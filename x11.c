@@ -127,11 +127,16 @@ kpress(struct Console *con, XEvent* e)
     struct XWindow *xw = con->win;
     KeySym *keysym = XGetKeyboardMapping(xw->dpy, e->xkey.keycode, 1, &ret);
     if (*keysym == XK_Escape) xw->running = 0;
-    else if (*keysym == XK_Shift_L || *keysym == XK_Shift_R) gui_input_key(&con->input, GUI_KEY_SHIFT, gui_true);
-    else if (*keysym == XK_Control_L || *keysym == XK_Control_L) gui_input_key(&con->input, GUI_KEY_CTRL, gui_true);
-    else if (*keysym == XK_Delete) gui_input_key(&con->input, GUI_KEY_DEL, gui_true);
-    else if (*keysym == XK_Return) gui_input_key(&con->input, GUI_KEY_ENTER, gui_true);
-    else if (*keysym == XK_BackSpace) gui_input_key(&con->input, GUI_KEY_BACKSPACE, gui_true);
+    else if (*keysym == XK_Shift_L || *keysym == XK_Shift_R)
+        gui_input_key(&con->input, GUI_KEY_SHIFT, gui_true);
+    else if (*keysym == XK_Control_L || *keysym == XK_Control_L)
+        gui_input_key(&con->input, GUI_KEY_CTRL, gui_true);
+    else if (*keysym == XK_Delete)
+        gui_input_key(&con->input, GUI_KEY_DEL, gui_true);
+    else if (*keysym == XK_Return)
+        gui_input_key(&con->input, GUI_KEY_ENTER, gui_true);
+    else if (*keysym == XK_BackSpace)
+        gui_input_key(&con->input, GUI_KEY_BACKSPACE, gui_true);
 }
 
 static void
@@ -140,11 +145,16 @@ krelease(struct Console *con, XEvent* e)
     int ret;
     struct XWindow *xw = con->win;
     KeySym *keysym = XGetKeyboardMapping(xw->dpy, e->xkey.keycode, 1, &ret);
-    if (*keysym == XK_Shift_L || *keysym == XK_Shift_R) gui_input_key(&con->input, GUI_KEY_SHIFT, gui_false);
-    else if (*keysym == XK_Control_L || *keysym == XK_Control_L) gui_input_key(&con->input, GUI_KEY_CTRL, gui_false);
-    else if (*keysym == XK_Delete) gui_input_key(&con->input, GUI_KEY_DEL, gui_false);
-    else if (*keysym == XK_Return) gui_input_key(&con->input, GUI_KEY_ENTER, gui_false);
-    else if (*keysym == XK_BackSpace) gui_input_key(&con->input, GUI_KEY_BACKSPACE, gui_false);
+    if (*keysym == XK_Shift_L || *keysym == XK_Shift_R)
+        gui_input_key(&con->input, GUI_KEY_SHIFT, gui_false);
+    else if (*keysym == XK_Control_L || *keysym == XK_Control_L)
+        gui_input_key(&con->input, GUI_KEY_CTRL, gui_false);
+    else if (*keysym == XK_Delete)
+        gui_input_key(&con->input, GUI_KEY_DEL, gui_false);
+    else if (*keysym == XK_Return)
+        gui_input_key(&con->input, GUI_KEY_ENTER, gui_false);
+    else if (*keysym == XK_BackSpace)
+        gui_input_key(&con->input, GUI_KEY_BACKSPACE, gui_false);
 }
 
 static void
@@ -169,8 +179,8 @@ brelease(struct Console *con, XEvent *evt)
 static void
 bmotion(struct Console *con, XEvent *evt)
 {
-    const float x = evt->xbutton.x;
-    const float y = evt->xbutton.y;
+    const gui_int x = evt->xbutton.x;
+    const gui_int y = evt->xbutton.y;
     struct XWindow *xw = con->win;
     gui_input_motion(&con->input, x, y);
 }
@@ -270,7 +280,7 @@ main(int argc, char *argv[])
     xw.swa.colormap = xw.cmap;
     xw.swa.event_mask =
         ExposureMask | KeyPressMask | ButtonPress |
-        ButtonReleaseMask | ButtonMotionMask |
+        ButtonReleaseMask | ButtonMotionMask | PointerMotionMask |
         Button1MotionMask | Button2MotionMask | Button3MotionMask;
     xw.win = XCreateWindow(
         xw.dpy, xw.root, 0, 0,WIN_WIDTH,WIN_HEIGHT, 0,
@@ -290,12 +300,12 @@ main(int argc, char *argv[])
 
     xw.running = 1;
     while (xw.running) {
-        /* Input */
+        /*----------------------- Input -----------------------------*/
         XEvent ev;
         started = timestamp();
         gui_input_begin(&con.input);
         while (XCheckWindowEvent(xw.dpy, xw.win, xw.swa.event_mask, &ev)) {
-            if (ev.type == Expose || ev.type == ConfigureNotify) resize(&con, &ev);
+            if (ev.type == Expose||ev.type == ConfigureNotify) resize(&con, &ev);
             else if (ev.type == MotionNotify) bmotion(&con, &ev);
             else if (ev.type == ButtonPress) bpress(&con, &ev);
             else if (ev.type == ButtonRelease) brelease(&con, &ev);
@@ -308,9 +318,12 @@ main(int argc, char *argv[])
         gui_begin(&con.gui, buffer, MAX_VERTEX_BUFFER);
         if (gui_button(&con.gui, &con.input, colorA, colorC, 50,50,150,30,5,"",0))
             fprintf(stdout, "Button pressed!\n");
-        slider = gui_slider(&con.gui, &con.input, colorA, colorB, 50,100,150,30,2, 0.0f, slider, 10.0f, 1.0f);
-        prog = gui_progress(&con.gui, &con.input, colorA, colorB, 50,150,150,30,2, prog, 100.0f, gui_true);
-        offset = gui_scroll(&con.gui, &con.input, colorA, colorB, 250,50,16,332, offset, 600);
+        slider = gui_slider(&con.gui, &con.input, colorA, colorB,
+                            50,100,150,30,2, 0.0f, slider, 10.0f, 1.0f);
+        prog = gui_progress(&con.gui, &con.input, colorA, colorB,
+                            50,150,150,30,2, prog, 100.0f, gui_true);
+        offset = gui_scroll(&con.gui, &con.input, colorA, colorB,
+                            250,50,16,300, offset, 600);
         gui_end(&con.gui);
         /* ---------------------------------------------------------*/
 

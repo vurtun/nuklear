@@ -81,11 +81,6 @@ struct gui_font {
     struct gui_font_glyph glyphes[GUI_GLYPHES_MAX];
 };
 
-void gui_begin(struct gui_draw_list *list, gui_byte *memory, gui_size size);
-gui_size gui_end(struct gui_draw_list *list);
-const struct gui_draw_command *gui_next(const struct gui_draw_list *list,
-                                        const struct gui_draw_command*);
-
 void gui_input_begin(struct gui_input *in);
 void gui_input_motion(struct gui_input *in, gui_int x, gui_int y);
 void gui_input_key(struct gui_input *in, enum gui_keys key, gui_int down);
@@ -93,7 +88,13 @@ void gui_input_button(struct gui_input *in, gui_int x, gui_int y, gui_int down);
 void gui_input_char(struct gui_input *in, gui_glyph glyph);
 void gui_input_end(struct gui_input *in);
 
+void gui_begin(struct gui_draw_list *list, gui_byte *memory, gui_size size);
+gui_size gui_end(struct gui_draw_list *list);
+const struct gui_draw_command *gui_next(const struct gui_draw_list *list,
+                                        const struct gui_draw_command*);
+
 gui_int gui_button(struct gui_draw_list *list, const struct gui_input *in,
+                    const struct gui_font *font,
                     struct gui_color bg, struct gui_color fg,
                     gui_int x, gui_int y, gui_int w, gui_int h, gui_int pad,
                     const char *str, gui_int len);
@@ -108,14 +109,15 @@ gui_int gui_slider(struct gui_draw_list *list, const struct gui_input *in,
 gui_int gui_progress(struct gui_draw_list *list, const struct gui_input *in,
                     struct gui_color bg, struct gui_color fg,
                     gui_int x, gui_int y, gui_int w, gui_int h, gui_int pad,
-                    gui_float cur, gui_float max, gui_bool modifyable);
+                    gui_size cur, gui_size max, gui_bool modifyable);
 gui_int gui_scroll(struct gui_draw_list *list, const struct gui_input *in,
                     struct gui_color bg, struct gui_color fg,
                     gui_int x, gui_int y, gui_int w, gui_int h,
                     gui_int offset, gui_int dst);
-gui_int gui_input(struct gui_draw_list *list,
-                    const struct gui_input *in, gui_char *buffer, gui_int *len,
+gui_int gui_input(struct gui_draw_list *list, const struct gui_input *in,
+                    const struct gui_font *font,
                     struct gui_color bg, struct gui_color fg,
-                    gui_int x, gui_int y, gui_int w, gui_int h, gui_int active);
+                    gui_int x, gui_int y, gui_int w, gui_int h,
+                    gui_char *buffer, gui_int *len, gui_bool active);
 
 #endif

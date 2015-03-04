@@ -26,7 +26,7 @@
 #define ASSERT(predicate) ASSERT_LINE(predicate,__LINE__,__FILE__)
 
 #define vec2_load(v,a,b) (v).x = (a), (v).y = (b)
-#define vec2_cpy(to,from) (to).x = (from).x, (to).y = (from).y
+#define vec2_mov(to,from) (to).x = (from).x, (to).y = (from).y
 #define vec2_len(v) ((float)fsqrt((v).x*(v).x+(v).y*(v).y))
 #define vec2_sub(r,a,b) do {(r).x=(a).x-(b).x; (r).y=(a).y-(b).y;} while(0)
 #define vec2_add(r,a,b) do {(r).x=(a).x+(b).x; (r).y=(a).y+(b).y;} while(0)
@@ -129,7 +129,7 @@ gui_input_begin(struct gui_input *in)
     if (!in) return;
     in->mouse_clicked = 0;
     in->glyph_count = 0;
-    vec2_cpy(in->mouse_prev, in->mouse_pos);
+    vec2_mov(in->mouse_prev, in->mouse_pos);
 }
 
 void
@@ -378,11 +378,22 @@ gui_slider(struct gui_draw_list *list, const struct gui_input *in,
     gui_int mouse_x, mouse_y;
     gui_int clicked_x, clicked_y;
 
-    /* TODO(micha): make this safe */
-    const gui_float cursor_w = (w - 2 * pad) / (((max - min) + 1) / step);
-    const gui_int cursor_h = h - 2 * pad;
-    gui_int cursor_x = x + pad + (cursor_w * (value - min));
-    gui_int cursor_y = y + pad;
+    gui_float cursor_w;
+    gui_int cursor_x;
+    gui_int cursor_y;
+    gui_int cursor_h;
+
+    if (step == 0.0f) return value;
+    w = MAX(w, 2 * pad);
+    h = MAX(h, 2 * pad);
+    max = MAX(min, max);
+    min = MIN(min, max);
+    value = CLAMP(min, value, max);
+
+    cursor_w = (w - 2 * pad) / (((max - min) + step) / step);
+    cursor_h = h - 2 * pad;
+    cursor_x = x + pad + (cursor_w * (value - min));
+    cursor_y = y + pad;
 
     if (!list || !in) return 0;
     mouse_x = in->mouse_pos.x;
@@ -396,7 +407,6 @@ gui_slider(struct gui_draw_list *list, const struct gui_input *in,
     {
         gui_float cursor_next_x;
         const gui_float tmp = mouse_x - cursor_x + (cursor_w / 2);
-        /* TODO(micha): make this safe */
         gui_float next_value = value + step * ((tmp < 0) ? -1.0f : 1.0f);
         next_value = CLAMP(min, next_value, max);
         cursor_next_x = x + pad + (cursor_w * (next_value - min));
@@ -416,32 +426,38 @@ gui_int
 gui_progress(struct gui_draw_list *list, const struct gui_input *in,
     struct gui_color bg, struct gui_color fg,
     gui_int x, gui_int y, gui_int w, gui_int h, gui_int pad,
-    gui_float cur, gui_float max, gui_bool modifyable)
+    gui_size value, gui_size max, gui_bool modifyable)
 {
-    gui_int mx;
-    gui_int my;
+    gui_int mouse_x, mouse_y;
     gui_float scale;
-    gui_int cx, cy, cw, ch;
+    gui_int cursor_x;
+    gui_int cursor_y;
+    gui_int cursor_w;
+    gui_int cursor_h;
 
     if (!list || !in) return 0;
-    mx = in->mouse_pos.x;
-    my = in->mouse_pos.y;
+    mouse_x = in->mouse_pos.x;
+    mouse_y = in->mouse_pos.y;
 
-    /* TODO(micha): make this safe */
-    if (modifyable && in->mouse_down && INBOX(mx, my, x, y, x + w, y + h))
-        cur = max * (((gui_float)mx - (gui_float)x) / (gui_float)w);
+    w = MAX(w, 2 * pad + 1);
+    h = MAX(h, 2 * pad + 1);
+    value = MIN(value, max);
 
-    if (!max) return cur;
-    /* TODO(micha): make this safe */
-    cur = CLAMP(0, cur, max);
-    scale = (cur/max);
-    ch = h - 2 * pad;
-    cw = (w - 2 * pad) * scale;
-    cx = x + pad;
-    cy = y + pad;
+    if (modifyable && in->mouse_down && INBOX(mouse_x, mouse_y, x, y, x+w, y+h)) {
+        gui_float ratio = (gui_float)(mouse_x - x) / (gui_float)w;
+        value = (gui_size)((gui_float)max * ratio);
+    }
+
+    if (!max) return value;
+    value = MIN(value, max);
+    scale = (gui_float)value / (gui_float)max;
+    cursor_h = h - 2 * pad;
+    cursor_w = (w - 2 * pad) * scale;
+    cursor_x = x + pad;
+    cursor_y = y + pad;
     gui_rectf(list, x, y, w, h, bg);
-    gui_rectf(list, cx, cy, cw, ch, fg);
-    return cur;
+    gui_rectf(list, cursor_x, cursor_y, cursor_w, cursor_h, fg);
+    return value;
 }
 
 gui_int
@@ -450,42 +466,91 @@ gui_scroll(struct gui_draw_list *list, const struct gui_input *in,
     gui_int x, gui_int y, gui_int w, gui_int h,
     gui_int offset, gui_int dst)
 {
-    gui_bool up, down;
-    /* TODO(micha): make this safe */
-    const gui_int p = w / 4;
-    const gui_int bs = w;
-    const gui_int bh = bs / 2;
-    const gui_int by = y + h - bs;
-    const gui_int barh = h - 2 * bs;
-    const gui_int bary = y + bs;
+    gui_int mouse_x;
+    gui_int mouse_y;
+    gui_int prev_x;
+    gui_int prev_y;
 
-    /* TODO(micha): make this safe */
-    const gui_float ratio = (gui_float)barh/(gui_float)dst;
-    gui_float off = (gui_float)offset/(gui_float)dst;
-    const gui_int ch = (gui_int)(ratio * (gui_float)barh);
-    gui_int cy = bary + (gui_int)(off * barh);
-    const gui_int cw = w;
-    const gui_int cx = x;
+    gui_bool up, down;
+    gui_int button_size;
+    gui_int button_half;
+    gui_int button_y;
+    gui_int bar_h;
+    gui_int bar_y;
+
+    gui_float ratio;
+    gui_float off;
+    gui_int cursor_x;
+    gui_int cursor_y;
+    gui_int cursor_w;
+    gui_int cursor_h;
+    gui_int cursor_px;
+    gui_int cursor_py;
+    gui_bool inscroll;
+    gui_bool incursor;
+
+    gui_int pad;
+    gui_int xoff, yoff, boff;
+    gui_int xpad, ypad;
+    gui_int xmid;
 
     if (!list || !in) return 0;
     gui_rectf(list, x, y, w, h, bg);
     if (dst <= h) return 0;
 
-    /* TODO(micha): make this safe */
-    up = gui_button(list, in, fg, bg, x, y, bs, bs, 0, "", 0);
-    down = gui_button(list, in, fg, bg, x, by, bs, bs, 0, "", 0);
-    gui_trianglef(list, x + bh, y+p, x+(bs-p), y+(bs-p), x+p, y+(bs-p), bg);
-    gui_trianglef(list, x+p, by + p, x + bs - p, by+p, x + bh, by + bs-p, bg);
+    mouse_x = in->mouse_pos.x;
+    mouse_y = in->mouse_pos.y;
+    prev_x = in->mouse_prev.x;
+    prev_y = in->mouse_prev.y;
 
-    if (up || down) {
+    w = MAX(w, 0);
+    h = MAX(h, 2 * w);
+
+    pad = w / 4;
+    button_size = w;
+    button_half = button_size / 2;
+    button_y = y + h - button_size;
+    bar_h = h - 2 * button_size;
+    bar_y = y + button_size;
+
+    ratio = (gui_float)bar_h/(gui_float)dst;
+    off = (gui_float)offset/(gui_float)dst;
+    cursor_h = (gui_int)(ratio * (gui_float)bar_h);
+    cursor_y = bar_y + (gui_int)(off * bar_h);
+    cursor_w = w;
+    cursor_x = x;
+
+    xpad = x + pad;
+    ypad = button_y + pad;
+    xmid = x + button_half;
+    xoff = x + (button_size - pad);
+    yoff = y + (button_size - pad);
+    boff = button_y + (button_size - pad);
+
+    up = gui_button(list, in, fg, bg, x, y, button_size, button_size, 0, "", 0);
+    down = gui_button(list,in,fg,bg,x,button_y,button_size,button_size,0,"", 0);
+    gui_trianglef(list, xmid, y + pad, xoff, yoff, xpad, yoff, bg);
+    gui_trianglef(list, xpad, ypad, xoff, ypad, xmid, boff, bg);
+
+    cursor_px = cursor_x + cursor_w;
+    cursor_py = cursor_y + cursor_h;
+    inscroll = INBOX(mouse_x, mouse_y, x, y, x + w, y + h);
+    incursor = INBOX(prev_x, prev_y, cursor_x, cursor_y, cursor_px, cursor_py);
+    if (in->mouse_down && inscroll && incursor)
+    {
+        const gui_float pixel = in->mouse_delta.y;
+        const gui_float delta = (pixel/(gui_float)bar_h) * (gui_float)dst;
+        offset = CLAMP(0, offset + delta, dst - bar_h);
+        cursor_y += pixel;
+    } else if (up || down) {
         const gui_int h2 = h/2;
-        offset = (down) ? MIN(offset+h2, dst-barh) : MAX(0, offset - h2);
+        offset = (down) ? MIN(offset + h2, dst - bar_h) : MAX(0, offset - h2);
         off = (gui_float)offset/(gui_float)dst;
-        cy = bary + (gui_int)(off * barh);
+        cursor_y = bar_y + (gui_int)(off * bar_h);
     }
 
-    gui_rectf(list, cx, cy, cw, ch, fg);
-    gui_rect(list, cx, cy, cw, ch, bg);
+    gui_rectf(list, cursor_x, cursor_y, cursor_w, cursor_h, fg);
+    gui_rect(list, cursor_x, cursor_y, cursor_w, cursor_h, bg);
     return offset;
 }
 
