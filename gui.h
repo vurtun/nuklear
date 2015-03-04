@@ -34,8 +34,8 @@ struct gui_vertex {
 
 struct gui_draw_command {
     struct gui_vertex *vertexes;
-    gui_int vertex_count;
-    gui_int vertex_write;
+    gui_size vertex_count;
+    gui_size vertex_write;
     struct gui_rect clip_rect;
     gui_texture texture;
 };
@@ -60,7 +60,7 @@ enum gui_keys {
 };
 
 struct gui_input {
-    gui_int keys[GUI_KEY_MAX];
+    gui_bool keys[GUI_KEY_MAX];
     gui_glyph text[GUI_INPUT_MAX];
     gui_size glyph_count;
     gui_bool shift;

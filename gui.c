@@ -50,12 +50,15 @@ fsqrt(float x)
     val.f = x;
     val.i = 0x5f375a86 - (val.i>>1);
     val.f = val.f*(1.5f-xhalf*val.f*val.f);
-    return 1.0f/val.f;
+    if (val.f != 0.0f)
+        return 1.0f/val.f;
+    return val.f;
 }
 
 static gui_size
 utf_validate(long *u, gui_size i)
 {
+    if (!u) return 0;
     if (!BETWEEN(*u, utfmin[i], utfmax[i]) ||
          BETWEEN(*u, 0xD800, 0xDFFF))
             *u = UTF_INVALID;
@@ -66,6 +69,7 @@ utf_validate(long *u, gui_size i)
 static long
 utf_decode_byte(gui_char c, gui_size *i)
 {
+    if (!i) return 0;
     for(*i = 0; *i < LEN(utfmask); ++(*i)) {
         if ((c & utfmask[*i]) == utfbyte[*i])
             return c & ~utfmask[*i];
@@ -80,6 +84,7 @@ utf_decode(gui_char *c, long *u, gui_size clen)
     long udecoded;
 
     *u = UTF_INVALID;
+    if (!c || !u) return 0;
     if (!clen) return 0;
     udecoded = utf_decode_byte(c[0], &len);
     if (!BETWEEN(len, 1, GUI_UTF_SIZE))
@@ -108,7 +113,7 @@ utf_encode(long u, gui_char *c, gui_size clen)
 {
     gui_size len, i;
     len = utf_validate(&u, 0);
-    if (clen < len)
+    if (clen < len || !len)
         return 0;
     for (i = len - 1; i != 0; --i) {
         c[i] = utf_encode_byte(u, 0);
@@ -121,6 +126,7 @@ utf_encode(long u, gui_char *c, gui_size clen)
 void
 gui_input_begin(struct gui_input *in)
 {
+    if (!in) return;
     in->mouse_clicked = 0;
     in->glyph_count = 0;
     vec2_cpy(in->mouse_prev, in->mouse_pos);
@@ -135,6 +141,7 @@ gui_input_motion(struct gui_input *in, gui_int x, gui_int y)
 void
 gui_input_key(struct gui_input *in, enum gui_keys key, gui_int down)
 {
+    if (!in) return;
     in->keys[key] = down;
     if (key == GUI_KEY_SHIFT)
         in->shift = gui_true;
@@ -145,6 +152,7 @@ gui_input_key(struct gui_input *in, enum gui_keys key, gui_int down)
 void
 gui_input_button(struct gui_input *in, gui_int x, gui_int y, gui_int down)
 {
+    if (!in) return;
     if (in->mouse_down == down) return;
     vec2_load(in->mouse_clicked_pos, x, y);
     in->mouse_down = down;
@@ -156,6 +164,7 @@ gui_input_char(struct gui_input *in, gui_glyph glyph)
 {
     gui_size len = 0;
     long unicode;
+    if (!in) return;
     len = utf_decode(glyph, &unicode, GUI_UTF_SIZE);
     if (len && in->glyph_count < GUI_INPUT_MAX) {
         utf_encode(unicode, in->text[in->glyph_count], GUI_UTF_SIZE);
@@ -166,21 +175,26 @@ gui_input_char(struct gui_input *in, gui_glyph glyph)
 void
 gui_input_end(struct gui_input *in)
 {
+    if (!in) return;
     vec2_sub(in->mouse_delta, in->mouse_pos, in->mouse_prev);
 }
 
 static struct gui_draw_command*
-gui_push_command(struct gui_draw_list *list, gui_int count,
+gui_push_command(struct gui_draw_list *list, gui_size count,
     const struct gui_rect *rect, gui_texture tex)
 {
     gui_size memory = 0;
     gui_size current;
     struct gui_draw_command *cmd = NULL;
+    if (!list || !rect) return NULL;
+    if (!list->end || !list->begin || list->end < list->begin)
+        return NULL;
+
     memory += sizeof(struct gui_draw_command);
     memory += sizeof(struct gui_vertex) * count;
     list->needed += memory;
     current = (gui_byte*)list->end - (gui_byte*)list->begin;
-    if (list->size < (current + memory))
+    if (list->size <= (current + memory))
         return NULL;
 
     cmd = list->end;
@@ -197,8 +211,10 @@ static void
 gui_vertex(struct gui_draw_command *cmd, gui_float x, gui_float y,
     struct gui_color col)
 {
-    const gui_int i = cmd->vertex_write;
-    if (i < 0 || i >= cmd->vertex_count) return;
+    gui_size i;
+    if (!cmd) return;
+    i = cmd->vertex_write;
+    if (i >= cmd->vertex_count) return;
     cmd->vertexes[i].pos.x = x;
     cmd->vertexes[i].pos.y = y;
     cmd->vertexes[i].color = col;
@@ -214,10 +230,14 @@ gui_vertex_line(struct gui_draw_command* cmd, gui_float x0, gui_float y0,
     gui_float len;
     struct gui_vec2 a, b, d;
     struct gui_vec2 hn, hp0, hp1;
+    if (!cmd) return;
 
     vec2_load(a, x0, y0);
     vec2_load(b, x1, y1);
     vec2_sub(d, b, a);
+
+    if (d.x == 0.0f && d.y == 0.0f)
+        return;
 
     len = 0.5f / vec2_len(d);
     vec2_muls(hn, d, len);
@@ -237,6 +257,7 @@ gui_line(struct gui_draw_list *list, gui_float x0, gui_float y0,
     gui_float x1, gui_float y1, struct gui_color col)
 {
     struct gui_draw_command *cmd;
+    if (!list) return;
     if (col.a == 0) return;
     cmd = gui_push_command(list, 6, &null_rect, null_tex);
     if (!cmd) return;
@@ -248,6 +269,7 @@ gui_trianglef(struct gui_draw_list *list, gui_float x0, gui_float y0,
     gui_float x1, gui_float y1, gui_float x2, gui_float y2, struct gui_color c)
 {
     struct gui_draw_command *cmd;
+    if (!list) return;
     if (c.a == 0) return;
     cmd = gui_push_command(list, 3, &null_rect, null_tex);
     if (!cmd) return;
@@ -261,6 +283,7 @@ gui_rect(struct gui_draw_list *list, gui_float x, gui_float y,
     gui_float w, gui_float h, struct gui_color col)
 {
     struct gui_draw_command *cmd;
+    if (!list) return;
     if (col.a == 0) return;
     cmd = gui_push_command(list, 6 * 4, &null_rect, null_tex);
     if (!cmd) return;
@@ -276,6 +299,7 @@ gui_rectf(struct gui_draw_list *list, gui_float x, gui_float y,
     gui_float w, gui_float h, struct gui_color col)
 {
     struct gui_draw_command *cmd;
+    if (!list) return;
     if (col.a == 0) return;
     cmd = gui_push_command(list, 6, &null_rect, null_tex);
     if (!cmd) return;
@@ -335,9 +359,9 @@ gui_button(struct gui_draw_list *list, const struct gui_input *in,
     gui_int ret = gui_false;
     if (!list || !in) return gui_false;
     if (!in->mouse_down && in->mouse_clicked) {
-        const gui_int mx = in->mouse_clicked_pos.x;
-        const gui_int my = in->mouse_clicked_pos.y;
-        if (INBOX(mx, my, x, y, x + w, y + h))
+        const gui_int clicked_x = in->mouse_clicked_pos.x;
+        const gui_int clicked_y = in->mouse_clicked_pos.y;
+        if (INBOX(clicked_x, clicked_y, x, y, x+w, y+h))
             ret = gui_true;
     }
     gui_rectf(list, x, y, w, h, bg);
@@ -349,37 +373,43 @@ gui_int
 gui_slider(struct gui_draw_list *list, const struct gui_input *in,
     struct gui_color bg, struct gui_color fg,
     gui_int x, gui_int y, gui_int w, gui_int h, gui_int pad,
-    gui_float min, gui_float cur, gui_float max, gui_float step)
+    gui_float min, gui_float value, gui_float max, gui_float step)
 {
-    const gui_float cw = (w - 2 * pad) / (((max - min) + 1) / step);
-    const gui_int ch = h - 2 * pad;
-    gui_int cx = x + pad + (cw * (cur - min));
-    gui_int cy = y + pad;
+    gui_int mouse_x, mouse_y;
+    gui_int clicked_x, clicked_y;
 
-    const gui_int mx = in->mouse_pos.x;
-    const gui_int my = in->mouse_pos.y;
-    const gui_int dx = in->mouse_clicked_pos.x;
-    const gui_int dy = in->mouse_clicked_pos.y;
+    /* TODO(micha): make this safe */
+    const gui_float cursor_w = (w - 2 * pad) / (((max - min) + 1) / step);
+    const gui_int cursor_h = h - 2 * pad;
+    gui_int cursor_x = x + pad + (cursor_w * (value - min));
+    gui_int cursor_y = y + pad;
 
-    if (!list || !in) return gui_false;
+    if (!list || !in) return 0;
+    mouse_x = in->mouse_pos.x;
+    mouse_y = in->mouse_pos.y;
+    clicked_x = in->mouse_clicked_pos.x;
+    clicked_y = in->mouse_clicked_pos.y;
+
     if (in->mouse_down &&
-        INBOX(dx, dy, x, y, x + w, y + h) &&
-        INBOX(mx, my, x, y, x + w, y + h))
+        INBOX(clicked_x, clicked_y, x, y, x + w, y + h) &&
+        INBOX(mouse_x, mouse_y, x, y, x + w, y + h))
     {
-        gui_float cnx;
-        const gui_float tmp = mx - cx + (cw / 2);
-        gui_float next = cur + step * ((tmp < 0) ? -1.0f : 1.0f);
-        next = CLAMP(min, next, max);
-        cnx = x + pad + (cw * (next - min));
-        if (INBOX(mx, my, cnx, cy, cnx + cw, cy + ch)) {
-            cur = next;
-            cx = cnx;
+        gui_float cursor_next_x;
+        const gui_float tmp = mouse_x - cursor_x + (cursor_w / 2);
+        /* TODO(micha): make this safe */
+        gui_float next_value = value + step * ((tmp < 0) ? -1.0f : 1.0f);
+        next_value = CLAMP(min, next_value, max);
+        cursor_next_x = x + pad + (cursor_w * (next_value - min));
+        if (INBOX(mouse_x, mouse_y, cursor_next_x, cursor_y,
+                cursor_next_x + cursor_w, cursor_y + cursor_h))
+        {
+            value = next_value;
+            cursor_x = cursor_next_x;
         }
     }
-
     gui_rectf(list, x, y, w, h, bg);
-    gui_rectf(list, cx, cy, cw, ch, fg);
-    return cur;
+    gui_rectf(list, cursor_x, cursor_y, cursor_w, cursor_h, fg);
+    return value;
 }
 
 gui_int
@@ -388,15 +418,21 @@ gui_progress(struct gui_draw_list *list, const struct gui_input *in,
     gui_int x, gui_int y, gui_int w, gui_int h, gui_int pad,
     gui_float cur, gui_float max, gui_bool modifyable)
 {
-    const gui_int mx = in->mouse_pos.x;
-    const gui_int my = in->mouse_pos.y;
-    gui_int cx, cy, cw, ch;
+    gui_int mx;
+    gui_int my;
     gui_float scale;
+    gui_int cx, cy, cw, ch;
 
+    if (!list || !in) return 0;
+    mx = in->mouse_pos.x;
+    my = in->mouse_pos.y;
+
+    /* TODO(micha): make this safe */
     if (modifyable && in->mouse_down && INBOX(mx, my, x, y, x + w, y + h))
         cur = max * (((gui_float)mx - (gui_float)x) / (gui_float)w);
 
     if (!max) return cur;
+    /* TODO(micha): make this safe */
     cur = CLAMP(0, cur, max);
     scale = (cur/max);
     ch = h - 2 * pad;
@@ -414,27 +450,39 @@ gui_scroll(struct gui_draw_list *list, const struct gui_input *in,
     gui_int x, gui_int y, gui_int w, gui_int h,
     gui_int offset, gui_int dst)
 {
+    gui_bool up, down;
+    /* TODO(micha): make this safe */
     const gui_int p = w / 4;
     const gui_int bs = w;
+    const gui_int bh = bs / 2;
     const gui_int by = y + h - bs;
     const gui_int barh = h - 2 * bs;
     const gui_int bary = y + bs;
 
+    /* TODO(micha): make this safe */
     const gui_float ratio = (gui_float)barh/(gui_float)dst;
-    const gui_float off = (gui_float)offset/(gui_float)dst;
+    gui_float off = (gui_float)offset/(gui_float)dst;
     const gui_int ch = (gui_int)(ratio * (gui_float)barh);
-    const gui_int cy = bary + (gui_int)(off * barh);
+    gui_int cy = bary + (gui_int)(off * barh);
     const gui_int cw = w;
     const gui_int cx = x;
-    static const struct gui_color col = {255, 0, 0, 255};
 
+    if (!list || !in) return 0;
     gui_rectf(list, x, y, w, h, bg);
     if (dst <= h) return 0;
 
-    gui_button(list, in, fg, bg, x, y, bs, bs, 0, "", 0);
-    gui_button(list, in, fg, bg, x, by, bs, bs, 0, "", 0);
-    gui_trianglef(list, x + (bs/2), y+p, x+(bs-p), y+(bs-p), x+p, y+(bs-p), bg);
-    gui_trianglef(list, x+p, by + p, x + bs - p, by+p, x + (bs/2) , by + bs-p, bg);
+    /* TODO(micha): make this safe */
+    up = gui_button(list, in, fg, bg, x, y, bs, bs, 0, "", 0);
+    down = gui_button(list, in, fg, bg, x, by, bs, bs, 0, "", 0);
+    gui_trianglef(list, x + bh, y+p, x+(bs-p), y+(bs-p), x+p, y+(bs-p), bg);
+    gui_trianglef(list, x+p, by + p, x + bs - p, by+p, x + bh, by + bs-p, bg);
+
+    if (up || down) {
+        const gui_int h2 = h/2;
+        offset = (down) ? MIN(offset+h2, dst-barh) : MAX(0, offset - h2);
+        off = (gui_float)offset/(gui_float)dst;
+        cy = bary + (gui_int)(off * barh);
+    }
 
     gui_rectf(list, cx, cy, cw, ch, fg);
     gui_rect(list, cx, cy, cw, ch, bg);
