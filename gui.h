@@ -10,7 +10,8 @@
 #define GUI_INPUT_MAX 8
 
 typedef int gui_int;
-typedef int gui_short;
+typedef short gui_short;
+typedef long gui_long;
 typedef int gui_bool;
 typedef unsigned int gui_flags;
 typedef unsigned char gui_char;
@@ -87,7 +88,7 @@ struct gui_font {
     gui_texture texture;
     struct gui_vec2 tex_size;
     struct gui_font_glyph *glyphes;
-    gui_size glyph_count;
+    gui_long glyph_count;
     const struct gui_font_glyph *fallback;
 };
 

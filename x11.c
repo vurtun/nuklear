@@ -268,9 +268,9 @@ ldfont(const char *name, unsigned char height)
         glyphes[id].yoff = *(float*)&iter[14];
         glyphes[id].xadvance =  *(float*)&iter[18];
         glyphes[id].uv[0].u = (gui_float)x/(gui_float)tex_width;
-        glyphes[id].uv[0].v = (gui_float)y/(gui_float)tex_height;
+        glyphes[id].uv[0].v = (gui_float)(y+h)/(gui_float)tex_height;
         glyphes[id].uv[1].u = (gui_float)(x+w)/(gui_float)tex_width;
-        glyphes[id].uv[1].v = (gui_float)(y+h)/(gui_float)tex_height;
+        glyphes[id].uv[1].v = (gui_float)y/(gui_float)tex_height;
         if (glyphes[id].height > max_height) max_height = glyphes[id].height;
         iter += 22;
     }
@@ -423,7 +423,7 @@ main(int argc, char *argv[])
 
     xw.running = 1;
     gui.win = &xw;
-    gui.font = ldfont("mono.font", 16);
+    gui.font = ldfont("mono.font", 12);
     while (xw.running) {
         XEvent ev;
         started = timestamp();
@@ -440,7 +440,7 @@ main(int argc, char *argv[])
 
         /* ------------------------- GUI --------------------------*/
         gui_begin(&gui.out, buffer, MAX_VERTEX_BUFFER);
-        if (gui_button(&gui.out, &gui.input, NULL, colorA, colorC, 50,50,150,30,5,"",0))
+        if (gui_button(&gui.out, &gui.input, gui.font, colorA, colorC, 50,50,150,30,5,"button",6))
             fprintf(stdout, "Button pressed!\n");
         slider = gui_slider(&gui.out, &gui.input, colorA, colorB,
                             50, 100, 150, 30, 2, 0.0f, slider, 10.0f, 1.0f);

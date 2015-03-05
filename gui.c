@@ -66,7 +66,7 @@ utf_validate(long *u, gui_size i)
     return i;
 }
 
-static long
+static gui_long
 utf_decode_byte(gui_char c, gui_size *i)
 {
     if (!i) return 0;
@@ -78,10 +78,10 @@ utf_decode_byte(gui_char c, gui_size *i)
 }
 
 static gui_size
-utf_decode(gui_char *c, long *u, gui_size clen)
+utf_decode(const gui_char *c, gui_long *u, gui_size clen)
 {
     gui_size i, j, len, type;
-    long udecoded;
+    gui_long udecoded;
 
     *u = UTF_INVALID;
     if (!c || !u) return 0;
@@ -103,13 +103,13 @@ utf_decode(gui_char *c, long *u, gui_size clen)
 }
 
 static gui_char
-utf_encode_byte(long u, gui_size i)
+utf_encode_byte(gui_long u, gui_size i)
 {
     return utfbyte[i] | (u & ~utfmask[i]);
 }
 
 static gui_size
-utf_encode(long u, gui_char *c, gui_size clen)
+utf_encode(gui_long u, gui_char *c, gui_size clen)
 {
     gui_size len, i;
     len = utf_validate(&u, 0);
@@ -159,7 +159,7 @@ void
 gui_input_char(struct gui_input *in, gui_glyph glyph)
 {
     gui_size len = 0;
-    long unicode;
+    gui_long unicode;
     if (!in) return;
     len = utf_decode(glyph, &unicode, GUI_UTF_SIZE);
     if (len && in->glyph_count < GUI_INPUT_MAX) {
@@ -173,6 +173,23 @@ gui_input_end(struct gui_input *in)
 {
     if (!in) return;
     vec2_sub(in->mouse_delta, in->mouse_pos, in->mouse_prev);
+}
+
+static gui_size
+gui_font_text_width(const struct gui_font *font, const gui_char *t, gui_size l)
+{
+    gui_long unicode;
+    gui_size len = 0;
+    const struct gui_font_glyph *g;
+    gui_size text_len = utf_decode(t, &unicode, l);
+    while (text_len < l) {
+        if (unicode == UTF_INVALID) return 0;
+        g = (unicode < font->glyph_count) ? &font->glyphes[unicode] : font->fallback;
+        g = (g->code == 0) ? font->fallback : g;
+        len += g->width + g->xadvance;
+        text_len += utf_decode(t + text_len, &unicode, l - text_len);
+    }
+    return (gui_size)((gui_float)len * font->scale);
 }
 
 static struct gui_draw_command*
@@ -206,7 +223,7 @@ gui_push_command(struct gui_draw_list *list, gui_size count,
 
 static void
 gui_vertex(struct gui_draw_command *cmd, gui_float x, gui_float y,
-    struct gui_color col)
+    struct gui_color col, gui_float u, gui_float v)
 {
     gui_size i;
     if (!cmd) return;
@@ -215,8 +232,8 @@ gui_vertex(struct gui_draw_command *cmd, gui_float x, gui_float y,
     cmd->vertexes[i].pos.x = x;
     cmd->vertexes[i].pos.y = y;
     cmd->vertexes[i].color = col;
-    cmd->vertexes[i].uv.u = 0.0f;
-    cmd->vertexes[i].uv.v = 0.0f;
+    cmd->vertexes[i].uv.u = u;
+    cmd->vertexes[i].uv.v = v;
     cmd->vertex_write++;
 }
 
@@ -241,12 +258,12 @@ gui_vertex_line(struct gui_draw_command* cmd, gui_float x0, gui_float y0,
     vec2_load(hp0, +hn.y, -hn.x);
     vec2_load(hp1, -hn.y, +hn.x);
 
-    gui_vertex(cmd, a.x + hp0.x, a.y + hp0.y, col);
-    gui_vertex(cmd, b.x + hp0.x, b.y + hp0.y, col);
-    gui_vertex(cmd, a.x + hp1.x, a.y + hp1.y, col);
-    gui_vertex(cmd, b.x + hp0.x, b.y + hp0.y, col);
-    gui_vertex(cmd, b.x + hp1.x, b.y + hp1.y, col);
-    gui_vertex(cmd, a.x + hp1.x, a.y + hp1.y, col);
+    gui_vertex(cmd, a.x + hp0.x, a.y + hp0.y, col, 0.0f, 0.0f);
+    gui_vertex(cmd, b.x + hp0.x, b.y + hp0.y, col, 0.0f, 0.0f);
+    gui_vertex(cmd, a.x + hp1.x, a.y + hp1.y, col, 0.0f, 0.0f);
+    gui_vertex(cmd, b.x + hp0.x, b.y + hp0.y, col, 0.0f, 0.0f);
+    gui_vertex(cmd, b.x + hp1.x, b.y + hp1.y, col, 0.0f, 0.0f);
+    gui_vertex(cmd, a.x + hp1.x, a.y + hp1.y, col, 0.0f, 0.0f);
 }
 
 static void
@@ -270,9 +287,9 @@ gui_trianglef(struct gui_draw_list *list, gui_float x0, gui_float y0,
     if (c.a == 0) return;
     cmd = gui_push_command(list, 3, &null_rect, null_tex);
     if (!cmd) return;
-    gui_vertex(cmd, x0, y0, c);
-    gui_vertex(cmd, x1, y1, c);
-    gui_vertex(cmd, x2, y2, c);
+    gui_vertex(cmd, x0, y0, c, 0.0f, 0.0f);
+    gui_vertex(cmd, x1, y1, c, 0.0f, 0.0f);
+    gui_vertex(cmd, x2, y2, c, 0.0f, 0.0f);
 }
 
 static void
@@ -301,19 +318,52 @@ gui_rectf(struct gui_draw_list *list, gui_float x, gui_float y,
     cmd = gui_push_command(list, 6, &null_rect, null_tex);
     if (!cmd) return;
 
-    gui_vertex(cmd, x, y, col);
-    gui_vertex(cmd, x + w, y, col);
-    gui_vertex(cmd, x + w, y + h, col);
-    gui_vertex(cmd, x, y, col);
-    gui_vertex(cmd, x + w, y + h, col);
-    gui_vertex(cmd, x, y + h, col);
+    gui_vertex(cmd, x, y, col, 0.0f, 0.0f);
+    gui_vertex(cmd, x + w, y, col, 0.0f, 0.0f);
+    gui_vertex(cmd, x + w, y + h, col, 0.0f, 0.0f);
+    gui_vertex(cmd, x, y, col, 0.0f, 0.0f);
+    gui_vertex(cmd, x + w, y + h, col, 0.0f, 0.0f);
+    gui_vertex(cmd, x, y + h, col, 0.0f, 0.0f);
 }
 
-static void
-gui_text(const struct gui_draw_list *list, gui_float x, gui_float y,
-        gui_float w, gui_float h, const gui_char *txt, gui_size len)
-{
 
+static void
+gui_text(struct gui_draw_list *list, const struct gui_font *font, gui_float x,
+        gui_float y, gui_float w, gui_float h,
+        struct gui_color col, const gui_char *t, gui_size len)
+{
+    struct gui_draw_command *cmd;
+    struct gui_rect clip;
+    gui_size text_len;
+    gui_float off = 0;
+    gui_long unicode;
+    const struct gui_font_glyph *g;
+
+    if (!list) return;
+    clip.x = x; clip.y = y;
+    clip.w = w; clip.h = h;
+    cmd = gui_push_command(list, 6 * len, &clip, font->texture);
+    if (!cmd) return;
+
+    text_len = utf_decode(t, &unicode, len);
+    while (text_len < len) {
+        gui_float x1, y1, x2, y2;
+        if (unicode == UTF_INVALID) break;
+        g = (unicode < font->glyph_count) ? &font->glyphes[unicode] : font->fallback;
+        g = (g->code == 0) ? font->fallback : g;
+
+        x1 = x + off;
+        x2 = x + w + off;
+        off += g->width + g->xadvance;
+
+        gui_vertex(cmd, x1, y, col, g->uv[0].u, g->uv[0].v);
+        gui_vertex(cmd, x2, y, col, g->uv[1].u, g->uv[0].v);
+        gui_vertex(cmd, x2, y+h, col, g->uv[1].u, g->uv[1].v);
+        gui_vertex(cmd, x1, y, col, g->uv[0].u, g->uv[0].v);
+        gui_vertex(cmd, x2, y+h, col, g->uv[1].u, g->uv[1].v);
+        gui_vertex(cmd, x1, y+h, col, g->uv[0].u, g->uv[1].v);
+        text_len += utf_decode(t + text_len, &unicode, len - text_len);
+    }
 }
 
 void
@@ -358,9 +408,10 @@ gui_int
 gui_button(struct gui_draw_list *list, const struct gui_input *in,
     const struct gui_font *font, struct gui_color bg, struct gui_color fg,
     gui_int x, gui_int y, gui_int w, gui_int h, gui_int pad,
-    const char *str, gui_int len)
+    const char *str, gui_int l)
 {
     gui_int ret = gui_false;
+    const gui_char *t = (const gui_char*)str;
     if (!list || !in) return gui_false;
     if (!in->mouse_down && in->mouse_clicked) {
         const gui_int clicked_x = in->mouse_clicked_pos.x;
@@ -370,6 +421,7 @@ gui_button(struct gui_draw_list *list, const struct gui_input *in,
     }
     gui_rectf(list, x, y, w, h, bg);
     gui_rect(list, x, y, w, h, fg);
+    gui_text(list, font, x + pad, y + pad, w - 2 * pad, h - 2 * pad, fg, t, l);
     return ret;
 }
 
