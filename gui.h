@@ -7,11 +7,12 @@
 #define TINY_GUI_H_
 
 #define GUI_UTF_SIZE 4
-#define GUI_INPUT_MAX 16
-#define GUI_GLYPHES_MAX 512
+#define GUI_INPUT_MAX 8
 
 typedef int gui_int;
+typedef int gui_short;
 typedef int gui_bool;
+typedef unsigned int gui_flags;
 typedef unsigned char gui_char;
 typedef float gui_float;
 typedef void* gui_texture;
@@ -43,6 +44,7 @@ struct gui_draw_command {
 struct gui_draw_list {
     struct gui_draw_command *begin;
     struct gui_draw_command *end;
+    gui_size vertex_count;
     gui_byte *memory;
     gui_size size;
     gui_size needed;
@@ -74,11 +76,34 @@ struct gui_input {
 };
 
 struct gui_font_glyph {
-    gui_glyph glpyh;
+    gui_int code;
+    gui_short xadvance;
+    gui_short width, height;
+    gui_float xoff, yoff;
+    struct gui_texCoord uv[2];
 };
 
 struct gui_font {
-    struct gui_font_glyph glyphes[GUI_GLYPHES_MAX];
+    gui_short height;
+    gui_float scale;
+    gui_texture texture;
+    struct gui_vec2 tex_size;
+    struct gui_font_glyph *glyphes;
+    gui_size glyph_count;
+    const struct gui_font_glyph *fallback;
+};
+
+enum gui_panel_flags {
+    GUI_PANEL_HEADER = 0x01,
+    GUI_PANEL_MINIMIZABLE = 0x02,
+    GUI_PANEL_CLOSEABLE = 0x04,
+    GUI_PANEL_SCALEABLE = 0x08,
+    GUI_PANEL_SCROLLBAR = 0x10
+};
+
+struct gui_panel {
+    gui_flags flags;
+    gui_int at_x, at_y;
 };
 
 void gui_input_begin(struct gui_input *in);
@@ -99,6 +124,7 @@ gui_int gui_button(struct gui_draw_list *list, const struct gui_input *in,
                     gui_int x, gui_int y, gui_int w, gui_int h, gui_int pad,
                     const char *str, gui_int len);
 gui_int gui_toggle(struct gui_draw_list *list, const struct gui_input *in,
+                    const struct gui_font *font,
                     struct gui_color bg, struct gui_color fg,
                     gui_int x, gui_int y, gui_int w, gui_int h, gui_int pad,
                     const char *str, gui_int len, gui_int active);

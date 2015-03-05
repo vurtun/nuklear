@@ -193,6 +193,7 @@ gui_push_command(struct gui_draw_list *list, gui_size count,
     memory += sizeof(struct gui_draw_command);
     memory += sizeof(struct gui_vertex) * count;
     list->needed += memory;
+    list->vertex_count += count;
     current = (gui_byte*)list->end - (gui_byte*)list->begin;
     if (list->size <= (current + memory))
         return NULL;
@@ -352,7 +353,7 @@ gui_end(struct gui_draw_list *list)
 
 gui_int
 gui_button(struct gui_draw_list *list, const struct gui_input *in,
-    struct gui_color bg, struct gui_color fg,
+    const struct gui_font *font, struct gui_color bg, struct gui_color fg,
     gui_int x, gui_int y, gui_int w, gui_int h, gui_int pad,
     const char *str, gui_int len)
 {
@@ -377,10 +378,9 @@ gui_slider(struct gui_draw_list *list, const struct gui_input *in,
 {
     gui_int mouse_x, mouse_y;
     gui_int clicked_x, clicked_y;
-
-    gui_float cursor_w;
     gui_int cursor_x;
     gui_int cursor_y;
+    gui_float cursor_w;
     gui_int cursor_h;
 
     if (step == 0.0f) return value;
@@ -428,12 +428,10 @@ gui_progress(struct gui_draw_list *list, const struct gui_input *in,
     gui_int x, gui_int y, gui_int w, gui_int h, gui_int pad,
     gui_size value, gui_size max, gui_bool modifyable)
 {
-    gui_int mouse_x, mouse_y;
     gui_float scale;
-    gui_int cursor_x;
-    gui_int cursor_y;
-    gui_int cursor_w;
-    gui_int cursor_h;
+    gui_int mouse_x, mouse_y;
+    gui_int cursor_x, cursor_y;
+    gui_int cursor_w, cursor_h;
 
     if (!list || !in) return 0;
     mouse_x = in->mouse_pos.x;
@@ -466,33 +464,23 @@ gui_scroll(struct gui_draw_list *list, const struct gui_input *in,
     gui_int x, gui_int y, gui_int w, gui_int h,
     gui_int offset, gui_int dst)
 {
-    gui_int mouse_x;
-    gui_int mouse_y;
-    gui_int prev_x;
-    gui_int prev_y;
+    gui_int mouse_x, mouse_y;
+    gui_int prev_x, prev_y;
 
     gui_bool up, down;
-    gui_int button_size;
-    gui_int button_half;
-    gui_int button_y;
-    gui_int bar_h;
-    gui_int bar_y;
+    gui_int button_size, button_half, button_y;
+    gui_int bar_h, bar_y;
 
     gui_float ratio;
     gui_float off;
-    gui_int cursor_x;
-    gui_int cursor_y;
-    gui_int cursor_w;
-    gui_int cursor_h;
-    gui_int cursor_px;
-    gui_int cursor_py;
-    gui_bool inscroll;
-    gui_bool incursor;
+    gui_int cursor_x, cursor_y;
+    gui_int cursor_w, cursor_h;
+    gui_int cursor_px, cursor_py;
+    gui_bool inscroll, incursor;
 
     gui_int pad;
     gui_int xoff, yoff, boff;
-    gui_int xpad, ypad;
-    gui_int xmid;
+    gui_int xpad, ypad, xmid;
 
     if (!list || !in) return 0;
     gui_rectf(list, x, y, w, h, bg);
@@ -527,8 +515,8 @@ gui_scroll(struct gui_draw_list *list, const struct gui_input *in,
     yoff = y + (button_size - pad);
     boff = button_y + (button_size - pad);
 
-    up = gui_button(list, in, fg, bg, x, y, button_size, button_size, 0, "", 0);
-    down = gui_button(list,in,fg,bg,x,button_y,button_size,button_size,0,"", 0);
+    up = gui_button(list, in, NULL, fg, bg, x, y, button_size, button_size, 0, "", 0);
+    down = gui_button(list,in,NULL, fg,bg,x,button_y,button_size,button_size,0,"", 0);
     gui_trianglef(list, xmid, y + pad, xoff, yoff, xpad, yoff, bg);
     gui_trianglef(list, xpad, ypad, xoff, ypad, xmid, boff, bg);
 
