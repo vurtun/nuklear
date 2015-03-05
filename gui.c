@@ -143,10 +143,6 @@ gui_input_key(struct gui_input *in, enum gui_keys key, gui_int down)
 {
     if (!in) return;
     in->keys[key] = down;
-    if (key == GUI_KEY_SHIFT)
-        in->shift = gui_true;
-    if (key == GUI_KEY_CTRL)
-        in->ctrl = gui_true;
 }
 
 void
@@ -311,6 +307,13 @@ gui_rectf(struct gui_draw_list *list, gui_float x, gui_float y,
     gui_vertex(cmd, x, y, col);
     gui_vertex(cmd, x + w, y + h, col);
     gui_vertex(cmd, x, y + h, col);
+}
+
+static void
+gui_text(const struct gui_draw_list *list, gui_float x, gui_float y,
+        gui_float w, gui_float h, const gui_char *txt, gui_size len)
+{
+
 }
 
 void
@@ -524,8 +527,7 @@ gui_scroll(struct gui_draw_list *list, const struct gui_input *in,
     cursor_py = cursor_y + cursor_h;
     inscroll = INBOX(mouse_x, mouse_y, x, y, x + w, y + h);
     incursor = INBOX(prev_x, prev_y, cursor_x, cursor_y, cursor_px, cursor_py);
-    if (in->mouse_down && inscroll && incursor)
-    {
+    if (in->mouse_down && inscroll && incursor) {
         const gui_float pixel = in->mouse_delta.y;
         const gui_float delta = (pixel/(gui_float)bar_h) * (gui_float)dst;
         offset = CLAMP(0, offset + delta, dst - bar_h);

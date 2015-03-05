@@ -38,6 +38,7 @@
 #define CLAMP(i,v,x) (MAX(MIN(v,x), i))
 #define LEN(a)(sizeof(a)/sizeof(a)[0])
 #define UNUSED(a)((void)(a))
+#define glerror() glerror_(__FILE__, __LINE__)
 
 /* types  */
 struct XWindow {
@@ -207,6 +208,24 @@ ldfile(const char* path, int flags, size_t* siz)
     return buf;
 }
 
+static void
+glerror_(const char *file, int line)
+{
+    const GLenum code = glGetError();
+    if (code == GL_INVALID_ENUM)
+        fprintf(stdout, "[GL] Error: (%s:%d) invalid value!\n", file, line);
+    else if (code == GL_INVALID_OPERATION)
+        fprintf(stdout, "[GL] Error: (%s:%d) invalid operation!\n", file, line);
+    else if (code == GL_INVALID_FRAMEBUFFER_OPERATION)
+        fprintf(stdout, "[GL] Error: (%s:%d) invalid frame op!\n", file, line);
+    else if (code == GL_OUT_OF_MEMORY)
+        fprintf(stdout, "[GL] Error: (%s:%d) out of memory!\n", file, line);
+    else if (code == GL_STACK_UNDERFLOW)
+        fprintf(stdout, "[GL] Error: (%s:%d) stack underflow!\n", file, line);
+    else if (code == GL_STACK_OVERFLOW)
+        fprintf(stdout, "[GL] Error: (%s:%d) stack overflow!\n", file, line);
+}
+
 static struct gui_font*
 ldfont(const char *name, unsigned char height)
 {
@@ -220,9 +239,7 @@ ldfont(const char *name, unsigned char height)
     short i = 0;
     uint32_t bpp;
     short max_height = 0;
-
-    uint32_t iheight;
-    uint32_t iwidth;
+    uint32_t ioff;
 
     /* header */
     unsigned char *buffer = (unsigned char*)ldfile(name, O_RDONLY, &size);
@@ -262,17 +279,19 @@ ldfont(const char *name, unsigned char height)
     header = iter;
     assert(header[0] == 'B');
     assert(header[1] == 'M');
+    ioff = *(uint32_t*)(&header[0x0A]);
 
-    data = header + 54;
+    data = iter + ioff;
     glGenTextures(1, &texture);
     convert.ptr = texture;
     glBindTexture(GL_TEXTURE_2D, texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex_width, tex_height, 0,
-                GL_RGBA, GL_UNSIGNED_BYTE, data);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                GL_BGRA, GL_UNSIGNED_BYTE, data);
+    glerror();
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
     /* font */
     font = xcalloc(sizeof(struct gui_font), 1);
@@ -326,20 +345,6 @@ draw(struct GUI *con, int width, int height, const struct gui_draw_list *list)
     glPushMatrix();
     glLoadIdentity();
 
-    glBindTexture(GL_TEXTURE_2D, (unsigned long)con->font->texture);
-    glColor4ub(255,255,255,255);
-    glBegin(GL_QUADS);
-    glTexCoord3d(1, 1, 0);
-    glVertex2f(300, 300);
-    glTexCoord2d(0, 1);
-    glVertex2f(50, 300);
-    glTexCoord2d(0, 0);
-    glVertex2f(50, 50);
-    glTexCoord2d(1, 0);
-    glVertex2f(300, 50);
-    glEnd();
-
-#if 0
     cmd = list->begin;
     while (cmd) {
         const int x = (int)cmd->clip_rect.x;
@@ -355,7 +360,6 @@ draw(struct GUI *con, int width, int height, const struct gui_draw_list *list)
         glDrawArrays(GL_TRIANGLES, 0, cmd->vertex_count);
         cmd = gui_next(list, cmd);
     }
-#endif
 
     glDisableClientState(GL_COLOR_ARRAY);
     glDisableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -411,8 +415,6 @@ main(int argc, char *argv[])
     XMapWindow(xw.dpy, xw.win);
     XFlush(xw.dpy);
     XSync(xw.dpy, False);
-    gui.win = &xw;
-    gui.font = ldfont("mono.font", 16);
 
     /* OpenGL */
     xw.glc = glXCreateContext(xw.dpy, xw.vi, NULL, GL_TRUE);
@@ -420,6 +422,8 @@ main(int argc, char *argv[])
     buffer = xcalloc(MAX_VERTEX_BUFFER, 1);
 
     xw.running = 1;
+    gui.win = &xw;
+    gui.font = ldfont("mono.font", 16);
     while (xw.running) {
         XEvent ev;
         started = timestamp();

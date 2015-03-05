@@ -65,8 +65,6 @@ struct gui_input {
     gui_bool keys[GUI_KEY_MAX];
     gui_glyph text[GUI_INPUT_MAX];
     gui_size glyph_count;
-    gui_bool shift;
-    gui_bool ctrl;
     struct gui_vec2 mouse_pos;
     struct gui_vec2 mouse_prev;
     struct gui_vec2 mouse_delta;
