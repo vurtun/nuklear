@@ -1,5 +1,5 @@
 # Install
-BIN = x11
+BIN = opengl
 
 # Compiler
 CC = gcc
@@ -15,7 +15,7 @@ CFLAGS += -Wshadow -Wpointer-arith -Wcast-qual -Wmissing-prototypes
 CFLAGS += -Wswitch-default -Wundef -Wstrict-overflow=5
 CFLAGS += -Winit-self -Wstrict-aliasing -Wunused
 
-SRC = gui.c x11.c
+SRC = gui.c opengl.c
 OBJ = $(SRC:.c=.o)
 
 # Modes

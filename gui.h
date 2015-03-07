@@ -7,7 +7,7 @@
 #define TINY_GUI_H_
 
 #define GUI_UTF_SIZE 4
-#define GUI_INPUT_MAX 8
+#define GUI_INPUT_MAX 16
 
 typedef int gui_int;
 typedef short gui_short;
@@ -18,7 +18,7 @@ typedef unsigned char gui_char;
 typedef float gui_float;
 typedef void* gui_texture;
 typedef unsigned char gui_byte;
-typedef unsigned long gui_flag;
+typedef unsigned int gui_flag;
 typedef unsigned long gui_size;
 typedef gui_char gui_glyph[GUI_UTF_SIZE];
 
@@ -42,7 +42,7 @@ struct gui_draw_command {
     gui_texture texture;
 };
 
-struct gui_draw_list {
+struct gui_draw_queue {
     struct gui_draw_command *begin;
     struct gui_draw_command *end;
     gui_size vertex_count;
@@ -64,8 +64,8 @@ enum gui_keys {
 
 struct gui_input {
     gui_bool keys[GUI_KEY_MAX];
-    gui_glyph text[GUI_INPUT_MAX];
-    gui_size glyph_count;
+    gui_char text[GUI_INPUT_MAX];
+    gui_size text_len;
     struct gui_vec2 mouse_pos;
     struct gui_vec2 mouse_prev;
     struct gui_vec2 mouse_delta;
@@ -112,34 +112,34 @@ void gui_input_button(struct gui_input *in, gui_int x, gui_int y, gui_int down);
 void gui_input_char(struct gui_input *in, gui_glyph glyph);
 void gui_input_end(struct gui_input *in);
 
-void gui_begin(struct gui_draw_list *list, gui_byte *memory, gui_size size);
-gui_size gui_end(struct gui_draw_list *list);
-const struct gui_draw_command *gui_next(const struct gui_draw_list *list,
+void gui_begin(struct gui_draw_queue *que, gui_byte *memory, gui_size size);
+gui_size gui_end(struct gui_draw_queue *que);
+const struct gui_draw_command *gui_next(const struct gui_draw_queue *que,
                                         const struct gui_draw_command*);
 
-gui_int gui_button(struct gui_draw_list *list, const struct gui_input *in,
+gui_int gui_button(struct gui_draw_queue *que, const struct gui_input *in,
                     const struct gui_font *font,
                     struct gui_color bg, struct gui_color fg,
                     gui_int x, gui_int y, gui_int w, gui_int h, gui_int pad,
                     const char *str, gui_int len);
-gui_int gui_toggle(struct gui_draw_list *list, const struct gui_input *in,
+gui_int gui_toggle(struct gui_draw_queue *que, const struct gui_input *in,
                     const struct gui_font *font,
                     struct gui_color bg, struct gui_color fg,
                     gui_int x, gui_int y, gui_int w, gui_int h, gui_int pad,
                     const char *str, gui_int len, gui_int active);
-gui_int gui_slider(struct gui_draw_list *list, const struct gui_input *in,
+gui_int gui_slider(struct gui_draw_queue *que, const struct gui_input *in,
                     struct gui_color bg, struct gui_color fg,
                     gui_int x, gui_int y, gui_int w, gui_int h, gui_int pad,
                     gui_float min, gui_float v, gui_float max, gui_float step);
-gui_int gui_progress(struct gui_draw_list *list, const struct gui_input *in,
+gui_int gui_progress(struct gui_draw_queue *que, const struct gui_input *in,
                     struct gui_color bg, struct gui_color fg,
                     gui_int x, gui_int y, gui_int w, gui_int h, gui_int pad,
                     gui_size cur, gui_size max, gui_bool modifyable);
-gui_int gui_scroll(struct gui_draw_list *list, const struct gui_input *in,
+gui_int gui_scroll(struct gui_draw_queue *que, const struct gui_input *in,
                     struct gui_color bg, struct gui_color fg,
                     gui_int x, gui_int y, gui_int w, gui_int h,
                     gui_int offset, gui_int dst);
-gui_int gui_input(struct gui_draw_list *list, const struct gui_input *in,
+gui_int gui_input(struct gui_draw_queue *que, const struct gui_input *in,
                     const struct gui_font *font,
                     struct gui_color bg, struct gui_color fg,
                     gui_int x, gui_int y, gui_int w, gui_int h,
