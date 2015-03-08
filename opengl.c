@@ -72,9 +72,10 @@ static void brelease(struct GUI*, XEvent*);
 static void bmotion(struct GUI*, XEvent*);
 static void resize(struct GUI*, XEvent*);
 
+static GLuint ldbmp(gui_byte*, uint32_t*, uint32_t*);
 static struct gui_font *ldfont(const char*, unsigned char);
 static void delfont(struct gui_font *font);
-static void draw(struct GUI*, int, int , const struct gui_draw_queue*);
+static void draw(int, int, const struct gui_draw_queue*);
 
 /* gobals */
 static void
@@ -302,7 +303,7 @@ ldfont(const char *name, unsigned char height)
         glyphes[id].yoff = *(float*)&iter[14];
         glyphes[id].xadvance =  *(float*)&iter[18];
         glyphes[id].uv[0].u = (float)x/(float)tex_width;
-        glyphes[id].uv[0].v = (float)(y)/(float)tex_height;
+        glyphes[id].uv[0].v = (float)y/(float)tex_height;
         glyphes[id].uv[1].u = (float)(x+w)/(float)tex_width;
         glyphes[id].uv[1].v = (float)(y+h)/(float)tex_height;
         if (glyphes[id].height > max_height) max_height = glyphes[id].height;
@@ -337,7 +338,7 @@ delfont(struct gui_font *font)
 }
 
 static void
-draw(struct GUI *con, int width, int height, const struct gui_draw_queue *que)
+draw(int width, int height, const struct gui_draw_queue *que)
 {
     const struct gui_draw_command *cmd;
     static const size_t v = sizeof(struct gui_vertex);
@@ -394,6 +395,7 @@ draw(struct GUI *con, int width, int height, const struct gui_draw_queue *que)
 int
 main(int argc, char *argv[])
 {
+    GLenum err;
     struct XWindow xw;
     struct GUI gui;
     long dt, started;
@@ -401,9 +403,7 @@ main(int argc, char *argv[])
     gui_size buffer_size = MAX_VERTEX_BUFFER;
     const struct gui_color colorA = {100, 100, 100, 255};
     const struct gui_color colorB = {45, 45, 45, 255};
-    const struct gui_color colorC = {0, 0, 0, 255};
     static GLint att[] = {GLX_RGBA, GLX_DEPTH_SIZE,24, GLX_DOUBLEBUFFER, None};
-    GLenum err;
 
     gui_float slider = 5.0f;
     gui_float prog = 60.0f;
@@ -462,7 +462,7 @@ main(int argc, char *argv[])
 
         /* ------------------------- GUI --------------------------*/
         gui_begin(&gui.out, buffer, MAX_VERTEX_BUFFER);
-        if (gui_button(&gui.out, &gui.in, gui.font, colorA, colorC, 50,50,150,30,5,"button",6))
+        if (gui_button(&gui.out, &gui.in, gui.font, colorA, colorB, 50,50,150,30,5,"button",6))
             fprintf(stdout, "Button pressed!\n");
         slider = gui_slider(&gui.out, &gui.in, colorA, colorB,
                             50, 100, 150, 30, 2, 0.0f, slider, 10.0f, 1.0f);
@@ -479,7 +479,7 @@ main(int argc, char *argv[])
         /* Draw */
         glClearColor(45.0f/255.0f,45.0f/255.0f,45.0f/255.0f,1);
         glClear(GL_COLOR_BUFFER_BIT);
-        draw(&gui, xw.gwa.width, xw.gwa.height, &gui.out);
+        draw(xw.gwa.width, xw.gwa.height, &gui.out);
         glXSwapBuffers(xw.dpy, xw.win);
 
         /* Timing */

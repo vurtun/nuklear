@@ -93,16 +93,50 @@ struct gui_font {
 };
 
 enum gui_panel_flags {
-    GUI_PANEL_HEADER = 0x01,
-    GUI_PANEL_MINIMIZABLE = 0x02,
-    GUI_PANEL_CLOSEABLE = 0x04,
-    GUI_PANEL_SCALEABLE = 0x08,
-    GUI_PANEL_SCROLLBAR = 0x10
+    GUI_PANEL_BORDER = 0x01,
+    GUI_PANEL_TITLEBAR = 0x02,
+    GUI_PANEL_MINIMIZABLE = 0x04,
+    GUI_PANEL_CLOSEABLE = 0x08,
+    GUI_PANEL_SCALEABLE = 0x10,
+    GUI_PANEL_SCROLLBAR = 0x20
+};
+
+enum gui_colors {
+    GUI_COLOR_TEXT,
+    GUI_COLOR_PANEL,
+    GUI_COLOR_BORDER,
+    GUI_COLOR_FRAME,
+    GUI_COLOR_TITLEBAR,
+    GUI_COLOR_BUTTON,
+    GUI_COLOR_BUTTON_HOVER,
+    GUI_COLOR_BUTTON_BORDER,
+    GUI_COLOR_TOGGLE,
+    GUI_COLOR_TOGGLE_ACTIVE,
+    GUI_COLOR_SCROLL,
+    GUI_COLOR_SCROLL_CURSOR,
+    GUI_COLOR_SLIDER,
+    GUI_COLOR_SLIDER_CURSOR,
+    GUI_COLOR_PROGRESS,
+    GUI_COLOR_PROGRESS_CURSOR,
+    GUI_COLOR_COUNT
+};
+
+struct gui_config {
+    gui_float global_alpha;
+    struct gui_vec2 window_padding;
+    struct  gui_vec2 window_min_size;
+    struct gui_vec2 frame_padding;
+    struct gui_vec2 item_spacing;
+    struct gui_vec2 item_padding;
+    gui_int scroll_width;
+    struct gui_color colors[GUI_COLOR_COUNT];
 };
 
 struct gui_panel {
     gui_flags flags;
+    gui_int x, y;
     gui_int at_x, at_y;
+    gui_int width;
 };
 
 void gui_input_begin(struct gui_input *in);
@@ -115,7 +149,7 @@ void gui_input_end(struct gui_input *in);
 void gui_begin(struct gui_draw_queue *que, gui_byte *memory, gui_size size);
 gui_size gui_end(struct gui_draw_queue *que);
 const struct gui_draw_command *gui_next(const struct gui_draw_queue *que,
-                                        const struct gui_draw_command*);
+                                        const struct gui_draw_command *cmd);
 
 gui_int gui_button(struct gui_draw_queue *que, const struct gui_input *in,
                     const struct gui_font *font,
@@ -127,7 +161,7 @@ gui_int gui_toggle(struct gui_draw_queue *que, const struct gui_input *in,
                     struct gui_color bg, struct gui_color fg,
                     gui_int x, gui_int y, gui_int w, gui_int h, gui_int pad,
                     const char *str, gui_int len, gui_int active);
-gui_int gui_slider(struct gui_draw_queue *que, const struct gui_input *in,
+gui_float gui_slider(struct gui_draw_queue *que, const struct gui_input *in,
                     struct gui_color bg, struct gui_color fg,
                     gui_int x, gui_int y, gui_int w, gui_int h, gui_int pad,
                     gui_float min, gui_float v, gui_float max, gui_float step);
@@ -144,5 +178,18 @@ gui_int gui_input(struct gui_draw_queue *que, const struct gui_input *in,
                     struct gui_color bg, struct gui_color fg,
                     gui_int x, gui_int y, gui_int w, gui_int h,
                     gui_char *buffer, gui_int *len, gui_bool active);
+
+gui_int gui_panel_begin(struct gui_panel *panel, const char *title, gui_flags f,
+                        const struct gui_config *c, const struct gui_input *i);
+gui_int gui_panel_button(struct gui_panel *panel, const char *str, gui_int len);
+gui_int gui_panel_toggle(struct gui_panel *panel, const char *str, gui_int len,
+                        gui_int active);
+gui_float gui_panel_slider(struct gui_panel *panel, gui_float min, gui_float v,
+                        gui_float max, gui_float step);
+gui_float gui_panel_progress(struct gui_panel *panel, gui_size cur, gui_size max,
+                        gui_bool modifyable);
+gui_int gui_panel_input(struct gui_panel *panel, gui_char *buffer, gui_int *len,
+                        gui_bool active);
+void gui_panel_end(struct gui_panel *panel);
 
 #endif

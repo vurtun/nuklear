@@ -181,15 +181,18 @@ gui_font_text_width(const struct gui_font *font, const gui_char *t, gui_size l)
     gui_long unicode;
     gui_size len = 0;
     const struct gui_font_glyph *g;
-    gui_size text_len = utf_decode(t, &unicode, l);
+    gui_size text_len;
+
+    if (!t || !l) return 0;
+    text_len = utf_decode(t, &unicode, l);
     while (text_len < l) {
         if (unicode == UTF_INVALID) return 0;
         g = (unicode < font->glyph_count) ? &font->glyphes[unicode] : font->fallback;
         g = (g->code == 0) ? font->fallback : g;
-        len += g->width + g->xadvance;
+        len += g->xadvance * font->scale;
         text_len += utf_decode(t + text_len, &unicode, l - text_len);
     }
-    return (gui_size)((gui_float)len * font->scale);
+    return len;
 }
 
 static struct gui_draw_command*
@@ -250,10 +253,8 @@ gui_vertex_line(struct gui_draw_command* cmd, gui_float x0, gui_float y0,
     vec2_load(b, x1, y1);
     vec2_sub(d, b, a);
 
-    if (d.x == 0.0f && d.y == 0.0f)
-        return;
-
-    len = 0.5f / vec2_len(d);
+    len = vec2_len(d);
+    if (len) len = 0.5f / vec2_len(d);
     vec2_muls(hn, d, len);
     vec2_load(hp0, +hn.y, -hn.x);
     vec2_load(hp1, -hn.y, +hn.x);
@@ -353,7 +354,7 @@ gui_text(struct gui_draw_queue *que, const struct gui_font *font, gui_float x,
             font->fallback;
         g = (g->code == 0) ? font->fallback : g;
 
-        y1 = y;/*(gui_float)(y + (g->yoff * font->scale));*/
+        y1 = (gui_float)(y + (g->yoff * font->scale));
         y2 = (gui_float)(y1 + (gui_float)g->height * font->scale);
         x1 = (gui_float)(x + g->xoff * font->scale);
         x2 = (gui_float)(x1 + (gui_float)g->width * font->scale);
@@ -405,6 +406,7 @@ gui_end(struct gui_draw_queue *que)
     if (!que) return 0;
     needed = que->needed;
     que->needed = 0;
+    que->vertex_count = 0;
     return needed;
 }
 
@@ -414,8 +416,12 @@ gui_button(struct gui_draw_queue *que, const struct gui_input *in,
     gui_int x, gui_int y, gui_int w, gui_int h, gui_int pad,
     const char *str, gui_int l)
 {
+    gui_int text_width;
+    gui_int label_x, label_y;
+    gui_int label_w, label_h;
     gui_int ret = gui_false;
     const gui_char *t = (const gui_char*)str;
+
     if (!que || !in) return gui_false;
     if (!in->mouse_down && in->mouse_clicked) {
         const gui_int clicked_x = in->mouse_clicked_pos.x;
@@ -423,9 +429,24 @@ gui_button(struct gui_draw_queue *que, const struct gui_input *in,
         if (INBOX(clicked_x, clicked_y, x, y, x+w, y+h))
             ret = gui_true;
     }
+
     gui_rectf(que, x, y, w, h, bg);
-    gui_rect(que, x+1, y, w-1, h, fg);
-    gui_text(que, font, x + pad, y + pad, w - 2 * pad, h - 2 * pad, fg, t, l);
+    gui_rect(que, x+1, y+1, w-1, h-1, fg);
+    if (!font || !str || !l) return ret;
+
+    text_width = gui_font_text_width(font, t, l);
+    if (text_width > (w - 2 * pad)) {
+        label_x = x + pad;
+        label_y = y + pad;
+        label_w = w - 2 * pad;
+        label_h = h - 2 * pad;
+    } else {
+        label_w = w - 2 * pad;
+        label_h = h - 2 * pad;
+        label_x = x + (label_w - text_width) / 2;
+        label_y = y + (label_h - font->height) / 2;
+    }
+    gui_text(que, font, label_x, label_y, label_w, label_h, fg, t, l);
     return ret;
 }
 
@@ -435,8 +456,8 @@ gui_toggle(struct gui_draw_queue *que, const struct gui_input *in,
     gui_int x, gui_int y, gui_int w, gui_int h, gui_int pad,
     const char *str, gui_int len, gui_int active)
 {
-    gui_int select_x, select_y;
     gui_int select_size;
+    gui_int select_x, select_y;
     gui_int cursor_x, cursor_y;
     gui_int cursor_pad, cursor_size;
     gui_int label_x, label_w;
@@ -468,12 +489,12 @@ gui_toggle(struct gui_draw_queue *que, const struct gui_input *in,
     }
 
     gui_rectf(que, select_x, select_y, select_size, select_size, bg);
-    if (!active) gui_rectf(que, cursor_x, cursor_y, cursor_size, cursor_size, fg);
+    if (active) gui_rectf(que, cursor_x, cursor_y, cursor_size, cursor_size, fg);
     gui_text(que, font, label_x, y + pad, label_w, h - 2 * pad, white, t, len);
     return active;
 }
 
-gui_int
+gui_float
 gui_slider(struct gui_draw_queue *que, const struct gui_input *in,
     struct gui_color bg, struct gui_color fg,
     gui_int x, gui_int y, gui_int w, gui_int h, gui_int pad,
@@ -618,8 +639,8 @@ gui_scroll(struct gui_draw_queue *que, const struct gui_input *in,
     yoff = y + (button_size - pad);
     boff = button_y + (button_size - pad);
 
-    up = gui_button(que, in, NULL, fg, bg, x, y, button_size, button_size, 0, "", 0);
-    down = gui_button(que,in,NULL, fg,bg,x,button_y,button_size,button_size,0,"", 0);
+    up = gui_button(que, in, NULL, fg, bg, x, y, button_size, button_size, 0, NULL, 0);
+    down = gui_button(que, in, NULL, fg, bg, x, button_y, button_size, button_size, 0,NULL, 0);
     gui_trianglef(que, xmid, y + pad, xoff, yoff, xpad, yoff, bg);
     gui_trianglef(que, xpad, ypad, xoff, ypad, xmid, boff, bg);
 
@@ -643,5 +664,13 @@ gui_scroll(struct gui_draw_queue *que, const struct gui_input *in,
     gui_rectf(que, cursor_x, cursor_y, cursor_w, cursor_h, fg);
     gui_rect(que, cursor_x+1, cursor_y, cursor_w-1, cursor_h, bg);
     return offset;
+}
+
+gui_int gui_input(struct gui_draw_queue *que, const struct gui_input *in,
+    const struct gui_font *font, struct gui_color bg, struct gui_color fg,
+    gui_int x, gui_int y, gui_int w, gui_int h,
+    gui_char *buffer, gui_int *len, gui_bool active)
+{
+    return active;
 }
 
