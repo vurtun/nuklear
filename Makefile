@@ -8,7 +8,7 @@ DCC = clang
 # Flags
 CFLAGS = -std=c89 -pedantic-errors -Wno-deprecated-declarations -D_POSIX_C_SOURCE=200809L
 CFLAGS += -g -Wall -Wextra -Werror -Wformat -Wunreachable-code
-CFLAGS += -Winline -Wshadow -Wwrite-strings -Wno-unused-variable -Wno-unused-parameter -Wno-unused-function
+CFLAGS += -Winline -Wshadow -Wwrite-strings
 CFLAGS += -Wstrict-prototypes -Wold-style-definition
 CFLAGS += -Wredundant-decls -Wnested-externs -Wmissing-include-dirs
 CFLAGS += -Wshadow -Wpointer-arith -Wcast-qual -Wmissing-prototypes

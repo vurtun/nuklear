@@ -32,6 +32,7 @@
 #define WIN_HEIGHT  600
 #define DTIME       33
 #define MAX_VERTEX_BUFFER (16 * 1024)
+#define INPUT_MAX 64
 
 #define MIN(a,b)((a) < (b) ? (a) : (b))
 #define MAX(a,b)((a) < (b) ? (b) : (a))
@@ -133,6 +134,9 @@ kpress(struct GUI *gui, XEvent* e)
         gui_input_key(&gui->in, GUI_KEY_ENTER, gui_true);
     else if (*keysym == XK_BackSpace)
         gui_input_key(&gui->in, GUI_KEY_BACKSPACE, gui_true);
+    else if ((*keysym >= 'a' && *keysym <= 'z') ||
+            (*keysym >= '0' && *keysym <= '9'))
+        gui_input_char(&gui->in, (unsigned char*)keysym);
 }
 
 static void
@@ -167,7 +171,7 @@ brelease(struct GUI *con, XEvent *evt)
 {
     const float x = evt->xbutton.x;
     const float y = evt->xbutton.y;
-    struct XWindow *xw = con->win;
+    UNUSED(evt);
     if (evt->xbutton.button == Button1)
         gui_input_button(&con->in, x, y, gui_false);
 }
@@ -177,7 +181,7 @@ bmotion(struct GUI *gui, XEvent *evt)
 {
     const gui_int x = evt->xbutton.x;
     const gui_int y = evt->xbutton.y;
-    struct XWindow *xw = gui->win;
+    UNUSED(evt);
     gui_input_motion(&gui->in, x, y);
 }
 
@@ -185,6 +189,7 @@ static void
 resize(struct GUI *con, XEvent* evt)
 {
     struct XWindow *xw = con->win;
+    UNUSED(evt);
     XGetWindowAttributes(xw->dpy, xw->win, &xw->gwa);
     glViewport(0, 0, xw->gwa.width, xw->gwa.height);
 }
@@ -223,12 +228,16 @@ ldbmp(gui_byte *data, uint32_t *width, uint32_t *height)
     int32_t i;
 
     header = data;
-    if (!width || !height) die("[BMP]: width or height is NULL!");
-    if (header[0] != 'B' || header[1] != 'M') die("[BMP]: invalid file");
+    if (!width || !height)
+        die("[BMP]: width or height is NULL!");
+    if (header[0] != 'B' || header[1] != 'M')
+        die("[BMP]: invalid file");
 
     *width = *(uint32_t*)&(header[0x12]);
     *height = *(uint32_t*)&(header[0x12]);
     ioff = *(uint32_t*)(&header[0x0A]);
+    if (*width <= 0 || *height <= 0)
+        die("[BMP]: invalid image size");
 
     data = data + ioff;
     reader = data;
@@ -237,15 +246,10 @@ ldbmp(gui_byte *data, uint32_t *width, uint32_t *height)
     for (i = *height-1; i >= 0; i--) {
         writer = target + (i * *width * 4);
         for (j = 0; j < *width; j++) {
-            gui_byte a = *(reader + (j * 4) + 0);
-            gui_byte r = *(reader + (j * 4) + 1);
-            gui_byte g = *(reader + (j * 4) + 2);
-            gui_byte b = *(reader + (j * 4) + 3);
-
-            *writer++ = r;
-            *writer++ = g;
-            *writer++ = b;
-            *writer++ = a;
+            *writer++ = *(reader + (j * 4) + 1);
+            *writer++ = *(reader + (j * 4) + 2);
+            *writer++ = *(reader + (j * 4) + 3);
+            *writer++ = *(reader + (j * 4) + 0);
             *writer += 4;
         }
         reader += *width * 4;
@@ -395,23 +399,111 @@ draw(int width, int height, const struct gui_draw_queue *que)
 int
 main(int argc, char *argv[])
 {
-    GLenum err;
     struct XWindow xw;
     struct GUI gui;
     long dt, started;
     gui_byte *buffer;
-    gui_size buffer_size = MAX_VERTEX_BUFFER;
+    const gui_size buffer_size = MAX_VERTEX_BUFFER;
     const struct gui_color colorA = {100, 100, 100, 255};
     const struct gui_color colorB = {45, 45, 45, 255};
+    const struct gui_color colorC = {255, 255, 255, 255};
+    const struct gui_color colorD = {255, 0, 0, 255};
     static GLint att[] = {GLX_RGBA, GLX_DEPTH_SIZE,24, GLX_DOUBLEBUFFER, None};
 
-    gui_float slider = 5.0f;
-    gui_float prog = 60.0f;
-    gui_float offset = 300;
-    gui_int select = gui_false;
-    const char *selection[] = {"Inactive", "Active"};
+    struct gui_button button;
+    struct gui_slider slider;
+    struct gui_progress prog;
+    struct gui_toggle toggle;
+    struct gui_input_field field;
+    struct gui_plot plot;
+    struct gui_histo histo;
+    struct gui_scroll scroll;
 
-    /* x11 */
+    const char *selection[] = {"Inactive", "Active"};
+    gui_char input[INPUT_MAX];
+    gui_int input_len = 0;
+    const gui_float values[] = {10.0f, 12.0f, 25.0f, 15.0f, 18.0f, 30.0f, 32.0f, 15.0f};
+    strcpy((char*)input, "input");
+    input_len = strlen((char*)input);
+
+    button.x = 50, button.y = 50;
+    button.w = 150, button.h = 30;
+    button.pad_x = 5, button.pad_y = 5;
+    button.text = "button";
+    button.length = 6;
+    button.background = colorB;
+    button.foreground = colorA;
+    button.font = colorC;
+    button.highlight = colorA;
+
+    slider.x = 50, slider.y = 100;
+    slider.w = 150, slider.h = 30;
+    slider.pad_x = 2, slider.pad_y = 2;
+    slider.min = 0.0f;
+    slider.value = 5.0f;
+    slider.max = 10.0f;
+    slider.step = 1.0f;
+    slider.foreground = colorB;
+    slider.background = colorA;
+
+    prog.x = 50, prog.y = 150;
+    prog.w = 150, prog.h = 30;
+    prog.pad_x = 2, prog.pad_y = 2;
+    prog.current = 60.0f;
+    prog.max = 100.0f;
+    prog.modifyable = gui_true;
+    prog.foreground = colorB;
+    prog.background = colorA;
+
+    toggle.x = 50, toggle.y = 200;
+    toggle.w = 150, toggle.h = 30;
+    toggle.pad_x = 2, toggle.pad_y = 2;
+    toggle.active = gui_false;
+    toggle.text = selection[toggle.active];
+    toggle.length = strlen(selection[toggle.active]);
+    toggle.foreground = colorB;
+    toggle.background = colorA;
+    toggle.font = colorC;
+    toggle.highlight = colorA;
+
+    field.x = 50, field.y = 250;
+    field.w = 150, field.h = 30;
+    field.pad_x = 5, field.pad_y = 5;
+    field.buffer = input;
+    field.length = &input_len;
+    field.max = INPUT_MAX;
+    field.active = gui_false;
+    field.foreground = colorA;
+    field.background = colorB;
+    field.font = colorC;
+
+    plot.x = 50, plot.y = 300;
+    plot.w = 150, plot.h = 100;
+    plot.pad_x = 5, plot.pad_y = 5;
+    plot.values = values;
+    plot.value_count = LEN(values);
+    plot.foreground = colorB;
+    plot.background = colorA;
+
+    histo.x = 50, histo.y = 430;
+    histo.w = 150, histo.h = 100;
+    histo.pad_x = 5, histo.pad_y = 5;
+    histo.values = values;
+    histo.value_count = LEN(values);
+    histo.foreground = colorB;
+    histo.background = colorA;
+    histo.negative = colorC;
+    histo.highlight = colorD;
+
+    scroll.x = 250, scroll.y = 50;
+    scroll.w = 16, scroll.h = 300;
+    scroll.offset = 300;
+    scroll.target = 600;
+    scroll.step = 150;
+    scroll.foreground = colorB;
+    scroll.background = colorA;
+
+    /* Window */
     UNUSED(argc); UNUSED(argv);
     memset(&xw, 0, sizeof xw);
     memset(&gui, 0, sizeof gui);
@@ -441,7 +533,7 @@ main(int argc, char *argv[])
     /* OpenGL */
     xw.glc = glXCreateContext(xw.dpy, xw.vi, NULL, GL_TRUE);
     glXMakeCurrent(xw.dpy, xw.win, xw.glc);
-    buffer = xcalloc(MAX_VERTEX_BUFFER, 1);
+    buffer = xcalloc(buffer_size, 1);
 
     xw.running = 1;
     gui.win = &xw;
@@ -462,17 +554,16 @@ main(int argc, char *argv[])
 
         /* ------------------------- GUI --------------------------*/
         gui_begin(&gui.out, buffer, MAX_VERTEX_BUFFER);
-        if (gui_button(&gui.out, &gui.in, gui.font, colorA, colorB, 50,50,150,30,5,"button",6))
-            fprintf(stdout, "Button pressed!\n");
-        slider = gui_slider(&gui.out, &gui.in, colorA, colorB,
-                            50, 100, 150, 30, 2, 0.0f, slider, 10.0f, 1.0f);
-        prog = gui_progress(&gui.out, &gui.in, colorA, colorB,
-                            50, 150, 150, 30, 2, prog, 100.0f, gui_true);
-        select = gui_toggle(&gui.out, &gui.in, gui.font, colorA, colorB,
-                            50, 200, 150, 30, 2, selection[select],
-                            strlen(selection[select]), select);
-        offset = gui_scroll(&gui.out, &gui.in, colorA, colorB,
-                            250, 50, 16, 300, offset, 600);
+        if (gui_button(&gui.out, &button, gui.font, &gui.in))
+            fprintf(stdout, "button pressed!\n");
+        slider.value = gui_slider(&gui.out, &slider, &gui.in);
+        prog.current = gui_progress(&gui.out, &prog, &gui.in);
+        toggle.active = gui_toggle(&gui.out, &toggle, gui.font, &gui.in);
+        toggle.text = selection[toggle.active];
+        field.active = gui_input(&gui.out, &field, gui.font, &gui.in);
+        gui_plot(&gui.out, &plot);
+        gui_histo(&gui.out, &histo, &gui.in);
+        scroll.offset = gui_scroll(&gui.out, &scroll, &gui.in);
         gui_end(&gui.out);
         /* ---------------------------------------------------------*/
 

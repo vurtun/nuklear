@@ -126,10 +126,13 @@ utf_encode(gui_long u, gui_char *c, gui_size clen)
 void
 gui_input_begin(struct gui_input *in)
 {
+    gui_size i;
     if (!in) return;
     in->mouse_clicked = 0;
     in->text_len = 0;
     vec2_mov(in->mouse_prev, in->mouse_pos);
+    for (i = 0; i < GUI_KEY_MAX; i++)
+        in->keys[i].clicked = 0;
 }
 
 void
@@ -142,7 +145,9 @@ void
 gui_input_key(struct gui_input *in, enum gui_keys key, gui_int down)
 {
     if (!in) return;
-    in->keys[key] = down;
+    if (in->keys[key].down == down) return;
+    in->keys[key].down = down;
+    in->keys[key].clicked++;
 }
 
 void
@@ -328,14 +333,13 @@ gui_rectf(struct gui_draw_queue *que, gui_float x, gui_float y,
 }
 
 static void
-gui_text(struct gui_draw_queue *que, const struct gui_font *font, gui_float x,
+gui_string(struct gui_draw_queue *que, const struct gui_font *font, gui_float x,
         gui_float y, gui_float w, gui_float h,
         struct gui_color col, const gui_char *t, gui_size len)
 {
     struct gui_draw_command *cmd;
     struct gui_rect clip;
     gui_size text_len;
-    gui_float off = 0;
     gui_long unicode;
     const struct gui_font_glyph *g;
 
@@ -411,64 +415,85 @@ gui_end(struct gui_draw_queue *que)
 }
 
 gui_int
-gui_button(struct gui_draw_queue *que, const struct gui_input *in,
-    const struct gui_font *font, struct gui_color bg, struct gui_color fg,
-    gui_int x, gui_int y, gui_int w, gui_int h, gui_int pad,
-    const char *str, gui_int l)
+gui_button(struct gui_draw_queue *que, const struct gui_button *button,
+    const struct gui_font *font, const struct gui_input *in)
 {
     gui_int text_width;
     gui_int label_x, label_y;
     gui_int label_w, label_h;
     gui_int ret = gui_false;
-    const gui_char *t = (const gui_char*)str;
+    gui_int mouse_x, mouse_y;
+    gui_int clicked_x, clicked_y;
+    struct gui_color fc, bg, hc;
+    gui_int x, y, w, h;
+    const gui_char *t;
 
-    if (!que || !in) return gui_false;
-    if (!in->mouse_down && in->mouse_clicked) {
-        const gui_int clicked_x = in->mouse_clicked_pos.x;
-        const gui_int clicked_y = in->mouse_clicked_pos.y;
+    if (!que || !in || !button)
+        return gui_false;
+
+    x = button->x, y = button->y;
+    w = button->w, h = button->h;
+    t = (const gui_char*)button->text;
+    mouse_x = in->mouse_pos.x;
+    mouse_y = in->mouse_pos.y;
+    clicked_x = in->mouse_clicked_pos.x;
+    clicked_y = in->mouse_clicked_pos.y;
+    fc = button->font;
+    bg = button->background;
+    hc = button->highlight;
+
+    if (INBOX(mouse_x, mouse_y, x, y, x+w, y+h)) {
         if (INBOX(clicked_x, clicked_y, x, y, x+w, y+h))
-            ret = gui_true;
+            ret = (in->mouse_down && in->mouse_clicked);
+        fc = bg; bg = hc;
     }
 
     gui_rectf(que, x, y, w, h, bg);
-    gui_rect(que, x+1, y+1, w-1, h-1, fg);
-    if (!font || !str || !l) return ret;
+    gui_rect(que, x+1, y+1, w-1, h-1, button->foreground);
+    if (!font || !button->text || !button->length) return ret;
 
-    text_width = gui_font_text_width(font, t, l);
-    if (text_width > (w - 2 * pad)) {
-        label_x = x + pad;
-        label_y = y + pad;
-        label_w = w - 2 * pad;
-        label_h = h - 2 * pad;
+    text_width = gui_font_text_width(font, t, button->length);
+    if (text_width > (w - 2 * button->pad_x)) {
+        label_x = x + button->pad_x;
+        label_y = y + button->pad_y;
+        label_w = w - 2 * button->pad_x;
+        label_h = h - 2 * button->pad_y;
     } else {
-        label_w = w - 2 * pad;
-        label_h = h - 2 * pad;
+        label_w = w - 2 * button->pad_x;
+        label_h = h - 2 * button->pad_y;
         label_x = x + (label_w - text_width) / 2;
         label_y = y + (label_h - font->height) / 2;
     }
-    gui_text(que, font, label_x, label_y, label_w, label_h, fg, t, l);
+    gui_string(que, font, label_x, label_y, label_w, label_h, fc, t, button->length);
     return ret;
 }
 
 gui_int
-gui_toggle(struct gui_draw_queue *que, const struct gui_input *in,
-    const struct gui_font *font, struct gui_color bg, struct gui_color fg,
-    gui_int x, gui_int y, gui_int w, gui_int h, gui_int pad,
-    const char *str, gui_int len, gui_int active)
+gui_toggle(struct gui_draw_queue *que, const struct gui_toggle *toggle,
+    const struct gui_font *font, const struct gui_input *in)
 {
     gui_int select_size;
+    gui_int x, y, w, h;
+    gui_int active;
     gui_int select_x, select_y;
     gui_int cursor_x, cursor_y;
     gui_int cursor_pad, cursor_size;
     gui_int label_x, label_w;
-    const struct gui_color white = {255, 255, 255, 255};
-    const gui_char *t = (const gui_char*)str;
+    struct gui_color fg, bg;
+    const gui_char *t;
 
-    w = MAX(w, font->height + 2 * pad);
-    h = MAX(h, font->height + 2 * pad);
+    if (!que || !toggle || !font || !in) return 0;
+    active = toggle->active;
+    t = (const gui_char*)toggle->text;
+    x = toggle->x, y = toggle->y;
+    w = toggle->w, h = toggle->h;
+    w = MAX(w, font->height + 2 * toggle->pad_x);
+    h = MAX(h, font->height + 2 * toggle->pad_y);
+    fg = toggle->foreground;
+    bg = toggle->background;
 
-    select_x = x + pad;
-    select_y = y + pad;
+    select_x = x + toggle->pad_x;
+    select_y = y + toggle->pad_y;
     select_size = font->height;
 
     cursor_pad = select_size / 8;
@@ -476,8 +501,8 @@ gui_toggle(struct gui_draw_queue *que, const struct gui_input *in,
     cursor_y = select_y + cursor_pad;
     cursor_size = select_size - 2 * cursor_pad;
 
-    label_x = x + select_size + pad * 2;
-    label_w = w - select_size + 3 * pad;
+    label_x = x + select_size + toggle->pad_x * 2;
+    label_w = w - select_size + 3 * toggle->pad_x;
 
     if (!in->mouse_down && in->mouse_clicked) {
         const gui_int clicked_x = in->mouse_clicked_pos.x;
@@ -490,34 +515,37 @@ gui_toggle(struct gui_draw_queue *que, const struct gui_input *in,
 
     gui_rectf(que, select_x, select_y, select_size, select_size, bg);
     if (active) gui_rectf(que, cursor_x, cursor_y, cursor_size, cursor_size, fg);
-    gui_text(que, font, label_x, y + pad, label_w, h - 2 * pad, white, t, len);
+    gui_string(que, font, label_x, y + toggle->pad_y, label_w,
+        h - 2 * toggle->pad_y, toggle->font, t, toggle->length);
     return active;
 }
 
 gui_float
-gui_slider(struct gui_draw_queue *que, const struct gui_input *in,
-    struct gui_color bg, struct gui_color fg,
-    gui_int x, gui_int y, gui_int w, gui_int h, gui_int pad,
-    gui_float min, gui_float value, gui_float max, gui_float step)
+gui_slider(struct gui_draw_queue *que, const struct gui_slider *slider,
+    const struct gui_input *in)
 {
+    gui_float min, max, value, step;
+    gui_int x, y, w, h;
     gui_int mouse_x, mouse_y;
     gui_int clicked_x, clicked_y;
-    gui_int cursor_x;
-    gui_int cursor_y;
+    gui_int cursor_x, cursor_y, cursor_h;
     gui_float cursor_w;
-    gui_int cursor_h;
 
-    if (step == 0.0f) return value;
-    w = MAX(w, 2 * pad);
-    h = MAX(h, 2 * pad);
-    max = MAX(min, max);
-    min = MIN(min, max);
-    value = CLAMP(min, value, max);
+    if (!que || !slider || !in) return 0;
+    if (slider->step == 0.0f) return slider->value;
+    x = slider->x, y = slider->y;
+    w = slider->w, h = slider->h;
+    w = MAX(slider->w, 2 * slider->pad_x);
+    h = MAX(slider->h, 2 * slider->pad_y);
+    max = MAX(slider->min, slider->max);
+    min = MIN(slider->min, slider->max);
+    value = CLAMP(min, slider->value, max);
+    step = slider->step;
 
-    cursor_w = (w - 2 * pad) / (((max - min) + step) / step);
-    cursor_h = h - 2 * pad;
-    cursor_x = x + pad + (cursor_w * (value - min));
-    cursor_y = y + pad;
+    cursor_w = (w - 2 * slider->pad_x) / (((max - min) + step) / step);
+    cursor_h = h - 2 * slider->pad_y;
+    cursor_x = x + slider->pad_x + (cursor_w * (value - min));
+    cursor_y = y + slider->pad_y;
 
     if (!que || !in) return 0;
     mouse_x = in->mouse_pos.x;
@@ -533,7 +561,7 @@ gui_slider(struct gui_draw_queue *que, const struct gui_input *in,
         const gui_float tmp = mouse_x - cursor_x + (cursor_w / 2);
         gui_float next_value = value + step * ((tmp < 0) ? -1.0f : 1.0f);
         next_value = CLAMP(min, next_value, max);
-        cursor_next_x = x + pad + (cursor_w * (next_value - min));
+        cursor_next_x = x + slider->pad_x + (cursor_w * (next_value - min));
         if (INBOX(mouse_x, mouse_y, cursor_next_x, cursor_y,
                 cursor_next_x + cursor_w, cursor_y + cursor_h))
         {
@@ -541,59 +569,228 @@ gui_slider(struct gui_draw_queue *que, const struct gui_input *in,
             cursor_x = cursor_next_x;
         }
     }
-    gui_rectf(que, x, y, w, h, bg);
-    gui_rectf(que, cursor_x, cursor_y, cursor_w, cursor_h, fg);
+    gui_rectf(que, x, y, w, h, slider->background);
+    gui_rectf(que, cursor_x, cursor_y, cursor_w, cursor_h, slider->foreground);
     return value;
 }
 
 gui_int
-gui_progress(struct gui_draw_queue *que, const struct gui_input *in,
-    struct gui_color bg, struct gui_color fg,
-    gui_int x, gui_int y, gui_int w, gui_int h, gui_int pad,
-    gui_size value, gui_size max, gui_bool modifyable)
+gui_progress(struct gui_draw_queue *que, const struct gui_progress *prog,
+    const struct gui_input *in)
 {
     gui_float scale;
     gui_int mouse_x, mouse_y;
     gui_int cursor_x, cursor_y;
     gui_int cursor_w, cursor_h;
+    gui_int x, y, w, h;
+    gui_size value;
 
-    if (!que || !in) return 0;
+    if (!que || !in || !prog) return 0;
     mouse_x = in->mouse_pos.x;
     mouse_y = in->mouse_pos.y;
 
-    w = MAX(w, 2 * pad + 1);
-    h = MAX(h, 2 * pad + 1);
-    value = MIN(value, max);
+    x = prog->x, y = prog->y;
+    w = prog->w, h = prog->h;
+    w = MAX(prog->w, 2 * prog->pad_x + 1);
+    h = MAX(prog->h, 2 * prog->pad_y + 1);
+    value = MIN(prog->current, prog->max);
 
-    if (modifyable && in->mouse_down && INBOX(mouse_x, mouse_y, x, y, x+w, y+h)) {
+    if (prog->modifyable && in->mouse_down && INBOX(mouse_x, mouse_y, x, y, x+w, y+h)) {
         gui_float ratio = (gui_float)(mouse_x - x) / (gui_float)w;
-        value = (gui_size)((gui_float)max * ratio);
+        value = (gui_size)((gui_float)prog->max * ratio);
     }
 
-    if (!max) return value;
-    value = MIN(value, max);
-    scale = (gui_float)value / (gui_float)max;
-    cursor_h = h - 2 * pad;
-    cursor_w = (w - 2 * pad) * scale;
-    cursor_x = x + pad;
-    cursor_y = y + pad;
-    gui_rectf(que, x, y, w, h, bg);
-    gui_rectf(que, cursor_x, cursor_y, cursor_w, cursor_h, fg);
+    if (!prog->max) return value;
+    value = MIN(value, prog->max);
+    scale = (gui_float)value / (gui_float)prog->max;
+    cursor_h = h - 2 * prog->pad_y;
+    cursor_w = (w - 2 * prog->pad_x) * scale;
+    cursor_x = x + prog->pad_x;
+    cursor_y = y + prog->pad_y;
+    gui_rectf(que, x, y, w, h, prog->background);
+    gui_rectf(que, cursor_x, cursor_y, cursor_w, cursor_h, prog->foreground);
     return value;
 }
 
 gui_int
-gui_scroll(struct gui_draw_queue *que, const struct gui_input *in,
-    struct gui_color bg, struct gui_color fg,
-    gui_int x, gui_int y, gui_int w, gui_int h,
-    gui_int offset, gui_int dst)
+gui_input(struct gui_draw_queue *que, const struct gui_input_field *input,
+    const struct gui_font *font, const struct gui_input *in)
+{
+    gui_int offset = 0;
+    gui_int label_x, label_y;
+    gui_int label_w, label_h;
+    gui_int x, y, w, h;
+    gui_int active;
+    const gui_char *t;
+    gui_int mouse_x, mouse_y;
+    gui_int text_width;
+
+    if (!que || !in || !font || !input)
+        return 0;
+
+    mouse_x = in->mouse_clicked_pos.x;
+    mouse_y = in->mouse_clicked_pos.y;
+    x = input->x, y = input->y;
+    w = MAX(input->w, 2 * input->pad_x);
+    h = MAX(input->h, font->height);
+    active = input->active;
+    t = input->buffer;
+
+    if (in->mouse_clicked && in->mouse_down)
+        active = INBOX(mouse_x, mouse_y, x, y, x + w, y + h);
+    if (active) {
+        const struct gui_key *del = &in->keys[GUI_KEY_DEL];
+        const struct gui_key *bs = &in->keys[GUI_KEY_BACKSPACE];
+        const struct gui_key *enter = &in->keys[GUI_KEY_ENTER];
+        const struct gui_key *esc = &in->keys[GUI_KEY_ESCAPE];
+        if (in->text_len && *input->length < input->max) {
+            gui_long unicode;
+            gui_size i = 0, l = 0;
+            gui_size ulen = utf_decode(in->text, &unicode, in->text_len);
+            while (ulen && (l + ulen) <= in->text_len && *input->length < input->max) {
+                for (i = 0; i < ulen; i++)
+                    input->buffer[(*input->length)++] = in->text[l + i];
+                l = l + ulen;
+                ulen = utf_decode(in->text + l, &unicode, in->text_len - l);
+            }
+        }
+        if ((del->down && del->clicked) || (bs->down && bs->clicked))
+            if (*input->length > 0) *input->length = *input->length - 1;
+        if ((enter->down && enter->clicked) || (esc->down && esc->clicked))
+            active = gui_false;
+    }
+
+    label_x = x + input->pad_x;
+    label_y = y + input->pad_y;
+    label_w = w - 2 * input->pad_x;
+    label_h = h - 2 * input->pad_y;
+    text_width = gui_font_text_width(font, t, *input->length);
+    while (text_width > label_w) {
+        offset += 1;
+        text_width = gui_font_text_width(font, &t[offset], *input->length - offset);
+    }
+
+    gui_rectf(que, x, y, w, h, input->background);
+    gui_rect(que, x + 1, y, w - 1, h, input->foreground);
+    gui_string(que, font, label_x, label_y, label_w, label_h, input->font,
+        &t[offset], *input->length);
+    return active;
+}
+
+void
+gui_plot(struct gui_draw_queue *que, const struct gui_plot *plot)
+{
+    gui_int i;
+    gui_int last_x;
+    gui_int last_y;
+    gui_float max, min;
+    gui_float range, ratio;
+    gui_int step;
+    gui_int canvas_x, canvas_y;
+    gui_int canvas_w, canvas_h;
+    gui_int x, y, w, h;
+
+    if (!que || !plot) return;
+
+    x = plot->x, y = plot->y;
+    w = plot->w, h = plot->h;
+    gui_rectf(que, x, y, w, h, plot->background);
+    max = plot->values[0], min = plot->values[0];
+    for (i = 0; i < plot->value_count; ++i) {
+        if (plot->values[i] > max)
+            max = plot->values[i];
+        if (plot->values[i] < min)
+            min = plot->values[i];
+    }
+    range = max - min;
+
+    canvas_x = x + plot->pad_x;
+    canvas_y = y + plot->pad_y;
+    canvas_w = w - 2 * plot->pad_x;
+    canvas_h = h - 2 * plot->pad_y;
+    step = canvas_w / plot->value_count;
+
+    ratio = (plot->values[0] - min) / range;
+    last_x = canvas_x;
+    last_y = (canvas_y + canvas_h) - ratio * (gui_float)canvas_h;
+    gui_rectf(que, last_x - 3, last_y - 3, 6, 6, plot->foreground);
+    for (i = 1; i < plot->value_count; i++) {
+        gui_int cur_x, cur_y;
+        ratio = (plot->values[i] - min) / range;
+        cur_x = canvas_x + step * i;
+        cur_y = (canvas_y + canvas_h) - (ratio * (gui_float)canvas_h);
+        gui_line(que, last_x, last_y, cur_x, cur_y, plot->foreground);
+        gui_rectf(que, cur_x - 3, cur_y - 3, 6, 6, plot->foreground);
+        last_x = cur_x;
+        last_y = cur_y;
+    }
+}
+
+gui_int
+gui_histo(struct gui_draw_queue *que, const struct gui_histo *histo,
+    const struct gui_input *in)
+{
+    gui_int i;
+    gui_float max;
+    gui_int canvas_x, canvas_y;
+    gui_int canvas_w, canvas_h;
+    gui_int item_w;
+    gui_int selected = -1;
+    gui_int x, y, w, h;
+    struct gui_color fg, nc;
+
+    if (!que || !histo || !in)
+        return selected;
+
+    x = histo->x, y = histo->y;
+    w = histo->w, h = histo->h;
+    fg = histo->foreground;
+    nc = histo->negative;
+    max = histo->values[0];
+    for (i = 0; i < histo->value_count; ++i) {
+        if (ABS(histo->values[i]) > max)
+            max = histo->values[i];
+    }
+
+    gui_rectf(que, x, y, w, h, histo->background);
+    canvas_x = x + histo->pad_x;
+    canvas_y = y + histo->pad_y;
+    canvas_w = w - 2 * histo->pad_x;
+    canvas_h = h - 2 * histo->pad_y;
+    item_w = (canvas_w - (histo->value_count-1) * histo->pad_x) / (histo->value_count);
+
+    for (i = 0; i < histo->value_count; i++) {
+        const gui_int mouse_x = in->mouse_pos.x;
+        const gui_int mouse_y = in->mouse_pos.y;
+        const gui_float ratio = ABS(histo->values[i]) / max;
+        const gui_int item_h = (gui_int)((gui_float)canvas_h * ratio);
+        const gui_int item_x = canvas_x + (i * item_w) + (i * histo->pad_y);
+        const gui_int item_y = (canvas_y + canvas_h) - item_h;
+        struct gui_color col = (histo->values[i] < 0) ? nc: fg;
+        if (INBOX(mouse_x, mouse_y, item_x, item_y, item_x + item_w, item_y + item_h)) {
+            selected = (in->mouse_down && in->mouse_clicked) ? i : -1;
+            col = histo->highlight;
+        }
+        gui_rectf(que, item_x, item_y, item_w, item_h, col);
+    }
+    return selected;
+}
+
+gui_int
+gui_scroll(struct gui_draw_queue *que, const struct gui_scroll *scroll,
+    const struct gui_input *in)
 {
     gui_int mouse_x, mouse_y;
     gui_int prev_x, prev_y;
+    gui_int x, y, w, h;
+    gui_int step, offset;
 
-    gui_bool up, down;
+    gui_bool u, d;
     gui_int button_size, button_half, button_y;
     gui_int bar_h, bar_y;
+    struct gui_button up, down;
+    struct gui_color fg, bg;
+    gui_int target;
 
     gui_float ratio;
     gui_float off;
@@ -607,8 +804,13 @@ gui_scroll(struct gui_draw_queue *que, const struct gui_input *in,
     gui_int xpad, ypad, xmid;
 
     if (!que || !in) return 0;
-    gui_rectf(que, x, y, w, h, bg);
-    if (dst <= h) return 0;
+    x = scroll->x, y = scroll->y;
+    w = scroll->w, h = scroll->h;
+    target = scroll->target;
+    fg = scroll->foreground;
+    bg = scroll->background;
+    gui_rectf(que, x, y, w, h, scroll->background);
+    if (scroll->target <= h) return 0;
 
     mouse_x = in->mouse_pos.x;
     mouse_y = in->mouse_pos.y;
@@ -617,6 +819,7 @@ gui_scroll(struct gui_draw_queue *que, const struct gui_input *in,
 
     w = MAX(w, 0);
     h = MAX(h, 2 * w);
+    step = CLAMP(0, scroll->step, h);
 
     pad = w / 4;
     button_size = w;
@@ -624,13 +827,31 @@ gui_scroll(struct gui_draw_queue *que, const struct gui_input *in,
     button_y = y + h - button_size;
     bar_h = h - 2 * button_size;
     bar_y = y + button_size;
+    offset = CLAMP(0, scroll->offset, scroll->target - bar_h);
 
-    ratio = (gui_float)bar_h/(gui_float)dst;
-    off = (gui_float)offset/(gui_float)dst;
+    ratio = (gui_float)bar_h/(gui_float)scroll->target;
+    off = (gui_float)offset/(gui_float)scroll->target;
     cursor_h = (gui_int)(ratio * (gui_float)bar_h);
     cursor_y = bar_y + (gui_int)(off * bar_h);
     cursor_w = w;
     cursor_x = x;
+
+    up.x = x, up.y = y;
+    up.w = button_size, up.h = button_size;
+    up.pad_y = 0, up.pad_x = 0;
+    up.text = NULL, up.length = 0;
+    up.font = fg, up.background = fg;
+    up.foreground = bg, up.highlight = fg;
+
+    down.x = x, down.y = y + h - button_size;
+    down.w = button_size, down.h = button_size;
+    down.pad_y = 0, down.pad_x = 0;
+    down.text = NULL, down.length = 0;
+    down.font = fg, down.background = fg;
+    down.foreground = bg, down.highlight = fg;
+
+    u = gui_button(que, &up, NULL, in);
+    d = gui_button(que, &down, NULL, in);
 
     xpad = x + pad;
     ypad = button_y + pad;
@@ -639,10 +860,8 @@ gui_scroll(struct gui_draw_queue *que, const struct gui_input *in,
     yoff = y + (button_size - pad);
     boff = button_y + (button_size - pad);
 
-    up = gui_button(que, in, NULL, fg, bg, x, y, button_size, button_size, 0, NULL, 0);
-    down = gui_button(que, in, NULL, fg, bg, x, button_y, button_size, button_size, 0,NULL, 0);
-    gui_trianglef(que, xmid, y + pad, xoff, yoff, xpad, yoff, bg);
-    gui_trianglef(que, xpad, ypad, xoff, ypad, xmid, boff, bg);
+    gui_trianglef(que, xmid, y + pad, xoff, yoff, xpad, yoff, scroll->background);
+    gui_trianglef(que, xpad, ypad, xoff, ypad, xmid, boff, scroll->background);
 
     cursor_px = cursor_x + cursor_w;
     cursor_py = cursor_y + cursor_h;
@@ -651,13 +870,12 @@ gui_scroll(struct gui_draw_queue *que, const struct gui_input *in,
 
     if (in->mouse_down && inscroll && incursor) {
         const gui_float pixel = in->mouse_delta.y;
-        const gui_float delta = (pixel / (gui_float)bar_h) * (gui_float)dst;
-        offset = CLAMP(0, offset + delta, dst - bar_h);
+        const gui_float delta =  (pixel / (gui_float)bar_h) * (gui_float)target;
+        offset = CLAMP(0, offset + delta, target - bar_h);
         cursor_y += pixel;
-    } else if (up || down) {
-        const gui_int h2 = h/2;
-        offset = (down) ? MIN(offset + h2, dst - bar_h) : MAX(0, offset - h2);
-        off = (gui_float)offset / (gui_float)dst;
+    } else if (u || d) {
+        offset = (d) ? MIN(offset + step, target - bar_h): MAX(0, offset - step);
+        off = (gui_float)offset / (gui_float)scroll->target;
         cursor_y = bar_y + (gui_int)(off * bar_h);
     }
 
@@ -666,11 +884,78 @@ gui_scroll(struct gui_draw_queue *que, const struct gui_input *in,
     return offset;
 }
 
-gui_int gui_input(struct gui_draw_queue *que, const struct gui_input *in,
-    const struct gui_font *font, struct gui_color bg, struct gui_color fg,
-    gui_int x, gui_int y, gui_int w, gui_int h,
-    gui_char *buffer, gui_int *len, gui_bool active)
+void gui_panel_init(struct gui_panel *panel, const struct gui_config *config,
+    const struct gui_font *font, const struct gui_input *input)
 {
-    return active;
+    panel->config = config;
+    panel->font = font;
+    panel->input = input;
+    panel->x = 0; panel->y = 0;
+    panel->at_x = 0; panel->at_y = 0;
+    panel->width = 0;
+    panel->flags = 0;
+    panel->index = 0;
+    panel->row_columns = 0;
+    panel->row_height = 0;
+    panel->queue = NULL;
+}
+
+gui_int gui_panel_begin(struct gui_panel *panel, struct gui_draw_queue *q,
+    const char *t, gui_flags f, gui_int x, gui_int y, gui_int w)
+{
+    panel->x = x; panel->y = y;
+    panel->at_x = x; panel->at_y = y;
+    panel->width = w;
+    panel->flags = f;
+    panel->index = 0;
+    panel->row_columns = 0;
+    panel->row_height = 0;
+    panel->queue = q;
+    return 0;
+}
+
+void
+gui_panel_row(struct gui_panel *panel, gui_int height, gui_int cols)
+{
+    panel->at_y += panel->row_height;
+    panel->at_x = panel->x;
+    panel->index = 0;
+    panel->row_columns = cols;
+    panel->row_height = height;
+}
+
+static void
+gui_panel_bounds(struct gui_rect *bounds, const struct gui_panel *panel)
+{
+
+}
+
+gui_int
+gui_panel_button(struct gui_panel *panel, const char *str, gui_int len)
+{
+    struct gui_rect bounds;
+    struct gui_button button;
+    const struct gui_config *config = panel->config;
+    gui_panel_bounds(&bounds, panel);
+    panel->at_x += button.w;
+
+    button.text = str;
+    button.length = len;
+    button.x = bounds.x;
+    button.y = bounds.y;
+    button.w = bounds.w;
+    button.h = bounds.h;
+    button.pad_x = config->item_padding.x;
+    button.pad_y = config->item_padding.y;
+    button.background = config->colors[GUI_COLOR_BUTTON];
+    button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
+    button.font = config->colors[GUI_COLOR_TEXT];
+    button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
+    return gui_button(panel->queue, &button, panel->font, panel->input);
+}
+
+void gui_panel_end(struct gui_panel *panel)
+{
+    panel->height = panel->at_y - panel->y;
 }
 
