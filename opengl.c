@@ -58,6 +58,8 @@ struct GUI {
     struct gui_draw_queue out;
     struct gui_input in;
     struct gui_font *font;
+    struct gui_config config;
+    struct gui_panel panel;
 };
 
 /* functions */
@@ -404,104 +406,16 @@ main(int argc, char *argv[])
     long dt, started;
     gui_byte *buffer;
     const gui_size buffer_size = MAX_VERTEX_BUFFER;
-    const struct gui_color colorA = {100, 100, 100, 255};
-    const struct gui_color colorB = {45, 45, 45, 255};
-    const struct gui_color colorC = {255, 255, 255, 255};
-    const struct gui_color colorD = {255, 0, 0, 255};
     static GLint att[] = {GLX_RGBA, GLX_DEPTH_SIZE,24, GLX_DOUBLEBUFFER, None};
 
-    struct gui_button button;
-    struct gui_slider slider;
-    struct gui_progress prog;
-    struct gui_toggle toggle;
-    struct gui_input_field field;
-    struct gui_plot plot;
-    struct gui_histo histo;
-    struct gui_scroll scroll;
-
-    const char *selection[] = {"Inactive", "Active"};
-    gui_char input[INPUT_MAX];
+    gui_char input_text[INPUT_MAX];
     gui_int input_len = 0;
-    const gui_float values[] = {10.0f, 12.0f, 25.0f, 15.0f, 18.0f, 30.0f, 32.0f, 15.0f};
-    strcpy((char*)input, "input");
-    input_len = strlen((char*)input);
-
-    button.x = 50, button.y = 50;
-    button.w = 150, button.h = 30;
-    button.pad_x = 5, button.pad_y = 5;
-    button.text = "button";
-    button.length = 6;
-    button.background = colorB;
-    button.foreground = colorA;
-    button.font = colorC;
-    button.highlight = colorA;
-
-    slider.x = 50, slider.y = 100;
-    slider.w = 150, slider.h = 30;
-    slider.pad_x = 2, slider.pad_y = 2;
-    slider.min = 0.0f;
-    slider.value = 5.0f;
-    slider.max = 10.0f;
-    slider.step = 1.0f;
-    slider.foreground = colorB;
-    slider.background = colorA;
-
-    prog.x = 50, prog.y = 150;
-    prog.w = 150, prog.h = 30;
-    prog.pad_x = 2, prog.pad_y = 2;
-    prog.current = 60.0f;
-    prog.max = 100.0f;
-    prog.modifyable = gui_true;
-    prog.foreground = colorB;
-    prog.background = colorA;
-
-    toggle.x = 50, toggle.y = 200;
-    toggle.w = 150, toggle.h = 30;
-    toggle.pad_x = 2, toggle.pad_y = 2;
-    toggle.active = gui_false;
-    toggle.text = selection[toggle.active];
-    toggle.length = strlen(selection[toggle.active]);
-    toggle.foreground = colorB;
-    toggle.background = colorA;
-    toggle.font = colorC;
-    toggle.highlight = colorA;
-
-    field.x = 50, field.y = 250;
-    field.w = 150, field.h = 30;
-    field.pad_x = 5, field.pad_y = 5;
-    field.buffer = input;
-    field.length = &input_len;
-    field.max = INPUT_MAX;
-    field.active = gui_false;
-    field.foreground = colorA;
-    field.background = colorB;
-    field.font = colorC;
-
-    plot.x = 50, plot.y = 300;
-    plot.w = 150, plot.h = 100;
-    plot.pad_x = 5, plot.pad_y = 5;
-    plot.values = values;
-    plot.value_count = LEN(values);
-    plot.foreground = colorB;
-    plot.background = colorA;
-
-    histo.x = 50, histo.y = 430;
-    histo.w = 150, histo.h = 100;
-    histo.pad_x = 5, histo.pad_y = 5;
-    histo.values = values;
-    histo.value_count = LEN(values);
-    histo.foreground = colorB;
-    histo.background = colorA;
-    histo.negative = colorC;
-    histo.highlight = colorD;
-
-    scroll.x = 250, scroll.y = 50;
-    scroll.w = 16, scroll.h = 300;
-    scroll.offset = 300;
-    scroll.target = 600;
-    scroll.step = 150;
-    scroll.foreground = colorB;
-    scroll.background = colorA;
+    gui_int typing = 0;
+    gui_float slider = 5.0f;
+    gui_float prog = 60.0f;
+    gui_int selected = gui_false;
+    const char *s[] = {"inactive", "active"};
+    const gui_float values[] = {10.0f, 12.5f, 18.0f, 15.0f, 25.0f, 30.0f, 5.0f};
 
     /* Window */
     UNUSED(argc); UNUSED(argv);
@@ -535,9 +449,13 @@ main(int argc, char *argv[])
     glXMakeCurrent(xw.dpy, xw.win, xw.glc);
     buffer = xcalloc(buffer_size, 1);
 
-    xw.running = 1;
+    /* GUI */
     gui.win = &xw;
     gui.font = ldfont("mono.font", 16);
+    gui_default_config(&gui.config);
+    gui_panel_init(&gui.panel, &gui.config, gui.font, &gui.in);
+
+    xw.running = 1;
     while (xw.running) {
         XEvent ev;
         started = timestamp();
@@ -554,21 +472,28 @@ main(int argc, char *argv[])
 
         /* ------------------------- GUI --------------------------*/
         gui_begin(&gui.out, buffer, MAX_VERTEX_BUFFER);
-        if (gui_button(&gui.out, &button, gui.font, &gui.in))
+        gui_panel_begin(&gui.panel, &gui.out, "Console", 0, 50, 50, 200, 0);
+        gui_panel_row(&gui.panel, 30, 1);
+        if (gui_panel_button(&gui.panel, "button", 6))
             fprintf(stdout, "button pressed!\n");
-        slider.value = gui_slider(&gui.out, &slider, &gui.in);
-        prog.current = gui_progress(&gui.out, &prog, &gui.in);
-        toggle.active = gui_toggle(&gui.out, &toggle, gui.font, &gui.in);
-        toggle.text = selection[toggle.active];
-        field.active = gui_input(&gui.out, &field, gui.font, &gui.in);
-        gui_plot(&gui.out, &plot);
-        gui_histo(&gui.out, &histo, &gui.in);
-        scroll.offset = gui_scroll(&gui.out, &scroll, &gui.in);
+        gui_panel_row(&gui.panel, 30, 1);
+        slider = gui_panel_slider(&gui.panel, 0.0f, slider, 10.0f, 1.0f);
+        gui_panel_row(&gui.panel, 30, 1);
+        prog = gui_panel_progress(&gui.panel, prog, 100, gui_true);
+        gui_panel_row(&gui.panel, 30, 1);
+        selected = gui_panel_toggle(&gui.panel, s[selected], strlen(s[selected]), selected);
+        gui_panel_row(&gui.panel, 30, 1);
+        typing = gui_panel_input(&gui.panel, input_text, &input_len, INPUT_MAX, typing);
+        gui_panel_row(&gui.panel, 100, 1);
+        gui_panel_plot(&gui.panel, values, LEN(values));
+        gui_panel_row(&gui.panel, 100, 1);
+        gui_panel_histo(&gui.panel, values, LEN(values));
+        gui_panel_end(&gui.panel);
         gui_end(&gui.out);
         /* ---------------------------------------------------------*/
 
         /* Draw */
-        glClearColor(45.0f/255.0f,45.0f/255.0f,45.0f/255.0f,1);
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         draw(xw.gwa.width, xw.gwa.height, &gui.out);
         glXSwapBuffers(xw.dpy, xw.win);

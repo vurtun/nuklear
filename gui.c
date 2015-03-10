@@ -123,6 +123,60 @@ utf_encode(gui_long u, gui_char *c, gui_size clen)
     return len;
 }
 
+struct gui_color
+gui_make_color(gui_byte r, gui_byte g, gui_byte b, gui_byte a)
+{
+    struct gui_color col;
+    col.r = r; col.g = g;
+    col.b = b; col.a = a;
+    return col;
+}
+
+struct gui_vec2
+gui_make_vec2(gui_float x, gui_float y)
+{
+    struct gui_vec2 vec;
+    vec.x = x; vec.y = y;
+    return vec;
+}
+
+void
+gui_default_config(struct gui_config *config)
+{
+    if (!config) return;
+    config->global_alpha = 1.0f;
+    config->header_height = 50.0f;
+    config->scrollbar_width = 16;
+    config->scroll_factor = 2;
+    config->panel_padding = gui_make_vec2(8.0f, 8.0f);
+    config->panel_min_size = gui_make_vec2(32.0f, 32.0f);
+    config->item_spacing = gui_make_vec2(8.0f, 4.0f);
+    config->item_padding = gui_make_vec2(4.0f, 4.0f);
+    config->colors[GUI_COLOR_TEXT] = gui_make_color(255, 255, 255, 255);
+    config->colors[GUI_COLOR_PANEL] = gui_make_color(45, 45, 45, 255);
+    config->colors[GUI_COLOR_BORDER] = gui_make_color(0, 0, 0, 255);
+    config->colors[GUI_COLOR_TITLEBAR] = gui_make_color(45, 45, 45, 255);
+    config->colors[GUI_COLOR_BUTTON] = gui_make_color(45, 45, 45, 255);
+    config->colors[GUI_COLOR_BUTTON_HOVER] = gui_make_color(100, 100, 100, 255);
+    config->colors[GUI_COLOR_BUTTON_BORDER] = gui_make_color(100, 100, 100, 255);
+    config->colors[GUI_COLOR_TOGGLE] = gui_make_color(100, 100, 100, 255);
+    config->colors[GUI_COLOR_TOGGLE_ACTIVE] = gui_make_color(45, 45, 45, 255);
+    config->colors[GUI_COLOR_SCROLL] = gui_make_color(100, 100, 100, 255);
+    config->colors[GUI_COLOR_SCROLL_CURSOR] = gui_make_color(45, 45, 45, 255);
+    config->colors[GUI_COLOR_SLIDER] = gui_make_color(100, 100, 100, 255);
+    config->colors[GUI_COLOR_SLIDER_CURSOR] = gui_make_color(45, 45, 45, 255);
+    config->colors[GUI_COLOR_PROGRESS] = gui_make_color(100, 100, 100, 255);
+    config->colors[GUI_COLOR_PROGRESS_CURSOR] = gui_make_color(45, 45, 45, 255);
+    config->colors[GUI_COLOR_INPUT] = gui_make_color(45, 45, 45, 255);
+    config->colors[GUI_COLOR_INPUT_BORDER] = gui_make_color(100, 100, 100, 255);
+    config->colors[GUI_COLOR_HISTO] = gui_make_color(100, 100, 100, 255);
+    config->colors[GUI_COLOR_HISTO_BARS] = gui_make_color(45, 45, 45, 255);
+    config->colors[GUI_COLOR_HISTO_NEGATIVE] = gui_make_color(255, 255, 255, 255);
+    config->colors[GUI_COLOR_HISTO_HIGHLIGHT] = gui_make_color(255, 0, 0, 255);
+    config->colors[GUI_COLOR_PLOT] = gui_make_color(100, 100, 100, 255);
+    config->colors[GUI_COLOR_PLOT_LINES] = gui_make_color(45, 45, 45, 255);
+}
+
 void
 gui_input_begin(struct gui_input *in)
 {
@@ -884,14 +938,16 @@ gui_scroll(struct gui_draw_queue *que, const struct gui_scroll *scroll,
     return offset;
 }
 
-void gui_panel_init(struct gui_panel *panel, const struct gui_config *config,
+void
+gui_panel_init(struct gui_panel *panel, const struct gui_config *config,
     const struct gui_font *font, const struct gui_input *input)
 {
     panel->config = config;
     panel->font = font;
     panel->input = input;
-    panel->x = 0; panel->y = 0;
-    panel->at_x = 0; panel->at_y = 0;
+    panel->x = 0;
+    panel->y = 0;
+    panel->at_y = 0;
     panel->width = 0;
     panel->flags = 0;
     panel->index = 0;
@@ -900,34 +956,60 @@ void gui_panel_init(struct gui_panel *panel, const struct gui_config *config,
     panel->queue = NULL;
 }
 
-gui_int gui_panel_begin(struct gui_panel *panel, struct gui_draw_queue *q,
-    const char *t, gui_flags f, gui_int x, gui_int y, gui_int w)
+gui_int
+gui_panel_begin(struct gui_panel *panel, struct gui_draw_queue *q,
+    const char *t, gui_flags f, gui_int x, gui_int y, gui_int w, gui_int h)
 {
-    panel->x = x; panel->y = y;
-    panel->at_x = x; panel->at_y = y;
+    const struct gui_config *config = panel->config;
+    const struct gui_color *header = &config->colors[GUI_COLOR_TITLEBAR];
+    gui_rectf(panel->queue, x ,y, w, config->header_height, *header);
+    if (panel->flags & GUI_PANEL_SCROLLBAR) panel->height = h;
+
+    UNUSED(t);
+    panel->queue = q;
+    panel->x = x;
+    panel->y = y;
     panel->width = w;
+    panel->at_y = y;
     panel->flags = f;
     panel->index = 0;
     panel->row_columns = 0;
-    panel->row_height = 0;
-    panel->queue = q;
+    panel->row_height = config->header_height;
     return 0;
 }
 
 void
 gui_panel_row(struct gui_panel *panel, gui_int height, gui_int cols)
 {
+    const struct gui_config *config = panel->config;
+    const struct gui_color *color = &config->colors[GUI_COLOR_PANEL];
     panel->at_y += panel->row_height;
-    panel->at_x = panel->x;
     panel->index = 0;
     panel->row_columns = cols;
     panel->row_height = height;
+    gui_rectf(panel->queue, panel->x, panel->at_y, panel->width, height, *color);
 }
 
 static void
-gui_panel_bounds(struct gui_rect *bounds, const struct gui_panel *panel)
+gui_panel_alloc(struct gui_rect *bounds, struct gui_panel *panel)
 {
+    const struct gui_config *config = panel->config;
+    gui_int padding, spacing, space;
+    gui_int item_offset, item_width, item_spacing;
 
+    padding = 2 * config->panel_padding.x;
+    spacing = (panel->row_columns - 1) * config->item_spacing.x;
+    space  = panel->width - padding - spacing;
+
+    item_width = space / panel->row_columns;
+    item_offset = config->item_padding.x + panel->index * item_width;
+    item_spacing = panel->index * config->item_spacing.x;
+
+    bounds->x = panel->x + item_offset + item_spacing;
+    bounds->y = panel->at_y;
+    bounds->w = item_width;
+    bounds->h = panel->row_height - config->item_spacing.y;
+    panel->index++;
 }
 
 gui_int
@@ -936,8 +1018,7 @@ gui_panel_button(struct gui_panel *panel, const char *str, gui_int len)
     struct gui_rect bounds;
     struct gui_button button;
     const struct gui_config *config = panel->config;
-    gui_panel_bounds(&bounds, panel);
-    panel->at_x += button.w;
+    gui_panel_alloc(&bounds, panel);
 
     button.text = str;
     button.length = len;
@@ -954,8 +1035,149 @@ gui_panel_button(struct gui_panel *panel, const char *str, gui_int len)
     return gui_button(panel->queue, &button, panel->font, panel->input);
 }
 
+gui_int
+gui_panel_toggle(struct gui_panel *panel, const char *text, gui_int length,
+    gui_int is_active)
+{
+    struct gui_rect bounds;
+    struct gui_toggle toggle;
+    const struct gui_config *config = panel->config;
+    gui_panel_alloc(&bounds, panel);
+
+    toggle.x = bounds.x;
+    toggle.y = bounds.y;
+    toggle.w = bounds.w;
+    toggle.h = bounds.h;
+    toggle.pad_x = config->item_padding.x;
+    toggle.pad_y = config->item_padding.y;
+    toggle.active = is_active;
+    toggle.text = text;
+    toggle.length = length;
+    toggle.font = config->colors[GUI_COLOR_TEXT];
+    toggle.background = config->colors[GUI_COLOR_TOGGLE];
+    toggle.foreground = config->colors[GUI_COLOR_TOGGLE_ACTIVE];
+    return gui_toggle(panel->queue, &toggle, panel->font, panel->input);
+}
+
+gui_float
+gui_panel_slider(struct gui_panel *panel, gui_float min_value, gui_float value,
+    gui_float max_value, gui_float value_step)
+{
+    struct gui_rect bounds;
+    struct gui_slider slider;
+    const struct gui_config *config = panel->config;
+    gui_panel_alloc(&bounds, panel);
+
+    slider.x = bounds.x;
+    slider.y = bounds.y;
+    slider.w = bounds.w;
+    slider.h = bounds.h;
+    slider.pad_x = config->item_padding.x;
+    slider.pad_y = config->item_padding.y;
+    slider.value = value;
+    slider.min = min_value;
+    slider.max = max_value;
+    slider.step = value_step;
+    slider.background = config->colors[GUI_COLOR_SLIDER];
+    slider.foreground = config->colors[GUI_COLOR_SLIDER_CURSOR];
+    return gui_slider(panel->queue, &slider, panel->input);
+}
+
+gui_float
+gui_panel_progress(struct gui_panel *panel, gui_size cur_value, gui_size max_value,
+    gui_bool is_modifyable)
+{
+    struct gui_rect bounds;
+    struct gui_progress prog;
+    const struct gui_config *config = panel->config;
+    gui_panel_alloc(&bounds, panel);
+
+    prog.x = bounds.x;
+    prog.y = bounds.y;
+    prog.w = bounds.w;
+    prog.h = bounds.h;
+    prog.pad_x = config->item_padding.x;
+    prog.pad_y = config->item_padding.y;
+    prog.current = cur_value;
+    prog.max = max_value;
+    prog.modifyable = is_modifyable;
+    prog.background = config->colors[GUI_COLOR_PROGRESS];
+    prog.foreground = config->colors[GUI_COLOR_PROGRESS_CURSOR];
+    return gui_progress(panel->queue, &prog, panel->input);
+}
+
+gui_int
+gui_panel_input(struct gui_panel *panel, gui_char *buffer, gui_int *length,
+    gui_int max_length, gui_bool is_active)
+{
+    struct gui_rect bounds;
+    struct gui_input_field field;
+    const struct gui_config *config = panel->config;
+    gui_panel_alloc(&bounds, panel);
+
+    field.x = bounds.x;
+    field.y = bounds.y;
+    field.w = bounds.w;
+    field.h = bounds.h;
+    field.pad_x = config->item_padding.x;
+    field.pad_y = config->item_padding.y;
+    field.buffer = buffer;
+    field.length = length;
+    field.max  = max_length;
+    field.active = is_active;
+    field.font = config->colors[GUI_COLOR_TEXT];
+    field.background = config->colors[GUI_COLOR_INPUT];
+    field.foreground = config->colors[GUI_COLOR_BORDER];
+    return gui_input(panel->queue, &field, panel->font, panel->input);
+}
+
+void
+gui_panel_plot(struct gui_panel *panel, const gui_float *values, gui_int count)
+{
+    struct gui_rect bounds;
+    struct gui_plot plot;
+    const struct gui_config *config = panel->config;
+    gui_panel_alloc(&bounds, panel);
+
+    plot.x = bounds.x;
+    plot.y = bounds.y;
+    plot.w = bounds.w;
+    plot.h = bounds.h;
+    plot.pad_x = config->item_padding.x;
+    plot.pad_y = config->item_padding.y;
+    plot.value_count = count;
+    plot.values = values;
+    plot.background = config->colors[GUI_COLOR_PLOT];
+    plot.foreground = config->colors[GUI_COLOR_PLOT_LINES];
+    gui_plot(panel->queue, &plot);
+}
+
+gui_int
+gui_panel_histo(struct gui_panel *panel, const gui_float *values, gui_int count)
+{
+    struct gui_rect bounds;
+    struct gui_histo histo;
+    const struct gui_config *config = panel->config;
+    gui_panel_alloc(&bounds, panel);
+
+    histo.x = bounds.x;
+    histo.y = bounds.y;
+    histo.w = bounds.w;
+    histo.h = bounds.h;
+    histo.pad_x = config->item_padding.x;
+    histo.pad_y = config->item_padding.y;
+    histo.value_count = count;
+    histo.values = values;
+    histo.background = config->colors[GUI_COLOR_HISTO];
+    histo.foreground = config->colors[GUI_COLOR_HISTO_BARS];
+    histo.negative = config->colors[GUI_COLOR_HISTO_NEGATIVE];
+    histo.highlight = config->colors[GUI_COLOR_HISTO_HIGHLIGHT];
+    return gui_histo(panel->queue, &histo, panel->input);
+}
+
 void gui_panel_end(struct gui_panel *panel)
 {
-    panel->height = panel->at_y - panel->y;
+    if (!(panel->flags & GUI_PANEL_SCROLLBAR))
+        panel->height = panel->at_y - panel->y;
 }
 

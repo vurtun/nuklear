@@ -6,6 +6,24 @@
 #ifndef GUI_H_
 #define GUI_H_
 
+/*
+ *  ------------- TODO-List ------------
+ * - fix input bug
+ * - plot input handling
+ * - fine tune progressbar input handling
+ * - fine tune slider input handling
+ * - make additional widgets hoverable
+ * - panel row call only on change
+ * - panel clip rects
+ * - panel
+ *      o flags
+ *      o widgets
+ *      o combobox
+ *      o listView
+ *      o treeView
+ *      o textBox
+ * ---------------------------------------
+ */
 #define GUI_UTF_SIZE 4
 #define GUI_INPUT_MAX 16
 
@@ -115,7 +133,6 @@ struct gui_toggle {
     struct gui_color font;
     struct gui_color background;
     struct gui_color foreground;
-    struct gui_color highlight;
 };
 
 struct gui_slider {
@@ -190,20 +207,10 @@ struct gui_histo {
     struct gui_color highlight;
 };
 
-enum gui_panel_flags {
-    GUI_PANEL_BORDER = 0x01,
-    GUI_PANEL_TITLEBAR = 0x02,
-    GUI_PANEL_MINIMIZABLE = 0x04,
-    GUI_PANEL_CLOSEABLE = 0x08,
-    GUI_PANEL_SCALEABLE = 0x10,
-    GUI_PANEL_SCROLLBAR = 0x20
-};
-
 enum gui_colors {
     GUI_COLOR_TEXT,
     GUI_COLOR_PANEL,
     GUI_COLOR_BORDER,
-    GUI_COLOR_FRAME,
     GUI_COLOR_TITLEBAR,
     GUI_COLOR_BUTTON,
     GUI_COLOR_BUTTON_HOVER,
@@ -216,24 +223,42 @@ enum gui_colors {
     GUI_COLOR_SLIDER_CURSOR,
     GUI_COLOR_PROGRESS,
     GUI_COLOR_PROGRESS_CURSOR,
+    GUI_COLOR_INPUT,
+    GUI_COLOR_INPUT_BORDER,
+    GUI_COLOR_HISTO,
+    GUI_COLOR_HISTO_BARS,
+    GUI_COLOR_HISTO_NEGATIVE,
+    GUI_COLOR_HISTO_HIGHLIGHT,
+    GUI_COLOR_PLOT,
+    GUI_COLOR_PLOT_LINES,
     GUI_COLOR_COUNT
 };
 
 struct gui_config {
     gui_float global_alpha;
-    struct gui_vec2 window_padding;
-    struct  gui_vec2 window_min_size;
-    struct gui_vec2 frame_padding;
+    gui_float header_height;
+    struct gui_vec2 panel_padding;
+    struct gui_vec2 panel_min_size;
     struct gui_vec2 item_spacing;
     struct gui_vec2 item_padding;
-    gui_int scroll_width;
+    gui_int scrollbar_width;
+    gui_int scroll_factor;
     struct gui_color colors[GUI_COLOR_COUNT];
+};
+
+enum gui_panel_flags {
+    GUI_PANEL_BORDER = 0x01,
+    GUI_PANEL_TITLEBAR = 0x02,
+    GUI_PANEL_MINIMIZABLE = 0x04,
+    GUI_PANEL_CLOSEABLE = 0x08,
+    GUI_PANEL_SCALEABLE = 0x10,
+    GUI_PANEL_SCROLLBAR = 0x20
 };
 
 struct gui_panel {
     gui_flags flags;
     gui_int x, y;
-    gui_int at_x, at_y;
+    gui_int at_y;
     gui_int width, height;
     gui_int index;
     gui_int row_height;
@@ -243,6 +268,11 @@ struct gui_panel {
     const struct gui_input *input;
     const struct gui_config *config;
 };
+
+/* Utility */
+struct gui_color gui_make_color(gui_byte r, gui_byte g, gui_byte b, gui_byte a);
+struct gui_vec2 gui_make_vec2(gui_float x, gui_float y);
+void gui_default_config(struct gui_config *config);
 
 /* Input */
 void gui_input_begin(struct gui_input *in);
@@ -257,7 +287,6 @@ void gui_begin(struct gui_draw_queue *que, gui_byte *memory, gui_size size);
 gui_size gui_end(struct gui_draw_queue *que);
 const struct gui_draw_command *gui_next(const struct gui_draw_queue *que,
                                         const struct gui_draw_command *cmd);
-
 
 /* Widgets */
 gui_int gui_button(struct gui_draw_queue *que, const struct gui_button *button,
@@ -276,12 +305,12 @@ gui_int gui_histo(struct gui_draw_queue *que, const struct gui_histo *histo,
                     const struct gui_input *in);
 void gui_plot(struct gui_draw_queue *que, const struct gui_plot *plot);
 
-
 /* Panel */
 void gui_panel_init(struct gui_panel *panel, const struct gui_config *config,
                     const struct gui_font *font, const struct gui_input *input);
 gui_int gui_panel_begin(struct gui_panel *panel, struct gui_draw_queue *q,
-                        const char *t, gui_flags f, gui_int x, gui_int y, gui_int w);
+                        const char *t, gui_flags f,
+                        gui_int x, gui_int y, gui_int w, gui_int h);
 void gui_panel_row(struct gui_panel *panel, gui_int height, gui_int cols);
 void gui_panel_space(struct gui_panel *panel, gui_int cols);
 gui_int gui_panel_button(struct gui_panel *panel, const char *str, gui_int len);
@@ -294,9 +323,9 @@ gui_float gui_panel_progress(struct gui_panel *panel, gui_size cur, gui_size max
 gui_int gui_panel_input(struct gui_panel *panel, gui_char *buffer, gui_int *len,
                         gui_int max, gui_bool active);
 void gui_panel_plot(struct gui_panel *panel, const gui_float *values,
-                        gui_int value_count, gui_int offset, const char *text);
-void gui_panel_histo(struct gui_panel *panel, const gui_float *values,
-                        gui_int value_count, gui_int offset, const char *text);
+                        gui_int value_count);
+gui_int gui_panel_histo(struct gui_panel *panel, const gui_float *values,
+                        gui_int value_count);
 void gui_panel_end(struct gui_panel *panel);
 
 #endif
