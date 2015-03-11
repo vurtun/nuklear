@@ -122,8 +122,7 @@ kpress(struct GUI *gui, XEvent* e)
     int ret;
     struct XWindow *xw = gui->win;
     KeySym *keysym = XGetKeyboardMapping(xw->dpy, (KeyCode)e->xkey.keycode, 1, &ret);
-    if (*keysym == XK_Escape) xw->running = 0;
-    else if (*keysym == XK_Shift_L || *keysym == XK_Shift_R)
+    if (*keysym == XK_Shift_L || *keysym == XK_Shift_R)
         gui_input_key(&gui->in, GUI_KEY_SHIFT, gui_true);
     else if (*keysym == XK_Control_L || *keysym == XK_Control_L)
         gui_input_key(&gui->in, GUI_KEY_CTRL, gui_true);
@@ -131,6 +130,8 @@ kpress(struct GUI *gui, XEvent* e)
         gui_input_key(&gui->in, GUI_KEY_DEL, gui_true);
     else if (*keysym == XK_Return)
         gui_input_key(&gui->in, GUI_KEY_ENTER, gui_true);
+    else if (*keysym == XK_space)
+        gui_input_key(&gui->in, GUI_KEY_SPACE, gui_true);
     else if (*keysym == XK_BackSpace)
         gui_input_key(&gui->in, GUI_KEY_BACKSPACE, gui_true);
     else if ((*keysym >= 'a' && *keysym <= 'z') ||
@@ -153,6 +154,8 @@ krelease(struct GUI *gui, XEvent* e)
         gui_input_key(&gui->in, GUI_KEY_DEL, gui_false);
     else if (*keysym == XK_Return)
         gui_input_key(&gui->in, GUI_KEY_ENTER, gui_false);
+    else if (*keysym == XK_space)
+        gui_input_key(&gui->in, GUI_KEY_SPACE, gui_false);
     else if (*keysym == XK_BackSpace)
         gui_input_key(&gui->in, GUI_KEY_BACKSPACE, gui_false);
     XFree(keysym);
@@ -443,7 +446,7 @@ main(int argc, char *argv[])
     xw.cmap = XCreateColormap(xw.dpy,xw.root,xw.vi->visual,AllocNone);
     xw.swa.colormap = xw.cmap;
     xw.swa.event_mask =
-        ExposureMask | KeyPressMask | ButtonPress |
+        ExposureMask | KeyPressMask |KeyReleaseMask | ButtonPress |
         ButtonReleaseMask | ButtonMotionMask | PointerMotionMask |
         Button1MotionMask | Button2MotionMask | Button3MotionMask;
     xw.win = XCreateWindow(
@@ -484,8 +487,9 @@ main(int argc, char *argv[])
 
         /* ------------------------- GUI --------------------------*/
         gui_begin(&gui.out, buffer, MAX_BUFFER);
-        gui_panel_begin(&gui.panel, &gui.out, "Demo", 0, 50, 50, 200, 0);
-        gui_panel_row(&gui.panel, 40, 1);
+        xw.running = gui_panel_begin(&gui.panel, &gui.out, "Demo",
+            GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE, 50, 50, 200, 0);
+        gui_panel_row(&gui.panel, 30, 1);
         if (gui_panel_button(&gui.panel, "button", 6))
             fprintf(stdout, "button pressed!\n");
         slider = gui_panel_slider(&gui.panel, 0.0f, slider, 10.0f, 1.0f);
@@ -500,7 +504,7 @@ main(int argc, char *argv[])
         /* ---------------------------------------------------------*/
 
         /* Draw */
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClearColor(120.0f/255.0f, 120.0f/255.0f, 120.0f/255.0f, 120.0f/255.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         draw(xw.gwa.width, xw.gwa.height, &gui.out);
         glXSwapBuffers(xw.dpy, xw.win);
