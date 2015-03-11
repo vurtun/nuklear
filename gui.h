@@ -102,7 +102,7 @@ struct gui_font_glyph {
 };
 
 struct gui_font {
-    gui_short height;
+    gui_float height;
     gui_float scale;
     gui_texture texture;
     struct gui_vec2 tex_size;
@@ -128,8 +128,8 @@ struct gui_toggle {
     gui_float w, h;
     gui_float pad_x, pad_y;
     gui_int active;
-    const char *text;
     gui_size length;
+    const char *text;
     struct gui_color font;
     struct gui_color background;
     struct gui_color foreground;

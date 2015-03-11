@@ -7,8 +7,6 @@
 
 #define NULL (void*)0
 #define UTF_INVALID 0xFFFD
-#define PI 3.141592654f
-
 #define PASTE(a,b) a##b
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #define MAX(a,b) ((a) < (b) ? (b) : (a))
@@ -16,8 +14,6 @@
 #define LEN(a) (sizeof(a)/sizeof(a)[0])
 #define ABS(a) (((a) < 0) ? -(a) : (a))
 #define UNUSED(a) ((void)(a))
-#define DEG2RAD(a) ((a) * (PI / 180.0f))
-#define RAD2DEG(a) ((a) * (180.0f / PI))
 #define BETWEEN(x, a, b) ((a) <= (x) && (x) <= (b))
 #define INBOX(x, y, x0, y0, x1, y1) (BETWEEN(x, x0, x1) && BETWEEN(y, y0, y1))
 
@@ -29,9 +25,7 @@
 #define vec2_mov(to,from) (to).x = (from).x, (to).y = (from).y
 #define vec2_len(v) ((float)fsqrt((v).x*(v).x+(v).y*(v).y))
 #define vec2_sub(r,a,b) do {(r).x=(a).x-(b).x; (r).y=(a).y-(b).y;} while(0)
-#define vec2_add(r,a,b) do {(r).x=(a).x+(b).x; (r).y=(a).y+(b).y;} while(0)
 #define vec2_muls(r, v, s) do {(r).x=(v).x*(s); (r).y=(v).y*(s);} while(0)
-#define vec2_norm(r, v) do {float _ = vec2_len(v); if (_) vec2_muls(r, v, 1.0f/_);} while(0)
 
 static const gui_texture null_tex = (void*)0;
 static const struct gui_rect null_rect = {-9999, -9999, 9999 * 2, 9999 * 2};
@@ -50,9 +44,7 @@ fsqrt(float x)
     val.f = x;
     val.i = 0x5f375a86 - (val.i>>1);
     val.f = val.f*(1.5f-xhalf*val.f*val.f);
-    if (val.f != 0.0f)
-        return 1.0f/val.f;
-    return val.f;
+    return 1.0f/val.f;
 }
 
 static void*
@@ -159,7 +151,7 @@ gui_default_config(struct gui_config *config)
     config->header_height = 50.0f;
     config->scrollbar_width = 16;
     config->scroll_factor = 2;
-    config->panel_padding = gui_make_vec2(8.0f, 8.0f);
+    config->panel_padding = gui_make_vec2(10.0f, 10.0f);
     config->panel_min_size = gui_make_vec2(32.0f, 32.0f);
     config->item_spacing = gui_make_vec2(8.0f, 4.0f);
     config->item_padding = gui_make_vec2(4.0f, 4.0f);
@@ -373,8 +365,7 @@ gui_vertex_line(struct gui_draw_buffer* buffer, gui_float x0, gui_float y0,
     vec2_load(b, x1, y1);
     vec2_sub(d, b, a);
 
-    len = vec2_len(d);
-    if (len) len = 0.5f / vec2_len(d);
+    len = 0.5f / vec2_len(d);
     vec2_muls(hn, d, len);
     vec2_load(hp0, +hn.y, -hn.x);
     vec2_load(hp1, -hn.y, +hn.x);
@@ -602,7 +593,6 @@ gui_slider(struct gui_draw_buffer *buffer, const struct gui_slider *slider,
     gui_float cursor_w;
 
     if (!buffer || !slider || !in) return 0;
-    if (slider->step == 0.0f) return slider->value;
     x = slider->x; y = slider->y;
     w = MAX(slider->w, 2 * slider->pad_x);
     h = MAX(slider->h, 2 * slider->pad_y);
@@ -825,8 +815,8 @@ gui_histo(struct gui_draw_buffer *buffer, const struct gui_histo *histo,
     gui_rectf(buffer, x, y, w, h, histo->background);
     canvas_x = x + histo->pad_x;
     canvas_y = y + histo->pad_y;
-    canvas_w = w - 2 * histo->pad_x;
-    canvas_h = h - 2 * histo->pad_y;
+    canvas_w = MAX(0, w - 2 * histo->pad_x);
+    canvas_h = MAX(0, h - 2 * histo->pad_y);
     if (histo->value_count) {
         gui_float padding = (gui_float)(histo->value_count-1) * histo->pad_x;
         item_w = (canvas_w - padding) / (gui_float)(histo->value_count);
@@ -1024,10 +1014,10 @@ gui_panel_alloc(struct gui_rect *bounds, struct gui_panel *panel)
     space  = panel->width - padding - spacing;
 
     item_width = space / (gui_float)panel->row_columns;
-    item_offset = config->item_padding.x + (gui_float)panel->index * item_width;
+    item_offset = (gui_float)panel->index * item_width;
     item_spacing = (gui_float)panel->index * config->item_spacing.x;
 
-    bounds->x = panel->x + item_offset + item_spacing;
+    bounds->x = panel->x + item_offset + item_spacing + config->panel_padding.x;
     bounds->y = panel->at_y;
     bounds->w = item_width;
     bounds->h = panel->row_height - config->item_spacing.y;

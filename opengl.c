@@ -34,16 +34,13 @@
 #define MAX_BUFFER (32 * 1024)
 #define INPUT_MAX 64
 
-#define MIN(a,b)((a) < (b) ? (a) : (b))
-#define MAX(a,b)((a) < (b) ? (b) : (a))
-#define CLAMP(i,v,x) (MAX(MIN(v,x), i))
 #define LEN(a)(sizeof(a)/sizeof(a)[0])
 #define UNUSED(a)((void)(a))
 
 /* types  */
 struct XWindow {
-    Display *dpy;
     Window root;
+    Display *dpy;
     XVisualInfo *vi;
     Colormap cmap;
     XSetWindowAttributes swa;
@@ -139,6 +136,7 @@ kpress(struct GUI *gui, XEvent* e)
     else if ((*keysym >= 'a' && *keysym <= 'z') ||
             (*keysym >= '0' && *keysym <= '9'))
         gui_input_char(&gui->in, (unsigned char*)keysym);
+    XFree(keysym);
 }
 
 static void
@@ -157,6 +155,7 @@ krelease(struct GUI *gui, XEvent* e)
         gui_input_key(&gui->in, GUI_KEY_ENTER, gui_false);
     else if (*keysym == XK_BackSpace)
         gui_input_key(&gui->in, GUI_KEY_BACKSPACE, gui_false);
+    XFree(keysym);
 }
 
 static void
@@ -437,12 +436,10 @@ main(int argc, char *argv[])
     memset(&xw, 0, sizeof xw);
     memset(&gui, 0, sizeof gui);
     xw.dpy = XOpenDisplay(NULL);
-    if (!xw.dpy)
-        die("XOpenDisplay failed\n");
+    if (!xw.dpy) die("XOpenDisplay failed\n");
     xw.root = DefaultRootWindow(xw.dpy);
     xw.vi = glXChooseVisual(xw.dpy, 0, att);
-    if (!xw.vi)
-        die("Failed to find appropriate visual\n");
+    if (!xw.vi) die("Failed to find appropriate visual\n");
     xw.cmap = XCreateColormap(xw.dpy,xw.root,xw.vi->visual,AllocNone);
     xw.swa.colormap = xw.cmap;
     xw.swa.event_mask =
@@ -515,7 +512,9 @@ main(int argc, char *argv[])
     }
 
     /* Cleanup */
+    free(buffer);
     delfont(gui.font);
+    XFree(xw.vi);
     glXMakeCurrent(xw.dpy, None, NULL);
     glXDestroyContext(xw.dpy, xw.glc);
     XDestroyWindow(xw.dpy, xw.win);
