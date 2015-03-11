@@ -6,14 +6,14 @@ CC = gcc
 DCC = clang
 
 # Flags
-CFLAGS = -std=c89 -pedantic-errors -Wno-deprecated-declarations -D_POSIX_C_SOURCE=200809L
-CFLAGS += -g -Wall -Wextra -Werror -Wformat -Wunreachable-code
-CFLAGS += -Winline -Wshadow -Wwrite-strings
-CFLAGS += -Wstrict-prototypes -Wold-style-definition
+CFLAGS = -std=c89 -pedantic-errors -Wdeprecated-declarations -D_POSIX_C_SOURCE=200809L
+CFLAGS = -g -Wextra -Werror -Wformat -Wunreachable-code
+CFLAGS += -fstack-protector-strong -Winline -Wshadow -Wwrite-strings -fstrict-aliasing
+CFLAGS += -Wstrict-prototypes -Wold-style-definition -Wconversion
 CFLAGS += -Wredundant-decls -Wnested-externs -Wmissing-include-dirs
-CFLAGS += -Wshadow -Wpointer-arith -Wcast-qual -Wmissing-prototypes
-CFLAGS += -Wswitch-default -Wundef -Wstrict-overflow=5
-CFLAGS += -Winit-self -Wstrict-aliasing -Wunused
+CFLAGS += -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wmissing-prototypes -Wconversion
+CFLAGS += -Wswitch-default -Wundef -Wno-unused -Wstrict-overflow=5 -Wsign-conversion
+CFLAGS += -Winit-self -Wstrict-aliasing -fsanitize=address -fsanitize=undefined
 
 SRC = gui.c opengl.c
 OBJ = $(SRC:.c=.o)
@@ -21,7 +21,6 @@ OBJ = $(SRC:.c=.o)
 # Modes
 .PHONY: gcc
 gcc: CC = gcc
-gcc:  CFLAGS += -Wno-unused-local-typedefs
 gcc: $(BIN)
 
 .PHONY: clang

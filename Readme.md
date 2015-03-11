@@ -1,3 +1,4 @@
-# TINYGUI
+# GUI
+
 # License
     (The MIT License)

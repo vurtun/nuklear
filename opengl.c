@@ -31,7 +31,7 @@
 #define WIN_WIDTH   800
 #define WIN_HEIGHT  600
 #define DTIME       33
-#define MAX_VERTEX_BUFFER (16 * 1024)
+#define MAX_BUFFER (32 * 1024)
 #define INPUT_MAX 64
 
 #define MIN(a,b)((a) < (b) ? (a) : (b))
@@ -55,7 +55,7 @@ struct XWindow {
 
 struct GUI {
     struct XWindow *win;
-    struct gui_draw_queue out;
+    struct gui_draw_buffer out;
     struct gui_input in;
     struct gui_font *font;
     struct gui_config config;
@@ -78,7 +78,7 @@ static void resize(struct GUI*, XEvent*);
 static GLuint ldbmp(gui_byte*, uint32_t*, uint32_t*);
 static struct gui_font *ldfont(const char*, unsigned char);
 static void delfont(struct gui_font *font);
-static void draw(int, int, const struct gui_draw_queue*);
+static void draw(int, int, const struct gui_draw_buffer*);
 
 /* gobals */
 static void
@@ -124,7 +124,7 @@ kpress(struct GUI *gui, XEvent* e)
 {
     int ret;
     struct XWindow *xw = gui->win;
-    KeySym *keysym = XGetKeyboardMapping(xw->dpy, e->xkey.keycode, 1, &ret);
+    KeySym *keysym = XGetKeyboardMapping(xw->dpy, (KeyCode)e->xkey.keycode, 1, &ret);
     if (*keysym == XK_Escape) xw->running = 0;
     else if (*keysym == XK_Shift_L || *keysym == XK_Shift_R)
         gui_input_key(&gui->in, GUI_KEY_SHIFT, gui_true);
@@ -146,7 +146,7 @@ krelease(struct GUI *gui, XEvent* e)
 {
     int ret;
     struct XWindow *xw = gui->win;
-    KeySym *keysym = XGetKeyboardMapping(xw->dpy, e->xkey.keycode, 1, &ret);
+    KeySym *keysym = XGetKeyboardMapping(xw->dpy, (KeyCode)e->xkey.keycode, 1, &ret);
     if (*keysym == XK_Shift_L || *keysym == XK_Shift_R)
         gui_input_key(&gui->in, GUI_KEY_SHIFT, gui_false);
     else if (*keysym == XK_Control_L || *keysym == XK_Control_L)
@@ -162,8 +162,8 @@ krelease(struct GUI *gui, XEvent* e)
 static void
 bpress(struct GUI *gui, XEvent *evt)
 {
-    const float x = evt->xbutton.x;
-    const float y = evt->xbutton.y;
+    const int x = evt->xbutton.x;
+    const int y = evt->xbutton.y;
     if (evt->xbutton.button == Button1)
         gui_input_button(&gui->in, x, y, gui_true);
 }
@@ -171,8 +171,8 @@ bpress(struct GUI *gui, XEvent *evt)
 static void
 brelease(struct GUI *con, XEvent *evt)
 {
-    const float x = evt->xbutton.x;
-    const float y = evt->xbutton.y;
+    const int x = evt->xbutton.x;
+    const int y = evt->xbutton.y;
     UNUSED(evt);
     if (evt->xbutton.button == Button1)
         gui_input_button(&con->in, x, y, gui_false);
@@ -207,7 +207,7 @@ ldfile(const char* path, int flags, size_t* siz)
             path, strerror(errno));
     if (fstat(fd, &status) < 0)
         die("Failed to call fstat: %s",strerror(errno));
-    *siz = status.st_size;
+    *siz = (size_t)status.st_size;
     buf = xcalloc(*siz, 1);
     if (read(fd, buf, *siz) < 0)
         die("Failed to call read: %s",strerror(errno));
@@ -235,9 +235,9 @@ ldbmp(gui_byte *data, uint32_t *width, uint32_t *height)
     if (header[0] != 'B' || header[1] != 'M')
         die("[BMP]: invalid file");
 
-    *width = *(uint32_t*)&(header[0x12]);
-    *height = *(uint32_t*)&(header[0x12]);
-    ioff = *(uint32_t*)(&header[0x0A]);
+    memcpy(width, &header[0x12], sizeof(uint32_t));
+    memcpy(height, &header[0x16], sizeof(uint32_t));
+    memcpy(&ioff, &header[0x0A], sizeof(uint32_t));
     if (*width <= 0 || *height <= 0)
         die("[BMP]: invalid image size");
 
@@ -245,21 +245,20 @@ ldbmp(gui_byte *data, uint32_t *width, uint32_t *height)
     reader = data;
     mem = *width * *height * 4;
     target = xcalloc(mem, 1);
-    for (i = *height-1; i >= 0; i--) {
-        writer = target + (i * *width * 4);
+    for (i = (int32_t)*height-1; i >= 0; i--) {
+        writer = target + (i * (int32_t)*width * 4);
         for (j = 0; j < *width; j++) {
             *writer++ = *(reader + (j * 4) + 1);
             *writer++ = *(reader + (j * 4) + 2);
             *writer++ = *(reader + (j * 4) + 3);
             *writer++ = *(reader + (j * 4) + 0);
-            *writer += 4;
         }
         reader += *width * 4;
     }
 
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, *width, *height, 0,
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)*width, (GLsizei)*height, 0,
                 GL_RGBA, GL_UNSIGNED_BYTE, target);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -284,30 +283,42 @@ ldfont(const char *name, unsigned char height)
     short max_height = 0;
     size_t i = 0;
 
+    uint16_t num;
+    uint16_t indexes;
+    uint16_t tex_width;
+    uint16_t tex_height;
+
     /* header */
     gui_byte *buffer = (gui_byte*)ldfile(name, O_RDONLY, &size);
-    uint16_t num = *(uint16_t*)buffer;
-    uint16_t indexes = *(uint16_t*)&buffer[0x02] + 1;
-    uint16_t tex_width = *(uint16_t*)&buffer[0x04];
-    uint16_t tex_height = *(uint16_t*)&buffer[0x06];
+    memcpy(&num, buffer, sizeof(uint16_t));
+    memcpy(&indexes, &buffer[0x02], sizeof(uint16_t));
+    memcpy(&tex_width, &buffer[0x04], sizeof(uint16_t));
+    memcpy(&tex_height, &buffer[0x06], sizeof(uint16_t));
 
     /* glyphes */
     gui_byte *iter = &buffer[0x08];
-    size_t mem = sizeof(struct gui_font_glyph) * indexes;
+    size_t mem = sizeof(struct gui_font_glyph) * ((size_t)indexes + 1);
     struct gui_font_glyph *glyphes = xcalloc(mem, 1);
     for(i = 0; i < num; ++i) {
-        short id = *(uint16_t*)&iter[0];
-        short x = *(uint16_t*)&iter[2];
-        short y = *(uint16_t*)&iter[4];
-        short w = *(uint16_t*)&iter[6];
-        short h = *(uint16_t*)&iter[8];
+        uint16_t id, x, y, w, h;
+        float xoff, yoff, xadv;
 
+        memcpy(&id, iter, sizeof(uint16_t));
+        memcpy(&x, &iter[0x02], sizeof(uint16_t));
+        memcpy(&y, &iter[0x04], sizeof(uint16_t));
+        memcpy(&w, &iter[0x06], sizeof(uint16_t));
+        memcpy(&h, &iter[0x08], sizeof(uint16_t));
+        memcpy(&xoff, &iter[10], sizeof(float));
+        memcpy(&yoff, &iter[14], sizeof(float));
+        memcpy(&xadv, &iter[18], sizeof(float));
+
+        assert(id <= indexes);
         glyphes[id].code = id;
-        glyphes[id].width = w;
-        glyphes[id].height = h;
-        glyphes[id].xoff  = *(float*)&iter[10];
-        glyphes[id].yoff = *(float*)&iter[14];
-        glyphes[id].xadvance =  *(float*)&iter[18];
+        glyphes[id].width = (short)w;
+        glyphes[id].height = (short)h;
+        glyphes[id].xoff  = xoff;
+        glyphes[id].yoff = yoff;
+        glyphes[id].xadvance = xadv;
         glyphes[id].uv[0].u = (float)x/(float)tex_width;
         glyphes[id].uv[0].v = (float)y/(float)tex_height;
         glyphes[id].uv[1].u = (float)(x+w)/(float)tex_width;
@@ -329,7 +340,7 @@ ldfont(const char *name, unsigned char height)
     font->tex_size.y = tex_height;
     font->fallback = &glyphes['?'];
     font->glyphes = glyphes;
-    font->glyph_count = indexes;
+    font->glyph_count = indexes + 1;
     free(buffer);
     return font;
 }
@@ -344,15 +355,18 @@ delfont(struct gui_font *font)
 }
 
 static void
-draw(int width, int height, const struct gui_draw_queue *que)
+draw(int width, int height, const struct gui_draw_buffer *buffer)
 {
-    const struct gui_draw_command *cmd;
+    gui_size i = 0;
+    struct gui_draw_command cmd;
+    GLint offset = 0;
     static const size_t v = sizeof(struct gui_vertex);
     static const size_t p = offsetof(struct gui_vertex, pos);
     static const size_t t = offsetof(struct gui_vertex, uv);
     static const size_t c = offsetof(struct gui_vertex, color);
+    gui_byte *vertexes;
 
-    if (!que) return;
+    if (!buffer) return;
     glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_TRANSFORM_BIT);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -372,20 +386,21 @@ draw(int width, int height, const struct gui_draw_queue *que)
     glPushMatrix();
     glLoadIdentity();
 
-    cmd = que->begin;
-    while (cmd) {
-        const int x = (int)cmd->clip_rect.x;
-        const int y = height - (int)(cmd->clip_rect.y + cmd->clip_rect.h);
-        const int w = (int)cmd->clip_rect.w;
-        const int h = (int)cmd->clip_rect.h;
-        gui_byte *buffer = (gui_byte*)cmd->vertexes;
-        glVertexPointer(2, GL_FLOAT, v, (void*)(buffer + p));
-        glTexCoordPointer(2, GL_FLOAT, v, (void*)(buffer + t));
-        glColorPointer(4, GL_UNSIGNED_BYTE, v, (void*)(buffer + c));
-        glBindTexture(GL_TEXTURE_2D, (unsigned long)cmd->texture);
+    vertexes = buffer->vertexes;
+    glVertexPointer(2, GL_FLOAT, (GLsizei)v, (void*)(vertexes + p));
+    glTexCoordPointer(2, GL_FLOAT, (GLsizei)v, (void*)(vertexes + t));
+    glColorPointer(4, GL_UNSIGNED_BYTE, (GLsizei)v, (void*)(vertexes + c));
+
+    for (i = 0; i < buffer->command_count; ++i) {
+        gui_get_command(&cmd, buffer, i);
+        const int x = (int)cmd.clip_rect.x;
+        const int y = height - (int)(cmd.clip_rect.y + cmd.clip_rect.h);
+        const int w = (int)cmd.clip_rect.w;
+        const int h = (int)cmd.clip_rect.h;
         glScissor(x, y, w, h);
-        glDrawArrays(GL_TRIANGLES, 0, cmd->vertex_count);
-        cmd = gui_next(que, cmd);
+        glBindTexture(GL_TEXTURE_2D, (GLuint)(unsigned long)cmd.texture);
+        glDrawArrays(GL_TRIANGLES, offset, (GLsizei)cmd.vertex_count);
+        offset += (GLint)cmd.vertex_count;
     }
 
     glDisableClientState(GL_COLOR_ARRAY);
@@ -405,17 +420,17 @@ main(int argc, char *argv[])
     struct GUI gui;
     long dt, started;
     gui_byte *buffer;
-    const gui_size buffer_size = MAX_VERTEX_BUFFER;
+    const gui_size buffer_size = MAX_BUFFER;
     static GLint att[] = {GLX_RGBA, GLX_DEPTH_SIZE,24, GLX_DOUBLEBUFFER, None};
 
     gui_char input_text[INPUT_MAX];
-    gui_int input_len = 0;
+    gui_size input_len = 0;
     gui_int typing = 0;
     gui_float slider = 5.0f;
-    gui_float prog = 60.0f;
+    gui_size prog = 60;
     gui_int selected = gui_false;
     const char *s[] = {"inactive", "active"};
-    const gui_float values[] = {10.0f, 12.5f, 18.0f, 15.0f, 25.0f, 30.0f, 5.0f};
+    const gui_float values[] = {10.0f, 12.5f, 18.0f, 15.0f, 25.0f, 30.0f};
 
     /* Window */
     UNUSED(argc); UNUSED(argv);
@@ -451,7 +466,7 @@ main(int argc, char *argv[])
 
     /* GUI */
     gui.win = &xw;
-    gui.font = ldfont("mono.font", 16);
+    gui.font = ldfont("mono.sdf", 16);
     gui_default_config(&gui.config);
     gui_panel_init(&gui.panel, &gui.config, gui.font, &gui.in);
 
@@ -471,22 +486,17 @@ main(int argc, char *argv[])
         gui_input_end(&gui.in);
 
         /* ------------------------- GUI --------------------------*/
-        gui_begin(&gui.out, buffer, MAX_VERTEX_BUFFER);
-        gui_panel_begin(&gui.panel, &gui.out, "Console", 0, 50, 50, 200, 0);
-        gui_panel_row(&gui.panel, 30, 1);
+        gui_begin(&gui.out, buffer, MAX_BUFFER);
+        gui_panel_begin(&gui.panel, &gui.out, "Demo", 0, 50, 50, 200, 0);
+        gui_panel_row(&gui.panel, 40, 1);
         if (gui_panel_button(&gui.panel, "button", 6))
             fprintf(stdout, "button pressed!\n");
-        gui_panel_row(&gui.panel, 30, 1);
         slider = gui_panel_slider(&gui.panel, 0.0f, slider, 10.0f, 1.0f);
-        gui_panel_row(&gui.panel, 30, 1);
         prog = gui_panel_progress(&gui.panel, prog, 100, gui_true);
-        gui_panel_row(&gui.panel, 30, 1);
         selected = gui_panel_toggle(&gui.panel, s[selected], strlen(s[selected]), selected);
-        gui_panel_row(&gui.panel, 30, 1);
         typing = gui_panel_input(&gui.panel, input_text, &input_len, INPUT_MAX, typing);
         gui_panel_row(&gui.panel, 100, 1);
         gui_panel_plot(&gui.panel, values, LEN(values));
-        gui_panel_row(&gui.panel, 100, 1);
         gui_panel_histo(&gui.panel, values, LEN(values));
         gui_panel_end(&gui.panel);
         gui_end(&gui.out);
@@ -500,10 +510,8 @@ main(int argc, char *argv[])
 
         /* Timing */
         dt = timestamp() - started;
-        if (dt < DTIME) {
+        if (dt < DTIME)
             sleep_for(DTIME - dt);
-            dt = DTIME;
-        }
     }
 
     /* Cleanup */
