@@ -360,13 +360,13 @@ static void
 draw(int width, int height, const struct gui_draw_buffer *buffer)
 {
     gui_size i = 0;
-    struct gui_draw_command cmd;
+    const struct gui_draw_command *cmd;
     GLint offset = 0;
     static const size_t v = sizeof(struct gui_vertex);
     static const size_t p = offsetof(struct gui_vertex, pos);
     static const size_t t = offsetof(struct gui_vertex, uv);
     static const size_t c = offsetof(struct gui_vertex, color);
-    gui_byte *vertexes;
+    const gui_byte *vertexes;
 
     if (!buffer) return;
     glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_TRANSFORM_BIT);
@@ -388,21 +388,21 @@ draw(int width, int height, const struct gui_draw_buffer *buffer)
     glPushMatrix();
     glLoadIdentity();
 
-    vertexes = buffer->vertexes;
-    glVertexPointer(2, GL_FLOAT, (GLsizei)v, (void*)(vertexes + p));
-    glTexCoordPointer(2, GL_FLOAT, (GLsizei)v, (void*)(vertexes + t));
-    glColorPointer(4, GL_UNSIGNED_BYTE, (GLsizei)v, (void*)(vertexes + c));
+    vertexes = (const gui_char*)buffer->vertexes;
+    glVertexPointer(2, GL_FLOAT, (GLsizei)v, (const void*)(vertexes + p));
+    glTexCoordPointer(2, GL_FLOAT, (GLsizei)v, (const void*)(vertexes + t));
+    glColorPointer(4, GL_UNSIGNED_BYTE, (GLsizei)v, (const void*)(vertexes + c));
 
-    for (i = 0; i < buffer->command_count; ++i) {
-        gui_get_command(&cmd, buffer, i);
-        const int x = (int)cmd.clip_rect.x;
-        const int y = height - (int)(cmd.clip_rect.y + cmd.clip_rect.h);
-        const int w = (int)cmd.clip_rect.w;
-        const int h = (int)cmd.clip_rect.h;
+    for (i = 0; i < buffer->command_size; ++i) {
+        cmd = &buffer->commands[i];
+        const int x = (int)cmd->clip_rect.x;
+        const int y = height - (int)(cmd->clip_rect.y + cmd->clip_rect.h);
+        const int w = (int)cmd->clip_rect.w;
+        const int h = (int)cmd->clip_rect.h;
         glScissor(x, y, w, h);
-        glBindTexture(GL_TEXTURE_2D, (GLuint)(unsigned long)cmd.texture);
-        glDrawArrays(GL_TRIANGLES, offset, (GLsizei)cmd.vertex_count);
-        offset += (GLint)cmd.vertex_count;
+        glBindTexture(GL_TEXTURE_2D, (GLuint)(unsigned long)cmd->texture);
+        glDrawArrays(GL_TRIANGLES, offset, (GLsizei)cmd->vertex_count);
+        offset += (GLint)cmd->vertex_count;
     }
 
     glDisableClientState(GL_COLOR_ARRAY);
@@ -422,7 +422,6 @@ main(int argc, char *argv[])
     struct GUI gui;
     long dt, started;
     gui_byte *buffer;
-    const gui_size buffer_size = MAX_BUFFER;
     static GLint att[] = {GLX_RGBA, GLX_DEPTH_SIZE,24, GLX_DOUBLEBUFFER, None};
 
     gui_char input_text[INPUT_MAX];
@@ -462,7 +461,7 @@ main(int argc, char *argv[])
     /* OpenGL */
     xw.glc = glXCreateContext(xw.dpy, xw.vi, NULL, GL_TRUE);
     glXMakeCurrent(xw.dpy, xw.win, xw.glc);
-    buffer = xcalloc(buffer_size, 1);
+    buffer = xcalloc(MAX_BUFFER, 1);
 
     /* GUI */
     gui.win = &xw;
