@@ -487,9 +487,11 @@ main(int argc, char *argv[])
         /* ------------------------- GUI --------------------------*/
         gui_begin(&gui.out, buffer, MAX_BUFFER);
         xw.running = gui_panel_begin(&gui.panel, &gui.out, "Demo",
-            GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE, 50, 50, 200, 0);
+            GUI_PANEL_HEADER|GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE,
+            20, 20, 200, 0);
         gui_panel_row(&gui.panel, 30, 1);
-        if (gui_panel_button(&gui.panel, "button", 6))
+        gui_panel_text(&gui.panel, "Text", 4);
+        if (gui_panel_button_text(&gui.panel, "button", 6))
             fprintf(stdout, "button pressed!\n");
         slider = gui_panel_slider(&gui.panel, 0.0f, slider, 10.0f, 1.0f);
         prog = gui_panel_progress(&gui.panel, prog, 100, gui_true);
