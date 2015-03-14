@@ -9,18 +9,17 @@
 /*
  *  ------------- TODO-List ------------
  * - widgets
- *      o Input (1)
- *      o Counter
+ *      o Input cursor
  * - panel
- *      o Group (4)
- *      o Border (3)
+ *      o Group (3)
+ *      o Border (2)
  *      o Moveable
  *      o Scaleable
- *      o Scrollbar (2)
+ *      o Scrollbar (1)
  *      o Tabs
  *      o Icon
  *      o combobox
- *      o listView  (5)
+ *      o listView  (4)
  *      o treeView
  *      o textBox
  * ---------------------------------------
@@ -133,14 +132,20 @@ struct gui_image {
     struct gui_color background;
 };
 
+enum gui_button_behavior {
+    GUI_BUTTON_SWITCH,
+    GUI_BUTTON_REPEATER
+};
+
 struct gui_button {
     gui_float x, y;
     gui_float w, h;
     gui_float pad_x, pad_y;
-    struct gui_color font;
+    enum gui_button_behavior behavior;
     struct gui_color background;
     struct gui_color foreground;
     struct gui_color highlight;
+    struct gui_color font;
 };
 
 struct gui_toggle {
@@ -187,11 +192,13 @@ struct gui_scroll {
     struct gui_color foreground;
 };
 
-enum gui_input_flags {
-    GUI_INPUT_ALL = -1,
-    GUI_INPUT_INTEGER = 0x01,
-    GUI_INPUT_FLOAT = 0x02,
-    GUI_INPUT_LITERALS = 0x04,
+enum gui_input_filter {
+    GUI_INPUT_DEFAULT,
+    GUI_INPUT_FLOAT,
+    GUI_INPUT_DEC,
+    GUI_INPUT_HEX,
+    GUI_INPUT_OCT,
+    GUI_INPUT_BIN,
 };
 
 struct gui_input_field {
@@ -200,7 +207,7 @@ struct gui_input_field {
     gui_float pad_x, pad_y;
     gui_size max;
     gui_bool active;
-    gui_flags flags;
+    enum gui_input_filter filter;
     gui_bool password;
     struct gui_color background;
     struct gui_color foreground;
@@ -212,10 +219,12 @@ struct gui_spinner {
     gui_float w, h;
     gui_float pad_x, pad_y;
     gui_bool active;
-    gui_float max;
-    gui_float min;
+    gui_int step;
+    gui_int max;
+    gui_int min;
     struct gui_color background;
     struct gui_color foreground;
+    struct gui_color button;
     struct gui_color font;
 };
 
@@ -261,6 +270,9 @@ enum gui_colors {
     GUI_COLOR_PROGRESS_CURSOR,
     GUI_COLOR_INPUT,
     GUI_COLOR_INPUT_BORDER,
+    GUI_COLOR_SPINNER,
+    GUI_COLOR_SPINNER_BORDER,
+    GUI_COLOR_SPINNER_BUTTON,
     GUI_COLOR_HISTO,
     GUI_COLOR_HISTO_BARS,
     GUI_COLOR_HISTO_NEGATIVE,
@@ -341,9 +353,12 @@ gui_size gui_progress(struct gui_draw_buffer *buf, const struct gui_progress *pr
 gui_int gui_input(struct gui_draw_buffer *buf,  gui_char *buffer, gui_size *length,
                     const struct gui_input_field *input,
                     const struct gui_font *font, const struct gui_input *in);
-gui_int gui_spinner(struct gui_draw_buffer *buf, const struct gui_spinner *spinner,
-                    gui_float *value, gui_float *step,
+gui_size gui_command(struct gui_draw_buffer *buf,  gui_char *buffer, gui_size *length,
+                    gui_int *active, const struct gui_input_field *input,
                     const struct gui_font *font, const struct gui_input *in);
+gui_int gui_spinner(struct gui_draw_buffer *buf, const struct gui_spinner *spinner,
+                    gui_int *value, const struct gui_font *font,
+                    const struct gui_input *in);
 gui_size gui_scroll(struct gui_draw_buffer *buf, const struct gui_scroll *scroll,
                     const struct gui_input *in);
 gui_int gui_histo(struct gui_draw_buffer *buf, const struct gui_histo *histo,
@@ -362,10 +377,13 @@ void gui_panel_row(struct gui_panel *panel, gui_float height, gui_size cols);
 void gui_panel_seperator(struct gui_panel *panel, gui_size cols);
 void gui_panel_text(struct gui_panel *panel, const char *str, gui_size len);
 gui_size gui_panel_text_wrap(struct gui_panel *panel, const char *str, gui_size len);
-gui_int gui_panel_button_text(struct gui_panel *panel, const char *str, gui_size len);
-gui_int gui_panel_button_triangle(struct gui_panel *panel, enum gui_direction d);
+gui_int gui_panel_button_text(struct gui_panel *panel, const char *str, gui_size len,
+                        enum gui_button_behavior behavior);
+gui_int gui_panel_button_triangle(struct gui_panel *panel, enum gui_direction d,
+                        enum gui_button_behavior behavior);
 gui_int gui_panel_button_image(struct gui_panel *panel, gui_texture tex,
-                        struct gui_texCoord from, struct gui_texCoord to);
+                        struct gui_texCoord from, struct gui_texCoord to,
+                        enum gui_button_behavior behavior);
 gui_int gui_panel_toggle(struct gui_panel *panel, const char *str, gui_size len,
                         gui_int active);
 gui_float gui_panel_slider(struct gui_panel *panel, gui_float min, gui_float v,
@@ -373,7 +391,11 @@ gui_float gui_panel_slider(struct gui_panel *panel, gui_float min, gui_float v,
 gui_size gui_panel_progress(struct gui_panel *panel, gui_size cur, gui_size max,
                         gui_bool modifyable);
 gui_int gui_panel_input(struct gui_panel *panel, gui_char *buffer, gui_size *len,
-                        gui_size max, gui_bool active);
+                        gui_size max, enum gui_input_filter filter,  gui_bool active);
+gui_size gui_panel_command(struct gui_panel *panel,  gui_char *buffer, gui_size *length,
+                        gui_size max, gui_int *active);
+gui_int gui_panel_spinner(struct gui_panel *panel, gui_int min, gui_int *value,
+                        gui_int max, gui_int step, gui_int active);
 gui_int gui_panel_plot(struct gui_panel *panel, const gui_float *values,
                         gui_size value_count);
 gui_int gui_panel_histo(struct gui_panel *panel, const gui_float *values,

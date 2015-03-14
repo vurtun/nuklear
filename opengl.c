@@ -425,11 +425,17 @@ main(int argc, char *argv[])
     static GLint att[] = {GLX_RGBA, GLX_DEPTH_SIZE,24, GLX_DOUBLEBUFFER, None};
 
     gui_char input_text[INPUT_MAX];
+    gui_char cmd_input[INPUT_MAX];
     gui_size input_len = 0;
+    gui_size cmd_len = 0;
     gui_int typing = 0;
     gui_float slider = 5.0f;
     gui_size prog = 60;
+    gui_int spinner = 100;
     gui_int selected = gui_false;
+    gui_int spinning = gui_false;
+    gui_size submit = 0;
+    gui_int submitting = 0;
     const char *s[] = {"inactive", "active"};
     const gui_float values[] = {10.0f, 12.5f, 18.0f, 15.0f, 25.0f, 30.0f};
 
@@ -490,13 +496,16 @@ main(int argc, char *argv[])
             GUI_PANEL_HEADER|GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE,
             20, 20, 200, 0);
         gui_panel_row(&gui.panel, 30, 1);
-        gui_panel_text(&gui.panel, "Text", 4);
-        if (gui_panel_button_text(&gui.panel, "button", 6))
+        if (gui_panel_button_text(&gui.panel, "button", 6, GUI_BUTTON_SWITCH))
             fprintf(stdout, "button pressed!\n");
         slider = gui_panel_slider(&gui.panel, 0.0f, slider, 10.0f, 1.0f);
         prog = gui_panel_progress(&gui.panel, prog, 100, gui_true);
         selected = gui_panel_toggle(&gui.panel, s[selected], strlen(s[selected]), selected);
-        typing = gui_panel_input(&gui.panel, input_text, &input_len, INPUT_MAX, typing);
+        typing = gui_panel_input(&gui.panel, input_text, &input_len, INPUT_MAX,
+                GUI_INPUT_DEFAULT, typing);
+        submit = gui_panel_command(&gui.panel, cmd_input, &cmd_len, INPUT_MAX,
+                &submitting);
+        spinning = gui_panel_spinner(&gui.panel, 0, &spinner, 250, 10, spinning);
         gui_panel_row(&gui.panel, 100, 1);
         gui_panel_plot(&gui.panel, values, LEN(values));
         gui_panel_histo(&gui.panel, values, LEN(values));

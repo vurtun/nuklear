@@ -7,6 +7,7 @@
 
 #define NULL (void*)0
 #define UTF_INVALID 0xFFFD
+#define MAX_NUMBER_BUFFER 64
 #define PASTE(a,b) a##b
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #define MAX(a,b) ((a) < (b) ? (b) : (a))
@@ -31,10 +32,10 @@
 
 static const gui_texture null_tex = (void*)0;
 static const struct gui_rect null_rect = {-9999, -9999, 9999 * 2, 9999 * 2};
-static gui_char utfbyte[GUI_UTF_SIZE+1] = {0x80, 0, 0xC0, 0xE0, 0xF0};
-static gui_char utfmask[GUI_UTF_SIZE+1] = {0xC0, 0x80, 0xE0, 0xF0, 0xF8};
-static long utfmin[GUI_UTF_SIZE+1] = {0, 0, 0x80, 0x800, 0x100000};
-static long utfmax[GUI_UTF_SIZE+1] = {0x10FFFF, 0x7F, 0x7FF, 0xFFFF, 0x10FFFF};
+static const gui_char utfbyte[GUI_UTF_SIZE+1] = {0x80, 0, 0xC0, 0xE0, 0xF0};
+static const gui_char utfmask[GUI_UTF_SIZE+1] = {0xC0, 0x80, 0xE0, 0xF0, 0xF8};
+static const long utfmin[GUI_UTF_SIZE+1] = {0, 0, 0x80, 0x800, 0x100000};
+static const long utfmax[GUI_UTF_SIZE+1] = {0x10FFFF, 0x7F, 0x7FF, 0xFFFF, 0x10FFFF};
 
 static gui_float
 fsqrt(float x)
@@ -42,7 +43,6 @@ fsqrt(float x)
     float xhalf = 0.5f*x;
     union {float f; int i;} val;
     ASSERT(sizeof(int) == sizeof(float));
-
     val.f = x;
     val.i = 0x5f375a86 - (val.i >> 1);
     val.f = val.f * (1.5f - xhalf * val.f * val.f);
@@ -58,6 +58,47 @@ memcopy(void *dst, const void *src, gui_size size)
     for (i = 0; i < size; ++i)
         d[i] = s[i];
     return dst;
+}
+
+static gui_int
+strtoi(gui_int *number, const char *buffer, gui_size len)
+{
+    gui_size i;
+    if (!number || !buffer | !len) {
+        *number = 0;
+        return 0;
+    }
+    *number = 0;
+    for (i = 0;i < len; ++i)
+        *number = *number * 10 + (buffer[i] - '0');
+    return 1;
+}
+
+static gui_size
+itos(char *buffer, gui_int num)
+{
+    gui_int shifter;
+    gui_size len = 0;
+    const char digit[] = "0123456789";
+    char *p = buffer;
+    if (!buffer)
+        return 0;
+    if (num < 0) {
+        num = ABS(num);
+        *p++ = '-';
+    }
+    shifter = num;
+    do {
+        ++p;
+        shifter = shifter/10;
+    } while (shifter);
+    *p = '\0';
+    len = (gui_size)(p - buffer);
+    do {
+        *--p = digit[num % 10];
+        num = num / 10;
+    } while (num);
+    return len;
 }
 
 static gui_size
@@ -273,10 +314,10 @@ static gui_size
 gui_font_chars_in_space(const struct gui_font *font, const gui_char *text, gui_size len,
     gui_float space)
 {
+    const struct gui_font_glyph *glyph;
     gui_size chars = 0;
     gui_long unicode;
     gui_size text_width = 0;
-    const struct gui_font_glyph *glyph;
     gui_size text_len = 0;
     gui_size glyph_len;
 
@@ -435,7 +476,9 @@ gui_draw_rect(struct gui_draw_buffer *buffer, gui_float x, gui_float y,
     struct gui_draw_command *cmd;
     if (!buffer) return;
     if (col.a == 0) return;
-    if (!gui_push_command(buffer, 6 * 4, &null_rect, null_tex)) return;
+    if (!gui_push_command(buffer, 6 * 4, &null_rect, null_tex))
+        return;
+
     gui_vertex_line(buffer, x, y, x + w, y, col);
     gui_vertex_line(buffer, x + w, y, x + w, y + h, col);
     gui_vertex_line(buffer, x + w, y + h, x, y + h, col);
@@ -609,7 +652,6 @@ gui_button_text(struct gui_draw_buffer *buffer, const struct gui_button *button,
 
     font_color = button->font;
     background = button->background;
-    highlight = button->highlight;
     button_w = MAX(button->w, 2 * button->pad_x);
     button_h = MAX(button->h, 2 * button->pad_x);
 
@@ -617,8 +659,12 @@ gui_button_text(struct gui_draw_buffer *buffer, const struct gui_button *button,
         font_color = button->background;
         background = button->highlight;
         if (INBOX(in->mouse_clicked_pos.x, in->mouse_clicked_pos.y,
-                 button->x, button->y, button_w, button_h))
-            ret = (in->mouse_down && in->mouse_clicked);
+                 button->x, button->y, button_w, button_h)) {
+            if (button->behavior == GUI_BUTTON_SWITCH)
+                ret = (in->mouse_down && in->mouse_clicked);
+            else
+                ret = in->mouse_down;
+        }
     }
     gui_draw_rectf(buffer, button->x, button->y, button_w, button_h, background);
     gui_draw_rect(buffer, button->x+1, button->y+1, button_w-1, button_h-1, button->foreground);
@@ -808,12 +854,70 @@ gui_progress(struct gui_draw_buffer *buffer, const struct gui_progress *prog,
     return prog_value;
 }
 
+static gui_bool
+gui_filter_input(gui_long unicode, gui_size len, enum gui_input_filter filter)
+{
+    if (filter == GUI_INPUT_DEFAULT) {
+        return gui_true;
+    } else if (filter == GUI_INPUT_FLOAT) {
+        if (len > 1)
+            return gui_false;
+        if ((unicode < '0' || unicode > '9') && unicode != '.')
+            return gui_false;
+        return gui_true;
+    } else if (filter == GUI_INPUT_DEC) {
+        if (len > 1)
+            return gui_false;
+        if (unicode < '0' || unicode > '9')
+            return gui_false;
+        return gui_true;
+    } else if (filter == GUI_INPUT_HEX) {
+        if (len > 1)
+            return gui_false;
+        if ((unicode < '0' || unicode > '9') &&
+            (unicode < 'a' || unicode > 'f') &&
+            (unicode < 'A' || unicode > 'B'))
+            return gui_false;
+        return gui_true;
+    } else if (filter == GUI_INPUT_OCT) {
+        if (len > 1)
+            return gui_false;
+        if (unicode < '0' || unicode > '7')
+            return gui_false;
+        return gui_true;
+    } else if (filter == GUI_INPUT_BIN) {
+        if (len > 1)
+            return gui_false;
+        if (unicode < '0' || unicode > '1')
+            return gui_false;
+        return gui_true;
+    }
+    return gui_false;
+}
+
+static void
+gui_buffer_input(gui_char *buffer, gui_size *length, gui_size max,
+    enum gui_input_filter filter, const struct gui_input *in)
+{
+    gui_size text_len = 0, glyph_len = 0;
+    gui_long unicode;
+    glyph_len = utf_decode(in->text, &unicode, in->text_len);
+    while (glyph_len && (text_len + glyph_len) <= in->text_len && *length < max) {
+        if (gui_filter_input(unicode, glyph_len, filter)) {
+            gui_size i = 0;
+            for (i = 0; i < glyph_len; i++)
+                buffer[(*length)++] = in->text[text_len + i];
+        }
+        text_len = text_len + glyph_len;
+        glyph_len = utf_decode(in->text + text_len, &unicode, in->text_len - text_len);
+    }
+}
+
 gui_int
 gui_input(struct gui_draw_buffer *buf,  gui_char *buffer, gui_size *length,
     const struct gui_input_field *input,
     const struct gui_font *font, const struct gui_input *in)
 {
-    gui_size offset = 0;
     gui_float input_w, input_h;
     gui_int input_active;
     if (!buffer || !in || !font || !input)
@@ -842,22 +946,12 @@ gui_input(struct gui_draw_buffer *buf,  gui_char *buffer, gui_size *length,
             input_active = gui_false;
         if ((space->down && space->clicked) && (*length < input->max))
             buffer[(*length)++] = ' ';
-
-        if (in->text_len && *length < input->max) {
-            gui_size text_len = 0, glyph_len = 0;
-            gui_long unicode;
-            gui_size i = 0;
-            glyph_len = utf_decode(in->text, &unicode, in->text_len);
-            while (glyph_len && (text_len + glyph_len) <= in->text_len && *length < input->max) {
-                for (i = 0; i < glyph_len; i++)
-                    buffer[(*length)++] = in->text[text_len + i];
-                text_len = text_len + glyph_len;
-                glyph_len = utf_decode(in->text + text_len, &unicode, in->text_len - text_len);
-            }
-        }
+        if (in->text_len && *length < input->max)
+            gui_buffer_input(buffer, length, input->max, input->filter, in);
     }
 
     if (font && buffer && length && *length) {
+        gui_size offset = 0;
         gui_float label_x = input->x + input->pad_x;
         gui_float label_y = input->y + input->pad_y;
         gui_float label_w = input_w - 2 * input->pad_x;
@@ -868,9 +962,106 @@ gui_input(struct gui_draw_buffer *buf,  gui_char *buffer, gui_size *length,
             text_width = gui_font_text_width(font, &buffer[offset], *length - offset);
         }
         gui_draw_string(buf, font, label_x, label_y, label_w, label_h, input->font,
-                    &buffer[offset], *length);
+            &buffer[offset], *length);
     }
     return input_active;
+}
+
+gui_size
+gui_command(struct gui_draw_buffer *buf, gui_char *buffer, gui_size *length,
+    gui_int *active, const struct gui_input_field *input,
+    const struct gui_font *font, const struct gui_input *in)
+{
+    gui_size submit = 0;
+    gui_size space = 0;
+    struct gui_button button;
+    struct gui_input_field field;
+    if (!buf|| !buffer || !length || !font || !in || !input || !active)
+        return 0;
+
+    memcopy(&field, input, sizeof(struct gui_input_field));
+    space = gui_font_text_width(font, (const gui_char*)"Submit", 6);
+
+    button.y = field.y;
+    button.h = field.h;
+    button.w = (gui_float)space + 2 * field.pad_x - 1;
+    button.x = field.x + field.w - button.w + 1;
+    button.pad_x = field.pad_x;
+    button.pad_y = field.pad_y;
+    button.behavior = GUI_BUTTON_SWITCH;
+    button.font = field.font;
+    button.background = field.background;
+    button.foreground =  field.foreground;
+    button.highlight = field.foreground;
+    if (gui_button_text(buf, &button, "Submit", 6, font, in )) {
+        submit = *length;
+        *length = 0;
+    }
+
+    field.w = field.w - button.w;
+    *active = gui_input(buf, (gui_char*)buffer, length, &field, font, in);
+    if (!submit && active) {
+        const struct gui_key *enter = &in->keys[GUI_KEY_ENTER];
+        if ((enter->down && enter->clicked)) {
+            submit = *length;
+            *length = 0;
+        }
+    }
+    return submit;
+}
+
+gui_int
+gui_spinner(struct gui_draw_buffer *buffer, const struct gui_spinner *spinner,
+    gui_int *value, const struct gui_font *font, const struct gui_input *in)
+{
+    struct gui_button button;
+    struct gui_input_field field;
+    char string[MAX_NUMBER_BUFFER];
+    gui_bool is_active, updated = gui_false;
+    gui_bool button_up_clicked, button_down_clicked;
+    gui_size len, old_len;
+
+    if (!buffer || !spinner || !value || !font) return 0;
+    *value = CLAMP(spinner->min, *value, spinner->max);
+    is_active = spinner->active;
+    len = itos(string, *value);
+    old_len = len;
+
+    button.y = spinner->y;
+    button.h = spinner->h / 2;
+    button.w = spinner->h - spinner->pad_x;
+    button.x = spinner->x + spinner->w - button.w;
+    button.pad_x = MAX(3, button.h - font->height);
+    button.pad_y = MAX(3, button.h - font->height);
+    button.behavior = GUI_BUTTON_SWITCH;
+    button.background = spinner->foreground;
+    button.foreground =  spinner->button;
+    button.highlight = spinner->foreground;
+    button_up_clicked = gui_button_triangle(buffer, &button, GUI_UP, in);
+    button.y = spinner->y + button.h;
+    button_down_clicked = gui_button_triangle(buffer, &button, GUI_DOWN, in);
+    if (button_up_clicked || button_down_clicked) {
+        *value += (button_up_clicked) ? spinner->step : -spinner->step;
+        *value = CLAMP(spinner->min, *value, spinner->max);
+    }
+
+    field.x = spinner->x;
+    field.y = spinner->y;
+    field.w = spinner->w - button.w;
+    field.h = spinner->h;
+    field.pad_x = spinner->pad_x;
+    field.pad_y = spinner->pad_y;
+    field.max  = MAX_NUMBER_BUFFER;
+    field.filter = GUI_INPUT_FLOAT;
+    field.active = is_active;
+    field.font = spinner->font;
+    field.background = spinner->background;
+    field.foreground = spinner->foreground;
+
+    is_active = gui_input(buffer, (gui_char*)string, &len, &field, font, in);
+    if (old_len != len)
+        strtoi(value, string, len);
+    return is_active;
 }
 
 gui_int
@@ -878,11 +1069,11 @@ gui_plot(struct gui_draw_buffer *buffer, const struct gui_plot *plot,
     const struct gui_input *in)
 {
     gui_size i;
+    gui_size plot_step;
+    gui_float plot_w, plot_h;
     gui_int plot_selected = -1;
     gui_float plot_max_value, plot_min_value;
     gui_float plot_value_range, plot_value_ratio;
-    gui_size plot_step;
-    gui_float plot_w, plot_h;
     gui_float canvas_x, canvas_y;
     gui_float canvas_w, canvas_h;
     gui_float last_x;
@@ -1008,7 +1199,6 @@ gui_scroll(struct gui_draw_buffer *buffer, const struct gui_scroll *scroll,
     gui_bool inscroll, incursor;
 
     if (!buffer || !in || !scroll) return 0;
-    scroll_y = scroll->y;
     scroll_w = MAX(scroll->w, 0);
     scroll_h = MAX(scroll->h, 2 * scroll_w);
     gui_draw_rectf(buffer, scroll->x, scroll->y, scroll_w, scroll_h, scroll->background);
@@ -1023,6 +1213,7 @@ gui_scroll(struct gui_draw_buffer *buffer, const struct gui_scroll *scroll,
     button.background = scroll->foreground;
     button.foreground =  scroll->background;
     button.highlight = scroll->foreground;
+    button.behavior = GUI_BUTTON_SWITCH;
     button_up_pressed = gui_button_triangle(buffer, &button, GUI_UP, in);
     button.y = scroll->y + scroll_h - button.h;
     button_down_pressed = gui_button_triangle(buffer, &button, GUI_DOWN, in);
@@ -1085,8 +1276,11 @@ gui_default_config(struct gui_config *config)
     config->colors[GUI_COLOR_SLIDER_CURSOR] = gui_make_color(45, 45, 45, 255);
     config->colors[GUI_COLOR_PROGRESS] = gui_make_color(100, 100, 100, 255);
     config->colors[GUI_COLOR_PROGRESS_CURSOR] = gui_make_color(45, 45, 45, 255);
-    config->colors[GUI_COLOR_INPUT] = gui_make_color(45, 45, 45, 45);
-    config->colors[GUI_COLOR_INPUT_BORDER] = gui_make_color(100, 100, 100, 100);
+    config->colors[GUI_COLOR_INPUT] = gui_make_color(45, 45, 45, 255);
+    config->colors[GUI_COLOR_INPUT_BORDER] = gui_make_color(100, 100, 100, 255);
+    config->colors[GUI_COLOR_SPINNER] = gui_make_color(45, 45, 45, 255);
+    config->colors[GUI_COLOR_SPINNER_BORDER] = gui_make_color(100, 100, 100, 255);
+    config->colors[GUI_COLOR_SPINNER_BUTTON] = gui_make_color(45, 45, 45, 255);
     config->colors[GUI_COLOR_HISTO] = gui_make_color(100, 100, 100, 255);
     config->colors[GUI_COLOR_HISTO_BARS] = gui_make_color(45, 45, 45, 255);
     config->colors[GUI_COLOR_HISTO_NEGATIVE] = gui_make_color(255, 255, 255, 255);
@@ -1307,7 +1501,8 @@ gui_panel_text_wrap(struct gui_panel *panel, const char *str, gui_size len)
 }
 
 gui_int
-gui_panel_button_text(struct gui_panel *panel, const char *str, gui_size len)
+gui_panel_button_text(struct gui_panel *panel, const char *str, gui_size len,
+    enum gui_button_behavior behavior)
 {
     struct gui_rect bounds;
     struct gui_button button;
@@ -1322,6 +1517,7 @@ gui_panel_button_text(struct gui_panel *panel, const char *str, gui_size len)
     button.y = bounds.y;
     button.w = bounds.w;
     button.h = bounds.h;
+    button.behavior = behavior;
     button.pad_x = config->item_padding.x;
     button.pad_y = config->item_padding.y;
     button.background = config->colors[GUI_COLOR_BUTTON];
@@ -1332,7 +1528,8 @@ gui_panel_button_text(struct gui_panel *panel, const char *str, gui_size len)
 }
 
 gui_int
-gui_panel_button_triangle(struct gui_panel *panel, enum gui_direction d)
+gui_panel_button_triangle(struct gui_panel *panel, enum gui_direction d,
+    enum gui_button_behavior behavior)
 {
     struct gui_rect bounds;
     struct gui_button button;
@@ -1347,6 +1544,7 @@ gui_panel_button_triangle(struct gui_panel *panel, enum gui_direction d)
     button.y = bounds.y;
     button.w = bounds.w;
     button.h = bounds.h;
+    button.behavior = behavior;
     button.pad_x = config->item_padding.x;
     button.pad_y = config->item_padding.y;
     button.background = config->colors[GUI_COLOR_BUTTON];
@@ -1358,7 +1556,8 @@ gui_panel_button_triangle(struct gui_panel *panel, enum gui_direction d)
 
 gui_int
 gui_panel_button_image(struct gui_panel *panel, gui_texture tex,
-    struct gui_texCoord from, struct gui_texCoord to)
+    struct gui_texCoord from, struct gui_texCoord to,
+    enum gui_button_behavior behavior)
 {
     struct gui_rect bounds;
     struct gui_button button;
@@ -1372,6 +1571,7 @@ gui_panel_button_image(struct gui_panel *panel, gui_texture tex,
     button.y = bounds.y;
     button.w = bounds.w;
     button.h = bounds.h;
+    button.behavior = behavior;
     button.pad_x = config->item_padding.x;
     button.pad_y = config->item_padding.y;
     button.background = config->colors[GUI_COLOR_BUTTON];
@@ -1466,14 +1666,14 @@ gui_panel_progress(struct gui_panel *panel, gui_size cur_value, gui_size max_val
 
 gui_int
 gui_panel_input(struct gui_panel *panel, gui_char *buffer, gui_size *length,
-    gui_size max_length, gui_bool is_active)
+    gui_size max_length, enum gui_input_filter filter, gui_bool is_active)
 {
     struct gui_rect bounds;
     struct gui_input_field field;
     const struct gui_config *config;
 
-    if (!panel || !panel->config || !panel->in || !panel->out) return is_active;
-    if (!panel->font || panel->minimized) return is_active;
+    if (!panel || !panel->config || !panel->in || !panel->out) return 0;
+    if (!panel->font || panel->minimized) return 0;
     gui_panel_alloc_space(&bounds, panel);
     config = panel->config;
 
@@ -1484,11 +1684,70 @@ gui_panel_input(struct gui_panel *panel, gui_char *buffer, gui_size *length,
     field.pad_x = config->item_padding.x;
     field.pad_y = config->item_padding.y;
     field.max  = max_length;
+    field.filter = filter;
     field.active = is_active;
     field.font = config->colors[GUI_COLOR_TEXT];
     field.background = config->colors[GUI_COLOR_INPUT];
     field.foreground = config->colors[GUI_COLOR_INPUT_BORDER];
     return gui_input(panel->out, buffer, length, &field, panel->font, panel->in);
+}
+
+gui_size
+gui_panel_command(struct gui_panel *panel, gui_char *buffer, gui_size *length,
+    gui_size max, gui_int *active)
+{
+    struct gui_rect bounds;
+    struct gui_input_field field;
+    const struct gui_config *config;
+
+    if (!panel || !panel->config || !panel->in || !panel->out) return 0;
+    if (!panel->font || panel->minimized || !active) return 0;
+    gui_panel_alloc_space(&bounds, panel);
+    config = panel->config;
+
+    field.x = bounds.x;
+    field.y = bounds.y;
+    field.w = bounds.w;
+    field.h = bounds.h;
+    field.pad_x = config->item_padding.x;
+    field.pad_y = config->item_padding.y;
+    field.max  = max;
+    field.filter = GUI_INPUT_DEFAULT;
+    field.active = *active;
+    field.font = config->colors[GUI_COLOR_TEXT];
+    field.background = config->colors[GUI_COLOR_INPUT];
+    field.foreground = config->colors[GUI_COLOR_INPUT_BORDER];
+    return gui_command(panel->out, buffer, length, active, &field, panel->font, panel->in);
+}
+
+gui_int
+gui_panel_spinner(struct gui_panel *panel, gui_int min, gui_int *value,
+    gui_int max, gui_int step, gui_int active)
+{
+    struct gui_rect bounds;
+    struct gui_spinner spinner;
+    const struct gui_config *config;
+
+    if (!panel || !panel->config || !panel->in || !panel->out) return 0;
+    if (!panel->font || panel->minimized) return 0;
+    gui_panel_alloc_space(&bounds, panel);
+    config = panel->config;
+
+    spinner.x = bounds.x;
+    spinner.y = bounds.y;
+    spinner.w = bounds.w;
+    spinner.h = bounds.h;
+    spinner.pad_x = config->item_padding.x;
+    spinner.pad_y = config->item_padding.y;
+    spinner.min = min;
+    spinner.max = max;
+    spinner.step = step;
+    spinner.active = active;
+    spinner.background = config->colors[GUI_COLOR_SPINNER];
+    spinner.foreground = config->colors[GUI_COLOR_SPINNER_BORDER];
+    spinner.button = config->colors[GUI_COLOR_SPINNER_BUTTON];
+    spinner.font = config->colors[GUI_COLOR_TEXT];
+    return gui_spinner(panel->out, &spinner, value, panel->font, panel->in);
 }
 
 gui_int
