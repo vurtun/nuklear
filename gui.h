@@ -5,18 +5,15 @@
 */
 #ifndef GUI_H_
 #define GUI_H_
-
 /*
  *  ------------- TODO-List ------------
- * - widgets
- *      o Input cursor
+ * - Input cursor is fucked!!!
  * - panel
  *      o Group (3)
  *      o Border (2)
  *      o Moveable
  *      o Scaleable
- *      o Scrollbar (1)
- *      o Tabs
+ *      o Tabs (5)
  *      o Icon
  *      o combobox
  *      o listView  (4)
@@ -49,6 +46,24 @@ struct gui_vec2 {gui_float x,y;};
 struct gui_rect {gui_float x,y,w,h;};
 struct gui_key {gui_int down, clicked;};
 
+struct gui_memory {
+    void *memory;
+    gui_size vertex_size;
+    gui_size command_size;
+    gui_size clip_size;
+};
+
+struct gui_memory_status {
+    gui_size vertexes_allocated;
+    gui_size vertexes_needed;
+    gui_size commands_allocated;
+    gui_size commands_needed;
+    gui_size clips_allocated;
+    gui_size clips_needed;
+    gui_size allocated;
+    gui_size needed;
+};
+
 struct gui_vertex {
     struct gui_vec2 pos;
     struct gui_texCoord uv;
@@ -65,11 +80,23 @@ struct gui_draw_buffer {
     struct gui_vertex *vertexes;
     gui_size vertex_capacity;
     gui_size vertex_size;
+    gui_size vertex_needed;
     struct gui_draw_command *commands;
     gui_size command_capacity;
     gui_size command_size;
-    gui_size allocated;
-    gui_size needed;
+    gui_size command_needed;
+    struct gui_rect *clips;
+    gui_size clip_capacity;
+    gui_size clip_size;
+    gui_size clip_needed;
+};
+
+struct gui_draw_call_list {
+    void *memory;
+    struct gui_vertex *vertexes;
+    gui_size vertex_size;
+    struct gui_draw_command *commands;
+    gui_size command_size;
 };
 
 enum gui_keys {
@@ -207,6 +234,7 @@ struct gui_input_field {
     gui_float pad_x, pad_y;
     gui_size max;
     gui_bool active;
+    gui_bool show_cursor;
     enum gui_input_filter filter;
     gui_bool password;
     struct gui_color background;
@@ -280,6 +308,8 @@ enum gui_colors {
     GUI_COLOR_PLOT,
     GUI_COLOR_PLOT_LINES,
     GUI_COLOR_PLOT_HIGHLIGHT,
+    GUI_COLOR_SCROLLBAR,
+    GUI_COLOR_SCROLLBAR_CURSOR,
     GUI_COLOR_COUNT
 };
 
@@ -289,8 +319,8 @@ struct gui_config {
     struct gui_vec2 panel_min_size;
     struct gui_vec2 item_spacing;
     struct gui_vec2 item_padding;
-    gui_int scrollbar_width;
-    gui_int scroll_factor;
+    gui_float scrollbar_width;
+    gui_float scroll_factor;
     struct gui_color colors[GUI_COLOR_COUNT];
 };
 
@@ -309,8 +339,10 @@ struct gui_panel {
     gui_float at_y;
     gui_float width, height;
     gui_size index;
+    gui_float header_height;
     gui_float row_height;
     gui_size row_columns;
+    gui_float offset;
     gui_int minimized;
     struct gui_draw_buffer *out;
     const struct gui_font *font;
@@ -327,8 +359,9 @@ void gui_input_char(struct gui_input *in, gui_glyph glyph);
 void gui_input_end(struct gui_input *in);
 
 /* Output */
-void gui_begin(struct gui_draw_buffer *buf, void *memory, gui_size size);
-gui_size gui_end(struct gui_draw_buffer *buf);
+void gui_begin(struct gui_draw_buffer *buf, const struct gui_memory *memory);
+void gui_end(struct gui_draw_buffer *buf, struct gui_draw_call_list *calls,
+            struct gui_memory_status* status);
 
 /* Widgets */
 void gui_text(struct gui_draw_buffer *buf, const struct gui_text *text,
@@ -373,10 +406,9 @@ void gui_panel_init(struct gui_panel *panel, const struct gui_config *config,
 gui_int gui_panel_begin(struct gui_panel *panel, struct gui_draw_buffer *q,
                         const char *t, gui_flags f,
                         gui_float x, gui_float y, gui_float w, gui_float h);
-void gui_panel_row(struct gui_panel *panel, gui_float height, gui_size cols);
+void gui_panel_layout(struct gui_panel *panel, gui_float height, gui_size cols);
 void gui_panel_seperator(struct gui_panel *panel, gui_size cols);
 void gui_panel_text(struct gui_panel *panel, const char *str, gui_size len);
-gui_size gui_panel_text_wrap(struct gui_panel *panel, const char *str, gui_size len);
 gui_int gui_panel_button_text(struct gui_panel *panel, const char *str, gui_size len,
                         enum gui_button_behavior behavior);
 gui_int gui_panel_button_triangle(struct gui_panel *panel, enum gui_direction d,
