@@ -59,6 +59,7 @@ struct GUI {
     struct gui_font *font;
     struct gui_config config;
     struct gui_panel panel;
+    struct gui_panel group;
 
     /* State */
     gui_char input_text[INPUT_MAX];
@@ -502,22 +503,29 @@ main(int argc, char *argv[])
         gui_begin(&gui.out, &gui.memory);
         xw.running = gui_panel_begin(&gui.panel, &gui.out, "Demo",
             GUI_PANEL_HEADER|GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE|GUI_PANEL_SCROLLBAR,
-            20, 20, 200, 260);
+            20, 20, 200, 400);
         gui_panel_layout(&gui.panel, 30, 1);
         if (gui_panel_button_text(&gui.panel, "button", 6, GUI_BUTTON_SWITCH))
             fprintf(stdout, "button pressed!\n");
         gui.slider = gui_panel_slider(&gui.panel, 0.0f, gui.slider, 10.0f, 1.0f);
         gui.prog = gui_panel_progress(&gui.panel, gui.prog, 100, gui_true);
         gui.selected = gui_panel_toggle(&gui.panel, s[gui.selected],
-                        strlen(s[gui.selected]), gui.selected);
+                                        strlen(s[gui.selected]), gui.selected);
         gui.typing = gui_panel_input(&gui.panel, gui.input_text, &gui.input_len, INPUT_MAX,
-                        GUI_INPUT_DEFAULT, gui.typing);
+                                        GUI_INPUT_DEFAULT, gui.typing);
         gui.submit = gui_panel_command(&gui.panel, gui.cmd_input, &gui.cmd_len, INPUT_MAX,
-                        &gui.submitting);
+                                        &gui.submitting);
         gui.spinning = gui_panel_spinner(&gui.panel, 0, &gui.spinner, 250, 10, gui.spinning);
+        gui_panel_layout(&gui.panel, 100, 1);
+        gui_panel_group_begin(&gui.group, NULL, &gui.panel);
+        gui_panel_layout(&gui.group, 30, 1);
+        if (gui_panel_button_text(&gui.group, "button", 6, GUI_BUTTON_SWITCH))
+            fprintf(stdout, "button group pressed!\n");
+        gui_panel_group_end(&gui.group);
         gui_panel_layout(&gui.panel, 100, 1);
         gui_panel_plot(&gui.panel, values, LEN(values));
         gui_panel_histo(&gui.panel, values, LEN(values));
+        gui_panel_end(&gui.panel);
         gui_panel_end(&gui.panel);
         gui_end(&gui.out, &gui.draw_list, NULL);
         /* ---------------------------------------------------------*/

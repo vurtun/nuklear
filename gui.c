@@ -1102,8 +1102,9 @@ gui_command(struct gui_draw_buffer *buf, gui_char *buffer, gui_size *length,
 }
 
 gui_int
-gui_spinner(struct gui_draw_buffer *buffer, const struct gui_spinner *spinner,
-    gui_int *value, const struct gui_font *font, const struct gui_input *in)
+gui_spinner(struct gui_draw_buffer *buffer, gui_int *value,
+    const struct gui_spinner *spinner, const struct gui_font *font,
+    const struct gui_input *in)
 {
     struct gui_button button;
     struct gui_input_field field;
@@ -1271,7 +1272,7 @@ gui_histo(struct gui_draw_buffer *buffer, const struct gui_histo *histo,
     return selected;
 }
 
-gui_size
+gui_float
 gui_scroll(struct gui_draw_buffer *buffer, const struct gui_scroll *scroll,
     const struct gui_input *in)
 {
@@ -1280,8 +1281,8 @@ gui_scroll(struct gui_draw_buffer *buffer, const struct gui_scroll *scroll,
     struct gui_button button;
 
     gui_float scroll_y, scroll_w, scroll_h;
-    gui_size scroll_offset;
-    gui_size scroll_step;
+    gui_float scroll_offset;
+    gui_float scroll_step;
     gui_float scroll_off, scroll_ratio;
 
     gui_float cursor_x, cursor_y;
@@ -1292,6 +1293,7 @@ gui_scroll(struct gui_draw_buffer *buffer, const struct gui_scroll *scroll,
     scroll_w = MAX(scroll->w, 0);
     scroll_h = MAX(scroll->h, 2 * scroll_w);
     gui_draw_rectf(buffer, scroll->x, scroll->y, scroll_w, scroll_h, scroll->background);
+    gui_draw_rect(buffer, scroll->x, scroll->y, scroll_w, scroll_h, scroll->border);
     if (scroll->target <= scroll_h) return 0;
 
     button.x = scroll->x;
@@ -1310,10 +1312,10 @@ gui_scroll(struct gui_draw_buffer *buffer, const struct gui_scroll *scroll,
 
     scroll_h = scroll_h - 2 * button.h;
     scroll_y = scroll->y + button.h;
-    scroll_step = MIN(scroll->step, (gui_size)scroll_h);
-    scroll_offset = MIN(scroll->offset, (gui_size)(scroll->target - (gui_size)scroll_h));
-    scroll_ratio = (gui_float)scroll_h/(gui_float)scroll->target;
-    scroll_off = (gui_float)scroll_offset/(gui_float)scroll->target;
+    scroll_step = MIN(scroll->step, scroll_h);
+    scroll_offset = MIN(scroll->offset, scroll->target - scroll_h);
+    scroll_ratio = scroll_h / scroll->target;
+    scroll_off = scroll_offset / scroll->target;
 
     cursor_h = scroll_ratio * scroll_h;
     cursor_y = scroll_y + (scroll_off * scroll_h);
@@ -1324,14 +1326,14 @@ gui_scroll(struct gui_draw_buffer *buffer, const struct gui_scroll *scroll,
     incursor = INBOX(in->mouse_prev.x, in->mouse_prev.y, cursor_x, cursor_y, cursor_w, cursor_h);
     if (in->mouse_down && inscroll && incursor) {
         const gui_float pixel = in->mouse_delta.y;
-        const gui_float delta =  (pixel / (gui_float)scroll_h) * (gui_float)scroll->target;
-        scroll_offset = MIN(scroll_offset + (gui_size)delta, scroll->target - (gui_size)scroll_h);
+        const gui_float delta =  (pixel / scroll_h) * scroll->target;
+        scroll_offset = CLAMP(0, scroll_offset + delta, scroll->target - scroll_h);
         cursor_y += pixel;
     } else if (button_up_pressed || button_down_pressed) {
         scroll_offset = (button_down_pressed) ?
-            MIN(scroll_offset + scroll_step, scroll->target - (gui_size)scroll_h):
+            MIN(scroll_offset + scroll_step, scroll->target - scroll_h):
             MAX(0, scroll_offset - scroll_step);
-        scroll_off = (gui_float)scroll_offset / (gui_float)scroll->target;
+        scroll_off = scroll_offset / scroll->target;
         cursor_y = scroll_y + (scroll_off * scroll_h);
     }
 
@@ -1353,7 +1355,7 @@ gui_default_config(struct gui_config *config)
     config->item_padding = gui_make_vec2(4.0f, 4.0f);
     config->colors[GUI_COLOR_TEXT] = gui_make_color(255, 255, 255, 255);
     config->colors[GUI_COLOR_PANEL] = gui_make_color(45, 45, 45, 255);
-    config->colors[GUI_COLOR_BORDER] = gui_make_color(0, 0, 0, 255);
+    config->colors[GUI_COLOR_BORDER] = gui_make_color(100, 100, 100, 255);
     config->colors[GUI_COLOR_TITLEBAR] = gui_make_color(45, 45, 45, 255);
     config->colors[GUI_COLOR_BUTTON] = gui_make_color(45, 45, 45, 255);
     config->colors[GUI_COLOR_BUTTON_HOVER] = gui_make_color(100, 100, 100, 255);
@@ -1378,8 +1380,9 @@ gui_default_config(struct gui_config *config)
     config->colors[GUI_COLOR_PLOT] = gui_make_color(100, 100, 100, 255);
     config->colors[GUI_COLOR_PLOT_LINES] = gui_make_color(45, 45, 45, 255);
     config->colors[GUI_COLOR_PLOT_HIGHLIGHT] = gui_make_color(255, 0, 0, 255);
-    config->colors[GUI_COLOR_SCROLLBAR] = gui_make_color(100, 100, 100, 255);
-    config->colors[GUI_COLOR_SCROLLBAR_CURSOR] = gui_make_color(45, 45, 45, 255);
+    config->colors[GUI_COLOR_SCROLLBAR] = gui_make_color(41, 41, 41, 255);
+    config->colors[GUI_COLOR_SCROLLBAR_CURSOR] = gui_make_color(70, 70, 70, 255);
+    config->colors[GUI_COLOR_SCROLLBAR_BORDER] = gui_make_color(45, 45, 45, 255);
 }
 
 void
@@ -1427,12 +1430,16 @@ gui_panel_begin(struct gui_panel *panel, struct gui_draw_buffer *out,
         clip.x = x; clip.w = w;
         clip.y = y + panel->header_height;
         clip.h = h - panel->header_height;
+        if (panel->flags & GUI_PANEL_SCROLLBAR)
+            clip.h -= config->panel_padding.y;
         gui_push_clip(out, &clip);
     } else {
         clip.x = x; clip.y = y;
         clip.w = w; clip.h = h;
+        if (panel->flags & GUI_PANEL_SCROLLBAR)
+            clip.h -= config->panel_padding.y;
         gui_push_clip(out, &clip);
-        panel->header_height = 0.0f;
+        panel->header_height = config->panel_padding.y + config->item_padding.y;
     }
 
     panel->out = out;
@@ -1832,7 +1839,7 @@ gui_panel_spinner(struct gui_panel *panel, gui_int min, gui_int *value,
     spinner.foreground = config->colors[GUI_COLOR_SPINNER_BORDER];
     spinner.button = config->colors[GUI_COLOR_SPINNER_BUTTON];
     spinner.font = config->colors[GUI_COLOR_TEXT];
-    return gui_spinner(panel->out, &spinner, value, panel->font, panel->in);
+    return gui_spinner(panel->out, value, &spinner, panel->font, panel->in);
 }
 
 gui_int
@@ -1888,26 +1895,123 @@ gui_panel_histo(struct gui_panel *panel, const gui_float *values, gui_size count
     return gui_histo(panel->out, &histo, panel->in);
 }
 
-void gui_panel_end(struct gui_panel *panel)
+void
+gui_panel_group_begin(struct gui_panel *group, const char *title, struct gui_panel *panel)
+{
+    struct gui_rect bounds;
+    struct gui_rect clip;
+    const struct gui_config *config;
+    const struct gui_color *color;
+
+    if (!panel || !panel->config || !panel->in || !panel->out || !group ||
+        panel->minimized) return;
+    gui_panel_alloc_space(&bounds, panel);
+    config = panel->config;
+    color = &config->colors[GUI_COLOR_BORDER];
+
+    gui_panel_init(group, panel->config, panel->font, panel->in);
+    group->flags = GUI_PANEL_TAB|GUI_PANEL_BORDER|GUI_PANEL_SCROLLBAR;
+    group->out = panel->out;
+    group->x = bounds.x;
+    group->y = bounds.y;
+    group->at_y = group->y;
+    group->width = bounds.w;
+    group->width -= config->scrollbar_width;
+    group->index = 0;
+    group->header_height = 0;
+    group->offset = 0;
+    group->row_height = 0;
+    group->row_columns = 0;
+    group->minimized = gui_false;
+    group->header_height = config->panel_padding.y + config->item_padding.y;
+    group->row_height = group->header_height;
+    group->height = bounds.h - group->header_height - config->panel_padding.y;
+
+    if (title) {
+        const struct gui_color *font = &config->colors[GUI_COLOR_TEXT];
+        const char *p = title;
+        gui_size text_len = 0;
+        gui_float label_x, label_y;
+        gui_float label_w, label_h;
+        gui_float offset = group->font->height / 2;
+        gui_int font_width = group->font->glyphes['X'].width;
+        gui_size text_width;
+        while (*p++ != '\0') text_len++;
+
+        text_width = gui_font_text_width(group->font, (const gui_char*)title, text_len);
+        label_x = group->x + (gui_float)font_width;
+        label_y = group->y + group->font->height;
+        label_w = (gui_float)text_width;
+        label_h = group->font->height;
+
+        gui_draw_line(group->out, group->x, group->y + offset,
+                label_x, group->y + offset, *color);
+        gui_draw_string(group->out, group->font, label_x, label_y,
+                label_w, label_h, *font, (const gui_char*)title, text_len);
+        gui_draw_line(group->out, label_x + label_w, group->y + offset,
+                group->x + group->width, group->y + offset, *color);
+    } else {
+        gui_draw_line(panel->out, bounds.x, bounds.y, bounds.x + bounds.w, bounds.y, *color);
+    }
+
+    clip.x = group->x - 1; clip.w = group->width + 1;
+    clip.y = group->y - 1; clip.h = group->height + 1;
+    clip.h -= config->panel_padding.y;
+    gui_push_clip(group->out, &clip);
+}
+
+void
+gui_panel_group_end(struct gui_panel *group)
+{
+    gui_panel_end(group);
+}
+
+void
+gui_panel_end(struct gui_panel *panel)
 {
     gui_pop_clip(panel->out);
     if (panel->flags & GUI_PANEL_SCROLLBAR && !panel->minimized) {
+        gui_float padding_y;
         struct gui_scroll scroll;
         const struct gui_config *config;
-        gui_float space = (panel->at_y + panel->row_height) - panel->y - panel->header_height;
+        gui_float space = (panel->at_y + panel->row_height) - panel->y;
+        space -= (panel->flags & GUI_PANEL_HEADER) ? panel->header_height : 0;
         config = panel->config;
         scroll.w = config->scrollbar_width;
         scroll.h = panel->height;
-        scroll.y = panel->y + panel->header_height;
+        scroll.y =  (panel->flags & GUI_PANEL_BORDER) ? panel->y + 1 : panel->y;
+        if (panel->flags & GUI_PANEL_HEADER)
+            scroll.y += panel->header_height;
+        else scroll.h += panel->header_height;
+        scroll.h = (panel->flags & GUI_PANEL_BORDER) ? scroll.h - 1: scroll.h;
         scroll.x = panel->x + panel->width;
-        scroll.offset = (gui_size)panel->offset;
-        scroll.target = (gui_size)space;
-        scroll.step = (gui_size)(panel->height * 0.25f);
+        scroll.offset = panel->offset;
+        scroll.target = space;
+        scroll.step = panel->height * 0.25f;
         scroll.background = config->colors[GUI_COLOR_SCROLLBAR];
         scroll.foreground = config->colors[GUI_COLOR_SCROLLBAR_CURSOR];
+        scroll.border = config->colors[GUI_COLOR_SCROLLBAR_BORDER];
         panel->offset = (gui_float)gui_scroll(panel->out, &scroll, panel->in);
+        padding_y = panel->y + panel->height + panel->header_height - config->panel_padding.y;
+        gui_draw_rectf(panel->out, panel->x, padding_y, panel->width, config->panel_padding.y,
+                config->colors[GUI_COLOR_PANEL]);
     } else {
-        panel->height = panel->at_y - panel->y;
+        panel->height = panel->at_y + panel->row_height - panel->y;
+    }
+
+    if (panel->flags & GUI_PANEL_BORDER) {
+        const struct gui_config *config;
+        gui_float padding_y, width;
+        config = panel->config;
+        padding_y = panel->y + panel->height + panel->header_height;
+        width = (panel->flags & GUI_PANEL_SCROLLBAR) ?
+                    panel->width + config->scrollbar_width : panel->width;
+        gui_draw_line(panel->out, panel->x, padding_y, panel->x + width,
+                padding_y, config->colors[GUI_COLOR_BORDER]);
+        gui_draw_line(panel->out, panel->x, panel->y, panel->x,
+                padding_y, config->colors[GUI_COLOR_BORDER]);
+        gui_draw_line(panel->out, panel->x + width, panel->y, panel->x + width,
+                padding_y, config->colors[GUI_COLOR_BORDER]);
     }
 }
 

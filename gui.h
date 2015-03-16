@@ -9,14 +9,13 @@
  *  ------------- TODO-List ------------
  * - Input cursor is fucked!!!
  * - panel
- *      o Group (3)
- *      o Border (2)
+ *      o Group (1)
  *      o Moveable
  *      o Scaleable
- *      o Tabs (5)
+ *      o Tabs (2)
  *      o Icon
  *      o combobox
- *      o listView  (4)
+ *      o listView  (3)
  *      o treeView
  *      o textBox
  * ---------------------------------------
@@ -212,11 +211,12 @@ struct gui_progress {
 struct gui_scroll {
     gui_float x, y;
     gui_float w, h;
-    gui_size offset;
-    gui_size target;
-    gui_size step;
+    gui_float offset;
+    gui_float target;
+    gui_float step;
     struct gui_color background;
     struct gui_color foreground;
+    struct gui_color border;
 };
 
 enum gui_input_filter {
@@ -310,6 +310,7 @@ enum gui_colors {
     GUI_COLOR_PLOT_HIGHLIGHT,
     GUI_COLOR_SCROLLBAR,
     GUI_COLOR_SCROLLBAR_CURSOR,
+    GUI_COLOR_SCROLLBAR_BORDER,
     GUI_COLOR_COUNT
 };
 
@@ -325,7 +326,7 @@ struct gui_config {
 };
 
 enum gui_panel_flags {
-    GUI_PANEL_GROUP = 0x01,
+    GUI_PANEL_TAB = 0x01,
     GUI_PANEL_HEADER = 0x02,
     GUI_PANEL_BORDER = 0x04,
     GUI_PANEL_MINIMIZABLE = 0x08,
@@ -389,10 +390,10 @@ gui_int gui_input(struct gui_draw_buffer *buf,  gui_char *buffer, gui_size *leng
 gui_size gui_command(struct gui_draw_buffer *buf,  gui_char *buffer, gui_size *length,
                     gui_int *active, const struct gui_input_field *input,
                     const struct gui_font *font, const struct gui_input *in);
-gui_int gui_spinner(struct gui_draw_buffer *buf, const struct gui_spinner *spinner,
-                    gui_int *value, const struct gui_font *font,
+gui_int gui_spinner(struct gui_draw_buffer *buf, gui_int *value,
+                    const struct gui_spinner *spinner, const struct gui_font *font,
                     const struct gui_input *in);
-gui_size gui_scroll(struct gui_draw_buffer *buf, const struct gui_scroll *scroll,
+gui_float gui_scroll(struct gui_draw_buffer *buf, const struct gui_scroll *scroll,
                     const struct gui_input *in);
 gui_int gui_histo(struct gui_draw_buffer *buf, const struct gui_histo *histo,
                     const struct gui_input *in);
@@ -432,6 +433,8 @@ gui_int gui_panel_plot(struct gui_panel *panel, const gui_float *values,
                         gui_size value_count);
 gui_int gui_panel_histo(struct gui_panel *panel, const gui_float *values,
                         gui_size value_count);
+void gui_panel_group_begin(struct gui_panel *panel, const char *t, struct gui_panel *tab);
+void gui_panel_group_end(struct gui_panel *tab);
 void gui_panel_end(struct gui_panel *panel);
 
 #endif
