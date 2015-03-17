@@ -69,7 +69,9 @@ struct GUI {
     gui_size cmd_len;
     gui_int typing;
     gui_float slider;
+    gui_float vslider;
     gui_size prog;
+    gui_size vprog;
     gui_int spinner;
     gui_int selected;
     gui_int spinning;
@@ -476,8 +478,10 @@ main(int argc, char *argv[])
     /* GUI */
     gui.win = &xw;
     gui.prog = 60;
+    gui.vprog = 70;
     gui.spinner = 100;
     gui.slider = 5.0f;
+    gui.vslider = 2.0f;
     gui.font = ldfont("mono.sdf", 16);
     gui.memory.memory = xcalloc(MAX_BUFFER, 1);
     gui.memory.clip_size = MAX_BUFFER / 16;
@@ -518,6 +522,9 @@ main(int argc, char *argv[])
         gui.submit = gui_panel_command(&gui.panel, gui.cmd_input, &gui.cmd_len, INPUT_MAX,
                                         &gui.submitting);
         gui.spinning = gui_panel_spinner(&gui.panel, 0, &gui.spinner, 250, 10, gui.spinning);
+        gui_panel_layout(&gui.panel, 100, 2);
+        gui.vslider = gui_panel_slider(&gui.panel, 0.0f, gui.vslider, 6.0f, 1.0f, GUI_VERTICAL);
+        gui.vprog = gui_panel_progress(&gui.panel, gui.vprog, 100, gui_true, GUI_VERTICAL);
         gui_panel_layout(&gui.panel, 100, 1);
         gui_panel_plot(&gui.panel, values, LEN(values));
         gui_panel_histo(&gui.panel, values, LEN(values));

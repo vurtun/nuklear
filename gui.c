@@ -930,7 +930,7 @@ gui_slider_vertical(struct gui_draw_buffer *buffer,
     cursor_w = (slider_w - 2 * slider->pad_x);
     cursor_h = slider_h - 2 * slider->pad_y;
     cursor_w = cursor_h / (((slider_max - slider_min) + slider->step) / slider->step);
-    cursor_y = slider->y + slider->h - slider->pad_x - (cursor_h * (slider_value - slider_min));
+    cursor_y = slider->y + slider->h - slider->pad_y - (cursor_h * (slider_value - slider_min));
     cursor_x = slider->x + slider->pad_x;
 
     mouse_x = in->mouse_pos.x;
@@ -942,12 +942,12 @@ gui_slider_vertical(struct gui_draw_buffer *buffer,
         INBOX(clicked_x, clicked_y, slider->x, slider->y, slider_w, slider_h) &&
         INBOX(mouse_x, mouse_y, slider->x, slider->y, slider_w, slider_h))
     {
-        const float d = mouse_x - (cursor_x + cursor_w / 2.0f);
-        const float pxstep = (slider_w - 2 * slider->pad_x) / slider_steps;
+        const float d = mouse_y - (cursor_y + cursor_h / 2.0f);
+        const float pxstep = (slider_h - 2 * slider->pad_y) / slider_steps;
         if (ABS(d) >= pxstep) {
             slider_value += (d < 0) ? -slider->step : slider->step;
             slider_value = CLAMP(slider_min, slider_value, slider_max);
-            cursor_y = slider->y + slider->h - slider->pad_x;
+            cursor_y = slider->y + slider->h - slider->pad_y;
             cursor_y -= (cursor_h * (slider_value - slider_min));
         }
     }
@@ -1008,7 +1008,7 @@ gui_progress_vertical(struct gui_draw_buffer *buffer, const struct gui_progress 
 
     if (prog->modifyable && in->mouse_down &&
         INBOX(in->mouse_pos.x, in->mouse_pos.y, prog->x, prog->y, prog_w, prog_h)){
-        gui_float ratio = (gui_float)(in->mouse_pos.y - prog->y) / (gui_float)prog_h;
+        gui_float ratio = (gui_float)(prog->y + prog->h - in->mouse_pos.y) / (gui_float)prog_h;
         prog_value = (gui_size)((gui_float)prog->max * ratio);
     }
 
