@@ -20,16 +20,16 @@ SRC = gui.c opengl.c
 OBJ = $(SRC:.c=.o)
 
 # Modes
-.PHONY: clang
-clang: CC = clang
-clang: $(BIN)
-
 .PHONY: gcc
 gcc: CC = gcc
 gcc: $(BIN)
 
+.PHONY: clang
+clang: CC = clang
+clang: $(BIN)
+
 $(BIN):
 	@mkdir -p bin
 	rm -f bin/$(BIN) $(OBJS)
-	$(CC) $(SRC) -D_POSIX_C_SOURCE=200809L $(CFLAGS) -o bin/$(BIN) -lX11 -lGL -lGLU -lm
+	$(CC) $(SRC) -D_POSIX_C_SOURCE=200809L $(CFLAGS) -o bin/$(BIN) -lX11 -lGL -lGLU
 

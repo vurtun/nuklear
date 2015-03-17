@@ -59,7 +59,8 @@ struct GUI {
     struct gui_font *font;
     struct gui_config config;
     struct gui_panel panel;
-    struct gui_panel group;
+    gui_bool selection[4];
+    gui_float seloff;
 
     /* State */
     gui_char input_text[INPUT_MAX];
@@ -441,6 +442,7 @@ main(int argc, char *argv[])
     static const char *s[] = {"inactive", "active"};
     static const gui_float values[] = {10.0f, 12.5f, 18.0f, 15.0f, 25.0f, 30.0f};
     static GLint att[] = {GLX_RGBA, GLX_DEPTH_SIZE,24, GLX_DOUBLEBUFFER, None};
+    static const char *sel[] = {"item0", "item1", "item2", "item3"};
 
     /* Window */
     UNUSED(argc); UNUSED(argv);
@@ -507,8 +509,8 @@ main(int argc, char *argv[])
         gui_panel_layout(&gui.panel, 30, 1);
         if (gui_panel_button_text(&gui.panel, "button", 6, GUI_BUTTON_SWITCH))
             fprintf(stdout, "button pressed!\n");
-        gui.slider = gui_panel_slider(&gui.panel, 0.0f, gui.slider, 10.0f, 1.0f);
-        gui.prog = gui_panel_progress(&gui.panel, gui.prog, 100, gui_true);
+        gui.slider = gui_panel_slider(&gui.panel, 0.0f, gui.slider, 10.0f, 1.0f, GUI_HORIZONTAL);
+        gui.prog = gui_panel_progress(&gui.panel, gui.prog, 100, gui_true, GUI_HORIZONTAL);
         gui.selected = gui_panel_toggle(&gui.panel, s[gui.selected],
                                         strlen(s[gui.selected]), gui.selected);
         gui.typing = gui_panel_input(&gui.panel, gui.input_text, &gui.input_len, INPUT_MAX,
@@ -517,15 +519,9 @@ main(int argc, char *argv[])
                                         &gui.submitting);
         gui.spinning = gui_panel_spinner(&gui.panel, 0, &gui.spinner, 250, 10, gui.spinning);
         gui_panel_layout(&gui.panel, 100, 1);
-        gui_panel_group_begin(&gui.group, NULL, &gui.panel);
-        gui_panel_layout(&gui.group, 30, 1);
-        if (gui_panel_button_text(&gui.group, "button", 6, GUI_BUTTON_SWITCH))
-            fprintf(stdout, "button group pressed!\n");
-        gui_panel_group_end(&gui.group);
-        gui_panel_layout(&gui.panel, 100, 1);
         gui_panel_plot(&gui.panel, values, LEN(values));
         gui_panel_histo(&gui.panel, values, LEN(values));
-        gui_panel_end(&gui.panel);
+        gui.seloff = gui_panel_list(&gui.panel, gui.selection, sel, LEN(sel), gui.seloff);
         gui_panel_end(&gui.panel);
         gui_end(&gui.out, &gui.draw_list, NULL);
         /* ---------------------------------------------------------*/

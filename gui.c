@@ -60,6 +60,15 @@ memcopy(void *dst, const void *src, gui_size size)
     return dst;
 }
 
+static gui_size
+strsiz(const char *str)
+{
+    gui_size siz = 0;
+    const char *p = str;
+    while (p && *p++ != '\0') siz++;
+    return siz;
+}
+
 static gui_int
 strtoi(gui_int *number, const char *buffer, gui_size len)
 {
@@ -109,6 +118,8 @@ unify(const struct gui_rect *a, const struct gui_rect *b)
     clip.y = MAX(a->y, b->y);
     clip.w = MIN(a->x + a->w, b->x + b->w) - clip.x;
     clip.h = MIN(a->y + a->h, b->y + b->h) - clip.y;
+    clip.w = MAX(0, clip.w);
+    clip.h = MAX(0, clip.h);
     return clip;
 }
 
@@ -200,7 +211,7 @@ gui_make_vec2(gui_float x, gui_float y)
 static void
 gui_triangle_from_direction(struct gui_vec2 *result, gui_float x, gui_float y,
     gui_float w, gui_float h, gui_float pad_x, gui_float pad_y,
-    enum gui_direction direction)
+    enum gui_heading direction)
 {
     gui_float w_half, h_half;
     w = MAX(4 * pad_x, w);
@@ -455,6 +466,7 @@ gui_push_command(struct gui_draw_buffer *buffer, gui_size count, gui_texture tex
     const struct gui_rect *clip;
     buffer->vertex_needed += count * sizeof(struct gui_vertex);
     buffer->command_needed += sizeof(struct gui_draw_command);
+
     if (!buffer || !count) return gui_false;
     if (!buffer->commands || buffer->command_size >= buffer->command_capacity ||
         !buffer->command_capacity)
@@ -519,7 +531,6 @@ static void
 gui_draw_line(struct gui_draw_buffer *buffer, gui_float x0, gui_float y0,
     gui_float x1, gui_float y1, struct gui_color col)
 {
-    struct gui_draw_command *cmd;
     if (!buffer) return;
     if (col.a == 0) return;
     if (!gui_push_command(buffer, 6, null_tex)) return;
@@ -530,7 +541,6 @@ static void
 gui_draw_trianglef(struct gui_draw_buffer *buffer, gui_float x0, gui_float y0,
     gui_float x1, gui_float y1, gui_float x2, gui_float y2, struct gui_color c)
 {
-    struct gui_draw_command *cmd;
     if (!buffer) return;
     if (c.a == 0) return;
     if (!gui_push_command(buffer, 3, null_tex))
@@ -545,7 +555,6 @@ static void
 gui_draw_rect(struct gui_draw_buffer *buffer, gui_float x, gui_float y,
     gui_float w, gui_float h, struct gui_color col)
 {
-    struct gui_draw_command *cmd;
     if (!buffer) return;
     if (col.a == 0) return;
     if (!gui_push_command(buffer, 6 * 4, null_tex))
@@ -561,7 +570,6 @@ static void
 gui_draw_rectf(struct gui_draw_buffer *buffer, gui_float x, gui_float y,
     gui_float w, gui_float h, struct gui_color col)
 {
-    struct gui_draw_command *cmd;
     if (!buffer) return;
     if (col.a == 0) return;
     if (!gui_push_command(buffer, 6, null_tex))
@@ -735,7 +743,7 @@ gui_button_text(struct gui_draw_buffer *buffer, const struct gui_button *button,
     button_h = MAX(button->h, 2 * button->pad_x);
 
     if (INBOX(in->mouse_pos.x, in->mouse_pos.y, button->x, button->y, button_w, button_h)) {
-        font_color = button->background;
+        font_color = button->highlight_font;
         background = button->highlight;
         if (INBOX(in->mouse_clicked_pos.x, in->mouse_clicked_pos.y,
                  button->x, button->y, button_w, button_h)) {
@@ -770,13 +778,13 @@ gui_button_text(struct gui_draw_buffer *buffer, const struct gui_button *button,
 
 gui_int
 gui_button_triangle(struct gui_draw_buffer *buffer, struct gui_button* button,
-    enum gui_direction direction, const struct gui_input *in)
+    enum gui_heading heading, const struct gui_input *in)
 {
     gui_bool pressed;
     struct gui_vec2 points[3];
     pressed = gui_button_text(buffer, button, NULL, 0, NULL, in);
     gui_triangle_from_direction(points, button->x, button->y, button->w, button->h,
-        button->pad_x, button->pad_y, direction);
+        button->pad_x, button->pad_y, heading);
     gui_draw_trianglef(buffer, points[0].x, points[0].y, points[1].x, points[1].y,
         points[2].x, points[2].y, button->foreground);
     return pressed;
@@ -898,6 +906,56 @@ gui_slider(struct gui_draw_buffer *buffer, const struct gui_slider *slider,
     return slider_value;
 }
 
+gui_float
+gui_slider_vertical(struct gui_draw_buffer *buffer,
+    const struct gui_slider *slider, const struct gui_input *in)
+{
+    gui_float slider_min, slider_max;
+    gui_float slider_value, slider_steps;
+    gui_float slider_w, slider_h;
+    gui_float mouse_x, mouse_y;
+    gui_float clicked_x, clicked_y;
+    gui_float cursor_x, cursor_y;
+    gui_float cursor_w, cursor_h;
+    if (!buffer || !slider || !in)
+        return 0;
+
+    slider_w = MAX(slider->w, 2 * slider->pad_x);
+    slider_h = MAX(slider->h, 2 * slider->pad_y);
+    slider_max = MAX(slider->min, slider->max);
+    slider_min = MIN(slider->min, slider->max);
+    slider_value = CLAMP(slider_min, slider->value, slider_max);
+    slider_steps = (slider_max - slider_min) / slider->step;
+
+    cursor_w = (slider_w - 2 * slider->pad_x);
+    cursor_h = slider_h - 2 * slider->pad_y;
+    cursor_w = cursor_h / (((slider_max - slider_min) + slider->step) / slider->step);
+    cursor_y = slider->y + slider->h - slider->pad_x - (cursor_h * (slider_value - slider_min));
+    cursor_x = slider->x + slider->pad_x;
+
+    mouse_x = in->mouse_pos.x;
+    mouse_y = in->mouse_pos.y;
+    clicked_x = in->mouse_clicked_pos.x;
+    clicked_y = in->mouse_clicked_pos.y;
+
+    if (in->mouse_down &&
+        INBOX(clicked_x, clicked_y, slider->x, slider->y, slider_w, slider_h) &&
+        INBOX(mouse_x, mouse_y, slider->x, slider->y, slider_w, slider_h))
+    {
+        const float d = mouse_x - (cursor_x + cursor_w / 2.0f);
+        const float pxstep = (slider_w - 2 * slider->pad_x) / slider_steps;
+        if (ABS(d) >= pxstep) {
+            slider_value += (d < 0) ? -slider->step : slider->step;
+            slider_value = CLAMP(slider_min, slider_value, slider_max);
+            cursor_y = slider->y + slider->h - slider->pad_x;
+            cursor_y -= (cursor_h * (slider_value - slider_min));
+        }
+    }
+    gui_draw_rectf(buffer, slider->x, slider->y, slider_w, slider_h, slider->background);
+    gui_draw_rectf(buffer, cursor_x, cursor_y, cursor_w, cursor_h, slider->foreground);
+    return slider_value;
+}
+
 gui_size
 gui_progress(struct gui_draw_buffer *buffer, const struct gui_progress *prog,
     const struct gui_input *in)
@@ -927,6 +985,41 @@ gui_progress(struct gui_draw_buffer *buffer, const struct gui_progress *prog,
     cursor_w = (prog_w - 2 * prog->pad_x) * prog_scale;
     cursor_x = prog->x + prog->pad_x;
     cursor_y = prog->y + prog->pad_y;
+
+    gui_draw_rectf(buffer, prog->x, prog->y, prog_w, prog_h, prog->background);
+    gui_draw_rectf(buffer, cursor_x, cursor_y, cursor_w, cursor_h, prog->foreground);
+    return prog_value;
+}
+
+gui_size
+gui_progress_vertical(struct gui_draw_buffer *buffer, const struct gui_progress *prog,
+    const struct gui_input *in)
+{
+    gui_float prog_scale;
+    gui_float cursor_x, cursor_y;
+    gui_float cursor_w, cursor_h;
+    gui_float prog_w, prog_h;
+    gui_size prog_value;
+
+    if (!buffer || !in || !prog) return 0;
+    prog_w = MAX(prog->w, 2 * prog->pad_x + 1);
+    prog_h = MAX(prog->h, 2 * prog->pad_y + 1);
+    prog_value = MIN(prog->current, prog->max);
+
+    if (prog->modifyable && in->mouse_down &&
+        INBOX(in->mouse_pos.x, in->mouse_pos.y, prog->x, prog->y, prog_w, prog_h)){
+        gui_float ratio = (gui_float)(in->mouse_pos.y - prog->y) / (gui_float)prog_h;
+        prog_value = (gui_size)((gui_float)prog->max * ratio);
+    }
+
+    if (!prog->max) return prog_value;
+    prog_value = MIN(prog_value, prog->max);
+    prog_scale = (gui_float)prog_value / (gui_float)prog->max;
+
+    cursor_w = prog_w - 2 * prog->pad_x;
+    cursor_h = (prog_h - 2 * prog->pad_y) * prog_scale;
+    cursor_x = prog->x + prog->pad_x;
+    cursor_y = prog->y + prog->h - prog->pad_y - cursor_h;
 
     gui_draw_rectf(buffer, prog->x, prog->y, prog_w, prog_h, prog->background);
     gui_draw_rectf(buffer, cursor_x, cursor_y, cursor_w, cursor_h, prog->foreground);
@@ -1359,6 +1452,7 @@ gui_default_config(struct gui_config *config)
     config->colors[GUI_COLOR_TITLEBAR] = gui_make_color(45, 45, 45, 255);
     config->colors[GUI_COLOR_BUTTON] = gui_make_color(45, 45, 45, 255);
     config->colors[GUI_COLOR_BUTTON_HOVER] = gui_make_color(100, 100, 100, 255);
+    config->colors[GUI_COLOR_BUTTON_HOVER_FONT] = gui_make_color(45, 45, 45, 255);
     config->colors[GUI_COLOR_BUTTON_BORDER] = gui_make_color(100, 100, 100, 255);
     config->colors[GUI_COLOR_TOGGLE] = gui_make_color(100, 100, 100, 255);
     config->colors[GUI_COLOR_TOGGLE_ACTIVE] = gui_make_color(45, 45, 45, 255);
@@ -1414,6 +1508,7 @@ gui_panel_begin(struct gui_panel *panel, struct gui_draw_buffer *out,
     gui_size text_len = 0;
     struct gui_rect clip;
     gui_float label_x, label_y, label_w, label_h;
+    gui_float header_w = w;
 
     const struct gui_config *config = panel->config;
     const struct gui_color *header = &config->colors[GUI_COLOR_TITLEBAR];
@@ -1421,6 +1516,58 @@ gui_panel_begin(struct gui_panel *panel, struct gui_draw_buffer *out,
     const gui_float mouse_y = panel->in->mouse_pos.y;
     const gui_float clicked_x = panel->in->mouse_clicked_pos.x;
     const gui_float clicked_y = panel->in->mouse_clicked_pos.y;
+
+    i = text;
+    label_x = x + config->panel_padding.x + config->item_padding.x;
+    label_y = y + config->panel_padding.y;
+    label_w = w - 2 * config->panel_padding.x - 2 * config->item_padding.x;
+    label_h = panel->font->height + 2 * config->item_padding.y;
+    while (*i++ != '\0') text_len++;
+    gui_draw_string(panel->out, panel->font, label_x, label_y, label_w, label_h,
+        config->colors[GUI_COLOR_TEXT], (const gui_char*)text, text_len);
+
+    if (panel->flags & (GUI_PANEL_CLOSEABLE|GUI_PANEL_HEADER)) {
+        gui_size text_width;
+        gui_float close_x, close_y, close_w, close_h;
+        const gui_char *X = (const gui_char*)"x";
+
+        text_width = gui_font_text_width(panel->font, X, 1);
+        close_x = (x + w) - ((gui_float)text_width + config->panel_padding.x);
+        close_y = y + config->panel_padding.y;
+        close_w = (gui_float)text_width + config->panel_padding.x;
+        close_h = panel->font->height + 2 * config->item_padding.y;
+        header_w -= ((gui_float)text_width + config->panel_padding.x);
+
+        gui_draw_string(panel->out, panel->font, close_x, close_y, close_w, close_h,
+            config->colors[GUI_COLOR_TEXT], X, 1);
+        if (INBOX(mouse_x, mouse_y, close_x, close_y, close_w, close_h)) {
+            if (INBOX(clicked_x, clicked_y, close_x, close_y, close_w, close_h))
+                ret = !(panel->in->mouse_down && panel->in->mouse_clicked);
+        }
+    }
+
+    if (panel->flags & (GUI_PANEL_MINIMIZABLE|GUI_PANEL_HEADER)) {
+        gui_size text_width;
+        gui_float min_x, min_y, min_w, min_h;
+        const gui_char *score = (panel->minimized) ?
+            (const gui_char*)"+":
+            (const gui_char*)"-";
+
+        text_width = gui_font_text_width(panel->font, score, 1);
+        min_x = (x + header_w) - ((gui_float)text_width + config->item_padding.y);
+        min_y = y + config->panel_padding.y;
+        min_w = (gui_float)text_width;
+        min_h = panel->font->height + 2 * config->item_padding.y;
+        header_w -= (gui_float)text_width;
+
+        gui_draw_string(panel->out, panel->font, min_x, min_y, min_w, min_h,
+            config->colors[GUI_COLOR_TEXT], score, 1);
+        if (INBOX(mouse_x, mouse_y, min_x, min_y, min_w, min_h)) {
+            if (INBOX(clicked_x, clicked_y, min_x, min_y, min_w, min_h))
+                if (panel->in->mouse_down && panel->in->mouse_clicked)
+                    panel->minimized = !panel->minimized;
+        }
+    }
 
     if (panel->flags & GUI_PANEL_HEADER) {
         panel->header_height = panel->font->height + 3 * config->item_padding.y;
@@ -1452,63 +1599,18 @@ gui_panel_begin(struct gui_panel *panel, struct gui_draw_buffer *out,
     panel->row_columns = 0;
     panel->row_height = panel->header_height;
 
-    if (panel->flags & (GUI_PANEL_CLOSEABLE|GUI_PANEL_HEADER)) {
-        gui_size text_width;
-        gui_float close_x, close_y, close_w, close_h;
-        const gui_char *X = (const gui_char*)"x";
-
-        text_width = gui_font_text_width(panel->font, X, 1);
-        close_x = (x + w) - ((gui_float)text_width + config->panel_padding.x);
-        close_y = y + config->panel_padding.y;
-        close_w = (gui_float)text_width + config->panel_padding.x;
-        close_h = panel->font->height + 2 * config->item_padding.y;
-        w -= ((gui_float)text_width + config->panel_padding.x);
-
-        gui_draw_string(panel->out, panel->font, close_x, close_y, close_w, close_h,
-            config->colors[GUI_COLOR_TEXT], X, 1);
-        if (INBOX(mouse_x, mouse_y, close_x, close_y, close_w, close_h)) {
-            if (INBOX(clicked_x, clicked_y, close_x, close_y, close_w, close_h))
-                ret = !(panel->in->mouse_down && panel->in->mouse_clicked);
-        }
-    }
-
-    if (panel->flags & (GUI_PANEL_MINIMIZABLE|GUI_PANEL_HEADER)) {
-        gui_size text_width;
-        gui_float min_x, min_y, min_w, min_h;
-        const gui_char *score = (panel->minimized) ?
-            (const gui_char*)"+":
-            (const gui_char*)"-";
-
-        text_width = gui_font_text_width(panel->font, score, 1);
-        min_x = (x + w) - ((gui_float)text_width + config->item_padding.y);
-        min_y = y + config->panel_padding.y;
-        min_w = (gui_float)text_width;
-        min_h = panel->font->height + 2 * config->item_padding.y;
-        w -= (gui_float)text_width;
-
-        gui_draw_string(panel->out, panel->font, min_x, min_y, min_w, min_h,
-            config->colors[GUI_COLOR_TEXT], score, 1);
-        if (INBOX(mouse_x, mouse_y, min_x, min_y, min_w, min_h)) {
-            if (INBOX(clicked_x, clicked_y, min_x, min_y, min_w, min_h))
-                if (panel->in->mouse_down && panel->in->mouse_clicked)
-                    panel->minimized = !panel->minimized;
-        }
-    }
-
     if (panel->flags & GUI_PANEL_SCROLLBAR) {
         panel->width -= config->scrollbar_width;
         panel->height = (panel->flags & GUI_PANEL_HEADER) ?
             (h - panel->header_height) : h;
     }
 
-    i = text;
-    label_x = x + config->panel_padding.x + config->item_padding.x;
-    label_y = y + config->panel_padding.y;
-    label_w = w - 2 * config->panel_padding.x - 2 * config->item_padding.x;
-    label_h = panel->font->height + 2 * config->item_padding.y;
-    while (*i++ != '\0') text_len++;
-    gui_draw_string(panel->out, panel->font, label_x, label_y, label_w, label_h,
-        config->colors[GUI_COLOR_TEXT], (const gui_char*)text, text_len);
+    if (panel->flags & GUI_PANEL_BORDER) {
+        const struct gui_color *color;
+        color = &config->colors[GUI_COLOR_BORDER];
+        gui_draw_line(panel->out, x, y, x + w, y, *color);
+    }
+
     return ret;
 }
 
@@ -1615,11 +1717,67 @@ gui_panel_button_text(struct gui_panel *panel, const char *str, gui_size len,
     button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
     button.font = config->colors[GUI_COLOR_TEXT];
     button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
+    button.highlight_font = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
     return gui_button_text(panel->out, &button, str, len, panel->font, panel->in);
 }
 
 gui_int
-gui_panel_button_triangle(struct gui_panel *panel, enum gui_direction d,
+gui_panel_button_invisible(struct gui_panel *panel, const char *str, gui_size len,
+    enum gui_button_behavior behavior)
+{
+    struct gui_rect bounds;
+    struct gui_button button;
+    const struct gui_config *config;
+    const struct gui_color invis = {0,0,0,255};
+
+    if (!panel || !panel->config || !panel->in || !panel->out) return 0;
+    if (!panel->font || panel->minimized) return 0;
+    gui_panel_alloc_space(&bounds, panel);
+    config = panel->config;
+
+    button.x = bounds.x;
+    button.y = bounds.y;
+    button.w = bounds.w;
+    button.h = bounds.h;
+    button.behavior = behavior;
+    button.pad_x = config->item_padding.x;
+    button.pad_y = config->item_padding.y;
+    button.background = invis;
+    button.foreground = invis;
+    button.font = config->colors[GUI_COLOR_TEXT];
+    button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
+    button.highlight_font = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
+    return gui_button_text(panel->out, &button, str, len, panel->font, panel->in);
+}
+
+gui_int gui_panel_button_color(struct gui_panel *panel, const struct gui_color color,
+    enum gui_button_behavior behavior)
+{
+    struct gui_rect bounds;
+    struct gui_button button;
+    const struct gui_config *config;
+
+    if (!panel || !panel->config || !panel->in || !panel->out) return 0;
+    if (!panel->font || panel->minimized) return 0;
+    gui_panel_alloc_space(&bounds, panel);
+    config = panel->config;
+
+    button.x = bounds.x;
+    button.y = bounds.y;
+    button.w = bounds.w;
+    button.h = bounds.h;
+    button.behavior = behavior;
+    button.pad_x = config->item_padding.x;
+    button.pad_y = config->item_padding.y;
+    button.background = color;
+    button.foreground = color;
+    button.highlight = color;
+    button.highlight_font = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
+    return gui_button_text(panel->out, &button, NULL, 0, panel->font, panel->in);
+}
+
+gui_int
+gui_panel_button_triangle(struct gui_panel *panel, enum gui_heading heading,
     enum gui_button_behavior behavior)
 {
     struct gui_rect bounds;
@@ -1642,7 +1800,8 @@ gui_panel_button_triangle(struct gui_panel *panel, enum gui_direction d,
     button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
     button.font = config->colors[GUI_COLOR_TEXT];
     button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
-    return gui_button_triangle(panel->out, &button, d, panel->in);
+    button.highlight_font = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
+    return gui_button_triangle(panel->out, &button, heading, panel->in);
 }
 
 gui_int
@@ -1670,6 +1829,42 @@ gui_panel_button_image(struct gui_panel *panel, gui_texture tex,
     button.font = config->colors[GUI_COLOR_TEXT];
     button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
     return gui_button_image(panel->out, &button, tex, from, to, panel->in);
+}
+
+gui_int
+gui_panel_button_toggle(struct gui_panel *panel, const char *str, gui_size len,
+    gui_int value)
+{
+    struct gui_rect bounds;
+    struct gui_button button;
+    const struct gui_config *config;
+
+    if (!panel || !panel->config || !panel->in || !panel->out) return 0;
+    if (!panel->font || panel->minimized) return 0;
+    gui_panel_alloc_space(&bounds, panel);
+    config = panel->config;
+
+    button.x = bounds.x;
+    button.y = bounds.y;
+    button.w = bounds.w;
+    button.h = bounds.h;
+    button.behavior = GUI_BUTTON_SWITCH;
+    button.pad_x = config->item_padding.x;
+    button.pad_y = config->item_padding.y;
+    if (!value) {
+        button.background = config->colors[GUI_COLOR_BUTTON];
+        button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
+        button.font = config->colors[GUI_COLOR_TEXT];
+        button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
+    } else {
+        button.background = config->colors[GUI_COLOR_BUTTON_HOVER];
+        button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
+        button.font = config->colors[GUI_COLOR_BUTTON];
+        button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
+    }
+    if (gui_button_text(panel->out, &button, str, len, panel->font, panel->in))
+        value = !value;
+    return value;
 }
 
 gui_int
@@ -1702,7 +1897,7 @@ gui_panel_toggle(struct gui_panel *panel, const char *text, gui_size length,
 
 gui_float
 gui_panel_slider(struct gui_panel *panel, gui_float min_value, gui_float value,
-    gui_float max_value, gui_float value_step)
+    gui_float max_value, gui_float value_step, enum gui_direction direction)
 {
     struct gui_rect bounds;
     struct gui_slider slider;
@@ -1725,12 +1920,14 @@ gui_panel_slider(struct gui_panel *panel, gui_float min_value, gui_float value,
     slider.step = value_step;
     slider.background = config->colors[GUI_COLOR_SLIDER];
     slider.foreground = config->colors[GUI_COLOR_SLIDER_CURSOR];
-    return gui_slider(panel->out, &slider, panel->in);
+    if (direction == GUI_HORIZONTAL)
+        return gui_slider(panel->out, &slider, panel->in);
+    return gui_slider_vertical(panel->out, &slider, panel->in);
 }
 
 gui_size
 gui_panel_progress(struct gui_panel *panel, gui_size cur_value, gui_size max_value,
-    gui_bool is_modifyable)
+    gui_bool is_modifyable, enum gui_direction direction)
 {
     struct gui_rect bounds;
     struct gui_progress prog;
@@ -1752,7 +1949,9 @@ gui_panel_progress(struct gui_panel *panel, gui_size cur_value, gui_size max_val
     prog.modifyable = is_modifyable;
     prog.background = config->colors[GUI_COLOR_PROGRESS];
     prog.foreground = config->colors[GUI_COLOR_PROGRESS_CURSOR];
-    return gui_progress(panel->out, &prog, panel->in);
+    if (direction == GUI_HORIZONTAL)
+        return gui_progress(panel->out, &prog, panel->in);
+    return gui_progress_vertical(panel->out, &prog, panel->in);
 }
 
 gui_int
@@ -1893,6 +2092,39 @@ gui_panel_histo(struct gui_panel *panel, const gui_float *values, gui_size count
     histo.negative = config->colors[GUI_COLOR_HISTO_NEGATIVE];
     histo.highlight = config->colors[GUI_COLOR_HISTO_HIGHLIGHT];
     return gui_histo(panel->out, &histo, panel->in);
+}
+
+gui_float
+gui_panel_list(struct gui_panel *panel, gui_bool *selection,
+    const char *items[], gui_size item_count, gui_float offset)
+{
+    gui_size i;
+    struct gui_panel list;
+    struct gui_config config;
+    const struct gui_config *temp = panel->config;
+    if (panel->minimized) return 0;
+    memcopy(&config, panel->config, sizeof(struct gui_config));
+    config.panel_padding.y = 0.0f;
+    config.item_padding.x = 0.0f;
+    config.item_padding.y = 0.0f;
+    config.item_spacing.x = 0.0f;
+    config.item_spacing.y = 0.0f;
+    panel->config = &config;
+
+    if (!panel || !items || !item_count || !selection) return 0;
+    gui_panel_group_begin(&list, NULL, panel);
+    list.offset = offset;
+    config.panel_padding.x = 1.0f;
+    gui_panel_layout(&list, 30, 1);
+    for (i = 0; i < item_count; i++) {
+        selection[i] = gui_panel_button_toggle(&list, items[i],
+            strsiz(items[i]), selection[i]);
+    }
+    gui_panel_group_end(&list);
+    panel->config = temp;
+    if (list.offset > 0)
+        offset = list.offset;
+    return offset;
 }
 
 void
