@@ -6,8 +6,8 @@ CC = gcc
 DCC = clang
 
 # Flags
-CFLAGS = -std=c89 -pedantic-errors -Wdeprecated-declarations
-CFLAGS = -g -Wall -Wextra -Wformat-security -Wunreachable-code
+CFLAGS = -std=c89 -pedantic -Wdeprecated-declarations
+CFLAGS += -g -Wall -Wextra -Wformat-security -Wunreachable-code
 CFLAGS += -fstack-protector-strong -Winline -Wshadow -Wwrite-strings -fstrict-aliasing
 CFLAGS += -Wstrict-prototypes -Wold-style-definition -Wconversion -Wfloat-equal
 CFLAGS += -Wredundant-decls -Wnested-externs -Wmissing-include-dirs

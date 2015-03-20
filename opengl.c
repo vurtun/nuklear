@@ -31,7 +31,7 @@
 #define WIN_WIDTH   800
 #define WIN_HEIGHT  600
 #define DTIME       33
-#define MAX_BUFFER (32 * 1024)
+#define MAX_BUFFER (64 * 1024)
 #define INPUT_MAX 64
 
 #define LEN(a)(sizeof(a)/sizeof(a)[0])
@@ -47,19 +47,22 @@ struct XWindow {
     XWindowAttributes gwa;
     Window win;
     GLXContext glc;
-    int running;
+    gui_bool running;
 };
 
 struct GUI {
     struct XWindow *win;
-    struct gui_memory memory;
+    struct gui_memory main;
+    struct gui_memory combo;
+    struct gui_memory_status status;
     struct gui_draw_buffer out;
     struct gui_draw_call_list draw_list;
     struct gui_input in;
     struct gui_font *font;
     struct gui_config config;
     struct gui_panel panel;
-    gui_bool selection[4];
+    struct gui_panel tab;
+    gui_bool selection[6];
     gui_float seloff;
 
     /* State */
@@ -67,16 +70,19 @@ struct GUI {
     gui_char cmd_input[INPUT_MAX];
     gui_size input_len;
     gui_size cmd_len;
-    gui_int typing;
+    gui_bool typing;
     gui_float slider;
-    gui_float vslider;
     gui_size prog;
     gui_size vprog;
+    gui_size vprog2;
+    gui_size vprog3;
     gui_int spinner;
-    gui_int selected;
-    gui_int spinning;
+    gui_bool check;
+    gui_bool option;
+    gui_bool spinning;
     gui_size submit;
-    gui_int submitting;
+    gui_bool submitting;
+    gui_size select;
 };
 
 /* functions */
@@ -95,7 +101,6 @@ static void resize(struct GUI*, XEvent*);
 static GLuint ldbmp(gui_byte*, uint32_t*, uint32_t*);
 static struct gui_font *ldfont(const char*, unsigned char);
 static void delfont(struct gui_font*);
-static void draw(int, int, const struct gui_draw_call_list*);
 
 /* gobals */
 static void
@@ -304,6 +309,9 @@ ldfont(const char *name, unsigned char height)
     uint32_t img_width, img_height;
     short max_height = 0;
     size_t i = 0;
+    size_t mem;
+    gui_byte *iter;
+    struct gui_font_glyph *glyphes;
 
     uint16_t num;
     uint16_t indexes;
@@ -318,9 +326,9 @@ ldfont(const char *name, unsigned char height)
     memcpy(&tex_height, &buffer[0x06], sizeof(uint16_t));
 
     /* glyphes */
-    gui_byte *iter = &buffer[0x08];
-    size_t mem = sizeof(struct gui_font_glyph) * ((size_t)indexes + 1);
-    struct gui_font_glyph *glyphes = xcalloc(mem, 1);
+    iter = &buffer[0x08];
+    mem = sizeof(struct gui_font_glyph) * ((size_t)indexes + 1);
+    glyphes = xcalloc(mem, 1);
     for(i = 0; i < num; ++i) {
         uint16_t id, x, y, w, h;
         float xoff, yoff, xadv;
@@ -377,16 +385,17 @@ delfont(struct gui_font *font)
 }
 
 static void
-draw(int width, int height, const struct gui_draw_call_list *list)
+draw(int width, int height, const struct gui_draw_call_list **list, gui_size count)
 {
     gui_size i = 0;
-    const struct gui_draw_command *cmd;
+    gui_size n = 0;
     GLint offset = 0;
+    const gui_byte *vertexes;
+    const struct gui_draw_command *cmd;
     static const size_t v = sizeof(struct gui_vertex);
     static const size_t p = offsetof(struct gui_vertex, pos);
     static const size_t t = offsetof(struct gui_vertex, uv);
     static const size_t c = offsetof(struct gui_vertex, color);
-    const gui_byte *vertexes;
 
     if (!list) return;
     glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_TRANSFORM_BIT);
@@ -408,21 +417,24 @@ draw(int width, int height, const struct gui_draw_call_list *list)
     glPushMatrix();
     glLoadIdentity();
 
-    vertexes = (const gui_char*)list->vertexes;
-    glVertexPointer(2, GL_FLOAT, (GLsizei)v, (const void*)(vertexes + p));
-    glTexCoordPointer(2, GL_FLOAT, (GLsizei)v, (const void*)(vertexes + t));
-    glColorPointer(4, GL_UNSIGNED_BYTE, (GLsizei)v, (const void*)(vertexes + c));
+    for (n = 0; n < count; ++n) {
+        vertexes = (const gui_char*)list[n]->vertexes;
+        glVertexPointer(2, GL_FLOAT, (GLsizei)v, (const void*)(vertexes + p));
+        glTexCoordPointer(2, GL_FLOAT, (GLsizei)v, (const void*)(vertexes + t));
+        glColorPointer(4, GL_UNSIGNED_BYTE, (GLsizei)v, (const void*)(vertexes + c));
 
-    for (i = 0; i < list->command_size; ++i) {
-        cmd = &list->commands[i];
-        const int x = (int)cmd->clip_rect.x;
-        const int y = height - (int)(cmd->clip_rect.y + cmd->clip_rect.h);
-        const int w = (int)cmd->clip_rect.w;
-        const int h = (int)cmd->clip_rect.h;
-        glScissor(x, y, w, h);
-        glBindTexture(GL_TEXTURE_2D, (GLuint)(unsigned long)cmd->texture);
-        glDrawArrays(GL_TRIANGLES, offset, (GLsizei)cmd->vertex_count);
-        offset += (GLint)cmd->vertex_count;
+        for (i = 0; i < list[n]->command_size; ++i) {
+            int x,y,w,h;
+            cmd = &list[n]->commands[i];
+            x = (int)cmd->clip_rect.x;
+            y = height - (int)(cmd->clip_rect.y + cmd->clip_rect.h);
+            w = (int)cmd->clip_rect.w;
+            h = (int)cmd->clip_rect.h;
+            glScissor(x, y, w, h);
+            glBindTexture(GL_TEXTURE_2D, (GLuint)(unsigned long)cmd->texture);
+            glDrawArrays(GL_TRIANGLES, offset, (GLsizei)cmd->vertex_count);
+            offset += (GLint)cmd->vertex_count;
+        }
     }
 
     glDisableClientState(GL_COLOR_ARRAY);
@@ -441,10 +453,11 @@ main(int argc, char *argv[])
     struct XWindow xw;
     struct GUI gui;
     long dt, started;
-    static const char *s[] = {"inactive", "active"};
+    const struct gui_draw_call_list *list;
     static const gui_float values[] = {10.0f, 12.5f, 18.0f, 15.0f, 25.0f, 30.0f};
     static GLint att[] = {GLX_RGBA, GLX_DEPTH_SIZE,24, GLX_DOUBLEBUFFER, None};
-    static const char *sel[] = {"item0", "item1", "item2", "item3"};
+    static const char *sel[] = {"item0", "item1", "item2", "item3", "item4", "item5"};
+    static const char *select[] = {"Fist", "Pistol", "Shotgun", "Railgun", "BFG"};
 
     /* Window */
     UNUSED(argc); UNUSED(argv);
@@ -475,18 +488,22 @@ main(int argc, char *argv[])
     xw.glc = glXCreateContext(xw.dpy, xw.vi, NULL, GL_TRUE);
     glXMakeCurrent(xw.dpy, xw.win, xw.glc);
 
-    /* GUI */
     gui.win = &xw;
+    gui.option = 0;
+    gui.select = 0;
     gui.prog = 60;
     gui.vprog = 70;
+    gui.vprog2 = 30;
+    gui.vprog3 = 50;
     gui.spinner = 100;
     gui.slider = 5.0f;
-    gui.vslider = 2.0f;
+
+    /* GUI */
     gui.font = ldfont("mono.sdf", 16);
-    gui.memory.memory = xcalloc(MAX_BUFFER, 1);
-    gui.memory.clip_size = MAX_BUFFER / 16;
-    gui.memory.command_size = MAX_BUFFER / 6;
-    gui.memory.vertex_size = MAX_BUFFER - gui.memory.clip_size - gui.memory.command_size;
+    gui.main.memory = xcalloc(MAX_BUFFER, 1);
+    gui.main.clip_size = MAX_BUFFER / 32;
+    gui.main.command_size = MAX_BUFFER / 6;
+    gui.main.vertex_size = MAX_BUFFER - gui.main.clip_size - gui.main.command_size;
     gui_default_config(&gui.config);
     gui_panel_init(&gui.panel, &gui.config, gui.font, &gui.in);
 
@@ -506,37 +523,42 @@ main(int argc, char *argv[])
         gui_input_end(&gui.in);
 
         /* ------------------------- GUI --------------------------*/
-        gui_begin(&gui.out, &gui.memory);
-        xw.running = gui_panel_begin(&gui.panel, &gui.out, "Demo",
-            GUI_PANEL_HEADER|GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE|GUI_PANEL_SCROLLBAR,
-            20, 20, 200, 400);
+        gui_begin(&gui.out, &gui.main);
+        xw.running = gui_panel_begin(&gui.panel, &gui.out, "Demo", 20, 20, 200, 400,
+            GUI_PANEL_HEADER|GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE|GUI_PANEL_SCROLLBAR);
         gui_panel_layout(&gui.panel, 30, 1);
         if (gui_panel_button_text(&gui.panel, "button", 6, GUI_BUTTON_SWITCH))
             fprintf(stdout, "button pressed!\n");
         gui.slider = gui_panel_slider(&gui.panel, 0.0f, gui.slider, 10.0f, 1.0f, GUI_HORIZONTAL);
         gui.prog = gui_panel_progress(&gui.panel, gui.prog, 100, gui_true, GUI_HORIZONTAL);
-        gui.selected = gui_panel_toggle(&gui.panel, s[gui.selected],
-                                        strlen(s[gui.selected]), gui.selected);
+        gui.check = gui_panel_check(&gui.panel, "advanced", 8, gui.check);
+        gui_panel_layout(&gui.panel, 30, 2);
+        if (gui_panel_option(&gui.panel, "easy", 4, gui.option == 0)) gui.option = 0;
+        if (gui_panel_option(&gui.panel, "hard", 4, gui.option == 1)) gui.option = 1;
+        gui_panel_layout(&gui.panel, 30, 1);
         gui.typing = gui_panel_input(&gui.panel, gui.input_text, &gui.input_len, INPUT_MAX,
                                         GUI_INPUT_DEFAULT, gui.typing);
         gui.submit = gui_panel_command(&gui.panel, gui.cmd_input, &gui.cmd_len, INPUT_MAX,
                                         &gui.submitting);
         gui.spinning = gui_panel_spinner(&gui.panel, 0, &gui.spinner, 250, 10, gui.spinning);
-        gui_panel_layout(&gui.panel, 100, 2);
-        gui.vslider = gui_panel_slider(&gui.panel, 0.0f, gui.vslider, 6.0f, 1.0f, GUI_VERTICAL);
+        gui.select = gui_panel_selector(&gui.panel, select, LEN(select), gui.select);
+        gui_panel_layout(&gui.panel, 100, 3);
         gui.vprog = gui_panel_progress(&gui.panel, gui.vprog, 100, gui_true, GUI_VERTICAL);
+        gui.vprog2 = gui_panel_progress(&gui.panel, gui.vprog2, 100, gui_true, GUI_VERTICAL);
+        gui.vprog3 = gui_panel_progress(&gui.panel, gui.vprog3, 100, gui_true, GUI_VERTICAL);
         gui_panel_layout(&gui.panel, 100, 1);
-        gui_panel_plot(&gui.panel, values, LEN(values));
+        gui.seloff = gui_panel_list(&gui.panel, gui.selection, sel, LEN(sel), gui.seloff, 30);
         gui_panel_histo(&gui.panel, values, LEN(values));
-        gui.seloff = gui_panel_list(&gui.panel, gui.selection, sel, LEN(sel), gui.seloff);
+        gui_panel_plot(&gui.panel, values, LEN(values));
         gui_panel_end(&gui.panel);
-        gui_end(&gui.out, &gui.draw_list, NULL);
+        gui_end(&gui.out, &gui.draw_list, &gui.status);
         /* ---------------------------------------------------------*/
 
         /* Draw */
         glClearColor(120.0f/255.0f, 120.0f/255.0f, 120.0f/255.0f, 120.0f/255.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-        draw(xw.gwa.width, xw.gwa.height, &gui.draw_list);
+        list = &gui.draw_list;
+        draw(xw.gwa.width, xw.gwa.height, &list, 1);
         glXSwapBuffers(xw.dpy, xw.win);
 
         /* Timing */
@@ -546,7 +568,7 @@ main(int argc, char *argv[])
     }
 
     /* Cleanup */
-    free(gui.memory.memory);
+    free(gui.main.memory);
     delfont(gui.font);
     XFree(xw.vi);
     glXMakeCurrent(xw.dpy, None, NULL);
