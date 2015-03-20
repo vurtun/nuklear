@@ -30,7 +30,7 @@
 #define vec2_sub(r,a,b) do {(r).x=(a).x-(b).x; (r).y=(a).y-(b).y;} while(0)
 #define vec2_muls(r, v, s) do {(r).x=(v).x*(s); (r).y=(v).y*(s);} while(0)
 
-static const gui_texture null_tex = (void*)0;
+static const gui_texture null_tex;
 static const struct gui_rect null_rect = {0, 0, 9999, 9999};
 static const gui_char utfbyte[GUI_UTF_SIZE+1] = {0x80, 0, 0xC0, 0xE0, 0xF0};
 static const gui_char utfmask[GUI_UTF_SIZE+1] = {0xC0, 0x80, 0xE0, 0xF0, 0xF8};
@@ -1394,7 +1394,7 @@ gui_default_config(struct gui_config *config)
     config->panel_min_size = gui_make_vec2(32.0f, 32.0f);
     config->item_spacing = gui_make_vec2(8.0f, 8.0f);
     config->item_padding = gui_make_vec2(4.0f, 4.0f);
-    config->colors[GUI_COLOR_TEXT] = gui_make_color(255, 255, 255, 255);
+    config->colors[GUI_COLOR_TEXT] = gui_make_color(100, 100, 100, 255);
     config->colors[GUI_COLOR_PANEL] = gui_make_color(45, 45, 45, 255);
     config->colors[GUI_COLOR_BORDER] = gui_make_color(100, 100, 100, 255);
     config->colors[GUI_COLOR_TITLEBAR] = gui_make_color(45, 45, 45, 255);
@@ -1679,35 +1679,6 @@ gui_panel_button_text(struct gui_panel *panel, const char *str, gui_size len,
     return gui_button_text(panel->out, &button, str, len, panel->font, panel->in);
 }
 
-gui_bool
-gui_panel_button_invisible(struct gui_panel *panel, const char *str, gui_size len,
-    enum gui_button_behavior behavior)
-{
-    struct gui_rect bounds;
-    struct gui_button button;
-    const struct gui_config *config;
-    const struct gui_color invis = {0,0,0,255};
-
-    if (!panel || !panel->config || !panel->in || !panel->out) return 0;
-    if (!panel->font || panel->minimized) return 0;
-    gui_panel_alloc_space(&bounds, panel);
-    config = panel->config;
-
-    button.x = bounds.x;
-    button.y = bounds.y;
-    button.w = bounds.w;
-    button.h = bounds.h;
-    button.behavior = behavior;
-    button.pad_x = config->item_padding.x;
-    button.pad_y = config->item_padding.y;
-    button.background = invis;
-    button.foreground = invis;
-    button.content = config->colors[GUI_COLOR_TEXT];
-    button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
-    button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
-    return gui_button_text(panel->out, &button, str, len, panel->font, panel->in);
-}
-
 gui_bool gui_panel_button_color(struct gui_panel *panel, const struct gui_color color,
     enum gui_button_behavior behavior)
 {
@@ -1731,7 +1702,7 @@ gui_bool gui_panel_button_color(struct gui_panel *panel, const struct gui_color 
     button.foreground = color;
     button.highlight = color;
     button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
-    return gui_button_text(panel->out, &button, NULL, 0, panel->font, panel->in);
+    return gui_button(panel->out, &button, panel->in);
 }
 
 gui_bool
@@ -2235,48 +2206,6 @@ gui_panel_list(struct gui_panel *panel, gui_bool *selection,
     panel->config = temp;
     offset = list.offset;
     return offset;
-}
-
-void
-gui_panel_text_box(struct gui_panel *panel, const gui_char *content, gui_size *len,
-    gui_float *offset)
-{
-    gui_size i;
-    struct gui_panel box;
-    struct gui_config config;
-    struct gui_text text;
-    struct gui_rect bounds;
-    const struct gui_config *temp;
-    if (!panel || !content || !len || !offset) return;
-    if (panel->minimized) return;
-
-    temp = panel->config;
-    memcopy(&config, panel->config, sizeof(struct gui_config));
-    config.panel_padding.y = 0.0f;
-    panel->config = &config;
-
-    gui_panel_frame_begin(panel, &box, NULL);
-    box.offset = *offset;
-    config.panel_padding.x = 0.0f;
-    gui_panel_layout(&box, box.height, 1);
-    gui_panel_alloc_space(&bounds, &box);
-
-    text.x = bounds.x;
-    text.y = bounds.y;
-    text.w = bounds.w;
-    text.h = bounds.h;
-    text.pad_x = box.config->item_padding.x;
-    text.pad_y = box.config->item_padding.y;
-    text.text = (const char*)content;
-    text.length = *len;
-    text.font = temp->colors[GUI_COLOR_TEXT];
-    text.background = temp->colors[GUI_COLOR_PANEL];
-    gui_text_wrap(panel->out, &text, panel->font);
-
-    gui_panel_frame_end(&box);
-    panel->config = temp;
-    *offset = box.offset;
-    return;
 }
 
 void

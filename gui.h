@@ -18,11 +18,11 @@ typedef unsigned int gui_bool;
 typedef unsigned int gui_flags;
 typedef unsigned char gui_char;
 typedef float gui_float;
-typedef void* gui_texture;
 typedef unsigned char gui_byte;
 typedef unsigned int gui_flag;
 typedef unsigned long gui_size;
 typedef gui_char gui_glyph[GUI_UTF_SIZE];
+typedef union {void* dx; gui_uint gl;} gui_texture;
 
 enum {gui_false, gui_true};
 enum gui_heading {GUI_UP, GUI_RIGHT, GUI_DOWN, GUI_LEFT};
@@ -130,8 +130,8 @@ struct gui_font {
     gui_float scale;
     gui_texture texture;
     struct gui_vec2 tex_size;
-    struct gui_font_glyph *glyphes;
     gui_long glyph_count;
+    struct gui_font_glyph *glyphes;
     const struct gui_font_glyph *fallback;
 };
 
@@ -323,10 +323,7 @@ enum gui_panel_flags {
     GUI_PANEL_MINIMIZABLE = 0x8,
     GUI_PANEL_CLOSEABLE = 0x10,
     GUI_PANEL_SCROLLBAR = 0x20,
-    GUI_PANEL_HIDDEN = 0x40,
-    GUI_PANEL_MOVEABLE = 0x80,
-    GUI_PANEL_SCALEABLE = 0x100,
-    GUI_PANEL_OVERLAP = 0x100,
+    GUI_PANEL_HIDDEN = 0x40
 };
 
 struct gui_panel {
@@ -407,8 +404,6 @@ gui_bool gui_panel_check(struct gui_panel *p, const char *s, gui_size l, gui_boo
 gui_bool gui_panel_option(struct gui_panel *p, const char *s, gui_size l, gui_bool a);
 gui_bool gui_panel_button_text(struct gui_panel *panel, const char *str, gui_size len,
                         enum gui_button_behavior behavior);
-gui_bool gui_panel_button_invisible(struct gui_panel *panel, const char *str, gui_size len,
-                        enum gui_button_behavior behavior);
 gui_bool gui_panel_button_color(struct gui_panel *panel, const struct gui_color color,
                         enum gui_button_behavior behavior);
 gui_bool gui_panel_button_triangle(struct gui_panel *panel, enum gui_heading heading,
@@ -434,8 +429,6 @@ gui_int gui_panel_plot(struct gui_panel *panel, const gui_float *values,
                         gui_size value_count);
 gui_int gui_panel_histo(struct gui_panel *panel, const gui_float *values,
                         gui_size value_count);
-void gui_panel_text_box(struct gui_panel *panel, const gui_char *text, gui_size *len,
-                        gui_float *offset);
 gui_float gui_panel_list(struct gui_panel *panel, gui_bool *selected, const char *items[],
                         gui_size item_count, gui_float offset, gui_float item_height);
 void gui_panel_frame_begin(struct gui_panel *panel, struct gui_panel *tab, const char *title);

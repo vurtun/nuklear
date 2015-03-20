@@ -27,6 +27,11 @@
 
 #include "gui.h"
 
+/* ---- TODO ------
+ * - Font loading
+ * - X11 -> SDL
+ */
+
 /* macros */
 #define WIN_WIDTH   800
 #define WIN_HEIGHT  600
@@ -68,12 +73,8 @@ struct GUI {
     /* State */
     gui_char input_text[INPUT_MAX];
     gui_char cmd_input[INPUT_MAX];
-    gui_char box_input[INPUT_MAX];
     gui_size input_len;
     gui_size cmd_len;
-    gui_size box_len;
-    gui_float box_off;
-    gui_bool box_act;
     gui_bool typing;
     gui_float slider;
     gui_size prog;
@@ -101,10 +102,7 @@ static void bpress(struct GUI*, XEvent*);
 static void brelease(struct GUI*, XEvent*);
 static void bmotion(struct GUI*, XEvent*);
 static void resize(struct GUI*, XEvent*);
-
 static GLuint ldbmp(gui_byte*, uint32_t*, uint32_t*);
-static struct gui_font *ldfont(const char*, unsigned char);
-static void delfont(struct gui_font*);
 
 /* gobals */
 static void
@@ -304,10 +302,7 @@ ldbmp(gui_byte *data, uint32_t *width, uint32_t *height)
 static struct gui_font*
 ldfont(const char *name, unsigned char height)
 {
-    union conversion {
-        gui_texture handle;
-        uintptr_t ptr;
-    } convert;
+    gui_texture tex;
     size_t size;
     struct gui_font *font;
     uint32_t img_width, img_height;
@@ -322,14 +317,12 @@ ldfont(const char *name, unsigned char height)
     uint16_t tex_width;
     uint16_t tex_height;
 
-    /* header */
     gui_byte *buffer = (gui_byte*)ldfile(name, O_RDONLY, &size);
     memcpy(&num, buffer, sizeof(uint16_t));
     memcpy(&indexes, &buffer[0x02], sizeof(uint16_t));
     memcpy(&tex_width, &buffer[0x04], sizeof(uint16_t));
     memcpy(&tex_height, &buffer[0x06], sizeof(uint16_t));
 
-    /* glyphes */
     iter = &buffer[0x08];
     mem = sizeof(struct gui_font_glyph) * ((size_t)indexes + 1);
     glyphes = xcalloc(mem, 1);
@@ -361,15 +354,10 @@ ldfont(const char *name, unsigned char height)
         iter += 22;
     }
 
-    /* texture */
-    convert.ptr = ldbmp(iter, &img_width, &img_height);
-    assert(img_width == tex_width && img_height == tex_height);
-
-    /* font */
     font = xcalloc(sizeof(struct gui_font), 1);
     font->height = height;
     font->scale = (float)height/(float)max_height;
-    font->texture = convert.handle;
+    font->texture.gl = ldbmp(iter, &img_width, &img_height);
     font->tex_size.x = tex_width;
     font->tex_size.y = tex_height;
     font->fallback = &glyphes['?'];
@@ -435,7 +423,7 @@ draw(int width, int height, const struct gui_draw_call_list **list, gui_size cou
             w = (int)cmd->clip_rect.w;
             h = (int)cmd->clip_rect.h;
             glScissor(x, y, w, h);
-            glBindTexture(GL_TEXTURE_2D, (GLuint)(unsigned long)cmd->texture);
+            glBindTexture(GL_TEXTURE_2D, (GLuint)(unsigned long)cmd->texture.gl);
             glDrawArrays(GL_TRIANGLES, offset, (GLsizei)cmd->vertex_count);
             offset += (GLint)cmd->vertex_count;
         }
@@ -510,6 +498,10 @@ main(int argc, char *argv[])
     gui.main.vertex_size = MAX_BUFFER - gui.main.clip_size - gui.main.command_size;
     gui_default_config(&gui.config);
     gui_panel_init(&gui.panel, &gui.config, gui.font, &gui.in);
+    gui.config.colors[GUI_COLOR_TEXT].r = 255;
+    gui.config.colors[GUI_COLOR_TEXT].g = 255;
+    gui.config.colors[GUI_COLOR_TEXT].b = 255;
+    gui.config.colors[GUI_COLOR_TEXT].a = 255;
 
     xw.running = 1;
     while (xw.running) {
@@ -554,7 +546,6 @@ main(int argc, char *argv[])
         gui.seloff = gui_panel_list(&gui.panel, gui.selection, sel, LEN(sel), gui.seloff, 30);
         gui_panel_histo(&gui.panel, values, LEN(values));
         gui_panel_plot(&gui.panel, values, LEN(values));
-        gui_panel_text_box(&gui.panel, gui.box_input, &gui.box_len, &gui.box_off);
         gui_panel_end(&gui.panel);
         gui_end(&gui.out, &gui.draw_list, &gui.status);
         /* ---------------------------------------------------------*/
