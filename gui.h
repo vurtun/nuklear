@@ -434,15 +434,13 @@ gui_int gui_panel_plot(struct gui_panel *panel, const gui_float *values,
                         gui_size value_count);
 gui_int gui_panel_histo(struct gui_panel *panel, const gui_float *values,
                         gui_size value_count);
-gui_int gui_panel_text_box(struct gui_panel *panel, char *text, gui_size *len,
-                        gui_float *offset, gui_int active);
+void gui_panel_text_box(struct gui_panel *panel, const gui_char *text, gui_size *len,
+                        gui_float *offset);
 gui_float gui_panel_list(struct gui_panel *panel, gui_bool *selected, const char *items[],
                         gui_size item_count, gui_float offset, gui_float item_height);
 void gui_panel_frame_begin(struct gui_panel *panel, struct gui_panel *tab, const char *title);
 void gui_panel_frame_end(struct gui_panel *tab);
 void gui_panel_hook(struct gui_panel *panel, struct gui_panel *tab);
 gui_uint gui_panel_end(struct gui_panel *panel);
-
-/* Window */
 
 #endif

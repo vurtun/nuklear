@@ -2237,9 +2237,9 @@ gui_panel_list(struct gui_panel *panel, gui_bool *selection,
     return offset;
 }
 
-gui_int
-gui_panel_text_box(struct gui_panel *panel, char *content, gui_size *len,
-    gui_float *offset, gui_int active)
+void
+gui_panel_text_box(struct gui_panel *panel, const gui_char *content, gui_size *len,
+    gui_float *offset)
 {
     gui_size i;
     struct gui_panel box;
@@ -2247,8 +2247,8 @@ gui_panel_text_box(struct gui_panel *panel, char *content, gui_size *len,
     struct gui_text text;
     struct gui_rect bounds;
     const struct gui_config *temp;
-    if (!panel || !content || !len || !offset) return 0;
-    if (panel->minimized) return 0;
+    if (!panel || !content || !len || !offset) return;
+    if (panel->minimized) return;
 
     temp = panel->config;
     memcopy(&config, panel->config, sizeof(struct gui_config));
@@ -2267,7 +2267,7 @@ gui_panel_text_box(struct gui_panel *panel, char *content, gui_size *len,
     text.h = bounds.h;
     text.pad_x = box.config->item_padding.x;
     text.pad_y = box.config->item_padding.y;
-    text.text = content;
+    text.text = (const char*)content;
     text.length = *len;
     text.font = temp->colors[GUI_COLOR_TEXT];
     text.background = temp->colors[GUI_COLOR_PANEL];
@@ -2276,7 +2276,7 @@ gui_panel_text_box(struct gui_panel *panel, char *content, gui_size *len,
     gui_panel_frame_end(&box);
     panel->config = temp;
     *offset = box.offset;
-    return active;
+    return;
 }
 
 void

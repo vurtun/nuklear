@@ -68,8 +68,12 @@ struct GUI {
     /* State */
     gui_char input_text[INPUT_MAX];
     gui_char cmd_input[INPUT_MAX];
+    gui_char box_input[INPUT_MAX];
     gui_size input_len;
     gui_size cmd_len;
+    gui_size box_len;
+    gui_float box_off;
+    gui_bool box_act;
     gui_bool typing;
     gui_float slider;
     gui_size prog;
@@ -550,6 +554,7 @@ main(int argc, char *argv[])
         gui.seloff = gui_panel_list(&gui.panel, gui.selection, sel, LEN(sel), gui.seloff, 30);
         gui_panel_histo(&gui.panel, values, LEN(values));
         gui_panel_plot(&gui.panel, values, LEN(values));
+        gui_panel_text_box(&gui.panel, gui.box_input, &gui.box_len, &gui.box_off);
         gui_panel_end(&gui.panel);
         gui_end(&gui.out, &gui.draw_list, &gui.status);
         /* ---------------------------------------------------------*/
