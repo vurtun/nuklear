@@ -379,8 +379,8 @@ main(int argc, char *argv[])
     config.colors[GUI_COLOR_TEXT].g = 255;
     config.colors[GUI_COLOR_TEXT].b = 255;
     config.colors[GUI_COLOR_TEXT].a = 255;
-    panel = gui_panel_new(ctx, 20, 20, 200, 200, 0, &config, font);
-    subpanel = gui_panel_new(ctx, 250, 20, 200, 200, 0, &config, font);
+    panel = gui_panel_new(ctx, 20, 20, 200, 200, &config, font);
+    subpanel = gui_panel_new(ctx, 250, 20, 200, 200, &config, font);
 
     running = 1;
     while (running) {
@@ -401,17 +401,20 @@ main(int argc, char *argv[])
         SDL_GetWindowSize(win, &width, &height);
         gui_begin(ctx, (gui_float)width, (gui_float)height);
         running = gui_begin_panel(ctx, panel, "Demo",
-            GUI_PANEL_HEADER|GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE|GUI_PANEL_SCROLLBAR);
+            GUI_PANEL_HEADER|GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE|
+            GUI_PANEL_MOVEABLE|GUI_PANEL_SCROLLBAR);
         gui_panel_layout(panel, 30, 1);
         if (gui_panel_button_text(panel, "button", 6, GUI_BUTTON_SWITCH))
             fprintf(stdout, "button pressed!\n");
         gui_end_panel(ctx, panel, NULL);
 
         gui_begin_panel(ctx, subpanel, "Subdemo",
-            GUI_PANEL_HEADER|GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE|GUI_PANEL_SCROLLBAR);
-        gui_panel_layout(subpanel, 30, 1);
-        if (gui_panel_button_text(subpanel, "button", 6, GUI_BUTTON_SWITCH))
-            fprintf(stdout, "subbutton pressed!\n");
+            GUI_PANEL_HEADER|GUI_PANEL_MINIMIZABLE|GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE);
+        gui_panel_layout(subpanel, 30, 2);
+        if (gui_panel_button_text(subpanel, "ok", 2, GUI_BUTTON_SWITCH))
+            fprintf(stdout, "ok pressed!\n");
+        if (gui_panel_button_text(subpanel, "cancel", 6, GUI_BUTTON_SWITCH))
+            fprintf(stdout, "cancel pressed!\n");
         gui_end_panel(ctx, subpanel, NULL);
         gui_end(ctx, &output, NULL);
         /* ---------------------------------------------------------*/
@@ -431,6 +434,8 @@ main(int argc, char *argv[])
     /* Cleanup */
     free(memory.memory);
     delfont(font);
+    SDL_GL_DeleteContext(glContext);
+    SDL_DestroyWindow(win);
     SDL_Quit();
     return 0;
 }

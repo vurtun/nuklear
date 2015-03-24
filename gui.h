@@ -330,13 +330,9 @@ enum gui_panel_flags {
     GUI_PANEL_MINIMIZABLE = 0x8,
     GUI_PANEL_CLOSEABLE = 0x10,
     GUI_PANEL_SCROLLBAR = 0x20,
-    GUI_PANEL_HIDDEN = 0x40
-};
-
-enum gui_win_flags {
-    GUI_PANEL_SCALEABLE = 0x01,
-    GUI_PANEL_MOVEABLE = 0x02,
-    GUI_PANEL_OVERLAPPING = 0x03
+    GUI_PANEL_HIDDEN = 0x40,
+    GUI_PANEL_SCALEABLE = 0x80,
+    GUI_PANEL_MOVEABLE = 0x100
 };
 
 struct gui_panel {
@@ -454,7 +450,7 @@ struct gui_context *gui_new(const struct gui_memory*, const struct gui_input*);
 void gui_begin(struct gui_context*, gui_float width, gui_float height);
 void gui_end(struct gui_context*, struct gui_output*, struct gui_memory_status*);
 struct gui_panel *gui_panel_new(struct gui_context*, gui_float x, gui_float y, gui_float w,
-                    gui_float h, gui_flags, const struct gui_config* , const struct gui_font*);
+                    gui_float h, const struct gui_config* , const struct gui_font*);
 void gui_panel_del(struct gui_context*, struct gui_panel*);
 gui_bool gui_begin_panel(struct gui_context*, struct gui_panel*, const char *title, gui_flags flags);
 void gui_end_panel(struct gui_context*, struct gui_panel*, struct gui_memory_status*);
