@@ -2440,9 +2440,20 @@ gui_begin_panel(struct gui_context *ctx, struct gui_panel *panel,
     cpanel = CONTAINER_OF(panel, struct gui_context_panel, panel);
     inpanel = INBOX(in->mouse_prev.x,in->mouse_prev.y, cpanel->x, cpanel->y, cpanel->w, cpanel->h);
     if (in->mouse_down && in->mouse_clicked && inpanel) {
-        gui_rm_draw_list(ctx, &cpanel->list);
-        gui_add_draw_list(ctx, &cpanel->list);
-        ctx->active = cpanel;
+        gui_size n = 0;
+        struct gui_context_panel *p = NULL;
+        while (n < ctx->panel_size && ctx->panel_lists[n++] != &cpanel->list);
+        while (n < ctx->panel_size) {
+            p = CONTAINER_OF(ctx->panel_lists[n], struct gui_context_panel, list);
+            if (INBOX(in->mouse_prev.x, in->mouse_prev.y, p->x, p->y, p->w, p->h))
+                break;
+            n++;
+        }
+        if (n >= ctx->panel_size) {
+            gui_rm_draw_list(ctx, &cpanel->list);
+            gui_add_draw_list(ctx, &cpanel->list);
+            ctx->active = cpanel;
+        }
     }
 
     if (ctx->active == cpanel && (flags & GUI_PANEL_MOVEABLE) && (flags & GUI_PANEL_HEADER)) {

@@ -408,8 +408,8 @@ main(int argc, char *argv[])
             fprintf(stdout, "button pressed!\n");
         gui_end_panel(ctx, panel, NULL);
 
-        gui_begin_panel(ctx, subpanel, "Subdemo",
-            GUI_PANEL_HEADER|GUI_PANEL_MINIMIZABLE|GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE);
+        gui_begin_panel(ctx, subpanel, "Error",
+            GUI_PANEL_HEADER|GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE);
         gui_panel_layout(subpanel, 30, 2);
         if (gui_panel_button_text(subpanel, "ok", 2, GUI_BUTTON_SWITCH))
             fprintf(stdout, "ok pressed!\n");
