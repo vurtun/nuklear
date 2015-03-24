@@ -275,7 +275,6 @@ draw(int width, int height, struct gui_draw_call_list **list, gui_size count)
 {
     gui_size i = 0;
     gui_size n = 0;
-    GLint offset = 0;
     const gui_byte *vertexes;
     const struct gui_draw_command *cmd;
     static const size_t v = sizeof(struct gui_vertex);
@@ -304,6 +303,7 @@ draw(int width, int height, struct gui_draw_call_list **list, gui_size count)
     glLoadIdentity();
 
     for (n = 0; n < count; ++n) {
+        GLint offset = 0;
         vertexes = (const gui_char*)list[n]->vertexes;
         glVertexPointer(2, GL_FLOAT, (GLsizei)v, (const void*)(vertexes + p));
         glTexCoordPointer(2, GL_FLOAT, (GLsizei)v, (const void*)(vertexes + t));
@@ -350,7 +350,6 @@ main(int argc, char *argv[])
     struct gui_memory memory;
     struct gui_input input;
     struct gui_output output;
-    gui_int id;
 
     /* Window */
     UNUSED(argc); UNUSED(argv);
@@ -374,15 +373,14 @@ main(int argc, char *argv[])
     memory.clip_percentage = 0.01f;
 
     ctx = gui_new(&memory, &input);
+    font = ldfont("mono.sdf", 16);
     gui_default_config(&config);
     config.colors[GUI_COLOR_TEXT].r = 255;
     config.colors[GUI_COLOR_TEXT].g = 255;
     config.colors[GUI_COLOR_TEXT].b = 255;
     config.colors[GUI_COLOR_TEXT].a = 255;
-    font = ldfont("mono.sdf", 16);
-
     panel = gui_panel_new(ctx, 20, 20, 200, 200, 0, &config, font);
-    subpanel = gui_panel_new(ctx, 300, 20, 200, 200, 0, &config, font);
+    subpanel = gui_panel_new(ctx, 250, 20, 200, 200, 0, &config, font);
 
     running = 1;
     while (running) {
@@ -409,8 +407,9 @@ main(int argc, char *argv[])
             fprintf(stdout, "button pressed!\n");
         gui_end_panel(ctx, panel, NULL);
 
-        gui_begin_panel(ctx, subpanel, "Subdemo", GUI_PANEL_HEADER|GUI_PANEL_SCROLLBAR);
-        gui_panel_layout(panel, 30, 1);
+        gui_begin_panel(ctx, subpanel, "Subdemo",
+            GUI_PANEL_HEADER|GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE|GUI_PANEL_SCROLLBAR);
+        gui_panel_layout(subpanel, 30, 1);
         if (gui_panel_button_text(subpanel, "button", 6, GUI_BUTTON_SWITCH))
             fprintf(stdout, "subbutton pressed!\n");
         gui_end_panel(ctx, subpanel, NULL);

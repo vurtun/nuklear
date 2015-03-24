@@ -31,5 +31,5 @@ clang: $(BIN)
 $(BIN):
 	@mkdir -p bin
 	rm -f bin/$(BIN) $(OBJS)
-	$(CC) $(SRC) -D_POSIX_C_SOURCE=200809L $(CFLAGS) -o bin/$(BIN) -lX11 -lGL -lGLU
+	$(CC) $(SRC) -D_POSIX_C_SOURCE=200809L $(CFLAGS) -o bin/$(BIN) -lSDL2 -lGL -lGLU
 

@@ -15,7 +15,6 @@
 #define SATURATE(x) (MAX(0, MIN(1.0f, x)))
 #define LEN(a) (sizeof(a)/sizeof(a)[0])
 #define ABS(a) (((a) < 0) ? -(a) : (a))
-#define UNUSED(a) ((void)(a))
 #define BETWEEN(x, a, b) ((a) <= (x) && (x) <= (b))
 #define INBOX(px, py, x, y, w, h) (BETWEEN(px, x, x+w) && BETWEEN(py, y, y+h))
 #define ALIGNOF(t) ((char*)(&((struct {char c; t _h;}*)0)->_h) - (char*)0)
@@ -758,6 +757,7 @@ gui_widget_image(struct gui_draw_buffer *buffer, const struct gui_image *image)
     gui_float image_w;
     gui_float image_h;
     if (!buffer || !image) return;
+
     image_x = image->x + image->pad_x;
     image_y = image->y + image->pad_y;
     image_w = MAX(0, image->w - 2 * image->pad_x);
@@ -1321,6 +1321,7 @@ gui_widget_histo(struct gui_draw_buffer *buffer, const struct gui_histo *histo,
         const gui_float item_y = (canvas_y + canvas_h) - item_h;
         gui_float item_x = canvas_x + ((gui_float)i * item_w);
         item_x = item_x + ((gui_float)i * histo->pad_y);
+
         if (INBOX(in->mouse_pos.x, in->mouse_pos.y, item_x, item_y, item_w, item_h)) {
             selected = (in->mouse_down && in->mouse_clicked) ? (gui_int)i: selected;
             item_color = histo->highlight;
@@ -1474,6 +1475,7 @@ gui_panel_begin(struct gui_panel *panel, struct gui_draw_buffer *out,
     const struct gui_config *config;
     const struct gui_color *header;
     struct gui_rect clip;
+
     gui_float mouse_x, mouse_y;
     gui_float clicked_x, clicked_y;
     gui_float header_w = w;
@@ -1521,7 +1523,8 @@ gui_panel_begin(struct gui_panel *panel, struct gui_draw_buffer *out,
     } else {
         clip.x = x; clip.y = y;
         clip.w = w; clip.h = h;
-        if (panel->flags & GUI_PANEL_SCROLLBAR) clip.h -= config->panel_padding.y;
+        if (panel->flags & GUI_PANEL_SCROLLBAR)
+            clip.h -= config->panel_padding.y;
         panel->header_height = config->panel_padding.y + config->item_padding.y;
     }
 
@@ -1535,6 +1538,7 @@ gui_panel_begin(struct gui_panel *panel, struct gui_draw_buffer *out,
         header_w -= ((gui_float)text_width + config->panel_padding.x);
         gui_draw_string(panel->out, panel->font, close_x, close_y, close_w, close_h,
                         config->colors[GUI_COLOR_TEXT], X, 1);
+
         if (INBOX(mouse_x, mouse_y, close_x, close_y, close_w, close_h)) {
             if (INBOX(clicked_x, clicked_y, close_x, close_y, close_w, close_h))
                 ret = !(panel->in->mouse_down && panel->in->mouse_clicked);
@@ -1555,6 +1559,7 @@ gui_panel_begin(struct gui_panel *panel, struct gui_draw_buffer *out,
         min_h = panel->font->height + 2 * config->item_padding.y;
         gui_draw_string(panel->out, panel->font, min_x, min_y, min_w, min_h,
                         config->colors[GUI_COLOR_TEXT], score, 1);
+
         if (INBOX(mouse_x, mouse_y, min_x, min_y, min_w, min_h)) {
             if (INBOX(clicked_x, clicked_y, min_x, min_y, min_w, min_h))
                 if (panel->in->mouse_down && panel->in->mouse_clicked)
@@ -2284,6 +2289,7 @@ gui_panel_end(struct gui_panel *panel)
         scroll.target = panel->at_y - panel->y;
         if (panel->flags & GUI_PANEL_HEADER)
             scroll.target -= panel->header_height;
+
         panel->offset = (gui_float)gui_widget_scroll(panel->out, &scroll, panel->in);
         panel_y = panel->y + panel->height + panel->header_height - config->panel_padding.y;
         gui_draw_rectf(panel->out, panel->x, panel_y, panel->width, config->panel_padding.y,
@@ -2298,7 +2304,7 @@ gui_panel_end(struct gui_panel *panel)
                 panel->y + panel->header_height;
 
         gui_draw_line(panel->out, panel->x, padding_y, panel->x + width,
-            padding_y, config->colors[GUI_COLOR_BORDER]);
+                padding_y, config->colors[GUI_COLOR_BORDER]);
         gui_draw_line(panel->out, panel->x, panel->y, panel->x,
                 padding_y, config->colors[GUI_COLOR_BORDER]);
         gui_draw_line(panel->out, panel->x + width, panel->y, panel->x + width,
@@ -2449,7 +2455,6 @@ gui_begin_panel(struct gui_context *ctx, struct gui_panel *panel,
     if (!ctx || !panel || !title)
         return gui_false;
 
-    cpanel = CONTAINER_OF(panel, struct gui_context_panel, panel);
     global = &ctx->global_buffer;
     out = &ctx->buffer;
     out->vertex_size = 0;
@@ -2462,9 +2467,10 @@ gui_begin_panel(struct gui_context *ctx, struct gui_panel *panel,
     out->vertex_capacity = global->vertex_capacity - global->vertex_size;
     out->commands = &global->commands[global->command_size];
     out->command_capacity = global->command_capacity - global->command_size;
-    out->clips = &global->clips[global->clip_size];
-    out->clip_capacity = global->clip_capacity - global->clip_size;
-    return gui_panel_begin(panel, &ctx->buffer, ctx->input, title,
+    out->clips = global->clips;
+    out->clip_capacity = global->clip_capacity;
+    cpanel = CONTAINER_OF(panel, struct gui_context_panel, panel);
+    return gui_panel_begin(panel, out, ctx->input, title,
             cpanel->x, cpanel->y, cpanel->w, cpanel->h, flags);
 }
 
@@ -2475,13 +2481,12 @@ gui_end_panel(struct gui_context *ctx, struct gui_panel *panel,
     struct gui_context_panel *cpanel;
     struct gui_draw_buffer *global;
     if (!ctx || !panel) return;
+
     cpanel = CONTAINER_OF(panel, struct gui_context_panel, panel);
     gui_panel_end(panel);
-
     global = &ctx->global_buffer;
     global->vertex_size += ctx->buffer.vertex_size;
     global->command_size += ctx->buffer.command_size;
-    global->clip_size += ctx->buffer.clip_size;
     gui_output_end(&ctx->buffer, &cpanel->list, status);
 }
 
