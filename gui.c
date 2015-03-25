@@ -2479,14 +2479,13 @@ gui_begin_panel(struct gui_context *ctx, struct gui_panel *panel,
     }
 
     if (ctx->active == cpanel && (flags & GUI_PANEL_MOVEABLE) && (flags & GUI_PANEL_HEADER)) {
-        gui_bool inscroll, incursor;
+        gui_bool incursor;
         const gui_float header_x = cpanel->x;
         const gui_float header_y = cpanel->y;
         const gui_float header_w = cpanel->w;
         const gui_float header_h = cpanel->panel.header_height;
-        inscroll = INBOX(in->mouse_pos.x,in->mouse_pos.y,header_x, header_y, header_w, header_h);
         incursor = INBOX(in->mouse_prev.x,in->mouse_prev.y,header_x, header_y, header_w, header_h);
-        if (in->mouse_down && inscroll && incursor) {
+        if (in->mouse_down && incursor) {
             cpanel->x = CLAMP(0, cpanel->x + in->mouse_delta.x, ctx->width - cpanel->w);
             cpanel->y = CLAMP(0, cpanel->y + in->mouse_delta.y, ctx->height - cpanel->h);
         }
@@ -2494,14 +2493,13 @@ gui_begin_panel(struct gui_context *ctx, struct gui_panel *panel,
 
     if (ctx->active == cpanel && (flags & GUI_PANEL_SCALEABLE) && (flags & GUI_PANEL_SCROLLBAR)) {
         const struct gui_config *config = cpanel->panel.config;
-        gui_bool inscroll, incursor;
+        gui_bool incursor;
         const gui_float scaler_x = cpanel->x;
         const gui_float scaler_y = (cpanel->y + cpanel->h) - config->scaler_size.y;
         const gui_float scaler_w = config->scaler_size.x;
         const gui_float scaler_h = config->scaler_size.y;
-        inscroll = INBOX(in->mouse_pos.x,in->mouse_pos.y,scaler_x, scaler_y, scaler_w, scaler_h);
         incursor = INBOX(in->mouse_prev.x,in->mouse_prev.y,scaler_x, scaler_y, scaler_w, scaler_h);
-        if (in->mouse_down && inscroll && incursor) {
+        if (in->mouse_down && incursor) {
             cpanel->x = CLAMP(0, cpanel->x + in->mouse_delta.x, ctx->width - cpanel->w);
             cpanel->w = CLAMP(0, cpanel->w - in->mouse_delta.x, ctx->width - cpanel->x);
             cpanel->h = CLAMP(0, cpanel->h + in->mouse_delta.y, ctx->height - cpanel->y);
