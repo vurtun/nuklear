@@ -15,10 +15,11 @@
 #include "gui.h"
 
 /* macros */
+#define LEN(a) (sizeof(a)/sizeof(a)[0])
 #define UNUSED(v) (void)v
-#define WIN_WIDTH 600
-#define WIN_HEIGHT 400
-#define MAX_MEMORY (64 * 1024)
+#define WIN_WIDTH 800
+#define WIN_HEIGHT 600
+#define MAX_MEMORY (128 * 1024)
 #define MAX_PANELS 4
 #define DTIME 33
 #define MAX_BUFFER 64
@@ -356,9 +357,23 @@ main(int argc, char *argv[])
     struct gui_input input;
     struct gui_output output;
 
+    gui_char cmd_buf[MAX_BUFFER];
+    gui_size cmd_len = 0;
+    gui_bool cmd_act = gui_false;
     gui_char input_buf[MAX_BUFFER];
     gui_bool typing = gui_false;
     gui_size input_len = 0;
+    gui_bool check = gui_false;
+    gui_int option = 0;
+    gui_float slider = 2.0f;
+    gui_size prog = 60;
+    gui_int spinner = 100;
+    gui_bool spin_act = gui_false;
+    const gui_float values[] = {8.0f, 15.0f, 20.0f, 12.0f, 30.0f};
+    const char *items[] = {"Fist", "Pistol", "Shotgun", "Railgun", "BFG"};
+    gui_size item_cur = 0;
+    gui_float list_off = 0.0f;
+    gui_bool list_sel[5];
 
     /* Window */
     UNUSED(argc); UNUSED(argv);
@@ -388,7 +403,7 @@ main(int argc, char *argv[])
     config.colors[GUI_COLOR_TEXT].g = 255;
     config.colors[GUI_COLOR_TEXT].b = 255;
     config.colors[GUI_COLOR_TEXT].a = 255;
-    panel = gui_panel_new(ctx, 20, 20, 200, 200, &config, font);
+    panel = gui_panel_new(ctx, 20, 20, 200, 400, &config, font);
     subpanel = gui_panel_new(ctx, 250, 20, 200, 200, &config, font);
 
     running = gui_true;
@@ -416,8 +431,22 @@ main(int argc, char *argv[])
         gui_panel_layout(panel, 30, 1);
         if (gui_panel_button_text(panel, "button", 6, GUI_BUTTON_SWITCH))
             fprintf(stdout, "button pressed!\n");
+        check = gui_panel_check(panel, "advanced", 8, check);
+        gui_panel_layout(panel, 30, 2);
+        if (gui_panel_option(panel, "easy", 4, option == 0)) option = 0;
+        if (gui_panel_option(panel, "hard", 4, option == 1)) option = 1;
+        gui_panel_layout(panel, 30, 1);
         typing = gui_panel_input(panel, input_buf, &input_len, MAX_BUFFER,
                                 GUI_INPUT_DEFAULT, typing);
+        slider = gui_panel_slider(panel, 0, slider, 10, 1.0f, GUI_HORIZONTAL);
+        prog = gui_panel_progress(panel, prog, 100, gui_true, GUI_HORIZONTAL);
+        gui_panel_command(panel, cmd_buf, &cmd_len, MAX_BUFFER, &cmd_act);
+        spin_act = gui_panel_spinner(panel, 0, &spinner, 1024, 10, spin_act);
+        item_cur = gui_panel_selector(panel, items, LEN(items), item_cur);
+        gui_panel_layout(panel, 100, 1);
+        gui_panel_plot(panel, values, LEN(values));
+        gui_panel_histo(panel, values, LEN(values));
+        list_off = gui_panel_list(panel, list_sel, items, LEN(items), list_off, 30);
         gui_end_panel(ctx, panel, NULL);
 
         gui_begin_panel(ctx, subpanel, "Error",

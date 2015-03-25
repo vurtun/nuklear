@@ -829,7 +829,7 @@ gui_widget_button_triangle(struct gui_draw_buffer *buffer, struct gui_button* bu
     pressed = gui_widget_button(buffer, button, in);
     gui_triangle_from_direction(points, button->x, button->y, button->w, button->h,
         button->pad_x, button->pad_y, heading);
-    col = (INBOX(in->mouse_pos.x, in->mouse_pos.y, button->x, button->y, button->w, button->h)) ?
+    col = (in && INBOX(in->mouse_pos.x,in->mouse_pos.y,button->x,button->y,button->w,button->h)) ?
         button->highlight_content : button->foreground;
     gui_draw_trianglef(buffer, points[0].x, points[0].y, points[1].x, points[1].y,
         points[2].x, points[2].y, col);
@@ -1994,7 +1994,7 @@ gui_panel_command(struct gui_panel *panel, gui_char *buffer, gui_size *length,
     field.w = field.w - button.w;
     *active = gui_widget_input(panel->out, (gui_char*)buffer, length, &field,
                                 panel->font, panel->in);
-    if (!submit && active) {
+    if (!submit && active && panel->in) {
         const struct gui_key *enter = &panel->in->keys[GUI_KEY_ENTER];
         if ((enter->down && enter->clicked)) {
             submit = *length;
