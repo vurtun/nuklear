@@ -19,8 +19,6 @@
 #define INBOX(px, py, x, y, w, h) (BETWEEN(px, x, x+w) && BETWEEN(py, y, y+h))
 #define ALIGNOF(t) ((char*)(&((struct {char c; t _h;}*)0)->_h) - (char*)0)
 #define ALIGN(x, mask) (void*)((gui_size)((gui_byte*)(x) + (mask-1)) & ~(mask-1))
-#define OFFSETOF(st,m) ((gui_size)(&((st*)0)->m))
-#define CONTAINER_OF(p, t, m) ((t*)(void*)((char*)p - OFFSETOF(t,m)))
 
 #define col_load(c,j,k,l,m) (c).r = (j), (c).g = (k), (c).b = (l), (c).a = (m)
 #define vec2_load(v,a,b) (v).x = (a), (v).y = (b)
@@ -290,7 +288,7 @@ gui_input_button(struct gui_input *in, gui_int x, gui_int y, gui_bool down)
 }
 
 void
-gui_input_char(struct gui_input *in, gui_glyph glyph)
+gui_input_char(struct gui_input *in, const gui_glyph glyph)
 {
     gui_size len = 0;
     gui_long unicode;
@@ -2407,7 +2405,7 @@ gui_panel_del(struct gui_context *ctx, struct gui_panel *panel)
 {
     struct gui_context_panel *cpanel;
     if (!ctx || !panel) return;
-    cpanel = CONTAINER_OF(panel, struct gui_context_panel, panel);
+    cpanel = (struct gui_context_panel*)panel;
     gui_rm_draw_list(ctx, &cpanel->list);
     gui_free_panel(ctx, cpanel);
 }
@@ -2416,7 +2414,7 @@ void
 gui_panel_geometry(struct gui_panel *panel, struct gui_rect *geometry)
 {
     const struct gui_context_panel *cpanel;
-    cpanel = CONTAINER_OF(panel, const struct gui_context_panel, panel);
+    cpanel = (struct gui_context_panel*)panel;
     geometry->x = cpanel->x;
     geometry->y = cpanel->y;
     geometry->w = cpanel->w;
@@ -2427,7 +2425,7 @@ gui_flags
 gui_panel_get_flags(struct gui_panel *panel)
 {
     const struct gui_context_panel *cpanel;
-    cpanel = CONTAINER_OF(panel, const struct gui_context_panel, panel);
+    cpanel = (struct gui_context_panel*)panel;
     return cpanel->panel.flags;
 }
 
@@ -2435,7 +2433,7 @@ void
 gui_panel_set_flags(struct gui_panel *panel, gui_flags flags)
 {
     struct gui_context_panel *cpanel;
-    cpanel = CONTAINER_OF(panel, struct gui_context_panel, panel);
+    cpanel = (struct gui_context_panel*)panel;
     cpanel->panel.flags = flags;
 }
 
@@ -2460,14 +2458,14 @@ gui_begin_panel(struct gui_context *ctx, struct gui_panel *panel,
         return gui_false;
 
     in = ctx->input;
-    cpanel = CONTAINER_OF(panel, struct gui_context_panel, panel);
+    cpanel = (struct gui_context_panel*)panel;
     inpanel = INBOX(in->mouse_prev.x,in->mouse_prev.y, cpanel->x, cpanel->y, cpanel->w, cpanel->h);
     if (in->mouse_down && in->mouse_clicked && inpanel) {
         gui_size n = 0;
         struct gui_context_panel *p = NULL;
         while (n < ctx->panel_size && ctx->panel_lists[n++] != &cpanel->list);
         for (n; n < ctx->panel_size; n++) {
-            p = CONTAINER_OF(ctx->panel_lists[n], struct gui_context_panel, list);
+            p = (struct gui_context_panel*)ctx->panel_lists[n];
             if (INBOX(in->mouse_prev.x, in->mouse_prev.y, p->x, p->y, p->w, p->h))
                 break;
         }
@@ -2532,7 +2530,7 @@ gui_end_panel(struct gui_context *ctx, struct gui_panel *panel,
     struct gui_draw_buffer *global;
     if (!ctx || !panel) return;
 
-    cpanel = CONTAINER_OF(panel, struct gui_context_panel, panel);
+    cpanel = (struct gui_context_panel*)panel;
     gui_panel_end(panel);
     global = &ctx->global_buffer;
     global->vertex_size += ctx->buffer.vertex_size;

@@ -18,9 +18,10 @@
 #define UNUSED(v) (void)v
 #define WIN_WIDTH 600
 #define WIN_HEIGHT 400
-#define MAX_BUFFER (64 * 1024)
+#define MAX_MEMORY (64 * 1024)
 #define MAX_PANELS 4
 #define DTIME 33
+#define MAX_BUFFER 64
 
 /* functions */
 static void die(const char*,...);
@@ -115,6 +116,12 @@ bmotion(struct gui_input *in, SDL_Event *evt)
     const gui_int x = evt->motion.x;
     const gui_int y = evt->motion.y;
     gui_input_motion(in, x, y);
+}
+
+static void
+text(struct gui_input *in, SDL_Event *evt)
+{
+    gui_input_char(in, (const gui_char*)evt->text.text);
 }
 
 static void
@@ -349,6 +356,10 @@ main(int argc, char *argv[])
     struct gui_input input;
     struct gui_output output;
 
+    gui_char input_buf[MAX_BUFFER];
+    gui_bool typing = gui_false;
+    gui_size input_len = 0;
+
     /* Window */
     UNUSED(argc); UNUSED(argv);
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -364,8 +375,8 @@ main(int argc, char *argv[])
     /* GUI */
     memset(&input, 0, sizeof(input));
     memory.max_panels = MAX_PANELS;
-    memory.memory = xcalloc(MAX_BUFFER , 1);
-    memory.size = MAX_BUFFER;
+    memory.memory = xcalloc(MAX_MEMORY , 1);
+    memory.size = MAX_MEMORY;
     memory.vertex_percentage = 0.80f;
     memory.command_percentage = 0.19f;
     memory.clip_percentage = 0.01f;
@@ -392,6 +403,7 @@ main(int argc, char *argv[])
             else if (ev.type == SDL_MOUSEBUTTONUP) brelease(&input, &ev);
             else if (ev.type == SDL_KEYDOWN) kpress( &input, &ev);
             else if (ev.type == SDL_KEYUP) krelease(&input, &ev);
+            else if (ev.type == SDL_TEXTINPUT) text(&input, &ev);
         }
         gui_input_end(&input);
         SDL_GetWindowSize(win, &width, &height);
@@ -404,6 +416,8 @@ main(int argc, char *argv[])
         gui_panel_layout(panel, 30, 1);
         if (gui_panel_button_text(panel, "button", 6, GUI_BUTTON_SWITCH))
             fprintf(stdout, "button pressed!\n");
+        typing = gui_panel_input(panel, input_buf, &input_len, MAX_BUFFER,
+                                GUI_INPUT_DEFAULT, typing);
         gui_end_panel(ctx, panel, NULL);
 
         gui_begin_panel(ctx, subpanel, "Error",

@@ -358,7 +358,7 @@ void gui_input_begin(struct gui_input *in);
 void gui_input_motion(struct gui_input *in, gui_int x, gui_int y);
 void gui_input_key(struct gui_input *in, enum gui_keys key, gui_int down);
 void gui_input_button(struct gui_input *in, gui_int x, gui_int y, gui_bool down);
-void gui_input_char(struct gui_input *in, gui_glyph glyph);
+void gui_input_char(struct gui_input *in, const gui_glyph glyph);
 void gui_input_end(struct gui_input *in);
 
 /* Output */
