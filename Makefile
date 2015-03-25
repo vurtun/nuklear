@@ -14,7 +14,7 @@ CFLAGS += -Wredundant-decls -Wnested-externs -Wmissing-include-dirs
 CFLAGS += -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wmissing-prototypes -Wconversion
 CFLAGS += -Wswitch-default -Wundef -Wno-unused -Wstrict-overflow=5 -Wsign-conversion
 CFLAGS += -Winit-self -Wstrict-aliasing -fsanitize=address -fsanitize=undefined -ftrapv
-CFLAGS += -Wswitch-enum -Winvalid-pch
+CFLAGS += -Wswitch-enum -Winvalid-pch -Wbad-function-cast
 
 SRC = gui.c opengl.c
 OBJ = $(SRC:.c=.o)
