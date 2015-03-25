@@ -402,7 +402,7 @@ main(int argc, char *argv[])
         gui_begin(ctx, (gui_float)width, (gui_float)height);
         running = gui_begin_panel(ctx, panel, "Demo",
             GUI_PANEL_HEADER|GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE|
-            GUI_PANEL_MOVEABLE|GUI_PANEL_SCROLLBAR);
+            GUI_PANEL_MOVEABLE|GUI_PANEL_SCROLLBAR|GUI_PANEL_SCALEABLE);
         gui_panel_layout(panel, 30, 1);
         if (gui_panel_button_text(panel, "button", 6, GUI_BUTTON_SWITCH))
             fprintf(stdout, "button pressed!\n");

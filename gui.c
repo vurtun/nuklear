@@ -22,10 +22,6 @@
 #define OFFSETOF(st,m) ((gui_size)(&((st*)0)->m))
 #define CONTAINER_OF(p, t, m) ((t*)(void*)((char*)p - OFFSETOF(t,m)))
 
-#define ASSERT_LINE(p, l, f) \
-    typedef char PASTE(assertion_failed_##f##_,l)[2*!!(p)-1];
-#define ASSERT(predicate) ASSERT_LINE(predicate,__LINE__,__FILE__)
-
 #define col_load(c,j,k,l,m) (c).r = (j), (c).g = (k), (c).b = (l), (c).a = (m)
 #define vec2_load(v,a,b) (v).x = (a), (v).y = (b)
 #define vec2_mov(to,from) (to).x = (from).x, (to).y = (from).y
@@ -34,9 +30,8 @@
 #define vec2_muls(r, v, s) do {(r).x=(v).x*(s); (r).y=(v).y*(s);} while(0)
 
 struct gui_context_panel {
-    gui_float x, y;
-    gui_float w, h;
     struct gui_panel panel;
+    gui_float x, y, w, h;
     struct gui_draw_call_list list;
     struct gui_context_panel *next;
 };
@@ -55,7 +50,7 @@ struct gui_context {
 };
 
 static const gui_texture null_tex;
-static const struct gui_rect null_rect = {0, 0, 9999, 9999};
+static const struct gui_rect null_rect = {0.0f, 0.0f, 9999.0f, 9999.0f};
 static const gui_char utfbyte[GUI_UTF_SIZE+1] = {0x80, 0, 0xC0, 0xE0, 0xF0};
 static const gui_char utfmask[GUI_UTF_SIZE+1] = {0xC0, 0x80, 0xE0, 0xF0, 0xF8};
 static const long utfmin[GUI_UTF_SIZE+1] = {0, 0, 0x80, 0x800, 0x100000};
@@ -65,9 +60,9 @@ static gui_float
 fsqrt(float x)
 {
     float xhalf = 0.5f*x;
-    union {float f; int i;} val;
-    ASSERT(sizeof(int) == sizeof(float));
-    val.f = x;
+    union {float f; long i;} val;
+    val.i = 0;
+    val.f = ABS(x);
     val.i = 0x5f375a86 - (val.i >> 1);
     val.f = val.f * (1.5f - xhalf * val.f * val.f);
     return 1.0f/val.f;
@@ -1394,6 +1389,7 @@ gui_default_config(struct gui_config *config)
     vec2_load(config->panel_min_size, 64.0f, 64.0f);
     vec2_load(config->item_spacing, 8.0f, 8.0f);
     vec2_load(config->item_padding, 4.0f, 4.0f);
+    vec2_load(config->scaler_size, 16.0f, 16.0f);
     col_load(config->colors[GUI_COLOR_TEXT], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_PANEL], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_BORDER], 100, 100, 100, 255);
@@ -2417,6 +2413,33 @@ gui_panel_del(struct gui_context *ctx, struct gui_panel *panel)
 }
 
 void
+gui_panel_geometry(struct gui_panel *panel, struct gui_rect *geometry)
+{
+    const struct gui_context_panel *cpanel;
+    cpanel = CONTAINER_OF(panel, const struct gui_context_panel, panel);
+    geometry->x = cpanel->x;
+    geometry->y = cpanel->y;
+    geometry->w = cpanel->w;
+    geometry->h = cpanel->h;
+}
+
+gui_flags
+gui_panel_get_flags(struct gui_panel *panel)
+{
+    const struct gui_context_panel *cpanel;
+    cpanel = CONTAINER_OF(panel, const struct gui_context_panel, panel);
+    return cpanel->panel.flags;
+}
+
+void
+gui_panel_set_flags(struct gui_panel *panel, gui_flags flags)
+{
+    struct gui_context_panel *cpanel;
+    cpanel = CONTAINER_OF(panel, struct gui_context_panel, panel);
+    cpanel->panel.flags = flags;
+}
+
+void
 gui_begin(struct gui_context *ctx, gui_float w, gui_float h)
 {
     if (!ctx) return;
@@ -2443,11 +2466,10 @@ gui_begin_panel(struct gui_context *ctx, struct gui_panel *panel,
         gui_size n = 0;
         struct gui_context_panel *p = NULL;
         while (n < ctx->panel_size && ctx->panel_lists[n++] != &cpanel->list);
-        while (n < ctx->panel_size) {
+        for (n; n < ctx->panel_size; n++) {
             p = CONTAINER_OF(ctx->panel_lists[n], struct gui_context_panel, list);
             if (INBOX(in->mouse_prev.x, in->mouse_prev.y, p->x, p->y, p->w, p->h))
                 break;
-            n++;
         }
         if (n >= ctx->panel_size) {
             gui_rm_draw_list(ctx, &cpanel->list);
@@ -2467,6 +2489,22 @@ gui_begin_panel(struct gui_context *ctx, struct gui_panel *panel,
         if (in->mouse_down && inscroll && incursor) {
             cpanel->x = CLAMP(0, cpanel->x + in->mouse_delta.x, ctx->width - cpanel->w);
             cpanel->y = CLAMP(0, cpanel->y + in->mouse_delta.y, ctx->height - cpanel->h);
+        }
+    }
+
+    if (ctx->active == cpanel && (flags & GUI_PANEL_SCALEABLE) && (flags & GUI_PANEL_SCROLLBAR)) {
+        const struct gui_config *config = cpanel->panel.config;
+        gui_bool inscroll, incursor;
+        const gui_float scaler_x = cpanel->x;
+        const gui_float scaler_y = (cpanel->y + cpanel->h) - config->scaler_size.y;
+        const gui_float scaler_w = config->scaler_size.x;
+        const gui_float scaler_h = config->scaler_size.y;
+        inscroll = INBOX(in->mouse_pos.x,in->mouse_pos.y,scaler_x, scaler_y, scaler_w, scaler_h);
+        incursor = INBOX(in->mouse_prev.x,in->mouse_prev.y,scaler_x, scaler_y, scaler_w, scaler_h);
+        if (in->mouse_down && inscroll && incursor) {
+            cpanel->x = CLAMP(0, cpanel->x + in->mouse_delta.x, ctx->width - cpanel->w);
+            cpanel->w = CLAMP(0, cpanel->w - in->mouse_delta.x, ctx->width - cpanel->x);
+            cpanel->h = CLAMP(0, cpanel->h + in->mouse_delta.y, ctx->height - cpanel->y);
         }
     }
 

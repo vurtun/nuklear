@@ -319,6 +319,7 @@ struct gui_config {
     struct gui_vec2 panel_min_size;
     struct gui_vec2 item_spacing;
     struct gui_vec2 item_padding;
+    struct gui_vec2 scaler_size;
     gui_float scrollbar_width;
     struct gui_color colors[GUI_COLOR_COUNT];
 };
@@ -331,8 +332,8 @@ enum gui_panel_flags {
     GUI_PANEL_CLOSEABLE = 0x10,
     GUI_PANEL_SCROLLBAR = 0x20,
     GUI_PANEL_HIDDEN = 0x40,
-    GUI_PANEL_SCALEABLE = 0x80,
-    GUI_PANEL_MOVEABLE = 0x100
+    GUI_PANEL_MOVEABLE = 0x80,
+    GUI_PANEL_SCALEABLE = 0x100
 };
 
 struct gui_panel {
@@ -451,6 +452,9 @@ void gui_begin(struct gui_context*, gui_float width, gui_float height);
 void gui_end(struct gui_context*, struct gui_output*, struct gui_memory_status*);
 struct gui_panel *gui_panel_new(struct gui_context*, gui_float x, gui_float y, gui_float w,
                     gui_float h, const struct gui_config* , const struct gui_font*);
+void gui_panel_geometry(struct gui_panel*, struct gui_rect*);
+gui_flags gui_panel_get_flags(struct gui_panel*);
+void gui_panel_set_flags(struct gui_panel*, gui_flags flags);
 void gui_panel_del(struct gui_context*, struct gui_panel*);
 gui_bool gui_begin_panel(struct gui_context*, struct gui_panel*, const char *title, gui_flags flags);
 void gui_end_panel(struct gui_context*, struct gui_panel*, struct gui_memory_status*);
