@@ -15,14 +15,12 @@
 #include "gui.h"
 
 /* macros */
-#define WIN_WIDTH   800
-#define WIN_HEIGHT  600
-#define DTIME       33
-#define MAX_BUFFER (256 * 1024)
+#define UNUSED(v) (void)v
+#define WIN_WIDTH 600
+#define WIN_HEIGHT 400
+#define MAX_BUFFER (64 * 1024)
 #define MAX_PANELS 4
-
-#define LEN(a)(sizeof(a)/sizeof(a)[0])
-#define UNUSED(a)((void)(a))
+#define DTIME 33
 
 /* functions */
 static void die(const char*,...);
@@ -382,7 +380,7 @@ main(int argc, char *argv[])
     panel = gui_panel_new(ctx, 20, 20, 200, 200, &config, font);
     subpanel = gui_panel_new(ctx, 250, 20, 200, 200, &config, font);
 
-    running = 1;
+    running = gui_true;
     while (running) {
         SDL_Event ev;
         started = SDL_GetTicks();
@@ -396,9 +394,9 @@ main(int argc, char *argv[])
             else if (ev.type == SDL_KEYUP) krelease(&input, &ev);
         }
         gui_input_end(&input);
+        SDL_GetWindowSize(win, &width, &height);
 
         /* ------------------------- GUI --------------------------*/
-        SDL_GetWindowSize(win, &width, &height);
         gui_begin(ctx, (gui_float)width, (gui_float)height);
         running = gui_begin_panel(ctx, panel, "Demo",
             GUI_PANEL_HEADER|GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE|
