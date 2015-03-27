@@ -75,13 +75,6 @@ struct gui_input {
     struct gui_vec2 mouse_clicked_pos;
 };
 
-enum gui_error {
-    GUI_OK = 0x00,
-    GUI_ERROR_NOMEM = 0x01,
-    GUI_ERROR_INVAL = 0x02,
-    GUI_ERROR_INVOP = 0x04
-};
-
 struct gui_vertex {
     struct gui_vec2 pos;
     struct gui_texCoord uv;
@@ -444,7 +437,7 @@ gui_float gui_panel_list(struct gui_panel*, gui_bool *selected, const char *item
                     gui_size item_count, gui_float offset, gui_float item_height);
 void gui_panel_frame_begin(struct gui_panel *panel, struct gui_panel *tab, const char *title);
 void gui_panel_frame_end(struct gui_panel*);
-gui_uint gui_panel_end(struct gui_panel*);
+void gui_panel_end(struct gui_panel*);
 
 /* Context */
 struct gui_context;

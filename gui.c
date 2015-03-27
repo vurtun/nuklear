@@ -5,6 +5,12 @@
 */
 #include "gui.h"
 
+#ifndef NDEBUG
+#include <assert.h>
+#else
+#define assert(expr)
+#endif
+
 #define NULL (void*)0
 #define UTF_INVALID 0xFFFD
 #define MAX_NUMBER_BUFFER 64
@@ -19,12 +25,6 @@
 #define INBOX(px, py, x, y, w, h) (BETWEEN(px, x, x+w) && BETWEEN(py, y, y+h))
 #define ALIGNOF(t) ((char*)(&((struct {char c; t _h;}*)0)->_h) - (char*)0)
 #define ALIGN(x, mask) (void*)((gui_size)((gui_byte*)(x) + (mask-1)) & ~(mask-1))
-
-#ifndef NDEBUG
-#include <assert.h>
-#else
-#define assert(expr)
-#endif
 
 #define col_load(c,j,k,l,m) (c).r = (j), (c).g = (k), (c).b = (l), (c).a = (m)
 #define vec2_load(v,a,b) (v).x = (a), (v).y = (b)
@@ -303,6 +303,7 @@ gui_input_char(struct gui_input *in, const gui_glyph glyph)
 {
     gui_size len = 0;
     gui_long unicode;
+    assert(in);
     if (!in) return;
     len = utf_decode(glyph, &unicode, GUI_UTF_SIZE);
     if (len && ((in->text_len + len) < GUI_INPUT_MAX)) {
@@ -2459,13 +2460,13 @@ gui_panel_frame_end(struct gui_panel *tab)
     gui_panel_end(tab);
 }
 
-gui_uint
+void
 gui_panel_end(struct gui_panel *panel)
 {
     const struct gui_config *config;
     assert(panel);
-    if (!panel) return 0;
-    if (panel->flags & GUI_PANEL_HIDDEN) return 0;
+    if (!panel) return;
+    if (panel->flags & GUI_PANEL_HIDDEN) return;
     gui_pop_clip(panel->out);
     panel->at_y += panel->row_height;
 
@@ -2511,7 +2512,6 @@ gui_panel_end(struct gui_panel *panel)
         gui_draw_line(panel->out, panel->x + width, panel->y, panel->x + width,
                 padding_y, config->colors[GUI_COLOR_BORDER]);
     }
-    return GUI_OK;
 }
 
 struct gui_context*

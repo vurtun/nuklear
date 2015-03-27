@@ -12,7 +12,7 @@
 #include <GL/glu.h>
 #include <SDL2/SDL.h>
 
-#include "gui.h"
+#include "../gui.h"
 
 /* macros */
 #define LEN(a) (sizeof(a)/sizeof(a)[0])
@@ -448,10 +448,8 @@ main(int argc, char *argv[])
         gui_begin_panel(ctx, subpanel, "Error",
             GUI_PANEL_HEADER|GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE);
         gui_panel_layout(subpanel, 30, 2);
-        if (gui_panel_button_text(subpanel, "ok", 2, GUI_BUTTON_SWITCH))
-            break;
-        if (gui_panel_button_text(subpanel, "cancel", 6, GUI_BUTTON_SWITCH))
-            break;
+        if (gui_panel_button_text(subpanel, "ok", 2, GUI_BUTTON_SWITCH)) break;
+        if (gui_panel_button_text(subpanel, "cancel", 6, GUI_BUTTON_SWITCH)) break;
         gui_end_panel(ctx, subpanel, NULL);
         gui_end(ctx, &output, NULL);
         /* ---------------------------------------------------------*/
