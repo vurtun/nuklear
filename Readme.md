@@ -2,7 +2,7 @@
 Work in progress
 
 ## Features
-- Immediate graphical user interface
+- Immediate mode graphical user interface
 - Suited for embedding into graphical applications
 - Written in C89 (ANSI C)
 - Small (~2.5kLOC)
