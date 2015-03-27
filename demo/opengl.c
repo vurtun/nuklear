@@ -20,7 +20,7 @@
 #define WIN_WIDTH 800
 #define WIN_HEIGHT 600
 #define MAX_MEMORY (128 * 1024)
-#define MAX_PANELS 4
+#define MAX_PANELS 16
 #define DTIME 33
 #define MAX_BUFFER 64
 
@@ -436,7 +436,7 @@ main(int argc, char *argv[])
         gui_panel_layout(panel, 30, 1);
         slider = gui_panel_slider(panel, 0, slider, 10, 1.0f, GUI_HORIZONTAL);
         prog = gui_panel_progress(panel, prog, 100, gui_true, GUI_HORIZONTAL);
-        gui_panel_command(panel, cmd_buf, &cmd_len, MAX_BUFFER, &cmd_act);
+        gui_panel_shell(panel, cmd_buf, &cmd_len, MAX_BUFFER, &cmd_act);
         spin_act = gui_panel_spinner(panel, 0, &spinner, 1024, 10, spin_act);
         item_cur = gui_panel_selector(panel, items, LEN(items), item_cur);
         gui_panel_layout(panel, 100, 1);

@@ -885,7 +885,7 @@ gui_widget_button_triangle(struct gui_draw_buffer *buffer, struct gui_button* bu
 }
 
 gui_bool
-gui_widget_button_image(struct gui_draw_buffer *buffer, struct gui_button* button,
+gui_widget_button_icon(struct gui_draw_buffer *buffer, struct gui_button* button,
     gui_texture tex, struct gui_texCoord from, struct gui_texCoord to,
     const struct gui_input *in)
 {
@@ -1868,7 +1868,7 @@ gui_panel_button_triangle(struct gui_panel *panel, enum gui_heading heading,
 }
 
 gui_bool
-gui_panel_button_image(struct gui_panel *panel, gui_texture tex,
+gui_panel_button_icon(struct gui_panel *panel, gui_texture tex,
     struct gui_texCoord from, struct gui_texCoord to,
     enum gui_button_behavior behavior)
 {
@@ -1896,7 +1896,7 @@ gui_panel_button_image(struct gui_panel *panel, gui_texture tex,
     button.content = config->colors[GUI_COLOR_TEXT];
     button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
     button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER];
-    return gui_widget_button_image(panel->out, &button, tex, from, to, panel->in);
+    return gui_widget_button_icon(panel->out, &button, tex, from, to, panel->in);
 }
 
 gui_bool
@@ -2114,7 +2114,7 @@ gui_panel_input(struct gui_panel *panel, gui_char *buffer, gui_size *length,
 }
 
 gui_size
-gui_panel_command(struct gui_panel *panel, gui_char *buffer, gui_size *length,
+gui_panel_shell(struct gui_panel *panel, gui_char *buffer, gui_size *length,
     gui_size max, gui_bool *active)
 {
     struct gui_rect bounds;
@@ -2614,39 +2614,6 @@ gui_panel_del(struct gui_context *ctx, struct gui_panel *panel)
     cpanel = (struct gui_context_panel*)panel;
     gui_rm_draw_list(ctx, &cpanel->list);
     gui_free_panel(ctx, cpanel);
-}
-
-void
-gui_panel_geometry(struct gui_panel *panel, struct gui_rect *geometry)
-{
-    const struct gui_context_panel *cpanel;
-    assert(panel);
-    assert(geometry);
-    if (!panel || !geometry) return;
-    cpanel = (struct gui_context_panel*)panel;
-    geometry->x = cpanel->x;
-    geometry->y = cpanel->y;
-    geometry->w = cpanel->w;
-    geometry->h = cpanel->h;
-}
-
-gui_flags
-gui_panel_get_flags(struct gui_panel *panel)
-{
-    const struct gui_context_panel *cpanel;
-    assert(panel);
-    cpanel = (struct gui_context_panel*)panel;
-    return cpanel->panel.flags;
-}
-
-void
-gui_panel_set_flags(struct gui_panel *panel, gui_flags flags)
-{
-    struct gui_context_panel *cpanel;
-    assert(panel);
-    if (!panel) return;
-    cpanel = (struct gui_context_panel*)panel;
-    cpanel->panel.flags = flags;
 }
 
 void

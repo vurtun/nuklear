@@ -371,7 +371,7 @@ gui_bool gui_widget_button_text(struct gui_draw_buffer*, const struct gui_button
                     const struct gui_input*);
 gui_bool gui_widget_button_triangle(struct gui_draw_buffer*, struct gui_button*,
                     enum gui_heading, const struct gui_input*);
-gui_bool gui_widget_button_image(struct gui_draw_buffer*, struct gui_button*,
+gui_bool gui_widget_button_icon(struct gui_draw_buffer*, struct gui_button*,
                     gui_texture, struct gui_texCoord from, struct gui_texCoord to,
                     const struct gui_input*);
 gui_bool gui_widget_toggle(struct gui_draw_buffer*, const struct gui_toggle*,
@@ -412,7 +412,7 @@ gui_bool gui_panel_button_color(struct gui_panel*, const struct gui_color,
                     enum gui_button_behavior);
 gui_bool gui_panel_button_triangle(struct gui_panel*, enum gui_heading,
                     enum gui_button_behavior);
-gui_bool gui_panel_button_image(struct gui_panel*, gui_texture,
+gui_bool gui_panel_button_icon(struct gui_panel*, gui_texture,
                     struct gui_texCoord from, struct gui_texCoord to,
                     enum gui_button_behavior);
 gui_bool gui_panel_button_toggle(struct gui_panel*, const char*, gui_size,
@@ -423,7 +423,7 @@ gui_size gui_panel_progress(struct gui_panel*, gui_size cur, gui_size max,
                     gui_bool modifyable, enum gui_direction);
 gui_bool gui_panel_input(struct gui_panel*, gui_char *buffer, gui_size *len,
                     gui_size max, enum gui_input_filter, gui_bool active);
-gui_size gui_panel_command(struct gui_panel*, gui_char *buffer, gui_size *length,
+gui_size gui_panel_shell(struct gui_panel*, gui_char *buffer, gui_size *length,
                     gui_size max, gui_bool *active);
 gui_bool gui_panel_spinner(struct gui_panel*, gui_int min, gui_int *value,
                     gui_int max, gui_int step, gui_bool active);
@@ -444,9 +444,6 @@ void gui_begin(struct gui_context*, gui_float width, gui_float height);
 void gui_end(struct gui_context*, struct gui_output*, struct gui_memory_status*);
 struct gui_panel *gui_panel_new(struct gui_context*, gui_float x, gui_float y, gui_float w,
                     gui_float h, const struct gui_config* , const struct gui_font*);
-void gui_panel_geometry(struct gui_panel*, struct gui_rect*);
-gui_flags gui_panel_get_flags(struct gui_panel*);
-void gui_panel_set_flags(struct gui_panel*, gui_flags flags);
 void gui_panel_del(struct gui_context*, struct gui_panel*);
 gui_bool gui_begin_panel(struct gui_context*, struct gui_panel*, const char *title, gui_flags flags);
 void gui_end_panel(struct gui_context*, struct gui_panel*, struct gui_memory_status*);
