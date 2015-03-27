@@ -393,7 +393,8 @@ main(int argc, char *argv[])
     memory.command_percentage = 0.19f;
     memory.clip_percentage = 0.01f;
 
-    ctx = gui_new(&memory, &input);
+    /*ctx = gui_new(&memory, &input);*/
+    ctx = gui_new(&memory, NULL);
     font = ldfont("mono.sdf", 16);
     gui_default_config(&config);
     config.colors[GUI_COLOR_TEXT].r = 255;
