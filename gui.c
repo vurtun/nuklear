@@ -459,6 +459,7 @@ gui_push_clip(struct gui_draw_buffer *buffer, const struct gui_rect *rect)
 static void
 gui_pop_clip(struct gui_draw_buffer *buffer)
 {
+    if (!buffer || !buffer->clip_capacity) return;
     if (buffer->clip_size == 0) {
         buffer->clips[buffer->clip_size] = null_rect;
         buffer->clip_size = 1;
@@ -1573,7 +1574,7 @@ gui_panel_layout(struct gui_panel *panel, gui_float height, gui_size cols)
     const struct gui_color *color;
 
     if (!panel) return;
-    if (panel->minimized || panel->flags & GUI_PANEL_HIDDEN) return;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return;
     config = panel->config;
     color = &config->colors[GUI_COLOR_PANEL];
 
@@ -1590,7 +1591,7 @@ gui_panel_seperator(struct gui_panel *panel, gui_size cols)
 {
     const struct gui_config *config;
     if (!panel) return;
-    if (panel->minimized || panel->flags & GUI_PANEL_HIDDEN) return;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return;
     config = panel->config;
     cols = MIN(cols, panel->row_columns - panel->index);
     panel->index += cols;
@@ -1634,7 +1635,7 @@ gui_panel_text(struct gui_panel *panel, const char *str, gui_size len)
     const struct gui_config *config;
 
     if (!panel || !panel->config || !panel->out || !panel->font) return;
-    if (panel->minimized || panel->flags & GUI_PANEL_HIDDEN) return;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return;
     gui_panel_alloc_space(&bounds, panel);
     config = panel->config;
 
@@ -1660,7 +1661,7 @@ gui_panel_button_text(struct gui_panel *panel, const char *str, gui_size len,
     const struct gui_config *config;
 
     if (!panel || !panel->config || !panel->out || !panel->font) return 0;
-    if (panel->minimized || panel->flags & GUI_PANEL_HIDDEN) return 0;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return 0;
     gui_panel_alloc_space(&bounds, panel);
     config = panel->config;
 
@@ -1687,7 +1688,7 @@ gui_bool gui_panel_button_color(struct gui_panel *panel, const struct gui_color 
     const struct gui_config *config;
 
     if (!panel || !panel->config || !panel->out || !panel->font) return 0;
-    if (panel->minimized || panel->flags & GUI_PANEL_HIDDEN) return 0;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return 0;
     gui_panel_alloc_space(&bounds, panel);
     config = panel->config;
 
@@ -1714,7 +1715,7 @@ gui_panel_button_triangle(struct gui_panel *panel, enum gui_heading heading,
     const struct gui_config *config;
 
     if (!panel || !panel->config || !panel->out || !panel->font) return 0;
-    if (panel->minimized || panel->flags & GUI_PANEL_HIDDEN) return 0;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return 0;
     gui_panel_alloc_space(&bounds, panel);
     config = panel->config;
 
@@ -1743,7 +1744,7 @@ gui_panel_button_image(struct gui_panel *panel, gui_texture tex,
     const struct gui_config *config;
 
     if (!panel || !panel->config || !panel->out || !panel->font) return 0;
-    if (panel->minimized || panel->flags & GUI_PANEL_HIDDEN) return 0;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return 0;
     gui_panel_alloc_space(&bounds, panel);
     config = panel->config;
     button.x = bounds.x;
@@ -1770,7 +1771,7 @@ gui_panel_button_toggle(struct gui_panel *panel, const char *str, gui_size len,
     const struct gui_config *config;
 
     if (!panel || !panel->config || !panel->out || !panel->font) return 0;
-    if (panel->minimized || panel->flags & GUI_PANEL_HIDDEN) return 0;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return 0;
     gui_panel_alloc_space(&bounds, panel);
     config = panel->config;
 
@@ -1808,7 +1809,7 @@ gui_panel_check(struct gui_panel *panel, const char *text, gui_size length,
     const struct gui_config *config;
 
     if (!panel || !panel->config || !panel->out || !panel->font) return is_active;
-    if (panel->minimized || panel->flags & GUI_PANEL_HIDDEN) return is_active;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return is_active;
     gui_panel_alloc_space(&bounds, panel);
     config = panel->config;
 
@@ -1837,7 +1838,7 @@ gui_panel_option(struct gui_panel *panel, const char *text, gui_size length,
     const struct gui_config *config;
 
     if (!panel || !panel->config || !panel->out || !panel->font) return is_active;
-    if (panel->minimized || panel->flags & GUI_PANEL_HIDDEN) return is_active;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return is_active;
     gui_panel_alloc_space(&bounds, panel);
     config = panel->config;
 
@@ -1866,7 +1867,7 @@ gui_panel_slider(struct gui_panel *panel, gui_float min_value, gui_float value,
     const struct gui_config *config;
 
     if (!panel || !panel->config || !panel->out) return value;
-    if (panel->minimized || panel->flags & GUI_PANEL_HIDDEN) return value;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return value;
     gui_panel_alloc_space(&bounds, panel);
     config = panel->config;
 
@@ -1896,7 +1897,7 @@ gui_panel_progress(struct gui_panel *panel, gui_size cur_value, gui_size max_val
     const struct gui_config *config;
 
     if (!panel || !panel->config || !panel->out) return cur_value;
-    if (panel->minimized || panel->flags & GUI_PANEL_HIDDEN) return cur_value;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return cur_value;
     gui_panel_alloc_space(&bounds, panel);
     config = panel->config;
 
@@ -1925,7 +1926,7 @@ gui_panel_input(struct gui_panel *panel, gui_char *buffer, gui_size *length,
     const struct gui_config *config;
 
     if (!panel || !panel->config || !panel->out || !panel->font) return 0;
-    if (panel->minimized || panel->flags & GUI_PANEL_HIDDEN) return 0;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return 0;
     gui_panel_alloc_space(&bounds, panel);
     config = panel->config;
 
@@ -1957,7 +1958,7 @@ gui_panel_command(struct gui_panel *panel, gui_char *buffer, gui_size *length,
     const struct gui_config *config;
 
     if (!panel || !panel->config || !panel->out || !panel->font) return 0;
-    if (panel->minimized || panel->flags & GUI_PANEL_HIDDEN) return 0;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return 0;
     gui_panel_alloc_space(&bounds, panel);
     config = panel->config;
 
@@ -2020,7 +2021,7 @@ gui_panel_spinner(struct gui_panel *panel, gui_int min, gui_int *value,
     gui_bool button_up_clicked, button_down_clicked;
 
     if (!panel || !panel->config || !panel->out || !panel->font) return 0;
-    if (panel->minimized || panel->flags & GUI_PANEL_HIDDEN) return 0;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return 0;
     gui_panel_alloc_space(&bounds, panel);
     config = panel->config;
 
@@ -2085,7 +2086,7 @@ gui_panel_selector(struct gui_panel *panel, const char *items[],
     gui_bool button_up_clicked, button_down_clicked;
 
     if (!panel || !panel->config || !panel->out || !panel->font) return 0;
-    if (panel->minimized || panel->flags & GUI_PANEL_HIDDEN) return 0;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return 0;
     gui_panel_alloc_space(&bounds, panel);
     config = panel->config;
 
@@ -2132,7 +2133,7 @@ gui_panel_plot(struct gui_panel *panel, const gui_float *values, gui_size count)
     const struct gui_config *config;
 
     if (!panel || !panel->config || !panel->out) return -1;
-    if (panel->minimized || panel->flags & GUI_PANEL_HIDDEN) return -1;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return -1;
     gui_panel_alloc_space(&bounds, panel);
     config = panel->config;
 
@@ -2158,7 +2159,7 @@ gui_panel_histo(struct gui_panel *panel, const gui_float *values, gui_size count
     const struct gui_config *config;
 
     if (!panel || !panel->config || !panel->out) return -1;
-    if (panel->minimized || panel->flags & GUI_PANEL_HIDDEN) return -1;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return -1;
     gui_panel_alloc_space(&bounds, panel);
     config = panel->config;
 
@@ -2187,7 +2188,7 @@ gui_panel_list(struct gui_panel *panel, gui_bool *selection,
     struct gui_config config;
     const struct gui_config *temp;
     if (!panel || !items || !item_count || !selection) return 0;
-    if (panel->minimized || panel->flags & GUI_PANEL_HIDDEN) return 0;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return 0;
 
     temp = panel->config;
     memcopy(&config, panel->config, sizeof(struct gui_config));
@@ -2221,7 +2222,7 @@ gui_panel_frame_begin(struct gui_panel *panel, struct gui_panel *frame, const ch
     const struct gui_config *config;
     const struct gui_color *color;
     if (!panel || !panel->config || !panel->out || !frame) return;
-    if (panel->minimized || panel->flags & GUI_PANEL_HIDDEN) return;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return;
 
     gui_panel_alloc_space(&bounds, panel);
     flags = GUI_PANEL_SCROLLBAR|GUI_PANEL_TAB|GUI_PANEL_BORDER;
@@ -2534,7 +2535,6 @@ gui_end_panel(struct gui_context *ctx, struct gui_panel *panel,
     struct gui_context_panel *cpanel;
     struct gui_draw_buffer *global;
     if (!ctx || !panel) return;
-    if (panel->flags & GUI_PANEL_HIDDEN) return;
 
     cpanel = (struct gui_context_panel*)panel;
     gui_panel_end(panel);

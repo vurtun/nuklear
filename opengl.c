@@ -416,13 +416,14 @@ main(int argc, char *argv[])
             else if (ev.type == SDL_KEYDOWN) kpress( &input, &ev);
             else if (ev.type == SDL_KEYUP) krelease(&input, &ev);
             else if (ev.type == SDL_TEXTINPUT) text(&input, &ev);
+            else if (ev.type == SDL_QUIT) running = gui_false;
         }
         gui_input_end(&input);
         SDL_GetWindowSize(win, &width, &height);
 
         /* ------------------------- GUI --------------------------*/
         gui_begin(ctx, (gui_float)width, (gui_float)height);
-        running = gui_begin_panel(ctx, panel, "Demo",
+        gui_begin_panel(ctx, panel, "Demo",
             GUI_PANEL_HEADER|GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE|
             GUI_PANEL_MOVEABLE|GUI_PANEL_SCROLLBAR|GUI_PANEL_SCALEABLE);
         gui_panel_layout(panel, 30, 1);
@@ -448,9 +449,9 @@ main(int argc, char *argv[])
             GUI_PANEL_HEADER|GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE);
         gui_panel_layout(subpanel, 30, 2);
         if (gui_panel_button_text(subpanel, "ok", 2, GUI_BUTTON_SWITCH))
-            fprintf(stdout, "ok pressed!\n");
+            break;
         if (gui_panel_button_text(subpanel, "cancel", 6, GUI_BUTTON_SWITCH))
-            fprintf(stdout, "cancel pressed!\n");
+            break;
         gui_end_panel(ctx, subpanel, NULL);
         gui_end(ctx, &output, NULL);
         /* ---------------------------------------------------------*/
