@@ -2385,6 +2385,10 @@ gui_panel_list(struct gui_panel *panel, gui_bool *selection,
     gui_float item_height)
 {
     gui_size i;
+    gui_bool res;
+    struct gui_rect bounds;
+    struct gui_rect clip;
+    const struct gui_color *color;
     struct gui_panel list;
     struct gui_config config;
     const struct gui_config *temp;
@@ -2400,13 +2404,21 @@ gui_panel_list(struct gui_panel *panel, gui_bool *selection,
     if (!items || !item_count || !selection) return 0;
     if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return 0;
 
-    temp = panel->config;
     memcopy(&config, panel->config, sizeof(struct gui_config));
     config.panel_padding.y = 0.0f;
     config.item_spacing.x = 0.0f;
-    panel->config = &config;
+    list.config = &config;
 
-    gui_panel_frame_begin(panel, &list, NULL);
+    temp = panel->config;
+    gui_panel_alloc_space(&bounds, panel);
+    panel->config = temp;
+
+    list.minimized = 0;
+    list.font = panel->font;
+    list.in = panel->in;
+    gui_panel_begin(&list, panel->out, panel->in, NULL, bounds.x, bounds.y,
+        bounds.w, bounds.h, GUI_PANEL_SCROLLBAR|GUI_PANEL_TAB|GUI_PANEL_BORDER);
+
     list.offset = offset;
     config.panel_padding.x = 0.0f;
     config.item_spacing.y = 0.0f;
@@ -2415,49 +2427,8 @@ gui_panel_list(struct gui_panel *panel, gui_bool *selection,
         selection[i] = gui_panel_button_toggle(&list, items[i],
             strsiz(items[i]), selection[i]);
     }
-
-    gui_panel_frame_end(&list);
-    panel->config = temp;
-    offset = list.offset;
-    return offset;
-}
-
-void
-gui_panel_frame_begin(struct gui_panel *panel, struct gui_panel *frame, const char *title)
-{
-    gui_bool res;
-    struct gui_rect bounds;
-    struct gui_rect clip;
-    gui_flags flags;
-    const struct gui_config *config;
-    const struct gui_color *color;
-
-    assert(panel);
-    assert(panel->config);
-    assert(panel->out);
-    assert(frame);
-
-    if (!panel || !panel->config || !panel->out || !frame) return;
-    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return;
-
-    gui_panel_alloc_space(&bounds, panel);
-    flags = GUI_PANEL_SCROLLBAR|GUI_PANEL_TAB|GUI_PANEL_BORDER;
-    if (title) flags |= GUI_PANEL_HEADER;
-    else frame->minimized = 0;
-    frame->config = panel->config;
-    frame->font = panel->font;
-    frame->in = panel->in;
-    if (panel->minimized)
-        frame->minimized = panel->minimized;
-    gui_panel_begin(frame, panel->out, panel->in, title,
-        bounds.x, bounds.y, bounds.w, bounds.h, flags);
-}
-
-void
-gui_panel_frame_end(struct gui_panel *tab)
-{
-    assert(tab);
-    gui_panel_end(tab);
+    gui_panel_end(&list);
+    return list.offset;
 }
 
 void
