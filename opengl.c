@@ -360,9 +360,6 @@ main(int argc, char *argv[])
     gui_char cmd_buf[MAX_BUFFER];
     gui_size cmd_len = 0;
     gui_bool cmd_act = gui_false;
-    gui_char input_buf[MAX_BUFFER];
-    gui_bool typing = gui_false;
-    gui_size input_len = 0;
     gui_bool check = gui_false;
     gui_int option = 0;
     gui_float slider = 2.0f;
@@ -436,8 +433,6 @@ main(int argc, char *argv[])
         if (gui_panel_option(panel, "easy", 4, option == 0)) option = 0;
         if (gui_panel_option(panel, "hard", 4, option == 1)) option = 1;
         gui_panel_layout(panel, 30, 1);
-        typing = gui_panel_input(panel, input_buf, &input_len, MAX_BUFFER,
-                                GUI_INPUT_DEFAULT, typing);
         slider = gui_panel_slider(panel, 0, slider, 10, 1.0f, GUI_HORIZONTAL);
         prog = gui_panel_progress(panel, prog, 100, gui_true, GUI_HORIZONTAL);
         gui_panel_command(panel, cmd_buf, &cmd_len, MAX_BUFFER, &cmd_act);

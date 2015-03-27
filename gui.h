@@ -156,6 +156,7 @@ struct gui_image {
     gui_float x, y;
     gui_float w, h;
     gui_float pad_x, pad_y;
+    struct gui_color color;
     struct gui_texCoord uv[2];
     gui_texture texture;
     struct gui_color background;

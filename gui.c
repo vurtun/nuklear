@@ -661,26 +661,15 @@ gui_draw_string(struct gui_draw_buffer *buffer, const struct gui_font *font, gui
 static void
 gui_draw_image(struct gui_draw_buffer *buffer, gui_float x, gui_float y,
     gui_float w, gui_float h, gui_texture texture, struct gui_texCoord from,
-    struct gui_texCoord to)
+    struct gui_texCoord to, struct gui_color col)
 {
-    const struct gui_color col = {0,0,0,0};
-    struct gui_rect clip;
-    clip.x = x; clip.y = y;
-    clip.w = w; clip.h = h;
-
-    if (gui_push_clip(buffer, &clip)) return;
-    if (!gui_push_command(buffer, 6, texture)) {
-        gui_pop_clip(buffer);
-        return;
-    }
-
+    if (!gui_push_command(buffer, 6, texture)) return;
     gui_push_vertex(buffer, x, y, col, from.u, from.v);
     gui_push_vertex(buffer, x + w, y, col, to.u, from.v);
     gui_push_vertex(buffer, x + w, y + h, col, to.u, to.v);
-    gui_push_vertex(buffer, x, y, col, from.u, to.v);
+    gui_push_vertex(buffer, x, y, col, from.u, from.v);
     gui_push_vertex(buffer, x + w, y + h, col, to.u, to.v);
     gui_push_vertex(buffer, x, y + h, col, from.u, to.v);
-    gui_pop_clip(buffer);
 }
 
 void
@@ -752,7 +741,7 @@ gui_widget_image(struct gui_draw_buffer *buffer, const struct gui_image *image)
     image_h = MAX(0, image->h - 2 * image->pad_y);
     gui_draw_rectf(buffer, image->x, image->y, image->w, image->h, image->background);
     gui_draw_image(buffer, image_x, image_y, image_w, image_h,
-        image->texture, image->uv[0], image->uv[1]);
+        image->texture, image->uv[0], image->uv[1], image->color);
 }
 
 static gui_bool
@@ -765,7 +754,7 @@ gui_widget_button(struct gui_draw_buffer *buffer, const struct gui_button *butto
         return gui_false;
 
     background = button->background;
-    if (in && INBOX(in->mouse_pos.x, in->mouse_pos.y, button->x, button->y, button->w, button->h)) {
+    if (in && INBOX(in->mouse_pos.x,in->mouse_pos.y,button->x,button->y,button->w,button->h)) {
         background = button->highlight;
         if (INBOX(in->mouse_clicked_pos.x, in->mouse_clicked_pos.y,
                  button->x, button->y, button->w, button->h)) {
@@ -843,17 +832,22 @@ gui_widget_button_image(struct gui_draw_buffer *buffer, struct gui_button* butto
 {
     gui_bool pressed;
     struct gui_image image;
+    struct gui_color col;
+    const struct gui_color color = {255,255,255,255};
     pressed = gui_widget_button(buffer, button, in);
-    image.x = button->x;
-    image.y = button->y;
-    image.w = button->y;
-    image.h = button->y;
+    image.x = button->x + button->pad_x;
+    image.y = button->y + button->pad_y;
+    image.w = button->w - 2 * button->pad_x;
+    image.h = button->h - 2 * button->pad_y;
     image.pad_x = button->pad_x;
     image.pad_y = button->pad_y;
     image.texture = tex;
     image.uv[0] = from;
     image.uv[1] = to;
-    image.background = button->background;
+    col = (in && INBOX(in->mouse_pos.x,in->mouse_pos.y,button->x,button->y,button->w,button->h)) ?
+        button->highlight: button->background;
+    image.background = col;
+    image.color = color;
     gui_widget_image(buffer, &image);
     return pressed;
 }
@@ -1202,8 +1196,8 @@ gui_widget_plot(struct gui_draw_buffer *buffer, const struct gui_plot *plot,
     gui_float plot_value_range, plot_value_ratio;
     gui_float canvas_x, canvas_y;
     gui_float canvas_w, canvas_h;
-    gui_float last_x;
-    gui_float last_y;
+    gui_float plot_last_x;
+    gui_float plot_last_y;
     struct gui_color col;
     if (!buffer || !plot)
         return plot_selected;
@@ -1233,26 +1227,28 @@ gui_widget_plot(struct gui_draw_buffer *buffer, const struct gui_plot *plot,
     plot_value_range = plot_max_value - plot_min_value;
     plot_value_ratio = (plot->values[0] - plot_min_value) / plot_value_range;
 
-    last_x = canvas_x;
-    last_y = (canvas_y + canvas_h) - plot_value_ratio * (gui_float)canvas_h;
-    if (in && INBOX(in->mouse_pos.x, in->mouse_pos.y, last_x-3, last_y-3, 6, 6)) {
+    plot_last_x = canvas_x;
+    plot_last_y = (canvas_y + canvas_h) - plot_value_ratio * (gui_float)canvas_h;
+    if (in && INBOX(in->mouse_pos.x, in->mouse_pos.y, plot_last_x-3, plot_last_y-3, 6, 6)) {
         plot_selected = (in->mouse_down && in->mouse_clicked) ? (gui_int)i : -1;
         col = plot->highlight;
     }
-    gui_draw_rectf(buffer, last_x - 3, last_y - 3, 6, 6, col);
+    gui_draw_rectf(buffer, plot_last_x - 3, plot_last_y - 3, 6, 6, col);
 
     for (i = 1; i < plot->value_count; i++) {
-        gui_float cur_x, cur_y;
+        gui_float plot_cur_x, plot_cur_y;
         plot_value_ratio = (plot->values[i] - plot_min_value) / plot_value_range;
-        cur_x = canvas_x + (gui_float)(plot_step * i);
-        cur_y = (canvas_y + canvas_h) - (plot_value_ratio * (gui_float)canvas_h);
-        gui_draw_line(buffer, last_x, last_y, cur_x, cur_y, plot->foreground);
-        if (in && INBOX(in->mouse_pos.x, in->mouse_pos.y, cur_x-3, cur_y-3, 6, 6)) {
+        plot_cur_x = canvas_x + (gui_float)(plot_step * i);
+        plot_cur_y = (canvas_y + canvas_h) - (plot_value_ratio * (gui_float)canvas_h);
+        gui_draw_line(buffer, plot_last_x, plot_last_y, plot_cur_x, plot_cur_y, plot->foreground);
+
+        if (in && INBOX(in->mouse_pos.x, in->mouse_pos.y, plot_cur_x-3, plot_cur_y-3, 6, 6)) {
             plot_selected = (in->mouse_down && in->mouse_clicked) ? (gui_int)i : plot_selected;
             col = plot->highlight;
         } else col = plot->foreground;
-        gui_draw_rectf(buffer, cur_x - 3, cur_y - 3, 6, 6, col);
-        last_x = cur_x, last_y = cur_y;
+
+        gui_draw_rectf(buffer, plot_cur_x - 3, plot_cur_y - 3, 6, 6, col);
+        plot_last_x = plot_cur_x, plot_last_y = plot_cur_y;
     }
     return plot_selected;
 }
