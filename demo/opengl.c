@@ -377,7 +377,6 @@ main(int argc, char *argv[])
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
         die("[SDL] unabled to initialize\n");
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     win = SDL_CreateWindow("clone",
         0, 0, WIN_WIDTH, WIN_HEIGHT, SDL_WINDOW_OPENGL|SDL_WINDOW_SHOWN);
     if (!win) die("[SDL] unable to create window\n");
@@ -427,12 +426,12 @@ main(int argc, char *argv[])
             GUI_PANEL_HEADER|GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE|
             GUI_PANEL_MOVEABLE|GUI_PANEL_SCROLLBAR|GUI_PANEL_SCALEABLE);
         gui_panel_layout(panel, 30, 1);
-        if (gui_panel_button_text(panel, "button", 6, GUI_BUTTON_SWITCH))
+        if (gui_panel_button_text(panel, "button", GUI_BUTTON_SWITCH))
             fprintf(stdout, "button pressed!\n");
-        check = gui_panel_check(panel, "advanced", 8, check);
+        check = gui_panel_check(panel, "advanced", check);
         gui_panel_layout(panel, 30, 2);
-        if (gui_panel_option(panel, "easy", 4, option == 0)) option = 0;
-        if (gui_panel_option(panel, "hard", 4, option == 1)) option = 1;
+        if (gui_panel_option(panel, "easy", option == 0)) option = 0;
+        if (gui_panel_option(panel, "hard", option == 1)) option = 1;
         gui_panel_layout(panel, 30, 1);
         slider = gui_panel_slider(panel, 0, slider, 10, 1.0f, GUI_HORIZONTAL);
         prog = gui_panel_progress(panel, prog, 100, gui_true, GUI_HORIZONTAL);
@@ -448,8 +447,8 @@ main(int argc, char *argv[])
         gui_begin_panel(ctx, subpanel, "Error",
             GUI_PANEL_HEADER|GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE);
         gui_panel_layout(subpanel, 30, 2);
-        if (gui_panel_button_text(subpanel, "ok", 2, GUI_BUTTON_SWITCH)) break;
-        if (gui_panel_button_text(subpanel, "cancel", 6, GUI_BUTTON_SWITCH)) break;
+        if (gui_panel_button_text(subpanel, "ok", GUI_BUTTON_SWITCH)) break;
+        if (gui_panel_button_text(subpanel, "cancel", GUI_BUTTON_SWITCH)) break;
         gui_end_panel(ctx, subpanel, NULL);
         gui_end(ctx, &output, NULL);
         /* ---------------------------------------------------------*/

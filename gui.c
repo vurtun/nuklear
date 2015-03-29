@@ -1773,12 +1773,13 @@ gui_panel_text(struct gui_panel *panel, const char *str, gui_size len)
 }
 
 gui_bool
-gui_panel_button_text(struct gui_panel *panel, const char *str, gui_size len,
+gui_panel_button_text(struct gui_panel *panel, const char *str,
     enum gui_button_behavior behavior)
 {
     struct gui_rect bounds;
     struct gui_button button;
     const struct gui_config *config;
+    gui_size len;
 
     assert(panel);
     assert(panel->config);
@@ -1789,6 +1790,7 @@ gui_panel_button_text(struct gui_panel *panel, const char *str, gui_size len,
     if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return 0;
     gui_panel_alloc_space(&bounds, panel);
     config = panel->config;
+    len = strsiz(str);
 
     button.x = bounds.x;
     button.y = bounds.y;
@@ -1900,12 +1902,12 @@ gui_panel_button_icon(struct gui_panel *panel, gui_texture tex,
 }
 
 gui_bool
-gui_panel_button_toggle(struct gui_panel *panel, const char *str, gui_size len,
-    gui_bool value)
+gui_panel_button_toggle(struct gui_panel *panel, const char *str, gui_bool value)
 {
     struct gui_rect bounds;
     struct gui_button button;
     const struct gui_config *config;
+    gui_size len;
 
     assert(panel);
     assert(panel->config);
@@ -1916,6 +1918,7 @@ gui_panel_button_toggle(struct gui_panel *panel, const char *str, gui_size len,
     if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return 0;
     gui_panel_alloc_space(&bounds, panel);
     config = panel->config;
+    len = strsiz(str);
 
     button.x = bounds.x;
     button.y = bounds.y;
@@ -1943,12 +1946,12 @@ gui_panel_button_toggle(struct gui_panel *panel, const char *str, gui_size len,
 }
 
 gui_bool
-gui_panel_check(struct gui_panel *panel, const char *text, gui_size length,
-    gui_bool is_active)
+gui_panel_check(struct gui_panel *panel, const char *text, gui_bool is_active)
 {
     struct gui_rect bounds;
     struct gui_toggle toggle;
     const struct gui_config *config;
+    gui_size length;
 
     assert(panel);
     assert(panel->config);
@@ -1959,6 +1962,7 @@ gui_panel_check(struct gui_panel *panel, const char *text, gui_size length,
     if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return is_active;
     gui_panel_alloc_space(&bounds, panel);
     config = panel->config;
+    length = strsiz(text);
 
     toggle.x = bounds.x;
     toggle.y = bounds.y;
@@ -1977,12 +1981,12 @@ gui_panel_check(struct gui_panel *panel, const char *text, gui_size length,
 }
 
 gui_bool
-gui_panel_option(struct gui_panel *panel, const char *text, gui_size length,
-    gui_bool is_active)
+gui_panel_option(struct gui_panel *panel, const char *text, gui_bool is_active)
 {
     struct gui_rect bounds;
     struct gui_toggle toggle;
     const struct gui_config *config;
+    gui_size length;
 
     assert(panel);
     assert(panel->config);
@@ -1993,6 +1997,7 @@ gui_panel_option(struct gui_panel *panel, const char *text, gui_size length,
     if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return is_active;
     gui_panel_alloc_space(&bounds, panel);
     config = panel->config;
+    length = strsiz(text);
 
     toggle.x = bounds.x;
     toggle.y = bounds.y;
@@ -2423,10 +2428,8 @@ gui_panel_list(struct gui_panel *panel, gui_bool *selection,
     config.panel_padding.x = 0.0f;
     config.item_spacing.y = 0.0f;
     gui_panel_layout(&list, item_height, 1);
-    for (i = 0; i < item_count; i++) {
-        selection[i] = gui_panel_button_toggle(&list, items[i],
-            strsiz(items[i]), selection[i]);
-    }
+    for (i = 0; i < item_count; i++)
+        selection[i] = gui_panel_button_toggle(&list, items[i] , selection[i]);
     gui_panel_end(&list);
     return list.offset;
 }
@@ -2494,6 +2497,7 @@ gui_new(const struct gui_memory *memory, const struct gui_input *input)
     struct gui_context *ctx;
     static const gui_size align_panels = ALIGNOF(struct gui_context_panel);
     static const gui_size align_list = ALIGNOF(struct gui_draw_call_list**);
+
     assert(memory);
     assert(input);
     if (!memory  || !input)
@@ -2575,6 +2579,7 @@ gui_rm_draw_list(struct gui_context *ctx, struct gui_draw_call_list *list)
         if (ctx->panel_lists[i] == list)
             break;
     }
+
     if (i == ctx->panel_size) return;
     if (i < ctx->panel_size-1) {
         for (n = i+1; n < ctx->panel_size; n++, i++)
@@ -2634,9 +2639,11 @@ gui_begin_panel(struct gui_context *ctx, struct gui_panel *panel,
     struct gui_context_panel *cpanel;
     struct gui_draw_buffer *out;
     struct gui_draw_buffer *global;
+
     assert(ctx);
     assert(panel);
     assert(title);
+
     if (!ctx || !panel || !title)
         return gui_false;
     if (panel->flags & GUI_PANEL_HIDDEN)

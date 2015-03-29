@@ -404,19 +404,15 @@ gui_bool gui_panel_begin(struct gui_panel*, struct gui_draw_buffer*,
 void gui_panel_layout(struct gui_panel*, gui_float height, gui_size cols);
 void gui_panel_seperator(struct gui_panel*, gui_size cols);
 void gui_panel_text(struct gui_panel*, const char *str, gui_size len);
-gui_bool gui_panel_check(struct gui_panel*, const char*, gui_size, gui_bool active);
-gui_bool gui_panel_option(struct gui_panel*, const char*, gui_size, gui_bool active);
-gui_bool gui_panel_button_text(struct gui_panel*, const char*, gui_size,
-                    enum gui_button_behavior);
-gui_bool gui_panel_button_color(struct gui_panel*, const struct gui_color,
-                    enum gui_button_behavior);
-gui_bool gui_panel_button_triangle(struct gui_panel*, enum gui_heading,
-                    enum gui_button_behavior);
+gui_bool gui_panel_check(struct gui_panel*, const char*, gui_bool active);
+gui_bool gui_panel_option(struct gui_panel*, const char*, gui_bool active);
+gui_bool gui_panel_button_text(struct gui_panel*, const char*, enum gui_button_behavior);
+gui_bool gui_panel_button_color(struct gui_panel*, const struct gui_color, enum gui_button_behavior);
+gui_bool gui_panel_button_triangle(struct gui_panel*, enum gui_heading, enum gui_button_behavior);
+gui_bool gui_panel_button_toggle(struct gui_panel*, const char*, gui_bool value);
 gui_bool gui_panel_button_icon(struct gui_panel*, gui_texture,
                     struct gui_texCoord from, struct gui_texCoord to,
                     enum gui_button_behavior);
-gui_bool gui_panel_button_toggle(struct gui_panel*, const char*, gui_size,
-                    gui_bool value);
 gui_float gui_panel_slider(struct gui_panel*, gui_float min, gui_float val,
                     gui_float max, gui_float step, enum gui_direction);
 gui_size gui_panel_progress(struct gui_panel*, gui_size cur, gui_size max,
