@@ -38,6 +38,7 @@ struct gui_context_panel {
     gui_float x, y, w, h;
     struct gui_draw_call_list list;
     struct gui_context_panel *next;
+    struct gui_context_panel *prev;
 };
 
 struct gui_context {
@@ -45,10 +46,12 @@ struct gui_context {
     struct gui_draw_buffer global_buffer;
     struct gui_draw_buffer buffer;
     const struct gui_input *input;
-    struct gui_draw_call_list **panel_lists;
-    struct gui_context_panel *free_list;
-    struct gui_context_panel *panels;
     struct gui_context_panel *active;
+    struct gui_context_panel *panel_pool;
+    struct gui_context_panel *free_list;
+    struct gui_context_panel *stack_begin;
+    struct gui_context_panel *stack_end;
+    struct gui_draw_call_list **output_list;
     gui_size panel_capacity;
     gui_size panel_size;
 };
@@ -337,6 +340,7 @@ gui_font_text_width(const struct gui_font *font, const gui_char *t, gui_size l)
         if (unicode == UTF_INVALID) return 0;
         glyph = (unicode < font->glyph_count) ? &font->glyphes[unicode] : font->fallback;
         glyph = (glyph->code == 0) ? font->fallback : glyph;
+
         text_width += (gui_size)(glyph->xadvance * font->scale);
         glyph_len = utf_decode(t + text_len, &unicode, l - text_len);
         text_len += glyph_len;
@@ -365,6 +369,7 @@ gui_font_chars_in_space(const struct gui_font *font, const gui_char *text, gui_s
         if (unicode == UTF_INVALID) return 0;
         glyph = (unicode < font->glyph_count) ? &font->glyphes[unicode] : font->fallback;
         glyph = (glyph->code == 0) ? font->fallback : glyph;
+
         text_width += (gui_size)(glyph->xadvance * font->scale);
         if (text_width >= space) break;
         glyph_len = utf_decode(text + text_len, &unicode, len - text_len);
@@ -2507,20 +2512,22 @@ gui_new(const struct gui_memory *memory, const struct gui_input *input)
     ctx->width = 0;
     ctx->height = 0;
     ctx->input = input;
-    ctx->free_list = NULL;
     ctx->active = NULL;
+    ctx->free_list = NULL;
+    ctx->stack_begin = NULL;
+    ctx->stack_end = NULL;
 
     ptr = (gui_byte*)memory->memory + sizeof(struct gui_context);
-    ctx->panels = ALIGN(ptr, align_panels);
+    ctx->panel_pool = ALIGN(ptr, align_panels);
     ctx->panel_capacity = memory->max_panels;
     ctx->panel_size = 0;
 
     size = sizeof(struct gui_context_panel) * memory->max_panels;
-    ptr = (gui_byte*)ctx->panels + size;
-    ctx->panel_lists = ALIGN(ptr, align_list);
+    ptr = (gui_byte*)ctx->panel_pool + size;
+    ctx->output_list = ALIGN(ptr, align_list);
 
     size = sizeof(struct gui_draw_call_list*) * memory->max_panels;
-    buffer.memory = (gui_byte*)ctx->panel_lists + size;
+    buffer.memory = (gui_byte*)ctx->output_list + size;
     buffer.size = memory->size - (gui_size)((gui_byte*)buffer.memory - (gui_byte*)memory->memory);
     buffer.vertex_percentage = memory->vertex_percentage;
     buffer.command_percentage = memory->command_percentage;
@@ -2541,7 +2548,7 @@ gui_alloc_panel(struct gui_context *ctx)
         return panel;
     } else if (ctx->panel_capacity) {
         ctx->panel_capacity--;
-        return &ctx->panels[ctx->panel_capacity];
+        return &ctx->panel_pool[ctx->panel_capacity];
     }
     return NULL;
 }
@@ -2556,36 +2563,30 @@ gui_free_panel(struct gui_context *ctx, struct gui_context_panel *panel)
 }
 
 static void
-gui_add_draw_list(struct gui_context *ctx, struct gui_draw_call_list *list)
+gui_stack_push(struct gui_context *ctx, struct gui_context_panel *panel)
 {
-    gui_size i;
-    assert(ctx);
-    assert(list);
-    for (i = 0; i < ctx->panel_size; ++i) {
-        if (ctx->panel_lists[i] == list)
-            return;
+    if (!ctx->stack_end) {
+        ctx->stack_begin = panel;
+        ctx->stack_end = panel;
+        return;
     }
-    ctx->panel_lists[ctx->panel_size++] = list;
+    ctx->stack_end->next = panel;
+    panel->prev = ctx->stack_end;
+    panel->next = NULL;
+    ctx->stack_end = panel;
 }
 
 static void
-gui_rm_draw_list(struct gui_context *ctx, struct gui_draw_call_list *list)
+gui_stack_remove(struct gui_context *ctx, struct gui_context_panel *panel)
 {
-    gui_size i, n;
-    assert(ctx);
-    assert(list);
-    if (!ctx->panel_size) return;
-    for (i = 0; i < ctx->panel_size; ++i) {
-        if (ctx->panel_lists[i] == list)
-            break;
-    }
-
-    if (i == ctx->panel_size) return;
-    if (i < ctx->panel_size-1) {
-        for (n = i+1; n < ctx->panel_size; n++, i++)
-            ctx->panel_lists[i] = ctx->panel_lists[n];
-    }
-    ctx->panel_size = (gui_size)MAX(0, (gui_int)ctx->panel_size - 1);
+    if (panel->prev)
+        panel->prev->next = panel->next;
+    if (panel->next)
+        panel->next->prev = panel->prev;
+    if (ctx->stack_begin == panel)
+        ctx->stack_begin = panel->next;
+    panel->next = NULL;
+    panel->prev = NULL;
 }
 
 struct gui_panel*
@@ -2602,10 +2603,12 @@ gui_panel_new(struct gui_context *ctx,
 
     cpanel = gui_alloc_panel(ctx);
     if (!cpanel) return NULL;
-    gui_add_draw_list(ctx, &cpanel->list);
-    gui_panel_init(&cpanel->panel, config, font);
     cpanel->x = x, cpanel->y = y;
     cpanel->w = w, cpanel->h = h;
+    cpanel->next = NULL; cpanel->prev = NULL;
+    gui_panel_init(&cpanel->panel, config, font);
+    gui_stack_push(ctx, cpanel);
+    ctx->panel_size++;
     return &cpanel->panel;
 }
 
@@ -2617,8 +2620,9 @@ gui_panel_del(struct gui_context *ctx, struct gui_panel *panel)
     assert(panel);
     if (!ctx || !panel) return;
     cpanel = (struct gui_context_panel*)panel;
-    gui_rm_draw_list(ctx, &cpanel->list);
+    gui_stack_remove(ctx, cpanel);
     gui_free_panel(ctx, cpanel);
+    ctx->panel_size--;
 }
 
 void
@@ -2653,17 +2657,15 @@ gui_begin_panel(struct gui_context *ctx, struct gui_panel *panel,
     cpanel = (struct gui_context_panel*)panel;
     inpanel = INBOX(in->mouse_prev.x,in->mouse_prev.y, cpanel->x, cpanel->y, cpanel->w, cpanel->h);
     if (in->mouse_down && in->mouse_clicked && inpanel) {
-        gui_size n = 0;
-        struct gui_context_panel *p = NULL;
-        while (n < ctx->panel_size && ctx->panel_lists[n++] != &cpanel->list);
-        for (n; n < ctx->panel_size; n++) {
-            p = (struct gui_context_panel*)ctx->panel_lists[n];
-            if (INBOX(in->mouse_prev.x, in->mouse_prev.y, p->x, p->y, p->w, p->h))
+        struct gui_context_panel *iter = cpanel->next;
+        while (iter) {
+            if (INBOX(in->mouse_prev.x, in->mouse_prev.y, iter->x, iter->y, iter->w, iter->h))
                 break;
+            iter = iter->next;
         }
-        if (n >= ctx->panel_size) {
-            gui_rm_draw_list(ctx, &cpanel->list);
-            gui_add_draw_list(ctx, &cpanel->list);
+        if (!iter) {
+            gui_stack_remove(ctx, cpanel);
+            gui_stack_push(ctx, cpanel);
             ctx->active = cpanel;
         }
     }
@@ -2739,8 +2741,14 @@ gui_end(struct gui_context *ctx, struct gui_output *output,
     assert(ctx);
     if (!ctx) return;
     if (output) {
+        gui_size n = 0;
+        struct gui_context_panel *iter = ctx->stack_begin;
+        while (iter) {
+            ctx->output_list[n++] = &iter->list;
+            iter = iter->next;
+        }
         output->list_size = ctx->panel_size;
-        output->list = ctx->panel_lists;
+        output->list = ctx->output_list;
     }
     gui_output_end(&ctx->global_buffer, NULL, status);
 }
