@@ -429,6 +429,9 @@ gui_int gui_panel_plot(struct gui_panel*, const gui_float *values,
                     gui_size value_count);
 gui_int gui_panel_histo(struct gui_panel*, const gui_float *values,
                     gui_size value_count);
+gui_bool gui_panel_tab_begin(struct gui_panel*, struct gui_panel* tab,
+                    const char *title, gui_bool minimized);
+void gui_panel_tab_end(struct gui_panel *panel, struct gui_panel *tab);
 gui_float gui_panel_list(struct gui_panel*, gui_bool *selected, const char *items[],
                     gui_size item_count, gui_float offset, gui_float item_height);
 void gui_panel_end(struct gui_panel*);

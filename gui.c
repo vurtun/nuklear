@@ -1601,11 +1601,13 @@ gui_panel_begin(struct gui_panel *panel, struct gui_draw_buffer *out,
         clip.h = h - panel->header_height;
         if (panel->flags & GUI_PANEL_SCROLLBAR)
             clip.h -= (config->panel_padding.y + config->item_padding.y);
+        else clip.h = null_rect.h;
     } else {
         clip.x = x; clip.y = y;
         clip.w = w; clip.h = h;
         if (panel->flags & GUI_PANEL_SCROLLBAR)
             clip.h -= config->panel_padding.y;
+        else clip.h = null_rect.h;
         panel->header_height = config->panel_padding.y + config->item_padding.y;
     }
 
@@ -2439,6 +2441,45 @@ gui_panel_list(struct gui_panel *panel, gui_bool *selection,
     return list.offset;
 }
 
+gui_bool
+gui_panel_tab_begin(struct gui_panel *panel, struct gui_panel* tab,
+    const char *title, gui_bool minimized)
+{
+    struct gui_rect bounds;
+    gui_float old_height;
+    gui_size old_cols;
+    gui_flags flags;
+
+    assert(panel);
+    assert(tab);
+    if (!panel || !tab) return minimized;
+    if ((panel->flags & GUI_PANEL_HIDDEN) || panel->minimized)
+        return minimized;
+
+    old_height = panel->row_height;
+    old_cols = panel->row_columns;
+    gui_panel_layout(panel, 0, 1);
+    gui_panel_alloc_space(&bounds, panel);
+    panel->row_height = old_height;
+    panel->row_columns = old_cols;
+
+    gui_panel_init(tab, panel->config, panel->font);
+    tab->minimized = minimized;
+    flags = GUI_PANEL_BORDER|GUI_PANEL_MINIMIZABLE|GUI_PANEL_HEADER;
+    gui_panel_begin(tab, panel->out, panel->in, title,
+        bounds.x, bounds.y, bounds.w, null_rect.h, flags);
+    return tab->minimized;
+}
+
+void
+gui_panel_tab_end(struct gui_panel *panel, struct gui_panel *tab)
+{
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return;
+    gui_panel_end(tab);
+    panel->at_y -= panel->row_height;
+    panel->at_y += tab->height + tab->config->item_spacing.y;
+}
+
 void
 gui_panel_end(struct gui_panel *panel)
 {
@@ -2545,6 +2586,7 @@ gui_alloc_panel(struct gui_context *ctx)
         panel = ctx->free_list;
         ctx->free_list = panel->next;
         panel->next = NULL;
+        panel->prev = NULL;
         return panel;
     } else if (ctx->panel_capacity) {
         ctx->panel_capacity--;
@@ -2565,7 +2607,7 @@ gui_free_panel(struct gui_context *ctx, struct gui_context_panel *panel)
 static void
 gui_stack_push(struct gui_context *ctx, struct gui_context_panel *panel)
 {
-    if (!ctx->stack_end) {
+    if (!ctx->stack_begin) {
         ctx->stack_begin = panel;
         ctx->stack_end = panel;
         return;
@@ -2585,6 +2627,8 @@ gui_stack_remove(struct gui_context *ctx, struct gui_context_panel *panel)
         panel->next->prev = panel->prev;
     if (ctx->stack_begin == panel)
         ctx->stack_begin = panel->next;
+    if (ctx->stack_end == panel)
+        ctx->stack_end = panel->prev;
     panel->next = NULL;
     panel->prev = NULL;
 }
@@ -2628,10 +2672,12 @@ gui_panel_del(struct gui_context *ctx, struct gui_panel *panel)
 void
 gui_begin(struct gui_context *ctx, gui_float w, gui_float h)
 {
+    struct gui_context_panel *iter;
     assert(ctx);
     if (!ctx) return;
     ctx->width = w;
     ctx->height = h;
+    iter = ctx->stack_begin;
 }
 
 gui_bool
@@ -2656,7 +2702,7 @@ gui_begin_panel(struct gui_context *ctx, struct gui_panel *panel,
     in = ctx->input;
     cpanel = (struct gui_context_panel*)panel;
     inpanel = INBOX(in->mouse_prev.x,in->mouse_prev.y, cpanel->x, cpanel->y, cpanel->w, cpanel->h);
-    if (in->mouse_down && in->mouse_clicked && inpanel) {
+    if (in->mouse_down && in->mouse_clicked && inpanel && cpanel != ctx->active) {
         struct gui_context_panel *iter = cpanel->next;
         while (iter) {
             if (INBOX(in->mouse_prev.x, in->mouse_prev.y, iter->x, iter->y, iter->w, iter->h))
@@ -2712,8 +2758,8 @@ gui_begin_panel(struct gui_context *ctx, struct gui_panel *panel,
     out->command_capacity = global->command_capacity - global->command_size;
     out->clips = global->clips;
     out->clip_capacity = global->clip_capacity;
-    return gui_panel_begin(panel, out, (ctx->active == cpanel) ? ctx->input : NULL,
-            title, cpanel->x, cpanel->y, cpanel->w, cpanel->h, flags);
+    in = (ctx->active == cpanel) ? ctx->input : NULL;
+    return gui_panel_begin(panel, out, in, title, cpanel->x, cpanel->y, cpanel->w, cpanel->h, flags);
 }
 
 void
@@ -2744,10 +2790,11 @@ gui_end(struct gui_context *ctx, struct gui_output *output,
         gui_size n = 0;
         struct gui_context_panel *iter = ctx->stack_begin;
         while (iter) {
-            ctx->output_list[n++] = &iter->list;
+            if (!(iter->panel.flags & GUI_PANEL_HIDDEN))
+                ctx->output_list[n++] = &iter->list;
             iter = iter->next;
         }
-        output->list_size = ctx->panel_size;
+        output->list_size = n;
         output->list = ctx->output_list;
     }
     gui_output_end(&ctx->global_buffer, NULL, status);

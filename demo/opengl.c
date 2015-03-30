@@ -19,7 +19,7 @@
 #define UNUSED(v) (void)v
 #define WIN_WIDTH 800
 #define WIN_HEIGHT 600
-#define MAX_MEMORY (128 * 1024)
+#define MAX_MEMORY (256 * 1024)
 #define MAX_PANELS 16
 #define DTIME 33
 #define MAX_BUFFER 64
@@ -352,6 +352,7 @@ main(int argc, char *argv[])
     struct gui_font *font;
     struct gui_panel *panel;
     struct gui_panel *subpanel;
+    struct gui_panel tab;
     struct gui_config config;
     struct gui_memory memory;
     struct gui_input input;
@@ -371,6 +372,8 @@ main(int argc, char *argv[])
     gui_size item_cur = 0;
     gui_float list_off = 0.0f;
     gui_bool list_sel[5];
+    gui_bool minimized = gui_true;
+    memset(list_sel, 0, sizeof list_sel);
 
     /* Window */
     UNUSED(argc); UNUSED(argv);
@@ -441,6 +444,11 @@ main(int argc, char *argv[])
         gui_panel_layout(panel, 100, 1);
         gui_panel_plot(panel, values, LEN(values));
         gui_panel_histo(panel, values, LEN(values));
+        minimized = gui_panel_tab_begin(panel, &tab, "Options", minimized);
+        gui_panel_layout(&tab, 30, 1);
+        if (gui_panel_button_text(&tab, "button", GUI_BUTTON_SWITCH))
+            fprintf(stdout, "tab button pressed!\n");
+        gui_panel_tab_end(panel, &tab);
         list_off = gui_panel_list(panel, list_sel, items, LEN(items), list_off, 30);
         gui_end_panel(ctx, panel, NULL);
 
