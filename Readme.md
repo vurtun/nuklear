@@ -5,9 +5,9 @@ Work in progress
 - Immediate mode graphical user interface
 - Suited for embedding into graphical applications
 - Written in C89 (ANSI C)
-- Small (~2.5kLOC)
+- Small (~3kLOC)
 - Focus on portability and ease of use
-- No hidden state or global variables
+- No global hidden state
 - No direct dependencies (not even libc)
 - Renderer and platform independent
 - Complete memory management control
