@@ -44,7 +44,7 @@ struct gui_context_panel {
 struct gui_context {
     gui_float width, height;
     struct gui_draw_buffer global_buffer;
-    struct gui_draw_buffer buffer;
+    struct gui_draw_buffer current_buffer;
     const struct gui_input *input;
     struct gui_context_panel *active;
     struct gui_context_panel *panel_pool;
@@ -2516,7 +2516,7 @@ gui_panel_group_end(struct gui_panel *panel, struct gui_panel* group)
 
 gui_size
 gui_panel_shelf_begin(struct gui_panel *panel, struct gui_panel *shelf,
-    const char *tabs[], gui_size tab_count, gui_size current)
+    const char *tabs[], gui_size tab_count, gui_size current, gui_float offset)
 {
     gui_size i;
     gui_flags flags;
@@ -2573,19 +2573,21 @@ gui_panel_shelf_begin(struct gui_panel *panel, struct gui_panel *shelf,
     bounds.h -= header_h;
     gui_panel_init(shelf, panel->config, panel->font);
     flags = GUI_PANEL_BORDER|GUI_PANEL_SCROLLBAR|GUI_PANEL_TAB;
+    panel->offset = offset;
     gui_panel_begin(shelf, panel->out, panel->in, NULL,
         bounds.x, bounds.y, bounds.w, bounds.h, flags);
     return current;
 }
 
-void
+gui_float
 gui_panel_shelf_end(struct gui_panel *panel, struct gui_panel *tab)
 {
     assert(panel);
     assert(tab);
-    if (!panel || !tab) return;
-    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return;
+    if (!panel || !tab) return 0;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return 0;
     gui_panel_end(tab);
+    return tab->offset;
 }
 
 void
@@ -2852,7 +2854,7 @@ gui_begin_panel(struct gui_context *ctx, struct gui_panel *panel,
     }
 
     global = &ctx->global_buffer;
-    out = &ctx->buffer;
+    out = &ctx->current_buffer;
     out->vertex_size = 0;
     out->vertex_needed = 0;
     out->command_size = 0;
@@ -2883,9 +2885,9 @@ gui_end_panel(struct gui_context *ctx, struct gui_panel *panel,
     cpanel = (struct gui_context_panel*)panel;
     gui_panel_end(panel);
     global = &ctx->global_buffer;
-    global->vertex_size += ctx->buffer.vertex_size;
-    global->command_size += ctx->buffer.command_size;
-    gui_output_end(&ctx->buffer, &cpanel->list, status);
+    global->vertex_size += ctx->current_buffer.vertex_size;
+    global->command_size += ctx->current_buffer.command_size;
+    gui_output_end(&ctx->current_buffer, &cpanel->list, status);
 }
 
 void

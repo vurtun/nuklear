@@ -37,29 +37,6 @@ static void brelease(struct gui_input*, SDL_Event*);
 static void bmotion(struct gui_input*, SDL_Event*);
 static GLuint ldbmp(gui_byte*, uint32_t*, uint32_t*);
 
-/* types */
-struct widget {
-    gui_char cmd_buf[MAX_BUFFER];
-    gui_size cmd_len;
-    gui_bool cmd_act;
-    gui_bool check;
-    gui_int option;
-    gui_float slider;
-    gui_size prog;
-    gui_int spinner;
-    gui_bool spin_act;
-    gui_size item_cur;
-    gui_float list_off;
-    gui_bool list_sel[5];
-};
-
-struct layout {
-    gui_size current_tab;
-    gui_float offset;
-    gui_float group_offset;
-    gui_bool minimized;
-};
-
 /* gobals */
 static void
 die(const char *fmt, ...)
@@ -362,92 +339,6 @@ draw(int width, int height, struct gui_draw_call_list **list, gui_size count)
     glPopAttrib();
 }
 
-static void
-widget_panel(struct gui_context *ctx, struct gui_panel *panel, struct widget *demo)
-{
-    const gui_float values[] = {8.0f, 15.0f, 20.0f, 12.0f, 30.0f};
-    const char *items[] = {"Fist", "Pistol", "Shotgun", "Railgun", "BFG"};
-
-    gui_begin_panel(ctx, panel, "Widgets",
-        GUI_PANEL_HEADER|GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE|GUI_PANEL_BORDER|
-        GUI_PANEL_MOVEABLE|GUI_PANEL_SCROLLBAR|GUI_PANEL_SCALEABLE);
-    gui_panel_layout(panel, 30, 1);
-    if (gui_panel_button_text(panel, "button", GUI_BUTTON_SWITCH))
-        fprintf(stdout, "button pressed!\n");
-    demo->check = gui_panel_check(panel, "advanced", demo->check);
-    gui_panel_layout(panel, 30, 2);
-    if (gui_panel_option(panel, "easy", demo->option == 0)) demo->option = 0;
-    if (gui_panel_option(panel, "hard", demo->option == 1)) demo->option = 1;
-    gui_panel_layout(panel, 30, 1);
-    demo->slider = gui_panel_slider(panel, 0, demo->slider, 10, 1.0f, GUI_HORIZONTAL);
-    demo->prog = gui_panel_progress(panel, demo->prog, 100, gui_true, GUI_HORIZONTAL);
-    gui_panel_shell(panel, demo->cmd_buf, &demo->cmd_len, MAX_BUFFER, &demo->cmd_act);
-    demo->spin_act = gui_panel_spinner(panel, 0, &demo->spinner, 1024, 10, demo->spin_act);
-    demo->item_cur = gui_panel_selector(panel, items, LEN(items), demo->item_cur);
-    gui_panel_layout(panel, 100, 1);
-    gui_panel_plot(panel, values, LEN(values));
-    gui_panel_histo(panel, values, LEN(values));
-    gui_panel_layout(panel, 150, 1);
-    demo->list_off = gui_panel_list(panel, demo->list_sel, items, LEN(items), demo->list_off, 30);
-    gui_end_panel(ctx, panel, NULL);
-}
-
-static void
-layout_panel(struct gui_context *ctx, struct gui_panel *panel, struct layout *l)
-{
-    struct gui_panel tab;
-    enum {MOUSE, KEYBOARD, GAMEPAD};
-    const char *shelfs[] = {"Mouse", "Keyboard", "Gamepad"};
-
-    gui_begin_panel(ctx, panel, "Layouts",
-        GUI_PANEL_HEADER|GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE|
-        GUI_PANEL_MOVEABLE|GUI_PANEL_BORDER);
-
-    /* Tabs */
-    gui_panel_layout(panel, 100, 1);
-    l->minimized = gui_panel_tab_begin(panel, &tab, "Options", l->minimized);
-    gui_panel_layout(&tab, 30, 1);
-    if (gui_panel_button_text(&tab, "button", GUI_BUTTON_SWITCH))
-        fprintf(stdout, "tab button pressed!\n");
-    gui_panel_tab_end(panel, &tab);
-
-    /* Shelf */
-    gui_panel_layout(panel, 200, 2);
-    l->current_tab = gui_panel_shelf_begin(panel, &tab, shelfs, LEN(shelfs), l->current_tab);
-    gui_panel_layout(&tab, 30, 1);
-    if (l->current_tab == MOUSE) {
-        if (gui_panel_button_text(&tab, "button0", GUI_BUTTON_SWITCH))
-            fprintf(stdout, "shelf button0 pressed!\n");
-    } else if (l->current_tab == KEYBOARD) {
-        if (gui_panel_button_text(&tab, "button1", GUI_BUTTON_SWITCH))
-            fprintf(stdout, "shelf button1 pressed!\n");
-    } else {
-        if (gui_panel_button_text(&tab, "button2", GUI_BUTTON_SWITCH))
-            fprintf(stdout, "shelf button2 pressed!\n");
-    }
-    gui_panel_shelf_end(panel, &tab);
-
-    /* Group */
-    gui_panel_group_begin(panel, &tab, "Options", l->group_offset);
-    gui_panel_layout(&tab, 30, 1);
-    if (gui_panel_button_text(&tab, "button", GUI_BUTTON_SWITCH))
-        fprintf(stdout, "group button pressed!\n");
-    l->group_offset = gui_panel_group_end(panel, &tab);
-    gui_end_panel(ctx, panel, NULL);
-}
-
-static gui_bool
-msgbox_panel(struct gui_context *ctx, struct gui_panel *panel)
-{
-    gui_begin_panel(ctx, panel, "Error",
-        GUI_PANEL_HEADER|GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE);
-    gui_panel_layout(panel, 30, 2);
-    if (gui_panel_button_text(panel, "ok", GUI_BUTTON_SWITCH)) return gui_false;
-    if (gui_panel_button_text(panel, "cancel", GUI_BUTTON_SWITCH)) return gui_false;
-    gui_end_panel(ctx, panel, NULL);
-    return gui_true;
-}
-
 int
 main(int argc, char *argv[])
 {
@@ -464,11 +355,6 @@ main(int argc, char *argv[])
     struct gui_font *font;
     struct gui_context *ctx;
     struct gui_panel *panel;
-    struct gui_panel *subpanel;
-    struct gui_panel *groups;
-
-    struct widget widgets;
-    struct layout layout;
 
     /* Window */
     UNUSED(argc); UNUSED(argv);
@@ -489,7 +375,6 @@ main(int argc, char *argv[])
     memory.vertex_percentage = 0.80f;
     memory.command_percentage = 0.19f;
     memory.clip_percentage = 0.01f;
-
     ctx = gui_new(&memory, &input);
     font = ldfont("mono.sdf", 16);
     gui_default_config(&config);
@@ -497,18 +382,7 @@ main(int argc, char *argv[])
     config.colors[GUI_COLOR_TEXT].g = 255;
     config.colors[GUI_COLOR_TEXT].b = 255;
     config.colors[GUI_COLOR_TEXT].a = 255;
-
     panel = gui_panel_new(ctx, 20, 20, 200, 400, &config, font);
-    subpanel = gui_panel_new(ctx, 250, 20, 200, 200, &config, font);
-    groups = gui_panel_new(ctx, 230, 150, 550, 400, &config, font);
-
-    /* State */
-    memset(&layout, 0, sizeof layout);
-    memset(&widgets, 0, sizeof widgets);
-    widgets.spinner = 100;
-    widgets.slider = 2.0f;
-    widgets.prog = 60;
-    layout.minimized = gui_true;
 
     running = gui_true;
     while (running) {
@@ -530,9 +404,13 @@ main(int argc, char *argv[])
 
         /* ------------------------- GUI --------------------------*/
         gui_begin(ctx, (gui_float)width, (gui_float)height);
-        widget_panel(ctx, panel, &widgets);
-        layout_panel(ctx, groups, &layout);
-        if (!msgbox_panel(ctx, subpanel)) break;
+        running = gui_begin_panel(ctx, panel, "GUI",
+            GUI_PANEL_HEADER|GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE|GUI_PANEL_BORDER|
+            GUI_PANEL_MOVEABLE|GUI_PANEL_SCROLLBAR|GUI_PANEL_SCALEABLE);
+        gui_panel_layout(panel, 30, 1);
+        if (gui_panel_button_text(panel, "button", GUI_BUTTON_SWITCH))
+            fprintf(stdout, "button pressed!\n");
+        gui_end_panel(ctx, panel, NULL);
         gui_end(ctx, &output, NULL);
         /* ---------------------------------------------------------*/
 

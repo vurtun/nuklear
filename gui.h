@@ -348,17 +348,17 @@ struct gui_panel {
 };
 
 /* Input */
-void gui_input_begin(struct gui_input *in);
-void gui_input_motion(struct gui_input *in, gui_int x, gui_int y);
-void gui_input_key(struct gui_input *in, enum gui_keys key, gui_int down);
-void gui_input_button(struct gui_input *in, gui_int x, gui_int y, gui_bool down);
-void gui_input_char(struct gui_input *in, const gui_glyph glyph);
-void gui_input_end(struct gui_input *in);
+void gui_input_begin(struct gui_input*);
+void gui_input_motion(struct gui_input*, gui_int x, gui_int y);
+void gui_input_key(struct gui_input*, enum gui_keys, gui_int down);
+void gui_input_button(struct gui_input*, gui_int x, gui_int y, gui_bool down);
+void gui_input_char(struct gui_input*, const gui_glyph);
+void gui_input_end(struct gui_input*);
 
 /* Output */
-void gui_output_begin(struct gui_draw_buffer *buf, const struct gui_memory *memory);
-void gui_output_end(struct gui_draw_buffer *buf, struct gui_draw_call_list *calls,
-                    struct gui_memory_status* status);
+void gui_output_begin(struct gui_draw_buffer*, const struct gui_memory*);
+void gui_output_end(struct gui_draw_buffer*, struct gui_draw_call_list*,
+                    struct gui_memory_status*);
 
 /* Widgets */
 void gui_widget_text(struct gui_draw_buffer*, const struct gui_text*,
@@ -438,8 +438,9 @@ void gui_panel_group_begin(struct gui_panel*, struct gui_panel* tab,
                     const char *title, gui_float offset);
 gui_float gui_panel_group_end(struct gui_panel*, struct gui_panel* tab);
 gui_size gui_panel_shelf_begin(struct gui_panel*, struct gui_panel *shelf,
-                    const char *tabs[], gui_size tab_count, gui_size current);
-void gui_panel_shelf_end(struct gui_panel *panel, struct gui_panel *tab);
+                    const char *tabs[], gui_size tab_count, gui_size current,
+                    gui_float offset);
+gui_float gui_panel_shelf_end(struct gui_panel *panel, struct gui_panel *tab);
 void gui_panel_end(struct gui_panel*);
 
 /* Context */
