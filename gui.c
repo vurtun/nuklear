@@ -2412,9 +2412,8 @@ gui_panel_tab_begin(struct gui_panel *panel, gui_tab *tab, const char *title)
     assert(panel);
     assert(tab);
     if (!panel || !tab) return gui_true;
-    if (!panel->minimized && !(panel->flags & GUI_PANEL_HIDDEN)) {
-        flags = GUI_PANEL_BORDER|GUI_PANEL_MINIMIZABLE|GUI_PANEL_HEADER|GUI_PANEL_TAB;
-    } else flags = GUI_PANEL_HIDDEN;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN))
+        return gui_false;
 
     old_height = panel->row_height;
     old_cols = panel->row_columns;
@@ -2428,6 +2427,7 @@ gui_panel_tab_begin(struct gui_panel *panel, gui_tab *tab, const char *title)
 
     gui_panel_init(tab, panel->config, panel->font);
     tab->minimized = min;
+        flags = GUI_PANEL_BORDER|GUI_PANEL_MINIMIZABLE|GUI_PANEL_HEADER|GUI_PANEL_TAB;
     gui_panel_begin(tab, panel->out, panel->in, title,
         bounds.x, bounds.y + 1, bounds.w, null_rect.h, flags);
     return tab->minimized;
@@ -2503,24 +2503,26 @@ gui_panel_shelf_begin(struct gui_panel *panel, gui_shelf *shelf,
     header_x = bounds.x;
     header_y = bounds.y;
     header_w = bounds.w;
-    header_h = config->panel_padding.y + 2 * config->item_padding.y + panel->font->height;
-    item_width = header_w / (gui_float)size;
+    header_h = config->panel_padding.y + 3 * config->item_padding.y + panel->font->height;
+    item_width = (header_w - (gui_float)size) / (gui_float)size;
     for (i = 0; i < size; i++) {
         struct gui_button button;
         button.y = header_y;
         button.h = header_h;
-        button.x = header_x + (gui_float)i * item_width;
+        button.x = header_x + ((gui_float)i * (item_width + 1));
         button.w = item_width;
         button.pad_x = config->item_padding.x;
         button.pad_y = config->item_padding.y;
         button.behavior = GUI_BUTTON_SWITCH;
         if (active == i) {
-            button.background = config->colors[GUI_COLOR_BUTTON_HOVER];
+            button.background = config->colors[GUI_COLOR_BUTTON];
             button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
-            button.content = config->colors[GUI_COLOR_BUTTON];
-            button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
-            button.highlight_content = config->colors[GUI_COLOR_BUTTON];
+            button.content = config->colors[GUI_COLOR_TEXT];
+            button.highlight = config->colors[GUI_COLOR_BUTTON];
+            button.highlight_content = config->colors[GUI_COLOR_TEXT];
         } else {
+            button.y += config->item_padding.y;
+            button.h -= config->item_padding.y;
             button.background = config->colors[GUI_COLOR_BUTTON];
             button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
             button.content = config->colors[GUI_COLOR_TEXT];
