@@ -2447,6 +2447,7 @@ gui_panel_tab_begin(struct gui_panel *panel, gui_tab *tab, const char *title)
     gui_float old_height;
     gui_size old_cols;
     gui_flags flags;
+    gui_bool min;
 
     assert(panel);
     assert(tab);
@@ -2463,8 +2464,10 @@ gui_panel_tab_begin(struct gui_panel *panel, gui_tab *tab, const char *title)
     gui_panel_alloc_space(&bounds, panel);
     panel->row_columns = old_cols;
     panel->row_height = old_height;
+    min = tab->minimized;
 
     gui_panel_init(tab, panel->config, panel->font);
+    tab->minimized = min;
     gui_panel_begin(tab, panel->out, panel->in, title,
         bounds.x, bounds.y + 1, bounds.w, null_rect.h, flags);
     return tab->minimized;
@@ -2487,14 +2490,17 @@ gui_panel_group_begin(struct gui_panel *panel, gui_group *group, const char *tit
 {
     gui_flags flags;
     struct gui_rect bounds;
+    gui_float offset;
+
     assert(panel);
     assert(group);
     if (!panel || !group) return;
     if ((panel->flags & GUI_PANEL_HIDDEN) || panel->minimized) return;
-
+    offset = group->offset;
     gui_panel_alloc_space(&bounds, panel);
     gui_panel_init(group, panel->config, panel->font);
     flags = GUI_PANEL_BORDER|GUI_PANEL_HEADER|GUI_PANEL_SCROLLBAR;
+    group->offset = offset;
     gui_panel_begin(group, panel->out, panel->in, title,
         bounds.x, bounds.y, bounds.w, bounds.h, flags);
 }
@@ -2520,6 +2526,7 @@ gui_panel_shelf_begin(struct gui_panel *panel, gui_shelf *shelf,
     gui_float header_x, header_y;
     gui_float header_w, header_h;
     gui_float item_width;
+    gui_float offset;
 
     assert(panel);
     assert(tabs);
@@ -2566,7 +2573,9 @@ gui_panel_shelf_begin(struct gui_panel *panel, gui_shelf *shelf,
 
     bounds.y += header_h;
     bounds.h -= header_h;
+    offset = shelf->offset;
     gui_panel_init(shelf, panel->config, panel->font);
+    shelf->offset = offset;
     flags = GUI_PANEL_BORDER|GUI_PANEL_SCROLLBAR|GUI_PANEL_TAB;
     gui_panel_begin(shelf, panel->out, panel->in, NULL,
         bounds.x, bounds.y, bounds.w, bounds.h, flags);
