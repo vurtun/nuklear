@@ -2441,8 +2441,7 @@ gui_panel_list(struct gui_panel *panel, gui_bool *selection,
 }
 
 gui_bool
-gui_panel_tab_begin(struct gui_panel *panel, struct gui_panel* tab,
-    const char *title, gui_bool minimized)
+gui_panel_tab_begin(struct gui_panel *panel, gui_tab *tab, const char *title)
 {
     struct gui_rect bounds;
     gui_float old_height;
@@ -2451,7 +2450,7 @@ gui_panel_tab_begin(struct gui_panel *panel, struct gui_panel* tab,
 
     assert(panel);
     assert(tab);
-    if (!panel || !tab) return minimized;
+    if (!panel || !tab) return gui_true;
     if (!panel->minimized && !(panel->flags & GUI_PANEL_HIDDEN)) {
         flags = GUI_PANEL_BORDER|GUI_PANEL_MINIMIZABLE|GUI_PANEL_HEADER;
     } else flags = GUI_PANEL_HIDDEN;
@@ -2466,7 +2465,6 @@ gui_panel_tab_begin(struct gui_panel *panel, struct gui_panel* tab,
     panel->row_height = old_height;
 
     gui_panel_init(tab, panel->config, panel->font);
-    tab->minimized = minimized;
     gui_panel_begin(tab, panel->out, panel->in, title,
         bounds.x, bounds.y + 1, bounds.w, null_rect.h, flags);
     return tab->minimized;
@@ -2485,11 +2483,10 @@ gui_panel_tab_end(struct gui_panel *panel, struct gui_panel *tab)
 }
 
 void
-gui_panel_group_begin(struct gui_panel *panel, struct gui_panel* group,
-                    const char *title, gui_float offset)
+gui_panel_group_begin(struct gui_panel *panel, gui_group *group, const char *title)
 {
-    struct gui_rect bounds;
     gui_flags flags;
+    struct gui_rect bounds;
     assert(panel);
     assert(group);
     if (!panel || !group) return;
@@ -2498,25 +2495,23 @@ gui_panel_group_begin(struct gui_panel *panel, struct gui_panel* group,
     gui_panel_alloc_space(&bounds, panel);
     gui_panel_init(group, panel->config, panel->font);
     flags = GUI_PANEL_BORDER|GUI_PANEL_HEADER|GUI_PANEL_SCROLLBAR;
-    group->offset = offset;
     gui_panel_begin(group, panel->out, panel->in, title,
         bounds.x, bounds.y, bounds.w, bounds.h, flags);
 }
 
-gui_float
-gui_panel_group_end(struct gui_panel *panel, struct gui_panel* group)
+void
+gui_panel_group_end(struct gui_panel *panel, gui_group* group)
 {
     assert(panel);
     assert(group);
-    if (!panel || !group) return 0;
-    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return 0;
+    if (!panel || !group) return;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return;
     gui_panel_end(group);
-    return group->offset;
 }
 
 gui_size
-gui_panel_shelf_begin(struct gui_panel *panel, struct gui_panel *shelf,
-    const char *tabs[], gui_size tab_count, gui_size current, gui_float offset)
+gui_panel_shelf_begin(struct gui_panel *panel, gui_shelf *shelf,
+    const char *tabs[], gui_size size, gui_size active)
 {
     gui_size i;
     gui_flags flags;
@@ -2529,11 +2524,11 @@ gui_panel_shelf_begin(struct gui_panel *panel, struct gui_panel *shelf,
     assert(panel);
     assert(tabs);
     assert(shelf);
-    assert(current < tab_count);
-    if (!panel || !shelf || !tabs || current >= tab_count)
-        return current;
+    assert(active < size);
+    if (!panel || !shelf || !tabs || active >= size)
+        return active;
     if ((panel->flags & GUI_PANEL_HIDDEN) || panel->minimized)
-        return current;
+        return active;
 
     config = panel->config;
     gui_panel_alloc_space(&bounds, panel);
@@ -2542,8 +2537,8 @@ gui_panel_shelf_begin(struct gui_panel *panel, struct gui_panel *shelf,
     header_y = bounds.y;
     header_w = bounds.w;
     header_h = config->panel_padding.y + 2 * config->item_padding.y + panel->font->height;
-    item_width = header_w / (gui_float)tab_count;
-    for (i = 0; i < tab_count; i++) {
+    item_width = header_w / (gui_float)size;
+    for (i = 0; i < size; i++) {
         struct gui_button button;
         button.y = header_y;
         button.h = header_h;
@@ -2552,7 +2547,7 @@ gui_panel_shelf_begin(struct gui_panel *panel, struct gui_panel *shelf,
         button.pad_x = config->item_padding.x;
         button.pad_y = config->item_padding.y;
         button.behavior = GUI_BUTTON_SWITCH;
-        if (current == i) {
+        if (active == i) {
             button.background = config->colors[GUI_COLOR_BUTTON_HOVER];
             button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
             button.content = config->colors[GUI_COLOR_BUTTON];
@@ -2566,28 +2561,26 @@ gui_panel_shelf_begin(struct gui_panel *panel, struct gui_panel *shelf,
             button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
         }
         if (gui_widget_button_text(panel->out, &button, tabs[i], strsiz(tabs[i]),
-                panel->font, panel->in)) current = i;
+                panel->font, panel->in)) active = i;
     }
 
     bounds.y += header_h;
     bounds.h -= header_h;
     gui_panel_init(shelf, panel->config, panel->font);
     flags = GUI_PANEL_BORDER|GUI_PANEL_SCROLLBAR|GUI_PANEL_TAB;
-    panel->offset = offset;
     gui_panel_begin(shelf, panel->out, panel->in, NULL,
         bounds.x, bounds.y, bounds.w, bounds.h, flags);
-    return current;
+    return active;
 }
 
-gui_float
-gui_panel_shelf_end(struct gui_panel *panel, struct gui_panel *tab)
+void
+gui_panel_shelf_end(struct gui_panel *panel, gui_shelf *shelf)
 {
     assert(panel);
-    assert(tab);
-    if (!panel || !tab) return 0;
-    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return 0;
-    gui_panel_end(tab);
-    return tab->offset;
+    assert(shelf);
+    if (!panel || !shelf) return;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return;
+    gui_panel_end(shelf);
 }
 
 void
