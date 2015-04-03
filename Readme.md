@@ -18,7 +18,7 @@ Work in progress
 ## References
 - [Tutorial from Jari Komppa on imgui libraries](http://www.johno.se/book/imgui.html)
 - [Johannes 'johno' Norneby's article](http://iki.fi/sol/imgui/)
-- [ImGui: The base to this project from ocornut](https://github.com/ocornut/imgui)
+- [imgui: The inspiration to this project](https://github.com/ocornut/imgui)
 
 # License
     (The MIT License)
