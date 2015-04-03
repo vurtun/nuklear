@@ -1743,7 +1743,7 @@ gui_panel_alloc_space(struct gui_rect *bounds, struct gui_panel *panel)
         gui_panel_layout(panel, row_height, panel->row_columns);
     }
 
-    panel_padding = 2.0f * config->panel_padding.x;
+    panel_padding = 2 * config->panel_padding.x;
     panel_spacing = (gui_float)(panel->row_columns - 1) * config->item_spacing.x;
     panel_space  = panel->width - panel_padding - panel_spacing;
 
@@ -1948,14 +1948,14 @@ gui_panel_button_toggle(struct gui_panel *panel, const char *str, gui_bool value
         button.background = config->colors[GUI_COLOR_BUTTON];
         button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
         button.content = config->colors[GUI_COLOR_TEXT];
-        button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
-        button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
+        button.highlight = config->colors[GUI_COLOR_BUTTON];
+        button.highlight_content = config->colors[GUI_COLOR_TEXT];
     } else {
         button.background = config->colors[GUI_COLOR_BUTTON_HOVER];
         button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
         button.content = config->colors[GUI_COLOR_BUTTON];
-        button.highlight = config->colors[GUI_COLOR_BUTTON];
-        button.highlight_content = config->colors[GUI_COLOR_TEXT];
+        button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
+        button.highlight_content = config->colors[GUI_COLOR_BUTTON];
     }
     if (gui_widget_button_text(panel->out, &button, str, len, panel->font, panel->in))
         value = !value;
@@ -2243,8 +2243,8 @@ gui_panel_spinner(struct gui_panel *panel, gui_int min, gui_int *value,
     button.background = config->colors[GUI_COLOR_BUTTON];
     button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
     button.content = config->colors[GUI_COLOR_TEXT];
-    button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
-    button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
+    button.highlight = config->colors[GUI_COLOR_BUTTON];
+    button.highlight_content = config->colors[GUI_COLOR_TEXT];
     button_up_clicked = gui_widget_button_triangle(panel->out, &button, GUI_UP, panel->in);
     button.y = bounds.y + button.h;
     button_down_clicked = gui_widget_button_triangle(panel->out, &button, GUI_DOWN, panel->in);
@@ -2316,8 +2316,8 @@ gui_panel_selector(struct gui_panel *panel, const char *items[],
     button.background = config->colors[GUI_COLOR_BUTTON];
     button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
     button.content = config->colors[GUI_COLOR_TEXT];
-    button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
-    button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
+    button.highlight = config->colors[GUI_COLOR_BUTTON];
+    button.highlight_content = config->colors[GUI_COLOR_TEXT];
     button_up_clicked = gui_widget_button_triangle(panel->out, &button, GUI_UP, panel->in);
     button.y = bounds.y + button.h;
     button_down_clicked = gui_widget_button_triangle(panel->out, &button, GUI_DOWN, panel->in);
@@ -2398,56 +2398,6 @@ gui_panel_histo(struct gui_panel *panel, const gui_float *values, gui_size count
     histo.negative = config->colors[GUI_COLOR_HISTO_NEGATIVE];
     histo.highlight = config->colors[GUI_COLOR_HISTO_HIGHLIGHT];
     return gui_widget_histo(panel->out, &histo, panel->in);
-}
-
-gui_float
-gui_panel_list(struct gui_panel *panel, gui_bool *selection,
-    const char *items[], gui_size item_count, gui_float offset,
-    gui_float item_height)
-{
-    gui_size i;
-    gui_bool res;
-    struct gui_rect bounds;
-    struct gui_rect clip;
-    const struct gui_color *color;
-    struct gui_panel list;
-    struct gui_config config;
-    const struct gui_config *temp;
-
-    assert(panel);
-    assert(panel->config);
-    assert(panel->out);
-    assert(items);
-    assert(item_count);
-    assert(selection);
-
-    if (!panel || !panel->config || !panel->out) return 0;
-    if (!items || !item_count || !selection) return 0;
-    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return 0;
-
-    memcopy(&config, panel->config, sizeof(struct gui_config));
-    config.panel_padding.y = 0.0f;
-    config.item_spacing.x = 0.0f;
-    list.config = &config;
-
-    temp = panel->config;
-    gui_panel_alloc_space(&bounds, panel);
-    panel->config = temp;
-
-    list.minimized = 0;
-    list.font = panel->font;
-    list.in = panel->in;
-    gui_panel_begin(&list, panel->out, panel->in, NULL, bounds.x, bounds.y,
-        bounds.w, bounds.h, GUI_PANEL_SCROLLBAR|GUI_PANEL_TAB|GUI_PANEL_BORDER);
-
-    list.offset = offset;
-    config.panel_padding.x = 0.0f;
-    config.item_spacing.y = 0.0f;
-    gui_panel_layout(&list, item_height, 1);
-    for (i = 0; i < item_count; i++)
-        selection[i] = gui_panel_button_toggle(&list, items[i] , selection[i]);
-    gui_panel_end(&list);
-    return list.offset;
 }
 
 gui_bool
@@ -2568,14 +2518,14 @@ gui_panel_shelf_begin(struct gui_panel *panel, gui_shelf *shelf,
             button.background = config->colors[GUI_COLOR_BUTTON_HOVER];
             button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
             button.content = config->colors[GUI_COLOR_BUTTON];
-            button.highlight = config->colors[GUI_COLOR_BUTTON];
-            button.highlight_content = config->colors[GUI_COLOR_TEXT];
+            button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
+            button.highlight_content = config->colors[GUI_COLOR_BUTTON];
         } else {
             button.background = config->colors[GUI_COLOR_BUTTON];
             button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
             button.content = config->colors[GUI_COLOR_TEXT];
-            button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
-            button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
+            button.highlight = config->colors[GUI_COLOR_BUTTON];
+            button.highlight_content = config->colors[GUI_COLOR_TEXT];
         }
         if (gui_widget_button_text(panel->out, &button, tabs[i], strsiz(tabs[i]),
                 panel->font, panel->in)) active = i;
