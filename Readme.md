@@ -3,12 +3,13 @@ Work in progress
 
 ## Features
 - Immediate mode graphical user interface
-- Suited for embedding into graphical applications
 - Written in C89 (ANSI C)
 - Small (~3kLOC)
-- Focus on portability and ease of use
+- Focus on portability and minimized internal state
+- Suited for embedding into graphical applications
+- Flexible abstraction layer (Widgets, Panel, Window)
 - No global hidden state
-- No direct dependencies (not even libc)
+- No direct dependencies (not even libc!)
 - Renderer and platform independent
 - Complete memory management control
 - Configurable

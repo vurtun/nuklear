@@ -55,6 +55,26 @@ struct gui_font {
     const struct gui_font_glyph *fallback;
 };
 
+struct gui_memory {
+    void *memory;
+    gui_size size;
+    gui_size max_panels;
+    gui_float vertex_percentage;
+    gui_float command_percentage;
+    gui_float clip_percentage;
+};
+
+struct gui_memory_status {
+    gui_size vertexes_allocated;
+    gui_size vertexes_needed;
+    gui_size commands_allocated;
+    gui_size commands_needed;
+    gui_size clips_allocated;
+    gui_size clips_needed;
+    gui_size allocated;
+    gui_size needed;
+};
+
 enum gui_keys {
     GUI_KEY_SHIFT,
     GUI_KEY_CTRL,
@@ -90,26 +110,6 @@ struct gui_draw_command {
     gui_texture texture;
 };
 
-struct gui_memory {
-    void *memory;
-    gui_size size;
-    gui_size max_panels;
-    gui_float vertex_percentage;
-    gui_float command_percentage;
-    gui_float clip_percentage;
-};
-
-struct gui_memory_status {
-    gui_size vertexes_allocated;
-    gui_size vertexes_needed;
-    gui_size commands_allocated;
-    gui_size commands_needed;
-    gui_size clips_allocated;
-    gui_size clips_needed;
-    gui_size allocated;
-    gui_size needed;
-};
-
 struct gui_draw_buffer {
     struct gui_vertex *vertexes;
     gui_size vertex_capacity;
@@ -126,7 +126,6 @@ struct gui_draw_buffer {
 };
 
 struct gui_draw_call_list {
-    void *memory;
     struct gui_vertex *vertexes;
     gui_size vertex_size;
     struct gui_draw_command *commands;

@@ -277,7 +277,8 @@ void
 gui_input_motion(struct gui_input *in, gui_int x, gui_int y)
 {
     assert(in);
-    vec2_load(in->mouse_pos, (gui_float)x, (gui_float)y);
+    in->mouse_pos.x = (gui_float)x;
+    in->mouse_pos.y = (gui_float)y;
 }
 
 void
@@ -296,7 +297,8 @@ gui_input_button(struct gui_input *in, gui_int x, gui_int y, gui_bool down)
     assert(in);
     if (!in) return;
     if (in->mouse_down == down) return;
-    vec2_load(in->mouse_clicked_pos, (gui_float)x, (gui_float)y);
+    in->mouse_clicked_pos.x = (gui_float)x;
+    in->mouse_clicked_pos.y = (gui_float)y;
     in->mouse_down = down;
     in->mouse_clicked++;
 }
@@ -394,6 +396,7 @@ gui_output_begin(struct gui_draw_buffer *buffer, const struct gui_memory *memory
 
     assert(buffer);
     assert(memory);
+    assert((memory->vertex_percentage+memory->command_percentage+memory->clip_percentage) <= 1.0f);
     if (!buffer || !memory) return;
     if ((memory->vertex_percentage + memory->command_percentage +
         memory->clip_percentage) > 1.0f) return;
@@ -455,7 +458,6 @@ gui_output_end(struct gui_draw_buffer *buffer, struct gui_draw_call_list *list,
     }
 
     if (list) {
-        list->memory = buffer->vertexes;
         list->vertexes = buffer->vertexes;
         list->vertex_size = buffer->vertex_size;
         list->commands = buffer->commands;
@@ -505,12 +507,13 @@ gui_push_command(struct gui_draw_buffer *buffer, gui_size count, gui_texture tex
 {
     struct gui_draw_command *cmd;
     const struct gui_rect *clip;
-    buffer->vertex_needed += count * sizeof(struct gui_vertex);
-    buffer->command_needed += sizeof(struct gui_draw_command);
-
     assert(buffer);
     assert(count);
-    if (!buffer || !count) return gui_false;
+    if (!buffer || !count)
+        return gui_false;
+
+    buffer->vertex_needed += count * sizeof(struct gui_vertex);
+    buffer->command_needed += sizeof(struct gui_draw_command);
     if (!buffer->commands || buffer->command_size >= buffer->command_capacity ||
         !buffer->command_capacity)
         return gui_false;
@@ -1554,7 +1557,7 @@ gui_panel_begin(struct gui_panel *panel, struct gui_draw_buffer *out,
 
     gui_float mouse_x, mouse_y;
     gui_float clicked_x, clicked_y;
-    gui_float header_w = w;
+    gui_float header_x, header_w;
     gui_bool ret = gui_true;
 
     assert(panel);
@@ -1580,21 +1583,13 @@ gui_panel_begin(struct gui_panel *panel, struct gui_draw_buffer *out,
     mouse_y = (panel->in) ? panel->in->mouse_pos.y: -1;
     clicked_x = (panel->in) ? panel->in->mouse_clicked_pos.x: - 1;
     clicked_y = (panel->in) ? panel->in->mouse_clicked_pos.y: - 1;
+    header_x = x + config->panel_padding.x;
+    header_w = w - 2 * config->panel_padding.x;
 
     if (panel->flags & GUI_PANEL_HEADER) {
         panel->header_height = panel->font->height + 3 * config->item_padding.y;
         panel->header_height += config->panel_padding.y;
         gui_draw_rectf(out, x, y, w, panel->header_height, *header);
-
-        if (text) {
-            const gui_size text_len = strsiz(text);
-            const gui_float label_x = x + config->panel_padding.x + config->item_padding.x;
-            const gui_float label_y = y + config->panel_padding.y;
-            const gui_float label_w = w - (2*config->panel_padding.x + 2 * config->item_padding.x);
-            const gui_float label_h = panel->font->height + 2 * config->item_padding.y;
-            gui_draw_string(panel->out, panel->font, label_x, label_y, label_w, label_h,
-                config->colors[GUI_COLOR_TEXT], (const gui_char*)text, text_len);
-        }
 
         clip.x = x; clip.w = w;
         clip.y = y + panel->header_height;
@@ -1612,16 +1607,17 @@ gui_panel_begin(struct gui_panel *panel, struct gui_draw_buffer *out,
     }
 
     if (panel->flags & GUI_PANEL_CLOSEABLE && panel->flags & GUI_PANEL_HEADER) {
-        const gui_char *X = (const gui_char*)"X";
+        const gui_char *X = (const gui_char*)"x";
         const gui_size text_width = gui_font_text_width(panel->font, X, 1);
-        const gui_float close_x = (x + w) - ((gui_float)text_width + config->panel_padding.x);
+        const gui_float close_x = header_x + config->item_padding.x;
         const gui_float close_y = y + config->panel_padding.y;
-        const gui_float close_w = (gui_float)text_width + config->panel_padding.x;
+        const gui_float close_w = (gui_float)text_width + config->item_padding.x;
         const gui_float close_h = panel->font->height + 2 * config->item_padding.y;
-        header_w -= ((gui_float)text_width + config->panel_padding.x);
         gui_draw_string(panel->out, panel->font, close_x, close_y, close_w, close_h,
                         config->colors[GUI_COLOR_TEXT], X, 1);
 
+        header_w -= close_w;
+        header_x += close_h - config->item_padding.x;
         if (INBOX(mouse_x, mouse_y, close_x, close_y, close_w, close_h)) {
             if (INBOX(clicked_x, clicked_y, close_x, close_y, close_w, close_h)) {
                 ret = !(panel->in->mouse_down && panel->in->mouse_clicked);
@@ -1638,19 +1634,32 @@ gui_panel_begin(struct gui_panel *panel, struct gui_draw_buffer *out,
             (const gui_char*)"-";
 
         text_width = gui_font_text_width(panel->font, score, 1);
-        min_x = (x + header_w) - ((gui_float)text_width + config->item_padding.y);
+        min_x = header_x + config->item_padding.x;
         min_y = y + config->panel_padding.y;
-        min_w = (gui_float)text_width;
+        min_w = (gui_float)text_width + 2 * config->item_padding.x;
         min_h = panel->font->height + 2 * config->item_padding.y;
         gui_draw_string(panel->out, panel->font, min_x, min_y, min_w, min_h,
                         config->colors[GUI_COLOR_TEXT], score, 1);
 
+        header_w -= min_w;
+        header_x += min_w - config->item_padding.x;
         if (INBOX(mouse_x, mouse_y, min_x, min_y, min_w, min_h)) {
             if (INBOX(clicked_x, clicked_y, min_x, min_y, min_w, min_h))
                 if (panel->in->mouse_down && panel->in->mouse_clicked)
                     panel->minimized = !panel->minimized;
         }
     }
+
+    if (panel->flags & GUI_PANEL_HEADER && text) {
+        const gui_size text_len = strsiz(text);
+        const gui_float label_x = header_x + config->item_padding.x;
+        const gui_float label_y = y + config->panel_padding.y;
+        const gui_float label_w = header_w - (2 * config->item_padding.x);
+        const gui_float label_h = panel->font->height + 2 * config->item_padding.y;
+        gui_draw_string(panel->out, panel->font, label_x, label_y, label_w, label_h,
+            config->colors[GUI_COLOR_TEXT], (const gui_char*)text, text_len);
+    }
+
 
     panel->row_height = panel->header_height;
     if (panel->flags & GUI_PANEL_SCROLLBAR) {
