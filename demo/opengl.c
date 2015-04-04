@@ -76,21 +76,12 @@ key(struct gui_input *in, SDL_Event* e, gui_bool down)
 }
 
 static void
-bpress(struct gui_input *in, SDL_Event *evt)
+button(struct gui_input *in, SDL_Event *evt, gui_bool down)
 {
     const int x = evt->button.x;
     const int y = evt->button.y;
     if (evt->button.button == SDL_BUTTON_LEFT)
-        gui_input_button(in, x, y, gui_true);
-}
-
-static void
-brelease(struct gui_input *in, SDL_Event *evt)
-{
-    const int x = evt->button.x;
-    const int y = evt->button.y;
-    if (evt->button.button == SDL_BUTTON_LEFT)
-        gui_input_button(in, x, y, gui_false);
+        gui_input_button(in, x, y, down);
 }
 
 static void
@@ -374,8 +365,8 @@ main(int argc, char *argv[])
         while (SDL_PollEvent(&ev)) {
             if (ev.type == SDL_WINDOWEVENT) resize(&ev);
             else if (ev.type == SDL_MOUSEMOTION) bmotion(&input, &ev);
-            else if (ev.type == SDL_MOUSEBUTTONDOWN) bpress(&input, &ev);
-            else if (ev.type == SDL_MOUSEBUTTONUP) brelease(&input, &ev);
+            else if (ev.type == SDL_MOUSEBUTTONDOWN) button(&input, &ev, gui_false);
+            else if (ev.type == SDL_MOUSEBUTTONUP) button(&input, &ev, gui_true);
             else if (ev.type == SDL_KEYDOWN) key( &input, &ev, gui_true);
             else if (ev.type == SDL_KEYUP) key(&input, &ev, gui_false);
             else if (ev.type == SDL_TEXTINPUT) text(&input, &ev);
