@@ -35,7 +35,7 @@ struct gui_colorf {gui_float r,g,b,a;};
 struct gui_texCoord {gui_float u,v;};
 struct gui_vec2 {gui_float x,y;};
 struct gui_rect {gui_float x,y,w,h;};
-struct gui_key {gui_int down, clicked;};
+struct gui_key {gui_bool down, clicked;};
 
 struct gui_font_glyph {
     gui_ulong code;
@@ -353,7 +353,7 @@ struct gui_panel {
 /* Input */
 void gui_input_begin(struct gui_input*);
 void gui_input_motion(struct gui_input*, gui_int x, gui_int y);
-void gui_input_key(struct gui_input*, enum gui_keys, gui_int down);
+void gui_input_key(struct gui_input*, enum gui_keys, gui_bool down);
 void gui_input_button(struct gui_input*, gui_int x, gui_int y, gui_bool down);
 void gui_input_char(struct gui_input*, const gui_glyph);
 void gui_input_end(struct gui_input*);
@@ -413,9 +413,8 @@ gui_bool gui_panel_button_text(struct gui_panel*, const char*, enum gui_button_b
 gui_bool gui_panel_button_color(struct gui_panel*, const struct gui_color, enum gui_button_behavior);
 gui_bool gui_panel_button_triangle(struct gui_panel*, enum gui_heading, enum gui_button_behavior);
 gui_bool gui_panel_button_toggle(struct gui_panel*, const char*, gui_bool value);
-gui_bool gui_panel_button_icon(struct gui_panel*, gui_texture,
-                    struct gui_texCoord from, struct gui_texCoord to,
-                    enum gui_button_behavior);
+gui_bool gui_panel_button_icon(struct gui_panel*, gui_texture, struct gui_texCoord from,
+                    struct gui_texCoord to, enum gui_button_behavior);
 gui_float gui_panel_slider(struct gui_panel*, gui_float min, gui_float val,
                     gui_float max, gui_float step, enum gui_direction);
 gui_size gui_panel_progress(struct gui_panel*, gui_size cur, gui_size max,

@@ -4,7 +4,7 @@ Work in progress
 ## Features
 - Immediate mode graphical user interface
 - Written in C89 (ANSI C)
-- Small (~3kLOC)
+- Small (~2.5kLOC)
 - Focus on portability and minimized internal state
 - Suited for embedding into graphical applications
 - Flexible abstraction layer (Widgets, Panel, Window)
@@ -18,7 +18,7 @@ Work in progress
 ## References
 - [Tutorial from Jari Komppa on imgui libraries](http://www.johno.se/book/imgui.html)
 - [Johannes 'johno' Norneby's article](http://iki.fi/sol/imgui/)
-- [imgui: The inspiration to this project](https://github.com/ocornut/imgui)
+- [imgui: The inspiration for this project](https://github.com/ocornut/imgui)
 
 # License
     (The MIT License)

@@ -58,39 +58,21 @@ xcalloc(size_t nmemb, size_t size)
 }
 
 static void
-kpress(struct gui_input *in, SDL_Event* e)
+key(struct gui_input *in, SDL_Event* e, gui_bool down)
 {
     SDL_Keycode code = e->key.keysym.sym;
     if (code == SDLK_LCTRL || code == SDLK_RCTRL)
-        gui_input_key(in, GUI_KEY_CTRL, gui_true);
+        gui_input_key(in, GUI_KEY_CTRL, down);
     else if (code == SDLK_LSHIFT || code == SDLK_RSHIFT)
-        gui_input_key(in, GUI_KEY_SHIFT, gui_true);
+        gui_input_key(in, GUI_KEY_SHIFT, down);
     else if (code == SDLK_DELETE)
-        gui_input_key(in, GUI_KEY_DEL, gui_true);
+        gui_input_key(in, GUI_KEY_DEL, down);
     else if (code == SDLK_RETURN)
-        gui_input_key(in, GUI_KEY_ENTER, gui_true);
+        gui_input_key(in, GUI_KEY_ENTER, down);
     else if (code == SDLK_SPACE)
-        gui_input_key(in, GUI_KEY_SPACE, gui_true);
+        gui_input_key(in, GUI_KEY_SPACE, down);
     else if (code == SDLK_BACKSPACE)
-        gui_input_key(in, GUI_KEY_BACKSPACE, gui_true);
-}
-
-static void
-krelease(struct gui_input *in, SDL_Event* e)
-{
-    SDL_Keycode code = e->key.keysym.sym;
-    if (code == SDLK_LCTRL || code == SDLK_RCTRL)
-        gui_input_key(in, GUI_KEY_CTRL, gui_false);
-    else if (code == SDLK_LSHIFT || code == SDLK_RSHIFT)
-        gui_input_key(in, GUI_KEY_SHIFT, gui_false);
-    else if (code == SDLK_DELETE)
-        gui_input_key(in, GUI_KEY_DEL, gui_false);
-    else if (code == SDLK_RETURN)
-        gui_input_key(in, GUI_KEY_ENTER, gui_false);
-    else if (code == SDLK_SPACE)
-        gui_input_key(in, GUI_KEY_SPACE, gui_false);
-    else if (code == SDLK_BACKSPACE)
-        gui_input_key(in, GUI_KEY_BACKSPACE, gui_false);
+        gui_input_key(in, GUI_KEY_BACKSPACE, down);
 }
 
 static void
@@ -394,8 +376,8 @@ main(int argc, char *argv[])
             else if (ev.type == SDL_MOUSEMOTION) bmotion(&input, &ev);
             else if (ev.type == SDL_MOUSEBUTTONDOWN) bpress(&input, &ev);
             else if (ev.type == SDL_MOUSEBUTTONUP) brelease(&input, &ev);
-            else if (ev.type == SDL_KEYDOWN) kpress( &input, &ev);
-            else if (ev.type == SDL_KEYUP) krelease(&input, &ev);
+            else if (ev.type == SDL_KEYDOWN) key( &input, &ev, gui_true);
+            else if (ev.type == SDL_KEYUP) key(&input, &ev, gui_false);
             else if (ev.type == SDL_TEXTINPUT) text(&input, &ev);
             else if (ev.type == SDL_QUIT) running = gui_false;
         }

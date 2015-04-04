@@ -282,7 +282,7 @@ gui_input_motion(struct gui_input *in, gui_int x, gui_int y)
 }
 
 void
-gui_input_key(struct gui_input *in, enum gui_keys key, gui_int down)
+gui_input_key(struct gui_input *in, enum gui_keys key, gui_bool down)
 {
     assert(in);
     if (!in) return;
