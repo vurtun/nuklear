@@ -16,7 +16,7 @@ CFLAGS += -Wswitch-default -Wundef -Wno-unused -Wstrict-overflow=5 -Wsign-conver
 CFLAGS += -Winit-self -Wstrict-aliasing -fsanitize=address -fsanitize=undefined -ftrapv
 CFLAGS += -Wswitch-enum -Winvalid-pch -Wbad-function-cast
 
-SRC = gui.c test.c
+SRC = gui.c demo/opengl.c
 OBJ = $(SRC:.c=.o)
 
 # Modes
