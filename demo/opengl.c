@@ -342,20 +342,21 @@ main(int argc, char *argv[])
 
     /* GUI */
     memset(&input, 0, sizeof(input));
-    memory.max_panels = MAX_PANELS;
+    memory.max_panels = 8;
+    memory.max_depth = 4;
     memory.memory = xcalloc(MAX_MEMORY , 1);
     memory.size = MAX_MEMORY;
     memory.vertex_percentage = 0.80f;
     memory.command_percentage = 0.19f;
-    memory.clip_percentage = 0.01f;
-    ctx = gui_new(&memory, &input);
+
     font = ldfont("mono.sdf", 16);
+    ctx = gui_new(&memory, &input);
     gui_default_config(&config);
     config.colors[GUI_COLOR_TEXT].r = 255;
     config.colors[GUI_COLOR_TEXT].g = 255;
     config.colors[GUI_COLOR_TEXT].b = 255;
     config.colors[GUI_COLOR_TEXT].a = 255;
-    panel = gui_panel_new(ctx, 20, 20, 200, 400, &config, font);
+    panel = gui_panel_new(ctx, 20, 20, 200, 100, &config, font);
 
     running = gui_true;
     while (running) {
@@ -365,8 +366,8 @@ main(int argc, char *argv[])
         while (SDL_PollEvent(&ev)) {
             if (ev.type == SDL_WINDOWEVENT) resize(&ev);
             else if (ev.type == SDL_MOUSEMOTION) bmotion(&input, &ev);
-            else if (ev.type == SDL_MOUSEBUTTONDOWN) button(&input, &ev, gui_false);
-            else if (ev.type == SDL_MOUSEBUTTONUP) button(&input, &ev, gui_true);
+            else if (ev.type == SDL_MOUSEBUTTONDOWN) button(&input, &ev, gui_true);
+            else if (ev.type == SDL_MOUSEBUTTONUP) button(&input, &ev, gui_false);
             else if (ev.type == SDL_KEYDOWN) key( &input, &ev, gui_true);
             else if (ev.type == SDL_KEYUP) key(&input, &ev, gui_false);
             else if (ev.type == SDL_TEXTINPUT) text(&input, &ev);

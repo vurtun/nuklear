@@ -385,49 +385,51 @@ void
 gui_output_begin(struct gui_draw_buffer *buffer, const struct gui_memory *memory)
 {
     void *cmds;
-    void *clips;
+    void *vertexes;
     void *aligned;
     gui_size vertex_size;
     gui_size command_size;
     gui_size clip_size;
     gui_long alignment;
+    gui_size size;
     static const gui_size align_cmd = ALIGNOF(struct gui_draw_command);
-    static const gui_size align_clip = ALIGNOF(struct gui_rect);
+    static const gui_size align_vert = ALIGNOF(struct gui_vertex);
 
     assert(buffer);
     assert(memory);
-    assert((memory->vertex_percentage+memory->command_percentage+memory->clip_percentage) <= 1.0f);
+    assert((memory->vertex_percentage + memory->command_percentage) <= 1.0f);
     if (!buffer || !memory) return;
-    if ((memory->vertex_percentage + memory->command_percentage +
-        memory->clip_percentage) > 1.0f) return;
+    if ((memory->vertex_percentage + memory->command_percentage) > 1.0f)
+        return;
 
-    vertex_size = (gui_size)((gui_float)memory->size * SATURATE(memory->vertex_percentage));
-    command_size = (gui_size)((gui_float)memory->size * SATURATE(memory->command_percentage));
-    clip_size = (gui_size)((gui_float)memory->size * SATURATE(memory->clip_percentage));
+    clip_size = memory->max_depth * 2 * sizeof(struct gui_rect);
+    size = memory->size - clip_size;
+    vertex_size = (gui_size)((gui_float)size * SATURATE(memory->vertex_percentage));
+    command_size = (gui_size)((gui_float)size * SATURATE(memory->command_percentage));
 
-    cmds = (gui_byte*)memory->memory + vertex_size;
+    cmds = (gui_byte*)memory->memory + clip_size;
     aligned = ALIGN(cmds, align_cmd);
     alignment = (gui_byte*)aligned - (gui_byte*)cmds;
+    command_size -= (gui_size)alignment;
     cmds = aligned;
 
-    clips = (gui_byte*)memory->memory + vertex_size + command_size + alignment;
-    clips = ALIGN(clips, align_clip);
+    vertexes = (gui_byte*)memory->memory + command_size + clip_size + alignment;
+    aligned = ALIGN(vertexes, align_vert);
+    alignment = (gui_byte*)aligned - (gui_byte*)vertexes;
+    vertex_size -= (gui_size)alignment;
+    vertexes = aligned;
 
     buffer->vertex_capacity = vertex_size / sizeof(struct gui_vertex);
     buffer->command_capacity = command_size / sizeof(struct gui_draw_command);
-    buffer->clip_capacity = clip_size / sizeof(struct gui_rect);
-    buffer->vertex_capacity = (gui_size)MAX(0, (gui_int)vertex_size - 1);
-    buffer->command_capacity = (gui_size)MAX(0, (gui_int)command_size - 1);
-    buffer->clip_capacity = (gui_size)MAX(0, (gui_int)clip_size - 1);
-    buffer->vertexes = memory->memory;
+    buffer->clip_capacity = memory->max_depth * 2;
+    buffer->clips = memory->memory;
     buffer->commands = cmds;
-    buffer->clips = clips;
+    buffer->vertexes = vertexes;
     buffer->command_size = 0;
     buffer->command_needed = 0;
     buffer->vertex_size = 0;
     buffer->vertex_needed = 0;
     buffer->clip_size = 0;
-    buffer->clip_needed = 0;
 }
 
 void
@@ -446,7 +448,6 @@ gui_output_end(struct gui_draw_buffer *buffer, struct gui_draw_call_list *list,
         status->commands_allocated = buffer->command_size * cmdsize;
         status->commands_needed = buffer->command_needed *cmdsize;
         status->clips_allocated = buffer->clip_size * recsize;
-        status->clips_needed = buffer->clip_needed * recsize;
 
         status->allocated = status->vertexes_allocated;
         status->allocated += status->commands_allocated;
@@ -454,7 +455,6 @@ gui_output_end(struct gui_draw_buffer *buffer, struct gui_draw_call_list *list,
 
         status->needed = status->vertexes_needed;
         status->needed += status->commands_needed;
-        status->needed += status->clips_needed;
     }
 
     if (list) {
@@ -469,7 +469,6 @@ gui_output_end(struct gui_draw_buffer *buffer, struct gui_draw_call_list *list,
     buffer->command_size = 0;
     buffer->command_needed = 0;
     buffer->clip_size = 0;
-    buffer->clip_needed = 0;
 }
 
 static gui_int
@@ -478,8 +477,6 @@ gui_push_clip(struct gui_draw_buffer *buffer, const struct gui_rect *rect)
     struct gui_rect clip;
     assert(buffer);
     assert(rect);
-
-    buffer->clip_needed += sizeof(struct gui_rect);
     if (!buffer || !rect || buffer->clip_size >= buffer->clip_capacity)
         return gui_false;
 
@@ -809,7 +806,6 @@ gui_widget_button(struct gui_draw_buffer *buffer, const struct gui_button *butto
 {
     gui_bool ret = gui_false;
     struct gui_color background, highlight;
-
     assert(buffer);
     assert(button);
     if (!buffer || !button)
@@ -839,8 +835,8 @@ gui_widget_button_text(struct gui_draw_buffer *buffer, const struct gui_button *
     gui_bool ret = gui_false;
     gui_float label_x, label_y, label_w, label_h;
     struct gui_color font_color, background, highlight;
-    gui_size text_width;
     gui_float button_w, button_h;
+    gui_size text_width;
 
     assert(buffer);
     assert(button);
@@ -857,7 +853,6 @@ gui_widget_button_text(struct gui_draw_buffer *buffer, const struct gui_button *
 
     ret = gui_widget_button(buffer, button, in);
     if (!font || !text || !length) return ret;
-
     text_width = gui_font_text_width(font, (const gui_char*)text, length);
     if (text_width > (button_w - 2.0f * button->pad_x)) {
         label_x = button->x + button->pad_x;
@@ -1231,16 +1226,15 @@ gui_widget_input(struct gui_draw_buffer *buf,  gui_char *buffer, gui_size *lengt
     input_active = input->active;
     gui_draw_rectf(buf, input->x, input->y, input_w, input_h, input->background);
     gui_draw_rect(buf, input->x + 1, input->y, input_w - 1, input_h, input->foreground);
-    if (in && in->mouse_clicked && in->mouse_down) {
+    if (in && in->mouse_clicked && in->mouse_down)
         input_active = INBOX(in->mouse_pos.x, in->mouse_pos.y,
                             input->x, input->y, input_w, input_h);
-    }
 
     if (input_active && in) {
-        const struct gui_key *del = &in->keys[GUI_KEY_DEL];
         const struct gui_key *bs = &in->keys[GUI_KEY_BACKSPACE];
-        const struct gui_key *enter = &in->keys[GUI_KEY_ENTER];
+        const struct gui_key *del = &in->keys[GUI_KEY_DEL];
         const struct gui_key *esc = &in->keys[GUI_KEY_ESCAPE];
+        const struct gui_key *enter = &in->keys[GUI_KEY_ENTER];
         const struct gui_key *space = &in->keys[GUI_KEY_SPACE];
 
         if ((del->down && del->clicked) || (bs->down && bs->clicked))
@@ -2644,9 +2638,9 @@ gui_new(const struct gui_memory *memory, const struct gui_input *input)
     size = sizeof(struct gui_draw_call_list*) * memory->max_panels;
     buffer.memory = (gui_byte*)ctx->output_list + size;
     buffer.size = memory->size - (gui_size)((gui_byte*)buffer.memory - (gui_byte*)memory->memory);
+    buffer.max_depth = memory->max_depth;
     buffer.vertex_percentage = memory->vertex_percentage;
     buffer.command_percentage = memory->command_percentage;
-    buffer.clip_percentage = memory->clip_percentage;
     gui_output_begin(&ctx->global_buffer, &buffer);
     return ctx;
 }
@@ -2820,15 +2814,13 @@ gui_begin_panel(struct gui_context *ctx, struct gui_panel *panel,
         }
     }
 
-
     global = &ctx->global_buffer;
     out = &ctx->current_buffer;
     out->vertex_size = 0;
     out->vertex_needed = 0;
     out->command_size = 0;
     out->command_needed = 0;
-    out->clip_size = 0;
-    out->clip_needed = 0;
+    out->clip_size = global->clip_size;
     out->vertexes = &global->vertexes[global->vertex_size];
     out->vertex_capacity = global->vertex_capacity - global->vertex_size;
     out->commands = &global->commands[global->command_size];

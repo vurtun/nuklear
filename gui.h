@@ -59,9 +59,9 @@ struct gui_memory {
     void *memory;
     gui_size size;
     gui_size max_panels;
+    gui_size max_depth;
     gui_float vertex_percentage;
     gui_float command_percentage;
-    gui_float clip_percentage;
 };
 
 struct gui_memory_status {
@@ -70,7 +70,6 @@ struct gui_memory_status {
     gui_size commands_allocated;
     gui_size commands_needed;
     gui_size clips_allocated;
-    gui_size clips_needed;
     gui_size allocated;
     gui_size needed;
 };
@@ -122,7 +121,6 @@ struct gui_draw_buffer {
     struct gui_rect *clips;
     gui_size clip_capacity;
     gui_size clip_size;
-    gui_size clip_needed;
 };
 
 struct gui_draw_call_list {
