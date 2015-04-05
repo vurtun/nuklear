@@ -1,6 +1,9 @@
 #define MAX_BUFFER 64
 
 struct demo {
+    gui_char in_buf[MAX_BUFFER];
+    gui_size in_len;
+    gui_bool in_act;
     gui_char cmd_buf[MAX_BUFFER];
     gui_size cmd_len;
     gui_bool cmd_act;
@@ -212,6 +215,8 @@ demo_panel(struct gui_context *ctx, struct gui_panel *panel, struct demo *demo)
     if (gui_panel_shell(&demo->group, demo->cmd_buf, &demo->cmd_len, MAX_BUFFER, &demo->cmd_act))
         fprintf(stdout, "shell executed!\n");
     demo->spin_act = gui_panel_spinner(&demo->group, 0, &demo->spinner, 1024, 10, demo->spin_act);
+    demo->in_act = gui_panel_input(&demo->group, demo->in_buf, &demo->in_len, MAX_BUFFER,
+                                    GUI_INPUT_DEFAULT, demo->in_act);
     demo->item_cur = gui_panel_selector(&demo->group, items, LEN(items), demo->item_cur);
     gui_panel_group_end(panel, &demo->group);
 
