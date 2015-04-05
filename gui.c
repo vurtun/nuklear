@@ -763,6 +763,7 @@ gui_widget_text_wrap(struct gui_draw_buffer *buffer, const struct gui_text *text
     label_y = text->y + text->pad_y;
     label_w = MAX(0, text->w - 2 * text->pad_x);
     label_h = MAX(0, text->h - 2 * text->pad_y);
+
     space = font->height + 2 * text->pad_y;
     chars = gui_font_chars_in_space(font, (const gui_char*)text->text, text->length, label_w);
     while (chars && label_h >= space) {

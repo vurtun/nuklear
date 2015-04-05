@@ -24,39 +24,16 @@
 #define DTIME 33
 #define MAX_BUFFER 64
 
-/* functions */
-static void die(const char*,...);
-static void* xcalloc(size_t nmemb, size_t size);
-static long timestamp(void);
-static void sleep_for(long ms);
-static char* ldfile(const char*, size_t*);
 
+#include "example.c"
+
+/* functions */
 static void kpress(struct gui_input*, SDL_Event*);
 static void bpress(struct gui_input*, SDL_Event*);
 static void brelease(struct gui_input*, SDL_Event*);
 static void bmotion(struct gui_input*, SDL_Event*);
-static GLuint ldbmp(gui_byte*, uint32_t*, uint32_t*);
 
 /* gobals */
-static void
-die(const char *fmt, ...)
-{
-    va_list ap;
-    va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
-    va_end(ap);
-    SDL_Quit();
-    exit(1);
-}
-
-static void*
-xcalloc(size_t nmemb, size_t size)
-{
-    void *p = calloc(nmemb, size);
-    if (!p) die("out of memory\n");
-    return p;
-}
-
 static void
 key(struct gui_input *in, SDL_Event* e, gui_bool down)
 {
@@ -103,150 +80,6 @@ resize(SDL_Event* evt)
 {
     if (evt->window.event == SDL_WINDOWEVENT_RESIZED)
         glViewport(0, 0, evt->window.data1, evt->window.data2);
-}
-
-static char*
-ldfile(const char* path, size_t* siz)
-{
-    char *buf;
-    FILE *fd = fopen(path, "rb");
-    if (!fd) die("Failed to open file: %s\n");
-    fseek(fd, 0, SEEK_END);
-    *siz = (size_t)ftell(fd);
-    fseek(fd, 0, SEEK_SET);
-    buf = xcalloc(*siz, 1);
-    fread(buf, *siz, 1, fd);
-    fclose(fd);
-    return buf;
-}
-
-static GLuint
-ldbmp(gui_byte *data, uint32_t *width, uint32_t *height)
-{
-    /* texture */
-    GLuint texture;
-    gui_byte *header;
-    gui_byte *target;
-    gui_byte *writer;
-    gui_byte *reader;
-    uint32_t ioff;
-    uint32_t j;
-    int32_t i;
-
-    header = data;
-    if (!width || !height)
-        die("[BMP]: width or height is NULL!");
-    if (header[0] != 'B' || header[1] != 'M')
-        die("[BMP]: invalid file");
-
-    memcpy(width, &header[0x12], sizeof(uint32_t));
-    memcpy(height, &header[0x16], sizeof(uint32_t));
-    memcpy(&ioff, &header[0x0A], sizeof(uint32_t));
-    if (*width <= 0 || *height <= 0)
-        die("[BMP]: invalid image size");
-
-    data = data + ioff;
-    reader = data;
-    target = xcalloc(*width * *height * 4, 1);
-    for (i = (int32_t)*height-1; i >= 0; i--) {
-        writer = target + (i * (int32_t)*width * 4);
-        for (j = 0; j < *width; j++) {
-            *writer++ = *(reader + (j * 4) + 1);
-            *writer++ = *(reader + (j * 4) + 2);
-            *writer++ = *(reader + (j * 4) + 3);
-            *writer++ = *(reader + (j * 4) + 0);
-        }
-        reader += *width * 4;
-    }
-
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)*width, (GLsizei)*height, 0,
-                GL_RGBA, GL_UNSIGNED_BYTE, target);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-    free(target);
-    return texture;
-}
-
-static struct gui_font*
-ldfont(const char *name, unsigned char height)
-{
-    size_t mem;
-    size_t size;
-    size_t i = 0;
-    gui_byte *iter;
-    gui_texture tex;
-    short max_height = 0;
-    struct gui_font *font;
-    uint32_t img_width, img_height;
-    struct gui_font_glyph *glyphes;
-
-    uint16_t num;
-    uint16_t indexes;
-    uint16_t tex_width;
-    uint16_t tex_height;
-
-    gui_byte *buffer = (gui_byte*)ldfile(name, &size);
-    memcpy(&num, buffer, sizeof(uint16_t));
-    memcpy(&indexes, &buffer[0x02], sizeof(uint16_t));
-    memcpy(&tex_width, &buffer[0x04], sizeof(uint16_t));
-    memcpy(&tex_height, &buffer[0x06], sizeof(uint16_t));
-
-    iter = &buffer[0x08];
-    mem = sizeof(struct gui_font_glyph) * ((size_t)indexes + 1);
-    glyphes = xcalloc(mem, 1);
-    for(i = 0; i < num; ++i) {
-        uint16_t id, x, y, w, h;
-        float xoff, yoff, xadv;
-
-        memcpy(&id, iter, sizeof(uint16_t));
-        memcpy(&x, &iter[0x02], sizeof(uint16_t));
-        memcpy(&y, &iter[0x04], sizeof(uint16_t));
-        memcpy(&w, &iter[0x06], sizeof(uint16_t));
-        memcpy(&h, &iter[0x08], sizeof(uint16_t));
-        memcpy(&xoff, &iter[10], sizeof(float));
-        memcpy(&yoff, &iter[14], sizeof(float));
-        memcpy(&xadv, &iter[18], sizeof(float));
-
-        glyphes[id].code = id;
-        glyphes[id].width = (short)w;
-        glyphes[id].height = (short)h;
-        glyphes[id].xoff  = xoff;
-        glyphes[id].yoff = yoff;
-        glyphes[id].xadvance = xadv;
-        glyphes[id].uv[0].u = (float)x/(float)tex_width;
-        glyphes[id].uv[0].v = (float)y/(float)tex_height;
-        glyphes[id].uv[1].u = (float)(x+w)/(float)tex_width;
-        glyphes[id].uv[1].v = (float)(y+h)/(float)tex_height;
-        if (glyphes[id].height > max_height) max_height = glyphes[id].height;
-        iter += 22;
-    }
-
-    font = xcalloc(sizeof(struct gui_font), 1);
-    font->height = height;
-    font->scale = (float)height/(float)max_height;
-    font->texture.gl = ldbmp(iter, &img_width, &img_height);
-    font->tex_size.x = tex_width;
-    font->tex_size.y = tex_height;
-    font->fallback = &glyphes['?'];
-    font->glyphes = glyphes;
-    font->glyph_count = indexes + 1;
-    free(buffer);
-    return font;
-}
-
-static void
-delfont(struct gui_font *font)
-{
-    if (!font) return;
-    if (font->glyphes)
-        free(font->glyphes);
-    free(font);
 }
 
 static void
@@ -328,15 +161,15 @@ main(int argc, char *argv[])
     struct gui_font *font;
     struct gui_context *ctx;
     struct gui_panel *panel;
+    struct gui_panel *message;
+    struct demo demo;
 
     /* Window */
     UNUSED(argc); UNUSED(argv);
-    if (SDL_Init(SDL_INIT_VIDEO) < 0)
-        die("[SDL] unabled to initialize\n");
+    SDL_Init(SDL_INIT_VIDEO);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     win = SDL_CreateWindow("clone",
         0, 0, WIN_WIDTH, WIN_HEIGHT, SDL_WINDOW_OPENGL|SDL_WINDOW_SHOWN);
-    if (!win) die("[SDL] unable to create window\n");
     glContext = SDL_GL_CreateContext(win);
     glViewport(0, 0, WIN_WIDTH, WIN_HEIGHT);
 
@@ -344,10 +177,16 @@ main(int argc, char *argv[])
     memset(&input, 0, sizeof(input));
     memory.max_panels = 8;
     memory.max_depth = 4;
-    memory.memory = xcalloc(MAX_MEMORY , 1);
+    memory.memory = calloc(MAX_MEMORY , 1);
     memory.size = MAX_MEMORY;
     memory.vertex_percentage = 0.80f;
     memory.command_percentage = 0.19f;
+
+    memset(&demo, 0, sizeof(demo));
+    demo.tab.minimized = gui_true;
+    demo.spinner = 250;
+    demo.slider = 2.0f;
+    demo.prog = 60;
 
     font = ldfont("mono.sdf", 16);
     ctx = gui_new(&memory, &input);
@@ -356,7 +195,8 @@ main(int argc, char *argv[])
     config.colors[GUI_COLOR_TEXT].g = 255;
     config.colors[GUI_COLOR_TEXT].b = 255;
     config.colors[GUI_COLOR_TEXT].a = 255;
-    panel = gui_panel_new(ctx, 20, 20, 200, 100, &config, font);
+    panel = gui_panel_new(ctx, 50, 50, 500, 300, &config, font);
+    message = gui_panel_new(ctx, 150, 150, 200, 100, &config, font);
 
     running = gui_true;
     while (running) {
@@ -378,13 +218,8 @@ main(int argc, char *argv[])
 
         /* ------------------------- GUI --------------------------*/
         gui_begin(ctx, (gui_float)width, (gui_float)height);
-        running = gui_begin_panel(ctx, panel, "GUI",
-            GUI_PANEL_HEADER|GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE|GUI_PANEL_BORDER|
-            GUI_PANEL_MOVEABLE|GUI_PANEL_SCROLLBAR|GUI_PANEL_SCALEABLE);
-        gui_panel_layout(panel, 30, 1);
-        if (gui_panel_button_text(panel, "button", GUI_BUTTON_SWITCH))
-            fprintf(stdout, "button pressed!\n");
-        gui_end_panel(ctx, panel, NULL);
+        running = demo_panel(ctx, panel, &demo);
+        message_panel(ctx, message);
         gui_end(ctx, &output, NULL);
         /* ---------------------------------------------------------*/
 
