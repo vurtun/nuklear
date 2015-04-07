@@ -320,15 +320,15 @@ struct gui_config {
 };
 
 enum gui_panel_flags {
+    GUI_PANEL_HIDDEN = 0x01,
     GUI_PANEL_BORDER = 0x02,
     GUI_PANEL_MINIMIZABLE = 0x4,
     GUI_PANEL_CLOSEABLE = 0x8,
-    GUI_PANEL_HIDDEN = 0x10,
-    GUI_PANEL_MOVEABLE = 0x20,
-    GUI_PANEL_SCALEABLE = 0x40,
+    GUI_PANEL_MOVEABLE = 0x10,
+    GUI_PANEL_SCALEABLE = 0x20,
     /* internal */
-    GUI_PANEL_SCROLLBAR = 0x100,
-    GUI_PANEL_TAB = 0x200
+    GUI_PANEL_SCROLLBAR = 0x40,
+    GUI_PANEL_TAB = 0x80
 };
 
 struct gui_panel {
@@ -401,6 +401,7 @@ void gui_panel_init(struct gui_panel*, const struct gui_config*,
                     const struct gui_font*);
 void gui_panel_show(struct gui_panel*);
 void gui_panel_hide(struct gui_panel*);
+gui_bool gui_panel_is_hidden(const struct gui_panel*);
 gui_bool gui_panel_begin(struct gui_panel*, struct gui_draw_buffer*,
                     const struct gui_input*, const char*,
                     gui_float x, gui_float y, gui_float w, gui_float h, gui_flags);
@@ -446,6 +447,8 @@ void gui_end(struct gui_context*, struct gui_output*, struct gui_memory_status*)
 struct gui_panel *gui_panel_new(struct gui_context*, gui_float x, gui_float y, gui_float w,
                     gui_float h, const struct gui_config* , const struct gui_font*);
 void gui_panel_del(struct gui_context*, struct gui_panel*);
+struct gui_vec2 gui_get_panel_position(const struct gui_context*, const struct gui_panel*);
+struct gui_vec2 gui_get_panel_size(const struct gui_context*, const struct gui_panel*);
 gui_bool gui_begin_panel(struct gui_context*, struct gui_panel*, const char *title, gui_flags flags);
 void gui_end_panel(struct gui_context*, struct gui_panel*, struct gui_memory_status*);
 

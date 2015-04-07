@@ -1693,6 +1693,12 @@ gui_panel_hide(struct gui_panel *panel)
     panel->flags |= GUI_PANEL_HIDDEN;
 }
 
+gui_bool
+gui_panel_is_hidden(const struct gui_panel *panel)
+{
+    return panel->flags & GUI_PANEL_HIDDEN;
+}
+
 void
 gui_panel_layout(struct gui_panel *panel, gui_float height, gui_size cols)
 {
@@ -2753,11 +2759,40 @@ gui_panel_del(struct gui_context *ctx, struct gui_panel *panel)
 void
 gui_begin(struct gui_context *ctx, gui_float w, gui_float h)
 {
-    struct gui_context_panel *iter;
     assert(ctx);
     if (!ctx) return;
     ctx->width = w;
     ctx->height = h;
+}
+
+struct gui_vec2
+gui_get_panel_position(const struct gui_context *ctx, const struct gui_panel *panel)
+{
+    struct gui_vec2 pos;
+    const struct gui_context_panel *cpanel;
+
+    assert(ctx && panel);
+    pos.x = 0; pos.y = 0;
+    if (!ctx || !panel) return pos;
+    cpanel = (const struct gui_context_panel*)panel;
+    pos.x = cpanel->x;
+    pos.y = cpanel->y;
+    return pos;
+}
+
+struct gui_vec2
+gui_get_panel_size(const struct gui_context *ctx, const struct gui_panel *panel)
+{
+    struct gui_vec2 size;
+    const struct gui_context_panel *cpanel;
+
+    assert(ctx && panel);
+    size.x = 0; size.y = 0;
+    if (!ctx || !panel) return size;
+    cpanel = (const struct gui_context_panel*)panel;
+    size.x = cpanel->w;
+    size.y = cpanel->h;
+    return size;
 }
 
 gui_bool
