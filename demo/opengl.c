@@ -20,10 +20,8 @@
 #define WIN_WIDTH 800
 #define WIN_HEIGHT 600
 #define MAX_MEMORY (256 * 1024)
-#define MAX_PANELS 8
-#define DTIME 33
 #define MAX_BUFFER 64
-
+#define DTIME 33
 
 #include "example.c"
 
@@ -162,7 +160,9 @@ main(int argc, char *argv[])
     struct gui_context *ctx;
     struct gui_panel *panel;
     struct gui_panel *message;
+    struct gui_panel *color_panel;
     struct demo demo;
+    struct color_picker picker;
 
     /* Window */
     UNUSED(argc); UNUSED(argv);
@@ -183,6 +183,7 @@ main(int argc, char *argv[])
     memory.command_percentage = 0.19f;
 
     memset(&demo, 0, sizeof(demo));
+    memset(&picker, 0, sizeof(picker));
     demo.tab.minimized = gui_true;
     demo.spinner = 250;
     demo.slider = 2.0f;
@@ -197,6 +198,7 @@ main(int argc, char *argv[])
     config.colors[GUI_COLOR_TEXT].a = 255;
     panel = gui_panel_new(ctx, 50, 50, 500, 300, &config, font);
     message = gui_panel_new(ctx, 150, 150, 200, 100, &config, font);
+    color_panel = gui_panel_new(ctx, 250, 250, 400, 250, &config, font);
 
     running = gui_true;
     while (running) {
@@ -220,6 +222,11 @@ main(int argc, char *argv[])
         gui_begin(ctx, (gui_float)width, (gui_float)height);
         running = demo_panel(ctx, panel, &demo);
         message_panel(ctx, message);
+        if (color_picker_panel(ctx, color_panel, &picker) >= 0) {
+            struct gui_color c = picker.color;
+            fprintf(stdout, "color picked: {%u, %u, %u, %u}\n", c.r, c.g, c.b, c.a);
+            gui_panel_hide(color_panel);
+        }
         gui_end(ctx, &output, NULL);
         /* ---------------------------------------------------------*/
 

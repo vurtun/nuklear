@@ -305,6 +305,7 @@ enum gui_panel_colors {
     GUI_COLOR_SCROLLBAR,
     GUI_COLOR_SCROLLBAR_CURSOR,
     GUI_COLOR_SCROLLBAR_BORDER,
+    GUI_COLOR_SCALER,
     GUI_COLOR_COUNT
 };
 
@@ -399,6 +400,8 @@ gui_int gui_widget_plot(struct gui_draw_buffer*, const struct gui_plot*,
 void gui_default_config(struct gui_config*);
 void gui_panel_init(struct gui_panel*, const struct gui_config*,
                     const struct gui_font*);
+void gui_panel_show(struct gui_panel*);
+void gui_panel_hide(struct gui_panel*);
 gui_bool gui_panel_begin(struct gui_panel*, struct gui_draw_buffer*,
                     const struct gui_input*, const char*,
                     gui_float x, gui_float y, gui_float w, gui_float h, gui_flags);

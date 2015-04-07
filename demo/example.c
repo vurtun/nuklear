@@ -20,6 +20,11 @@ struct demo {
     gui_size current;
 };
 
+struct color_picker {
+    gui_bool active[4];
+    struct gui_color color;
+};
+
 static char*
 ldfile(const char* path, size_t* siz)
 {
@@ -165,9 +170,36 @@ message_panel(struct gui_context *ctx, struct gui_panel *panel)
     gui_panel_layout(panel, 30, 2);
     if (gui_panel_button_text(panel, "ok", GUI_BUTTON_SWITCH))
         fprintf(stdout, "ok pressed!\n");
-    if (gui_panel_button_text(panel, "cancle", GUI_BUTTON_SWITCH))
+    if (gui_panel_button_text(panel, "cancel", GUI_BUTTON_SWITCH))
         fprintf(stdout, "cancel pressed!\n");
     gui_end_panel(ctx, panel, NULL);
+}
+
+static gui_int
+color_picker_panel(struct gui_context *ctx, struct gui_panel *panel, struct color_picker *picker)
+{
+    gui_size i;
+    gui_int ret = -1;
+    gui_byte *ptr = &picker->color.r;
+    gui_begin_panel(ctx, panel, "Color Picker",
+        GUI_PANEL_HEADER|GUI_PANEL_MOVEABLE|GUI_PANEL_BORDER);
+    gui_panel_layout(panel, 30, 2);
+    for (i = 0; i < 4; ++i) {
+        gui_int ivalue;
+        gui_float fvalue = (gui_float)*ptr;
+        fvalue = gui_panel_slider(panel, 0, fvalue, 255.0f, 10.0f, GUI_HORIZONTAL);
+        ivalue = (gui_int)fvalue;
+        picker->active[i] = gui_panel_spinner(panel, 0, &ivalue, 255, 1, picker->active[i]);
+        *ptr = (gui_byte)ivalue;
+        ptr++;
+    }
+
+    gui_panel_layout(panel, 30, 4);
+    gui_panel_seperator(panel, 1);
+    if (gui_panel_button_text(panel, "ok", GUI_BUTTON_SWITCH)) ret = 1;
+    if (gui_panel_button_text(panel, "cancel", GUI_BUTTON_SWITCH)) ret = 0;
+    gui_end_panel(ctx, panel, NULL);
+    return ret;
 }
 
 static gui_bool

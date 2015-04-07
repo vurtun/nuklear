@@ -407,6 +407,10 @@ gui_output_begin(struct gui_draw_buffer *buffer, const struct gui_memory *memory
     vertex_size = (gui_size)((gui_float)size * SATURATE(memory->vertex_percentage));
     command_size = (gui_size)((gui_float)size * SATURATE(memory->command_percentage));
 
+    assert(vertex_size > 0);
+    assert(command_size > 0);
+    assert(clip_size > 0);
+
     cmds = (gui_byte*)memory->memory + clip_size;
     aligned = ALIGN(cmds, align_cmd);
     alignment = (gui_byte*)aligned - (gui_byte*)cmds;
@@ -979,9 +983,11 @@ gui_float
 gui_widget_slider(struct gui_draw_buffer *buffer, const struct gui_slider *slider,
     const struct gui_input *in)
 {
+    gui_float slider_range;
     gui_float slider_min, slider_max;
     gui_float slider_value, slider_steps;
     gui_float slider_w, slider_h;
+    gui_float cursor_offset;
     gui_float cursor_x, cursor_y;
     gui_float cursor_w, cursor_h;
 
@@ -995,12 +1001,13 @@ gui_widget_slider(struct gui_draw_buffer *buffer, const struct gui_slider *slide
     slider_max = MAX(slider->min, slider->max);
     slider_min = MIN(slider->min, slider->max);
     slider_value = CLAMP(slider_min, slider->value, slider_max);
-    slider_steps = (slider_max - slider_min) / slider->step;
+    slider_range = slider_max - slider_min;
+    slider_steps = slider_range / slider->step;
 
-    cursor_w = (slider_w - 2 * slider->pad_x);
-    cursor_w = cursor_w / (((slider_max - slider_min) + slider->step) / slider->step);
+    cursor_offset = (slider_value - slider_min) / slider->step;
+    cursor_w = (slider_w - 2 * slider->pad_x) / (slider_steps + 1);
     cursor_h = slider_h - 2 * slider->pad_y;
-    cursor_x = slider->x + slider->pad_x + (cursor_w * (slider_value - slider_min));
+    cursor_x = slider->x + slider->pad_x + (cursor_w * cursor_offset);
     cursor_y = slider->y + slider->pad_y;
 
     if (in && in->mouse_down &&
@@ -1011,7 +1018,8 @@ gui_widget_slider(struct gui_draw_buffer *buffer, const struct gui_slider *slide
         const float d = in->mouse_pos.x - (cursor_x + cursor_w / 2.0f);
         const float pxstep = (slider_w - 2 * slider->pad_x) / slider_steps;
         if (ABS(d) >= pxstep) {
-            slider_value += (d < 0) ? -slider->step : slider->step;
+            const gui_float steps = (gui_float)((gui_int)(ABS(d) / pxstep));
+            slider_value += (d > 0) ? (slider->step * steps) : -(slider->step * steps);
             slider_value = CLAMP(slider_min, slider_value, slider_max);
             cursor_x = slider->x + slider->pad_x + (cursor_w * (slider_value - slider_min));
         }
@@ -1025,9 +1033,11 @@ gui_float
 gui_widget_slider_vertical(struct gui_draw_buffer *buffer,
     const struct gui_slider *slider, const struct gui_input *in)
 {
+    gui_float slider_range;
     gui_float slider_min, slider_max;
     gui_float slider_value, slider_steps;
     gui_float slider_w, slider_h;
+    gui_float cursor_offset;
     gui_float cursor_x, cursor_y;
     gui_float cursor_w, cursor_h;
 
@@ -1041,23 +1051,25 @@ gui_widget_slider_vertical(struct gui_draw_buffer *buffer,
     slider_max = MAX(slider->min, slider->max);
     slider_min = MIN(slider->min, slider->max);
     slider_value = CLAMP(slider_min, slider->value, slider_max);
-    slider_steps = (slider_max - slider_min) / slider->step;
+    slider_range = slider_max - slider_min;
+    slider_steps = slider_range / slider->step;
 
-    cursor_w = (slider_w - 2 * slider->pad_x);
-    cursor_h = slider_h - 2 * slider->pad_y;
-    cursor_h = cursor_h / (((slider_max - slider_min) + slider->step) / slider->step);
-    cursor_y = slider->y + slider_h - slider->pad_y - (cursor_h * (slider_value - slider_min));
+    cursor_offset = (slider_value - slider_min) / slider->step;
     cursor_x = slider->x + slider->pad_x;
+    cursor_w = (slider_w - 2 * slider->pad_x);
+    cursor_h = (slider_h - 2 * slider->pad_y) / (slider_steps + 1);
+    cursor_y = slider->y + slider_h - slider->pad_y - (cursor_h * cursor_offset);
 
     if (in && in->mouse_down &&
         INBOX(in->mouse_pos.x, in->mouse_pos.y, slider->x, slider->y, slider_w, slider_h) &&
         INBOX(in->mouse_clicked_pos.x,in->mouse_clicked_pos.y, slider->x, slider->y,
                 slider_w, slider_h))
     {
-        const float d = in->mouse_pos.y - (cursor_y + cursor_h / 2.0f);
-        const float pxstep = (slider_h - 2 * slider->pad_y) / slider_steps;
+        const gui_float d = in->mouse_pos.y - (cursor_y + cursor_h / 2.0f);
+        const gui_float pxstep = (slider_h - 2 * slider->pad_y) / slider_steps;
         if (ABS(d) >= pxstep) {
-            slider_value += (d > 0) ? -slider->step : slider->step;
+            const gui_float steps = (gui_float)((gui_int)(ABS(d) / pxstep));
+            slider_value += (d > 0) ? -(slider->step * steps) : (slider->step * steps);
             slider_value = CLAMP(slider_min, slider_value, slider_max);
             cursor_y = slider->y + slider_h - slider->pad_y;
             cursor_y -= (cursor_h * (slider_value - slider_min));
@@ -1517,6 +1529,7 @@ gui_default_config(struct gui_config *config)
     col_load(config->colors[GUI_COLOR_SCROLLBAR], 41, 41, 41, 255);
     col_load(config->colors[GUI_COLOR_SCROLLBAR_CURSOR], 70, 70, 70, 255);
     col_load(config->colors[GUI_COLOR_SCROLLBAR_BORDER], 45, 45, 45, 255);
+    col_load(config->colors[GUI_COLOR_SCALER], 100, 100, 100, 255);
 }
 
 void
@@ -1676,6 +1689,18 @@ gui_panel_begin(struct gui_panel *panel, struct gui_draw_buffer *out,
     }
     gui_push_clip(out, &clip);
     return ret;
+}
+
+void
+gui_panel_show(struct gui_panel *panel)
+{
+    panel->flags = panel->flags & (gui_flags)(~GUI_PANEL_HIDDEN);
+}
+
+void
+gui_panel_hide(struct gui_panel *panel)
+{
+    panel->flags |= GUI_PANEL_HIDDEN;
 }
 
 void
@@ -2842,9 +2867,21 @@ gui_end_panel(struct gui_context *ctx, struct gui_panel *panel,
     assert(ctx);
     assert(panel);
     if (!ctx || !panel) return;
-
     cpanel = (struct gui_context_panel*)panel;
+
     gui_panel_end(panel);
+    if (ctx->active == cpanel && (panel->flags & GUI_PANEL_SCALEABLE) &&
+        (panel->flags & GUI_PANEL_SCROLLBAR)) {
+        const struct gui_config *config = panel->config;
+        struct gui_color col = config->colors[GUI_COLOR_SCALER];
+        const gui_float height = panel->height + panel->header_height;
+        gui_float scaler_x = panel->x + config->item_padding.x;
+        gui_float scaler_y = panel->y + height - config->scaler_size.y;
+        gui_float scaler_w = MAX(0, config->scaler_size.x - config->item_padding.x);
+        gui_float scaler_h = MAX(0, config->scaler_size.y - config->item_padding.y);
+        gui_draw_rectf(&ctx->current_buffer, scaler_x, scaler_y, scaler_w, scaler_h, col);
+    }
+
     global = &ctx->global_buffer;
     global->vertex_size += ctx->current_buffer.vertex_size;
     global->command_size += ctx->current_buffer.command_size;
