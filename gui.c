@@ -1602,15 +1602,15 @@ gui_panel_begin(struct gui_panel *panel, struct gui_draw_buffer *out,
         gui_draw_rectf(out, x, y, w, panel->header_height, *header);
 
         clip.x = x; clip.w = w;
-        clip.y = y + panel->header_height;
-        clip.h = h - panel->header_height;
+        clip.y = y + panel->header_height - 1;
+        clip.h = h - panel->header_height - 1;
         if (panel->flags & GUI_PANEL_SCROLLBAR)
             clip.h -= (config->panel_padding.y + config->item_padding.y);
         else clip.h = null_rect.h;
     } else {
         panel->header_height = config->panel_padding.y + config->item_padding.y;
-        clip.x = x; clip.y = y;
-        clip.w = w; clip.h = h;
+        clip.x = x; clip.y = y - 1;
+        clip.w = w; clip.h = h + 1;
         if (panel->flags & GUI_PANEL_SCROLLBAR)
             clip.h -= panel->header_height;
         else clip.h = null_rect.h;
@@ -2870,7 +2870,7 @@ gui_end_panel(struct gui_context *ctx, struct gui_panel *panel,
     cpanel = (struct gui_context_panel*)panel;
 
     gui_panel_end(panel);
-    if (ctx->active == cpanel && (panel->flags & GUI_PANEL_SCALEABLE) &&
+    if (!panel->minimized && ctx->active == cpanel && (panel->flags & GUI_PANEL_SCALEABLE) &&
         (panel->flags & GUI_PANEL_SCROLLBAR)) {
         const struct gui_config *config = panel->config;
         struct gui_color col = config->colors[GUI_COLOR_SCALER];

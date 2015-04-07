@@ -196,7 +196,7 @@ main(int argc, char *argv[])
     config.colors[GUI_COLOR_TEXT].g = 255;
     config.colors[GUI_COLOR_TEXT].b = 255;
     config.colors[GUI_COLOR_TEXT].a = 255;
-    panel = gui_panel_new(ctx, 50, 50, 500, 300, &config, font);
+    panel = gui_panel_new(ctx, 50, 50, 500, 320, &config, font);
     message = gui_panel_new(ctx, 150, 150, 200, 100, &config, font);
     color_panel = gui_panel_new(ctx, 250, 250, 400, 250, &config, font);
 
