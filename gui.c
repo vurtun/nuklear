@@ -1596,27 +1596,19 @@ gui_panel_begin(struct gui_panel *panel, struct gui_draw_buffer *out,
 
     if (!(panel->flags & GUI_PANEL_TAB))
         panel->flags |= GUI_PANEL_SCROLLBAR;
-    if (panel->flags & GUI_PANEL_HEADER) {
-        panel->header_height = panel->font->height + 3 * config->item_padding.y;
-        panel->header_height += config->panel_padding.y;
-        gui_draw_rectf(out, x, y, w, panel->header_height, *header);
 
-        clip.x = x; clip.w = w;
-        clip.y = y + panel->header_height - 1;
-        clip.h = h - panel->header_height - 1;
-        if (panel->flags & GUI_PANEL_SCROLLBAR)
-            clip.h -= (config->panel_padding.y + config->item_padding.y);
-        else clip.h = null_rect.h;
-    } else {
-        panel->header_height = config->panel_padding.y + config->item_padding.y;
-        clip.x = x; clip.y = y - 1;
-        clip.w = w; clip.h = h + 1;
-        if (panel->flags & GUI_PANEL_SCROLLBAR)
-            clip.h -= panel->header_height;
-        else clip.h = null_rect.h;
-    }
+    panel->header_height = panel->font->height + 3 * config->item_padding.y;
+    panel->header_height += config->panel_padding.y;
+    gui_draw_rectf(out, x, y, w, panel->header_height, *header);
 
-    if (panel->flags & GUI_PANEL_CLOSEABLE && panel->flags & GUI_PANEL_HEADER) {
+    clip.x = x; clip.w = w;
+    clip.y = y + panel->header_height - 1;
+    clip.h = h - panel->header_height - 1;
+    if (panel->flags & GUI_PANEL_SCROLLBAR)
+        clip.h -= (config->panel_padding.y + config->item_padding.y);
+    else clip.h = null_rect.h;
+
+    if (panel->flags & GUI_PANEL_CLOSEABLE) {
         const gui_char *X = (const gui_char*)"x";
         const gui_size text_width = gui_font_text_width(panel->font, X, 1);
         const gui_float close_x = header_x + config->item_padding.x;
@@ -1636,7 +1628,7 @@ gui_panel_begin(struct gui_panel *panel, struct gui_draw_buffer *out,
         }
     }
 
-    if (panel->flags & GUI_PANEL_MINIMIZABLE && panel->flags & GUI_PANEL_HEADER) {
+    if (panel->flags & GUI_PANEL_MINIMIZABLE) {
         gui_size text_width;
         gui_float min_x, min_y, min_w, min_h;
         const gui_char *score = (panel->minimized) ?
@@ -1660,7 +1652,7 @@ gui_panel_begin(struct gui_panel *panel, struct gui_draw_buffer *out,
         }
     }
 
-    if (panel->flags & GUI_PANEL_HEADER && text) {
+    if (text) {
         const gui_size text_len = strsiz(text);
         const gui_float label_x = header_x + config->item_padding.x;
         const gui_float label_y = y + config->panel_padding.y;
@@ -1674,9 +1666,7 @@ gui_panel_begin(struct gui_panel *panel, struct gui_draw_buffer *out,
     if (panel->flags & GUI_PANEL_SCROLLBAR) {
         const struct gui_color *color = &config->colors[GUI_COLOR_PANEL];
         panel->width -= config->scrollbar_width;
-        panel->height = (panel->flags & GUI_PANEL_HEADER) ? (h - panel->header_height) : h;
-        if (!(panel->flags & GUI_PANEL_HEADER))
-            panel->height -= (config->panel_padding.y + config->item_padding.y);
+        panel->height = h - panel->header_height;
         if (!panel->minimized)
             gui_draw_rectf(panel->out, x, y + panel->header_height, w,
                             h - panel->header_height, *color);
@@ -2447,7 +2437,7 @@ gui_panel_tab_begin(struct gui_panel *panel, gui_tab *tab, const char *title)
 
     gui_panel_init(tab, panel->config, panel->font);
     tab->minimized = min;
-        flags = GUI_PANEL_BORDER|GUI_PANEL_MINIMIZABLE|GUI_PANEL_HEADER|GUI_PANEL_TAB;
+        flags = GUI_PANEL_BORDER|GUI_PANEL_MINIMIZABLE|GUI_PANEL_TAB;
     gui_panel_begin(tab, panel->out, panel->in, title,
         bounds.x, bounds.y + 1, bounds.w, null_rect.h, flags);
     return tab->minimized;
@@ -2479,7 +2469,7 @@ gui_panel_group_begin(struct gui_panel *panel, gui_group *group, const char *tit
     offset = group->offset;
     gui_panel_alloc_space(&bounds, panel);
     gui_panel_init(group, panel->config, panel->font);
-    flags = GUI_PANEL_BORDER|GUI_PANEL_HEADER|GUI_PANEL_SCROLLBAR|GUI_PANEL_TAB;
+    flags = GUI_PANEL_BORDER|GUI_PANEL_SCROLLBAR|GUI_PANEL_TAB;
     group->offset = offset;
     gui_panel_begin(group, panel->out, panel->in, title,
         bounds.x, bounds.y, bounds.w, bounds.h, flags);
@@ -2597,12 +2587,9 @@ gui_panel_end(struct gui_panel *panel)
         scroll.foreground = config->colors[GUI_COLOR_SCROLLBAR_CURSOR];
         scroll.border = config->colors[GUI_COLOR_SCROLLBAR_BORDER];
         scroll.h = panel->height;
-        if (panel->flags & GUI_PANEL_HEADER) scroll.y += panel->header_height;
-        else scroll.h += panel->header_height;
+        scroll.y += panel->header_height;
         if (panel->flags & GUI_PANEL_BORDER) scroll.h -= 1;
-        scroll.target = panel->at_y - panel->y;
-        if (panel->flags & GUI_PANEL_HEADER)
-            scroll.target -= panel->header_height;
+        scroll.target = (panel->at_y - panel->y) - panel->header_height;
 
         panel->offset = (gui_float)gui_widget_scroll(panel->out, &scroll, panel->in);
         panel_y = panel->y + panel->height + panel->header_height - config->panel_padding.y;
@@ -2812,7 +2799,7 @@ gui_begin_panel(struct gui_context *ctx, struct gui_panel *panel,
     if (!(flags & GUI_PANEL_TAB))
         flags |= GUI_PANEL_SCROLLBAR;
 
-    if (ctx->active == cpanel && (flags & GUI_PANEL_MOVEABLE) && (flags & GUI_PANEL_HEADER)) {
+    if (ctx->active == cpanel && (flags & GUI_PANEL_MOVEABLE)) {
         gui_bool incursor;
         const gui_float header_x = cpanel->x;
         const gui_float header_y = cpanel->y;

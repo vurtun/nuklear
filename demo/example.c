@@ -165,8 +165,7 @@ delfont(struct gui_font *font)
 static void
 message_panel(struct gui_context *ctx, struct gui_panel *panel)
 {
-    gui_begin_panel(ctx, panel, "Error", GUI_PANEL_HEADER|
-        GUI_PANEL_MOVEABLE|GUI_PANEL_BORDER);
+    gui_begin_panel(ctx, panel, "Error", GUI_PANEL_MOVEABLE|GUI_PANEL_BORDER);
     gui_panel_layout(panel, 30, 2);
     if (gui_panel_button_text(panel, "ok", GUI_BUTTON_SWITCH))
         fprintf(stdout, "ok pressed!\n");
@@ -181,8 +180,7 @@ color_picker_panel(struct gui_context *ctx, struct gui_panel *panel, struct colo
     gui_size i;
     gui_int ret = -1;
     gui_byte *ptr = &picker->color.r;
-    gui_begin_panel(ctx, panel, "Color Picker",
-        GUI_PANEL_HEADER|GUI_PANEL_MOVEABLE|GUI_PANEL_BORDER);
+    gui_begin_panel(ctx, panel, "Color Picker", GUI_PANEL_MOVEABLE|GUI_PANEL_BORDER);
     gui_panel_layout(panel, 30, 2);
     for (i = 0; i < 4; ++i) {
         gui_int ivalue;
@@ -212,7 +210,7 @@ demo_panel(struct gui_context *ctx, struct gui_panel *panel, struct demo *demo)
     gui_bool running;
 
     running = gui_begin_panel(ctx, panel, "Demo",
-        GUI_PANEL_HEADER|GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE|
+        GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE|
         GUI_PANEL_SCALEABLE|GUI_PANEL_MOVEABLE|GUI_PANEL_BORDER);
 
     /* Tabs */

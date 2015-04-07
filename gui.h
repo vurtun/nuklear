@@ -320,7 +320,6 @@ struct gui_config {
 };
 
 enum gui_panel_flags {
-    GUI_PANEL_HEADER = 0x01,
     GUI_PANEL_BORDER = 0x02,
     GUI_PANEL_MINIMIZABLE = 0x4,
     GUI_PANEL_CLOSEABLE = 0x8,
