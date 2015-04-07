@@ -326,7 +326,7 @@ enum gui_panel_flags {
     GUI_PANEL_HIDDEN = 0x10,
     GUI_PANEL_MOVEABLE = 0x20,
     GUI_PANEL_SCALEABLE = 0x40,
-    /* intern */
+    /* internal */
     GUI_PANEL_SCROLLBAR = 0x100,
     GUI_PANEL_TAB = 0x200
 };
@@ -425,17 +425,15 @@ gui_bool gui_panel_spinner(struct gui_panel*, gui_int min, gui_int *value,
                     gui_int max, gui_int step, gui_bool active);
 gui_size gui_panel_selector(struct gui_panel*, const char *items[],
                     gui_size item_count, gui_size item_current);
-gui_int gui_panel_plot(struct gui_panel*, const gui_float *values,
-                    gui_size value_count);
-gui_int gui_panel_histo(struct gui_panel*, const gui_float *values,
-                    gui_size value_count);
-gui_bool gui_panel_tab_begin(struct gui_panel*, gui_tab*, const char *title);
-void gui_panel_tab_end(struct gui_panel *panel, gui_tab *tab);
-void gui_panel_group_begin(struct gui_panel*, gui_group*, const char *title);
-void gui_panel_group_end(struct gui_panel*, gui_group* tab);
-gui_size gui_panel_shelf_begin(struct gui_panel*, gui_shelf *shelf,
-                    const char *tabs[], gui_size size, gui_size active);
-void gui_panel_shelf_end(struct gui_panel *panel, gui_shelf *shelf);
+gui_int gui_panel_plot(struct gui_panel*, const gui_float *values, gui_size value_count);
+gui_int gui_panel_histo(struct gui_panel*, const gui_float *values, gui_size value_count);
+gui_bool gui_panel_tab_begin(gui_tab*, gui_tab*, const char *title);
+void gui_panel_tab_end(gui_tab*, gui_tab *tab);
+void gui_panel_group_begin(gui_group*, gui_group*, const char *title);
+void gui_panel_group_end(gui_group*, gui_group* tab);
+gui_size gui_panel_shelf_begin(gui_shelf*, gui_shelf *shelf, const char *tabs[],
+                    gui_size size, gui_size active);
+void gui_panel_shelf_end(gui_shelf*, gui_shelf *shelf);
 void gui_panel_end(struct gui_panel*);
 
 /* Context */

@@ -5,7 +5,7 @@ Work in progress
 - Immediate mode graphical user interface
 - Written in C89 (ANSI C)
 - Small (~2.5kLOC)
-- Focus on portability and minimized internal state
+- Focus on portability and minimal internal state
 - Suited for embedding into graphical applications
 - Flexible abstraction layer (Widgets, Panel, Window)
 - No global hidden state
