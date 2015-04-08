@@ -135,12 +135,19 @@ struct gui_output {
     gui_size list_size;
 };
 
+enum gui_text_align {
+    GUI_TEXT_LEFT,
+    GUI_TEXT_CENTERED,
+    GUI_TEXT_RIGHT
+};
+
 struct gui_text {
     gui_float x, y;
     gui_float w, h;
     gui_float pad_x, pad_y;
     const char *text;
     gui_size length;
+    enum gui_text_align align;
     struct gui_color font;
     struct gui_color background;
 };
@@ -364,8 +371,6 @@ void gui_output_end(struct gui_draw_buffer*, struct gui_draw_call_list*,
 /* Widgets */
 void gui_widget_text(struct gui_draw_buffer*, const struct gui_text*,
                     const struct gui_font*);
-gui_size gui_widget_text_wrap(struct gui_draw_buffer*, const struct gui_text*,
-                    const struct gui_font*);
 void gui_widget_image(struct gui_draw_buffer*, const struct gui_image*);
 gui_bool gui_widget_button_text(struct gui_draw_buffer*, const struct gui_button*,
                     const char *text, gui_size len, const struct gui_font*,
@@ -407,7 +412,7 @@ gui_bool gui_panel_begin(struct gui_panel*, struct gui_draw_buffer*,
                     gui_float x, gui_float y, gui_float w, gui_float h, gui_flags);
 void gui_panel_layout(struct gui_panel*, gui_float height, gui_size cols);
 void gui_panel_seperator(struct gui_panel*, gui_size cols);
-void gui_panel_text(struct gui_panel*, const char *str, gui_size len);
+void gui_panel_text(struct gui_panel*, const char *str, gui_size len, enum gui_text_align);
 gui_bool gui_panel_check(struct gui_panel*, const char*, gui_bool active);
 gui_bool gui_panel_option(struct gui_panel*, const char*, gui_bool active);
 gui_bool gui_panel_button_text(struct gui_panel*, const char*, enum gui_button_behavior);

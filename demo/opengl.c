@@ -221,11 +221,11 @@ main(int argc, char *argv[])
         /* ------------------------- GUI --------------------------*/
         gui_begin(ctx, (gui_float)width, (gui_float)height);
         running = demo_panel(ctx, panel, &demo);
-        message_panel(ctx, message);
+        if (message_panel(ctx, message) >= 0)
+            fprintf(stdout, "message closed\n");
         if (color_picker_panel(ctx, color_panel, &picker) >= 0) {
             struct gui_color c = picker.color;
             fprintf(stdout, "color picked: {%u, %u, %u, %u}\n", c.r, c.g, c.b, c.a);
-            gui_panel_hide(color_panel);
         }
         gui_end(ctx, &output, NULL);
         /* ---------------------------------------------------------*/

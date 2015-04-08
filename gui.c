@@ -733,6 +733,7 @@ gui_widget_text(struct gui_draw_buffer *buffer, const struct gui_text *text,
     gui_float label_y;
     gui_float label_w;
     gui_float label_h;
+    gui_size text_width;
 
     assert(buffer);
     assert(text);
@@ -740,48 +741,23 @@ gui_widget_text(struct gui_draw_buffer *buffer, const struct gui_text *text,
     if (!buffer || !text || !font)
         return;
 
-    label_x = text->x + text->pad_x;
+    text_width =  gui_font_text_width(font, (const gui_char*)text->text, text->length);
     label_y = text->y + text->pad_y;
-    label_w = MAX(0, text->w - 2 * text->pad_x);
     label_h = MAX(0, text->h - 2 * text->pad_y);
+    if (text->align == GUI_TEXT_LEFT) {
+        label_x = text->x + text->pad_x;
+        label_w = MAX(0, text->w - 2 * text->pad_x);
+    } else if (text->align == GUI_TEXT_CENTERED) {
+        label_w = 2 * text->pad_x + (gui_float)text_width;
+        label_x = text->x + ((text->w/2) - (label_w/2));
+    } else if (text->align ==  GUI_TEXT_RIGHT) {
+        label_x = MAX(text->x, (text->x + text->w) - (2 * text->pad_x + (gui_float)text_width));
+        label_w = (gui_float)text_width + 2 * text->pad_x;
+    }
+
     gui_draw_rectf(buffer, text->x, text->y, text->w, text->h, text->background);
     gui_draw_string(buffer, font, label_x, label_y, label_w, label_h,
                     text->font, (const gui_char*)text->text, text->length);
-}
-
-gui_size
-gui_widget_text_wrap(struct gui_draw_buffer *buffer, const struct gui_text *text,
-    const struct gui_font *font)
-{
-    gui_size len = 0;
-    gui_size lines = 0;
-    gui_size chars = 0;
-
-    gui_float label_x, label_y;
-    gui_float label_w, label_h;
-    gui_float space;
-    if (!buffer || !text || !font)
-        return 0;
-
-    label_x = text->x + text->pad_x;
-    label_y = text->y + text->pad_y;
-    label_w = MAX(0, text->w - 2 * text->pad_x);
-    label_h = MAX(0, text->h - 2 * text->pad_y);
-
-    space = font->height + 2 * text->pad_y;
-    chars = gui_font_chars_in_space(font, (const gui_char*)text->text, text->length, label_w);
-    while (chars && label_h >= space) {
-        lines++;
-        gui_draw_string(buffer, font, label_x, label_y, label_w, space,
-            text->font, (const gui_char*)text->text + len, chars);
-
-        len += chars;
-        label_h -= space;
-        label_y += space;
-        chars = gui_font_chars_in_space(font, (const gui_char*)text->text + chars,
-            text->length - chars, label_w);
-    }
-    return lines;
 }
 
 void
@@ -1775,7 +1751,8 @@ gui_panel_alloc_space(struct gui_rect *bounds, struct gui_panel *panel)
 }
 
 void
-gui_panel_text(struct gui_panel *panel, const char *str, gui_size len)
+gui_panel_text(struct gui_panel *panel, const char *str, gui_size len,
+    enum gui_text_align alignment)
 {
     struct gui_rect bounds;
     struct gui_text text;
@@ -1800,6 +1777,7 @@ gui_panel_text(struct gui_panel *panel, const char *str, gui_size len)
     text.pad_y = config->item_padding.y;
     text.text = str;
     text.length = len;
+    text.align = alignment;
     text.font = config->colors[GUI_COLOR_TEXT];
     text.background = config->colors[GUI_COLOR_PANEL];
     gui_widget_text(panel->out, &text, panel->font);
@@ -2820,8 +2798,9 @@ gui_begin_panel(struct gui_context *ctx, struct gui_panel *panel,
     if (in->mouse_down && in->mouse_clicked && inpanel && cpanel != ctx->active) {
         struct gui_context_panel *iter = cpanel->next;
         while (iter) {
-            if (INBOX(in->mouse_prev.x, in->mouse_prev.y, iter->x, iter->y, iter->w, iter->h))
-                break;
+            if (!iter->panel.minimized)
+                if (INBOX(in->mouse_prev.x, in->mouse_prev.y, iter->x, iter->y, iter->w, iter->h))
+                    break;
             iter = iter->next;
         }
         if (!iter) {
