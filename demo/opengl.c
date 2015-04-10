@@ -209,6 +209,11 @@ main(int argc, char *argv[])
     struct gui_panel *message;
     struct gui_panel *color_panel;
 
+    if (argc < 2) {
+        fprintf(stdout, "missing font file path!\n");
+        exit(EXIT_FAILURE);
+    }
+
     /* Window */
     UNUSED(argc); UNUSED(argv);
     SDL_Init(SDL_INIT_VIDEO);
@@ -238,15 +243,16 @@ main(int argc, char *argv[])
 
     /* Panel */
     gui_default_config(&config);
-    font = mkfont("mono.ttf", 14, 16, 255, GUI_ATLAS_DIM_256);
+    font = mkfont(argv[1], 14, 16, 255, GUI_ATLAS_DIM_256);
     panel = gui_panel_new(ctx, 50, 50, 500, 320, &config, font);
     message = gui_panel_new(ctx, 150, 150, 200, 100, &config, font);
-    color_panel = gui_panel_new(ctx, 250, 250, 400, 260, &config, font);
+    color_panel = gui_panel_new(ctx, 250, 250, 400, 235, &config, font);
 
     running = gui_true;
     while (running) {
         SDL_Event ev;
         started = SDL_GetTicks();
+
         gui_input_begin(&input);
         while (SDL_PollEvent(&ev)) {
             if (ev.type == SDL_WINDOWEVENT) resize(&ev);
@@ -277,7 +283,6 @@ main(int argc, char *argv[])
         glClearColor(120.0f/255.0f, 120.0f/255.0f, 120.0f/255.0f, 120.0f/255.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         draw(width, height, output.list, output.list_size);
-        /*draw_font(font, width, height);*/
         SDL_GL_SwapWindow(win);
 
         /* Timing */
