@@ -6,21 +6,43 @@
 #ifndef GUI_H_
 #define GUI_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define GUI_UTF_SIZE 4
 #define GUI_INPUT_MAX 16
+#define GUI_ATLAS_DEPTH 4
 
+#ifdef GUI_USE_FIXED_TYPES
+#include <stdint.h>
+typedef int32_t gui_int;
+typedef int32_t gui_bool;
+typedef int16_t gui_short;
+typedef int64_t gui_long;
+typedef float gui_float;
+typedef uint32_t gui_uint;
+typedef uint64_t gui_ulong;
+typedef uint32_t gui_flags;
+typedef uint8_t gui_char;
+typedef uint8_t gui_byte;
+typedef uint32_t gui_flag;
+typedef uint64_t gui_size;
+#else
 typedef int gui_int;
-typedef unsigned int gui_uint;
+typedef int gui_bool;
 typedef short gui_short;
 typedef long gui_long;
+typedef float gui_float;
+typedef unsigned int gui_uint;
 typedef unsigned long gui_ulong;
-typedef unsigned int gui_bool;
 typedef unsigned int gui_flags;
 typedef unsigned char gui_char;
-typedef float gui_float;
 typedef unsigned char gui_byte;
 typedef unsigned int gui_flag;
 typedef unsigned long gui_size;
+#endif
+
 typedef gui_char gui_glyph[GUI_UTF_SIZE];
 typedef union {void* dx; gui_uint gl;} gui_texture;
 typedef struct gui_panel gui_tab;
@@ -37,8 +59,27 @@ struct gui_vec2 {gui_float x,y;};
 struct gui_rect {gui_float x,y,w,h;};
 struct gui_key {gui_bool down, clicked;};
 
+#ifdef GUI_USE_FREETYPE_FONT
+enum gui_font_atlas_dimension {
+    GUI_ATLAS_DIM_64 = 64,
+    GUI_ATLAS_DIM_128 = 128,
+    GUI_ATLAS_DIM_256 = 256,
+    GUI_ATLAS_DIM_512 = 512,
+    GUI_ATLAS_DIM_1024 = 1024,
+    GUI_ATLAS_DIM_2048 = 2048,
+    GUI_ATLAS_DIM_4096 = 4095
+};
+
+struct gui_font_atlas {
+    enum gui_font_atlas_dimension dim;
+    gui_size range;
+    gui_size size;
+    gui_byte *memory;
+};
+#endif
+
 struct gui_font_glyph {
-    gui_ulong code;
+    gui_uint code;
     gui_float xadvance;
     gui_short width, height;
     gui_float xoff, yoff;
@@ -50,7 +91,7 @@ struct gui_font {
     gui_float scale;
     gui_texture texture;
     struct gui_vec2 tex_size;
-    gui_long glyph_count;
+    gui_uint glyph_count;
     struct gui_font_glyph *glyphes;
     const struct gui_font_glyph *fallback;
 };
@@ -163,7 +204,7 @@ struct gui_image {
 };
 
 enum gui_button_behavior {
-    GUI_BUTTON_SWITCH,
+    GUI_BUTTON_DEFAULT,
     GUI_BUTTON_REPEATER
 };
 
@@ -368,6 +409,13 @@ void gui_output_begin(struct gui_draw_buffer*, const struct gui_memory*);
 void gui_output_end(struct gui_draw_buffer*, struct gui_draw_call_list*,
                     struct gui_memory_status*);
 
+/* font */
+#ifdef GUI_USE_FREETYPE_FONT
+#define gui_font_atlas_alloc_size(sz) ((sz) * (sz) * GUI_ATLAS_DEPTH)
+gui_bool gui_font_load(struct gui_font*, struct gui_font_atlas*, gui_uint height,
+                    const gui_byte*, gui_size);
+#endif
+
 /* Widgets */
 void gui_widget_text(struct gui_draw_buffer*, const struct gui_text*,
                     const struct gui_font*);
@@ -402,14 +450,14 @@ gui_int gui_widget_plot(struct gui_draw_buffer*, const struct gui_plot*,
 
 /* Panel */
 void gui_default_config(struct gui_config*);
-void gui_panel_init(struct gui_panel*, const struct gui_config*,
-                    const struct gui_font*);
 void gui_panel_show(struct gui_panel*);
 void gui_panel_hide(struct gui_panel*);
+void gui_panel_init(struct gui_panel*, const struct gui_config*, const struct gui_font*);
 gui_bool gui_panel_is_hidden(const struct gui_panel*);
 gui_bool gui_panel_begin(struct gui_panel*, struct gui_draw_buffer*,
                     const struct gui_input*, const char*,
                     gui_float x, gui_float y, gui_float w, gui_float h, gui_flags);
+void gui_panel_end(struct gui_panel*);
 void gui_panel_layout(struct gui_panel*, gui_float height, gui_size cols);
 void gui_panel_seperator(struct gui_panel*, gui_size cols);
 void gui_panel_text(struct gui_panel*, const char *str, gui_size len, enum gui_text_align);
@@ -442,7 +490,6 @@ void gui_panel_group_end(gui_group*, gui_group* tab);
 gui_size gui_panel_shelf_begin(gui_shelf*, gui_shelf *shelf, const char *tabs[],
                     gui_size size, gui_size active);
 void gui_panel_shelf_end(gui_shelf*, gui_shelf *shelf);
-void gui_panel_end(struct gui_panel*);
 
 /* Context */
 struct gui_context;
@@ -456,5 +503,9 @@ struct gui_vec2 gui_get_panel_position(const struct gui_context*, const struct g
 struct gui_vec2 gui_get_panel_size(const struct gui_context*, const struct gui_panel*);
 gui_bool gui_begin_panel(struct gui_context*, struct gui_panel*, const char *title, gui_flags flags);
 void gui_end_panel(struct gui_context*, struct gui_panel*, struct gui_memory_status*);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

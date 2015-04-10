@@ -25,13 +25,58 @@
 
 #include "example.c"
 
-/* functions */
-static void kpress(struct gui_input*, SDL_Event*);
-static void bpress(struct gui_input*, SDL_Event*);
-static void brelease(struct gui_input*, SDL_Event*);
-static void bmotion(struct gui_input*, SDL_Event*);
+static void
+delfont(struct gui_font *font)
+{
+    free(font->glyphes);
+    free(font);
+}
 
-/* gobals */
+static struct gui_font*
+mkfont(const char *path, gui_uint font_height, gui_uint bake_height,
+    gui_size range, enum gui_font_atlas_dimension dim)
+{
+    gui_byte *ttf_blob;
+    gui_size ttf_blob_size;
+    struct gui_font_atlas atlas;
+    struct gui_font *font = calloc(sizeof(struct gui_font), 1);
+
+    atlas.dim = dim;
+    atlas.range = range;
+    atlas.size = gui_font_atlas_alloc_size(atlas.dim);
+    atlas.memory = calloc((gui_size)atlas.size, 1);
+
+    memset(font, 0, sizeof(*font));
+    font->glyph_count = (gui_uint)atlas.range;
+    font->glyphes = calloc(atlas.range, sizeof(struct gui_font_glyph));
+    font->fallback = &font->glyphes['?'];
+    font->scale = (gui_float)font_height / (gui_float)bake_height;
+    font->height = (gui_float)font_height;
+
+    ttf_blob = (gui_byte*)ldfile(path, &ttf_blob_size);
+    if (!gui_font_load(font, &atlas, bake_height, ttf_blob, ttf_blob_size))
+        goto failed;
+
+    glGenTextures(1, &font->texture.gl);
+    glBindTexture(GL_TEXTURE_2D, font->texture.gl);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, dim, dim, 0,
+            GL_RGBA, GL_UNSIGNED_BYTE, atlas.memory);
+
+    free(atlas.memory);
+    free(ttf_blob);
+    return font;
+
+failed:
+    free(atlas.memory);
+    free(ttf_blob);
+    delfont(font);
+    return NULL;
+}
+
 static void
 key(struct gui_input *in, SDL_Event* e, gui_bool down)
 {
@@ -143,6 +188,52 @@ draw(int width, int height, struct gui_draw_call_list **list, gui_size count)
     glPopAttrib();
 }
 
+static void
+draw_font(struct gui_font *font, int width, int height)
+{
+    glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_TRANSFORM_BIT);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_SCISSOR_TEST);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glEnableClientState(GL_COLOR_ARRAY);
+    glEnable(GL_TEXTURE_2D);
+
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    glOrtho(0.0f, width, height, 0.0f, 0.0f, 1.0f);
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, font->texture.gl);
+    glBegin(GL_QUADS);
+    glTexCoord2f(0,0);
+    glVertex2f(0, 0);
+    glTexCoord2f(0,1);
+    glVertex2f(0, 250);
+    glTexCoord2f(1,1);
+    glVertex2f(250, 250);
+    glTexCoord2f(1,0);
+    glVertex2f(250, 0);
+    glEnd();
+    glDisable(GL_TEXTURE_2D);
+
+    glDisableClientState(GL_COLOR_ARRAY);
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glPopAttrib();
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -151,37 +242,29 @@ main(int argc, char *argv[])
     gui_bool running;
     SDL_Window *win;
     SDL_GLContext glContext;
+    struct color_picker picker;
+    struct demo demo;
 
     struct gui_memory memory;
     struct gui_config config;
+    struct gui_font *font;
     struct gui_input input;
     struct gui_output output;
-    struct gui_font *font;
     struct gui_context *ctx;
     struct gui_panel *panel;
     struct gui_panel *message;
     struct gui_panel *color_panel;
-    struct demo demo;
-    struct color_picker picker;
 
     /* Window */
     UNUSED(argc); UNUSED(argv);
     SDL_Init(SDL_INIT_VIDEO);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    win = SDL_CreateWindow("clone",
-        0, 0, WIN_WIDTH, WIN_HEIGHT, SDL_WINDOW_OPENGL|SDL_WINDOW_SHOWN);
+    win = SDL_CreateWindow("clone", 0, 0,
+        WIN_WIDTH, WIN_HEIGHT, SDL_WINDOW_OPENGL|SDL_WINDOW_SHOWN);
     glContext = SDL_GL_CreateContext(win);
     glViewport(0, 0, WIN_WIDTH, WIN_HEIGHT);
 
     /* GUI */
-    memset(&input, 0, sizeof(input));
-    memory.max_panels = 8;
-    memory.max_depth = 4;
-    memory.memory = calloc(MAX_MEMORY , 1);
-    memory.size = MAX_MEMORY;
-    memory.vertex_percentage = 0.80f;
-    memory.command_percentage = 0.19f;
-
     memset(&demo, 0, sizeof(demo));
     memset(&picker, 0, sizeof(picker));
     demo.tab.minimized = gui_true;
@@ -189,16 +272,22 @@ main(int argc, char *argv[])
     demo.slider = 2.0f;
     demo.prog = 60;
 
-    font = ldfont("mono.sdf", 16);
+    /* Context */
+    memset(&input, 0, sizeof(input));
+    memory.max_panels = 8;
+    memory.max_depth = 4;
+    memory.memory = calloc(MAX_MEMORY , 1);
+    memory.size = MAX_MEMORY;
+    memory.vertex_percentage = 0.80f;
+    memory.command_percentage = 0.19f;
     ctx = gui_new(&memory, &input);
+
+    /* Panel */
     gui_default_config(&config);
-    config.colors[GUI_COLOR_TEXT].r = 255;
-    config.colors[GUI_COLOR_TEXT].g = 255;
-    config.colors[GUI_COLOR_TEXT].b = 255;
-    config.colors[GUI_COLOR_TEXT].a = 255;
+    font = mkfont("mono.ttf", 14, 16, 255, GUI_ATLAS_DIM_256);
     panel = gui_panel_new(ctx, 50, 50, 500, 320, &config, font);
     message = gui_panel_new(ctx, 150, 150, 200, 100, &config, font);
-    color_panel = gui_panel_new(ctx, 250, 250, 400, 250, &config, font);
+    color_panel = gui_panel_new(ctx, 250, 250, 400, 260, &config, font);
 
     running = gui_true;
     while (running) {
@@ -213,7 +302,7 @@ main(int argc, char *argv[])
             else if (ev.type == SDL_KEYDOWN) key( &input, &ev, gui_true);
             else if (ev.type == SDL_KEYUP) key(&input, &ev, gui_false);
             else if (ev.type == SDL_TEXTINPUT) text(&input, &ev);
-            else if (ev.type == SDL_QUIT) running = gui_false;
+            else if (ev.type == SDL_QUIT) goto cleanup;
         }
         gui_input_end(&input);
         SDL_GetWindowSize(win, &width, &height);
@@ -222,7 +311,7 @@ main(int argc, char *argv[])
         gui_begin(ctx, (gui_float)width, (gui_float)height);
         running = demo_panel(ctx, panel, &demo);
         if (message_panel(ctx, message) >= 0)
-            fprintf(stdout, "message closed\n");
+            running = gui_false;
         if (color_picker_panel(ctx, color_panel, &picker) >= 0) {
             struct gui_color c = picker.color;
             fprintf(stdout, "color picked: {%u, %u, %u, %u}\n", c.r, c.g, c.b, c.a);
@@ -234,6 +323,7 @@ main(int argc, char *argv[])
         glClearColor(120.0f/255.0f, 120.0f/255.0f, 120.0f/255.0f, 120.0f/255.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         draw(width, height, output.list, output.list_size);
+        /*draw_font(font, width, height);*/
         SDL_GL_SwapWindow(win);
 
         /* Timing */
@@ -243,6 +333,7 @@ main(int argc, char *argv[])
     }
 
     /* Cleanup */
+cleanup:
     free(memory.memory);
     delfont(font);
     SDL_GL_DeleteContext(glContext);
