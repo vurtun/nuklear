@@ -188,52 +188,6 @@ draw(int width, int height, struct gui_draw_call_list **list, gui_size count)
     glPopAttrib();
 }
 
-static void
-draw_font(struct gui_font *font, int width, int height)
-{
-    glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_TRANSFORM_BIT);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDisable(GL_CULL_FACE);
-    glDisable(GL_DEPTH_TEST);
-    glEnable(GL_SCISSOR_TEST);
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    glEnableClientState(GL_COLOR_ARRAY);
-    glEnable(GL_TEXTURE_2D);
-
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix();
-    glLoadIdentity();
-    glOrtho(0.0f, width, height, 0.0f, 0.0f, 1.0f);
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix();
-    glLoadIdentity();
-
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, font->texture.gl);
-    glBegin(GL_QUADS);
-    glTexCoord2f(0,0);
-    glVertex2f(0, 0);
-    glTexCoord2f(0,1);
-    glVertex2f(0, 250);
-    glTexCoord2f(1,1);
-    glVertex2f(250, 250);
-    glTexCoord2f(1,0);
-    glVertex2f(250, 0);
-    glEnd();
-    glDisable(GL_TEXTURE_2D);
-
-    glDisableClientState(GL_COLOR_ARRAY);
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glMatrixMode(GL_MODELVIEW);
-    glPopMatrix();
-    glMatrixMode(GL_PROJECTION);
-    glPopMatrix();
-    glPopAttrib();
-}
-
 int
 main(int argc, char *argv[])
 {
