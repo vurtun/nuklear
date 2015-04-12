@@ -215,7 +215,6 @@ main(int argc, char *argv[])
     }
 
     /* Window */
-    UNUSED(argc); UNUSED(argv);
     SDL_Init(SDL_INIT_VIDEO);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     win = SDL_CreateWindow("clone", 0, 0,
@@ -238,12 +237,12 @@ main(int argc, char *argv[])
     memory.memory = calloc(MAX_MEMORY , 1);
     memory.size = MAX_MEMORY;
     memory.vertex_percentage = 0.80f;
-    memory.command_percentage = 0.19f;
+    memory.command_percentage = 0.20f;
     ctx = gui_new(&memory, &input);
 
     /* Panel */
     gui_default_config(&config);
-    font = mkfont(argv[1], 14, 16, 255, GUI_ATLAS_DIM_256);
+    font = mkfont(argv[1], 12, 16, 255, GUI_ATLAS_DIM_256);
     panel = gui_panel_new(ctx, 50, 50, 500, 320, &config, font);
     message = gui_panel_new(ctx, 150, 150, 200, 100, &config, font);
     color_panel = gui_panel_new(ctx, 250, 250, 400, 235, &config, font);
@@ -291,8 +290,8 @@ main(int argc, char *argv[])
             SDL_Delay(DTIME - dt);
     }
 
-    /* Cleanup */
 cleanup:
+    /* Cleanup */
     free(memory.memory);
     delfont(font);
     SDL_GL_DeleteContext(glContext);

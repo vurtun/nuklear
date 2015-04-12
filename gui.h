@@ -396,6 +396,13 @@ struct gui_panel {
     const struct gui_config *config;
 };
 
+/* font */
+#ifdef GUI_USE_FREETYPE_FONT
+#define gui_font_atlas_alloc_size(sz) ((sz) * (sz) * GUI_ATLAS_DEPTH)
+gui_bool gui_font_load(struct gui_font*, struct gui_font_atlas*, gui_uint height,
+                    const gui_byte*, gui_size);
+#endif
+
 /* Input */
 void gui_input_begin(struct gui_input*);
 void gui_input_motion(struct gui_input*, gui_int x, gui_int y);
@@ -408,13 +415,6 @@ void gui_input_end(struct gui_input*);
 void gui_output_begin(struct gui_draw_buffer*, const struct gui_memory*);
 void gui_output_end(struct gui_draw_buffer*, struct gui_draw_call_list*,
                     struct gui_memory_status*);
-
-/* font */
-#ifdef GUI_USE_FREETYPE_FONT
-#define gui_font_atlas_alloc_size(sz) ((sz) * (sz) * GUI_ATLAS_DEPTH)
-gui_bool gui_font_load(struct gui_font*, struct gui_font_atlas*, gui_uint height,
-                    const gui_byte*, gui_size);
-#endif
 
 /* Widgets */
 void gui_widget_text(struct gui_draw_buffer*, const struct gui_text*,
