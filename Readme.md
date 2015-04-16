@@ -27,20 +27,6 @@ over the panel management and therefore needs the most amount of internal state.
 Each higher level level of astraction uses the lower level(s) internally to build
 on but offers mostly a different API.
 
-### Widgets
-
-### Panels
-
-### Context
-
-## Memory
-
-## Input
-
-## Output
-
-## Font
-
 ## Configuration
 While the widgets layer offers the most configuration and even expects you to
 configure each and every widget, the upper levels provide you with a basic set of
@@ -48,30 +34,11 @@ configurable attributes like color, padding and spacing.
 
 ## FAQ
 
-### Is this project stable?
-The basic API is stable while the needed backend may change. For example the draw
-command backend will probably be changed to support primitives instead of
-just using triangles with textures. Which would simplify the library a whole lot
-while providing more freedom and control to the user.
-
 ### Where is widget X?
 A number of basic widgets are provided but some of the more complex widgets like
 comboboxes, tables and tree views are not yet implemented. Maybe if I have more
 time I will look into adding them, except for comboboxes which are just
 discusting to implement.
-
-### Why should I use this library over ImGui
-You probably shouldn't since ImGui provides a lot more features, better
-support and more polish. That being said ImGui is C++ and not C and
-therefore for people who exclusivly only use C not interesting. Furthermore
-while ImGui provides a way more bloat free expierence than most classic
-non immediate mode GUIs, it still focuses on unneeded global hidden state.
-And finally the biggest difference between this project and ImGui is the
-flexible selection of abstraction provided by this project. That beeing said I
-still think the ImGui team did a great job of providing a good
-immedate mode GUI that I don't activily try compete against since the
-contributors of ImGUI are a.) alot more contributers and b.) probably have more
-programming expierence than I do.
 
 ### Why did you use ANSI C and not C99 or C++?
 Personally I stay out of all "discussions" about C vs C++ since they are totally
@@ -92,12 +59,6 @@ and therefore does not provide me with fixed size types that I need . Therefore
 I defined my own types which need to be set to the correct size for each
 plaform. But if your development environment provides the header you can define
 `GUI_USE_FIXED_SIZE_TYPES` to directly use the correct types.
-
-### Why do you use Freetype? I thought there are no direct dependencies?
-Freefont is no direct dependency and is only used if you specifically import
-the library by defining `GUI_USE_FRETYPE_FONT`. The main reason I even added
-freetype was to have a basic easy way to test out the library without having to
-manage font handling.
 
 ## References
 - [Tutorial from Jari Komppa about imgui libraries](http://www.johno.se/book/imgui.html)

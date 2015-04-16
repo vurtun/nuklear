@@ -12,7 +12,7 @@
 
 /* macros */
 #define MAX_BUFFER 64
-#define MAX_MEMORY (8 * 1024)
+#define MAX_MEMORY (16 * 1024)
 #define MAX_DEPTH   8
 #define MAX_PANEL   4
 #define WIN_WIDTH   800
@@ -457,8 +457,6 @@ demo_panel(struct gui_context *ctx, struct gui_panel *panel, struct demo *demo)
     demo->item_cur = gui_panel_selector(&demo->group, items, LEN(items), demo->item_cur);
     demo->in_act = gui_panel_input(&demo->group, demo->in_buf, &demo->in_len,
                         MAX_BUFFER, GUI_INPUT_DEFAULT, demo->in_act);
-    demo->in_act = gui_panel_input(&demo->group, demo->in_buf, &demo->in_len,
-                    MAX_BUFFER, GUI_INPUT_DEFAULT, demo->in_act);
     if (gui_panel_shell(&demo->group, demo->cmd_buf, &demo->cmd_len, MAX_BUFFER, &demo->cmd_act))
         fprintf(stdout, "shell executed!\n");
     gui_panel_group_end(panel, &demo->group);
@@ -525,10 +523,11 @@ main(int argc, char *argv[])
     panel = gui_new_panel(ctx, 50, 50, 500, 320, &config, &font);
 
     memset(&demo, 0, sizeof(demo));
-    demo.tab.minimized = gui_true;
+    demo.tab.minimized = gui_false;
     demo.spinner = 250;
     demo.slider = 2.0f;
     demo.prog = 60;
+    demo.current = 1;
 
     while (running) {
         /* Input */
