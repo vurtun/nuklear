@@ -15,8 +15,8 @@ WORK IN PROGRESS: I do not garantee that anything works right now
 - UTF-8 supported
 
 ## Limitation
-- It is NOT provide platform indepenedent window management
-- It is NOT provide platform independent input handling
+- It does NOT provide platform indepenedent window management
+- It does NOT provide platform independent input handling
 - It does NOT provide a renderer backend
 - it does NOT implement a font library
 - Summary: It is only responsible for the actual user interface
