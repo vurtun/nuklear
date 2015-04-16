@@ -18,7 +18,7 @@ WORK IN PROGRESS: I do not garantee that anything works right now
 - Does NOT provide platform independent window management
 - Does NOT provide platform independent input handling
 - Does NOT provide a renderer backend
-- Does NOT implement a font library
+- Does NOT implement a font library  
 Summary: It is only responsible for the actual user interface
 
 ## Layer
