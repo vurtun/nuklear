@@ -363,18 +363,20 @@ static void*
 gui_buffer_push(struct gui_command_buffer *buffer, enum gui_command_type type,
     gui_size size)
 {
+    gui_size alignment;
     void *unaligned;
     const gui_size align = ALIGNOF(struct gui_command);
     struct gui_command_list *list = &buffer->cmds;
     struct gui_command *cmd;
     list->needed += size;
-    if (size > list->capacity) return NULL;
+    if ((list->size + size) > list->capacity) return NULL;
 
     cmd = list->end;
     unaligned = (gui_byte*)list->end + size;
     list->end = ALIGN(unaligned, align);
-    list->capacity -= size;
-    list->size += size;
+    alignment = (gui_size)((gui_byte*)list->end - (gui_byte*)unaligned);
+    list->size += size + alignment;
+    list->needed += alignment;
     list->count++;
 
     cmd->type = type;
@@ -1929,7 +1931,7 @@ gui_panel_shell(struct gui_panel *panel, gui_char *buffer, gui_size *length,
     button.content = config->colors[GUI_COLOR_TEXT];
     button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
     button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
-    if (gui_widget_button_text(panel->out, &button, "Submit", 6, &panel->font, panel->in )) {
+    if (gui_widget_button_text(panel->out, &button, "Submit", 6, &panel->font, panel->in)) {
         submit = *length;
         *length = 0;
     }
@@ -2597,8 +2599,8 @@ gui_begin_panel(struct gui_context *ctx, struct gui_panel *panel,
     global = &ctx->global_buffer;
     out = &ctx->current_buffer;
     out->cmds.begin = global->cmds.end;
-    out->cmds.end = global->cmds.begin;
-    out->cmds.capacity = global->cmds.capacity;
+    out->cmds.end = out->cmds.begin;
+    out->cmds.capacity = global->cmds.capacity - global->cmds.size;
     out->cmds.count = 0;
     out->cmds.needed = 0;
     out->cmds.size = 0;
@@ -2637,7 +2639,6 @@ gui_end_panel(struct gui_context *ctx, struct gui_panel *panel,
 
     global = &ctx->global_buffer;
     global->cmds.count += ctx->current_buffer.cmds.count;
-    global->cmds.capacity += ctx->current_buffer.cmds.capacity;
     global->cmds.needed += ctx->current_buffer.cmds.needed;
     global->cmds.size += ctx->current_buffer.cmds.size;
     global->cmds.end = ctx->current_buffer.cmds.end;
