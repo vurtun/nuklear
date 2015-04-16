@@ -1913,8 +1913,8 @@ gui_panel_spinner(struct gui_panel *panel, gui_int min, gui_int *value,
 
     button.y = bounds.y;
     button.h = bounds.h / 2;
-    button.w = bounds.h - config->item_padding.x + 1;
-    button.x = bounds.x + bounds.w - button.w - 1;
+    button.w = bounds.h - config->item_padding.x;
+    button.x = bounds.x + bounds.w - button.w;
     button.border = 1;
     button.pad_x = MAX(3, button.h - panel->font.height);
     button.pad_y = MAX(3, button.h - panel->font.height);
@@ -1985,8 +1985,8 @@ gui_panel_selector(struct gui_panel *panel, const char *items[],
     button.border = 1;
     button.y = bounds.y;
     button.h = bounds.h / 2;
-    button.w = bounds.h - config->item_padding.x + 1;
-    button.x = bounds.x + bounds.w - button.w - 1;
+    button.w = bounds.h - config->item_padding.x;
+    button.x = bounds.x + bounds.w - button.w;
     button.pad_x = MAX(3, button.h - panel->font.height);
     button.pad_y = MAX(3, button.h - panel->font.height);
     button.behavior = GUI_BUTTON_DEFAULT;

@@ -103,8 +103,7 @@ static long
 timestamp(void)
 {
     struct timeval tv;
-    if (gettimeofday(&tv, NULL) < 0)
-        return 0;
+    if (gettimeofday(&tv, NULL) < 0) return 0;
     return (long)((long)tv.tv_sec * 1000 + (long)tv.tv_usec/1000);
 }
 
@@ -137,10 +136,8 @@ surface_create(Display *dpy,  int screen, Window root, unsigned int w, unsigned 
 static void
 surface_resize(XSurface *surf, unsigned int w, unsigned int h) {
     if(!surf) return;
-    surf->w = w;
-    surf->h = h;
-    if(surf->drawable)
-        XFreePixmap(surf->dpy, surf->drawable);
+    surf->w = w; surf->h = h;
+    if(surf->drawable) XFreePixmap(surf->dpy, surf->drawable);
     surf->drawable = XCreatePixmap(surf->dpy, surf->root, w, h,
         (unsigned int)DefaultDepth(surf->dpy, surf->screen));
 }
@@ -469,6 +466,17 @@ demo_panel(struct gui_context *ctx, struct gui_panel *panel, struct demo *demo)
     return running;
 }
 
+static void
+message_panel(struct gui_context *ctx, struct gui_panel *panel)
+{
+    gui_int ret = -1;
+    gui_begin_panel(ctx, panel, "Error", GUI_PANEL_MOVEABLE|GUI_PANEL_BORDER);
+    gui_panel_layout(panel, 30, 2);
+    if (gui_panel_button_text(panel, "ok", GUI_BUTTON_DEFAULT)) ret = 1;
+    if (gui_panel_button_text(panel, "cancel", GUI_BUTTON_DEFAULT)) ret = 0;
+    gui_end_panel(ctx, panel, NULL);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -483,6 +491,7 @@ main(int argc, char *argv[])
     struct gui_memory memory;
     struct gui_font font;
     struct gui_panel *panel;
+    struct gui_panel *message;
     struct gui_context *ctx;
     struct gui_output output;
 
@@ -525,6 +534,7 @@ main(int argc, char *argv[])
     font.width = font_get_text_width;
     gui_default_config(&config);
     panel = gui_new_panel(ctx, 50, 50, 400, 300, &config, &font);
+    message = gui_new_panel(ctx, 150, 150, 200, 100, &config, &font);
 
     memset(&demo, 0, sizeof(demo));
     demo.tab.minimized = gui_true;
@@ -552,6 +562,7 @@ main(int argc, char *argv[])
         /* GUI */
         gui_begin(ctx, (gui_float)xw.width, (gui_float)xw.height);
         running = demo_panel(ctx, panel, &demo);
+        message_panel(ctx, message);
         gui_end(ctx, &output, NULL);
 
         /* Draw */

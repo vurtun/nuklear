@@ -1,6 +1,6 @@
 # GUI
 
-WORK IN PROGRESS: I do not garantee that anything works right now
+WORK IN PROGRESS: I do not garantee that everything works right now
 
 ## Features
 - Immediate mode graphical user interface toolkit
@@ -74,8 +74,8 @@ plaform. But if your development environment provides the header file you can de
 - [Tutorial from Jari Komppa about imgui libraries](http://www.johno.se/book/imgui.html)
 - [Johannes 'johno' Norneby's article](http://iki.fi/sol/imgui/)
 - [Casey Muratori's original introduction to imgui's](http:://mollyrocket.com/861?node=861)
-- [Casey Muratori's imgui Panel design 1/2](http://mollyrocket.com/casey/stream_0019.html)
-- [Casey Muratori's imgui Panel design 2/2](http://mollyrocket.com/casey/stream_0020.html)
+- [Casey Muratori's imgui panel design 1/2](http://mollyrocket.com/casey/stream_0019.html)
+- [Casey Muratori's imgui panel design 2/2](http://mollyrocket.com/casey/stream_0020.html)
 - [ImGui: The inspiration for this project](https://github.com/ocornut/imgui)
 
 # License
