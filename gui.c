@@ -393,6 +393,7 @@ gui_buffer_push_clip(struct gui_command_buffer *buffer, const struct gui_rect *r
         return gui_false;
 
     cmd = gui_buffer_push(buffer, GUI_COMMAND_CLIP, sizeof(*cmd));
+    if (!cmd) return gui_false;
     clip = unify(rect, (!buffer->clip_size) ? &null_rect : &buffer->clips[buffer->clip_size-1]);
     buffer->clips[buffer->clip_size] = clip;
     buffer->clip_size++;
@@ -419,6 +420,7 @@ gui_buffer_pop_clip(struct gui_command_buffer *buffer)
 
     clip = (!buffer->clip_size) ? &null_rect : &buffer->clips[buffer->clip_size-1];
     cmd = gui_buffer_push(buffer, GUI_COMMAND_CLIP, sizeof(*cmd));
+    if (!cmd) return;
     cmd->x = clip->x;
     cmd->y = clip->y;
     cmd->w = clip->w;
@@ -740,8 +742,8 @@ gui_widget_toggle(struct gui_command_buffer *buffer, const struct gui_toggle *to
     select_y = toggle->y + toggle->pad_y;
     select_size = font->height + 2 * toggle->pad_y;
 
-    cursor_pad = select_size / 8;
-    cursor_size = select_size - 2 * cursor_pad;
+    cursor_pad = (gui_float)(gui_int)(select_size / 8);
+    cursor_size = select_size - cursor_pad * 2;
     cursor_x = select_x + cursor_pad;
     cursor_y = select_y + cursor_pad;
 
@@ -757,8 +759,8 @@ gui_widget_toggle(struct gui_command_buffer *buffer, const struct gui_toggle *to
             gui_buffer_push_rect(buffer, cursor_x, cursor_y, cursor_size, cursor_size,
                 toggle->foreground);
     } else {
-        select_x += select_size/2;
-        select_y += select_size/2;
+        select_x += select_size / 2;
+        select_y += select_size / 2;
         gui_buffer_push_circle(buffer, select_x, select_y, select_size/2, toggle->background);
         if (toggle_active) {
             cursor_x += cursor_size / 2;
@@ -939,8 +941,8 @@ gui_buffer_input(gui_char *buffer, gui_size length, gui_size max,
 
 gui_bool
 gui_widget_input(struct gui_command_buffer *buf,  gui_char *buffer, gui_size *length,
-    const struct gui_input_field *input,
-    const struct gui_font *font, const struct gui_input *in)
+    const struct gui_input_field *input, const struct gui_font *font,
+    const struct gui_input *in)
 {
     gui_float input_w, input_h;
     gui_bool input_active;
@@ -997,10 +999,10 @@ gui_widget_input(struct gui_command_buffer *buf,  gui_char *buffer, gui_size *le
         label_y = input->y + input->pad_y;
         label_h = input_h - 2 * input->pad_y;
         gui_buffer_push_text(buf, font->user, label_x, label_y, label_w, label_h,
-            &buffer[offset], text_len, input->background, input->font);
+            &buffer[offset], text_len, input->foreground, input->font);
         if (input_active && input->show_cursor) {
             gui_buffer_push_rect(buf,  label_x + (gui_float)text_width, label_y,
-                (gui_float)cursor_width, label_h, input->foreground);
+                (gui_float)cursor_width, label_h, input->background);
         }
     }
     return input_active;
@@ -1934,7 +1936,7 @@ gui_panel_shell(struct gui_panel *panel, gui_char *buffer, gui_size *length,
 
     field.w = field.w - button.w;
     *active = gui_widget_input(panel->out, (gui_char*)buffer, length, &field,
-            &panel->font, panel->in);
+                    &panel->font, panel->in);
     if (!submit && active && panel->in) {
         const struct gui_key *enter = &panel->in->keys[GUI_KEY_ENTER];
         if ((enter->down && enter->clicked)) {
@@ -2023,7 +2025,6 @@ gui_panel_selector(struct gui_panel *panel, const char *items[],
     gui_float label_x, label_y;
     gui_float label_w, label_h;
 
-    struct gui_color color;
     struct gui_rect bounds;
     struct gui_button button;
     const struct gui_config *config;
@@ -2042,9 +2043,9 @@ gui_panel_selector(struct gui_panel *panel, const char *items[],
     config = panel->config;
 
     gui_buffer_push_rect(panel->out, bounds.x, bounds.y, bounds.w, bounds.h,
-            config->colors[GUI_COLOR_SELECTOR]);
-    gui_buffer_push_rect(panel->out, bounds.x, bounds.y, bounds.w, bounds.h,
             config->colors[GUI_COLOR_SELECTOR_BORDER]);
+    gui_buffer_push_rect(panel->out, bounds.x + 1, bounds.y + 1, bounds.w - 2, bounds.h - 2,
+            config->colors[GUI_COLOR_SELECTOR]);
 
     button.y = bounds.y;
     button.h = bounds.h / 2;
@@ -2053,7 +2054,6 @@ gui_panel_selector(struct gui_panel *panel, const char *items[],
     button.border = 1;
     button.pad_x = MAX(3, button.h - panel->font.height);
     button.pad_y = MAX(3, button.h - panel->font.height);
-    button.behavior = GUI_BUTTON_DEFAULT;
     button.behavior = GUI_BUTTON_DEFAULT;
     button.background = config->colors[GUI_COLOR_BUTTON];
     button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
@@ -2071,10 +2071,9 @@ gui_panel_selector(struct gui_panel *panel, const char *items[],
     label_w = bounds.w - (button.w + 2 * config->item_padding.x);
     label_h = bounds.h - 2 * config->item_padding.y;
     text_len = strsiz(items[item_current]);
-    color = config->colors[GUI_COLOR_TEXT];
-    gui_buffer_push_text(panel->out, &panel->font, label_x, label_y, label_w, label_h,
+    gui_buffer_push_text(panel->out, panel->font.user, label_x, label_y, label_w, label_h,
                     (const gui_char*)items[item_current], text_len,
-                    config->colors[GUI_COLOR_PANEL], color);
+                    config->colors[GUI_COLOR_PANEL], config->colors[GUI_COLOR_TEXT]);
     return item_current;
 }
 

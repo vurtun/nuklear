@@ -204,7 +204,7 @@ surface_draw_text(XSurface *surf, XFont *font, int x, int y, unsigned int w, uns
     int i, tx, ty, th, olen;
     XSetForeground(surf->dpy, surf->gc, bg);
     XFillRectangle(surf->dpy, surf->drawable, surf->gc, x, y, w, h);
-    if(!text || !font) return;
+    if(!text || !font || !len) return;
 
     th = font->ascent + font->descent;
     ty = y + ((int)h / 2) - (th / 2) + font->ascent;
@@ -454,6 +454,13 @@ demo_panel(struct gui_context *ctx, struct gui_panel *panel, struct demo *demo)
     demo->check = gui_panel_check(&demo->group, "advanced", demo->check);
     demo->slider = gui_panel_slider(&demo->group, 0, demo->slider, 10, 1.0f);
     demo->prog = gui_panel_progress(&demo->group, demo->prog, 100, gui_true);
+    demo->item_cur = gui_panel_selector(&demo->group, items, LEN(items), demo->item_cur);
+    demo->in_act = gui_panel_input(&demo->group, demo->in_buf, &demo->in_len,
+                        MAX_BUFFER, GUI_INPUT_DEFAULT, demo->in_act);
+    demo->in_act = gui_panel_input(&demo->group, demo->in_buf, &demo->in_len,
+                    MAX_BUFFER, GUI_INPUT_DEFAULT, demo->in_act);
+    if (gui_panel_shell(&demo->group, demo->cmd_buf, &demo->cmd_len, MAX_BUFFER, &demo->cmd_act))
+        fprintf(stdout, "shell executed!\n");
     gui_panel_group_end(panel, &demo->group);
 
     gui_end_panel(ctx, panel, NULL);
