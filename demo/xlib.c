@@ -318,6 +318,11 @@ key(struct XWindow *xw, struct gui_input *in, XEvent *evt, gui_bool down)
         gui_input_key(in, GUI_KEY_SPACE, down);
     else if (*code == XK_BackSpace)
         gui_input_key(in, GUI_KEY_BACKSPACE, down);
+    else if (*code > 32 && *code < 128 && !down) {
+        gui_glyph glyph;
+        glyph[0] = (gui_char)*code;
+        gui_input_char(in, glyph);
+    }
     XFree(code);
 }
 
@@ -428,7 +433,7 @@ demo_panel(struct gui_context *ctx, struct gui_panel *panel, struct demo *demo)
     /* Tabs */
     gui_panel_layout(panel, 100, 1);
     gui_panel_tab_begin(panel, &demo->tab, "Difficulty");
-    gui_panel_layout(&demo->tab, 30, 2);
+    gui_panel_layout(&demo->tab, 30, 1);
     if (gui_panel_option(&demo->tab, "easy", demo->option == 0)) demo->option = 0;
     if (gui_panel_option(&demo->tab, "hard", demo->option == 1)) demo->option = 1;
     if (gui_panel_option(&demo->tab, "normal", demo->option == 2)) demo->option = 2;
@@ -455,10 +460,9 @@ demo_panel(struct gui_context *ctx, struct gui_panel *panel, struct demo *demo)
     demo->slider = gui_panel_slider(&demo->group, 0, demo->slider, 10, 1.0f);
     demo->prog = gui_panel_progress(&demo->group, demo->prog, 100, gui_true);
     demo->item_cur = gui_panel_selector(&demo->group, items, LEN(items), demo->item_cur);
+    demo->spin_act = gui_panel_spinner(&demo->group, 0, &demo->spinner, 250, 10, demo->spin_act);
     demo->in_act = gui_panel_input(&demo->group, demo->in_buf, &demo->in_len,
                         MAX_BUFFER, GUI_INPUT_DEFAULT, demo->in_act);
-    if (gui_panel_shell(&demo->group, demo->cmd_buf, &demo->cmd_len, MAX_BUFFER, &demo->cmd_act))
-        fprintf(stdout, "shell executed!\n");
     gui_panel_group_end(panel, &demo->group);
 
     gui_end_panel(ctx, panel, NULL);
@@ -520,11 +524,11 @@ main(int argc, char *argv[])
     font.height = (gui_float)xfont->height;
     font.width = font_get_text_width;
     gui_default_config(&config);
-    panel = gui_new_panel(ctx, 50, 50, 500, 320, &config, &font);
+    panel = gui_new_panel(ctx, 50, 50, 400, 300, &config, &font);
 
     memset(&demo, 0, sizeof(demo));
-    demo.tab.minimized = gui_false;
-    demo.spinner = 250;
+    demo.tab.minimized = gui_true;
+    demo.spinner = 100;
     demo.slider = 2.0f;
     demo.prog = 60;
     demo.current = 1;

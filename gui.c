@@ -1001,7 +1001,7 @@ gui_widget_input(struct gui_command_buffer *buf,  gui_char *buffer, gui_size *le
         label_y = input->y + input->pad_y;
         label_h = input_h - 2 * input->pad_y;
         gui_buffer_push_text(buf, font->user, label_x, label_y, label_w, label_h,
-            &buffer[offset], text_len, input->foreground, input->font);
+            &buffer[offset], text_len, input->foreground, input->background);
         if (input_active && input->show_cursor) {
             gui_buffer_push_rect(buf,  label_x + (gui_float)text_width, label_y,
                 (gui_float)cursor_width, label_h, input->background);
@@ -1174,6 +1174,7 @@ gui_widget_scroll(struct gui_command_buffer *buffer, const struct gui_scroll *sc
     button.background = scroll->foreground;
     button.foreground =  scroll->background;
     button.highlight = scroll->foreground;
+    button.highlight_content = scroll->background;
     button.behavior = GUI_BUTTON_DEFAULT;
     button_up_pressed = gui_widget_button_triangle(buffer, &button, GUI_UP, in);
     button.y = scroll->y + scroll_h - button.h;
@@ -1881,74 +1882,6 @@ gui_panel_input(struct gui_panel *panel, gui_char *buffer, gui_size *length,
     return gui_widget_input(panel->out, buffer, length, &field, &panel->font, panel->in);
 }
 
-gui_size
-gui_panel_shell(struct gui_panel *panel, gui_char *buffer, gui_size *length,
-    gui_size max, gui_bool *active)
-{
-    struct gui_rect bounds;
-    gui_size submit = 0;
-    gui_size space = 0;
-    struct gui_button button;
-    struct gui_input_field field;
-    const struct gui_config *config;
-
-    assert(panel);
-    assert(panel->config);
-    assert(panel->out);
-    assert(buffer);
-    assert(length);
-    assert(active);
-
-    if (!panel || !panel->config || !panel->out) return 0;
-    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return 0;
-    gui_panel_alloc_space(&bounds, panel);
-    config = panel->config;
-
-    field.x = bounds.x;
-    field.y = bounds.y;
-    field.w = bounds.w;
-    field.h = bounds.h;
-    field.pad_x = config->item_padding.x;
-    field.pad_y = config->item_padding.y;
-    field.max  = max;
-    field.filter = GUI_INPUT_DEFAULT;
-    field.active = *active;
-    field.font = config->colors[GUI_COLOR_TEXT];
-    field.background = config->colors[GUI_COLOR_INPUT];
-    field.foreground = config->colors[GUI_COLOR_INPUT_BORDER];
-
-    space = panel->font.width(panel->font.user, (const gui_char*)"Submit", 6);
-    button.y = field.y;
-    button.h = field.h;
-    button.w = (gui_float)space + 2 * field.pad_x - 1;
-    button.x = field.x + field.w - button.w + 1;
-    button.pad_x = field.pad_x;
-    button.pad_y = field.pad_y;
-    button.border = 1;
-    button.behavior = GUI_BUTTON_DEFAULT;
-    button.background = config->colors[GUI_COLOR_BUTTON];
-    button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
-    button.content = config->colors[GUI_COLOR_TEXT];
-    button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
-    button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
-    if (gui_widget_button_text(panel->out, &button, "Submit", 6, &panel->font, panel->in)) {
-        submit = *length;
-        *length = 0;
-    }
-
-    field.w = field.w - button.w;
-    *active = gui_widget_input(panel->out, (gui_char*)buffer, length, &field,
-                    &panel->font, panel->in);
-    if (!submit && active && panel->in) {
-        const struct gui_key *enter = &panel->in->keys[GUI_KEY_ENTER];
-        if ((enter->down && enter->clicked)) {
-            submit = *length;
-            *length = 0;
-        }
-    }
-    return submit;
-}
-
 gui_bool
 gui_panel_spinner(struct gui_panel *panel, gui_int min, gui_int *value,
     gui_int max, gui_int step, gui_bool active)
@@ -2049,11 +1982,11 @@ gui_panel_selector(struct gui_panel *panel, const char *items[],
     gui_buffer_push_rect(panel->out, bounds.x + 1, bounds.y + 1, bounds.w - 2, bounds.h - 2,
             config->colors[GUI_COLOR_SELECTOR]);
 
+    button.border = 1;
     button.y = bounds.y;
     button.h = bounds.h / 2;
     button.w = bounds.h - config->item_padding.x + 1;
     button.x = bounds.x + bounds.w - button.w - 1;
-    button.border = 1;
     button.pad_x = MAX(3, button.h - panel->font.height);
     button.pad_y = MAX(3, button.h - panel->font.height);
     button.behavior = GUI_BUTTON_DEFAULT;
