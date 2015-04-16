@@ -53,7 +53,6 @@ enum {gui_false, gui_true};
 enum gui_heading {GUI_UP, GUI_RIGHT, GUI_DOWN, GUI_LEFT};
 struct gui_color {gui_byte r,g,b,a;};
 struct gui_colorf {gui_float r,g,b,a;};
-struct gui_texCoord {gui_float u,v;};
 struct gui_vec2 {gui_float x,y;};
 struct gui_rect {gui_float x,y,w,h;};
 struct gui_key {gui_bool down, clicked;};
@@ -211,7 +210,6 @@ struct gui_image {
     gui_float w, h;
     gui_float pad_x, pad_y;
     struct gui_color color;
-    struct gui_texCoord uv[2];
     gui_texture texture;
     struct gui_color background;
 };
@@ -432,8 +430,7 @@ gui_bool gui_widget_button_text(struct gui_command_buffer*, const struct gui_but
 gui_bool gui_widget_button_triangle(struct gui_command_buffer*, struct gui_button*,
                     enum gui_heading, const struct gui_input*);
 gui_bool gui_widget_button_icon(struct gui_command_buffer*, struct gui_button*,
-                    gui_texture, struct gui_texCoord from, struct gui_texCoord to,
-                    const struct gui_input*);
+                    gui_texture, struct gui_rect *source, const struct gui_input*);
 gui_bool gui_widget_toggle(struct gui_command_buffer*, const struct gui_toggle*,
                     gui_bool active, const struct gui_font*, const struct gui_input*);
 gui_float gui_widget_slider(struct gui_command_buffer*, const struct gui_slider*,
@@ -469,8 +466,8 @@ gui_bool gui_panel_button_text(struct gui_panel*, const char*, enum gui_button_b
 gui_bool gui_panel_button_color(struct gui_panel*, const struct gui_color, enum gui_button_behavior);
 gui_bool gui_panel_button_triangle(struct gui_panel*, enum gui_heading, enum gui_button_behavior);
 gui_bool gui_panel_button_toggle(struct gui_panel*, const char*, gui_bool value);
-gui_bool gui_panel_button_icon(struct gui_panel*, gui_texture, struct gui_texCoord from,
-                    struct gui_texCoord to, enum gui_button_behavior);
+gui_bool gui_panel_button_icon(struct gui_panel*, gui_texture, const struct gui_rect*,
+                    enum gui_button_behavior);
 gui_float gui_panel_slider(struct gui_panel*, gui_float min, gui_float val,
                     gui_float max, gui_float step);
 gui_size gui_panel_progress(struct gui_panel*, gui_size cur, gui_size max,
@@ -491,7 +488,7 @@ void gui_panel_group_begin(gui_group*, gui_group*, const char *title);
 void gui_panel_group_end(gui_group*, gui_group* tab);
 gui_size gui_panel_shelf_begin(gui_shelf*, gui_shelf *shelf, const char *tabs[],
                     gui_size size, gui_size active);
-void gui_panel_shelf_end(gui_shelf*, gui_shelf *shelf);
+void gui_panel_shelf_end(struct gui_panel*, gui_shelf *shelf);
 
 /* Context */
 struct gui_context;

@@ -738,12 +738,12 @@ gui_widget_toggle(struct gui_command_buffer *buffer, const struct gui_toggle *to
 
     select_x = toggle->x + toggle->pad_x;
     select_y = toggle->y + toggle->pad_y;
-    select_size = toggle->h - 2 * toggle->pad_y;
+    select_size = font->height + 2 * toggle->pad_y;
 
     cursor_pad = select_size / 8;
+    cursor_size = select_size - 2 * cursor_pad;
     cursor_x = select_x + cursor_pad;
     cursor_y = select_y + cursor_pad;
-    cursor_size = select_size - 2 * cursor_pad;
 
     if (in && !in->mouse_down && in->mouse_clicked)
         if (INBOX(in->mouse_clicked_pos.x, in->mouse_clicked_pos.y,
@@ -757,9 +757,14 @@ gui_widget_toggle(struct gui_command_buffer *buffer, const struct gui_toggle *to
             gui_buffer_push_rect(buffer, cursor_x, cursor_y, cursor_size, cursor_size,
                 toggle->foreground);
     } else {
+        select_x += select_size/2;
+        select_y += select_size/2;
         gui_buffer_push_circle(buffer, select_x, select_y, select_size/2, toggle->background);
-        if (toggle_active)
+        if (toggle_active) {
+            cursor_x += cursor_size / 2;
+            cursor_y += cursor_size / 2;
             gui_buffer_push_circle(buffer, cursor_x, cursor_y, cursor_size/2, toggle->foreground);
+        }
     }
 
     if (font && toggle->text && toggle->length) {
@@ -773,7 +778,7 @@ gui_widget_toggle(struct gui_command_buffer *buffer, const struct gui_toggle *to
         text.length = toggle->length;
         text.align = GUI_TEXT_LEFT;
         text.font = font->user;
-        text.background = toggle->background;
+        text.background = toggle->foreground;
         text.foreground = toggle->font;
         gui_widget_text(buffer, &text, font);
     }
@@ -2099,7 +2104,6 @@ gui_panel_plot(struct gui_panel *panel, const gui_float *values, gui_size count)
     plot.pad_y = config->item_padding.y;
     plot.value_count = count;
     plot.values = values;
-
     plot.background = config->colors[GUI_COLOR_PLOT];
     plot.foreground = config->colors[GUI_COLOR_PLOT_LINES];
     plot.highlight = config->colors[GUI_COLOR_PLOT_HIGHLIGHT];
@@ -2132,7 +2136,6 @@ gui_panel_histo(struct gui_panel *panel, const gui_float *values, gui_size count
     histo.pad_y = config->item_padding.y;
     histo.values = values;
     histo.value_count = count;
-
     histo.background = config->colors[GUI_COLOR_HISTO];
     histo.foreground = config->colors[GUI_COLOR_HISTO_BARS];
     histo.negative = config->colors[GUI_COLOR_HISTO_NEGATIVE];

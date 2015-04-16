@@ -11,6 +11,7 @@
 #include "../gui.h"
 
 /* macros */
+#define MAX_BUFFER 64
 #define MAX_MEMORY (8 * 1024)
 #define MAX_DEPTH   8
 #define MAX_PANEL   4
@@ -58,6 +59,26 @@ struct XWindow {
     unsigned int width;
     unsigned int height;
     XSurface surface;
+};
+
+struct demo {
+    gui_char in_buf[MAX_BUFFER];
+    gui_size in_len;
+    gui_bool in_act;
+    gui_char cmd_buf[MAX_BUFFER];
+    gui_size cmd_len;
+    gui_bool cmd_act;
+    gui_bool check;
+    gui_int option;
+    gui_float slider;
+    gui_size prog;
+    gui_int spinner;
+    gui_bool spin_act;
+    gui_size item_cur;
+    gui_tab tab;
+    gui_group group;
+    gui_shelf shelf;
+    gui_size current;
 };
 
 static void
@@ -171,6 +192,8 @@ surface_draw_circle(XSurface *surf, int x, int y, unsigned int radius, unsigned 
 {
     unsigned int d = radius * 2;
     XSetForeground(surf->dpy, surf->gc, c);
+    x -= (int)radius;
+    y -= (int)radius;
     XFillArc(surf->dpy, surf->drawable, surf->gc, x, y, d, d, 0, 360 * 64);
 }
 
@@ -389,6 +412,54 @@ gui_draw(XSurface *surf, const struct gui_output *out)
         execute(surf, out->list[i]);
 }
 
+static gui_bool
+demo_panel(struct gui_context *ctx, struct gui_panel *panel, struct demo *demo)
+{
+    enum {PLOT, HISTO};
+    const char *shelfs[] = {"Histogram", "Lines"};
+    const gui_float values[] = {8.0f, 15.0f, 20.0f, 12.0f, 30.0f};
+    const char *items[] = {"Fist", "Pistol", "Shotgun", "Railgun", "BFG"};
+    gui_bool running;
+
+    running = gui_begin_panel(ctx, panel, "Demo",
+        GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE|GUI_PANEL_SCALEABLE|
+        GUI_PANEL_MOVEABLE|GUI_PANEL_BORDER);
+
+    /* Tabs */
+    gui_panel_layout(panel, 100, 1);
+    gui_panel_tab_begin(panel, &demo->tab, "Difficulty");
+    gui_panel_layout(&demo->tab, 30, 2);
+    if (gui_panel_option(&demo->tab, "easy", demo->option == 0)) demo->option = 0;
+    if (gui_panel_option(&demo->tab, "hard", demo->option == 1)) demo->option = 1;
+    if (gui_panel_option(&demo->tab, "normal", demo->option == 2)) demo->option = 2;
+    if (gui_panel_option(&demo->tab, "godlike", demo->option == 3)) demo->option = 3;
+    gui_panel_tab_end(panel, &demo->tab);
+
+    /* Shelf */
+    gui_panel_layout(panel, 200, 2);
+    demo->current = gui_panel_shelf_begin(panel, &demo->shelf, shelfs, LEN(shelfs), demo->current);
+    gui_panel_layout(&demo->shelf, 100, 1);
+    if (demo->current == PLOT) {
+        gui_panel_histo(&demo->shelf, values, LEN(values));
+    } else {
+        gui_panel_plot(&demo->shelf, values, LEN(values));
+    }
+    gui_panel_shelf_end(panel, &demo->shelf);
+
+    /* Group */
+    gui_panel_group_begin(panel, &demo->group, "Options");
+    gui_panel_layout(&demo->group, 30, 1);
+    if (gui_panel_button_text(&demo->group, "button", GUI_BUTTON_DEFAULT))
+        fprintf(stdout, "button pressed!\n");
+    demo->check = gui_panel_check(&demo->group, "advanced", demo->check);
+    demo->slider = gui_panel_slider(&demo->group, 0, demo->slider, 10, 1.0f);
+    demo->prog = gui_panel_progress(&demo->group, demo->prog, 100, gui_true);
+    gui_panel_group_end(panel, &demo->group);
+
+    gui_end_panel(ctx, panel, NULL);
+    return running;
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -396,10 +467,8 @@ main(int argc, char *argv[])
     long started;
     gui_bool running = gui_true;
 
-    XWindow xw;
-    XSurface *surf;
-    XFont *xfont;
-
+    /* GUI */
+    struct demo demo;
     struct gui_input in;
     struct gui_config config;
     struct gui_memory memory;
@@ -409,6 +478,10 @@ main(int argc, char *argv[])
     struct gui_output output;
 
     /* Window */
+    XWindow xw;
+    XSurface *surf;
+    XFont *xfont;
+
     UNUSED(argc); UNUSED(argv);
     memset(&xw, 0, sizeof xw);
     xw.dpy = XOpenDisplay(NULL);
@@ -442,7 +515,13 @@ main(int argc, char *argv[])
     font.height = (gui_float)xfont->height;
     font.width = font_get_text_width;
     gui_default_config(&config);
-    panel = gui_new_panel(ctx, 50, 50, 200, 400, &config, &font);
+    panel = gui_new_panel(ctx, 50, 50, 500, 320, &config, &font);
+
+    memset(&demo, 0, sizeof(demo));
+    demo.tab.minimized = gui_true;
+    demo.spinner = 250;
+    demo.slider = 2.0f;
+    demo.prog = 60;
 
     while (running) {
         /* Input */
@@ -462,13 +541,7 @@ main(int argc, char *argv[])
 
         /* GUI */
         gui_begin(ctx, (gui_float)xw.width, (gui_float)xw.height);
-        running = gui_begin_panel(ctx, panel, "Demo",
-            GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE|GUI_PANEL_SCALEABLE|
-            GUI_PANEL_MOVEABLE|GUI_PANEL_BORDER);
-        gui_panel_layout(panel, 30, 1);
-        if (gui_panel_button_text(panel, "button", GUI_BUTTON_DEFAULT))
-            fprintf(stdout, "button pressed!\n");
-        gui_end_panel(ctx, panel, NULL);
+        running = demo_panel(ctx, panel, &demo);
         gui_end(ctx, &output, NULL);
 
         /* Draw */
