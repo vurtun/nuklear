@@ -366,40 +366,51 @@ execute(XSurface *surf, const struct gui_command_list *list)
     if (!list->count) return;
     iter = list->begin;
     while (iter != list->end) {
-        if (iter->type == GUI_COMMAND_CLIP) {
+        switch (iter->type) {
+        case GUI_COMMAND_NOP: break;
+        case GUI_COMMAND_CLIP: {
             const struct gui_command_clip *clip = (const struct gui_command_clip*)iter;
             surface_scissor(surf, (int)clip->x, (int)clip->y,
                 (unsigned int)clip->w, (unsigned int)clip->h);
-        } else if (iter->type == GUI_COMMAND_LINE) {
+            } break;
+        case GUI_COMMAND_LINE: {
             const struct gui_command_line *line = (const struct gui_command_line*)iter;
             const unsigned long color = color_from_byte(line->color);
             surface_draw_line(surf, (int)line->from.x, (int)line->from.y,
                 (int)line->to.x, (int)line->to.y, color);
-        } else if (iter->type == GUI_COMMAND_RECT) {
+            } break;
+        case GUI_COMMAND_RECT: {
             const struct gui_command_rect *rect = (const struct gui_command_rect*)iter;
             const unsigned long color = color_from_byte(rect->color);
             surface_draw_rect(surf, (int)rect->x, (int)rect->y,
                 (unsigned int)rect->w, (unsigned int)rect->h, color);
-        } else if (iter->type == GUI_COMMAND_CIRCLE) {
+            } break;
+        case GUI_COMMAND_CIRCLE: {
             const struct gui_command_circle *circle = (const struct gui_command_circle*)iter;
             const unsigned long color = color_from_byte(circle->color);
             surface_draw_circle(surf, (int)circle->x, (int)circle->y,
                 (unsigned int)circle->radius, color);
-        } else if (iter->type == GUI_COMMAND_BITMAP) {
+            } break;
+        case GUI_COMMAND_BITMAP: {
             const struct gui_command_bitmap *bitmap = (const struct gui_command_bitmap*)iter;
-        } else if (iter->type == GUI_COMMAND_TRIANGLE) {
+            } break;
+        case GUI_COMMAND_TRIANGLE: {
             const struct gui_command_triangle *triangle = (const struct gui_command_triangle*)iter;
             const unsigned long color = color_from_byte(triangle->color);
             surface_draw_triangle(surf, (int)triangle->pnt[0].x, (int)triangle->pnt[0].y,
                 (int)triangle->pnt[1].x, (int)triangle->pnt[1].y, (int)triangle->pnt[2].x,
                 (int)triangle->pnt[2].y, color);
-        } else if (iter->type == GUI_COMMAND_TEXT) {
+            } break;
+        case GUI_COMMAND_TEXT: {
             const struct gui_command_text *text = (const struct gui_command_text*)iter;
             const unsigned long bg = color_from_byte(text->background);
             const unsigned long fg = color_from_byte(text->foreground);
             surface_draw_text(surf, text->font, (int)text->x, (int)text->y,
                 (unsigned int)text->w, (unsigned int)text->h,
                 (const char*)text->string, (unsigned int)text->length, bg, fg);
+            } break;
+        case GUI_COMMAND_MAX: break;
+        default: break;
         }
         iter = iter->next;
     }

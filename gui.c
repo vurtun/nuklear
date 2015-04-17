@@ -124,17 +124,15 @@ itos(char *buffer, gui_int num)
     return len;
 }
 
-static struct gui_rect
-unify(const struct gui_rect *a, const struct gui_rect *b)
+static void
+unify(struct gui_rect *clip, const struct gui_rect *a, const struct gui_rect *b)
 {
-    struct gui_rect clip;
-    clip.x = MAX(a->x, b->x);
-    clip.y = MAX(a->y, b->y);
-    clip.w = MIN(a->x + a->w, b->x + b->w) - clip.x;
-    clip.h = MIN(a->y + a->h, b->y + b->h) - clip.y;
-    clip.w = MAX(0, clip.w);
-    clip.h = MAX(0, clip.h);
-    return clip;
+    clip->x = MAX(a->x, b->x);
+    clip->y = MAX(a->y, b->y);
+    clip->w = MIN(a->x + a->w, b->x + b->w) - clip->x;
+    clip->h = MIN(a->y + a->h, b->y + b->h) - clip->y;
+    clip->w = MAX(0, clip->w);
+    clip->h = MAX(0, clip->h);
 }
 
 static gui_size
@@ -396,7 +394,7 @@ gui_buffer_push_clip(struct gui_command_buffer *buffer, const struct gui_rect *r
 
     cmd = gui_buffer_push(buffer, GUI_COMMAND_CLIP, sizeof(*cmd));
     if (!cmd) return gui_false;
-    clip = unify(rect, (!buffer->clip_size) ? &null_rect : &buffer->clips[buffer->clip_size-1]);
+    unify(&clip, rect, (!buffer->clip_size) ? &null_rect : &buffer->clips[buffer->clip_size-1]);
     buffer->clips[buffer->clip_size] = clip;
     buffer->clip_size++;
     cmd->x = clip.x;
@@ -693,7 +691,6 @@ gui_widget_button_icon(struct gui_command_buffer *buffer, struct gui_button* but
     gui_bool pressed;
     struct gui_image image;
     struct gui_color col;
-    const struct gui_color color = {255,255,255,255};
 
     assert(buffer);
     assert(button);
@@ -2523,9 +2520,11 @@ gui_begin_panel(struct gui_context *ctx, struct gui_panel *panel,
 
         incursor = INBOX(in->mouse_prev.x,in->mouse_prev.y,scaler_x, scaler_y, scaler_w, scaler_h);
         if (in->mouse_down && incursor) {
+            gui_float min_x = config->panel_min_size.x;
+            gui_float min_y = config->panel_min_size.y;
             cpanel->x = CLAMP(0, cpanel->x + in->mouse_delta.x, ctx->width - cpanel->w);
-            cpanel->w = CLAMP(0, cpanel->w - in->mouse_delta.x, ctx->width - cpanel->x);
-            cpanel->h = CLAMP(0, cpanel->h + in->mouse_delta.y, ctx->height - cpanel->y);
+            cpanel->w = CLAMP(min_x, cpanel->w - in->mouse_delta.x, ctx->width - cpanel->x);
+            cpanel->h = CLAMP(min_y, cpanel->h + in->mouse_delta.y, ctx->height - cpanel->y);
         }
     }
 

@@ -27,12 +27,12 @@ for a as pure functional as possible set of widgets functions without
 any kind of internal state, with the tradeoff off of a lot of boilerplate code.
 Second the panel layer for a static grouping of widgets into a panel with a reduced need for
 a lot of the boilerplate code but takes away some freedom of widget placing and
-introduces the state of the pannel.
+introduces the state of the panel.
 Finally there is the context layer which represent the complete window and
 enables moveable, scaleable and overlapping panels, but needs complete control
 over the panel management and therefore needs the most amount of internal state.
-Each higher level of astraction uses the lower level(s) internally to build
-on but offers a little bit of a different API.
+Each higher level of abstraction uses the lower level(s) internally to build
+on but offers a little bit different API.
 
 ## Configuration
 The gui toolkit provides a number of different attributes that can be
@@ -42,7 +42,7 @@ for each and every widget the higher layers provide you with a set of
 attributes in the `gui_config` structure. The structure either needs to be
 filled by the user or can be setup with some default values by the function
 `gui_default_config`. Modification on the fly to the `gui_config` is in
-in true immedate mode fashion possible and supported.
+true immedate mode fashion possible and supported.
 
 ## FAQ
 #### Where is Widget X?
