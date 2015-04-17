@@ -145,8 +145,8 @@ struct gui_command_circle {
 struct gui_command_bitmap {
     struct gui_command header;
     gui_texture texture;
-    gui_float x, y;
-    gui_float w, h;
+    struct gui_rect src;
+    struct gui_rect dst;
 };
 
 struct gui_command_triangle {
@@ -206,8 +206,8 @@ struct gui_text {
 };
 
 struct gui_image {
-    gui_float x, y;
-    gui_float w, h;
+    struct gui_rect src;
+    struct gui_rect dst;
     gui_float pad_x, pad_y;
     struct gui_color color;
     gui_texture texture;
@@ -425,12 +425,11 @@ void gui_widget_text(struct gui_command_buffer*, const struct gui_text*,
                     const struct gui_font*);
 void gui_widget_image(struct gui_command_buffer*, const struct gui_image*);
 gui_bool gui_widget_button_text(struct gui_command_buffer*, const struct gui_button*,
-                    const char *text, gui_size len, const struct gui_font*,
-                    const struct gui_input*);
+                    const char *text, const struct gui_font*, const struct gui_input*);
 gui_bool gui_widget_button_triangle(struct gui_command_buffer*, struct gui_button*,
                     enum gui_heading, const struct gui_input*);
 gui_bool gui_widget_button_icon(struct gui_command_buffer*, struct gui_button*,
-                    gui_texture, struct gui_rect *source, const struct gui_input*);
+                    gui_texture, const struct gui_rect *source, const struct gui_input*);
 gui_bool gui_widget_toggle(struct gui_command_buffer*, const struct gui_toggle*,
                     gui_bool active, const struct gui_font*, const struct gui_input*);
 gui_float gui_widget_slider(struct gui_command_buffer*, const struct gui_slider*,

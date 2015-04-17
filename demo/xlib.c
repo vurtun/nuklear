@@ -65,9 +65,6 @@ struct demo {
     gui_char in_buf[MAX_BUFFER];
     gui_size in_len;
     gui_bool in_act;
-    gui_char cmd_buf[MAX_BUFFER];
-    gui_size cmd_len;
-    gui_bool cmd_act;
     gui_bool check;
     gui_int option;
     gui_float slider;
@@ -428,7 +425,7 @@ gui_draw(XSurface *surf, const struct gui_output *out)
 static gui_bool
 demo_panel(struct gui_context *ctx, struct gui_panel *panel, struct demo *demo)
 {
-    enum {PLOT, HISTO};
+    enum {HISTO, PLOT};
     const char *shelfs[] = {"Histogram", "Lines"};
     const gui_float values[] = {8.0f, 15.0f, 20.0f, 12.0f, 30.0f};
     const char *items[] = {"Fist", "Pistol", "Shotgun", "Railgun", "BFG"};
@@ -452,7 +449,7 @@ demo_panel(struct gui_context *ctx, struct gui_panel *panel, struct demo *demo)
     gui_panel_layout(panel, 200, 2);
     demo->current = gui_panel_shelf_begin(panel, &demo->shelf, shelfs, LEN(shelfs), demo->current);
     gui_panel_layout(&demo->shelf, 100, 1);
-    if (demo->current == PLOT) {
+    if (demo->current == HISTO) {
         gui_panel_histo(&demo->shelf, values, LEN(values));
     } else {
         gui_panel_plot(&demo->shelf, values, LEN(values));
@@ -483,8 +480,8 @@ message_panel(struct gui_context *ctx, struct gui_panel *panel)
     gui_int ret = -1;
     gui_begin_panel(ctx, panel, "Error", GUI_PANEL_MOVEABLE|GUI_PANEL_BORDER);
     gui_panel_layout(panel, 30, 2);
-    if (gui_panel_button_text(panel, "ok", GUI_BUTTON_DEFAULT)) ret = 1;
-    if (gui_panel_button_text(panel, "cancel", GUI_BUTTON_DEFAULT)) ret = 0;
+    gui_panel_button_text(panel, "ok", GUI_BUTTON_DEFAULT);
+    gui_panel_button_text(panel, "cancel", GUI_BUTTON_DEFAULT);
     gui_end_panel(ctx, panel, NULL);
 }
 

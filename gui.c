@@ -479,14 +479,14 @@ gui_buffer_push_triangle(struct gui_command_buffer *buffer, struct gui_vec2 *pos
 }
 
 static void
-gui_buffer_push_bitmap(struct gui_command_buffer *buffer, gui_float x, gui_float y,
-    gui_float w, gui_float h, gui_texture texture)
+gui_buffer_push_bitmap(struct gui_command_buffer *buffer, const struct gui_rect *src,
+    const struct gui_rect *dst, gui_texture texture)
 {
     struct gui_command_bitmap *bitmap;
     bitmap = gui_buffer_push(buffer, GUI_COMMAND_BITMAP, sizeof(*bitmap));
     if (!bitmap) return;
-    bitmap->x = x; bitmap->y = y;
-    bitmap->w = w; bitmap->h = h;
+    bitmap->src = *src;
+    bitmap->dst = *dst;
     bitmap->texture = texture;
 }
 
@@ -566,29 +566,22 @@ gui_widget_text(struct gui_command_buffer *buffer, const struct gui_text *text,
         (const gui_char*)text->string, text->length, text->background, text->foreground);
 }
 
-/*
 void
-gui_widget_image(struct gui_draw_buffer *buffer, const struct gui_image *image)
+gui_widget_image(struct gui_command_buffer *buffer, const struct gui_image *image)
 {
-    gui_float image_x;
-    gui_float image_y;
-    gui_float image_w;
-    gui_float image_h;
-
+    struct gui_rect dst;
     assert(buffer);
     assert(image);
     if (!buffer || !image) return;
 
-    image_x = image->x + image->pad_x;
-    image_y = image->y + image->pad_y;
-    image_w = MAX(0, image->w - 2 * image->pad_x);
-    image_h = MAX(0, image->h - 2 * image->pad_y);
+    dst.x = image->dst.x + image->pad_x;
+    dst.y = image->dst.y + image->pad_y;
+    dst.w = MAX(0, image->dst.w - 2 * image->pad_x);
+    dst.h = MAX(0, image->dst.h - 2 * image->pad_y);
 
-    gui_draw_rectf(buffer, image->x, image->y, image->w, image->h, image->background);
-    gui_draw_image(buffer, image_x, image_y, image_w, image_h,
-        image->texture, image->uv[0], image->uv[1], image->color);
+    gui_buffer_push_rect(buffer, image->dst.x, image->dst.y, image->dst.w, image->dst.h, image->background);
+    gui_buffer_push_bitmap(buffer, &image->src, &dst, image->texture);
 }
-*/
 
 static gui_bool
 gui_widget_button(struct gui_command_buffer *buffer, const struct gui_button *button,
@@ -623,8 +616,7 @@ gui_widget_button(struct gui_command_buffer *buffer, const struct gui_button *bu
 
 gui_bool
 gui_widget_button_text(struct gui_command_buffer *buffer, const struct gui_button *button,
-    const char *string, gui_size length, const struct gui_font *font,
-    const struct gui_input *in)
+    const char *string, const struct gui_font *font, const struct gui_input *in)
 {
     gui_bool ret = gui_false;
     gui_float button_w, button_h;
@@ -656,7 +648,7 @@ gui_widget_button_text(struct gui_command_buffer *buffer, const struct gui_butto
     text.pad_x = button->pad_x;
     text.pad_y = button->pad_y;
     text.string = string;
-    text.length = length;
+    text.length = strsiz(string);
     text.align = GUI_TEXT_CENTERED;
     text.font = font->user;
     text.background = bg_color;
@@ -682,11 +674,9 @@ gui_widget_button_triangle(struct gui_command_buffer *buffer, struct gui_button*
     return pressed;
 }
 
-/*
 gui_bool
 gui_widget_button_icon(struct gui_command_buffer *buffer, struct gui_button* button,
-    gui_texture tex, struct gui_texCoord from, struct gui_texCoord to,
-    const struct gui_input *in)
+    gui_texture texture, const struct gui_rect *src, const struct gui_input *in)
 {
     gui_bool pressed;
     struct gui_image image;
@@ -698,23 +688,20 @@ gui_widget_button_icon(struct gui_command_buffer *buffer, struct gui_button* but
         return gui_false;
 
     pressed = gui_widget_button(buffer, button, in);
-    image.x = button->x + button->pad_x;
-    image.y = button->y + button->pad_y;
-    image.w = button->w - 2 * button->pad_x;
-    image.h = button->h - 2 * button->pad_y;
+    image.dst.x = button->x + button->pad_x;
+    image.dst.y = button->y + button->pad_y;
+    image.dst.w = button->w - 2 * button->pad_x;
+    image.dst.h = button->h - 2 * button->pad_y;
     image.pad_x = button->pad_x;
     image.pad_y = button->pad_y;
-    image.texture = tex;
-    image.uv[0] = from;
-    image.uv[1] = to;
+    image.texture = texture;
+    image.src = *src;
     col = (in && INBOX(in->mouse_pos.x,in->mouse_pos.y,button->x,button->y,button->w,button->h)) ?
         button->highlight: button->background;
     image.background = col;
-    image.color = color;
     gui_widget_image(buffer, &image);
     return pressed;
 }
-*/
 
 gui_bool
 gui_widget_toggle(struct gui_command_buffer *buffer, const struct gui_toggle *toggle,
@@ -1540,7 +1527,6 @@ gui_panel_button_text(struct gui_panel *panel, const char *str,
     struct gui_rect bounds;
     struct gui_button button;
     const struct gui_config *config;
-    gui_size len;
 
     assert(panel);
     assert(panel->config);
@@ -1550,7 +1536,6 @@ gui_panel_button_text(struct gui_panel *panel, const char *str,
     if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return 0;
     gui_panel_alloc_space(&bounds, panel);
     config = panel->config;
-    len = strsiz(str);
 
     button.x = bounds.x;
     button.y = bounds.y;
@@ -1565,7 +1550,7 @@ gui_panel_button_text(struct gui_panel *panel, const char *str,
     button.content = config->colors[GUI_COLOR_TEXT];
     button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
     button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
-    return gui_widget_button_text(panel->out, &button, str, len, &panel->font, panel->in);
+    return gui_widget_button_text(panel->out, &button, str, &panel->font, panel->in);
 }
 
 gui_bool gui_panel_button_color(struct gui_panel *panel, const struct gui_color color,
@@ -1632,11 +1617,9 @@ gui_panel_button_triangle(struct gui_panel *panel, enum gui_heading heading,
     return gui_widget_button_triangle(panel->out, &button, heading, panel->in);
 }
 
-/*
 gui_bool
 gui_panel_button_icon(struct gui_panel *panel, gui_texture tex,
-    struct gui_texCoord from, struct gui_texCoord to,
-    enum gui_button_behavior behavior)
+        const struct gui_rect *src, enum gui_button_behavior behavior)
 {
     struct gui_rect bounds;
     struct gui_button button;
@@ -1663,9 +1646,8 @@ gui_panel_button_icon(struct gui_panel *panel, gui_texture tex,
     button.content = config->colors[GUI_COLOR_TEXT];
     button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
     button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER];
-    return gui_widget_button_icon(panel->out, &button, tex, from, to, panel->in);
+    return gui_widget_button_icon(panel->out, &button, tex, src, panel->in);
 }
-*/
 
 gui_bool
 gui_panel_button_toggle(struct gui_panel *panel, const char *str, gui_bool value)
@@ -1673,7 +1655,6 @@ gui_panel_button_toggle(struct gui_panel *panel, const char *str, gui_bool value
     struct gui_rect bounds;
     struct gui_button button;
     const struct gui_config *config;
-    gui_size len;
 
     assert(panel);
     assert(panel->config);
@@ -1684,7 +1665,6 @@ gui_panel_button_toggle(struct gui_panel *panel, const char *str, gui_bool value
     if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return 0;
     gui_panel_alloc_space(&bounds, panel);
     config = panel->config;
-    len = strsiz(str);
 
     button.x = bounds.x;
     button.y = bounds.y;
@@ -1708,7 +1688,7 @@ gui_panel_button_toggle(struct gui_panel *panel, const char *str, gui_bool value
         button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
         button.highlight_content = config->colors[GUI_COLOR_BUTTON];
     }
-    if (gui_widget_button_text(panel->out, &button, str, len, &panel->font, panel->in))
+    if (gui_widget_button_text(panel->out, &button, str, &panel->font, panel->in))
         value = !value;
     return value;
 }
@@ -2202,7 +2182,7 @@ gui_panel_shelf_begin(struct gui_panel *panel, gui_shelf *shelf,
             button.y += config->item_padding.y;
             button.h -= config->item_padding.y;
         }
-        if (gui_widget_button_text(panel->out, &button, tabs[i], strsiz(tabs[i]),
+        if (gui_widget_button_text(panel->out, &button, tabs[i],
                 &panel->font, panel->in)) active = i;
     }
 
