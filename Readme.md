@@ -181,7 +181,7 @@ I defined my own types which need to be set to the correct size for each
 plaform. But if your development environment provides the header file you can define
 `GUI_USE_FIXED_SIZE_TYPES` to directly use the correct types.
 
-#### Why is the font/input/window management not provided
+#### Why is font/input/window management not provided
 As for window and input management it is a ton of work to abstract over
 all possible platforms and there are already libraries like SDL or SFML or even
 the platform itself which provide you with the functionality.
@@ -203,9 +203,7 @@ This is one of the more controversial decision in the toolkit and it comes down
 to some preference that I personally build up. There are two general
 ways to allocate memory, the standard way of callbacks and preallocation.
 Personally I am not a big fan of callbacks even though they have their use cases
-for abstraction purposes but are greatly overused in my experience. The biggest
-misuse of callbacks are asynchrounous callbacks with resulting state changes which are
-hell to grasp and truly comprehend in a big system.
+for abstraction purposes but are greatly overused in my experience.
 Memory callbacks are an edge case for me and definitly shine in cases where a lot
 of unpredictable allocation with varying life cycles take place. This toolkit on
 the other hand has a relative stable memory allocation behavior. In the worse
