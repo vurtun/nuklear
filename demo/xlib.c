@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -11,10 +12,8 @@
 #include "../gui.h"
 
 /* macros */
-#define MAX_BUFFER 64
-#define MAX_MEMORY (16 * 1024)
-#define MAX_DEPTH   8
-#define MAX_PANEL   4
+#define MAX_BUFFER  64
+#define MAX_DEPTH   4
 #define WIN_WIDTH   800
 #define WIN_HEIGHT  600
 #define DTIME       16
@@ -28,38 +27,6 @@
 typedef struct XFont XFont;
 typedef struct XSurface XSurface;
 typedef struct XWindow XWindow;
-
-struct XFont {
-    int ascent;
-    int descent;
-    int height;
-    XFontSet set;
-    XFontStruct *xfont;
-};
-
-struct XSurface {
-    GC gc;
-    Display *dpy;
-    int screen;
-    Window root;
-    Drawable drawable;
-    unsigned int w, h;
-};
-
-struct XWindow {
-    Display *dpy;
-    Window root;
-    Visual *vis;
-    Colormap cmap;
-    XWindowAttributes attr;
-    XSetWindowAttributes swa;
-    Window win;
-    GC gc;
-    int screen;
-    unsigned int width;
-    unsigned int height;
-    XSurface surface;
-};
 
 struct demo {
     gui_char in_buf[MAX_BUFFER];
@@ -76,6 +43,38 @@ struct demo {
     gui_group group;
     gui_shelf shelf;
     gui_size current;
+};
+
+struct XFont {
+    int ascent;
+    int descent;
+    int height;
+    XFontSet set;
+    XFontStruct *xfont;
+};
+
+struct XSurface {
+    GC gc;
+    Display *dpy;
+    int screen;
+    Window root;
+    Drawable drawable;
+    unsigned int w, h;
+    gui_size clip_depth;
+    struct gui_rect clips[MAX_DEPTH];
+};
+
+struct XWindow {
+    Display *dpy;
+    Window root;
+    Visual *vis;
+    Colormap cmap;
+    XWindowAttributes attr;
+    XSetWindowAttributes swa;
+    Window win;
+    int screen;
+    unsigned int width;
+    unsigned int height;
 };
 
 static void
@@ -113,122 +112,6 @@ sleep_for(long t)
     req.tv_sec = sec;
     req.tv_nsec = ms * 1000000L;
     while(-1 == nanosleep(&req, &req));
-}
-
-static XSurface*
-surface_create(Display *dpy,  int screen, Window root, unsigned int w, unsigned int h)
-{
-    XSurface *surface = xcalloc(1, sizeof(XSurface));
-    surface->w = w;
-    surface->h = h;
-    surface->dpy = dpy;
-    surface->screen = screen;
-    surface->root = root;
-    surface->gc = XCreateGC(dpy, root, 0, NULL);
-    XSetLineAttributes(dpy, surface->gc, 1, LineSolid, CapButt, JoinMiter);
-    surface->drawable = XCreatePixmap(dpy, root, w, h, (unsigned int)DefaultDepth(dpy, screen));
-    return surface;
-}
-
-static void
-surface_resize(XSurface *surf, unsigned int w, unsigned int h) {
-    if(!surf) return;
-    surf->w = w; surf->h = h;
-    if(surf->drawable) XFreePixmap(surf->dpy, surf->drawable);
-    surf->drawable = XCreatePixmap(surf->dpy, surf->root, w, h,
-        (unsigned int)DefaultDepth(surf->dpy, surf->screen));
-}
-
-static void
-surface_scissor(XSurface *surf, int x, int y, unsigned int w, unsigned int h)
-{
-    XRectangle clip_rect;
-    clip_rect.x = (short)x;
-    clip_rect.y = (short)y;
-    clip_rect.width = (unsigned short)w;
-    clip_rect.height = (unsigned short)h;
-    clip_rect.width = (unsigned short)MIN(surf->w, clip_rect.width);
-    clip_rect.height = (unsigned short)MIN(surf->h, clip_rect.height);
-    XSetClipRectangles(surf->dpy, surf->gc, 0, 0, &clip_rect, 1, Unsorted);
-}
-
-static void
-surface_draw_line(XSurface *surf, int x0, int y0, int x1, int y1, unsigned long c)
-{
-    XSetForeground(surf->dpy, surf->gc, c);
-    XDrawLine(surf->dpy, surf->drawable, surf->gc, x0, y0, x1, y1);
-}
-
-static void
-surface_draw_rect(XSurface *surf, int x, int y, unsigned int w, unsigned int h, unsigned long c)
-{
-    XSetForeground(surf->dpy, surf->gc, c);
-    XFillRectangle(surf->dpy, surf->drawable, surf->gc, x, y, w, h);
-}
-
-static void
-surface_draw_triangle(XSurface *surf, int x0, int y0, int x1, int y1, int x2, int y2,
-    unsigned long c)
-{
-    XPoint pnts[3];
-    pnts[0].x = (short)x0;
-    pnts[0].y = (short)y0;
-    pnts[1].x = (short)x1;
-    pnts[1].y = (short)y1;
-    pnts[2].x = (short)x2;
-    pnts[2].y = (short)y2;
-    XSetForeground(surf->dpy, surf->gc, c);
-    XFillPolygon(surf->dpy, surf->drawable, surf->gc, pnts, 3, Convex, CoordModeOrigin);
-}
-
-static void
-surface_draw_circle(XSurface *surf, int x, int y, unsigned int radius, unsigned long c)
-{
-    unsigned int d = radius * 2;
-    XSetForeground(surf->dpy, surf->gc, c);
-    x -= (int)radius;
-    y -= (int)radius;
-    XFillArc(surf->dpy, surf->drawable, surf->gc, x, y, d, d, 0, 360 * 64);
-}
-
-static void
-surface_draw_text(XSurface *surf, XFont *font, int x, int y, unsigned int w, unsigned int h,
-    const char *text, unsigned int len, unsigned long bg, unsigned long fg)
-{
-    int i, tx, ty, th, olen;
-    XSetForeground(surf->dpy, surf->gc, bg);
-    XFillRectangle(surf->dpy, surf->drawable, surf->gc, x, y, w, h);
-    if(!text || !font || !len) return;
-
-    th = font->ascent + font->descent;
-    ty = y + ((int)h / 2) - (th / 2) + font->ascent;
-    tx = x;/* + ((int)h / 2);*/
-    XSetForeground(surf->dpy, surf->gc, fg);
-    if(font->set)
-        XmbDrawString(surf->dpy, surf->drawable, font->set, surf->gc, tx, ty, text, (int)len);
-    else
-        XDrawString(surf->dpy, surf->drawable, surf->gc, tx, ty, text, (int)len);
-}
-
-static void
-surface_clear(XSurface *surf, unsigned long color)
-{
-    XSetForeground(surf->dpy, surf->gc, color);
-    XFillRectangle(surf->dpy, surf->drawable, surf->gc, 0, 0, surf->w, surf->h);
-}
-
-static void
-surface_blit(Drawable target, XSurface *surf, unsigned int width, unsigned int height)
-{
-    XCopyArea(surf->dpy, surf->drawable, target, surf->gc, 0, 0, width, height, 0, 0);
-}
-
-static void
-surface_del(XSurface *surf)
-{
-    XFreePixmap(surf->dpy, surf->drawable);
-    XFreeGC(surf->dpy, surf->gc);
-    free(surf);
 }
 
 static XFont*
@@ -295,6 +178,153 @@ font_del(Display *dpy, XFont *font)
     free(font);
 }
 
+static unsigned long
+color_from_byte(struct gui_color col)
+{
+    unsigned long res = 0;
+    res |= (unsigned long)col.r << 16;
+    res |= (unsigned long)col.g << 8;
+    res |= (unsigned long)col.b << 0;
+    return (res);
+}
+
+static XSurface*
+surface_create(Display *dpy,  int screen, Window root, unsigned int w, unsigned int h)
+{
+    XSurface *surface = xcalloc(1, sizeof(XSurface));
+    surface->w = w;
+    surface->h = h;
+    surface->dpy = dpy;
+    surface->screen = screen;
+    surface->root = root;
+    surface->gc = XCreateGC(dpy, root, 0, NULL);
+    XSetLineAttributes(dpy, surface->gc, 1, LineSolid, CapButt, JoinMiter);
+    surface->drawable = XCreatePixmap(dpy, root, w, h, (unsigned int)DefaultDepth(dpy, screen));
+    return surface;
+}
+
+static void
+surface_resize(XSurface *surf, unsigned int w, unsigned int h) {
+    if(!surf) return;
+    if (surf->w == w && surf->h == h) return;
+    surf->w = w; surf->h = h;
+    if(surf->drawable) XFreePixmap(surf->dpy, surf->drawable);
+    surf->drawable = XCreatePixmap(surf->dpy, surf->root, w, h,
+        (unsigned int)DefaultDepth(surf->dpy, surf->screen));
+}
+
+static void
+unify(struct gui_rect *clip, const struct gui_rect *a, const struct gui_rect *b)
+{
+    clip->x = MAX(a->x, b->x);
+    clip->y = MAX(a->y, b->y);
+    clip->w = MIN(a->x + a->w, b->x + b->w) - clip->x;
+    clip->h = MIN(a->y + a->h, b->y + b->h) - clip->y;
+}
+
+static void
+surface_scissor(void *handle, gui_float x, gui_float y, gui_float w, gui_float h)
+{
+    XSurface *surf = handle;
+    XRectangle clip_rect;
+    clip_rect.x = (short)x;
+    clip_rect.y = (short)y;
+    clip_rect.width = (unsigned short)w;
+    clip_rect.height = (unsigned short)h;
+    clip_rect.width = (unsigned short)MIN(surf->w, clip_rect.width);
+    clip_rect.height = (unsigned short)MIN(surf->h, clip_rect.height);
+    XSetClipRectangles(surf->dpy, surf->gc, 0, 0, &clip_rect, 1, Unsorted);
+}
+
+static void
+surface_draw_line(void *handle, gui_float x0, gui_float y0, gui_float x1, gui_float y1, struct gui_color col)
+{
+    XSurface *surf = handle;
+    unsigned long c = color_from_byte(col);
+    XSetForeground(surf->dpy, surf->gc, c);
+    XDrawLine(surf->dpy, surf->drawable, surf->gc, (int)x0, (int)y0, (int)x1, (int)y1);
+}
+
+static void
+surface_draw_rect(void *handle, gui_float x, gui_float y, gui_float w, gui_float h, struct gui_color col)
+{
+    XSurface *surf = handle;
+    unsigned long c = color_from_byte(col);
+    XSetForeground(surf->dpy, surf->gc, c);
+    XFillRectangle(surf->dpy, surf->drawable, surf->gc, (int)x, (int)y, (unsigned)w, (unsigned)h);
+}
+
+static void
+surface_draw_triangle(void *handle, const struct gui_vec2 *src, struct gui_color col)
+{
+    XPoint pnts[3];
+    XSurface *surf = handle;
+    unsigned long c = color_from_byte(col);
+    pnts[0].x = (short)src[0].x;
+    pnts[0].y = (short)src[0].y;
+    pnts[1].x = (short)src[1].x;
+    pnts[1].y = (short)src[1].y;
+    pnts[2].x = (short)src[2].x;
+    pnts[2].y = (short)src[2].y;
+    XSetForeground(surf->dpy, surf->gc, c);
+    XFillPolygon(surf->dpy, surf->drawable, surf->gc, pnts, 3, Convex, CoordModeOrigin);
+}
+
+static void
+surface_draw_circle(void *handle, gui_float x, gui_float y, gui_float w, gui_float h, struct gui_color col)
+{
+    XSurface *surf = handle;
+    unsigned long c = color_from_byte(col);
+    XSetForeground(surf->dpy, surf->gc, c);
+    XFillArc(surf->dpy, surf->drawable, surf->gc, (int)x, (int)y,
+        (unsigned)w, (unsigned)h, 0, 360 * 64);
+}
+
+static void
+surface_draw_text(void *handle, gui_float x, gui_float y, gui_float w, gui_float h, const gui_char *text,
+    gui_size len, const struct gui_font *f, struct gui_color cbg, struct gui_color cfg)
+{
+    int i, tx, ty, th, olen;
+    XSurface *surf = handle;
+    XFont *font = f->userdata;
+    unsigned long bg = color_from_byte(cbg);
+    unsigned long fg = color_from_byte(cfg);
+
+    XSetForeground(surf->dpy, surf->gc, bg);
+    XFillRectangle(surf->dpy, surf->drawable, surf->gc, (int)x, (int)y, (unsigned)w, (unsigned)h);
+    if(!text || !font || !len) return;
+
+    tx = (int)x;
+    th = font->ascent + font->descent;
+    ty = (int)y + ((int)h / 2) - (th / 2) + font->ascent;
+    XSetForeground(surf->dpy, surf->gc, fg);
+    if(font->set)
+        XmbDrawString(surf->dpy, surf->drawable, font->set, surf->gc, tx, ty, (const char*)text, (int)len);
+    else
+        XDrawString(surf->dpy, surf->drawable, surf->gc, tx, ty, (const char*)text, (int)len);
+}
+
+static void
+surface_clear(XSurface *surf, unsigned long color)
+{
+    XSetForeground(surf->dpy, surf->gc, color);
+    XFillRectangle(surf->dpy, surf->drawable, surf->gc, 0, 0, surf->w, surf->h);
+}
+
+static void
+surface_blit(Drawable target, XSurface *surf, unsigned int width, unsigned int height)
+{
+    XCopyArea(surf->dpy, surf->drawable, target, surf->gc, 0, 0, width, height, 0, 0);
+}
+
+static void
+surface_del(XSurface *surf)
+{
+    XFreePixmap(surf->dpy, surf->drawable);
+    XFreeGC(surf->dpy, surf->gc);
+    free(surf);
+}
+
 static void
 key(struct XWindow *xw, struct gui_input *in, XEvent *evt, gui_bool down)
 {
@@ -329,7 +359,7 @@ motion(struct gui_input *in, XEvent *evt)
 }
 
 static void
-button(struct gui_input *in, XEvent *evt, gui_bool down)
+btn(struct gui_input *in, XEvent *evt, gui_bool down)
 {
     const gui_int x = evt->xbutton.x;
     const gui_int y = evt->xbutton.y;
@@ -346,103 +376,24 @@ resize(struct XWindow *xw, XSurface *surf)
     surface_resize(surf, xw->width, xw->height);
 }
 
-static unsigned long
-color_from_byte(struct gui_color col)
-{
-    unsigned long res = 0;
-    res |= (unsigned long)col.r << 16;
-    res |= (unsigned long)col.g << 8;
-    res |= (unsigned long)col.b << 0;
-    return (res);
-}
-
 static void
-execute(XSurface *surf, const struct gui_command_list *list)
-{
-    const struct gui_command *iter = NULL;
-    if (!list->count) return;
-    iter = list->begin;
-    while (iter != list->end) {
-        switch (iter->type) {
-        case GUI_COMMAND_NOP: break;
-        case GUI_COMMAND_CLIP: {
-            const struct gui_command_clip *clip = (const struct gui_command_clip*)iter;
-            surface_scissor(surf, (int)clip->x, (int)clip->y,
-                (unsigned int)clip->w, (unsigned int)clip->h);
-            } break;
-        case GUI_COMMAND_LINE: {
-            const struct gui_command_line *line = (const struct gui_command_line*)iter;
-            const unsigned long color = color_from_byte(line->color);
-            surface_draw_line(surf, (int)line->from.x, (int)line->from.y,
-                (int)line->to.x, (int)line->to.y, color);
-            } break;
-        case GUI_COMMAND_RECT: {
-            const struct gui_command_rect *rect = (const struct gui_command_rect*)iter;
-            const unsigned long color = color_from_byte(rect->color);
-            surface_draw_rect(surf, (int)rect->x, (int)rect->y,
-                (unsigned int)rect->w, (unsigned int)rect->h, color);
-            } break;
-        case GUI_COMMAND_CIRCLE: {
-            const struct gui_command_circle *circle = (const struct gui_command_circle*)iter;
-            const unsigned long color = color_from_byte(circle->color);
-            surface_draw_circle(surf, (int)circle->x, (int)circle->y,
-                (unsigned int)circle->radius, color);
-            } break;
-        case GUI_COMMAND_BITMAP: {
-            const struct gui_command_bitmap *bitmap = (const struct gui_command_bitmap*)iter;
-            } break;
-        case GUI_COMMAND_TRIANGLE: {
-            const struct gui_command_triangle *triangle = (const struct gui_command_triangle*)iter;
-            const unsigned long color = color_from_byte(triangle->color);
-            surface_draw_triangle(surf, (int)triangle->pnt[0].x, (int)triangle->pnt[0].y,
-                (int)triangle->pnt[1].x, (int)triangle->pnt[1].y, (int)triangle->pnt[2].x,
-                (int)triangle->pnt[2].y, color);
-            } break;
-        case GUI_COMMAND_TEXT: {
-            const struct gui_command_text *text = (const struct gui_command_text*)iter;
-            const unsigned long bg = color_from_byte(text->background);
-            const unsigned long fg = color_from_byte(text->foreground);
-            surface_draw_text(surf, text->font, (int)text->x, (int)text->y,
-                (unsigned int)text->w, (unsigned int)text->h,
-                (const char*)text->string, (unsigned int)text->length, bg, fg);
-            } break;
-        case GUI_COMMAND_MAX: break;
-        default: break;
-        }
-        iter = iter->next;
-    }
-}
-
-static void
-gui_draw(XSurface *surf, const struct gui_output *out)
-{
-    gui_size i = 0;
-    if (!out->list_size) return;
-    for (i = 0; i < out->list_size; i++)
-        execute(surf, out->list[i]);
-}
-
-static gui_bool
-demo_panel(struct gui_context *ctx, struct gui_panel *panel, struct demo *demo)
+demo_panel(struct gui_panel *panel, struct demo *demo)
 {
     enum {HISTO, PLOT};
     const char *shelfs[] = {"Histogram", "Lines"};
     const gui_float values[] = {8.0f, 15.0f, 20.0f, 12.0f, 30.0f};
     const char *items[] = {"Fist", "Pistol", "Shotgun", "Railgun", "BFG"};
-    gui_bool running;
-
-    running = gui_begin_panel(ctx, panel, "Demo",
-        GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE|GUI_PANEL_SCALEABLE|
-        GUI_PANEL_MOVEABLE|GUI_PANEL_BORDER);
 
     /* Tabs */
     gui_panel_layout(panel, 100, 1);
     gui_panel_tab_begin(panel, &demo->tab, "Difficulty");
-    gui_panel_layout(&demo->tab, 30, 1);
+    gui_panel_layout(&demo->tab, 30, 3);
     if (gui_panel_option(&demo->tab, "easy", demo->option == 0)) demo->option = 0;
-    if (gui_panel_option(&demo->tab, "hard", demo->option == 1)) demo->option = 1;
-    if (gui_panel_option(&demo->tab, "normal", demo->option == 2)) demo->option = 2;
-    if (gui_panel_option(&demo->tab, "godlike", demo->option == 3)) demo->option = 3;
+    if (gui_panel_option(&demo->tab, "normal", demo->option == 1)) demo->option = 1;
+    if (gui_panel_option(&demo->tab, "hard", demo->option == 2)) demo->option = 2;
+    if (gui_panel_option(&demo->tab, "hell", demo->option == 3)) demo->option = 3;
+    if (gui_panel_option(&demo->tab, "doom", demo->option == 4)) demo->option = 4;
+    if (gui_panel_option(&demo->tab, "godlike", demo->option == 5)) demo->option = 5;
     gui_panel_tab_end(panel, &demo->tab);
 
     /* Shelf */
@@ -466,23 +417,7 @@ demo_panel(struct gui_context *ctx, struct gui_panel *panel, struct demo *demo)
     demo->prog = gui_panel_progress(&demo->group, demo->prog, 100, gui_true);
     demo->item_cur = gui_panel_selector(&demo->group, items, LEN(items), demo->item_cur);
     demo->spin_act = gui_panel_spinner(&demo->group, 0, &demo->spinner, 250, 10, demo->spin_act);
-    demo->in_act = gui_panel_input(&demo->group, demo->in_buf, &demo->in_len,
-                        MAX_BUFFER, GUI_INPUT_DEFAULT, demo->in_act);
     gui_panel_group_end(panel, &demo->group);
-
-    gui_end_panel(ctx, panel, NULL);
-    return running;
-}
-
-static void
-message_panel(struct gui_context *ctx, struct gui_panel *panel)
-{
-    gui_int ret = -1;
-    gui_begin_panel(ctx, panel, "Error", GUI_PANEL_MOVEABLE|GUI_PANEL_BORDER);
-    gui_panel_layout(panel, 30, 2);
-    gui_panel_button_text(panel, "ok", GUI_BUTTON_DEFAULT);
-    gui_panel_button_text(panel, "cancel", GUI_BUTTON_DEFAULT);
-    gui_end_panel(ctx, panel, NULL);
 }
 
 int
@@ -491,23 +426,19 @@ main(int argc, char *argv[])
     long dt;
     long started;
     gui_bool running = gui_true;
+    XWindow xw;
 
     /* GUI */
-    struct demo demo;
+    gui_bool checked = gui_false;
+    gui_float value = 5.0f;
+    gui_size done = 20;
     struct gui_input in;
     struct gui_config config;
-    struct gui_memory memory;
-    struct gui_font font;
-    struct gui_panel *panel;
-    struct gui_panel *message;
-    struct gui_context *ctx;
-    struct gui_output output;
+    struct gui_canvas canvas;
+    struct gui_panel panel;
+    struct demo demo;
 
     /* Window */
-    XWindow xw;
-    XSurface *surf;
-    XFont *xfont;
-
     UNUSED(argc); UNUSED(argv);
     memset(&xw, 0, sizeof xw);
     xw.dpy = XOpenDisplay(NULL);
@@ -527,22 +458,26 @@ main(int argc, char *argv[])
     XGetWindowAttributes(xw.dpy, xw.win, &xw.attr);
     xw.width = (unsigned int)xw.attr.width;
     xw.height = (unsigned int)xw.attr.height;
-    xfont = font_create(xw.dpy, "fixed");
-    surf = surface_create(xw.dpy, xw.screen, xw.win, xw.width, xw.height);
 
     /* GUI */
-    memory.size = MAX_MEMORY;
-    memory.memory = calloc(1, memory.size);
-    memory.max_depth = MAX_DEPTH;
-    memory.max_panels = MAX_PANEL;
-    ctx = gui_new(&memory, &in);
-
-    font.user = xfont;
-    font.height = (gui_float)xfont->height;
-    font.width = font_get_text_width;
+    canvas.userdata = surface_create(xw.dpy, xw.screen, xw.win, xw.width, xw.height);
+    canvas.width = xw.width;
+    canvas.height = xw.height;
+    canvas.scissor = surface_scissor;
+    canvas.draw_line = surface_draw_line;
+    canvas.draw_rect = surface_draw_rect;
+    canvas.draw_circle = surface_draw_circle;
+    canvas.draw_triangle = surface_draw_triangle;
+    canvas.draw_text = surface_draw_text;
+    canvas.font.userdata = font_create(xw.dpy, "fixed");
+    canvas.font.height = (gui_float)((XFont*)canvas.font.userdata)->height;
+    canvas.font.width = font_get_text_width;
     gui_default_config(&config);
-    panel = gui_new_panel(ctx, 50, 50, 400, 300, &config, &font);
-    message = gui_new_panel(ctx, 150, 150, 200, 100, &config, &font);
+    memset(&in, 0, sizeof in);
+    memset(&panel, 0, sizeof panel);
+    panel.x = 50; panel.y = 50;
+    /*panel.w = 420; panel.h = 300;*/
+    panel.w = 420; panel.h = 200;
 
     memset(&demo, 0, sizeof(demo));
     demo.tab.minimized = gui_true;
@@ -559,25 +494,24 @@ main(int argc, char *argv[])
         while (XCheckWindowEvent(xw.dpy, xw.win, xw.swa.event_mask, &evt)) {
             if (evt.type == KeyPress) key(&xw, &in, &evt, gui_true);
             else if (evt.type == KeyRelease) key(&xw, &in, &evt, gui_false);
-            else if (evt.type == ButtonPress) button(&in, &evt, gui_true);
-            else if (evt.type == ButtonRelease) button(&in, &evt, gui_false);
+            else if (evt.type == ButtonPress) btn(&in, &evt, gui_true);
+            else if (evt.type == ButtonRelease) btn(&in, &evt, gui_false);
             else if (evt.type == MotionNotify) motion(&in, &evt);
             else if (evt.type == Expose || evt.type == ConfigureNotify)
-                resize(&xw, surf);
+                resize(&xw, canvas.userdata);
         }
         gui_input_end(&in);
 
         /* GUI */
-        gui_begin(ctx, (gui_float)xw.width, (gui_float)xw.height);
-        running = demo_panel(ctx, panel, &demo);
-        message_panel(ctx, message);
-        gui_end(ctx, &output, NULL);
-
-        /* Draw */
         XClearWindow(xw.dpy, xw.win);
-        surface_clear(surf, 0x00646464);
-        gui_draw(surf, &output);
-        surface_blit(xw.win, surf, xw.width, xw.height);
+        surface_clear(canvas.userdata, 0x002D2D2D);
+        canvas.width = xw.width; canvas.height = xw.height;
+        running = gui_panel_begin(&panel, "Demo", panel.x, panel.y, panel.w, panel.h,
+            GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE|GUI_PANEL_BORDER|
+            GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE, &config, &canvas, &in);
+        demo_panel(&panel, &demo);
+        gui_panel_end(&panel);
+        surface_blit(xw.win, canvas.userdata, xw.width, xw.height);
         XFlush(xw.dpy);
 
         /* Timing */
@@ -586,9 +520,10 @@ main(int argc, char *argv[])
             sleep_for(DTIME - dt);
     }
 
-    free(memory.memory);
-    font_del(xw.dpy, xfont);
-    surface_del(surf);
+    font_del(xw.dpy, canvas.font.userdata);
+    surface_del(canvas.userdata);
+    XUnmapWindow(xw.dpy, xw.win);
+    XFreeColormap(xw.dpy, xw.cmap);
     XDestroyWindow(xw.dpy, xw.win);
     XCloseDisplay(xw.dpy);
     return 0;

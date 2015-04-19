@@ -42,13 +42,6 @@ typedef unsigned int gui_flag;
 typedef unsigned long gui_size;
 #endif
 
-typedef struct gui_panel gui_tab;
-typedef struct gui_panel gui_group;
-typedef struct gui_panel gui_shelf;
-typedef gui_char gui_glyph[GUI_UTF_SIZE];
-typedef union {void* handle; gui_uint id;} gui_texture;
-typedef gui_size(*gui_text_width_f)(void*,const gui_char*, gui_size);
-
 enum {gui_false, gui_true};
 enum gui_heading {GUI_UP, GUI_RIGHT, GUI_DOWN, GUI_LEFT};
 struct gui_color {gui_byte r,g,b,a;};
@@ -56,9 +49,24 @@ struct gui_colorf {gui_float r,g,b,a;};
 struct gui_vec2 {gui_float x,y;};
 struct gui_rect {gui_float x,y,w,h;};
 struct gui_key {gui_bool down, clicked;};
+struct gui_font;
 
+typedef struct gui_panel gui_tab;
+typedef struct gui_panel gui_group;
+typedef struct gui_panel gui_shelf;
+typedef gui_char gui_glyph[GUI_UTF_SIZE];
+typedef union {void* handle; gui_uint id;} gui_texture;
+typedef gui_size(*gui_text_width_f)(void*,const gui_char*, gui_size);
+typedef void(*gui_scissor)(void*, gui_float, gui_float, gui_float, gui_float);
+typedef void(*gui_draw_line)(void*, gui_float, gui_float, gui_float, gui_float, struct gui_color);
+typedef void(*gui_draw_rect)(void*, gui_float, gui_float, gui_float, gui_float, struct gui_color);
+typedef void(*gui_draw_circle)(void*, gui_float, gui_float, gui_float, gui_float, struct gui_color);
+typedef void(*gui_draw_triangle)(void*, const struct gui_vec2*, struct gui_color);
+typedef void(*gui_draw_text)(void*, gui_float, gui_float, gui_float, gui_float,
+                            const gui_char*, gui_size, const struct gui_font*,
+                            struct gui_color, struct gui_color);
 struct gui_font {
-    void *user;
+    void *userdata;
     gui_float height;
     gui_text_width_f width;
 };
@@ -86,105 +94,17 @@ struct gui_input {
     struct gui_vec2 mouse_clicked_pos;
 };
 
-struct gui_memory {
-    void *memory;
-    gui_size size;
-    gui_size max_panels;
-    gui_size max_depth;
-};
-
-struct gui_memory_status {
-    gui_size allocated;
-    gui_size needed;
-};
-
-enum gui_command_type {
-    GUI_COMMAND_NOP = 0,
-    GUI_COMMAND_CLIP,
-    GUI_COMMAND_LINE,
-    GUI_COMMAND_RECT,
-    GUI_COMMAND_CIRCLE,
-    GUI_COMMAND_BITMAP,
-    GUI_COMMAND_TRIANGLE,
-    GUI_COMMAND_TEXT,
-    GUI_COMMAND_MAX
-};
-
-struct gui_command {
-    enum gui_command_type type;
-    struct gui_command *next;
-};
-
-struct gui_command_clip {
-    struct gui_command header;
-    gui_float x, y;
-    gui_float w, h;
-};
-
-struct gui_command_line {
-    struct gui_command header;
-    struct gui_color color;
-    struct gui_vec2 from;
-    struct gui_vec2 to;
-};
-
-struct gui_command_rect {
-    struct gui_command header;
-    struct gui_color color;
-    gui_float x, y;
-    gui_float w, h;
-};
-
-struct gui_command_circle {
-    struct gui_command header;
-    struct gui_color color;
-    gui_float radius;
-    gui_float x, y;
-};
-
-struct gui_command_bitmap {
-    struct gui_command header;
-    gui_texture texture;
-    struct gui_rect src;
-    struct gui_rect dst;
-};
-
-struct gui_command_triangle {
-    struct gui_command header;
-    struct gui_vec2 pnt[3];
-    struct gui_color color;
-};
-
-struct gui_command_text {
-    struct gui_command header;
-    struct gui_color background;
-    struct gui_color foreground;
-    void *font;
-    gui_float x, y;
-    gui_float w, h;
-    gui_size length;
-    gui_byte string[1];
-};
-
-struct gui_command_list{
-    struct gui_command *begin;
-    struct gui_command *end;
-    gui_size count;
-    gui_size capacity;
-    gui_size needed;
-    gui_size size;
-};
-
-struct gui_command_buffer {
-    struct gui_command_list cmds;
-    struct gui_rect *clips;
-    gui_size clip_capacity;
-    gui_size clip_size;
-};
-
-struct gui_output {
-    struct gui_command_list **list;
-    gui_size list_size;
+struct gui_canvas {
+    void *userdata;
+    gui_size width;
+    gui_size height;
+    struct gui_font font;
+    gui_scissor scissor;
+    gui_draw_line draw_line;
+    gui_draw_rect draw_rect;
+    gui_draw_circle draw_circle;
+    gui_draw_triangle draw_triangle;
+    gui_draw_text draw_text;
 };
 
 enum gui_text_align {
@@ -194,23 +114,14 @@ enum gui_text_align {
 };
 
 struct gui_text {
-    void *font;
-    gui_float x, y;
-    gui_float w, h;
-    gui_float pad_x, pad_y;
-    const char *string;
-    gui_size length;
+    struct gui_vec2 padding;
     enum gui_text_align align;
     struct gui_color foreground;
     struct gui_color background;
 };
 
 struct gui_image {
-    struct gui_rect src;
-    struct gui_rect dst;
-    gui_float pad_x, pad_y;
-    struct gui_color color;
-    gui_texture texture;
+    struct gui_vec2 padding;
     struct gui_color background;
 };
 
@@ -220,11 +131,8 @@ enum gui_button_behavior {
 };
 
 struct gui_button {
-    gui_float x, y;
-    gui_float w, h;
-    gui_float pad_x, pad_y;
     gui_float border;
-    enum gui_button_behavior behavior;
+    struct gui_vec2 padding;
     struct gui_color background;
     struct gui_color foreground;
     struct gui_color content;
@@ -238,45 +146,19 @@ enum gui_toggle_type {
 };
 
 struct gui_toggle {
-    gui_float x, y;
-    gui_float w, h;
-    gui_float pad_x, pad_y;
-    const gui_char *text;
-    gui_size length;
-    enum gui_toggle_type type;
+    struct gui_vec2 padding;
     struct gui_color font;
     struct gui_color background;
     struct gui_color foreground;
 };
 
 struct gui_slider {
-    gui_float x, y;
-    gui_float w, h;
-    gui_float pad_x, pad_y;
-    gui_float min, max;
-    gui_float value;
-    gui_float step;
-    struct gui_color background;
-    struct gui_color foreground;
-};
-
-struct gui_progress {
-    gui_float x, y;
-    gui_float w, h;
-    gui_float pad_x, pad_y;
-    gui_size current;
-    gui_size max;
-    gui_bool modifyable;
+    struct gui_vec2 padding;
     struct gui_color background;
     struct gui_color foreground;
 };
 
 struct gui_scroll {
-    gui_float x, y;
-    gui_float w, h;
-    gui_float offset;
-    gui_float target;
-    gui_float step;
     struct gui_color background;
     struct gui_color foreground;
     struct gui_color border;
@@ -292,37 +174,23 @@ enum gui_input_filter {
 };
 
 struct gui_input_field {
-    gui_float x, y;
-    gui_float w, h;
-    gui_float pad_x, pad_y;
-    gui_size max;
-    gui_bool active;
+    struct gui_vec2 padding;
     gui_bool show_cursor;
     enum gui_input_filter filter;
-    gui_bool password;
     struct gui_color background;
     struct gui_color foreground;
     struct gui_color font;
 };
 
 struct gui_plot {
-    gui_float x, y;
-    gui_float w, h;
-    gui_float pad_x;
-    gui_float pad_y;
-    gui_size value_count;
-    const gui_float *values;
+    struct gui_vec2 padding;
     struct gui_color background;
     struct gui_color foreground;
     struct gui_color highlight;
 };
 
 struct gui_histo {
-    gui_float x, y;
-    gui_float w, h;
-    gui_float pad_x, pad_y;
-    gui_size value_count;
-    const gui_float *values;
+    struct gui_vec2 padding;
     struct gui_color background;
     struct gui_color foreground;
     struct gui_color negative;
@@ -393,6 +261,7 @@ enum gui_panel_flags {
 struct gui_panel {
     gui_flags flags;
     gui_float x, y;
+    gui_float w, h;
     gui_float at_y;
     gui_float width, height;
     gui_size index;
@@ -401,10 +270,10 @@ struct gui_panel {
     gui_size row_columns;
     gui_float offset;
     gui_bool minimized;
-    struct gui_command_buffer *out;
-    struct gui_font font;
+    struct gui_rect clip;
     const struct gui_input *in;
     const struct gui_config *config;
+    const struct gui_canvas *canvas;
 };
 
 /* Input */
@@ -415,46 +284,43 @@ void gui_input_button(struct gui_input*, gui_int x, gui_int y, gui_bool down);
 void gui_input_char(struct gui_input*, const gui_glyph);
 void gui_input_end(struct gui_input*);
 
-/* Output */
-void gui_output_begin(struct gui_command_buffer*, const struct gui_memory*);
-void gui_output_end(struct gui_command_buffer*, struct gui_command_list*,
-                    struct gui_memory_status*);
-
 /* Widgets */
-void gui_widget_text(struct gui_command_buffer*, const struct gui_text*,
-                    const struct gui_font*);
-void gui_widget_image(struct gui_command_buffer*, const struct gui_image*);
-gui_bool gui_widget_button_text(struct gui_command_buffer*, const struct gui_button*,
-                    const char *text, const struct gui_font*, const struct gui_input*);
-gui_bool gui_widget_button_triangle(struct gui_command_buffer*, struct gui_button*,
-                    enum gui_heading, const struct gui_input*);
-gui_bool gui_widget_button_icon(struct gui_command_buffer*, struct gui_button*,
-                    gui_texture, const struct gui_rect *source, const struct gui_input*);
-gui_bool gui_widget_toggle(struct gui_command_buffer*, const struct gui_toggle*,
-                    gui_bool active, const struct gui_font*, const struct gui_input*);
-gui_float gui_widget_slider(struct gui_command_buffer*, const struct gui_slider*,
-                    const struct gui_input*);
-gui_size gui_widget_progress(struct gui_command_buffer*, const struct gui_progress*,
-                    const struct gui_input*);
-gui_bool gui_widget_input(struct gui_command_buffer*,  gui_char*, gui_size*,
-                    const struct gui_input_field*, const struct gui_font*,
-                    const struct gui_input*);
-gui_float gui_widget_scroll(struct gui_command_buffer*, const struct gui_scroll*,
-                    const struct gui_input*);
-gui_int gui_widget_histo(struct gui_command_buffer*, const struct gui_histo*,
-                    const struct gui_input*);
-gui_int gui_widget_plot(struct gui_command_buffer*, const struct gui_plot*,
-                    const struct gui_input*);
+void gui_text(const struct gui_canvas*, gui_float x, gui_float y, gui_float w, gui_float h,
+                    const struct gui_text*, const char *text, gui_size len);
+gui_bool gui_button_text(const struct gui_canvas*, gui_float x, gui_float y,
+                    gui_float w, gui_float h, const struct gui_button*, const char*,
+                    enum gui_button_behavior, const struct gui_input*);
+gui_bool gui_button_triangle(const struct gui_canvas*, gui_float x, gui_float y,
+                    gui_float w, gui_float h, const struct gui_button*, enum gui_heading,
+                    enum gui_button_behavior, const struct gui_input*);
+gui_bool gui_toggle(const struct gui_canvas*, gui_float x, gui_float y, gui_float w,
+                    gui_float h, gui_bool, const char*, const struct gui_toggle*,
+                    enum gui_toggle_type, const struct gui_input*);
+gui_float gui_slider(const struct gui_canvas*, gui_float x, gui_float y, gui_float w,
+                    gui_float h, gui_float min, gui_float val, gui_float max, gui_float step,
+                    const struct gui_slider*, const struct gui_input*);
+gui_size gui_progress(const struct gui_canvas*, gui_float x, gui_float y, gui_float w,
+                    gui_float h, gui_size value, gui_size max, gui_bool modifyable,
+                    const struct gui_slider*, const struct gui_input*);
+gui_size gui_input(const struct gui_canvas*, gui_float x, gui_float y, gui_float w,
+                    gui_float h, gui_char*, gui_size, gui_size max, gui_bool*,
+                    const struct gui_input_field*, const struct gui_input*);
+gui_int gui_histo(const struct gui_canvas*, gui_float x, gui_float y, gui_float w,
+                    gui_float h, const gui_float*, gui_size,
+                    const struct gui_histo*, const struct gui_input*);
+gui_int gui_plot(const struct gui_canvas*, gui_float x, gui_float y, gui_float w,
+                    gui_float h, const gui_float*, gui_size,
+                    const struct gui_plot*, const struct gui_input*);
+gui_float gui_scroll(const struct gui_canvas*, gui_float x, gui_float y,
+                    gui_float w, gui_float h, gui_float offset, gui_float target,
+                    gui_float step, const struct gui_scroll*, const struct gui_input*);
 
 /* Panel */
 void gui_default_config(struct gui_config*);
-void gui_panel_show(struct gui_panel*);
-void gui_panel_hide(struct gui_panel*);
-void gui_panel_init(struct gui_panel*, const struct gui_config*, const struct gui_font*);
 gui_bool gui_panel_is_hidden(const struct gui_panel*);
-gui_bool gui_panel_begin(struct gui_panel*, struct gui_command_buffer*,
-                    const struct gui_input*, const char*,
-                    gui_float x, gui_float y, gui_float w, gui_float h, gui_flags);
+gui_bool gui_panel_begin(struct gui_panel*, const char*, gui_float x, gui_float y,
+                    gui_float w, gui_float h, gui_flags, const struct gui_config*,
+                    const struct gui_canvas*, const struct gui_input*);
 void gui_panel_end(struct gui_panel*);
 void gui_panel_layout(struct gui_panel*, gui_float height, gui_size cols);
 void gui_panel_seperator(struct gui_panel*, gui_size cols);
@@ -465,14 +331,12 @@ gui_bool gui_panel_button_text(struct gui_panel*, const char*, enum gui_button_b
 gui_bool gui_panel_button_color(struct gui_panel*, const struct gui_color, enum gui_button_behavior);
 gui_bool gui_panel_button_triangle(struct gui_panel*, enum gui_heading, enum gui_button_behavior);
 gui_bool gui_panel_button_toggle(struct gui_panel*, const char*, gui_bool value);
-gui_bool gui_panel_button_icon(struct gui_panel*, gui_texture, const struct gui_rect*,
-                    enum gui_button_behavior);
 gui_float gui_panel_slider(struct gui_panel*, gui_float min, gui_float val,
                     gui_float max, gui_float step);
 gui_size gui_panel_progress(struct gui_panel*, gui_size cur, gui_size max,
                     gui_bool modifyable);
-gui_bool gui_panel_input(struct gui_panel*, gui_char *buffer, gui_size *len,
-                    gui_size max, enum gui_input_filter, gui_bool active);
+gui_size gui_panel_input(struct gui_panel*, gui_char *buffer, gui_size len,
+                    gui_size max, gui_bool *active, enum gui_input_filter);
 gui_bool gui_panel_spinner(struct gui_panel*, gui_int min, gui_int *value,
                     gui_int max, gui_int step, gui_bool active);
 gui_size gui_panel_selector(struct gui_panel*, const char *items[],
@@ -486,19 +350,6 @@ void gui_panel_group_end(gui_group*, gui_group* tab);
 gui_size gui_panel_shelf_begin(gui_shelf*, gui_shelf *shelf, const char *tabs[],
                     gui_size size, gui_size active);
 void gui_panel_shelf_end(struct gui_panel*, gui_shelf *shelf);
-
-/* Context */
-struct gui_context;
-struct gui_context *gui_new(const struct gui_memory*, const struct gui_input*);
-void gui_begin(struct gui_context*, gui_float width, gui_float height);
-void gui_end(struct gui_context*, struct gui_output*, struct gui_memory_status*);
-struct gui_panel *gui_new_panel(struct gui_context*, gui_float x, gui_float y, gui_float w,
-                    gui_float h, const struct gui_config* , const struct gui_font*);
-void gui_del_panel(struct gui_context*, struct gui_panel*);
-struct gui_vec2 gui_get_panel_position(const struct gui_context*, const struct gui_panel*);
-struct gui_vec2 gui_get_panel_size(const struct gui_context*, const struct gui_panel*);
-gui_bool gui_begin_panel(struct gui_context*, struct gui_panel*, const char *title, gui_flags flags);
-void gui_end_panel(struct gui_context*, struct gui_panel*, struct gui_memory_status*);
 
 #ifdef __cplusplus
 }
