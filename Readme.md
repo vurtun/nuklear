@@ -30,7 +30,7 @@ streamlined user development speed in mind.
 + Selector
 + Linegraph
 + Histogram
-+ Panels
++ Panel
 + Layouts(Tabs, Groups, Shelf)
 
 ## Limitations
@@ -149,7 +149,7 @@ time I will look into adding them. Except for comboboxes which are just
 really hard to implement, but for a smaller datasets there is the selector
 widget or you could combine a tab with a group and toggle buttons.
 
-#### Where is the demo/example code
+#### Where is the demo/example code?
 The demo and example code can be found in the demo folder. For now there is
 only example code for Linux with X11 and Xlib but a Win32, OpenGL and Directx
 demo is in the working.
@@ -166,14 +166,14 @@ users possible which brings me to ANSI C as the most portable version.
 In addition not all C compiler like the MSVC
 compiler fully support C99, which finalized my decision to use ANSI C.
 
-#### Why do you typedef your own types instead of using the standard types
+#### Why do you typedef your own types instead of using the standard types?
 This Project uses ANSI C which does not have the header file `<stdint.h>`
 and therefore does not provide the fixed sized types that I need. Therefore
 I defined my own types which need to be set to the correct size for each
 plaform. But if your development environment provides the header file you can define
 `GUI_USE_FIXED_SIZE_TYPES` to directly use the correct types.
 
-#### Why is font/input/window management not provided
+#### Why is font/input/window management not provided?
 As for window and input management it is a ton of work to abstract over
 all possible platforms and there are already libraries like SDL or SFML or even
 the platform itself which provide you with the functionality.
@@ -189,6 +189,16 @@ framework the question would definitely be yes but for a toolkit library the
 question is not as easy. In the end the project does not have font handling
 since there are already a number of font handling libraries in existence or even the
 platform (Xlib, Win32) itself already provides a solution.
+
+#### Why are my panels not overlapping properly while being moved?
+Since every panel is directly drawn to screen if you have not implement buffering
+there is no direct way for the toolkit to decide which panel has to be drawn at which
+time. But the functionality can be easily implemented by buffering each drawing
+call and managing a panel stack. The panel stack would keep the active panel
+(`GUI_PANEL_ACTIVE`) at the top of the stack and keep the rest of the panel in
+order and draw each panel from top to down. As for now the overlapping panels
+are not implemented but if I have some time and it is a requested feature
+I will implement a panel window manager.
 
 ## References
 - [Tutorial from Jari Komppa about imgui libraries](http://www.johno.se/book/imgui.html)

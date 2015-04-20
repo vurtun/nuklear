@@ -1551,9 +1551,9 @@ gui_panel_input(struct gui_panel *panel, gui_char *buffer, gui_size len,
                     buffer, len, max, active, &field, panel->in);
 }
 
-gui_bool
-gui_panel_spinner(struct gui_panel *panel, gui_int min, gui_int *value,
-    gui_int max, gui_int step, gui_bool active)
+gui_int
+gui_panel_spinner(struct gui_panel *panel, gui_int min, gui_int value,
+    gui_int max, gui_int step, gui_bool *active)
 {
     struct gui_rect bounds;
     const struct gui_config *config;
@@ -1581,9 +1581,9 @@ gui_panel_spinner(struct gui_panel *panel, gui_int min, gui_int *value,
     config = panel->config;
     canvas = panel->canvas;
 
-    *value = CLAMP(min, *value, max);
-    len = itos(string, *value);
-    is_active = active;
+    value = CLAMP(min, value, max);
+    len = itos(string, value);
+    is_active = *active;
     old_len = len;
 
     button.border = 1;
@@ -1604,8 +1604,8 @@ gui_panel_spinner(struct gui_panel *panel, gui_int min, gui_int *value,
     button_down_clicked = gui_button_triangle(canvas, button_x, button_y, button_w, button_h,
                                 &button, GUI_DOWN, GUI_BUTTON_DEFAULT, panel->in);
     if (button_up_clicked || button_down_clicked) {
-        *value += (button_up_clicked) ? step : -step;
-        *value = CLAMP(min, *value, max);
+        value += (button_up_clicked) ? step : -step;
+        value = CLAMP(min, value, max);
     }
 
     field_x = bounds.x;
@@ -1622,8 +1622,9 @@ gui_panel_spinner(struct gui_panel *panel, gui_int min, gui_int *value,
     len = gui_input(canvas, field_x, field_y, field_w, field_h, (gui_char*)string,
                         len, MAX_NUMBER_BUFFER, &is_active, &field, panel->in);
     if (old_len != len)
-        strtoi(value, string, len);
-    return is_active;
+        strtoi(&value, string, len);
+    *active = is_active;
+    return value;
 }
 
 gui_size

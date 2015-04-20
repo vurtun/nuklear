@@ -341,8 +341,8 @@ gui_size gui_panel_progress(struct gui_panel*, gui_size cur, gui_size max,
                     gui_bool modifyable);
 gui_size gui_panel_input(struct gui_panel*, gui_char *buffer, gui_size len,
                     gui_size max, gui_bool *active, enum gui_input_filter);
-gui_bool gui_panel_spinner(struct gui_panel*, gui_int min, gui_int *value,
-                    gui_int max, gui_int step, gui_bool active);
+gui_int gui_panel_spinner(struct gui_panel*, gui_int min, gui_int value,
+                    gui_int max, gui_int step, gui_bool *active);
 gui_size gui_panel_selector(struct gui_panel*, const char *items[],
                     gui_size item_count, gui_size item_current);
 gui_int gui_panel_plot(struct gui_panel*, const gui_float *values, gui_size value_count);
