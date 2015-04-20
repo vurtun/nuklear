@@ -437,6 +437,28 @@ gui_button_triangle(const struct gui_canvas *canvas, gui_float x, gui_float y, g
 }
 
 gui_bool
+gui_button_icon(const struct gui_canvas *canvas, gui_float x, gui_float y,
+    gui_float w, gui_float h, const struct gui_button *button, void *img,
+    const struct gui_rect *src, enum gui_button_behavior behavior,
+    const struct gui_input *in)
+{
+    struct gui_rect dst;
+    gui_bool pressed;
+    assert(button);
+    assert(canvas);
+    if (!canvas || !button)
+        return gui_false;
+
+    dst.x = x + button->padding.x;
+    dst.y = x + button->padding.y;
+    dst.w = w - 2 * button->padding.x;
+    dst.h = h - 2 * button->padding.y;
+    pressed = gui_button(canvas, x, y, w, h, button, in, behavior);
+    canvas->draw_bitmap(canvas->userdata, dst.x, dst.y, dst.w, dst.h, src, img);
+    return pressed;
+}
+
+gui_bool
 gui_toggle(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w,
     gui_float h, gui_bool active, const char *string, const struct gui_toggle *toggle,
     enum gui_toggle_type type, const struct gui_input *in)
@@ -1362,6 +1384,35 @@ gui_panel_button_toggle(struct gui_panel *panel, const char *str, gui_bool value
 }
 
 gui_bool
+gui_panel_button_icon(struct gui_panel *panel, void *img, const struct gui_rect *src,
+    enum gui_button_behavior behavior)
+{
+    struct gui_rect bounds;
+    struct gui_button button;
+    const struct gui_config *config;
+
+    assert(panel);
+    assert(panel->config);
+    assert(panel->canvas);
+
+    if (!panel || !panel->config || !panel->canvas) return 0;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return 0;
+    gui_panel_alloc_space(&bounds, panel);
+    config = panel->config;
+
+    button.border = 1;
+    button.padding.x = config->item_padding.x;
+    button.padding.y = config->item_padding.y;
+    button.background = config->colors[GUI_COLOR_BUTTON];
+    button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
+    button.content = config->colors[GUI_COLOR_TEXT];
+    button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
+    button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
+    return gui_button_icon(panel->canvas, bounds.x, bounds.y, bounds.w, bounds.h,
+                &button, img, src, behavior, panel->in);
+}
+
+gui_bool
 gui_panel_check(struct gui_panel *panel, const char *text, gui_bool is_active)
 {
     struct gui_rect bounds;
@@ -1689,7 +1740,8 @@ gui_panel_histo(struct gui_panel *panel, const gui_float *values, gui_size count
 }
 
 gui_bool
-gui_panel_tab_begin(struct gui_panel *panel, gui_tab *tab, const char *title)
+gui_panel_tab_begin(struct gui_panel *panel, struct gui_panel *tab,
+    const char *title, gui_bool minimized)
 {
     struct gui_rect bounds;
     const struct gui_canvas *canvas;
@@ -1697,15 +1749,13 @@ gui_panel_tab_begin(struct gui_panel *panel, gui_tab *tab, const char *title)
     gui_float old_height;
     gui_size old_cols;
     gui_flags flags;
-    gui_bool min;
 
     assert(panel);
     assert(tab);
     if (!panel || !tab) return gui_true;
     canvas = panel->canvas;
-    min = tab->minimized;
     zero(tab, sizeof(*tab));
-    tab->minimized = min;
+    tab->minimized = minimized;
     if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) {
         tab->flags = GUI_PANEL_HIDDEN;
         tab->config = panel->config;
@@ -1748,10 +1798,10 @@ gui_panel_tab_end(struct gui_panel *panel, struct gui_panel *tab)
 }
 
 void
-gui_panel_group_begin(struct gui_panel *panel, gui_group *group, const char *title)
+gui_panel_group_begin(struct gui_panel *panel, struct gui_panel *group,
+    const char *title, gui_float offset)
 {
     gui_flags flags;
-    gui_float offset;
     struct gui_rect bounds;
     const struct gui_canvas *canvas;
     struct gui_rect clip;
@@ -1766,7 +1816,6 @@ gui_panel_group_begin(struct gui_panel *panel, gui_group *group, const char *tit
         return;
     }
 
-    offset = group->offset;
     gui_panel_alloc_space(&bounds, panel);
     zero(group, sizeof(*group));
     canvas = panel->canvas;
@@ -1780,26 +1829,27 @@ gui_panel_group_begin(struct gui_panel *panel, gui_group *group, const char *tit
     canvas->scissor(canvas->userdata, clip.x, clip.y, clip.w, clip.h);
 }
 
-void
-gui_panel_group_end(struct gui_panel *panel, gui_group* group)
+gui_float
+gui_panel_group_end(struct gui_panel *panel, struct gui_panel *group)
 {
     const struct gui_canvas *canvas;
     struct gui_rect clip;
     assert(panel);
     assert(group);
-    if (!panel || !group) return;
-    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return;
+    if (!panel || !group) return 0;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return 0;
 
     canvas = panel->canvas;
     unify(&clip, &panel->clip, group->clip.x, group->clip.y, group->x + group->w, group->y + group->h);
     canvas->scissor(canvas->userdata, clip.x, clip.y, clip.w, clip.h);
     gui_panel_end(group);
     canvas->scissor(canvas->userdata, panel->clip.x, panel->clip.y, panel->clip.w, panel->clip.h);
+    return group->offset;
 }
 
 gui_size
-gui_panel_shelf_begin(struct gui_panel *panel, gui_shelf *shelf,
-    const char *tabs[], gui_size size, gui_size active)
+gui_panel_shelf_begin(struct gui_panel *panel, struct gui_panel *shelf,
+    const char *tabs[], gui_size size, gui_size active, gui_float offset)
 {
     const struct gui_config *config;
     const struct gui_canvas *canvas;
@@ -1808,7 +1858,6 @@ gui_panel_shelf_begin(struct gui_panel *panel, gui_shelf *shelf,
     struct gui_rect bounds;
     struct gui_rect clip;
     gui_float item_width;
-    gui_float offset;
     gui_flags flags;
     gui_size i;
 
@@ -1828,7 +1877,6 @@ gui_panel_shelf_begin(struct gui_panel *panel, gui_shelf *shelf,
 
     config = panel->config;
     canvas = panel->canvas;
-    offset = shelf->offset;
     gui_panel_alloc_space(&bounds, panel);
     zero(shelf, sizeof(*shelf));
 
@@ -1876,22 +1924,23 @@ gui_panel_shelf_begin(struct gui_panel *panel, gui_shelf *shelf,
     return active;
 }
 
-void
-gui_panel_shelf_end(struct gui_panel *panel, gui_shelf *shelf)
+gui_float
+gui_panel_shelf_end(struct gui_panel *panel, struct gui_panel *shelf)
 {
     const struct gui_canvas *canvas;
     struct gui_rect clip;
 
     assert(panel);
     assert(shelf);
-    if (!panel || !shelf) return;
-    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return;
+    if (!panel || !shelf) return 0;
+    if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return 0;
 
     canvas = panel->canvas;
     unify(&clip, &panel->clip, shelf->clip.x, shelf->clip.y, shelf->x + shelf->w, shelf->y + shelf->h);
     canvas->scissor(canvas->userdata, clip.x, clip.y, clip.w, clip.h);
     gui_panel_end(shelf);
     canvas->scissor(canvas->userdata, panel->clip.x, panel->clip.y, panel->clip.w, panel->clip.h);
+    return shelf->offset;
 }
 
 void

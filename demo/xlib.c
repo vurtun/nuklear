@@ -39,10 +39,10 @@ struct demo {
     gui_int spinner;
     gui_bool spin_act;
     gui_size item_cur;
-    gui_tab tab;
-    gui_group group;
-    gui_shelf shelf;
     gui_size current;
+    gui_bool tab_minimized;
+    gui_float group_offset;
+    gui_float shelf_offset;
 };
 
 struct XFont {
@@ -383,41 +383,42 @@ demo_panel(struct gui_panel *panel, struct demo *demo)
     const char *shelfs[] = {"Histogram", "Lines"};
     const gui_float values[] = {8.0f, 15.0f, 20.0f, 12.0f, 30.0f};
     const char *items[] = {"Fist", "Pistol", "Shotgun", "Railgun", "BFG"};
+    struct gui_panel tab;
 
     /* Tabs */
     gui_panel_layout(panel, 100, 1);
-    gui_panel_tab_begin(panel, &demo->tab, "Difficulty");
-    gui_panel_layout(&demo->tab, 30, 3);
-    if (gui_panel_option(&demo->tab, "easy", demo->option == 0)) demo->option = 0;
-    if (gui_panel_option(&demo->tab, "normal", demo->option == 1)) demo->option = 1;
-    if (gui_panel_option(&demo->tab, "hard", demo->option == 2)) demo->option = 2;
-    if (gui_panel_option(&demo->tab, "hell", demo->option == 3)) demo->option = 3;
-    if (gui_panel_option(&demo->tab, "doom", demo->option == 4)) demo->option = 4;
-    if (gui_panel_option(&demo->tab, "godlike", demo->option == 5)) demo->option = 5;
-    gui_panel_tab_end(panel, &demo->tab);
+    demo->tab_minimized = gui_panel_tab_begin(panel, &tab, "Difficulty", demo->tab_minimized);
+    gui_panel_layout(&tab, 30, 3);
+    if (gui_panel_option(&tab, "easy", demo->option == 0)) demo->option = 0;
+    if (gui_panel_option(&tab, "normal", demo->option == 1)) demo->option = 1;
+    if (gui_panel_option(&tab, "hard", demo->option == 2)) demo->option = 2;
+    if (gui_panel_option(&tab, "hell", demo->option == 3)) demo->option = 3;
+    if (gui_panel_option(&tab, "doom", demo->option == 4)) demo->option = 4;
+    if (gui_panel_option(&tab, "godlike", demo->option == 5)) demo->option = 5;
+    gui_panel_tab_end(panel, &tab);
 
     /* Shelf */
     gui_panel_layout(panel, 200, 2);
-    demo->current = gui_panel_shelf_begin(panel, &demo->shelf, shelfs, LEN(shelfs), demo->current);
-    gui_panel_layout(&demo->shelf, 100, 1);
+    demo->current = gui_panel_shelf_begin(panel, &tab, shelfs, LEN(shelfs), demo->current, demo->shelf_offset);
+    gui_panel_layout(&tab, 100, 1);
     if (demo->current == HISTO) {
-        gui_panel_histo(&demo->shelf, values, LEN(values));
+        gui_panel_histo(&tab, values, LEN(values));
     } else {
-        gui_panel_plot(&demo->shelf, values, LEN(values));
+        gui_panel_plot(&tab, values, LEN(values));
     }
-    gui_panel_shelf_end(panel, &demo->shelf);
+    demo->shelf_offset = gui_panel_shelf_end(panel, &tab);
 
     /* Group */
-    gui_panel_group_begin(panel, &demo->group, "Options");
-    gui_panel_layout(&demo->group, 30, 1);
-    if (gui_panel_button_text(&demo->group, "button", GUI_BUTTON_DEFAULT))
+    gui_panel_group_begin(panel, &tab, "Options", demo->group_offset);
+    gui_panel_layout(&tab, 30, 1);
+    if (gui_panel_button_text(&tab, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");
-    demo->check = gui_panel_check(&demo->group, "advanced", demo->check);
-    demo->slider = gui_panel_slider(&demo->group, 0, demo->slider, 10, 1.0f);
-    demo->prog = gui_panel_progress(&demo->group, demo->prog, 100, gui_true);
-    demo->item_cur = gui_panel_selector(&demo->group, items, LEN(items), demo->item_cur);
-    demo->spin_act = gui_panel_spinner(&demo->group, 0, &demo->spinner, 250, 10, demo->spin_act);
-    gui_panel_group_end(panel, &demo->group);
+    demo->check = gui_panel_check(&tab, "advanced", demo->check);
+    demo->slider = gui_panel_slider(&tab, 0, demo->slider, 10, 1.0f);
+    demo->prog = gui_panel_progress(&tab, demo->prog, 100, gui_true);
+    demo->item_cur = gui_panel_selector(&tab, items, LEN(items), demo->item_cur);
+    demo->spin_act = gui_panel_spinner(&tab, 0, &demo->spinner, 250, 10, demo->spin_act);
+    demo->group_offset = gui_panel_group_end(panel, &tab);
 }
 
 int
@@ -479,7 +480,7 @@ main(int argc, char *argv[])
     panel.w = 420; panel.h = 300;
 
     memset(&demo, 0, sizeof(demo));
-    demo.tab.minimized = gui_true;
+    demo.tab_minimized = gui_true;
     demo.spinner = 100;
     demo.slider = 2.0f;
     demo.prog = 60;

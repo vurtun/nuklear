@@ -10,7 +10,7 @@ WORK IN PROGRESS: I do not garantee that everything works right now
 - Suited for embedding into graphical applications
 - No global hidden state
 - No direct dependencies (not even libc!)
-- No memory allocation
+- No memory allocation needed
 - Renderer and platform independent
 - Configurable
 - UTF-8 supported
