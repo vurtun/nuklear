@@ -505,7 +505,7 @@ main(int argc, char *argv[])
 
         /* GUI */
         XClearWindow(xw.dpy, xw.win);
-        surface_clear(canvas.userdata, 0x002D2D2D);
+        surface_clear(canvas.userdata, 0x00646464);
         canvas.width = xw.width; canvas.height = xw.height;
         running = gui_panel_begin(&panel, "Demo", panel.x, panel.y, panel.w, panel.h,
             GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE|GUI_PANEL_BORDER|

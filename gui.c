@@ -1021,8 +1021,6 @@ gui_panel_begin(struct gui_panel *panel, const char *text, gui_float x, gui_floa
     panel->index = 0;
     panel->row_columns = 0;
     panel->flags = f;
-    if (!(panel->flags & GUI_PANEL_TAB))
-        panel->flags |= GUI_PANEL_SCROLLBAR;
 
     config = panel->config;
     panel->header_height = canvas->font.height + 3 * config->item_padding.y;
@@ -1058,16 +1056,26 @@ gui_panel_begin(struct gui_panel *panel, const char *text, gui_float x, gui_floa
         }
     }
 
-    header = &config->colors[GUI_COLOR_TITLEBAR];
-    header_x = panel->x + config->panel_padding.x;
-    header_w = panel->w - 2 * config->panel_padding.x;
     mouse_x = (panel->in) ? panel->in->mouse_pos.x : -1;
     mouse_y = (panel->in) ? panel->in->mouse_pos.y: -1;
     clicked_x = (panel->in) ? panel->in->mouse_clicked_pos.x: - 1;
     clicked_y = (panel->in) ? panel->in->mouse_clicked_pos.y: - 1;
+
+    header = &config->colors[GUI_COLOR_TITLEBAR];
+    header_x = panel->x + config->panel_padding.x;
+    header_w = panel->w - 2 * config->panel_padding.x;
     panel->width = panel->w;
     panel->at_y = panel->y;
     canvas->draw_rect(canvas->userdata, panel->x, panel->y, panel->w, panel->header_height, *header);
+
+    if (!(panel->flags & GUI_PANEL_TAB)) {
+        panel->flags |= GUI_PANEL_SCROLLBAR;
+        if (in && in->mouse_down) {
+            if (!INBOX(clicked_x, clicked_y, panel->x, panel->y, panel->w, panel->h))
+                panel->flags &= (gui_flag)~GUI_PANEL_ACTIVE;
+            else panel->flags |= GUI_PANEL_ACTIVE;
+        }
+    }
 
     panel->clip.x = panel->x;
     panel->clip.w = panel->w;

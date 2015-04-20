@@ -63,12 +63,6 @@ typedef void(*gui_draw_bitmap)(void*, gui_float, gui_float, gui_float, gui_float
 typedef void(*gui_draw_text)(void*, gui_float, gui_float, gui_float, gui_float,
                             const gui_char*, gui_size, const struct gui_font*,
                             struct gui_color, struct gui_color);
-struct gui_font {
-    void *userdata;
-    gui_float height;
-    gui_text_width_f width;
-};
-
 enum gui_keys {
     GUI_KEY_SHIFT,
     GUI_KEY_CTRL,
@@ -90,6 +84,12 @@ struct gui_input {
     gui_bool mouse_down;
     gui_uint mouse_clicked;
     struct gui_vec2 mouse_clicked_pos;
+};
+
+struct gui_font {
+    void *userdata;
+    gui_float height;
+    gui_text_width_f width;
 };
 
 struct gui_canvas {
@@ -253,8 +253,9 @@ enum gui_panel_flags {
     GUI_PANEL_MOVEABLE = 0x10,
     GUI_PANEL_SCALEABLE = 0x20,
     /* internal */
-    GUI_PANEL_SCROLLBAR = 0x40,
-    GUI_PANEL_TAB = 0x80
+    GUI_PANEL_ACTIVE = 0x40,
+    GUI_PANEL_SCROLLBAR = 0x80,
+    GUI_PANEL_TAB = 0x100
 };
 
 struct gui_panel {
