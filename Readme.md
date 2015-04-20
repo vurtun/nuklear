@@ -117,6 +117,8 @@ while (1) {
     gui_panel_layout(&panel, 30, 1);
     if (gui_panel_button_text(&panel, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");
+    value = gui_panel_slider(&panel, 0, value, 10, 1);
+    progress = gui_panel_progress(&panel, progress, 100, gui_true);
     gui_panel_end(&panel);
 }
 ```
@@ -164,7 +166,7 @@ users possible which brings me to ANSI C as the most portable version.
 In addition not all C compiler like the MSVC
 compiler fully support C99, which finalized my decision to use ANSI C.
 
-#### Why do you typedef our own types instead of using the standard types
+#### Why do you typedef your own types instead of using the standard types
 This Project uses ANSI C which does not have the header file `<stdint.h>`
 and therefore does not provide the fixed sized types that I need. Therefore
 I defined my own types which need to be set to the correct size for each
@@ -192,10 +194,10 @@ platform (Xlib, Win32) itself already provides a solution.
 - [Tutorial from Jari Komppa about imgui libraries](http://www.johno.se/book/imgui.html)
 - [Johannes 'johno' Norneby's article](http://iki.fi/sol/imgui/)
 - [Casey Muratori's original introduction to imgui's](http:://mollyrocket.com/861?node=861)
-- [Casey Muratori's imgui panel design 1/2](http://mollyrocket.com/casey/stream_0019.html)
-- [Casey Muratori's imgui panel design 2/2](http://mollyrocket.com/casey/stream_0020.html)
+- [Casey Muratori's imgui panel design(1/2)](http://mollyrocket.com/casey/stream_0019.html)
+- [Casey Muratori's imgui panel design(2/2)](http://mollyrocket.com/casey/stream_0020.html)
 - [ImGui: The inspiration for this project](https://github.com/ocornut/imgui)
-- [Nvidia'S imgui toolkit](https://code.google.com/p/nvidia-widgets/)
+- [Nvidia's imgui toolkit](https://code.google.com/p/nvidia-widgets/)
 
 # License
     (The MIT License)
