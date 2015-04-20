@@ -1,26 +1,9 @@
 # GUI
-This is a bloat-free stateless immedate mode graphical user interface toolkit
-written in ANSI C. It was designed to be embedded into graphical application and
-does not have any direct dependencies.
-The main premise of this toolkit is to be as stateless, simple but as powerful as
-possible with fast streamlined user development speed in mind.
-
-## IMGUIs
-immediate mode in contrast to classic retained GUIs stores as little state as possible
-by using procedural function calls as "widgets" instead of storing objects.
-Each "widget" function call takes hereby all its neccessary data and immediatly returns
-the through the user modified state back to the caller. Immediate mode graphical
-user interfaces therefore combine drawing and input handling into one unit
-instead of seperating them like retrain mode GUIs.
-
-Since there is no to minimal internal state in immediate mode user interfaces,
-updates have to occur every frame which on one hand is more drawing expensive than classic
-ratained GUI implementations but on the other hand grants a lot more flexibility and
-support for overall changes. In addition without any state there is no need to
-transfer state between your program, the gui state and the user which greatly
-simplifies code. Further traits of immediate mode graphic user interfaces are a
-code driven style, centralized flow control, easy extensibility and
-understandablity.
+This is a bloat-free stateless immediate mode graphical user interface toolkit
+written in ANSI C. It was designed to be easily embeddable into graphical
+application and does not have any direct dependencies. The main premise of this
+toolkit is to be as stateless, simple but as powerful as possible with fast
+streamlined user development speed in mind.
 
 ## Features
 - Immediate mode graphical user interface toolkit
@@ -51,13 +34,29 @@ understandablity.
 + Layouts(Tabs, Groups, Shelf)
 
 ## Limitations
-- Needs a high frame rate loop
 - Does NOT provide window management
 - Does NOT provide input handling
 - Does NOT provide a renderer backend
 - Does NOT implement a font library
 - Does NOT provide overlapping panels  
 Summary: It is only responsible for the actual user interface
+
+## IMGUIs
+Immediate mode in contrast to classical retained mode GUIs store as little state as possible
+by using procedural function calls as "widgets" instead of storing objects.
+Each "widget" function call takes hereby all its neccessary data and immediatly returns
+the through the user modified state back to the caller. Immediate mode graphical
+user interfaces therefore combine drawing and input handling into one unit
+instead of seperating them like retain mode GUIs.
+
+Since there is no to minimal internal state in immediate mode user interfaces,
+updates have to occur every frame which on one hand is more drawing expensive than classic
+ratained GUI implementations but on the other hand grants a lot more flexibility and
+support for overall changes. In addition without any state there is no need to
+transfer state between your program, the gui state and the user which greatly
+simplifies code. Further traits of immediate mode graphic user interfaces are a
+code driven style, centralized flow control, easy extensibility and
+understandablity.
 
 ## API
 The API for this gui toolkit is divided into two different layers. There
