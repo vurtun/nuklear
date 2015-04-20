@@ -379,22 +379,22 @@ resize(struct XWindow *xw, XSurface *surf)
 static void
 demo_panel(struct gui_panel *panel, struct demo *demo)
 {
+    gui_int i = 0;
     enum {HISTO, PLOT};
     const char *shelfs[] = {"Histogram", "Lines"};
     const gui_float values[] = {8.0f, 15.0f, 20.0f, 12.0f, 30.0f};
     const char *items[] = {"Fist", "Pistol", "Shotgun", "Railgun", "BFG"};
+    const char *options[] = {"easy", "normal", "hard", "hell", "doom", "godlike"};
     struct gui_panel tab;
 
     /* Tabs */
     gui_panel_layout(panel, 100, 1);
     demo->tab_minimized = gui_panel_tab_begin(panel, &tab, "Difficulty", demo->tab_minimized);
     gui_panel_layout(&tab, 30, 3);
-    if (gui_panel_option(&tab, "easy", demo->option == 0)) demo->option = 0;
-    if (gui_panel_option(&tab, "normal", demo->option == 1)) demo->option = 1;
-    if (gui_panel_option(&tab, "hard", demo->option == 2)) demo->option = 2;
-    if (gui_panel_option(&tab, "hell", demo->option == 3)) demo->option = 3;
-    if (gui_panel_option(&tab, "doom", demo->option == 4)) demo->option = 4;
-    if (gui_panel_option(&tab, "godlike", demo->option == 5)) demo->option = 5;
+    for (i = 0; i < (gui_int)LEN(options); i++) {
+        if (gui_panel_option(&tab, options[i], demo->option == i))
+            demo->option = i;
+    }
     gui_panel_tab_end(panel, &tab);
 
     /* Shelf */
@@ -418,6 +418,7 @@ demo_panel(struct gui_panel *panel, struct demo *demo)
     demo->prog = gui_panel_progress(&tab, demo->prog, 100, gui_true);
     demo->item_cur = gui_panel_selector(&tab, items, LEN(items), demo->item_cur);
     demo->spin_act = gui_panel_spinner(&tab, 0, &demo->spinner, 250, 10, demo->spin_act);
+    demo->in_len = gui_panel_input(&tab, demo->in_buf, demo->in_len, MAX_BUFFER, &demo->in_act, GUI_INPUT_DEFAULT);
     demo->group_offset = gui_panel_group_end(panel, &tab);
 }
 

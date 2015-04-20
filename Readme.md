@@ -35,7 +35,7 @@ while (1) {
     /* record input */
     gui_input_end(&input);
 
-    if (gui_button_text(&canvas, 0, 0, 100, 30, &style, "ok", GUI_BUTTON_DEFAULT, &input))
+    if(gui_button_text(&canvas, 0, 0, 100, 30, &style, "ok", GUI_BUTTON_DEFAULT, &input))
         fprintf(stdout, "button pressed!\n");
 }
 ```

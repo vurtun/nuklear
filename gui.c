@@ -660,7 +660,7 @@ gui_buffer_input(gui_char *buffer, gui_size length, gui_size max,
     assert(in);
 
     glyph_len = utf_decode(in->text, &unicode, in->text_len);
-    while (glyph_len && (text_len + glyph_len) <= in->text_len && (length + text_len) < max) {
+    while (glyph_len && ((text_len + glyph_len) <= in->text_len) && (length + text_len) < max) {
         if (gui_filter_input(unicode, glyph_len, filter)) {
             gui_size i = 0;
             for (i = 0; i < glyph_len; i++)
@@ -714,7 +714,7 @@ gui_input(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w
             len += gui_buffer_input(buffer, len, max, field->filter, in);
     }
 
-    if (font && buffer && len) {
+    if (font && buffer) {
         gui_size offset = 0;
         gui_float label_x, label_y, label_h;
         gui_float label_w = input_w - 2 * field->padding.x;
@@ -725,7 +725,7 @@ gui_input(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w
         while (text_len && (text_width + cursor_width) > (gui_size)label_w) {
             gui_long unicode;
             offset += utf_decode(&buffer[offset], &unicode, text_len);
-            text_len -= offset;
+            text_len = len - offset;
             text_width = font->width(font->userdata, &buffer[offset], text_len);
         }
 
