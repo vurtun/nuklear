@@ -106,6 +106,18 @@ itos(char *buffer, gui_int num)
     return len;
 }
 
+static void
+unify(struct gui_rect *clip, const struct gui_rect *a, gui_float x0, gui_float y0,
+    gui_float x1, gui_float y1)
+{
+    clip->x = MAX(a->x, x0) - 1;
+    clip->y = MAX(a->y, y0) - 1;
+    clip->w = MIN(a->x + a->w, x1) - clip->x+ 2;
+    clip->h = MIN(a->y + a->h, y1) - clip->y + 2;
+    clip->w = MAX(0, clip->w);
+    clip->h = MAX(0, clip->h);
+}
+
 static gui_size
 utf_validate(long *u, gui_size i)
 {
@@ -1681,8 +1693,7 @@ gui_panel_tab_begin(struct gui_panel *panel, gui_tab *tab, const char *title)
 {
     struct gui_rect bounds;
     const struct gui_canvas *canvas;
-    gui_float clip_x, clip_y;
-    gui_float clip_h, clip_w;
+    struct gui_rect clip;
     gui_float old_height;
     gui_size old_cols;
     gui_flags flags;
@@ -1714,14 +1725,9 @@ gui_panel_tab_begin(struct gui_panel *panel, gui_tab *tab, const char *title)
     flags = GUI_PANEL_BORDER|GUI_PANEL_MINIMIZABLE|GUI_PANEL_TAB;
     gui_panel_begin(tab, title, bounds.x, bounds.y + 1, bounds.w, null_rect.h, flags,
         panel->config, panel->canvas, panel->in);
-
-    clip_x = MAX(panel->clip.x, tab->clip.x) - 1;
-    clip_y = MAX(panel->clip.y, tab->clip.y) - 1;
-    clip_w = MIN(panel->clip.x + panel->clip.w, tab->clip.x + tab->clip.w) - clip_x+ 2;
-    clip_h = MIN(panel->clip.y + panel->clip.h, tab->clip.y + tab->clip.h) - clip_y + 2;
-    clip_w = MAX(0, clip_w);
-    clip_h = MAX(0, clip_h);
-    canvas->scissor(canvas->userdata, clip_x, clip_y, clip_w, clip_h);
+    unify(&clip, &panel->clip, tab->clip.x, tab->clip.y, tab->clip.x + tab->clip.w,
+        tab->clip.y + tab->clip.h);
+    canvas->scissor(canvas->userdata, clip.x, clip.y, clip.w, clip.h);
     return tab->minimized;
 }
 
@@ -1748,8 +1754,7 @@ gui_panel_group_begin(struct gui_panel *panel, gui_group *group, const char *tit
     gui_float offset;
     struct gui_rect bounds;
     const struct gui_canvas *canvas;
-    gui_float clip_x, clip_y;
-    gui_float clip_h, clip_w;
+    struct gui_rect clip;
 
     assert(panel);
     assert(group);
@@ -1770,35 +1775,24 @@ gui_panel_group_begin(struct gui_panel *panel, gui_group *group, const char *tit
     flags = GUI_PANEL_BORDER|GUI_PANEL_SCROLLBAR|GUI_PANEL_TAB;
     gui_panel_begin(group, title, bounds.x, bounds.y, bounds.w, bounds.h, flags,
         panel->config, panel->canvas, panel->in);
-
-    clip_x = MAX(panel->clip.x, group->clip.x) - 1;
-    clip_y = MAX(panel->clip.y, group->clip.y) - 1;
-    clip_w = MIN(panel->clip.x + panel->clip.w, group->clip.x + group->clip.w) - clip_x+ 2;
-    clip_h = MIN(panel->clip.y + panel->clip.h, group->clip.y + group->clip.h) - clip_y + 2;
-    clip_w = MAX(0, clip_w);
-    clip_h = MAX(0, clip_h);
-    canvas->scissor(canvas->userdata, clip_x, clip_y, clip_w, clip_h);
+    unify(&clip, &panel->clip, group->clip.x, group->clip.y, group->clip.x + group->clip.w,
+        group->clip.y + group->clip.h);
+    canvas->scissor(canvas->userdata, clip.x, clip.y, clip.w, clip.h);
 }
 
 void
 gui_panel_group_end(struct gui_panel *panel, gui_group* group)
 {
-    gui_float clip_x, clip_y;
-    gui_float clip_h, clip_w;
     const struct gui_canvas *canvas;
+    struct gui_rect clip;
     assert(panel);
     assert(group);
     if (!panel || !group) return;
     if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return;
 
     canvas = panel->canvas;
-    clip_x = MAX(panel->clip.x, group->clip.x) - 1;
-    clip_y = MAX(panel->clip.y, group->clip.y) - 1;
-    clip_w = MIN(panel->clip.x + panel->clip.w, group->x + group->w) - clip_x+ 2;
-    clip_h = MIN(panel->clip.y + panel->clip.h, group->y + group->h) - clip_y + 2;
-    clip_w = MAX(0, clip_w);
-    clip_h = MAX(0, clip_h);
-    canvas->scissor(canvas->userdata, clip_x, clip_y, clip_w, clip_h);
+    unify(&clip, &panel->clip, group->clip.x, group->clip.y, group->x + group->w, group->y + group->h);
+    canvas->scissor(canvas->userdata, clip.x, clip.y, clip.w, clip.h);
     gui_panel_end(group);
     canvas->scissor(canvas->userdata, panel->clip.x, panel->clip.y, panel->clip.w, panel->clip.h);
 }
@@ -1811,9 +1805,8 @@ gui_panel_shelf_begin(struct gui_panel *panel, gui_shelf *shelf,
     const struct gui_canvas *canvas;
     gui_float header_x, header_y;
     gui_float header_w, header_h;
-    gui_float clip_x, clip_y;
-    gui_float clip_h, clip_w;
     struct gui_rect bounds;
+    struct gui_rect clip;
     gui_float item_width;
     gui_float offset;
     gui_flags flags;
@@ -1877,13 +1870,9 @@ gui_panel_shelf_begin(struct gui_panel *panel, gui_shelf *shelf,
     gui_panel_begin(shelf, NULL, bounds.x, bounds.y, bounds.w, bounds.h, flags,
         panel->config, panel->canvas, panel->in);
 
-    clip_x = MAX(panel->clip.x, shelf->clip.x) - 1;
-    clip_y = MAX(panel->clip.y, shelf->clip.y) - 1;
-    clip_w = MIN(panel->clip.x + panel->clip.w, shelf->clip.x + shelf->clip.w) - clip_x+ 2;
-    clip_h = MIN(panel->clip.y + panel->clip.h, shelf->clip.y + shelf->clip.h) - clip_y + 2;
-    clip_w = MAX(0, clip_w);
-    clip_h = MAX(0, clip_h);
-    canvas->scissor(canvas->userdata, clip_x, clip_y, clip_w, clip_h);
+    unify(&clip, &panel->clip, shelf->clip.x, shelf->clip.y,
+        shelf->clip.x + shelf->clip.w, shelf->clip.y + shelf->clip.h);
+    canvas->scissor(canvas->userdata, clip.x, clip.y, clip.w, clip.h);
     return active;
 }
 
@@ -1891,8 +1880,7 @@ void
 gui_panel_shelf_end(struct gui_panel *panel, gui_shelf *shelf)
 {
     const struct gui_canvas *canvas;
-    gui_float clip_x, clip_y;
-    gui_float clip_h, clip_w;
+    struct gui_rect clip;
 
     assert(panel);
     assert(shelf);
@@ -1900,13 +1888,8 @@ gui_panel_shelf_end(struct gui_panel *panel, gui_shelf *shelf)
     if (panel->minimized || (panel->flags & GUI_PANEL_HIDDEN)) return;
 
     canvas = panel->canvas;
-    clip_x = MAX(panel->clip.x, shelf->clip.x) - 1;
-    clip_y = MAX(panel->clip.y, shelf->clip.y) - 1;
-    clip_w = MIN(panel->clip.x + panel->clip.w, shelf->x + shelf->w) - clip_x+ 2;
-    clip_h = MIN(panel->clip.y + panel->clip.h, shelf->y + shelf->h) - clip_y + 2;
-    clip_w = MAX(0, clip_w);
-    clip_h = MAX(0, clip_h);
-    canvas->scissor(canvas->userdata, clip_x, clip_y, clip_w, clip_h);
+    unify(&clip, &panel->clip, shelf->clip.x, shelf->clip.y, shelf->x + shelf->w, shelf->y + shelf->h);
+    canvas->scissor(canvas->userdata, clip.x, clip.y, clip.w, clip.h);
     gui_panel_end(shelf);
     canvas->scissor(canvas->userdata, panel->clip.x, panel->clip.y, panel->clip.w, panel->clip.h);
 }

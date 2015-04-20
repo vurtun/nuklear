@@ -19,6 +19,7 @@ WORK IN PROGRESS: I do not garantee that everything works right now
 - Does NOT provide window management
 - Does NOT provide input handling
 - Does NOT provide a renderer backend
+- Does NOT provide overlapping panels
 - Does NOT implement a font library  
 Summary: It is only responsible for the actual user interface
 
@@ -34,15 +35,15 @@ while (1) {
     /* record input */
     gui_input_end(&input);
 
-    if (gui_button_text(&canvas, 50, 50, 100, 30, &style, "button", GUI_BUTTON_DEFAULT, &input))
+    if (gui_button_text(&canvas, 0, 0, 100, 30, &style, "ok", GUI_BUTTON_DEFAULT, &input))
         fprintf(stdout, "button pressed!\n");
 }
 ```
 
 #### Panels
 ```c
-struct gui_input in = {0};
 struct gui_config config;
+struct gui_input in = {0};
 struct gui_panel panel = {0};
 struct gui_canvas canvas = {...};
 gui_default_config(&config);
@@ -107,8 +108,8 @@ to be as indepenedent and out of the users way as possible.
 This means in practice a litte bit more work on the users behalf but grants a
 lot more freedom especially because the toolkit is designed to be embeddable.
 
-The font management on the other hand is a more tricky subject. In the beginning
-the toolkit had some basic font handling but it got later removed. This is mainly
+The font management on the other hand it is litte bit more tricky. In the beginning
+the toolkit had some basic font handling but I removed it later. This is mainly
 a question of if font handling should be part of a gui toolkit or not. As for a
 framework the question would definitely be yes but for a toolkit library the
 question is not as easy. In the end the project does not have font handling

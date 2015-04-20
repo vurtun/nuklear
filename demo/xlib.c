@@ -476,8 +476,7 @@ main(int argc, char *argv[])
     memset(&in, 0, sizeof in);
     memset(&panel, 0, sizeof panel);
     panel.x = 50; panel.y = 50;
-    /*panel.w = 420; panel.h = 300;*/
-    panel.w = 420; panel.h = 200;
+    panel.w = 420; panel.h = 300;
 
     memset(&demo, 0, sizeof(demo));
     demo.tab.minimized = gui_true;

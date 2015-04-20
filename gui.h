@@ -317,11 +317,10 @@ gui_float gui_scroll(const struct gui_canvas*, gui_float x, gui_float y,
 
 /* Panel */
 void gui_default_config(struct gui_config*);
-gui_bool gui_panel_is_hidden(const struct gui_panel*);
 gui_bool gui_panel_begin(struct gui_panel*, const char*, gui_float x, gui_float y,
                     gui_float w, gui_float h, gui_flags, const struct gui_config*,
                     const struct gui_canvas*, const struct gui_input*);
-void gui_panel_end(struct gui_panel*);
+gui_bool gui_panel_is_hidden(const struct gui_panel*);
 void gui_panel_layout(struct gui_panel*, gui_float height, gui_size cols);
 void gui_panel_seperator(struct gui_panel*, gui_size cols);
 void gui_panel_text(struct gui_panel*, const char *str, gui_size len, enum gui_text_align);
@@ -350,6 +349,7 @@ void gui_panel_group_end(gui_group*, gui_group* tab);
 gui_size gui_panel_shelf_begin(gui_shelf*, gui_shelf *shelf, const char *tabs[],
                     gui_size size, gui_size active);
 void gui_panel_shelf_end(struct gui_panel*, gui_shelf *shelf);
+void gui_panel_end(struct gui_panel*);
 
 #ifdef __cplusplus
 }
