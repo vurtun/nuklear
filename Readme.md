@@ -195,6 +195,7 @@ platform (Xlib, Win32) itself already provides a solution.
 - [Casey Muratori's imgui panel design 1/2](http://mollyrocket.com/casey/stream_0019.html)
 - [Casey Muratori's imgui panel design 2/2](http://mollyrocket.com/casey/stream_0020.html)
 - [ImGui: The inspiration for this project](https://github.com/ocornut/imgui)
+- [Nvidia'S imgui toolkit](https://code.google.com/p/nvidia-widgets/)
 
 # License
     (The MIT License)
