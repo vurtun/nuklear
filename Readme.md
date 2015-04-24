@@ -1,6 +1,6 @@
 # GUI
 
-WORK IN PROGRESS: I don not garantee that everything works right now
+WORK IN PROGRESS: I do not garantee that everything works right now
 
 
 This is a bloat-free stateless immediate mode graphical user interface toolkit
