@@ -8,7 +8,7 @@ streamlined user development speed in mind.
 ## Features
 - Immediate mode graphical user interface toolkit
 - Written in C89 (ANSI C)
-- Small codebase (~2kLOC)
+- Small codebase (~2.5kLOC)
 - Focus on portability and minimal internal state
 - Suited for embedding into graphical applications
 - No global hidden state
@@ -37,8 +37,7 @@ streamlined user development speed in mind.
 - Does NOT provide window management
 - Does NOT provide input handling
 - Does NOT provide a renderer backend
-- Does NOT implement a font library
-- Does NOT provide overlapping panels  
+- Does NOT implement a font library  
 Summary: It is only responsible for the actual user interface
 
 ## IMGUIs
@@ -66,6 +65,30 @@ state. Each widget can be placed anywhere on the screen but there is no directy
 way provided to group widgets together. For this to change there is the panel
 layer which is build on top of the widget layer and uses most of the widget API
 internally to form groups of widgets into a layout.
+
+### Font
+
+### Canvas
+The Canvas is the abstract drawing interface between the GUI toolkit
+and the user and contains drawing callbacks for the primitives
+scissor, line, rectangle, circle, triangle, bitmap and text which need to be
+provided by the user. In addition to the drawing callbacks the canvas contains
+font data and the width and height of the canvas drawing area.
+Therefore the canvas is the heart of the toolkit and is probably the biggest
+chunk of work to be done by the user.
+
+### Commands
+
+
+### Configuration
+The gui toolkit provides a number of different attributes that can be
+configured, like spacing, padding, size and color.
+While the widget API even expects you to provide the configuration
+for each and every widget the panel layer provides you with a set of
+attributes in the `gui_config` structure. The structure either needs to be
+filled by the user or can be setup with some default values by the function
+`gui_default_config`. Modification on the fly to the `gui_config` struct is in
+true immedate mode fashion possible and supported.
 
 ### Widgets
 The minimal widget API provides a basic number of widgets and is designed for
@@ -122,33 +145,8 @@ while (1) {
     gui_panel_end(&panel);
 }
 ```
-## Canvas
-The Canvas is the abstract drawing interface between the GUI toolkit
-and the user and contains drawing callbacks for the primitives
-scissor, line, rectangle, circle, triangle, bitmap and text which need to be
-provided by the user. In addition to the drawing callbacks the canvas contains
-font data and the width and height of the canvas drawing area.
-Therefore the canvas is the heart of the toolkit and is probably the biggest
-chunk of work to be done by the user.
-
-## Configuration
-The gui toolkit provides a number of different attributes that can be
-configured, like spacing, padding, size and color.
-While the widget API even expects you to provide the configuration
-for each and every widget the panel layer provides you with a set of
-attributes in the `gui_config` structure. The structure either needs to be
-filled by the user or can be setup with some default values by the function
-`gui_default_config`. Modification on the fly to the `gui_config` struct is in
-true immedate mode fashion possible and supported.
 
 ## FAQ
-#### Where is Widget X?
-A number of basic widgets are provided but some of the more complex widgets like
-comboboxes, tables and trees are not yet implemented. Maybe if I have more
-time I will look into adding them. Except for comboboxes which are just
-really hard to implement, but for a smaller datasets there is the selector
-widget or you could combine a tab with a group and toggle buttons.
-
 #### Where is the demo/example code?
 The demo and example code can be found in the demo folder. For now there is
 only example code for Linux with X11 and Xlib but a Win32, OpenGL and Directx
@@ -182,7 +180,7 @@ to be as indepenedent and out of the users way as possible.
 This means in practice a litte bit more work on the users behalf but grants a
 lot more freedom especially because the toolkit is designed to be embeddable.
 
-The font management on the other hand it is litte bit more tricky. In the beginning
+The font management on the other hand is litte bit more tricky. In the beginning
 the toolkit had some basic font handling but I removed it later. This is mainly
 a question of if font handling should be part of a gui toolkit or not. As for a
 framework the question would definitely be yes but for a toolkit library the
@@ -190,22 +188,13 @@ question is not as easy. In the end the project does not have font handling
 since there are already a number of font handling libraries in existence or even the
 platform (Xlib, Win32) itself already provides a solution.
 
-#### Why are my panels not overlapping properly while being moved?
-Since every panel is directly drawn to screen if you have not implement buffering
-there is no direct way for the toolkit to decide which panel has to be drawn at which
-time. But the functionality can be easily implemented by buffering each drawing
-call and managing a panel stack. The panel stack would keep the active panel
-(`GUI_PANEL_ACTIVE`) at the top of the stack and keep the rest of the panel in
-order and draw each panel from top to down. As for now the overlapping panels
-are not implemented but if I have some time and it is a requested feature
-I will implement a panel window manager.
-
 ## References
 - [Tutorial from Jari Komppa about imgui libraries](http://www.johno.se/book/imgui.html)
 - [Johannes 'johno' Norneby's article](http://iki.fi/sol/imgui/)
 - [Casey Muratori's original introduction to imgui's](http:://mollyrocket.com/861?node=861)
 - [Casey Muratori's imgui panel design(1/2)](http://mollyrocket.com/casey/stream_0019.html)
 - [Casey Muratori's imgui panel design(2/2)](http://mollyrocket.com/casey/stream_0020.html)
+- [Casey Muratori: Designing and Evaluation Reusable Components](http://mollyrocket.com/casey/stream_0028.html)
 - [ImGui: The inspiration for this project](https://github.com/ocornut/imgui)
 - [Nvidia's imgui toolkit](https://code.google.com/p/nvidia-widgets/)
 
