@@ -1,4 +1,8 @@
 # GUI
+
+WORK IN PROGRESS: I don not garantee that everything works right now
+
+
 This is a bloat-free stateless immediate mode graphical user interface toolkit
 written in ANSI C. It was designed to be easily embeddable into graphical
 application and does not have any direct dependencies. The main premise of this
@@ -66,8 +70,6 @@ way provided to group widgets together. For this to change there is the panel
 layer which is build on top of the widget layer and uses most of the widget API
 internally to form groups of widgets into a layout.
 
-### Font
-
 ### Canvas
 The Canvas is the abstract drawing interface between the GUI toolkit
 and the user and contains drawing callbacks for the primitives
@@ -76,9 +78,6 @@ provided by the user. In addition to the drawing callbacks the canvas contains
 font data and the width and height of the canvas drawing area.
 Therefore the canvas is the heart of the toolkit and is probably the biggest
 chunk of work to be done by the user.
-
-### Commands
-
 
 ### Configuration
 The gui toolkit provides a number of different attributes that can be
