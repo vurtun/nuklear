@@ -71,10 +71,10 @@ struct demo {
     gui_int spinner;
     gui_bool spin_act;
     gui_size item_cur;
-    gui_size current;
-    gui_bool tab_minimized;
-    gui_float group_offset;
-    gui_float shelf_offset;
+    gui_size cur;
+    gui_bool tab_min;
+    gui_float group_off;
+    gui_float shelf_off;
 };
 
 static void
@@ -284,7 +284,7 @@ surface_draw_text(XSurface *surf, float x, float y, float w, float h, const char
     ty = (int)y + ((int)h / 2) - (th / 2) + font->ascent;
     XSetForeground(surf->dpy, surf->gc, fg);
     if(font->set)
-        XmbDrawString(surf->dpy, surf->drawable, font->set, surf->gc, tx, ty, (const char*)text, (int)len);
+        XmbDrawString(surf->dpy,surf->drawable,font->set,surf->gc,tx,ty,(const char*)text,(int)len);
     else
         XDrawString(surf->dpy, surf->drawable, surf->gc, tx, ty, (const char*)text, (int)len);
 }
@@ -416,7 +416,7 @@ demo_panel(struct gui_panel_layout *panel, struct demo *demo)
     struct gui_panel_layout tab;
 
     /* Tabs */
-    demo->tab_minimized = gui_panel_tab_begin(panel, &tab, "Difficulty", demo->tab_minimized);
+    demo->tab_min = gui_panel_tab_begin(panel, &tab, "Difficulty", demo->tab_min);
     gui_panel_row(&tab, 30, 3);
     for (i = 0; i < (gui_int)LEN(options); i++) {
         if (gui_panel_option(&tab, options[i], demo->option == i))
@@ -426,17 +426,17 @@ demo_panel(struct gui_panel_layout *panel, struct demo *demo)
 
     /* Shelf */
     gui_panel_row(panel, 200, 2);
-    demo->current = gui_panel_shelf_begin(panel, &tab, shelfs, LEN(shelfs), demo->current, demo->shelf_offset);
+    demo->cur = gui_panel_shelf_begin(panel,&tab,shelfs,LEN(shelfs),demo->cur,demo->shelf_off);
     gui_panel_row(&tab, 100, 1);
-    if (demo->current == HISTO) {
+    if (demo->cur == HISTO) {
         gui_panel_histo(&tab, values, LEN(values));
     } else {
         gui_panel_plot(&tab, values, LEN(values));
     }
-    demo->shelf_offset = gui_panel_shelf_end(panel, &tab);
+    demo->shelf_off = gui_panel_shelf_end(panel, &tab);
 
     /* Group */
-    gui_panel_group_begin(panel, &tab, "Options", demo->group_offset);
+    gui_panel_group_begin(panel, &tab, "Options", demo->group_off);
     gui_panel_row(&tab, 30, 1);
     if (gui_panel_button_text(&tab, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");
@@ -445,8 +445,9 @@ demo_panel(struct gui_panel_layout *panel, struct demo *demo)
     demo->prog = gui_panel_progress(&tab, demo->prog, 100, gui_true);
     demo->item_cur = gui_panel_selector(&tab, items, LEN(items), demo->item_cur);
     demo->spinner = gui_panel_spinner(&tab, 0, demo->spinner, 250, 10, &demo->spin_act);
-    demo->in_len = gui_panel_input(&tab, demo->in_buf, demo->in_len, MAX_BUFFER, &demo->in_act, GUI_INPUT_DEFAULT);
-    demo->group_offset = gui_panel_group_end(panel, &tab);
+    demo->in_len = gui_panel_input(&tab,demo->in_buf,demo->in_len,
+                        MAX_BUFFER,&demo->in_act,GUI_INPUT_DEFAULT);
+    demo->group_off = gui_panel_group_end(panel, &tab);
 }
 
 int
@@ -511,7 +512,7 @@ main(int argc, char *argv[])
 
     /* Demo */
     memset(&demo, 0, sizeof(demo));
-    demo.tab_minimized = gui_true;
+    demo.tab_min = gui_true;
     demo.spinner = 100;
     demo.slider = 2.0f;
     demo.prog = 60;

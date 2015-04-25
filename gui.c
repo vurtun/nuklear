@@ -1957,7 +1957,7 @@ gui_bool gui_panel_tab_begin(struct gui_panel_layout *parent, struct gui_panel_l
     gui_panel_alloc_space(&bounds, parent);
 
     flags = GUI_PANEL_BORDER|GUI_PANEL_MINIMIZABLE|GUI_PANEL_TAB;
-    gui_panel_init(&panel, bounds.x, bounds.y, bounds.w, null_rect.h, flags, parent->config, &parent->font);
+    gui_panel_init(&panel,bounds.x,bounds.y,bounds.w,null_rect.h,flags,parent->config,&parent->font);
     panel.minimized = minimized;
     gui_panel_begin(tab, &panel, title, canvas, parent->input);
     unify(&clip, &parent->clip, tab->clip.x, tab->clip.y, tab->clip.x + tab->clip.w,
@@ -1982,7 +1982,7 @@ gui_panel_tab_end(struct gui_panel_layout *parent, struct gui_panel_layout *tab)
     gui_panel_end(tab, &panel);
     parent->at_y += tab->height + tab->config->item_spacing.y;
     canvas = parent->canvas;
-    canvas->scissor(canvas->userdata, parent->clip.x, parent->clip.y, parent->clip.w, parent->clip.h);
+    canvas->scissor(canvas->userdata, parent->clip.x,parent->clip.y,parent->clip.w,parent->clip.h);
 }
 
 void
@@ -2011,7 +2011,7 @@ gui_panel_group_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
     canvas = parent->canvas;
 
     flags = GUI_PANEL_BORDER|GUI_PANEL_SCROLLBAR|GUI_PANEL_TAB;
-    gui_panel_init(&panel, bounds.x, bounds.y, bounds.w, bounds.h, flags, parent->config, &parent->font);
+    gui_panel_init(&panel, bounds.x,bounds.y,bounds.w,bounds.h,flags,parent->config,&parent->font);
     gui_panel_begin(group, &panel, title, parent->canvas, parent->input);
     group->offset = offset;
     unify(&clip, &parent->clip, group->clip.x, group->clip.y, group->clip.x + group->clip.w,
@@ -2039,7 +2039,7 @@ gui_panel_group_end(struct gui_panel_layout *parent, struct gui_panel_layout *gr
     unify(&clip, &parent->clip, group->clip.x, group->clip.y, group->x+group->w, group->y+group->h);
     canvas->scissor(canvas->userdata, clip.x, clip.y, clip.w, clip.h);
     gui_panel_end(group, &panel);
-    canvas->scissor(canvas->userdata, parent->clip.x, parent->clip.y, parent->clip.w, parent->clip.h);
+    canvas->scissor(canvas->userdata, parent->clip.x,parent->clip.y,parent->clip.w,parent->clip.h);
     return panel.offset;
 }
 
@@ -2112,7 +2112,7 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
     bounds.h -= header_h;
 
     flags = GUI_PANEL_BORDER|GUI_PANEL_SCROLLBAR|GUI_PANEL_TAB;
-    gui_panel_init(&panel, bounds.x, bounds.y, bounds.w, bounds.h, flags, parent->config, &parent->font);
+    gui_panel_init(&panel, bounds.x,bounds.y,bounds.w,bounds.h,flags,parent->config,&parent->font);
     gui_panel_begin(shelf, &panel, NULL, parent->canvas, parent->input);
     shelf->offset = offset;
     unify(&clip, &parent->clip, shelf->clip.x, shelf->clip.y,
@@ -2141,7 +2141,7 @@ gui_panel_shelf_end(struct gui_panel_layout *parent, struct gui_panel_layout *sh
     unify(&clip, &parent->clip, shelf->clip.x, shelf->clip.y, shelf->x+shelf->w, shelf->y+shelf->h);
     canvas->scissor(canvas->userdata, clip.x, clip.y, clip.w, clip.h);
     gui_panel_end(shelf, &panel);
-    canvas->scissor(canvas->userdata, parent->clip.x, parent->clip.y, parent->clip.w, parent->clip.h);
+    canvas->scissor(canvas->userdata, parent->clip.x,parent->clip.y,parent->clip.w,parent->clip.h);
     return shelf->offset;
 }
 

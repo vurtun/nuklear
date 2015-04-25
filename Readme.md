@@ -66,7 +66,6 @@ struct gui_memory memory = {...};
 struct gui_memory_status status;
 struct gui_command_buffer buffer;
 struct gui_command_list out;
-struct gui_command_list list;
 struct gui_panel panel;
 
 gui_default_config(&config);
@@ -161,16 +160,16 @@ true immedate mode fashion possible and supported.
 ### Buffering
 For the purpose of defered drawing or the implementation of overlapping panels
 the command buffering API was added. The command buffer hereby holds a queue of
-drawing commands for a number of primitives like line, rectangle, circle,
-triangle and text. The memory for the command buffer can be provided by the user
-in three different ways. First a fixed memory block can be given over to the
-command buffer which fills the memory up until no memory is left. The seond way
-is still using a fixed size block but rellocating a new block of memory at the
-end of the frame, if not enough memory was provided. The final way of memory
-management is by providing allocator callbacks with alloc, realloc and free.
-In true immediate mode fashion the buffering API is by base around a sequence
-point API with an begin sequence point `gui_output_begin` and a end sequence
-point with `gui_output_end` and modification of state between both points. Just
+drawing commands for a number of primitives eg.: line, rectangle, circle,
+triangle and text. memory The command buffer memory is provided by the user
+in three possible ways. First by providing a fixed size memory block which
+will be filled up until no memory is left.
+The second way is extending the fixed size memory block by reallocating at the
+end of the frame if the providided memory size was not sufficient.
+The final way of memory management is by providing allocator callbacks with alloc, realloc and free.
+In true immediate mode fashion the buffering API is based around a sequence
+points with an begin sequence point `gui_output_begin` and a end sequence
+point `gui_output_end` and modification of state between both points. Just
 like the input API the buffer modification before the begining or after the end
 sequence point is undefined behavior.
 
@@ -212,18 +211,17 @@ while (1) {
 ### Panels
 To further extend the basic widget layer and remove some of the boilerplate
 code the panel was introduced. The panel groups together a number of
-widgets but in true immediate mode fashion does not save any widget state from
+widgets but in true immediate mode fashion does not save any state from
 widgets that have been added to the panel. In addition the panel enables a
-number of nice features for a group of widgets like panel movement, scaling,
-closing and minimizing. An additional use for panels is to further group widgets
-in panels to tabs, groups and shelfs.
-The panel is divided into a persistent state struct with `struct gui_panel` with a number
-of attributes which have a persistent life time outside the frame and the panel layout
-`struct gui_panel_layout` with a transient frame life time. While the layout
-state is constantly modifed over the course of the frame the panel struct is
-only modifed at the immendiate mode sequence points `gui_panel_begin` and
-`gui_panel_end`. Therefore all changes to the panel struct inside of both
-sequence points has no effect on the current frame and is only visible in the
+number of nice features on a group of widgets like movement, scaling,
+closing and minimizing. An additional use for panel is to further extend the
+grouping of widgets into tabs, groups and shelfs.
+The panel is divided into a `struct gui_panel` with persistent life time
+the `struct gui_panel_layout` structure with a transient frame life time.
+While the layout state is constantly modifed over the course of
+the frame, the panel struct is only modified at the immendiate mode sequence points
+`gui_panel_begin` and `gui_panel_end`. Therefore all changes to the panel struct inside of both
+sequence points have no effect in the current frame and are only visible in the
 next frame.
 
 ```c
