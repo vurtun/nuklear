@@ -29,23 +29,6 @@ typedef struct XFont XFont;
 typedef struct XSurface XSurface;
 typedef struct XWindow XWindow;
 
-struct demo {
-    gui_char in_buf[MAX_BUFFER];
-    gui_size in_len;
-    gui_bool in_act;
-    gui_bool check;
-    gui_int option;
-    gui_float slider;
-    gui_size prog;
-    gui_int spinner;
-    gui_bool spin_act;
-    gui_size item_cur;
-    gui_size current;
-    gui_bool tab_minimized;
-    gui_float group_offset;
-    gui_float shelf_offset;
-};
-
 struct XFont {
     int ascent;
     int descent;
@@ -75,6 +58,23 @@ struct XWindow {
     int screen;
     unsigned int width;
     unsigned int height;
+};
+
+struct demo {
+    gui_char in_buf[MAX_BUFFER];
+    gui_size in_len;
+    gui_bool in_act;
+    gui_bool check;
+    gui_int option;
+    gui_float slider;
+    gui_size prog;
+    gui_int spinner;
+    gui_bool spin_act;
+    gui_size item_cur;
+    gui_size current;
+    gui_bool tab_minimized;
+    gui_float group_offset;
+    gui_float shelf_offset;
 };
 
 static void
@@ -405,7 +405,7 @@ resize(struct XWindow *xw, XSurface *surf)
 }
 
 static void
-demo_panel(struct gui_panel *panel, struct demo *demo)
+demo_panel(struct gui_panel_layout *panel, struct demo *demo)
 {
     gui_int i = 0;
     enum {HISTO, PLOT};
@@ -413,12 +413,11 @@ demo_panel(struct gui_panel *panel, struct demo *demo)
     const gui_float values[] = {8.0f, 15.0f, 20.0f, 12.0f, 30.0f};
     const char *items[] = {"Fist", "Pistol", "Shotgun", "Railgun", "BFG"};
     const char *options[] = {"easy", "normal", "hard", "hell", "doom", "godlike"};
-    struct gui_panel tab;
+    struct gui_panel_layout tab;
 
     /* Tabs */
-    gui_panel_layout(panel, 100, 1);
     demo->tab_minimized = gui_panel_tab_begin(panel, &tab, "Difficulty", demo->tab_minimized);
-    gui_panel_layout(&tab, 30, 3);
+    gui_panel_row(&tab, 30, 3);
     for (i = 0; i < (gui_int)LEN(options); i++) {
         if (gui_panel_option(&tab, options[i], demo->option == i))
             demo->option = i;
@@ -426,9 +425,9 @@ demo_panel(struct gui_panel *panel, struct demo *demo)
     gui_panel_tab_end(panel, &tab);
 
     /* Shelf */
-    gui_panel_layout(panel, 200, 2);
+    gui_panel_row(panel, 200, 2);
     demo->current = gui_panel_shelf_begin(panel, &tab, shelfs, LEN(shelfs), demo->current, demo->shelf_offset);
-    gui_panel_layout(&tab, 100, 1);
+    gui_panel_row(&tab, 100, 1);
     if (demo->current == HISTO) {
         gui_panel_histo(&tab, values, LEN(values));
     } else {
@@ -438,7 +437,7 @@ demo_panel(struct gui_panel *panel, struct demo *demo)
 
     /* Group */
     gui_panel_group_begin(panel, &tab, "Options", demo->group_offset);
-    gui_panel_layout(&tab, 30, 1);
+    gui_panel_row(&tab, 30, 1);
     if (gui_panel_button_text(&tab, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");
     demo->check = gui_panel_check(&tab, "advanced", demo->check);
@@ -455,25 +454,24 @@ main(int argc, char *argv[])
 {
     long dt;
     long started;
+    XWindow xw;
+    XSurface *surf;
+    XFont *xfont;
     gui_bool running = gui_true;
     struct demo demo;
 
     /* GUI */
     struct gui_input in;
-    struct gui_font font_data;
+    struct gui_font font;
     struct gui_memory memory;
-    struct gui_context *ctx;
     struct gui_config config;
+    struct gui_canvas canvas;
     struct gui_command_buffer buffer;
     struct gui_command_list list;
     struct gui_panel panel;
-    struct gui_canvas canvas;
+    struct gui_panel_layout layout;
 
     /* Window */
-    XWindow xw;
-    XSurface *surf;
-    XFont *font;
-
     UNUSED(argc); UNUSED(argv);
     memset(&xw, 0, sizeof xw);
     xw.dpy = XOpenDisplay(NULL);
@@ -494,19 +492,22 @@ main(int argc, char *argv[])
     xw.width = (unsigned int)xw.attr.width;
     xw.height = (unsigned int)xw.attr.height;
     surf = surface_create(xw.dpy, xw.screen, xw.win, xw.width, xw.height);
-    font = font_create(xw.dpy, "fixed");
+    xfont = font_create(xw.dpy, "fixed");
 
     /* GUI */
     memset(&in, 0, sizeof in);
-    memset(&panel, 0, sizeof panel);
-    gui_default_config(&config);
     memory.memory = calloc(MAX_MEMORY, 1);
     memory.size = MAX_MEMORY;
-    font_data.userdata = font;
-    font_data.height = (gui_float)font->height;
-    font_data.width = font_get_text_width;
-    panel.x = 50; panel.y = 50;
-    panel.w = 420; panel.h = 300;
+    gui_output_init_fixed(&buffer, &memory);
+
+    font.userdata = xfont;
+    font.height = (gui_float)xfont->height;
+    font.width = font_get_text_width;
+    gui_default_config(&config);
+    gui_panel_init(&panel, 50, 50, 420, 300,
+        GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
+        GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
+        GUI_PANEL_MINIMIZABLE, &config, &font);
 
     /* Demo */
     memset(&demo, 0, sizeof(demo));
@@ -532,13 +533,11 @@ main(int argc, char *argv[])
         gui_input_end(&in);
 
         /* GUI */
-        gui_output_begin_fixed(&buffer, &canvas, &memory, xw.width, xw.height);
-        running = gui_panel_begin(&panel, "Demo", panel.x, panel.y, panel.w, panel.h,
-            GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE|GUI_PANEL_BORDER|
-            GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE, &config, &canvas, &font_data, &in);
-        demo_panel(&panel, &demo);
-        gui_panel_end(&panel);
-        gui_output_end(&buffer, &list, &canvas, NULL);
+        gui_output_begin(&canvas, &buffer, xw.width, xw.height);
+        running = gui_panel_begin(&layout, &panel , "Demo", &canvas, &in);
+        demo_panel(&layout, &demo);
+        gui_panel_end(&layout, &panel);
+        gui_output_end(&list, &buffer, &canvas, NULL);
 
         /* Draw */
         XClearWindow(xw.dpy, xw.win);
@@ -553,7 +552,8 @@ main(int argc, char *argv[])
             sleep_for(DTIME - dt);
     }
 
-    font_del(xw.dpy, font);
+    free(memory.memory);
+    font_del(xw.dpy, xfont);
     surface_del(surf);
     XUnmapWindow(xw.dpy, xw.win);
     XFreeColormap(xw.dpy, xw.cmap);

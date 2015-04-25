@@ -17,28 +17,28 @@ streamlined user development speed in mind.
 - Suited for embedding into graphical applications
 - No global hidden state
 - No direct dependencies (not even libc!)
-- No memory allocation needed
+- Full memory management control
 - Renderer and platform independent
 - Configurable
 - UTF-8 supported
 
 ## Functionality
 + Label
-+ Buttons(Text, Triangle, Color, Toggle, Icon)
++ Buttons
 + Slider
 + Progressbar
 + Checkbox
 + Radiobutton
-+ Input field
++ Input
 + Spinner
 + Selector
 + Linegraph
 + Histogram
 + Panel
-+ Layouts(Tabs, Groups, Shelf)
++ Layouts
 
 ## Limitations
-- Does NOT provide window management
+- Does NOT provide os window management
 - Does NOT provide input handling
 - Does NOT provide a renderer backend
 - Does NOT implement a font library  
@@ -55,8 +55,8 @@ instead of seperating them like retain mode GUIs.
 Since there is no to minimal internal state in immediate mode user interfaces,
 updates have to occur every frame which on one hand is more drawing expensive than classic
 ratained GUI implementations but on the other hand grants a lot more flexibility and
-support for overall changes. In addition without any state there is no need to
-transfer state between your program, the gui state and the user which greatly
+support for overall layout changes. In addition without any state there is no need to
+transfer state between your program, the gui and the user which greatly
 simplifies code. Further traits of immediate mode graphic user interfaces are a
 code driven style, centralized flow control, easy extensibility and
 understandablity.
@@ -79,6 +79,13 @@ font data and the width and height of the canvas drawing area.
 Therefore the canvas is the heart of the toolkit and is probably the biggest
 chunk of work to be done by the user.
 
+### Font
+Since there is no direct font implementation in the toolkit but font handling is
+still an aspect of a gui implemenatation the gui struct was introduced. It only
+contains the bare minimum of what is needed for font handling with a handle to
+your font structure, the font height and a callback to calculate the width of a
+given string.
+
 ### Configuration
 The gui toolkit provides a number of different attributes that can be
 configured, like spacing, padding, size and color.
@@ -89,6 +96,46 @@ filled by the user or can be setup with some default values by the function
 `gui_default_config`. Modification on the fly to the `gui_config` struct is in
 true immedate mode fashion possible and supported.
 
+### Input
+The input structure holds the user input over the course of the frame and
+manages the complete modification of widget and panel state. Like the panel and
+buffering the input is an immediate mode API and consist of an begin sequence
+point with `gui_input_begin` and a end sequence point with `gui_input_end`.
+All modifications to the input struct can only occur between both of these
+sequence points while all outside modifcation provoke undefined behavior.
+
+### Buffering
+For the purpose of defered drawing or the implementation of overlapping panels
+the command buffering API was added. The command buffer hereby holds a queue of
+drawing commands for a number of primitives like line, rectangle, circle,
+triangle and text. The memory for the command buffer can be provided by the user
+in three different ways. First a fixed memory block can be given over to the
+command buffer which fills the memory up until no memory is left. The seond way
+is still using a fixed size block but rellocating a new block of memory at the
+end of the frame, if not enough memory was provided. The final way of memory
+management is by providing allocator callbacks with alloc, realloc and free.
+In true immediate mode fashion the buffering API is by base around a sequence
+point API with an begin sequence point `gui_output_begin` and a end sequence
+point with `gui_output_end` and modification of state between both points. Just
+like the input API the buffer modification before the begining or after the end
+sequence point is undefined behavior.
+
+```c
+struct gui_memory memory = {...};
+struct gui_memory_status status = {0};
+struct gui_command_list out = {0};
+struct gui_command_buffer buffer = {0};
+struct gui_canvas canvas = {0};
+gui_output_init_fixed(buffer, &memory);
+
+while (1) {
+    gui_output_begin(&canvas, &buffer, window_width, window_height);
+    /* add commands by using the canvas */
+    gui_output_end(&list, buffer, &status);
+}
+
+```
+
 ### Widgets
 The minimal widget API provides a basic number of widgets and is designed for
 uses cases where only a small number of basic widgets are needed without any kind of
@@ -97,7 +144,8 @@ draw to, positional and widgets specific data as well as user input
 and returns the from the user input modified state of the widget.
 
 ```c
-struct gui_input in = {0};
+struct gui_input input = {0};
+struct gui_font font = {...};
 struct gui_canvas canvas = {...};
 struct gui_button style = {...};
 
@@ -105,7 +153,7 @@ while (1) {
     gui_input_begin(&input);
     /* record input */
     gui_input_end(&input);
-    if(gui_button_text(&canvas, 0, 0, 100, 30, &style, "ok", GUI_BUTTON_DEFAULT, &input))
+    if(gui_button_text(&canvas, 0, 0, 100, 30, "ok", GUI_BUTTON_DEFAULT, &style, &input, &font))
         fprintf(stdout, "button pressed!\n");
 }
 ```
@@ -117,31 +165,38 @@ widgets but in true immediate mode fashion does not save any widget state from
 widgets that have been added to the panel. In addition the panel enables a
 number of nice features for a group of widgets like panel movement, scaling,
 closing and minimizing. An additional use for panels is to further group widgets
-in panels to tabs, groups and shelfs. The state of internal panels (tabs,
-groups. shelf) is only needed over the course of the build up unlike normal
-panels, which further emphasizes the minimal state mindset.
+in panels to tabs, groups and shelfs.
+The panel is divided into a persistent state struct with `struct gui_panel` with a number
+of attributes which have a persistent life time outside the frame and the panel layout
+`struct gui_panel_layout` with a transient frame life time. While the layout
+state is constantly modifed over the course of the frame the panel struct is
+only modifed at the immendiate mode sequence points `gui_panel_begin` and
+`gui_panel_end`. Therefore all changes to the panel struct inside of both
+sequence points has no effect on the current frame and is only visible in the
+next frame.
 
 ```c
+struct gui_panel panel;
 struct gui_config config;
-struct gui_input in = {0};
-struct gui_panel panel = {0};
+struct gui_font font = {...}
+struct gui_input input = {0};
 struct gui_canvas canvas = {...};
 gui_default_config(&config);
+gui_panel_init(&panel, 50, 50, 300, 200, 0, &config, &font);
 
 while (1) {
     gui_input_begin(&input);
     /* record input */
     gui_input_end(&input);
 
-    gui_panel_begin(&panel, "Demo", panel.x, panel.y, panel.width, panel.height,
-        GUI_PANEL_CLOSEABLE|GUI_PANEL_MINIMIZABLE|GUI_PANEL_BORDER|
-        GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE, &config, &canvas, &in);
-    gui_panel_layout(&panel, 30, 1);
-    if (gui_panel_button_text(&panel, "button", GUI_BUTTON_DEFAULT))
+    struct gui_panel_layout layout;
+    gui_panel_begin(&layout, &panel, "Demo", &canvas, &in);
+    gui_panel_layout(&layout, 30, 1);
+    if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");
-    value = gui_panel_slider(&panel, 0, value, 10, 1);
-    progress = gui_panel_progress(&panel, progress, 100, gui_true);
-    gui_panel_end(&panel);
+    value = gui_panel_slider(&layout, 0, value, 10, 1);
+    progress = gui_panel_progress(&layout, progress, 100, gui_true);
+    gui_panel_end(&layout, &panel);
 }
 ```
 
