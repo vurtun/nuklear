@@ -1,8 +1,4 @@
 # GUI
-
-WORK IN PROGRESS: I do not guarantee that everything works right now
-
-
 This is a bloat-free stateless immediate mode graphical user interface toolkit
 written in ANSI C. It was designed to be easily embeddable into graphical
 application and does not have any direct dependencies. The main premise of this
@@ -61,6 +57,55 @@ simplifies code. Further traits of immediate mode graphic user interfaces are a
 code driven style, centralized flow control, easy extensibility and
 understandablity.
 
+## Example
+```c
+gui_float value = 5.0f;
+struct gui_input in = {0};
+struct gui_config config;
+struct gui_font font = {...};
+struct gui_memory memory = {...};
+struct gui_memory_status status;
+struct gui_command_buffer buffer;
+struct gui_command_list out;
+struct gui_command_list list;
+struct gui_panel panel;
+
+gui_default_config(&config);
+gui_panel_init(&panel, 50, 50, 100, 150,
+    GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
+    GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
+    GUI_PANEL_MINIMIZABLE, &config, &font);
+gui_output_init_fixed(buffer, &memory);
+
+while (1) {
+    gui_input_begin(&input);
+    /* record input */
+    gui_input_end(&input);
+
+    struct gui_canvas canvas;
+    struct gui_panel_layout layout;
+    gui_output_begin(&canvas, &buffer, window_width, window_height);
+    gui_panel_begin(&layout, &panel, "Demo", &canvas, &input);
+    gui_panel_row(&layout, 30, 1);
+    gui_panel_text(&layout, "label", 5, GUI_TEXT_CENTERED);
+    if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT)) {
+        /* event handling */
+    }
+    gui_panel_row(&layout, 30, 2);
+    gui_panel_text(&layout, "value:", 6, GUI_TEXT_CENTERED);
+    value = gui_panel_slider(&layout, 0, value, 10, 1);
+    gui_panel_end(&layout, &panel);
+    gui_output_end(&list, buffer, &status);
+
+    struct gui_command *cmd = list.begin;
+    while (cmd != list.end) {
+        /* execute command */
+        cmd = cmd->next;
+    }
+}
+```
+![gui screenshot](/screen.png?raw=true)
+
 ## API
 The API for this gui toolkit is divided into two different layers. There
 is the widget layer and the panel layer. The widget layer provides a number of
@@ -69,6 +114,23 @@ state. Each widget can be placed anywhere on the screen but there is no directy
 way provided to group widgets together. For this to change there is the panel
 layer which is build on top of the widget layer and uses most of the widget API
 internally to form groups of widgets into a layout.
+
+### Input
+The input structure holds the user input over the course of the frame and
+manages the complete modification of widget and panel state. Like the panel and
+buffering the input is an immediate mode API and consist of an begin sequence
+point with `gui_input_begin` and a end sequence point with `gui_input_end`.
+All modifications to the input struct can only occur between both of these
+sequence points while all outside modifcation provoke undefined behavior.
+
+```c
+struct gui_input input = {0};
+while (1) {
+    gui_input_begin(&input);
+    /* record input */
+    gui_input_end(&input);
+}
+```
 
 ### Canvas
 The Canvas is the abstract drawing interface between the GUI toolkit
@@ -95,14 +157,6 @@ attributes in the `gui_config` structure. The structure either needs to be
 filled by the user or can be setup with some default values by the function
 `gui_default_config`. Modification on the fly to the `gui_config` struct is in
 true immedate mode fashion possible and supported.
-
-### Input
-The input structure holds the user input over the course of the frame and
-manages the complete modification of widget and panel state. Like the panel and
-buffering the input is an immediate mode API and consist of an begin sequence
-point with `gui_input_begin` and a end sequence point with `gui_input_end`.
-All modifications to the input struct can only occur between both of these
-sequence points while all outside modifcation provoke undefined behavior.
 
 ### Buffering
 For the purpose of defered drawing or the implementation of overlapping panels
@@ -150,9 +204,6 @@ struct gui_canvas canvas = {...};
 struct gui_button style = {...};
 
 while (1) {
-    gui_input_begin(&input);
-    /* record input */
-    gui_input_end(&input);
     if(gui_button_text(&canvas, 0, 0, 100, 30, "ok", GUI_BUTTON_DEFAULT, &style, &input, &font))
         fprintf(stdout, "button pressed!\n");
 }
@@ -185,13 +236,9 @@ gui_default_config(&config);
 gui_panel_init(&panel, 50, 50, 300, 200, 0, &config, &font);
 
 while (1) {
-    gui_input_begin(&input);
-    /* record input */
-    gui_input_end(&input);
-
     struct gui_panel_layout layout;
     gui_panel_begin(&layout, &panel, "Demo", &canvas, &in);
-    gui_panel_layout(&layout, 30, 1);
+    gui_panel_row(&layout, 30, 1);
     if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");
     value = gui_panel_slider(&layout, 0, value, 10, 1);

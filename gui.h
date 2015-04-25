@@ -469,7 +469,7 @@ gui_size gui_panel_selector(struct gui_panel_layout*, const char *items[],
                     gui_size item_count, gui_size item_current);
 gui_int gui_panel_plot(struct gui_panel_layout*, const gui_float *values, gui_size value_count);
 gui_int gui_panel_histo(struct gui_panel_layout*, const gui_float *values, gui_size value_count);
-gui_bool gui_panel_tab_begin(struct gui_panel_layout*, struct gui_panel_layout*,
+gui_bool gui_panel_tab_begin(struct gui_panel_layout *parent, struct gui_panel_layout*,
                     const char*, gui_bool minimized);
 void gui_panel_tab_end(struct gui_panel_layout*, struct gui_panel_layout *tab);
 void gui_panel_group_begin(struct gui_panel_layout *panel, struct gui_panel_layout*,
