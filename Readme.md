@@ -71,7 +71,7 @@ struct gui_command_list list;
 struct gui_panel panel;
 
 gui_default_config(&config);
-gui_panel_init(&panel, 50, 50, 100, 150,
+gui_panel_init(&panel, 50, 50, 220, 170,
     GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
     GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
     GUI_PANEL_MINIMIZABLE, &config, &font);
