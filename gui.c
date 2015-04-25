@@ -1980,7 +1980,6 @@ gui_panel_tab_end(struct gui_panel_layout *parent, struct gui_panel_layout *tab)
     panel.y = tab->y;
     panel.flags = GUI_PANEL_BORDER|GUI_PANEL_MINIMIZABLE|GUI_PANEL_TAB;
     gui_panel_end(tab, &panel);
-    /*parent->at_y -= tab->row_height;*/
     parent->at_y += tab->height + tab->config->item_spacing.y;
     canvas = parent->canvas;
     canvas->scissor(canvas->userdata, parent->clip.x, parent->clip.y, parent->clip.w, parent->clip.h);

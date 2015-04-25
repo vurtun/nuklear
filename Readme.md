@@ -2,7 +2,7 @@
 This is a bloat-free stateless immediate mode graphical user interface toolkit
 written in ANSI C. It was designed to be easily embeddable into graphical
 application and does not have any direct dependencies. The main premise of this
-toolkit is to be as stateless, simple but as powerful as possible with fast
+toolkit is to be as stateless and simple but as powerful as possible with fast
 streamlined user development speed in mind.
 
 ## Features
@@ -59,7 +59,6 @@ understandablity.
 
 ## Example
 ```c
-gui_float value = 5.0f;
 struct gui_input in = {0};
 struct gui_config config;
 struct gui_font font = {...};
