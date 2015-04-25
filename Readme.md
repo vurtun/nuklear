@@ -87,13 +87,14 @@ while (1) {
     gui_output_begin(&canvas, &buffer, window_width, window_height);
     gui_panel_begin(&layout, &panel, "Demo", &canvas, &input);
     gui_panel_row(&layout, 30, 1);
-    gui_panel_text(&layout, "label", 5, GUI_TEXT_CENTERED);
     if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT)) {
         /* event handling */
     }
     gui_panel_row(&layout, 30, 2);
-    gui_panel_text(&layout, "value:", 6, GUI_TEXT_CENTERED);
-    value = gui_panel_slider(&layout, 0, value, 10, 1);
+    if (gui_panel_option(&layout, "easy", option == 0)) option = 0;
+    if (gui_panel_option(&layout, "hard", option == 1)) option = 1;
+    gui_panel_text(&layout, "input:", 6, GUI_TEXT_LEFT);
+    len = gui_panel_input(&layout, input, len, 256, &active, GUI_INPUT_DEFAULT);
     gui_panel_end(&layout, &panel);
     gui_output_end(&list, buffer, &status);
 
