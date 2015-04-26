@@ -5,7 +5,7 @@
 */
 #include "gui.h"
 
-#ifndef GUI_USE_DEBUG_BUILD
+#ifdef GUI_USE_DEBUG_BUILD
 #include <assert.h>
 #else
 #define assert(expr)
