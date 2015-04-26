@@ -5,7 +5,7 @@
 */
 #include "gui.h"
 
-#ifndef NDEBUG
+#ifndef GUI_USE_DEBUG_BUILD
 #include <assert.h>
 #else
 #define assert(expr)
@@ -921,7 +921,7 @@ gui_scroll(const struct gui_canvas *canvas, gui_float x, gui_float y,
 }
 
 void*
-gui_output_push(struct gui_command_buffer* buffer,
+gui_buffer_push(struct gui_command_buffer* buffer,
     enum gui_command_type type, gui_size size)
 {
     static const gui_size align = ALIGNOF(struct gui_command);
@@ -958,12 +958,12 @@ gui_output_push(struct gui_command_buffer* buffer,
 }
 
 void
-gui_output_push_scissor(struct gui_command_buffer *buffer, gui_float x, gui_float y,
+gui_buffer_push_scissor(struct gui_command_buffer *buffer, gui_float x, gui_float y,
     gui_float w, gui_float h)
 {
     struct gui_command_scissor *cmd;
     if (!buffer) return;
-    cmd = gui_output_push(buffer, GUI_COMMAND_SCISSOR, sizeof(*cmd));
+    cmd = gui_buffer_push(buffer, GUI_COMMAND_SCISSOR, sizeof(*cmd));
     if (!cmd) return;
     cmd->x = x;
     cmd->y = y;
@@ -972,12 +972,12 @@ gui_output_push_scissor(struct gui_command_buffer *buffer, gui_float x, gui_floa
 }
 
 void
-gui_output_push_line(struct gui_command_buffer *buffer, gui_float x0, gui_float y0,
+gui_buffer_push_line(struct gui_command_buffer *buffer, gui_float x0, gui_float y0,
     gui_float x1, gui_float y1, struct gui_color c)
 {
     struct gui_command_line *cmd;
     if (!buffer) return;
-    cmd = gui_output_push(buffer, GUI_COMMAND_LINE, sizeof(*cmd));
+    cmd = gui_buffer_push(buffer, GUI_COMMAND_LINE, sizeof(*cmd));
     if (!cmd) return;
     cmd->begin[0] = x0;
     cmd->begin[1] = y0;
@@ -987,12 +987,12 @@ gui_output_push_line(struct gui_command_buffer *buffer, gui_float x0, gui_float 
 }
 
 void
-gui_output_push_rect(struct gui_command_buffer *buffer, gui_float x, gui_float y,
+gui_buffer_push_rect(struct gui_command_buffer *buffer, gui_float x, gui_float y,
     gui_float w, gui_float h, struct gui_color c)
 {
     struct gui_command_rect *cmd;
     if (!buffer) return;
-    cmd = gui_output_push(buffer, GUI_COMMAND_RECT, sizeof(*cmd));
+    cmd = gui_buffer_push(buffer, GUI_COMMAND_RECT, sizeof(*cmd));
     if (!cmd) return;
     cmd->x = x;
     cmd->y = y;
@@ -1002,12 +1002,12 @@ gui_output_push_rect(struct gui_command_buffer *buffer, gui_float x, gui_float y
 }
 
 void
-gui_output_push_circle(struct gui_command_buffer *buffer, gui_float x, gui_float y,
+gui_buffer_push_circle(struct gui_command_buffer *buffer, gui_float x, gui_float y,
     gui_float w, gui_float h, struct gui_color c)
 {
     struct gui_command_circle *cmd;
     if (!buffer) return;
-    cmd = gui_output_push(buffer, GUI_COMMAND_CIRCLE, sizeof(*cmd));
+    cmd = gui_buffer_push(buffer, GUI_COMMAND_CIRCLE, sizeof(*cmd));
     if (!cmd) return;
     cmd->x = x;
     cmd->y = y;
@@ -1017,12 +1017,12 @@ gui_output_push_circle(struct gui_command_buffer *buffer, gui_float x, gui_float
 }
 
 void
-gui_output_push_triangle(struct gui_command_buffer *buffer, gui_float x0, gui_float y0,
+gui_buffer_push_triangle(struct gui_command_buffer *buffer, gui_float x0, gui_float y0,
     gui_float x1, gui_float y1, gui_float x2, gui_float y2, struct gui_color c)
 {
     struct gui_command_triangle *cmd;
     if (!buffer) return;
-    cmd = gui_output_push(buffer, GUI_COMMAND_TRIANGLE, sizeof(*cmd));
+    cmd = gui_buffer_push(buffer, GUI_COMMAND_TRIANGLE, sizeof(*cmd));
     if (!cmd) return;
     cmd->a[0] = x0;
     cmd->a[1] = y0;
@@ -1034,14 +1034,14 @@ gui_output_push_triangle(struct gui_command_buffer *buffer, gui_float x0, gui_fl
 }
 
 void
-gui_output_push_text(struct gui_command_buffer *buffer, gui_float x, gui_float y,
+gui_buffer_push_text(struct gui_command_buffer *buffer, gui_float x, gui_float y,
     gui_float w, gui_float h, const gui_char *string, gui_size length,
     const struct gui_font *font, struct gui_color bg, struct gui_color fg)
 {
     struct gui_command_text *cmd;
     if (!buffer) return;
     if (!string || !length) return;
-    cmd = gui_output_push(buffer, GUI_COMMAND_TEXT, sizeof(*cmd) + length + 1);
+    cmd = gui_buffer_push(buffer, GUI_COMMAND_TEXT, sizeof(*cmd) + length + 1);
     if (!cmd) return;
     cmd->x = x;
     cmd->y = y;
@@ -1056,7 +1056,7 @@ gui_output_push_text(struct gui_command_buffer *buffer, gui_float x, gui_float y
 }
 
 void
-gui_output_init_fixed(struct gui_command_buffer *buffer, const struct gui_memory *memory)
+gui_buffer_init_fixed(struct gui_command_buffer *buffer, const struct gui_memory *memory)
 {
     zero(buffer, sizeof(*buffer));
     buffer->memory = memory->memory;
@@ -1066,7 +1066,7 @@ gui_output_init_fixed(struct gui_command_buffer *buffer, const struct gui_memory
 }
 
 void
-gui_output_init(struct gui_command_buffer *buffer, const struct gui_allocator *memory,
+gui_buffer_init(struct gui_command_buffer *buffer, const struct gui_allocator *memory,
     gui_size initial_size, gui_float grow_factor)
 {
     zero(buffer, sizeof(*buffer));
@@ -1079,22 +1079,22 @@ gui_output_init(struct gui_command_buffer *buffer, const struct gui_allocator *m
 }
 
 void
-gui_output_begin(struct gui_canvas *canvas, struct gui_command_buffer *buffer,
+gui_buffer_begin(struct gui_canvas *canvas, struct gui_command_buffer *buffer,
     gui_size width, gui_size height)
 {
     canvas->userdata = buffer;
     canvas->width = width;
     canvas->height = height;
-    canvas->scissor = (gui_scissor)gui_output_push_scissor;
-    canvas->draw_line = (gui_draw_line)gui_output_push_line;
-    canvas->draw_rect = (gui_draw_rect)gui_output_push_rect;
-    canvas->draw_circle = (gui_draw_circle)gui_output_push_circle;
-    canvas->draw_triangle = (gui_draw_triangle)gui_output_push_triangle;
-    canvas->draw_text = (gui_draw_text)gui_output_push_text;
+    canvas->scissor = (gui_scissor)gui_buffer_push_scissor;
+    canvas->draw_line = (gui_draw_line)gui_buffer_push_line;
+    canvas->draw_rect = (gui_draw_rect)gui_buffer_push_rect;
+    canvas->draw_circle = (gui_draw_circle)gui_buffer_push_circle;
+    canvas->draw_triangle = (gui_draw_triangle)gui_buffer_push_triangle;
+    canvas->draw_text = (gui_draw_text)gui_buffer_push_text;
 }
 
 void
-gui_output_end(struct gui_command_list *list, struct gui_command_buffer *buffer,
+gui_buffer_end(struct gui_command_list *list, struct gui_command_buffer *buffer,
     struct gui_canvas *canvas, struct gui_memory_status *status)
 {
     assert(buffer);
@@ -1118,7 +1118,7 @@ gui_output_end(struct gui_command_list *list, struct gui_command_buffer *buffer,
 }
 
 void
-gui_output_clear(struct gui_command_buffer *buffer)
+gui_buffer_clear(struct gui_command_buffer *buffer)
 {
     assert(buffer);
     if (!buffer || !buffer->memory || !buffer->allocator.free) return;

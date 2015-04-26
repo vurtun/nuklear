@@ -499,7 +499,7 @@ main(int argc, char *argv[])
     memset(&in, 0, sizeof in);
     memory.memory = calloc(MAX_MEMORY, 1);
     memory.size = MAX_MEMORY;
-    gui_output_init_fixed(&buffer, &memory);
+    gui_buffer_init_fixed(&buffer, &memory);
 
     font.userdata = xfont;
     font.height = (gui_float)xfont->height;
@@ -534,11 +534,11 @@ main(int argc, char *argv[])
         gui_input_end(&in);
 
         /* GUI */
-        gui_output_begin(&canvas, &buffer, xw.width, xw.height);
+        gui_buffer_begin(&canvas, &buffer, xw.width, xw.height);
         running = gui_panel_begin(&layout, &panel , "Demo", &canvas, &in);
         demo_panel(&layout, &demo);
         gui_panel_end(&layout, &panel);
-        gui_output_end(&list, &buffer, &canvas, NULL);
+        gui_buffer_end(&list, &buffer, &canvas, NULL);
 
         /* Draw */
         XClearWindow(xw.dpy, xw.win);

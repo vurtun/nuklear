@@ -75,7 +75,7 @@ gui_panel_init(&panel, 50, 50, 220, 170,
     GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
     GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
     GUI_PANEL_MINIMIZABLE, &config, &font);
-gui_output_init_fixed(buffer, &memory);
+gui_buffer_init_fixed(buffer, &memory);
 
 while (1) {
     gui_input_begin(&input);
@@ -84,7 +84,7 @@ while (1) {
 
     struct gui_canvas canvas;
     struct gui_panel_layout layout;
-    gui_output_begin(&canvas, &buffer, window_width, window_height);
+    gui_buffer_begin(&canvas, &buffer, window_width, window_height);
     gui_panel_begin(&layout, &panel, "Demo", &canvas, &input);
     gui_panel_row(&layout, 30, 1);
     if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT)) {
@@ -96,7 +96,7 @@ while (1) {
     gui_panel_text(&layout, "input:", 5, GUI_TEXT_LEFT);
     len = gui_panel_input(&layout, input, len, 256, &active, GUI_INPUT_DEFAULT);
     gui_panel_end(&layout, &panel);
-    gui_output_end(&list, buffer, &status);
+    gui_buffer_end(&list, buffer, &status);
 
     struct gui_command *cmd = list.begin;
     while (cmd != list.end) {
@@ -168,8 +168,8 @@ The second way is extending the fixed size memory block by reallocating at the
 end of the frame if the providided memory size was not sufficient.
 The final way of memory management is by providing allocator callbacks with alloc,
 realloc and free. In true immediate mode fashion the buffering API is based around sequence
-points with an begin sequence point `gui_output_begin` and a end sequence
-point `gui_output_end` and modification of state between both points. Just
+points with an begin sequence point `gui_buffer_begin` and a end sequence
+point `gui_buffer_end` and modification of state between both points. Just
 like the input API the buffer modification before the beginning or after the end
 sequence point is undefined behavior.
 
@@ -178,13 +178,13 @@ struct gui_memory memory = {...};
 struct gui_memory_status status = {0};
 struct gui_command_list out = {0};
 struct gui_command_buffer buffer = {0};
-gui_output_init_fixed(buffer, &memory);
+gui_buffer_init_fixed(buffer, &memory);
 
 while (1) {
     struct gui_canvas canvas;
-    gui_output_begin(&canvas, &buffer, window_width, window_height);
+    gui_buffer_begin(&canvas, &buffer, window_width, window_height);
     /* add commands by using the canvas */
-    gui_output_end(&list, buffer, &status);
+    gui_buffer_end(&list, buffer, &status);
 }
 
 ```

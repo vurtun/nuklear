@@ -382,28 +382,28 @@ void gui_input_end(struct gui_input*);
 
 
 /* Output */
-void gui_output_init(struct gui_command_buffer*, const struct gui_allocator*,
+void gui_buffer_init(struct gui_command_buffer*, const struct gui_allocator*,
                     gui_size initial_size, gui_float grow_factor);
-void gui_output_init_fixed(struct gui_command_buffer*, const struct gui_memory*);
-void gui_output_begin(struct gui_canvas *canvas, struct gui_command_buffer *buffer,
+void gui_buffer_init_fixed(struct gui_command_buffer*, const struct gui_memory*);
+void gui_buffer_begin(struct gui_canvas *canvas, struct gui_command_buffer *buffer,
                     gui_size width, gui_size height);
-void *gui_output_push(struct gui_command_buffer*,
+void *gui_buffer_push(struct gui_command_buffer*,
                     enum gui_command_type, gui_size size);
-void gui_output_push_scissor(struct gui_command_buffer*, gui_float, gui_float,
+void gui_buffer_push_scissor(struct gui_command_buffer*, gui_float, gui_float,
                     gui_float, gui_float);
-void gui_output_push_line(struct gui_command_buffer*, gui_float, gui_float,
+void gui_buffer_push_line(struct gui_command_buffer*, gui_float, gui_float,
                     gui_float, gui_float, struct gui_color);
-void gui_output_push_rect(struct gui_command_buffer*, gui_float, gui_float,
+void gui_buffer_push_rect(struct gui_command_buffer*, gui_float, gui_float,
                     gui_float, gui_float, struct gui_color);
-void gui_output_push_circle(struct gui_command_buffer*, gui_float, gui_float,
+void gui_buffer_push_circle(struct gui_command_buffer*, gui_float, gui_float,
                     gui_float, gui_float, struct gui_color);
-void gui_output_push_triangle(struct gui_command_buffer *buffer, gui_float x0, gui_float y0,
+void gui_buffer_push_triangle(struct gui_command_buffer *buffer, gui_float x0, gui_float y0,
                     gui_float x1, gui_float y1, gui_float x2, gui_float y2, struct gui_color c);
-void gui_output_push_text(struct gui_command_buffer*, gui_float, gui_float,
+void gui_buffer_push_text(struct gui_command_buffer*, gui_float, gui_float,
                     gui_float, gui_float, const gui_char*, gui_size,
                     const struct gui_font*, struct gui_color, struct gui_color);
-void gui_output_clear(struct gui_command_buffer*);
-void gui_output_end(struct gui_command_list*, struct gui_command_buffer*,
+void gui_buffer_clear(struct gui_command_buffer*);
+void gui_buffer_end(struct gui_command_list*, struct gui_command_buffer*,
                     struct gui_canvas*, struct gui_memory_status*);
 
 
