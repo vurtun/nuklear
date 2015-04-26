@@ -1141,6 +1141,7 @@ gui_default_config(struct gui_config *config)
     col_load(config->colors[GUI_COLOR_TITLEBAR], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_BUTTON], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_BUTTON_HOVER], 100, 100, 100, 255);
+    col_load(config->colors[GUI_COLOR_BUTTON_TOGGLE], 65, 65, 65, 255);
     col_load(config->colors[GUI_COLOR_BUTTON_HOVER_FONT], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_BUTTON_BORDER], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_CHECK], 100, 100, 100, 255);
@@ -1588,12 +1589,12 @@ gui_panel_button_toggle(struct gui_panel_layout *layout, const char *str, gui_bo
         button.background = config->colors[GUI_COLOR_BUTTON];
         button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
         button.content = config->colors[GUI_COLOR_TEXT];
-        button.highlight = config->colors[GUI_COLOR_BUTTON];
-        button.highlight_content = config->colors[GUI_COLOR_TEXT];
+        button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
+        button.highlight_content = config->colors[GUI_COLOR_BUTTON];
     } else {
-        button.background = config->colors[GUI_COLOR_BUTTON_HOVER];
+        button.background = config->colors[GUI_COLOR_BUTTON_TOGGLE];
         button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
-        button.content = config->colors[GUI_COLOR_BUTTON];
+        button.content = config->colors[GUI_COLOR_TEXT];
         button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
         button.highlight_content = config->colors[GUI_COLOR_BUTTON];
     }
@@ -1929,7 +1930,8 @@ gui_panel_histo(struct gui_panel_layout *layout, const gui_float *values, gui_si
             values, count, &histo, layout->input);
 }
 
-gui_bool gui_panel_tab_begin(struct gui_panel_layout *parent, struct gui_panel_layout *tab,
+gui_bool
+gui_panel_tab_begin(struct gui_panel_layout *parent, struct gui_panel_layout *tab,
     const char *title, gui_bool minimized)
 {
     struct gui_rect bounds;

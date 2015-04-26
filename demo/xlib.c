@@ -75,6 +75,7 @@ struct demo {
     gui_bool tab_min;
     gui_float group_off;
     gui_float shelf_off;
+    gui_bool toggle;
 };
 
 static void
@@ -440,6 +441,7 @@ demo_panel(struct gui_panel_layout *panel, struct demo *demo)
     gui_panel_row(&tab, 30, 1);
     if (gui_panel_button_text(&tab, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");
+    demo->toggle = gui_panel_button_toggle(&tab, "toggle", demo->toggle);
     demo->check = gui_panel_check(&tab, "advanced", demo->check);
     demo->slider = gui_panel_slider(&tab, 0, demo->slider, 10, 1.0f);
     demo->prog = gui_panel_progress(&tab, demo->prog, 100, gui_true);
