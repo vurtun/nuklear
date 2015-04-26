@@ -1,9 +1,9 @@
 # GUI
-This is a bloat-free stateless immediate mode graphical user interface toolkit
-written in ANSI C. It was designed to be easily embeddable into graphical
+This is a bloat free stateless immediate mode graphical user interface toolkit
+written in ANSI C. It was designed as a embeddable user interface for graphical
 application and does not have any direct dependencies. The main premise of this
-toolkit is to be as stateless and simple but as powerful as possible with fast
-streamlined user development speed in mind.
+toolkit is to be as stateless and simple but at the same time as powerful as
+possible with fast streamlined development speed in mind.
 
 ## Features
 - Immediate mode graphical user interface toolkit
@@ -53,8 +53,8 @@ instead of seperating them like retain mode GUIs.
 Since there is no to minimal internal state in immediate mode user interfaces,
 updates have to occur every frame which on one hand is more drawing expensive than classic
 ratained GUI implementations but on the other hand grants a lot more flexibility and
-support for overall layout changes. In addition without any state there is no need to
-transfer state between your program, the gui and the user which greatly
+support for overall layout changes. In addition without any state there is no
+duplicated state between your program, the gui and the user which greatly
 simplifies code. Further traits of immediate mode graphic user interfaces are a
 code driven style, centralized flow control, easy extensibility and
 understandablity.
@@ -93,7 +93,7 @@ while (1) {
     gui_panel_row(&layout, 30, 2);
     if (gui_panel_option(&layout, "easy", option == 0)) option = 0;
     if (gui_panel_option(&layout, "hard", option == 1)) option = 1;
-    gui_panel_text(&layout, "input:", 6, GUI_TEXT_LEFT);
+    gui_panel_text(&layout, "input:", 5, GUI_TEXT_LEFT);
     len = gui_panel_input(&layout, input, len, 256, &active, GUI_INPUT_DEFAULT);
     gui_panel_end(&layout, &panel);
     gui_output_end(&list, buffer, &status);
@@ -166,8 +166,8 @@ in three possible ways. First by providing a fixed size memory block which
 will be filled up until no memory is left.
 The second way is extending the fixed size memory block by reallocating at the
 end of the frame if the providided memory size was not sufficient.
-The final way of memory management is by providing allocator callbacks with alloc, realloc and free.
-In true immediate mode fashion the buffering API is based around sequence
+The final way of memory management is by providing allocator callbacks with alloc,
+realloc and free. In true immediate mode fashion the buffering API is based around sequence
 points with an begin sequence point `gui_output_begin` and a end sequence
 point `gui_output_end` and modification of state between both points. Just
 like the input API the buffer modification before the beginning or after the end
@@ -190,9 +190,9 @@ while (1) {
 ```
 
 ### Widgets
-The minimal widget API provides a basic number of widgets and is designed for
-uses cases where only a small number of basic widgets are needed without any kind of
-more complex layouts. In order for the GUI to work each widget needs a canvas to
+The minimal widget API provides a number of basic widgets and is designed for
+uses cases where no complex wideget layouts or grouping is needed.
+In order for the GUI to work each widget needs a canvas to
 draw to, positional and widgets specific data as well as user input
 and returns the from the user input modified state of the widget.
 
@@ -216,10 +216,10 @@ widgets that have been added to the panel. In addition the panel enables a
 number of nice features on a group of widgets like movement, scaling,
 closing and minimizing. An additional use for panel is to further extend the
 grouping of widgets into tabs, groups and shelfs.
-The panel is divided into a `struct gui_panel` with persistent life time
-the `struct gui_panel_layout` structure with a transient frame life time.
+The panel is divided into a `struct gui_panel` with persistent life time and
+the `struct gui_panel_layout` structure with a temporary life time.
 While the layout state is constantly modifed over the course of
-the frame, the panel struct is only modified at the immendiate mode sequence points
+the frame, the panel struct is only modified at the immediate mode sequence points
 `gui_panel_begin` and `gui_panel_end`. Therefore all changes to the panel struct inside of both
 sequence points have no effect in the current frame and are only visible in the
 next frame.
