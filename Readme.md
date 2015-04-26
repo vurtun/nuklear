@@ -8,7 +8,7 @@ streamlined user development speed in mind.
 ## Features
 - Immediate mode graphical user interface toolkit
 - Written in C89 (ANSI C)
-- Small codebase (~2.5kLOC)
+- Small codebase (~2kLOC)
 - Focus on portability and minimal internal state
 - Suited for embedding into graphical applications
 - No global hidden state
@@ -31,7 +31,9 @@ streamlined user development speed in mind.
 + Linegraph
 + Histogram
 + Panel
-+ Layouts
++ Tab
++ Group
++ Shelf
 
 ## Limitations
 - Does NOT provide os window management
@@ -135,10 +137,8 @@ while (1) {
 The Canvas is the abstract drawing interface between the GUI toolkit
 and the user and contains drawing callbacks for the primitives
 scissor, line, rectangle, circle, triangle, bitmap and text which need to be
-provided by the user. In addition to the drawing callbacks the canvas contains
-font data and the width and height of the canvas drawing area.
-Therefore the canvas is the heart of the toolkit and is probably the biggest
-chunk of work to be done by the user.
+provided by the user. Therefore the canvas is  probably the biggest chunk of work
+to be done by the user.
 
 ### Font
 Since there is no direct font implementation in the toolkit but font handling is
@@ -167,10 +167,10 @@ will be filled up until no memory is left.
 The second way is extending the fixed size memory block by reallocating at the
 end of the frame if the providided memory size was not sufficient.
 The final way of memory management is by providing allocator callbacks with alloc, realloc and free.
-In true immediate mode fashion the buffering API is based around a sequence
+In true immediate mode fashion the buffering API is based around sequence
 points with an begin sequence point `gui_output_begin` and a end sequence
 point `gui_output_end` and modification of state between both points. Just
-like the input API the buffer modification before the begining or after the end
+like the input API the buffer modification before the beginning or after the end
 sequence point is undefined behavior.
 
 ```c
@@ -178,10 +178,10 @@ struct gui_memory memory = {...};
 struct gui_memory_status status = {0};
 struct gui_command_list out = {0};
 struct gui_command_buffer buffer = {0};
-struct gui_canvas canvas = {0};
 gui_output_init_fixed(buffer, &memory);
 
 while (1) {
+    struct gui_canvas canvas;
     gui_output_begin(&canvas, &buffer, window_width, window_height);
     /* add commands by using the canvas */
     gui_output_end(&list, buffer, &status);
