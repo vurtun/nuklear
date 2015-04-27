@@ -95,7 +95,7 @@ while (1) {
     if (gui_panel_option(&layout, "easy", option == 0)) option = 0;
     if (gui_panel_option(&layout, "hard", option == 1)) option = 1;
     gui_panel_text(&layout, "input:", 6, GUI_TEXT_LEFT);
-    len = gui_panel_input(&layout, input, len, 256, &active, GUI_INPUT_DEFAULT);
+    len = gui_panel_input(&layout, buffer, len, 256, &active, GUI_INPUT_DEFAULT);
     gui_panel_end(&layout, &panel);
     gui_buffer_end(&list, buffer, &status);
 
