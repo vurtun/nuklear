@@ -81,7 +81,7 @@ while (1) {
     gui_input_end(&input);
 
     struct gui_canvas canvas;
-    struct gui_command_list out;
+    struct gui_command_list list;
     struct gui_panel_layout layout;
     struct gui_memory_status status;
 
