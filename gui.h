@@ -258,11 +258,20 @@ struct gui_command_text {
     gui_char string[1];
 };
 
+enum gui_clipping {
+    GUI_NO_CLIP,
+    GUI_CLIP
+};
+
 struct gui_command_buffer {
     void *memory;
     struct gui_allocator allocator;
     struct gui_command *begin;
     struct gui_command *end;
+    struct gui_rect clip;
+    enum gui_clipping clipping;
+    gui_size clipped_cmds;
+    gui_size clipped_memory;
     gui_float grow_factor;
     gui_size allocated;
     gui_size capacity;
@@ -280,6 +289,8 @@ struct gui_memory_status {
     gui_size size;
     gui_size allocated;
     gui_size needed;
+    gui_size clipped_commands;
+    gui_size clipped_memory;
 };
 
 enum gui_panel_colors {
@@ -382,10 +393,11 @@ void gui_input_char(struct gui_input*, const gui_glyph);
 void gui_input_end(struct gui_input*);
 
 
-/* Output */
+/* Buffer */
 void gui_buffer_init(struct gui_command_buffer*, const struct gui_allocator*,
-                    gui_size initial_size, gui_float grow_factor);
-void gui_buffer_init_fixed(struct gui_command_buffer*, const struct gui_memory*);
+                    gui_size initial_size, gui_float grow_factor, enum gui_clipping);
+void gui_buffer_init_fixed(struct gui_command_buffer*, const struct gui_memory*,
+                    enum gui_clipping);
 void gui_buffer_begin(struct gui_canvas *canvas, struct gui_command_buffer *buffer,
                     gui_size width, gui_size height);
 void *gui_buffer_push(struct gui_command_buffer*,

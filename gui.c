@@ -23,6 +23,8 @@
 #define ABS(a) (((a) < 0) ? -(a) : (a))
 #define BETWEEN(x, a, b) ((a) <= (x) && (x) <= (b))
 #define INBOX(px, py, x, y, w, h) (BETWEEN(px, x, x+w) && BETWEEN(py, y, y+h))
+#define INTERSECT(x0, y0, w0, h0, x1, y1, w1, h1) \
+    (!(((x1 > (x0 + w0)) || ((x1 + w1) < x0) || (y1 > (y0 + h0)) || (y1 + h1) < y0)))
 
 #define col_load(c,j,k,l,m) (c).r = (j), (c).g = (k), (c).b = (l), (c).a = (m)
 #define vec2_load(v,a,b) (v).x = (a), (v).y = (b)
@@ -953,6 +955,7 @@ gui_buffer_push(struct gui_command_buffer* buffer,
 
     buffer->end = tail;
     buffer->allocated += size + alignment;
+    buffer->needed += alignment;
     buffer->count++;
     return cmd;
 }
@@ -965,6 +968,12 @@ gui_buffer_push_scissor(struct gui_command_buffer *buffer, gui_float x, gui_floa
     if (!buffer) return;
     cmd = gui_buffer_push(buffer, GUI_COMMAND_SCISSOR, sizeof(*cmd));
     if (!cmd) return;
+
+    buffer->clip.x = x;
+    buffer->clip.y = y;
+    buffer->clip.w = w;
+    buffer->clip.h = h;
+
     cmd->x = x;
     cmd->y = y;
     cmd->w = w;
@@ -977,6 +986,14 @@ gui_buffer_push_line(struct gui_command_buffer *buffer, gui_float x0, gui_float 
 {
     struct gui_command_line *cmd;
     if (!buffer) return;
+    if (buffer->clipping == GUI_CLIP) {
+        const struct gui_rect *r = &buffer->clip;
+        if (!INBOX(x0, y0, r->x, r->y, r->w, r->h) &&
+            (!INBOX(x1, y1, r->x, r->y, r->w, r->h))) {
+            buffer->clipped_memory += sizeof(*cmd);
+            buffer->clipped_cmds++;
+        }
+    }
     cmd = gui_buffer_push(buffer, GUI_COMMAND_LINE, sizeof(*cmd));
     if (!cmd) return;
     cmd->begin[0] = x0;
@@ -992,6 +1009,14 @@ gui_buffer_push_rect(struct gui_command_buffer *buffer, gui_float x, gui_float y
 {
     struct gui_command_rect *cmd;
     if (!buffer) return;
+    if (buffer->clipping == GUI_CLIP) {
+        const struct gui_rect *r = &buffer->clip;
+        if (!INTERSECT(r->x, r->y, r->w, r->h, x, y, w, h)) {
+            buffer->clipped_memory += sizeof(*cmd);
+            buffer->clipped_cmds++;
+            return;
+        }
+    }
     cmd = gui_buffer_push(buffer, GUI_COMMAND_RECT, sizeof(*cmd));
     if (!cmd) return;
     cmd->x = x;
@@ -1007,6 +1032,15 @@ gui_buffer_push_circle(struct gui_command_buffer *buffer, gui_float x, gui_float
 {
     struct gui_command_circle *cmd;
     if (!buffer) return;
+    if (buffer->clipping == GUI_CLIP) {
+        const struct gui_rect *r = &buffer->clip;
+        if (!INTERSECT(r->x, r->y, r->w, r->h, x, y, w, h)) {
+            buffer->clipped_memory += sizeof(*cmd);
+            buffer->clipped_cmds++;
+            return;
+        }
+    }
+
     cmd = gui_buffer_push(buffer, GUI_COMMAND_CIRCLE, sizeof(*cmd));
     if (!cmd) return;
     cmd->x = x;
@@ -1022,6 +1056,16 @@ gui_buffer_push_triangle(struct gui_command_buffer *buffer, gui_float x0, gui_fl
 {
     struct gui_command_triangle *cmd;
     if (!buffer) return;
+    if (buffer->clipping == GUI_CLIP) {
+        const struct gui_rect *r = &buffer->clip;
+        if (!INBOX(x0, y0, r->x, r->y, r->w, r->h) &&
+            !INBOX(x1, y1, r->x, r->y, r->w, r->h) &&
+            !INBOX(x2, y2, r->x, r->y, r->w, r->h)) {
+            buffer->clipped_memory += sizeof(*cmd);
+            buffer->clipped_cmds++;
+            return;
+        }
+    }
     cmd = gui_buffer_push(buffer, GUI_COMMAND_TRIANGLE, sizeof(*cmd));
     if (!cmd) return;
     cmd->a[0] = x0;
@@ -1041,6 +1085,14 @@ gui_buffer_push_text(struct gui_command_buffer *buffer, gui_float x, gui_float y
     struct gui_command_text *cmd;
     if (!buffer) return;
     if (!string || !length) return;
+    if (buffer->clipping == GUI_CLIP) {
+        const struct gui_rect *r = &buffer->clip;
+        if (!INTERSECT(r->x, r->y, r->w, r->h, x, y, w, h)) {
+            buffer->clipped_memory += sizeof(*cmd);
+            buffer->clipped_cmds++;
+            return;
+        }
+    }
     cmd = gui_buffer_push(buffer, GUI_COMMAND_TEXT, sizeof(*cmd) + length + 1);
     if (!cmd) return;
     cmd->x = x;
@@ -1056,18 +1108,22 @@ gui_buffer_push_text(struct gui_command_buffer *buffer, gui_float x, gui_float y
 }
 
 void
-gui_buffer_init_fixed(struct gui_command_buffer *buffer, const struct gui_memory *memory)
+gui_buffer_init_fixed(struct gui_command_buffer *buffer, const struct gui_memory *memory,
+    enum gui_clipping clipping)
 {
     zero(buffer, sizeof(*buffer));
     buffer->memory = memory->memory;
     buffer->capacity = memory->size;
     buffer->begin = buffer->memory;
     buffer->end = buffer->begin;
+    buffer->clipping = clipping;
+    buffer->clip = null_rect;
+    buffer->grow_factor = 0;
 }
 
 void
 gui_buffer_init(struct gui_command_buffer *buffer, const struct gui_allocator *memory,
-    gui_size initial_size, gui_float grow_factor)
+    gui_size initial_size, gui_float grow_factor, enum gui_clipping clipping)
 {
     zero(buffer, sizeof(*buffer));
     buffer->memory = memory->alloc(initial_size);
@@ -1076,6 +1132,8 @@ gui_buffer_init(struct gui_command_buffer *buffer, const struct gui_allocator *m
     buffer->begin = buffer->memory;
     buffer->end = buffer->begin;
     buffer->grow_factor = grow_factor;
+    buffer->clip = null_rect;
+    buffer->clipping = clipping;
 }
 
 void
@@ -1103,6 +1161,8 @@ gui_buffer_end(struct gui_command_list *list, struct gui_command_buffer *buffer,
         status->size = buffer->capacity;
         status->allocated = buffer->allocated;
         status->needed = buffer->needed;
+        status->clipped_commands = buffer->clipped_cmds;
+        status->clipped_memory = buffer->clipped_memory;
     }
     if (list) {
         list->count = buffer->count;
@@ -1114,6 +1174,9 @@ gui_buffer_end(struct gui_command_list *list, struct gui_command_buffer *buffer,
     buffer->needed = 0;
     buffer->allocated = 0;
     buffer->count = 0;
+    buffer->clip = null_rect;
+    buffer->clipped_cmds = 0;
+    buffer->clipped_memory = 0;
     zero(canvas, sizeof(*canvas));
 }
 

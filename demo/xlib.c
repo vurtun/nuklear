@@ -467,6 +467,7 @@ main(int argc, char *argv[])
     struct gui_input in;
     struct gui_font font;
     struct gui_memory memory;
+    struct gui_memory_status status;
     struct gui_config config;
     struct gui_canvas canvas;
     struct gui_command_buffer buffer;
@@ -501,7 +502,7 @@ main(int argc, char *argv[])
     memset(&in, 0, sizeof in);
     memory.memory = calloc(MAX_MEMORY, 1);
     memory.size = MAX_MEMORY;
-    gui_buffer_init_fixed(&buffer, &memory);
+    gui_buffer_init_fixed(&buffer, &memory, GUI_CLIP);
 
     font.userdata = xfont;
     font.height = (gui_float)xfont->height;
@@ -540,7 +541,7 @@ main(int argc, char *argv[])
         running = gui_panel_begin(&layout, &panel , "Demo", &canvas, &in);
         demo_panel(&layout, &demo);
         gui_panel_end(&layout, &panel);
-        gui_buffer_end(&list, &buffer, &canvas, NULL);
+        gui_buffer_end(&list, &buffer, &canvas, &status);
 
         /* Draw */
         XClearWindow(xw.dpy, xw.win);

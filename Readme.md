@@ -65,9 +65,7 @@ struct gui_input in = {0};
 struct gui_config config;
 struct gui_font font = {...};
 struct gui_memory memory = {...};
-struct gui_memory_status status;
 struct gui_command_buffer buffer;
-struct gui_command_list out;
 struct gui_panel panel;
 
 gui_default_config(&config);
@@ -75,7 +73,7 @@ gui_panel_init(&panel, 50, 50, 220, 170,
     GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
     GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
     GUI_PANEL_MINIMIZABLE, &config, &font);
-gui_buffer_init_fixed(buffer, &memory);
+gui_buffer_init_fixed(buffer, &memory, GUI_CLIP);
 
 while (1) {
     gui_input_begin(&input);
@@ -83,7 +81,10 @@ while (1) {
     gui_input_end(&input);
 
     struct gui_canvas canvas;
+    struct gui_command_list out;
     struct gui_panel_layout layout;
+    struct gui_memory_status status;
+
     gui_buffer_begin(&canvas, &buffer, window_width, window_height);
     gui_panel_begin(&layout, &panel, "Demo", &canvas, &input);
     gui_panel_row(&layout, 30, 1);
