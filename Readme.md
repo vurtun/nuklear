@@ -61,7 +61,7 @@ understandablity.
 
 ## Example
 ```c
-struct gui_input in = {0};
+struct gui_input input = {0};
 struct gui_config config;
 struct gui_font font = {...};
 struct gui_memory memory = {...};
