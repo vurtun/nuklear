@@ -20,6 +20,7 @@ typedef int32_t gui_bool;
 typedef int16_t gui_short;
 typedef int64_t gui_long;
 typedef float gui_float;
+typedef uint16_t gui_ushort;
 typedef uint32_t gui_uint;
 typedef uint64_t gui_ulong;
 typedef uint32_t gui_flags;
@@ -33,6 +34,7 @@ typedef int gui_bool;
 typedef short gui_short;
 typedef long gui_long;
 typedef float gui_float;
+typedef unsigned short gui_ushort;
 typedef unsigned int gui_uint;
 typedef unsigned long gui_ulong;
 typedef unsigned int gui_flags;
@@ -214,43 +216,43 @@ struct gui_command {
 
 struct gui_command_scissor {
     struct gui_command header;
-    gui_float x, y;
-    gui_float w, h;
+    gui_short x, y;
+    gui_ushort w, h;
 };
 
 struct gui_command_line {
     struct gui_command header;
-    gui_float begin[2];
-    gui_float end[2];
+    gui_short begin[2];
+    gui_short end[2];
     struct gui_color color;
 };
 
 struct gui_command_rect {
     struct gui_command header;
-    gui_float x, y;
-    gui_float w, h;
+    gui_short x, y;
+    gui_ushort w, h;
     struct gui_color color;
 };
 
 struct gui_command_circle {
     struct gui_command header;
-    gui_float x, y;
-    gui_float w, h;
+    gui_short x, y;
+    gui_ushort w, h;
     struct gui_color color;
 };
 
 struct gui_command_triangle {
     struct gui_command header;
-    gui_float a[2];
-    gui_float b[2];
-    gui_float c[2];
+    gui_short a[2];
+    gui_short b[2];
+    gui_short c[2];
     struct gui_color color;
 };
 
 struct gui_command_text {
     struct gui_command header;
-    gui_float x, y;
-    gui_float w, h;
+    gui_short x, y;
+    gui_ushort w, h;
     gui_size length;
     struct gui_color bg;
     struct gui_color fg;

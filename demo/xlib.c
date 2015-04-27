@@ -13,7 +13,7 @@
 
 /* macros */
 #define MAX_BUFFER  64
-#define MAX_MEMORY  (16 * 1024)
+#define MAX_MEMORY  (8 * 1024)
 #define MAX_PANELS  4
 #define WIN_WIDTH   800
 #define WIN_HEIGHT  600
@@ -228,7 +228,8 @@ surface_scissor(XSurface *surf, float x, float y, float w, float h)
 }
 
 static void
-surface_draw_line(XSurface *surf, float x0, float y0, float x1, float y1, struct gui_color col)
+surface_draw_line(XSurface *surf, gui_short x0, gui_short y0, gui_short x1,
+    gui_short y1, struct gui_color col)
 {
     unsigned long c = color_from_byte(col);
     XSetForeground(surf->dpy, surf->gc, c);
@@ -236,7 +237,8 @@ surface_draw_line(XSurface *surf, float x0, float y0, float x1, float y1, struct
 }
 
 static void
-surface_draw_rect(XSurface* surf, float x, float y, float w, float h, struct gui_color col)
+surface_draw_rect(XSurface* surf, gui_short x, gui_short y, gui_ushort w,
+    gui_ushort h, struct gui_color col)
 {
     unsigned long c = color_from_byte(col);
     XSetForeground(surf->dpy, surf->gc, c);
@@ -244,8 +246,8 @@ surface_draw_rect(XSurface* surf, float x, float y, float w, float h, struct gui
 }
 
 static void
-surface_draw_triangle(XSurface *surf, float x0, float y0, float x1, float y1,
-    float x2, float y2, struct gui_color col)
+surface_draw_triangle(XSurface *surf, gui_short x0, gui_short y0, gui_short x1,
+    gui_short y1, gui_short x2, gui_short y2, struct gui_color col)
 {
     XPoint pnts[3];
     unsigned long c = color_from_byte(col);
@@ -260,7 +262,8 @@ surface_draw_triangle(XSurface *surf, float x0, float y0, float x1, float y1,
 }
 
 static void
-surface_draw_circle(XSurface *surf, float x, float y, float w, float h, struct gui_color col)
+surface_draw_circle(XSurface *surf, gui_short x, gui_short y, gui_ushort w,
+    gui_ushort h, struct gui_color col)
 {
     unsigned long c = color_from_byte(col);
     XSetForeground(surf->dpy, surf->gc, c);
@@ -269,8 +272,8 @@ surface_draw_circle(XSurface *surf, float x, float y, float w, float h, struct g
 }
 
 static void
-surface_draw_text(XSurface *surf, float x, float y, float w, float h, const char *text,
-    size_t len, XFont *font, struct gui_color cbg, struct gui_color cfg)
+surface_draw_text(XSurface *surf, gui_short x, gui_short y, gui_ushort w, gui_ushort h,
+    const char *text, size_t len, XFont *font, struct gui_color cbg, struct gui_color cfg)
 {
     int i, tx, ty, th, olen;
     unsigned long bg = color_from_byte(cbg);
