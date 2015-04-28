@@ -176,9 +176,9 @@ sequence point is undefined behavior.
 
 ```c
 struct gui_memory memory = {...};
-struct gui_memory_status status = {0};
-struct gui_command_list out = {0};
-struct gui_command_buffer buffer = {0};
+struct gui_memory_status status;
+struct gui_command_list list;
+struct gui_command_buffer buffer;
 gui_buffer_init_fixed(buffer, &memory);
 
 while (1) {
@@ -236,7 +236,7 @@ gui_panel_init(&panel, 50, 50, 300, 200, 0, &config, &font);
 
 while (1) {
     struct gui_panel_layout layout;
-    gui_panel_begin(&layout, &panel, "Demo", &canvas, &in);
+    gui_panel_begin(&layout, &panel, "Demo", &canvas, &input);
     gui_panel_row(&layout, 30, 1);
     if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");

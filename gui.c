@@ -662,8 +662,7 @@ gui_input(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w
     assert(canvas);
     assert(buffer);
     assert(field);
-    assert(in);
-    if (!canvas || !buffer || !field || !in)
+    if (!canvas || !buffer || !field)
         return 0;
 
     input_w = MAX(w, 2 * field->padding.x);
@@ -809,8 +808,7 @@ gui_histo(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w
 
     assert(canvas);
     assert(histo);
-    assert(in);
-    if (!canvas || !histo || !in)
+    if (!canvas || !histo)
         return selected;
 
     histo_w = MAX(w, 2 * histo->padding.x);
@@ -944,7 +942,7 @@ gui_buffer_push(struct gui_command_buffer* buffer,
         if (!buffer->allocator.realloc) return NULL;
         cap = (gui_size)((gui_float)buffer->capacity * buffer->grow_factor);
         cap = cap + MAX(size, cap - buffer->capacity);
-        buffer->memory = buffer->allocator.realloc(buffer->memory, cap);
+        buffer->memory = buffer->allocator.realloc(buffer->allocator.userdata, buffer->memory, cap);
         if (!buffer->memory) return NULL;
         buffer->capacity = cap;
     }
@@ -1126,7 +1124,7 @@ gui_buffer_init(struct gui_command_buffer *buffer, const struct gui_allocator *m
     gui_size initial_size, gui_float grow_factor, enum gui_clipping clipping)
 {
     zero(buffer, sizeof(*buffer));
-    buffer->memory = memory->alloc(initial_size);
+    buffer->memory = memory->alloc(memory->userdata, initial_size);
     buffer->allocator = *memory;
     buffer->capacity = initial_size;
     buffer->begin = buffer->memory;
@@ -1185,7 +1183,7 @@ gui_buffer_clear(struct gui_command_buffer *buffer)
 {
     assert(buffer);
     if (!buffer || !buffer->memory || !buffer->allocator.free) return;
-    buffer->allocator.free(buffer->memory);
+    buffer->allocator.free(buffer->allocator.userdata, buffer->memory);
 }
 
 void
@@ -1270,9 +1268,8 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     assert(panel);
     assert(layout);
     assert(canvas);
-    assert(in);
 
-    if (!panel || !canvas || !layout || !in)
+    if (!panel || !canvas || !layout)
         return gui_false;
     if (panel->flags & GUI_PANEL_HIDDEN)
         return gui_false;
@@ -1280,6 +1277,12 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     config = panel->config;
     layout->header_height = panel->font.height + 3 * config->item_padding.y;
     layout->header_height += config->panel_padding.y;
+
+    mouse_x = (in) ? in->mouse_pos.x : -1;
+    mouse_y = (in) ? in->mouse_pos.y : -1;
+    clicked_x = (in) ? in->mouse_clicked_pos.x : -1;
+    clicked_y = (in) ? in->mouse_clicked_pos.y : -1;
+
     if (panel->flags & GUI_PANEL_MOVEABLE) {
         gui_bool incursor;
         const gui_float move_x = panel->x;
@@ -1287,8 +1290,8 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
         const gui_float move_w = panel->w;
         const gui_float move_h = layout->header_height;
 
-        incursor = INBOX(in->mouse_prev.x,in->mouse_prev.y, move_x, move_y, move_w, move_h);
-        if (in->mouse_down && incursor) {
+        incursor = in && INBOX(in->mouse_prev.x,in->mouse_prev.y, move_x, move_y, move_w, move_h);
+        if (in && in->mouse_down && incursor) {
             panel->x = CLAMP(0, panel->x+in->mouse_delta.x, (gui_float)canvas->width-panel->w);
             panel->y = CLAMP(0, panel->y+in->mouse_delta.y, (gui_float)canvas->height-panel->h);
         }
@@ -1301,8 +1304,8 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
         gui_float scaler_w = MAX(0, config->scaler_size.x - config->item_padding.x);
         gui_float scaler_h = MAX(0, config->scaler_size.y - config->item_padding.y);
 
-        incursor = INBOX(in->mouse_prev.x,in->mouse_prev.y,scaler_x, scaler_y, scaler_w, scaler_h);
-        if (in->mouse_down && incursor) {
+        incursor = in && INBOX(in->mouse_prev.x,in->mouse_prev.y,scaler_x, scaler_y, scaler_w, scaler_h);
+        if (in && in->mouse_down && incursor) {
             gui_float min_x = config->panel_min_size.x;
             gui_float min_y = config->panel_min_size.y;
             panel->x = CLAMP(0, panel->x + in->mouse_delta.x, (gui_float)canvas->width-panel->w);
@@ -1327,11 +1330,6 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     layout->row_columns = 0;
     layout->row_height = 0;
     layout->offset = panel->offset;
-
-    mouse_x = in->mouse_pos.x;
-    mouse_y = in->mouse_pos.y;
-    clicked_x = in->mouse_clicked_pos.x;
-    clicked_y = in->mouse_clicked_pos.y;
 
     header = &config->colors[GUI_COLOR_TITLEBAR];
     header_x = panel->x + config->panel_padding.x;
@@ -1439,6 +1437,29 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     }
     canvas->scissor(canvas->userdata,layout->clip.x,layout->clip.y,layout->clip.w,layout->clip.h);
     return ret;
+}
+
+gui_bool
+gui_panel_begin_stacked(struct gui_panel_layout *layout, struct gui_panel *panel,
+    struct gui_panel_stack *stack, const char *title, const struct gui_canvas *canvas,
+    const struct gui_input *in)
+{
+    gui_bool inpanel;
+    inpanel = INBOX(in->mouse_prev.x, in->mouse_prev.y, panel->x, panel->y, panel->w, panel->h);
+    if (in->mouse_down && in->mouse_clicked && inpanel && panel != stack->end) {
+        struct gui_panel *iter = panel->next;
+        while (iter) {
+            if (!iter->minimized)
+                if (INBOX(in->mouse_prev.x, in->mouse_prev.y, iter->x, iter->y,
+                    iter->w, iter->h)) break;
+            iter = iter->next;
+        }
+        if (!iter) {
+            gui_stack_pop(stack, panel);
+            gui_stack_push(stack, panel);
+        }
+    }
+    return gui_panel_begin(layout, panel, title, canvas, (stack->end == panel) ? in : NULL);
 }
 
 void
@@ -1553,7 +1574,6 @@ gui_panel_button_text(struct gui_panel_layout *layout, const char *str,
     assert(layout);
     assert(layout->config);
     assert(layout->canvas);
-    assert(layout->input);
 
     if (!layout || !layout->config || !layout->canvas) return 0;
     if (!layout->valid) return 0;
@@ -2279,5 +2299,46 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
                 padding_y, config->colors[GUI_COLOR_BORDER]);
     }
     canvas->scissor(canvas->userdata, 0, 0, (gui_float)canvas->width, (gui_float)canvas->height);
+}
+
+void
+gui_stack_clear(struct gui_panel_stack *stack)
+{
+    stack->begin = NULL;
+    stack->end = NULL;
+    stack->count = 0;
+}
+
+void
+gui_stack_push(struct gui_panel_stack *stack, struct gui_panel *panel)
+{
+    if (!stack->begin) {
+        panel->next = NULL;
+        panel->prev = NULL;
+        stack->begin = panel;
+        stack->end = panel;
+        stack->count = 1;
+        return;
+    }
+    stack->end->next = panel;
+    panel->prev = stack->end;
+    panel->next = NULL;
+    stack->end = panel;
+    stack->count++;
+}
+
+void
+gui_stack_pop(struct gui_panel_stack *stack, struct gui_panel *panel)
+{
+    if (panel->prev)
+        panel->prev->next = panel->next;
+    if (panel->next)
+        panel->next->prev = panel->prev;
+    if (stack->begin == panel)
+        stack->begin = panel->next;
+    if (stack->end == panel)
+        stack->end = panel->prev;
+    panel->next = NULL;
+    panel->prev = NULL;
 }
 

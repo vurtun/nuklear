@@ -194,9 +194,10 @@ struct gui_memory {
 };
 
 struct gui_allocator {
-    void*(*alloc)(gui_size);
-    void*(*realloc)(void*,gui_size);
-    void(*free)(void*);
+    void *userdata;
+    void*(*alloc)(void *usr, gui_size);
+    void*(*realloc)(void *usr, void*, gui_size);
+    void(*free)(void *usr, void*);
 };
 
 enum gui_command_type {
@@ -251,12 +252,12 @@ struct gui_command_triangle {
 
 struct gui_command_text {
     struct gui_command header;
+    void *font;
     gui_short x, y;
     gui_ushort w, h;
-    gui_size length;
     struct gui_color bg;
     struct gui_color fg;
-    void *font;
+    gui_size length;
     gui_char string[1];
 };
 
@@ -366,6 +367,8 @@ struct gui_panel {
     gui_bool minimized;
     struct gui_font font;
     const struct gui_config *config;
+    struct gui_panel *next;
+    struct gui_panel *prev;
 };
 
 struct gui_panel_layout {
@@ -384,6 +387,17 @@ struct gui_panel_layout {
     const struct gui_config *config;
     const struct gui_input *input;
     const struct gui_canvas *canvas;
+};
+
+struct gui_panel_stack {
+    gui_size count;
+    struct gui_panel *begin;
+    struct gui_panel *end;
+};
+
+struct gui_window {
+    struct gui_panel panel;
+    struct gui_command_list list;
 };
 
 /* Input */
@@ -461,6 +475,9 @@ void gui_panel_init(struct gui_panel*, gui_float x, gui_float y, gui_float w, gu
                     const struct gui_config *config, const struct gui_font*);
 gui_bool gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel*,
                     const char *title, const struct gui_canvas*, const struct gui_input*);
+gui_bool gui_panel_begin_stacked(struct gui_panel_layout *layout, struct gui_panel*,
+                    struct gui_panel_stack*, const char *title, const struct gui_canvas*,
+                    const struct gui_input*);
 void gui_panel_row(struct gui_panel_layout*, gui_float height, gui_size cols);
 void gui_panel_seperator(struct gui_panel_layout*, gui_size cols);
 void gui_panel_text(struct gui_panel_layout*, const char *str, gui_size len, enum gui_text_align);
@@ -494,6 +511,12 @@ gui_size gui_panel_shelf_begin(struct gui_panel_layout*, struct gui_panel_layout
                     const char *tabs[], gui_size size, gui_size active, gui_float offset);
 gui_float gui_panel_shelf_end(struct gui_panel_layout*, struct gui_panel_layout *shelf);
 void gui_panel_end(struct gui_panel_layout*, struct gui_panel*);
+
+
+/* Stack  */
+void gui_stack_clear(struct gui_panel_stack*);
+void gui_stack_push(struct gui_panel_stack*, struct gui_panel*);
+void gui_stack_pop(struct gui_panel_stack*, struct gui_panel*);
 
 #ifdef __cplusplus
 }

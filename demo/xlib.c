@@ -458,6 +458,7 @@ demo_panel(struct gui_panel_layout *panel, struct demo *demo)
 int
 main(int argc, char *argv[])
 {
+    /* Platform */
     long dt;
     long started;
     XWindow xw;
@@ -475,8 +476,10 @@ main(int argc, char *argv[])
     struct gui_canvas canvas;
     struct gui_command_buffer buffer;
     struct gui_command_list list;
-    struct gui_panel panel;
+    struct gui_panel_stack stack;
     struct gui_panel_layout layout;
+    struct gui_window win;
+    struct gui_window msg;
 
     /* Window */
     UNUSED(argc); UNUSED(argv);
@@ -511,10 +514,12 @@ main(int argc, char *argv[])
     font.height = (gui_float)xfont->height;
     font.width = font_get_text_width;
     gui_default_config(&config);
-    gui_panel_init(&panel, 50, 50, 420, 300,
+    gui_stack_clear(&stack);
+    gui_panel_init(&win.panel, 50, 50, 420, 300,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
         GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
         GUI_PANEL_MINIMIZABLE, &config, &font);
+    gui_stack_push(&stack, &win.panel);
 
     /* Demo */
     memset(&demo, 0, sizeof(demo));
@@ -541,9 +546,9 @@ main(int argc, char *argv[])
 
         /* GUI */
         gui_buffer_begin(&canvas, &buffer, xw.width, xw.height);
-        running = gui_panel_begin(&layout, &panel , "Demo", &canvas, &in);
+        running = gui_panel_begin_stacked(&layout, &win.panel, &stack, "Demo", &canvas, &in);
         demo_panel(&layout, &demo);
-        gui_panel_end(&layout, &panel);
+        gui_panel_end(&layout, &win.panel);
         gui_buffer_end(&list, &buffer, &canvas, &status);
 
         /* Draw */
