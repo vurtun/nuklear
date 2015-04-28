@@ -348,8 +348,6 @@ gui_do_button(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_flo
 {
     gui_bool ret = gui_false;
     struct gui_color background;
-    struct gui_color highlight;
-    struct gui_rect inner;
 
     assert(button);
     if (!button)
