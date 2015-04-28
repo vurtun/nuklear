@@ -249,7 +249,7 @@ while (1) {
 ## FAQ
 #### Where is the demo/example code?
 The demo and example code can be found in the demo folder. For now there is
-only example code for Linux with X11 and Xlib but a Win32, OpenGL and Directx
+only example code for Linux(X11) and Windows(Win32), OpenGL and Directx
 demo is in the working.
 
 #### Why did you use ANSI C and not C99 or C++?
