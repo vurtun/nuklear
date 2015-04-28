@@ -51,6 +51,8 @@ struct XWindow {
     Display *dpy;
     Window root;
     Visual *vis;
+    XFont *font;
+    XSurface *surf;
     Colormap cmap;
     XWindowAttributes attr;
     XSetWindowAttributes swa;
@@ -462,8 +464,6 @@ main(int argc, char *argv[])
     long dt;
     long started;
     XWindow xw;
-    XSurface *surf;
-    XFont *xfont;
     gui_bool running = gui_true;
     struct demo demo;
 
@@ -499,8 +499,8 @@ main(int argc, char *argv[])
     XGetWindowAttributes(xw.dpy, xw.win, &xw.attr);
     xw.width = (unsigned int)xw.attr.width;
     xw.height = (unsigned int)xw.attr.height;
-    surf = surface_create(xw.dpy, xw.screen, xw.win, xw.width, xw.height);
-    xfont = font_create(xw.dpy, "fixed");
+    xw.surf = surface_create(xw.dpy, xw.screen, xw.win, xw.width, xw.height);
+    xw.font = font_create(xw.dpy, "fixed");
 
     /* GUI */
     memset(&in, 0, sizeof in);
@@ -508,8 +508,8 @@ main(int argc, char *argv[])
     memory.size = MAX_MEMORY;
     gui_buffer_init_fixed(&buffer, &memory, GUI_CLIP);
 
-    font.userdata = xfont;
-    font.height = (gui_float)xfont->height;
+    font.userdata = xw.font;
+    font.height = (gui_float)xw.font->height;
     font.width = font_get_text_width;
     gui_default_config(&config);
     gui_panel_init(&panel, 50, 50, 420, 300,
@@ -536,7 +536,7 @@ main(int argc, char *argv[])
             else if (evt.type == ButtonRelease) btn(&in, &evt, gui_false);
             else if (evt.type == MotionNotify) motion(&in, &evt);
             else if (evt.type == Expose || evt.type == ConfigureNotify)
-                resize(&xw, surf);
+                resize(&xw, xw.surf);
         }
         gui_input_end(&in);
 
@@ -549,9 +549,9 @@ main(int argc, char *argv[])
 
         /* Draw */
         XClearWindow(xw.dpy, xw.win);
-        surface_clear(surf, 0x00646464);
-        draw(surf, &list);
-        surface_blit(xw.win, surf, xw.width, xw.height);
+        surface_clear(xw.surf, 0x00646464);
+        draw(xw.surf, &list);
+        surface_blit(xw.win, xw.surf, xw.width, xw.height);
         XFlush(xw.dpy);
 
         /* Timing */
@@ -561,8 +561,8 @@ main(int argc, char *argv[])
     }
 
     free(memory.memory);
-    font_del(xw.dpy, xfont);
-    surface_del(surf);
+    font_del(xw.dpy, xw.font);
+    surface_del(xw.surf);
     XUnmapWindow(xw.dpy, xw.win);
     XFreeColormap(xw.dpy, xw.cmap);
     XDestroyWindow(xw.dpy, xw.win);

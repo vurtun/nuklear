@@ -389,15 +389,15 @@ struct gui_panel_layout {
     const struct gui_canvas *canvas;
 };
 
+struct gui_window {
+    struct gui_panel panel;
+    struct gui_command_list list;
+};
+
 struct gui_panel_stack {
     gui_size count;
     struct gui_panel *begin;
     struct gui_panel *end;
-};
-
-struct gui_window {
-    struct gui_panel panel;
-    struct gui_command_list list;
 };
 
 /* Input */

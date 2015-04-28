@@ -36,8 +36,7 @@ possible with fast streamlined development speed in mind.
 + Shelf
 
 ## Limitations
-- Does NOT provide os window management
-- Does NOT provide input handling
+- Does NOT provide os window/input management
 - Does NOT provide a renderer backend
 - Does NOT implement a font library  
 Summary: It is only responsible for the actual user interface
@@ -97,7 +96,7 @@ while (1) {
     gui_panel_text(&layout, "input:", 6, GUI_TEXT_LEFT);
     len = gui_panel_input(&layout, buffer, len, 256, &active, GUI_INPUT_DEFAULT);
     gui_panel_end(&layout, &panel);
-    gui_buffer_end(&list, buffer, &status);
+    gui_buffer_end(&list, &buffer, &status);
 
     struct gui_command *cmd = list.begin;
     while (cmd != list.end) {
@@ -112,7 +111,7 @@ while (1) {
 The API for this gui toolkit is divided into two different layers. There
 is the widget layer and the panel layer. The widget layer provides a number of
 classical widgets in functional immediate mode form without any kind of internal
-state. Each widget can be placed anywhere on the screen but there is no directy
+state. Each widget can be placed anywhere on the screen but there is no direct
 way provided to group widgets together. For this to change there is the panel
 layer which is build on top of the widget layer and uses most of the widget API
 internally to form groups of widgets into a layout.
@@ -162,11 +161,11 @@ true immedate mode fashion possible and supported.
 For the purpose of defered drawing or the implementation of overlapping panels
 the command buffering API was added. The command buffer hereby holds a queue of
 drawing commands for a number of primitives eg.: line, rectangle, circle,
-triangle and text. memory The command buffer memory is provided by the user
+triangle and text. The command buffer memory is provided by the user
 in three possible ways. First by providing a fixed size memory block which
 will be filled up until no memory is left.
 The second way is extending the fixed size memory block by reallocating at the
-end of the frame if the providided memory size was not sufficient.
+end of the frame if the provided memory size was not sufficient.
 The final way of memory management is by providing allocator callbacks with alloc,
 realloc and free. In true immediate mode fashion the buffering API is based around sequence
 points with an begin sequence point `gui_buffer_begin` and a end sequence
