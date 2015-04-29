@@ -1,3 +1,8 @@
+/*
+    Copyright (c) 2015
+    vurtun <polygone@gmx.net>
+    MIT licence
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -25,6 +30,8 @@
 typedef struct XFont {
     HFONT handle;
     int height;
+    int ascent;
+    int descent;
 } XFont;
 
 typedef struct XSurface {
@@ -44,6 +51,8 @@ typedef struct XWindow {
     RECT rect;
     XSurface *backbuffer;
     XFont *font;
+    unsigned int width;
+    unsigned int height;
 } XWindow;
 
 struct demo {
@@ -65,6 +74,8 @@ struct demo {
 };
 
 static int running = 1;
+static int quit = 0;
+static XWindow xw;
 
 static void
 die(const char *fmt, ...)
@@ -86,13 +97,21 @@ timestamp(LARGE_INTEGER freq)
 
 
 static XFont*
-font_new(const char *name, int height)
+font_new(HDC hdc, const char *name, int height)
 {
+    HFONT old;
+    TEXTMETRIC metrics;
     XFont *font = malloc(sizeof(XFont));
     font->height = height;
     font->handle = CreateFont(height, 0, 0, 0, 0, FALSE, FALSE, FALSE,
 		    ANSI_CHARSET, OUT_CHARACTER_PRECIS, CLIP_CHARACTER_PRECIS,
 		    ANTIALIASED_QUALITY, DEFAULT_PITCH, name);
+
+    old = SelectObject(hdc, font->handle);
+    GetTextMetrics(hdc, &metrics);
+    font->ascent = metrics.tmAscent;
+    font->descent = metrics.tmDescent;
+    SelectObject(hdc, old);
     return font;
 }
 
@@ -164,8 +183,6 @@ surface_draw_line(XSurface *surf, short x0, short y0, short x1, short y1,
 {
     HPEN hPen;
     HPEN old;
-    /* TODO(vurtun): This brush allocation is literally bad shit INSANE!
-     * There has to be a better way to do this! */
     hPen = CreatePen(PS_SOLID, 1, RGB(r,g,b));
     old = SelectObject(surf->hdc, hPen);
     MoveToEx(surf->hdc, x0, y0, NULL);
@@ -236,6 +253,7 @@ surface_draw_text(XSurface *surf, XFont *font, short x, short y, unsigned short 
     UINT bg = RGB(bg_r, bg_g, bg_b);
     UINT fg = RGB(fg_r, fg_g, fg_b);
     HFONT old = SelectObject(surf->hdc, font->handle);
+
     format.left = x;
     format.top = y;
     format.right = x + w;
@@ -301,7 +319,8 @@ draw(XSurface *surf, struct gui_command_list *list)
         } break;
         case GUI_COMMAND_TEXT: {
             struct gui_command_text *t = (void*)cmd;
-            surface_draw_text(surf, t->font, t->x, t->y, t->w, t->h, (const char*)t->string,
+	    XWindow *xw = t->font;
+            surface_draw_text(surf, xw->font, t->x, t->y, t->w, t->h, (const char*)t->string,
                     t->length, t->bg.r, t->bg.g, t->bg.b, t->fg.r, t->fg.g, t->fg.b);
         } break;
         default: break;
@@ -406,6 +425,14 @@ wnd_proc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_DESTROY:
 	    PostQuitMessage(WM_QUIT);
 	    running = 0;
+	    quit = 1;
+	    break;
+	case WM_SIZE:
+	    if (xw.backbuffer) {
+		xw.width = LOWORD(lParam);
+		xw.height = HIWORD(lParam);
+		surface_resize(xw.backbuffer, xw.hdc, xw.width, xw.height);
+	    }
 	    break;
 	default:
 	    return DefWindowProc(hWnd, msg, wParam, lParam);
@@ -434,8 +461,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int show)
     struct gui_panel panel;
 
     /* Window */
-    XWindow xw;
-    memset(&xw, 0, sizeof(xw));
+    QueryPerformanceFrequency(&freq);
     xw.wc.style = CS_HREDRAW|CS_VREDRAW;
     xw.wc.lpfnWndProc = wnd_proc;
     xw.wc.hInstance = hInstance;
@@ -448,11 +474,12 @@ WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int show)
 	CW_USEDEFAULT, CW_USEDEFAULT,
 	0, 0, hInstance, 0);
 
-    QueryPerformanceFrequency(&freq);
     xw.hdc = GetDC(xw.hWnd);
     GetClientRect(xw.hWnd, &xw.rect);
     xw.backbuffer = surface_new(xw.hdc, xw.rect.right, xw.rect.bottom);
-    xw.font = font_new("Times New Roman", 12);
+    xw.font = font_new(xw.hdc, "Times New Roman", 14);
+    xw.width = xw.rect.right;
+    xw.height = xw.rect.bottom;
 
     /* GUI */
     memset(&in, 0, sizeof in);
@@ -476,7 +503,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int show)
     demo.slider = 2.0f;
     demo.prog = 60;
 
-    while (running) {
+    while (running && !quit) {
         /* Input */
 	MSG msg;
 	start = timestamp(freq);
@@ -494,7 +521,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int show)
         gui_input_end(&in);
 
 	/* GUI */
-        gui_buffer_begin(&canvas, &buffer, xw.backbuffer->width, xw.backbuffer->height);
+        gui_buffer_begin(&canvas, &buffer, xw.width, xw.height);
         running = gui_panel_begin(&layout, &panel, "Demo", &canvas, &in);
         demo_panel(&layout, &demo);
         gui_panel_end(&layout, &panel);
