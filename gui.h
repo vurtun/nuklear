@@ -12,6 +12,7 @@ extern "C" {
 
 #define GUI_UTF_SIZE 4
 #define GUI_INPUT_MAX 16
+#define GUI_UTF_INVALID 0xFFFD
 
 #ifdef GUI_USE_FIXED_TYPES
 #include <stdint.h>
@@ -401,6 +402,8 @@ struct gui_panel_stack {
 };
 
 /* Input */
+gui_size gui_utf_decode(const gui_char*, gui_long*, gui_size);
+gui_size gui_utf_encode(gui_long, gui_char*, gui_size);
 void gui_input_begin(struct gui_input*);
 void gui_input_motion(struct gui_input*, gui_int x, gui_int y);
 void gui_input_key(struct gui_input*, enum gui_keys, gui_bool down);

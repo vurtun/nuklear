@@ -16,7 +16,7 @@ possible with fast streamlined development speed in mind.
 - Full memory management control
 - Renderer and platform independent
 - Configurable
-- UTF-8 supported
+- UTF-8 support
 
 ## Functionality
 + Label
@@ -247,9 +247,12 @@ while (1) {
 
 ## FAQ
 #### Where is the demo/example code?
-The demo and example code can be found in the demo folder. For now there is
-only example code for Linux(X11) and Windows(Win32), OpenGL and Directx
-demo is in the working.
+The demo and example code can be found in the demo folder.
+There is demo code for Linux(X11), Windows(win32) and OpenGL(SDL2, freetype).
+As for now there will be no DirectX demo since I don't have expierence
+programming in DirectX(9, 10, 11) but you are more than welcome to provide one.
+Depending on the demand I will write a Directx 12 and Vulkan demo once they are
+released as well as stable.
 
 #### Why did you use ANSI C and not C99 or C++?
 Personally I stay out of all "discussions" about C vs C++ since they are totally

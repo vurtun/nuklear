@@ -12,7 +12,6 @@
 #endif
 
 #define NULL (void*)0
-#define UTF_INVALID 0xFFFD
 #define MAX_NUMBER_BUFFER 64
 #define PASTE(a,b) a##b
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
@@ -123,18 +122,18 @@ unify(struct gui_rect *clip, const struct gui_rect *a, gui_float x0, gui_float y
 }
 
 static gui_size
-utf_validate(long *u, gui_size i)
+gui_utf_validate(long *u, gui_size i)
 {
     if (!u) return 0;
     if (!BETWEEN(*u, utfmin[i], utfmax[i]) ||
          BETWEEN(*u, 0xD800, 0xDFFF))
-            *u = UTF_INVALID;
+            *u = GUI_UTF_INVALID;
     for (i = 1; *u > utfmax[i]; ++i);
     return i;
 }
 
 static gui_long
-utf_decode_byte(gui_char c, gui_size *i)
+gui_utf_decode_byte(gui_char c, gui_size *i)
 {
     if (!i) return 0;
     for(*i = 0; *i < LEN(utfmask); ++(*i)) {
@@ -144,49 +143,49 @@ utf_decode_byte(gui_char c, gui_size *i)
     return 0;
 }
 
-static gui_size
-utf_decode(const gui_char *c, gui_long *u, gui_size clen)
+gui_size
+gui_utf_decode(const gui_char *c, gui_long *u, gui_size clen)
 {
     gui_size i, j, len, type;
     gui_long udecoded;
 
-    *u = UTF_INVALID;
+    *u = GUI_UTF_INVALID;
     if (!c || !u) return 0;
     if (!clen) return 0;
-    udecoded = utf_decode_byte(c[0], &len);
+    udecoded = gui_utf_decode_byte(c[0], &len);
     if (!BETWEEN(len, 1, GUI_UTF_SIZE))
         return 1;
 
     for (i = 1, j = 1; i < clen && j < len; ++i, ++j) {
-        udecoded = (udecoded << 6) | utf_decode_byte(c[i], &type);
+        udecoded = (udecoded << 6) | gui_utf_decode_byte(c[i], &type);
         if (type != 0)
             return j;
     }
     if (j < len)
         return 0;
     *u = udecoded;
-    utf_validate(u, len);
+    gui_utf_validate(u, len);
     return len;
 }
 
 static gui_char
-utf_encode_byte(gui_long u, gui_size i)
+gui_utf_encode_byte(gui_long u, gui_size i)
 {
     return (gui_char)(utfbyte[i] | (u & ~utfmask[i]));
 }
 
-static gui_size
-utf_encode(gui_long u, gui_char *c, gui_size clen)
+gui_size
+gui_utf_encode(gui_long u, gui_char *c, gui_size clen)
 {
     gui_size len, i;
-    len = utf_validate(&u, 0);
+    len = gui_utf_validate(&u, 0);
     if (clen < len || !len)
         return 0;
     for (i = len - 1; i != 0; --i) {
-        c[i] = utf_encode_byte(u, 0);
+        c[i] = gui_utf_encode_byte(u, 0);
         u >>= 6;
     }
-    c[0] = utf_encode_byte(u, len);
+    c[0] = gui_utf_encode_byte(u, len);
     return len;
 }
 
@@ -202,10 +201,10 @@ gui_triangle_from_direction(struct gui_vec2 *result, gui_float x, gui_float y,
     h = MAX(4 * pad_y, h);
     w = w - 2 * pad_x;
     h = h - 2 * pad_y;
-    w_half = w / 2.0f;
-    h_half = h / 2.0f;
     x = x + pad_x;
     y = y + pad_y;
+    w_half = w / 2.0f;
+    h_half = h / 2.0f;
 
     if (direction == GUI_UP) {
         result[0].x = x + w_half;
@@ -289,9 +288,9 @@ gui_input_char(struct gui_input *in, const gui_glyph glyph)
     gui_long unicode;
     assert(in);
     if (!in) return;
-    len = utf_decode(glyph, &unicode, GUI_UTF_SIZE);
+    len = gui_utf_decode(glyph, &unicode, GUI_UTF_SIZE);
     if (len && ((in->text_len + len) < GUI_INPUT_MAX)) {
-        utf_encode(unicode, &in->text[in->text_len], GUI_INPUT_MAX - in->text_len);
+        gui_utf_encode(unicode, &in->text[in->text_len], GUI_INPUT_MAX - in->text_len);
         in->text_len += len;
     }
 }
@@ -636,7 +635,7 @@ gui_buffer_input(gui_char *buffer, gui_size length, gui_size max,
     assert(buffer);
     assert(in);
 
-    glyph_len = utf_decode(in->text, &unicode, in->text_len);
+    glyph_len = gui_utf_decode(in->text, &unicode, in->text_len);
     while (glyph_len && ((text_len + glyph_len) <= in->text_len) && (length + text_len) < max) {
         if (gui_filter_input(unicode, glyph_len, filter)) {
             gui_size i = 0;
@@ -644,7 +643,7 @@ gui_buffer_input(gui_char *buffer, gui_size length, gui_size max,
                 buffer[length++] = in->text[text_len + i];
         }
         text_len = text_len + glyph_len;
-        glyph_len = utf_decode(in->text + text_len, &unicode, in->text_len - text_len);
+        glyph_len = gui_utf_decode(in->text + text_len, &unicode, in->text_len - text_len);
     }
     return text_len;
 }
@@ -698,7 +697,7 @@ gui_input(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w
         gui_size text_width = font->width(font->userdata, buffer, text_len);
         while (text_len && (text_width + cursor_width) > (gui_size)label_w) {
             gui_long unicode;
-            offset += utf_decode(&buffer[offset], &unicode, text_len);
+            offset += gui_utf_decode(&buffer[offset], &unicode, text_len);
             text_len = len - offset;
             text_width = font->width(font->userdata, &buffer[offset], text_len);
         }
