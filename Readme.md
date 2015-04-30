@@ -8,7 +8,7 @@ possible with fast streamlined development speed in mind.
 ## Features
 - Immediate mode graphical user interface toolkit
 - Written in C89 (ANSI C)
-- Small codebase (~2kLOC)
+- Small codebase (~2.5kLOC)
 - Focus on portability and minimal internal state
 - Suited for embedding into graphical applications
 - No global hidden state
@@ -96,7 +96,7 @@ while (1) {
     gui_panel_text(&layout, "input:", 6, GUI_TEXT_LEFT);
     len = gui_panel_input(&layout, buffer, len, 256, &active, GUI_INPUT_DEFAULT);
     gui_panel_end(&layout, &panel);
-    gui_buffer_end(&list, &buffer, &status);
+    gui_buffer_end(&list, &buffer, &canvas, &status);
 
     struct gui_command *cmd = list.begin;
     while (cmd != list.end) {
