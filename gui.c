@@ -436,6 +436,31 @@ gui_button_triangle(const struct gui_canvas *canvas, gui_float x, gui_float y,
 }
 
 gui_bool
+gui_button_image(const struct gui_canvas *canvas, gui_float x, gui_float y,
+    gui_float w, gui_float h, gui_image img, enum gui_button_behavior b,
+    const struct gui_button *button, const struct gui_input *in)
+{
+    gui_bool pressed;
+    gui_float img_x, img_y, img_w, img_h;
+    struct gui_color col;
+    struct gui_vec2 points[3];
+
+    assert(button);
+    assert(canvas);
+    if (!canvas || !button)
+        return gui_false;
+
+    pressed = gui_do_button(canvas, x, y, w, h, button, in, b);
+
+    img_x = x + button->padding.x;
+    img_y = y + button->padding.y;
+    img_w = w - 2 * button->padding.x;
+    img_h = h - 2 * button->padding.y;
+    canvas->draw_image(canvas->userdata, img_x, img_y, img_w, img_h, img);
+    return pressed;
+}
+
+gui_bool
 gui_toggle(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w,
     gui_float h, gui_bool active, const char *string, enum gui_toggle_type type,
     const struct gui_toggle *toggle, const struct gui_input *in, const struct gui_font *font)
@@ -939,7 +964,7 @@ gui_buffer_push(struct gui_command_buffer* buffer,
         if (!buffer->allocator.realloc) return NULL;
         cap = (gui_size)((gui_float)buffer->capacity * buffer->grow_factor);
         cap = cap + MAX(size, cap - buffer->capacity);
-        buffer->memory = buffer->allocator.realloc(buffer->allocator.userdata, buffer->memory, cap);
+        buffer->memory = buffer->allocator.realloc(buffer->allocator.userdata,buffer->memory, cap);
         if (!buffer->memory) return NULL;
         buffer->capacity = cap;
     }
@@ -1070,6 +1095,29 @@ gui_buffer_push_triangle(struct gui_command_buffer *buffer, gui_float x0, gui_fl
     cmd->c[0] = (gui_short)x2;
     cmd->c[1] = (gui_short)y2;
     cmd->color = c;
+}
+
+void
+gui_buffer_push_image(struct gui_command_buffer *buffer, gui_float x, gui_float y,
+    gui_float w, gui_float h, gui_image img)
+{
+    struct gui_command_image *cmd;
+    if (!buffer) return;
+    if (buffer->clipping == GUI_CLIP) {
+        const struct gui_rect *r = &buffer->clip;
+        if (!INTERSECT(r->x, r->y, r->w, r->h, x, y, w, h)) {
+            buffer->clipped_memory += sizeof(*cmd);
+            buffer->clipped_cmds++;
+            return;
+        }
+    }
+    cmd = gui_buffer_push(buffer, GUI_COMMAND_RECT, sizeof(*cmd));
+    if (!cmd) return;
+    cmd->x = (gui_short)x;
+    cmd->y = (gui_short)y;
+    cmd->w = (gui_ushort)w;
+    cmd->h = (gui_ushort)h;
+    cmd->img = img;
 }
 
 void
@@ -1258,6 +1306,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     const struct gui_config *config;
     const struct gui_color *header;
     gui_float mouse_x, mouse_y;
+    gui_float prev_x, prev_y;
     gui_float clicked_x, clicked_y;
     gui_float header_x, header_w;
     gui_bool ret = gui_true;
@@ -1277,6 +1326,9 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
 
     mouse_x = (in) ? in->mouse_pos.x : -1;
     mouse_y = (in) ? in->mouse_pos.y : -1;
+    prev_x = (in) ? in->mouse_prev.x : -1;
+    prev_y = (in) ? in->mouse_prev.y : -1;
+
     clicked_x = (in) ? in->mouse_clicked_pos.x : -1;
     clicked_y = (in) ? in->mouse_clicked_pos.y : -1;
 
@@ -1301,7 +1353,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
         gui_float scaler_w = MAX(0, config->scaler_size.x - config->item_padding.x);
         gui_float scaler_h = MAX(0, config->scaler_size.y - config->item_padding.y);
 
-        incursor = in && INBOX(in->mouse_prev.x,in->mouse_prev.y,scaler_x, scaler_y, scaler_w, scaler_h);
+        incursor = in && INBOX(prev_x, prev_y, scaler_x, scaler_y, scaler_w, scaler_h);
         if (in && in->mouse_down && incursor) {
             gui_float min_x = config->panel_min_size.x;
             gui_float min_y = config->panel_min_size.y;
@@ -1643,6 +1695,35 @@ gui_panel_button_triangle(struct gui_panel_layout *layout, enum gui_heading head
     button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
     return gui_button_triangle(layout->canvas, bounds.x, bounds.y, bounds.w,
             bounds.h, heading, behavior, &button, layout->input);
+}
+
+gui_bool
+gui_panel_button_image(struct gui_panel_layout *layout, gui_image image,
+    enum gui_button_behavior behavior)
+{
+    struct gui_rect bounds;
+    struct gui_button button;
+    const struct gui_config *config;
+
+    assert(layout);
+    assert(layout->config);
+    assert(layout->canvas);
+
+    if (!layout || !layout->config || !layout->canvas) return 0;
+    if (!layout->valid) return 0;
+    gui_panel_alloc_space(&bounds, layout);
+    config = layout->config;
+
+    button.border = 1;
+    button.padding.x = config->item_padding.x;
+    button.padding.y = config->item_padding.y;
+    button.background = config->colors[GUI_COLOR_BUTTON];
+    button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
+    button.content = config->colors[GUI_COLOR_TEXT];
+    button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
+    button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
+    return gui_button_image(layout->canvas, bounds.x, bounds.y, bounds.w,
+            bounds.h, image, behavior, &button, layout->input);
 }
 
 gui_bool
