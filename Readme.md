@@ -250,9 +250,7 @@ while (1) {
 The demo and example code can be found in the demo folder.
 There is demo code for Linux(X11), Windows(win32) and OpenGL(SDL2, freetype).
 As for now there will be no DirectX demo since I don't have experience
-programming in DirectX(9, 10, 11) but you are more than welcome to provide one.
-Depending on the demand I will write a Directx 12 and Vulkan demo once they are
-released as well as stable.
+programming with DirectX but you are more than welcome to provide one.
 
 #### Why did you use ANSI C and not C99 or C++?
 Personally I stay out of all "discussions" about C vs C++ since they are totally
