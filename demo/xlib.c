@@ -66,6 +66,9 @@ struct demo {
     gui_char in_buf[MAX_BUFFER];
     gui_size in_len;
     gui_bool in_act;
+    gui_char cmd_buf[MAX_BUFFER];
+    gui_size cmd_len;
+    gui_bool cmd_act;
     gui_bool check;
     gui_int option;
     gui_float slider;
@@ -452,8 +455,10 @@ demo_panel(struct gui_panel_layout *panel, struct demo *demo)
     demo->prog = gui_panel_progress(&tab, demo->prog, 100, gui_true);
     demo->item_cur = gui_panel_selector(&tab, items, LEN(items), demo->item_cur);
     demo->spinner = gui_panel_spinner(&tab, 0, demo->spinner, 250, 10, &demo->spin_act);
-    demo->in_len = gui_panel_input(&tab,demo->in_buf,demo->in_len,
-                        MAX_BUFFER,&demo->in_act,GUI_INPUT_DEFAULT);
+    if (gui_panel_shell(&tab, demo->cmd_buf, &demo->cmd_len, MAX_BUFFER, &demo->cmd_act))
+        demo->cmd_len = 0;
+    demo->in_len = gui_panel_edit(&tab, demo->in_buf, demo->in_len,
+                        MAX_BUFFER, &demo->in_act, GUI_INPUT_DEFAULT);
     demo->group_off = gui_panel_group_end(panel, &tab);
 }
 

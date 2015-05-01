@@ -451,7 +451,7 @@ demo_panel(struct gui_panel_layout *panel, struct demo *demo)
     demo->prog = gui_panel_progress(&tab, demo->prog, 100, gui_true);
     demo->item_cur = gui_panel_selector(&tab, items, LEN(items), demo->item_cur);
     demo->spinner = gui_panel_spinner(&tab, 0, demo->spinner, 250, 10, &demo->spin_act);
-    demo->in_len = gui_panel_input(&tab, demo->in_buf, demo->in_len,
+    demo->in_len = gui_panel_edit(&tab, demo->in_buf, demo->in_len,
                         MAX_BUFFER, &demo->in_act, GUI_INPUT_DEFAULT);
     demo->group_off = gui_panel_group_end(panel, &tab);
 }
@@ -511,7 +511,6 @@ draw(struct gui_command_list *list, int width, int height)
         } break;
         case GUI_COMMAND_TEXT: {
             struct gui_command_text *t = (void*)cmd;
-            /*draw_rect(t->x, t->y, t->w, t->h, t->fg);*/
             font_draw_text(t->font, t->x, t->y, t->h, t->fg, t->string, t->length);
         } break;
         default: break;

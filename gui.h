@@ -473,7 +473,7 @@ gui_float gui_slider(const struct gui_canvas*, gui_float x, gui_float y, gui_flo
 gui_size gui_progress(const struct gui_canvas*, gui_float x, gui_float y, gui_float w,
                     gui_float h, gui_size value, gui_size max, gui_bool modifyable,
                     const struct gui_slider*, const struct gui_input*);
-gui_size gui_input(const struct gui_canvas*, gui_float x, gui_float y, gui_float w,
+gui_size gui_edit(const struct gui_canvas*, gui_float x, gui_float y, gui_float w,
                     gui_float h, gui_char*, gui_size, gui_size max, gui_bool*,
                     const struct gui_input_field*, const struct gui_input*, const struct gui_font*);
 gui_int gui_histo(const struct gui_canvas*, gui_float x, gui_float y, gui_float w,
@@ -498,7 +498,7 @@ gui_bool gui_panel_begin_stacked(struct gui_panel_layout *layout, struct gui_pan
                     const struct gui_input*);
 void gui_panel_row(struct gui_panel_layout*, gui_float height, gui_size cols);
 void gui_panel_seperator(struct gui_panel_layout*, gui_size cols);
-void gui_panel_text(struct gui_panel_layout*, const char *str, gui_size len, enum gui_text_align);
+void gui_panel_text(struct gui_panel_layout*, const char*, gui_size, enum gui_text_align);
 gui_bool gui_panel_check(struct gui_panel_layout*, const char*, gui_bool active);
 gui_bool gui_panel_option(struct gui_panel_layout*, const char*, gui_bool active);
 gui_bool gui_panel_button_text(struct gui_panel_layout*, const char*, enum gui_button_behavior);
@@ -513,8 +513,10 @@ gui_float gui_panel_slider(struct gui_panel_layout*, gui_float min, gui_float va
                     gui_float max, gui_float step);
 gui_size gui_panel_progress(struct gui_panel_layout*, gui_size cur, gui_size max,
                     gui_bool modifyable);
-gui_size gui_panel_input(struct gui_panel_layout*, gui_char *buffer, gui_size len,
+gui_size gui_panel_edit(struct gui_panel_layout*, gui_char *buffer, gui_size len,
                     gui_size max, gui_bool *active, enum gui_input_filter);
+gui_bool gui_panel_shell(struct gui_panel_layout*, gui_char *buffer, gui_size *len,
+                    gui_size max, gui_bool *active);
 gui_int gui_panel_spinner(struct gui_panel_layout*, gui_int min, gui_int value,
                     gui_int max, gui_int step, gui_bool *active);
 gui_size gui_panel_selector(struct gui_panel_layout*, const char *items[],

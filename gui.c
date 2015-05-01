@@ -325,16 +325,15 @@ gui_text(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w,
         label_x = x + text->padding.x;
         label_w = MAX(0, w - 2 * text->padding.x);
     } else if (align == GUI_TEXT_CENTERED) {
-        label_w = 3 * text->padding.x + (gui_float)text_width;
+        label_w = 2 * text->padding.x + (gui_float)text_width;
         label_x = (x + text->padding.x + ((w - 2 * text->padding.x)/2)) - (label_w/2);
+        label_x = MAX(x + text->padding.x, label_x);
+        label_w = MIN(x + w, label_x + label_w) - label_x;
     } else if (align == GUI_TEXT_RIGHT) {
         label_x = MAX(x, (x + w) - (2 * text->padding.x + (gui_float)text_width));
         label_w = (gui_float)text_width + 2 * text->padding.x;
     } else return;
 
-
-    clip.x = x; clip.y = y;
-    clip.w = w; clip.h = h;
     canvas->draw_rect(canvas->userdata, x, y, w, h, text->background);
     canvas->draw_text(canvas->userdata, label_x, label_y, label_w, label_h,
         (const gui_char*)string, len, font, text->background, text->foreground);
@@ -390,7 +389,7 @@ gui_button_text(const struct gui_canvas *canvas, gui_float x, gui_float y,
 
     font_color = button->content;
     bg_color = button->background;
-    button_w = MAX(w, font->height + 2 * button->padding.x);
+    button_w = MAX(w, 2 * button->padding.x);
     button_h = MAX(h, font->height + 2 * button->padding.y);
     if (in && INBOX(in->mouse_pos.x, in->mouse_pos.y, x, y, button_w, button_h)) {
         font_color = button->highlight_content;
@@ -656,25 +655,27 @@ gui_buffer_input(gui_char *buffer, gui_size length, gui_size max,
     enum gui_input_filter filter, const struct gui_input *in)
 {
     gui_long unicode;
+    gui_size src_len = 0;
     gui_size text_len = 0, glyph_len = 0;
     assert(buffer);
     assert(in);
 
     glyph_len = gui_utf_decode(in->text, &unicode, in->text_len);
-    while (glyph_len && ((text_len + glyph_len) <= in->text_len) && (length + text_len) < max) {
+    while (glyph_len && ((text_len + glyph_len) <= in->text_len) && (length + src_len) < max) {
         if (gui_filter_input(unicode, glyph_len, filter)) {
             gui_size i = 0;
             for (i = 0; i < glyph_len; i++)
                 buffer[length++] = in->text[text_len + i];
+            text_len += glyph_len;
         }
-        text_len = text_len + glyph_len;
-        glyph_len = gui_utf_decode(in->text + text_len, &unicode, in->text_len - text_len);
+        src_len = src_len + glyph_len;
+        glyph_len = gui_utf_decode(in->text + src_len, &unicode, in->text_len - src_len);
     }
     return text_len;
 }
 
 gui_size
-gui_input(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w,
+gui_edit(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w,
     gui_float h, gui_char *buffer, gui_size len, gui_size max, gui_bool *active,
     const struct gui_input_field *field, const struct gui_input *in, const struct gui_font *font)
 {
@@ -1932,7 +1933,7 @@ gui_panel_progress(struct gui_panel_layout *layout, gui_size cur_value, gui_size
 }
 
 gui_size
-gui_panel_input(struct gui_panel_layout *layout, gui_char *buffer, gui_size len,
+gui_panel_edit(struct gui_panel_layout *layout, gui_char *buffer, gui_size len,
     gui_size max, gui_bool *active, enum gui_input_filter filter)
 {
     struct gui_rect *c;
@@ -1959,8 +1960,68 @@ gui_panel_input(struct gui_panel_layout *layout, gui_char *buffer, gui_size len,
     field.font = config->colors[GUI_COLOR_TEXT];
     field.background = config->colors[GUI_COLOR_INPUT];
     field.foreground = config->colors[GUI_COLOR_INPUT_BORDER];
-    return gui_input(layout->canvas, bounds.x, bounds.y, bounds.w, bounds.h,
+    return gui_edit(layout->canvas, bounds.x, bounds.y, bounds.w, bounds.h,
                     buffer, len, max, active, &field, layout->input, &layout->font);
+}
+
+gui_bool
+gui_panel_shell(struct gui_panel_layout *layout, gui_char *buffer, gui_size *len,
+    gui_size max, gui_bool *active)
+{
+    struct gui_rect *c;
+    struct gui_rect bounds;
+    struct gui_input_field field;
+    struct gui_button button;
+    gui_float button_x, button_y;
+    gui_float button_w, button_h;
+    gui_float field_x, field_y;
+    gui_float field_w, field_h;
+    const struct gui_config *config;
+    gui_bool clicked = gui_false;
+
+    assert(layout);
+    assert(layout->config);
+    assert(layout->canvas);
+
+    if (!layout || !layout->config || !layout->canvas) return 0;
+    if (!layout->valid) return 0;
+    gui_panel_alloc_space(&bounds, layout);
+    config = layout->config;
+    c = &layout->clip;
+    if (!INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h))
+        return 0;
+
+    button.border = 1;
+    button_y = bounds.y;
+    button_h = bounds.h;
+    button_w = layout->font.width(layout->font.userdata, (const gui_char*)"submit", 6);
+    button_w += config->item_padding.x * 2;
+    button_w += button.border * 2;
+    button_x = bounds.x + bounds.w - button_w;
+    button.padding.x = config->item_padding.x;
+    button.padding.y = config->item_padding.y;
+    button.background = config->colors[GUI_COLOR_BUTTON];
+    button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
+    button.content = config->colors[GUI_COLOR_TEXT];
+    button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
+    button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
+    clicked = gui_button_text(layout->canvas, button_x, button_y, button_w, button_h,
+                "submit", GUI_BUTTON_DEFAULT, &button, layout->input, &layout->font);
+
+    field_x = bounds.x;
+    field_y = bounds.y;
+    field_w = bounds.w - button_w - config->item_spacing.x;
+    field_h = bounds.h;
+    field.padding.x = config->item_padding.x;
+    field.padding.y = config->item_padding.y;
+    field.filter = GUI_INPUT_DEFAULT;
+    field.show_cursor = gui_true;
+    field.font = config->colors[GUI_COLOR_TEXT];
+    field.background = config->colors[GUI_COLOR_INPUT];
+    field.foreground = config->colors[GUI_COLOR_INPUT_BORDER];
+    *len = gui_edit(layout->canvas, field_x, field_y, field_w, field_h, buffer,
+            *len, max, active, &field, layout->input, &layout->font);
+    return clicked;
 }
 
 gui_int
@@ -2034,7 +2095,7 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     field.font = config->colors[GUI_COLOR_TEXT];
     field.background = config->colors[GUI_COLOR_SPINNER];
     field.foreground = config->colors[GUI_COLOR_SPINNER_BORDER];
-    len = gui_input(canvas, field_x, field_y, field_w, field_h, (gui_char*)string,
+    len = gui_edit(canvas, field_x, field_y, field_w, field_h, (gui_char*)string,
             len, MAX_NUMBER_BUFFER, &is_active, &field, layout->input, &layout->font);
     if (old_len != len)
         strtoi(&value, string, len);
