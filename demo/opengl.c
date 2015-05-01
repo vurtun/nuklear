@@ -249,7 +249,6 @@ font_get_text_width(void *handle, const gui_char *t, gui_size l)
     size_t text_len = 0;
     size_t glyph_len;
     struct font *font = handle;
-
     assert(font);
     if (!t || !l) return 0;
 
@@ -330,7 +329,6 @@ font_new(const char *path, unsigned int font_height, unsigned int bake_height,
     atlas.size = atlas.dim * atlas.dim * FONT_ATLAS_DEPTH;
     atlas.memory = calloc((gui_size)atlas.size, 1);
 
-    memset(font, 0, sizeof(*font));
     font->glyph_count = (unsigned int)atlas.range;
     font->glyphes = calloc(atlas.range, sizeof(struct font_glyph));
     font->fallback = &font->glyphes['?'];
@@ -449,28 +447,9 @@ demo_panel(struct gui_panel_layout *panel, struct demo *demo)
     demo->prog = gui_panel_progress(&tab, demo->prog, 100, gui_true);
     demo->item_cur = gui_panel_selector(&tab, items, LEN(items), demo->item_cur);
     demo->spinner = gui_panel_spinner(&tab, 0, demo->spinner, 250, 10, &demo->spin_act);
-    demo->in_len = gui_panel_input(&tab,demo->in_buf,demo->in_len,
-                        MAX_BUFFER,&demo->in_act,GUI_INPUT_DEFAULT);
+    demo->in_len = gui_panel_input(&tab, demo->in_buf, demo->in_len,
+                        MAX_BUFFER, &demo->in_act, GUI_INPUT_DEFAULT);
     demo->group_off = gui_panel_group_end(panel, &tab);
-}
-
-#define glerror() glerror_(__FILE__, __LINE__)
-static void
-glerror_(const char *file, int line)
-{
-    GLenum code = glGetError();
-    if (code == GL_INVALID_ENUM)
-        fprintf(stdout, "[GL] Error: (%s:%d) invalid value!\n", file, line);
-    else if (code == GL_INVALID_OPERATION)
-        fprintf(stdout, "[GL] Error: (%s:%d) invalid operation!\n", file, line);
-    else if (code == GL_INVALID_FRAMEBUFFER_OPERATION)
-        fprintf(stdout, "[GL] Error: (%s:%d) invalid frame op!\n", file, line);
-    else if (code == GL_OUT_OF_MEMORY)
-        fprintf(stdout, "[GL] Error: (%s:%d) out of memory!\n", file, line);
-    else if (code == GL_STACK_UNDERFLOW)
-        fprintf(stdout, "[GL] Error: (%s:%d) stack underflow!\n", file, line);
-    else if (code == GL_STACK_OVERFLOW)
-        fprintf(stdout, "[GL] Error: (%s:%d) stack overflow!\n", file, line);
 }
 
 static void
@@ -495,7 +474,6 @@ draw(struct gui_command_list *list, int width, int height)
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
     glLoadIdentity();
-    glerror();
 
     cmd = list->begin;
     while (cmd != list->end) {
@@ -529,7 +507,9 @@ draw(struct gui_command_list *list, int width, int height)
         } break;
         case GUI_COMMAND_TEXT: {
             struct gui_command_text *t = (void*)cmd;
-            font_draw_text(t->font, t->x, t->y, t->fg, t->string, t->length);
+            draw_rect(t->x, t->y, t->w, t->h, t->fg);
+            /*font_draw_text(t->font, t->x, t->y, t->fg, t->string,
+             * t->length);*/
         } break;
         default: break;
         }
@@ -577,6 +557,14 @@ btn(struct gui_input *in, SDL_Event *evt, gui_bool down)
     const gui_int y = evt->button.y;
     if (evt->button.button == SDL_BUTTON_LEFT)
         gui_input_button(in, x, y, down);
+}
+
+static void
+text(struct gui_input *in, SDL_Event *evt)
+{
+    gui_glyph glyph;
+    memcpy(glyph, evt->text.text, GUI_UTF_SIZE);
+    gui_input_char(in, glyph);
 }
 
 static void
@@ -639,7 +627,6 @@ main(int argc, char *argv[])
     font.userdata = glfont;
     font.height = glfont->height;
     font.width = font_get_text_width;
-
     gui_default_config(&config);
     gui_panel_init(&panel, 50, 50, 420, 300,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
@@ -666,6 +653,7 @@ main(int argc, char *argv[])
             else if (evt.type == SDL_MOUSEBUTTONDOWN) btn(&in, &evt, gui_true);
             else if (evt.type == SDL_MOUSEBUTTONUP) btn(&in, &evt, gui_false);
             else if (evt.type == SDL_MOUSEMOTION) motion(&in, &evt);
+            else if (evt.type == SDL_TEXTINPUT) text(&in, &evt);
         }
         gui_input_end(&in);
 

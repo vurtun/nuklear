@@ -985,6 +985,7 @@ gui_buffer_push_scissor(struct gui_command_buffer *buffer, gui_float x, gui_floa
     gui_float w, gui_float h)
 {
     struct gui_command_scissor *cmd;
+    assert(buffer);
     if (!buffer) return;
     cmd = gui_buffer_push(buffer, GUI_COMMAND_SCISSOR, sizeof(*cmd));
     if (!cmd) return;
@@ -1005,6 +1006,7 @@ gui_buffer_push_line(struct gui_command_buffer *buffer, gui_float x0, gui_float 
     gui_float x1, gui_float y1, struct gui_color c)
 {
     struct gui_command_line *cmd;
+    assert(buffer);
     if (!buffer) return;
     if (buffer->clipping == GUI_CLIP) {
         const struct gui_rect *r = &buffer->clip;
@@ -1028,6 +1030,7 @@ gui_buffer_push_rect(struct gui_command_buffer *buffer, gui_float x, gui_float y
     gui_float w, gui_float h, struct gui_color c)
 {
     struct gui_command_rect *cmd;
+    assert(buffer);
     if (!buffer) return;
     if (buffer->clipping == GUI_CLIP) {
         const struct gui_rect *r = &buffer->clip;
@@ -1051,6 +1054,7 @@ gui_buffer_push_circle(struct gui_command_buffer *buffer, gui_float x, gui_float
     gui_float w, gui_float h, struct gui_color c)
 {
     struct gui_command_circle *cmd;
+    assert(buffer);
     if (!buffer) return;
     if (buffer->clipping == GUI_CLIP) {
         const struct gui_rect *r = &buffer->clip;
@@ -1075,6 +1079,7 @@ gui_buffer_push_triangle(struct gui_command_buffer *buffer, gui_float x0, gui_fl
     gui_float x1, gui_float y1, gui_float x2, gui_float y2, struct gui_color c)
 {
     struct gui_command_triangle *cmd;
+    assert(buffer);
     if (!buffer) return;
     if (buffer->clipping == GUI_CLIP) {
         const struct gui_rect *r = &buffer->clip;
@@ -1102,6 +1107,7 @@ gui_buffer_push_image(struct gui_command_buffer *buffer, gui_float x, gui_float 
     gui_float w, gui_float h, gui_image img)
 {
     struct gui_command_image *cmd;
+    assert(buffer);
     if (!buffer) return;
     if (buffer->clipping == GUI_CLIP) {
         const struct gui_rect *r = &buffer->clip;
@@ -1126,8 +1132,9 @@ gui_buffer_push_text(struct gui_command_buffer *buffer, gui_float x, gui_float y
     const struct gui_font *font, struct gui_color bg, struct gui_color fg)
 {
     struct gui_command_text *cmd;
-    if (!buffer) return;
-    if (!string || !length) return;
+    assert(buffer);
+    assert(font);
+    if (!buffer || !string || !length) return;
     if (buffer->clipping == GUI_CLIP) {
         const struct gui_rect *r = &buffer->clip;
         if (!INTERSECT(r->x, r->y, r->w, r->h, x, y, w, h)) {
@@ -1154,6 +1161,10 @@ void
 gui_buffer_init_fixed(struct gui_command_buffer *buffer, const struct gui_memory *memory,
     enum gui_clipping clipping)
 {
+    assert(buffer);
+    assert(memory);
+    if (!buffer || !memory) return;
+
     zero(buffer, sizeof(*buffer));
     buffer->memory = memory->memory;
     buffer->capacity = memory->size;
@@ -1168,6 +1179,11 @@ void
 gui_buffer_init(struct gui_command_buffer *buffer, const struct gui_allocator *memory,
     gui_size initial_size, gui_float grow_factor, enum gui_clipping clipping)
 {
+    assert(buffer);
+    assert(memory);
+    assert(initial_size);
+    if (!buffer || !memory || !initial_size) return;
+
     zero(buffer, sizeof(*buffer));
     buffer->memory = memory->alloc(memory->userdata, initial_size);
     buffer->allocator = *memory;
@@ -1183,6 +1199,12 @@ void
 gui_buffer_begin(struct gui_canvas *canvas, struct gui_command_buffer *buffer,
     gui_size width, gui_size height)
 {
+    assert(canvas);
+    assert(buffer);
+    assert(buffer->memory);
+    assert(buffer->begin == buffer->end);
+    if (!canvas || !buffer) return;
+
     canvas->userdata = buffer;
     canvas->width = width;
     canvas->height = height;
@@ -1199,7 +1221,8 @@ gui_buffer_end(struct gui_command_list *list, struct gui_command_buffer *buffer,
     struct gui_canvas *canvas, struct gui_memory_status *status)
 {
     assert(buffer);
-    if (!buffer) return;
+    assert(canvas);
+    if (!buffer || !canvas) return;
     if (status) {
         status->size = buffer->capacity;
         status->allocated = buffer->allocated;
@@ -1234,6 +1257,7 @@ gui_buffer_clear(struct gui_command_buffer *buffer)
 void
 gui_default_config(struct gui_config *config)
 {
+    assert(config);
     if (!config) return;
     config->scrollbar_width = 16;
     vec2_load(config->panel_padding, 15.0f, 10.0f);
@@ -1494,6 +1518,11 @@ gui_panel_begin_stacked(struct gui_panel_layout *layout, struct gui_panel *panel
     const struct gui_input *in)
 {
     gui_bool inpanel;
+    assert(layout);
+    assert(panel);
+    assert(stack);
+    assert(canvas);
+
     inpanel = INBOX(in->mouse_prev.x, in->mouse_prev.y, panel->x, panel->y, panel->w, panel->h);
     if (in->mouse_down && in->mouse_clicked && inpanel && panel != stack->end) {
         struct gui_panel *iter = panel->next;
