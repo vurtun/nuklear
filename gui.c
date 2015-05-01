@@ -2038,8 +2038,8 @@ gui_panel_selector(struct gui_panel_layout *layout, const char *items[],
     button_h = bounds.h / 2;
     button_w = bounds.h - config->item_padding.x;
     button_x = bounds.x + bounds.w - button_w;
-    button.padding.x = MAX(3, button_h - layout->font.height);
-    button.padding.y = MAX(3, button_h - layout->font.height);
+    button.padding.x = MAX(3, (button_h - layout->font.height) / 2);
+    button.padding.y = MAX(3, (button_h - layout->font.height) / 2);
     button.background = config->colors[GUI_COLOR_BUTTON];
     button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
     button.content = config->colors[GUI_COLOR_TEXT];
