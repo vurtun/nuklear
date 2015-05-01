@@ -507,9 +507,7 @@ draw(struct gui_command_list *list, int width, int height)
         } break;
         case GUI_COMMAND_TEXT: {
             struct gui_command_text *t = (void*)cmd;
-            draw_rect(t->x, t->y, t->w, t->h, t->fg);
-            /*font_draw_text(t->font, t->x, t->y, t->fg, t->string,
-             * t->length);*/
+            font_draw_text(t->font, t->x, t->y, t->fg, t->string, t->length);
         } break;
         default: break;
         }
