@@ -258,7 +258,7 @@ font_get_text_width(void *handle, const gui_char *t, gui_size l)
         glyph = (unicode < font->glyph_count) ? &font->glyphes[unicode] : font->fallback;
         glyph = (glyph->code == 0) ? font->fallback : glyph;
 
-        text_width += (gui_size)(glyph->xadvance * font->scale);
+        text_width += (gui_size)((float)glyph->xadvance * font->scale);
         glyph_len = gui_utf_decode(t + text_len, &unicode, l - text_len);
         text_len += glyph_len;
     }
@@ -266,12 +266,12 @@ font_get_text_width(void *handle, const gui_char *t, gui_size l)
 }
 
 static void
-font_draw_text(const struct font *font, float x, float y,
+font_draw_text(const struct font *font, float x, float y, float h,
     struct gui_color color, const unsigned char *text, size_t len)
 {
     struct gui_rect clip;
-    gui_size text_len;
-    gui_long unicode;
+    size_t text_len;
+    long unicode;
     const struct font_glyph *g;
 
     text_len = gui_utf_decode(text, &unicode, len);
@@ -286,10 +286,14 @@ font_draw_text(const struct font *font, float x, float y,
             font->fallback;
         g = (g->code == 0) ? font->fallback : g;
 
-        gw = g->width * font->scale;
-        gh = g->height * font->scale;
+
+        /* th = font->ascent + font->descent;*/
+        /*ty = (int)y + ((int)h / 2) - (th / 2) + font->ascent;*/
+        gw = (float)g->width * font->scale;
+        gh = (float)g->height * font->scale;
         gx = x + g->xoff * font->scale;
-        gy = y + (font->height - g->yoff * font->scale);
+        /*gy = y + (font->height - g->yoff * font->scale);*/
+        gy = y + (h / 2) - (g->yoff * font->scale);
         char_width = g->xadvance * font->scale;
 
         glTexCoord2f(g->uv[0].u, g->uv[0].v);
@@ -507,7 +511,8 @@ draw(struct gui_command_list *list, int width, int height)
         } break;
         case GUI_COMMAND_TEXT: {
             struct gui_command_text *t = (void*)cmd;
-            font_draw_text(t->font, t->x, t->y, t->fg, t->string, t->length);
+            /*draw_rect(t->x, t->y, t->w, t->h, t->fg);*/
+            font_draw_text(t->font, t->x, t->y, t->h, t->fg, t->string, t->length);
         } break;
         default: break;
         }
@@ -626,7 +631,7 @@ main(int argc, char *argv[])
     font.height = glfont->height;
     font.width = font_get_text_width;
     gui_default_config(&config);
-    gui_panel_init(&panel, 50, 50, 420, 300,
+    gui_panel_init(&panel, 50, 50, 450, 310,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
         GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
         GUI_PANEL_MINIMIZABLE, &config, &font);

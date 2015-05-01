@@ -1646,6 +1646,7 @@ gui_panel_button_text(struct gui_panel_layout *layout, const char *str,
     enum gui_button_behavior behavior)
 {
     struct gui_rect bounds;
+    struct gui_rect *clipping;
     struct gui_button button;
     const struct gui_config *config;
 
@@ -1657,6 +1658,9 @@ gui_panel_button_text(struct gui_panel_layout *layout, const char *str,
     if (!layout->valid) return 0;
     gui_panel_alloc_space(&bounds, layout);
     config = layout->config;
+    clipping = &layout->clip;
+    if (!INTERSECT(clipping->x, clipping->y, clipping->w, clipping->h, bounds.x, bounds.y, bounds.w, bounds.h))
+        return 0;
 
     button.border = 1;
     button.padding.x = config->item_padding.x;
@@ -1674,6 +1678,7 @@ gui_bool gui_panel_button_color(struct gui_panel_layout *layout,
     const struct gui_color color, enum gui_button_behavior behavior)
 {
     struct gui_rect bounds;
+    struct gui_rect *clipping;
     struct gui_button button;
     const struct gui_config *config;
 
@@ -1685,6 +1690,9 @@ gui_bool gui_panel_button_color(struct gui_panel_layout *layout,
     if (!layout->valid) return 0;
     gui_panel_alloc_space(&bounds, layout);
     config = layout->config;
+    clipping = &layout->clip;
+    if (!INTERSECT(clipping->x, clipping->y, clipping->w, clipping->h, bounds.x, bounds.y, bounds.w, bounds.h))
+        return 0;
 
     button.border = 1;
     button.padding.x = config->item_padding.x;
@@ -1702,6 +1710,7 @@ gui_panel_button_triangle(struct gui_panel_layout *layout, enum gui_heading head
     enum gui_button_behavior behavior)
 {
     struct gui_rect bounds;
+    struct gui_rect *clipping;
     struct gui_button button;
     const struct gui_config *config;
 
@@ -1713,6 +1722,9 @@ gui_panel_button_triangle(struct gui_panel_layout *layout, enum gui_heading head
     if (!layout->valid) return 0;
     gui_panel_alloc_space(&bounds, layout);
     config = layout->config;
+    clipping = &layout->clip;
+    if (!INTERSECT(clipping->x, clipping->y, clipping->w, clipping->h, bounds.x, bounds.y, bounds.w, bounds.h))
+        return 0;
 
     button.border = 1;
     button.padding.x = config->item_padding.x;
@@ -1731,6 +1743,7 @@ gui_panel_button_image(struct gui_panel_layout *layout, gui_image image,
     enum gui_button_behavior behavior)
 {
     struct gui_rect bounds;
+    struct gui_rect *clipping;
     struct gui_button button;
     const struct gui_config *config;
 
@@ -1742,6 +1755,9 @@ gui_panel_button_image(struct gui_panel_layout *layout, gui_image image,
     if (!layout->valid) return 0;
     gui_panel_alloc_space(&bounds, layout);
     config = layout->config;
+    clipping = &layout->clip;
+    if (!INTERSECT(clipping->x, clipping->y, clipping->w, clipping->h, bounds.x, bounds.y, bounds.w, bounds.h))
+        return 0;
 
     button.border = 1;
     button.padding.x = config->item_padding.x;
@@ -1759,6 +1775,7 @@ gui_bool
 gui_panel_button_toggle(struct gui_panel_layout *layout, const char *str, gui_bool value)
 {
     struct gui_rect bounds;
+    struct gui_rect *clipping;
     struct gui_button button;
     const struct gui_config *config;
 
@@ -1771,6 +1788,9 @@ gui_panel_button_toggle(struct gui_panel_layout *layout, const char *str, gui_bo
     if (!layout->valid) return 0;
     gui_panel_alloc_space(&bounds, layout);
     config = layout->config;
+    clipping = &layout->clip;
+    if (!INTERSECT(clipping->x, clipping->y, clipping->w, clipping->h, bounds.x, bounds.y, bounds.w, bounds.h))
+        return 0;
 
     button.border = 1;
     button.padding.x = config->item_padding.x;
@@ -1797,6 +1817,7 @@ gui_bool
 gui_panel_check(struct gui_panel_layout *layout, const char *text, gui_bool is_active)
 {
     struct gui_rect bounds;
+    struct gui_rect *clipping;
     struct gui_toggle toggle;
     const struct gui_config *config;
 
@@ -1809,6 +1830,9 @@ gui_panel_check(struct gui_panel_layout *layout, const char *text, gui_bool is_a
     if (!layout->valid) return is_active;
     gui_panel_alloc_space(&bounds, layout);
     config = layout->config;
+    clipping = &layout->clip;
+    if (!INTERSECT(clipping->x, clipping->y, clipping->w, clipping->h, bounds.x, bounds.y, bounds.w, bounds.h))
+        return is_active;
 
     toggle.padding.x = config->item_padding.x;
     toggle.padding.y = config->item_padding.y;
@@ -1823,6 +1847,7 @@ gui_bool
 gui_panel_option(struct gui_panel_layout *layout, const char *text, gui_bool is_active)
 {
     struct gui_rect bounds;
+    struct gui_rect *clipping;
     struct gui_toggle toggle;
     const struct gui_config *config;
 
@@ -1835,6 +1860,9 @@ gui_panel_option(struct gui_panel_layout *layout, const char *text, gui_bool is_
     if (!layout->valid) return is_active;
     gui_panel_alloc_space(&bounds, layout);
     config = layout->config;
+    clipping = &layout->clip;
+    if (!INTERSECT(clipping->x, clipping->y, clipping->w, clipping->h, bounds.x, bounds.y, bounds.w, bounds.h))
+        return is_active;
 
     toggle.padding.x = config->item_padding.x;
     toggle.padding.y = config->item_padding.y;
@@ -1850,6 +1878,7 @@ gui_panel_slider(struct gui_panel_layout *layout, gui_float min_value, gui_float
     gui_float max_value, gui_float value_step)
 {
     struct gui_rect bounds;
+    struct gui_rect *clipping;
     struct gui_slider slider;
     const struct gui_config *config;
 
@@ -1861,6 +1890,9 @@ gui_panel_slider(struct gui_panel_layout *layout, gui_float min_value, gui_float
     if (!layout->valid) return value;
     gui_panel_alloc_space(&bounds, layout);
     config = layout->config;
+    clipping = &layout->clip;
+    if (!INTERSECT(clipping->x, clipping->y, clipping->w, clipping->h, bounds.x, bounds.y, bounds.w, bounds.h))
+        return value;
 
     slider.padding.x = config->item_padding.x;
     slider.padding.y = config->item_padding.y;
@@ -1875,6 +1907,7 @@ gui_panel_progress(struct gui_panel_layout *layout, gui_size cur_value, gui_size
     gui_bool is_modifyable)
 {
     struct gui_rect bounds;
+    struct gui_rect *clipping;
     struct gui_slider prog;
     const struct gui_config *config;
 
@@ -1886,6 +1919,9 @@ gui_panel_progress(struct gui_panel_layout *layout, gui_size cur_value, gui_size
     if (!layout->valid) return cur_value;
     gui_panel_alloc_space(&bounds, layout);
     config = layout->config;
+    clipping = &layout->clip;
+    if (!INTERSECT(clipping->x, clipping->y, clipping->w, clipping->h, bounds.x, bounds.y, bounds.w, bounds.h))
+        return cur_value;
 
     prog.padding.x = config->item_padding.x;
     prog.padding.y = config->item_padding.y;
@@ -1900,6 +1936,7 @@ gui_panel_input(struct gui_panel_layout *layout, gui_char *buffer, gui_size len,
     gui_size max, gui_bool *active, enum gui_input_filter filter)
 {
     struct gui_rect bounds;
+    struct gui_rect *clipping;
     struct gui_input_field field;
     const struct gui_config *config;
 
@@ -1911,6 +1948,9 @@ gui_panel_input(struct gui_panel_layout *layout, gui_char *buffer, gui_size len,
     if (!layout->valid) return 0;
     gui_panel_alloc_space(&bounds, layout);
     config = layout->config;
+    clipping = &layout->clip;
+    if (!INTERSECT(clipping->x, clipping->y, clipping->w, clipping->h, bounds.x, bounds.y, bounds.w, bounds.h))
+        return 0;
 
     field.padding.x = config->item_padding.x;
     field.padding.y = config->item_padding.y;
@@ -1928,6 +1968,7 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     gui_int max, gui_int step, gui_bool *active)
 {
     struct gui_rect bounds;
+    struct gui_rect *clipping;
     const struct gui_config *config;
     const struct gui_canvas *canvas;
     struct gui_input_field field;
@@ -1951,6 +1992,9 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     gui_panel_alloc_space(&bounds, layout);
     config = layout->config;
     canvas = layout->canvas;
+    clipping = &layout->clip;
+    if (!INTERSECT(clipping->x, clipping->y, clipping->w, clipping->h, bounds.x, bounds.y, bounds.w, bounds.h))
+        return 0;
 
     value = CLAMP(min, value, max);
     len = itos(string, value);
@@ -1962,8 +2006,8 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     button_h = bounds.h / 2;
     button_w = bounds.h - config->item_padding.x;
     button_x = bounds.x + bounds.w - button_w;
-    button.padding.x = MAX(3, button_h - layout->font.height);
-    button.padding.y = MAX(3, button_h - layout->font.height);
+    button.padding.x = MAX(3, (button_h - layout->font.height) / 2);
+    button.padding.y = MAX(3, (button_h - layout->font.height) / 2);
     button.background = config->colors[GUI_COLOR_BUTTON];
     button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
     button.content = config->colors[GUI_COLOR_TEXT];
@@ -2007,6 +2051,7 @@ gui_panel_selector(struct gui_panel_layout *layout, const char *items[],
     gui_float label_w, label_h;
 
     struct gui_rect bounds;
+    struct gui_rect *clipping;
     struct gui_button button;
     const struct gui_config *config;
     const struct gui_canvas *canvas;
@@ -2027,6 +2072,9 @@ gui_panel_selector(struct gui_panel_layout *layout, const char *items[],
     gui_panel_alloc_space(&bounds, layout);
     config = layout->config;
     canvas = layout->canvas;
+    clipping = &layout->clip;
+    if (!INTERSECT(clipping->x, clipping->y, clipping->w, clipping->h, bounds.x, bounds.y, bounds.w, bounds.h))
+        return 0;
 
     canvas->draw_rect(canvas->userdata, bounds.x, bounds.y, bounds.w, bounds.h,
             config->colors[GUI_COLOR_SELECTOR_BORDER]);
@@ -2070,6 +2118,7 @@ gui_panel_plot(struct gui_panel_layout *layout, const gui_float *values, gui_siz
 {
     struct gui_rect bounds;
     struct gui_plot plot;
+    struct gui_rect *clipping;
     const struct gui_config *config;
 
     assert(layout);
@@ -2082,6 +2131,9 @@ gui_panel_plot(struct gui_panel_layout *layout, const gui_float *values, gui_siz
     if (!layout->valid) return -1;
     gui_panel_alloc_space(&bounds, layout);
     config = layout->config;
+    clipping = &layout->clip;
+    if (!INTERSECT(clipping->x, clipping->y, clipping->w, clipping->h, bounds.x, bounds.y, bounds.w, bounds.h))
+        return -1;
 
     plot.padding.x = config->item_padding.x;
     plot.padding.y = config->item_padding.y;
@@ -2097,6 +2149,7 @@ gui_panel_histo(struct gui_panel_layout *layout, const gui_float *values, gui_si
 {
     struct gui_rect bounds;
     struct gui_histo histo;
+    struct gui_rect *clipping;
     const struct gui_config *config;
 
     assert(layout);
@@ -2108,6 +2161,9 @@ gui_panel_histo(struct gui_panel_layout *layout, const gui_float *values, gui_si
     if (!layout || !layout->config || !layout->canvas) return -1;
     if (!layout->valid) return -1;
     gui_panel_alloc_space(&bounds, layout);
+    clipping = &layout->clip;
+    if (!INTERSECT(clipping->x, clipping->y, clipping->w, clipping->h, bounds.x, bounds.y, bounds.w, bounds.h))
+        return -1;
     config = layout->config;
 
     histo.padding.x = config->item_padding.x;
@@ -2188,6 +2244,7 @@ gui_panel_group_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
     const struct gui_canvas *canvas;
     struct gui_rect clip;
     struct gui_panel panel;
+    const struct gui_rect *clipping;
 
     assert(parent);
     assert(group);
@@ -2202,6 +2259,10 @@ gui_panel_group_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
 
     gui_panel_alloc_space(&bounds, parent);
     zero(group, sizeof(*group));
+    clipping = &parent->clip;
+    if (!INTERSECT(clipping->x, clipping->y, clipping->w, clipping->h, bounds.x, bounds.y, bounds.w, bounds.h))
+        return;
+
     canvas = parent->canvas;
     flags = GUI_PANEL_BORDER|GUI_PANEL_SCROLLBAR|GUI_PANEL_TAB;
     gui_panel_init(&panel, bounds.x,bounds.y,bounds.w,bounds.h,flags,parent->config,&parent->font);
@@ -2247,6 +2308,7 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
     gui_float header_w, header_h;
     struct gui_rect bounds;
     struct gui_rect clip;
+    struct gui_rect *clipping;
     struct gui_panel panel;
     gui_float item_width;
     gui_flags flags;
@@ -2271,6 +2333,9 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
     canvas = parent->canvas;
     gui_panel_alloc_space(&bounds, parent);
     zero(shelf, sizeof(*shelf));
+    clipping = &parent->clip;
+    if (!INTERSECT(clipping->x, clipping->y, clipping->w, clipping->h, bounds.x, bounds.y, bounds.w, bounds.h))
+        return active;
 
     header_x = bounds.x;
     header_y = bounds.y;
@@ -2299,7 +2364,8 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
             button_h -= config->item_padding.y;
         }
         if (gui_button_text(canvas, button_x, button_y, button_w, button_h,
-            tabs[i], GUI_BUTTON_DEFAULT, &button, parent->input, &parent->font)) active = i;
+            tabs[i], GUI_BUTTON_DEFAULT, &button, parent->input, &parent->font))
+            active = i;
     }
 
     bounds.y += header_h;
