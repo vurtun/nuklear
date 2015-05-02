@@ -158,19 +158,20 @@ struct gui_input_field {
     struct gui_color font;
 };
 
-struct gui_plot {
-    struct gui_vec2 padding;
-    struct gui_color background;
-    struct gui_color foreground;
-    struct gui_color highlight;
+enum gui_graph_type {
+    GUI_GRAPH_LINES,
+    GUI_GRAPH_HISTO,
+    GUI_GRAPH_MAX
 };
 
-struct gui_histo {
-    struct gui_vec2 padding;
-    struct gui_color background;
-    struct gui_color foreground;
-    struct gui_color negative;
-    struct gui_color highlight;
+struct gui_graph {
+    enum gui_graph_type type;
+    gui_float x, y;
+    gui_float w, h;
+    gui_float min, max;
+    struct gui_vec2 last;
+    gui_size index;
+    gui_size count;
 };
 
 struct gui_font {
@@ -195,6 +196,14 @@ struct gui_canvas {
 struct gui_memory {
     void *memory;
     gui_size size;
+};
+
+struct gui_memory_status {
+    gui_size size;
+    gui_size allocated;
+    gui_size needed;
+    gui_size clipped_commands;
+    gui_size clipped_memory;
 };
 
 struct gui_allocator {
@@ -297,14 +306,6 @@ struct gui_command_list {
     struct gui_command *begin;
     struct gui_command *end;
     gui_size count;
-};
-
-struct gui_memory_status {
-    gui_size size;
-    gui_size allocated;
-    gui_size needed;
-    gui_size clipped_commands;
-    gui_size clipped_memory;
 };
 
 enum gui_panel_colors {
@@ -476,12 +477,6 @@ gui_size gui_progress(const struct gui_canvas*, gui_float x, gui_float y, gui_fl
 gui_size gui_edit(const struct gui_canvas*, gui_float x, gui_float y, gui_float w,
                     gui_float h, gui_char*, gui_size, gui_size max, gui_bool*,
                     const struct gui_input_field*, const struct gui_input*, const struct gui_font*);
-gui_int gui_histo(const struct gui_canvas*, gui_float x, gui_float y, gui_float w,
-                    gui_float h, const gui_float*, gui_size,
-                    const struct gui_histo*, const struct gui_input*);
-gui_int gui_plot(const struct gui_canvas*, gui_float x, gui_float y, gui_float w,
-                    gui_float h, const gui_float*, gui_size,
-                    const struct gui_plot*, const struct gui_input*);
 gui_float gui_scroll(const struct gui_canvas*, gui_float x, gui_float y,
                     gui_float w, gui_float h, gui_float offset, gui_float target,
                     gui_float step, const struct gui_scroll*, const struct gui_input*);
@@ -521,12 +516,18 @@ gui_int gui_panel_spinner(struct gui_panel_layout*, gui_int min, gui_int value,
                     gui_int max, gui_int step, gui_bool *active);
 gui_size gui_panel_selector(struct gui_panel_layout*, const char *items[],
                     gui_size item_count, gui_size item_current);
-gui_int gui_panel_plot(struct gui_panel_layout*, const gui_float *values, gui_size value_count);
-gui_int gui_panel_histo(struct gui_panel_layout*, const gui_float *values, gui_size value_count);
-gui_bool gui_panel_tab_begin(struct gui_panel_layout*, struct gui_panel_layout*,
+void gui_panel_table_begin(struct gui_panel_layout*, gui_size cols);
+void gui_panel_table_end(struct gui_panel_layout*);
+void gui_panel_graph_begin(struct gui_panel_layout*, struct gui_graph*, enum gui_graph_type,
+                    gui_size count, gui_float min_value, gui_float max_value);
+gui_bool gui_panel_graph_push(struct gui_panel_layout *layout, struct gui_graph*, gui_float);
+void gui_panel_graph_end(struct gui_panel_layout *layout, struct gui_graph*);
+gui_int gui_panel_graph(struct gui_panel_layout*, enum gui_graph_type,
+                    const gui_float *values, gui_size count);
+gui_bool gui_panel_tab_begin(struct gui_panel_layout*, struct gui_panel_layout *tab,
                     const char*, gui_bool);
 void gui_panel_tab_end(struct gui_panel_layout*, struct gui_panel_layout *tab);
-void gui_panel_group_begin(struct gui_panel_layout *panel, struct gui_panel_layout*,
+void gui_panel_group_begin(struct gui_panel_layout*, struct gui_panel_layout *tab,
                     const char*,gui_float offset);
 gui_float gui_panel_group_end(struct gui_panel_layout*, struct gui_panel_layout* tab);
 gui_size gui_panel_shelf_begin(struct gui_panel_layout*, struct gui_panel_layout *shelf,

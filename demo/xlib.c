@@ -438,9 +438,9 @@ demo_panel(struct gui_panel_layout *panel, struct demo *demo)
     demo->cur = gui_panel_shelf_begin(panel,&tab,shelfs,LEN(shelfs),demo->cur,demo->shelf_off);
     gui_panel_row(&tab, 100, 1);
     if (demo->cur == HISTO) {
-        gui_panel_histo(&tab, values, LEN(values));
+        gui_panel_graph(&tab, GUI_GRAPH_HISTO, values, LEN(values));
     } else {
-        gui_panel_plot(&tab, values, LEN(values));
+        gui_panel_graph(&tab, GUI_GRAPH_LINES, values, LEN(values));
     }
     demo->shelf_off = gui_panel_shelf_end(panel, &tab);
 
@@ -528,6 +528,7 @@ main(int argc, char *argv[])
     demo.spinner = 100;
     demo.slider = 2.0f;
     demo.prog = 60;
+    demo.cur = 1;
 
     while (running) {
         /* Input */

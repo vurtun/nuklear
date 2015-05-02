@@ -13,6 +13,7 @@
 
 #define NULL (void*)0
 #define MAX_NUMBER_BUFFER 64
+#define UNUSED(a)   ((void)(a))
 #define PASTE(a,b) a##b
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #define MAX(a,b) ((a) < (b) ? (b) : (a))
@@ -740,134 +741,6 @@ gui_edit(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w,
     }
     *active = input_active;
     return len;
-}
-
-gui_int
-gui_plot(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w,
-    gui_float h, const gui_float *values, gui_size value_count,
-    const struct gui_plot *plot, const struct gui_input *in)
-{
-    gui_size i;
-    struct gui_color col;
-    gui_float canvas_x, canvas_y;
-    gui_float canvas_w, canvas_h;
-
-    gui_size plot_step;
-    gui_float plot_last_x;
-    gui_float plot_last_y;
-    gui_float plot_w, plot_h;
-    gui_int plot_selected = -1;
-    gui_float plot_max_value, plot_min_value;
-    gui_float plot_value_range, plot_value_ratio;
-
-    assert(canvas);
-    assert(plot);
-    if (!canvas || !plot)
-        return plot_selected;
-
-    col = plot->foreground;
-    plot_w = MAX(w, 2 * plot->padding.x);
-    plot_h = MAX(h, 2 * plot->padding.y);
-    canvas->draw_rect(canvas->userdata, x, y, plot_w, plot_h, plot->background);
-    if (!value_count)
-        return plot_selected;
-
-    plot_max_value = values[0];
-    plot_min_value = values[0];
-    for (i = 0; i < value_count; ++i) {
-        if (values[i] > plot_max_value)
-            plot_max_value = values[i];
-        if (values[i] < plot_min_value)
-            plot_min_value = values[i];
-    }
-
-    canvas_x = x + plot->padding.x;
-    canvas_y = y + plot->padding.y;
-    canvas_w = MAX(1 + 2 * plot->padding.x, plot_w - 2 * plot->padding.x);
-    canvas_h = MAX(1 + 2 * plot->padding.y, plot_h - 2 * plot->padding.y);
-
-    plot_step = (gui_size)canvas_w / value_count;
-    plot_value_range = plot_max_value - plot_min_value;
-    plot_value_ratio = (values[0] - plot_min_value) / plot_value_range;
-
-    plot_last_x = canvas_x;
-    plot_last_y = (canvas_y + canvas_h) - plot_value_ratio * (gui_float)canvas_h;
-    if (in && INBOX(in->mouse_pos.x, in->mouse_pos.y, plot_last_x-3, plot_last_y-3, 6, 6)) {
-        plot_selected = (in->mouse_down && in->mouse_clicked) ? (gui_int)i : -1;
-        col = plot->highlight;
-    }
-    canvas->draw_rect(canvas->userdata, plot_last_x - 3, plot_last_y - 3, 6, 6, col);
-
-    for (i = 1; i < value_count; i++) {
-        gui_float plot_cur_x, plot_cur_y;
-        plot_value_ratio = (values[i] - plot_min_value) / plot_value_range;
-        plot_cur_x = canvas_x + (gui_float)(plot_step * i);
-        plot_cur_y = (canvas_y + canvas_h) - (plot_value_ratio * (gui_float)canvas_h);
-        canvas->draw_line(canvas->userdata, plot_last_x, plot_last_y, plot_cur_x, plot_cur_y,
-            plot->foreground);
-
-        if (in && INBOX(in->mouse_pos.x, in->mouse_pos.y, plot_cur_x-3, plot_cur_y-3, 6, 6)) {
-            plot_selected = (in->mouse_down && in->mouse_clicked) ? (gui_int)i : plot_selected;
-            col = plot->highlight;
-        } else col = plot->foreground;
-        canvas->draw_rect(canvas->userdata, plot_cur_x - 3, plot_cur_y - 3, 6, 6, col);
-        plot_last_x = plot_cur_x, plot_last_y = plot_cur_y;
-    }
-    return plot_selected;
-}
-
-gui_int
-gui_histo(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w,
-    gui_float h, const gui_float *values, gui_size value_count,
-    const struct gui_histo *histo, const struct gui_input *in)
-{
-    gui_size i;
-    gui_int selected = -1;
-    gui_float canvas_x, canvas_y;
-    gui_float canvas_w, canvas_h;
-    gui_float histo_max_value;
-    gui_float histo_w, histo_h;
-    gui_float item_w = 0.0f;
-
-    assert(canvas);
-    assert(histo);
-    if (!canvas || !histo)
-        return selected;
-
-    histo_w = MAX(w, 2 * histo->padding.x);
-    histo_h = MAX(h, 2 * histo->padding.y);
-    canvas->draw_rect(canvas->userdata, x, y, histo_w, histo_h, histo->background);
-
-    histo_max_value = values[0];
-    for (i = 0; i < value_count; ++i) {
-        if (ABS(values[i]) > histo_max_value)
-            histo_max_value = values[i];
-    }
-
-    canvas_x = x + histo->padding.x;
-    canvas_y = y + histo->padding.y;
-    canvas_w = histo_w - 2 * histo->padding.x;
-    canvas_h = histo_h - 2 * histo->padding.y;
-    if (value_count) {
-        gui_float padding = (gui_float)(value_count-1) * histo->padding.x;
-        item_w = (canvas_w - padding) / (gui_float)(value_count);
-    }
-
-    for (i = 0; i < value_count; i++) {
-        const gui_float histo_ratio = ABS(values[i]) / histo_max_value;
-        struct gui_color item_color = (values[i] < 0) ? histo->negative: histo->foreground;
-        const gui_float item_h = canvas_h * histo_ratio;
-        const gui_float item_y = (canvas_y + canvas_h) - item_h;
-        gui_float item_x = canvas_x + ((gui_float)i * item_w);
-        item_x = item_x + ((gui_float)i * histo->padding.y);
-
-        if (in && INBOX(in->mouse_pos.x, in->mouse_pos.y, item_x, item_y, item_w, item_h)) {
-            selected = (in->mouse_down && in->mouse_clicked) ? (gui_int)i: selected;
-            item_color = histo->highlight;
-        }
-        canvas->draw_rect(canvas->userdata, item_x, item_y, item_w, item_h, item_color);
-    }
-    return selected;
 }
 
 gui_float
@@ -2174,44 +2047,244 @@ gui_panel_selector(struct gui_panel_layout *layout, const char *items[],
     return item_current;
 }
 
+/*
 gui_int
-gui_panel_plot(struct gui_panel_layout *layout, const gui_float *values, gui_size count)
+gui_plot(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w,
+    gui_float h, const gui_float *values, gui_size value_count,
+    const struct gui_plot *plot, const struct gui_input *in)
 {
-    struct gui_rect bounds;
-    struct gui_plot plot;
+    gui_size i;
+    struct gui_color col;
+    gui_float canvas_x, canvas_y;
+    gui_float canvas_w, canvas_h;
+
+    gui_size plot_step;
+    gui_float plot_last_x;
+    gui_float plot_last_y;
+    gui_float plot_w, plot_h;
+    gui_int plot_selected = -1;
+    gui_float plot_max_value, plot_min_value;
+    gui_float plot_value_range, plot_value_ratio;
+
+    assert(canvas);
+    assert(plot);
+    if (!canvas || !plot)
+        return plot_selected;
+
+    col = plot->foreground;
+    plot_w = MAX(w, 2 * plot->padding.x);
+    plot_h = MAX(h, 2 * plot->padding.y);
+    canvas->draw_rect(canvas->userdata, x, y, plot_w, plot_h, plot->background);
+    if (!value_count)
+        return plot_selected;
+
+    plot_max_value = values[0];
+    plot_min_value = values[0];
+    for (i = 0; i < value_count; ++i) {
+        if (values[i] > plot_max_value)
+            plot_max_value = values[i];
+        if (values[i] < plot_min_value)
+            plot_min_value = values[i];
+    }
+
+    canvas_x = x + plot->padding.x;
+    canvas_y = y + plot->padding.y;
+    canvas_w = MAX(1 + 2 * plot->padding.x, plot_w - 2 * plot->padding.x);
+    canvas_h = MAX(1 + 2 * plot->padding.y, plot_h - 2 * plot->padding.y);
+
+    plot_step = (gui_size)canvas_w / value_count;
+    plot_value_range = plot_max_value - plot_min_value;
+    plot_value_ratio = (values[0] - plot_min_value) / plot_value_range;
+
+    plot_last_x = canvas_x;
+    plot_last_y = (canvas_y + canvas_h) - plot_value_ratio * (gui_float)canvas_h;
+    if (in && INBOX(in->mouse_pos.x, in->mouse_pos.y, plot_last_x-3, plot_last_y-3, 6, 6)) {
+        plot_selected = (in->mouse_down && in->mouse_clicked) ? (gui_int)i : -1;
+        col = plot->highlight;
+    }
+    canvas->draw_rect(canvas->userdata, plot_last_x - 3, plot_last_y - 3, 6, 6, col);
+
+    for (i = 1; i < value_count; i++) {
+        gui_float plot_cur_x, plot_cur_y;
+        plot_value_ratio = (values[i] - plot_min_value) / plot_value_range;
+        plot_cur_x = canvas_x + (gui_float)(plot_step * i);
+        plot_cur_y = (canvas_y + canvas_h) - (plot_value_ratio * (gui_float)canvas_h);
+        canvas->draw_line(canvas->userdata, plot_last_x, plot_last_y, plot_cur_x, plot_cur_y,
+            plot->foreground);
+
+        if (in && INBOX(in->mouse_pos.x, in->mouse_pos.y, plot_cur_x-3, plot_cur_y-3, 6, 6)) {
+            plot_selected = (in->mouse_down && in->mouse_clicked) ? (gui_int)i : plot_selected;
+            col = plot->highlight;
+        } else col = plot->foreground;
+        canvas->draw_rect(canvas->userdata, plot_cur_x - 3, plot_cur_y - 3, 6, 6, col);
+        plot_last_x = plot_cur_x, plot_last_y = plot_cur_y;
+    }
+    return plot_selected;
+}
+*/
+
+void
+gui_panel_graph_begin(struct gui_panel_layout *layout, struct gui_graph *graph,
+    enum gui_graph_type type, gui_size count, gui_float min_value, gui_float max_value)
+{
     struct gui_rect *c;
+    struct gui_rect bounds;
     const struct gui_config *config;
+    const struct gui_canvas *canvas;
+    struct gui_color color;
 
     assert(layout);
     assert(layout->config);
     assert(layout->canvas);
-    assert(values);
-    assert(count);
 
-    if (!layout || !layout->config || !layout->canvas) return -1;
-    if (!layout->valid) return -1;
+    if (!layout || !layout->config || !layout->canvas) return;
+    if (!layout->valid) return;
     gui_panel_alloc_space(&bounds, layout);
     config = layout->config;
+    canvas = layout->canvas;
     c = &layout->clip;
     if (!INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h))
-        return -1;
+        return;
 
-    plot.padding.x = config->item_padding.x;
-    plot.padding.y = config->item_padding.y;
-    plot.background = config->colors[GUI_COLOR_PLOT];
-    plot.foreground = config->colors[GUI_COLOR_PLOT_LINES];
-    plot.highlight = config->colors[GUI_COLOR_PLOT_HIGHLIGHT];
-    return gui_plot(layout->canvas, bounds.x, bounds.y, bounds.w, bounds.h,
-            values, count, &plot, layout->input);
+    color = (type == GUI_GRAPH_LINES) ?
+        config->colors[GUI_COLOR_PLOT]: config->colors[GUI_COLOR_HISTO];
+    canvas->draw_rect(canvas->userdata, bounds.x, bounds.y, bounds.w, bounds.h, color);
+
+    graph->type = type;
+    graph->index = 0;
+    graph->count = count;
+    graph->min = min_value;
+    graph->max = max_value;
+    graph->x = bounds.x + config->item_padding.x;
+    graph->y = bounds.y + config->item_padding.y;
+    graph->w = bounds.w - 2 * config->item_padding.x;
+    graph->h = bounds.h - 2 * config->item_padding.y;
+    graph->w = MAX(graph->w, 2 * config->item_padding.x);
+    graph->h = MAX(graph->h, 2 * config->item_padding.y);
+    graph->last.x = 0; graph->last.y = 0;
+}
+
+static gui_bool
+gui_panel_graph_push_line(struct gui_panel_layout *layout,
+    struct gui_graph *graph, gui_float value)
+{
+    const struct gui_canvas *canvas = layout->canvas;
+    const struct gui_config *config = layout->config;
+    const struct gui_input *in = layout->input;
+    struct gui_color color = config->colors[GUI_COLOR_PLOT_LINES];
+
+    gui_bool selected = gui_false;
+    gui_float step, range, ratio;
+    struct gui_vec2 cur;
+    if (graph->index >= graph->count)
+        return gui_false;
+
+    step = graph->w / graph->count;
+    range = graph->max - graph->min;
+    ratio = (value - graph->min) / range;
+
+    if (graph->index == 0) {
+        graph->last.x = graph->x;
+        graph->last.y = (graph->y + graph->h) - ratio * (gui_float)graph->h;
+        if (in && INBOX(in->mouse_pos.x, in->mouse_pos.y, graph->last.x-3, graph->last.y-3, 6, 6)) {
+            selected = (in->mouse_down && in->mouse_clicked) ? gui_true: gui_false;
+            color = config->colors[GUI_COLOR_PLOT_HIGHLIGHT];
+        }
+        canvas->draw_rect(canvas->userdata, graph->last.x - 3, graph->last.y - 3, 6, 6, color);
+        graph->index++;
+        return selected;
+    }
+
+    cur.x = graph->x + (gui_float)(step * graph->index);
+    cur.y = (graph->y + graph->h) - (ratio * (gui_float)graph->h);
+    canvas->draw_line(canvas->userdata, graph->last.x, graph->last.y, cur.x, cur.y,
+        config->colors[GUI_COLOR_PLOT_LINES]);
+
+    if (in && INBOX(in->mouse_pos.x, in->mouse_pos.y, cur.x-3, cur.y-3, 6, 6)) {
+        selected = (in->mouse_down && in->mouse_clicked) ? gui_true: gui_false;
+        color = config->colors[GUI_COLOR_PLOT_HIGHLIGHT];
+    } else color = config->colors[GUI_COLOR_PLOT_LINES];
+    canvas->draw_rect(canvas->userdata, cur.x - 3, cur.y - 3, 6, 6, color);
+
+    graph->last.x = cur.x;
+    graph->last.y = cur.y;
+    graph->index++;
+    return selected;
+}
+
+static gui_bool
+gui_panel_graph_push_histo(struct gui_panel_layout *layout,
+    struct gui_graph *graph, gui_float value)
+{
+    const struct gui_canvas *canvas = layout->canvas;
+    const struct gui_config *config = layout->config;
+    const struct gui_input *in = layout->input;
+    struct gui_color color;
+
+    gui_bool selected = gui_false;
+    gui_float item_x, item_y;
+    gui_float item_w = 0.0f, item_h = 0.0f;
+    gui_float ratio;
+
+    if (graph->index >= graph->count)
+        return gui_false;
+    if (graph->count) {
+        gui_float padding = (gui_float)(graph->count-1) * config->item_padding.x;
+        item_w = (graph->w - padding) / (gui_float)(graph->count);
+    }
+
+    ratio = ABS(value) / graph->max;
+    color = (value < 0) ? config->colors[GUI_COLOR_HISTO_NEGATIVE]: config->colors[GUI_COLOR_HISTO_BARS];
+    item_h = graph->h * ratio;
+    item_y = (graph->y + graph->h) - item_h;
+    item_x = graph->x + ((gui_float)graph->index * item_w);
+    item_x = item_x + ((gui_float)graph->index * config->item_padding.y);
+
+    if (in && INBOX(in->mouse_pos.x, in->mouse_pos.y, item_x, item_y, item_w, item_h)) {
+        selected = (in->mouse_down && in->mouse_clicked) ? (gui_int)graph->index: selected;
+        color = config->colors[GUI_COLOR_HISTO_HIGHLIGHT];
+    }
+    canvas->draw_rect(canvas->userdata, item_x, item_y, item_w, item_h, color);
+    graph->index++;
+    return selected;
+}
+
+gui_bool
+gui_panel_graph_push(struct gui_panel_layout *layout, struct gui_graph *graph, gui_float value)
+{
+    if (graph->type == GUI_GRAPH_LINES)
+        return gui_panel_graph_push_line(layout, graph, value);
+    else if (graph->type == GUI_GRAPH_HISTO)
+        return gui_panel_graph_push_histo(layout, graph, value);
+    else return gui_false;
+}
+
+void
+gui_panel_graph_end(struct gui_panel_layout *layout, struct gui_graph *graph)
+{
+    UNUSED(layout);
+    graph->type = GUI_GRAPH_MAX;
+    graph->index = 0;
+    graph->count = 0;
+    graph->min = 0;
+    graph->max = 0;
+    graph->x = 0;
+    graph->y = 0;
+    graph->w = 0;
+    graph->h = 0;
 }
 
 gui_int
-gui_panel_histo(struct gui_panel_layout *layout, const gui_float *values, gui_size count)
+gui_panel_graph(struct gui_panel_layout *layout, enum gui_graph_type type,
+    const gui_float *values, gui_size count)
 {
+    gui_size i;
+    gui_int index = -1;
     struct gui_rect bounds;
-    struct gui_histo histo;
-    struct gui_rect *c;
+    gui_float min_value;
+    gui_float max_value;
     const struct gui_config *config;
+    struct gui_graph graph;
 
     assert(layout);
     assert(layout->config);
@@ -2219,22 +2292,21 @@ gui_panel_histo(struct gui_panel_layout *layout, const gui_float *values, gui_si
     assert(values);
     assert(count);
 
-    if (!layout || !layout->config || !layout->canvas) return -1;
-    if (!layout->valid) return -1;
-    gui_panel_alloc_space(&bounds, layout);
-    config = layout->config;
-    c = &layout->clip;
-    if (!INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h))
-        return -1;
-
-    histo.padding.x = config->item_padding.x;
-    histo.padding.y = config->item_padding.y;
-    histo.background = config->colors[GUI_COLOR_HISTO];
-    histo.foreground = config->colors[GUI_COLOR_HISTO_BARS];
-    histo.negative = config->colors[GUI_COLOR_HISTO_NEGATIVE];
-    histo.highlight = config->colors[GUI_COLOR_HISTO_HIGHLIGHT];
-    return gui_histo(layout->canvas, bounds.x, bounds.y, bounds.w, bounds.h,
-            values, count, &histo, layout->input);
+    max_value = values[0];
+    min_value = values[0];
+    for (i = 0; i < count; ++i) {
+        if (values[i] > max_value)
+            max_value = values[i];
+        if (values[i] < min_value)
+            min_value = values[i];
+    }
+    gui_panel_graph_begin(layout, &graph, type, count, min_value, max_value);
+    for (i = 0; i <  count; ++i) {
+        if (gui_panel_graph_push(layout, &graph, values[i]))
+            index = (gui_int)i;
+    }
+    gui_panel_graph_end(layout, &graph);
+    return index;
 }
 
 gui_bool

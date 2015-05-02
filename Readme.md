@@ -26,6 +26,7 @@ possible with fast streamlined development speed in mind.
 + Checkbox
 + Radiobutton
 + Input
++ Shell
 + Spinner
 + Selector
 + Linegraph
