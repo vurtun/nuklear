@@ -281,30 +281,20 @@ struct gui_command_text {
     gui_char string[1];
 };
 
-enum gui_clipping {
-    GUI_NO_CLIP,
-    GUI_CLIP
-};
-
-enum gui_buffer_type {
-    GUI_BUFFER_OWNER,
-    GUI_BUFFER_SUB
-};
-
-enum gui_buffer_state {
-    GUI_BUFFER_ACTIVE,
-    GUI_BUFFER_LOCKED,
+enum gui_buffer_flags {
+    GUI_BUFFER_DEFAULT = 0,
+    GUI_BUFFER_CLIPPING = 0x01,
+    GUI_BUFFER_OWNER = 0x02,
+    GUI_BUFFER_LOCKED = 0x04
 };
 
 struct gui_command_buffer {
     void *memory;
-    enum gui_buffer_type type;
-    enum gui_buffer_state state;
+    gui_flags flags;
     struct gui_allocator allocator;
     struct gui_command *begin;
     struct gui_command *end;
     struct gui_rect clip;
-    enum gui_clipping clipping;
     gui_size clipped_cmds;
     gui_size clipped_memory;
     gui_float grow_factor;
@@ -439,14 +429,14 @@ void gui_input_end(struct gui_input*);
 
 /* Buffer */
 void gui_buffer_init(struct gui_command_buffer*, const struct gui_allocator*,
-                    gui_size initial_size, gui_float grow_factor, enum gui_clipping);
+                    gui_size initial_size, gui_float grow_factor, gui_flag clipping);
 void gui_buffer_init_fixed(struct gui_command_buffer*, const struct gui_memory*,
-                    enum gui_clipping);
+                    gui_flag clipping);
 void gui_buffer_begin(struct gui_canvas *canvas, struct gui_command_buffer *buffer,
                     gui_size width, gui_size height);
 void gui_buffer_lock(struct gui_command_buffer *buffer, struct gui_command_buffer *sub,
-                    enum gui_clipping clipping)
-void gui_buffer_unlock(struct gui_command_buffer *buf, struct gui_command_buffer *sub)
+                    gui_flag clipping);
+void gui_buffer_unlock(struct gui_command_buffer *buf, struct gui_command_buffer *sub);
 void *gui_buffer_push(struct gui_command_buffer*,
                     enum gui_command_type, gui_size size);
 void gui_buffer_push_scissor(struct gui_command_buffer*, gui_float, gui_float,

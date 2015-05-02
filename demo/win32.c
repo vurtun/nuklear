@@ -104,8 +104,8 @@ font_new(HDC hdc, const char *name, int height)
     XFont *font = malloc(sizeof(XFont));
     font->height = height;
     font->handle = CreateFont(height, 0, 0, 0, 0, FALSE, FALSE, FALSE,
-		    ANSI_CHARSET, OUT_CHARACTER_PRECIS, CLIP_CHARACTER_PRECIS,
-		    ANTIALIASED_QUALITY, DEFAULT_PITCH, name);
+        ANSI_CHARSET, OUT_CHARACTER_PRECIS, CLIP_CHARACTER_PRECIS,
+        ANTIALIASED_QUALITY, DEFAULT_PITCH, name);
 
     old = SelectObject(hdc, font->handle);
     GetTextMetrics(hdc, &metrics);
@@ -305,12 +305,12 @@ draw(XSurface *surf, struct gui_command_list *list)
         case GUI_COMMAND_RECT: {
             struct gui_command_rect *r = (void*)cmd;
             surface_draw_rect(surf, r->x, r->y, r->w, r->h,
-		r->color.r, r->color.g, r->color.b);
+                r->color.r, r->color.g, r->color.b);
         } break;
         case GUI_COMMAND_CIRCLE: {
             struct gui_command_circle *c = (void*)cmd;
             surface_draw_circle(surf, c->x, c->y, c->w, c->h,
-		c->color.r, c->color.g, c->color.b);
+                c->color.r, c->color.g, c->color.b);
         } break;
         case GUI_COMMAND_TRIANGLE: {
             struct gui_command_triangle *t = (void*)cmd;
@@ -319,7 +319,7 @@ draw(XSurface *surf, struct gui_command_list *list)
         } break;
         case GUI_COMMAND_TEXT: {
             struct gui_command_text *t = (void*)cmd;
-	    XWindow *xw = t->font;
+            XWindow *xw = t->font;
             surface_draw_text(surf, xw->font, t->x, t->y, t->w, t->h, (const char*)t->string,
                     t->length, t->bg.r, t->bg.g, t->bg.b, t->fg.r, t->fg.g, t->fg.b);
         } break;
@@ -422,20 +422,19 @@ LRESULT CALLBACK
 wnd_proc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch (msg) {
-	case WM_DESTROY:
-	    PostQuitMessage(WM_QUIT);
-	    running = 0;
-	    quit = 1;
-	    break;
-	case WM_SIZE:
-	    if (xw.backbuffer) {
-		xw.width = LOWORD(lParam);
-		xw.height = HIWORD(lParam);
-		surface_resize(xw.backbuffer, xw.hdc, xw.width, xw.height);
-	    }
-	    break;
-	default:
-	    return DefWindowProc(hWnd, msg, wParam, lParam);
+    case WM_DESTROY:
+        PostQuitMessage(WM_QUIT);
+        running = 0;
+        quit = 1;
+        break;
+    case WM_SIZE:
+        if (xw.backbuffer) {
+        xw.width = LOWORD(lParam);
+        xw.height = HIWORD(lParam);
+        surface_resize(xw.backbuffer, xw.hdc, xw.width, xw.height);
+        } break;
+    default:
+        return DefWindowProc(hWnd, msg, wParam, lParam);
     }
     return 0;
 }
@@ -468,11 +467,11 @@ WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int show)
     xw.wc.lpszClassName = "GUI";
     RegisterClass(&xw.wc);
     xw.hWnd = CreateWindowEx(
-	0, xw.wc.lpszClassName, "Demo",
-	WS_OVERLAPPEDWINDOW|WS_VISIBLE,
-	CW_USEDEFAULT, CW_USEDEFAULT,
-	CW_USEDEFAULT, CW_USEDEFAULT,
-	0, 0, hInstance, 0);
+        0, xw.wc.lpszClassName, "Demo",
+        WS_OVERLAPPEDWINDOW|WS_VISIBLE,
+        CW_USEDEFAULT, CW_USEDEFAULT,
+        CW_USEDEFAULT, CW_USEDEFAULT,
+        0, 0, hInstance, 0);
 
     xw.hdc = GetDC(xw.hWnd);
     GetClientRect(xw.hWnd, &xw.rect);
@@ -485,7 +484,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int show)
     memset(&in, 0, sizeof in);
     memory.memory = calloc(MAX_MEMORY, 1);
     memory.size = MAX_MEMORY;
-    gui_buffer_init_fixed(&buffer, &memory, GUI_CLIP);
+    gui_buffer_init_fixed(&buffer, &memory, GUI_BUFFER_CLIPPING);
 
     font.userdata = &xw;
     font.height = (gui_float)xw.font->height;
@@ -505,37 +504,37 @@ WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int show)
 
     while (running && !quit) {
         /* Input */
-	MSG msg;
-	start = timestamp(freq);
+        MSG msg;
+        start = timestamp(freq);
         gui_input_begin(&in);
-	while (PeekMessage(&msg, xw.hWnd, 0, 0, PM_REMOVE)) {
-	    if (msg.message == WM_KEYDOWN) key(&in, &msg, gui_true);
-	    else if (msg.message == WM_KEYUP) key(&in, &msg, gui_false);
-	    else if (msg.message == WM_LBUTTONDOWN) btn(&in, &msg, gui_true);
-	    else if (msg.message == WM_LBUTTONUP) btn(&in, &msg, gui_false);
-	    else if (msg.message == WM_MOUSEMOVE) motion(&in, &msg);
-	    else if (msg.message == WM_CHAR) text(&in, &msg);
+        while (PeekMessage(&msg, xw.hWnd, 0, 0, PM_REMOVE)) {
+            if (msg.message == WM_KEYDOWN) key(&in, &msg, gui_true);
+            else if (msg.message == WM_KEYUP) key(&in, &msg, gui_false);
+            else if (msg.message == WM_LBUTTONDOWN) btn(&in, &msg, gui_true);
+            else if (msg.message == WM_LBUTTONUP) btn(&in, &msg, gui_false);
+            else if (msg.message == WM_MOUSEMOVE) motion(&in, &msg);
+            else if (msg.message == WM_CHAR) text(&in, &msg);
             TranslateMessage(&msg);
-	    DispatchMessage(&msg);
-	}
+            DispatchMessage(&msg);
+        }
         gui_input_end(&in);
 
-	/* GUI */
+        /* GUI */
         gui_buffer_begin(&canvas, &buffer, xw.width, xw.height);
         running = gui_panel_begin(&layout, &panel, "Demo", &canvas, &in);
         demo_panel(&layout, &demo);
         gui_panel_end(&layout, &panel);
         gui_buffer_end(&list, &buffer, &canvas, &status);
 
-	/* Draw */
-	surface_begin(xw.backbuffer);
-	surface_clear(xw.backbuffer, 255, 255, 255);
-	draw(xw.backbuffer, &list);
-	surface_end(xw.backbuffer, xw.hdc);
+        /* Draw */
+        surface_begin(xw.backbuffer);
+        surface_clear(xw.backbuffer, 255, 255, 255);
+        draw(xw.backbuffer, &list);
+        surface_end(xw.backbuffer, xw.hdc);
 
         /* Timing */
-	dt = timestamp(freq) - start;
-	if (dt < DTIME) Sleep(DTIME - dt);
+        dt = timestamp(freq) - start;
+        if (dt < DTIME) Sleep(DTIME - dt);
     }
 
     font_del(xw.font);

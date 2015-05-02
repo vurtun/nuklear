@@ -624,7 +624,7 @@ main(int argc, char *argv[])
     memset(&in, 0, sizeof in);
     memory.memory = calloc(MAX_MEMORY, 1);
     memory.size = MAX_MEMORY;
-    gui_buffer_init_fixed(&buffer, &memory, GUI_CLIP);
+    gui_buffer_init_fixed(&buffer, &memory, GUI_BUFFER_CLIPPING);
 
     font.userdata = glfont;
     font.height = glfont->height;
