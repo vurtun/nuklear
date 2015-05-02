@@ -827,6 +827,8 @@ gui_buffer_push(struct gui_command_buffer* buffer,
     void *tail;
 
     assert(buffer);
+    assert(buffer->state != GUI_BUFFER_LOCKED);
+    if (!buffer || buffer->state == GUI_BUFFER_LOCKED) return NULL;
     if (!buffer) return NULL;
     buffer->needed += size;
 
@@ -860,7 +862,9 @@ gui_buffer_push_scissor(struct gui_command_buffer *buffer, gui_float x, gui_floa
 {
     struct gui_command_scissor *cmd;
     assert(buffer);
-    if (!buffer) return;
+    assert(buffer->state != GUI_BUFFER_LOCKED);
+    if (!buffer || buffer->state == GUI_BUFFER_LOCKED) return;
+
     cmd = gui_buffer_push(buffer, GUI_COMMAND_SCISSOR, sizeof(*cmd));
     if (!cmd) return;
 
@@ -881,7 +885,9 @@ gui_buffer_push_line(struct gui_command_buffer *buffer, gui_float x0, gui_float 
 {
     struct gui_command_line *cmd;
     assert(buffer);
-    if (!buffer) return;
+    assert(buffer->state != GUI_BUFFER_LOCKED);
+    if (!buffer || buffer->state == GUI_BUFFER_LOCKED) return;
+
     if (buffer->clipping == GUI_CLIP) {
         const struct gui_rect *r = &buffer->clip;
         if (!INBOX(x0, y0, r->x, r->y, r->w, r->h) &&
@@ -905,7 +911,9 @@ gui_buffer_push_rect(struct gui_command_buffer *buffer, gui_float x, gui_float y
 {
     struct gui_command_rect *cmd;
     assert(buffer);
-    if (!buffer) return;
+    assert(buffer->state != GUI_BUFFER_LOCKED);
+    if (!buffer || buffer->state == GUI_BUFFER_LOCKED) return;
+
     if (buffer->clipping == GUI_CLIP) {
         const struct gui_rect *r = &buffer->clip;
         if (!INTERSECT(r->x, r->y, r->w, r->h, x, y, w, h)) {
@@ -929,7 +937,9 @@ gui_buffer_push_circle(struct gui_command_buffer *buffer, gui_float x, gui_float
 {
     struct gui_command_circle *cmd;
     assert(buffer);
-    if (!buffer) return;
+    assert(buffer->state != GUI_BUFFER_LOCKED);
+    if (!buffer || buffer->state == GUI_BUFFER_LOCKED) return;
+
     if (buffer->clipping == GUI_CLIP) {
         const struct gui_rect *r = &buffer->clip;
         if (!INTERSECT(r->x, r->y, r->w, r->h, x, y, w, h)) {
@@ -954,7 +964,9 @@ gui_buffer_push_triangle(struct gui_command_buffer *buffer, gui_float x0, gui_fl
 {
     struct gui_command_triangle *cmd;
     assert(buffer);
-    if (!buffer) return;
+    assert(buffer->state != GUI_BUFFER_LOCKED);
+    if (!buffer || buffer->state == GUI_BUFFER_LOCKED) return;
+
     if (buffer->clipping == GUI_CLIP) {
         const struct gui_rect *r = &buffer->clip;
         if (!INBOX(x0, y0, r->x, r->y, r->w, r->h) &&
@@ -982,7 +994,9 @@ gui_buffer_push_image(struct gui_command_buffer *buffer, gui_float x, gui_float 
 {
     struct gui_command_image *cmd;
     assert(buffer);
-    if (!buffer) return;
+    assert(buffer->state != GUI_BUFFER_LOCKED);
+    if (!buffer || buffer->state == GUI_BUFFER_LOCKED) return;
+
     if (buffer->clipping == GUI_CLIP) {
         const struct gui_rect *r = &buffer->clip;
         if (!INTERSECT(r->x, r->y, r->w, r->h, x, y, w, h)) {
@@ -1008,7 +1022,10 @@ gui_buffer_push_text(struct gui_command_buffer *buffer, gui_float x, gui_float y
     struct gui_command_text *cmd;
     assert(buffer);
     assert(font);
+    assert(buffer->state != GUI_BUFFER_LOCKED);
     if (!buffer || !string || !length) return;
+    if (buffer->state == GUI_BUFFER_LOCKED) return;
+
     if (buffer->clipping == GUI_CLIP) {
         const struct gui_rect *r = &buffer->clip;
         if (!INTERSECT(r->x, r->y, r->w, r->h, x, y, w, h)) {
@@ -1040,6 +1057,8 @@ gui_buffer_init_fixed(struct gui_command_buffer *buffer, const struct gui_memory
     if (!buffer || !memory) return;
 
     zero(buffer, sizeof(*buffer));
+    buffer->type = GUI_BUFFER_OWNER;
+    buffer->state = GUI_BUFFER_ACTIVE;
     buffer->memory = memory->memory;
     buffer->capacity = memory->size;
     buffer->begin = buffer->memory;
@@ -1059,6 +1078,8 @@ gui_buffer_init(struct gui_command_buffer *buffer, const struct gui_allocator *m
     if (!buffer || !memory || !initial_size) return;
 
     zero(buffer, sizeof(*buffer));
+    buffer->type = GUI_BUFFER_OWNER;
+    buffer->state = GUI_BUFFER_ACTIVE;
     buffer->memory = memory->alloc(memory->userdata, initial_size);
     buffer->allocator = *memory;
     buffer->capacity = initial_size;
@@ -1067,6 +1088,49 @@ gui_buffer_init(struct gui_command_buffer *buffer, const struct gui_allocator *m
     buffer->grow_factor = grow_factor;
     buffer->clip = null_rect;
     buffer->clipping = clipping;
+}
+
+void
+gui_buffer_lock(struct gui_command_buffer *buffer, struct gui_command_buffer *sub,
+    enum gui_clipping clipping)
+{
+    assert(buffer);
+    assert(sub);
+    assert(buffer->state != GUI_BUFFER_LOCKED);
+    if (!buffer || !sub || buffer->state == GUI_BUFFER_LOCKED) return;
+
+    buffer->state = GUI_BUFFER_LOCKED;
+    sub->type = GUI_BUFFER_SUB;
+    sub->state = GUI_BUFFER_ACTIVE;
+    sub->memory = buffer->memory;
+    sub->allocator = buffer->allocator;
+    sub->begin = buffer->end;
+    sub->end = sub->begin;
+    sub->clipping = clipping;
+    sub->grow_factor = buffer->grow_factor;
+    sub->allocated = buffer->allocated;
+    sub->capacity = buffer->capacity;
+    sub->sub_size = sub->allocated;
+    sub->sub_cap = sub->capacity;
+    sub->needed = 0;
+    sub->count = 0;
+}
+
+void
+gui_buffer_unlock(struct gui_command_buffer *buffer, struct gui_command_buffer *sub)
+{
+    assert(buffer);
+    assert(sub);
+    if (!buffer || !sub) return;
+    buffer->state = GUI_BUFFER_ACTIVE;
+    buffer->memory = sub->memory;
+    buffer->end = sub->end;
+    buffer->allocated = sub->allocated;
+    buffer->capacity = sub->capacity;
+    buffer->count += sub->count;
+    buffer->needed += sub->needed;
+    zero(sub, sizeof(*sub));
+    sub->state = GUI_BUFFER_LOCKED;
 }
 
 void
@@ -1098,8 +1162,10 @@ gui_buffer_end(struct gui_command_list *list, struct gui_command_buffer *buffer,
     assert(canvas);
     if (!buffer || !canvas) return;
     if (status) {
-        status->size = buffer->capacity;
-        status->allocated = buffer->allocated;
+        status->allocated = (buffer->type == GUI_BUFFER_SUB) ?
+            buffer->allocated - buffer->sub_size: buffer->allocated;
+        status->size = (buffer->type == GUI_BUFFER_SUB) ?
+            buffer->capacity - buffer->sub_cap: buffer->capacity;
         status->needed = buffer->needed;
         status->clipped_commands = buffer->clipped_cmds;
         status->clipped_memory = buffer->clipped_memory;
@@ -1125,6 +1191,8 @@ gui_buffer_clear(struct gui_command_buffer *buffer)
 {
     assert(buffer);
     if (!buffer || !buffer->memory || !buffer->allocator.free) return;
+    if (buffer->type != GUI_BUFFER_OWNER) return;
+    if (buffer->state == GUI_BUFFER_LOCKED) return;
     buffer->allocator.free(buffer->allocator.userdata, buffer->memory);
 }
 
@@ -2046,82 +2114,6 @@ gui_panel_selector(struct gui_panel_layout *layout, const char *items[],
         config->colors[GUI_COLOR_PANEL], config->colors[GUI_COLOR_TEXT]);
     return item_current;
 }
-
-/*
-gui_int
-gui_plot(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w,
-    gui_float h, const gui_float *values, gui_size value_count,
-    const struct gui_plot *plot, const struct gui_input *in)
-{
-    gui_size i;
-    struct gui_color col;
-    gui_float canvas_x, canvas_y;
-    gui_float canvas_w, canvas_h;
-
-    gui_size plot_step;
-    gui_float plot_last_x;
-    gui_float plot_last_y;
-    gui_float plot_w, plot_h;
-    gui_int plot_selected = -1;
-    gui_float plot_max_value, plot_min_value;
-    gui_float plot_value_range, plot_value_ratio;
-
-    assert(canvas);
-    assert(plot);
-    if (!canvas || !plot)
-        return plot_selected;
-
-    col = plot->foreground;
-    plot_w = MAX(w, 2 * plot->padding.x);
-    plot_h = MAX(h, 2 * plot->padding.y);
-    canvas->draw_rect(canvas->userdata, x, y, plot_w, plot_h, plot->background);
-    if (!value_count)
-        return plot_selected;
-
-    plot_max_value = values[0];
-    plot_min_value = values[0];
-    for (i = 0; i < value_count; ++i) {
-        if (values[i] > plot_max_value)
-            plot_max_value = values[i];
-        if (values[i] < plot_min_value)
-            plot_min_value = values[i];
-    }
-
-    canvas_x = x + plot->padding.x;
-    canvas_y = y + plot->padding.y;
-    canvas_w = MAX(1 + 2 * plot->padding.x, plot_w - 2 * plot->padding.x);
-    canvas_h = MAX(1 + 2 * plot->padding.y, plot_h - 2 * plot->padding.y);
-
-    plot_step = (gui_size)canvas_w / value_count;
-    plot_value_range = plot_max_value - plot_min_value;
-    plot_value_ratio = (values[0] - plot_min_value) / plot_value_range;
-
-    plot_last_x = canvas_x;
-    plot_last_y = (canvas_y + canvas_h) - plot_value_ratio * (gui_float)canvas_h;
-    if (in && INBOX(in->mouse_pos.x, in->mouse_pos.y, plot_last_x-3, plot_last_y-3, 6, 6)) {
-        plot_selected = (in->mouse_down && in->mouse_clicked) ? (gui_int)i : -1;
-        col = plot->highlight;
-    }
-    canvas->draw_rect(canvas->userdata, plot_last_x - 3, plot_last_y - 3, 6, 6, col);
-
-    for (i = 1; i < value_count; i++) {
-        gui_float plot_cur_x, plot_cur_y;
-        plot_value_ratio = (values[i] - plot_min_value) / plot_value_range;
-        plot_cur_x = canvas_x + (gui_float)(plot_step * i);
-        plot_cur_y = (canvas_y + canvas_h) - (plot_value_ratio * (gui_float)canvas_h);
-        canvas->draw_line(canvas->userdata, plot_last_x, plot_last_y, plot_cur_x, plot_cur_y,
-            plot->foreground);
-
-        if (in && INBOX(in->mouse_pos.x, in->mouse_pos.y, plot_cur_x-3, plot_cur_y-3, 6, 6)) {
-            plot_selected = (in->mouse_down && in->mouse_clicked) ? (gui_int)i : plot_selected;
-            col = plot->highlight;
-        } else col = plot->foreground;
-        canvas->draw_rect(canvas->userdata, plot_cur_x - 3, plot_cur_y - 3, 6, 6, col);
-        plot_last_x = plot_cur_x, plot_last_y = plot_cur_y;
-    }
-    return plot_selected;
-}
-*/
 
 void
 gui_panel_graph_begin(struct gui_panel_layout *layout, struct gui_graph *graph,

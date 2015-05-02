@@ -286,8 +286,20 @@ enum gui_clipping {
     GUI_CLIP
 };
 
+enum gui_buffer_type {
+    GUI_BUFFER_OWNER,
+    GUI_BUFFER_SUB
+};
+
+enum gui_buffer_state {
+    GUI_BUFFER_ACTIVE,
+    GUI_BUFFER_LOCKED,
+};
+
 struct gui_command_buffer {
     void *memory;
+    enum gui_buffer_type type;
+    enum gui_buffer_state state;
     struct gui_allocator allocator;
     struct gui_command *begin;
     struct gui_command *end;
@@ -296,6 +308,8 @@ struct gui_command_buffer {
     gui_size clipped_cmds;
     gui_size clipped_memory;
     gui_float grow_factor;
+    gui_size sub_size;
+    gui_size sub_cap;
     gui_size allocated;
     gui_size capacity;
     gui_size needed;
@@ -430,6 +444,9 @@ void gui_buffer_init_fixed(struct gui_command_buffer*, const struct gui_memory*,
                     enum gui_clipping);
 void gui_buffer_begin(struct gui_canvas *canvas, struct gui_command_buffer *buffer,
                     gui_size width, gui_size height);
+void gui_buffer_lock(struct gui_command_buffer *buffer, struct gui_command_buffer *sub,
+                    enum gui_clipping clipping)
+void gui_buffer_unlock(struct gui_command_buffer *buf, struct gui_command_buffer *sub)
 void *gui_buffer_push(struct gui_command_buffer*,
                     enum gui_command_type, gui_size size);
 void gui_buffer_push_scissor(struct gui_command_buffer*, gui_float, gui_float,
