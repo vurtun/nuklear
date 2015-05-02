@@ -31,6 +31,7 @@ possible with fast streamlined development speed in mind.
 + Selector
 + Linegraph
 + Histogram
++ Table
 + Panel
 + Tab
 + Group

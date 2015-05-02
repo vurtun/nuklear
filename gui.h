@@ -126,6 +126,7 @@ struct gui_toggle {
     struct gui_color font;
     struct gui_color background;
     struct gui_color foreground;
+    struct gui_color cursor;
 };
 
 struct gui_slider {
@@ -172,6 +173,13 @@ struct gui_graph {
     struct gui_vec2 last;
     gui_size index;
     gui_size count;
+};
+
+enum gui_table_lines {
+    GUI_TABLE_HHEADER = 0x01,
+    GUI_TABLE_VHEADER = 0x02,
+    GUI_TABLE_HBODY = 0x04,
+    GUI_TABLE_VBODY = 0x08
 };
 
 struct gui_font {
@@ -323,8 +331,10 @@ enum gui_panel_colors {
     GUI_COLOR_BUTTON_TOGGLE,
     GUI_COLOR_BUTTON_HOVER_FONT,
     GUI_COLOR_CHECK,
+    GUI_COLOR_CHECK_BACKGROUND,
     GUI_COLOR_CHECK_ACTIVE,
     GUI_COLOR_OPTION,
+    GUI_COLOR_OPTION_BACKGROUND,
     GUI_COLOR_OPTION_ACTIVE,
     GUI_COLOR_SCROLL,
     GUI_COLOR_SCROLL_CURSOR,
@@ -348,6 +358,7 @@ enum gui_panel_colors {
     GUI_COLOR_SCROLLBAR,
     GUI_COLOR_SCROLLBAR_CURSOR,
     GUI_COLOR_SCROLLBAR_BORDER,
+    GUI_COLOR_TABLE_LINES,
     GUI_COLOR_SCALER,
     GUI_COLOR_COUNT
 };
@@ -390,6 +401,8 @@ struct gui_panel {
 struct gui_panel_layout {
     gui_float x, y, w, h;
     gui_float offset;
+    gui_bool is_table;
+    gui_flags tbl_flags;
     gui_bool valid;
     gui_float at_x;
     gui_float at_y;
@@ -501,6 +514,11 @@ gui_bool gui_panel_begin_stacked(struct gui_panel_layout *layout, struct gui_pan
 void gui_panel_row(struct gui_panel_layout*, gui_float height, gui_size cols);
 void gui_panel_seperator(struct gui_panel_layout*, gui_size cols);
 void gui_panel_text(struct gui_panel_layout*, const char*, gui_size, enum gui_text_align);
+void gui_panel_text_colored(struct gui_panel_layout*, const char*, gui_size, enum gui_text_align,
+                    struct gui_color color);
+void gui_panel_label(struct gui_panel_layout*, const char*, enum gui_text_align);
+void gui_panel_label_colored(struct gui_panel_layout*, const char*, enum gui_text_align,
+                    struct gui_color color);
 gui_bool gui_panel_check(struct gui_panel_layout*, const char*, gui_bool active);
 gui_bool gui_panel_option(struct gui_panel_layout*, const char*, gui_bool active);
 gui_bool gui_panel_button_text(struct gui_panel_layout*, const char*, enum gui_button_behavior);
@@ -523,14 +541,17 @@ gui_int gui_panel_spinner(struct gui_panel_layout*, gui_int min, gui_int value,
                     gui_int max, gui_int step, gui_bool *active);
 gui_size gui_panel_selector(struct gui_panel_layout*, const char *items[],
                     gui_size item_count, gui_size item_current);
-void gui_panel_table_begin(struct gui_panel_layout*, gui_size cols);
-void gui_panel_table_end(struct gui_panel_layout*);
 void gui_panel_graph_begin(struct gui_panel_layout*, struct gui_graph*, enum gui_graph_type,
                     gui_size count, gui_float min_value, gui_float max_value);
 gui_bool gui_panel_graph_push(struct gui_panel_layout *layout, struct gui_graph*, gui_float);
 void gui_panel_graph_end(struct gui_panel_layout *layout, struct gui_graph*);
 gui_int gui_panel_graph(struct gui_panel_layout*, enum gui_graph_type,
                     const gui_float *values, gui_size count);
+void gui_panel_table_begin(struct gui_panel_layout*, gui_flags flags,
+                    gui_size row_height, gui_size cols);
+void gui_panel_table_label(struct gui_panel_layout*, const char*);
+void gui_panel_table_row(struct gui_panel_layout*);
+void gui_panel_table_end(struct gui_panel_layout*);
 gui_bool gui_panel_tab_begin(struct gui_panel_layout*, struct gui_panel_layout *tab,
                     const char*, gui_bool);
 void gui_panel_tab_end(struct gui_panel_layout*, struct gui_panel_layout *tab);
