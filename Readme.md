@@ -46,19 +46,19 @@ Summary: It is only responsible for the actual user interface
 ## IMGUIs
 Immediate mode in contrast to classical retained mode GUIs store as little state as possible
 by using procedural function calls as "widgets" instead of storing objects.
-Each "widget" function call takes hereby all its neccessary data and immediatly returns
+Each "widget" function call takes hereby all its necessary data and immediately returns
 the through the user modified state back to the caller. Immediate mode graphical
 user interfaces therefore combine drawing and input handling into one unit
-instead of seperating them like retain mode GUIs.
+instead of separating them like retain mode GUIs.
 
 Since there is no to minimal internal state in immediate mode user interfaces,
 updates have to occur every frame which on one hand is more drawing expensive than classic
-ratained GUI implementations but on the other hand grants a lot more flexibility and
+retained GUI implementations but on the other hand grants a lot more flexibility and
 support for overall layout changes. In addition without any state there is no
 duplicated state between your program, the gui and the user which greatly
 simplifies code. Further traits of immediate mode graphic user interfaces are a
 code driven style, centralized flow control, easy extensibility and
-understandablity.
+understandability.
 
 ## Example
 ```c
@@ -150,7 +150,7 @@ for each and every widget the panel layer provides you with a set of
 attributes in the `gui_config` structure. The structure either needs to be
 filled by the user or can be setup with some default values by the function
 `gui_default_config`. Modification on the fly to the `gui_config` struct is in
-true immedate mode fashion possible and supported.
+true immediate mode fashion possible and supported.
 
 ### Canvas
 The Canvas is the abstract drawing interface between the GUI toolkit
@@ -159,13 +159,13 @@ scissor, line, rectangle, circle, triangle, bitmap and text which need to be
 provided by the user. Main advantage of using the raw canvas instead of using
 buffering is that no memory to buffer all draw command is needed. Instead you
 can directly draw each requested primitive. The downside is setting up the canvas
-structure and the fact that you have to draw each primitive immediatly.
-Internally the canvas is used to implement the buffering of primitve draw
+structure and the fact that you have to draw each primitive immediately.
+Internally the canvas is used to implement the buffering of primitive draw
 commands, but can be used to implement a different buffering scheme like
 buffering vertexes instead of primitives.
 
 ### Buffering
-For the purpose of defered drawing or the implementation of overlapping panels
+For the purpose of deferred drawing or the implementation of overlapping panels
 the command buffering API was added. The command buffer hereby holds a queue of
 drawing commands for a number of primitives eg.: line, rectangle, circle,
 triangle and text. The memory for the command buffer is provided by the user
@@ -223,7 +223,7 @@ while (1) {
 
 ### Widgets
 The minimal widget API provides a number of basic widgets and is designed for
-uses cases where no complex wideget layouts or grouping is needed.
+uses cases where no complex widget layouts or grouping is needed.
 In order for the GUI to work each widget needs a canvas to
 draw to, positional and widgets specific data as well as user input
 and returns the from the user input modified state of the widget.
@@ -250,7 +250,7 @@ closing and minimizing. An additional use for panel is to further extend the
 grouping of widgets into tabs, groups and shelfs.
 The panel is divided into a `struct gui_panel` with persistent life time and
 the `struct gui_panel_layout` structure with a temporary life time.
-While the layout state is constantly modifed over the course of
+While the layout state is constantly modified over the course of
 the frame, the panel struct is only modified at the immediate mode sequence points
 `gui_panel_begin` and `gui_panel_end`. Therefore all changes to the panel struct inside of both
 sequence points have no effect in the current frame and are only visible in the
@@ -278,13 +278,13 @@ while (1) {
 ```
 
 ### Stack
-While using basic panels is fine for a single moveable panel or a big number of
+While using basic panels is fine for a single movable panel or a big number of
 static panels, it has rather limited support for overlapping movable panels. For
 that to change the panel stack was introduced. The panel stack holds the basic
-drawing order of each panel so instead of drawing each panel indiviually they
+drawing order of each panel so instead of drawing each panel individually they
 have to be drawn in a certain order. The biggest problem while creating the API
 was that the buffer has to saved with the panel, but the type of the buffer is
-not known beforhand since it is possible to create your own buffer type.
+not known beforehand since it is possible to create your own buffer type.
 Therefore just the sequence of panels is managed and you either have to cast
 from the panel to your own type, use inheritance in C++ or use the `container_of`
 macro from the Linux kernel. For the standard buffer there is already a type
@@ -342,7 +342,7 @@ programming with DirectX but you are more than welcome to provide one.
 #### Why did you use ANSI C and not C99 or C++?
 Personally I stay out of all "discussions" about C vs C++ since they are totally
 worthless and never brought anything good with it. The simple answer is I
-personally love C and have nothing against people using C++ exspecially the new
+personally love C and have nothing against people using C++ especially the new
 iterations with C++11 and C++14.
 While this hopefully settles my view on C vs C++ there is still ANSI C vs C99.
 While for personal projects I only use C99 with all its niceties, libraries are
@@ -355,7 +355,7 @@ compiler fully support C99, which finalized my decision to use ANSI C.
 This Project uses ANSI C which does not have the header file `<stdint.h>`
 and therefore does not provide the fixed sized types that I need. Therefore
 I defined my own types which need to be set to the correct size for each
-plaform. But if your development environment provides the header file you can define
+platform. But if your development environment provides the header file you can define
 `GUI_USE_FIXED_SIZE_TYPES` to directly use the correct types.
 
 #### Why is font/input/window management not provided?
@@ -363,8 +363,8 @@ As for window and input management it is a ton of work to abstract over
 all possible platforms and there are already libraries like SDL or SFML or even
 the platform itself which provide you with the functionality.
 So instead of reinventing the wheel and trying to do everything the project tries
-to be as indepenedent and out of the users way as possible.
-This means in practice a litte bit more work on the users behalf but grants a
+to be as independent and out of the users way as possible.
+This means in practice a little bit more work on the users behalf but grants a
 lot more freedom especially because the toolkit is designed to be embeddable.
 
 The font management on the other hand is litte bit more tricky. In the beginning
