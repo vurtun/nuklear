@@ -233,7 +233,7 @@ enum gui_command_type {
 
 struct gui_command {
     enum gui_command_type type;
-    struct gui_command *next;
+    gui_size offset;
 };
 
 struct gui_command_scissor {
@@ -471,6 +471,10 @@ void gui_buffer_clear(struct gui_command_buffer*);
 void gui_buffer_end(struct gui_command_list*, struct gui_command_buffer*,
                     struct gui_canvas*, struct gui_memory_status*);
 
+/* List */
+const struct gui_command* gui_list_begin(const struct gui_command_list*);
+const struct gui_command* gui_list_next(const struct gui_command_list*,
+                        const struct gui_command*);
 
 /* Widgets */
 void gui_text(const struct gui_canvas*, gui_float x, gui_float y, gui_float w, gui_float h,

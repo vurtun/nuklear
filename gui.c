@@ -834,19 +834,25 @@ gui_buffer_push(struct gui_command_buffer* buffer,
     unaligned = (gui_byte*)buffer->end + size;
     tail = ALIGN(unaligned, align);
     alignment = (gui_size)((gui_byte*)tail - (gui_byte*)unaligned);
+
     if ((buffer->allocated + size + alignment) >= buffer->capacity) {
         gui_size cap;
         if (!buffer->allocator.realloc) return NULL;
         cap = (gui_size)((gui_float)buffer->capacity * buffer->grow_factor);
-        cap = cap + MAX(size, cap - buffer->capacity);
         buffer->memory = buffer->allocator.realloc(buffer->allocator.userdata,buffer->memory, cap);
         if (!buffer->memory) return NULL;
         buffer->capacity = cap;
+        buffer->begin = buffer->memory;
+        buffer->end = (void*)((gui_byte*)buffer->begin + buffer->allocated);
+
+        unaligned = (gui_byte*)buffer->end + size;
+        tail = ALIGN(unaligned, align);
+        alignment = (gui_size)((gui_byte*)tail - (gui_byte*)unaligned);
     }
 
     cmd = buffer->end;
     cmd->type = type;
-    cmd->next = tail;
+    cmd->offset = size + alignment;
 
     buffer->end = tail;
     buffer->allocated += size + alignment;
@@ -1186,6 +1192,27 @@ gui_buffer_clear(struct gui_command_buffer *buffer)
     buffer->allocator.free(buffer->allocator.userdata, buffer->memory);
 }
 
+const struct gui_command*
+gui_list_begin(const struct gui_command_list *list)
+{
+    const struct gui_command *cmd;
+    assert(list);
+    if (!list || !list->count) return NULL;
+    cmd = list->begin;
+    return cmd;
+}
+
+const struct gui_command*
+gui_list_next(const struct gui_command_list *list, const struct gui_command *cmd)
+{
+    assert(list);
+    assert(cmd);
+    if (!list || !list->count || !cmd) return NULL;
+    cmd = (const void*)((const gui_byte*)cmd + cmd->offset);
+    if (cmd >= list->end) return NULL;
+    return cmd;
+}
+
 void
 gui_default_config(struct gui_config *config)
 {
@@ -1226,10 +1253,10 @@ gui_default_config(struct gui_config *config)
     col_load(config->colors[GUI_COLOR_HISTO], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_HISTO_BARS], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_HISTO_NEGATIVE], 255, 255, 255, 255);
-    col_load(config->colors[GUI_COLOR_HISTO_HIGHLIGHT], 178, 122, 1, 255);
+    col_load(config->colors[GUI_COLOR_HISTO_HIGHLIGHT], 255, 0, 0, 255);
     col_load(config->colors[GUI_COLOR_PLOT], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_PLOT_LINES], 45, 45, 45, 255);
-    col_load(config->colors[GUI_COLOR_PLOT_HIGHLIGHT], 178, 122, 1, 255);
+    col_load(config->colors[GUI_COLOR_PLOT_HIGHLIGHT], 255, 0, 0, 255);
     col_load(config->colors[GUI_COLOR_SCROLLBAR], 41, 41, 41, 255);
     col_load(config->colors[GUI_COLOR_SCROLLBAR_CURSOR], 70, 70, 70, 255);
     col_load(config->colors[GUI_COLOR_SCROLLBAR_BORDER], 45, 45, 45, 255);

@@ -100,10 +100,10 @@ while (1) {
     gui_panel_end(&layout, &panel);
     gui_buffer_end(&list, &buffer, &canvas, &status);
 
-    struct gui_command *cmd = list.begin;
-    while (cmd != list.end) {
+    const struct gui_command *cmd = gui_list_begin(&list);
+    while (cmd) {
         /* execute command */
-        cmd = cmd->next;
+        cmd = gui_list_next(&list, cmd);
     }
 }
 ```
@@ -322,12 +322,12 @@ while (1) {
     /* draw each panel */
     struct gui_panel *iter = stack.begin;
     while (iter) {
-        struct gui_command *cmd = list.begin;
-        while (cmd != list.end) {
+        const struct gui_command *cmd = gui_list_begin(&list);
+        while (cmd) {
             /* execute command */
             cmd = cmd->next;
         }
-        iter = iter->next;
+        cmd = gui_list_next(&list, cmd);
     }
 }
 ```
