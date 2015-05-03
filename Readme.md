@@ -214,9 +214,9 @@ while (1) {
     struct gui_command_buffer sub;
 
     gui_buffer_lock(&sub, &buffer);
-    gui_buffer_begin(&canvas, &buffer, window_width, window_height);
+    gui_buffer_begin(&canvas, &sub, window_width, window_height);
     /* add commands by using the canvas */
-    gui_buffer_end(&list, buffer, &status);
+    gui_buffer_end(&list, &sub, &status);
     gui_buffer_unlock(&buffer, &sub);
 }
 ```
