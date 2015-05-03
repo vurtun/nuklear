@@ -547,6 +547,8 @@ gui_bool gui_panel_graph_push(struct gui_panel_layout *layout, struct gui_graph*
 void gui_panel_graph_end(struct gui_panel_layout *layout, struct gui_graph*);
 gui_int gui_panel_graph(struct gui_panel_layout*, enum gui_graph_type,
                     const gui_float *values, gui_size count);
+gui_int gui_panel_graph_ex(struct gui_panel_layout*, enum gui_graph_type, gui_size count,
+                    gui_float(*get_value)(void*, gui_size), void *userdata);
 void gui_panel_table_begin(struct gui_panel_layout*, gui_flags flags,
                     gui_size row_height, gui_size cols);
 void gui_panel_table_label(struct gui_panel_layout*, const char*);

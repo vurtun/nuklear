@@ -1158,11 +1158,13 @@ gui_buffer_end(struct gui_command_list *list, struct gui_command_buffer *buffer,
         status->clipped_commands = buffer->clipped_cmds;
         status->clipped_memory = buffer->clipped_memory;
     }
+
     if (list) {
         list->count = buffer->count;
         list->begin = buffer->begin;
         list->end = buffer->end;
     }
+
     buffer->begin = buffer->memory;
     buffer->end = buffer->begin;
     buffer->needed = 0;
@@ -1455,6 +1457,8 @@ gui_panel_begin_stacked(struct gui_panel_layout *layout, struct gui_panel *panel
     assert(panel);
     assert(stack);
     assert(canvas);
+    if (!layout || !panel || !stack || !canvas)
+        return gui_false;
 
     inpanel = INBOX(in->mouse_prev.x, in->mouse_prev.y, panel->x, panel->y, panel->w, panel->h);
     if (in->mouse_down && in->mouse_clicked && inpanel && panel != stack->end) {
@@ -2033,10 +2037,10 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     button.highlight = config->colors[GUI_COLOR_BUTTON];
     button.highlight_content = config->colors[GUI_COLOR_TEXT];
     button_up_clicked = gui_button_triangle(canvas, button_x, button_y, button_w, button_h,
-                            GUI_UP, GUI_BUTTON_DEFAULT, &button, layout->input);
+        GUI_UP, GUI_BUTTON_DEFAULT, &button, layout->input);
     button_y = bounds.y + button_h;
     button_down_clicked = gui_button_triangle(canvas, button_x, button_y, button_w, button_h,
-                            GUI_DOWN, GUI_BUTTON_DEFAULT, &button, layout->input);
+        GUI_DOWN, GUI_BUTTON_DEFAULT, &button, layout->input);
     if (button_up_clicked || button_down_clicked) {
         value += (button_up_clicked) ? step : -step;
         value = CLAMP(min, value, max);
@@ -2243,7 +2247,9 @@ gui_panel_graph_push_histo(struct gui_panel_layout *layout,
     }
 
     ratio = ABS(value) / graph->max;
-    color = (value < 0) ? config->colors[GUI_COLOR_HISTO_NEGATIVE]: config->colors[GUI_COLOR_HISTO_BARS];
+    color = (value < 0) ? config->colors[GUI_COLOR_HISTO_NEGATIVE]:
+        config->colors[GUI_COLOR_HISTO_BARS];
+
     item_h = graph->h * ratio;
     item_y = (graph->y + graph->h) - item_h;
     item_x = graph->x + ((gui_float)graph->index * item_w);
@@ -2312,6 +2318,43 @@ gui_panel_graph(struct gui_panel_layout *layout, enum gui_graph_type type,
     gui_panel_graph_begin(layout, &graph, type, count, min_value, max_value);
     for (i = 0; i <  count; ++i) {
         if (gui_panel_graph_push(layout, &graph, values[i]))
+            index = (gui_int)i;
+    }
+    gui_panel_graph_end(layout, &graph);
+    return index;
+}
+
+gui_int
+gui_panel_graph_ex(struct gui_panel_layout *layout, enum gui_graph_type type,
+    gui_size count, gui_float(*get_value)(void*, gui_size), void *userdata)
+{
+    gui_size i;
+    gui_int index = -1;
+    struct gui_rect bounds;
+    gui_float min_value;
+    gui_float max_value;
+    const struct gui_config *config;
+    struct gui_graph graph;
+
+    assert(layout);
+    assert(layout->config);
+    assert(layout->canvas);
+    assert(get_value);
+
+    max_value = get_value(userdata, 0);
+    min_value = max_value;
+    for (i = 1; i < count; ++i) {
+        gui_float value = get_value(userdata, i);
+        if (value > max_value)
+            max_value = value;
+        if (value < min_value)
+            min_value = value;
+    }
+
+    gui_panel_graph_begin(layout, &graph, type, count, min_value, max_value);
+    for (i = 0; i < count; ++i) {
+        gui_float value = get_value(userdata, i);
+        if (gui_panel_graph_push(layout, &graph, value))
             index = (gui_int)i;
     }
     gui_panel_graph_end(layout, &graph);
@@ -2517,12 +2560,14 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
 {
     const struct gui_config *config;
     const struct gui_canvas *canvas;
-    gui_float header_x, header_y;
-    gui_float header_w, header_h;
+
     struct gui_rect bounds;
     struct gui_rect clip;
     struct gui_rect *c;
     struct gui_panel panel;
+
+    gui_float header_x, header_y;
+    gui_float header_w, header_h;
     gui_float item_width;
     gui_flags flags;
     gui_size i;
@@ -2710,6 +2755,7 @@ gui_stack_push(struct gui_panel_stack *stack, struct gui_panel *panel)
         stack->count = 1;
         return;
     }
+
     stack->end->next = panel;
     panel->prev = stack->end;
     panel->next = NULL;

@@ -8,7 +8,7 @@ possible with fast streamlined development speed in mind.
 ## Features
 - Immediate mode graphical user interface toolkit
 - Written in C89 (ANSI C)
-- Small codebase (~2.5kLOC)
+- Small codebase (~3kLOC)
 - Focus on portability and minimal internal state
 - Suited for embedding into graphical applications
 - No global hidden state
@@ -119,11 +119,11 @@ layer which is build on top of the widget layer and uses most of the widget API
 internally to form groups of widgets into a layout.
 
 ### Input
-The input structure holds the user input over the course of the frame and
+The `gui_input` struct holds the user input over the course of the frame and
 manages the complete modification of widget and panel state. Like the panel and
-buffering the input is an immediate mode API and consist of an begin sequence
+buffering, input is an immediate mode API and consist of an begin sequence
 point with `gui_input_begin` and a end sequence point with `gui_input_end`.
-All modifications to the input struct can only occur between both of these
+All modifications can only occur between both of these
 sequence points while all outside modifcation provoke undefined behavior.
 
 ```c
@@ -134,13 +134,6 @@ while (1) {
     gui_input_end(&input);
 }
 ```
-
-### Canvas
-The Canvas is the abstract drawing interface between the GUI toolkit
-and the user and contains drawing callbacks for the primitives
-scissor, line, rectangle, circle, triangle, bitmap and text which need to be
-provided by the user. Therefore the canvas is  probably the biggest chunk of work
-to be done by the user.
 
 ### Font
 Since there is no direct font implementation in the toolkit but font handling is
@@ -159,21 +152,55 @@ filled by the user or can be setup with some default values by the function
 `gui_default_config`. Modification on the fly to the `gui_config` struct is in
 true immedate mode fashion possible and supported.
 
+### Canvas
+The Canvas is the abstract drawing interface between the GUI toolkit
+and the user and contains drawing callbacks for the primitives
+scissor, line, rectangle, circle, triangle, bitmap and text which need to be
+provided by the user. Main advantage of using the raw canvas instead of using
+buffering is that no memory to buffer all draw command is needed. Instead you
+can directly draw each requested primitive. The downside is setting up the canvas
+structure and the fact that you have to draw each primitive immediatly.
+Internally the canvas is used to implement the buffering of primitve draw
+commands, but can be used to implement a different buffering scheme like
+buffering vertexes instead of primitives.
+
 ### Buffering
 For the purpose of defered drawing or the implementation of overlapping panels
 the command buffering API was added. The command buffer hereby holds a queue of
 drawing commands for a number of primitives eg.: line, rectangle, circle,
-triangle and text. The command buffer memory is provided by the user
+triangle and text. The memory for the command buffer is provided by the user
 in three possible ways. First by providing a fixed size memory block which
 will be filled up until no memory is left.
 The second way is extending the fixed size memory block by reallocating at the
 end of the frame if the provided memory size was not sufficient.
-The final way of memory management is by providing allocator callbacks with alloc,
-realloc and free. In true immediate mode fashion the buffering API is based around sequence
-points with an begin sequence point `gui_buffer_begin` and a end sequence
+The final and most complex way of memory management is by providing allocator
+callbacks with alloc, realloc and free.
+In true immediate mode fashion the buffering API is based around sequence
+points with a begin sequence point `gui_buffer_begin` and a end sequence
 point `gui_buffer_end` and modification of state between both points. Just
 like the input API the buffer modification before the beginning or after the end
 sequence point is undefined behavior.
+
+```c
+struct gui_allocator allocator = {...};
+struct gui_memory_status status;
+struct gui_command_list list;
+struct gui_command_buffer buffer;
+gui_buffer_init(buffer, &allocator, 2.0f, INITAL_SIZE, 0);
+
+while (1) {
+    struct gui_canvas canvas;
+    gui_buffer_begin(&canvas, &buffer, window_width, window_height);
+    /* add commands by using the canvas */
+    gui_buffer_end(&list, buffer, &status);
+}
+
+```
+For the purpose of implementing overlapping panels sub buffers were implemented.
+With sub buffers you can create one global buffer which owns the allocated memory
+and a number of sub buffers which directly reference the global buffer. Biggest
+advantage is that you do not have to allocate a buffer for each panel and boil
+down the memory management to a single buffer.
 
 ```c
 struct gui_memory memory = {...};
@@ -184,11 +211,14 @@ gui_buffer_init_fixed(buffer, &memory);
 
 while (1) {
     struct gui_canvas canvas;
+    struct gui_command_buffer sub;
+
+    gui_buffer_lock(&sub, &buffer);
     gui_buffer_begin(&canvas, &buffer, window_width, window_height);
     /* add commands by using the canvas */
     gui_buffer_end(&list, buffer, &status);
+    gui_buffer_unlock(&buffer, &sub);
 }
-
 ```
 
 ### Widgets
@@ -244,6 +274,61 @@ while (1) {
     value = gui_panel_slider(&layout, 0, value, 10, 1);
     progress = gui_panel_progress(&layout, progress, 100, gui_true);
     gui_panel_end(&layout, &panel);
+}
+```
+
+### Stack
+While using basic panels is fine for a single moveable panel or a big number of
+static panels, it has rather limited support for overlapping movable panels. For
+that to change the panel stack was introduced. The panel stack holds the basic
+drawing order of each panel so instead of drawing each panel indiviually they
+have to be drawn in a certain order. The biggest problem while creating the API
+was that the buffer has to saved with the panel, but the type of the buffer is
+not known beforhand since it is possible to create your own buffer type.
+Therefore just the sequence of panels is managed and you either have to cast
+from the panel to your own type, use inheritance in C++ or use the `container_of`
+macro from the Linux kernel. For the standard buffer there is already a type
+`gui_window` which contains the panel and the buffer output `gui_command_list`,
+which can be used to implement overlapping panels.
+
+```c
+struct gui_window window;
+struct gui_memory memory = {...};
+struct gui_memory_status status;
+struct gui_command_buffer buffer;
+struct gui_config config;
+struct gui_font font = {...}
+struct gui_input input = {0};
+struct gui_stack stack;
+
+gui_buffer_init_fixed(buffer, &memory);
+gui_default_config(&config);
+gui_panel_init(&win.panel, 50, 50, 300, 200, 0, &config, &font);
+gui_stack_clear(&stack);
+gui_stack_push(&stack, &win.panel);
+
+while (1) {
+    struct gui_panel_layout layout;
+    struct gui_canvas canvas;
+
+    gui_buffer_begin(&canvas, &buffer, window_width, window_height);
+    gui_panel_begin_stacked(&layout, &win.panel, &stack, "Demo", &canvas, &input);
+    gui_panel_row(&layout, 30, 1);
+    if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT))
+        fprintf(stdout, "button pressed!\n");
+    gui_panel_end(&layout, &win.panel);
+    gui_buffer_end(&win.list, buffer, &status);
+
+    /* draw each panel */
+    struct gui_panel *iter = stack.begin;
+    while (iter) {
+        struct gui_command *cmd = list.begin;
+        while (cmd != list.end) {
+            /* execute command */
+            cmd = cmd->next;
+        }
+        iter = iter->next;
+    }
 }
 ```
 
