@@ -325,9 +325,9 @@ while (1) {
         const struct gui_command *cmd = gui_list_begin(&list);
         while (cmd) {
             /* execute command */
-            cmd = cmd->next;
+            cmd = gui_list_next(&list, cmd);
         }
-        cmd = gui_list_next(&list, cmd);
+        iter = iter->next;
     }
 }
 ```
