@@ -322,10 +322,11 @@ while (1) {
     /* draw each panel */
     struct gui_panel *iter = stack.begin;
     while (iter) {
-        const struct gui_command *cmd = gui_list_begin(&list);
+        const struct gui_window *w = iter;
+        const struct gui_command *cmd = gui_list_begin(&w->list);
         while (cmd) {
             /* execute command */
-            cmd = gui_list_next(&list, cmd);
+            cmd = gui_list_next(&w->list, cmd);
         }
         iter = iter->next;
     }
