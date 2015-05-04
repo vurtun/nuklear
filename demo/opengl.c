@@ -460,7 +460,7 @@ static void
 draw(struct gui_command_list *list, int width, int height)
 {
     static const struct gui_color col = {255, 0, 0, 255};
-    struct gui_command *cmd;
+    const struct gui_command *cmd;
     if (!list->count) return;
 
     glPushAttrib(GL_ENABLE_BIT|GL_COLOR_BUFFER_BIT|GL_TRANSFORM_BIT);
@@ -479,29 +479,29 @@ draw(struct gui_command_list *list, int width, int height)
     glPushMatrix();
     glLoadIdentity();
 
-    cmd = list->begin;
-    while (cmd != list->end) {
+    cmd = gui_list_begin(list);
+    while (cmd) {
         switch (cmd->type) {
         case GUI_COMMAND_NOP: break;
         case GUI_COMMAND_SCISSOR: {
-            struct gui_command_scissor *s = (void*)cmd;
+            const struct gui_command_scissor *s = (const void*)cmd;
             glScissor(s->x, height - (s->y + s->h), s->w, s->h);
         } break;
         case GUI_COMMAND_LINE: {
-            struct gui_command_line *l = (void*)cmd;
+            const struct gui_command_line *l = (const void*)cmd;
             draw_line(l->begin[0], l->begin[1], l->end[0], l->end[1], l->color);
         } break;
         case GUI_COMMAND_RECT: {
-            struct gui_command_rect *r = (void*)cmd;
+            const struct gui_command_rect *r = (const void*)cmd;
             draw_rect(r->x, r->y, r->w, r->h, r->color);
         } break;
         case GUI_COMMAND_CIRCLE: {
             unsigned i;
-            struct gui_command_circle *c = (void*)cmd;
+            const struct gui_command_circle *c = (const void*)cmd;
             draw_circle(c->x, c->y, (float)c->w / 2.0f, c->color);
         } break;
         case GUI_COMMAND_TRIANGLE: {
-            struct gui_command_triangle *t = (void*)cmd;
+            const struct gui_command_triangle *t = (const void*)cmd;
             glColor4ub(t->color.r, t->color.g, t->color.b, t->color.a);
             glBegin(GL_TRIANGLES);
             glVertex2f(t->a[0], t->a[1]);
@@ -510,12 +510,12 @@ draw(struct gui_command_list *list, int width, int height)
             glEnd();
         } break;
         case GUI_COMMAND_TEXT: {
-            struct gui_command_text *t = (void*)cmd;
+            const struct gui_command_text *t = (const void*)cmd;
             font_draw_text(t->font, t->x, t->y, t->h, t->fg, t->string, t->length);
         } break;
         default: break;
         }
-        cmd = cmd->next;
+        cmd = gui_list_next(list, cmd);
     }
 
     glBindTexture(GL_TEXTURE_2D, 0);

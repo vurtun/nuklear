@@ -471,10 +471,12 @@ void gui_buffer_clear(struct gui_command_buffer*);
 void gui_buffer_end(struct gui_command_list*, struct gui_command_buffer*,
                     struct gui_canvas*, struct gui_memory_status*);
 
+
 /* List */
 const struct gui_command* gui_list_begin(const struct gui_command_list*);
 const struct gui_command* gui_list_next(const struct gui_command_list*,
                         const struct gui_command*);
+
 
 /* Widgets */
 void gui_text(const struct gui_canvas*, gui_float x, gui_float y, gui_float w, gui_float h,
@@ -508,8 +510,8 @@ gui_float gui_scroll(const struct gui_canvas*, gui_float x, gui_float y,
 
 /* Panel */
 void gui_default_config(struct gui_config*);
-void gui_panel_init(struct gui_panel*, gui_float x, gui_float y, gui_float w, gui_float h, gui_flags,
-                    const struct gui_config *config, const struct gui_font*);
+void gui_panel_init(struct gui_panel*, gui_float x, gui_float y, gui_float w, gui_float h,
+                    gui_flags, const struct gui_config *config, const struct gui_font*);
 gui_bool gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel*,
                     const char *title, const struct gui_canvas*, const struct gui_input*);
 gui_bool gui_panel_begin_stacked(struct gui_panel_layout *layout, struct gui_panel*,

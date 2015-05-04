@@ -287,45 +287,45 @@ surface_end(XSurface *surf, HDC hdc)
 static void
 draw(XSurface *surf, struct gui_command_list *list)
 {
-    struct gui_command *cmd;
+    const struct gui_command *cmd;
     if (!list->count) return;
-    cmd = list->begin;
-    while (cmd != list->end) {
+    cmd = gui_list_begin(list);
+    while (cmd) {
         switch (cmd->type) {
         case GUI_COMMAND_NOP: break;
         case GUI_COMMAND_SCISSOR: {
-            struct gui_command_scissor *s = (void*)cmd;
+            const struct gui_command_scissor *s = (const void*)cmd;
             surface_scissor(surf, s->x, s->y, s->w, s->h);
         } break;
         case GUI_COMMAND_LINE: {
-            struct gui_command_line *l = (void*)cmd;
+            const struct gui_command_line *l = (const void*)cmd;
             surface_draw_line(surf, l->begin[0], l->begin[1], l->end[0],
                 l->end[1], l->color.r, l->color.g, l->color.b);
         } break;
         case GUI_COMMAND_RECT: {
-            struct gui_command_rect *r = (void*)cmd;
+            const struct gui_command_rect *r = (const void*)cmd;
             surface_draw_rect(surf, r->x, r->y, r->w, r->h,
                 r->color.r, r->color.g, r->color.b);
         } break;
         case GUI_COMMAND_CIRCLE: {
-            struct gui_command_circle *c = (void*)cmd;
+            const struct gui_command_circle *c = (const void*)cmd;
             surface_draw_circle(surf, c->x, c->y, c->w, c->h,
                 c->color.r, c->color.g, c->color.b);
         } break;
         case GUI_COMMAND_TRIANGLE: {
-            struct gui_command_triangle *t = (void*)cmd;
+            const struct gui_command_triangle *t = (const void*)cmd;
             surface_draw_triangle(surf, t->a[0], t->a[1], t->b[0], t->b[1],
                 t->c[0], t->c[1], t->color.r, t->color.g, t->color.b);
         } break;
         case GUI_COMMAND_TEXT: {
-            struct gui_command_text *t = (void*)cmd;
+            const struct gui_command_text *t = (const void*)cmd;
             XWindow *xw = t->font;
             surface_draw_text(surf, xw->font, t->x, t->y, t->w, t->h, (const char*)t->string,
                     t->length, t->bg.r, t->bg.g, t->bg.b, t->fg.r, t->fg.g, t->fg.b);
         } break;
         default: break;
         }
-        cmd = cmd->next;
+        cmd = gui_list_next(list, cmd);
     }
 }
 

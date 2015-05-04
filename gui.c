@@ -451,7 +451,6 @@ gui_button_image(const struct gui_canvas *canvas, gui_float x, gui_float y,
         return gui_false;
 
     pressed = gui_do_button(canvas, x, y, w, h, button, in, b);
-
     img_x = x + button->padding.x;
     img_y = y + button->padding.y;
     img_w = w - 2 * button->padding.x;
@@ -1116,6 +1115,7 @@ gui_buffer_unlock(struct gui_command_buffer *buffer, struct gui_command_buffer *
     assert(buffer);
     assert(sub);
     if (!buffer || !sub) return;
+
     buffer->flags &= (gui_flags)~GUI_BUFFER_LOCKED;
     buffer->memory = sub->memory;
     buffer->end = sub->end;
@@ -1531,7 +1531,6 @@ void
 gui_panel_seperator(struct gui_panel_layout *layout, gui_size cols)
 {
     const struct gui_config *config;
-
     assert(layout);
     assert(layout->config);
     assert(layout->canvas);
@@ -2261,10 +2260,10 @@ gui_panel_graph_push_histo(struct gui_panel_layout *layout,
     const struct gui_input *in = layout->input;
     struct gui_color color;
 
+    gui_float ratio;
     gui_bool selected = gui_false;
     gui_float item_x, item_y;
     gui_float item_w = 0.0f, item_h = 0.0f;
-    gui_float ratio;
 
     if (graph->index >= graph->count)
         return gui_false;
@@ -2342,6 +2341,7 @@ gui_panel_graph(struct gui_panel_layout *layout, enum gui_graph_type type,
         if (values[i] < min_value)
             min_value = values[i];
     }
+
     gui_panel_graph_begin(layout, &graph, type, count, min_value, max_value);
     for (i = 0; i <  count; ++i) {
         if (gui_panel_graph_push(layout, &graph, values[i]))
@@ -2409,6 +2409,7 @@ gui_panel_table_vline(struct gui_panel_layout *layout, gui_size cols)
     for (i = 0; i < cols - 1; ++i) {
         gui_float y, h;
         struct gui_rect bounds;
+
         gui_panel_alloc_space(&bounds, layout);
         y = layout->at_y + layout->row_height;
         h = layout->row_height;
