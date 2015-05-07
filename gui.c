@@ -7,8 +7,9 @@
 
 #ifdef GUI_USE_DEBUG_BUILD
 #include <assert.h>
+#define ASSERT assert
 #else
-#define assert(expr)
+#define ASSERT(expr)
 #endif
 
 #define NULL (void*)0
@@ -33,7 +34,9 @@
 #define vec2_sub(r,a,b) do {(r).x=(a).x-(b).x; (r).y=(a).y-(b).y;} while(0)
 #define vec2_muls(r, v, s) do {(r).x=(v).x*(s); (r).y=(v).y*(s);} while(0)
 #define ALIGNOF(t) ((char*)(&((struct {char c; t _h;}*)0)->_h) - (char*)0)
-#define ALIGN(x, mask) (void*)((gui_size)((gui_byte*)(x) + (mask-1)) & ~(mask-1))
+#define ALIGN_PTR(x, mask) (void*)((gui_size)((gui_byte*)(x) + (mask-1)) & ~(mask-1))
+#define ALIGN(x, mask) ((x) + (mask-1)) & ~(mask-1)
+#define OFFSETOF(st, m) ((gui_size)(&((st *)0)->m))
 
 static const struct gui_rect null_rect = {0.0f, 0.0f, 9999.0f, 9999.0f};
 static const gui_char utfbyte[GUI_UTF_SIZE+1] = {0x80, 0, 0xC0, 0xE0, 0xF0};
@@ -196,7 +199,7 @@ gui_triangle_from_direction(struct gui_vec2 *result, gui_float x, gui_float y,
     enum gui_heading direction)
 {
     gui_float w_half, h_half;
-    assert(result);
+    ASSERT(result);
 
     w = MAX(4 * pad_x, w);
     h = MAX(4 * pad_y, h);
@@ -242,7 +245,7 @@ void
 gui_input_begin(struct gui_input *in)
 {
     gui_size i;
-    assert(in);
+    ASSERT(in);
     if (!in) return;
     in->mouse_clicked = 0;
     in->text_len = 0;
@@ -254,7 +257,7 @@ gui_input_begin(struct gui_input *in)
 void
 gui_input_motion(struct gui_input *in, gui_int x, gui_int y)
 {
-    assert(in);
+    ASSERT(in);
     if (!in) return;
     in->mouse_pos.x = (gui_float)x;
     in->mouse_pos.y = (gui_float)y;
@@ -263,7 +266,7 @@ gui_input_motion(struct gui_input *in, gui_int x, gui_int y)
 void
 gui_input_key(struct gui_input *in, enum gui_keys key, gui_bool down)
 {
-    assert(in);
+    ASSERT(in);
     if (!in) return;
     if (in->keys[key].down == down) return;
     in->keys[key].down = down;
@@ -273,7 +276,7 @@ gui_input_key(struct gui_input *in, enum gui_keys key, gui_bool down)
 void
 gui_input_button(struct gui_input *in, gui_int x, gui_int y, gui_bool down)
 {
-    assert(in);
+    ASSERT(in);
     if (!in) return;
     if (in->mouse_down == down) return;
     in->mouse_clicked_pos.x = (gui_float)x;
@@ -287,7 +290,7 @@ gui_input_char(struct gui_input *in, const gui_glyph glyph)
 {
     gui_size len = 0;
     gui_long unicode;
-    assert(in);
+    ASSERT(in);
     if (!in) return;
     len = gui_utf_decode(glyph, &unicode, GUI_UTF_SIZE);
     if (len && ((in->text_len + len) < GUI_INPUT_MAX)) {
@@ -299,7 +302,7 @@ gui_input_char(struct gui_input *in, const gui_glyph glyph)
 void
 gui_input_end(struct gui_input *in)
 {
-    assert(in);
+    ASSERT(in);
     if (!in) return;
     vec2_sub(in->mouse_delta, in->mouse_pos, in->mouse_prev);
 }
@@ -316,7 +319,7 @@ gui_text(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w,
     gui_size text_width;
     struct gui_rect clip;
 
-    assert(text);
+    ASSERT(text);
     if (!text) return;
 
     text_width = font->width(font->userdata, (const gui_char*)string, len);
@@ -348,7 +351,7 @@ gui_do_button(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_flo
     gui_bool ret = gui_false;
     struct gui_color background;
 
-    assert(button);
+    ASSERT(button);
     if (!button)
         return gui_false;
 
@@ -382,9 +385,9 @@ gui_button_text(const struct gui_canvas *canvas, gui_float x, gui_float y,
     gui_float inner_x, inner_y;
     gui_float inner_w, inner_h;
 
-    assert(button);
-    assert(string);
-    assert(canvas);
+    ASSERT(button);
+    ASSERT(string);
+    ASSERT(canvas);
     if (!canvas || !button)
         return gui_false;
 
@@ -421,8 +424,8 @@ gui_button_triangle(const struct gui_canvas *canvas, gui_float x, gui_float y,
     struct gui_color col;
     struct gui_vec2 points[3];
 
-    assert(button);
-    assert(canvas);
+    ASSERT(button);
+    ASSERT(canvas);
     if (!canvas || !button)
         return gui_false;
 
@@ -445,8 +448,8 @@ gui_button_image(const struct gui_canvas *canvas, gui_float x, gui_float y,
     struct gui_color col;
     struct gui_vec2 points[3];
 
-    assert(button);
-    assert(canvas);
+    ASSERT(button);
+    ASSERT(canvas);
     if (!canvas || !button)
         return gui_false;
 
@@ -472,8 +475,8 @@ gui_toggle(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float 
     gui_float cursor_pad, cursor_size;
     gui_draw_rect draw[2];
 
-    assert(toggle);
-    assert(canvas);
+    ASSERT(toggle);
+    ASSERT(canvas);
     if (!canvas || !toggle)
         return 0;
 
@@ -534,8 +537,8 @@ gui_slider(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float 
     gui_float cursor_x, cursor_y;
     gui_float cursor_w, cursor_h;
 
-    assert(slider);
-    assert(canvas);
+    ASSERT(slider);
+    ASSERT(canvas);
     if (!canvas || !slider)
         return 0;
 
@@ -582,8 +585,8 @@ gui_progress(const struct gui_canvas *canvas, gui_float x, gui_float y,
     gui_float prog_scale;
     gui_size prog_value;
 
-    assert(prog);
-    assert(canvas);
+    ASSERT(prog);
+    ASSERT(canvas);
     if (!canvas || !prog) return 0;
     prog_w = MAX(w, 2 * prog->padding.x + 1);
     prog_h = MAX(h, 2 * prog->padding.y + 1);
@@ -657,8 +660,8 @@ gui_buffer_input(gui_char *buffer, gui_size length, gui_size max,
     gui_long unicode;
     gui_size src_len = 0;
     gui_size text_len = 0, glyph_len = 0;
-    assert(buffer);
-    assert(in);
+    ASSERT(buffer);
+    ASSERT(in);
 
     glyph_len = gui_utf_decode(in->text, &unicode, in->text_len);
     while (glyph_len && ((text_len + glyph_len) <= in->text_len) && (length + src_len) < max) {
@@ -682,9 +685,9 @@ gui_edit(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w,
     gui_float input_w, input_h;
     gui_bool input_active;
 
-    assert(canvas);
-    assert(buffer);
-    assert(field);
+    ASSERT(canvas);
+    ASSERT(buffer);
+    ASSERT(field);
     if (!canvas || !buffer || !field)
         return 0;
 
@@ -760,8 +763,8 @@ gui_scroll(const struct gui_canvas *canvas, gui_float x, gui_float y,
     gui_float cursor_w, cursor_h;
     gui_bool inscroll, incursor;
 
-    assert(canvas);
-    assert(scroll);
+    ASSERT(canvas);
+    ASSERT(scroll);
     if (!canvas || !scroll) return 0;
 
     scroll_w = MAX(w, 0);
@@ -825,13 +828,13 @@ gui_buffer_push(struct gui_command_buffer* buffer,
     void *unaligned;
     void *tail;
 
-    assert(buffer);
-    assert(!(buffer->flags & GUI_BUFFER_LOCKED));
+    ASSERT(buffer);
+    ASSERT(!(buffer->flags & GUI_BUFFER_LOCKED));
     if (!buffer || buffer->flags & GUI_BUFFER_LOCKED) return NULL;
     buffer->needed += size;
 
     unaligned = (gui_byte*)buffer->end + size;
-    tail = ALIGN(unaligned, align);
+    tail = ALIGN_PTR(unaligned, align);
     alignment = (gui_size)((gui_byte*)tail - (gui_byte*)unaligned);
 
     if ((buffer->allocated + size + alignment) >= buffer->capacity) {
@@ -845,13 +848,14 @@ gui_buffer_push(struct gui_command_buffer* buffer,
         buffer->end = (void*)((gui_byte*)buffer->begin + buffer->allocated);
 
         unaligned = (gui_byte*)buffer->end + size;
-        tail = ALIGN(unaligned, align);
+        tail = ALIGN_PTR(unaligned, align);
         alignment = (gui_size)((gui_byte*)tail - (gui_byte*)unaligned);
     }
 
     cmd = buffer->end;
     cmd->type = type;
     cmd->offset = size + alignment;
+    cmd->offset = ALIGN(cmd->offset, align);
 
     buffer->end = tail;
     buffer->allocated += size + alignment;
@@ -865,8 +869,8 @@ gui_buffer_push_scissor(struct gui_command_buffer *buffer, gui_float x, gui_floa
     gui_float w, gui_float h)
 {
     struct gui_command_scissor *cmd;
-    assert(buffer);
-    assert(!(buffer->flags & GUI_BUFFER_LOCKED));
+    ASSERT(buffer);
+    ASSERT(!(buffer->flags & GUI_BUFFER_LOCKED));
     if (!buffer || buffer->flags & GUI_BUFFER_LOCKED) return;
 
     cmd = gui_buffer_push(buffer, GUI_COMMAND_SCISSOR, sizeof(*cmd));
@@ -888,8 +892,8 @@ gui_buffer_push_line(struct gui_command_buffer *buffer, gui_float x0, gui_float 
     gui_float x1, gui_float y1, struct gui_color c)
 {
     struct gui_command_line *cmd;
-    assert(buffer);
-    assert(!(buffer->flags & GUI_BUFFER_LOCKED));
+    ASSERT(buffer);
+    ASSERT(!(buffer->flags & GUI_BUFFER_LOCKED));
     if (!buffer || buffer->flags & GUI_BUFFER_LOCKED) return;
 
     cmd = gui_buffer_push(buffer, GUI_COMMAND_LINE, sizeof(*cmd));
@@ -906,8 +910,8 @@ gui_buffer_push_rect(struct gui_command_buffer *buffer, gui_float x, gui_float y
     gui_float w, gui_float h, struct gui_color c)
 {
     struct gui_command_rect *cmd;
-    assert(buffer);
-    assert(!(buffer->flags & GUI_BUFFER_LOCKED));
+    ASSERT(buffer);
+    ASSERT(!(buffer->flags & GUI_BUFFER_LOCKED));
     if (!buffer || buffer->flags & GUI_BUFFER_LOCKED) return;
 
     if (buffer->flags & GUI_BUFFER_CLIPPING) {
@@ -918,6 +922,7 @@ gui_buffer_push_rect(struct gui_command_buffer *buffer, gui_float x, gui_float y
             return;
         }
     }
+
     cmd = gui_buffer_push(buffer, GUI_COMMAND_RECT, sizeof(*cmd));
     if (!cmd) return;
     cmd->x = (gui_short)x;
@@ -932,8 +937,8 @@ gui_buffer_push_circle(struct gui_command_buffer *buffer, gui_float x, gui_float
     gui_float w, gui_float h, struct gui_color c)
 {
     struct gui_command_circle *cmd;
-    assert(buffer);
-    assert(!(buffer->flags & GUI_BUFFER_LOCKED));
+    ASSERT(buffer);
+    ASSERT(!(buffer->flags & GUI_BUFFER_LOCKED));
     if (!buffer || buffer->flags & GUI_BUFFER_LOCKED) return;
 
     if (buffer->flags & GUI_BUFFER_CLIPPING) {
@@ -959,8 +964,8 @@ gui_buffer_push_triangle(struct gui_command_buffer *buffer, gui_float x0, gui_fl
     gui_float x1, gui_float y1, gui_float x2, gui_float y2, struct gui_color c)
 {
     struct gui_command_triangle *cmd;
-    assert(buffer);
-    assert(!(buffer->flags & GUI_BUFFER_LOCKED));
+    ASSERT(buffer);
+    ASSERT(!(buffer->flags & GUI_BUFFER_LOCKED));
     if (!buffer || buffer->flags & GUI_BUFFER_LOCKED) return;
 
     if (buffer->flags & GUI_BUFFER_CLIPPING) {
@@ -989,8 +994,8 @@ gui_buffer_push_image(struct gui_command_buffer *buffer, gui_float x, gui_float 
     gui_float w, gui_float h, gui_image img)
 {
     struct gui_command_image *cmd;
-    assert(buffer);
-    assert(!(buffer->flags & GUI_BUFFER_LOCKED));
+    ASSERT(buffer);
+    ASSERT(!(buffer->flags & GUI_BUFFER_LOCKED));
     if (!buffer || buffer->flags & GUI_BUFFER_LOCKED) return;
 
     if (buffer->flags == GUI_BUFFER_CLIPPING) {
@@ -1016,9 +1021,9 @@ gui_buffer_push_text(struct gui_command_buffer *buffer, gui_float x, gui_float y
     const struct gui_font *font, struct gui_color bg, struct gui_color fg)
 {
     struct gui_command_text *cmd;
-    assert(buffer);
-    assert(font);
-    assert(!(buffer->flags & GUI_BUFFER_LOCKED));
+    ASSERT(buffer);
+    ASSERT(font);
+    ASSERT(!(buffer->flags & GUI_BUFFER_LOCKED));
     if (!buffer || !string || !length) return;
     if (buffer->flags & GUI_BUFFER_LOCKED) return;
 
@@ -1048,8 +1053,8 @@ void
 gui_buffer_init_fixed(struct gui_command_buffer *buffer, const struct gui_memory *memory,
     gui_flags clipping)
 {
-    assert(buffer);
-    assert(memory);
+    ASSERT(buffer);
+    ASSERT(memory);
     if (!buffer || !memory) return;
 
     zero(buffer, sizeof(*buffer));
@@ -1067,9 +1072,9 @@ void
 gui_buffer_init(struct gui_command_buffer *buffer, const struct gui_allocator *memory,
     gui_size initial_size, gui_float grow_factor, gui_flags clipping)
 {
-    assert(buffer);
-    assert(memory);
-    assert(initial_size);
+    ASSERT(buffer);
+    ASSERT(memory);
+    ASSERT(initial_size);
     if (!buffer || !memory || !initial_size) return;
 
     zero(buffer, sizeof(*buffer));
@@ -1085,13 +1090,14 @@ gui_buffer_init(struct gui_command_buffer *buffer, const struct gui_allocator *m
 }
 
 void
-gui_buffer_lock(struct gui_command_buffer *buffer, struct gui_command_buffer *sub,
-    gui_flags clipping)
+gui_buffer_lock(struct gui_canvas *canvas, struct gui_command_buffer *buffer,
+    struct gui_command_buffer *sub, gui_flags clipping, gui_size width, gui_size height)
 {
-    assert(buffer);
-    assert(sub);
-    assert(buffer->flags & GUI_BUFFER_LOCKED);
-    if (!buffer || !sub || !(buffer->flags & GUI_BUFFER_LOCKED)) return;
+    static const gui_size align = ALIGNOF(struct gui_command);
+    ASSERT(buffer);
+    ASSERT(sub);
+    ASSERT(!(buffer->flags & GUI_BUFFER_LOCKED));
+    if (!buffer || !sub || (buffer->flags & GUI_BUFFER_LOCKED)) return;
 
     buffer->flags |= GUI_BUFFER_LOCKED;
     sub->flags = GUI_BUFFER_DEFAULT;
@@ -1107,34 +1113,37 @@ gui_buffer_lock(struct gui_command_buffer *buffer, struct gui_command_buffer *su
     sub->sub_cap = sub->capacity;
     sub->needed = 0;
     sub->count = 0;
+    gui_buffer_begin(canvas, sub, width, height);
 }
 
 void
-gui_buffer_unlock(struct gui_command_buffer *buffer, struct gui_command_buffer *sub)
+gui_buffer_unlock(struct gui_command_list *list, struct gui_command_buffer *buffer,
+    struct gui_command_buffer *sub, struct gui_canvas *canvas,
+    struct gui_memory_status *status)
 {
-    assert(buffer);
-    assert(sub);
+    ASSERT(buffer);
+    ASSERT(sub);
     if (!buffer || !sub) return;
 
     buffer->flags &= (gui_flags)~GUI_BUFFER_LOCKED;
-    buffer->memory = sub->memory;
     buffer->end = sub->end;
     buffer->allocated = sub->allocated;
     buffer->capacity = sub->capacity;
     buffer->count += sub->count;
     buffer->needed += sub->needed;
-    zero(sub, sizeof(*sub));
     sub->flags = GUI_BUFFER_LOCKED;
+    gui_buffer_end(list, sub, canvas, status);
+    zero(sub, sizeof(*sub));
 }
 
 void
 gui_buffer_begin(struct gui_canvas *canvas, struct gui_command_buffer *buffer,
     gui_size width, gui_size height)
 {
-    assert(canvas);
-    assert(buffer);
-    assert(buffer->memory);
-    assert(buffer->begin == buffer->end);
+    ASSERT(canvas);
+    ASSERT(buffer);
+    ASSERT(buffer->memory);
+    ASSERT(buffer->begin == buffer->end);
     if (!canvas || !buffer) return;
 
     canvas->userdata = buffer;
@@ -1152,9 +1161,8 @@ void
 gui_buffer_end(struct gui_command_list *list, struct gui_command_buffer *buffer,
     struct gui_canvas *canvas, struct gui_memory_status *status)
 {
-    assert(buffer);
-    assert(canvas);
-    if (!buffer || !canvas) return;
+    ASSERT(buffer);
+    if (!buffer) return;
     if (status) {
         status->allocated = (!(buffer->flags & GUI_BUFFER_OWNER)) ?
             buffer->allocated - buffer->sub_size: buffer->allocated;
@@ -1179,13 +1187,13 @@ gui_buffer_end(struct gui_command_list *list, struct gui_command_buffer *buffer,
     buffer->clip = null_rect;
     buffer->clipped_cmds = 0;
     buffer->clipped_memory = 0;
-    zero(canvas, sizeof(*canvas));
+    if (canvas) zero(canvas, sizeof(*canvas));
 }
 
 void
 gui_buffer_clear(struct gui_command_buffer *buffer)
 {
-    assert(buffer);
+    ASSERT(buffer);
     if (!buffer || !buffer->memory || !buffer->allocator.free) return;
     if (!(buffer->flags & GUI_BUFFER_OWNER)) return;
     if (buffer->flags & GUI_BUFFER_LOCKED) return;
@@ -1196,7 +1204,7 @@ const struct gui_command*
 gui_list_begin(const struct gui_command_list *list)
 {
     const struct gui_command *cmd;
-    assert(list);
+    ASSERT(list);
     if (!list || !list->count) return NULL;
     cmd = list->begin;
     return cmd;
@@ -1205,8 +1213,8 @@ gui_list_begin(const struct gui_command_list *list)
 const struct gui_command*
 gui_list_next(const struct gui_command_list *list, const struct gui_command *cmd)
 {
-    assert(list);
-    assert(cmd);
+    ASSERT(list);
+    ASSERT(cmd);
     if (!list || !list->count || !cmd) return NULL;
     cmd = (const void*)((const gui_byte*)cmd + cmd->offset);
     if (cmd >= list->end) return NULL;
@@ -1216,7 +1224,7 @@ gui_list_next(const struct gui_command_list *list, const struct gui_command *cmd
 void
 gui_default_config(struct gui_config *config)
 {
-    assert(config);
+    ASSERT(config);
     if (!config) return;
     config->scrollbar_width = 16;
     vec2_load(config->panel_padding, 15.0f, 10.0f);
@@ -1226,13 +1234,13 @@ gui_default_config(struct gui_config *config)
     vec2_load(config->scaler_size, 16.0f, 16.0f);
     col_load(config->colors[GUI_COLOR_TEXT], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_PANEL], 45, 45, 45, 255);
+    col_load(config->colors[GUI_COLOR_HEADER], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_BORDER], 100, 100, 100, 255);
-    col_load(config->colors[GUI_COLOR_TITLEBAR], 45, 45, 45, 255);
-    col_load(config->colors[GUI_COLOR_BUTTON], 45, 45, 45, 255);
+    col_load(config->colors[GUI_COLOR_BUTTON], 50, 50, 50, 255);
     col_load(config->colors[GUI_COLOR_BUTTON_HOVER], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_BUTTON_TOGGLE], 65, 65, 65, 255);
     col_load(config->colors[GUI_COLOR_BUTTON_HOVER_FONT], 45, 45, 45, 255);
-    col_load(config->colors[GUI_COLOR_BUTTON_BORDER], 100, 100, 100, 255);
+    col_load(config->colors[GUI_COLOR_BUTTON_BORDER], 80, 80, 80, 255);
     col_load(config->colors[GUI_COLOR_CHECK], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_CHECK_BACKGROUND], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_CHECK_ACTIVE], 45, 45, 45, 255);
@@ -1250,14 +1258,14 @@ gui_default_config(struct gui_config *config)
     col_load(config->colors[GUI_COLOR_SPINNER_BORDER], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_SELECTOR], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_SELECTOR_BORDER], 100, 100, 100, 255);
-    col_load(config->colors[GUI_COLOR_HISTO], 100, 100, 100, 255);
+    col_load(config->colors[GUI_COLOR_HISTO], 120, 120, 120, 255);
     col_load(config->colors[GUI_COLOR_HISTO_BARS], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_HISTO_NEGATIVE], 255, 255, 255, 255);
     col_load(config->colors[GUI_COLOR_HISTO_HIGHLIGHT], 255, 0, 0, 255);
     col_load(config->colors[GUI_COLOR_PLOT], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_PLOT_LINES], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_PLOT_HIGHLIGHT], 255, 0, 0, 255);
-    col_load(config->colors[GUI_COLOR_SCROLLBAR], 41, 41, 41, 255);
+    col_load(config->colors[GUI_COLOR_SCROLLBAR], 40, 40, 40, 255);
     col_load(config->colors[GUI_COLOR_SCROLLBAR_CURSOR], 70, 70, 70, 255);
     col_load(config->colors[GUI_COLOR_SCROLLBAR_BORDER], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_TABLE_LINES], 100, 100, 100, 255);
@@ -1268,9 +1276,9 @@ void
 gui_panel_init(struct gui_panel *panel, gui_float x, gui_float y, gui_float w,
     gui_float h, gui_flags flags, const struct gui_config *config, const struct gui_font *font)
 {
-    assert(panel);
-    assert(config);
-    assert(font);
+    ASSERT(panel);
+    ASSERT(config);
+    ASSERT(font);
     if (!panel || !config || !font)
         return;
 
@@ -1297,9 +1305,9 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     gui_float header_x, header_w;
     gui_bool ret = gui_true;
 
-    assert(panel);
-    assert(layout);
-    assert(canvas);
+    ASSERT(panel);
+    ASSERT(layout);
+    ASSERT(canvas);
 
     if (!panel || !canvas || !layout)
         return gui_false;
@@ -1366,7 +1374,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     layout->row_height = 0;
     layout->offset = panel->offset;
 
-    header = &config->colors[GUI_COLOR_TITLEBAR];
+    header = &config->colors[GUI_COLOR_HEADER];
     header_x = panel->x + config->panel_padding.x;
     header_w = panel->w - 2 * config->panel_padding.x;
     canvas->draw_rect(canvas->userdata, panel->x, panel->y, panel->w,
@@ -1480,10 +1488,10 @@ gui_panel_begin_stacked(struct gui_panel_layout *layout, struct gui_panel *panel
     const struct gui_input *in)
 {
     gui_bool inpanel;
-    assert(layout);
-    assert(panel);
-    assert(stack);
-    assert(canvas);
+    ASSERT(layout);
+    ASSERT(panel);
+    ASSERT(stack);
+    ASSERT(canvas);
     if (!layout || !panel || !stack || !canvas)
         return gui_false;
 
@@ -1510,12 +1518,12 @@ gui_panel_row(struct gui_panel_layout *layout, gui_float height, gui_size cols)
     const struct gui_config *config;
     const struct gui_color *color;
 
-    assert(layout);
+    ASSERT(layout);
     if (!layout) return;
     if (!layout->valid) return;
 
-    assert(layout->config);
-    assert(layout->canvas);
+    ASSERT(layout->config);
+    ASSERT(layout->canvas);
     config = layout->config;
     color = &config->colors[GUI_COLOR_PANEL];
 
@@ -1531,9 +1539,9 @@ void
 gui_panel_seperator(struct gui_panel_layout *layout, gui_size cols)
 {
     const struct gui_config *config;
-    assert(layout);
-    assert(layout->config);
-    assert(layout->canvas);
+    ASSERT(layout);
+    ASSERT(layout->config);
+    ASSERT(layout->canvas);
     if (!layout) return;
     if (!layout->valid) return;
 
@@ -1546,16 +1554,16 @@ gui_panel_seperator(struct gui_panel_layout *layout, gui_size cols)
     }
 }
 
-static void
+void
 gui_panel_alloc_space(struct gui_rect *bounds, struct gui_panel_layout *layout)
 {
     const struct gui_config *config;
     gui_float panel_padding, panel_spacing, panel_space;
     gui_float item_offset, item_width, item_spacing;
 
-    assert(layout);
-    assert(layout->config);
-    assert(bounds);
+    ASSERT(layout);
+    ASSERT(layout->config);
+    ASSERT(bounds);
 
     config = layout->config;
     if (layout->index >= layout->row_columns) {
@@ -1586,10 +1594,10 @@ gui_panel_text_colored(struct gui_panel_layout *layout, const char *str, gui_siz
     struct gui_text text;
     const struct gui_config *config;
 
-    assert(layout);
-    assert(layout->config);
-    assert(layout->canvas);
-    assert(str && len);
+    ASSERT(layout);
+    ASSERT(layout->config);
+    ASSERT(layout->canvas);
+    ASSERT(str && len);
 
     if (!layout || !layout->config || !layout->canvas) return;
     if (!layout->valid) return;
@@ -1636,9 +1644,9 @@ gui_panel_button_text(struct gui_panel_layout *layout, const char *str,
     struct gui_button button;
     const struct gui_config *config;
 
-    assert(layout);
-    assert(layout->config);
-    assert(layout->canvas);
+    ASSERT(layout);
+    ASSERT(layout->config);
+    ASSERT(layout->canvas);
 
     if (!layout || !layout->config || !layout->canvas) return 0;
     if (!layout->valid) return 0;
@@ -1668,9 +1676,9 @@ gui_bool gui_panel_button_color(struct gui_panel_layout *layout,
     struct gui_button button;
     const struct gui_config *config;
 
-    assert(layout);
-    assert(layout->config);
-    assert(layout->canvas);
+    ASSERT(layout);
+    ASSERT(layout->config);
+    ASSERT(layout->canvas);
 
     if (!layout || !layout->config || !layout->canvas) return 0;
     if (!layout->valid) return 0;
@@ -1700,9 +1708,9 @@ gui_panel_button_triangle(struct gui_panel_layout *layout, enum gui_heading head
     struct gui_button button;
     const struct gui_config *config;
 
-    assert(layout);
-    assert(layout->config);
-    assert(layout->canvas);
+    ASSERT(layout);
+    ASSERT(layout->config);
+    ASSERT(layout->canvas);
 
     if (!layout || !layout->config || !layout->canvas) return 0;
     if (!layout->valid) return 0;
@@ -1733,9 +1741,9 @@ gui_panel_button_image(struct gui_panel_layout *layout, gui_image image,
     struct gui_button button;
     const struct gui_config *config;
 
-    assert(layout);
-    assert(layout->config);
-    assert(layout->canvas);
+    ASSERT(layout);
+    ASSERT(layout->config);
+    ASSERT(layout->canvas);
 
     if (!layout || !layout->config || !layout->canvas) return 0;
     if (!layout->valid) return 0;
@@ -1765,10 +1773,10 @@ gui_panel_button_toggle(struct gui_panel_layout *layout, const char *str, gui_bo
     struct gui_button button;
     const struct gui_config *config;
 
-    assert(layout);
-    assert(layout->config);
-    assert(layout->canvas);
-    assert(str);
+    ASSERT(layout);
+    ASSERT(layout->config);
+    ASSERT(layout->canvas);
+    ASSERT(str);
 
     if (!layout || !layout->config || !layout->canvas) return 0;
     if (!layout->valid) return 0;
@@ -1807,10 +1815,10 @@ gui_panel_check(struct gui_panel_layout *layout, const char *text, gui_bool is_a
     struct gui_toggle toggle;
     const struct gui_config *config;
 
-    assert(layout);
-    assert(layout->config);
-    assert(layout->canvas);
-    assert(text);
+    ASSERT(layout);
+    ASSERT(layout->config);
+    ASSERT(layout->canvas);
+    ASSERT(text);
 
     if (!layout || !layout->config || !layout->canvas) return is_active;
     if (!layout->valid) return is_active;
@@ -1838,10 +1846,10 @@ gui_panel_option(struct gui_panel_layout *layout, const char *text, gui_bool is_
     struct gui_toggle toggle;
     const struct gui_config *config;
 
-    assert(layout);
-    assert(layout->config);
-    assert(layout->canvas);
-    assert(text);
+    ASSERT(layout);
+    ASSERT(layout->config);
+    ASSERT(layout->canvas);
+    ASSERT(text);
 
     if (!layout || !layout->config || !layout->canvas) return is_active;
     if (!layout->valid) return is_active;
@@ -1870,9 +1878,9 @@ gui_panel_slider(struct gui_panel_layout *layout, gui_float min_value, gui_float
     struct gui_slider slider;
     const struct gui_config *config;
 
-    assert(layout);
-    assert(layout->config);
-    assert(layout->canvas);
+    ASSERT(layout);
+    ASSERT(layout->config);
+    ASSERT(layout->canvas);
 
     if (!layout || !layout->config || !layout->canvas) return value;
     if (!layout->valid) return value;
@@ -1899,9 +1907,9 @@ gui_panel_progress(struct gui_panel_layout *layout, gui_size cur_value, gui_size
     struct gui_slider prog;
     const struct gui_config *config;
 
-    assert(layout);
-    assert(layout->config);
-    assert(layout->canvas);
+    ASSERT(layout);
+    ASSERT(layout->config);
+    ASSERT(layout->canvas);
 
     if (!layout || !layout->config || !layout->canvas) return cur_value;
     if (!layout->valid) return cur_value;
@@ -1928,9 +1936,9 @@ gui_panel_edit(struct gui_panel_layout *layout, gui_char *buffer, gui_size len,
     struct gui_input_field field;
     const struct gui_config *config;
 
-    assert(layout);
-    assert(layout->config);
-    assert(layout->canvas);
+    ASSERT(layout);
+    ASSERT(layout->config);
+    ASSERT(layout->canvas);
 
     if (!layout || !layout->config || !layout->canvas) return 0;
     if (!layout->valid) return 0;
@@ -1967,9 +1975,9 @@ gui_panel_shell(struct gui_panel_layout *layout, gui_char *buffer, gui_size *len
     gui_bool clicked = gui_false;
     gui_size width;
 
-    assert(layout);
-    assert(layout->config);
-    assert(layout->canvas);
+    ASSERT(layout);
+    ASSERT(layout->config);
+    ASSERT(layout->canvas);
 
     if (!layout || !layout->config || !layout->canvas) return 0;
     if (!layout->valid) return 0;
@@ -2032,9 +2040,9 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     gui_bool is_active, updated = gui_false;
     gui_bool button_up_clicked, button_down_clicked;
 
-    assert(layout);
-    assert(layout->config);
-    assert(layout->canvas);
+    ASSERT(layout);
+    ASSERT(layout->config);
+    ASSERT(layout->canvas);
 
     if (!layout || !layout->config || !layout->canvas) return 0;
     if (!layout->valid) return 0;
@@ -2109,12 +2117,12 @@ gui_panel_selector(struct gui_panel_layout *layout, const char *items[],
     gui_float button_x, button_y;
     gui_float button_w, button_h;
 
-    assert(layout);
-    assert(layout->config);
-    assert(layout->canvas);
-    assert(items);
-    assert(item_count);
-    assert(item_current < item_count);
+    ASSERT(layout);
+    ASSERT(layout->config);
+    ASSERT(layout->canvas);
+    ASSERT(items);
+    ASSERT(item_count);
+    ASSERT(item_current < item_count);
 
     if (!layout || !layout->config || !layout->canvas) return 0;
     if (!layout->valid) return 0;
@@ -2172,9 +2180,9 @@ gui_panel_graph_begin(struct gui_panel_layout *layout, struct gui_graph *graph,
     const struct gui_canvas *canvas;
     struct gui_color color;
 
-    assert(layout);
-    assert(layout->config);
-    assert(layout->canvas);
+    ASSERT(layout);
+    ASSERT(layout->config);
+    ASSERT(layout->canvas);
 
     if (!layout || !layout->config || !layout->canvas) return;
     if (!layout->valid) return;
@@ -2327,11 +2335,11 @@ gui_panel_graph(struct gui_panel_layout *layout, enum gui_graph_type type,
     const struct gui_config *config;
     struct gui_graph graph;
 
-    assert(layout);
-    assert(layout->config);
-    assert(layout->canvas);
-    assert(values);
-    assert(count);
+    ASSERT(layout);
+    ASSERT(layout->config);
+    ASSERT(layout->canvas);
+    ASSERT(values);
+    ASSERT(count);
 
     max_value = values[0];
     min_value = values[0];
@@ -2363,10 +2371,10 @@ gui_panel_graph_ex(struct gui_panel_layout *layout, enum gui_graph_type type,
     const struct gui_config *config;
     struct gui_graph graph;
 
-    assert(layout);
-    assert(layout->config);
-    assert(layout->canvas);
-    assert(get_value);
+    ASSERT(layout);
+    ASSERT(layout->config);
+    ASSERT(layout->canvas);
+    ASSERT(get_value);
 
     max_value = get_value(userdata, 0);
     min_value = max_value;
@@ -2425,7 +2433,7 @@ gui_panel_table_begin(struct gui_panel_layout *layout, gui_flags flags,
 {
     struct gui_rect bounds;
     const struct gui_rect *c;
-    assert(layout);
+    ASSERT(layout);
     if (!layout || !layout->valid) return;
 
     layout->is_table = gui_true;
@@ -2441,7 +2449,7 @@ void
 gui_panel_table_row(struct gui_panel_layout *layout)
 {
     const struct gui_config *config;
-    assert(layout);
+    ASSERT(layout);
     if (!layout) return;
 
     config = layout->config;
@@ -2468,8 +2476,8 @@ gui_panel_tab_begin(struct gui_panel_layout *parent, struct gui_panel_layout *ta
     struct gui_rect clip;
     gui_flags flags;
 
-    assert(parent);
-    assert(tab);
+    ASSERT(parent);
+    ASSERT(tab);
     if (!parent || !tab) return gui_true;
     canvas = parent->canvas;
     zero(tab, sizeof(*tab));
@@ -2502,8 +2510,8 @@ gui_panel_tab_end(struct gui_panel_layout *parent, struct gui_panel_layout *tab)
 {
     struct gui_panel panel;
     const struct gui_canvas *canvas;
-    assert(tab);
-    assert(parent);
+    ASSERT(tab);
+    ASSERT(parent);
     if (!parent || !tab || !parent->valid)
         return;
 
@@ -2528,8 +2536,8 @@ gui_panel_group_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
     struct gui_panel panel;
     const struct gui_rect *c;
 
-    assert(parent);
-    assert(group);
+    ASSERT(parent);
+    ASSERT(group);
     if (!parent || !group) return;
     if (!parent->valid)
         goto failed;
@@ -2565,8 +2573,8 @@ gui_panel_group_end(struct gui_panel_layout *parent, struct gui_panel_layout *gr
     struct gui_rect clip;
     struct gui_panel panel;
 
-    assert(parent);
-    assert(group);
+    ASSERT(parent);
+    ASSERT(group);
     if (!parent || !group) return 0;
     if (!parent->valid) return 0;
 
@@ -2600,10 +2608,10 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
     gui_flags flags;
     gui_size i;
 
-    assert(parent);
-    assert(tabs);
-    assert(shelf);
-    assert(active < size);
+    ASSERT(parent);
+    ASSERT(tabs);
+    ASSERT(shelf);
+    ASSERT(active < size);
     if (!parent || !shelf || !tabs || active >= size)
         return active;
 
@@ -2676,8 +2684,8 @@ gui_panel_shelf_end(struct gui_panel_layout *parent, struct gui_panel_layout *sh
     struct gui_rect clip;
     struct gui_panel panel;
 
-    assert(parent);
-    assert(shelf);
+    ASSERT(parent);
+    ASSERT(shelf);
     if (!parent || !shelf) return 0;
     if (!parent->valid) return 0;
 
@@ -2698,8 +2706,8 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
 {
     const struct gui_config *config;
     const struct gui_canvas *canvas;
-    assert(layout);
-    assert(panel);
+    ASSERT(layout);
+    ASSERT(panel);
     if (!panel || !layout) return;
     layout->at_y += layout->row_height;
 
@@ -2802,7 +2810,278 @@ gui_stack_pop(struct gui_panel_stack *stack, struct gui_panel *panel)
         stack->begin = panel->next;
     if (stack->end == panel)
         stack->end = panel->prev;
+
     panel->next = NULL;
     panel->prev = NULL;
 }
+
+void
+gui_pool_init(struct gui_pool *pool, const struct gui_allocator *allocator,
+    gui_size panel_size, gui_size offset, gui_size panels_per_page)
+{
+    struct gui_pool_page *page;
+    gui_size page_memory;
+    ASSERT(pool);
+    ASSERT(allocator);
+    ASSERT(panels_per_page);
+    ASSERT((panel_size - offset) >= sizeof(struct gui_panel));
+    if (!pool || !allocator || !panels_per_page)
+        return;
+
+    zero(pool, sizeof(*pool));
+    pool->allocator = *allocator;
+    pool->pages = &pool->base;
+    pool->free_list = NULL;
+    pool->page_size = panels_per_page;
+    pool->page_count = 1;
+    pool->panel_size = panel_size;
+    pool->panel_offset = offset;
+
+    page = pool->pages;
+    page->next = NULL;
+    page_memory = pool->panel_size * pool->page_size;
+    page->memory = allocator->alloc(allocator->userdata, page_memory);
+    page->capacity = pool->page_size;
+    page->count = 0;
+}
+
+void
+gui_pool_init_fixed(struct gui_pool *pool, void *memory, gui_size panel_count,
+    gui_size panel_size, gui_size offset)
+{
+    struct gui_pool_page *page;
+    ASSERT(pool);
+    ASSERT(memory);
+    ASSERT(panel_count);
+    ASSERT((panel_size - offset) >= sizeof(struct gui_panel));
+
+    if (!pool || !memory || !panel_count || panel_size < sizeof(struct gui_panel))
+        return;
+
+    zero(pool, sizeof(*pool));
+    pool->pages = &pool->base;
+    pool->free_list = NULL;
+    pool->page_size = panel_count;
+    pool->page_count = 1;
+    pool->panel_size = panel_size;
+    pool->panel_offset = offset;
+
+    page = pool->pages;
+    page->next = NULL;
+    page->memory = memory;
+    page->capacity = pool->page_size;
+    page->count = 0;
+}
+
+void*
+gui_pool_alloc(struct gui_pool *pool)
+{
+    void *ret;
+    struct gui_pool_page *page;
+    struct gui_panel *panel;
+    ASSERT(pool);
+    if (!pool) return NULL;
+
+    if (pool->free_list) {
+        panel = pool->free_list;
+        ret = (gui_byte*)panel - pool->panel_offset;
+        pool->free_list = panel->next;
+        return ret;
+    }
+
+    page = pool->pages;
+    if ((page->count + 1) >= page->capacity) {
+        gui_size page_memory;
+        if (!pool->allocator.alloc)
+            return NULL;
+
+        page_memory = sizeof(struct gui_pool_page);
+        page_memory += pool->panel_size * pool->page_size;
+        page = pool->allocator.alloc(pool->allocator.userdata, page_memory);
+        page->memory = ((gui_byte*)page + sizeof(struct gui_pool_page));
+        page->capacity = pool->page_size;
+        page->count = 0;
+        page->next = pool->pages;
+        pool->pages = page;
+        pool->page_count++;
+    }
+
+    ret = (gui_byte*)page->memory + pool->panel_size * page->count;
+    page->count++;
+    zero(ret, pool->panel_size);
+    return (gui_byte*)ret + pool->panel_offset;
+}
+
+void
+gui_pool_free(struct gui_pool *pool, void *memory)
+{
+    struct gui_panel *panel;
+    ASSERT(pool);
+    ASSERT(memory);
+    if (!pool || !memory) return;
+
+    panel = (void*)((gui_byte*)memory + pool->panel_offset);
+    panel->next = pool->free_list;
+    pool->free_list = panel;
+}
+
+void
+gui_pool_clear(struct gui_pool *pool)
+{
+    struct gui_pool_page *iter;
+    struct gui_pool_page *next;
+    ASSERT(pool);
+    if (!pool || !pool->allocator.free) return;
+    iter = pool->pages;
+    while (iter != &pool->base) {
+        next = iter->next;
+        pool->allocator.free(pool->allocator.userdata, iter);
+        iter = next;
+    }
+    pool->allocator.free(pool->allocator.userdata, pool->base.memory);
+}
+
+void
+gui_output_init(struct gui_output_buffer *out, const struct gui_allocator *alloc,
+    gui_size initial, gui_float grow_factor)
+{
+    ASSERT(out);
+    ASSERT(initial);
+    if (!out || !initial) return;
+    zero(out, sizeof(*out));
+    gui_buffer_init(&out->global, alloc, initial, grow_factor, GUI_BUFFER_CLIPPING);
+}
+
+void
+gui_output_init_fixed(struct gui_output_buffer *out, struct gui_memory *memory)
+{
+    ASSERT(out);
+    ASSERT(memory);
+    if (!out || !memory) return;
+    zero(out, sizeof(*out));
+    gui_buffer_init_fixed(&out->global, memory, 0);
+}
+
+void
+gui_output_begin(struct gui_output_buffer *buffer, gui_size width, gui_size height)
+{
+    ASSERT(buffer);
+    if (!buffer) return;
+    buffer->width = width;
+    buffer->height = height;
+    buffer->out.begin = NULL;
+    buffer->out.end = NULL;
+    buffer->out.size = 0;
+}
+
+static void
+gui_output_begin_window(struct gui_output_buffer *buffer, struct gui_window *win)
+{
+    gui_buffer_lock(&buffer->canvas, &buffer->global, &buffer->current, 0, buffer->width, buffer->height);
+    if (!buffer->out.begin) {
+        buffer->out.begin = &win->list;
+        buffer->out.end = buffer->out.begin;
+        buffer->out.size++;
+        win->list.next = NULL;
+    } else {
+        buffer->out.end->next = &win->list;
+        buffer->out.end = &win->list;
+        win->list.next = NULL;
+        buffer->out.size++;
+    }
+}
+
+static void
+gui_output_end_window(struct gui_output_buffer *buffer, struct gui_window *win,
+    struct gui_memory_status *status)
+{
+    gui_buffer_unlock(&win->list, &buffer->global, &buffer->current, &buffer->canvas, status);
+}
+
+void
+gui_output_end(struct gui_output *output, struct gui_output_buffer *buffer,
+    struct gui_memory_status *status)
+{
+    ASSERT(output);
+    ASSERT(buffer);
+    if (!output || !buffer) return;
+    gui_buffer_end(NULL, &buffer->global, NULL, status);
+    *output = buffer->out;
+}
+
+static void
+gui_output_sort(struct gui_output_buffer *buffer, struct gui_panel_stack *stack)
+{
+    struct gui_window *win;
+    struct gui_panel *iter = stack->begin;
+    if (!iter) return;
+
+    win = (void*)stack->begin;
+    buffer->out.begin = &win->list;
+    buffer->out.end = buffer->out.begin;;
+    iter = iter->next;
+
+    while (iter) {
+        win = (void*)iter;
+        win->list.next = buffer->out.end;
+        buffer->out.end = &win->list;
+        iter = iter->next;
+    }
+}
+
+void
+gui_output_end_ordered(struct gui_output *output, struct gui_output_buffer *buffer,
+    struct gui_panel_stack *stack, struct gui_memory_status *status)
+{
+    ASSERT(output);
+    ASSERT(buffer);
+    ASSERT(stack);
+    if (!output || !buffer || !stack) return;
+    gui_buffer_end(NULL, &buffer->global, NULL, status);
+    gui_output_sort(buffer, stack);
+    *output = buffer->out;
+}
+
+void
+gui_output_clear(struct gui_output_buffer *buffer)
+{
+    ASSERT(buffer);
+    if (!buffer) return;
+    gui_buffer_clear(&buffer->global);
+}
+
+gui_bool
+gui_window_begin(struct gui_panel_layout *layout, struct gui_window *win,
+    struct gui_output_buffer *buffer, const char *title, const struct gui_input *in)
+{
+    ASSERT(win);
+    ASSERT(buffer);
+    if (!buffer | !win) return gui_false;
+    gui_output_begin_window(buffer, win);
+    return gui_panel_begin(layout, &win->panel, title, &buffer->canvas, in);
+}
+
+gui_bool
+gui_window_begin_stacked(struct gui_panel_layout *layout, struct gui_window *win,
+    struct gui_output_buffer *buffer, struct gui_panel_stack *stack,
+    const char* title, const struct gui_input *in)
+{
+    ASSERT(win);
+    ASSERT(buffer);
+    if (!buffer | !win) return gui_false;
+    gui_output_begin_window(buffer, win);
+    return gui_panel_begin_stacked(layout, &win->panel, stack, title, &buffer->canvas, in);
+}
+
+void
+gui_window_end(struct gui_panel_layout *layout, struct gui_window *win,
+ struct gui_output_buffer *buffer, struct gui_memory_status *status)
+{
+    ASSERT(buffer);
+    ASSERT(win);
+    if (!buffer || !win) return;
+    gui_panel_end(layout, &win->panel);
+    gui_output_end_window(buffer, win, status);
+}
+
 

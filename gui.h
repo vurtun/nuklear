@@ -315,6 +315,7 @@ struct gui_command_buffer {
 };
 
 struct gui_command_list {
+    struct gui_command_list *next;
     struct gui_command *begin;
     struct gui_command *end;
     gui_size count;
@@ -323,8 +324,8 @@ struct gui_command_list {
 enum gui_panel_colors {
     GUI_COLOR_TEXT,
     GUI_COLOR_PANEL,
+    GUI_COLOR_HEADER,
     GUI_COLOR_BORDER,
-    GUI_COLOR_TITLEBAR,
     GUI_COLOR_BUTTON,
     GUI_COLOR_BUTTON_BORDER,
     GUI_COLOR_BUTTON_HOVER,
@@ -429,6 +430,38 @@ struct gui_panel_stack {
     struct gui_panel *end;
 };
 
+struct gui_pool_page {
+    struct gui_pool_page *next;
+    void *memory;
+    gui_size capacity;
+    gui_size count;
+};
+
+struct gui_pool {
+    struct gui_allocator allocator;
+    struct gui_pool_page base;
+    struct gui_pool_page *pages;
+    gui_size page_count;
+    gui_size page_size;
+    gui_size panel_size;
+    gui_size panel_offset;
+    struct gui_panel *free_list;
+};
+
+struct gui_output {
+    struct gui_command_list *begin;
+    struct gui_command_list *end;
+    gui_size size;
+};
+
+struct gui_output_buffer {
+    gui_size width, height;
+    struct gui_canvas canvas;
+    struct gui_command_buffer global;
+    struct gui_command_buffer current;
+    struct gui_output out;
+};
+
 /* Input */
 gui_size gui_utf_decode(const gui_char*, gui_long*, gui_size);
 gui_size gui_utf_encode(gui_long, gui_char*, gui_size);
@@ -447,9 +480,12 @@ void gui_buffer_init_fixed(struct gui_command_buffer*, const struct gui_memory*,
                     gui_flag clipping);
 void gui_buffer_begin(struct gui_canvas *canvas, struct gui_command_buffer *buffer,
                     gui_size width, gui_size height);
-void gui_buffer_lock(struct gui_command_buffer *buffer, struct gui_command_buffer *sub,
-                    gui_flag clipping);
-void gui_buffer_unlock(struct gui_command_buffer *buf, struct gui_command_buffer *sub);
+void gui_buffer_lock(struct gui_canvas*, struct gui_command_buffer *buffer,
+                    struct gui_command_buffer *sub, gui_flag clipping,
+                    gui_size width, gui_size height);
+void gui_buffer_unlock(struct gui_command_list*, struct gui_command_buffer *buf,
+                    struct gui_command_buffer *sub, struct gui_canvas*,
+                    struct gui_memory_status*);
 void *gui_buffer_push(struct gui_command_buffer*,
                     enum gui_command_type, gui_size size);
 void gui_buffer_push_scissor(struct gui_command_buffer*, gui_float, gui_float,
@@ -518,6 +554,7 @@ gui_bool gui_panel_begin_stacked(struct gui_panel_layout *layout, struct gui_pan
                     struct gui_panel_stack*, const char *title, const struct gui_canvas*,
                     const struct gui_input*);
 void gui_panel_row(struct gui_panel_layout*, gui_float height, gui_size cols);
+void gui_panel_alloc_space(struct gui_rect*, struct gui_panel_layout*);
 void gui_panel_seperator(struct gui_panel_layout*, gui_size cols);
 void gui_panel_text(struct gui_panel_layout*, const char*, gui_size, enum gui_text_align);
 void gui_panel_text_colored(struct gui_panel_layout*, const char*, gui_size, enum gui_text_align,
@@ -557,7 +594,6 @@ gui_int gui_panel_graph_ex(struct gui_panel_layout*, enum gui_graph_type, gui_si
                     gui_float(*get_value)(void*, gui_size), void *userdata);
 void gui_panel_table_begin(struct gui_panel_layout*, gui_flags flags,
                     gui_size row_height, gui_size cols);
-void gui_panel_table_label(struct gui_panel_layout*, const char*);
 void gui_panel_table_row(struct gui_panel_layout*);
 void gui_panel_table_end(struct gui_panel_layout*);
 gui_bool gui_panel_tab_begin(struct gui_panel_layout*, struct gui_panel_layout *tab,
@@ -572,10 +608,43 @@ gui_float gui_panel_shelf_end(struct gui_panel_layout*, struct gui_panel_layout 
 void gui_panel_end(struct gui_panel_layout*, struct gui_panel*);
 
 
-/* Stack  */
+/* Stack */
 void gui_stack_clear(struct gui_panel_stack*);
 void gui_stack_push(struct gui_panel_stack*, struct gui_panel*);
 void gui_stack_pop(struct gui_panel_stack*, struct gui_panel*);
+
+
+/* Pool */
+void gui_pool_init(struct gui_pool*, const struct gui_allocator*,
+                    gui_size panel_size, gui_size offset, gui_size panels_per_page);
+void gui_pool_init_fixed(struct gui_pool*, void *memory, gui_size panel_count,
+                    gui_size panel_size, gui_size offset);
+void *gui_pool_alloc(struct gui_pool*);
+void gui_pool_free(struct gui_pool*, void*);
+void gui_pool_clear(struct gui_pool*);
+
+
+/* Output */
+void gui_output_init(struct gui_output_buffer*, const struct gui_allocator*,
+                    gui_size initial, gui_float grow_factor);
+void gui_output_init_fixed(struct gui_output_buffer*, struct gui_memory *memory);
+void gui_output_begin(struct gui_output_buffer*, gui_size width, gui_size height);
+void gui_output_end(struct gui_output*, struct gui_output_buffer*,
+                    struct gui_memory_status*);
+void gui_output_end_ordered(struct gui_output*, struct gui_output_buffer*,
+                    struct gui_panel_stack*, struct gui_memory_status*);
+void gui_output_clear(struct gui_output_buffer*);
+
+
+/* Window */
+gui_bool gui_window_begin(struct gui_panel_layout *layout, struct gui_window *win,
+                    struct gui_output_buffer *buffer, const char*, const struct gui_input *in);
+gui_bool gui_window_begin_stacked(struct gui_panel_layout*, struct gui_window*,
+                    struct gui_output_buffer*, struct gui_panel_stack*, const char*,
+                    const struct gui_input*);
+void gui_window_end(struct gui_panel_layout*, struct gui_window*,
+                    struct gui_output_buffer*, struct gui_memory_status*);
+
 
 #ifdef __cplusplus
 }

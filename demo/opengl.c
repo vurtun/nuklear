@@ -287,12 +287,9 @@ font_draw_text(const struct font *font, float x, float y, float h,
         g = (g->code == 0) ? font->fallback : g;
 
 
-        /* th = font->ascent + font->descent;*/
-        /*ty = (int)y + ((int)h / 2) - (th / 2) + font->ascent;*/
         gw = (float)g->width * font->scale;
         gh = (float)g->height * font->scale;
         gx = x + g->xoff * font->scale;
-        /*gy = y + (font->height - g->yoff * font->scale);*/
         gy = y + (h / 2) - (g->yoff * font->scale);
         char_width = g->xadvance * font->scale;
 
