@@ -198,7 +198,7 @@ while (1) {
 ```
 For the purpose of implementing overlapping panels sub buffers were implemented.
 With sub buffers you can create one global buffer which owns the allocated memory
-and a number of sub buffers which directly reference the global buffer. Biggest
+and sub buffers which directly reference the global buffer. Biggest
 advantage is that you do not have to allocate a buffer for each panel and boil
 down the memory management to a single buffer.
 

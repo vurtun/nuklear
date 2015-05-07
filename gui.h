@@ -395,8 +395,6 @@ struct gui_panel {
     gui_bool minimized;
     struct gui_font font;
     const struct gui_config *config;
-    struct gui_panel *next;
-    struct gui_panel *prev;
 };
 
 struct gui_panel_layout {
@@ -417,24 +415,6 @@ struct gui_panel_layout {
     const struct gui_config *config;
     const struct gui_input *input;
     const struct gui_canvas *canvas;
-};
-
-struct gui_pool_page {
-    struct gui_pool_page *next;
-    void *memory;
-    gui_size capacity;
-    gui_size count;
-};
-
-struct gui_pool {
-    struct gui_allocator allocator;
-    struct gui_pool_page base;
-    struct gui_pool_page *pages;
-    gui_size page_count;
-    gui_size page_size;
-    gui_size panel_size;
-    gui_size panel_offset;
-    struct gui_panel *free_list;
 };
 
 /* Input */
