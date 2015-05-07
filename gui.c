@@ -1237,7 +1237,7 @@ gui_default_config(struct gui_config *config)
     col_load(config->colors[GUI_COLOR_BORDER], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_BUTTON], 50, 50, 50, 255);
     col_load(config->colors[GUI_COLOR_BUTTON_HOVER], 100, 100, 100, 255);
-    col_load(config->colors[GUI_COLOR_BUTTON_TOGGLE], 65, 65, 65, 255);
+    col_load(config->colors[GUI_COLOR_BUTTON_TOGGLE], 75, 75, 75, 255);
     col_load(config->colors[GUI_COLOR_BUTTON_HOVER_FONT], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_BUTTON_BORDER], 80, 80, 80, 255);
     col_load(config->colors[GUI_COLOR_CHECK], 100, 100, 100, 255);
@@ -1303,6 +1303,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     gui_float prev_x, prev_y;
     gui_float clicked_x, clicked_y;
     gui_float header_x, header_w;
+    gui_float footer_h;
     gui_bool ret = gui_true;
 
     ASSERT(panel);
@@ -1338,6 +1339,16 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
             panel->x = CLAMP(0, panel->x+in->mouse_delta.x, (gui_float)canvas->width-panel->w);
             panel->y = CLAMP(0, panel->y+in->mouse_delta.y, (gui_float)canvas->height-panel->h);
         }
+    }
+
+    footer_h = config->scaler_size.y + config->item_padding.y;
+    if (panel->flags & GUI_PANEL_SCROLLBAR) {
+        gui_float footer_x, footer_y, footer_w;
+        footer_x = panel->x;
+        footer_w = panel->w;
+        footer_y = panel->y + panel->h - footer_h;
+        canvas->draw_rect(canvas->userdata, footer_x, footer_y, footer_w, footer_h,
+            config->colors[GUI_COLOR_PANEL]);
     }
 
     if (panel->flags & GUI_PANEL_SCALEABLE) {
@@ -1380,6 +1391,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     canvas->draw_rect(canvas->userdata, panel->x, panel->y, panel->w,
         layout->header_height, *header);
 
+
     if (!(panel->flags & GUI_PANEL_TAB)) {
         panel->flags |= GUI_PANEL_SCROLLBAR;
         if (in && in->mouse_down) {
@@ -1393,8 +1405,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     layout->clip.w = panel->w;
     layout->clip.y = panel->y + layout->header_height - 1;
     if (panel->flags & GUI_PANEL_SCROLLBAR) {
-        layout->clip.h = panel->h;
-        layout->clip.h = panel->h - layout->header_height;
+        layout->clip.h = panel->h - (footer_h + layout->header_height);
         layout->clip.h -= (config->panel_padding.y + config->item_padding.y);
     }
     else layout->clip.h = null_rect.h;
@@ -1461,6 +1472,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
         const struct gui_color *color = &config->colors[GUI_COLOR_PANEL];
         layout->width = panel->w - config->scrollbar_width;
         layout->height = panel->h - layout->header_height;
+        layout->height -= footer_h;
         if (layout->valid)
             canvas->draw_rect(canvas->userdata, panel->x, panel->y + layout->header_height,
                 panel->w, panel->h - layout->header_height, *color);
@@ -1488,10 +1500,10 @@ gui_panel_begin_stacked(struct gui_panel_layout *layout, struct gui_panel *panel
     const struct gui_input *in)
 {
     gui_bool inpanel;
-    assert(layout);
-    assert(panel);
-    assert(stack);
-    assert(canvas);
+    ASSERT(layout);
+    ASSERT(panel);
+    ASSERT(stack);
+    ASSERT(canvas);
     if (!layout || !panel || !stack || !canvas)
         return gui_false;
 
@@ -2759,7 +2771,7 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
         const gui_float padding_y = (!layout->valid) ?
                 panel->y + layout->header_height:
                 (panel->flags & GUI_PANEL_SCROLLBAR) ?
-                panel->y + layout->height + layout->header_height:
+                panel->y + layout->h :
                 panel->y + layout->height + config->item_padding.y;
 
         canvas->draw_line(canvas->userdata, panel->x, padding_y, panel->x + width,
