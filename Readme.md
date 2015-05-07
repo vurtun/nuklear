@@ -217,7 +217,7 @@ while (1) {
     gui_buffer_lock(&canvas, &buffer, &sub, 0, width, height);
     /* add commands by using the canvas */
     gui_buffer_unlock(&list, &buffer, &sub, &canvas, NULL);
-    gui_buffer_end(NULL, &buffer, NULL, NULL);
+    gui_buffer_end(NULL, &buffer, NULL, &status);
 }
 ```
 
