@@ -559,11 +559,11 @@ main(int argc, char *argv[])
         gui_buffer_unlock(&panel_list, &buffer, &sub, &canvas, NULL);
 
         gui_buffer_lock(&canvas, &buffer, &sub, 0, xw.width, xw.height);
-        running = gui_panel_begin(&layout, &msg, "Demo", &canvas, &in);
+        gui_panel_begin(&layout, &msg, "Demo", &canvas, &in);
         gui_panel_row(&layout, 30, 2);
         if (gui_panel_button_text(&layout, "ok", GUI_BUTTON_DEFAULT)) break;
         if (gui_panel_button_text(&layout, "cancel", GUI_BUTTON_DEFAULT)) break;
-        gui_panel_end(&layout, &panel);
+        gui_panel_end(&layout, &msg);
         gui_buffer_unlock(&msg_list, &buffer, &sub, &canvas, NULL);
         gui_buffer_end(NULL, &buffer, NULL, NULL);
 

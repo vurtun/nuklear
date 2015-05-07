@@ -579,17 +579,6 @@ gui_size gui_panel_shelf_begin(struct gui_panel_layout*, struct gui_panel_layout
 gui_float gui_panel_shelf_end(struct gui_panel_layout*, struct gui_panel_layout *shelf);
 void gui_panel_end(struct gui_panel_layout*, struct gui_panel*);
 
-
-/* Pool */
-void gui_pool_init(struct gui_pool*, const struct gui_allocator*,
-                    gui_size panel_size, gui_size offset, gui_size panels_per_page);
-void gui_pool_init_fixed(struct gui_pool*, void *memory, gui_size panel_count,
-                    gui_size panel_size, gui_size offset);
-void *gui_pool_alloc(struct gui_pool*);
-void gui_pool_free(struct gui_pool*, void*);
-void gui_pool_clear(struct gui_pool*);
-
-
 #ifdef __cplusplus
 }
 #endif

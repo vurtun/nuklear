@@ -1285,6 +1285,7 @@ gui_panel_init(struct gui_panel *panel, gui_float x, gui_float y, gui_float w,
     panel->y = y;
     panel->w = w;
     panel->h = h;
+    panel->flags = 0;
     panel->flags = flags;
     panel->config = config;
     panel->font = *font;
@@ -1317,25 +1318,15 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     layout->header_height = panel->font.height + 3 * config->item_padding.y;
     layout->header_height += config->panel_padding.y;
 
-    if (!(panel->flags & GUI_PANEL_TAB)) {
-        panel->flags |= GUI_PANEL_SCROLLBAR;
-        clicked_x = (in) ? in->mouse_clicked_pos.x : -1;
-        clicked_y = (in) ? in->mouse_clicked_pos.y : -1;
-        if (in && in->mouse_down) {
-            if (!INBOX(clicked_x, clicked_y, panel->x, panel->y, panel->w, panel->h))
-                panel->flags &= (gui_flag)~GUI_PANEL_ACTIVE;
-            else panel->flags |= GUI_PANEL_ACTIVE;
-        }
-    }
-
     mouse_x = (in) ? in->mouse_pos.x : -1;
     mouse_y = (in) ? in->mouse_pos.y : -1;
     prev_x = (in) ? in->mouse_prev.x : -1;
     prev_y = (in) ? in->mouse_prev.y : -1;
+
     clicked_x = (in) ? in->mouse_clicked_pos.x : -1;
     clicked_y = (in) ? in->mouse_clicked_pos.y : -1;
 
-    if ((panel->flags & GUI_PANEL_MOVEABLE) && (panel->flags & GUI_PANEL_ACTIVE)) {
+    if (panel->flags & GUI_PANEL_MOVEABLE) {
         gui_bool incursor;
         const gui_float move_x = panel->x;
         const gui_float move_y = panel->y;
@@ -1349,7 +1340,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
         }
     }
 
-    if ((panel->flags & GUI_PANEL_SCALEABLE) && (panel->flags & GUI_PANEL_ACTIVE)) {
+    if (panel->flags & GUI_PANEL_SCALEABLE) {
         gui_bool incursor;
         gui_float scaler_x = panel->x + config->item_padding.x;
         gui_float scaler_y = panel->y + panel->h - config->scaler_size.y;
@@ -1388,6 +1379,15 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     header_w = panel->w - 2 * config->panel_padding.x;
     canvas->draw_rect(canvas->userdata, panel->x, panel->y, panel->w,
         layout->header_height, *header);
+
+    if (!(panel->flags & GUI_PANEL_TAB)) {
+        panel->flags |= GUI_PANEL_SCROLLBAR;
+        if (in && in->mouse_down) {
+            if (!INBOX(clicked_x, clicked_y, panel->x, panel->y, panel->w, panel->h))
+                panel->flags &= (gui_flag)~GUI_PANEL_ACTIVE;
+            else panel->flags |= GUI_PANEL_ACTIVE;
+        }
+    }
 
     layout->clip.x = panel->x;
     layout->clip.w = panel->w;
@@ -2714,7 +2714,7 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
                         config->colors[GUI_COLOR_PANEL]);
     } else layout->height = layout->at_y - layout->y;
 
-    if (panel->flags & GUI_PANEL_SCALEABLE && layout->valid) {
+    if ((panel->flags & GUI_PANEL_SCALEABLE) && layout->valid) {
         struct gui_color col = config->colors[GUI_COLOR_SCALER];
         gui_float scaler_x = layout->x + config->item_padding.x;
         gui_float scaler_y = layout->y + layout->h - config->scaler_size.y;
@@ -2740,131 +2740,5 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
                 padding_y, config->colors[GUI_COLOR_BORDER]);
     }
     canvas->scissor(canvas->userdata, 0, 0, (gui_float)canvas->width, (gui_float)canvas->height);
-}
-
-void
-gui_pool_init(struct gui_pool *pool, const struct gui_allocator *allocator,
-    gui_size panel_size, gui_size offset, gui_size panels_per_page)
-{
-    struct gui_pool_page *page;
-    gui_size page_memory;
-    ASSERT(pool);
-    ASSERT(allocator);
-    ASSERT(panels_per_page);
-    ASSERT((panel_size - offset) >= sizeof(struct gui_panel));
-    if (!pool || !allocator || !panels_per_page)
-        return;
-
-    zero(pool, sizeof(*pool));
-    pool->allocator = *allocator;
-    pool->pages = &pool->base;
-    pool->free_list = NULL;
-    pool->page_size = panels_per_page;
-    pool->page_count = 1;
-    pool->panel_size = panel_size;
-    pool->panel_offset = offset;
-
-    page = pool->pages;
-    page->next = NULL;
-    page_memory = pool->panel_size * pool->page_size;
-    page->memory = allocator->alloc(allocator->userdata, page_memory);
-    page->capacity = pool->page_size;
-    page->count = 0;
-}
-
-void
-gui_pool_init_fixed(struct gui_pool *pool, void *memory, gui_size panel_count,
-    gui_size panel_size, gui_size offset)
-{
-    struct gui_pool_page *page;
-    ASSERT(pool);
-    ASSERT(memory);
-    ASSERT(panel_count);
-    ASSERT((panel_size - offset) >= sizeof(struct gui_panel));
-
-    if (!pool || !memory || !panel_count || panel_size < sizeof(struct gui_panel))
-        return;
-
-    zero(pool, sizeof(*pool));
-    pool->pages = &pool->base;
-    pool->free_list = NULL;
-    pool->page_size = panel_count;
-    pool->page_count = 1;
-    pool->panel_size = panel_size;
-    pool->panel_offset = offset;
-
-    page = pool->pages;
-    page->next = NULL;
-    page->memory = memory;
-    page->capacity = pool->page_size;
-    page->count = 0;
-}
-
-void*
-gui_pool_alloc(struct gui_pool *pool)
-{
-    void *ret;
-    struct gui_pool_page *page;
-    struct gui_panel *panel;
-    ASSERT(pool);
-    if (!pool) return NULL;
-
-    if (pool->free_list) {
-        panel = pool->free_list;
-        ret = (gui_byte*)panel - pool->panel_offset;
-        pool->free_list = panel->next;
-        return ret;
-    }
-
-    page = pool->pages;
-    if ((page->count + 1) >= page->capacity) {
-        gui_size page_memory;
-        if (!pool->allocator.alloc)
-            return NULL;
-
-        page_memory = sizeof(struct gui_pool_page);
-        page_memory += pool->panel_size * pool->page_size;
-        page = pool->allocator.alloc(pool->allocator.userdata, page_memory);
-        page->memory = ((gui_byte*)page + sizeof(struct gui_pool_page));
-        page->capacity = pool->page_size;
-        page->count = 0;
-        page->next = pool->pages;
-        pool->pages = page;
-        pool->page_count++;
-    }
-
-    ret = (gui_byte*)page->memory + pool->panel_size * page->count;
-    page->count++;
-    zero(ret, pool->panel_size);
-    return (gui_byte*)ret + pool->panel_offset;
-}
-
-void
-gui_pool_free(struct gui_pool *pool, void *memory)
-{
-    struct gui_panel *panel;
-    ASSERT(pool);
-    ASSERT(memory);
-    if (!pool || !memory) return;
-
-    panel = (void*)((gui_byte*)memory + pool->panel_offset);
-    panel->next = pool->free_list;
-    pool->free_list = panel;
-}
-
-void
-gui_pool_clear(struct gui_pool *pool)
-{
-    struct gui_pool_page *iter;
-    struct gui_pool_page *next;
-    ASSERT(pool);
-    if (!pool || !pool->allocator.free) return;
-    iter = pool->pages;
-    while (iter != &pool->base) {
-        next = iter->next;
-        pool->allocator.free(pool->allocator.userdata, iter);
-        iter = next;
-    }
-    pool->allocator.free(pool->allocator.userdata, pool->base.memory);
 }
 
