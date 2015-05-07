@@ -1482,6 +1482,36 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     return ret;
 }
 
+gui_bool
+gui_panel_begin_stacked(struct gui_panel_layout *layout, struct gui_panel *panel,
+    struct gui_panel_stack *stack, const char *title, const struct gui_canvas *canvas,
+    const struct gui_input *in)
+{
+    gui_bool inpanel;
+    assert(layout);
+    assert(panel);
+    assert(stack);
+    assert(canvas);
+    if (!layout || !panel || !stack || !canvas)
+        return gui_false;
+
+    inpanel = INBOX(in->mouse_prev.x, in->mouse_prev.y, panel->x, panel->y, panel->w, panel->h);
+    if (in->mouse_down && in->mouse_clicked && inpanel && panel != stack->end) {
+        struct gui_panel *iter = panel->next;
+        while (iter) {
+            if (!iter->minimized)
+                if (INBOX(in->mouse_prev.x, in->mouse_prev.y, iter->x, iter->y,
+                    iter->w, iter->h)) break;
+            iter = iter->next;
+        }
+        if (!iter) {
+            gui_stack_pop(stack, panel);
+            gui_stack_push(stack, panel);
+        }
+    }
+    return gui_panel_begin(layout, panel, title, canvas, (stack->end == panel) ? in : NULL);
+}
+
 void
 gui_panel_row(struct gui_panel_layout *layout, gui_float height, gui_size cols)
 {
@@ -2740,5 +2770,47 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
                 padding_y, config->colors[GUI_COLOR_BORDER]);
     }
     canvas->scissor(canvas->userdata, 0, 0, (gui_float)canvas->width, (gui_float)canvas->height);
+}
+
+void
+gui_stack_clear(struct gui_panel_stack *stack)
+{
+    stack->begin = NULL;
+    stack->end = NULL;
+    stack->count = 0;
+}
+
+void
+gui_stack_push(struct gui_panel_stack *stack, struct gui_panel *panel)
+{
+    if (!stack->begin) {
+        panel->next = NULL;
+        panel->prev = NULL;
+        stack->begin = panel;
+        stack->end = panel;
+        stack->count = 1;
+        return;
+    }
+
+    stack->end->next = panel;
+    panel->prev = stack->end;
+    panel->next = NULL;
+    stack->end = panel;
+    stack->count++;
+}
+
+void
+gui_stack_pop(struct gui_panel_stack *stack, struct gui_panel *panel)
+{
+    if (panel->prev)
+        panel->prev->next = panel->next;
+    if (panel->next)
+        panel->next->prev = panel->prev;
+    if (stack->begin == panel)
+        stack->begin = panel->next;
+    if (stack->end == panel)
+        stack->end = panel->prev;
+    panel->next = NULL;
+    panel->prev = NULL;
 }
 
