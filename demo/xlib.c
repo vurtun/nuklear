@@ -516,7 +516,7 @@ main(int argc, char *argv[])
     font.height = (gui_float)xw.font->height;
     font.width = font_get_text_width;
     gui_default_config(&config);
-    gui_panel_init(&panel, 50, 50, 420, 300,
+    gui_panel_init(&panel, 50, 50, 420, 320,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
         GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
         GUI_PANEL_MINIMIZABLE, &config, &font);

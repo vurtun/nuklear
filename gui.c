@@ -1353,17 +1353,16 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
 
     if (panel->flags & GUI_PANEL_SCALEABLE) {
         gui_bool incursor;
-        gui_float scaler_x = panel->x + config->item_padding.x;
-        gui_float scaler_y = panel->y + panel->h - config->scaler_size.y;
         gui_float scaler_w = MAX(0, config->scaler_size.x - config->item_padding.x);
         gui_float scaler_h = MAX(0, config->scaler_size.y - config->item_padding.y);
+        gui_float scaler_x = (layout->x + layout->w) - (config->item_padding.x + scaler_w);
+        gui_float scaler_y = layout->y + layout->h - config->scaler_size.y;
 
         incursor = in && INBOX(prev_x, prev_y, scaler_x, scaler_y, scaler_w, scaler_h);
         if (in && in->mouse_down && incursor) {
             gui_float min_x = config->panel_min_size.x;
             gui_float min_y = config->panel_min_size.y;
-            panel->x = CLAMP(0, panel->x + in->mouse_delta.x, (gui_float)canvas->width-panel->w);
-            panel->w = CLAMP(min_x, panel->w-in->mouse_delta.x, (gui_float)canvas->width-panel->x);
+            panel->w = CLAMP(min_x, panel->w+in->mouse_delta.x, (gui_float)canvas->width-panel->x);
             panel->h = CLAMP(min_y,panel->h+in->mouse_delta.y,(gui_float)canvas->height-panel->y);
         }
     }
@@ -2758,11 +2757,12 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
 
     if ((panel->flags & GUI_PANEL_SCALEABLE) && layout->valid) {
         struct gui_color col = config->colors[GUI_COLOR_SCALER];
-        gui_float scaler_x = layout->x + config->item_padding.x;
-        gui_float scaler_y = layout->y + layout->h - config->scaler_size.y;
         gui_float scaler_w = MAX(0, config->scaler_size.x - config->item_padding.x);
         gui_float scaler_h = MAX(0, config->scaler_size.y - config->item_padding.y);
-        canvas->draw_rect(canvas->userdata, scaler_x, scaler_y, scaler_w, scaler_h, col);
+        gui_float scaler_x = (layout->x + layout->w) - (config->item_padding.x + scaler_w);
+        gui_float scaler_y = layout->y + layout->h - config->scaler_size.y;
+        canvas->draw_triangle(canvas->userdata, scaler_x + scaler_w, scaler_y,
+            scaler_x + scaler_w, scaler_y + scaler_h, scaler_x, scaler_y + scaler_h, col);
     }
 
     if (panel->flags & GUI_PANEL_BORDER) {
