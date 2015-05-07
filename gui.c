@@ -1140,7 +1140,6 @@ void
 gui_buffer_begin(struct gui_canvas *canvas, struct gui_command_buffer *buffer,
     gui_size width, gui_size height)
 {
-    ASSERT(canvas);
     ASSERT(buffer);
     ASSERT(buffer->memory);
     ASSERT(buffer->begin == buffer->end);
@@ -1318,15 +1317,25 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     layout->header_height = panel->font.height + 3 * config->item_padding.y;
     layout->header_height += config->panel_padding.y;
 
+    if (!(panel->flags & GUI_PANEL_TAB)) {
+        panel->flags |= GUI_PANEL_SCROLLBAR;
+        clicked_x = (in) ? in->mouse_clicked_pos.x : -1;
+        clicked_y = (in) ? in->mouse_clicked_pos.y : -1;
+        if (in && in->mouse_down) {
+            if (!INBOX(clicked_x, clicked_y, panel->x, panel->y, panel->w, panel->h))
+                panel->flags &= (gui_flag)~GUI_PANEL_ACTIVE;
+            else panel->flags |= GUI_PANEL_ACTIVE;
+        }
+    }
+
     mouse_x = (in) ? in->mouse_pos.x : -1;
     mouse_y = (in) ? in->mouse_pos.y : -1;
     prev_x = (in) ? in->mouse_prev.x : -1;
     prev_y = (in) ? in->mouse_prev.y : -1;
-
     clicked_x = (in) ? in->mouse_clicked_pos.x : -1;
     clicked_y = (in) ? in->mouse_clicked_pos.y : -1;
 
-    if (panel->flags & GUI_PANEL_MOVEABLE) {
+    if ((panel->flags & GUI_PANEL_MOVEABLE) && (panel->flags & GUI_PANEL_ACTIVE)) {
         gui_bool incursor;
         const gui_float move_x = panel->x;
         const gui_float move_y = panel->y;
@@ -1340,7 +1349,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
         }
     }
 
-    if (panel->flags & GUI_PANEL_SCALEABLE) {
+    if ((panel->flags & GUI_PANEL_SCALEABLE) && (panel->flags & GUI_PANEL_ACTIVE)) {
         gui_bool incursor;
         gui_float scaler_x = panel->x + config->item_padding.x;
         gui_float scaler_y = panel->y + panel->h - config->scaler_size.y;
@@ -1379,15 +1388,6 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     header_w = panel->w - 2 * config->panel_padding.x;
     canvas->draw_rect(canvas->userdata, panel->x, panel->y, panel->w,
         layout->header_height, *header);
-
-    if (!(panel->flags & GUI_PANEL_TAB)) {
-        panel->flags |= GUI_PANEL_SCROLLBAR;
-        if (in && in->mouse_down) {
-            if (!INBOX(clicked_x, clicked_y, panel->x, panel->y, panel->w, panel->h))
-                panel->flags &= (gui_flag)~GUI_PANEL_ACTIVE;
-            else panel->flags |= GUI_PANEL_ACTIVE;
-        }
-    }
 
     layout->clip.x = panel->x;
     layout->clip.w = panel->w;
@@ -1480,36 +1480,6 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     }
     canvas->scissor(canvas->userdata,layout->clip.x,layout->clip.y,layout->clip.w,layout->clip.h);
     return ret;
-}
-
-gui_bool
-gui_panel_begin_stacked(struct gui_panel_layout *layout, struct gui_panel *panel,
-    struct gui_panel_stack *stack, const char *title, const struct gui_canvas *canvas,
-    const struct gui_input *in)
-{
-    gui_bool inpanel;
-    ASSERT(layout);
-    ASSERT(panel);
-    ASSERT(stack);
-    ASSERT(canvas);
-    if (!layout || !panel || !stack || !canvas)
-        return gui_false;
-
-    inpanel = INBOX(in->mouse_prev.x, in->mouse_prev.y, panel->x, panel->y, panel->w, panel->h);
-    if (in->mouse_down && in->mouse_clicked && inpanel && panel != stack->end) {
-        struct gui_panel *iter = panel->next;
-        while (iter) {
-            if (!iter->minimized)
-                if (INBOX(in->mouse_prev.x, in->mouse_prev.y, iter->x, iter->y,
-                    iter->w, iter->h)) break;
-            iter = iter->next;
-        }
-        if (!iter) {
-            gui_stack_pop(stack, panel);
-            gui_stack_push(stack, panel);
-        }
-    }
-    return gui_panel_begin(layout, panel, title, canvas, (stack->end == panel) ? in : NULL);
 }
 
 void
@@ -2773,49 +2743,6 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
 }
 
 void
-gui_stack_clear(struct gui_panel_stack *stack)
-{
-    stack->begin = NULL;
-    stack->end = NULL;
-    stack->count = 0;
-}
-
-void
-gui_stack_push(struct gui_panel_stack *stack, struct gui_panel *panel)
-{
-    if (!stack->begin) {
-        panel->next = NULL;
-        panel->prev = NULL;
-        stack->begin = panel;
-        stack->end = panel;
-        stack->count = 1;
-        return;
-    }
-
-    stack->end->next = panel;
-    panel->prev = stack->end;
-    panel->next = NULL;
-    stack->end = panel;
-    stack->count++;
-}
-
-void
-gui_stack_pop(struct gui_panel_stack *stack, struct gui_panel *panel)
-{
-    if (panel->prev)
-        panel->prev->next = panel->next;
-    if (panel->next)
-        panel->next->prev = panel->prev;
-    if (stack->begin == panel)
-        stack->begin = panel->next;
-    if (stack->end == panel)
-        stack->end = panel->prev;
-
-    panel->next = NULL;
-    panel->prev = NULL;
-}
-
-void
 gui_pool_init(struct gui_pool *pool, const struct gui_allocator *allocator,
     gui_size panel_size, gui_size offset, gui_size panels_per_page)
 {
@@ -2940,148 +2867,4 @@ gui_pool_clear(struct gui_pool *pool)
     }
     pool->allocator.free(pool->allocator.userdata, pool->base.memory);
 }
-
-void
-gui_output_init(struct gui_output_buffer *out, const struct gui_allocator *alloc,
-    gui_size initial, gui_float grow_factor)
-{
-    ASSERT(out);
-    ASSERT(initial);
-    if (!out || !initial) return;
-    zero(out, sizeof(*out));
-    gui_buffer_init(&out->global, alloc, initial, grow_factor, GUI_BUFFER_CLIPPING);
-}
-
-void
-gui_output_init_fixed(struct gui_output_buffer *out, struct gui_memory *memory)
-{
-    ASSERT(out);
-    ASSERT(memory);
-    if (!out || !memory) return;
-    zero(out, sizeof(*out));
-    gui_buffer_init_fixed(&out->global, memory, 0);
-}
-
-void
-gui_output_begin(struct gui_output_buffer *buffer, gui_size width, gui_size height)
-{
-    ASSERT(buffer);
-    if (!buffer) return;
-    buffer->width = width;
-    buffer->height = height;
-    buffer->out.begin = NULL;
-    buffer->out.end = NULL;
-    buffer->out.size = 0;
-}
-
-static void
-gui_output_begin_window(struct gui_output_buffer *buffer, struct gui_window *win)
-{
-    gui_buffer_lock(&buffer->canvas, &buffer->global, &buffer->current, 0, buffer->width, buffer->height);
-    if (!buffer->out.begin) {
-        buffer->out.begin = &win->list;
-        buffer->out.end = buffer->out.begin;
-        buffer->out.size++;
-        win->list.next = NULL;
-    } else {
-        buffer->out.end->next = &win->list;
-        buffer->out.end = &win->list;
-        win->list.next = NULL;
-        buffer->out.size++;
-    }
-}
-
-static void
-gui_output_end_window(struct gui_output_buffer *buffer, struct gui_window *win,
-    struct gui_memory_status *status)
-{
-    gui_buffer_unlock(&win->list, &buffer->global, &buffer->current, &buffer->canvas, status);
-}
-
-void
-gui_output_end(struct gui_output *output, struct gui_output_buffer *buffer,
-    struct gui_memory_status *status)
-{
-    ASSERT(output);
-    ASSERT(buffer);
-    if (!output || !buffer) return;
-    gui_buffer_end(NULL, &buffer->global, NULL, status);
-    *output = buffer->out;
-}
-
-static void
-gui_output_sort(struct gui_output_buffer *buffer, struct gui_panel_stack *stack)
-{
-    struct gui_window *win;
-    struct gui_panel *iter = stack->begin;
-    if (!iter) return;
-
-    win = (void*)stack->begin;
-    buffer->out.begin = &win->list;
-    buffer->out.end = buffer->out.begin;;
-    iter = iter->next;
-
-    while (iter) {
-        win = (void*)iter;
-        win->list.next = buffer->out.end;
-        buffer->out.end = &win->list;
-        iter = iter->next;
-    }
-}
-
-void
-gui_output_end_ordered(struct gui_output *output, struct gui_output_buffer *buffer,
-    struct gui_panel_stack *stack, struct gui_memory_status *status)
-{
-    ASSERT(output);
-    ASSERT(buffer);
-    ASSERT(stack);
-    if (!output || !buffer || !stack) return;
-    gui_buffer_end(NULL, &buffer->global, NULL, status);
-    gui_output_sort(buffer, stack);
-    *output = buffer->out;
-}
-
-void
-gui_output_clear(struct gui_output_buffer *buffer)
-{
-    ASSERT(buffer);
-    if (!buffer) return;
-    gui_buffer_clear(&buffer->global);
-}
-
-gui_bool
-gui_window_begin(struct gui_panel_layout *layout, struct gui_window *win,
-    struct gui_output_buffer *buffer, const char *title, const struct gui_input *in)
-{
-    ASSERT(win);
-    ASSERT(buffer);
-    if (!buffer | !win) return gui_false;
-    gui_output_begin_window(buffer, win);
-    return gui_panel_begin(layout, &win->panel, title, &buffer->canvas, in);
-}
-
-gui_bool
-gui_window_begin_stacked(struct gui_panel_layout *layout, struct gui_window *win,
-    struct gui_output_buffer *buffer, struct gui_panel_stack *stack,
-    const char* title, const struct gui_input *in)
-{
-    ASSERT(win);
-    ASSERT(buffer);
-    if (!buffer | !win) return gui_false;
-    gui_output_begin_window(buffer, win);
-    return gui_panel_begin_stacked(layout, &win->panel, stack, title, &buffer->canvas, in);
-}
-
-void
-gui_window_end(struct gui_panel_layout *layout, struct gui_window *win,
- struct gui_output_buffer *buffer, struct gui_memory_status *status)
-{
-    ASSERT(buffer);
-    ASSERT(win);
-    if (!buffer || !win) return;
-    gui_panel_end(layout, &win->panel);
-    gui_output_end_window(buffer, win, status);
-}
-
 

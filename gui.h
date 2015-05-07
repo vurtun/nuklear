@@ -419,17 +419,6 @@ struct gui_panel_layout {
     const struct gui_canvas *canvas;
 };
 
-struct gui_window {
-    struct gui_panel panel;
-    struct gui_command_list list;
-};
-
-struct gui_panel_stack {
-    gui_size count;
-    struct gui_panel *begin;
-    struct gui_panel *end;
-};
-
 struct gui_pool_page {
     struct gui_pool_page *next;
     void *memory;
@@ -446,20 +435,6 @@ struct gui_pool {
     gui_size panel_size;
     gui_size panel_offset;
     struct gui_panel *free_list;
-};
-
-struct gui_output {
-    struct gui_command_list *begin;
-    struct gui_command_list *end;
-    gui_size size;
-};
-
-struct gui_output_buffer {
-    gui_size width, height;
-    struct gui_canvas canvas;
-    struct gui_command_buffer global;
-    struct gui_command_buffer current;
-    struct gui_output out;
 };
 
 /* Input */
@@ -550,9 +525,6 @@ void gui_panel_init(struct gui_panel*, gui_float x, gui_float y, gui_float w, gu
                     gui_flags, const struct gui_config *config, const struct gui_font*);
 gui_bool gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel*,
                     const char *title, const struct gui_canvas*, const struct gui_input*);
-gui_bool gui_panel_begin_stacked(struct gui_panel_layout *layout, struct gui_panel*,
-                    struct gui_panel_stack*, const char *title, const struct gui_canvas*,
-                    const struct gui_input*);
 void gui_panel_row(struct gui_panel_layout*, gui_float height, gui_size cols);
 void gui_panel_alloc_space(struct gui_rect*, struct gui_panel_layout*);
 void gui_panel_seperator(struct gui_panel_layout*, gui_size cols);
@@ -608,12 +580,6 @@ gui_float gui_panel_shelf_end(struct gui_panel_layout*, struct gui_panel_layout 
 void gui_panel_end(struct gui_panel_layout*, struct gui_panel*);
 
 
-/* Stack */
-void gui_stack_clear(struct gui_panel_stack*);
-void gui_stack_push(struct gui_panel_stack*, struct gui_panel*);
-void gui_stack_pop(struct gui_panel_stack*, struct gui_panel*);
-
-
 /* Pool */
 void gui_pool_init(struct gui_pool*, const struct gui_allocator*,
                     gui_size panel_size, gui_size offset, gui_size panels_per_page);
@@ -622,28 +588,6 @@ void gui_pool_init_fixed(struct gui_pool*, void *memory, gui_size panel_count,
 void *gui_pool_alloc(struct gui_pool*);
 void gui_pool_free(struct gui_pool*, void*);
 void gui_pool_clear(struct gui_pool*);
-
-
-/* Output */
-void gui_output_init(struct gui_output_buffer*, const struct gui_allocator*,
-                    gui_size initial, gui_float grow_factor);
-void gui_output_init_fixed(struct gui_output_buffer*, struct gui_memory *memory);
-void gui_output_begin(struct gui_output_buffer*, gui_size width, gui_size height);
-void gui_output_end(struct gui_output*, struct gui_output_buffer*,
-                    struct gui_memory_status*);
-void gui_output_end_ordered(struct gui_output*, struct gui_output_buffer*,
-                    struct gui_panel_stack*, struct gui_memory_status*);
-void gui_output_clear(struct gui_output_buffer*);
-
-
-/* Window */
-gui_bool gui_window_begin(struct gui_panel_layout *layout, struct gui_window *win,
-                    struct gui_output_buffer *buffer, const char*, const struct gui_input *in);
-gui_bool gui_window_begin_stacked(struct gui_panel_layout*, struct gui_window*,
-                    struct gui_output_buffer*, struct gui_panel_stack*, const char*,
-                    const struct gui_input*);
-void gui_window_end(struct gui_panel_layout*, struct gui_window*,
-                    struct gui_output_buffer*, struct gui_memory_status*);
 
 
 #ifdef __cplusplus

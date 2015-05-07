@@ -213,11 +213,11 @@ while (1) {
     struct gui_canvas canvas;
     struct gui_command_buffer sub;
 
-    gui_buffer_lock(&sub, &buffer);
-    gui_buffer_begin(&canvas, &sub, window_width, window_height);
+    gui_buffer_begin(NULL, &buffer, width, height);
+    gui_buffer_lock(&canvas, &buffer, &sub, 0, width, height);
     /* add commands by using the canvas */
-    gui_buffer_end(&list, &sub, &status);
-    gui_buffer_unlock(&buffer, &sub);
+    gui_buffer_unlock(&list, &buffer, &sub, &canvas, NULL);
+    gui_buffer_end(NULL, &buffer, NULL, NULL);
 }
 ```
 
@@ -274,62 +274,6 @@ while (1) {
     value = gui_panel_slider(&layout, 0, value, 10, 1);
     progress = gui_panel_progress(&layout, progress, 100, gui_true);
     gui_panel_end(&layout, &panel);
-}
-```
-
-### Stack
-While using basic panels is fine for a single movable panel or a big number of
-static panels, it has rather limited support for overlapping movable panels. For
-that to change the panel stack was introduced. The panel stack holds the basic
-drawing order of each panel so instead of drawing each panel individually they
-have to be drawn in a certain order. The biggest problem while creating the API
-was that the buffer has to saved with the panel, but the type of the buffer is
-not known beforehand since it is possible to create your own buffer type.
-Therefore just the sequence of panels is managed and you either have to cast
-from the panel to your own type, use inheritance in C++ or use the `container_of`
-macro from the Linux kernel. For the standard buffer there is already a type
-`gui_window` which contains the panel and the buffer output `gui_command_list`,
-which can be used to implement overlapping panels.
-
-```c
-struct gui_window window;
-struct gui_memory memory = {...};
-struct gui_memory_status status;
-struct gui_command_buffer buffer;
-struct gui_config config;
-struct gui_font font = {...}
-struct gui_input input = {0};
-struct gui_stack stack;
-
-gui_buffer_init_fixed(buffer, &memory);
-gui_default_config(&config);
-gui_panel_init(&win.panel, 50, 50, 300, 200, 0, &config, &font);
-gui_stack_clear(&stack);
-gui_stack_push(&stack, &win.panel);
-
-while (1) {
-    struct gui_panel_layout layout;
-    struct gui_canvas canvas;
-
-    gui_buffer_begin(&canvas, &buffer, window_width, window_height);
-    gui_panel_begin_stacked(&layout, &win.panel, &stack, "Demo", &canvas, &input);
-    gui_panel_row(&layout, 30, 1);
-    if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT))
-        fprintf(stdout, "button pressed!\n");
-    gui_panel_end(&layout, &win.panel);
-    gui_buffer_end(&win.list, buffer, &status);
-
-    /* draw each panel */
-    struct gui_panel *iter = stack.begin;
-    while (iter) {
-        const struct gui_window *w = iter;
-        const struct gui_command *cmd = gui_list_begin(&w->list);
-        while (cmd) {
-            /* execute command */
-            cmd = gui_list_next(&w->list, cmd);
-        }
-        iter = iter->next;
-    }
 }
 ```
 

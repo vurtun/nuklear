@@ -320,7 +320,7 @@ surface_del(XSurface *surf)
 }
 
 static void
-execute(XSurface *surf, const struct gui_command_list *list)
+draw(XSurface *surf, struct gui_command_list *list)
 {
     const struct gui_command *cmd;
     if (!list->count) return;
@@ -358,18 +358,6 @@ execute(XSurface *surf, const struct gui_command_list *list)
         default: break;
         }
         cmd = gui_list_next(list, cmd);
-    }
-}
-
-static void
-draw(XSurface *surf, struct gui_output *out)
-{
-    const struct gui_command_list *iter;
-    if (!out->size) return;
-    iter = out->begin;
-    while (iter) {
-        execute(surf, iter);
-        iter = iter->next;
     }
 }
 
@@ -487,12 +475,16 @@ main(int argc, char *argv[])
     struct gui_input in;
     struct gui_font font;
     struct gui_memory memory;
+    struct gui_memory_status status;
     struct gui_config config;
-    struct gui_output_buffer buffer;
-    struct gui_output output;
+    struct gui_canvas canvas;
+    struct gui_command_buffer buffer;
+    struct gui_command_buffer sub;
+    struct gui_command_list panel_list;
+    struct gui_command_list msg_list;
     struct gui_panel_layout layout;
-    struct gui_window win;
-    struct gui_window msg;
+    struct gui_panel panel;
+    struct gui_panel msg;
 
     /* Window */
     UNUSED(argc); UNUSED(argv);
@@ -517,25 +509,22 @@ main(int argc, char *argv[])
     xw.surf = surface_create(xw.dpy, xw.screen, xw.win, xw.width, xw.height);
     xw.font = font_create(xw.dpy, "fixed");
 
-
     /* GUI */
     memset(&in, 0, sizeof in);
     memory.memory = calloc(MAX_MEMORY, 1);
     memory.size = MAX_MEMORY;
-    gui_output_init_fixed(&buffer, &memory);
+    gui_buffer_init_fixed(&buffer, &memory, GUI_BUFFER_CLIPPING);
 
     font.userdata = xw.font;
     font.height = (gui_float)xw.font->height;
     font.width = font_get_text_width;
-
     gui_default_config(&config);
-    gui_panel_init(&win.panel, 50, 50, 420, 300,
+    gui_panel_init(&panel, 50, 50, 420, 300,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
         GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
         GUI_PANEL_MINIMIZABLE, &config, &font);
-    gui_panel_init(&msg.panel, 150, 150, 200, 80,
+    gui_panel_init(&msg, 150, 150, 200, 80,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE, &config, &font);
-
 
     /* Demo */
     memset(&demo, 0, sizeof(demo));
@@ -562,22 +551,27 @@ main(int argc, char *argv[])
         gui_input_end(&in);
 
         /* GUI */
-        gui_output_begin(&buffer, xw.width, xw.height);
-        running = gui_window_begin(&layout, &win, &buffer, "Demo", &in);
+        gui_buffer_begin(NULL, &buffer, xw.width, xw.height);
+        gui_buffer_lock(&canvas, &buffer, &sub, 0, xw.width, xw.height);
+        running = gui_panel_begin(&layout, &panel, "Demo", &canvas, &in);
         demo_panel(&layout, &demo);
-        gui_window_end(&layout, &win, &buffer, NULL);
+        gui_panel_end(&layout, &panel);
+        gui_buffer_unlock(&panel_list, &buffer, &sub, &canvas, NULL);
 
-        gui_window_begin(&layout, &msg, &buffer, "Error", &in);
+        gui_buffer_lock(&canvas, &buffer, &sub, 0, xw.width, xw.height);
+        running = gui_panel_begin(&layout, &msg, "Demo", &canvas, &in);
         gui_panel_row(&layout, 30, 2);
         if (gui_panel_button_text(&layout, "ok", GUI_BUTTON_DEFAULT)) break;
         if (gui_panel_button_text(&layout, "cancel", GUI_BUTTON_DEFAULT)) break;
-        gui_window_end(&layout, &msg, &buffer, NULL);
-        gui_output_end(&output, &buffer, NULL);
+        gui_panel_end(&layout, &panel);
+        gui_buffer_unlock(&msg_list, &buffer, &sub, &canvas, NULL);
+        gui_buffer_end(NULL, &buffer, NULL, NULL);
 
         /* Draw */
         XClearWindow(xw.dpy, xw.win);
         surface_clear(xw.surf, 0x00646464);
-        draw(xw.surf, &output);
+        draw(xw.surf, &panel_list);
+        draw(xw.surf, &msg_list);
         surface_blit(xw.win, xw.surf, xw.width, xw.height);
         XFlush(xw.dpy);
 
@@ -596,5 +590,4 @@ main(int argc, char *argv[])
     XCloseDisplay(xw.dpy);
     return 0;
 }
-
 
