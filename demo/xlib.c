@@ -483,6 +483,11 @@ main(int argc, char *argv[])
     struct gui_panel_layout layout;
     struct gui_panel panel;
 
+    gui_size option = 0;
+    gui_char buf[256];
+    gui_size len = 0;
+    gui_bool active;
+
     /* Window */
     UNUSED(argc); UNUSED(argv);
     memset(&xw, 0, sizeof xw);
@@ -516,7 +521,7 @@ main(int argc, char *argv[])
     font.height = (gui_float)xw.font->height;
     font.width = font_get_text_width;
     gui_default_config(&config);
-    gui_panel_init(&panel, 50, 50, 420, 320,
+    gui_panel_init(&panel, 50, 50, 400, 320,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
         GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
         GUI_PANEL_MINIMIZABLE, &config, &font);

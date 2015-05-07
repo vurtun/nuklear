@@ -92,11 +92,13 @@ while (1) {
     if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT)) {
         /* event handling */
     }
+
     gui_panel_row(&layout, 30, 2);
     if (gui_panel_option(&layout, "easy", option == 0)) option = 0;
     if (gui_panel_option(&layout, "hard", option == 1)) option = 1;
-    gui_panel_text(&layout, "input:", 6, GUI_TEXT_LEFT);
-    len = gui_panel_input(&layout, buffer, len, 256, &active, GUI_INPUT_DEFAULT);
+
+    gui_panel_label(&layout, "input:", GUI_TEXT_LEFT);
+    len = gui_panel_edit(&layout, buffer, len, 256, &active, GUI_INPUT_DEFAULT);
     gui_panel_end(&layout, &panel);
     gui_buffer_end(&list, &buffer, &canvas, &status);
 

@@ -1341,16 +1341,6 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
         }
     }
 
-    footer_h = config->scaler_size.y + config->item_padding.y;
-    if (panel->flags & GUI_PANEL_SCROLLBAR) {
-        gui_float footer_x, footer_y, footer_w;
-        footer_x = panel->x;
-        footer_w = panel->w;
-        footer_y = panel->y + panel->h - footer_h;
-        canvas->draw_rect(canvas->userdata, footer_x, footer_y, footer_w, footer_h,
-            config->colors[GUI_COLOR_PANEL]);
-    }
-
     if (panel->flags & GUI_PANEL_SCALEABLE) {
         gui_bool incursor;
         gui_float scaler_w = MAX(0, config->scaler_size.x - config->item_padding.x);
@@ -1390,6 +1380,15 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     canvas->draw_rect(canvas->userdata, panel->x, panel->y, panel->w,
         layout->header_height, *header);
 
+    footer_h = config->scaler_size.y + config->item_padding.y;
+    if ((panel->flags & GUI_PANEL_SCROLLBAR) && !panel->minimized) {
+        gui_float footer_x, footer_y, footer_w;
+        footer_x = panel->x;
+        footer_w = panel->w;
+        footer_y = panel->y + panel->h - footer_h;
+        canvas->draw_rect(canvas->userdata, footer_x, footer_y, footer_w, footer_h,
+            config->colors[GUI_COLOR_PANEL]);
+    }
 
     if (!(panel->flags & GUI_PANEL_TAB)) {
         panel->flags |= GUI_PANEL_SCROLLBAR;
