@@ -18,9 +18,6 @@
 #include "../gui.h"
 
 /* macros */
-#define MAX_BUFFER  64
-#define MAX_MEMORY  (8 * 1024)
-#define MAX_PANELS  4
 #define WIN_WIDTH   800
 #define WIN_HEIGHT  600
 #define DTIME       16
@@ -32,6 +29,8 @@
 #define CLAMP(i,v,x) (MAX(MIN(v,x), i))
 #define LEN(a)      (sizeof(a)/sizeof(a)[0])
 #define UNUSED(a)   ((void)(a))
+
+#include "demo.c"
 
 struct texCoord {
     float u;
@@ -407,54 +406,7 @@ draw_circle(float x, float y, float r, struct gui_color color)
 }
 
 static void
-demo_panel(struct gui_panel_layout *panel, struct demo *demo)
-{
-    gui_int i = 0;
-    enum {HISTO, PLOT};
-    const char *shelfs[] = {"Histogram", "Lines"};
-    const gui_float values[] = {8.0f, 15.0f, 20.0f, 12.0f, 30.0f};
-    const char *items[] = {"Fist", "Pistol", "Shotgun", "Railgun", "BFG"};
-    const char *options[] = {"easy", "normal", "hard", "hell", "doom", "godlike"};
-    struct gui_panel_layout tab;
-
-    /* Tabs */
-    demo->tab_min = gui_panel_tab_begin(panel, &tab, "Difficulty", demo->tab_min);
-    gui_panel_row(&tab, 30, 3);
-    for (i = 0; i < (gui_int)LEN(options); i++) {
-        if (gui_panel_option(&tab, options[i], demo->option == i))
-            demo->option = i;
-    }
-    gui_panel_tab_end(panel, &tab);
-
-    /* Shelf */
-    gui_panel_row(panel, 200, 2);
-    demo->cur = gui_panel_shelf_begin(panel,&tab,shelfs,LEN(shelfs),demo->cur,demo->shelf_off);
-    gui_panel_row(&tab, 100, 1);
-    if (demo->cur == HISTO) {
-        gui_panel_graph(&tab, GUI_GRAPH_HISTO, values, LEN(values));
-    } else {
-        gui_panel_graph(&tab, GUI_GRAPH_LINES, values, LEN(values));
-    }
-    demo->shelf_off = gui_panel_shelf_end(panel, &tab);
-
-    /* Group */
-    gui_panel_group_begin(panel, &tab, "Options", demo->group_off);
-    gui_panel_row(&tab, 30, 1);
-    if (gui_panel_button_text(&tab, "button", GUI_BUTTON_DEFAULT))
-        fprintf(stdout, "button pressed!\n");
-    demo->toggle = gui_panel_button_toggle(&tab, "toggle", demo->toggle);
-    demo->check = gui_panel_check(&tab, "advanced", demo->check);
-    demo->slider = gui_panel_slider(&tab, 0, demo->slider, 10, 1.0f);
-    demo->prog = gui_panel_progress(&tab, demo->prog, 100, gui_true);
-    demo->item_cur = gui_panel_selector(&tab, items, LEN(items), demo->item_cur);
-    demo->spinner = gui_panel_spinner(&tab, 0, demo->spinner, 250, 10, &demo->spin_act);
-    demo->in_len = gui_panel_edit(&tab, demo->in_buf, demo->in_len,
-                        MAX_BUFFER, &demo->in_act, GUI_INPUT_DEFAULT);
-    demo->group_off = gui_panel_group_end(panel, &tab);
-}
-
-static void
-draw(struct gui_command_list *list, int width, int height)
+execute(struct gui_command_list *list, int width, int height)
 {
     static const struct gui_color col = {255, 0, 0, 255};
     const struct gui_command *cmd;
@@ -510,6 +462,8 @@ draw(struct gui_command_list *list, int width, int height)
             const struct gui_command_text *t = (const void*)cmd;
             font_draw_text(t->font, t->x, t->y, t->h, t->fg, t->string, t->length);
         } break;
+        case GUI_COMMAND_IMAGE:
+        case GUI_COMMAND_MAX:
         default: break;
         }
         cmd = gui_list_next(list, cmd);
@@ -521,6 +475,18 @@ draw(struct gui_command_list *list, int width, int height)
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
     glPopAttrib();
+}
+
+static void
+draw(struct gui_panel_stack *stack, int width, int height)
+{
+    struct gui_panel *iter = stack->begin;
+    if (!stack->count) return;
+    while (iter) {
+        struct gui_window *win = (void*)iter;
+        execute(&win->list, width, height);
+        iter = iter->next;
+    }
 }
 
 static void
@@ -592,13 +558,11 @@ main(int argc, char *argv[])
     struct gui_input in;
     struct gui_font font;
     struct gui_memory memory;
-    struct gui_memory_status status;
     struct gui_config config;
-    struct gui_canvas canvas;
     struct gui_command_buffer buffer;
-    struct gui_command_list list;
-    struct gui_panel panel;
-    struct gui_panel_layout layout;
+    struct gui_panel_stack stack;
+    struct show_window show;
+    struct control_window control;
 
     font_path = argv[1];
     if (argc < 2) {
@@ -627,17 +591,8 @@ main(int argc, char *argv[])
     font.height = glfont->height;
     font.width = font_get_text_width;
     gui_default_config(&config);
-    gui_panel_init(&panel, 50, 50, 450, 310,
-        GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
-        GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
-        GUI_PANEL_MINIMIZABLE, &config, &font);
-
-    /* Demo */
-    memset(&demo, 0, sizeof(demo));
-    demo.tab_min = gui_true;
-    demo.spinner = 100;
-    demo.slider = 2.0f;
-    demo.prog = 60;
+    gui_stack_clear(&stack);
+    init_demo(&show, &control, &stack, &config, &font);
 
     while (running) {
         /* Input */
@@ -658,16 +613,13 @@ main(int argc, char *argv[])
 
         /* GUI */
         SDL_GetWindowSize(win, &width, &height);
-        gui_buffer_begin(&canvas, &buffer, (gui_size)width, (gui_size)height);
-        running = gui_panel_begin(&layout, &panel , "Demo", &canvas, &in);
-        demo_panel(&layout, &demo);
-        gui_panel_end(&layout, &panel);
-        gui_buffer_end(&list, &buffer, &canvas, &status);
+        running = run_demo(&show, &control, &stack, &config, &in, &buffer,
+                            (gui_size)width, (gui_size)height);
 
         /* Draw */
         glClearColor(0.4f, 0.4f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-        draw(&list, width, height);
+        draw(&stack, width, height);
         SDL_GL_SwapWindow(win);
 
         /* Timing */
