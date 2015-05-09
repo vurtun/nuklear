@@ -228,7 +228,9 @@ enum gui_command_type {
     GUI_COMMAND_RECT,
     GUI_COMMAND_CIRCLE,
     GUI_COMMAND_TRIANGLE,
-    GUI_COMMAND_TEXT
+    GUI_COMMAND_TEXT,
+    GUI_COMMAND_IMAGE,
+    GUI_COMMAND_MAX
 };
 
 struct gui_command {
@@ -399,11 +401,6 @@ struct gui_panel {
     struct gui_panel *prev;
 };
 
-struct gui_window {
-    struct gui_panel panel;
-    struct gui_command_list list;
-};
-
 struct gui_panel_layout {
     gui_float x, y, w, h;
     gui_float offset;
@@ -428,6 +425,11 @@ struct gui_panel_stack {
     gui_size count;
     struct gui_panel *begin;
     struct gui_panel *end;
+};
+
+struct gui_window {
+    struct gui_panel panel;
+    struct gui_command_list list;
 };
 
 /* Input */

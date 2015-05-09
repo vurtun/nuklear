@@ -18,47 +18,11 @@ possible with fast streamlined development speed in mind.
 - Configurable
 - UTF-8 support
 
-## Functionality
-+ Label
-+ Buttons
-+ Slider
-+ Progressbar
-+ Checkbox
-+ Radiobutton
-+ Input
-+ Shell
-+ Spinner
-+ Selector
-+ Linegraph
-+ Histogram
-+ Table
-+ Panel
-+ Tab
-+ Group
-+ Shelf
-
 ## Limitations
 - Does NOT provide os window/input management
 - Does NOT provide a renderer backend
 - Does NOT implement a font library  
 Summary: It is only responsible for the actual user interface
-
-## IMGUIs
-Immediate mode in contrast to classical retained mode GUIs store as little state as possible
-by using procedural function calls as "widgets" instead of storing objects.
-Each "widget" function call takes hereby all its necessary data and immediately returns
-the through the user modified state back to the caller. Immediate mode graphical
-user interfaces therefore combine drawing and input handling into one unit
-instead of separating them like retain mode GUIs.
-
-Since there is no to minimal internal state in immediate mode user interfaces,
-updates have to occur every frame which on one hand is more drawing expensive than classic
-retained GUI implementations but on the other hand grants a lot more flexibility and
-support for overall layout changes. In addition without any state there is no
-duplicated state between your program, the gui and the user which greatly
-simplifies code. Further traits of immediate mode graphic user interfaces are a
-code driven style, centralized flow control, easy extensibility and
-understandability.
 
 ## Example
 ```c
@@ -111,14 +75,22 @@ while (1) {
 ```
 ![gui screenshot](/screen.png?raw=true)
 
-## API
-The API for this gui toolkit is divided into two different layers. There
-is the widget layer and the panel layer. The widget layer provides a number of
-classical widgets in functional immediate mode form without any kind of internal
-state. Each widget can be placed anywhere on the screen but there is no direct
-way provided to group widgets together. For this to change there is the panel
-layer which is build on top of the widget layer and uses most of the widget API
-internally to form groups of widgets into a layout.
+## IMGUIs
+Immediate mode in contrast to classical retained mode GUIs store as little state as possible
+by using procedural function calls as "widgets" instead of storing objects.
+Each "widget" function call takes hereby all its necessary data and immediately returns
+the through the user modified state back to the caller. Immediate mode graphical
+user interfaces therefore combine drawing and input handling into one unit
+instead of separating them like retain mode GUIs.
+
+Since there is no to minimal internal state in immediate mode user interfaces,
+updates have to occur every frame which on one hand is more drawing expensive than classic
+retained GUI implementations but on the other hand grants a lot more flexibility and
+support for overall layout changes. In addition without any state there is no
+duplicated state between your program, the gui and the user which greatly
+simplifies code. Further traits of immediate mode graphic user interfaces are a
+code driven style, centralized flow control, easy extensibility and
+understandability.
 
 ### Input
 The `gui_input` struct holds the user input over the course of the frame and
@@ -198,9 +170,9 @@ while (1) {
 }
 
 ```
-For the purpose of implementing overlapping panels sub buffers were implemented.
+For the purpose of implementing multible panels, sub buffers were implemented.
 With sub buffers you can create one global buffer which owns the allocated memory
-and sub buffers which directly reference the global buffer. Biggest
+and sub buffers which directly reference the global buffer. The biggest
 advantage is that you do not have to allocate a buffer for each panel and boil
 down the memory management to a single buffer.
 

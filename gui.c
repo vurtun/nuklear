@@ -843,6 +843,7 @@ gui_buffer_push(struct gui_command_buffer* buffer,
         cap = (gui_size)((gui_float)buffer->capacity * buffer->grow_factor);
         buffer->memory = buffer->allocator.realloc(buffer->allocator.userdata,buffer->memory, cap);
         if (!buffer->memory) return NULL;
+
         buffer->capacity = cap;
         buffer->begin = buffer->memory;
         buffer->end = (void*)((gui_byte*)buffer->begin + buffer->allocated);
@@ -1006,7 +1007,8 @@ gui_buffer_push_image(struct gui_command_buffer *buffer, gui_float x, gui_float 
             return;
         }
     }
-    cmd = gui_buffer_push(buffer, GUI_COMMAND_RECT, sizeof(*cmd));
+
+    cmd = gui_buffer_push(buffer, GUI_COMMAND_IMAGE, sizeof(*cmd));
     if (!cmd) return;
     cmd->x = (gui_short)x;
     cmd->y = (gui_short)y;
@@ -1035,6 +1037,7 @@ gui_buffer_push_text(struct gui_command_buffer *buffer, gui_float x, gui_float y
             return;
         }
     }
+
     cmd = gui_buffer_push(buffer, GUI_COMMAND_TEXT, sizeof(*cmd) + length + 1);
     if (!cmd) return;
     cmd->x = (gui_short)x;
@@ -1285,7 +1288,6 @@ gui_panel_init(struct gui_panel *panel, gui_float x, gui_float y, gui_float w,
     panel->y = y;
     panel->w = w;
     panel->h = h;
-    panel->flags = 0;
     panel->flags = flags;
     panel->config = config;
     panel->font = *font;
@@ -1312,8 +1314,13 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
 
     if (!panel || !canvas || !layout)
         return gui_false;
-    if (panel->flags & GUI_PANEL_HIDDEN)
+    if (panel->flags & GUI_PANEL_HIDDEN) {
+        zero(layout, sizeof(*layout));
+        layout->valid = gui_false;
+        layout->config = panel->config;
+        layout->canvas = canvas;
         return gui_false;
+    }
 
     config = panel->config;
     layout->header_height = panel->font.height + 3 * config->item_padding.y;
@@ -1323,7 +1330,6 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     mouse_y = (in) ? in->mouse_pos.y : -1;
     prev_x = (in) ? in->mouse_prev.x : -1;
     prev_y = (in) ? in->mouse_prev.y : -1;
-
     clicked_x = (in) ? in->mouse_clicked_pos.x : -1;
     clicked_y = (in) ? in->mouse_clicked_pos.y : -1;
 
@@ -1345,8 +1351,8 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
         gui_bool incursor;
         gui_float scaler_w = MAX(0, config->scaler_size.x - config->item_padding.x);
         gui_float scaler_h = MAX(0, config->scaler_size.y - config->item_padding.y);
-        gui_float scaler_x = (layout->x + layout->w) - (config->item_padding.x + scaler_w);
-        gui_float scaler_y = layout->y + layout->h - config->scaler_size.y;
+        gui_float scaler_x = (panel->x + panel->w) - (config->item_padding.x + scaler_w);
+        gui_float scaler_y = panel->y + panel->h - config->scaler_size.y;
 
         incursor = in && INBOX(prev_x, prev_y, scaler_x, scaler_y, scaler_w, scaler_h);
         if (in && in->mouse_down && incursor) {
@@ -1423,7 +1429,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
         if (INBOX(mouse_x, mouse_y, close_x, close_y, close_w, close_h)) {
             if (INBOX(clicked_x, clicked_y, close_x, close_y, close_w, close_h)) {
                 ret = !(in->mouse_down && in->mouse_clicked);
-                if (ret) panel->flags |= GUI_PANEL_HIDDEN;
+                if (!ret) panel->flags |= GUI_PANEL_HIDDEN;
             }
         }
     }
@@ -1509,9 +1515,8 @@ gui_panel_begin_stacked(struct gui_panel_layout *layout, struct gui_panel *panel
     if (in->mouse_down && in->mouse_clicked && inpanel && panel != stack->end) {
         struct gui_panel *iter = panel->next;
         while (iter) {
-            if (!iter->minimized)
-                if (INBOX(in->mouse_prev.x, in->mouse_prev.y, iter->x, iter->y,
-                    iter->w, iter->h)) break;
+            if (INBOX(in->mouse_prev.x, in->mouse_prev.y, iter->x, iter->y, iter->w, iter->h) &&
+              !iter->minimized) break;
             iter = iter->next;
         }
         if (!iter) {
@@ -1574,6 +1579,8 @@ gui_panel_alloc_space(struct gui_rect *bounds, struct gui_panel_layout *layout)
     ASSERT(layout);
     ASSERT(layout->config);
     ASSERT(bounds);
+    if (!layout || !layout->config || !bounds)
+        return;
 
     config = layout->config;
     if (layout->index >= layout->row_columns) {
@@ -1644,7 +1651,6 @@ gui_panel_label(struct gui_panel_layout *layout, const char *text, enum gui_text
     gui_panel_text(layout, text, len, align);
 }
 
-
 gui_bool
 gui_panel_button_text(struct gui_panel_layout *layout, const char *str,
     enum gui_button_behavior behavior)
@@ -1704,7 +1710,7 @@ gui_bool gui_panel_button_color(struct gui_panel_layout *layout,
     button.background = color;
     button.foreground = color;
     button.highlight = color;
-    button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
+    button.highlight_content = color;
     return gui_do_button(layout->canvas, bounds.x, bounds.y, bounds.w, bounds.h,
                 &button, layout->input, behavior);
 }
@@ -2054,18 +2060,18 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     ASSERT(layout->config);
     ASSERT(layout->canvas);
 
-    if (!layout || !layout->config || !layout->canvas) return 0;
-    if (!layout->valid) return 0;
+    if (!layout || !layout->config || !layout->canvas) return value;
+    if (!layout->valid) return value;
     gui_panel_alloc_space(&bounds, layout);
     config = layout->config;
     canvas = layout->canvas;
     c = &layout->clip;
     if (!INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h))
-        return 0;
+        return value;
 
     value = CLAMP(min, value, max);
     len = itos(string, value);
-    is_active = *active;
+    is_active = (active) ? *active : gui_false;
     old_len = len;
 
     button.border = 1;
@@ -2105,7 +2111,7 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
             len, MAX_NUMBER_BUFFER, &is_active, &field, layout->input, &layout->font);
     if (old_len != len)
         strtoi(&value, string, len);
-    *active = is_active;
+    if (active) *active = is_active;
     return value;
 }
 
@@ -2160,11 +2166,11 @@ gui_panel_selector(struct gui_panel_layout *layout, const char *items[],
     button.content = config->colors[GUI_COLOR_TEXT];
     button.highlight = config->colors[GUI_COLOR_BUTTON];
     button.highlight_content = config->colors[GUI_COLOR_TEXT];
-    button_up_clicked = gui_button_triangle(canvas, button_x, button_y, button_w,
+    button_down_clicked = gui_button_triangle(canvas, button_x, button_y, button_w,
         button_h, GUI_UP, GUI_BUTTON_DEFAULT, &button, layout->input);
 
     button_y = bounds.y + button_h;
-    button_down_clicked = gui_button_triangle(canvas, button_x, button_y, button_w,
+    button_up_clicked = gui_button_triangle(canvas, button_x, button_y, button_w,
         button_h, GUI_DOWN, GUI_BUTTON_DEFAULT, &button,  layout->input);
     item_current = (button_down_clicked && item_current < item_count-1) ?
         item_current+1 : (button_up_clicked && item_current > 0) ? item_current-1 : item_current;
@@ -2342,14 +2348,13 @@ gui_panel_graph(struct gui_panel_layout *layout, enum gui_graph_type type,
     struct gui_rect bounds;
     gui_float min_value;
     gui_float max_value;
-    const struct gui_config *config;
     struct gui_graph graph;
 
     ASSERT(layout);
-    ASSERT(layout->config);
-    ASSERT(layout->canvas);
     ASSERT(values);
     ASSERT(count);
+    if (!layout || !values || !count)
+        return -1;
 
     max_value = values[0];
     min_value = values[0];
@@ -2378,13 +2383,13 @@ gui_panel_graph_ex(struct gui_panel_layout *layout, enum gui_graph_type type,
     struct gui_rect bounds;
     gui_float min_value;
     gui_float max_value;
-    const struct gui_config *config;
     struct gui_graph graph;
 
     ASSERT(layout);
-    ASSERT(layout->config);
-    ASSERT(layout->canvas);
     ASSERT(get_value);
+    ASSERT(count);
+    if (!layout || !get_value || !count)
+        return -1;
 
     max_value = get_value(userdata, 0);
     min_value = max_value;
