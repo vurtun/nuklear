@@ -24,6 +24,9 @@ possible with fast streamlined development speed in mind.
 - Does NOT implement a font library  
 Summary: It is only responsible for the actual user interface
 
+## Gallery
+![gui screenshot](/demo.png?raw=true)
+
 ## Example
 ```c
 struct gui_input input = {0};
