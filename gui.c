@@ -1232,8 +1232,10 @@ gui_default_config(struct gui_config *config)
     vec2_load(config->item_spacing, 10.0f, 4.0f);
     vec2_load(config->item_padding, 4.0f, 4.0f);
     vec2_load(config->scaler_size, 16.0f, 16.0f);
+    /*col_load(config->colors[GUI_COLOR_TEXT], 200, 200, 200, 255);*/
     col_load(config->colors[GUI_COLOR_TEXT], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_PANEL], 45, 45, 45, 255);
+    /*col_load(config->colors[GUI_COLOR_HEADER], 76, 88, 68, 255);*/
     col_load(config->colors[GUI_COLOR_HEADER], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_BORDER], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_BUTTON], 50, 50, 50, 255);
@@ -1378,11 +1380,14 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     layout->row_height = 0;
     layout->offset = panel->offset;
 
-    header = &config->colors[GUI_COLOR_HEADER];
-    header_x = panel->x + config->panel_padding.x;
-    header_w = panel->w - 2 * config->panel_padding.x;
-    canvas->draw_rect(canvas->userdata, panel->x, panel->y, panel->w,
-        layout->header_height, *header);
+    if (!(panel->flags & GUI_PANEL_NO_HEADER)) {
+        header = &config->colors[GUI_COLOR_HEADER];
+        header_x = panel->x + config->panel_padding.x;
+        header_w = panel->w - 2 * config->panel_padding.x;
+        canvas->draw_rect(canvas->userdata, panel->x, panel->y, panel->w,
+            layout->header_height, *header);
+    } else layout->header_height = 1;
+    layout->row_height = layout->header_height + 2 * config->item_spacing.y;
 
     footer_h = config->scaler_size.y + config->item_padding.y;
     if ((panel->flags & GUI_PANEL_SCROLLBAR) && !panel->minimized) {
@@ -1420,7 +1425,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
         const gui_float close_w = (gui_float)text_width + 2 * config->item_padding.x;
         const gui_float close_h = panel->font.height + 2 * config->item_padding.y;
         canvas->draw_text(canvas->userdata, close_x, close_y, close_w, close_h,
-            X, 1, &panel->font, config->colors[GUI_COLOR_PANEL], config->colors[GUI_COLOR_TEXT]);
+            X, 1, &panel->font, config->colors[GUI_COLOR_HEADER], config->colors[GUI_COLOR_TEXT]);
 
         header_w -= close_w;
         header_x += close_h - config->item_padding.x;
@@ -1445,7 +1450,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
         min_w = (gui_float)text_width + 3 * config->item_padding.x;
         min_h = panel->font.height + 2 * config->item_padding.y;
         canvas->draw_text(canvas->userdata, min_x, min_y, min_w, min_h,
-            score, 1, &panel->font, config->colors[GUI_COLOR_PANEL],
+            score, 1, &panel->font, config->colors[GUI_COLOR_HEADER],
             config->colors[GUI_COLOR_TEXT]);
 
         header_w -= min_w;
@@ -1465,15 +1470,14 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
         const gui_float label_w = header_w - (3 * config->item_padding.x);
         const gui_float label_h = panel->font.height + 2 * config->item_padding.y;
         canvas->draw_text(canvas->userdata, label_x, label_y, label_w, label_h,
-            (const gui_char*)text, text_len, &panel->font, config->colors[GUI_COLOR_PANEL],
+            (const gui_char*)text, text_len, &panel->font, config->colors[GUI_COLOR_HEADER],
             config->colors[GUI_COLOR_TEXT]);
     }
 
-    layout->row_height = layout->header_height;
     if (panel->flags & GUI_PANEL_SCROLLBAR) {
         const struct gui_color *color = &config->colors[GUI_COLOR_PANEL];
         layout->width = panel->w - config->scrollbar_width;
-        layout->height = panel->h - layout->header_height;
+        layout->height = panel->h - (layout->header_height + 2 * config->item_spacing.y);
         layout->height -= footer_h;
         if (layout->valid)
             canvas->draw_rect(canvas->userdata, panel->x, panel->y + layout->header_height,
@@ -2656,10 +2660,10 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
         button.border = 1;
         button.padding.x = config->item_padding.x;
         button.padding.y = config->item_padding.y;
-        button.background = config->colors[GUI_COLOR_BUTTON];
+        button.background = config->colors[GUI_COLOR_HEADER];
         button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
         button.content = config->colors[GUI_COLOR_TEXT];
-        button.highlight = config->colors[GUI_COLOR_BUTTON];
+        button.highlight = config->colors[GUI_COLOR_HEADER];
         button.highlight_content = config->colors[GUI_COLOR_TEXT];
         if (active != i) {
             button_y += config->item_padding.y;
@@ -2673,7 +2677,7 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
     bounds.y += header_h;
     bounds.h -= header_h;
 
-    flags = GUI_PANEL_BORDER|GUI_PANEL_SCROLLBAR|GUI_PANEL_TAB;
+    flags = GUI_PANEL_BORDER|GUI_PANEL_SCROLLBAR|GUI_PANEL_TAB|GUI_PANEL_NO_HEADER;
     gui_panel_init(&panel, bounds.x,bounds.y,bounds.w,bounds.h,flags,parent->config,&parent->font);
     gui_panel_begin(shelf, &panel, NULL, parent->canvas, parent->input);
     shelf->offset = offset;

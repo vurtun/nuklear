@@ -79,7 +79,7 @@ graph_panel(struct gui_panel_layout *panel, struct show_window *demo)
     struct gui_panel_layout tab;
     static const char *shelfs[] = {"Histogram", "Lines"};
     static const gui_float values[] = {8.0f, 15.0f, 20.0f, 12.0f, 30.0f, 12.0f, 35.0f, 40.0f, 20.0f};
-    gui_panel_row(panel, 200, 1);
+    gui_panel_row(panel, 180, 1);
     demo->cur = gui_panel_shelf_begin(panel,&tab,shelfs,LEN(shelfs),demo->cur,demo->shelf_off);
     gui_panel_row(&tab, 100, 1);
     if (demo->cur == HISTO) {
@@ -162,7 +162,9 @@ flags_tab(struct gui_panel_layout *panel, struct control_window *control)
     gui_size n = 0;
     gui_flags res = 0;
     struct gui_panel_layout tab;
-    const char *options[] = {"Hidden", "Border", "Minimizable", "Closeable", "Moveable", "Scaleable"};
+
+    const char *options[] = {"Hidden", "Border", "Minimizable",
+        "Closeable", "Moveable", "Scaleable"};
     control->flag_min = gui_panel_tab_begin(panel, &tab, "Options", control->flag_min);
     gui_panel_row(&tab, 30, 2);
     do {

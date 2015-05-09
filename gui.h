@@ -379,14 +379,15 @@ struct gui_config {
 enum gui_panel_flags {
     GUI_PANEL_HIDDEN = 0x01,
     GUI_PANEL_BORDER = 0x02,
-    GUI_PANEL_MINIMIZABLE = 0x4,
-    GUI_PANEL_CLOSEABLE = 0x8,
+    GUI_PANEL_MINIMIZABLE = 0x04,
+    GUI_PANEL_CLOSEABLE = 0x08,
     GUI_PANEL_MOVEABLE = 0x10,
     GUI_PANEL_SCALEABLE = 0x20,
     /* internal */
     GUI_PANEL_ACTIVE = 0x40,
     GUI_PANEL_SCROLLBAR = 0x80,
-    GUI_PANEL_TAB = 0x100
+    GUI_PANEL_TAB = 0x100,
+    GUI_PANEL_NO_HEADER = 0x200
 };
 
 struct gui_panel {
