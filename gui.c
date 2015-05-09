@@ -1229,7 +1229,7 @@ gui_default_config(struct gui_config *config)
     config->scrollbar_width = 16;
     vec2_load(config->panel_padding, 15.0f, 10.0f);
     vec2_load(config->panel_min_size, 64.0f, 64.0f);
-    vec2_load(config->item_spacing, 8.0f, 8.0f);
+    vec2_load(config->item_spacing, 10.0f, 4.0f);
     vec2_load(config->item_padding, 4.0f, 4.0f);
     vec2_load(config->scaler_size, 16.0f, 16.0f);
     col_load(config->colors[GUI_COLOR_TEXT], 100, 100, 100, 255);
