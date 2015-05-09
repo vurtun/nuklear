@@ -37,6 +37,7 @@ struct control_window {
     gui_bool col_g_act;
     gui_bool col_b_act;
     gui_bool col_a_act;
+    gui_size current;
     struct gui_color color;
 };
 
@@ -244,13 +245,13 @@ color_tab(struct gui_panel_layout *panel, struct control_window *control, struct
 {
     gui_size i = 0;
     struct gui_panel_layout tab;
-    static const char *labels[] = {"Text", "Panel", "Header", "Border", "Button", "Button Border",
-        "Button Hovering", "Button Toggle", "Button Hovering Text", "Check", "Check BG",
-        "Check Active", "Option", "Option BG", "Option Active", "Scroll", "Scroll Cursor",
-        "Slider", "Slider cursor", "Progress", "Progress Cursor", "Editbox", "Editbox Border",
-        "Spinner", "Spinner Border", "Selector", "Selector Border", "Histo", "Hist Bars",
-        "Histo Negative", "Histo Hovering", "Plot", "Plot Lines", "Plot Hightlight",
-        "Scrollbar", "Scrollbar Cursor", "Scrollbar Border", "Table lines", "Scaler"
+    static const char *labels[] = {"Text:", "Panel:", "Header:", "Border:", "Button:", "Button Border:",
+        "Button Hovering:", "Button Toggle:", "Button Hovering Text:", "Check:", "Check BG:",
+        "Check Active:", "Option:", "Option BG:", "Option Active:", "Scroll:", "Scroll Cursor:",
+        "Slider:", "Slider cursor:", "Progress:", "Progress Cursor:", "Editbox:", "Editbox Border:",
+        "Spinner:", "Spinner Border:", "Selector:", "Selector Border:", "Histo:", "Histo Bars:",
+        "Histo Negative:", "Histo Hovering:", "Plot:", "Plot Lines:", "Plot Hightlight:",
+        "Scrollbar:", "Scrollbar Cursor:", "Scrollbar Border:", "Table lines:", "Scaler:"
     };
     control->color_min = gui_panel_tab_begin(panel, &tab, "Color", control->color_min);
     if (control->picker_act) {
@@ -258,7 +259,7 @@ color_tab(struct gui_panel_layout *panel, struct control_window *control, struct
         gui_panel_row(&tab, 30, 3);
         gui_panel_seperator(&tab, 1);
         if (gui_panel_button_text(&tab, "ok", GUI_BUTTON_DEFAULT)) {
-            config->colors[i] = control->color;
+            config->colors[control->current] = control->color;
             control->picker_act = gui_false;
         }
         if (gui_panel_button_text(&tab, "cancel", GUI_BUTTON_DEFAULT))
@@ -267,11 +268,12 @@ color_tab(struct gui_panel_layout *panel, struct control_window *control, struct
         gui_panel_row(&tab, 30, 2);
         for (i = 0; i < GUI_COLOR_COUNT; ++i) {
             struct gui_panel_layout layout;
-            gui_panel_label(&tab, labels[i], GUI_TEXT_CENTERED);
+            gui_panel_label(&tab, labels[i], GUI_TEXT_LEFT);
             if (gui_panel_button_color(&tab, config->colors[i], GUI_BUTTON_DEFAULT)) {
                 if (!control->picker_act) {
                     control->picker_act = gui_true;
                     control->color = config->colors[i];
+                    control->current = i;
                 } else continue;
             }
         }

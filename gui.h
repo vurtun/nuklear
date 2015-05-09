@@ -150,13 +150,12 @@ enum gui_input_filter {
     GUI_INPUT_BIN
 };
 
-struct gui_input_field {
+struct gui_edit {
     struct gui_vec2 padding;
     gui_bool show_cursor;
     enum gui_input_filter filter;
     struct gui_color background;
     struct gui_color foreground;
-    struct gui_color font;
 };
 
 enum gui_graph_type {
@@ -509,7 +508,7 @@ gui_size gui_progress(const struct gui_canvas*, gui_float x, gui_float y, gui_fl
                     const struct gui_slider*, const struct gui_input*);
 gui_size gui_edit(const struct gui_canvas*, gui_float x, gui_float y, gui_float w,
                     gui_float h, gui_char*, gui_size, gui_size max, gui_bool*,
-                    const struct gui_input_field*, const struct gui_input*, const struct gui_font*);
+                    const struct gui_edit*, const struct gui_input*, const struct gui_font*);
 gui_float gui_scroll(const struct gui_canvas*, gui_float x, gui_float y,
                     gui_float w, gui_float h, gui_float offset, gui_float target,
                     gui_float step, const struct gui_scroll*, const struct gui_input*);

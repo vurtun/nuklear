@@ -678,7 +678,7 @@ gui_buffer_input(gui_char *buffer, gui_size length, gui_size max,
 gui_size
 gui_edit(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w,
     gui_float h, gui_char *buffer, gui_size len, gui_size max, gui_bool *active,
-    const struct gui_input_field *field, const struct gui_input *in, const struct gui_font *font)
+    const struct gui_edit *field, const struct gui_input *in, const struct gui_font *font)
 {
     gui_float input_w, input_h;
     gui_bool input_active;
@@ -1232,10 +1232,9 @@ gui_default_config(struct gui_config *config)
     vec2_load(config->item_spacing, 10.0f, 4.0f);
     vec2_load(config->item_padding, 4.0f, 4.0f);
     vec2_load(config->scaler_size, 16.0f, 16.0f);
-    /*col_load(config->colors[GUI_COLOR_TEXT], 200, 200, 200, 255);*/
     col_load(config->colors[GUI_COLOR_TEXT], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_PANEL], 45, 45, 45, 255);
-    /*col_load(config->colors[GUI_COLOR_HEADER], 76, 88, 68, 255);*/
+    col_load(config->colors[GUI_COLOR_HEADER], 76, 88, 68, 255);
     col_load(config->colors[GUI_COLOR_HEADER], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_BORDER], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_BUTTON], 50, 50, 50, 255);
@@ -1951,26 +1950,25 @@ gui_panel_edit(struct gui_panel_layout *layout, gui_char *buffer, gui_size len,
 {
     struct gui_rect *c;
     struct gui_rect bounds;
-    struct gui_input_field field;
+    struct gui_edit field;
     const struct gui_config *config;
 
     ASSERT(layout);
     ASSERT(layout->config);
     ASSERT(layout->canvas);
 
-    if (!layout || !layout->config || !layout->canvas) return 0;
-    if (!layout->valid) return 0;
+    if (!layout || !layout->config || !layout->canvas) return len;
+    if (!layout->valid) return len;
     gui_panel_alloc_space(&bounds, layout);
     config = layout->config;
     c = &layout->clip;
     if (!INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h))
-        return 0;
+        return len;
 
     field.padding.x = config->item_padding.x;
     field.padding.y = config->item_padding.y;
     field.filter = filter;
     field.show_cursor = gui_true;
-    field.font = config->colors[GUI_COLOR_TEXT];
     field.background = config->colors[GUI_COLOR_INPUT];
     field.foreground = config->colors[GUI_COLOR_INPUT_BORDER];
     return gui_edit(layout->canvas, bounds.x, bounds.y, bounds.w, bounds.h,
@@ -1983,7 +1981,7 @@ gui_panel_shell(struct gui_panel_layout *layout, gui_char *buffer, gui_size *len
 {
     struct gui_rect *c;
     struct gui_rect bounds;
-    struct gui_input_field field;
+    struct gui_edit field;
     struct gui_button button;
     gui_float button_x, button_y;
     gui_float button_w, button_h;
@@ -1997,13 +1995,13 @@ gui_panel_shell(struct gui_panel_layout *layout, gui_char *buffer, gui_size *len
     ASSERT(layout->config);
     ASSERT(layout->canvas);
 
-    if (!layout || !layout->config || !layout->canvas) return 0;
-    if (!layout->valid) return 0;
+    if (!layout || !layout->config || !layout->canvas) return *active;
+    if (!layout->valid) return *active;
     gui_panel_alloc_space(&bounds, layout);
     config = layout->config;
     c = &layout->clip;
     if (!INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h))
-        return 0;
+        return *active;
 
     width = layout->font.width(layout->font.userdata, (const gui_char*)"submit", 6);
     button.border = 1;
@@ -2030,7 +2028,6 @@ gui_panel_shell(struct gui_panel_layout *layout, gui_char *buffer, gui_size *len
     field.padding.y = config->item_padding.y;
     field.filter = GUI_INPUT_DEFAULT;
     field.show_cursor = gui_true;
-    field.font = config->colors[GUI_COLOR_TEXT];
     field.background = config->colors[GUI_COLOR_INPUT];
     field.foreground = config->colors[GUI_COLOR_INPUT_BORDER];
     *len = gui_edit(layout->canvas, field_x, field_y, field_w, field_h, buffer,
@@ -2046,7 +2043,7 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     struct gui_rect *c;
     const struct gui_config *config;
     const struct gui_canvas *canvas;
-    struct gui_input_field field;
+    struct gui_edit field;
     char string[MAX_NUMBER_BUFFER];
     gui_size len, old_len;
 
@@ -2106,7 +2103,6 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     field.padding.y = config->item_padding.y;
     field.filter = GUI_INPUT_FLOAT;
     field.show_cursor = gui_false;
-    field.font = config->colors[GUI_COLOR_TEXT];
     field.background = config->colors[GUI_COLOR_SPINNER];
     field.foreground = config->colors[GUI_COLOR_SPINNER_BORDER];
     len = gui_edit(canvas, field_x, field_y, field_w, field_h, (gui_char*)string,
@@ -2142,14 +2138,14 @@ gui_panel_selector(struct gui_panel_layout *layout, const char *items[],
     ASSERT(item_count);
     ASSERT(item_current < item_count);
 
-    if (!layout || !layout->config || !layout->canvas) return 0;
-    if (!layout->valid) return 0;
+    if (!layout || !layout->config || !layout->canvas) return item_current;
+    if (!layout->valid) return item_current;
     gui_panel_alloc_space(&bounds, layout);
     config = layout->config;
     canvas = layout->canvas;
     c = &layout->clip;
     if (!INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h))
-        return 0;
+        return item_current;
 
     canvas->draw_rect(canvas->userdata, bounds.x, bounds.y, bounds.w, bounds.h,
             config->colors[GUI_COLOR_SELECTOR_BORDER]);
@@ -2319,6 +2315,9 @@ gui_panel_graph_push_histo(struct gui_panel_layout *layout,
 gui_bool
 gui_panel_graph_push(struct gui_panel_layout *layout, struct gui_graph *graph, gui_float value)
 {
+    ASSERT(layout);
+    ASSERT(graph);
+    if (!layout || !graph || !layout->valid) return gui_false;
     if (graph->type == GUI_GRAPH_LINES)
         return gui_panel_graph_push_line(layout, graph, value);
     else if (graph->type == GUI_GRAPH_HISTO)
@@ -2355,7 +2354,7 @@ gui_panel_graph(struct gui_panel_layout *layout, enum gui_graph_type type,
     ASSERT(layout);
     ASSERT(values);
     ASSERT(count);
-    if (!layout || !values || !count)
+    if (!layout || !layout->valid || !values || !count)
         return -1;
 
     max_value = values[0];
@@ -2390,7 +2389,7 @@ gui_panel_graph_ex(struct gui_panel_layout *layout, enum gui_graph_type type,
     ASSERT(layout);
     ASSERT(get_value);
     ASSERT(count);
-    if (!layout || !get_value || !count)
+    if (!layout || !layout->valid || !get_value || !count)
         return -1;
 
     max_value = get_value(userdata, 0);
@@ -2678,9 +2677,10 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
     bounds.h -= header_h;
 
     flags = GUI_PANEL_BORDER|GUI_PANEL_SCROLLBAR|GUI_PANEL_TAB|GUI_PANEL_NO_HEADER;
-    gui_panel_init(&panel, bounds.x,bounds.y,bounds.w,bounds.h,flags,parent->config,&parent->font);
-    gui_panel_begin(shelf, &panel, NULL, parent->canvas, parent->input);
+    gui_panel_init(&panel, bounds.x, bounds.y, bounds.w, bounds.h, flags, config, &parent->font);
+    gui_panel_begin(shelf, &panel, NULL, canvas, parent->input);
     shelf->offset = offset;
+
     unify(&clip, &parent->clip, shelf->clip.x, shelf->clip.y,
         shelf->clip.x + shelf->clip.w, shelf->clip.y + shelf->clip.h);
     canvas->scissor(canvas->userdata, clip.x, clip.y, clip.w, clip.h);
@@ -2715,7 +2715,7 @@ gui_panel_shelf_end(struct gui_panel_layout *parent, struct gui_panel_layout *sh
     canvas->scissor(canvas->userdata, clip.x, clip.y, clip.w, clip.h);
     gui_panel_end(shelf, &panel);
     canvas->scissor(canvas->userdata, parent->clip.x,parent->clip.y,parent->clip.w,parent->clip.h);
-    return shelf->offset;
+    return panel.offset;
 }
 
 void
@@ -2751,7 +2751,7 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
         scroll.foreground = config->colors[GUI_COLOR_SCROLLBAR_CURSOR];
         scroll.border = config->colors[GUI_COLOR_SCROLLBAR_BORDER];
         if (panel->flags & GUI_PANEL_BORDER) scroll_h -= 1;
-        scroll_target = (layout->at_y - layout->y) - layout->header_height;
+        scroll_target = (layout->at_y - layout->y) - (layout->header_height + 2 * config->item_spacing.y);
         panel->offset = gui_scroll(canvas, scroll_x, scroll_y, scroll_w, scroll_h,
                                     scroll_offset, scroll_target, scroll_step,
                                     &scroll, layout->input);

@@ -26,6 +26,7 @@ Summary: It is only responsible for the actual user interface
 
 ## Gallery
 ![gui screenshot](/demo.png?raw=true)
+![gui screenshot](/config.png?raw=true)
 
 ## Example
 ```c
