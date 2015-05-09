@@ -176,29 +176,39 @@ flags_tab(struct gui_panel_layout *panel, struct control_window *control)
 static void
 style_tab(struct gui_panel_layout *panel, struct control_window *control, struct gui_config *config)
 {
+    gui_int tx, ty;
     struct gui_panel_layout tab;
     control->style_min = gui_panel_tab_begin(panel, &tab, "Style", control->style_min);
 
     gui_panel_row(&tab, 30, 2);
     gui_panel_label(&tab, "scrollbar width:", GUI_TEXT_RIGHT);
-    config->scrollbar_width = gui_panel_spinner(&tab, 0, (gui_int)config->scrollbar_width, 20, 1, NULL);
+    tx = gui_panel_spinner(&tab, 0, (gui_int)config->scrollbar_width, 20, 1, NULL);
+    config->scrollbar_width = (float)tx;
 
     gui_panel_row(&tab, 30, 3);
     gui_panel_label(&tab, "padding:", GUI_TEXT_LEFT);
-    config->panel_padding.x = gui_panel_spinner(&tab, 0, (gui_int)config->panel_padding.x, 20, 1, NULL);
-    config->panel_padding.y = gui_panel_spinner(&tab, 0, (gui_int)config->panel_padding.y, 20, 1, NULL);
+    tx = gui_panel_spinner(&tab, 0, (gui_int)config->panel_padding.x, 20, 1, NULL);
+    ty = gui_panel_spinner(&tab, 0, (gui_int)config->panel_padding.y, 20, 1, NULL);
+    config->panel_padding.x = (float)tx;
+    config->panel_padding.y = (float)ty;
 
     gui_panel_label(&tab, "item spacing:", GUI_TEXT_LEFT);
-    config->item_spacing.x = gui_panel_spinner(&tab, 0, (gui_int)config->item_spacing.x, 20, 1, NULL);
-    config->item_spacing.y = gui_panel_spinner(&tab, 0, (gui_int)config->item_spacing.y, 20, 1, NULL);
+    tx = gui_panel_spinner(&tab, 0, (gui_int)config->item_spacing.x, 20, 1, NULL);
+    ty = gui_panel_spinner(&tab, 0, (gui_int)config->item_spacing.y, 20, 1, NULL);
+    config->item_spacing.x = (float)tx;
+    config->item_spacing.y = (float)ty;
 
     gui_panel_label(&tab, "item padding:", GUI_TEXT_LEFT);
-    config->item_padding.x = gui_panel_spinner(&tab, 0, (gui_int)config->item_padding.x, 20, 1, NULL);
-    config->item_padding.y = gui_panel_spinner(&tab, 0, (gui_int)config->item_padding.y, 20, 1, NULL);
+    tx = gui_panel_spinner(&tab, 0, (gui_int)config->item_padding.x, 20, 1, NULL);
+    ty = gui_panel_spinner(&tab, 0, (gui_int)config->item_padding.y, 20, 1, NULL);
+    config->item_padding.x = (float)tx;
+    config->item_padding.y = (float)ty;
 
     gui_panel_label(&tab, "scaler size:", GUI_TEXT_LEFT);
-    config->scaler_size.x = gui_panel_spinner(&tab, 0, (gui_int)config->scaler_size.x, 20, 1, NULL);
-    config->scaler_size.y = gui_panel_spinner(&tab, 0, (gui_int)config->scaler_size.y, 20, 1, NULL);
+    tx = gui_panel_spinner(&tab, 0, (gui_int)config->scaler_size.x, 20, 1, NULL);
+    ty = gui_panel_spinner(&tab, 0, (gui_int)config->scaler_size.y, 20, 1, NULL);
+    config->scaler_size.x = (float)tx;
+    config->scaler_size.y = (float)ty;
     gui_panel_tab_end(panel, &tab);
 }
 
@@ -273,9 +283,7 @@ control_panel(struct control_window *control, struct gui_panel_stack *stack,
 {
     gui_bool running;
     struct gui_panel_layout layout;
-    UNUSED(stack);
-    /*running = gui_panel_begin_stacked(&layout, &control->win.panel, stack, "Control", canvas, in);*/
-    running = gui_panel_begin(&layout, &control->win.panel, "Control", canvas, in);
+    running = gui_panel_begin_stacked(&layout, &control->win.panel, stack, "Control", canvas, in);
     flags_tab(&layout, control);
     style_tab(&layout, control, config);
     color_tab(&layout, control, config);

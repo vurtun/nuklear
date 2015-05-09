@@ -359,10 +359,8 @@ gui_do_button(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_flo
     if (in && INBOX(in->mouse_pos.x,in->mouse_pos.y, x, y, w, h)) {
         background = button->highlight;
         if (INBOX(in->mouse_clicked_pos.x, in->mouse_clicked_pos.y, x, y, w, h)) {
-            if (behavior == GUI_BUTTON_DEFAULT)
-                ret = (in->mouse_down && in->mouse_clicked);
-            else
-                ret = in->mouse_down;
+            ret = (behavior != GUI_BUTTON_DEFAULT) ? in->mouse_down:
+                (in->mouse_down && in->mouse_clicked);
         }
     }
 

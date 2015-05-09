@@ -476,7 +476,8 @@ main(int argc, char *argv[])
         gui_input_end(&in);
 
         /* GUI */
-        running = run_demo(&show, &control, &stack, &config, &in, &buffer, xw.width, xw.height);
+        running = run_demo(&show, &control, &stack, &config, &in, &buffer,
+                            xw.width, xw.height);
 
         /* Draw */
         XClearWindow(xw.dpy, xw.win);
