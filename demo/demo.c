@@ -1,5 +1,5 @@
 #define MAX_BUFFER  64
-#define MAX_MEMORY  (16 * 1024)
+#define MAX_MEMORY  (32 * 1024)
 
 struct show_window {
     struct gui_window win;
@@ -184,7 +184,7 @@ style_tab(struct gui_panel_layout *panel, struct control_window *control, struct
     control->style_min = gui_panel_tab_begin(panel, &tab, "Style", control->style_min);
 
     gui_panel_row(&tab, 30, 2);
-    gui_panel_label(&tab, "scrollbar width:", GUI_TEXT_RIGHT);
+    gui_panel_label(&tab, "scrollbar width:", GUI_TEXT_LEFT);
     tx = gui_panel_spinner(&tab, 0, (gui_int)config->scrollbar_width, 20, 1, NULL);
     config->scrollbar_width = (float)tx;
 
@@ -216,24 +216,24 @@ style_tab(struct gui_panel_layout *panel, struct control_window *control, struct
 }
 
 static struct gui_color
-color_picker(struct gui_panel_layout *panel, struct control_window *control, struct gui_color color)
+color_picker(struct gui_panel_layout *panel, struct control_window *control,
+    const char *name, struct gui_color color)
 {
     gui_float r, g, b, a;
-    gui_panel_row(panel, 30, 3);
-    gui_panel_label(panel, "R:", GUI_TEXT_RIGHT);
+    gui_panel_row(panel, 30, 2);
+    gui_panel_label(panel, name, GUI_TEXT_LEFT);
+    gui_panel_button_color(panel, color, GUI_BUTTON_DEFAULT);
+    gui_panel_row(panel, 30, 2);
     r = color.r; g = color.g; b = color.b; a = color.a;
     r = gui_panel_slider(panel, 0, r, 255, 10);
     color.r = (gui_byte)r;
     color.r = (gui_byte)gui_panel_spinner(panel, 0, color.r, 255, 1, &control->col_r_act);
-    gui_panel_label(panel, "G:", GUI_TEXT_RIGHT);
     g = gui_panel_slider(panel, 0, g, 255, 10);
     color.g = (gui_byte)g;
     color.g = (gui_byte)gui_panel_spinner(panel, 0, color.g, 255, 1, &control->col_g_act);
-    gui_panel_label(panel, "B:", GUI_TEXT_RIGHT);
     b = gui_panel_slider(panel, 0, b, 255, 10);
     color.b = (gui_byte)b;
     color.b = (gui_byte)gui_panel_spinner(panel, 0, (gui_int)color.b, 255, 1, &control->col_b_act);
-    gui_panel_label(panel, "A:", GUI_TEXT_RIGHT);
     a = gui_panel_slider(panel, 0, a, 255, 10);
     color.a = (gui_byte)a;
     color.a = (gui_byte)gui_panel_spinner(panel, 0, (gui_int)color.a, 255, 1, &control->col_a_act);
@@ -255,7 +255,7 @@ color_tab(struct gui_panel_layout *panel, struct control_window *control, struct
     };
     control->color_min = gui_panel_tab_begin(panel, &tab, "Color", control->color_min);
     if (control->picker_act) {
-        control->color = color_picker(&tab, control, control->color);
+        control->color = color_picker(&tab, control, labels[control->current], control->color);
         gui_panel_row(&tab, 30, 3);
         gui_panel_seperator(&tab, 1);
         if (gui_panel_button_text(&tab, "ok", GUI_BUTTON_DEFAULT)) {

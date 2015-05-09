@@ -25,8 +25,8 @@ possible with fast streamlined development speed in mind.
 Summary: It is only responsible for the actual user interface
 
 ## Gallery
-![gui screenshot](/demo.png?raw=true)
-![gui screenshot](/config.png?raw=true)
+![gui screenshot](/screen/demo.png?raw=true)
+![gui screenshot](/screen/config.png?raw=true)
 
 ## Example
 ```c
@@ -77,7 +77,7 @@ while (1) {
     }
 }
 ```
-![gui screenshot](/screen.png?raw=true)
+![gui screenshot](/screen/screen.png?raw=true)
 
 ## IMGUIs
 Immediate mode in contrast to classical retained mode GUIs store as little state as possible
