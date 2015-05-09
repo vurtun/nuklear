@@ -25,7 +25,7 @@ possible with fast streamlined development speed in mind.
 Summary: It is only responsible for the actual user interface
 
 ## Gallery
-![gui screenshot](/screen/screen.png?raw=true)
+![gui screenshot](/screen/demo.png?raw=true)
 ![gui screenshot](/screen/config.png?raw=true)
 ![gui screenshot](/screen/config2.png?raw=true)
 
