@@ -59,6 +59,7 @@ struct gui_font;
 
 typedef void* gui_image;
 typedef gui_char gui_glyph[GUI_UTF_SIZE];
+typedef gui_bool(*gui_filter)(gui_long unicode);
 typedef gui_size(*gui_text_width_f)(void*,const gui_char*, gui_size);
 typedef void(*gui_scissor)(void*, gui_float, gui_float, gui_float, gui_float);
 typedef void(*gui_draw_line)(void*, gui_float, gui_float, gui_float, gui_float, struct gui_color);
@@ -107,7 +108,8 @@ struct gui_text {
 
 enum gui_button_behavior {
     GUI_BUTTON_DEFAULT,
-    GUI_BUTTON_REPEATER
+    GUI_BUTTON_REPEATER,
+    GUI_BUTTON_MAX
 };
 
 struct gui_button {
@@ -147,6 +149,7 @@ struct gui_scroll {
 
 enum gui_input_filter {
     GUI_INPUT_DEFAULT,
+    GUI_INOUT_ASCII,
     GUI_INPUT_FLOAT,
     GUI_INPUT_DEC,
     GUI_INPUT_HEX,
@@ -157,7 +160,6 @@ enum gui_input_filter {
 struct gui_edit {
     struct gui_vec2 padding;
     gui_bool show_cursor;
-    enum gui_input_filter filter;
     struct gui_color background;
     struct gui_color foreground;
 };
@@ -169,6 +171,7 @@ enum gui_graph_type {
 };
 
 struct gui_graph {
+    gui_bool valid;
     enum gui_graph_type type;
     gui_float x, y;
     gui_float w, h;
@@ -369,6 +372,19 @@ enum gui_panel_colors {
     GUI_COLOR_COUNT
 };
 
+enum gui_panel_rounding {
+    GUI_ROUNDING_BUTTON,
+    GUI_ROUNDING_TOGGLE,
+    GUI_ROUNDING_SLIDER,
+    GUI_ROUNDING_PROGRESSBAR,
+    GUI_ROUNDING_SPINNER,
+    GUI_ROUNDING_SELECTOR,
+    GUI_ROUNDING_EDIT,
+    GUI_ROUNDING_SHELF,
+    GUI_ROUNDING_SCROLLBAR,
+    GUI_ROUNDING_COUNT
+};
+
 struct gui_config {
     struct gui_vec2 panel_padding;
     struct gui_vec2 panel_min_size;
@@ -376,6 +392,7 @@ struct gui_config {
     struct gui_vec2 item_padding;
     struct gui_vec2 scaler_size;
     gui_float scrollbar_width;
+    gui_float rounding[GUI_ROUNDING_COUNT];
     struct gui_color colors[GUI_COLOR_COUNT];
 };
 
@@ -513,7 +530,12 @@ gui_size gui_progress(const struct gui_canvas*, gui_float x, gui_float y, gui_fl
                     const struct gui_slider*, const struct gui_input*);
 gui_size gui_edit(const struct gui_canvas*, gui_float x, gui_float y, gui_float w,
                     gui_float h, gui_char*, gui_size, gui_size max, gui_bool*,
-                    const struct gui_edit*, const struct gui_input*, const struct gui_font*);
+                    const struct gui_edit*, enum gui_input_filter filter,
+                    const struct gui_input*, const struct gui_font*);
+gui_size gui_edit_filtered(const struct gui_canvas*, gui_float x, gui_float y, gui_float w,
+                    gui_float h, gui_char*, gui_size, gui_size max, gui_bool*,
+                    const struct gui_edit*, gui_filter filter, const struct gui_input*,
+                    const struct gui_font*);
 gui_float gui_scroll(const struct gui_canvas*, gui_float x, gui_float y,
                     gui_float w, gui_float h, gui_float offset, gui_float target,
                     gui_float step, const struct gui_scroll*, const struct gui_input*);
@@ -553,6 +575,8 @@ gui_size gui_panel_progress(struct gui_panel_layout*, gui_size cur, gui_size max
                     gui_bool modifyable);
 gui_size gui_panel_edit(struct gui_panel_layout*, gui_char *buffer, gui_size len,
                     gui_size max, gui_bool *active, enum gui_input_filter);
+gui_size gui_panel_edit_filtered(struct gui_panel_layout*, gui_char *buffer, gui_size len,
+                    gui_size max, gui_bool *active, gui_filter);
 gui_bool gui_panel_shell(struct gui_panel_layout*, gui_char *buffer, gui_size *len,
                     gui_size max, gui_bool *active);
 gui_int gui_panel_spinner(struct gui_panel_layout*, gui_int min, gui_int value,

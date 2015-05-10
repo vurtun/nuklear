@@ -611,49 +611,65 @@ gui_progress(const struct gui_canvas *canvas, gui_float x, gui_float y,
 }
 
 static gui_bool
-gui_filter_input(gui_long unicode, gui_size len, enum gui_input_filter filter)
+gui_filter_input_default(gui_long unicode)
 {
-    if (filter == GUI_INPUT_DEFAULT) {
-        return gui_true;
-    } else if (filter == GUI_INPUT_FLOAT) {
-        if (len > 1)
-            return gui_false;
-        if ((unicode < '0' || unicode > '9') && unicode != '.' && unicode != '-')
-            return gui_false;
-        return gui_true;
-    } else if (filter == GUI_INPUT_DEC) {
-        if (len > 1)
-            return gui_false;
-        if (unicode < '0' || unicode > '9')
-            return gui_false;
-        return gui_true;
-    } else if (filter == GUI_INPUT_HEX) {
-        if (len > 1)
-            return gui_false;
-        if ((unicode < '0' || unicode > '9') &&
-            (unicode < 'a' || unicode > 'f') &&
-            (unicode < 'A' || unicode > 'B'))
-            return gui_false;
-        return gui_true;
-    } else if (filter == GUI_INPUT_OCT) {
-        if (len > 1)
-            return gui_false;
-        if (unicode < '0' || unicode > '7')
-            return gui_false;
-        return gui_true;
-    } else if (filter == GUI_INPUT_BIN) {
-        if (len > 1)
-            return gui_false;
-        if (unicode < '0' || unicode > '1')
-            return gui_false;
-        return gui_true;
-    }
-    return gui_false;
+    UNUSED(unicode);
+    return gui_true;
+}
+
+static gui_bool
+gui_filter_input_ascii(gui_long unicode)
+{
+    if (unicode < 0 || unicode > 128)
+        return gui_false;
+    return gui_true;
+}
+
+static gui_bool
+gui_filter_input_float(gui_long unicode)
+{
+    if ((unicode < '0' || unicode > '9') && unicode != '.' && unicode != '-')
+        return gui_false;
+    return gui_true;
+}
+
+static gui_bool
+gui_filter_input_decimal(gui_long unicode)
+{
+    if (unicode < '0' || unicode > '9')
+        return gui_false;
+    return gui_true;
+}
+
+static gui_bool
+gui_filter_input_hex(gui_long unicode)
+{
+    if ((unicode < '0' || unicode > '9') &&
+        (unicode < 'a' || unicode > 'f') &&
+        (unicode < 'A' || unicode > 'B'))
+        return gui_false;
+    return gui_true;
+}
+
+static gui_bool
+gui_filter_input_oct(gui_long unicode)
+{
+    if (unicode < '0' || unicode > '7')
+        return gui_false;
+    return gui_true;
+}
+
+static gui_bool
+gui_filter_input_binary(gui_long unicode)
+{
+    if (unicode < '0' || unicode > '1')
+        return gui_false;
+    return gui_true;
 }
 
 static gui_size
 gui_buffer_input(gui_char *buffer, gui_size length, gui_size max,
-    enum gui_input_filter filter, const struct gui_input *in)
+    gui_filter filter, const struct gui_input *in)
 {
     gui_long unicode;
     gui_size src_len = 0;
@@ -663,7 +679,7 @@ gui_buffer_input(gui_char *buffer, gui_size length, gui_size max,
 
     glyph_len = gui_utf_decode(in->text, &unicode, in->text_len);
     while (glyph_len && ((text_len + glyph_len) <= in->text_len) && (length + src_len) < max) {
-        if (gui_filter_input(unicode, glyph_len, filter)) {
+        if (filter(unicode)) {
             gui_size i = 0;
             for (i = 0; i < glyph_len; i++)
                 buffer[length++] = in->text[text_len + i];
@@ -676,9 +692,10 @@ gui_buffer_input(gui_char *buffer, gui_size length, gui_size max,
 }
 
 gui_size
-gui_edit(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w,
+gui_edit_filtered(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w,
     gui_float h, gui_char *buffer, gui_size len, gui_size max, gui_bool *active,
-    const struct gui_edit *field, const struct gui_input *in, const struct gui_font *font)
+    const struct gui_edit *field, gui_filter filter, const struct gui_input *in,
+    const struct gui_font *font)
 {
     gui_float input_w, input_h;
     gui_bool input_active;
@@ -711,7 +728,7 @@ gui_edit(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w,
         if ((space->down && space->clicked) && (len < max))
             buffer[len++] = ' ';
         if (in->text_len && len < max)
-            len += gui_buffer_input(buffer, len, max, field->filter, in);
+            len += gui_buffer_input(buffer, len, max, filter, in);
     }
 
     if (font && buffer) {
@@ -741,6 +758,26 @@ gui_edit(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w,
     }
     *active = input_active;
     return len;
+
+}
+
+gui_size
+gui_edit(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w,
+    gui_float h, gui_char *buffer, gui_size len, gui_size max, gui_bool *active,
+    const struct gui_edit *field, enum gui_input_filter f,
+    const struct gui_input *in, const struct gui_font *font)
+{
+    static const gui_filter filter[] = {
+        gui_filter_input_default,
+        gui_filter_input_ascii,
+        gui_filter_input_float,
+        gui_filter_input_decimal,
+        gui_filter_input_hex,
+        gui_filter_input_oct,
+        gui_filter_input_binary,
+    };
+    return gui_edit_filtered(canvas, x, y, w, h, buffer, len, max, active,
+                field,filter[f], in, font);
 }
 
 gui_float
@@ -1604,6 +1641,23 @@ gui_panel_alloc_space(struct gui_rect *bounds, struct gui_panel_layout *layout)
     layout->index++;
 }
 
+static gui_bool
+gui_panel_widget(struct gui_rect *bounds, struct gui_panel_layout *layout)
+{
+    struct gui_rect *c;
+    ASSERT(layout);
+    ASSERT(layout->config);
+    ASSERT(layout->canvas);
+    if (!layout || !layout->config || !layout->canvas) return gui_false;
+    if (!layout->valid) return gui_false;
+
+    gui_panel_alloc_space(bounds, layout);
+    c = &layout->clip;
+    if (!INTERSECT(c->x, c->y, c->w, c->h, bounds->x, bounds->y, bounds->w, bounds->h))
+        return gui_false;
+    return gui_true;
+}
+
 void
 gui_panel_text_colored(struct gui_panel_layout *layout, const char *str, gui_size len,
     enum gui_text_align alignment, struct gui_color color)
@@ -1652,30 +1706,30 @@ gui_panel_label(struct gui_panel_layout *layout, const char *text, enum gui_text
     gui_panel_text(layout, text, len, align);
 }
 
+static gui_bool
+gui_panel_button(struct gui_button *button, struct gui_rect *bounds,
+    struct gui_panel_layout *layout)
+{
+    const struct gui_config *config;
+    if (!gui_panel_widget(bounds, layout)) return gui_false;
+    config = layout->config;
+    button->border = 1;
+    button->padding.x = config->item_padding.x;
+    button->padding.y = config->item_padding.y;
+    return gui_true;
+}
+
 gui_bool
 gui_panel_button_text(struct gui_panel_layout *layout, const char *str,
     enum gui_button_behavior behavior)
 {
-    struct gui_rect *c;
     struct gui_rect bounds;
     struct gui_button button;
     const struct gui_config *config;
+    if (!gui_panel_button(&button, &bounds, layout))
+        return gui_false;
 
-    ASSERT(layout);
-    ASSERT(layout->config);
-    ASSERT(layout->canvas);
-
-    if (!layout || !layout->config || !layout->canvas) return 0;
-    if (!layout->valid) return 0;
-    gui_panel_alloc_space(&bounds, layout);
     config = layout->config;
-    c = &layout->clip;
-    if (!INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h))
-        return 0;
-
-    button.border = 1;
-    button.padding.x = config->item_padding.x;
-    button.padding.y = config->item_padding.y;
     button.background = config->colors[GUI_COLOR_BUTTON];
     button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
     button.content = config->colors[GUI_COLOR_TEXT];
@@ -1691,23 +1745,9 @@ gui_bool gui_panel_button_color(struct gui_panel_layout *layout,
     struct gui_rect *c;
     struct gui_rect bounds;
     struct gui_button button;
-    const struct gui_config *config;
+    if (!gui_panel_button(&button, &bounds, layout))
+        return gui_false;
 
-    ASSERT(layout);
-    ASSERT(layout->config);
-    ASSERT(layout->canvas);
-
-    if (!layout || !layout->config || !layout->canvas) return 0;
-    if (!layout->valid) return 0;
-    gui_panel_alloc_space(&bounds, layout);
-    config = layout->config;
-    c = &layout->clip;
-    if (!INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h))
-        return 0;
-
-    button.border = 1;
-    button.padding.x = config->item_padding.x;
-    button.padding.y = config->item_padding.y;
     button.background = color;
     button.foreground = color;
     button.highlight = color;
@@ -1724,22 +1764,10 @@ gui_panel_button_triangle(struct gui_panel_layout *layout, enum gui_heading head
     struct gui_rect bounds;
     struct gui_button button;
     const struct gui_config *config;
+    if (!gui_panel_button(&button, &bounds, layout))
+        return gui_false;
 
-    ASSERT(layout);
-    ASSERT(layout->config);
-    ASSERT(layout->canvas);
-
-    if (!layout || !layout->config || !layout->canvas) return 0;
-    if (!layout->valid) return 0;
-    gui_panel_alloc_space(&bounds, layout);
     config = layout->config;
-    c = &layout->clip;
-    if (!INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h))
-        return 0;
-
-    button.border = 1;
-    button.padding.x = config->item_padding.x;
-    button.padding.y = config->item_padding.y;
     button.background = config->colors[GUI_COLOR_BUTTON];
     button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
     button.content = config->colors[GUI_COLOR_TEXT];
@@ -1757,22 +1785,10 @@ gui_panel_button_image(struct gui_panel_layout *layout, gui_image image,
     struct gui_rect bounds;
     struct gui_button button;
     const struct gui_config *config;
+    if (!gui_panel_button(&button, &bounds, layout))
+        return gui_false;
 
-    ASSERT(layout);
-    ASSERT(layout->config);
-    ASSERT(layout->canvas);
-
-    if (!layout || !layout->config || !layout->canvas) return 0;
-    if (!layout->valid) return 0;
-    gui_panel_alloc_space(&bounds, layout);
     config = layout->config;
-    c = &layout->clip;
-    if (!INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h))
-        return 0;
-
-    button.border = 1;
-    button.padding.x = config->item_padding.x;
-    button.padding.y = config->item_padding.y;
     button.background = config->colors[GUI_COLOR_BUTTON];
     button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
     button.content = config->colors[GUI_COLOR_TEXT];
@@ -1789,23 +1805,11 @@ gui_panel_button_toggle(struct gui_panel_layout *layout, const char *str, gui_bo
     struct gui_rect bounds;
     struct gui_button button;
     const struct gui_config *config;
-
-    ASSERT(layout);
-    ASSERT(layout->config);
-    ASSERT(layout->canvas);
     ASSERT(str);
+    if (!gui_panel_button(&button, &bounds, layout))
+        return gui_false;
 
-    if (!layout || !layout->config || !layout->canvas) return 0;
-    if (!layout->valid) return 0;
-    gui_panel_alloc_space(&bounds, layout);
     config = layout->config;
-    c = &layout->clip;
-    if (!INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h))
-        return 0;
-
-    button.border = 1;
-    button.padding.x = config->item_padding.x;
-    button.padding.y = config->item_padding.y;
     if (!value) {
         button.background = config->colors[GUI_COLOR_BUTTON];
         button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
@@ -1824,6 +1828,22 @@ gui_panel_button_toggle(struct gui_panel_layout *layout, const char *str, gui_bo
     return value;
 }
 
+static gui_bool
+gui_panel_toggle_base(struct gui_toggle *toggle, struct gui_rect *bounds,
+    struct gui_panel_layout *layout)
+{
+    struct gui_rect *c;
+    const struct gui_config *config;
+    if (!gui_panel_widget(bounds, layout))
+        return gui_false;
+
+    config = layout->config;
+    toggle->padding.x = config->item_padding.x;
+    toggle->padding.y = config->item_padding.y;
+    toggle->font = config->colors[GUI_COLOR_TEXT];
+    return gui_true;
+}
+
 gui_bool
 gui_panel_check(struct gui_panel_layout *layout, const char *text, gui_bool is_active)
 {
@@ -1831,23 +1851,10 @@ gui_panel_check(struct gui_panel_layout *layout, const char *text, gui_bool is_a
     struct gui_rect bounds;
     struct gui_toggle toggle;
     const struct gui_config *config;
-
-    ASSERT(layout);
-    ASSERT(layout->config);
-    ASSERT(layout->canvas);
-    ASSERT(text);
-
-    if (!layout || !layout->config || !layout->canvas) return is_active;
-    if (!layout->valid) return is_active;
-    gui_panel_alloc_space(&bounds, layout);
-    config = layout->config;
-    c = &layout->clip;
-    if (!INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h))
+    if (!text || !gui_panel_toggle_base(&toggle, &bounds, layout))
         return is_active;
 
-    toggle.padding.x = config->item_padding.x;
-    toggle.padding.y = config->item_padding.y;
-    toggle.font = config->colors[GUI_COLOR_TEXT];
+    config = layout->config;
     toggle.cursor = config->colors[GUI_COLOR_CHECK_ACTIVE];
     toggle.background = config->colors[GUI_COLOR_CHECK_BACKGROUND];
     toggle.foreground = config->colors[GUI_COLOR_CHECK];
@@ -1862,26 +1869,13 @@ gui_panel_option(struct gui_panel_layout *layout, const char *text, gui_bool is_
     struct gui_rect bounds;
     struct gui_toggle toggle;
     const struct gui_config *config;
-
-    ASSERT(layout);
-    ASSERT(layout->config);
-    ASSERT(layout->canvas);
-    ASSERT(text);
-
-    if (!layout || !layout->config || !layout->canvas) return is_active;
-    if (!layout->valid) return is_active;
-    gui_panel_alloc_space(&bounds, layout);
-    config = layout->config;
-    c = &layout->clip;
-    if (!INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h))
+    if (!text || !gui_panel_toggle_base(&toggle, &bounds, layout))
         return is_active;
 
-    toggle.padding.x = config->item_padding.x;
-    toggle.padding.y = config->item_padding.y;
-    toggle.font = config->colors[GUI_COLOR_TEXT];
-    toggle.cursor = config->colors[GUI_COLOR_CHECK_ACTIVE];
-    toggle.background = config->colors[GUI_COLOR_CHECK_BACKGROUND];
-    toggle.foreground = config->colors[GUI_COLOR_CHECK];
+    config = layout->config;
+    toggle.cursor = config->colors[GUI_COLOR_OPTION_ACTIVE];
+    toggle.background = config->colors[GUI_COLOR_OPTION_BACKGROUND];
+    toggle.foreground = config->colors[GUI_COLOR_OPTION];
     return gui_toggle(layout->canvas, bounds.x, bounds.y, bounds.w, bounds.h,
         is_active, text, GUI_TOGGLE_OPTION, &toggle, layout->input, &layout->font);
 }
@@ -1894,19 +1888,10 @@ gui_panel_slider(struct gui_panel_layout *layout, gui_float min_value, gui_float
     struct gui_rect bounds;
     struct gui_slider slider;
     const struct gui_config *config;
-
-    ASSERT(layout);
-    ASSERT(layout->config);
-    ASSERT(layout->canvas);
-
-    if (!layout || !layout->config || !layout->canvas) return value;
-    if (!layout->valid) return value;
-    gui_panel_alloc_space(&bounds, layout);
-    config = layout->config;
-    c = &layout->clip;
-    if (!INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h))
+    if (!gui_panel_widget(&bounds, layout))
         return value;
 
+    config = layout->config;
     slider.padding.x = config->item_padding.x;
     slider.padding.y = config->item_padding.y;
     slider.background = config->colors[GUI_COLOR_SLIDER];
@@ -1923,19 +1908,10 @@ gui_panel_progress(struct gui_panel_layout *layout, gui_size cur_value, gui_size
     struct gui_rect bounds;
     struct gui_slider prog;
     const struct gui_config *config;
-
-    ASSERT(layout);
-    ASSERT(layout->config);
-    ASSERT(layout->canvas);
-
-    if (!layout || !layout->config || !layout->canvas) return cur_value;
-    if (!layout->valid) return cur_value;
-    gui_panel_alloc_space(&bounds, layout);
-    config = layout->config;
-    c = &layout->clip;
-    if (!INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h))
+    if (!gui_panel_widget(&bounds, layout))
         return cur_value;
 
+    config = layout->config;
     prog.padding.x = config->item_padding.x;
     prog.padding.y = config->item_padding.y;
     prog.background = config->colors[GUI_COLOR_PROGRESS];
@@ -1944,35 +1920,43 @@ gui_panel_progress(struct gui_panel_layout *layout, gui_size cur_value, gui_size
             cur_value, max_value, is_modifyable, &prog, layout->input);
 }
 
+static gui_bool
+gui_panel_edit_base(struct gui_rect *bounds, struct gui_edit *field,
+    struct gui_panel_layout *layout)
+{
+    const struct gui_config *config;
+    if (!gui_panel_widget(bounds, layout))
+        return gui_false;
+
+    config = layout->config;
+    field->padding.x = config->item_padding.x;
+    field->padding.y = config->item_padding.y;
+    field->show_cursor = gui_true;
+    field->background = config->colors[GUI_COLOR_INPUT];
+    field->foreground = config->colors[GUI_COLOR_INPUT_BORDER];
+    return gui_true;
+}
+
 gui_size
 gui_panel_edit(struct gui_panel_layout *layout, gui_char *buffer, gui_size len,
     gui_size max, gui_bool *active, enum gui_input_filter filter)
 {
-    struct gui_rect *c;
     struct gui_rect bounds;
     struct gui_edit field;
-    const struct gui_config *config;
-
-    ASSERT(layout);
-    ASSERT(layout->config);
-    ASSERT(layout->canvas);
-
-    if (!layout || !layout->config || !layout->canvas) return len;
-    if (!layout->valid) return len;
-    gui_panel_alloc_space(&bounds, layout);
-    config = layout->config;
-    c = &layout->clip;
-    if (!INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h))
-        return len;
-
-    field.padding.x = config->item_padding.x;
-    field.padding.y = config->item_padding.y;
-    field.filter = filter;
-    field.show_cursor = gui_true;
-    field.background = config->colors[GUI_COLOR_INPUT];
-    field.foreground = config->colors[GUI_COLOR_INPUT_BORDER];
+    if (!gui_panel_edit_base(&bounds, &field, layout)) return len;
     return gui_edit(layout->canvas, bounds.x, bounds.y, bounds.w, bounds.h,
-                    buffer, len, max, active, &field, layout->input, &layout->font);
+                    buffer, len, max, active, &field, filter, layout->input, &layout->font);
+}
+
+gui_size
+gui_panel_edit_filtered(struct gui_panel_layout *layout, gui_char *buffer, gui_size len,
+    gui_size max, gui_bool *active, gui_filter filter)
+{
+    struct gui_rect bounds;
+    struct gui_edit field;
+    if (!gui_panel_edit_base(&bounds, &field, layout)) return len;
+    return gui_edit_filtered(layout->canvas, bounds.x, bounds.y, bounds.w, bounds.h,
+                    buffer, len, max, active, &field, filter, layout->input, &layout->font);
 }
 
 gui_bool
@@ -1990,19 +1974,10 @@ gui_panel_shell(struct gui_panel_layout *layout, gui_char *buffer, gui_size *len
     const struct gui_config *config;
     gui_bool clicked = gui_false;
     gui_size width;
-
-    ASSERT(layout);
-    ASSERT(layout->config);
-    ASSERT(layout->canvas);
-
-    if (!layout || !layout->config || !layout->canvas) return *active;
-    if (!layout->valid) return *active;
-    gui_panel_alloc_space(&bounds, layout);
-    config = layout->config;
-    c = &layout->clip;
-    if (!INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h))
+    if (!gui_panel_widget(&bounds, layout))
         return *active;
 
+    config = layout->config;
     width = layout->font.width(layout->font.userdata, (const gui_char*)"submit", 6);
     button.border = 1;
     button_y = bounds.y;
@@ -2026,12 +2001,11 @@ gui_panel_shell(struct gui_panel_layout *layout, gui_char *buffer, gui_size *len
     field_h = bounds.h;
     field.padding.x = config->item_padding.x;
     field.padding.y = config->item_padding.y;
-    field.filter = GUI_INPUT_DEFAULT;
     field.show_cursor = gui_true;
     field.background = config->colors[GUI_COLOR_INPUT];
     field.foreground = config->colors[GUI_COLOR_INPUT_BORDER];
     *len = gui_edit(layout->canvas, field_x, field_y, field_w, field_h, buffer,
-            *len, max, active, &field, layout->input, &layout->font);
+            *len, max, active, &field, GUI_INPUT_DEFAULT, layout->input, &layout->font);
     return clicked;
 }
 
@@ -2054,24 +2028,16 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     gui_float field_w, field_h;
     gui_bool is_active, updated = gui_false;
     gui_bool button_up_clicked, button_down_clicked;
-
-    ASSERT(layout);
-    ASSERT(layout->config);
-    ASSERT(layout->canvas);
-
-    if (!layout || !layout->config || !layout->canvas) return value;
-    if (!layout->valid) return value;
-    gui_panel_alloc_space(&bounds, layout);
-    config = layout->config;
-    canvas = layout->canvas;
-    c = &layout->clip;
-    if (!INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h))
+    if (!gui_panel_widget(&bounds, layout))
         return value;
 
     value = CLAMP(min, value, max);
     len = itos(string, value);
     is_active = (active) ? *active : gui_false;
     old_len = len;
+
+    config = layout->config;
+    canvas = layout->canvas;
 
     button.border = 1;
     button_y = bounds.y;
@@ -2101,12 +2067,12 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     field_h = bounds.h;
     field.padding.x = config->item_padding.x;
     field.padding.y = config->item_padding.y;
-    field.filter = GUI_INPUT_FLOAT;
     field.show_cursor = gui_false;
     field.background = config->colors[GUI_COLOR_SPINNER];
     field.foreground = config->colors[GUI_COLOR_SPINNER_BORDER];
     len = gui_edit(canvas, field_x, field_y, field_w, field_h, (gui_char*)string,
-            len, MAX_NUMBER_BUFFER, &is_active, &field, layout->input, &layout->font);
+            len, MAX_NUMBER_BUFFER, &is_active, &field,GUI_INPUT_FLOAT,
+            layout->input, &layout->font);
     if (old_len != len)
         strtoi(&value, string, len);
     if (active) *active = is_active;
@@ -2131,22 +2097,14 @@ gui_panel_selector(struct gui_panel_layout *layout, const char *items[],
     gui_float button_x, button_y;
     gui_float button_w, button_h;
 
-    ASSERT(layout);
-    ASSERT(layout->config);
-    ASSERT(layout->canvas);
     ASSERT(items);
     ASSERT(item_count);
     ASSERT(item_current < item_count);
-
-    if (!layout || !layout->config || !layout->canvas) return item_current;
-    if (!layout->valid) return item_current;
-    gui_panel_alloc_space(&bounds, layout);
-    config = layout->config;
-    canvas = layout->canvas;
-    c = &layout->clip;
-    if (!INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h))
+    if (!gui_panel_widget(&bounds, layout))
         return item_current;
 
+    config = layout->config;
+    canvas = layout->canvas;
     canvas->draw_rect(canvas->userdata, bounds.x, bounds.y, bounds.w, bounds.h,
             config->colors[GUI_COLOR_SELECTOR_BORDER]);
     canvas->draw_rect(canvas->userdata, bounds.x + 1, bounds.y + 1, bounds.w - 2, bounds.h - 2,
@@ -2193,24 +2151,18 @@ gui_panel_graph_begin(struct gui_panel_layout *layout, struct gui_graph *graph,
     const struct gui_config *config;
     const struct gui_canvas *canvas;
     struct gui_color color;
+    if (!gui_panel_widget(&bounds, layout)) {
+        zero(graph, sizeof(*graph));
+        return;
+    }
 
-    ASSERT(layout);
-    ASSERT(layout->config);
-    ASSERT(layout->canvas);
-
-    if (!layout || !layout->config || !layout->canvas) return;
-    if (!layout->valid) return;
-    gui_panel_alloc_space(&bounds, layout);
     config = layout->config;
     canvas = layout->canvas;
-    c = &layout->clip;
-    if (!INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h))
-        return;
-
     color = (type == GUI_GRAPH_LINES) ?
         config->colors[GUI_COLOR_PLOT]: config->colors[GUI_COLOR_HISTO];
     canvas->draw_rect(canvas->userdata, bounds.x, bounds.y, bounds.w, bounds.h, color);
 
+    graph->valid = gui_true;
     graph->type = type;
     graph->index = 0;
     graph->count = count;
@@ -2233,11 +2185,13 @@ gui_panel_graph_push_line(struct gui_panel_layout *layout,
     const struct gui_config *config = layout->config;
     const struct gui_input *in = layout->input;
     struct gui_color color = config->colors[GUI_COLOR_PLOT_LINES];
-
     gui_bool selected = gui_false;
     gui_float step, range, ratio;
     struct gui_vec2 cur;
-    if (graph->index >= graph->count)
+
+    ASSERT(graph);
+    ASSERT(layout);
+    if (!graph || !layout || !graph->valid || graph->index >= graph->count)
         return gui_false;
 
     step = graph->w / (gui_float)graph->count;
@@ -2286,8 +2240,7 @@ gui_panel_graph_push_histo(struct gui_panel_layout *layout,
     gui_bool selected = gui_false;
     gui_float item_x, item_y;
     gui_float item_w = 0.0f, item_h = 0.0f;
-
-    if (graph->index >= graph->count)
+    if (!graph->valid || graph->index >= graph->count)
         return gui_false;
     if (graph->count) {
         gui_float padding = (gui_float)(graph->count-1) * config->item_padding.x;
@@ -2328,7 +2281,9 @@ gui_panel_graph_push(struct gui_panel_layout *layout, struct gui_graph *graph, g
 void
 gui_panel_graph_end(struct gui_panel_layout *layout, struct gui_graph *graph)
 {
-    UNUSED(layout);
+    ASSERT(layout);
+    ASSERT(graph);
+    if (!layout || !graph) return;
     graph->type = GUI_GRAPH_MAX;
     graph->index = 0;
     graph->count = 0;
@@ -2346,7 +2301,6 @@ gui_panel_graph(struct gui_panel_layout *layout, enum gui_graph_type type,
 {
     gui_size i;
     gui_int index = -1;
-    struct gui_rect bounds;
     gui_float min_value;
     gui_float max_value;
     struct gui_graph graph;
@@ -2381,7 +2335,6 @@ gui_panel_graph_ex(struct gui_panel_layout *layout, enum gui_graph_type type,
 {
     gui_size i;
     gui_int index = -1;
-    struct gui_rect bounds;
     gui_float min_value;
     gui_float max_value;
     struct gui_graph graph;
