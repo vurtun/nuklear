@@ -13,6 +13,10 @@ extern "C" {
 #define GUI_UTF_SIZE 4
 #define GUI_INPUT_MAX 16
 #define GUI_UTF_INVALID 0xFFFD
+#define GUI_HOOK_PANEL_NAME panel
+#define GUI_HOOK_LIST_NAME list
+#define GUI_HOOK_ATTR(T, name) struct T name
+#define GUI_HOOK_OUT gui_command_list
 
 #ifdef GUI_USE_FIXED_TYPES
 #include <stdint.h>
@@ -427,9 +431,10 @@ struct gui_panel_stack {
     struct gui_panel *end;
 };
 
+
 struct gui_panel_hook {
-    struct gui_panel panel;
-    struct gui_command_list list;
+    GUI_HOOK_ATTR(gui_panel, GUI_HOOK_PANEL_NAME);
+    GUI_HOOK_ATTR(GUI_HOOK_OUT, GUI_HOOK_LIST_NAME);
 };
 
 /* Input */
@@ -582,6 +587,22 @@ void gui_panel_end(struct gui_panel_layout*, struct gui_panel*);
 void gui_stack_clear(struct gui_panel_stack*);
 void gui_stack_push(struct gui_panel_stack*, struct gui_panel*);
 void gui_stack_pop(struct gui_panel_stack*, struct gui_panel*);
+
+
+/* Hook */
+#define gui_hook(p) ((struct gui_panel_hook*)(p))
+#define gui_hook_panel(h) (&((h)->GUI_HOOK_PANEL_NAME))
+#define gui_hook_list(h) (&((h)->GUI_HOOK_LIST_NAME))
+#define gui_hook_init(hook, x, y, w, h, flags, config, font)\
+    gui_panel_init(&(*(hook)).GUI_HOOK_PANEL_NAME, x, y, w, h, flags, config, font)
+#define gui_hook_begin(layout, hook, stack, title, canvas, in)\
+    gui_panel_begin_stacked(layout, &(*(hook)).GUI_HOOK_PANEL_NAME, stack, title, canvas, in)
+#define gui_hook_end(layout, hook)\
+    gui_panel_end((layout), &(hook)->GUI_HOOK_PANEL_NAME)
+#define gui_stack_push_hook(stack, hook)\
+    gui_stack_push(stack, &(*(hook)).GUI_HOOK_PANEL_NAME)
+#define gui_stack_pop_hook(stack, hook)\
+    gui_stack_pop(stack, &(*(hook)).GUI_HOOK_PANEL_NAME)
 
 #ifdef __cplusplus
 }

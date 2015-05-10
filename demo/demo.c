@@ -2,7 +2,7 @@
 #define MAX_MEMORY  (32 * 1024)
 
 struct show_window {
-    struct gui_panel_hook win;
+    struct gui_panel_hook hook;
     gui_char in_buf[MAX_BUFFER];
     gui_size in_len;
     gui_bool in_act;
@@ -27,7 +27,7 @@ struct show_window {
 };
 
 struct control_window {
-    struct gui_panel_hook win;
+    struct gui_panel_hook hook;
     gui_flags show_flags;
     gui_bool flag_min;
     gui_bool style_min;
@@ -148,12 +148,12 @@ show_panel(struct show_window *show, struct gui_panel_stack *stack,
     struct gui_input *in, struct gui_canvas *canvas)
 {
     struct gui_panel_layout layout;
-    gui_panel_begin_stacked(&layout, &show->win.panel, stack, "Show", canvas, in);
+    gui_hook_begin(&layout, &show->hook, stack, "Show", canvas, in);
     combobox_panel(&layout, show);
     widget_panel(&layout, show);
     graph_panel(&layout, show);
     table_panel(&layout, show);
-    gui_panel_end(&layout, &show->win.panel);
+    gui_hook_end(&layout, &show->hook);
 }
 
 static void
@@ -287,11 +287,11 @@ control_panel(struct control_window *control, struct gui_panel_stack *stack,
 {
     gui_bool running;
     struct gui_panel_layout layout;
-    running = gui_panel_begin_stacked(&layout, &control->win.panel, stack, "Control", canvas, in);
+    running = gui_hook_begin(&layout, &control->hook, stack, "Control", canvas, in);
     flags_tab(&layout, control);
     style_tab(&layout, control, config);
     color_tab(&layout, control, config);
-    gui_panel_end(&layout, &control->win.panel);
+    gui_hook_end(&layout, &control->hook);
     return running;
 }
 
@@ -301,11 +301,12 @@ init_demo(struct show_window *show, struct control_window *control,
 {
     memset(show, 0, sizeof(*show));
     gui_default_config(config);
-    gui_panel_init(&show->win.panel, 50, 50, 300, 500,
+
+    gui_hook_init(&show->hook, 50, 50, 300, 500,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
         GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
         GUI_PANEL_MINIMIZABLE, config, font);
-    gui_stack_push(stack, &show->win.panel);
+    gui_stack_push_hook(stack, &show->hook);
 
     show->wid_min = gui_true;
     show->diff_min = gui_true;
@@ -314,10 +315,10 @@ init_demo(struct show_window *show, struct control_window *control,
     show->spinner = 100;
 
     memset(control, 0, sizeof(*control));
-    gui_panel_init(&control->win.panel, 380, 50, 400, 350,
+    gui_hook_init(&control->hook, 380, 50, 400, 350,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE, config, font);
-    gui_stack_push(stack, &control->win.panel);
-    control->show_flags = show->win.panel.flags;
+    gui_stack_push_hook(stack, &control->hook);
+    control->show_flags = gui_hook_panel(&show->hook)->flags;
     control->style_min = gui_true;
     control->color_min = gui_true;
 }
@@ -334,14 +335,14 @@ run_demo(struct show_window *show, struct control_window *control, struct gui_pa
     gui_buffer_begin(NULL, buffer, width, height);
     gui_buffer_lock(&canvas, buffer, &sub, 0, width, height);
     running = control_panel(control, stack, in, &canvas, config);
-    gui_buffer_unlock(&control->win.list, buffer, &sub, &canvas, NULL);
+    gui_buffer_unlock(gui_hook_list(&control->hook), buffer, &sub, &canvas, NULL);
 
-    show->win.panel.flags = control->show_flags;
+    gui_hook_panel(&show->hook)->flags = control->show_flags;
     gui_buffer_lock(&canvas, buffer, &sub, 0, width, height);
     show_panel(show, stack, in, &canvas);
-    if (show->win.panel.flags & GUI_PANEL_HIDDEN)
+    if (gui_hook_panel(&show->hook)->flags & GUI_PANEL_HIDDEN)
         control->show_flags |= GUI_PANEL_HIDDEN;
-    gui_buffer_unlock(&show->win.list, buffer, &sub, &canvas, NULL);
+    gui_buffer_unlock(gui_hook_list(&show->hook), buffer, &sub, &canvas, NULL);
     gui_buffer_end(NULL, buffer, NULL, NULL);
     return running;
 }

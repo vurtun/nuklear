@@ -282,30 +282,30 @@ struct gui_stack stack;
 
 gui_buffer_init_fixed(buffer, &memory);
 gui_default_config(&config);
-gui_panel_init(&hook.panel, 50, 50, 300, 200, 0, &config, &font);
+gui_hook_init(&hook, 50, 50, 300, 200, 0, &config, &font);
 gui_stack_clear(&stack);
-gui_stack_push(&stack, &hook.panel);
+gui_stack_push_hook(&stack, &hook);
 
 while (1) {
     struct gui_panel_layout layout;
     struct gui_canvas canvas;
 
     gui_buffer_begin(&canvas, &buffer, window_width, window_height);
-    gui_panel_begin_stacked(&layout, &win.panel, &stack, "Demo", &canvas, &input);
+    gui_hook_begin(&layout, &hook, &stack, "Demo", &canvas, &input);
     gui_panel_row(&layout, 30, 1);
     if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");
-    gui_panel_end(&layout, &win.panel);
-    gui_buffer_end(&win.list, buffer, &status);
+    gui_hook_end(&layout, &hook);
+    gui_buffer_end(gui_hook_list(&hook), buffer, &status);
 
     /* draw each panel */
     struct gui_panel *iter = stack.begin;
     while (iter) {
-        const struct gui_panel_hook *h = iter;
-        const struct gui_command *cmd = gui_list_begin(&h->list);
+        struct gui_panel_hook *h = gui_hook(iter);
+        const struct gui_command *cmd = gui_list_begin(gui_hook_list(h));
         while (cmd) {
             /* execute command */
-            cmd = gui_list_next(&h->list, cmd);
+            cmd = gui_list_next(gui_hook_list(h), cmd);
         }
         iter = iter->next;
     }
