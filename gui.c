@@ -1241,7 +1241,7 @@ gui_default_config(struct gui_config *config)
     col_load(config->colors[GUI_COLOR_BUTTON_HOVER], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_BUTTON_TOGGLE], 75, 75, 75, 255);
     col_load(config->colors[GUI_COLOR_BUTTON_HOVER_FONT], 45, 45, 45, 255);
-    col_load(config->colors[GUI_COLOR_BUTTON_BORDER], 80, 80, 80, 255);
+    col_load(config->colors[GUI_COLOR_BUTTON_BORDER], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_CHECK], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_CHECK_BACKGROUND], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_CHECK_ACTIVE], 45, 45, 45, 255);

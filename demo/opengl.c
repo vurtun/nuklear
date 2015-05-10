@@ -483,8 +483,8 @@ draw(struct gui_panel_stack *stack, int width, int height)
     struct gui_panel *iter = stack->begin;
     if (!stack->count) return;
     while (iter) {
-        struct gui_window *win = (void*)iter;
-        execute(&win->list, width, height);
+        struct gui_panel_hook *hook = (void*)iter;
+        execute(&hook->list, width, height);
         iter = iter->next;
     }
 }

@@ -2,7 +2,7 @@
 #define MAX_MEMORY  (32 * 1024)
 
 struct show_window {
-    struct gui_window win;
+    struct gui_panel_hook win;
     gui_char in_buf[MAX_BUFFER];
     gui_size in_len;
     gui_bool in_act;
@@ -27,7 +27,7 @@ struct show_window {
 };
 
 struct control_window {
-    struct gui_window win;
+    struct gui_panel_hook win;
     gui_flags show_flags;
     gui_bool flag_min;
     gui_bool style_min;

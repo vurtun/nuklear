@@ -427,7 +427,7 @@ struct gui_panel_stack {
     struct gui_panel *end;
 };
 
-struct gui_window {
+struct gui_panel_hook {
     struct gui_panel panel;
     struct gui_command_list list;
 };

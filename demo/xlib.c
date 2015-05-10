@@ -347,8 +347,8 @@ draw(XSurface *surf, struct gui_panel_stack *stack)
     struct gui_panel *iter = stack->begin;
     if (!stack->count) return;
     while (iter) {
-        struct gui_window *win = (void*)iter;
-        execute(surf, &win->list);
+        struct gui_panel_hook *hook = (void*)iter;
+        execute(surf, &hook->list);
         iter = iter->next;
     }
 }

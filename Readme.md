@@ -225,7 +225,7 @@ code the panel was introduced. The panel groups together a number of
 widgets but in true immediate mode fashion does not save any state from
 widgets that have been added to the panel. In addition the panel enables a
 number of nice features on a group of widgets like movement, scaling,
-closing and minimizing. An additional use for panel is to further extend the
+hidding and minimizing. An additional use for panel is to further extend the
 grouping of widgets into tabs, groups and shelfs.
 The panel is divided into a `struct gui_panel` with persistent life time and
 the `struct gui_panel_layout` structure with a temporary life time.
@@ -267,11 +267,11 @@ not known beforehand since it is possible to create your own buffer type.
 Therefore just the sequence of panels is managed and you either have to cast
 from the panel to your own type, use inheritance in C++ or use the `container_of`
 macro from the Linux kernel. For the standard buffer there is already a type
-`gui_window` which contains the panel and the buffer output `gui_command_list`,
+`gui_panel_hook` which contains the panel and the buffer output `gui_command_list`,
 which can be used to implement overlapping panels.
 
 ```c
-struct gui_window window;
+struct gui_panel_hook hook;
 struct gui_memory memory = {...};
 struct gui_memory_status status;
 struct gui_command_buffer buffer;
@@ -282,9 +282,9 @@ struct gui_stack stack;
 
 gui_buffer_init_fixed(buffer, &memory);
 gui_default_config(&config);
-gui_panel_init(&win.panel, 50, 50, 300, 200, 0, &config, &font);
+gui_panel_init(&hook.panel, 50, 50, 300, 200, 0, &config, &font);
 gui_stack_clear(&stack);
-gui_stack_push(&stack, &win.panel);
+gui_stack_push(&stack, &hook.panel);
 
 while (1) {
     struct gui_panel_layout layout;
@@ -301,11 +301,11 @@ while (1) {
     /* draw each panel */
     struct gui_panel *iter = stack.begin;
     while (iter) {
-        const struct gui_window *w = iter;
-        const struct gui_command *cmd = gui_list_begin(&w->list);
+        const struct gui_panel_hook *h = iter;
+        const struct gui_command *cmd = gui_list_begin(&h->list);
         while (cmd) {
             /* execute command */
-            cmd = gui_list_next(&w->list, cmd);
+            cmd = gui_list_next(&h->list, cmd);
         }
         iter = iter->next;
     }
