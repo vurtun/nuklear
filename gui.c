@@ -338,7 +338,7 @@ gui_text(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w,
         label_w = (gui_float)text_width + 2 * text->padding.x;
     } else return;
 
-    canvas->draw_rect(canvas->userdata, x, y, w, h, text->background);
+    canvas->draw_rect(canvas->userdata, x, y, w, h, 0, text->background);
     canvas->draw_text(canvas->userdata, label_x, label_y, label_w, label_h,
         (const gui_char*)string, len, font, text->background, text->foreground);
 }
@@ -364,9 +364,9 @@ gui_do_button(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_flo
         }
     }
 
-    canvas->draw_rect(canvas->userdata, x, y, w, h, button->foreground);
+    canvas->draw_rect(canvas->userdata, x, y, w, h, button->rounding, button->foreground);
     canvas->draw_rect(canvas->userdata, x + button->border, y + button->border,
-        w - 2 * button->border, h - 2 * button->border, background);
+        w - 2 * button->border, h - 2 * button->border, button->rounding, background);
     return ret;
 }
 
@@ -471,15 +471,12 @@ gui_toggle(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float 
     gui_float select_x, select_y;
     gui_float cursor_x, cursor_y;
     gui_float cursor_pad, cursor_size;
-    gui_draw_rect draw[2];
 
     ASSERT(toggle);
     ASSERT(canvas);
     if (!canvas || !toggle)
         return 0;
 
-    draw[GUI_TOGGLE_CHECK] = canvas->draw_rect;
-    draw[GUI_TOGGLE_OPTION] = canvas->draw_circle;
     toggle_w = MAX(w, font->height + 2 * toggle->padding.x);
     toggle_h = MAX(h, font->height + 2 * toggle->padding.y);
     toggle_active = active;
@@ -498,9 +495,19 @@ gui_toggle(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float 
                 cursor_x, cursor_y, cursor_size, cursor_size))
                 toggle_active = !toggle_active;
 
-    draw[type](canvas->userdata, select_x, select_y, select_size, select_size, toggle->foreground);
-    if (toggle_active)
-        draw[type](canvas->userdata,cursor_x,cursor_y,cursor_size,cursor_size, toggle->cursor);
+    if (type == GUI_TOGGLE_CHECK)
+        canvas->draw_rect(canvas->userdata, select_x, select_y, select_size,
+           select_size, 0, toggle->foreground);
+    else canvas->draw_circle(canvas->userdata, select_x, select_y, select_size,
+            select_size, toggle->foreground);
+
+    if (toggle_active) {
+        if (type == GUI_TOGGLE_CHECK)
+            canvas->draw_rect(canvas->userdata,cursor_x,cursor_y,cursor_size,
+                cursor_size, 0, toggle->cursor);
+        else canvas->draw_circle(canvas->userdata, cursor_x, cursor_y, cursor_size,
+                cursor_size, toggle->cursor);
+    }
 
     if (font && string) {
         struct gui_text text;
@@ -567,8 +574,9 @@ gui_slider(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float 
             cursor_x = x + slider->padding.x + (cursor_w * (slider_value - slider_min));
         }
     }
-    canvas->draw_rect(canvas->userdata, x, y, slider_w, slider_h, slider->background);
-    canvas->draw_rect(canvas->userdata,cursor_x,cursor_y,cursor_w,cursor_h,slider->foreground);
+    canvas->draw_rect(canvas->userdata, x, y, slider_w, slider_h, slider->rounding, slider->background);
+    canvas->draw_rect(canvas->userdata,cursor_x,cursor_y,cursor_w,cursor_h,
+            slider->cursor_rounding, slider->foreground);
     return slider_value;
 }
 
@@ -605,8 +613,9 @@ gui_progress(const struct gui_canvas *canvas, gui_float x, gui_float y,
     cursor_x = x + prog->padding.x;
     cursor_y = y + prog->padding.y;
 
-    canvas->draw_rect(canvas->userdata, x, y, prog_w, prog_h, prog->background);
-    canvas->draw_rect(canvas->userdata, cursor_x, cursor_y, cursor_w, cursor_h, prog->foreground);
+    canvas->draw_rect(canvas->userdata, x, y, prog_w, prog_h, prog->rounding, prog->background);
+    canvas->draw_rect(canvas->userdata, cursor_x, cursor_y, cursor_w, cursor_h,
+            prog->cursor_rounding, prog->foreground);
     return prog_value;
 }
 
@@ -709,8 +718,9 @@ gui_edit_filtered(const struct gui_canvas *canvas, gui_float x, gui_float y, gui
     input_w = MAX(w, 2 * field->padding.x);
     input_h = MAX(h, font->height);
     input_active = *active;
-    canvas->draw_rect(canvas->userdata, x, y, input_w, input_h, field->background);
-    canvas->draw_rect(canvas->userdata, x + 1, y, input_w - 1, input_h, field->foreground);
+    canvas->draw_rect(canvas->userdata, x, y, input_w, input_h, field->rounding, field->background);
+    canvas->draw_rect(canvas->userdata, x + 1, y, input_w - 1, input_h,
+            field->cursor_rounding, field->foreground);
     if (in && in->mouse_clicked && in->mouse_down)
         input_active = INBOX(in->mouse_pos.x, in->mouse_pos.y, x, y, input_w, input_h);
 
@@ -753,7 +763,7 @@ gui_edit_filtered(const struct gui_canvas *canvas, gui_float x, gui_float y, gui
             &buffer[offset], text_len, font, field->foreground, field->background);
         if (input_active && field->show_cursor) {
             canvas->draw_rect(canvas->userdata,  label_x + (gui_float)text_width, label_y,
-                (gui_float)cursor_width, label_h, field->background);
+                (gui_float)cursor_width, label_h, field->cursor_rounding, field->background);
         }
     }
     *active = input_active;
@@ -804,7 +814,7 @@ gui_scroll(const struct gui_canvas *canvas, gui_float x, gui_float y,
 
     scroll_w = MAX(w, 0);
     scroll_h = MAX(h, 2 * scroll_w);
-    canvas->draw_rect(canvas->userdata, x, y, scroll_w, scroll_h, scroll->background);
+    canvas->draw_rect(canvas->userdata, x, y, scroll_w, scroll_h, scroll->rounding, scroll->background);
     if (target <= scroll_h) return 0;
 
     button.border = 1;
@@ -849,7 +859,8 @@ gui_scroll(const struct gui_canvas *canvas, gui_float x, gui_float y,
             cursor_y = scroll_y + (scroll_off * scroll_h);
         }
     }
-    canvas->draw_rect(canvas->userdata,cursor_x,cursor_y,cursor_w,cursor_h,scroll->foreground);
+    canvas->draw_rect(canvas->userdata,cursor_x,cursor_y,cursor_w,cursor_h,
+        scroll->cursor_rounding, scroll->foreground);
     return scroll_offset;
 }
 
@@ -943,7 +954,7 @@ gui_buffer_push_line(struct gui_command_buffer *buffer, gui_float x0, gui_float 
 
 void
 gui_buffer_push_rect(struct gui_command_buffer *buffer, gui_float x, gui_float y,
-    gui_float w, gui_float h, struct gui_color c)
+    gui_float w, gui_float h, gui_float rounding, struct gui_color c)
 {
     struct gui_command_rect *cmd;
     ASSERT(buffer);
@@ -965,6 +976,7 @@ gui_buffer_push_rect(struct gui_command_buffer *buffer, gui_float x, gui_float y
     cmd->y = (gui_short)y;
     cmd->w = (gui_ushort)w;
     cmd->h = (gui_ushort)h;
+    cmd->rounding = (gui_ushort)rounding;
     cmd->color = c;
 }
 
@@ -1269,6 +1281,19 @@ gui_default_config(struct gui_config *config)
     vec2_load(config->item_spacing, 10.0f, 4.0f);
     vec2_load(config->item_padding, 4.0f, 4.0f);
     vec2_load(config->scaler_size, 16.0f, 16.0f);
+    config->rounding[GUI_ROUNDING_BUTTON] = 0.0f;
+    config->rounding[GUI_ROUNDING_TOGGLE] = 0.0f;
+    config->rounding[GUI_ROUNDING_SLIDER] = 0.0f;
+    config->rounding[GUI_ROUNDING_SLIDER_CURSOR] = 0.0f;
+    config->rounding[GUI_ROUNDING_PROGRESSBAR] = 0.0f;
+    config->rounding[GUI_ROUNDING_PROGRESSBAR_CURSOR] = 0.0f;
+    config->rounding[GUI_ROUNDING_SELECTOR] = 0.0f;
+    config->rounding[GUI_ROUNDING_EDIT] = 0.0f;
+    config->rounding[GUI_ROUNDING_EDIT_CURSOR] = 0.0f;
+    config->rounding[GUI_ROUNDING_SHELF] = 0.0f;
+    config->rounding[GUI_ROUNDING_SCROLLBAR] = 0.0f;
+    config->rounding[GUI_ROUNDING_SCROLLBAR_CURSOR] = 0.0f;
+    config->rounding[GUI_ROUNDING_GRAPH] = 0.0f;
     col_load(config->colors[GUI_COLOR_TEXT], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_PANEL], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_HEADER], 76, 88, 68, 255);
@@ -1421,7 +1446,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
         header_x = panel->x + config->panel_padding.x;
         header_w = panel->w - 2 * config->panel_padding.x;
         canvas->draw_rect(canvas->userdata, panel->x, panel->y, panel->w,
-            layout->header_height, *header);
+            layout->header_height, 0, *header);
     } else layout->header_height = 1;
     layout->row_height = layout->header_height + 2 * config->item_spacing.y;
 
@@ -1432,7 +1457,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
         footer_w = panel->w;
         footer_y = panel->y + panel->h - footer_h;
         canvas->draw_rect(canvas->userdata, footer_x, footer_y, footer_w, footer_h,
-            config->colors[GUI_COLOR_PANEL]);
+            0, config->colors[GUI_COLOR_PANEL]);
     }
 
     if (!(panel->flags & GUI_PANEL_TAB)) {
@@ -1517,7 +1542,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
         layout->height -= footer_h;
         if (layout->valid)
             canvas->draw_rect(canvas->userdata, panel->x, panel->y + layout->header_height,
-                panel->w, panel->h - layout->header_height, *color);
+                panel->w, panel->h - layout->header_height, 0, *color);
     }
 
     if (panel->flags & GUI_PANEL_BORDER) {
@@ -1585,7 +1610,7 @@ gui_panel_row(struct gui_panel_layout *layout, gui_float height, gui_size cols)
     layout->row_columns = cols;
     layout->row_height = height + config->item_spacing.y;
     layout->canvas->draw_rect(layout->canvas->userdata, layout->at_x, layout->at_y,
-        layout->width, height + config->panel_padding.y, *color);
+        layout->width, height + config->panel_padding.y, 0, *color);
 }
 
 void
@@ -1714,6 +1739,7 @@ gui_panel_button(struct gui_button *button, struct gui_rect *bounds,
     if (!gui_panel_widget(bounds, layout)) return gui_false;
     config = layout->config;
     button->border = 1;
+    button->rounding = config->rounding[GUI_ROUNDING_BUTTON];
     button->padding.x = config->item_padding.x;
     button->padding.y = config->item_padding.y;
     return gui_true;
@@ -1892,6 +1918,8 @@ gui_panel_slider(struct gui_panel_layout *layout, gui_float min_value, gui_float
         return value;
 
     config = layout->config;
+    slider.rounding = config->rounding[GUI_ROUNDING_SLIDER];
+    slider.cursor_rounding = config->rounding[GUI_ROUNDING_SLIDER_CURSOR];
     slider.padding.x = config->item_padding.x;
     slider.padding.y = config->item_padding.y;
     slider.background = config->colors[GUI_COLOR_SLIDER];
@@ -1912,6 +1940,8 @@ gui_panel_progress(struct gui_panel_layout *layout, gui_size cur_value, gui_size
         return cur_value;
 
     config = layout->config;
+    prog.rounding = config->rounding[GUI_ROUNDING_PROGRESSBAR];
+    prog.cursor_rounding = config->rounding[GUI_ROUNDING_PROGRESSBAR_CURSOR];
     prog.padding.x = config->item_padding.x;
     prog.padding.y = config->item_padding.y;
     prog.background = config->colors[GUI_COLOR_PROGRESS];
@@ -1929,6 +1959,8 @@ gui_panel_edit_base(struct gui_rect *bounds, struct gui_edit *field,
         return gui_false;
 
     config = layout->config;
+    field->rounding = config->rounding[GUI_ROUNDING_EDIT];
+    field->cursor_rounding = config->rounding[GUI_ROUNDING_EDIT_CURSOR];
     field->padding.x = config->item_padding.x;
     field->padding.y = config->item_padding.y;
     field->show_cursor = gui_true;
@@ -1985,6 +2017,7 @@ gui_panel_shell(struct gui_panel_layout *layout, gui_char *buffer, gui_size *len
     button_w = (gui_float)width + config->item_padding.x * 2;
     button_w += button.border * 2;
     button_x = bounds.x + bounds.w - button_w;
+    button.rounding = config->rounding[GUI_ROUNDING_BUTTON];
     button.padding.x = config->item_padding.x;
     button.padding.y = config->item_padding.y;
     button.background = config->colors[GUI_COLOR_BUTTON];
@@ -1999,6 +2032,8 @@ gui_panel_shell(struct gui_panel_layout *layout, gui_char *buffer, gui_size *len
     field_y = bounds.y;
     field_w = bounds.w - button_w - config->item_spacing.x;
     field_h = bounds.h;
+    field.rounding = config->rounding[GUI_ROUNDING_EDIT];
+    field.cursor_rounding = config->rounding[GUI_ROUNDING_EDIT_CURSOR];
     field.padding.x = config->item_padding.x;
     field.padding.y = config->item_padding.y;
     field.show_cursor = gui_true;
@@ -2044,6 +2079,7 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     button_h = bounds.h / 2;
     button_w = bounds.h - config->item_padding.x;
     button_x = bounds.x + bounds.w - button_w;
+    button.rounding = config->rounding[GUI_ROUNDING_BUTTON];
     button.padding.x = MAX(3, (button_h - layout->font.height) / 2);
     button.padding.y = MAX(3, (button_h - layout->font.height) / 2);
     button.background = config->colors[GUI_COLOR_BUTTON];
@@ -2065,6 +2101,8 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     field_y = bounds.y;
     field_w = bounds.w - button_w;
     field_h = bounds.h;
+    field.rounding = config->rounding[GUI_ROUNDING_EDIT];
+    field.cursor_rounding = config->rounding[GUI_ROUNDING_EDIT_CURSOR];
     field.padding.x = config->item_padding.x;
     field.padding.y = config->item_padding.y;
     field.show_cursor = gui_false;
@@ -2106,15 +2144,16 @@ gui_panel_selector(struct gui_panel_layout *layout, const char *items[],
     config = layout->config;
     canvas = layout->canvas;
     canvas->draw_rect(canvas->userdata, bounds.x, bounds.y, bounds.w, bounds.h,
-            config->colors[GUI_COLOR_SELECTOR_BORDER]);
+            config->rounding[GUI_ROUNDING_SELECTOR], config->colors[GUI_COLOR_SELECTOR_BORDER]);
     canvas->draw_rect(canvas->userdata, bounds.x + 1, bounds.y + 1, bounds.w - 2, bounds.h - 2,
-            config->colors[GUI_COLOR_SELECTOR]);
+            config->rounding[GUI_ROUNDING_SELECTOR], config->colors[GUI_COLOR_SELECTOR]);
 
     button.border = 1;
     button_y = bounds.y;
     button_h = bounds.h / 2;
     button_w = bounds.h - config->item_padding.x;
     button_x = bounds.x + bounds.w - button_w;
+    button.rounding = config->rounding[GUI_ROUNDING_BUTTON];
     button.padding.x = MAX(3, (button_h - layout->font.height) / 2);
     button.padding.y = MAX(3, (button_h - layout->font.height) / 2);
     button.background = config->colors[GUI_COLOR_BUTTON];
@@ -2160,7 +2199,8 @@ gui_panel_graph_begin(struct gui_panel_layout *layout, struct gui_graph *graph,
     canvas = layout->canvas;
     color = (type == GUI_GRAPH_LINES) ?
         config->colors[GUI_COLOR_PLOT]: config->colors[GUI_COLOR_HISTO];
-    canvas->draw_rect(canvas->userdata, bounds.x, bounds.y, bounds.w, bounds.h, color);
+    canvas->draw_rect(canvas->userdata, bounds.x, bounds.y, bounds.w, bounds.h,
+            config->rounding[GUI_ROUNDING_GRAPH], color);
 
     graph->valid = gui_true;
     graph->type = type;
@@ -2205,7 +2245,7 @@ gui_panel_graph_push_line(struct gui_panel_layout *layout,
             selected = (in->mouse_down && in->mouse_clicked) ? gui_true: gui_false;
             color = config->colors[GUI_COLOR_PLOT_HIGHLIGHT];
         }
-        canvas->draw_rect(canvas->userdata, graph->last.x - 3, graph->last.y - 3, 6, 6, color);
+        canvas->draw_rect(canvas->userdata, graph->last.x - 3, graph->last.y - 3, 6, 6,0, color);
         graph->index++;
         return selected;
     }
@@ -2219,7 +2259,7 @@ gui_panel_graph_push_line(struct gui_panel_layout *layout,
         selected = (in->mouse_down && in->mouse_clicked) ? gui_true: gui_false;
         color = config->colors[GUI_COLOR_PLOT_HIGHLIGHT];
     } else color = config->colors[GUI_COLOR_PLOT_LINES];
-    canvas->draw_rect(canvas->userdata, cur.x - 3, cur.y - 3, 6, 6, color);
+    canvas->draw_rect(canvas->userdata, cur.x - 3, cur.y - 3, 6, 6,0, color);
 
     graph->last.x = cur.x;
     graph->last.y = cur.y;
@@ -2260,7 +2300,7 @@ gui_panel_graph_push_histo(struct gui_panel_layout *layout,
         selected = (in->mouse_down && in->mouse_clicked) ? (gui_int)graph->index: selected;
         color = config->colors[GUI_COLOR_HISTO_HIGHLIGHT];
     }
-    canvas->draw_rect(canvas->userdata, item_x, item_y, item_w, item_h, color);
+    canvas->draw_rect(canvas->userdata, item_x, item_y, item_w, item_h, 0, color);
     graph->index++;
     return selected;
 }
@@ -2700,6 +2740,8 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
         scroll_h = layout->height;
         scroll_offset = layout->offset;
         scroll_step = layout->height * 0.25f;
+        scroll.rounding = config->rounding[GUI_ROUNDING_SCROLLBAR];
+        scroll.cursor_rounding = config->rounding[GUI_ROUNDING_SCROLLBAR_CURSOR];
         scroll.background = config->colors[GUI_COLOR_SCROLLBAR];
         scroll.foreground = config->colors[GUI_COLOR_SCROLLBAR_CURSOR];
         scroll.border = config->colors[GUI_COLOR_SCROLLBAR_BORDER];
@@ -2711,7 +2753,7 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
 
         panel_y = layout->y + layout->height + layout->header_height - config->panel_padding.y;
         canvas->draw_rect(canvas->userdata,layout->x,panel_y,layout->width,config->panel_padding.y,
-                        config->colors[GUI_COLOR_PANEL]);
+                        0, config->colors[GUI_COLOR_PANEL]);
     } else layout->height = layout->at_y - layout->y;
 
     if ((panel->flags & GUI_PANEL_SCALEABLE) && layout->valid) {

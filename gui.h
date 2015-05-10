@@ -63,7 +63,7 @@ typedef gui_bool(*gui_filter)(gui_long unicode);
 typedef gui_size(*gui_text_width_f)(void*,const gui_char*, gui_size);
 typedef void(*gui_scissor)(void*, gui_float, gui_float, gui_float, gui_float);
 typedef void(*gui_draw_line)(void*, gui_float, gui_float, gui_float, gui_float, struct gui_color);
-typedef void(*gui_draw_rect)(void*, gui_float, gui_float, gui_float, gui_float, struct gui_color);
+typedef void(*gui_draw_rect)(void*, gui_float, gui_float, gui_float, gui_float, gui_float, struct gui_color);
 typedef void(*gui_draw_image)(void*, gui_float, gui_float, gui_float, gui_float, gui_image);
 typedef void(*gui_draw_circle)(void*, gui_float, gui_float, gui_float, gui_float, struct gui_color);
 typedef void(*gui_draw_triangle)(void*, gui_float, gui_float, gui_float, gui_float,
@@ -114,6 +114,7 @@ enum gui_button_behavior {
 
 struct gui_button {
     gui_float border;
+    gui_float rounding;
     struct gui_vec2 padding;
     struct gui_color background;
     struct gui_color foreground;
@@ -136,12 +137,16 @@ struct gui_toggle {
 };
 
 struct gui_slider {
+    gui_float rounding;
+    gui_float cursor_rounding;
     struct gui_vec2 padding;
     struct gui_color background;
     struct gui_color foreground;
 };
 
 struct gui_scroll {
+    gui_float rounding;
+    gui_float cursor_rounding;
     struct gui_color background;
     struct gui_color foreground;
     struct gui_color border;
@@ -158,6 +163,8 @@ enum gui_input_filter {
 };
 
 struct gui_edit {
+    gui_float rounding;
+    gui_float cursor_rounding;
     struct gui_vec2 padding;
     gui_bool show_cursor;
     struct gui_color background;
@@ -172,6 +179,7 @@ enum gui_graph_type {
 
 struct gui_graph {
     gui_bool valid;
+    gui_float rounding;
     enum gui_graph_type type;
     gui_float x, y;
     gui_float w, h;
@@ -259,6 +267,7 @@ struct gui_command_line {
 
 struct gui_command_rect {
     struct gui_command header;
+    gui_ushort rounding;
     gui_short x, y;
     gui_ushort w, h;
     struct gui_color color;
@@ -376,12 +385,16 @@ enum gui_panel_rounding {
     GUI_ROUNDING_BUTTON,
     GUI_ROUNDING_TOGGLE,
     GUI_ROUNDING_SLIDER,
+    GUI_ROUNDING_SLIDER_CURSOR,
     GUI_ROUNDING_PROGRESSBAR,
-    GUI_ROUNDING_SPINNER,
+    GUI_ROUNDING_PROGRESSBAR_CURSOR,
     GUI_ROUNDING_SELECTOR,
     GUI_ROUNDING_EDIT,
+    GUI_ROUNDING_EDIT_CURSOR,
     GUI_ROUNDING_SHELF,
     GUI_ROUNDING_SCROLLBAR,
+    GUI_ROUNDING_SCROLLBAR_CURSOR,
+    GUI_ROUNDING_GRAPH,
     GUI_ROUNDING_COUNT
 };
 
@@ -484,8 +497,8 @@ void gui_buffer_push_scissor(struct gui_command_buffer*, gui_float, gui_float,
                     gui_float, gui_float);
 void gui_buffer_push_line(struct gui_command_buffer*, gui_float, gui_float,
                     gui_float, gui_float, struct gui_color);
-void gui_buffer_push_rect(struct gui_command_buffer*, gui_float, gui_float,
-                    gui_float, gui_float, struct gui_color);
+void gui_buffer_push_rect(struct gui_command_buffer *buffer, gui_float x, gui_float y,
+                    gui_float w, gui_float h, gui_float rounding, struct gui_color c);
 void gui_buffer_push_circle(struct gui_command_buffer*, gui_float, gui_float,
                     gui_float, gui_float, struct gui_color);
 void gui_buffer_push_triangle(struct gui_command_buffer*, gui_float, gui_float,
@@ -627,6 +640,7 @@ void gui_stack_pop(struct gui_panel_stack*, struct gui_panel*);
     gui_stack_push(stack, &(*(hook)).GUI_HOOK_PANEL_NAME)
 #define gui_stack_pop_hook(stack, hook)\
     gui_stack_pop(stack, &(*(hook)).GUI_HOOK_PANEL_NAME)
+
 
 #ifdef __cplusplus
 }
