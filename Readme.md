@@ -49,7 +49,7 @@ gui_panel_init(&panel, 50, 50, 220, 170,
     GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
     GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
     GUI_PANEL_MINIMIZABLE, &config, &font);
-gui_buffer_init_fixed(buffer, &memory, GUI_CLIP);
+gui_buffer_init_fixed(buffer, &memory, 0);
 
 while (1) {
     gui_input_begin(&input);
