@@ -40,16 +40,22 @@ Summary: It is only responsible for the actual user interface
 struct gui_input input = {0};
 struct gui_config config;
 struct gui_font font = {...};
-struct gui_memory memory = {...};
+struct gui_memory memory;
 struct gui_command_buffer buffer;
 struct gui_panel panel;
 
+memory.memory = calloc(MEMORY_SIZE, 1);
+memory.size = MEMORY_SIZE;
+gui_buffer_init_fixed(buffer, &memory, 0);
+
 gui_default_config(&config);
+font.userdata = your_font;
+font.height = your_font_height;
+font.width = your_font_string_width_function;
 gui_panel_init(&panel, 50, 50, 220, 170,
     GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
     GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
     GUI_PANEL_MINIMIZABLE, &config, &font);
-gui_buffer_init_fixed(buffer, &memory, 0);
 
 while (1) {
     gui_input_begin(&input);
@@ -151,8 +157,8 @@ buffering vertexes instead of primitives.
 
 ### Buffering
 For the purpose of deferred drawing or the implementation of overlapping panels
-the command buffering API was added. The command buffer hereby holds a queue of
-drawing commands for a number of primitives eg.: line, rectangle, circle,
+the command buffering API was added. The command buffer uses a canvas internally
+and holds a queue of drawing commands for a number of primitives eg.: line, rectangle, circle,
 triangle and text. The memory for the command buffer is provided by the user
 in three possible ways. First by providing a fixed size memory block which
 will be filled up until no memory is left.
@@ -167,10 +173,15 @@ like the input API the buffer modification before the beginning or after the end
 sequence point is undefined behavior.
 
 ```c
-struct gui_allocator allocator = {...};
+struct gui_allocator allocator;
 struct gui_memory_status status;
 struct gui_command_list list;
 struct gui_command_buffer buffer;
+
+allocator.userdata = ...;
+allocator.alloc = ...;
+allocator.realloc = ...;
+allocator.free = ...;
 gui_buffer_init(buffer, &allocator, 2.0f, INITAL_SIZE, 0);
 
 while (1) {
@@ -188,10 +199,13 @@ advantage is that you do not have to allocate a buffer for each panel and boil
 down the memory management to a single buffer.
 
 ```c
-struct gui_memory memory = {...};
+struct gui_memory memory;
 struct gui_memory_status status;
 struct gui_command_list list;
 struct gui_command_buffer buffer;
+
+memory.memory = calloc(MEMORY_SIZE, 1);
+memory.size = MEMORY_SIZE;
 gui_buffer_init_fixed(buffer, &memory);
 
 while (1) {
@@ -242,12 +256,26 @@ sequence points have no effect in the current frame and are only visible in the
 next frame.
 
 ```c
-struct gui_panel panel;
-struct gui_config config;
-struct gui_font font = {...}
+
+struct gui_font font;
 struct gui_input input = {0};
-struct gui_canvas canvas = {...};
+struct gui_config config;
+struct gui_canvas canvas;
+struct gui_panel panel;
+
+canvas.userdata = your_renderer_context;
+canvas.scissor = your_scissor_function;
+canvas.draw_line = your_draw_line_function;
+canvas.draw_rect = your_draw_rectangle_function;
+canvas.draw_circle = your_draw_circle_function;
+canvas.draw_triangle = your_draw_triangle_function;
+canvas.draw_image = your_draw_image_function;
+canvas.draw_text = your_draw_text_function;
+
 gui_default_config(&config);
+font.userdata = your_font;
+font.height = your_font_height;
+font.width = your_font_string_len_function;
 gui_panel_init(&panel, 50, 50, 300, 200, 0, &config, &font);
 
 while (1) {

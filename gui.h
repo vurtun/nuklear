@@ -339,7 +339,6 @@ struct gui_command_list {
     gui_size count;
 };
 
-
 /* Panel */
 enum gui_panel_colors {
     GUI_COLOR_TEXT,
