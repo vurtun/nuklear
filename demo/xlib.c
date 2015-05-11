@@ -165,6 +165,7 @@ font_del(Display *dpy, XFont *font)
 static unsigned long
 color_from_byte(struct gui_color col)
 {
+    /* NOTE(vurtun): this only works for little-endian */
     unsigned long res = 0;
     res |= (unsigned long)col.r << 16;
     res |= (unsigned long)col.g << 8;
@@ -225,7 +226,7 @@ surface_draw_rect(XSurface* surf, gui_short x, gui_short y, gui_ushort w,
 {
     unsigned long c = color_from_byte(col);
     XSetForeground(surf->dpy, surf->gc, c);
-    XFillRectangle(surf->dpy, surf->drawable, surf->gc, (int)x, (int)y, (unsigned)w, (unsigned)h);
+    XFillRectangle(surf->dpy, surf->drawable, surf->gc, x, y, w, h);
 }
 
 static void
@@ -492,6 +493,7 @@ main(int argc, char *argv[])
             sleep_for(DTIME - dt);
     }
 
+cleanup:
     free(memory.memory);
     font_del(xw.dpy, xw.font);
     surface_del(xw.surf);

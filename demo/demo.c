@@ -300,15 +300,13 @@ init_demo(struct show_window *show, struct control_window *control,
     struct gui_panel_stack *stack, struct gui_config *config, struct gui_font *font)
 {
     memset(show, 0, sizeof(*show));
-    gui_default_config(config);
-
     gui_hook_init(&show->hook, 50, 50, 300, 500,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
         GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
         GUI_PANEL_MINIMIZABLE, config, font);
     gui_stack_push_hook(stack, &show->hook);
 
-    show->wid_min = gui_true;
+    /*show->wid_min = gui_true;*/
     show->diff_min = gui_true;
     show->slider = 5.0f;
     show->prog = 50;
