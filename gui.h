@@ -10,6 +10,7 @@
 extern "C" {
 #endif
 
+/* Constants */
 #define GUI_UTF_SIZE 4
 #define GUI_INPUT_MAX 16
 #define GUI_UTF_INVALID 0xFFFD
@@ -18,6 +19,7 @@ extern "C" {
 #define GUI_HOOK_ATTR(T, name) struct T name
 #define GUI_HOOK_OUT gui_command_list
 
+/* Types */
 #ifdef GUI_USE_FIXED_TYPES
 #include <stdint.h>
 typedef int32_t gui_int;
@@ -49,6 +51,7 @@ typedef unsigned int gui_flag;
 typedef unsigned long gui_size;
 #endif
 
+/* Utilities */
 enum {gui_false, gui_true};
 enum gui_heading {GUI_UP, GUI_RIGHT, GUI_DOWN, GUI_LEFT};
 struct gui_color {gui_byte r,g,b,a;};
@@ -57,6 +60,7 @@ struct gui_rect {gui_float x,y,w,h;};
 struct gui_key {gui_bool down, clicked;};
 struct gui_font;
 
+/* Callbacks */
 typedef void* gui_image;
 typedef gui_char gui_glyph[GUI_UTF_SIZE];
 typedef gui_bool(*gui_filter)(gui_long unicode);
@@ -71,6 +75,8 @@ typedef void(*gui_draw_triangle)(void*, gui_float, gui_float, gui_float, gui_flo
 typedef void(*gui_draw_text)(void*, gui_float, gui_float, gui_float, gui_float,
                             const gui_char*, gui_size, const struct gui_font*,
                             struct gui_color, struct gui_color);
+
+/* Input */
 enum gui_keys {
     GUI_KEY_SHIFT,
     GUI_KEY_CTRL,
@@ -94,6 +100,8 @@ struct gui_input {
     struct gui_vec2 mouse_clicked_pos;
 };
 
+
+/* Widgets */
 enum gui_text_align {
     GUI_TEXT_LEFT,
     GUI_TEXT_CENTERED,
@@ -207,6 +215,8 @@ struct gui_canvas {
     gui_draw_text draw_text;
 };
 
+
+/* Buffer */
 struct gui_memory {
     void *memory;
     gui_size size;
@@ -329,6 +339,8 @@ struct gui_command_list {
     gui_size count;
 };
 
+
+/* Panel */
 enum gui_panel_colors {
     GUI_COLOR_TEXT,
     GUI_COLOR_PANEL,

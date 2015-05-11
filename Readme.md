@@ -15,10 +15,17 @@ possible with fast streamlined development speed in mind.
 - No direct dependencies (not even libc!)
 - Full memory management control
 - Renderer and platform independent
-- Configurable
+- Configurable style and colors
 - UTF-8 support
 
+## Target Audience
+- Graphical tools/editors
+- Library testbed UI
+- Game engine debugging UI
+- Graphical overlays
+
 ## Limitations
+- Is NOT a layered Framework it is a component
 - Does NOT provide os window/input management
 - Does NOT provide a renderer backend
 - Does NOT implement a font library  
@@ -27,7 +34,6 @@ Summary: It is only responsible for the actual user interface
 ## Gallery
 ![gui screenshot](/screen/demo.png?raw=true)
 ![gui screenshot](/screen/config.png?raw=true)
-![gui screenshot](/screen/config2.png?raw=true)
 
 ## Example
 ```c
