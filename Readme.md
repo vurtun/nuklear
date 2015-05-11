@@ -178,9 +178,9 @@ struct gui_memory_status status;
 struct gui_command_list list;
 struct gui_command_buffer buffer;
 
-allocator.userdata = your_allocator
+allocator.userdata = your_allocator;
 allocator.alloc = your_alloc_function;
-allocator.realloc = your_relloc_function;
+allocator.realloc = your_realloc_function;
 allocator.free = your_free_function;
 gui_buffer_init(buffer, &allocator, 2.0f, INITAL_SIZE, 0);
 
