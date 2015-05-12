@@ -19,13 +19,12 @@ possible with fast streamlined development speed in mind.
 - UTF-8 support
 
 ## Limitations
-- Is NOT a layered Framework, it is a component
 - Does NOT provide os window/input management
 - Does NOT provide a renderer backend
 - Does NOT implement a font library  
 Summary: It is only responsible for the actual user interface
 
-## Target applications/area
+## Target applications
 - Graphical tools/editors
 - Library testbed UI
 - Game engine debugging UI
@@ -194,20 +193,21 @@ struct gui_canvas {
 ```
 
 ### Memory
-Almost all memory aswell as object management for the toolkit
+Almost all memory as well as object management for the toolkit
 is left to the user for maximum control. In fact a big subset of the toolkit can
-be used without any memory allocation at all. The only place there is any need
-for memory control lies in buffering of draw calls for overlapping panels or
-defered drawing. While the standart way of memory allocation is to just provide
-a allocator class which is implemented as well with the `gui_allocator`
-structure there are two addition ways provided with better flow control. The
-first one is by just providing a static fixed size memory block to fill which
+be used without any heap allocation at all. The only place where heap allocation
+is needed at all is for buffering draw calls for overlapping panels or defered drawing.
+While the standart way of memory allocation in that case for libraries is to
+just provide allocator callbacks which is implemented aswell with the `gui_allocator`
+structure, there are two addition ways to provided memory. The
+first one is to just providing a static fixed size memory block to fill up which
 is handy for UIs with roughly known memory requirements. The other way of memory
-managment extends the fixed size block with the abiltiy to resize your block of
-memory at the end of the frame.
-The toolkit In addition to the memory managment flow control provides exact
-memory stats like the amount of memory that has been allocated, or the memory amount
-that would have been needed if there was enough memory.
+managment is to extend the fixed size block with the abiltiy to resize your block
+at the end of the frame if there is not enough memory.
+For the purpose of resizable fixed size memory blocks and for general
+information about memory consumption the `gui_memory_status` structure was
+added. It contains information about the allocated amount of data in the current
+frame as well as the needed amount if not enough memory was provided.
 
 ```c
 struct gui_memory {
@@ -232,13 +232,19 @@ struct gui_allocator {
 ```
 
 ### Buffering
-For the purpose of deferred drawing or the implementation of overlapping panels
-the command buffering API was added. The command buffer uses a canvas internally
-and holds a queue of drawing commands for a number of primitives eg.: line, rectangle, circle,
-triangle and text. In true immediate mode fashion the buffering API is based around sequence
+While a raw canvas provides the ability to draw without any problems, the pure
+nature of callbacks is a loss of flow control. You have to immediately
+draw a primitive to screen which forces your application to build around the
+toolkit instead of controling it. An additional disadvantage of callbacks in this
+particular case is that dynamically overlapping panels cannot be implemented since the
+drawing order is static. The buffer fixes these problem in exchange for some memory
+consumption while still using a canvas internally which adds primitves as
+commands into a queue which can later be drawn to screen. Since the buffer
+provides a canvas to draw to no additional API changes have to take place.
+In true immediate mode fashion the buffering API is based around sequence
 points with a begin sequence point `gui_buffer_begin` and a end sequence
-point `gui_buffer_end` and modification of state between both points. Just
-like the input API the buffer modification before the beginning or after the end
+point `gui_buffer_end` and modification of state between both points.
+Buffer and canvas modification before the beginning or after the end
 sequence point is undefined behavior.
 
 ```c
@@ -252,11 +258,11 @@ while (1) {
     struct gui_canvas canvas;
     gui_buffer_begin(&canvas, &buffer, window_width, window_height);
     /* add commands by using the canvas */
-    gui_buffer_end(&list, buffer, &status);
+    gui_buffer_end(&list, buffer, &canvas, &status);
 }
 
 ```
-For the purpose of implementing multible panels, sub buffers were implemented.
+For the purpose of making multible panels easier to handle, sub buffers were implemented.
 With sub buffers you can create one global buffer which owns the allocated memory
 and sub buffers which directly reference the global buffer. The biggest
 advantage is that you do not have to allocate a buffer for each panel and boil
@@ -299,7 +305,7 @@ gui_default_config(&config);
 
 while (1) {
     value = gui_slider(&canvas, 50, 50, 100, 30, 0, value, 10, 1, &style, &input);
-    prog = gui_progress(&canvas, 50, 100, 100, 30, prog 100, gui_false, &style, &input);
+    prog = gui_progress(&canvas, 50, 100, 100, 30, prog, 100, gui_false, &style, &input);
 }
 ```
 
