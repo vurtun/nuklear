@@ -25,7 +25,7 @@ possible with fast streamlined development speed in mind.
 - Does NOT implement a font library  
 Summary: It is only responsible for the actual user interface
 
-## Target applications
+## Target applications/area
 - Graphical tools/editors
 - Library testbed UI
 - Game engine debugging UI

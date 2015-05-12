@@ -248,10 +248,11 @@ color_tab(struct gui_panel_layout *panel, struct control_window *control, struct
     static const char *labels[] = {"Text:", "Panel:", "Header:", "Border:", "Button:",
         "Button Border:", "Button Hovering:", "Button Toggle:", "Button Hovering Text:",
         "Check:", "Check BG:", "Check Active:", "Option:", "Option BG:", "Option Active:",
-        "Slider:", "Slider cursor:", "Progress:", "Progress Cursor:", "Editbox:", "Editbox Border:",
-        "Spinner:", "Spinner Border:", "Selector:", "Selector Border:", "Histo:", "Histo Bars:",
-        "Histo Negative:", "Histo Hovering:", "Plot:", "Plot Lines:", "Plot Hightlight:",
-        "Scrollbar:", "Scrollbar Cursor:", "Scrollbar Border:", "Table lines:", "Scaler:"
+        "Slider:", "Slider cursor:", "Progress:", "Progress Cursor:", "Editbox:", "Editbox cursor:",
+        "Editbox Border:", "Spinner:", "Spinner Border:", "Selector:", "Selector Border:",
+        "Histo:", "Histo Bars:", "Histo Negative:", "Histo Hovering:", "Plot:", "Plot Lines:",
+        "Plot Hightlight:", "Scrollbar:", "Scrollbar Cursor:", "Scrollbar Border:",
+        "Table lines:", "Scaler:"
     };
     control->color_min = gui_panel_tab_begin(panel, &tab, "Color", control->color_min);
     if (control->picker_act) {

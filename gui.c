@@ -757,7 +757,7 @@ gui_edit_filtered(const struct gui_canvas *canvas, gui_float x, gui_float y, gui
             &buffer[offset], text_len, font, field->foreground, field->background);
         if (input_active && field->show_cursor) {
             canvas->draw_rect(canvas->userdata,  label_x + (gui_float)text_width, label_y,
-                (gui_float)cursor_width, label_h, field->background);
+                (gui_float)cursor_width, label_h, field->cursor);
         }
     }
     *active = input_active;
@@ -1294,6 +1294,7 @@ gui_default_config(struct gui_config *config)
     col_load(config->colors[GUI_COLOR_PROGRESS], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_PROGRESS_CURSOR], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_INPUT], 45, 45, 45, 255);
+    col_load(config->colors[GUI_COLOR_INPUT_CURSOR], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_INPUT_BORDER], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_SPINNER], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_SPINNER_BORDER], 100, 100, 100, 255);

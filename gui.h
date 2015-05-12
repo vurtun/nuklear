@@ -168,6 +168,7 @@ enum gui_input_filter {
 struct gui_edit {
     struct gui_vec2 padding;
     gui_bool show_cursor;
+    struct gui_color cursor;
     struct gui_color background;
     struct gui_color foreground;
 };
@@ -361,6 +362,7 @@ enum gui_panel_colors {
     GUI_COLOR_PROGRESS,
     GUI_COLOR_PROGRESS_CURSOR,
     GUI_COLOR_INPUT,
+    GUI_COLOR_INPUT_CURSOR,
     GUI_COLOR_INPUT_BORDER,
     GUI_COLOR_SPINNER,
     GUI_COLOR_SPINNER_BORDER,
