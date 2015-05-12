@@ -382,7 +382,7 @@ while (1) {
     gui_buffer_end(gui_hook_list(&win.hook), buffer, &status);
 
     /* draw each panel */
-    struct gui_panel *iter = stack.begin;
+    struct gui_panel_hook *iter = stack.begin;
     while (iter) {
         const struct gui_command *cmd = gui_list_begin(gui_hook_list(h));
         while (cmd) {
