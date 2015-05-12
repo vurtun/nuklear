@@ -2692,7 +2692,7 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
         scroll.foreground = config->colors[GUI_COLOR_SCROLLBAR_CURSOR];
         scroll.border = config->colors[GUI_COLOR_SCROLLBAR_BORDER];
         if (panel->flags & GUI_PANEL_BORDER) scroll_h -= 1;
-        scroll_target = (layout->at_y - layout->y) - (layout->header_height + 2 * config->item_spacing.y);
+        scroll_target = (layout->at_y-layout->y)-(layout->header_height+2*config->item_spacing.y);
         panel->offset = gui_scroll(canvas, scroll_x, scroll_y, scroll_w, scroll_h,
                                     scroll_offset, scroll_target, scroll_step,
                                     &scroll, layout->input);

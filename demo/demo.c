@@ -245,9 +245,9 @@ color_tab(struct gui_panel_layout *panel, struct control_window *control, struct
 {
     gui_size i = 0;
     struct gui_panel_layout tab;
-    static const char *labels[] = {"Text:", "Panel:", "Header:", "Border:", "Button:", "Button Border:",
-        "Button Hovering:", "Button Toggle:", "Button Hovering Text:", "Check:", "Check BG:",
-        "Check Active:", "Option:", "Option BG:", "Option Active:", "Scroll:", "Scroll Cursor:",
+    static const char *labels[] = {"Text:", "Panel:", "Header:", "Border:", "Button:",
+        "Button Border:", "Button Hovering:", "Button Toggle:", "Button Hovering Text:",
+        "Check:", "Check BG:", "Check Active:", "Option:", "Option BG:", "Option Active:",
         "Slider:", "Slider cursor:", "Progress:", "Progress Cursor:", "Editbox:", "Editbox Border:",
         "Spinner:", "Spinner Border:", "Selector:", "Selector Border:", "Histo:", "Histo Bars:",
         "Histo Negative:", "Histo Hovering:", "Plot:", "Plot Lines:", "Plot Hightlight:",
