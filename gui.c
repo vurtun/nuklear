@@ -317,7 +317,6 @@ gui_text(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w,
     gui_float label_w;
     gui_float label_h;
     gui_size text_width;
-    struct gui_rect clip;
 
     ASSERT(text);
     if (!text) return;
@@ -443,8 +442,6 @@ gui_button_image(const struct gui_canvas *canvas, gui_float x, gui_float y,
 {
     gui_bool pressed;
     gui_float img_x, img_y, img_w, img_h;
-    struct gui_color col;
-    struct gui_vec2 points[3];
 
     ASSERT(button);
     ASSERT(canvas);
@@ -1347,7 +1344,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     gui_float mouse_x, mouse_y;
     gui_float prev_x, prev_y;
     gui_float clicked_x, clicked_y;
-    gui_float header_x, header_w;
+    gui_float header_x = 0, header_w = 0;
     gui_float footer_h;
     gui_bool ret = gui_true;
 
@@ -1460,7 +1457,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     }
     else layout->clip.h = null_rect.h;
 
-    if (panel->flags & GUI_PANEL_CLOSEABLE) {
+    if ((panel->flags & GUI_PANEL_CLOSEABLE) && (!(panel->flags & GUI_PANEL_NO_HEADER))) {
         const gui_char *X = (const gui_char*)"x";
         const gui_size text_width = panel->font.width(panel->font.userdata, X, 1);
         const gui_float close_x = header_x;
@@ -1472,7 +1469,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
 
         header_w -= close_w;
         header_x += close_h - config->item_padding.x;
-        if (INBOX(mouse_x, mouse_y, close_x, close_y, close_w, close_h)) {
+        if (in && INBOX(mouse_x, mouse_y, close_x, close_y, close_w, close_h)) {
             if (INBOX(clicked_x, clicked_y, close_x, close_y, close_w, close_h)) {
                 ret = !(in->mouse_down && in->mouse_clicked);
                 if (!ret) panel->flags |= GUI_PANEL_HIDDEN;
@@ -1480,7 +1477,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
         }
     }
 
-    if (panel->flags & GUI_PANEL_MINIMIZABLE) {
+    if ((panel->flags & GUI_PANEL_MINIMIZABLE) && (!(panel->flags & GUI_PANEL_NO_HEADER))) {
         gui_size text_width;
         gui_float min_x, min_y, min_w, min_h;
         const gui_char *score = (panel->minimized) ?
@@ -1498,7 +1495,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
 
         header_w -= min_w;
         header_x += min_w - config->item_padding.x;
-        if (INBOX(mouse_x, mouse_y, min_x, min_y, min_w, min_h)) {
+        if (in && INBOX(mouse_x, mouse_y, min_x, min_y, min_w, min_h)) {
             if (INBOX(clicked_x, clicked_y, min_x, min_y, min_w, min_h))
                 if (in->mouse_down && in->mouse_clicked)
                     panel->minimized = !panel->minimized;
@@ -1506,7 +1503,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     }
     layout->valid = !(panel->minimized || (panel->flags & GUI_PANEL_HIDDEN));
 
-    if (text) {
+    if (text && !(panel->flags & GUI_PANEL_NO_HEADER)) {
         const gui_size text_len = strsiz(text);
         const gui_float label_x = header_x + config->item_padding.x;
         const gui_float label_y = panel->y + config->panel_padding.y;
@@ -1749,7 +1746,6 @@ gui_panel_button_text(struct gui_panel_layout *layout, const char *str,
 gui_bool gui_panel_button_color(struct gui_panel_layout *layout,
     const struct gui_color color, enum gui_button_behavior behavior)
 {
-    struct gui_rect *c;
     struct gui_rect bounds;
     struct gui_button button;
     if (!gui_panel_button(&button, &bounds, layout))
@@ -1767,7 +1763,6 @@ gui_bool
 gui_panel_button_triangle(struct gui_panel_layout *layout, enum gui_heading heading,
     enum gui_button_behavior behavior)
 {
-    struct gui_rect *c;
     struct gui_rect bounds;
     struct gui_button button;
     const struct gui_config *config;
@@ -1788,7 +1783,6 @@ gui_bool
 gui_panel_button_image(struct gui_panel_layout *layout, gui_image image,
     enum gui_button_behavior behavior)
 {
-    struct gui_rect *c;
     struct gui_rect bounds;
     struct gui_button button;
     const struct gui_config *config;
@@ -1808,7 +1802,6 @@ gui_panel_button_image(struct gui_panel_layout *layout, gui_image image,
 gui_bool
 gui_panel_button_toggle(struct gui_panel_layout *layout, const char *str, gui_bool value)
 {
-    struct gui_rect *c;
     struct gui_rect bounds;
     struct gui_button button;
     const struct gui_config *config;
@@ -1839,7 +1832,6 @@ static gui_bool
 gui_panel_toggle_base(struct gui_toggle *toggle, struct gui_rect *bounds,
     struct gui_panel_layout *layout)
 {
-    struct gui_rect *c;
     const struct gui_config *config;
     if (!gui_panel_widget(bounds, layout))
         return gui_false;
@@ -1854,7 +1846,6 @@ gui_panel_toggle_base(struct gui_toggle *toggle, struct gui_rect *bounds,
 gui_bool
 gui_panel_check(struct gui_panel_layout *layout, const char *text, gui_bool is_active)
 {
-    struct gui_rect *c;
     struct gui_rect bounds;
     struct gui_toggle toggle;
     const struct gui_config *config;
@@ -1872,7 +1863,6 @@ gui_panel_check(struct gui_panel_layout *layout, const char *text, gui_bool is_a
 gui_bool
 gui_panel_option(struct gui_panel_layout *layout, const char *text, gui_bool is_active)
 {
-    struct gui_rect *c;
     struct gui_rect bounds;
     struct gui_toggle toggle;
     const struct gui_config *config;
@@ -1891,7 +1881,6 @@ gui_float
 gui_panel_slider(struct gui_panel_layout *layout, gui_float min_value, gui_float value,
     gui_float max_value, gui_float value_step)
 {
-    struct gui_rect *c;
     struct gui_rect bounds;
     struct gui_slider slider;
     const struct gui_config *config;
@@ -1911,7 +1900,6 @@ gui_size
 gui_panel_progress(struct gui_panel_layout *layout, gui_size cur_value, gui_size max_value,
     gui_bool is_modifyable)
 {
-    struct gui_rect *c;
     struct gui_rect bounds;
     struct gui_slider prog;
     const struct gui_config *config;
@@ -1970,7 +1958,6 @@ gui_bool
 gui_panel_shell(struct gui_panel_layout *layout, gui_char *buffer, gui_size *len,
     gui_size max, gui_bool *active)
 {
-    struct gui_rect *c;
     struct gui_rect bounds;
     struct gui_edit field;
     struct gui_button button;
@@ -2021,7 +2008,6 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     gui_int max, gui_int step, gui_bool *active)
 {
     struct gui_rect bounds;
-    struct gui_rect *c;
     const struct gui_config *config;
     const struct gui_canvas *canvas;
     struct gui_edit field;
@@ -2095,7 +2081,6 @@ gui_panel_selector(struct gui_panel_layout *layout, const char *items[],
     gui_float label_w, label_h;
 
     struct gui_rect bounds;
-    struct gui_rect *c;
     struct gui_button button;
     const struct gui_config *config;
     const struct gui_canvas *canvas;
@@ -2153,7 +2138,6 @@ void
 gui_panel_graph_begin(struct gui_panel_layout *layout, struct gui_graph *graph,
     enum gui_graph_type type, gui_size count, gui_float min_value, gui_float max_value)
 {
-    struct gui_rect *c;
     struct gui_rect bounds;
     const struct gui_config *config;
     const struct gui_canvas *canvas;
@@ -2407,8 +2391,6 @@ void
 gui_panel_table_begin(struct gui_panel_layout *layout, gui_flags flags,
     gui_size row_height, gui_size cols)
 {
-    struct gui_rect bounds;
-    const struct gui_rect *c;
     ASSERT(layout);
     if (!layout || !layout->valid) return;
 

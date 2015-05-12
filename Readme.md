@@ -18,18 +18,18 @@ possible with fast streamlined development speed in mind.
 - Configurable style and colors
 - UTF-8 support
 
-## Target Audience
-- Graphical tools/editors
-- Library testbed UI
-- Game engine debugging UI
-- Graphical overlays
-
 ## Limitations
-- Is NOT a layered Framework it is a component
+- Is NOT a layered Framework, it is a component
 - Does NOT provide os window/input management
 - Does NOT provide a renderer backend
 - Does NOT implement a font library  
 Summary: It is only responsible for the actual user interface
+
+## Target applications
+- Graphical tools/editors
+- Library testbed UI
+- Game engine debugging UI
+- Graphical overlays
 
 ## Gallery
 ![gui screenshot](/screen/demo.png?raw=true)
@@ -38,20 +38,14 @@ Summary: It is only responsible for the actual user interface
 ## Example
 ```c
 struct gui_input input = {0};
-struct gui_config config;
 struct gui_font font = {...};
-struct gui_memory memory;
+struct gui_memory memory = {...};
 struct gui_command_buffer buffer;
-struct gui_panel panel;
-
-memory.memory = calloc(MEMORY_SIZE, 1);
-memory.size = MEMORY_SIZE;
 gui_buffer_init_fixed(buffer, &memory, 0);
 
+struct gui_panel panel;
+struct gui_config config;
 gui_default_config(&config);
-font.userdata = your_font;
-font.height = your_font_height;
-font.width = your_font_string_width_function;
 gui_panel_init(&panel, 50, 50, 220, 170,
     GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
     GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
@@ -62,6 +56,7 @@ while (1) {
     /* record input */
     gui_input_end(&input);
 
+    /* transient frame data */
     struct gui_canvas canvas;
     struct gui_command_list list;
     struct gui_panel_layout layout;
@@ -111,11 +106,15 @@ understandability.
 
 ### Input
 The `gui_input` struct holds the user input over the course of the frame and
-manages the complete modification of widget and panel state. Like the panel and
-buffering, input is an immediate mode API and consist of an begin sequence
-point with `gui_input_begin` and a end sequence point with `gui_input_end`.
-All modifications can only occur between both of these
-sequence points while all outside modifcation provoke undefined behavior.
+manages the complete modification of widget and panel state. To fill the
+structure with data over the frame there are a number of functions provided for
+key, motion, button and text input. The input is hereby completly independent of
+the underlying platform or way of input so even touch or other ways of input are
+possible.
+Like the panel and the buffer, input is based on an immediate mode API and
+consist of an begin sequence with `gui_input_begin` and a end sequence point
+with `gui_input_end`. All modifications can only occur between both of these
+sequence points while all outside modification provoke undefined behavior.
 
 ```c
 struct gui_input input = {0};
@@ -128,10 +127,20 @@ while (1) {
 
 ### Font
 Since there is no direct font implementation in the toolkit but font handling is
-still an aspect of a gui implemenatation the gui struct was introduced. It only
-contains the bare minimum of what is needed for font handling with a handle to
-your font structure, the font height and a callback to calculate the width of a
-given string.
+still an aspect of a gui implementation, the `gui_font` struct was introduced. It only
+contains the bare minimum of what is needed for font handling.
+For widgets the `gui_font` data has to be persistent while the
+panel hold the font internally. Important to node is that the font does not hold
+your font data but merely references it so you have to make sure that the font
+always points to a valid object.
+
+```c
+struct gui_font {
+    void *userdata;
+    gui_float height;
+    gui_text_width_f width;
+};
+```
 
 ### Configuration
 The gui toolkit provides a number of different attributes that can be
@@ -142,6 +151,18 @@ attributes in the `gui_config` structure. The structure either needs to be
 filled by the user or can be setup with some default values by the function
 `gui_default_config`. Modification on the fly to the `gui_config` struct is in
 true immediate mode fashion possible and supported.
+
+```c
+struct gui_config {
+    struct gui_vec2 panel_padding;
+    struct gui_vec2 panel_min_size;
+    struct gui_vec2 item_spacing;
+    struct gui_vec2 item_padding;
+    struct gui_vec2 scaler_size;
+    gui_float scrollbar_width;
+    struct gui_color colors[GUI_COLOR_COUNT];
+};
+```
 
 ### Canvas
 The Canvas is the abstract drawing interface between the GUI toolkit
@@ -155,33 +176,74 @@ Internally the canvas is used to implement the buffering of primitive draw
 commands, but can be used to implement a different buffering scheme like
 buffering vertexes instead of primitives.
 
+```c
+struct gui_canvas {
+    void *userdata;
+    gui_size width;
+    gui_size height;
+    gui_scissor scissor;
+    gui_draw_line draw_line;
+    gui_draw_rect draw_rect;
+    gui_draw_circle draw_circle;
+    gui_draw_triangle draw_triangle;
+    gui_draw_image draw_image;
+    gui_draw_text draw_text;
+};
+```
+
+### Memory
+Almost all memory aswell as object management for the toolkit
+is left to the user for maximum control. In fact a big subset of the toolkit can
+be used without any memory allocation at all. The only place there is any need
+for memory control lies in buffering of draw calls for overlapping panels or
+defered drawing. While the standart way of memory allocation is to just provide
+a allocator class which is implemented as well with the `gui_allocator`
+structure there are two addition ways provided with better flow control. The
+first one is by just providing a static fixed size memory block to fill which
+is handy for UIs with roughly known memory requirements. The other way of memory
+managment extends the fixed size block with the abiltiy to resize your block of
+memory at the end of the frame.
+The toolkit In addition to the memory managment flow control provides exact
+memory stats like the amount of memory that has been allocated, or the memory amount
+that would have been needed if there was enough memory.
+
+```c
+struct gui_memory {
+    void *memory;
+    gui_size size;
+};
+
+struct gui_memory_status {
+    gui_size size;
+    gui_size allocated;
+    gui_size needed;
+    gui_size clipped_commands;
+    gui_size clipped_memory;
+};
+
+struct gui_allocator {
+    void *userdata;
+    void*(*alloc)(void *usr, gui_size);
+    void*(*realloc)(void *usr, void*, gui_size);
+    void(*free)(void *usr, void*);
+};
+```
+
 ### Buffering
 For the purpose of deferred drawing or the implementation of overlapping panels
 the command buffering API was added. The command buffer uses a canvas internally
 and holds a queue of drawing commands for a number of primitives eg.: line, rectangle, circle,
-triangle and text. The memory for the command buffer is provided by the user
-in three possible ways. First by providing a fixed size memory block which
-will be filled up until no memory is left.
-The second way is extending the fixed size memory block by reallocating at the
-end of the frame if the provided memory size was not sufficient.
-The final and most complex way of memory management is by providing allocator
-callbacks with alloc, realloc and free.
-In true immediate mode fashion the buffering API is based around sequence
+triangle and text. In true immediate mode fashion the buffering API is based around sequence
 points with a begin sequence point `gui_buffer_begin` and a end sequence
 point `gui_buffer_end` and modification of state between both points. Just
 like the input API the buffer modification before the beginning or after the end
 sequence point is undefined behavior.
 
 ```c
-struct gui_allocator allocator;
 struct gui_memory_status status;
 struct gui_command_list list;
+struct gui_allocator allocator = {...};
 struct gui_command_buffer buffer;
-
-allocator.userdata = your_allocator;
-allocator.alloc = your_alloc_function;
-allocator.realloc = your_realloc_function;
-allocator.free = your_free_function;
 gui_buffer_init(buffer, &allocator, 2.0f, INITAL_SIZE, 0);
 
 while (1) {
@@ -199,13 +261,10 @@ advantage is that you do not have to allocate a buffer for each panel and boil
 down the memory management to a single buffer.
 
 ```c
-struct gui_memory memory;
+struct gui_memory memory = {...};
 struct gui_memory_status status;
 struct gui_command_list list;
 struct gui_command_buffer buffer;
-
-memory.memory = calloc(MEMORY_SIZE, 1);
-memory.size = MEMORY_SIZE;
 gui_buffer_init_fixed(buffer, &memory);
 
 while (1) {
@@ -231,11 +290,14 @@ and returns the from the user input modified state of the widget.
 struct gui_input input = {0};
 struct gui_font font = {...};
 struct gui_canvas canvas = {...};
-struct gui_button style = {...};
+const struct gui_slider style = {...};
+gui_float value = 5.0f
+gui_size prog = 20;
+gui_default_config(&config);
 
 while (1) {
-    if(gui_button_text(&canvas, 0, 0, 100, 30, "ok", GUI_BUTTON_DEFAULT, &style, &input, &font))
-        fprintf(stdout, "button pressed!\n");
+    value = gui_slider(&canvas, 50, 50, 100, 30, 0, value, 10, 1, &style, &input);
+    prog = gui_progress(&canvas, 50, 100, 100, 30, prog 100, gui_false, &style, &input);
 }
 ```
 
@@ -257,25 +319,12 @@ next frame.
 
 ```c
 
-struct gui_font font;
+struct gui_font font = {...};
 struct gui_input input = {0};
+struct gui_canvas canvas = {...};
 struct gui_config config;
-struct gui_canvas canvas;
 struct gui_panel panel;
-
-canvas.userdata = your_renderer_context;
-canvas.scissor = your_scissor_function;
-canvas.draw_line = your_draw_line_function;
-canvas.draw_rect = your_draw_rectangle_function;
-canvas.draw_circle = your_draw_circle_function;
-canvas.draw_triangle = your_draw_triangle_function;
-canvas.draw_image = your_draw_image_function;
-canvas.draw_text = your_draw_text_function;
-
 gui_default_config(&config);
-font.userdata = your_font;
-font.height = your_font_height;
-font.width = your_font_string_len_function;
 gui_panel_init(&panel, 50, 50, 300, 200, 0, &config, &font);
 
 while (1) {
