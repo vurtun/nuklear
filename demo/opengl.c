@@ -480,11 +480,10 @@ execute(struct gui_command_list *list, int width, int height)
 static void
 draw(struct gui_panel_stack *stack, int width, int height)
 {
-    struct gui_panel *iter = stack->begin;
+    struct gui_panel_hook *iter = stack->begin;
     if (!stack->count) return;
     while (iter) {
-        struct gui_panel_hook *hook = gui_hook(iter);
-        execute(&hook->list, width, height);
+        execute(gui_hook_output(iter), width, height);
         iter = iter->next;
     }
 }

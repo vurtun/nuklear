@@ -3,6 +3,8 @@
 
 struct show_window {
     struct gui_panel_hook hook;
+
+    /* widget data */
     gui_char in_buf[MAX_BUFFER];
     gui_size in_len;
     gui_bool in_act;
@@ -16,22 +18,30 @@ struct show_window {
     gui_bool spin_act;
     gui_size item_cur;
     gui_size cur;
-    gui_bool diff_min;
-    gui_bool wid_min;
-    gui_bool tbl_min;
-    gui_float shelf_off;
-    gui_float tbl_off;
     gui_int combo_sel;
     gui_bool toggle;
     gui_int option;
+
+    /* tabs */
+    gui_bool diff_min;
+    gui_bool wid_min;
+    gui_bool tbl_min;
+
+    /* scrollbars */
+    gui_float shelf_off;
+    gui_float tbl_off;
 };
 
 struct control_window {
     struct gui_panel_hook hook;
     gui_flags show_flags;
+
+    /* tabs */
     gui_bool flag_min;
     gui_bool style_min;
     gui_bool color_min;
+
+    /* color picker */
     gui_bool picker_act;
     gui_bool col_r_act;
     gui_bool col_g_act;
@@ -79,7 +89,7 @@ graph_panel(struct gui_panel_layout *panel, struct show_window *demo)
     enum {HISTO, PLOT};
     struct gui_panel_layout tab;
     static const char *shelfs[] = {"Histogram", "Lines"};
-    static const gui_float values[] = {8.0f, 15.0f, 20.0f, 12.0f, 30.0f, 12.0f, 35.0f, 40.0f, 20.0f};
+    static const gui_float values[] = {8.0f,15.0f,20.0f,12.0f,30.0f,12.0f,35.0f,40.0f,20.0f};
     gui_panel_row(panel, 180, 1);
     demo->cur = gui_panel_shelf_begin(panel,&tab,shelfs,LEN(shelfs),demo->cur,demo->shelf_off);
     gui_panel_row(&tab, 100, 1);
@@ -169,7 +179,8 @@ flags_tab(struct gui_panel_layout *panel, struct control_window *control)
     control->flag_min = gui_panel_tab_begin(panel, &tab, "Options", control->flag_min);
     gui_panel_row(&tab, 30, 2);
     do {
-        if (gui_panel_check(&tab, options[n++], (control->show_flags & i) ? gui_true : gui_false)) res |= i;
+        if (gui_panel_check(&tab, options[n++], (control->show_flags & i) ? gui_true : gui_false))
+            res |= i;
         i = i << 1;
     } while (i <= GUI_PANEL_SCALEABLE);
     control->show_flags = res;
@@ -305,9 +316,9 @@ init_demo(struct show_window *show, struct control_window *control,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
         GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
         GUI_PANEL_MINIMIZABLE, config, font);
-    gui_stack_push_hook(stack, &show->hook);
+    gui_stack_push(stack, &show->hook);
 
-    /*show->wid_min = gui_true;*/
+    show->wid_min = gui_true;
     show->diff_min = gui_true;
     show->slider = 5.0f;
     show->prog = 50;
@@ -316,7 +327,7 @@ init_demo(struct show_window *show, struct control_window *control,
     memset(control, 0, sizeof(*control));
     gui_hook_init(&control->hook, 380, 50, 400, 350,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE, config, font);
-    gui_stack_push_hook(stack, &control->hook);
+    gui_stack_push(stack, &control->hook);
     control->show_flags = gui_hook_panel(&show->hook)->flags;
     control->style_min = gui_true;
     control->color_min = gui_true;
@@ -334,14 +345,14 @@ run_demo(struct show_window *show, struct control_window *control, struct gui_pa
     gui_buffer_begin(NULL, buffer, width, height);
     gui_buffer_lock(&canvas, buffer, &sub, 0, width, height);
     running = control_panel(control, stack, in, &canvas, config);
-    gui_buffer_unlock(gui_hook_list(&control->hook), buffer, &sub, &canvas, NULL);
+    gui_buffer_unlock(gui_hook_output(&control->hook), buffer, &sub, &canvas, NULL);
 
     gui_hook_panel(&show->hook)->flags = control->show_flags;
     gui_buffer_lock(&canvas, buffer, &sub, 0, width, height);
     show_panel(show, stack, in, &canvas);
     if (gui_hook_panel(&show->hook)->flags & GUI_PANEL_HIDDEN)
         control->show_flags |= GUI_PANEL_HIDDEN;
-    gui_buffer_unlock(gui_hook_list(&show->hook), buffer, &sub, &canvas, NULL);
+    gui_buffer_unlock(gui_hook_output(&show->hook), buffer, &sub, &canvas, NULL);
     gui_buffer_end(NULL, buffer, NULL, NULL);
     return running;
 }

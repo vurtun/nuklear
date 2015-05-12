@@ -135,7 +135,7 @@ static void
 font_del(XFont *font)
 {
     if (font->handle)
-	DeleteObject(font->handle);
+    DeleteObject(font->handle);
     free(font);
 }
 
@@ -334,11 +334,10 @@ execute(XSurface *surf, struct gui_command_list *list)
 static void
 draw(XSurface *surf, struct gui_panel_stack *stack)
 {
-    struct gui_panel *iter = stack->begin;
+    struct gui_panel_hook *iter = stack->begin;
     if (!stack->count) return;
     while (iter) {
-        struct gui_panel_hook *hook = gui_hook(iter);
-        execute(surf, gui_hook_list(hook));
+        execute(surf, gui_hook_output(iter));
         iter = iter->next;
     }
 }

@@ -1546,6 +1546,7 @@ gui_panel_begin_stacked(struct gui_panel_layout *layout, struct gui_panel *panel
     const struct gui_input *in)
 {
     gui_bool inpanel;
+    struct gui_panel_hook *hook;
     ASSERT(layout);
     ASSERT(panel);
     ASSERT(stack);
@@ -1553,20 +1554,22 @@ gui_panel_begin_stacked(struct gui_panel_layout *layout, struct gui_panel *panel
     if (!layout || !panel || !stack || !canvas)
         return gui_false;
 
+    hook = (struct gui_panel_hook*)panel;
     inpanel = INBOX(in->mouse_prev.x, in->mouse_prev.y, panel->x, panel->y, panel->w, panel->h);
-    if (in->mouse_down && in->mouse_clicked && inpanel && panel != stack->end) {
-        struct gui_panel *iter = panel->next;
+    if (in->mouse_down && in->mouse_clicked && inpanel && hook != stack->end) {
+        const struct gui_panel_hook *iter = hook->next;
         while (iter) {
-            if (INBOX(in->mouse_prev.x, in->mouse_prev.y, iter->x, iter->y, iter->w, iter->h) &&
-              !iter->minimized) break;
+            const struct gui_panel *cur = gui_hook_panel(iter);
+            if (INBOX(in->mouse_prev.x, in->mouse_prev.y, cur->x, cur->y, cur->w, cur->h) &&
+              !cur->minimized) break;
             iter = iter->next;
         }
         if (!iter) {
-            gui_stack_pop(stack, panel);
-            gui_stack_push(stack, panel);
+            gui_stack_pop(stack, hook);
+            gui_stack_push(stack, hook);
         }
     }
-    return gui_panel_begin(layout, panel, title, canvas, (stack->end == panel) ? in : NULL);
+    return gui_panel_begin(layout, panel, title, canvas, (stack->end == hook) ? in : NULL);
 }
 
 void
@@ -2741,7 +2744,7 @@ gui_stack_clear(struct gui_panel_stack *stack)
 }
 
 void
-gui_stack_push(struct gui_panel_stack *stack, struct gui_panel *panel)
+gui_stack_push(struct gui_panel_stack *stack, struct gui_panel_hook *panel)
 {
     if (!stack->begin) {
         panel->next = NULL;
@@ -2760,7 +2763,7 @@ gui_stack_push(struct gui_panel_stack *stack, struct gui_panel *panel)
 }
 
 void
-gui_stack_pop(struct gui_panel_stack *stack, struct gui_panel *panel)
+gui_stack_pop(struct gui_panel_stack *stack, struct gui_panel_hook *panel)
 {
     if (panel->prev)
         panel->prev->next = panel->next;

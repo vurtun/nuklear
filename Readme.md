@@ -37,14 +37,16 @@ Summary: It is only responsible for the actual user interface
 
 ## Example
 ```c
-struct gui_input input = {0};
-struct gui_font font = {...};
+/* allocate memory to hold output */
 struct gui_memory memory = {...};
 struct gui_command_buffer buffer;
 gui_buffer_init_fixed(buffer, &memory, 0);
 
-struct gui_panel panel;
+/* initialize panel */
 struct gui_config config;
+struct gui_input input = {0};
+struct gui_font font = {...};
+struct gui_panel panel;
 gui_default_config(&config);
 gui_panel_init(&panel, 50, 50, 220, 170,
     GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
@@ -344,17 +346,15 @@ While using basic panels is fine for a single movable panel or a big number of
 static panels, it has rather limited support for overlapping movable panels. For
 that to change the panel stack was introduced. The panel stack holds the basic
 drawing order of each panel so instead of drawing each panel individually they
-have to be drawn in a certain order. The biggest problem while creating the API
-was that the buffer has to saved with the panel, but the type of the buffer is
-not known beforehand since it is possible to create your own buffer type.
-Therefore just the sequence of panels is managed and you either have to cast
-from the panel to your own type, use inheritance in C++ or use the `container_of`
-macro from the Linux kernel. For the standard buffer there is already a type
-`gui_panel_hook` which contains the panel and the buffer output `gui_command_list`,
-which can be used to implement overlapping panels.
+have to be drawn in a certain order.
 
 ```c
-struct gui_panel_hook hook;
+struct your_window {
+    struct gui_panel_hook hook;
+    /* your data */
+}
+
+struct your_window win;
 struct gui_memory memory = {...};
 struct gui_memory_status status;
 struct gui_command_buffer buffer;
@@ -365,30 +365,29 @@ struct gui_stack stack;
 
 gui_buffer_init_fixed(buffer, &memory);
 gui_default_config(&config);
-gui_hook_init(&hook, 50, 50, 300, 200, 0, &config, &font);
+gui_hook_init(&win.hook, 50, 50, 300, 200, 0, &config, &font);
 gui_stack_clear(&stack);
-gui_stack_push_hook(&stack, &hook);
+gui_stack_push(&stack, &win.hook);
 
 while (1) {
     struct gui_panel_layout layout;
     struct gui_canvas canvas;
 
     gui_buffer_begin(&canvas, &buffer, window_width, window_height);
-    gui_hook_begin(&layout, &hook, &stack, "Demo", &canvas, &input);
+    gui_hook_begin(&layout, &win.hook, &stack, "Demo", &canvas, &input);
     gui_panel_row(&layout, 30, 1);
     if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");
-    gui_hook_end(&layout, &hook);
-    gui_buffer_end(gui_hook_list(&hook), buffer, &status);
+    gui_hook_end(&layout, &win.hook);
+    gui_buffer_end(gui_hook_list(&win.hook), buffer, &status);
 
     /* draw each panel */
     struct gui_panel *iter = stack.begin;
     while (iter) {
-        struct gui_panel_hook *h = gui_hook(iter);
         const struct gui_command *cmd = gui_list_begin(gui_hook_list(h));
         while (cmd) {
             /* execute command */
-            cmd = gui_list_next(gui_hook_list(h), cmd);
+            cmd = gui_list_next(gui_hook_output(iter), cmd);
         }
         iter = iter->next;
     }
