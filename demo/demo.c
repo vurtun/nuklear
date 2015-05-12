@@ -158,12 +158,12 @@ show_panel(struct show_window *show, struct gui_panel_stack *stack,
     struct gui_input *in, struct gui_canvas *canvas)
 {
     struct gui_panel_layout layout;
-    gui_hook_begin(&layout, &show->hook, stack, "Show", canvas, in);
+    gui_panel_hook_begin(&layout, &show->hook, stack, "Show", canvas, in);
     combobox_panel(&layout, show);
     widget_panel(&layout, show);
     graph_panel(&layout, show);
     table_panel(&layout, show);
-    gui_hook_end(&layout, &show->hook);
+    gui_panel_hook_end(&layout, &show->hook);
 }
 
 static void
@@ -299,11 +299,11 @@ control_panel(struct control_window *control, struct gui_panel_stack *stack,
 {
     gui_bool running;
     struct gui_panel_layout layout;
-    running = gui_hook_begin(&layout, &control->hook, stack, "Control", canvas, in);
+    running = gui_panel_hook_begin(&layout, &control->hook, stack, "Control", canvas, in);
     flags_tab(&layout, control);
     style_tab(&layout, control, config);
     color_tab(&layout, control, config);
-    gui_hook_end(&layout, &control->hook);
+    gui_panel_hook_end(&layout, &control->hook);
     return running;
 }
 
@@ -312,7 +312,7 @@ init_demo(struct show_window *show, struct control_window *control,
     struct gui_panel_stack *stack, struct gui_config *config, struct gui_font *font)
 {
     memset(show, 0, sizeof(*show));
-    gui_hook_init(&show->hook, 50, 50, 300, 500,
+    gui_panel_hook_init(&show->hook, 50, 50, 300, 500,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
         GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
         GUI_PANEL_MINIMIZABLE, config, font);
@@ -325,7 +325,7 @@ init_demo(struct show_window *show, struct control_window *control,
     show->spinner = 100;
 
     memset(control, 0, sizeof(*control));
-    gui_hook_init(&control->hook, 380, 50, 400, 350,
+    gui_panel_hook_init(&control->hook, 380, 50, 400, 350,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE, config, font);
     gui_stack_push(stack, &control->hook);
     control->show_flags = gui_hook_panel(&show->hook)->flags;

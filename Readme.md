@@ -374,11 +374,11 @@ while (1) {
     struct gui_canvas canvas;
 
     gui_buffer_begin(&canvas, &buffer, window_width, window_height);
-    gui_hook_begin(&layout, &win.hook, &stack, "Demo", &canvas, &input);
+    gui_panel_hook_begin(&layout, &win.hook, &stack, "Demo", &canvas, &input);
     gui_panel_row(&layout, 30, 1);
     if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");
-    gui_hook_end(&layout, &win.hook);
+    gui_panel_hook_end(&layout, &win.hook);
     gui_buffer_end(gui_hook_list(&win.hook), buffer, &status);
 
     /* draw each panel */

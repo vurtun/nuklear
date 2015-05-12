@@ -612,11 +612,11 @@ void gui_stack_pop(struct gui_panel_stack*, struct gui_panel_hook*);
 /* Hook */
 #define gui_hook_panel(h) (&((h)->GUI_HOOK_PANEL_NAME))
 #define gui_hook_output(h) (&((h)->GUI_HOOK_OUTPUT_NAME))
-#define gui_hook_init(hook, x, y, w, h, flags, config, font)\
+#define gui_panel_hook_init(hook, x, y, w, h, flags, config, font)\
     gui_panel_init(&(*(hook)).GUI_HOOK_PANEL_NAME, x, y, w, h, flags, config, font)
-#define gui_hook_begin(layout, hook, stack, title, canvas, in)\
+#define gui_panel_hook_begin(layout, hook, stack, title, canvas, in)\
     gui_panel_begin_stacked(layout, &(*(hook)).GUI_HOOK_PANEL_NAME, stack, title, canvas, in)
-#define gui_hook_end(layout, hook)\
+#define gui_panel_hook_end(layout, hook)\
     gui_panel_end((layout), &(hook)->GUI_HOOK_PANEL_NAME)
 
 #ifdef __cplusplus
