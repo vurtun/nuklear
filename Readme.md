@@ -354,18 +354,19 @@ struct your_window {
     /* your data */
 }
 
-struct your_window win;
 struct gui_memory memory = {...};
 struct gui_memory_status status;
 struct gui_command_buffer buffer;
+gui_buffer_init_fixed(buffer, &memory);
+
 struct gui_config config;
 struct gui_font font = {...}
 struct gui_input input = {0};
-struct gui_stack stack;
-
-gui_buffer_init_fixed(buffer, &memory);
+struct your_window win;
 gui_default_config(&config);
 gui_hook_init(&win.hook, 50, 50, 300, 200, 0, &config, &font);
+
+struct gui_stack stack;
 gui_stack_clear(&stack);
 gui_stack_push(&stack, &win.hook);
 
