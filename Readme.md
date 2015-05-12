@@ -364,7 +364,7 @@ struct gui_font font = {...}
 struct gui_input input = {0};
 struct your_window win;
 gui_default_config(&config);
-gui_hook_init(&win.hook, 50, 50, 300, 200, 0, &config, &font);
+gui_panel_hook_init(&win.hook, 50, 50, 300, 200, 0, &config, &font);
 
 struct gui_stack stack;
 gui_stack_clear(&stack);
