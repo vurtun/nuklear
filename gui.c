@@ -1289,7 +1289,6 @@ gui_default_config(struct gui_config *config)
     col_load(config->colors[GUI_COLOR_OPTION], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_OPTION_BACKGROUND], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_OPTION_ACTIVE], 45, 45, 45, 255);
-    col_load(config->colors[GUI_COLOR_SCROLL], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_SLIDER], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_SLIDER_CURSOR], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_PROGRESS], 100, 100, 100, 255);
