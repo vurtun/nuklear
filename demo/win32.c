@@ -415,12 +415,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int shown)
     /* GUI */
     struct gui_input in;
     struct gui_font font;
-    struct gui_memory memory;
-    struct gui_config config;
-    struct gui_command_buffer buffer;
-    struct gui_panel_stack stack;
-    struct show_window show;
-    struct control_window control;
+    struct demo_gui gui;
 
     /* Window */
     QueryPerformanceFrequency(&freq);
@@ -445,16 +440,11 @@ WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int shown)
 
     /* GUI */
     memset(&in, 0, sizeof in);
-    memory.memory = calloc(MAX_MEMORY, 1);
-    memory.size = MAX_MEMORY;
-    gui_buffer_init_fixed(&buffer, &memory, GUI_BUFFER_CLIPPING);
-
+    memset(&gui, 0, sizeof gui);
     font.userdata = &xw;
     font.height = (gui_float)xw.font->height;
     font.width = font_get_text_width;
-    gui_default_config(&config);
-    gui_stack_clear(&stack);
-    init_demo(&show, &control, &stack, &config, &font);
+    init_demo(&gui, &font);
 
     while (running && !quit) {
         /* Input */
@@ -474,13 +464,14 @@ WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int shown)
         gui_input_end(&in);
 
         /* GUI */
-        running = run_demo(&show, &control, &stack, &config, &in, &buffer,
-                            xw.width, xw.height);
+        gui.width = xw.width;
+        gui.height = xw.height;
+        running = run_demo(&gui, &in);
 
         /* Draw */
         surface_begin(xw.backbuffer);
         surface_clear(xw.backbuffer, 255, 255, 255);
-        draw(xw.backbuffer, &stack);
+        draw(xw.backbuffer, &gui.stack);
         surface_end(xw.backbuffer, xw.hdc);
 
         /* Timing */
@@ -488,7 +479,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int shown)
         if (dt < DTIME) Sleep(DTIME - dt);
     }
 
-    free(memory.memory);
+    free(gui.memory.memory);
     font_del(xw.font);
     surface_del(xw.backbuffer);
     ReleaseDC(xw.hWnd, xw.hdc);

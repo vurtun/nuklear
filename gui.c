@@ -1880,6 +1880,20 @@ gui_panel_option(struct gui_panel_layout *layout, const char *text, gui_bool is_
         is_active, text, GUI_TOGGLE_OPTION, &toggle, layout->input, &layout->font);
 }
 
+gui_size
+gui_panel_option_group(struct gui_panel_layout *layout, const char **options,
+    gui_size count, gui_size current)
+{
+    gui_size i;
+    ASSERT(layout && options && count);
+    if (!layout || !options || !count) return current;
+    for (i = 0; i < count; ++i) {
+        if (gui_panel_option(layout, options[i], i == current))
+            current = i;
+    }
+    return current;
+}
+
 gui_float
 gui_panel_slider(struct gui_panel_layout *layout, gui_float min_value, gui_float value,
     gui_float max_value, gui_float value_step)

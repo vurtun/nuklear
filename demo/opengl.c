@@ -551,17 +551,11 @@ main(int argc, char *argv[])
     unsigned int started;
     unsigned int dt;
     int width = 0, height = 0;
-    struct demo demo;
 
     /* GUI */
     struct gui_input in;
     struct gui_font font;
-    struct gui_memory memory;
-    struct gui_config config;
-    struct gui_command_buffer buffer;
-    struct gui_panel_stack stack;
-    struct show_window show;
-    struct control_window control;
+    struct demo_gui gui;
 
     font_path = argv[1];
     if (argc < 2) {
@@ -582,16 +576,11 @@ main(int argc, char *argv[])
 
     /* GUI */
     memset(&in, 0, sizeof in);
-    memory.memory = calloc(MAX_MEMORY, 1);
-    memory.size = MAX_MEMORY;
-    gui_buffer_init_fixed(&buffer, &memory, GUI_BUFFER_CLIPPING);
-
+    memset(&gui, 0, sizeof gui);
     font.userdata = glfont;
     font.height = glfont->height;
     font.width = font_get_text_width;
-    gui_default_config(&config);
-    gui_stack_clear(&stack);
-    init_demo(&show, &control, &stack, &config, &font);
+    init_demo(&gui, &font);
 
     while (running) {
         /* Input */
@@ -612,13 +601,14 @@ main(int argc, char *argv[])
 
         /* GUI */
         SDL_GetWindowSize(win, &width, &height);
-        running = run_demo(&show, &control, &stack, &config, &in, &buffer,
-                            (gui_size)width, (gui_size)height);
+        gui.width = (gui_size)width;
+        gui.height = (gui_size)height;
+        running = run_demo(&gui, &in);
 
         /* Draw */
         glClearColor(0.4f, 0.4f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-        draw(&stack, width, height);
+        draw(&gui.stack, width, height);
         SDL_GL_SwapWindow(win);
 
         /* Timing */
@@ -629,7 +619,7 @@ main(int argc, char *argv[])
 
 cleanup:
     /* Cleanup */
-    free(memory.memory);
+    free(gui.memory.memory);
     font_del(glfont);
     SDL_GL_DeleteContext(glContext);
     SDL_DestroyWindow(win);

@@ -393,6 +393,11 @@ struct gui_config {
     struct gui_color colors[GUI_COLOR_COUNT];
 };
 
+enum gui_panel_tab {
+    GUI_MAXIMIZED = gui_false,
+    GUI_MINIMIZED = gui_true
+};
+
 enum gui_panel_flags {
     GUI_PANEL_HIDDEN = 0x01,
     GUI_PANEL_BORDER = 0x02,
@@ -449,6 +454,7 @@ struct gui_panel_stack {
     struct gui_panel_hook *begin;
     struct gui_panel_hook *end;
 };
+
 
 /* Input */
 gui_size gui_utf_decode(const gui_char*, gui_long*, gui_size);
@@ -557,6 +563,7 @@ void gui_panel_label_colored(struct gui_panel_layout*, const char*, enum gui_tex
                     struct gui_color color);
 gui_bool gui_panel_check(struct gui_panel_layout*, const char*, gui_bool active);
 gui_bool gui_panel_option(struct gui_panel_layout*, const char*, gui_bool active);
+gui_size gui_panel_option_group(struct gui_panel_layout*, const char**, gui_size cnt, gui_size cur);
 gui_bool gui_panel_button_text(struct gui_panel_layout*, const char*, enum gui_button_behavior);
 gui_bool gui_panel_button_color(struct gui_panel_layout*, const struct gui_color,
                     enum gui_button_behavior);
