@@ -12,7 +12,9 @@
 #define ASSERT(expr)
 #endif
 
+#ifndef NULL
 #define NULL (void*)0
+#endif
 #define MAX_NUMBER_BUFFER 64
 #define UNUSED(a)   ((void)(a))
 #define PASTE(a,b) a##b
@@ -535,6 +537,7 @@ gui_slider(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float 
     gui_float slider_min, slider_max;
     gui_float slider_value, slider_steps;
     gui_float slider_w, slider_h;
+
     gui_float cursor_offset;
     gui_float cursor_x, cursor_y;
     gui_float cursor_w, cursor_h;
@@ -590,6 +593,7 @@ gui_progress(const struct gui_canvas *canvas, gui_float x, gui_float y,
     ASSERT(prog);
     ASSERT(canvas);
     if (!canvas || !prog) return 0;
+
     prog_w = MAX(w, 2 * prog->padding.x + 1);
     prog_h = MAX(h, 2 * prog->padding.y + 1);
     prog_value = MIN(value, max);

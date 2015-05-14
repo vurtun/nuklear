@@ -54,24 +54,6 @@ typedef struct XWindow {
     unsigned int height;
 } XWindow;
 
-struct demo {
-    gui_char in_buf[MAX_BUFFER];
-    gui_size in_len;
-    gui_bool in_act;
-    gui_bool check;
-    gui_int option;
-    gui_float slider;
-    gui_size prog;
-    gui_int spinner;
-    gui_bool spin_act;
-    gui_size item_cur;
-    gui_size cur;
-    gui_bool tab_min;
-    gui_float group_off;
-    gui_float shelf_off;
-    gui_bool toggle;
-};
-
 static int running = 1;
 static int quit = 0;
 static XWindow xw;

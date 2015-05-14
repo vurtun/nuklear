@@ -1,9 +1,8 @@
 # GUI
 This is a bloat free stateless immediate mode graphical user interface toolkit
 written in ANSI C. It was designed as a embeddable user interface for graphical
-application and does not have any direct dependencies. The main premise of this
-toolkit is to be as stateless and simple but at the same time as powerful as
-possible with fast streamlined development speed in mind.
+application and does not have any direct dependencies. The main design goals was 
+an embeddable immediate mode toolkit that is simple, efficient, portable and lightweight.
 
 ## Features
 - Immediate mode graphical user interface toolkit
@@ -63,6 +62,7 @@ while (1) {
     struct gui_panel_layout layout;
     struct gui_memory_status status;
 
+    /* GUI */
     gui_buffer_begin(&canvas, &buffer, window_width, window_height);
     gui_panel_begin(&layout, &panel, "Demo", &canvas, &input);
     gui_panel_row(&layout, 30, 1);
@@ -79,6 +79,7 @@ while (1) {
     gui_panel_end(&layout, &panel);
     gui_buffer_end(&list, &buffer, &canvas, &status);
 
+    /* draw */
     const struct gui_command *cmd = gui_list_begin(&list);
     while (cmd) {
         /* execute command */
