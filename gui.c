@@ -1621,7 +1621,7 @@ gui_panel_seperator(struct gui_panel_layout *layout, gui_size cols)
     }
 }
 
-void
+static void
 gui_panel_alloc_space(struct gui_rect *bounds, struct gui_panel_layout *layout)
 {
     const struct gui_config *config;
@@ -1655,7 +1655,7 @@ gui_panel_alloc_space(struct gui_rect *bounds, struct gui_panel_layout *layout)
     layout->index++;
 }
 
-static gui_bool
+gui_bool
 gui_panel_widget(struct gui_rect *bounds, struct gui_panel_layout *layout)
 {
     struct gui_rect *c;

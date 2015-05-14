@@ -557,7 +557,7 @@ gui_bool gui_panel_begin_stacked(struct gui_panel_layout*, struct gui_panel*,
                     struct gui_panel_stack*, const char*, const struct gui_canvas*,
                     const struct gui_input*);
 void gui_panel_row(struct gui_panel_layout*, gui_float height, gui_size cols);
-void gui_panel_alloc_space(struct gui_rect*, struct gui_panel_layout*);
+gui_bool gui_panel_widget(struct gui_rect*, struct gui_panel_layout*);
 void gui_panel_seperator(struct gui_panel_layout*, gui_size cols);
 void gui_panel_text(struct gui_panel_layout*, const char*, gui_size, enum gui_text_align);
 void gui_panel_text_colored(struct gui_panel_layout*, const char*, gui_size, enum gui_text_align,
@@ -613,13 +613,6 @@ gui_size gui_panel_shelf_begin(struct gui_panel_layout*, struct gui_panel_layout
 gui_float gui_panel_shelf_end(struct gui_panel_layout*, struct gui_panel_layout *shelf);
 void gui_panel_end(struct gui_panel_layout*, struct gui_panel*);
 
-
-/* Stack  */
-void gui_stack_clear(struct gui_panel_stack*);
-void gui_stack_push(struct gui_panel_stack*, struct gui_panel_hook*);
-void gui_stack_pop(struct gui_panel_stack*, struct gui_panel_hook*);
-
-
 /* Hook */
 #define gui_hook_panel(h) (&((h)->GUI_HOOK_PANEL_NAME))
 #define gui_hook_output(h) (&((h)->GUI_HOOK_OUTPUT_NAME))
@@ -629,6 +622,12 @@ void gui_stack_pop(struct gui_panel_stack*, struct gui_panel_hook*);
     gui_panel_begin_stacked(layout, &(*(hook)).GUI_HOOK_PANEL_NAME, stack, title, canvas, in)
 #define gui_panel_hook_end(layout, hook)\
     gui_panel_end((layout), &(hook)->GUI_HOOK_PANEL_NAME)
+
+/* Stack  */
+void gui_stack_clear(struct gui_panel_stack*);
+void gui_stack_push(struct gui_panel_stack*, struct gui_panel_hook*);
+void gui_stack_pop(struct gui_panel_stack*, struct gui_panel_hook*);
+
 
 #ifdef __cplusplus
 }
