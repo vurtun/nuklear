@@ -302,7 +302,6 @@ struct gui_canvas canvas = {...};
 const struct gui_slider style = {...};
 gui_float value = 5.0f
 gui_size prog = 20;
-gui_default_config(&config);
 
 while (1) {
     value = gui_slider(&canvas, 50, 50, 100, 30, 0, value, 10, 1, &style, &input);
