@@ -1,7 +1,7 @@
 # GUI
 This is a bloat free stateless immediate mode graphical user interface toolkit
 written in ANSI C. It was designed as a embeddable user interface for graphical
-application and does not have any direct dependencies. The main design goals was 
+application and does not have any direct dependencies. The main design goals is
 an embeddable immediate mode toolkit that is simple, efficient, portable and lightweight.
 
 ## Features
