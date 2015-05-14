@@ -1279,7 +1279,6 @@ gui_default_config(struct gui_config *config)
     vec2_load(config->scaler_size, 16.0f, 16.0f);
     col_load(config->colors[GUI_COLOR_TEXT], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_PANEL], 45, 45, 45, 255);
-    col_load(config->colors[GUI_COLOR_HEADER], 76, 88, 68, 255);
     col_load(config->colors[GUI_COLOR_HEADER], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_BORDER], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_BUTTON], 50, 50, 50, 255);
@@ -1315,6 +1314,10 @@ gui_default_config(struct gui_config *config)
     col_load(config->colors[GUI_COLOR_SCROLLBAR_CURSOR], 70, 70, 70, 255);
     col_load(config->colors[GUI_COLOR_SCROLLBAR_BORDER], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_TABLE_LINES], 100, 100, 100, 255);
+    col_load(config->colors[GUI_COLOR_SHELF], 45, 45, 45, 255);
+    col_load(config->colors[GUI_COLOR_SHELF_TEXT], 100, 100, 100, 255);
+    col_load(config->colors[GUI_COLOR_SHELF_ACTIVE], 60, 60, 60, 255);
+    col_load(config->colors[GUI_COLOR_SHELF_ACTIVE_TEXT], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_SCALER], 100, 100, 100, 255);
 }
 
@@ -2622,14 +2625,19 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
         button.border = 1;
         button.padding.x = config->item_padding.x;
         button.padding.y = config->item_padding.y;
-        button.background = config->colors[GUI_COLOR_HEADER];
-        button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
-        button.content = config->colors[GUI_COLOR_TEXT];
-        button.highlight = config->colors[GUI_COLOR_HEADER];
-        button.highlight_content = config->colors[GUI_COLOR_TEXT];
+        button.foreground = config->colors[GUI_COLOR_BORDER];
         if (active != i) {
             button_y += config->item_padding.y;
             button_h -= config->item_padding.y;
+            button.background = config->colors[GUI_COLOR_SHELF];
+            button.content = config->colors[GUI_COLOR_TEXT];
+            button.highlight = config->colors[GUI_COLOR_SHELF];
+            button.highlight_content = config->colors[GUI_COLOR_SHELF_TEXT];
+        } else {
+            button.background = config->colors[GUI_COLOR_SHELF_ACTIVE];
+            button.content = config->colors[GUI_COLOR_TEXT];
+            button.highlight = config->colors[GUI_COLOR_SHELF_ACTIVE];
+            button.highlight_content = config->colors[GUI_COLOR_SHELF_TEXT];
         }
         if (gui_button_text(canvas, button_x, button_y, button_w, button_h,
             tabs[i], GUI_BUTTON_DEFAULT, &button, parent->input, &parent->font))
