@@ -80,10 +80,9 @@ while (1) {
     gui_buffer_end(&list, &buffer, &canvas, &status);
 
     /* draw */
-    const struct gui_command *cmd = gui_list_begin(&list);
-    while (cmd) {
+    const struct gui_command *cmd;
+    gui_list_for_each(cmd, list) {
         /* execute command */
-        cmd = gui_list_next(&list, cmd);
     }
 }
 ```
@@ -304,6 +303,10 @@ gui_float value = 5.0f
 gui_size prog = 20;
 
 while (1) {
+    gui_input_begin(&input);
+    /* record input */
+    gui_input_end(&input);
+
     value = gui_slider(&canvas, 50, 50, 100, 30, 0, value, 10, 1, &style, &input);
     prog = gui_progress(&canvas, 50, 100, 100, 30, prog, 100, gui_false, &style, &input);
 }
@@ -326,7 +329,6 @@ sequence points have no effect in the current frame and are only visible in the
 next frame.
 
 ```c
-
 struct gui_font font = {...};
 struct gui_input input = {0};
 struct gui_canvas canvas = {...};
@@ -336,6 +338,10 @@ gui_default_config(&config);
 gui_panel_init(&panel, 50, 50, 300, 200, 0, &config, &font);
 
 while (1) {
+    gui_input_begin(&input);
+    /* record input */
+    gui_input_end(&input);
+
     struct gui_panel_layout layout;
     gui_panel_begin(&layout, &panel, "Demo", &canvas, &input);
     gui_panel_row(&layout, 30, 1);
@@ -380,6 +386,10 @@ while (1) {
     struct gui_panel_layout layout;
     struct gui_canvas canvas;
 
+    gui_input_begin(&input);
+    /* record input */
+    gui_input_end(&input);
+
     gui_buffer_begin(&canvas, &buffer, window_width, window_height);
     gui_panel_hook_begin(&layout, &win.hook, &stack, "Demo", &canvas, &input);
     gui_panel_row(&layout, 30, 1);
@@ -389,14 +399,12 @@ while (1) {
     gui_buffer_end(gui_hook_list(&win.hook), buffer, &status);
 
     /* draw each panel */
-    struct gui_panel_hook *iter = stack.begin;
-    while (iter) {
-        const struct gui_command *cmd = gui_list_begin(gui_hook_list(h));
-        while (cmd) {
+    struct gui_panel_hook *iter;
+    gui_stack_for_each(iter, &stack) {
+        const struct gui_command *cmd
+        gui_list_for_each(cmd, gui_hook_list(h)) {
             /* execute command */
-            cmd = gui_list_next(gui_hook_output(iter), cmd);
         }
-        iter = iter->next;
     }
 }
 ```
