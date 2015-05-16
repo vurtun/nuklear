@@ -272,56 +272,50 @@ static void
 execute(XSurface *surf, struct gui_command_list *list)
 {
     const struct gui_command *cmd;
-    if (!list->count) return;
-    cmd = gui_list_begin(list);
-    while (cmd) {
+    gui_list_for_each(cmd, list) {
         switch (cmd->type) {
         case GUI_COMMAND_NOP: break;
         case GUI_COMMAND_SCISSOR: {
-            const struct gui_command_scissor *s = (const void*)cmd;
+            const struct gui_command_scissor *s = GUI_FETCH(scissor, cmd);
             surface_scissor(surf, s->x, s->y, s->w, s->h);
         } break;
         case GUI_COMMAND_LINE: {
-            const struct gui_command_line *l = (const void*)cmd;
+            const struct gui_command_line *l = GUI_FETCH(line, cmd);
             surface_draw_line(surf, l->begin[0], l->begin[1], l->end[0],
                 l->end[1], l->color.r, l->color.g, l->color.b);
         } break;
         case GUI_COMMAND_RECT: {
-            const struct gui_command_rect *r = (const void*)cmd;
+            const struct gui_command_rect *r = GUI_FETCH(rect, cmd);
             surface_draw_rect(surf, r->x, r->y, r->w, r->h,
                 r->color.r, r->color.g, r->color.b);
         } break;
         case GUI_COMMAND_CIRCLE: {
-            const struct gui_command_circle *c = (const void*)cmd;
+            const struct gui_command_circle *c = GUI_FETCH(circle, cmd);
             surface_draw_circle(surf, c->x, c->y, c->w, c->h,
                 c->color.r, c->color.g, c->color.b);
         } break;
         case GUI_COMMAND_TRIANGLE: {
-            const struct gui_command_triangle *t = (const void*)cmd;
+            const struct gui_command_triangle *t = GUI_FETCH(triangle, cmd);
             surface_draw_triangle(surf, t->a[0], t->a[1], t->b[0], t->b[1],
                 t->c[0], t->c[1], t->color.r, t->color.g, t->color.b);
         } break;
         case GUI_COMMAND_TEXT: {
-            const struct gui_command_text *t = (const void*)cmd;
+            const struct gui_command_text *t = GUI_FETCH(text, cmd);
             XWindow *win = t->font;
             surface_draw_text(surf, win->font, t->x, t->y, t->w, t->h, (const char*)t->string,
                     t->length, t->bg.r, t->bg.g, t->bg.b, t->fg.r, t->fg.g, t->fg.b);
         } break;
         default: break;
         }
-        cmd = gui_list_next(list, cmd);
     }
 }
 
 static void
 draw(XSurface *surf, struct gui_panel_stack *stack)
 {
-    struct gui_panel_hook *iter = stack->begin;
-    if (!stack->count) return;
-    while (iter) {
+    struct gui_panel_hook *iter;
+    gui_stack_for_each(iter, stack)
         execute(surf, gui_hook_output(iter));
-        iter = iter->next;
-    }
 }
 
 static void

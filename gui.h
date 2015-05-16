@@ -460,6 +460,45 @@ struct gui_panel_stack {
 };
 
 
+
+/* Layout */
+struct gui_layout_ratio {
+    gui_float left;
+    gui_float center;
+    gui_float right;
+};
+
+enum gui_layout_index {
+    GUI_SLOT_TOP,
+    GUI_SLOT_BOTTOM,
+    GUI_SLOT_LEFT,
+    GUI_SLOT_CENTER,
+    GUI_SLOT_RIGHT,
+    GUI_SLOT_MAX
+};
+
+struct gui_layout_slots {
+    struct gui_panel_hook *top;
+    struct gui_panel_hook *bottom;
+    struct gui_panel_hook *left;
+    struct gui_panel_hook *center;
+    struct gui_panel_hook *right;
+};
+
+union gui_layout_slot_data {
+    struct gui_layout_slots slot;
+    struct gui_panel_hook *at[GUI_SLOT_MAX];
+};
+
+struct gui_layout {
+    gui_size width, height;
+    struct gui_panel_stack stack;
+    struct gui_layout_ratio horizontal;
+    struct gui_layout_ratio vertical;
+    union gui_layout_slot_data slots;
+};
+
+
 /* Input */
 gui_size gui_utf_decode(const gui_char*, gui_long*, gui_size);
 gui_size gui_utf_encode(gui_long, gui_char*, gui_size);
@@ -507,6 +546,8 @@ void gui_buffer_end(struct gui_command_list*, struct gui_command_buffer*,
 
 
 /* List */
+#define GUI_FETCH(t,c) (const struct gui_command_##t*)c
+#define gui_list_for_each(i, l) for (i = gui_list_begin(l); i != NULL; i = gui_list_next(l, i))
 const struct gui_command* gui_list_begin(const struct gui_command_list*);
 const struct gui_command* gui_list_next(const struct gui_command_list*,
                         const struct gui_command*);
@@ -555,6 +596,9 @@ gui_bool gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel*,
                     const char *title, const struct gui_canvas*, const struct gui_input*);
 gui_bool gui_panel_begin_stacked(struct gui_panel_layout*, struct gui_panel*,
                     struct gui_panel_stack*, const char*, const struct gui_canvas*,
+                    const struct gui_input*);
+gui_bool gui_panel_begin_tiled(struct gui_panel_layout*, struct gui_panel*,
+                    struct gui_panel_layout*, const char*, const struct gui_canvas*,
                     const struct gui_input*);
 void gui_panel_row(struct gui_panel_layout*, gui_float height, gui_size cols);
 gui_bool gui_panel_widget(struct gui_rect*, struct gui_panel_layout*);
@@ -613,20 +657,29 @@ gui_size gui_panel_shelf_begin(struct gui_panel_layout*, struct gui_panel_layout
 gui_float gui_panel_shelf_end(struct gui_panel_layout*, struct gui_panel_layout *shelf);
 void gui_panel_end(struct gui_panel_layout*, struct gui_panel*);
 
+
 /* Hook */
 #define gui_hook_panel(h) (&((h)->GUI_HOOK_PANEL_NAME))
 #define gui_hook_output(h) (&((h)->GUI_HOOK_OUTPUT_NAME))
 #define gui_panel_hook_init(hook, x, y, w, h, flags, config, font)\
-    gui_panel_init(&(*(hook)).GUI_HOOK_PANEL_NAME, x, y, w, h, flags, config, font)
+    gui_panel_init(gui_hook_panel(hook), x, y, w, h, flags, config, font)
 #define gui_panel_hook_begin(layout, hook, stack, title, canvas, in)\
-    gui_panel_begin_stacked(layout, &(*(hook)).GUI_HOOK_PANEL_NAME, stack, title, canvas, in)
+    gui_panel_begin_stacked(layout, gui_hook_panel(hook), stack, title, canvas, in)
 #define gui_panel_hook_end(layout, hook)\
-    gui_panel_end((layout), &(hook)->GUI_HOOK_PANEL_NAME)
+    gui_panel_end((layout), gui_hook_panel(hook))
 
 /* Stack  */
+#define gui_stack_begin(s) ((s)->begin)
+#define gui_stack_end(s) ((s)->end)
 void gui_stack_clear(struct gui_panel_stack*);
 void gui_stack_push(struct gui_panel_stack*, struct gui_panel_hook*);
 void gui_stack_pop(struct gui_panel_stack*, struct gui_panel_hook*);
+#define gui_stack_for_each(i, s) for (i = gui_stack_begin(s); i != NULL; i = (i)->next)
+
+/* Layout  */
+void gui_layout_init(struct gui_layout*);
+void gui_layout_add(struct gui_layout*, struct gui_panel_hook*, enum gui_layout_index);
+void gui_layout_remove(struct gui_layout*, struct gui_panel_hook*);
 
 
 #ifdef __cplusplus

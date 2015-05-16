@@ -428,29 +428,27 @@ execute(struct gui_command_list *list, int width, int height)
     glPushMatrix();
     glLoadIdentity();
 
-    cmd = gui_list_begin(list);
-    while (cmd) {
+    gui_list_for_each(cmd, list) {
         switch (cmd->type) {
         case GUI_COMMAND_NOP: break;
         case GUI_COMMAND_SCISSOR: {
-            const struct gui_command_scissor *s = (const void*)cmd;
+            const struct gui_command_scissor *s = GUI_FETCH(scissor, cmd);
             glScissor(s->x, height - (s->y + s->h), s->w, s->h);
         } break;
         case GUI_COMMAND_LINE: {
-            const struct gui_command_line *l = (const void*)cmd;
+            const struct gui_command_line *l = GUI_FETCH(line, cmd);
             draw_line(l->begin[0], l->begin[1], l->end[0], l->end[1], l->color);
         } break;
         case GUI_COMMAND_RECT: {
-            const struct gui_command_rect *r = (const void*)cmd;
+            const struct gui_command_rect *r = GUI_FETCH(rect, cmd);
             draw_rect(r->x, r->y, r->w, r->h, r->color);
         } break;
         case GUI_COMMAND_CIRCLE: {
-            unsigned i;
-            const struct gui_command_circle *c = (const void*)cmd;
+            const struct gui_command_circle *c = GUI_FETCH(circle, cmd);
             draw_circle(c->x, c->y, (float)c->w / 2.0f, c->color);
         } break;
         case GUI_COMMAND_TRIANGLE: {
-            const struct gui_command_triangle *t = (const void*)cmd;
+            const struct gui_command_triangle *t = GUI_FETCH(triangle, cmd);
             glColor4ub(t->color.r, t->color.g, t->color.b, t->color.a);
             glBegin(GL_TRIANGLES);
             glVertex2f(t->a[0], t->a[1]);
@@ -459,14 +457,13 @@ execute(struct gui_command_list *list, int width, int height)
             glEnd();
         } break;
         case GUI_COMMAND_TEXT: {
-            const struct gui_command_text *t = (const void*)cmd;
+            const struct gui_command_text *t = GUI_FETCH(text, cmd);
             font_draw_text(t->font, t->x, t->y, t->h, t->fg, t->string, t->length);
         } break;
         case GUI_COMMAND_IMAGE:
         case GUI_COMMAND_MAX:
         default: break;
         }
-        cmd = gui_list_next(list, cmd);
     }
 
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -480,12 +477,9 @@ execute(struct gui_command_list *list, int width, int height)
 static void
 draw(struct gui_panel_stack *stack, int width, int height)
 {
-    struct gui_panel_hook *iter = stack->begin;
-    if (!stack->count) return;
-    while (iter) {
+    struct gui_panel_hook *iter;
+    gui_stack_for_each(iter, stack)
         execute(gui_hook_output(iter), width, height);
-        iter = iter->next;
-    }
 }
 
 static void

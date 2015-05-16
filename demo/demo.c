@@ -267,7 +267,7 @@ color_picker(struct gui_panel_layout *panel, struct control_window *control,
 
     b = gui_panel_slider(panel, 0, b, 255, 10);
     color.b = (gui_byte)b;
-    color.b = (gui_byte)gui_panel_spinner(panel, 0, (gui_int)color.b, 255, 1, &control->spinner_b_active);
+    color.b = (gui_byte)gui_panel_spinner(panel, 0,(gui_int)color.b, 255, 1, &control->spinner_b_active);
 
     a = gui_panel_slider(panel, 0, a, 255, 10);
     color.a = (gui_byte)a;
@@ -286,10 +286,11 @@ color_tab(struct gui_panel_layout *panel, struct control_window *control, struct
         "Editbox Border:", "Spinner:", "Spinner Border:", "Selector:", "Selector Border:",
         "Histo:", "Histo Bars:", "Histo Negative:", "Histo Hovering:", "Plot:", "Plot Lines:",
         "Plot Hightlight:", "Scrollbar:", "Scrollbar Cursor:", "Scrollbar Border:",
-        "Table lines:", "Scaler:"
+        "Table lines:", "Shelf:", "Shelf Text:", "Shelf Active:", "Shelf Active Text:", "Scaler:"
     };
+
     if (control->picker_active) {
-        control->color = color_picker(panel, control, labels[control->current_color], control->color);
+        control->color = color_picker(panel,control,labels[control->current_color], control->color);
         gui_panel_row(panel, 30, 3);
         gui_panel_seperator(panel, 1);
         if (gui_panel_button_text(panel, "ok", GUI_BUTTON_DEFAULT)) {
