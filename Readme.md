@@ -8,9 +8,9 @@ an embeddable immediate mode toolkit that is simple, efficient, portable and lig
 - Immediate mode graphical user interface toolkit
 - Written in C89 (ANSI C)
 - Small codebase (~3kLOC)
-- Focus on portability and minimal internal state
+- Focus on portability, efficiency, simplicity and minimal internal state
 - Suited for embedding into graphical applications
-- No global hidden state
+- No global or hidden state
 - No direct dependencies (not even libc!)
 - Full memory management control
 - Renderer and platform independent
@@ -391,12 +391,76 @@ while (1) {
     gui_input_end(&input);
 
     gui_buffer_begin(&canvas, &buffer, window_width, window_height);
-    gui_panel_hook_begin(&layout, &win.hook, &stack, "Demo", &canvas, &input);
+    gui_panel_hook_begin_stacked(&layout, &win.hook, &stack, "Demo", &canvas, &input);
     gui_panel_row(&layout, 30, 1);
     if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");
     gui_panel_hook_end(&layout, &win.hook);
-    gui_buffer_end(gui_hook_list(&win.hook), buffer, &status);
+    gui_buffer_end(gui_hook_output(&win.hook), buffer, &status);
+
+    /* draw each panel */
+    struct gui_panel_hook *iter;
+    gui_stack_for_each(iter, &stack) {
+        const struct gui_command *cmd
+        gui_list_for_each(cmd, gui_hook_list(h)) {
+            /* execute command */
+        }
+    }
+}
+```
+
+### Tiling
+Stacked windows are only one side of the coin for panel layouts while
+tiled layout are the other. Tiled layout divide the screen into regions in this
+case the top, left, center, right and bottom region. Each region occupies a
+certain percentage on the screen and can be filled with panels. The combination
+of regions, ratio and multiple panels per region support a rich set of vertical,
+horizontal and mixed layout.
+
+```c
+struct your_window {
+    struct gui_panel_hook hook;
+    /* your data */
+}
+
+struct gui_memory memory = {...};
+struct gui_memory_status status;
+struct gui_command_buffer buffer;
+gui_buffer_init_fixed(buffer, &memory);
+
+struct gui_config config;
+struct gui_font font = {...}
+struct gui_input input = {0};
+struct your_window win;
+gui_default_config(&config);
+gui_panel_hook_init(&win.hook, 0, 0, 0, 0, 0, &config, &font);
+
+struct gui_layout tiled;
+struct gui_layout_config ratio = {...};
+gui_layout_init(&tiled, &ratio);
+
+while (1) {
+    struct gui_panel_layout layout;
+    struct gui_canvas canvas;
+    struct gui_panel_stack stack;
+
+    gui_input_begin(&input);
+    /* record input */
+    gui_input_end(&input);
+
+    gui_layout_begin(&tiled, window_width, window_height, gui_true);
+    gui_layout_slot(&tiled, GUI_SLOT_LEFT, 1);
+
+    gui_buffer_begin(&canvas, &buffer, window_width, window_height);
+    gui_panel_hook_begin_tiled(&layout, &win.hook, &tiled, GUI_SLOT_LEFT, 0,
+        "Demo", &canvas, &input);
+    gui_panel_row(&layout, 30, 1);
+    if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT))
+        fprintf(stdout, "button pressed!\n");
+    gui_panel_hook_end(&layout, &win.hook);
+    gui_buffer_end(gui_hook_output(&win.hook), buffer, &status);
+
+    gui_layout_end(&stack, &tiled);
 
     /* draw each panel */
     struct gui_panel_hook *iter;
