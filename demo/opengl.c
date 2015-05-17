@@ -602,7 +602,8 @@ main(int argc, char *argv[])
         /* Draw */
         glClearColor(0.4f, 0.4f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-        draw(&gui.stack, width, height);
+        draw(&gui.background, width, height);
+        draw(&gui.floating, width, height);
         SDL_GL_SwapWindow(win);
 
         /* Timing */

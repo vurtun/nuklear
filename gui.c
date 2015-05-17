@@ -1617,20 +1617,20 @@ gui_panel_hook_begin_tiled(struct gui_panel_layout *tile, struct gui_panel_hook 
     if (index >= layout->capacity[slot]) return gui_false;
 
     panel = gui_hook_panel(hook);
-    panel->flags &= (gui_size)~GUI_PANEL_MINIMIZABLE;
-    panel->flags &= (gui_size)~GUI_PANEL_CLOSEABLE;
-    panel->flags &= (gui_size)~GUI_PANEL_MOVEABLE;
-    panel->flags &= (gui_size)~GUI_PANEL_SCALEABLE;
+    panel->flags &= (gui_flags)~GUI_PANEL_MINIMIZABLE;
+    panel->flags &= (gui_flags)~GUI_PANEL_CLOSEABLE;
+    panel->flags &= (gui_flags)~GUI_PANEL_MOVEABLE;
+    panel->flags &= (gui_flags)~GUI_PANEL_SCALEABLE;
 
-    bounds.x = layout->offset[slot].x * layout->width;
-    bounds.y = layout->offset[slot].y * layout->height;
-    bounds.w = layout->ratio[slot].x * layout->width;
-    bounds.h = layout->ratio[slot].y * layout->height;
+    bounds.x = layout->offset[slot].x * (gui_float)layout->width;
+    bounds.y = layout->offset[slot].y * (gui_float)layout->height;
+    bounds.w = layout->ratio[slot].x * (gui_float)layout->width;
+    bounds.h = layout->ratio[slot].y * (gui_float)layout->height;
 
     panel->x = bounds.x;
     panel->w = bounds.w;
-    panel->h = bounds.h / layout->capacity[slot];
-    panel->y = bounds.y + index * panel->h;
+    panel->h = bounds.h / (gui_float)layout->capacity[slot];
+    panel->y = bounds.y + (gui_float)index * panel->h;
     gui_stack_push(&layout->stack, hook);
     return gui_panel_begin(tile, panel, title, canvas, (layout->active) ? in : NULL);
 }

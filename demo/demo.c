@@ -580,9 +580,9 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
     gui_default_config(config);
 
     ratio.left = 0.10f;
-    ratio.right = 0.20f;
+    ratio.right = 0.40f;
     ratio.centerv = 0.9f;
-    ratio.centerh = 0.7f;
+    ratio.centerh = 0.5f;
     ratio.bottom = 0.05f;
     ratio.top = 0.05f;
     gui_layout_init(&gui->layout, &ratio);

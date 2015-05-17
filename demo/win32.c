@@ -448,6 +448,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int shown)
         surface_begin(xw.backbuffer);
         surface_clear(xw.backbuffer, 255, 255, 255);
         draw(xw.backbuffer, &gui.stack);
+        draw(xw.floating, &gui.stack);
         surface_end(xw.backbuffer, xw.hdc);
 
         /* Timing */

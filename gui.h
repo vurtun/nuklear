@@ -542,7 +542,7 @@ void gui_buffer_end(struct gui_command_list*, struct gui_command_buffer*,
 #define gui_list_for_each(i, l) for (i = gui_list_begin(l); i != NULL; i = gui_list_next(l, i))
 const struct gui_command* gui_list_begin(const struct gui_command_list*);
 const struct gui_command* gui_list_next(const struct gui_command_list*,
-                        const struct gui_command*);
+                    const struct gui_command*);
 
 
 /* Widgets */
