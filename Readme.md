@@ -411,7 +411,7 @@ while (1) {
 
 ### Tiling
 Stacked windows are only one side of the coin for panel layouts while
-tiled layout are the other. Tiled layout divide the screen into regions in this
+a tiled layout is the other. Tiled layout divide the screen into regions in this
 case the top, left, center, right and bottom region. Each region occupies a
 certain percentage on the screen and can be filled with panels. The combination
 of regions, ratio and multiple panels per region support a rich set of vertical,
@@ -452,8 +452,7 @@ while (1) {
     gui_layout_slot(&tiled, GUI_SLOT_LEFT, 1);
 
     gui_buffer_begin(&canvas, &buffer, window_width, window_height);
-    gui_panel_hook_begin_tiled(&layout, &win.hook, &tiled, GUI_SLOT_LEFT, 0,
-        "Demo", &canvas, &input);
+    gui_panel_hook_begin_tiled(&layout, &win.hook, &tiled, GUI_SLOT_LEFT, 0, "Demo", &canvas, &input);
     gui_panel_row(&layout, 30, 1);
     if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");

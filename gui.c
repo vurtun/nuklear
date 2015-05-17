@@ -927,8 +927,8 @@ gui_buffer_push_scissor(struct gui_command_buffer *buffer, gui_float x, gui_floa
 
     cmd->x = (gui_short)x;
     cmd->y = (gui_short)y;
-    cmd->w = (gui_ushort)w;
-    cmd->h = (gui_ushort)h;
+    cmd->w = (gui_ushort)MAX(0, w);
+    cmd->h = (gui_ushort)MAX(0, h);
 }
 
 void
@@ -971,8 +971,8 @@ gui_buffer_push_rect(struct gui_command_buffer *buffer, gui_float x, gui_float y
     if (!cmd) return;
     cmd->x = (gui_short)x;
     cmd->y = (gui_short)y;
-    cmd->w = (gui_ushort)w;
-    cmd->h = (gui_ushort)h;
+    cmd->w = (gui_ushort)MAX(0, w);
+    cmd->h = (gui_ushort)MAX(0, h);
     cmd->color = c;
 }
 
@@ -998,8 +998,8 @@ gui_buffer_push_circle(struct gui_command_buffer *buffer, gui_float x, gui_float
     if (!cmd) return;
     cmd->x = (gui_short)x;
     cmd->y = (gui_short)y;
-    cmd->w = (gui_ushort)w;
-    cmd->h = (gui_ushort)h;
+    cmd->w = (gui_ushort)MAX(w, 0);
+    cmd->h = (gui_ushort)MAX(h, 0);
     cmd->color = c;
 }
 
@@ -1055,8 +1055,8 @@ gui_buffer_push_image(struct gui_command_buffer *buffer, gui_float x, gui_float 
     if (!cmd) return;
     cmd->x = (gui_short)x;
     cmd->y = (gui_short)y;
-    cmd->w = (gui_ushort)w;
-    cmd->h = (gui_ushort)h;
+    cmd->w = (gui_ushort)MAX(0, w);
+    cmd->h = (gui_ushort)MAX(0, h);
     cmd->img = img;
 }
 
