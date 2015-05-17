@@ -1661,16 +1661,23 @@ gui_panel_row(struct gui_panel_layout *layout, gui_float height, gui_size cols)
 void
 gui_panel_seperator(struct gui_panel_layout *layout, gui_size cols)
 {
-    const struct gui_config *config;
+    gui_size add;
     ASSERT(layout);
     ASSERT(layout->config);
     ASSERT(layout->canvas);
     if (!layout) return;
     if (!layout->valid) return;
 
-    config = layout->config;
-    cols = MIN(cols, layout->row_columns - layout->index);
-    layout->index += cols;
+    add = (layout->index + cols) % layout->row_columns;
+    if (layout->index + cols > layout->row_columns) {
+        gui_size i;
+        const struct gui_config *config = layout->config;
+        const gui_float row_height = layout->row_height - config->item_spacing.y;
+        gui_size rows = (layout->index + cols) / layout->row_columns;
+        for (i = 0; i < rows; ++i)
+            gui_panel_row(layout, row_height, layout->row_columns);
+    }
+    layout->index += add;
 }
 
 static void

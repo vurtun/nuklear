@@ -417,7 +417,6 @@ scolor_tab(struct gui_panel_layout *panel, struct settings_window *win)
     char buffer[256];
     struct gui_color color = win->color;
     gui_float c = color.r;
-    gui_float o = color.r;
 
     gui_panel_row(panel, 20, 3);
     gui_panel_label(panel, "Color:", GUI_TEXT_RIGHT);
@@ -442,7 +441,6 @@ flood_tab(struct gui_panel_layout *panel, struct settings_window *win)
     const char *flood_types[] = {"All", "Selected"};
     struct gui_color color = win->flood_color;
     gui_float c = color.r;
-    gui_float o = color.r;
 
     gui_panel_row(panel, 25, 3);
     gui_panel_label(panel, "Color:", GUI_TEXT_RIGHT);
@@ -506,29 +504,21 @@ texture_tab(struct gui_panel_layout *panel, struct settings_window *win)
     gui_panel_row(panel, 25, 3);
     gui_panel_label(panel, "Attribute:", GUI_TEXT_RIGHT);
     win->attribute = gui_panel_selector(panel, attributes, LEN(attributes), win->attribute);
-    gui_panel_row(panel, 25, 3);
-    gui_panel_seperator(panel, 1);
+    gui_panel_seperator(panel, 2);
     if (gui_panel_button_text(panel, "Assign", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "assign/edit textures button pressed!\n");
-    gui_panel_row(panel, 25, 3);
-    gui_panel_seperator(panel, 1);
+    gui_panel_seperator(panel, 2);
     if (gui_panel_button_text(panel, "Save", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "save textures button pressed!\n");
-    gui_panel_row(panel, 25, 3);
-    gui_panel_seperator(panel, 1);
+    gui_panel_seperator(panel, 2);
     if (gui_panel_button_text(panel, "Reload", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "reload textures button pressed!\n");
 
-    gui_panel_row(panel, 25, 3);
-    gui_panel_seperator(panel, 1);
+    gui_panel_seperator(panel, 2);
     win->update_on_stroke = gui_panel_check(panel, "Update on stroke", win->update_on_stroke);
-
-    gui_panel_row(panel, 25, 3);
-    gui_panel_seperator(panel, 1);
+    gui_panel_seperator(panel, 2);
     win->save_on_stroke = gui_panel_check(panel, "Save texture on stroke", win->save_on_stroke);
-
-    gui_panel_row(panel, 25, 3);
-    gui_panel_seperator(panel, 1);
+    gui_panel_seperator(panel, 2);
     win->extend_seam_color = gui_panel_check(panel, "Extend seam color", win->extend_seam_color);
 }
 
