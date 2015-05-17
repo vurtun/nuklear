@@ -1602,11 +1602,12 @@ gui_panel_hook_begin_stacked(struct gui_panel_layout *layout, struct gui_panel_h
 
 gui_bool
 gui_panel_hook_begin_tiled(struct gui_panel_layout *tile, struct gui_panel_hook *hook,
-    struct gui_layout *layout, enum gui_layout_slot slot, gui_size index,
+    struct gui_layout *layout, enum gui_layout_slot_index slot, gui_size index,
     const char *title, const struct gui_canvas *canvas, const struct gui_input *in)
 {
     struct gui_rect bounds;
     struct gui_panel *panel;
+    struct gui_layout_slot *s;
     ASSERT(hook);
     ASSERT(tile);
     ASSERT(layout);
@@ -1614,7 +1615,7 @@ gui_panel_hook_begin_tiled(struct gui_panel_layout *tile, struct gui_panel_hook 
 
     if (!layout || !hook || !tile || !canvas) return gui_false;
     if (slot >= GUI_SLOT_MAX) return gui_false;
-    if (index >= layout->capacity[slot]) return gui_false;
+    if (index >= layout->slots[slot].capacity) return gui_false;
 
     panel = gui_hook_panel(hook);
     panel->flags &= (gui_flags)~GUI_PANEL_MINIMIZABLE;
@@ -1622,14 +1623,15 @@ gui_panel_hook_begin_tiled(struct gui_panel_layout *tile, struct gui_panel_hook 
     panel->flags &= (gui_flags)~GUI_PANEL_MOVEABLE;
     panel->flags &= (gui_flags)~GUI_PANEL_SCALEABLE;
 
-    bounds.x = layout->offset[slot].x * (gui_float)layout->width;
-    bounds.y = layout->offset[slot].y * (gui_float)layout->height;
-    bounds.w = layout->ratio[slot].x * (gui_float)layout->width;
-    bounds.h = layout->ratio[slot].y * (gui_float)layout->height;
+    s = &layout->slots[slot];
+    bounds.x = s->offset.x * (gui_float)layout->width;
+    bounds.y = s->offset.y * (gui_float)layout->height;
+    bounds.w = s->ratio.x * (gui_float)layout->width;
+    bounds.h = s->ratio.y * (gui_float)layout->height;
 
     panel->x = bounds.x;
     panel->w = bounds.w;
-    panel->h = bounds.h / (gui_float)layout->capacity[slot];
+    panel->h = bounds.h / (gui_float)s->capacity;
     panel->y = bounds.y + (gui_float)index * panel->h;
     gui_stack_push(&layout->stack, hook);
     return gui_panel_begin(tile, panel, title, canvas, (layout->active) ? in : NULL);
@@ -2878,22 +2880,23 @@ gui_stack_pop(struct gui_panel_stack *stack, struct gui_panel_hook *panel)
 void
 gui_layout_init(struct gui_layout *layout, const struct gui_layout_config *config)
 {
+    struct gui_layout_slot *slot;
     ASSERT(layout);
     ASSERT(config);
     if (!layout || !config) return;
 
     zero(layout, sizeof(*layout));
-    vec2_load(layout->ratio[GUI_SLOT_TOP], 1.0f, config->top);
-    vec2_load(layout->ratio[GUI_SLOT_LEFT], config->left, config->centerv);
-    vec2_load(layout->ratio[GUI_SLOT_BOTTOM], 1.0f, config->bottom);
-    vec2_load(layout->ratio[GUI_SLOT_CENTER], config->centerh, config->centerv);
-    vec2_load(layout->ratio[GUI_SLOT_RIGHT], config->right, config->centerv);
+    vec2_load(layout->slots[GUI_SLOT_TOP].ratio, 1.0f, config->top);
+    vec2_load(layout->slots[GUI_SLOT_LEFT].ratio, config->left, config->centerv);
+    vec2_load(layout->slots[GUI_SLOT_BOTTOM].ratio, 1.0f, config->bottom);
+    vec2_load(layout->slots[GUI_SLOT_CENTER].ratio, config->centerh, config->centerv);
+    vec2_load(layout->slots[GUI_SLOT_RIGHT].ratio, config->right, config->centerv);
 
-    vec2_load(layout->offset[GUI_SLOT_TOP], 0.0f, 0.0f);
-    vec2_load(layout->offset[GUI_SLOT_LEFT], 0.0f, config->top);
-    vec2_load(layout->offset[GUI_SLOT_BOTTOM], 0.0f, config->top + config->centerv);
-    vec2_load(layout->offset[GUI_SLOT_CENTER], config->left, config->top);
-    vec2_load(layout->offset[GUI_SLOT_RIGHT], config->left + config->centerh, config->top);
+    vec2_load(layout->slots[GUI_SLOT_TOP].offset, 0.0f, 0.0f);
+    vec2_load(layout->slots[GUI_SLOT_LEFT].offset, 0.0f, config->top);
+    vec2_load(layout->slots[GUI_SLOT_BOTTOM].offset, 0.0f, config->top + config->centerv);
+    vec2_load(layout->slots[GUI_SLOT_CENTER].offset, config->left, config->top);
+    vec2_load(layout->slots[GUI_SLOT_RIGHT].offset, config->left + config->centerh, config->top);
 }
 
 void
@@ -2914,19 +2917,24 @@ gui_layout_end(struct gui_panel_stack *stack, struct gui_layout *layout)
     ASSERT(stack);
     ASSERT(layout);
     if (!stack || !layout) return;
+
     *stack = layout->stack;
     gui_stack_clear(&layout->stack);
-    zero(&layout->capacity, sizeof(layout->capacity));
+    layout->slots[GUI_SLOT_TOP].capacity = 0;
+    layout->slots[GUI_SLOT_LEFT].capacity = 0;
+    layout->slots[GUI_SLOT_BOTTOM].capacity = 0;
+    layout->slots[GUI_SLOT_CENTER].capacity = 0;
+    layout->slots[GUI_SLOT_RIGHT].capacity = 0;
 }
 
 void
-gui_layout_slot(struct gui_layout *layout, enum gui_layout_slot slot,
+gui_layout_slot(struct gui_layout *layout, enum gui_layout_slot_index slot,
     gui_size count)
 {
     ASSERT(layout);
     ASSERT(count);
     ASSERT(slot >= GUI_SLOT_TOP && slot < GUI_SLOT_MAX);
     if (!layout || !count) return;
-    layout->capacity[slot] = count;
+    layout->slots[slot].capacity = count;
 }
 

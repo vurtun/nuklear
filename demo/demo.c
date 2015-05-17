@@ -529,7 +529,6 @@ update_settings(struct settings_window *win, struct gui_layout *layout,
     gui_bool running;
     struct gui_panel_layout panel;
     struct gui_panel_layout tab;
-    gui_layout_slot(layout, GUI_SLOT_RIGHT, 1);
     gui_panel_hook_begin_tiled(&panel, &win->hook, layout, GUI_SLOT_RIGHT, 0, "Tool Settings", canvas, in);
 
     win->brush_tab = gui_panel_tab_begin(&panel, &tab, "Brush", win->brush_tab);
@@ -592,14 +591,11 @@ background_demo(struct demo_gui *gui, struct gui_input *input, struct gui_comman
     struct settings_window *settings = &gui->settings;
 
     gui_layout_begin(&gui->layout, gui->width, gui->height, active);
+    gui_layout_slot(&gui->layout, GUI_SLOT_RIGHT, 1);
 
-    /* settings window */
     gui_buffer_lock(&canvas, buffer, &sub, 0, gui->width, gui->height);
     update_settings(&gui->settings, &gui->layout, input, &canvas);
     gui_buffer_unlock(gui_hook_output(&settings->hook), buffer, &sub, &canvas, NULL);
-
-    /* toolbar window */
-
     gui_layout_end(&gui->background, &gui->layout);
 }
 
