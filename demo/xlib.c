@@ -465,7 +465,8 @@ main(int argc, char *argv[])
         /* Draw */
         XClearWindow(xw.dpy, xw.win);
         surface_clear(xw.surf, 0x00646464);
-        draw(xw.surf, &gui.stack);
+        draw(xw.surf, &gui.background);
+        draw(xw.surf, &gui.floating);
         surface_blit(xw.win, xw.surf, xw.width, xw.height);
         XFlush(xw.dpy);
 

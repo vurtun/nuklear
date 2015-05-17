@@ -1,5 +1,42 @@
 #define MAX_BUFFER  64
-#define MAX_MEMORY  (32 * 1024)
+#define MAX_MEMORY  (64 * 1024)
+
+struct settings_window {
+    struct gui_panel_hook hook;
+
+    /* brush tab */
+    gui_bool brush_tab;
+    gui_bool radius_u_active;
+    gui_bool radius_l_active;
+    gui_float radiusu;
+    gui_float radiusl;
+    gui_bool rotate_to_stroke;
+
+    /* color tab */
+    gui_bool color_tab;
+    struct gui_color color;
+    gui_float opacity;
+    gui_bool opacity_active;
+
+    /* floot tab */
+    gui_bool flood_tab;
+    struct gui_color flood_color;
+    gui_float flood_opacity;
+    gui_size flood_type;
+
+    /* paint tabs */
+    gui_bool paint_tab;
+    gui_size artisan_type;
+    gui_size effect_type;
+    gui_size brush_mode;
+
+    /* texture tab */
+    gui_bool texture_tab;
+    gui_size attribute;
+    gui_bool update_on_stroke;
+    gui_bool save_on_stroke;
+    gui_bool extend_seam_color;
+};
 
 struct show_window {
     struct gui_panel_hook hook;
@@ -51,9 +88,16 @@ struct control_window {
 struct demo_gui {
     struct show_window show;
     struct control_window control;
+    struct settings_window settings;
+
     struct gui_memory memory;
     struct gui_command_buffer buffer;
-    struct gui_panel_stack stack;
+
+    struct gui_layout_config conf;
+    struct gui_panel_stack background;
+    struct gui_layout layout;
+
+    struct gui_panel_stack floating;
     struct gui_panel_layout tab;
     struct gui_config config;
     struct gui_font font;
@@ -171,7 +215,7 @@ update_show(struct show_window *show, struct gui_panel_stack *stack,
     struct gui_panel_layout layout;
     struct gui_panel_layout tab;
     static const char *shelfs[] = {"Histogram", "Lines"};
-    gui_panel_hook_begin(&layout, &show->hook, stack, "Show", canvas, in);
+    gui_panel_hook_begin_stacked(&layout, &show->hook, stack, "Show", canvas, in);
 
     show->combobox_tab = gui_panel_tab_begin(&layout, &tab, "Combobox", show->combobox_tab);
     combobox_panel(&tab, show);
@@ -335,7 +379,7 @@ update_control(struct control_window *control, struct gui_panel_stack *stack,
     struct gui_panel_layout layout;
     struct gui_panel_layout tab;
 
-    running = gui_panel_hook_begin(&layout, &control->hook, stack, "Control", canvas, in);
+    running = gui_panel_hook_begin_stacked(&layout, &control->hook, stack, "Control", canvas, in);
     control->flag_tab = gui_panel_tab_begin(&layout, &tab, "Options", control->flag_tab);
     update_flags(&tab, control);
     gui_panel_tab_end(&layout, &tab);
@@ -352,50 +396,255 @@ update_control(struct control_window *control, struct gui_panel_stack *stack,
     return running;
 }
 
+
+static void
+brush_tab(struct gui_panel_layout *panel, struct settings_window *win)
+{
+    gui_panel_row(panel, 20, 2);
+    gui_panel_label(panel, "Radius (U):", GUI_TEXT_RIGHT);
+    win->radiusu = gui_panel_slider(panel, 0, win->radiusu, 20, 0.5);
+    gui_panel_label(panel, "Radius (L):", GUI_TEXT_RIGHT);
+    win->radiusl = gui_panel_slider(panel, 0, win->radiusl, 20, 0.5);
+
+    gui_panel_row(panel, 25, 3);
+    gui_panel_seperator(panel, 1);
+    win->rotate_to_stroke = gui_panel_check(panel, "Rotate to stroke", win->rotate_to_stroke);
+}
+
+static struct gui_color
+scolor_tab(struct gui_panel_layout *panel, struct settings_window *win)
+{
+    char buffer[256];
+    struct gui_color color = win->color;
+    gui_float c = color.r;
+    gui_float o = color.r;
+
+    gui_panel_row(panel, 20, 3);
+    gui_panel_label(panel, "Color:", GUI_TEXT_RIGHT);
+    c = gui_panel_slider(panel, 0, c, 250, 10);
+    color.r = (gui_byte)c;
+    color.g = (gui_byte)c;
+    color.b = (gui_byte)c;
+    color.a = 255;
+    gui_panel_button_color(panel, color, GUI_BUTTON_DEFAULT);
+
+    gui_panel_label(panel, "Opacity:", GUI_TEXT_RIGHT);
+    win->flood_opacity = gui_panel_slider(panel, 0, win->flood_opacity, 250, 10);
+    sprintf(buffer, "%.2f", win->flood_opacity);
+    gui_panel_label(panel, buffer, GUI_TEXT_LEFT);
+    return color;
+}
+
+static struct gui_color
+flood_tab(struct gui_panel_layout *panel, struct settings_window *win)
+{
+    char buffer[256];
+    const char *flood_types[] = {"All", "Selected"};
+    struct gui_color color = win->flood_color;
+    gui_float c = color.r;
+    gui_float o = color.r;
+
+    gui_panel_row(panel, 25, 3);
+    gui_panel_label(panel, "Color:", GUI_TEXT_RIGHT);
+    c = gui_panel_slider(panel, 0, c, 250, 10);
+    color.r = (gui_byte)c;
+    color.g = (gui_byte)c;
+    color.b = (gui_byte)c;
+    color.a = 255;
+    gui_panel_button_color(panel, color, GUI_BUTTON_DEFAULT);
+
+    gui_panel_label(panel, "Opacity:", GUI_TEXT_RIGHT);
+    win->opacity = gui_panel_slider(panel, 0, win->opacity, 250, 10);
+    sprintf(buffer, "%.2f", win->opacity);
+    gui_panel_label(panel, buffer, GUI_TEXT_LEFT);
+
+    gui_panel_row(panel, 25, 2);
+    if (gui_panel_button_text(panel, "Flood Paint", GUI_BUTTON_DEFAULT))
+        fprintf(stdout, "flood paint pressed!\n");
+    if (gui_panel_button_text(panel, "Flood Erease", GUI_BUTTON_DEFAULT))
+        fprintf(stdout, "flood erase pressed!\n");
+
+    gui_panel_row(panel, 25, LEN(flood_types) + 1);
+    gui_panel_label(panel, "Flood:", GUI_TEXT_RIGHT);
+    win->flood_type = gui_panel_option_group(panel, flood_types, LEN(flood_types), win->flood_type);
+    return color;
+}
+
+
+static void
+paint_tab(struct gui_panel_layout *panel, struct settings_window *win)
+{
+    const char *brush_mode[] = {"Dynamic", "Static"};
+    const char *artisan_types[] = {"Paint", "Erase", "Clone"};
+    const char *paint_effects[] = {"Paint", "Smear", "Blur"};
+    gui_panel_row(panel, 25, LEN(artisan_types) + 1);
+    gui_panel_label(panel, "Artisan:", GUI_TEXT_RIGHT);
+    win->artisan_type = gui_panel_option_group(panel, artisan_types, LEN(artisan_types), win->artisan_type);
+    gui_panel_row(panel, 25, LEN(paint_effects) + 1);
+    gui_panel_label(panel, "Effects:", GUI_TEXT_RIGHT);
+    win->effect_type = gui_panel_option_group(panel, paint_effects, LEN(paint_effects), win->effect_type);
+
+    gui_panel_row(panel, 25, 3);
+    gui_panel_seperator(panel, 1);
+    if (gui_panel_button_text(panel, "Erase", GUI_BUTTON_DEFAULT))
+        fprintf(stdout, "set erase image button pressed!\n");
+
+    gui_panel_row(panel, 25, 3);
+    gui_panel_seperator(panel, 1);
+    if (gui_panel_button_text(panel, "Reset", GUI_BUTTON_DEFAULT))
+        fprintf(stdout, "reset brushes button pressed!\n");
+
+    gui_panel_row(panel, 25, LEN(brush_mode) + 1);
+    gui_panel_label(panel, "Brush mode:", GUI_TEXT_RIGHT);
+    win->brush_mode = gui_panel_option_group(panel, brush_mode, LEN(brush_mode), win->brush_mode);
+}
+
+static void
+texture_tab(struct gui_panel_layout *panel, struct settings_window *win)
+{
+    const char *attributes[] = {"Color", "Normals", "Depth"};
+    gui_panel_row(panel, 25, 3);
+    gui_panel_label(panel, "Attribute:", GUI_TEXT_RIGHT);
+    win->attribute = gui_panel_selector(panel, attributes, LEN(attributes), win->attribute);
+    gui_panel_row(panel, 25, 3);
+    gui_panel_seperator(panel, 1);
+    if (gui_panel_button_text(panel, "Assign", GUI_BUTTON_DEFAULT))
+        fprintf(stdout, "assign/edit textures button pressed!\n");
+    gui_panel_row(panel, 25, 3);
+    gui_panel_seperator(panel, 1);
+    if (gui_panel_button_text(panel, "Save", GUI_BUTTON_DEFAULT))
+        fprintf(stdout, "save textures button pressed!\n");
+    gui_panel_row(panel, 25, 3);
+    gui_panel_seperator(panel, 1);
+    if (gui_panel_button_text(panel, "Reload", GUI_BUTTON_DEFAULT))
+        fprintf(stdout, "reload textures button pressed!\n");
+
+    gui_panel_row(panel, 25, 3);
+    gui_panel_seperator(panel, 1);
+    win->update_on_stroke = gui_panel_check(panel, "Update on stroke", win->update_on_stroke);
+
+    gui_panel_row(panel, 25, 3);
+    gui_panel_seperator(panel, 1);
+    win->save_on_stroke = gui_panel_check(panel, "Save texture on stroke", win->save_on_stroke);
+
+    gui_panel_row(panel, 25, 3);
+    gui_panel_seperator(panel, 1);
+    win->extend_seam_color = gui_panel_check(panel, "Extend seam color", win->extend_seam_color);
+}
+
+static void
+update_settings(struct settings_window *win, struct gui_layout *layout,
+    struct gui_input *in, struct gui_canvas *canvas)
+{
+    gui_bool running;
+    struct gui_panel_layout panel;
+    struct gui_panel_layout tab;
+    gui_layout_slot(layout, GUI_SLOT_RIGHT, 1);
+    gui_panel_hook_begin_tiled(&panel, &win->hook, layout, GUI_SLOT_RIGHT, 0, "Tool Settings", canvas, in);
+
+    win->brush_tab = gui_panel_tab_begin(&panel, &tab, "Brush", win->brush_tab);
+    brush_tab(&tab, win);
+    gui_panel_tab_end(&panel, &tab);
+
+    win->color_tab = gui_panel_tab_begin(&panel, &tab, "Color", win->color_tab);
+    win->color = scolor_tab(&tab, win);
+    gui_panel_tab_end(&panel, &tab);
+
+    win->flood_tab = gui_panel_tab_begin(&panel, &tab, "Flood", win->flood_tab);
+    win->flood_color = flood_tab(&tab, win);
+    gui_panel_tab_end(&panel, &tab);
+
+    win->paint_tab = gui_panel_tab_begin(&panel, &tab, "Paint", win->paint_tab);
+    paint_tab(&tab, win);
+    gui_panel_tab_end(&panel, &tab);
+
+    win->texture_tab = gui_panel_tab_begin(&panel, &tab, "Textures", win->texture_tab);
+    texture_tab(&tab, win);
+    gui_panel_tab_end(&panel, &tab);
+
+    gui_panel_hook_end(&panel, &win->hook);
+}
+
 static void
 init_demo(struct demo_gui *gui, struct gui_font *font)
 {
+    struct gui_layout_config ratio;
     struct gui_command_buffer *buffer = &gui->buffer;
     struct gui_memory *memory = &gui->memory;
     struct gui_config *config = &gui->config;
-    struct gui_panel_stack *stack = &gui->stack;
 
     gui->font = *font;
     memory->memory = calloc(MAX_MEMORY, 1);
     memory->size = MAX_MEMORY;
     gui_buffer_init_fixed(buffer, memory, GUI_BUFFER_CLIPPING);
-
     gui_default_config(config);
-    gui_stack_clear(stack);
-    init_show(&gui->show, config, font, stack);
-    init_control(&gui->control, config, font, stack);
+
+    ratio.left = 0.10f;
+    ratio.right = 0.20f;
+    ratio.centerv = 0.9f;
+    ratio.centerh = 0.7f;
+    ratio.bottom = 0.05f;
+    ratio.top = 0.05f;
+    gui_layout_init(&gui->layout, &ratio);
+    gui_panel_hook_init(&gui->settings.hook, 0, 0, 0, 0, GUI_PANEL_BORDER, config, font);
+
+    gui_stack_clear(&gui->floating);
+    init_show(&gui->show, config, font, &gui->floating);
+    init_control(&gui->control, config, font, &gui->floating);
+}
+
+static void
+background_demo(struct demo_gui *gui, struct gui_input *input, struct gui_command_buffer *buffer,
+    gui_bool active)
+{
+    struct gui_command_buffer sub;
+    struct gui_canvas canvas;
+    struct settings_window *settings = &gui->settings;
+
+    gui_layout_begin(&gui->layout, gui->width, gui->height, active);
+
+    /* settings window */
+    gui_buffer_lock(&canvas, buffer, &sub, 0, gui->width, gui->height);
+    update_settings(&gui->settings, &gui->layout, input, &canvas);
+    gui_buffer_unlock(gui_hook_output(&settings->hook), buffer, &sub, &canvas, NULL);
+
+    /* toolbar window */
+
+    gui_layout_end(&gui->background, &gui->layout);
+}
+
+static gui_bool
+floating_demo(struct demo_gui *gui, struct gui_input *input, struct gui_command_buffer *buffer)
+{
+    gui_bool running;
+    struct show_window *show = &gui->show;
+    struct control_window *control = &gui->control;
+    struct gui_command_buffer sub;
+    struct gui_canvas canvas;
+
+    /* Show window */
+    gui_buffer_lock(&canvas, buffer, &sub, 0, gui->width, gui->height);
+    running = update_control(control, &gui->floating, input, &canvas, &gui->config);
+    gui_buffer_unlock(gui_hook_output(&control->hook), buffer, &sub, &canvas, NULL);
+
+    /* control window */
+    gui_hook_panel(&show->hook)->flags = control->show_flags;
+    gui_buffer_lock(&canvas, buffer, &sub, 0, gui->width, gui->height);
+    update_show(show, &gui->floating, input, &canvas);
+    if (gui_hook_panel(&show->hook)->flags & GUI_PANEL_HIDDEN)
+        control->show_flags |= GUI_PANEL_HIDDEN;
+    gui_buffer_unlock(gui_hook_output(&show->hook), buffer, &sub, &canvas, NULL);
+    return running;
 }
 
 static gui_bool
 run_demo(struct demo_gui *gui, struct gui_input *input)
 {
     gui_bool running;
-    struct show_window *show = &gui->show;
-    struct control_window *control = &gui->control;
     struct gui_command_buffer *buffer = &gui->buffer;
-    struct gui_command_buffer sub;
-    struct gui_canvas canvas;
-
     gui_buffer_begin(NULL, buffer, gui->width, gui->height);
-
-    /* Show window */
-    gui_buffer_lock(&canvas, buffer, &sub, 0, gui->width, gui->height);
-    running = update_control(control, &gui->stack, input, &canvas, &gui->config);
-    gui_buffer_unlock(gui_hook_output(&control->hook), buffer, &sub, &canvas, NULL);
-
-    /* control window */
-    gui_hook_panel(&show->hook)->flags = control->show_flags;
-    gui_buffer_lock(&canvas, buffer, &sub, 0, gui->width, gui->height);
-    update_show(show, &gui->stack, input, &canvas);
-    if (gui_hook_panel(&show->hook)->flags & GUI_PANEL_HIDDEN)
-        control->show_flags |= GUI_PANEL_HIDDEN;
-    gui_buffer_unlock(gui_hook_output(&show->hook), buffer, &sub, &canvas, NULL);
-
+    background_demo(gui, input, buffer, gui->control.show_flags & GUI_PANEL_HIDDEN);
+    running = floating_demo(gui, input, buffer);
     gui_buffer_end(NULL, buffer, NULL, NULL);
     return running;
 }
