@@ -1,5 +1,10 @@
 #define MAX_BUFFER  64
-#define MAX_MEMORY  (64 * 1024)
+#define MAX_MEMORY  (128 * 1024)
+
+struct menubar_window {
+    struct gui_panel_hook hook;
+    int current;
+};
 
 struct settings_window {
     struct gui_panel_hook hook;
@@ -89,6 +94,7 @@ struct demo_gui {
     struct show_window show;
     struct control_window control;
     struct settings_window settings;
+    struct menubar_window menu;
 
     struct gui_memory memory;
     struct gui_command_buffer buffer;
@@ -259,6 +265,7 @@ static void
 style_tab(struct gui_panel_layout *panel, struct gui_config *config)
 {
     gui_int tx, ty;
+
     gui_panel_row(panel, 30, 2);
     gui_panel_label(panel, "scrollbar width:", GUI_TEXT_LEFT);
     tx = gui_panel_spinner(panel, 0, (gui_int)config->scrollbar_width, 20, 1, NULL);
@@ -346,6 +353,7 @@ color_tab(struct gui_panel_layout *panel, struct control_window *control, struct
     } else {
         gui_panel_row(panel, 30, 2);
         for (i = 0; i < GUI_COLOR_COUNT; ++i) {
+            struct gui_panel_layout layout;
             gui_panel_label(panel, labels[i], GUI_TEXT_LEFT);
             if (gui_panel_button_color(panel, config->colors[i], GUI_BUTTON_DEFAULT)) {
                 if (!control->picker_active) {
@@ -527,7 +535,8 @@ update_settings(struct settings_window *win, struct gui_layout *layout,
 {
     struct gui_panel_layout panel;
     struct gui_panel_layout tab;
-    gui_panel_hook_begin_tiled(&panel, &win->hook, layout, GUI_SLOT_RIGHT, 0, "Tool Settings", canvas, in);
+    gui_panel_hook_begin_tiled(&panel, &win->hook, layout, GUI_SLOT_RIGHT, 0,
+        "Tool Settings", canvas, in);
 
     win->brush_tab = gui_panel_tab_begin(&panel, &tab, "Brush", win->brush_tab);
     brush_tab(&tab, win);
@@ -553,6 +562,34 @@ update_settings(struct settings_window *win, struct gui_layout *layout,
 }
 
 static void
+update_menu(struct menubar_window *win, struct gui_layout *layout,
+    struct gui_input *in, struct gui_canvas *canvas)
+{
+    struct level {const char *name; const int next;};
+    static const struct level levels[][4] = {
+        {{"File", 1}, {"Edit", 2}, {"Tools", 3}, {NULL, -1}},
+        {{"Back", 0}, {"New", -1}, {"Open", -1}, {NULL, -1}},
+        {{"Back", 0}, {"Copy", -1}, {"Paste", -1}, {NULL, -1}},
+        {{"Back", 0}, {"Selection", 4}, {"Transform", 5}, {NULL, -1}},
+        {{"Back", 3}, {"Rectangle", -1}, {"Elipse", -1}, {NULL, -1}},
+        {{"Back", 3}, {"Align", -1}, {"Move", -1}, {NULL, -1}}
+    };
+    const struct level *iter = levels[win->current];
+    struct gui_panel_layout panel;
+    gui_panel_hook_begin_tiled(&panel, &win->hook, layout, GUI_SLOT_TOP, 0, NULL, canvas, in);
+    gui_panel_row(&panel, 25, 10);
+    while (iter->name) {
+        if (gui_panel_button_text(&panel, iter->name, GUI_BUTTON_DEFAULT)) {
+            fprintf(stdout, "button: %s pressed!\n", iter->name);
+            if (iter->next >= 0)
+                win->current = iter->next;
+        }
+        iter++;
+    }
+    gui_panel_hook_end(&panel, &win->hook);
+}
+
+static void
 init_demo(struct demo_gui *gui, struct gui_font *font)
 {
     struct gui_layout_config ratio;
@@ -573,7 +610,10 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
     ratio.bottom = 0.05f;
     ratio.top = 0.05f;
     gui_layout_init(&gui->layout, &ratio);
+
     gui_panel_hook_init(&gui->settings.hook, 0, 0, 0, 0, GUI_PANEL_BORDER, config, font);
+    gui_panel_hook_init(&gui->menu.hook, 0, 0, 0, 0, GUI_PANEL_BORDER|GUI_PANEL_NO_HEADER,
+        config, font);
 
     gui_stack_clear(&gui->floating);
     init_show(&gui->show, config, font, &gui->floating);
@@ -586,14 +626,23 @@ background_demo(struct demo_gui *gui, struct gui_input *input, struct gui_comman
 {
     struct gui_command_buffer sub;
     struct gui_canvas canvas;
+    struct menubar_window *menu = &gui->menu;
     struct settings_window *settings = &gui->settings;
 
     gui_layout_begin(&gui->layout, gui->width, gui->height, active);
     gui_layout_slot(&gui->layout, GUI_SLOT_RIGHT, GUI_LAYOUT_VERTICAL, 1);
+    gui_layout_slot(&gui->layout, GUI_SLOT_TOP, GUI_LAYOUT_VERTICAL, 1);
 
+    /* settings window */
     gui_buffer_lock(&canvas, buffer, &sub, 0, gui->width, gui->height);
-    update_settings(&gui->settings, &gui->layout, input, &canvas);
+    update_settings(settings, &gui->layout, input, &canvas);
     gui_buffer_unlock(gui_hook_output(&settings->hook), buffer, &sub, &canvas, NULL);
+
+    /* menubar window */
+    gui_buffer_lock(&canvas, buffer, &sub, 0, gui->width, gui->height);
+    update_menu(menu, &gui->layout, input, &canvas);
+    gui_buffer_unlock(gui_hook_output(&menu->hook), buffer, &sub, &canvas, NULL);
+
     gui_layout_end(&gui->background, &gui->layout);
 }
 
