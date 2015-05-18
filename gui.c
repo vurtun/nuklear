@@ -1629,10 +1629,17 @@ gui_panel_hook_begin_tiled(struct gui_panel_layout *tile, struct gui_panel_hook 
     bounds.w = s->ratio.x * (gui_float)layout->width;
     bounds.h = s->ratio.y * (gui_float)layout->height;
 
-    panel->x = bounds.x;
-    panel->w = bounds.w;
-    panel->h = bounds.h / (gui_float)s->capacity;
-    panel->y = bounds.y + (gui_float)index * panel->h;
+    if (s->format == GUI_LAYOUT_HORIZONTAL) {
+        panel->h = bounds.h;
+        panel->y = bounds.y;
+        panel->x = bounds.x + (gui_float)index * panel->w;
+        panel->w = bounds.w / (gui_float)s->capacity;
+    } else {
+        panel->x = bounds.x;
+        panel->w = bounds.w;
+        panel->h = bounds.h / (gui_float)s->capacity;
+        panel->y = bounds.y + (gui_float)index * panel->h;
+    }
     gui_stack_push(&layout->stack, hook);
     return gui_panel_begin(tile, panel, title, canvas, (layout->active) ? in : NULL);
 }
@@ -2929,12 +2936,13 @@ gui_layout_end(struct gui_panel_stack *stack, struct gui_layout *layout)
 
 void
 gui_layout_slot(struct gui_layout *layout, enum gui_layout_slot_index slot,
-    gui_size count)
+    enum gui_layout_format format, gui_size count)
 {
     ASSERT(layout);
     ASSERT(count);
     ASSERT(slot >= GUI_SLOT_TOP && slot < GUI_SLOT_MAX);
     if (!layout || !count) return;
     layout->slots[slot].capacity = count;
+    layout->slots[slot].format = format;
 }
 

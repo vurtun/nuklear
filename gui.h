@@ -471,6 +471,11 @@ enum gui_layout_slot_index {
     GUI_SLOT_MAX
 };
 
+enum gui_layout_format {
+    GUI_LAYOUT_HORIZONTAL,
+    GUI_LAYOUT_VERTICAL
+};
+
 struct gui_layout_config {
     gui_float left;
     gui_float right;
@@ -484,6 +489,7 @@ struct gui_layout_slot {
     gui_size capacity;
     struct gui_vec2 ratio;
     struct gui_vec2 offset;
+    enum gui_layout_format format;
 };
 
 struct gui_layout {
@@ -652,14 +658,15 @@ void gui_panel_end(struct gui_panel_layout*, struct gui_panel*);
 #define gui_hook_panel(h) (&((h)->GUI_HOOK_PANEL_NAME))
 #define gui_hook_output(h) (&((h)->GUI_HOOK_OUTPUT_NAME))
 #define gui_panel_hook_init(hook, x, y, w, h, flags, config, font)\
-    gui_panel_init(gui_hook_panel(hook), x, y, w, h, flags, config, font)
+                    gui_panel_init(gui_hook_panel(hook), x, y, w, h, flags, config, font)
 gui_bool gui_panel_hook_begin_stacked(struct gui_panel_layout*, struct gui_panel_hook*,
-    struct gui_panel_stack*, const char*, const struct gui_canvas*, const struct gui_input*);
+                    struct gui_panel_stack*, const char*, const struct gui_canvas*,
+                    const struct gui_input*);
 gui_bool gui_panel_hook_begin_tiled(struct gui_panel_layout*, struct gui_panel_hook*,
-    struct gui_layout*, enum gui_layout_slot_index, gui_size index, const char*,
-    const struct gui_canvas*, const struct gui_input*);
+                    struct gui_layout*, enum gui_layout_slot_index, gui_size index, const char*,
+                    const struct gui_canvas*, const struct gui_input*);
 #define gui_panel_hook_end(layout, hook)\
-    gui_panel_end((layout), gui_hook_panel(hook))
+                    gui_panel_end((layout), gui_hook_panel(hook))
 
 /* Stack  */
 #define gui_stack_begin(s) ((s)->begin)
@@ -673,7 +680,8 @@ void gui_stack_pop(struct gui_panel_stack*, struct gui_panel_hook*);
 void gui_layout_init(struct gui_layout*, const struct gui_layout_config*);
 void gui_layout_begin(struct gui_layout*, gui_size width, gui_size height, gui_bool active);
 void gui_layout_end(struct gui_panel_stack*, struct gui_layout*);
-void gui_layout_slot(struct gui_layout*, enum gui_layout_slot_index, gui_size panel_count);
+void gui_layout_slot(struct gui_layout*, enum gui_layout_slot_index,
+                    enum gui_layout_format, gui_size panel_count);
 
 #ifdef __cplusplus
 }

@@ -591,7 +591,7 @@ background_demo(struct demo_gui *gui, struct gui_input *input, struct gui_comman
     struct settings_window *settings = &gui->settings;
 
     gui_layout_begin(&gui->layout, gui->width, gui->height, active);
-    gui_layout_slot(&gui->layout, GUI_SLOT_RIGHT, 1);
+    gui_layout_slot(&gui->layout, GUI_SLOT_RIGHT, GUI_LAYOUT_VERTICAL, 1);
 
     gui_buffer_lock(&canvas, buffer, &sub, 0, gui->width, gui->height);
     update_settings(&gui->settings, &gui->layout, input, &canvas);

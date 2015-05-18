@@ -367,7 +367,6 @@ struct your_window {
 }
 
 struct gui_memory memory = {...};
-struct gui_memory_status status;
 struct gui_command_buffer buffer;
 gui_buffer_init_fixed(buffer, &memory);
 
@@ -396,7 +395,7 @@ while (1) {
     if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");
     gui_panel_hook_end(&layout, &win.hook);
-    gui_buffer_end(gui_hook_output(&win.hook), buffer, &status);
+    gui_buffer_end(gui_hook_output(&win.hook), buffer, NULL);
 
     /* draw each panel */
     struct gui_panel_hook *iter;
@@ -411,11 +410,14 @@ while (1) {
 
 ### Tiling
 Stacked windows are only one side of the coin for panel layouts while
-a tiled layout is the other. Tiled layout divide the screen into regions in this
-case the top, left, center, right and bottom region. Each region occupies a
-certain percentage on the screen and can be filled with panels. The combination
-of regions, ratio and multiple panels per region support a rich set of vertical,
-horizontal and mixed layout.
+a tiled layout is the other. Tiled layouts divide the screen into regions called
+slots in this case the top, left, center, right and bottom slot. Each slot occupies a
+certain percentage on the screen and can be filled with panels either
+horizontally or vertically. The combination of slots, ratio and multiple panels
+per slots support a rich set of vertical, horizontal and mixed layouts. Biggest
+disadvantage of tiled layouts are the percentage based dividing of space since the
+right formating works best for a fixed size destination screen space. So the
+target application lies in fullscreen tools and editors.
 
 ```c
 struct your_window {
@@ -424,14 +426,13 @@ struct your_window {
 }
 
 struct gui_memory memory = {...};
-struct gui_memory_status status;
 struct gui_command_buffer buffer;
 gui_buffer_init_fixed(buffer, &memory);
 
+struct your_window win;
 struct gui_config config;
 struct gui_font font = {...}
 struct gui_input input = {0};
-struct your_window win;
 gui_default_config(&config);
 gui_panel_hook_init(&win.hook, 0, 0, 0, 0, 0, &config, &font);
 
@@ -449,7 +450,7 @@ while (1) {
     gui_input_end(&input);
 
     gui_layout_begin(&tiled, window_width, window_height, gui_true);
-    gui_layout_slot(&tiled, GUI_SLOT_LEFT, 1);
+    gui_layout_slot(&tiled, GUI_SLOT_LEFT, GUI_LAYOUT_VERTICAL, 1);
 
     gui_buffer_begin(&canvas, &buffer, window_width, window_height);
     gui_panel_hook_begin_tiled(&layout, &win.hook, &tiled, GUI_SLOT_LEFT, 0, "Demo", &canvas, &input);
@@ -457,7 +458,7 @@ while (1) {
     if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");
     gui_panel_hook_end(&layout, &win.hook);
-    gui_buffer_end(gui_hook_output(&win.hook), buffer, &status);
+    gui_buffer_end(gui_hook_output(&win.hook), buffer, NULL);
 
     gui_layout_end(&stack, &tiled);
 
@@ -477,7 +478,7 @@ while (1) {
 The demo and example code can be found in the demo folder.
 There is demo code for Linux(X11), Windows(win32) and OpenGL(SDL2, freetype).
 As for now there will be no DirectX demo since I don't have experience
-programming with DirectX but you are more than welcome to provide one.
+programming using DirectX but you are more than welcome to provide one.
 
 #### Why did you use ANSI C and not C99 or C++?
 Personally I stay out of all "discussions" about C vs C++ since they are totally
