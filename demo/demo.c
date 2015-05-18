@@ -353,7 +353,6 @@ color_tab(struct gui_panel_layout *panel, struct control_window *control, struct
     } else {
         gui_panel_row(panel, 30, 2);
         for (i = 0; i < GUI_COLOR_COUNT; ++i) {
-            struct gui_panel_layout layout;
             gui_panel_label(panel, labels[i], GUI_TEXT_LEFT);
             if (gui_panel_button_color(panel, config->colors[i], GUI_BUTTON_DEFAULT)) {
                 if (!control->picker_active) {
@@ -524,7 +523,7 @@ texture_tab(struct gui_panel_layout *panel, struct settings_window *win)
     gui_panel_seperator(panel, 2);
     win->update_on_stroke = gui_panel_check(panel, "Update on stroke", win->update_on_stroke);
     gui_panel_seperator(panel, 2);
-    win->save_on_stroke = gui_panel_check(panel, "Save texture on stroke", win->save_on_stroke);
+    win->save_on_stroke = gui_panel_check(panel, "Save on stroke", win->save_on_stroke);
     gui_panel_seperator(panel, 2);
     win->extend_seam_color = gui_panel_check(panel, "Extend seam color", win->extend_seam_color);
 }
@@ -577,7 +576,7 @@ update_menu(struct menubar_window *win, struct gui_layout *layout,
     const struct level *iter = levels[win->current];
     struct gui_panel_layout panel;
     gui_panel_hook_begin_tiled(&panel, &win->hook, layout, GUI_SLOT_TOP, 0, NULL, canvas, in);
-    gui_panel_row(&panel, 25, 10);
+    gui_panel_row(&panel, 25, 16);
     while (iter->name) {
         if (gui_panel_button_text(&panel, iter->name, GUI_BUTTON_DEFAULT)) {
             fprintf(stdout, "button: %s pressed!\n", iter->name);
@@ -592,7 +591,6 @@ update_menu(struct menubar_window *win, struct gui_layout *layout,
 static void
 init_demo(struct demo_gui *gui, struct gui_font *font)
 {
-    struct gui_layout_config ratio;
     struct gui_command_buffer *buffer = &gui->buffer;
     struct gui_memory *memory = &gui->memory;
     struct gui_config *config = &gui->config;
@@ -602,14 +600,6 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
     memory->size = MAX_MEMORY;
     gui_buffer_init_fixed(buffer, memory, GUI_BUFFER_CLIPPING);
     gui_default_config(config);
-
-    ratio.left = 0.05f;
-    ratio.right = 0.35f;
-    ratio.centerv = 0.9f;
-    ratio.centerh = 0.6f;
-    ratio.bottom = 0.05f;
-    ratio.top = 0.05f;
-    gui_layout_init(&gui->layout, &ratio);
 
     gui_panel_hook_init(&gui->settings.hook, 0, 0, 0, 0, GUI_PANEL_BORDER, config, font);
     gui_panel_hook_init(&gui->menu.hook, 0, 0, 0, 0, GUI_PANEL_BORDER|GUI_PANEL_NO_HEADER,
@@ -624,10 +614,19 @@ static void
 background_demo(struct demo_gui *gui, struct gui_input *input, struct gui_command_buffer *buffer,
     gui_bool active)
 {
+    struct gui_layout_config ratio;
     struct gui_command_buffer sub;
     struct gui_canvas canvas;
     struct menubar_window *menu = &gui->menu;
     struct settings_window *settings = &gui->settings;
+
+    ratio.right = 450.0f / gui->width;
+    ratio.top = 52.0f / gui->height;
+    ratio.left = 0.0f;
+    ratio.bottom = 0;
+    ratio.centerv = 1.0f - ratio.top;
+    ratio.centerh = 1.0f - ratio.right;
+    gui_layout_init(&gui->layout, &ratio);
 
     gui_layout_begin(&gui->layout, gui->width, gui->height, active);
     gui_layout_slot(&gui->layout, GUI_SLOT_RIGHT, GUI_LAYOUT_VERTICAL, 1);

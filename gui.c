@@ -1445,7 +1445,9 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
 
     /* add footer at the end of the panel */
     footer_h = config->scaler_size.y + config->item_padding.y;
-    if ((panel->flags & GUI_PANEL_SCROLLBAR) && !panel->minimized) {
+    if ((panel->flags & GUI_PANEL_SCALEABLE) &&
+	(panel->flags & GUI_PANEL_SCROLLBAR) &&
+       	!panel->minimized) {
         gui_float footer_x, footer_y, footer_w;
         footer_x = panel->x;
         footer_w = panel->w;
@@ -1469,7 +1471,9 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     layout->clip.w = panel->w;
     layout->clip.y = panel->y + layout->header_height - 1;
     if (panel->flags & GUI_PANEL_SCROLLBAR) {
-        layout->clip.h = panel->h - (footer_h + layout->header_height);
+	if (panel->flags & GUI_PANEL_SCALEABLE)
+	    layout->clip.h = panel->h - (footer_h + layout->header_height);
+	else layout->clip.h = panel->h - layout->header_height;
         layout->clip.h -= (config->panel_padding.y + config->item_padding.y);
     }
     else layout->clip.h = null_rect.h;
@@ -1540,7 +1544,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
         const struct gui_color *color = &config->colors[GUI_COLOR_PANEL];
         layout->width = panel->w - config->scrollbar_width;
         layout->height = panel->h - (layout->header_height + 2 * config->item_spacing.y);
-        layout->height -= footer_h;
+	if (panel->flags & GUI_PANEL_SCALEABLE) layout->height -= footer_h;
         if (layout->valid)
             canvas->draw_rect(canvas->userdata, panel->x, panel->y + layout->header_height,
                 panel->w, panel->h - layout->header_height, *color);
@@ -2021,6 +2025,7 @@ gui_panel_edit_base(struct gui_rect *bounds, struct gui_edit *field,
     field->show_cursor = gui_true;
     field->background = config->colors[GUI_COLOR_INPUT];
     field->foreground = config->colors[GUI_COLOR_INPUT_BORDER];
+    field->cursor = config->colors[GUI_COLOR_INPUT_CURSOR];
     return gui_true;
 }
 
@@ -2088,6 +2093,7 @@ gui_panel_shell(struct gui_panel_layout *layout, gui_char *buffer, gui_size *len
     field.padding.x = config->item_padding.x;
     field.padding.y = config->item_padding.y;
     field.show_cursor = gui_true;
+    field.cursor = config->colors[GUI_COLOR_INPUT_CURSOR];
     field.background = config->colors[GUI_COLOR_INPUT];
     field.foreground = config->colors[GUI_COLOR_INPUT_BORDER];
     *len = gui_edit(layout->canvas, field_x, field_y, field_w, field_h, buffer,
