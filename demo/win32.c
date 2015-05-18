@@ -232,7 +232,6 @@ surface_draw_text(XSurface *surf, XFont *font, short x, short y, unsigned short 
     unsigned char bg_r, unsigned char bg_g, unsigned char bg_b,
     unsigned char fg_r, unsigned char fg_g, unsigned char fg_b)
 {
-    int tx, ty, th;
     RECT format;
     UINT bg = RGB(bg_r, bg_g, bg_b);
     UINT fg = RGB(fg_r, fg_g, fg_b);
@@ -447,8 +446,8 @@ WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int shown)
         /* Draw */
         surface_begin(xw.backbuffer);
         surface_clear(xw.backbuffer, 255, 255, 255);
-        draw(xw.backbuffer, &gui.stack);
-        draw(xw.floating, &gui.stack);
+        draw(xw.backbuffer, &gui.background);
+        draw(xw.backbuffer, &gui.floating);
         surface_end(xw.backbuffer, xw.hdc);
 
         /* Timing */

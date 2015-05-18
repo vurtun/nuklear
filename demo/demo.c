@@ -259,7 +259,7 @@ static void
 style_tab(struct gui_panel_layout *panel, struct gui_config *config)
 {
     gui_int tx, ty;
-
+    gui_panel_row(panel, 30, 2);
     gui_panel_label(panel, "scrollbar width:", GUI_TEXT_LEFT);
     tx = gui_panel_spinner(panel, 0, (gui_int)config->scrollbar_width, 20, 1, NULL);
     config->scrollbar_width = (float)tx;
@@ -346,7 +346,6 @@ color_tab(struct gui_panel_layout *panel, struct control_window *control, struct
     } else {
         gui_panel_row(panel, 30, 2);
         for (i = 0; i < GUI_COLOR_COUNT; ++i) {
-            struct gui_panel_layout layout;
             gui_panel_label(panel, labels[i], GUI_TEXT_LEFT);
             if (gui_panel_button_color(panel, config->colors[i], GUI_BUTTON_DEFAULT)) {
                 if (!control->picker_active) {
@@ -526,7 +525,6 @@ static void
 update_settings(struct settings_window *win, struct gui_layout *layout,
     struct gui_input *in, struct gui_canvas *canvas)
 {
-    gui_bool running;
     struct gui_panel_layout panel;
     struct gui_panel_layout tab;
     gui_panel_hook_begin_tiled(&panel, &win->hook, layout, GUI_SLOT_RIGHT, 0, "Tool Settings", canvas, in);
@@ -568,10 +566,10 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
     gui_buffer_init_fixed(buffer, memory, GUI_BUFFER_CLIPPING);
     gui_default_config(config);
 
-    ratio.left = 0.10f;
-    ratio.right = 0.40f;
+    ratio.left = 0.05f;
+    ratio.right = 0.35f;
     ratio.centerv = 0.9f;
-    ratio.centerh = 0.5f;
+    ratio.centerh = 0.6f;
     ratio.bottom = 0.05f;
     ratio.top = 0.05f;
     gui_layout_init(&gui->layout, &ratio);

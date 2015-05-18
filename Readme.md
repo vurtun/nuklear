@@ -232,7 +232,7 @@ struct gui_allocator {
 ```
 
 ### Buffering
-While a raw canvas provides the ability to draw without any problems, the pure
+While a raw canvas provides the ability to draw without problems, the pure
 nature of callbacks is a loss of flow control. You have to immediately
 draw a primitive to screen which forces your application to build around the
 toolkit instead of controling it. An additional disadvantage of callbacks in this
@@ -520,8 +520,8 @@ platform (Xlib, Win32) itself already provides a solution.
 - [Tutorial from Jari Komppa about imgui libraries](http://www.johno.se/book/imgui.html)
 - [Johannes 'johno' Norneby's article](http://iki.fi/sol/imgui/)
 - [Casey Muratori's original introduction to imgui's](http:://mollyrocket.com/861?node=861)
-- [Casey Muratori's imgui panel design(1/2)](http://mollyrocket.com/casey/stream_0019.html)
-- [Casey Muratori's imgui panel design(2/2)](http://mollyrocket.com/casey/stream_0020.html)
+- [Casey Muratori's imgui panel design (1/2)](http://mollyrocket.com/casey/stream_0019.html)
+- [Casey Muratori's imgui panel design (2/2)](http://mollyrocket.com/casey/stream_0020.html)
 - [Casey Muratori: Designing and Evaluation Reusable Components](http://mollyrocket.com/casey/stream_0028.html)
 - [ImGui: The inspiration for this project](https://github.com/ocornut/imgui)
 - [Nvidia's imgui toolkit](https://code.google.com/p/nvidia-widgets/)

@@ -2707,14 +2707,14 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
             button_y += config->item_padding.y;
             button_h -= config->item_padding.y;
             button.background = config->colors[GUI_COLOR_SHELF];
-            button.content = config->colors[GUI_COLOR_TEXT];
+            button.content = config->colors[GUI_COLOR_SHELF_TEXT];
             button.highlight = config->colors[GUI_COLOR_SHELF];
             button.highlight_content = config->colors[GUI_COLOR_SHELF_TEXT];
         } else {
             button.background = config->colors[GUI_COLOR_SHELF_ACTIVE];
-            button.content = config->colors[GUI_COLOR_TEXT];
+            button.content = config->colors[GUI_COLOR_SHELF_ACTIVE_TEXT];
             button.highlight = config->colors[GUI_COLOR_SHELF_ACTIVE];
-            button.highlight_content = config->colors[GUI_COLOR_SHELF_TEXT];
+            button.highlight_content = config->colors[GUI_COLOR_SHELF_ACTIVE_TEXT];
         }
         if (gui_button_text(canvas, button_x, button_y, button_w, button_h,
             tabs[i], GUI_BUTTON_DEFAULT, &button, parent->input, &parent->font))
@@ -2887,7 +2887,6 @@ gui_stack_pop(struct gui_panel_stack *stack, struct gui_panel_hook *panel)
 void
 gui_layout_init(struct gui_layout *layout, const struct gui_layout_config *config)
 {
-    struct gui_layout_slot *slot;
     ASSERT(layout);
     ASSERT(config);
     if (!layout || !config) return;
@@ -2920,7 +2919,6 @@ gui_layout_begin(struct gui_layout *layout, gui_size width, gui_size height,
 void
 gui_layout_end(struct gui_panel_stack *stack, struct gui_layout *layout)
 {
-    gui_size i;
     ASSERT(stack);
     ASSERT(layout);
     if (!stack || !layout) return;
