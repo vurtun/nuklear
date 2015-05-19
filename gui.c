@@ -1200,6 +1200,7 @@ gui_buffer_begin(struct gui_canvas *canvas, struct gui_command_buffer *buffer,
     canvas->draw_circle = (gui_draw_circle)gui_buffer_push_circle;
     canvas->draw_triangle = (gui_draw_triangle)gui_buffer_push_triangle;
     canvas->draw_text = (gui_draw_text)gui_buffer_push_text;
+    canvas->draw_image = (gui_draw_image)gui_buffer_push_image;
 }
 
 void
@@ -1275,11 +1276,11 @@ gui_default_config(struct gui_config *config)
     vec2_load(config->panel_padding, 15.0f, 10.0f);
     vec2_load(config->panel_min_size, 64.0f, 64.0f);
     vec2_load(config->item_spacing, 10.0f, 4.0f);
-    vec2_load(config->item_padding, 4.0f, 4.0f);
+    vec2_load(config->item_padding, 3.0f, 3.0f);
     vec2_load(config->scaler_size, 16.0f, 16.0f);
     col_load(config->colors[GUI_COLOR_TEXT], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_PANEL], 45, 45, 45, 255);
-    col_load(config->colors[GUI_COLOR_HEADER], 45, 45, 45, 255);
+    col_load(config->colors[GUI_COLOR_HEADER], 40, 40, 40, 255);
     col_load(config->colors[GUI_COLOR_BORDER], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_BUTTON], 50, 50, 50, 255);
     col_load(config->colors[GUI_COLOR_BUTTON_HOVER], 100, 100, 100, 255);
@@ -1315,9 +1316,9 @@ gui_default_config(struct gui_config *config)
     col_load(config->colors[GUI_COLOR_SCROLLBAR_BORDER], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_TABLE_LINES], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_SHELF], 45, 45, 45, 255);
-    col_load(config->colors[GUI_COLOR_SHELF_TEXT], 100, 100, 100, 255);
-    col_load(config->colors[GUI_COLOR_SHELF_ACTIVE], 50, 50, 50, 255);
-    col_load(config->colors[GUI_COLOR_SHELF_ACTIVE_TEXT], 100, 100, 100, 255);
+    col_load(config->colors[GUI_COLOR_SHELF_TEXT], 150, 150, 150, 255);
+    col_load(config->colors[GUI_COLOR_SHELF_ACTIVE], 100, 100, 100, 255);
+    col_load(config->colors[GUI_COLOR_SHELF_ACTIVE_TEXT], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_SCALER], 100, 100, 100, 255);
 }
 
@@ -2659,6 +2660,7 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
 {
     const struct gui_config *config;
     const struct gui_canvas *canvas;
+    const struct gui_font *font;
 
     struct gui_rect bounds;
     struct gui_rect clip;
@@ -2683,6 +2685,8 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
 
     config = parent->config;
     canvas = parent->canvas;
+    font = &parent->font;
+
     gui_panel_alloc_space(&bounds, parent);
     zero(shelf, sizeof(*shelf));
     c = &parent->clip;
@@ -2701,14 +2705,19 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
         struct gui_button button;
         gui_float button_x, button_y;
         gui_float button_w, button_h;
+	gui_size text_width = font->width(font->userdata, (const gui_char*)tabs[i], strsiz(tabs[i]));
+	text_width = text_width + (gui_size)(2 * config->item_spacing.x);
+
         button_y = header_y;
         button_h = header_h;
-        button_x = header_x + ((gui_float)i * (item_width + 1));
-        button_w = item_width;
+        button_x = header_x;
+        button_w = MIN(item_width, text_width);
         button.border = 1;
         button.padding.x = config->item_padding.x;
         button.padding.y = config->item_padding.y;
         button.foreground = config->colors[GUI_COLOR_BORDER];
+	header_x += MIN(item_width, text_width);
+	if ((button_x + button_w) >= (bounds.x + bounds.w)) break;
         if (active != i) {
             button_y += config->item_padding.y;
             button_h -= config->item_padding.y;

@@ -1,11 +1,25 @@
 #define MAX_BUFFER  64
-#define MAX_MEMORY  (128 * 1024)
+#define MAX_MEMORY  (256 * 1024)
+#define WINDOW_WIDTH 1200
+#define WINDOW_HEIGHT 800
 
 struct menubar_window {
     struct gui_panel_hook hook;
     int current;
+    gui_size selection;
 };
 
+struct status_window {
+    struct gui_panel_hook hook;
+    gui_char mel_buffer[MAX_BUFFER];
+    gui_size mel_length;
+    gui_bool mel_active;
+    gui_char py_buffer[MAX_BUFFER];
+    gui_size py_length;
+    gui_bool py_active;
+};
+
+struct toolbar_window {struct gui_panel_hook hook;};
 struct settings_window {
     struct gui_panel_hook hook;
 
@@ -90,11 +104,23 @@ struct control_window {
     struct gui_color color;
 };
 
+struct demo_img {
+    void *select;
+    void *lasso;
+    void *paint;
+    void *move;
+    void *rotate;
+    void *scale;
+};
+
 struct demo_gui {
+    gui_bool running;
     struct show_window show;
     struct control_window control;
     struct settings_window settings;
     struct menubar_window menu;
+    struct toolbar_window tool;
+    struct status_window status;
 
     struct gui_memory memory;
     struct gui_command_buffer buffer;
@@ -102,9 +128,10 @@ struct demo_gui {
     struct gui_layout_config conf;
     struct gui_panel_stack background;
     struct gui_layout layout;
-
     struct gui_panel_stack floating;
     struct gui_panel_layout tab;
+
+    struct demo_img images;
     struct gui_config config;
     struct gui_font font;
     gui_size width, height;
@@ -201,7 +228,7 @@ static void
 init_show(struct show_window *win, struct gui_config *config, struct gui_font *font,
         struct gui_panel_stack *stack)
 {
-    gui_panel_hook_init(&win->hook, 50, 50, 300, 500,
+    gui_panel_hook_init(&win->hook, 120, 160, 300, 550,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
         GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
         GUI_PANEL_MINIMIZABLE, config, font);
@@ -369,11 +396,10 @@ static void
 init_control(struct control_window *win, struct gui_config *config, struct gui_font *font,
         struct gui_panel_stack *stack)
 {
-    gui_panel_hook_init(&win->hook, 380, 50, 400, 350,
+    gui_panel_hook_init(&win->hook, 430, 180, 320, 500,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE, config, font);
     gui_stack_push(stack, &win->hook);
     win->show_flags = gui_hook_panel(&win->hook)->flags;
-    win->style_tab = GUI_MINIMIZED;
     win->color_tab = GUI_MINIMIZED;
 }
 
@@ -424,7 +450,7 @@ scolor_tab(struct gui_panel_layout *panel, struct settings_window *win)
     struct gui_color color = win->color;
     gui_float c = color.r;
 
-    gui_panel_row(panel, 20, 3);
+    gui_panel_row(panel, 25, 3);
     gui_panel_label(panel, "Color:", GUI_TEXT_RIGHT);
     c = gui_panel_slider(panel, 0, c, 250, 10);
     color.r = (gui_byte)c;
@@ -473,7 +499,6 @@ flood_tab(struct gui_panel_layout *panel, struct settings_window *win)
     win->flood_type = gui_panel_option_group(panel, flood_types, LEN(flood_types), win->flood_type);
     return color;
 }
-
 
 static void
 paint_tab(struct gui_panel_layout *panel, struct settings_window *win)
@@ -562,19 +587,27 @@ update_settings(struct settings_window *win, struct gui_layout *layout,
 
 static void
 update_menu(struct menubar_window *win, struct gui_layout *layout,
-    struct gui_input *in, struct gui_canvas *canvas)
+    struct gui_input *in, struct gui_canvas *canvas, struct demo_gui *demo)
 {
+    /* TODO(vurtun): probably want this to be a little bit more extensive*/
+    const char *tabs[] = {"General", "Curves"};
     struct level {const char *name; const int next;};
-    static const struct level levels[][4] = {
-        {{"File", 1}, {"Edit", 2}, {"Tools", 3}, {NULL, -1}},
-        {{"Back", 0}, {"New", -1}, {"Open", -1}, {NULL, -1}},
-        {{"Back", 0}, {"Copy", -1}, {"Paste", -1}, {NULL, -1}},
-        {{"Back", 0}, {"Selection", 4}, {"Transform", 5}, {NULL, -1}},
-        {{"Back", 3}, {"Rectangle", -1}, {"Elipse", -1}, {NULL, -1}},
-        {{"Back", 3}, {"Align", -1}, {"Move", -1}, {NULL, -1}}
+    static const struct level levels[][32] = {
+        {{"File", 1}, {"Edit", 2}, {"Tools", 3}, {"Create", 4}, {"Window", 5}, {"Quit", 0}, {NULL, -1}},
+        {{"Back", 0}, {"New", 0}, {"Open", 0}, {NULL, -1}},
+        {{"Back", 0}, {"Undo", 0}, {"Redo", 0}, {"Copy", 0}, {"Paste", 0}, {NULL, -1}},
+        {{"Back", 0}, {"Selection", 6}, {"Transform", 7}, {NULL, -1}},
+	{{"Back", 0}, {"Sphere", 0}, {"Cube", 0}, {"Cylinder", 0}, {NULL, -1}},
+	{{"Back", 0}, {"General Editor", 0}, {"Node Editor", 0}, {NULL, -1}},
+        {{"Home", 0}, {"Back", 3}, {"Rectangle", 0}, {"Elipse", 0}, {NULL, -1}},
+        {{"Home", 0}, {"Back", 3}, {"Align", 0}, {"Move", 0}, {NULL, -1}}
     };
+
     const struct level *iter = levels[win->current];
     struct gui_panel_layout panel;
+    struct gui_panel_layout tab;
+    struct demo_img *images = &demo->images;
+
     gui_panel_hook_begin_tiled(&panel, &win->hook, layout, GUI_SLOT_TOP, 0, NULL, canvas, in);
     gui_panel_row(&panel, 25, 16);
     while (iter->name) {
@@ -582,9 +615,78 @@ update_menu(struct menubar_window *win, struct gui_layout *layout,
             fprintf(stdout, "button: %s pressed!\n", iter->name);
             if (iter->next >= 0)
                 win->current = iter->next;
+	    if (!strcmp(iter->name, "Quit"))
+		demo->running = gui_false;
         }
         iter++;
     }
+    gui_panel_row(&panel, 100, 1);
+    win->selection = gui_panel_shelf_begin(&panel, &tab, tabs, LEN(tabs), win->selection, 0);
+    gui_panel_row(&tab, 36, 26);
+    if (win->selection == 1) {
+	if (gui_panel_button_image(&tab, images->select, GUI_BUTTON_DEFAULT))
+	    fprintf(stdout, "select button pressed!\n");
+	if (gui_panel_button_image(&tab, images->lasso, GUI_BUTTON_DEFAULT))
+	    fprintf(stdout, "lasso button pressed!\n");
+	if (gui_panel_button_image(&tab, images->paint, GUI_BUTTON_DEFAULT))
+	    fprintf(stdout, "paint button pressed!\n");
+	if (gui_panel_button_image(&tab, images->move, GUI_BUTTON_DEFAULT))
+	    fprintf(stdout, "move button pressed!\n");
+	if (gui_panel_button_image(&tab, images->rotate, GUI_BUTTON_DEFAULT))
+	    fprintf(stdout, "rotate button pressed!\n");
+	if (gui_panel_button_image(&tab, images->scale, GUI_BUTTON_DEFAULT))
+	    fprintf(stdout, "scale button pressed!\n");
+    } else {
+	if (gui_panel_button_image(&tab, images->move, GUI_BUTTON_DEFAULT))
+	    fprintf(stdout, "move button pressed!\n");
+	if (gui_panel_button_image(&tab, images->rotate, GUI_BUTTON_DEFAULT))
+	    fprintf(stdout, "rotate button pressed!\n");
+	if (gui_panel_button_image(&tab, images->scale, GUI_BUTTON_DEFAULT))
+	    fprintf(stdout, "scale button pressed!\n");
+	if (gui_panel_button_image(&tab, images->select, GUI_BUTTON_DEFAULT))
+	    fprintf(stdout, "select button pressed!\n");
+	if (gui_panel_button_image(&tab, images->lasso, GUI_BUTTON_DEFAULT))
+	    fprintf(stdout, "lasso button pressed!\n");
+	if (gui_panel_button_image(&tab, images->paint, GUI_BUTTON_DEFAULT))
+	    fprintf(stdout, "paint button pressed!\n");
+    }
+    gui_panel_shelf_end(&panel, &tab);
+    gui_panel_hook_end(&panel, &win->hook);
+}
+
+static void
+update_status(struct status_window *win, struct gui_layout *layout,
+    struct gui_input *in, struct gui_canvas *canvas)
+{
+    struct gui_panel_layout panel;
+    gui_panel_hook_begin_tiled(&panel, &win->hook, layout, GUI_SLOT_BOTTOM, 0, NULL, canvas, in);
+    gui_panel_row(&panel, 25, 2);
+    if (gui_panel_shell(&panel, win->mel_buffer, &win->mel_length, MAX_BUFFER, &win->mel_active))
+        win->mel_length = 0;
+    if (gui_panel_shell(&panel, win->py_buffer, &win->py_length, MAX_BUFFER, &win->py_active))
+        win->py_length = 0;
+    gui_panel_hook_end(&panel, &win->hook);
+}
+
+static void
+update_toolbar(struct toolbar_window *win, struct gui_layout *layout, struct demo_img *images,
+    struct gui_input *in, struct gui_canvas *canvas)
+{
+    struct gui_panel_layout panel;
+    gui_panel_hook_begin_tiled(&panel, &win->hook, layout, GUI_SLOT_LEFT, 0, NULL, canvas, in);
+    gui_panel_row(&panel, 40, 1);
+    if (gui_panel_button_image(&panel, images->select, GUI_BUTTON_DEFAULT))
+	fprintf(stdout, "select button pressed!\n");
+    if (gui_panel_button_image(&panel, images->lasso, GUI_BUTTON_DEFAULT))
+	fprintf(stdout, "lasso button pressed!\n");
+    if (gui_panel_button_image(&panel, images->paint, GUI_BUTTON_DEFAULT))
+	fprintf(stdout, "paint button pressed!\n");
+    if (gui_panel_button_image(&panel, images->move, GUI_BUTTON_DEFAULT))
+	fprintf(stdout, "move button pressed!\n");
+    if (gui_panel_button_image(&panel, images->rotate, GUI_BUTTON_DEFAULT))
+	fprintf(stdout, "rotate button pressed!\n");
+    if (gui_panel_button_image(&panel, images->scale, GUI_BUTTON_DEFAULT))
+	fprintf(stdout, "scale button pressed!\n");
     gui_panel_hook_end(&panel, &win->hook);
 }
 
@@ -601,10 +703,17 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
     gui_buffer_init_fixed(buffer, memory, GUI_BUFFER_CLIPPING);
     gui_default_config(config);
 
-    gui_panel_hook_init(&gui->settings.hook, 0, 0, 0, 0, GUI_PANEL_BORDER, config, font);
-    gui_panel_hook_init(&gui->menu.hook, 0, 0, 0, 0, GUI_PANEL_BORDER|GUI_PANEL_NO_HEADER,
-        config, font);
+    /* background panels */
+    gui_panel_hook_init(&gui->settings.hook, 0, 0, 0, 0, 0, config, font);
+    gui_panel_hook_init(&gui->status.hook, 0, 0, 0, 0, GUI_PANEL_NO_HEADER, config, font);
+    gui_panel_hook_init(&gui->tool.hook, 0, 0, 0, 0, GUI_PANEL_NO_HEADER, config, font);
+    gui_panel_hook_init(&gui->menu.hook, 0, 0, 0, 0, GUI_PANEL_NO_HEADER, config, font);
+    gui->settings.brush_tab = GUI_MINIMIZED;
+    gui->settings.paint_tab = GUI_MINIMIZED;
+    gui->settings.flood_tab = GUI_MINIMIZED;
+    gui->settings.color_tab = GUI_MINIMIZED;
 
+    /* floating windows */
     gui_stack_clear(&gui->floating);
     init_show(&gui->show, config, font, &gui->floating);
     init_control(&gui->control, config, font, &gui->floating);
@@ -618,19 +727,25 @@ background_demo(struct demo_gui *gui, struct gui_input *input, struct gui_comman
     struct gui_command_buffer sub;
     struct gui_canvas canvas;
     struct menubar_window *menu = &gui->menu;
+    struct toolbar_window *tool = &gui->tool;
+    struct status_window *status = &gui->status;
     struct settings_window *settings = &gui->settings;
 
-    ratio.right = 450.0f / gui->width;
-    ratio.top = 52.0f / gui->height;
-    ratio.left = 0.0f;
-    ratio.bottom = 0;
-    ratio.centerv = 1.0f - ratio.top;
-    ratio.centerh = 1.0f - ratio.right;
+    /* setup layout split to fit screen */
+    ratio.right = 400.0f / gui->width;
+    ratio.top = 160.0f / gui->height;
+    ratio.left = 85.0f / gui->width;
+    ratio.bottom = 52.0f / gui->height;
+    ratio.centerv = 1.0f - (ratio.top + ratio.bottom);
+    ratio.centerh = 1.0f - (ratio.right + ratio.left);
     gui_layout_init(&gui->layout, &ratio);
 
+    /* activate each used layout slot */
     gui_layout_begin(&gui->layout, gui->width, gui->height, active);
     gui_layout_slot(&gui->layout, GUI_SLOT_RIGHT, GUI_LAYOUT_VERTICAL, 1);
+    gui_layout_slot(&gui->layout, GUI_SLOT_LEFT, GUI_LAYOUT_VERTICAL, 1);
     gui_layout_slot(&gui->layout, GUI_SLOT_TOP, GUI_LAYOUT_VERTICAL, 1);
+    gui_layout_slot(&gui->layout, GUI_SLOT_BOTTOM, GUI_LAYOUT_VERTICAL, 1);
 
     /* settings window */
     gui_buffer_lock(&canvas, buffer, &sub, 0, gui->width, gui->height);
@@ -639,16 +754,25 @@ background_demo(struct demo_gui *gui, struct gui_input *input, struct gui_comman
 
     /* menubar window */
     gui_buffer_lock(&canvas, buffer, &sub, 0, gui->width, gui->height);
-    update_menu(menu, &gui->layout, input, &canvas);
+    update_menu(menu, &gui->layout, input, &canvas, gui);
     gui_buffer_unlock(gui_hook_output(&menu->hook), buffer, &sub, &canvas, NULL);
+
+    /* statusbar window */
+    gui_buffer_lock(&canvas, buffer, &sub, 0, gui->width, gui->height);
+    update_status(status, &gui->layout, input, &canvas);
+    gui_buffer_unlock(gui_hook_output(&status->hook), buffer, &sub, &canvas, NULL);
+
+    /* toolbar window */
+    gui_buffer_lock(&canvas, buffer, &sub, 0, gui->width, gui->height);
+    update_toolbar(tool, &gui->layout, &gui->images, input, &canvas);
+    gui_buffer_unlock(gui_hook_output(&tool->hook), buffer, &sub, &canvas, NULL);
 
     gui_layout_end(&gui->background, &gui->layout);
 }
 
-static gui_bool
+static void
 floating_demo(struct demo_gui *gui, struct gui_input *input, struct gui_command_buffer *buffer)
 {
-    gui_bool running;
     struct show_window *show = &gui->show;
     struct control_window *control = &gui->control;
     struct gui_command_buffer sub;
@@ -656,7 +780,7 @@ floating_demo(struct demo_gui *gui, struct gui_input *input, struct gui_command_
 
     /* Show window */
     gui_buffer_lock(&canvas, buffer, &sub, 0, gui->width, gui->height);
-    running = update_control(control, &gui->floating, input, &canvas, &gui->config);
+    update_control(control, &gui->floating, input, &canvas, &gui->config);
     gui_buffer_unlock(gui_hook_output(&control->hook), buffer, &sub, &canvas, NULL);
 
     /* control window */
@@ -666,18 +790,15 @@ floating_demo(struct demo_gui *gui, struct gui_input *input, struct gui_command_
     if (gui_hook_panel(&show->hook)->flags & GUI_PANEL_HIDDEN)
         control->show_flags |= GUI_PANEL_HIDDEN;
     gui_buffer_unlock(gui_hook_output(&show->hook), buffer, &sub, &canvas, NULL);
-    return running;
 }
 
-static gui_bool
+static void
 run_demo(struct demo_gui *gui, struct gui_input *input)
 {
-    gui_bool running;
     struct gui_command_buffer *buffer = &gui->buffer;
     gui_buffer_begin(NULL, buffer, gui->width, gui->height);
     background_demo(gui, input, buffer, gui->control.show_flags & GUI_PANEL_HIDDEN);
-    running = floating_demo(gui, input, buffer);
+    floating_demo(gui, input, buffer);
     gui_buffer_end(NULL, buffer, NULL, NULL);
-    return running;
 }
 
