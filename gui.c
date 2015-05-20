@@ -1343,7 +1343,7 @@ gui_config_color(const struct gui_config *config, enum gui_panel_colors index)
 
 void
 gui_config_push_color(struct gui_config *config, enum gui_panel_colors index,
-    struct gui_color color)
+    gui_byte r, gui_byte g, gui_byte b, gui_byte a)
 {
     struct gui_saved_color *c;
     ASSERT(config);
@@ -1352,7 +1352,10 @@ gui_config_push_color(struct gui_config *config, enum gui_panel_colors index,
     c = &config->color_stack[config->color++];
     c->value = config->colors[index];
     c->type = index;
-    config->colors[index] = color;
+    config->colors[index].r = r;
+    config->colors[index].g = g;
+    config->colors[index].b = b;
+    config->colors[index].a = a;
 }
 
 void
@@ -1376,7 +1379,7 @@ gui_config_pop_color(struct gui_config *config)
     struct gui_saved_color *c;
     ASSERT(config);
     if (!config) return;
-    if (!config->colors) return;
+    if (!config->color) return;
     c = &config->color_stack[--config->color];
     config->colors[c->type] = c->value;
 }
@@ -1387,7 +1390,7 @@ gui_config_pop_property(struct gui_config *config)
     struct gui_saved_property *p;
     ASSERT(config);
     if (!config) return;
-    if (!config->properties) return;
+    if (!config->property) return;
     p = &config->property_stack[--config->property];
     config->properties[p->type] = p->value;
 }
