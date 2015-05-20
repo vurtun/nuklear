@@ -407,7 +407,7 @@ while (1) {
     struct gui_panel_hook *iter;
     gui_stack_for_each(iter, &stack) {
         const struct gui_command *cmd
-        gui_list_for_each(cmd, gui_hook_list(iter)) {
+        gui_list_for_each(cmd, gui_hook_output(iter)) {
             /* execute command */
         }
     }
@@ -472,7 +472,7 @@ while (1) {
     struct gui_panel_hook *iter;
     gui_stack_for_each(iter, &stack) {
         const struct gui_command *cmd
-        gui_list_for_each(cmd, gui_hook_list(iter)) {
+        gui_list_for_each(cmd, gui_hook_output(iter)) {
             /* execute command */
         }
     }
