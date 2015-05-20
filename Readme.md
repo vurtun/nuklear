@@ -45,7 +45,7 @@ struct gui_config config;
 struct gui_input input = {0};
 struct gui_font font = {...};
 struct gui_panel panel;
-gui_default_config(&config);
+gui_config_default(&config);
 gui_panel_init(&panel, 50, 50, 220, 170,
     GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
     GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
@@ -150,7 +150,7 @@ While the widget API even expects you to provide the configuration
 for each and every widget the panel layer provides you with a set of
 attributes in the `gui_config` structure. The structure either needs to be
 filled by the user or can be setup with some default values by the function
-`gui_default_config`. Modification on the fly to the `gui_config` struct is in
+`gui_config_default`. Modification on the fly to the `gui_config` struct is in
 true immediate mode fashion possible and supported.
 
 ```c
@@ -334,7 +334,7 @@ struct gui_input input = {0};
 struct gui_canvas canvas = {...};
 struct gui_config config;
 struct gui_panel panel;
-gui_default_config(&config);
+gui_config_default(&config);
 gui_panel_init(&panel, 50, 50, 300, 200, 0, &config, &font);
 
 while (1) {
@@ -374,7 +374,7 @@ struct gui_config config;
 struct gui_font font = {...}
 struct gui_input input = {0};
 struct your_window win;
-gui_default_config(&config);
+gui_config_default(&config);
 gui_panel_hook_init(&win.hook, 50, 50, 300, 200, 0, &config, &font);
 
 struct gui_stack stack;
@@ -433,7 +433,7 @@ struct your_window win;
 struct gui_config config;
 struct gui_font font = {...}
 struct gui_input input = {0};
-gui_default_config(&config);
+gui_config_default(&config);
 gui_panel_hook_init(&win.hook, 0, 0, 0, 0, 0, &config, &font);
 
 struct gui_layout tiled;
