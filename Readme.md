@@ -166,7 +166,7 @@ after the change is no longer needed.
 ```c
 gui_config_push_color(config, GUI_COLORS_PANEL, 255, 0, 0, 255);
 gui_config_push_attribute(config, GUI_ATTRIBUTE_PADDING, 10.0f, 5.0f);
-/* use the configration data */
+/* use the configuration data */
 gui_config_pop_attribute(config);
 gui_config_pop_color(config);
 ```
