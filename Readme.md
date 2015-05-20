@@ -160,7 +160,7 @@ struct gui_config {
 };
 ```
 In addition to modifing the `gui_config` struct directly the configration API
-enables you to temporarily change a property or color and refert back directly
+enables you to temporarily change a property or color and revert back directly
 after the change is no longer needed.
 
 ```c
