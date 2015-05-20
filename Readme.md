@@ -155,14 +155,20 @@ true immediate mode fashion possible and supported.
 
 ```c
 struct gui_config {
-    struct gui_vec2 panel_padding;
-    struct gui_vec2 panel_min_size;
-    struct gui_vec2 item_spacing;
-    struct gui_vec2 item_padding;
-    struct gui_vec2 scaler_size;
-    gui_float scrollbar_width;
+    struct gui_vec2 properties[GUI_PROPERTY_MAX];
     struct gui_color colors[GUI_COLOR_COUNT];
 };
+```
+In addition to modifing the `gui_config` struct directly the configration API
+enables you to temporarily change a property or color and refert back directly
+after the change is no longer needed.
+
+```c
+gui_config_push_color(config, GUI_COLORS_PANEL, 255, 0, 0, 255);
+gui_config_push_attribute(config, GUI_ATTRIBUTE_PADDING, 10.0f, 5.0f);
+/* use the configration data */
+gui_config_pop_attribute(config);
+gui_config_pop_color(config);
 ```
 
 ### Canvas
