@@ -1401,7 +1401,7 @@ gui_config_reset_colors(struct gui_config *config)
     ASSERT(config);
     if (!config) return;
     while (config->color)
-	gui_config_pop_color(config);
+    gui_config_pop_color(config);
 }
 
 void
@@ -1410,7 +1410,7 @@ gui_config_reset_properties(struct gui_config *config)
     ASSERT(config);
     if (!config) return;
     while (config->property)
-	gui_config_pop_property(config);
+    gui_config_pop_property(config);
 }
 
 void
@@ -1561,8 +1561,8 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     /* add footer at the end of the panel */
     footer_h = scaler_size.y + item_padding.y;
     if ((panel->flags & GUI_PANEL_SCALEABLE) &&
-	(panel->flags & GUI_PANEL_SCROLLBAR) &&
-       	!panel->minimized) {
+        (panel->flags & GUI_PANEL_SCROLLBAR) &&
+        !panel->minimized) {
         gui_float footer_x, footer_y, footer_w;
         footer_x = panel->x;
         footer_w = panel->w;
@@ -1586,9 +1586,9 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     layout->clip.w = panel->w;
     layout->clip.y = panel->y + layout->header_height - 1;
     if (panel->flags & GUI_PANEL_SCROLLBAR) {
-	if (panel->flags & GUI_PANEL_SCALEABLE)
-	    layout->clip.h = panel->h - (footer_h + layout->header_height);
-	else layout->clip.h = panel->h - layout->header_height;
+    if (panel->flags & GUI_PANEL_SCALEABLE)
+        layout->clip.h = panel->h - (footer_h + layout->header_height);
+    else layout->clip.h = panel->h - layout->header_height;
         layout->clip.h -= (panel_padding.y + item_padding.y);
     }
     else layout->clip.h = null_rect.h;
@@ -1659,7 +1659,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
         const struct gui_color *color = &config->colors[GUI_COLOR_PANEL];
         layout->width = panel->w - scrollbar_width;
         layout->height = panel->h - (layout->header_height + 2 * item_spacing.y);
-	if (panel->flags & GUI_PANEL_SCALEABLE) layout->height -= footer_h;
+        if (panel->flags & GUI_PANEL_SCALEABLE) layout->height -= footer_h;
         if (layout->valid)
             canvas->draw_rect(canvas->userdata, panel->x, panel->y + layout->header_height,
                 panel->w, panel->h - layout->header_height, *color);
@@ -1799,7 +1799,7 @@ gui_panel_row_columns(const struct gui_panel_layout *layout, gui_size widget_siz
     ASSERT(layout);
     ASSERT(widget_size);
     if (!layout || !widget_size)
-	return 0;
+        return 0;
 
     item_spacing = gui_config_property(layout->config, GUI_PROPERTY_ITEM_SPACING);
     panel_padding = gui_config_property(layout->config, GUI_PROPERTY_PADDING);
@@ -1807,7 +1807,7 @@ gui_panel_row_columns(const struct gui_panel_layout *layout, gui_size widget_siz
     cols = (gui_size)(layout->width / widget_size);
     size = (cols * (gui_size)item_spacing.x) + 2 * (gui_size)panel_padding.x + widget_size * cols;
     while ((size > layout->width) && --cols)
-	size = (cols * (gui_size)item_spacing.x) + 2 * (gui_size)panel_padding.x + widget_size * cols;
+        size = (cols * (gui_size)item_spacing.x) + 2 * (gui_size)panel_padding.x + widget_size * cols;
     return cols;
 }
 
@@ -1825,7 +1825,7 @@ gui_panel_seperator(struct gui_panel_layout *layout, gui_size cols)
     if (layout->index + cols > layout->row_columns) {
         gui_size i;
         const struct gui_config *config = layout->config;
-	const struct gui_vec2 item_spacing = gui_config_property(config, GUI_PROPERTY_ITEM_SPACING);
+        const struct gui_vec2 item_spacing = gui_config_property(config, GUI_PROPERTY_ITEM_SPACING);
         const gui_float row_height = layout->row_height - item_spacing.y;
         gui_size rows = (layout->index + cols) / layout->row_columns;
         for (i = 0; i < rows; ++i)
@@ -2892,19 +2892,19 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
         struct gui_button button;
         gui_float button_x, button_y;
         gui_float button_w, button_h;
-	gui_size text_width = font->width(font->userdata, (const gui_char*)tabs[i], strsiz(tabs[i]));
-	text_width = text_width + (gui_size)(2 * item_spacing.x);
+    gui_size text_width = font->width(font->userdata, (const gui_char*)tabs[i], strsiz(tabs[i]));
+    text_width = text_width + (gui_size)(2 * item_spacing.x);
 
-        button_y = header_y;
-        button_h = header_h;
-        button_x = header_x;
-        button_w = MIN(item_width, text_width);
-        button.border = 1;
-        button.padding.x = item_padding.x;
-        button.padding.y = item_padding.y;
-        button.foreground = config->colors[GUI_COLOR_BORDER];
-	header_x += MIN(item_width, text_width);
-	if ((button_x + button_w) >= (bounds.x + bounds.w)) break;
+    button_y = header_y;
+    button_h = header_h;
+    button_x = header_x;
+    button_w = MIN(item_width, text_width);
+    button.border = 1;
+    button.padding.x = item_padding.x;
+    button.padding.y = item_padding.y;
+    button.foreground = config->colors[GUI_COLOR_BORDER];
+    header_x += MIN(item_width, text_width);
+    if ((button_x + button_w) >= (bounds.x + bounds.w)) break;
         if (active != i) {
             button_y += item_padding.y;
             button_h -= item_padding.y;
