@@ -228,7 +228,7 @@ static void
 init_show(struct show_window *win, struct gui_config *config, struct gui_font *font,
         struct gui_panel_stack *stack)
 {
-    gui_panel_hook_init(&win->hook, 120, 160, 300, 550,
+    gui_panel_hook_init(&win->hook, 120, 160, 300, 545,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
         GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
         GUI_PANEL_MINIMIZABLE, config, font);
@@ -295,33 +295,34 @@ style_tab(struct gui_panel_layout *panel, struct gui_config *config)
 
     gui_panel_row(panel, 30, 2);
     gui_panel_label(panel, "scrollbar width:", GUI_TEXT_LEFT);
-    tx = gui_panel_spinner(panel, 0, (gui_int)config->scrollbar_width, 20, 1, NULL);
-    config->scrollbar_width = (float)tx;
+    tx = gui_panel_spinner(panel, 0, (gui_int)config->properties[GUI_PROPERTY_SCROLLBAR_WIDTH].x, 20, 1, NULL);
+    config->properties[GUI_PROPERTY_SCROLLBAR_WIDTH].x = (float)tx;
+    config->properties[GUI_PROPERTY_SCROLLBAR_WIDTH].y = (float)tx;
 
     gui_panel_row(panel, 30, 3);
     gui_panel_label(panel, "padding:", GUI_TEXT_LEFT);
-    tx = gui_panel_spinner(panel, 0, (gui_int)config->panel_padding.x, 20, 1, NULL);
-    ty = gui_panel_spinner(panel, 0, (gui_int)config->panel_padding.y, 20, 1, NULL);
-    config->panel_padding.x = (float)tx;
-    config->panel_padding.y = (float)ty;
+    tx = gui_panel_spinner(panel, 0, (gui_int)config->properties[GUI_PROPERTY_PADDING].x, 20, 1, NULL);
+    ty = gui_panel_spinner(panel, 0, (gui_int)config->properties[GUI_PROPERTY_PADDING].y, 20, 1, NULL);
+    config->properties[GUI_PROPERTY_PADDING].x = (float)tx;
+    config->properties[GUI_PROPERTY_PADDING].y = (float)ty;
 
     gui_panel_label(panel, "item spacing:", GUI_TEXT_LEFT);
-    tx = gui_panel_spinner(panel, 0, (gui_int)config->item_spacing.x, 20, 1, NULL);
-    ty = gui_panel_spinner(panel, 0, (gui_int)config->item_spacing.y, 20, 1, NULL);
-    config->item_spacing.x = (float)tx;
-    config->item_spacing.y = (float)ty;
+    tx = gui_panel_spinner(panel, 0, (gui_int)config->properties[GUI_PROPERTY_ITEM_SPACING].x, 20, 1, NULL);
+    ty = gui_panel_spinner(panel, 0, (gui_int)config->properties[GUI_PROPERTY_ITEM_SPACING].y, 20, 1, NULL);
+    config->properties[GUI_PROPERTY_ITEM_SPACING].x = (float)tx;
+    config->properties[GUI_PROPERTY_ITEM_SPACING].y = (float)ty;
 
     gui_panel_label(panel, "item padding:", GUI_TEXT_LEFT);
-    tx = gui_panel_spinner(panel, 0, (gui_int)config->item_padding.x, 20, 1, NULL);
-    ty = gui_panel_spinner(panel, 0, (gui_int)config->item_padding.y, 20, 1, NULL);
-    config->item_padding.x = (float)tx;
-    config->item_padding.y = (float)ty;
+    tx = gui_panel_spinner(panel, 0, (gui_int)config->properties[GUI_PROPERTY_ITEM_PADDING].x, 20, 1, NULL);
+    ty = gui_panel_spinner(panel, 0, (gui_int)config->properties[GUI_PROPERTY_ITEM_PADDING].y, 20, 1, NULL);
+    config->properties[GUI_PROPERTY_ITEM_PADDING].x = (float)tx;
+    config->properties[GUI_PROPERTY_ITEM_PADDING].y = (float)ty;
 
     gui_panel_label(panel, "scaler size:", GUI_TEXT_LEFT);
-    tx = gui_panel_spinner(panel, 0, (gui_int)config->scaler_size.x, 20, 1, NULL);
-    ty = gui_panel_spinner(panel, 0, (gui_int)config->scaler_size.y, 20, 1, NULL);
-    config->scaler_size.x = (float)tx;
-    config->scaler_size.y = (float)ty;
+    tx = gui_panel_spinner(panel, 0, (gui_int)config->properties[GUI_PROPERTY_SCALER_SIZE].x, 20, 1, NULL);
+    ty = gui_panel_spinner(panel, 0, (gui_int)config->properties[GUI_PROPERTY_SCALER_SIZE].y, 20, 1, NULL);
+    config->properties[GUI_PROPERTY_SCALER_SIZE].x = (float)tx;
+    config->properties[GUI_PROPERTY_SCALER_SIZE].y = (float)ty;
 }
 
 static struct gui_color
@@ -590,11 +591,12 @@ update_menu(struct menubar_window *win, struct gui_layout *layout,
     struct gui_input *in, struct gui_canvas *canvas, struct demo_gui *demo)
 {
     /* TODO(vurtun): probably want this to be a little bit more extensive*/
+    gui_size cols;
     const char *tabs[] = {"General", "Curves"};
     struct level {const char *name; const int next;};
     static const struct level levels[][32] = {
-        {{"File", 1}, {"Edit", 2}, {"Tools", 3}, {"Create", 4}, {"Window", 5}, {"Quit", 0}, {NULL, -1}},
-        {{"Back", 0}, {"New", 0}, {"Open", 0}, {NULL, -1}},
+        {{"File", 1}, {"Edit", 2}, {"Tools", 3}, {"Create", 4}, {"Window", 5}, {NULL, -1}},
+        {{"Back", 0}, {"New", 0}, {"Open", 0}, {"Quit", 0}, {NULL, -1}},
         {{"Back", 0}, {"Undo", 0}, {"Redo", 0}, {"Copy", 0}, {"Paste", 0}, {NULL, -1}},
         {{"Back", 0}, {"Selection", 6}, {"Transform", 7}, {NULL, -1}},
 	{{"Back", 0}, {"Sphere", 0}, {"Cube", 0}, {"Cylinder", 0}, {NULL, -1}},
@@ -609,7 +611,7 @@ update_menu(struct menubar_window *win, struct gui_layout *layout,
     struct demo_img *images = &demo->images;
 
     gui_panel_hook_begin_tiled(&panel, &win->hook, layout, GUI_SLOT_TOP, 0, NULL, canvas, in);
-    gui_panel_row(&panel, 25, 16);
+    gui_panel_row(&panel, 20, 12);
     while (iter->name) {
         if (gui_panel_button_text(&panel, iter->name, GUI_BUTTON_DEFAULT)) {
             fprintf(stdout, "button: %s pressed!\n", iter->name);
@@ -620,9 +622,14 @@ update_menu(struct menubar_window *win, struct gui_layout *layout,
         }
         iter++;
     }
-    gui_panel_row(&panel, 100, 1);
+
+    gui_panel_row(&panel, 85, 1);
+    gui_config_push_property(&demo->config, GUI_PROPERTY_PADDING, 15, 5);
+    gui_config_push_property(&demo->config, GUI_PROPERTY_ITEM_PADDING, 1, 1);
     win->selection = gui_panel_shelf_begin(&panel, &tab, tabs, LEN(tabs), win->selection, 0);
-    gui_panel_row(&tab, 36, 26);
+
+    cols = gui_panel_row_columns(&tab, 40);
+    gui_panel_row(&tab, 40, cols);
     if (win->selection == 1) {
 	if (gui_panel_button_image(&tab, images->select, GUI_BUTTON_DEFAULT))
 	    fprintf(stdout, "select button pressed!\n");
@@ -651,6 +658,8 @@ update_menu(struct menubar_window *win, struct gui_layout *layout,
 	    fprintf(stdout, "paint button pressed!\n");
     }
     gui_panel_shelf_end(&panel, &tab);
+    gui_config_pop_property(&demo->config);
+    gui_config_pop_property(&demo->config);
     gui_panel_hook_end(&panel, &win->hook);
 }
 
@@ -670,11 +679,12 @@ update_status(struct status_window *win, struct gui_layout *layout,
 
 static void
 update_toolbar(struct toolbar_window *win, struct gui_layout *layout, struct demo_img *images,
-    struct gui_input *in, struct gui_canvas *canvas)
+    struct gui_input *in, struct gui_canvas *canvas, struct gui_config *config)
 {
     struct gui_panel_layout panel;
+    gui_config_push_property(config, GUI_PROPERTY_PADDING, 5, 10);
     gui_panel_hook_begin_tiled(&panel, &win->hook, layout, GUI_SLOT_LEFT, 0, NULL, canvas, in);
-    gui_panel_row(&panel, 40, 1);
+    gui_panel_row(&panel, 45, 1);
     if (gui_panel_button_image(&panel, images->select, GUI_BUTTON_DEFAULT))
 	fprintf(stdout, "select button pressed!\n");
     if (gui_panel_button_image(&panel, images->lasso, GUI_BUTTON_DEFAULT))
@@ -688,6 +698,7 @@ update_toolbar(struct toolbar_window *win, struct gui_layout *layout, struct dem
     if (gui_panel_button_image(&panel, images->scale, GUI_BUTTON_DEFAULT))
 	fprintf(stdout, "scale button pressed!\n");
     gui_panel_hook_end(&panel, &win->hook);
+    gui_config_pop_property(config);
 }
 
 static void
@@ -701,7 +712,7 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
     memory->memory = calloc(MAX_MEMORY, 1);
     memory->size = MAX_MEMORY;
     gui_buffer_init_fixed(buffer, memory, GUI_BUFFER_CLIPPING);
-    gui_default_config(config);
+    gui_config_default(config);
 
     /* background panels */
     gui_panel_hook_init(&gui->settings.hook, 0, 0, 0, 0, 0, config, font);
@@ -709,9 +720,8 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
     gui_panel_hook_init(&gui->tool.hook, 0, 0, 0, 0, GUI_PANEL_NO_HEADER, config, font);
     gui_panel_hook_init(&gui->menu.hook, 0, 0, 0, 0, GUI_PANEL_NO_HEADER, config, font);
     gui->settings.brush_tab = GUI_MINIMIZED;
-    gui->settings.paint_tab = GUI_MINIMIZED;
-    gui->settings.flood_tab = GUI_MINIMIZED;
     gui->settings.color_tab = GUI_MINIMIZED;
+    gui->settings.texture_tab = GUI_MINIMIZED;
 
     /* floating windows */
     gui_stack_clear(&gui->floating);
@@ -733,8 +743,8 @@ background_demo(struct demo_gui *gui, struct gui_input *input, struct gui_comman
 
     /* setup layout split to fit screen */
     ratio.right = 400.0f / gui->width;
-    ratio.top = 160.0f / gui->height;
-    ratio.left = 85.0f / gui->width;
+    ratio.top = 140.0f / gui->height;
+    ratio.left = 70.0f / gui->width;
     ratio.bottom = 52.0f / gui->height;
     ratio.centerv = 1.0f - (ratio.top + ratio.bottom);
     ratio.centerh = 1.0f - (ratio.right + ratio.left);
@@ -764,7 +774,7 @@ background_demo(struct demo_gui *gui, struct gui_input *input, struct gui_comman
 
     /* toolbar window */
     gui_buffer_lock(&canvas, buffer, &sub, 0, gui->width, gui->height);
-    update_toolbar(tool, &gui->layout, &gui->images, input, &canvas);
+    update_toolbar(tool, &gui->layout, &gui->images, input, &canvas, &gui->config);
     gui_buffer_unlock(gui_hook_output(&tool->hook), buffer, &sub, &canvas, NULL);
 
     gui_layout_end(&gui->background, &gui->layout);

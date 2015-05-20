@@ -12,10 +12,7 @@
 #include "../gui.h"
 
 /* macros */
-#define WIN_WIDTH   800
-#define WIN_HEIGHT  600
 #define DTIME       16
-
 #define MIN(a,b)    ((a) < (b) ? (a) : (b))
 #define MAX(a,b)    ((a) < (b) ? (b) : (a))
 #define CLAMP(i,v,x) (MAX(MIN(v,x), i))
@@ -422,7 +419,7 @@ main(int argc, char *argv[])
     xw.swa.event_mask =
         ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPress |
         ButtonReleaseMask | ButtonMotionMask | Button1MotionMask | PointerMotionMask;
-    xw.win = XCreateWindow(xw.dpy, xw.root, 0, 0, WIN_WIDTH, WIN_HEIGHT, 0,
+    xw.win = XCreateWindow(xw.dpy, xw.root, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, 0,
         XDefaultDepth(xw.dpy, xw.screen), InputOutput,
         xw.vis, CWEventMask | CWColormap, &xw.swa);
     XStoreName(xw.dpy, xw.win, "X11");
@@ -460,7 +457,7 @@ main(int argc, char *argv[])
         /* GUI */
         gui.width = xw.width;
         gui.height = xw.height;
-        running = run_demo(&gui, &in);
+        run_demo(&gui, &in);
 
         /* Draw */
         XClearWindow(xw.dpy, xw.win);

@@ -13,6 +13,8 @@ extern "C" {
 /* Constants */
 #define GUI_UTF_SIZE 4
 #define GUI_INPUT_MAX 16
+#define GUI_MAX_COLOR_STACK 8
+#define GUI_MAX_ATTRIB_STACK 8
 #define GUI_UTF_INVALID 0xFFFD
 #define GUI_HOOK_PANEL_NAME panel
 #define GUI_HOOK_OUTPUT_NAME list
@@ -340,7 +342,7 @@ struct gui_command_list {
     gui_size count;
 };
 
-/* Panel */
+/* Configuration */
 enum gui_panel_colors {
     GUI_COLOR_TEXT,
     GUI_COLOR_PANEL,
@@ -387,16 +389,37 @@ enum gui_panel_colors {
     GUI_COLOR_COUNT
 };
 
-struct gui_config {
-    struct gui_vec2 panel_padding;
-    struct gui_vec2 panel_min_size;
-    struct gui_vec2 item_spacing;
-    struct gui_vec2 item_padding;
-    struct gui_vec2 scaler_size;
-    gui_float scrollbar_width;
-    struct gui_color colors[GUI_COLOR_COUNT];
+enum gui_panel_properties {
+    GUI_PROPERTY_ITEM_SPACING,
+    GUI_PROPERTY_ITEM_PADDING,
+    GUI_PROPERTY_PADDING,
+    GUI_PROPERTY_SCALER_SIZE,
+    GUI_PROPERTY_SCROLLBAR_WIDTH,
+    GUI_PROPERTY_SIZE,
+    GUI_PROPERTY_MAX
 };
 
+struct gui_saved_property {
+    enum gui_panel_properties type;
+    struct gui_vec2 value;
+};
+
+struct gui_saved_color {
+    enum gui_panel_colors type;
+    struct gui_color value;
+};
+
+struct gui_config {
+    struct gui_vec2 properties[GUI_PROPERTY_MAX];
+    struct gui_color colors[GUI_COLOR_COUNT];
+    /* internal */
+    struct gui_saved_property property_stack[GUI_MAX_ATTRIB_STACK];
+    struct gui_saved_color color_stack[GUI_MAX_COLOR_STACK];
+    gui_size color, property;
+};
+
+
+/* Panel */
 enum gui_panel_tab {
     GUI_MAXIMIZED = gui_false,
     GUI_MINIMIZED = gui_true
@@ -590,12 +613,25 @@ gui_float gui_scroll(const struct gui_canvas*, gui_float x, gui_float y,
                     gui_float step, const struct gui_scroll*, const struct gui_input*);
 
 
+/* Config */
+void gui_config_default(struct gui_config*);
+struct gui_vec2 gui_config_property(const struct gui_config*, enum gui_panel_properties);
+struct gui_color gui_config_color(const struct gui_config*, enum gui_panel_colors);
+void gui_config_push_color(struct gui_config*, enum gui_panel_colors, struct gui_color);
+void gui_config_push_property(struct gui_config*, enum gui_panel_properties, gui_float x, gui_float y);
+void gui_config_pop_color(struct gui_config*);
+void gui_config_pop_property(struct gui_config*);
+void gui_config_reset_colors(struct gui_config*);
+void gui_config_reset_properties(struct gui_config*);
+void gui_config_reset(struct gui_config*);
+
+
 /* Panel */
-void gui_default_config(struct gui_config*);
 void gui_panel_init(struct gui_panel*, gui_float x, gui_float y, gui_float w, gui_float h,
                     gui_flags, const struct gui_config *config, const struct gui_font*);
 gui_bool gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel*,
                     const char *title, const struct gui_canvas*, const struct gui_input*);
+gui_size gui_panel_row_columns(const struct gui_panel_layout *layout, gui_size widget_size);
 void gui_panel_row(struct gui_panel_layout*, gui_float height, gui_size cols);
 gui_bool gui_panel_widget(struct gui_rect*, struct gui_panel_layout*);
 void gui_panel_seperator(struct gui_panel_layout*, gui_size cols);

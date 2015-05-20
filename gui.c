@@ -484,7 +484,7 @@ gui_toggle(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float 
     select_y = y + toggle->padding.y;
     select_size = font->height + 2 * toggle->padding.y;
 
-    cursor_pad = (gui_float)(gui_int)(select_size / 8);
+    cursor_pad = (gui_float)(gui_int)(select_size / 6);
     cursor_size = select_size - cursor_pad * 2;
     cursor_x = select_x + cursor_pad;
     cursor_y = select_y + cursor_pad;
@@ -1268,16 +1268,17 @@ gui_list_next(const struct gui_command_list *list, const struct gui_command *cmd
 }
 
 void
-gui_default_config(struct gui_config *config)
+gui_config_default(struct gui_config *config)
 {
     ASSERT(config);
     if (!config) return;
-    config->scrollbar_width = 16;
-    vec2_load(config->panel_padding, 15.0f, 10.0f);
-    vec2_load(config->panel_min_size, 64.0f, 64.0f);
-    vec2_load(config->item_spacing, 10.0f, 4.0f);
-    vec2_load(config->item_padding, 3.0f, 3.0f);
-    vec2_load(config->scaler_size, 16.0f, 16.0f);
+    zero(config, sizeof(*config));
+    vec2_load(config->properties[GUI_PROPERTY_SCROLLBAR_WIDTH], 16, 16);
+    vec2_load(config->properties[GUI_PROPERTY_PADDING], 15.0f, 10.0f);
+    vec2_load(config->properties[GUI_PROPERTY_SIZE], 64.0f, 64.0f);
+    vec2_load(config->properties[GUI_PROPERTY_ITEM_SPACING], 10.0f, 4.0f);
+    vec2_load(config->properties[GUI_PROPERTY_ITEM_PADDING], 3.0f, 3.0f);
+    vec2_load(config->properties[GUI_PROPERTY_SCALER_SIZE], 16.0f, 16.0f);
     col_load(config->colors[GUI_COLOR_TEXT], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_PANEL], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_HEADER], 40, 40, 40, 255);
@@ -1322,6 +1323,102 @@ gui_default_config(struct gui_config *config)
     col_load(config->colors[GUI_COLOR_SCALER], 100, 100, 100, 255);
 }
 
+struct gui_vec2
+gui_config_property(const struct gui_config *config, enum gui_panel_properties index)
+{
+    static struct gui_vec2 zero;
+    ASSERT(config);
+    if (!config) return zero;
+    return config->properties[index];
+}
+
+struct gui_color
+gui_config_color(const struct gui_config *config, enum gui_panel_colors index)
+{
+    static struct gui_color zero;
+    ASSERT(config);
+    if (!config) return zero;
+    return config->colors[index];
+}
+
+void
+gui_config_push_color(struct gui_config *config, enum gui_panel_colors index,
+    struct gui_color color)
+{
+    struct gui_saved_color *c;
+    ASSERT(config);
+    if (!config) return;
+    if (config->color >= GUI_MAX_COLOR_STACK) return;
+    c = &config->color_stack[config->color++];
+    c->value = config->colors[index];
+    c->type = index;
+    config->colors[index] = color;
+}
+
+void
+gui_config_push_property(struct gui_config *config, enum gui_panel_properties index,
+    gui_float x, gui_float y)
+{
+    struct gui_saved_property *p;
+    ASSERT(config);
+    if (!config) return;
+    if (config->property >= GUI_MAX_ATTRIB_STACK) return;
+    p = &config->property_stack[config->property++];
+    p->value = config->properties[index];
+    p->type = index;
+    config->properties[index].x = x;
+    config->properties[index].y = y;
+}
+
+void
+gui_config_pop_color(struct gui_config *config)
+{
+    struct gui_saved_color *c;
+    ASSERT(config);
+    if (!config) return;
+    if (!config->colors) return;
+    c = &config->color_stack[--config->color];
+    config->colors[c->type] = c->value;
+}
+
+void
+gui_config_pop_property(struct gui_config *config)
+{
+    struct gui_saved_property *p;
+    ASSERT(config);
+    if (!config) return;
+    if (!config->properties) return;
+    p = &config->property_stack[--config->property];
+    config->properties[p->type] = p->value;
+}
+
+void
+gui_config_reset_colors(struct gui_config *config)
+{
+    ASSERT(config);
+    if (!config) return;
+    while (config->color)
+	gui_config_pop_color(config);
+}
+
+void
+gui_config_reset_properties(struct gui_config *config)
+{
+    ASSERT(config);
+    if (!config) return;
+    while (config->property)
+	gui_config_pop_property(config);
+}
+
+void
+gui_config_reset(struct gui_config *config)
+{
+    ASSERT(config);
+    if (!config) return;
+    gui_config_reset_colors(config);
+    gui_config_reset_properties(config);
+}
+
 void
 gui_panel_init(struct gui_panel *panel, gui_float x, gui_float y, gui_float w,
     gui_float h, gui_flags flags, const struct gui_config *config, const struct gui_font *font)
@@ -1356,6 +1453,13 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     gui_float footer_h;
     gui_bool ret = gui_true;
 
+    float scrollbar_width;
+    struct gui_vec2 panel_size;
+    struct gui_vec2 item_padding;
+    struct gui_vec2 item_spacing;
+    struct gui_vec2 panel_padding;
+    struct gui_vec2 scaler_size;
+
     ASSERT(panel);
     ASSERT(layout);
     ASSERT(canvas);
@@ -1371,10 +1475,17 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
         return gui_false;
     }
 
-    /* calculate header */
     config = panel->config;
-    layout->header_height = panel->font.height + 3 * config->item_padding.y;
-    layout->header_height += config->panel_padding.y;
+    scrollbar_width = gui_config_property(config, GUI_PROPERTY_SCROLLBAR_WIDTH).x;
+    panel_size = gui_config_property(config, GUI_PROPERTY_SIZE);
+    panel_padding = gui_config_property(config, GUI_PROPERTY_PADDING);
+    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
+    item_spacing = gui_config_property(config, GUI_PROPERTY_ITEM_SPACING);
+    scaler_size = gui_config_property(config, GUI_PROPERTY_SCALER_SIZE);
+
+    /* calculate header */
+    layout->header_height = panel->font.height + 3 * item_padding.y;
+    layout->header_height += panel_padding.y;
 
     /* make sure input can be NULL */
     mouse_x = (in) ? in->mouse_pos.x : -1;
@@ -1402,15 +1513,15 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     /* panel scaling logic */
     if (panel->flags & GUI_PANEL_SCALEABLE) {
         gui_bool incursor;
-        gui_float scaler_w = MAX(0, config->scaler_size.x - config->item_padding.x);
-        gui_float scaler_h = MAX(0, config->scaler_size.y - config->item_padding.y);
-        gui_float scaler_x = (panel->x + panel->w) - (config->item_padding.x + scaler_w);
-        gui_float scaler_y = panel->y + panel->h - config->scaler_size.y;
+        gui_float scaler_w = MAX(0, scaler_size.x - item_padding.x);
+        gui_float scaler_h = MAX(0, scaler_size.y - item_padding.y);
+        gui_float scaler_x = (panel->x + panel->w) - (item_padding.x + scaler_w);
+        gui_float scaler_y = panel->y + panel->h - scaler_size.y;
 
         incursor = in && INBOX(prev_x, prev_y, scaler_x, scaler_y, scaler_w, scaler_h);
         if (in && in->mouse_down && incursor) {
-            gui_float min_x = config->panel_min_size.x;
-            gui_float min_y = config->panel_min_size.y;
+            gui_float min_x = panel_size.x;
+            gui_float min_y = panel_size.y;
             panel->w = CLAMP(min_x, panel->w+in->mouse_delta.x, (gui_float)canvas->width-panel->x);
             panel->h = CLAMP(min_y,panel->h+in->mouse_delta.y,(gui_float)canvas->height-panel->y);
         }
@@ -1437,15 +1548,15 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     /* special case for shelfs which do not have a header */
     if (!(panel->flags & GUI_PANEL_NO_HEADER)) {
         header = &config->colors[GUI_COLOR_HEADER];
-        header_x = panel->x + config->panel_padding.x;
-        header_w = panel->w - 2 * config->panel_padding.x;
+        header_x = panel->x + panel_padding.x;
+        header_w = panel->w - 2 * panel_padding.x;
         canvas->draw_rect(canvas->userdata, panel->x, panel->y, panel->w,
             layout->header_height, *header);
     } else layout->header_height = 1;
-    layout->row_height = layout->header_height + 2 * config->item_spacing.y;
+    layout->row_height = layout->header_height + 2 * item_spacing.y;
 
     /* add footer at the end of the panel */
-    footer_h = config->scaler_size.y + config->item_padding.y;
+    footer_h = scaler_size.y + item_padding.y;
     if ((panel->flags & GUI_PANEL_SCALEABLE) &&
 	(panel->flags & GUI_PANEL_SCROLLBAR) &&
        	!panel->minimized) {
@@ -1475,7 +1586,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
 	if (panel->flags & GUI_PANEL_SCALEABLE)
 	    layout->clip.h = panel->h - (footer_h + layout->header_height);
 	else layout->clip.h = panel->h - layout->header_height;
-        layout->clip.h -= (config->panel_padding.y + config->item_padding.y);
+        layout->clip.h -= (panel_padding.y + item_padding.y);
     }
     else layout->clip.h = null_rect.h;
 
@@ -1484,15 +1595,15 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
         const gui_char *X = (const gui_char*)"x";
         const gui_size text_width = panel->font.width(panel->font.userdata, X, 1);
         const gui_float close_x = header_x;
-        const gui_float close_y = panel->y + config->panel_padding.y;
-        const gui_float close_w = (gui_float)text_width + 2 * config->item_padding.x;
-        const gui_float close_h = panel->font.height + 2 * config->item_padding.y;
+        const gui_float close_y = panel->y + panel_padding.y;
+        const gui_float close_w = (gui_float)text_width + 2 * item_padding.x;
+        const gui_float close_h = panel->font.height + 2 * item_padding.y;
         canvas->draw_text(canvas->userdata, close_x, close_y, close_w, close_h,
             X, 1, &panel->font, config->colors[GUI_COLOR_HEADER], config->colors[GUI_COLOR_TEXT]);
 
 
         header_w -= close_w;
-        header_x += close_h - config->item_padding.x;
+        header_x += close_h - item_padding.x;
         if (in && INBOX(mouse_x, mouse_y, close_x, close_y, close_w, close_h)) {
             if (INBOX(clicked_x, clicked_y, close_x, close_y, close_w, close_h)) {
                 ret = !(in->mouse_down && in->mouse_clicked);
@@ -1511,15 +1622,15 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
 
         text_width = panel->font.width(panel->font.userdata, score, 1);
         min_x = header_x;
-        min_y = panel->y + config->panel_padding.y;
-        min_w = (gui_float)text_width + 3 * config->item_padding.x;
-        min_h = panel->font.height + 2 * config->item_padding.y;
+        min_y = panel->y + panel_padding.y;
+        min_w = (gui_float)text_width + 3 * item_padding.x;
+        min_h = panel->font.height + 2 * item_padding.y;
         canvas->draw_text(canvas->userdata, min_x, min_y, min_w, min_h,
             score, 1, &panel->font, config->colors[GUI_COLOR_HEADER],
             config->colors[GUI_COLOR_TEXT]);
 
         header_w -= min_w;
-        header_x += min_w - config->item_padding.x;
+        header_x += min_w - item_padding.x;
         if (in && INBOX(mouse_x, mouse_y, min_x, min_y, min_w, min_h)) {
             if (INBOX(clicked_x, clicked_y, min_x, min_y, min_w, min_h))
                 if (in->mouse_down && in->mouse_clicked)
@@ -1531,10 +1642,10 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     /* panel title */
     if (text && !(panel->flags & GUI_PANEL_NO_HEADER)) {
         const gui_size text_len = strsiz(text);
-        const gui_float label_x = header_x + config->item_padding.x;
-        const gui_float label_y = panel->y + config->panel_padding.y;
-        const gui_float label_w = header_w - (3 * config->item_padding.x);
-        const gui_float label_h = panel->font.height + 2 * config->item_padding.y;
+        const gui_float label_x = header_x + item_padding.x;
+        const gui_float label_y = panel->y + panel_padding.y;
+        const gui_float label_w = header_w - (3 * item_padding.x);
+        const gui_float label_h = panel->font.height + 2 * item_padding.y;
         canvas->draw_text(canvas->userdata, label_x, label_y, label_w, label_h,
             (const gui_char*)text, text_len, &panel->font, config->colors[GUI_COLOR_HEADER],
             config->colors[GUI_COLOR_TEXT]);
@@ -1543,8 +1654,8 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     /* panels have an empty space at the bottom that needs to be filled */
     if (panel->flags & GUI_PANEL_SCROLLBAR) {
         const struct gui_color *color = &config->colors[GUI_COLOR_PANEL];
-        layout->width = panel->w - config->scrollbar_width;
-        layout->height = panel->h - (layout->header_height + 2 * config->item_spacing.y);
+        layout->width = panel->w - scrollbar_width;
+        layout->height = panel->h - (layout->header_height + 2 * item_spacing.y);
 	if (panel->flags & GUI_PANEL_SCALEABLE) layout->height -= footer_h;
         if (layout->valid)
             canvas->draw_rect(canvas->userdata, panel->x, panel->y + layout->header_height,
@@ -1555,7 +1666,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     if (panel->flags & GUI_PANEL_BORDER) {
         const struct gui_color *color = &config->colors[GUI_COLOR_BORDER];
         const gui_float width = (panel->flags & GUI_PANEL_SCROLLBAR) ?
-                layout->width + config->scrollbar_width : layout->width;
+                layout->width + scrollbar_width : layout->width;
 
         canvas->draw_line(canvas->userdata, panel->x, panel->y,
                 panel->x + panel->w, panel->y, *color);
@@ -1654,6 +1765,8 @@ gui_panel_row(struct gui_panel_layout *layout, gui_float height, gui_size cols)
 {
     const struct gui_config *config;
     const struct gui_color *color;
+    struct gui_vec2 item_spacing;
+    struct gui_vec2 panel_padding;
 
     ASSERT(layout);
     if (!layout) return;
@@ -1663,13 +1776,36 @@ gui_panel_row(struct gui_panel_layout *layout, gui_float height, gui_size cols)
     ASSERT(layout->canvas);
     config = layout->config;
     color = &config->colors[GUI_COLOR_PANEL];
+    item_spacing = gui_config_property(config, GUI_PROPERTY_ITEM_SPACING);
+    panel_padding = gui_config_property(config, GUI_PROPERTY_PADDING);
 
     layout->index = 0;
     layout->at_y += layout->row_height;
     layout->row_columns = cols;
-    layout->row_height = height + config->item_spacing.y;
+    layout->row_height = height + item_spacing.y;
     layout->canvas->draw_rect(layout->canvas->userdata, layout->at_x, layout->at_y,
-        layout->width, height + config->panel_padding.y, *color);
+        layout->width, height + panel_padding.y, *color);
+}
+
+gui_size
+gui_panel_row_columns(const struct gui_panel_layout *layout, gui_size widget_size)
+{
+    struct gui_vec2 item_spacing;
+    struct gui_vec2 panel_padding;
+    gui_size cols = 0, size;
+    ASSERT(layout);
+    ASSERT(widget_size);
+    if (!layout || !widget_size)
+	return 0;
+
+    item_spacing = gui_config_property(layout->config, GUI_PROPERTY_ITEM_SPACING);
+    panel_padding = gui_config_property(layout->config, GUI_PROPERTY_PADDING);
+
+    cols = (gui_size)(layout->width / widget_size);
+    size = (cols * (gui_size)item_spacing.x) + 2 * (gui_size)panel_padding.x + widget_size * cols;
+    while ((size > layout->width) && --cols)
+	size = (cols * (gui_size)item_spacing.x) + 2 * (gui_size)panel_padding.x + widget_size * cols;
+    return cols;
 }
 
 void
@@ -1686,7 +1822,8 @@ gui_panel_seperator(struct gui_panel_layout *layout, gui_size cols)
     if (layout->index + cols > layout->row_columns) {
         gui_size i;
         const struct gui_config *config = layout->config;
-        const gui_float row_height = layout->row_height - config->item_spacing.y;
+	const struct gui_vec2 item_spacing = gui_config_property(config, GUI_PROPERTY_ITEM_SPACING);
+        const gui_float row_height = layout->row_height - item_spacing.y;
         gui_size rows = (layout->index + cols) / layout->row_columns;
         for (i = 0; i < rows; ++i)
             gui_panel_row(layout, row_height, layout->row_columns);
@@ -1700,6 +1837,8 @@ gui_panel_alloc_space(struct gui_rect *bounds, struct gui_panel_layout *layout)
     const struct gui_config *config;
     gui_float panel_padding, panel_spacing, panel_space;
     gui_float item_offset, item_width, item_spacing;
+    struct gui_vec2 spacing;
+    struct gui_vec2 padding;
 
     ASSERT(layout);
     ASSERT(layout->config);
@@ -1708,23 +1847,25 @@ gui_panel_alloc_space(struct gui_rect *bounds, struct gui_panel_layout *layout)
         return;
 
     config = layout->config;
+    spacing = gui_config_property(config, GUI_PROPERTY_ITEM_SPACING);
+    padding = gui_config_property(config, GUI_PROPERTY_PADDING);
     if (layout->index >= layout->row_columns) {
-        const gui_float row_height = layout->row_height - config->item_spacing.y;
+        const gui_float row_height = layout->row_height - spacing.y;
         gui_panel_row(layout, row_height, layout->row_columns);
     }
 
-    panel_padding = 2 * config->panel_padding.x;
-    panel_spacing = (gui_float)(layout->row_columns - 1) * config->item_spacing.x;
+    panel_padding = 2 * padding.x;
+    panel_spacing = (gui_float)(layout->row_columns - 1) * spacing.x;
     panel_space  = layout->width - panel_padding - panel_spacing;
 
     item_width = panel_space / (gui_float)layout->row_columns;
     item_offset = (gui_float)layout->index * item_width;
-    item_spacing = (gui_float)layout->index * config->item_spacing.x;
+    item_spacing = (gui_float)layout->index * spacing.x;
 
-    bounds->x = layout->at_x + item_offset + item_spacing + config->panel_padding.x;
+    bounds->x = layout->at_x + item_offset + item_spacing + padding.x;
     bounds->y = layout->at_y - layout->offset;
     bounds->w = item_width;
-    bounds->h = layout->row_height - config->item_spacing.y;
+    bounds->h = layout->row_height - spacing.y;
     layout->index++;
 }
 
@@ -1752,6 +1893,7 @@ gui_panel_text_colored(struct gui_panel_layout *layout, const char *str, gui_siz
     struct gui_rect bounds;
     struct gui_text text;
     const struct gui_config *config;
+    struct gui_vec2 item_padding;
 
     ASSERT(layout);
     ASSERT(layout->config);
@@ -1762,9 +1904,10 @@ gui_panel_text_colored(struct gui_panel_layout *layout, const char *str, gui_siz
     if (!layout->valid) return;
     gui_panel_alloc_space(&bounds, layout);
     config = layout->config;
+    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
 
-    text.padding.x = config->item_padding.x;
-    text.padding.y = config->item_padding.y;
+    text.padding.x = item_padding.x;
+    text.padding.y = item_padding.y;
     text.foreground = color;
     text.background = config->colors[GUI_COLOR_PANEL];
     gui_text(layout->canvas,bounds.x,bounds.y,bounds.w,bounds.h, str, len,
@@ -1798,11 +1941,14 @@ gui_panel_button(struct gui_button *button, struct gui_rect *bounds,
     struct gui_panel_layout *layout)
 {
     const struct gui_config *config;
+    struct gui_vec2 item_padding;
     if (!gui_panel_widget(bounds, layout)) return gui_false;
     config = layout->config;
+    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
+
     button->border = 1;
-    button->padding.x = config->item_padding.x;
-    button->padding.y = config->item_padding.y;
+    button->padding.x = item_padding.x;
+    button->padding.y = item_padding.y;
     return gui_true;
 }
 
@@ -1916,12 +2062,14 @@ gui_panel_toggle_base(struct gui_toggle *toggle, struct gui_rect *bounds,
     struct gui_panel_layout *layout)
 {
     const struct gui_config *config;
+    struct gui_vec2 item_padding;
     if (!gui_panel_widget(bounds, layout))
         return gui_false;
 
     config = layout->config;
-    toggle->padding.x = config->item_padding.x;
-    toggle->padding.y = config->item_padding.y;
+    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
+    toggle->padding.x = item_padding.x;
+    toggle->padding.y = item_padding.y;
     toggle->font = config->colors[GUI_COLOR_TEXT];
     return gui_true;
 }
@@ -1981,12 +2129,14 @@ gui_panel_slider(struct gui_panel_layout *layout, gui_float min_value, gui_float
     struct gui_rect bounds;
     struct gui_slider slider;
     const struct gui_config *config;
+    struct gui_vec2 item_padding;
     if (!gui_panel_widget(&bounds, layout))
         return value;
 
     config = layout->config;
-    slider.padding.x = config->item_padding.x;
-    slider.padding.y = config->item_padding.y;
+    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
+    slider.padding.x = item_padding.x;
+    slider.padding.y = item_padding.y;
     slider.background = config->colors[GUI_COLOR_SLIDER];
     slider.foreground = config->colors[GUI_COLOR_SLIDER_CURSOR];
     return gui_slider(layout->canvas, bounds.x, bounds.y, bounds.w, bounds.h,
@@ -2000,12 +2150,14 @@ gui_panel_progress(struct gui_panel_layout *layout, gui_size cur_value, gui_size
     struct gui_rect bounds;
     struct gui_slider prog;
     const struct gui_config *config;
+    struct gui_vec2 item_padding;
     if (!gui_panel_widget(&bounds, layout))
         return cur_value;
 
     config = layout->config;
-    prog.padding.x = config->item_padding.x;
-    prog.padding.y = config->item_padding.y;
+    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
+    prog.padding.x = item_padding.x;
+    prog.padding.y = item_padding.y;
     prog.background = config->colors[GUI_COLOR_PROGRESS];
     prog.foreground = config->colors[GUI_COLOR_PROGRESS_CURSOR];
     return gui_progress(layout->canvas, bounds.x, bounds.y, bounds.w, bounds.h,
@@ -2017,12 +2169,14 @@ gui_panel_edit_base(struct gui_rect *bounds, struct gui_edit *field,
     struct gui_panel_layout *layout)
 {
     const struct gui_config *config;
+    struct gui_vec2 item_padding;
     if (!gui_panel_widget(bounds, layout))
         return gui_false;
 
     config = layout->config;
-    field->padding.x = config->item_padding.x;
-    field->padding.y = config->item_padding.y;
+    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
+    field->padding.x = item_padding.x;
+    field->padding.y = item_padding.y;
     field->show_cursor = gui_true;
     field->background = config->colors[GUI_COLOR_INPUT];
     field->foreground = config->colors[GUI_COLOR_INPUT_BORDER];
@@ -2059,6 +2213,8 @@ gui_panel_shell(struct gui_panel_layout *layout, gui_char *buffer, gui_size *len
     struct gui_rect bounds;
     struct gui_edit field;
     struct gui_button button;
+    struct gui_vec2 item_padding;
+    struct gui_vec2 item_spacing;
     gui_float button_x, button_y;
     gui_float button_w, button_h;
     gui_float field_x, field_y;
@@ -2070,15 +2226,18 @@ gui_panel_shell(struct gui_panel_layout *layout, gui_char *buffer, gui_size *len
         return *active;
 
     config = layout->config;
+    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
+    item_spacing = gui_config_property(config, GUI_PROPERTY_ITEM_SPACING);
+
     width = layout->font.width(layout->font.userdata, (const gui_char*)"submit", 6);
     button.border = 1;
     button_y = bounds.y;
     button_h = bounds.h;
-    button_w = (gui_float)width + config->item_padding.x * 2;
+    button_w = (gui_float)width + item_padding.x * 2;
     button_w += button.border * 2;
     button_x = bounds.x + bounds.w - button_w;
-    button.padding.x = config->item_padding.x;
-    button.padding.y = config->item_padding.y;
+    button.padding.x = item_padding.x;
+    button.padding.y = item_padding.y;
     button.background = config->colors[GUI_COLOR_BUTTON];
     button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
     button.content = config->colors[GUI_COLOR_TEXT];
@@ -2089,10 +2248,10 @@ gui_panel_shell(struct gui_panel_layout *layout, gui_char *buffer, gui_size *len
 
     field_x = bounds.x;
     field_y = bounds.y;
-    field_w = bounds.w - button_w - config->item_spacing.x;
+    field_w = bounds.w - button_w - item_spacing.x;
     field_h = bounds.h;
-    field.padding.x = config->item_padding.x;
-    field.padding.y = config->item_padding.y;
+    field.padding.x = item_padding.x;
+    field.padding.y = item_padding.y;
     field.show_cursor = gui_true;
     field.cursor = config->colors[GUI_COLOR_INPUT_CURSOR];
     field.background = config->colors[GUI_COLOR_INPUT];
@@ -2112,6 +2271,7 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     struct gui_edit field;
     char string[MAX_NUMBER_BUFFER];
     gui_size len, old_len;
+    struct gui_vec2 item_padding;
 
     struct gui_button button;
     gui_float button_x, button_y;
@@ -2123,19 +2283,20 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     if (!gui_panel_widget(&bounds, layout))
         return value;
 
+    config = layout->config;
+    canvas = layout->canvas;
+    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
+
     value = CLAMP(min, value, max);
     len = itos(string, value);
     is_active = (active) ? *active : gui_false;
     old_len = len;
 
-    config = layout->config;
-    canvas = layout->canvas;
-
     /* up button */
     button.border = 1;
     button_y = bounds.y;
     button_h = bounds.h / 2;
-    button_w = bounds.h - config->item_padding.x;
+    button_w = bounds.h - item_padding.x;
     button_x = bounds.x + bounds.w - button_w;
     button.padding.x = MAX(3, (button_h - layout->font.height) / 2);
     button.padding.y = MAX(3, (button_h - layout->font.height) / 2);
@@ -2160,8 +2321,8 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     field_y = bounds.y;
     field_w = bounds.w - button_w;
     field_h = bounds.h;
-    field.padding.x = config->item_padding.x;
-    field.padding.y = config->item_padding.y;
+    field.padding.x = item_padding.x;
+    field.padding.y = item_padding.y;
     field.show_cursor = gui_false;
     field.background = config->colors[GUI_COLOR_SPINNER];
     field.foreground = config->colors[GUI_COLOR_SPINNER_BORDER];
@@ -2187,6 +2348,8 @@ gui_panel_selector(struct gui_panel_layout *layout, const char *items[],
     struct gui_button button;
     const struct gui_config *config;
     const struct gui_canvas *canvas;
+    struct gui_vec2 item_padding;
+
     gui_bool button_up_clicked;
     gui_bool button_down_clicked;
     gui_float button_x, button_y;
@@ -2200,6 +2363,7 @@ gui_panel_selector(struct gui_panel_layout *layout, const char *items[],
 
     config = layout->config;
     canvas = layout->canvas;
+    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
     canvas->draw_rect(canvas->userdata, bounds.x, bounds.y, bounds.w, bounds.h,
             config->colors[GUI_COLOR_SELECTOR_BORDER]);
     canvas->draw_rect(canvas->userdata, bounds.x + 1, bounds.y + 1, bounds.w - 2, bounds.h - 2,
@@ -2209,7 +2373,7 @@ gui_panel_selector(struct gui_panel_layout *layout, const char *items[],
     button.border = 1;
     button_y = bounds.y;
     button_h = bounds.h / 2;
-    button_w = bounds.h - config->item_padding.x;
+    button_w = bounds.h - item_padding.x;
     button_x = bounds.x + bounds.w - button_w;
     button.padding.x = MAX(3, (button_h - layout->font.height) / 2);
     button.padding.y = MAX(3, (button_h - layout->font.height) / 2);
@@ -2229,10 +2393,10 @@ gui_panel_selector(struct gui_panel_layout *layout, const char *items[],
         item_current+1 : (button_up_clicked && item_current > 0) ? item_current-1 : item_current;
 
     /* current item */
-    label_x = bounds.x + config->item_padding.x;
-    label_y = bounds.y + config->item_padding.y;
-    label_w = bounds.w - (button_w + 2 * config->item_padding.x);
-    label_h = bounds.h - 2 * config->item_padding.y;
+    label_x = bounds.x + item_padding.x;
+    label_y = bounds.y + item_padding.y;
+    label_w = bounds.w - (button_w + 2 * item_padding.x);
+    label_h = bounds.h - 2 * item_padding.y;
     text_len = strsiz(items[item_current]);
     canvas->draw_text(canvas->userdata, label_x, label_y, label_w, label_h,
         (const gui_char*)items[item_current], text_len, &layout->font,
@@ -2248,6 +2412,7 @@ gui_panel_graph_begin(struct gui_panel_layout *layout, struct gui_graph *graph,
     const struct gui_config *config;
     const struct gui_canvas *canvas;
     struct gui_color color;
+    struct gui_vec2 item_padding;
     if (!gui_panel_widget(&bounds, layout)) {
         zero(graph, sizeof(*graph));
         return;
@@ -2255,6 +2420,7 @@ gui_panel_graph_begin(struct gui_panel_layout *layout, struct gui_graph *graph,
 
     config = layout->config;
     canvas = layout->canvas;
+    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
     color = (type == GUI_GRAPH_LINES) ?
         config->colors[GUI_COLOR_PLOT]: config->colors[GUI_COLOR_HISTO];
     canvas->draw_rect(canvas->userdata, bounds.x, bounds.y, bounds.w, bounds.h,color);
@@ -2265,12 +2431,12 @@ gui_panel_graph_begin(struct gui_panel_layout *layout, struct gui_graph *graph,
     graph->count = count;
     graph->min = min_value;
     graph->max = max_value;
-    graph->x = bounds.x + config->item_padding.x;
-    graph->y = bounds.y + config->item_padding.y;
-    graph->w = bounds.w - 2 * config->item_padding.x;
-    graph->h = bounds.h - 2 * config->item_padding.y;
-    graph->w = MAX(graph->w, 2 * config->item_padding.x);
-    graph->h = MAX(graph->h, 2 * config->item_padding.y);
+    graph->x = bounds.x + item_padding.x;
+    graph->y = bounds.y + item_padding.y;
+    graph->w = bounds.w - 2 * item_padding.x;
+    graph->h = bounds.h - 2 * item_padding.y;
+    graph->w = MAX(graph->w, 2 * item_padding.x);
+    graph->h = MAX(graph->h, 2 * item_padding.y);
     graph->last.x = 0; graph->last.y = 0;
 }
 
@@ -2331,16 +2497,19 @@ gui_panel_graph_push_histo(struct gui_panel_layout *layout,
     const struct gui_canvas *canvas = layout->canvas;
     const struct gui_config *config = layout->config;
     const struct gui_input *in = layout->input;
+    struct gui_vec2 item_padding;
     struct gui_color color;
 
     gui_float ratio;
     gui_bool selected = gui_false;
     gui_float item_x, item_y;
     gui_float item_w = 0.0f, item_h = 0.0f;
+    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
+
     if (!graph->valid || graph->index >= graph->count)
         return gui_false;
     if (graph->count) {
-        gui_float padding = (gui_float)(graph->count-1) * config->item_padding.x;
+        gui_float padding = (gui_float)(graph->count-1) * item_padding.x;
         item_w = (graph->w - padding) / (gui_float)(graph->count);
     }
 
@@ -2351,7 +2520,7 @@ gui_panel_graph_push_histo(struct gui_panel_layout *layout,
     item_h = graph->h * ratio;
     item_y = (graph->y + graph->h) - item_h;
     item_x = graph->x + ((gui_float)graph->index * item_w);
-    item_x = item_x + ((gui_float)graph->index * config->item_padding.y);
+    item_x = item_x + ((gui_float)graph->index * item_padding.y);
 
     if (in && INBOX(in->mouse_pos.x, in->mouse_pos.y, item_x, item_y, item_w, item_h)) {
         selected = (in->mouse_down && in->mouse_clicked) ? (gui_int)graph->index: selected;
@@ -2467,9 +2636,12 @@ gui_panel_table_hline(struct gui_panel_layout *layout, gui_size row_height)
 {
     const struct gui_canvas *canvas = layout->canvas;
     const struct gui_config *config = layout->config;
+    const struct gui_vec2 item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
+    const struct gui_vec2 item_spacing = gui_config_property(config, GUI_PROPERTY_ITEM_SPACING);
+
     gui_float y = layout->at_y + (gui_float)row_height - layout->offset;
-    gui_float x = layout->at_x + config->item_spacing.x + config->item_padding.x;
-    gui_float w = layout->width - (2 * config->item_spacing.x + 2 * config->item_padding.x);
+    gui_float x = layout->at_x + item_spacing.x + item_padding.x;
+    gui_float w = layout->width - (2 * item_spacing.x + 2 * item_padding.x);
     canvas->draw_line(canvas->userdata, x, y, x + w,
         y, config->colors[GUI_COLOR_TABLE_LINES]);
 }
@@ -2513,13 +2685,17 @@ void
 gui_panel_table_row(struct gui_panel_layout *layout)
 {
     const struct gui_config *config;
+    struct gui_vec2 item_padding;
+    struct gui_vec2 item_spacing;
     ASSERT(layout);
     if (!layout) return;
 
     config = layout->config;
-    gui_panel_row(layout, layout->row_height - config->item_spacing.y, layout->row_columns);
+    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
+    item_spacing = gui_config_property(config, GUI_PROPERTY_ITEM_SPACING);
+    gui_panel_row(layout, layout->row_height - item_spacing.y, layout->row_columns);
     if (layout->tbl_flags & GUI_TABLE_HBODY)
-        gui_panel_table_hline(layout, (gui_size)(layout->row_height - config->item_spacing.y));
+        gui_panel_table_hline(layout, (gui_size)(layout->row_height - item_spacing.y));
     if (layout->tbl_flags & GUI_TABLE_VBODY)
         gui_panel_table_vline(layout, layout->row_columns);
 }
@@ -2574,6 +2750,7 @@ gui_panel_tab_end(struct gui_panel_layout *parent, struct gui_panel_layout *tab)
 {
     struct gui_panel panel;
     const struct gui_canvas *canvas;
+    struct gui_vec2 item_spacing;
     ASSERT(tab);
     ASSERT(parent);
     if (!parent || !tab || !parent->valid)
@@ -2584,7 +2761,8 @@ gui_panel_tab_end(struct gui_panel_layout *parent, struct gui_panel_layout *tab)
     panel.flags = GUI_PANEL_BORDER|GUI_PANEL_MINIMIZABLE|GUI_PANEL_TAB;
     gui_panel_end(tab, &panel);
 
-    parent->at_y += tab->height + tab->config->item_spacing.y;
+    item_spacing = gui_config_property(parent->config, GUI_PROPERTY_ITEM_SPACING);
+    parent->at_y += tab->height + item_spacing.y;
     canvas = parent->canvas;
     canvas->scissor(canvas->userdata, parent->clip.x,parent->clip.y,parent->clip.w,parent->clip.h);
 }
@@ -2661,6 +2839,9 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
     const struct gui_config *config;
     const struct gui_canvas *canvas;
     const struct gui_font *font;
+    struct gui_vec2 item_spacing;
+    struct gui_vec2 item_padding;
+    struct gui_vec2 panel_padding;
 
     struct gui_rect bounds;
     struct gui_rect clip;
@@ -2686,6 +2867,9 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
     config = parent->config;
     canvas = parent->canvas;
     font = &parent->font;
+    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
+    item_spacing = gui_config_property(config, GUI_PROPERTY_ITEM_SPACING);
+    panel_padding = gui_config_property(config, GUI_PROPERTY_PADDING);
 
     gui_panel_alloc_space(&bounds, parent);
     zero(shelf, sizeof(*shelf));
@@ -2697,7 +2881,7 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
     header_x = bounds.x;
     header_y = bounds.y;
     header_w = bounds.w;
-    header_h = config->panel_padding.y + 3 * config->item_padding.y + parent->font.height;
+    header_h = panel_padding.y + 3 * item_padding.y + parent->font.height;
     item_width = (header_w - (gui_float)size) / (gui_float)size;
 
     /* shelf selection tabs */
@@ -2706,21 +2890,21 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
         gui_float button_x, button_y;
         gui_float button_w, button_h;
 	gui_size text_width = font->width(font->userdata, (const gui_char*)tabs[i], strsiz(tabs[i]));
-	text_width = text_width + (gui_size)(2 * config->item_spacing.x);
+	text_width = text_width + (gui_size)(2 * item_spacing.x);
 
         button_y = header_y;
         button_h = header_h;
         button_x = header_x;
         button_w = MIN(item_width, text_width);
         button.border = 1;
-        button.padding.x = config->item_padding.x;
-        button.padding.y = config->item_padding.y;
+        button.padding.x = item_padding.x;
+        button.padding.y = item_padding.y;
         button.foreground = config->colors[GUI_COLOR_BORDER];
 	header_x += MIN(item_width, text_width);
 	if ((button_x + button_w) >= (bounds.x + bounds.w)) break;
         if (active != i) {
-            button_y += config->item_padding.y;
-            button_h -= config->item_padding.y;
+            button_y += item_padding.y;
+            button_h -= item_padding.y;
             button.background = config->colors[GUI_COLOR_SHELF];
             button.content = config->colors[GUI_COLOR_SHELF_TEXT];
             button.highlight = config->colors[GUI_COLOR_SHELF];
@@ -2786,6 +2970,12 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
 {
     const struct gui_config *config;
     const struct gui_canvas *canvas;
+    gui_float scrollbar_width;
+    struct gui_vec2 item_padding;
+    struct gui_vec2 item_spacing;
+    struct gui_vec2 panel_padding;
+    struct gui_vec2 scaler_size;
+
     ASSERT(layout);
     ASSERT(panel);
     if (!panel || !layout) return;
@@ -2793,6 +2983,11 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
 
     config = layout->config;
     canvas = layout->canvas;
+    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
+    item_spacing = gui_config_property(config, GUI_PROPERTY_ITEM_SPACING);
+    panel_padding = gui_config_property(config, GUI_PROPERTY_PADDING);
+    scrollbar_width = gui_config_property(config, GUI_PROPERTY_SCROLLBAR_WIDTH).x;
+    scaler_size = gui_config_property(config, GUI_PROPERTY_SCALER_SIZE);
     if (!(panel->flags & GUI_PANEL_TAB))
         canvas->scissor(canvas->userdata, layout->x, layout->y, layout->w + 1, layout->h + 1);
 
@@ -2808,7 +3003,7 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
         scroll_x = layout->at_x + layout->width;
         scroll_y = (panel->flags & GUI_PANEL_BORDER) ? layout->y + 1 : layout->y;
         scroll_y += layout->header_height;
-        scroll_w = config->scrollbar_width;
+        scroll_w = scrollbar_width;
         scroll_h = layout->height;
         scroll_offset = layout->offset;
         scroll_step = layout->height * 0.25f;
@@ -2816,23 +3011,23 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
         scroll.foreground = config->colors[GUI_COLOR_SCROLLBAR_CURSOR];
         scroll.border = config->colors[GUI_COLOR_SCROLLBAR_BORDER];
         if (panel->flags & GUI_PANEL_BORDER) scroll_h -= 1;
-        scroll_target = (layout->at_y-layout->y)-(layout->header_height+2*config->item_spacing.y);
+        scroll_target = (layout->at_y - layout->y) - (layout->header_height + 2 * item_spacing.y);
         panel->offset = gui_scroll(canvas, scroll_x, scroll_y, scroll_w, scroll_h,
                                     scroll_offset, scroll_target, scroll_step,
                                     &scroll, layout->input);
 
-        panel_y = layout->y + layout->height + layout->header_height - config->panel_padding.y;
-        canvas->draw_rect(canvas->userdata,layout->x,panel_y,layout->width,config->panel_padding.y,
+        panel_y = layout->y + layout->height + layout->header_height - panel_padding.y;
+        canvas->draw_rect(canvas->userdata, layout->x, panel_y, layout->width, panel_padding.y,
                         config->colors[GUI_COLOR_PANEL]);
     } else layout->height = layout->at_y - layout->y;
 
     /* draws the scaling triangle in the footer of the panel */
     if ((panel->flags & GUI_PANEL_SCALEABLE) && layout->valid) {
         struct gui_color col = config->colors[GUI_COLOR_SCALER];
-        gui_float scaler_w = MAX(0, config->scaler_size.x - config->item_padding.x);
-        gui_float scaler_h = MAX(0, config->scaler_size.y - config->item_padding.y);
-        gui_float scaler_x = (layout->x + layout->w) - (config->item_padding.x + scaler_w);
-        gui_float scaler_y = layout->y + layout->h - config->scaler_size.y;
+        gui_float scaler_w = MAX(0, scaler_size.x - item_padding.x);
+        gui_float scaler_h = MAX(0, scaler_size.y - item_padding.y);
+        gui_float scaler_x = (layout->x + layout->w) - (item_padding.x + scaler_w);
+        gui_float scaler_y = layout->y + layout->h - scaler_size.y;
         canvas->draw_triangle(canvas->userdata, scaler_x + scaler_w, scaler_y,
             scaler_x + scaler_w, scaler_y + scaler_h, scaler_x, scaler_y + scaler_h, col);
     }
@@ -2840,12 +3035,12 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
     /* draw the border for the body of the panel */
     if (panel->flags & GUI_PANEL_BORDER) {
         const gui_float width = (panel->flags & GUI_PANEL_SCROLLBAR) ?
-                layout->width + config->scrollbar_width : layout->width;
+                layout->width + scrollbar_width : layout->width;
         const gui_float padding_y = (!layout->valid) ?
                 panel->y + layout->header_height:
                 (panel->flags & GUI_PANEL_SCROLLBAR) ?
                 panel->y + layout->h :
-                panel->y + layout->height + config->item_padding.y;
+                panel->y + layout->height + item_padding.y;
 
         canvas->draw_line(canvas->userdata, panel->x, padding_y, panel->x + width,
                 padding_y, config->colors[GUI_COLOR_BORDER]);
