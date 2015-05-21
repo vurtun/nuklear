@@ -248,21 +248,6 @@ surface_draw_text(XSurface *surf, XFont *font, short x, short y, unsigned short 
 }
 
 static void
-surface_draw_image(XSurface *surf, HBITMAP img, short x, short y, unsigned short w, unsigned short h)
-{
-    HDC mem;
-    BITMAP bitmap;
-    HGDIOBJ old;
-
-    mem = CreateCompatibleDC(surf->hdc);
-    old = SelectObject(mem, img);
-    GetObject(img, sizeof(bitmap), &bitmap);
-    StretchBlt(surf->hdc, x, y, w, h, mem, 0, 0, bitmap.bmWidth, bitmap.bmHeight, SRCCOPY);
-    SelectObject(mem, old);
-    DeleteDC(mem);
-}
-
-static void
 surface_clear(XSurface *surf, unsigned char r,  unsigned char g, unsigned char b)
 {surface_draw_rect(surf, 0, 0, (unsigned short)surf->width, (unsigned short)surf->height, r, g, b);}
 
@@ -317,11 +302,7 @@ execute(XSurface *surf, struct gui_command_list *list)
             surface_draw_text(surf, win->font, t->x, t->y, t->w, t->h, (const char*)t->string,
                     t->length, t->bg.r, t->bg.g, t->bg.b, t->fg.r, t->fg.g, t->fg.b);
         } break;
-        case GUI_COMMAND_IMAGE: {
-            const struct gui_command_image *i = GUI_FETCH(image, cmd);
-            HBITMAP bitmap = i->img;
-            surface_draw_image(surf, bitmap, i->x, i->y, i->w, i->h);
-        } break;
+        case GUI_COMMAND_IMAGE:
         default: break;
         }
     }
@@ -398,19 +379,6 @@ wnd_proc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
-HBITMAP
-loadimg(const char *path)
-{
-    HBITMAP bitmap;
-    DWORD ret = 0;
-    TCHAR buffer[4 *1024];
-    TCHAR ** lppPart = {NULL};
-    ret = GetFullPathName(path, 4 * 1024, buffer, lppPart);
-    bitmap = (HBITMAP)LoadImage(NULL, buffer, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-    assert(bitmap);
-    return bitmap;
-}
-
 INT WINAPI
 WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int shown)
 {
@@ -453,13 +421,6 @@ WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int shown)
     gui.running = gui_true;
     init_demo(&gui, &font);
 
-    gui.images.select = loadimg("icon/select.bmp");
-    gui.images.lasso = loadimg("icon/lasso.bmp");
-    gui.images.paint = loadimg("icon/paint.bmp");
-    gui.images.move = loadimg("icon/move.bmp");
-    gui.images.rotate = loadimg("icon/rotate.bmp");
-    gui.images.scale = loadimg("icon/scale.bmp");
-
     while (gui.running && !quit) {
         /* Input */
         MSG msg;
@@ -485,8 +446,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int shown)
         /* Draw */
         surface_begin(xw.backbuffer);
         surface_clear(xw.backbuffer, 100, 100, 100);
-        draw(xw.backbuffer, &gui.background);
-        draw(xw.backbuffer, &gui.floating);
+        draw(xw.backbuffer, &gui.stack);
         surface_end(xw.backbuffer, xw.hdc);
 
         /* Timing */
@@ -495,11 +455,6 @@ WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int shown)
     }
 
     free(gui.memory.memory);
-    DeleteObject(gui.images.select);
-    DeleteObject(gui.images.paint);
-    DeleteObject(gui.images.move);
-    DeleteObject(gui.images.rotate);
-    DeleteObject(gui.images.scale);
     font_del(xw.font);
     surface_del(xw.backbuffer);
     ReleaseDC(xw.hWnd, xw.hdc);
