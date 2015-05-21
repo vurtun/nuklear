@@ -159,7 +159,7 @@ struct gui_scroll {
 
 enum gui_input_filter {
     GUI_INPUT_DEFAULT,
-    GUI_INOUT_ASCII,
+    GUI_INPUT_ASCII,
     GUI_INPUT_FLOAT,
     GUI_INPUT_DEC,
     GUI_INPUT_HEX,
@@ -177,7 +177,7 @@ struct gui_edit {
 
 enum gui_graph_type {
     GUI_GRAPH_LINES,
-    GUI_GRAPH_HISTO,
+    GUI_GRAPH_COLUMN,
     GUI_GRAPH_MAX
 };
 

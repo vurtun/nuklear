@@ -2542,7 +2542,7 @@ gui_panel_graph_push(struct gui_panel_layout *layout, struct gui_graph *graph, g
     if (!layout || !graph || !layout->valid) return gui_false;
     if (graph->type == GUI_GRAPH_LINES)
         return gui_panel_graph_push_line(layout, graph, value);
-    else if (graph->type == GUI_GRAPH_HISTO)
+    else if (graph->type == GUI_GRAPH_COLUMN)
         return gui_panel_graph_push_histo(layout, graph, value);
     else return gui_false;
 }
@@ -3100,22 +3100,33 @@ gui_stack_pop(struct gui_panel_stack *stack, struct gui_panel_hook *panel)
 void
 gui_layout_init(struct gui_layout *layout, const struct gui_layout_config *config)
 {
+    gui_float left, right;
+    gui_float centerh, centerv;
+    gui_float bottom, top;
+
     ASSERT(layout);
     ASSERT(config);
     if (!layout || !config) return;
 
+    left = SATURATE(config->left);
+    right = SATURATE(config->right);
+    centerh = SATURATE(config->centerh);
+    centerv = SATURATE(config->centerv);
+    bottom = SATURATE(config->bottom);
+    top = SATURATE(config->top);
+
     zero(layout, sizeof(*layout));
-    vec2_load(layout->slots[GUI_SLOT_TOP].ratio, 1.0f, config->top);
-    vec2_load(layout->slots[GUI_SLOT_LEFT].ratio, config->left, config->centerv);
-    vec2_load(layout->slots[GUI_SLOT_BOTTOM].ratio, 1.0f, config->bottom);
-    vec2_load(layout->slots[GUI_SLOT_CENTER].ratio, config->centerh, config->centerv);
-    vec2_load(layout->slots[GUI_SLOT_RIGHT].ratio, config->right, config->centerv);
+    vec2_load(layout->slots[GUI_SLOT_TOP].ratio, 1.0f, top);
+    vec2_load(layout->slots[GUI_SLOT_LEFT].ratio, left, centerv);
+    vec2_load(layout->slots[GUI_SLOT_BOTTOM].ratio, 1.0f, bottom);
+    vec2_load(layout->slots[GUI_SLOT_CENTER].ratio, centerh, centerv);
+    vec2_load(layout->slots[GUI_SLOT_RIGHT].ratio, right, centerv);
 
     vec2_load(layout->slots[GUI_SLOT_TOP].offset, 0.0f, 0.0f);
-    vec2_load(layout->slots[GUI_SLOT_LEFT].offset, 0.0f, config->top);
-    vec2_load(layout->slots[GUI_SLOT_BOTTOM].offset, 0.0f, config->top + config->centerv);
-    vec2_load(layout->slots[GUI_SLOT_CENTER].offset, config->left, config->top);
-    vec2_load(layout->slots[GUI_SLOT_RIGHT].offset, config->left + config->centerh, config->top);
+    vec2_load(layout->slots[GUI_SLOT_LEFT].offset, 0.0f, top);
+    vec2_load(layout->slots[GUI_SLOT_BOTTOM].offset, 0.0f, top + centerv);
+    vec2_load(layout->slots[GUI_SLOT_CENTER].offset, left, top);
+    vec2_load(layout->slots[GUI_SLOT_RIGHT].offset, left + centerh, top);
 }
 
 void

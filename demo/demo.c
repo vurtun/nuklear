@@ -186,11 +186,11 @@ widget_panel(struct gui_panel_layout *panel, struct show_window *demo)
 static void
 graph_panel(struct gui_panel_layout *panel, gui_size current)
 {
-    enum {HISTO, PLOT};
+    enum {COL, PLOT};
     static const gui_float values[] = {8.0f,15.0f,20.0f,12.0f,30.0f,12.0f,35.0f,40.0f,20.0f};
     gui_panel_row(panel, 100, 1);
-    if (current == HISTO) {
-        gui_panel_graph(panel, GUI_GRAPH_HISTO, values, LEN(values));
+    if (current == COL) {
+        gui_panel_graph(panel, GUI_GRAPH_COLUMN, values, LEN(values));
     } else {
         gui_panel_graph(panel, GUI_GRAPH_LINES, values, LEN(values));
     }
