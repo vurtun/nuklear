@@ -601,8 +601,7 @@ update_menu(struct menubar_window *win, struct gui_layout *layout,
     };
     const char *tabs[] = {
         "General", "Curves", "Surfaces", "Polygons", "Deformation", "Animation", "Dynamics",
-        "Rendering", "PaintEffects", "Toon", "Muscle", "Fluids", "Fur", "nHair", "nCloth",
-        "Custom", "XGen"
+        "Rendering", "PaintEffects", "Toon", "Muscle", "Fluids", "Fur", "nHair", "nCloth"
     };
 
     gui_size cols;
@@ -712,6 +711,7 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
     struct gui_config *config = &gui->config;
 
     gui->font = *font;
+    gui->running = gui_true;
     memory->memory = calloc(MAX_MEMORY, 1);
     memory->size = MAX_MEMORY;
     gui_buffer_init_fixed(buffer, memory, GUI_BUFFER_CLIPPING);

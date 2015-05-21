@@ -75,7 +75,6 @@ timestamp(LARGE_INTEGER freq)
     return (1000LL * now.QuadPart) / freq.QuadPart;
 }
 
-
 static XFont*
 font_new(HDC hdc, const char *name, int height)
 {
