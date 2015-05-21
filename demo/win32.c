@@ -318,11 +318,11 @@ execute(XSurface *surf, struct gui_command_list *list)
             surface_draw_text(surf, win->font, t->x, t->y, t->w, t->h, (const char*)t->string,
                     t->length, t->bg.r, t->bg.g, t->bg.b, t->fg.r, t->fg.g, t->fg.b);
         } break;
-	case GUI_COMMAND_IMAGE: {
+        case GUI_COMMAND_IMAGE: {
             const struct gui_command_image *i = GUI_FETCH(image, cmd);
-	    HBITMAP bitmap = i->img;
+            HBITMAP bitmap = i->img;
             surface_draw_image(surf, bitmap, i->x, i->y, i->w, i->h);
-	} break;
+        } break;
         default: break;
         }
     }
@@ -460,7 +460,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int shown)
     gui.images.move = loadimg("icon/move.bmp");
     gui.images.rotate = loadimg("icon/rotate.bmp");
     gui.images.scale = loadimg("icon/scale.bmp");
-	
+
     while (gui.running && !quit) {
         /* Input */
         MSG msg;

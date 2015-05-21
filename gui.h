@@ -617,9 +617,9 @@ gui_float gui_scroll(const struct gui_canvas*, gui_float x, gui_float y,
 void gui_config_default(struct gui_config*);
 struct gui_vec2 gui_config_property(const struct gui_config*, enum gui_panel_properties);
 struct gui_color gui_config_color(const struct gui_config*, enum gui_panel_colors);
+void gui_config_push_property(struct gui_config*, enum gui_panel_properties, gui_float, gui_float);
 void gui_config_push_color(struct gui_config*, enum gui_panel_colors,
-                    gui_byte r, gui_byte g, gui_byte b, gui_byte a);
-void gui_config_push_property(struct gui_config*, enum gui_panel_properties, gui_float x, gui_float y);
+                    gui_byte, gui_byte, gui_byte, gui_byte);
 void gui_config_pop_color(struct gui_config*);
 void gui_config_pop_property(struct gui_config*);
 void gui_config_reset_colors(struct gui_config*);

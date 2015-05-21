@@ -1679,7 +1679,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
                 panel->y + layout->header_height, config->colors[GUI_COLOR_BORDER]);
         if (panel->flags & GUI_PANEL_BORDER_HEADER)
             canvas->draw_line(canvas->userdata, panel->x, panel->y + layout->header_height,
-                panel->x + panel->w, panel->y + layout->header_height, config->colors[GUI_COLOR_BORDER]);
+                panel->x+panel->w, panel->y+layout->header_height, config->colors[GUI_COLOR_BORDER]);
     }
     canvas->scissor(canvas->userdata,layout->clip.x,layout->clip.y,layout->clip.w,layout->clip.h);
     return ret;
@@ -1807,7 +1807,7 @@ gui_panel_row_columns(const struct gui_panel_layout *layout, gui_size widget_siz
     cols = (gui_size)(layout->width / widget_size);
     size = (cols * (gui_size)item_spacing.x) + 2 * (gui_size)panel_padding.x + widget_size * cols;
     while ((size > layout->width) && --cols)
-        size = (cols * (gui_size)item_spacing.x) + 2 * (gui_size)panel_padding.x + widget_size * cols;
+        size = (cols*(gui_size)item_spacing.x) + 2 * (gui_size)panel_padding.x + widget_size * cols;
     return cols;
 }
 
@@ -2892,19 +2892,19 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
         struct gui_button button;
         gui_float button_x, button_y;
         gui_float button_w, button_h;
-    gui_size text_width = font->width(font->userdata, (const gui_char*)tabs[i], strsiz(tabs[i]));
-    text_width = text_width + (gui_size)(2 * item_spacing.x);
+        gui_size text_width = font->width(font->userdata, (const gui_char*)tabs[i], strsiz(tabs[i]));
+        text_width = text_width + (gui_size)(2 * item_spacing.x);
 
-    button_y = header_y;
-    button_h = header_h;
-    button_x = header_x;
-    button_w = MIN(item_width, text_width);
-    button.border = 1;
-    button.padding.x = item_padding.x;
-    button.padding.y = item_padding.y;
-    button.foreground = config->colors[GUI_COLOR_BORDER];
-    header_x += MIN(item_width, text_width);
-    if ((button_x + button_w) >= (bounds.x + bounds.w)) break;
+        button_y = header_y;
+        button_h = header_h;
+        button_x = header_x;
+        button_w = MIN(item_width, text_width);
+        button.border = 1;
+        button.padding.x = item_padding.x;
+        button.padding.y = item_padding.y;
+        button.foreground = config->colors[GUI_COLOR_BORDER];
+        header_x += MIN(item_width, text_width);
+        if ((button_x + button_w) >= (bounds.x + bounds.w)) break;
         if (active != i) {
             button_y += item_padding.y;
             button_h -= item_padding.y;

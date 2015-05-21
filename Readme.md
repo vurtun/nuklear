@@ -1,5 +1,5 @@
 # GUI
-This is a bloat free stateless immediate mode graphical user interface toolkit
+This is a bloat free minimal state immediate mode graphical user interface toolkit
 written in ANSI C. It was designed as a embeddable user interface for graphical
 application and does not have any direct dependencies.
 
