@@ -2041,7 +2041,7 @@ gui_panel_button_toggle(struct gui_panel_layout *layout, const char *str, gui_bo
     const struct gui_config *config;
     ASSERT(str);
     if (!gui_panel_button(&button, &bounds, layout))
-        return gui_false;
+        return value;
 
     config = layout->config;
     if (!value) {
