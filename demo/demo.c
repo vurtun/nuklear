@@ -1,5 +1,5 @@
 #define MAX_BUFFER  64
-#define MAX_MEMORY  (64 * 1024)
+#define MAX_MEMORY  (16 * 1024)
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 
@@ -155,7 +155,7 @@ static void
 init_show(struct show_window *win, struct gui_config *config, struct gui_font *font,
         struct gui_panel_stack *stack)
 {
-    gui_panel_hook_init(&win->hook, 20, 20, 300, 545,
+    gui_panel_hook_init(&win->hook, 20, 20, 300, 550,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
         GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
         GUI_PANEL_MINIMIZABLE|GUI_PANEL_HIDDEN, config, font);
@@ -328,7 +328,7 @@ static void
 init_control(struct control_window *win, struct gui_config *config, struct gui_font *font,
         struct gui_panel_stack *stack)
 {
-    gui_panel_hook_init(&win->hook, 380, 20, 320, 500,
+    gui_panel_hook_init(&win->hook, 380, 20, 350, 500,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE, config, font);
     gui_stack_push(stack, &win->hook);
     win->show_flags = gui_hook_panel(&win->hook)->flags;

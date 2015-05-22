@@ -484,7 +484,9 @@ gui_toggle(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float 
     select_y = y + toggle->padding.y;
     select_size = font->height + 2 * toggle->padding.y;
 
-    cursor_pad = (gui_float)(gui_int)(select_size / 6);
+    cursor_pad = (type == GUI_TOGGLE_OPTION) ?
+        (gui_float)(gui_int)(select_size / 4):
+        (gui_float)(gui_int)(select_size / 8);
     cursor_size = select_size - cursor_pad * 2;
     cursor_x = select_x + cursor_pad;
     cursor_y = select_y + cursor_pad;
@@ -1277,7 +1279,7 @@ gui_config_default(struct gui_config *config)
     vec2_load(config->properties[GUI_PROPERTY_PADDING], 15.0f, 10.0f);
     vec2_load(config->properties[GUI_PROPERTY_SIZE], 64.0f, 64.0f);
     vec2_load(config->properties[GUI_PROPERTY_ITEM_SPACING], 10.0f, 4.0f);
-    vec2_load(config->properties[GUI_PROPERTY_ITEM_PADDING], 3.0f, 3.0f);
+    vec2_load(config->properties[GUI_PROPERTY_ITEM_PADDING], 3.0f, 4.0f);
     vec2_load(config->properties[GUI_PROPERTY_SCALER_SIZE], 16.0f, 16.0f);
     col_load(config->colors[GUI_COLOR_TEXT], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_PANEL], 45, 45, 45, 255);
@@ -2494,7 +2496,7 @@ gui_panel_graph_push_line(struct gui_panel_layout *layout,
 }
 
 static gui_bool
-gui_panel_graph_push_histo(struct gui_panel_layout *layout,
+gui_panel_graph_push_column(struct gui_panel_layout *layout,
     struct gui_graph *graph, gui_float value)
 {
     const struct gui_canvas *canvas = layout->canvas;
@@ -2523,7 +2525,7 @@ gui_panel_graph_push_histo(struct gui_panel_layout *layout,
     item_h = graph->h * ratio;
     item_y = (graph->y + graph->h) - item_h;
     item_x = graph->x + ((gui_float)graph->index * item_w);
-    item_x = item_x + ((gui_float)graph->index * item_padding.y);
+    item_x = item_x + ((gui_float)graph->index * item_padding.x);
 
     if (in && INBOX(in->mouse_pos.x, in->mouse_pos.y, item_x, item_y, item_w, item_h)) {
         selected = (in->mouse_down && in->mouse_clicked) ? (gui_int)graph->index: selected;
@@ -2543,7 +2545,7 @@ gui_panel_graph_push(struct gui_panel_layout *layout, struct gui_graph *graph, g
     if (graph->type == GUI_GRAPH_LINES)
         return gui_panel_graph_push_line(layout, graph, value);
     else if (graph->type == GUI_GRAPH_COLUMN)
-        return gui_panel_graph_push_histo(layout, graph, value);
+        return gui_panel_graph_push_column(layout, graph, value);
     else return gui_false;
 }
 

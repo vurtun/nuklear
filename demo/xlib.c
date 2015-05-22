@@ -40,7 +40,6 @@ struct XSurface {
     Window root;
     Drawable drawable;
     unsigned int w, h;
-    gui_size clip_depth;
 };
 
 struct XWindow {

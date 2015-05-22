@@ -705,6 +705,7 @@ gui_bool gui_panel_hook_begin_tiled(struct gui_panel_layout*, struct gui_panel_h
 #define gui_panel_hook_end(layout, hook)\
                     gui_panel_end((layout), gui_hook_panel(hook))
 
+
 /* Stack  */
 #define gui_stack_begin(s) ((s)->begin)
 #define gui_stack_end(s) ((s)->end)
@@ -712,6 +713,7 @@ void gui_stack_clear(struct gui_panel_stack*);
 void gui_stack_push(struct gui_panel_stack*, struct gui_panel_hook*);
 void gui_stack_pop(struct gui_panel_stack*, struct gui_panel_hook*);
 #define gui_stack_for_each(i, s) for (i = gui_stack_begin(s); i != NULL; i = (i)->next)
+
 
 /* Layout  */
 void gui_layout_init(struct gui_layout*, const struct gui_layout_config*);
