@@ -539,16 +539,16 @@ gui_slider(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float 
     gui_float slider_min, slider_max;
     gui_float slider_value, slider_steps;
     gui_float slider_w, slider_h;
-
     gui_float cursor_offset;
-    gui_float cursor_x, cursor_y;
-    gui_float cursor_w, cursor_h;
+    struct gui_rect cursor;
+    struct gui_rect bar;
 
     ASSERT(slider);
     ASSERT(canvas);
     if (!canvas || !slider)
         return 0;
 
+    /* make sure to use correct values */
     slider_w = MAX(w, 2 * slider->padding.x);
     slider_h = MAX(h, 2 * slider->padding.y);
     slider_max = MAX(min, max);
@@ -557,34 +557,46 @@ gui_slider(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float 
     slider_range = slider_max - slider_min;
     slider_steps = slider_range / step;
 
+
+    /* calculate slider cursor bounds */
     cursor_offset = (slider_value - slider_min) / step;
-    cursor_w = (slider_w - 2 * slider->padding.x) / (slider_steps + 1);
-    cursor_h = slider_h - 2 * slider->padding.y;
-    cursor_x = x + slider->padding.x + (cursor_w * cursor_offset);
-    cursor_y = y + slider->padding.y;
+    cursor.w = (slider_w - 2 * slider->padding.x) / (slider_steps + 1);
+    cursor.h = slider_h - 2 * slider->padding.y;
+    cursor.x = x + slider->padding.x + (cursor.w * cursor_offset);
+    cursor.y = y + slider->padding.y;
+
+    /* calculate slider background bar */
+    bar.x = x + slider->padding.x;
+    bar.y = (cursor.y + cursor.h/2) - cursor.h/8;
+    bar.w = slider_w - 2 * slider->padding.x;
+    bar.h = cursor.h/4;
 
     if (in && in->mouse_down &&
         INBOX(in->mouse_pos.x, in->mouse_pos.y, x, y, slider_w, slider_h) &&
         INBOX(in->mouse_clicked_pos.x,in->mouse_clicked_pos.y, x, y, slider_w, slider_h))
     {
-        const float d = in->mouse_pos.x - (cursor_x + cursor_w / 2.0f);
+        /* update slider within intervals */
+        const float d = in->mouse_pos.x - (cursor.x + cursor.w / 2.0f);
         const float pxstep = (slider_w - 2 * slider->padding.x) / slider_steps;
         if (ABS(d) >= pxstep) {
             const gui_float steps = (gui_float)((gui_int)(ABS(d) / pxstep));
             slider_value += (d > 0) ? (step * steps) : -(step * steps);
             slider_value = CLAMP(slider_min, slider_value, slider_max);
-            cursor_x = x + slider->padding.x + (cursor_w * (slider_value - slider_min));
+            cursor.x = x + slider->padding.x + (cursor.w * (slider_value - slider_min));
         }
     }
-    canvas->draw_rect(canvas->userdata, x, y, slider_w, slider_h, slider->background);
-    canvas->draw_rect(canvas->userdata,cursor_x,cursor_y,cursor_w,cursor_h,slider->foreground);
+
+    canvas->draw_rect(canvas->userdata, x, y, slider_w, slider_h, slider->bg);
+    canvas->draw_rect(canvas->userdata, bar.x, bar.y, bar.w, bar.h, slider->bar);
+    canvas->draw_rect(canvas->userdata,cursor.x,cursor.y,cursor.w,cursor.h,slider->border);
+    canvas->draw_rect(canvas->userdata,cursor.x+1,cursor.y+1,cursor.w-2,cursor.h-2,slider->fg);
     return slider_value;
 }
 
 gui_size
 gui_progress(const struct gui_canvas *canvas, gui_float x, gui_float y,
     gui_float w, gui_float h, gui_size value, gui_size max, gui_bool modifyable,
-    const struct gui_slider *prog, const struct gui_input *in)
+    const struct gui_progress *prog, const struct gui_input *in)
 {
     gui_float cursor_x, cursor_y;
     gui_float cursor_w, cursor_h;
@@ -1279,7 +1291,7 @@ gui_config_default(struct gui_config *config)
     vec2_load(config->properties[GUI_PROPERTY_PADDING], 15.0f, 10.0f);
     vec2_load(config->properties[GUI_PROPERTY_SIZE], 64.0f, 64.0f);
     vec2_load(config->properties[GUI_PROPERTY_ITEM_SPACING], 10.0f, 4.0f);
-    vec2_load(config->properties[GUI_PROPERTY_ITEM_PADDING], 3.0f, 4.0f);
+    vec2_load(config->properties[GUI_PROPERTY_ITEM_PADDING], 4.0f, 4.0f);
     vec2_load(config->properties[GUI_PROPERTY_SCALER_SIZE], 16.0f, 16.0f);
     col_load(config->colors[GUI_COLOR_TEXT], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_PANEL], 45, 45, 45, 255);
@@ -1296,8 +1308,10 @@ gui_config_default(struct gui_config *config)
     col_load(config->colors[GUI_COLOR_OPTION], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_OPTION_BACKGROUND], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_OPTION_ACTIVE], 45, 45, 45, 255);
-    col_load(config->colors[GUI_COLOR_SLIDER], 100, 100, 100, 255);
-    col_load(config->colors[GUI_COLOR_SLIDER_CURSOR], 45, 45, 45, 255);
+    col_load(config->colors[GUI_COLOR_SLIDER], 45, 45, 45, 255);
+    col_load(config->colors[GUI_COLOR_SLIDER_BAR], 100, 100, 100, 255);
+    col_load(config->colors[GUI_COLOR_SLIDER_BORDER], 45, 45, 45, 255);
+    col_load(config->colors[GUI_COLOR_SLIDER_CURSOR], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_PROGRESS], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_PROGRESS_CURSOR], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_INPUT], 45, 45, 45, 255);
@@ -2142,8 +2156,10 @@ gui_panel_slider(struct gui_panel_layout *layout, gui_float min_value, gui_float
     item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
     slider.padding.x = item_padding.x;
     slider.padding.y = item_padding.y;
-    slider.background = config->colors[GUI_COLOR_SLIDER];
-    slider.foreground = config->colors[GUI_COLOR_SLIDER_CURSOR];
+    slider.bg = config->colors[GUI_COLOR_SLIDER];
+    slider.fg = config->colors[GUI_COLOR_SLIDER_CURSOR];
+    slider.bar = config->colors[GUI_COLOR_SLIDER_BAR];
+    slider.border = config->colors[GUI_COLOR_SLIDER_BORDER];
     return gui_slider(layout->canvas, bounds.x, bounds.y, bounds.w, bounds.h,
                 min_value, value, max_value, value_step, &slider, layout->input);
 }
@@ -2153,7 +2169,7 @@ gui_panel_progress(struct gui_panel_layout *layout, gui_size cur_value, gui_size
     gui_bool is_modifyable)
 {
     struct gui_rect bounds;
-    struct gui_slider prog;
+    struct gui_progress prog;
     const struct gui_config *config;
     struct gui_vec2 item_padding;
     if (!gui_panel_widget(&bounds, layout))

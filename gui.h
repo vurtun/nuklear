@@ -145,10 +145,18 @@ struct gui_toggle {
     struct gui_color cursor;
 };
 
-struct gui_slider {
+struct gui_progress {
     struct gui_vec2 padding;
     struct gui_color background;
     struct gui_color foreground;
+};
+
+struct gui_slider {
+    struct gui_vec2 padding;
+    struct gui_color bar;
+    struct gui_color border;
+    struct gui_color bg;
+    struct gui_color fg;
 };
 
 struct gui_scroll {
@@ -360,6 +368,8 @@ enum gui_panel_colors {
     GUI_COLOR_OPTION_BACKGROUND,
     GUI_COLOR_OPTION_ACTIVE,
     GUI_COLOR_SLIDER,
+    GUI_COLOR_SLIDER_BAR,
+    GUI_COLOR_SLIDER_BORDER,
     GUI_COLOR_SLIDER_CURSOR,
     GUI_COLOR_PROGRESS,
     GUI_COLOR_PROGRESS_CURSOR,
@@ -599,7 +609,7 @@ gui_float gui_slider(const struct gui_canvas*, gui_float x, gui_float y, gui_flo
                     const struct gui_slider*, const struct gui_input*);
 gui_size gui_progress(const struct gui_canvas*, gui_float x, gui_float y, gui_float w,
                     gui_float h, gui_size value, gui_size max, gui_bool modifyable,
-                    const struct gui_slider*, const struct gui_input*);
+                    const struct gui_progress*, const struct gui_input*);
 gui_size gui_edit(const struct gui_canvas*, gui_float x, gui_float y, gui_float w,
                     gui_float h, gui_char*, gui_size, gui_size max, gui_bool*,
                     const struct gui_edit*, enum gui_input_filter filter,
