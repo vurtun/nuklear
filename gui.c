@@ -323,9 +323,12 @@ gui_text(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w,
     ASSERT(text);
     if (!text) return;
 
-    text_width = font->width(font->userdata, (const gui_char*)string, len);
+    /* calculate y position + height */
     label_y = y + text->padding.y;
     label_h = MAX(0, h - 2 * text->padding.y);
+
+    /* calculate text x position and width */
+    text_width = font->width(font->userdata, (const gui_char*)string, len);
     if (align == GUI_TEXT_LEFT) {
         label_x = x + text->padding.x;
         label_w = MAX(0, w - 2 * text->padding.x);
@@ -339,6 +342,7 @@ gui_text(const struct gui_canvas *canvas, gui_float x, gui_float y, gui_float w,
         label_w = (gui_float)text_width + 2 * text->padding.x;
     } else return;
 
+    /* draw background + text */
     canvas->draw_rect(canvas->userdata, x, y, w, h, text->background);
     canvas->draw_text(canvas->userdata, label_x, label_y, label_w, label_h,
         (const gui_char*)string, len, font, text->background, text->foreground);
@@ -1776,7 +1780,7 @@ gui_panel_hook_begin_tiled(struct gui_panel_layout *tile, struct gui_panel_hook 
         panel->y = bounds.y + (gui_float)index * panel->h;
     }
     gui_stack_push(&layout->stack, hook);
-    return gui_panel_begin(tile, panel, title, canvas, (layout->active) ? in : NULL);
+    return gui_panel_begin(tile, panel, title, canvas, (layout->state) ? in : NULL);
 }
 
 void
@@ -3147,13 +3151,13 @@ gui_layout_init(struct gui_layout *layout, const struct gui_layout_config *confi
 
 void
 gui_layout_begin(struct gui_layout *layout, gui_size width, gui_size height,
-    gui_bool active)
+    enum gui_layout_state state)
 {
     ASSERT(layout);
     if (!layout) return;
     layout->width = width;
     layout->height = height;
-    layout->active = active;
+    layout->state = state;
 }
 
 void

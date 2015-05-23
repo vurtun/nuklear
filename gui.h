@@ -495,6 +495,11 @@ struct gui_panel_stack {
 
 
 /* Layout */
+enum gui_layout_state {
+    GUI_LAYOUT_INACTIVE,
+    GUI_LAYOUT_ACTIVE
+};
+
 enum gui_layout_slot_index {
     GUI_SLOT_TOP,
     GUI_SLOT_BOTTOM,
@@ -526,9 +531,9 @@ struct gui_layout_slot {
 };
 
 struct gui_layout {
-    gui_bool active;
     gui_flags flags;
     gui_size width, height;
+    enum gui_layout_state state;
     struct gui_panel_stack stack;
     struct gui_layout_slot slots[GUI_SLOT_MAX];
 };
@@ -727,7 +732,7 @@ void gui_stack_pop(struct gui_panel_stack*, struct gui_panel_hook*);
 
 /* Layout  */
 void gui_layout_init(struct gui_layout*, const struct gui_layout_config*);
-void gui_layout_begin(struct gui_layout*, gui_size width, gui_size height, gui_bool active);
+void gui_layout_begin(struct gui_layout*, gui_size width, gui_size height, enum gui_layout_state);
 void gui_layout_end(struct gui_panel_stack*, struct gui_layout*);
 void gui_layout_slot(struct gui_layout*, enum gui_layout_slot_index,
                     enum gui_layout_format, gui_size panel_count);

@@ -420,10 +420,7 @@ a tiled layout is the other. Tiled layouts divide the screen into regions called
 slots in this case the top, left, center, right and bottom slot. Each slot occupies a
 certain percentage on the screen and can be filled with panels either
 horizontally or vertically. The combination of slots, ratio and multiple panels
-per slots support a rich set of vertical, horizontal and mixed layouts. Biggest
-disadvantage of tiled layouts are the percentage based dividing of space since the
-right formating works best for a fixed size destination screen space. So the
-target application lies in fullscreen tools and editors.
+per slots support a rich set of vertical, horizontal and mixed layouts.
 
 ```c
 struct your_window {
@@ -455,7 +452,7 @@ while (1) {
     /* record input */
     gui_input_end(&input);
 
-    gui_layout_begin(&tiled, window_width, window_height, gui_true);
+    gui_layout_begin(&tiled, window_width, window_height, GUI_LAYOUT_ACTIVE);
     gui_layout_slot(&tiled, GUI_SLOT_LEFT, GUI_LAYOUT_VERTICAL, 1);
 
     gui_buffer_begin(&canvas, &buffer, window_width, window_height);

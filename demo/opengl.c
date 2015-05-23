@@ -68,24 +68,6 @@ struct font {
     const struct font_glyph *fallback;
 };
 
-struct demo {
-    gui_char in_buf[MAX_BUFFER];
-    gui_size in_len;
-    gui_bool in_act;
-    gui_bool check;
-    gui_int option;
-    gui_float slider;
-    gui_size prog;
-    gui_int spinner;
-    gui_bool spin_act;
-    gui_size item_cur;
-    gui_size cur;
-    gui_bool tab_min;
-    gui_float group_off;
-    gui_float shelf_off;
-    gui_bool toggle;
-};
-
 static void
 die(const char *fmt, ...)
 {
@@ -574,7 +556,7 @@ main(int argc, char *argv[])
     glContext = SDL_GL_CreateContext(win);
     SDL_GetWindowSize(win, &win_width, &win_height);
     glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-    glfont = font_new(font_path, 10, 12, 255, FONT_ATLAS_DIM_256);
+    glfont = font_new(font_path, 10, 10, 255, FONT_ATLAS_DIM_256);
 
     /* GUI */
     memset(&in, 0, sizeof in);
