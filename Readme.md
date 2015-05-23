@@ -35,7 +35,7 @@ Summary: It is only responsible for the actual user interface
 
 ## Example
 ```c
-/* allocate memory to hold output */
+/* allocate memory to hold the output */
 struct gui_memory memory = {...};
 struct gui_command_buffer buffer;
 gui_buffer_init_fixed(buffer, &memory, 0);
