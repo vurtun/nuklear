@@ -1820,7 +1820,7 @@ gui_panel_row_columns(const struct gui_panel_layout *layout, gui_size widget_siz
     item_spacing = gui_config_property(layout->config, GUI_PROPERTY_ITEM_SPACING);
     panel_padding = gui_config_property(layout->config, GUI_PROPERTY_PADDING);
 
-    cols = (gui_size)(layout->width / widget_size);
+    cols = (gui_size)(layout->width) / widget_size;
     size = (cols * (gui_size)item_spacing.x) + 2 * (gui_size)panel_padding.x + widget_size * cols;
     while ((size > layout->width) && --cols)
         size = (cols*(gui_size)item_spacing.x) + 2 * (gui_size)panel_padding.x + widget_size * cols;
@@ -2706,13 +2706,11 @@ void
 gui_panel_table_row(struct gui_panel_layout *layout)
 {
     const struct gui_config *config;
-    struct gui_vec2 item_padding;
     struct gui_vec2 item_spacing;
     ASSERT(layout);
     if (!layout) return;
 
     config = layout->config;
-    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
     item_spacing = gui_config_property(config, GUI_PROPERTY_ITEM_SPACING);
     gui_panel_row(layout, layout->row_height - item_spacing.y, layout->row_columns);
     if (layout->tbl_flags & GUI_TABLE_HBODY)
@@ -2916,12 +2914,12 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
         button_y = header_y;
         button_h = header_h;
         button_x = header_x;
-        button_w = MIN(item_width, text_width);
+        button_w = MIN(item_width, (gui_float)text_width);
         button.border = 1;
         button.padding.x = item_padding.x;
         button.padding.y = item_padding.y;
         button.foreground = config->colors[GUI_COLOR_BORDER];
-        header_x += MIN(item_width, text_width);
+        header_x += MIN(item_width, (gui_float)text_width);
         if ((button_x + button_w) >= (bounds.x + bounds.w)) break;
         if (active != i) {
             button_y += item_padding.y;
