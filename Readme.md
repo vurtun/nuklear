@@ -304,7 +304,8 @@ and returns the from the user input modified state of the widget.
 struct gui_input input = {0};
 struct gui_font font = {...};
 struct gui_canvas canvas = {...};
-const struct gui_slider style = {...};
+const struct gui_slider slider = {...};
+const struct gui_progress progress = {...};
 gui_float value = 5.0f
 gui_size prog = 20;
 
@@ -313,8 +314,8 @@ while (1) {
     /* record input */
     gui_input_end(&input);
 
-    value = gui_slider(&canvas, 50, 50, 100, 30, 0, value, 10, 1, &style, &input);
-    prog = gui_progress(&canvas, 50, 100, 100, 30, prog, 100, gui_false, &style, &input);
+    value = gui_slider(&canvas, 50, 50, 100, 30, 0, value, 10, 1, &slider, &input);
+    prog = gui_progress(&canvas, 50, 100, 100, 30, prog, 100, gui_false, &progress, &input);
 }
 ```
 
