@@ -3166,14 +3166,8 @@ gui_layout_end(struct gui_panel_stack *stack, struct gui_layout *layout)
     ASSERT(stack);
     ASSERT(layout);
     if (!stack || !layout) return;
-
     *stack = layout->stack;
     gui_stack_clear(&layout->stack);
-    layout->slots[GUI_SLOT_TOP].capacity = 0;
-    layout->slots[GUI_SLOT_LEFT].capacity = 0;
-    layout->slots[GUI_SLOT_BOTTOM].capacity = 0;
-    layout->slots[GUI_SLOT_CENTER].capacity = 0;
-    layout->slots[GUI_SLOT_RIGHT].capacity = 0;
 }
 
 void

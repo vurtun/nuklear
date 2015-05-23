@@ -442,6 +442,7 @@ gui_panel_hook_init(&win.hook, 0, 0, 0, 0, 0, &config, &font);
 struct gui_layout tiled;
 struct gui_layout_config ratio = {...};
 gui_layout_init(&tiled, &ratio);
+gui_layout_slot(&tiled, GUI_SLOT_LEFT, GUI_LAYOUT_VERTICAL, 1);
 
 while (1) {
     struct gui_panel_layout layout;
@@ -453,8 +454,6 @@ while (1) {
     gui_input_end(&input);
 
     gui_layout_begin(&tiled, window_width, window_height, GUI_LAYOUT_ACTIVE);
-    gui_layout_slot(&tiled, GUI_SLOT_LEFT, GUI_LAYOUT_VERTICAL, 1);
-
     gui_buffer_begin(&canvas, &buffer, window_width, window_height);
     gui_panel_hook_begin_tiled(&layout, &win.hook, &tiled, GUI_SLOT_LEFT, 0, "Demo", &canvas, &input);
     gui_panel_row(&layout, 30, 1);
@@ -462,7 +461,6 @@ while (1) {
         fprintf(stdout, "button pressed!\n");
     gui_panel_hook_end(&layout, &win.hook);
     gui_buffer_end(gui_hook_output(&win.hook), buffer, NULL);
-
     gui_layout_end(&stack, &tiled);
 
     /* draw each panel */
