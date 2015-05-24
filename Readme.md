@@ -56,7 +56,7 @@ while (1) {
     /* record input */
     gui_input_end(&input);
 
-    /* transient frame data */
+    /* transient stack data */
     struct gui_canvas canvas;
     struct gui_command_list list;
     struct gui_panel_layout layout;

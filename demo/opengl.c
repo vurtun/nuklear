@@ -1,3 +1,8 @@
+/*
+    Copyright (c) 2015
+    vurtun <polygone@gmx.net>
+    MIT licence
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
