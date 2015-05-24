@@ -293,8 +293,8 @@ color_tab(struct gui_panel_layout *panel, struct control_window *control, struct
         "Button Border:", "Button Hovering:", "Button Toggle:", "Button Hovering Text:",
         "Check:", "Check BG:", "Check Active:", "Option:", "Option BG:", "Option Active:",
         "Slider:", "Slider bar:", "Slider boder:","Slider cursor:", "Progress:", "Progress Cursor:",
-        "Editbox:", "Editbox cursor:", "Editbox Border:", "Spinner:", "Spinner Border:",
-        "Selector:", "Selector Border:", "Histo:", "Histo Bars:", "Histo Negative:",
+        "Editbox:", "Editbox cursor:", "Editbox Border:", "Spinner:", "Spinner Border:", "Spinner Triangle:",
+        "Selector:", "Selector Border:", "Selector Triangle:", "Histo:", "Histo Bars:", "Histo Negative:",
         "Histo Hovering:", "Plot:", "Plot Lines:", "Plot Hightlight:", "Scrollbar:",
         "Scrollbar Cursor:", "Scrollbar Border:", "Table lines:", "Shelf:", "Shelf Text:",
         "Shelf Active:", "Shelf Active Text:", "Scaler:"

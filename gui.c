@@ -1374,8 +1374,10 @@ gui_config_default(struct gui_config *config)
     col_load(config->colors[GUI_COLOR_INPUT_BORDER], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_SPINNER], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_SPINNER_BORDER], 100, 100, 100, 255);
+    col_load(config->colors[GUI_COLOR_SPINNER_TRIANGLE], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_SELECTOR], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_SELECTOR_BORDER], 100, 100, 100, 255);
+    col_load(config->colors[GUI_COLOR_SELECTOR_TRIANGLE], 100, 100, 100, 255);
     col_load(config->colors[GUI_COLOR_HISTO], 120, 120, 120, 255);
     col_load(config->colors[GUI_COLOR_HISTO_BARS], 45, 45, 45, 255);
     col_load(config->colors[GUI_COLOR_HISTO_NEGATIVE], 255, 255, 255, 255);
@@ -2395,9 +2397,9 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     button.padding.y = MAX(3, (button_h - layout->font.height) / 2);
     button.background = config->colors[GUI_COLOR_BUTTON];
     button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
-    button.content = config->colors[GUI_COLOR_TEXT];
+    button.content = config->colors[GUI_COLOR_SPINNER_TRIANGLE];
     button.highlight = config->colors[GUI_COLOR_BUTTON];
-    button.highlight_content = config->colors[GUI_COLOR_TEXT];
+    button.highlight_content = config->colors[GUI_COLOR_SPINNER_TRIANGLE];
     button_up_clicked = gui_button_triangle(canvas, button_x, button_y, button_w, button_h,
         GUI_UP, GUI_BUTTON_DEFAULT, &button, layout->input);
 
@@ -2472,9 +2474,9 @@ gui_panel_selector(struct gui_panel_layout *layout, const char *items[],
     button.padding.y = MAX(3, (button_h - layout->font.height) / 2);
     button.background = config->colors[GUI_COLOR_BUTTON];
     button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
-    button.content = config->colors[GUI_COLOR_TEXT];
+    button.content = config->colors[GUI_COLOR_SELECTOR_TRIANGLE];
     button.highlight = config->colors[GUI_COLOR_BUTTON];
-    button.highlight_content = config->colors[GUI_COLOR_TEXT];
+    button.highlight_content = config->colors[GUI_COLOR_SELECTOR_TRIANGLE];
     button_down_clicked = gui_button_triangle(canvas, button_x, button_y, button_w,
         button_h, GUI_UP, GUI_BUTTON_DEFAULT, &button, layout->input);
 
