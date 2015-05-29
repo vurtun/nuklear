@@ -36,9 +36,9 @@ Summary: It is only responsible for the actual user interface
 ## Example
 ```c
 /* allocate memory to hold the draw calls output */
-struct gui_command_buffer buffer;
+gui_command_buffer buffer;
 void *memory = malloc(MEMORY_SIZE)
-gui_buffer_init_fixed(buffer, memory, MEMORY_SIZE);
+gui_command_buffer_init_fixed(buffer, memory, MEMORY_SIZE);
 
 /* setup configuration */
 struct gui_config config;
@@ -185,7 +185,7 @@ frame as well as the needed amount if not enough memory was provided.
 
 ```c
 void *memory = malloc(size);
-struct gui_command_buffer buffer;
+gui_command_buffer buffer;
 gui_command_buffer_init_fixed(&buffer, memory, size);
 ```
 
@@ -196,7 +196,7 @@ alloc.alloc = your_allocation_callback;
 alloc.relloac = your_reallocation_callback;
 alloc.free = your_free_callback;
 
-struct gui_command_buffer buffer;
+gui_command_buffer buffer;
 const gui_size initial_size = 4*1024;
 const gui_float grow_factor = 2.0f;
 gui_command_buffer_init(&buffer, &alloc, initial_size, grow_factor);
@@ -268,7 +268,7 @@ struct your_window {
 }
 
 /* allocate buffer to hold output */
-struct gui_command_buffer buffer;
+gui_command_buffer buffer;
 gui_buffer_init_fixed(buffer, memory, size);
 
 /* setup configuration data */
