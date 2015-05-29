@@ -301,36 +301,36 @@ surface_del(XSurface *surf)
 }
 
 static void
-execute(XSurface *surf, struct gui_command_list *list)
+execute(XSurface *surf, gui_command_buffer *buffer)
 {
     const struct gui_command *cmd;
-    gui_list_for_each(cmd, list) {
+    gui_foreach_command(cmd, buffer) {
         switch (cmd->type) {
         case GUI_COMMAND_NOP: break;
         case GUI_COMMAND_SCISSOR: {
-            const struct gui_command_scissor *s = GUI_FETCH(scissor, cmd);
+            const struct gui_command_scissor *s = gui_command(scissor, cmd);
             surface_scissor(surf, s->x, s->y, s->w, s->h);
         } break;
         case GUI_COMMAND_LINE: {
-            const struct gui_command_line *l = GUI_FETCH(line, cmd);
+            const struct gui_command_line *l = gui_command(line, cmd);
             surface_draw_line(surf, l->begin[0], l->begin[1], l->end[0],
                 l->end[1], l->color);
         } break;
         case GUI_COMMAND_RECT: {
-            const struct gui_command_rect *r = GUI_FETCH(rect, cmd);
+            const struct gui_command_rect *r = gui_command(rect, cmd);
             surface_draw_rect(surf, r->x, r->y, r->w, r->h, r->color);
         } break;
         case GUI_COMMAND_CIRCLE: {
-            const struct gui_command_circle *c = GUI_FETCH(circle, cmd);
+            const struct gui_command_circle *c = gui_command(circle, cmd);
             surface_draw_circle(surf, c->x, c->y, c->w, c->h, c->color);
         } break;
         case GUI_COMMAND_TRIANGLE: {
-            const struct gui_command_triangle *t = GUI_FETCH(triangle, cmd);
+            const struct gui_command_triangle *t = gui_command(triangle, cmd);
             surface_draw_triangle(surf, t->a[0], t->a[1], t->b[0], t->b[1],
                 t->c[0], t->c[1], t->color);
         } break;
         case GUI_COMMAND_TEXT: {
-            const struct gui_command_text *t = GUI_FETCH(text, cmd);
+            const struct gui_command_text *t = gui_command(text, cmd);
             surface_draw_text(surf, t->x, t->y, t->w, t->h, (const char*)t->string,
                     t->length, t->font, t->bg, t->fg);
         } break;
@@ -342,11 +342,11 @@ execute(XSurface *surf, struct gui_command_list *list)
 }
 
 static void
-draw(XSurface *surf, struct gui_panel_stack *stack)
+draw(XSurface *surf, struct gui_stack *stack)
 {
-    struct gui_panel_hook *iter;
-    gui_stack_for_each(iter, stack)
-        execute(surf, gui_hook_output(iter));
+    struct gui_panel *iter;
+    gui_foreach_panel(iter, stack)
+        execute(surf, iter->buffer);
 }
 
 static void
@@ -440,6 +440,7 @@ main(int argc, char *argv[])
     font.userdata = xw.font;
     font.height = (gui_float)xw.font->height;
     font.width = font_get_text_width;
+    gui.memory = calloc(MAX_MEMORY, 1);
     init_demo(&gui, &font);
 
     while (gui.running) {
@@ -459,8 +460,6 @@ main(int argc, char *argv[])
         gui_input_end(&in);
 
         /* GUI */
-        gui.width = xw.width;
-        gui.height = xw.height;
         run_demo(&gui, &in);
 
         /* Draw */
@@ -477,7 +476,7 @@ main(int argc, char *argv[])
     }
 
 cleanup:
-    free(gui.memory.memory);
+    free(gui.memory);
     font_del(xw.dpy, xw.font);
     surface_del(xw.surf);
     XUnmapWindow(xw.dpy, xw.win);
