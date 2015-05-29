@@ -187,7 +187,6 @@ frame as well as the needed amount if not enough memory was provided.
 void *memory = malloc(size);
 struct gui_command_buffer buffer;
 gui_command_buffer_init_fixed(&buffer, memory, size);
-};
 ```
 
 ```c
