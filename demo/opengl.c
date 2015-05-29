@@ -402,11 +402,10 @@ draw_circle(float x, float y, float r, struct gui_color color)
 }
 
 static void
-execute(struct gui_command_list *list, int width, int height)
+execute(gui_command_buffer *list, int width, int height)
 {
     static const struct gui_color col = {255, 0, 0, 255};
     const struct gui_command *cmd;
-    if (!list->count) return;
 
     glPushAttrib(GL_ENABLE_BIT|GL_COLOR_BUFFER_BIT|GL_TRANSFORM_BIT);
     glEnable(GL_BLEND);
@@ -424,27 +423,27 @@ execute(struct gui_command_list *list, int width, int height)
     glPushMatrix();
     glLoadIdentity();
 
-    gui_list_for_each(cmd, list) {
+    gui_foreach_command(cmd, list) {
         switch (cmd->type) {
         case GUI_COMMAND_NOP: break;
         case GUI_COMMAND_SCISSOR: {
-            const struct gui_command_scissor *s = GUI_FETCH(scissor, cmd);
+            const struct gui_command_scissor *s = gui_command(scissor, cmd);
             glScissor(s->x, height - (s->y + s->h), s->w, s->h);
         } break;
         case GUI_COMMAND_LINE: {
-            const struct gui_command_line *l = GUI_FETCH(line, cmd);
+            const struct gui_command_line *l = gui_command(line, cmd);
             draw_line(l->begin[0], l->begin[1], l->end[0], l->end[1], l->color);
         } break;
         case GUI_COMMAND_RECT: {
-            const struct gui_command_rect *r = GUI_FETCH(rect, cmd);
+            const struct gui_command_rect *r = gui_command(rect, cmd);
             draw_rect(r->x, r->y, r->w, r->h, r->color);
         } break;
         case GUI_COMMAND_CIRCLE: {
-            const struct gui_command_circle *c = GUI_FETCH(circle, cmd);
+            const struct gui_command_circle *c = gui_command(circle, cmd);
             draw_circle(c->x, c->y, (float)c->w / 2.0f, c->color);
         } break;
         case GUI_COMMAND_TRIANGLE: {
-            const struct gui_command_triangle *t = GUI_FETCH(triangle, cmd);
+            const struct gui_command_triangle *t = gui_command(triangle, cmd);
             glColor4ub(t->color.r, t->color.g, t->color.b, t->color.a);
             glBegin(GL_TRIANGLES);
             glVertex2f(t->a[0], t->a[1]);
@@ -453,7 +452,7 @@ execute(struct gui_command_list *list, int width, int height)
             glEnd();
         } break;
         case GUI_COMMAND_TEXT: {
-            const struct gui_command_text *t = GUI_FETCH(text, cmd);
+            const struct gui_command_text *t = gui_command(text, cmd);
             font_draw_text(t->font, t->x, t->y, t->h, t->fg, t->string, t->length);
         } break;
         case GUI_COMMAND_IMAGE:
@@ -471,11 +470,11 @@ execute(struct gui_command_list *list, int width, int height)
 }
 
 static void
-draw(struct gui_panel_stack *stack, int width, int height)
+draw(struct gui_stack *stack, int width, int height)
 {
-    struct gui_panel_hook *iter;
-    gui_stack_for_each(iter, stack)
-        execute(gui_hook_output(iter), width, height);
+    struct gui_panel*iter;
+    gui_foreach_panel(iter, stack)
+        execute(iter->buffer, width, height);
 }
 
 static void
@@ -566,6 +565,7 @@ main(int argc, char *argv[])
     /* GUI */
     memset(&in, 0, sizeof in);
     memset(&gui, 0, sizeof gui);
+    gui.memory = malloc(MAX_MEMORY);
     font.userdata = glfont;
     font.height = glfont->height;
     font.width = font_get_text_width;
@@ -590,8 +590,6 @@ main(int argc, char *argv[])
 
         /* GUI */
         SDL_GetWindowSize(win, &width, &height);
-        gui.width = (gui_size)width;
-        gui.height = (gui_size)height;
         run_demo(&gui, &in);
 
         /* Draw */
@@ -608,7 +606,7 @@ main(int argc, char *argv[])
 
 cleanup:
     /* Cleanup */
-    free(gui.memory.memory);
+    free(gui.memory);
     font_del(glfont);
     SDL_GL_DeleteContext(glContext);
     SDL_DestroyWindow(win);
