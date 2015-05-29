@@ -717,7 +717,6 @@ struct gui_layout {
 };
 
 void gui_layout_init(struct gui_layout*, const struct gui_layout_config*);
-gui_size gui_layout_space(struct gui_layout*, enum gui_layout_slot_index, gui_size index);
 void gui_layout_slot(struct gui_layout*, enum gui_layout_slot_index,
                     enum gui_layout_format, gui_size panel_count);
 
