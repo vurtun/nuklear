@@ -594,8 +594,8 @@ void gui_panel_row(struct gui_panel_layout*, gui_float height, gui_size cols);
 gui_bool gui_panel_widget(struct gui_rect*, struct gui_panel_layout*);
 void gui_panel_spacing(struct gui_panel_layout*, gui_size cols);
 void gui_panel_text(struct gui_panel_layout*, const char*, gui_size, enum gui_text_align);
-void gui_panel_text_colored(struct gui_panel_layout*, const char*, gui_size, enum gui_text_align,
-                    struct gui_color color);
+void gui_panel_text_colored(struct gui_panel_layout*, const char*, gui_size,
+                    enum gui_text_align, struct gui_color color);
 void gui_panel_label(struct gui_panel_layout*, const char*, enum gui_text_align);
 void gui_panel_label_colored(struct gui_panel_layout*, const char*, enum gui_text_align,
                     struct gui_color color);
@@ -626,7 +626,7 @@ gui_size gui_panel_selector(struct gui_panel_layout*, const char *items[],
                     gui_size item_count, gui_size item_current);
 void gui_panel_graph_begin(struct gui_panel_layout*, struct gui_graph*, enum gui_graph_type,
                     gui_size count, gui_float min_value, gui_float max_value);
-gui_bool gui_panel_graph_push(struct gui_panel_layout *layout, struct gui_graph*, gui_float);
+gui_bool gui_panel_graph_push(struct gui_panel_layout *layout,struct gui_graph*,gui_float);
 void gui_panel_graph_end(struct gui_panel_layout *layout, struct gui_graph*);
 gui_int gui_panel_graph(struct gui_panel_layout*, enum gui_graph_type,
                     const gui_float *values, gui_size count, gui_size offset);

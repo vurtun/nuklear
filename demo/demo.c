@@ -55,7 +55,8 @@ struct demo_gui {
     void *memory;
     struct show_window show;
     struct control_window control;
-    gui_command_buffer buffer;
+    gui_command_buffer show_buffer;
+    gui_command_buffer control_buffer;
     struct gui_stack stack;
     struct gui_config config;
     struct gui_font font;
@@ -200,7 +201,7 @@ update_flags(struct gui_panel_layout *panel, struct control_window *control)
     gui_size n = 0;
     gui_flags res = 0;
     gui_flags i = 0x01;
-    const char *options[] = {"Hidden", "Border", "Minimizable", "Closeable", "Moveable", "Scaleable"};
+    const char *options[]={"Hidden","Border","Minimizable","Closeable","Moveable","Scaleable"};
     gui_panel_row(panel, 30, 2);
     do {
         if (gui_panel_check(panel, options[n++], (control->show_flags & i) ? gui_true : gui_false))
@@ -359,26 +360,28 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
     struct gui_config *config = &gui->config;
     gui->font = *font;
     gui->running = gui_true;
-    gui_command_buffer_init_fixed(&gui->buffer, gui->memory, MAX_MEMORY);
+    gui_command_buffer_init_fixed(&gui->show_buffer, gui->memory, MAX_MEMORY/2);
+    gui_command_buffer_init_fixed(&gui->control_buffer,
+        GUI_PTR_ADD(void*, gui->memory, (MAX_MEMORY/2)), MAX_MEMORY/2);
     gui_config_default(config, font);
 
     gui_stack_clear(&gui->stack);
-    /*init_show(&gui->show, config, &gui->buffer, &gui->stack);*/
-    init_control(&gui->control, config, &gui->buffer, &gui->stack);
+    init_show(&gui->show, config, &gui->show_buffer, &gui->stack);
+    init_control(&gui->control, config, &gui->control_buffer, &gui->stack);
+    gui->show.hook.flags |= GUI_PANEL_HIDDEN;
 }
 
 static void
 run_demo(struct demo_gui *gui, struct gui_input *input)
 {
     struct control_window *control = &gui->control;
+    struct show_window *show = &gui->show;
     gui->running = update_control(control, &gui->stack, input, &gui->config);
 
     /* Show window */
-    /*
-    show->hook.panel.flags = control->show_flags;
+    show->hook.flags = control->show_flags;
     update_show(show, &gui->stack, input);
-    if (show->hook.panel.flags & GUI_PANEL_HIDDEN)
+    if (show->hook.flags & GUI_PANEL_HIDDEN)
         control->show_flags |= GUI_PANEL_HIDDEN;
-    */
 }
 

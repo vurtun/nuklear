@@ -1387,6 +1387,8 @@ gui_panel_begin(struct gui_panel_layout *l, struct gui_panel *p,
     /* check arguments */
     if (!p || !p->buffer || !l)
         return gui_false;
+    if (!(p->flags & GUI_PANEL_TAB))
+        gui_command_buffer_reset(p->buffer);
     if (p->flags & GUI_PANEL_HIDDEN) {
         zero(l, sizeof(*l));
         l->valid = gui_false;
@@ -1459,8 +1461,6 @@ gui_panel_begin(struct gui_panel_layout *l, struct gui_panel *p,
     l->row_columns = 0;
     l->row_height = 0;
     l->offset = p->offset;
-    if (!(p->flags & GUI_PANEL_TAB))
-        gui_command_buffer_reset(l->buffer);
 
     if (!(p->flags & GUI_PANEL_NO_HEADER)) {
         header = &c->colors[GUI_COLOR_HEADER];
