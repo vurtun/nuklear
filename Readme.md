@@ -269,7 +269,7 @@ gui_buffer_init_fixed(buffer, memory, size);
 /* setup configuration data */
 struct gui_config config;
 struct gui_font font = {...}
-gui_config_default(&config);
+gui_config_default(&config, &font);
 
 /* setup panel */
 struct gui_panel panel;
