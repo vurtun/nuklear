@@ -211,7 +211,7 @@ and returns the from the user input modified state of the widget.
 
 ```c
 
-struct gui_command_buffer buffer;
+gui_command_buffer buffer;
 void *memory = malloc(MEMORY_SIZE)
 gui_buffer_init_fixed(buffer, memory, MEMORY_SIZE);
 
@@ -262,11 +262,6 @@ drawing order of each panel so instead of drawing each panel individually they
 have to be drawn in a certain order.
 
 ```c
-struct your_window {
-    struct gui_panel hook;
-    /* your data */
-}
-
 /* allocate buffer to hold output */
 gui_command_buffer buffer;
 gui_buffer_init_fixed(buffer, memory, size);
@@ -277,24 +272,23 @@ struct gui_font font = {...}
 gui_config_default(&config);
 
 /* setup panel */
-struct your_window win;
-gui_panel_init(&win.hook, 50, 50, 300, 200, 0, &config, &buffer);
+struct gui_panel panel;
+gui_panel_init(&panel, 50, 50, 300, 200, 0, &config, &buffer);
 
 /* setup stack */
 struct gui_stack stack;
 gui_stack_clear(&stack);
-gui_stack_push(&stack, &win.hook);
+gui_stack_push(&stack, &panel);
 
 struct gui_input input = {0};
 while (1) {
-    struct gui_panel_layout layout;
-    struct gui_canvas canvas;
 
     gui_input_begin(&input);
     /* record input */
     gui_input_end(&input);
 
-    gui_panel_begin_stacked(&layout, &win.hook, &stack, "Demo", &input);
+    struct gui_panel_layout layout;
+    gui_panel_begin_stacked(&layout, &panel, &stack, "Demo", &input);
     gui_panel_row(&layout, 30, 1);
     if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");
@@ -320,21 +314,16 @@ horizontally or vertically. The combination of slots, ratio and multiple panels
 per slots support a rich set of vertical, horizontal and mixed layouts.
 
 ```c
-struct your_window {
-    struct gui_panel_hook hook;
-    /* your data */
-}
-
-struct gui_command_buffer buffer;
+gui_command_buffer buffer;
 gui_buffer_init_fixed(buffer, memory, size);
 
 struct gui_config config;
 struct gui_font font = {...}
 gui_config_default(&config);
 
-struct your_window win;
+struct gui_panel panel;
 struct gui_input input = {0};
-gui_panel_init(&win.hook, 0, 0, 0, 0, 0, &config, &buffer);
+gui_panel_init(&panel, 0, 0, 0, 0, 0, &config, &buffer);
 
 struct gui_layout tiled;
 struct gui_layout_config ratio = {...};
@@ -350,11 +339,11 @@ while (1) {
     /* record input */
     gui_input_end(&input);
 
-    gui_panel_begin_tiled(&layout, &win.hook, &tiled, GUI_SLOT_LEFT, 0, "Demo", &input);
+    gui_panel_begin_tiled(&layout, &panel, &tiled, GUI_SLOT_LEFT, 0, "Demo", &input);
     gui_panel_row(&layout, 30, 1);
     if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");
-    gui_panel_end(&layout, &win.hook);
+    gui_panel_end(&layout, &panel);
 
     /* draw each panel */
     struct gui_panel *iter;
