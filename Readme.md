@@ -319,7 +319,7 @@ gui_buffer_init_fixed(buffer, memory, size);
 
 struct gui_config config;
 struct gui_font font = {...}
-gui_config_default(&config);
+gui_config_default(&config, &font);
 
 struct gui_panel panel;
 struct gui_input input = {0};
