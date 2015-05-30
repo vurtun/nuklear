@@ -35,7 +35,7 @@ Summary: It is only responsible for the actual user interface
 
 ## Example
 ```c
-/* allocate memory to hold the draw calls output */
+/* allocate memory to hold the draw commands */
 gui_command_buffer buffer;
 void *memory = malloc(MEMORY_SIZE)
 gui_command_buffer_init_fixed(buffer, memory, MEMORY_SIZE);
@@ -327,7 +327,7 @@ gui_panel_init(&panel, 0, 0, 0, 0, 0, &config, &buffer);
 
 struct gui_layout tiled;
 struct gui_layout_config ratio = {...};
-gui_layout_init(&tiled, &ratio);
+gui_layout_init(&tiled, &ratio, window_width, window_height);
 gui_layout_slot(&tiled, GUI_SLOT_LEFT, GUI_LAYOUT_VERTICAL, 1);
 
 while (1) {

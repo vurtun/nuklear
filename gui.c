@@ -3019,7 +3019,8 @@ gui_stack_pop(struct gui_stack *stack, struct gui_panel*panel)
  * ===============================================================
  */
 void
-gui_layout_init(struct gui_layout *layout, const struct gui_layout_config *config)
+gui_layout_init(struct gui_layout *layout, const struct gui_layout_config *config,
+    gui_size width, gui_size height)
 {
     gui_float left, right;
     gui_float centerh, centerv;
@@ -3030,6 +3031,8 @@ gui_layout_init(struct gui_layout *layout, const struct gui_layout_config *confi
     if (!layout || !config) return;
     zero(layout, sizeof(*layout));
     layout->state = GUI_LAYOUT_ACTIVE;
+    layout->width = width;
+    layout->height = height;
 
     left = SATURATE(config->left);
     right = SATURATE(config->right);
@@ -3049,6 +3052,15 @@ gui_layout_init(struct gui_layout *layout, const struct gui_layout_config *confi
     vec2_load(layout->slots[GUI_SLOT_BOTTOM].offset, 0.0f, top + centerv);
     vec2_load(layout->slots[GUI_SLOT_CENTER].offset, left, top);
     vec2_load(layout->slots[GUI_SLOT_RIGHT].offset, left + centerh, top);
+}
+
+void
+gui_layout_set_size(struct gui_layout *layout, gui_size width, gui_size height)
+{
+    ASSERT(layout);
+    if (!layout) return;
+    layout->width = width;
+    layout->height = height;
 }
 
 void

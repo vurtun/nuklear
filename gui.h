@@ -669,7 +669,7 @@ void gui_stack_pop(struct gui_stack*, struct gui_panel*);
 /*
  * ==============================================================
  *
- *                          Border Layout
+ *                          Layout
  *
  * ===============================================================
  */
@@ -716,7 +716,9 @@ struct gui_layout {
     struct gui_layout_slot slots[GUI_SLOT_MAX];
 };
 
-void gui_layout_init(struct gui_layout*, const struct gui_layout_config*);
+void gui_layout_init(struct gui_layout*, const struct gui_layout_config*,
+                    gui_size width, gui_size height);
+void gui_layout_set_size(struct gui_layout*, gui_size width, gui_size height);
 void gui_layout_slot(struct gui_layout*, enum gui_layout_slot_index,
                     enum gui_layout_format, gui_size panel_count);
 

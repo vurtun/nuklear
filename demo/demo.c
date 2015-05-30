@@ -376,9 +376,8 @@ run_demo(struct demo_gui *gui, struct gui_input *input)
 {
     struct control_window *control = &gui->control;
     struct show_window *show = &gui->show;
-    gui->running = update_control(control, &gui->stack, input, &gui->config);
 
-    /* Show window */
+    gui->running = update_control(control, &gui->stack, input, &gui->config);
     show->hook.flags = control->show_flags;
     update_show(show, &gui->stack, input);
     if (show->hook.flags & GUI_PANEL_HIDDEN)
