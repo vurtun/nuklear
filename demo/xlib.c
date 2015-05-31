@@ -135,9 +135,9 @@ font_create(Display *dpy, const char *name)
 }
 
 static gui_size
-font_get_text_width(void *handle, const gui_char *text, gui_size len)
+font_get_text_width(gui_handle handle, const gui_char *text, gui_size len)
 {
-    XFont *font = handle;
+    XFont *font = handle.ptr;
     XRectangle r;
     gui_size width;
     if(!font || !text)
@@ -332,7 +332,7 @@ execute(XSurface *surf, gui_command_buffer *buffer)
         case GUI_COMMAND_TEXT: {
             const struct gui_command_text *t = gui_command(text, cmd);
             surface_draw_text(surf, t->x, t->y, t->w, t->h, (const char*)t->string,
-                    t->length, t->font, t->bg, t->fg);
+                    t->length, t->font.ptr, t->bg, t->fg);
         } break;
         case GUI_COMMAND_IMAGE:
         case GUI_COMMAND_MAX:
@@ -437,7 +437,7 @@ main(int argc, char *argv[])
     /* GUI */
     memset(&in, 0, sizeof in);
     memset(&gui, 0, sizeof gui);
-    font.userdata = xw.font;
+    font.userdata.ptr = xw.font;
     font.height = (gui_float)xw.font->height;
     font.width = font_get_text_width;
     gui.memory = calloc(MAX_MEMORY, 1);
