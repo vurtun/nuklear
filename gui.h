@@ -364,21 +364,15 @@ struct gui_edit {
     struct gui_color foreground;
 };
 
-enum gui_graph_type {
-    GUI_GRAPH_LINES,
-    GUI_GRAPH_COLUMN,
-    GUI_GRAPH_MAX
-};
-
-struct gui_graph {
-    gui_bool valid;
-    enum gui_graph_type type;
-    gui_float x, y;
-    gui_float w, h;
-    gui_float min, max;
-    struct gui_vec2 last;
-    gui_size index;
-    gui_size count;
+struct gui_spinner {
+    gui_size border_button;
+    struct gui_color button_color;
+    struct gui_color button_border;
+    struct gui_color button_triangle;
+    struct gui_color color;
+    struct gui_color border;
+    struct gui_vec2 padding;
+    gui_bool show_cursor;
 };
 
 void gui_text(gui_command_buffer*, gui_float x, gui_float y, gui_float w, gui_float h,
@@ -409,6 +403,10 @@ gui_size gui_edit(gui_command_buffer*, gui_float x, gui_float y, gui_float w,
 gui_size gui_edit_filtered(gui_command_buffer*, gui_float x, gui_float y, gui_float w,
                     gui_float h, gui_char*, gui_size, gui_size max, gui_bool*,
                     const struct gui_edit*, gui_filter filter, const struct gui_input*,
+                    const struct gui_font*);
+gui_int gui_spinner(gui_command_buffer*, gui_float x, gui_float y, gui_float w,
+                    gui_float h, const struct gui_spinner*, gui_int min, gui_int value,
+                    gui_int max, gui_int step, gui_bool *active, const struct gui_input*,
                     const struct gui_font*);
 gui_float gui_scroll(gui_command_buffer*, gui_float x, gui_float y,
                     gui_float w, gui_float h, gui_float offset, gui_float target,
@@ -524,6 +522,23 @@ enum gui_table_lines {
     GUI_TABLE_VHEADER = 0x02,
     GUI_TABLE_HBODY = 0x04,
     GUI_TABLE_VBODY = 0x08
+};
+
+enum gui_graph_type {
+    GUI_GRAPH_LINES,
+    GUI_GRAPH_COLUMN,
+    GUI_GRAPH_MAX
+};
+
+struct gui_graph {
+    gui_bool valid;
+    enum gui_graph_type type;
+    gui_float x, y;
+    gui_float w, h;
+    gui_float min, max;
+    struct gui_vec2 last;
+    gui_size index;
+    gui_size count;
 };
 
 enum gui_panel_tab {

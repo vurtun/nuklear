@@ -1157,6 +1157,71 @@ gui_scroll(gui_command_buffer *out, gui_float x, gui_float y,
     return scroll_offset;
 }
 
+gui_int
+gui_spinner(gui_command_buffer *out, gui_float x, gui_float y, gui_float w,
+    gui_float h, const struct gui_spinner *s, gui_int min, gui_int value,
+    gui_int max, gui_int step, gui_bool *active, const struct gui_input *in,
+    const struct gui_font *font)
+{
+    char string[MAX_NUMBER_BUFFER];
+    gui_size len, old_len;
+    gui_bool is_active, updated = gui_false;
+
+    struct gui_button button;
+    gui_float button_x, button_y;
+    gui_float button_w, button_h;
+    gui_bool button_up_clicked, button_down_clicked;
+
+    struct gui_edit field;
+    gui_float field_x, field_y;
+    gui_float field_w, field_h;
+
+    value = CLAMP(min, value, max);
+    len = itos(string, value);
+    is_active = (active) ? *active : gui_false;
+    old_len = len;
+
+    button_y = y;
+    button_h = h / 2;
+    button_w = h - s->padding.x;
+    button_x = x + w - button_w;
+    button.border = s->border_button;
+    button.padding.x = MAX(3, (button_h - font->height) / 2);
+    button.padding.y = MAX(3, (button_h - font->height) / 2);
+    button.background = s->button_color;
+    button.foreground = s->button_border;
+    button.content = s->button_triangle;
+    button.highlight = s->button_color;
+    button.highlight_content = s->button_triangle;
+    button_up_clicked = gui_button_triangle(out, button_x, button_y, button_w, button_h,
+        GUI_UP, GUI_BUTTON_DEFAULT, &button, in);
+
+    button_y = y + button_h;
+    button_down_clicked = gui_button_triangle(out, button_x, button_y, button_w, button_h,
+        GUI_DOWN, GUI_BUTTON_DEFAULT, &button, in);
+    if (button_up_clicked || button_down_clicked) {
+        value += (button_up_clicked) ? step : -step;
+        value = CLAMP(min, value, max);
+    }
+
+    field_x = x;
+    field_y = y;
+    field_h = h;
+    field_w = w - (button_w - button.border * 2);
+    field.padding.x = s->padding.x;
+    field.padding.y = s->padding.y;
+    field.show_cursor = s->show_cursor;
+    field.background = s->color;
+    field.foreground = s->border;
+    len = gui_edit(out, field_x, field_y, field_w, field_h, (gui_char*)string,
+            len, MAX_NUMBER_BUFFER, &is_active, &field,GUI_INPUT_FLOAT, in, font);
+
+    if (old_len != len)
+        strtoi(&value, string, len);
+    if (active) *active = is_active;
+    return value;
+}
+
 /*
  * ==============================================================
  *
@@ -2163,20 +2228,11 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     gui_int max, gui_int step, gui_bool *active)
 {
     struct gui_rect bounds;
+    struct gui_spinner spinner;
     const struct gui_config *config;
     gui_command_buffer *out;
-    struct gui_edit field;
-    char string[MAX_NUMBER_BUFFER];
-    gui_size len, old_len;
     struct gui_vec2 item_padding;
 
-    struct gui_button button;
-    gui_float button_x, button_y;
-    gui_float button_w, button_h;
-    gui_float field_x, field_y;
-    gui_float field_w, field_h;
-    gui_bool is_active, updated = gui_false;
-    gui_bool button_up_clicked, button_down_clicked;
     if (!gui_panel_widget(&bounds, layout))
         return value;
 
@@ -2184,51 +2240,17 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     out = layout->buffer;
     item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
 
-    value = CLAMP(min, value, max);
-    len = itos(string, value);
-    is_active = (active) ? *active : gui_false;
-    old_len = len;
-
-    button.border = 1;
-    button_y = bounds.y;
-    button_h = bounds.h / 2;
-    button_w = bounds.h - item_padding.x;
-    button_x = bounds.x + bounds.w - button_w;
-    button.padding.x = MAX(3, (button_h - config->font.height) / 2);
-    button.padding.y = MAX(3, (button_h - config->font.height) / 2);
-    button.background = config->colors[GUI_COLOR_BUTTON];
-    button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
-    button.content = config->colors[GUI_COLOR_SPINNER_TRIANGLE];
-    button.highlight = config->colors[GUI_COLOR_BUTTON];
-    button.highlight_content = config->colors[GUI_COLOR_SPINNER_TRIANGLE];
-    button_up_clicked = gui_button_triangle(out, button_x, button_y, button_w, button_h,
-        GUI_UP, GUI_BUTTON_DEFAULT, &button, layout->input);
-
-    button_y = bounds.y + button_h;
-    button_down_clicked = gui_button_triangle(out, button_x, button_y, button_w, button_h,
-        GUI_DOWN, GUI_BUTTON_DEFAULT, &button, layout->input);
-    if (button_up_clicked || button_down_clicked) {
-        value += (button_up_clicked) ? step : -step;
-        value = CLAMP(min, value, max);
-    }
-
-    field_x = bounds.x;
-    field_y = bounds.y;
-    field_w = bounds.w - (button_w - button.border * 2);
-    field_h = bounds.h;
-    field.padding.x = item_padding.x;
-    field.padding.y = item_padding.y;
-    field.show_cursor = gui_false;
-    field.background = config->colors[GUI_COLOR_SPINNER];
-    field.foreground = config->colors[GUI_COLOR_SPINNER_BORDER];
-    len = gui_edit(out, field_x, field_y, field_w, field_h, (gui_char*)string,
-            len, MAX_NUMBER_BUFFER, &is_active, &field,GUI_INPUT_FLOAT,
-            layout->input, &config->font);
-
-    if (old_len != len)
-        strtoi(&value, string, len);
-    if (active) *active = is_active;
-    return value;
+    spinner.border_button = 1;
+    spinner.button_color = config->colors[GUI_COLOR_BUTTON];
+    spinner.button_border = config->colors[GUI_COLOR_BUTTON_BORDER];
+    spinner.button_triangle = config->colors[GUI_COLOR_SPINNER_TRIANGLE];
+    spinner.padding.x = item_padding.x;
+    spinner.padding.y = item_padding.y;
+    spinner.color = config->colors[GUI_COLOR_SPINNER];
+    spinner.border = config->colors[GUI_COLOR_BORDER];
+    spinner.show_cursor = gui_false;
+    return gui_spinner(out, bounds.x, bounds.y, bounds.w, bounds.h, &spinner,
+        min, max, value, step, active, layout->input, &layout->config->font);
 }
 
 gui_size
