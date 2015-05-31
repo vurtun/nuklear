@@ -861,8 +861,14 @@ gui_slider(gui_command_buffer *out, gui_float x, gui_float y, gui_float w, gui_f
 
     gui_command_buffer_push_rect(out, x, y, slider_w, slider_h, s->bg);
     gui_command_buffer_push_rect(out, bar.x, bar.y, bar.w, bar.h, s->bar);
-    gui_command_buffer_push_rect(out,cursor.x, cursor.y, cursor.w, cursor.h, s->border);
-    gui_command_buffer_push_rect(out,cursor.x+1,cursor.y+1,cursor.w-2,cursor.h-2, s->fg);
+    if (s->cursor == GUI_SLIDER_RECT) {
+        gui_command_buffer_push_rect(out,cursor.x, cursor.y, cursor.w, cursor.h, s->border);
+        gui_command_buffer_push_rect(out,cursor.x+1,cursor.y+1,cursor.w-2,cursor.h-2, s->fg);
+    } else {
+        gui_float c_pos = cursor.x - cursor.h/4;
+        gui_command_buffer_push_circle(out,c_pos,cursor.y,cursor.h,cursor.h,s->border);
+        gui_command_buffer_push_circle(out,c_pos + 1,cursor.y+1,cursor.h-2,cursor.h-2,s->fg);
+    }
     return slider_value;
 }
 
@@ -1291,6 +1297,7 @@ gui_config_default(struct gui_config *config, const struct gui_font *font)
     if (!config) return;
     zero(config, sizeof(*config));
     config->font = *font;
+    config->slider_cursor = GUI_SLIDER_CIRCLE;
     vec2_load(config->properties[GUI_PROPERTY_SCROLLBAR_WIDTH], 16, 16);
     vec2_load(config->properties[GUI_PROPERTY_PADDING], 15.0f, 10.0f);
     vec2_load(config->properties[GUI_PROPERTY_SIZE], 64.0f, 64.0f);
@@ -2148,6 +2155,7 @@ gui_panel_slider(struct gui_panel_layout *layout, gui_float min_value, gui_float
 
     config = layout->config;
     item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
+    slider.cursor = config->slider_cursor;
     slider.padding.x = item_padding.x;
     slider.padding.y = item_padding.y;
     slider.bg = config->colors[GUI_COLOR_SLIDER];

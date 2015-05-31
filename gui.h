@@ -332,7 +332,13 @@ struct gui_progress {
     struct gui_color foreground;
 };
 
+enum gui_slider_cursor {
+    GUI_SLIDER_RECT,
+    GUI_SLIDER_CIRCLE
+};
+
 struct gui_slider {
+    enum gui_slider_cursor cursor;
     struct gui_vec2 padding;
     struct gui_color bar;
     struct gui_color border;
@@ -507,6 +513,7 @@ struct gui_saved_color {
 
 struct gui_config {
     struct gui_font font;
+    enum gui_slider_cursor slider_cursor;
     struct gui_vec2 properties[GUI_PROPERTY_MAX];
     struct gui_color colors[GUI_COLOR_COUNT];
     struct gui_saved_property property_stack[GUI_MAX_ATTRIB_STACK];
