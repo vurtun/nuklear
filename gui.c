@@ -15,6 +15,7 @@
 #ifndef NULL
 #define NULL ((void*)0)
 #endif
+
 #define MAX_NUMBER_BUFFER 64
 #define UNUSED(a)   ((void)(a))
 #define PASTE(a,b) a##b
@@ -35,6 +36,7 @@
 #define vec2_len(v) ((float)fsqrt((v).x*(v).x+(v).y*(v).y))
 #define vec2_sub(r,a,b) do {(r).x=(a).x-(b).x; (r).y=(a).y-(b).y;} while(0)
 #define vec2_muls(r, v, s) do {(r).x=(v).x*(s); (r).y=(v).y*(s);} while(0)
+
 #define PTR_ADD(t, p, i) ((t*)((void*)((gui_size)(p) + (i))))
 #define PTR_SUB(t, p, i) ((t*)((void*)((gui_size)(p) - (i))))
 #define ALIGNOF(t) ((char*)(&((struct {char c; t _h;}*)0)->_h) - (char*)0)
@@ -141,39 +143,29 @@ triangle_from_direction(struct gui_vec2 *result, gui_float x, gui_float y,
     h = MAX(4 * pad_y, h);
     w = w - 2 * pad_x;
     h = h - 2 * pad_y;
+
     x = x + pad_x;
     y = y + pad_y;
+
     w_half = w / 2.0f;
     h_half = h / 2.0f;
 
     if (direction == GUI_UP) {
-        result[0].x = x + w_half;
-        result[0].y = y;
-        result[1].x = x;
-        result[1].y = y + h;
-        result[2].x = x + w;
-        result[2].y = y + h;
+        vec2_load(result[0], x + w_half, y);
+        vec2_load(result[1], x, y + h);
+        vec2_load(result[2], x + w, y + h);
     } else if (direction == GUI_RIGHT) {
-        result[0].x = x;
-        result[0].y = y;
-        result[1].x = x;
-        result[1].y = y + h;
-        result[2].x = x + w;
-        result[2].y = y + h_half;
+        vec2_load(result[0], x, y);
+        vec2_load(result[1], x, y + h);
+        vec2_load(result[2], x + w, y + h_half);
     } else if (direction == GUI_DOWN) {
-        result[0].x = x;
-        result[0].y = y;
-        result[1].x = x + w_half;
-        result[1].y = y + h;
-        result[2].x = x + w;
-        result[2].y = y;
+        vec2_load(result[0], x, y);
+        vec2_load(result[1], x + w_half, y + h);
+        vec2_load(result[2], x + w, y);
     } else {
-        result[0].x = x;
-        result[0].y = y + h_half;
-        result[1].x = x + w;
-        result[1].y = y + h;
-        result[2].x = x + w;
-        result[2].y = y;
+        vec2_load(result[0], x, y + h_half);
+        vec2_load(result[1], x + w, y + h);
+        vec2_load(result[2], x + w, y);
     }
 }
 
@@ -1614,7 +1606,6 @@ gui_panel_begin_stacked(struct gui_panel_layout *l, struct gui_panel* p,
     return gui_panel_begin(l, p, title, (s->end == p) ? i : NULL);
 }
 
-
 gui_bool
 gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
     struct gui_layout *layout, enum gui_layout_slot_index slot, gui_size index,
@@ -2222,7 +2213,7 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
 
     field_x = bounds.x;
     field_y = bounds.y;
-    field_w = bounds.w - button_w;
+    field_w = bounds.w - (button_w - button.border * 2);
     field_h = bounds.h;
     field.padding.x = item_padding.x;
     field.padding.y = item_padding.y;
