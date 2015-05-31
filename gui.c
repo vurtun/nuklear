@@ -1222,6 +1222,61 @@ gui_spinner(gui_command_buffer *out, gui_float x, gui_float y, gui_float w,
     return value;
 }
 
+gui_size gui_selector(gui_command_buffer *out, gui_float x, gui_float y, gui_float w,
+    gui_float h, const struct gui_selector *s, const char *items[],
+    gui_size item_count, gui_size item_current, const struct gui_input *input,
+    const struct gui_font *font)
+{
+    gui_size text_len;
+    gui_float label_x, label_y;
+    gui_float label_w, label_h;
+
+    struct gui_button button;
+    gui_bool button_up_clicked;
+    gui_bool button_down_clicked;
+    gui_float button_x, button_y;
+    gui_float button_w, button_h;
+
+    ASSERT(items);
+    ASSERT(item_count);
+    ASSERT(item_current < item_count);
+
+    gui_command_buffer_push_rect(out, x, y, w, h, s->border);
+    gui_command_buffer_push_rect(out, x+1, y+1, w-2, h-2, s->color);
+
+    button_y = y;
+    button_h = h / 2;
+    button_w = h - s->padding.x;
+    button_x = x + w - button_w;
+    button.border = s->border_button;
+    button.padding.x = MAX(3, (button_h - font->height) / 2);
+    button.padding.y = MAX(3, (button_h - font->height) / 2);
+    button.background = s->button_color;
+    button.foreground = s->button_border;
+    button.content = s->button_triangle;
+    button.highlight = s->button_color;
+    button.highlight_content = s->button_triangle;
+    button_down_clicked = gui_button_triangle(out, button_x, button_y, button_w,
+        button_h, GUI_UP, GUI_BUTTON_DEFAULT, &button, input);
+
+    button_y = y + button_h;
+    button_up_clicked = gui_button_triangle(out, button_x, button_y, button_w,
+        button_h, GUI_DOWN, GUI_BUTTON_DEFAULT, &button,  input);
+    item_current = (button_down_clicked && item_current < item_count-1) ?
+        item_current+1 : (button_up_clicked && item_current > 0) ?
+        item_current-1 : item_current;
+
+    label_x = x + s->padding.x;
+    label_y = y + s->padding.y;
+    label_w = w - (button_w + 2 * s->padding.x);
+    label_h = h - 2 * s->padding.y;
+    text_len = strsiz(items[item_current]);
+    gui_command_buffer_push_text(out, label_x, label_y, label_w, label_h,
+        (const gui_char*)items[item_current], text_len, font,
+        s->text_bg, s->text);
+    return item_current;
+}
+
 /*
  * ==============================================================
  *
@@ -2257,20 +2312,10 @@ gui_size
 gui_panel_selector(struct gui_panel_layout *layout, const char *items[],
     gui_size item_count, gui_size item_current)
 {
-    gui_size text_len;
-    gui_float label_x, label_y;
-    gui_float label_w, label_h;
-
     struct gui_rect bounds;
-    struct gui_button button;
+    struct gui_selector selector;
     const struct gui_config *config;
     gui_command_buffer *out;
-    struct gui_vec2 item_padding;
-
-    gui_bool button_up_clicked;
-    gui_bool button_down_clicked;
-    gui_float button_x, button_y;
-    gui_float button_w, button_h;
 
     ASSERT(items);
     ASSERT(item_count);
@@ -2278,45 +2323,20 @@ gui_panel_selector(struct gui_panel_layout *layout, const char *items[],
     if (!gui_panel_widget(&bounds, layout))
         return item_current;
 
-    config = layout->config;
     out = layout->buffer;
-    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
-    gui_command_buffer_push_rect(out, bounds.x, bounds.y, bounds.w, bounds.h,
-            config->colors[GUI_COLOR_SELECTOR_BORDER]);
-    gui_command_buffer_push_rect(out, bounds.x+1, bounds.y+1, bounds.w-2, bounds.h-2,
-            config->colors[GUI_COLOR_SELECTOR]);
+    config = layout->config;
 
-    button.border = 1;
-    button_y = bounds.y;
-    button_h = bounds.h / 2;
-    button_w = bounds.h - item_padding.x;
-    button_x = bounds.x + bounds.w - button_w;
-    button.padding.x = MAX(3, (button_h - config->font.height) / 2);
-    button.padding.y = MAX(3, (button_h - config->font.height) / 2);
-    button.background = config->colors[GUI_COLOR_BUTTON];
-    button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
-    button.content = config->colors[GUI_COLOR_SELECTOR_TRIANGLE];
-    button.highlight = config->colors[GUI_COLOR_BUTTON];
-    button.highlight_content = config->colors[GUI_COLOR_SELECTOR_TRIANGLE];
-    button_down_clicked = gui_button_triangle(out, button_x, button_y, button_w,
-        button_h, GUI_UP, GUI_BUTTON_DEFAULT, &button, layout->input);
-
-    button_y = bounds.y + button_h;
-    button_up_clicked = gui_button_triangle(out, button_x, button_y, button_w,
-        button_h, GUI_DOWN, GUI_BUTTON_DEFAULT, &button,  layout->input);
-    item_current = (button_down_clicked && item_current < item_count-1) ?
-        item_current+1 : (button_up_clicked && item_current > 0) ?
-        item_current-1 : item_current;
-
-    label_x = bounds.x + item_padding.x;
-    label_y = bounds.y + item_padding.y;
-    label_w = bounds.w - (button_w + 2 * item_padding.x);
-    label_h = bounds.h - 2 * item_padding.y;
-    text_len = strsiz(items[item_current]);
-    gui_command_buffer_push_text(out, label_x, label_y, label_w, label_h,
-        (const gui_char*)items[item_current], text_len, &config->font,
-        config->colors[GUI_COLOR_PANEL], config->colors[GUI_COLOR_TEXT]);
-    return item_current;
+    selector.border_button = 1;
+    selector.button_color = config->colors[GUI_COLOR_BUTTON];
+    selector.button_border = config->colors[GUI_COLOR_BUTTON_BORDER];
+    selector.button_triangle = config->colors[GUI_COLOR_SELECTOR_TRIANGLE];
+    selector.color = config->colors[GUI_COLOR_SELECTOR];
+    selector.border = config->colors[GUI_COLOR_SELECTOR_BORDER];
+    selector.text = config->colors[GUI_COLOR_TEXT];
+    selector.text_bg = config->colors[GUI_COLOR_PANEL];
+    selector.padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
+    return gui_selector(out, bounds.x, bounds.y, bounds.w, bounds.h, &selector,
+        items, item_count, item_current, layout->input, &layout->config->font);
 }
 
 void

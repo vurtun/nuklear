@@ -375,6 +375,18 @@ struct gui_spinner {
     gui_bool show_cursor;
 };
 
+struct gui_selector {
+    gui_size border_button;
+    struct gui_color button_color;
+    struct gui_color button_border;
+    struct gui_color button_triangle;
+    struct gui_color color;
+    struct gui_color border;
+    struct gui_color text;
+    struct gui_color text_bg;
+    struct gui_vec2 padding;
+};
+
 void gui_text(gui_command_buffer*, gui_float x, gui_float y, gui_float w, gui_float h,
                     const char *text, gui_size len, const struct gui_text*, enum gui_text_align,
                     const struct gui_font*);
@@ -407,6 +419,10 @@ gui_size gui_edit_filtered(gui_command_buffer*, gui_float x, gui_float y, gui_fl
 gui_int gui_spinner(gui_command_buffer*, gui_float x, gui_float y, gui_float w,
                     gui_float h, const struct gui_spinner*, gui_int min, gui_int value,
                     gui_int max, gui_int step, gui_bool *active, const struct gui_input*,
+                    const struct gui_font*);
+gui_size gui_selector(gui_command_buffer*, gui_float x, gui_float y, gui_float w,
+                    gui_float h, const struct gui_selector*, const char *items[],
+                    gui_size item_count, gui_size item_current, const struct gui_input*,
                     const struct gui_font*);
 gui_float gui_scroll(gui_command_buffer*, gui_float x, gui_float y,
                     gui_float w, gui_float h, gui_float offset, gui_float target,
