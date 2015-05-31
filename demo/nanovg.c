@@ -81,10 +81,10 @@ draw_line(NVGcontext *ctx, float x0, float y0, float x1, float y1, struct gui_co
 }
 
 static void
-draw_rect(NVGcontext *ctx, float x, float y, float w, float h, struct gui_color c)
+draw_rect(NVGcontext *ctx, float x, float y, float w, float h, float r, struct gui_color c)
 {
     nvgBeginPath(ctx);
-    nvgRect(ctx, x, y, w, h);
+    nvgRoundedRect(ctx, x, y, w, h, r);
     nvgFillColor(ctx, nvgRGBA(c.r, c.g, c.b, c.a));
     nvgFill(ctx);
 }
@@ -151,7 +151,7 @@ execute(NVGcontext *nvg, gui_command_buffer *list, int width, int height)
         } break;
         case GUI_COMMAND_RECT: {
             const struct gui_command_rect *r = gui_command(rect, cmd);
-            draw_rect(nvg, r->x, r->y, r->w, r->h, r->color);
+            draw_rect(nvg, r->x, r->y, r->w, r->h, r->r, r->color);
         } break;
         case GUI_COMMAND_CIRCLE: {
             const struct gui_command_circle *c = gui_command(circle, cmd);
