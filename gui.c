@@ -45,8 +45,8 @@
 #define OFFSETOF(st, m) ((gui_size)(&((st *)0)->m))
 
 static const struct gui_rect null_rect = {-9999.0f, 9999.0f, 9999.0f, 9999.0f};
-static const gui_char utfbyte[GUI_UTF_SIZE+1] = {0x80, 0, 0xC0, 0xE0, 0xF0};
-static const gui_char utfmask[GUI_UTF_SIZE+1] = {0xC0, 0x80, 0xE0, 0xF0, 0xF8};
+static const gui_byte utfbyte[GUI_UTF_SIZE+1] = {0x80, 0, 0xC0, 0xE0, 0xF0};
+static const gui_byte utfmask[GUI_UTF_SIZE+1] = {0xC0, 0x80, 0xE0, 0xF0, 0xF8};
 static const long utfmin[GUI_UTF_SIZE+1] = {0, 0, 0x80, 0x800, 0x100000};
 static const long utfmax[GUI_UTF_SIZE+1] = {0x10FFFF, 0x7F, 0x7FF, 0xFFFF, 0x10FFFF};
 
@@ -313,6 +313,271 @@ gui_input_end(struct gui_input *in)
 /*
  * ==============================================================
  *
+ *                          Buffer
+ *
+ * ===============================================================
+ */
+void
+gui_buffer_init(struct gui_buffer *buffer, const struct gui_allocator *memory,
+    gui_size initial_size, gui_float grow_factor)
+{
+    ASSERT(buffer);
+    ASSERT(memory);
+    ASSERT(initial_size);
+    if (!buffer || !memory || !initial_size) return;
+
+    zero(buffer, sizeof(*buffer));
+    buffer->type = GUI_BUFFER_DYNAMIC;
+    buffer->memory.ptr = memory->alloc(memory->userdata, initial_size);
+    buffer->memory.size = initial_size;
+    buffer->grow_factor = grow_factor;
+    buffer->pool = *memory;
+}
+
+void
+gui_buffer_init_fixed(struct gui_buffer *buffer, void *memory, gui_size size)
+{
+    ASSERT(buffer);
+    ASSERT(memory);
+    ASSERT(size);
+    if (!buffer || !memory || !size) return;
+
+    zero(buffer, sizeof(*buffer));
+    buffer->type = GUI_BUFFER_FIXED;
+    buffer->memory.ptr = memory;
+    buffer->memory.size = size;
+}
+
+void*
+gui_buffer_alloc(struct gui_buffer *b, gui_size size, gui_size align)
+{
+    gui_size cap;
+    gui_size alignment;
+    void *unaligned;
+    void *memory;
+
+    ASSERT(b);
+    if (!b || !size) return NULL;
+    b->needed += size;
+
+    unaligned = PTR_ADD(void, b->memory.ptr, b->allocated);
+    memory = ALIGN_PTR(unaligned, align);
+    alignment = (gui_size)((gui_byte*)memory - (gui_byte*)unaligned);
+
+    if ((b->allocated + size + alignment) >= b->memory.size) {
+        if (b->type != GUI_BUFFER_DYNAMIC || !b->pool.realloc)
+            return NULL;
+
+        cap = (gui_size)((gui_float)b->memory.size * b->grow_factor);
+        b->memory.ptr = b->pool.realloc(b->pool.userdata, b->memory.ptr, cap);
+        if (!b->memory.ptr) return NULL;
+
+        b->memory.size = cap;
+        unaligned = PTR_ADD(gui_byte, b->memory.ptr, b->allocated);
+        memory = ALIGN_PTR(unaligned, align);
+        alignment = (gui_size)((gui_byte*)memory - (gui_byte*)unaligned);
+    }
+
+    b->allocated += size + alignment;
+    b->needed += alignment;
+    b->calls++;
+    return memory;
+}
+
+void
+gui_buffer_reset(struct gui_buffer *buffer)
+{
+    ASSERT(buffer);
+    if (!buffer) return;
+    buffer->allocated = 0;
+    buffer->calls = 0;
+}
+
+void
+gui_buffer_clear(struct gui_buffer *buffer)
+{
+    ASSERT(buffer);
+    if (!buffer || !buffer->memory.ptr) return;
+    if (buffer->type == GUI_BUFFER_FIXED) return;
+    if (!buffer->pool.free) return;
+    buffer->pool.free(buffer->pool.userdata, buffer->memory.ptr);
+}
+
+void
+gui_buffer_info(struct gui_memory_status *status, struct gui_buffer *buffer)
+{
+    ASSERT(buffer);
+    ASSERT(status);
+    if (!status || !buffer) return;
+    status->allocated = buffer->allocated;
+    status->size =  buffer->memory.size;
+    status->needed = buffer->needed;
+    status->memory = buffer->memory.ptr;
+    status->calls = buffer->calls;
+}
+
+/*
+ * ==============================================================
+ *
+ *                          Command buffer
+ *
+ * ===============================================================
+ */
+void*
+gui_command_buffer_push(gui_command_buffer* buffer,
+    enum gui_command_type type, gui_size size)
+{
+    static const gui_size align = ALIGNOF(struct gui_command);
+    struct gui_command *cmd;
+    gui_size alignment;
+    void *unaligned;
+    void *memory;
+    ASSERT(buffer);
+    if (!buffer) return NULL;
+
+    cmd = gui_buffer_alloc(buffer, size, align);
+    if (!cmd) return NULL;
+
+    unaligned = (gui_byte*)cmd + size;
+    memory = ALIGN_PTR(unaligned, align);
+    alignment = (gui_size)((gui_byte*)memory - (gui_byte*)unaligned);
+
+    cmd->type = type;
+    cmd->offset = size + alignment;
+    return cmd;
+}
+
+void
+gui_command_buffer_push_scissor(gui_command_buffer *buffer, gui_float x, gui_float y,
+    gui_float w, gui_float h)
+{
+    struct gui_command_scissor *cmd;
+    ASSERT(buffer);
+    if (!buffer) return;
+
+    cmd = gui_command_buffer_push(buffer, GUI_COMMAND_SCISSOR, sizeof(*cmd));
+    if (!cmd) return;
+    cmd->x = (gui_short)x;
+    cmd->y = (gui_short)y;
+    cmd->w = (gui_ushort)MAX(0, w);
+    cmd->h = (gui_ushort)MAX(0, h);
+}
+
+void
+gui_command_buffer_push_line(gui_command_buffer *buffer, gui_float x0, gui_float y0,
+    gui_float x1, gui_float y1, struct gui_color c)
+{
+    struct gui_command_line *cmd;
+    ASSERT(buffer);
+    if (!buffer) return;
+
+    cmd = gui_command_buffer_push(buffer, GUI_COMMAND_LINE, sizeof(*cmd));
+    if (!cmd) return;
+    cmd->begin[0] = (gui_short)x0;
+    cmd->begin[1] = (gui_short)y0;
+    cmd->end[0] = (gui_short)x1;
+    cmd->end[1] = (gui_short)y1;
+    cmd->color = c;
+}
+
+void
+gui_command_buffer_push_rect(gui_command_buffer *buffer, gui_float x, gui_float y,
+    gui_float w, gui_float h, struct gui_color c)
+{
+    struct gui_command_rect *cmd;
+    ASSERT(buffer);
+    if (!buffer) return;
+
+    cmd = gui_command_buffer_push(buffer, GUI_COMMAND_RECT, sizeof(*cmd));
+    if (!cmd) return;
+    cmd->x = (gui_short)x;
+    cmd->y = (gui_short)y;
+    cmd->w = (gui_ushort)MAX(0, w);
+    cmd->h = (gui_ushort)MAX(0, h);
+    cmd->color = c;
+}
+
+void
+gui_command_buffer_push_circle(gui_command_buffer *buffer, gui_float x, gui_float y,
+    gui_float w, gui_float h, struct gui_color c)
+{
+    struct gui_command_circle *cmd;
+    ASSERT(buffer);
+    if (!buffer) return;
+
+    cmd = gui_command_buffer_push(buffer, GUI_COMMAND_CIRCLE, sizeof(*cmd));
+    if (!cmd) return;
+    cmd->x = (gui_short)x;
+    cmd->y = (gui_short)y;
+    cmd->w = (gui_ushort)MAX(w, 0);
+    cmd->h = (gui_ushort)MAX(h, 0);
+    cmd->color = c;
+}
+
+void
+gui_command_buffer_push_triangle(gui_command_buffer *buffer, gui_float x0, gui_float y0,
+    gui_float x1, gui_float y1, gui_float x2, gui_float y2, struct gui_color c)
+{
+    struct gui_command_triangle *cmd;
+    ASSERT(buffer);
+    if (!buffer) return;
+
+    cmd = gui_command_buffer_push(buffer, GUI_COMMAND_TRIANGLE, sizeof(*cmd));
+    if (!cmd) return;
+    cmd->a[0] = (gui_short)x0;
+    cmd->a[1] = (gui_short)y0;
+    cmd->b[0] = (gui_short)x1;
+    cmd->b[1] = (gui_short)y1;
+    cmd->c[0] = (gui_short)x2;
+    cmd->c[1] = (gui_short)y2;
+    cmd->color = c;
+}
+
+void
+gui_command_buffer_push_image(gui_command_buffer *buffer, gui_float x, gui_float y,
+    gui_float w, gui_float h, gui_handle img)
+{
+    struct gui_command_image *cmd;
+    ASSERT(buffer);
+    if (!buffer) return;
+
+    cmd = gui_command_buffer_push(buffer, GUI_COMMAND_IMAGE, sizeof(*cmd));
+    if (!cmd) return;
+    cmd->x = (gui_short)x;
+    cmd->y = (gui_short)y;
+    cmd->w = (gui_ushort)MAX(0, w);
+    cmd->h = (gui_ushort)MAX(0, h);
+    cmd->img = img;
+}
+
+void
+gui_command_buffer_push_text(gui_command_buffer *buffer, gui_float x, gui_float y,
+    gui_float w, gui_float h, const gui_char *string, gui_size length,
+    const struct gui_font *font, struct gui_color bg, struct gui_color fg)
+{
+    struct gui_command_text *cmd;
+    ASSERT(buffer);
+    ASSERT(font);
+    if (!buffer || !string || !length) return;
+
+    cmd = gui_command_buffer_push(buffer, GUI_COMMAND_TEXT, sizeof(*cmd) + length + 1);
+    if (!cmd) return;
+    cmd->x = (gui_short)x;
+    cmd->y = (gui_short)y;
+    cmd->w = (gui_ushort)w;
+    cmd->h = (gui_ushort)h;
+    cmd->bg = bg;
+    cmd->fg = fg;
+    cmd->font = font->userdata;
+    cmd->length = length;
+    memcopy(cmd->string, string, length);
+    cmd->string[length] = '\0';
+}
+
+
+/*
+ * ==============================================================
+ *
  *                          Widgets
  *
  * ===============================================================
@@ -451,7 +716,7 @@ gui_button_triangle(gui_command_buffer *out, gui_float x, gui_float y,
 
 gui_bool
 gui_button_image(gui_command_buffer *out, gui_float x, gui_float y,
-    gui_float w, gui_float h, gui_image img, enum gui_button_behavior b,
+    gui_float w, gui_float h, gui_handle img, enum gui_button_behavior b,
     const struct gui_button *button, const struct gui_input *in)
 {
     gui_bool pressed;
@@ -890,270 +1155,6 @@ gui_scroll(gui_command_buffer *out, gui_float x, gui_float y,
     gui_command_buffer_push_rect(out, cursor_x, cursor_y, cursor_w,
         cursor_h, s->foreground);
     return scroll_offset;
-}
-
-/*
- * ==============================================================
- *
- *                          Buffer
- *
- * ===============================================================
- */
-void
-gui_buffer_init(struct gui_buffer *buffer, const struct gui_allocator *memory,
-    gui_size initial_size, gui_float grow_factor)
-{
-    ASSERT(buffer);
-    ASSERT(memory);
-    ASSERT(initial_size);
-    if (!buffer || !memory || !initial_size) return;
-
-    zero(buffer, sizeof(*buffer));
-    buffer->type = GUI_BUFFER_DYNAMIC;
-    buffer->memory.ptr = memory->alloc(memory->userdata, initial_size);
-    buffer->memory.size = initial_size;
-    buffer->grow_factor = grow_factor;
-    buffer->pool = *memory;
-}
-
-void
-gui_buffer_init_fixed(struct gui_buffer *buffer, void *memory, gui_size size)
-{
-    ASSERT(buffer);
-    ASSERT(memory);
-    ASSERT(size);
-    if (!buffer || !memory || !size) return;
-
-    zero(buffer, sizeof(*buffer));
-    buffer->type = GUI_BUFFER_FIXED;
-    buffer->memory.ptr = memory;
-    buffer->memory.size = size;
-}
-
-void*
-gui_buffer_alloc(struct gui_buffer *b, gui_size size, gui_size align)
-{
-    gui_size cap;
-    gui_size alignment;
-    void *unaligned;
-    void *memory;
-
-    ASSERT(b);
-    if (!b || !size) return NULL;
-    b->needed += size;
-
-    unaligned = PTR_ADD(void, b->memory.ptr, b->allocated);
-    memory = ALIGN_PTR(unaligned, align);
-    alignment = (gui_size)((gui_byte*)memory - (gui_byte*)unaligned);
-
-    if ((b->allocated + size + alignment) >= b->memory.size) {
-        if (b->type != GUI_BUFFER_DYNAMIC || !b->pool.realloc)
-            return NULL;
-
-        cap = (gui_size)((gui_float)b->memory.size * b->grow_factor);
-        b->memory.ptr = b->pool.realloc(b->pool.userdata, b->memory.ptr, cap);
-        if (!b->memory.ptr) return NULL;
-
-        b->memory.size = cap;
-        unaligned = PTR_ADD(gui_byte, b->memory.ptr, b->allocated);
-        memory = ALIGN_PTR(unaligned, align);
-        alignment = (gui_size)((gui_byte*)memory - (gui_byte*)unaligned);
-    }
-
-    b->allocated += size + alignment;
-    b->needed += alignment;
-    b->calls++;
-    return memory;
-}
-
-void
-gui_buffer_reset(struct gui_buffer *buffer)
-{
-    ASSERT(buffer);
-    if (!buffer) return;
-    buffer->allocated = 0;
-    buffer->calls = 0;
-}
-
-void
-gui_buffer_clear(struct gui_buffer *buffer)
-{
-    ASSERT(buffer);
-    if (!buffer || !buffer->memory.ptr) return;
-    if (buffer->type == GUI_BUFFER_FIXED) return;
-    if (!buffer->pool.free) return;
-    buffer->pool.free(buffer->pool.userdata, buffer->memory.ptr);
-}
-
-void
-gui_buffer_info(struct gui_memory_status *status, struct gui_buffer *buffer)
-{
-    ASSERT(buffer);
-    ASSERT(status);
-    if (!status || !buffer) return;
-    status->allocated = buffer->allocated;
-    status->size =  buffer->memory.size;
-    status->needed = buffer->needed;
-    status->memory = buffer->memory.ptr;
-    status->calls = buffer->calls;
-}
-
-/*
- * ==============================================================
- *
- *                          Command buffer
- *
- * ===============================================================
- */
-void*
-gui_command_buffer_push(gui_command_buffer* buffer,
-    enum gui_command_type type, gui_size size)
-{
-    static const gui_size align = ALIGNOF(struct gui_command);
-    struct gui_command *cmd;
-    gui_size alignment;
-    void *unaligned;
-    void *memory;
-    ASSERT(buffer);
-    if (!buffer) return NULL;
-
-    cmd = gui_buffer_alloc(buffer, size, align);
-    if (!cmd) return NULL;
-
-    unaligned = (gui_byte*)cmd + size;
-    memory = ALIGN_PTR(unaligned, align);
-    alignment = (gui_size)((gui_byte*)memory - (gui_byte*)unaligned);
-
-    cmd->type = type;
-    cmd->offset = size + alignment;
-    return cmd;
-}
-
-void
-gui_command_buffer_push_scissor(gui_command_buffer *buffer, gui_float x, gui_float y,
-    gui_float w, gui_float h)
-{
-    struct gui_command_scissor *cmd;
-    ASSERT(buffer);
-    if (!buffer) return;
-
-    cmd = gui_command_buffer_push(buffer, GUI_COMMAND_SCISSOR, sizeof(*cmd));
-    if (!cmd) return;
-    cmd->x = (gui_short)x;
-    cmd->y = (gui_short)y;
-    cmd->w = (gui_ushort)MAX(0, w);
-    cmd->h = (gui_ushort)MAX(0, h);
-}
-
-void
-gui_command_buffer_push_line(gui_command_buffer *buffer, gui_float x0, gui_float y0,
-    gui_float x1, gui_float y1, struct gui_color c)
-{
-    struct gui_command_line *cmd;
-    ASSERT(buffer);
-    if (!buffer) return;
-
-    cmd = gui_command_buffer_push(buffer, GUI_COMMAND_LINE, sizeof(*cmd));
-    if (!cmd) return;
-    cmd->begin[0] = (gui_short)x0;
-    cmd->begin[1] = (gui_short)y0;
-    cmd->end[0] = (gui_short)x1;
-    cmd->end[1] = (gui_short)y1;
-    cmd->color = c;
-}
-
-void
-gui_command_buffer_push_rect(gui_command_buffer *buffer, gui_float x, gui_float y,
-    gui_float w, gui_float h, struct gui_color c)
-{
-    struct gui_command_rect *cmd;
-    ASSERT(buffer);
-    if (!buffer) return;
-
-    cmd = gui_command_buffer_push(buffer, GUI_COMMAND_RECT, sizeof(*cmd));
-    if (!cmd) return;
-    cmd->x = (gui_short)x;
-    cmd->y = (gui_short)y;
-    cmd->w = (gui_ushort)MAX(0, w);
-    cmd->h = (gui_ushort)MAX(0, h);
-    cmd->color = c;
-}
-
-void
-gui_command_buffer_push_circle(gui_command_buffer *buffer, gui_float x, gui_float y,
-    gui_float w, gui_float h, struct gui_color c)
-{
-    struct gui_command_circle *cmd;
-    ASSERT(buffer);
-    if (!buffer) return;
-
-    cmd = gui_command_buffer_push(buffer, GUI_COMMAND_CIRCLE, sizeof(*cmd));
-    if (!cmd) return;
-    cmd->x = (gui_short)x;
-    cmd->y = (gui_short)y;
-    cmd->w = (gui_ushort)MAX(w, 0);
-    cmd->h = (gui_ushort)MAX(h, 0);
-    cmd->color = c;
-}
-
-void
-gui_command_buffer_push_triangle(gui_command_buffer *buffer, gui_float x0, gui_float y0,
-    gui_float x1, gui_float y1, gui_float x2, gui_float y2, struct gui_color c)
-{
-    struct gui_command_triangle *cmd;
-    ASSERT(buffer);
-    if (!buffer) return;
-
-    cmd = gui_command_buffer_push(buffer, GUI_COMMAND_TRIANGLE, sizeof(*cmd));
-    if (!cmd) return;
-    cmd->a[0] = (gui_short)x0;
-    cmd->a[1] = (gui_short)y0;
-    cmd->b[0] = (gui_short)x1;
-    cmd->b[1] = (gui_short)y1;
-    cmd->c[0] = (gui_short)x2;
-    cmd->c[1] = (gui_short)y2;
-    cmd->color = c;
-}
-
-void
-gui_command_buffer_push_image(gui_command_buffer *buffer, gui_float x, gui_float y,
-    gui_float w, gui_float h, gui_image img)
-{
-    struct gui_command_image *cmd;
-    ASSERT(buffer);
-    if (!buffer) return;
-
-    cmd = gui_command_buffer_push(buffer, GUI_COMMAND_IMAGE, sizeof(*cmd));
-    if (!cmd) return;
-    cmd->x = (gui_short)x;
-    cmd->y = (gui_short)y;
-    cmd->w = (gui_ushort)MAX(0, w);
-    cmd->h = (gui_ushort)MAX(0, h);
-    cmd->img = img;
-}
-
-void
-gui_command_buffer_push_text(gui_command_buffer *buffer, gui_float x, gui_float y,
-    gui_float w, gui_float h, const gui_char *string, gui_size length,
-    const struct gui_font *font, struct gui_color bg, struct gui_color fg)
-{
-    struct gui_command_text *cmd;
-    ASSERT(buffer);
-    ASSERT(font);
-    if (!buffer || !string || !length) return;
-
-    cmd = gui_command_buffer_push(buffer, GUI_COMMAND_TEXT, sizeof(*cmd) + length + 1);
-    if (!cmd) return;
-    cmd->x = (gui_short)x;
-    cmd->y = (gui_short)y;
-    cmd->w = (gui_ushort)w;
-    cmd->h = (gui_ushort)h;
-    cmd->bg = bg;
-    cmd->fg = fg;
-    cmd->font = font->userdata;
-    cmd->length = length;
-    memcopy(cmd->string, string, length);
-    cmd->string[length] = '\0';
 }
 
 /*
@@ -1901,7 +1902,7 @@ gui_panel_button_triangle(struct gui_panel_layout *layout, enum gui_heading head
 }
 
 gui_bool
-gui_panel_button_image(struct gui_panel_layout *layout, gui_image image,
+gui_panel_button_image(struct gui_panel_layout *layout, gui_handle image,
     enum gui_button_behavior behavior)
 {
     struct gui_rect bounds;

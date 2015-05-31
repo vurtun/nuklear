@@ -22,6 +22,7 @@ extern "C" {
 /* Types */
 #ifdef GUI_USE_FIXED_TYPES
 #include <stdint.h>
+typedef int8_t gui_char;
 typedef int32_t gui_int;
 typedef int32_t gui_bool;
 typedef int16_t gui_short;
@@ -31,13 +32,13 @@ typedef uint16_t gui_ushort;
 typedef uint32_t gui_uint;
 typedef uint64_t gui_ulong;
 typedef uint32_t gui_flags;
-typedef uint8_t gui_char;
 typedef uint8_t gui_byte;
 typedef uint32_t gui_flag;
 typedef uint64_t gui_size;
 #else
 typedef int gui_int;
 typedef int gui_bool;
+typedef char gui_char;
 typedef short gui_short;
 typedef long gui_long;
 typedef float gui_float;
@@ -45,7 +46,6 @@ typedef unsigned short gui_ushort;
 typedef unsigned int gui_uint;
 typedef unsigned long gui_ulong;
 typedef unsigned int gui_flags;
-typedef unsigned char gui_char;
 typedef unsigned char gui_byte;
 typedef unsigned int gui_flag;
 typedef unsigned long gui_size;
@@ -61,10 +61,10 @@ struct gui_key {gui_bool down, clicked;};
 struct gui_font;
 
 /* Callbacks */
-typedef void* gui_image;
+typedef union {void *ptr; gui_int id;} gui_handle;
 typedef gui_char gui_glyph[GUI_UTF_SIZE];
 typedef gui_bool(*gui_filter)(gui_long unicode);
-typedef gui_size(*gui_text_width_f)(void*, const gui_char*, gui_size);
+typedef gui_size(*gui_text_width_f)(gui_handle, const gui_char*, gui_size);
 
 /*
  * ==============================================================
@@ -125,10 +125,10 @@ struct gui_memory_status {
 };
 
 struct gui_allocator {
-    void *userdata;
-    void*(*alloc)(void *usr, gui_size);
-    void*(*realloc)(void *usr, void*, gui_size);
-    void(*free)(void *usr, void*);
+    gui_handle userdata;
+    void*(*alloc)(gui_handle, gui_size);
+    void*(*realloc)(gui_handle, void*, gui_size);
+    void(*free)(gui_handle, void*);
 };
 
 struct gui_memory {
@@ -216,7 +216,7 @@ struct gui_command_image {
     struct gui_command header;
     gui_short x, y;
     gui_ushort w, h;
-    gui_image img;
+    gui_handle img;
 };
 
 struct gui_command_triangle {
@@ -229,11 +229,11 @@ struct gui_command_triangle {
 
 struct gui_command_text {
     struct gui_command header;
-    void *font;
-    gui_short x, y;
-    gui_ushort w, h;
+    gui_handle font;
     struct gui_color bg;
     struct gui_color fg;
+    gui_short x, y;
+    gui_ushort w, h;
     gui_size length;
     gui_char string[1];
 };
@@ -255,7 +255,7 @@ void gui_command_buffer_push_circle(gui_command_buffer*, gui_float, gui_float,
 void gui_command_buffer_push_triangle(gui_command_buffer*, gui_float, gui_float,
                     gui_float, gui_float, gui_float, gui_float, struct gui_color);
 void gui_command_buffer_push_image(gui_command_buffer*, gui_float,
-                    gui_float, gui_float, gui_float, gui_image);
+                    gui_float, gui_float, gui_float, gui_handle);
 void gui_command_buffer_push_text(gui_command_buffer*, gui_float, gui_float,
                     gui_float, gui_float, const gui_char*, gui_size,
                     const struct gui_font*, struct gui_color, struct gui_color);
@@ -280,7 +280,7 @@ void gui_command_buffer_push_text(gui_command_buffer*, gui_float, gui_float,
  * ===============================================================
  */
 struct gui_font {
-    void *userdata;
+    gui_handle userdata;
     gui_float height;
     gui_text_width_f width;
 };
@@ -388,7 +388,7 @@ gui_bool gui_button_text(gui_command_buffer*, gui_float x, gui_float y,
                     gui_float w, gui_float h, const char*, enum gui_button_behavior,
                     const struct gui_button*, const struct gui_input*, const struct gui_font*);
 gui_bool gui_button_image(gui_command_buffer*, gui_float x, gui_float y,
-                    gui_float w, gui_float h, gui_image, enum gui_button_behavior,
+                    gui_float w, gui_float h, gui_handle img, enum gui_button_behavior,
                     const struct gui_button*, const struct gui_input*);
 gui_bool gui_button_triangle(gui_command_buffer*, gui_float x, gui_float y,
                     gui_float w, gui_float h, enum gui_heading, enum gui_button_behavior,
@@ -546,8 +546,6 @@ enum gui_panel_flags {
     GUI_PANEL_TAB = 0x400
 };
 
-struct gui_layout;
-struct gui_stack;
 struct gui_panel {
     gui_float x, y;
     gui_float w, h;
@@ -580,6 +578,8 @@ struct gui_panel_layout {
 };
 
 /* Panel */
+struct gui_stack;
+struct gui_layout;
 void gui_panel_init(struct gui_panel*, gui_float x, gui_float y, gui_float w,
                     gui_float h, gui_flags, gui_command_buffer*, const struct gui_config*);
 gui_bool gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel*,
@@ -607,7 +607,7 @@ gui_bool gui_panel_button_color(struct gui_panel_layout*, const struct gui_color
                     enum gui_button_behavior);
 gui_bool gui_panel_button_triangle(struct gui_panel_layout*, enum gui_heading,
                     enum gui_button_behavior);
-gui_bool gui_panel_button_image(struct gui_panel_layout*, gui_image image,
+gui_bool gui_panel_button_image(struct gui_panel_layout*, gui_handle img,
                     enum gui_button_behavior);
 gui_bool gui_panel_button_toggle(struct gui_panel_layout*, const char*, gui_bool value);
 gui_float gui_panel_slider(struct gui_panel_layout*, gui_float min, gui_float val,
