@@ -282,7 +282,6 @@ gui_stack_push(&stack, &panel);
 
 struct gui_input input = {0};
 while (1) {
-
     gui_input_begin(&input);
     /* record input */
     gui_input_end(&input);
@@ -331,14 +330,11 @@ gui_layout_init(&tiled, &ratio, window_width, window_height);
 gui_layout_slot(&tiled, GUI_SLOT_LEFT, GUI_LAYOUT_VERTICAL, 1);
 
 while (1) {
-    struct gui_panel_layout layout;
-    struct gui_canvas canvas;
-    struct gui_panel_stack stack;
-
     gui_input_begin(&input);
     /* record input */
     gui_input_end(&input);
 
+    struct gui_panel_layout layout;
     gui_panel_begin_tiled(&layout, &panel, &tiled, GUI_SLOT_LEFT, 0, "Demo", &input);
     gui_panel_row(&layout, 30, 1);
     if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT))
