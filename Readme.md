@@ -43,7 +43,7 @@ gui_command_buffer_init_fixed(buffer, memory, MEMORY_SIZE);
 /* setup configuration */
 struct gui_config config;
 struct gui_font font = {...};
-gui_config_default(&config, &font);
+gui_config_default(&config, GUI_DEFAULT_ALL, &font);
 
 /* initialize panel */
 struct gui_panel panel;
@@ -269,7 +269,7 @@ gui_buffer_init_fixed(buffer, memory, size);
 /* setup configuration data */
 struct gui_config config;
 struct gui_font font = {...}
-gui_config_default(&config, &font);
+gui_config_default(&config, GUI_DEFAULT_ALL, &font);
 
 /* setup panel */
 struct gui_panel panel;
@@ -319,7 +319,7 @@ gui_buffer_init_fixed(buffer, memory, size);
 
 struct gui_config config;
 struct gui_font font = {...}
-gui_config_default(&config, &font);
+gui_config_default(&config, GUI_DEFAULT_ALL, &font);
 
 struct gui_panel panel;
 struct gui_input input = {0};
