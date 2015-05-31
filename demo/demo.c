@@ -363,7 +363,7 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
     gui_command_buffer_init_fixed(&gui->show_buffer, gui->memory, MAX_MEMORY/2);
     gui_command_buffer_init_fixed(&gui->control_buffer,
         GUI_PTR_ADD(void*, gui->memory, (MAX_MEMORY/2)), MAX_MEMORY/2);
-    gui_config_default(config, font);
+    gui_config_default(config, GUI_DEFAULT_ALL, font);
 
     gui_stack_clear(&gui->stack);
     init_show(&gui->show, config, &gui->show_buffer, &gui->stack);

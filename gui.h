@@ -200,6 +200,7 @@ struct gui_command_line {
 
 struct gui_command_rect {
     struct gui_command header;
+    gui_uint r;
     gui_short x, y;
     gui_ushort w, h;
     struct gui_color color;
@@ -249,7 +250,7 @@ void gui_command_buffer_push_scissor(gui_command_buffer*, gui_float,
 void gui_command_buffer_push_line(gui_command_buffer*, gui_float, gui_float,
                     gui_float, gui_float, struct gui_color);
 void gui_command_buffer_push_rect(gui_command_buffer *buffer, gui_float x,
-                    gui_float y, gui_float w, gui_float h, struct gui_color c);
+                    gui_float y, gui_float w, gui_float h, gui_float r, struct gui_color c);
 void gui_command_buffer_push_circle(gui_command_buffer*, gui_float, gui_float,
                     gui_float, gui_float, struct gui_color);
 void gui_command_buffer_push_triangle(gui_command_buffer*, gui_float, gui_float,
@@ -305,6 +306,7 @@ enum gui_button_behavior {
 
 struct gui_button {
     gui_float border;
+    gui_float rounding;
     struct gui_vec2 padding;
     struct gui_color background;
     struct gui_color foreground;
@@ -319,6 +321,7 @@ enum gui_toggle_type {
 };
 
 struct gui_toggle {
+    gui_float rounding;
     struct gui_vec2 padding;
     struct gui_color font;
     struct gui_color background;
@@ -327,6 +330,7 @@ struct gui_toggle {
 };
 
 struct gui_progress {
+    gui_float rounding;
     struct gui_vec2 padding;
     struct gui_color background;
     struct gui_color foreground;
@@ -347,6 +351,7 @@ struct gui_slider {
 };
 
 struct gui_scroll {
+    gui_float rounding;
     struct gui_color background;
     struct gui_color foreground;
     struct gui_color border;
@@ -363,6 +368,7 @@ enum gui_input_filter {
 };
 
 struct gui_edit {
+    gui_float rounding;
     struct gui_vec2 padding;
     gui_bool show_cursor;
     struct gui_color cursor;
@@ -491,6 +497,17 @@ enum gui_config_colors {
     GUI_COLOR_COUNT
 };
 
+enum gui_config_rounding {
+    GUI_ROUNDING_PANEL,
+    GUI_ROUNDING_BUTTON,
+    GUI_ROUNDING_CHECK,
+    GUI_ROUNDING_PROGRESS,
+    GUI_ROUNDING_INPUT,
+    GUI_ROUNDING_GRAPH,
+    GUI_ROUNDING_SCROLLBAR,
+    GUI_ROUNDING_MAX
+};
+
 enum gui_config_properties {
     GUI_PROPERTY_ITEM_SPACING,
     GUI_PROPERTY_ITEM_PADDING,
@@ -511,9 +528,17 @@ struct gui_saved_color {
     struct gui_color value;
 };
 
+enum gui_config_components {
+    GUI_DEFAULT_COLOR = 0x01,
+    GUI_DEFAULT_PROPERTIES = 0x02,
+    GUI_DEFAULT_ROUNDING = 0x04,
+    GUI_DEFAULT_ALL = 0xFFFF,
+};
+
 struct gui_config {
     struct gui_font font;
     enum gui_slider_cursor slider_cursor;
+    gui_float rounding[GUI_ROUNDING_MAX];
     struct gui_vec2 properties[GUI_PROPERTY_MAX];
     struct gui_color colors[GUI_COLOR_COUNT];
     struct gui_saved_property property_stack[GUI_MAX_ATTRIB_STACK];
@@ -521,7 +546,7 @@ struct gui_config {
     gui_size color, property;
 };
 
-void gui_config_default(struct gui_config*, const struct gui_font*);
+void gui_config_default(struct gui_config*, gui_flags, const struct gui_font*);
 struct gui_vec2 gui_config_property(const struct gui_config*, enum gui_config_properties);
 struct gui_color gui_config_color(const struct gui_config*, enum gui_config_colors);
 void gui_config_push_property(struct gui_config*, enum gui_config_properties, gui_float, gui_float);
