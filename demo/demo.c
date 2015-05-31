@@ -9,10 +9,6 @@ struct show_window {
     gui_char input_buffer[MAX_BUFFER];
     gui_size input_length;
     gui_bool input_active;
-    /* command buffer */
-    gui_char command_buffer[MAX_BUFFER];
-    gui_size command_length;
-    gui_bool command_active;
     /* widgets state */
     gui_bool checkbox;
     gui_float slider;
@@ -102,8 +98,6 @@ widget_panel(struct gui_panel_layout *panel, struct show_window *demo)
     gui_panel_row(panel, 30, 1);
     demo->item_current = gui_panel_selector(panel, items, LEN(items), demo->item_current);
     demo->spinner = gui_panel_spinner(panel, 0, demo->spinner, 250, 10, &demo->spinner_active);
-    if (gui_panel_shell(panel, demo->command_buffer, &demo->command_length, MAX_BUFFER,
-        &demo->command_active)) demo->command_length = 0;
     demo->input_length = gui_panel_edit(panel, demo->input_buffer, demo->input_length,
         MAX_BUFFER, &demo->input_active, GUI_INPUT_DEFAULT);
 }

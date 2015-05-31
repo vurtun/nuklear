@@ -2275,63 +2275,6 @@ gui_panel_edit_filtered(struct gui_panel_layout *layout, gui_char *buffer, gui_s
         buffer, len, max, active, &field, filter, layout->input, &config->font);
 }
 
-gui_bool
-gui_panel_shell(struct gui_panel_layout *layout, gui_char *buffer, gui_size *len,
-    gui_size max, gui_bool *active)
-{
-    struct gui_rect bounds;
-    struct gui_edit field;
-    struct gui_button button;
-    struct gui_vec2 item_padding;
-    struct gui_vec2 item_spacing;
-    gui_float button_x, button_y;
-    gui_float button_w, button_h;
-    gui_float field_x, field_y;
-    gui_float field_w, field_h;
-    const struct gui_config *config;
-    gui_bool clicked = gui_false;
-    gui_size width;
-    if (!gui_panel_widget(&bounds, layout))
-        return *active;
-
-    config = layout->config;
-    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
-    item_spacing = gui_config_property(config, GUI_PROPERTY_ITEM_SPACING);
-
-    width = config->font.width(config->font.userdata, (const gui_char*)"submit", 6);
-    button.border = 1;
-    button_y = bounds.y;
-    button_h = bounds.h;
-    button_w = (gui_float)width + item_padding.x * 2;
-    button_w += button.border * 2;
-    button_x = bounds.x + bounds.w - button_w;
-    button.rounding = 0;
-    button.padding.x = item_padding.x;
-    button.padding.y = item_padding.y;
-    button.background = config->colors[GUI_COLOR_BUTTON];
-    button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
-    button.content = config->colors[GUI_COLOR_TEXT];
-    button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
-    button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
-    clicked = gui_button_text(layout->buffer, button_x, button_y, button_w, button_h,
-                "submit", GUI_BUTTON_DEFAULT, &button, layout->input, &config->font);
-
-    field_x = bounds.x;
-    field_y = bounds.y;
-    field_w = bounds.w - button_w - item_spacing.x;
-    field_h = bounds.h;
-    field.rounding = 0;
-    field.padding.x = item_padding.x;
-    field.padding.y = item_padding.y;
-    field.show_cursor = gui_true;
-    field.cursor = config->colors[GUI_COLOR_INPUT_CURSOR];
-    field.background = config->colors[GUI_COLOR_INPUT];
-    field.foreground = config->colors[GUI_COLOR_INPUT_BORDER];
-    *len = gui_edit(layout->buffer, field_x, field_y, field_w, field_h, buffer,
-            *len, max, active, &field, GUI_INPUT_DEFAULT, layout->input, &config->font);
-    return clicked;
-}
-
 gui_int
 gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     gui_int max, gui_int step, gui_bool *active)

@@ -681,8 +681,6 @@ gui_size gui_panel_edit(struct gui_panel_layout*, gui_char *buffer, gui_size len
                     gui_size max, gui_bool *active, enum gui_input_filter);
 gui_size gui_panel_edit_filtered(struct gui_panel_layout*, gui_char *buffer, gui_size len,
                     gui_size max, gui_bool *active, gui_filter);
-gui_bool gui_panel_shell(struct gui_panel_layout*, gui_char *buffer, gui_size *len,
-                    gui_size max, gui_bool *active);
 gui_int gui_panel_spinner(struct gui_panel_layout*, gui_int min, gui_int value,
                     gui_int max, gui_int step, gui_bool *active);
 gui_size gui_panel_selector(struct gui_panel_layout*, const char *items[],
