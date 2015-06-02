@@ -299,8 +299,8 @@ execute(XSurface *surf, gui_command_buffer *buffer)
         } break;
         case GUI_COMMAND_TEXT: {
             const struct gui_command_text *t = gui_command(text, cmd);
-            XWindow *win = t->font;
-            surface_draw_text(surf, win->font.ptr, t->x, t->y, t->w, t->h, (const char*)t->string,
+            XWindow *win = t->font.ptr;
+            surface_draw_text(surf, win->font, t->x, t->y, t->w, t->h, (const char*)t->string,
                     t->length, t->bg.r, t->bg.g, t->bg.b, t->fg.r, t->fg.g, t->fg.b);
         } break;
         case GUI_COMMAND_IMAGE:
@@ -460,4 +460,3 @@ WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int shown)
     ReleaseDC(xw.hWnd, xw.hdc);
     return 0;
 }
-
