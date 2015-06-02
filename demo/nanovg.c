@@ -23,17 +23,17 @@
 #include "nanovg/nanovg.h"
 #include "nanovg/nanovg_gl.h"
 #include "nanovg/nanovg_gl_utils.h"
-#include "../gui.h"
 
 /* macros */
 #define DTIME       16
-#define MIN(a,b)    ((a) < (b) ? (a) : (b))
 #define MIN(a,b)    ((a) < (b) ? (a) : (b))
 #define MAX(a,b)    ((a) < (b) ? (b) : (a))
 #define CLAMP(i,v,x) (MAX(MIN(v,x), i))
 #define LEN(a)      (sizeof(a)/sizeof(a)[0])
 #define UNUSED(a)   ((void)(a))
 
+#define GUI_IMPLEMENTATION
+#include "../gui.h"
 #include "demo.c"
 
 static void
@@ -124,12 +124,12 @@ draw_image(NVGcontext *ctx, gui_handle img, float x, float y, float w, float h, 
 }
 
 static void
-execute(NVGcontext *nvg, gui_command_buffer *list, int width, int height)
+execute(NVGcontext *nvg, struct gui_command_buffer *list, int width, int height)
 {
     static const struct gui_color col = {255, 0, 0, 255};
     const struct gui_command *cmd;
 
-    glPushAttrib(GL_ENABLE_BIT|GL_COLOR_BUFFER_BIT|GL_TRANSFORM_BIT);
+    glPushAttrib(GL_ENABLE_BIT|GL_COLOR_BUFFER_BIT);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_CULL_FACE);
@@ -318,10 +318,12 @@ main(int argc, char *argv[])
         glClearColor(0.4f, 0.4f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         draw(vg, &gui.stack, width, height);
+        gui.ms = SDL_GetTicks() - started;
         SDL_GL_SwapWindow(win);
 
         /* Timing */
         dt = SDL_GetTicks() - started;
+        gui.ms = dt;
         if (dt < DTIME)
             SDL_Delay(DTIME - dt);
     }

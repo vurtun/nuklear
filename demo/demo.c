@@ -1,5 +1,5 @@
 #define MAX_BUFFER  64
-#define MAX_MEMORY  (32 * 1024)
+#define MAX_MEMORY  (64 * 1024)
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 
@@ -27,6 +27,7 @@ struct show_window {
     /* scrollbars */
     gui_float shelf_scrollbar;
     gui_float table_scrollbar;
+    gui_float time_scrollbar;
 };
 
 struct control_window {
@@ -35,6 +36,7 @@ struct control_window {
     /* tabs */
     gui_bool flag_tab;
     gui_bool style_tab;
+    gui_bool round_tab;
     gui_bool color_tab;
     /* color picker */
     gui_bool picker_active;
@@ -48,11 +50,12 @@ struct control_window {
 
 struct demo_gui {
     gui_bool running;
+    unsigned int ms;
     void *memory;
     struct show_window show;
     struct control_window control;
-    gui_command_buffer show_buffer;
-    gui_command_buffer control_buffer;
+    struct gui_command_buffer show_buffer;
+    struct gui_command_buffer control_buffer;
     struct gui_stack stack;
     struct gui_config config;
     struct gui_font font;
@@ -106,13 +109,27 @@ static void
 graph_panel(struct gui_panel_layout *panel, gui_size current)
 {
     enum {COL, PLOT};
-    static const gui_float values[] = {8.0f,15.0f,20.0f,12.0f,30.0f,12.0f,35.0f,40.0f,20.0f};
+    static const gui_float values[]={8.0f,15.0f,20.0f,12.0f,30.0f,12.0f,35.0f,40.0f,20.0f};
     gui_panel_row(panel, 100, 1);
     if (current == COL) {
         gui_panel_graph(panel, GUI_GRAPH_COLUMN, values, LEN(values), 0);
     } else {
         gui_panel_graph(panel, GUI_GRAPH_LINES, values, LEN(values), 0);
     }
+}
+
+static void
+time_panel(struct gui_panel_layout *panel, unsigned int ms)
+{
+    char buffer[MAX_BUFFER];
+    ms = MAX(1, ms);
+    gui_panel_row(panel, 20, 2);
+    gui_panel_label(panel, "FPS:", GUI_TEXT_LEFT);
+    sprintf(buffer, "%.2f", 1.0f/((float)ms/1000.0f));
+    gui_panel_label(panel, buffer, GUI_TEXT_CENTERED);
+    gui_panel_label(panel, "MS:", GUI_TEXT_LEFT);
+    sprintf(buffer, "%d", ms);
+    gui_panel_label(panel, buffer, GUI_TEXT_CENTERED);
 }
 
 static void
@@ -145,8 +162,9 @@ table_panel(struct gui_panel_layout *panel)
 
 static void
 init_show(struct show_window *win, struct gui_config *config,
-    gui_command_buffer *buffer, struct gui_stack *stack)
+    struct gui_command_buffer *buffer, struct gui_stack *stack)
 {
+    memset(win, 0, sizeof(*win));
     gui_panel_init(&win->hook, 20, 20, 300, 550,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
         GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
@@ -161,7 +179,8 @@ init_show(struct show_window *win, struct gui_config *config,
 }
 
 static void
-update_show(struct show_window *show, struct gui_stack *stack, struct gui_input *in)
+update_show(struct show_window *show, struct gui_stack *stack, struct gui_input *in,
+    unsigned int ms)
 {
     struct gui_panel_layout tab;
     struct gui_panel_layout layout;
@@ -175,6 +194,11 @@ update_show(struct show_window *show, struct gui_stack *stack, struct gui_input 
     show->widget_tab = gui_panel_tab_begin(&layout, &tab, "Widgets", show->widget_tab);
     widget_panel(&tab, show);
     gui_panel_tab_end(&layout, &tab);
+
+    gui_panel_row(&layout, 110, 1);
+    gui_panel_group_begin(&layout, &tab, "Time", show->time_scrollbar);
+    time_panel(&tab, ms);
+    show->time_scrollbar = gui_panel_group_end(&layout, &tab);
 
     gui_panel_row(&layout, 180, 1);
     show->shelf_selection = gui_panel_shelf_begin(&layout, &tab, shelfs,
@@ -198,7 +222,7 @@ update_flags(struct gui_panel_layout *panel, struct control_window *control)
     const char *options[]={"Hidden","Border","Minimizable","Closeable","Moveable","Scaleable"};
     gui_panel_row(panel, 30, 2);
     do {
-        if (gui_panel_check(panel, options[n++], (control->show_flags & i) ? gui_true : gui_false))
+        if (gui_panel_check(panel,options[n++],(control->show_flags & i)?gui_true:gui_false))
             res |= i;
         i = i << 1;
     } while (i <= GUI_PANEL_SCALEABLE);
@@ -206,68 +230,64 @@ update_flags(struct gui_panel_layout *panel, struct control_window *control)
 }
 
 static void
-style_tab(struct gui_panel_layout *panel, struct gui_config *config)
+properties_tab(struct gui_panel_layout *panel, struct gui_config *config)
 {
-    gui_int tx, ty;
-
-    gui_panel_row(panel, 30, 2);
-    gui_panel_label(panel, "scrollbar width:", GUI_TEXT_LEFT);
-    tx = gui_panel_spinner(panel,0,(gui_int)config->properties[GUI_PROPERTY_SCROLLBAR_WIDTH].x, 20, 1, NULL);
-    config->properties[GUI_PROPERTY_SCROLLBAR_WIDTH].x = (float)tx;
-    config->properties[GUI_PROPERTY_SCROLLBAR_WIDTH].y = (float)tx;
+    int i = 0;
+    const char *properties[] = {"item spacing", "item padding", "panel padding",
+        "scaler size:", "scrollbar width:"};
 
     gui_panel_row(panel, 30, 3);
-    gui_panel_label(panel, "panel padding:", GUI_TEXT_LEFT);
-    tx = gui_panel_spinner(panel,0,(gui_int)config->properties[GUI_PROPERTY_PADDING].x,20,1,NULL);
-    ty = gui_panel_spinner(panel,0,(gui_int)config->properties[GUI_PROPERTY_PADDING].y,20,1,NULL);
-    config->properties[GUI_PROPERTY_PADDING].x = (float)tx;
-    config->properties[GUI_PROPERTY_PADDING].y = (float)ty;
+    for (i = 0; i <= GUI_PROPERTY_SCROLLBAR_WIDTH; ++i) {
+        gui_int tx, ty;
+        gui_panel_label(panel, properties[i], GUI_TEXT_LEFT);
+        tx = gui_panel_spinner(panel,0,(gui_int)config->properties[i].x, 20, 1, NULL);
+        ty = gui_panel_spinner(panel,0,(gui_int)config->properties[i].y, 20, 1, NULL);
+        config->properties[i].x = (float)tx;
+        config->properties[i].y = (float)ty;
+    }
+}
 
-    gui_panel_label(panel, "item spacing:", GUI_TEXT_LEFT);
-    tx = gui_panel_spinner(panel,0,(gui_int)config->properties[GUI_PROPERTY_ITEM_SPACING].x,20,1,NULL);
-    ty = gui_panel_spinner(panel,0,(gui_int)config->properties[GUI_PROPERTY_ITEM_SPACING].y,20,1,NULL);
-    config->properties[GUI_PROPERTY_ITEM_SPACING].x = (float)tx;
-    config->properties[GUI_PROPERTY_ITEM_SPACING].y = (float)ty;
+static void
+round_tab(struct gui_panel_layout *panel, struct gui_config *config)
+{
+    int i = 0;
+    const char *rounding[] = {"panel:", "button:", "checkbox:", "progress:", "input: ",
+        "graph:", "scrollbar:"};
 
-    gui_panel_label(panel, "item padding:", GUI_TEXT_LEFT);
-    tx = gui_panel_spinner(panel,0,(gui_int)config->properties[GUI_PROPERTY_ITEM_PADDING].x,20,1,NULL);
-    ty = gui_panel_spinner(panel,0,(gui_int)config->properties[GUI_PROPERTY_ITEM_PADDING].y,20,1,NULL);
-    config->properties[GUI_PROPERTY_ITEM_PADDING].x = (float)tx;
-    config->properties[GUI_PROPERTY_ITEM_PADDING].y = (float)ty;
-
-    gui_panel_label(panel, "scaler size:", GUI_TEXT_LEFT);
-    tx = gui_panel_spinner(panel,0,(gui_int)config->properties[GUI_PROPERTY_SCALER_SIZE].x,20,1,NULL);
-    ty = gui_panel_spinner(panel,0,(gui_int)config->properties[GUI_PROPERTY_SCALER_SIZE].y,20,1,NULL);
-    config->properties[GUI_PROPERTY_SCALER_SIZE].x = (float)tx;
-    config->properties[GUI_PROPERTY_SCALER_SIZE].y = (float)ty;
+    gui_panel_row(panel, 30, 2);
+    for (i = 0; i < GUI_ROUNDING_MAX; ++i) {
+        gui_int t;
+        gui_panel_label(panel, rounding[i], GUI_TEXT_LEFT);
+        t = gui_panel_spinner(panel,0,(gui_int)config->rounding[i], 20, 1, NULL);
+        config->rounding[i] = (float)t;
+    }
 }
 
 static struct gui_color
 color_picker(struct gui_panel_layout *panel, struct control_window *control,
     const char *name, struct gui_color color)
 {
+    int i;
+    gui_byte *iter;
     gui_float r, g, b, a;
+    gui_bool *active[4];
+    active[0] = &control->spinner_r_active;
+    active[1] = &control->spinner_g_active;
+    active[2] = &control->spinner_b_active;
+    active[3] = &control->spinner_a_active;
+
     gui_panel_row(panel, 30, 2);
     gui_panel_label(panel, name, GUI_TEXT_LEFT);
     gui_panel_button_color(panel, color, GUI_BUTTON_DEFAULT);
+
+    iter = &color.r;
     gui_panel_row(panel, 30, 2);
-    r = color.r; g = color.g; b = color.b; a = color.a;
-
-    r = gui_panel_slider(panel, 0, r, 255, 10);
-    color.r = (gui_byte)r;
-    color.r = (gui_byte)gui_panel_spinner(panel, 0, color.r, 255, 1, &control->spinner_r_active);
-
-    g = gui_panel_slider(panel, 0, g, 255, 10);
-    color.g = (gui_byte)g;
-    color.g = (gui_byte)gui_panel_spinner(panel, 0, color.g, 255, 1, &control->spinner_g_active);
-
-    b = gui_panel_slider(panel, 0, b, 255, 10);
-    color.b = (gui_byte)b;
-    color.b = (gui_byte)gui_panel_spinner(panel, 0,(gui_int)color.b, 255, 1, &control->spinner_b_active);
-
-    a = gui_panel_slider(panel, 0, a, 255, 10);
-    color.a = (gui_byte)a;
-    color.a = (gui_byte)gui_panel_spinner(panel, 0, (gui_int)color.a, 255, 1, &control->spinner_a_active);
+    for (i = 0; i < 4; ++i, iter++) {
+        gui_float t = *iter;
+        t = gui_panel_slider(panel, 0, t, 255, 10);
+        *iter = (gui_byte)t;
+        *iter = (gui_byte)gui_panel_spinner(panel, 0, *iter, 255, 1, active[i]);
+    }
     return color;
 }
 
@@ -279,11 +299,12 @@ color_tab(struct gui_panel_layout *panel, struct control_window *control, struct
         "Button Border:", "Button Hovering:", "Button Toggle:", "Button Hovering Text:",
         "Check:", "Check BG:", "Check Active:", "Option:", "Option BG:", "Option Active:",
         "Slider:", "Slider bar:", "Slider boder:","Slider cursor:", "Progress:", "Progress Cursor:",
-        "Editbox:", "Editbox cursor:", "Editbox Border:", "Spinner:", "Spinner Border:", "Spinner Triangle:",
-        "Selector:", "Selector Border:", "Selector Triangle:", "Histo:", "Histo Bars:", "Histo Negative:",
-        "Histo Hovering:", "Plot:", "Plot Lines:", "Plot Hightlight:", "Scrollbar:",
-        "Scrollbar Cursor:", "Scrollbar Border:", "Table lines:", "Shelf:", "Shelf Text:",
-        "Shelf Active:", "Shelf Active Text:", "Scaler:"
+        "Editbox:", "Editbox cursor:", "Editbox Border:", "Editbox Text:",
+        "Spinner:", "Spinner Border:", "Spinner Triangle:", "Spinner Text:",
+        "Selector:", "Selector Border:", "Selector Triangle:", "Selector Text:",
+        "Histo:", "Histo Bars:", "Histo Negative:", "Histo Hovering:", "Plot:", "Plot Lines:",
+        "Plot Hightlight:", "Scrollbar:", "Scrollbar Cursor:", "Scrollbar Border:",
+        "Table lines:", "Shelf:", "Shelf Text:", "Shelf Active:", "Shelf Active Text:", "Scaler:"
     };
 
     if (control->picker_active) {
@@ -313,8 +334,9 @@ color_tab(struct gui_panel_layout *panel, struct control_window *control, struct
 
 static void
 init_control(struct control_window *win, struct gui_config *config,
-    gui_command_buffer *buffer, struct gui_stack *stack)
+    struct gui_command_buffer *buffer, struct gui_stack *stack)
 {
+    memset(win, 0, sizeof(*win));
     gui_panel_init(&win->hook, 380, 20, 350, 500,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE,
         buffer, config);
@@ -336,8 +358,12 @@ update_control(struct control_window *control, struct gui_stack *stack,
     update_flags(&tab, control);
     gui_panel_tab_end(&layout, &tab);
 
-    control->style_tab = gui_panel_tab_begin(&layout, &tab, "Style", control->style_tab);
-    style_tab(&tab, config);
+    control->style_tab = gui_panel_tab_begin(&layout, &tab, "Properties", control->style_tab);
+    properties_tab(&tab, config);
+    gui_panel_tab_end(&layout, &tab);
+
+    control->round_tab = gui_panel_tab_begin(&layout, &tab, "Rounding", control->round_tab);
+    round_tab(&tab, config);
     gui_panel_tab_end(&layout, &tab);
 
     control->color_tab = gui_panel_tab_begin(&layout, &tab, "Color", control->color_tab);
@@ -354,9 +380,9 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
     struct gui_config *config = &gui->config;
     gui->font = *font;
     gui->running = gui_true;
-    gui_command_buffer_init_fixed(&gui->show_buffer, gui->memory, MAX_MEMORY/2);
+    gui_command_buffer_init_fixed(&gui->show_buffer, gui->memory, MAX_MEMORY/2, GUI_CLIP);
     gui_command_buffer_init_fixed(&gui->control_buffer,
-        GUI_PTR_ADD(void*, gui->memory, (MAX_MEMORY/2)), MAX_MEMORY/2);
+        GUI_PTR_ADD(void*, gui->memory, (MAX_MEMORY/2)), MAX_MEMORY/2, GUI_CLIP);
     gui_config_default(config, GUI_DEFAULT_ALL, font);
 
     gui_stack_clear(&gui->stack);
@@ -373,7 +399,7 @@ run_demo(struct demo_gui *gui, struct gui_input *input)
 
     gui->running = update_control(control, &gui->stack, input, &gui->config);
     show->hook.flags = control->show_flags;
-    update_show(show, &gui->stack, input);
+    update_show(show, &gui->stack, input, gui->ms);
     if (show->hook.flags & GUI_PANEL_HIDDEN)
         control->show_flags |= GUI_PANEL_HIDDEN;
 }

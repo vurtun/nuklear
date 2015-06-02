@@ -14,8 +14,6 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
-#include "../gui.h"
-
 /* macros */
 #define DTIME       16
 #define MIN(a,b)    ((a) < (b) ? (a) : (b))
@@ -24,6 +22,8 @@
 #define LEN(a)      (sizeof(a)/sizeof(a)[0])
 #define UNUSED(a)   ((void)(a))
 
+#define GUI_IMPLEMENTATION
+#include "../gui.h"
 #include "demo.c"
 
 typedef struct XFont XFont;
@@ -223,6 +223,30 @@ surface_draw_line(XSurface *surf, gui_short x0, gui_short y0, gui_short x1,
 }
 
 static void
+surface_draw_round_rect(XSurface* surf, gui_short x, gui_short y, gui_ushort w,
+    gui_ushort h, gui_ushort r, struct gui_color col)
+{
+    unsigned long c = color_from_byte(col);
+    gui_int mx, my;
+    gui_int mw, mh;
+    mx = x + r; my = y + r;
+    mw = w - (r * 2);
+    mh = h - (r * 2);
+
+    XSetForeground(surf->dpy, surf->gc, c);
+    XFillRectangle(surf->dpy, surf->drawable, surf->gc, mx, my, (gui_ushort)mw, (gui_ushort)mh);
+    XFillRectangle(surf->dpy, surf->drawable, surf->gc, mx, y, (gui_ushort)mw, r);
+    XFillRectangle(surf->dpy, surf->drawable, surf->gc, mx+mw, my, r, (gui_ushort)mh);
+    XFillRectangle(surf->dpy, surf->drawable, surf->gc, mx, my+mh, (gui_ushort)mw, r);
+    XFillRectangle(surf->dpy, surf->drawable, surf->gc, x, my, r, (gui_ushort)mh);
+
+    XFillArc(surf->dpy, surf->drawable, surf->gc, x, y, 2*r, 2*r, 90 * 64, 90 * 64);
+    XFillArc(surf->dpy, surf->drawable, surf->gc, mx+mw-r, y, 2*r, 2*r, 90 * 64, -90 * 64);
+    XFillArc(surf->dpy, surf->drawable, surf->gc, mx+mw-r, my+mh-r, r*2, r*2, 0 * 64, -90 * 64);
+    XFillArc(surf->dpy, surf->drawable, surf->gc, x, my+mh-r, r*2, r*2, -90 * 64, -90 * 64);
+}
+
+static void
 surface_draw_rect(XSurface* surf, gui_short x, gui_short y, gui_ushort w,
     gui_ushort h, struct gui_color col)
 {
@@ -301,7 +325,7 @@ surface_del(XSurface *surf)
 }
 
 static void
-execute(XSurface *surf, gui_command_buffer *buffer)
+execute(XSurface *surf, struct gui_command_buffer *buffer)
 {
     const struct gui_command *cmd;
     gui_foreach_command(cmd, buffer) {
@@ -318,7 +342,8 @@ execute(XSurface *surf, gui_command_buffer *buffer)
         } break;
         case GUI_COMMAND_RECT: {
             const struct gui_command_rect *r = gui_command(rect, cmd);
-            surface_draw_rect(surf, r->x, r->y, r->w, r->h, r->color);
+            if (r->r) surface_draw_round_rect(surf, r->x, r->y, r->w, r->h, (gui_ushort)r->r, r->color);
+            else surface_draw_rect(surf, r->x, r->y, r->w, r->h, r->color);
         } break;
         case GUI_COMMAND_CIRCLE: {
             const struct gui_command_circle *c = gui_command(circle, cmd);
@@ -471,6 +496,7 @@ main(int argc, char *argv[])
 
         /* Timing */
         dt = timestamp() - started;
+        gui.ms = (unsigned int)dt;
         if (dt < DTIME)
             sleep_for(DTIME - dt);
     }

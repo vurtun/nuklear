@@ -12,16 +12,16 @@
 #include <assert.h>
 #include <string.h>
 
-#include "gui.h"
-
 /* macros */
-#define DTIME       33
+#define DTIME       16
 #define MIN(a,b)    ((a) < (b) ? (a) : (b))
 #define MAX(a,b)    ((a) < (b) ? (b) : (a))
 #define CLAMP(i,v,x) (MAX(MIN(v,x), i))
 #define LEN(a)      (sizeof(a)/sizeof(a)[0])
 #define UNUSED(a)   ((void)(a))
 
+#define GUI_IMPLEMENTATION
+#include "../tiny_gui.h"
 #include "demo.c"
 
 /* Types */
@@ -460,3 +460,4 @@ WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int shown)
     ReleaseDC(xw.hWnd, xw.hdc);
     return 0;
 }
+
