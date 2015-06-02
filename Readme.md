@@ -13,6 +13,7 @@ application and does not have any direct dependencies.
 - No direct dependencies (not even libc!)
 - Full memory management control
 - Renderer and platform independent
+- [Single header version](https://github.com/vurtun/tlib)
 - Configurable style and colors
 - UTF-8 support
 
