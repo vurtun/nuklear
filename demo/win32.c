@@ -21,7 +21,7 @@
 #define UNUSED(a)   ((void)(a))
 
 #define GUI_IMPLEMENTATION
-#include "../tiny_gui.h"
+#include "../gui.h"
 #include "demo.c"
 
 /* Types */
