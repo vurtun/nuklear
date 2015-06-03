@@ -21,7 +21,7 @@
 #define UNUSED(a)   ((void)(a))
 
 #define GUI_IMPLEMENTATION
-#include "../gui.h"
+#include "gui.h"
 #include "demo.c"
 
 /* Types */
@@ -174,6 +174,24 @@ surface_draw_line(XSurface *surf, short x0, short y0, short x1, short y1,
 }
 
 static void
+surface_draw_rounded_rect(XSurface *surf, short x, short y, unsigned short w, unsigned short h,
+    unsigned short rounding,  unsigned char r,  unsigned char g, unsigned char b)
+{
+    HBRUSH hBrush;
+    HBRUSH old;
+    RECT rect;
+    rect.left = (LONG)x;
+    rect.top = (LONG)y;
+    rect.right = (LONG)(x + w);
+    rect.bottom = (LONG)(y + h);
+    hBrush = CreateSolidBrush(RGB(r,g,b));
+    old = SelectObject(surf->hdc, hBrush);
+    RoundRect(surf->hdc, rect.left, rect.top, rect.right, rect.bottom,2*rounding, 2*rounding);
+    SelectObject(surf->hdc, old);
+    DeleteObject(hBrush);
+}
+
+static void
 surface_draw_rect(XSurface *surf, short x, short y, unsigned short w, unsigned short h,
     unsigned char r,  unsigned char g, unsigned char b)
 {
@@ -267,7 +285,7 @@ surface_end(XSurface *surf, HDC hdc)
 }
 
 static void
-execute(XSurface *surf, gui_command_buffer *buffer)
+execute(XSurface *surf, struct gui_command_buffer *buffer)
 {
     const struct gui_command *cmd;
     gui_foreach_command(cmd, buffer) {
@@ -284,8 +302,13 @@ execute(XSurface *surf, gui_command_buffer *buffer)
         } break;
         case GUI_COMMAND_RECT: {
             const struct gui_command_rect *r = gui_command(rect, cmd);
-            surface_draw_rect(surf, r->x, r->y, r->w, r->h,
-                r->color.r, r->color.g, r->color.b);
+	    if (!r->r) {
+		surface_draw_rect(surf, r->x, r->y, r->w, r->h,
+		    r->color.r, r->color.g, r->color.b);
+	    } else {
+		surface_draw_rounded_rect(surf, r->x, r->y, r->w, r->h, r->r,
+		    r->color.r, r->color.g, r->color.b);
+	    }
         } break;
         case GUI_COMMAND_CIRCLE: {
             const struct gui_command_circle *c = gui_command(circle, cmd);
