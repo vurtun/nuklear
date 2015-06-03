@@ -1524,10 +1524,10 @@ gui_button_text(struct gui_command_buffer *o, gui_float x, gui_float y,
     }
     ret = gui_do_button(o, x, y, button_w, button_h, b, i, behavior);
 
-    inner.x = x + b->border;
+    inner.x = x + b->border + b->rounding;
     inner.y = y + b->border;
-    inner.w = button_w - 2 * b->border;
-    inner.h = button_h - 2 * b->border;
+    inner.w = button_w - (2 * b->border + 2 * b->rounding);
+    inner.h = button_h - (2 * b->border);
 
     t.padding.x = b->padding.x;
     t.padding.y = b->padding.y;
