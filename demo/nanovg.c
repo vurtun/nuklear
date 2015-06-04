@@ -59,56 +59,55 @@ font_get_width(gui_handle handle, const gui_char *text, gui_size len)
 }
 
 static void
-draw_text(NVGcontext *ctx, float x, float y, struct gui_color c,
+draw_text(NVGcontext *ctx, float x, float y, const gui_byte *c,
     const gui_char *string, gui_size len)
 {
     gui_float height = 0;
     nvgBeginPath(ctx);
     nvgTextMetrics(ctx, NULL, NULL, &height);
-    nvgFillColor(ctx, nvgRGBA(c.r, c.g, c.b, c.a));
+    nvgFillColor(ctx, nvgRGBA(c[0], c[1], c[2], c[3]));
     nvgText(ctx, x, y + height, string, &string[len]);
     nvgFill(ctx);
 }
 
 static void
-draw_line(NVGcontext *ctx, float x0, float y0, float x1, float y1, struct gui_color c)
+draw_line(NVGcontext *ctx, float x0, float y0, float x1, float y1, const gui_byte *c)
 {
     nvgBeginPath(ctx);
     nvgMoveTo(ctx, x0, y0);
     nvgLineTo(ctx, x1, y1);
-    nvgFillColor(ctx, nvgRGBA(c.r, c.g, c.b, c.a));
+    nvgFillColor(ctx, nvgRGBA(c[0], c[1], c[2], c[3]));
     nvgFill(ctx);
 }
 
 static void
-draw_rect(NVGcontext *ctx, float x, float y, float w, float h, float r, struct gui_color c)
+draw_rect(NVGcontext *ctx, float x, float y, float w, float h, float r, const gui_byte* c)
 {
     nvgBeginPath(ctx);
     nvgRoundedRect(ctx, x, y, w, h, r);
-    nvgFillColor(ctx, nvgRGBA(c.r, c.g, c.b, c.a));
+    nvgFillColor(ctx, nvgRGBA(c[0], c[1], c[2], c[3]));
     nvgFill(ctx);
 }
 
 static void
-draw_circle(NVGcontext *ctx, float x, float y, float r, struct gui_color c)
+draw_circle(NVGcontext *ctx, float x, float y, float r, const gui_byte *c)
 {
-    NVGpaint bg;
     nvgBeginPath(ctx);
     nvgCircle(ctx, x + r, y + r, r);
-    nvgFillColor(ctx, nvgRGBA(c.r, c.g, c.b, c.a));
+    nvgFillColor(ctx, nvgRGBA(c[0], c[1], c[2], c[3]));
     nvgFill(ctx);
 }
 
 static void
 draw_triangle(NVGcontext *ctx, float x0, float y0, float x1, float y1,
-    float x2, float y2, struct gui_color c)
+    float x2, float y2, const gui_byte *c)
 {
     nvgBeginPath(ctx);
     nvgMoveTo(ctx, x0, y0);
     nvgLineTo(ctx, x1, y1);
     nvgLineTo(ctx, x2, y2);
     nvgLineTo(ctx, x0, y0);
-    nvgFillColor(ctx, nvgRGBA(c.r, c.g, c.b, c.a));
+    nvgFillColor(ctx, nvgRGBA(c[0], c[1], c[2], c[3]));
     nvgFill(ctx);
 }
 
@@ -126,9 +125,7 @@ draw_image(NVGcontext *ctx, gui_handle img, float x, float y, float w, float h, 
 static void
 execute(NVGcontext *nvg, struct gui_command_buffer *list, int width, int height)
 {
-    static const struct gui_color col = {255, 0, 0, 255};
     const struct gui_command *cmd;
-
     glPushAttrib(GL_ENABLE_BIT|GL_COLOR_BUFFER_BIT);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -190,9 +187,7 @@ static void
 key(struct gui_input *in, SDL_Event *evt, gui_bool down)
 {
     SDL_Keycode sym = evt->key.keysym.sym;
-    if (sym == SDLK_LCTRL || sym == SDLK_RCTRL)
-        gui_input_key(in, GUI_KEY_CTRL, down);
-    else if (sym == SDLK_RSHIFT || sym == SDLK_LSHIFT)
+    if (sym == SDLK_RSHIFT || sym == SDLK_LSHIFT)
         gui_input_key(in, GUI_KEY_SHIFT, down);
     else if (sym == SDLK_DELETE)
         gui_input_key(in, GUI_KEY_DEL, down);
@@ -332,6 +327,7 @@ cleanup:
     /* Cleanup */
     free(gui.memory);
     nvgDeleteGLES2(vg);
+    SDL_GL_DeleteContext(glContext);
     SDL_DestroyWindow(win);
     SDL_Quit();
     return 0;

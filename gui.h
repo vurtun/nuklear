@@ -1035,9 +1035,10 @@ GUI_API gui_size gui_edit(struct gui_command_buffer*, gui_float x, gui_float y, 
     - returns the size of the buffer in bytes after the modification
 */
 GUI_API gui_size gui_edit_filtered(struct gui_command_buffer*, gui_float x, gui_float y,
-                    gui_float w, gui_float h, gui_char*, gui_size, gui_size max, gui_bool*,
-                    const struct gui_edit*, gui_filter filter, const struct gui_input*,
-                    const struct gui_font*);
+                                    gui_float w, gui_float h, gui_char*, gui_size,
+                                    gui_size max, gui_bool*, const struct gui_edit*,
+                                    gui_filter filter, const struct gui_input*,
+                                    const struct gui_font*);
 /*  this function executes a editbox widget
     Input:
     - output command buffer for draw commands
@@ -1106,7 +1107,7 @@ GUI_API gui_float gui_scroll(struct gui_command_buffer*, gui_float x, gui_float 
     - visual widget style structure describing the selector
     - input structure to update the slider with
     Output:
-    - returns the from the user input updated spinner value
+    - returns the from the user input updated scrollbar offset in pixels
 */
 /*
  * ==============================================================
@@ -1117,9 +1118,21 @@ GUI_API gui_float gui_scroll(struct gui_command_buffer*, gui_float x, gui_float 
  */
 /*  CONFIG
     ----------------------------
+    The panel configuration consists of style information that is used for
+    the general style and looks of panel. In addition for temporary modification
+    the configuration structure consists of a stack for pushing and pop either
+    color or property values.
 
     USAGE
     ----------------------------
+    To use the configuration file you either initial every value yourself besides
+    the internal stack which needs to be initialized to zero or use the default
+    configuration by calling the function gui_config_default.
+    To add and remove temporary configuration states the gui_config_push_xxxx
+    for adding and gui_config_pop_xxxx for removing either color or property values
+    from the stack. To reset all previously modified values the gui_config_reset_xxx
+    were added.
+
     Configuration function API
     gui_config_default              -- initializes a default panel configuration
     gui_config_property             -- returns the property value from an id
