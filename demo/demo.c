@@ -135,10 +135,9 @@ time_panel(struct gui_panel_layout *panel, unsigned int ms)
 static void
 table_panel(struct gui_panel_layout *panel)
 {
-    static const struct gui_color header = {178, 122, 1, 255};
     gui_panel_table_begin(panel, GUI_TABLE_HHEADER, 30, 2);
-    gui_panel_label_colored(panel, "MOVEMENT", GUI_TEXT_CENTERED, header);
-    gui_panel_label_colored(panel, "KEY/BUTTON", GUI_TEXT_CENTERED, header);
+    gui_panel_label_colored(panel, "MOVEMENT", GUI_TEXT_CENTERED, gui_rgba(178, 122, 1, 255));
+    gui_panel_label_colored(panel, "KEY/BUTTON", GUI_TEXT_CENTERED, gui_rgba(178, 122, 1, 255));
     gui_panel_table_row(panel);
     gui_panel_label(panel, "Move foward", GUI_TEXT_LEFT);
     gui_panel_label(panel, "w", GUI_TEXT_CENTERED);
@@ -269,7 +268,6 @@ color_picker(struct gui_panel_layout *panel, struct control_window *control,
 {
     int i;
     gui_byte *iter;
-    gui_float r, g, b, a;
     gui_bool *active[4];
     active[0] = &control->spinner_r_active;
     active[1] = &control->spinner_g_active;
@@ -320,8 +318,9 @@ color_tab(struct gui_panel_layout *panel, struct control_window *control, struct
     } else {
         gui_panel_row(panel, 30, 2);
         for (i = 0; i < GUI_COLOR_COUNT; ++i) {
+            struct gui_color c = config->colors[i];
             gui_panel_label(panel, labels[i], GUI_TEXT_LEFT);
-            if (gui_panel_button_color(panel, config->colors[i], GUI_BUTTON_DEFAULT)) {
+            if (gui_panel_button_color(panel, c, GUI_BUTTON_DEFAULT)) {
                 if (!control->picker_active) {
                     control->picker_active = gui_true;
                     control->color = config->colors[i];
@@ -382,7 +381,7 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
     gui->running = gui_true;
     gui_command_buffer_init_fixed(&gui->show_buffer, gui->memory, MAX_MEMORY/2, GUI_CLIP);
     gui_command_buffer_init_fixed(&gui->control_buffer,
-        GUI_PTR_ADD(void*, gui->memory, (MAX_MEMORY/2)), MAX_MEMORY/2, GUI_CLIP);
+        gui_ptr_add(void*, gui->memory, (MAX_MEMORY/2)), MAX_MEMORY/2, GUI_CLIP);
     gui_config_default(config, GUI_DEFAULT_ALL, font);
 
     gui_stack_clear(&gui->stack);

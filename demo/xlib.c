@@ -165,13 +165,13 @@ font_del(Display *dpy, XFont *font)
 }
 
 static unsigned long
-color_from_byte(struct gui_color col)
+color_from_byte(const gui_byte *c)
 {
     /* NOTE(vurtun): this only works for little-endian */
     unsigned long res = 0;
-    res |= (unsigned long)col.r << 16;
-    res |= (unsigned long)col.g << 8;
-    res |= (unsigned long)col.b << 0;
+    res |= (unsigned long)c[0] << 16;
+    res |= (unsigned long)c[1] << 8;
+    res |= (unsigned long)c[2] << 0;
     return (res);
 }
 
@@ -215,7 +215,7 @@ surface_scissor(XSurface *surf, float x, float y, float w, float h)
 
 static void
 surface_draw_line(XSurface *surf, gui_short x0, gui_short y0, gui_short x1,
-    gui_short y1, struct gui_color col)
+    gui_short y1, const gui_byte *col)
 {
     unsigned long c = color_from_byte(col);
     XSetForeground(surf->dpy, surf->gc, c);
@@ -224,7 +224,7 @@ surface_draw_line(XSurface *surf, gui_short x0, gui_short y0, gui_short x1,
 
 static void
 surface_draw_round_rect(XSurface* surf, gui_short x, gui_short y, gui_ushort w,
-    gui_ushort h, gui_ushort r, struct gui_color col)
+    gui_ushort h, gui_ushort r, const gui_byte *col)
 {
     unsigned long c = color_from_byte(col);
     gui_int mx, my;
@@ -248,7 +248,7 @@ surface_draw_round_rect(XSurface* surf, gui_short x, gui_short y, gui_ushort w,
 
 static void
 surface_draw_rect(XSurface* surf, gui_short x, gui_short y, gui_ushort w,
-    gui_ushort h, struct gui_color col)
+    gui_ushort h, const gui_byte *col)
 {
     unsigned long c = color_from_byte(col);
     XSetForeground(surf->dpy, surf->gc, c);
@@ -257,7 +257,7 @@ surface_draw_rect(XSurface* surf, gui_short x, gui_short y, gui_ushort w,
 
 static void
 surface_draw_triangle(XSurface *surf, gui_short x0, gui_short y0, gui_short x1,
-    gui_short y1, gui_short x2, gui_short y2, struct gui_color col)
+    gui_short y1, gui_short x2, gui_short y2, const gui_byte *col)
 {
     XPoint pnts[3];
     unsigned long c = color_from_byte(col);
@@ -273,7 +273,7 @@ surface_draw_triangle(XSurface *surf, gui_short x0, gui_short y0, gui_short x1,
 
 static void
 surface_draw_circle(XSurface *surf, gui_short x, gui_short y, gui_ushort w,
-    gui_ushort h, struct gui_color col)
+    gui_ushort h, const gui_byte *col)
 {
     unsigned long c = color_from_byte(col);
     XSetForeground(surf->dpy, surf->gc, c);
@@ -283,7 +283,7 @@ surface_draw_circle(XSurface *surf, gui_short x, gui_short y, gui_ushort w,
 
 static void
 surface_draw_text(XSurface *surf, gui_short x, gui_short y, gui_ushort w, gui_ushort h,
-    const char *text, size_t len, XFont *font, struct gui_color cbg, struct gui_color cfg)
+    const char *text, size_t len, XFont *font, const gui_byte* cbg, const gui_byte *cfg)
 {
     int i, tx, ty, th, olen;
     unsigned long bg = color_from_byte(cbg);
@@ -342,8 +342,10 @@ execute(XSurface *surf, struct gui_command_buffer *buffer)
         } break;
         case GUI_COMMAND_RECT: {
             const struct gui_command_rect *r = gui_command(rect, cmd);
-            if (r->r) surface_draw_round_rect(surf, r->x, r->y, r->w, r->h, (gui_ushort)r->r, r->color);
-            else surface_draw_rect(surf, r->x, r->y, r->w, r->h, r->color);
+            if (r->r)
+                surface_draw_round_rect(surf, r->x, r->y, r->w, r->h, (gui_ushort)r->r, r->color);
+            else
+                surface_draw_rect(surf, r->x, r->y, r->w, r->h, r->color);
         } break;
         case GUI_COMMAND_CIRCLE: {
             const struct gui_command_circle *c = gui_command(circle, cmd);
@@ -379,9 +381,7 @@ key(struct XWindow *xw, struct gui_input *in, XEvent *evt, gui_bool down)
 {
     int ret;
     KeySym *code = XGetKeyboardMapping(xw->dpy, (KeyCode)evt->xkey.keycode, 1, &ret);
-    if (*code == XK_Control_L || *code == XK_Control_R)
-        gui_input_key(in, GUI_KEY_CTRL, down);
-    else if (*code == XK_Shift_L || *code == XK_Shift_R)
+    if (*code == XK_Shift_L || *code == XK_Shift_R)
         gui_input_key(in, GUI_KEY_SHIFT, down);
     else if (*code == XK_Delete)
         gui_input_key(in, GUI_KEY_DEL, down);
