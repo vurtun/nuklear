@@ -1118,14 +1118,14 @@ GUI_API gui_float gui_scroll(struct gui_command_buffer*, gui_float x, gui_float 
  */
 /*  CONFIG
     ----------------------------
-    The panel configuration consists of style information that is used for
+    The panel configuration consists of style and color information that is used for
     the general style and looks of panel. In addition for temporary modification
     the configuration structure consists of a stack for pushing and pop either
     color or property values.
 
     USAGE
     ----------------------------
-    To use the configuration file you either initial every value yourself besides
+    To use the configuration file you either initialize every value yourself besides
     the internal stack which needs to be initialized to zero or use the default
     configuration by calling the function gui_config_default.
     To add and remove temporary configuration states the gui_config_push_xxxx
@@ -1221,12 +1221,16 @@ enum gui_config_properties {
 
 struct gui_saved_property {
     enum gui_config_properties type;
+    /* identifier of the current modified property */
     struct gui_vec2 value;
+    /* property value that has been saveed */
 };
 
 struct gui_saved_color {
     enum gui_config_colors type;
+    /* identifier of the current modified color */
     struct gui_color value;
+    /* color value that has been saveed */
 };
 
 enum gui_config_components {
@@ -1238,18 +1242,28 @@ enum gui_config_components {
 
 struct gui_config_stack  {
     gui_size property;
+    /* current property stack pushing index */
     struct gui_saved_property properties[GUI_MAX_ATTRIB_STACK];
+    /* saved property stack */
     struct gui_saved_color colors[GUI_MAX_COLOR_STACK];
+    /* saved color stack */
     gui_size color;
+    /* current color stack pushing index */
 };
 
 struct gui_config {
     struct gui_font font;
+    /* the from the user provided font */
     enum gui_slider_cursor slider_cursor;
+    /* slider cursor type identifier */
     gui_float rounding[GUI_ROUNDING_MAX];
+    /* rectangle widget rounding */
     struct gui_vec2 properties[GUI_PROPERTY_MAX];
+    /* configuration properties to modify the panel style */
     struct gui_color colors[GUI_COLOR_COUNT];
+    /* configuration color to modify the panel color */
     struct gui_config_stack stack;
+    /* modification stack */
 };
 
 GUI_API void gui_config_default(struct gui_config*, gui_flags, const struct gui_font*);
