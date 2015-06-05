@@ -78,7 +78,6 @@ typedef gui_char gui_glyph[GUI_UTF_SIZE];
 struct gui_font;
 typedef gui_bool(*gui_filter)(gui_long unicode);
 typedef gui_size(*gui_text_width_f)(gui_handle, const gui_char*, gui_size);
-
 /*
  * ==============================================================
  *
@@ -2133,7 +2132,10 @@ static const long gui_utfmax[GUI_UTF_SIZE+1] = {0x10FFFF, 0x7F, 0x7FF, 0xFFFF, 0
  *
  * ===============================================================
  */
-GUI_API struct gui_color
+GUI_API struct gui_color gui_rgba(gui_byte r, gui_byte g, gui_byte b, gui_byte a);
+GUI_API struct gui_color gui_rgb(gui_byte r, gui_byte g, gui_byte b);
+
+struct gui_color
 gui_rgba(gui_byte r, gui_byte g, gui_byte b, gui_byte a)
 {
     struct gui_color ret;
@@ -2142,7 +2144,7 @@ gui_rgba(gui_byte r, gui_byte g, gui_byte b, gui_byte a)
     return ret;
 }
 
-GUI_API struct gui_color
+struct gui_color
 gui_rgb(gui_byte r, gui_byte g, gui_byte b)
 {
     struct gui_color ret;
