@@ -259,7 +259,7 @@ font_get_text_width(gui_handle handle, const gui_char *t, gui_size l)
         glyph_len = gui_utf_decode(t + text_len, &unicode, l - text_len);
         text_len += glyph_len;
     }
-    return text_width;
+    return MAX(0, text_width - text_width);
 }
 
 static void
@@ -600,6 +600,7 @@ main(int argc, char *argv[])
 
         /* Timing */
         dt = SDL_GetTicks() - started;
+        gui.ms = dt;
         if (dt < DTIME)
             SDL_Delay(DTIME - dt);
     }

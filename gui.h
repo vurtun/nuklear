@@ -290,7 +290,7 @@ enum gui_buffer_type {
     GUI_BUFFER_FIXED,
     /* fixed size memory buffer */
     GUI_BUFFER_DYNAMIC
-    /* dynically growing buffer */
+    /* dynamically growing buffer */
 };
 
 struct gui_memory {void *ptr;gui_size size;};
@@ -355,6 +355,7 @@ GUI_API void gui_buffer_clear(struct gui_buffer*);
     Input:
     - buffer to clear
 */
+
 #if 0
 /* Example fixed size buffer */
 #define GUI_IMPLEMENTATION
@@ -439,7 +440,6 @@ int main(void)
     gui_command_buffer_begin        -- returns the first command in a queue
     gui_command_buffer_next         -- returns the next command in a queue
     gui_foreach_command             -- iterates over all commands in a queue
-
 */
 
 /* command type of every used drawing primitive */
@@ -3771,7 +3771,7 @@ gui_panel_begin(struct gui_panel_layout *l, struct gui_panel *p,
     scaler_size = gui_config_property(c, GUI_PROPERTY_SCALER_SIZE);
 
     /* calculate the height of the panel header */
-    l->header_height = c->font.height + 3 * item_padding.y;
+    l->header_height = c->font.height + 4 * item_padding.y;
     l->header_height += panel_padding.y;
 
     /* cache relevant user input values */
