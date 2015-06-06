@@ -2,7 +2,26 @@
     Copyright (c) 2015
     vurtun <polygone@gmx.net>
     MIT licence
+
+    GUI
+    -----------------------
+    This file provides both the interface and implementation for a bloat free
+    minimal state immediate mode graphical user interface toolkit. The Toolkit
+    does not have any library or runtine dependencies like libc but does not
+    handle os window/input management, have a render backend or a font library which
+    need to be provided by the user.
+
+    USAGE
+    ------------------------
+    To instantiate the implementation part of the library you have to define
+        #define GUI_IMPLEMENTATION
+    in *ONE* of your source files, before #include'ing this file. This expands out the
+    actual implementation into that C/C++ file.
+    To make the implementation private to the file that generates the implementation use
+    #define GUI_STATIC
+
 */
+
 #ifndef GUI_H_
 #define GUI_H_
 
@@ -20,7 +39,7 @@ extern "C" {
 #define GUI_UTF_SIZE 4
 /* describes the number of bytes a glyph consists of*/
 #define GUI_INPUT_MAX 16
-/* defines the max number of bytes to be added as input in one frame */
+/* defines the max number of bytes to be added as text input in one frame */
 #define GUI_MAX_COLOR_STACK 32
 /* defines the number of temporary configuration color changes that can be stored */
 #define GUI_MAX_ATTRIB_STACK 32
@@ -89,7 +108,7 @@ typedef gui_size(*gui_text_width_f)(gui_handle, const gui_char*, gui_size);
     ----------------------------
     The input API is responsible for holding input state by keeping track of
     mouse, key and text input state. The core of the API is the persistent
-    gui_input struct which holds the input state over the runtime of the gui.
+    gui_input struct which holds the input state over the runtime.
     It is important to note that no direct os or window handling is done by the input
     API, instead all the input state has to be provided from the user. This in one hand
     expects more work from the user and complicates the usage but on the other hand
@@ -223,12 +242,12 @@ GUI_API void gui_input_end(struct gui_input*);
     A basic buffer API with linear allocation and resetting as only freeing policy.
     The buffer main purpose is to control all memory management inside
     the GUI toolkit and still leave memory control as much as possible in the hand
-    of the user. The memory control is herby achivable over three different ways
-    of memory handlong from the user.
+    of the user. The memory control is herby achievable over three different ways
+    of memory handling from the user.
     The first way is to use a fixed size block of memory to be filled up.
     Biggest advantage of using a fixed size block is a simple memory model.
-    Downside is that if the buffer is full no way of accessing more memory is
-    available, which fits target application with roughly known memory consumptions.
+    Downside is that if the buffer is full there is no way to accesses more memory,
+    which fits target application with a GUI with roughly known memory consumptions.
     The second way to mnamge memory is by extending the fixed size block by querying
     the buffer for information about the used size and needed size and allocate new
     memory if the buffer is full. While this approach is still better than just using
@@ -242,7 +261,7 @@ GUI_API void gui_input_end(struct gui_input*);
 
     USAGE
     ----------------------------
-    To instantiate the Buffer you either have to call the fixed size or allocator
+    To instantiate the buffer you either have to call the fixed size or allocator
     initialization function and provide a memory block in the first case and
     an allocator in the second case.
     To allocate memory from the buffer you would call gui_buffer_alloc with a request
@@ -402,11 +421,11 @@ int main(void)
  */
 /*  DRAW COMMAND QUEUE
     ----------------------------
-    The command buffer API enqueues draw calls as commands and therefore abstracts
-    over drawing routines and enables defered drawing. The API offers a number of
-    drawing primitives like lines, rectangles, circles, triangles, images, text and
-    clipping rectangles, that have to be drawn by the user. Therefore the command
-    buffer is the main toolkit output besides the actual widget output.
+    The command buffer API enqueues draw calls as commands in to a buffer and
+    therefore abstracts over drawing routines and enables defered drawing.
+    The API offers a number of drawing primitives like lines, rectangles, circles,
+    triangles, images, text and clipping rectangles, that have to be drawn by the user.
+    Therefore the command buffer is the main toolkit output besides the actual widget output.
     The actual draw command execution is done by the user and is build up in a
     interpreter like fashion by iterating over all commands and executing each
     command differently depending on the command type.
@@ -1348,7 +1367,7 @@ GUI_API void gui_config_reset(struct gui_config*);
 /*  PANEL
     ----------------------------
     The Panel function API is based on the widget API and is almost in its
-    entirety based on positioning of groups o widgets. Almost each widget inside the
+    entirety based on positioning of groups of widgets. Almost each widget inside the
     panel API uses the widget API for drawing and manipulation/input logic
     but offers a uniform style over a single configuration structure as well as
     widget group base moving, spacing and structuring. The panel references
@@ -1359,8 +1378,8 @@ GUI_API void gui_config_reset(struct gui_config*);
     USAGE
     ----------------------------
     To setup the Panel API you have to initiate the panel first with position, size
-    and behavior flags. The Flags inside the panel describe the behavior of the panel
-    and can be either set or modified directly over the publicaly visual panel struture
+    and behavior flags. The flags inside the panel describe the behavior of the panel
+    and can be set or modified directly over the public panel struture
     or at the beginning in the initialization phase. Just like the flags the position
     and size of the panel is made directly modifiable at any given time given single
     threaded access while changes are only visible outside the layout buildup process.
@@ -1368,8 +1387,8 @@ GUI_API void gui_config_reset(struct gui_config*);
     To finally use the panel a panel layout has to be created over gui_panle_begin_xxx
     which sets up the panel layout build up process. The panel layout has to be kept
     valid over the course of the build process until gui_panel_end is called, which
-    makes the layout perfectly fit for either a stack object or single instanced for
-    every panel. The beginning of the panel layout also gives the opportunity to
+    makes the layout perfectly fit for either a stack object or a single instance for
+    every panel. The begin sequence pont of the panel layout also gives the opportunity to
     add the panel either into a panel stack for overlapping panels or a tiled border
     layout for automated window independend panel positing and sizing.
 
@@ -3989,7 +4008,7 @@ gui_panel_begin_stacked(struct gui_panel_layout *l, struct gui_panel* p,
             iter = iter->next;
         }
         /* current panel is active panel in that position so transfer to top
-         * highest priortiy in stack */
+         * at the highest priority in stack */
         if (!iter) {
             gui_stack_pop(s, p);
             gui_stack_push(s, p);
