@@ -85,6 +85,10 @@ widget_panel(struct gui_panel_layout *panel, struct show_window *demo)
     gui_panel_label(panel, "text right", GUI_TEXT_RIGHT);
     if (gui_panel_button_text(panel, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");
+    if (gui_panel_button_text_triangle(panel, GUI_RIGHT, "button", GUI_TEXT_LEFT, GUI_BUTTON_DEFAULT))
+        fprintf(stdout, "right triangle button pressed!\n");
+    if (gui_panel_button_text_triangle(panel, GUI_LEFT, "button", GUI_TEXT_RIGHT, GUI_BUTTON_DEFAULT))
+        fprintf(stdout, "left triangle button pressed!\n");
     demo->toggle = gui_panel_button_toggle(panel, "toggle", demo->toggle);
     demo->checkbox = gui_panel_check(panel, "checkbox", demo->checkbox);
 

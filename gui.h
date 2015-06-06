@@ -90,8 +90,9 @@ struct gui_color {gui_byte r,g,b,a;};
 struct gui_vec2 {gui_float x,y;};
 struct gui_rect {gui_float x,y,w,h;};
 struct gui_key {gui_bool down, clicked;};
-typedef union {void *ptr; gui_int id;} gui_handle;
 typedef gui_char gui_glyph[GUI_UTF_SIZE];
+typedef union {void *ptr; gui_int id;} gui_handle;
+struct gui_image {gui_handle handle; struct gui_rect region;};
 
 /* Callbacks */
 struct gui_font;
@@ -514,7 +515,7 @@ struct gui_command_image {
     struct gui_command header;
     gui_short x, y;
     gui_ushort w, h;
-    gui_handle img;
+    struct gui_image img;
 };
 
 struct gui_command_triangle {
@@ -638,7 +639,8 @@ GUI_API void gui_command_buffer_push_triangle(struct gui_command_buffer*, gui_fl
     - color of the triangle to draw
 */
 GUI_API void gui_command_buffer_push_image(struct gui_command_buffer*, gui_float,
-                                            gui_float, gui_float, gui_float, gui_handle);
+                                            gui_float, gui_float, gui_float,
+                                            struct gui_image*);
 /*  this function pushes a image draw command into the buffer
     Input:
     - buffer to push the draw image command into
@@ -954,7 +956,7 @@ GUI_API gui_bool gui_button_text(struct gui_command_buffer*, gui_float x, gui_fl
     - returns gui_true if the button was pressed gui_false otherwise
 */
 GUI_API gui_bool gui_button_image(struct gui_command_buffer*, gui_float x, gui_float y,
-                                gui_float w, gui_float h, gui_handle img, enum gui_button_behavior,
+                                gui_float w, gui_float h, struct gui_image img, enum gui_button_behavior,
                                 const struct gui_button*, const struct gui_input*);
 /*  this function executes a image button widget
     Input:
@@ -980,6 +982,47 @@ GUI_API gui_bool gui_button_triangle(struct gui_command_buffer*, gui_float x, gu
     - triangle direction with either left, top, right xor bottom
     - button behavior with either repeating or transition state event
     - visual widget style structure describing the button
+    - input structure to update the button with
+    Output:
+    - returns gui_true if the button was pressed gui_false otherwise
+*/
+GUI_API gui_bool gui_button_text_triangle(struct gui_command_buffer*, gui_float x, gui_float y,
+                                        gui_float w, gui_float h, enum gui_heading,
+                                        const char*,enum gui_text_align, enum gui_button_behavior,
+                                        const struct gui_button*, const struct gui_font*,
+                                        const struct gui_input*);
+/*  this function executes a button with text and a triangle widget
+    Input:
+    - output command buffer for draw commands
+    - (x,y) coordinates for the button bounds
+    - (width, height) size for the button bounds
+    - triangle direction with either left, top, right xor bottom
+    - button text
+    - text alignment with either left, center and right
+    - button behavior with either repeating or transition state event
+    - visual widget style structure describing the button
+    - font structure for text drawing
+    - input structure to update the button with
+    Output:
+    - returns gui_true if the button was pressed gui_false otherwise
+*/
+gui_bool gui_button_text_image(struct gui_command_buffer *out, gui_float x, gui_float y,
+                            gui_float w, gui_float h, struct gui_image img,
+                            const char* text, enum gui_text_align align,
+                            enum gui_button_behavior behavior,
+                            const struct gui_button *button, const struct gui_font *f,
+                            const struct gui_input *i);
+/*  this function executes a button widget with text and an icon
+    Input:
+    - output command buffer for draw commands
+    - (x,y) coordinates for the button bounds
+    - (width, height) size for the button bounds
+    - user provided image handle which is either a pointer or a id
+    - button text
+    - text alignment with either left, center and right
+    - button behavior with either repeating or transition state event
+    - visual widget style structure describing the button
+    - font structure for text drawing
     - input structure to update the button with
     Output:
     - returns gui_true if the button was pressed gui_false otherwise
@@ -1788,11 +1831,23 @@ GUI_API gui_bool gui_panel_button_triangle(struct gui_panel_layout*, enum gui_he
     - gui_true if the button was transistioned from unpressed to pressed with
         default button behavior or pressed if repeater behavior.
 */
-GUI_API gui_bool gui_panel_button_image(struct gui_panel_layout*, gui_handle img,
+GUI_API gui_bool gui_panel_button_image(struct gui_panel_layout*, struct gui_image img,
                                         enum gui_button_behavior);
 /*  this function creates a button with an icon as content
     Input:
     - icon image handle to draw into the button
+    - button behavior with either default or repeater behavior
+    Output:
+    - gui_true if the button was transistioned from unpressed to pressed with
+        default button behavior or pressed if repeater behavior.
+*/
+GUI_API gui_bool gui_panel_button_text_triangle(struct gui_panel_layout*, enum gui_heading,
+                                    const char*, enum gui_text_align, enum gui_button_behavior);
+/*  this function creates a button with a triangle pointing in one of four directions and text
+    Input:
+    - triangle direction with either up, down, left or right direction
+    - button label describing the button
+    - text alignment with either left, centered or right alignment
     - button behavior with either default or repeater behavior
     Output:
     - gui_true if the button was transistioned from unpressed to pressed with
@@ -2151,8 +2206,44 @@ static const long gui_utfmax[GUI_UTF_SIZE+1] = {0x10FFFF, 0x7F, 0x7FF, 0xFFFF, 0
  *
  * ===============================================================
  */
+GUI_API struct gui_image gui_image_ptr(void*);
+GUI_API struct gui_image gui_image_id(gui_int);
+GUI_API struct gui_image gui_subimage_ptr(void*, struct gui_rect);
+GUI_API struct gui_image gui_subimage_id(gui_int, struct gui_rect);
+GUI_API gui_bool gui_rect_is_valid(struct gui_rect*);
+GUI_API gui_bool gui_image_is_subimage(struct gui_image* img);
+GUI_API struct gui_rect gui_rect(gui_float x, gui_float y, gui_float w, gui_float h);
+GUI_API struct gui_vec2 gui_vec2(gui_float x, gui_float y);
 GUI_API struct gui_color gui_rgba(gui_byte r, gui_byte g, gui_byte b, gui_byte a);
 GUI_API struct gui_color gui_rgb(gui_byte r, gui_byte g, gui_byte b);
+
+struct gui_rect
+gui_rect(gui_float x, gui_float y, gui_float w, gui_float h)
+{
+    struct gui_rect r;
+    r.x = x, r.y = y;
+    r.w = w, r.h = h;
+    return r;
+}
+
+struct gui_vec2
+gui_vec2(gui_float x, gui_float y)
+{
+    struct gui_vec2 ret;
+    ret.x = x; ret.y = y;
+    return ret;
+}
+
+static void*
+gui_memcopy(void *dst, const void *src, gui_size size)
+{
+    gui_size i = 0;
+    char *d = dst;
+    const char *s = src;
+    for (i = 0; i < size; ++i)
+        d[i] = s[i];
+    return dst;
+}
 
 struct gui_color
 gui_rgba(gui_byte r, gui_byte g, gui_byte b, gui_byte a)
@@ -2172,23 +2263,55 @@ gui_rgb(gui_byte r, gui_byte g, gui_byte b)
     return ret;
 }
 
-static struct gui_vec2
-gui_vec2(gui_float x, gui_float y)
+struct gui_image
+gui_subimage_ptr(void *ptr, struct gui_rect r)
 {
-    struct gui_vec2 ret;
-    ret.x = x; ret.y = y;
-    return ret;
+    struct gui_image s;
+    s.handle.ptr = ptr;
+    s.region = r;
+    return s;
 }
 
-static void*
-gui_memcopy(void *dst, const void *src, gui_size size)
+struct gui_image
+gui_subimage_id(gui_int id, struct gui_rect r)
 {
-    gui_size i = 0;
-    char *d = dst;
-    const char *s = src;
-    for (i = 0; i < size; ++i)
-        d[i] = s[i];
-    return dst;
+    struct gui_image s;
+    s.handle.id = id;
+    s.region = r;
+    return s;
+}
+
+struct gui_image
+gui_image_ptr(void *ptr)
+{
+    struct gui_image s;
+    s.handle.ptr = ptr;
+    s.region = gui_rect(-1,-1,-1,-1);
+    return s;
+}
+
+struct gui_image
+gui_image_id(gui_int id)
+{
+    struct gui_image s;
+    s.handle.id = id;
+    s.region = gui_rect(-1,-1,-1,-1);
+    return s;
+}
+
+gui_bool
+gui_rect_is_valid(struct gui_rect *r)
+{
+    if (r->x < 0 || r->y < 0 ||
+        r->w < 0 || r->h < 0)
+        return gui_false;
+    return gui_true;
+}
+
+gui_bool
+gui_image_is_subimage(struct gui_image* img)
+{
+    return !gui_rect_is_valid(&img->region);
 }
 
 static void
@@ -2698,7 +2821,7 @@ gui_command_buffer_push_triangle(struct gui_command_buffer *b, gui_float x0, gui
 
 void
 gui_command_buffer_push_image(struct gui_command_buffer *b, gui_float x, gui_float y,
-    gui_float w, gui_float h, gui_handle img)
+    gui_float w, gui_float h, struct gui_image *img)
 {
     struct gui_command_image *cmd;
     GUI_ASSERT(b);
@@ -2716,7 +2839,7 @@ gui_command_buffer_push_image(struct gui_command_buffer *b, gui_float x, gui_flo
     cmd->y = (gui_short)y;
     cmd->w = (gui_ushort)MAX(0, w);
     cmd->h = (gui_ushort)MAX(0, h);
-    cmd->img = img;
+    cmd->img = *img;
 }
 
 void
@@ -2892,7 +3015,7 @@ gui_button_triangle(struct gui_command_buffer *out, gui_float x, gui_float y,
 
 gui_bool
 gui_button_image(struct gui_command_buffer *out, gui_float x, gui_float y,
-    gui_float w, gui_float h, gui_handle img, enum gui_button_behavior b,
+    gui_float w, gui_float h, struct gui_image img, enum gui_button_behavior b,
     const struct gui_button *button, const struct gui_input *in)
 {
     gui_bool pressed;
@@ -2909,7 +3032,73 @@ gui_button_image(struct gui_command_buffer *out, gui_float x, gui_float y,
     img_y = y + button->padding.y;
     img_w = w - 2 * button->padding.x;
     img_h = h - 2 * button->padding.y;
-    gui_command_buffer_push_image(out, img_x, img_y, img_w, img_h, img);
+    gui_command_buffer_push_image(out, img_x, img_y, img_w, img_h, &img);
+    return pressed;
+}
+
+gui_bool
+gui_button_text_triangle(struct gui_command_buffer *out, gui_float x, gui_float y,
+    gui_float w, gui_float h, enum gui_heading heading, const char *text, enum gui_text_align align,
+    enum gui_button_behavior behavior, const struct gui_button *button, const struct gui_font *f,
+    const struct gui_input *i)
+{
+    gui_bool pressed;
+    struct gui_rect tri;
+    struct gui_color col;
+    struct gui_vec2 points[3];
+
+    GUI_ASSERT(button);
+    GUI_ASSERT(out);
+    if (!out || !button)
+        return gui_false;
+
+    pressed = gui_button_text(out, x, y, w, h, text, behavior, button, i, f);
+    tri.y = y + (h/2) - f->height/2;
+    tri.w = tri.h = f->height;
+    if (align == GUI_TEXT_LEFT) {
+        tri.x = (x + w) - (2 * button->padding.x + tri.w);
+        tri.x = MAX(tri.x, 0);
+    } else if (align == GUI_TEXT_RIGHT) {
+        tri.x = x + 2 * button->padding.x;
+    }
+
+    col = (i && GUI_INBOX(i->mouse_pos.x, i->mouse_pos.y, x, y, w, h)) ?
+        col = button->highlight_content : button->content;
+
+    /* draw triangle */
+    gui_triangle_from_direction(points, tri.x, tri.y, tri.w, tri.h, 0, 0, heading);
+    gui_command_buffer_push_triangle(out,  points[0].x, points[0].y,
+        points[1].x, points[1].y, points[2].x, points[2].y, col);
+    return pressed;
+}
+
+gui_bool
+gui_button_text_image(struct gui_command_buffer *out, gui_float x, gui_float y,
+    gui_float w, gui_float h, struct gui_image img, const char* text,
+    enum gui_text_align align, enum gui_button_behavior behavior,
+    const struct gui_button *button, const struct gui_font *f, 
+    const struct gui_input *i)
+{
+    gui_bool pressed;
+    struct gui_rect tri;
+    struct gui_rect icon;
+    struct gui_color col;
+
+    GUI_ASSERT(button);
+    GUI_ASSERT(out);
+    if (!out || !button)
+        return gui_false;
+
+    pressed = gui_button_text(out, x, y, w, h, text, behavior, button, i, f);
+    icon.y = y + (h/2) - f->height/2;
+    icon.w = icon.h = f->height;
+    if (align == GUI_TEXT_LEFT) {
+        icon.x = (x + w) - (2 * button->padding.x + tri.w);
+        icon.x = MAX(tri.x, 0);
+    } else if (align == GUI_TEXT_RIGHT) {
+        icon.x = x + 2 * button->padding.x;
+    }
+    gui_command_buffer_push_image(out, icon.x, icon.y, icon.w, icon.h, &img);
     return pressed;
 }
 
@@ -4327,7 +4516,7 @@ gui_panel_button_triangle(struct gui_panel_layout *layout, enum gui_heading head
 }
 
 gui_bool
-gui_panel_button_image(struct gui_panel_layout *layout, gui_handle image,
+gui_panel_button_image(struct gui_panel_layout *layout, struct gui_image image,
     enum gui_button_behavior behavior)
 {
     struct gui_rect bounds;
@@ -4375,6 +4564,27 @@ gui_panel_button_toggle(struct gui_panel_layout *layout, const char *str, gui_bo
     if (gui_button_text(layout->buffer, bounds.x, bounds.y, bounds.w, bounds.h,
         str, GUI_BUTTON_DEFAULT, &button, layout->input, &config->font)) value = !value;
     return value;
+}
+
+gui_bool
+gui_panel_button_text_triangle(struct gui_panel_layout *layout, enum gui_heading heading,
+    const char *text, enum gui_text_align align, enum gui_button_behavior behavior)
+{
+    struct gui_rect bounds;
+    struct gui_button button;
+    const struct gui_config *config;
+    if (!gui_panel_button(&button, &bounds, layout))
+        return gui_false;
+
+    config = layout->config;
+    button.rounding = config->rounding[GUI_ROUNDING_BUTTON];
+    button.background = config->colors[GUI_COLOR_BUTTON];
+    button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
+    button.content = config->colors[GUI_COLOR_TEXT];
+    button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
+    button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
+    return gui_button_text_triangle(layout->buffer, bounds.x, bounds.y, bounds.w,
+            bounds.h, heading, text, align, behavior, &button, &config->font, layout->input);
 }
 
 static gui_bool

@@ -164,7 +164,7 @@ execute(NVGcontext *nvg, struct gui_command_buffer *list, int width, int height)
         } break;
         case GUI_COMMAND_IMAGE: {
             const struct gui_command_image *i = gui_command(image, cmd);
-            draw_image(nvg, i->img, i->x, i->y, i->w, i->h, 1);
+            draw_image(nvg, i->img.handle, i->x, i->y, i->w, i->h, 1);
         } break;
         case GUI_COMMAND_MAX:
         default: break;
