@@ -291,7 +291,7 @@ while (1) {
     gui_panel_row(&layout, 30, 1);
     if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");
-    gui_panel_end(&layout, &win.hook);
+    gui_panel_end(&layout, &panel);
 
     /* draw each panel */
     struct gui_panel *iter;
