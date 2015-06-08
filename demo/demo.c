@@ -273,6 +273,7 @@ color_picker(struct gui_panel_layout *panel, struct control_window *control,
     int i;
     gui_byte *iter;
     gui_bool *active[4];
+
     active[0] = &control->spinner_r_active;
     active[1] = &control->spinner_g_active;
     active[2] = &control->spinner_b_active;
@@ -383,6 +384,7 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
     struct gui_config *config = &gui->config;
     gui->font = *font;
     gui->running = gui_true;
+
     gui_command_buffer_init_fixed(&gui->show_buffer, gui->memory, MAX_MEMORY/2, GUI_CLIP);
     gui_command_buffer_init_fixed(&gui->control_buffer,
         gui_ptr_add(void*, gui->memory, (MAX_MEMORY/2)), MAX_MEMORY/2, GUI_CLIP);

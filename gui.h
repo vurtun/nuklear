@@ -1028,8 +1028,8 @@ gui_bool gui_button_text_image(struct gui_command_buffer *out, gui_float x, gui_
     - returns gui_true if the button was pressed gui_false otherwise
 */
 GUI_API gui_bool gui_toggle(struct gui_command_buffer*, gui_float x, gui_float y, gui_float w,
-                    gui_float h, gui_bool, const char*, enum gui_toggle_type,
-                    const struct gui_toggle*, const struct gui_input*, const struct gui_font*);
+                            gui_float h, gui_bool, const char*, enum gui_toggle_type,
+                            const struct gui_toggle*, const struct gui_input*, const struct gui_font*);
 /*  this function executes a toggle (checkbox, radiobutton) widget
     Input:
     - output command buffer for draw commands
@@ -5159,6 +5159,7 @@ gui_panel_tab_end(struct gui_panel_layout *p, struct gui_panel_layout *t)
     struct gui_panel panel;
     struct gui_command_buffer *out;
     struct gui_vec2 item_spacing;
+    struct gui_vec2 panel_padding;
     GUI_ASSERT(t);
     GUI_ASSERT(p);
     if (!p || !t || !p->valid)
@@ -5170,7 +5171,11 @@ gui_panel_tab_end(struct gui_panel_layout *p, struct gui_panel_layout *t)
     gui_panel_end(t, &panel);
 
     item_spacing = gui_config_property(p->config, GUI_PROPERTY_ITEM_SPACING);
-    p->at_y += t->height + item_spacing.y;
+    panel_padding = gui_config_property(p->config, GUI_PROPERTY_PADDING);
+    if (t->valid)
+        p->at_y += t->height + 2 * item_spacing.y;
+    else
+        p->at_y += t->height - panel_padding.x + 2 * item_spacing.y;
     out = p->buffer;
     gui_command_buffer_push_scissor(out, p->clip.x, p->clip.y, p->clip.w, p->clip.h);
 }
