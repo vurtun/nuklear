@@ -76,18 +76,16 @@ combobox_panel(struct gui_panel_layout *panel, struct show_window *demo)
 static void
 widget_panel(struct gui_panel_layout *panel, struct show_window *demo)
 {
-    char buffer[MAX_BUFFER];
     const char *items[] = {"Fist", "Pistol", "Shotgun", "Railgun", "BFG"};
-
     gui_panel_row(panel, 30, 1);
     gui_panel_label(panel, "text left", GUI_TEXT_LEFT);
     gui_panel_label(panel, "text center", GUI_TEXT_CENTERED);
     gui_panel_label(panel, "text right", GUI_TEXT_RIGHT);
     if (gui_panel_button_text(panel, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");
-    if (gui_panel_button_text_triangle(panel, GUI_RIGHT, "button", GUI_TEXT_LEFT, GUI_BUTTON_DEFAULT))
+    if (gui_panel_button_text_triangle(panel, GUI_RIGHT, "next", GUI_TEXT_LEFT, GUI_BUTTON_DEFAULT))
         fprintf(stdout, "right triangle button pressed!\n");
-    if (gui_panel_button_text_triangle(panel, GUI_LEFT, "button", GUI_TEXT_RIGHT, GUI_BUTTON_DEFAULT))
+    if (gui_panel_button_text_triangle(panel, GUI_LEFT, "previous", GUI_TEXT_RIGHT, GUI_BUTTON_DEFAULT))
         fprintf(stdout, "left triangle button pressed!\n");
     demo->toggle = gui_panel_button_toggle(panel, "toggle", demo->toggle);
     demo->checkbox = gui_panel_check(panel, "checkbox", demo->checkbox);
@@ -95,18 +93,33 @@ widget_panel(struct gui_panel_layout *panel, struct show_window *demo)
     gui_panel_row(panel, 30, 2);
     if (gui_panel_option(panel, "option 0", demo->option == 0)) demo->option = 0;
     if (gui_panel_option(panel, "option 1", demo->option == 1)) demo->option = 1;
-    demo->slider = gui_panel_slider(panel, 0, demo->slider, 10, 1.0f);
-    sprintf(buffer, "%.2f", demo->slider);
-    gui_panel_label(panel, buffer, GUI_TEXT_LEFT);
-    demo->progressbar = gui_panel_progress(panel, demo->progressbar, 100, gui_true);
-    sprintf(buffer, "%lu", demo->progressbar);
-    gui_panel_label(panel, buffer, GUI_TEXT_LEFT);
+
+    {
+        char buffer[MAX_BUFFER];
+        const gui_float ratio[] = {0.8f, 0.2f};
+        gui_panel_row_templated(panel, 30, 2, ratio);
+        demo->slider = gui_panel_slider(panel, 0, demo->slider, 10, 1.0f);
+        sprintf(buffer, "%.2f", demo->slider);
+        gui_panel_label(panel, buffer, GUI_TEXT_LEFT);
+        demo->progressbar = gui_panel_progress(panel, demo->progressbar, 100, gui_true);
+        sprintf(buffer, "%lu", demo->progressbar);
+        gui_panel_label(panel, buffer, GUI_TEXT_LEFT);
+    }
 
     gui_panel_row(panel, 30, 1);
     demo->item_current = gui_panel_selector(panel, items, LEN(items), demo->item_current);
     demo->spinner = gui_panel_spinner(panel, 0, demo->spinner, 250, 10, &demo->spinner_active);
-    demo->input_length = gui_panel_edit(panel, demo->input_buffer, demo->input_length,
-        MAX_BUFFER, &demo->input_active, GUI_INPUT_DEFAULT);
+
+    {
+        const gui_float ratio[] = {0.7f, 0.3f};
+        gui_panel_row_templated(panel, 30, 2, ratio);
+        demo->input_length = gui_panel_edit(panel, demo->input_buffer, demo->input_length,
+            MAX_BUFFER, &demo->input_active, GUI_INPUT_DEFAULT);
+        if (gui_panel_button_text(panel, "submit", GUI_BUTTON_DEFAULT)) {
+            demo->input_length = 0;
+            fprintf(stdout, "command executed!\n");
+        }
+    }
 }
 
 static void
