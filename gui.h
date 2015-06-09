@@ -5377,7 +5377,7 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
         gui_float button_w, button_h;
         gui_size text_width = font->width(font->userdata,
             (const gui_char*)tabs[i], gui_strsiz(tabs[i]));
-        text_width = text_width + (gui_size)(2 * item_spacing.x);
+        text_width = text_width + (gui_size)(4 * item_padding.x);
 
         button_y = header_y;
         button_h = header_h;
