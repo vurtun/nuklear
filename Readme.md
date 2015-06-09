@@ -36,7 +36,7 @@ Summary: It is only responsible for the actual user interface
 ## Example
 ```c
 /* allocate memory to hold the draw commands */
-gui_command_buffer buffer;
+struct gui_command_buffer buffer;
 void *memory = malloc(MEMORY_SIZE)
 gui_command_buffer_init_fixed(buffer, memory, MEMORY_SIZE);
 
@@ -196,7 +196,7 @@ alloc.alloc = your_allocation_callback;
 alloc.relloac = your_reallocation_callback;
 alloc.free = your_free_callback;
 
-gui_command_buffer buffer;
+struct gui_command_buffer buffer;
 const gui_size initial_size = 4*1024;
 const gui_float grow_factor = 2.0f;
 gui_command_buffer_init(&buffer, &alloc, initial_size, grow_factor);
@@ -211,7 +211,7 @@ and returns the from the user input modified state of the widget.
 
 ```c
 
-gui_command_buffer buffer;
+struct gui_command_buffer buffer;
 void *memory = malloc(MEMORY_SIZE)
 gui_buffer_init_fixed(buffer, memory, MEMORY_SIZE);
 
@@ -263,7 +263,7 @@ have to be drawn in a certain order.
 
 ```c
 /* allocate buffer to hold output */
-gui_command_buffer buffer;
+struct gui_command_buffer buffer;
 gui_buffer_init_fixed(buffer, memory, size);
 
 /* setup configuration data */
@@ -313,7 +313,7 @@ horizontally or vertically. The combination of slots, ratio and multiple panels
 per slots support a rich set of vertical, horizontal and mixed layouts.
 
 ```c
-gui_command_buffer buffer;
+struct gui_command_buffer buffer;
 gui_buffer_init_fixed(buffer, memory, size);
 
 struct gui_config config;
