@@ -52,13 +52,13 @@ struct demo_gui {
     gui_bool running;
     unsigned int ms;
     void *memory;
-    struct show_window show;
-    struct control_window control;
     struct gui_command_buffer show_buffer;
     struct gui_command_buffer control_buffer;
-    struct gui_stack stack;
     struct gui_config config;
     struct gui_font font;
+    struct control_window control;
+    struct show_window show;
+    struct gui_stack stack;
 };
 
 static void

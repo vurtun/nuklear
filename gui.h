@@ -3080,7 +3080,7 @@ gui_button_text_triangle(struct gui_command_buffer *out, gui_float x, gui_float 
     }
 
     col = (i && GUI_INBOX(i->mouse_pos.x, i->mouse_pos.y, x, y, w, h)) ?
-        col = button->highlight_content : button->content;
+        button->highlight_content : button->content;
 
     /* draw triangle */
     gui_triangle_from_direction(points, tri.x, tri.y, tri.w, tri.h, 0, 0, heading);
@@ -4325,7 +4325,7 @@ gui_panel_row_templated(struct gui_panel_layout *layout, gui_float height,
     }
 
     r = GUI_SATURATE(1.0f - r);
-    layout->row.item_ratio = (r > 0) ? r / n_undef : 0;
+    layout->row.item_ratio = (r > 0) ? (r / (gui_float)n_undef) : 0;
 }
 
 static void
@@ -5294,14 +5294,15 @@ failed:
 gui_float
 gui_panel_group_end(struct gui_panel_layout *p, struct gui_panel_layout *g)
 {
+    struct gui_panel pan;
     struct gui_command_buffer *out;
     struct gui_rect clip;
-    struct gui_panel pan;
 
     GUI_ASSERT(p);
     GUI_ASSERT(g);
     if (!p || !g) return 0;
     if (!p->valid) return 0;
+    gui_zero(&pan, sizeof(pan));
 
     out = p->buffer;
     pan.x = g->at_x;
@@ -5352,7 +5353,6 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
     out = parent->buffer;
     font = &config->font;
     item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
-    item_spacing = gui_config_property(config, GUI_PROPERTY_ITEM_SPACING);
     panel_padding = gui_config_property(config, GUI_PROPERTY_PADDING);
 
     gui_panel_alloc_space(&bounds, parent);
@@ -5438,6 +5438,7 @@ gui_panel_shelf_end(struct gui_panel_layout *p, struct gui_panel_layout *s)
     GUI_ASSERT(s);
     if (!p || !s) return 0;
     if (!p->valid) return 0;
+    gui_zero(&pan, sizeof(pan));
 
     out = p->buffer;
     pan.x = s->at_x; pan.y = s->y;
