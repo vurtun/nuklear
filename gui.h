@@ -2998,8 +2998,8 @@ gui_button_text(struct gui_command_buffer *o, gui_float x, gui_float y,
     inner.h = button_h - (2 * b->border);
 
     /* draw text inside button */
-    t.padding.x = b->padding.x;
-    t.padding.y = b->padding.y;
+    t.padding.x = 0;
+    t.padding.y = 0;
     t.background = bg_color;
     t.foreground = font_color;
     gui_text(o, inner.x, inner.y, inner.w, inner.h, string, gui_strsiz(string),
