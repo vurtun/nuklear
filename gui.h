@@ -5199,6 +5199,7 @@ gui_panel_tab_begin(struct gui_panel_layout *parent, struct gui_panel_layout *ta
     out = parent->buffer;
     gui_zero(tab, sizeof(*tab));
     tab->valid = !minimized;
+
     if (!parent->valid) {
         tab->valid = gui_false;
         tab->config = parent->config;

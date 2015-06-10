@@ -85,7 +85,7 @@ widget_panel(struct gui_panel_layout *panel, struct show_window *demo)
         fprintf(stdout, "button pressed!\n");
     if (gui_panel_button_text_triangle(panel, GUI_RIGHT, "next", GUI_TEXT_LEFT, GUI_BUTTON_DEFAULT))
         fprintf(stdout, "right triangle button pressed!\n");
-    if (gui_panel_button_text_triangle(panel, GUI_LEFT, "previous", GUI_TEXT_RIGHT, GUI_BUTTON_DEFAULT))
+    if (gui_panel_button_text_triangle(panel,GUI_LEFT,"previous",GUI_TEXT_RIGHT,GUI_BUTTON_DEFAULT))
         fprintf(stdout, "left triangle button pressed!\n");
     demo->toggle = gui_panel_button_toggle(panel, "toggle", demo->toggle);
     demo->checkbox = gui_panel_check(panel, "checkbox", demo->checkbox);
@@ -152,27 +152,17 @@ time_panel(struct gui_panel_layout *panel, unsigned int ms)
 static void
 table_panel(struct gui_panel_layout *panel)
 {
+    gui_size i = 0;
+    const char *table[] = {"Move forward", "w", "Move back", "s", "Move left", "a",
+        "Move right", "d", "Jump", "SPACE", "Duck", "CTRL"};
     gui_panel_table_begin(panel, GUI_TABLE_HHEADER, 30, 2);
     gui_panel_label_colored(panel, "MOVEMENT", GUI_TEXT_CENTERED, gui_rgba(178, 122, 1, 255));
     gui_panel_label_colored(panel, "KEY/BUTTON", GUI_TEXT_CENTERED, gui_rgba(178, 122, 1, 255));
-    gui_panel_table_row(panel);
-    gui_panel_label(panel, "Move foward", GUI_TEXT_LEFT);
-    gui_panel_label(panel, "w", GUI_TEXT_CENTERED);
-    gui_panel_table_row(panel);
-    gui_panel_label(panel, "Move back", GUI_TEXT_LEFT);
-    gui_panel_label(panel, "s", GUI_TEXT_CENTERED);
-    gui_panel_table_row(panel);
-    gui_panel_label(panel, "Move left", GUI_TEXT_LEFT);
-    gui_panel_label(panel, "a", GUI_TEXT_CENTERED);
-    gui_panel_table_row(panel);
-    gui_panel_label(panel, "Move right", GUI_TEXT_LEFT);
-    gui_panel_label(panel, "d", GUI_TEXT_CENTERED);
-    gui_panel_table_row(panel);
-    gui_panel_label(panel, "Jump", GUI_TEXT_LEFT);
-    gui_panel_label(panel, "SPACE", GUI_TEXT_CENTERED);
-    gui_panel_table_row(panel);
-    gui_panel_label(panel, "Duck", GUI_TEXT_LEFT);
-    gui_panel_label(panel, "CTRL", GUI_TEXT_CENTERED);
+    for (i = 0; i < LEN(table); i += 2) {
+        gui_panel_table_row(panel);
+        gui_panel_label(panel, table[i], GUI_TEXT_LEFT);
+        gui_panel_label(panel, table[i+1], GUI_TEXT_CENTERED);
+    }
     gui_panel_table_end(panel);
 }
 
