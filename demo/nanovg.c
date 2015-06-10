@@ -302,6 +302,7 @@ main(int argc, char *argv[])
             else if (evt.type == SDL_MOUSEBUTTONUP) btn(&in, &evt, gui_false);
             else if (evt.type == SDL_MOUSEMOTION) motion(&in, &evt);
             else if (evt.type == SDL_TEXTINPUT) text(&in, &evt);
+            else if (evt.type == SDL_MOUSEWHEEL) gui_input_scroll(&in, evt.wheel.y);
         }
         gui_input_end(&in);
 

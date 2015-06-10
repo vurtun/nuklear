@@ -187,6 +187,8 @@ struct gui_input {
     /* current mouse button state */
     gui_uint mouse_clicked;
     /* number of mouse button state transistion between frames */
+    gui_float scroll_delta;
+    /* number of step in the up or down scroll direction */
     struct gui_vec2 mouse_clicked_pos;
     /* mouse position of the last mouse button state change */
 };
@@ -217,6 +219,12 @@ GUI_API void gui_input_button(struct gui_input*, gui_int x, gui_int y, gui_bool 
     - local os window X position inside of the mouse
     - local os window Y position inside of the mouse
     - the new state of the button
+*/
+GUI_API void gui_input_scroll(struct gui_input*, gui_float y);
+/*  this function updates the current page scroll delta
+    Input:
+    - Input structure to add the glyph to
+    - vector with each direction (< 0 down > 0 up and scroll distance)
 */
 GUI_API void gui_input_char(struct gui_input*, const gui_glyph);
 /*  this function adds a utf8 glpyh into the internal text frame buffer
@@ -2522,6 +2530,7 @@ gui_input_begin(struct gui_input *in)
     if (!in) return;
     in->mouse_clicked = 0;
     in->text_len = 0;
+    in->scroll_delta = 0;
     gui_vec2_mov(in->mouse_prev, in->mouse_pos);
     for (i = 0; i < GUI_KEY_MAX; i++)
         in->keys[i].clicked = 0;
@@ -2556,6 +2565,14 @@ gui_input_button(struct gui_input *in, gui_int x, gui_int y, gui_bool down)
     in->mouse_clicked_pos.y = (gui_float)y;
     in->mouse_down = down;
     in->mouse_clicked++;
+}
+
+void
+gui_input_scroll(struct gui_input *in, gui_float y)
+{
+    GUI_ASSERT(in);
+    if (!in) return;
+    in->scroll_delta += y;
 }
 
 void
@@ -3569,10 +3586,17 @@ gui_scroll(struct gui_command_buffer *out, gui_float x, gui_float y,
             scroll_offset = CLAMP(0, scroll_offset + delta, target - scroll_h);
             cursor_y += pixel;
         } else if (button_up_pressed || button_down_pressed) {
-            /* update cursor over up/down button */
+            /* update cursor by up/down button */
             scroll_offset = (button_down_pressed) ?
                 MIN(scroll_offset + scroll_step, target - scroll_h):
                 MAX(0, scroll_offset - scroll_step);
+            scroll_off = scroll_offset / target;
+            cursor_y = scroll_y + (scroll_off * scroll_h);
+        } else if ((i->scroll_delta < 0) || (i->scroll_delta > 0)) {
+            /* update cursor by scrolling */
+            scroll_offset = (button_down_pressed) ?
+                MIN(scroll_offset + scroll_step * i->scroll_delta, target - scroll_h):
+                MAX(0, scroll_offset - scroll_step * i->scroll_delta);
             scroll_off = scroll_offset / target;
             cursor_y = scroll_y + (scroll_off * scroll_h);
         }
@@ -5490,7 +5514,7 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
         scroll_w = scrollbar_width;
         scroll_h = layout->height;
         scroll_offset = layout->offset;
-        scroll_step = layout->height * 0.25f;
+        scroll_step = layout->height * 0.10f;
         scroll.rounding = config->rounding[GUI_ROUNDING_SCROLLBAR];
         scroll.background = config->colors[GUI_COLOR_SCROLLBAR];
         scroll.foreground = config->colors[GUI_COLOR_SCROLLBAR_CURSOR];

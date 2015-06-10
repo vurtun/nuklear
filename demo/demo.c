@@ -239,8 +239,8 @@ static void
 properties_tab(struct gui_panel_layout *panel, struct gui_config *config)
 {
     int i = 0;
-    const char *properties[] = {"item spacing", "item padding", "panel padding",
-        "scaler size:", "scrollbar width:"};
+    const char *properties[] = {"item spacing:", "item padding:", "panel padding:",
+        "scaler size:", "scrollbar:"};
 
     gui_panel_row(panel, 30, 3);
     for (i = 0; i <= GUI_PROPERTY_SCROLLBAR_WIDTH; ++i) {
