@@ -3114,7 +3114,6 @@ gui_button_text_image(struct gui_command_buffer *out, gui_float x, gui_float y,
     const struct gui_input *i)
 {
     gui_bool pressed;
-    struct gui_rect tri;
     struct gui_rect icon;
     struct gui_color col;
 
@@ -3127,11 +3126,11 @@ gui_button_text_image(struct gui_command_buffer *out, gui_float x, gui_float y,
     icon.y = y + (h/2) - f->height/2;
     icon.w = icon.h = f->height;
     if (align == GUI_TEXT_LEFT) {
-        icon.x = (x + w) - (2 * button->padding.x + tri.w);
-        icon.x = MAX(tri.x, 0);
+        icon.x = (x + w) - (2 * button->padding.x + icon.w);
+        icon.x = MAX(icon.x, 0);
     } else if (align == GUI_TEXT_RIGHT) {
         icon.x = x + 2 * button->padding.x;
-    }
+    } else return gui_false;
     gui_command_buffer_push_image(out, icon.x, icon.y, icon.w, icon.h, &img);
     return pressed;
 }
