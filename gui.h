@@ -2998,8 +2998,8 @@ gui_button_text(struct gui_command_buffer *o, gui_float x, gui_float y,
     inner.h = button_h - (2 * b->border);
 
     /* draw text inside button */
-    t.padding.x = 0;
-    t.padding.y = 0;
+    t.padding.x = b->padding.x;
+    t.padding.y = b->padding.y;
     t.background = bg_color;
     t.foreground = font_color;
     gui_text(o, inner.x, inner.y, inner.w, inner.h, string, gui_strsiz(string),
@@ -3143,9 +3143,9 @@ gui_toggle(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w
     toggle_active = active;
 
     /* calculate the size of the complete toggle */
-    select_x = x + toggle->padding.x;
-    select_y = y + toggle->padding.y;
     select_size = font->height + 2 * toggle->padding.y;
+    select_x = x + toggle->padding.x;
+    select_y = (y + toggle->padding.y + (select_size / 2)) - (font->height / 2);
 
     /* calculate the bounds of the cursor inside the toggle */
     cursor_pad = (type == GUI_TOGGLE_OPTION) ?
@@ -3185,9 +3185,9 @@ gui_toggle(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w
 
         /* calculate text bounds */
         inner_x = x + select_size + toggle->padding.x * 2;
-        inner_y = (y + (select_size / 2)) - (font->height / 2);
+        inner_y = select_y;
         inner_w = (x + toggle_w) - (inner_x + toggle->padding.x);
-        inner_h = (y + toggle_h) - (inner_y + toggle->padding.y);
+        inner_h = select_size;
 
         /* draw text */
         text.padding.x = 0;
