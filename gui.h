@@ -53,7 +53,7 @@ to automatically set the correct size for each type in the library.
 */
 #ifdef GUI_USE_FIXED_TYPES
 #include <stdint.h>
-typedef int8_t gui_char;
+typedef char gui_char;
 typedef int32_t gui_int;
 typedef int32_t gui_bool;
 typedef int16_t gui_short;
@@ -3315,7 +3315,7 @@ gui_progress(struct gui_command_buffer *out, gui_float x, gui_float y,
     }
 
     if (!max) return prog_value;
-    /* make calculated values are correct */
+    /* make sure calculated values are correct */
     prog_value = MIN(prog_value, max);
     prog_scale = (gui_float)prog_value / (gui_float)max;
 
@@ -3820,7 +3820,7 @@ gui_config_default_color(struct gui_config *config)
     config->colors[GUI_COLOR_SHELF] = gui_rgba(45, 45, 45, 255);
     config->colors[GUI_COLOR_SHELF_TEXT] = gui_rgba(150, 150, 150, 255);
     config->colors[GUI_COLOR_SHELF_ACTIVE] = gui_rgba(30, 30, 30, 255);
-    config->colors[GUI_COLOR_SHELF_ACTIVE_TEXT] = gui_rgba(100, 100, 100, 255);
+    config->colors[GUI_COLOR_SHELF_ACTIVE_TEXT] = gui_rgba(150, 150, 150, 255);
     config->colors[GUI_COLOR_SCALER] = gui_rgba(100, 100, 100, 255);
 }
 
