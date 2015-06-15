@@ -20,6 +20,7 @@ struct show_window {
     gui_int combo_selection;
     gui_bool toggle;
     gui_int option;
+    gui_size text_box;
     /* tabs */
     gui_bool combobox_tab;
     gui_bool widget_tab;

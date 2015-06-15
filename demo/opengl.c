@@ -21,12 +21,12 @@
 #include FT_GLYPH_H
 
 /* macros */
-#define DTIME       16
+/*#define DTIME       16*/
+#define DTIME       40
 #define FONT_ATLAS_DEPTH 4
 #define CIRCLE_SEGMENTS 22
 
 /* macros */
-#define DTIME       16
 #define MIN(a,b)    ((a) < (b) ? (a) : (b))
 #define MAX(a,b)    ((a) < (b) ? (b) : (a))
 #define CLAMP(i,v,x) (MAX(MIN(v,x), i))
@@ -34,6 +34,7 @@
 #define UNUSED(a)   ((void)(a))
 
 #define GUI_IMPLEMENTATION
+#define GUI_USE_FIXED_TYPES
 #include "../gui.h"
 #include "demo.c"
 
@@ -585,7 +586,7 @@ main(int argc, char *argv[])
             else if (evt.type == SDL_MOUSEBUTTONUP) btn(&in, &evt, gui_false);
             else if (evt.type == SDL_MOUSEMOTION) motion(&in, &evt);
             else if (evt.type == SDL_TEXTINPUT) text(&in, &evt);
-            else if (evt.type == SDL_MOUSEWHEEL) gui_input_scroll(&in, evt.wheel.y);
+            else if (evt.type == SDL_MOUSEWHEEL) gui_input_scroll(&in, (float)evt.wheel.y);
         }
         gui_input_end(&in);
 

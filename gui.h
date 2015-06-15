@@ -47,7 +47,7 @@ extern "C" {
 /*
 Since the gui uses ANSI C which does not guarantee to have fixed types, you need
 to set the appropriate size of each type. However if your developer environment
-supports fixed size types over the <stdint> header you can just use
+supports fixed size types by the <stdint> header you can just use
 #define GUI_USE_FIXED_TYPES
 to automatically set the correct size for each type in the library.
 */
@@ -106,9 +106,9 @@ typedef gui_size(*gui_text_width_f)(gui_handle, const gui_char*, gui_size);
  */
 /*  INPUT
     ----------------------------
-    The input API is responsible for holding input state by keeping track of
+    The input API is responsible for holding input by keeping track of
     mouse, key and text input state. The core of the API is the persistent
-    gui_input struct which holds the input state over the runtime.
+    gui_input struct which holds the input state while running.
     It is important to note that no direct os or window handling is done by the input
     API, instead all the input state has to be provided from the user. This in one hand
     expects more work from the user and complicates the usage but on the other hand
@@ -182,60 +182,50 @@ struct gui_input {
     struct gui_vec2 mouse_prev;
     /* mouse position in the last frame */
     struct gui_vec2 mouse_delta;
-    /* mouse travelling distance over the last and current frame */
+    /* mouse travelling distance from last to current frame */
     gui_bool mouse_down;
     /* current mouse button state */
     gui_uint mouse_clicked;
-    /* number of mouse button state transistion between frames */
+    /* number of mouse button state transistions between frames */
     gui_float scroll_delta;
-    /* number of step in the up or down scroll direction */
+    /* number of steps in the up or down scroll direction */
     struct gui_vec2 mouse_clicked_pos;
     /* mouse position of the last mouse button state change */
 };
 
 GUI_API void gui_input_begin(struct gui_input*);
-/*  this function sets the input state to writeable
-    Input:
-    - Input structure to set modfifiable
-*/
+/*  this function sets the input state to writeable */
 GUI_API void gui_input_motion(struct gui_input*, gui_int x, gui_int y);
 /*  this function updates the current mouse position
     Input:
-    - Input structure to update to mouse state
-    - local os window X position inside of the mouse
-    - local os window Y position inside of the mouse
+    - local os window X position
+    - local os window Y position
 */
 GUI_API void gui_input_key(struct gui_input*, enum gui_keys, gui_bool down);
 /*  this function updates the current state of a key
     Input:
-    - Input structure to update to key state
-    - key identifies whose state has been changed
+    - key identifier
     - the new state of the key
 */
 GUI_API void gui_input_button(struct gui_input*, gui_int x, gui_int y, gui_bool down);
 /*  this function updates the current state of the button
     Input:
-    - Input structure to update to key state
-    - local os window X position inside of the mouse
-    - local os window Y position inside of the mouse
+    - local os window X position
+    - local os window Y position
     - the new state of the button
 */
 GUI_API void gui_input_scroll(struct gui_input*, gui_float y);
 /*  this function updates the current page scroll delta
     Input:
-    - Input structure to add the glyph to
     - vector with each direction (< 0 down > 0 up and scroll distance)
 */
 GUI_API void gui_input_char(struct gui_input*, const gui_glyph);
-/*  this function adds a utf8 glpyh into the internal text frame buffer
+/*  this function adds a utf-8 glpyh into the internal text frame buffer
     Input:
-    - Input structure to add the glyph to
-    - utf8 glyph to add
+    - utf8 glyph to add to the text buffer
 */
 GUI_API void gui_input_end(struct gui_input*);
 /*  this function sets the input state to readable
-    Input:
-    - Input structure to set readable
 */
 
 /*
@@ -250,14 +240,13 @@ GUI_API void gui_input_end(struct gui_input*);
     A basic buffer API with linear allocation and resetting as only freeing policy.
     The buffer main purpose is to control all memory management inside
     the GUI toolkit and still leave memory control as much as possible in the hand
-    of the user. The memory control is herby achievable over three different ways
-    of memory handling from the user.
+    of the user. The memory is provided in three different ways.
     The first way is to use a fixed size block of memory to be filled up.
-    Biggest advantage of using a fixed size block is a simple memory model.
-    Downside is that if the buffer is full there is no way to accesses more memory,
-    which fits target application with a GUI with roughly known memory consumptions.
+    Biggest advantage is a simple memory model. Downside is that if the buffer
+    is full there is no way to accesses more memory, which fits target application
+    with a GUI with roughly known memory consumptions.
     The second way to mnamge memory is by extending the fixed size block by querying
-    the buffer for information about the used size and needed size and allocate new
+    information from the buffer about the used size and needed size and allocate new
     memory if the buffer is full. While this approach is still better than just using
     a fixed size memory block the reallocation still has one invalid frame as consquence
     since the used memory information is only available at the end of the frame which leads
@@ -344,7 +333,7 @@ GUI_API void gui_buffer_init(struct gui_buffer*, const struct gui_allocator*,
     Input:
     - allocator holding your own alloctator and memory allocation callbacks
     - initial size of the buffer
-    - factor to grow the buffer with if the buffer is full
+    - factor to grow the buffer by if the buffer is full
     Output:
     - dynamically growing buffer
 */
@@ -373,15 +362,9 @@ GUI_API void *gui_buffer_alloc(struct gui_buffer*, gui_size size, gui_size align
     - memory block with given size and alignment requirement
 */
 GUI_API void gui_buffer_reset(struct gui_buffer*);
-/*  this functions resets the buffer back into a empty state
-    Input:
-    - buffer to reset
-*/
+/*  this functions resets the buffer back into an empty state */
 GUI_API void gui_buffer_clear(struct gui_buffer*);
-/*  this functions frees all memory inside a dynamically growing buffer
-    Input:
-    - buffer to clear
-*/
+/*  this functions frees all memory inside a dynamically growing buffer */
 
 #if 0
 /* Example fixed size buffer */
@@ -771,7 +754,7 @@ struct gui_text {
 
 enum gui_button_behavior {
     GUI_BUTTON_DEFAULT,
-    /* buton only returns on activation */
+    /* button only returns on activation */
     GUI_BUTTON_REPEATER,
     /* button returns as long as the button is pressed */
     GUI_BUTTON_MAX
@@ -820,13 +803,13 @@ struct gui_toggle {
 
 struct gui_progress {
     gui_float rounding;
-    /* prgressbar rectangle rounding */
+    /* progressbar rectangle rounding */
     struct gui_vec2 padding;
     /* padding between bounds and content */
     struct gui_color background;
     /* progressbar background color */
     struct gui_color foreground;
-    /* pgressbar cursor color */
+    /* progressbar cursor color */
 };
 
 enum gui_slider_cursor {
@@ -851,7 +834,7 @@ struct gui_slider {
 
 struct gui_scroll {
     gui_float rounding;
-    /* scrolbar rectangle rounding */
+    /* scrollbar rectangle rounding */
     struct gui_color background;
     /* scrollbar background color */
     struct gui_color foreground;
@@ -862,12 +845,19 @@ struct gui_scroll {
 
 enum gui_input_filter {
     GUI_INPUT_DEFAULT,
+    /* everything goes */
     GUI_INPUT_ASCII,
+    /* ASCII characters (0-127)*/
     GUI_INPUT_FLOAT,
+    /* only float point numbers */
     GUI_INPUT_DEC,
+    /* only integer numbers */
     GUI_INPUT_HEX,
+    /* only hex numbers */
     GUI_INPUT_OCT,
+    /* only octal numbers */
     GUI_INPUT_BIN
+    /* only binary numbers */
 };
 
 struct gui_edit {
@@ -920,13 +910,13 @@ struct gui_selector {
     struct gui_color button_triangle;
     /* selector button content color */
     struct gui_color color;
-    /* spinner background color */
+    /* selector background color */
     struct gui_color border;
-    /* spinner border color */
+    /* selector border color */
     struct gui_color text;
-    /* spinner text color */
+    /* selector text color */
     struct gui_color text_bg;
-    /* spinner text background color */
+    /* selector text background color */
     struct gui_vec2 padding;
     /* padding between bounds and content*/
 };
@@ -934,11 +924,11 @@ struct gui_selector {
 GUI_API void gui_text(struct gui_command_buffer*, gui_float, gui_float, gui_float, gui_float,
                     const char *text, gui_size len, const struct gui_text*, enum gui_text_align,
                     const struct gui_font*);
-/*  this function execute a text widget with alignment
+/*  this function executes a text widget with text alignment
     Input:
-    - output command buffer for draw commands
-    - (x,y) coordinates for the button bounds
-    - (width, height) size for the button bounds
+    - output command buffer for drawing
+    - (x,y) position
+    - (width, height) size
     - string to draw
     - length of the string
     - visual widget style structure describing the text
@@ -951,9 +941,9 @@ GUI_API gui_bool gui_button_text(struct gui_command_buffer*, gui_float x, gui_fl
                                 const struct gui_font*);
 /*  this function executes a text button widget
     Input:
-    - output command buffer for draw commands
-    - (x,y) coordinates for the button bounds
-    - (width, height) size for the button bounds
+    - output command buffer for drawing
+    - (x,y) position
+    - (width, height) size
     - button text
     - button behavior with either repeating or transition state event
     - visual widget style structure describing the button
@@ -967,9 +957,9 @@ GUI_API gui_bool gui_button_image(struct gui_command_buffer*, gui_float x, gui_f
                                 const struct gui_button*, const struct gui_input*);
 /*  this function executes a image button widget
     Input:
-    - output command buffer for draw commands
-    - (x,y) coordinates for the button bounds
-    - (width, height) size for the button bounds
+    - output command buffer for drawing
+    - (x,y) position
+    - (width, height) size
     - user provided image handle which is either a pointer or a id
     - button behavior with either repeating or transition state event
     - visual widget style structure describing the button
@@ -983,9 +973,9 @@ GUI_API gui_bool gui_button_triangle(struct gui_command_buffer*, gui_float x, gu
                                     const struct gui_input*);
 /*  this function executes a triangle button widget
     Input:
-    - output command buffer for draw commands
-    - (x,y) coordinates for the button bounds
-    - (width, height) size for the button bounds
+    - output command buffer for drawing
+    - (x,y) position
+    - (width, height) size
     - triangle direction with either left, top, right xor bottom
     - button behavior with either repeating or transition state event
     - visual widget style structure describing the button
@@ -1000,9 +990,9 @@ GUI_API gui_bool gui_button_text_triangle(struct gui_command_buffer*, gui_float 
                                         const struct gui_input*);
 /*  this function executes a button with text and a triangle widget
     Input:
-    - output command buffer for draw commands
-    - (x,y) coordinates for the button bounds
-    - (width, height) size for the button bounds
+    - output command buffer for drawing
+    - (x,y) position
+    - (width, height) size
     - triangle direction with either left, top, right xor bottom
     - button text
     - text alignment with either left, center and right
@@ -1021,9 +1011,9 @@ gui_bool gui_button_text_image(struct gui_command_buffer *out, gui_float x, gui_
                             const struct gui_input *i);
 /*  this function executes a button widget with text and an icon
     Input:
-    - output command buffer for draw commands
-    - (x,y) coordinates for the button bounds
-    - (width, height) size for the button bounds
+    - output command buffer for drawing
+    - (x,y) position
+    - (width, height) size
     - user provided image handle which is either a pointer or a id
     - button text
     - text alignment with either left, center and right
@@ -1039,9 +1029,9 @@ GUI_API gui_bool gui_toggle(struct gui_command_buffer*, gui_float x, gui_float y
                             const struct gui_toggle*, const struct gui_input*, const struct gui_font*);
 /*  this function executes a toggle (checkbox, radiobutton) widget
     Input:
-    - output command buffer for draw commands
-    - (x,y) coordinates for the button bounds
-    - (width, height) size for the button bounds
+    - output command buffer for drawing
+    - (x,y) position
+    - (width, height) size
     - active or inactive flag describing the state of the toggle
     - visual widget style structure describing the toggle
     - input structure to update the toggle with
@@ -1054,9 +1044,9 @@ GUI_API gui_float gui_slider(struct gui_command_buffer*, gui_float x, gui_float 
                             const struct gui_slider*, const struct gui_input*);
 /*  this function executes a slider widget
     Input:
-    - output command buffer for draw commands
-    - (x,y) coordinates for the button bounds
-    - (width, height) size for the button bounds
+    - output command buffer for drawing
+    - (x,y) position
+    - (width, height) size
     - minimal slider value that will not be underflown
     - slider value to be updated by the user
     - maximal slider value that will not be overflown
@@ -1072,9 +1062,9 @@ GUI_API gui_size gui_progress(struct gui_command_buffer*, gui_float x, gui_float
                             const struct gui_input*);
 /*  this function executes a progressbar widget
     Input:
-    - output command buffer for draw commands
-    - (x,y) coordinates for the button bounds
-    - (width, height) size for the button bounds
+    - output command buffer for drawing
+    - (x,y) position
+    - (width, height) size
     - progressbar value to be updated by the user
     - maximal progressbar value that will not be overflown
     - flag if the progressbar is modifyable by the user
@@ -1089,9 +1079,9 @@ GUI_API gui_size gui_edit(struct gui_command_buffer*, gui_float x, gui_float y, 
                         const struct gui_input*, const struct gui_font*);
 /*  this function executes a editbox widget
     Input:
-    - output command buffer for draw commands
-    - (x,y) coordinates for the button bounds
-    - (width, height) size for the button bounds
+    - output command buffer for drawing
+    - (x,y) position
+    - (width, height) size
     - char buffer to add or remove glyphes from/to
     - buffer text length in bytes
     - maximal buffer size
@@ -1111,9 +1101,9 @@ GUI_API gui_size gui_edit_filtered(struct gui_command_buffer*, gui_float x, gui_
                                     const struct gui_font*);
 /*  this function executes a editbox widget
     Input:
-    - output command buffer for draw commands
-    - (x,y) coordinates for the button bounds
-    - (width, height) size for the button bounds
+    - output command buffer for drawing
+    - (x,y) position
+    - (width, height) size
     - char buffer to add or remove glyphes from/to
     - buffer text length in bytes
     - maximal buffer size
@@ -1133,8 +1123,8 @@ GUI_API gui_int gui_spinner(struct gui_command_buffer*, gui_float x, gui_float y
 /*  this function executes a spinner widget
     Input:
     - output command buffer for draw commands
-    - (x,y) coordinates for the button bounds
-    - (width, height) size for the button bounds
+    - (x,y) position
+    - (width, height) size
     - visual widget style structure describing the spinner
     - minimal spinner value that will no be underflown
     - spinner value that will be updated
@@ -1153,8 +1143,8 @@ GUI_API gui_size gui_selector(struct gui_command_buffer*, gui_float x, gui_float
 /*  this function executes a selector widget
     Input:
     - output command buffer for draw commands
-    - (x,y) coordinates for the button bounds
-    - (width, height) size for the button bounds
+    - (x,y) position
+    - (width, height) size
     - visual widget style structure describing the selector
     - selection of string array to select from
     - size of the selection array
@@ -1169,8 +1159,8 @@ GUI_API gui_float gui_scroll(struct gui_command_buffer*, gui_float x, gui_float 
 /*  this function executes a scrollbar widget
     Input:
     - output command buffer for draw commands
-    - (x,y) coordinates for the button bounds
-    - (width, height) size for the button bounds
+    - (x,y) position
+    - (width, height) size
     - scrollbar offset in source pixel
     - destination pixel size
     - step pixel size if the scrollbar up- or down button is pressed
@@ -1188,10 +1178,10 @@ GUI_API gui_float gui_scroll(struct gui_command_buffer*, gui_float x, gui_float 
  */
 /*  CONFIG
     ----------------------------
-    The panel configuration consists of style and color information that is used for
-    the general style and looks of panel. In addition for temporary modification
-    the configuration structure consists of a stack for pushing and pop either
-    color or property values.
+    The panel configuration consists of style, color and rectangle roundingo
+    information that is used for the general style and looks of panel.
+    In addition for temporary modification the configuration structure consists
+    of a stack for pushing and pop either color or property values.
 
     USAGE
     ----------------------------
@@ -1594,7 +1584,7 @@ enum gui_panel_flags {
      * in the panel header to be clicked by GUI user */
     GUI_PANEL_CLOSEABLE = 0x08,
     /* Enables the panel to be closed, hidden and made non interactive for the
-     * user over a closing icon in the panel header */
+     * user by adding a closing icon in the panel header */
     GUI_PANEL_MOVEABLE = 0x10,
     /* The moveable flag inidicates that a panel can be move by user input by
      * dragging the panel header */
@@ -1605,7 +1595,7 @@ enum gui_panel_flags {
     /* To remove the header from the panel and invalidate all panel header flags
      * the NO HEADER flags was added */
     GUI_PANEL_BORDER_HEADER = 0x80,
-    /* Draw a border inside the panel for the panel header seperating the body
+    /* Draws a border inside the panel for the panel header seperating the body
      * and header of the panel */
     GUI_PANEL_ACTIVE = 0x100,
     /* INTERNAL ONLY!: marks the panel as active, used by the panel stack */
@@ -1659,7 +1649,7 @@ struct gui_panel_layout {
     gui_flags tbl_flags;
     /* flags describing the line drawing for every row in the table */
     gui_bool valid;
-    /* flag inidicaing if the panel is visible */
+    /* flag inidicating if the panel is visible */
     gui_float at_x, at_y;
     /* index position of the current widget row and column  */
     gui_float width, height;
@@ -1687,7 +1677,7 @@ GUI_API void gui_panel_init(struct gui_panel*, gui_float x, gui_float y, gui_flo
                             const struct gui_config*);
 /*  this function initilizes and setups the panel
     Input:
-    - bounds of the panel with x,y position and widht and height
+    - bounds of the panel with x,y position and width and height
     - panel flags for modified panel behavior
     - reference to a output command buffer to push draw calls to
     - configuration file containing the style, color and font for the panel
@@ -1744,7 +1734,7 @@ GUI_API void gui_panel_row_templated(struct gui_panel_layout*, gui_float height,
 */
 GUI_API gui_size gui_panel_row_columns(const struct gui_panel_layout *layout,
                                         gui_size widget_size);
-/*  this function calculates the number of widget with the same width into the
+/*  this function calculates the possible number of widget with the same width in the
     current row layout.
     Input:
     - size of all widgets that need to fit into the current panel row layout
@@ -1754,14 +1744,12 @@ GUI_API gui_size gui_panel_row_columns(const struct gui_panel_layout *layout,
 GUI_API gui_bool gui_panel_widget(struct gui_rect*, struct gui_panel_layout*);
 /*  this function represents the base of every widget and calculates the bounds
  *  and allocated space for a widget inside a panel.
-    current row layout.
     Output:
     - allocated space for a widget to draw into
     - gui_true if the widget is visible and should be updated gui_false if not
 */
 GUI_API void gui_panel_spacing(struct gui_panel_layout*, gui_size cols);
-/*  this function creates a seperator to fill a current row of the panel layout
-    current row layout.
+/*  this function creates a seperator to fill space
     Input:
     - number of columns or widget to jump over
 */
