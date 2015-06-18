@@ -2167,6 +2167,11 @@ GUI_API void gui_layout_slot(struct gui_layout*, enum gui_layout_slot_index,
                             enum gui_layout_format, gui_size panel_count);
 /* activates a layout slot with number of panels and filling format*/
 
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* GUI_H_ */
 #ifdef GUI_IMPLEMENTATION
 
 #ifndef GUI_ASSERT
@@ -5672,7 +5677,4 @@ gui_layout_slot(struct gui_layout *layout, enum gui_layout_slot_index slot,
 }
 
 #endif
-#ifdef __cplusplus
-}
-#endif
-#endif /* GUI_H_ */
+
