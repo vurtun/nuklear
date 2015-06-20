@@ -298,33 +298,33 @@ execute(XSurface *surf, struct gui_command_buffer *buffer)
         case GUI_COMMAND_LINE: {
             const struct gui_command_line *l = gui_command(line, cmd);
             surface_draw_line(surf, l->begin[0], l->begin[1], l->end[0],
-                l->end[1], l->color.r, l->color.g, l->color.b);
+                l->end[1], l->color[0], l->color[1], l->color[2]);
         } break;
         case GUI_COMMAND_RECT: {
             const struct gui_command_rect *r = gui_command(rect, cmd);
 	    if (!r->r) {
 		surface_draw_rect(surf, r->x, r->y, r->w, r->h,
-		    r->color.r, r->color.g, r->color.b);
+		    r->color[0], r->color[1], r->color[2]);
 	    } else {
 		surface_draw_rounded_rect(surf, r->x, r->y, r->w, r->h, r->r,
-		    r->color.r, r->color.g, r->color.b);
+		    r->color[0], r->color[1], r->color[2]);
 	    }
         } break;
         case GUI_COMMAND_CIRCLE: {
             const struct gui_command_circle *c = gui_command(circle, cmd);
             surface_draw_circle(surf, c->x, c->y, c->w, c->h,
-                c->color.r, c->color.g, c->color.b);
+                c->color[0], c->color[1], c->color[2]);
         } break;
         case GUI_COMMAND_TRIANGLE: {
             const struct gui_command_triangle *t = gui_command(triangle, cmd);
             surface_draw_triangle(surf, t->a[0], t->a[1], t->b[0], t->b[1],
-                t->c[0], t->c[1], t->color.r, t->color.g, t->color.b);
+                t->c[0], t->c[1], t->color[0], t->color[1], t->color[2]);
         } break;
         case GUI_COMMAND_TEXT: {
             const struct gui_command_text *t = gui_command(text, cmd);
             XWindow *win = t->font.ptr;
             surface_draw_text(surf, win->font, t->x, t->y, t->w, t->h, (const char*)t->string,
-                    t->length, t->bg.r, t->bg.g, t->bg.b, t->fg.r, t->fg.g, t->fg.b);
+                    t->length, t->bg[0], t->bg[1], t->bg[2], t->fg[0], t->fg[1], t->fg[2]);
         } break;
         case GUI_COMMAND_IMAGE:
         default: break;
@@ -343,9 +343,10 @@ draw(XSurface *surf, struct gui_stack *stack)
 static void
 key(struct gui_input *in, MSG *msg, gui_bool down)
 {
-    if (msg->lParam == VK_CONTROL)
-        gui_input_key(in, GUI_KEY_CTRL, down);
-    else if (msg->lParam == VK_SHIFT)
+    //if (msg->lParam == VK_CONTROL)
+    //    gui_input_key(in, GUI_KEY_CTRL, down);
+    //else 
+    if (msg->lParam == VK_SHIFT)
         gui_input_key(in, GUI_KEY_SHIFT, down);
     else if (msg->lParam == VK_DELETE)
         gui_input_key(in, GUI_KEY_DEL, down);
