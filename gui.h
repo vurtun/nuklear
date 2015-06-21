@@ -5,21 +5,11 @@
 
     GUI
     -----------------------
-    This file provides both the interface and implementation for a bloat free
+    This two file provide both the interface and implementation for a bloat free
     minimal state immediate mode graphical user interface toolkit. The Toolkit
     does not have any library or runtine dependencies like libc but does not
     handle os window/input management, have a render backend or a font library which
     need to be provided by the user.
-
-    USAGE
-    ------------------------
-    To instantiate the implementation part of the library you have to define
-        #define GUI_IMPLEMENTATION
-    in *ONE* of your source files, before #include'ing this file. This expands out the
-    actual implementation into that C/C++ file.
-    To make the implementation private to the file that generates the implementation use
-    #define GUI_STATIC
-
 */
 #ifndef GUI_H_
 #define GUI_H_
