@@ -20,7 +20,7 @@
 #define LEN(a)      (sizeof(a)/sizeof(a)[0])
 #define UNUSED(a)   ((void)(a))
 
-#include "gui.h"
+#include "../gui.h"
 #include "demo.c"
 
 /* Types */
