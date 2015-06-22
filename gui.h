@@ -2141,7 +2141,7 @@ struct gui_layout_slot {
 
 enum gui_layout_state {
     GUI_LAYOUT_DEACTIVATED,
-    GUI_LAYOUT_ACTIVED
+    GUI_LAYOUT_ACTIVATED
 };
 
 enum gui_layout_flags {
