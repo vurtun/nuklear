@@ -3488,6 +3488,15 @@ gui_layout_set_size(struct gui_layout *layout, gui_size width, gui_size height)
 }
 
 void
+gui_layout_set_state(struct gui_layout *layout, gui_uint state)
+{
+    GUI_ASSERT(layout);
+    if (!layout) return;
+    if (state) layout->flags |= GUI_LAYOUT_INACTIVE;
+    else layout->flags &= (gui_flags)~GUI_LAYOUT_INACTIVE;
+}
+
+void
 gui_layout_slot(struct gui_layout *layout, enum gui_layout_slot_index slot,
     enum gui_layout_format format, gui_size count)
 {
