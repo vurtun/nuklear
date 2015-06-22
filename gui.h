@@ -14,12 +14,6 @@
 #ifndef GUI_H_
 #define GUI_H_
 
-#ifdef GUI_STATIC
-#define GUI_API static
-#else
-#define GUI_API extern
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -99,19 +93,19 @@ typedef gui_size(*gui_text_width_f)(gui_handle, const gui_char*, gui_size);
  *
  * ===============================================================
  */
-GUI_API struct gui_rect gui_get_null_rect(void);
-GUI_API gui_size gui_utf_decode(const gui_char*, gui_long*, gui_size);
-GUI_API gui_size gui_utf_encode(gui_long, gui_char*, gui_size);
-GUI_API struct gui_image gui_image_ptr(void*);
-GUI_API struct gui_image gui_image_id(gui_int);
-GUI_API struct gui_image gui_subimage_ptr(void*, struct gui_rect);
-GUI_API struct gui_image gui_subimage_id(gui_int, struct gui_rect);
-GUI_API gui_bool gui_rect_is_valid(struct gui_rect*);
-GUI_API gui_bool gui_image_is_subimage(struct gui_image* img);
-GUI_API struct gui_rect gui_rect(gui_float x, gui_float y, gui_float w, gui_float h);
-GUI_API struct gui_vec2 gui_vec2(gui_float x, gui_float y);
-GUI_API struct gui_color gui_rgba(gui_byte r, gui_byte g, gui_byte b, gui_byte a);
-GUI_API struct gui_color gui_rgb(gui_byte r, gui_byte g, gui_byte b);
+struct gui_rect gui_get_null_rect(void);
+gui_size gui_utf_decode(const gui_char*, gui_long*, gui_size);
+gui_size gui_utf_encode(gui_long, gui_char*, gui_size);
+struct gui_image gui_image_ptr(void*);
+struct gui_image gui_image_id(gui_int);
+struct gui_image gui_subimage_ptr(void*, struct gui_rect);
+struct gui_image gui_subimage_id(gui_int, struct gui_rect);
+gui_bool gui_rect_is_valid(struct gui_rect*);
+gui_bool gui_image_is_subimage(struct gui_image* img);
+struct gui_rect gui_rect(gui_float x, gui_float y, gui_float w, gui_float h);
+struct gui_vec2 gui_vec2(gui_float x, gui_float y);
+struct gui_color gui_rgba(gui_byte r, gui_byte g, gui_byte b, gui_byte a);
+struct gui_color gui_rgb(gui_byte r, gui_byte g, gui_byte b);
 /*
  * ==============================================================
  *
@@ -208,38 +202,38 @@ struct gui_input {
     /* mouse position of the last mouse button state change */
 };
 
-GUI_API void gui_input_begin(struct gui_input*);
+void gui_input_begin(struct gui_input*);
 /*  this function sets the input state to writeable */
-GUI_API void gui_input_motion(struct gui_input*, gui_int x, gui_int y);
+void gui_input_motion(struct gui_input*, gui_int x, gui_int y);
 /*  this function updates the current mouse position
     Input:
     - local os window X position
     - local os window Y position
 */
-GUI_API void gui_input_key(struct gui_input*, enum gui_keys, gui_bool down);
+void gui_input_key(struct gui_input*, enum gui_keys, gui_bool down);
 /*  this function updates the current state of a key
     Input:
     - key identifier
     - the new state of the key
 */
-GUI_API void gui_input_button(struct gui_input*, gui_int x, gui_int y, gui_bool down);
+void gui_input_button(struct gui_input*, gui_int x, gui_int y, gui_bool down);
 /*  this function updates the current state of the button
     Input:
     - local os window X position
     - local os window Y position
     - the new state of the button
 */
-GUI_API void gui_input_scroll(struct gui_input*, gui_float y);
+void gui_input_scroll(struct gui_input*, gui_float y);
 /*  this function updates the current page scroll delta
     Input:
     - vector with each direction (< 0 down > 0 up and scroll distance)
 */
-GUI_API void gui_input_char(struct gui_input*, const gui_glyph);
+void gui_input_char(struct gui_input*, const gui_glyph);
 /*  this function adds a utf-8 glpyh into the internal text frame buffer
     Input:
     - utf8 glyph to add to the text buffer
 */
-GUI_API void gui_input_end(struct gui_input*);
+void gui_input_end(struct gui_input*);
 /*  this function sets the input state to readable
 */
 
@@ -342,7 +336,7 @@ struct gui_buffer {
     /* number of allcation calls */
 };
 
-GUI_API void gui_buffer_init(struct gui_buffer*, const struct gui_allocator*,
+void gui_buffer_init(struct gui_buffer*, const struct gui_allocator*,
                             gui_size initial_size, gui_float grow_factor);
 /*  this function initializes a growing buffer
     Input:
@@ -352,7 +346,7 @@ GUI_API void gui_buffer_init(struct gui_buffer*, const struct gui_allocator*,
     Output:
     - dynamically growing buffer
 */
-GUI_API void gui_buffer_init_fixed(struct gui_buffer*, void *memory, gui_size size);
+void gui_buffer_init_fixed(struct gui_buffer*, void *memory, gui_size size);
 /*  this function initializes a fixed size buffer
     Input:
     - fixed size previously allocated memory block
@@ -360,14 +354,14 @@ GUI_API void gui_buffer_init_fixed(struct gui_buffer*, void *memory, gui_size si
     Output:
     - fixed size buffer
 */
-GUI_API void gui_buffer_info(struct gui_memory_status*, struct gui_buffer*);
+void gui_buffer_info(struct gui_memory_status*, struct gui_buffer*);
 /*  this function requests memory information from a buffer
     Input:
     - buffer to get the inforamtion from
     Output:
     - buffer memory information
 */
-GUI_API void *gui_buffer_alloc(struct gui_buffer*, gui_size size, gui_size align);
+void *gui_buffer_alloc(struct gui_buffer*, gui_size size, gui_size align);
 /*  this functions allocated a aligned memory block from a buffer
     Input:
     - buffer to allocate memory from
@@ -376,9 +370,9 @@ GUI_API void *gui_buffer_alloc(struct gui_buffer*, gui_size size, gui_size align
     Output:
     - memory block with given size and alignment requirement
 */
-GUI_API void gui_buffer_reset(struct gui_buffer*);
+void gui_buffer_reset(struct gui_buffer*);
 /*  this functions resets the buffer back into an empty state */
-GUI_API void gui_buffer_clear(struct gui_buffer*);
+void gui_buffer_clear(struct gui_buffer*);
 /*  this functions frees all memory inside a dynamically growing buffer */
 
 #if 0
@@ -589,21 +583,21 @@ struct gui_command_buffer {
     Input:
     - buffer to reset
 */
-GUI_API void *gui_command_buffer_push(struct gui_command_buffer*, gui_uint type, gui_size size);
+void *gui_command_buffer_push(struct gui_command_buffer*, gui_uint type, gui_size size);
 /*  this function push enqueues a command into the buffer
     Input:
     - buffer to push the command into
     - type of the command
     - amount of memory that is needed for the specified command
 */
-GUI_API void gui_command_buffer_push_scissor(struct gui_command_buffer*, gui_float,
+void gui_command_buffer_push_scissor(struct gui_command_buffer*, gui_float,
                                                 gui_float, gui_float, gui_float);
 /*  this function push a clip rectangle command into the buffer
     Input:
     - buffer to push the clip rectangle command into
     - x,y and width and height of the clip rectangle
 */
-GUI_API void gui_command_buffer_push_line(struct gui_command_buffer*, gui_float, gui_float,
+void gui_command_buffer_push_line(struct gui_command_buffer*, gui_float, gui_float,
                                             gui_float, gui_float, struct gui_color);
 /*  this function pushes a line draw command into the buffer
     Input:
@@ -612,7 +606,7 @@ GUI_API void gui_command_buffer_push_line(struct gui_command_buffer*, gui_float,
     - ending position of the line
     - color of the line to draw
 */
-GUI_API void gui_command_buffer_push_rect(struct gui_command_buffer *buffer, gui_float x,
+void gui_command_buffer_push_rect(struct gui_command_buffer *buffer, gui_float x,
                                         gui_float y, gui_float w, gui_float h,
                                         gui_float r, struct gui_color c);
 /*  this function pushes a rectangle draw command into the buffer
@@ -623,7 +617,7 @@ GUI_API void gui_command_buffer_push_rect(struct gui_command_buffer *buffer, gui
     - rectangle rounding
     - color of the rectangle to draw
 */
-GUI_API void gui_command_buffer_push_circle(struct gui_command_buffer*, gui_float, gui_float,
+void gui_command_buffer_push_circle(struct gui_command_buffer*, gui_float, gui_float,
                                             gui_float, gui_float, struct gui_color);
 /*  this function pushes a circle draw command into the buffer
     Input:
@@ -633,7 +627,7 @@ GUI_API void gui_command_buffer_push_circle(struct gui_command_buffer*, gui_floa
     - rectangle diameter of the circle
     - color of the circle to draw
 */
-GUI_API void gui_command_buffer_push_triangle(struct gui_command_buffer*, gui_float, gui_float,
+void gui_command_buffer_push_triangle(struct gui_command_buffer*, gui_float, gui_float,
                                                 gui_float, gui_float, gui_float, gui_float,
                                                 struct gui_color);
 /*  this function pushes a triangle draw command into the buffer
@@ -643,7 +637,7 @@ GUI_API void gui_command_buffer_push_triangle(struct gui_command_buffer*, gui_fl
     - rectangle diameter of the circle
     - color of the triangle to draw
 */
-GUI_API void gui_command_buffer_push_image(struct gui_command_buffer*, gui_float,
+void gui_command_buffer_push_image(struct gui_command_buffer*, gui_float,
                                             gui_float, gui_float, gui_float,
                                             struct gui_image*);
 /*  this function pushes a image draw command into the buffer
@@ -654,7 +648,7 @@ GUI_API void gui_command_buffer_push_image(struct gui_command_buffer*, gui_float
     - rectangle diameter of the circle
     - color of the triangle to draw
 */
-GUI_API void gui_command_buffer_push_text(struct gui_command_buffer*, gui_float, gui_float,
+void gui_command_buffer_push_text(struct gui_command_buffer*, gui_float, gui_float,
                                             gui_float, gui_float, const gui_char*, gui_size,
                                             const struct gui_font*, struct gui_color,
                                             struct gui_color);
@@ -936,7 +930,7 @@ struct gui_selector {
     /* padding between bounds and content*/
 };
 
-GUI_API void gui_text(struct gui_command_buffer*, gui_float, gui_float, gui_float, gui_float,
+void gui_text(struct gui_command_buffer*, gui_float, gui_float, gui_float, gui_float,
                     const char *text, gui_size len, const struct gui_text*, enum gui_text_align,
                     const struct gui_font*);
 /*  this function executes a text widget with text alignment
@@ -950,7 +944,7 @@ GUI_API void gui_text(struct gui_command_buffer*, gui_float, gui_float, gui_floa
     - text alignment with either left, center and right
     - font structure for text drawing
 */
-GUI_API gui_bool gui_button_text(struct gui_command_buffer*, gui_float x, gui_float y,
+gui_bool gui_button_text(struct gui_command_buffer*, gui_float x, gui_float y,
                                 gui_float w, gui_float h, const char*, enum gui_button_behavior,
                                 const struct gui_button*, const struct gui_input*,
                                 const struct gui_font*);
@@ -967,7 +961,7 @@ GUI_API gui_bool gui_button_text(struct gui_command_buffer*, gui_float x, gui_fl
     Output:
     - returns gui_true if the button was pressed gui_false otherwise
 */
-GUI_API gui_bool gui_button_image(struct gui_command_buffer*, gui_float x, gui_float y,
+gui_bool gui_button_image(struct gui_command_buffer*, gui_float x, gui_float y,
                                 gui_float w, gui_float h, struct gui_image img, enum gui_button_behavior,
                                 const struct gui_button*, const struct gui_input*);
 /*  this function executes a image button widget
@@ -982,7 +976,7 @@ GUI_API gui_bool gui_button_image(struct gui_command_buffer*, gui_float x, gui_f
     Output:
     - returns gui_true if the button was pressed gui_false otherwise
 */
-GUI_API gui_bool gui_button_triangle(struct gui_command_buffer*, gui_float x, gui_float y,
+gui_bool gui_button_triangle(struct gui_command_buffer*, gui_float x, gui_float y,
                                     gui_float w, gui_float h, enum gui_heading,
                                     enum gui_button_behavior, const struct gui_button*,
                                     const struct gui_input*);
@@ -998,7 +992,7 @@ GUI_API gui_bool gui_button_triangle(struct gui_command_buffer*, gui_float x, gu
     Output:
     - returns gui_true if the button was pressed gui_false otherwise
 */
-GUI_API gui_bool gui_button_text_triangle(struct gui_command_buffer*, gui_float x, gui_float y,
+gui_bool gui_button_text_triangle(struct gui_command_buffer*, gui_float x, gui_float y,
                                         gui_float w, gui_float h, enum gui_heading,
                                         const char*,enum gui_text_align, enum gui_button_behavior,
                                         const struct gui_button*, const struct gui_font*,
@@ -1039,7 +1033,7 @@ gui_bool gui_button_text_image(struct gui_command_buffer *out, gui_float x, gui_
     Output:
     - returns gui_true if the button was pressed gui_false otherwise
 */
-GUI_API gui_bool gui_toggle(struct gui_command_buffer*, gui_float x, gui_float y, gui_float w,
+gui_bool gui_toggle(struct gui_command_buffer*, gui_float x, gui_float y, gui_float w,
                             gui_float h, gui_bool, const char*, enum gui_toggle_type,
                             const struct gui_toggle*, const struct gui_input*, const struct gui_font*);
 /*  this function executes a toggle (checkbox, radiobutton) widget
@@ -1054,7 +1048,7 @@ GUI_API gui_bool gui_toggle(struct gui_command_buffer*, gui_float x, gui_float y
     Output:
     - returns the update state of the toggle
 */
-GUI_API gui_float gui_slider(struct gui_command_buffer*, gui_float x, gui_float y, gui_float,
+gui_float gui_slider(struct gui_command_buffer*, gui_float x, gui_float y, gui_float,
                             gui_float h, gui_float min, gui_float val, gui_float max, gui_float step,
                             const struct gui_slider*, const struct gui_input*);
 /*  this function executes a slider widget
@@ -1071,7 +1065,7 @@ GUI_API gui_float gui_slider(struct gui_command_buffer*, gui_float x, gui_float 
     Output:
     - returns the from the user input updated value
 */
-GUI_API gui_size gui_progress(struct gui_command_buffer*, gui_float x, gui_float y,
+gui_size gui_progress(struct gui_command_buffer*, gui_float x, gui_float y,
                             gui_float w, gui_float h, gui_size value, gui_size max,
                             gui_bool modifyable, const struct gui_progress*,
                             const struct gui_input*);
@@ -1088,7 +1082,7 @@ GUI_API gui_size gui_progress(struct gui_command_buffer*, gui_float x, gui_float
     Output:
     - returns the from the user input updated value
 */
-GUI_API gui_size gui_edit(struct gui_command_buffer*, gui_float x, gui_float y, gui_float w,
+gui_size gui_edit(struct gui_command_buffer*, gui_float x, gui_float y, gui_float w,
                         gui_float h, gui_char*, gui_size, gui_size max, gui_bool*,
                         const struct gui_edit*, enum gui_input_filter filter,
                         const struct gui_input*, const struct gui_font*);
@@ -1109,7 +1103,7 @@ GUI_API gui_size gui_edit(struct gui_command_buffer*, gui_float x, gui_float y, 
     - state of the editbox with either active or inactive
     - returns the size of the buffer in bytes after the modification
 */
-GUI_API gui_size gui_edit_filtered(struct gui_command_buffer*, gui_float x, gui_float y,
+gui_size gui_edit_filtered(struct gui_command_buffer*, gui_float x, gui_float y,
                                     gui_float w, gui_float h, gui_char*, gui_size,
                                     gui_size max, gui_bool*, const struct gui_edit*,
                                     gui_filter filter, const struct gui_input*,
@@ -1131,7 +1125,7 @@ GUI_API gui_size gui_edit_filtered(struct gui_command_buffer*, gui_float x, gui_
     - state of the editbox with either active or inactive
     - returns the size of the buffer in bytes after the modification
 */
-GUI_API gui_int gui_spinner(struct gui_command_buffer*, gui_float x, gui_float y, gui_float w,
+gui_int gui_spinner(struct gui_command_buffer*, gui_float x, gui_float y, gui_float w,
                             gui_float h, const struct gui_spinner*, gui_int min, gui_int value,
                             gui_int max, gui_int step, gui_bool *active, const struct gui_input*,
                             const struct gui_font*);
@@ -1150,7 +1144,7 @@ GUI_API gui_int gui_spinner(struct gui_command_buffer*, gui_float x, gui_float y
     Output:
     - returns the from the user input updated spinner value
 */
-GUI_API gui_size gui_selector(struct gui_command_buffer*, gui_float x, gui_float y,
+gui_size gui_selector(struct gui_command_buffer*, gui_float x, gui_float y,
                                 gui_float w, gui_float h, const struct gui_selector*,
                                 const char *items[], gui_size item_count,
                                 gui_size item_current, const struct gui_input*,
@@ -1168,7 +1162,7 @@ GUI_API gui_size gui_selector(struct gui_command_buffer*, gui_float x, gui_float
     Output:
     - returns the from the user input updated spinner value
 */
-GUI_API gui_float gui_scroll(struct gui_command_buffer*, gui_float x, gui_float y,
+gui_float gui_scroll(struct gui_command_buffer*, gui_float x, gui_float y,
                             gui_float w, gui_float h, gui_float offset, gui_float target,
                             gui_float step, const struct gui_scroll*, const struct gui_input*);
 /*  this function executes a scrollbar widget
@@ -1341,7 +1335,7 @@ struct gui_config {
     /* modification stack */
 };
 
-GUI_API void gui_config_default(struct gui_config*, gui_flags, const struct gui_font*);
+void gui_config_default(struct gui_config*, gui_flags, const struct gui_font*);
 /*  this function load the panel configuration with default values
     Input:
     - configuration flags indicating which part of the configuration should be loaded with default values
@@ -1349,7 +1343,7 @@ GUI_API void gui_config_default(struct gui_config*, gui_flags, const struct gui_
     Output:
     - configuration structure holding the default panel style
 */
-GUI_API struct gui_vec2 gui_config_property(const struct gui_config*,
+struct gui_vec2 gui_config_property(const struct gui_config*,
                                             enum gui_config_properties);
 /*  this function accesses a configuration property over an identifier
     Input:
@@ -1358,7 +1352,7 @@ GUI_API struct gui_vec2 gui_config_property(const struct gui_config*,
     Output:
     - Property value that has been asked for
 */
-GUI_API struct gui_color gui_config_color(const struct gui_config*, enum gui_config_colors);
+struct gui_color gui_config_color(const struct gui_config*, enum gui_config_colors);
 /*  this function accesses a configuration color over an identifier
     Input:
     - Configuration the get the color from
@@ -1366,7 +1360,7 @@ GUI_API struct gui_color gui_config_color(const struct gui_config*, enum gui_con
     Output:
     - color value that has been asked for
 */
-GUI_API void gui_config_push_property(struct gui_config*, enum gui_config_properties,
+void gui_config_push_property(struct gui_config*, enum gui_config_properties,
                                         gui_float, gui_float);
 /*  this function temporarily changes a property in a stack like fashion to be reseted later
     Input:
@@ -1375,7 +1369,7 @@ GUI_API void gui_config_push_property(struct gui_config*, enum gui_config_proper
     - first value of the property most of the time the x position
     - second value of the property most of the time the y position
 */
-GUI_API void gui_config_push_color(struct gui_config*, enum gui_config_colors,
+void gui_config_push_color(struct gui_config*, enum gui_config_colors,
                                     gui_byte, gui_byte, gui_byte, gui_byte);
 /*  this function temporarily changes a color in a stack like fashion to be reseted later
     Input:
@@ -1386,27 +1380,27 @@ GUI_API void gui_config_push_color(struct gui_config*, enum gui_config_colors,
     - blue color component
     - alpha color component
 */
-GUI_API void gui_config_pop_color(struct gui_config*);
+void gui_config_pop_color(struct gui_config*);
 /*  this function reverts back a previously pushed temporary color change
     Input:
     - Configuration structure to pop the change from and to
 */
-GUI_API void gui_config_pop_property(struct gui_config*);
+void gui_config_pop_property(struct gui_config*);
 /*  this function reverts back a previously pushed temporary property change
     Input:
     - Configuration structure to pop the change from and to
 */
-GUI_API void gui_config_reset_colors(struct gui_config*);
+void gui_config_reset_colors(struct gui_config*);
 /*  this function reverts back all previously pushed temporary color changes
     Input:
     - Configuration structure to pop the change from and to
 */
-GUI_API void gui_config_reset_properties(struct gui_config*);
+void gui_config_reset_properties(struct gui_config*);
 /*  this function reverts back all previously pushed temporary color changes
     Input:
     - Configuration structure to pop the change from and to
 */
-GUI_API void gui_config_reset(struct gui_config*);
+void gui_config_reset(struct gui_config*);
 /*  this function reverts back all previously pushed temporary color and
  *  property changes
     Input:
@@ -1687,7 +1681,7 @@ struct gui_panel_layout {
 
 /* Panel */
 struct gui_layout;
-GUI_API void gui_panel_init(struct gui_panel*, gui_float x, gui_float y, gui_float w,
+void gui_panel_init(struct gui_panel*, gui_float x, gui_float y, gui_float w,
                             gui_float h, gui_flags, struct gui_command_buffer*, 
                             const struct gui_config*);
 /*  this function initilizes and setups the panel
@@ -1699,7 +1693,7 @@ GUI_API void gui_panel_init(struct gui_panel*, gui_float x, gui_float y, gui_flo
     Output:
     - a newly initialized panel
 */
-GUI_API gui_bool gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel*,
+gui_bool gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel*,
                                     const char *title, const struct gui_input*);
 /*  this function begins the panel build up process
     Input:
@@ -1709,7 +1703,7 @@ GUI_API gui_bool gui_panel_begin(struct gui_panel_layout *layout, struct gui_pan
     - panel layout to fill up with widgets
 */
 struct gui_stack;
-GUI_API gui_bool gui_panel_begin_stacked(struct gui_panel_layout*, struct gui_panel*,
+gui_bool gui_panel_begin_stacked(struct gui_panel_layout*, struct gui_panel*,
                                         struct gui_stack*, const char*,
                                         const struct gui_input*);
 /*  this function begins the panel build up process and push the panel into a panel stack
@@ -1720,7 +1714,7 @@ GUI_API gui_bool gui_panel_begin_stacked(struct gui_panel_layout*, struct gui_pa
     Output:
     - panel layout to fill up with widgets
 */
-GUI_API gui_bool gui_panel_begin_tiled(struct gui_panel_layout*, struct gui_panel*,
+gui_bool gui_panel_begin_tiled(struct gui_panel_layout*, struct gui_panel*,
                                         struct gui_layout*, gui_uint slot, gui_size index,
                                         const char*, const struct gui_input*);
 /*  this function begins the panel build up process and push the panel into a tiled
@@ -1734,20 +1728,20 @@ GUI_API gui_bool gui_panel_begin_tiled(struct gui_panel_layout*, struct gui_pane
     Output:
     - panel layout to fill up with widgets
 */
-GUI_API void gui_panel_row(struct gui_panel_layout*, gui_float height, gui_size cols);
+void gui_panel_row(struct gui_panel_layout*, gui_float height, gui_size cols);
 /*  this function set the current panel row layout
     Input:
     - panel row layout height in pixel
     - panel row layout column count
 */
-GUI_API void gui_panel_row_templated(struct gui_panel_layout*, gui_float height,
+void gui_panel_row_templated(struct gui_panel_layout*, gui_float height,
                                     gui_size cols, const gui_float *ratio);
 /*  this function set the current panel row layout
     Input:
     - panel row layout height in pixel
     - panel row layout column count
 */
-GUI_API gui_size gui_panel_row_columns(const struct gui_panel_layout *layout,
+gui_size gui_panel_row_columns(const struct gui_panel_layout *layout,
                                         gui_size widget_size);
 /*  this function calculates the possible number of widget with the same width in the
     current row layout.
@@ -1756,19 +1750,19 @@ GUI_API gui_size gui_panel_row_columns(const struct gui_panel_layout *layout,
     Output:
     - panel layout to fill up with widgets
 */
-GUI_API gui_bool gui_panel_widget(struct gui_rect*, struct gui_panel_layout*);
+gui_bool gui_panel_widget(struct gui_rect*, struct gui_panel_layout*);
 /*  this function represents the base of every widget and calculates the bounds
  *  and allocated space for a widget inside a panel.
     Output:
     - allocated space for a widget to draw into
     - gui_true if the widget is visible and should be updated gui_false if not
 */
-GUI_API void gui_panel_spacing(struct gui_panel_layout*, gui_size cols);
+void gui_panel_spacing(struct gui_panel_layout*, gui_size cols);
 /*  this function creates a seperator to fill space
     Input:
     - number of columns or widget to jump over
 */
-GUI_API void gui_panel_text(struct gui_panel_layout*, const char*, gui_size,
+void gui_panel_text(struct gui_panel_layout*, const char*, gui_size,
                             enum gui_text_align);
 /*  this function creates a bounded non terminated text widget with either
     left, centered or right alignment
@@ -1777,7 +1771,7 @@ GUI_API void gui_panel_text(struct gui_panel_layout*, const char*, gui_size,
     - number of bytes the text is long
     - text alignment with either left, centered or right alignment
 */
-GUI_API void gui_panel_text_colored(struct gui_panel_layout*, const char*, gui_size,
+void gui_panel_text_colored(struct gui_panel_layout*, const char*, gui_size,
                                     enum gui_text_align, struct gui_color);
 /*  this function creates a bounded non terminated color text widget with either
     left, centered or right alignment
@@ -1787,14 +1781,14 @@ GUI_API void gui_panel_text_colored(struct gui_panel_layout*, const char*, gui_s
     - text alignment with either left, centered or right alignment
     - color the text should be drawn
 */
-GUI_API void gui_panel_label(struct gui_panel_layout*, const char*, enum gui_text_align);
+void gui_panel_label(struct gui_panel_layout*, const char*, enum gui_text_align);
 /*  this function creates a zero terminated text widget with either
     left, centered or right alignment
     Input:
     - string pointer to text that should be drawn
     - text alignment with either left, centered or right alignment
 */
-GUI_API void gui_panel_label_colored(struct gui_panel_layout*, const char*,
+void gui_panel_label_colored(struct gui_panel_layout*, const char*,
                                     enum gui_text_align, struct gui_color);
 /*  this function creates a zero terminated colored text widget with either
     left, centered or right alignment
@@ -1803,7 +1797,7 @@ GUI_API void gui_panel_label_colored(struct gui_panel_layout*, const char*,
     - text alignment with either left, centered or right alignment
     - color the label should be drawn
 */
-GUI_API gui_bool gui_panel_check(struct gui_panel_layout*, const char*, gui_bool active);
+gui_bool gui_panel_check(struct gui_panel_layout*, const char*, gui_bool active);
 /*  this function creates a checkbox widget with either active or inactive state
     Input:
     - checkbox label describing the content
@@ -1811,7 +1805,7 @@ GUI_API gui_bool gui_panel_check(struct gui_panel_layout*, const char*, gui_bool
     Output:
     - from user input updated state of the checkbox
 */
-GUI_API gui_bool gui_panel_option(struct gui_panel_layout*, const char*, gui_bool active);
+gui_bool gui_panel_option(struct gui_panel_layout*, const char*, gui_bool active);
 /*  this function creates a radiobutton widget with either active or inactive state
     Input:
     - radiobutton label describing the content
@@ -1819,7 +1813,7 @@ GUI_API gui_bool gui_panel_option(struct gui_panel_layout*, const char*, gui_boo
     Output:
     - from user input updated state of the radiobutton
 */
-GUI_API gui_size gui_panel_option_group(struct gui_panel_layout*, const char**,
+gui_size gui_panel_option_group(struct gui_panel_layout*, const char**,
                                         gui_size cnt, gui_size cur);
 /*  this function creates a radiobutton group widget with only one active radiobutton
     Input:
@@ -1829,7 +1823,7 @@ GUI_API gui_size gui_panel_option_group(struct gui_panel_layout*, const char**,
     Output:
     - the from user input updated index of the active radiobutton
 */
-GUI_API gui_bool gui_panel_button_text(struct gui_panel_layout*, const char*,
+gui_bool gui_panel_button_text(struct gui_panel_layout*, const char*,
                                         enum gui_button_behavior);
 /*  this function creates a text button
     Input:
@@ -1839,7 +1833,7 @@ GUI_API gui_bool gui_panel_button_text(struct gui_panel_layout*, const char*,
     - gui_true if the button was transistioned from unpressed to pressed with
         default button behavior or pressed if repeater behavior.
 */
-GUI_API gui_bool gui_panel_button_color(struct gui_panel_layout*, struct gui_color,
+gui_bool gui_panel_button_color(struct gui_panel_layout*, struct gui_color,
                                         enum gui_button_behavior);
 /*  this function creates a colored button without content
     Input:
@@ -1849,7 +1843,7 @@ GUI_API gui_bool gui_panel_button_color(struct gui_panel_layout*, struct gui_col
     - gui_true if the button was transistioned from unpressed to pressed with
         default button behavior or pressed if repeater behavior.
 */
-GUI_API gui_bool gui_panel_button_triangle(struct gui_panel_layout*, enum gui_heading,
+gui_bool gui_panel_button_triangle(struct gui_panel_layout*, enum gui_heading,
                                             enum gui_button_behavior);
 /*  this function creates a button with a triangle pointing in one of four directions
     Input:
@@ -1859,7 +1853,7 @@ GUI_API gui_bool gui_panel_button_triangle(struct gui_panel_layout*, enum gui_he
     - gui_true if the button was transistioned from unpressed to pressed with
         default button behavior or pressed if repeater behavior.
 */
-GUI_API gui_bool gui_panel_button_image(struct gui_panel_layout*, struct gui_image img,
+gui_bool gui_panel_button_image(struct gui_panel_layout*, struct gui_image img,
                                         enum gui_button_behavior);
 /*  this function creates a button with an icon as content
     Input:
@@ -1869,7 +1863,7 @@ GUI_API gui_bool gui_panel_button_image(struct gui_panel_layout*, struct gui_ima
     - gui_true if the button was transistioned from unpressed to pressed with
         default button behavior or pressed if repeater behavior.
 */
-GUI_API gui_bool gui_panel_button_text_triangle(struct gui_panel_layout*, enum gui_heading,
+gui_bool gui_panel_button_text_triangle(struct gui_panel_layout*, enum gui_heading,
                                     const char*, enum gui_text_align, enum gui_button_behavior);
 /*  this function creates a button with a triangle pointing in one of four directions and text
     Input:
@@ -1881,7 +1875,7 @@ GUI_API gui_bool gui_panel_button_text_triangle(struct gui_panel_layout*, enum g
     - gui_true if the button was transistioned from unpressed to pressed with
         default button behavior or pressed if repeater behavior.
 */
-GUI_API gui_bool gui_panel_button_toggle(struct gui_panel_layout*, const char*,gui_bool value);
+gui_bool gui_panel_button_toggle(struct gui_panel_layout*, const char*,gui_bool value);
 /*  this function creates a toggle button which is either active or inactive
     Input:
     - label describing the toggle button
@@ -1889,7 +1883,7 @@ GUI_API gui_bool gui_panel_button_toggle(struct gui_panel_layout*, const char*,g
     Output:
     - from user input updated toggle state
 */
-GUI_API gui_float gui_panel_slider(struct gui_panel_layout*, gui_float min, gui_float val,
+gui_float gui_panel_slider(struct gui_panel_layout*, gui_float min, gui_float val,
                                     gui_float max, gui_float step);
 /*  this function creates a slider for value manipulation
     Input:
@@ -1900,7 +1894,7 @@ GUI_API gui_float gui_panel_slider(struct gui_panel_layout*, gui_float min, gui_
     Output:
     - the from user input updated slider value
 */
-GUI_API gui_size gui_panel_progress(struct gui_panel_layout*, gui_size cur, gui_size max,
+gui_size gui_panel_progress(struct gui_panel_layout*, gui_size cur, gui_size max,
                                     gui_bool modifyable);
 /*  this function creates an either user or program controlled progressbar
     Input:
@@ -1910,7 +1904,7 @@ GUI_API gui_size gui_panel_progress(struct gui_panel_layout*, gui_size cur, gui_
     Output:
     - the from user input updated progressbar value if modifyable progressbar
 */
-GUI_API gui_size gui_panel_edit(struct gui_panel_layout*, gui_char *buffer, gui_size len,
+gui_size gui_panel_edit(struct gui_panel_layout*, gui_char *buffer, gui_size len,
                                 gui_size max, gui_bool *active, enum gui_input_filter);
 /*  this function creates an editbox to updated/insert user text input
     Input:
@@ -1923,7 +1917,7 @@ GUI_API gui_size gui_panel_edit(struct gui_panel_layout*, gui_char *buffer, gui_
     - length of the buffer after user input update
     - current state of the editbox with active(gui_true) or inactive(gui_false)
 */
-GUI_API gui_size gui_panel_edit_filtered(struct gui_panel_layout*, gui_char *buffer,
+gui_size gui_panel_edit_filtered(struct gui_panel_layout*, gui_char *buffer,
                                         gui_size len, gui_size max, gui_bool *active, gui_filter);
 /*  this function creates an editbox to updated/insert filtered user text input
     Input:
@@ -1936,7 +1930,7 @@ GUI_API gui_size gui_panel_edit_filtered(struct gui_panel_layout*, gui_char *buf
     - length of the buffer after user input update
     - current state of the editbox with active(gui_true) or inactive(gui_false)
 */
-GUI_API gui_int gui_panel_spinner(struct gui_panel_layout*, gui_int min, gui_int value,
+gui_int gui_panel_spinner(struct gui_panel_layout*, gui_int min, gui_int value,
                                     gui_int max, gui_int step, gui_bool *active);
 /*  this function creates a spinner widget
     Input:
@@ -1949,7 +1943,7 @@ GUI_API gui_int gui_panel_spinner(struct gui_panel_layout*, gui_int min, gui_int
     - the from user input updated spinner value
     - current state of the editbox with active(gui_true) or inactive(gui_false)
 */
-GUI_API gui_size gui_panel_selector(struct gui_panel_layout*, const char *items[],
+gui_size gui_panel_selector(struct gui_panel_layout*, const char *items[],
                                     gui_size item_count, gui_size item_current);
 /*  this function creates a string selector widget
     Input:
@@ -1959,7 +1953,7 @@ GUI_API gui_size gui_panel_selector(struct gui_panel_layout*, const char *items[
     Output:
     - the from user selection selected array index of the active item
 */
-GUI_API void gui_panel_graph_begin(struct gui_panel_layout*, struct gui_graph*,
+void gui_panel_graph_begin(struct gui_panel_layout*, struct gui_graph*,
                                     enum gui_graph_type, gui_size count,
                                     gui_float min, gui_float max);
 /*  this function begins a graph building widget
@@ -1970,15 +1964,15 @@ GUI_API void gui_panel_graph_begin(struct gui_panel_layout*, struct gui_graph*,
     Output:
     - graph stack object that can be filled with values
 */
-GUI_API gui_bool gui_panel_graph_push(struct gui_panel_layout*,struct gui_graph*,gui_float);
+gui_bool gui_panel_graph_push(struct gui_panel_layout*,struct gui_graph*,gui_float);
 /*  this function pushes a value inside the pushed graph
     Input:
     - value data point to fill into the graph either as point or as bar
 */
-GUI_API void gui_panel_graph_end(struct gui_panel_layout *layout, struct gui_graph*);
+void gui_panel_graph_end(struct gui_panel_layout *layout, struct gui_graph*);
 /*  this function pops the graph from being used
 */
-GUI_API gui_int gui_panel_graph(struct gui_panel_layout*, enum gui_graph_type,
+gui_int gui_panel_graph(struct gui_panel_layout*, enum gui_graph_type,
                                 const gui_float *values, gui_size count, gui_size offset);
 /*  this function create a graph with given type from an array of value
     Input:
@@ -1987,7 +1981,7 @@ GUI_API gui_int gui_panel_graph(struct gui_panel_layout*, enum gui_graph_type,
     - number of graph values
     - offset into the value array from which to begin drawing
 */
-GUI_API gui_int gui_panel_graph_ex(struct gui_panel_layout*, enum gui_graph_type,
+gui_int gui_panel_graph_ex(struct gui_panel_layout*, enum gui_graph_type,
                                     gui_size count, gui_float(*get_value)(void*, gui_size),
                                     void *userdata);
 /*  this function create a graph with given type from callback providing the
@@ -1998,7 +1992,7 @@ GUI_API gui_int gui_panel_graph_ex(struct gui_panel_layout*, enum gui_graph_type
     - callback to access the values inside your datastrucutre
     - userdata to pull the graph values from
 */
-GUI_API void gui_panel_table_begin(struct gui_panel_layout*, gui_flags flags,
+void gui_panel_table_begin(struct gui_panel_layout*, gui_flags flags,
                                     gui_size row_height, gui_size cols);
 /*  this function set the panel to a table state which enable you to create a
     table with the standart panel row layout
@@ -2007,14 +2001,14 @@ GUI_API void gui_panel_table_begin(struct gui_panel_layout*, gui_flags flags,
     - height of each table row
     - number of columns inside the table
 */
-GUI_API void gui_panel_table_row(struct gui_panel_layout*);
+void gui_panel_table_row(struct gui_panel_layout*);
 /*  this function add a row with line seperator into asa table marked table
 */
-GUI_API void gui_panel_table_end(struct gui_panel_layout*);
+void gui_panel_table_end(struct gui_panel_layout*);
 /*  this function finished the table build up process and reverts the panel back
     to its normal state.
 */
-GUI_API gui_bool gui_panel_tab_begin(struct gui_panel_layout*, struct gui_panel_layout *tab,
+gui_bool gui_panel_tab_begin(struct gui_panel_layout*, struct gui_panel_layout *tab,
                                     const char*, gui_bool);
 /*  this function adds a tab subpanel into the parent panel
     Input:
@@ -2024,11 +2018,11 @@ GUI_API gui_bool gui_panel_tab_begin(struct gui_panel_layout*, struct gui_panel_
     - tab layout to fill with widgets
     - wether the tab is currently collapsed(gui_true) or open(gui_false)
 */
-GUI_API void gui_panel_tab_end(struct gui_panel_layout*, struct gui_panel_layout *tab);
+void gui_panel_tab_end(struct gui_panel_layout*, struct gui_panel_layout *tab);
 /*  this function finishes the previously started tab and allocated the needed
     tab space in the parent panel
 */
-GUI_API void gui_panel_group_begin(struct gui_panel_layout*, struct gui_panel_layout *tab,
+void gui_panel_group_begin(struct gui_panel_layout*, struct gui_panel_layout *tab,
                                     const char*, gui_float offset);
 /*  this function adds a grouped subpanel into the parent panel
     IMPORTANT: You need to set the height of the group with panel_row_layout
@@ -2038,12 +2032,12 @@ GUI_API void gui_panel_group_begin(struct gui_panel_layout*, struct gui_panel_la
     Output:
     - group layout to fill with widgets
 */
-GUI_API gui_float gui_panel_group_end(struct gui_panel_layout*, struct gui_panel_layout* tab);
+gui_float gui_panel_group_end(struct gui_panel_layout*, struct gui_panel_layout* tab);
 /*  this function finishes the previously started group layout
     Output:
     - The from user input updated group scrollbar pixel offset
 */
-GUI_API gui_size gui_panel_shelf_begin(struct gui_panel_layout*, struct gui_panel_layout*,
+gui_size gui_panel_shelf_begin(struct gui_panel_layout*, struct gui_panel_layout*,
                                         const char *tabs[], gui_size size,
                                         gui_size active, gui_float offset);
 /*  this function adds a shelf subpanel into the parent panel
@@ -2057,14 +2051,14 @@ GUI_API gui_size gui_panel_shelf_begin(struct gui_panel_layout*, struct gui_pane
     - group layout to fill with widgets
     - the from user input updated current shelf tab index
 */
-GUI_API gui_float gui_panel_shelf_end(struct gui_panel_layout*, struct gui_panel_layout*);
+gui_float gui_panel_shelf_end(struct gui_panel_layout*, struct gui_panel_layout*);
 /*  this function finishes the previously started shelf layout
     Input:
     - previously started group layout
     Output:
     - The from user input updated shelf scrollbar pixel offset
 */
-GUI_API void gui_panel_end(struct gui_panel_layout*, struct gui_panel*);
+void gui_panel_end(struct gui_panel_layout*, struct gui_panel*);
 /*  this function ends the panel layout build up process and updates the panel
 */
 /*
@@ -2083,12 +2077,12 @@ struct gui_stack {
     /* currently active panel which will be drawn last */
 };
 
-GUI_API void gui_stack_clear(struct gui_stack*);
+void gui_stack_clear(struct gui_stack*);
 /* this function clears and reset the stack back to an empty state */
-GUI_API void gui_stack_push(struct gui_stack*, struct gui_panel*);
+void gui_stack_push(struct gui_stack*, struct gui_panel*);
 /* this function add a panel into the stack if the panel is not already inside
  * the stack */
-GUI_API void gui_stack_pop(struct gui_stack*, struct gui_panel*);
+void gui_stack_pop(struct gui_stack*, struct gui_panel*);
 /* this function removes a panel from the stack */
 #define gui_foreach_panel(i, s) for (i = (s)->begin; i != NULL; i = (i)->next)
 /* iterates over each panel inside the stack */
@@ -2154,18 +2148,17 @@ struct gui_layout_slot {
     /* panel filling layout */
 };
 
-enum gui_layout_state {
-    GUI_LAYOUT_INACTIVE,
+enum gui_layout_flags {
+    GUI_LAYOUT_INACTIVE = 0x01,
     /* tiled layout is inactive and cannot be updated by the user */
-    GUI_LAYOUT_ACTIVE
-    /* tiled layout is active and can be updated by the user */
+    GUI_LAYOUT_SCALEABLE = 0x02
+    /* tiled layout ratio can be changed by the user */
 };
 
 struct gui_layout {
-    gui_flags flags;
     gui_size width, height;
     /* size of the layout inside the window */
-    enum gui_layout_state state;
+    gui_flags flags;
     /* flag indicating if the layout is from the user modifyable */
     struct gui_stack stack;
     /* panel stack of all panels inside the layout */
@@ -2173,12 +2166,12 @@ struct gui_layout {
     /* each slot inside the panel layout */
 };
 
-GUI_API void gui_layout_init(struct gui_layout*, const struct gui_layout_config*,
-                            gui_size width, gui_size height);
+void gui_layout_init(struct gui_layout*, const struct gui_layout_config*,
+                            gui_flags, gui_size width, gui_size height);
 /* initializes the layout with given slot ratio and size */
-GUI_API void gui_layout_set_size(struct gui_layout*, gui_size width, gui_size height);
+void gui_layout_set_size(struct gui_layout*, gui_size width, gui_size height);
 /* updates the size of the complete layout */
-GUI_API void gui_layout_slot(struct gui_layout*, enum gui_layout_slot_index,
+void gui_layout_slot(struct gui_layout*, enum gui_layout_slot_index,
                             enum gui_layout_format, gui_size panel_count);
 /* activates a layout slot with number of panels and filling format*/
 

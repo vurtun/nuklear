@@ -1915,7 +1915,7 @@ gui_panel_begin(struct gui_panel_layout *l, struct gui_panel *p,
             0, c->colors[GUI_COLOR_PANEL]);
     }
 
-    /* fix up some panel flags combinations */
+    /* fix up some panel flag combinations */
     if (!(p->flags & GUI_PANEL_TAB)) {
         p->flags |= GUI_PANEL_SCROLLBAR;
         if (i && i->mouse_down) {
@@ -1928,7 +1928,7 @@ gui_panel_begin(struct gui_panel_layout *l, struct gui_panel *p,
     /* calculate the panel clipping rectangle*/
     l->clip.x = p->x;
     l->clip.w = p->w;
-    l->clip.y = p->y + l->header_height - 1;
+    l->clip.y = p->y + l->header_height + 1;
     if (p->flags & GUI_PANEL_SCROLLBAR) {
         if (p->flags & GUI_PANEL_SCALEABLE)
             l->clip.h = p->h - (footer_h + l->header_height);
@@ -1937,7 +1937,7 @@ gui_panel_begin(struct gui_panel_layout *l, struct gui_panel *p,
     } else l->clip.h = gui_null_rect.h;
 
 
-    /* execute the panel closing and closer icon drawing */
+    /* execute the panel closing and closing icon drawing */
     if ((p->flags & GUI_PANEL_CLOSEABLE) && (!(p->flags & GUI_PANEL_NO_HEADER))) {
         /* calculate the position of the close icon position and draw it */
         const gui_char *X = (const gui_char*)"x";
@@ -2105,7 +2105,8 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
         panel->y = bounds.y + (gui_float)index * panel->h;
     }
     gui_stack_push(&layout->stack, panel);
-    return gui_panel_begin(tile, panel, title, (layout->state) ? in : NULL);
+    return gui_panel_begin(tile, panel, title,
+            (layout->flags & GUI_LAYOUT_INACTIVE) ? NULL : in);
 }
 
 void
@@ -3442,7 +3443,7 @@ gui_stack_pop(struct gui_stack *stack, struct gui_panel*panel)
  */
 void
 gui_layout_init(struct gui_layout *layout, const struct gui_layout_config *config,
-    gui_size width, gui_size height)
+    gui_flags flags, gui_size width, gui_size height)
 {
     gui_float left, right;
     gui_float centerh, centerv;
@@ -3453,7 +3454,7 @@ gui_layout_init(struct gui_layout *layout, const struct gui_layout_config *confi
     if (!layout || !config) return;
 
     gui_zero(layout, sizeof(*layout));
-    layout->state = GUI_LAYOUT_ACTIVE;
+    layout->flags = flags;
     layout->width = width;
     layout->height = height;
 
