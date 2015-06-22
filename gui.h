@@ -821,14 +821,7 @@ struct gui_progress {
     /* progressbar cursor color */
 };
 
-enum gui_slider_cursor {
-    GUI_SLIDER_RECT,
-    GUI_SLIDER_CIRCLE
-};
-
 struct gui_slider {
-    enum gui_slider_cursor cursor;
-    /* slider cursor shape */
     struct gui_vec2 padding;
     /* padding between bounds and content */
     struct gui_color bar;
@@ -1323,8 +1316,6 @@ struct gui_config_stack  {
 struct gui_config {
     struct gui_font font;
     /* the from the user provided font */
-    enum gui_slider_cursor slider_cursor;
-    /* slider cursor type identifier */
     gui_float rounding[GUI_ROUNDING_MAX];
     /* rectangle widget rounding */
     struct gui_vec2 properties[GUI_PROPERTY_MAX];

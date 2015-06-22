@@ -887,9 +887,9 @@ gui_button_image(struct gui_command_buffer *out, gui_float x, gui_float y,
 
 gui_bool
 gui_button_text_triangle(struct gui_command_buffer *out, gui_float x, gui_float y,
-    gui_float w, gui_float h, enum gui_heading heading, const char *text, enum gui_text_align align,
-    enum gui_button_behavior behavior, const struct gui_button *button, const struct gui_font *f,
-    const struct gui_input *i)
+    gui_float w, gui_float h, enum gui_heading heading, const char *text,
+    enum gui_text_align align, enum gui_button_behavior behavior,
+    const struct gui_button *button, const struct gui_font *f, const struct gui_input *i)
 {
     gui_bool pressed;
     struct gui_rect tri;
@@ -1036,6 +1036,7 @@ gui_slider(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w
     gui_float min, gui_float val, gui_float max, gui_float step,
     const struct gui_slider *s, const struct gui_input *in)
 {
+    gui_float slider_x;
     gui_float slider_range;
     gui_float slider_min, slider_max;
     gui_float slider_value, slider_steps;
@@ -1050,25 +1051,26 @@ gui_slider(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w
         return 0;
 
     /* make sure the provided values are correct */
-    slider_w = MAX(w, 2 * s->padding.x);
+    slider_x = x + s->padding.x;
     slider_h = MAX(h, 2 * s->padding.y);
+    slider_w = MAX(w, 1 + slider_h + 2 * s->padding.x);
     slider_max = MAX(min, max);
     slider_min = MIN(min, max);
     slider_value = CLAMP(slider_min, val, slider_max);
     slider_range = slider_max - slider_min;
     slider_steps = slider_range / step;
 
-    /* calculate slider cursor bounds */
+    /* calculate slider virtual cursor bounds */
     cursor_offset = (slider_value - slider_min) / step;
-    cursor.w = (slider_w - 2 * s->padding.x) / (slider_steps + 1);
     cursor.h = slider_h - 2 * s->padding.y;
-    cursor.x = x + s->padding.x + (cursor.w * cursor_offset);
+    cursor.w = (slider_w - (2 * s->padding.x)) / (slider_steps + 1);
+    cursor.x = slider_x + (cursor.w * cursor_offset);
     cursor.y = y + s->padding.y;
 
     /* calculate slider background bar bounds */
-    bar.x = x + s->padding.x;
+    bar.x = slider_x;
     bar.y = (cursor.y + cursor.h/2) - cursor.h/8;
-    bar.w = slider_w - 2 * s->padding.x;
+    bar.w = (slider_w - (2 * s->padding.x));
     bar.h = cursor.h/4;
 
     /* updated the slider value by user input */
@@ -1077,25 +1079,24 @@ gui_slider(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w
         GUI_INBOX(in->mouse_clicked_pos.x,in->mouse_clicked_pos.y, x, y, slider_w, slider_h))
     {
         const float d = in->mouse_pos.x - (cursor.x + cursor.w / 2.0f);
-        const float pxstep = (slider_w - 2 * s->padding.x) / slider_steps;
+        const float pxstep = (slider_w - (2 * s->padding.x)) / slider_steps;
 
         /* only update value if the next slider step is reached*/
         if (GUI_ABS(d) >= pxstep) {
             const gui_float steps = (gui_float)((gui_int)(GUI_ABS(d) / pxstep));
             slider_value += (d > 0) ? (step * steps) : -(step * steps);
             slider_value = CLAMP(slider_min, slider_value, slider_max);
-            cursor.x = x + s->padding.x + (cursor.w * (slider_value - slider_min));
+            cursor.x = slider_x + (cursor.w * ((slider_value - slider_min) / step));
         }
     }
 
-    /* draw slider with background/background bar and either rectangle or circle cusor*/
-    gui_command_buffer_push_rect(out, x, y, slider_w, slider_h, 0, s->bg);
-    gui_command_buffer_push_rect(out, bar.x, bar.y, bar.w, bar.h,0, s->bar);
-    if (s->cursor == GUI_SLIDER_RECT) {
-        gui_command_buffer_push_rect(out,cursor.x, cursor.y, cursor.w, cursor.h,0, s->border);
-        gui_command_buffer_push_rect(out,cursor.x+1,cursor.y+1,cursor.w-2,cursor.h-2,0, s->fg);
-    } else {
-        gui_float c_pos = cursor.x - cursor.h/4;
+    {
+        /* draw slider with background and circle cursor*/
+        gui_float c_pos = (slider_value <= slider_min) ? cursor.x:
+            (slider_value >= slider_max) ? ((bar.x + bar.w) - cursor.h) :
+            cursor.x + (cursor.w/2) - cursor.h/2;
+
+        gui_command_buffer_push_rect(out, bar.x, bar.y, bar.w, bar.h,0, s->bar);
         gui_command_buffer_push_circle(out,c_pos,cursor.y,cursor.h,cursor.h,s->border);
         gui_command_buffer_push_circle(out,c_pos + 1,cursor.y+1,cursor.h-2,cursor.h-2,s->fg);
     }
@@ -1564,7 +1565,6 @@ gui_selector(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float
 static void
 gui_config_default_properties(struct gui_config *config)
 {
-    config->slider_cursor = GUI_SLIDER_CIRCLE;
     config->properties[GUI_PROPERTY_SCROLLBAR_WIDTH] = gui_vec2(16, 16);
     config->properties[GUI_PROPERTY_PADDING] = gui_vec2(15.0f, 10.0f);
     config->properties[GUI_PROPERTY_SIZE] = gui_vec2(64.0f, 64.0f);
@@ -2050,7 +2050,7 @@ gui_panel_begin_stacked(struct gui_panel_layout *l, struct gui_panel* p,
             /* try to find a panel with higher priorty in the same position */
             const struct gui_panel *cur = iter;
             if (GUI_INBOX(i->mouse_prev.x,i->mouse_prev.y,cur->x,cur->y,cur->w,cur->h) &&
-              !cur->minimized) break;
+              !cur->minimized && !(iter->flags & GUI_PANEL_HIDDEN)) break;
             iter = iter->next;
         }
         /* current panel is active panel in that position so transfer to top
@@ -2575,7 +2575,6 @@ gui_panel_slider(struct gui_panel_layout *layout, gui_float min_value, gui_float
 
     config = layout->config;
     item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
-    slider.cursor = config->slider_cursor;
     slider.padding.x = item_padding.x;
     slider.padding.y = item_padding.y;
     slider.bg = config->colors[GUI_COLOR_SLIDER];
