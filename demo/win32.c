@@ -173,24 +173,6 @@ surface_draw_line(XSurface *surf, short x0, short y0, short x1, short y1,
 }
 
 static void
-surface_draw_rounded_rect(XSurface *surf, short x, short y, unsigned short w, unsigned short h,
-    unsigned short rounding,  unsigned char r,  unsigned char g, unsigned char b)
-{
-    HBRUSH hBrush;
-    HBRUSH old;
-    RECT rect;
-    rect.left = (LONG)x;
-    rect.top = (LONG)y;
-    rect.right = (LONG)(x + w);
-    rect.bottom = (LONG)(y + h);
-    hBrush = CreateSolidBrush(RGB(r,g,b));
-    old = SelectObject(surf->hdc, hBrush);
-    RoundRect(surf->hdc, rect.left, rect.top, rect.right, rect.bottom,2*rounding, 2*rounding);
-    SelectObject(surf->hdc, old);
-    DeleteObject(hBrush);
-}
-
-static void
 surface_draw_rect(XSurface *surf, short x, short y, unsigned short w, unsigned short h,
     unsigned char r,  unsigned char g, unsigned char b)
 {
@@ -301,13 +283,8 @@ execute(XSurface *surf, struct gui_command_buffer *buffer)
         } break;
         case GUI_COMMAND_RECT: {
             const struct gui_command_rect *r = gui_command(rect, cmd);
-	    if (!r->r) {
-		surface_draw_rect(surf, r->x, r->y, r->w, r->h,
-		    r->color[0], r->color[1], r->color[2]);
-	    } else {
-		surface_draw_rounded_rect(surf, r->x, r->y, r->w, r->h, r->r,
-		    r->color[0], r->color[1], r->color[2]);
-	    }
+            surface_draw_rect(surf, r->x, r->y, r->w, r->h,
+                r->color[0], r->color[1], r->color[2]);
         } break;
         case GUI_COMMAND_CIRCLE: {
             const struct gui_command_circle *c = gui_command(circle, cmd);
