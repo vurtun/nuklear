@@ -1257,11 +1257,11 @@ enum gui_config_colors {
     GUI_COLOR_SHELF_ACTIVE,
     GUI_COLOR_SHELF_ACTIVE_TEXT,
     GUI_COLOR_SCALER,
+    GUI_COLOR_LAYOUT_SCALER,
     GUI_COLOR_COUNT
 };
 
 enum gui_config_rounding {
-    GUI_ROUNDING_PANEL,
     GUI_ROUNDING_BUTTON,
     GUI_ROUNDING_CHECK,
     GUI_ROUNDING_PROGRESS,
@@ -1316,6 +1316,8 @@ struct gui_config_stack  {
 struct gui_config {
     struct gui_font font;
     /* the from the user provided font */
+    gui_float scaler_width;
+    /* width of the tiled panel scaler */
     gui_float rounding[GUI_ROUNDING_MAX];
     /* rectangle widget rounding */
     struct gui_vec2 properties[GUI_PROPERTY_MAX];
@@ -1602,8 +1604,10 @@ enum gui_panel_flags {
     GUI_PANEL_SCROLLBAR = 0x200,
     /* INTERNAL ONLY!: adds a scrollbar to the panel which enables fixed size
      * panels with unlimited amount of space to fill */
-    GUI_PANEL_TAB = 0x400
+    GUI_PANEL_TAB = 0x400,
     /* INTERNAL ONLY!: Marks the panel as an subpanel of another panel(Groups/Tabs/Shelf)*/
+    GUI_PANEL_DO_NOT_RESET = 0x800
+    /* INTERNAL ONLY!: requires that the panel does not resets the command buffer */
 };
 
 struct gui_panel {
@@ -2113,8 +2117,6 @@ enum gui_layout_format {
 };
 
 struct gui_layout_slot {
-    gui_float scaler_width;
-    /* width of the scaling line between slots */
     gui_size capacity;
     /* number of panels inside the slot */
     gui_float value;
@@ -2135,6 +2137,8 @@ enum gui_layout_flags {
 };
 
 struct gui_layout {
+    gui_float scaler_width;
+    /* width of the scaling line between slots */
     gui_size width, height;
     /* size of the layout inside the window */
     gui_flags flags;
