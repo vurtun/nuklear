@@ -1637,7 +1637,7 @@ gui_config_default_color(struct gui_config *config)
     config->colors[GUI_COLOR_SHELF_ACTIVE] = gui_rgba(30, 30, 30, 255);
     config->colors[GUI_COLOR_SHELF_ACTIVE_TEXT] = gui_rgba(150, 150, 150, 255);
     config->colors[GUI_COLOR_SCALER] = gui_rgba(100, 100, 100, 255);
-    config->colors[GUI_COLOR_LAYOUT_SCALER] = gui_rgba(255, 0, 0, 255);
+    config->colors[GUI_COLOR_LAYOUT_SCALER] = gui_rgba(25, 25, 25, 255);
 }
 
 void
