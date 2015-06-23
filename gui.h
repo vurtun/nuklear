@@ -2090,7 +2090,7 @@ void gui_stack_pop(struct gui_stack*, struct gui_panel*);
 |           Top             |
 -----------------------------
 |       |           |       |
-| left  |   center  | right |
+| Left  |   Center  | Right |
 |       |           |       |
 -----------------------------
 |          Bottom           |
@@ -2112,36 +2112,19 @@ enum gui_layout_format {
     /* panels in slots are added top to bottom */
 };
 
-struct gui_layout_config {
-    /* every value is in percent (0.0f - 1.0f) */
-    gui_float left;
-    /* horizontal window ratio left slot */
-    gui_float right;
-    /* horizontal window ratio right slot */
-    gui_float centerh;
-    /* horizontal window ratio center slot */
-    gui_float centerv;
-    /* vertical window ratio in center slot */
-    gui_float bottom;
-    /* vertical window ratio in bottom slot */
-    gui_float top;
-    /* vertical window ratio in top slot */
-};
-
 struct gui_layout_slot {
+    gui_float scaler_width;
+    /* width of the scaling line between slots */
     gui_size capacity;
     /* number of panels inside the slot */
+    gui_float value;
+    /* temporary storage for the layout build up process */
     struct gui_vec2 ratio;
     /* horizontal and vertical window ratio */
     struct gui_vec2 offset;
     /* position of the slot in the window */
     enum gui_layout_format format;
     /* panel filling layout */
-};
-
-enum gui_layout_state {
-    GUI_LAYOUT_DEACTIVATED,
-    GUI_LAYOUT_ACTIVATED
 };
 
 enum gui_layout_flags {
@@ -2162,16 +2145,10 @@ struct gui_layout {
     /* each slot inside the panel layout */
 };
 
-void gui_layout_init(struct gui_layout*, const struct gui_layout_config*,
-                            gui_flags, gui_size width, gui_size height);
-/* initializes the layout with given slot ratio and size */
-void gui_layout_set_size(struct gui_layout*, gui_size width, gui_size height);
-/* updates the size of the complete layout */
-void gui_layout_set_state(struct gui_layout*, gui_uint state);
-/* updates the state of the layout */
+void gui_layout_begin(struct gui_layout*, gui_size width, gui_size height, gui_flags);
 void gui_layout_slot(struct gui_layout*, enum gui_layout_slot_index,
-                            enum gui_layout_format, gui_size panel_count);
-/* activates a layout slot with number of panels and filling format*/
+                    gui_float ratio, enum gui_layout_format, gui_size panel_count);
+void gui_layout_end(struct gui_layout*);
 
 #ifdef __cplusplus
 }

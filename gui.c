@@ -1091,11 +1091,12 @@ gui_slider(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w
     }
 
     {
-        /* draw slider with background and circle cursor*/
+        /* NOTE: this is a shitty hack since I am to stupid for math */
         gui_float c_pos = (slider_value <= slider_min) ? cursor.x:
             (slider_value >= slider_max) ? ((bar.x + bar.w) - cursor.h) :
             cursor.x + (cursor.w/2) - cursor.h/2;
 
+        /* draw slider with background and circle cursor*/
         gui_command_buffer_push_rect(out, bar.x, bar.y, bar.w, bar.h,0, s->bar);
         gui_command_buffer_push_circle(out,c_pos,cursor.y,cursor.h,cursor.h,s->border);
         gui_command_buffer_push_circle(out,c_pos + 1,cursor.y+1,cursor.h-2,cursor.h-2,s->fg);
@@ -3440,64 +3441,23 @@ gui_stack_pop(struct gui_stack *stack, struct gui_panel*panel)
  *
  * ===============================================================
  */
-void
-gui_layout_init(struct gui_layout *layout, const struct gui_layout_config *config,
-    gui_flags flags, gui_size width, gui_size height)
-{
-    gui_float left, right;
-    gui_float centerh, centerv;
-    gui_float bottom, top;
 
+void
+gui_layout_begin(struct gui_layout *layout, gui_size width, gui_size height, gui_flags flags)
+{
     GUI_ASSERT(layout);
     GUI_ASSERT(config);
-    if (!layout || !config) return;
+    if (!layout) return;
 
     gui_zero(layout, sizeof(*layout));
     layout->flags = flags;
     layout->width = width;
     layout->height = height;
-
-    left = GUI_SATURATE(config->left);
-    right = GUI_SATURATE(config->right);
-    centerh = GUI_SATURATE(config->centerh);
-    centerv = GUI_SATURATE(config->centerv);
-    bottom = GUI_SATURATE(config->bottom);
-    top = GUI_SATURATE(config->top);
-
-    layout->slots[GUI_SLOT_TOP].ratio = gui_vec2(1.0f, top);
-    layout->slots[GUI_SLOT_LEFT].ratio = gui_vec2(left, centerv);
-    layout->slots[GUI_SLOT_BOTTOM].ratio = gui_vec2(1.0f, bottom);
-    layout->slots[GUI_SLOT_CENTER].ratio = gui_vec2(centerh, centerv);
-    layout->slots[GUI_SLOT_RIGHT].ratio = gui_vec2(right, centerv);
-
-    layout->slots[GUI_SLOT_TOP].offset = gui_vec2(0.0f, 0.0f);
-    layout->slots[GUI_SLOT_LEFT].offset = gui_vec2(0.0f, top);
-    layout->slots[GUI_SLOT_BOTTOM].offset = gui_vec2(0.0f, top + centerv);
-    layout->slots[GUI_SLOT_CENTER].offset = gui_vec2(left, top);
-    layout->slots[GUI_SLOT_RIGHT].offset = gui_vec2(left + centerh, top);
-}
-
-void
-gui_layout_set_size(struct gui_layout *layout, gui_size width, gui_size height)
-{
-    GUI_ASSERT(layout);
-    if (!layout) return;
-    layout->width = width;
-    layout->height = height;
-}
-
-void
-gui_layout_set_state(struct gui_layout *layout, gui_uint state)
-{
-    GUI_ASSERT(layout);
-    if (!layout) return;
-    if (state) layout->flags |= GUI_LAYOUT_INACTIVE;
-    else layout->flags &= (gui_flags)~GUI_LAYOUT_INACTIVE;
 }
 
 void
 gui_layout_slot(struct gui_layout *layout, enum gui_layout_slot_index slot,
-    enum gui_layout_format format, gui_size count)
+    gui_float ratio, enum gui_layout_format format, gui_size count)
 {
     GUI_ASSERT(layout);
     GUI_ASSERT(count);
@@ -3505,5 +3465,36 @@ gui_layout_slot(struct gui_layout *layout, enum gui_layout_slot_index slot,
     if (!layout || !count) return;
     layout->slots[slot].capacity = count;
     layout->slots[slot].format = format;
+    layout->slots[slot].value = GUI_SATURATE(ratio);
+}
+
+void
+gui_layout_end(struct gui_layout *layout)
+{
+    struct gui_layout_slot *top, *bottom;
+    struct gui_layout_slot *left, *right;
+    struct gui_layout_slot *center;
+    gui_float centerh, centerv;
+
+    top = &layout->slots[GUI_SLOT_TOP];
+    bottom = &layout->slots[GUI_SLOT_BOTTOM];
+    left = &layout->slots[GUI_SLOT_LEFT];
+    right = &layout->slots[GUI_SLOT_RIGHT];
+    center = &layout->slots[GUI_SLOT_CENTER];
+
+    centerh = MAX(0.0f, 1.0f - (left->value + right->value));
+    centerv = MAX(0.0f, 1.0f - (top->value + bottom->value));
+    layout->slots[GUI_SLOT_CENTER].ratio = gui_vec2(centerh, centerv);
+
+    layout->slots[GUI_SLOT_TOP].ratio = gui_vec2(1.0f, top->value);
+    layout->slots[GUI_SLOT_LEFT].ratio = gui_vec2(left->value, centerv);
+    layout->slots[GUI_SLOT_BOTTOM].ratio = gui_vec2(1.0f, bottom->value);
+    layout->slots[GUI_SLOT_RIGHT].ratio = gui_vec2(right->value, centerv);
+
+    layout->slots[GUI_SLOT_TOP].offset = gui_vec2(0.0f, 0.0f);
+    layout->slots[GUI_SLOT_LEFT].offset = gui_vec2(0.0f, top->value);
+    layout->slots[GUI_SLOT_BOTTOM].offset = gui_vec2(0.0f, top->value + centerv);
+    layout->slots[GUI_SLOT_RIGHT].offset = gui_vec2(left->value + centerh, top->value);
+    layout->slots[GUI_SLOT_CENTER].offset = gui_vec2(left->value, top->value);
 }
 

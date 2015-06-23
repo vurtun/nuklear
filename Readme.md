@@ -324,16 +324,18 @@ struct gui_panel panel;
 struct gui_input input = {0};
 gui_panel_init(&panel, 0, 0, 0, 0, 0, &config, &buffer);
 
-struct gui_layout tiled;
-struct gui_layout_config ratio = {...};
-gui_layout_init(&tiled, &ratio, window_width, window_height);
-gui_layout_slot(&tiled, GUI_SLOT_LEFT, GUI_LAYOUT_VERTICAL, 1);
-
 while (1) {
     gui_input_begin(&input);
     /* record input */
     gui_input_end(&input);
 
+    /* setup layout */
+    struct gui_layout tiled;
+    gui_layout_begin(&tiled, 0, window_width, window_height);
+    gui_layout_slot(&tiled, GUI_SLOT_LEFT, 1.0f, GUI_LAYOUT_VERTICAL, 1);
+    gui_layout_end(&tiled);
+
+    /* GUI */
     struct gui_panel_layout layout;
     gui_panel_begin_tiled(&layout, &panel, &tiled, GUI_SLOT_LEFT, 0, "Demo", &input);
     gui_panel_row(&layout, 30, 1);
