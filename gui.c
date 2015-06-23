@@ -1400,25 +1400,21 @@ gui_scroll(struct gui_command_buffer *out, gui_float x, gui_float y,
             const gui_float pixel = i->mouse_delta.y;
             const gui_float delta =  (pixel / scroll_h) * target;
             scroll_offset = CLAMP(0, scroll_offset + delta, target - scroll_h);
-            cursor_y += pixel;
         } else if (button_up_pressed || button_down_pressed) {
             /* update cursor by up/down button */
             scroll_offset = (button_down_pressed) ?
                 MIN(scroll_offset + scroll_step, target - scroll_h):
                 MAX(0, scroll_offset - scroll_step);
-            scroll_off = scroll_offset / target;
-            cursor_y = scroll_y + (scroll_off * scroll_h);
         } else if (s->has_scrolling && ((i->scroll_delta < 0) || (i->scroll_delta > 0))) {
             /* update cursor by scrolling */
-            scroll_offset = (button_down_pressed) ?
-                MIN(scroll_offset + scroll_step * i->scroll_delta, target - scroll_h):
-                MAX(0, scroll_offset - scroll_step * i->scroll_delta);
-            scroll_off = scroll_offset / target;
-            cursor_y = scroll_y + (scroll_off * scroll_h);
+            scroll_offset = scroll_offset + scroll_step * (-i->scroll_delta);
+            scroll_offset = CLAMP(0, scroll_offset, target - scroll_h);
         }
+        scroll_off = scroll_offset / target;
+        cursor_y = scroll_y + (scroll_off * scroll_h);
     }
 
-    /* draw updated scrollbar cursor */
+    /* draw scrollbar cursor */
     gui_command_buffer_push_rect(out, cursor_x, cursor_y, cursor_w,
         cursor_h, s->rounding, s->foreground);
     return scroll_offset;
