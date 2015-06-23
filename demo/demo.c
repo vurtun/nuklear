@@ -180,7 +180,7 @@ init_show(struct show_window *win, struct gui_config *config,
 
     win->widget_tab = GUI_MINIMIZED;
     win->combobox_tab = GUI_MINIMIZED;
-    win->slider = 5.0f;
+    win->slider = 10.0f;
     win->progressbar = 50;
     win->spinner = 100;
 }
@@ -311,7 +311,8 @@ color_tab(struct gui_panel_layout *panel, struct control_window *control, struct
         "Selector:", "Selector Border:", "Selector Triangle:", "Selector Text:",
         "Histo:", "Histo Bars:", "Histo Negative:", "Histo Hovering:", "Plot:", "Plot Lines:",
         "Plot Hightlight:", "Scrollbar:", "Scrollbar Cursor:", "Scrollbar Border:",
-        "Table lines:", "Shelf:", "Shelf Text:", "Shelf Active:", "Shelf Active Text:", "Scaler:"
+        "Table lines:", "Shelf:", "Shelf Text:", "Shelf Active:", "Shelf Active Text:", "Scaler:",
+        "Tiled Scaler"
     };
 
     if (control->picker_active) {
@@ -407,7 +408,9 @@ run_demo(struct demo_gui *gui, struct gui_input *input)
     struct show_window *show = &gui->show;
 
     gui->running = update_control(control, &gui->stack, input, &gui->config);
-    show->hook.flags = control->show_flags;
+    if (show->hook.flags & GUI_PANEL_ACTIVE)
+        show->hook.flags = control->show_flags|GUI_PANEL_ACTIVE;
+    else show->hook.flags = control->show_flags;
     update_show(show, &gui->stack, input, gui->ms);
     if (show->hook.flags & GUI_PANEL_HIDDEN)
         control->show_flags |= GUI_PANEL_HIDDEN;

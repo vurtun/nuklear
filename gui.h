@@ -843,6 +843,8 @@ struct gui_scroll {
     /* scrollbar cursor color */
     struct gui_color border;
     /* scrollbar border color */
+    gui_bool has_scrolling;
+    /* flag if the scrollbar can be updated by scrolling */
 };
 
 enum gui_input_filter {

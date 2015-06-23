@@ -1408,7 +1408,7 @@ gui_scroll(struct gui_command_buffer *out, gui_float x, gui_float y,
                 MAX(0, scroll_offset - scroll_step);
             scroll_off = scroll_offset / target;
             cursor_y = scroll_y + (scroll_off * scroll_h);
-        } else if ((i->scroll_delta < 0) || (i->scroll_delta > 0)) {
+        } else if (s->has_scrolling && ((i->scroll_delta < 0) || (i->scroll_delta > 0))) {
             /* update cursor by scrolling */
             scroll_offset = (button_down_pressed) ?
                 MIN(scroll_offset + scroll_step * i->scroll_delta, target - scroll_h):
@@ -1904,7 +1904,7 @@ gui_panel_begin(struct gui_panel_layout *l, struct gui_panel *p,
     } else l->header_height = 1;
     l->row.height = l->header_height + 2 * item_spacing.y;
 
-    /* calculate the panel footer */
+    /* calculate the panel footer bounds */
     footer_h = scaler_size.y + item_padding.y;
     if ((p->flags & GUI_PANEL_SCALEABLE) &&
         (p->flags & GUI_PANEL_SCROLLBAR) &&
@@ -1921,9 +1921,9 @@ gui_panel_begin(struct gui_panel_layout *l, struct gui_panel *p,
     if (!(p->flags & GUI_PANEL_TAB)) {
         p->flags |= GUI_PANEL_SCROLLBAR;
         if (i && i->mouse_down) {
-            if (!GUI_INBOX(clicked_x, clicked_y, p->x, p->y, p->w, p->h))
-                p->flags &= (gui_flag)~GUI_PANEL_ACTIVE;
-            else p->flags |= GUI_PANEL_ACTIVE;
+            if (GUI_INBOX(clicked_x, clicked_y, p->x, p->y, p->w, p->h))
+                p->flags |= GUI_PANEL_ACTIVE;
+            /*else p->flags &= (gui_flag)~GUI_PANEL_ACTIVE;*/
         }
     }
 
@@ -3469,6 +3469,7 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
         scroll.border = config->colors[GUI_COLOR_SCROLLBAR_BORDER];
         if (panel->flags & GUI_PANEL_BORDER) scroll_h -= 1;
         scroll_target = (layout->at_y-layout->y)-(layout->header_height+2*item_spacing.y);
+        scroll.has_scrolling = (panel->flags & GUI_PANEL_ACTIVE);
         panel->offset = gui_scroll(out, scroll_x, scroll_y, scroll_w, scroll_h,
                                     scroll_offset, scroll_target, scroll_step,
                                     &scroll, layout->input);
