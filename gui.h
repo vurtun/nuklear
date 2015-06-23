@@ -2129,6 +2129,11 @@ struct gui_layout_slot {
     /* panel filling layout */
 };
 
+enum gui_layout_state {
+    GUI_LAYOUT_DEACTIVATE,
+    GUI_LAYOUT_ACTIVATE
+};
+
 enum gui_layout_flags {
     GUI_LAYOUT_INACTIVE = 0x01,
     /* tiled layout is inactive and cannot be updated by the user */
@@ -2153,6 +2158,8 @@ void gui_layout_begin(struct gui_layout*, gui_size width, gui_size height, gui_f
 void gui_layout_slot(struct gui_layout*, enum gui_layout_slot_index,
                     gui_float ratio, enum gui_layout_format, gui_size panel_count);
 void gui_layout_end(struct gui_layout*);
+void gui_layout_update_size(struct gui_layout*, gui_size width, gui_size height);
+void gui_layout_update_state(struct gui_layout*, gui_uint state);
 
 #ifdef __cplusplus
 }

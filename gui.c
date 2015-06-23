@@ -3610,6 +3610,9 @@ gui_layout_end(struct gui_layout *layout)
     struct gui_layout_slot *center;
     gui_float centerh, centerv;
 
+    GUI_ASSERT(layout);
+    if (!layout) return;
+
     top = &layout->slots[GUI_SLOT_TOP];
     bottom = &layout->slots[GUI_SLOT_BOTTOM];
     left = &layout->slots[GUI_SLOT_LEFT];
@@ -3630,5 +3633,23 @@ gui_layout_end(struct gui_layout *layout)
     layout->slots[GUI_SLOT_BOTTOM].offset = gui_vec2(0.0f, top->value + centerv);
     layout->slots[GUI_SLOT_RIGHT].offset = gui_vec2(left->value + centerh, top->value);
     layout->slots[GUI_SLOT_CENTER].offset = gui_vec2(left->value, top->value);
+}
+
+void
+gui_layout_update_size(struct gui_layout *layout, gui_size width, gui_size height)
+{
+    GUI_ASSERT(layout);
+    if (!layout) return;
+    layout->width = width;
+    layout->height = height;
+}
+
+void
+gui_layout_update_state(struct gui_layout *layout, gui_uint state)
+{
+    GUI_ASSERT(layout);
+    if (!layout) return;
+    if (!state) layout->flags |= GUI_LAYOUT_INACTIVE;
+    else layout->flags &= (gui_flags)~GUI_LAYOUT_INACTIVE;
 }
 
