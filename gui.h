@@ -1737,6 +1737,7 @@ void gui_panel_row_templated(struct gui_panel_layout*, gui_float height,
     Input:
     - panel row layout height in pixel
     - panel row layout column count
+    - array with percentage size values for each column
 */
 gui_size gui_panel_row_columns(const struct gui_panel_layout *layout,
                                         gui_size widget_size);

@@ -786,7 +786,7 @@ gui_do_button(struct gui_command_buffer *o, gui_float x, gui_float y, gui_float 
         }
     }
 
-    /* basic button drawing routines */
+    /* basic button drawing */
     gui_command_buffer_push_rect(o, x, y, w, h, b->rounding, b->foreground);
     gui_command_buffer_push_rect(o, x + b->border, y + b->border,
         w - 2 * b->border, h - 2 * b->border, b->rounding, background);
@@ -2091,7 +2091,7 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
     bounds.w = s->ratio.x * (gui_float)layout->width;
     bounds.h = s->ratio.y * (gui_float)layout->height;
 
-    /* by user scaleable layout  */
+    /* user slot scaling */
     if (layout->flags & GUI_LAYOUT_SCALEABLE) {
         const struct gui_config *config = panel->config;
         struct gui_command_buffer *out = panel->buffer;
@@ -2113,8 +2113,8 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
                 bounds.h = MAX(config->properties[GUI_PROPERTY_SIZE].y, bounds.h);
                 scaler.y = (bounds.y + bounds.h) - config->scaler_width;
 
-                py = 1.0f - ((bounds.h / layout->height) + layout->slots[GUI_SLOT_BOTTOM].ratio.y);
-                layout->slots[GUI_SLOT_TOP].ratio.y = bounds.h / layout->height;
+                py = 1.0f - ((bounds.h / (gui_float)layout->height) + layout->slots[GUI_SLOT_BOTTOM].ratio.y);
+                layout->slots[GUI_SLOT_TOP].ratio.y = bounds.h / (gui_float)layout->height;
                 layout->slots[GUI_SLOT_LEFT].ratio.y = py;
                 layout->slots[GUI_SLOT_CENTER].ratio.y = py;
                 layout->slots[GUI_SLOT_RIGHT].ratio.y = py;
@@ -2139,12 +2139,12 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
                 bounds.h += -dy;
                 scaler.y = bounds.y;
 
-                py = 1.0f - ((bounds.h / layout->height) + layout->slots[GUI_SLOT_TOP].ratio.y);
-                layout->slots[GUI_SLOT_BOTTOM].ratio.y = bounds.h / layout->height;
+                py = 1.0f - ((bounds.h / (gui_float)layout->height) + layout->slots[GUI_SLOT_TOP].ratio.y);
+                layout->slots[GUI_SLOT_BOTTOM].ratio.y = bounds.h / (gui_float)layout->height;
                 layout->slots[GUI_SLOT_LEFT].ratio.y = py;
                 layout->slots[GUI_SLOT_CENTER].ratio.y = py;
                 layout->slots[GUI_SLOT_RIGHT].ratio.y = py;
-                layout->slots[GUI_SLOT_BOTTOM].offset.y = bounds.y/layout->height;
+                layout->slots[GUI_SLOT_BOTTOM].offset.y = bounds.y/(gui_float)layout->height;
             }
 
             bounds.y += config->scaler_width;
@@ -2165,12 +2165,12 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
                 bounds.w = MAX(config->properties[GUI_PROPERTY_SIZE].x, bounds.w);
                 scaler.x = bounds.x + bounds.w - config->scaler_width;
 
-                cx = 1.0f - ((bounds.w / layout->width) + layout->slots[GUI_SLOT_RIGHT].ratio.x);
-                layout->slots[GUI_SLOT_LEFT].ratio.x = bounds.w / layout->width;
+                cx = 1.0f - ((bounds.w / (gui_float)layout->width) + layout->slots[GUI_SLOT_RIGHT].ratio.x);
+                layout->slots[GUI_SLOT_LEFT].ratio.x = bounds.w / (gui_float)layout->width;
                 layout->slots[GUI_SLOT_CENTER].offset.x = layout->slots[GUI_SLOT_LEFT].ratio.x;
                 layout->slots[GUI_SLOT_CENTER].ratio.x = cx;
 
-                rx = 1.0f - ((bounds.w / layout->width) + layout->slots[GUI_SLOT_CENTER].ratio.x);
+                rx = 1.0f - ((bounds.w / (gui_float)layout->width) + layout->slots[GUI_SLOT_CENTER].ratio.x);
                 layout->slots[GUI_SLOT_RIGHT].ratio.x = rx;
                 layout->slots[GUI_SLOT_RIGHT].offset.x = layout->slots[GUI_SLOT_CENTER].offset.x +
                                                             layout->slots[GUI_SLOT_CENTER].ratio.x;
@@ -2193,11 +2193,11 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
                 bounds.w = MAX(config->properties[GUI_PROPERTY_SIZE].x, bounds.w);
                 scaler.x = bounds.x;
 
-                cx = 1.0f - ((bounds.w / layout->width) + layout->slots[GUI_SLOT_LEFT].ratio.x);
-                layout->slots[GUI_SLOT_RIGHT].ratio.x = bounds.w / layout->width;
+                cx = 1.0f - ((bounds.w / (gui_float)layout->width) + layout->slots[GUI_SLOT_LEFT].ratio.x);
+                layout->slots[GUI_SLOT_RIGHT].ratio.x = bounds.w / (gui_float)layout->width;
                 layout->slots[GUI_SLOT_CENTER].ratio.x = cx;
 
-                lx = 1.0f - ((bounds.w / layout->width) + layout->slots[GUI_SLOT_CENTER].ratio.x);
+                lx = 1.0f - ((bounds.w / (gui_float)layout->width) + layout->slots[GUI_SLOT_CENTER].ratio.x);
                 layout->slots[GUI_SLOT_LEFT].ratio.x = lx;
                 layout->slots[GUI_SLOT_RIGHT].offset.x = layout->slots[GUI_SLOT_CENTER].offset.x +
                                                             layout->slots[GUI_SLOT_CENTER].ratio.x;
@@ -3614,7 +3614,6 @@ gui_layout_end(struct gui_layout *layout)
     bottom = &layout->slots[GUI_SLOT_BOTTOM];
     left = &layout->slots[GUI_SLOT_LEFT];
     right = &layout->slots[GUI_SLOT_RIGHT];
-    center = &layout->slots[GUI_SLOT_CENTER];
 
     centerh = MAX(0.0f, 1.0f - (left->value + right->value));
     centerv = MAX(0.0f, 1.0f - (top->value + bottom->value));
