@@ -52,6 +52,12 @@ gui_panel_init(&panel, 50, 50, 220, 170,
     GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
     GUI_PANEL_MINIMIZABLE, &config, &buffer);
 
+/* setup widget data */
+gui_size len = 0;
+gui_char buffer[256];
+gui_bool active = gui_false;
+gui_size option = 0;
+
 struct gui_input input = {0};
 while (1) {
     gui_input_begin(&input);
@@ -74,7 +80,7 @@ while (1) {
 
     /* draw */
     const struct gui_command *cmd;
-    gui_foreach_command(cmd, buffer) {
+    gui_foreach_command(cmd, &buffer) {
         /* execute draw call command */
     }
 }
@@ -232,7 +238,7 @@ while (1) {
     prog = gui_progress(&buffer, 50, 100, 100, 30, prog, 100, gui_false, &progress, &input);
 
     const struct gui_command *cmd;
-    gui_foreach_command(cmd, buffer) {
+    gui_foreach_command(cmd, &buffer) {
         /* execute draw call command */
     }
 }
@@ -297,7 +303,7 @@ while (1) {
     struct gui_panel *iter;
     gui_foreach_panel(iter, &stack) {
         const struct gui_command *cmd
-        gui_foreach_command(cmd, panel->buffer)) {
+        gui_foreach_command(cmd, iter->buffer)) {
             /* execute command */
         }
     }
