@@ -1,5 +1,5 @@
 #define MAX_BUFFER  64
-#define MAX_MEMORY  (64 * 1024)
+#define MAX_MEMORY  (32 * 1024)
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 

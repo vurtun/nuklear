@@ -21,8 +21,7 @@
 #include FT_GLYPH_H
 
 /* macros */
-/*#define DTIME       16*/
-#define DTIME       40
+#define DTIME       33
 #define FONT_ATLAS_DEPTH 4
 #define CIRCLE_SEGMENTS 22
 
@@ -34,6 +33,7 @@
 #define UNUSED(a)   ((void)(a))
 
 #define GUI_USE_FIXED_TYPES
+#define GUI_ASSERT(expr) assert(expr)
 #include "../gui.h"
 #include "demo.c"
 
@@ -92,8 +92,7 @@ file_load(const char* path, size_t* siz)
     char *buf;
     FILE *fd = fopen(path, "rb");
     if (!fd) {
-        fprintf(stderr, "Failed to open file: %s\n", path);
-        exit(EXIT_FAILURE);
+        die("Failed to open file: %s\n", path);
     }
     fseek(fd, 0, SEEK_END);
     *siz = (size_t)ftell(fd);
@@ -266,7 +265,6 @@ static void
 font_draw_text(const struct font *font, float x, float y, float h,
     const gui_byte *color, const char *text, size_t len)
 {
-    struct gui_rect clip;
     size_t text_len;
     long unicode;
     const struct font_glyph *g;
@@ -406,9 +404,7 @@ draw_circle(float x, float y, float r, const gui_byte *c)
 static void
 execute(struct gui_command_buffer *list, int width, int height)
 {
-    static const struct gui_color col = {255, 0, 0, 255};
     const struct gui_command *cmd;
-
     glPushAttrib(GL_ENABLE_BIT|GL_COLOR_BUFFER_BIT|GL_TRANSFORM_BIT);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

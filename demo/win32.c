@@ -20,6 +20,8 @@
 #define LEN(a)      (sizeof(a)/sizeof(a)[0])
 #define UNUSED(a)   ((void)(a))
 
+#define GUI_USE_FIXED_TYPES
+#define GUI_ASSERT(expr) assert(expr)
 #include "../gui.h"
 #include "demo.c"
 
@@ -319,9 +321,6 @@ draw(XSurface *surf, struct gui_stack *stack)
 static void
 key(struct gui_input *in, MSG *msg, gui_bool down)
 {
-    //if (msg->lParam == VK_CONTROL)
-    //    gui_input_key(in, GUI_KEY_CTRL, down);
-    //else 
     if (msg->lParam == VK_SHIFT)
         gui_input_key(in, GUI_KEY_SHIFT, down);
     else if (msg->lParam == VK_DELETE)

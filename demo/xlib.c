@@ -22,7 +22,8 @@
 #define LEN(a)      (sizeof(a)/sizeof(a)[0])
 #define UNUSED(a)   ((void)(a))
 
-#define GUI_IMPLEMENTATION
+#define GUI_USE_FIXED_TYPES
+#define GUI_ASSERT(expr) assert(expr)
 #include "../gui.h"
 #include "demo.c"
 
