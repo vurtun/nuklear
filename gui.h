@@ -100,8 +100,8 @@ struct gui_image gui_image_ptr(void*);
 struct gui_image gui_image_id(gui_int);
 struct gui_image gui_subimage_ptr(void*, struct gui_rect);
 struct gui_image gui_subimage_id(gui_int, struct gui_rect);
-gui_bool gui_rect_is_valid(struct gui_rect*);
-gui_bool gui_image_is_subimage(struct gui_image* img);
+gui_bool gui_rect_is_valid(const struct gui_rect*);
+gui_bool gui_image_is_subimage(const struct gui_image* img);
 struct gui_rect gui_rect(gui_float x, gui_float y, gui_float w, gui_float h);
 struct gui_vec2 gui_vec2(gui_float x, gui_float y);
 struct gui_color gui_rgba(gui_byte r, gui_byte g, gui_byte b, gui_byte a);
@@ -562,7 +562,8 @@ struct gui_command_buffer {
     - dynamically growing command buffer
 */
 #define gui_command_buffer_init_fixed(b, m, s,c)\
-    {gui_buffer_init_fixed(&(b)->base, m ,s); (b)->use_clipping=c; (b)->clip=gui_get_null_rect();}
+    {gui_buffer_init_fixed(&(b)->base, m ,s); (b)->use_clipping=c; \
+        (b)->clip=gui_get_null_rect();}
 /*  this function initializes a fixed size buffer
     Input:
     - memory block to fill
@@ -926,8 +927,8 @@ struct gui_selector {
 };
 
 void gui_text(struct gui_command_buffer*, gui_float, gui_float, gui_float, gui_float,
-                    const char *text, gui_size len, const struct gui_text*, enum gui_text_align,
-                    const struct gui_font*);
+                    const char *text, gui_size len, const struct gui_text*,
+                    enum gui_text_align, const struct gui_font*);
 /*  this function executes a text widget with text alignment
     Input:
     - output command buffer for drawing
@@ -940,9 +941,9 @@ void gui_text(struct gui_command_buffer*, gui_float, gui_float, gui_float, gui_f
     - font structure for text drawing
 */
 gui_bool gui_button_text(struct gui_command_buffer*, gui_float x, gui_float y,
-                                gui_float w, gui_float h, const char*, enum gui_button_behavior,
-                                const struct gui_button*, const struct gui_input*,
-                                const struct gui_font*);
+                                gui_float w, gui_float h, const char*,
+                                enum gui_button_behavior, const struct gui_button*,
+                                const struct gui_input*, const struct gui_font*);
 /*  this function executes a text button widget
     Input:
     - output command buffer for drawing
@@ -957,8 +958,9 @@ gui_bool gui_button_text(struct gui_command_buffer*, gui_float x, gui_float y,
     - returns gui_true if the button was pressed gui_false otherwise
 */
 gui_bool gui_button_image(struct gui_command_buffer*, gui_float x, gui_float y,
-                                gui_float w, gui_float h, struct gui_image img, enum gui_button_behavior,
-                                const struct gui_button*, const struct gui_input*);
+                                gui_float w, gui_float h, struct gui_image img,
+                                enum gui_button_behavior, const struct gui_button*,
+                                const struct gui_input*);
 /*  this function executes a image button widget
     Input:
     - output command buffer for drawing
@@ -989,7 +991,8 @@ gui_bool gui_button_triangle(struct gui_command_buffer*, gui_float x, gui_float 
 */
 gui_bool gui_button_text_triangle(struct gui_command_buffer*, gui_float x, gui_float y,
                                         gui_float w, gui_float h, enum gui_heading,
-                                        const char*,enum gui_text_align, enum gui_button_behavior,
+                                        const char*,enum gui_text_align,
+                                        enum gui_button_behavior,
                                         const struct gui_button*, const struct gui_font*,
                                         const struct gui_input*);
 /*  this function executes a button with text and a triangle widget
@@ -1030,7 +1033,8 @@ gui_bool gui_button_text_image(struct gui_command_buffer *out, gui_float x, gui_
 */
 gui_bool gui_toggle(struct gui_command_buffer*, gui_float x, gui_float y, gui_float w,
                             gui_float h, gui_bool, const char*, enum gui_toggle_type,
-                            const struct gui_toggle*, const struct gui_input*, const struct gui_font*);
+                            const struct gui_toggle*, const struct gui_input*,
+                            const struct gui_font*);
 /*  this function executes a toggle (checkbox, radiobutton) widget
     Input:
     - output command buffer for drawing
@@ -1044,8 +1048,8 @@ gui_bool gui_toggle(struct gui_command_buffer*, gui_float x, gui_float y, gui_fl
     - returns the update state of the toggle
 */
 gui_float gui_slider(struct gui_command_buffer*, gui_float x, gui_float y, gui_float,
-                            gui_float h, gui_float min, gui_float val, gui_float max, gui_float step,
-                            const struct gui_slider*, const struct gui_input*);
+                            gui_float h, gui_float min, gui_float val, gui_float max,
+                            gui_float step, const struct gui_slider*, const struct gui_input*);
 /*  this function executes a slider widget
     Input:
     - output command buffer for drawing
@@ -1122,8 +1126,8 @@ gui_size gui_edit_filtered(struct gui_command_buffer*, gui_float x, gui_float y,
 */
 gui_int gui_spinner(struct gui_command_buffer*, gui_float x, gui_float y, gui_float w,
                             gui_float h, const struct gui_spinner*, gui_int min, gui_int value,
-                            gui_int max, gui_int step, gui_bool *active, const struct gui_input*,
-                            const struct gui_font*);
+                            gui_int max, gui_int step, gui_bool *active,
+                            const struct gui_input*, const struct gui_font*);
 /*  this function executes a spinner widget
     Input:
     - output command buffer for draw commands
@@ -1862,10 +1866,24 @@ gui_bool gui_panel_button_image(struct gui_panel_layout*, struct gui_image img,
         default button behavior or pressed if repeater behavior.
 */
 gui_bool gui_panel_button_text_triangle(struct gui_panel_layout*, enum gui_heading,
-                                    const char*, enum gui_text_align, enum gui_button_behavior);
+                                    const char*, enum gui_text_align,
+                                    enum gui_button_behavior);
 /*  this function creates a button with a triangle pointing in one of four directions and text
     Input:
     - triangle direction with either up, down, left or right direction
+    - button label describing the button
+    - text alignment with either left, centered or right alignment
+    - button behavior with either default or repeater behavior
+    Output:
+    - gui_true if the button was transistioned from unpressed to pressed with
+        default button behavior or pressed if repeater behavior.
+*/
+gui_bool gui_panel_button_text_image(struct gui_panel_layout *layout, struct gui_image img,
+                                const char *text, enum gui_text_align align,
+                                enum gui_button_behavior behavior);
+/*  this function creates a button with an icon and text
+    Input:
+    - image or subimage to use as an icon
     - button label describing the button
     - text alignment with either left, centered or right alignment
     - button behavior with either default or repeater behavior
@@ -1916,7 +1934,8 @@ gui_size gui_panel_edit(struct gui_panel_layout*, gui_char *buffer, gui_size len
     - current state of the editbox with active(gui_true) or inactive(gui_false)
 */
 gui_size gui_panel_edit_filtered(struct gui_panel_layout*, gui_char *buffer,
-                                        gui_size len, gui_size max, gui_bool *active, gui_filter);
+                                        gui_size len, gui_size max,
+                                        gui_bool *active, gui_filter);
 /*  this function creates an editbox to updated/insert filtered user text input
     Input:
     - buffer to fill with user input

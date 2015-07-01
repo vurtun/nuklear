@@ -140,7 +140,7 @@ gui_image_id(gui_int id)
 }
 
 gui_bool
-gui_rect_is_valid(struct gui_rect *r)
+gui_rect_is_valid(const struct gui_rect *r)
 {
     if (r->x < 0 || r->y < 0 ||
         r->w < 0 || r->h < 0)
@@ -149,9 +149,9 @@ gui_rect_is_valid(struct gui_rect *r)
 }
 
 gui_bool
-gui_image_is_subimage(struct gui_image* img)
+gui_image_is_subimage(const struct gui_image* img)
 {
-    return !gui_rect_is_valid(&img->region);
+    return gui_rect_is_valid(&img->region);
 }
 
 static void
@@ -809,7 +809,8 @@ gui_button_text(struct gui_command_buffer *o, gui_float x, gui_float y,
     GUI_ASSERT(b);
     GUI_ASSERT(o);
     GUI_ASSERT(string);
-    if (!o || !b)
+    GUI_ASSERT(f);
+    if (!o || !b || !f)
         return gui_false;
 
     /* general drawing and logic button */
@@ -925,7 +926,7 @@ gui_bool
 gui_button_text_image(struct gui_command_buffer *out, gui_float x, gui_float y,
     gui_float w, gui_float h, struct gui_image img, const char* text,
     enum gui_text_align align, enum gui_button_behavior behavior,
-    const struct gui_button *button, const struct gui_font *f, 
+    const struct gui_button *button, const struct gui_font *f,
     const struct gui_input *i)
 {
     gui_bool pressed;
@@ -937,8 +938,8 @@ gui_button_text_image(struct gui_command_buffer *out, gui_float x, gui_float y,
         return gui_false;
 
     pressed = gui_button_text(out, x, y, w, h, text, behavior, button, i, f);
-    icon.y = y + (h/2) - f->height/2;
-    icon.w = icon.h = f->height;
+    icon.y = y + button->padding.y;
+    icon.w = icon.h = h - 2 * button->padding.y;
     if (align == GUI_TEXT_LEFT) {
         icon.x = (x + w) - (2 * button->padding.x + icon.w);
         icon.x = MAX(icon.x, 0);
@@ -964,7 +965,8 @@ gui_toggle(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w
 
     GUI_ASSERT(toggle);
     GUI_ASSERT(out);
-    if (!out || !toggle)
+    GUI_ASSERT(font);
+    if (!out || !toggle || !font)
         return 0;
 
     /* make sure correct values */
@@ -1588,9 +1590,9 @@ gui_config_default_color(struct gui_config *config)
     config->colors[GUI_COLOR_HEADER] = gui_rgba(40, 40, 40, 255);
     config->colors[GUI_COLOR_BORDER] = gui_rgba(100, 100, 100, 255);
     config->colors[GUI_COLOR_BUTTON] = gui_rgba(50, 50, 50, 255);
-    config->colors[GUI_COLOR_BUTTON_HOVER] = gui_rgba(100, 100, 100, 255);
-    config->colors[GUI_COLOR_BUTTON_TOGGLE] = gui_rgba(75, 75, 75, 255);
-    config->colors[GUI_COLOR_BUTTON_HOVER_FONT] = gui_rgba(45, 45, 45, 255);
+    config->colors[GUI_COLOR_BUTTON_HOVER] = gui_rgba(35, 35, 35, 255);
+    config->colors[GUI_COLOR_BUTTON_TOGGLE] = gui_rgba(35, 35, 35, 255);
+    config->colors[GUI_COLOR_BUTTON_HOVER_FONT] = gui_rgba(100, 100, 100, 255);
     config->colors[GUI_COLOR_BUTTON_BORDER] = gui_rgba(100, 100, 100, 255);
     config->colors[GUI_COLOR_CHECK] = gui_rgba(100, 100, 100, 255);
     config->colors[GUI_COLOR_CHECK_BACKGROUND] = gui_rgba(45, 45, 45, 255);
@@ -2592,13 +2594,13 @@ gui_panel_button_toggle(struct gui_panel_layout *layout, const char *str, gui_bo
         button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
         button.content = config->colors[GUI_COLOR_TEXT];
         button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
-        button.highlight_content = config->colors[GUI_COLOR_BUTTON];
+        button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
     } else {
         button.background = config->colors[GUI_COLOR_BUTTON_TOGGLE];
         button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
-        button.content = config->colors[GUI_COLOR_TEXT];
-        button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
-        button.highlight_content = config->colors[GUI_COLOR_BUTTON];
+        button.content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
+        button.highlight = config->colors[GUI_COLOR_BUTTON];
+        button.highlight_content = config->colors[GUI_COLOR_TEXT];
     }
     if (gui_button_text(layout->buffer, bounds.x, bounds.y, bounds.w, bounds.h,
         str, GUI_BUTTON_DEFAULT, &button, layout->input, &config->font)) value = !value;
@@ -2624,6 +2626,28 @@ gui_panel_button_text_triangle(struct gui_panel_layout *layout, enum gui_heading
     button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
     return gui_button_text_triangle(layout->buffer, bounds.x, bounds.y, bounds.w,
             bounds.h, heading, text, align, behavior, &button, &config->font, layout->input);
+}
+
+gui_bool
+gui_panel_button_text_image(struct gui_panel_layout *layout, struct gui_image img,
+    const char *text, enum gui_text_align align, enum gui_button_behavior behavior)
+{
+    struct gui_rect bounds;
+    struct gui_button button;
+    const struct gui_config *config;
+    if (!gui_panel_button(&button, &bounds, layout))
+        return gui_false;
+
+    config = layout->config;
+    button.rounding = config->rounding[GUI_ROUNDING_BUTTON];
+    button.background = config->colors[GUI_COLOR_BUTTON];
+    button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
+    button.content = config->colors[GUI_COLOR_TEXT];
+    button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
+    button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
+    return gui_button_text_image(layout->buffer, bounds.x, bounds.y, bounds.w,
+                            bounds.h, img, text, align, behavior, &button,
+                            &config->font, layout->input);
 }
 
 static gui_bool
