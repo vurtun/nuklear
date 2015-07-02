@@ -38,14 +38,16 @@ Summary: It is only responsible for the actual user interface
 /* allocate memory to hold the draw commands */
 struct gui_command_buffer buffer;
 void *memory = malloc(MEMORY_SIZE);
-gui_command_buffer_init_fixed(buffer, memory, MEMORY_SIZE, GUI_CLIP);
+gui_command_buffer_init_fixed(&buffer, memory, MEMORY_SIZE, GUI_CLIP);
 
-/* setup configuration */
-struct gui_config config;
+/* setup font */
 struct gui_font font;
 font.userdata.ptr = your_font_data;
 font.height = your_font_data.height;
 font.width = your_font_width_callback_function;
+
+/* setup configuration */
+struct gui_config config;
 gui_config_default(&config, GUI_DEFAULT_ALL, &font);
 
 /* initialize panel */
@@ -53,7 +55,7 @@ struct gui_panel panel;
 gui_panel_init(&panel, 50, 50, 220, 170,
     GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
     GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
-    GUI_PANEL_MINIMIZABLE, &config, &buffer);
+    GUI_PANEL_MINIMIZABLE, &buffer, &config);
 
 /* setup widget data */
 gui_size len = 0;
@@ -195,7 +197,7 @@ frame as well as the needed amount if not enough memory was provided.
 ```c
 void *memory = malloc(size);
 gui_command_buffer buffer;
-gui_command_buffer_init_fixed(buffer, memory, MEMORY_SIZE, GUI_CLIP);
+gui_command_buffer_init_fixed(&buffer, memory, MEMORY_SIZE, GUI_CLIP);
 ```
 
 ```c
@@ -222,7 +224,7 @@ and returns the from the user input modified state of the widget.
 
 struct gui_command_buffer buffer;
 void *memory = malloc(MEMORY_SIZE);
-gui_command_buffer_init_fixed(buffer, memory, MEMORY_SIZE, GUI_CLIP);
+gui_command_buffer_init_fixed(&buffer, memory, MEMORY_SIZE, GUI_CLIP);
 
 struct gui_font font = {...};
 const struct gui_slider slider = {...};
@@ -274,7 +276,7 @@ have to be drawn in a certain order.
 /* allocate buffer to hold output */
 struct gui_command_buffer buffer;
 void *memory = malloc(MEMORY_SIZE);
-gui_command_buffer_init_fixed(buffer, memory, MEMORY_SIZE, GUI_CLIP);
+gui_command_buffer_init_fixed(&buffer, memory, MEMORY_SIZE, GUI_CLIP);
 
 /* setup configuration data */
 struct gui_config config;
@@ -283,7 +285,7 @@ gui_config_default(&config, GUI_DEFAULT_ALL, &font);
 
 /* setup panel */
 struct gui_panel panel;
-gui_panel_init(&panel, 50, 50, 300, 200, 0, &config, &buffer);
+gui_panel_init(&panel, 50, 50, 300, 200, 0, &buffer, &config);
 
 /* setup stack */
 struct gui_stack stack;
@@ -325,7 +327,7 @@ per slots support a rich set of vertical, horizontal and mixed layouts.
 ```c
 struct gui_command_buffer buffer;
 void *memory = malloc(MEMORY_SIZE);
-gui_command_buffer_init_fixed(buffer, memory, MEMORY_SIZE, GUI_CLIP);
+gui_command_buffer_init_fixed(&buffer, memory, MEMORY_SIZE, GUI_CLIP);
 
 struct gui_config config;
 struct gui_font font = {...}
@@ -339,7 +341,7 @@ gui_layout_end(&tiled);
 
 struct gui_panel panel;
 struct gui_input input = {0};
-gui_panel_init(&panel, 0, 0, 0, 0, 0, &config, &buffer);
+gui_panel_init(&panel, 0, 0, 0, 0, 0, &buffer, &config);
 
 while (1) {
     gui_input_begin(&input);
