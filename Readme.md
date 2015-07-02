@@ -42,7 +42,10 @@ gui_command_buffer_init_fixed(buffer, memory, MEMORY_SIZE, GUI_CLIP);
 
 /* setup configuration */
 struct gui_config config;
-struct gui_font font = {...};
+struct gui_font font;
+font.userdata.ptr = your_font_data;
+font.height = your_font_data.height;
+font.width = your_font_width_callback_function;
 gui_config_default(&config, GUI_DEFAULT_ALL, &font);
 
 /* initialize panel */
@@ -166,7 +169,7 @@ always points to a valid object.
 
 ```c
 struct gui_font {
-    void *userdata;
+    gui_handle userdata;
     gui_float height;
     gui_text_width_f width;
 };
