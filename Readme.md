@@ -31,6 +31,7 @@ Summary: It is only responsible for the actual user interface
 ## Gallery
 ![gui screenshot](/screen/demo.png?raw=true)
 ![gui screenshot](/screen/config.png?raw=true)
+![gui screenshot](/screen/explorer.png?raw=true)
 ![gui screenshot](/screen/screenshot.png?raw=true)
 
 ## Example
