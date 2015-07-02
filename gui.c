@@ -391,7 +391,7 @@ gui_input_scroll(struct gui_input *in, gui_float y)
 }
 
 void
-gui_input_char(struct gui_input *in, const gui_glyph glyph)
+gui_input_glyph(struct gui_input *in, const gui_glyph glyph)
 {
     gui_size len = 0;
     gui_long unicode;
@@ -402,6 +402,14 @@ gui_input_char(struct gui_input *in, const gui_glyph glyph)
         gui_utf_encode(unicode, &in->text[in->text_len], GUI_INPUT_MAX - in->text_len);
         in->text_len += len;
     }
+}
+
+void
+gui_input_char(struct gui_input *in, char c)
+{
+    gui_glyph glyph;
+    glyph[0] = c;
+    gui_input_glyph(in, glyph);
 }
 
 void

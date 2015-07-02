@@ -336,9 +336,7 @@ key(struct gui_input *in, MSG *msg, gui_bool down)
 static void
 text(struct gui_input *in, MSG *msg)
 {
-    gui_glyph glyph;
     if (msg->wParam < 32 && msg->wParam >= 128) return;
-    glyph[0] = (gui_char)msg->wParam;
     gui_input_char(in, glyph);
 }
 

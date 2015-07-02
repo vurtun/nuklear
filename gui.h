@@ -228,10 +228,15 @@ void gui_input_scroll(struct gui_input*, gui_float y);
     Input:
     - vector with each direction (< 0 down > 0 up and scroll distance)
 */
-void gui_input_char(struct gui_input*, const gui_glyph);
+void gui_input_glyph(struct gui_input*, const gui_glyph);
 /*  this function adds a utf-8 glpyh into the internal text frame buffer
     Input:
     - utf8 glyph to add to the text buffer
+*/
+void gui_input_char(struct gui_input*, char);
+/*  this function adds char into the internal text frame buffer
+    Input:
+    - character to add to the text buffer
 */
 void gui_input_end(struct gui_input*);
 /*  this function sets the input state to readable

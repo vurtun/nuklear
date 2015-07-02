@@ -286,7 +286,7 @@ static void
 surface_draw_text(XSurface *surf, gui_short x, gui_short y, gui_ushort w, gui_ushort h,
     const char *text, size_t len, XFont *font, const gui_byte* cbg, const gui_byte *cfg)
 {
-    int i, tx, ty, th, olen;
+    int tx, ty, th;
     unsigned long bg = color_from_byte(cbg);
     unsigned long fg = color_from_byte(cfg);
 
@@ -393,9 +393,7 @@ key(struct XWindow *xw, struct gui_input *in, XEvent *evt, gui_bool down)
     else if (*code == XK_BackSpace)
         gui_input_key(in, GUI_KEY_BACKSPACE, down);
     else if (*code > 32 && *code < 128 && !down) {
-        gui_glyph glyph;
-        glyph[0] = (gui_char)*code;
-        gui_input_char(in, glyph);
+        gui_input_char(in, (char)*code);
     }
     XFree(code);
 }
@@ -502,7 +500,6 @@ main(int argc, char *argv[])
             sleep_for(DTIME - dt);
     }
 
-cleanup:
     free(gui.memory);
     font_del(xw.dpy, xw.font);
     surface_del(xw.surf);

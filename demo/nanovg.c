@@ -32,8 +32,11 @@
 #define LEN(a)      (sizeof(a)/sizeof(a)[0])
 #define UNUSED(a)   ((void)(a))
 
+#define GUI_USE_FIXED_TYPES
+#define GUI_ASSERT(expr) assert(expr)
 #include "../gui.h"
-#include "demo.c"
+/*#include "demo.c"*/
+#include "maya.c"
 
 static void
 die(const char *fmt, ...)
@@ -220,7 +223,7 @@ text(struct gui_input *in, SDL_Event *evt)
 {
     gui_glyph glyph;
     memcpy(glyph, evt->text.text, GUI_UTF_SIZE);
-    gui_input_char(in, glyph);
+    gui_input_glyph(in, glyph);
 }
 
 static void
@@ -285,7 +288,17 @@ main(int argc, char *argv[])
     font.userdata.ptr = vg;
     nvgTextMetrics(vg, NULL, NULL, &font.height);
     font.width = font_get_width;
+
+    gui.width = WINDOW_WIDTH;
+    gui.height = WINDOW_HEIGHT;
     init_demo(&gui, &font);
+
+    gui.images.select = nvgCreateImage(vg, "icon/select.bmp", 0);
+    gui.images.lasso = nvgCreateImage(vg, "icon/lasso.bmp", 0);
+    gui.images.paint = nvgCreateImage(vg, "icon/paint.bmp", 0);
+    gui.images.move = nvgCreateImage(vg, "icon/move.bmp", 0);
+    gui.images.rotate = nvgCreateImage(vg, "icon/rotate.bmp", 0);
+    gui.images.scale = nvgCreateImage(vg, "icon/scale.bmp", 0);
 
     while (gui.running) {
         /* Input */
@@ -312,6 +325,7 @@ main(int argc, char *argv[])
         /* Draw */
         glClearColor(0.4f, 0.4f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+        draw(vg, &gui.layout.stack, width, height);
         draw(vg, &gui.stack, width, height);
         gui.ms = SDL_GetTicks() - started;
         SDL_GL_SwapWindow(win);

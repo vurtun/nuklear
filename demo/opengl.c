@@ -21,7 +21,7 @@
 #include FT_GLYPH_H
 
 /* macros */
-#define DTIME       33
+#define DTIME       17
 #define FONT_ATLAS_DEPTH 4
 #define CIRCLE_SEGMENTS 22
 
@@ -513,7 +513,7 @@ text(struct gui_input *in, SDL_Event *evt)
 {
     gui_glyph glyph;
     memcpy(glyph, evt->text.text, GUI_UTF_SIZE);
-    gui_input_char(in, glyph);
+    gui_input_glyph(in, glyph);
 }
 
 static void
