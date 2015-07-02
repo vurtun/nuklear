@@ -1793,6 +1793,24 @@ gui_panel_init(struct gui_panel *panel, gui_float x, gui_float y, gui_float w,
     panel->minimized = gui_false;
 }
 
+void
+gui_panel_add_flag(struct gui_panel *panel, gui_flags f)
+{
+    panel->flags |= f;
+}
+
+void
+gui_panel_remove_flag(struct gui_panel *panel, gui_flags f)
+{
+    panel->flags &= (gui_flags)~f;
+}
+
+gui_bool
+gui_panel_has_flag(struct gui_panel *panel, gui_flags f)
+{
+    return (panel->flags & f) ? gui_true: gui_false;
+}
+
 gui_bool
 gui_panel_begin(struct gui_panel_layout *l, struct gui_panel *p,
     const char *text, const struct gui_input *i)

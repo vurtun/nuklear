@@ -1685,7 +1685,7 @@ struct gui_panel_layout {
     /* command draw call output command buffer */
 };
 
-/* Panel */
+
 struct gui_layout;
 void gui_panel_init(struct gui_panel*, gui_float x, gui_float y, gui_float w,
                             gui_float h, gui_flags, struct gui_command_buffer*, 
@@ -1698,6 +1698,21 @@ void gui_panel_init(struct gui_panel*, gui_float x, gui_float y, gui_float w,
     - configuration file containing the style, color and font for the panel
     Output:
     - a newly initialized panel
+*/
+void gui_panel_add_flag(struct gui_panel*, gui_flags);
+/*  this function adds panel flags to the panel
+    Input:
+    - panel flags to add the panel
+*/
+void gui_panel_remove_flag(struct gui_panel*, gui_flags);
+/*  this function removes panel flags from the panel
+    Input:
+    - panel flags to remove from the panel
+*/
+gui_bool gui_panel_has_flag(struct gui_panel*, gui_flags);
+/*  this function checks if a panel has given flag(s)
+    Input:
+    - panel flags to check for
 */
 gui_bool gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel*,
                                     const char *title, const struct gui_input*);
