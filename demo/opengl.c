@@ -249,7 +249,7 @@ font_get_text_width(gui_handle handle, const gui_char *t, gui_size l)
     if (!t || !l) return 0;
 
     glyph_len = gui_utf_decode(t, &unicode, l);
-    while (text_len <= l && glyph_len) {
+    while (text_len < l && glyph_len) {
         if (unicode == GUI_UTF_INVALID) return 0;
         glyph = (unicode < font->glyph_count) ? &font->glyphes[unicode] : font->fallback;
         glyph = (glyph->code == 0) ? font->fallback : glyph;
@@ -258,7 +258,7 @@ font_get_text_width(gui_handle handle, const gui_char *t, gui_size l)
         glyph_len = gui_utf_decode(t + text_len, &unicode, l - text_len);
         text_len += glyph_len;
     }
-    return (l > 1) ? text_width : 0;
+    return (l >= 1) ? text_width : 0;
 }
 
 static void

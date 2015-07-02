@@ -1979,8 +1979,8 @@ gui_panel_begin(struct gui_panel_layout *l, struct gui_panel *p,
         /* check if the close icon has been pressed and set the panel to hidden */
         header_w -= close_w;
         header_x += close_h - item_padding.x;
-        if (i && GUI_INBOX(mouse_x, mouse_y, close_x, close_y, close_w, close_h)) {
-            if (GUI_INBOX(clicked_x, clicked_y, close_x, close_y, close_w, close_h)) {
+        if (i && GUI_INBOX(mouse_x, mouse_y, close_x, close_y, text_width, close_h)) {
+            if (GUI_INBOX(clicked_x, clicked_y, close_x, close_y, text_width, close_h)) {
                 ret = !(i->mouse_down && i->mouse_clicked);
                 if (!ret) p->flags |= GUI_PANEL_HIDDEN;
             }
@@ -2008,7 +2008,7 @@ gui_panel_begin(struct gui_panel_layout *l, struct gui_panel *p,
         /* minize the panel if the minimize icon has been pressed */
         header_w -= min_w;
         header_x += min_w - item_padding.x;
-        if (i && GUI_INBOX(mouse_x, mouse_y, min_x, min_y, min_w, min_h)) {
+        if (i && GUI_INBOX(mouse_x, mouse_y, min_x, min_y, text_width, min_h)) {
             if (GUI_INBOX(clicked_x, clicked_y, min_x, min_y, min_w, min_h))
                 if (i->mouse_down && i->mouse_clicked)
                     p->minimized = !p->minimized;
