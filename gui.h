@@ -1714,6 +1714,8 @@ gui_bool gui_panel_has_flag(struct gui_panel*, gui_flags);
     Input:
     - panel flags to check for
 */
+gui_bool gui_panel_is_minimized(struct gui_panel*);
+/*  this function checks if the panel is minimized */
 gui_bool gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel*,
                                     const char *title, const struct gui_input*);
 /*  this function begins the panel build up process

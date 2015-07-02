@@ -1812,6 +1812,12 @@ gui_panel_has_flag(struct gui_panel *panel, gui_flags f)
 }
 
 gui_bool
+gui_panel_is_minimized(struct gui_panel *panel)
+{
+    return panel->minimized;
+}
+
+gui_bool
 gui_panel_begin(struct gui_panel_layout *l, struct gui_panel *p,
     const char *text, const struct gui_input *i)
 {
