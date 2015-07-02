@@ -37,7 +37,7 @@ Summary: It is only responsible for the actual user interface
 ```c
 /* allocate memory to hold the draw commands */
 struct gui_command_buffer buffer;
-void *memory = malloc(MEMORY_SIZE)
+void *memory = malloc(MEMORY_SIZE);
 gui_command_buffer_init_fixed(buffer, memory, MEMORY_SIZE, GUI_CLIP);
 
 /* setup configuration */
@@ -218,7 +218,7 @@ and returns the from the user input modified state of the widget.
 ```c
 
 struct gui_command_buffer buffer;
-void *memory = malloc(MEMORY_SIZE)
+void *memory = malloc(MEMORY_SIZE);
 gui_command_buffer_init_fixed(buffer, memory, MEMORY_SIZE, GUI_CLIP);
 
 struct gui_font font = {...};
@@ -270,6 +270,7 @@ have to be drawn in a certain order.
 ```c
 /* allocate buffer to hold output */
 struct gui_command_buffer buffer;
+void *memory = malloc(MEMORY_SIZE);
 gui_command_buffer_init_fixed(buffer, memory, MEMORY_SIZE, GUI_CLIP);
 
 /* setup configuration data */
@@ -320,6 +321,7 @@ per slots support a rich set of vertical, horizontal and mixed layouts.
 
 ```c
 struct gui_command_buffer buffer;
+void *memory = malloc(MEMORY_SIZE);
 gui_command_buffer_init_fixed(buffer, memory, MEMORY_SIZE, GUI_CLIP);
 
 struct gui_config config;
