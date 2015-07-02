@@ -221,7 +221,6 @@ draw to, positional and widgets specific data as well as user input
 and returns the from the user input modified state of the widget.
 
 ```c
-
 struct gui_command_buffer buffer;
 void *memory = malloc(MEMORY_SIZE);
 gui_command_buffer_init_fixed(&buffer, memory, MEMORY_SIZE, GUI_CLIP);
