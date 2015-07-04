@@ -86,6 +86,9 @@ struct gui_image {gui_handle handle; struct gui_rect region;};
 struct gui_font;
 typedef gui_bool(*gui_filter)(gui_long unicode);
 typedef gui_size(*gui_text_width_f)(gui_handle, const gui_char*, gui_size);
+typedef gui_size(*gui_paste_f)(gui_handle, char *buffer, gui_size max);
+typedef void(*gui_copy_f)(gui_handle, const char*, gui_size size);
+
 /*
  * ==============================================================
  *
@@ -93,6 +96,27 @@ typedef gui_size(*gui_text_width_f)(gui_handle, const gui_char*, gui_size);
  *
  * ===============================================================
  */
+/*  Utility
+    ----------------------------
+    The utility API provides mainly a number of object construction function
+    for some gui specific objects like image handle, vector, color and rectangle.
+
+    USAGE
+    ----------------------------
+    Utility function API
+    gui_get_null_rect()     -- returns a default clipping rectangle
+    gui_utf_decode()        -- decodes a utf-8 glyph into u32 unicode glyph and len
+    gui_utf_encode()        -- encodes a u32 unicode glyph into a utf-8 glyph
+    gui_image_ptr()         -- create a image handle from pointer
+    gui_image_id()          -- create a image handle from integer id
+    gui_subimage_ptr()      -- create a sub-image handle from pointer and region
+    gui_subimage_id()       -- create a sub-image handle from integer id and region
+    gui_rect_is_valid()     -- check if a rectangle inside the image command is valid
+    gui_rect()              -- creates a rectangle from x,y-Position and width and height
+    gui_vec2()              -- creates a 2D vector, in the best case should not be needed by the user
+    gui_rgba()              -- create a gui color struct from rgba color code
+    gui_rgb()               -- create a gui color struct from rgb color code
+*/
 struct gui_rect gui_get_null_rect(void);
 gui_size gui_utf_decode(const gui_char*, gui_long*, gui_size);
 gui_size gui_utf_encode(gui_long, gui_char*, gui_size);
@@ -174,8 +198,9 @@ enum gui_keys {
     GUI_KEY_DEL,
     GUI_KEY_ENTER,
     GUI_KEY_BACKSPACE,
-    GUI_KEY_ESCAPE,
     GUI_KEY_SPACE,
+    GUI_KEY_COPY,
+    GUI_KEY_PASTE,
     GUI_KEY_MAX
 };
 
@@ -682,6 +707,58 @@ void gui_command_buffer_push_text(struct gui_command_buffer*, gui_float, gui_flo
 /*
  * ==============================================================
  *
+ *                          Edit Buffer
+ *
+ * ===============================================================
+ */
+typedef struct gui_buffer gui_edit_buffer;
+void gui_edit_buffer_append(gui_edit_buffer*, const char*, gui_size);
+void gui_edit_buffer_insert(gui_edit_buffer*, gui_size pos, const char*, gui_size);
+void gui_edit_buffer_remove(gui_edit_buffer*, gui_size);
+void gui_edit_buffer_del(gui_edit_buffer*, gui_size pos, gui_size len);
+char *gui_edit_buffer_at(gui_edit_buffer*, gui_size pos);
+
+/*
+ * ==============================================================
+ *
+ *                          Edit Box
+ *
+ * ===============================================================
+ */
+struct gui_clipboard {
+    gui_handle userdata;
+    gui_paste_f paste;
+    gui_copy_f copy;
+};
+
+struct gui_edit_box {
+    gui_edit_buffer buffer;
+    gui_bool active;
+    struct gui_clipboard clip;
+    gui_filter filter;
+};
+
+gui_bool gui_filter_input_default(gui_long unicode);
+gui_bool gui_filter_input_ascii(gui_long unicode);
+gui_bool gui_filter_input_float(gui_long unicode);
+gui_bool gui_filter_input_decimal(gui_long unicode);
+gui_bool gui_filter_input_hex(gui_long unicode);
+gui_bool gui_filter_input_oct(gui_long unicode);
+gui_bool gui_filter_input_binary(gui_long unicode);
+
+void gui_edit_box_init(struct gui_edit_box*, struct gui_allocator*, gui_size initial,
+                        gui_float grow_fac, const struct gui_clipboard*, gui_filter);
+void gui_edit_box_init_fixed(struct gui_edit_box*, void *memory, gui_size size,
+                        const struct gui_clipboard*, gui_filter);
+#define gui_edit_box_reset(b) gui_buffer_reset(&(b)->buffer)
+#define gui_edit_box_clear(b) gui_buffer_clear(&(b)->buffer)
+void gui_edit_box_add(struct gui_edit_box*, const char*, gui_size);
+void gui_edit_box_remove(struct gui_edit_box*);
+gui_char *gui_edit_box_get(struct gui_edit_box*);
+gui_size gui_edit_box_len(struct gui_edit_box*);
+/*
+ * ==============================================================
+ *
  *                          Widgets
  *
  * ===============================================================
@@ -1085,6 +1162,19 @@ gui_size gui_progress(struct gui_command_buffer*, gui_float x, gui_float y,
     - input structure to update the slider with
     Output:
     - returns the from the user input updated value
+*/
+void gui_editbox(struct gui_command_buffer*, gui_float x, gui_float y, gui_float w,
+                gui_float h, struct gui_edit_box*, const struct gui_edit*,
+                const struct gui_input*, const struct gui_font*);
+/*  this function executes a editbox widget
+    Input:
+    - output command buffer for drawing
+    - (x,y) position
+    - (width, height) size
+    - edit box structure containing the state to update
+    - visual widget style structure describing the editbox
+    - input structure to update the editbox with
+    - font structure for text drawing
 */
 gui_size gui_edit(struct gui_command_buffer*, gui_float x, gui_float y, gui_float w,
                         gui_float h, gui_char*, gui_size, gui_size max, gui_bool*,
@@ -1942,6 +2032,8 @@ gui_size gui_panel_progress(struct gui_panel_layout*, gui_size cur, gui_size max
     Output:
     - the from user input updated progressbar value if modifyable progressbar
 */
+void gui_panel_editbox(struct gui_panel_layout*, struct gui_edit_box*);
+/*  this function creates an editbox with copy & paste functionality and text buffering */
 gui_size gui_panel_edit(struct gui_panel_layout*, gui_char *buffer, gui_size len,
                                 gui_size max, gui_bool *active, enum gui_input_filter);
 /*  this function creates an editbox to updated/insert user text input
@@ -2123,7 +2215,7 @@ void gui_stack_push(struct gui_stack*, struct gui_panel*);
  * the stack */
 void gui_stack_pop(struct gui_stack*, struct gui_panel*);
 /* this function removes a panel from the stack */
-#define gui_foreach_panel(i, s) for (i = (s)->begin; i != NULL; i = (i)->next)
+#define gui_foreach_panel(i, s) for (i = (s)->begin; i != 0; i = (i)->next)
 /* iterates over each panel inside the stack */
 
 /*

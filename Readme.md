@@ -6,7 +6,7 @@ application and does not have any direct dependencies.
 ## Features
 - Immediate mode graphical user interface toolkit
 - Written in C89 (ANSI C)
-- Small codebase (~3kLOC)
+- Small codebase (~4kLOC)
 - Focus on portability, efficiency, simplicity and minimal internal state
 - Suited for embedding into graphical applications
 - No global or hidden state

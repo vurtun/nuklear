@@ -5,9 +5,6 @@
 */
 #include "gui.h"
 
-#ifndef NULL
-#define NULL ((void*)0)
-#endif
 #ifndef MIN
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #endif
@@ -33,7 +30,18 @@
 #define gui_color_to_array(ar, c)\
     (ar)[0] = (c).r, (ar)[1] = (c).g, (ar)[2] = (c).b, (ar)[3] = (c).a
 
+#ifdef __cplusplus
+template<typename T> struct gui_alignof;
+template<typename T, int size_diff> struct gui_helper{enum {value = size_diff};};
+template<typename T> struct gui_helper<T,0>{enum {value = gui_alignof<T>::value};};
+template<typename T> struct gui_alignof{struct Big {T x; char c;}; enum {
+    diff = sizeof(Big) - sizeof(T), value = gui_helper<Big, diff>::value};};
+#define GUI_ALIGNOF(t) (gui_alignof<t>::value);
+#else
 #define GUI_ALIGNOF(t) ((char*)(&((struct {char c; t _h;}*)0)->_h) - (char*)0)
+#endif
+
+
 #define GUI_ALIGN_PTR(x, mask) (void*)((gui_size)((gui_byte*)(x) + (mask-1)) & ~(mask-1))
 #define GUI_ALIGN(x, mask) ((x) + (mask-1)) & ~(mask-1)
 #define GUI_OFFSETOF(st, m) ((gui_size)(&((st *)0)->m))
@@ -78,8 +86,8 @@ static void*
 gui_memcopy(void *dst, const void *src, gui_size size)
 {
     gui_size i = 0;
-    char *d = dst;
-    const char *s = src;
+    char *d = (char*)dst;
+    const char *s = (const char*)src;
     for (i = 0; i < size; ++i)
         d[i] = s[i];
     return dst;
@@ -158,7 +166,7 @@ static void
 gui_zero(void *dst, gui_size size)
 {
     gui_size i;
-    char *d = dst;
+    char *d = (char*)dst;
     for (i = 0; i < size; ++i) d[i] = 0;
 }
 
@@ -467,32 +475,42 @@ gui_buffer_alloc(struct gui_buffer *b, gui_size size, gui_size align)
     void *memory;
 
     GUI_ASSERT(b);
-    if (!b || !size) return NULL;
+    if (!b || !size) return 0;
     b->needed += size;
 
     /* calculate total size with needed alignment + size */
     unaligned = gui_ptr_add(void, b->memory.ptr, b->allocated);
-    memory = GUI_ALIGN_PTR(unaligned, align);
-    alignment = (gui_size)((gui_byte*)memory - (gui_byte*)unaligned);
+    if (align) {
+        memory = GUI_ALIGN_PTR(unaligned, align);
+        alignment = (gui_size)((gui_byte*)memory - (gui_byte*)unaligned);
+    } else {
+        memory = unaligned;
+        alignment = 0;
+    }
 
     /* check if buffer has enough memory*/
     if ((b->allocated + size + alignment) >= b->memory.size) {
         void *temp;
         if (b->type != GUI_BUFFER_DYNAMIC || !b->pool.realloc)
-            return NULL;
+            return 0;
 
         /* allocated new bigger block of memory if the buffer is dynamic */
         cap = (gui_size)((gui_float)b->memory.size * b->grow_factor);
         temp = b->pool.realloc(b->pool.userdata, b->memory.ptr, cap);
-        if (!temp) return NULL;
+        if (!temp) return 0;
 
         b->memory.ptr = temp;
         b->memory.size = cap;
 
         /* align newly allocated pointer to memory */
         unaligned = gui_ptr_add(gui_byte, b->memory.ptr, b->allocated);
-        memory = GUI_ALIGN_PTR(unaligned, align);
-        alignment = (gui_size)((gui_byte*)memory - (gui_byte*)unaligned);
+        if (align) {
+            memory = GUI_ALIGN_PTR(unaligned, align);
+            alignment = (gui_size)((gui_byte*)memory - (gui_byte*)unaligned);
+        } else {
+            memory = unaligned;
+            alignment = 0;
+        }
     }
 
     b->allocated += size + alignment;
@@ -549,10 +567,10 @@ gui_command_buffer_push(struct gui_command_buffer* b,
     void *unaligned;
     void *memory;
     GUI_ASSERT(b);
-    if (!b) return NULL;
+    if (!b) return 0;
 
-    cmd = gui_buffer_alloc(&b->base, size, align);
-    if (!cmd) return NULL;
+    cmd = (struct gui_command*)gui_buffer_alloc(&b->base, size, align);
+    if (!cmd) return 0;
 
     /* make sure the offset to the next command is aligned */
     unaligned = (gui_byte*)cmd + size;
@@ -577,7 +595,8 @@ gui_command_buffer_push_scissor(struct gui_command_buffer *b, gui_float x, gui_f
     b->clip.w = w;
     b->clip.h = h;
 
-    cmd = gui_command_buffer_push(b, GUI_COMMAND_SCISSOR, sizeof(*cmd));
+    cmd = (struct gui_command_scissor*)
+        gui_command_buffer_push(b, GUI_COMMAND_SCISSOR, sizeof(*cmd));
     if (!cmd) return;
     cmd->x = (gui_short)x;
     cmd->y = (gui_short)y;
@@ -593,7 +612,8 @@ gui_command_buffer_push_line(struct gui_command_buffer *b, gui_float x0, gui_flo
     GUI_ASSERT(buffer);
     if (!b) return;
 
-    cmd = gui_command_buffer_push(b, GUI_COMMAND_LINE, sizeof(*cmd));
+    cmd = (struct gui_command_line*)
+        gui_command_buffer_push(b, GUI_COMMAND_LINE, sizeof(*cmd));
     if (!cmd) return;
     cmd->begin[0] = (gui_short)x0;
     cmd->begin[1] = (gui_short)y0;
@@ -616,7 +636,8 @@ gui_command_buffer_push_rect(struct gui_command_buffer *b, gui_float x, gui_floa
             return;
     }
 
-    cmd = gui_command_buffer_push(b, GUI_COMMAND_RECT, sizeof(*cmd));
+    cmd = (struct gui_command_rect*)
+        gui_command_buffer_push(b, GUI_COMMAND_RECT, sizeof(*cmd));
     if (!cmd) return;
     cmd->r = (gui_uint)rounding;
     cmd->x = (gui_short)x;
@@ -640,7 +661,8 @@ gui_command_buffer_push_circle(struct gui_command_buffer *b, gui_float x, gui_fl
             return;
     }
 
-    cmd = gui_command_buffer_push(b, GUI_COMMAND_CIRCLE, sizeof(*cmd));
+    cmd = (struct gui_command_circle*)
+        gui_command_buffer_push(b, GUI_COMMAND_CIRCLE, sizeof(*cmd));
     if (!cmd) return;
     cmd->x = (gui_short)x;
     cmd->y = (gui_short)y;
@@ -665,7 +687,8 @@ gui_command_buffer_push_triangle(struct gui_command_buffer *b, gui_float x0, gui
             return;
     }
 
-    cmd = gui_command_buffer_push(b, GUI_COMMAND_TRIANGLE, sizeof(*cmd));
+    cmd = (struct gui_command_triangle*)
+        gui_command_buffer_push(b, GUI_COMMAND_TRIANGLE, sizeof(*cmd));
     if (!cmd) return;
     cmd->a[0] = (gui_short)x0;
     cmd->a[1] = (gui_short)y0;
@@ -690,7 +713,8 @@ gui_command_buffer_push_image(struct gui_command_buffer *b, gui_float x, gui_flo
             return;
     }
 
-    cmd = gui_command_buffer_push(b, GUI_COMMAND_IMAGE, sizeof(*cmd));
+    cmd = (struct gui_command_image*)
+        gui_command_buffer_push(b, GUI_COMMAND_IMAGE, sizeof(*cmd));
     if (!cmd) return;
     cmd->x = (gui_short)x;
     cmd->y = (gui_short)y;
@@ -715,7 +739,8 @@ gui_command_buffer_push_text(struct gui_command_buffer *b, gui_float x, gui_floa
             return;
     }
 
-    cmd = gui_command_buffer_push(b, GUI_COMMAND_TEXT, sizeof(*cmd) + length + 1);
+    cmd = (struct gui_command_text*)
+        gui_command_buffer_push(b, GUI_COMMAND_TEXT, sizeof(*cmd) + length + 1);
     if (!cmd) return;
     cmd->x = (gui_short)x;
     cmd->y = (gui_short)y;
@@ -727,6 +752,166 @@ gui_command_buffer_push_text(struct gui_command_buffer *b, gui_float x, gui_floa
     cmd->length = length;
     gui_memcopy(cmd->string, string, length);
     cmd->string[length] = '\0';
+}
+
+/*
+ * ==============================================================
+ *
+ *                      Edit Box
+ *
+ * ===============================================================
+ */
+void
+gui_edit_buffer_append(gui_edit_buffer *buffer, const char *str, gui_size len)
+{
+    char *mem;
+    GUI_ASSERT(buffer);
+    if (!buffer || !str || !len) return;
+    mem = (char*)gui_buffer_alloc(buffer, len * sizeof(char), 0);
+    if (!mem) return;
+    gui_memcopy(mem, str, len * sizeof(char));
+}
+
+void
+gui_edit_buffer_insert(gui_edit_buffer *buffer, gui_size pos, const char *str, gui_size len)
+{
+    void *mem;
+    gui_size i;
+    char *src, *dst;
+
+    gui_size copylen;
+    GUI_ASSERT(buffer);
+    if (!buffer || !str || !len || pos > buffer->allocated) return;
+
+    copylen = buffer->allocated - pos;
+    if (!copylen) {
+        gui_edit_buffer_append(buffer, str, len);
+        return;
+    }
+
+    /* memmove */
+    mem = gui_buffer_alloc(buffer, len * sizeof(char), 0);
+    if (!mem) return;
+    dst = gui_ptr_add(char, buffer->memory.ptr, pos + len + copylen);
+    src = gui_ptr_add(char, buffer->memory.ptr, pos + copylen);
+    for (i = 0; i < len; ++i)
+        *dst-- = *src--;
+    mem = gui_ptr_add(void, buffer->memory.ptr, pos);
+    gui_memcopy(mem, str, len * sizeof(char));
+}
+
+void
+gui_edit_buffer_remove(gui_edit_buffer *buffer, gui_size len)
+{
+    GUI_ASSERT(buffer);
+    if (!buffer || len > buffer->allocated) return;
+    buffer->allocated -= len;
+}
+
+void
+gui_edit_buffer_del(gui_edit_buffer *buffer, gui_size pos, gui_size len)
+{
+    char *src, *dst;
+    GUI_ASSERT(buffer);
+    if (!buffer || !len || pos > buffer->allocated ||
+        pos + len > buffer->allocated) return;
+
+    /* memmove */
+    dst = gui_ptr_add(char, buffer->memory.ptr, pos);
+    src = gui_ptr_add(char, buffer->memory.ptr, pos + len);
+    gui_memcopy(dst, src, len * sizeof(char));
+}
+
+char*
+gui_edit_buffer_at(gui_edit_buffer *buffer, gui_size pos)
+{
+    GUI_ASSERT(buffer);
+    if (!buffer || pos > buffer->allocated) return 0;
+    return gui_ptr_add(char, buffer->memory.ptr, pos);
+}
+
+void
+gui_edit_box_init(struct gui_edit_box *eb, struct gui_allocator *a, gui_size initial_size,
+                        gui_float grow_fac, const struct gui_clipboard *clip, gui_filter f)
+{
+    GUI_ASSERT(eb);
+    GUI_ASSERT(a);
+    GUI_ASSERT(grow_fac);
+    if (!eb || !a) return;
+
+    gui_zero(eb, sizeof(*eb));
+    gui_buffer_init(&eb->buffer, a, initial_size, grow_fac);
+    if (clip) eb->clip = *clip;
+    eb->filter = f;
+}
+
+void
+gui_edit_box_init_fixed(struct gui_edit_box *eb, void *memory, gui_size size,
+                        const struct gui_clipboard *clip, gui_filter f)
+{
+    GUI_ASSERT(eb);
+    GUI_ASSERT(a);
+    GUI_ASSERT(grow_fac);
+    GUI_ASSERT(clip);
+    if (!eb) return;
+
+    gui_zero(eb, sizeof(*eb));
+    gui_buffer_init_fixed(&eb->buffer, memory, size);
+    if (clip) eb->clip = *clip;
+    eb->filter = f;
+}
+
+void
+gui_edit_box_add(struct gui_edit_box *eb, const char *str, gui_size len)
+{
+    GUI_ASSERT(eb);
+    if (!eb || !str || !len) return;
+    gui_edit_buffer_insert(&eb->buffer, eb->buffer.allocated, str, len);
+}
+
+static void
+gui_edit_box_buffer_input(struct gui_edit_box *box, const struct gui_input *i)
+{
+    gui_long unicode;
+    gui_size src_len = 0;
+    gui_size text_len = 0, glyph_len = 0;
+    GUI_ASSERT(buffer);
+    GUI_ASSERT(i);
+
+    /* add user provided text to buffer until either no input or buffer space left*/
+    glyph_len = gui_utf_decode(i->text, &unicode, i->text_len);
+    while (glyph_len && ((text_len+glyph_len) <= i->text_len)) {
+        /* filter value to make sure the value is correct */
+        if (box->filter(unicode)) {
+            gui_size n = 0;
+            for (n = 0; n < glyph_len; n++)
+                gui_edit_box_add(box, &i->text[text_len + n], glyph_len);
+            text_len += glyph_len;
+        }
+        src_len = src_len + glyph_len;
+        glyph_len = gui_utf_decode(i->text + src_len, &unicode, i->text_len - src_len);
+    }
+}
+
+void
+gui_edit_box_remove(struct gui_edit_box *eb)
+{
+    GUI_ASSERT(eb);
+    gui_edit_buffer_remove(&eb->buffer, 1);
+}
+
+gui_char*
+gui_edit_box_get(struct gui_edit_box *eb)
+{
+    GUI_ASSERT(eb);
+    return (gui_char*)eb->buffer.memory.ptr;
+}
+
+gui_size
+gui_edit_box_len(struct gui_edit_box *eb)
+{
+    GUI_ASSERT(eb);
+    return eb->buffer.allocated;
 }
 
 /*
@@ -1158,107 +1343,22 @@ gui_progress(struct gui_command_buffer *out, gui_float x, gui_float y,
     return prog_value;
 }
 
-static gui_bool
-gui_filter_input_default(gui_long unicode)
-{
-    (void)unicode;
-    return gui_true;
-}
-
-static gui_bool
-gui_filter_input_ascii(gui_long unicode)
-{
-    if (unicode < 0 || unicode > 128)
-        return gui_false;
-    return gui_true;
-}
-
-static gui_bool
-gui_filter_input_float(gui_long unicode)
-{
-    if ((unicode < '0' || unicode > '9') && unicode != '.' && unicode != '-')
-        return gui_false;
-    return gui_true;
-}
-
-static gui_bool
-gui_filter_input_decimal(gui_long unicode)
-{
-    if (unicode < '0' || unicode > '9')
-        return gui_false;
-    return gui_true;
-}
-
-static gui_bool
-gui_filter_input_hex(gui_long unicode)
-{
-    if ((unicode < '0' || unicode > '9') &&
-        (unicode < 'a' || unicode > 'f') &&
-        (unicode < 'A' || unicode > 'B'))
-        return gui_false;
-    return gui_true;
-}
-
-static gui_bool
-gui_filter_input_oct(gui_long unicode)
-{
-    if (unicode < '0' || unicode > '7')
-        return gui_false;
-    return gui_true;
-}
-
-static gui_bool
-gui_filter_input_binary(gui_long unicode)
-{
-    if (unicode < '0' || unicode > '1')
-        return gui_false;
-    return gui_true;
-}
-
-static gui_size
-gui_buffer_input(gui_char *buffer, gui_size length, gui_size max,
-    gui_filter filter, const struct gui_input *i)
-{
-    gui_long unicode;
-    gui_size src_len = 0;
-    gui_size text_len = 0, glyph_len = 0;
-    GUI_ASSERT(buffer);
-    GUI_ASSERT(i);
-
-    /* add user provided text to buffer until either no input or buffer space left*/
-    glyph_len = gui_utf_decode(i->text, &unicode, i->text_len);
-    while (glyph_len && ((text_len+glyph_len) <= i->text_len) && (length+src_len)<max) {
-        /* filter value to make sure the value is correct */
-        if (filter(unicode)) {
-            gui_size n = 0;
-            for (n = 0; n < glyph_len; n++)
-                buffer[length++] = i->text[text_len + n];
-            text_len += glyph_len;
-        }
-        src_len = src_len + glyph_len;
-        glyph_len = gui_utf_decode(i->text + src_len, &unicode, i->text_len - src_len);
-    }
-    return text_len;
-}
-
-gui_size
-gui_edit_filtered(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w,
-    gui_float h, gui_char *buffer, gui_size len, gui_size max, gui_bool *active,
-    const struct gui_edit *field, gui_filter filter, const struct gui_input *in,
-    const struct gui_font *font)
+void
+gui_editbox(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w,
+                gui_float h, struct gui_edit_box *box, const struct gui_edit *field,
+                const struct gui_input *in, const struct gui_font *font)
 {
     gui_float input_w, input_h;
-    gui_bool input_active;
-
+    gui_char *buffer;
+    gui_size len, max;
     GUI_ASSERT(out);
     GUI_ASSERT(buffer);
     GUI_ASSERT(field);
-    if (!out || !buffer || !field)
-        return 0;
+    if (!out || !box || !field)
+        return;
 
     input_w = MAX(w, 2 * field->padding.x);
     input_h = MAX(h, font->height);
-    input_active = *active;
 
     /* draw editbox background and border */
     gui_command_buffer_push_rect(out, x, y, input_w, input_h,field->rounding, field->border);
@@ -1266,38 +1366,47 @@ gui_edit_filtered(struct gui_command_buffer *out, gui_float x, gui_float y, gui_
         input_w - 2 * field->border_size, input_h - 2 * field->border_size,
         field->rounding, field->background);
 
-    /* check if editbox is not active */
+    /* check if editbox was activated/deactivated */
     if (in && in->mouse_clicked && in->mouse_down)
-        input_active = GUI_INBOX(in->mouse_pos.x, in->mouse_pos.y, x, y, input_w, input_h);
+        box->active = GUI_INBOX(in->mouse_pos.x, in->mouse_pos.y, x, y, input_w, input_h);
 
-    if (input_active && in) {
+    max = box->buffer.memory.size;
+    len = gui_edit_box_len(box);
+    buffer = gui_edit_box_get(box);
+    if (box->active && in) {
         const struct gui_key *bs = &in->keys[GUI_KEY_BACKSPACE];
         const struct gui_key *del = &in->keys[GUI_KEY_DEL];
-        const struct gui_key *esc = &in->keys[GUI_KEY_ESCAPE];
         const struct gui_key *enter = &in->keys[GUI_KEY_ENTER];
         const struct gui_key *space = &in->keys[GUI_KEY_SPACE];
+        const struct gui_key *copy = &in->keys[GUI_KEY_COPY];
+        const struct gui_key *paste = &in->keys[GUI_KEY_PASTE];
 
         /* update input buffer by user input */
         if ((del->down && del->clicked) || (bs->down && bs->clicked))
-            if (len > 0) len = len - 1;
-        if ((enter->down && enter->clicked) || (esc->down && esc->clicked))
-            input_active = gui_false;
-        if ((space->down && space->clicked) && (len < max))
-            buffer[len++] = ' ';
-        if (in->text_len && len < max)
-            len += gui_buffer_input(buffer, len, max, filter, in);
+            gui_edit_box_remove(box);
+        if (enter->down && enter->clicked)
+            box->active = gui_false;
+        if (copy->down && copy->clicked && box->clip.copy)
+            box->clip.copy(box->clip.userdata, buffer, len);
+        if (paste->down && paste->clicked && box->clip.paste)
+            box->buffer.allocated = box->clip.paste(box->clip.userdata, buffer, max);
+        if (space->down && space->clicked)
+            gui_edit_box_add(box, " ", 1);
+        if (in->text_len)
+            gui_edit_box_buffer_input(box, in);
     }
 
-    if (font && buffer) {
+    if (font) {
         gui_size offset = 0;
         gui_float label_x, label_y, label_h;
         gui_float label_w = input_w - 2 * field->padding.x - 2 * field->border_size;
-        gui_size cursor_w =(gui_size)font->width(font->userdata,(const gui_char*)"X", 1);
+        gui_size cursor_w = font->width(font->userdata,(const gui_char*)"X", 1);
 
         /* calculate the visible text range */
         gui_size text_len = len;
+        gui_float space = label_w - (gui_float)cursor_w;
         gui_size text_width = font->width(font->userdata, buffer, text_len);
-        while (text_len && (text_width + cursor_w) > (gui_size)label_w) {
+        while (text_len && (text_width > space)) {
             gui_long unicode;
             offset += gui_utf_decode(&buffer[offset], &unicode, text_len);
             text_len = len - offset;
@@ -1312,14 +1421,83 @@ gui_edit_filtered(struct gui_command_buffer *out, gui_float x, gui_float y, gui_
             &buffer[offset], text_len, font, field->background, field->text);
 
         /* if wanted draw the cursor at the end of the text input */
-        if (input_active && field->show_cursor) {
+        if (box->active && field->show_cursor) {
             gui_command_buffer_push_rect(out, label_x + (gui_float)text_width, label_y,
-                (gui_float)cursor_w, label_h,0, field->cursor);
+                        (gui_float)cursor_w, label_h, 0, field->cursor);
         }
     }
-    *active = input_active;
-    return len;
+}
 
+gui_bool
+gui_filter_input_default(gui_long unicode)
+{
+    (void)unicode;
+    return gui_true;
+}
+
+gui_bool
+gui_filter_input_ascii(gui_long unicode)
+{
+    if (unicode < 0 || unicode > 128)
+        return gui_false;
+    return gui_true;
+}
+
+gui_bool
+gui_filter_input_float(gui_long unicode)
+{
+    if ((unicode < '0' || unicode > '9') && unicode != '.' && unicode != '-')
+        return gui_false;
+    return gui_true;
+}
+
+gui_bool
+gui_filter_input_decimal(gui_long unicode)
+{
+    if (unicode < '0' || unicode > '9')
+        return gui_false;
+    return gui_true;
+}
+
+gui_bool
+gui_filter_input_hex(gui_long unicode)
+{
+    if ((unicode < '0' || unicode > '9') &&
+        (unicode < 'a' || unicode > 'f') &&
+        (unicode < 'A' || unicode > 'B'))
+        return gui_false;
+    return gui_true;
+}
+
+gui_bool
+gui_filter_input_oct(gui_long unicode)
+{
+    if (unicode < '0' || unicode > '7')
+        return gui_false;
+    return gui_true;
+}
+
+gui_bool
+gui_filter_input_binary(gui_long unicode)
+{
+    if (unicode < '0' || unicode > '1')
+        return gui_false;
+    return gui_true;
+}
+
+gui_size
+gui_edit_filtered(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w,
+    gui_float h, gui_char *buffer, gui_size len, gui_size max, gui_bool *active,
+    const struct gui_edit *field, gui_filter filter, const struct gui_input *in,
+    const struct gui_font *font)
+{
+    struct gui_edit_box box;
+    gui_edit_box_init_fixed(&box, buffer, max, 0, filter);
+    box.buffer.allocated = len;
+    box.active = *active;
+    gui_editbox(out, x, y, w, h, &box, field, in, font);
+    *active = box.active;
+    return gui_edit_box_len(&box);
 }
 
 gui_size
@@ -1338,7 +1516,7 @@ gui_edit(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w,
         gui_filter_input_binary,
     };
     return gui_edit_filtered(out, x, y, w, h, buffer, len, max, active,
-                field,filter[f], in, font);
+                field, filter[f], in, font);
 }
 
 gui_float
@@ -1921,7 +2099,7 @@ gui_panel_begin(struct gui_panel_layout *l, struct gui_panel *p,
     l->buffer = p->buffer;
     l->row.columns = 0;
     l->row.height = 0;
-    l->row.ratio = NULL;
+    l->row.ratio = 0;
     l->row.item_ratio = 0;
     l->offset = p->offset;
     out = p->buffer;
@@ -1985,8 +2163,8 @@ gui_panel_begin(struct gui_panel_layout *l, struct gui_panel *p,
         /* check if the close icon has been pressed and set the panel to hidden */
         header_w -= close_w;
         header_x += close_h - item_padding.x;
-        if (i && GUI_INBOX(mouse_x, mouse_y, close_x, close_y, text_width, close_h)) {
-            if (GUI_INBOX(clicked_x, clicked_y, close_x, close_y, text_width, close_h)) {
+        if (i && GUI_INBOX(mouse_x, mouse_y, close_x, close_y, (gui_float)text_width, close_h)) {
+            if (GUI_INBOX(clicked_x, clicked_y, close_x, close_y, (gui_float)text_width, close_h)) {
                 ret = !(i->mouse_down && i->mouse_clicked);
                 if (!ret) p->flags |= GUI_PANEL_HIDDEN;
             }
@@ -2014,8 +2192,8 @@ gui_panel_begin(struct gui_panel_layout *l, struct gui_panel *p,
         /* minize the panel if the minimize icon has been pressed */
         header_w -= min_w;
         header_x += min_w - item_padding.x;
-        if (i && GUI_INBOX(mouse_x, mouse_y, min_x, min_y, text_width, min_h)) {
-            if (GUI_INBOX(clicked_x, clicked_y, min_x, min_y, min_w, min_h))
+        if (i && GUI_INBOX(mouse_x, mouse_y, min_x, min_y, (gui_float)text_width, min_h)) {
+            if (GUI_INBOX(clicked_x, clicked_y, min_x, min_y, (gui_float)text_width, min_h))
                 if (i->mouse_down && i->mouse_clicked)
                     p->minimized = !p->minimized;
         }
@@ -2093,7 +2271,7 @@ gui_panel_begin_stacked(struct gui_panel_layout *l, struct gui_panel* p,
             gui_stack_push(s, p);
         }
     }
-    return gui_panel_begin(l, p, title, (s->end == p) ? i : NULL);
+    return gui_panel_begin(l, p, title, (s->end == p) ? i : 0);
 }
 
 gui_bool
@@ -2269,7 +2447,7 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
     }
 
     gui_stack_push(&layout->stack, panel);
-    res = gui_panel_begin(tile,panel,title,(layout->flags&GUI_LAYOUT_INACTIVE)?NULL:in);
+    res = gui_panel_begin(tile,panel,title,(layout->flags&GUI_LAYOUT_INACTIVE)?0:in);
     panel->flags &= ~(gui_flags)GUI_PANEL_DO_NOT_RESET;
     return res;
 }
@@ -2299,7 +2477,7 @@ gui_panel_row(struct gui_panel_layout *layout, gui_float height, gui_size cols)
     /* draw the current row and set the current row layout */
     layout->index = 0;
     layout->at_y += layout->row.height;
-    layout->row.ratio = NULL;
+    layout->row.ratio = 0;
     layout->row.columns = cols;
     layout->row.height = height + item_spacing.y;
     gui_command_buffer_push_rect(out,  layout->at_x, layout->at_y,
@@ -2445,7 +2623,7 @@ gui_panel_spacing(struct gui_panel_layout *l, gui_size cols)
 gui_bool
 gui_panel_widget(struct gui_rect *bounds, struct gui_panel_layout *layout)
 {
-    struct gui_rect *c = NULL;
+    struct gui_rect *c = 0;
     GUI_ASSERT(layout);
     GUI_ASSERT(layout->config);
     GUI_ASSERT(layout->buffer);
@@ -2815,6 +2993,17 @@ gui_panel_edit_base(struct gui_rect *bounds, struct gui_edit *field,
     field->cursor = config->colors[GUI_COLOR_INPUT_CURSOR];
     field->text = config->colors[GUI_COLOR_INPUT_TEXT];
     return gui_true;
+}
+
+void
+gui_panel_editbox(struct gui_panel_layout *layout, struct gui_edit_box *box)
+{
+    struct gui_rect bounds;
+    struct gui_edit field;
+    const struct gui_config *config = layout->config;
+    if (!gui_panel_edit_base(&bounds, &field, layout)) return;
+    gui_editbox(layout->buffer, bounds.x, bounds.y, bounds.w, bounds.h,
+            box, &field, layout->input, &config->font);
 }
 
 gui_size
@@ -3471,7 +3660,7 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
     /* setup fake panel to create a panel layout from */
     flags = GUI_PANEL_BORDER|GUI_PANEL_SCROLLBAR|GUI_PANEL_TAB|GUI_PANEL_NO_HEADER;
     gui_panel_init(&panel, bounds.x, bounds.y, bounds.w, bounds.h, flags, out, config);
-    gui_panel_begin(shelf, &panel, NULL, parent->input);
+    gui_panel_begin(shelf, &panel, 0, parent->input);
     shelf->offset = offset;
 
     /* setup clip rect for the shelf panel */
@@ -3608,8 +3797,8 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
 void
 gui_stack_clear(struct gui_stack *stack)
 {
-    stack->begin = NULL;
-    stack->end = NULL;
+    stack->begin = 0;
+    stack->end = 0;
     stack->count = 0;
 }
 
@@ -3624,8 +3813,8 @@ gui_stack_push(struct gui_stack *stack, struct gui_panel *panel)
         if (iter == panel) return;
 
     if (!stack->begin) {
-        panel->next = NULL;
-        panel->prev = NULL;
+        panel->next = 0;
+        panel->prev = 0;
         stack->begin = panel;
         stack->end = panel;
         stack->count = 1;
@@ -3634,7 +3823,7 @@ gui_stack_push(struct gui_stack *stack, struct gui_panel *panel)
 
     stack->end->next = panel;
     panel->prev = stack->end;
-    panel->next = NULL;
+    panel->next = 0;
     stack->end = panel;
     stack->count++;
 }
@@ -3655,8 +3844,8 @@ gui_stack_pop(struct gui_stack *stack, struct gui_panel*panel)
     if (stack->end == panel)
         stack->end = panel->prev;
 
-    panel->next = NULL;
-    panel->prev = NULL;
+    panel->next = 0;
+    panel->prev = 0;
 }
 
 /*
