@@ -449,7 +449,7 @@ int main(void)
  *
  * ===============================================================
  */
-/*  DRAW COMMAND QUEUE
+/*  COMMAND QUEUE
     ----------------------------
     The command buffer API enqueues draw calls as commands in to a buffer and
     therefore abstracts over drawing routines and enables defered drawing.
@@ -691,16 +691,20 @@ void gui_command_buffer_push_text(struct gui_command_buffer*, gui_float, gui_flo
     - color of the triangle to draw
 */
 
-#define gui_ptr_add(t, p, i) ((t*)((void*)((gui_size)(p) + (i))))
-#define gui_ptr_sub(t, p, i) ((t*)((void*)((gui_size)(p) - (i))))
+#define gui_ptr_add(t, p, i) ((t*)((void*)((gui_byte*)(p) + (i))))
+#define gui_ptr_sub(t, p, i) ((t*)((void*)((gui_byte*)(p) - (i))))
+
+#define gui_ptr_add_const(t, p, i) ((t*)((const void*)((const gui_byte*)(p) + (i))))
+#define gui_ptr_sub_const(t, p, i) ((t*)((const void*)((const gui_byte*)(p) - (i))))
+
 #define gui_command(t, c) ((const struct gui_command_##t*)c)
 #define gui_command_buffer_begin(b)\
     ((const struct gui_command*)(b)->base.memory.ptr)
 #define gui_command_buffer_end(b)\
-    (gui_ptr_add(const struct gui_command, (b)->base.memory.ptr, (b)->base.allocated))
+    (gui_ptr_add_const(const struct gui_command, (b)->base.memory.ptr, (b)->base.allocated))
 #define gui_command_buffer_next(b, c)\
-    ((gui_ptr_add(const struct gui_command,c,c->offset)<gui_command_buffer_end(b))?\
-     gui_ptr_add(const struct gui_command,c,c->offset):NULL)
+    ((gui_ptr_add_const(const struct gui_command,c,c->offset) < gui_command_buffer_end(b))?\
+     gui_ptr_add_const(const struct gui_command,c,c->offset):NULL)
 #define gui_foreach_command(i, b)\
     for((i)=gui_command_buffer_begin(b); (i)!=NULL; (i)=gui_command_buffer_next(b,i))
 
@@ -725,6 +729,30 @@ char *gui_edit_buffer_at(gui_edit_buffer*, gui_size pos);
  *
  * ===============================================================
  */
+/*  EDIT BOX
+    ----------------------------
+    The Editbox is for text input with either a fixed or dynamically growing
+    buffer. It extends the basic functionality of basic input over `gui_edit`
+    and `gui_panel_edit` with basic copy and paste functionality and the possiblity
+    to use a extending buffer.
+
+    USAGE
+    ----------------------------
+    The Editbox first needs to be initialized either with a fixed size
+    memory block or a allocator. After that it can be used by either the
+    `gui_editobx` or `gui_panel_editbox` function. In addition symbols can be
+    added and removed with either `gui_edit_box_add` and `gui_edit_box_remove`.
+
+    Widget function API
+    gui_edit_box_init()         -- initialize a dynamically growing edit box
+    gui_edit_box_init_fixed()   -- initialize a statically edit box
+    gui_edit_box_reset()        -- resets the edit box back to the beginning
+    gui_edit_box_clear()        -- frees all memory of a dynamic edit box
+    gui_edit_box_add()          -- adds a symbol to the editbox
+    gui_edit_box_remove()       -- removes a symbol from the editbox
+    gui_edit_box_get()          -- returns the string inside the editbox
+    gui_edit_box_len()          -- returns the length of the string inside the edditbox
+*/
 struct gui_clipboard {
     gui_handle userdata;
     gui_paste_f paste;
@@ -738,6 +766,7 @@ struct gui_edit_box {
     gui_filter filter;
 };
 
+/* filter function */
 gui_bool gui_filter_input_default(gui_long unicode);
 gui_bool gui_filter_input_ascii(gui_long unicode);
 gui_bool gui_filter_input_float(gui_long unicode);
