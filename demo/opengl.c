@@ -97,7 +97,7 @@ file_load(const char* path, size_t* siz)
     fseek(fd, 0, SEEK_END);
     *siz = (size_t)ftell(fd);
     fseek(fd, 0, SEEK_SET);
-    buf = calloc(*siz, 1);
+    buf = (char*)calloc(*siz, 1);
     fread(buf, *siz, 1, fd);
     fclose(fd);
     return buf;
@@ -244,7 +244,7 @@ font_get_text_width(gui_handle handle, const gui_char *t, gui_size l)
     const struct font_glyph *glyph;
     size_t text_len = 0;
     size_t glyph_len;
-    struct font *font = handle.ptr;
+    struct font *font = (struct font*)handle.ptr;
     assert(font);
     if (!t || !l) return 0;
 
@@ -258,7 +258,7 @@ font_get_text_width(gui_handle handle, const gui_char *t, gui_size l)
         glyph_len = gui_utf_decode(t + text_len, &unicode, l - text_len);
         text_len += glyph_len;
     }
-    return (l >= 1) ? text_width : 0;
+    return text_width;
 }
 
 static void
@@ -318,15 +318,15 @@ font_new(const char *path, unsigned int font_height, unsigned int bake_height,
     gui_byte *ttf_blob;
     gui_size ttf_blob_size;
     struct font_atlas atlas;
-    struct font *font = calloc(sizeof(struct font), 1);
+    struct font *font = (struct font*)calloc(sizeof(struct font), 1);
 
     atlas.dim = dim;
     atlas.range = range;
     atlas.size = atlas.dim * atlas.dim * FONT_ATLAS_DEPTH;
-    atlas.memory = calloc((gui_size)atlas.size, 1);
+    atlas.memory = (gui_byte*)calloc((gui_size)atlas.size, 1);
 
     font->glyph_count = (unsigned int)atlas.range;
-    font->glyphes = calloc(atlas.range, sizeof(struct font_glyph));
+    font->glyphes = (struct font_glyph*)calloc(atlas.range, sizeof(struct font_glyph));
     font->fallback = &font->glyphes['?'];
     font->scale = (float)font_height / (gui_float)bake_height;
     font->height = (float)font_height;
@@ -451,7 +451,7 @@ execute(struct gui_command_buffer *list, int width, int height)
         } break;
         case GUI_COMMAND_TEXT: {
             const struct gui_command_text *t = gui_command(text, cmd);
-            font_draw_text(t->font.ptr, t->x, t->y, t->h, t->fg, t->string, t->length);
+            font_draw_text((const struct font*)t->font.ptr, t->x, t->y, t->h, t->fg, t->string, t->length);
         } break;
         case GUI_COMMAND_IMAGE:
         case GUI_COMMAND_MAX:
@@ -478,6 +478,7 @@ draw(struct gui_stack *stack, int width, int height)
 static void
 key(struct gui_input *in, SDL_Event *evt, gui_bool down)
 {
+    const Uint8* state = SDL_GetKeyboardState(NULL);
     SDL_Keycode sym = evt->key.keysym.sym;
     if (sym == SDLK_RSHIFT || sym == SDLK_LSHIFT)
         gui_input_key(in, GUI_KEY_SHIFT, down);
@@ -489,6 +490,10 @@ key(struct gui_input *in, SDL_Event *evt, gui_bool down)
         gui_input_key(in, GUI_KEY_SPACE, down);
     else if (sym == SDLK_BACKSPACE)
         gui_input_key(in, GUI_KEY_BACKSPACE, down);
+    else if (state[SDL_SCANCODE_LCTRL] && state[SDL_SCANCODE_C])
+        gui_input_key(in, GUI_KEY_COPY, down);
+    else if (state[SDL_SCANCODE_LCTRL] && state[SDL_SCANCODE_P])
+        gui_input_key(in, GUI_KEY_PASTE, down);
 }
 
 static void

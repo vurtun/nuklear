@@ -106,7 +106,7 @@ font_create(Display *dpy, const char *name)
 {
     int n;
     char *def, **missing;
-    XFont *font = xcalloc(1, sizeof(XFont));
+    XFont *font = (XFont*)xcalloc(1, sizeof(XFont));
     font->set = XCreateFontSet(dpy, name, &missing, &n, &def);
     if(missing) {
         while(n--)
@@ -138,7 +138,7 @@ font_create(Display *dpy, const char *name)
 static gui_size
 font_get_text_width(gui_handle handle, const gui_char *text, gui_size len)
 {
-    XFont *font = handle.ptr;
+    XFont *font = (XFont*)handle.ptr;
     XRectangle r;
     gui_size width;
     if(!font || !text)
@@ -179,7 +179,7 @@ color_from_byte(const gui_byte *c)
 static XSurface*
 surface_create(Display *dpy,  int screen, Window root, unsigned int w, unsigned int h)
 {
-    XSurface *surface = xcalloc(1, sizeof(XSurface));
+    XSurface *surface = (XSurface*)xcalloc(1, sizeof(XSurface));
     surface->w = w;
     surface->h = h;
     surface->dpy = dpy;
@@ -360,7 +360,7 @@ execute(XSurface *surf, struct gui_command_buffer *buffer)
         case GUI_COMMAND_TEXT: {
             const struct gui_command_text *t = gui_command(text, cmd);
             surface_draw_text(surf, t->x, t->y, t->w, t->h, (const char*)t->string,
-                    t->length, t->font.ptr, t->bg, t->fg);
+                    t->length, (XFont*)t->font.ptr, t->bg, t->fg);
         } break;
         case GUI_COMMAND_IMAGE:
         case GUI_COMMAND_MAX:
