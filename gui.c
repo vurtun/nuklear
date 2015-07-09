@@ -2313,12 +2313,13 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
 
         switch (slot) {
         case GUI_SLOT_TOP:
+            s = &layout->slots[GUI_SLOT_TOP];
             scaler.x = bounds.x;
             scaler.y = (bounds.y + bounds.h) - config->scaler_width;
             scaler.w = bounds.w;
             scaler.h = config->scaler_width;
 
-            if (in && !(layout->flags & GUI_LAYOUT_INACTIVE) && in->mouse_down &&
+            if (in && s->state != GUI_LOCKED && !(layout->flags & GUI_LAYOUT_INACTIVE) && in->mouse_down &&
                 GUI_INBOX(mpos.x, mpos.y, scaler.x, scaler.y, scaler.w, scaler.h)) {
                 gui_float py, dy = in->mouse_delta.y;
 
@@ -2339,12 +2340,13 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
             bounds.h -= config->scaler_width;
             break;
         case GUI_SLOT_BOTTOM:
+            s = &layout->slots[GUI_SLOT_BOTTOM];
             scaler.x = bounds.x;
             scaler.y = bounds.y;
             scaler.w = bounds.w;
             scaler.h = config->scaler_width;
 
-            if (in && !(layout->flags & GUI_LAYOUT_INACTIVE) && in->mouse_down &&
+            if (in && s->state != GUI_LOCKED && !(layout->flags & GUI_LAYOUT_INACTIVE) && in->mouse_down &&
                 GUI_INBOX(mpos.x, mpos.y, scaler.x, scaler.y, scaler.w, scaler.h)) {
                 gui_float py, dy = in->mouse_delta.y;
 
@@ -2364,12 +2366,13 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
             bounds.h -= config->scaler_width;
             break;
         case GUI_SLOT_LEFT:
+            s = &layout->slots[GUI_SLOT_LEFT];
             scaler.x = bounds.x + bounds.w - config->scaler_width;
             scaler.y = bounds.y;
             scaler.w = config->scaler_width;
             scaler.h = bounds.h;
 
-            if (in && !(layout->flags & GUI_LAYOUT_INACTIVE) && in->mouse_down &&
+            if (in && s->state != GUI_LOCKED && !(layout->flags & GUI_LAYOUT_INACTIVE) && in->mouse_down &&
                 GUI_INBOX(mpos.x, mpos.y, scaler.x, scaler.y, scaler.w, scaler.h)) {
                 gui_float dx = in->mouse_delta.x;
                 gui_float cx, rx;
@@ -2391,12 +2394,13 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
             bounds.w -= config->scaler_width;
             break;
         case GUI_SLOT_RIGHT:
+            s = &layout->slots[GUI_SLOT_LEFT];
             scaler.x = bounds.x;
             scaler.y = bounds.y;
             scaler.w = config->scaler_width;
             scaler.h = bounds.h;
 
-            if (in && !(layout->flags & GUI_LAYOUT_INACTIVE) && in->mouse_down &&
+            if (in && s->state != GUI_LOCKED && !(layout->flags & GUI_LAYOUT_INACTIVE) && in->mouse_down &&
                 GUI_INBOX(mpos.x, mpos.y, scaler.x, scaler.y, scaler.w, scaler.h)) {
                 gui_float dx = in->mouse_delta.x;
                 gui_float cx, lx;
@@ -3880,6 +3884,19 @@ gui_layout_slot(struct gui_layout *layout, enum gui_layout_slot_index slot,
     layout->slots[slot].capacity = count;
     layout->slots[slot].format = format;
     layout->slots[slot].value = GUI_SATURATE(ratio);
+    layout->slots[slot].state = GUI_UNLOCKED;
+}
+
+void
+gui_layout_slot_locked(struct gui_layout *layout, enum gui_layout_slot_index slot,
+    gui_float ratio, enum gui_layout_format format, gui_size count)
+{
+    GUI_ASSERT(layout);
+    GUI_ASSERT(count);
+    GUI_ASSERT(slot >= GUI_SLOT_TOP && slot < GUI_SLOT_MAX);
+    if (!layout || !count) return;
+    gui_layout_slot(layout, slot, ratio, format, count);
+    layout->slots[slot].state = GUI_LOCKED;
 }
 
 void

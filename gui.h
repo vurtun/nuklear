@@ -2281,6 +2281,11 @@ enum gui_layout_format {
     /* panels in slots are added top to bottom */
 };
 
+enum gui_layout_slot_state {
+    GUI_UNLOCKED,
+    GUI_LOCKED
+};
+
 struct gui_layout_slot {
     gui_size capacity;
     /* number of panels inside the slot */
@@ -2292,6 +2297,8 @@ struct gui_layout_slot {
     /* position of the slot in the window */
     enum gui_layout_format format;
     /* panel filling layout */
+    enum gui_layout_slot_state state;
+    /* scaleable state */
 };
 
 enum gui_layout_state {
@@ -2320,8 +2327,10 @@ struct gui_layout {
 };
 
 void gui_layout_begin(struct gui_layout*, gui_size width, gui_size height, gui_flags);
-void gui_layout_slot(struct gui_layout*, enum gui_layout_slot_index,
-                    gui_float ratio, enum gui_layout_format, gui_size panel_count);
+void gui_layout_slot(struct gui_layout*, enum gui_layout_slot_index, gui_float ratio,
+                    enum gui_layout_format, gui_size panel_count);
+void gui_layout_slot_locked(struct gui_layout*, enum gui_layout_slot_index, gui_float ratio,
+                            enum gui_layout_format, gui_size panel_count);
 void gui_layout_end(struct gui_layout*);
 void gui_layout_update_size(struct gui_layout*, gui_size width, gui_size height);
 void gui_layout_update_state(struct gui_layout*, gui_uint state);
