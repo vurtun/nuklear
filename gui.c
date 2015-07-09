@@ -2621,7 +2621,7 @@ gui_panel_spacing(struct gui_panel_layout *l, gui_size cols)
         for (i = 0; i < rows; ++i)
             gui_panel_row(l, row_height, l->row.columns);
     }
-    l->index += add;
+    l->index = add;
 }
 
 gui_bool
