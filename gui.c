@@ -896,8 +896,21 @@ gui_edit_box_buffer_input(struct gui_edit_box *box, const struct gui_input *i)
 void
 gui_edit_box_remove(struct gui_edit_box *eb)
 {
+    gui_long unicode;
+    gui_size src_len = 0;
+    gui_size last_glyph = 0;
+    gui_size glyph_len = 0;
+    gui_char *text = gui_edit_box_get(eb);
+    gui_size text_len = gui_edit_box_len(eb);
     GUI_ASSERT(eb);
-    gui_edit_buffer_remove(&eb->buffer, 1);
+
+    glyph_len = gui_utf_decode(text, &unicode, text_len);
+    while (glyph_len) {
+        src_len = src_len + glyph_len;
+        last_glyph = glyph_len;
+        glyph_len = gui_utf_decode(text + src_len, &unicode, text_len - src_len);
+    }
+    gui_edit_buffer_remove(&eb->buffer, last_glyph);
 }
 
 gui_char*

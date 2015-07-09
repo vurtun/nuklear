@@ -741,7 +741,7 @@ char *gui_edit_buffer_at(gui_edit_buffer*, gui_size pos);
     The Editbox first needs to be initialized either with a fixed size
     memory block or a allocator. After that it can be used by either the
     `gui_editobx` or `gui_panel_editbox` function. In addition symbols can be
-    added and removed with either `gui_edit_box_add` and `gui_edit_box_remove`.
+    added and removed with `gui_edit_box_add` and `gui_edit_box_remove`.
 
     Widget function API
     gui_edit_box_init()         -- initialize a dynamically growing edit box
