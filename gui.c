@@ -1853,6 +1853,14 @@ gui_config_default(struct gui_config *config, gui_flags flags, const struct gui_
         gui_config_default_rounding(config);
 }
 
+void
+gui_config_set_font(struct gui_config *config, const struct gui_font *font)
+{
+    GUI_ASSERT(config);
+    if (!config) return;
+    config->font = *font;
+}
+
 struct gui_vec2
 gui_config_property(const struct gui_config *config, enum gui_config_properties index)
 {

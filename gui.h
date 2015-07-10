@@ -1466,6 +1466,11 @@ void gui_config_default(struct gui_config*, gui_flags, const struct gui_font*);
     Output:
     - configuration structure holding the default panel style
 */
+void gui_config_set_font(struct gui_config*, const struct gui_font*);
+/*  this function changes the used font
+    Input:
+    - user font reference structure describing the font used inside the panel
+*/
 struct gui_vec2 gui_config_property(const struct gui_config*,
                                             enum gui_config_properties);
 /*  this function accesses a configuration property over an identifier
