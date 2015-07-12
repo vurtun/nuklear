@@ -619,6 +619,14 @@ struct gui_command_buffer {
     Input:
     - buffer to reset
 */
+#define gui_command_buffer_info(status, b)\
+    gui_buffer_info((status), &(b)->base)
+/*  this function requests memory information from a buffer
+    Input:
+    - buffer to get the inforamtion from
+    Output:
+    - buffer memory information
+*/
 void *gui_command_buffer_push(struct gui_command_buffer*, gui_uint type, gui_size size);
 /*  this function push enqueues a command into the buffer
     Input:
@@ -791,6 +799,8 @@ void gui_edit_box_init_fixed(struct gui_edit_box*, void *memory, gui_size size,
 #define gui_edit_box_reset(b)\
     do {gui_buffer_reset(&(b)->buffer); (b)->cursor = (b)->glyphes = 0;} while(0);
 #define gui_edit_box_clear(b) gui_buffer_clear(&(b)->buffer)
+#define gui_edit_box_info(status, b)\
+    gui_buffer_info((status), &(b)->buffer)
 void gui_edit_box_add(struct gui_edit_box*, const char*, gui_size);
 void gui_edit_box_remove(struct gui_edit_box*);
 gui_char *gui_edit_box_get(struct gui_edit_box*);
