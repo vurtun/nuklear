@@ -42,7 +42,7 @@ template<typename T> struct gui_alignof{struct Big {T x; char c;}; enum {
 #endif
 
 
-#define GUI_ALIGN_PTR(x, mask) (void*)((gui_size)((gui_byte*)(x) + (mask-1)) & ~(mask-1))
+#define GUI_ALIGN_PTR(x, mask) (void*)((gui_ptr)((gui_byte*)(x) + (mask-1)) & ~(mask-1))
 #define GUI_ALIGN(x, mask) ((x) + (mask-1)) & ~(mask-1)
 #define GUI_OFFSETOF(st, m) ((gui_size)(&((st *)0)->m))
 
@@ -343,6 +343,28 @@ gui_utf_encode(gui_long u, gui_char *c, gui_size clen)
     }
     c[0] = gui_utf_encode_byte(u, len);
     return len;
+}
+
+gui_size
+gui_utf_len(const gui_char *str, gui_size len)
+{
+    const gui_char *text;
+    gui_size text_len;
+    gui_size glyph_len;
+    gui_size src_len = 0;
+    gui_long unicode;
+
+    GUI_ASSERT(str);
+    if (!str || !len) return 0;
+
+    text = str;
+    text_len = len;
+    glyph_len = gui_utf_decode(text, &unicode, text_len);
+    while (glyph_len && src_len < len) {
+        src_len = src_len + glyph_len;
+        glyph_len = gui_utf_decode(text + src_len, &unicode, text_len - src_len);
+    }
+    return src_len;
 }
 
 void
@@ -772,8 +794,9 @@ gui_edit_buffer_append(gui_edit_buffer *buffer, const char *str, gui_size len)
     gui_memcopy(mem, str, len * sizeof(char));
 }
 
-void
-gui_edit_buffer_insert(gui_edit_buffer *buffer, gui_size pos, const char *str, gui_size len)
+int
+gui_edit_buffer_insert(gui_edit_buffer *buffer, gui_size pos,
+    const char *str, gui_size len)
 {
     void *mem;
     gui_size i;
@@ -781,23 +804,24 @@ gui_edit_buffer_insert(gui_edit_buffer *buffer, gui_size pos, const char *str, g
 
     gui_size copylen;
     GUI_ASSERT(buffer);
-    if (!buffer || !str || !len || pos > buffer->allocated) return;
+    if (!buffer || !str || !len || pos > buffer->allocated) return 0;
 
     copylen = buffer->allocated - pos;
     if (!copylen) {
         gui_edit_buffer_append(buffer, str, len);
-        return;
+        return 1;
     }
 
     /* memmove */
     mem = gui_buffer_alloc(buffer, len * sizeof(char), 0);
-    if (!mem) return;
-    dst = gui_ptr_add(char, buffer->memory.ptr, pos + len + copylen);
-    src = gui_ptr_add(char, buffer->memory.ptr, pos + copylen);
-    for (i = 0; i < len; ++i)
+    if (!mem) return 0;
+    dst = gui_ptr_add(char, buffer->memory.ptr, pos + len + (copylen - 1));
+    src = gui_ptr_add(char, buffer->memory.ptr, pos + (copylen-1));
+    for (i = 0; i < copylen; ++i)
         *dst-- = *src--;
     mem = gui_ptr_add(void, buffer->memory.ptr, pos);
     gui_memcopy(mem, str, len * sizeof(char));
+    return 1;
 }
 
 void
@@ -816,18 +840,57 @@ gui_edit_buffer_del(gui_edit_buffer *buffer, gui_size pos, gui_size len)
     if (!buffer || !len || pos > buffer->allocated ||
         pos + len > buffer->allocated) return;
 
-    /* memmove */
-    dst = gui_ptr_add(char, buffer->memory.ptr, pos);
-    src = gui_ptr_add(char, buffer->memory.ptr, pos + len);
-    gui_memcopy(dst, src, len * sizeof(char));
+    if (pos + len < buffer->allocated) {
+        /* memmove */
+        dst = gui_ptr_add(char, buffer->memory.ptr, pos);
+        src = gui_ptr_add(char, buffer->memory.ptr, pos + len);
+        gui_memcopy(dst, src, buffer->allocated - (pos + len));
+        buffer->allocated -= len;
+    } else gui_edit_buffer_remove(buffer, len);
 }
 
 char*
-gui_edit_buffer_at(gui_edit_buffer *buffer, gui_size pos)
+gui_edit_buffer_at_char(gui_edit_buffer *buffer, gui_size pos)
 {
     GUI_ASSERT(buffer);
     if (!buffer || pos > buffer->allocated) return 0;
     return gui_ptr_add(char, buffer->memory.ptr, pos);
+}
+
+char*
+gui_edit_buffer_at(gui_edit_buffer *buffer, gui_int pos, gui_long *unicode,
+    gui_size *len)
+{
+    gui_int i = 0;
+    gui_size src_len = 0;
+    gui_size glyph_len = 0;
+    gui_char *text;
+    gui_size text_len;
+
+    GUI_ASSERT(buffer);
+    GUI_ASSERT(unicode);
+    GUI_ASSERT(len);
+    if (!buffer || !unicode || !len) return 0;
+    if (pos < 0) {
+        *unicode = 0;
+        *len = 0;
+        return 0;
+    }
+
+    text = buffer->memory.ptr;
+    text_len = buffer->allocated;
+    glyph_len = gui_utf_decode(text, unicode, text_len);
+    while (glyph_len) {
+        if (i == pos) {
+            *len = glyph_len;
+            break;
+        }
+        i++;
+        src_len = src_len + glyph_len;
+        glyph_len = gui_utf_decode(text + src_len, unicode, text_len - src_len);
+    }
+    if (i != pos) return 0;
+    return text + src_len;
 }
 
 void
@@ -842,7 +905,10 @@ gui_edit_box_init(struct gui_edit_box *eb, struct gui_allocator *a, gui_size ini
     gui_zero(eb, sizeof(*eb));
     gui_buffer_init(&eb->buffer, a, initial_size, grow_fac);
     if (clip) eb->clip = *clip;
-    eb->filter = f;
+    if (f) eb->filter = f;
+    else eb->filter = gui_filter_input_default;
+    eb->cursor = 0;
+    eb->glyphes = 0;
 }
 
 void
@@ -858,15 +924,32 @@ gui_edit_box_init_fixed(struct gui_edit_box *eb, void *memory, gui_size size,
     gui_zero(eb, sizeof(*eb));
     gui_buffer_init_fixed(&eb->buffer, memory, size);
     if (clip) eb->clip = *clip;
-    eb->filter = f;
+    if (f) eb->filter = f;
+    else eb->filter = gui_filter_input_default;
+    eb->cursor = 0;
+    eb->glyphes = 0;
 }
 
 void
 gui_edit_box_add(struct gui_edit_box *eb, const char *str, gui_size len)
 {
+    gui_int res = 0;
     GUI_ASSERT(eb);
     if (!eb || !str || !len) return;
-    gui_edit_buffer_insert(&eb->buffer, eb->buffer.allocated, str, len);
+    if (eb->cursor == eb->glyphes) {
+        res = gui_edit_buffer_insert(&eb->buffer, eb->buffer.allocated, str, len);
+    } else {
+        gui_size l = 0;
+        gui_long unicode;
+        gui_int cursor = (eb->cursor) ? (gui_int)(eb->cursor) : 0;
+        gui_char *sym = gui_edit_buffer_at(&eb->buffer, cursor, &unicode, &l);
+        gui_size offset = (gui_size)(sym - (gui_char*)eb->buffer.memory.ptr);
+        res = gui_edit_buffer_insert(&eb->buffer, offset, str, len);
+    }
+    if (res) {
+        eb->cursor++;
+        eb->glyphes++;
+    }
 }
 
 static void
@@ -875,8 +958,10 @@ gui_edit_box_buffer_input(struct gui_edit_box *box, const struct gui_input *i)
     gui_long unicode;
     gui_size src_len = 0;
     gui_size text_len = 0, glyph_len = 0;
+
     GUI_ASSERT(buffer);
     GUI_ASSERT(i);
+    if (!box || !i) return;
 
     /* add user provided text to buffer until either no input or buffer space left*/
     glyph_len = gui_utf_decode(i->text, &unicode, i->text_len);
@@ -897,34 +982,98 @@ void
 gui_edit_box_remove(struct gui_edit_box *eb)
 {
     gui_long unicode;
-    gui_size src_len = 0;
-    gui_size last_glyph = 0;
-    gui_size glyph_len = 0;
-    gui_char *text = gui_edit_box_get(eb);
-    gui_size text_len = gui_edit_box_len(eb);
-    GUI_ASSERT(eb);
+    gui_size len;
+    gui_int cursor;
+    gui_char *glyph;
+    gui_size offset;
 
-    glyph_len = gui_utf_decode(text, &unicode, text_len);
-    while (glyph_len) {
-        src_len = src_len + glyph_len;
-        last_glyph = glyph_len;
-        glyph_len = gui_utf_decode(text + src_len, &unicode, text_len - src_len);
-    }
-    gui_edit_buffer_remove(&eb->buffer, last_glyph);
+    GUI_ASSERT(eb);
+    if (!eb) return;
+
+    cursor = (gui_int)eb->cursor - 1;
+    glyph = gui_edit_buffer_at(&eb->buffer, cursor, &unicode, &len);
+    if (!glyph || !len) return;
+    offset = (gui_size)(glyph - (gui_char*)eb->buffer.memory.ptr);
+    gui_edit_buffer_del(&eb->buffer, offset, len);
+    eb->cursor--;
+    eb->glyphes--;
 }
 
 gui_char*
 gui_edit_box_get(struct gui_edit_box *eb)
 {
     GUI_ASSERT(eb);
+    if (!eb) return 0;
     return (gui_char*)eb->buffer.memory.ptr;
+}
+
+const gui_char*
+gui_edit_box_get_const(struct gui_edit_box *eb)
+{
+    GUI_ASSERT(eb);
+    if (!eb) return 0;
+    return (gui_char*)eb->buffer.memory.ptr;
+}
+
+gui_char
+gui_edit_box_at_byte(struct gui_edit_box *eb, gui_size pos)
+{
+    gui_char *c;
+    GUI_ASSERT(eb);
+    if (!eb || pos >= eb->buffer.allocated) return 0;
+    c = gui_edit_buffer_at_char(&eb->buffer, pos);
+    return c ? *c : 0;
+}
+
+void
+gui_edit_box_at(struct gui_edit_box *eb, gui_size pos, gui_glyph g, gui_size *len)
+{
+    gui_char *sym;
+    gui_long unicode;
+
+    GUI_ASSERT(eb);
+    GUI_ASSERT(g);
+    GUI_ASSERT(len);
+
+    if (!eb || !len || !g) return;
+    if (pos >= eb->glyphes) {
+        *len = 0;
+        return;
+    }
+    sym = gui_edit_buffer_at(&eb->buffer, (gui_int)pos, &unicode, len);
+    if (!sym) return;
+    gui_memcopy(g, sym, *len);
+}
+
+void
+gui_edit_box_at_cursor(struct gui_edit_box *eb, gui_glyph g, gui_size *len)
+{
+    gui_size cursor = 0;
+    GUI_ASSERT(eb);
+    GUI_ASSERT(g);
+    GUI_ASSERT(len);
+
+    if (!eb || !g || !len) return;
+    if (!eb->cursor) {
+        *len = 0;
+        return;
+    }
+    cursor = (eb->cursor) ? eb->cursor-1 : 0;
+    gui_edit_box_at(eb, 0, g, len);
+}
+
+gui_size
+gui_edit_box_len_byte(struct gui_edit_box *eb)
+{
+    GUI_ASSERT(eb);
+    return eb->buffer.allocated;
 }
 
 gui_size
 gui_edit_box_len(struct gui_edit_box *eb)
 {
     GUI_ASSERT(eb);
-    return eb->buffer.allocated;
+    return eb->glyphes;
 }
 
 /*
@@ -1114,9 +1263,7 @@ gui_button_text_triangle(struct gui_command_buffer *out, gui_float x, gui_float 
     if (align == GUI_TEXT_LEFT) {
         tri.x = (x + w) - (2 * button->padding.x + tri.w);
         tri.x = MAX(tri.x, 0);
-    } else if (align == GUI_TEXT_RIGHT) {
-        tri.x = x + 2 * button->padding.x;
-    }
+    } else tri.x = x + 2 * button->padding.x;
 
     col = (i && GUI_INBOX(i->mouse_pos.x, i->mouse_pos.y, x, y, w, h)) ?
         button->highlight_content : button->content;
@@ -1149,9 +1296,7 @@ gui_button_text_image(struct gui_command_buffer *out, gui_float x, gui_float y,
     if (align == GUI_TEXT_LEFT) {
         icon.x = (x + w) - (2 * button->padding.x + icon.w);
         icon.x = MAX(icon.x, 0);
-    } else if (align == GUI_TEXT_RIGHT) {
-        icon.x = x + 2 * button->padding.x;
-    } else return gui_false;
+    } else icon.x = x + 2 * button->padding.x;
     gui_command_buffer_push_image(out, icon.x, icon.y, icon.w, icon.h, &img);
     return pressed;
 }
@@ -1393,6 +1538,8 @@ gui_editbox(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float 
         const struct gui_key *space = &in->keys[GUI_KEY_SPACE];
         const struct gui_key *copy = &in->keys[GUI_KEY_COPY];
         const struct gui_key *paste = &in->keys[GUI_KEY_PASTE];
+        const struct gui_key *left = &in->keys[GUI_KEY_LEFT];
+        const struct gui_key *right = &in->keys[GUI_KEY_RIGHT];
 
         /* update input buffer by user input */
         if ((del->down && del->clicked) || (bs->down && bs->clicked))
@@ -1405,6 +1552,10 @@ gui_editbox(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float 
             box->buffer.allocated = box->clip.paste(box->clip.userdata, buffer, max);
         if (space->down && space->clicked)
             gui_edit_box_add(box, " ", 1);
+        if (left->down && left->clicked)
+            box->cursor = (gui_size)MAX(0, (gui_int)box->cursor-1);
+        if (right->down && right->clicked)
+            box->cursor = MIN((!box->glyphes) ? 0 : box->glyphes, box->cursor+1);
         if (in->text_len)
             gui_edit_box_buffer_input(box, in);
     }
@@ -1435,8 +1586,19 @@ gui_editbox(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float 
 
         /* if wanted draw the cursor at the end of the text input */
         if (box->active && field->show_cursor) {
-            gui_command_buffer_push_rect(out, label_x + (gui_float)text_width, label_y,
+            if (box->cursor == box->glyphes) {
+                gui_command_buffer_push_rect(out, label_x + (gui_float)text_width, label_y,
                         (gui_float)cursor_w, label_h, 0, field->cursor);
+            } else {
+                gui_size l;
+                gui_long unicode;
+                const gui_char *cursor = gui_edit_buffer_at(&box->buffer, (gui_int)box->cursor, &unicode, &l);
+                gui_size off = (gui_size)(cursor - (gui_char*)box->buffer.memory.ptr);
+                label_x += font->width(font->userdata, buffer, off);
+                label_w = font->width(font->userdata, cursor, l);
+                gui_command_buffer_push_text(out , label_x, label_y, label_w, label_h,
+                    cursor, l, font, field->cursor, field->background);
+            }
         }
     }
 }
@@ -1508,6 +1670,8 @@ gui_edit_filtered(struct gui_command_buffer *out, gui_float x, gui_float y, gui_
     gui_edit_box_init_fixed(&box, buffer, max, 0, filter);
     box.buffer.allocated = len;
     box.active = *active;
+    box.glyphes = gui_utf_len(buffer, len);
+    box.cursor = box.glyphes;
     gui_editbox(out, x, y, w, h, &box, field, in, font);
     *active = box.active;
     return gui_edit_box_len(&box);
@@ -3471,7 +3635,8 @@ gui_panel_tab_begin(struct gui_panel_layout *parent, struct gui_panel_layout *ta
 
     /* create a fake panel to create a panel layout from */
     flags = GUI_PANEL_BORDER|GUI_PANEL_MINIMIZABLE|GUI_PANEL_TAB|GUI_PANEL_BORDER_HEADER;
-    gui_panel_init(&panel,bounds.x,bounds.y,bounds.w,gui_null_rect.h,flags,out,parent->config);
+    gui_panel_init(&panel, bounds.x, bounds.y, bounds.w,
+        gui_null_rect.h,flags,out,parent->config);
     panel.minimized = minimized;
     gui_panel_begin(tab, &panel, title, parent->input);
 

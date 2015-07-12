@@ -262,13 +262,26 @@ font_get_text_width(gui_handle handle, const gui_char *t, gui_size l)
 }
 
 static void
-font_draw_text(const struct font *font, float x, float y, float h,
-    const gui_byte *color, const char *text, size_t len)
+draw_rect(float x, float y, float w, float h, const gui_byte *c)
+{
+    glColor4ub(c[0], c[1], c[2], c[3]);
+    glBegin(GL_QUADS);
+    glVertex2f(x, y);
+    glVertex2f(x + w, y);
+    glVertex2f(x + w, y + h);
+    glVertex2f(x, y + h);
+    glEnd();
+}
+
+static void
+font_draw_text(const struct font *font, float x, float y, float w, float h,
+    const gui_byte *bg, const gui_byte *color, const char *text, size_t len)
 {
     size_t text_len;
     long unicode;
     const struct font_glyph *g;
 
+    draw_rect(x, y, w, h, bg);
     text_len = gui_utf_decode(text, &unicode, len);
     glBindTexture(GL_TEXTURE_2D, font->texture);
     glColor4ub(color[0], color[1], color[2], color[3]);
@@ -366,18 +379,6 @@ draw_line(float x0, float y0, float x1, float y1, const gui_byte *c)
 }
 
 static void
-draw_rect(float x, float y, float w, float h, const gui_byte *c)
-{
-    glColor4ub(c[0], c[1], c[2], c[3]);
-    glBegin(GL_QUADS);
-    glVertex2f(x, y);
-    glVertex2f(x + w, y);
-    glVertex2f(x + w, y + h);
-    glVertex2f(x, y + h);
-    glEnd();
-}
-
-static void
 draw_circle(float x, float y, float r, const gui_byte *c)
 {
     int i;
@@ -451,7 +452,8 @@ execute(struct gui_command_buffer *list, int width, int height)
         } break;
         case GUI_COMMAND_TEXT: {
             const struct gui_command_text *t = gui_command(text, cmd);
-            font_draw_text((const struct font*)t->font.ptr, t->x, t->y, t->h, t->fg, t->string, t->length);
+            font_draw_text((const struct font*)t->font.ptr, t->x, t->y, t->w, t->h,
+                    t->bg, t->fg, t->string, t->length);
         } break;
         case GUI_COMMAND_IMAGE:
         case GUI_COMMAND_MAX:
@@ -490,6 +492,10 @@ key(struct gui_input *in, SDL_Event *evt, gui_bool down)
         gui_input_key(in, GUI_KEY_SPACE, down);
     else if (sym == SDLK_BACKSPACE)
         gui_input_key(in, GUI_KEY_BACKSPACE, down);
+    else if (sym == SDLK_LEFT)
+        gui_input_key(in, GUI_KEY_LEFT, down);
+    else if (sym == SDLK_RIGHT)
+        gui_input_key(in, GUI_KEY_RIGHT, down);
     else if (state[SDL_SCANCODE_LCTRL] && state[SDL_SCANCODE_C])
         gui_input_key(in, GUI_KEY_COPY, down);
     else if (state[SDL_SCANCODE_LCTRL] && state[SDL_SCANCODE_P])

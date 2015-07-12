@@ -390,6 +390,10 @@ key(struct XWindow *xw, struct gui_input *in, XEvent *evt, gui_bool down)
         gui_input_key(in, GUI_KEY_ENTER, down);
     else if (*code == XK_space)
         gui_input_key(in, GUI_KEY_SPACE, down);
+    else if (*code == XK_Left)
+        gui_input_key(in, GUI_KEY_LEFT, down);
+    else if (*code == XK_Right)
+        gui_input_key(in, GUI_KEY_RIGHT, down);
     else if (*code == XK_BackSpace)
         gui_input_key(in, GUI_KEY_BACKSPACE, down);
     else if (*code > 32 && *code < 128 && !down) {

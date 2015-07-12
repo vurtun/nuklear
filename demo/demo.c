@@ -7,8 +7,8 @@ struct show_window {
     struct gui_panel hook;
     /* input buffer */
     gui_char input_buffer[MAX_BUFFER];
-    gui_size input_length;
-    gui_bool input_active;
+    struct gui_edit_box input;
+
     /* widgets state */
     gui_bool checkbox;
     gui_float slider;
@@ -114,10 +114,9 @@ widget_panel(struct gui_panel_layout *panel, struct show_window *demo)
     {
         const gui_float ratio[] = {0.7f, 0.3f};
         gui_panel_row_templated(panel, 30, 2, ratio);
-        demo->input_length = gui_panel_edit(panel, demo->input_buffer, demo->input_length,
-            MAX_BUFFER, &demo->input_active, GUI_INPUT_DEFAULT);
+        gui_panel_editbox(panel, &demo->input);
         if (gui_panel_button_text(panel, "submit", GUI_BUTTON_DEFAULT)) {
-            demo->input_length = 0;
+            gui_edit_box_reset(&demo->input);
             fprintf(stdout, "command executed!\n");
         }
     }
@@ -177,6 +176,7 @@ init_show(struct show_window *win, struct gui_config *config,
         GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
         GUI_PANEL_MINIMIZABLE|GUI_PANEL_HIDDEN, buffer, config);
     gui_stack_push(stack, &win->hook);
+    gui_edit_box_init_fixed(&win->input, win->input_buffer, MAX_BUFFER, NULL, NULL);
 
     win->widget_tab = GUI_MINIMIZED;
     win->combobox_tab = GUI_MINIMIZED;

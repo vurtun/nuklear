@@ -55,6 +55,7 @@ typedef uint32_t gui_flags;
 typedef uint8_t gui_byte;
 typedef uint32_t gui_flag;
 typedef uint64_t gui_size;
+typedef uintptr_t gui_ptr;
 #else
 typedef int gui_int;
 typedef int gui_bool;
@@ -69,6 +70,7 @@ typedef unsigned int gui_flags;
 typedef unsigned char gui_byte;
 typedef unsigned int gui_flag;
 typedef unsigned long gui_size;
+typedef unsigned long gui_ptr;
 #endif
 
 /* Utilities */
@@ -120,6 +122,7 @@ typedef void(*gui_copy_f)(gui_handle, const char*, gui_size size);
 struct gui_rect gui_get_null_rect(void);
 gui_size gui_utf_decode(const gui_char*, gui_long*, gui_size);
 gui_size gui_utf_encode(gui_long, gui_char*, gui_size);
+gui_size gui_utf_len(const gui_char*, gui_size len);
 struct gui_image gui_image_ptr(void*);
 struct gui_image gui_image_id(gui_int);
 struct gui_image gui_subimage_ptr(void*, struct gui_rect);
@@ -201,6 +204,8 @@ enum gui_keys {
     GUI_KEY_SPACE,
     GUI_KEY_COPY,
     GUI_KEY_PASTE,
+    GUI_KEY_LEFT,
+    GUI_KEY_RIGHT,
     GUI_KEY_MAX
 };
 
@@ -717,10 +722,11 @@ void gui_command_buffer_push_text(struct gui_command_buffer*, gui_float, gui_flo
  */
 typedef struct gui_buffer gui_edit_buffer;
 void gui_edit_buffer_append(gui_edit_buffer*, const char*, gui_size);
-void gui_edit_buffer_insert(gui_edit_buffer*, gui_size pos, const char*, gui_size);
+int gui_edit_buffer_insert(gui_edit_buffer*, gui_size pos, const char*, gui_size);
 void gui_edit_buffer_remove(gui_edit_buffer*, gui_size);
 void gui_edit_buffer_del(gui_edit_buffer*, gui_size pos, gui_size len);
-char *gui_edit_buffer_at(gui_edit_buffer*, gui_size pos);
+char *gui_edit_buffer_at_char(gui_edit_buffer*, gui_size pos);
+char* gui_edit_buffer_at(gui_edit_buffer*, gui_int, gui_long*, gui_size*);
 
 /*
  * ==============================================================
@@ -762,6 +768,8 @@ struct gui_clipboard {
 struct gui_edit_box {
     gui_edit_buffer buffer;
     gui_bool active;
+    gui_size cursor;
+    gui_size glyphes;
     struct gui_clipboard clip;
     gui_filter filter;
 };
@@ -775,15 +783,22 @@ gui_bool gui_filter_input_hex(gui_long unicode);
 gui_bool gui_filter_input_oct(gui_long unicode);
 gui_bool gui_filter_input_binary(gui_long unicode);
 
+/* editbox */
 void gui_edit_box_init(struct gui_edit_box*, struct gui_allocator*, gui_size initial,
                         gui_float grow_fac, const struct gui_clipboard*, gui_filter);
 void gui_edit_box_init_fixed(struct gui_edit_box*, void *memory, gui_size size,
                         const struct gui_clipboard*, gui_filter);
-#define gui_edit_box_reset(b) gui_buffer_reset(&(b)->buffer)
+#define gui_edit_box_reset(b)\
+    do {gui_buffer_reset(&(b)->buffer); (b)->cursor = (b)->glyphes = 0;} while(0);
 #define gui_edit_box_clear(b) gui_buffer_clear(&(b)->buffer)
 void gui_edit_box_add(struct gui_edit_box*, const char*, gui_size);
 void gui_edit_box_remove(struct gui_edit_box*);
 gui_char *gui_edit_box_get(struct gui_edit_box*);
+const gui_char *gui_edit_box_get_const(struct gui_edit_box*);
+gui_char gui_edit_box_at_byte(struct gui_edit_box*, gui_size pos);
+void gui_edit_box_at(struct gui_edit_box*, gui_size pos, gui_glyph, gui_size*);
+void gui_edit_box_at_cursor(struct gui_edit_box*, gui_glyph, gui_size*);
+gui_size gui_edit_box_len_byte(struct gui_edit_box*);
 gui_size gui_edit_box_len(struct gui_edit_box*);
 /*
  * ==============================================================
@@ -1327,6 +1342,7 @@ gui_float gui_scroll(struct gui_command_buffer*, gui_float x, gui_float y,
 
     Configuration function API
     gui_config_default              -- initializes a default panel configuration
+    gui_config_set_font             -- changes the used font
     gui_config_property             -- returns the property value from an id
     gui_config_color                -- returns the color value from an id
     gui_config_push_property        -- push an old property onto a interal stack and sets a new value
@@ -1467,7 +1483,7 @@ void gui_config_default(struct gui_config*, gui_flags, const struct gui_font*);
     - configuration structure holding the default panel style
 */
 void gui_config_set_font(struct gui_config*, const struct gui_font*);
-/*  this function changes the used font
+/*  this function changes the used font and can be used even inside a frame
     Input:
     - user font reference structure describing the font used inside the panel
 */
