@@ -41,7 +41,6 @@ template<typename T> struct gui_alignof{struct Big {T x; char c;}; enum {
 #define GUI_ALIGNOF(t) ((char*)(&((struct {char c; t _h;}*)0)->_h) - (char*)0)
 #endif
 
-
 #define GUI_ALIGN_PTR(x, mask) (void*)((gui_ptr)((gui_byte*)(x) + (mask-1)) & ~(mask-1))
 #define GUI_ALIGN(x, mask) ((x) + (mask-1)) & ~(mask-1)
 #define GUI_OFFSETOF(st, m) ((gui_size)(&((st *)0)->m))
@@ -1590,10 +1589,12 @@ gui_editbox(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float 
                 gui_command_buffer_push_rect(out, label_x + (gui_float)text_width, label_y,
                         (gui_float)cursor_w, label_h, 0, field->cursor);
             } else {
-                gui_size l;
+                gui_size l, off;
                 gui_long unicode;
-                const gui_char *cursor = gui_edit_buffer_at(&box->buffer, (gui_int)box->cursor, &unicode, &l);
-                gui_size off = (gui_size)(cursor - (gui_char*)box->buffer.memory.ptr);
+                gui_char *cursor;
+
+                cursor = gui_edit_buffer_at(&box->buffer,(gui_int)box->cursor, &unicode, &l);
+                off = (gui_size)(cursor - (gui_char*)box->buffer.memory.ptr);
                 label_x += font->width(font->userdata, buffer, off);
                 label_w = font->width(font->userdata, cursor, l);
                 gui_command_buffer_push_text(out , label_x, label_y, label_w, label_h,
@@ -1639,7 +1640,7 @@ gui_filter_input_hex(gui_long unicode)
 {
     if ((unicode < '0' || unicode > '9') &&
         (unicode < 'a' || unicode > 'f') &&
-        (unicode < 'A' || unicode > 'B'))
+        (unicode < 'A' || unicode > 'F'))
         return gui_false;
     return gui_true;
 }
