@@ -254,9 +254,9 @@ font_get_text_width(gui_handle handle, const gui_char *t, gui_size l)
         glyph = (unicode < font->glyph_count) ? &font->glyphes[unicode] : font->fallback;
         glyph = (glyph->code == 0) ? font->fallback : glyph;
 
+        text_len += glyph_len;
         text_width += (gui_size)((float)glyph->xadvance * font->scale);
         glyph_len = gui_utf_decode(t + text_len, &unicode, l - text_len);
-        text_len += glyph_len;
     }
     return text_width;
 }
