@@ -1701,7 +1701,6 @@ struct gui_panel_layout {
     /* command draw call output command buffer */
 };
 
-
 struct gui_layout;
 void gui_panel_init(struct gui_panel*, gui_float x, gui_float y, gui_float w,
                     gui_float h, gui_flags, struct gui_command_buffer*,

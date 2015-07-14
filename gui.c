@@ -876,7 +876,7 @@ gui_edit_buffer_at(gui_edit_buffer *buffer, gui_int pos, gui_long *unicode,
         return 0;
     }
 
-    text = buffer->memory.ptr;
+    text = (gui_char*)buffer->memory.ptr;
     text_len = buffer->allocated;
     glyph_len = gui_utf_decode(text, unicode, text_len);
     while (glyph_len) {
@@ -2846,7 +2846,6 @@ gui_panel_alloc_space(struct gui_rect *bounds, struct gui_panel_layout *layout)
         /* user provided ratio layout */
         if (layout->row.ratio) {
             /* ratio in array form */
-            gui_size i;
             gui_float ratio = (layout->row.ratio[layout->index] < 0) ?
                 layout->row.item_ratio : layout->row.ratio[layout->index];
 
