@@ -111,15 +111,15 @@ widget_panel(struct gui_panel_layout *panel, struct show_window *demo)
     demo->item_current = gui_panel_selector(panel, items, LEN(items), demo->item_current);
     demo->spinner = gui_panel_spinner(panel, 0, demo->spinner, 250, 10, &demo->spinner_active);
 
-    {
-        const gui_float ratio[] = {0.7f, 0.3f};
-        gui_panel_row_templated(panel, 30, 2, ratio);
-        gui_panel_editbox(panel, &demo->input);
-        if (gui_panel_button_text(panel, "submit", GUI_BUTTON_DEFAULT)) {
-            gui_edit_box_reset(&demo->input);
-            fprintf(stdout, "command executed!\n");
-        }
+    gui_panel_row_begin(panel, 30);
+    gui_panel_row_push_widget(panel, 0.7f);
+    gui_panel_editbox(panel, &demo->input);
+    gui_panel_row_push_widget(panel, 0.3f);
+    if (gui_panel_button_text(panel, "submit", GUI_BUTTON_DEFAULT)) {
+        gui_edit_box_reset(&demo->input);
+        fprintf(stdout, "command executed!\n");
     }
+    gui_panel_row_end(panel);
 }
 
 static void
@@ -178,7 +178,7 @@ init_show(struct show_window *win, struct gui_config *config,
     gui_stack_push(stack, &win->hook);
     gui_edit_box_init_fixed(&win->input, win->input_buffer, MAX_BUFFER, NULL, NULL);
 
-    win->widget_tab = GUI_MINIMIZED;
+    win->widget_tab = GUI_MAXIMIZED;
     win->combobox_tab = GUI_MINIMIZED;
     win->slider = 10.0f;
     win->progressbar = 50;
