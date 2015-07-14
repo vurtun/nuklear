@@ -1715,6 +1715,10 @@ void gui_panel_init(struct gui_panel*, gui_float x, gui_float y, gui_float w,
     Output:
     - a newly initialized panel
 */
+void gui_panel_set_config(struct gui_panel*, const struct gui_config*);
+/*  this function updateds the panel configuration pointer */
+void gui_panel_set_buffer(struct gui_panel*, struct gui_command_buffer*);
+/*  this function updateds the used panel command buffer */
 void gui_panel_add_flag(struct gui_panel*, gui_flags);
 /*  this function adds panel flags to the panel
     Input:

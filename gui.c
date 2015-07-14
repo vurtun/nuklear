@@ -2160,7 +2160,8 @@ gui_panel_init(struct gui_panel *panel, gui_float x, gui_float y, gui_float w,
 {
     GUI_ASSERT(panel);
     GUI_ASSERT(config);
-    if (!panel || !config)
+    GUI_ASSERT(buffer);
+    if (!panel || !config || !buffer)
         return;
 
     panel->x = x;
@@ -2172,6 +2173,24 @@ gui_panel_init(struct gui_panel *panel, gui_float x, gui_float y, gui_float w,
     panel->buffer = buffer;
     panel->offset = 0;
     panel->minimized = gui_false;
+}
+
+void
+gui_panel_set_config(struct gui_panel *panel, const struct gui_config *config)
+{
+    GUI_ASSERT(panel);
+    GUI_ASSERT(config);
+    if (!panel || !config) return;
+    panel->config = config;
+}
+
+void
+gui_panel_set_buffer(struct gui_panel *panel, struct gui_command_buffer *buffer)
+{
+    GUI_ASSERT(panel);
+    GUI_ASSERT(buffer);
+    if (!panel || !buffer) return;
+    panel->buffer = buffer;
 }
 
 void

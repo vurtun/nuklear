@@ -335,7 +335,7 @@ gui_config_default(&config, GUI_DEFAULT_ALL, &font);
 
 /* setup layout */
 struct gui_layout tiled;
-gui_layout_begin(&tiled, 0, window_width, window_height);
+gui_layout_begin(&tiled, 0, 0, window_width, window_height, 0);
 gui_layout_slot(&tiled, GUI_SLOT_LEFT, 1.0f, GUI_LAYOUT_VERTICAL, 1);
 gui_layout_end(&tiled);
 
