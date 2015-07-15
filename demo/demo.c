@@ -3,6 +3,20 @@
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 
+struct tree_node {
+    enum gui_tree_node_state state;
+    const char *name;
+    struct tree_node *parent;
+    struct tree_node *children[4];
+    int count;
+};
+
+struct test_tree {
+    struct tree_node root;
+    struct tree_node *clipboard[16];
+    int count;
+};
+
 struct show_window {
     struct gui_panel hook;
     /* input buffer */
@@ -30,6 +44,9 @@ struct show_window {
     gui_float table_scrollbar;
     gui_float time_scrollbar;
     /* tree */
+    struct test_tree tree;
+    struct tree_node nodes[8];
+    gui_float tree_offset;
 };
 
 struct control_window {
@@ -89,13 +106,12 @@ widget_panel(struct gui_panel_layout *panel, struct show_window *demo)
         fprintf(stdout, "right triangle button pressed!\n");
     if (gui_panel_button_text_triangle(panel,GUI_LEFT,"previous",GUI_TEXT_RIGHT,GUI_BUTTON_DEFAULT))
         fprintf(stdout, "left triangle button pressed!\n");
+
     demo->toggle = gui_panel_button_toggle(panel, "toggle", demo->toggle);
     demo->checkbox = gui_panel_check(panel, "checkbox", demo->checkbox);
-
     gui_panel_row(panel, 30, 2);
     if (gui_panel_option(panel, "option 0", demo->option == 0)) demo->option = 0;
     if (gui_panel_option(panel, "option 1", demo->option == 1)) demo->option = 1;
-
     {
         char buffer[MAX_BUFFER];
         const gui_float ratio[] = {0.8f, 0.2f};
@@ -112,7 +128,7 @@ widget_panel(struct gui_panel_layout *panel, struct show_window *demo)
     demo->item_current = gui_panel_selector(panel, items, LEN(items), demo->item_current);
     demo->spinner = gui_panel_spinner(panel, 0, demo->spinner, 250, 10, &demo->spinner_active);
 
-    gui_panel_row_begin(panel, 30);
+    gui_panel_row_begin(panel, 30, 2);
     gui_panel_row_push_widget(panel, 0.7f);
     gui_panel_editbox(panel, &demo->input);
     gui_panel_row_push_widget(panel, 0.3f);
@@ -121,7 +137,6 @@ widget_panel(struct gui_panel_layout *panel, struct show_window *demo)
         fprintf(stdout, "command executed!\n");
     }
     gui_panel_row_end(panel);
-
 }
 
 static void
@@ -135,20 +150,6 @@ graph_panel(struct gui_panel_layout *panel, gui_size current)
     } else {
         gui_panel_graph(panel, GUI_GRAPH_LINES, values, LEN(values), 0);
     }
-}
-
-static void
-time_panel(struct gui_panel_layout *panel, unsigned int ms)
-{
-    char buffer[MAX_BUFFER];
-    ms = MAX(1, ms);
-    gui_panel_row(panel, 20, 2);
-    gui_panel_label(panel, "FPS:", GUI_TEXT_LEFT);
-    sprintf(buffer, "%.2f", 1.0f/((float)ms/1000.0f));
-    gui_panel_label(panel, buffer, GUI_TEXT_CENTERED);
-    gui_panel_label(panel, "MS:", GUI_TEXT_LEFT);
-    sprintf(buffer, "%d", ms);
-    gui_panel_label(panel, buffer, GUI_TEXT_CENTERED);
 }
 
 static void
@@ -180,16 +181,84 @@ init_show(struct show_window *win, struct gui_config *config,
     gui_stack_push(stack, &win->hook);
     gui_edit_box_init_fixed(&win->input, win->input_buffer, MAX_BUFFER, NULL, NULL);
 
-    win->widget_tab = GUI_MAXIMIZED;
+    win->widget_tab = GUI_MINIMIZED;
     win->combobox_tab = GUI_MINIMIZED;
     win->slider = 10.0f;
     win->progressbar = 50;
     win->spinner = 100;
+
+    {
+        struct test_tree *tree = &win->tree;
+        tree->root.state = GUI_NODE_ACTIVE;
+        tree->root.name = "Primitives";
+        tree->root.parent = NULL;
+        tree->root.count = 2;
+        tree->root.children[0] = &win->nodes[0];
+        tree->root.children[1] = &win->nodes[4];
+
+        win->nodes[0].state = 0;
+        win->nodes[0].name = "Boxes";
+        win->nodes[0].parent = &tree->root;
+        win->nodes[0].count = 3;
+        win->nodes[0].children[0] = &win->nodes[1];
+        win->nodes[0].children[1] = &win->nodes[2];
+        win->nodes[0].children[2] = &win->nodes[3];
+
+        win->nodes[1].state = 0;
+        win->nodes[1].name = "Box0";
+        win->nodes[1].parent = &win->nodes[1];
+        win->nodes[1].count = 0;
+
+        win->nodes[2].state = 0;
+        win->nodes[2].name = "Box1";
+        win->nodes[2].parent = &win->nodes[1];
+        win->nodes[2].count = 0;
+
+        win->nodes[3].state = 0;
+        win->nodes[3].name = "Box2";
+        win->nodes[3].parent = &win->nodes[1];
+        win->nodes[3].count = 0;
+
+        win->nodes[4].state = GUI_NODE_ACTIVE;
+        win->nodes[4].name = "Cylinders";
+        win->nodes[4].parent = &tree->root;
+        win->nodes[4].count = 3;
+        win->nodes[4].children[0] = &win->nodes[5];
+        win->nodes[4].children[1] = &win->nodes[6];
+        win->nodes[4].children[2] = &win->nodes[7];
+
+        win->nodes[5].state = 0;
+        win->nodes[5].name = "Cylinder0";
+        win->nodes[5].parent = &win->nodes[4];
+        win->nodes[5].count = 0;
+
+        win->nodes[6].state = 0;
+        win->nodes[6].name = "Cylinder1";
+        win->nodes[6].parent = &win->nodes[4];
+        win->nodes[6].count = 0;
+
+        win->nodes[7].state = 0;
+        win->nodes[7].name = "Cylinder2";
+        win->nodes[7].parent = &win->nodes[4];
+        win->nodes[7].count = 0;
+    }
 }
 
 static void
-update_show(struct show_window *show, struct gui_stack *stack, struct gui_input *in,
-    unsigned int ms)
+upload_tree(struct gui_tree *tree, struct tree_node *node)
+{
+    int i = 0;
+    if (node->count) {
+        gui_panel_tree_begin_node(tree, node->name, &node->state);
+        for (i = 0; i < node->count; ++i)
+            upload_tree(tree, node->children[i]);
+        gui_panel_tree_end_node(tree);
+    }
+    else gui_panel_tree_leaf(tree, node->name, &node->state);
+}
+
+static void
+update_show(struct show_window *show, struct gui_stack *stack, struct gui_input *in)
 {
     struct gui_panel_layout tab;
     struct gui_panel_layout layout;
@@ -204,11 +273,6 @@ update_show(struct show_window *show, struct gui_stack *stack, struct gui_input 
     widget_panel(&tab, show);
     gui_panel_tab_end(&layout, &tab);
 
-    gui_panel_row(&layout, 110, 1);
-    gui_panel_group_begin(&layout, &tab, "Time", show->time_scrollbar);
-    time_panel(&tab, ms);
-    show->time_scrollbar = gui_panel_group_end(&layout, &tab);
-
     gui_panel_row(&layout, 180, 1);
     show->shelf_selection = gui_panel_shelf_begin(&layout, &tab, shelfs,
         LEN(shelfs), show->shelf_selection, show->shelf_scrollbar);
@@ -219,6 +283,14 @@ update_show(struct show_window *show, struct gui_stack *stack, struct gui_input 
     gui_panel_group_begin(&layout, &tab, "Table", show->table_scrollbar);
     table_panel(&tab);
     show->table_scrollbar = gui_panel_group_end(&layout, &tab);
+
+    {
+        struct gui_tree tree;
+        gui_panel_row(&layout, 250, 1);
+        gui_panel_tree_begin(&layout, &tree, "Models", 20, show->tree_offset);
+        upload_tree(&tree, &show->tree.root);
+        show->tree_offset = gui_panel_tree_end(&layout, &tree);
+    }
     gui_panel_end(&layout, &show->hook);
 }
 
@@ -413,7 +485,7 @@ run_demo(struct demo_gui *gui, struct gui_input *input)
     if (show->hook.flags & GUI_PANEL_ACTIVE)
         show->hook.flags = control->show_flags|GUI_PANEL_ACTIVE;
     else show->hook.flags = control->show_flags;
-    update_show(show, &gui->stack, input, gui->ms);
+    update_show(show, &gui->stack, input);
     if (show->hook.flags & GUI_PANEL_HIDDEN)
         control->show_flags |= GUI_PANEL_HIDDEN;
 }

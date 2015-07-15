@@ -187,6 +187,7 @@ enum gui_keys {
     GUI_KEY_BACKSPACE,
     GUI_KEY_SPACE,
     GUI_KEY_COPY,
+    GUI_KEY_CUT,
     GUI_KEY_PASTE,
     GUI_KEY_LEFT,
     GUI_KEY_RIGHT,
@@ -1704,6 +1705,28 @@ struct gui_panel_layout {
     /* command draw call output command buffer */
 };
 
+enum gui_tree_node_state {
+    GUI_NODE_ACTIVE = 0x01,
+    GUI_NODE_SELECTED = 0x02,
+    GUI_NODE_DRAGGED = 0x04
+};
+
+enum gui_tree_node_operation {
+    GUI_NODE_NOP,
+    GUI_NODE_CUT,
+    GUI_NODE_CLONE,
+    GUI_NODE_PASTE,
+    GUI_NODE_DELETE
+};
+
+struct gui_tree {
+    struct gui_panel_layout group;
+    gui_float x_off;
+    gui_float at_x;
+    gui_int skip;
+    gui_int depth;
+};
+
 struct gui_layout;
 void gui_panel_init(struct gui_panel*, gui_float x, gui_float y, gui_float w,
                     gui_float h, gui_flags, struct gui_command_buffer*,
@@ -2140,6 +2163,14 @@ gui_float gui_panel_shelf_end(struct gui_panel_layout*, struct gui_panel_layout*
     Output:
     - The from user input updated shelf scrollbar pixel offset
 */
+void gui_panel_tree_begin(struct gui_panel_layout*, struct gui_tree*,
+                        const char*, gui_float row_height, gui_float offset);
+enum gui_tree_node_operation gui_panel_tree_begin_node(struct gui_tree*, const char*,
+                                                    enum gui_tree_node_state*);
+void gui_panel_tree_end_node(struct gui_tree*);
+enum gui_tree_node_operation gui_panel_tree_leaf(struct gui_tree*, const char*,
+                                                    enum gui_tree_node_state*);
+gui_float gui_panel_tree_end(struct gui_panel_layout*, struct gui_tree*);
 void gui_panel_end(struct gui_panel_layout*, struct gui_panel*);
 /*  this function ends the panel layout build up process and updates the panel
 */
@@ -2298,7 +2329,6 @@ void gui_layout_update_state(struct gui_layout*, gui_uint state);
     Input:
         - new state of the layout with either active or inactive
 */
-
 #ifdef __cplusplus
 }
 #endif

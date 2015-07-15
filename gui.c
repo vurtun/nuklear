@@ -45,6 +45,7 @@ template<typename T> struct gui_alignof{struct Big {T x; char c;}; enum {
 #define GUI_ALIGN(x, mask) ((x) + (mask-1)) & ~(mask-1)
 #define GUI_OFFSETOF(st, m) ((gui_size)(&((st *)0)->m))
 
+enum gui_tree_node_symbol {GUI_TREE_NODE_BULLET, GUI_TREE_NODE_TRIANGLE};
 static const struct gui_rect gui_null_rect = {-9999.0f, -9999.0f, 2*9999.0f, 2*9999.0f};
 static const gui_byte gui_utfbyte[GUI_UTF_SIZE+1] = {0x80, 0, 0xC0, 0xE0, 0xF0};
 static const gui_byte gui_utfmask[GUI_UTF_SIZE+1] = {0xC0, 0x80, 0xE0, 0xF0, 0xF8};
@@ -468,6 +469,28 @@ gui_input_end(struct gui_input *in)
     GUI_ASSERT(in);
     if (!in) return;
     gui_vec2_sub(in->mouse_delta, in->mouse_pos, in->mouse_prev);
+}
+
+static gui_bool
+gui_input_clicked(const struct gui_input *i, struct gui_rect *b)
+{
+    if (!i) return gui_false;
+    if (!GUI_INBOX(i->mouse_pos.x, i->mouse_pos.y, b->x, b->y, b->w, b->h))
+        return gui_false;
+    if (!GUI_INBOX(i->mouse_clicked_pos.x,i->mouse_clicked_pos.y,b->x,b->y,b->w,b->h))
+        return gui_false;
+    return (i->mouse_down && i->mouse_clicked) ? gui_true : gui_false;
+}
+
+static gui_bool
+gui_input_pressed(const struct gui_input *i, enum gui_keys key)
+{
+    const struct gui_key *k;
+    if (!i) return gui_false;
+    k = &i->keys[key];
+    if (k->down && k->clicked)
+        return gui_true;
+    return gui_false;
 }
 
 /*
@@ -1597,29 +1620,20 @@ gui_editbox(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float 
     len = gui_edit_box_len(box);
     buffer = gui_edit_box_get(box);
     if (box->active && in) {
-        const struct gui_key *bs = &in->keys[GUI_KEY_BACKSPACE];
-        const struct gui_key *del = &in->keys[GUI_KEY_DEL];
-        const struct gui_key *enter = &in->keys[GUI_KEY_ENTER];
-        const struct gui_key *space = &in->keys[GUI_KEY_SPACE];
-        const struct gui_key *copy = &in->keys[GUI_KEY_COPY];
-        const struct gui_key *paste = &in->keys[GUI_KEY_PASTE];
-        const struct gui_key *left = &in->keys[GUI_KEY_LEFT];
-        const struct gui_key *right = &in->keys[GUI_KEY_RIGHT];
-
         /* update input buffer by user input */
-        if ((del->down && del->clicked) || (bs->down && bs->clicked))
+        if (gui_input_pressed(in,GUI_KEY_DEL)||gui_input_pressed(in,GUI_KEY_BACKSPACE))
             gui_edit_box_remove(box);
-        if (enter->down && enter->clicked)
+        if (gui_input_pressed(in, GUI_KEY_ENTER))
             box->active = gui_false;
-        if (copy->down && copy->clicked && box->clip.copy)
+        if (gui_input_pressed(in, GUI_KEY_COPY) && box->clip.copy)
             box->clip.copy(box->clip.userdata, buffer, len);
-        if (paste->down && paste->clicked && box->clip.paste)
+        if (gui_input_pressed(in, GUI_KEY_PASTE) && box->clip.paste)
             box->buffer.allocated = box->clip.paste(box->clip.userdata, buffer, max);
-        if (space->down && space->clicked)
+        if (gui_input_pressed(in, GUI_KEY_SPACE))
             gui_edit_box_add(box, " ", 1);
-        if (left->down && left->clicked)
+        if (gui_input_pressed(in, GUI_KEY_LEFT))
             box->cursor = (gui_size)MAX(0, (gui_int)box->cursor-1);
-        if (right->down && right->clicked)
+        if (gui_input_pressed(in, GUI_KEY_RIGHT))
             box->cursor = MIN((!box->glyphes) ? 0 : box->glyphes, box->cursor+1);
         if (in->text_len)
             gui_edit_box_buffer_input(box, in);
@@ -2683,8 +2697,9 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
                 rx = 1.0f - ((bounds.w / (gui_float)layout->width) +
                     layout->slots[GUI_SLOT_CENTER].ratio.x);
                 layout->slots[GUI_SLOT_RIGHT].ratio.x = rx;
-                layout->slots[GUI_SLOT_RIGHT].offset.x = layout->slots[GUI_SLOT_CENTER].offset.x+
-                                                        layout->slots[GUI_SLOT_CENTER].ratio.x;
+                layout->slots[GUI_SLOT_RIGHT].offset.x =
+                    layout->slots[GUI_SLOT_CENTER].offset.x +
+                    layout->slots[GUI_SLOT_CENTER].ratio.x;
             }
             bounds.w -= config->scaler_width;
             break;
@@ -2714,8 +2729,9 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
                 lx = 1.0f - ((bounds.w / (gui_float)layout->width) +
                     layout->slots[GUI_SLOT_CENTER].ratio.x);
                 layout->slots[GUI_SLOT_LEFT].ratio.x = lx;
-                layout->slots[GUI_SLOT_RIGHT].offset.x = layout->slots[GUI_SLOT_CENTER].offset.x+
-                                                        layout->slots[GUI_SLOT_CENTER].ratio.x;
+                layout->slots[GUI_SLOT_RIGHT].offset.x =
+                    layout->slots[GUI_SLOT_CENTER].offset.x +
+                    layout->slots[GUI_SLOT_CENTER].ratio.x;
             }
 
             bounds.x += config->scaler_width;
@@ -3247,7 +3263,7 @@ gui_panel_button_text_triangle(struct gui_panel_layout *layout, enum gui_heading
     button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
     button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
     return gui_button_text_triangle(layout->buffer, bounds.x, bounds.y, bounds.w,
-            bounds.h, heading, text, align, behavior, &button, &config->font, layout->input);
+            bounds.h, heading,text,align,behavior,&button,&config->font,layout->input);
 }
 
 gui_bool
@@ -3569,7 +3585,7 @@ gui_panel_graph_push_line(struct gui_panel_layout *l,
         /* special case for the first data point since it does not have a connection */
         g->last.x = g->x;
         g->last.y = (g->y + g->h) - ratio * (gui_float)g->h;
-        if (i && GUI_INBOX(i->mouse_pos.x, i->mouse_pos.y, g->last.x-3, g->last.y-3, 6, 6)){
+        if (i && GUI_INBOX(i->mouse_pos.x,i->mouse_pos.y,g->last.x-3,g->last.y-3,6,6)){
             selected = (i->mouse_down && i->mouse_clicked) ? gui_true: gui_false;
             color = config->colors[GUI_COLOR_PLOT_HIGHLIGHT];
         }
@@ -3632,7 +3648,7 @@ gui_panel_graph_push_column(struct gui_panel_layout *layout,
     item_x = item_x + ((gui_float)graph->index * item_padding.x);
 
     /* user graph bar selection */
-    if (in && GUI_INBOX(in->mouse_pos.x, in->mouse_pos.y, item_x, item_y, item_w, item_h)) {
+    if (in && GUI_INBOX(in->mouse_pos.x,in->mouse_pos.y,item_x,item_y,item_w,item_h)) {
         selected = (in->mouse_down && in->mouse_clicked) ? (gui_int)graph->index: selected;
         color = config->colors[GUI_COLOR_HISTO_HIGHLIGHT];
     }
@@ -3890,7 +3906,7 @@ gui_panel_tab_end(struct gui_panel_layout *p, struct gui_panel_layout *t)
     panel.flags = GUI_PANEL_BORDER|GUI_PANEL_MINIMIZABLE|GUI_PANEL_TAB;
     gui_panel_end(t, &panel);
 
-    /* calculate the from the tab occupied space and allocate the space in the parent panel */
+    /*calculate the from the tab occupied space and allocate it in the parent panel */
     item_spacing = gui_config_property(p->config, GUI_PROPERTY_ITEM_SPACING);
     panel_padding = gui_config_property(p->config, GUI_PROPERTY_PADDING);
     if (t->valid)
@@ -4115,6 +4131,153 @@ gui_panel_shelf_end(struct gui_panel_layout *p, struct gui_panel_layout *s)
     gui_panel_end(s, &pan);
     gui_command_buffer_push_scissor(out, p->clip.x, p->clip.y, p->clip.w, p->clip.h);
     return pan.offset;
+}
+
+void
+gui_panel_tree_begin(struct gui_panel_layout *p, struct gui_tree *tree,
+                        const char *title, gui_float height, gui_float offset)
+{
+    struct gui_vec2 padding;
+    const struct gui_config *config;
+    gui_panel_group_begin(p, &tree->group, title, offset);
+    gui_panel_row(&tree->group, height, 1);
+
+    config = tree->group.config;
+    padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
+
+    tree->at_x = 0;
+    tree->skip = -1;
+    tree->depth = 0;
+    tree->x_off = tree->group.config->font.height + 2 * padding.x;
+}
+
+static enum gui_tree_node_operation
+gui_panel_tree_node(struct gui_tree *tree, enum gui_tree_node_symbol symbol,
+    const char *title, enum gui_tree_node_state *state)
+{
+    struct gui_rect bounds;
+    struct gui_rect sym, label;
+    struct gui_text text;
+
+    const struct gui_input *i;
+    const struct gui_config *config;
+    struct gui_vec2 item_padding;
+    struct gui_color col;
+
+    enum gui_tree_node_operation op = GUI_NODE_NOP;
+    struct gui_panel_layout *layout = &tree->group;
+
+    if (tree->skip >= 0 || !gui_panel_widget(&bounds, layout)) {
+        if (!tree->depth) tree->at_x = bounds.x;
+        return op;
+    }
+    if (!tree->depth){
+        tree->at_x = bounds.x;
+    } else {
+        bounds.w = (bounds.x + bounds.w) - tree->at_x;
+        bounds.x = tree->at_x;
+    }
+
+    /* fetch some configuration constants */
+    i = layout->input;
+    config = layout->config;
+    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
+    col = gui_config_color(config, GUI_COLOR_TEXT);
+
+    /* calculate symbol bounds */
+    sym.x = bounds.x;
+    sym.y = bounds.y + (bounds.h/2) - (config->font.height/2);
+    sym.w = config->font.height;
+    sym.h = config->font.height;
+
+    /* calculate text bounds */
+    label.y = bounds.y;
+    label.h = bounds.h;
+    label.x = sym.x + sym.w + item_padding.x;
+    label.w = bounds.w - (sym.w + 2 * item_padding.x);
+
+    /* output symbol */
+    if (symbol == GUI_TREE_NODE_TRIANGLE) {
+        /* parent node */
+        struct gui_vec2 points[3];
+        enum gui_heading heading;
+        if (gui_input_clicked(i, &sym)) {
+            if (*state & GUI_NODE_ACTIVE)
+                *state &= ~(gui_flags)GUI_NODE_ACTIVE;
+            else *state |= GUI_NODE_ACTIVE;
+        }
+        heading = (*state & GUI_NODE_ACTIVE) ? GUI_DOWN : GUI_RIGHT;
+        gui_triangle_from_direction(points, sym.x, sym.y, sym.w, sym.h, 0, 0, heading);
+        gui_command_buffer_push_triangle(layout->buffer,  points[0].x, points[0].y,
+            points[1].x, points[1].y, points[2].x, points[2].y, col);
+    } else {
+        /* leaf node */
+        gui_command_buffer_push_circle(layout->buffer, sym.x, sym.y, sym.w, sym.h, col);
+    }
+
+    /* selection */
+    if (gui_input_clicked(i, &label)) {
+        if (*state & GUI_NODE_SELECTED)
+            *state &= ~(gui_flags)GUI_NODE_SELECTED;
+        else *state |= GUI_NODE_SELECTED;
+    }
+
+    {
+        /* tree node opderations */
+        if (gui_input_pressed(i, GUI_KEY_DEL) && (*state & GUI_NODE_SELECTED))
+            op = GUI_NODE_DELETE;
+        if (gui_input_pressed(i, GUI_KEY_COPY) && (*state & GUI_NODE_SELECTED))
+            op = GUI_NODE_CLONE;
+        if (gui_input_pressed(i, GUI_KEY_CUT) && (*state & GUI_NODE_SELECTED))
+            op = GUI_NODE_CUT;
+        if (gui_input_pressed(i, GUI_KEY_PASTE) && (*state & GUI_NODE_SELECTED))
+            op = GUI_NODE_PASTE;
+    }
+
+    /* output label */
+    text.padding.x = item_padding.x;
+    text.padding.y = item_padding.y;
+    text.foreground = config->colors[GUI_COLOR_TEXT];
+    text.background = (*state & GUI_NODE_SELECTED) ?
+        config->colors[GUI_COLOR_BUTTON_HOVER]:
+        config->colors[GUI_COLOR_PANEL];
+    gui_text(layout->buffer,label.x,label.y,label.w,label.h, title, gui_strsiz(title),
+        &text, GUI_TEXT_LEFT, &config->font);
+    return op;
+}
+
+enum gui_tree_node_operation
+gui_panel_tree_begin_node(struct gui_tree *tree, const char *title,
+    enum gui_tree_node_state *state)
+{
+    enum gui_tree_node_operation op;
+    op = gui_panel_tree_node(tree, GUI_TREE_NODE_TRIANGLE, title, state);
+    tree->at_x += tree->x_off;
+    if (tree->skip < 0 && !(*state & GUI_NODE_ACTIVE))
+        tree->skip = tree->depth;
+    tree->depth++;
+    return op;
+}
+
+enum gui_tree_node_operation
+gui_panel_tree_leaf(struct gui_tree *tree, const char *title,
+    enum gui_tree_node_state *state)
+{return gui_panel_tree_node(tree, GUI_TREE_NODE_BULLET, title, state);}
+
+void
+gui_panel_tree_end_node(struct gui_tree *tree)
+{
+    GUI_ASSERT(tree->depth);
+    tree->depth--;
+    tree->at_x -= tree->x_off;
+    if (tree->skip == tree->depth)
+        tree->skip = -1;
+}
+
+gui_float
+gui_panel_tree_end(struct gui_panel_layout *p, struct gui_tree* tree)
+{
+    return gui_panel_group_end(p, &tree->group);
 }
 
 void
