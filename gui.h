@@ -1786,7 +1786,7 @@ gui_float gui_panel_pixel_to_ratio(struct gui_panel_layout *layout, gui_size pix
     Output:
     - widget width in panel space percentage
 */
-void gui_panel_row_begin(struct gui_panel_layout*, gui_float height);
+void gui_panel_row_begin(struct gui_panel_layout*, gui_float height, gui_size cols);
 /*  this function start the row build up process
     Input:
     - row height inhereted by all widget inside the row

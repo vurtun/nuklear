@@ -844,8 +844,7 @@ gui_edit_buffer_insert(gui_edit_buffer *buffer, gui_size pos,
 
     dst = gui_ptr_add(char, buffer->memory.ptr, pos + len + (copylen - 1));
     src = gui_ptr_add(char, buffer->memory.ptr, pos + (copylen-1));
-    for (i = 0; i < copylen; ++i)
-        *dst-- = *src--;
+    for (i = 0; i < copylen; ++i) *dst-- = *src--;
     mem = gui_ptr_add(void, buffer->memory.ptr, pos);
     gui_memcopy(mem, str, len * sizeof(char));
     return 1;
@@ -1021,6 +1020,9 @@ gui_edit_box_remove(struct gui_edit_box *eb)
     if (!glyph || !len) return;
     offset = (gui_size)(glyph - (gui_char*)eb->buffer.memory.ptr);
     gui_edit_buffer_del(&eb->buffer, offset, len);
+
+    GUI_ASSERT(eb->cursor > 0);
+    GUI_ASSERT(eb->glyphes > 0);
     eb->cursor--;
     eb->glyphes--;
 }
@@ -1138,21 +1140,25 @@ gui_text(struct gui_command_buffer *o, gui_float x, gui_float y, gui_float w,
     GUI_ASSERT(t);
     if (!o || !t) return;
 
+    h = MAX(h, 2 * t->padding.y);
     label.x = 0; label.w = 0;
     label.y = y + t->padding.y;
     label.h = MAX(0, h - 2 * t->padding.y);
-
     text_width = f->width(f->userdata, (const gui_char*)string, len);
+    w = MAX(w, (2 * t->padding.x + (gui_float)text_width));
+
     if (a == GUI_TEXT_LEFT) {
         label.x = x + t->padding.x;
         label.w = MAX(0, w - 2 * t->padding.x);
     } else if (a == GUI_TEXT_CENTERED) {
-        label.w = 2 * t->padding.x + (gui_float)text_width;
-        label.x = (x + t->padding.x + ((w - 2 * t->padding.x)/2)) - (label.w/2);
+        label.w = MAX(1, 2 * t->padding.x + (gui_float)text_width);
+        label.x = (x + t->padding.x + ((w - 2 * t->padding.x)/2));
+        if (label.x > label.w/2) label.x -= (label.w/2);
         label.x = MAX(x + t->padding.x, label.x);
-        label.w = MIN(x + w, label.x + label.w) - label.x;
+        label.w = MIN(x + w, label.x + label.w);
+        if (label.w > label.x) label.w -= label.x;
     } else if (a == GUI_TEXT_RIGHT) {
-        label.x = MAX(x, (x + w) - (2 * t->padding.x + (gui_float)text_width));
+        label.x = (x + w) - (2 * t->padding.x + (gui_float)text_width);
         label.w = (gui_float)text_width + 2 * t->padding.x;
     } else return;
 
@@ -1173,6 +1179,10 @@ gui_do_button(struct gui_command_buffer *o, gui_float x, gui_float y, gui_float 
     GUI_ASSERT(b);
     if (!o || !b)
         return gui_false;
+
+    /* make sure correct values */
+    w = MAX(w, 2 * b->border);
+    h = MAX(h, 2 * b->border);
 
     /* general button user input logic */
     background = b->background;
@@ -1214,8 +1224,9 @@ gui_button_text(struct gui_command_buffer *o, gui_float x, gui_float y,
     /* general drawing and logic button */
     font_color = b->content;
     bg_color = b->background;
-    button_w = MAX(w, 2 * b->padding.x);
+    button_w = MAX(w, (2 * b->border + 2 * b->rounding));
     button_h = MAX(h, f->height + 2 * b->padding.y);
+
     if (i && GUI_INBOX(i->mouse_pos.x, i->mouse_pos.y, x, y, button_w, button_h)) {
         font_color = b->highlight_content;
         bg_color = b->highlight;
@@ -1274,6 +1285,10 @@ gui_button_image(struct gui_command_buffer *out, gui_float x, gui_float y,
     if (!out || !button)
         return gui_false;
 
+    /* make sure correct values */
+    w = MAX(w, 2 * button->padding.x);
+    h = MAX(h, 2 * button->padding.y);
+
     /* execute basic button logic/drawing and finally draw image into the button */
     pressed = gui_do_button(out, x, y, w, h, button, in, b);
     img_x = x + button->padding.x;
@@ -1300,6 +1315,8 @@ gui_button_text_triangle(struct gui_command_buffer *out, gui_float x, gui_float 
     if (!out || !button)
         return gui_false;
 
+    /* make sure correct values */
+    h = MAX(1, h);
     pressed = gui_button_text(out, x, y, w, h, text, behavior, button, i, f);
     tri.y = y + (h/2) - f->height/2;
     tri.w = tri.h = f->height;
@@ -1369,7 +1386,7 @@ gui_toggle(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w
     toggle_active = active;
 
     /* calculate the size of the complete toggle */
-    select_size = font->height + 2 * toggle->padding.y;
+    select_size = MAX(font->height + 2 * toggle->padding.y, 1);
     select_x = x + toggle->padding.x;
     select_y = (y + toggle->padding.y + (select_size / 2)) - (font->height / 2);
 
@@ -1377,6 +1394,8 @@ gui_toggle(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w
     cursor_pad = (type == GUI_TOGGLE_OPTION) ?
         (gui_float)(gui_int)(select_size / 4):
         (gui_float)(gui_int)(select_size / 8);
+
+    select_size = MAX(select_size, cursor_pad * 2);
     cursor_size = select_size - cursor_pad * 2;
     cursor_x = select_x + cursor_pad;
     cursor_y = select_y + cursor_pad;
@@ -1412,7 +1431,8 @@ gui_toggle(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w
         /* calculate text bounds */
         inner_x = x + select_size + toggle->padding.x * 2;
         inner_y = select_y;
-        inner_w = (x + toggle_w) - (inner_x + toggle->padding.x);
+        inner_w = MAX(x + toggle_w, inner_x + toggle->padding.x);
+        inner_w -= (inner_x + toggle->padding.x);
         inner_h = select_size;
 
         /* draw text */
@@ -1560,8 +1580,8 @@ gui_editbox(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float 
     if (!out || !box || !field)
         return;
 
-    input_w = MAX(w, 2 * field->padding.x);
-    input_h = MAX(h, font->height);
+    input_w = MAX(w, 2 * field->padding.x + 2 * field->border_size);
+    input_h = MAX(h, font->height + (2 * field->padding.y + 2 * field->border_size));
 
     /* draw editbox background and border */
     gui_command_buffer_push_rect(out,x,y,input_w,input_h,field->rounding,field->border);
@@ -1635,14 +1655,16 @@ gui_editbox(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float 
                 gui_command_buffer_push_rect(out,label_x+(gui_float)text_width, label_y,
                         (gui_float)cursor_w, label_h, 0, field->cursor);
             } else {
-                gui_size l, off;
+                gui_size l, off, s;
                 gui_long unicode;
                 gui_char *cursor;
 
                 cursor=gui_edit_buffer_at(&box->buffer,(gui_int)box->cursor,&unicode,&l);
                 off = (gui_size)(cursor - (gui_char*)box->buffer.memory.ptr);
-                label_x += font->width(font->userdata, buffer, off);
-                label_w = font->width(font->userdata, cursor, l);
+                s = font->width(font->userdata, buffer, off);
+                label_x += (gui_float)s;
+                s = font->width(font->userdata, cursor, l);
+                label_w = (gui_float)s;
                 gui_command_buffer_push_text(out , label_x, label_y, label_w, label_h,
                     cursor, l, font, field->cursor, field->background);
             }
@@ -1766,7 +1788,7 @@ gui_scroll(struct gui_command_buffer *out, gui_float x, gui_float y,
     if (!out || !s) return 0;
 
     /* scrollbar background */
-    scroll_w = MAX(w, 0);
+    scroll_w = MAX(w, 1);
     scroll_h = MAX(h, 2 * scroll_w);
     gui_command_buffer_push_rect(out,x,y,scroll_w,scroll_h,s->rounding,s->background);
     if (target <= scroll_h) return 0;
@@ -1858,6 +1880,9 @@ gui_spinner(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float 
     is_active = (active) ? *active : gui_false;
     old_len = len;
 
+    h = MAX(h, font->height + 2 * s->padding.x);
+    w = MAX(w, h - s->padding.x + (gui_float)s->border_button * 2);
+
     /* up/down button setup and execution */
     button_y = y;
     button_h = h / 2;
@@ -1872,8 +1897,8 @@ gui_spinner(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float 
     button.content = s->button_triangle;
     button.highlight = s->button_color;
     button.highlight_content = s->button_triangle;
-    button_up_clicked = gui_button_triangle(out, button_x, button_y, button_w, button_h,
-        GUI_UP, GUI_BUTTON_DEFAULT, &button, in);
+    button_up_clicked = gui_button_triangle(out, button_x, button_y, button_w,
+        button_h, GUI_UP, GUI_BUTTON_DEFAULT, &button, in);
 
     button_y = y + button_h;
     button_down_clicked = gui_button_triangle(out, button_x,button_y,button_w,button_h,
@@ -1924,6 +1949,9 @@ gui_selector(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float
     GUI_ASSERT(items);
     GUI_ASSERT(item_count);
     GUI_ASSERT(item_current < item_count);
+
+    h = MAX(h, font->height + 2 * s->padding.x);
+    w = MAX(w, (h - s->padding.x) + 2 * s->padding.x);
 
     /* draw selector background and border */
     gui_command_buffer_push_rect(out, x, y, w, h, 0, s->border);
@@ -2407,7 +2435,8 @@ gui_panel_begin(struct gui_panel_layout *l, struct gui_panel *p,
     if ((p->flags & GUI_PANEL_CLOSEABLE) && (!(p->flags & GUI_PANEL_NO_HEADER))) {
         /* calculate the position of the close icon position and draw it */
         const gui_char *X = (const gui_char*)"x";
-        const gui_float text_width = c->font.width(c->font.userdata, X, 1);
+        const gui_size t = c->font.width(c->font.userdata, X, 1);
+        const gui_float text_width = (gui_float)t;
         const gui_float close_x = header_x;
         const gui_float close_y = p->y + panel_padding.y;
         const gui_float close_w = (gui_float)text_width + 2 * item_padding.x;
@@ -2428,14 +2457,16 @@ gui_panel_begin(struct gui_panel_layout *l, struct gui_panel *p,
 
     /* execute panel minimzing and minimizer icon drawing */
     if ((p->flags & GUI_PANEL_MINIMIZABLE) && (!(p->flags & GUI_PANEL_NO_HEADER))) {
-        gui_size text_width;
+        gui_size t;
+        gui_float text_width;
         gui_float min_x, min_y, min_w, min_h;
         const gui_char *score = (p->minimized) ?
             (const gui_char*)"+":
             (const gui_char*)"-";
 
         /* calculate the icon positon and size of the icon and draw it */
-        text_width = c->font.width(c->font.userdata, score, 1);
+        t = c->font.width(c->font.userdata, score, 1);
+        text_width = (gui_float)t;
         min_x = header_x;
         min_y = p->y + panel_padding.y;
         min_w = (gui_float)text_width + 3 * item_padding.x;
@@ -2554,8 +2585,8 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
 
     /* calculate the bounds of the slot */
     s = &layout->slots[slot];
-    bounds.x = layout->x + s->offset.x * (gui_float)layout->width;
-    bounds.y = layout->y + s->offset.y * (gui_float)layout->height;
+    bounds.x = (gui_float)layout->x + s->offset.x * (gui_float)layout->width;
+    bounds.y = (gui_float)layout->y + s->offset.y * (gui_float)layout->height;
     bounds.w = s->ratio.x * (gui_float)layout->width;
     bounds.h = s->ratio.y * (gui_float)layout->height;
 
@@ -2756,7 +2787,7 @@ gui_panel_row(struct gui_panel_layout *layout, gui_float height, gui_size cols)
 }
 
 void
-gui_panel_row_begin(struct gui_panel_layout *layout, gui_float height)
+gui_panel_row_begin(struct gui_panel_layout *layout, gui_float height, gui_size cols)
 {
     GUI_ASSERT(layout);
     GUI_ASSERT(layout->config);
@@ -2771,7 +2802,7 @@ gui_panel_row_begin(struct gui_panel_layout *layout, gui_float height)
     layout->row.item_ratio = 0;
     layout->row.item_offset = 0;
     layout->row.filled = 0;
-    layout->row.columns = 2;
+    layout->row.columns = cols;
 }
 
 void
@@ -2779,12 +2810,11 @@ gui_panel_row_push_widget(struct gui_panel_layout *layout, gui_float ratio)
 {
     GUI_ASSERT(layout);
     GUI_ASSERT(layout->config);
-    GUI_ASSERT(ratio != 0.0f);
     GUI_ASSERT((ratio + layout->row.filled) <= 1.0f);
 
     if (!layout) return;
     if (!layout->valid) return;
-    if (ratio == 0.0f || (ratio + layout->row.filled) > 1.0f) return;
+    if ((ratio + layout->row.filled) > 1.0f) return;
 
     if (ratio > 0.0f)
         layout->row.item_ratio = GUI_SATURATE(ratio);
@@ -3727,9 +3757,11 @@ gui_panel_table_hline(struct gui_panel_layout *l, gui_size row_height)
     const struct gui_vec2 item_spacing = gui_config_property(c, GUI_PROPERTY_ITEM_SPACING);
 
     /* draws a horizontal line under the current item */
-    gui_float y = l->at_y + (gui_float)row_height - l->offset;
-    gui_float x = l->at_x + item_spacing.x + item_padding.x;
-    gui_float w = l->width - (2 * item_spacing.x + 2 * item_padding.x);
+    gui_float x, y, w;
+    w = MAX(l->width, (2 * item_spacing.x + 2 * item_padding.x));
+    y = l->at_y + (gui_float)row_height - l->offset;
+    x = l->at_x + item_spacing.x + item_padding.x;
+    w = w - (2 * item_spacing.x + 2 * item_padding.x);
     gui_command_buffer_push_line(out, x, y, x + w, y, c->colors[GUI_COLOR_TABLE_LINES]);
 }
 
