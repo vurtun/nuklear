@@ -29,6 +29,7 @@ struct show_window {
     gui_float shelf_scrollbar;
     gui_float table_scrollbar;
     gui_float time_scrollbar;
+    /* tree */
 };
 
 struct control_window {
@@ -120,6 +121,7 @@ widget_panel(struct gui_panel_layout *panel, struct show_window *demo)
         fprintf(stdout, "command executed!\n");
     }
     gui_panel_row_end(panel);
+
 }
 
 static void

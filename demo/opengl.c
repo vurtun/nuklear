@@ -32,8 +32,6 @@
 #define LEN(a)      (sizeof(a)/sizeof(a)[0])
 #define UNUSED(a)   ((void)(a))
 
-#define GUI_USE_FIXED_TYPES
-#define GUI_ASSERT(expr) assert(expr)
 #include "../gui.h"
 #include "demo.c"
 
@@ -91,9 +89,7 @@ file_load(const char* path, size_t* siz)
 {
     char *buf;
     FILE *fd = fopen(path, "rb");
-    if (!fd) {
-        die("Failed to open file: %s\n", path);
-    }
+    if (!fd) die("Failed to open file: %s\n", path);
     fseek(fd, 0, SEEK_END);
     *siz = (size_t)ftell(fd);
     fseek(fd, 0, SEEK_SET);
@@ -279,16 +275,21 @@ font_draw_text(const struct font *font, float x, float y, float w, float h,
 {
     size_t text_len;
     long unicode;
+    size_t glyph_len;
     const struct font_glyph *g;
+    if (!len) return;
 
     draw_rect(x, y, w, h, bg);
-    text_len = gui_utf_decode(text, &unicode, len);
+    glyph_len = text_len = gui_utf_decode(text, &unicode, len);
+    if (!glyph_len) return;
+
     glBindTexture(GL_TEXTURE_2D, font->texture);
     glColor4ub(color[0], color[1], color[2], color[3]);
     glBegin(GL_QUADS);
-    while (text_len <= len) {
+    do {
         float gx, gy, gh, gw;
         float char_width = 0;
+
         if (unicode == GUI_UTF_INVALID) break;
         g = (unicode < font->glyph_count) ?
             &font->glyphes[unicode] :
@@ -309,9 +310,11 @@ font_draw_text(const struct font *font, float x, float y, float w, float h,
         glVertex2f(gx + gw, gy + gh);
         glTexCoord2f(g->uv[0].u, g->uv[1].v);
         glVertex2f(gx, gy + gh);
-        text_len += gui_utf_decode(text + text_len, &unicode, len - text_len);
+
+        glyph_len = gui_utf_decode(text + text_len, &unicode, len - text_len);
+        text_len += glyph_len;
         x += char_width;
-    }
+    } while (text_len <= len && glyph_len);
     glEnd();
     glBindTexture(GL_TEXTURE_2D, 0);
 }

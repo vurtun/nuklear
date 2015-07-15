@@ -19,7 +19,9 @@ extern "C" {
 #endif
 
 #ifndef GUI_ASSERT
-#define GUI_ASSERT(expr)
+/* remove or change if not wanted */
+#include <assert.h>
+#define GUI_ASSERT(expr) assert(expr)
 #endif
 
 /* Constants */
@@ -36,10 +38,11 @@ extern "C" {
 /*
 Since the gui uses ANSI C which does not guarantee to have fixed types, you need
 to set the appropriate size of each type. However if your developer environment
-supports fixed size types by the <stdint> header you can just use
+supports fixed size types by the <stdint> header you can just uncomment the define
+to automatically set the correct size for each type in the library:
 #define GUI_USE_FIXED_TYPES
-to automatically set the correct size for each type in the library.
 */
+
 #ifdef GUI_USE_FIXED_TYPES
 #include <stdint.h>
 typedef char gui_char;
