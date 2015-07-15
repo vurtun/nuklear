@@ -2391,7 +2391,8 @@ gui_panel_begin(struct gui_panel_layout *l, struct gui_panel *p,
     if (!(p->flags & GUI_PANEL_NO_HEADER)) {
         header = &c->colors[GUI_COLOR_HEADER];
         header_x = p->x + panel_padding.x;
-        header_w = p->w - 2 * panel_padding.x;
+        header_w = MAX(p->w, 2 * panel_padding.x);
+        header_w -= 2 * panel_padding.x;
         gui_command_buffer_push_rect(out,p->x,p->y,p->w, l->header_height, 0, *header);
     } else l->header_height = 1;
     l->row.height = l->header_height + 2 * item_spacing.y;
@@ -2491,8 +2492,9 @@ gui_panel_begin(struct gui_panel_layout *l, struct gui_panel *p,
         const gui_size text_len = gui_strsiz(text);
         const gui_float label_x = header_x + item_padding.x;
         const gui_float label_y = p->y + panel_padding.y;
-        const gui_float label_w = header_w - (3 * item_padding.x);
         const gui_float label_h = c->font.height + 2 * item_padding.y;
+        gui_float label_w = MAX(header_w, 3 * item_padding.x);
+        label_w -= (3 * item_padding.x);
         gui_command_buffer_push_text(out, label_x, label_y, label_w, label_h,
             (const gui_char*)text, text_len, &c->font, c->colors[GUI_COLOR_HEADER],
             c->colors[GUI_COLOR_TEXT]);
