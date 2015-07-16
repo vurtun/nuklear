@@ -7,7 +7,7 @@ struct tree_node {
     enum gui_tree_node_state state;
     const char *name;
     struct tree_node *parent;
-    struct tree_node *children[4];
+    struct tree_node *children[8];
     int count;
 };
 
@@ -206,17 +206,17 @@ init_show(struct show_window *win, struct gui_config *config,
 
         win->nodes[1].state = 0;
         win->nodes[1].name = "Box0";
-        win->nodes[1].parent = &win->nodes[1];
+        win->nodes[1].parent = &win->nodes[0];
         win->nodes[1].count = 0;
 
         win->nodes[2].state = 0;
         win->nodes[2].name = "Box1";
-        win->nodes[2].parent = &win->nodes[1];
+        win->nodes[2].parent = &win->nodes[0];
         win->nodes[2].count = 0;
 
         win->nodes[3].state = 0;
         win->nodes[3].name = "Box2";
-        win->nodes[3].parent = &win->nodes[1];
+        win->nodes[3].parent = &win->nodes[0];
         win->nodes[3].count = 0;
 
         win->nodes[4].state = GUI_NODE_ACTIVE;
@@ -245,16 +245,84 @@ init_show(struct show_window *win, struct gui_config *config,
 }
 
 static void
-upload_tree(struct gui_tree *tree, struct tree_node *node)
+tree_remove_node(struct tree_node *parent, struct tree_node *child)
 {
     int i = 0;
+    child->parent = NULL;
+    if (!parent->count) return;
+    if (parent->count == 1) {
+        parent->count = 0;
+        return;
+    }
+    for (i = 0; i < parent->count; ++i) {
+        if (parent->children[i] == child)
+            break;
+    }
+    if (i == parent->count) return;
+    if (i == parent->count - 1) {
+        parent->count--;
+        return;
+    } else{
+        parent->children[i] = parent->children[parent->count-1];
+        parent->count--;
+    }
+}
+
+static void
+tree_add_node(struct tree_node *parent, struct tree_node *child)
+{
+    assert(parent->count < 8);
+    child->parent = parent;
+    parent->children[parent->count++] = child;
+}
+
+static void
+tree_push_node(struct test_tree *tree, struct tree_node *node)
+{
+    assert(tree->count < 16);
+    tree->clipboard[tree->count++] = node;
+}
+
+static struct tree_node*
+tree_pop_node(struct test_tree *tree)
+{
+    assert(tree->count > 0);
+    return tree->clipboard[--tree->count];
+}
+
+static int
+upload_tree(struct test_tree *base, struct gui_tree *tree, struct tree_node *node)
+{
+    int i = 0, n = 0;
+    enum gui_tree_node_operation op;
     if (node->count) {
-        gui_panel_tree_begin_node(tree, node->name, &node->state);
-        for (i = 0; i < node->count; ++i)
-            upload_tree(tree, node->children[i]);
+        i = 0;
+        op = gui_panel_tree_begin_node(tree, node->name, &node->state);
+        while (i < node->count)
+            i += upload_tree(base, tree, node->children[i]);
         gui_panel_tree_end_node(tree);
     }
-    else gui_panel_tree_leaf(tree, node->name, &node->state);
+    else op = gui_panel_tree_leaf(tree, node->name, &node->state);
+
+    switch (op) {
+    case GUI_NODE_NOP: break;
+    case GUI_NODE_CUT:
+        tree_remove_node(node->parent, node);
+        tree_push_node(base, node);
+        return 0;
+    case GUI_NODE_DELETE:
+        tree_remove_node(node->parent, node); break;
+        return 0;
+    case GUI_NODE_PASTE:
+        i = 0; n = base->count;
+        while (i < n) {
+            tree_add_node(node, tree_pop_node(base));
+            i++;
+        }
+    case GUI_NODE_CLONE:
+    default:break;
+    }
+    return 1;
 }
 
 static void
@@ -287,8 +355,8 @@ update_show(struct show_window *show, struct gui_stack *stack, struct gui_input 
     {
         struct gui_tree tree;
         gui_panel_row(&layout, 250, 1);
-        gui_panel_tree_begin(&layout, &tree, "Models", 20, show->tree_offset);
-        upload_tree(&tree, &show->tree.root);
+        gui_panel_tree_begin(&layout, &tree, "Tree", 20, show->tree_offset);
+        upload_tree(&show->tree, &tree, &show->tree.root);
         show->tree_offset = gui_panel_tree_end(&layout, &tree);
     }
     gui_panel_end(&layout, &show->hook);

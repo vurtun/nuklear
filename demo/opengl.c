@@ -499,10 +499,12 @@ key(struct gui_input *in, SDL_Event *evt, gui_bool down)
         gui_input_key(in, GUI_KEY_LEFT, down);
     else if (sym == SDLK_RIGHT)
         gui_input_key(in, GUI_KEY_RIGHT, down);
-    else if (state[SDL_SCANCODE_LCTRL] && state[SDL_SCANCODE_C])
-        gui_input_key(in, GUI_KEY_COPY, down);
-    else if (state[SDL_SCANCODE_LCTRL] && state[SDL_SCANCODE_P])
-        gui_input_key(in, GUI_KEY_PASTE, down);
+    else if (sym == SDLK_c)
+        gui_input_key(in, GUI_KEY_COPY, down && state[SDL_SCANCODE_LCTRL]);
+    else if (sym == SDLK_v)
+        gui_input_key(in, GUI_KEY_PASTE, down && state[SDL_SCANCODE_LCTRL]);
+    else if (sym == SDLK_x)
+        gui_input_key(in, GUI_KEY_CUT, down && state[SDL_SCANCODE_LCTRL]);
 }
 
 static void

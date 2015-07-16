@@ -4166,7 +4166,6 @@ gui_panel_tree_node(struct gui_tree *tree, enum gui_tree_node_symbol symbol,
 
     enum gui_tree_node_operation op = GUI_NODE_NOP;
     struct gui_panel_layout *layout = &tree->group;
-
     if (tree->skip >= 0 || !gui_panel_widget(&bounds, layout)) {
         if (!tree->depth) tree->at_x = bounds.x;
         return op;
@@ -4224,14 +4223,22 @@ gui_panel_tree_node(struct gui_tree *tree, enum gui_tree_node_symbol symbol,
 
     {
         /* tree node opderations */
-        if (gui_input_pressed(i, GUI_KEY_DEL) && (*state & GUI_NODE_SELECTED))
+        if (gui_input_pressed(i, GUI_KEY_DEL) && (*state & GUI_NODE_SELECTED)) {
+            *state &= ~(gui_flags)GUI_NODE_SELECTED;
             op = GUI_NODE_DELETE;
-        if (gui_input_pressed(i, GUI_KEY_COPY) && (*state & GUI_NODE_SELECTED))
+        }
+        if (gui_input_pressed(i, GUI_KEY_COPY) && (*state & GUI_NODE_SELECTED)) {
+            *state &= ~(gui_flags)GUI_NODE_SELECTED;
             op = GUI_NODE_CLONE;
-        if (gui_input_pressed(i, GUI_KEY_CUT) && (*state & GUI_NODE_SELECTED))
+        }
+        if (gui_input_pressed(i, GUI_KEY_CUT) && (*state & GUI_NODE_SELECTED)) {
+            *state &= ~(gui_flags)GUI_NODE_SELECTED;
             op = GUI_NODE_CUT;
-        if (gui_input_pressed(i, GUI_KEY_PASTE) && (*state & GUI_NODE_SELECTED))
+        }
+        if (gui_input_pressed(i, GUI_KEY_PASTE) && (*state & GUI_NODE_SELECTED)) {
+            *state &= ~(gui_flags)GUI_NODE_SELECTED;
             op = GUI_NODE_PASTE;
+        }
     }
 
     /* output label */

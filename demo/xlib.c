@@ -394,8 +394,14 @@ key(struct XWindow *xw, struct gui_input *in, XEvent *evt, gui_bool down)
         gui_input_key(in, GUI_KEY_RIGHT, down);
     else if (*code == XK_BackSpace)
         gui_input_key(in, GUI_KEY_BACKSPACE, down);
-    else if (*code > 32 && *code < 128 && !down) {
-        gui_input_char(in, (char)*code);
+    else if (*code > 32 && *code < 128) {
+        if (*code == 'c')
+            gui_input_key(in, GUI_KEY_COPY, down && (evt->xkey.state & ControlMask));
+        else if (*code == 'v')
+            gui_input_key(in, GUI_KEY_PASTE, down && (evt->xkey.state & ControlMask));
+        else if (*code == 'x')
+            gui_input_key(in, GUI_KEY_CUT, down && (evt->xkey.state & ControlMask));
+        if (!down) gui_input_char(in, (char)*code);
     }
     XFree(code);
 }
@@ -475,7 +481,8 @@ main(int argc, char *argv[])
         started = timestamp();
         gui_input_begin(&in);
         while (XCheckWindowEvent(xw.dpy, xw.win, xw.swa.event_mask, &evt)) {
-            if (evt.type == KeyPress) key(&xw, &in, &evt, gui_true);
+            if (evt.type == KeyPress)
+                key(&xw, &in, &evt, gui_true);
             else if (evt.type == KeyRelease) key(&xw, &in, &evt, gui_false);
             else if (evt.type == ButtonPress) btn(&in, &evt, gui_true);
             else if (evt.type == ButtonRelease) btn(&in, &evt, gui_false);
