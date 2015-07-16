@@ -25,6 +25,8 @@ extern "C" {
 #endif
 
 /* Constants */
+#define GUI_BORDER gui_true
+#define GUI_NO_BORDER gui_false
 #define GUI_UTF_INVALID 0xFFFD
 #define GUI_UTF_SIZE 4
 /* describes the number of bytes a glyph consists of*/
@@ -1689,6 +1691,8 @@ struct gui_panel_row_layout {
 };
 
 struct gui_panel_layout {
+    gui_flags flags;
+    /* panel flags modifing its behavior */
     gui_float x, y, w, h;
     /* position and size of the panel in the os window */
     gui_float offset;
@@ -2128,7 +2132,7 @@ void gui_panel_table_end(struct gui_panel_layout*);
     to its normal state.
 */
 gui_bool gui_panel_tab_begin(struct gui_panel_layout*, struct gui_panel_layout *tab,
-                            const char*, gui_bool minimized);
+                            const char*, gui_bool border, gui_bool minimized);
 /*  this function adds a tab subpanel into the parent panel
     Input:
     - tab title to write into the header

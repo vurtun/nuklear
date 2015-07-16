@@ -2039,14 +2039,14 @@ gui_config_default_rounding(struct gui_config *config)
 static void
 gui_config_default_color(struct gui_config *config)
 {
-    config->colors[GUI_COLOR_TEXT] = gui_rgba(100, 100, 100, 255);
+    config->colors[GUI_COLOR_TEXT] = gui_rgba(135, 135, 135, 255);
     config->colors[GUI_COLOR_PANEL] = gui_rgba(45, 45, 45, 255);
     config->colors[GUI_COLOR_HEADER] = gui_rgba(40, 40, 40, 255);
     config->colors[GUI_COLOR_BORDER] = gui_rgba(100, 100, 100, 255);
     config->colors[GUI_COLOR_BUTTON] = gui_rgba(50, 50, 50, 255);
     config->colors[GUI_COLOR_BUTTON_HOVER] = gui_rgba(35, 35, 35, 255);
     config->colors[GUI_COLOR_BUTTON_TOGGLE] = gui_rgba(35, 35, 35, 255);
-    config->colors[GUI_COLOR_BUTTON_HOVER_FONT] = gui_rgba(100, 100, 100, 255);
+    config->colors[GUI_COLOR_BUTTON_HOVER_FONT] = gui_rgba(135, 135, 135, 255);
     config->colors[GUI_COLOR_BUTTON_BORDER] = gui_rgba(100, 100, 100, 255);
     config->colors[GUI_COLOR_CHECK] = gui_rgba(100, 100, 100, 255);
     config->colors[GUI_COLOR_CHECK_BACKGROUND] = gui_rgba(45, 45, 45, 255);
@@ -2063,7 +2063,7 @@ gui_config_default_color(struct gui_config *config)
     config->colors[GUI_COLOR_INPUT] = gui_rgba(45, 45, 45, 255);
     config->colors[GUI_COLOR_INPUT_CURSOR] = gui_rgba(100, 100, 100, 255);
     config->colors[GUI_COLOR_INPUT_BORDER] = gui_rgba(100, 100, 100, 255);
-    config->colors[GUI_COLOR_INPUT_TEXT] = gui_rgba(100, 100, 100, 255);
+    config->colors[GUI_COLOR_INPUT_TEXT] = gui_rgba(135, 135, 135, 255);
     config->colors[GUI_COLOR_SPINNER] = gui_rgba(45, 45, 45, 255);
     config->colors[GUI_COLOR_SPINNER_BORDER] = gui_rgba(100, 100, 100, 255);
     config->colors[GUI_COLOR_SPINNER_TRIANGLE] = gui_rgba(100, 100, 100, 255);
@@ -2386,6 +2386,7 @@ gui_panel_begin(struct gui_panel_layout *l, struct gui_panel *p,
     }
 
     /* setup the rest of the panel */
+    l->flags = p->flags;
     l->input = i;
     l->index = 0;
     l->x = p->x; l->y = p->y;
@@ -3845,13 +3846,13 @@ gui_panel_table_end(struct gui_panel_layout *layout)
 
 gui_bool
 gui_panel_tab_begin(struct gui_panel_layout *parent, struct gui_panel_layout *tab,
-    const char *title, gui_bool minimized)
+    const char *title, gui_bool border, gui_bool minimized)
 {
     struct gui_rect bounds;
     struct gui_command_buffer *out;
     struct gui_panel panel;
     struct gui_rect clip;
-    gui_flags flags;
+    gui_flags flags = 0;
 
     GUI_ASSERT(parent);
     GUI_ASSERT(tab);
@@ -3875,7 +3876,8 @@ gui_panel_tab_begin(struct gui_panel_layout *parent, struct gui_panel_layout *ta
     gui_panel_alloc_space(&bounds, parent);
 
     /* create a fake panel to create a panel layout from */
-    flags = GUI_PANEL_BORDER|GUI_PANEL_MINIMIZABLE|GUI_PANEL_TAB|GUI_PANEL_BORDER_HEADER;
+    flags = GUI_PANEL_MINIMIZABLE|GUI_PANEL_TAB;
+    if (border) flags |= GUI_PANEL_BORDER|GUI_PANEL_BORDER_HEADER;
     gui_panel_init(&panel, bounds.x, bounds.y, bounds.w,
         gui_null_rect.h,flags,out,parent->config);
     panel.minimized = minimized;
@@ -3903,7 +3905,7 @@ gui_panel_tab_end(struct gui_panel_layout *p, struct gui_panel_layout *t)
     /* setup fake panel to end the tab */
     panel.x = t->at_x;
     panel.y = t->y;
-    panel.flags = GUI_PANEL_BORDER|GUI_PANEL_MINIMIZABLE|GUI_PANEL_TAB;
+    panel.flags = t->flags;
     gui_panel_end(t, &panel);
 
     /*calculate the from the tab occupied space and allocate it in the parent panel */

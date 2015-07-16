@@ -321,11 +321,12 @@ update_show(struct show_window *show, struct gui_stack *stack, struct gui_input 
     static const char *shelfs[] = {"Histogram", "Lines"};
     gui_panel_begin_stacked(&layout, &show->hook, stack, "Show", in);
 
-    show->combobox_tab = gui_panel_tab_begin(&layout, &tab, "Combobox", show->combobox_tab);
+    show->combobox_tab = gui_panel_tab_begin(&layout, &tab, "Combobox",
+                                            GUI_BORDER, show->combobox_tab);
     combobox_panel(&tab, show);
     gui_panel_tab_end(&layout, &tab);
 
-    show->widget_tab = gui_panel_tab_begin(&layout, &tab, "Widgets", show->widget_tab);
+    show->widget_tab = gui_panel_tab_begin(&layout, &tab, "Widgets",GUI_BORDER, show->widget_tab);
     widget_panel(&tab, show);
     gui_panel_tab_end(&layout, &tab);
 
@@ -493,19 +494,19 @@ update_control(struct control_window *control, struct gui_stack *stack,
     struct gui_panel_layout tab;
 
     running = gui_panel_begin_stacked(&layout, &control->hook, stack, "Control", in);
-    control->flag_tab = gui_panel_tab_begin(&layout, &tab, "Options", control->flag_tab);
+    control->flag_tab = gui_panel_tab_begin(&layout, &tab, "Options", GUI_BORDER, control->flag_tab);
     update_flags(&tab, control);
     gui_panel_tab_end(&layout, &tab);
 
-    control->style_tab = gui_panel_tab_begin(&layout, &tab, "Properties", control->style_tab);
+    control->style_tab = gui_panel_tab_begin(&layout, &tab, "Properties", GUI_BORDER, control->style_tab);
     properties_tab(&tab, config);
     gui_panel_tab_end(&layout, &tab);
 
-    control->round_tab = gui_panel_tab_begin(&layout, &tab, "Rounding", control->round_tab);
+    control->round_tab = gui_panel_tab_begin(&layout, &tab, "Rounding", GUI_BORDER, control->round_tab);
     round_tab(&tab, config);
     gui_panel_tab_end(&layout, &tab);
 
-    control->color_tab = gui_panel_tab_begin(&layout, &tab, "Color", control->color_tab);
+    control->color_tab = gui_panel_tab_begin(&layout, &tab, "Color", GUI_BORDER, control->color_tab);
     color_tab(&tab, control, config);
     gui_panel_tab_end(&layout, &tab);
 
