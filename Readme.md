@@ -29,10 +29,10 @@ Summary: It is only responsible for the actual user interface
 - Graphical overlay
 
 ## Gallery
-![gui screenshot](/screen/demo.png?raw=true)
-![gui screenshot](/screen/config.png?raw=true)
-![gui screenshot](/screen/tree.png?raw=true)
-![gui screenshot](/screen/explorer.png?raw=true)
+![gui demo](/screen/demo.png?raw=true)
+![gui config](/screen/config.png?raw=true)
+![gui tree](/screen/tree.gif)
+![gui exlporer](/screen/explorer.png?raw=true)
 ![gui screenshot](/screen/screenshot.png?raw=true)
 
 ## Example
