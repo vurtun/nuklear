@@ -199,10 +199,9 @@ init_show(struct show_window *win, struct gui_config *config,
         win->nodes[0].state = 0;
         win->nodes[0].name = "Boxes";
         win->nodes[0].parent = &tree->root;
-        win->nodes[0].count = 3;
+        win->nodes[0].count = 2;
         win->nodes[0].children[0] = &win->nodes[1];
         win->nodes[0].children[1] = &win->nodes[2];
-        win->nodes[0].children[2] = &win->nodes[3];
 
         win->nodes[1].state = 0;
         win->nodes[1].name = "Box0";
@@ -214,18 +213,12 @@ init_show(struct show_window *win, struct gui_config *config,
         win->nodes[2].parent = &win->nodes[0];
         win->nodes[2].count = 0;
 
-        win->nodes[3].state = 0;
-        win->nodes[3].name = "Box2";
-        win->nodes[3].parent = &win->nodes[0];
-        win->nodes[3].count = 0;
-
         win->nodes[4].state = GUI_NODE_ACTIVE;
         win->nodes[4].name = "Cylinders";
         win->nodes[4].parent = &tree->root;
-        win->nodes[4].count = 3;
+        win->nodes[4].count = 2;
         win->nodes[4].children[0] = &win->nodes[5];
         win->nodes[4].children[1] = &win->nodes[6];
-        win->nodes[4].children[2] = &win->nodes[7];
 
         win->nodes[5].state = 0;
         win->nodes[5].name = "Cylinder0";
@@ -236,11 +229,6 @@ init_show(struct show_window *win, struct gui_config *config,
         win->nodes[6].name = "Cylinder1";
         win->nodes[6].parent = &win->nodes[4];
         win->nodes[6].count = 0;
-
-        win->nodes[7].state = 0;
-        win->nodes[7].name = "Cylinder2";
-        win->nodes[7].parent = &win->nodes[4];
-        win->nodes[7].count = 0;
     }
 }
 

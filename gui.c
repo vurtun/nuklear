@@ -4170,12 +4170,10 @@ gui_panel_tree_node(struct gui_tree *tree, enum gui_tree_node_symbol symbol,
         if (!tree->depth) tree->at_x = bounds.x;
         return op;
     }
-    if (!tree->depth){
-        tree->at_x = bounds.x;
-    } else {
+    if (tree->depth){
         bounds.w = (bounds.x + bounds.w) - tree->at_x;
         bounds.x = tree->at_x;
-    }
+    } else tree->at_x = bounds.x;
 
     /* fetch some configuration constants */
     i = layout->input;
@@ -4214,7 +4212,7 @@ gui_panel_tree_node(struct gui_tree *tree, enum gui_tree_node_symbol symbol,
         gui_command_buffer_push_circle(layout->buffer, sym.x, sym.y, sym.w, sym.h, col);
     }
 
-    /* selection */
+    /* node selection */
     if (gui_input_clicked(i, &label)) {
         if (*state & GUI_NODE_SELECTED)
             *state &= ~(gui_flags)GUI_NODE_SELECTED;

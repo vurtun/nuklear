@@ -32,11 +32,8 @@
 #define LEN(a)      (sizeof(a)/sizeof(a)[0])
 #define UNUSED(a)   ((void)(a))
 
-#define GUI_USE_FIXED_TYPES
-#define GUI_ASSERT(expr) assert(expr)
 #include "../gui.h"
-/*#include "demo.c"*/
-#include "maya.c"
+#include "demo.c"
 
 static void
 die(const char *fmt, ...)
@@ -61,14 +58,23 @@ font_get_width(gui_handle handle, const gui_char *text, gui_size len)
 }
 
 static void
-draw_text(NVGcontext *ctx, float x, float y, const gui_byte *c,
-    const gui_char *string, gui_size len)
+draw_rect(NVGcontext *ctx, float x, float y, float w, float h, float r, const gui_byte* c)
 {
-    gui_float height = 0;
     nvgBeginPath(ctx);
-    nvgTextMetrics(ctx, NULL, NULL, &height);
+    nvgRoundedRect(ctx, x, y, w, h, r);
     nvgFillColor(ctx, nvgRGBA(c[0], c[1], c[2], c[3]));
-    nvgText(ctx, x, y + height, string, &string[len]);
+    nvgFill(ctx);
+}
+
+static void
+draw_text(NVGcontext *ctx, float x, float y, float w, float h,
+    const gui_byte *c, const gui_byte *bg, const gui_char *string, gui_size len)
+{
+    draw_rect(ctx, x,y,w,h,0, bg);
+    nvgBeginPath(ctx);
+    nvgFillColor(ctx, nvgRGBA(c[0], c[1], c[2], c[3]));
+    nvgTextAlign(ctx, NVG_ALIGN_MIDDLE);
+    nvgText(ctx, x, y + h * 0.5f, string, &string[len]);
     nvgFill(ctx);
 }
 
@@ -78,15 +84,6 @@ draw_line(NVGcontext *ctx, float x0, float y0, float x1, float y1, const gui_byt
     nvgBeginPath(ctx);
     nvgMoveTo(ctx, x0, y0);
     nvgLineTo(ctx, x1, y1);
-    nvgFillColor(ctx, nvgRGBA(c[0], c[1], c[2], c[3]));
-    nvgFill(ctx);
-}
-
-static void
-draw_rect(NVGcontext *ctx, float x, float y, float w, float h, float r, const gui_byte* c)
-{
-    nvgBeginPath(ctx);
-    nvgRoundedRect(ctx, x, y, w, h, r);
     nvgFillColor(ctx, nvgRGBA(c[0], c[1], c[2], c[3]));
     nvgFill(ctx);
 }
@@ -162,7 +159,7 @@ execute(NVGcontext *nvg, struct gui_command_buffer *list, int width, int height)
         } break;
         case GUI_COMMAND_TEXT: {
             const struct gui_command_text *t = gui_command(text, cmd);
-            draw_text(nvg, t->x, t->y, t->fg, t->string, t->length);
+            draw_text(nvg, t->x, t->y, t->w, t->h, t->fg, t->bg, t->string, t->length);
         } break;
         case GUI_COMMAND_IMAGE: {
             const struct gui_command_image *i = gui_command(image, cmd);
@@ -188,6 +185,7 @@ draw(NVGcontext *nvg,struct gui_stack *stack, int width, int height)
 static void
 key(struct gui_input *in, SDL_Event *evt, gui_bool down)
 {
+    const Uint8* state = SDL_GetKeyboardState(NULL);
     SDL_Keycode sym = evt->key.keysym.sym;
     if (sym == SDLK_RSHIFT || sym == SDLK_LSHIFT)
         gui_input_key(in, GUI_KEY_SHIFT, down);
@@ -199,6 +197,16 @@ key(struct gui_input *in, SDL_Event *evt, gui_bool down)
         gui_input_key(in, GUI_KEY_SPACE, down);
     else if (sym == SDLK_BACKSPACE)
         gui_input_key(in, GUI_KEY_BACKSPACE, down);
+    else if (sym == SDLK_LEFT)
+        gui_input_key(in, GUI_KEY_LEFT, down);
+    else if (sym == SDLK_RIGHT)
+        gui_input_key(in, GUI_KEY_RIGHT, down);
+    else if (sym == SDLK_c)
+        gui_input_key(in, GUI_KEY_COPY, down && state[SDL_SCANCODE_LCTRL]);
+    else if (sym == SDLK_v)
+        gui_input_key(in, GUI_KEY_PASTE, down && state[SDL_SCANCODE_LCTRL]);
+    else if (sym == SDLK_x)
+        gui_input_key(in, GUI_KEY_CUT, down && state[SDL_SCANCODE_LCTRL]);
 }
 
 static void
@@ -288,17 +296,7 @@ main(int argc, char *argv[])
     font.userdata.ptr = vg;
     nvgTextMetrics(vg, NULL, NULL, &font.height);
     font.width = font_get_width;
-
-    gui.width = WINDOW_WIDTH;
-    gui.height = WINDOW_HEIGHT;
     init_demo(&gui, &font);
-
-    gui.images.select = nvgCreateImage(vg, "icon/select.bmp", 0);
-    gui.images.lasso = nvgCreateImage(vg, "icon/lasso.bmp", 0);
-    gui.images.paint = nvgCreateImage(vg, "icon/paint.bmp", 0);
-    gui.images.move = nvgCreateImage(vg, "icon/move.bmp", 0);
-    gui.images.rotate = nvgCreateImage(vg, "icon/rotate.bmp", 0);
-    gui.images.scale = nvgCreateImage(vg, "icon/scale.bmp", 0);
 
     while (gui.running) {
         /* Input */
@@ -325,7 +323,6 @@ main(int argc, char *argv[])
         /* Draw */
         glClearColor(0.4f, 0.4f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-        draw(vg, &gui.layout.stack, width, height);
         draw(vg, &gui.stack, width, height);
         gui.ms = SDL_GetTicks() - started;
         SDL_GL_SwapWindow(win);

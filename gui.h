@@ -1514,6 +1514,7 @@ void gui_config_reset(struct gui_config*);
     gui_panel_begin_stacked -- extends gui_panel_begin by adding the panel into a panel stack
     gui_panel_begin_tiled   -- extends gui_panel_begin by adding the panel into a tiled layout
     gui_panel_row           -- defines the current row layout with row height and number of columns
+    gui_panel_row_templated -- defines the row layout as  a nother of panel space ratios
     gui_panel_row_begin     -- begins the row build up process
     gui_panel_row_push_widget-- pushes the next added widget width as a ratio of the provided space
     gui_panel_row_end       -- ends the row build up process
@@ -1533,6 +1534,8 @@ void gui_config_reset(struct gui_config*);
     gui_panel_button_triangle --button with triangle pointing either up-/down-/left- or right
     gui_panel_button_image  -- button widget width icon content
     gui_panel_button_toggle -- toggle button with either active or inactive state
+    gui_panel_button_text_image -- button widget with text and icon
+    gui_panel_button_text_triangle --button widget with text and a triangle
     gui_panel_slider        -- slider widget with min and max value as well as stepping range
     gui_panel_progress      -- either modifyable or static progressbar
     gui_panel_editbox       -- edit textbox for text input with cursor, clipboard and filter
@@ -1545,6 +1548,17 @@ void gui_config_reset(struct gui_config*);
     gui_panel_graph_end     -- immediate mode graph building end sequence point
     gui_panel_graph         -- retained mode graph with array of values
     gui_panel_graph_ex      -- ratained mode graph with getter callback
+    gui_panel_tab_begin     -- begins a minimizable growing space inside the panel
+    gui_panel_tab_end       -- ends the minimizable space
+    gui_panel_group_begin   -- adds a scrollable fixed space inside the panel
+    gui_panel_group_end     -- ends the scrollable space
+    gui_panel_shelf_begin   -- begins a shelf with a number of selectable tabs
+    gui_panel_shelf_end     -- ends a previously started shelf build up process
+    gui_panel_tree_begin    -- begin a new tree build up process
+    gui_panel_tree_begin_node -- begins a new parent node
+    gui_panel_tree_end_node -- ends the previously started parent node
+    gui_panel_tree_leaf     -- adds a leaf node
+    gui_panel_tree_end      -- ends the previously started tree build up process
     gui_panel_end           -- end squeunce point which finializes the panel build up
 */
 enum gui_table_lines {
@@ -2114,7 +2128,7 @@ void gui_panel_table_end(struct gui_panel_layout*);
     to its normal state.
 */
 gui_bool gui_panel_tab_begin(struct gui_panel_layout*, struct gui_panel_layout *tab,
-                            const char*, gui_bool);
+                            const char*, gui_bool minimized);
 /*  this function adds a tab subpanel into the parent panel
     Input:
     - tab title to write into the header
@@ -2165,15 +2179,38 @@ gui_float gui_panel_shelf_end(struct gui_panel_layout*, struct gui_panel_layout*
 */
 void gui_panel_tree_begin(struct gui_panel_layout*, struct gui_tree*,
                         const char*, gui_float row_height, gui_float offset);
+/*  this function begins the tree building process
+    Input:
+    - title describing the tree or NULL
+    - height of every node inside the panel
+    - scrollbar offset
+    Output:
+    - tree build up state structure
+*/
 enum gui_tree_node_operation gui_panel_tree_begin_node(struct gui_tree*, const char*,
                                                     enum gui_tree_node_state*);
+/*  this function begins a parent node
+    Input:
+    - title of the node
+    - current node state
+    Output:
+    - operation identifier what should be done with this node
+*/
 void gui_panel_tree_end_node(struct gui_tree*);
+/*  this function ends a parent node */
 enum gui_tree_node_operation gui_panel_tree_leaf(struct gui_tree*, const char*,
                                                     enum gui_tree_node_state*);
-gui_float gui_panel_tree_end(struct gui_panel_layout*, struct gui_tree*);
-void gui_panel_end(struct gui_panel_layout*, struct gui_panel*);
-/*  this function ends the panel layout build up process and updates the panel
+/*  this function pushes a leaf node to the tree
+    Input:
+    - title of the node
+    - current leaf node state
+    Output:
+    - operation identifier what should be done with this node
 */
+gui_float gui_panel_tree_end(struct gui_panel_layout*, struct gui_tree*);
+/*  this function ends a the tree building process */
+void gui_panel_end(struct gui_panel_layout*, struct gui_panel*);
+/*  this function ends the panel layout build up process and updates the panel */
 /*
  * ==============================================================
  *
