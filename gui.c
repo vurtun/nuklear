@@ -1117,7 +1117,7 @@ void
 gui_edit_box_set_cursor(struct gui_edit_box *eb, gui_size pos)
 {
     GUI_ASSERT(eb);
-    GUI_ASSERT(eb->glyphes <= pos);
+    GUI_ASSERT(eb->glyphes >= pos);
     if (!eb || pos > eb->glyphes) return;
     eb->cursor = pos;
 }
@@ -1588,6 +1588,30 @@ gui_progress(struct gui_command_buffer *out, gui_float x, gui_float y,
     return prog_value;
 }
 
+
+static gui_size
+gui_utf_glyph_index_at_pos(const struct gui_font *font, const char *text,
+    gui_size text_len, gui_float xoff)
+{
+    gui_size i = 0;
+    gui_long unicode;
+    gui_size glyph_offset = 0;
+    gui_size glyph_len = gui_utf_decode(text, &unicode, text_len);
+    gui_size text_width = font->width(font->userdata, text, glyph_len);
+    gui_size src_len = glyph_len;
+
+    while (text_len && glyph_len) {
+        if (text_width >= xoff)
+            return glyph_offset;
+        glyph_offset++;
+        text_len -= glyph_len;
+        glyph_len = gui_utf_decode(text + src_len, &unicode, text_len);
+        src_len += glyph_len;
+        text_width = font->width(font->userdata, text, src_len);
+    }
+    return glyph_offset;
+}
+
 void
 gui_editbox(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w,
                 gui_float h, struct gui_edit_box *box, const struct gui_edit *field,
@@ -1638,8 +1662,8 @@ gui_editbox(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float 
         if (in->text_len)
             gui_edit_box_buffer_input(box, in);
     }
-
-    if (font) {
+    {
+        /* text drawing */
         gui_size offset = 0;
         gui_float label_x, label_y, label_h;
         gui_float label_w = input_w - 2 * field->padding.x - 2 * field->border_size;
@@ -1656,6 +1680,15 @@ gui_editbox(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float 
             text_width = font->width(font->userdata, &buffer[offset], text_len);
         }
 
+        /* set cursor by mouse click */
+        if (in && field->show_cursor && in->mouse_clicked && in->mouse_down && box->active &&
+            GUI_INBOX(in->mouse_pos.x, in->mouse_pos.y, x, y, input_w, input_h))
+        {
+            gui_float xoff = in->mouse_pos.x - (x + field->border_size);
+            gui_size glyph_pos = gui_utf_glyph_index_at_pos(font, buffer + offset, text_len, xoff);
+            gui_edit_box_set_cursor(box, glyph_pos);
+        }
+
         /* calculate the text bounds and draw the string to screen*/
         label_x = x + field->padding.x + field->border_size;
         label_y = y + field->padding.y + field->border_size;
@@ -1663,7 +1696,7 @@ gui_editbox(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float 
         gui_command_buffer_push_text(out , label_x, label_y, label_w, label_h,
             &buffer[offset], text_len, font, field->background, field->text);
 
-        /* if wanted draw the cursor at the end of the text input */
+        /* if requested draw the cursor at the end of the text input */
         if (box->active && field->show_cursor) {
             if (box->cursor == box->glyphes) {
                 gui_command_buffer_push_rect(out,label_x+(gui_float)text_width, label_y,
@@ -2067,11 +2100,11 @@ gui_config_default_color(struct gui_config *config)
     config->colors[GUI_COLOR_SPINNER] = gui_rgba(45, 45, 45, 255);
     config->colors[GUI_COLOR_SPINNER_BORDER] = gui_rgba(100, 100, 100, 255);
     config->colors[GUI_COLOR_SPINNER_TRIANGLE] = gui_rgba(100, 100, 100, 255);
-    config->colors[GUI_COLOR_SPINNER_TEXT] = gui_rgba(100, 100, 100, 255);
+    config->colors[GUI_COLOR_SPINNER_TEXT] = gui_rgba(135, 135, 135, 255);
     config->colors[GUI_COLOR_SELECTOR] = gui_rgba(45, 45, 45, 255);
     config->colors[GUI_COLOR_SELECTOR_BORDER] = gui_rgba(100, 100, 100, 255);
     config->colors[GUI_COLOR_SELECTOR_TRIANGLE] = gui_rgba(100, 100, 100, 255);
-    config->colors[GUI_COLOR_SELECTOR_TEXT] = gui_rgba(100, 100, 100, 255);
+    config->colors[GUI_COLOR_SELECTOR_TEXT] = gui_rgba(135, 135, 135, 255);
     config->colors[GUI_COLOR_HISTO] = gui_rgba(120, 120, 120, 255);
     config->colors[GUI_COLOR_HISTO_BARS] = gui_rgba(45, 45, 45, 255);
     config->colors[GUI_COLOR_HISTO_NEGATIVE] = gui_rgba(255, 255, 255, 255);

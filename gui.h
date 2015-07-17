@@ -44,7 +44,6 @@ supports fixed size types by the <stdint> header you can just uncomment the defi
 to automatically set the correct size for each type in the library:
 #define GUI_USE_FIXED_TYPES
 */
-
 #ifdef GUI_USE_FIXED_TYPES
 #include <stdint.h>
 typedef char gui_char;
@@ -353,7 +352,7 @@ struct gui_buffer {
     gui_size needed;
     /* total amount of memory allocated if enough memory would have been present */
     gui_size calls;
-    /* number of allcation calls */
+    /* number of allocation calls */
 };
 
 void gui_buffer_init(struct gui_buffer*, const struct gui_allocator*,
@@ -650,7 +649,6 @@ void gui_command_buffer_push_text(struct gui_command_buffer*, gui_float, gui_flo
     - maixmal size of the text to draw with width and height
     - color of the triangle to draw
 */
-
 #define gui_command(t, c) ((const struct gui_command_##t*)c)
 #define gui_command_buffer_begin(b)\
     ((struct gui_command*)(b)->base.memory.ptr)
@@ -663,7 +661,7 @@ void gui_command_buffer_push_text(struct gui_command_buffer*, gui_float, gui_flo
     for((i)=gui_command_buffer_begin(b); (i)!=NULL; (i)=gui_command_buffer_next(b,i))
 
 /*
- * ==============================================================
+ * ===============================================================
  *
  *                          Edit Box
  *
@@ -684,14 +682,14 @@ void gui_command_buffer_push_text(struct gui_command_buffer*, gui_float, gui_flo
     added and removed with `gui_edit_box_add` and `gui_edit_box_remove`.
 
     Widget function API
-    gui_edit_box_init()         -- initialize a dynamically growing edit box
-    gui_edit_box_init_fixed()   -- initialize a statically edit box
-    gui_edit_box_reset()        -- resets the edit box back to the beginning
-    gui_edit_box_clear()        -- frees all memory of a dynamic edit box
-    gui_edit_box_add()          -- adds a symbol to the editbox
-    gui_edit_box_remove()       -- removes a symbol from the editbox
-    gui_edit_box_get()          -- returns the string inside the editbox
-    gui_edit_box_len()          -- returns the length of the string inside the edditbox
+    gui_edit_box_init         -- initialize a dynamically growing edit box
+    gui_edit_box_init_fixed   -- initialize a statically edit box
+    gui_edit_box_reset        -- resets the edit box back to the beginning
+    gui_edit_box_clear        -- frees all memory of a dynamic edit box
+    gui_edit_box_add          -- adds a symbol to the editbox
+    gui_edit_box_remove       -- removes a symbol from the editbox
+    gui_edit_box_get          -- returns the string inside the editbox
+    gui_edit_box_len          -- returns the length of the string inside the edditbox
 */
 struct gui_clipboard {
     gui_handle userdata;
@@ -722,7 +720,7 @@ gui_bool gui_filter_input_binary(gui_long unicode);
 void gui_edit_box_init(struct gui_edit_box*, struct gui_allocator*, gui_size initial,
                         gui_float grow_fac, const struct gui_clipboard*, gui_filter);
 void gui_edit_box_init_fixed(struct gui_edit_box*, void *memory, gui_size size,
-                        const struct gui_clipboard*, gui_filter);
+                                const struct gui_clipboard*, gui_filter);
 #define gui_edit_box_reset(b)\
     do {gui_buffer_reset(&(b)->buffer); (b)->cursor = (b)->glyphes = 0;} while(0);
 #define gui_edit_box_clear(b) gui_buffer_clear(&(b)->buffer)
@@ -879,6 +877,10 @@ struct gui_slider {
 struct gui_scroll {
     gui_float rounding;
     /* scrollbar rectangle rounding */
+    struct gui_color highlight;
+    /* button highlight color  */
+    struct gui_color highlight_content;
+    /* button content highlight color */
     struct gui_color background;
     /* scrollbar background color */
     struct gui_color foreground;
@@ -1628,8 +1630,7 @@ enum gui_panel_flags {
     /* The scaleable flag indicates that a panel can be scaled by user input
      * by dragging a scaler icon at the button of the panel */
     GUI_PANEL_NO_HEADER = 0x40,
-    /* To remove the header from the panel and invalidate all panel header flags
-     * the NO HEADER flags was added */
+    /* To remove the header from the panel and invalidate all panel header flags*/
     GUI_PANEL_BORDER_HEADER = 0x80,
     /* Draws a border inside the panel for the panel header seperating the body
      * and header of the panel */
@@ -1983,8 +1984,8 @@ gui_bool gui_panel_button_text_triangle(struct gui_panel_layout*, enum gui_headi
         default button behavior or pressed if repeater behavior.
 */
 gui_bool gui_panel_button_text_image(struct gui_panel_layout *layout, struct gui_image img,
-                                const char *text, enum gui_text_align align,
-                                enum gui_button_behavior behavior);
+                                    const char *text, enum gui_text_align align,
+                                    enum gui_button_behavior behavior);
 /*  this function creates a button with an icon and text
     Input:
     - image or subimage to use as an icon
@@ -2182,7 +2183,7 @@ gui_float gui_panel_shelf_end(struct gui_panel_layout*, struct gui_panel_layout*
     - The from user input updated shelf scrollbar pixel offset
 */
 void gui_panel_tree_begin(struct gui_panel_layout*, struct gui_tree*,
-                        const char*, gui_float row_height, gui_float offset);
+                            const char*, gui_float row_height, gui_float offset);
 /*  this function begins the tree building process
     Input:
     - title describing the tree or NULL
@@ -2359,7 +2360,6 @@ void gui_layout_update_pos(struct gui_layout*, gui_size x, gui_size y);
     Input:
         - position (x/y) of the layout in the window
 */
-
 void gui_layout_update_size(struct gui_layout*, gui_size width, gui_size height);
 /*  this function updates the size of the layout
     Input:
