@@ -4188,11 +4188,11 @@ gui_panel_tree_begin(struct gui_panel_layout *p, struct gui_tree *tree,
 
 static enum gui_tree_node_operation
 gui_panel_tree_node(struct gui_tree *tree, enum gui_tree_node_symbol symbol,
-    const char *title, enum gui_tree_node_state *state)
+    const char *title, struct gui_image *img, enum gui_tree_node_state *state)
 {
-    struct gui_rect bounds;
-    struct gui_rect sym, label;
     struct gui_text text;
+    struct gui_rect bounds;
+    struct gui_rect sym, label, icon;
 
     const struct gui_input *i;
     const struct gui_config *config;
@@ -4222,10 +4222,17 @@ gui_panel_tree_node(struct gui_tree *tree, enum gui_tree_node_symbol symbol,
     sym.w = config->font.height;
     sym.h = config->font.height;
 
+    if (img) {
+        icon.x = sym.x + sym.w + item_padding.x;
+        icon.y = sym.y;
+        icon.w = bounds.h;
+        icon.h = bounds.h;
+        label.x = icon.x + icon.w + item_padding.x;
+    } else label.x = sym.x + sym.w + item_padding.x;
+
     /* calculate text bounds */
     label.y = bounds.y;
     label.h = bounds.h;
-    label.x = sym.x + sym.w + item_padding.x;
     label.w = bounds.w - (sym.w + 2 * item_padding.x);
 
     /* output symbol */
@@ -4291,7 +4298,20 @@ gui_panel_tree_begin_node(struct gui_tree *tree, const char *title,
     enum gui_tree_node_state *state)
 {
     enum gui_tree_node_operation op;
-    op = gui_panel_tree_node(tree, GUI_TREE_NODE_TRIANGLE, title, state);
+    op = gui_panel_tree_node(tree, GUI_TREE_NODE_TRIANGLE, title, 0, state);
+    tree->at_x += tree->x_off;
+    if (tree->skip < 0 && !(*state & GUI_NODE_ACTIVE))
+        tree->skip = tree->depth;
+    tree->depth++;
+    return op;
+}
+
+enum gui_tree_node_operation
+gui_panel_tree_begin_node_icon(struct gui_tree *tree, const char *title,
+    struct gui_image img, enum gui_tree_node_state *state)
+{
+    enum gui_tree_node_operation op;
+    op = gui_panel_tree_node(tree, GUI_TREE_NODE_TRIANGLE, title, &img, state);
     tree->at_x += tree->x_off;
     if (tree->skip < 0 && !(*state & GUI_NODE_ACTIVE))
         tree->skip = tree->depth;
@@ -4302,7 +4322,12 @@ gui_panel_tree_begin_node(struct gui_tree *tree, const char *title,
 enum gui_tree_node_operation
 gui_panel_tree_leaf(struct gui_tree *tree, const char *title,
     enum gui_tree_node_state *state)
-{return gui_panel_tree_node(tree, GUI_TREE_NODE_BULLET, title, state);}
+{return gui_panel_tree_node(tree, GUI_TREE_NODE_BULLET, title, 0, state);}
+
+enum gui_tree_node_operation
+gui_panel_tree_leaf_icon(struct gui_tree *tree, const char *title, struct gui_image img,
+    enum gui_tree_node_state *state)
+{return gui_panel_tree_node(tree, GUI_TREE_NODE_BULLET, title, &img, state);}
 
 void
 gui_panel_tree_end_node(struct gui_tree *tree)

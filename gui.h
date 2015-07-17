@@ -1107,6 +1107,25 @@ gui_float gui_slider(struct gui_command_buffer*, gui_float x, gui_float y, gui_f
     Output:
     - returns the from the user input updated value
 */
+gui_float gui_range(struct gui_command_buffer*, gui_float x, gui_float y, gui_float,
+                    gui_float h, gui_float min, gui_float val_min,
+                    gui_float val_max, gui_float max, gui_float step,
+                    const struct gui_slider*, const struct gui_input*);
+/*  this function executes a range slider widget
+    Input:
+    - output command buffer for drawing
+    - (x,y) position
+    - (width, height) size
+    - minimal slider value that will not be underflown
+    - slider min value to be updated by the user
+    - slider max value to be updated by the user
+    - maximal slider value that will not be overflown
+    - step interval the value will be updated with
+    - visual widget style structure describing the slider
+    - input structure to update the slider with
+    Output:
+    - returns the from the user input updated value
+*/
 gui_size gui_progress(struct gui_command_buffer*, gui_float x, gui_float y,
                         gui_float w, gui_float h, gui_size value, gui_size max,
                         gui_bool modifyable, const struct gui_progress*,
@@ -1726,8 +1745,7 @@ struct gui_panel_layout {
 
 enum gui_tree_node_state {
     GUI_NODE_ACTIVE = 0x01,
-    GUI_NODE_SELECTED = 0x02,
-    GUI_NODE_DRAGGED = 0x04
+    GUI_NODE_SELECTED = 0x02
 };
 
 enum gui_tree_node_operation {
@@ -2201,6 +2219,18 @@ enum gui_tree_node_operation gui_panel_tree_begin_node(struct gui_tree*, const c
     Output:
     - operation identifier what should be done with this node
 */
+enum gui_tree_node_operation gui_panel_tree_begin_node_icon(struct gui_tree*,
+                                                    const char*, struct gui_image,
+                                                    enum gui_tree_node_state*);
+/*  this function begins a text icon parent node
+    Input:
+    - title of the node
+    - icon of the node
+    - current node state
+    Output:
+    - operation identifier what should be done with this node
+*/
+
 void gui_panel_tree_end_node(struct gui_tree*);
 /*  this function ends a parent node */
 enum gui_tree_node_operation gui_panel_tree_leaf(struct gui_tree*, const char*,
@@ -2208,6 +2238,17 @@ enum gui_tree_node_operation gui_panel_tree_leaf(struct gui_tree*, const char*,
 /*  this function pushes a leaf node to the tree
     Input:
     - title of the node
+    - current leaf node state
+    Output:
+    - operation identifier what should be done with this node
+*/
+enum gui_tree_node_operation gui_panel_tree_leaf_icon(struct gui_tree*,
+                                                    const char*, struct gui_image,
+                                                    enum gui_tree_node_state*);
+/*  this function pushes a leaf icon node to the tree
+    Input:
+    - title of the node
+    - icon of the node
     - current leaf node state
     Output:
     - operation identifier what should be done with this node
