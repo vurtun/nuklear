@@ -1067,7 +1067,7 @@ gui_edit_box_get_const(struct gui_edit_box *eb)
 }
 
 gui_char
-gui_edit_box_at_byte(struct gui_edit_box *eb, gui_size pos)
+gui_edit_box_at_char(struct gui_edit_box *eb, gui_size pos)
 {
     gui_char *c;
     GUI_ASSERT(eb);
@@ -1131,7 +1131,7 @@ gui_edit_box_get_cursor(struct gui_edit_box *eb)
 }
 
 gui_size
-gui_edit_box_len_byte(struct gui_edit_box *eb)
+gui_edit_box_len_char(struct gui_edit_box *eb)
 {
     GUI_ASSERT(eb);
     return eb->buffer.allocated;
@@ -2686,7 +2686,6 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
                 in->mouse_down)
             {
                 gui_float py;
-
                 bounds.y += in->mouse_delta.y;
                 bounds.h += -in->mouse_delta.y;
                 scaler.y = bounds.y;
@@ -2744,7 +2743,6 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
                 !(layout->flags & GUI_LAYOUT_INACTIVE))
             {
                 gui_float cx, lx;
-
                 bounds.w -= in->mouse_delta.x;
                 bounds.x += in->mouse_delta.x;
                 bounds.w = MAX(config->properties[GUI_PROPERTY_SIZE].x, bounds.w);
@@ -2913,9 +2911,9 @@ gui_panel_row_templated(struct gui_panel_layout *layout, gui_float height,
 static void
 gui_panel_alloc_row(struct gui_panel_layout *layout)
 {
+    const gui_float *ratio;
     const struct gui_config *c = layout->config;
     enum gui_panel_row_layout_type type = layout->row.type;
-    const gui_float *ratio;
     struct gui_vec2 spacing = gui_config_property(c, GUI_PROPERTY_ITEM_SPACING);
     const gui_float row_height = layout->row.height - spacing.y;
 
@@ -2952,7 +2950,7 @@ gui_panel_alloc_space(struct gui_rect *bounds, struct gui_panel_layout *layout)
     if (layout->index >= layout->row.columns)
         gui_panel_alloc_row(layout);
 
-    /* calculate the total width of the useable panel space */
+    /* calculate the useable panel space */
     panel_padding = 2 * padding.x;
     panel_spacing = (gui_float)(layout->row.columns - 1) * spacing.x;
     panel_space  = layout->width - panel_padding - panel_spacing;

@@ -719,24 +719,84 @@ gui_bool gui_filter_input_binary(gui_long unicode);
 /* editbox */
 void gui_edit_box_init(struct gui_edit_box*, struct gui_allocator*, gui_size initial,
                         gui_float grow_fac, const struct gui_clipboard*, gui_filter);
+/*  this function initializes the editbox a growing buffer
+    Input:
+    - allocator implementation
+    - initital buffer size
+    - buffer growing factor
+    - clipboard implementation for copy&paste or NULL of not needed
+    - character filtering callback to limit input or NULL of not needed
+*/
 void gui_edit_box_init_fixed(struct gui_edit_box*, void *memory, gui_size size,
                                 const struct gui_clipboard*, gui_filter);
+/*  this function initializes the editbox a static buffer
+    Input:
+    - memory block to fill
+    - sizeo of the memory block
+    - clipboard implementation for copy&paste or NULL of not needed
+    - character filtering callback to limit input or NULL of not needed
+*/
 #define gui_edit_box_reset(b)\
     do {gui_buffer_reset(&(b)->buffer); (b)->cursor = (b)->glyphes = 0;} while(0);
+/*  this function resets the buffer and sets everything back into a clean state */
 #define gui_edit_box_clear(b) gui_buffer_clear(&(b)->buffer)
+/*  this function frees all internal memory in a dynamically growing buffer */
 #define gui_edit_box_info(status, b)\
     gui_buffer_info((status), &(b)->buffer)
+/* this function return information about the memory in use  */
 void gui_edit_box_add(struct gui_edit_box*, const char*, gui_size);
+/*  this function adds text at the current cursor position
+    Input:
+    - string buffer or glyph to copy/add to the buffer
+    - length of the string buffer or glyph
+*/
 void gui_edit_box_remove(struct gui_edit_box*);
+/*  removes the glyph at the current cursor position */
 gui_char *gui_edit_box_get(struct gui_edit_box*);
+/* returns the string buffer inside the edit box */
 const gui_char *gui_edit_box_get_const(struct gui_edit_box*);
+/* returns the constant string buffer inside the edit box */
 void gui_edit_box_at(struct gui_edit_box*, gui_size pos, gui_glyph, gui_size*);
+/*  this function returns the glyph at a given offset
+    Input:
+    - glyph offset inside the buffer
+    Output:
+    - utf8 glyph at the given position
+    - byte length of the glyph
+*/
 void gui_edit_box_at_cursor(struct gui_edit_box*, gui_glyph, gui_size*);
-gui_char gui_edit_box_at_byte(struct gui_edit_box*, gui_size pos);
+/*  this function returns the glyph at the cursor
+    Output:
+    - utf8 glyph at the cursor position
+    - byte length of the glyph
+*/
+gui_char gui_edit_box_at_char(struct gui_edit_box*, gui_size pos);
+/*  this function returns the character at a given byte position
+    Input:
+    - character offset inside the buffer
+    Output:
+    - character at the given position
+*/
 void gui_edit_box_set_cursor(struct gui_edit_box*, gui_size pos);
+/*  this function sets the cursor at a given glyph position
+    Input:
+    - glyph offset inside the buffer
+*/
 gui_size gui_edit_box_get_cursor(struct gui_edit_box *eb);
-gui_size gui_edit_box_len_byte(struct gui_edit_box*);
+/*  this function returns the cursor glyph position
+    Output:
+    - cursor glyph offset inside the buffer
+*/
+gui_size gui_edit_box_len_char(struct gui_edit_box*);
+/*  this function returns length of the buffer in bytes
+    Output:
+    - string buffer byte length
+*/
 gui_size gui_edit_box_len(struct gui_edit_box*);
+/*  this function returns length of the buffer in glyphes
+    Output:
+    - string buffer glyph length
+*/
 /*
  * ==============================================================
  *
