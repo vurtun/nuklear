@@ -1110,7 +1110,7 @@ gui_edit_box_at_cursor(struct gui_edit_box *eb, gui_glyph g, gui_size *len)
         return;
     }
     cursor = (eb->cursor) ? eb->cursor-1 : 0;
-    gui_edit_box_at(eb, 0, g, len);
+    gui_edit_box_at(eb, cursor, g, len);
 }
 
 void
@@ -1593,7 +1593,6 @@ static gui_size
 gui_utf_glyph_index_at_pos(const struct gui_font *font, const char *text,
     gui_size text_len, gui_float xoff)
 {
-    gui_size i = 0;
     gui_long unicode;
     gui_size glyph_offset = 0;
     gui_size glyph_len = gui_utf_decode(text, &unicode, text_len);
@@ -2649,18 +2648,17 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
 
         switch (slot) {
         case GUI_SLOT_TOP:
-            s = &layout->slots[GUI_SLOT_TOP];
             scaler.x = bounds.x;
             scaler.y = (bounds.y + bounds.h) - config->scaler_width;
             scaler.w = bounds.w;
             scaler.h = config->scaler_width;
 
             if (in && s->state!=GUI_LOCKED && !(layout->flags&GUI_LAYOUT_INACTIVE) &&
-                in->mouse_down &&
-                GUI_INBOX(mpos.x, mpos.y, scaler.x, scaler.y, scaler.w, scaler.h)) {
-                gui_float py, dy = in->mouse_delta.y;
-
-                bounds.h += dy;
+                GUI_INBOX(mpos.x, mpos.y, scaler.x, scaler.y, scaler.w, scaler.h) &&
+                in->mouse_down)
+            {
+                gui_float py;
+                bounds.h += in->mouse_delta.y;
                 bounds.h = MAX(config->properties[GUI_PROPERTY_SIZE].y, bounds.h);
                 scaler.y = (bounds.y + bounds.h) - config->scaler_width;
 
@@ -2678,19 +2676,19 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
             bounds.h -= config->scaler_width;
             break;
         case GUI_SLOT_BOTTOM:
-            s = &layout->slots[GUI_SLOT_BOTTOM];
             scaler.x = bounds.x;
             scaler.y = bounds.y;
             scaler.w = bounds.w;
             scaler.h = config->scaler_width;
 
             if (in && s->state != GUI_LOCKED && !(layout->flags & GUI_LAYOUT_INACTIVE) &&
-                in->mouse_down &&
-                GUI_INBOX(mpos.x, mpos.y, scaler.x, scaler.y, scaler.w, scaler.h)) {
-                gui_float py, dy = in->mouse_delta.y;
+                GUI_INBOX(mpos.x, mpos.y, scaler.x, scaler.y, scaler.w, scaler.h) &&
+                in->mouse_down)
+            {
+                gui_float py;
 
-                bounds.y += dy;
-                bounds.h += -dy;
+                bounds.y += in->mouse_delta.y;
+                bounds.h += -in->mouse_delta.y;
                 scaler.y = bounds.y;
 
                 py = 1.0f - ((bounds.h / (gui_float)layout->height) +
@@ -2706,19 +2704,17 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
             bounds.h -= config->scaler_width;
             break;
         case GUI_SLOT_LEFT:
-            s = &layout->slots[GUI_SLOT_LEFT];
             scaler.x = bounds.x + bounds.w - config->scaler_width;
             scaler.y = bounds.y;
             scaler.w = config->scaler_width;
             scaler.h = bounds.h;
 
             if (in && s->state != GUI_LOCKED &&  in->mouse_down &&
-                !(layout->flags & GUI_LAYOUT_INACTIVE) &&
-                GUI_INBOX(mpos.x, mpos.y, scaler.x, scaler.y, scaler.w, scaler.h)) {
-                gui_float dx = in->mouse_delta.x;
+                GUI_INBOX(mpos.x, mpos.y, scaler.x, scaler.y, scaler.w, scaler.h) &&
+                !(layout->flags & GUI_LAYOUT_INACTIVE))
+            {
                 gui_float cx, rx;
-
-                bounds.w += dx;
+                bounds.w += in->mouse_delta.x;
                 bounds.w = MAX(config->properties[GUI_PROPERTY_SIZE].x, bounds.w);
                 scaler.x = bounds.x + bounds.w - config->scaler_width;
 
@@ -2738,20 +2734,19 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
             bounds.w -= config->scaler_width;
             break;
         case GUI_SLOT_RIGHT:
-            s = &layout->slots[GUI_SLOT_LEFT];
             scaler.x = bounds.x;
             scaler.y = bounds.y;
             scaler.w = config->scaler_width;
             scaler.h = bounds.h;
 
-            if (in && s->state != GUI_LOCKED && in->mouse_down &&
-                !(layout->flags & GUI_LAYOUT_INACTIVE) &&
-                GUI_INBOX(mpos.x, mpos.y, scaler.x, scaler.y, scaler.w, scaler.h)) {
-                gui_float dx = in->mouse_delta.x;
+            if (in && layout->slots[GUI_SLOT_LEFT].state != GUI_LOCKED && in->mouse_down &&
+                GUI_INBOX(mpos.x, mpos.y, scaler.x, scaler.y, scaler.w, scaler.h) &&
+                !(layout->flags & GUI_LAYOUT_INACTIVE))
+            {
                 gui_float cx, lx;
 
-                bounds.w -= dx;
-                bounds.x += dx;
+                bounds.w -= in->mouse_delta.x;
+                bounds.x += in->mouse_delta.x;
                 bounds.w = MAX(config->properties[GUI_PROPERTY_SIZE].x, bounds.w);
                 scaler.x = bounds.x;
 
@@ -2899,6 +2894,7 @@ gui_panel_row_templated(struct gui_panel_layout *layout, gui_float height,
     if (!layout) return;
     if (!layout->valid) return;
 
+    /* calculate width of undefined widget ratios */
     gui_panel_row(layout, height, cols);
     layout->row.ratio = ratio;
     for (i = 0; i < cols; ++i) {
@@ -4188,7 +4184,7 @@ gui_panel_tree_begin(struct gui_panel_layout *p, struct gui_tree *tree,
 
 static enum gui_tree_node_operation
 gui_panel_tree_node(struct gui_tree *tree, enum gui_tree_node_symbol symbol,
-    const char *title, struct gui_image *img, enum gui_tree_node_state *state)
+    const char *title, struct gui_image *img, gui_tree_node_state *state)
 {
     struct gui_text text;
     struct gui_rect bounds;
@@ -4243,7 +4239,7 @@ gui_panel_tree_node(struct gui_tree *tree, enum gui_tree_node_symbol symbol,
         if (gui_input_clicked(i, &sym)) {
             if (*state & GUI_NODE_ACTIVE)
                 *state &= ~(gui_flags)GUI_NODE_ACTIVE;
-            else *state |= GUI_NODE_ACTIVE;
+            else *state |=  (gui_flags)GUI_NODE_ACTIVE;
         }
         heading = (*state & GUI_NODE_ACTIVE) ? GUI_DOWN : GUI_RIGHT;
         gui_triangle_from_direction(points, sym.x, sym.y, sym.w, sym.h, 0, 0, heading);
@@ -4258,7 +4254,7 @@ gui_panel_tree_node(struct gui_tree *tree, enum gui_tree_node_symbol symbol,
     if (gui_input_clicked(i, &label)) {
         if (*state & GUI_NODE_SELECTED)
             *state &= ~(gui_flags)GUI_NODE_SELECTED;
-        else *state |= GUI_NODE_SELECTED;
+        else *state |= (gui_flags)GUI_NODE_SELECTED;
     }
 
     {
@@ -4295,7 +4291,7 @@ gui_panel_tree_node(struct gui_tree *tree, enum gui_tree_node_symbol symbol,
 
 enum gui_tree_node_operation
 gui_panel_tree_begin_node(struct gui_tree *tree, const char *title,
-    enum gui_tree_node_state *state)
+    gui_tree_node_state *state)
 {
     enum gui_tree_node_operation op;
     op = gui_panel_tree_node(tree, GUI_TREE_NODE_TRIANGLE, title, 0, state);
@@ -4308,7 +4304,7 @@ gui_panel_tree_begin_node(struct gui_tree *tree, const char *title,
 
 enum gui_tree_node_operation
 gui_panel_tree_begin_node_icon(struct gui_tree *tree, const char *title,
-    struct gui_image img, enum gui_tree_node_state *state)
+    struct gui_image img, gui_tree_node_state *state)
 {
     enum gui_tree_node_operation op;
     op = gui_panel_tree_node(tree, GUI_TREE_NODE_TRIANGLE, title, &img, state);
@@ -4321,12 +4317,12 @@ gui_panel_tree_begin_node_icon(struct gui_tree *tree, const char *title,
 
 enum gui_tree_node_operation
 gui_panel_tree_leaf(struct gui_tree *tree, const char *title,
-    enum gui_tree_node_state *state)
+    gui_tree_node_state *state)
 {return gui_panel_tree_node(tree, GUI_TREE_NODE_BULLET, title, 0, state);}
 
 enum gui_tree_node_operation
 gui_panel_tree_leaf_icon(struct gui_tree *tree, const char *title, struct gui_image img,
-    enum gui_tree_node_state *state)
+    gui_tree_node_state *state)
 {return gui_panel_tree_node(tree, GUI_TREE_NODE_BULLET, title, &img, state);}
 
 void

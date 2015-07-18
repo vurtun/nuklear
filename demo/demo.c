@@ -4,7 +4,7 @@
 #define WINDOW_HEIGHT 600
 
 struct tree_node {
-    enum gui_tree_node_state state;
+    gui_tree_node_state state;
     const char *name;
     struct tree_node *parent;
     struct tree_node *children[8];
@@ -112,7 +112,9 @@ widget_panel(struct gui_panel_layout *panel, struct show_window *demo)
     gui_panel_row(panel, 30, 2);
     if (gui_panel_option(panel, "option 0", demo->option == 0)) demo->option = 0;
     if (gui_panel_option(panel, "option 1", demo->option == 1)) demo->option = 1;
+
     {
+        /* templated row layout */
         char buffer[MAX_BUFFER];
         const gui_float ratio[] = {0.8f, 0.2f};
         gui_panel_row_templated(panel, 30, 2, ratio);
@@ -129,12 +131,14 @@ widget_panel(struct gui_panel_layout *panel, struct show_window *demo)
     demo->spinner = gui_panel_spinner(panel, 0, demo->spinner, 250, 10, &demo->spinner_active);
 
     gui_panel_row_begin(panel, 30, 2);
-    gui_panel_row_push_widget(panel, 0.7f);
-    gui_panel_editbox(panel, &demo->input);
-    gui_panel_row_push_widget(panel, 0.3f);
-    if (gui_panel_button_text(panel, "submit", GUI_BUTTON_DEFAULT)) {
-        gui_edit_box_reset(&demo->input);
-        fprintf(stdout, "command executed!\n");
+    {
+        gui_panel_row_push_widget(panel, 0.7f);
+        gui_panel_editbox(panel, &demo->input);
+        gui_panel_row_push_widget(panel, 0.3f);
+        if (gui_panel_button_text(panel, "submit", GUI_BUTTON_DEFAULT)) {
+            gui_edit_box_reset(&demo->input);
+            fprintf(stdout, "command executed!\n");
+        }
     }
     gui_panel_row_end(panel);
 }
@@ -322,31 +326,37 @@ update_show(struct show_window *show, struct gui_stack *stack, struct gui_input 
     gui_panel_begin_stacked(&layout, &show->hook, stack, "Show", in);
 
     show->combobox_tab = gui_panel_tab_begin(&layout, &tab, "Combobox",
-                                            GUI_BORDER, show->combobox_tab);
-    combobox_panel(&tab, show);
-    gui_panel_tab_end(&layout, &tab);
-
-    show->widget_tab = gui_panel_tab_begin(&layout, &tab, "Widgets",GUI_BORDER, show->widget_tab);
-    widget_panel(&tab, show);
-    gui_panel_tab_end(&layout, &tab);
-
-    gui_panel_row(&layout, 180, 1);
-    show->shelf_selection = gui_panel_shelf_begin(&layout, &tab, shelfs,
-        LEN(shelfs), show->shelf_selection, show->shelf_scrollbar);
-    graph_panel(&tab, show->shelf_selection);
-    show->shelf_scrollbar = gui_panel_shelf_end(&layout, &tab);
-
-    gui_panel_row(&layout, 180, 1);
-    gui_panel_group_begin(&layout, &tab, "Table", show->table_scrollbar);
-    table_panel(&tab);
-    show->table_scrollbar = gui_panel_group_end(&layout, &tab);
-
+                            GUI_BORDER, show->combobox_tab);
     {
-        struct gui_tree tree;
-        gui_panel_row(&layout, 250, 1);
-        gui_panel_tree_begin(&layout, &tree, "Tree", 20, show->tree_offset);
-        upload_tree(&show->tree, &tree, &show->tree.root);
-        show->tree_offset = gui_panel_tree_end(&layout, &tree);
+        combobox_panel(&tab, show);
+        gui_panel_tab_end(&layout, &tab);
+
+        /* Widgets */
+        show->widget_tab = gui_panel_tab_begin(&layout, &tab, "Widgets",GUI_BORDER, show->widget_tab);
+        widget_panel(&tab, show);
+        gui_panel_tab_end(&layout, &tab);
+
+        /* Graph */
+        gui_panel_row(&layout, 180, 1);
+        show->shelf_selection = gui_panel_shelf_begin(&layout, &tab, shelfs,
+            LEN(shelfs), show->shelf_selection, show->shelf_scrollbar);
+        graph_panel(&tab, show->shelf_selection);
+        show->shelf_scrollbar = gui_panel_shelf_end(&layout, &tab);
+
+        /* Table */
+        gui_panel_row(&layout, 180, 1);
+        gui_panel_group_begin(&layout, &tab, "Table", show->table_scrollbar);
+        table_panel(&tab);
+        show->table_scrollbar = gui_panel_group_end(&layout, &tab);
+
+        {
+            /* Tree */
+            struct gui_tree tree;
+            gui_panel_row(&layout, 250, 1);
+            gui_panel_tree_begin(&layout, &tree, "Tree", 20, show->tree_offset);
+            upload_tree(&show->tree, &tree, &show->tree.root);
+            show->tree_offset = gui_panel_tree_end(&layout, &tree);
+        }
     }
     gui_panel_end(&layout, &show->hook);
 }
@@ -494,22 +504,23 @@ update_control(struct control_window *control, struct gui_stack *stack,
     struct gui_panel_layout tab;
 
     running = gui_panel_begin_stacked(&layout, &control->hook, stack, "Control", in);
-    control->flag_tab = gui_panel_tab_begin(&layout, &tab, "Options", GUI_BORDER, control->flag_tab);
-    update_flags(&tab, control);
-    gui_panel_tab_end(&layout, &tab);
+    {
+        control->flag_tab = gui_panel_tab_begin(&layout, &tab, "Options", GUI_BORDER, control->flag_tab);
+        update_flags(&tab, control);
+        gui_panel_tab_end(&layout, &tab);
 
-    control->style_tab = gui_panel_tab_begin(&layout, &tab, "Properties", GUI_BORDER, control->style_tab);
-    properties_tab(&tab, config);
-    gui_panel_tab_end(&layout, &tab);
+        control->style_tab = gui_panel_tab_begin(&layout, &tab, "Properties", GUI_BORDER, control->style_tab);
+        properties_tab(&tab, config);
+        gui_panel_tab_end(&layout, &tab);
 
-    control->round_tab = gui_panel_tab_begin(&layout, &tab, "Rounding", GUI_BORDER, control->round_tab);
-    round_tab(&tab, config);
-    gui_panel_tab_end(&layout, &tab);
+        control->round_tab = gui_panel_tab_begin(&layout, &tab, "Rounding", GUI_BORDER, control->round_tab);
+        round_tab(&tab, config);
+        gui_panel_tab_end(&layout, &tab);
 
-    control->color_tab = gui_panel_tab_begin(&layout, &tab, "Color", GUI_BORDER, control->color_tab);
-    color_tab(&tab, control, config);
-    gui_panel_tab_end(&layout, &tab);
-
+        control->color_tab = gui_panel_tab_begin(&layout, &tab, "Color", GUI_BORDER, control->color_tab);
+        color_tab(&tab, control, config);
+        gui_panel_tab_end(&layout, &tab);
+    }
     gui_panel_end(&layout, &control->hook);
     return running;
 }

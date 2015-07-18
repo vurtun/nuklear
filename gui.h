@@ -1743,10 +1743,9 @@ struct gui_panel_layout {
     /* command draw call output command buffer */
 };
 
-enum gui_tree_node_state {
-    GUI_NODE_ACTIVE = 0x01,
-    GUI_NODE_SELECTED = 0x02
-};
+#define GUI_NODE_ACTIVE 0x01
+#define GUI_NODE_SELECTED 0x02
+typedef gui_flag gui_tree_node_state;
 
 enum gui_tree_node_operation {
     GUI_NODE_NOP,
@@ -2211,7 +2210,7 @@ void gui_panel_tree_begin(struct gui_panel_layout*, struct gui_tree*,
     - tree build up state structure
 */
 enum gui_tree_node_operation gui_panel_tree_begin_node(struct gui_tree*, const char*,
-                                                    enum gui_tree_node_state*);
+                                                    gui_tree_node_state*);
 /*  this function begins a parent node
     Input:
     - title of the node
@@ -2221,7 +2220,7 @@ enum gui_tree_node_operation gui_panel_tree_begin_node(struct gui_tree*, const c
 */
 enum gui_tree_node_operation gui_panel_tree_begin_node_icon(struct gui_tree*,
                                                     const char*, struct gui_image,
-                                                    enum gui_tree_node_state*);
+                                                    gui_tree_node_state*);
 /*  this function begins a text icon parent node
     Input:
     - title of the node
@@ -2234,7 +2233,7 @@ enum gui_tree_node_operation gui_panel_tree_begin_node_icon(struct gui_tree*,
 void gui_panel_tree_end_node(struct gui_tree*);
 /*  this function ends a parent node */
 enum gui_tree_node_operation gui_panel_tree_leaf(struct gui_tree*, const char*,
-                                                    enum gui_tree_node_state*);
+                                                    gui_tree_node_state*);
 /*  this function pushes a leaf node to the tree
     Input:
     - title of the node
@@ -2244,7 +2243,7 @@ enum gui_tree_node_operation gui_panel_tree_leaf(struct gui_tree*, const char*,
 */
 enum gui_tree_node_operation gui_panel_tree_leaf_icon(struct gui_tree*,
                                                     const char*, struct gui_image,
-                                                    enum gui_tree_node_state*);
+                                                    gui_tree_node_state*);
 /*  this function pushes a leaf icon node to the tree
     Input:
     - title of the node
