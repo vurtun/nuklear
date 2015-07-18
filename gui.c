@@ -4239,7 +4239,7 @@ gui_panel_tree_node(struct gui_tree *tree, enum gui_tree_node_symbol symbol,
         if (gui_input_clicked(i, &sym)) {
             if (*state & GUI_NODE_ACTIVE)
                 *state &= ~(gui_flags)GUI_NODE_ACTIVE;
-            else *state |=  (gui_flags)GUI_NODE_ACTIVE;
+            else *state |= GUI_NODE_ACTIVE;
         }
         heading = (*state & GUI_NODE_ACTIVE) ? GUI_DOWN : GUI_RIGHT;
         gui_triangle_from_direction(points, sym.x, sym.y, sym.w, sym.h, 0, 0, heading);
@@ -4254,7 +4254,7 @@ gui_panel_tree_node(struct gui_tree *tree, enum gui_tree_node_symbol symbol,
     if (gui_input_clicked(i, &label)) {
         if (*state & GUI_NODE_SELECTED)
             *state &= ~(gui_flags)GUI_NODE_SELECTED;
-        else *state |= (gui_flags)GUI_NODE_SELECTED;
+        else *state |= GUI_NODE_SELECTED;
     }
 
     {

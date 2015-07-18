@@ -1743,9 +1743,11 @@ struct gui_panel_layout {
     /* command draw call output command buffer */
 };
 
-#define GUI_NODE_ACTIVE 0x01
-#define GUI_NODE_SELECTED 0x02
-typedef gui_flag gui_tree_node_state;
+enum gui_tree_nodes_states {
+    GUI_NODE_ACTIVE = 0x01,
+    GUI_NODE_SELECTED = 0x02
+};
+typedef gui_flags gui_tree_node_state;
 
 enum gui_tree_node_operation {
     GUI_NODE_NOP,
