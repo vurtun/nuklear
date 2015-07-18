@@ -3032,8 +3032,7 @@ gui_panel_row_columns(const struct gui_panel_layout *l, gui_size widget_size)
 
     GUI_ASSERT(l);
     GUI_ASSERT(widget_size);
-    GUI_ASSERT(l->row.type == GUI_PANEL_ROW_LAYOUT_TABLE);
-    if (!l || l->row.type != GUI_PANEL_ROW_LAYOUT_TABLE || !widget_size)
+    if (!l || !widget_size)
         return 0;
 
     /* calculate the number of widgets with given size that fit into the current
@@ -3108,7 +3107,6 @@ gui_panel_text_colored(struct gui_panel_layout *layout, const char *str, gui_siz
     GUI_ASSERT(layout);
     GUI_ASSERT(layout->config);
     GUI_ASSERT(layout->buffer);
-    GUI_ASSERT(str && len);
 
     if (!layout || !layout->config || !layout->buffer) return;
     if (!layout->valid) return;
