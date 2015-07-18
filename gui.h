@@ -1030,8 +1030,8 @@ struct gui_selector {
 };
 
 void gui_text(struct gui_command_buffer*, gui_float, gui_float, gui_float, gui_float,
-                    const char *text, gui_size len, const struct gui_text*,
-                    enum gui_text_align, const struct gui_font*);
+                const char *text, gui_size len, const struct gui_text*,
+                enum gui_text_align, const struct gui_font*);
 /*  this function executes a text widget with text alignment
     Input:
     - output command buffer for drawing
@@ -1964,6 +1964,11 @@ void gui_panel_label_colored(struct gui_panel_layout*, const char*,
     - text alignment with either left, centered or right alignment
     - color the label should be drawn
 */
+void gui_panel_image(struct gui_panel_layout*, struct gui_image);
+/*  this function creates an image widget
+    Input:
+    - string pointer to text that should be drawn
+*/
 gui_bool gui_panel_check(struct gui_panel_layout*, const char*, gui_bool active);
 /*  this function creates a checkbox widget with either active or inactive state
     Input:
@@ -2272,7 +2277,6 @@ enum gui_tree_node_operation gui_panel_tree_begin_node_icon(struct gui_tree*,
     Output:
     - operation identifier what should be done with this node
 */
-
 void gui_panel_tree_end_node(struct gui_tree*);
 /*  this function ends a parent node */
 enum gui_tree_node_operation gui_panel_tree_leaf(struct gui_tree*, const char*,

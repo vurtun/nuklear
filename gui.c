@@ -3143,6 +3143,26 @@ gui_panel_label(struct gui_panel_layout *layout, const char *text,
     gui_panel_text(layout, text, len, align);
 }
 
+void
+gui_panel_image(struct gui_panel_layout *layout, struct gui_image img)
+{
+    const struct gui_config *config;
+    struct gui_vec2 item_padding;
+    struct gui_rect bounds;
+    GUI_ASSERT(layout);
+    if (!gui_panel_widget(&bounds, layout))
+        return;
+
+    config = layout->config;
+    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
+    bounds.x += item_padding.x;
+    bounds.y += item_padding.y;
+    bounds.w -= 2 * item_padding.x;
+    bounds.h -= 2 * item_padding.y;
+    gui_command_buffer_push_image(layout->buffer, bounds.x, bounds.y,
+        bounds.w, bounds.h, &img);
+}
+
 static gui_bool
 gui_panel_button(struct gui_button *button, struct gui_rect *bounds,
     struct gui_panel_layout *layout)
@@ -3813,8 +3833,15 @@ static void
 gui_panel_table_vline(struct gui_panel_layout *layout, gui_size cols)
 {
     gui_size i;
-    struct gui_command_buffer *out = layout->buffer;
-    const struct gui_config *config = layout->config;
+    struct gui_command_buffer *out;
+    const struct gui_config *config;
+
+    GUI_ASSERT(layout);
+    GUI_ASSERT(cols);
+    if (!layout || !cols) return;
+
+    out = layout->buffer;
+    config = layout->config;
     for (i = 0; i < cols - 1; ++i) {
         gui_float y, h;
         struct gui_rect bounds;
@@ -4237,6 +4264,7 @@ gui_panel_tree_node(struct gui_tree *tree, enum gui_tree_node_symbol symbol,
                 *state &= ~(gui_flags)GUI_NODE_ACTIVE;
             else *state |= GUI_NODE_ACTIVE;
         }
+
         heading = (*state & GUI_NODE_ACTIVE) ? GUI_DOWN : GUI_RIGHT;
         gui_triangle_from_direction(points, sym.x, sym.y, sym.w, sym.h, 0, 0, heading);
         gui_command_buffer_push_triangle(layout->buffer,  points[0].x, points[0].y,
@@ -4355,13 +4383,15 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
 
     config = layout->config;
     out = layout->buffer;
+    if (!(panel->flags & GUI_PANEL_TAB))
+        gui_command_buffer_push_scissor(out, layout->x,layout->y,layout->w+1,layout->h+1);
+
+    /* cache configuration data */
     item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
     item_spacing = gui_config_property(config, GUI_PROPERTY_ITEM_SPACING);
     panel_padding = gui_config_property(config, GUI_PROPERTY_PADDING);
     scrollbar_width = gui_config_property(config, GUI_PROPERTY_SCROLLBAR_WIDTH).x;
     scaler_size = gui_config_property(config, GUI_PROPERTY_SCALER_SIZE);
-    if (!(panel->flags & GUI_PANEL_TAB))
-        gui_command_buffer_push_scissor(out, layout->x,layout->y,layout->w+1,layout->h+1);
 
     if (panel->flags & GUI_PANEL_SCROLLBAR && layout->valid) {
         struct gui_scroll scroll;
