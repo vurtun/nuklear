@@ -19,6 +19,7 @@ struct test_tree {
 
 struct show_window {
     struct gui_panel hook;
+    gui_flags header_flags;
     /* input buffer */
     gui_char input_buffer[MAX_BUFFER];
     struct gui_edit_box input;
@@ -52,6 +53,7 @@ struct show_window {
 struct control_window {
     struct gui_panel hook;
     gui_flags show_flags;
+    gui_flags header_flags;
     /* tabs */
     gui_bool flag_tab;
     gui_bool style_tab;
@@ -79,18 +81,6 @@ struct demo_gui {
     struct show_window show;
     struct gui_stack stack;
 };
-
-static void
-combobox_panel(struct gui_panel_layout *panel, struct show_window *demo)
-{
-    gui_int i = 0;
-    static const char *options[] = {"easy", "normal", "hard", "hell", "doom", "godlike"};
-    gui_panel_row(panel, 30, 3);
-    for (i = 0; i < (gui_int)LEN(options); i++) {
-        if (gui_panel_option(panel, options[i], demo->combo_selection == i))
-            demo->combo_selection = i;
-    }
-}
 
 static void
 widget_panel(struct gui_panel_layout *panel, struct show_window *demo)
@@ -180,16 +170,17 @@ init_show(struct show_window *win, struct gui_config *config,
     memset(win, 0, sizeof(*win));
     gui_panel_init(&win->hook, 20, 20, 300, 550,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
-        GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
-        GUI_PANEL_MINIMIZABLE|GUI_PANEL_HIDDEN, buffer, config);
+        GUI_PANEL_SCALEABLE, buffer, config);
     gui_stack_push(stack, &win->hook);
     gui_edit_box_init_fixed(&win->input, win->input_buffer, MAX_BUFFER, NULL, NULL);
 
-    win->widget_tab = GUI_MINIMIZED;
+    win->header_flags = GUI_CLOSEABLE|GUI_MINIMIZABLE;
+    win->widget_tab = GUI_MAXIMIZED;
     win->combobox_tab = GUI_MINIMIZED;
     win->slider = 10.0f;
     win->progressbar = 50;
     win->spinner = 100;
+    win->hook.offset = 180;
 
     {
         struct test_tree *tree = &win->tree;
@@ -323,14 +314,9 @@ update_show(struct show_window *show, struct gui_stack *stack, struct gui_input 
     struct gui_panel_layout tab;
     struct gui_panel_layout layout;
     static const char *shelfs[] = {"Histogram", "Lines"};
-    gui_panel_begin_stacked(&layout, &show->hook, stack, "Show", in);
-
-    show->combobox_tab = gui_panel_tab_begin(&layout, &tab, "Combobox",
-                            GUI_BORDER, show->combobox_tab);
+    gui_panel_begin_stacked(&layout, &show->hook, stack, in);
+    gui_panel_header(&layout, "Show", show->header_flags, 0);
     {
-        combobox_panel(&tab, show);
-        gui_panel_tab_end(&layout, &tab);
-
         /* Widgets */
         show->widget_tab = gui_panel_tab_begin(&layout, &tab, "Widgets",GUI_BORDER, show->widget_tab);
         widget_panel(&tab, show);
@@ -367,7 +353,7 @@ update_flags(struct gui_panel_layout *panel, struct control_window *control)
     gui_size n = 0;
     gui_flags res = 0;
     gui_flags i = 0x01;
-    const char *options[]={"Hidden","Border","Minimizable","Closeable","Moveable","Scaleable"};
+    const char *options[]={"Hidden","Border","Header Border", "Moveable","Scaleable"};
     gui_panel_row(panel, 30, 2);
     do {
         if (gui_panel_check(panel,options[n++],(control->show_flags & i)?gui_true:gui_false))
@@ -488,8 +474,7 @@ init_control(struct control_window *win, struct gui_config *config,
 {
     memset(win, 0, sizeof(*win));
     gui_panel_init(&win->hook, 380, 20, 350, 500,
-        GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE,
-        buffer, config);
+        GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE, buffer, config);
     gui_stack_push(stack, &win->hook);
     win->show_flags = win->hook.flags;
     win->color_tab = GUI_MINIMIZED;
@@ -503,7 +488,8 @@ update_control(struct control_window *control, struct gui_stack *stack,
     struct gui_panel_layout layout;
     struct gui_panel_layout tab;
 
-    running = gui_panel_begin_stacked(&layout, &control->hook, stack, "Control", in);
+    gui_panel_begin_stacked(&layout, &control->hook, stack, in);
+    running = !gui_panel_header(&layout, "Control", GUI_CLOSEABLE|GUI_MINIMIZABLE, GUI_CLOSEABLE);
     {
         control->flag_tab = gui_panel_tab_begin(&layout, &tab, "Options", GUI_BORDER, control->flag_tab);
         update_flags(&tab, control);
@@ -540,7 +526,7 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
     gui_stack_clear(&gui->stack);
     init_show(&gui->show, config, &gui->show_buffer, &gui->stack);
     init_control(&gui->control, config, &gui->control_buffer, &gui->stack);
-    gui->show.hook.flags |= GUI_PANEL_HIDDEN;
+    gui->control.header_flags = gui->show.header_flags;
 }
 
 static void
@@ -553,8 +539,9 @@ run_demo(struct demo_gui *gui, struct gui_input *input)
     if (show->hook.flags & GUI_PANEL_ACTIVE)
         show->hook.flags = control->show_flags|GUI_PANEL_ACTIVE;
     else show->hook.flags = control->show_flags;
-    update_show(show, &gui->stack, input);
     if (show->hook.flags & GUI_PANEL_HIDDEN)
         control->show_flags |= GUI_PANEL_HIDDEN;
+    gui->show.header_flags = gui->control.header_flags;
+    update_show(show, &gui->stack, input);
 }
 

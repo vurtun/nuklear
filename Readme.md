@@ -55,9 +55,8 @@ gui_config_default(&config, GUI_DEFAULT_ALL, &font);
 /* initialize panel */
 struct gui_panel panel;
 gui_panel_init(&panel, 50, 50, 220, 170,
-    GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
-    GUI_PANEL_CLOSEABLE|GUI_PANEL_SCALEABLE|
-    GUI_PANEL_MINIMIZABLE, &buffer, &config);
+    GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE
+    &buffer, &config);
 
 /* setup widget data */
 gui_size len = 0;
@@ -73,7 +72,8 @@ while (1) {
 
     /* GUI */
     struct gui_panel_layout layout;
-    gui_panel_begin(&layout, &panel, "Demo", &input);
+    gui_panel_begin(&layout, &panel, &input);
+    gui_panel_header(&layout, "Show", GUI_CLOSEABLE|GUI_MINIMIZABLE, 0);
     gui_panel_row(&layout, 30, 1);
     if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT)) {
         /* event handling */
@@ -286,7 +286,7 @@ gui_config_default(&config, GUI_DEFAULT_ALL, &font);
 
 /* setup panel */
 struct gui_panel panel;
-gui_panel_init(&panel, 50, 50, 300, 200, 0, &buffer, &config);
+gui_panel_init(&panel, 50, 50, 300, 200, GUI_PANEL_MOVEABLE, &buffer, &config);
 
 /* setup stack */
 struct gui_stack stack;
@@ -300,7 +300,8 @@ while (1) {
     gui_input_end(&input);
 
     struct gui_panel_layout layout;
-    gui_panel_begin_stacked(&layout, &panel, &stack, "Demo", &input);
+    gui_panel_begin_stacked(&layout, &panel, &stack, &input);
+    gui_panel_header(&layout, "Demo", GUI_CLOSEABLE|GUI_MINIMIZABLE, 0);
     gui_panel_row(&layout, 30, 1);
     if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");

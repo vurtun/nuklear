@@ -24,6 +24,8 @@
 #define GUI_INBOX(px, py, x, y, w, h) (GUI_BETWEEN(px,x,x+w) && GUI_BETWEEN(py,y,y+h))
 #define GUI_INTERSECT(x0, y0, w0, h0, x1, y1, w1, h1) \
     (!(((x1 > (x0 + w0)) || ((x1 + w1) < x0) || (y1 > (y0 + h0)) || (y1 + h1) < y0)))
+#define GUI_CONTAINS(x, y, w, h, bx, by, bw, bh)\
+    (GUI_INBOX(x,y, bx, by, bw, bh) && GUI_INBOX(x+w,y+h, bx, by, bw, bh))
 
 #define gui_vec2_mov(to,from) (to).x = (from).x, (to).y = (from).y
 #define gui_vec2_sub(r,a,b) do {(r).x=(a).x-(b).x; (r).y=(a).y-(b).y;} while(0)
@@ -1684,7 +1686,7 @@ gui_editbox(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float 
             GUI_INBOX(in->mouse_pos.x, in->mouse_pos.y, x, y, input_w, input_h))
         {
             gui_float xoff = in->mouse_pos.x - (x + field->border_size);
-            gui_size glyph_pos = gui_utf_glyph_index_at_pos(font, buffer + offset, text_len, xoff);
+            gui_size glyph_pos=gui_utf_glyph_index_at_pos(font,buffer+offset,text_len,xoff);
             gui_edit_box_set_cursor(box, glyph_pos);
         }
 
@@ -2278,7 +2280,6 @@ gui_panel_init(struct gui_panel *panel, gui_float x, gui_float y, gui_float w,
     panel->config = config;
     panel->buffer = buffer;
     panel->offset = 0;
-    panel->minimized = gui_false;
 }
 
 void
@@ -2301,70 +2302,40 @@ gui_panel_set_buffer(struct gui_panel *panel, struct gui_command_buffer *buffer)
 
 void
 gui_panel_add_flag(struct gui_panel *panel, gui_flags f)
-{
-    panel->flags |= f;
-}
+{panel->flags |= f;}
 
 void
 gui_panel_remove_flag(struct gui_panel *panel, gui_flags f)
-{
-    panel->flags &= (gui_flags)~f;
-}
+{panel->flags &= (gui_flags)~f;}
 
 gui_bool
 gui_panel_has_flag(struct gui_panel *panel, gui_flags f)
-{
-    return (panel->flags & f) ? gui_true: gui_false;
-}
+{return (panel->flags & f) ? gui_true: gui_false;}
 
 gui_bool
 gui_panel_is_minimized(struct gui_panel *panel)
-{
-    return panel->minimized;
-}
+{return panel->flags & GUI_PANEL_MINIMIZED;}
 
-gui_bool
-gui_panel_begin(struct gui_panel_layout *l, struct gui_panel *p,
-    const char *text, const struct gui_input *i)
+void
+gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
+    const struct gui_input *in)
 {
     const struct gui_config *c;
-    struct gui_command_buffer *out;
-    const struct gui_color *header;
-
-    gui_float mouse_x, mouse_y;
-    gui_float prev_x, prev_y;
-    gui_float clicked_x, clicked_y;
-    gui_float header_x = 0, header_w = 0;
-    gui_float footer_h;
-    gui_bool ret = gui_true;
-
-    float scrollbar_width;
+    gui_float scrollbar_width;
     struct gui_vec2 panel_size;
     struct gui_vec2 item_padding;
     struct gui_vec2 item_spacing;
     struct gui_vec2 panel_padding;
     struct gui_vec2 scaler_size;
+    struct gui_command_buffer *out;
 
-    GUI_ASSERT(p);
-    GUI_ASSERT(l);
-    GUI_ASSERT(p->buffer);
-    GUI_ASSERT(p->config);
+    GUI_ASSERT(panel);
+    GUI_ASSERT(layout);
+    GUI_ASSERT(panel->buffer);
+    GUI_ASSERT(panel->config);
 
-    /* check arguments */
-    if (!p || !p->buffer || !l)
-        return gui_false;
-    if (!(p->flags & GUI_PANEL_TAB) && !(p->flags & GUI_PANEL_DO_NOT_RESET))
-        gui_command_buffer_reset(p->buffer);
-    if (p->flags & GUI_PANEL_HIDDEN) {
-        gui_zero(l, sizeof(*l));
-        l->valid = gui_false;
-        l->config = p->config;
-        l->buffer = p->buffer;
-        return gui_false;
-    }
-
-    /* aquire all needed configuration style constants */
-    c = p->config;
+    /* cache configuration data */
+    c = panel->config;
     scrollbar_width = gui_config_property(c, GUI_PROPERTY_SCROLLBAR_WIDTH).x;
     panel_size = gui_config_property(c, GUI_PROPERTY_SIZE);
     panel_padding = gui_config_property(c, GUI_PROPERTY_PADDING);
@@ -2372,222 +2343,441 @@ gui_panel_begin(struct gui_panel_layout *l, struct gui_panel *p,
     item_spacing = gui_config_property(c, GUI_PROPERTY_ITEM_SPACING);
     scaler_size = gui_config_property(c, GUI_PROPERTY_SCALER_SIZE);
 
-    /* calculate the height of the panel header */
-    l->header_height = c->font.height + 4 * item_padding.y;
-    l->header_height += panel_padding.y;
-
-    /* cache relevant user input values */
-    mouse_x = (i) ? i->mouse_pos.x : -1;
-    mouse_y = (i) ? i->mouse_pos.y : -1;
-    prev_x = (i) ? i->mouse_prev.x : -1;
-    prev_y = (i) ? i->mouse_prev.y : -1;
-    clicked_x = (i) ? i->mouse_clicked_pos.x : -1;
-    clicked_y = (i) ? i->mouse_clicked_pos.y : -1;
+    /* check arguments */
+    if (!panel || !panel->buffer || !layout) return;
+    if (!(panel->flags & GUI_PANEL_TAB) && !(panel->flags & GUI_PANEL_DO_NOT_RESET))
+        gui_command_buffer_reset(panel->buffer);
+    if (panel->flags & GUI_PANEL_HIDDEN) {
+        gui_zero(layout, sizeof(*layout));
+        layout->flags = panel->flags;
+        layout->valid = gui_false;
+        layout->config = panel->config;
+        layout->buffer = panel->buffer;
+        return;
+    }
 
     /* move panel position if requested */
-    if (p->flags & GUI_PANEL_MOVEABLE) {
+    layout->header.h = c->font.height + 4 * item_padding.y;
+    layout->header.h += panel_padding.y;
+    if (panel->flags & GUI_PANEL_MOVEABLE) {
         gui_bool incursor;
-        const gui_float move_x = p->x;
-        const gui_float move_y = p->y;
-        const gui_float move_w = p->w;
-        const gui_float move_h = l->header_height;
-
-        incursor = i && GUI_INBOX(i->mouse_prev.x, i->mouse_prev.y, move_x, move_y,
-                                    move_w, move_h);
-        if (i && i->mouse_down && incursor) {
-            p->x = MAX(0, p->x + i->mouse_delta.x);
-            p->y = MAX(0, p->y + i->mouse_delta.y);
+        const gui_float move_x = panel->x;
+        const gui_float move_y = panel->y;
+        const gui_float move_w = panel->w;
+        const gui_float move_h = layout->header.h;
+        incursor = in && GUI_INBOX(in->mouse_prev.x, in->mouse_prev.y,
+                                    move_x, move_y, move_w, move_h);
+        if (in && in->mouse_down && incursor) {
+            panel->x = MAX(0, panel->x + in->mouse_delta.x);
+            panel->y = MAX(0, panel->y + in->mouse_delta.y);
         }
     }
 
     /* scale panel size if requested */
-    if (p->flags & GUI_PANEL_SCALEABLE) {
+    if (panel->flags & GUI_PANEL_SCALEABLE) {
         gui_bool incursor;
         gui_float scaler_w = MAX(0, scaler_size.x - item_padding.x);
         gui_float scaler_h = MAX(0, scaler_size.y - item_padding.y);
-        gui_float scaler_x = (p->x + p->w) - (item_padding.x + scaler_w);
-        gui_float scaler_y = p->y + p->h - scaler_size.y;
+        gui_float scaler_x = (panel->x + panel->w) - (item_padding.x + scaler_w);
+        gui_float scaler_y = panel->y + panel->h - scaler_size.y;
 
-        incursor = i && GUI_INBOX(prev_x,prev_y,scaler_x,scaler_y,scaler_w,scaler_h);
-        if (i && i->mouse_down && incursor) {
-            gui_float min_x = panel_size.x;
-            gui_float min_y = panel_size.y;
-            p->w = MAX(min_x, p->w + i->mouse_delta.x);
-            p->h = MAX(min_y, p->h + i->mouse_delta.y);
+        gui_float prev_x = (in) ? in->mouse_prev.x : -1;
+        gui_float prev_y = (in) ? in->mouse_prev.y : -1;
+        incursor = in && GUI_INBOX(prev_x,prev_y,scaler_x,scaler_y,scaler_w,scaler_h);
+        if (in && in->mouse_down && incursor) {
+            panel->w = MAX(panel_size.x, panel->w + in->mouse_delta.x);
+            panel->h = MAX(panel_size.y, panel->h + in->mouse_delta.y);
         }
     }
 
-    /* setup the rest of the panel */
-    l->flags = p->flags;
-    l->input = i;
-    l->index = 0;
-    l->x = p->x; l->y = p->y;
-    l->w = p->w; l->h = p->h;
-    l->at_x = p->x; l->at_y = p->y;
-    l->width = p->w; l->height = p->h;
-    l->config = p->config;
-    l->buffer = p->buffer;
-    l->row.columns = 0;
-    l->row.height = 0;
-    l->row.ratio = 0;
-    l->row.item_ratio = 0;
-    l->offset = p->offset;
-    out = p->buffer;
+    /* setup panel layout */
+    layout->input = in;
+    layout->index = 0;
+    layout->x = panel->x;
+    layout->y = panel->y;
+    layout->w = panel->w;
+    layout->h = panel->h;
+    layout->at_x = panel->x;
+    layout->at_y = panel->y;
+    layout->width = panel->w;
+    layout->height = panel->h;
+    layout->config = panel->config;
+    layout->buffer = panel->buffer;
+    layout->row.columns = 0;
+    layout->row.height = 0;
+    layout->row.ratio = 0;
+    layout->row.item_ratio = 0;
+    layout->offset = panel->offset;
+    layout->header.h = 1;
+    layout->row.height = layout->header.h + 2 * item_spacing.y;
+    out = panel->buffer;
 
-    /* calulate the header height if no header is needed or draw the header otherwise */
-    if (!(p->flags & GUI_PANEL_NO_HEADER)) {
-        header = &c->colors[GUI_COLOR_HEADER];
-        header_x = p->x + panel_padding.x;
-        header_w = MAX(p->w, 2 * panel_padding.x);
-        header_w -= 2 * panel_padding.x;
-        gui_command_buffer_push_rect(out,p->x,p->y,p->w, l->header_height, 0, *header);
-    } else l->header_height = 1;
-    l->row.height = l->header_height + 2 * item_spacing.y;
+    /* panel activation by clicks inside of the panel */
+    if (!(panel->flags & GUI_PANEL_TAB)) {
+        gui_float clicked_x = (in) ? in->mouse_clicked_pos.x : -1;
+        gui_float clicked_y = (in) ? in->mouse_clicked_pos.y : -1;
+        panel->flags |= GUI_PANEL_SCROLLBAR;
+        if (in && in->mouse_down) {
+            if (GUI_INBOX(clicked_x, clicked_y, panel->x, panel->y, panel->w, panel->h))
+                panel->flags |= GUI_PANEL_ACTIVE;
+            else panel->flags &= (gui_flag)~GUI_PANEL_ACTIVE;
+        }
+    }
+    layout->flags = panel->flags;
+    layout->valid = !(panel->flags & GUI_PANEL_HIDDEN) && !(panel->flags & GUI_PANEL_MINIMIZED);
 
     /* calculate the panel footer bounds */
-    footer_h = scaler_size.y + item_padding.y;
-    if ((p->flags & GUI_PANEL_SCALEABLE) &&
-        (p->flags & GUI_PANEL_SCROLLBAR) &&
-        !p->minimized) {
+    layout->footer_h = scaler_size.y + item_padding.y;
+    if ((layout->flags & GUI_PANEL_SCALEABLE) &&
+        (layout->flags & GUI_PANEL_SCROLLBAR) &&
+        !(layout->flags & GUI_PANEL_MINIMIZED)) {
         gui_float footer_x, footer_y, footer_w;
-        footer_x = p->x;
-        footer_w = p->w;
-        footer_y = p->y + p->h - footer_h;
-        gui_command_buffer_push_rect(out, footer_x, footer_y, footer_w, footer_h,
+        footer_x = panel->x;
+        footer_w = panel->w;
+        footer_y = panel->y + panel->h - layout->footer_h;
+        gui_command_buffer_push_rect(out, footer_x, footer_y, footer_w, layout->footer_h,
             0, c->colors[GUI_COLOR_PANEL]);
     }
 
-    /* fix up some panel flag combinations */
-    if (!(p->flags & GUI_PANEL_TAB)) {
-        p->flags |= GUI_PANEL_SCROLLBAR;
-        if (i && i->mouse_down) {
-            if (GUI_INBOX(clicked_x, clicked_y, p->x, p->y, p->w, p->h))
-                p->flags |= GUI_PANEL_ACTIVE;
-            /*else p->flags &= (gui_flag)~GUI_PANEL_ACTIVE;*/
-        }
-    }
-
-    /* calculate the panel clipping rectangle*/
-    l->clip.x = p->x;
-    l->clip.w = p->w;
-    l->clip.y = p->y + l->header_height + 1;
-    if (p->flags & GUI_PANEL_SCROLLBAR) {
-        if (p->flags & GUI_PANEL_SCALEABLE)
-            l->clip.h = p->h - (footer_h + l->header_height);
-        else l->clip.h = p->h - l->header_height;
-        l->clip.h -= (panel_padding.y + item_padding.y);
-    } else l->clip.h = gui_null_rect.h;
-
-
-    /* execute the panel closing and closing icon drawing */
-    if ((p->flags & GUI_PANEL_CLOSEABLE) && (!(p->flags & GUI_PANEL_NO_HEADER))) {
-        /* calculate the position of the close icon position and draw it */
-        const gui_char *X = (const gui_char*)"x";
-        const gui_size t = c->font.width(c->font.userdata, X, 1);
-        const gui_float text_width = (gui_float)t;
-        const gui_float close_x = header_x;
-        const gui_float close_y = p->y + panel_padding.y;
-        const gui_float close_w = (gui_float)text_width + 2 * item_padding.x;
-        const gui_float close_h = c->font.height + 2 * item_padding.y;
-        gui_command_buffer_push_text(out, close_x, close_y, close_w, close_h,
-            X, 1, &c->font, c->colors[GUI_COLOR_HEADER], c->colors[GUI_COLOR_TEXT]);
-
-        /* check if the close icon has been pressed and set the panel to hidden */
-        header_w -= close_w;
-        header_x += close_h - item_padding.x;
-        if (i && GUI_INBOX(mouse_x, mouse_y, close_x, close_y, text_width, close_h)) {
-            if (GUI_INBOX(clicked_x, clicked_y, close_x, close_y, text_width, close_h)) {
-                ret = !(i->mouse_down && i->mouse_clicked);
-                if (!ret) p->flags |= GUI_PANEL_HIDDEN;
-            }
-        }
-    }
-
-    /* execute panel minimzing and minimizer icon drawing */
-    if ((p->flags & GUI_PANEL_MINIMIZABLE) && (!(p->flags & GUI_PANEL_NO_HEADER))) {
-        gui_size t;
-        gui_float text_width;
-        gui_float min_x, min_y, min_w, min_h;
-        const gui_char *score = (p->minimized) ?
-            (const gui_char*)"+":
-            (const gui_char*)"-";
-
-        /* calculate the icon positon and size of the icon and draw it */
-        t = c->font.width(c->font.userdata, score, 1);
-        text_width = (gui_float)t;
-        min_x = header_x;
-        min_y = p->y + panel_padding.y;
-        min_w = (gui_float)text_width + 3 * item_padding.x;
-        min_h = c->font.height + 2 * item_padding.y;
-        gui_command_buffer_push_text(out, min_x, min_y, min_w, min_h,
-            score, 1, &c->font, c->colors[GUI_COLOR_HEADER],
-            c->colors[GUI_COLOR_TEXT]);
-
-        /* minize the panel if the minimize icon has been pressed */
-        header_w -= min_w;
-        header_x += min_w - item_padding.x;
-        if (i && GUI_INBOX(mouse_x, mouse_y, min_x, min_y, text_width, min_h)) {
-            if (GUI_INBOX(clicked_x, clicked_y, min_x, min_y, text_width, min_h))
-                if (i->mouse_down && i->mouse_clicked)
-                    p->minimized = !p->minimized;
-        }
-    }
-    l->valid = !(p->minimized || (p->flags & GUI_PANEL_HIDDEN));
-
-    /* draw the panel title into the header */
-    if (text && !(p->flags & GUI_PANEL_NO_HEADER)) {
-        const gui_size text_len = gui_strsiz(text);
-        const gui_float label_x = header_x + item_padding.x;
-        const gui_float label_y = p->y + panel_padding.y;
-        const gui_float label_h = c->font.height + 2 * item_padding.y;
-        gui_float label_w = MAX(header_w, 3 * item_padding.x);
-        label_w -= (3 * item_padding.x);
-        gui_command_buffer_push_text(out, label_x, label_y, label_w, label_h,
-            (const gui_char*)text, text_len, &c->font, c->colors[GUI_COLOR_HEADER],
-            c->colors[GUI_COLOR_TEXT]);
-    }
-
     /* draw scrollbar panel footer */
-    if (p->flags & GUI_PANEL_SCROLLBAR) {
+    if (layout->flags & GUI_PANEL_SCROLLBAR) {
         const struct gui_color *color = &c->colors[GUI_COLOR_PANEL];
-        l->width = p->w - scrollbar_width;
-        l->height = p->h - (l->header_height + 2 * item_spacing.y);
-        if (p->flags & GUI_PANEL_SCALEABLE) l->height -= footer_h;
-        if (l->valid)
-            gui_command_buffer_push_rect(out, p->x, p->y + l->header_height,
-                p->w, p->h - l->header_height, 0, *color);
+        layout->width = panel->w - scrollbar_width;
+        layout->height = panel->h - (layout->header.h + 2 * item_spacing.y);
+        if (layout->flags & GUI_PANEL_SCALEABLE) layout->height -= layout->footer_h;
+        if (layout->valid)
+            gui_command_buffer_push_rect(out, layout->x, layout->y,
+                layout->w, layout->h, 0, *color);
     }
 
-    /* draw the border around the panel header */
-    if (p->flags & GUI_PANEL_BORDER) {
-        const struct gui_color *color = &c->colors[GUI_COLOR_BORDER];
-        const gui_float width = (p->flags & GUI_PANEL_SCROLLBAR) ?
-                l->width + scrollbar_width : l->width;
-
-        gui_command_buffer_push_line(out, p->x, p->y,
-                p->x + p->w, p->y, *color);
-        gui_command_buffer_push_line(out, p->x, p->y, p->x,
-                p->y + l->header_height, c->colors[GUI_COLOR_BORDER]);
-        gui_command_buffer_push_line(out, p->x + width, p->y, p->x + width,
-                p->y + l->header_height, c->colors[GUI_COLOR_BORDER]);
-        if (p->flags & GUI_PANEL_BORDER_HEADER)
-            gui_command_buffer_push_line(out, p->x, p->y + l->header_height,
-                p->x + p->w, p->y + l->header_height, c->colors[GUI_COLOR_BORDER]);
+    /* draw top border line */
+    if (layout->flags & GUI_PANEL_BORDER) {
+        gui_command_buffer_push_line(out, layout->x, layout->y,
+            layout->x + layout->w, layout->y, c->colors[GUI_COLOR_BORDER]);
     }
 
-    /* setup the clipping panel rectangle */
-    gui_command_buffer_push_scissor(out, l->clip.x, l->clip.y, l->clip.w, l->clip.h);
-    return ret;
+    /* calculate and set the panel clipping rectangle*/
+    layout->clip.x = panel->x;
+    layout->clip.w = panel->w;
+    layout->clip.y = panel->y;
+    if (layout->flags & GUI_PANEL_SCROLLBAR) {
+        if (layout->flags & GUI_PANEL_SCALEABLE)
+            layout->clip.h = panel->h - (layout->footer_h + layout->header.h);
+        else layout->clip.h = panel->h - layout->header.h;
+        layout->clip.h -= (panel_padding.y + item_padding.y);
+    } else layout->clip.h = gui_null_rect.h;
+    gui_command_buffer_push_scissor(out, layout->clip.x, layout->clip.y,
+        layout->clip.w, layout->clip.h);
+}
+
+void
+gui_panel_header_begin(struct gui_panel_layout *layout)
+{
+    const struct gui_config *c;
+    struct gui_vec2 item_padding;
+    struct gui_vec2 item_spacing;
+    struct gui_vec2 panel_padding;
+    struct gui_command_buffer *out;
+
+    GUI_ASSERT(layout);
+    if (!layout) return;
+    if (layout->flags & GUI_PANEL_HIDDEN)
+        return;
+
+    c = layout->config;
+    out = layout->buffer;
+
+    panel_padding = gui_config_property(c, GUI_PROPERTY_PADDING);
+    item_padding = gui_config_property(c, GUI_PROPERTY_ITEM_PADDING);
+    item_spacing = gui_config_property(c, GUI_PROPERTY_ITEM_SPACING);
+
+    layout->header.h = c->font.height + 4 * item_padding.y;
+    layout->header.h += panel_padding.y;
+    layout->row.height = layout->header.h + 2 * item_spacing.y;
+
+    layout->header.x = layout->x + panel_padding.x;
+    layout->header.y = layout->y + panel_padding.y;
+    layout->header.w = MAX(layout->w, 2 * panel_padding.x);
+    layout->header.w -= 2 * panel_padding.x;
+
+    /* panel layout footer  */
+    if (layout->flags & GUI_PANEL_SCROLLBAR) {
+        const struct gui_color *color = &c->colors[GUI_COLOR_PANEL];
+        layout->height = layout->h - (layout->header.h + 2 * item_spacing.y);
+        if (layout->flags & GUI_PANEL_SCALEABLE) layout->height -= layout->footer_h;
+        if (layout->valid)
+            gui_command_buffer_push_rect(out, layout->x, layout->y + layout->header.h,
+                layout->w, layout->h - layout->header.h, 0, *color);
+    }
+    gui_command_buffer_push_rect(out, layout->x, layout->y, layout->w,
+        layout->header.h, 0, c->colors[GUI_COLOR_HEADER]);
 }
 
 gui_bool
+gui_panel_header_icon(struct gui_panel_layout *layout,
+    enum gui_panel_header_symbol symbol, enum gui_panel_flags flag)
+{
+    /* calculate the position of the close icon position and draw it */
+    gui_float sym_x, sym_y;
+    gui_float sym_w, sym_h, sym_bw;
+    gui_bool ret = gui_false;
+
+    const struct gui_config *c;
+    struct gui_command_buffer *out;
+    struct gui_vec2 item_padding;
+
+    GUI_ASSERT(layout);
+    GUI_ASSERT(layout->buffer);
+    GUI_ASSERT(layout->config);
+    if (!layout || layout->flags & GUI_PANEL_HIDDEN)
+        return gui_false;
+
+    /* cache configuration data */
+    c = layout->config;
+    out = layout->buffer;
+    item_padding = gui_config_property(c, GUI_PROPERTY_ITEM_PADDING);
+
+    sym_x = layout->header.x;
+    sym_y = layout->header.y;
+
+    switch (symbol) {
+    case GUI_SYMBOL_X: {
+        const gui_char *X = "x";
+        const gui_size t = c->font.width(c->font.userdata, X, 1);
+        const gui_float text_width = (gui_float)t;
+
+        sym_w = (gui_float)text_width + 2 * item_padding.x;
+        sym_h = c->font.height + 2 * item_padding.y;
+        gui_command_buffer_push_text(out, sym_x, sym_y, sym_w, sym_h,
+            X, 1, &c->font, c->colors[GUI_COLOR_HEADER],
+            c->colors[GUI_COLOR_TEXT]);
+        sym_bw = text_width;
+        } break;
+    case GUI_SYMBOL_CIRCLE: {
+        sym_bw = sym_w = c->font.height;
+        sym_h = c->font.height;
+        sym_y = sym_y + c->font.height/2;
+
+        gui_command_buffer_push_circle(out, sym_x, sym_y, sym_w, sym_h,
+            c->colors[GUI_COLOR_TEXT]);
+        if (layout->flags & flag)
+            gui_command_buffer_push_circle(out, sym_x+1, sym_y+1, sym_w-2, sym_h-2,
+                                            c->colors[GUI_COLOR_HEADER]);
+        sym_w = c->font.height + 2 * item_padding.x;
+        } break;
+    case GUI_SYMBOL_RECT: {
+        sym_bw = sym_w = c->font.height;
+        sym_h = c->font.height;
+        sym_y = sym_y + c->font.height/2;
+
+        gui_command_buffer_push_rect(out, sym_x, sym_y, sym_w, sym_h,
+            0, c->colors[GUI_COLOR_TEXT]);
+        if (layout->flags & flag)
+            gui_command_buffer_push_rect(out, sym_x+1, sym_y+1, sym_w-2, sym_h-2,
+            0, c->colors[GUI_COLOR_HEADER]);
+        sym_w = c->font.height + 2 * item_padding.x;
+        } break;
+    case GUI_SYMBOL_TRIANGLE: {
+        enum gui_heading heading;
+        struct gui_vec2 points[3];
+
+        sym_bw = sym_w = c->font.height;
+        sym_h = c->font.height;
+        sym_y = sym_y + c->font.height/2;
+
+        heading = (layout->flags & flag) ? GUI_RIGHT : GUI_DOWN;
+        gui_triangle_from_direction(points, sym_x, sym_y, sym_w, sym_h, 0, 0, heading);
+        gui_command_buffer_push_triangle(layout->buffer,  points[0].x, points[0].y,
+            points[1].x, points[1].y, points[2].x, points[2].y, c->colors[GUI_COLOR_TEXT]);
+        sym_w = c->font.height + 2 * item_padding.x;
+        } break;
+    case GUI_SYMBOL_PLUS_MINUS: {
+        gui_size t;
+        gui_float text_width;
+        const gui_char *score = (layout->flags & GUI_PANEL_MINIMIZED) ? "+": "-";
+        t = c->font.width(c->font.userdata, score, 1);
+        text_width = (gui_float)t;
+
+        sym_w = (gui_float)text_width + 3 * item_padding.x;
+        sym_h = c->font.height + 2 * item_padding.y;
+        gui_command_buffer_push_text(out, sym_x, sym_y, sym_w, sym_h,
+            score, 1, &c->font, c->colors[GUI_COLOR_HEADER],
+            c->colors[GUI_COLOR_TEXT]);
+        sym_bw = text_width;
+        } break;
+    case GUI_SYMBOL_CIRCLE_RECT: {
+        sym_bw = sym_w = c->font.height;
+        sym_h = c->font.height;
+        sym_y = sym_y + c->font.height/2;
+
+        if (layout->flags & flag) {
+            gui_command_buffer_push_circle(out, sym_x+1, sym_y+1, sym_w-2, sym_h-2,
+                c->colors[GUI_COLOR_TEXT]);
+        } else {
+            gui_command_buffer_push_rect(out, sym_x, sym_y, sym_w, sym_h,
+                0, c->colors[GUI_COLOR_TEXT]);
+        }
+        }break;
+    default: return ret;
+    }
+
+    /* check if the close icon has been pressed and set the panel to hidden */
+    if (layout->input) {
+        gui_float clicked_x = layout->input->mouse_clicked_pos.x;
+        gui_float clicked_y = layout->input->mouse_clicked_pos.y;
+        gui_float mouse_x = layout->input->mouse_pos.x;
+        gui_float mouse_y = layout->input->mouse_pos.y;
+
+        if (GUI_INBOX(mouse_x, mouse_y, sym_x, sym_y, sym_bw, sym_h)) {
+            if (GUI_INBOX(clicked_x, clicked_y, sym_x, sym_y, sym_bw, sym_h)) {
+                ret = (layout->input->mouse_down && layout->input->mouse_clicked);
+                if (ret) {
+                    if (layout->flags & flag) layout->flags &= ~flag;
+                    else layout->flags |= flag;
+                }
+            }
+        }
+        layout->valid = !(layout->flags & GUI_PANEL_HIDDEN) &&
+            !(layout->flags & GUI_PANEL_MINIMIZED);
+    }
+
+    /* update the header */
+    layout->header.w -= sym_w;
+    layout->header.x += sym_w + item_padding.x;
+    return ret;
+}
+
+void
+gui_panel_header_title(struct gui_panel_layout *layout, const char *title)
+{
+    gui_float label_x, label_y, label_w, label_h;
+    const struct gui_config *c;
+    struct gui_command_buffer *out;
+    struct gui_vec2 item_padding;
+    gui_size text_len;
+
+    GUI_ASSERT(layout);
+    if (!layout || !title) return;
+    if (layout->flags & GUI_PANEL_HIDDEN)
+        return;
+
+    c = layout->config;
+    out = layout->buffer;
+    item_padding = gui_config_property(c, GUI_PROPERTY_ITEM_PADDING);
+    text_len = gui_strsiz(title);
+
+    label_x = layout->header.x + item_padding.x;
+    label_y = layout->header.y;
+    label_h = c->font.height + 2 * item_padding.y;
+    label_w = MAX(layout->header.w, 3 * item_padding.x);
+    label_w -= (3 * item_padding.x);
+
+    gui_command_buffer_push_text(out, label_x, label_y, label_w, label_h,
+        (const gui_char*)title, text_len, &c->font, c->colors[GUI_COLOR_HEADER],
+        c->colors[GUI_COLOR_TEXT]);
+}
+
+void
+gui_panel_header_end(struct gui_panel_layout *layout)
+{
+    const struct gui_config *c;
+    struct gui_command_buffer *out;
+    struct gui_vec2 item_padding;
+    struct gui_vec2 panel_padding;
+
+    GUI_ASSERT(layout);
+    if (!layout) return;
+    if (layout->flags & GUI_PANEL_HIDDEN)
+        return;
+
+    c = layout->config;
+    out = layout->buffer;
+    panel_padding = gui_config_property(c, GUI_PROPERTY_PADDING);
+    item_padding = gui_config_property(c, GUI_PROPERTY_ITEM_PADDING);
+
+    /* draw scrollbar panel footer */
+    if (layout->flags & GUI_PANEL_SCROLLBAR) {
+        const struct gui_color *color = &c->colors[GUI_COLOR_PANEL];
+        if (layout->valid)
+            gui_command_buffer_push_rect(out, layout->x, layout->y + layout->header.h,
+                layout->w, layout->h - layout->header.h, 0, *color);
+    }
+
+    /* draw panel header border */
+    if (layout->flags & GUI_PANEL_BORDER) {
+        gui_float scrollbar_width = gui_config_property(c, GUI_PROPERTY_SCROLLBAR_WIDTH).x;
+        const gui_float width = (layout->flags & GUI_PANEL_SCROLLBAR) ?
+                layout->width + scrollbar_width : layout->width;
+
+        gui_command_buffer_push_line(out, layout->x, layout->y, layout->x,
+                layout->y + layout->header.h, c->colors[GUI_COLOR_BORDER]);
+        gui_command_buffer_push_line(out, layout->x + width, layout->y, layout->x + width,
+                layout->y + layout->header.h, c->colors[GUI_COLOR_BORDER]);
+        if (layout->flags & GUI_PANEL_BORDER_HEADER)
+            gui_command_buffer_push_line(out, layout->x, layout->y + layout->header.h,
+                layout->x + layout->w, layout->y + layout->header.h,
+                c->colors[GUI_COLOR_BORDER]);
+    }
+
+    layout->clip.x = layout->x;
+    layout->clip.w = layout->w;
+    layout->clip.y = layout->y + layout->header.h;
+    if (layout->flags & GUI_PANEL_SCROLLBAR) {
+        if (layout->flags & GUI_PANEL_SCALEABLE)
+            layout->clip.h = layout->h - (layout->footer_h + layout->header.h);
+        else layout->clip.h = layout->h - layout->header.h;
+        layout->clip.h -= (panel_padding.y + item_padding.y);
+    } else layout->clip.h = gui_null_rect.h;
+    gui_command_buffer_push_scissor(out, layout->clip.x, layout->clip.y,
+        layout->clip.w, layout->clip.h);
+}
+
+gui_bool
+gui_panel_header(struct gui_panel_layout *layout, const char *title,
+    gui_flags flags, gui_flags notify)
+{
+    gui_bool ret = gui_false;
+    if (layout->flags & GUI_PANEL_HIDDEN)
+        return gui_false;
+
+    gui_panel_header_begin(layout);
+    if (flags & GUI_CLOSEABLE) {
+        if (notify & GUI_CLOSEABLE)
+            ret = ret || gui_panel_header_icon(layout, GUI_SYMBOL_X, GUI_PANEL_HIDDEN);
+        else gui_panel_header_icon(layout, GUI_SYMBOL_X, GUI_PANEL_HIDDEN);
+    }
+
+    if (flags & GUI_MINIMIZABLE) {
+        if (notify & GUI_MINIMIZABLE)
+            ret = ret || gui_panel_header_icon(layout,GUI_SYMBOL_PLUS_MINUS,
+                GUI_PANEL_MINIMIZED);
+        gui_panel_header_icon(layout, GUI_SYMBOL_PLUS_MINUS, GUI_PANEL_MINIMIZED);
+    }
+
+    if (flags & GUI_SCALEABLE) {
+        if (notify & GUI_SCALEABLE)
+            ret = ret || gui_panel_header_icon(layout, GUI_SYMBOL_RECT, GUI_PANEL_SCALEABLE);
+        gui_panel_header_icon(layout, GUI_SYMBOL_RECT, GUI_PANEL_SCALEABLE);
+    }
+
+    if (flags & GUI_MOVEABLE) {
+        if (notify & GUI_MOVEABLE)
+            ret = ret || gui_panel_header_icon(layout, GUI_SYMBOL_RECT, GUI_PANEL_MOVEABLE);
+        gui_panel_header_icon(layout, GUI_SYMBOL_CIRCLE, GUI_PANEL_MOVEABLE);
+    }
+    if (title) gui_panel_header_title(layout, title);
+    gui_panel_header_end(layout);
+    return ret;
+}
+
+void
 gui_panel_begin_stacked(struct gui_panel_layout *l, struct gui_panel* p,
-    struct gui_stack *s, const char *title, const struct gui_input *i)
+    struct gui_stack *s, const struct gui_input *i)
 {
     gui_bool inpanel;
     GUI_ASSERT(l);
     GUI_ASSERT(s);
-    if (!l || !s) return gui_false;
+    if (!l || !s) return;
 
     inpanel = GUI_INBOX(i->mouse_prev.x, i->mouse_prev.y, p->x, p->y, p->w, p->h);
     if (i->mouse_down && i->mouse_clicked && inpanel && p != s->end) {
@@ -2596,7 +2786,7 @@ gui_panel_begin_stacked(struct gui_panel_layout *l, struct gui_panel* p,
             /* try to find a panel with higher priorty in the same position */
             const struct gui_panel *cur = iter;
             if (GUI_INBOX(i->mouse_prev.x,i->mouse_prev.y,cur->x,cur->y,cur->w,cur->h) &&
-              !cur->minimized && !(iter->flags & GUI_PANEL_HIDDEN)) break;
+              !(cur->flags & GUI_PANEL_MINIMIZED) && !(iter->flags & GUI_PANEL_HIDDEN)) break;
             iter = iter->next;
         }
         /* current panel is active panel in that position so transfer to top
@@ -2606,36 +2796,33 @@ gui_panel_begin_stacked(struct gui_panel_layout *l, struct gui_panel* p,
             gui_stack_push(s, p);
         }
     }
-    return gui_panel_begin(l, p, title, (s->end == p) ? i : 0);
+    gui_panel_begin(l, p, (s->end == p) ? i : 0);
 }
 
-gui_bool
+void
 gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
     struct gui_layout *layout, enum gui_layout_slot_index slot, gui_size index,
-    const char *title, const struct gui_input *in)
+    const struct gui_input *in)
 {
     struct gui_rect bounds;
     struct gui_layout_slot *s;
-    gui_bool res;
 
     GUI_ASSERT(panel);
     GUI_ASSERT(tile);
     GUI_ASSERT(layout);
 
-    if (!layout || !panel || !tile) return gui_false;
-    if (slot >= GUI_SLOT_MAX) return gui_false;
-    if (index >= layout->slots[slot].capacity) return gui_false;
+    if (!layout || !panel || !tile) return;
+    if (slot >= GUI_SLOT_MAX) return;
+    if (index >= layout->slots[slot].capacity) return;
 
     /* make sure the correct flags are set */
-    panel->flags &= (gui_flags)~GUI_PANEL_MINIMIZABLE;
-    panel->flags &= (gui_flags)~GUI_PANEL_CLOSEABLE;
     panel->flags &= (gui_flags)~GUI_PANEL_MOVEABLE;
     panel->flags &= (gui_flags)~GUI_PANEL_SCALEABLE;
 
     /* calculate the bounds of the slot */
     s = &layout->slots[slot];
-    bounds.x = (gui_float)layout->x + s->offset.x * (gui_float)layout->width;
-    bounds.y = (gui_float)layout->y + s->offset.y * (gui_float)layout->height;
+    bounds.x = s->offset.x * (gui_float)layout->width;
+    bounds.y = s->offset.y * (gui_float)layout->height;
     bounds.w = s->ratio.x * (gui_float)layout->width;
     bounds.h = s->ratio.y * (gui_float)layout->height;
 
@@ -2792,9 +2979,8 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
     }
 
     gui_stack_push(&layout->stack, panel);
-    res = gui_panel_begin(tile,panel,title,(layout->flags&GUI_LAYOUT_INACTIVE)?0:in);
+    gui_panel_begin(tile, panel, (layout->flags & GUI_LAYOUT_INACTIVE) ? 0:in);
     panel->flags &= ~(gui_flags)GUI_PANEL_DO_NOT_RESET;
-    return res;
 }
 
 void
@@ -3075,7 +3261,7 @@ gui_panel_spacing(struct gui_panel_layout *l, gui_size cols)
     l->index = index;
 }
 
-gui_bool
+enum gui_widget_state
 gui_panel_widget(struct gui_rect *bounds, struct gui_panel_layout *layout)
 {
     struct gui_rect *c = 0;
@@ -3089,8 +3275,10 @@ gui_panel_widget(struct gui_rect *bounds, struct gui_panel_layout *layout)
     gui_panel_alloc_space(bounds, layout);
     c = &layout->clip;
     if (!GUI_INTERSECT(c->x, c->y, c->w, c->h, bounds->x, bounds->y, bounds->w, bounds->h))
-        return gui_false;
-    return gui_true;
+        return GUI_INVALID;
+    if (!GUI_CONTAINS(bounds->x, bounds->y, bounds->w, bounds->h, c->x, c->y, c->w, c->h))
+        return GUI_ROM;
+    return GUI_VALID;
 }
 
 void
@@ -3163,21 +3351,23 @@ gui_panel_image(struct gui_panel_layout *layout, struct gui_image img)
         bounds.w, bounds.h, &img);
 }
 
-static gui_bool
+static enum gui_widget_state
 gui_panel_button(struct gui_button *button, struct gui_rect *bounds,
     struct gui_panel_layout *layout)
 {
     const struct gui_config *config;
     struct gui_vec2 item_padding;
-    if (!gui_panel_widget(bounds, layout)) return gui_false;
+    enum gui_widget_state state;
+    state = gui_panel_widget(bounds, layout);
+    if (!state) return state;
+
     config = layout->config;
     item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
-
     button->border = 1;
     button->rounding = config->rounding[GUI_ROUNDING_BUTTON];
     button->padding.x = item_padding.x;
     button->padding.y = item_padding.y;
-    return gui_true;
+    return state;
 }
 
 gui_bool
@@ -3187,8 +3377,12 @@ gui_panel_button_text(struct gui_panel_layout *layout, const char *str,
     struct gui_rect bounds;
     struct gui_button button;
     const struct gui_config *config;
-    if (!gui_panel_button(&button, &bounds, layout))
-        return gui_false;
+
+    const struct gui_input *i;
+    enum gui_widget_state state;
+    state = gui_panel_button(&button, &bounds, layout);
+    if (!state) return gui_false;
+    i = (state == GUI_ROM) ? 0 : layout->input;
 
     config = layout->config;
     button.background = config->colors[GUI_COLOR_BUTTON];
@@ -3198,7 +3392,7 @@ gui_panel_button_text(struct gui_panel_layout *layout, const char *str,
     button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
     button.rounding = config->rounding[GUI_ROUNDING_BUTTON];
     return gui_button_text(layout->buffer, bounds.x, bounds.y, bounds.w, bounds.h,
-            str, behavior, &button, layout->input, &config->font);
+            str, behavior, &button, i, &config->font);
 }
 
 gui_bool
@@ -3207,8 +3401,12 @@ gui_panel_button_color(struct gui_panel_layout *layout,
 {
     struct gui_rect bounds;
     struct gui_button button;
-    if (!gui_panel_button(&button, &bounds, layout))
-        return gui_false;
+
+    const struct gui_input *i;
+    enum gui_widget_state state;
+    state = gui_panel_button(&button, &bounds, layout);
+    if (!state) return gui_false;
+    i = (state == GUI_ROM) ? 0 : layout->input;
 
     button.background = color;
     button.foreground = color;
@@ -3216,7 +3414,7 @@ gui_panel_button_color(struct gui_panel_layout *layout,
     button.highlight_content = color;
     button.rounding = layout->config->rounding[GUI_ROUNDING_BUTTON];
     return gui_do_button(layout->buffer, bounds.x, bounds.y, bounds.w, bounds.h,
-                &button, layout->input, behavior);
+                &button, i, behavior);
 }
 
 gui_bool
@@ -3226,8 +3424,12 @@ gui_panel_button_triangle(struct gui_panel_layout *layout, enum gui_heading head
     struct gui_rect bounds;
     struct gui_button button;
     const struct gui_config *config;
-    if (!gui_panel_button(&button, &bounds, layout))
-        return gui_false;
+
+    const struct gui_input *i;
+    enum gui_widget_state state;
+    state = gui_panel_button(&button, &bounds, layout);
+    if (!state) return gui_false;
+    i = (state == GUI_ROM) ? 0 : layout->input;
 
     config = layout->config;
     button.rounding = config->rounding[GUI_ROUNDING_BUTTON];
@@ -3237,7 +3439,7 @@ gui_panel_button_triangle(struct gui_panel_layout *layout, enum gui_heading head
     button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
     button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
     return gui_button_triangle(layout->buffer, bounds.x, bounds.y, bounds.w,
-            bounds.h, heading, behavior, &button, layout->input);
+            bounds.h, heading, behavior, &button, i);
 }
 
 gui_bool
@@ -3247,8 +3449,12 @@ gui_panel_button_image(struct gui_panel_layout *layout, struct gui_image image,
     struct gui_rect bounds;
     struct gui_button button;
     const struct gui_config *config;
-    if (!gui_panel_button(&button, &bounds, layout))
-        return gui_false;
+
+    const struct gui_input *i;
+    enum gui_widget_state state;
+    state = gui_panel_button(&button, &bounds, layout);
+    if (!state) return gui_false;
+    i = (state == GUI_ROM) ? 0 : layout->input;
 
     config = layout->config;
     button.rounding = config->rounding[GUI_ROUNDING_BUTTON];
@@ -3258,7 +3464,7 @@ gui_panel_button_image(struct gui_panel_layout *layout, struct gui_image image,
     button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
     button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
     return gui_button_image(layout->buffer, bounds.x, bounds.y, bounds.w,
-            bounds.h, image, behavior, &button, layout->input);
+            bounds.h, image, behavior, &button, i);
 }
 
 gui_bool
@@ -3267,9 +3473,12 @@ gui_panel_button_toggle(struct gui_panel_layout *layout, const char *str, gui_bo
     struct gui_rect bounds;
     struct gui_button button;
     const struct gui_config *config;
-    GUI_ASSERT(str);
-    if (!gui_panel_button(&button, &bounds, layout))
-        return value;
+
+    const struct gui_input *i;
+    enum gui_widget_state state;
+    state = gui_panel_button(&button, &bounds, layout);
+    if (!state) return value;
+    i = (state == GUI_ROM) ? 0 : layout->input;
 
     config = layout->config;
     button.rounding = config->rounding[GUI_ROUNDING_BUTTON];
@@ -3287,7 +3496,7 @@ gui_panel_button_toggle(struct gui_panel_layout *layout, const char *str, gui_bo
         button.highlight_content = config->colors[GUI_COLOR_TEXT];
     }
     if (gui_button_text(layout->buffer, bounds.x, bounds.y, bounds.w, bounds.h,
-        str, GUI_BUTTON_DEFAULT, &button, layout->input, &config->font)) value = !value;
+        str, GUI_BUTTON_DEFAULT, &button, i, &config->font)) value = !value;
     return value;
 }
 
@@ -3298,8 +3507,12 @@ gui_panel_button_text_triangle(struct gui_panel_layout *layout, enum gui_heading
     struct gui_rect bounds;
     struct gui_button button;
     const struct gui_config *config;
-    if (!gui_panel_button(&button, &bounds, layout))
-        return gui_false;
+
+    const struct gui_input *i;
+    enum gui_widget_state state;
+    state = gui_panel_button(&button, &bounds, layout);
+    if (!state) return gui_false;
+    i = (state == GUI_ROM) ? 0 : layout->input;
 
     config = layout->config;
     button.rounding = config->rounding[GUI_ROUNDING_BUTTON];
@@ -3309,7 +3522,7 @@ gui_panel_button_text_triangle(struct gui_panel_layout *layout, enum gui_heading
     button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
     button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
     return gui_button_text_triangle(layout->buffer, bounds.x, bounds.y, bounds.w,
-            bounds.h, heading,text,align,behavior,&button,&config->font,layout->input);
+            bounds.h, heading, text, align, behavior, &button, &config->font, i);
 }
 
 gui_bool
@@ -3319,8 +3532,12 @@ gui_panel_button_text_image(struct gui_panel_layout *layout, struct gui_image im
     struct gui_rect bounds;
     struct gui_button button;
     const struct gui_config *config;
-    if (!gui_panel_button(&button, &bounds, layout))
-        return gui_false;
+
+    const struct gui_input *i;
+    enum gui_widget_state state;
+    state = gui_panel_button(&button, &bounds, layout);
+    if (!state) return gui_false;
+    i = (state == GUI_ROM) ? 0 : layout->input;
 
     config = layout->config;
     button.rounding = config->rounding[GUI_ROUNDING_BUTTON];
@@ -3331,17 +3548,18 @@ gui_panel_button_text_image(struct gui_panel_layout *layout, struct gui_image im
     button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
     return gui_button_text_image(layout->buffer, bounds.x, bounds.y, bounds.w,
                             bounds.h, img, text, align, behavior, &button,
-                            &config->font, layout->input);
+                            &config->font, i);
 }
 
-static gui_bool
+static enum gui_widget_state
 gui_panel_toggle_base(struct gui_toggle *toggle, struct gui_rect *bounds,
     struct gui_panel_layout *layout)
 {
     const struct gui_config *config;
     struct gui_vec2 item_padding;
-    if (!gui_panel_widget(bounds, layout))
-        return gui_false;
+    enum gui_widget_state state;
+    state = gui_panel_widget(bounds, layout);
+    if (!state) return state;
 
     config = layout->config;
     item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
@@ -3349,7 +3567,7 @@ gui_panel_toggle_base(struct gui_toggle *toggle, struct gui_rect *bounds,
     toggle->padding.x = item_padding.x;
     toggle->padding.y = item_padding.y;
     toggle->font = config->colors[GUI_COLOR_TEXT];
-    return gui_true;
+    return state;
 }
 
 gui_bool
@@ -3358,8 +3576,12 @@ gui_panel_check(struct gui_panel_layout *layout, const char *text, gui_bool is_a
     struct gui_rect bounds;
     struct gui_toggle toggle;
     const struct gui_config *config;
-    if (!text || !gui_panel_toggle_base(&toggle, &bounds, layout))
-        return is_active;
+
+    const struct gui_input *i;
+    enum gui_widget_state state;
+    state = gui_panel_toggle_base(&toggle, &bounds, layout);
+    if (!state) return is_active;
+    i = (state == GUI_ROM) ? 0 : layout->input;
 
     config = layout->config;
     toggle.rounding = config->rounding[GUI_ROUNDING_CHECK];
@@ -3367,7 +3589,7 @@ gui_panel_check(struct gui_panel_layout *layout, const char *text, gui_bool is_a
     toggle.background = config->colors[GUI_COLOR_CHECK_BACKGROUND];
     toggle.foreground = config->colors[GUI_COLOR_CHECK];
     return gui_toggle(layout->buffer, bounds.x, bounds.y, bounds.w, bounds.h,
-                is_active, text, GUI_TOGGLE_CHECK, &toggle, layout->input, &config->font);
+                is_active, text, GUI_TOGGLE_CHECK, &toggle, i, &config->font);
 }
 
 gui_bool
@@ -3376,15 +3598,19 @@ gui_panel_option(struct gui_panel_layout *layout, const char *text, gui_bool is_
     struct gui_rect bounds;
     struct gui_toggle toggle;
     const struct gui_config *config;
-    if (!text || !gui_panel_toggle_base(&toggle, &bounds, layout))
-        return is_active;
+
+    const struct gui_input *i;
+    enum gui_widget_state state;
+    state = gui_panel_toggle_base(&toggle, &bounds, layout);
+    if (!state) return is_active;
+    i = (state == GUI_ROM) ? 0 : layout->input;
 
     config = layout->config;
     toggle.cursor = config->colors[GUI_COLOR_OPTION_ACTIVE];
     toggle.background = config->colors[GUI_COLOR_OPTION_BACKGROUND];
     toggle.foreground = config->colors[GUI_COLOR_OPTION];
     return gui_toggle(layout->buffer, bounds.x, bounds.y, bounds.w, bounds.h,
-        is_active, text, GUI_TOGGLE_OPTION, &toggle, layout->input, &config->font);
+        is_active, text, GUI_TOGGLE_OPTION, &toggle, i, &config->font);
 }
 
 gui_size
@@ -3409,8 +3635,12 @@ gui_panel_slider(struct gui_panel_layout *layout, gui_float min_value, gui_float
     struct gui_slider slider;
     const struct gui_config *config;
     struct gui_vec2 item_padding;
-    if (!gui_panel_widget(&bounds, layout))
-        return value;
+
+    const struct gui_input *i;
+    enum gui_widget_state state;
+    state = gui_panel_widget(&bounds, layout);
+    if (!state) return value;
+    i = (state == GUI_ROM) ? 0 : layout->input;
 
     config = layout->config;
     item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
@@ -3421,7 +3651,7 @@ gui_panel_slider(struct gui_panel_layout *layout, gui_float min_value, gui_float
     slider.bar = config->colors[GUI_COLOR_SLIDER_BAR];
     slider.border = config->colors[GUI_COLOR_SLIDER_BORDER];
     return gui_slider(layout->buffer, bounds.x, bounds.y, bounds.w, bounds.h,
-                min_value, value, max_value, value_step, &slider, layout->input);
+                min_value, value, max_value, value_step, &slider, i);
 }
 
 gui_size
@@ -3432,8 +3662,12 @@ gui_panel_progress(struct gui_panel_layout *layout, gui_size cur_value, gui_size
     struct gui_progress prog;
     const struct gui_config *config;
     struct gui_vec2 item_padding;
-    if (!gui_panel_widget(&bounds, layout))
-        return cur_value;
+
+    const struct gui_input *i;
+    enum gui_widget_state state;
+    state = gui_panel_widget(&bounds, layout);
+    if (!state) return cur_value;
+    i = (state == GUI_ROM) ? 0 : layout->input;
 
     config = layout->config;
     item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
@@ -3443,17 +3677,17 @@ gui_panel_progress(struct gui_panel_layout *layout, gui_size cur_value, gui_size
     prog.background = config->colors[GUI_COLOR_PROGRESS];
     prog.foreground = config->colors[GUI_COLOR_PROGRESS_CURSOR];
     return gui_progress(layout->buffer, bounds.x, bounds.y, bounds.w, bounds.h,
-            cur_value, max_value, is_modifyable, &prog, layout->input);
+            cur_value, max_value, is_modifyable, &prog, i);
 }
 
-static gui_bool
+static enum gui_widget_state
 gui_panel_edit_base(struct gui_rect *bounds, struct gui_edit *field,
     struct gui_panel_layout *layout)
 {
     const struct gui_config *config;
     struct gui_vec2 item_padding;
-    if (!gui_panel_widget(bounds, layout))
-        return gui_false;
+    enum gui_widget_state state = gui_panel_widget(bounds, layout);
+    if (!state) return state;
 
     config = layout->config;
     item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
@@ -3466,7 +3700,7 @@ gui_panel_edit_base(struct gui_rect *bounds, struct gui_edit *field,
     field->border = config->colors[GUI_COLOR_INPUT_BORDER];
     field->cursor = config->colors[GUI_COLOR_INPUT_CURSOR];
     field->text = config->colors[GUI_COLOR_INPUT_TEXT];
-    return gui_true;
+    return state;
 }
 
 void
@@ -3475,9 +3709,14 @@ gui_panel_editbox(struct gui_panel_layout *layout, struct gui_edit_box *box)
     struct gui_rect bounds;
     struct gui_edit field;
     const struct gui_config *config = layout->config;
-    if (!gui_panel_edit_base(&bounds, &field, layout)) return;
+    const struct gui_input *i;
+    enum gui_widget_state state;
+
+    state = gui_panel_edit_base(&bounds, &field, layout);
+    if (!state) return;
+    i = (state == GUI_ROM) ? 0 : layout->input;
     gui_editbox(layout->buffer, bounds.x, bounds.y, bounds.w, bounds.h,
-            box, &field, layout->input, &config->font);
+            box, &field, i, &config->font);
 }
 
 gui_size
@@ -3487,9 +3726,14 @@ gui_panel_edit(struct gui_panel_layout *layout, gui_char *buffer, gui_size len,
     struct gui_rect bounds;
     struct gui_edit field;
     const struct gui_config *config = layout->config;
-    if (!gui_panel_edit_base(&bounds, &field, layout)) return len;
+    const struct gui_input *i;
+    enum gui_widget_state state;
+
+    state = gui_panel_edit_base(&bounds, &field, layout);
+    if (!state) return len;
+    i = (state == GUI_ROM) ? 0 : layout->input;
     return gui_edit(layout->buffer, bounds.x, bounds.y, bounds.w, bounds.h,
-        buffer, len, max, active, &field, filter, layout->input, &config->font);
+        buffer, len, max, active, &field, filter, i, &config->font);
 }
 
 gui_size
@@ -3499,9 +3743,14 @@ gui_panel_edit_filtered(struct gui_panel_layout *layout, gui_char *buffer, gui_s
     struct gui_rect bounds;
     struct gui_edit field;
     const struct gui_config *config = layout->config;
-    if (!gui_panel_edit_base(&bounds, &field, layout)) return len;
+    const struct gui_input *i;
+    enum gui_widget_state state;
+
+    state = gui_panel_edit_base(&bounds, &field, layout);
+    if (!state) return len;
+    i = (state == GUI_ROM) ? 0 : layout->input;
     return gui_edit_filtered(layout->buffer, bounds.x, bounds.y, bounds.w, bounds.h,
-        buffer, len, max, active, &field, filter, layout->input, &config->font);
+        buffer, len, max, active, &field, filter, i, &config->font);
 }
 
 gui_int
@@ -3514,8 +3763,11 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     struct gui_command_buffer *out;
     struct gui_vec2 item_padding;
 
-    if (!gui_panel_widget(&bounds, layout))
-        return value;
+    const struct gui_input *i;
+    enum gui_widget_state state;
+    state = gui_panel_widget(&bounds, layout);
+    if (!state) return value;
+    i = (state == GUI_ROM) ? 0 : layout->input;
 
     config = layout->config;
     out = layout->buffer;
@@ -3532,7 +3784,7 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     spinner.text = config->colors[GUI_COLOR_SPINNER_TEXT];
     spinner.show_cursor = gui_false;
     return gui_spinner(out, bounds.x, bounds.y, bounds.w, bounds.h, &spinner,
-        min, value, max, step, active, layout->input, &layout->config->font);
+        min, value, max, step, active, i, &layout->config->font);
 }
 
 gui_size
@@ -3544,11 +3796,15 @@ gui_panel_selector(struct gui_panel_layout *layout, const char *items[],
     const struct gui_config *config;
     struct gui_command_buffer *out;
 
+    const struct gui_input *i;
+    enum gui_widget_state state;
+    state = gui_panel_widget(&bounds, layout);
+    if (!state) return item_current;
+    i = (state == GUI_ROM) ? 0 : layout->input;
+
     GUI_ASSERT(items);
     GUI_ASSERT(item_count);
     GUI_ASSERT(item_current < item_count);
-    if (!gui_panel_widget(&bounds, layout))
-        return item_current;
 
     out = layout->buffer;
     config = layout->config;
@@ -3563,7 +3819,7 @@ gui_panel_selector(struct gui_panel_layout *layout, const char *items[],
     selector.text_bg = config->colors[GUI_COLOR_PANEL];
     selector.padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
     return gui_selector(out, bounds.x, bounds.y, bounds.w, bounds.h, &selector,
-        items, item_count, item_current, layout->input, &layout->config->font);
+        items, item_count, item_current, i, &layout->config->font);
 }
 
 void
@@ -3928,18 +4184,24 @@ gui_panel_tab_begin(struct gui_panel_layout *parent, struct gui_panel_layout *ta
     gui_panel_alloc_space(&bounds, parent);
 
     /* create a fake panel to create a panel layout from */
-    flags = GUI_PANEL_MINIMIZABLE|GUI_PANEL_TAB;
+    flags = GUI_PANEL_TAB;
     if (border) flags |= GUI_PANEL_BORDER|GUI_PANEL_BORDER_HEADER;
     gui_panel_init(&panel, bounds.x, bounds.y, bounds.w,
         gui_null_rect.h,flags,out,parent->config);
-    panel.minimized = minimized;
-    gui_panel_begin(tab, &panel, title, parent->input);
+
+    if (minimized) panel.flags |= GUI_PANEL_MINIMIZED;
+    gui_panel_begin(tab, &panel, parent->input);
+    gui_unify(&clip, &parent->clip, tab->clip.x, tab->clip.y, tab->clip.x + tab->clip.w,
+        tab->clip.y + tab->clip.h);
+    gui_command_buffer_push_scissor(out, clip.x, clip.y, clip.w, clip.h);
+    gui_panel_header(tab, title, GUI_MINIMIZABLE, 0);
 
     /* calculate the tab clipping rect */
     gui_unify(&clip, &parent->clip, tab->clip.x, tab->clip.y, tab->clip.x + tab->clip.w,
         tab->clip.y + tab->clip.h);
     gui_command_buffer_push_scissor(out, clip.x, clip.y, clip.w, clip.h);
-    return panel.minimized;
+    tab->clip = clip;
+    return (tab->flags & GUI_PANEL_MINIMIZED) ? gui_true : gui_false;
 }
 
 void
@@ -3957,7 +4219,9 @@ gui_panel_tab_end(struct gui_panel_layout *p, struct gui_panel_layout *t)
     /* setup fake panel to end the tab */
     panel.x = t->at_x;
     panel.y = t->y;
-    panel.flags = t->flags;
+    panel.w = t->width;
+    panel.h = t->height;
+    panel.flags = t->flags|GUI_PANEL_BORDER|GUI_PANEL_BORDER_HEADER;
     gui_panel_end(t, &panel);
 
     /*calculate the from the tab occupied space and allocate it in the parent panel */
@@ -3998,13 +4262,22 @@ gui_panel_group_begin(struct gui_panel_layout *p, struct gui_panel_layout *g,
     out = p->buffer;
     flags = GUI_PANEL_BORDER|GUI_PANEL_SCROLLBAR|GUI_PANEL_TAB;
     gui_panel_init(&panel, bounds.x,bounds.y,bounds.w,bounds.h,flags, out, p->config);
-    gui_panel_begin(g, &panel, title, p->input);
+    gui_panel_begin(g, &panel, p->input);
     g->offset = offset;
 
-    /* setup correct clipping rectangle for the group */
     gui_unify(&clip, &p->clip, g->clip.x, g->clip.y, g->clip.x + g->clip.w,
         g->clip.y + g->clip.h);
     gui_command_buffer_push_scissor(out, clip.x, clip.y, clip.w, clip.h);
+    gui_panel_header(g, title, 0, 0);
+
+    /* calculate the tab clipping rect */
+    gui_unify(&clip, &p->clip, g->clip.x, g->clip.y, g->clip.x + g->clip.w,
+        g->clip.y + g->clip.h);
+    gui_command_buffer_push_scissor(out, clip.x, clip.y, clip.w, clip.h);
+
+    /* setup correct clipping rectangle for the group */
+    gui_command_buffer_push_scissor(out, clip.x, clip.y, clip.w, clip.h);
+    g->clip = clip;
     return;
 
 failed:
@@ -4031,7 +4304,9 @@ gui_panel_group_end(struct gui_panel_layout *p, struct gui_panel_layout *g)
     out = p->buffer;
     pan.x = g->at_x;
     pan.y = g->y;
-    pan.flags = GUI_PANEL_BORDER|GUI_PANEL_MINIMIZABLE|GUI_PANEL_TAB|GUI_PANEL_SCROLLBAR;
+    pan.w = g->width;
+    pan.h = g->height;
+    pan.flags = GUI_PANEL_BORDER|GUI_PANEL_TAB|GUI_PANEL_SCROLLBAR;
 
     /* setup clipping rect to finalize group panel drawing*/
     gui_unify(&clip, &p->clip, g->clip.x, g->clip.y, g->x + g->w, g->y + g->h);
@@ -4143,15 +4418,16 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
     bounds.h -= header_h;
 
     /* setup fake panel to create a panel layout from */
-    flags = GUI_PANEL_BORDER|GUI_PANEL_SCROLLBAR|GUI_PANEL_TAB|GUI_PANEL_NO_HEADER;
+    flags = GUI_PANEL_BORDER|GUI_PANEL_SCROLLBAR|GUI_PANEL_TAB;
     gui_panel_init(&panel, bounds.x, bounds.y, bounds.w, bounds.h, flags, out, config);
-    gui_panel_begin(shelf, &panel, 0, parent->input);
+    gui_panel_begin(shelf, &panel, parent->input);
     shelf->offset = offset;
 
     /* setup clip rect for the shelf panel */
     gui_unify(&clip, &parent->clip, shelf->clip.x, shelf->clip.y,
         shelf->clip.x + shelf->clip.w, shelf->clip.y + shelf->clip.h);
     gui_command_buffer_push_scissor(out, clip.x, clip.y, clip.w, clip.h);
+    shelf->clip = clip;
     return active;
 
 failed:
@@ -4178,7 +4454,7 @@ gui_panel_shelf_end(struct gui_panel_layout *p, struct gui_panel_layout *s)
 
     out = p->buffer;
     pan.x = s->at_x; pan.y = s->y;
-    pan.flags = GUI_PANEL_BORDER|GUI_PANEL_MINIMIZABLE|GUI_PANEL_TAB|GUI_PANEL_SCROLLBAR;
+    pan.flags = GUI_PANEL_BORDER|GUI_PANEL_TAB|GUI_PANEL_SCROLLBAR;
 
     gui_unify(&clip, &p->clip, s->clip.x, s->clip.y, s->x + s->w, s->y + s->h);
     gui_command_buffer_push_scissor(out, clip.x, clip.y, clip.w, clip.h);
@@ -4383,8 +4659,14 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
 
     config = layout->config;
     out = layout->buffer;
-    if (!(panel->flags & GUI_PANEL_TAB))
-        gui_command_buffer_push_scissor(out, layout->x,layout->y,layout->w+1,layout->h+1);
+    if (!(layout->flags & GUI_PANEL_TAB)) {
+        struct gui_rect clip;
+        clip.x = MAX(0, (layout->x - 1));
+        clip.y = MAX(0, (layout->y - 1));
+        clip.w = layout->w+1;
+        clip.h = layout->h+1;
+        gui_command_buffer_push_scissor(out, clip.x, clip.y, clip.w,clip.h);
+    }
 
     /* cache configuration data */
     item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
@@ -4393,7 +4675,7 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
     scrollbar_width = gui_config_property(config, GUI_PROPERTY_SCROLLBAR_WIDTH).x;
     scaler_size = gui_config_property(config, GUI_PROPERTY_SCALER_SIZE);
 
-    if (panel->flags & GUI_PANEL_SCROLLBAR && layout->valid) {
+    if (layout->flags & GUI_PANEL_SCROLLBAR && layout->valid) {
         struct gui_scroll scroll;
         gui_float panel_y;
         gui_float scroll_x, scroll_y;
@@ -4401,8 +4683,8 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
         gui_float scroll_target, scroll_offset, scroll_step;
 
         scroll_x = layout->at_x + layout->width;
-        scroll_y = (panel->flags & GUI_PANEL_BORDER) ? layout->y + 1 : layout->y;
-        scroll_y += layout->header_height;
+        scroll_y = (layout->flags & GUI_PANEL_BORDER) ? layout->y + 1 : layout->y;
+        scroll_y += layout->header.h;
         scroll_w = scrollbar_width;
         scroll_h = layout->height;
         scroll_offset = layout->offset;
@@ -4411,19 +4693,19 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
         scroll.background = config->colors[GUI_COLOR_SCROLLBAR];
         scroll.foreground = config->colors[GUI_COLOR_SCROLLBAR_CURSOR];
         scroll.border = config->colors[GUI_COLOR_SCROLLBAR_BORDER];
-        if (panel->flags & GUI_PANEL_BORDER) scroll_h -= 1;
-        scroll_target = (layout->at_y-layout->y)-(layout->header_height+2*item_spacing.y);
-        scroll.has_scrolling = (panel->flags & GUI_PANEL_ACTIVE);
+        if (layout->flags & GUI_PANEL_BORDER) scroll_h -= 1;
+        scroll_target = (layout->at_y-layout->y)-(layout->header.h+2*item_spacing.y);
+        scroll.has_scrolling = (layout->flags & GUI_PANEL_ACTIVE);
         panel->offset = gui_scroll(out, scroll_x, scroll_y, scroll_w, scroll_h,
                                     scroll_offset, scroll_target, scroll_step,
                                     &scroll, layout->input);
 
-        panel_y = layout->y + layout->height + layout->header_height - panel_padding.y;
+        panel_y = layout->y + layout->height + layout->header.h - panel_padding.y;
         gui_command_buffer_push_rect(out, layout->x,panel_y,layout->width,panel_padding.y,
             0, config->colors[GUI_COLOR_PANEL]);
     } else layout->height = layout->at_y - layout->y;
 
-    if ((panel->flags & GUI_PANEL_SCALEABLE) && layout->valid) {
+    if ((layout->flags & GUI_PANEL_SCALEABLE) && layout->valid) {
         struct gui_color col = config->colors[GUI_COLOR_SCALER];
         gui_float scaler_w = MAX(0, scaler_size.x - item_padding.x);
         gui_float scaler_h = MAX(0, scaler_size.y - item_padding.y);
@@ -4433,15 +4715,21 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
             scaler_x + scaler_w, scaler_y + scaler_h, scaler_x, scaler_y + scaler_h, col);
     }
 
-    if (panel->flags & GUI_PANEL_BORDER) {
-        const gui_float width = (panel->flags & GUI_PANEL_SCROLLBAR) ?
+    if (layout->flags & GUI_PANEL_BORDER) {
+        const gui_float width = (layout->flags & GUI_PANEL_SCROLLBAR) ?
                 layout->width + scrollbar_width : layout->width;
         const gui_float padding_y = (!layout->valid) ?
-                panel->y + layout->header_height:
+                panel->y + layout->header.h:
                 (panel->flags & GUI_PANEL_SCROLLBAR) ?
-                panel->y + layout->h :
+                layout->y + layout->h-1 :
                 panel->y + layout->height + item_padding.y;
 
+        if (panel->flags & GUI_PANEL_BORDER_HEADER)
+            gui_command_buffer_push_line(out, panel->x, panel->y + layout->header.h,
+                panel->x + panel->w, panel->y + layout->header.h,
+                config->colors[GUI_COLOR_BORDER]);
+
+        /* panel border */
         gui_command_buffer_push_line(out, panel->x, padding_y, panel->x + width,
                 padding_y, config->colors[GUI_COLOR_BORDER]);
         gui_command_buffer_push_line(out, panel->x, panel->y, panel->x,
@@ -4449,6 +4737,7 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
         gui_command_buffer_push_line(out, panel->x + width, panel->y, panel->x + width,
                 padding_y, config->colors[GUI_COLOR_BORDER]);
     }
+    panel->flags = layout->flags;
     gui_command_buffer_push_scissor(out, 0, 0, gui_null_rect.w, gui_null_rect.h);
 }
 
@@ -4522,16 +4811,12 @@ gui_stack_pop(struct gui_stack *stack, struct gui_panel*panel)
  */
 
 void
-gui_layout_begin(struct gui_layout *layout, gui_size x, gui_size y,
-    gui_size width, gui_size height, gui_flags flags)
+gui_layout_begin(struct gui_layout *layout, gui_size width, gui_size height, gui_flags flags)
 {
     GUI_ASSERT(layout);
     if (!layout) return;
-
     gui_zero(layout, sizeof(*layout));
     layout->flags = flags;
-    layout->width = x;
-    layout->height = y;
     layout->width = width;
     layout->height = height;
 }
@@ -4600,15 +4885,6 @@ gui_layout_update_size(struct gui_layout *layout, gui_size width, gui_size heigh
     if (!layout) return;
     layout->width = width;
     layout->height = height;
-}
-
-void
-gui_layout_update_pos(struct gui_layout *layout, gui_size x, gui_size y)
-{
-    GUI_ASSERT(layout);
-    if (!layout) return;
-    layout->x = x;
-    layout->y = y;
 }
 
 void

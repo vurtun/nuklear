@@ -1625,6 +1625,15 @@ void gui_config_reset(struct gui_config*);
     gui_panel_tree_end      -- ends the previously started tree build up process
     gui_panel_end           -- end squeunce point which finializes the panel build up
 */
+enum gui_widget_state {
+    GUI_INVALID,
+    /* The widget cannot be seen and is completly out of bounds  */
+    GUI_VALID,
+    /* The widget is completly inside the panel and can be updated + drawn */
+    GUI_ROM
+    /* The widget is partially visible and cannot be updated */
+};
+
 enum gui_table_lines {
     GUI_TABLE_HHEADER = 0x01,
     /* Horizontal table header lines */
@@ -1670,6 +1679,22 @@ enum gui_panel_tab {
     /* Flag indicating that the panel tab is closed */
 };
 
+enum gui_panel_header_flags {
+    GUI_CLOSEABLE = 0x01,
+    GUI_MINIMIZABLE = 0x02,
+    GUI_SCALEABLE = 0x04,
+    GUI_MOVEABLE = 0x08
+};
+
+enum gui_panel_header_symbol {
+    GUI_SYMBOL_X,
+    GUI_SYMBOL_CIRCLE,
+    GUI_SYMBOL_RECT,
+    GUI_SYMBOL_TRIANGLE,
+    GUI_SYMBOL_PLUS_MINUS,
+    GUI_SYMBOL_CIRCLE_RECT
+};
+
 enum gui_panel_flags {
     GUI_PANEL_HIDDEN = 0x01,
     /* Hiddes the panel and stops any panel interaction and drawing can be set
@@ -1677,31 +1702,24 @@ enum gui_panel_flags {
     GUI_PANEL_BORDER = 0x02,
     /* Draws a border around the panel to visually seperate the panel from the
      * background */
-    GUI_PANEL_MINIMIZABLE = 0x04,
-    /* Enables the panel to be minimized/collapsed and adds a minimizing icon
-     * in the panel header to be clicked by GUI user */
-    GUI_PANEL_CLOSEABLE = 0x08,
-    /* Enables the panel to be closed, hidden and made non interactive for the
-     * user by adding a closing icon in the panel header */
-    GUI_PANEL_MOVEABLE = 0x10,
+    GUI_PANEL_BORDER_HEADER = 0x04,
+    /* Draws a border between panel header and body */
+    GUI_PANEL_MOVEABLE = 0x08,
     /* The moveable flag inidicates that a panel can be move by user input by
      * dragging the panel header */
-    GUI_PANEL_SCALEABLE = 0x20,
+    GUI_PANEL_SCALEABLE = 0x10,
     /* The scaleable flag indicates that a panel can be scaled by user input
      * by dragging a scaler icon at the button of the panel */
-    GUI_PANEL_NO_HEADER = 0x40,
-    /* To remove the header from the panel and invalidate all panel header flags*/
-    GUI_PANEL_BORDER_HEADER = 0x80,
-    /* Draws a border inside the panel for the panel header seperating the body
-     * and header of the panel */
-    GUI_PANEL_ACTIVE = 0x100,
+    GUI_PANEL_MINIMIZED = 0x20,
+    /* marks the panel as minimized */
+    GUI_PANEL_ACTIVE = 0x40,
     /* INTERNAL ONLY!: marks the panel as active, used by the panel stack */
-    GUI_PANEL_SCROLLBAR = 0x200,
+    GUI_PANEL_SCROLLBAR = 0x80,
     /* INTERNAL ONLY!: adds a scrollbar to the panel which enables fixed size
      * panels with unlimited amount of space to fill */
-    GUI_PANEL_TAB = 0x400,
+    GUI_PANEL_TAB = 0x100,
     /* INTERNAL ONLY!: Marks the panel as an subpanel of another panel(Groups/Tabs/Shelf)*/
-    GUI_PANEL_DO_NOT_RESET = 0x800
+    GUI_PANEL_DO_NOT_RESET = 0x200
     /* INTERNAL ONLY!: requires that the panel does not resets the command buffer */
 };
 
@@ -1713,8 +1731,6 @@ struct gui_panel {
     gui_flags flags;
     /* panel flags modifing its behavior */
     gui_float offset;
-    /* panel scrollbar offset in pixel */
-    gui_bool minimized;
     /* flag indicating if the panel is collapsed */
     const struct gui_config *config;
     /* configuration reference describing the panel style */
@@ -1768,8 +1784,10 @@ struct gui_panel_layout {
     /* index position of the current widget row and column  */
     gui_float width, height;
     /* size of the actual useable space inside the panel */
-    gui_float header_height;
-    /* height of the panel header space */
+    struct gui_rect header;
+    /* panel header bounds */
+    gui_float footer_h;
+    /* height of the panel footer space */
     gui_size index;
     /* index of the current widget in the current panel row */
     struct gui_panel_row_layout row;
@@ -1784,11 +1802,11 @@ struct gui_panel_layout {
     /* command draw call output command buffer */
 };
 
+typedef gui_flags gui_tree_node_state;
 enum gui_tree_nodes_states {
     GUI_NODE_ACTIVE = 0x01,
     GUI_NODE_SELECTED = 0x02
 };
-typedef gui_flags gui_tree_node_state;
 
 enum gui_tree_node_operation {
     GUI_NODE_NOP,
@@ -1840,19 +1858,42 @@ gui_bool gui_panel_has_flag(struct gui_panel*, gui_flags);
 */
 gui_bool gui_panel_is_minimized(struct gui_panel*);
 /*  this function checks if the panel is minimized */
-gui_bool gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel*,
-                        const char *title, const struct gui_input*);
+void gui_panel_begin(struct gui_panel_layout*, struct gui_panel*, const struct gui_input*);
 /*  this function begins the panel build up process
     Input:
-    - title of the panel visible in th header
     - input structure holding all user generated state changes
     Output:
     - panel layout to fill up with widgets
 */
+void gui_panel_header_begin(struct gui_panel_layout*);
+/*  this function begins the panel header build up process */
+gui_bool gui_panel_header_icon(struct gui_panel_layout*, enum gui_panel_header_symbol,
+                                enum gui_panel_flags);
+/*  this function adds a header icon to header which allows a change of a panel
+    flag by the user
+    Input:
+    - symbol that shall be shown in the header as a icon
+    - panel flag to update
+*/
+void gui_panel_header_title(struct gui_panel_layout*, const char*);
+/*  this function adds a title to the panel header
+    flag by the user
+    Input:
+    - title of the header
+*/
+void gui_panel_header_end(struct gui_panel_layout*);
+/*  this function ends the panel header build up process */
+gui_bool gui_panel_header(struct gui_panel_layout*, const char*, gui_flags show, gui_flags notify);
+/*  this function is a shorthand for the header build up process
+    flag by the user
+    Input:
+    - title of the header or NULL if not needed
+    - flags indicating which icons should be drawn to the header
+    - flags indicating which icons should notify if clicked
+*/
 struct gui_stack;
-gui_bool gui_panel_begin_stacked(struct gui_panel_layout*, struct gui_panel*,
-                                struct gui_stack*, const char*,
-                                const struct gui_input*);
+void gui_panel_begin_stacked(struct gui_panel_layout*, struct gui_panel*,
+                                struct gui_stack*, const struct gui_input*);
 /*  this function begins the panel build up process and push the panel into a panel stack
     Input:
     - panel stack to push the panel into
@@ -1861,9 +1902,9 @@ gui_bool gui_panel_begin_stacked(struct gui_panel_layout*, struct gui_panel*,
     Output:
     - panel layout to fill up with widgets
 */
-gui_bool gui_panel_begin_tiled(struct gui_panel_layout*, struct gui_panel*,
+void gui_panel_begin_tiled(struct gui_panel_layout*, struct gui_panel*,
                                 struct gui_layout*, gui_uint slot, gui_size index,
-                                const char*, const struct gui_input*);
+                                const struct gui_input*);
 /*  this function begins the panel build up process and push the panel into a tiled
  *  layout container
     Input:
@@ -1917,7 +1958,7 @@ gui_size gui_panel_row_columns(const struct gui_panel_layout *layout,
     Output:
     - panel layout to fill up with widgets
 */
-gui_bool gui_panel_widget(struct gui_rect*, struct gui_panel_layout*);
+enum gui_widget_state gui_panel_widget(struct gui_rect*, struct gui_panel_layout*);
 /*  this function represents the base of every widget and calculates the bounds
  *  and allocated space for a widget inside a panel.
     Output:
@@ -2402,8 +2443,6 @@ enum gui_layout_flags {
 struct gui_layout {
     gui_float scaler_width;
     /* width of the scaling line between slots */
-    gui_size x, y;
-    /* position of the layout inside the window */
     gui_size width, height;
     /* size of the layout inside the window */
     gui_flags flags;
@@ -2414,26 +2453,25 @@ struct gui_layout {
     /* each slot inside the panel layout */
 };
 
-void gui_layout_begin(struct gui_layout*, gui_size x, gui_size y,
-                        gui_size width, gui_size height, gui_flags);
+void gui_layout_begin(struct gui_layout*, gui_size width, gui_size height, gui_flags);
 /*  this function start the definition of the layout slots
     Input:
     - position (width/height) of the layout in the window
     - size (width/height) of the layout in the window
     - layout flag settings
 */
-void gui_layout_slot(struct gui_layout*, enum gui_layout_slot_index, gui_float ratio,
-                    enum gui_layout_format, gui_size panel_count);
-/*  this function activates a slot inside the layout
+void gui_layout_slot_locked(struct gui_layout*, enum gui_layout_slot_index, gui_float ratio,
+                            enum gui_layout_format, gui_size entry_count);
+/*  this function activates a non scaleable slot inside a scaleable layout
     Input:
         - index of the slot to be activated
         - percentage of the screen that is being occupied
         - panel filling format either horizntal or vertical
         - number of panels the slot will be filled with
 */
-void gui_layout_slot_locked(struct gui_layout*, enum gui_layout_slot_index, gui_float ratio,
-                            enum gui_layout_format, gui_size panel_count);
-/*  this function activates a non scaleable slot inside a scaleable layout
+void gui_layout_slot(struct gui_layout*, enum gui_layout_slot_index, gui_float ratio,
+                    enum gui_layout_format, gui_size entry_count);
+/*  this function activates a slot inside the layout
     Input:
         - index of the slot to be activated
         - percentage of the screen that is being occupied
@@ -2442,11 +2480,6 @@ void gui_layout_slot_locked(struct gui_layout*, enum gui_layout_slot_index, gui_
 */
 void gui_layout_end(struct gui_layout*);
 /*  this function ends the definition of the layout slots */
-void gui_layout_update_pos(struct gui_layout*, gui_size x, gui_size y);
-/*  this function updates the position of the layout
-    Input:
-        - position (x/y) of the layout in the window
-*/
 void gui_layout_update_size(struct gui_layout*, gui_size width, gui_size height);
 /*  this function updates the size of the layout
     Input:
