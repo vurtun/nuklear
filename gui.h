@@ -1786,6 +1786,8 @@ struct gui_panel_layout {
     /* size of the actual useable space inside the panel */
     struct gui_rect header;
     /* panel header bounds */
+    struct gui_rect menu;
+    /* panel menubar bounds */
     gui_float footer_h;
     /* height of the panel footer space */
     gui_size index;
@@ -1874,6 +1876,8 @@ gui_bool gui_panel_header_icon(struct gui_panel_layout*, enum gui_panel_header_s
     Input:
     - symbol that shall be shown in the header as a icon
     - panel flag to update
+    Output:
+    - gui_true if the icon was pressed gui_false otherwise
 */
 void gui_panel_header_title(struct gui_panel_layout*, const char*);
 /*  this function adds a title to the panel header
@@ -1891,6 +1895,18 @@ gui_bool gui_panel_header(struct gui_panel_layout*, const char*, gui_flags show,
     - flags indicating which icons should be drawn to the header
     - flags indicating which icons should notify if clicked
 */
+void gui_panel_menu_begin(struct gui_panel_layout*);
+/*  this function begins the panel menubar build up process */
+gui_bool gui_panel_menu_item(struct gui_panel_layout*, const char *label);
+/*  this function adds a header icon to header which allows a change of a panel
+    flag by the user
+    Input:
+    - menu item label
+    Output:
+    - gui_true if it was pressed gui_false otherwise
+*/
+void gui_panel_menu_end(struct gui_panel_layout*);
+/*  this function ends the panel menubar build up process */
 struct gui_stack;
 void gui_panel_begin_stacked(struct gui_panel_layout*, struct gui_panel*,
                                 struct gui_stack*, const struct gui_input*);

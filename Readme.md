@@ -73,7 +73,7 @@ while (1) {
     /* GUI */
     struct gui_panel_layout layout;
     gui_panel_begin(&layout, &panel, &input);
-    gui_panel_header(&layout, "Show", GUI_CLOSEABLE|GUI_MINIMIZABLE, 0);
+    gui_panel_header(&layout, "Show", GUI_CLOSEABLE, 0);
     gui_panel_row(&layout, 30, 1);
     if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT)) {
         /* event handling */
