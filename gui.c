@@ -3268,8 +3268,8 @@ gui_panel_widget(struct gui_rect *bounds, struct gui_panel_layout *layout)
     GUI_ASSERT(layout);
     GUI_ASSERT(layout->config);
     GUI_ASSERT(layout->buffer);
-    if (!layout || !layout->config || !layout->buffer) return gui_false;
-    if (!layout->valid) return gui_false;
+    if (!layout || !layout->config || !layout->buffer) return GUI_INVALID;
+    if (!layout->valid) return GUI_INVALID;
 
     /* allocated space for the panel and check if the widget needs to be updated */
     gui_panel_alloc_space(bounds, layout);
