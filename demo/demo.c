@@ -48,6 +48,8 @@ struct show_window {
     struct test_tree tree;
     struct tree_node nodes[8];
     gui_float tree_offset;
+    /* menu */
+    gui_size menu_item;
 };
 
 struct control_window {
@@ -168,7 +170,7 @@ init_show(struct show_window *win, struct gui_config *config,
     struct gui_command_buffer *buffer, struct gui_stack *stack)
 {
     memset(win, 0, sizeof(*win));
-    gui_panel_init(&win->hook, 20, 20, 300, 550,
+    gui_panel_init(&win->hook, 20, 20, 310, 550,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
         GUI_PANEL_SCALEABLE, buffer, config);
     gui_stack_push(stack, &win->hook);
@@ -180,7 +182,6 @@ init_show(struct show_window *win, struct gui_config *config,
     win->slider = 10.0f;
     win->progressbar = 50;
     win->spinner = 100;
-    win->hook.offset = 180;
 
     {
         struct test_tree *tree = &win->tree;
@@ -309,13 +310,128 @@ upload_tree(struct test_tree *base, struct gui_tree *tree, struct tree_node *nod
 }
 
 static void
-update_show(struct show_window *show, struct gui_stack *stack, struct gui_input *in)
+update_menu(struct gui_panel_layout *layout, struct show_window *win, struct gui_config *config)
+{
+    int i = 0;
+    enum level_id {LEVEL_MENU,LEVEL_FILE,LEVEL_OPEN,LEVEL_EDIT};
+    enum item_id {ITEM_FILE, ITEM_EDIT,
+        ITEM_FILE_BACK, ITEM_FILE_OPEN, ITEM_FILE_CLOSE, ITEM_FILE_QUIT,
+        ITEM_FILE_OPEN_BACK, ITEM_FILE_OPEN_EXE, ITEM_FILE_OPEN_SRC,
+        ITEM_EDIT_BACK, ITEM_EDIT_COPY, ITEM_EDIT_CUT, ITEM_EDIT_PASTE, ITEM_EDIT_DELETE};
+    enum combi_id {MENU_FILE, MENU_EDIT,
+        FILE_BACK, FILE_OPEN, FILE_CLOSE, FILE_QUIT,
+        OPEN_BACK, OPEN_EXE, OPEN_SRC,
+        EDIT_BACK, EDIT_COPY, EDIT_CUT, EDIT_PASTE, EDIT_DELETE};
+
+    struct level {const enum level_id id; const int items; enum combi_id list;};
+    struct item {const enum item_id id; const char *name; const enum level_id lvl, next;};
+    struct combi {const enum combi_id id; const enum level_id level; const enum item_id item;};
+
+    static const struct level levels[] = {
+        {LEVEL_MENU, 2, MENU_FILE},
+        {LEVEL_FILE, 4, FILE_BACK},
+        {LEVEL_OPEN, 3, OPEN_BACK},
+        {LEVEL_EDIT, 5, EDIT_BACK},
+    };
+    static const struct item items[] = {
+        {ITEM_FILE, "FILE", LEVEL_MENU, LEVEL_FILE},
+        {ITEM_EDIT, "EDIT", LEVEL_MENU, LEVEL_EDIT},
+        {ITEM_FILE_BACK, "BACK", LEVEL_FILE, LEVEL_MENU},
+        {ITEM_FILE_OPEN, "OPEN", LEVEL_FILE, LEVEL_OPEN},
+        {ITEM_FILE_CLOSE, "CLOSE", LEVEL_FILE, LEVEL_MENU},
+        {ITEM_FILE_QUIT, "QUIT", LEVEL_FILE, LEVEL_MENU},
+        {ITEM_FILE_OPEN_BACK, "BACK", LEVEL_OPEN, LEVEL_FILE},
+        {ITEM_FILE_OPEN_EXE, "IMAGE", LEVEL_OPEN, LEVEL_MENU},
+        {ITEM_FILE_OPEN_SRC, "TEXT", LEVEL_OPEN, LEVEL_MENU},
+        {ITEM_EDIT_BACK, "BACK", LEVEL_EDIT, LEVEL_MENU},
+        {ITEM_EDIT_COPY, "COPY", LEVEL_EDIT, LEVEL_MENU},
+        {ITEM_EDIT_CUT, "CUT", LEVEL_EDIT, LEVEL_MENU},
+        {ITEM_EDIT_PASTE, "PASTE", LEVEL_EDIT, LEVEL_MENU},
+        {ITEM_EDIT_DELETE, "DEL", LEVEL_EDIT, LEVEL_MENU}
+    };
+    static const struct combi combis[] = {
+        /* main menu level */
+        {MENU_FILE, LEVEL_MENU, ITEM_FILE},
+        {MENU_EDIT, LEVEL_MENU, ITEM_EDIT},
+        /* file menu level */
+        {FILE_BACK, LEVEL_FILE, ITEM_FILE_BACK},
+        {FILE_OPEN, LEVEL_FILE, ITEM_FILE_OPEN},
+        {FILE_CLOSE, LEVEL_FILE, ITEM_FILE_CLOSE},
+        {FILE_QUIT, LEVEL_FILE, ITEM_FILE_QUIT},
+        /* open file options menu level */
+        {OPEN_BACK, LEVEL_OPEN, ITEM_FILE_OPEN_BACK},
+        {OPEN_EXE, LEVEL_OPEN, ITEM_FILE_OPEN_EXE},
+        {OPEN_SRC, LEVEL_OPEN, ITEM_FILE_OPEN_SRC},
+        /* edit main level*/
+        {EDIT_BACK, LEVEL_EDIT, ITEM_EDIT_BACK},
+        {EDIT_COPY, LEVEL_EDIT, ITEM_EDIT_COPY},
+        {EDIT_CUT, LEVEL_EDIT, ITEM_EDIT_CUT},
+        {EDIT_PASTE, LEVEL_EDIT, ITEM_EDIT_PASTE},
+        {EDIT_DELETE, LEVEL_EDIT, ITEM_EDIT_DELETE}
+    };
+
+    const struct level *lvl = &levels[win->menu_item];
+    const struct combi *iter = &combis[lvl->list];
+    {
+        /* calculate column row count to fit largets menu item  */
+        gui_size cols, max = 0;
+        for (i = 0; i < lvl->items; ++i) {
+            gui_size text_w, w;
+            const struct item *item = &items[iter->item];
+            text_w = config->font.width(config->font.userdata,item->name,strlen(item->name));
+            w = text_w + (gui_size)config->properties[GUI_PROPERTY_ITEM_PADDING].x * 2;
+            if (w > max) max = w;
+            iter++;
+        }
+        cols = gui_panel_row_columns(layout, max);
+        gui_panel_row(layout, 18, cols);
+    }
+
+    /* output current menu level entries */
+    gui_panel_menu_begin(layout);
+    {
+        gui_config_push_color(config, GUI_COLOR_BUTTON_BORDER, 45, 45, 45, 250);
+        gui_config_push_property(config, GUI_PROPERTY_ITEM_SPACING, 0, 4.0f);
+        iter = &combis[lvl->list];
+        for (i = 0; i < lvl->items; ++i) {
+            const struct item *item = &items[iter->item];
+            if (gui_panel_menu_item(layout, item->name)) {
+                if (item->id == ITEM_FILE_OPEN_EXE) {
+                    fprintf(stdout, "open program file button pressed!\n");
+                } else if (item->id == ITEM_FILE_OPEN_SRC) {
+                    fprintf(stdout, "open source file button pressed!\n");
+                } else if (item->id == ITEM_FILE_CLOSE) {
+                    fprintf(stdout, "close button pressed!\n");
+                } else if (item->id == ITEM_FILE_QUIT) {
+                    fprintf(stdout, "quit button pressed!\n");
+                } else if (item->id == ITEM_EDIT_COPY) {
+                    fprintf(stdout, "copy button pressed!\n");
+                } else if (item->id == ITEM_EDIT_CUT) {
+                    fprintf(stdout, "cut button pressed!\n");
+                } else if (item->id == ITEM_EDIT_PASTE) {
+                    fprintf(stdout, "paste button pressed!\n");
+                } else if (item->id == ITEM_EDIT_DELETE) {
+                    fprintf(stdout, "delete button pressed!\n");
+                }
+                win->menu_item = item->next;
+            }
+            iter++;
+        }
+        gui_config_pop_color(config);
+        gui_config_pop_property(config);
+    }
+    gui_panel_menu_end(layout);
+}
+
+static void
+update_show(struct show_window *show, struct gui_stack *stack, struct gui_input *in, struct gui_config *config)
 {
     struct gui_panel_layout tab;
     struct gui_panel_layout layout;
     static const char *shelfs[] = {"Histogram", "Lines"};
     gui_panel_begin_stacked(&layout, &show->hook, stack, in);
     gui_panel_header(&layout, "Show", show->header_flags, 0);
+    update_menu(&layout, show, config);
     {
         /* Widgets */
         show->widget_tab = gui_panel_tab_begin(&layout, &tab, "Widgets",GUI_BORDER, show->widget_tab);
@@ -353,13 +469,13 @@ update_flags(struct gui_panel_layout *panel, struct control_window *control)
     gui_size n = 0;
     gui_flags res = 0;
     gui_flags i = 0x01;
-    const char *options[]={"Hidden","Border","Header Border", "Moveable","Scaleable"};
+    const char *options[]={"Hidden","Border","Header Border", "Moveable","Scaleable", "Minimized"};
     gui_panel_row(panel, 30, 2);
     do {
         if (gui_panel_check(panel,options[n++],(control->show_flags & i)?gui_true:gui_false))
             res |= i;
         i = i << 1;
-    } while (i <= GUI_PANEL_SCALEABLE);
+    } while (i <= GUI_PANEL_MINIMIZED);
     control->show_flags = res;
 }
 
@@ -532,16 +648,24 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
 static void
 run_demo(struct demo_gui *gui, struct gui_input *input)
 {
+    gui_flags prev;
     struct control_window *control = &gui->control;
     struct show_window *show = &gui->show;
 
     gui->running = update_control(control, &gui->stack, input, &gui->config);
+
     if (show->hook.flags & GUI_PANEL_ACTIVE)
         show->hook.flags = control->show_flags|GUI_PANEL_ACTIVE;
     else show->hook.flags = control->show_flags;
+    gui->show.header_flags = gui->control.header_flags;
+
+    prev = show->hook.flags;
+    update_show(show, &gui->stack, input, &gui->config);
     if (show->hook.flags & GUI_PANEL_HIDDEN)
         control->show_flags |= GUI_PANEL_HIDDEN;
-    gui->show.header_flags = gui->control.header_flags;
-    update_show(show, &gui->stack, input);
+    if (show->hook.flags & GUI_PANEL_MINIMIZED && !(prev & GUI_PANEL_MINIMIZED))
+        control->show_flags |= GUI_PANEL_MINIMIZED;
+    else if (prev & GUI_PANEL_MINIMIZED && !(show->hook.flags & GUI_PANEL_MINIMIZED))
+        control->show_flags &= ~(gui_flags)GUI_PANEL_MINIMIZED;
 }
 
