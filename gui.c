@@ -2440,7 +2440,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
             0, c->colors[GUI_COLOR_PANEL]);
     }
 
-    /* draw scrollbar panel footer */
+    /* draw panel background if fixed panel size */
     if (layout->flags & GUI_PANEL_SCROLLBAR) {
         const struct gui_color *color = &c->colors[GUI_COLOR_PANEL];
         layout->width = panel->w - scrollbar_width;
@@ -2459,8 +2459,8 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
 
     /* calculate and set the panel clipping rectangle*/
     layout->clip.x = panel->x;
-    layout->clip.w = panel->w;
     layout->clip.y = panel->y;
+    layout->clip.w = panel->w;
     if (layout->flags & GUI_PANEL_SCROLLBAR) {
         if (layout->flags & GUI_PANEL_SCALEABLE)
             layout->clip.h = panel->h - (layout->footer_h + layout->header.h);
@@ -2723,8 +2723,8 @@ gui_panel_header_begin(struct gui_panel_layout *layout)
             gui_command_buffer_push_rect(out, layout->x, layout->y + layout->header.h,
                 layout->w, layout->h - layout->header.h, 0, *color);
     }
-    gui_command_buffer_push_rect(out, layout->x, layout->y, layout->w,
-        layout->header.h, 0, c->colors[GUI_COLOR_HEADER]);
+    gui_command_buffer_push_rect(out, layout->x, layout->y+1, layout->w,
+        layout->header.h-1, 0, c->colors[GUI_COLOR_HEADER]);
 }
 
 gui_bool
@@ -2835,7 +2835,7 @@ gui_panel_header_icon(struct gui_panel_layout *layout,
     default: return ret;
     }
 
-    /* check if the close icon has been pressed and set the panel to hidden */
+    /* check if the icon has been pressed and set/remove the panel flag */
     if (layout->input) {
         gui_float clicked_x = layout->input->mouse_clicked_pos.x;
         gui_float clicked_y = layout->input->mouse_clicked_pos.y;
@@ -2955,31 +2955,30 @@ gui_panel_header(struct gui_panel_layout *layout, const char *title,
         return gui_false;
 
     gui_panel_header_begin(layout);
-    if (flags & GUI_CLOSEABLE) {
-        if (notify & GUI_CLOSEABLE)
-            ret = ret || gui_panel_header_icon(layout, GUI_SYMBOL_X, GUI_PANEL_HIDDEN);
-        else gui_panel_header_icon(layout, GUI_SYMBOL_X, GUI_PANEL_HIDDEN);
+    {
+        if (flags & GUI_CLOSEABLE) {
+            if (notify & GUI_CLOSEABLE)
+                ret = ret || gui_panel_header_icon(layout, GUI_SYMBOL_X, GUI_PANEL_HIDDEN);
+            else gui_panel_header_icon(layout, GUI_SYMBOL_X, GUI_PANEL_HIDDEN);
+        }
+        if (flags & GUI_MINIMIZABLE) {
+            if (notify & GUI_MINIMIZABLE)
+                ret = ret || gui_panel_header_icon(layout,GUI_SYMBOL_PLUS_MINUS,
+                    GUI_PANEL_MINIMIZED);
+            gui_panel_header_icon(layout, GUI_SYMBOL_PLUS_MINUS, GUI_PANEL_MINIMIZED);
+        }
+        if (flags & GUI_SCALEABLE) {
+            if (notify & GUI_SCALEABLE)
+                ret = ret || gui_panel_header_icon(layout, GUI_SYMBOL_RECT, GUI_PANEL_SCALEABLE);
+            gui_panel_header_icon(layout, GUI_SYMBOL_RECT, GUI_PANEL_SCALEABLE);
+        }
+        if (flags & GUI_MOVEABLE) {
+            if (notify & GUI_MOVEABLE)
+                ret = ret || gui_panel_header_icon(layout, GUI_SYMBOL_RECT, GUI_PANEL_MOVEABLE);
+            gui_panel_header_icon(layout, GUI_SYMBOL_CIRCLE, GUI_PANEL_MOVEABLE);
+        }
+        if (title) gui_panel_header_title(layout, title);
     }
-
-    if (flags & GUI_MINIMIZABLE) {
-        if (notify & GUI_MINIMIZABLE)
-            ret = ret || gui_panel_header_icon(layout,GUI_SYMBOL_PLUS_MINUS,
-                GUI_PANEL_MINIMIZED);
-        gui_panel_header_icon(layout, GUI_SYMBOL_PLUS_MINUS, GUI_PANEL_MINIMIZED);
-    }
-
-    if (flags & GUI_SCALEABLE) {
-        if (notify & GUI_SCALEABLE)
-            ret = ret || gui_panel_header_icon(layout, GUI_SYMBOL_RECT, GUI_PANEL_SCALEABLE);
-        gui_panel_header_icon(layout, GUI_SYMBOL_RECT, GUI_PANEL_SCALEABLE);
-    }
-
-    if (flags & GUI_MOVEABLE) {
-        if (notify & GUI_MOVEABLE)
-            ret = ret || gui_panel_header_icon(layout, GUI_SYMBOL_RECT, GUI_PANEL_MOVEABLE);
-        gui_panel_header_icon(layout, GUI_SYMBOL_CIRCLE, GUI_PANEL_MOVEABLE);
-    }
-    if (title) gui_panel_header_title(layout, title);
     gui_panel_header_end(layout);
     return ret;
 }
@@ -4258,10 +4257,10 @@ gui_panel_tab_begin(struct gui_panel_layout *parent, struct gui_panel_layout *ta
     /* create a fake panel to create a panel layout from */
     flags = GUI_PANEL_TAB;
     if (border) flags |= GUI_PANEL_BORDER|GUI_PANEL_BORDER_HEADER;
+    if (minimized) flags |= GUI_PANEL_MINIMIZED;
     gui_panel_init(&panel, bounds.x, bounds.y, bounds.w,
         gui_null_rect.h,flags,out,parent->config);
 
-    if (minimized) panel.flags |= GUI_PANEL_MINIMIZED;
     gui_panel_begin(tab, &panel, parent->input);
     gui_unify(&clip, &parent->clip, tab->clip.x, tab->clip.y, tab->clip.x + tab->clip.w,
         tab->clip.y + tab->clip.h);
@@ -4333,7 +4332,7 @@ gui_panel_group_begin(struct gui_panel_layout *p, struct gui_panel_layout *g,
     /* initialize a fake panel to create the layout from */
     out = p->buffer;
     flags = GUI_PANEL_BORDER|GUI_PANEL_SCROLLBAR|GUI_PANEL_TAB;
-    gui_panel_init(&panel, bounds.x,bounds.y,bounds.w,bounds.h,flags, out, p->config);
+    gui_panel_init(&panel, bounds.x, bounds.y,bounds.w,bounds.h,flags, out, p->config);
     gui_panel_begin(g, &panel, p->input);
     g->offset = offset;
 
@@ -4342,10 +4341,9 @@ gui_panel_group_begin(struct gui_panel_layout *p, struct gui_panel_layout *g,
     gui_command_buffer_push_scissor(out, clip.x, clip.y, clip.w, clip.h);
     gui_panel_header(g, title, 0, 0);
 
-    /* calculate the tab clipping rect */
+    /* calculate the group clipping rect */
     gui_unify(&clip, &p->clip, g->clip.x, g->clip.y, g->clip.x + g->clip.w,
         g->clip.y + g->clip.h);
-    gui_command_buffer_push_scissor(out, clip.x, clip.y, clip.w, clip.h);
 
     /* setup correct clipping rectangle for the group */
     gui_command_buffer_push_scissor(out, clip.x, clip.y, clip.w, clip.h);
@@ -4966,5 +4964,55 @@ gui_layout_update_state(struct gui_layout *layout, gui_uint state)
     if (!layout) return;
     if (!state) layout->flags |= GUI_LAYOUT_INACTIVE;
     else layout->flags &= (gui_flags)~GUI_LAYOUT_INACTIVE;
+}
+
+void
+gui_layout_slot_bounds(struct gui_rect *bounds, struct gui_layout* layout,
+    enum gui_layout_slot_index slot)
+{
+    struct gui_layout_slot *s;
+
+    GUI_ASSERT(bounds);
+    GUI_ASSERT(layout);
+    if (!bounds || !layout || slot >= GUI_SLOT_MAX) return;
+
+    s = &layout->slots[slot];
+    bounds->x = s->offset.x * (gui_float)layout->width;
+    bounds->y = s->offset.y * (gui_float)layout->height;
+    bounds->w = s->ratio.x * (gui_float)layout->width;
+    bounds->h = s->ratio.y * (gui_float)layout->height;
+}
+
+void
+gui_layout_slot_panel_bounds(struct gui_rect *bounds, struct gui_layout *layout,
+    enum gui_layout_slot_index slot, gui_size index)
+{
+    /* calculate the bounds of the panel */
+    struct gui_rect slot_bounds;
+    struct gui_layout_slot *s;
+
+    GUI_ASSERT(bounds);
+    GUI_ASSERT(layout);
+    if (!bounds || !layout) return;
+
+    s = &layout->slots[slot];
+    GUI_ASSERT(index < s->capacity);
+    if (index >= s->capacity) {
+        gui_zero(bounds, sizeof(*bounds));
+        return;
+    }
+
+    gui_layout_slot_bounds(&slot_bounds, layout, slot);
+    if (s->format == GUI_LAYOUT_HORIZONTAL) {
+        bounds->h = slot_bounds.h;
+        bounds->y = slot_bounds.y;
+        bounds->x = slot_bounds.x + (gui_float)index * bounds->w;
+        bounds->w = slot_bounds.w / (gui_float)s->capacity;
+    } else {
+        bounds->x = slot_bounds.x;
+        bounds->w = slot_bounds.w;
+        bounds->h = slot_bounds.h / (gui_float)s->capacity;
+        bounds->y = slot_bounds.y + (gui_float)index * bounds->h;
+    }
 }
 

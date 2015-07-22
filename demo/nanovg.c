@@ -259,12 +259,12 @@ main(int argc, char *argv[])
     struct gui_font font;
     struct demo_gui gui;
 
-    if (argc < 3) {
-        fprintf(stdout,"Missing TTF Font file/height argument: nanovg <path> <height>\n");
+    if (argc < 2) {
+        fprintf(stdout,"Missing TTF Font file argument: gui <path>\n");
         exit(EXIT_FAILURE);
     }
     font_path = argv[1];
-    font_height = (gui_size)MAX(0, atoi(argv[2]));
+    font_height = 10;
 
     /* SDL */
     SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER|SDL_INIT_EVENTS);

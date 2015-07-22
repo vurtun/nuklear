@@ -2506,6 +2506,24 @@ void gui_layout_update_state(struct gui_layout*, gui_uint state);
     Input:
         - new state of the layout with either active or inactive
 */
+void gui_layout_slot_bounds(struct gui_rect *bounds, struct gui_layout*,
+                            enum gui_layout_slot_index);
+/*  this function returns the complete space occupied by a given slot
+    Input:
+        - index of the slot to be queried
+    Output:
+        - bounds of the slot as a rectangle (x,y,w,h)
+*/
+void gui_layout_slot_panel_bounds(struct gui_rect *bounds, struct gui_layout*,
+                                enum gui_layout_slot_index, gui_size entry);
+/*  this function returns the space occupied by a given panel and slot
+    Input:
+        - slot index to be queried
+        - panel index to be queried
+    Output:
+        - bounds of the panel inside the slot as a rectangle (x,y,w,h)
+*/
+
 #ifdef __cplusplus
 }
 #endif
