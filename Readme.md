@@ -1,5 +1,4 @@
 # GUI
-=====
 [![Coverity Status](https://scan.coverity.com/projects/5863/badge.svg)](https://scan.coverity.com/projects/4720)
 
 This is a bloat free minimal state immediate mode graphical user interface toolkit
