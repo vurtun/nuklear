@@ -131,7 +131,7 @@ struct gui_image gui_image_ptr(void*);
 struct gui_image gui_image_id(gui_int);
 struct gui_image gui_subimage_ptr(void*, struct gui_rect);
 struct gui_image gui_subimage_id(gui_int, struct gui_rect);
-gui_bool gui_rect_is_valid(const struct gui_rect*);
+gui_bool gui_rect_is_valid(const struct gui_rect r);
 gui_bool gui_image_is_subimage(const struct gui_image* img);
 struct gui_rect gui_rect(gui_float x, gui_float y, gui_float w, gui_float h);
 struct gui_vec2 gui_vec2(gui_float x, gui_float y);
@@ -2367,6 +2367,29 @@ void gui_panel_end(struct gui_panel_layout*, struct gui_panel*);
  *
  * ===============================================================
  */
+/*  STACK
+    ----------------------------
+    The stack was added to support overlapping panels by defining a draw order
+    for each panel from least-recently-used to recently-used panel. So instead
+    of drawing each panel in random order each panel is drawn in a user defined
+    order.
+
+    USAGE
+    ----------------------------
+    To use the stack it first as the be cleared to set it into a ready state.
+    After that panels can be added into the stack by calling the `gui_stack_push`
+    function and removed by the `gui_stack_pop` function. TO update a panel the stack
+    needs to be provided in the `gui_panel_begin` function call. To iterate
+    over each panel inside the stack from down-most to up-most the iteration
+    function `gui_foreach_panel` is provided.
+
+    stack function API
+    gui_stack_clear         -- resets the stack back to a cleared state
+    gui_stack_push          -- adds a panel into the stack
+    gui_stack_pop           -- removes a panel from the stack
+    gui_foreach_panel       -- iterates over each panel in the stack
+
+*/
 struct gui_stack {
     gui_size count;
     /* number of panels inside the stack */
@@ -2393,16 +2416,50 @@ void gui_stack_pop(struct gui_stack*, struct gui_panel*);
  *
  * ===============================================================
  */
-/*
------------------------------
-|           Top             |
------------------------------
-|       |           |       |
-| Left  |   Center  | Right |
-|       |           |       |
------------------------------
-|          Bottom           |
------------------------------
+/*  LAYOUT
+    ----------------------------
+    The tiled layout provides a way to divide the os window into slots which
+    again can be divided into either horizontal or vertical panels or another
+    tiled layout. This is especially usefull for more complex application which
+    need more than just fixed or overlapping panels. There are five slots
+    (Top, Left, Center, Right, Bottom) in the layout which are either be
+    scaleable or static and occupy a certain percentage of the screen.
+
+    USAGE
+    ----------------------------
+    To use the tile layout you first have to define the bounds of the layout,
+    which slots of the layout is going to be used, how many panels are contained
+    inside each slot as well as if a slot can be scaled or is static.
+    This is done by calling `gui_layout_slot` for scaleable and `gui_layout_slot_locked`
+    for non-scaleable slot in between the `gui_layout_begin` and `gui_layout_end` call,
+    for each used layout slot. After that each panel will have to take the tiled
+    layout as argument in the `gui_panel_begin_tiled` function call.
+
+    -----------------------------
+    |           Top             |
+    -----------------------------
+    |       |           |       |
+    | Left  |   Center  | Right |
+    |       |           |       |
+    -----------------------------
+    |          Bottom           |
+    -----------------------------
+
+    definition function API
+    gui_layout_begin                - begins the layout definition process
+    gui_layout_slot_locked          - adds a non scaleable slot
+    gui_layout_slot                 - adds a scaleable slot
+    gui_layout_end                  - ends the definition process
+
+    update function API
+    gui_layout_update_size          - updates the size of the layaout
+    gui_layout_update_pos           - updates the position of the layout
+    gui_layout_update_state         - activate or deactivate user input
+    gui_layout_load                 - position a child layout into parent layout slot
+    gui_layout_remove               - removes a panel from the layout
+    gui_layout_clear                - removes all panels from the layout
+    gui_layout_slot_bounds          - queries the space of a given slot
+    gui_layout_slot_panel_bounds    - queries the space of a panel in a slot
 */
 enum gui_layout_slot_index {
     GUI_SLOT_TOP,
@@ -2443,25 +2500,18 @@ struct gui_layout_slot {
 };
 
 enum gui_layout_state {
-    GUI_LAYOUT_DEACTIVATE,
+    GUI_LAYOUT_INACTIVE = gui_false,
     /* all panels inside the layout can NOT be modified by user input */
-    GUI_LAYOUT_ACTIVATE
+    GUI_LAYOUT_ACTIVE = gui_true
     /* all panels inside the layout can be modified by user input */
-};
-
-enum gui_layout_flags {
-    GUI_LAYOUT_INACTIVE = 0x01,
-    /* tiled layout is inactive and cannot be updated by the user */
-    GUI_LAYOUT_SCALEABLE = 0x02
-    /* tiled layout ratio can be changed by the user */
 };
 
 struct gui_layout {
     gui_float scaler_width;
     /* width of the scaling line between slots */
-    gui_size width, height;
-    /* size of the layout inside the window */
-    gui_flags flags;
+    struct gui_rect bounds;
+    /* bounds of the layout inside the window */
+    enum gui_layout_state active;
     /* flag indicating if the layout is from the user modifyable */
     struct gui_stack stack;
     /* panel stack of all panels inside the layout */
@@ -2469,12 +2519,13 @@ struct gui_layout {
     /* each slot inside the panel layout */
 };
 
-void gui_layout_begin(struct gui_layout*, gui_size width, gui_size height, gui_flags);
+void gui_layout_begin(struct gui_layout*, struct gui_rect bounds,
+                    enum gui_layout_state);
 /*  this function start the definition of the layout slots
     Input:
     - position (width/height) of the layout in the window
     - size (width/height) of the layout in the window
-    - layout flag settings
+    - layout state with either active as user updateable or inactive for blocked
 */
 void gui_layout_slot_locked(struct gui_layout*, enum gui_layout_slot_index, gui_float ratio,
                             enum gui_layout_format, gui_size entry_count);
@@ -2496,16 +2547,36 @@ void gui_layout_slot(struct gui_layout*, enum gui_layout_slot_index, gui_float r
 */
 void gui_layout_end(struct gui_layout*);
 /*  this function ends the definition of the layout slots */
+void gui_layout_load(struct gui_layout*child, struct gui_layout *parent,
+                        enum gui_layout_slot_index, gui_size index);
+/*  this function places a child layout into a parent slot panel index
+    Input:
+        - child layout that will be filled
+        - parent layout that provided the position/size and state for the child
+        - the slot index the child layout will be placed into
+        - the panel index in the slot the child layout will be placed into
+*/
 void gui_layout_update_size(struct gui_layout*, gui_size width, gui_size height);
 /*  this function updates the size of the layout
     Input:
         - size (width/height) of the layout in the window
 */
-void gui_layout_update_state(struct gui_layout*, gui_uint state);
+void gui_layout_update_pos(struct gui_layout*, gui_size x, gui_size y);
+/*  this function updates the position of the layout
+    Input:
+        - position (x/y) of the layout in the window
+*/
+void gui_layout_update_state(struct gui_layout*, enum gui_layout_state);
 /*  this function changes the user modifiable layout state
     Input:
         - new state of the layout with either active or inactive
 */
+#define gui_layout_remove(layout, panel)\
+    gui_stack_pop(&(layout)->stack, (panel))
+/*  this function removes a panel from the layout */
+#define gui_layout_clear(layout, panel)\
+    gui_stack_clear(&(layout)->stack)
+/*  this function removes all panels from the layout */
 void gui_layout_slot_bounds(struct gui_rect *bounds, struct gui_layout*,
                             enum gui_layout_slot_index);
 /*  this function returns the complete space occupied by a given slot

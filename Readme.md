@@ -1,4 +1,7 @@
 # GUI
+=====
+[![Coverity Status](https://scan.coverity.com/projects/5863/badge.svg)](https://scan.coverity.com/projects/4720)
+
 This is a bloat free minimal state immediate mode graphical user interface toolkit
 written in ANSI C. It was designed as a embeddable user interface for graphical
 application and does not have any direct dependencies.
