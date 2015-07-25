@@ -4555,7 +4555,7 @@ gui_panel_tree_node(struct gui_tree *tree, enum gui_tree_node_symbol symbol,
     const char *title, struct gui_image *img, gui_tree_node_state *state)
 {
     struct gui_text text;
-    struct gui_rect bounds;
+    struct gui_rect bounds = {0,0,0,0};
     struct gui_rect sym, label, icon;
 
     const struct gui_input *i;
@@ -4565,10 +4565,8 @@ gui_panel_tree_node(struct gui_tree *tree, enum gui_tree_node_symbol symbol,
 
     enum gui_tree_node_operation op = GUI_NODE_NOP;
     struct gui_panel_layout *layout = &tree->group;
-    enum gui_widget_state valid = gui_panel_widget(&bounds, layout);
-    if (tree->skip >= 0 || !valid) {
-        if (!tree->depth && valid)
-            tree->at_x = bounds.x;
+    if (tree->skip >= 0 || !gui_panel_widget(&bounds, layout)) {
+        if (!tree->depth) tree->at_x = bounds.x;
         return op;
     }
 
@@ -4965,8 +4963,8 @@ gui_layout_update_size(struct gui_layout *layout, gui_size width, gui_size heigh
 {
     GUI_ASSERT(layout);
     if (!layout) return;
-    layout->bounds.w = width;
-    layout->bounds.h = height;
+    layout->bounds.w = (gui_float)width;
+    layout->bounds.h = (gui_float)height;
 }
 
 void
@@ -4974,8 +4972,8 @@ gui_layout_update_pos(struct gui_layout *layout, gui_size x, gui_size y)
 {
     GUI_ASSERT(layout);
     if (!layout) return;
-    layout->bounds.x = x;
-    layout->bounds.y = y;
+    layout->bounds.x = (gui_float)x;
+    layout->bounds.y = (gui_float)y;
 }
 
 void
