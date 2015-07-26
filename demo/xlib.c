@@ -204,9 +204,9 @@ surface_scissor(XSurface *surf, float x, float y, float w, float h)
 {
     XRectangle clip_rect;
     clip_rect.x = (short)x;
-    clip_rect.y = (short)y-1;
+    clip_rect.y = (short)y;
     clip_rect.width = (unsigned short)w;
-    clip_rect.height = (unsigned short)h+1;
+    clip_rect.height = (unsigned short)h;
     clip_rect.width = (unsigned short)MIN(surf->w, clip_rect.width);
     clip_rect.height = (unsigned short)MIN(surf->h, clip_rect.height);
     XSetClipRectangles(surf->dpy, surf->gc, 0, 0, &clip_rect, 1, Unsorted);

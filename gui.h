@@ -1688,11 +1688,19 @@ enum gui_panel_header_flags {
 
 enum gui_panel_header_symbol {
     GUI_SYMBOL_X,
+    GUI_SYMBOL_UNDERSCORE,
     GUI_SYMBOL_CIRCLE,
+    GUI_SYMBOL_CIRCLE_FILLED,
     GUI_SYMBOL_RECT,
-    GUI_SYMBOL_TRIANGLE,
-    GUI_SYMBOL_PLUS_MINUS,
-    GUI_SYMBOL_CIRCLE_RECT
+    GUI_SYMBOL_RECT_FILLED,
+    GUI_SYMBOL_TRIANGLE_UP,
+    GUI_SYMBOL_TRIANGLE_DOWN,
+    GUI_SYMBOL_TRIANGLE_LEFT,
+    GUI_SYMBOL_TRIANGLE_RIGHT,
+    GUI_SYMBOL_PLUS,
+    GUI_SYMBOL_MINUS,
+    GUI_SYMBOL_IMAGE,
+    GUI_SYMBOL_MAX
 };
 
 enum gui_panel_flags {
@@ -1869,15 +1877,32 @@ void gui_panel_begin(struct gui_panel_layout*, struct gui_panel*, const struct g
 */
 void gui_panel_header_begin(struct gui_panel_layout*);
 /*  this function begins the panel header build up process */
-gui_bool gui_panel_header_icon(struct gui_panel_layout*, enum gui_panel_header_symbol,
-                                enum gui_panel_flags);
-/*  this function adds a header icon to header which allows a change of a panel
-    flag by the user
+gui_bool gui_panel_header_button(struct gui_panel_layout *layout,
+                                enum gui_panel_header_symbol symbol);
+/*  this function adds a header button
     Input:
     - symbol that shall be shown in the header as a icon
-    - panel flag to update
     Output:
-    - gui_true if the icon was pressed gui_false otherwise
+    - gui_true if the button was pressed gui_false otherwise
+*/
+gui_bool gui_panel_header_button_icon(struct gui_panel_layout*, struct gui_image);
+/*  this function adds a header image button
+    Input:
+    - symbol that shall be shown in the header as a icon
+    Output:
+    - gui_true if the button was pressed gui_false otherwise
+*/
+gui_bool gui_panel_header_toggle(struct gui_panel_layout*,
+                                enum gui_panel_header_symbol inactive,
+                                enum gui_panel_header_symbol active,
+                                gui_bool state);
+/*  this function adds a header toggle button
+    Input:
+    - symbol that will be drawn if the toggle is inactive
+    - symbol that will be drawn if the toggle is active
+    - state of the toggle with either active or inactive
+    Output:
+    - updated state of the toggle
 */
 void gui_panel_header_title(struct gui_panel_layout*, const char*);
 /*  this function adds a title to the panel header
@@ -1932,7 +1957,7 @@ void gui_panel_begin_tiled(struct gui_panel_layout*, struct gui_panel*,
     Output:
     - panel layout to fill up with widgets
 */
-void gui_panel_row(struct gui_panel_layout*, gui_float height, gui_size cols);
+void gui_panel_layout(struct gui_panel_layout*, gui_float row_height, gui_size cols);
 /*  this function set the current panel row layout
     Input:
     - panel row layout height in pixel
@@ -1945,28 +1970,28 @@ gui_float gui_panel_pixel_to_ratio(struct gui_panel_layout *layout, gui_size pix
     Output:
     - widget width in panel space percentage
 */
-void gui_panel_row_begin(struct gui_panel_layout*, gui_float height, gui_size cols);
+void gui_panel_row_begin(struct gui_panel_layout*, gui_float row_height, gui_size cols);
 /*  this function start the row build up process
     Input:
     - row height inhereted by all widget inside the row
 */
-void gui_panel_row_push_widget(struct gui_panel_layout*, gui_float ratio);
+void gui_panel_row_push(struct gui_panel_layout*, gui_float ratio);
 /*  this function directly sets the width ratio of the next added widget
     Input:
     - ratio percentage value (0.0f-1.0f) of the needed row space
 */
 void gui_panel_row_end(struct gui_panel_layout*);
 /* this function ends the row build up process */
-void gui_panel_row_templated(struct gui_panel_layout*, gui_float height,
-                            gui_size cols, const gui_float *ratio);
+void gui_panel_row(struct gui_panel_layout*, gui_float height,
+                    gui_size cols, const gui_float *ratio);
 /*  this function set the current panel row layout as a array of ratios
     Input:
     - panel row layout height in pixel
     - panel row layout column count
     - array with percentage size values for each column
 */
-gui_size gui_panel_row_columns(const struct gui_panel_layout *layout,
-                                gui_size widget_size);
+gui_size gui_panel_table_columns(const struct gui_panel_layout *layout,
+                                    gui_size widget_pixel_size);
 /*  this function calculates the possible number of widget with the same width in the
     current row layout.
     Input:
