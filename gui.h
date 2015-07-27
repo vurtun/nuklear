@@ -110,19 +110,23 @@ typedef void(*gui_copy_f)(gui_handle, const char*, gui_size size);
     USAGE
     ----------------------------
     Utility function API
-    gui_get_null_rect()     -- returns a default clipping rectangle
-    gui_utf_decode()        -- decodes a utf-8 glyph into u32 unicode glyph and len
-    gui_utf_encode()        -- encodes a u32 unicode glyph into a utf-8 glyph
-    gui_image_ptr()         -- create a image handle from pointer
-    gui_image_id()          -- create a image handle from integer id
-    gui_subimage_ptr()      -- create a sub-image handle from pointer and region
-    gui_subimage_id()       -- create a sub-image handle from integer id and region
-    gui_rect_is_valid()     -- check if a rectangle inside the image command is valid
-    gui_rect()              -- creates a rectangle from x,y-Position and width and height
-    gui_vec2()              -- creates a 2D vector, in the best case should not be needed by the user
-    gui_rgba()              -- create a gui color struct from rgba color code
-    gui_rgb()               -- create a gui color struct from rgb color code
+    gui_get_null_rect   -- returns a default clipping rectangle
+    gui_utf_decode      -- decodes a utf-8 glyph into u32 unicode glyph and len
+    gui_utf_encode      -- encodes a u32 unicode glyph into a utf-8 glyph
+    gui_image_ptr       -- create a image handle from pointer
+    gui_image_id        -- create a image handle from integer id
+    gui_subimage_ptr    -- create a sub-image handle from pointer and region
+    gui_subimage_id     -- create a sub-image handle from integer id and region
+    gui_rect_is_valid   -- check if a rectangle inside the image command is valid
+    gui_rect            -- creates a rectangle from x,y-Position and width and height
+    gui_vec2            -- creates a 2D vector, in the best case should not be needed by the user
+    gui_rgba            -- create a gui color struct from rgba color code
+    gui_rgb             -- create a gui color struct from rgb color code
 */
+gui_float gui_sin(gui_float);
+gui_float gui_cos(gui_float);
+gui_float gui_sin_fast(gui_float);
+gui_float gui_cos_fast(gui_float);
 struct gui_rect gui_get_null_rect(void);
 gui_size gui_utf_decode(const gui_char*, gui_long*, gui_size);
 gui_size gui_utf_encode(gui_long, gui_char*, gui_size);
@@ -1681,9 +1685,13 @@ enum gui_panel_tab {
 
 enum gui_panel_header_flags {
     GUI_CLOSEABLE = 0x01,
+    /* adds a closeable icon into the header */
     GUI_MINIMIZABLE = 0x02,
+    /* adds a minimize icon into the header */
     GUI_SCALEABLE = 0x04,
+    /* adds a scaleable flag icon into the header */
     GUI_MOVEABLE = 0x08
+    /* adds a moveable flag icon into the header */
 };
 
 enum gui_panel_header_symbol {
@@ -1701,6 +1709,11 @@ enum gui_panel_header_symbol {
     GUI_SYMBOL_MINUS,
     GUI_SYMBOL_IMAGE,
     GUI_SYMBOL_MAX
+};
+
+enum gui_panel_header_align {
+    GUI_HEADER_LEFT,
+    GUI_HEADER_RIGHT
 };
 
 enum gui_panel_flags {
@@ -1751,10 +1764,18 @@ struct gui_panel {
 };
 
 enum gui_panel_row_layout_type {
-    GUI_PANEL_ROW_LAYOUT_TABLE,
-    /* table like row layout with fixed widget width */
-    GUI_PANEL_ROW_LAYOUT_RATIO
-    /* freely defineable widget width */
+    GUI_PANEL_LAYOUT_FIXED_RATIO,
+    /* fixed widget ratio width panel layout */
+    GUI_PANEL_LAYOUT_FIXED_PIXELS,
+    /* fixed widget pixel width panel layout */
+    GUI_PANEL_LAYOUT_ROW_RATIO,
+    /* immediate mode widget specific widget width ratio layout */
+    GUI_PANEL_LAYOUT_ROW_PIXELS,
+    /* immediate mode widget specific widget pixel width layout */
+    GUI_PANEL_LAYOUT_DEF_RATIO,
+    /* retain mode widget specific widget ratio width*/
+    GUI_PANEL_LAYOUT_DEF_PIXELS
+    /* retain mode widget specific widget pixel width layout */
 };
 
 #define GUI_UNDEFINED (-1.0f)
@@ -1794,6 +1815,7 @@ struct gui_panel_layout {
     /* size of the actual useable space inside the panel */
     struct gui_rect header;
     /* panel header bounds */
+    gui_float header_front, header_back;
     struct gui_rect menu;
     /* panel menubar bounds */
     gui_float footer_h;
@@ -1810,28 +1832,6 @@ struct gui_panel_layout {
     /* current input state for updating the panel and all its widgets */
     struct gui_command_buffer *buffer;
     /* command draw call output command buffer */
-};
-
-typedef gui_flags gui_tree_node_state;
-enum gui_tree_nodes_states {
-    GUI_NODE_ACTIVE = 0x01,
-    GUI_NODE_SELECTED = 0x02
-};
-
-enum gui_tree_node_operation {
-    GUI_NODE_NOP,
-    GUI_NODE_CUT,
-    GUI_NODE_CLONE,
-    GUI_NODE_PASTE,
-    GUI_NODE_DELETE
-};
-
-struct gui_tree {
-    struct gui_panel_layout group;
-    gui_float x_off;
-    gui_float at_x;
-    gui_int skip;
-    gui_int depth;
 };
 
 struct gui_layout;
@@ -1875,63 +1875,6 @@ void gui_panel_begin(struct gui_panel_layout*, struct gui_panel*, const struct g
     Output:
     - panel layout to fill up with widgets
 */
-void gui_panel_header_begin(struct gui_panel_layout*);
-/*  this function begins the panel header build up process */
-gui_bool gui_panel_header_button(struct gui_panel_layout *layout,
-                                enum gui_panel_header_symbol symbol);
-/*  this function adds a header button
-    Input:
-    - symbol that shall be shown in the header as a icon
-    Output:
-    - gui_true if the button was pressed gui_false otherwise
-*/
-gui_bool gui_panel_header_button_icon(struct gui_panel_layout*, struct gui_image);
-/*  this function adds a header image button
-    Input:
-    - symbol that shall be shown in the header as a icon
-    Output:
-    - gui_true if the button was pressed gui_false otherwise
-*/
-gui_bool gui_panel_header_toggle(struct gui_panel_layout*,
-                                enum gui_panel_header_symbol inactive,
-                                enum gui_panel_header_symbol active,
-                                gui_bool state);
-/*  this function adds a header toggle button
-    Input:
-    - symbol that will be drawn if the toggle is inactive
-    - symbol that will be drawn if the toggle is active
-    - state of the toggle with either active or inactive
-    Output:
-    - updated state of the toggle
-*/
-void gui_panel_header_title(struct gui_panel_layout*, const char*);
-/*  this function adds a title to the panel header
-    flag by the user
-    Input:
-    - title of the header
-*/
-void gui_panel_header_end(struct gui_panel_layout*);
-/*  this function ends the panel header build up process */
-gui_bool gui_panel_header(struct gui_panel_layout*, const char*, gui_flags show, gui_flags notify);
-/*  this function is a shorthand for the header build up process
-    flag by the user
-    Input:
-    - title of the header or NULL if not needed
-    - flags indicating which icons should be drawn to the header
-    - flags indicating which icons should notify if clicked
-*/
-void gui_panel_menu_begin(struct gui_panel_layout*);
-/*  this function begins the panel menubar build up process */
-gui_bool gui_panel_menu_item(struct gui_panel_layout*, const char *label);
-/*  this function adds a header icon to header which allows a change of a panel
-    flag by the user
-    Input:
-    - menu item label
-    Output:
-    - gui_true if it was pressed gui_false otherwise
-*/
-void gui_panel_menu_end(struct gui_panel_layout*);
-/*  this function ends the panel menubar build up process */
 struct gui_stack;
 void gui_panel_begin_stacked(struct gui_panel_layout*, struct gui_panel*,
                                 struct gui_stack*, const struct gui_input*);
@@ -1957,32 +1900,102 @@ void gui_panel_begin_tiled(struct gui_panel_layout*, struct gui_panel*,
     Output:
     - panel layout to fill up with widgets
 */
-void gui_panel_layout(struct gui_panel_layout*, gui_float row_height, gui_size cols);
+void gui_panel_header_begin(struct gui_panel_layout*);
+/*  this function begins the panel header build up process */
+gui_bool gui_panel_header_button(struct gui_panel_layout *layout,
+                                enum gui_panel_header_symbol symbol,
+                                enum gui_panel_header_align);
+/*  this function adds a header button
+    Input:
+    -
+    - symbol that shall be shown in the header as a icon
+    Output:
+    - gui_true if the button was pressed gui_false otherwise
+*/
+gui_bool gui_panel_header_button_icon(struct gui_panel_layout*, struct gui_image,
+                                    enum gui_panel_header_align);
+/*  this function adds a header image button
+    Input:
+    - symbol that shall be shown in the header as a icon
+    Output:
+    - gui_true if the button was pressed gui_false otherwise
+*/
+gui_bool gui_panel_header_toggle(struct gui_panel_layout*,
+                                enum gui_panel_header_symbol inactive,
+                                enum gui_panel_header_symbol active,
+                                enum gui_panel_header_align,
+                                gui_bool state);
+/*  this function adds a header toggle button
+    Input:
+    - symbol that will be drawn if the toggle is inactive
+    - symbol that will be drawn if the toggle is active
+    - state of the toggle with either active or inactive
+    Output:
+    - updated state of the toggle
+*/
+gui_bool gui_panel_header_flag(struct gui_panel_layout *layout,
+                                enum gui_panel_header_symbol inactive,
+                                enum gui_panel_header_symbol active,
+                                enum gui_panel_header_align,
+                                enum gui_panel_flags flag);
+/*  this function adds a header toggle button for modifing a certain panel flag
+    Input:
+    - symbol that will be drawn if the flag is inactive
+    - symbol that will be drawn if the flag is active
+    - panel flag whose state will be display by the toggle button
+    Output:
+    - gui_true if the button was pressed gui_false otherwise
+*/
+void gui_panel_header_title(struct gui_panel_layout*, const char*,
+                                enum gui_panel_header_align);
+/*  this function adds a title to the panel header
+    flag by the user
+    Input:
+    - title of the header
+*/
+void gui_panel_header_end(struct gui_panel_layout*);
+/*  this function ends the panel header build up process */
+gui_flags gui_panel_header(struct gui_panel_layout*, const char *title,
+                            gui_flags show, gui_flags notify,
+                            enum gui_panel_header_align);
+/*  this function is a shorthand for the header build up process
+    flag by the user
+    Input:
+    - title of the header or NULL if not needed
+    - flags indicating which icons should be drawn to the header
+    - flags indicating which icons should notify if clicked
+*/
+void gui_panel_menu_begin(struct gui_panel_layout*);
+/*  this function begins the panel menubar build up process */
+gui_bool gui_panel_menu_item(struct gui_panel_layout*, const char *label);
+/*  this function adds a header icon to header which allows a change of a panel
+    flag by the user
+    Input:
+    - menu item label
+    Output:
+    - gui_true if it was pressed gui_false otherwise
+*/
+void gui_panel_menu_end(struct gui_panel_layout*);
+/*  this function ends the panel menubar build up process */
+void gui_panel_layout_fixed_ratio(struct gui_panel_layout*, gui_float row_height, gui_size cols);
 /*  this function set the current panel row layout
     Input:
     - panel row layout height in pixel
     - panel row layout column count
 */
-gui_float gui_panel_pixel_to_ratio(struct gui_panel_layout *layout, gui_size pixel);
-/*  converts the width of a widget into a percentage of the panel
-    Input:
-    - widget width in pixel
-    Output:
-    - widget width in panel space percentage
-*/
-void gui_panel_row_begin(struct gui_panel_layout*, gui_float row_height, gui_size cols);
+void gui_panel_layout_row_ratio_begin(struct gui_panel_layout*, gui_float row_height, gui_size cols);
 /*  this function start the row build up process
     Input:
     - row height inhereted by all widget inside the row
 */
-void gui_panel_row_push(struct gui_panel_layout*, gui_float ratio);
+void gui_panel_layout_row_ratio_push(struct gui_panel_layout*, gui_float ratio);
 /*  this function directly sets the width ratio of the next added widget
     Input:
     - ratio percentage value (0.0f-1.0f) of the needed row space
 */
-void gui_panel_row_end(struct gui_panel_layout*);
+void gui_panel_layout_row_ratio_end(struct gui_panel_layout*);
 /* this function ends the row build up process */
-void gui_panel_row(struct gui_panel_layout*, gui_float height,
+void gui_panel_layout_def_ratio(struct gui_panel_layout*, gui_float height,
                     gui_size cols, const gui_float *ratio);
 /*  this function set the current panel row layout as a array of ratios
     Input:
@@ -2294,7 +2307,7 @@ void gui_panel_tab_end(struct gui_panel_layout*, struct gui_panel_layout *tab);
     tab space in the parent panel
 */
 void gui_panel_group_begin(struct gui_panel_layout*, struct gui_panel_layout *tab,
-                            const char*, gui_float offset);
+                            const char *title, gui_float offset);
 /*  this function adds a grouped subpanel into the parent panel
     IMPORTANT: You need to set the height of the group with panel_row_layout
     Input:
@@ -2329,60 +2342,6 @@ gui_float gui_panel_shelf_end(struct gui_panel_layout*, struct gui_panel_layout*
     Output:
     - The from user input updated shelf scrollbar pixel offset
 */
-void gui_panel_tree_begin(struct gui_panel_layout*, struct gui_tree*,
-                            const char*, gui_float row_height, gui_float offset);
-/*  this function begins the tree building process
-    Input:
-    - title describing the tree or NULL
-    - height of every node inside the panel
-    - scrollbar offset
-    Output:
-    - tree build up state structure
-*/
-enum gui_tree_node_operation gui_panel_tree_begin_node(struct gui_tree*, const char*,
-                                                    gui_tree_node_state*);
-/*  this function begins a parent node
-    Input:
-    - title of the node
-    - current node state
-    Output:
-    - operation identifier what should be done with this node
-*/
-enum gui_tree_node_operation gui_panel_tree_begin_node_icon(struct gui_tree*,
-                                                    const char*, struct gui_image,
-                                                    gui_tree_node_state*);
-/*  this function begins a text icon parent node
-    Input:
-    - title of the node
-    - icon of the node
-    - current node state
-    Output:
-    - operation identifier what should be done with this node
-*/
-void gui_panel_tree_end_node(struct gui_tree*);
-/*  this function ends a parent node */
-enum gui_tree_node_operation gui_panel_tree_leaf(struct gui_tree*, const char*,
-                                                    gui_tree_node_state*);
-/*  this function pushes a leaf node to the tree
-    Input:
-    - title of the node
-    - current leaf node state
-    Output:
-    - operation identifier what should be done with this node
-*/
-enum gui_tree_node_operation gui_panel_tree_leaf_icon(struct gui_tree*,
-                                                    const char*, struct gui_image,
-                                                    gui_tree_node_state*);
-/*  this function pushes a leaf icon node to the tree
-    Input:
-    - title of the node
-    - icon of the node
-    - current leaf node state
-    Output:
-    - operation identifier what should be done with this node
-*/
-gui_float gui_panel_tree_end(struct gui_panel_layout*, struct gui_tree*);
-/*  this function ends a the tree building process */
 void gui_panel_end(struct gui_panel_layout*, struct gui_panel*);
 /*  this function ends the panel layout build up process and updates the panel */
 /*
@@ -2477,9 +2436,9 @@ void gui_stack_pop(struct gui_stack*, struct gui_panel*);
     gui_layout_end                  - ends the definition process
 
     update function API
-    gui_layout_update_size          - updates the size of the layaout
-    gui_layout_update_pos           - updates the position of the layout
-    gui_layout_update_state         - activate or deactivate user input
+    gui_layout_set_size             - updates the size of the layaout
+    gui_layout_set_pos              - updates the position of the layout
+    gui_layout_set_state            - activate or deactivate user input
     gui_layout_load                 - position a child layout into parent layout slot
     gui_layout_remove               - removes a panel from the layout
     gui_layout_clear                - removes all panels from the layout
@@ -2581,17 +2540,17 @@ void gui_layout_load(struct gui_layout*child, struct gui_layout *parent,
         - the slot index the child layout will be placed into
         - the panel index in the slot the child layout will be placed into
 */
-void gui_layout_update_size(struct gui_layout*, gui_size width, gui_size height);
+void gui_layout_set_size(struct gui_layout*, gui_size width, gui_size height);
 /*  this function updates the size of the layout
     Input:
         - size (width/height) of the layout in the window
 */
-void gui_layout_update_pos(struct gui_layout*, gui_size x, gui_size y);
+void gui_layout_set_pos(struct gui_layout*, gui_size x, gui_size y);
 /*  this function updates the position of the layout
     Input:
         - position (x/y) of the layout in the window
 */
-void gui_layout_update_state(struct gui_layout*, enum gui_layout_state);
+void gui_layout_set_state(struct gui_layout*, enum gui_layout_state);
 /*  this function changes the user modifiable layout state
     Input:
         - new state of the layout with either active or inactive

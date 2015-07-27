@@ -3,20 +3,6 @@
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 
-struct tree_node {
-    gui_tree_node_state state;
-    const char *name;
-    struct tree_node *parent;
-    struct tree_node *children[8];
-    int count;
-};
-
-struct test_tree {
-    struct tree_node root;
-    struct tree_node *clipboard[16];
-    int count;
-};
-
 struct show_window {
     struct gui_panel hook;
     gui_flags header_flags;
@@ -44,10 +30,6 @@ struct show_window {
     gui_float shelf_scrollbar;
     gui_float table_scrollbar;
     gui_float time_scrollbar;
-    /* tree */
-    struct test_tree tree;
-    struct tree_node nodes[8];
-    gui_float tree_offset;
     /* menu */
     gui_size menu_item;
 };
@@ -88,10 +70,15 @@ static void
 widget_panel(struct gui_panel_layout *panel, struct show_window *demo)
 {
     const char *items[] = {"Fist", "Pistol", "Shotgun", "Railgun", "BFG"};
-    gui_panel_layout(panel, 30, 1);
+
+    /* Labels */
+    gui_panel_layout_fixed_ratio(panel, 30, 1);
     gui_panel_label(panel, "text left", GUI_TEXT_LEFT);
     gui_panel_label(panel, "text center", GUI_TEXT_CENTERED);
     gui_panel_label(panel, "text right", GUI_TEXT_RIGHT);
+
+    /* Buttons */
+    gui_panel_layout_fixed_ratio(panel, 30, 1);
     if (gui_panel_button_text(panel, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");
     if (gui_panel_button_text_triangle(panel, GUI_RIGHT, "next", GUI_TEXT_LEFT, GUI_BUTTON_DEFAULT))
@@ -101,7 +88,7 @@ widget_panel(struct gui_panel_layout *panel, struct show_window *demo)
 
     demo->toggle = gui_panel_button_toggle(panel, "toggle", demo->toggle);
     demo->checkbox = gui_panel_check(panel, "checkbox", demo->checkbox);
-    gui_panel_layout(panel, 30, 2);
+    gui_panel_layout_fixed_ratio(panel, 30, 2);
     if (gui_panel_option(panel, "option 0", demo->option == 0)) demo->option = 0;
     if (gui_panel_option(panel, "option 1", demo->option == 1)) demo->option = 1;
 
@@ -109,7 +96,7 @@ widget_panel(struct gui_panel_layout *panel, struct show_window *demo)
         /* templated row layout */
         char buffer[MAX_BUFFER];
         const gui_float ratio[] = {0.8f, 0.2f};
-        gui_panel_row(panel, 30, 2, ratio);
+        gui_panel_layout_def_ratio(panel, 30, 2, ratio);
         demo->slider = gui_panel_slider(panel, 0, demo->slider, 10, 1.0f);
         sprintf(buffer, "%.2f", demo->slider);
         gui_panel_label(panel, buffer, GUI_TEXT_LEFT);
@@ -118,21 +105,21 @@ widget_panel(struct gui_panel_layout *panel, struct show_window *demo)
         gui_panel_label(panel, buffer, GUI_TEXT_LEFT);
     }
 
-    gui_panel_layout(panel, 30, 1);
+    gui_panel_layout_fixed_ratio(panel, 30, 1);
     demo->item_current = gui_panel_selector(panel, items, LEN(items), demo->item_current);
     demo->spinner = gui_panel_spinner(panel, 0, demo->spinner, 250, 10, &demo->spinner_active);
 
-    gui_panel_row_begin(panel, 30, 2);
+    gui_panel_layout_row_ratio_begin(panel, 30, 2);
     {
-        gui_panel_row_push(panel, 0.7f);
+        gui_panel_layout_row_ratio_push(panel, 0.7f);
         gui_panel_editbox(panel, &demo->input);
-        gui_panel_row_push(panel, 0.3f);
+        gui_panel_layout_row_ratio_push(panel, 0.3f);
         if (gui_panel_button_text(panel, "submit", GUI_BUTTON_DEFAULT)) {
             gui_edit_box_reset(&demo->input);
             fprintf(stdout, "command executed!\n");
         }
     }
-    gui_panel_row_end(panel);
+    gui_panel_layout_row_ratio_end(panel);
 }
 
 static void
@@ -140,7 +127,7 @@ graph_panel(struct gui_panel_layout *panel, gui_size current)
 {
     enum {COL, PLOT};
     static const gui_float values[]={8.0f,15.0f,20.0f,12.0f,30.0f,12.0f,35.0f,40.0f,20.0f};
-    gui_panel_layout(panel, 100, 1);
+    gui_panel_layout_fixed_ratio(panel, 100, 1);
     if (current == COL) {
         gui_panel_graph(panel, GUI_GRAPH_COLUMN, values, LEN(values), 0);
     } else {
@@ -177,136 +164,11 @@ init_show(struct show_window *win, struct gui_config *config,
     gui_edit_box_init_fixed(&win->input, win->input_buffer, MAX_BUFFER, NULL, NULL);
 
     win->header_flags = GUI_CLOSEABLE|GUI_MINIMIZABLE;
-    win->widget_tab = GUI_MAXIMIZED;
+    win->widget_tab = GUI_MINIMIZED;
     win->combobox_tab = GUI_MINIMIZED;
     win->slider = 10.0f;
     win->progressbar = 50;
     win->spinner = 100;
-
-    {
-        struct test_tree *tree = &win->tree;
-        tree->root.state = GUI_NODE_ACTIVE;
-        tree->root.name = "Primitives";
-        tree->root.parent = NULL;
-        tree->root.count = 2;
-        tree->root.children[0] = &win->nodes[0];
-        tree->root.children[1] = &win->nodes[4];
-
-        win->nodes[0].state = 0;
-        win->nodes[0].name = "Boxes";
-        win->nodes[0].parent = &tree->root;
-        win->nodes[0].count = 2;
-        win->nodes[0].children[0] = &win->nodes[1];
-        win->nodes[0].children[1] = &win->nodes[2];
-
-        win->nodes[1].state = 0;
-        win->nodes[1].name = "Box0";
-        win->nodes[1].parent = &win->nodes[0];
-        win->nodes[1].count = 0;
-
-        win->nodes[2].state = 0;
-        win->nodes[2].name = "Box1";
-        win->nodes[2].parent = &win->nodes[0];
-        win->nodes[2].count = 0;
-
-        win->nodes[4].state = GUI_NODE_ACTIVE;
-        win->nodes[4].name = "Cylinders";
-        win->nodes[4].parent = &tree->root;
-        win->nodes[4].count = 2;
-        win->nodes[4].children[0] = &win->nodes[5];
-        win->nodes[4].children[1] = &win->nodes[6];
-
-        win->nodes[5].state = 0;
-        win->nodes[5].name = "Cylinder0";
-        win->nodes[5].parent = &win->nodes[4];
-        win->nodes[5].count = 0;
-
-        win->nodes[6].state = 0;
-        win->nodes[6].name = "Cylinder1";
-        win->nodes[6].parent = &win->nodes[4];
-        win->nodes[6].count = 0;
-    }
-}
-
-static void
-tree_remove_node(struct tree_node *parent, struct tree_node *child)
-{
-    int i = 0;
-    child->parent = NULL;
-    if (!parent->count) return;
-    if (parent->count == 1) {
-        parent->count = 0;
-        return;
-    }
-    for (i = 0; i < parent->count; ++i) {
-        if (parent->children[i] == child)
-            break;
-    }
-    if (i == parent->count) return;
-    if (i == parent->count - 1) {
-        parent->count--;
-        return;
-    } else{
-        parent->children[i] = parent->children[parent->count-1];
-        parent->count--;
-    }
-}
-
-static void
-tree_add_node(struct tree_node *parent, struct tree_node *child)
-{
-    assert(parent->count < 8);
-    child->parent = parent;
-    parent->children[parent->count++] = child;
-}
-
-static void
-tree_push_node(struct test_tree *tree, struct tree_node *node)
-{
-    assert(tree->count < 16);
-    tree->clipboard[tree->count++] = node;
-}
-
-static struct tree_node*
-tree_pop_node(struct test_tree *tree)
-{
-    assert(tree->count > 0);
-    return tree->clipboard[--tree->count];
-}
-
-static int
-upload_tree(struct test_tree *base, struct gui_tree *tree, struct tree_node *node)
-{
-    int i = 0, n = 0;
-    enum gui_tree_node_operation op;
-    if (node->count) {
-        i = 0;
-        op = gui_panel_tree_begin_node(tree, node->name, &node->state);
-        while (i < node->count)
-            i += upload_tree(base, tree, node->children[i]);
-        gui_panel_tree_end_node(tree);
-    }
-    else op = gui_panel_tree_leaf(tree, node->name, &node->state);
-
-    switch (op) {
-    case GUI_NODE_NOP: break;
-    case GUI_NODE_CUT:
-        tree_remove_node(node->parent, node);
-        tree_push_node(base, node);
-        return 0;
-    case GUI_NODE_DELETE:
-        tree_remove_node(node->parent, node); break;
-        return 0;
-    case GUI_NODE_PASTE:
-        i = 0; n = base->count;
-        while (i < n) {
-            tree_add_node(node, tree_pop_node(base));
-            i++;
-        }
-    case GUI_NODE_CLONE:
-    default:break;
-    }
-    return 1;
 }
 
 static void
@@ -384,7 +246,7 @@ update_menu(struct gui_panel_layout *layout, struct show_window *win, struct gui
             iter++;
         }
         cols = gui_panel_table_columns(layout, max);
-        gui_panel_layout(layout, 18, cols);
+        gui_panel_layout_fixed_ratio(layout, 18, cols);
     }
 
     /* output current menu level entries */
@@ -430,7 +292,7 @@ update_show(struct show_window *show, struct gui_stack *stack, struct gui_input 
     struct gui_panel_layout layout;
     static const char *shelfs[] = {"Histogram", "Lines"};
     gui_panel_begin_stacked(&layout, &show->hook, stack, in);
-    gui_panel_header(&layout, "Show", show->header_flags, 0);
+    gui_panel_header(&layout, "Show", show->header_flags, 0, GUI_HEADER_RIGHT);
     update_menu(&layout, show, config);
     {
         /* Widgets */
@@ -439,26 +301,17 @@ update_show(struct show_window *show, struct gui_stack *stack, struct gui_input 
         gui_panel_tab_end(&layout, &tab);
 
         /* Graph */
-        gui_panel_layout(&layout, 180, 1);
+        gui_panel_layout_fixed_ratio(&layout, 180, 1);
         show->shelf_selection = gui_panel_shelf_begin(&layout, &tab, shelfs,
             LEN(shelfs), show->shelf_selection, show->shelf_scrollbar);
         graph_panel(&tab, show->shelf_selection);
         show->shelf_scrollbar = gui_panel_shelf_end(&layout, &tab);
 
         /* Table */
-        gui_panel_layout(&layout, 180, 1);
+        gui_panel_layout_fixed_ratio(&layout, 180, 1);
         gui_panel_group_begin(&layout, &tab, "Table", show->table_scrollbar);
         table_panel(&tab);
         show->table_scrollbar = gui_panel_group_end(&layout, &tab);
-
-        {
-            /* Tree */
-            struct gui_tree tree;
-            gui_panel_layout(&layout, 250, 1);
-            gui_panel_tree_begin(&layout, &tree, "Tree", 20, show->tree_offset);
-            upload_tree(&show->tree, &tree, &show->tree.root);
-            show->tree_offset = gui_panel_tree_end(&layout, &tree);
-        }
     }
     gui_panel_end(&layout, &show->hook);
 }
@@ -470,7 +323,7 @@ update_flags(struct gui_panel_layout *panel, struct control_window *control)
     gui_flags res = 0;
     gui_flags i = 0x01;
     const char *options[]={"Hidden","Border","Header Border", "Moveable","Scaleable", "Minimized"};
-    gui_panel_layout(panel, 30, 2);
+    gui_panel_layout_fixed_ratio(panel, 30, 2);
     do {
         if (gui_panel_check(panel,options[n++],(control->show_flags & i)?gui_true:gui_false))
             res |= i;
@@ -486,7 +339,7 @@ properties_tab(struct gui_panel_layout *panel, struct gui_config *config)
     const char *properties[] = {"item spacing:", "item padding:", "panel padding:",
         "scaler size:", "scrollbar:"};
 
-    gui_panel_layout(panel, 30, 3);
+    gui_panel_layout_fixed_ratio(panel, 30, 3);
     for (i = 0; i <= GUI_PROPERTY_SCROLLBAR_WIDTH; ++i) {
         gui_int tx, ty;
         gui_panel_label(panel, properties[i], GUI_TEXT_LEFT);
@@ -504,7 +357,7 @@ round_tab(struct gui_panel_layout *panel, struct gui_config *config)
     const char *rounding[] = {"panel:", "button:", "checkbox:", "progress:", "input: ",
         "graph:", "scrollbar:"};
 
-    gui_panel_layout(panel, 30, 2);
+    gui_panel_layout_fixed_ratio(panel, 30, 2);
     for (i = 0; i < GUI_ROUNDING_MAX; ++i) {
         gui_int t;
         gui_panel_label(panel, rounding[i], GUI_TEXT_LEFT);
@@ -526,12 +379,12 @@ color_picker(struct gui_panel_layout *panel, struct control_window *control,
     active[2] = &control->spinner_b_active;
     active[3] = &control->spinner_a_active;
 
-    gui_panel_layout(panel, 30, 2);
+    gui_panel_layout_fixed_ratio(panel, 30, 2);
     gui_panel_label(panel, name, GUI_TEXT_LEFT);
     gui_panel_button_color(panel, color, GUI_BUTTON_DEFAULT);
 
     iter = &color.r;
-    gui_panel_layout(panel, 30, 2);
+    gui_panel_layout_fixed_ratio(panel, 30, 2);
     for (i = 0; i < 4; ++i, iter++) {
         gui_float t = *iter;
         t = gui_panel_slider(panel, 0, t, 255, 10);
@@ -560,7 +413,7 @@ color_tab(struct gui_panel_layout *panel, struct control_window *control, struct
 
     if (control->picker_active) {
         control->color = color_picker(panel,control,labels[control->current_color], control->color);
-        gui_panel_layout(panel, 30, 3);
+        gui_panel_layout_fixed_ratio(panel, 30, 3);
         gui_panel_spacing(panel, 1);
         if (gui_panel_button_text(panel, "ok", GUI_BUTTON_DEFAULT)) {
             config->colors[control->current_color] = control->color;
@@ -569,7 +422,7 @@ color_tab(struct gui_panel_layout *panel, struct control_window *control, struct
         if (gui_panel_button_text(panel, "cancel", GUI_BUTTON_DEFAULT))
             control->picker_active = gui_false;
     } else {
-        gui_panel_layout(panel, 30, 2);
+        gui_panel_layout_fixed_ratio(panel, 30, 2);
         for (i = 0; i < GUI_COLOR_COUNT; ++i) {
             struct gui_color c = config->colors[i];
             gui_panel_label(panel, labels[i], GUI_TEXT_LEFT);
@@ -605,7 +458,8 @@ update_control(struct control_window *control, struct gui_stack *stack,
     struct gui_panel_layout tab;
 
     gui_panel_begin_stacked(&layout, &control->hook, stack, in);
-    running = !gui_panel_header(&layout, "Control", GUI_CLOSEABLE|GUI_MINIMIZABLE, GUI_CLOSEABLE);
+    running = !gui_panel_header(&layout, "Control", GUI_CLOSEABLE|GUI_MINIMIZABLE,
+                                GUI_CLOSEABLE, GUI_HEADER_LEFT);
     {
         control->flag_tab = gui_panel_tab_begin(&layout, &tab, "Options", GUI_BORDER, control->flag_tab);
         update_flags(&tab, control);
