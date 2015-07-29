@@ -11,6 +11,7 @@ struct show_window {
     struct gui_edit_box input;
 
     /* widgets state */
+    gui_bool scaleable;
     gui_bool checkbox;
     gui_float slider;
     gui_size progressbar;
@@ -72,13 +73,15 @@ widget_panel(struct gui_panel_layout *panel, struct show_window *demo)
     const char *items[] = {"Fist", "Pistol", "Shotgun", "Railgun", "BFG"};
 
     /* Labels */
-    gui_panel_layout_fixed_ratio(panel, 30, 1);
+    gui_panel_layout_flux_fixed(panel, 30, 1);
+    demo->scaleable = gui_panel_check(panel, "Scaleable Layout", demo->scaleable);
+    if (!demo->scaleable)
+        gui_panel_layout_static_fixed(panel, 30, 150, 1);
     gui_panel_label(panel, "text left", GUI_TEXT_LEFT);
     gui_panel_label(panel, "text center", GUI_TEXT_CENTERED);
     gui_panel_label(panel, "text right", GUI_TEXT_RIGHT);
 
     /* Buttons */
-    gui_panel_layout_fixed_ratio(panel, 30, 1);
     if (gui_panel_button_text(panel, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");
     if (gui_panel_button_text_triangle(panel, GUI_RIGHT, "next", GUI_TEXT_LEFT, GUI_BUTTON_DEFAULT))
@@ -88,38 +91,71 @@ widget_panel(struct gui_panel_layout *panel, struct show_window *demo)
 
     demo->toggle = gui_panel_button_toggle(panel, "toggle", demo->toggle);
     demo->checkbox = gui_panel_check(panel, "checkbox", demo->checkbox);
-    gui_panel_layout_fixed_ratio(panel, 30, 2);
+
+    if (!demo->scaleable)
+        gui_panel_layout_static_fixed(panel, 30, 75, 2);
+    else gui_panel_layout_flux_fixed(panel, 30, 2);
+
     if (gui_panel_option(panel, "option 0", demo->option == 0)) demo->option = 0;
     if (gui_panel_option(panel, "option 1", demo->option == 1)) demo->option = 1;
 
     {
         /* templated row layout */
         char buffer[MAX_BUFFER];
-        const gui_float ratio[] = {0.8f, 0.2f};
-        gui_panel_layout_def_ratio(panel, 30, 2, ratio);
-        demo->slider = gui_panel_slider(panel, 0, demo->slider, 10, 1.0f);
-        sprintf(buffer, "%.2f", demo->slider);
-        gui_panel_label(panel, buffer, GUI_TEXT_LEFT);
-        demo->progressbar = gui_panel_progress(panel, demo->progressbar, 100, gui_true);
-        sprintf(buffer, "%lu", demo->progressbar);
-        gui_panel_label(panel, buffer, GUI_TEXT_LEFT);
+        if (demo->scaleable) {
+            const gui_float ratio[] = {0.8f, 0.2f};
+            gui_panel_layout_flux_row(panel, 30, 2, ratio);
+            demo->slider = gui_panel_slider(panel, 0, demo->slider, 10, 1.0f);
+            sprintf(buffer, "%.2f", demo->slider);
+            gui_panel_label(panel, buffer, GUI_TEXT_LEFT);
+            demo->progressbar = gui_panel_progress(panel, demo->progressbar, 100, gui_true);
+            sprintf(buffer, "%lu", demo->progressbar);
+            gui_panel_label(panel, buffer, GUI_TEXT_LEFT);
+        } else {
+            const gui_float ratio[] = {150.0f, 30.0f};
+            gui_panel_layout_static_row(panel, 30, 2, ratio);
+            demo->slider = gui_panel_slider(panel, 0, demo->slider, 10, 1.0f);
+            sprintf(buffer, "%.2f", demo->slider);
+            gui_panel_label(panel, buffer, GUI_TEXT_LEFT);
+            demo->progressbar = gui_panel_progress(panel, demo->progressbar, 100, gui_true);
+            sprintf(buffer, "%lu", demo->progressbar);
+            gui_panel_label(panel, buffer, GUI_TEXT_LEFT);
+        }
     }
 
-    gui_panel_layout_fixed_ratio(panel, 30, 1);
+    if (!demo->scaleable)
+        gui_panel_layout_static_fixed(panel, 30, 150, 1);
+    else gui_panel_layout_flux_fixed(panel, 30, 1);
+
     demo->item_current = gui_panel_selector(panel, items, LEN(items), demo->item_current);
     demo->spinner = gui_panel_spinner(panel, 0, demo->spinner, 250, 10, &demo->spinner_active);
 
-    gui_panel_layout_row_ratio_begin(panel, 30, 2);
-    {
-        gui_panel_layout_row_ratio_push(panel, 0.7f);
-        gui_panel_editbox(panel, &demo->input);
-        gui_panel_layout_row_ratio_push(panel, 0.3f);
-        if (gui_panel_button_text(panel, "submit", GUI_BUTTON_DEFAULT)) {
-            gui_edit_box_reset(&demo->input);
-            fprintf(stdout, "command executed!\n");
+    if (demo->scaleable) {
+        gui_panel_layout_flux_row_begin(panel, 30, 2);
+        {
+            gui_panel_layout_flux_row_push(panel, 0.7f);
+            gui_panel_editbox(panel, &demo->input);
+            gui_panel_layout_flux_row_push(panel, 0.3f);
+            if (gui_panel_button_text(panel, "submit", GUI_BUTTON_DEFAULT)) {
+                gui_edit_box_reset(&demo->input);
+                fprintf(stdout, "command executed!\n");
+            }
         }
+        gui_panel_layout_flux_row_end(panel);
+    } else {
+        gui_panel_layout_static_row_begin(panel, 30, 2);
+        {
+            gui_panel_layout_static_row_push(panel, 100);
+            gui_panel_editbox(panel, &demo->input);
+            gui_panel_layout_static_row_push(panel, 80);
+            if (gui_panel_button_text(panel, "submit", GUI_BUTTON_DEFAULT)) {
+                gui_edit_box_reset(&demo->input);
+                fprintf(stdout, "command executed!\n");
+            }
+        }
+        gui_panel_layout_static_row_end(panel);
+
     }
-    gui_panel_layout_row_ratio_end(panel);
 }
 
 static void
@@ -127,7 +163,7 @@ graph_panel(struct gui_panel_layout *panel, gui_size current)
 {
     enum {COL, PLOT};
     static const gui_float values[]={8.0f,15.0f,20.0f,12.0f,30.0f,12.0f,35.0f,40.0f,20.0f};
-    gui_panel_layout_fixed_ratio(panel, 100, 1);
+    gui_panel_layout_flux_fixed(panel, 100, 1);
     if (current == COL) {
         gui_panel_graph(panel, GUI_GRAPH_COLUMN, values, LEN(values), 0);
     } else {
@@ -164,7 +200,7 @@ init_show(struct show_window *win, struct gui_config *config,
     gui_edit_box_init_fixed(&win->input, win->input_buffer, MAX_BUFFER, NULL, NULL);
 
     win->header_flags = GUI_CLOSEABLE|GUI_MINIMIZABLE;
-    win->widget_tab = GUI_MINIMIZED;
+    win->widget_tab = GUI_MAXIMIZED;
     win->combobox_tab = GUI_MINIMIZED;
     win->slider = 10.0f;
     win->progressbar = 50;
@@ -245,8 +281,7 @@ update_menu(struct gui_panel_layout *layout, struct show_window *win, struct gui
             if (w > max) max = w;
             iter++;
         }
-        cols = gui_panel_table_columns(layout, max);
-        gui_panel_layout_fixed_ratio(layout, 18, cols);
+        gui_panel_layout_flux_fixed(layout, 18, 5);
     }
 
     /* output current menu level entries */
@@ -257,7 +292,7 @@ update_menu(struct gui_panel_layout *layout, struct show_window *win, struct gui
         iter = &combis[lvl->list];
         for (i = 0; i < lvl->items; ++i) {
             const struct item *item = &items[iter->item];
-            if (gui_panel_menu_item(layout, item->name)) {
+            if (gui_panel_button_text(layout, item->name, GUI_BUTTON_DEFAULT)) {
                 if (item->id == ITEM_FILE_OPEN_EXE) {
                     fprintf(stdout, "open program file button pressed!\n");
                 } else if (item->id == ITEM_FILE_OPEN_SRC) {
@@ -301,14 +336,14 @@ update_show(struct show_window *show, struct gui_stack *stack, struct gui_input 
         gui_panel_tab_end(&layout, &tab);
 
         /* Graph */
-        gui_panel_layout_fixed_ratio(&layout, 180, 1);
+        gui_panel_layout_flux_fixed(&layout, 180, 1);
         show->shelf_selection = gui_panel_shelf_begin(&layout, &tab, shelfs,
             LEN(shelfs), show->shelf_selection, show->shelf_scrollbar);
         graph_panel(&tab, show->shelf_selection);
         show->shelf_scrollbar = gui_panel_shelf_end(&layout, &tab);
 
         /* Table */
-        gui_panel_layout_fixed_ratio(&layout, 180, 1);
+        gui_panel_layout_flux_fixed(&layout, 180, 1);
         gui_panel_group_begin(&layout, &tab, "Table", show->table_scrollbar);
         table_panel(&tab);
         show->table_scrollbar = gui_panel_group_end(&layout, &tab);
@@ -323,7 +358,7 @@ update_flags(struct gui_panel_layout *panel, struct control_window *control)
     gui_flags res = 0;
     gui_flags i = 0x01;
     const char *options[]={"Hidden","Border","Header Border", "Moveable","Scaleable", "Minimized"};
-    gui_panel_layout_fixed_ratio(panel, 30, 2);
+    gui_panel_layout_flux_fixed(panel, 30, 2);
     do {
         if (gui_panel_check(panel,options[n++],(control->show_flags & i)?gui_true:gui_false))
             res |= i;
@@ -339,7 +374,7 @@ properties_tab(struct gui_panel_layout *panel, struct gui_config *config)
     const char *properties[] = {"item spacing:", "item padding:", "panel padding:",
         "scaler size:", "scrollbar:"};
 
-    gui_panel_layout_fixed_ratio(panel, 30, 3);
+    gui_panel_layout_flux_fixed(panel, 30, 3);
     for (i = 0; i <= GUI_PROPERTY_SCROLLBAR_WIDTH; ++i) {
         gui_int tx, ty;
         gui_panel_label(panel, properties[i], GUI_TEXT_LEFT);
@@ -357,7 +392,7 @@ round_tab(struct gui_panel_layout *panel, struct gui_config *config)
     const char *rounding[] = {"panel:", "button:", "checkbox:", "progress:", "input: ",
         "graph:", "scrollbar:"};
 
-    gui_panel_layout_fixed_ratio(panel, 30, 2);
+    gui_panel_layout_flux_fixed(panel, 30, 2);
     for (i = 0; i < GUI_ROUNDING_MAX; ++i) {
         gui_int t;
         gui_panel_label(panel, rounding[i], GUI_TEXT_LEFT);
@@ -379,12 +414,12 @@ color_picker(struct gui_panel_layout *panel, struct control_window *control,
     active[2] = &control->spinner_b_active;
     active[3] = &control->spinner_a_active;
 
-    gui_panel_layout_fixed_ratio(panel, 30, 2);
+    gui_panel_layout_flux_fixed(panel, 30, 2);
     gui_panel_label(panel, name, GUI_TEXT_LEFT);
     gui_panel_button_color(panel, color, GUI_BUTTON_DEFAULT);
 
     iter = &color.r;
-    gui_panel_layout_fixed_ratio(panel, 30, 2);
+    gui_panel_layout_flux_fixed(panel, 30, 2);
     for (i = 0; i < 4; ++i, iter++) {
         gui_float t = *iter;
         t = gui_panel_slider(panel, 0, t, 255, 10);
@@ -413,7 +448,7 @@ color_tab(struct gui_panel_layout *panel, struct control_window *control, struct
 
     if (control->picker_active) {
         control->color = color_picker(panel,control,labels[control->current_color], control->color);
-        gui_panel_layout_fixed_ratio(panel, 30, 3);
+        gui_panel_layout_flux_fixed(panel, 30, 3);
         gui_panel_spacing(panel, 1);
         if (gui_panel_button_text(panel, "ok", GUI_BUTTON_DEFAULT)) {
             config->colors[control->current_color] = control->color;
@@ -422,7 +457,7 @@ color_tab(struct gui_panel_layout *panel, struct control_window *control, struct
         if (gui_panel_button_text(panel, "cancel", GUI_BUTTON_DEFAULT))
             control->picker_active = gui_false;
     } else {
-        gui_panel_layout_fixed_ratio(panel, 30, 2);
+        gui_panel_layout_flux_fixed(panel, 30, 2);
         for (i = 0; i < GUI_COLOR_COUNT; ++i) {
             struct gui_color c = config->colors[i];
             gui_panel_label(panel, labels[i], GUI_TEXT_LEFT);

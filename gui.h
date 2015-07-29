@@ -125,8 +125,6 @@ typedef void(*gui_copy_f)(gui_handle, const char*, gui_size size);
 */
 gui_float gui_sin(gui_float);
 gui_float gui_cos(gui_float);
-gui_float gui_sin_fast(gui_float);
-gui_float gui_cos_fast(gui_float);
 struct gui_rect gui_get_null_rect(void);
 gui_size gui_utf_decode(const gui_char*, gui_long*, gui_size);
 gui_size gui_utf_encode(gui_long, gui_char*, gui_size);
@@ -360,7 +358,7 @@ struct gui_buffer {
 };
 
 void gui_buffer_init(struct gui_buffer*, const struct gui_allocator*,
-                            gui_size initial_size, gui_float grow_factor);
+                        gui_size initial_size, gui_float grow_factor);
 /*  this function initializes a growing buffer
     Input:
     - allocator holding your own alloctator and memory allocation callbacks
@@ -404,7 +402,7 @@ void gui_buffer_clear(struct gui_buffer*);
  *
  * ===============================================================
  */
-/*  COMMAND QUEUE
+/*  COMMAND BUFFER
     ----------------------------
     The command buffer API enqueues draw calls as commands in to a buffer and
     therefore abstracts over drawing routines and enables defered drawing.
@@ -1537,105 +1535,53 @@ void gui_config_reset(struct gui_config*);
  *                          Panel
  *
  * ===============================================================
- */
-/*  PANEL
+    PANEL
     ----------------------------
-    The Panel function API is based on the widget API and is almost in its
-    entirety based on positioning of groups of widgets. Almost each widget inside the
-    panel API uses the widget API for drawing and manipulation/input logic
-    but offers a uniform style over a single configuration structure as well as
-    widget group base moving, spacing and structuring. The panel references
-    a basic configuration file, an output commmand buffer and input structure which
-    need to share the same or greater life time than the panel since they are relied
-    on by the panel.
+    A panel provides functionality on groupes of widgets like
+    moving, scaleing, minimizing, controlled positioning, scrolling, tabs, trees,
+    tables and shelfs. The panel API is hereby not responsible for providing widgets
+    but instead uses the widget API under the hood and only controlles position
+    and style of each widget. The actual drawing and updating is done by the
+    widget API.
+    The API is just like the widget API an immediate mode API and almost all
+    data outside of the actual panel is lost after each fraem.
+    Therefore there is no concept of storing widget state but instead the user
+    has to manage all state.
+    From a data point of view the panel takes in panel data, widget data, configuration
+    data and a memory block and outputs the updated widget data plus a command
+    buffer with a number of draw commands for each frame. This was done to provide
+    a easy way to abstract over a big number of platforms, renter backends, font
+    implementations.
+
+    ----------                                  -------------
+    | config |          -------------           |           |
+    | panel  |          |           |           | widget    |
+    | memory | ------\  |   GUI     |  -------> |-----------|
+    | widget | ------/  |           |           | commands  |
+    | Input  |          -------------           |           |
+    ----------                                  -------------
+
+    The panel can be divided into a header, menubar and body. The header
+    provides functionality like closing or minimizing while the menubar
+    is space under the header that is independent of scrolling and therefore
+    always stays at the top of the panel. The menubar and body can be filled with
+    a number of different provided widgets while the header only supports its
+    own set of icons.
 
     USAGE
     ----------------------------
-    To setup the Panel API you have to initiate the panel first with position, size
-    and behavior flags. The flags inside the panel describe the behavior of the panel
-    and can be set or modified directly over the public panel struture
-    or at the beginning in the initialization phase. Just like the flags the position
-    and size of the panel is made directly modifiable at any given time given single
-    threaded access while changes are only visible outside the layout buildup process.
+    Main functions      -- main panel setup and modification functions
+    Header functions    -- functions to create and setup a panel header and menubar
+    Layout functions    -- API that provides different ways to place widgets in the panel
+    Widget functions    -- immediate mode widgets functions to till the panel with
+    Complex functions   -- Widget with more complex behavior and requirements
+    Group functions     -- Widget grouping functions
 
-    To finally use the panel a panel layout has to be created over gui_panle_begin_xxx
-    which sets up the panel layout build up process. The panel layout has to be kept
-    valid over the course of the build process until gui_panel_end is called, which
-    makes the layout perfectly fit for either a stack object or a single instance for
-    every panel. The begin sequence pont of the panel layout also gives the opportunity to
-    add the panel either into a panel stack for overlapping panels or a tiled border
-    layout for automated window independend panel positing and sizing.
-
-    To add widgets into the panel layout a number of basic widget are provided
-    which can be added by calling the appropriate function inside both panel
-    layout sequene points gui_panel_begin and gui_panel_end. All calls outside
-    both sequence points are invalid and can cause undefined behavior.
-
-    Since the panel has no information about the structuring of widgets a
-    row layout has to be set with row height and number of columns which can
-    be changed and set by calling the gui_panel_row function.
-    IMPORTANT: !IF YOUR LAYOUT IS WRONG FIRST CHECK IF YOU CALLED gui_panel_row CORRECTLY XOR AT ALL!
-
-    Panel function API
-    gui_panel_init          -- initializes the panel with position, size and flags
-    gui_panel_begin         -- begin sequence point in the panel layout build up process
-    gui_panel_begin_stacked -- extends gui_panel_begin by adding the panel into a panel stack
-    gui_panel_begin_tiled   -- extends gui_panel_begin by adding the panel into a tiled layout
-    gui_panel_row           -- defines the current row layout with row height and number of columns
-    gui_panel_row_templated -- defines the row layout as  a nother of panel space ratios
-    gui_panel_row_begin     -- begins the row build up process
-    gui_panel_row_push_widget-- pushes the next added widget width as a ratio of the provided space
-    gui_panel_row_end       -- ends the row build up process
-    gui_panel_row_columns   -- returns the number of possible columns with a given width in a table layout
-    gui_panel_pixel_to_ratio-- convert a widget width from pixel into a panel space ratio
-    gui_panel_widget        -- base function for all widgets to allocate space on the panel
-    gui_panel_spacing       -- create a column seperator and is basically an empty widget
-    gui_panel_text          -- text widget for printing text with length
-    gui_panel_text_colored  -- colored text widget for printing colored text width length
-    gui_panel_label         -- text widget for printing zero terminated strings
-    gui_panel_label_colored -- text wicget for printing colored zero terminiated strings
-    gui_panel_check         -- add a checkbox widget with either active or inactive state
-    gui_panel_option        -- radiobutton widget with either active or inactive state
-    gui_panel_option_group  -- radiobutton group with automates the process of having only one active
-    gui_panel_button_text   -- button widget with text content
-    gui_panel_button_color  -- colored button widget without content
-    gui_panel_button_triangle --button with triangle pointing either up-/down-/left- or right
-    gui_panel_button_image  -- button widget width icon content
-    gui_panel_button_toggle -- toggle button with either active or inactive state
-    gui_panel_button_text_image -- button widget with text and icon
-    gui_panel_button_text_triangle --button widget with text and a triangle
-    gui_panel_slider        -- slider widget with min and max value as well as stepping range
-    gui_panel_progress      -- either modifyable or static progressbar
-    gui_panel_editbox       -- edit textbox for text input with cursor, clipboard and filter
-    gui_panel_edit          -- edit textbox widget for text input
-    gui_panel_edit_filtered -- edit textbox widget for text input with filter input
-    gui_panel_spinner       -- spinner widget with either keyboard or mouse modification
-    gui_panel_selector      -- selector widget for combobox like selection of types
-    gui_panel_graph_begin   -- immediate mode graph building begin sequence point
-    gui_panel_graph_push    -- push a value into a graph
-    gui_panel_graph_end     -- immediate mode graph building end sequence point
-    gui_panel_graph         -- retained mode graph with array of values
-    gui_panel_graph_ex      -- ratained mode graph with getter callback
-    gui_panel_tab_begin     -- begins a minimizable growing space inside the panel
-    gui_panel_tab_end       -- ends the minimizable space
-    gui_panel_group_begin   -- adds a scrollable fixed space inside the panel
-    gui_panel_group_end     -- ends the scrollable space
-    gui_panel_shelf_begin   -- begins a shelf with a number of selectable tabs
-    gui_panel_shelf_end     -- ends a previously started shelf build up process
-    gui_panel_tree_begin    -- begin a new tree build up process
-    gui_panel_tree_begin_node -- begins a new parent node
-    gui_panel_tree_end_node -- ends the previously started parent node
-    gui_panel_tree_leaf     -- adds a leaf node
-    gui_panel_tree_end      -- ends the previously started tree build up process
-    gui_panel_end           -- end squeunce point which finializes the panel build up
 */
 enum gui_widget_state {
-    GUI_INVALID,
-    /* The widget cannot be seen and is completly out of bounds  */
-    GUI_VALID,
-    /* The widget is completly inside the panel and can be updated + drawn */
-    GUI_ROM
-    /* The widget is partially visible and cannot be updated */
+    GUI_INVALID, /* The widget cannot be seen and is completly out of view */
+    GUI_VALID, /* The widget is completly inside the panel and can be updated + drawn */
+    GUI_ROM /* The widget is partially visible and cannot be updated */
 };
 
 enum gui_table_lines {
@@ -1713,7 +1659,9 @@ enum gui_panel_header_symbol {
 
 enum gui_panel_header_align {
     GUI_HEADER_LEFT,
+    /* header elements are added at the left side of the header */
     GUI_HEADER_RIGHT
+    /* header elements are added at the right side of the header */
 };
 
 enum gui_panel_flags {
@@ -1764,17 +1712,21 @@ struct gui_panel {
 };
 
 enum gui_panel_row_layout_type {
-    GUI_PANEL_LAYOUT_FIXED_RATIO,
+    GUI_PANEL_LAYOUT_FLUX_FIXED,
     /* fixed widget ratio width panel layout */
-    GUI_PANEL_LAYOUT_FIXED_PIXELS,
-    /* fixed widget pixel width panel layout */
-    GUI_PANEL_LAYOUT_ROW_RATIO,
+    GUI_PANEL_LAYOUT_FLUX_ROW,
     /* immediate mode widget specific widget width ratio layout */
-    GUI_PANEL_LAYOUT_ROW_PIXELS,
-    /* immediate mode widget specific widget pixel width layout */
-    GUI_PANEL_LAYOUT_DEF_RATIO,
+    GUI_PANEL_LAYOUT_FLUX_FREE,
+    /* free ratio based placing of widget in a local space  */
+    GUI_PANEL_LAYOUT_FLUX,
     /* retain mode widget specific widget ratio width*/
-    GUI_PANEL_LAYOUT_DEF_PIXELS
+    GUI_PANEL_LAYOUT_STATIC_FIXED,
+    /* fixed widget pixel width panel layout */
+    GUI_PANEL_LAYOUT_STATIC_ROW,
+    /* immediate mode widget specific widget pixel width layout */
+    GUI_PANEL_LAYOUT_STATIC_FREE,
+    /* free pixel based placing of widget in a local space  */
+    GUI_PANEL_LAYOUT_STATIC
     /* retain mode widget specific widget pixel width layout */
 };
 
@@ -1782,18 +1734,35 @@ enum gui_panel_row_layout_type {
 struct gui_panel_row_layout {
     enum gui_panel_row_layout_type type;
     /* type of the row layout */
+    gui_size index;
+    /* index of the current widget in the current panel row */
     gui_float height;
     /* height of the current row */
     gui_size columns;
     /* number of columns in the current row */
     const gui_float *ratio;
     /* row widget width ratio */
-    gui_float item_ratio;
-    /* current with of very item */
+    gui_float item_width, item_height;
+    /* current width of very item */
     gui_float item_offset;
     /* x positon offset of the current item */
     gui_float filled;
     /* total fill ratio */
+    struct gui_rect item;
+    /* item bounds */
+};
+
+struct gui_panel_header {
+    gui_float x, y, w, h;
+    /* header bounds */
+    gui_float front, back;
+    /* header filling stack */
+};
+
+struct gui_panel_menu {
+    gui_float x, y, w, h;
+    /* menu bounds */
+    gui_float offset;
 };
 
 struct gui_panel_layout {
@@ -1813,19 +1782,16 @@ struct gui_panel_layout {
     /* index position of the current widget row and column  */
     gui_float width, height;
     /* size of the actual useable space inside the panel */
-    struct gui_rect header;
-    /* panel header bounds */
-    gui_float header_front, header_back;
-    struct gui_rect menu;
-    /* panel menubar bounds */
     gui_float footer_h;
     /* height of the panel footer space */
-    gui_size index;
-    /* index of the current widget in the current panel row */
+    struct gui_rect clip;
+    /* panel clipping rect */
+    struct gui_panel_header header;
+    /* panel header bounds */
+    struct gui_panel_menu menu;
+    /* panel menubar bounds */
     struct gui_panel_row_layout row;
     /* currently used panel row layout */
-    struct gui_rect clip;
-    /* panel clipping rect needed by scrolling */
     const struct gui_config *config;
     /* configuration data describing the visual style of the panel */
     const struct gui_input *input;
@@ -1834,6 +1800,43 @@ struct gui_panel_layout {
     /* command draw call output command buffer */
 };
 
+/*
+ * --------------------------------------------------------------
+ *                          MAIN
+ * --------------------------------------------------------------
+    MAIN
+    The Main Panel function API is used to initialize a panel, create
+    a stack based panel layout, control the build up process and to
+    modify the panel state. The modification of the panel is only allowed
+    outside both sequence points `gui_panel_begin` and `gui_panel_end`, therefore
+    all modification inside them is undefined behavior.
+
+    USAGE
+    To work a panel needs to be initialized by calling `gui_panel_init` with
+    a reference to a valid command buffer and configuration structure.
+    The references have to be valid over the life time of the panel and can be
+    changed by setter functions. In addition to being initialized
+    the panel needs a panel layout in every frame to fill and use as temporary
+    state to fill the panel with widgets.
+    The panel layout hereby does NOT have to be kept around outside of the build
+    up process and multiple panels can share one panel layout. The reason why
+    panel and layout are split is to seperate the temporary changing state
+    of the panel layout from the persistent state of the panel. In addition
+    the panel only needs a fraction of the needed space and state of the panel layout.
+
+    panel function API
+    gui_panel_init          -- initializes the panel with position, size and flags
+    gui_panel_begin         -- begin sequence point in the panel layout build up process
+    gui_panel_begin_stacked -- extends gui_panel_begin by adding the panel into a panel stack
+    gui_panel_begin_tiled   -- extends gui_panel_begin by adding the panel into a tiled layout
+    gui_panel_end           -- end squeunce point which finializes the panel build up
+    gui_panel_set_config    -- updates the used panel configuration
+    gui_panel_set_buffer    -- update the used panel buffer
+    gui_panel_add_flag      -- adds a behavior flag to the panel
+    gui_panel_remove_flag   -- removes a behavior flag from the panel
+    gui_panel_has_flag      -- check if a given behavior flag is set in the panel
+    gui_panel_is_minimized  -- return wether the panel is minimized
+ */
 struct gui_layout;
 void gui_panel_init(struct gui_panel*, gui_float x, gui_float y, gui_float w,
                     gui_float h, gui_flags, struct gui_command_buffer*,
@@ -1900,12 +1903,51 @@ void gui_panel_begin_tiled(struct gui_panel_layout*, struct gui_panel*,
     Output:
     - panel layout to fill up with widgets
 */
+void gui_panel_end(struct gui_panel_layout*, struct gui_panel*);
+/*  this function ends the panel layout build up process and updates the panel */
+/*
+ * --------------------------------------------------------------
+ *                          HEADER
+ * --------------------------------------------------------------
+    HEADER
+    The header API is for adding a window space at the top of the panel for
+    buttons, icons and panel title. It is useful for toggling the visiblity
+    aswell as minmized state of the panel. The header can be filled with buttons
+    and icons from the left and as well as the right side and allows therefore
+    a wide range of header layouts.
+
+    USAGE
+    To create a header you have to call one of two API after the panel layout
+    has been created with `gui_panel_begin`. The first and easiest way is to
+    just call `gui_panel_header` which provides a basic header with
+    customizable buttons as well as title but notification if a button is pressed.
+    The layout supported is hereby limited and custom button and icons cannot be
+    added. To achieve that you have to use the more extensive header API.
+    You start by calling `gui_panel_header_begin` after `gui_panel_begin` and
+    call the different `gui_panel_header_xxx` function to add icons or the title
+    either at the left or right side of the panel. Each function return if the
+    icon or button has been pressed or in the base of the toggle the current state.
+    Finally if all button/icons/toggles have been added the process is finished
+    by calling `gui_panel_header_end`.
+
+    panel header function API
+    gui_panel_header_begin          -- begins the header build up process
+    gui_panel_header_button         -- adds a button into the header
+    gui_panel_header_button_icon    -- adds a image button into the header
+    gui_panel_header_toggle         -- adds a toggle button into the header
+    gui_panel_header_flag           -- adds a panel flag toggle button 
+    gui_panel_header_title          -- adds the title of the panel into the header
+    gui_panel_header_end            -- finishes the header build up process
+    gui_panel_header                -- short cut version of the header build up process
+    gui_panel_menu_begin            -- marks the beginning of the menubar building process
+    gui_panel_menu_end              -- marks the end the menubar build up process
+*/
 void gui_panel_header_begin(struct gui_panel_layout*);
 /*  this function begins the panel header build up process */
 gui_bool gui_panel_header_button(struct gui_panel_layout *layout,
                                 enum gui_panel_header_symbol symbol,
                                 enum gui_panel_header_align);
-/*  this function adds a header button
+/*  this function adds a header button icon
     Input:
     -
     - symbol that shall be shown in the header as a icon
@@ -1914,7 +1956,7 @@ gui_bool gui_panel_header_button(struct gui_panel_layout *layout,
 */
 gui_bool gui_panel_header_button_icon(struct gui_panel_layout*, struct gui_image,
                                     enum gui_panel_header_align);
-/*  this function adds a header image button
+/*  this function adds a header image button icon
     Input:
     - symbol that shall be shown in the header as a icon
     Output:
@@ -1949,7 +1991,6 @@ gui_bool gui_panel_header_flag(struct gui_panel_layout *layout,
 void gui_panel_header_title(struct gui_panel_layout*, const char*,
                                 enum gui_panel_header_align);
 /*  this function adds a title to the panel header
-    flag by the user
     Input:
     - title of the header
 */
@@ -1967,50 +2008,201 @@ gui_flags gui_panel_header(struct gui_panel_layout*, const char *title,
 */
 void gui_panel_menu_begin(struct gui_panel_layout*);
 /*  this function begins the panel menubar build up process */
-gui_bool gui_panel_menu_item(struct gui_panel_layout*, const char *label);
-/*  this function adds a header icon to header which allows a change of a panel
-    flag by the user
-    Input:
-    - menu item label
-    Output:
-    - gui_true if it was pressed gui_false otherwise
-*/
 void gui_panel_menu_end(struct gui_panel_layout*);
 /*  this function ends the panel menubar build up process */
-void gui_panel_layout_fixed_ratio(struct gui_panel_layout*, gui_float row_height, gui_size cols);
-/*  this function set the current panel row layout
-    Input:
-    - panel row layout height in pixel
-    - panel row layout column count
+/*
+ * --------------------------------------------------------------
+ *                          LAYOUT
+ * --------------------------------------------------------------
+    HEADER
+    The layout API is for positioning of widget inside a panel. In general there
+    are three different ways to position widget. The first one is a table with
+    fixed size columns. This like the other three comes in two flavors. First
+    the scaleable with as a ration of the panel width and the other is a
+    non-scaleable fixed pixel value for static panels.
+    Since sometimes widgets with different size in a row is needed another set
+    of row layout has been added. The first API for dynamically size widgets
+    is an immediate mode API which sets each size of a widget directly before
+    it is called or a retain mode API which stores the size of every widget as
+    an array.
+    The final way to position widgets is by allocating a fixed space from
+    the panel and directly positioning each widget with position and size.
+    This requires the least amount of work for the API and the most for the user,
+    but offers the most positioning freedom.
+
+    USAGE
+    The first layout type with a fixed size table layout only needs to be set once
+    and works over row boundaries this includes `gui_panel_layout_flux_fixed`
+    as well as `gui_panel_layout_static_fixed`.
+    The second layout tike with its `gui_panel_layout_flux_row_xxx` and
+    `gui_panel_layout_static_row_xxx` functions only works for one row and
+    as to be set for each row. In addition the `gui_panel_layout_xxx_row_push`
+    function has to be called for each widget.
+    The free position API works completly on the allocated space and the
+    `gui_panel_layout_xxxx_widget` functions need to be called for each widget
+    seperatly and only between the begin and end sequence points.
+
+    panel scaling layout function API
+    gui_panel_layout_flux_fixed         -- scaleable fixed ratio size widget row layout
+    gui_panel_layout_flux_row           -- scaleable user defined widget row layout
+    gui_panel_layout_flux_row_begin     -- begins the row build up process
+    gui_panel_layout_flux_row_push      -- pushes the next widget width ratio
+    gui_panel_layout_flux_row_end       -- ends the row build up process
+    gui_panel_layout_flux_begin         -- creates a free drawing space in the panel
+    gui_panel_layout_flux_widget        -- pushes a widget into the space
+    gui_panel_layout_flux_end           -- finishes the free drawingp process
+
+    panel fixed layout function API
+    gui_panel_layout_static_fixed       -- fixed pixel size widget row layout
+    gui_panel_layout_static_row         -- fixed size user defined widget row layout
+    gui_panel_layout_static_row_begin   -- begins the row build up process
+    gui_panel_layout_static_row_push    -- pushes the next widget pixel width
+    gui_panel_layout_static_row_end     -- ends the row build up process
+    gui_panel_layout_static_begin       -- creates a free drawing space in the panel
+    gui_panel_layout_static_widget      -- pushes a widget into the space
+    gui_panel_layout_static_end         -- finishes the free drawingp process
 */
-void gui_panel_layout_row_ratio_begin(struct gui_panel_layout*, gui_float row_height, gui_size cols);
-/*  this function start the row build up process
+void gui_panel_layout_flux_fixed(struct gui_panel_layout*, gui_float row_height, gui_size cols);
+/*  this function sets the current row layout to a scaleable table like layout where each
+    widget occupies a fixed ratio of the panel width
     Input:
-    - row height inhereted by all widget inside the row
+    - height of the row that will be filled
+    - number of widget inside the row that will divide the space
 */
-void gui_panel_layout_row_ratio_push(struct gui_panel_layout*, gui_float ratio);
-/*  this function directly sets the width ratio of the next added widget
+void gui_panel_layout_flux_row_begin(struct gui_panel_layout*, gui_float row_height, gui_size cols);
+/*  this function start a new scaleable row that can be filled with different
+    sized widget
     Input:
-    - ratio percentage value (0.0f-1.0f) of the needed row space
+    - height of the row that will be filled
+    - number of widget inside the row that will divide the space
 */
-void gui_panel_layout_row_ratio_end(struct gui_panel_layout*);
-/* this function ends the row build up process */
-void gui_panel_layout_def_ratio(struct gui_panel_layout*, gui_float height,
-                    gui_size cols, const gui_float *ratio);
-/*  this function set the current panel row layout as a array of ratios
+void gui_panel_layout_flux_row_push(struct gui_panel_layout*, gui_float ratio);
+/*  this function pushes a widget into the previously start row with the given
+    panel width ratio
     Input:
-    - panel row layout height in pixel
-    - panel row layout column count
-    - array with percentage size values for each column
+    - ratio of the complete width of the panel row that the next widget should take
 */
-gui_size gui_panel_table_columns(const struct gui_panel_layout *layout,
-                                    gui_size widget_pixel_size);
-/*  this function calculates the possible number of widget with the same width in the
-    current row layout.
+void gui_panel_layout_flux_row_end(struct gui_panel_layout*);
+/*  this function ends the previously started scaleable row */
+void gui_panel_layout_flux_row(struct gui_panel_layout*, gui_float height,
+                                gui_size cols, const gui_float *ratio);
+/*  this function sets the scaleable row layout as an array of ratios for
+    every widget that will be inserted into that row
     Input:
-    - size of all widgets that need to fit into the current panel row layout
-    Output:
-    - panel layout to fill up with widgets
+    - height of the row and there each widget inside
+    - number of widget inside the row
+    - panel width ratio array for each widget
+*/
+void gui_panel_layout_flux_begin(struct gui_panel_layout*, gui_float height,
+                                        gui_size widget_count);
+/*  this functions starts a scaling space where widgets can be added
+    at any given position and the user has to make sure no overlap occures
+    Input:
+    - height of the row and therefore each widget inside
+    - number of widget that will be added into that space
+*/
+void gui_panel_layout_flux_widget(struct gui_panel_layout*, struct gui_rect);
+/*  this functions pushes the position and size of the next widget that will
+    be added into the previously allocated panel space
+    Input:
+    - rectangle with position and size as a ratio of the next widget to add
+*/
+void gui_panel_layout_flux_end(struct gui_panel_layout*);
+/*  this functions finishes the scaleable space filling process */
+void gui_panel_layout_static_fixed(struct gui_panel_layout*, gui_float row_height,
+                                    gui_float width, gui_size cols);
+/*  this function sets the current row layout to a table like layout where each
+    widget has a fixed pixel width
+    Input:
+    - height of the row that will be filled
+    - number of widget inside the row that will divide the space
+*/
+void gui_panel_layout_static_row_begin(struct gui_panel_layout*, gui_float row_height,
+                                        gui_size cols);
+/*  this function start a new non scaleable row that can be filled with different
+    pixel sized widget
+    Input:
+    - height of the row that will be filled
+    - number of widget inside the row that will share the space
+*/
+void gui_panel_layout_static_row_push(struct gui_panel_layout*, gui_float width);
+/*  this function pushes a widget into the previously start row with a given
+    pixel width
+    Input:
+    - non-scaleable widget pixel width
+*/
+void gui_panel_layout_static_row_end(struct gui_panel_layout*);
+/*  this functions finishes the non-scaleable space filling process */
+void gui_panel_layout_static_row(struct gui_panel_layout*, gui_float height,
+                                gui_size cols, const gui_float *ratio);
+/*  this function sets the non-scaleable row layout as an array of pixel width for
+    every widget that will be inserted into that row
+    Input:
+    - height of the row and there each widget inside
+    - number of widget inside the row
+    - pixel width array with a value for each widget
+*/
+void gui_panel_layout_static_begin(struct gui_panel_layout*, gui_float height,
+                                    gui_size widget_count);
+/*  this functions starts a non-scaling space where widgets can be freely added
+    at any given position and the user has to make sure no overlap occures
+    Input:
+    - height of the row and therefore each widget inside
+    - number of widget that will be added into that space
+*/
+void gui_panel_layout_static_widget(struct gui_panel_layout*, struct gui_rect);
+/*  this functions pushes the position and size of the next widget that will
+    be added into the previously allocated panel space
+    Input:
+    - rectangle with position and size of the next widget to add
+*/
+void gui_panel_layout_static_end(struct gui_panel_layout*);
+/*  this functions finishes the non-scaleable space filling process */
+/*
+ * --------------------------------------------------------------
+ *                          WIDGETS
+ * --------------------------------------------------------------
+    WIDGET
+    The layout API uses the layout API to provide and add widget to the panel.
+    IMPORTANT: the widget API does NOT work without a layout so if you have
+    visual glitches that the problem probably comes from not using the layout 
+    correctly. The panel widget API does not implement any widget itself, instead
+    it uses the general Widget API under the hood and is only responsible for
+    calling the correct widget API function with correct position, size and style.
+    All widgets do NOT store any state instead everything has to be managed by
+    the user.
+
+    USAGE
+    To use the Widget API you first have to call one of the layout API funtions
+    to setup the widget. After that you can just call one of the widget functions
+    at it will automaticall update the widget state as well as `draw` the widget
+    by adding draw command into the panel command buffer.
+
+    Panel widget API
+    gui_panel_widget                -- base function for all widgets to allocate space on the panel
+    gui_panel_spacing               -- create a column seperator and is basically an empty widget
+    gui_panel_text                  -- text widget for printing text with length
+    gui_panel_text_colored          -- colored text widget for printing colored text width length
+    gui_panel_label                 -- text widget for printing zero terminated strings
+    gui_panel_label_colored         -- text widget for printing colored zero terminiated strings
+    gui_panle_image                 -- image widget for outputing a image to a panel
+    gui_panel_check                 -- add a checkbox widget with either active or inactive state
+    gui_panel_option                -- radiobutton widget with either active or inactive state
+    gui_panel_option_group          -- radiobutton group with automates the process of having only one active
+    gui_panel_button_text           -- button widget with text content
+    gui_panel_button_color          -- colored button widget without content
+    gui_panel_button_triangle       -- button with triangle pointing either up-/down-/left- or right
+    gui_panel_button_image          -- button widget width icon content
+    gui_panel_button_toggle         -- toggle button with either active or inactive state
+    gui_panel_button_text_image     -- button widget with text and icon
+    gui_panel_button_text_triangle  -- button widget with text and a triangle
+    gui_panel_slider                -- slider widget with min,max,step value
+    gui_panel_progress              -- progressbar widget
+    gui_panel_edit                  -- edit textbox widget for text input
+    gui_panel_edit_filtered         -- edit textbox widget for text input with filter input
+    gui_panel_editbox               -- edit textbox with cursor, clipboard and filter
+    gui_panel_spinner               -- spinner widget with either keyboard or mouse modification
+    gui_panel_selector              -- selector widget for combobox like selection of types
 */
 enum gui_widget_state gui_panel_widget(struct gui_rect*, struct gui_panel_layout*);
 /*  this function represents the base of every widget and calculates the bounds
@@ -2237,6 +2429,21 @@ gui_size gui_panel_selector(struct gui_panel_layout*, const char *items[],
     Output:
     - the from user selection selected array index of the active item
 */
+/*
+ * -------------------------------------------------------------
+ *                          COMPLEX
+ * --------------------------------------------------------------
+    Panel Graph API
+    gui_panel_graph_begin           -- immediate mode graph building begin sequence point
+    gui_panel_graph_push            -- push a value into a graph
+    gui_panel_graph_end             -- immediate mode graph building end sequence point
+    gui_panel_graph                 -- retained mode graph with array of values
+    gui_panel_graph_ex              -- ratained mode graph with getter callback
+    gui_panel_table_begin           -- begin table build up process
+    gui_panel_table_row             -- seperates tables rows
+    gui_panel_table_end             -- ends the table build up process
+
+*/
 void gui_panel_graph_begin(struct gui_panel_layout*, struct gui_graph*,
                             enum gui_graph_type, gui_size count,
                             gui_float min, gui_float max);
@@ -2292,6 +2499,16 @@ void gui_panel_table_end(struct gui_panel_layout*);
 /*  this function finished the table build up process and reverts the panel back
     to its normal state.
 */
+/*
+ * -------------------------------------------------------------
+ *                          GROUP
+ * --------------------------------------------------------------
+    Panel Graph API
+    gui_panel_group_begin           -- adds a scrollable fixed space inside the panel
+    gui_panel_group_end             -- ends the scrollable space
+    gui_panel_shelf_begin           -- begins a shelf with a number of selectable tabs
+    gui_panel_shelf_end             -- ends a previously started shelf build up process
+*/
 gui_bool gui_panel_tab_begin(struct gui_panel_layout*, struct gui_panel_layout *tab,
                             const char*, gui_bool border, gui_bool minimized);
 /*  this function adds a tab subpanel into the parent panel
@@ -2342,8 +2559,6 @@ gui_float gui_panel_shelf_end(struct gui_panel_layout*, struct gui_panel_layout*
     Output:
     - The from user input updated shelf scrollbar pixel offset
 */
-void gui_panel_end(struct gui_panel_layout*, struct gui_panel*);
-/*  this function ends the panel layout build up process and updates the panel */
 /*
  * ==============================================================
  *
@@ -2408,6 +2623,7 @@ void gui_stack_pop(struct gui_stack*, struct gui_panel*);
     need more than just fixed or overlapping panels. There are five slots
     (Top, Left, Center, Right, Bottom) in the layout which are either be
     scaleable or static and occupy a certain percentage of the screen.
+    o TODO dockable panels
 
     USAGE
     ----------------------------

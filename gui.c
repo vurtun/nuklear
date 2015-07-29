@@ -89,7 +89,7 @@ gui_float
 gui_cos(gui_float x)
 {
     gui_float rcos = 0;
-    x += 1.57079632;
+    x += 1.57079632f;
     if (x > GUI_PI)
         x -= GUI_PI2;
 
@@ -102,28 +102,6 @@ gui_cos(gui_float x)
         if (rcos < 0) rcos = 0.225f * (rcos *-rcos - rcos) + rcos;
         else rcos = 0.225f * (rcos * rcos - rcos) + rcos;
     }
-    return rcos;
-}
-
-gui_float
-gui_sin_fast(gui_float x)
-{
-    gui_float rsin = 0;
-    if (x < -GUI_PI) x += GUI_PI2;
-    else if (x > GUI_PI) x -= GUI_PI2;
-    if (x < 0) rsin = GUI_4_DIV_PI * x + GUI_4_DIV_PI_SQRT * x * x;
-    else rsin = GUI_4_DIV_PI * x - GUI_4_DIV_PI_SQRT * x * x;
-    return rsin;
-}
-
-gui_float
-gui_cos_fast(gui_float x)
-{
-    gui_float rcos = 0;
-    x += 1.57079632;
-    if (x > GUI_PI) x -= GUI_PI2;
-    if (x < 0) rcos = GUI_4_DIV_PI * x + GUI_4_DIV_PI_SQRT * x * x;
-    else rcos = GUI_4_DIV_PI * x - GUI_4_DIV_PI_SQRT * x * x;
     return rcos;
 }
 
@@ -351,7 +329,7 @@ gui_triangle_from_direction(struct gui_vec2 *result, gui_float x, gui_float y,
 /*
  * ==============================================================
  *
- *                          Input
+ *                          UTF-8
  *
  * ===============================================================
  */
@@ -452,6 +430,13 @@ gui_utf_len(const gui_char *str, gui_size len)
     return src_len;
 }
 
+/*
+ * ==============================================================
+ *
+ *                          Input
+ *
+ * ===============================================================
+ */
 void
 gui_input_begin(struct gui_input *in)
 {
@@ -1762,9 +1747,10 @@ gui_editbox(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float 
         gui_command_buffer_push_text(out , label_x, label_y, label_w, label_h,
             &buffer[offset], text_len, font, field->background, field->text);
 
-        /* if requested draw the cursor at the end of the text input */
+        /* if requested draw the cursor */
         if (box->active && field->show_cursor) {
             if (box->cursor == box->glyphes) {
+                /* draw the cursor at the end of the string */
                 gui_command_buffer_push_rect(out,label_x+(gui_float)text_width, label_y,
                         (gui_float)cursor_w, label_h, 0, field->cursor);
             } else {
@@ -1772,6 +1758,7 @@ gui_editbox(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float 
                 gui_long unicode;
                 gui_char *cursor;
 
+                /* draw the cursor as a different glyph character background */
                 cursor=gui_edit_buffer_at(&box->buffer,(gui_int)box->cursor,&unicode,&l);
                 off = (gui_size)(cursor - (gui_char*)box->buffer.memory.ptr);
                 s = font->width(font->userdata, buffer, off);
@@ -2458,7 +2445,6 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
 
     /* setup panel layout */
     layout->input = in;
-    layout->index = 0;
     layout->x = panel->x;
     layout->y = panel->y;
     layout->w = panel->w;
@@ -2469,10 +2455,11 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     layout->height = panel->h;
     layout->config = panel->config;
     layout->buffer = panel->buffer;
+    layout->row.index = 0;
     layout->row.columns = 0;
     layout->row.height = 0;
     layout->row.ratio = 0;
-    layout->row.item_ratio = 0;
+    layout->row.item_width = 0;
     layout->offset = panel->offset;
     layout->header.h = 1;
     layout->row.height = layout->header.h + 2 * item_spacing.y;
@@ -2573,10 +2560,12 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
     struct gui_rect bounds;
     struct gui_layout_slot *s;
 
+    /* debug build argument check */
     GUI_ASSERT(panel);
     GUI_ASSERT(tile);
     GUI_ASSERT(layout);
 
+    /* release build argument check */
     if (!layout || !panel || !tile) return;
     if (slot >= GUI_SLOT_MAX) return;
     if (index >= layout->slots[slot].capacity) return;
@@ -2592,8 +2581,8 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
     bounds.w = s->ratio.x * (gui_float)layout->bounds.w;
     bounds.h = s->ratio.y * (gui_float)layout->bounds.h;
 
-    /* user slot scaling */
     {
+        /* user slot scaling */
         const struct gui_config *config = panel->config;
         struct gui_command_buffer *out = panel->buffer;
         struct gui_vec2 mpos = in->mouse_prev;
@@ -2601,20 +2590,24 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
 
         switch (slot) {
         case GUI_SLOT_TOP:
+            /* calculate scaler bounds */
             scaler.x = bounds.x;
             scaler.y = (bounds.y + bounds.h) - config->scaler_width;
             scaler.w = bounds.w;
             scaler.h = config->scaler_width;
 
+            /* update top slot bounds by user input */
             if (in && s->state!=GUI_LOCKED && !layout->active &&
                 GUI_INBOX(mpos.x, mpos.y, scaler.x, scaler.y, scaler.w, scaler.h) &&
                 in->mouse_down)
             {
+                /* update bounds to the update size */
                 gui_float py;
                 bounds.h += in->mouse_delta.y;
                 bounds.h = MAX(config->properties[GUI_PROPERTY_SIZE].y, bounds.h);
                 scaler.y = (bounds.y + bounds.h) - config->scaler_width;
 
+                /* calculate the updated ratios for every influenced neighbour slot */
                 py = 1.0f- ((bounds.h / (gui_float)layout->bounds.h) +
                     layout->slots[GUI_SLOT_BOTTOM].ratio.y);
                 layout->slots[GUI_SLOT_TOP].ratio.y = bounds.h / (gui_float)layout->bounds.h;
@@ -2622,6 +2615,7 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
                 layout->slots[GUI_SLOT_CENTER].ratio.y = py;
                 layout->slots[GUI_SLOT_RIGHT].ratio.y = py;
 
+                /* calculate the updated offset for every influenced neighbour slot */
                 layout->slots[GUI_SLOT_LEFT].offset.y = layout->slots[GUI_SLOT_TOP].ratio.y;
                 layout->slots[GUI_SLOT_CENTER].offset.y = layout->slots[GUI_SLOT_TOP].ratio.y;
                 layout->slots[GUI_SLOT_RIGHT].offset.y = layout->slots[GUI_SLOT_TOP].ratio.y;
@@ -2629,20 +2623,24 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
             bounds.h -= config->scaler_width;
             break;
         case GUI_SLOT_BOTTOM:
+            /* calculate scaler bounds */
             scaler.x = bounds.x;
             scaler.y = bounds.y;
             scaler.w = bounds.w;
             scaler.h = config->scaler_width;
 
+            /* update bottom slot bounds by user input */
             if (in && s->state != GUI_LOCKED && layout->active &&
                 GUI_INBOX(mpos.x, mpos.y, scaler.x, scaler.y, scaler.w, scaler.h) &&
                 in->mouse_down)
             {
+                /* update bounds to the update size */
                 gui_float py;
                 bounds.y += in->mouse_delta.y;
                 bounds.h += -in->mouse_delta.y;
                 scaler.y = bounds.y;
 
+                /* calculate the updated ratios/offset for every influenced neighbour slot */
                 py = 1.0f - ((bounds.h / (gui_float)layout->bounds.h) +
                     layout->slots[GUI_SLOT_TOP].ratio.y);
                 layout->slots[GUI_SLOT_BOTTOM].ratio.y = bounds.h / (gui_float)layout->bounds.h;
@@ -2656,25 +2654,30 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
             bounds.h -= config->scaler_width;
             break;
         case GUI_SLOT_LEFT:
+            /* calculate scaler bounds */
             scaler.x = bounds.x + bounds.w - config->scaler_width;
             scaler.y = bounds.y;
             scaler.w = config->scaler_width;
             scaler.h = bounds.h;
 
+            /* update left slot bounds by user input */
             if (in && s->state != GUI_LOCKED &&  in->mouse_down && layout->active &&
                 GUI_INBOX(mpos.x, mpos.y, scaler.x, scaler.y, scaler.w, scaler.h))
             {
+                /* update left slot bounds by user input */
                 gui_float cx, rx;
                 bounds.w += in->mouse_delta.x;
                 bounds.w = MAX(config->properties[GUI_PROPERTY_SIZE].x, bounds.w);
                 scaler.x = bounds.x + bounds.w - config->scaler_width;
 
+                /* calculate the updated center ratio and offset */
                 cx = 1.0f - ((bounds.w / (gui_float)layout->bounds.w) +
                     layout->slots[GUI_SLOT_RIGHT].ratio.x);
                 layout->slots[GUI_SLOT_LEFT].ratio.x = bounds.w / (gui_float)layout->bounds.w;
                 layout->slots[GUI_SLOT_CENTER].offset.x = layout->slots[GUI_SLOT_LEFT].ratio.x;
                 layout->slots[GUI_SLOT_CENTER].ratio.x = cx;
 
+                /* calculate the updated right ratio and offset */
                 rx = 1.0f - ((bounds.w / (gui_float)layout->bounds.w) +
                     layout->slots[GUI_SLOT_CENTER].ratio.x);
                 layout->slots[GUI_SLOT_RIGHT].ratio.x = rx;
@@ -2685,26 +2688,31 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
             bounds.w -= config->scaler_width;
             break;
         case GUI_SLOT_RIGHT:
+            /* calculate scaler bounds */
             scaler.x = bounds.x;
             scaler.y = bounds.y;
             scaler.w = config->scaler_width;
             scaler.h = bounds.h;
 
+            /* update right slot bounds by user input */
             if (in && layout->slots[GUI_SLOT_LEFT].state != GUI_LOCKED && in->mouse_down &&
                 GUI_INBOX(mpos.x, mpos.y, scaler.x, scaler.y, scaler.w, scaler.h) &&
                 layout->active)
             {
+                /* update left slot bounds by user input */
                 gui_float cx, lx;
                 bounds.w -= in->mouse_delta.x;
                 bounds.x += in->mouse_delta.x;
                 bounds.w = MAX(config->properties[GUI_PROPERTY_SIZE].x, bounds.w);
                 scaler.x = bounds.x;
 
+                /* calculate the updated center ratio and offset */
                 cx = 1.0f - ((bounds.w / (gui_float)layout->bounds.w) +
                     layout->slots[GUI_SLOT_LEFT].ratio.x);
                 layout->slots[GUI_SLOT_RIGHT].ratio.x = bounds.w / (gui_float)layout->bounds.w;
                 layout->slots[GUI_SLOT_CENTER].ratio.x = cx;
 
+                /* calculate the updated left ratio and offset */
                 lx = 1.0f - ((bounds.w / (gui_float)layout->bounds.w) +
                     layout->slots[GUI_SLOT_CENTER].ratio.x);
                 layout->slots[GUI_SLOT_LEFT].ratio.x = lx;
@@ -2743,11 +2751,123 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
         panel->y = bounds.y + (gui_float)index * panel->h;
     }
 
+    /* add the panel into the stack and start the panel */
     gui_stack_push(&layout->stack, panel);
     gui_panel_begin(tile, panel, layout->active ? 0:in);
     panel->flags &= ~(gui_flags)GUI_PANEL_DO_NOT_RESET;
 }
 
+void
+gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
+{
+    const struct gui_config *config;
+    struct gui_command_buffer *out;
+    gui_float scrollbar_width;
+    struct gui_vec2 item_padding;
+    struct gui_vec2 item_spacing;
+    struct gui_vec2 panel_padding;
+    struct gui_vec2 scaler_size;
+
+    GUI_ASSERT(layout);
+    GUI_ASSERT(panel);
+    if (!panel || !layout) return;
+    layout->at_y += layout->row.height;
+
+    config = layout->config;
+    out = layout->buffer;
+    if (!(layout->flags & GUI_PANEL_TAB)) {
+        struct gui_rect clip;
+        clip.x = MAX(0, (layout->x - 1));
+        clip.y = MAX(0, (layout->y - 1));
+        clip.w = layout->w+1;
+        clip.h = layout->h+1;
+        gui_command_buffer_push_scissor(out, clip.x, clip.y, clip.w,clip.h);
+    }
+
+    /* cache configuration data */
+    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
+    item_spacing = gui_config_property(config, GUI_PROPERTY_ITEM_SPACING);
+    panel_padding = gui_config_property(config, GUI_PROPERTY_PADDING);
+    scrollbar_width = gui_config_property(config, GUI_PROPERTY_SCROLLBAR_WIDTH).x;
+    scaler_size = gui_config_property(config, GUI_PROPERTY_SCALER_SIZE);
+
+    if (layout->flags & GUI_PANEL_SCROLLBAR && layout->valid) {
+        struct gui_scroll scroll;
+        gui_float panel_y;
+        gui_float scroll_x, scroll_y;
+        gui_float scroll_w, scroll_h;
+        gui_float scroll_target, scroll_offset, scroll_step;
+
+        /* setup and execute scrollbar */
+        scroll_x = layout->at_x + layout->width;
+        scroll_y = (layout->flags & GUI_PANEL_BORDER) ? layout->y + 1 : layout->y;
+        scroll_y += layout->header.h + layout->menu.h;
+        scroll_w = scrollbar_width;
+        scroll_h = layout->height;
+        scroll_offset = layout->offset;
+        scroll_step = layout->height * 0.10f;
+        scroll.rounding = config->rounding[GUI_ROUNDING_SCROLLBAR];
+        scroll.background = config->colors[GUI_COLOR_SCROLLBAR];
+        scroll.foreground = config->colors[GUI_COLOR_SCROLLBAR_CURSOR];
+        scroll.border = config->colors[GUI_COLOR_SCROLLBAR_BORDER];
+        if (layout->flags & GUI_PANEL_BORDER) scroll_h -= 1;
+        scroll_target = (layout->at_y-layout->y)-(layout->header.h+2*item_spacing.y);
+        scroll.has_scrolling = (layout->flags & GUI_PANEL_ACTIVE);
+        panel->offset = gui_scroll(out, scroll_x, scroll_y, scroll_w, scroll_h,
+                                    scroll_offset, scroll_target, scroll_step,
+                                    &scroll, layout->input);
+
+        /* draw scrollbar footer to fill a gap */
+        panel_y = layout->y + layout->height + layout->header.h +
+                    layout->menu.h - panel_padding.y;
+        gui_command_buffer_push_rect(out, layout->x,panel_y,layout->width,panel_padding.y,
+            0, config->colors[GUI_COLOR_PANEL]);
+    } else layout->height = layout->at_y - layout->y;
+
+    if ((layout->flags & GUI_PANEL_SCALEABLE) && layout->valid) {
+        /* draw the panel scaler into the right corner of the panel footer */
+        struct gui_color col = config->colors[GUI_COLOR_SCALER];
+        gui_float scaler_w = MAX(0, scaler_size.x - item_padding.x);
+        gui_float scaler_h = MAX(0, scaler_size.y - item_padding.y);
+        gui_float scaler_x = (layout->x + layout->w) - (item_padding.x + scaler_w);
+        gui_float scaler_y = layout->y + layout->h - scaler_size.y;
+        gui_command_buffer_push_triangle(out, scaler_x + scaler_w, scaler_y,
+            scaler_x + scaler_w, scaler_y + scaler_h, scaler_x, scaler_y + scaler_h, col);
+    }
+
+    if (layout->flags & GUI_PANEL_BORDER) {
+        /* draw the border around the complete panel */
+        const gui_float width = (layout->flags & GUI_PANEL_SCROLLBAR) ?
+                layout->width + scrollbar_width : layout->width;
+        const gui_float padding_y = (!layout->valid) ?
+                panel->y + layout->header.h:
+                (panel->flags & GUI_PANEL_SCROLLBAR) ?
+                layout->y + layout->h :
+                panel->y + layout->height + item_padding.y;
+
+        if (panel->flags & GUI_PANEL_BORDER_HEADER)
+            gui_command_buffer_push_line(out, panel->x, panel->y + layout->header.h,
+                panel->x + panel->w, panel->y + layout->header.h,
+                config->colors[GUI_COLOR_BORDER]);
+
+        gui_command_buffer_push_line(out, panel->x, padding_y, panel->x + width,
+                padding_y, config->colors[GUI_COLOR_BORDER]);
+        gui_command_buffer_push_line(out, panel->x, panel->y, panel->x,
+                padding_y, config->colors[GUI_COLOR_BORDER]);
+        gui_command_buffer_push_line(out, panel->x + width, panel->y, panel->x + width,
+                padding_y, config->colors[GUI_COLOR_BORDER]);
+    }
+    panel->flags = layout->flags;
+    gui_command_buffer_push_scissor(out, 0, 0, gui_null_rect.w, gui_null_rect.h);
+}
+
+/*
+ * -------------------------------------------------------------
+ *
+ *                          Header
+ *
+ * --------------------------------------------------------------
+ */
 void
 gui_panel_header_begin(struct gui_panel_layout *layout)
 {
@@ -2765,22 +2885,25 @@ gui_panel_header_begin(struct gui_panel_layout *layout)
     c = layout->config;
     out = layout->buffer;
 
+    /* cache some configuration data */
     panel_padding = gui_config_property(c, GUI_PROPERTY_PADDING);
     item_padding = gui_config_property(c, GUI_PROPERTY_ITEM_PADDING);
     item_spacing = gui_config_property(c, GUI_PROPERTY_ITEM_SPACING);
 
+    /* update the header height and first row height */
     layout->header.h = c->font.height + 4 * item_padding.y;
     layout->header.h += panel_padding.y;
     layout->row.height = layout->header.h + 2 * item_spacing.y;
 
+    /* setup header bounds and growable icon space */
     layout->header.x = layout->x + panel_padding.x;
     layout->header.y = layout->y + panel_padding.y;
     layout->header.w = MAX(layout->w, 2 * panel_padding.x);
     layout->header.w -= 2 * panel_padding.x;
-    layout->header_front = layout->header.x;
-    layout->header_back = layout->header.x + layout->header.w;
+    layout->header.front = layout->header.x;
+    layout->header.back = layout->header.x + layout->header.w;
 
-    /* panel layout footer  */
+    /* setup and draw panel layout footer and header background */
     if (layout->flags & GUI_PANEL_SCROLLBAR) {
         const struct gui_color *color = &c->colors[GUI_COLOR_PANEL];
         layout->height = layout->h - (layout->header.h + 2 * item_spacing.y);
@@ -2789,7 +2912,6 @@ gui_panel_header_begin(struct gui_panel_layout *layout)
             gui_command_buffer_push_rect(out, layout->x, layout->y + layout->header.h,
                 layout->w, layout->h - layout->header.h, 0, *color);
     }
-
     gui_command_buffer_push_rect(out, layout->x, layout->y+1, layout->w,
         layout->header.h-1, 0, c->colors[GUI_COLOR_HEADER]);
 }
@@ -2819,7 +2941,7 @@ gui_panel_header_icon(struct gui_panel_layout *layout,
     out = layout->buffer;
     item_padding = gui_config_property(c, GUI_PROPERTY_ITEM_PADDING);
 
-    sym_x = layout->header_front;
+    sym_x = layout->header.front;
     sym_y = layout->header.y;
 
     switch (symbol) {
@@ -2827,17 +2949,21 @@ gui_panel_header_icon(struct gui_panel_layout *layout,
     case GUI_SYMBOL_PLUS:
     case GUI_SYMBOL_UNDERSCORE:
     case GUI_SYMBOL_X: {
+        /* single character text icon */
         const gui_char *X = (symbol == GUI_SYMBOL_X) ? "x":
             (symbol == GUI_SYMBOL_UNDERSCORE) ? "_":
             (symbol == GUI_SYMBOL_PLUS) ? "+": "-";
         const gui_size t = c->font.width(c->font.userdata, X, 1);
         const gui_float text_width = (gui_float)t;
 
+        /* calculate bounds of the icon */
         sym_bw = text_width;
         sym_w = (gui_float)text_width + 2 * item_padding.x;
         sym_h = c->font.height + 2 * item_padding.y;
         if (align == GUI_HEADER_RIGHT)
-            sym_x = layout->header_back - sym_w;
+            sym_x = layout->header.back - sym_w;
+
+        /* draw icon */
         gui_command_buffer_push_text(out, sym_x, sym_y, sym_w, sym_h,
             X, 1, &c->font, c->colors[GUI_COLOR_HEADER],
             c->colors[GUI_COLOR_TEXT]);
@@ -2846,54 +2972,67 @@ gui_panel_header_icon(struct gui_panel_layout *layout,
     case GUI_SYMBOL_CIRCLE:
     case GUI_SYMBOL_RECT_FILLED:
     case GUI_SYMBOL_RECT: {
+        /* simple empty/filled shapes */
         sym_bw = sym_w = c->font.height;
         sym_h = c->font.height;
         sym_y = sym_y + c->font.height/2;
         if (align == GUI_HEADER_RIGHT)
-            sym_x = layout->header_back - (c->font.height + 2 * item_padding.x);
+            sym_x = layout->header.back - (c->font.height + 2 * item_padding.x);
 
         if (symbol == GUI_SYMBOL_RECT || symbol == GUI_SYMBOL_RECT_FILLED) {
+            /* rectangle shape  */
             gui_command_buffer_push_rect(out, sym_x, sym_y, sym_w, sym_h,
                 0, c->colors[GUI_COLOR_TEXT]);
             if (symbol == GUI_SYMBOL_RECT_FILLED)
                 gui_command_buffer_push_rect(out, sym_x+1, sym_y+1, sym_w-2, sym_h-2,
                     0, c->colors[GUI_COLOR_HEADER]);
         } else {
+            /* rectangle circle  */
             gui_command_buffer_push_circle(out, sym_x, sym_y, sym_w, sym_h,
                 c->colors[GUI_COLOR_TEXT]);
             if (symbol == GUI_SYMBOL_CIRCLE_FILLED)
                 gui_command_buffer_push_circle(out, sym_x+1, sym_y+1, sym_w-2, sym_h-2,
                     c->colors[GUI_COLOR_HEADER]);
         }
+
+        /* calculate the space the icon occupied */
         sym_w = c->font.height + 2 * item_padding.x;
         } break;
     case GUI_SYMBOL_TRIANGLE_UP:
     case GUI_SYMBOL_TRIANGLE_DOWN:
     case GUI_SYMBOL_TRIANGLE_LEFT:
     case GUI_SYMBOL_TRIANGLE_RIGHT: {
+        /* triangle icon with direction */
         enum gui_heading heading;
         struct gui_vec2 points[3];
-        sym_bw = sym_w = c->font.height;
-        sym_h = c->font.height;
-        sym_y = sym_y + c->font.height/2;
-        if (align == GUI_HEADER_RIGHT)
-            sym_x = layout->header_back - (c->font.height + 2 * item_padding.x);
-
         heading = (symbol == GUI_SYMBOL_TRIANGLE_RIGHT) ? GUI_RIGHT :
             (symbol == GUI_SYMBOL_TRIANGLE_LEFT) ? GUI_LEFT:
             (symbol == GUI_SYMBOL_TRIANGLE_UP) ? GUI_UP: GUI_DOWN;
-        gui_triangle_from_direction(points, sym_x, sym_y, sym_w, sym_h, 0, 0, heading);
-        gui_command_buffer_push_triangle(layout->buffer,  points[0].x, points[0].y,
-            points[1].x, points[1].y, points[2].x, points[2].y, c->colors[GUI_COLOR_TEXT]);
-        sym_w = c->font.height + 2 * item_padding.x;
-        } break;
-    case GUI_SYMBOL_IMAGE: {
+
+        /* calculate bounds of the icon */
         sym_bw = sym_w = c->font.height;
         sym_h = c->font.height;
         sym_y = sym_y + c->font.height/2;
         if (align == GUI_HEADER_RIGHT)
-            sym_x = layout->header_back - (c->font.height + 2 * item_padding.x);
+            sym_x = layout->header.back - (c->font.height + 2 * item_padding.x);
 
+        /* calculate the triangle point positions and draw triangle */
+        gui_triangle_from_direction(points, sym_x, sym_y, sym_w, sym_h, 0, 0, heading);
+        gui_command_buffer_push_triangle(layout->buffer,  points[0].x, points[0].y,
+            points[1].x, points[1].y, points[2].x, points[2].y, c->colors[GUI_COLOR_TEXT]);
+
+        /* calculate the space the icon occupied */
+        sym_w = c->font.height + 2 * item_padding.x;
+        } break;
+    case GUI_SYMBOL_IMAGE: {
+        /* image icon bounds */
+        sym_bw = sym_w = c->font.height;
+        sym_h = c->font.height;
+        sym_y = sym_y + c->font.height/2;
+        if (align == GUI_HEADER_RIGHT)
+            sym_x = layout->header.back - (c->font.height + 2 * item_padding.x);
+
+        /* draw image and calculate the occuppied icon space */
         gui_command_buffer_push_image(out, sym_x, sym_y, sym_w, sym_h, img);
         sym_w = c->font.height + 2 * item_padding.x;
         } break;
@@ -2913,10 +3052,10 @@ gui_panel_header_icon(struct gui_panel_layout *layout,
         }
     }
 
-    /* update the header */
+    /* update the header space */
     if (align == GUI_HEADER_RIGHT)
-        layout->header_back -= (sym_w + item_padding.x);
-    else layout->header_front += sym_w + item_padding.x;
+        layout->header.back -= (sym_w + item_padding.x);
+    else layout->header.front += sym_w + item_padding.x;
     return ret;
 }
 
@@ -2947,10 +3086,12 @@ gui_panel_header_flag(struct gui_panel_layout *layout, enum gui_panel_header_sym
 {
     gui_flags flags = layout->flags;
     gui_bool state = (flags & flag) ? gui_true : gui_false;
-    gui_bool ret = gui_panel_header_toggle(layout, inactive, active, align, flags & flag);
+    gui_bool ret = gui_panel_header_toggle(layout, inactive, active, align, state);
     if (ret != ((flags & flag) ? gui_true : gui_false)) {
+        /* the state of the toggle icon has been changed  */
         if (!ret) layout->flags &= ~flag;
         else layout->flags |= flag;
+        /* update the state of the panel since the flag have changed */
         layout->valid = !(layout->flags & GUI_PANEL_HIDDEN) &&
                         !(layout->flags & GUI_PANEL_MINIMIZED);
         return gui_true;
@@ -2969,32 +3110,36 @@ gui_panel_header_title(struct gui_panel_layout *layout, const char *title,
     gui_size text_len;
     gui_size t;
 
+    /* make sure correct values and layout state */
     GUI_ASSERT(layout);
     if (!layout || !title) return;
     if (layout->flags & GUI_PANEL_HIDDEN)
         return;
 
+    /* cache configuration and title length */
     c = layout->config;
     out = layout->buffer;
     item_padding = gui_config_property(c, GUI_PROPERTY_ITEM_PADDING);
     text_len = gui_strsiz(title);
 
+    /* calculate and allocate space from the header */
     t = c->font.width(c->font.userdata, title, text_len);
     if (align == GUI_HEADER_RIGHT) {
-        layout->header_back = layout->header_back - (3 * item_padding.x + t);
-        label_x = layout->header_back;
+        layout->header.back = layout->header.back - (3 * item_padding.x + (gui_float)t);
+        label_x = layout->header.back;
     } else {
-        label_x = layout->header_front;
-        layout->header_front += 3 * item_padding.x + t;
+        label_x = layout->header.front;
+        layout->header.front += 3 * item_padding.x + (gui_float)t;
     }
 
+    /* calculate label bounds and draw text */
     label_y = layout->header.y;
     label_h = c->font.height + 2 * item_padding.y;
     if (align == GUI_HEADER_LEFT)
-        label_w = MAX(t + 2 * item_padding.x, 3 * item_padding.x);
-    else label_w = MAX(t + 2 * item_padding.x, 3 * item_padding.x);
-
+        label_w = MAX((gui_float)t + 2 * item_padding.x, 3 * item_padding.x);
+    else label_w = MAX((gui_float)t + 2 * item_padding.x, 3 * item_padding.x);
     label_w -= (3 * item_padding.x);
+
     gui_command_buffer_push_text(out, label_x, label_y, label_w, label_h,
         (const gui_char*)title, text_len, &c->font, c->colors[GUI_COLOR_HEADER],
         c->colors[GUI_COLOR_TEXT]);
@@ -3013,6 +3158,7 @@ gui_panel_header_end(struct gui_panel_layout *layout)
     if (layout->flags & GUI_PANEL_HIDDEN)
         return;
 
+    /* cache configuration data */
     c = layout->config;
     out = layout->buffer;
     panel_padding = gui_config_property(c, GUI_PROPERTY_PADDING);
@@ -3032,6 +3178,7 @@ gui_panel_header_end(struct gui_panel_layout *layout)
         const gui_float width = (layout->flags & GUI_PANEL_SCROLLBAR) ?
                 layout->width + scrollbar_width : layout->width;
 
+        /* draw the header border lines */
         gui_command_buffer_push_line(out, layout->x, layout->y, layout->x,
                 layout->y + layout->header.h, c->colors[GUI_COLOR_BORDER]);
         gui_command_buffer_push_line(out, layout->x + width, layout->y, layout->x + width,
@@ -3042,6 +3189,7 @@ gui_panel_header_end(struct gui_panel_layout *layout)
                 c->colors[GUI_COLOR_BORDER]);
     }
 
+    /* update the panel clipping rect to include the header */
     layout->clip.x = layout->x;
     layout->clip.w = layout->w;
     layout->clip.y = layout->y + layout->header.h;
@@ -3064,6 +3212,7 @@ gui_panel_header(struct gui_panel_layout *layout, const char *title,
     if (layout->flags & GUI_PANEL_HIDDEN)
         return gui_false;
 
+    /* basic standart header with fixed icon/title sequence */
     gui_panel_header_begin(layout);
     {
         if (flags & GUI_CLOSEABLE)
@@ -3080,22 +3229,72 @@ gui_panel_header(struct gui_panel_layout *layout, const char *title,
                 GUI_SYMBOL_CIRCLE_FILLED, align, GUI_PANEL_MOVEABLE);
         if (title) gui_panel_header_title(layout, title, GUI_HEADER_LEFT);
     }
+    gui_panel_header_end(layout);
 
+    /* notifcation if one if the icon buttons has been pressed */
     if ((notify & GUI_CLOSEABLE) && ((old & GUI_CLOSEABLE) ^ (layout->flags & GUI_CLOSEABLE)))
         ret |= GUI_CLOSEABLE;
-    if ((notify & GUI_MINIMIZABLE) && ((old & GUI_MINIMIZABLE) ^ (layout->flags & GUI_MINIMIZABLE)))
+    if ((notify & GUI_MINIMIZABLE) && ((old & GUI_MINIMIZABLE)^(layout->flags&GUI_MINIMIZABLE)))
         ret |= GUI_MINIMIZABLE;
     if ((notify & GUI_SCALEABLE) && ((old & GUI_SCALEABLE) ^ (layout->flags & GUI_SCALEABLE)))
         ret |= GUI_SCALEABLE;
     if ((notify & GUI_MOVEABLE) && ((old & GUI_MOVEABLE) ^ (layout->flags & GUI_MOVEABLE)))
         ret |= GUI_MOVEABLE;
-
-    gui_panel_header_end(layout);
     return ret;
 }
 
 void
-gui_panel_layout_fixed_ratio(struct gui_panel_layout *layout, gui_float height, gui_size cols)
+gui_panel_menu_begin(struct gui_panel_layout *layout)
+{
+    GUI_ASSERT(layout);
+    if (!layout || layout->flags & GUI_PANEL_HIDDEN || layout->flags & GUI_PANEL_MINIMIZED)
+        return;
+    layout->menu.x = layout->at_x;
+    layout->menu.y = layout->y + layout->header.h;
+    layout->menu.w = layout->width;
+    layout->menu.offset = layout->offset;
+    layout->offset = 0;
+}
+
+void
+gui_panel_menu_end(struct gui_panel_layout *layout)
+{
+    const struct gui_config *c;
+    struct gui_command_buffer *out;
+    struct gui_vec2 item_padding;
+    struct gui_vec2 panel_padding;
+    if (!layout || layout->flags & GUI_PANEL_HIDDEN || layout->flags & GUI_PANEL_MINIMIZED)
+        return;
+
+    c = layout->config;
+    out = layout->buffer;
+    panel_padding = gui_config_property(c, GUI_PROPERTY_PADDING);
+    item_padding = gui_config_property(c, GUI_PROPERTY_ITEM_PADDING);
+
+    layout->menu.h = (layout->at_y + layout->row.height-1) - layout->menu.y;
+    layout->clip.y = layout->y + layout->header.h + layout->menu.h;
+    layout->height -= layout->menu.h;
+    layout->offset = layout->menu.offset;
+
+    if (layout->flags & GUI_PANEL_SCROLLBAR) {
+        if (layout->flags & GUI_PANEL_SCALEABLE)
+            layout->clip.h = layout->h - (layout->footer_h + layout->header.h + layout->menu.h);
+        else layout->clip.h = layout->h - (layout->header.h + layout->menu.h);
+        layout->clip.h -= (panel_padding.y + item_padding.y);
+    } else layout->clip.h = gui_null_rect.h;
+    gui_command_buffer_push_scissor(out, layout->clip.x, layout->clip.y,
+        layout->clip.w, layout->clip.h);
+}
+
+/*
+ * -------------------------------------------------------------
+ *
+ *                          LAYOUT
+ *
+ * --------------------------------------------------------------
+ */
+static void
+gui_panel_layout(struct gui_panel_layout *layout, gui_float height, gui_size cols)
 {
     const struct gui_config *config;
     const struct gui_color *color;
@@ -3118,18 +3317,17 @@ gui_panel_layout_fixed_ratio(struct gui_panel_layout *layout, gui_float height, 
     panel_padding = gui_config_property(config, GUI_PROPERTY_PADDING);
 
     /* draw the current row and set the current row layout */
-    layout->index = 0;
+    layout->row.index = 0;
     layout->at_y += layout->row.height;
-    layout->row.type = GUI_PANEL_LAYOUT_FIXED_RATIO;
-    layout->row.ratio = 0;
     layout->row.columns = cols;
     layout->row.height = height + item_spacing.y;
+    layout->row.item_offset = 0;
     gui_command_buffer_push_rect(out,  layout->at_x, layout->at_y,
         layout->width, height + panel_padding.y, 0, *color);
 }
 
 void
-gui_panel_layout_row_ratio_begin(struct gui_panel_layout *layout, gui_float height, gui_size cols)
+gui_panel_layout_flux_fixed(struct gui_panel_layout *layout, gui_float height, gui_size cols)
 {
     GUI_ASSERT(layout);
     GUI_ASSERT(layout->config);
@@ -3138,17 +3336,37 @@ gui_panel_layout_row_ratio_begin(struct gui_panel_layout *layout, gui_float heig
     if (!layout) return;
     if (!layout->valid) return;
 
-    gui_panel_layout_fixed_ratio(layout, height, 0);
-    layout->row.type = GUI_PANEL_LAYOUT_ROW_RATIO;
+    /* draw the current row and set the current row layout */
+    gui_panel_layout(layout, height, cols);
+    layout->row.type = GUI_PANEL_LAYOUT_FLUX_FIXED;
     layout->row.ratio = 0;
-    layout->row.item_ratio = 0;
+    layout->row.item_width = 0;
+    layout->row.item_offset = 0;
+    layout->row.filled = 0;
+}
+
+void
+gui_panel_layout_flux_row_begin(struct gui_panel_layout *layout,
+    gui_float height, gui_size cols)
+{
+    GUI_ASSERT(layout);
+    GUI_ASSERT(layout->config);
+    GUI_ASSERT(layout->buffer);
+
+    if (!layout) return;
+    if (!layout->valid) return;
+
+    gui_panel_layout(layout, height, 0);
+    layout->row.type = GUI_PANEL_LAYOUT_FLUX_ROW;
+    layout->row.ratio = 0;
+    layout->row.item_width = 0;
     layout->row.item_offset = 0;
     layout->row.filled = 0;
     layout->row.columns = cols;
 }
 
 void
-gui_panel_layout_row_ratio_push(struct gui_panel_layout *layout, gui_float ratio)
+gui_panel_layout_flux_row_push(struct gui_panel_layout *layout, gui_float ratio)
 {
     GUI_ASSERT(layout);
     GUI_ASSERT(layout->config);
@@ -3159,23 +3377,23 @@ gui_panel_layout_row_ratio_push(struct gui_panel_layout *layout, gui_float ratio
     if ((ratio + layout->row.filled) > 1.0f) return;
 
     if (ratio > 0.0f)
-        layout->row.item_ratio = GUI_SATURATE(ratio);
-    else layout->row.item_ratio = 1.0f - layout->row.filled;
+        layout->row.item_width = GUI_SATURATE(ratio);
+    else layout->row.item_width = 1.0f - layout->row.filled;
 }
 
 void
-gui_panel_layout_row_ratio_end(struct gui_panel_layout *layout)
+gui_panel_layout_flux_row_end(struct gui_panel_layout *layout)
 {
     GUI_ASSERT(layout);
     GUI_ASSERT(layout->config);
     if (!layout) return;
     if (!layout->valid) return;
-    layout->row.item_ratio = 0;
+    layout->row.item_width = 0;
     layout->row.item_offset = 0;
 }
 
 void
-gui_panel_layout_def_ratio(struct gui_panel_layout *layout, gui_float height,
+gui_panel_layout_flux_row(struct gui_panel_layout *layout, gui_float height,
     gui_size cols, const gui_float *ratio)
 {
     gui_size i;
@@ -3190,7 +3408,7 @@ gui_panel_layout_def_ratio(struct gui_panel_layout *layout, gui_float height,
     if (!layout->valid) return;
 
     /* calculate width of undefined widget ratios */
-    gui_panel_layout_fixed_ratio(layout, height, cols);
+    gui_panel_layout(layout, height, cols);
     layout->row.ratio = ratio;
     for (i = 0; i < cols; ++i) {
         if (ratio[i] < 0.0f)
@@ -3198,30 +3416,199 @@ gui_panel_layout_def_ratio(struct gui_panel_layout *layout, gui_float height,
         else r += ratio[i];
     }
 
+    /* setup panel row layout */
     r = GUI_SATURATE(1.0f - r);
-    layout->row.type = GUI_PANEL_LAYOUT_DEF_RATIO;
-    layout->row.item_ratio = (r > 0 && n_undef > 0) ? (r / (gui_float)n_undef):0;
+    layout->row.type = GUI_PANEL_LAYOUT_FLUX;
+    layout->row.item_width = (r > 0 && n_undef > 0) ? (r / (gui_float)n_undef):0;
     layout->row.item_offset = 0;
     layout->row.filled = 0;
+}
+
+void
+gui_panel_layout_flux_begin(struct gui_panel_layout *layout, gui_float height,
+    gui_size count)
+{
+    GUI_ASSERT(layout);
+    GUI_ASSERT(layout->config);
+    GUI_ASSERT(layout->buffer);
+
+    if (!layout) return;
+    if (!layout->valid) return;
+
+    /* draw the current row and set the current row layout */
+    gui_panel_layout(layout, height, 0);
+    layout->row.type = GUI_PANEL_LAYOUT_FLUX_FREE;
+    layout->row.ratio = 0;
+    layout->row.item_width = 0;
+    layout->row.item_offset = 0;
+    layout->row.columns = count;
+    layout->row.filled = 0;
+}
+
+void
+gui_panel_layout_flux_widget(struct gui_panel_layout *layout,
+    struct gui_rect ratios)
+{
+    GUI_ASSERT(layout);
+    GUI_ASSERT(layout->config);
+    GUI_ASSERT(layout->buffer);
+    if (!layout) return;
+    if (!layout->valid) return;
+    layout->row.item = ratios;
+}
+
+void
+gui_panel_layout_flux_end(struct gui_panel_layout *layout)
+{
+    GUI_ASSERT(layout);
+    GUI_ASSERT(layout->config);
+    if (!layout) return;
+    if (!layout->valid) return;
+    layout->row.item_width = 0;
+    layout->row.item_height = 0;
+    layout->row.item_offset = 0;
+}
+
+void
+gui_panel_layout_static_fixed(struct gui_panel_layout *layout, gui_float row_height,
+    gui_float item_width, gui_size cols)
+{
+    GUI_ASSERT(layout);
+    GUI_ASSERT(layout->config);
+    GUI_ASSERT(layout->buffer);
+
+    if (!layout) return;
+    if (!layout->valid) return;
+    gui_panel_layout(layout, row_height, cols);
+    layout->row.type = GUI_PANEL_LAYOUT_STATIC_FIXED;
+    layout->row.item_width = item_width;
+    layout->row.item_offset = 0;
+    layout->row.ratio = 0;
+    layout->row.filled = 0;
+}
+
+void
+gui_panel_layout_static_row_begin(struct gui_panel_layout *layout, gui_float row_height,
+    gui_size cols)
+{
+    GUI_ASSERT(layout);
+    GUI_ASSERT(layout->config);
+    GUI_ASSERT(layout->buffer);
+
+    if (!layout) return;
+    if (!layout->valid) return;
+
+    gui_panel_layout(layout, row_height, 0);
+    layout->row.type = GUI_PANEL_LAYOUT_STATIC_ROW;
+    layout->row.ratio = 0;
+    layout->row.item_width = 0;
+    layout->row.item_offset = 0;
+    layout->row.filled = 0;
+    layout->row.columns = cols;
+}
+
+void
+gui_panel_layout_static_row_push(struct gui_panel_layout *layout, gui_float width)
+{
+    GUI_ASSERT(layout);
+    GUI_ASSERT(layout->config);
+    if (!layout) return;
+    if (!layout->valid) return;
+    layout->row.item_width = width;
+}
+
+void
+gui_panel_layout_static_row_end(struct gui_panel_layout *layout)
+{
+    GUI_ASSERT(layout);
+    GUI_ASSERT(layout->config);
+    if (!layout) return;
+    if (!layout->valid) return;
+    layout->row.item_width = 0;
+    layout->row.item_offset = 0;
+}
+
+void
+gui_panel_layout_static_row(struct gui_panel_layout *layout, gui_float height,
+    gui_size cols, const gui_float *ratio)
+{
+    GUI_ASSERT(layout);
+    GUI_ASSERT(layout->config);
+    GUI_ASSERT(layout->buffer);
+
+    if (!layout) return;
+    if (!layout->valid) return;
+
+    gui_panel_layout(layout, height, cols);
+    layout->row.ratio = ratio;
+    layout->row.type = GUI_PANEL_LAYOUT_STATIC;
+    layout->row.item_width = 0;
+    layout->row.item_offset = 0;
+    layout->row.filled = 0;
+}
+
+void
+gui_panel_layout_static_begin(struct gui_panel_layout *layout, gui_float height,
+    gui_size widget_count)
+{
+    struct gui_rect clip, space;
+    GUI_ASSERT(layout);
+    GUI_ASSERT(layout->config);
+    GUI_ASSERT(layout->buffer);
+
+    if (!layout) return;
+    if (!layout->valid) return;
+
+    /* draw the current row and set the current row layout */
+    gui_panel_layout(layout, height, widget_count);
+    layout->row.type = GUI_PANEL_LAYOUT_STATIC_FREE;
+    layout->row.ratio = 0;
+    layout->row.item_width = 0;
+    layout->row.item_offset = 0;
+    layout->row.filled = 0;
+
+    space.x = layout->at_x;
+    space.y = layout->at_y;
+    space.w = layout->width;
+    space.h = layout->row.height;
+
+    gui_unify(&clip, &layout->clip, space.x, space.y, space.x + space.w, space.y + space.h);
+    gui_command_buffer_push_scissor(layout->buffer, clip.x, clip.y, clip.w, clip.h);
+}
+
+void
+gui_panel_layout_static_widget(struct gui_panel_layout *layout,
+    struct gui_rect ratios)
+{
+    GUI_ASSERT(layout);
+    GUI_ASSERT(layout->config);
+    GUI_ASSERT(layout->buffer);
+    if (!layout) return;
+    if (!layout->valid) return;
+    layout->row.item = ratios;
+}
+
+void
+gui_panel_layout_static_end(struct gui_panel_layout *layout)
+{
+    GUI_ASSERT(layout);
+    GUI_ASSERT(layout->config);
+    if (!layout) return;
+    if (!layout->valid) return;
+    layout->row.item_width = 0;
+    layout->row.item_height = 0;
+    layout->row.item_offset = 0;
+    gui_command_buffer_push_scissor(layout->buffer, layout->clip.x,
+        layout->clip.y, layout->clip.w, layout->clip.h);
 }
 
 static void
 gui_panel_alloc_row(struct gui_panel_layout *layout)
 {
-    const gui_float *ratio;
     const struct gui_config *c = layout->config;
-    enum gui_panel_row_layout_type type = layout->row.type;
     struct gui_vec2 spacing = gui_config_property(c, GUI_PROPERTY_ITEM_SPACING);
     const gui_float row_height = layout->row.height - spacing.y;
-
-    ratio = layout->row.ratio;
-    gui_panel_layout_fixed_ratio(layout, row_height, layout->row.columns);
-    if (type == GUI_PANEL_LAYOUT_DEF_RATIO && ratio) {
-        layout->row.type = type;
-        layout->row.item_offset = 0;
-        layout->row.ratio = ratio;
-        layout->row.filled = 0;
-    }
+    gui_panel_layout(layout, row_height, layout->row.columns);
 }
 
 static void
@@ -3239,12 +3626,13 @@ gui_panel_alloc_space(struct gui_rect *bounds, struct gui_panel_layout *layout)
     if (!layout || !layout->config || !bounds)
         return;
 
+    /* cache some configuration data */
     config = layout->config;
     spacing = gui_config_property(config, GUI_PROPERTY_ITEM_SPACING);
     padding = gui_config_property(config, GUI_PROPERTY_PADDING);
 
     /* check if the end of the row was hit and begin new row if so */
-    if (layout->index >= layout->row.columns)
+    if (layout->row.index >= layout->row.columns)
         gui_panel_alloc_row(layout);
 
     /* calculate the useable panel space */
@@ -3254,40 +3642,76 @@ gui_panel_alloc_space(struct gui_rect *bounds, struct gui_panel_layout *layout)
 
     /* calculate the width of one item inside the panel row */
     switch (layout->row.type) {
-    case GUI_PANEL_LAYOUT_FIXED_RATIO:
-    {
-        /* basic standart table layout item with */
+    case GUI_PANEL_LAYOUT_FLUX_FIXED: {
+        /* scaling fixed size widgets item width */
         item_width = panel_space / (gui_float)layout->row.columns;
-        item_offset = (gui_float)layout->index * item_width;
-        item_spacing = (gui_float)layout->index * spacing.x;
+        item_offset = (gui_float)layout->row.index * item_width;
+        item_spacing = (gui_float)layout->row.index * spacing.x;
     } break;
-    case GUI_PANEL_LAYOUT_FIXED_PIXELS: break;
-    case GUI_PANEL_LAYOUT_ROW_RATIO:
-    {
-        item_width = layout->row.item_ratio * panel_space;
+    case GUI_PANEL_LAYOUT_FLUX_ROW: {
+        /* scaling single ratio widget width */
+        item_width = layout->row.item_width * panel_space;
         item_offset = layout->row.item_offset;
-        item_spacing = (gui_float)layout->index * spacing.x;
+        item_spacing = (gui_float)layout->row.index * spacing.x;
 
         layout->row.item_offset += item_width + spacing.x;
-        layout->row.filled += layout->row.item_ratio;
-        layout->index = 0;
+        layout->row.filled += layout->row.item_width;
+        layout->row.index = 0;
     } break;
-    case GUI_PANEL_LAYOUT_ROW_PIXELS: break;
-    case GUI_PANEL_LAYOUT_DEF_RATIO:
-    {
-        gui_float ratio = (layout->row.ratio[layout->index] < 0) ?
-            layout->row.item_ratio : layout->row.ratio[layout->index];
+    case GUI_PANEL_LAYOUT_FLUX_FREE: {
+        /*panel width depended free widget placing */
+        bounds->x = layout->at_x + (layout->width * layout->row.item.x);
+        bounds->y = layout->at_y + (layout->row.height * layout->row.item.y);
+        bounds->w = layout->width  * layout->row.item.w;
+        bounds->h = layout->row.height * layout->row.item.h;
+        return;
+    } break;
+    case GUI_PANEL_LAYOUT_FLUX: {
+        /* scaling arrays of panel width ratios for every widget */
+        gui_float ratio;
+        GUI_ASSERT(layout->row.ratio);
+        ratio = (layout->row.ratio[layout->row.index] < 0) ?
+            layout->row.item_width : layout->row.ratio[layout->row.index];
 
-        item_spacing = (gui_float)layout->index * spacing.x;
-        if (layout->index < layout->row.columns-1)
+        item_spacing = (gui_float)layout->row.index * spacing.x;
+        if (layout->row.index < layout->row.columns-1)
             item_width = (ratio * panel_space) - spacing.x;
         else item_width = (ratio * panel_space);
 
         item_offset = layout->row.item_offset;
         layout->row.item_offset += item_width + spacing.x;
         layout->row.filled += ratio;
-    case GUI_PANEL_LAYOUT_DEF_PIXELS: break;
     } break;
+    case GUI_PANEL_LAYOUT_STATIC_FIXED: {
+        /* non-scaling fixed widgets item width */
+        item_width = layout->row.item_width;
+        item_offset = (gui_float)layout->row.index * item_width;
+        item_spacing = (gui_float)layout->row.index * spacing.x;
+    } break;
+    case GUI_PANEL_LAYOUT_STATIC_ROW:{
+        /* scaling single ratio widget width */
+        item_width = layout->row.item_width;
+        item_offset = layout->row.item_offset;
+        item_spacing = (gui_float)layout->row.index * spacing.x;
+        layout->row.item_offset += item_width + spacing.x;
+        layout->row.index = 0;
+    } break;
+    case GUI_PANEL_LAYOUT_STATIC_FREE: {
+        /* free widget placing */
+        bounds->x = layout->at_x + padding.x + layout->row.item.x;
+        bounds->y = layout->at_y + layout->row.item.y;
+        bounds->w = layout->row.item.w;
+        bounds->h = layout->row.item.h;
+        return;
+    } break;
+    case GUI_PANEL_LAYOUT_STATIC: {
+        /* non-scaling array of panel pixel width for every widget */
+        item_spacing = (gui_float)layout->row.index * spacing.x;
+        item_width = layout->row.ratio[layout->row.index];
+        item_offset = layout->row.item_offset;
+        layout->row.item_offset += item_width + spacing.x;
+        } break;
+    default: break;
     };
 
     /* set the bounds of the newly allocated widget */
@@ -3295,103 +3719,16 @@ gui_panel_alloc_space(struct gui_rect *bounds, struct gui_panel_layout *layout)
     bounds->y = layout->at_y - layout->offset;
     bounds->w = item_width;
     bounds->h = layout->row.height - spacing.y;
-    layout->index++;
+    layout->row.index++;
 }
 
-void
-gui_panel_menu_begin(struct gui_panel_layout *layout)
-{
-    GUI_ASSERT(layout);
-    if (!layout || layout->flags & GUI_PANEL_HIDDEN || layout->flags & GUI_PANEL_MINIMIZED)
-        return;
-    layout->menu.x = layout->at_x;
-    layout->menu.y = layout->y + layout->header.h;
-    layout->menu.w = layout->width;
-}
-
-gui_bool
-gui_panel_menu_item(struct gui_panel_layout *layout, const char *label)
-{
-    struct gui_rect bounds;
-    struct gui_button button;
-    const struct gui_config *config;
-    struct gui_vec2 item_padding;
-    GUI_ASSERT(layout);
-    if (!layout || layout->flags & GUI_PANEL_HIDDEN || layout->flags & GUI_PANEL_MINIMIZED)
-        return gui_false;
-
-    config = layout->config;
-    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
-    gui_panel_alloc_space(&bounds, layout);
-    bounds.y += layout->offset;
-
-    button.border = 1;
-    button.rounding = config->rounding[GUI_ROUNDING_BUTTON];
-    button.padding.x = item_padding.x;
-    button.padding.y = item_padding.y;
-    button.background = config->colors[GUI_COLOR_BUTTON];
-    button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
-    button.content = config->colors[GUI_COLOR_TEXT];
-    button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
-    button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
-    button.rounding = config->rounding[GUI_ROUNDING_BUTTON];
-    return gui_button_text(layout->buffer, bounds.x, bounds.y, bounds.w, bounds.h,
-            label, GUI_BUTTON_DEFAULT, &button, layout->input, &config->font);
-}
-
-void
-gui_panel_menu_end(struct gui_panel_layout *layout)
-{
-    const struct gui_config *c;
-    struct gui_command_buffer *out;
-    struct gui_vec2 item_padding;
-    struct gui_vec2 panel_padding;
-    if (!layout || layout->flags & GUI_PANEL_HIDDEN || layout->flags & GUI_PANEL_MINIMIZED)
-        return;
-
-    c = layout->config;
-    out = layout->buffer;
-    panel_padding = gui_config_property(c, GUI_PROPERTY_PADDING);
-    item_padding = gui_config_property(c, GUI_PROPERTY_ITEM_PADDING);
-
-    layout->menu.h = (layout->at_y + layout->row.height-1) - layout->menu.y;
-    layout->clip.y = layout->y + layout->header.h + layout->menu.h;
-    layout->height -= layout->menu.h;
-
-    if (layout->flags & GUI_PANEL_SCROLLBAR) {
-        if (layout->flags & GUI_PANEL_SCALEABLE)
-            layout->clip.h = layout->h - (layout->footer_h + layout->header.h + layout->menu.h);
-        else layout->clip.h = layout->h - (layout->header.h + layout->menu.h);
-        layout->clip.h -= (panel_padding.y + item_padding.y);
-    } else layout->clip.h = gui_null_rect.h;
-    gui_command_buffer_push_scissor(out, layout->clip.x, layout->clip.y,
-        layout->clip.w, layout->clip.h);
-}
-
-
-gui_size
-gui_panel_table_columns(const struct gui_panel_layout *l, gui_size widget_pixel_size)
-{
-    struct gui_vec2 spacing;
-    struct gui_vec2 padding;
-    gui_size cols = 0, size;
-
-    GUI_ASSERT(l);
-    GUI_ASSERT(widget_pixel_size);
-    if (!l || !widget_pixel_size || l->flags & GUI_PANEL_HIDDEN || l->flags & GUI_PANEL_MINIMIZED)
-        return 0;
-
-    /* calculate the number of widgets with given size that fit into the current
-     * table row layout */
-    spacing = gui_config_property(l->config, GUI_PROPERTY_ITEM_SPACING);
-    padding = gui_config_property(l->config, GUI_PROPERTY_PADDING);
-    cols = (gui_size)(l->width) / widget_pixel_size;
-    size = (cols * (gui_size)spacing.x) + 2 * (gui_size)padding.x + widget_pixel_size * cols;
-    while ((size > l->width) && --cols)
-        size = (cols*(gui_size)spacing.x) + 2*(gui_size)padding.x + widget_pixel_size * cols;
-    return cols;
-}
-
+/*
+ * -------------------------------------------------------------
+ *
+ *                          Widgets
+ *
+ * --------------------------------------------------------------
+ */
 void
 gui_panel_spacing(struct gui_panel_layout *l, gui_size cols)
 {
@@ -3405,22 +3742,23 @@ gui_panel_spacing(struct gui_panel_layout *l, gui_size cols)
     if (!l) return;
     if (!l->valid) return;
 
-    index = (l->index + cols) % l->row.columns;
-    n = index - l->index;
+    index = (l->row.index + cols) % l->row.columns;
+    n = index - l->row.index;
 
     /* spacing goes over the row boundries */
-    if (l->index + cols > l->row.columns) {
-        gui_size rows = (l->index + cols) / l->row.columns;
+    if (l->row.index + cols > l->row.columns) {
+        gui_size rows = (l->row.index + cols) / l->row.columns;
         for (i = 0; i < rows; ++i)
             gui_panel_alloc_row(l);
     }
 
     /* non table layout need to allocate space */
-    if (l->row.type != GUI_PANEL_LAYOUT_FIXED_RATIO) {
+    if (l->row.type != GUI_PANEL_LAYOUT_FLUX_FIXED &&
+        l->row.type != GUI_PANEL_LAYOUT_STATIC_FIXED) {
         for (i = 0; i < n; ++i)
             gui_panel_alloc_space(&nil, l);
     }
-    l->index = index;
+    l->row.index = index;
 }
 
 enum gui_widget_state
@@ -4123,6 +4461,13 @@ gui_panel_graph_push_column(struct gui_panel_layout *layout,
     return selected;
 }
 
+/*
+ * -------------------------------------------------------------
+ *
+ *                          GRAPH
+ *
+ * --------------------------------------------------------------
+ */
 gui_bool
 gui_panel_graph_push(struct gui_panel_layout *layout, struct gui_graph *graph,
     gui_float value)
@@ -4231,8 +4576,15 @@ gui_panel_graph_ex(struct gui_panel_layout *layout, enum gui_graph_type type,
     return index;
 }
 
+/*
+ * -------------------------------------------------------------
+ *
+ *                          TABLE
+ *
+ * --------------------------------------------------------------
+ */
 static void
-gui_panel_table_hline(struct gui_panel_layout *l, gui_size row_height)
+gui_panel_table_horizontal_line(struct gui_panel_layout *l, gui_size row_height)
 {
     struct gui_command_buffer *out = l->buffer;
     const struct gui_config *c = l->config;
@@ -4249,7 +4601,7 @@ gui_panel_table_hline(struct gui_panel_layout *l, gui_size row_height)
 }
 
 static void
-gui_panel_table_vline(struct gui_panel_layout *layout, gui_size cols)
+gui_panel_table_vertical_line(struct gui_panel_layout *layout, gui_size cols)
 {
     gui_size i;
     struct gui_command_buffer *out;
@@ -4272,7 +4624,7 @@ gui_panel_table_vline(struct gui_panel_layout *layout, gui_size cols)
         gui_command_buffer_push_line(out,  bounds.x + bounds.w, y,
             bounds.x + bounds.w, h, config->colors[GUI_COLOR_TABLE_LINES]);
     }
-    layout->index -= i;
+    layout->row.index -= i;
 }
 
 void
@@ -4284,11 +4636,11 @@ gui_panel_table_begin(struct gui_panel_layout *layout, gui_flags flags,
 
     layout->is_table = gui_true;
     layout->tbl_flags = flags;
-    gui_panel_layout_fixed_ratio(layout, (gui_float)row_height, cols);
+    gui_panel_layout_flux_fixed(layout, (gui_float)row_height, cols);
     if (layout->tbl_flags & GUI_TABLE_HHEADER)
-        gui_panel_table_hline(layout, row_height);
+        gui_panel_table_horizontal_line(layout, row_height);
     if (layout->tbl_flags & GUI_TABLE_VHEADER)
-        gui_panel_table_vline(layout, cols);
+        gui_panel_table_vertical_line(layout, cols);
 }
 
 void
@@ -4301,11 +4653,11 @@ gui_panel_table_row(struct gui_panel_layout *layout)
 
     config = layout->config;
     item_spacing = gui_config_property(config, GUI_PROPERTY_ITEM_SPACING);
-    gui_panel_layout_fixed_ratio(layout, layout->row.height - item_spacing.y, layout->row.columns);
+    gui_panel_layout_flux_fixed(layout,layout->row.height-item_spacing.y,layout->row.columns);
     if (layout->tbl_flags & GUI_TABLE_HBODY)
-        gui_panel_table_hline(layout, (gui_size)(layout->row.height - item_spacing.y));
+        gui_panel_table_horizontal_line(layout, (gui_size)(layout->row.height - item_spacing.y));
     if (layout->tbl_flags & GUI_TABLE_VBODY)
-        gui_panel_table_vline(layout, layout->row.columns);
+        gui_panel_table_vertical_line(layout, layout->row.columns);
 }
 
 void
@@ -4315,6 +4667,13 @@ gui_panel_table_end(struct gui_panel_layout *layout)
     layout->is_table = gui_false;
 }
 
+/*
+ * -------------------------------------------------------------
+ *
+ *                          GROUPS
+ *
+ * --------------------------------------------------------------
+ */
 gui_bool
 gui_panel_tab_begin(struct gui_panel_layout *parent, struct gui_panel_layout *tab,
     const char *title, gui_bool border, gui_bool minimized)
@@ -4342,8 +4701,8 @@ gui_panel_tab_begin(struct gui_panel_layout *parent, struct gui_panel_layout *ta
 
     /* NOTE: tabs need to allocate a complete row since the size of the tab is
      * not known beforehand.  */
-    parent->index = 0;
-    gui_panel_layout_fixed_ratio(parent, 0, 1);
+    parent->row.index = 0;
+    gui_panel_layout_flux_fixed(parent, 0, 1);
     gui_panel_alloc_space(&bounds, parent);
 
     /* create a fake panel to create a panel layout from */
@@ -4623,106 +4982,6 @@ gui_panel_shelf_end(struct gui_panel_layout *p, struct gui_panel_layout *s)
     gui_panel_end(s, &pan);
     gui_command_buffer_push_scissor(out, p->clip.x, p->clip.y, p->clip.w, p->clip.h);
     return pan.offset;
-}
-
-void
-gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
-{
-    const struct gui_config *config;
-    struct gui_command_buffer *out;
-    gui_float scrollbar_width;
-    struct gui_vec2 item_padding;
-    struct gui_vec2 item_spacing;
-    struct gui_vec2 panel_padding;
-    struct gui_vec2 scaler_size;
-
-    GUI_ASSERT(layout);
-    GUI_ASSERT(panel);
-    if (!panel || !layout) return;
-    layout->at_y += layout->row.height;
-
-    config = layout->config;
-    out = layout->buffer;
-    if (!(layout->flags & GUI_PANEL_TAB)) {
-        struct gui_rect clip;
-        clip.x = MAX(0, (layout->x - 1));
-        clip.y = MAX(0, (layout->y - 1));
-        clip.w = layout->w+1;
-        clip.h = layout->h+1;
-        gui_command_buffer_push_scissor(out, clip.x, clip.y, clip.w,clip.h);
-    }
-
-    /* cache configuration data */
-    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
-    item_spacing = gui_config_property(config, GUI_PROPERTY_ITEM_SPACING);
-    panel_padding = gui_config_property(config, GUI_PROPERTY_PADDING);
-    scrollbar_width = gui_config_property(config, GUI_PROPERTY_SCROLLBAR_WIDTH).x;
-    scaler_size = gui_config_property(config, GUI_PROPERTY_SCALER_SIZE);
-
-    if (layout->flags & GUI_PANEL_SCROLLBAR && layout->valid) {
-        struct gui_scroll scroll;
-        gui_float panel_y;
-        gui_float scroll_x, scroll_y;
-        gui_float scroll_w, scroll_h;
-        gui_float scroll_target, scroll_offset, scroll_step;
-
-        scroll_x = layout->at_x + layout->width;
-        scroll_y = (layout->flags & GUI_PANEL_BORDER) ? layout->y + 1 : layout->y;
-        scroll_y += layout->header.h + layout->menu.h;
-        scroll_w = scrollbar_width;
-        scroll_h = layout->height;
-        scroll_offset = layout->offset;
-        scroll_step = layout->height * 0.10f;
-        scroll.rounding = config->rounding[GUI_ROUNDING_SCROLLBAR];
-        scroll.background = config->colors[GUI_COLOR_SCROLLBAR];
-        scroll.foreground = config->colors[GUI_COLOR_SCROLLBAR_CURSOR];
-        scroll.border = config->colors[GUI_COLOR_SCROLLBAR_BORDER];
-        if (layout->flags & GUI_PANEL_BORDER) scroll_h -= 1;
-        scroll_target = (layout->at_y-layout->y)-(layout->header.h+2*item_spacing.y);
-        scroll.has_scrolling = (layout->flags & GUI_PANEL_ACTIVE);
-        panel->offset = gui_scroll(out, scroll_x, scroll_y, scroll_w, scroll_h,
-                                    scroll_offset, scroll_target, scroll_step,
-                                    &scroll, layout->input);
-
-        panel_y = layout->y + layout->height + layout->header.h + layout->menu.h - panel_padding.y;
-        gui_command_buffer_push_rect(out, layout->x,panel_y,layout->width,panel_padding.y,
-            0, config->colors[GUI_COLOR_PANEL]);
-    } else layout->height = layout->at_y - layout->y;
-
-    if ((layout->flags & GUI_PANEL_SCALEABLE) && layout->valid) {
-        struct gui_color col = config->colors[GUI_COLOR_SCALER];
-        gui_float scaler_w = MAX(0, scaler_size.x - item_padding.x);
-        gui_float scaler_h = MAX(0, scaler_size.y - item_padding.y);
-        gui_float scaler_x = (layout->x + layout->w) - (item_padding.x + scaler_w);
-        gui_float scaler_y = layout->y + layout->h - scaler_size.y;
-        gui_command_buffer_push_triangle(out, scaler_x + scaler_w, scaler_y,
-            scaler_x + scaler_w, scaler_y + scaler_h, scaler_x, scaler_y + scaler_h, col);
-    }
-
-    if (layout->flags & GUI_PANEL_BORDER) {
-        const gui_float width = (layout->flags & GUI_PANEL_SCROLLBAR) ?
-                layout->width + scrollbar_width : layout->width;
-        const gui_float padding_y = (!layout->valid) ?
-                panel->y + layout->header.h:
-                (panel->flags & GUI_PANEL_SCROLLBAR) ?
-                layout->y + layout->h :
-                panel->y + layout->height + item_padding.y;
-
-        if (panel->flags & GUI_PANEL_BORDER_HEADER)
-            gui_command_buffer_push_line(out, panel->x, panel->y + layout->header.h,
-                panel->x + panel->w, panel->y + layout->header.h,
-                config->colors[GUI_COLOR_BORDER]);
-
-        /* panel border */
-        gui_command_buffer_push_line(out, panel->x, padding_y, panel->x + width,
-                padding_y, config->colors[GUI_COLOR_BORDER]);
-        gui_command_buffer_push_line(out, panel->x, panel->y, panel->x,
-                padding_y, config->colors[GUI_COLOR_BORDER]);
-        gui_command_buffer_push_line(out, panel->x + width, panel->y, panel->x + width,
-                padding_y, config->colors[GUI_COLOR_BORDER]);
-    }
-    panel->flags = layout->flags;
-    gui_command_buffer_push_scissor(out, 0, 0, gui_null_rect.w, gui_null_rect.h);
 }
 
 /*
