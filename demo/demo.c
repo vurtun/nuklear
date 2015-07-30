@@ -3,14 +3,30 @@
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 
-struct show_window {
-    struct gui_panel hook;
-    gui_flags header_flags;
+struct tree_node {
+    gui_tree_node_state state;
+    const char *name;
+    struct tree_node *parent;
+    struct tree_node *children[8];
+    int count;
+};
+
+struct test_tree {
+    struct tree_node root;
+    struct tree_node *clipboard[16];
+    int count;
+};
+
+struct state {
     /* input buffer */
     gui_char input_buffer[MAX_BUFFER];
     struct gui_edit_box input;
+    gui_char in_buf[MAX_BUFFER];
+    gui_size in_len;
+    gui_bool in_active;
 
     /* widgets state */
+    gui_size menu_item;
     gui_bool scaleable;
     gui_bool checkbox;
     gui_float slider;
@@ -19,31 +35,27 @@ struct show_window {
     gui_bool spinner_active;
     gui_size item_current;
     gui_size shelf_selection;
-    gui_int combo_selection;
     gui_bool toggle;
     gui_int option;
-    gui_size text_box;
+
+    /* tree */
+    struct test_tree tree;
+    struct tree_node nodes[8];
+    gui_float tree_offset;
+
     /* tabs */
-    gui_bool combobox_tab;
-    gui_bool widget_tab;
-    gui_bool table_tab;
+    enum gui_node_state config_tab;
+    enum gui_node_state widget_tab;
+    enum gui_node_state style_tab;
+    enum gui_node_state round_tab;
+    enum gui_node_state color_tab;
+    enum gui_node_state flag_tab;
+
     /* scrollbars */
     gui_float shelf_scrollbar;
     gui_float table_scrollbar;
-    gui_float time_scrollbar;
-    /* menu */
-    gui_size menu_item;
-};
+    gui_float tree_scrollbar;
 
-struct control_window {
-    struct gui_panel hook;
-    gui_flags show_flags;
-    gui_flags header_flags;
-    /* tabs */
-    gui_bool flag_tab;
-    gui_bool style_tab;
-    gui_bool round_tab;
-    gui_bool color_tab;
     /* color picker */
     gui_bool picker_active;
     gui_bool spinner_r_active;
@@ -52,23 +64,102 @@ struct control_window {
     gui_bool spinner_a_active;
     gui_size current_color;
     struct gui_color color;
+
 };
 
 struct demo_gui {
     gui_bool running;
-    unsigned int ms;
     void *memory;
-    struct gui_command_buffer show_buffer;
-    struct gui_command_buffer control_buffer;
+    struct gui_command_buffer buffer;
     struct gui_config config;
     struct gui_font font;
-    struct control_window control;
-    struct show_window show;
-    struct gui_stack stack;
+    struct gui_panel panel;
+    struct state state;
 };
 
 static void
-widget_panel(struct gui_panel_layout *panel, struct show_window *demo)
+tree_remove_node(struct tree_node *parent, struct tree_node *child)
+{
+    int i = 0;
+    child->parent = NULL;
+    if (!parent->count) return;
+    if (parent->count == 1) {
+        parent->count = 0;
+        return;
+    }
+    for (i = 0; i < parent->count; ++i) {
+        if (parent->children[i] == child)
+            break;
+    }
+    if (i == parent->count) return;
+    if (i == parent->count - 1) {
+        parent->count--;
+        return;
+    } else{
+        parent->children[i] = parent->children[parent->count-1];
+        parent->count--;
+    }
+}
+
+static void
+tree_add_node(struct tree_node *parent, struct tree_node *child)
+{
+    assert(parent->count < 8);
+    child->parent = parent;
+    parent->children[parent->count++] = child;
+}
+
+static void
+tree_push_node(struct test_tree *tree, struct tree_node *node)
+{
+    assert(tree->count < 16);
+    tree->clipboard[tree->count++] = node;
+}
+
+static struct tree_node*
+tree_pop_node(struct test_tree *tree)
+{
+    assert(tree->count > 0);
+    return tree->clipboard[--tree->count];
+}
+
+static int
+upload_tree(struct test_tree *base, struct gui_tree *tree, struct tree_node *node)
+{
+    int i = 0, n = 0;
+    enum gui_tree_node_operation op;
+    if (node->count) {
+        i = 0;
+        op = gui_panel_tree_begin_node(tree, node->name, &node->state);
+        while (i < node->count)
+            i += upload_tree(base, tree, node->children[i]);
+        gui_panel_tree_end_node(tree);
+    }
+    else op = gui_panel_tree_leaf(tree, node->name, &node->state);
+
+    switch (op) {
+    case GUI_NODE_NOP: break;
+    case GUI_NODE_CUT:
+        tree_remove_node(node->parent, node);
+        tree_push_node(base, node);
+        return 0;
+    case GUI_NODE_DELETE:
+        tree_remove_node(node->parent, node); break;
+        return 0;
+    case GUI_NODE_PASTE:
+        i = 0; n = base->count;
+        while (i < n) {
+            tree_add_node(node, tree_pop_node(base));
+            i++;
+        }
+    case GUI_NODE_CLONE:
+    default:break;
+    }
+    return 1;
+}
+
+static void
+widget_panel(struct gui_panel_layout *panel, struct state *demo)
 {
     const char *items[] = {"Fist", "Pistol", "Shotgun", "Railgun", "BFG"};
 
@@ -129,6 +220,8 @@ widget_panel(struct gui_panel_layout *panel, struct show_window *demo)
 
     demo->item_current = gui_panel_selector(panel, items, LEN(items), demo->item_current);
     demo->spinner = gui_panel_spinner(panel, 0, demo->spinner, 250, 10, &demo->spinner_active);
+    demo->in_len = gui_panel_edit(panel, demo->in_buf, demo->in_len, MAX_BUFFER,
+                        &demo->in_active, GUI_INPUT_DEFAULT);
 
     if (demo->scaleable) {
         gui_panel_layout_flux_row_begin(panel, 30, 2);
@@ -154,7 +247,6 @@ widget_panel(struct gui_panel_layout *panel, struct show_window *demo)
             }
         }
         gui_panel_layout_static_row_end(panel);
-
     }
 }
 
@@ -189,26 +281,7 @@ table_panel(struct gui_panel_layout *panel)
 }
 
 static void
-init_show(struct show_window *win, struct gui_config *config,
-    struct gui_command_buffer *buffer, struct gui_stack *stack)
-{
-    memset(win, 0, sizeof(*win));
-    gui_panel_init(&win->hook, 20, 20, 310, 550,
-        GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|
-        GUI_PANEL_SCALEABLE, buffer, config);
-    gui_stack_push(stack, &win->hook);
-    gui_edit_box_init_fixed(&win->input, win->input_buffer, MAX_BUFFER, NULL, NULL);
-
-    win->header_flags = GUI_CLOSEABLE|GUI_MINIMIZABLE;
-    win->widget_tab = GUI_MAXIMIZED;
-    win->combobox_tab = GUI_MINIMIZED;
-    win->slider = 10.0f;
-    win->progressbar = 50;
-    win->spinner = 100;
-}
-
-static void
-update_menu(struct gui_panel_layout *layout, struct show_window *win, struct gui_config *config)
+update_menu(struct gui_panel_layout *layout, struct state *win, struct gui_config *config)
 {
     int i = 0;
     enum level_id {LEVEL_MENU,LEVEL_FILE,LEVEL_OPEN,LEVEL_EDIT};
@@ -268,18 +341,12 @@ update_menu(struct gui_panel_layout *layout, struct show_window *win, struct gui
         {EDIT_DELETE, LEVEL_EDIT, ITEM_EDIT_DELETE}
     };
 
-    const struct level *lvl = &levels[win->menu_item];
-    const struct combi *iter = &combis[lvl->list];
     {
         /* calculate column row count to fit largets menu item  */
-        gui_size cols, max = 0;
-        for (i = 0; i < lvl->items; ++i) {
-            gui_size text_w, w;
-            const struct item *item = &items[iter->item];
-            text_w = config->font.width(config->font.userdata,item->name,strlen(item->name));
-            w = text_w + (gui_size)config->properties[GUI_PROPERTY_ITEM_PADDING].x * 2;
-            if (w > max) max = w;
-            iter++;
+        gui_int max = 0;
+        for (i = 0; i < (int)LEN(levels); ++i) {
+            if (levels[0].items > max)
+                max = levels[0].items;
         }
         gui_panel_layout_flux_fixed(layout, 18, 5);
     }
@@ -287,9 +354,10 @@ update_menu(struct gui_panel_layout *layout, struct show_window *win, struct gui
     /* output current menu level entries */
     gui_panel_menu_begin(layout);
     {
+        const struct level *lvl = &levels[win->menu_item];
+        const struct combi *iter = &combis[lvl->list];
         gui_config_push_color(config, GUI_COLOR_BUTTON_BORDER, 45, 45, 45, 250);
         gui_config_push_property(config, GUI_PROPERTY_ITEM_SPACING, 0, 4.0f);
-        iter = &combis[lvl->list];
         for (i = 0; i < lvl->items; ++i) {
             const struct item *item = &items[iter->item];
             if (gui_panel_button_text(layout, item->name, GUI_BUTTON_DEFAULT)) {
@@ -321,38 +389,7 @@ update_menu(struct gui_panel_layout *layout, struct show_window *win, struct gui
 }
 
 static void
-update_show(struct show_window *show, struct gui_stack *stack, struct gui_input *in, struct gui_config *config)
-{
-    struct gui_panel_layout tab;
-    struct gui_panel_layout layout;
-    static const char *shelfs[] = {"Histogram", "Lines"};
-    gui_panel_begin_stacked(&layout, &show->hook, stack, in);
-    gui_panel_header(&layout, "Show", show->header_flags, 0, GUI_HEADER_RIGHT);
-    update_menu(&layout, show, config);
-    {
-        /* Widgets */
-        show->widget_tab = gui_panel_tab_begin(&layout, &tab, "Widgets",GUI_BORDER, show->widget_tab);
-        widget_panel(&tab, show);
-        gui_panel_tab_end(&layout, &tab);
-
-        /* Graph */
-        gui_panel_layout_flux_fixed(&layout, 180, 1);
-        show->shelf_selection = gui_panel_shelf_begin(&layout, &tab, shelfs,
-            LEN(shelfs), show->shelf_selection, show->shelf_scrollbar);
-        graph_panel(&tab, show->shelf_selection);
-        show->shelf_scrollbar = gui_panel_shelf_end(&layout, &tab);
-
-        /* Table */
-        gui_panel_layout_flux_fixed(&layout, 180, 1);
-        gui_panel_group_begin(&layout, &tab, "Table", show->table_scrollbar);
-        table_panel(&tab);
-        show->table_scrollbar = gui_panel_group_end(&layout, &tab);
-    }
-    gui_panel_end(&layout, &show->hook);
-}
-
-static void
-update_flags(struct gui_panel_layout *panel, struct control_window *control)
+update_flags(struct gui_panel_layout *panel)
 {
     gui_size n = 0;
     gui_flags res = 0;
@@ -360,11 +397,11 @@ update_flags(struct gui_panel_layout *panel, struct control_window *control)
     const char *options[]={"Hidden","Border","Header Border", "Moveable","Scaleable", "Minimized"};
     gui_panel_layout_flux_fixed(panel, 30, 2);
     do {
-        if (gui_panel_check(panel,options[n++],(control->show_flags & i)?gui_true:gui_false))
+        if (gui_panel_check(panel,options[n++],(panel->flags & i)?gui_true:gui_false))
             res |= i;
         i = i << 1;
     } while (i <= GUI_PANEL_MINIMIZED);
-    control->show_flags = res;
+    panel->flags = res;
 }
 
 static void
@@ -402,7 +439,7 @@ round_tab(struct gui_panel_layout *panel, struct gui_config *config)
 }
 
 static struct gui_color
-color_picker(struct gui_panel_layout *panel, struct control_window *control,
+color_picker(struct gui_panel_layout *panel, struct state *control,
     const char *name, struct gui_color color)
 {
     int i;
@@ -430,7 +467,7 @@ color_picker(struct gui_panel_layout *panel, struct control_window *control,
 }
 
 static void
-color_tab(struct gui_panel_layout *panel, struct control_window *control, struct gui_config *config)
+color_tab(struct gui_panel_layout *panel, struct state *control, struct gui_config *config)
 {
     gui_size i = 0;
     static const char *labels[] = {"Text:", "Panel:", "Header:", "Border:", "Button:",
@@ -442,7 +479,8 @@ color_tab(struct gui_panel_layout *panel, struct control_window *control, struct
         "Selector:", "Selector Border:", "Selector Triangle:", "Selector Text:",
         "Histo:", "Histo Bars:", "Histo Negative:", "Histo Hovering:", "Plot:", "Plot Lines:",
         "Plot Hightlight:", "Scrollbar:", "Scrollbar Cursor:", "Scrollbar Border:",
-        "Table lines:", "Shelf:", "Shelf Text:", "Shelf Active:", "Shelf Active Text:", "Scaler:",
+        "Table lines:", "Tab header", "Tab border",
+        "Shelf:", "Shelf Text:", "Shelf Active:", "Shelf Active Text:", "Scaler:",
         "Tiled Scaler"
     };
 
@@ -473,88 +511,142 @@ color_tab(struct gui_panel_layout *panel, struct control_window *control, struct
 }
 
 static void
-init_control(struct control_window *win, struct gui_config *config,
-    struct gui_command_buffer *buffer, struct gui_stack *stack)
-{
-    memset(win, 0, sizeof(*win));
-    gui_panel_init(&win->hook, 380, 20, 350, 500,
-        GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE, buffer, config);
-    gui_stack_push(stack, &win->hook);
-    win->show_flags = win->hook.flags;
-    win->color_tab = GUI_MINIMIZED;
-}
-
-static gui_bool
-update_control(struct control_window *control, struct gui_stack *stack,
-    struct gui_input *in, struct gui_config *config)
-{
-    gui_bool running;
-    struct gui_panel_layout layout;
-    struct gui_panel_layout tab;
-
-    gui_panel_begin_stacked(&layout, &control->hook, stack, in);
-    running = !gui_panel_header(&layout, "Control", GUI_CLOSEABLE|GUI_MINIMIZABLE,
-                                GUI_CLOSEABLE, GUI_HEADER_LEFT);
-    {
-        control->flag_tab = gui_panel_tab_begin(&layout, &tab, "Options", GUI_BORDER, control->flag_tab);
-        update_flags(&tab, control);
-        gui_panel_tab_end(&layout, &tab);
-
-        control->style_tab = gui_panel_tab_begin(&layout, &tab, "Properties", GUI_BORDER, control->style_tab);
-        properties_tab(&tab, config);
-        gui_panel_tab_end(&layout, &tab);
-
-        control->round_tab = gui_panel_tab_begin(&layout, &tab, "Rounding", GUI_BORDER, control->round_tab);
-        round_tab(&tab, config);
-        gui_panel_tab_end(&layout, &tab);
-
-        control->color_tab = gui_panel_tab_begin(&layout, &tab, "Color", GUI_BORDER, control->color_tab);
-        color_tab(&tab, control, config);
-        gui_panel_tab_end(&layout, &tab);
-    }
-    gui_panel_end(&layout, &control->hook);
-    return running;
-}
-
-static void
 init_demo(struct demo_gui *gui, struct gui_font *font)
 {
     struct gui_config *config = &gui->config;
+    struct state *win = &gui->state;
     gui->font = *font;
     gui->running = gui_true;
 
-    gui_command_buffer_init_fixed(&gui->show_buffer, gui->memory, MAX_MEMORY/2, GUI_CLIP);
-    gui_command_buffer_init_fixed(&gui->control_buffer,
-        gui_ptr_add(void*, gui->memory, (MAX_MEMORY/2)), MAX_MEMORY/2, GUI_CLIP);
+    gui_command_buffer_init_fixed(&gui->buffer, gui->memory, MAX_MEMORY, GUI_CLIP);
     gui_config_default(config, GUI_DEFAULT_ALL, font);
+    gui_panel_init(&gui->panel, 30, 30, 280, 530,
+        GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE, &gui->buffer, config);
 
-    gui_stack_clear(&gui->stack);
-    init_show(&gui->show, config, &gui->show_buffer, &gui->stack);
-    init_control(&gui->control, config, &gui->control_buffer, &gui->stack);
-    gui->control.header_flags = gui->show.header_flags;
+    gui_edit_box_init_fixed(&win->input, win->input_buffer, MAX_BUFFER, NULL, NULL);
+    win->config_tab = GUI_MINIMIZED;
+    win->widget_tab = GUI_MINIMIZED;
+    win->style_tab = GUI_MINIMIZED;
+    win->round_tab = GUI_MINIMIZED;
+    win->color_tab = GUI_MINIMIZED;
+    win->flag_tab = GUI_MINIMIZED;
+    win->scaleable = gui_true;
+
+    win->slider = 2.0f;
+    win->progressbar = 50;
+    win->spinner = 100;
+
+    {
+        struct test_tree *tree = &win->tree;
+        tree->root.state = GUI_NODE_ACTIVE;
+        tree->root.name = "Primitives";
+        tree->root.parent = NULL;
+        tree->root.count = 2;
+        tree->root.children[0] = &win->nodes[0];
+        tree->root.children[1] = &win->nodes[4];
+
+        win->nodes[0].state = 0;
+        win->nodes[0].name = "Boxes";
+        win->nodes[0].parent = &tree->root;
+        win->nodes[0].count = 2;
+        win->nodes[0].children[0] = &win->nodes[1];
+        win->nodes[0].children[1] = &win->nodes[2];
+
+        win->nodes[1].state = 0;
+        win->nodes[1].name = "Box0";
+        win->nodes[1].parent = &win->nodes[0];
+        win->nodes[1].count = 0;
+
+        win->nodes[2].state = 0;
+        win->nodes[2].name = "Box1";
+        win->nodes[2].parent = &win->nodes[0];
+        win->nodes[2].count = 0;
+
+        win->nodes[4].state = GUI_NODE_ACTIVE;
+        win->nodes[4].name = "Cylinders";
+        win->nodes[4].parent = &tree->root;
+        win->nodes[4].count = 2;
+        win->nodes[4].children[0] = &win->nodes[5];
+        win->nodes[4].children[1] = &win->nodes[6];
+
+        win->nodes[5].state = 0;
+        win->nodes[5].name = "Cylinder0";
+        win->nodes[5].parent = &win->nodes[4];
+        win->nodes[5].count = 0;
+
+        win->nodes[6].state = 0;
+        win->nodes[6].name = "Cylinder1";
+        win->nodes[6].parent = &win->nodes[4];
+        win->nodes[6].count = 0;
+    }
 }
 
 static void
 run_demo(struct demo_gui *gui, struct gui_input *input)
 {
-    gui_flags prev;
-    struct control_window *control = &gui->control;
-    struct show_window *show = &gui->show;
+    struct gui_panel_layout layout;
+    struct state *state = &gui->state;
+    struct gui_panel_layout tab;
+    struct gui_config *config = &gui->config;
+    static const char *shelfs[] = {"Histogram", "Lines"};
 
-    gui->running = update_control(control, &gui->stack, input, &gui->config);
+    gui_panel_begin(&layout, &gui->panel, input);
+    {
+        /* Header + Menubar  */
+        gui->running = !gui_panel_header(&layout, "Demo",
+            GUI_CLOSEABLE|GUI_MINIMIZABLE, GUI_CLOSEABLE, GUI_HEADER_RIGHT);
+        update_menu(&layout, state, config);
 
-    if (show->hook.flags & GUI_PANEL_ACTIVE)
-        show->hook.flags = control->show_flags|GUI_PANEL_ACTIVE;
-    else show->hook.flags = control->show_flags;
-    gui->show.header_flags = gui->control.header_flags;
+        /* Panel style configuration  */
+        if (gui_panel_layout_push(&layout, GUI_LAYOUT_TAB, "Style", &state->config_tab))
+        {
+            if (gui_panel_layout_push(&layout, GUI_LAYOUT_NODE, "Options", &state->flag_tab)) {
+                update_flags(&layout);
+                gui_panel_layout_pop(&layout);
+            }
+            if (gui_panel_layout_push(&layout, GUI_LAYOUT_NODE, "Properties", &state->style_tab)) {
+                properties_tab(&layout, config);
+                gui_panel_layout_pop(&layout);
+            }
+            if (gui_panel_layout_push(&layout, GUI_LAYOUT_NODE, "Rounding", &state->round_tab)) {
+                round_tab(&layout, config);
+                gui_panel_layout_pop(&layout);
+            }
+            if (gui_panel_layout_push(&layout, GUI_LAYOUT_NODE, "Color", &state->color_tab)) {
+                color_tab(&layout, state, config);
+                gui_panel_layout_pop(&layout);
+            }
+            gui_panel_layout_pop(&layout);
+        }
 
-    prev = show->hook.flags;
-    update_show(show, &gui->stack, input, &gui->config);
-    if (show->hook.flags & GUI_PANEL_HIDDEN)
-        control->show_flags |= GUI_PANEL_HIDDEN;
-    if (show->hook.flags & GUI_PANEL_MINIMIZED && !(prev & GUI_PANEL_MINIMIZED))
-        control->show_flags |= GUI_PANEL_MINIMIZED;
-    else if (prev & GUI_PANEL_MINIMIZED && !(show->hook.flags & GUI_PANEL_MINIMIZED))
-        control->show_flags &= ~(gui_flags)GUI_PANEL_MINIMIZED;
+        /* Widgets examples */
+        if (gui_panel_layout_push(&layout, GUI_LAYOUT_TAB, "Widgets", &state->widget_tab)) {
+            widget_panel(&layout, state);
+            gui_panel_layout_pop(&layout);
+        }
+
+        /* Shelf + Graphes  */
+        gui_panel_layout_flux_fixed(&layout, 180, 1);
+        state->shelf_selection = gui_panel_shelf_begin(&layout, &tab, shelfs,
+            LEN(shelfs), state->shelf_selection, state->shelf_scrollbar);
+        graph_panel(&tab, state->shelf_selection);
+        state->shelf_scrollbar = gui_panel_shelf_end(&layout, &tab);
+
+        /* Tables */
+        gui_panel_layout_flux_fixed(&layout, 180, 1);
+        gui_panel_group_begin(&layout, &tab, "Table", state->table_scrollbar);
+        table_panel(&tab);
+        state->table_scrollbar = gui_panel_group_end(&layout, &tab);
+
+        {
+            /* Tree */
+            struct gui_tree tree;
+            gui_panel_layout_flux_fixed(&layout, 250, 1);
+            gui_panel_tree_begin(&layout, &tree, "Tree", 20, state->tree_offset);
+            upload_tree(&state->tree, &tree, &state->tree.root);
+            state->tree_offset = gui_panel_tree_end(&layout, &tree);
+        }
+    }
+    gui_panel_end(&layout, &gui->panel);
 }
 

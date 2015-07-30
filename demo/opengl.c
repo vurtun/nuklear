@@ -406,7 +406,7 @@ draw_circle(float x, float y, float r, const gui_byte *c)
 }
 
 static void
-execute(struct gui_command_buffer *list, int width, int height)
+draw(struct gui_command_buffer *list, int width, int height)
 {
     const struct gui_command *cmd;
     glPushAttrib(GL_ENABLE_BIT|GL_COLOR_BUFFER_BIT|GL_TRANSFORM_BIT);
@@ -470,14 +470,6 @@ execute(struct gui_command_buffer *list, int width, int height)
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
     glPopAttrib();
-}
-
-static void
-draw(struct gui_stack *stack, int width, int height)
-{
-    struct gui_panel*iter;
-    gui_foreach_panel(iter, stack)
-        execute(iter->buffer, width, height);
 }
 
 static void
@@ -608,12 +600,11 @@ main(int argc, char *argv[])
         /* Draw */
         glClearColor(0.4f, 0.4f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-        draw(&gui.stack, width, height);
+        draw(&gui.buffer, width, height);
         SDL_GL_SwapWindow(win);
 
         /* Timing */
         dt = SDL_GetTicks() - started;
-        gui.ms = dt;
         if (dt < DTIME)
             SDL_Delay(DTIME - dt);
     }

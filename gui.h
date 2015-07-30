@@ -25,8 +25,6 @@ extern "C" {
 #endif
 
 /* Constants */
-#define GUI_BORDER gui_true
-#define GUI_NO_BORDER gui_false
 #define GUI_UTF_INVALID 0xFFFD
 #define GUI_UTF_SIZE 4
 /* describes the number of bytes a glyph consists of*/
@@ -702,21 +700,27 @@ struct gui_clipboard {
 typedef struct gui_buffer gui_edit_buffer;
 struct gui_edit_box {
     gui_edit_buffer buffer;
+    /* glyph buffer to add text into */
     gui_bool active;
+    /* flag indicating if the buffer is currently being modified  */
     gui_size cursor;
+    /* current glyph (not byte) cursor position */
     gui_size glyphes;
+    /* number of glyphes inside the edit box */
     struct gui_clipboard clip;
+    /* copy paste callbacks */
     gui_filter filter;
+    /* input filter callback */
 };
 
 /* filter function */
-gui_bool gui_filter_input_default(gui_long unicode);
-gui_bool gui_filter_input_ascii(gui_long unicode);
-gui_bool gui_filter_input_float(gui_long unicode);
-gui_bool gui_filter_input_decimal(gui_long unicode);
-gui_bool gui_filter_input_hex(gui_long unicode);
-gui_bool gui_filter_input_oct(gui_long unicode);
-gui_bool gui_filter_input_binary(gui_long unicode);
+gui_bool gui_filter_default(gui_long unicode);
+gui_bool gui_filter_ascii(gui_long unicode);
+gui_bool gui_filter_float(gui_long unicode);
+gui_bool gui_filter_decimal(gui_long unicode);
+gui_bool gui_filter_hex(gui_long unicode);
+gui_bool gui_filter_oct(gui_long unicode);
+gui_bool gui_filter_binary(gui_long unicode);
 
 /* editbox */
 void gui_edit_box_init(struct gui_edit_box*, struct gui_allocator*, gui_size initial,
@@ -1377,6 +1381,8 @@ enum gui_config_colors {
     GUI_COLOR_SCROLLBAR_CURSOR,
     GUI_COLOR_SCROLLBAR_BORDER,
     GUI_COLOR_TABLE_LINES,
+    GUI_COLOR_TAB_HEADER,
+    GUI_COLOR_TAB_BORDER,
     GUI_COLOR_SHELF,
     GUI_COLOR_SHELF_TEXT,
     GUI_COLOR_SHELF_ACTIVE,
@@ -1403,6 +1409,7 @@ enum gui_config_properties {
     GUI_PROPERTY_SCALER_SIZE,
     GUI_PROPERTY_SCROLLBAR_WIDTH,
     GUI_PROPERTY_SIZE,
+    GUI_PROPERTY_NODE_SPACING,
     GUI_PROPERTY_MAX
 };
 
@@ -1584,86 +1591,6 @@ enum gui_widget_state {
     GUI_ROM /* The widget is partially visible and cannot be updated */
 };
 
-enum gui_table_lines {
-    GUI_TABLE_HHEADER = 0x01,
-    /* Horizontal table header lines */
-    GUI_TABLE_VHEADER = 0x02,
-    /* Vertical table header lines */
-    GUI_TABLE_HBODY = 0x04,
-    /* Horizontal table body lines */
-    GUI_TABLE_VBODY = 0x08
-    /* Vertical table body lines */
-};
-
-enum gui_graph_type {
-    GUI_GRAPH_LINES,
-    /* Line graph with each data point being connected with its previous and next node */
-    GUI_GRAPH_COLUMN,
-    /* Column graph/Histogram with value represented as bars */
-    GUI_GRAPH_MAX
-};
-
-struct gui_graph {
-    gui_bool valid;
-    /* graph valid flag to make sure that the graph is visible */
-    enum gui_graph_type type;
-    /* graph type with either line or column graph */
-    gui_float x, y;
-    /* graph canvas space position */
-    gui_float w, h;
-    /* graph canvas space size */
-    gui_float min, max;
-    /* min and max value for correct scaling of values */
-    struct gui_vec2 last;
-    /* last line graph point to connect to. Only used by the line graph */
-    gui_size index;
-    /* current graph value index*/
-    gui_size count;
-    /* number of values inside the graph */
-};
-
-enum gui_panel_tab {
-    GUI_MAXIMIZED = gui_false,
-    /* Flag indicating that the panel tab is open */
-    GUI_MINIMIZED = gui_true
-    /* Flag indicating that the panel tab is closed */
-};
-
-enum gui_panel_header_flags {
-    GUI_CLOSEABLE = 0x01,
-    /* adds a closeable icon into the header */
-    GUI_MINIMIZABLE = 0x02,
-    /* adds a minimize icon into the header */
-    GUI_SCALEABLE = 0x04,
-    /* adds a scaleable flag icon into the header */
-    GUI_MOVEABLE = 0x08
-    /* adds a moveable flag icon into the header */
-};
-
-enum gui_panel_header_symbol {
-    GUI_SYMBOL_X,
-    GUI_SYMBOL_UNDERSCORE,
-    GUI_SYMBOL_CIRCLE,
-    GUI_SYMBOL_CIRCLE_FILLED,
-    GUI_SYMBOL_RECT,
-    GUI_SYMBOL_RECT_FILLED,
-    GUI_SYMBOL_TRIANGLE_UP,
-    GUI_SYMBOL_TRIANGLE_DOWN,
-    GUI_SYMBOL_TRIANGLE_LEFT,
-    GUI_SYMBOL_TRIANGLE_RIGHT,
-    GUI_SYMBOL_PLUS,
-    GUI_SYMBOL_MINUS,
-    GUI_SYMBOL_IMAGE,
-    GUI_SYMBOL_MAX
-};
-
-enum gui_panel_header_align {
-    GUI_HEADER_LEFT,
-    /* header elements are added at the left side of the header */
-    GUI_HEADER_RIGHT
-    /* header elements are added at the right side of the header */
-};
-
 enum gui_panel_flags {
     GUI_PANEL_HIDDEN = 0x01,
     /* Hiddes the panel and stops any panel interaction and drawing can be set
@@ -1683,9 +1610,6 @@ enum gui_panel_flags {
     /* marks the panel as minimized */
     GUI_PANEL_ACTIVE = 0x40,
     /* INTERNAL ONLY!: marks the panel as active, used by the panel stack */
-    GUI_PANEL_SCROLLBAR = 0x80,
-    /* INTERNAL ONLY!: adds a scrollbar to the panel which enables fixed size
-     * panels with unlimited amount of space to fill */
     GUI_PANEL_TAB = 0x100,
     /* INTERNAL ONLY!: Marks the panel as an subpanel of another panel(Groups/Tabs/Shelf)*/
     GUI_PANEL_DO_NOT_RESET = 0x200
@@ -1730,6 +1654,16 @@ enum gui_panel_row_layout_type {
     /* retain mode widget specific widget pixel width layout */
 };
 
+enum gui_node_state {
+    GUI_MINIMIZED = gui_false,
+    GUI_MAXIMIZED = gui_true
+};
+
+enum gui_panel_layout_node_type {
+    GUI_LAYOUT_NODE,
+    GUI_LAYOUT_TAB
+};
+
 #define GUI_UNDEFINED (-1.0f)
 struct gui_panel_row_layout {
     enum gui_panel_row_layout_type type;
@@ -1750,19 +1684,22 @@ struct gui_panel_row_layout {
     /* total fill ratio */
     struct gui_rect item;
     /* item bounds */
+    struct gui_rect clip;
+    /* temporary clipping rect */
 };
 
 struct gui_panel_header {
     gui_float x, y, w, h;
     /* header bounds */
     gui_float front, back;
-    /* header filling stack */
+    /* visual header filling deque */
 };
 
 struct gui_panel_menu {
     gui_float x, y, w, h;
     /* menu bounds */
     gui_float offset;
+    /* saved panel scrollbar offset */
 };
 
 struct gui_panel_layout {
@@ -1942,6 +1879,41 @@ void gui_panel_end(struct gui_panel_layout*, struct gui_panel*);
     gui_panel_menu_begin            -- marks the beginning of the menubar building process
     gui_panel_menu_end              -- marks the end the menubar build up process
 */
+enum gui_panel_header_flags {
+    GUI_CLOSEABLE = 0x01,
+    /* adds a closeable icon into the header */
+    GUI_MINIMIZABLE = 0x02,
+    /* adds a minimize icon into the header */
+    GUI_SCALEABLE = 0x04,
+    /* adds a scaleable flag icon into the header */
+    GUI_MOVEABLE = 0x08
+    /* adds a moveable flag icon into the header */
+};
+
+enum gui_panel_header_symbol {
+    GUI_SYMBOL_X,
+    GUI_SYMBOL_UNDERSCORE,
+    GUI_SYMBOL_CIRCLE,
+    GUI_SYMBOL_CIRCLE_FILLED,
+    GUI_SYMBOL_RECT,
+    GUI_SYMBOL_RECT_FILLED,
+    GUI_SYMBOL_TRIANGLE_UP,
+    GUI_SYMBOL_TRIANGLE_DOWN,
+    GUI_SYMBOL_TRIANGLE_LEFT,
+    GUI_SYMBOL_TRIANGLE_RIGHT,
+    GUI_SYMBOL_PLUS,
+    GUI_SYMBOL_MINUS,
+    GUI_SYMBOL_IMAGE,
+    GUI_SYMBOL_MAX
+};
+
+enum gui_panel_header_align {
+    GUI_HEADER_LEFT,
+    /* header elements are added at the left side of the header */
+    GUI_HEADER_RIGHT
+    /* header elements are added at the right side of the header */
+};
+
 void gui_panel_header_begin(struct gui_panel_layout*);
 /*  this function begins the panel header build up process */
 gui_bool gui_panel_header_button(struct gui_panel_layout *layout,
@@ -2061,7 +2033,27 @@ void gui_panel_menu_end(struct gui_panel_layout*);
     gui_panel_layout_static_begin       -- creates a free drawing space in the panel
     gui_panel_layout_static_widget      -- pushes a widget into the space
     gui_panel_layout_static_end         -- finishes the free drawingp process
+
+    panel tree layout function API
+    gui_panel_layout_push               -- pushes a new node/collapseable header/tab
+    gui_panel_layout_pop                -- pops the the previously added node
+
 */
+gui_bool gui_panel_layout_push(struct gui_panel_layout*,
+                                enum gui_panel_layout_node_type,
+                                const char *title, enum gui_node_state*);
+/*  this functions pushes either a tree node, collapseable header or tab into
+ *  the current panel layout
+    Input:
+    - title of the node to push into the panel
+    - type of then node with either default node, collapseable header or tab
+    - state of the node with either GUI_MINIMIZED or GUI_MAXIMIZED
+    Output:
+    - returns the updated state as either gui_true if open and gui_false otherwise
+    - updates the state of the node pointer to the updated state
+*/
+void gui_panel_layout_pop(struct gui_panel_layout*);
+/*  this functions ends the previously added node */
 void gui_panel_layout_flux_fixed(struct gui_panel_layout*, gui_float row_height, gui_size cols);
 /*  this function sets the current row layout to a scaleable table like layout where each
     widget occupies a fixed ratio of the panel width
@@ -2442,8 +2434,84 @@ gui_size gui_panel_selector(struct gui_panel_layout*, const char *items[],
     gui_panel_table_begin           -- begin table build up process
     gui_panel_table_row             -- seperates tables rows
     gui_panel_table_end             -- ends the table build up process
-
+    gui_panel_tree_begin            -- begins the tree build up processs
+    gui_panel_tree_begin_node       -- adds and opens a normal node to the tree
+    gui_panel_tree_begin_node_icon  -- adds a opens a node with an icon to the tree
+    gui_panel_tree_end_node         -- ends and closes a previously added node
+    gui_panel_tree_leaf             -- adds a leaf node to a prev opened node
+    gui_panel_tree_leaf_icon        -- adds a leaf icon node to a prev opended node
+    gui_panel_tree_end              -- ends the tree build up process
 */
+enum gui_table_lines {
+    GUI_TABLE_HHEADER = 0x01,
+    /* Horizontal table header lines */
+    GUI_TABLE_VHEADER = 0x02,
+    /* Vertical table header lines */
+    GUI_TABLE_HBODY = 0x04,
+    /* Horizontal table body lines */
+    GUI_TABLE_VBODY = 0x08
+    /* Vertical table body lines */
+};
+
+enum gui_graph_type {
+    GUI_GRAPH_LINES,
+    /* Line graph with each data point being connected with its previous and next node */
+    GUI_GRAPH_COLUMN,
+    /* Column graph/Histogram with value represented as bars */
+    GUI_GRAPH_MAX
+};
+
+struct gui_graph {
+    gui_bool valid;
+    /* graph valid flag to make sure that the graph is visible */
+    enum gui_graph_type type;
+    /* graph type with either line or column graph */
+    gui_float x, y;
+    /* graph canvas space position */
+    gui_float w, h;
+    /* graph canvas space size */
+    gui_float min, max;
+    /* min and max value for correct scaling of values */
+    struct gui_vec2 last;
+    /* last line graph point to connect to. Only used by the line graph */
+    gui_size index;
+    /* current graph value index*/
+    gui_size count;
+    /* number of values inside the graph */
+};
+
+typedef gui_flags gui_tree_node_state;
+enum gui_tree_nodes_states {
+    GUI_NODE_ACTIVE = 0x01,
+    /* the node is currently opened */
+    GUI_NODE_SELECTED = 0x02
+    /* the node has been seleted by the user */
+};
+
+enum gui_tree_node_operation {
+    GUI_NODE_NOP,
+    /* node did not receive a command */
+    GUI_NODE_CUT,
+    /* cut the node from the current tree and add into a buffer */
+    GUI_NODE_CLONE,
+    /* copy current node and add copy into the parent node */
+    GUI_NODE_PASTE,
+    /* paste all node in the buffer into the tree */
+    GUI_NODE_DELETE
+    /* remove the node from the parent tree */
+};
+
+struct gui_tree {
+    struct gui_panel_layout group;
+    /* panel to add the tree into  */
+    gui_float x_off, at_x;
+    /* current x position of the next node */
+    gui_int skip;
+    /* flag that indicates that a node will be skipped */
+    gui_int depth;
+    /* current depth of the tree */
+};
+
 void gui_panel_graph_begin(struct gui_panel_layout*, struct gui_graph*,
                             enum gui_graph_type, gui_size count,
                             gui_float min, gui_float max);
@@ -2499,6 +2567,60 @@ void gui_panel_table_end(struct gui_panel_layout*);
 /*  this function finished the table build up process and reverts the panel back
     to its normal state.
 */
+void gui_panel_tree_begin(struct gui_panel_layout*, struct gui_tree*,
+                            const char*, gui_float row_height, gui_float offset);
+/*  this function begins the tree building process
+    Input:
+    - title describing the tree or NULL
+    - height of every node inside the panel
+    - scrollbar offset
+    Output:
+    - tree build up state structure
+*/
+enum gui_tree_node_operation gui_panel_tree_begin_node(struct gui_tree*, const char*,
+                                                    gui_tree_node_state*);
+/*  this function begins a parent node
+    Input:
+    - title of the node
+    - current node state
+    Output:
+    - operation identifier what should be done with this node
+*/
+enum gui_tree_node_operation gui_panel_tree_begin_node_icon(struct gui_tree*,
+                                                    const char*, struct gui_image,
+                                                    gui_tree_node_state*);
+/*  this function begins a text icon parent node
+    Input:
+    - title of the node
+    - icon of the node
+    - current node state
+    Output:
+    - operation identifier what should be done with this node
+*/
+void gui_panel_tree_end_node(struct gui_tree*);
+/*  this function ends a parent node */
+enum gui_tree_node_operation gui_panel_tree_leaf(struct gui_tree*, const char*,
+                                                    gui_tree_node_state*);
+/*  this function pushes a leaf node to the tree
+    Input:
+    - title of the node
+    - current leaf node state
+    Output:
+    - operation identifier what should be done with this node
+*/
+enum gui_tree_node_operation gui_panel_tree_leaf_icon(struct gui_tree*,
+                                                    const char*, struct gui_image,
+                                                    gui_tree_node_state*);
+/*  this function pushes a leaf icon node to the tree
+    Input:
+    - title of the node
+    - icon of the node
+    - current leaf node state
+    Output:
+    - operation identifier what should be done with this node
+*/
+gui_float gui_panel_tree_end(struct gui_panel_layout*, struct gui_tree*);
+/*  this function ends a the tree building process */
 /*
  * -------------------------------------------------------------
  *                          GROUP
@@ -2508,20 +2630,6 @@ void gui_panel_table_end(struct gui_panel_layout*);
     gui_panel_group_end             -- ends the scrollable space
     gui_panel_shelf_begin           -- begins a shelf with a number of selectable tabs
     gui_panel_shelf_end             -- ends a previously started shelf build up process
-*/
-gui_bool gui_panel_tab_begin(struct gui_panel_layout*, struct gui_panel_layout *tab,
-                            const char*, gui_bool border, gui_bool minimized);
-/*  this function adds a tab subpanel into the parent panel
-    Input:
-    - tab title to write into the header
-    - state of the tab with either collapsed(GUI_MINIMIZED) or open state
-    Output:
-    - tab layout to fill with widgets
-    - wether the tab is currently collapsed(gui_true) or open(gui_false)
-*/
-void gui_panel_tab_end(struct gui_panel_layout*, struct gui_panel_layout *tab);
-/*  this function finishes the previously started tab and allocated the needed
-    tab space in the parent panel
 */
 void gui_panel_group_begin(struct gui_panel_layout*, struct gui_panel_layout *tab,
                             const char *title, gui_float offset);

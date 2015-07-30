@@ -122,7 +122,7 @@ draw_image(NVGcontext *ctx, gui_handle img, float x, float y, float w, float h, 
 }
 
 static void
-execute(NVGcontext *nvg, struct gui_command_buffer *list, int width, int height)
+draw(NVGcontext *nvg, struct gui_command_buffer *list, int width, int height)
 {
     const struct gui_command *cmd;
     glPushAttrib(GL_ENABLE_BIT|GL_COLOR_BUFFER_BIT);
@@ -172,14 +172,6 @@ execute(NVGcontext *nvg, struct gui_command_buffer *list, int width, int height)
     nvgResetScissor(nvg);
     nvgEndFrame(nvg);
     glPopAttrib();
-}
-
-static void
-draw(NVGcontext *nvg,struct gui_stack *stack, int width, int height)
-{
-    struct gui_panel*iter;
-    gui_foreach_panel(iter, stack)
-        execute(nvg, iter->buffer, width, height);
 }
 
 static void
@@ -323,13 +315,11 @@ main(int argc, char *argv[])
         /* Draw */
         glClearColor(0.4f, 0.4f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-        draw(vg, &gui.stack, width, height);
-        gui.ms = SDL_GetTicks() - started;
+        draw(vg, &gui.buffer, width, height);
         SDL_GL_SwapWindow(win);
 
         /* Timing */
         dt = SDL_GetTicks() - started;
-        gui.ms = dt;
         if (dt < DTIME)
             SDL_Delay(DTIME - dt);
     }

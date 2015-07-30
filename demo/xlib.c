@@ -324,7 +324,7 @@ surface_del(XSurface *surf)
 }
 
 static void
-execute(XSurface *surf, struct gui_command_buffer *buffer)
+draw(XSurface *surf, struct gui_command_buffer *buffer)
 {
     const struct gui_command *cmd;
     gui_foreach_command(cmd, buffer) {
@@ -365,14 +365,6 @@ execute(XSurface *surf, struct gui_command_buffer *buffer)
         default: break;
         }
     }
-}
-
-static void
-draw(XSurface *surf, struct gui_stack *stack)
-{
-    struct gui_panel *iter;
-    gui_foreach_panel(iter, stack)
-        execute(surf, iter->buffer);
 }
 
 static void
@@ -498,13 +490,12 @@ main(int argc, char *argv[])
         /* Draw */
         XClearWindow(xw.dpy, xw.win);
         surface_clear(xw.surf, 0x00646464);
-        draw(xw.surf, &gui.stack);
+        draw(xw.surf, &gui.buffer);
         surface_blit(xw.win, xw.surf, xw.width, xw.height);
         XFlush(xw.dpy);
 
         /* Timing */
         dt = timestamp() - started;
-        gui.ms = (unsigned int)dt;
         if (dt < DTIME)
             sleep_for(DTIME - dt);
     }
