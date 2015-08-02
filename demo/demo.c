@@ -1,5 +1,5 @@
 #define MAX_BUFFER  64
-#define MAX_MEMORY  (32 * 1024)
+#define MAX_MEMORY  (16 * 1024)
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 
@@ -41,7 +41,6 @@ struct state {
     /* tree */
     struct test_tree tree;
     struct tree_node nodes[8];
-    gui_float tree_offset;
 
     /* tabs */
     enum gui_node_state config_tab;
@@ -52,9 +51,9 @@ struct state {
     enum gui_node_state flag_tab;
 
     /* scrollbars */
-    gui_float shelf_scrollbar;
-    gui_float table_scrollbar;
-    gui_float tree_scrollbar;
+    struct gui_vec2 shelf_scrollbar;
+    struct gui_vec2 table_scrollbar;
+    struct gui_vec2 tree_scrollbar;
 
     /* color picker */
     gui_bool picker_active;
@@ -221,7 +220,7 @@ widget_panel(struct gui_panel_layout *panel, struct state *demo)
     demo->item_current = gui_panel_selector(panel, items, LEN(items), demo->item_current);
     demo->spinner = gui_panel_spinner(panel, 0, demo->spinner, 250, 10, &demo->spinner_active);
     demo->in_len = gui_panel_edit(panel, demo->in_buf, demo->in_len, MAX_BUFFER,
-                        &demo->in_active, GUI_INPUT_DEFAULT);
+                        &demo->in_active, NULL, GUI_INPUT_DEFAULT);
 
     if (demo->scaleable) {
         gui_panel_layout_flux_row_begin(panel, 30, 2);
@@ -412,7 +411,7 @@ properties_tab(struct gui_panel_layout *panel, struct gui_config *config)
         "scaler size:", "scrollbar:"};
 
     gui_panel_layout_flux_fixed(panel, 30, 3);
-    for (i = 0; i <= GUI_PROPERTY_SCROLLBAR_WIDTH; ++i) {
+    for (i = 0; i <= GUI_PROPERTY_SCROLLBAR_SIZE; ++i) {
         gui_int tx, ty;
         gui_panel_label(panel, properties[i], GUI_TEXT_LEFT);
         tx = gui_panel_spinner(panel,0,(gui_int)config->properties[i].x, 20, 1, NULL);
@@ -511,19 +510,47 @@ color_tab(struct gui_panel_layout *panel, struct state *control, struct gui_conf
 }
 
 static void
+copy(gui_handle handle, const char *text, gui_size size)
+{
+    gui_char buffer[1024];
+    UNUSED(handle);
+    if (size >= 1023) return;
+    memcpy(buffer, text, size);
+    buffer[size] = '\0';
+    clipboard_set(buffer);
+}
+
+static void
+paste(gui_handle handle, struct gui_edit_box *box)
+{
+    gui_size len;
+    const char *text;
+    UNUSED(handle);
+    if (!clipboard_is_filled()) return;
+    text = clipboard_get();
+    len = strlen(text);
+    gui_edit_box_add(box, text, len);
+}
+
+static void
 init_demo(struct demo_gui *gui, struct gui_font *font)
 {
     struct gui_config *config = &gui->config;
     struct state *win = &gui->state;
+    struct gui_clipboard clip;
     gui->font = *font;
     gui->running = gui_true;
+
+    clip.userdata.ptr = NULL,
+    clip.copy = copy;
+    clip.paste = paste;
 
     gui_command_buffer_init_fixed(&gui->buffer, gui->memory, MAX_MEMORY, GUI_CLIP);
     gui_config_default(config, GUI_DEFAULT_ALL, font);
     gui_panel_init(&gui->panel, 30, 30, 280, 530,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE, &gui->buffer, config);
 
-    gui_edit_box_init_fixed(&win->input, win->input_buffer, MAX_BUFFER, NULL, NULL);
+    gui_edit_box_init_fixed(&win->input, win->input_buffer, MAX_BUFFER, &clip, NULL);
     win->config_tab = GUI_MINIMIZED;
     win->widget_tab = GUI_MINIMIZED;
     win->style_tab = GUI_MINIMIZED;
@@ -642,9 +669,9 @@ run_demo(struct demo_gui *gui, struct gui_input *input)
             /* Tree */
             struct gui_tree tree;
             gui_panel_layout_flux_fixed(&layout, 250, 1);
-            gui_panel_tree_begin(&layout, &tree, "Tree", 20, state->tree_offset);
+            gui_panel_tree_begin(&layout, &tree, "Tree", 20, state->tree_scrollbar);
             upload_tree(&state->tree, &tree, &state->tree.root);
-            state->tree_offset = gui_panel_tree_end(&layout, &tree);
+            state->tree_scrollbar = gui_panel_tree_end(&layout, &tree);
         }
     }
     gui_panel_end(&layout, &gui->panel);

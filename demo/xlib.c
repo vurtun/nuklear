@@ -23,6 +23,11 @@
 #define UNUSED(a)   ((void)(a))
 
 #include "../gui.h"
+
+static void clipboard_set(const char *text){UNUSED(text);}
+static gui_bool clipboard_is_filled(void){return gui_false;}
+static const char* clipboard_get(void) {return NULL;}
+
 #include "demo.c"
 
 typedef struct XFont XFont;

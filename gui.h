@@ -40,8 +40,8 @@ Since the gui uses ANSI C which does not guarantee to have fixed types, you need
 to set the appropriate size of each type. However if your developer environment
 supports fixed size types by the <stdint> header you can just uncomment the define
 to automatically set the correct size for each type in the library:
-#define GUI_USE_FIXED_TYPES
 */
+#define GUI_USE_FIXED_TYPES
 #ifdef GUI_USE_FIXED_TYPES
 #include <stdint.h>
 typedef char gui_char;
@@ -88,9 +88,10 @@ struct gui_image {gui_handle handle; struct gui_rect region;};
 
 /* Callbacks */
 struct gui_font;
+struct gui_edit_box;
 typedef gui_bool(*gui_filter)(gui_long unicode);
 typedef gui_size(*gui_text_width_f)(gui_handle, const gui_char*, gui_size);
-typedef gui_size(*gui_paste_f)(gui_handle, char *buffer, gui_size max);
+typedef void(*gui_paste_f)(gui_handle, struct gui_edit_box*);
 typedef void(*gui_copy_f)(gui_handle, const char*, gui_size size);
 
 /*
@@ -697,6 +698,12 @@ struct gui_clipboard {
     gui_copy_f copy;
 };
 
+struct gui_selection {
+    gui_bool active;
+    gui_size begin;
+    gui_size end;
+};
+
 typedef struct gui_buffer gui_edit_buffer;
 struct gui_edit_box {
     gui_edit_buffer buffer;
@@ -711,6 +718,8 @@ struct gui_edit_box {
     /* copy paste callbacks */
     gui_filter filter;
     /* input filter callback */
+    struct gui_selection sel;
+    /* text selection */
 };
 
 /* filter function */
@@ -940,7 +949,7 @@ struct gui_slider {
     /* slider cursor color */
 };
 
-struct gui_scroll {
+struct gui_scrollbar {
     gui_float rounding;
     /* scrollbar rectangle rounding */
     struct gui_color highlight;
@@ -1205,7 +1214,7 @@ void gui_editbox(struct gui_command_buffer*, gui_float x, gui_float y, gui_float
 */
 gui_size gui_edit(struct gui_command_buffer*, gui_float x, gui_float y, gui_float w,
                     gui_float h, gui_char*, gui_size, gui_size max, gui_bool*,
-                    const struct gui_edit*, enum gui_input_filter filter,
+                    gui_size *cursor, const struct gui_edit*, enum gui_input_filter filter,
                     const struct gui_input*, const struct gui_font*);
 /*  this function executes a editbox widget
     Input:
@@ -1226,9 +1235,9 @@ gui_size gui_edit(struct gui_command_buffer*, gui_float x, gui_float y, gui_floa
 */
 gui_size gui_edit_filtered(struct gui_command_buffer*, gui_float x, gui_float y,
                             gui_float w, gui_float h, gui_char*, gui_size,
-                            gui_size max, gui_bool*, const struct gui_edit*,
-                            gui_filter filter, const struct gui_input*,
-                            const struct gui_font*);
+                            gui_size max, gui_bool*, gui_size *cursor,
+                            const struct gui_edit*, gui_filter filter,
+                            const struct gui_input*, const struct gui_font*);
 /*  this function executes a editbox widget
     Input:
     - output command buffer for drawing
@@ -1283,10 +1292,29 @@ gui_size gui_selector(struct gui_command_buffer*, gui_float x, gui_float y,
     Output:
     - returns the from the user input updated spinner value
 */
-gui_float gui_scroll(struct gui_command_buffer*, gui_float x, gui_float y,
-                    gui_float w, gui_float h, gui_float offset, gui_float target,
-                    gui_float step, const struct gui_scroll*, const struct gui_input*);
-/*  this function executes a scrollbar widget
+gui_float gui_scrollbar_vertical(struct gui_command_buffer*, gui_float x, gui_float y,
+                        gui_float w, gui_float h, gui_float offset, gui_float target,
+                        gui_float step, const struct gui_scrollbar*,
+                        const struct gui_input*);
+/*  this function executes a vertical scrollbar widget
+    Input:
+    - output command buffer for draw commands
+    - (x,y) position
+    - (width, height) size
+    - scrollbar offset in source pixel
+    - destination pixel size
+    - step pixel size if the scrollbar up- or down button is pressed
+    - visual widget style structure describing the selector
+    - input structure to update the slider with
+    Output:
+    - returns the from the user input updated scrollbar offset in pixels
+*/
+gui_float gui_scrollbar_horizontal(struct gui_command_buffer*, gui_float x,
+                                    gui_float y, gui_float w, gui_float h,
+                                    gui_float offset, gui_float target,
+                                    gui_float step, const struct gui_scrollbar*,
+                                    const struct gui_input*);
+/*  this function executes a horizontal scrollbar widget
     Input:
     - output command buffer for draw commands
     - (x,y) position
@@ -1407,7 +1435,7 @@ enum gui_config_properties {
     GUI_PROPERTY_ITEM_PADDING,
     GUI_PROPERTY_PADDING,
     GUI_PROPERTY_SCALER_SIZE,
-    GUI_PROPERTY_SCROLLBAR_WIDTH,
+    GUI_PROPERTY_SCROLLBAR_SIZE,
     GUI_PROPERTY_SIZE,
     GUI_PROPERTY_NODE_SPACING,
     GUI_PROPERTY_MAX
@@ -1623,7 +1651,7 @@ struct gui_panel {
     /* size with width and height of the panel */
     gui_flags flags;
     /* panel flags modifing its behavior */
-    gui_float offset;
+    struct gui_vec2 offset;
     /* flag indicating if the panel is collapsed */
     const struct gui_config *config;
     /* configuration reference describing the panel style */
@@ -1698,7 +1726,7 @@ struct gui_panel_header {
 struct gui_panel_menu {
     gui_float x, y, w, h;
     /* menu bounds */
-    gui_float offset;
+    struct gui_vec2 offset;
     /* saved panel scrollbar offset */
 };
 
@@ -1707,7 +1735,7 @@ struct gui_panel_layout {
     /* panel flags modifing its behavior */
     gui_float x, y, w, h;
     /* position and size of the panel in the os window */
-    gui_float offset;
+    struct gui_vec2 offset;
     /* panel scrollbar offset */
     gui_bool is_table;
     /* flag indicating if the panel is currently creating a table */
@@ -1715,7 +1743,7 @@ struct gui_panel_layout {
     /* flags describing the line drawing for every row in the table */
     gui_bool valid;
     /* flag inidicating if the panel is visible */
-    gui_float at_x, at_y;
+    gui_float at_x, at_y, max_x;
     /* index position of the current widget row and column  */
     gui_float width, height;
     /* size of the actual useable space inside the panel */
@@ -2006,9 +2034,9 @@ void gui_panel_menu_end(struct gui_panel_layout*);
     The first layout type with a fixed size table layout only needs to be set once
     and works over row boundaries this includes `gui_panel_layout_flux_fixed`
     as well as `gui_panel_layout_static_fixed`.
-    The second layout tike with its `gui_panel_layout_flux_row_xxx` and
-    `gui_panel_layout_static_row_xxx` functions only works for one row and
-    as to be set for each row. In addition the `gui_panel_layout_xxx_row_push`
+    The second layout type with functions `gui_panel_layout_flux_row_xxx` and
+    `gui_panel_layout_static_row_xxx` only works for one row and
+    has to be set for each row. In addition the `gui_panel_layout_xxx_row_push`
     function has to be called for each widget.
     The free position API works completly on the allocated space and the
     `gui_panel_layout_xxxx_widget` functions need to be called for each widget
@@ -2372,7 +2400,8 @@ gui_size gui_panel_progress(struct gui_panel_layout*, gui_size cur, gui_size max
 void gui_panel_editbox(struct gui_panel_layout*, struct gui_edit_box*);
 /*  this function creates an editbox with copy & paste functionality and text buffering */
 gui_size gui_panel_edit(struct gui_panel_layout*, gui_char *buffer, gui_size len,
-                        gui_size max, gui_bool *active, enum gui_input_filter);
+                        gui_size max, gui_bool *active, gui_size *cursor,
+                        enum gui_input_filter);
 /*  this function creates an editbox to updated/insert user text input
     Input:
     - buffer to fill with user input
@@ -2385,8 +2414,8 @@ gui_size gui_panel_edit(struct gui_panel_layout*, gui_char *buffer, gui_size len
     - current state of the editbox with active(gui_true) or inactive(gui_false)
 */
 gui_size gui_panel_edit_filtered(struct gui_panel_layout*, gui_char *buffer,
-                                gui_size len, gui_size max,
-                                gui_bool *active, gui_filter);
+                                gui_size len, gui_size max,  gui_bool *active,
+                                gui_size *cursor, gui_filter);
 /*  this function creates an editbox to updated/insert filtered user text input
     Input:
     - buffer to fill with user input
@@ -2568,7 +2597,7 @@ void gui_panel_table_end(struct gui_panel_layout*);
     to its normal state.
 */
 void gui_panel_tree_begin(struct gui_panel_layout*, struct gui_tree*,
-                            const char*, gui_float row_height, gui_float offset);
+                            const char*, gui_float row_height, struct gui_vec2 offset);
 /*  this function begins the tree building process
     Input:
     - title describing the tree or NULL
@@ -2619,7 +2648,7 @@ enum gui_tree_node_operation gui_panel_tree_leaf_icon(struct gui_tree*,
     Output:
     - operation identifier what should be done with this node
 */
-gui_float gui_panel_tree_end(struct gui_panel_layout*, struct gui_tree*);
+struct gui_vec2 gui_panel_tree_end(struct gui_panel_layout*, struct gui_tree*);
 /*  this function ends a the tree building process */
 /*
  * -------------------------------------------------------------
@@ -2632,7 +2661,7 @@ gui_float gui_panel_tree_end(struct gui_panel_layout*, struct gui_tree*);
     gui_panel_shelf_end             -- ends a previously started shelf build up process
 */
 void gui_panel_group_begin(struct gui_panel_layout*, struct gui_panel_layout *tab,
-                            const char *title, gui_float offset);
+                            const char *title, struct gui_vec2 offset);
 /*  this function adds a grouped subpanel into the parent panel
     IMPORTANT: You need to set the height of the group with panel_row_layout
     Input:
@@ -2641,14 +2670,14 @@ void gui_panel_group_begin(struct gui_panel_layout*, struct gui_panel_layout *ta
     Output:
     - group layout to fill with widgets
 */
-gui_float gui_panel_group_end(struct gui_panel_layout*, struct gui_panel_layout* tab);
+struct gui_vec2 gui_panel_group_end(struct gui_panel_layout*, struct gui_panel_layout* tab);
 /*  this function finishes the previously started group layout
     Output:
     - The from user input updated group scrollbar pixel offset
 */
 gui_size gui_panel_shelf_begin(struct gui_panel_layout*, struct gui_panel_layout*,
                                 const char *tabs[], gui_size size,
-                                gui_size active, gui_float offset);
+                                gui_size active, struct gui_vec2 offset);
 /*  this function adds a shelf subpanel into the parent panel
     IMPORTANT: You need to set the height of the shelf with panel_row_layout
     Input:
@@ -2660,7 +2689,7 @@ gui_size gui_panel_shelf_begin(struct gui_panel_layout*, struct gui_panel_layout
     - group layout to fill with widgets
     - the from user input updated current shelf tab index
 */
-gui_float gui_panel_shelf_end(struct gui_panel_layout*, struct gui_panel_layout*);
+struct gui_vec2 gui_panel_shelf_end(struct gui_panel_layout*, struct gui_panel_layout*);
 /*  this function finishes the previously started shelf layout
     Input:
     - previously started group layout

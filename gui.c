@@ -1047,59 +1047,80 @@ gui_edit_box_add(struct gui_edit_box *eb, const char *str, gui_size len)
         res = gui_edit_buffer_insert(&eb->buffer, offset, str, len);
     }
     if (res) {
-        eb->cursor++;
-        eb->glyphes++;
+        gui_size l = gui_utf_len(str, len);
+        eb->cursor += l;
+        eb->glyphes += l;
     }
 }
 
-static void
+static gui_size
 gui_edit_box_buffer_input(struct gui_edit_box *box, const struct gui_input *i)
 {
     gui_long unicode;
     gui_size src_len = 0;
     gui_size text_len = 0, glyph_len = 0;
+    gui_size glyphes = 0;
 
     GUI_ASSERT(box);
     GUI_ASSERT(i);
-    if (!box || !i) return;
+    if (!box || !i) return 0;
 
     /* add user provided text to buffer until either no input or buffer space left*/
     glyph_len = gui_utf_decode(i->text, &unicode, i->text_len);
     while (glyph_len && ((text_len+glyph_len) <= i->text_len)) {
         /* filter value to make sure the value is correct */
         if (box->filter(unicode)) {
-            gui_size n = 0;
-            for (n = 0; n < glyph_len; n++)
-                gui_edit_box_add(box, &i->text[text_len + n], glyph_len);
+            gui_edit_box_add(box, &i->text[text_len], glyph_len);
             text_len += glyph_len;
+            glyphes++;
         }
         src_len = src_len + glyph_len;
         glyph_len = gui_utf_decode(i->text + src_len, &unicode, i->text_len - src_len);
     }
+    return glyphes;
 }
 
 void
-gui_edit_box_remove(struct gui_edit_box *eb)
+gui_edit_box_remove(struct gui_edit_box *box)
 {
-    gui_long unicode;
     gui_size len;
-    gui_int cursor;
-    gui_char *glyph;
-    gui_size offset;
+    gui_char *buf;
+    gui_size min, maxi, diff;
+    GUI_ASSERT(box);
+    if (!box) return;
+    if (!box->glyphes) return;
 
-    GUI_ASSERT(eb);
-    if (!eb) return;
+    buf = (gui_char*)box->buffer.memory.ptr;
+    min = MIN(box->sel.end, box->sel.begin);
+    maxi = MAX(box->sel.end, box->sel.begin);
+    diff = maxi - min;
 
-    cursor = (gui_int)eb->cursor - 1;
-    glyph = gui_edit_buffer_at(&eb->buffer, cursor, &unicode, &len);
-    if (!glyph || !len) return;
-    offset = (gui_size)(glyph - (gui_char*)eb->buffer.memory.ptr);
-    gui_edit_buffer_del(&eb->buffer, offset, len);
+    if (diff && box->cursor != box->glyphes) {
+        gui_size off;
+        gui_long unicode;
+        gui_char *begin, *end;
 
-    GUI_ASSERT(eb->cursor > 0);
-    GUI_ASSERT(eb->glyphes > 0);
-    eb->cursor--;
-    eb->glyphes--;
+        begin = gui_edit_buffer_at(&box->buffer, (gui_int)min, &unicode, &len);
+        end = gui_edit_buffer_at(&box->buffer, (gui_int)maxi, &unicode, &len);
+        len = (gui_size)(end - begin);
+        off = (gui_size)(begin - buf);
+        gui_edit_buffer_del(&box->buffer, off, len);
+        box->glyphes = gui_utf_len(buf, box->buffer.allocated);
+    } else {
+        gui_long unicode;
+        gui_int cursor;
+        gui_char *glyph;
+        gui_size offset;
+
+        cursor = (gui_int)box->cursor - 1;
+        glyph = gui_edit_buffer_at(&box->buffer, cursor, &unicode, &len);
+        if (!glyph || !len) return;
+        offset = (gui_size)(glyph - (gui_char*)box->buffer.memory.ptr);
+        gui_edit_buffer_del(&box->buffer, offset, len);
+        box->glyphes--;
+    }
+    if (box->cursor >= box->glyphes) box->cursor = box->glyphes;
+    else if (box->cursor > 0) box->cursor--;
 }
 
 gui_char*
@@ -1642,7 +1663,7 @@ gui_progress(struct gui_command_buffer *out, gui_float x, gui_float y,
 
 
 static gui_size
-gui_utf_glyph_index_at_pos(const struct gui_font *font, const char *text,
+gui_font_glyph_index_at_pos(const struct gui_font *font, const char *text,
     gui_size text_len, gui_float xoff)
 {
     gui_long unicode;
@@ -1663,14 +1684,43 @@ gui_utf_glyph_index_at_pos(const struct gui_font *font, const char *text,
     return glyph_offset;
 }
 
+static gui_size
+gui_font_glyphes_fitting_in_space(const struct gui_font *font, const char *text,
+    gui_size text_len, gui_float space, gui_size *glyphes, gui_float *text_width)
+{
+    gui_size glyph_len;
+    gui_float width = 0;
+    gui_float last_width = 0;
+    gui_long unicode;
+    gui_size offset = 0;
+    gui_size g = 0;
+    gui_size s;
+
+    glyph_len = gui_utf_decode(text, &unicode, text_len);
+    s = font->width(font->userdata, text, glyph_len);
+    width = last_width = (gui_float)s;
+    while ((width < space) && text_len) {
+        g++;
+        offset += glyph_len;
+        text_len -= glyph_len;
+        last_width = width;
+        glyph_len = gui_utf_decode(&text[offset], &unicode, text_len);
+        s = font->width(font->userdata, &text[offset], glyph_len);
+        width += (gui_float)s;
+    }
+    *glyphes = g;
+    *text_width = last_width;
+    return offset;
+}
+
 void
 gui_editbox(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w,
-                gui_float h, struct gui_edit_box *box, const struct gui_edit *field,
-                const struct gui_input *in, const struct gui_font *font)
+    gui_float h, struct gui_edit_box *box, const struct gui_edit *field,
+    const struct gui_input *in, const struct gui_font *font)
 {
     gui_float input_w, input_h;
     gui_char *buffer;
-    gui_size len, max;
+    gui_size len;
 
     GUI_ASSERT(out);
     GUI_ASSERT(font);
@@ -1680,6 +1730,8 @@ gui_editbox(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float 
 
     input_w = MAX(w, 2 * field->padding.x + 2 * field->border_size);
     input_h = MAX(h, font->height + (2 * field->padding.y + 2 * field->border_size));
+    len = gui_edit_box_len(box);
+    buffer = gui_edit_box_get(box);
 
     /* draw editbox background and border */
     gui_command_buffer_push_rect(out,x,y,input_w,input_h,field->rounding,field->border);
@@ -1687,86 +1739,193 @@ gui_editbox(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float 
         input_w - 2 * field->border_size, input_h - 2 * field->border_size,
         field->rounding, field->background);
 
-    /* check if editbox was activated/deactivated */
+    /* check if the editbox is activated/deactivated */
     if (in && in->mouse_clicked && in->mouse_down)
         box->active = GUI_INBOX(in->mouse_pos.x,in->mouse_pos.y,x,y,input_w, input_h);
 
-    max = box->buffer.memory.size;
-    len = gui_edit_box_len(box);
-    buffer = gui_edit_box_get(box);
+    /* input handling */
     if (box->active && in) {
-        /* update input buffer by user input */
+        gui_size min = MIN(box->sel.end, box->sel.begin);
+        gui_size maxi = MAX(box->sel.end, box->sel.begin);
+        gui_size diff = maxi - min;
+
+        /* text manipulation */
         if (gui_input_pressed(in,GUI_KEY_DEL)||gui_input_pressed(in,GUI_KEY_BACKSPACE))
             gui_edit_box_remove(box);
         if (gui_input_pressed(in, GUI_KEY_ENTER))
             box->active = gui_false;
-        if (gui_input_pressed(in, GUI_KEY_COPY) && box->clip.copy)
-            box->clip.copy(box->clip.userdata, buffer, len);
-        if (gui_input_pressed(in, GUI_KEY_PASTE) && box->clip.paste)
-            box->buffer.allocated = box->clip.paste(box->clip.userdata, buffer, max);
-        if (gui_input_pressed(in, GUI_KEY_SPACE))
+        if (gui_input_pressed(in, GUI_KEY_SPACE)) {
+            if (diff && box->cursor != box->glyphes)
+                gui_edit_box_remove(box);
             gui_edit_box_add(box, " ", 1);
-        if (gui_input_pressed(in, GUI_KEY_LEFT))
+        }
+        if (in->text_len) {
+            if (diff && box->cursor != box->glyphes) {
+                /* replace text selection */
+                gui_edit_box_remove(box);
+                box->cursor = min;
+                gui_edit_box_buffer_input(box, in);
+                box->sel.begin = box->cursor;
+                box->sel.end = box->cursor;
+            } else{
+                /* append text into the buffer */
+                gui_edit_box_buffer_input(box, in);
+                box->sel.begin = box->cursor;
+                box->sel.end = box->cursor;
+            }
+       }
+
+        /* cursor key movement */
+        if (gui_input_pressed(in, GUI_KEY_LEFT)) {
             box->cursor = (gui_size)MAX(0, (gui_int)box->cursor-1);
-        if (gui_input_pressed(in, GUI_KEY_RIGHT))
+            box->sel.begin = box->cursor;
+            box->sel.end = box->cursor;
+        }
+        if (gui_input_pressed(in, GUI_KEY_RIGHT)) {
             box->cursor = MIN((!box->glyphes) ? 0 : box->glyphes, box->cursor+1);
-        if (in->text_len)
-            gui_edit_box_buffer_input(box, in);
+            box->sel.begin = box->cursor;
+            box->sel.end = box->cursor;
+        }
+
+        /* copy & cut & paste functionatlity */
+        if (gui_input_pressed(in, GUI_KEY_PASTE) && box->clip.paste)
+            box->clip.paste(box->clip.userdata, box);
+        if ((gui_input_pressed(in, GUI_KEY_COPY) && box->clip.copy) ||
+            (gui_input_pressed(in, GUI_KEY_CUT) && box->clip.copy)) {
+            if (diff && box->cursor != box->glyphes) {
+                /* copy or cut text selection */
+                gui_size l;
+                gui_long unicode;
+                gui_char *begin, *end;
+                begin = gui_edit_buffer_at(&box->buffer, (gui_int)min, &unicode, &l);
+                end = gui_edit_buffer_at(&box->buffer, (gui_int)maxi, &unicode, &l);
+                box->clip.copy(box->clip.userdata, begin, (gui_size)(end - begin));
+
+                /* cut text out of the editbox */
+                if (gui_input_pressed(in, GUI_KEY_CUT)) {
+                }
+            } else {
+                /* copy or cut complete buffer */
+                box->clip.copy(box->clip.userdata, buffer, len);
+                if (gui_input_pressed(in, GUI_KEY_CUT))
+                    gui_edit_box_reset(box);
+            }
+
+        }
     }
     {
-        /* text drawing */
-        gui_size offset = 0;
+        /* text management */
         gui_float label_x, label_y, label_h;
         gui_float label_w = input_w - 2 * field->padding.x - 2 * field->border_size;
         gui_size cursor_w = font->width(font->userdata,(const gui_char*)"X", 1);
 
-        /* calculate the visible text range */
+        /* calculate text frame */
         gui_size text_len = len;
-        gui_float space = label_w - (gui_float)cursor_w;
-        gui_size text_width = font->width(font->userdata, buffer, text_len);
-        while (text_len && (text_width > space)) {
-            gui_long unicode;
-            offset += gui_utf_decode(&buffer[offset], &unicode, text_len);
-            text_len = len - offset;
-            text_width = font->width(font->userdata, &buffer[offset], text_len);
-        }
-
-        /* set cursor by mouse click */
-        if (in && field->show_cursor && in->mouse_clicked && in->mouse_down && box->active &&
-            GUI_INBOX(in->mouse_pos.x, in->mouse_pos.y, x, y, input_w, input_h))
+        gui_size glyph_off = 0;
+        gui_size glyph_cnt = 0;
+        gui_size offset = 0;
+        gui_float text_width = 0;
         {
-            gui_float xoff = in->mouse_pos.x - (x + field->border_size);
-            gui_size glyph_pos=gui_utf_glyph_index_at_pos(font,buffer+offset,text_len,xoff);
-            gui_edit_box_set_cursor(box, glyph_pos);
+            gui_size frames = 0;
+            gui_size glyphes = 0;
+            gui_size frame_len = 0;
+            gui_float space = label_w - (gui_float)cursor_w;
+            while (text_len) {
+                frames++;
+                offset += frame_len;
+                frame_len = gui_font_glyphes_fitting_in_space(font,
+                    &buffer[offset], text_len, space, &glyphes, &text_width);
+                glyph_off += glyphes;
+                if (glyph_off > box->cursor)
+                    break;
+                text_len -= frame_len;
+            }
+            text_len = frame_len;
+            glyph_cnt = glyphes;
+            glyph_off = (frames <= 1) ? 0 : (glyph_off - glyphes);
+            offset = (frames <= 1) ? 0 : offset;
         }
 
-        /* calculate the text bounds and draw the string to screen*/
+        /* set cursor by mouse click and handle text selection */
+        if (in && field->show_cursor && in->mouse_down && box->active) {
+            const gui_char *visible = &buffer[offset];
+            gui_float xoff = in->mouse_pos.x - (x + field->padding.x + field->border_size);
+            if (GUI_INBOX(in->mouse_pos.x, in->mouse_pos.y, x, y, input_w, input_h))
+            {
+                /* text selection in the current text frame */
+                gui_size glyph_index;
+                gui_size glyph_pos = gui_font_glyph_index_at_pos(font, visible, text_len, xoff);
+                if (glyph_cnt + glyph_off >= box->glyphes)
+                    glyph_index = glyph_off + MIN(glyph_pos, glyph_cnt);
+                else glyph_index = glyph_off + MIN(glyph_pos, glyph_cnt-1);
+
+                if (text_len)
+                    gui_edit_box_set_cursor(box, glyph_index);
+                if (!box->sel.active) {
+                    box->sel.active = gui_true;
+                    box->sel.begin = glyph_index;
+                    box->sel.end = box->sel.begin;
+                } else {
+                    if (box->sel.begin > glyph_index) {
+                        box->sel.end = glyph_index;
+                        box->sel.active = gui_true;
+                    }
+                }
+            } else if (!GUI_INBOX(in->mouse_pos.x, in->mouse_pos.y, x, y, input_w, input_h) &&
+                GUI_INBOX(in->mouse_clicked_pos.x, in->mouse_clicked_pos.y, x, y, input_w, input_h) &&
+                box->cursor != box->glyphes && box->cursor > 0)
+            {
+                /* text selection out of the current text frame */
+                gui_size glyph = ((in->mouse_pos.x > x) && box->cursor+1 < box->glyphes) ?
+                    box->cursor+1: box->cursor-1;
+                gui_edit_box_set_cursor(box, glyph);
+                if (box->sel.active) {
+                    box->sel.end = glyph;
+                    box->sel.active = gui_true;
+                }
+            } else box->sel.active = gui_false;
+        } else box->sel.active = gui_false;
+
+
+        /* calculate the text bounds */
         label_x = x + field->padding.x + field->border_size;
         label_y = y + field->padding.y + field->border_size;
         label_h = input_h - (2 * field->padding.y + 2 * field->border_size);
         gui_command_buffer_push_text(out , label_x, label_y, label_w, label_h,
             &buffer[offset], text_len, font, field->background, field->text);
 
-        /* if requested draw the cursor */
         if (box->active && field->show_cursor) {
             if (box->cursor == box->glyphes) {
                 /* draw the cursor at the end of the string */
                 gui_command_buffer_push_rect(out,label_x+(gui_float)text_width, label_y,
                         (gui_float)cursor_w, label_h, 0, field->cursor);
             } else {
-                gui_size l, off, s;
+                /* draw text selection */
+                gui_size l, s;
                 gui_long unicode;
-                gui_char *cursor;
+                gui_char *begin, *end;
+                gui_size off_begin, off_end;
+                gui_size min = MIN(box->sel.end, box->sel.begin);
+                gui_size maxi = MAX(box->sel.end, box->sel.begin);
+                struct gui_rect clip = out->clip;
 
-                /* draw the cursor as a different glyph character background */
-                cursor=gui_edit_buffer_at(&box->buffer,(gui_int)box->cursor,&unicode,&l);
-                off = (gui_size)(cursor - (gui_char*)box->buffer.memory.ptr);
-                s = font->width(font->userdata, buffer, off);
+                /* calculate selection text range */
+                begin = gui_edit_buffer_at(&box->buffer, (gui_int)min, &unicode, &l);
+                end = gui_edit_buffer_at(&box->buffer, (gui_int)maxi, &unicode, &l);
+                off_begin = (gui_size)(begin - (gui_char*)box->buffer.memory.ptr);
+                off_end = (gui_size)(end - (gui_char*)box->buffer.memory.ptr);
+
+                /* calculate selected text width */
+                gui_command_buffer_push_scissor(out, label_x, label_y, label_w, label_h);
+                s = font->width(font->userdata, buffer + offset, off_begin - offset);
                 label_x += (gui_float)s;
-                s = font->width(font->userdata, cursor, l);
+                s = font->width(font->userdata, begin, MAX(l, off_end - off_begin));
                 label_w = (gui_float)s;
+
+                /* draw selected text */
                 gui_command_buffer_push_text(out , label_x, label_y, label_w, label_h,
-                    cursor, l, font, field->cursor, field->background);
+                    begin, MAX(l, off_end - off_begin), font, field->cursor, field->background);
+                gui_command_buffer_push_scissor(out, clip.x, clip.y, clip.w, clip.h);
             }
         }
     }
@@ -1832,15 +1991,16 @@ gui_filter_binary(gui_long unicode)
 gui_size
 gui_edit_filtered(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w,
     gui_float h, gui_char *buffer, gui_size len, gui_size max, gui_bool *active,
-    const struct gui_edit *field, gui_filter filter, const struct gui_input *in,
-    const struct gui_font *font)
+    gui_size *cursor,  const struct gui_edit *field, gui_filter filter,
+    const struct gui_input *in, const struct gui_font *font)
 {
     struct gui_edit_box box;
     gui_edit_box_init_fixed(&box, buffer, max, 0, filter);
     box.buffer.allocated = len;
     box.active = *active;
     box.glyphes = gui_utf_len(buffer, len);
-    box.cursor = box.glyphes;
+    if (!cursor) box.cursor = box.glyphes;
+    else box.cursor = MIN(*cursor, box.glyphes);
     gui_editbox(out, x, y, w, h, &box, field, in, font);
     *active = box.active;
     return gui_edit_box_len(&box);
@@ -1849,7 +2009,7 @@ gui_edit_filtered(struct gui_command_buffer *out, gui_float x, gui_float y, gui_
 gui_size
 gui_edit(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w,
     gui_float h, gui_char *buffer, gui_size len, gui_size max, gui_bool *active,
-    const struct gui_edit *field, enum gui_input_filter f,
+    gui_size *cursor, const struct gui_edit *field, enum gui_input_filter f,
     const struct gui_input *in, const struct gui_font *font)
 {
     static const gui_filter filter[] = {
@@ -1862,13 +2022,13 @@ gui_edit(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w,
         gui_filter_binary,
     };
     return gui_edit_filtered(out, x, y, w, h, buffer, len, max, active,
-                field, filter[f], in, font);
+                cursor, field, filter[f], in, font);
 }
 
 gui_float
-gui_scroll(struct gui_command_buffer *out, gui_float x, gui_float y,
+gui_scrollbar_vertical(struct gui_command_buffer *out, gui_float x, gui_float y,
     gui_float w, gui_float h, gui_float offset, gui_float target,
-    gui_float step, const struct gui_scroll *s, const struct gui_input *i)
+    gui_float step, const struct gui_scrollbar *s, const struct gui_input *i)
 {
     gui_bool button_up_pressed;
     gui_bool button_down_pressed;
@@ -1955,6 +2115,97 @@ gui_scroll(struct gui_command_buffer *out, gui_float x, gui_float y,
     return scroll_offset;
 }
 
+gui_float
+gui_scrollbar_horizontal(struct gui_command_buffer *out, gui_float x, gui_float y,
+    gui_float w, gui_float h, gui_float offset, gui_float target,
+    gui_float step, const struct gui_scrollbar *s, const struct gui_input *i)
+{
+    gui_bool button_left_pressed;
+    gui_bool button_right_pressed;
+    struct gui_button button;
+
+    gui_float scroll_step;
+    gui_float scroll_offset;
+    gui_float scroll_off, scroll_ratio;
+    gui_float scroll_x, scroll_w, scroll_h;
+
+    gui_float cursor_x, cursor_y;
+    gui_float cursor_w, cursor_h;
+    gui_bool inscroll, incursor;
+
+    GUI_ASSERT(out);
+    GUI_ASSERT(s);
+    if (!out || !s) return 0;
+
+    /* scrollbar background */
+    scroll_h = MAX(h, 1);
+    scroll_w = MAX(w, 2 * scroll_h);
+    gui_command_buffer_push_rect(out,x,y,scroll_w,scroll_h,s->rounding,s->background);
+    if (target <= scroll_w) return 0;
+
+    /* setup and execute up/down button */
+    button.border = 1;
+    button.rounding = 0;
+    button.padding.x = scroll_h / 4;
+    button.padding.y = scroll_h / 4;
+    button.background = s->background;
+    button.foreground =  s->foreground;
+    button.content = s->foreground;
+    button.highlight = s->background;
+    button.highlight_content = s->foreground;
+
+    button_right_pressed = gui_button_triangle(out, x, y, scroll_h, scroll_h,
+         GUI_LEFT, GUI_BUTTON_DEFAULT, &button, i);
+    button_left_pressed = gui_button_triangle(out, x + scroll_w - scroll_h, y,
+        scroll_h, scroll_h, GUI_RIGHT, GUI_BUTTON_DEFAULT, &button, i);
+
+    /* calculate scrollbar constants */
+    scroll_w = scroll_w - 2 * scroll_h;
+    scroll_x = x + scroll_h;
+    scroll_step = MIN(step, scroll_w);
+    scroll_offset = MIN(offset, target - scroll_h);
+    scroll_ratio = scroll_w / target;
+    scroll_off = scroll_offset / target;
+
+    /* calculate scrollbar cursor bounds */
+    cursor_w = scroll_ratio * scroll_w;
+    cursor_x = scroll_x + (scroll_off * scroll_w);
+    cursor_h = scroll_h;
+    cursor_y = y;
+
+    if (i) {
+        const struct gui_vec2 mouse_pos = i->mouse_pos;
+        const struct gui_vec2 mouse_prev = i->mouse_prev;
+        inscroll = GUI_INBOX(mouse_pos.x,mouse_pos.y, x, y, scroll_w, scroll_h);
+        incursor = GUI_INBOX(mouse_prev.x, mouse_prev.y, cursor_x, cursor_y,
+                                cursor_w, cursor_h);
+
+        if (i->mouse_down && inscroll && incursor) {
+            /* update cursor by mouse dragging */
+            const gui_float pixel = i->mouse_delta.x;
+            const gui_float delta =  (pixel / scroll_w) * target;
+            scroll_offset = CLAMP(0, scroll_offset + delta, target - scroll_w);
+        } else if (button_left_pressed || button_right_pressed) {
+            /* update cursor by up/down button */
+            scroll_offset = (button_left_pressed) ?
+                MIN(scroll_offset + scroll_step, target - scroll_w):
+                MAX(0, scroll_offset - scroll_step);
+        } else if (s->has_scrolling && ((i->scroll_delta < 0) || (i->scroll_delta>0))) {
+            /* update cursor by mouse scrolling */
+            scroll_offset = scroll_offset + scroll_step * (-i->scroll_delta);
+            scroll_offset = CLAMP(0, scroll_offset, target - scroll_w);
+        }
+        scroll_off = scroll_offset / target;
+        cursor_x = scroll_x + (scroll_off * scroll_w);
+    }
+
+    /* draw scrollbar cursor */
+    gui_command_buffer_push_rect(out, cursor_x, cursor_y, cursor_w,
+        cursor_h, s->rounding, s->foreground);
+    return scroll_offset;
+
+}
+
 gui_int
 gui_spinner(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w,
     gui_float h, const struct gui_spinner *s, gui_int min, gui_int value,
@@ -1973,6 +2224,11 @@ gui_spinner(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float 
     struct gui_edit field;
     gui_float field_x, field_y;
     gui_float field_w, field_h;
+
+    GUI_ASSERT(out);
+    GUI_ASSERT(s);
+    GUI_ASSERT(font);
+    if (!out || !s || !font) return value;
 
     /* make sure given values are correct */
     value = CLAMP(min, value, max);
@@ -2022,7 +2278,8 @@ gui_spinner(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float 
     field.border = s->border;
     field.text = s->text;
     len = gui_edit(out, field_x, field_y, field_w, field_h, (gui_char*)string,
-            len, GUI_MAX_NUMBER_BUFFER, &is_active, &field,GUI_INPUT_FLOAT, in, font);
+            len, GUI_MAX_NUMBER_BUFFER, &is_active, 0,
+            &field,GUI_INPUT_FLOAT, in, font);
 
     if (old_len != len)
         gui_strtoi(&value, string, len);
@@ -2103,7 +2360,7 @@ gui_selector(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float
 static void
 gui_config_default_properties(struct gui_config *config)
 {
-    config->properties[GUI_PROPERTY_SCROLLBAR_WIDTH] = gui_vec2(16, 16);
+    config->properties[GUI_PROPERTY_SCROLLBAR_SIZE] = gui_vec2(16, 16);
     config->properties[GUI_PROPERTY_PADDING] = gui_vec2(15.0f, 10.0f);
     config->properties[GUI_PROPERTY_SIZE] = gui_vec2(64.0f, 64.0f);
     config->properties[GUI_PROPERTY_ITEM_SPACING] = gui_vec2(4.0f, 4.0f);
@@ -2120,7 +2377,7 @@ gui_config_default_rounding(struct gui_config *config)
     config->rounding[GUI_ROUNDING_PROGRESS] = 4.0f;
     config->rounding[GUI_ROUNDING_INPUT] = 2.0f;
     config->rounding[GUI_ROUNDING_GRAPH] = 4.0f;
-    config->rounding[GUI_ROUNDING_SCROLLBAR] = 8.0f;
+    config->rounding[GUI_ROUNDING_SCROLLBAR] = 2.0f;
 }
 
 static void
@@ -2334,7 +2591,8 @@ gui_panel_init(struct gui_panel *panel, gui_float x, gui_float y, gui_float w,
     panel->flags = flags;
     panel->config = config;
     panel->buffer = buffer;
-    panel->offset = 0;
+    panel->offset.x = 0;
+    panel->offset.y = 0;
 }
 
 void
@@ -2376,7 +2634,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     const struct gui_input *in)
 {
     const struct gui_config *c;
-    gui_float scrollbar_width;
+    gui_float scrollbar_size;
     struct gui_vec2 panel_size;
     struct gui_vec2 item_padding;
     struct gui_vec2 item_spacing;
@@ -2391,7 +2649,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
 
     /* cache configuration data */
     c = panel->config;
-    scrollbar_width = gui_config_property(c, GUI_PROPERTY_SCROLLBAR_WIDTH).x;
+    scrollbar_size = gui_config_property(c, GUI_PROPERTY_SCROLLBAR_SIZE).x;
     panel_size = gui_config_property(c, GUI_PROPERTY_SIZE);
     panel_padding = gui_config_property(c, GUI_PROPERTY_PADDING);
     item_padding = gui_config_property(c, GUI_PROPERTY_ITEM_PADDING);
@@ -2483,8 +2741,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
 
     /* calculate the panel footer bounds */
     layout->footer_h = scaler_size.y + item_padding.y;
-    if ((layout->flags & GUI_PANEL_SCALEABLE) &&
-        !(layout->flags & GUI_PANEL_MINIMIZED)) {
+    if (!(layout->flags & GUI_PANEL_MINIMIZED)) {
         gui_float footer_x, footer_y, footer_w;
         footer_x = panel->x;
         footer_w = panel->w;
@@ -2493,10 +2750,10 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
             0, c->colors[GUI_COLOR_PANEL]);
     }
 
-    /* draw panel background if fixed panel size */
     {
+        /* draw panel background */
         const struct gui_color *color = &c->colors[GUI_COLOR_PANEL];
-        layout->width = panel->w - scrollbar_width;
+        layout->width = panel->w - scrollbar_size;
         layout->height = panel->h - (layout->header.h + 2 * item_spacing.y);
         if (layout->flags & GUI_PANEL_SCALEABLE) layout->height -= layout->footer_h;
         if (layout->valid)
@@ -2514,12 +2771,8 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
     layout->clip.x = panel->x;
     layout->clip.y = panel->y;
     layout->clip.w = panel->w;
-    {
-        if (layout->flags & GUI_PANEL_SCALEABLE)
-            layout->clip.h = panel->h - (layout->footer_h + layout->header.h);
-        else layout->clip.h = panel->h - layout->header.h;
-        layout->clip.h -= (panel_padding.y + item_padding.y);
-    }
+    layout->clip.h = panel->h - (layout->footer_h + layout->header.h);
+    layout->clip.h -= (panel_padding.y + item_padding.y);
     gui_command_buffer_push_scissor(out, layout->clip.x, layout->clip.y,
         layout->clip.w, layout->clip.h);
 }
@@ -2743,8 +2996,8 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
     if (s->format == GUI_LAYOUT_HORIZONTAL) {
         panel->h = bounds.h;
         panel->y = bounds.y;
-        panel->x = bounds.x + (gui_float)index * panel->w;
         panel->w = bounds.w / (gui_float)s->capacity;
+        panel->x = bounds.x + (gui_float)index * panel->w;
     } else {
         panel->x = bounds.x;
         panel->w = bounds.w;
@@ -2763,7 +3016,7 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
 {
     const struct gui_config *config;
     struct gui_command_buffer *out;
-    gui_float scrollbar_width;
+    gui_float scrollbar_size;
     struct gui_vec2 item_padding;
     struct gui_vec2 item_spacing;
     struct gui_vec2 panel_padding;
@@ -2789,44 +3042,75 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
     item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
     item_spacing = gui_config_property(config, GUI_PROPERTY_ITEM_SPACING);
     panel_padding = gui_config_property(config, GUI_PROPERTY_PADDING);
-    scrollbar_width = gui_config_property(config, GUI_PROPERTY_SCROLLBAR_WIDTH).x;
+    scrollbar_size = gui_config_property(config, GUI_PROPERTY_SCROLLBAR_SIZE).x;
     scaler_size = gui_config_property(config, GUI_PROPERTY_SCALER_SIZE);
 
+    /* vertical scrollbar */
     if (layout->valid) {
-        struct gui_scroll scroll;
-        gui_float panel_y;
+        struct gui_scrollbar scroll;
         gui_float scroll_x, scroll_y;
         gui_float scroll_w, scroll_h;
         gui_float scroll_target, scroll_offset, scroll_step;
 
-        /* setup and execute scrollbar */
-        scroll_x = layout->at_x + layout->width;
+        /* calculate scollbar bounds */
+        scroll_x = layout->x + layout->width;
         scroll_y = (layout->flags & GUI_PANEL_BORDER) ? layout->y + 1 : layout->y;
         scroll_y += layout->header.h + layout->menu.h;
-        scroll_w = scrollbar_width;
+        scroll_w = scrollbar_size;
         scroll_h = layout->height;
-        scroll_offset = layout->offset;
+        if (layout->flags & GUI_PANEL_BORDER) scroll_h -= 1;
+
+        /* execute scrollbar widget */
+        scroll_offset = layout->offset.y;
         scroll_step = layout->height * 0.10f;
         scroll.rounding = config->rounding[GUI_ROUNDING_SCROLLBAR];
         scroll.background = config->colors[GUI_COLOR_SCROLLBAR];
         scroll.foreground = config->colors[GUI_COLOR_SCROLLBAR_CURSOR];
         scroll.border = config->colors[GUI_COLOR_SCROLLBAR_BORDER];
-        if (layout->flags & GUI_PANEL_BORDER) scroll_h -= 1;
         scroll_target = (layout->at_y-layout->y)-(layout->header.h+2*item_spacing.y);
         scroll.has_scrolling = (layout->flags & GUI_PANEL_ACTIVE);
-        panel->offset = gui_scroll(out, scroll_x, scroll_y, scroll_w, scroll_h,
-                                    scroll_offset, scroll_target, scroll_step,
-                                    &scroll, layout->input);
+        panel->offset.y = gui_scrollbar_vertical(out, scroll_x, scroll_y,
+                            scroll_w, scroll_h, scroll_offset, scroll_target,
+                            scroll_step, &scroll, layout->input);
+    };
 
-        /* draw scrollbar footer to fill a gap */
-        panel_y = layout->y + layout->height + layout->header.h +
-                    layout->menu.h - panel_padding.y;
-        gui_command_buffer_push_rect(out, layout->x,panel_y,layout->width,panel_padding.y,
-            0, config->colors[GUI_COLOR_PANEL]);
+    /* horizontal scrollbar */
+    if (layout->valid) {
+        struct gui_scrollbar scroll;
+        gui_float scroll_x, scroll_y;
+        gui_float scroll_w, scroll_h;
+        gui_float scroll_target, scroll_offset, scroll_step;
+
+        /* calculate scollbar bounds */
+        scroll_x = layout->x + panel_padding.x;
+        if (layout->flags & GUI_PANEL_TAB) {
+            scroll_h = scrollbar_size;
+            scroll_y = (layout->flags & GUI_PANEL_BORDER) ? layout->y + 1 : layout->y;
+            scroll_y += layout->header.h + layout->menu.h + layout->height;
+            scroll_w = layout->width - scrollbar_size;
+        } else {
+            scroll_h = MIN(scrollbar_size, layout->footer_h);
+            scroll_y = panel->y + panel->h - MAX(layout->footer_h, scrollbar_size);
+            scroll_w = layout->width - 2 * panel_padding.x;
+        }
+
+        /* execute scrollbar widget */
+        scroll_offset = layout->offset.x;
+        scroll_step = layout->max_x * 0.10f;
+        scroll.rounding = config->rounding[GUI_ROUNDING_SCROLLBAR];
+        scroll.background = config->colors[GUI_COLOR_SCROLLBAR];
+        scroll.foreground = config->colors[GUI_COLOR_SCROLLBAR_CURSOR];
+        scroll.border = config->colors[GUI_COLOR_SCROLLBAR_BORDER];
+        scroll_target = (layout->max_x - layout->at_x) - 2 * panel_padding.x;
+        scroll.has_scrolling = gui_false;
+        panel->offset.x = gui_scrollbar_horizontal(out, scroll_x, scroll_y,
+                            scroll_w, scroll_h, scroll_offset, scroll_target,
+                            scroll_step, &scroll, layout->input);
     } else layout->height = layout->at_y - layout->y;
 
+
+    /* draw the panel scaler into the right corner of the panel footer */
     if ((layout->flags & GUI_PANEL_SCALEABLE) && layout->valid) {
-        /* draw the panel scaler into the right corner of the panel footer */
         struct gui_color col = config->colors[GUI_COLOR_SCALER];
         gui_float scaler_w = MAX(0, scaler_size.x - item_padding.x);
         gui_float scaler_h = MAX(0, scaler_size.y - item_padding.y);
@@ -2838,7 +3122,7 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
 
     if (layout->flags & GUI_PANEL_BORDER) {
         /* draw the border around the complete panel */
-        const gui_float width = layout->width + scrollbar_width;
+        const gui_float width = layout->width + scrollbar_size;
         const gui_float padding_y = (!layout->valid) ?
                 panel->y + layout->header.h: layout->y + layout->h;
 
@@ -2904,7 +3188,7 @@ gui_panel_header_begin(struct gui_panel_layout *layout)
     {
         const struct gui_color *color = &c->colors[GUI_COLOR_PANEL];
         layout->height = layout->h - (layout->header.h + 2 * item_spacing.y);
-        if (layout->flags & GUI_PANEL_SCALEABLE) layout->height -= layout->footer_h;
+        layout->height -= layout->footer_h;
         if (layout->valid)
             gui_command_buffer_push_rect(out, layout->x, layout->y + layout->header.h,
                 layout->w, layout->h - layout->header.h, 0, *color);
@@ -3171,7 +3455,7 @@ gui_panel_header_end(struct gui_panel_layout *layout)
 
     /* draw panel header border */
     if (layout->flags & GUI_PANEL_BORDER) {
-        gui_float scrollbar_width = gui_config_property(c, GUI_PROPERTY_SCROLLBAR_WIDTH).x;
+        gui_float scrollbar_width = gui_config_property(c, GUI_PROPERTY_SCROLLBAR_SIZE).x;
         const gui_float width = layout->width + scrollbar_width;
 
         /* draw the header border lines */
@@ -3189,10 +3473,7 @@ gui_panel_header_end(struct gui_panel_layout *layout)
     layout->clip.x = layout->x;
     layout->clip.w = layout->w;
     layout->clip.y = layout->y + layout->header.h;
-
-    if (layout->flags & GUI_PANEL_SCALEABLE)
-        layout->clip.h = layout->h - (layout->footer_h + layout->header.h);
-    else layout->clip.h = layout->h - layout->header.h;
+    layout->clip.h = layout->h - (layout->footer_h + layout->header.h);
     layout->clip.h -= (panel_padding.y + item_padding.y);
 
     gui_command_buffer_push_scissor(out, layout->clip.x, layout->clip.y,
@@ -3205,7 +3486,9 @@ gui_panel_header(struct gui_panel_layout *layout, const char *title,
 {
     gui_flags ret = 0;
     gui_flags old = layout->flags;
-    if (layout->flags & GUI_PANEL_HIDDEN)
+
+    GUI_ASSERT(layout);
+    if (!layout || layout->flags & GUI_PANEL_HIDDEN)
         return gui_false;
 
     /* basic standart header with fixed icon/title sequence */
@@ -3249,7 +3532,8 @@ gui_panel_menu_begin(struct gui_panel_layout *layout)
     layout->menu.y = layout->y + layout->header.h;
     layout->menu.w = layout->width;
     layout->menu.offset = layout->offset;
-    layout->offset = 0;
+    layout->offset.x = 0;
+    layout->offset.y = 0;
 }
 
 void
@@ -3259,6 +3543,8 @@ gui_panel_menu_end(struct gui_panel_layout *layout)
     struct gui_command_buffer *out;
     struct gui_vec2 item_padding;
     struct gui_vec2 panel_padding;
+
+    GUI_ASSERT(layout);
     if (!layout || layout->flags & GUI_PANEL_HIDDEN || layout->flags & GUI_PANEL_MINIMIZED)
         return;
 
@@ -3271,10 +3557,7 @@ gui_panel_menu_end(struct gui_panel_layout *layout)
     layout->clip.y = layout->y + layout->header.h + layout->menu.h;
     layout->height -= layout->menu.h;
     layout->offset = layout->menu.offset;
-
-    if (layout->flags & GUI_PANEL_SCALEABLE)
-        layout->clip.h = layout->h - (layout->footer_h + layout->header.h + layout->menu.h);
-    else layout->clip.h = layout->h - (layout->header.h + layout->menu.h);
+    layout->clip.h = layout->h - (layout->footer_h + layout->header.h + layout->menu.h);
     layout->clip.h -= (panel_padding.y + item_padding.y);
     gui_command_buffer_push_scissor(out, layout->clip.x, layout->clip.y,
         layout->clip.w, layout->clip.h);
@@ -3658,6 +3941,7 @@ gui_panel_alloc_space(struct gui_rect *bounds, struct gui_panel_layout *layout)
     case GUI_PANEL_LAYOUT_FLUX_FREE: {
         /*panel width depended free widget placing */
         bounds->x = layout->at_x + (layout->width * layout->row.item.x);
+        bounds->x -= layout->offset.x;
         bounds->y = layout->at_y + (layout->row.height * layout->row.item.y);
         bounds->w = layout->width  * layout->row.item.w;
         bounds->h = layout->row.height * layout->row.item.h;
@@ -3696,9 +3980,12 @@ gui_panel_alloc_space(struct gui_rect *bounds, struct gui_panel_layout *layout)
     case GUI_PANEL_LAYOUT_STATIC_FREE: {
         /* free widget placing */
         bounds->x = layout->at_x + padding.x + layout->row.item.x;
+        bounds->x -= layout->offset.x;
         bounds->y = layout->at_y + layout->row.item.y;
         bounds->w = layout->row.item.w;
         bounds->h = layout->row.item.h;
+        if ((bounds->x + bounds->w) > layout->max_x)
+            layout->max_x = bounds->x + bounds->w;
         return;
     } break;
     case GUI_PANEL_LAYOUT_STATIC: {
@@ -3712,11 +3999,14 @@ gui_panel_alloc_space(struct gui_rect *bounds, struct gui_panel_layout *layout)
     };
 
     /* set the bounds of the newly allocated widget */
-    bounds->x = layout->at_x + item_offset + item_spacing + padding.x;
-    bounds->y = layout->at_y - layout->offset;
+    bounds->x = layout->at_x + item_offset + item_spacing + padding.x - layout->offset.x;
+    bounds->y = layout->at_y - layout->offset.y;
     bounds->w = item_width;
     bounds->h = layout->row.height - spacing.y;
+
     layout->row.index++;
+    if ((bounds->x + bounds->w) > layout->max_x)
+        layout->max_x = bounds->x + bounds->w;
 }
 
 gui_bool
@@ -4349,7 +4639,7 @@ gui_panel_editbox(struct gui_panel_layout *layout, struct gui_edit_box *box)
 
 gui_size
 gui_panel_edit(struct gui_panel_layout *layout, gui_char *buffer, gui_size len,
-    gui_size max, gui_bool *active, enum gui_input_filter filter)
+    gui_size max, gui_bool *active, gui_size *cursor, enum gui_input_filter filter)
 {
     struct gui_rect bounds;
     struct gui_edit field;
@@ -4361,12 +4651,12 @@ gui_panel_edit(struct gui_panel_layout *layout, gui_char *buffer, gui_size len,
     if (!state) return len;
     i = (state == GUI_ROM) ? 0 : layout->input;
     return gui_edit(layout->buffer, bounds.x, bounds.y, bounds.w, bounds.h,
-        buffer, len, max, active, &field, filter, i, &config->font);
+        buffer, len, max, active, cursor, &field, filter, i, &config->font);
 }
 
 gui_size
 gui_panel_edit_filtered(struct gui_panel_layout *layout, gui_char *buffer, gui_size len,
-    gui_size max, gui_bool *active, gui_filter filter)
+    gui_size max, gui_bool *active, gui_size *cursor, gui_filter filter)
 {
     struct gui_rect bounds;
     struct gui_edit field;
@@ -4378,7 +4668,7 @@ gui_panel_edit_filtered(struct gui_panel_layout *layout, gui_char *buffer, gui_s
     if (!state) return len;
     i = (state == GUI_ROM) ? 0 : layout->input;
     return gui_edit_filtered(layout->buffer, bounds.x, bounds.y, bounds.w, bounds.h,
-        buffer, len, max, active, &field, filter, i, &config->font);
+        buffer, len, max, active, cursor, &field, filter, i, &config->font);
 }
 
 gui_int
@@ -4722,8 +5012,8 @@ gui_panel_table_horizontal_line(struct gui_panel_layout *l, gui_size row_height)
 
     /* draws a horizontal line under the current item */
     w = MAX(l->width, (2 * item_spacing.x + 2 * item_padding.x));
-    y = (l->at_y + (gui_float)row_height + item_padding.y) - l->offset;
-    x = l->at_x + item_spacing.x + item_padding.x;
+    y = (l->at_y + (gui_float)row_height + item_padding.y) - l->offset.y;
+    x = l->at_x + item_spacing.x + item_padding.x - l->offset.x;
     w = w - (2 * item_spacing.x + 2 * item_padding.x);
     gui_command_buffer_push_line(out, x, y, x + w, y, c->colors[GUI_COLOR_TABLE_LINES]);
 }
@@ -4806,10 +5096,15 @@ gui_panel_table_end(struct gui_panel_layout *layout)
  */
 void
 gui_panel_tree_begin(struct gui_panel_layout *p, struct gui_tree *tree,
-                        const char *title, gui_float height, gui_float offset)
+                        const char *title, gui_float height, struct gui_vec2 offset)
 {
     struct gui_vec2 padding;
     const struct gui_config *config;
+    GUI_ASSERT(p);
+    GUI_ASSERT(tree);
+    GUI_ASSERT(title);
+    if (!p || !tree || !title) return;
+
     gui_panel_group_begin(p, &tree->group, title, offset);
     gui_panel_layout(&tree->group, height, 1);
 
@@ -4829,14 +5124,21 @@ gui_panel_tree_node(struct gui_tree *tree, enum gui_tree_node_symbol symbol,
     struct gui_text text;
     struct gui_rect bounds = {0,0,0,0};
     struct gui_rect sym, label, icon;
+    struct gui_panel_layout *layout;
+    enum gui_tree_node_operation op = GUI_NODE_NOP;
 
     const struct gui_input *i;
     const struct gui_config *config;
     struct gui_vec2 item_padding;
     struct gui_color col;
 
-    enum gui_tree_node_operation op = GUI_NODE_NOP;
-    struct gui_panel_layout *layout = &tree->group;
+    GUI_ASSERT(tree);
+    GUI_ASSERT(state);
+    GUI_ASSERT(title);
+    if (!tree || !state || !title)
+        return GUI_NODE_NOP;
+
+    layout = &tree->group;
     if (tree->skip >= 0 || !gui_panel_widget(&bounds, layout)) {
         if (!tree->depth) tree->at_x = bounds.x;
         return op;
@@ -4936,6 +5238,12 @@ gui_panel_tree_begin_node(struct gui_tree *tree, const char *title,
     gui_tree_node_state *state)
 {
     enum gui_tree_node_operation op;
+    GUI_ASSERT(tree);
+    GUI_ASSERT(state);
+    GUI_ASSERT(title);
+    if (!tree || !state || !title)
+        return GUI_NODE_NOP;
+
     op = gui_panel_tree_node(tree, GUI_TREE_NODE_TRIANGLE, title, 0, state);
     tree->at_x += tree->x_off;
     if (tree->skip < 0 && !(*state & GUI_NODE_ACTIVE))
@@ -4949,6 +5257,12 @@ gui_panel_tree_begin_node_icon(struct gui_tree *tree, const char *title,
     struct gui_image img, gui_tree_node_state *state)
 {
     enum gui_tree_node_operation op;
+    GUI_ASSERT(tree);
+    GUI_ASSERT(state);
+    GUI_ASSERT(title);
+    if (!tree || !state || !title)
+        return GUI_NODE_NOP;
+
     op = gui_panel_tree_node(tree, GUI_TREE_NODE_TRIANGLE, title, &img, state);
     tree->at_x += tree->x_off;
     if (tree->skip < 0 && !(*state & GUI_NODE_ACTIVE))
@@ -4977,7 +5291,7 @@ gui_panel_tree_end_node(struct gui_tree *tree)
         tree->skip = -1;
 }
 
-gui_float
+struct gui_vec2
 gui_panel_tree_end(struct gui_panel_layout *p, struct gui_tree* tree)
 {return gui_panel_group_end(p, &tree->group);}
 
@@ -4990,7 +5304,7 @@ gui_panel_tree_end(struct gui_panel_layout *p, struct gui_tree* tree)
  */
 void
 gui_panel_group_begin(struct gui_panel_layout *p, struct gui_panel_layout *g,
-    const char *title, gui_float offset)
+    const char *title, struct gui_vec2 offset)
 {
     gui_flags flags;
     struct gui_rect bounds;
@@ -5041,7 +5355,7 @@ failed:
     g->input = p->input;
 }
 
-gui_float
+struct gui_vec2
 gui_panel_group_end(struct gui_panel_layout *p, struct gui_panel_layout *g)
 {
     struct gui_panel pan;
@@ -5050,12 +5364,12 @@ gui_panel_group_end(struct gui_panel_layout *p, struct gui_panel_layout *g)
 
     GUI_ASSERT(p);
     GUI_ASSERT(g);
-    if (!p || !g) return 0;
-    if (!p->valid) return 0;
+    if (!p || !g) return gui_vec2(0,0);
+    if (!p->valid) return gui_vec2(0,0);
     gui_zero(&pan, sizeof(pan));
 
     out = p->buffer;
-    pan.x = g->at_x;
+    pan.x = g->x;
     pan.y = g->y;
     pan.w = g->width;
     pan.h = g->height;
@@ -5073,7 +5387,7 @@ gui_panel_group_end(struct gui_panel_layout *p, struct gui_panel_layout *g)
 
 gui_size
 gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *shelf,
-    const char *tabs[], gui_size size, gui_size active, gui_float offset)
+    const char *tabs[], gui_size size, gui_size active, struct gui_vec2 offset)
 {
     const struct gui_config *config;
     struct gui_command_buffer *out;
@@ -5170,11 +5484,12 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
     bounds.y += header_h;
     bounds.h -= header_h;
 
-    /* setup fake panel to create a panel layout from */
+    /* setup fake panel to create a panel layout */
     flags = GUI_PANEL_BORDER|GUI_PANEL_TAB;
     gui_panel_init(&panel, bounds.x, bounds.y, bounds.w, bounds.h, flags, out, config);
     gui_panel_begin(shelf, &panel, parent->input);
     shelf->offset = offset;
+    shelf->height -= header_h;
 
     /* setup clip rect for the shelf panel */
     gui_unify(&clip, &parent->clip, shelf->clip.x, shelf->clip.y,
@@ -5192,7 +5507,7 @@ failed:
     return active;
 }
 
-gui_float
+struct gui_vec2
 gui_panel_shelf_end(struct gui_panel_layout *p, struct gui_panel_layout *s)
 {
     struct gui_command_buffer *out;
@@ -5201,12 +5516,13 @@ gui_panel_shelf_end(struct gui_panel_layout *p, struct gui_panel_layout *s)
 
     GUI_ASSERT(p);
     GUI_ASSERT(s);
-    if (!p || !s) return 0;
-    if (!p->valid) return 0;
+    if (!p || !s) return gui_vec2(0,0);
+    if (!p->valid) return gui_vec2(0,0);
     gui_zero(&pan, sizeof(pan));
 
     out = p->buffer;
-    pan.x = s->at_x; pan.y = s->y;
+    pan.x = s->x; pan.y = s->y;
+    pan.w = s->w; pan.h = s->h;
     pan.flags = GUI_PANEL_BORDER|GUI_PANEL_TAB;
 
     gui_unify(&clip, &p->clip, s->clip.x, s->clip.y, s->x + s->w, s->y + s->h);

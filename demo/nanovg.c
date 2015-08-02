@@ -33,6 +33,19 @@
 #define UNUSED(a)   ((void)(a))
 
 #include "../gui.h"
+
+static void
+clipboard_set(const char *text)
+{SDL_SetClipboardText(text);}
+
+static gui_bool
+clipboard_is_filled(void)
+{return SDL_HasClipboardText();}
+
+static const char*
+clipboard_get(void)
+{return SDL_GetClipboardText();}
+
 #include "demo.c"
 
 static void
@@ -155,7 +168,8 @@ draw(NVGcontext *nvg, struct gui_command_buffer *list, int width, int height)
         } break;
         case GUI_COMMAND_TRIANGLE: {
             const struct gui_command_triangle *t = gui_command(triangle, cmd);
-            draw_triangle(nvg, t->a[0], t->a[1], t->b[0], t->b[1], t->c[0], t->c[1], t->color);
+            draw_triangle(nvg, t->a[0], t->a[1], t->b[0], t->b[1], t->c[0],
+                    t->c[1], t->color);
         } break;
         case GUI_COMMAND_TEXT: {
             const struct gui_command_text *t = gui_command(text, cmd);

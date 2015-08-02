@@ -32,7 +32,7 @@ Summary: It is only responsible for the actual user interface
 
 ## Gallery
 ![gui demo](/screen/demo.png?raw=true)
-![gui config](/screen/config.png?raw=true)
+![gui explorer](/screen/explorer.png?raw=true)
 ![gui screenshot](/screen/screenshot.png?raw=true)
 
 ## Example
@@ -63,6 +63,7 @@ gui_size len = 0;
 gui_char buffer[256];
 gui_bool active = gui_false;
 gui_size option = 0;
+gui_size cursor = 0;
 
 struct gui_input input = {0};
 while (1) {
@@ -73,16 +74,16 @@ while (1) {
     /* GUI */
     struct gui_panel_layout layout;
     gui_panel_begin(&layout, &panel, &input);
-    gui_panel_header(&layout, "Show", GUI_CLOSEABLE, 0);
-    gui_panel_row(&layout, 30, 1);
+    gui_panel_header(&layout, "Demo", GUI_CLOSEABLE, 0, GUI_HEADER_RIGHT);
+    gui_panel_layout_flux_fixed(&layout, 30, 1);
     if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT)) {
         /* event handling */
     }
-    gui_panel_row(&layout, 30, 2);
+    gui_panel_layout_flux_fixed(&layout, 30, 2);
     if (gui_panel_option(&layout, "easy", option == 0)) option = 0;
     if (gui_panel_option(&layout, "hard", option == 1)) option = 1;
     gui_panel_label(&layout, "input:", GUI_TEXT_LEFT);
-    len = gui_panel_edit(&layout, buffer, len, 256, &active, GUI_INPUT_DEFAULT);
+    len = gui_panel_edit(&layout, buffer, len, 256, &active, &cursor, GUI_INPUT_DEFAULT);
     gui_panel_end(&layout, &panel);
 
     /* draw */
@@ -301,8 +302,8 @@ while (1) {
 
     struct gui_panel_layout layout;
     gui_panel_begin_stacked(&layout, &panel, &stack, &input);
-    gui_panel_header(&layout, "Demo", GUI_CLOSEABLE|GUI_MINIMIZABLE, 0);
-    gui_panel_row(&layout, 30, 1);
+    gui_panel_header(&layout, "Demo", GUI_CLOSEABLE, 0, GUI_HEADER_RIGHT);
+    gui_panel_layout_flux_fixed(&layout, 30, 1);
     if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");
     gui_panel_end(&layout, &panel);
@@ -353,7 +354,7 @@ while (1) {
     /* GUI */
     struct gui_panel_layout layout;
     gui_panel_begin_tiled(&layout, &panel, &tiled, GUI_SLOT_LEFT, 0, "Demo", &input);
-    gui_panel_row(&layout, 30, 1);
+    gui_panel_layout_flux_fixed(&layout, 30, 1);
     if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");
     gui_panel_end(&layout, &panel);

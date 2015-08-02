@@ -33,6 +33,19 @@
 #define UNUSED(a)   ((void)(a))
 
 #include "../gui.h"
+
+static void
+clipboard_set(const char *text)
+{SDL_SetClipboardText(text);}
+
+static gui_bool
+clipboard_is_filled(void)
+{return SDL_HasClipboardText();}
+
+static const char*
+clipboard_get(void)
+{return SDL_GetClipboardText();}
+
 #include "demo.c"
 
 struct texCoord {
@@ -589,7 +602,7 @@ main(int argc, char *argv[])
             else if (evt.type == SDL_MOUSEBUTTONUP) btn(&in, &evt, gui_false);
             else if (evt.type == SDL_MOUSEMOTION) motion(&in, &evt);
             else if (evt.type == SDL_TEXTINPUT) text(&in, &evt);
-            else if (evt.type == SDL_MOUSEWHEEL) gui_input_scroll(&in, (float)evt.wheel.y);
+            else if (evt.type == SDL_MOUSEWHEEL) gui_input_scroll(&in,(float)evt.wheel.y);
         }
         gui_input_end(&in);
 
