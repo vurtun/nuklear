@@ -82,6 +82,7 @@ enum {gui_false, gui_true};
 enum gui_heading {GUI_UP, GUI_RIGHT, GUI_DOWN, GUI_LEFT};
 struct gui_color {gui_byte r,g,b,a;};
 struct gui_vec2 {gui_float x,y;};
+struct gui_vec2i {gui_short x, y;};
 struct gui_rect {gui_float x,y,w,h;};
 struct gui_key {gui_bool down, clicked;};
 typedef gui_char gui_glyph[GUI_UTF_SIZE];
@@ -390,20 +391,20 @@ void *gui_buffer_alloc(struct gui_buffer*, gui_size size, gui_size align);
     Output:
     - memory block with given size and alignment requirement
 */
-void gui_buffer_reset(struct gui_buffer*);
-/*  this functions resets the buffer back into an empty state */
 void gui_buffer_clear(struct gui_buffer*);
+/*  this functions resets the buffer back into an empty state */
+void gui_buffer_free(struct gui_buffer*);
 /*  this functions frees all memory inside a dynamically growing buffer */
 /*
  * ==============================================================
  *
- *                          Commands
+ *                          Command Buffer
  *
  * ===============================================================
  */
-/*  COMMANDS
+/*  COMMAND BUFFER
     ----------------------------
-    The command buffer API enqueues draw calls as commands in to a buffer and
+    The command API buffers draw calls as commands in to a buffer and
     therefore abstracts over drawing routines and enables defered drawing.
     The API offers a number of drawing primitives like lines, rectangles, circles,
     triangles, images, text and clipping rectangles, that have to be drawn by the user.
@@ -422,8 +423,7 @@ void gui_buffer_clear(struct gui_buffer*);
     gui_command_buffer_reset function.
 
     command buffer function API
-    gui_command_buffer_init         -- initializes a dynamic command buffer
-    gui_command_buffer_init_fixed   -- initializes a static command buffer
+    gui_command_buffer_init         -- initializes a command buffer with a buffer
     gui_command_buffer_reset        -- resets the command buffer back to an empty state
     gui_command_buffer_clear        -- frees all memory if the command buffer is dynamic
 
@@ -440,9 +440,8 @@ void gui_buffer_clear(struct gui_buffer*);
     command iterator function API
     gui_command_buffer_begin        -- returns the first command in a queue
     gui_command_buffer_next         -- returns the next command in a queue
-    gui_foreach_command             -- iterates over all commands in a queue
+    gui_foreach_buffer_command      -- iterates over all commands in a queue
 */
-
 /* command type of every used drawing primitive */
 enum gui_command_type {
     GUI_COMMAND_NOP,
@@ -460,8 +459,8 @@ enum gui_command_type {
 struct gui_command {
     enum gui_command_type type;
     /* the type of the current command */
-    gui_size offset;
-    /* offset to the next command */
+    gui_size next;
+    /* absolute base pointer offset to the next command */
 };
 
 struct gui_command_scissor {
@@ -472,24 +471,24 @@ struct gui_command_scissor {
 
 struct gui_command_line {
     struct gui_command header;
-    gui_short begin[2];
-    gui_short end[2];
-    gui_byte color[4];
+    struct gui_vec2i begin;
+    struct gui_vec2i end;
+    struct gui_color color;
 };
 
 struct gui_command_rect {
     struct gui_command header;
-    gui_uint r;
+    gui_uint rounding;
     gui_short x, y;
     gui_ushort w, h;
-    gui_byte color[4];
+    struct gui_color color;
 };
 
 struct gui_command_circle {
     struct gui_command header;
     gui_short x, y;
     gui_ushort w, h;
-    gui_byte color[4];
+    struct gui_color color;
 };
 
 struct gui_command_image {
@@ -501,17 +500,17 @@ struct gui_command_image {
 
 struct gui_command_triangle {
     struct gui_command header;
-    gui_short a[2];
-    gui_short b[2];
-    gui_short c[2];
-    gui_byte color[4];
+    struct gui_vec2i a;
+    struct gui_vec2i b;
+    struct gui_vec2i c;
+    struct gui_color color;
 };
 
 struct gui_command_text {
     struct gui_command header;
     gui_handle font;
-    gui_byte bg[4];
-    gui_byte fg[4];
+    struct gui_color background;
+    struct gui_color foreground;
     gui_short x, y;
     gui_ushort w, h;
     gui_size length;
@@ -523,56 +522,26 @@ enum gui_command_clipping {
     GUI_CLIP = gui_true
 };
 
+struct gui_command_queue;
 struct gui_command_buffer {
-    struct gui_buffer base;
-    /* memory buffer */
+    struct gui_buffer *base;
+    /* memory buffer to store the command */
     struct gui_rect clip;
     /* current clipping rectangle */
     gui_bool use_clipping;
     /* flag if the command buffer should clip commands */
+    struct gui_command_queue *queue;
+    struct gui_command_buffer *next;
+    struct gui_command_buffer *prev;
+    gui_size begin, end, last;
 };
 
-#define gui_command_buffer_init(b, a, i, g, c)\
-    {gui_buffer_init(&(b)->base, a, i, g), (b)->use_clipping=c; (b)->clip=gui_get_null_rect();}
-/*  this function initializes a growing buffer
+void gui_command_buffer_init(struct gui_command_buffer*, struct gui_buffer*,
+                                enum gui_command_clipping);
+/*  this function intializes the command buffer
     Input:
-    - allocator holding your own alloctator and memory allocation callbacks
-    - initial size of the buffer
-    - factor to grow the buffer with if the buffer is full
-    - clipping flag for draw command clipping
-    Output:
-    - dynamically growing command buffer
-*/
-#define gui_command_buffer_init_fixed(b, m, s,c)\
-    {gui_buffer_init_fixed(&(b)->base, m ,s); (b)->use_clipping=c; \
-        (b)->clip=gui_get_null_rect();}
-/*  this function initializes a fixed size buffer
-    Input:
-    - memory block to fill
-    - size of the memory block
-    - clipping flag for draw command clipping
-    Output:
-    - fixed size command buffer
-*/
-#define gui_command_buffer_reset(b)\
-    gui_buffer_reset(&(b)->base)
-/*  this function resets the buffer back to an empty state
-    Input:
-    - buffer to reset
-*/
-#define gui_command_buffer_clear(b)\
-    gui_buffer_clear(&(b)->base)
-/*  this function frees the memory of a dynamic buffer
-    Input:
-    - buffer to reset
-*/
-#define gui_command_buffer_info(status, b)\
-    gui_buffer_info((status), &(b)->base)
-/*  this function requests memory information from a buffer
-    Input:
-    - buffer to get the inforamtion from
-    Output:
-    - buffer memory information
+    - memory buffer to store the command into
+    - clipping flag for removing non-visible draw commands
 */
 void *gui_command_buffer_push(struct gui_command_buffer*, gui_uint type, gui_size size);
 /*  this function push enqueues a command into the buffer
@@ -651,16 +620,106 @@ void gui_command_buffer_push_text(struct gui_command_buffer*, gui_float, gui_flo
     - color of the triangle to draw
 */
 #define gui_command(t, c) ((const struct gui_command_##t*)c)
-#define gui_command_buffer_begin(b)\
-    ((struct gui_command*)(b)->base.memory.ptr)
-#define gui_command_buffer_end(b)\
-    (gui_ptr_add_const(struct gui_command, (b)->base.memory.ptr, (b)->base.allocated))
-#define gui_command_buffer_next(b, c)\
-    ((gui_ptr_add_const(struct gui_command,c,c->offset) < gui_command_buffer_end(b))?\
-     gui_ptr_add_const(struct gui_command,c,c->offset):NULL)
-#define gui_foreach_command(i, b)\
+#define gui_foreach_buffer_command(i, b)\
     for((i)=gui_command_buffer_begin(b); (i)!=NULL; (i)=gui_command_buffer_next(b,i))
+const struct gui_command *gui_command_buffer_begin(struct gui_command_buffer*);
+/*  this function returns the first command in the command buffer */
+const struct gui_command *gui_command_buffer_next(struct gui_command_buffer*,
+                                                struct gui_command*);
+/*  this function returns the next command of a given command*/
+/*
+ * ==============================================================
+ *
+ *                          Command Queue
+ *
+ * ===============================================================
+ */
+/*  COMMAND QUEUE
+    ----------------------------
 
+    USAGE
+    ----------------------------
+
+    command queue function API
+    gui_command_queue_init          -- initializes a dynamic command queue
+    gui_command_queue_init_fixed    -- initializes a static command queue
+    gui_command_queue_clear         -- frees all memory if the command queue is dynamic
+    gui_command_queue_add           -- adds a command buffer into the queue
+    gui_command_queue_remove        -- removes a command buffer from the queue
+    gui_command_queue_start         -- begins the command buffer filling process
+    gui_command_queue_finish        -- ends the command buffer filling process
+
+    command iterator function API
+    gui_command_queue_begin         -- returns the first command in a queue
+    gui_command_queue_next          -- returns the next command in a queue
+    gui_foreach_command             -- iterates over all commands in a queue
+*/
+struct gui_command_buffer_stack {
+    gui_size count;
+    /* number of panels inside the stack */
+    struct gui_command_buffer *begin;
+    /* first panel inside the panel which will be drawn first */
+    struct gui_command_buffer *end;
+    /* currently active panel which will be drawn last */
+};
+
+struct gui_command_queue {
+    struct gui_buffer buffer;
+    /* memory buffer the hold all commands */
+    struct gui_command_buffer_stack stack;
+    /* stack of each memory buffer inside the queue */
+};
+
+void gui_command_queue_init(struct gui_command_queue*, const struct gui_allocator*,
+                            gui_size initial_size, gui_float grow_factor);
+/*  this function initializes a growing command queue
+    Input:
+    - allocator holding your own alloctator and memory allocation callbacks
+    - initial size of the buffer
+    - factor to grow the buffer by if the buffer is full
+*/
+void gui_command_queue_init_fixed(struct gui_command_queue*, void*, gui_size);
+/*  this function initializes a fixed size command queue
+    Input:
+    - fixed size previously allocated memory block
+    - size of the memory block
+*/
+void gui_command_queue_add(struct gui_command_queue*, struct gui_command_buffer*);
+/*  this function adds a command buffer into the queue
+    Input:
+    - command buffer to add into the queue
+*/
+void gui_command_queue_remove(struct gui_command_queue*, struct gui_command_buffer*);
+/*  this function removes a command buffer from the queue
+    Input:
+    - command buffer to remove from the queue
+*/
+void gui_command_queue_start(struct gui_command_queue*, struct gui_command_buffer*);
+/*  this function sets up the command buffer to be filled up
+    Input:
+    - command buffer to fill with commands
+*/
+void gui_command_queue_finish(struct gui_command_queue*, struct gui_command_buffer*);
+/*  this function finishes the command buffer fill up process
+    Input:
+    - the now filled command buffer
+*/
+void gui_command_queue_free(struct gui_command_queue*);
+/*  this function clears the internal buffer if it is a dynamic buffer */
+void gui_command_queue_clear(struct gui_command_queue*);
+/*  this function reset the internal buffer and has to be called every frame */
+#define gui_foreach_command(i, q)\
+    for((i)=gui_command_queue_begin(q); (i)!=NULL; (i)=gui_command_queue_next(q,i))
+/*  this function iterates over each command inside the command queue
+    Input:
+    - iterator gui_command pointer to iterate over all commands
+    - queue to iterate over
+*/
+const struct gui_command *gui_command_queue_begin(struct gui_command_queue*);
+/*  this function returns the first command in the command queue */
+const struct gui_command* gui_command_queue_next(struct gui_command_queue*,
+                                                const struct gui_command*);
+/*  this function returns the next command of a given command*/
 /*
  * ===============================================================
  *
@@ -694,14 +753,20 @@ void gui_command_buffer_push_text(struct gui_command_buffer*, gui_float, gui_flo
 */
 struct gui_clipboard {
     gui_handle userdata;
+    /* user memory for callback */
     gui_paste_f paste;
+    /* paste callback for the edit box  */
     gui_copy_f copy;
+    /* copy callback for the edit box  */
 };
 
 struct gui_selection {
     gui_bool active;
+    /* current selection state */
     gui_size begin;
+    /* text selection beginning glyph index */
     gui_size end;
+    /* text selection ending glyph index */
 };
 
 typedef struct gui_buffer gui_edit_buffer;
@@ -751,14 +816,12 @@ void gui_edit_box_init_fixed(struct gui_edit_box*, void *memory, gui_size size,
     - clipboard implementation for copy&paste or NULL of not needed
     - character filtering callback to limit input or NULL of not needed
 */
-#define gui_edit_box_reset(b)\
-    do {gui_buffer_reset(&(b)->buffer); (b)->cursor = (b)->glyphes = 0;} while(0);
+void gui_edit_box_clear(struct gui_edit_box*);
 /*  this function resets the buffer and sets everything back into a clean state */
-#define gui_edit_box_clear(b) gui_buffer_clear(&(b)->buffer)
+void gui_edit_box_free(struct gui_edit_box*);
 /*  this function frees all internal memory in a dynamically growing buffer */
-#define gui_edit_box_info(status, b)\
-    gui_buffer_info((status), &(b)->buffer)
-/* this function return information about the memory in use  */
+void gui_edit_box_info(struct gui_memory_status*, struct gui_edit_box*);
+/* this function returns information about the memory in use  */
 void gui_edit_box_add(struct gui_edit_box*, const char*, gui_size);
 /*  this function adds text at the current cursor position
     Input:
@@ -1662,10 +1725,8 @@ enum gui_panel_flags {
     /* marks the panel as minimized */
     GUI_PANEL_ACTIVE = 0x40,
     /* INTERNAL ONLY!: marks the panel as active, used by the panel stack */
-    GUI_PANEL_TAB = 0x100,
+    GUI_PANEL_TAB = 0x80
     /* INTERNAL ONLY!: Marks the panel as an subpanel of another panel(Groups/Tabs/Shelf)*/
-    GUI_PANEL_DO_NOT_RESET = 0x200
-    /* INTERNAL ONLY!: requires that the panel does not resets the command buffer */
 };
 
 struct gui_panel {
@@ -1679,12 +1740,10 @@ struct gui_panel {
     /* flag indicating if the panel is collapsed */
     const struct gui_config *config;
     /* configuration reference describing the panel style */
-    struct gui_command_buffer *buffer;
+    struct gui_command_buffer buffer;
     /* output command buffer queuing all drawing calls */
-    struct gui_panel* next;
-    /* next panel pointer for the panel stack*/
-    struct gui_panel* prev;
-    /* prev panel pointer for the panel stack*/
+    struct gui_command_queue *queue;
+    /* output command queue which hold the command buffer */
 };
 
 enum gui_panel_row_layout_type {
@@ -1822,21 +1881,20 @@ struct gui_panel_layout {
     gui_panel_begin_tiled   -- extends gui_panel_begin by adding the panel into a tiled layout
     gui_panel_end           -- end squeunce point which finializes the panel build up
     gui_panel_set_config    -- updates the used panel configuration
-    gui_panel_set_buffer    -- update the used panel buffer
     gui_panel_add_flag      -- adds a behavior flag to the panel
     gui_panel_remove_flag   -- removes a behavior flag from the panel
     gui_panel_has_flag      -- check if a given behavior flag is set in the panel
     gui_panel_is_minimized  -- return wether the panel is minimized
  */
 struct gui_layout;
-void gui_panel_init(struct gui_panel*, gui_float x, gui_float y, gui_float w,
-                    gui_float h, gui_flags, struct gui_command_buffer*,
+void gui_panel_init(struct gui_panel *panel, gui_float x, gui_float y, gui_float w,
+                    gui_float h, gui_flags flags, struct gui_command_queue*,
                     const struct gui_config*);
 /*  this function initilizes and setups the panel
     Input:
     - bounds of the panel with x,y position and width and height
     - panel flags for modified panel behavior
-    - reference to a output command buffer to push draw calls to
+    - reference to a output command queue to push draw calls into
     - configuration file containing the style, color and font for the panel
     Output:
     - a newly initialized panel
@@ -1865,31 +1923,6 @@ gui_bool gui_panel_is_minimized(struct gui_panel*);
 void gui_panel_begin(struct gui_panel_layout*, struct gui_panel*, const struct gui_input*);
 /*  this function begins the panel build up process
     Input:
-    - input structure holding all user generated state changes
-    Output:
-    - panel layout to fill up with widgets
-*/
-struct gui_stack;
-void gui_panel_begin_stacked(struct gui_panel_layout*, struct gui_panel*,
-                                struct gui_stack*, const struct gui_input*);
-/*  this function begins the panel build up process and push the panel into a panel stack
-    Input:
-    - panel stack to push the panel into
-    - title of the panel visible in th header
-    - input structure holding all user generated state changes
-    Output:
-    - panel layout to fill up with widgets
-*/
-void gui_panel_begin_tiled(struct gui_panel_layout*, struct gui_panel*,
-                                struct gui_layout*, gui_uint slot, gui_size index,
-                                const struct gui_input*);
-/*  this function begins the panel build up process and push the panel into a tiled
- *  layout container
-    Input:
-    - tiled layout container to push the panel into
-    - slot inside the panel with either top,button,center,left or right position
-    - index inside the slot to position the panel into
-    - title of the panel visible in th header
     - input structure holding all user generated state changes
     Output:
     - panel layout to fill up with widgets
@@ -2037,9 +2070,9 @@ void gui_panel_menu_end(struct gui_panel_layout*);
 /*  this function ends the panel menubar build up process */
 /*
  * --------------------------------------------------------------
- *                          ROW LAYOUT
+ *                          LAYOUT
  * --------------------------------------------------------------
-    ROW LAYOUT
+    LAYOUT
     The layout API is for positioning of widget inside a panel. In general there
     are three different ways to position widget. The first one is a table with
     fixed size columns. This like the other three comes in two flavors. First
@@ -2682,59 +2715,11 @@ struct gui_vec2 gui_panel_shelf_end(struct gui_panel_layout*, struct gui_panel_l
     Output:
     - The from user input updated shelf scrollbar pixel offset
 */
+#if 0
 /*
  * ==============================================================
  *
- *                          Stack
- *
- * ===============================================================
- */
-/*  STACK
-    ----------------------------
-    The stack was added to support overlapping panels by defining a draw order
-    for each panel from least-recently-used to recently-used panel. So instead
-    of drawing each panel in random order each panel is drawn in a user defined
-    order.
-
-    USAGE
-    ----------------------------
-    To use the stack it first as the be cleared to set it into a ready state.
-    After that panels can be added into the stack by calling the `gui_stack_push`
-    function and removed by the `gui_stack_pop` function. TO update a panel the stack
-    needs to be provided in the `gui_panel_begin` function call. To iterate
-    over each panel inside the stack from down-most to up-most the iteration
-    function `gui_foreach_panel` is provided.
-
-    stack function API
-    gui_stack_clear         -- resets the stack back to a cleared state
-    gui_stack_push          -- adds a panel into the stack
-    gui_stack_pop           -- removes a panel from the stack
-    gui_foreach_panel       -- iterates over each panel in the stack
-
-*/
-struct gui_stack {
-    gui_size count;
-    /* number of panels inside the stack */
-    struct gui_panel *begin;
-    /* first panel inside the panel which will be drawn first */
-    struct gui_panel *end;
-    /* currently active panel which will be drawn last */
-};
-
-void gui_stack_clear(struct gui_stack*);
-/* this function clears and reset the stack back to an empty state */
-void gui_stack_push(struct gui_stack*, struct gui_panel*);
-/* this function add a panel into the stack if the panel is not already inside
- * the stack */
-void gui_stack_pop(struct gui_stack*, struct gui_panel*);
-/* this function removes a panel from the stack */
-#define gui_foreach_panel(i, s) for (i = (s)->begin; i != 0; i = (i)->next)
-/* iterates over each panel inside the stack */
-
-/*
- * ==============================================================
- *
- *                          Layout
+ *                          Window Layout
  *
  * ===============================================================
  */
@@ -2918,6 +2903,7 @@ void gui_layout_slot_panel_bounds(struct gui_rect *bounds, struct gui_layout*,
     Output:
         - bounds of the panel inside the slot as a rectangle (x,y,w,h)
 */
+#endif
 
 #ifdef __cplusplus
 }

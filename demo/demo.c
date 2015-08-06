@@ -39,6 +39,9 @@ struct state {
     gui_bool toggle;
     gui_int option;
 
+    gui_int op;
+    gui_size cur;
+
     /* tree */
     struct test_tree tree;
     struct tree_node nodes[8];
@@ -70,10 +73,11 @@ struct state {
 struct demo_gui {
     gui_bool running;
     void *memory;
-    struct gui_command_buffer buffer;
+    struct gui_command_queue queue;
     struct gui_config config;
     struct gui_font font;
     struct gui_panel panel;
+    struct gui_panel sub;
     struct state state;
 };
 
@@ -222,9 +226,9 @@ widget_panel(struct gui_panel_layout *panel, struct state *demo)
     demo->item_current = gui_panel_selector(panel, items, LEN(items), demo->item_current);
     demo->spinner_int = gui_panel_spinner_int(panel, 0, demo->spinner_int, 250, 10, &demo->spinner_active);
     demo->spinner_float = gui_panel_spinner_float(panel, 0.0f, demo->spinner_float,
-                            1.0f, 0.1f, &demo->spinner_active);
+                                                    1.0f, 0.1f, &demo->spinner_active);
     demo->in_len = gui_panel_edit(panel, demo->in_buf, demo->in_len, MAX_BUFFER,
-                        &demo->in_active, NULL, GUI_INPUT_DEFAULT);
+                                    &demo->in_active, NULL, GUI_INPUT_DEFAULT);
 
     if (demo->scaleable) {
         gui_panel_row_begin(panel, GUI_DYNAMIC, 30, 2);
@@ -233,7 +237,7 @@ widget_panel(struct gui_panel_layout *panel, struct state *demo)
             gui_panel_editbox(panel, &demo->input);
             gui_panel_row_push(panel, 0.3f);
             if (gui_panel_button_text(panel, "submit", GUI_BUTTON_DEFAULT)) {
-                gui_edit_box_reset(&demo->input);
+                gui_edit_box_clear(&demo->input);
                 fprintf(stdout, "command executed!\n");
             }
         }
@@ -245,7 +249,7 @@ widget_panel(struct gui_panel_layout *panel, struct state *demo)
             gui_panel_editbox(panel, &demo->input);
             gui_panel_row_push(panel, 80);
             if (gui_panel_button_text(panel, "submit", GUI_BUTTON_DEFAULT)) {
-                gui_edit_box_reset(&demo->input);
+                gui_edit_box_clear(&demo->input);
                 fprintf(stdout, "command executed!\n");
             }
         }
@@ -549,11 +553,16 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
     clip.copy = copy;
     clip.paste = paste;
 
-    gui_command_buffer_init_fixed(&gui->buffer, gui->memory, MAX_MEMORY, GUI_CLIP);
+    /* panel */
+    gui_command_queue_init_fixed(&gui->queue, gui->memory, MAX_MEMORY);
     gui_config_default(config, GUI_DEFAULT_ALL, font);
     gui_panel_init(&gui->panel, 30, 30, 280, 530,
-        GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE, &gui->buffer, config);
+        GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE, &gui->queue, config);
+    gui_panel_init(&gui->sub, 50, 50, 220, 180,
+        GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE,
+        &gui->queue, config);
 
+    /* widget state */
     gui_edit_box_init_fixed(&win->input, win->input_buffer, MAX_BUFFER, &clip, NULL);
     win->config_tab = GUI_MINIMIZED;
     win->widget_tab = GUI_MINIMIZED;
@@ -562,13 +571,13 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
     win->color_tab = GUI_MINIMIZED;
     win->flag_tab = GUI_MINIMIZED;
     win->scaleable = gui_true;
-
     win->slider = 2.0f;
     win->progressbar = 50;
     win->spinner_int = 100;
     win->spinner_float = 0.5f;
 
     {
+        /* test tree data */
         struct test_tree *tree = &win->tree;
         tree->root.state = GUI_NODE_ACTIVE;
         tree->root.name = "Primitives";
@@ -621,6 +630,7 @@ run_demo(struct demo_gui *gui, struct gui_input *input)
     struct gui_panel_layout tab;
     struct gui_config *config = &gui->config;
     static const char *shelfs[] = {"Histogram", "Lines"};
+    enum {EASY, HARD};
 
     gui_panel_begin(&layout, &gui->panel, input);
     {
@@ -680,5 +690,21 @@ run_demo(struct demo_gui *gui, struct gui_input *input)
         }
     }
     gui_panel_end(&layout, &gui->panel);
+
+    gui_panel_begin(&layout, &gui->sub, input);
+    {
+        const char *items[] = {"Fist", "Pistol", "Railgun", "BFG"};
+        gui_panel_header(&layout, "Demo", GUI_CLOSEABLE, 0, GUI_HEADER_LEFT);
+        gui_panel_row_dynamic(&layout, 30, 1);
+        if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT)) {
+            /* event handling */
+        }
+        gui_panel_row_dynamic(&layout, 30, 2);
+        if (gui_panel_option(&layout, "easy", state->op == EASY)) state->op = EASY;
+        if (gui_panel_option(&layout, "hard", state->op == HARD)) state->op = HARD;
+        gui_panel_label(&layout, "Weapon:", GUI_TEXT_LEFT);
+        state->cur = gui_panel_selector(&layout, items, LEN(items), state->cur);
+    }
+    gui_panel_end(&layout, &gui->sub);
 }
 

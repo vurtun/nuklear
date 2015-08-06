@@ -271,9 +271,9 @@ font_get_text_width(gui_handle handle, const gui_char *t, gui_size l)
 }
 
 static void
-draw_rect(float x, float y, float w, float h, const gui_byte *c)
+draw_rect(float x, float y, float w, float h, struct gui_color c)
 {
-    glColor4ub(c[0], c[1], c[2], c[3]);
+    glColor4ub(c.r, c.g, c.b, c.a);
     glBegin(GL_QUADS);
     glVertex2f(x, y);
     glVertex2f(x + w, y);
@@ -284,7 +284,7 @@ draw_rect(float x, float y, float w, float h, const gui_byte *c)
 
 static void
 font_draw_text(const struct font *font, float x, float y, float w, float h,
-    const gui_byte *bg, const gui_byte *color, const char *text, size_t len)
+    struct gui_color bg, struct gui_color color, const char *text, size_t len)
 {
     size_t text_len;
     long unicode;
@@ -297,7 +297,7 @@ font_draw_text(const struct font *font, float x, float y, float w, float h,
     if (!glyph_len) return;
 
     glBindTexture(GL_TEXTURE_2D, font->texture);
-    glColor4ub(color[0], color[1], color[2], color[3]);
+    glColor4ub(color.r, color.g, color.b, color.a);
     glBegin(GL_QUADS);
     do {
         float gx, gy, gh, gw;
@@ -385,9 +385,9 @@ failed:
 }
 
 static void
-draw_line(float x0, float y0, float x1, float y1, const gui_byte *c)
+draw_line(float x0, float y0, float x1, float y1, struct gui_color c)
 {
-    glColor4ub(c[0], c[1], c[2], c[3]);
+    glColor4ub(c.r, c.g, c.b, c.a);
     glBegin(GL_LINES);
     glVertex2f(x0, y0);
     glVertex2f(x1, y1);
@@ -395,13 +395,13 @@ draw_line(float x0, float y0, float x1, float y1, const gui_byte *c)
 }
 
 static void
-draw_circle(float x, float y, float r, const gui_byte *c)
+draw_circle(float x, float y, float r, struct gui_color c)
 {
     int i;
     float a0 = 0.0f;
     const float a_step = (2 * 3.141592654f)/22.0f;
     x += r; y += r;
-    glColor4ub(c[0], c[1], c[2], c[3]);
+    glColor4ub(c.r, c.g, c.b, c.a);
     glBegin(GL_TRIANGLES);
     for (i = 0; i < CIRCLE_SEGMENTS; i++) {
         const float a1 = ((i + 1) == CIRCLE_SEGMENTS) ? 0.0f : a0 + a_step;
@@ -419,7 +419,7 @@ draw_circle(float x, float y, float r, const gui_byte *c)
 }
 
 static void
-draw(struct gui_command_buffer *list, int width, int height)
+draw(struct gui_command_queue *queue, int width, int height)
 {
     const struct gui_command *cmd;
     glPushAttrib(GL_ENABLE_BIT|GL_COLOR_BUFFER_BIT|GL_TRANSFORM_BIT);
@@ -438,7 +438,7 @@ draw(struct gui_command_buffer *list, int width, int height)
     glPushMatrix();
     glLoadIdentity();
 
-    gui_foreach_command(cmd, list) {
+    gui_foreach_command(cmd, queue) {
         switch (cmd->type) {
         case GUI_COMMAND_NOP: break;
         case GUI_COMMAND_SCISSOR: {
@@ -447,7 +447,7 @@ draw(struct gui_command_buffer *list, int width, int height)
         } break;
         case GUI_COMMAND_LINE: {
             const struct gui_command_line *l = gui_command(line, cmd);
-            draw_line(l->begin[0], l->begin[1], l->end[0], l->end[1], l->color);
+            draw_line(l->begin.x, l->begin.y, l->end.x, l->end.y, l->color);
         } break;
         case GUI_COMMAND_RECT: {
             const struct gui_command_rect *r = gui_command(rect, cmd);
@@ -459,23 +459,24 @@ draw(struct gui_command_buffer *list, int width, int height)
         } break;
         case GUI_COMMAND_TRIANGLE: {
             const struct gui_command_triangle *t = gui_command(triangle, cmd);
-            glColor4ub(t->color[0], t->color[1], t->color[2], t->color[3]);
+            glColor4ub(t->color.r, t->color.g, t->color.b, t->color.a);
             glBegin(GL_TRIANGLES);
-            glVertex2f(t->a[0], t->a[1]);
-            glVertex2f(t->b[0], t->b[1]);
-            glVertex2f(t->c[0], t->c[1]);
+            glVertex2f(t->a.x, t->a.y);
+            glVertex2f(t->b.x, t->b.y);
+            glVertex2f(t->c.x, t->c.y);
             glEnd();
         } break;
         case GUI_COMMAND_TEXT: {
             const struct gui_command_text *t = gui_command(text, cmd);
             font_draw_text((const struct font*)t->font.ptr, t->x, t->y, t->w, t->h,
-                    t->bg, t->fg, t->string, t->length);
+                    t->background, t->foreground, t->string, t->length);
         } break;
         case GUI_COMMAND_IMAGE:
         case GUI_COMMAND_MAX:
         default: break;
         }
     }
+    gui_command_queue_clear(queue);
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glMatrixMode(GL_MODELVIEW);
@@ -613,7 +614,7 @@ main(int argc, char *argv[])
         /* Draw */
         glClearColor(0.4f, 0.4f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-        draw(&gui.buffer, width, height);
+        draw(&gui.queue, width, height);
         SDL_GL_SwapWindow(win);
 
         /* Timing */

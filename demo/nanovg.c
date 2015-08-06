@@ -71,55 +71,55 @@ font_get_width(gui_handle handle, const gui_char *text, gui_size len)
 }
 
 static void
-draw_rect(NVGcontext *ctx, float x, float y, float w, float h, float r, const gui_byte* c)
+draw_rect(NVGcontext *ctx, float x, float y, float w, float h, float r, struct gui_color c)
 {
     nvgBeginPath(ctx);
     nvgRoundedRect(ctx, x, y, w, h, r);
-    nvgFillColor(ctx, nvgRGBA(c[0], c[1], c[2], c[3]));
+    nvgFillColor(ctx, nvgRGBA(c.r, c.g, c.b, c.a));
     nvgFill(ctx);
 }
 
 static void
 draw_text(NVGcontext *ctx, float x, float y, float w, float h,
-    const gui_byte *c, const gui_byte *bg, const gui_char *string, gui_size len)
+    struct gui_color c, struct gui_color bg, const gui_char *string, gui_size len)
 {
     draw_rect(ctx, x,y,w,h,0, bg);
     nvgBeginPath(ctx);
-    nvgFillColor(ctx, nvgRGBA(c[0], c[1], c[2], c[3]));
+    nvgFillColor(ctx, nvgRGBA(c.r, c.g, c.b, c.a));
     nvgTextAlign(ctx, NVG_ALIGN_MIDDLE);
     nvgText(ctx, x, y + h * 0.5f, string, &string[len]);
     nvgFill(ctx);
 }
 
 static void
-draw_line(NVGcontext *ctx, float x0, float y0, float x1, float y1, const gui_byte *c)
+draw_line(NVGcontext *ctx, float x0, float y0, float x1, float y1, struct gui_color c)
 {
     nvgBeginPath(ctx);
     nvgMoveTo(ctx, x0, y0);
     nvgLineTo(ctx, x1, y1);
-    nvgFillColor(ctx, nvgRGBA(c[0], c[1], c[2], c[3]));
+    nvgFillColor(ctx, nvgRGBA(c.r, c.g, c.b, c.a));
     nvgFill(ctx);
 }
 
 static void
-draw_circle(NVGcontext *ctx, float x, float y, float r, const gui_byte *c)
+draw_circle(NVGcontext *ctx, float x, float y, float r, struct gui_color c)
 {
     nvgBeginPath(ctx);
     nvgCircle(ctx, x + r, y + r, r);
-    nvgFillColor(ctx, nvgRGBA(c[0], c[1], c[2], c[3]));
+    nvgFillColor(ctx, nvgRGBA(c.r, c.g, c.b, c.a));
     nvgFill(ctx);
 }
 
 static void
 draw_triangle(NVGcontext *ctx, float x0, float y0, float x1, float y1,
-    float x2, float y2, const gui_byte *c)
+    float x2, float y2, struct gui_color c)
 {
     nvgBeginPath(ctx);
     nvgMoveTo(ctx, x0, y0);
     nvgLineTo(ctx, x1, y1);
     nvgLineTo(ctx, x2, y2);
     nvgLineTo(ctx, x0, y0);
-    nvgFillColor(ctx, nvgRGBA(c[0], c[1], c[2], c[3]));
+    nvgFillColor(ctx, nvgRGBA(c.r, c.g, c.b, c.a));
     nvgFill(ctx);
 }
 
@@ -135,7 +135,7 @@ draw_image(NVGcontext *ctx, gui_handle img, float x, float y, float w, float h, 
 }
 
 static void
-draw(NVGcontext *nvg, struct gui_command_buffer *list, int width, int height)
+draw(NVGcontext *nvg, struct gui_command_queue *queue, int width, int height)
 {
     const struct gui_command *cmd;
     glPushAttrib(GL_ENABLE_BIT|GL_COLOR_BUFFER_BIT);
@@ -147,7 +147,7 @@ draw(NVGcontext *nvg, struct gui_command_buffer *list, int width, int height)
     glEnable(GL_TEXTURE_2D);
 
     nvgBeginFrame(nvg, width, height, ((float)width/(float)height));
-    gui_foreach_command(cmd, list) {
+    gui_foreach_command(cmd, queue) {
         switch (cmd->type) {
         case GUI_COMMAND_NOP: break;
         case GUI_COMMAND_SCISSOR: {
@@ -156,11 +156,11 @@ draw(NVGcontext *nvg, struct gui_command_buffer *list, int width, int height)
         } break;
         case GUI_COMMAND_LINE: {
             const struct gui_command_line *l = gui_command(line, cmd);
-            draw_line(nvg, l->begin[0], l->begin[1], l->end[0], l->end[1], l->color);
+            draw_line(nvg, l->begin.x, l->begin.y, l->end.x, l->end.y, l->color);
         } break;
         case GUI_COMMAND_RECT: {
             const struct gui_command_rect *r = gui_command(rect, cmd);
-            draw_rect(nvg, r->x, r->y, r->w, r->h, r->r, r->color);
+            draw_rect(nvg, r->x, r->y, r->w, r->h, r->rounding, r->color);
         } break;
         case GUI_COMMAND_CIRCLE: {
             const struct gui_command_circle *c = gui_command(circle, cmd);
@@ -168,12 +168,12 @@ draw(NVGcontext *nvg, struct gui_command_buffer *list, int width, int height)
         } break;
         case GUI_COMMAND_TRIANGLE: {
             const struct gui_command_triangle *t = gui_command(triangle, cmd);
-            draw_triangle(nvg, t->a[0], t->a[1], t->b[0], t->b[1], t->c[0],
-                    t->c[1], t->color);
+            draw_triangle(nvg, t->a.x, t->a.y, t->b.x, t->b.y, t->c.x,
+                    t->c.y, t->color);
         } break;
         case GUI_COMMAND_TEXT: {
             const struct gui_command_text *t = gui_command(text, cmd);
-            draw_text(nvg, t->x, t->y, t->w, t->h, t->fg, t->bg, t->string, t->length);
+            draw_text(nvg, t->x, t->y, t->w, t->h, t->foreground, t->background, t->string, t->length);
         } break;
         case GUI_COMMAND_IMAGE: {
             const struct gui_command_image *i = gui_command(image, cmd);
@@ -183,6 +183,8 @@ draw(NVGcontext *nvg, struct gui_command_buffer *list, int width, int height)
         default: break;
         }
     }
+    gui_command_queue_clear(queue);
+
     nvgResetScissor(nvg);
     nvgEndFrame(nvg);
     glPopAttrib();
@@ -329,7 +331,7 @@ main(int argc, char *argv[])
         /* Draw */
         glClearColor(0.4f, 0.4f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-        draw(vg, &gui.buffer, width, height);
+        draw(vg, &gui.queue, width, height);
         SDL_GL_SwapWindow(win);
 
         /* Timing */

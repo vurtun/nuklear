@@ -219,18 +219,18 @@ surface_scissor(XSurface *surf, float x, float y, float w, float h)
 
 static void
 surface_draw_line(XSurface *surf, gui_short x0, gui_short y0, gui_short x1,
-    gui_short y1, const gui_byte *col)
+    gui_short y1, struct gui_color col)
 {
-    unsigned long c = color_from_byte(col);
+    unsigned long c = color_from_byte(&col.r);
     XSetForeground(surf->dpy, surf->gc, c);
     XDrawLine(surf->dpy, surf->drawable, surf->gc, (int)x0, (int)y0, (int)x1, (int)y1);
 }
 
 static void
 surface_draw_round_rect(XSurface* surf, gui_short x, gui_short y, gui_ushort w,
-    gui_ushort h, gui_ushort r, const gui_byte *col)
+    gui_ushort h, gui_ushort r, struct gui_color col)
 {
-    unsigned long c = color_from_byte(col);
+    unsigned long c = color_from_byte(&col.r);
     gui_int mx, my;
     gui_int mw, mh;
     mx = x + r; my = y + r;
@@ -252,19 +252,19 @@ surface_draw_round_rect(XSurface* surf, gui_short x, gui_short y, gui_ushort w,
 
 static void
 surface_draw_rect(XSurface* surf, gui_short x, gui_short y, gui_ushort w,
-    gui_ushort h, const gui_byte *col)
+    gui_ushort h, struct gui_color col)
 {
-    unsigned long c = color_from_byte(col);
+    unsigned long c = color_from_byte(&col.r);
     XSetForeground(surf->dpy, surf->gc, c);
     XFillRectangle(surf->dpy, surf->drawable, surf->gc, x, y, w, h);
 }
 
 static void
 surface_draw_triangle(XSurface *surf, gui_short x0, gui_short y0, gui_short x1,
-    gui_short y1, gui_short x2, gui_short y2, const gui_byte *col)
+    gui_short y1, gui_short x2, gui_short y2, struct gui_color col)
 {
     XPoint pnts[3];
-    unsigned long c = color_from_byte(col);
+    unsigned long c = color_from_byte(&col.r);
     pnts[0].x = (short)x0;
     pnts[0].y = (short)y0;
     pnts[1].x = (short)x1;
@@ -277,9 +277,9 @@ surface_draw_triangle(XSurface *surf, gui_short x0, gui_short y0, gui_short x1,
 
 static void
 surface_draw_circle(XSurface *surf, gui_short x, gui_short y, gui_ushort w,
-    gui_ushort h, const gui_byte *col)
+    gui_ushort h, struct gui_color col)
 {
-    unsigned long c = color_from_byte(col);
+    unsigned long c = color_from_byte(&col.r);
     XSetForeground(surf->dpy, surf->gc, c);
     XFillArc(surf->dpy, surf->drawable, surf->gc, (int)x, (int)y,
         (unsigned)w, (unsigned)h, 0, 360 * 64);
@@ -287,11 +287,11 @@ surface_draw_circle(XSurface *surf, gui_short x, gui_short y, gui_ushort w,
 
 static void
 surface_draw_text(XSurface *surf, gui_short x, gui_short y, gui_ushort w, gui_ushort h,
-    const char *text, size_t len, XFont *font, const gui_byte* cbg, const gui_byte *cfg)
+    const char *text, size_t len, XFont *font, struct gui_color cbg, struct gui_color cfg)
 {
     int tx, ty, th;
-    unsigned long bg = color_from_byte(cbg);
-    unsigned long fg = color_from_byte(cfg);
+    unsigned long bg = color_from_byte(&cbg.r);
+    unsigned long fg = color_from_byte(&cfg.r);
 
     XSetForeground(surf->dpy, surf->gc, bg);
     XFillRectangle(surf->dpy, surf->drawable, surf->gc, (int)x, (int)y, (unsigned)w, (unsigned)h);
@@ -329,10 +329,10 @@ surface_del(XSurface *surf)
 }
 
 static void
-draw(XSurface *surf, struct gui_command_buffer *buffer)
+draw(XSurface *surf, struct gui_command_queue *queue)
 {
     const struct gui_command *cmd;
-    gui_foreach_command(cmd, buffer) {
+    gui_foreach_command(cmd, queue) {
         switch (cmd->type) {
         case GUI_COMMAND_NOP: break;
         case GUI_COMMAND_SCISSOR: {
@@ -341,13 +341,13 @@ draw(XSurface *surf, struct gui_command_buffer *buffer)
         } break;
         case GUI_COMMAND_LINE: {
             const struct gui_command_line *l = gui_command(line, cmd);
-            surface_draw_line(surf, l->begin[0], l->begin[1], l->end[0],
-                l->end[1], l->color);
+            surface_draw_line(surf, l->begin.x, l->begin.y, l->end.x,
+                l->end.y, l->color);
         } break;
         case GUI_COMMAND_RECT: {
             const struct gui_command_rect *r = gui_command(rect, cmd);
-            if (r->r)
-                surface_draw_round_rect(surf, r->x, r->y, r->w, r->h, (gui_ushort)r->r, r->color);
+            if (r->rounding)
+                surface_draw_round_rect(surf, r->x, r->y, r->w, r->h, (gui_ushort)r->rounding, r->color);
             else
                 surface_draw_rect(surf, r->x, r->y, r->w, r->h, r->color);
         } break;
@@ -357,19 +357,20 @@ draw(XSurface *surf, struct gui_command_buffer *buffer)
         } break;
         case GUI_COMMAND_TRIANGLE: {
             const struct gui_command_triangle *t = gui_command(triangle, cmd);
-            surface_draw_triangle(surf, t->a[0], t->a[1], t->b[0], t->b[1],
-                t->c[0], t->c[1], t->color);
+            surface_draw_triangle(surf, t->a.x, t->a.y, t->b.x, t->b.y,
+                t->c.x, t->c.y, t->color);
         } break;
         case GUI_COMMAND_TEXT: {
             const struct gui_command_text *t = gui_command(text, cmd);
             surface_draw_text(surf, t->x, t->y, t->w, t->h, (const char*)t->string,
-                    t->length, (XFont*)t->font.ptr, t->bg, t->fg);
+                    t->length, (XFont*)t->font.ptr, t->background, t->foreground);
         } break;
         case GUI_COMMAND_IMAGE:
         case GUI_COMMAND_MAX:
         default: break;
         }
     }
+    gui_command_queue_clear(queue);
 }
 
 static void
@@ -495,7 +496,7 @@ main(int argc, char *argv[])
         /* Draw */
         XClearWindow(xw.dpy, xw.win);
         surface_clear(xw.surf, 0x00646464);
-        draw(xw.surf, &gui.buffer);
+        draw(xw.surf, &gui.queue);
         surface_blit(xw.win, xw.surf, xw.width, xw.height);
         XFlush(xw.dpy);
 

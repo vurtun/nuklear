@@ -38,15 +38,15 @@ Summary: It is only responsible for the actual user interface
 ## Example
 ```c
 /* allocate memory to hold the draw commands */
-struct gui_command_buffer buffer;
+struct gui_command_queue queue;
 void *memory = malloc(MEMORY_SIZE);
-gui_command_buffer_init_fixed(&buffer, memory, MEMORY_SIZE, GUI_CLIP);
+gui_command_queue_init_fixed(&buffer, memory, MEMORY_SIZE);
 
 /* setup font */
 struct gui_font font;
 font.userdata.ptr = your_font_data;
 font.height = your_font_data.height;
-font.width = your_font_width_callback_function;
+font.width = your_font_string_width_callback_function;
 
 /* setup configuration */
 struct gui_config config;
@@ -55,16 +55,13 @@ gui_config_default(&config, GUI_DEFAULT_ALL, &font);
 /* initialize panel */
 struct gui_panel panel;
 gui_panel_init(&panel, 50, 50, 220, 170,
-    GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE
+    GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE,
     &buffer, &config);
 
 /* setup widget data */
 enum {EASY, HARD};
-gui_size len = 0;
-gui_char buffer[256];
-gui_bool active = gui_false;
 gui_size option = 0;
-gui_size cursor = 0;
+gui_size item;
 
 struct gui_input input = {0};
 while (1) {
@@ -75,23 +72,41 @@ while (1) {
     /* GUI */
     struct gui_panel_layout layout;
     gui_panel_begin(&layout, &panel, &input);
-    gui_panel_header(&layout, "Demo", GUI_CLOSEABLE, 0, GUI_HEADER_LEFT);
-    gui_panel_row_dynamic(&layout, 30, 1);
-    if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT)) {
-        /* event handling */
+    {
+        const char *items[] = {"Fist", "Pistol", "Railgun", "BFG"};
+        gui_panel_header(&layout, "Demo", GUI_CLOSEABLE, 0, GUI_HEADER_LEFT);
+        gui_panel_row_dynamic(&layout, 30, 1);
+        if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT)) {
+            /* event handling */
+        }
+        gui_panel_row_dynamic(&layout, 30, 2);
+        if (gui_panel_option(&layout, "easy", option == EASY)) option = EASY;
+        if (gui_panel_option(&layout, "hard", option == HARD)) option = HARD;
+        gui_panel_label(&layout, "Weapon:", GUI_TEXT_LEFT);
+        item = gui_panel_selector(&layout, items, LEN(items), item);
     }
-    gui_panel_row_dynamic(&layout, 30, 2);
-    if (gui_panel_option(&layout, "easy", option == EASY)) option = EASY;
-    if (gui_panel_option(&layout, "hard", option == HARD)) option = HARD;
-    gui_panel_label(&layout, "input:", GUI_TEXT_LEFT);
-    len = gui_panel_edit(&layout, buffer, len, 256, &active, &cursor, GUI_INPUT_DEFAULT);
     gui_panel_end(&layout, &panel);
 
     /* draw */
     const struct gui_command *cmd;
-    gui_foreach_command(cmd, &buffer) {
+    gui_foreach_command(cmd, &queue) {
         /* execute draw call command */
+        switch (cmd->type) {
+        case GUI_COMMAND_SCISSOR:
+            /*...*/
+        case GUI_COMMAND_LINE:
+            /*...*/
+        case GUI_COMMAND_RECT:
+            /*...*/
+        case GUI_COMMAND_CIRCLE:
+            /*...*/
+        case GUI_COMMAND_TRIANGLE:
+            /*...*/
+        case GUI_COMMAND_TEXT:
+            /*...*/
+        }
     }
+    gui_command_queue_clear(&queue);
 }
 ```
 ![gui screenshot](/screen/screen.png?raw=true)
@@ -129,7 +144,16 @@ sequence points while all outside modification provoke undefined behavior.
 struct gui_input input = {0};
 while (1) {
     gui_input_begin(&input);
-    /* record input */
+    if (/*mouse moved*/)
+        gui_input_motion(&input, mouse.x, mouse.y);
+    if (/*key pressed*/)
+        gui_input_key(&input, key, gui_true);
+    if (/*key released*/)
+        gui_input_key(&input, key, gui_false);
+    if (/*mouse button pressed*/)
+        gui_input_button(&input, mouse.x, mouse.y, gui_true);
+    if (/*mouse button released */)
+        gui_input_button(&input, mouse.x, mouse.y, gui_false);
     gui_input_end(&input);
 }
 ```
@@ -146,6 +170,7 @@ true immediate mode fashion possible and supported.
 
 ```c
 struct gui_config {
+    gui_float rounding[GUI_ROUNDING_MAX];
     struct gui_vec2 properties[GUI_PROPERTY_MAX];
     struct gui_color colors[GUI_COLOR_COUNT];
 };
@@ -179,196 +204,10 @@ struct gui_font {
     gui_float height;
     gui_text_width_f width;
 };
-```
 
-### Buffer
-Almost all memory as well as object management for the toolkit
-is left to the user for maximum control. In fact a big subset of the toolkit can
-be used without any heap allocation at all. The only place where heap allocation
-is needed at all is for buffering draw calls. While the standart way of
-memory allocation in that case for libraries is to just provide allocator callbacks
-which is implemented aswell with the `gui_allocator`
-structure, there are two addition ways to provided memory. The
-first one is to just providing a static fixed size memory block to fill up which
-is handy for UIs with roughly known memory requirements. The other way of memory
-managment is to extend the fixed size block with the abiltiy to resize your block
-at the end of the frame if there is not enough memory.
-For the purpose of resizable fixed size memory blocks and for general
-information about memory consumption the `gui_memory_info` structure was
-added. It contains information about the allocated amount of data in the current
-frame as well as the needed amount if not enough memory was provided.
-
-```c
-void *memory = malloc(size);
-gui_command_buffer buffer;
-gui_command_buffer_init_fixed(&buffer, memory, MEMORY_SIZE, GUI_CLIP);
-```
-
-```c
-struct gui_allocator alloc;
-alloc.userdata = your_allocator;
-alloc.alloc = your_allocation_callback;
-alloc.relloac = your_reallocation_callback;
-alloc.free = your_free_callback;
-
-struct gui_command_buffer buffer;
-const gui_size initial_size = 4*1024;
-const gui_float grow_factor = 2.0f;
-gui_command_buffer_init(&buffer, &alloc, initial_size, grow_factor, GUI_CLIP);
-```
-
-### Widgets
-The minimal widget API provides a number of basic widgets and is designed for
-uses cases where no complex widget layouts or grouping is needed.
-In order for the GUI to work each widget needs a canvas to
-draw to, positional and widgets specific data as well as user input
-and returns the from the user input modified state of the widget.
-
-```c
-struct gui_command_buffer buffer;
-void *memory = malloc(MEMORY_SIZE);
-gui_command_buffer_init_fixed(&buffer, memory, MEMORY_SIZE, GUI_CLIP);
-
-struct gui_font font = {...};
-const struct gui_slider slider = {...};
-const struct gui_progress progress = {...};
-gui_float value = 5.0f
-gui_size prog = 20;
-
-struct gui_input input = {0};
-while (1) {
-    gui_input_begin(&input);
-    /* record input */
-    gui_input_end(&input);
-
-    gui_command_buffer_reset(&buffer);
-    value = gui_slider(&buffer, 50, 50, 100, 30, 0, value, 10, 1, &slider, &input);
-    prog = gui_progress(&buffer, 50, 100, 100, 30, prog, 100, gui_false, &progress, &input);
-
-    const struct gui_command *cmd;
-    gui_foreach_command(cmd, &buffer) {
-        /* execute draw call command */
-    }
-}
-```
-
-### Panels
-To further extend the basic widget layer and remove some of the boilerplate
-code the panel was introduced. The panel groups together a number of
-widgets but in true immediate mode fashion does not save any state from
-widgets that have been added to the panel. In addition the panel enables a
-number of nice features on a group of widgets like movement, scaling,
-hidding and minimizing. An additional use for panel is to further extend the
-grouping of widgets into tabs, groups and shelfs.
-The panel is divided into a `struct gui_panel` with persistent life time and
-the `struct gui_panel_layout` structure with a temporary life time.
-While the layout state is constantly modified over the course of
-the frame, the panel struct is only modified at the immediate mode sequence points
-`gui_panel_begin` and `gui_panel_end`. Therefore all changes to the panel struct inside of both
-sequence points have no effect in the current frame and are only visible in the
-next frame.
-
-### Stack
-While using basic panels is fine for a single movable panel or a big number of
-static panels, it has rather limited support for overlapping movable panels. For
-that to change the panel stack was introduced. The panel stack holds the basic
-drawing order of each panel so instead of drawing each panel individually they
-have to be drawn in a certain order.
-
-```c
-/* allocate buffer to hold output */
-struct gui_command_buffer buffer;
-void *memory = malloc(MEMORY_SIZE);
-gui_command_buffer_init_fixed(&buffer, memory, MEMORY_SIZE, GUI_CLIP);
-
-/* setup configuration data */
-struct gui_config config;
-struct gui_font font = {...}
-gui_config_default(&config, GUI_DEFAULT_ALL, &font);
-
-/* setup panel */
-struct gui_panel panel;
-gui_panel_init(&panel, 50, 50, 300, 200, GUI_PANEL_MOVEABLE, &buffer, &config);
-
-/* setup stack */
-struct gui_stack stack;
-gui_stack_clear(&stack);
-gui_stack_push(&stack, &panel);
-
-struct gui_input input = {0};
-while (1) {
-    gui_input_begin(&input);
-    /* record input */
-    gui_input_end(&input);
-
-    struct gui_panel_layout layout;
-    gui_panel_begin_stacked(&layout, &panel, &stack, &input);
-    gui_panel_header(&layout, "Demo", GUI_CLOSEABLE, 0, GUI_HEADER_RIGHT);
-    gui_panel_row_dynamic(&layout, 30, 1);
-    if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT))
-        fprintf(stdout, "button pressed!\n");
-    gui_panel_end(&layout, &panel);
-
-    /* draw each panel */
-    struct gui_panel *iter;
-    gui_foreach_panel(iter, &stack) {
-        const struct gui_command *cmd
-        gui_foreach_command(cmd, iter->buffer)) {
-            /* execute command */
-        }
-    }
-}
-```
-
-### Tiling
-Stacked windows are only one side of the coin for panel layouts while
-a tiled layout is the other. Tiled layouts divide the screen into regions called
-slots in this case the top, left, center, right and bottom slot. Each slot occupies a
-certain percentage on the screen and can be filled with panels either
-horizontally or vertically. The combination of slots, ratio and multiple panels
-per slots support a rich set of vertical, horizontal and mixed layouts.
-
-```c
-struct gui_command_buffer buffer;
-void *memory = malloc(MEMORY_SIZE);
-gui_command_buffer_init_fixed(&buffer, memory, MEMORY_SIZE, GUI_CLIP);
-
-struct gui_config config;
-struct gui_font font = {...}
-gui_config_default(&config, GUI_DEFAULT_ALL, &font);
-
-/* setup layout */
-struct gui_layout tiled;
-gui_layout_begin(&tiled, 0, 0, window_width, window_height, 0);
-gui_layout_slot(&tiled, GUI_SLOT_LEFT, 1.0f, GUI_LAYOUT_VERTICAL, 1);
-gui_layout_end(&tiled);
-
-struct gui_panel panel;
-struct gui_input input = {0};
-gui_panel_init(&panel, 0, 0, 0, 0, 0, &buffer, &config);
-
-while (1) {
-    gui_input_begin(&input);
-    /* record input */
-    gui_input_end(&input);
-
-    /* GUI */
-    struct gui_panel_layout layout;
-    gui_panel_begin_tiled(&layout, &panel, &tiled, GUI_SLOT_LEFT, 0, "Demo", &input);
-    gui_panel_row_dynamic(&layout, 30, 1);
-    if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT))
-        fprintf(stdout, "button pressed!\n");
-    gui_panel_end(&layout, &panel);
-
-    /* draw each panel */
-    struct gui_panel *iter;
-    gui_foreach_panel(iter, &layout.stack) {
-        const struct gui_command *cmd
-        gui_foreach_command(cmd, iter->buffer) {
-            /* execute draw call command */
-        }
-    }
-}
+font.userdata.ptr = your_font_data;
+font.height = your_font_data.height;
+font.width = your_font_string_width_callback_function;
 ```
 
 ## FAQ
