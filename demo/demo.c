@@ -693,7 +693,7 @@ run_demo(struct demo_gui *gui, struct gui_input *input)
     {
         const char *items[] = {"Fist", "Pistol", "Railgun", "BFG"};
         gui_panel_header(&layout, "Demo", GUI_CLOSEABLE, 0, GUI_HEADER_LEFT);
-        gui_panel_row_dynamic(&layout, 30, 1);
+        gui_panel_row_static(&layout, 30, 80, 1);
         if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT)) {
             /* event handling */
         }
