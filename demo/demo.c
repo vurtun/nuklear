@@ -1,5 +1,5 @@
 #define MAX_BUFFER  64
-#define MAX_MEMORY  (16 * 1024)
+#define MAX_MEMORY  (32 * 1024)
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 
@@ -31,8 +31,7 @@ struct state {
     gui_bool checkbox;
     gui_float slider;
     gui_size progressbar;
-    gui_int spinner_int;
-    gui_float spinner_float;
+    gui_int spinner;
     gui_bool spinner_active;
     gui_size item_current;
     gui_size shelf_selection;
@@ -79,6 +78,7 @@ struct demo_gui {
     struct gui_panel panel;
     struct gui_panel sub;
     struct state state;
+    gui_size w, h;
 };
 
 static void
@@ -224,9 +224,7 @@ widget_panel(struct gui_panel_layout *panel, struct state *demo)
     else gui_panel_row_dynamic(panel, 30, 1);
 
     demo->item_current = gui_panel_selector(panel, items, LEN(items), demo->item_current);
-    demo->spinner_int = gui_panel_spinner_int(panel, 0, demo->spinner_int, 250, 10, &demo->spinner_active);
-    demo->spinner_float = gui_panel_spinner_float(panel, 0.0f, demo->spinner_float,
-                                                    1.0f, 0.1f, &demo->spinner_active);
+    demo->spinner= gui_panel_spinner(panel, 0, demo->spinner, 250, 10, &demo->spinner_active);
     demo->in_len = gui_panel_edit(panel, demo->in_buf, demo->in_len, MAX_BUFFER,
                                     &demo->in_active, NULL, GUI_INPUT_DEFAULT);
 
@@ -422,8 +420,8 @@ properties_tab(struct gui_panel_layout *panel, struct gui_config *config)
     for (i = 0; i <= GUI_PROPERTY_SCROLLBAR_SIZE; ++i) {
         gui_int tx, ty;
         gui_panel_label(panel, properties[i], GUI_TEXT_LEFT);
-        tx = gui_panel_spinner_int(panel,0,(gui_int)config->properties[i].x, 20, 1, NULL);
-        ty = gui_panel_spinner_int(panel,0,(gui_int)config->properties[i].y, 20, 1, NULL);
+        tx = gui_panel_spinner(panel,0,(gui_int)config->properties[i].x, 20, 1, NULL);
+        ty = gui_panel_spinner(panel,0,(gui_int)config->properties[i].y, 20, 1, NULL);
         config->properties[i].x = (float)tx;
         config->properties[i].y = (float)ty;
     }
@@ -440,7 +438,7 @@ round_tab(struct gui_panel_layout *panel, struct gui_config *config)
     for (i = 0; i < GUI_ROUNDING_MAX; ++i) {
         gui_int t;
         gui_panel_label(panel, rounding[i], GUI_TEXT_LEFT);
-        t = gui_panel_spinner_int(panel,0,(gui_int)config->rounding[i], 20, 1, NULL);
+        t = gui_panel_spinner(panel,0,(gui_int)config->rounding[i], 20, 1, NULL);
         config->rounding[i] = (float)t;
     }
 }
@@ -468,7 +466,7 @@ color_picker(struct gui_panel_layout *panel, struct state *control,
         gui_float t = *iter;
         t = gui_panel_slider(panel, 0, t, 255, 10);
         *iter = (gui_byte)t;
-        *iter = (gui_byte)gui_panel_spinner_int(panel, 0, *iter, 255, 1, active[i]);
+        *iter = (gui_byte)gui_panel_spinner(panel, 0, *iter, 255, 1, active[i]);
     }
     return color;
 }
@@ -553,12 +551,13 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
     clip.copy = copy;
     clip.paste = paste;
 
-    /* panel */
     gui_command_queue_init_fixed(&gui->queue, gui->memory, MAX_MEMORY);
     gui_config_default(config, GUI_DEFAULT_ALL, font);
+
+    /* panel */
     gui_panel_init(&gui->panel, 30, 30, 280, 530,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE, &gui->queue, config);
-    gui_panel_init(&gui->sub, 50, 50, 220, 180,
+    gui_panel_init(&gui->sub, 400, 50, 220, 180,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE,
         &gui->queue, config);
 
@@ -573,8 +572,7 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
     win->scaleable = gui_true;
     win->slider = 2.0f;
     win->progressbar = 50;
-    win->spinner_int = 100;
-    win->spinner_float = 0.5f;
+    win->spinner = 100;
 
     {
         /* test tree data */

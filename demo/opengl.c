@@ -609,6 +609,8 @@ main(int argc, char *argv[])
 
         /* GUI */
         SDL_GetWindowSize(win, &width, &height);
+        gui.w = (gui_size)width;
+        gui.h = (gui_size)height;
         run_demo(&gui, &in);
 
         /* Draw */

@@ -210,6 +210,91 @@ font.height = your_font_data.height;
 font.width = your_font_string_width_callback_function;
 ```
 
+### Memory
+Almost all memory as well as object management for the toolkit
+is left to the user for maximum control. In fact a big subset of the toolkit can
+be used without any heap allocation at all. The only place where heap allocation
+is needed at all is for buffering draw calls. While the standart way of
+memory allocation in that case for libraries is to just provide allocator callbacks
+which is implemented aswell with the `gui_allocator`
+structure, there are two addition ways to provided memory. The
+first one is to just providing a static fixed size memory block to fill up which
+is handy for UIs with roughly known memory requirements. The other way of memory
+managment is to extend the fixed size block with the abiltiy to resize your block
+at the end of the frame if there is not enough memory.
+For the purpose of resizable fixed size memory blocks and for general
+information about memory consumption the `gui_memory_info` structure was
+added. It contains information about the allocated amount of data in the current
+frame as well as the needed amount if not enough memory was provided.
+
+```c
+/* fixed size buffer */
+void *memory = malloc(size);
+gui_command_queue buffer;
+gui_command_queue_init_fixed(&buffer, memory, MEMORY_SIZE, GUI_CLIP);
+```
+
+```c
+/* dynamically growing buffer */
+struct gui_allocator alloc;
+alloc.userdata = your_allocator;
+alloc.alloc = your_allocation_callback;
+alloc.relloac = your_reallocation_callback;
+alloc.free = your_free_callback;
+
+struct gui_command_queue queue;
+const gui_size initial_size = 4*1024;
+const gui_float grow_factor = 2.0f;
+gui_command_queue_init(&queue, &alloc, initial_size, grow_factor);
+```
+
+### Tiling
+A tiled layout allows to divide the screen into regions called
+slots in this case the top, left, center, right and bottom slot. Each slot occupies a
+certain percentage on the screen and can be filled with panels either
+horizontally or vertically. The combination of slots, ratio and multiple panels
+per slots support a rich set of vertical, horizontal and mixed layouts.
+
+```c
+struct gui_command_queue queue;
+void *memory = malloc(MEMORY_SIZE);
+gui_command_queue_init_fixed(&queue, memory, MEMORY_SIZE, GUI_CLIP);
+
+struct gui_config config;
+struct gui_font font = {...}
+gui_config_default(&config, GUI_DEFAULT_ALL, &font);
+
+/* setup layout */
+struct gui_layout tiled;
+gui_layout_begin(&tiled, 0, 0, window_width, window_height, 0);
+gui_layout_slot(&tiled, GUI_SLOT_LEFT, 0.5f, GUI_LAYOUT_VERTICAL, 1);
+gui_layout_end(&tiled);
+
+struct gui_panel panel;
+struct gui_input input = {0};
+gui_panel_init(&panel, 0, 0, 0, 0, 0, &buffer, &queue);
+
+while (1) {
+    gui_input_begin(&input);
+    /* record input */
+    gui_input_end(&input);
+
+    /* GUI */
+    struct gui_panel_layout layout;
+    gui_panel_begin_tiled(&layout, &panel, &tiled, GUI_SLOT_LEFT, 0, "Demo", &input);
+    gui_panel_layout_flux_fixed(&layout, 30, 1);
+    if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT))
+        fprintf(stdout, "button pressed!\n");
+    gui_panel_end(&layout, &panel);
+
+    /* draw each panel */
+    const struct gui_command *cmd
+    gui_foreach_command(cmd, queue) {
+        /* execute draw call command */
+    }
+}
+```
+
 ## FAQ
 #### Where is the demo/example code?
 The demo and example code can be found in the demo folder.

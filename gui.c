@@ -177,45 +177,6 @@ gui_image_is_subimage(const struct gui_image* img)
     return gui_rect_is_valid(img->region);
 }
 
-static gui_float
-gui_sin(gui_float x)
-{
-    gui_float rsin = 0;
-    if (x < -GUI_PI) x += GUI_PI2;
-    else if (x >  GUI_PI) x -= GUI_PI2;
-    if (x < 0) {
-        rsin = GUI_4_DIV_PI * x + GUI_4_DIV_PI_SQRT * x * x;
-        if (rsin < 0) rsin = 0.225f * (rsin *-rsin - rsin) + rsin;
-        else rsin = 0.225f * (rsin * rsin - rsin) + rsin;
-    } else {
-        rsin = GUI_4_DIV_PI * x - GUI_4_DIV_PI_SQRT * x * x;
-        if (rsin < 0) rsin = 0.225f * (rsin *-rsin - rsin) + rsin;
-        else rsin = 0.225f * (rsin * rsin - rsin) + rsin;
-    }
-    return rsin;
-}
-
-
-static gui_float
-gui_cos(gui_float x)
-{
-    gui_float rcos = 0;
-    x += 1.57079632f;
-    if (x > GUI_PI)
-        x -= GUI_PI2;
-
-    if (x < 0) {
-        rcos = GUI_4_DIV_PI * x + GUI_4_DIV_PI_SQRT * x * x;
-        if (rcos < 0) rcos = 0.225f * (rcos *-rcos - rcos) + rcos;
-        else rcos = 0.225f * (rcos * rcos - rcos) + rcos;
-    } else {
-        rcos = GUI_4_DIV_PI * x - GUI_4_DIV_PI_SQRT * x * x;
-        if (rcos < 0) rcos = 0.225f * (rcos *-rcos - rcos) + rcos;
-        else rcos = 0.225f * (rcos * rcos - rcos) + rcos;
-    }
-    return rcos;
-}
-
 static void
 gui_zero(void *dst, gui_size size)
 {
@@ -244,59 +205,6 @@ gui_strtoi(gui_int *number, const char *buffer, gui_size len)
     *number = 0;
     for (i = 0; i < len; ++i)
         *number = *number * 10 + (buffer[i] - '0');
-    return 1;
-}
-
-static gui_int
-gui_strtof(gui_float *number, const char *buffer)
-{
-    gui_int i;
-    gui_float m;
-    gui_bool div;
-    gui_int pow;
-    const gui_char *p = buffer;
-    gui_float floatvalue = 0;
-
-    GUI_ASSERT(number);
-    GUI_ASSERT(buffer);
-    if (!number || !buffer) return 0;
-    *number = 0;
-
-    while( *p && *p != '.' && *p != 'e' ) {
-        floatvalue = floatvalue * 10.0f + (gui_float) (*p - '0');
-        p++;
-    }
-
-    if ( *p == '.' ) {
-        p++;
-        for(m = 0.1f; *p && *p != 'e'; p++ ) {
-            floatvalue = floatvalue + (gui_float) (*p - '0') * m;
-            m *= 0.1f;
-        }
-    }
-    if ( *p == 'e' ) {
-        p++;
-        if ( *p == '-' ) {
-            div = gui_true;
-            p++;
-        }
-        else if ( *p == '+' ) {
-            div = gui_false;
-            p++;
-        }
-        else div = gui_false;
-
-        for ( pow = 0; *p; p++ )
-            pow = pow * 10 + (int) (*p - '0');
-
-        for ( m = 1.0, i = 0; i < pow; i++ )
-            m *= 10.0f;
-
-        if ( div )
-            floatvalue /= m;
-        else floatvalue *= m;
-    }
-    *number = floatvalue;
     return 1;
 }
 
@@ -330,154 +238,6 @@ gui_itos(char *buffer, gui_int num)
         num = num / 10;
     } while (num);
     return len;
-}
-
-static gui_double
-gui_pow(double x, int n)
-{
-    /*  check the sign of n */
-    gui_double r = 1;
-    int plus = n >= 0;
-    n = (plus) ? n : -n;
-    while (n > 0) {
-        if ((n & 1) == 1)
-            r *= x;
-        n /= 2;
-        x *= x;
-    }
-    return plus ? r : 1.0 / r;
-}
-
-static int
-gui_isinf(double x)
-{
-    union {gui_ulong u; double f;} ieee754;
-    ieee754.f = x;
-    return ( (unsigned)(ieee754.u >> 32) & 0x7fffffff ) == 0x7ff00000 &&
-           ( (unsigned)ieee754.u == 0 );
-}
-
-static int
-gui_isnan(double x)
-{
-    union {gui_ulong u; double f;} ieee754;
-    ieee754.f = x;
-    return ( (unsigned)(ieee754.u >> 32) & 0x7fffffff ) +
-           ( (unsigned)ieee754.u != 0 ) > 0x7ff00000;
-}
-
-static gui_double
-gui_fabs(gui_double x)
-{
-    if (x < 0) return -x;
-    return x;
-}
-
-static gui_double
-gui_floor(gui_double x)
-{
-    return (gui_double)((gui_int)x - ((x < 0.0) ? 1 : 0));
-}
-
-static gui_int
-gui_log10(gui_double n)
-{
-    gui_int neg;
-    gui_int ret;
-    gui_int exp = 0;
-
-    neg = (n < 0) ? 1 : 0;
-    ret = (neg) ? (gui_int)-n : (gui_int)n;
-    while ((ret / 10) > 0) {
-        ret /= 10;
-        exp++;
-    }
-    if (neg) exp = -exp;
-    return exp;
-}
-
-static gui_size
-gui_dtos(char *s, gui_double n)
-{
-    gui_int useExp;
-    gui_int digit, m, m1;
-    gui_char *c = s;
-    gui_int neg;
-
-    if (gui_isnan(n)) {
-        s[0] = 'n'; s[1] = 'a'; s[2] = 'n'; s[3] = '\0';
-        return 3;
-    } else if (gui_isinf(n)) {
-        s[0] = 'i'; s[1] = 'n'; s[2] = 'f'; s[3] = '\0';
-        return 3;
-    } else if (n == 0.0) {
-        s[0] = '0'; s[1] = '\0';
-        return 1;
-    }
-
-    neg = (n < 0);
-    if (neg) n = -n;
-
-    /* calculate magnitude */
-    m = gui_log10(n);
-    useExp = (m >= 14 || (neg && m >= 9) || m <= -9);
-    if (neg) *(c++) = '-';
-
-    /* set up for scientific notation */
-    if (useExp) {
-        if (m < 0)
-           m -= 1;
-        n = n / gui_pow(10.0, m);
-        m1 = m;
-        m = 0;
-    }
-    if (m < 1.0) {
-        m = 0;
-    }
-
-    /* convert the number */
-    while (n > GUI_DOUBLE_PRECISION || m >= 0) {
-        gui_double tmp;
-        gui_double weight = gui_pow(10.0, m);
-        if (weight > 0 && !gui_isinf(weight)) {
-            gui_double t = (gui_double)n / weight;
-            tmp = gui_floor(t);
-            digit = (gui_int)tmp;
-            n -= (digit * weight);
-            *(c++) = (gui_char)('0' + (gui_char)digit);
-        }
-        if (m == 0 && n > 0)
-            *(c++) = '.';
-        m--;
-    }
-
-    if (useExp) {
-        /* convert the exponent */
-        int i, j;
-        *(c++) = 'e';
-        if (m1 > 0) {
-            *(c++) = '+';
-        } else {
-            *(c++) = '-';
-            m1 = -m1;
-        }
-        m = 0;
-        while (m1 > 0) {
-            *(c++) = (gui_char)('0' + (gui_char)(m1 % 10));
-            m1 /= 10;
-            m++;
-        }
-        c -= m;
-        for (i = 0, j = m-1; i<j; i++, j--) {
-            /* swap without temporary */
-            c[i] ^= c[j];
-            c[j] ^= c[i];
-            c[i] ^= c[j];
-        }
-        c += m;
-    }
-    *(c) = '\0';
-    return (gui_size)(c - s);
 }
 
 static void
@@ -888,12 +648,32 @@ gui_command_buffer_init(struct gui_command_buffer *cmdbuf,
 {
     GUI_ASSERT(cmdbuf);
     GUI_ASSERT(buffer);
+    if (!cmdbuf || !buffer) return;
     cmdbuf->base = buffer;
     cmdbuf->use_clipping = clip;
     cmdbuf->queue = 0;
     cmdbuf->begin = buffer->allocated;
     cmdbuf->end = buffer->allocated;
     cmdbuf->last = buffer->allocated;
+}
+
+void
+gui_command_buffer_reset(struct gui_command_buffer *buffer)
+{
+    GUI_ASSERT(buffer);
+    if (!buffer) return;
+    buffer->begin = 0;
+    buffer->end = 0;
+    buffer->last = 0;
+}
+
+void
+gui_command_buffer_clear(struct gui_command_buffer *buffer)
+{
+    GUI_ASSERT(buffer);
+    if (!buffer) return;
+    gui_command_buffer_reset(buffer);
+    gui_buffer_clear(buffer->base);
 }
 
 void*
@@ -1151,7 +931,8 @@ gui_command_queue_init_fixed(struct gui_command_queue *queue,
 }
 
 void
-gui_command_queue_add(struct gui_command_queue *queue, struct gui_command_buffer *buffer)
+gui_command_queue_insert_back(struct gui_command_queue *queue,
+    struct gui_command_buffer *buffer)
 {
     struct gui_command_buffer_stack *stack;
     GUI_ASSERT(queue);
@@ -1173,6 +954,29 @@ gui_command_queue_add(struct gui_command_queue *queue, struct gui_command_buffer
     buffer->prev = stack->end;
     buffer->next = 0;
     stack->end = buffer;
+    stack->count++;
+    buffer->queue = queue;
+}
+
+void
+gui_command_queue_insert_front(struct gui_command_queue *queue,
+    struct gui_command_buffer *buffer)
+{
+    struct gui_command_buffer_stack *stack;
+    GUI_ASSERT(queue);
+    GUI_ASSERT(buffer);
+    if (!queue || !buffer) return;
+
+    stack = &queue->stack;
+    if (!stack->begin) {
+        gui_command_queue_insert_back(queue, buffer);
+        return;
+    }
+
+    stack->begin->prev = buffer;
+    buffer->next = stack->begin;
+    buffer->prev = 0;
+    stack->begin = buffer;
     stack->count++;
     buffer->queue = queue;
 }
@@ -1238,16 +1042,14 @@ gui_command_queue_clear(struct gui_command_queue *queue)
     GUI_ASSERT(queue);
     if (!queue) return;
     gui_buffer_clear(&queue->buffer);
+    queue->build = gui_false;
 }
 
 const struct gui_command*
 gui_command_queue_begin(struct gui_command_queue *queue)
 {
-    struct gui_command_buffer *iter;
-    struct gui_command_buffer *next;
-    struct gui_command *cmd;
     gui_byte *buffer;
-
+    struct gui_command_buffer *iter;
     GUI_ASSERT(queue);
     if (!queue) return 0;
     if (!queue->stack.count) return 0;
@@ -1255,13 +1057,22 @@ gui_command_queue_begin(struct gui_command_queue *queue)
     /* build one command list out of all command buffers */
     buffer = queue->buffer.memory.ptr;
     iter = queue->stack.begin;
-    while (iter != 0) {
-        next = iter->next;
-        cmd = gui_ptr_add(struct gui_command, buffer, iter->last);
-        if (next && iter->last != iter->begin) {
-            cmd->next = next->begin;
-        } else cmd->next = queue->buffer.allocated;
-        iter = next;
+    if (!queue->build) {
+        struct gui_command_buffer *next;
+        struct gui_command *cmd;
+        while (iter != 0) {
+            next = iter->next;
+            if (iter->last != iter->begin) {
+                cmd = gui_ptr_add(struct gui_command, buffer, iter->last);
+                while (next && next->last == next->begin)
+                    next = next->next; /* skip empty command buffers */
+                if (next) {
+                    cmd->next = next->begin;
+                } else cmd->next = queue->buffer.allocated;
+            }
+            iter = next;
+        }
+        queue->build = gui_true;
     }
 
     iter = queue->stack.begin;
@@ -1276,9 +1087,7 @@ gui_command_queue_next(struct gui_command_queue *queue, const struct gui_command
 {
     gui_byte *buffer;
     GUI_ASSERT(queue);
-    if (!queue) return 0;
-    if (!cmd) return 0;
-    if (!queue->stack.count) return 0;
+    if (!queue || !cmd || !queue->stack.count) return 0;
     if (cmd->next >= queue->buffer.allocated) return 0;
     buffer = queue->buffer.memory.ptr;
     return gui_ptr_add_const(struct gui_command, buffer, cmd->next);
@@ -2649,7 +2458,7 @@ gui_scrollbar_horizontal(struct gui_command_buffer *out, gui_float x, gui_float 
 }
 
 static gui_int
-gui_spinner(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w,
+gui_spinner_base(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w,
     gui_float h, const struct gui_spinner *s, gui_char *buffer, gui_size *len,
     enum gui_input_filter filter, gui_bool *active,
     const struct gui_input *in, const struct gui_font *font)
@@ -2659,6 +2468,7 @@ gui_spinner(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float 
     gui_float button_x, button_y;
     gui_float button_w, button_h;
     gui_bool button_up_clicked, button_down_clicked;
+    gui_bool is_active = (active) ? *active : gui_false;
 
     struct gui_edit field;
     gui_float field_x, field_y;
@@ -2705,13 +2515,14 @@ gui_spinner(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float 
     field.border = s->border;
     field.text = s->text;
     *len = gui_edit(out, field_x, field_y, field_w, field_h, buffer,
-            *len, GUI_MAX_NUMBER_BUFFER, active, 0,
+            *len, GUI_MAX_NUMBER_BUFFER, &is_active, 0,
             &field, filter, in, font);
+    if (active) *active = is_active;
     return ret;
 }
 
 gui_int
-gui_spinner_int(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w,
+gui_spinner(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w,
     gui_float h, const struct gui_spinner *s, gui_int min, gui_int value,
     gui_int max, gui_int step, gui_bool *active, const struct gui_input *in,
     const struct gui_font *font)
@@ -2732,7 +2543,7 @@ gui_spinner_int(struct gui_command_buffer *out, gui_float x, gui_float y, gui_fl
     is_active = (active) ? *active : gui_false;
     old_len = len;
 
-    res = gui_spinner(out, x, y, w, h, s, string, &len, GUI_INPUT_DEC, active, in, font);
+    res = gui_spinner_base(out, x, y, w, h, s, string, &len, GUI_INPUT_DEC, active, in, font);
     if (res) {
         value += (res > 0) ? step : -step;
         value = CLAMP(min, value, max);
@@ -2740,40 +2551,6 @@ gui_spinner_int(struct gui_command_buffer *out, gui_float x, gui_float y, gui_fl
 
     if (old_len != len)
         gui_strtoi(&value, string, len);
-    if (active) *active = is_active;
-    return value;
-}
-
-gui_float
-gui_spinner_float(struct gui_command_buffer *out, gui_float x, gui_float y, gui_float w,
-    gui_float h, const struct gui_spinner *s, gui_float min, gui_float value,
-    gui_float max, gui_float step, gui_bool *active,
-    const struct gui_input *in, const struct gui_font *font)
-{
-    gui_int res;
-    char string[GUI_MAX_NUMBER_BUFFER];
-    gui_size len, old_len;
-    gui_bool is_active;
-
-    GUI_ASSERT(out);
-    GUI_ASSERT(s);
-    GUI_ASSERT(font);
-    if (!out || !s || !font) return value;
-
-    /* make sure given values are correct */
-    value = CLAMP(min, value, max);
-    len = gui_dtos(string, value);
-    is_active = (active) ? *active : gui_false;
-    old_len = len;
-
-    res = gui_spinner(out, x, y, w, h, s, string, &len, GUI_INPUT_FLOAT, active, in, font);
-    if (res) {
-        value += (res > 0) ? step : -step;
-        value = CLAMP(min, value, max);
-    }
-
-    if (old_len != len)
-        gui_strtof(&value, string);
     if (active) *active = is_active;
     return value;
 }
@@ -2857,7 +2634,6 @@ gui_config_default_properties(struct gui_config *config)
     config->properties[GUI_PROPERTY_ITEM_SPACING] = gui_vec2(4.0f, 4.0f);
     config->properties[GUI_PROPERTY_ITEM_PADDING] = gui_vec2(4.0f, 4.0f);
     config->properties[GUI_PROPERTY_SCALER_SIZE] = gui_vec2(16.0f, 16.0f);
-    config->properties[GUI_PROPERTY_NODE_SPACING] = gui_vec2(10.0f, 4.0f);
 }
 
 static void
@@ -3085,7 +2861,7 @@ gui_panel_init(struct gui_panel *panel, gui_float x, gui_float y, gui_float w,
     panel->queue = queue;
     if (queue) {
         gui_command_buffer_init(&panel->buffer, &queue->buffer, GUI_CLIP);
-        gui_command_queue_add(queue, &panel->buffer);
+        gui_command_queue_insert_back(queue, &panel->buffer);
     }
 }
 
@@ -3176,7 +2952,7 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
                  * at the highest priority in stack */
                 if (!iter) {
                     gui_command_queue_remove(panel->queue, &panel->buffer);
-                    gui_command_queue_add(panel->queue, &panel->buffer);
+                    gui_command_queue_insert_back(panel->queue, &panel->buffer);
                 }
             }
             if (s->end != &panel->buffer) {
@@ -3293,7 +3069,6 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel,
         layout->clip.w, layout->clip.h);
 }
 
-#if 0
 void
 gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
     struct gui_layout *layout, enum gui_layout_slot_index slot, gui_size index,
@@ -3301,6 +3076,9 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
 {
     struct gui_rect bounds;
     struct gui_layout_slot *s;
+    const struct gui_config *config;
+    struct gui_vec2 mpos = in->mouse_prev;
+    struct gui_rect scaler;
 
     /* debug build argument check */
     GUI_ASSERT(panel);
@@ -3323,13 +3101,9 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
     bounds.w = s->ratio.x * (gui_float)layout->bounds.w;
     bounds.h = s->ratio.y * (gui_float)layout->bounds.h;
 
+    config = panel->config;
     {
         /* user slot scaling */
-        const struct gui_config *config = panel->config;
-        struct gui_command_buffer *out = panel->buffer;
-        struct gui_vec2 mpos = in->mouse_prev;
-        struct gui_rect scaler;
-
         switch (slot) {
         case GUI_SLOT_TOP:
             /* calculate scaler bounds */
@@ -3470,14 +3244,6 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
         case GUI_SLOT_MAX:
         default: break;
         }
-
-        /* NOTE: this is a little bit of a hack */
-        if (slot != GUI_SLOT_CENTER) {
-            panel->flags |= GUI_PANEL_DO_NOT_RESET;
-            gui_command_buffer_reset(panel->buffer);
-            gui_command_buffer_push_rect(out, scaler.x, scaler.y, scaler.w, scaler.h,
-                0, config->colors[GUI_COLOR_LAYOUT_SCALER]);
-        }
     }
 
     /* calculate the bounds of the panel */
@@ -3493,12 +3259,23 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
         panel->y = bounds.y + (gui_float)index * panel->h;
     }
 
-    /* add the panel into the stack and start the panel */
-    gui_stack_push(&layout->stack, panel);
-    gui_panel_begin(tile, panel, layout->active ? 0:in);
-    panel->flags &= ~(gui_flags)GUI_PANEL_DO_NOT_RESET;
+    {
+        /* setup panel and make sure tiled panels are always in the background */
+        struct gui_command_queue *queue = panel->queue;
+        struct gui_command_buffer *out = &panel->buffer;
+        gui_command_queue_start(panel->queue, &panel->buffer);
+        if (slot != GUI_SLOT_CENTER && !index) {
+            /* draw the scaler of the slot */
+            gui_command_buffer_push_rect(out, scaler.x, scaler.y, scaler.w, scaler.h,
+                0, config->colors[GUI_COLOR_LAYOUT_SCALER]);
+        }
+        panel->queue = 0;
+        gui_panel_begin(tile, panel, layout->active ? in : 0);
+        panel->queue = queue;
+        gui_command_queue_remove(panel->queue, &panel->buffer);
+        gui_command_queue_insert_front(panel->queue, &panel->buffer);
+    }
 }
-#endif
 
 void
 gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
@@ -3629,8 +3406,13 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
     }
 
     gui_command_buffer_push_scissor(out, 0, 0, gui_null_rect.w, gui_null_rect.h);
-    if (!(panel->flags & GUI_PANEL_TAB))
-        gui_command_queue_finish(panel->queue, &panel->buffer);
+    if (!(panel->flags & GUI_PANEL_TAB)) {
+        /* panel is hidden so clear command buffer  */
+        if (layout->flags & GUI_PANEL_HIDDEN)
+            gui_command_buffer_reset(&panel->buffer);
+        /* panel is visible and not tab */
+        else gui_command_queue_finish(panel->queue, &panel->buffer);
+    }
     panel->flags = layout->flags;
 }
 
@@ -4227,11 +4009,14 @@ gui_panel_row_space_begin(struct gui_panel_layout *layout,
 
     gui_panel_layout(layout, height, widget_count);
     if (fmt == GUI_STATIC) {
+        /* calculate bounds of the free to use panel space */
         struct gui_rect clip, space;
         space.x = layout->at_x;
         space.y = layout->at_y;
         space.w = layout->width;
         space.h = layout->row.height;
+
+        /* setup clipping rect for the free space to prevent overdraw  */
         gui_unify(&clip, &layout->clip, space.x, space.y, space.x + space.w, space.y + space.h);
         gui_command_buffer_push_scissor(layout->buffer, clip.x, clip.y, clip.w, clip.h);
 
@@ -4411,7 +4196,6 @@ gui_panel_layout_push(struct gui_panel_layout *layout,
     struct gui_vec2 item_spacing;
     struct gui_vec2 item_padding;
     struct gui_vec2 panel_padding;
-    struct gui_vec2 node_spacing;
     struct gui_rect header;
     struct gui_rect sym;
 
@@ -4429,7 +4213,6 @@ gui_panel_layout_push(struct gui_panel_layout *layout,
     item_spacing = gui_config_property(config, GUI_PROPERTY_ITEM_SPACING);
     item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
     panel_padding = gui_config_property(config, GUI_PROPERTY_PADDING);
-    node_spacing = gui_config_property(config, GUI_PROPERTY_NODE_SPACING);
 
     /* calculate header bounds and draw background */
     gui_panel_layout(layout, config->font.height + 4 * item_padding.y, 1);
@@ -4504,9 +4287,9 @@ gui_panel_layout_push(struct gui_panel_layout *layout,
     }
 
     if (*state == GUI_MAXIMIZED) {
-        layout->at_x = header.x + node_spacing.x;
-        layout->width = MAX(layout->width, 2 * panel_padding.x + node_spacing.x);
-        layout->width -= 2 * panel_padding.x + node_spacing.x;
+        layout->at_x = header.x;
+        layout->width = MAX(layout->width, 2 * panel_padding.x);
+        layout->width -= 2 * panel_padding.x;
         return gui_true;
     } else return gui_false;
 }
@@ -4516,7 +4299,6 @@ gui_panel_layout_pop(struct gui_panel_layout *layout)
 {
     const struct gui_config *config;
     struct gui_vec2 panel_padding;
-    struct gui_vec2 node_spacing;
 
     GUI_ASSERT(layout);
     GUI_ASSERT(layout->config);
@@ -4527,9 +4309,8 @@ gui_panel_layout_pop(struct gui_panel_layout *layout)
 
     config = layout->config;
     panel_padding = gui_config_property(config, GUI_PROPERTY_PADDING);
-    node_spacing = gui_config_property(config, GUI_PROPERTY_NODE_SPACING);
-    layout->at_x -= panel_padding.x + node_spacing.x;
-    layout->width += 2 * panel_padding.x + node_spacing.x;
+    layout->at_x -= panel_padding.x;
+    layout->width += 2 * panel_padding.x;
 }
 
 /*
@@ -5058,7 +4839,7 @@ gui_panel_edit_filtered(struct gui_panel_layout *layout, gui_char *buffer, gui_s
 }
 
 gui_int
-gui_panel_spinner_int(struct gui_panel_layout *layout, gui_int min, gui_int value,
+gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     gui_int max, gui_int step, gui_bool *active)
 {
     struct gui_rect bounds;
@@ -5087,41 +4868,7 @@ gui_panel_spinner_int(struct gui_panel_layout *layout, gui_int min, gui_int valu
     spinner.border = config->colors[GUI_COLOR_SPINNER_BORDER];
     spinner.text = config->colors[GUI_COLOR_SPINNER_TEXT];
     spinner.show_cursor = gui_false;
-    return gui_spinner_int(out, bounds.x, bounds.y, bounds.w, bounds.h, &spinner,
-                            min, value, max, step, active, i, &layout->config->font);
-}
-
-gui_float
-gui_panel_spinner_float(struct gui_panel_layout *layout, gui_float min, gui_float value,
-    gui_float max, gui_float step, gui_bool *active)
-{
-    struct gui_rect bounds;
-    struct gui_spinner spinner;
-    const struct gui_config *config;
-    struct gui_command_buffer *out;
-    struct gui_vec2 item_padding;
-
-    const struct gui_input *i;
-    enum gui_widget_state state;
-    state = gui_panel_widget(&bounds, layout);
-    if (!state) return value;
-    i = (state == GUI_ROM) ? 0 : layout->input;
-
-    config = layout->config;
-    out = layout->buffer;
-    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
-
-    spinner.border_button = 1;
-    spinner.button_color = config->colors[GUI_COLOR_BUTTON];
-    spinner.button_border = config->colors[GUI_COLOR_BUTTON_BORDER];
-    spinner.button_triangle = config->colors[GUI_COLOR_SPINNER_TRIANGLE];
-    spinner.padding.x = item_padding.x;
-    spinner.padding.y = item_padding.y;
-    spinner.color = config->colors[GUI_COLOR_SPINNER];
-    spinner.border = config->colors[GUI_COLOR_SPINNER_BORDER];
-    spinner.text = config->colors[GUI_COLOR_SPINNER_TEXT];
-    spinner.show_cursor = gui_false;
-    return gui_spinner_float(out, bounds.x, bounds.y, bounds.w, bounds.h, &spinner,
+    return gui_spinner(out, bounds.x, bounds.y, bounds.w, bounds.h, &spinner,
                             min, value, max, step, active, i, &layout->config->font);
 }
 
@@ -5958,7 +5705,6 @@ gui_panel_shelf_end(struct gui_panel_layout *p, struct gui_panel_layout *s)
     return pan.offset;
 }
 
-#if 0
 /*
  * ==============================================================
  *
@@ -6121,4 +5867,3 @@ gui_layout_slot_panel_bounds(struct gui_rect *bounds, struct gui_layout *layout,
         bounds->y = slot_bounds.y + (gui_float)index * bounds->h;
     }
 }
-#endif

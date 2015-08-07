@@ -404,7 +404,7 @@ void gui_buffer_free(struct gui_buffer*);
  */
 /*  COMMAND BUFFER
     ----------------------------
-    The command API buffers draw calls as commands in to a buffer and
+    The command buffer API queues draw calls as commands in to a buffer and
     therefore abstracts over drawing routines and enables defered drawing.
     The API offers a number of drawing primitives like lines, rectangles, circles,
     triangles, images, text and clipping rectangles, that have to be drawn by the user.
@@ -415,17 +415,19 @@ void gui_buffer_free(struct gui_buffer*);
 
     USAGE
     ----------------------------
-    To use the command buffer you first have to initiate the buffer either as fixed
-    size or growing buffer. After the initilization you can add primitives by
+    To use the command buffer you first have to initiate the buffer with a
+    buffer. After the initilization you can add primitives by
     calling the appropriate gui_command_buffer_XXX for each primitive.
     To iterate over each commands inside the buffer gui_foreach_command is
     provided. Finally to reuse the buffer after the frame use the
-    gui_command_buffer_reset function.
+    gui_command_buffer_reset function. If used without a command queue the command
+    buffer has be cleared after each frame to reset the buffer back into a
+    empty state.
 
     command buffer function API
     gui_command_buffer_init         -- initializes a command buffer with a buffer
-    gui_command_buffer_reset        -- resets the command buffer back to an empty state
-    gui_command_buffer_clear        -- frees all memory if the command buffer is dynamic
+    gui_command_buffer_clear        -- resets the command buffer and internal buffer
+    gui_command_buffer_reset        -- resets the command buffer but not the buffer
 
     command queue function API
     gui_command_buffer_push         -- pushes and enqueues a command into the buffer
@@ -543,6 +545,10 @@ void gui_command_buffer_init(struct gui_command_buffer*, struct gui_buffer*,
     - memory buffer to store the command into
     - clipping flag for removing non-visible draw commands
 */
+void gui_command_buffer_reset(struct gui_command_buffer*);
+/*  this function clears the command buffer but not the internal memory buffer */
+void gui_command_buffer_clear(struct gui_command_buffer*);
+/*  this function clears the command buffer and internal memory buffer */
 void *gui_command_buffer_push(struct gui_command_buffer*, gui_uint type, gui_size size);
 /*  this function push enqueues a command into the buffer
     Input:
@@ -620,8 +626,10 @@ void gui_command_buffer_push_text(struct gui_command_buffer*, gui_float, gui_flo
     - color of the triangle to draw
 */
 #define gui_command(t, c) ((const struct gui_command_##t*)c)
+/*  this is a small helper makro to cast from a general to a specific command */
 #define gui_foreach_buffer_command(i, b)\
     for((i)=gui_command_buffer_begin(b); (i)!=NULL; (i)=gui_command_buffer_next(b,i))
+/*  this loop header allow to iterate over each command in a command buffer */
 const struct gui_command *gui_command_buffer_begin(struct gui_command_buffer*);
 /*  this function returns the first command in the command buffer */
 const struct gui_command *gui_command_buffer_next(struct gui_command_buffer*,
@@ -636,9 +644,24 @@ const struct gui_command *gui_command_buffer_next(struct gui_command_buffer*,
  */
 /*  COMMAND QUEUE
     ----------------------------
+    The command queue extends the command buffer with the possiblity to use
+    more than one command buffer on one memory buffer and still only need
+    to iterate over one command list. Therefore it is possible to have mutliple
+    panels without having to manage each panels individual memory. This greatly
+    simplifies and reduces the amount of code needed with just using memory buffers.
 
     USAGE
     ----------------------------
+    The command queue owns a memory buffer internal that needs to be initialized
+    either as a fixed size or dynamic buffer with functions `gui_commmand_queue_init'
+    or `gui_command_queue_init_fixed`. Panels are automaticall added to the command
+    queue in the `gui_panel_init` with the `gui_command-queue_add` function
+    but removing a panel requires a manual call of `gui_command_queue_remove`.
+    Internally the panel calls the `gui_command_queue_start` and
+    `gui_commanmd_queue_finish` function the setup a finilize a command buffer for
+    command queuing. Finally to iterate over all commands in all command buffers
+    the iterator API is provided. It allows to iterate over each command in a
+    foreach loop.
 
     command queue function API
     gui_command_queue_init          -- initializes a dynamic command queue
@@ -668,6 +691,8 @@ struct gui_command_queue {
     /* memory buffer the hold all commands */
     struct gui_command_buffer_stack stack;
     /* stack of each memory buffer inside the queue */
+    gui_bool build;
+    /* flag indicating if a complete command list was build inside the queue*/
 };
 
 void gui_command_queue_init(struct gui_command_queue*, const struct gui_allocator*,
@@ -684,8 +709,13 @@ void gui_command_queue_init_fixed(struct gui_command_queue*, void*, gui_size);
     - fixed size previously allocated memory block
     - size of the memory block
 */
-void gui_command_queue_add(struct gui_command_queue*, struct gui_command_buffer*);
-/*  this function adds a command buffer into the queue
+void gui_command_queue_insert_back(struct gui_command_queue*, struct gui_command_buffer*);
+/*  this function adds a command buffer into the back of the queue
+    Input:
+    - command buffer to add into the queue
+*/
+void gui_command_queue_insert_front(struct gui_command_queue*, struct gui_command_buffer*);
+/*  this function adds a command buffer into the beginning of the queue
     Input:
     - command buffer to add into the queue
 */
@@ -893,7 +923,7 @@ gui_size gui_edit_box_len(struct gui_edit_box*);
 
     USAGE
     ----------------------------
-    Most widgets takes an input struct, font and widget specific data and a command
+    Most widgets take an input struct, font and widget specific data and a command
     buffer to push draw command into and return the updated widget state.
     Important to note is that there is no actual state that is being stored inside
     the toolkit so everything has to be stored byte the user.
@@ -930,6 +960,14 @@ enum gui_text_align {
     GUI_TEXT_RIGHT
 };
 
+enum gui_button_behavior {
+    GUI_BUTTON_DEFAULT,
+    /* button only returns on activation */
+    GUI_BUTTON_REPEATER,
+    /* button returns as long as the button is pressed */
+    GUI_BUTTON_MAX
+};
+
 struct gui_text {
     struct gui_vec2 padding;
     /* padding between bounds and text */
@@ -937,14 +975,6 @@ struct gui_text {
     /*text color */
     struct gui_color background;
     /* text background color */
-};
-
-enum gui_button_behavior {
-    GUI_BUTTON_DEFAULT,
-    /* button only returns on activation */
-    GUI_BUTTON_REPEATER,
-    /* button returns as long as the button is pressed */
-    GUI_BUTTON_MAX
 };
 
 struct gui_button {
@@ -1318,7 +1348,7 @@ gui_size gui_edit_filtered(struct gui_command_buffer*, gui_float x, gui_float y,
     - state of the editbox with either active or inactive
     - returns the size of the buffer in bytes after the modification
 */
-gui_int gui_spinner_int(struct gui_command_buffer*, gui_float x, gui_float y, gui_float w,
+gui_int gui_spinner(struct gui_command_buffer*, gui_float x, gui_float y, gui_float w,
                         gui_float h, const struct gui_spinner*, gui_int min, gui_int value,
                         gui_int max, gui_int step, gui_bool *active,
                         const struct gui_input*, const struct gui_font*);
@@ -1337,26 +1367,6 @@ gui_int gui_spinner_int(struct gui_command_buffer*, gui_float x, gui_float y, gu
     Output:
     - returns the from the user input updated spinner value
 */
-gui_float gui_spinner_float(struct gui_command_buffer*, gui_float x, gui_float y, gui_float w,
-                        gui_float h, const struct gui_spinner*, gui_float min, gui_float value,
-                        gui_float max, gui_float step, gui_bool *active,
-                        const struct gui_input*, const struct gui_font*);
-/*  this function executes a float point spinner widget
-    Input:
-    - output command buffer for draw commands
-    - (x,y) position
-    - (width, height) size
-    - visual widget style structure describing the spinner
-    - minimal spinner value that will no be underflown
-    - spinner value that will be updated
-    - maximal spinner value that will no be overflown
-    - spinner input state with either active or inactive
-    - input structure to update the slider with
-    - font structure for text drawing
-    Output:
-    - returns the from the user input updated spinner value
-*/
-
 gui_size gui_selector(struct gui_command_buffer*, gui_float x, gui_float y,
                         gui_float w, gui_float h, const struct gui_selector*,
                         const char *items[], gui_size item_count,
@@ -1375,10 +1385,11 @@ gui_size gui_selector(struct gui_command_buffer*, gui_float x, gui_float y,
     Output:
     - returns the from the user input updated spinner value
 */
-gui_float gui_scrollbar_vertical(struct gui_command_buffer*, gui_float x, gui_float y,
-                        gui_float w, gui_float h, gui_float offset, gui_float target,
-                        gui_float step, const struct gui_scrollbar*,
-                        const struct gui_input*);
+gui_float gui_scrollbar_vertical(struct gui_command_buffer*, gui_float x,
+                                gui_float y, gui_float w, gui_float h,
+                                gui_float offset, gui_float target,
+                                gui_float step, const struct gui_scrollbar*,
+                                const struct gui_input*);
 /*  this function executes a vertical scrollbar widget
     Input:
     - output command buffer for draw commands
@@ -1520,7 +1531,6 @@ enum gui_config_properties {
     GUI_PROPERTY_SCALER_SIZE,
     GUI_PROPERTY_SCROLLBAR_SIZE,
     GUI_PROPERTY_SIZE,
-    GUI_PROPERTY_NODE_SPACING,
     GUI_PROPERTY_MAX
 };
 
@@ -2189,7 +2199,7 @@ void gui_panel_layout_pop(struct gui_panel_layout*);
     WIDGET
     The layout API uses the layout API to provide and add widget to the panel.
     IMPORTANT: the widget API does NOT work without a layout so if you have
-    visual glitches that the problem probably comes from not using the layout
+    visual glitches then the problem probably stems from not using the layout
     correctly. The panel widget API does not implement any widget itself, instead
     it uses the general Widget API under the hood and is only responsible for
     calling the correct widget API function with correct position, size and style.
@@ -2226,7 +2236,6 @@ void gui_panel_layout_pop(struct gui_panel_layout*);
     gui_panel_edit_filtered         -- edit textbox widget for text input with filter input
     gui_panel_editbox               -- edit textbox with cursor, clipboard and filter
     gui_panel_spinner_int           -- spinner widget with either keyboard or mouse modification
-    gui_panel_spinner_float         -- spinner widget with either keyboard or mouse modification
     gui_panel_selector              -- selector widget for combobox like selection of types
 */
 enum gui_widget_state gui_panel_widget(struct gui_rect*, struct gui_panel_layout*);
@@ -2432,7 +2441,7 @@ gui_size gui_panel_edit_filtered(struct gui_panel_layout*, gui_char *buffer,
     - length of the buffer after user input update
     - current state of the editbox with active(gui_true) or inactive(gui_false)
 */
-gui_int gui_panel_spinner_int(struct gui_panel_layout*, gui_int min, gui_int value,
+gui_int gui_panel_spinner(struct gui_panel_layout*, gui_int min, gui_int value,
                                 gui_int max, gui_int step, gui_bool *active);
 /*  this function creates a integer spinner widget
     Input:
@@ -2445,20 +2454,6 @@ gui_int gui_panel_spinner_int(struct gui_panel_layout*, gui_int min, gui_int val
     - the from user input updated spinner value
     - current state of the editbox with active(gui_true) or inactive(gui_false)
 */
-gui_float gui_panel_spinner_float(struct gui_panel_layout*, gui_float min, gui_float value,
-                                gui_float max, gui_float step, gui_bool *active);
-/*  this function creates a float point spinner widget
-    Input:
-    - min value that will not be underflown
-    - current spinner value to be updated by user input
-    - max value that will not be overflown
-    - spinner value modificaton stepping intervall
-    - current state of the spinner with active as currently modfied by user input
-    Output:
-    - the from user input updated spinner value
-    - current state of the editbox with active(gui_true) or inactive(gui_false)
-*/
-
 gui_size gui_panel_selector(struct gui_panel_layout*, const char *items[],
                             gui_size item_count, gui_size item_current);
 /*  this function creates a string selector widget
@@ -2473,7 +2468,38 @@ gui_size gui_panel_selector(struct gui_panel_layout*, const char *items[],
  * -------------------------------------------------------------
  *                          COMPLEX
  * --------------------------------------------------------------
-    Panel Graph API
+    COMPLEX
+    The complex widget API in contrast with the normal widget API implements
+    widgets that either need additional stack alloacted temporary object to build
+    up like in the case of the graph and tree widget implementation or require
+    a certain panel state to work like in the case of the table.
+
+    USAGE
+    First in the case of the graph there are three different ways to create a
+    graph widget. The first one is on immediate mode fashion with `xxx_begin`,
+    `xxx_end` and `gui_panel_graph_push` for every value. This makes it more easy
+    to add data from static like sources like an array of object. Then there
+    is a retain mode version which uses an array of float values to draw the graph.
+    Finally there is a callback based solution which is mainly meant for math-like
+    graph generation over a math function (e.g: sin,cos,...).
+
+    The tree widget is standart immediate mode API and divides tree nodes into
+    parent nodes and leafes. Nodes have immediate mode function points, while
+    leafes are just normal functions. In addition there is a icon version for each
+    of the two node types which allows you to add images into a tree node.
+    The tree widget supports in contrast to the tree layout a back channel
+    for each node and leaf. This allows to return commands back to the user
+    to declare what to do with the tree node. This includes cloning which is
+    copying the selected node and pasting it in the same parent node, cuting
+    which removes nodes from its parents and copyies it into a paste buffer,
+    pasting to take all nodes inside the paste buffer and copy it into a node and
+    finally removing a tree node.
+
+    Finally the table API which is rather limited at the moment and needs/will
+    be rewritten to support scaling table and columns bounds. At the moment a table
+    is nothing more than a fixed table layout with lines between each widget.
+
+    Complex widget Panel API
     gui_panel_graph_begin           -- immediate mode graph building begin sequence point
     gui_panel_graph_push            -- push a value into a graph
     gui_panel_graph_end             -- immediate mode graph building end sequence point
@@ -2673,7 +2699,24 @@ struct gui_vec2 gui_panel_tree_end(struct gui_panel_layout*, struct gui_tree*);
  * -------------------------------------------------------------
  *                          GROUP
  * --------------------------------------------------------------
-    Panel Graph API
+ *
+    GROUP
+    The group API is based on grouping of widget inside a panel. This in term
+    means a scaleable space inside a panel which can be filled widgets. There are
+    two different types of scaleable spaces the first a groups with normal
+    filling behavior and the other is a shelf with different content depending
+    on the selected tab inside the shelf.
+
+    USAGE
+    For grouping you need a additional panel layout for the group/shelf to work.
+    With it the scrollbar offsets of the panel layout need to be managed by the
+    user, since the panel does not store any state. The group panel layout is
+    created by the `gui_panel_group_begin` and `gui_panel_shelf_begin` calls.
+    After their creaton widget can be added the the group/shelf by just using the
+    new panel layout. In case of the shelf the `gui_panel_shelf_begin` call returns
+    a index as well indiciation which tab needs to filled inside the group.
+
+    Panel group API
     gui_panel_group_begin           -- adds a scrollable fixed space inside the panel
     gui_panel_group_end             -- ends the scrollable space
     gui_panel_shelf_begin           -- begins a shelf with a number of selectable tabs
@@ -2715,7 +2758,6 @@ struct gui_vec2 gui_panel_shelf_end(struct gui_panel_layout*, struct gui_panel_l
     Output:
     - The from user input updated shelf scrollbar pixel offset
 */
-#if 0
 /*
  * ==============================================================
  *
@@ -2821,12 +2863,19 @@ struct gui_layout {
     /* bounds of the layout inside the window */
     enum gui_layout_state active;
     /* flag indicating if the layout is from the user modifyable */
-    struct gui_stack stack;
-    /* panel stack of all panels inside the layout */
     struct gui_layout_slot slots[GUI_SLOT_MAX];
     /* each slot inside the panel layout */
 };
 
+void gui_panel_begin_tiled(struct gui_panel_layout*, struct gui_panel*,
+    struct gui_layout*, enum gui_layout_slot_index, gui_size index,
+    const struct gui_input*);
+/*  this function begins a tiled panel build up process
+    Input:
+    - slot the panel will be placed inside the tiled layout
+    - panel slot index inside the slot
+    - input structure holding all user generated state changes
+*/
 void gui_layout_begin(struct gui_layout*, struct gui_rect bounds,
                     enum gui_layout_state);
 /*  this function start the definition of the layout slots
@@ -2880,12 +2929,6 @@ void gui_layout_set_state(struct gui_layout*, enum gui_layout_state);
     Input:
         - new state of the layout with either active or inactive
 */
-#define gui_layout_remove(layout, panel)\
-    gui_stack_pop(&(layout)->stack, (panel))
-/*  this function removes a panel from the layout */
-#define gui_layout_clear(layout, panel)\
-    gui_stack_clear(&(layout)->stack)
-/*  this function removes all panels from the layout */
 void gui_layout_slot_bounds(struct gui_rect *bounds, struct gui_layout*,
                             enum gui_layout_slot_index);
 /*  this function returns the complete space occupied by a given slot
@@ -2903,7 +2946,6 @@ void gui_layout_slot_panel_bounds(struct gui_rect *bounds, struct gui_layout*,
     Output:
         - bounds of the panel inside the slot as a rectangle (x,y,w,h)
 */
-#endif
 
 #ifdef __cplusplus
 }
