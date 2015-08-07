@@ -63,7 +63,6 @@ static const gui_byte gui_utfbyte[GUI_UTF_SIZE+1] = {0x80, 0, 0xC0, 0xE0, 0xF0};
 static const gui_byte gui_utfmask[GUI_UTF_SIZE+1] = {0xC0, 0x80, 0xE0, 0xF0, 0xF8};
 static const long gui_utfmin[GUI_UTF_SIZE+1] = {0, 0, 0x80, 0x800, 0x100000};
 static const long gui_utfmax[GUI_UTF_SIZE+1] = {0x10FFFF, 0x7F, 0x7FF, 0xFFFF, 0x10FFFF};
-static const double GUI_DOUBLE_PRECISION = 0.00000000000001;
 
 /*
  * ==============================================================
@@ -883,7 +882,7 @@ gui_command_buffer_begin(struct gui_command_buffer *buffer)
     GUI_ASSERT(buffer);
     if (!buffer || !buffer->base) return 0;
     if (buffer->last == buffer->begin) return 0;
-    memory = buffer->base->memory.ptr;
+    memory = (gui_byte*)buffer->base->memory.ptr;
     return gui_ptr_add_const(struct gui_command, memory, buffer->begin);
 }
 
@@ -897,7 +896,7 @@ gui_command_buffer_next(struct gui_command_buffer *buffer,
     if (!cmd) return 0;
     if (cmd->next > buffer->last) return 0;
     if (cmd->next > buffer->base->allocated) return 0;
-    memory = buffer->base->memory.ptr;
+    memory = (gui_byte*)buffer->base->memory.ptr;
     return gui_ptr_add_const(struct gui_command, memory, cmd->next);
 }
 
@@ -1055,7 +1054,7 @@ gui_command_queue_begin(struct gui_command_queue *queue)
     if (!queue->stack.count) return 0;
 
     /* build one command list out of all command buffers */
-    buffer = queue->buffer.memory.ptr;
+    buffer = (gui_byte*)queue->buffer.memory.ptr;
     iter = queue->stack.begin;
     if (!queue->build) {
         struct gui_command_buffer *next;
@@ -1089,7 +1088,7 @@ gui_command_queue_next(struct gui_command_queue *queue, const struct gui_command
     GUI_ASSERT(queue);
     if (!queue || !cmd || !queue->stack.count) return 0;
     if (cmd->next >= queue->buffer.allocated) return 0;
-    buffer = queue->buffer.memory.ptr;
+    buffer = (gui_byte*)queue->buffer.memory.ptr;
     return gui_ptr_add_const(struct gui_command, buffer, cmd->next);
 }
 
