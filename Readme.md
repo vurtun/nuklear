@@ -264,16 +264,20 @@ struct gui_config config;
 struct gui_font font = {...}
 gui_config_default(&config, GUI_DEFAULT_ALL, &font);
 
-/* setup layout */
+/* setup tiled window layout */
 struct gui_layout tiled;
-gui_layout_begin(&tiled, 0, 0, window_width, window_height, 0);
+gui_layout_begin(&tiled, gui_rect(0, 0, window_width, window_height), GUI_LAYOUT_ACTIVE);
 gui_layout_slot(&tiled, GUI_SLOT_LEFT, 0.5f, GUI_LAYOUT_VERTICAL, 1);
+gui_layout_slot(&tiled, GUI_SLOT_CENTER, 0.5f, GUI_LAYOUT_VERTICAL, 1);
 gui_layout_end(&tiled);
 
-struct gui_panel panel;
-struct gui_input input = {0};
-gui_panel_init(&panel, 0, 0, 0, 0, 0, &buffer, &queue);
+/* setup panels */
+struct gui_panel left;
+struct gui_panel center;
+gui_panel_init(&left, 0, 0, 0, 0, 0, &buffer, &queue);
+gui_panel_init(&center, 0, 0, 0, 0, 0, &buffer, &queue);
 
+struct gui_input input = {0};
 while (1) {
     gui_input_begin(&input);
     /* record input */
@@ -281,11 +285,17 @@ while (1) {
 
     /* GUI */
     struct gui_panel_layout layout;
-    gui_panel_begin_tiled(&layout, &panel, &tiled, GUI_SLOT_LEFT, 0, "Demo", &input);
-    gui_panel_layout_flux_fixed(&layout, 30, 1);
-    if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT))
+    gui_panel_begin_tiled(&layout, &left, &tiled, GUI_SLOT_LEFT, 0, &input);
+    gui_panel_row_dynamic(&layout, 30, 1);
+    if (gui_panel_button_text(&layout, "button0", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");
-    gui_panel_end(&layout, &panel);
+    gui_panel_end(&layout, &left);
+
+    gui_panel_begin_tiled(&layout, &center, &tiled, GUI_SLOT_CENTER, 0, &input);
+    gui_panel_row_dynamic(&layout, 30, 1);
+    if (gui_panel_button_text(&layout, "button1", GUI_BUTTON_DEFAULT))
+        fprintf(stdout, "button pressed!\n");
+    gui_panel_end(&layout, &center);
 
     /* draw each panel */
     const struct gui_command *cmd
