@@ -8,7 +8,7 @@ application and does not have any direct dependencies.
 ## Features
 - Immediate mode graphical user interface toolkit
 - Written in C89 (ANSI C)
-- Small codebase (~5kLOC)
+- Small codebase (~6kLOC)
 - Focus on portability, efficiency, simplicity and minimal internal state
 - Suited for embedding into graphical applications
 - No global or hidden state
@@ -42,26 +42,24 @@ struct gui_command_queue queue;
 void *memory = malloc(MEMORY_SIZE);
 gui_command_queue_init_fixed(&buffer, memory, MEMORY_SIZE);
 
-/* setup font */
+/* setup configuration */
 struct gui_font font;
+struct gui_config config;
 font.userdata.ptr = your_font_data;
 font.height = your_font_data.height;
 font.width = your_font_string_width_callback_function;
-
-/* setup configuration */
-struct gui_config config;
 gui_config_default(&config, GUI_DEFAULT_ALL, &font);
 
 /* initialize panel */
 struct gui_panel panel;
 gui_panel_init(&panel, 50, 50, 220, 170,
     GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE,
-    &buffer, &config);
+    &queue, &config, &input);
 
 /* setup widget data */
 enum {EASY, HARD};
-gui_size option = 0;
-gui_size item;
+gui_size option = EASY;
+gui_size item = 0;
 
 struct gui_input input = {0};
 while (1) {
@@ -71,7 +69,7 @@ while (1) {
 
     /* GUI */
     struct gui_panel_layout layout;
-    gui_panel_begin(&layout, &panel, &input);
+    gui_panel_begin(&layout, &panel);
     {
         const char *items[] = {"Fist", "Pistol", "Railgun", "BFG"};
         gui_panel_header(&layout, "Demo", GUI_CLOSEABLE, 0, GUI_HEADER_LEFT);
@@ -103,6 +101,8 @@ while (1) {
         case GUI_COMMAND_TRIANGLE:
             /*...*/
         case GUI_COMMAND_TEXT:
+            /*...*/
+        case GUI_COMMAND_IMAGE:
             /*...*/
         }
     }
@@ -228,14 +228,14 @@ added. It contains information about the allocated amount of data in the current
 frame as well as the needed amount if not enough memory was provided.
 
 ```c
-/* fixed size buffer */
+/* fixed size queue */
 void *memory = malloc(size);
-gui_command_queue buffer;
-gui_command_queue_init_fixed(&buffer, memory, MEMORY_SIZE, GUI_CLIP);
+gui_command_queue queue;
+gui_command_queue_init_fixed(&queue, memory, MEMORY_SIZE, GUI_CLIP);
 ```
 
 ```c
-/* dynamically growing buffer */
+/* dynamically growing queue */
 struct gui_allocator alloc;
 alloc.userdata = your_allocator;
 alloc.alloc = your_allocation_callback;
@@ -272,12 +272,12 @@ gui_layout_slot(&tiled, GUI_SLOT_CENTER, 0.5f, GUI_LAYOUT_VERTICAL, 1);
 gui_layout_end(&tiled);
 
 /* setup panels */
+struct gui_input input = {0};
 struct gui_panel left;
 struct gui_panel center;
-gui_panel_init(&left, 0, 0, 0, 0, 0, &buffer, &queue);
-gui_panel_init(&center, 0, 0, 0, 0, 0, &buffer, &queue);
+gui_panel_init(&left, 0, 0, 0, 0, 0, &config, &queue, &input);
+gui_panel_init(&center, 0, 0, 0, 0, 0, &config, &queue, &input);
 
-struct gui_input input = {0};
 while (1) {
     gui_input_begin(&input);
     /* record input */
@@ -285,13 +285,13 @@ while (1) {
 
     /* GUI */
     struct gui_panel_layout layout;
-    gui_panel_begin_tiled(&layout, &left, &tiled, GUI_SLOT_LEFT, 0, &input);
+    gui_panel_begin_tiled(&layout, &left, &tiled, GUI_SLOT_LEFT, 0);
     gui_panel_row_dynamic(&layout, 30, 1);
     if (gui_panel_button_text(&layout, "button0", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");
     gui_panel_end(&layout, &left);
 
-    gui_panel_begin_tiled(&layout, &center, &tiled, GUI_SLOT_CENTER, 0, &input);
+    gui_panel_begin_tiled(&layout, &center, &tiled, GUI_SLOT_CENTER, 0);
     gui_panel_row_dynamic(&layout, 30, 1);
     if (gui_panel_button_text(&layout, "button1", GUI_BUTTON_DEFAULT))
         fprintf(stdout, "button pressed!\n");

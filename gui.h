@@ -68,7 +68,7 @@ typedef long gui_long;
 typedef float gui_float;
 typedef double gui_double;
 typedef unsigned short gui_ushort;
-typedef unsigned int gui_uint;
+ypedef unsigned int gui_uint;
 typedef unsigned long gui_ulong;
 typedef unsigned int gui_flags;
 typedef unsigned char gui_byte;
@@ -648,7 +648,13 @@ const struct gui_command *gui_command_buffer_next(struct gui_command_buffer*,
     more than one command buffer on one memory buffer and still only need
     to iterate over one command list. Therefore it is possible to have mutliple
     panels without having to manage each panels individual memory. This greatly
-    simplifies and reduces the amount of code needed with just using memory buffers.
+    simplifies and reduces the amount of code needed with just using command buffers.
+
+    Internally the command queue has a list of command buffers which can be
+    modified to create a certain sequence, for example the `gui_panel_begin`
+    function changes the list to create overlapping panels, while the
+    `gui_panel_begin_tiled` function makes sure that its command buffers will
+    always be drawn first since panel in tiled layouts are always in the background.
 
     USAGE
     ----------------------------
@@ -667,17 +673,20 @@ const struct gui_command *gui_command_buffer_next(struct gui_command_buffer*,
     gui_command_queue_init          -- initializes a dynamic command queue
     gui_command_queue_init_fixed    -- initializes a static command queue
     gui_command_queue_clear         -- frees all memory if the command queue is dynamic
-    gui_command_queue_add           -- adds a command buffer into the queue
+    gui_command_queue_insert_font   -- adds a command buffer in the front of the queue
+    gui_command_queue_insert_back   -- adds a command buffer in the back of the queue
     gui_command_queue_remove        -- removes a command buffer from the queue
     gui_command_queue_start         -- begins the command buffer filling process
     gui_command_queue_finish        -- ends the command buffer filling process
+    gui_command_queue_start_child   -- begins the child command buffer filling process
+    gui_command_queue_finish_child  -- ends the child command buffer filling process
 
     command iterator function API
     gui_command_queue_begin         -- returns the first command in a queue
     gui_command_queue_next          -- returns the next command in a queue
     gui_foreach_command             -- iterates over all commands in a queue
 */
-struct gui_command_buffer_stack {
+struct gui_command_buffer_list {
     gui_size count;
     /* number of panels inside the stack */
     struct gui_command_buffer *begin;
@@ -686,11 +695,36 @@ struct gui_command_buffer_stack {
     /* currently active panel which will be drawn last */
 };
 
+struct gui_command_sub_buffer {
+    gui_size begin;
+    /* begin of the subbuffer */
+    gui_size parent_last;
+    /* last entry before the sub buffer*/
+    gui_size last;
+    /* last entry in the sub buffer*/
+    gui_size end;
+    /* end of the subbuffer */
+    gui_size next;
+};
+
+struct gui_command_sub_buffer_stack {
+    gui_size count;
+    /* number of subbuffers */
+    gui_size begin;
+    /* buffer offset of the first subbuffer*/
+    gui_size end;
+    /* buffer offset of the last subbuffer*/
+    gui_size size;
+    /* real size of the buffer */
+};
+
 struct gui_command_queue {
     struct gui_buffer buffer;
     /* memory buffer the hold all commands */
-    struct gui_command_buffer_stack stack;
-    /* stack of each memory buffer inside the queue */
+    struct gui_command_buffer_list list;
+    /* list of each memory buffer inside the queue */
+    struct gui_command_sub_buffer_stack stack;
+    /* subbuffer stack for overlapping child panels in panels */
     gui_bool build;
     /* flag indicating if a complete command list was build inside the queue*/
 };
@@ -730,6 +764,18 @@ void gui_command_queue_start(struct gui_command_queue*, struct gui_command_buffe
     - command buffer to fill with commands
 */
 void gui_command_queue_finish(struct gui_command_queue*, struct gui_command_buffer*);
+/*  this function finishes the command buffer fill up process
+    Input:
+    - the now filled command buffer
+*/
+gui_bool gui_command_queue_start_child(struct gui_command_queue*, struct gui_command_buffer*);
+/*  this function sets up the command buffer to be filled up
+    Input:
+    - command buffer to fill begin the child buffer in
+    Output:
+    - gui_true if successful gui_false otherwise
+*/
+void gui_command_queue_finish_child(struct gui_command_queue*, struct gui_command_buffer*);
 /*  this function finishes the command buffer fill up process
     Input:
     - the now filled command buffer
@@ -1616,24 +1662,20 @@ struct gui_color gui_config_color(const struct gui_config*, enum gui_config_colo
     - color value that has been asked for
 */
 void gui_config_push_property(struct gui_config*, enum gui_config_properties,
-                                gui_float, gui_float);
+                                struct gui_vec2);
 /*  this function temporarily changes a property in a stack like fashion to be reseted later
     Input:
     - Configuration structure to push the change to
     - Property idenfifier to change
-    - first value of the property most of the time the x position
-    - second value of the property most of the time the y position
+    - new value of the property
 */
 void gui_config_push_color(struct gui_config*, enum gui_config_colors,
-                            gui_byte, gui_byte, gui_byte, gui_byte);
+                            struct gui_color);
 /*  this function temporarily changes a color in a stack like fashion to be reseted later
     Input:
     - Configuration structure to push the change to
     - color idenfifier to change
-    - red color component
-    - green color component
-    - blue color component
-    - alpha color component
+    - new color
 */
 void gui_config_pop_color(struct gui_config*);
 /*  this function reverts back a previously pushed temporary color change
@@ -1733,9 +1775,11 @@ enum gui_panel_flags {
      * by dragging a scaler icon at the button of the panel */
     GUI_PANEL_MINIMIZED = 0x20,
     /* marks the panel as minimized */
-    GUI_PANEL_ACTIVE = 0x40,
+    GUI_PANEL_ROM = 0x40,
+    /* sets the panel in to a read only mode and does not allow input changes */
+    GUI_PANEL_ACTIVE = 0x10000,
     /* INTERNAL ONLY!: marks the panel as active, used by the panel stack */
-    GUI_PANEL_TAB = 0x80
+    GUI_PANEL_TAB = 0x20000
     /* INTERNAL ONLY!: Marks the panel as an subpanel of another panel(Groups/Tabs/Shelf)*/
 };
 
@@ -1754,6 +1798,8 @@ struct gui_panel {
     /* output command buffer queuing all drawing calls */
     struct gui_command_queue *queue;
     /* output command queue which hold the command buffer */
+    const struct gui_input *input;
+    /* input state for updating the panel and all its widgets */
 };
 
 enum gui_panel_row_layout_type {
@@ -1858,6 +1904,8 @@ struct gui_panel_layout {
     /* current input state for updating the panel and all its widgets */
     struct gui_command_buffer *buffer;
     /* command draw call output command buffer */
+    struct gui_command_queue *queue;
+    /* command draw call output command buffer */
 };
 
 /*
@@ -1899,7 +1947,7 @@ struct gui_panel_layout {
 struct gui_layout;
 void gui_panel_init(struct gui_panel *panel, gui_float x, gui_float y, gui_float w,
                     gui_float h, gui_flags flags, struct gui_command_queue*,
-                    const struct gui_config*);
+                    const struct gui_config*, const struct gui_input *in);
 /*  this function initilizes and setups the panel
     Input:
     - bounds of the panel with x,y position and width and height
@@ -1930,7 +1978,7 @@ gui_bool gui_panel_has_flag(struct gui_panel*, gui_flags);
 */
 gui_bool gui_panel_is_minimized(struct gui_panel*);
 /*  this function checks if the panel is minimized */
-void gui_panel_begin(struct gui_panel_layout*, struct gui_panel*, const struct gui_input*);
+void gui_panel_begin(struct gui_panel_layout*, struct gui_panel*);
 /*  this function begins the panel build up process
     Input:
     - input structure holding all user generated state changes
@@ -2614,7 +2662,7 @@ gui_int gui_panel_graph(struct gui_panel_layout*, enum gui_graph_type,
     - number of graph values
     - offset into the value array from which to begin drawing
 */
-gui_int gui_panel_graph_ex(struct gui_panel_layout*, enum gui_graph_type,
+gui_int gui_panel_graph_callback(struct gui_panel_layout*, enum gui_graph_type,
                             gui_size count, gui_float(*get_value)(void*, gui_size),
                             void *userdata);
 /*  this function create a graph with given type from callback providing the
@@ -2717,10 +2765,29 @@ struct gui_vec2 gui_panel_tree_end(struct gui_panel_layout*, struct gui_tree*);
     a index as well indiciation which tab needs to filled inside the group.
 
     Panel group API
+    gui_panel_popup_begin           -- adds a popup inside a panel
+    gui_panel_popup_end             -- ends the popup building process
     gui_panel_group_begin           -- adds a scrollable fixed space inside the panel
     gui_panel_group_end             -- ends the scrollable space
     gui_panel_shelf_begin           -- begins a shelf with a number of selectable tabs
     gui_panel_shelf_end             -- ends a previously started shelf build up process
+*/
+gui_flags gui_panel_popup_begin(struct gui_panel_layout *parent, struct gui_panel_layout *popup,
+                                struct gui_rect bounds, struct gui_vec2 scrollbar);
+/*  this function adds a grouped subpanel into the parent panel
+    Input:
+    - popup position and size of the popup (NOTE: local position)
+    - scrollbar pixel offsets for the popup
+    Output:
+    - popup layout to fill with widgets
+*/
+void gui_panel_popup_close(struct gui_panel_layout *popup);
+/*  this functions closes a previously opened popup */
+struct gui_vec2 gui_panel_popup_end(struct gui_panel_layout *parent,
+                                    struct gui_panel_layout *popup);
+/*  this function finishes the previously started popup layout
+    Output:
+    - The from user input updated popup scrollbar pixel offset
 */
 void gui_panel_group_begin(struct gui_panel_layout*, struct gui_panel_layout *tab,
                             const char *title, struct gui_vec2 offset);
@@ -2773,7 +2840,6 @@ struct gui_vec2 gui_panel_shelf_end(struct gui_panel_layout*, struct gui_panel_l
     need more than just fixed or overlapping panels. There are five slots
     (Top, Left, Center, Right, Bottom) in the layout which are either be
     scaleable or static and occupy a certain percentage of the screen.
-    o TODO dockable panels
 
     USAGE
     ----------------------------
@@ -2868,8 +2934,7 @@ struct gui_layout {
 };
 
 void gui_panel_begin_tiled(struct gui_panel_layout*, struct gui_panel*,
-    struct gui_layout*, enum gui_layout_slot_index, gui_size index,
-    const struct gui_input*);
+    struct gui_layout*, enum gui_layout_slot_index, gui_size index);
 /*  this function begins a tiled panel build up process
     Input:
     - slot the panel will be placed inside the tiled layout

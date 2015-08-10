@@ -1,5 +1,5 @@
 #define MAX_BUFFER  64
-#define MAX_MEMORY  (32 * 1024)
+#define MAX_MEMORY  (64 * 1024)
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 
@@ -40,6 +40,9 @@ struct state {
 
     gui_int op;
     gui_size cur;
+    gui_bool popup;
+    gui_bool combo;
+    gui_size sel;
 
     /* tree */
     struct test_tree tree;
@@ -72,6 +75,7 @@ struct state {
 struct demo_gui {
     gui_bool running;
     void *memory;
+    const struct gui_input *input;
     struct gui_command_queue queue;
     struct gui_config config;
     struct gui_font font;
@@ -179,7 +183,7 @@ widget_panel(struct gui_panel_layout *panel, struct state *demo)
 
     /* Buttons */
     if (gui_panel_button_text(panel, "button", GUI_BUTTON_DEFAULT))
-        fprintf(stdout, "button pressed!\n");
+        demo->popup = gui_true;
     if (gui_panel_button_text_triangle(panel, GUI_RIGHT, "next", GUI_TEXT_LEFT, GUI_BUTTON_DEFAULT))
         fprintf(stdout, "right triangle button pressed!\n");
     if (gui_panel_button_text_triangle(panel,GUI_LEFT,"previous",GUI_TEXT_RIGHT,GUI_BUTTON_DEFAULT))
@@ -189,7 +193,7 @@ widget_panel(struct gui_panel_layout *panel, struct state *demo)
     demo->checkbox = gui_panel_check(panel, "checkbox", demo->checkbox);
 
     if (!demo->scaleable)
-        gui_panel_row_static(panel, 30, 75, 1);
+        gui_panel_row_static(panel, 30, 75, 2);
     else  gui_panel_row_dynamic(panel, 30, 2);
 
     if (gui_panel_option(panel, "option 0", demo->option == 0)) demo->option = 0;
@@ -286,126 +290,18 @@ table_panel(struct gui_panel_layout *panel)
 }
 
 static void
-update_menu(struct gui_panel_layout *layout, struct state *win, struct gui_config *config)
-{
-    int i = 0;
-    enum level_id {LEVEL_MENU,LEVEL_FILE,LEVEL_OPEN,LEVEL_EDIT};
-    enum item_id {ITEM_FILE, ITEM_EDIT,
-        ITEM_FILE_BACK, ITEM_FILE_OPEN, ITEM_FILE_CLOSE, ITEM_FILE_QUIT,
-        ITEM_FILE_OPEN_BACK, ITEM_FILE_OPEN_EXE, ITEM_FILE_OPEN_SRC,
-        ITEM_EDIT_BACK, ITEM_EDIT_COPY, ITEM_EDIT_CUT, ITEM_EDIT_PASTE, ITEM_EDIT_DELETE};
-    enum combi_id {MENU_FILE, MENU_EDIT,
-        FILE_BACK, FILE_OPEN, FILE_CLOSE, FILE_QUIT,
-        OPEN_BACK, OPEN_EXE, OPEN_SRC,
-        EDIT_BACK, EDIT_COPY, EDIT_CUT, EDIT_PASTE, EDIT_DELETE};
-
-    struct level {const enum level_id id; const int items; enum combi_id list;};
-    struct item {const enum item_id id; const char *name; const enum level_id lvl, next;};
-    struct combi {const enum combi_id id; const enum level_id level; const enum item_id item;};
-
-    static const struct level levels[] = {
-        {LEVEL_MENU, 2, MENU_FILE},
-        {LEVEL_FILE, 4, FILE_BACK},
-        {LEVEL_OPEN, 3, OPEN_BACK},
-        {LEVEL_EDIT, 5, EDIT_BACK},
-    };
-    static const struct item items[] = {
-        {ITEM_FILE, "FILE", LEVEL_MENU, LEVEL_FILE},
-        {ITEM_EDIT, "EDIT", LEVEL_MENU, LEVEL_EDIT},
-        {ITEM_FILE_BACK, "BACK", LEVEL_FILE, LEVEL_MENU},
-        {ITEM_FILE_OPEN, "OPEN", LEVEL_FILE, LEVEL_OPEN},
-        {ITEM_FILE_CLOSE, "CLOSE", LEVEL_FILE, LEVEL_MENU},
-        {ITEM_FILE_QUIT, "QUIT", LEVEL_FILE, LEVEL_MENU},
-        {ITEM_FILE_OPEN_BACK, "BACK", LEVEL_OPEN, LEVEL_FILE},
-        {ITEM_FILE_OPEN_EXE, "IMAGE", LEVEL_OPEN, LEVEL_MENU},
-        {ITEM_FILE_OPEN_SRC, "TEXT", LEVEL_OPEN, LEVEL_MENU},
-        {ITEM_EDIT_BACK, "BACK", LEVEL_EDIT, LEVEL_MENU},
-        {ITEM_EDIT_COPY, "COPY", LEVEL_EDIT, LEVEL_MENU},
-        {ITEM_EDIT_CUT, "CUT", LEVEL_EDIT, LEVEL_MENU},
-        {ITEM_EDIT_PASTE, "PASTE", LEVEL_EDIT, LEVEL_MENU},
-        {ITEM_EDIT_DELETE, "DEL", LEVEL_EDIT, LEVEL_MENU}
-    };
-    static const struct combi combis[] = {
-        /* main menu level */
-        {MENU_FILE, LEVEL_MENU, ITEM_FILE},
-        {MENU_EDIT, LEVEL_MENU, ITEM_EDIT},
-        /* file menu level */
-        {FILE_BACK, LEVEL_FILE, ITEM_FILE_BACK},
-        {FILE_OPEN, LEVEL_FILE, ITEM_FILE_OPEN},
-        {FILE_CLOSE, LEVEL_FILE, ITEM_FILE_CLOSE},
-        {FILE_QUIT, LEVEL_FILE, ITEM_FILE_QUIT},
-        /* open file options menu level */
-        {OPEN_BACK, LEVEL_OPEN, ITEM_FILE_OPEN_BACK},
-        {OPEN_EXE, LEVEL_OPEN, ITEM_FILE_OPEN_EXE},
-        {OPEN_SRC, LEVEL_OPEN, ITEM_FILE_OPEN_SRC},
-        /* edit main level*/
-        {EDIT_BACK, LEVEL_EDIT, ITEM_EDIT_BACK},
-        {EDIT_COPY, LEVEL_EDIT, ITEM_EDIT_COPY},
-        {EDIT_CUT, LEVEL_EDIT, ITEM_EDIT_CUT},
-        {EDIT_PASTE, LEVEL_EDIT, ITEM_EDIT_PASTE},
-        {EDIT_DELETE, LEVEL_EDIT, ITEM_EDIT_DELETE}
-    };
-
-    {
-        /* calculate column row count to fit largets menu item  */
-        gui_int max = 0;
-        for (i = 0; i < (int)LEN(levels); ++i) {
-            if (levels[0].items > max)
-                max = levels[0].items;
-        }
-        gui_panel_row_dynamic(layout, 18, 5);
-    }
-
-    /* output current menu level entries */
-    gui_panel_menu_begin(layout);
-    {
-        const struct level *lvl = &levels[win->menu_item];
-        const struct combi *iter = &combis[lvl->list];
-        gui_config_push_color(config, GUI_COLOR_BUTTON_BORDER, 45, 45, 45, 250);
-        gui_config_push_property(config, GUI_PROPERTY_ITEM_SPACING, 0, 4.0f);
-        for (i = 0; i < lvl->items; ++i) {
-            const struct item *item = &items[iter->item];
-            if (gui_panel_button_text(layout, item->name, GUI_BUTTON_DEFAULT)) {
-                if (item->id == ITEM_FILE_OPEN_EXE) {
-                    fprintf(stdout, "open program file button pressed!\n");
-                } else if (item->id == ITEM_FILE_OPEN_SRC) {
-                    fprintf(stdout, "open source file button pressed!\n");
-                } else if (item->id == ITEM_FILE_CLOSE) {
-                    fprintf(stdout, "close button pressed!\n");
-                } else if (item->id == ITEM_FILE_QUIT) {
-                    fprintf(stdout, "quit button pressed!\n");
-                } else if (item->id == ITEM_EDIT_COPY) {
-                    fprintf(stdout, "copy button pressed!\n");
-                } else if (item->id == ITEM_EDIT_CUT) {
-                    fprintf(stdout, "cut button pressed!\n");
-                } else if (item->id == ITEM_EDIT_PASTE) {
-                    fprintf(stdout, "paste button pressed!\n");
-                } else if (item->id == ITEM_EDIT_DELETE) {
-                    fprintf(stdout, "delete button pressed!\n");
-                }
-                win->menu_item = item->next;
-            }
-            iter++;
-        }
-        gui_config_pop_color(config);
-        gui_config_pop_property(config);
-    }
-    gui_panel_menu_end(layout);
-}
-
-static void
 update_flags(struct gui_panel_layout *panel)
 {
     gui_size n = 0;
     gui_flags res = 0;
     gui_flags i = 0x01;
-    const char *options[]={"Hidden","Border","Header Border", "Moveable","Scaleable", "Minimized"};
+    const char *options[]={"Hidden","Border","Header Border", "Moveable","Scaleable", "Minimized", "ROM"};
     gui_panel_row_dynamic(panel, 30, 2);
     do {
         if (gui_panel_check(panel,options[n++],(panel->flags & i)?gui_true:gui_false))
             res |= i;
         i = i << 1;
-    } while (i <= GUI_PANEL_MINIMIZED);
+    } while (i <= GUI_PANEL_ROM);
     panel->flags = res;
 }
 
@@ -547,22 +443,23 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
     gui->font = *font;
     gui->running = gui_true;
 
-    clip.userdata.ptr = NULL,
-    clip.copy = copy;
-    clip.paste = paste;
-
     gui_command_queue_init_fixed(&gui->queue, gui->memory, MAX_MEMORY);
     gui_config_default(config, GUI_DEFAULT_ALL, font);
 
     /* panel */
     gui_panel_init(&gui->panel, 30, 30, 280, 530,
-        GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE, &gui->queue, config);
+        GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE,
+        &gui->queue, config, gui->input);
     gui_panel_init(&gui->sub, 400, 50, 220, 180,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE,
-        &gui->queue, config);
+        &gui->queue, config, gui->input);
 
     /* widget state */
+    clip.userdata.ptr = NULL,
+    clip.copy = copy;
+    clip.paste = paste;
     gui_edit_box_init_fixed(&win->input, win->input_buffer, MAX_BUFFER, &clip, NULL);
+
     win->config_tab = GUI_MINIMIZED;
     win->widget_tab = GUI_MINIMIZED;
     win->style_tab = GUI_MINIMIZED;
@@ -621,7 +518,7 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
 }
 
 static void
-run_demo(struct demo_gui *gui, struct gui_input *input)
+run_demo(struct demo_gui *gui)
 {
     struct gui_panel_layout layout;
     struct state *state = &gui->state;
@@ -630,12 +527,11 @@ run_demo(struct demo_gui *gui, struct gui_input *input)
     static const char *shelfs[] = {"Histogram", "Lines"};
     enum {EASY, HARD};
 
-    gui_panel_begin(&layout, &gui->panel, input);
+    gui_panel_begin(&layout, &gui->panel);
     {
-        /* Header + Menubar  */
+        /* Header */
         gui->running = !gui_panel_header(&layout, "Demo",
             GUI_CLOSEABLE|GUI_MINIMIZABLE, GUI_CLOSEABLE, GUI_HEADER_RIGHT);
-        update_menu(&layout, state, config);
 
         /* Panel style configuration  */
         if (gui_panel_layout_push(&layout, GUI_LAYOUT_TAB, "Style", &state->config_tab))
@@ -665,6 +561,30 @@ run_demo(struct demo_gui *gui, struct gui_input *input)
             gui_panel_layout_pop(&layout);
         }
 
+        /* popup panel */
+        if (state->popup) {
+            gui_panel_popup_begin(&layout, &tab, gui_rect(20, 10, 220, 150), gui_vec2(0,0));
+            {
+                if (gui_panel_header(&tab, "Popup", GUI_CLOSEABLE, GUI_CLOSEABLE, GUI_HEADER_LEFT)) {
+                    gui_panel_popup_close(&tab);
+                    state->popup = gui_false;
+                }
+                gui_panel_row_dynamic(&tab, 30, 1);
+                gui_panel_label(&tab, "Are you sure you want to exit?", GUI_TEXT_LEFT);
+                gui_panel_row_dynamic(&tab, 30, 4);
+                gui_panel_spacing(&tab, 1);
+                if (gui_panel_button_text(&tab, "Yes", GUI_BUTTON_DEFAULT)) {
+                    gui_panel_popup_close(&tab);
+                    state->popup = gui_false;
+                }
+                if (gui_panel_button_text(&tab, "No", GUI_BUTTON_DEFAULT)) {
+                    gui_panel_popup_close(&tab);
+                    state->popup = gui_false;
+                }
+            }
+            gui_panel_popup_end(&layout, &tab);
+        }
+
         /* Shelf + Graphes  */
         gui_panel_row_dynamic(&layout, 180, 1);
         state->shelf_selection = gui_panel_shelf_begin(&layout, &tab, shelfs,
@@ -689,7 +609,7 @@ run_demo(struct demo_gui *gui, struct gui_input *input)
     }
     gui_panel_end(&layout, &gui->panel);
 
-    gui_panel_begin(&layout, &gui->sub, input);
+    gui_panel_begin(&layout, &gui->sub);
     {
         const char *items[] = {"Fist", "Pistol", "Railgun", "BFG"};
         gui_panel_header(&layout, "Demo", GUI_CLOSEABLE, 0, GUI_HEADER_LEFT);

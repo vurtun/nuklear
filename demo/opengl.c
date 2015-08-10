@@ -584,6 +584,7 @@ main(int argc, char *argv[])
     memset(&in, 0, sizeof in);
     memset(&gui, 0, sizeof gui);
     gui.memory = malloc(MAX_MEMORY);
+    gui.input = &in;
     font.userdata.ptr = glfont;
     font.height = glfont->height;
     font.width = font_get_text_width;
@@ -611,7 +612,7 @@ main(int argc, char *argv[])
         SDL_GetWindowSize(win, &width, &height);
         gui.w = (gui_size)width;
         gui.h = (gui_size)height;
-        run_demo(&gui, &in);
+        run_demo(&gui);
 
         /* Draw */
         glClearColor(0.4f, 0.4f, 0.4f, 1.0f);
