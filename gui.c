@@ -3040,7 +3040,6 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel)
             gui_bool inpanel;
             gui_float x, y, w, h;
             struct gui_command_buffer_list *s = &panel->queue->list;
-
             x = panel->x; y = panel->y; w = panel->w; h = panel->h;
             inpanel = GUI_INBOX(in->mouse_prev.x, in->mouse_prev.y, x, y, w, h);
             if (in->mouse_down && in->mouse_clicked && inpanel && &panel->buffer != s->end) {
@@ -3076,27 +3075,10 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel)
         const gui_float move_w = panel->w;
         const gui_float move_h = layout->header.h;
         incursor = GUI_INBOX(in->mouse_prev.x, in->mouse_prev.y,
-                            move_x, move_y, move_w, move_h);
+                    move_x, move_y, move_w, move_h);
         if (in->mouse_down && incursor) {
             panel->x = MAX(0, panel->x + in->mouse_delta.x);
             panel->y = MAX(0, panel->y + in->mouse_delta.y);
-        }
-    }
-
-    /* scale panel size if requested */
-    if (panel->flags & GUI_PANEL_SCALEABLE && !(panel->flags & GUI_PANEL_ROM)) {
-        gui_bool incursor;
-        gui_float scaler_w = MAX(0, scaler_size.x - item_padding.x);
-        gui_float scaler_h = MAX(0, scaler_size.y - item_padding.y);
-        gui_float scaler_x = (panel->x + panel->w) - (item_padding.x + scaler_w);
-        gui_float scaler_y = panel->y + panel->h - scaler_size.y;
-
-        gui_float prev_x = in->mouse_prev.x;
-        gui_float prev_y = in->mouse_prev.y;
-        incursor = GUI_INBOX(prev_x,prev_y,scaler_x,scaler_y,scaler_w,scaler_h);
-        if (in->mouse_down && incursor) {
-            panel->w = MAX(panel_size.x, panel->w + in->mouse_delta.x);
-            panel->h = MAX(panel_size.y, panel->h + in->mouse_delta.y);
         }
     }
 
@@ -3134,30 +3116,21 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel)
     }
     layout->flags = panel->flags;
     layout->valid = !(panel->flags & GUI_PANEL_HIDDEN) && !(panel->flags & GUI_PANEL_MINIMIZED);
-
-    /* calculate the panel footer bounds */
     layout->footer_h = scaler_size.y + item_padding.y;
-    if (!(layout->flags & GUI_PANEL_MINIMIZED)) {
-        gui_float footer_x, footer_y, footer_w;
-        footer_x = panel->x;
-        footer_w = panel->w;
-        footer_y = panel->y + panel->h - layout->footer_h;
-        gui_command_buffer_push_rect(out, footer_x, footer_y, footer_w, layout->footer_h,
-            0, c->colors[GUI_COLOR_PANEL]);
-    }
 
-    {
-        /* draw panel background */
-        const struct gui_color *color = &c->colors[GUI_COLOR_PANEL];
-        layout->width = panel->w - scrollbar_size;
-        layout->height = panel->h - (layout->header.h + 2 * item_spacing.y);
-        if (layout->flags & GUI_PANEL_SCALEABLE) layout->height -= layout->footer_h;
-        if (layout->valid)
-            gui_command_buffer_push_rect(out, layout->x, layout->y,
-                layout->w, layout->h, 0, *color);
-    }
+    /* calculate the panel size and panel footer height */
+    layout->width = panel->w - scrollbar_size;
+    layout->height = panel->h - (layout->header.h + 2 * item_spacing.y);
+    if (layout->flags & GUI_PANEL_SCALEABLE)
+        layout->height -= layout->footer_h;
 
-    /* draw top border line */
+    /* draw panel background if not a dynamic panel */
+    if (!(layout->flags & GUI_PANEL_DYNAMIC) && layout->valid) {
+        gui_command_buffer_push_rect(out, layout->x, layout->y,
+            layout->w, layout->h, 0, c->colors[GUI_COLOR_PANEL]);
+    } else layout->footer_h = scaler_size.y + item_padding.y;
+
+    /* draw top header border line */
     if (layout->flags & GUI_PANEL_BORDER) {
         gui_command_buffer_push_line(out, layout->x, layout->y,
             layout->x + layout->w, layout->y, c->colors[GUI_COLOR_BORDER]);
@@ -3253,7 +3226,6 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
             scaler.h = config->scaler_width;
 
             /* update bottom slot bounds by user input */
-
             if (!(panel->flags & GUI_PANEL_ROM) &&
                 s->state != GUI_LOCKED && layout->active &&
                 GUI_INBOX(mpos.x, mpos.y, scaler.x, scaler.y, scaler.w, scaler.h) &&
@@ -3403,11 +3375,11 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
     struct gui_vec2 item_spacing;
     struct gui_vec2 panel_padding;
     struct gui_vec2 scaler_size;
+    gui_float footer_x, footer_y, footer_w;
 
     GUI_ASSERT(layout);
     GUI_ASSERT(panel);
     if (!panel || !layout) return;
-    layout->at_y += layout->row.height;
 
     config = layout->config;
     out = layout->buffer;
@@ -3428,86 +3400,122 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
     scrollbar_size = gui_config_property(config, GUI_PROPERTY_SCROLLBAR_SIZE).x;
     scaler_size = gui_config_property(config, GUI_PROPERTY_SCALER_SIZE);
 
-    /* vertical scrollbar */
+    /* update the current Y-position to point over the last added widget */
+    layout->at_y += layout->row.height;
+    if (layout->valid && layout->flags & GUI_PANEL_DYNAMIC) {
+        struct gui_rect bounds;
+        /* calculate the dynamic panel footer bounds */
+        layout->height = MIN(layout->at_y - layout->y, layout->h);
+
+        /* draw the correct footer */
+        footer_x = panel->x;
+        footer_w = panel->w;
+        footer_y = panel->y + layout->height + layout->footer_h;
+        gui_command_buffer_push_rect(out, footer_x, footer_y, footer_w, layout->footer_h,
+            0, config->colors[GUI_COLOR_PANEL]);
+
+        /* draw the space between the last widget and the end of the dynamic panel */
+        bounds.x = layout->x;
+        bounds.y = panel->y + layout->height;
+        bounds.w = layout->width;
+        bounds.h = layout->row.height;
+        gui_command_buffer_push_rect(out, bounds.x, bounds.y, bounds.w, bounds.h,
+            0, config->colors[GUI_COLOR_PANEL]);
+    }
+
+    /* scrollbars */
     if (layout->valid) {
-        struct gui_scrollbar scroll;
         gui_float scroll_x, scroll_y;
         gui_float scroll_w, scroll_h;
         gui_float scroll_target, scroll_offset, scroll_step;
 
-        /* calculate scollbar bounds */
-        scroll_x = layout->x + layout->width;
-        scroll_y = (layout->flags & GUI_PANEL_BORDER) ? layout->y + 1 : layout->y;
-        scroll_y += layout->header.h + layout->menu.h;
-        scroll_w = scrollbar_size;
-        scroll_h = layout->height;
-        if (layout->flags & GUI_PANEL_BORDER) scroll_h -= 1;
-
-        /* execute scrollbar widget */
-        scroll_offset = layout->offset.y;
-        scroll_step = layout->height * 0.10f;
+        struct gui_scrollbar scroll;
         scroll.rounding = config->rounding[GUI_ROUNDING_SCROLLBAR];
         scroll.background = config->colors[GUI_COLOR_SCROLLBAR];
         scroll.foreground = config->colors[GUI_COLOR_SCROLLBAR_CURSOR];
         scroll.border = config->colors[GUI_COLOR_SCROLLBAR_BORDER];
-        scroll_target = (layout->at_y-layout->y)-(layout->header.h+2*item_spacing.y);
-        scroll.has_scrolling = (layout->flags & GUI_PANEL_ACTIVE);
-        panel->offset.y = gui_scrollbar_vertical(out, scroll_x, scroll_y,
-                            scroll_w, scroll_h, scroll_offset, scroll_target,
-                            scroll_step, &scroll, in);
+        {
+            /* vertical scollbar */
+            scroll_x = layout->x + layout->width;
+            scroll_y = (layout->flags & GUI_PANEL_BORDER) ? layout->y + 1 : layout->y;
+            scroll_y += layout->header.h + layout->menu.h;
+            scroll_w = scrollbar_size;
+            scroll_h = layout->height;
+            if (layout->flags & GUI_PANEL_DYNAMIC) scroll_h -= scrollbar_size;
+            if (layout->flags & GUI_PANEL_BORDER) scroll_h -= 1;
+            scroll_offset = layout->offset.y;
+            scroll_step = layout->height * 0.10f;
+            scroll_target = (layout->at_y-layout->y)-(layout->header.h+2*item_spacing.y);
+            scroll.has_scrolling = (layout->flags & GUI_PANEL_ACTIVE);
+            panel->offset.y = gui_scrollbar_vertical(out, scroll_x, scroll_y,
+                                scroll_w, scroll_h, scroll_offset, scroll_target,
+                                scroll_step, &scroll, in);
+        }
+        {
+            /* horizontal scrollbar */
+            scroll_x = layout->x + panel_padding.x;
+            if (layout->flags & GUI_PANEL_TAB) {
+                scroll_h = scrollbar_size;
+                scroll_y = (layout->flags & GUI_PANEL_BORDER) ? layout->y + 1 : layout->y;
+                scroll_y += layout->header.h + layout->menu.h + layout->height;
+                scroll_w = layout->width - scrollbar_size;
+            } else if (layout->flags & GUI_PANEL_DYNAMIC) {
+                scroll_h = MIN(scrollbar_size, layout->footer_h);
+                scroll_w = layout->width - 2 * panel_padding.x;
+                scroll_y = footer_y;
+            } else {
+                scroll_h = MIN(scrollbar_size, layout->footer_h);
+                scroll_y = layout->y + panel->h - MAX(layout->footer_h, scrollbar_size);
+                scroll_w = layout->width - 2 * panel_padding.x;
+            }
+            scroll_offset = layout->offset.x;
+            scroll_step = layout->max_x * 0.05f;
+            scroll_target = (layout->max_x - layout->at_x) - 2 * panel_padding.x;
+            scroll.has_scrolling = gui_false;
+            panel->offset.x = gui_scrollbar_horizontal(out, scroll_x, scroll_y,
+                                scroll_w, scroll_h, scroll_offset, scroll_target,
+                                scroll_step, &scroll, in);
+        }
     };
 
-    /* horizontal scrollbar */
-    if (layout->valid) {
-        struct gui_scrollbar scroll;
-        gui_float scroll_x, scroll_y;
-        gui_float scroll_w, scroll_h;
-        gui_float scroll_target, scroll_offset, scroll_step;
-
-        /* calculate scollbar bounds */
-        scroll_x = layout->x + panel_padding.x;
-        if (layout->flags & GUI_PANEL_TAB) {
-            scroll_h = scrollbar_size;
-            scroll_y = (layout->flags & GUI_PANEL_BORDER) ? layout->y + 1 : layout->y;
-            scroll_y += layout->header.h + layout->menu.h + layout->height;
-            scroll_w = layout->width - scrollbar_size;
-        } else {
-            scroll_h = MIN(scrollbar_size, layout->footer_h);
-            scroll_y = panel->y + panel->h - MAX(layout->footer_h, scrollbar_size);
-            scroll_w = layout->width - 2 * panel_padding.x;
-        }
-
-        /* execute scrollbar widget */
-        scroll_offset = layout->offset.x;
-        scroll_step = layout->max_x * 0.10f;
-        scroll.rounding = config->rounding[GUI_ROUNDING_SCROLLBAR];
-        scroll.background = config->colors[GUI_COLOR_SCROLLBAR];
-        scroll.foreground = config->colors[GUI_COLOR_SCROLLBAR_CURSOR];
-        scroll.border = config->colors[GUI_COLOR_SCROLLBAR_BORDER];
-        scroll_target = (layout->max_x - layout->at_x) - 2 * panel_padding.x;
-        scroll.has_scrolling = gui_false;
-        panel->offset.x = gui_scrollbar_horizontal(out, scroll_x, scroll_y,
-                            scroll_w, scroll_h, scroll_offset, scroll_target,
-                            scroll_step, &scroll, in);
-    } else layout->height = layout->at_y - layout->y;
-
-
-    /* draw the panel scaler into the right corner of the panel footer */
+    /* draw the panel scaler into the right corner of the panel footer and
+     * update panel size if user drags the scaler */
     if ((layout->flags & GUI_PANEL_SCALEABLE) && layout->valid) {
+        gui_float scaler_y;
         struct gui_color col = config->colors[GUI_COLOR_SCALER];
         gui_float scaler_w = MAX(0, scaler_size.x - item_padding.x);
         gui_float scaler_h = MAX(0, scaler_size.y - item_padding.y);
         gui_float scaler_x = (layout->x + layout->w) - (item_padding.x + scaler_w);
-        gui_float scaler_y = layout->y + layout->h - scaler_size.y;
+
+        if (layout->flags & GUI_PANEL_DYNAMIC)
+            scaler_y = footer_y + layout->footer_h - scaler_size.y;
+        else scaler_y = layout->y + layout->h - scaler_size.y;
         gui_command_buffer_push_triangle(out, scaler_x + scaler_w, scaler_y,
             scaler_x + scaler_w, scaler_y + scaler_h, scaler_x, scaler_y + scaler_h, col);
+
+        if (!(panel->flags & GUI_PANEL_ROM)) {
+            gui_bool incursor;
+            gui_float prev_x = in->mouse_prev.x;
+            gui_float prev_y = in->mouse_prev.y;
+            struct gui_vec2 panel_size = gui_config_property(config, GUI_PROPERTY_SIZE);
+            incursor = GUI_INBOX(prev_x,prev_y,scaler_x,scaler_y,scaler_w,scaler_h);
+            if (in->mouse_down && incursor) {
+                panel->w = MAX(panel_size.x, panel->w + in->mouse_delta.x);
+                /* draging in y-direction is only possible if static panel */
+                if (!(layout->flags & GUI_PANEL_DYNAMIC))
+                    panel->h = MAX(panel_size.y, panel->h + in->mouse_delta.y);
+            }
+        }
     }
 
     if (layout->flags & GUI_PANEL_BORDER) {
         /* draw the border around the complete panel */
         const gui_float width = layout->width + scrollbar_size;
         const gui_float padding_y = (!layout->valid) ?
-                panel->y + layout->header.h: layout->y + layout->h;
+                panel->y + layout->header.h:
+                (layout->flags & GUI_PANEL_DYNAMIC) ?
+                layout->footer_h + footer_y:
+                layout->y + layout->h;
 
         if (panel->flags & GUI_PANEL_BORDER_HEADER)
             gui_command_buffer_push_line(out, panel->x, panel->y + layout->header.h,
@@ -3564,7 +3572,9 @@ gui_panel_header_begin(struct gui_panel_layout *layout)
     /* update the header height and first row height */
     layout->header.h = c->font.height + 4 * item_padding.y;
     layout->header.h += panel_padding.y;
-    layout->row.height = layout->header.h + 2 * item_spacing.y;
+    layout->row.height += layout->header.h;
+    gui_command_buffer_push_rect(out, layout->x, layout->y + layout->header.h,
+        layout->w, layout->row.height, 0, c->colors[GUI_COLOR_PANEL]);
 
     /* setup header bounds and growable icon space */
     layout->header.x = layout->x + panel_padding.x;
@@ -3573,18 +3583,11 @@ gui_panel_header_begin(struct gui_panel_layout *layout)
     layout->header.w -= 2 * panel_padding.x;
     layout->header.front = layout->header.x;
     layout->header.back = layout->header.x + layout->header.w;
+    layout->height = layout->h - (layout->header.h + 2 * item_spacing.y);
+    layout->height -= layout->footer_h;
+    gui_command_buffer_push_rect(out, layout->x, layout->y, layout->w,
+        layout->header.h, 0, c->colors[GUI_COLOR_HEADER]);
 
-    {
-        /* setup and draw panel layout footer and header background */
-        const struct gui_color *color = &c->colors[GUI_COLOR_PANEL];
-        layout->height = layout->h - (layout->header.h + 2 * item_spacing.y);
-        layout->height -= layout->footer_h;
-        if (layout->valid)
-            gui_command_buffer_push_rect(out, layout->x, layout->y + layout->header.h,
-                layout->w, layout->h - layout->header.h, 0, *color);
-    }
-    gui_command_buffer_push_rect(out, layout->x, layout->y+1, layout->w,
-        layout->header.h-1, 0, c->colors[GUI_COLOR_HEADER]);
 }
 
 static gui_bool
@@ -3835,6 +3838,7 @@ gui_panel_header_end(struct gui_panel_layout *layout)
     panel_padding = gui_config_property(c, GUI_PROPERTY_PADDING);
     item_padding = gui_config_property(c, GUI_PROPERTY_ITEM_PADDING);
 
+#if 0
     {
         /* draw scrollbar panel footer */
         const struct gui_color *color = &c->colors[GUI_COLOR_PANEL];
@@ -3842,6 +3846,7 @@ gui_panel_header_end(struct gui_panel_layout *layout)
             gui_command_buffer_push_rect(out, layout->x, layout->y + layout->header.h,
                 layout->w, layout->h - layout->header.h, 0, *color);
     }
+#endif
 
     /* draw panel header border */
     if (layout->flags & GUI_PANEL_BORDER) {
@@ -3955,7 +3960,7 @@ gui_panel_menu_end(struct gui_panel_layout *layout)
 /*
  * -------------------------------------------------------------
  *
- *                          LAYOUT
+ *                      PANEL ROW LAYOUT
  *
  * --------------------------------------------------------------
  */
@@ -3988,8 +3993,9 @@ gui_panel_layout(struct gui_panel_layout *layout, gui_float height, gui_size col
     layout->row.columns = cols;
     layout->row.height = height + item_spacing.y;
     layout->row.item_offset = 0;
-    gui_command_buffer_push_rect(out,  layout->at_x, layout->at_y,
-        layout->width, height + panel_padding.y, 0, *color);
+    if (layout->flags & GUI_PANEL_DYNAMIC)
+        gui_command_buffer_push_rect(out,  layout->at_x, layout->at_y,
+            layout->width, height + panel_padding.y, 0, *color);
 }
 
 static void
@@ -4139,7 +4145,6 @@ gui_panel_row_space_begin(struct gui_panel_layout *layout,
         layout->row.type = GUI_PANEL_LAYOUT_STATIC_FREE;
         layout->row.clip = layout->clip;
         layout->clip = clip;
-
     } else layout->row.type = GUI_PANEL_LAYOUT_DYNAMIC_FREE;
 
     layout->row.ratio = 0;
@@ -4262,7 +4267,7 @@ gui_panel_alloc_space(struct gui_rect *bounds, struct gui_panel_layout *layout)
         item_offset = (gui_float)layout->row.index * item_width;
         item_spacing = (gui_float)layout->row.index * spacing.x;
     } break;
-    case GUI_PANEL_LAYOUT_STATIC_ROW:{
+    case GUI_PANEL_LAYOUT_STATIC_ROW: {
         /* scaling single ratio widget width */
         item_width = layout->row.item_width;
         item_offset = layout->row.item_offset;
@@ -4432,7 +4437,7 @@ gui_panel_layout_pop(struct gui_panel_layout *layout)
 /*
  * -------------------------------------------------------------
  *
- *                          Widgets
+ *                      PANEL WIDGETS
  *
  * --------------------------------------------------------------
  */
@@ -5165,7 +5170,6 @@ gui_panel_graph_push_column(struct gui_panel_layout *layout,
         selected = (in->mouse_down && in->mouse_clicked) ? (gui_int)graph->index: selected;
         color = config->colors[GUI_COLOR_HISTO_HIGHLIGHT];
     }
-
     gui_command_buffer_push_rect(out, item_x, item_y, item_w, item_h, 0, color);
     graph->index++;
     return selected;
@@ -5575,8 +5579,8 @@ gui_panel_tree_node(struct gui_tree *tree, enum gui_tree_node_symbol symbol,
         gui_command_buffer_push_circle(layout->buffer, sym.x, sym.y, sym.w, sym.h, col);
     }
 
-    /* node selection */
     if (!(layout->flags & GUI_PANEL_ROM)) {
+        /* node selection */
         if (gui_input_clicked(i, &label)) {
             if (*state & GUI_NODE_SELECTED)
                 *state &= ~(gui_flags)GUI_NODE_SELECTED;

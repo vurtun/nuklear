@@ -68,7 +68,7 @@ typedef long gui_long;
 typedef float gui_float;
 typedef double gui_double;
 typedef unsigned short gui_ushort;
-ypedef unsigned int gui_uint;
+typedef unsigned int gui_uint;
 typedef unsigned long gui_ulong;
 typedef unsigned int gui_flags;
 typedef unsigned char gui_byte;
@@ -1777,6 +1777,10 @@ enum gui_panel_flags {
     /* marks the panel as minimized */
     GUI_PANEL_ROM = 0x40,
     /* sets the panel in to a read only mode and does not allow input changes */
+    GUI_PANEL_DYNAMIC = 0x80,
+    /* special type of panel which grows up in height while being filled to a
+     * certain maximum height. It is mainly used for combo boxes but can be
+     * used to create perfectly content fitting panels as well */
     GUI_PANEL_ACTIVE = 0x10000,
     /* INTERNAL ONLY!: marks the panel as active, used by the panel stack */
     GUI_PANEL_TAB = 0x20000
@@ -2006,9 +2010,9 @@ void gui_panel_end(struct gui_panel_layout*, struct gui_panel*);
     The layout supported is hereby limited and custom button and icons cannot be
     added. To achieve that you have to use the more extensive header API.
     You start by calling `gui_panel_header_begin` after `gui_panel_begin` and
-    call the different `gui_panel_header_xxx` function to add icons or the title
-    either at the left or right side of the panel. Each function return if the
-    icon or button has been pressed or in the base of the toggle the current state.
+    call the different `gui_panel_header_xxx` functions to add icons or the title
+    either at the left or right side of the panel. Each function returns if the
+    icon or button has been pressed or in the case of the toggle the current state.
     Finally if all button/icons/toggles have been added the process is finished
     by calling `gui_panel_header_end`.
 
@@ -2267,10 +2271,6 @@ void gui_panel_layout_pop(struct gui_panel_layout*);
     gui_panel_text_colored          -- colored text widget for printing colored text width length
     gui_panel_label                 -- text widget for printing zero terminated strings
     gui_panel_label_colored         -- text widget for printing colored zero terminiated strings
-    gui_panle_image                 -- image widget for outputing a image to a panel
-    gui_panel_check                 -- add a checkbox widget with either active or inactive state
-    gui_panel_option                -- radiobutton widget with either active or inactive state
-    gui_panel_option_group          -- radiobutton group for automatic single selection
     gui_panel_button_text           -- button widget with text content
     gui_panel_button_color          -- colored button widget without content
     gui_panel_button_triangle       -- button with triangle pointing either up-/down-/left- or right
@@ -2278,6 +2278,10 @@ void gui_panel_layout_pop(struct gui_panel_layout*);
     gui_panel_button_toggle         -- toggle button with either active or inactive state
     gui_panel_button_text_image     -- button widget with text and icon
     gui_panel_button_text_triangle  -- button widget with text and a triangle
+    gui_panle_image                 -- image widget for outputing a image to a panel
+    gui_panel_check                 -- add a checkbox widget with either active or inactive state
+    gui_panel_option                -- radiobutton widget with either active or inactive state
+    gui_panel_option_group          -- radiobutton group for automatic single selection
     gui_panel_slider                -- slider widget with min,max,step value
     gui_panel_progress              -- progressbar widget
     gui_panel_edit                  -- edit textbox widget for text input
@@ -2514,67 +2518,114 @@ gui_size gui_panel_selector(struct gui_panel_layout*, const char *items[],
 */
 /*
  * -------------------------------------------------------------
- *                          COMPLEX
+ *                          GROUP
  * --------------------------------------------------------------
-    COMPLEX
-    The complex widget API in contrast with the normal widget API implements
-    widgets that either need additional stack alloacted temporary object to build
-    up like in the case of the graph and tree widget implementation or require
-    a certain panel state to work like in the case of the table.
+ *
+    GROUP
 
     USAGE
-    First in the case of the graph there are three different ways to create a
-    graph widget. The first one is on immediate mode fashion with `xxx_begin`,
-    `xxx_end` and `gui_panel_graph_push` for every value. This makes it more easy
-    to add data from static like sources like an array of object. Then there
-    is a retain mode version which uses an array of float values to draw the graph.
-    Finally there is a callback based solution which is mainly meant for math-like
-    graph generation over a math function (e.g: sin,cos,...).
 
-    The tree widget is standart immediate mode API and divides tree nodes into
-    parent nodes and leafes. Nodes have immediate mode function points, while
-    leafes are just normal functions. In addition there is a icon version for each
-    of the two node types which allows you to add images into a tree node.
-    The tree widget supports in contrast to the tree layout a back channel
-    for each node and leaf. This allows to return commands back to the user
-    to declare what to do with the tree node. This includes cloning which is
-    copying the selected node and pasting it in the same parent node, cuting
-    which removes nodes from its parents and copyies it into a paste buffer,
-    pasting to take all nodes inside the paste buffer and copy it into a node and
-    finally removing a tree node.
-
-    Finally the table API which is rather limited at the moment and needs/will
-    be rewritten to support scaling table and columns bounds. At the moment a table
-    is nothing more than a fixed table layout with lines between each widget.
-
-    Complex widget Panel API
-    gui_panel_graph_begin           -- immediate mode graph building begin sequence point
-    gui_panel_graph_push            -- push a value into a graph
-    gui_panel_graph_end             -- immediate mode graph building end sequence point
-    gui_panel_graph                 -- retained mode graph with array of values
-    gui_panel_graph_ex              -- ratained mode graph with getter callback
-    gui_panel_table_begin           -- begin table build up process
-    gui_panel_table_row             -- seperates tables rows
-    gui_panel_table_end             -- ends the table build up process
-    gui_panel_tree_begin            -- begins the tree build up processs
-    gui_panel_tree_begin_node       -- adds and opens a normal node to the tree
-    gui_panel_tree_begin_node_icon  -- adds a opens a node with an icon to the tree
-    gui_panel_tree_end_node         -- ends and closes a previously added node
-    gui_panel_tree_leaf             -- adds a leaf node to a prev opened node
-    gui_panel_tree_leaf_icon        -- adds a leaf icon node to a prev opended node
-    gui_panel_tree_end              -- ends the tree build up process
+    Panel group API
+    gui_panel_group_begin   -- adds a scrollable fixed space inside the panel
+    gui_panel_group_end     -- ends the scrollable space
 */
-enum gui_table_lines {
-    GUI_TABLE_HHEADER = 0x01,
-    /* Horizontal table header lines */
-    GUI_TABLE_VHEADER = 0x02,
-    /* Vertical table header lines */
-    GUI_TABLE_HBODY = 0x04,
-    /* Horizontal table body lines */
-    GUI_TABLE_VBODY = 0x08
-    /* Vertical table body lines */
-};
 
+void gui_panel_group_begin(struct gui_panel_layout*, struct gui_panel_layout *tab,
+                            const char *title, struct gui_vec2 offset);
+/*  this function adds a grouped subpanel into the parent panel
+    IMPORTANT: You need to set the height of the group with panel_row_layout
+    Input:
+    - group title to write into the header
+    - group scrollbar offset
+    Output:
+    - group layout to fill with widgets
+*/
+struct gui_vec2 gui_panel_group_end(struct gui_panel_layout*, struct gui_panel_layout* tab);
+/*  this function finishes the previously started group layout
+    Output:
+    - The from user input updated group scrollbar pixel offset
+*/
+/*
+ * -------------------------------------------------------------
+ *                          POPUP
+ * --------------------------------------------------------------
+ *
+    GROUP
+
+    USAGE
+
+    Panel popup API
+    gui_panel_shelf_begin   -- begins a shelf with a number of selectable tabs
+    gui_panel_shelf_end     -- ends a previously started shelf build up process
+*/
+gui_flags gui_panel_popup_begin(struct gui_panel_layout *parent, struct gui_panel_layout *popup,
+                                struct gui_rect bounds, struct gui_vec2 scrollbar);
+/*  this function adds a grouped subpanel into the parent panel
+    Input:
+    - popup position and size of the popup (NOTE: local position)
+    - scrollbar pixel offsets for the popup
+    Output:
+    - popup layout to fill with widgets
+*/
+void gui_panel_popup_close(struct gui_panel_layout *popup);
+/*  this functions closes a previously opened popup */
+
+struct gui_vec2 gui_panel_popup_end(struct gui_panel_layout *parent,
+                                    struct gui_panel_layout *popup);
+/*  this function finishes the previously started popup layout
+    Output:
+    - The from user input updated popup scrollbar pixel offset
+*/
+
+/*
+ * -------------------------------------------------------------
+ *                          SHELF
+ * --------------------------------------------------------------
+ *
+    SHELF
+
+    USAGE
+
+    Panel shelf API
+    gui_panel_popup_begin   -- adds a popup inside a panel
+    gui_panel_popup_end     -- ends the popup building process
+*/
+gui_size gui_panel_shelf_begin(struct gui_panel_layout*, struct gui_panel_layout*,
+                                const char *tabs[], gui_size size,
+                                gui_size active, struct gui_vec2 offset);
+/*  this function adds a shelf subpanel into the parent panel
+    IMPORTANT: You need to set the height of the shelf with panel_row_layout
+    Input:
+    - all possible selectible tabs of the shelf with names as a string array
+    - number of seletectible tabs
+    - current active tab array index
+    - scrollbar pixel offset for the shelf
+    Output:
+    - group layout to fill with widgets
+    - the from user input updated current shelf tab index
+*/
+struct gui_vec2 gui_panel_shelf_end(struct gui_panel_layout*, struct gui_panel_layout*);
+/*  this function finishes the previously started shelf layout
+    Input:
+    - previously started group layout
+    Output:
+    - The from user input updated shelf scrollbar pixel offset
+*/
+/*
+ * -------------------------------------------------------------
+ *                          GRAPH
+ * --------------------------------------------------------------
+    GRAPH
+
+    USAGE
+
+    graph widget API
+    gui_panel_graph_begin   -- immediate mode graph building begin sequence point
+    gui_panel_graph_push    -- push a value into a graph
+    gui_panel_graph_end     -- immediate mode graph building end sequence point
+    gui_panel_graph         -- retained mode graph with array of values
+    gui_panel_graph_ex      -- ratained mode graph with getter callback
+*/
 enum gui_graph_type {
     GUI_GRAPH_LINES,
     /* Line graph with each data point being connected with its previous and next node */
@@ -2600,38 +2651,6 @@ struct gui_graph {
     /* current graph value index*/
     gui_size count;
     /* number of values inside the graph */
-};
-
-typedef gui_flags gui_tree_node_state;
-enum gui_tree_nodes_states {
-    GUI_NODE_ACTIVE = 0x01,
-    /* the node is currently opened */
-    GUI_NODE_SELECTED = 0x02
-    /* the node has been seleted by the user */
-};
-
-enum gui_tree_node_operation {
-    GUI_NODE_NOP,
-    /* node did not receive a command */
-    GUI_NODE_CUT,
-    /* cut the node from the current tree and add into a buffer */
-    GUI_NODE_CLONE,
-    /* copy current node and add copy into the parent node */
-    GUI_NODE_PASTE,
-    /* paste all node in the buffer into the tree */
-    GUI_NODE_DELETE
-    /* remove the node from the parent tree */
-};
-
-struct gui_tree {
-    struct gui_panel_layout group;
-    /* panel to add the tree into  */
-    gui_float x_off, at_x;
-    /* current x position of the next node */
-    gui_int skip;
-    /* flag that indicates that a node will be skipped */
-    gui_int depth;
-    /* current depth of the tree */
 };
 
 void gui_panel_graph_begin(struct gui_panel_layout*, struct gui_graph*,
@@ -2673,22 +2692,55 @@ gui_int gui_panel_graph_callback(struct gui_panel_layout*, enum gui_graph_type,
     - callback to access the values inside your datastrucutre
     - userdata to pull the graph values from
 */
-void gui_panel_table_begin(struct gui_panel_layout*, gui_flags flags,
-                            gui_size row_height, gui_size cols);
-/*  this function set the panel to a table state which enable you to create a
-    table with the standart panel row layout
-    Input:
-    - table row and column line seperator flags
-    - height of each table row
-    - number of columns inside the table
+/*
+ * -------------------------------------------------------------
+ *                          TREE
+ * --------------------------------------------------------------
+    TREE
+
+    USAGE
+
+    tree widget API
+    gui_panel_tree_begin            -- begins the tree build up processs
+    gui_panel_tree_begin_node       -- adds and opens a normal node to the tree
+    gui_panel_tree_begin_node_icon  -- adds a opens a node with an icon to the tree
+    gui_panel_tree_end_node         -- ends and closes a previously added node
+    gui_panel_tree_leaf             -- adds a leaf node to a prev opened node
+    gui_panel_tree_leaf_icon        -- adds a leaf icon node to a prev opended node
+    gui_panel_tree_end              -- ends the tree build up process
 */
-void gui_panel_table_row(struct gui_panel_layout*);
-/*  this function add a row with line seperator into asa table marked table
-*/
-void gui_panel_table_end(struct gui_panel_layout*);
-/*  this function finished the table build up process and reverts the panel back
-    to its normal state.
-*/
+typedef gui_flags gui_tree_node_state;
+enum gui_tree_nodes_states {
+    GUI_NODE_ACTIVE = 0x01,
+    /* the node is currently opened */
+    GUI_NODE_SELECTED = 0x02
+    /* the node has been seleted by the user */
+};
+
+enum gui_tree_node_operation {
+    GUI_NODE_NOP,
+    /* node did not receive a command */
+    GUI_NODE_CUT,
+    /* cut the node from the current tree and add into a buffer */
+    GUI_NODE_CLONE,
+    /* copy current node and add copy into the parent node */
+    GUI_NODE_PASTE,
+    /* paste all node in the buffer into the tree */
+    GUI_NODE_DELETE
+    /* remove the node from the parent tree */
+};
+
+struct gui_tree {
+    struct gui_panel_layout group;
+    /* panel to add the tree into  */
+    gui_float x_off, at_x;
+    /* current x position of the next node */
+    gui_int skip;
+    /* flag that indicates that a node will be skipped */
+    gui_int depth;
+    /* current depth of the tree */
+};
+
 void gui_panel_tree_begin(struct gui_panel_layout*, struct gui_tree*,
                             const char*, gui_float row_height, struct gui_vec2 offset);
 /*  this function begins the tree building process
@@ -2745,85 +2797,43 @@ struct gui_vec2 gui_panel_tree_end(struct gui_panel_layout*, struct gui_tree*);
 /*  this function ends a the tree building process */
 /*
  * -------------------------------------------------------------
- *                          GROUP
+ *                          TABLE
  * --------------------------------------------------------------
- *
-    GROUP
-    The group API is based on grouping of widget inside a panel. This in term
-    means a scaleable space inside a panel which can be filled widgets. There are
-    two different types of scaleable spaces the first a groups with normal
-    filling behavior and the other is a shelf with different content depending
-    on the selected tab inside the shelf.
+    TABLE
 
     USAGE
-    For grouping you need a additional panel layout for the group/shelf to work.
-    With it the scrollbar offsets of the panel layout need to be managed by the
-    user, since the panel does not store any state. The group panel layout is
-    created by the `gui_panel_group_begin` and `gui_panel_shelf_begin` calls.
-    After their creaton widget can be added the the group/shelf by just using the
-    new panel layout. In case of the shelf the `gui_panel_shelf_begin` call returns
-    a index as well indiciation which tab needs to filled inside the group.
 
-    Panel group API
-    gui_panel_popup_begin           -- adds a popup inside a panel
-    gui_panel_popup_end             -- ends the popup building process
-    gui_panel_group_begin           -- adds a scrollable fixed space inside the panel
-    gui_panel_group_end             -- ends the scrollable space
-    gui_panel_shelf_begin           -- begins a shelf with a number of selectable tabs
-    gui_panel_shelf_end             -- ends a previously started shelf build up process
+    Table widget API
+    gui_panel_table_begin           -- begin table build up process
+    gui_panel_table_row             -- seperates tables rows
+    gui_panel_table_end             -- ends the table build up process
 */
-gui_flags gui_panel_popup_begin(struct gui_panel_layout *parent, struct gui_panel_layout *popup,
-                                struct gui_rect bounds, struct gui_vec2 scrollbar);
-/*  this function adds a grouped subpanel into the parent panel
+enum gui_table_lines {
+    GUI_TABLE_HHEADER = 0x01,
+    /* Horizontal table header lines */
+    GUI_TABLE_VHEADER = 0x02,
+    /* Vertical table header lines */
+    GUI_TABLE_HBODY = 0x04,
+    /* Horizontal table body lines */
+    GUI_TABLE_VBODY = 0x08
+    /* Vertical table body lines */
+};
+
+void gui_panel_table_begin(struct gui_panel_layout*, gui_flags flags,
+                            gui_size row_height, gui_size cols);
+/*  this function set the panel to a table state which enable you to create a
+    table with the standart panel row layout
     Input:
-    - popup position and size of the popup (NOTE: local position)
-    - scrollbar pixel offsets for the popup
-    Output:
-    - popup layout to fill with widgets
+    - table row and column line seperator flags
+    - height of each table row
+    - number of columns inside the table
 */
-void gui_panel_popup_close(struct gui_panel_layout *popup);
-/*  this functions closes a previously opened popup */
-struct gui_vec2 gui_panel_popup_end(struct gui_panel_layout *parent,
-                                    struct gui_panel_layout *popup);
-/*  this function finishes the previously started popup layout
-    Output:
-    - The from user input updated popup scrollbar pixel offset
+void gui_panel_table_row(struct gui_panel_layout*);
+/*  this function add a row with line seperator into asa table marked table
 */
-void gui_panel_group_begin(struct gui_panel_layout*, struct gui_panel_layout *tab,
-                            const char *title, struct gui_vec2 offset);
-/*  this function adds a grouped subpanel into the parent panel
-    IMPORTANT: You need to set the height of the group with panel_row_layout
-    Input:
-    - group title to write into the header
-    - group scrollbar offset
-    Output:
-    - group layout to fill with widgets
-*/
-struct gui_vec2 gui_panel_group_end(struct gui_panel_layout*, struct gui_panel_layout* tab);
-/*  this function finishes the previously started group layout
-    Output:
-    - The from user input updated group scrollbar pixel offset
-*/
-gui_size gui_panel_shelf_begin(struct gui_panel_layout*, struct gui_panel_layout*,
-                                const char *tabs[], gui_size size,
-                                gui_size active, struct gui_vec2 offset);
-/*  this function adds a shelf subpanel into the parent panel
-    IMPORTANT: You need to set the height of the shelf with panel_row_layout
-    Input:
-    - all possible selectible tabs of the shelf with names as a string array
-    - number of seletectible tabs
-    - current active tab array index
-    - scrollbar pixel offset for the shelf
-    Output:
-    - group layout to fill with widgets
-    - the from user input updated current shelf tab index
-*/
-struct gui_vec2 gui_panel_shelf_end(struct gui_panel_layout*, struct gui_panel_layout*);
-/*  this function finishes the previously started shelf layout
-    Input:
-    - previously started group layout
-    Output:
-    - The from user input updated shelf scrollbar pixel offset
+void gui_panel_table_end(struct gui_panel_layout*);
+/*  this function finished the table build up process and reverts the panel back
+    to its normal state.
 */
 /*
  * ==============================================================
@@ -2834,7 +2844,7 @@ struct gui_vec2 gui_panel_shelf_end(struct gui_panel_layout*, struct gui_panel_l
  */
 /*  LAYOUT
     ----------------------------
-    The tiled layout provides a way to divide the os window into slots which
+    The tiled layout provides a way to divide the screen into slots which
     again can be divided into either horizontal or vertical panels or another
     tiled layout. This is especially usefull for more complex application which
     need more than just fixed or overlapping panels. There are five slots
