@@ -648,9 +648,9 @@ gui_command_buffer_init(struct gui_command_buffer *cmdbuf,
     GUI_ASSERT(cmdbuf);
     GUI_ASSERT(buffer);
     if (!cmdbuf || !buffer) return;
+    cmdbuf->queue = 0;
     cmdbuf->base = buffer;
     cmdbuf->use_clipping = clip;
-    cmdbuf->queue = 0;
     cmdbuf->begin = buffer->allocated;
     cmdbuf->end = buffer->allocated;
     cmdbuf->last = buffer->allocated;
@@ -716,7 +716,6 @@ gui_command_buffer_push_scissor(struct gui_command_buffer *b, gui_float x, gui_f
     b->clip.y = y;
     b->clip.w = w;
     b->clip.h = h;
-
     cmd = (struct gui_command_scissor*)
         gui_command_buffer_push(b, GUI_COMMAND_SCISSOR, sizeof(*cmd));
     if (!cmd) return;
@@ -733,7 +732,6 @@ gui_command_buffer_push_line(struct gui_command_buffer *b, gui_float x0, gui_flo
     struct gui_command_line *cmd;
     GUI_ASSERT(b);
     if (!b) return;
-
     cmd = (struct gui_command_line*)
         gui_command_buffer_push(b, GUI_COMMAND_LINE, sizeof(*cmd));
     if (!cmd) return;
@@ -751,7 +749,6 @@ gui_command_buffer_push_rect(struct gui_command_buffer *b, gui_float x, gui_floa
     struct gui_command_rect *cmd;
     GUI_ASSERT(b);
     if (!b) return;
-
     if (b->use_clipping) {
         const struct gui_rect *clip = &b->clip;
         if (!GUI_INTERSECT(x, y, w, h, clip->x, clip->y, clip->w, clip->h))
@@ -776,7 +773,6 @@ gui_command_buffer_push_circle(struct gui_command_buffer *b, gui_float x, gui_fl
     struct gui_command_circle *cmd;
     GUI_ASSERT(b);
     if (!b) return;
-
     if (b->use_clipping) {
         const struct gui_rect *clip = &b->clip;
         if (!GUI_INTERSECT(x, y, w, h, clip->x, clip->y, clip->w, clip->h))
@@ -800,7 +796,6 @@ gui_command_buffer_push_triangle(struct gui_command_buffer *b,gui_float x0,gui_f
     struct gui_command_triangle *cmd;
     GUI_ASSERT(b);
     if (!b) return;
-
     if (b->use_clipping) {
         const struct gui_rect *clip = &b->clip;
         if (!GUI_INBOX(x0, y0, clip->x, clip->y, clip->w, clip->h) ||
@@ -828,7 +823,6 @@ gui_command_buffer_push_image(struct gui_command_buffer *b, gui_float x, gui_flo
     struct gui_command_image *cmd;
     GUI_ASSERT(b);
     if (!b) return;
-
     if (b->use_clipping) {
         const struct gui_rect *c = &b->clip;
         if (!GUI_INTERSECT(x, y, w, h, c->x, c->y, c->w, c->h))
@@ -854,7 +848,6 @@ gui_command_buffer_push_text(struct gui_command_buffer *b, gui_float x, gui_floa
     GUI_ASSERT(b);
     GUI_ASSERT(font);
     if (!b || !string || !length) return;
-
     if (b->use_clipping) {
         const struct gui_rect *c = &b->clip;
         if (!GUI_INTERSECT(x, y, w, h, c->x, c->y, c->w, c->h))
@@ -3563,8 +3556,9 @@ gui_panel_header_begin(struct gui_panel_layout *layout)
     layout->header.h = c->font.height + 4 * item_padding.y;
     layout->header.h += panel_padding.y;
     layout->row.height += layout->header.h;
-    gui_command_buffer_push_rect(out, layout->x, layout->y + layout->header.h,
-        layout->w, layout->row.height, 0, c->colors[GUI_COLOR_PANEL]);
+    if (layout->valid)
+        gui_command_buffer_push_rect(out, layout->x, layout->y + layout->header.h,
+            layout->w, layout->row.height, 0, c->colors[GUI_COLOR_PANEL]);
 
     /* setup header bounds and growable icon space */
     layout->header.x = layout->x + panel_padding.x;
