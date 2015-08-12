@@ -52,7 +52,7 @@ gui_config_default(&config, GUI_DEFAULT_ALL, &font);
 
 /* initialize panel */
 struct gui_panel panel;
-gui_panel_init(&panel, 50, 50, 220, 170,
+gui_panel_init(&panel, 50, 50, 220, 180,
     GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE,
     &queue, &config, &input);
 

@@ -471,6 +471,7 @@ main(int argc, char *argv[])
     font.height = (gui_float)xw.font->height;
     font.width = font_get_text_width;
     gui.memory = calloc(MAX_MEMORY, 1);
+    gui.input = &in;
     init_demo(&gui, &font);
 
     while (gui.running) {
@@ -491,7 +492,7 @@ main(int argc, char *argv[])
         gui_input_end(&in);
 
         /* GUI */
-        run_demo(&gui, &in);
+        run_demo(&gui);
 
         /* Draw */
         XClearWindow(xw.dpy, xw.win);

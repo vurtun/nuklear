@@ -1,5 +1,5 @@
 #define MAX_BUFFER  64
-#define MAX_MEMORY  (64 * 1024)
+#define MAX_MEMORY  (256 * 1024)
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 
@@ -38,11 +38,19 @@ struct state {
     gui_bool toggle;
     gui_int option;
 
-    gui_int op;
-    gui_size cur;
     gui_bool popup;
-    gui_bool combo;
-    gui_size sel;
+    gui_size cur;
+    gui_size op;
+
+    /* combo */
+    struct gui_color combo_color;
+    gui_size combo_prog[4];
+    gui_bool combo_sel[4];
+    gui_size sel_item;
+    gui_bool col_act;
+    gui_bool sel_act;
+    gui_bool box_act;
+    gui_bool prog_act;
 
     /* tree */
     struct test_tree tree;
@@ -51,6 +59,7 @@ struct state {
     /* tabs */
     enum gui_node_state config_tab;
     enum gui_node_state widget_tab;
+    enum gui_node_state combo_tab;
     enum gui_node_state style_tab;
     enum gui_node_state round_tab;
     enum gui_node_state color_tab;
@@ -228,6 +237,7 @@ widget_panel(struct gui_panel_layout *panel, struct state *demo)
     else gui_panel_row_dynamic(panel, 30, 1);
 
     demo->item_current = gui_panel_selector(panel, items, LEN(items), demo->item_current);
+    gui_panel_combo(panel, items, LEN(items), &demo->sel_item, 30, &demo->sel_act, gui_vec2(0,0));
     demo->spinner= gui_panel_spinner(panel, 0, demo->spinner, 250, 10, &demo->spinner_active);
     demo->in_len = gui_panel_edit(panel, demo->in_buf, demo->in_len, MAX_BUFFER,
                                     &demo->in_active, NULL, GUI_INPUT_DEFAULT);
@@ -372,17 +382,17 @@ color_tab(struct gui_panel_layout *panel, struct state *control, struct gui_conf
 {
     gui_size i = 0;
     static const char *labels[] = {"Text:", "Panel:", "Header:", "Border:", "Button:",
-        "Button Border:", "Button Hovering:", "Button Toggle:", "Button Hovering Text:",
+        "Button Hovering:", "Button Toggle:", "Button Hovering Text:",
         "Check:", "Check BG:", "Check Active:", "Option:", "Option BG:", "Option Active:",
         "Slider:", "Slider bar:", "Slider boder:","Slider cursor:", "Progress:", "Progress Cursor:",
-        "Editbox:", "Editbox cursor:", "Editbox Border:", "Editbox Text:",
-        "Spinner:", "Spinner Border:", "Spinner Triangle:", "Spinner Text:",
-        "Selector:", "Selector Border:", "Selector Triangle:", "Selector Text:",
+        "Editbox:", "Editbox cursor:", "Editbox Text:",
+        "Spinner:", "Spinner Triangle:", "Spinner Text:",
+        "Selector:", "Selector Triangle:", "Selector Text:", "Selector Button:",
         "Histo:", "Histo Bars:", "Histo Negative:", "Histo Hovering:", "Plot:", "Plot Lines:",
-        "Plot Hightlight:", "Scrollbar:", "Scrollbar Cursor:", "Scrollbar Border:",
-        "Table lines:", "Tab header", "Tab border",
-        "Shelf:", "Shelf Text:", "Shelf Active:", "Shelf Active Text:", "Scaler:",
-        "Tiled Scaler"
+        "Plot Hightlight:", "Scrollbar:", "Scrollbar Cursor:",
+        "Table lines:", "Tab header",
+        "Shelf:", "Shelf Text:", "Shelf Active:", "Shelf Active Text:",
+        "Scaler:", "Layout Scaler"
     };
 
     if (control->picker_active) {
@@ -450,7 +460,7 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
     gui_panel_init(&gui->panel, 30, 30, 280, 530,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE,
         &gui->queue, config, gui->input);
-    gui_panel_init(&gui->sub, 400, 50, 220, 180,
+    gui_panel_init(&gui->sub, 400, 50, 220, 400,
         GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE,
         &gui->queue, config, gui->input);
 
@@ -462,10 +472,17 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
 
     win->config_tab = GUI_MINIMIZED;
     win->widget_tab = GUI_MINIMIZED;
+    win->combo_tab = GUI_MINIMIZED;
     win->style_tab = GUI_MINIMIZED;
     win->round_tab = GUI_MINIMIZED;
     win->color_tab = GUI_MINIMIZED;
     win->flag_tab = GUI_MINIMIZED;
+
+    win->combo_prog[0] = 30;
+    win->combo_prog[1] = 80;
+    win->combo_prog[2] = 70;
+    win->combo_prog[3] = 50;
+
     win->scaleable = gui_true;
     win->slider = 2.0f;
     win->progressbar = 50;
@@ -529,11 +546,11 @@ run_demo(struct demo_gui *gui)
 
     gui_panel_begin(&layout, &gui->panel);
     {
-        /* Header */
+        /* header */
         gui->running = !gui_panel_header(&layout, "Demo",
             GUI_CLOSEABLE|GUI_MINIMIZABLE, GUI_CLOSEABLE, GUI_HEADER_RIGHT);
 
-        /* Panel style configuration  */
+        /* panel style configuration  */
         if (gui_panel_layout_push(&layout, GUI_LAYOUT_TAB, "Style", &state->config_tab))
         {
             if (gui_panel_layout_push(&layout, GUI_LAYOUT_NODE, "Options", &state->flag_tab)) {
@@ -555,7 +572,7 @@ run_demo(struct demo_gui *gui)
             gui_panel_layout_pop(&layout);
         }
 
-        /* Widgets examples */
+        /* widgets examples */
         if (gui_panel_layout_push(&layout, GUI_LAYOUT_TAB, "Widgets", &state->widget_tab)) {
             widget_panel(&layout, state);
             gui_panel_layout_pop(&layout);
@@ -563,7 +580,7 @@ run_demo(struct demo_gui *gui)
 
         /* popup panel */
         if (state->popup) {
-            gui_panel_popup_begin(&layout, &tab, gui_rect(20, 10, 220, 150), gui_vec2(0,0));
+            gui_panel_popup_begin(&layout, &tab, GUI_POPUP_STATIC, gui_rect(20, 100, 220, 150), gui_vec2(0,0));
             {
                 if (gui_panel_header(&tab, "Popup", GUI_CLOSEABLE, GUI_CLOSEABLE, GUI_HEADER_LEFT)) {
                     gui_panel_popup_close(&tab);
@@ -585,21 +602,22 @@ run_demo(struct demo_gui *gui)
             gui_panel_popup_end(&layout, &tab);
         }
 
-        /* Shelf + Graphes  */
+
+        /* shelf + graphes  */
         gui_panel_row_dynamic(&layout, 180, 1);
         state->shelf_selection = gui_panel_shelf_begin(&layout, &tab, shelfs,
             LEN(shelfs), state->shelf_selection, state->shelf_scrollbar);
         graph_panel(&tab, state->shelf_selection);
         state->shelf_scrollbar = gui_panel_shelf_end(&layout, &tab);
 
-        /* Tables */
+        /* tables */
         gui_panel_row_dynamic(&layout, 180, 1);
         gui_panel_group_begin(&layout, &tab, "Table", state->table_scrollbar);
         table_panel(&tab);
         state->table_scrollbar = gui_panel_group_end(&layout, &tab);
 
         {
-            /* Tree */
+            /* tree */
             struct gui_tree tree;
             gui_panel_row_dynamic(&layout, 250, 1);
             gui_panel_tree_begin(&layout, &tree, "Tree", 20, state->tree_scrollbar);
@@ -612,7 +630,7 @@ run_demo(struct demo_gui *gui)
     gui_panel_begin(&layout, &gui->sub);
     {
         const char *items[] = {"Fist", "Pistol", "Railgun", "BFG"};
-        gui_panel_header(&layout, "Demo", GUI_CLOSEABLE, 0, GUI_HEADER_LEFT);
+        gui_panel_header(&layout, "Show", GUI_CLOSEABLE, 0, GUI_HEADER_LEFT);
         gui_panel_row_static(&layout, 30, 80, 1);
         if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT)) {
             /* event handling */
@@ -620,8 +638,63 @@ run_demo(struct demo_gui *gui)
         gui_panel_row_dynamic(&layout, 30, 2);
         if (gui_panel_option(&layout, "easy", state->op == EASY)) state->op = EASY;
         if (gui_panel_option(&layout, "hard", state->op == HARD)) state->op = HARD;
-        gui_panel_label(&layout, "Weapon:", GUI_TEXT_LEFT);
-        state->cur = gui_panel_selector(&layout, items, LEN(items), state->cur);
+        gui_panel_row_dynamic(&layout, 30, 3);
+        {
+            /* progressbar combobox  */
+            gui_char buffer[64];
+            struct gui_panel_layout combo;
+            gui_int sum = (gui_int)(state->combo_prog[0] + state->combo_prog[1]);
+            sum += (gui_int)(state->combo_prog[2] + state->combo_prog[3]);
+            sprintf(buffer, "%d", sum);
+            gui_panel_combo_begin(&layout, &combo, buffer, &state->prog_act, gui_vec2(0,0));
+            {
+                gui_panel_row_dynamic(&combo, 30, 1);
+                state->combo_prog[0] = gui_panel_progress(&combo, state->combo_prog[0], 100, gui_true);
+                state->combo_prog[1] = gui_panel_progress(&combo, state->combo_prog[1], 100, gui_true);
+                state->combo_prog[2] = gui_panel_progress(&combo, state->combo_prog[2], 100, gui_true);
+                state->combo_prog[3] = gui_panel_progress(&combo, state->combo_prog[3], 100, gui_true);
+            }
+            gui_panel_combo_end(&layout, &combo);
+        }
+        {
+            /* color slider progressbar */
+            gui_char buffer[32];
+            struct gui_panel_layout combo;
+            sprintf(buffer, "#%02x%02x%02x%02x", state->combo_color.r, state->combo_color.g,
+                    state->combo_color.b, state->combo_color.a);
+            gui_panel_combo_begin(&layout, &combo, buffer,  &state->col_act, gui_vec2(0,0));
+            {
+                int i;
+                const char *color_names[] = {"R:", "G:", "B:", "A:"};
+                gui_float ratios[] = {0.15f, 0.85f};
+                gui_byte *iter = &state->combo_color.r;
+                gui_panel_row(&combo, GUI_DYNAMIC, 30, 2, ratios);
+                for (i = 0; i < 4; ++i, iter++) {
+                    gui_float t = *iter;
+                    gui_panel_label(&combo, color_names[i], GUI_TEXT_LEFT);
+                    t = gui_panel_slider(&combo, 0, t, 255, 5);
+                    *iter = (gui_byte)t;
+                }
+            }
+            gui_panel_combo_end(&layout, &combo);
+        }
+        {
+            /* checkbox combobox  */
+            struct gui_panel_layout combo;
+            gui_char buffer[64];
+            gui_int sum = state->combo_sel[0] + state->combo_sel[1];
+            sum += state->combo_sel[2] + state->combo_sel[3];
+            sprintf(buffer, "%d", sum);
+            gui_panel_combo_begin(&layout, &combo, buffer,  &state->box_act, gui_vec2(0,0));
+            {
+                gui_panel_row_dynamic(&combo, 30, 1);
+             state->combo_sel[0] = gui_panel_check(&combo, items[0], state->combo_sel[0]);
+             state->combo_sel[1] = gui_panel_check(&combo, items[1], state->combo_sel[1]);
+             state->combo_sel[2] = gui_panel_check(&combo, items[2], state->combo_sel[2]);
+             state->combo_sel[3] = gui_panel_check(&combo, items[3], state->combo_sel[3]);
+            }
+            gui_panel_combo_end(&layout, &combo);
+        }
     }
     gui_panel_end(&layout, &gui->sub);
 }

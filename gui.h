@@ -1510,7 +1510,6 @@ enum gui_config_colors {
     GUI_COLOR_HEADER,
     GUI_COLOR_BORDER,
     GUI_COLOR_BUTTON,
-    GUI_COLOR_BUTTON_BORDER,
     GUI_COLOR_BUTTON_HOVER,
     GUI_COLOR_BUTTON_TOGGLE,
     GUI_COLOR_BUTTON_HOVER_FONT,
@@ -1522,22 +1521,16 @@ enum gui_config_colors {
     GUI_COLOR_OPTION_ACTIVE,
     GUI_COLOR_SLIDER,
     GUI_COLOR_SLIDER_BAR,
-    GUI_COLOR_SLIDER_BORDER,
     GUI_COLOR_SLIDER_CURSOR,
     GUI_COLOR_PROGRESS,
     GUI_COLOR_PROGRESS_CURSOR,
     GUI_COLOR_INPUT,
     GUI_COLOR_INPUT_CURSOR,
-    GUI_COLOR_INPUT_BORDER,
     GUI_COLOR_INPUT_TEXT,
-    GUI_COLOR_SPINNER,
-    GUI_COLOR_SPINNER_BORDER,
-    GUI_COLOR_SPINNER_TRIANGLE,
-    GUI_COLOR_SPINNER_TEXT,
     GUI_COLOR_SELECTOR,
-    GUI_COLOR_SELECTOR_BORDER,
     GUI_COLOR_SELECTOR_TRIANGLE,
     GUI_COLOR_SELECTOR_TEXT,
+    GUI_COLOR_SELECTOR_BUTTON,
     GUI_COLOR_HISTO,
     GUI_COLOR_HISTO_BARS,
     GUI_COLOR_HISTO_NEGATIVE,
@@ -1547,10 +1540,8 @@ enum gui_config_colors {
     GUI_COLOR_PLOT_HIGHLIGHT,
     GUI_COLOR_SCROLLBAR,
     GUI_COLOR_SCROLLBAR_CURSOR,
-    GUI_COLOR_SCROLLBAR_BORDER,
     GUI_COLOR_TABLE_LINES,
     GUI_COLOR_TAB_HEADER,
-    GUI_COLOR_TAB_BORDER,
     GUI_COLOR_SHELF,
     GUI_COLOR_SHELF_TEXT,
     GUI_COLOR_SHELF_ACTIVE,
@@ -2522,8 +2513,19 @@ gui_size gui_panel_selector(struct gui_panel_layout*, const char *items[],
  * --------------------------------------------------------------
  *
     GROUP
+    A group represents a panel inside a panel. The group thereby has a fixed height
+    but just like a normal panel has a scrollbar. It main promise is to group together
+    a group of widgets into a small space inside a panel and to provide a scrollable
+    space inside a panel.
 
     USAGE
+    To create a group you first have to allocate space in a panel. This is done
+    by the panel row layout API and works the same as widgets. After that the
+    `gui_panel_group_begin` has to be called with the parent layout to create
+    the group in and a group layout to create a new panel inside the panel.
+    Just like a panel layout structures the group layout only has a lifetime
+    between the `gui_panel_group_begin` and `gui_panel_group_end` and does
+    not have to be persistent.
 
     Panel group API
     gui_panel_group_begin   -- adds a scrollable fixed space inside the panel
@@ -2547,48 +2549,20 @@ struct gui_vec2 gui_panel_group_end(struct gui_panel_layout*, struct gui_panel_l
 */
 /*
  * -------------------------------------------------------------
- *                          POPUP
- * --------------------------------------------------------------
- *
-    GROUP
-
-    USAGE
-
-    Panel popup API
-    gui_panel_shelf_begin   -- begins a shelf with a number of selectable tabs
-    gui_panel_shelf_end     -- ends a previously started shelf build up process
-*/
-gui_flags gui_panel_popup_begin(struct gui_panel_layout *parent, struct gui_panel_layout *popup,
-                                struct gui_rect bounds, struct gui_vec2 scrollbar);
-/*  this function adds a grouped subpanel into the parent panel
-    Input:
-    - popup position and size of the popup (NOTE: local position)
-    - scrollbar pixel offsets for the popup
-    Output:
-    - popup layout to fill with widgets
-*/
-void gui_panel_popup_close(struct gui_panel_layout *popup);
-/*  this functions closes a previously opened popup */
-
-struct gui_vec2 gui_panel_popup_end(struct gui_panel_layout *parent,
-                                    struct gui_panel_layout *popup);
-/*  this function finishes the previously started popup layout
-    Output:
-    - The from user input updated popup scrollbar pixel offset
-*/
-
-/*
- * -------------------------------------------------------------
  *                          SHELF
  * --------------------------------------------------------------
- *
     SHELF
-
-    USAGE
+    A shelf extends the concept of a group as an panel inside a panel
+    with the possibility to decide which content should be drawn into the group.
+    This is achieved by tabs on the top of the group panel with one selected
+    tab. The selected tab thereby defines which content should be drawn inside
+    the group panel by an index it returns. So you just have to check the returned
+    index and depending on it draw the wanted content.
 
     Panel shelf API
-    gui_panel_popup_begin   -- adds a popup inside a panel
-    gui_panel_popup_end     -- ends the popup building process
+    gui_panel_shelf_begin   -- begins a shelf with a number of selectable tabs
+    gui_panel_shelf_end     -- ends a previously started shelf build up process
+
 */
 gui_size gui_panel_shelf_begin(struct gui_panel_layout*, struct gui_panel_layout*,
                                 const char *tabs[], gui_size size,
@@ -2613,11 +2587,67 @@ struct gui_vec2 gui_panel_shelf_end(struct gui_panel_layout*, struct gui_panel_l
 */
 /*
  * -------------------------------------------------------------
+ *                          POPUP
+ * --------------------------------------------------------------
+    POPUP
+    The popup extends the normal panel with an overlapping blocking
+    panel that needs to be closed before the underlining main panel can
+    be used again. Therefore popups are designed for messages,tooltips and
+    are used to create the combo box. Internally the popup creates a subbuffer
+    inside a command queue that will be drawn after the complete parent panel.
+
+    USAGE
+    To create an popup the `gui_panel_popup_begin` function needs to be called
+    with to the parent panel local position and size and the wanted type with
+    static or dynamic panel. A static panel has a fixed size and behaves like a
+    normal panel inside a panel, but a dynamic panel only takes up as much
+    height as needed up to a given maximum height. Dynamic panels are for example
+    combo boxes while static panel make sense for messsages or tooltips.
+    To close a popup you can use the `gui_panel_pop_close` function which takes
+    care of the closing process. Finally if the popup panel was completly created
+    the `gui_panel_popup_end` function finializes the popup.
+
+    Panel popup API
+    gui_panel_popup_begin   -- adds a popup inside a panel
+    gui_panel_popup_close   -- closes the popup panel
+    gui_panel_popup_end     -- ends the popup building process
+*/
+enum gui_popup_type {
+    GUI_POPUP_STATIC, /* static fixed height non growing popup */
+    GUI_POPUP_DYNAMIC /* dynamically growing popup with maximum height */
+};
+gui_flags gui_panel_popup_begin(struct gui_panel_layout *parent, struct gui_panel_layout *popup,
+                                enum gui_popup_type, struct gui_rect bounds, struct gui_vec2 offset);
+/*  this function adds a grouped subpanel into the parent panel
+    Input:
+    - popup position and size of the popup (NOTE: local position)
+    - scrollbar pixel offsets for the popup
+    Output:
+    - popup layout to fill with widgets
+*/
+void gui_panel_popup_close(struct gui_panel_layout *popup);
+/*  this functions closes a previously opened popup */
+struct gui_vec2 gui_panel_popup_end(struct gui_panel_layout *parent,
+                                    struct gui_panel_layout *popup);
+/*  this function finishes the previously started popup layout
+    Output:
+    - The from user input updated popup scrollbar pixel offset
+*/
+/*
+ * -------------------------------------------------------------
  *                          GRAPH
  * --------------------------------------------------------------
     GRAPH
+    The graph widget provided a way to visualize data in either a line or
+    column graph.
 
     USAGE
+    To create a graph three different ways are provided. The first one
+    is an immediate mode API which allows the push values one by one
+    into the graph. The second one is a retain mode function which takes
+    an array of float values and converts them into a graph. The final
+    function is based on a callback and is mainly a good option if you
+    want to draw a mathematical function like for example sine or cosine.
 
     graph widget API
     gui_panel_graph_begin   -- immediate mode graph building begin sequence point
@@ -2693,12 +2723,75 @@ gui_int gui_panel_graph_callback(struct gui_panel_layout*, enum gui_graph_type,
     - userdata to pull the graph values from
 */
 /*
- * -------------------------------------------------------------
+ * --------------------------------------------------------------
+ *                          COMBO BOX
+ * --------------------------------------------------------------
+    COMBO BOX
+    The combo box is a minimizable popup panel and extends the old school
+    text combo box with the possibility to fill combo boxes with any kind of widgets.
+    The combo box is internall implemented with a dynamic popup panel
+    and can only be as height as the panel allows.
+    There are two different ways to create a combo box. The first one is a
+    standart text combo box which has it own function `gui_panel_combo`. The second
+    way is the more complex immediate mode API which allows to create
+    any kind of content inside the combo box. In case of the second API it is
+    additionally possible and sometimes wanted to close the combo box popup
+    panel. This can be achived with `gui_panel_combo_close`.
+
+    combo box API
+    gui_panel_combo_begin   -- begins the combo box popup panel
+    gui_panel_combo_close   -- closes the previously opened combo box
+    gui_panel_combo_end     -- ends the combo box build up process
+    gui_panel_combo         -- shorthand version for a text based combo box
+*/
+void gui_panel_combo(struct gui_panel_layout*, const char **entries,
+                    gui_size count, gui_size *current, gui_size row_height,
+                    gui_bool *active, struct gui_vec2 scrollbar);
+/*  this function creates a standart text based combobox
+    Input:
+    - parent panel layout the combo box will be placed into
+    - string array of all items inside the combo box
+    - number of items inside the string array
+    - the index of the currently selected item
+    - the height of every widget inside the combobox
+    - the current state of the combobox
+    - the scrollbar offset of the panel scrollbar
+    Output:
+    - updated currently selected index
+    - updated state of the combo box
+*/
+void gui_panel_combo_begin(struct gui_panel_layout *parent,
+                        struct gui_panel_layout *combo, const char *selected,
+                        gui_bool *active, struct gui_vec2 offset);
+/*  this function begins the combobox build up process
+    Input:
+    - parent panel layout the combo box will be placed into
+    - ouput combo box panel layout which will be needed to fill the combo box
+    - title of the combo box or in the case of the text combo box the selected item
+    - the current state of the combobox with either gui_true (active) or gui_false else
+    - the current scrollbar offset of the combo box popup panel
+*/
+void gui_panel_combo_close(struct gui_panel_layout *combo);
+/*  this function closes a opened combobox */
+struct gui_vec2 gui_panel_combo_end(struct gui_panel_layout *parent,
+                                    struct gui_panel_layout *comob);
+/*  this function ends the combobox build up process */
+/*
+ * --------------------------------------------------------------
  *                          TREE
  * --------------------------------------------------------------
     TREE
-
-    USAGE
+    The tree widget is standart immediate mode API and divides tree nodes into
+    parent nodes and leafes. Nodes have immediate mode function points, while
+    leafes are just normal functions. In addition there is a icon version for each
+    of the two node types which allows you to add images into a tree node.
+    The tree widget supports in contrast to the tree layout a back channel
+    for each node and leaf. This allows to return commands back to the user
+    to declare what to do with the tree node. This includes cloning which is
+    copying the selected node and pasting it in the same parent node, cuting
+    which removes nodes from its parents and copyies it into a paste buffer,
+    pasting to take all nodes inside the paste buffer and copy it into a node and
+    finally removing a tree node.
 
     tree widget API
     gui_panel_tree_begin            -- begins the tree build up processs
@@ -2752,7 +2845,7 @@ void gui_panel_tree_begin(struct gui_panel_layout*, struct gui_tree*,
     - tree build up state structure
 */
 enum gui_tree_node_operation gui_panel_tree_begin_node(struct gui_tree*, const char*,
-                                                    gui_tree_node_state*);
+                                                        gui_tree_node_state*);
 /*  this function begins a parent node
     Input:
     - title of the node

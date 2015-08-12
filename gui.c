@@ -1026,7 +1026,8 @@ gui_command_queue_start_child(struct gui_command_queue *queue,
     /* allocate header space from the buffer */
     stack = &queue->stack;
     memory = queue->buffer.memory.ptr;
-    buf = gui_buffer_alloc(&queue->buffer, buf_size, buf_align);
+    buf = (struct gui_command_sub_buffer*)
+        gui_buffer_alloc(&queue->buffer, buf_size, buf_align);
     if (!buf) return gui_false;
     offset = (gui_size)(((gui_byte*)buf) - (gui_byte*)memory);
     buffer->end += buf_size;
@@ -2765,7 +2766,6 @@ gui_config_default_color(struct gui_config *config)
     config->colors[GUI_COLOR_BUTTON_HOVER] = gui_rgba(35, 35, 35, 255);
     config->colors[GUI_COLOR_BUTTON_TOGGLE] = gui_rgba(35, 35, 35, 255);
     config->colors[GUI_COLOR_BUTTON_HOVER_FONT] = gui_rgba(135, 135, 135, 255);
-    config->colors[GUI_COLOR_BUTTON_BORDER] = gui_rgba(100, 100, 100, 255);
     config->colors[GUI_COLOR_CHECK] = gui_rgba(100, 100, 100, 255);
     config->colors[GUI_COLOR_CHECK_BACKGROUND] = gui_rgba(45, 45, 45, 255);
     config->colors[GUI_COLOR_CHECK_ACTIVE] = gui_rgba(45, 45, 45, 255);
@@ -2774,22 +2774,16 @@ gui_config_default_color(struct gui_config *config)
     config->colors[GUI_COLOR_OPTION_ACTIVE] = gui_rgba(45, 45, 45, 255);
     config->colors[GUI_COLOR_SLIDER] = gui_rgba(45, 45, 45, 255);
     config->colors[GUI_COLOR_SLIDER_BAR] = gui_rgba(100, 100, 100, 255);
-    config->colors[GUI_COLOR_SLIDER_BORDER] = gui_rgba(45, 45, 45, 255);
     config->colors[GUI_COLOR_SLIDER_CURSOR] = gui_rgba(100, 100, 100, 255);
     config->colors[GUI_COLOR_PROGRESS] = gui_rgba(100, 100, 100, 255);
     config->colors[GUI_COLOR_PROGRESS_CURSOR] = gui_rgba(45, 45, 45, 255);
     config->colors[GUI_COLOR_INPUT] = gui_rgba(45, 45, 45, 255);
     config->colors[GUI_COLOR_INPUT_CURSOR] = gui_rgba(100, 100, 100, 255);
-    config->colors[GUI_COLOR_INPUT_BORDER] = gui_rgba(100, 100, 100, 255);
     config->colors[GUI_COLOR_INPUT_TEXT] = gui_rgba(135, 135, 135, 255);
-    config->colors[GUI_COLOR_SPINNER] = gui_rgba(45, 45, 45, 255);
-    config->colors[GUI_COLOR_SPINNER_BORDER] = gui_rgba(100, 100, 100, 255);
-    config->colors[GUI_COLOR_SPINNER_TRIANGLE] = gui_rgba(100, 100, 100, 255);
-    config->colors[GUI_COLOR_SPINNER_TEXT] = gui_rgba(135, 135, 135, 255);
     config->colors[GUI_COLOR_SELECTOR] = gui_rgba(45, 45, 45, 255);
-    config->colors[GUI_COLOR_SELECTOR_BORDER] = gui_rgba(100, 100, 100, 255);
     config->colors[GUI_COLOR_SELECTOR_TRIANGLE] = gui_rgba(100, 100, 100, 255);
     config->colors[GUI_COLOR_SELECTOR_TEXT] = gui_rgba(135, 135, 135, 255);
+    config->colors[GUI_COLOR_SELECTOR_BUTTON] = gui_rgba(50, 50, 50, 255);
     config->colors[GUI_COLOR_HISTO] = gui_rgba(120, 120, 120, 255);
     config->colors[GUI_COLOR_HISTO_BARS] = gui_rgba(45, 45, 45, 255);
     config->colors[GUI_COLOR_HISTO_NEGATIVE] = gui_rgba(255, 255, 255, 255);
@@ -2799,10 +2793,8 @@ gui_config_default_color(struct gui_config *config)
     config->colors[GUI_COLOR_PLOT_HIGHLIGHT] = gui_rgba(255, 0, 0, 255);
     config->colors[GUI_COLOR_SCROLLBAR] = gui_rgba(40, 40, 40, 255);
     config->colors[GUI_COLOR_SCROLLBAR_CURSOR] = gui_rgba(70, 70, 70, 255);
-    config->colors[GUI_COLOR_SCROLLBAR_BORDER] = gui_rgba(45, 45, 45, 255);
     config->colors[GUI_COLOR_TABLE_LINES] = gui_rgba(100, 100, 100, 255);
     config->colors[GUI_COLOR_TAB_HEADER] = gui_rgba(40, 40, 40, 255);
-    config->colors[GUI_COLOR_TAB_BORDER] = gui_rgba(25, 25, 25, 255);
     config->colors[GUI_COLOR_SHELF] = gui_rgba(45, 45, 45, 255);
     config->colors[GUI_COLOR_SHELF_TEXT] = gui_rgba(150, 150, 150, 255);
     config->colors[GUI_COLOR_SHELF_ACTIVE] = gui_rgba(30, 30, 30, 255);
@@ -2998,7 +2990,6 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel)
 {
     const struct gui_config *c;
     gui_float scrollbar_size;
-    struct gui_vec2 panel_size;
     struct gui_vec2 item_padding;
     struct gui_vec2 item_spacing;
     struct gui_vec2 panel_padding;
@@ -3014,7 +3005,6 @@ gui_panel_begin(struct gui_panel_layout *layout, struct gui_panel *panel)
     c = panel->config;
     in = panel->input;
     scrollbar_size = gui_config_property(c, GUI_PROPERTY_SCROLLBAR_SIZE).x;
-    panel_size = gui_config_property(c, GUI_PROPERTY_SIZE);
     panel_padding = gui_config_property(c, GUI_PROPERTY_PADDING);
     item_padding = gui_config_property(c, GUI_PROPERTY_ITEM_PADDING);
     item_spacing = gui_config_property(c, GUI_PROPERTY_ITEM_SPACING);
@@ -3154,7 +3144,7 @@ gui_panel_begin_tiled(struct gui_panel_layout *tile, struct gui_panel *panel,
     struct gui_layout_slot *s;
     const struct gui_config *config;
     struct gui_vec2 mpos;
-    struct gui_rect scaler;
+    struct gui_rect scaler = {0,0,0,0};
     const struct gui_input *in;
 
     /* debug build argument check */
@@ -3376,6 +3366,7 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
     struct gui_vec2 panel_padding;
     struct gui_vec2 scaler_size;
     gui_float footer_x, footer_y, footer_w;
+    footer_x = footer_y = footer_w = 0,
 
     GUI_ASSERT(layout);
     GUI_ASSERT(panel);
@@ -3433,7 +3424,7 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
         scroll.rounding = config->rounding[GUI_ROUNDING_SCROLLBAR];
         scroll.background = config->colors[GUI_COLOR_SCROLLBAR];
         scroll.foreground = config->colors[GUI_COLOR_SCROLLBAR_CURSOR];
-        scroll.border = config->colors[GUI_COLOR_SCROLLBAR_BORDER];
+        scroll.border = config->colors[GUI_COLOR_BORDER];
         {
             /* vertical scollbar */
             scroll_x = layout->x + layout->width;
@@ -3441,7 +3432,6 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
             scroll_y += layout->header.h + layout->menu.h;
             scroll_w = scrollbar_size;
             scroll_h = layout->height;
-            if (layout->flags & GUI_PANEL_DYNAMIC) scroll_h -= scrollbar_size;
             if (layout->flags & GUI_PANEL_BORDER) scroll_h -= 1;
             scroll_offset = layout->offset.y;
             scroll_step = layout->height * 0.10f;
@@ -3480,7 +3470,7 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
 
     /* draw the panel scaler into the right corner of the panel footer and
      * update panel size if user drags the scaler */
-    if ((layout->flags & GUI_PANEL_SCALEABLE) && layout->valid) {
+    if ((layout->flags & GUI_PANEL_SCALEABLE) && layout->valid && in) {
         gui_float scaler_y;
         struct gui_color col = config->colors[GUI_COLOR_SCALER];
         gui_float scaler_w = MAX(0, scaler_size.x - item_padding.x);
@@ -3837,16 +3827,6 @@ gui_panel_header_end(struct gui_panel_layout *layout)
     out = layout->buffer;
     panel_padding = gui_config_property(c, GUI_PROPERTY_PADDING);
     item_padding = gui_config_property(c, GUI_PROPERTY_ITEM_PADDING);
-
-#if 0
-    {
-        /* draw scrollbar panel footer */
-        const struct gui_color *color = &c->colors[GUI_COLOR_PANEL];
-        if (layout->valid)
-            gui_command_buffer_push_rect(out, layout->x, layout->y + layout->header.h,
-                layout->w, layout->h - layout->header.h, 0, *color);
-    }
-#endif
 
     /* draw panel header border */
     if (layout->flags & GUI_PANEL_BORDER) {
@@ -4398,13 +4378,13 @@ gui_panel_layout_push(struct gui_panel_layout *layout,
     if (type == GUI_LAYOUT_TAB) {
         /* special node with border around the header */
         gui_command_buffer_push_line(out, header.x, header.y,
-            header.x + header.w, header.y, config->colors[GUI_COLOR_TAB_BORDER]);
+            header.x + header.w, header.y, config->colors[GUI_COLOR_BORDER]);
         gui_command_buffer_push_line(out, header.x, header.y,
-            header.x, header.y + header.h, config->colors[GUI_COLOR_TAB_BORDER]);
+            header.x, header.y + header.h, config->colors[GUI_COLOR_BORDER]);
         gui_command_buffer_push_line(out, header.x + header.w, header.y,
-            header.x + header.w, header.y + header.h, config->colors[GUI_COLOR_TAB_BORDER]);
+            header.x + header.w, header.y + header.h, config->colors[GUI_COLOR_BORDER]);
         gui_command_buffer_push_line(out, header.x, header.y + header.h,
-            header.x + header.w, header.y + header.h, config->colors[GUI_COLOR_TAB_BORDER]);
+            header.x + header.w, header.y + header.h, config->colors[GUI_COLOR_BORDER]);
     }
 
     if (*state == GUI_MAXIMIZED) {
@@ -4591,7 +4571,40 @@ gui_panel_button_text(struct gui_panel_layout *layout, const char *str,
 
     config = layout->config;
     button.background = config->colors[GUI_COLOR_BUTTON];
-    button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
+    button.foreground = config->colors[GUI_COLOR_BORDER];
+    button.content = config->colors[GUI_COLOR_TEXT];
+    button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
+    button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
+    button.rounding = config->rounding[GUI_ROUNDING_BUTTON];
+    return gui_button_text(layout->buffer, bounds.x, bounds.y, bounds.w, bounds.h,
+            str, behavior, &button, i, &config->font);
+}
+
+static gui_bool
+gui_panel_button__fitting(struct gui_panel_layout *layout, const char *str,
+    enum gui_button_behavior behavior)
+{
+    struct gui_rect bounds;
+    struct gui_button button;
+    const struct gui_config *config;
+    const struct gui_input *i;
+    enum gui_widget_state state;
+    struct gui_vec2 padding;
+    state = gui_panel_widget(&bounds, layout);
+    if (!state) return gui_false;
+    i = (state == GUI_ROM || layout->flags & GUI_PANEL_ROM) ? 0 : layout->input;
+
+    config = layout->config;
+    padding = gui_config_property(config, GUI_PROPERTY_PADDING);
+    bounds.x -= padding.x;
+    bounds.y -= padding.y;
+    bounds.w += 2 * padding.x;
+
+    button.border = 0;
+    button.padding.x = 0;
+    button.padding.y = 0;
+    button.background = config->colors[GUI_COLOR_PANEL];
+    button.foreground = config->colors[GUI_COLOR_PANEL];
     button.content = config->colors[GUI_COLOR_TEXT];
     button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
     button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
@@ -4639,7 +4652,7 @@ gui_panel_button_triangle(struct gui_panel_layout *layout, enum gui_heading head
     config = layout->config;
     button.rounding = config->rounding[GUI_ROUNDING_BUTTON];
     button.background = config->colors[GUI_COLOR_BUTTON];
-    button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
+    button.foreground = config->colors[GUI_COLOR_BORDER];
     button.content = config->colors[GUI_COLOR_TEXT];
     button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
     button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
@@ -4664,7 +4677,7 @@ gui_panel_button_image(struct gui_panel_layout *layout, struct gui_image image,
     config = layout->config;
     button.rounding = config->rounding[GUI_ROUNDING_BUTTON];
     button.background = config->colors[GUI_COLOR_BUTTON];
-    button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
+    button.foreground = config->colors[GUI_COLOR_BORDER];
     button.content = config->colors[GUI_COLOR_TEXT];
     button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
     button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
@@ -4689,13 +4702,13 @@ gui_panel_button_toggle(struct gui_panel_layout *layout, const char *str, gui_bo
     button.rounding = config->rounding[GUI_ROUNDING_BUTTON];
     if (!value) {
         button.background = config->colors[GUI_COLOR_BUTTON];
-        button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
+        button.foreground = config->colors[GUI_COLOR_BORDER];
         button.content = config->colors[GUI_COLOR_TEXT];
         button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
         button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
     } else {
         button.background = config->colors[GUI_COLOR_BUTTON_TOGGLE];
-        button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
+        button.foreground = config->colors[GUI_COLOR_BORDER];
         button.content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
         button.highlight = config->colors[GUI_COLOR_BUTTON];
         button.highlight_content = config->colors[GUI_COLOR_TEXT];
@@ -4722,7 +4735,7 @@ gui_panel_button_text_triangle(struct gui_panel_layout *layout, enum gui_heading
     config = layout->config;
     button.rounding = config->rounding[GUI_ROUNDING_BUTTON];
     button.background = config->colors[GUI_COLOR_BUTTON];
-    button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
+    button.foreground = config->colors[GUI_COLOR_BORDER];
     button.content = config->colors[GUI_COLOR_TEXT];
     button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
     button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
@@ -4747,7 +4760,7 @@ gui_panel_button_text_image(struct gui_panel_layout *layout, struct gui_image im
     config = layout->config;
     button.rounding = config->rounding[GUI_ROUNDING_BUTTON];
     button.background = config->colors[GUI_COLOR_BUTTON];
-    button.foreground = config->colors[GUI_COLOR_BUTTON_BORDER];
+    button.foreground = config->colors[GUI_COLOR_BORDER];
     button.content = config->colors[GUI_COLOR_TEXT];
     button.highlight = config->colors[GUI_COLOR_BUTTON_HOVER];
     button.highlight_content = config->colors[GUI_COLOR_BUTTON_HOVER_FONT];
@@ -4854,7 +4867,7 @@ gui_panel_slider(struct gui_panel_layout *layout, gui_float min_value, gui_float
     slider.bg = config->colors[GUI_COLOR_SLIDER];
     slider.fg = config->colors[GUI_COLOR_SLIDER_CURSOR];
     slider.bar = config->colors[GUI_COLOR_SLIDER_BAR];
-    slider.border = config->colors[GUI_COLOR_SLIDER_BORDER];
+    slider.border = config->colors[GUI_COLOR_BORDER];
     return gui_slider(layout->buffer, bounds.x, bounds.y, bounds.w, bounds.h,
                 min_value, value, max_value, value_step, &slider, i);
 }
@@ -4902,7 +4915,7 @@ gui_panel_edit_base(struct gui_rect *bounds, struct gui_edit *field,
     field->padding.y = item_padding.y;
     field->show_cursor = gui_true;
     field->background = config->colors[GUI_COLOR_INPUT];
-    field->border = config->colors[GUI_COLOR_INPUT_BORDER];
+    field->border = config->colors[GUI_COLOR_BORDER];
     field->cursor = config->colors[GUI_COLOR_INPUT_CURSOR];
     field->text = config->colors[GUI_COLOR_INPUT_TEXT];
     return state;
@@ -4980,14 +4993,14 @@ gui_panel_spinner(struct gui_panel_layout *layout, gui_int min, gui_int value,
     item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
 
     spinner.border_button = 1;
-    spinner.button_color = config->colors[GUI_COLOR_BUTTON];
-    spinner.button_border = config->colors[GUI_COLOR_BUTTON_BORDER];
-    spinner.button_triangle = config->colors[GUI_COLOR_SPINNER_TRIANGLE];
+    spinner.button_color = config->colors[GUI_COLOR_SELECTOR_BUTTON];
+    spinner.button_border = config->colors[GUI_COLOR_BORDER];
+    spinner.button_triangle = config->colors[GUI_COLOR_SELECTOR_TRIANGLE];
     spinner.padding.x = item_padding.x;
     spinner.padding.y = item_padding.y;
-    spinner.color = config->colors[GUI_COLOR_SPINNER];
-    spinner.border = config->colors[GUI_COLOR_SPINNER_BORDER];
-    spinner.text = config->colors[GUI_COLOR_SPINNER_TEXT];
+    spinner.color = config->colors[GUI_COLOR_SELECTOR];
+    spinner.border = config->colors[GUI_COLOR_BORDER];
+    spinner.text = config->colors[GUI_COLOR_SELECTOR_TEXT];
     spinner.show_cursor = gui_false;
     return gui_spinner(out, bounds.x, bounds.y, bounds.w, bounds.h, &spinner,
                             min, value, max, step, active, i, &layout->config->font);
@@ -5016,13 +5029,13 @@ gui_panel_selector(struct gui_panel_layout *layout, const char *items[],
     config = layout->config;
 
     selector.border_button = 1;
-    selector.button_color = config->colors[GUI_COLOR_BUTTON];
-    selector.button_border = config->colors[GUI_COLOR_BUTTON_BORDER];
+    selector.button_color = config->colors[GUI_COLOR_SELECTOR_BUTTON];
+    selector.button_border = config->colors[GUI_COLOR_BORDER];
     selector.button_triangle = config->colors[GUI_COLOR_SELECTOR_TRIANGLE];
     selector.color = config->colors[GUI_COLOR_SELECTOR];
-    selector.border = config->colors[GUI_COLOR_SELECTOR_BORDER];
-    selector.text = config->colors[GUI_COLOR_TEXT];
-    selector.text_bg = config->colors[GUI_COLOR_PANEL];
+    selector.border = config->colors[GUI_COLOR_BORDER];
+    selector.text = config->colors[GUI_COLOR_SELECTOR_TEXT];
+    selector.text_bg = config->colors[GUI_COLOR_SELECTOR];
     selector.padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
     return gui_selector(out, bounds.x, bounds.y, bounds.w, bounds.h, &selector,
                         items, item_count, item_current, i, &layout->config->font);
@@ -5386,10 +5399,9 @@ gui_panel_table_end(struct gui_panel_layout *layout)
  */
 gui_flags
 gui_panel_popup_begin(struct gui_panel_layout *parent, struct gui_panel_layout *popup,
-    struct gui_rect rect, struct gui_vec2 scrollbar)
+    enum gui_popup_type type, struct gui_rect rect, struct gui_vec2 scrollbar)
 {
     gui_flags flags = 0;
-    struct gui_command_buffer *out;
     struct gui_panel panel;
     struct gui_rect bounds;
 
@@ -5410,8 +5422,9 @@ gui_panel_popup_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
     parent->flags |= GUI_PANEL_ROM;
 
     /* initialize a fake panel */
-    out = parent->buffer;
     flags = GUI_PANEL_BORDER|GUI_PANEL_TAB;
+    if (type == GUI_POPUP_DYNAMIC)
+        flags |= GUI_PANEL_DYNAMIC;
     gui_panel_init(&panel, bounds.x, bounds.y, bounds.w,bounds.h,flags, 0,
         parent->config, parent->input);
 
@@ -5442,7 +5455,6 @@ gui_panel_popup_end(struct gui_panel_layout *parent, struct gui_panel_layout *po
 {
     struct gui_panel pan;
     struct gui_command_buffer *out;
-    struct gui_rect clip;
 
     GUI_ASSERT(parent);
     GUI_ASSERT(popup);
@@ -5464,12 +5476,191 @@ gui_panel_popup_end(struct gui_panel_layout *parent, struct gui_panel_layout *po
     pan.flags = GUI_PANEL_BORDER|GUI_PANEL_TAB;
 
     /* end popup and reset clipping rect back to parent panel */
-    gui_unify(&clip, &parent->clip, popup->x, popup->y,
-        popup->x + popup->w, popup->y + popup->h);
-    gui_command_buffer_push_scissor(out, clip.x, clip.y, clip.w, clip.h);
+    gui_command_buffer_push_scissor(out, parent->clip.x, parent->clip.y,
+        parent->clip.w, parent->clip.h);
     gui_panel_end(popup, &pan);
     gui_command_queue_finish_child(parent->queue, parent->buffer);
+    gui_command_buffer_push_scissor(out, parent->clip.x, parent->clip.y,
+        parent->clip.w, parent->clip.h);
     return pan.offset;
+}
+
+/*
+ * -------------------------------------------------------------
+ *
+ *                          COMBO
+ *
+ * --------------------------------------------------------------
+ */
+void
+gui_panel_combo_begin(struct gui_panel_layout *parent, struct gui_panel_layout *combo,
+    const char *selected, gui_bool *active, struct gui_vec2 offset)
+{
+    const struct gui_config *config;
+    struct gui_command_buffer *out;
+    struct gui_vec2 item_padding;
+    const struct gui_input *in;
+    struct gui_rect header;
+    gui_float button_w;
+    gui_bool is_active;
+
+    GUI_ASSERT(parent);
+    GUI_ASSERT(combo);
+    GUI_ASSERT(selected);
+    GUI_ASSERT(active);
+    if (!parent || !combo || !selected || !active) return;
+    if (!parent->valid || !gui_panel_widget(&header, parent))
+        goto failed;
+
+    is_active = *active;
+    out = parent->buffer;
+    config = parent->config;
+    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
+    in = parent->input;
+
+    /* draw combo box header background and border */
+    gui_command_buffer_push_rect(out, header.x, header.y, header.w, header.h, 0,
+        config->colors[GUI_COLOR_BORDER]);
+    gui_command_buffer_push_rect(out, header.x+1, header.y+1, header.w-2, header.h-2, 0,
+        config->colors[GUI_COLOR_SELECTOR]);
+
+    {
+        /* print currently selected item */
+        gui_size text_len;
+        struct gui_rect label;
+        label.x = header.x + item_padding.x;
+        label.y = header.y + item_padding.y;
+        label.w = header.w - (header.h + 2 * item_padding.x);
+        label.h = header.h - 2 * item_padding.y;
+        text_len = gui_strsiz(selected);
+        gui_command_buffer_push_scissor(out, label.x, label.y, label.w, label.h);
+        gui_command_buffer_push_text(out, label.x, label.y, label.w, label.h,
+            selected, text_len, &config->font, config->colors[GUI_COLOR_PANEL],
+            config->colors[GUI_COLOR_TEXT]);
+        gui_command_buffer_push_scissor(out, parent->clip.x, parent->clip.y, parent->clip.w, parent->clip.h);
+    }
+    {
+        /* button setup and execution */
+        struct gui_button button;
+        gui_float button_x, button_y;
+        gui_float button_h;
+        gui_bool button_clicked;
+
+        button_y = header.y;
+        button_h = header.h;
+        button_w = header.h;
+        button_x = header.x + header.w - button_w;
+
+        button.rounding = 0;
+        button.border = 1;
+        button.padding.x = button_w/4.0f;
+        button.padding.y = button_h/4.0f;
+        button.background = config->colors[GUI_COLOR_SELECTOR_BUTTON];
+        button.foreground = config->colors[GUI_COLOR_BORDER];
+        button.content = config->colors[GUI_COLOR_SELECTOR_TRIANGLE];
+        button.highlight = config->colors[GUI_COLOR_SELECTOR_BUTTON];
+        button.highlight_content = config->colors[GUI_COLOR_SELECTOR_TRIANGLE];
+        button.rounding = config->rounding[GUI_ROUNDING_BUTTON];
+        button_clicked = gui_button_triangle(out, button_x, button_y, button_w,
+            button_h, GUI_DOWN, GUI_BUTTON_DEFAULT, &button, in);
+        if (button_clicked)
+            is_active = !is_active;
+    }
+    {
+        /* calculate the maximum height of the combo box*/
+        struct gui_rect body;
+        body.x = header.x;
+        body.w = header.w;
+        body.y = header.y + header.h;
+        body.h = (parent->y + parent->h) - body.y;
+
+        /* deactivate popup if user clicked outside the popup*/
+        if (in && *active) {
+            gui_bool inbody = GUI_INBOX(in->mouse_clicked_pos.x,
+                in->mouse_clicked_pos.y, body.x, body.y, body.w, body.h);
+            gui_bool inpanel = GUI_INBOX(in->mouse_clicked_pos.x,
+                in->mouse_clicked_pos.y, parent->x, parent->y, parent->w, parent->h);
+            if ((in->mouse_down && in->mouse_clicked) && !inbody && inpanel)
+                is_active = gui_false;
+        }
+
+        /* recalculate body bounds into local panel position */
+        body.x = header.x - (parent->at_x - 2);
+        body.y = (header.y + header.h) - parent->clip.y;
+        body.w -= 4;
+
+        /* if active create popup otherwise deactive the panel layout  */
+        if (!is_active && *active) {
+            gui_panel_popup_begin(parent, combo, GUI_POPUP_DYNAMIC, body, offset);
+            gui_panel_popup_close(combo);
+            combo->flags &= ~(gui_flags)GUI_PANEL_MINIMIZED;
+        } else if (!is_active && !*active) {
+            *active = is_active;
+            combo->flags |= GUI_PANEL_MINIMIZED;
+            goto failed;
+        } else{
+            gui_panel_popup_begin(parent, combo, GUI_POPUP_DYNAMIC, body, offset);
+            combo->flags &= ~(gui_flags)GUI_PANEL_MINIMIZED;
+        }
+        *active = is_active;
+    }
+    return;
+
+failed:
+    combo->valid = gui_false;
+    combo->config = parent->config;
+    combo->buffer = parent->buffer;
+    combo->input = parent->input;
+    combo->queue = parent->queue;
+}
+
+struct gui_vec2
+gui_panel_combo_end(struct gui_panel_layout *parent, struct gui_panel_layout *combo)
+{
+    GUI_ASSERT(parent);
+    GUI_ASSERT(combo);
+    if (!parent || !combo) return gui_vec2(0,0);
+    if (!parent->valid)
+        return combo->offset;
+    if (!(combo->flags & GUI_PANEL_MINIMIZED))
+        gui_panel_popup_end(parent, combo);
+    return combo->offset;
+}
+
+void
+gui_panel_combo_close(struct gui_panel_layout *combo)
+{
+    GUI_ASSERT(combo);
+    if (!combo) return;
+    gui_panel_popup_close(combo);
+}
+
+void
+gui_panel_combo(struct gui_panel_layout *layout, const char **entries,
+    gui_size count, gui_size *current, gui_size row_height,
+    gui_bool *active, struct gui_vec2 scrollbar)
+{
+    gui_size i;
+    struct gui_panel_layout combo;
+
+    GUI_ASSERT(layout);
+    GUI_ASSERT(entries);
+    GUI_ASSERT(current);
+    GUI_ASSERT(active);
+    if (!layout || !layout->valid || !entries || !current || !active) return;
+    if (!count) return;
+
+    gui_panel_combo_begin(layout, &combo, entries[*current], active, scrollbar);
+    gui_panel_row_dynamic(&combo, row_height, 1);
+    for (i = 0; i < count; ++i) {
+        if (i == *current) continue;
+        if (gui_panel_button__fitting(&combo, entries[i], GUI_BUTTON_DEFAULT)) {
+            gui_panel_combo_close(&combo);
+            *active = gui_false;
+            *current = i;
+        }
+    }
+    gui_panel_combo_end(layout, &combo);
 }
 
 /*
@@ -5771,8 +5962,6 @@ gui_panel_group_end(struct gui_panel_layout *p, struct gui_panel_layout *g)
     /* setup clipping rect to finalize group panel drawing*/
     gui_unify(&clip, &p->clip, g->clip.x, g->clip.y, g->x + g->w, g->y + g->h);
     gui_command_buffer_push_scissor(out, clip.x, clip.y, clip.w, clip.h);
-
-    /* end group and reset clipping rect back to parent panel */
     gui_panel_end(g, &pan);
     gui_command_buffer_push_scissor(out, p->clip.x, p->clip.y, p->clip.w, p->clip.h);
     return pan.offset;
@@ -5877,7 +6066,6 @@ gui_panel_shelf_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
                 button.highlight = config->colors[GUI_COLOR_SHELF_ACTIVE];
                 button.highlight_content = config->colors[GUI_COLOR_SHELF_ACTIVE_TEXT];
             }
-
             if (gui_button_text(out, button_x, button_y, button_w, button_h,
                 tabs[i], GUI_BUTTON_DEFAULT, &button, input, &config->font))
                 active = i;
@@ -6082,7 +6270,7 @@ gui_layout_slot_panel_bounds(struct gui_rect *bounds, struct gui_layout *layout,
     enum gui_layout_slot_index slot, gui_size index)
 {
     /* calculate the bounds of the panel */
-    struct gui_rect slot_bounds;
+    struct gui_rect slot_bounds = {0,0,0,0};
     struct gui_layout_slot *s;
 
     GUI_ASSERT(bounds);

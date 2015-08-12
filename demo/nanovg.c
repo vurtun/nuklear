@@ -304,6 +304,7 @@ main(int argc, char *argv[])
     font.userdata.ptr = vg;
     nvgTextMetrics(vg, NULL, NULL, &font.height);
     font.width = font_get_width;
+    gui.input = &in;
     init_demo(&gui, &font);
 
     while (gui.running) {
@@ -326,7 +327,7 @@ main(int argc, char *argv[])
 
         /* GUI */
         SDL_GetWindowSize(win, &width, &height);
-        run_demo(&gui, &in);
+        run_demo(&gui);
 
         /* Draw */
         glClearColor(0.4f, 0.4f, 0.4f, 1.0f);
