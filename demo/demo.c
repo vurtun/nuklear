@@ -614,12 +614,12 @@ run_demo(struct demo_gui *gui)
         {
             const gui_char *file_items[] = {"Open", "Close", "Quit"};
             const gui_char *edit_items[] = {"Copy", "Cut", "Delete", "Paste"};
-            gui_panel_row_begin(&layout, GUI_STATIC, 30, 2);
+            gui_panel_row_begin(&layout, GUI_STATIC, 25, 2);
             gui_panel_row_push(&layout, config->font.width(config->font.userdata, "_FILE_", 6));
-            gui_panel_menu(&layout, "FILE", file_items, LEN(file_items), 30, 100,
+            gui_panel_menu(&layout, "FILE", file_items, LEN(file_items), 25, 100,
                 &state->file_open, gui_vec2(0,0));
             gui_panel_row_push(&layout, config->font.width(config->font.userdata, "_EDIT_", 6));
-            gui_panel_menu(&layout, "EDIT", edit_items, LEN(edit_items), 30, 100,
+            gui_panel_menu(&layout, "EDIT", edit_items, LEN(edit_items), 25, 100,
                 &state->edit_open, gui_vec2(0,0));
             gui_panel_row_end(&layout);
         }

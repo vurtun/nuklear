@@ -3528,6 +3528,8 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
         /* panel is visible and not tab */
         else gui_command_queue_finish(panel->queue, &panel->buffer);
     }
+    if (layout->flags & GUI_PANEL_REMOVE_ROM)
+        layout->flags &= ~(gui_flags)GUI_PANEL_ROM;
     panel->flags = layout->flags;
 }
 
@@ -5465,7 +5467,7 @@ gui_panel_popup_end(struct gui_panel_layout *parent, struct gui_panel_layout *po
 
     gui_zero(&pan, sizeof(pan));
     if (popup->flags & GUI_PANEL_HIDDEN) {
-        parent->flags &= (gui_flags)~GUI_PANEL_ROM;
+        parent->flags |= GUI_PANEL_REMOVE_ROM;
         popup->flags &= ~(gui_flags)~GUI_PANEL_HIDDEN;
         popup->valid = gui_true;
     }
@@ -5513,11 +5515,12 @@ gui_panel_popup_nonblock_begin(struct gui_panel_layout *parent,
         gui_panel_popup_begin(parent, popup, GUI_POPUP_DYNAMIC, body, offset);
         gui_panel_popup_close(popup);
         popup->flags &= ~(gui_flags)GUI_PANEL_MINIMIZED;
+        parent->flags &= ~(gui_flags)GUI_PANEL_ROM;
     } else if (!is_active && !*active) {
         *active = is_active;
         popup->flags |= GUI_PANEL_MINIMIZED;
         return gui_false;
-    } else{
+    } else {
         gui_panel_popup_begin(parent, popup, GUI_POPUP_DYNAMIC, body, offset);
         popup->flags &= ~(gui_flags)GUI_PANEL_MINIMIZED;
     }

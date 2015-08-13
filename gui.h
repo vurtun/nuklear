@@ -1778,7 +1778,10 @@ enum gui_panel_flags {
     /* INTERNAL ONLY!: marks the panel as active, used by the panel stack */
     GUI_PANEL_TAB = 0x20000,
     /* INTERNAL ONLY!: Marks the panel as an subpanel of another panel(Groups/Tabs/Shelf)*/
-    GUI_PANEL_COMBO_MENU = 0x40000
+    GUI_PANEL_COMBO_MENU = 0x40000,
+    /* INTERNAL ONLY!: Marks the panel as an combo box or menu */
+    GUI_PANEL_REMOVE_ROM = 0x80000
+    /* INTERNAL ONLY!: removes the read only mode at the end of the panel */
 };
 
 struct gui_panel {
@@ -2632,6 +2635,7 @@ enum gui_popup_type {
     GUI_POPUP_STATIC, /* static fixed height non growing popup */
     GUI_POPUP_DYNAMIC /* dynamically growing popup with maximum height */
 };
+
 gui_flags gui_panel_popup_begin(struct gui_panel_layout *parent, struct gui_panel_layout *popup,
                                 enum gui_popup_type, struct gui_rect bounds, struct gui_vec2 offset);
 /*  this function adds a grouped subpanel into the parent panel
