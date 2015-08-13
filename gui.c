@@ -5566,6 +5566,7 @@ gui_panel_combo_begin(struct gui_panel_layout *parent, struct gui_panel_layout *
     if (!parent->valid || !gui_panel_widget(&header, parent))
         goto failed;
 
+    gui_zero(combo, sizeof(*combo));
     in = (parent->flags & GUI_PANEL_ROM) ? 0 : parent->input;
     is_active = *active;
     out = parent->buffer;
@@ -5680,8 +5681,9 @@ gui_panel_combo(struct gui_panel_layout *layout, const char **entries,
     if (!layout || !layout->valid || !entries || !current || !active) return;
     if (!count) return;
 
+    gui_zero(&combo, sizeof(combo));
     gui_panel_combo_begin(layout, &combo, entries[*current], active, scrollbar);
-    gui_panel_row_dynamic(&combo, row_height, 1);
+    gui_panel_row_dynamic(&combo, (gui_float)row_height, 1);
     for (i = 0; i < count; ++i) {
         if (i == *current) continue;
         if (gui_panel_button_fitting(&combo, entries[i], GUI_TEXT_LEFT, GUI_BUTTON_DEFAULT)) {
@@ -5718,6 +5720,7 @@ gui_panel_menu_begin(struct gui_panel_layout *parent, struct gui_panel_layout *m
     is_active = *active;
     in = parent->input;
     config = parent->config;
+    gui_zero(menu, sizeof(*menu));
     {
         struct gui_button button;
         gui_panel_button(&button, &header, parent);
@@ -5792,7 +5795,7 @@ gui_panel_menu(struct gui_panel_layout *layout, const char *title,
     if (!count) return -1;
 
     gui_panel_menu_begin(layout, &menu, title, width, active, scrollbar);
-    gui_panel_row_dynamic(&menu, row_height, 1);
+    gui_panel_row_dynamic(&menu, (gui_float)row_height, 1);
     for (i = 0; i < count; ++i) {
         if (gui_panel_button_fitting(&menu, entries[i], GUI_TEXT_CENTERED, GUI_BUTTON_DEFAULT)) {
             gui_panel_combo_close(&menu);

@@ -244,9 +244,12 @@ widget_panel(struct gui_panel_layout *panel, struct state *demo)
     gui_panel_combo(panel, items, LEN(items), &demo->sel_item, 30, &demo->sel_act, gui_vec2(0,0));
     {
         /* progressbar combobox  */
+        gui_int sum;
         gui_char buffer[64];
         struct gui_panel_layout combo;
-        gui_int sum = (gui_int)(demo->combo_prog[0] + demo->combo_prog[1]);
+        memset(&combo, 0, sizeof(combo));
+
+        sum = (gui_int)(demo->combo_prog[0] + demo->combo_prog[1]);
         sum += (gui_int)(demo->combo_prog[2] + demo->combo_prog[3]);
         sprintf(buffer, "%d", sum);
         gui_panel_combo_begin(panel, &combo, buffer, &demo->prog_act, gui_vec2(0,0));
@@ -263,6 +266,7 @@ widget_panel(struct gui_panel_layout *panel, struct state *demo)
         /* color slider progressbar */
         gui_char buffer[32];
         struct gui_panel_layout combo;
+        memset(&combo, 0, sizeof(combo));
         sprintf(buffer, "#%02x%02x%02x%02x", demo->combo_color.r, demo->combo_color.g,
                 demo->combo_color.b, demo->combo_color.a);
         gui_panel_combo_begin(panel, &combo, buffer,  &demo->col_act, gui_vec2(0,0));
@@ -283,9 +287,11 @@ widget_panel(struct gui_panel_layout *panel, struct state *demo)
     }
     {
         /* checkbox combobox  */
-        struct gui_panel_layout combo;
+        gui_int sum;
         gui_char buffer[64];
-        gui_int sum = demo->combo_sel[0] + demo->combo_sel[1];
+        struct gui_panel_layout combo;
+        memset(&combo, 0, sizeof(combo));
+        sum = demo->combo_sel[0] + demo->combo_sel[1];
         sum += demo->combo_sel[2] + demo->combo_sel[3];
         sprintf(buffer, "%d", sum);
         gui_panel_combo_begin(panel, &combo, buffer,  &demo->box_act, gui_vec2(0,0));
