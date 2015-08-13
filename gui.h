@@ -1040,6 +1040,8 @@ struct gui_button {
     /* background color if mouse is over */
     struct gui_color highlight_content;
     /* content color if mouse is over */
+    enum gui_text_align alignment;
+    /* text alignment in the button */
 };
 
 enum gui_toggle_type {
@@ -1774,8 +1776,9 @@ enum gui_panel_flags {
      * used to create perfectly content fitting panels as well */
     GUI_PANEL_ACTIVE = 0x10000,
     /* INTERNAL ONLY!: marks the panel as active, used by the panel stack */
-    GUI_PANEL_TAB = 0x20000
+    GUI_PANEL_TAB = 0x20000,
     /* INTERNAL ONLY!: Marks the panel as an subpanel of another panel(Groups/Tabs/Shelf)*/
+    GUI_PANEL_COMBO_MENU = 0x40000
 };
 
 struct gui_panel {
@@ -2016,8 +2019,8 @@ void gui_panel_end(struct gui_panel_layout*, struct gui_panel*);
     gui_panel_header_title          -- adds the title of the panel into the header
     gui_panel_header_end            -- finishes the header build up process
     gui_panel_header                -- short cut version of the header build up process
-    gui_panel_menu_begin            -- marks the beginning of the menubar building process
-    gui_panel_menu_end              -- marks the end the menubar build up process
+    gui_panel_menubar_begin         -- marks the beginning of the menubar building process
+    gui_panel_menubar_end           -- marks the end the menubar build up process
 */
 enum gui_panel_header_flags {
     GUI_CLOSEABLE = 0x01,
@@ -2117,9 +2120,9 @@ gui_flags gui_panel_header(struct gui_panel_layout*, const char *title,
     - flags indicating which icons should be drawn to the header
     - flags indicating which icons should notify if clicked
 */
-void gui_panel_menu_begin(struct gui_panel_layout*);
+void gui_panel_menubar_begin(struct gui_panel_layout*);
 /*  this function begins the panel menubar build up process */
-void gui_panel_menu_end(struct gui_panel_layout*);
+void gui_panel_menubar_end(struct gui_panel_layout*);
 /*  this function ends the panel menubar build up process */
 /*
  * --------------------------------------------------------------
@@ -2129,9 +2132,9 @@ void gui_panel_menu_end(struct gui_panel_layout*);
     The layout API is for positioning of widget inside a panel. In general there
     are three different ways to position widget. The first one is a table with
     fixed size columns. This like the other three comes in two flavors. First
-    the scaleable with as a ration of the panel width and the other is a
+    the scaleable width as a ratio of the panel width and the other is a
     non-scaleable fixed pixel value for static panels.
-    Since sometimes widgets with different size in a row is needed another set
+    Since sometimes widgets with different sizes in a row is needed another set
     of row layout has been added. The first set is for dynamically size widgets
     in an immediate mode API which sets each size of a widget directly before
     it is called or a retain mode API which stores the size of every widget as
@@ -2364,6 +2367,19 @@ gui_bool gui_panel_button_text(struct gui_panel_layout*, const char*,
 /*  this function creates a text button
     Input:
     - button label describing the button
+    - string label
+    - button behavior with either default or repeater behavior
+    Output:
+    - gui_true if the button was transistioned from unpressed to pressed with
+        default button behavior or pressed if repeater behavior.
+*/
+gui_bool gui_panel_button_fitting(struct gui_panel_layout *layout,
+                                const char *str, enum gui_text_align align,
+                                enum gui_button_behavior behavior);
+/*  this function creates a fitting text button for combo boxes and menus
+    Input:
+    - button label describing the button
+    - alignment of the text inside the button
     - button behavior with either default or repeater behavior
     Output:
     - gui_true if the button was transistioned from unpressed to pressed with
@@ -2778,6 +2794,53 @@ struct gui_vec2 gui_panel_combo_end(struct gui_panel_layout *parent,
 /*  this function ends the combobox build up process */
 /*
  * --------------------------------------------------------------
+ *                          MENU
+ * --------------------------------------------------------------
+    MENU
+    The menu widget provides a overlapping popup panel which can
+    be opened/closed by clicking on the menu button. It is normally
+    placed at the top of the panel and is independent of the parent
+    scrollbar offset. But if needed the menu can even be placed inside the panel.
+
+    menu widget API
+    gui_panel_menu_begin    -- begins the menu item build up processs
+    gui_panel_menu_push     -- adds a item into the menu
+    gui_panel_menu_end      -- ends the menu item build up process
+    gui_panel_menu          -- shorthand retain mode array version
+*/
+gui_int gui_panel_menu(struct gui_panel_layout*, const gui_char *title,
+                    const char **entries, gui_size count, gui_size row_height,
+                    gui_float width, gui_bool *active, struct gui_vec2 scrollbar);
+/*  this function creates a standart text based combobox
+    Input:
+    - parent panel layout the combo box will be placed into
+    - string array of all items inside the menu
+    - number of menu items inside the string array
+    - the height of every widget inside the combobox
+    - the current state of the menu
+    - the scrollbar offset of the panel scrollbar
+    Output:
+    - updated state of the menu
+    - index of the selected menu item or -1 otherwise
+*/
+void gui_panel_menu_begin(struct gui_panel_layout *parent,
+                        struct gui_panel_layout *menu, const char *title,
+                        gui_float width, gui_bool *active, struct gui_vec2 offset);
+/*  this function begins the menu build up process
+    Input:
+    - parent panel layout the menu will be placed into
+    - ouput menu panel layout
+    - title of the menu to
+    - the current state of the menu with either gui_true (open) or gui_false else
+    - the current scrollbar offset of the menu popup panel
+*/
+void gui_panel_menu_close(struct gui_panel_layout *menu);
+/*  this function closes a opened menu */
+struct gui_vec2 gui_panel_menu_end(struct gui_panel_layout *parent,
+                                    struct gui_panel_layout *menu);
+/*  this function ends the menu build up process */
+/*
+ * --------------------------------------------------------------
  *                          TREE
  * --------------------------------------------------------------
     TREE
@@ -2893,8 +2956,7 @@ struct gui_vec2 gui_panel_tree_end(struct gui_panel_layout*, struct gui_tree*);
  *                          TABLE
  * --------------------------------------------------------------
     TABLE
-
-    USAGE
+    Temporary table widget. Needs to be rewritten to be actually useful.
 
     Table widget API
     gui_panel_table_begin           -- begin table build up process
