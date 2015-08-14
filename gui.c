@@ -3528,8 +3528,10 @@ gui_panel_end(struct gui_panel_layout *layout, struct gui_panel *panel)
         /* panel is visible and not tab */
         else gui_command_queue_finish(panel->queue, &panel->buffer);
     }
-    if (layout->flags & GUI_PANEL_REMOVE_ROM)
+    if (layout->flags & GUI_PANEL_REMOVE_ROM) {
         layout->flags &= ~(gui_flags)GUI_PANEL_ROM;
+        layout->flags &= ~(gui_flags)GUI_PANEL_REMOVE_ROM;
+    }
     panel->flags = layout->flags;
 }
 
