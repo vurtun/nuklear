@@ -35,14 +35,12 @@ extern "C" {
 #define GUI_MAX_ATTRIB_STACK 32
 /* defines the number of temporary configuration attribute changes that can be stored */
 
-/*
-Since the gui uses ANSI C which does not guarantee to have fixed types, you need
-to set the appropriate size of each type. However if your developer environment
-supports fixed size types by the <stdint> header you can just uncomment the define
-to automatically set the correct size for each type in the library:
-*/
-#define GUI_USE_FIXED_TYPES
-#ifdef GUI_USE_FIXED_TYPES
+/* Compiler switches */
+#define GUI_COMPILE_WITH_FIXED_TYPES 1
+/* setting this define to 1 adds the <stdint.h> header for fixed sized types
+ * if 0 each type has to be set to the correct size*/
+
+#if GUI_COMPILE_WITH_FIXED_TYPES
 #include <stdint.h>
 typedef char gui_char;
 typedef int32_t gui_int;
@@ -55,6 +53,7 @@ typedef uint16_t gui_ushort;
 typedef uint32_t gui_uint;
 typedef uint64_t gui_ulong;
 typedef uint32_t gui_flags;
+typedef gui_flags gui_state;
 typedef uint8_t gui_byte;
 typedef uint32_t gui_flag;
 typedef uint64_t gui_size;
@@ -71,6 +70,7 @@ typedef unsigned short gui_ushort;
 typedef unsigned int gui_uint;
 typedef unsigned long gui_ulong;
 typedef unsigned int gui_flags;
+typedef gui_flags gui_state;
 typedef unsigned char gui_byte;
 typedef unsigned int gui_flag;
 typedef unsigned long gui_size;
@@ -88,6 +88,8 @@ struct gui_key {gui_bool down, clicked;};
 typedef gui_char gui_glyph[GUI_UTF_SIZE];
 typedef union {void *ptr; gui_int id;} gui_handle;
 struct gui_image {gui_handle handle; struct gui_rect region;};
+enum gui_widget_states {GUI_INACTIVE = gui_false, GUI_AYOUT_ACTIVE = gui_true};
+enum gui_collapse_states {GUI_MINIMIZED = gui_false, GUI_MAXIMIZED = gui_true};
 
 /* Callbacks */
 struct gui_font;
@@ -96,7 +98,6 @@ typedef gui_bool(*gui_filter)(gui_long unicode);
 typedef gui_size(*gui_text_width_f)(gui_handle, const gui_char*, gui_size);
 typedef void(*gui_paste_f)(gui_handle, struct gui_edit_box*);
 typedef void(*gui_copy_f)(gui_handle, const char*, gui_size size);
-
 /*
  * ==============================================================
  *
@@ -849,7 +850,7 @@ typedef struct gui_buffer gui_edit_buffer;
 struct gui_edit_box {
     gui_edit_buffer buffer;
     /* glyph buffer to add text into */
-    gui_bool active;
+    gui_state active;
     /* flag indicating if the buffer is currently being modified  */
     gui_size cursor;
     /* current glyph (not byte) cursor position */
@@ -1354,7 +1355,7 @@ void gui_editbox(struct gui_command_buffer*, gui_float x, gui_float y, gui_float
     - font structure for text drawing
 */
 gui_size gui_edit(struct gui_command_buffer*, gui_float x, gui_float y, gui_float w,
-                    gui_float h, gui_char*, gui_size, gui_size max, gui_bool*,
+                    gui_float h, gui_char*, gui_size, gui_size max, gui_state*,
                     gui_size *cursor, const struct gui_edit*, enum gui_input_filter filter,
                     const struct gui_input*, const struct gui_font*);
 /*  this function executes a editbox widget
@@ -1376,7 +1377,7 @@ gui_size gui_edit(struct gui_command_buffer*, gui_float x, gui_float y, gui_floa
 */
 gui_size gui_edit_filtered(struct gui_command_buffer*, gui_float x, gui_float y,
                             gui_float w, gui_float h, gui_char*, gui_size,
-                            gui_size max, gui_bool*, gui_size *cursor,
+                            gui_size max, gui_state*, gui_size *cursor,
                             const struct gui_edit*, gui_filter filter,
                             const struct gui_input*, const struct gui_font*);
 /*  this function executes a editbox widget
@@ -1398,7 +1399,7 @@ gui_size gui_edit_filtered(struct gui_command_buffer*, gui_float x, gui_float y,
 */
 gui_int gui_spinner(struct gui_command_buffer*, gui_float x, gui_float y, gui_float w,
                         gui_float h, const struct gui_spinner*, gui_int min, gui_int value,
-                        gui_int max, gui_int step, gui_bool *active,
+                        gui_int max, gui_int step, gui_state *active,
                         const struct gui_input*, const struct gui_font*);
 /*  this function executes a integer spinner widget
     Input:
@@ -1746,9 +1747,9 @@ void gui_config_reset(struct gui_config*);
 
 */
 enum gui_widget_state {
-    GUI_INVALID, /* The widget cannot be seen and is completly out of view */
-    GUI_VALID, /* The widget is completly inside the panel and can be updated + drawn */
-    GUI_ROM /* The widget is partially visible and cannot be updated */
+    GUI_WIDGET_INVALID, /* The widget cannot be seen and is completly out of view */
+    GUI_WIDGET_VALID, /* The widget is completly inside the panel and can be updated + drawn */
+    GUI_WIDGET_ROM /* The widget is partially visible and cannot be updated */
 };
 
 enum gui_panel_flags {
@@ -1820,11 +1821,6 @@ enum gui_panel_row_layout_type {
     /* free pixel based placing of widget in a local space  */
     GUI_PANEL_LAYOUT_STATIC
     /* retain mode widget specific widget pixel width layout */
-};
-
-enum gui_node_state {
-    GUI_MINIMIZED = gui_false,
-    GUI_MAXIMIZED = gui_true
 };
 
 enum gui_panel_layout_node_type {
@@ -2228,7 +2224,7 @@ void gui_panel_row_space_push(struct gui_panel_layout*, struct gui_rect);
 void gui_panel_row_space_end(struct gui_panel_layout*);
 /*  this functions finishes the scaleable space filling process */
 gui_bool gui_panel_layout_push(struct gui_panel_layout*, enum gui_panel_layout_node_type,
-                                const char *title, enum gui_node_state*);
+                                const char *title, gui_state*);
 /*  this functions pushes either a tree node, collapseable header or tab into
  *  the current panel layout
     Input:
@@ -2476,7 +2472,7 @@ gui_size gui_panel_progress(struct gui_panel_layout*, gui_size cur, gui_size max
 void gui_panel_editbox(struct gui_panel_layout*, struct gui_edit_box*);
 /*  this function creates an editbox with copy & paste functionality and text buffering */
 gui_size gui_panel_edit(struct gui_panel_layout*, gui_char *buffer, gui_size len,
-                        gui_size max, gui_bool *active, gui_size *cursor,
+                        gui_size max, gui_state *active, gui_size *cursor,
                         enum gui_input_filter);
 /*  this function creates an editbox to updated/insert user text input
     Input:
@@ -2490,7 +2486,7 @@ gui_size gui_panel_edit(struct gui_panel_layout*, gui_char *buffer, gui_size len
     - current state of the editbox with active(gui_true) or inactive(gui_false)
 */
 gui_size gui_panel_edit_filtered(struct gui_panel_layout*, gui_char *buffer,
-                                gui_size len, gui_size max,  gui_bool *active,
+                                gui_size len, gui_size max,  gui_state *active,
                                 gui_size *cursor, gui_filter);
 /*  this function creates an editbox to updated/insert filtered user text input
     Input:
@@ -2504,7 +2500,7 @@ gui_size gui_panel_edit_filtered(struct gui_panel_layout*, gui_char *buffer,
     - current state of the editbox with active(gui_true) or inactive(gui_false)
 */
 gui_int gui_panel_spinner(struct gui_panel_layout*, gui_int min, gui_int value,
-                                gui_int max, gui_int step, gui_bool *active);
+                                gui_int max, gui_int step, gui_state *active);
 /*  this function creates a integer spinner widget
     Input:
     - min value that will not be underflown
@@ -2550,9 +2546,8 @@ gui_size gui_panel_selector(struct gui_panel_layout*, const char *items[],
     gui_panel_group_begin   -- adds a scrollable fixed space inside the panel
     gui_panel_group_end     -- ends the scrollable space
 */
-
 void gui_panel_group_begin(struct gui_panel_layout*, struct gui_panel_layout *tab,
-                            const char *title, struct gui_vec2 offset);
+                            const char *title, struct gui_vec2);
 /*  this function adds a grouped subpanel into the parent panel
     IMPORTANT: You need to set the height of the group with panel_row_layout
     Input:
@@ -2636,8 +2631,10 @@ enum gui_popup_type {
     GUI_POPUP_DYNAMIC /* dynamically growing popup with maximum height */
 };
 
-gui_flags gui_panel_popup_begin(struct gui_panel_layout *parent, struct gui_panel_layout *popup,
-                                enum gui_popup_type, struct gui_rect bounds, struct gui_vec2 offset);
+gui_flags gui_panel_popup_begin(struct gui_panel_layout *parent,
+                                struct gui_panel_layout *popup,
+                                enum gui_popup_type, struct gui_rect bounds,
+                                struct gui_vec2 offset);
 /*  this function adds a grouped subpanel into the parent panel
     Input:
     - popup position and size of the popup (NOTE: local position)
@@ -2766,7 +2763,7 @@ gui_int gui_panel_graph_callback(struct gui_panel_layout*, enum gui_graph_type,
 */
 void gui_panel_combo(struct gui_panel_layout*, const char **entries,
                     gui_size count, gui_size *current, gui_size row_height,
-                    gui_bool *active, struct gui_vec2 scrollbar);
+                    gui_state *active, struct gui_vec2 *scrollbar);
 /*  this function creates a standart text based combobox
     Input:
     - parent panel layout the combo box will be placed into
@@ -2782,7 +2779,7 @@ void gui_panel_combo(struct gui_panel_layout*, const char **entries,
 */
 void gui_panel_combo_begin(struct gui_panel_layout *parent,
                         struct gui_panel_layout *combo, const char *selected,
-                        gui_bool *active, struct gui_vec2 offset);
+                        gui_state *active, struct gui_vec2 offset);
 /*  this function begins the combobox build up process
     Input:
     - parent panel layout the combo box will be placed into
@@ -2812,9 +2809,10 @@ struct gui_vec2 gui_panel_combo_end(struct gui_panel_layout *parent,
     gui_panel_menu_end      -- ends the menu item build up process
     gui_panel_menu          -- shorthand retain mode array version
 */
+#define GUI_NONE (-1)
 gui_int gui_panel_menu(struct gui_panel_layout*, const gui_char *title,
                     const char **entries, gui_size count, gui_size row_height,
-                    gui_float width, gui_bool *active, struct gui_vec2 scrollbar);
+                    gui_float width, gui_state *active, struct gui_vec2 scrollbar);
 /*  this function creates a standart text based combobox
     Input:
     - parent panel layout the combo box will be placed into
@@ -2829,7 +2827,7 @@ gui_int gui_panel_menu(struct gui_panel_layout*, const gui_char *title,
 */
 void gui_panel_menu_begin(struct gui_panel_layout *parent,
                         struct gui_panel_layout *menu, const char *title,
-                        gui_float width, gui_bool *active, struct gui_vec2 offset);
+                        gui_float width, gui_state *active, struct gui_vec2 offset);
 /*  this function begins the menu build up process
     Input:
     - parent panel layout the menu will be placed into
@@ -2841,7 +2839,7 @@ void gui_panel_menu_begin(struct gui_panel_layout *parent,
 void gui_panel_menu_close(struct gui_panel_layout *menu);
 /*  this function closes a opened menu */
 struct gui_vec2 gui_panel_menu_end(struct gui_panel_layout *parent,
-                                    struct gui_panel_layout *menu);
+                            struct gui_panel_layout *menu);
 /*  this function ends the menu build up process */
 /*
  * --------------------------------------------------------------
@@ -2869,7 +2867,6 @@ struct gui_vec2 gui_panel_menu_end(struct gui_panel_layout *parent,
     gui_panel_tree_leaf_icon        -- adds a leaf icon node to a prev opended node
     gui_panel_tree_end              -- ends the tree build up process
 */
-typedef gui_flags gui_tree_node_state;
 enum gui_tree_nodes_states {
     GUI_NODE_ACTIVE = 0x01,
     /* the node is currently opened */
@@ -2902,7 +2899,8 @@ struct gui_tree {
 };
 
 void gui_panel_tree_begin(struct gui_panel_layout*, struct gui_tree*,
-                            const char*, gui_float row_height, struct gui_vec2 offset);
+                            const char*, gui_float row_height,
+                            struct gui_vec2 scrollbar);
 /*  this function begins the tree building process
     Input:
     - title describing the tree or NULL
@@ -2912,7 +2910,7 @@ void gui_panel_tree_begin(struct gui_panel_layout*, struct gui_tree*,
     - tree build up state structure
 */
 enum gui_tree_node_operation gui_panel_tree_begin_node(struct gui_tree*, const char*,
-                                                        gui_tree_node_state*);
+                                                        gui_state*);
 /*  this function begins a parent node
     Input:
     - title of the node
@@ -2922,7 +2920,7 @@ enum gui_tree_node_operation gui_panel_tree_begin_node(struct gui_tree*, const c
 */
 enum gui_tree_node_operation gui_panel_tree_begin_node_icon(struct gui_tree*,
                                                     const char*, struct gui_image,
-                                                    gui_tree_node_state*);
+                                                    gui_state*);
 /*  this function begins a text icon parent node
     Input:
     - title of the node
@@ -2934,7 +2932,7 @@ enum gui_tree_node_operation gui_panel_tree_begin_node_icon(struct gui_tree*,
 void gui_panel_tree_end_node(struct gui_tree*);
 /*  this function ends a parent node */
 enum gui_tree_node_operation gui_panel_tree_leaf(struct gui_tree*, const char*,
-                                                    gui_tree_node_state*);
+                                                    gui_state*);
 /*  this function pushes a leaf node to the tree
     Input:
     - title of the node
@@ -2944,7 +2942,7 @@ enum gui_tree_node_operation gui_panel_tree_leaf(struct gui_tree*, const char*,
 */
 enum gui_tree_node_operation gui_panel_tree_leaf_icon(struct gui_tree*,
                                                     const char*, struct gui_image,
-                                                    gui_tree_node_state*);
+                                                    gui_state*);
 /*  this function pushes a leaf icon node to the tree
     Input:
     - title of the node
@@ -3084,19 +3082,12 @@ struct gui_layout_slot {
     /* scaleable state */
 };
 
-enum gui_layout_state {
-    GUI_LAYOUT_INACTIVE = gui_false,
-    /* all panels inside the layout can NOT be modified by user input */
-    GUI_LAYOUT_ACTIVE = gui_true
-    /* all panels inside the layout can be modified by user input */
-};
-
 struct gui_layout {
     gui_float scaler_width;
     /* width of the scaling line between slots */
     struct gui_rect bounds;
     /* bounds of the layout inside the window */
-    enum gui_layout_state active;
+    gui_state active;
     /* flag indicating if the layout is from the user modifyable */
     struct gui_layout_slot slots[GUI_SLOT_MAX];
     /* each slot inside the panel layout */
@@ -3111,7 +3102,7 @@ void gui_panel_begin_tiled(struct gui_panel_layout*, struct gui_panel*,
     - input structure holding all user generated state changes
 */
 void gui_layout_begin(struct gui_layout*, struct gui_rect bounds,
-                    enum gui_layout_state);
+                    gui_state);
 /*  this function start the definition of the layout slots
     Input:
     - position (width/height) of the layout in the window
@@ -3158,7 +3149,7 @@ void gui_layout_set_pos(struct gui_layout*, gui_size x, gui_size y);
     Input:
         - position (x/y) of the layout in the window
 */
-void gui_layout_set_state(struct gui_layout*, enum gui_layout_state);
+void gui_layout_set_state(struct gui_layout*, gui_state);
 /*  this function changes the user modifiable layout state
     Input:
         - new state of the layout with either active or inactive
