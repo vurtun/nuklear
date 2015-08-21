@@ -6,22 +6,67 @@
 #include <stdio.h>
 
 #define WEAPON_MAP(WEAPON)\
-    WEAPON(FIST, "Fist")\
-    WEAPON(PISTOL, "Pistol")\
-    WEAPON(SHOTGUN, "Shotgun")\
-    WEAPON(RAILGUN, "Railgun")\
-    WEAPON(BFG, "BFG")
+    WEAPON(FIST, "fist")\
+    WEAPON(PISTOL, "pistol")\
+    WEAPON(SHOTGUN, "shotgun")\
+    WEAPON(RAILGUN, "railgun")\
+    WEAPON(BFG, "bfg")
 
 #define MENU_FILE_ITEMS(ITEM)\
-    ITEM(OPEN, "Open")\
-    ITEM(CLOSE, "Close")\
-    ITEM(QUIT, "Quit")
+    ITEM(OPEN, "open")\
+    ITEM(CLOSE, "close")\
+    ITEM(QUIT, "quit")
 
 #define MENU_EDIT_ITEMS(ITEM)\
-    ITEM(COPY, "Copy")\
-    ITEM(CUT, "Cut")\
-    ITEM(DELETE, "Delete")\
-    ITEM(PASTE, "Paste")
+    ITEM(COPY, "copy")\
+    ITEM(CUT, "cut")\
+    ITEM(DELETE, "delete")\
+    ITEM(PASTE, "paste")
+
+#define COLOR_MAP(COLOR)\
+    COLOR(text)\
+    COLOR(panel)\
+    COLOR(header)\
+    COLOR(border)\
+    COLOR(button)\
+    COLOR(button_hover)\
+    COLOR(button_toggle)\
+    COLOR(button_hover_font)\
+    COLOR(check)\
+    COLOR(check_background)\
+    COLOR(check_active)\
+    COLOR(option)\
+    COLOR(option_background)\
+    COLOR(option_active)\
+    COLOR(slider)\
+    COLOR(slider_bar)\
+    COLOR(slider_cursor)\
+    COLOR(progress)\
+    COLOR(progress_cursor)\
+    COLOR(input)\
+    COLOR(input_cursor)\
+    COLOR(input_text)\
+    COLOR(selector)\
+    COLOR(selector_triangle)\
+    COLOR(selector_text)\
+    COLOR(selector_button)\
+    COLOR(histo)\
+    COLOR(histo_bars)\
+    COLOR(histo_negative)\
+    COLOR(histo_highlight)\
+    COLOR(plot)\
+    COLOR(plot_lines)\
+    COLOR(plot_highlight)\
+    COLOR(scrollbar)\
+    COLOR(scrollbar_cursor)\
+    COLOR(table_lines)\
+    COLOR(tab_header)\
+    COLOR(shelf)\
+    COLOR(shelf_text)\
+    COLOR(shelf_active)\
+    COLOR(shelf_active_text)\
+    COLOR(scaler)\
+    COLOR(layout_scaler)
 
 enum weapon_types {
 #define WEAPON(id, name) WEAPON_##id,
@@ -57,11 +102,10 @@ static const char *edit_items[] = {
     MENU_EDIT_ITEMS(ITEM)
 #undef ITEM
 };
-
-struct input {
-    gui_char in_buf[MAX_BUFFER];
-    gui_size in_len;
-    gui_state in_active;
+static const char *colors[] = {
+#define COLOR(name) #name,
+    COLOR_MAP(COLOR)
+#undef COLOR
 };
 
 /* =================================================================
@@ -205,10 +249,8 @@ upload_tree(struct test_tree *base, struct gui_tree *tree, struct tree_node *nod
         return 0;
     case GUI_NODE_PASTE:
         i = 0; n = base->count;
-        while (i < n) {
+        while (i++ < n)
             tree_add_node(node, tree_pop_node(base));
-            i++;
-        }
     case GUI_NODE_CLONE:
     default:break;
     }
@@ -233,9 +275,9 @@ color_picker(struct gui_panel_layout *panel, struct color_picker* control,
     gui_byte *iter;
     gui_bool ret = gui_true;
     struct gui_panel_layout popup;
-    gui_panel_popup_begin(panel, &popup, GUI_POPUP_STATIC, gui_rect(20, 100, 220, 280), gui_vec2(0,0));
+    gui_panel_popup_begin(panel, &popup, GUI_POPUP_STATIC, gui_rect(10, 100, 280, 280), gui_vec2(0,0));
     {
-        if (gui_panel_header(&popup, "Color Picker", GUI_CLOSEABLE, GUI_CLOSEABLE, GUI_HEADER_LEFT)) {
+        if (gui_panel_header(&popup, "Color", GUI_CLOSEABLE, GUI_CLOSEABLE, GUI_HEADER_LEFT)) {
             gui_panel_popup_close(&popup);
             return gui_false;
         }
@@ -249,7 +291,7 @@ color_picker(struct gui_panel_layout *panel, struct color_picker* control,
             gui_float t = *iter;
             t = gui_panel_slider(&popup, 0, t, 255, 10);
             *iter = (gui_byte)t;
-            *iter = (gui_byte)gui_panel_spinner(&popup, 0, *iter, 255, 1, NULL);
+            *iter = (gui_byte)gui_panel_spinner_int(&popup, 0, *iter, 255, 1, NULL);
         }
 
         gui_panel_row_dynamic(&popup, 30, 3);
@@ -279,9 +321,9 @@ gui_panel_labelf(struct gui_panel_layout *panel, enum gui_text_align align, cons
     va_list args;
     va_start(args, fmt);
     vsnprintf(buffer, sizeof(buffer), fmt, args);
+    buffer[1023] = 0;
     gui_panel_label(panel, buffer, align);
     va_end(args);
-    buffer[1023] = 0;
 }
 
 /* -----------------------------------------------------------------
@@ -336,7 +378,7 @@ prog_combo_box(struct gui_panel_layout *panel, gui_size *values, gui_size count,
         gui_panel_row_dynamic(&combo, 30, 1);
         for (i = 0; i < count; ++i)
             values[i] = gui_panel_progress(&combo, values[i], 100, gui_true);
-   }
+    }
     demo->scrollbar = gui_panel_combo_end(panel, &combo);
 }
 
@@ -503,11 +545,12 @@ widget_panel(struct gui_panel_layout *panel, struct state *demo)
     if (!demo->scaleable) gui_panel_row_static(panel, 30, 150, 1);
     else gui_panel_row_dynamic(panel, 30, 1);
     demo->item_current = gui_panel_selector(panel, weapons, LEN(weapons), demo->item_current);
+
     combo_box(panel, &demo->combo, weapons, LEN(weapons));
     prog_combo_box(panel, demo->prog_values, LEN(demo->prog_values), &demo->progcom);
     color_combo_box(panel, &demo->colcom);
     check_combo_box(panel, demo->check_values, LEN(demo->check_values), &demo->checkcom);
-    demo->spinner = gui_panel_spinner(panel, 0, demo->spinner, 250, 10, &demo->spinner_active);
+    demo->spinner = gui_panel_spinner_int(panel, 0, demo->spinner, 250, 10, &demo->spinner_active);
 
     {
         /* immediate mode custom row layout */
@@ -529,13 +572,15 @@ widget_panel(struct gui_panel_layout *panel, struct state *demo)
 static void
 graph_panel(struct gui_panel_layout *panel, gui_size current)
 {
-    enum {COL, PLOT};
+    enum {COLUMNS, LINES};
     static const gui_float values[]={8.0f,15.0f,20.0f,12.0f,30.0f,12.0f,35.0f,40.0f,20.0f};
     gui_panel_row_dynamic(panel, 100, 1);
-    if (current == COL) {
-        gui_panel_graph(panel, GUI_GRAPH_COLUMN, values, LEN(values), 0);
-    } else {
-        gui_panel_graph(panel, GUI_GRAPH_LINES, values, LEN(values), 0);
+    switch (current) {
+    case COLUMNS:
+        gui_panel_graph(panel, GUI_GRAPH_COLUMN, values, LEN(values), 0); break;
+    case LINES:
+        gui_panel_graph(panel, GUI_GRAPH_LINES, values, LEN(values), 0); break;
+    default: break;
     }
 }
 
@@ -586,8 +631,8 @@ properties_tab(struct gui_panel_layout *panel, struct gui_config *config)
     for (i = 0; i <= GUI_PROPERTY_SCROLLBAR_SIZE; ++i) {
         gui_int tx, ty;
         gui_panel_label(panel, properties[i], GUI_TEXT_LEFT);
-        tx = gui_panel_spinner(panel,0,(gui_int)config->properties[i].x, 20, 1, NULL);
-        ty = gui_panel_spinner(panel,0,(gui_int)config->properties[i].y, 20, 1, NULL);
+        tx = gui_panel_spinner_int(panel,0,(gui_int)config->properties[i].x, 20, 1, NULL);
+        ty = gui_panel_spinner_int(panel,0,(gui_int)config->properties[i].y, 20, 1, NULL);
         config->properties[i].x = (float)tx;
         config->properties[i].y = (float)ty;
     }
@@ -604,7 +649,7 @@ round_tab(struct gui_panel_layout *panel, struct gui_config *config)
     for (i = 0; i < GUI_ROUNDING_MAX; ++i) {
         gui_int t;
         gui_panel_label(panel, rounding[i], GUI_TEXT_LEFT);
-        t = gui_panel_spinner(panel,0,(gui_int)config->rounding[i], 20, 1, NULL);
+        t = gui_panel_spinner_int(panel,0,(gui_int)config->rounding[i], 20, 1, NULL);
         config->rounding[i] = (float)t;
     }
 }
@@ -613,23 +658,10 @@ static void
 color_tab(struct gui_panel_layout *panel, struct state *control, struct gui_config *config)
 {
     gui_size i = 0;
-    static const char *labels[] = {"Text:", "Panel:", "Header:", "Border:", "Button:",
-        "Button Hovering:", "Button Toggle:", "Button Hovering Text:",
-        "Check:", "Check BG:", "Check Active:", "Option:", "Option BG:", "Option Active:",
-        "Slider:", "Slider bar:", "Slider boder:","Slider cursor:", "Progress:", "Progress Cursor:",
-        "Editbox:", "Editbox cursor:", "Editbox Text:",
-        "Spinner:", "Spinner Triangle:", "Spinner Text:",
-        "Selector:", "Selector Triangle:", "Selector Text:", "Selector Button:",
-        "Histo:", "Histo Bars:", "Histo Negative:", "Histo Hovering:", "Plot:", "Plot Lines:",
-        "Plot Hightlight:", "Scrollbar:", "Scrollbar Cursor:",
-        "Table lines:", "Tab header",
-        "Shelf:", "Shelf Text:", "Shelf Active:", "Shelf Active Text:",
-        "Scaler:", "Layout Scaler"
-    };
     gui_panel_row_dynamic(panel, 30, 2);
     for (i = 0; i < GUI_COLOR_COUNT; ++i) {
         struct gui_color c = config->colors[i];
-        gui_panel_label(panel, labels[i], GUI_TEXT_LEFT);
+        gui_panel_label(panel, colors[i], GUI_TEXT_LEFT);
         if (gui_panel_button_color(panel, c, GUI_BUTTON_DEFAULT)) {
             control->picker.active = gui_true;
             control->picker.color = config->colors[i];
@@ -637,7 +669,7 @@ color_tab(struct gui_panel_layout *panel, struct state *control, struct gui_conf
         }
     }
     if (control->picker.active) {
-        color_picker(panel, &control->picker, labels[control->picker.index],
+        color_picker(panel, &control->picker, colors[control->picker.index],
             &config->colors[control->picker.index]);
     }
 }
@@ -719,7 +751,6 @@ run_demo(struct demo_gui *gui)
     struct state *state = &gui->state;
     struct gui_panel_layout tab;
     struct gui_config *config = &gui->config;
-    static const char *shelfs[] = {"Histogram", "Lines"};
 
     /* first panel */
     gui_panel_begin(&layout, &gui->panel);
@@ -733,35 +764,36 @@ run_demo(struct demo_gui *gui)
         {
             gui_int sel;
             gui_panel_row_begin(&layout, GUI_STATIC, 25, 2);
-            gui_panel_row_push(&layout, config->font.width(config->font.userdata, "__FILE__", 8));
+            {
+                gui_panel_row_push(&layout, config->font.width(config->font.userdata, "__FILE__", 8));
+                sel = gui_panel_menu(&layout, "FILE", file_items, LEN(file_items), 25, 100,
+                    &state->file_open, gui_vec2(0,0));
+                switch (sel) {
+                case MENU_FILE_OPEN:
+                    fprintf(stdout, "[Menu:File] open clicked!\n"); break;
+                case MENU_FILE_CLOSE:
+                    fprintf(stdout, "[Menu:File] close clicked!\n"); break;
+                case MENU_FILE_QUIT:
+                    fprintf(stdout, "[Menu:File] quit clicked!\n"); break;
+                case GUI_NONE:
+                default: break;
+                }
 
-            sel = gui_panel_menu(&layout, "FILE", file_items, LEN(file_items), 25, 100,
-                &state->file_open, gui_vec2(0,0));
-            switch (sel) {
-            case MENU_FILE_OPEN:
-                fprintf(stdout, "[Menu:File] open clicked!\n"); break;
-            case MENU_FILE_CLOSE:
-                fprintf(stdout, "[Menu:File] close clicked!\n"); break;
-            case MENU_FILE_QUIT:
-                fprintf(stdout, "[Menu:File] quit clicked!\n"); break;
-            case GUI_NONE:
-            default: break;
-            }
-
-            gui_panel_row_push(&layout, config->font.width(config->font.userdata, "__EDIT__", 8));
-            sel = gui_panel_menu(&layout, "EDIT", edit_items, LEN(edit_items), 25, 100,
-                &state->edit_open, gui_vec2(0,0));
-            switch (sel) {
-            case MENU_EDIT_COPY:
-                fprintf(stdout, "[Menu:Edit] copy clicked!\n"); break;
-            case MENU_EDIT_CUT:
-                fprintf(stdout, "[Menu:Edit] cut clicked!\n"); break;
-            case MENU_EDIT_DELETE:
-                fprintf(stdout, "[Menu:Edit] delete clicked!\n"); break;
-            case MENU_EDIT_PASTE:
-                fprintf(stdout, "[Menu:Edit] paste clicked!\n"); break;
-            case GUI_NONE:
-            default: break;
+                gui_panel_row_push(&layout, config->font.width(config->font.userdata, "__EDIT__", 8));
+                sel = gui_panel_menu(&layout, "EDIT", edit_items, LEN(edit_items), 25, 100,
+                    &state->edit_open, gui_vec2(0,0));
+                switch (sel) {
+                case MENU_EDIT_COPY:
+                    fprintf(stdout, "[Menu:Edit] copy clicked!\n"); break;
+                case MENU_EDIT_CUT:
+                    fprintf(stdout, "[Menu:Edit] cut clicked!\n"); break;
+                case MENU_EDIT_DELETE:
+                    fprintf(stdout, "[Menu:Edit] delete clicked!\n"); break;
+                case MENU_EDIT_PASTE:
+                    fprintf(stdout, "[Menu:Edit] paste clicked!\n"); break;
+                case GUI_NONE:
+                default: break;
+                }
             }
             gui_panel_row_end(&layout);
         }
@@ -819,12 +851,15 @@ run_demo(struct demo_gui *gui)
             gui_panel_popup_end(&layout, &tab);
         }
 
-        /* shelf + graphes  */
-        gui_panel_row_dynamic(&layout, 180, 1);
-        state->shelf_selection = gui_panel_shelf_begin(&layout, &tab, shelfs,
-            LEN(shelfs), state->shelf_selection, state->shelf);
-        graph_panel(&tab, state->shelf_selection);
-        state->shelf = gui_panel_shelf_end(&layout, &tab);
+        {
+            /* shelf + graphes  */
+            static const char *shelfs[] = {"Histogram", "Lines"};
+            gui_panel_row_dynamic(&layout, 180, 1);
+            state->shelf_selection = gui_panel_shelf_begin(&layout, &tab, shelfs,
+                LEN(shelfs), state->shelf_selection, state->shelf);
+            graph_panel(&tab, state->shelf_selection);
+            state->shelf = gui_panel_shelf_end(&layout, &tab);
+        }
 
         /* tables */
         gui_panel_row_dynamic(&layout, 180, 1);
