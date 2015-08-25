@@ -365,7 +365,7 @@ static gui_size
 gui_dtos(char *s, gui_double n)
 {
     gui_int useExp;
-    gui_int digit, m, m1;
+    gui_int digit, m, m1 = 0;
     gui_char *c = s;
     gui_int neg;
 
@@ -505,7 +505,7 @@ gui_triangle_from_direction(struct gui_vec2 *result, struct gui_rect r,
  * ===============================================================
  */
 static gui_size
-gui_utf_validate(long *u, gui_size i)
+gui_utf_validate(gui_long *u, gui_size i)
 {
     GUI_ASSERT(u);
     if (!u) return 0;
@@ -4837,11 +4837,14 @@ gui_panel_button_text_fitting(struct gui_panel_layout *layout, const char *str,
     i = (state == GUI_WIDGET_ROM || layout->flags & GUI_PANEL_ROM) ? 0 : layout->input;
 
     config = layout->config;
-    item_padding = gui_config_property(config, GUI_PROPERTY_PADDING);
+    item_padding = gui_config_property(config, GUI_PROPERTY_ITEM_PADDING);
     bounds.x -= item_padding.x;
     bounds.w += 2 * item_padding.x;
     if (layout->row.index > 1 && layout->row.index == layout->row.columns)
+    {
+        panel_padding = gui_config_property(config, GUI_PROPERTY_PADDING);
         bounds.w += panel_padding.x;
+    }
 
     button.border = 0;
     button.padding.y = 0;
