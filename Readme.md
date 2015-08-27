@@ -2,38 +2,32 @@
 [![Coverity Status](https://scan.coverity.com/projects/5863/badge.svg)](https://scan.coverity.com/projects/5863)
 
 This is a bloat free minimal state immediate mode graphical user interface toolkit
-written in ANSI C. It was designed as a embeddable user interface for graphical
-application and does not have any direct dependencies.
+written in ANSI C. It was designed as a simple embeddable user interface for
+application and does not have any direct dependencies. The toolkit was mainly
+developed to have a simple GUI for the X11 window system but can be used
+with other platforms like win32 or libraries like nanovg. The library uses
+no heap allocation outside of draw commands and as a whole has a low memory
+footprint.
 
 ## Features
 - Immediate mode graphical user interface toolkit
 - Written in C89 (ANSI C)
 - Small codebase (~6kLOC)
 - Focus on portability, efficiency, simplicity and minimal internal state
-- Suited for embedding into graphical applications
 - No global or hidden state
 - No direct dependencies (not even libc!)
-- Full memory management control
-- Renderer and platform independent
 - Configurable style and colors
 - UTF-8 support
 
 ## Limitations
 - Does NOT provide os window/input management
-- Does NOT provide a renderer backend
+- Does NOT implement a render backend
 - Does NOT implement a font library  
 Summary: It is only responsible for the actual user interface
-
-## Target applications
-- Graphical tools/editors
-- Library testbeds
-- Game engine debugging UI
-- Graphical overlay
 
 ## Gallery
 ![gui demo](/screen/demo.png?raw=true)
 ![gui explorer](/screen/explorer.png?raw=true)
-![gui screenshot](/screen/screenshot.png?raw=true)
 
 ## Example
 ```c
@@ -89,22 +83,6 @@ while (1) {
     const struct gui_command *cmd;
     gui_foreach_command(cmd, &queue) {
         /* execute draw call command */
-        switch (cmd->type) {
-        case GUI_COMMAND_SCISSOR:
-            /*...*/
-        case GUI_COMMAND_LINE:
-            /*...*/
-        case GUI_COMMAND_RECT:
-            /*...*/
-        case GUI_COMMAND_CIRCLE:
-            /*...*/
-        case GUI_COMMAND_TRIANGLE:
-            /*...*/
-        case GUI_COMMAND_TEXT:
-            /*...*/
-        case GUI_COMMAND_IMAGE:
-            /*...*/
-        }
     }
     gui_command_queue_clear(&queue);
 }
@@ -246,63 +224,6 @@ struct gui_command_queue queue;
 const gui_size initial_size = 4*1024;
 const gui_float grow_factor = 2.0f;
 gui_command_queue_init(&queue, &alloc, initial_size, grow_factor);
-```
-
-### Tiling
-A tiled layout allows to divide the screen into regions called
-slots in this case the top, left, center, right and bottom slot. Each slot occupies a
-certain percentage on the screen and can be filled with panels either
-horizontally or vertically. The combination of slots, ratio and multiple panels
-per slots support a rich set of vertical, horizontal and mixed layouts.
-
-```c
-struct gui_command_queue queue;
-void *memory = malloc(MEMORY_SIZE);
-gui_command_queue_init_fixed(&queue, memory, MEMORY_SIZE, GUI_CLIP);
-
-struct gui_config config;
-struct gui_font font = {...}
-gui_config_default(&config, GUI_DEFAULT_ALL, &font);
-
-/* setup tiled window layout */
-struct gui_layout tiled;
-gui_layout_begin(&tiled, gui_rect(0, 0, window_width, window_height), GUI_LAYOUT_ACTIVE);
-gui_layout_slot(&tiled, GUI_SLOT_LEFT, 0.5f, GUI_LAYOUT_VERTICAL, 1);
-gui_layout_slot(&tiled, GUI_SLOT_CENTER, 0.5f, GUI_LAYOUT_VERTICAL, 1);
-gui_layout_end(&tiled);
-
-/* setup panels */
-struct gui_input input = {0};
-struct gui_panel left;
-struct gui_panel center;
-gui_panel_init(&left, 0, 0, 0, 0, 0, &config, &queue, &input);
-gui_panel_init(&center, 0, 0, 0, 0, 0, &config, &queue, &input);
-
-while (1) {
-    gui_input_begin(&input);
-    /* record input */
-    gui_input_end(&input);
-
-    /* GUI */
-    struct gui_panel_layout layout;
-    gui_panel_begin_tiled(&layout, &left, &tiled, GUI_SLOT_LEFT, 0);
-    gui_panel_row_dynamic(&layout, 30, 1);
-    if (gui_panel_button_text(&layout, "button0", GUI_BUTTON_DEFAULT))
-        fprintf(stdout, "button pressed!\n");
-    gui_panel_end(&layout, &left);
-
-    gui_panel_begin_tiled(&layout, &center, &tiled, GUI_SLOT_CENTER, 0);
-    gui_panel_row_dynamic(&layout, 30, 1);
-    if (gui_panel_button_text(&layout, "button1", GUI_BUTTON_DEFAULT))
-        fprintf(stdout, "button pressed!\n");
-    gui_panel_end(&layout, &center);
-
-    /* draw each panel */
-    const struct gui_command *cmd
-    gui_foreach_command(cmd, queue) {
-        /* execute draw call command */
-    }
-}
 ```
 
 ## FAQ

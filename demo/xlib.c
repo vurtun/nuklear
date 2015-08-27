@@ -347,9 +347,9 @@ draw(XSurface *surf, struct gui_command_queue *queue)
         case GUI_COMMAND_RECT: {
             const struct gui_command_rect *r = gui_command(rect, cmd);
             if (r->rounding)
-                surface_draw_round_rect(surf, r->x, r->y, r->w, r->h, (gui_ushort)r->rounding, r->color);
-            else
-                surface_draw_rect(surf, r->x, r->y, r->w, r->h, r->color);
+                surface_draw_round_rect(surf,r->x,r->y,r->w,r->h,
+                    (gui_ushort)r->rounding, r->color);
+            else surface_draw_rect(surf, r->x, r->y, r->w, r->h, r->color);
         } break;
         case GUI_COMMAND_CIRCLE: {
             const struct gui_command_circle *c = gui_command(circle, cmd);

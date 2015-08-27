@@ -291,7 +291,7 @@ color_picker(struct gui_panel_layout *panel, struct color_picker* control,
             gui_float t = *iter;
             t = gui_panel_slider(&popup, 0, t, 255, 10);
             *iter = (gui_byte)t;
-            *iter = (gui_byte)gui_panel_spinner_int(&popup, 0, *iter, 255, 1, NULL);
+            *iter = (gui_byte)gui_panel_spinner(&popup, 0, *iter, 255, 1, NULL);
         }
 
         gui_panel_row_dynamic(&popup, 30, 3);
@@ -519,18 +519,18 @@ widget_panel(struct gui_panel_layout *panel, struct state *demo)
         fprintf(stdout, "left triangle button pressed!\n");
     demo->toggle = gui_panel_button_toggle(panel, "toggle", demo->toggle);
 
-    /* checkbox + radio buttons */
+    /* Checkbox + Radio buttons */
     demo->checkbox = gui_panel_check(panel, "checkbox", demo->checkbox);
     if (!demo->scaleable)
         gui_panel_row_static(panel, 30, 75, 2);
-    else  gui_panel_row_dynamic(panel, 30, 2);
+    else gui_panel_row_dynamic(panel, 30, 2);
     if (gui_panel_option(panel, "option 0", demo->option == 0))
         demo->option = 0;
     if (gui_panel_option(panel, "option 1", demo->option == 1))
         demo->option = 1;
 
     {
-        /* retain mode custom row layout */
+        /* custom row layout by array */
         const gui_float ratio[] = {0.8f, 0.2f};
         const gui_float pixel[] = {150.0f, 30.0f};
         enum gui_panel_row_layout_format fmt = (demo->scaleable) ? GUI_DYNAMIC : GUI_STATIC;
@@ -545,12 +545,13 @@ widget_panel(struct gui_panel_layout *panel, struct state *demo)
     if (!demo->scaleable) gui_panel_row_static(panel, 30, 150, 1);
     else gui_panel_row_dynamic(panel, 30, 1);
     demo->item_current = gui_panel_selector(panel, weapons, LEN(weapons), demo->item_current);
+    demo->spinner = gui_panel_spinner(panel, 0, demo->spinner, 250, 10, &demo->spinner_active);
 
+    /* combo boxes  */
     combo_box(panel, &demo->combo, weapons, LEN(weapons));
     prog_combo_box(panel, demo->prog_values, LEN(demo->prog_values), &demo->progcom);
     color_combo_box(panel, &demo->colcom);
     check_combo_box(panel, demo->check_values, LEN(demo->check_values), &demo->checkcom);
-    demo->spinner = gui_panel_spinner_int(panel, 0, demo->spinner, 250, 10, &demo->spinner_active);
 
     {
         /* immediate mode custom row layout */
@@ -566,21 +567,6 @@ widget_panel(struct gui_panel_layout *panel, struct state *demo)
             }
         }
         gui_panel_row_end(panel);
-    }
-}
-
-static void
-graph_panel(struct gui_panel_layout *panel, gui_size current)
-{
-    enum {COLUMNS, LINES};
-    static const gui_float values[]={8.0f,15.0f,20.0f,12.0f,30.0f,12.0f,35.0f,40.0f,20.0f};
-    gui_panel_row_dynamic(panel, 100, 1);
-    switch (current) {
-    case COLUMNS:
-        gui_panel_graph(panel, GUI_GRAPH_COLUMN, values, LEN(values), 0); break;
-    case LINES:
-        gui_panel_graph(panel, GUI_GRAPH_LINES, values, LEN(values), 0); break;
-    default: break;
     }
 }
 
@@ -631,8 +617,8 @@ properties_tab(struct gui_panel_layout *panel, struct gui_config *config)
     for (i = 0; i <= GUI_PROPERTY_SCROLLBAR_SIZE; ++i) {
         gui_int tx, ty;
         gui_panel_label(panel, properties[i], GUI_TEXT_LEFT);
-        tx = gui_panel_spinner_int(panel,0,(gui_int)config->properties[i].x, 20, 1, NULL);
-        ty = gui_panel_spinner_int(panel,0,(gui_int)config->properties[i].y, 20, 1, NULL);
+        tx = gui_panel_spinner(panel,0,(gui_int)config->properties[i].x, 20, 1, NULL);
+        ty = gui_panel_spinner(panel,0,(gui_int)config->properties[i].y, 20, 1, NULL);
         config->properties[i].x = (float)tx;
         config->properties[i].y = (float)ty;
     }
@@ -649,7 +635,7 @@ round_tab(struct gui_panel_layout *panel, struct gui_config *config)
     for (i = 0; i < GUI_ROUNDING_MAX; ++i) {
         gui_int t;
         gui_panel_label(panel, rounding[i], GUI_TEXT_LEFT);
-        t = gui_panel_spinner_int(panel,0,(gui_int)config->rounding[i], 20, 1, NULL);
+        t = gui_panel_spinner(panel,0,(gui_int)config->rounding[i], 20, 1, NULL);
         config->rounding[i] = (float)t;
     }
 }
@@ -762,9 +748,9 @@ run_demo(struct demo_gui *gui)
         /* menubar */
         gui_panel_menubar_begin(&layout);
         {
-            gui_int sel;
             gui_panel_row_begin(&layout, GUI_STATIC, 25, 2);
             {
+                gui_int sel;
                 gui_panel_row_push(&layout, config->font.width(config->font.userdata, "__FILE__", 8));
                 sel = gui_panel_menu(&layout, "FILE", file_items, LEN(file_items), 25, 100,
                     &state->file_open, gui_vec2(0,0));
@@ -857,11 +843,22 @@ run_demo(struct demo_gui *gui)
             gui_panel_row_dynamic(&layout, 180, 1);
             state->shelf_selection = gui_panel_shelf_begin(&layout, &tab, shelfs,
                 LEN(shelfs), state->shelf_selection, state->shelf);
-            graph_panel(&tab, state->shelf_selection);
+            {
+                enum {COLUMNS, LINES};
+                static const gui_float values[]={8.0f,15.0f,20.0f,12.0f,30.0f,12.0f,35.0f,40.0f,20.0f};
+                gui_panel_row_dynamic(&tab, 100, 1);
+                switch (state->shelf_selection) {
+                case COLUMNS:
+                    gui_panel_graph(&tab, GUI_GRAPH_COLUMN, values, LEN(values), 0); break;
+                case LINES:
+                    gui_panel_graph(&tab, GUI_GRAPH_LINES, values, LEN(values), 0); break;
+                default: break;
+                }
+            }
             state->shelf = gui_panel_shelf_end(&layout, &tab);
         }
 
-        /* tables */
+        /* table */
         gui_panel_row_dynamic(&layout, 180, 1);
         gui_panel_group_begin(&layout, &tab, "Table", state->table);
         table_panel(&tab);
