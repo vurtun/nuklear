@@ -187,6 +187,10 @@ gui_image_ptr(void *ptr)
     GUI_ASSERT(ptr);
     s.handle.ptr = ptr;
     s.w = 0; s.h = 0;
+    s.region[0] = 0;
+    s.region[1] = 0;
+    s.region[2] = 0;
+    s.region[3] = 0;
     return s;
 }
 
@@ -196,6 +200,10 @@ gui_image_id(gui_int id)
     struct gui_image s;
     s.handle.id = id;
     s.w = 0; s.h = 0;
+    s.region[0] = 0;
+    s.region[1] = 0;
+    s.region[2] = 0;
+    s.region[3] = 0;
     return s;
 }
 
@@ -4507,6 +4515,7 @@ gui_button_toggle(struct gui_context *layout, const char *str, gui_bool value)
 
     config = layout->style;
     button.base.border = config->colors[GUI_COLOR_BORDER];
+    button.alignment = GUI_TEXT_CENTERED;
     if (!value) {
         button.base.normal = config->colors[GUI_COLOR_BUTTON];
         button.base.hover = config->colors[GUI_COLOR_BUTTON_HOVER];
@@ -4515,9 +4524,9 @@ gui_button_toggle(struct gui_context *layout, const char *str, gui_bool value)
         button.hover = config->colors[GUI_COLOR_TEXT_HOVERING];
         button.active = config->colors[GUI_COLOR_TEXT_ACTIVE];
     } else {
-        button.base.normal = config->colors[GUI_COLOR_BUTTON];
+        button.base.normal = config->colors[GUI_COLOR_BUTTON_ACTIVE];
         button.base.hover = config->colors[GUI_COLOR_BUTTON_HOVER];
-        button.base.active = config->colors[GUI_COLOR_BUTTON_ACTIVE];
+        button.base.active = config->colors[GUI_COLOR_BUTTON];
         button.normal = config->colors[GUI_COLOR_TEXT_ACTIVE];
         button.hover = config->colors[GUI_COLOR_TEXT_HOVERING];
         button.active = config->colors[GUI_COLOR_TEXT];
@@ -5533,6 +5542,7 @@ gui_menu_begin(struct gui_context *parent, struct gui_context *menu,
         /* exeucte menu button for open/closing the popup */
         struct gui_button_text button;
         gui_button(&button.base, &header, parent);
+        button.alignment = GUI_TEXT_CENTERED;
         button.base.rounding = 0;
         button.base.border = config->colors[GUI_COLOR_WINDOW];
         button.base.normal = (is_active) ? config->colors[GUI_COLOR_BUTTON_HOVER]:
