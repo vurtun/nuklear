@@ -71,70 +71,6 @@ font_get_width(gui_handle handle, const gui_char *text, gui_size len)
 }
 
 static void
-draw_rect(NVGcontext *ctx, float x, float y, float w, float h, float r, struct gui_color c)
-{
-    nvgBeginPath(ctx);
-    nvgRoundedRect(ctx, x, y, w, h, r);
-    nvgFillColor(ctx, nvgRGBA(c.r, c.g, c.b, c.a));
-    nvgFill(ctx);
-}
-
-static void
-draw_text(NVGcontext *ctx, float x, float y, float w, float h,
-    struct gui_color c, struct gui_color bg, const gui_char *string, gui_size len)
-{
-    draw_rect(ctx, x,y,w,h,0, bg);
-    nvgBeginPath(ctx);
-    nvgFillColor(ctx, nvgRGBA(c.r, c.g, c.b, c.a));
-    nvgTextAlign(ctx, NVG_ALIGN_MIDDLE);
-    nvgText(ctx, x, y + h * 0.5f, string, &string[len]);
-    nvgFill(ctx);
-}
-
-static void
-draw_line(NVGcontext *ctx, float x0, float y0, float x1, float y1, struct gui_color c)
-{
-    nvgBeginPath(ctx);
-    nvgMoveTo(ctx, x0, y0);
-    nvgLineTo(ctx, x1, y1);
-    nvgFillColor(ctx, nvgRGBA(c.r, c.g, c.b, c.a));
-    nvgFill(ctx);
-}
-
-static void
-draw_circle(NVGcontext *ctx, float x, float y, float r, struct gui_color c)
-{
-    nvgBeginPath(ctx);
-    nvgCircle(ctx, x + r, y + r, r);
-    nvgFillColor(ctx, nvgRGBA(c.r, c.g, c.b, c.a));
-    nvgFill(ctx);
-}
-
-static void
-draw_triangle(NVGcontext *ctx, float x0, float y0, float x1, float y1,
-    float x2, float y2, struct gui_color c)
-{
-    nvgBeginPath(ctx);
-    nvgMoveTo(ctx, x0, y0);
-    nvgLineTo(ctx, x1, y1);
-    nvgLineTo(ctx, x2, y2);
-    nvgLineTo(ctx, x0, y0);
-    nvgFillColor(ctx, nvgRGBA(c.r, c.g, c.b, c.a));
-    nvgFill(ctx);
-}
-
-static void
-draw_image(NVGcontext *ctx, gui_handle img, float x, float y, float w, float h, float r)
-{
-    NVGpaint imgpaint;
-    imgpaint = nvgImagePattern(ctx, x, y, w, h, 0, img.id, 1.0f);
-    nvgBeginPath(ctx);
-    nvgRoundedRect(ctx, x, y, w, h, r);
-    nvgFillPaint(ctx, imgpaint);
-    nvgFill(ctx);
-}
-
-static void
 draw(NVGcontext *nvg, struct gui_command_queue *queue, int width, int height)
 {
     const struct gui_command *cmd;
@@ -156,28 +92,75 @@ draw(NVGcontext *nvg, struct gui_command_queue *queue, int width, int height)
         } break;
         case GUI_COMMAND_LINE: {
             const struct gui_command_line *l = gui_command(line, cmd);
-            draw_line(nvg, l->begin.x, l->begin.y, l->end.x, l->end.y, l->color);
+            nvgBeginPath(nvg);
+            nvgMoveTo(nvg, l->begin.x, l->begin.y);
+            nvgLineTo(nvg, l->end.x, l->end.y);
+            nvgFillColor(nvg, nvgRGBA(l->color.r, l->color.g, l->color.b, l->color.a));
+            nvgFill(nvg);
+        } break;
+        case GUI_COMMAND_QUAD: {
+            const struct gui_command_quad *q = gui_command(quad, cmd);
+            nvgBeginPath(nvg);
+            nvgMoveTo(nvg, q->begin.x, q->begin.y);
+            nvgQuadTo(nvg, q->ctrl.x, q->ctrl.y, q->end.x, q->end.y);
+            nvgStrokeColor(nvg, nvgRGBA(q->color.r, q->color.g, q->color.b, q->color.a));
+            nvgStroke(nvg);
+        } break;
+        case GUI_COMMAND_CURVE: {
+            const struct gui_command_curve *q = gui_command(curve, cmd);
+            nvgBeginPath(nvg);
+            nvgMoveTo(nvg, q->begin.x, q->begin.y);
+            nvgBezierTo(nvg, q->ctrl[0].x, q->ctrl[0].y, q->ctrl[1].x, q->ctrl[1].y, q->end.x, q->end.y);
+            nvgStrokeColor(nvg, nvgRGBA(q->color.r, q->color.g, q->color.b, q->color.a));
+            nvgStroke(nvg);
         } break;
         case GUI_COMMAND_RECT: {
             const struct gui_command_rect *r = gui_command(rect, cmd);
-            draw_rect(nvg, r->x, r->y, r->w, r->h, r->rounding, r->color);
+            nvgBeginPath(nvg);
+            nvgRoundedRect(nvg, r->x, r->y, r->w, r->h, r->rounding);
+            nvgFillColor(nvg, nvgRGBA(r->color.r, r->color.g, r->color.b, r->color.a));
+            nvgFill(nvg);
         } break;
         case GUI_COMMAND_CIRCLE: {
             const struct gui_command_circle *c = gui_command(circle, cmd);
-            draw_circle(nvg, c->x, c->y, (float)c->w / 2.0f, c->color);
+            nvgBeginPath(nvg);
+            nvgCircle(nvg, c->x + (c->w/2.0f), c->y + c->w/2.0f, c->w/2.0f);
+            nvgFillColor(nvg, nvgRGBA(c->color.r, c->color.g, c->color.b, c->color.a));
+            nvgFill(nvg);
         } break;
         case GUI_COMMAND_TRIANGLE: {
             const struct gui_command_triangle *t = gui_command(triangle, cmd);
-            draw_triangle(nvg, t->a.x, t->a.y, t->b.x, t->b.y, t->c.x,
-                    t->c.y, t->color);
+            nvgBeginPath(nvg);
+            nvgMoveTo(nvg, t->a.x, t->a.y);
+            nvgLineTo(nvg, t->b.x, t->b.y);
+            nvgLineTo(nvg, t->c.x, t->c.y);
+            nvgLineTo(nvg, t->a.x, t->a.y);
+            nvgFillColor(nvg, nvgRGBA(t->color.r, t->color.g, t->color.b, t->color.a));
+            nvgFill(nvg);
         } break;
         case GUI_COMMAND_TEXT: {
             const struct gui_command_text *t = gui_command(text, cmd);
-            draw_text(nvg, t->x, t->y, t->w, t->h, t->foreground, t->background, t->string, t->length);
+            nvgBeginPath(nvg);
+            nvgRoundedRect(nvg, t->x, t->y, t->w, t->h, 0);
+            nvgFillColor(nvg, nvgRGBA(t->background.r, t->background.g,
+                t->background.b, t->background.a));
+            nvgFill(nvg);
+
+            nvgBeginPath(nvg);
+            nvgFillColor(nvg, nvgRGBA(t->foreground.r, t->foreground.g,
+                t->foreground.b, t->foreground.a));
+            nvgTextAlign(nvg, NVG_ALIGN_MIDDLE);
+            nvgText(nvg, t->x, t->y + t->h * 0.5f, t->string, &t->string[t->length]);
+            nvgFill(nvg);
         } break;
         case GUI_COMMAND_IMAGE: {
             const struct gui_command_image *i = gui_command(image, cmd);
-            draw_image(nvg, i->img.handle, i->x, i->y, i->w, i->h, 1);
+            NVGpaint imgpaint;
+            imgpaint = nvgImagePattern(nvg, i->x, i->y, i->w, i->h, 0, i->img.handle.id, 1.0f);
+            nvgBeginPath(nvg);
+            nvgRoundedRect(nvg, i->x, i->y, i->w, i->h, 0);
+            nvgFillPaint(nvg, imgpaint);
+            nvgFill(nvg);
         } break;
         case GUI_COMMAND_MAX:
         default: break;

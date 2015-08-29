@@ -914,6 +914,48 @@ gui_command_buffer_push_line(struct gui_command_buffer *b, gui_float x0, gui_flo
 }
 
 void
+gui_command_buffer_push_quad(struct gui_command_buffer *b, gui_float ax, gui_float ay,
+    gui_float bx, gui_float by,  gui_float ctrlx, gui_float ctrly, struct gui_color col)
+{
+    struct gui_command_quad *cmd;
+    cmd = (struct gui_command_quad*)
+        gui_command_buffer_push(b, GUI_COMMAND_QUAD, sizeof(*cmd));
+    if (!cmd) return;
+    cmd->begin.x = (gui_short)ax;
+    cmd->begin.y = (gui_short)ay;
+    cmd->end.x = (gui_short)bx;
+    cmd->end.y = (gui_short)by;
+    cmd->ctrl.x = (gui_short)ctrlx;
+    cmd->ctrl.y = (gui_short)ctrly;
+    cmd->color = col;
+    b->stats.lines++;
+}
+
+void
+gui_command_buffer_push_curve(struct gui_command_buffer *b, gui_float ax, gui_float ay,
+    gui_float bx, gui_float by,  gui_float ctrl0x, gui_float ctrl0y,
+    gui_float ctrl1x, gui_float ctrl1y, struct gui_color col)
+{
+    struct gui_command_curve *cmd;
+    GUI_ASSERT(b);
+    if (!b) return;
+
+    cmd = (struct gui_command_curve*)
+        gui_command_buffer_push(b, GUI_COMMAND_CURVE, sizeof(*cmd));
+    if (!cmd) return;
+    cmd->begin.x = (gui_short)ax;
+    cmd->begin.y = (gui_short)ay;
+    cmd->end.x = (gui_short)bx;
+    cmd->end.y = (gui_short)by;
+    cmd->ctrl[0].x = (gui_short)ctrl0x;
+    cmd->ctrl[0].y = (gui_short)ctrl0y;
+    cmd->ctrl[1].x = (gui_short)ctrl1x;
+    cmd->ctrl[1].y = (gui_short)ctrl1y;
+    cmd->color = col;
+    b->stats.lines++;
+}
+
+void
 gui_command_buffer_push_rect(struct gui_command_buffer *b, struct gui_rect rect,
     gui_float rounding, struct gui_color c)
 {
@@ -4119,9 +4161,10 @@ gui_panel_alloc_space(struct gui_rect *bounds, struct gui_context *layout)
     } break;
     case GUI_LAYOUT_STATIC_FREE: {
         /* free widget placing */
-        bounds->x = layout->at_x + padding.x + layout->row.item.x;
+        bounds->x = layout->clip.x + layout->row.item.x;
         bounds->x -= layout->offset.x;
-        bounds->y = layout->at_y + layout->row.item.y;
+        bounds->y = layout->clip.y + layout->row.item.y;
+        bounds->y -= layout->offset.y;
         bounds->w = layout->row.item.w;
         bounds->h = layout->row.item.h;
         if ((bounds->x + bounds->w) > layout->max_x)

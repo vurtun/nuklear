@@ -523,6 +523,8 @@ enum gui_command_type {
     GUI_COMMAND_NOP,
     GUI_COMMAND_SCISSOR,
     GUI_COMMAND_LINE,
+    GUI_COMMAND_QUAD,
+    GUI_COMMAND_CURVE,
     GUI_COMMAND_RECT,
     GUI_COMMAND_CIRCLE,
     GUI_COMMAND_TRIANGLE,
@@ -549,6 +551,22 @@ struct gui_command_line {
     struct gui_command header;
     struct gui_vec2i begin;
     struct gui_vec2i end;
+    struct gui_color color;
+};
+
+struct gui_command_quad {
+    struct gui_command header;
+    struct gui_vec2i begin;
+    struct gui_vec2i end;
+    struct gui_vec2i ctrl;
+    struct gui_color color;
+};
+
+struct gui_command_curve {
+    struct gui_command header;
+    struct gui_vec2i begin;
+    struct gui_vec2i end;
+    struct gui_vec2i ctrl[2];
     struct gui_color color;
 };
 
@@ -661,8 +679,31 @@ void gui_command_buffer_push_line(struct gui_command_buffer*, gui_float, gui_flo
 /*  this function pushes a line draw command into the buffer
     Input:
     - buffer to push the clip rectangle command into
-    - starting position of the line
-    - ending position of the line
+    - starting point of the line
+    - ending point of the line
+    - color of the line to draw
+*/
+void gui_command_buffer_push_quad(struct gui_command_buffer*, gui_float, gui_float,
+                                    gui_float, gui_float,  gui_float, gui_float,
+                                    struct gui_color);
+/*  this function pushes a quad bezier line draw command into the buffer
+    Input:
+    - buffer to push the clip rectangle command into
+    - starting point (x,y) of the line
+    - ending point (x,y) of the line
+    - control point (x,y) of the line
+    - color of the line to draw
+*/
+void gui_command_buffer_push_curve(struct gui_command_buffer*, gui_float, gui_float,
+                                    gui_float, gui_float,  gui_float, gui_float,
+                                    gui_float, gui_float, struct gui_color);
+/*  this function pushes a quad bezier line draw command into the buffer
+    Input:
+    - buffer to push the clip rectangle command into
+    - starting point (x,y) of the line
+    - ending point (x,y) of the line
+    - first control point (x,y) of the line
+    - second control point (x,y) of the line
     - color of the line to draw
 */
 void
