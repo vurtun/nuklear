@@ -1,7 +1,7 @@
 #define MAX_BUFFER  64
 #define MAX_MEMORY  (16 * 1024)
-#define WINDOW_WIDTH 800
-#define WINDOW_HEIGHT 600
+#define WINDOW_WIDTH 1200
+#define WINDOW_HEIGHT 800
 
 #include <stdio.h>
 
@@ -25,31 +25,30 @@
 
 #define COLOR_MAP(COLOR)\
     COLOR(text)\
-    COLOR(panel)\
+    COLOR(text_hovering)\
+    COLOR(text_active)\
+    COLOR(window)\
     COLOR(header)\
     COLOR(border)\
     COLOR(button)\
     COLOR(button_hover)\
-    COLOR(button_toggle)\
-    COLOR(button_hover_font)\
-    COLOR(check)\
-    COLOR(check_background)\
-    COLOR(check_active)\
-    COLOR(option)\
-    COLOR(option_background)\
-    COLOR(option_active)\
+    COLOR(button_active)\
+    COLOR(toggle)\
+    COLOR(toggle_hover)\
+    COLOR(toggle_cursor)\
     COLOR(slider)\
-    COLOR(slider_bar)\
     COLOR(slider_cursor)\
+    COLOR(slider_cursor_hover)\
+    COLOR(slider_cursor_active)\
     COLOR(progress)\
     COLOR(progress_cursor)\
+    COLOR(progress_cursor_hover)\
+    COLOR(progress_cursor_active)\
     COLOR(input)\
     COLOR(input_cursor)\
     COLOR(input_text)\
-    COLOR(selector)\
-    COLOR(selector_triangle)\
-    COLOR(selector_text)\
-    COLOR(selector_button)\
+    COLOR(spinner)\
+    COLOR(spinner_triangle)\
     COLOR(histo)\
     COLOR(histo_bars)\
     COLOR(histo_negative)\
@@ -59,14 +58,15 @@
     COLOR(plot_highlight)\
     COLOR(scrollbar)\
     COLOR(scrollbar_cursor)\
+    COLOR(scrollbar_cursor_hover)\
+    COLOR(scrollbar_cursor_active)\
     COLOR(table_lines)\
     COLOR(tab_header)\
     COLOR(shelf)\
     COLOR(shelf_text)\
     COLOR(shelf_active)\
     COLOR(shelf_active_text)\
-    COLOR(scaler)\
-    COLOR(layout_scaler)
+    COLOR(scaler)
 
 enum weapon_types {
 #define WEAPON(id, name) WEAPON_##id,
@@ -231,12 +231,12 @@ upload_tree(struct test_tree *base, struct gui_tree *tree, struct tree_node *nod
     enum gui_tree_node_operation op;
     if (node->count) {
         i = 0;
-        op = gui_panel_tree_begin_node(tree, node->name, &node->state);
+        op = gui_tree_begin_node(tree, node->name, &node->state);
         while (i < node->count)
             i += upload_tree(base, tree, node->children[i]);
-        gui_panel_tree_end_node(tree);
+        gui_tree_end_node(tree);
     }
-    else op = gui_panel_tree_leaf(tree, node->name, &node->state);
+    else op = gui_tree_leaf(tree, node->name, &node->state);
 
     switch (op) {
     case GUI_NODE_NOP: break;
@@ -268,45 +268,45 @@ struct color_picker {
 };
 
 static gui_bool
-color_picker(struct gui_panel_layout *panel, struct color_picker* control,
+color_picker(struct gui_context *panel, struct color_picker* control,
     const char *name, struct gui_color *color)
 {
     int i;
     gui_byte *iter;
     gui_bool ret = gui_true;
-    struct gui_panel_layout popup;
-    gui_panel_popup_begin(panel, &popup, GUI_POPUP_STATIC, gui_rect(10, 100, 280, 280), gui_vec2(0,0));
+    struct gui_context popup;
+    gui_popup_begin(panel, &popup, GUI_POPUP_STATIC, gui_rect(10, 100, 280, 280), gui_vec2(0,0));
     {
-        if (gui_panel_header(&popup, "Color", GUI_CLOSEABLE, GUI_CLOSEABLE, GUI_HEADER_LEFT)) {
-            gui_panel_popup_close(&popup);
+        if (gui_header(&popup, "Color", GUI_CLOSEABLE, GUI_CLOSEABLE, GUI_HEADER_LEFT)) {
+            gui_popup_close(&popup);
             return gui_false;
         }
-        gui_panel_row_dynamic(&popup, 30, 2);
-        gui_panel_label(&popup, name, GUI_TEXT_LEFT);
-        gui_panel_button_color(&popup, control->color, GUI_BUTTON_DEFAULT);
+        gui_layout_row_dynamic(&popup, 30, 2);
+        gui_label(&popup, name, GUI_TEXT_LEFT);
+        gui_button_color(&popup, control->color, GUI_BUTTON_DEFAULT);
 
         iter = &control->color.r;
-        gui_panel_row_dynamic(&popup, 30, 2);
+        gui_layout_row_dynamic(&popup, 30, 2);
         for (i = 0; i < 4; ++i, iter++) {
             gui_float t = *iter;
-            t = gui_panel_slider(&popup, 0, t, 255, 10);
+            t = gui_slider(&popup, 0, t, 255, 10);
             *iter = (gui_byte)t;
-            *iter = (gui_byte)gui_panel_spinner(&popup, 0, *iter, 255, 1, NULL);
+            *iter = (gui_byte)gui_spinner(&popup, 0, *iter, 255, 1, NULL);
         }
 
-        gui_panel_row_dynamic(&popup, 30, 3);
-        gui_panel_spacing(&popup, 1);
-        if (gui_panel_button_text(&popup, "ok", GUI_BUTTON_DEFAULT)) {
-            gui_panel_popup_close(&popup);
+        gui_layout_row_dynamic(&popup, 30, 3);
+        gui_spacing(&popup, 1);
+        if (gui_button_text(&popup, "ok", GUI_BUTTON_DEFAULT)) {
+            gui_popup_close(&popup);
             *color = control->color;
             ret = gui_false;
         }
-        if (gui_panel_button_text(&popup, "cancel", GUI_BUTTON_DEFAULT)) {
-            gui_panel_popup_close(&popup);
+        if (gui_button_text(&popup, "cancel", GUI_BUTTON_DEFAULT)) {
+            gui_popup_close(&popup);
             ret = gui_false;
         }
     }
-    gui_panel_popup_end(panel, &popup);
+    gui_popup_end(panel, &popup);
     control->active = (gui_state)ret;
     return ret;
 }
@@ -315,14 +315,14 @@ color_picker(struct gui_panel_layout *panel, struct color_picker* control,
  *  LABEL
  * ----------------------------------------------------------------- */
 static void
-gui_panel_labelf(struct gui_panel_layout *panel, enum gui_text_align align, const gui_char *fmt, ...)
+gui_labelf(struct gui_context *panel, enum gui_text_align align, const gui_char *fmt, ...)
 {
     gui_char buffer[1024];
     va_list args;
     va_start(args, fmt);
     vsnprintf(buffer, sizeof(buffer), fmt, args);
     buffer[1023] = 0;
-    gui_panel_label(panel, buffer, align);
+    gui_label(panel, buffer, align);
     va_end(args);
 }
 
@@ -353,82 +353,82 @@ struct color_combo_box {
 };
 
 static void
-combo_box(struct gui_panel_layout *panel, struct combobox *combo,
+combo_box(struct gui_context *panel, struct combobox *combo,
     const char**values, gui_size count)
 {
-    gui_panel_combo(panel, values, count, &combo->selected, 30,
+    gui_combo(panel, values, count, &combo->selected, 30,
         &combo->active, &combo->scrollbar);
 }
 
 static void
-prog_combo_box(struct gui_panel_layout *panel, gui_size *values, gui_size count,
+prog_combo_box(struct gui_context *panel, gui_size *values, gui_size count,
     struct prog_combo_box *demo)
 {
     gui_size i = 0;
     gui_int sum = 0;
     gui_char buffer[64];
-    struct gui_panel_layout combo;
+    struct gui_context combo;
     memset(&combo, 0, sizeof(combo));
     for (i = 0; i < count; ++i)
         sum += (gui_int)values[i];
 
     sprintf(buffer, "%d", sum);
-    gui_panel_combo_begin(panel, &combo, buffer, &demo->active, demo->scrollbar);
+    gui_combo_begin(panel, &combo, buffer, &demo->active, demo->scrollbar);
     {
-        gui_panel_row_dynamic(&combo, 30, 1);
+        gui_layout_row_dynamic(&combo, 30, 1);
         for (i = 0; i < count; ++i)
-            values[i] = gui_panel_progress(&combo, values[i], 100, gui_true);
+            values[i] = gui_progress(&combo, values[i], 100, gui_true);
     }
-    demo->scrollbar = gui_panel_combo_end(panel, &combo);
+    demo->scrollbar = gui_combo_end(panel, &combo);
 }
 
 static void
-color_combo_box(struct gui_panel_layout *panel, struct color_combo_box *demo)
+color_combo_box(struct gui_context *panel, struct color_combo_box *demo)
 {
     /* color slider progressbar */
     gui_char buffer[32];
-    struct gui_panel_layout combo;
+    struct gui_context combo;
     memset(&combo, 0, sizeof(combo));
     sprintf(buffer, "#%02x%02x%02x%02x", demo->color.r, demo->color.g,
             demo->color.b, demo->color.a);
-    gui_panel_combo_begin(panel, &combo, buffer,  &demo->active, demo->scrollbar);
+    gui_combo_begin(panel, &combo, buffer,  &demo->active, demo->scrollbar);
     {
         int i;
         const char *color_names[] = {"R:", "G:", "B:", "A:"};
         gui_float ratios[] = {0.15f, 0.85f};
         gui_byte *iter = &demo->color.r;
-        gui_panel_row(&combo, GUI_DYNAMIC, 30, 2, ratios);
+        gui_layout_row(&combo, GUI_DYNAMIC, 30, 2, ratios);
         for (i = 0; i < 4; ++i, iter++) {
             gui_float t = *iter;
-            gui_panel_label(&combo, color_names[i], GUI_TEXT_LEFT);
-            t = gui_panel_slider(&combo, 0, t, 255, 5);
+            gui_label(&combo, color_names[i], GUI_TEXT_LEFT);
+            t = gui_slider(&combo, 0, t, 255, 5);
             *iter = (gui_byte)t;
         }
     }
-    demo->scrollbar = gui_panel_combo_end(panel, &combo);
+    demo->scrollbar = gui_combo_end(panel, &combo);
 }
 
 static void
-check_combo_box(struct gui_panel_layout *panel, gui_bool *values, gui_size count,
+check_combo_box(struct gui_context *panel, gui_bool *values, gui_size count,
     struct check_combo_box *demo)
 {
     /* checkbox combobox  */
     gui_int sum = 0;
     gui_size i = 0;
     gui_char buffer[64];
-    struct gui_panel_layout combo;
+    struct gui_context combo;
     memset(&combo, 0, sizeof(combo));
     for (i = 0; i < count; ++i)
         sum += (gui_int)values[i];
 
     sprintf(buffer, "%d", sum);
-    gui_panel_combo_begin(panel, &combo, buffer,  &demo->active, demo->scrollbar);
+    gui_combo_begin(panel, &combo, buffer,  &demo->active, demo->scrollbar);
     {
-        gui_panel_row_dynamic(&combo, 30, 1);
+        gui_layout_row_dynamic(&combo, 30, 1);
         for (i = 0; i < count; ++i)
-            values[i] = gui_panel_check(&combo, weapons[i], values[i]);
+            values[i] = gui_check(&combo, weapons[i], values[i]);
     }
-    demo->scrollbar = gui_panel_combo_end(panel, &combo);
+    demo->scrollbar = gui_combo_end(panel, &combo);
 }
 
 /* =================================================================
@@ -487,10 +487,10 @@ struct demo_gui {
     void *memory;
     const struct gui_input *input;
     struct gui_command_queue queue;
-    struct gui_config config;
+    struct gui_style config;
     struct gui_font font;
-    struct gui_panel panel;
-    struct gui_panel sub;
+    struct gui_window panel;
+    struct gui_window sub;
     struct state state;
     gui_size w, h;
 };
@@ -499,53 +499,52 @@ struct demo_gui {
  *  WIDGETS
  * ----------------------------------------------------------------- */
 static void
-widget_panel(struct gui_panel_layout *panel, struct state *demo)
+widget_panel(struct gui_context *panel, struct state *demo)
 {
     /* Labels */
-    gui_panel_row_dynamic(panel, 30, 1);
-    demo->scaleable = gui_panel_check(panel, "Scaleable Layout", demo->scaleable);
+    gui_layout_row_dynamic(panel, 30, 1);
+    demo->scaleable = gui_check(panel, "Scaleable Layout", demo->scaleable);
     if (!demo->scaleable)
-        gui_panel_row_static(panel, 30, 150, 1);
-    gui_panel_label(panel, "text left", GUI_TEXT_LEFT);
-    gui_panel_label(panel, "text center", GUI_TEXT_CENTERED);
-    gui_panel_label(panel, "text right", GUI_TEXT_RIGHT);
+        gui_layout_row_static(panel, 30, 150, 1);
+    gui_label(panel, "text left", GUI_TEXT_LEFT);
+    gui_label(panel, "text center", GUI_TEXT_CENTERED);
+    gui_label(panel, "text right", GUI_TEXT_RIGHT);
 
     /* Buttons */
-    if (gui_panel_button_text(panel, "button", GUI_BUTTON_DEFAULT))
+    if (gui_button_text(panel, "button", GUI_BUTTON_DEFAULT))
         demo->popup = gui_true;
-    if (gui_panel_button_text_triangle(panel, GUI_RIGHT, "next", GUI_TEXT_LEFT, GUI_BUTTON_DEFAULT))
+    if (gui_button_text_symbol(panel, GUI_SYMBOL_TRIANGLE_RIGHT, "next", GUI_TEXT_LEFT, GUI_BUTTON_DEFAULT))
         fprintf(stdout, "right triangle button pressed!\n");
-    if (gui_panel_button_text_triangle(panel,GUI_LEFT,"previous",GUI_TEXT_RIGHT,GUI_BUTTON_DEFAULT))
+    if (gui_button_text_symbol(panel,GUI_SYMBOL_TRIANGLE_LEFT,"previous",GUI_TEXT_RIGHT,GUI_BUTTON_DEFAULT))
         fprintf(stdout, "left triangle button pressed!\n");
-    demo->toggle = gui_panel_button_toggle(panel, "toggle", demo->toggle);
+    demo->toggle = gui_button_toggle(panel, "toggle", demo->toggle);
 
     /* Checkbox + Radio buttons */
-    demo->checkbox = gui_panel_check(panel, "checkbox", demo->checkbox);
+    demo->checkbox = gui_check(panel, "checkbox", demo->checkbox);
     if (!demo->scaleable)
-        gui_panel_row_static(panel, 30, 75, 2);
-    else gui_panel_row_dynamic(panel, 30, 2);
-    if (gui_panel_option(panel, "option 0", demo->option == 0))
+        gui_layout_row_static(panel, 30, 75, 2);
+    else gui_layout_row_dynamic(panel, 30, 2);
+    if (gui_option(panel, "option 0", demo->option == 0))
         demo->option = 0;
-    if (gui_panel_option(panel, "option 1", demo->option == 1))
+    if (gui_option(panel, "option 1", demo->option == 1))
         demo->option = 1;
 
     {
         /* custom row layout by array */
         const gui_float ratio[] = {0.8f, 0.2f};
         const gui_float pixel[] = {150.0f, 30.0f};
-        enum gui_panel_row_layout_format fmt = (demo->scaleable) ? GUI_DYNAMIC : GUI_STATIC;
-        gui_panel_row(panel, fmt, 30, 2, (fmt == GUI_DYNAMIC) ? ratio: pixel);
-        demo->slider = gui_panel_slider(panel, 0, demo->slider, 10, 1.0f);
-        gui_panel_labelf(panel, GUI_TEXT_LEFT, "%.2f", demo->slider);
-        demo->progressbar = gui_panel_progress(panel, demo->progressbar, 100, gui_true);
-        gui_panel_labelf(panel, GUI_TEXT_LEFT, "%lu", demo->progressbar);
+        enum gui_row_layout_format fmt = (demo->scaleable) ? GUI_DYNAMIC : GUI_STATIC;
+        gui_layout_row(panel, fmt, 30, 2, (fmt == GUI_DYNAMIC) ? ratio: pixel);
+        demo->slider = gui_slider(panel, 0, demo->slider, 10, 1.0f);
+        gui_labelf(panel, GUI_TEXT_LEFT, "%.2f", demo->slider);
+        demo->progressbar = gui_progress(panel, demo->progressbar, 100, gui_true);
+        gui_labelf(panel, GUI_TEXT_LEFT, "%lu", demo->progressbar);
     }
 
     /* item selection  */
-    if (!demo->scaleable) gui_panel_row_static(panel, 30, 150, 1);
-    else gui_panel_row_dynamic(panel, 30, 1);
-    demo->item_current = gui_panel_selector(panel, weapons, LEN(weapons), demo->item_current);
-    demo->spinner = gui_panel_spinner(panel, 0, demo->spinner, 250, 10, &demo->spinner_active);
+    if (!demo->scaleable) gui_layout_row_static(panel, 30, 150, 1);
+    else gui_layout_row_dynamic(panel, 30, 1);
+    demo->spinner = gui_spinner(panel, 0, demo->spinner, 250, 10, &demo->spinner_active);
 
     /* combo boxes  */
     combo_box(panel, &demo->combo, weapons, LEN(weapons));
@@ -555,100 +554,100 @@ widget_panel(struct gui_panel_layout *panel, struct state *demo)
 
     {
         /* immediate mode custom row layout */
-        enum gui_panel_row_layout_format fmt = (demo->scaleable) ? GUI_DYNAMIC : GUI_STATIC;
-        gui_panel_row_begin(panel, fmt, 30, 2);
+        enum gui_row_layout_format fmt = (demo->scaleable) ? GUI_DYNAMIC : GUI_STATIC;
+        gui_layout_row_begin(panel, fmt, 30, 2);
         {
-            gui_panel_row_push(panel,(fmt == GUI_DYNAMIC) ? 0.7f : 100);
-            gui_panel_editbox(panel, &demo->edit);
-            gui_panel_row_push(panel, (fmt == GUI_DYNAMIC) ? 0.3f : 80);
-            if (gui_panel_button_text(panel, "submit", GUI_BUTTON_DEFAULT)) {
+            gui_layout_row_push(panel,(fmt == GUI_DYNAMIC) ? 0.7f : 100);
+            gui_editbox(panel, &demo->edit);
+            gui_layout_row_push(panel, (fmt == GUI_DYNAMIC) ? 0.3f : 80);
+            if (gui_button_text(panel, "submit", GUI_BUTTON_DEFAULT)) {
                 gui_edit_box_clear(&demo->edit);
                 fprintf(stdout, "command executed!\n");
             }
         }
-        gui_panel_row_end(panel);
+        gui_layout_row_end(panel);
     }
 }
 
 static void
-table_panel(struct gui_panel_layout *panel)
+table_panel(struct gui_context *panel)
 {
     gui_size i = 0;
     const char *table[] = {"Move forward", "w", "Move back", "s", "Move left", "a",
         "Move right", "d", "Jump", "SPACE", "Duck", "CTRL"};
-    gui_panel_table_begin(panel, GUI_TABLE_HHEADER, 30, 2);
-    gui_panel_label_colored(panel, "MOVEMENT", GUI_TEXT_CENTERED, gui_rgba(178, 122, 1, 255));
-    gui_panel_label_colored(panel, "KEY/BUTTON", GUI_TEXT_CENTERED, gui_rgba(178, 122, 1, 255));
+    gui_table_begin(panel, GUI_TABLE_HHEADER, 30, 2);
+    gui_label_colored(panel, "MOVEMENT", GUI_TEXT_CENTERED, gui_rgba(178, 122, 1, 255));
+    gui_label_colored(panel, "KEY/BUTTON", GUI_TEXT_CENTERED, gui_rgba(178, 122, 1, 255));
     for (i = 0; i < LEN(table); i += 2) {
-        gui_panel_table_row(panel);
-        gui_panel_label(panel, table[i], GUI_TEXT_LEFT);
-        gui_panel_label(panel, table[i+1], GUI_TEXT_CENTERED);
+        gui_table_row(panel);
+        gui_label(panel, table[i], GUI_TEXT_LEFT);
+        gui_label(panel, table[i+1], GUI_TEXT_CENTERED);
     }
-    gui_panel_table_end(panel);
+    gui_table_end(panel);
 }
 
 /* -----------------------------------------------------------------
  *  STYLE
  * ----------------------------------------------------------------- */
 static void
-update_flags(struct gui_panel_layout *panel)
+update_flags(struct gui_context *panel)
 {
     gui_size n = 0;
     gui_flags res = 0;
     gui_flags i = 0x01;
     const char *options[]={"Hidden","Border","Header Border", "Moveable","Scaleable", "Minimized", "ROM"};
-    gui_panel_row_dynamic(panel, 30, 2);
+    gui_layout_row_dynamic(panel, 30, 2);
     do {
-        if (gui_panel_check(panel,options[n++],(panel->flags & i)?gui_true:gui_false))
+        if (gui_check(panel,options[n++],(panel->flags & i)?gui_true:gui_false))
             res |= i;
         i = i << 1;
-    } while (i <= GUI_PANEL_ROM);
+    } while (i <= GUI_WINDOW_ROM);
     panel->flags = res;
 }
 
 static void
-properties_tab(struct gui_panel_layout *panel, struct gui_config *config)
+properties_tab(struct gui_context *panel, struct gui_style *config)
 {
     int i = 0;
     const char *properties[] = {"item spacing:", "item padding:", "panel padding:",
         "scaler size:", "scrollbar:"};
 
-    gui_panel_row_dynamic(panel, 30, 3);
+    gui_layout_row_dynamic(panel, 30, 3);
     for (i = 0; i <= GUI_PROPERTY_SCROLLBAR_SIZE; ++i) {
         gui_int tx, ty;
-        gui_panel_label(panel, properties[i], GUI_TEXT_LEFT);
-        tx = gui_panel_spinner(panel,0,(gui_int)config->properties[i].x, 20, 1, NULL);
-        ty = gui_panel_spinner(panel,0,(gui_int)config->properties[i].y, 20, 1, NULL);
+        gui_label(panel, properties[i], GUI_TEXT_LEFT);
+        tx = gui_spinner(panel,0,(gui_int)config->properties[i].x, 20, 1, NULL);
+        ty = gui_spinner(panel,0,(gui_int)config->properties[i].y, 20, 1, NULL);
         config->properties[i].x = (float)tx;
         config->properties[i].y = (float)ty;
     }
 }
 
 static void
-round_tab(struct gui_panel_layout *panel, struct gui_config *config)
+round_tab(struct gui_context *panel, struct gui_style *config)
 {
     int i = 0;
     const char *rounding[] = {"panel:", "button:", "checkbox:", "progress:", "input: ",
         "graph:", "scrollbar:"};
 
-    gui_panel_row_dynamic(panel, 30, 2);
+    gui_layout_row_dynamic(panel, 30, 2);
     for (i = 0; i < GUI_ROUNDING_MAX; ++i) {
         gui_int t;
-        gui_panel_label(panel, rounding[i], GUI_TEXT_LEFT);
-        t = gui_panel_spinner(panel,0,(gui_int)config->rounding[i], 20, 1, NULL);
+        gui_label(panel, rounding[i], GUI_TEXT_LEFT);
+        t = gui_spinner(panel,0,(gui_int)config->rounding[i], 20, 1, NULL);
         config->rounding[i] = (float)t;
     }
 }
 
 static void
-color_tab(struct gui_panel_layout *panel, struct state *control, struct gui_config *config)
+color_tab(struct gui_context *panel, struct state *control, struct gui_style *config)
 {
     gui_size i = 0;
-    gui_panel_row_dynamic(panel, 30, 2);
+    gui_layout_row_dynamic(panel, 30, 2);
     for (i = 0; i < GUI_COLOR_COUNT; ++i) {
         struct gui_color c = config->colors[i];
-        gui_panel_label(panel, colors[i], GUI_TEXT_LEFT);
-        if (gui_panel_button_color(panel, c, GUI_BUTTON_DEFAULT)) {
+        gui_label(panel, colors[i], GUI_TEXT_LEFT);
+        if (gui_button_color(panel, c, GUI_BUTTON_DEFAULT)) {
             control->picker.active = gui_true;
             control->picker.color = config->colors[i];
             control->picker.index = i;
@@ -692,21 +691,21 @@ paste(gui_handle handle, struct gui_edit_box *box)
 static void
 init_demo(struct demo_gui *gui, struct gui_font *font)
 {
-    struct gui_config *config = &gui->config;
+    struct gui_style *config = &gui->config;
     struct state *win = &gui->state;
     struct gui_clipboard clip;
     gui->font = *font;
     gui->running = gui_true;
 
     gui_command_queue_init_fixed(&gui->queue, gui->memory, MAX_MEMORY);
-    gui_config_default(config, GUI_DEFAULT_ALL, font);
+    gui_style_default(config, GUI_DEFAULT_ALL, font);
 
     /* panel */
-    gui_panel_init(&gui->panel, 30, 30, 280, 530,
-        GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE,
+    gui_window_init(&gui->panel, 30, 30, 280, 530,
+        GUI_WINDOW_BORDER|GUI_WINDOW_MOVEABLE|GUI_WINDOW_SCALEABLE,
         &gui->queue, config, gui->input);
-    gui_panel_init(&gui->sub, 400, 50, 220, 180,
-        GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE,
+    gui_window_init(&gui->sub, 400, 50, 220, 180,
+        GUI_WINDOW_BORDER|GUI_WINDOW_MOVEABLE|GUI_WINDOW_SCALEABLE,
         &gui->queue, config, gui->input);
 
     /* widget state */
@@ -733,27 +732,27 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
 static void
 run_demo(struct demo_gui *gui)
 {
-    struct gui_panel_layout layout;
+    struct gui_context layout;
     struct state *state = &gui->state;
-    struct gui_panel_layout tab;
-    struct gui_config *config = &gui->config;
+    struct gui_context tab;
+    struct gui_style *config = &gui->config;
 
-    /* first panel */
-    gui_panel_begin(&layout, &gui->panel);
+    /* first window */
+    gui_begin(&layout, &gui->panel);
     {
         /* header */
-        gui->running = !gui_panel_header(&layout, "Demo",
+        gui->running = !gui_header(&layout, "Demo",
             GUI_CLOSEABLE|GUI_MINIMIZABLE, GUI_CLOSEABLE, GUI_HEADER_RIGHT);
 
         /* menubar */
-        gui_panel_menubar_begin(&layout);
+        gui_menubar_begin(&layout);
         {
-            gui_panel_row_begin(&layout, GUI_STATIC, 25, 2);
+            gui_layout_row_begin(&layout, GUI_STATIC, 25, 2);
             {
                 gui_int sel;
-                gui_panel_row_push(&layout, config->font.width(config->font.userdata, "__FILE__", 8));
-                sel = gui_panel_menu(&layout, "FILE", file_items, LEN(file_items), 25, 100,
-                    &state->file_open, gui_vec2(0,0));
+                gui_layout_row_push(&layout, config->font.width(config->font.userdata, "__FILE__", 8));
+                sel = gui_menu(&layout, "FILE", file_items, LEN(file_items), 25, 100,
+                    &state->file_open);
                 switch (sel) {
                 case MENU_FILE_OPEN:
                     fprintf(stdout, "[Menu:File] open clicked!\n"); break;
@@ -765,9 +764,9 @@ run_demo(struct demo_gui *gui)
                 default: break;
                 }
 
-                gui_panel_row_push(&layout, config->font.width(config->font.userdata, "__EDIT__", 8));
-                sel = gui_panel_menu(&layout, "EDIT", edit_items, LEN(edit_items), 25, 100,
-                    &state->edit_open, gui_vec2(0,0));
+                gui_layout_row_push(&layout, config->font.width(config->font.userdata, "__EDIT__", 8));
+                sel = gui_menu(&layout, "EDIT", edit_items, LEN(edit_items), 25, 100,
+                    &state->edit_open);
                 switch (sel) {
                 case MENU_EDIT_COPY:
                     fprintf(stdout, "[Menu:Edit] copy clicked!\n"); break;
@@ -781,113 +780,113 @@ run_demo(struct demo_gui *gui)
                 default: break;
                 }
             }
-            gui_panel_row_end(&layout);
+            gui_layout_row_end(&layout);
         }
-        gui_panel_menubar_end(&layout);
+        gui_menubar_end(&layout);
 
         /* panel style configuration  */
-        if (gui_panel_layout_push(&layout, GUI_LAYOUT_TAB, "Style", &state->config_tab))
+        if (gui_layout_push(&layout, GUI_LAYOUT_TAB, "Style", &state->config_tab))
         {
-            if (gui_panel_layout_push(&layout, GUI_LAYOUT_NODE, "Options", &state->flag_tab)) {
+            if (gui_layout_push(&layout, GUI_LAYOUT_NODE, "Options", &state->flag_tab)) {
                 update_flags(&layout);
-                gui_panel_layout_pop(&layout);
+                gui_layout_pop(&layout);
             }
-            if (gui_panel_layout_push(&layout, GUI_LAYOUT_NODE, "Properties", &state->style_tab)) {
+            if (gui_layout_push(&layout, GUI_LAYOUT_NODE, "Properties", &state->style_tab)) {
                 properties_tab(&layout, config);
-                gui_panel_layout_pop(&layout);
+                gui_layout_pop(&layout);
             }
-            if (gui_panel_layout_push(&layout, GUI_LAYOUT_NODE, "Rounding", &state->round_tab)) {
+            if (gui_layout_push(&layout, GUI_LAYOUT_NODE, "Rounding", &state->round_tab)) {
                 round_tab(&layout, config);
-                gui_panel_layout_pop(&layout);
+                gui_layout_pop(&layout);
             }
-            if (gui_panel_layout_push(&layout, GUI_LAYOUT_NODE, "Color", &state->color_tab)) {
+            if (gui_layout_push(&layout, GUI_LAYOUT_NODE, "Color", &state->color_tab)) {
                 color_tab(&layout, state, config);
-                gui_panel_layout_pop(&layout);
+                gui_layout_pop(&layout);
             }
-            gui_panel_layout_pop(&layout);
+            gui_layout_pop(&layout);
         }
 
         /* widgets examples */
-        if (gui_panel_layout_push(&layout, GUI_LAYOUT_TAB, "Widgets", &state->widget_tab)) {
+        if (gui_layout_push(&layout, GUI_LAYOUT_TAB, "Widgets", &state->widget_tab)) {
             widget_panel(&layout, state);
-            gui_panel_layout_pop(&layout);
+            gui_layout_pop(&layout);
         }
 
         /* popup panel */
         if (state->popup) {
-            gui_panel_popup_begin(&layout, &tab, GUI_POPUP_STATIC, gui_rect(20, 100, 220, 150), gui_vec2(0,0));
+            gui_popup_begin(&layout, &tab, GUI_POPUP_STATIC, gui_rect(20, 100, 220, 150), gui_vec2(0,0));
             {
-                if (gui_panel_header(&tab, "Popup", GUI_CLOSEABLE, GUI_CLOSEABLE, GUI_HEADER_LEFT)) {
-                    gui_panel_popup_close(&tab);
+                if (gui_header(&tab, "Popup", GUI_CLOSEABLE, GUI_CLOSEABLE, GUI_HEADER_LEFT)) {
+                    gui_popup_close(&tab);
                     state->popup = gui_false;
                 }
-                gui_panel_row_dynamic(&tab, 30, 1);
-                gui_panel_label(&tab, "Are you sure you want to exit?", GUI_TEXT_LEFT);
-                gui_panel_row_dynamic(&tab, 30, 4);
-                gui_panel_spacing(&tab, 1);
-                if (gui_panel_button_text(&tab, "Yes", GUI_BUTTON_DEFAULT)) {
-                    gui_panel_popup_close(&tab);
+                gui_layout_row_dynamic(&tab, 30, 1);
+                gui_label(&tab, "Are you sure you want to exit?", GUI_TEXT_LEFT);
+                gui_layout_row_dynamic(&tab, 30, 4);
+                gui_spacing(&tab, 1);
+                if (gui_button_text(&tab, "Yes", GUI_BUTTON_DEFAULT)) {
+                    gui_popup_close(&tab);
                     state->popup = gui_false;
                 }
-                if (gui_panel_button_text(&tab, "No", GUI_BUTTON_DEFAULT)) {
-                    gui_panel_popup_close(&tab);
+                if (gui_button_text(&tab, "No", GUI_BUTTON_DEFAULT)) {
+                    gui_popup_close(&tab);
                     state->popup = gui_false;
                 }
             }
-            gui_panel_popup_end(&layout, &tab);
+            gui_popup_end(&layout, &tab);
         }
 
         {
             /* shelf + graphes  */
             static const char *shelfs[] = {"Histogram", "Lines"};
-            gui_panel_row_dynamic(&layout, 180, 1);
-            state->shelf_selection = gui_panel_shelf_begin(&layout, &tab, shelfs,
+            gui_layout_row_dynamic(&layout, 180, 1);
+            state->shelf_selection = gui_shelf_begin(&layout, &tab, shelfs,
                 LEN(shelfs), state->shelf_selection, state->shelf);
             {
                 enum {COLUMNS, LINES};
                 static const gui_float values[]={8.0f,15.0f,20.0f,12.0f,30.0f,12.0f,35.0f,40.0f,20.0f};
-                gui_panel_row_dynamic(&tab, 100, 1);
+                gui_layout_row_dynamic(&tab, 100, 1);
                 switch (state->shelf_selection) {
                 case COLUMNS:
-                    gui_panel_graph(&tab, GUI_GRAPH_COLUMN, values, LEN(values), 0); break;
+                    gui_graph(&tab, GUI_GRAPH_COLUMN, values, LEN(values), 0); break;
                 case LINES:
-                    gui_panel_graph(&tab, GUI_GRAPH_LINES, values, LEN(values), 0); break;
+                    gui_graph(&tab, GUI_GRAPH_LINES, values, LEN(values), 0); break;
                 default: break;
                 }
             }
-            state->shelf = gui_panel_shelf_end(&layout, &tab);
+            state->shelf = gui_shelf_end(&layout, &tab);
         }
 
         /* table */
-        gui_panel_row_dynamic(&layout, 180, 1);
-        gui_panel_group_begin(&layout, &tab, "Table", state->table);
+        gui_layout_row_dynamic(&layout, 180, 1);
+        gui_child_begin(&layout, &tab, "Table", state->table);
         table_panel(&tab);
-        state->table = gui_panel_group_end(&layout, &tab);
+        state->table = gui_child_end(&layout, &tab);
 
         {
             /* tree */
             struct gui_tree tree;
-            gui_panel_row_dynamic(&layout, 250, 1);
-            gui_panel_tree_begin(&layout, &tree, "Tree", 20, state->tree);
+            gui_layout_row_dynamic(&layout, 250, 1);
+            gui_tree_begin(&layout, &tree, "Tree", 20, state->tree);
             upload_tree(&state->test, &tree, &state->test.root);
-            state->tree = gui_panel_tree_end(&layout, &tree);
+            state->tree = gui_tree_end(&layout, &tree);
         }
     }
-    gui_panel_end(&layout, &gui->panel);
+    gui_end(&layout, &gui->panel);
 
     /* second panel */
-    gui_panel_begin(&layout, &gui->sub);
+    gui_begin(&layout, &gui->sub);
     {
         enum {EASY, HARD};
-        gui_panel_header(&layout, "Show", GUI_CLOSEABLE, 0, GUI_HEADER_LEFT);
-        gui_panel_row_static(&layout, 30, 80, 1);
-        if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT)) {
+        gui_header(&layout, "Show", GUI_CLOSEABLE, 0, GUI_HEADER_LEFT);
+        gui_layout_row_static(&layout, 30, 80, 1);
+        if (gui_button_text(&layout, "button", GUI_BUTTON_DEFAULT)) {
             /* event handling */
         }
-        gui_panel_row_dynamic(&layout, 30, 2);
-        if (gui_panel_option(&layout, "easy", state->op == EASY)) state->op = EASY;
-        if (gui_panel_option(&layout, "hard", state->op == HARD)) state->op = HARD;
+        gui_layout_row_dynamic(&layout, 30, 2);
+        if (gui_option(&layout, "easy", state->op == EASY)) state->op = EASY;
+        if (gui_option(&layout, "hard", state->op == HARD)) state->op = HARD;
     }
-    gui_panel_end(&layout, &gui->sub);
+    gui_end(&layout, &gui->sub);
 }
 

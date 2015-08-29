@@ -6,8 +6,8 @@ written in ANSI C. It was designed as a simple embeddable user interface for
 application and does not have any direct dependencies. The toolkit was mainly
 developed to have a simple GUI for the X11 window system but can be used
 with other platforms like win32 or libraries like nanovg. The library uses
-no heap allocation outside of draw commands and as a whole has a low memory
-footprint.
+no heap allocation outside of draw commands and as a whole has a low default 
+heap memory footprint.
 
 ## Features
 - Immediate mode graphical user interface toolkit
@@ -229,9 +229,7 @@ gui_command_queue_init(&queue, &alloc, initial_size, grow_factor);
 ## FAQ
 #### Where is the demo/example code?
 The demo and example code can be found in the demo folder.
-There is demo code for Linux(X11), Windows(win32) and OpenGL(SDL2, freetype).
-As for now there will be no DirectX demo since I don't have experience
-programming using DirectX but you are more than welcome to provide one.
+There is demo code for Linux(X11) and nanovg.
 
 #### Why did you use ANSI C and not C99 or C++?
 Personally I stay out of all "discussions" about C vs C++ since they are totally
