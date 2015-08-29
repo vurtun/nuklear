@@ -28,6 +28,7 @@ Summary: It is only responsible for the actual user interface
 ## Gallery
 ![gui demo](/screen/demo.png?raw=true)
 ![gui explorer](/screen/explorer.png?raw=true)
+![gui nodedit](/screen/nodedit.png?raw=true)
 
 ## Example
 ```c
