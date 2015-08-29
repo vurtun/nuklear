@@ -70,7 +70,6 @@ static const gui_byte gui_utfbyte[GUI_UTF_SIZE+1] = {0x80, 0, 0xC0, 0xE0, 0xF0};
 static const gui_byte gui_utfmask[GUI_UTF_SIZE+1] = {0xC0, 0x80, 0xE0, 0xF0, 0xF8};
 static const long gui_utfmin[GUI_UTF_SIZE+1] = {0, 0, 0x80, 0x800, 0x100000};
 static const long gui_utfmax[GUI_UTF_SIZE+1] = {0x10FFFF, 0x7F, 0x7FF, 0xFFFF, 0x10FFFF};
-static const double GUI_DOUBLE_PRECISION = 0.0000001;
 
 /*
  * ==============================================================
@@ -79,25 +78,6 @@ static const double GUI_DOUBLE_PRECISION = 0.0000001;
  *
  * ===============================================================
  */
-static gui_float
-gui_inv_sqrt(gui_float number)
-{
-    gui_float x2;
-    const gui_float threehalfs = 1.5f;
-    union {gui_uint i; gui_float f;} conv;
-    conv.f = number;
-    x2 = number * 0.5f;
-    conv.i = 0x5f375A84 - (conv.i >> 1);
-    conv.f = conv.f * (threehalfs - (x2 * conv.f * conv.f));
-    return conv.f;
-}
-
-static gui_float
-gui_sqrt(gui_float number)
-{
-    return (1.0f / gui_inv_sqrt(number));
-}
-
 struct gui_rect
 gui_get_null_rect(void)
 {
@@ -1194,7 +1174,6 @@ gui_command_queue_start_child(struct gui_command_queue *queue,
 {
     static const gui_size buf_size = sizeof(struct gui_command_sub_buffer);
     static const gui_size buf_align = GUI_ALIGNOF(struct gui_command_sub_buffer);
-    static const gui_size cmd_align = GUI_ALIGNOF(struct gui_command);
     struct gui_command_sub_buffer_stack *stack;
     struct gui_command_sub_buffer *buf;
     struct gui_command_sub_buffer *end;
@@ -1976,7 +1955,6 @@ gui_widget_button_text_symbol(struct gui_command_buffer *out, struct gui_rect r,
     struct gui_rect tri;
     struct gui_color background;
     struct gui_color color;
-    struct gui_vec2 points[3];
 
     GUI_ASSERT(button);
     GUI_ASSERT(out);
@@ -2177,7 +2155,6 @@ gui_widget_slider(struct gui_command_buffer *out, struct gui_rect slider,
     {
         /* NOTE: this is a shitty hack since I am to stupid for math */
         struct gui_rect fill;
-        gui_float cursor_rounding;
         cursor.w = cursor.h;
         cursor.x = (slider_value <= slider_min) ? cursor.x:
             (slider_value >= slider_max) ? ((bar.x + bar.w) - cursor.h) :
@@ -2187,7 +2164,6 @@ gui_widget_slider(struct gui_command_buffer *out, struct gui_rect slider,
         fill.y = bar.y + 2;
         fill.w = (cursor.x + (cursor.w/2.0f)) - bar.x;
         fill.h = bar.h - 4;
-        cursor_rounding = (s->rounding > 2.0f) ? s->rounding-2 : 0;
 
         /* draw slider with background and circle cursor*/
         gui_command_buffer_push_rect(out, bar, s->rounding, s->border);
@@ -2208,7 +2184,6 @@ gui_widget_progress(struct gui_command_buffer *out, struct gui_rect r,
     struct gui_rect cursor;
     gui_float prog_scale;
     gui_size prog_value;
-    struct gui_vec2 pad;
     struct gui_color col;
 
     GUI_ASSERT(prog);
@@ -4507,15 +4482,12 @@ gui_button_image(struct gui_context *layout, struct gui_image image,
 {
     struct gui_rect bounds;
     struct gui_button_icon button;
-    const struct gui_style *config;
 
     const struct gui_input *i;
     enum gui_widget_state state;
     state = gui_button(&button.base, &bounds, layout);
     if (!state) return gui_false;
     i = (state == GUI_WIDGET_ROM || layout->flags & GUI_WINDOW_ROM) ? 0 : layout->input;
-
-    config = layout->style;
     button.padding = gui_vec2(0,0);
     return gui_widget_button_image(layout->buffer, bounds, image, behavior, &button, i);
 }
@@ -5563,8 +5535,8 @@ gui_menu_begin(struct gui_context *parent, struct gui_context *menu,
         gui_button(&button.base, &header, parent);
         button.base.rounding = 0;
         button.base.border = config->colors[GUI_COLOR_WINDOW];
-        button.base.normal = config->colors[GUI_COLOR_WINDOW];
-        button.base.hover = config->colors[GUI_COLOR_WINDOW];
+        button.base.normal = (is_active) ? config->colors[GUI_COLOR_BUTTON_HOVER]:
+            config->colors[GUI_COLOR_WINDOW];
         button.base.active = config->colors[GUI_COLOR_WINDOW];
         button.normal = config->colors[GUI_COLOR_TEXT];
         button.active = config->colors[GUI_COLOR_TEXT];

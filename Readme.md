@@ -54,6 +54,7 @@ gui_window_init(&panel, 50, 50, 220, 180,
 enum {EASY, HARD};
 gui_size option = EASY;
 gui_size item = 0;
+gui_state active = 0;
 
 struct gui_input input = {0};
 while (1) {
@@ -66,7 +67,7 @@ while (1) {
     gui_begin(&context, &panel);
     {
         const char *items[] = {"Fist", "Pistol", "Railgun", "BFG"};
-        gui_header(&context, "Demo", GUI_CLOSEABLE, 0, GUI_HEADER_LEFT);
+        gui_header(&context, "Show", GUI_CLOSEABLE, 0, GUI_HEADER_LEFT);
         gui_layout_row_static(&context, 30, 80, 1);
         if (gui_button_text(&context, "button", GUI_BUTTON_DEFAULT)) {
             /* event handling */
@@ -75,7 +76,7 @@ while (1) {
         if (gui_option(&context, "easy", option == EASY)) option = EASY;
         if (gui_option(&context, "hard", option == HARD)) option = HARD;
         gui_label(&context, "Weapon:", GUI_TEXT_LEFT);
-        item = gui_selector(&context, items, LEN(items), item);
+        gui_combo(&context, items, LEN(items), &selected, 20, &combo->active);
     }
     gui_end(&context, &panel);
 
