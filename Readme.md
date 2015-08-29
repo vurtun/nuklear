@@ -38,17 +38,17 @@ gui_command_queue_init_fixed(&buffer, memory, MEMORY_SIZE);
 
 /* setup configuration */
 struct gui_font font;
-struct gui_config config;
+struct gui_style style;
 font.userdata.ptr = your_font_data;
 font.height = your_font_data.height;
 font.width = your_font_string_width_callback_function;
-gui_config_default(&config, GUI_DEFAULT_ALL, &font);
+gui_style_default(&style, GUI_DEFAULT_ALL, &font);
 
 /* initialize panel */
-struct gui_panel panel;
-gui_panel_init(&panel, 50, 50, 220, 180,
+struct gui_window panel;
+gui_window_init(&panel, 50, 50, 220, 180,
     GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE,
-    &queue, &config, &input);
+    &queue, &style, &input);
 
 /* setup widget data */
 enum {EASY, HARD};
@@ -62,22 +62,22 @@ while (1) {
     gui_input_end(&input);
 
     /* GUI */
-    struct gui_panel_layout layout;
-    gui_panel_begin(&layout, &panel);
+    struct gui_context context;
+    gui_begin(&context, &panel);
     {
         const char *items[] = {"Fist", "Pistol", "Railgun", "BFG"};
-        gui_panel_header(&layout, "Demo", GUI_CLOSEABLE, 0, GUI_HEADER_LEFT);
-        gui_panel_row_static(&layout, 30, 80, 1);
-        if (gui_panel_button_text(&layout, "button", GUI_BUTTON_DEFAULT)) {
+        gui_header(&context, "Demo", GUI_CLOSEABLE, 0, GUI_HEADER_LEFT);
+        gui_layout_row_static(&context, 30, 80, 1);
+        if (gui_button_text(&context, "button", GUI_BUTTON_DEFAULT)) {
             /* event handling */
         }
-        gui_panel_row_dynamic(&layout, 30, 2);
-        if (gui_panel_option(&layout, "easy", option == EASY)) option = EASY;
-        if (gui_panel_option(&layout, "hard", option == HARD)) option = HARD;
-        gui_panel_label(&layout, "Weapon:", GUI_TEXT_LEFT);
-        item = gui_panel_selector(&layout, items, LEN(items), item);
+        gui_layout_row_dynamic(&context, 30, 2);
+        if (gui_option(&context, "easy", option == EASY)) option = EASY;
+        if (gui_option(&context, "hard", option == HARD)) option = HARD;
+        gui_label(&context, "Weapon:", GUI_TEXT_LEFT);
+        item = gui_selector(&context, items, LEN(items), item);
     }
-    gui_panel_end(&layout, &panel);
+    gui_end(&context, &panel);
 
     /* draw */
     const struct gui_command *cmd;
@@ -147,13 +147,13 @@ filled by the user or can be setup with some default values by the function
 true immediate mode fashion possible and supported.
 
 ```c
-struct gui_config {
+struct gui_style {
     gui_float rounding[GUI_ROUNDING_MAX];
     struct gui_vec2 properties[GUI_PROPERTY_MAX];
     struct gui_color colors[GUI_COLOR_COUNT];
 };
 ```
-In addition to modifing the `gui_config` struct directly the configration API
+In addition to modifing the `gui_style` struct directly the styleration API
 enables you to temporarily change a property or color and revert back directly
 after the change is no longer needed. The number of temporary changes are
 limited but can be changed with constants `GUI_MAX_COLOR_STACK` and
@@ -161,11 +161,11 @@ limited but can be changed with constants `GUI_MAX_COLOR_STACK` and
 
 
 ```c
-gui_config_push_color(config, GUI_COLORS_PANEL, 255, 0, 0, 255);
-gui_config_push_attribute(config, GUI_ATTRIBUTE_PADDING, 10.0f, 5.0f);
-/* use the configuration data */
-gui_config_pop_attribute(config);
-gui_config_pop_color(config);
+gui_style_push_color(style, GUI_COLORS_PANEL, 255, 0, 0, 255);
+gui_style_push_attribute(style, GUI_ATTRIBUTE_PADDING, 10.0f, 5.0f);
+/* use the styleuration data */
+gui_style_pop_attribute(style);
+gui_style_pop_color(style);
 ```
 
 Since there is no direct font implementation in the toolkit but font handling is

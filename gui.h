@@ -1844,8 +1844,10 @@ enum gui_window_flags {
     /* INTERNAL ONLY!: Marks the window as an subwindow of another window(Groups/Tabs/Shelf)*/
     GUI_WINDOW_COMBO_MENU = 0x40000,
     /* INTERNAL ONLY!: Marks the window as an combo box or menu */
-    GUI_WINDOW_REMOVE_ROM = 0x80000
+    GUI_WINDOW_REMOVE_ROM = 0x80000,
     /* INTERNAL ONLY!: removes the read only mode at the end of the window */
+    GUI_WINDOW_NO_SCROLLBAR = 0x100000
+    /* INTERNAL ONLY!: removes the scrollbar from the window */
 };
 
 struct gui_window {
@@ -2291,11 +2293,12 @@ void gui_layout_pop(struct gui_context*);
     gui_label_colored         -- widget for printing colored zero terminiated strings
     gui_button_text           -- button widget with text content
     gui_button_color          -- colored button widget without content
-    gui_button_triangle       -- button with triangle either up-/down-/left- or right
+    gui_button_symbol         -- button with triangle either up-/down-/left- or right
     gui_button_image          -- button widget width icon content
     gui_button_toggle         -- toggle button with either active or inactive state
     gui_button_text_image     -- button widget with text and icon
-    gui_button_text_triangle  -- button widget with text and a triangle
+    gui_button_text_symbol    -- button widget with text and a triangle
+    gui_button_invisible      -- button widget without border and fitting space
     gui_image                 -- image widget for outputing a image to a window
     gui_check                 -- add a checkbox widget
     gui_option                -- radiobutton widget
@@ -2451,6 +2454,17 @@ gui_bool gui_button_text_image(struct gui_context *layout, struct gui_image img,
     - gui_true if the button was transistioned from unpressed to pressed with
         default button behavior or pressed if repeater behavior.
 */
+gui_bool gui_button_invisible(struct gui_context *layout,  const char *text,
+                            enum gui_text_align align, enum gui_button_behavior behavior);
+/*  this function creates a fitting  button without border
+    Input:
+    - button label describing the button
+    - text alignment with either left, centered or right alignment
+    - button behavior with either default or repeater behavior
+    Output:
+    - gui_true if the button was transistioned from unpressed to pressed with
+        default button behavior or pressed if repeater behavior.
+*/
 gui_bool gui_button_toggle(struct gui_context*, const char*,gui_bool value);
 /*  this function creates a toggle button which is either active or inactive
     Input:
@@ -2525,31 +2539,31 @@ gui_int gui_spinner(struct gui_context*, gui_int min, gui_int value,
 */
 /*
  * -------------------------------------------------------------
- *                          Child
+ *                          Group
  * --------------------------------------------------------------
  *
-    CHILD
-    A child window represents a window inside a window. The child thereby has a fixed height
+    GROUP
+    A group window represents a window inside a window. The group thereby has a fixed height
     but just like a normal window has a scrollbar. It main promise is to group together
     a group of widgets into a small space inside a window and to provide a scrollable
     space inside a window.
 
     USAGE
     To create a group you first have to allocate space in a window. This is done
-    by the child row layout API and works the same as widgets. After that the
-    `gui_child_begin` has to be called with the parent layout to create
+    by the group row layout API and works the same as widgets. After that the
+    `gui_group_begin` has to be called with the parent layout to create
     the group in and a group layout to create a new window inside the window.
     Just like a window layout structures the group layout only has a lifetime
-    between the `gui_child_begin` and `gui_child_end` and does
+    between the `gui_group_begin` and `gui_group_end` and does
     not have to be persistent.
 
-    child window API
-    gui_child_begin -- adds a scrollable fixed space inside the window
-    gui_child_begin -- ends the scrollable space
+    group window API
+    gui_group_begin -- adds a scrollable fixed space inside the window
+    gui_group_begin -- ends the scrollable space
 */
-void gui_child_begin(struct gui_context*, struct gui_context *tab,
-                    const char *title, struct gui_vec2);
-/*  this function adds a grouped child window into the parent window
+void gui_group_begin(struct gui_context*, struct gui_context *tab,
+                    const char *title, gui_flags, struct gui_vec2);
+/*  this function adds a grouped group window into the parent window
     IMPORTANT: You need to set the height of the group with gui_row_layout
     Input:
     - group title to write into the header
@@ -2557,7 +2571,7 @@ void gui_child_begin(struct gui_context*, struct gui_context *tab,
     Output:
     - group layout to fill with widgets
 */
-struct gui_vec2 gui_child_end(struct gui_context*, struct gui_context*);
+struct gui_vec2 gui_group_end(struct gui_context*, struct gui_context*);
 /*  this function finishes the previously started group layout
     Output:
     - The from user input updated group scrollbar pixel offset
@@ -2632,9 +2646,8 @@ enum gui_popup_type {
     GUI_POPUP_DYNAMIC /* dynamically growing popup with maximum height */
 };
 gui_flags gui_popup_begin(struct gui_context *parent,
-                            struct gui_context *popup,
-                            enum gui_popup_type, struct gui_rect bounds,
-                            struct gui_vec2 offset);
+                            struct gui_context *popup, enum gui_popup_type,
+                            gui_flags, struct gui_rect bounds, struct gui_vec2 offset);
 /*  this function adds a grouped child window into the parent window
     Input:
     - popup position and size of the popup (NOTE: local position)
@@ -2763,7 +2776,7 @@ gui_int gui_graph_callback(struct gui_context*, enum gui_graph_type,
 */
 void gui_combo(struct gui_context*, const char **entries,
                     gui_size count, gui_size *current, gui_size row_height,
-                    gui_state *active, struct gui_vec2 *scrollbar);
+                    gui_state *active);
 /*  this function creates a standart text based combobox
     Input:
     - parent window layout the combo box will be placed into
@@ -2779,7 +2792,7 @@ void gui_combo(struct gui_context*, const char **entries,
 */
 void gui_combo_begin(struct gui_context *parent,
                         struct gui_context *combo, const char *selected,
-                        gui_state *active, struct gui_vec2 offset);
+                        gui_state *active);
 /*  this function begins the combobox build up process
     Input:
     - parent window layout the combo box will be placed into
@@ -2790,8 +2803,7 @@ void gui_combo_begin(struct gui_context *parent,
 */
 void gui_combo_close(struct gui_context *combo);
 /*  this function closes a opened combobox */
-struct gui_vec2 gui_combo_end(struct gui_context *parent,
-                                    struct gui_context *combo);
+void gui_combo_end(struct gui_context *parent, struct gui_context *combo);
 /*  this function ends the combobox build up process */
 /*
  * --------------------------------------------------------------

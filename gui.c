@@ -3223,7 +3223,8 @@ gui_begin(struct gui_context *context, struct gui_window *window)
     context->footer_h = scaler_size.y + item_padding.y;
 
     /* calculate the window size and window footer height */
-    context->width = window->w - scrollbar_size;
+    if (!(window->flags & GUI_WINDOW_NO_SCROLLBAR))
+        context->width = window->w - scrollbar_size;
     context->height = window->h - (context->header.h + 2 * item_spacing.y);
     if (context->flags & GUI_WINDOW_SCALEABLE)
         context->height -= context->footer_h;
@@ -3291,7 +3292,8 @@ gui_end(struct gui_context *layout, struct gui_window *window)
 
     /* update the current Y-position to point over the last added widget */
     layout->at_y += layout->row.height;
-    if (layout->valid && layout->flags & GUI_WINDOW_DYNAMIC) {
+    if (layout->valid && (layout->flags & GUI_WINDOW_DYNAMIC) &&
+        !(layout->valid & GUI_WINDOW_NO_SCROLLBAR)) {
         /* calculate the dynamic window footer bounds */
         layout->height = MIN(layout->at_y - layout->y, layout->h);
 
@@ -3315,7 +3317,7 @@ gui_end(struct gui_context *layout, struct gui_window *window)
     }
 
     /* scrollbars */
-    if (layout->valid) {
+    if (layout->valid && !(layout->flags & GUI_WINDOW_NO_SCROLLBAR)) {
         struct gui_rect bounds;
         gui_float scroll_target, scroll_offset, scroll_step;
 
@@ -3401,7 +3403,8 @@ gui_end(struct gui_context *layout, struct gui_window *window)
 
     if (layout->flags & GUI_WINDOW_BORDER) {
         /* draw the border around the complete panel */
-        const gui_float width = layout->width + scrollbar_size;
+        const gui_float width = (layout->flags & GUI_WINDOW_NO_SCROLLBAR) ?
+            layout->width: layout->width + scrollbar_size;
         const gui_float padding_y = (!layout->valid) ?
                 window->y + layout->header.h:
                 (layout->flags & GUI_WINDOW_DYNAMIC) ?
@@ -4596,6 +4599,40 @@ gui_button_text_image(struct gui_context *layout, struct gui_image img,
                                 behavior, &button, &config->font, i);
 }
 
+gui_bool
+gui_button_invisible(struct gui_context *layout,  const char *text,
+    enum gui_text_align align, enum gui_button_behavior behavior)
+{
+    struct gui_rect bounds;
+    struct gui_button_text button;
+    const struct gui_style *config;
+
+    const struct gui_input *i;
+    enum gui_widget_state state;
+    state = gui_button(&button.base, &bounds, layout);
+    if (!state) return gui_false;
+    i = (state == GUI_WIDGET_ROM || layout->flags & GUI_WINDOW_ROM) ? 0 : layout->input;
+
+    /* update the bounds to stand without padding  */
+    if (layout->row.index == 1) {
+        bounds.w += layout->style->properties[GUI_PROPERTY_PADDING].x;
+        bounds.x -= layout->style->properties[GUI_PROPERTY_PADDING].x;
+    } else bounds.x -= layout->style->properties[GUI_PROPERTY_ITEM_PADDING].x;
+    if (layout->row.index == layout->row.columns)
+        bounds.w += layout->style->properties[GUI_PROPERTY_PADDING].x;
+    else bounds.w += layout->style->properties[GUI_PROPERTY_ITEM_PADDING].x;
+
+    config = layout->style;
+    button.base.border_width = 0;
+    button.base.normal = config->colors[GUI_COLOR_WINDOW];
+    button.normal = config->colors[GUI_COLOR_TEXT];
+    button.hover = config->colors[GUI_COLOR_TEXT_HOVERING];
+    button.active = config->colors[GUI_COLOR_TEXT_ACTIVE];
+    button.alignment = align;
+    return gui_widget_button_text(layout->buffer, bounds, text,  behavior,
+            &button, i, &config->font);
+}
+
 static enum gui_widget_state
 gui_toggle_base(struct gui_toggle *toggle, struct gui_rect *bounds,
     struct gui_context *layout)
@@ -5215,12 +5252,10 @@ gui_table_end(struct gui_context *layout)
  */
 gui_flags
 gui_popup_begin(struct gui_context *parent, struct gui_context *popup,
-    enum gui_popup_type type, struct gui_rect rect, struct gui_vec2 scrollbar)
+    enum gui_popup_type type, gui_flags flags,
+    struct gui_rect rect, struct gui_vec2 scrollbar)
 {
-    gui_flags flags = 0;
     struct gui_window panel;
-    struct gui_rect bounds;
-
     GUI_ASSERT(parent);
     GUI_ASSERT(popup);
     if (!parent || !popup || !parent->valid) {
@@ -5233,16 +5268,15 @@ gui_popup_begin(struct gui_context *parent, struct gui_context *popup,
 
     /* calculate bounds of the panel */
     gui_zero(popup, sizeof(*popup));
-    rect.x += parent->at_x;
+    rect.x += parent->clip.x;
     rect.y += parent->clip.y;
-    gui_unify(&bounds, &parent->clip, rect.x, rect.y, rect.x + rect.w, rect.y + rect.h);
     parent->flags |= GUI_WINDOW_ROM;
 
     /* initialize a fake panel */
-    flags = GUI_WINDOW_BORDER|GUI_WINDOW_TAB;
+    flags |= GUI_WINDOW_BORDER|GUI_WINDOW_TAB;
     if (type == GUI_POPUP_DYNAMIC)
         flags |= GUI_WINDOW_DYNAMIC;
-    gui_window_init(&panel, bounds.x, bounds.y, bounds.w, bounds.h,flags, 0,
+    gui_window_init(&panel, rect.x, rect.y, rect.w, rect.h,flags, 0,
         parent->style, parent->input);
 
     /* begin sub-buffer and create panel layout  */
@@ -5302,8 +5336,8 @@ gui_popup_end(struct gui_context *parent, struct gui_context *popup)
 
 static gui_bool
 gui_popup_nonblock_begin(struct gui_context *parent,
-    struct gui_context *popup, gui_state *active, gui_state is_active,
-    struct gui_rect body, struct gui_vec2 offset)
+    struct gui_context *popup, gui_flags flags, gui_state *active, gui_state is_active,
+    struct gui_rect body)
 {
     /* deactivate popup if user clicked outside the popup*/
     const struct gui_input *in = parent->input;
@@ -5317,13 +5351,12 @@ gui_popup_nonblock_begin(struct gui_context *parent,
     }
 
     /* recalculate body bounds into local panel position */
-    body.x -= (parent->at_x - 2);
+    body.x -= parent->clip.x;
     body.y -= parent->clip.y;
-    body.w -= 4;
 
     /* if active create popup otherwise deactive the panel layout  */
     if (!is_active && *active) {
-        gui_popup_begin(parent, popup, GUI_POPUP_DYNAMIC, body, offset);
+        gui_popup_begin(parent, popup, GUI_POPUP_DYNAMIC, flags, body, gui_vec2(0,0));
         gui_popup_close(popup);
         popup->flags &= ~(gui_flags)GUI_WINDOW_MINIMIZED;
         parent->flags &= ~(gui_flags)GUI_WINDOW_ROM;
@@ -5332,7 +5365,7 @@ gui_popup_nonblock_begin(struct gui_context *parent,
         popup->flags |= GUI_WINDOW_MINIMIZED;
         return gui_false;
     } else {
-        gui_popup_begin(parent, popup, GUI_POPUP_DYNAMIC, body, offset);
+        gui_popup_begin(parent, popup, GUI_POPUP_DYNAMIC, flags, body, gui_vec2(0,0));
         popup->flags &= ~(gui_flags)GUI_WINDOW_MINIMIZED;
     }
     *active = is_active;
@@ -5360,7 +5393,7 @@ gui_popup_nonblock_end(struct gui_context *parent,
  */
 void
 gui_combo_begin(struct gui_context *parent, struct gui_context *combo,
-    const char *selected, gui_state *active, struct gui_vec2 offset)
+    const char *selected, gui_state *active)
 {
     struct gui_rect bounds = {0,0,0,0};
     const struct gui_input *in;
@@ -5418,7 +5451,7 @@ gui_combo_begin(struct gui_context *parent, struct gui_context *combo,
         bounds.x = header.x + header.w - bounds.w;
 
         gui_fill_button(config, &button.base);
-        button.base.rounding = config->rounding[GUI_ROUNDING_BUTTON];
+        button.base.rounding = 0;
         button.base.padding.x = bounds.w/4.0f;
         button.base.padding.y = bounds.h/4.0f;
         button.normal = config->colors[GUI_COLOR_TEXT];
@@ -5434,8 +5467,8 @@ gui_combo_begin(struct gui_context *parent, struct gui_context *combo,
         body.x = header.x;
         body.w = header.w;
         body.y = header.y + header.h;
-        body.h = (parent->y + parent->h) - body.y;
-        if (!gui_popup_nonblock_begin(parent,combo,active,is_active,body,offset))
+        body.h = gui_null_rect.h;
+        if (!gui_popup_nonblock_begin(parent,combo,GUI_WINDOW_NO_SCROLLBAR, active,is_active,body))
             goto failed;
         combo->flags |= GUI_WINDOW_COMBO_MENU;
     }
@@ -5449,16 +5482,16 @@ failed:
     combo->queue = parent->queue;
 }
 
-struct gui_vec2
+void
 gui_combo_end(struct gui_context *parent, struct gui_context *combo)
 {
     GUI_ASSERT(parent);
     GUI_ASSERT(combo);
-    if (!parent || !combo) return gui_vec2(0,0);
+    if (!parent || !combo) return;
     if ((!parent->valid || !combo->valid) && !(combo->flags & GUI_WINDOW_HIDDEN))
-        return combo->offset;
+        return;
     gui_popup_nonblock_end(parent, combo);
-    return combo->offset;
+    return;
 }
 
 void
@@ -5473,7 +5506,7 @@ gui_combo_close(struct gui_context *combo)
 void
 gui_combo(struct gui_context *layout, const char **entries,
     gui_size count, gui_size *current, gui_size row_height,
-    gui_state *active, struct gui_vec2 *scrollbar)
+    gui_state *active)
 {
     gui_size i;
     struct gui_context combo;
@@ -5485,17 +5518,17 @@ gui_combo(struct gui_context *layout, const char **entries,
     if (!count) return;
 
     gui_zero(&combo, sizeof(combo));
-    gui_combo_begin(layout, &combo, entries[*current], active, *scrollbar);
+    gui_combo_begin(layout, &combo, entries[*current], active);
     gui_layout_row_dynamic(&combo, (gui_float)row_height, 1);
     for (i = 0; i < count; ++i) {
         if (i == *current) continue;
-        if (gui_button_text(&combo,entries[i], GUI_BUTTON_DEFAULT)) {
+        if (gui_button_invisible(&combo,entries[i], GUI_TEXT_LEFT, GUI_BUTTON_DEFAULT)) {
             gui_combo_close(&combo);
             *active = gui_false;
             *current = i;
         }
     }
-    *scrollbar = gui_combo_end(layout, &combo);
+    gui_combo_end(layout, &combo);
 }
 /*
  * -------------------------------------------------------------
@@ -5528,13 +5561,17 @@ gui_menu_begin(struct gui_context *parent, struct gui_context *menu,
         /* exeucte menu button for open/closing the popup */
         struct gui_button_text button;
         gui_button(&button.base, &header, parent);
+        button.base.rounding = 0;
+        button.base.border = config->colors[GUI_COLOR_WINDOW];
+        button.base.normal = config->colors[GUI_COLOR_WINDOW];
+        button.base.hover = config->colors[GUI_COLOR_WINDOW];
+        button.base.active = config->colors[GUI_COLOR_WINDOW];
         button.normal = config->colors[GUI_COLOR_TEXT];
         button.active = config->colors[GUI_COLOR_TEXT];
         button.hover = config->colors[GUI_COLOR_TEXT];
         button.base.rounding = config->rounding[GUI_ROUNDING_BUTTON];
         if (gui_widget_button_text(parent->buffer, header, title, GUI_BUTTON_DEFAULT,
-                &button, in, &config->font))
-            is_active = !is_active;
+                &button, in, &config->font)) is_active = !is_active;
     }
     {
         /* calculate the maximum height of the menu */
@@ -5543,8 +5580,8 @@ gui_menu_begin(struct gui_context *parent, struct gui_context *menu,
         body.w = width;
         body.y = header.y + header.h;
         body.h = (parent->y + parent->h) - body.y;
-        if (!gui_popup_nonblock_begin(parent, menu, active,
-            is_active, body, gui_vec2(0,0))) goto failed;
+        if (!gui_popup_nonblock_begin(parent, menu, GUI_WINDOW_NO_SCROLLBAR, active,
+            is_active, body)) goto failed;
         menu->flags |= GUI_WINDOW_COMBO_MENU;
     }
     return;
@@ -5596,7 +5633,7 @@ gui_menu(struct gui_context *layout, const char *title,
     gui_menu_begin(layout, &menu, title, width, active);
     gui_layout_row_dynamic(&menu, (gui_float)row_height, 1);
     for (i = 0; i < count; ++i) {
-        if (gui_button_text(&menu, entries[i], GUI_BUTTON_DEFAULT)) {
+        if (gui_button_invisible(&menu, entries[i], GUI_TEXT_LEFT, GUI_BUTTON_DEFAULT)) {
             gui_combo_close(&menu);
             *active = gui_false;
             sel = (gui_int)i;
@@ -5624,7 +5661,7 @@ gui_tree_begin(struct gui_context *p, struct gui_tree *tree,
     GUI_ASSERT(title);
     if (!p || !tree || !title) return;
 
-    gui_child_begin(p, &tree->group, title, offset);
+    gui_group_begin(p, &tree->group, title, 0, offset);
     gui_panel_layout(&tree->group, height, 1);
 
     config = tree->group.style;
@@ -5811,7 +5848,7 @@ gui_tree_end_node(struct gui_tree *tree)
 
 struct gui_vec2
 gui_tree_end(struct gui_context *p, struct gui_tree* tree)
-{return gui_child_end(p, &tree->group);}
+{return gui_group_end(p, &tree->group);}
 
 /*
  * -------------------------------------------------------------
@@ -5821,10 +5858,9 @@ gui_tree_end(struct gui_context *p, struct gui_tree* tree)
  * --------------------------------------------------------------
  */
 void
-gui_child_begin(struct gui_context *p, struct gui_context *g,
-    const char *title, struct gui_vec2 offset)
+gui_group_begin(struct gui_context *p, struct gui_context *g,
+    const char *title, gui_flags flags, struct gui_vec2 offset)
 {
-    gui_flags flags;
     struct gui_rect bounds;
     struct gui_window panel;
     const struct gui_rect *c;
@@ -5843,7 +5879,7 @@ gui_child_begin(struct gui_context *p, struct gui_context *g,
         goto failed;
 
     /* initialize a fake panel to create the layout from */
-    flags = GUI_WINDOW_BORDER|GUI_WINDOW_TAB;
+    flags |= GUI_WINDOW_BORDER|GUI_WINDOW_TAB;
     if (p->flags & GUI_WINDOW_ROM)
         flags |= GUI_WINDOW_ROM;
 
@@ -5883,7 +5919,7 @@ failed:
 }
 
 struct gui_vec2
-gui_child_end(struct gui_context *p, struct gui_context *g)
+gui_group_end(struct gui_context *p, struct gui_context *g)
 {
     struct gui_window pan;
     struct gui_command_buffer *out;

@@ -275,7 +275,7 @@ color_picker(struct gui_context *panel, struct color_picker* control,
     gui_byte *iter;
     gui_bool ret = gui_true;
     struct gui_context popup;
-    gui_popup_begin(panel, &popup, GUI_POPUP_STATIC, gui_rect(10, 100, 280, 280), gui_vec2(0,0));
+    gui_popup_begin(panel, &popup, GUI_POPUP_STATIC,0, gui_rect(10, 100, 280, 280), gui_vec2(0,0));
     {
         if (gui_header(&popup, "Color", GUI_CLOSEABLE, GUI_CLOSEABLE, GUI_HEADER_LEFT)) {
             gui_popup_close(&popup);
@@ -332,32 +332,27 @@ gui_labelf(struct gui_context *panel, enum gui_text_align align, const gui_char 
 struct combobox {
     gui_size selected;
     gui_state active;
-    struct gui_vec2 scrollbar;
 };
 
 struct check_combo_box {
     gui_bool values[4];
     gui_state active;
-    struct gui_vec2 scrollbar;
 };
 
 struct prog_combo_box {
     gui_state active;
-    struct gui_vec2 scrollbar;
 };
 
 struct color_combo_box {
     gui_state active;
     struct gui_color color;
-    struct gui_vec2 scrollbar;
 };
 
 static void
 combo_box(struct gui_context *panel, struct combobox *combo,
     const char**values, gui_size count)
 {
-    gui_combo(panel, values, count, &combo->selected, 30,
-        &combo->active, &combo->scrollbar);
+    gui_combo(panel, values, count, &combo->selected, 20, &combo->active);
 }
 
 static void
@@ -373,13 +368,13 @@ prog_combo_box(struct gui_context *panel, gui_size *values, gui_size count,
         sum += (gui_int)values[i];
 
     sprintf(buffer, "%d", sum);
-    gui_combo_begin(panel, &combo, buffer, &demo->active, demo->scrollbar);
+    gui_combo_begin(panel, &combo, buffer, &demo->active);
     {
         gui_layout_row_dynamic(&combo, 30, 1);
         for (i = 0; i < count; ++i)
             values[i] = gui_progress(&combo, values[i], 100, gui_true);
     }
-    demo->scrollbar = gui_combo_end(panel, &combo);
+    gui_combo_end(panel, &combo);
 }
 
 static void
@@ -391,7 +386,7 @@ color_combo_box(struct gui_context *panel, struct color_combo_box *demo)
     memset(&combo, 0, sizeof(combo));
     sprintf(buffer, "#%02x%02x%02x%02x", demo->color.r, demo->color.g,
             demo->color.b, demo->color.a);
-    gui_combo_begin(panel, &combo, buffer,  &demo->active, demo->scrollbar);
+    gui_combo_begin(panel, &combo, buffer,  &demo->active);
     {
         int i;
         const char *color_names[] = {"R:", "G:", "B:", "A:"};
@@ -405,7 +400,7 @@ color_combo_box(struct gui_context *panel, struct color_combo_box *demo)
             *iter = (gui_byte)t;
         }
     }
-    demo->scrollbar = gui_combo_end(panel, &combo);
+    gui_combo_end(panel, &combo);
 }
 
 static void
@@ -422,13 +417,13 @@ check_combo_box(struct gui_context *panel, gui_bool *values, gui_size count,
         sum += (gui_int)values[i];
 
     sprintf(buffer, "%d", sum);
-    gui_combo_begin(panel, &combo, buffer,  &demo->active, demo->scrollbar);
+    gui_combo_begin(panel, &combo, buffer,  &demo->active);
     {
         gui_layout_row_dynamic(&combo, 30, 1);
         for (i = 0; i < count; ++i)
             values[i] = gui_check(&combo, weapons[i], values[i]);
     }
-    demo->scrollbar = gui_combo_end(panel, &combo);
+    gui_combo_end(panel, &combo);
 }
 
 /* =================================================================
@@ -547,6 +542,8 @@ widget_panel(struct gui_context *panel, struct state *demo)
     demo->spinner = gui_spinner(panel, 0, demo->spinner, 250, 10, &demo->spinner_active);
 
     /* combo boxes  */
+    if (!demo->scaleable) gui_layout_row_static(panel, 30, 150, 1);
+    else gui_layout_row_dynamic(panel, 25, 1);
     combo_box(panel, &demo->combo, weapons, LEN(weapons));
     prog_combo_box(panel, demo->prog_values, LEN(demo->prog_values), &demo->progcom);
     color_combo_box(panel, &demo->colcom);
@@ -747,7 +744,7 @@ run_demo(struct demo_gui *gui)
         /* menubar */
         gui_menubar_begin(&layout);
         {
-            gui_layout_row_begin(&layout, GUI_STATIC, 25, 2);
+            gui_layout_row_begin(&layout, GUI_STATIC, 18, 2);
             {
                 gui_int sel;
                 gui_layout_row_push(&layout, config->font.width(config->font.userdata, "__FILE__", 8));
@@ -814,7 +811,7 @@ run_demo(struct demo_gui *gui)
 
         /* popup panel */
         if (state->popup) {
-            gui_popup_begin(&layout, &tab, GUI_POPUP_STATIC, gui_rect(20, 100, 220, 150), gui_vec2(0,0));
+            gui_popup_begin(&layout, &tab, GUI_POPUP_STATIC, 0, gui_rect(20, 100, 220, 150), gui_vec2(0,0));
             {
                 if (gui_header(&tab, "Popup", GUI_CLOSEABLE, GUI_CLOSEABLE, GUI_HEADER_LEFT)) {
                     gui_popup_close(&tab);
@@ -859,9 +856,9 @@ run_demo(struct demo_gui *gui)
 
         /* table */
         gui_layout_row_dynamic(&layout, 180, 1);
-        gui_child_begin(&layout, &tab, "Table", state->table);
+        gui_group_begin(&layout, &tab, "Table", 0, state->table);
         table_panel(&tab);
-        state->table = gui_child_end(&layout, &tab);
+        state->table = gui_group_end(&layout, &tab);
 
         {
             /* tree */
