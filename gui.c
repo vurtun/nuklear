@@ -3064,8 +3064,8 @@ gui_style_reset(struct gui_style *style)
  * ===============================================================
  */
 void
-gui_window_init(struct gui_window *window, gui_float x, gui_float y, gui_float w,
-    gui_float h, gui_flags flags, struct gui_command_queue *queue,
+gui_window_init(struct gui_window *window, struct gui_rect bounds,
+    gui_flags flags, struct gui_command_queue *queue,
     const struct gui_style *style, const struct gui_input *input)
 {
     GUI_ASSERT(window);
@@ -3074,10 +3074,7 @@ gui_window_init(struct gui_window *window, gui_float x, gui_float y, gui_float w
     if (!window || !style || !input)
         return;
 
-    window->x = x;
-    window->y = y;
-    window->w = w;
-    window->h = h;
+    window->bounds = bounds;
     window->flags = flags;
     window->style = style;
     window->offset.x = 0;
@@ -3114,7 +3111,6 @@ gui_window_has_flag(struct gui_window *panel, gui_flags f)
 gui_bool
 gui_window_is_minimized(struct gui_window *panel)
 {return panel->flags & GUI_WINDOW_MINIMIZED;}
-
 
 /*
  * ==============================================================
@@ -3168,7 +3164,8 @@ gui_begin(struct gui_context *context, struct gui_window *window)
             gui_bool inpanel;
             gui_float x, y, w, h;
             struct gui_command_buffer_list *s = &window->queue->list;
-            x = window->x; y = window->y; w = window->w; h = window->h;
+            x = window->bounds.x; y = window->bounds.y;
+            w = window->bounds.w; h = window->bounds.h;
             inpanel = GUI_INBOX(in->mouse_prev.x, in->mouse_prev.y, x, y, w, h);
             if (in->mouse_down && in->mouse_clicked && inpanel && &window->buffer != s->end) {
                 const struct gui_command_buffer *iter = window->buffer.next;
@@ -3176,7 +3173,8 @@ gui_begin(struct gui_context *context, struct gui_window *window)
                     /* try to find a panel with higher priorty in the same position */
                     const struct gui_window *cur;
                     cur = GUI_CONTAINER_OF_CONST(iter, struct gui_window, buffer);
-                    if (GUI_INBOX(in->mouse_prev.x,in->mouse_prev.y,cur->x,cur->y,cur->w,cur->h) &&
+                    if (GUI_INBOX(in->mouse_prev.x, in->mouse_prev.y, cur->bounds.x,
+                        cur->bounds.y, cur->bounds.w, cur->bounds.h) &&
                       !(cur->flags & GUI_WINDOW_MINIMIZED) && !(cur->flags & GUI_WINDOW_HIDDEN))
                         break;
                     iter = iter->next;
@@ -3199,28 +3197,25 @@ gui_begin(struct gui_context *context, struct gui_window *window)
     context->header.h += window_padding.y;
     if ((window->flags & GUI_WINDOW_MOVEABLE) && !(window->flags & GUI_WINDOW_ROM)) {
         gui_bool incursor;
-        const gui_float move_x = window->x;
-        const gui_float move_y = window->y;
-        const gui_float move_w = window->w;
+        const gui_float move_x = window->bounds.x;
+        const gui_float move_y = window->bounds.y;
+        const gui_float move_w = window->bounds.w;
         const gui_float move_h = context->header.h;
         incursor = GUI_INBOX(in->mouse_prev.x, in->mouse_prev.y,
                     move_x, move_y, move_w, move_h);
         if (in->mouse_down && incursor) {
-         window->x = MAX(0, window->x + in->mouse_delta.x);
-         window->y = MAX(0, window->y + in->mouse_delta.y);
+         window->bounds.x = MAX(0, window->bounds.x + in->mouse_delta.x);
+         window->bounds.y = MAX(0, window->bounds.y + in->mouse_delta.y);
         }
     }
 
     /* setup panel context */
     context->input = in;
-    context->x = window->x;
-    context->y = window->y;
-    context->w = window->w;
-    context->h = window->h;
-    context->at_x = window->x;
-    context->at_y = window->y;
-    context->width = window->w;
-    context->height = window->h;
+    context->bounds = window->bounds;
+    context->at_x = window->bounds.x;
+    context->at_y = window->bounds.y;
+    context->width = window->bounds.w;
+    context->height = window->bounds.h;
     context->style = window->style;
     context->buffer = &window->buffer;
     context->row.index = 0;
@@ -3238,7 +3233,8 @@ gui_begin(struct gui_context *context, struct gui_window *window)
         gui_float clicked_x = in->mouse_clicked_pos.x;
         gui_float clicked_y = in->mouse_clicked_pos.y;
         if (in->mouse_down) {
-            if (GUI_INBOX(clicked_x, clicked_y, window->x, window->y, window->w, window->h))
+            if (GUI_INBOX(clicked_x, clicked_y, window->bounds.x, window->bounds.y,
+                window->bounds.w, window->bounds.h))
                 window->flags |= GUI_WINDOW_ACTIVE;
             else window->flags &= (gui_flag)~GUI_WINDOW_ACTIVE;
         }
@@ -3251,32 +3247,32 @@ gui_begin(struct gui_context *context, struct gui_window *window)
 
     /* calculate the window size and window footer height */
     if (!(window->flags & GUI_WINDOW_NO_SCROLLBAR))
-        context->width = window->w - scrollbar_size;
-    context->height = window->h - (context->header.h + 2 * item_spacing.y);
+        context->width = window->bounds.w - scrollbar_size;
+    context->height = window->bounds.h - (context->header.h + 2 * item_spacing.y);
     if (context->flags & GUI_WINDOW_SCALEABLE)
         context->height -= context->footer_h;
 
     /* draw window background if not a dynamic window */
     if (!(context->flags & GUI_WINDOW_DYNAMIC) && context->valid) {
-        gui_command_buffer_push_rect(out, gui_rect(context->x, context->y,
-            context->w, context->h), 0, c->colors[GUI_COLOR_WINDOW]);
+        gui_command_buffer_push_rect(out, context->bounds, 0, c->colors[GUI_COLOR_WINDOW]);
     } else{
         context->footer_h = scaler_size.y + item_padding.y;
-        gui_command_buffer_push_rect(out, gui_rect(context->x, context->y, context->w,
-            context->row.height), 0, c->colors[GUI_COLOR_WINDOW]);
+        gui_command_buffer_push_rect(out, gui_rect(context->bounds.x, context->bounds.y,
+            context->bounds.w, context->row.height), 0, c->colors[GUI_COLOR_WINDOW]);
     }
 
     /* draw top border line */
     if (context->flags & GUI_WINDOW_BORDER) {
-        gui_command_buffer_push_line(out, context->x, context->y,
-            context->x + context->w, context->y, c->colors[GUI_COLOR_BORDER]);
+        gui_command_buffer_push_line(out, context->bounds.x, context->bounds.y,
+            context->bounds.x + context->bounds.w, context->bounds.y,
+            c->colors[GUI_COLOR_BORDER]);
     }
 
     /* calculate and set the window clipping rectangle*/
-    context->clip.x = window->x;
-    context->clip.y = window->y;
-    context->clip.w = window->w;
-    context->clip.h = window->h - (context->footer_h + context->header.h);
+    context->clip.x = window->bounds.x;
+    context->clip.y = window->bounds.y;
+    context->clip.w = window->bounds.w;
+    context->clip.h = window->bounds.h - (context->footer_h + context->header.h);
     context->clip.h -= (window_padding.y + item_padding.y);
     gui_command_buffer_push_scissor(out, context->clip);
 }
@@ -3303,10 +3299,10 @@ gui_end(struct gui_context *layout, struct gui_window *window)
     in = (layout->flags & GUI_WINDOW_ROM) ? 0 :layout->input;
     if (!(layout->flags & GUI_WINDOW_TAB)) {
         struct gui_rect clip;
-        clip.x = MAX(0, (layout->x - 1));
-        clip.y = MAX(0, (layout->y - 1));
-        clip.w = layout->w + 1;
-        clip.h = layout->h + 1;
+        clip.x = MAX(0, (layout->bounds.x - 1));
+        clip.y = MAX(0, (layout->bounds.y - 1));
+        clip.w = layout->bounds.w + 1;
+        clip.h = layout->bounds.h + 1;
         gui_command_buffer_push_scissor(out, clip);
     }
 
@@ -3322,21 +3318,21 @@ gui_end(struct gui_context *layout, struct gui_window *window)
     if (layout->valid && (layout->flags & GUI_WINDOW_DYNAMIC) &&
         !(layout->valid & GUI_WINDOW_NO_SCROLLBAR)) {
         /* calculate the dynamic window footer bounds */
-        layout->height = MIN(layout->at_y - layout->y, layout->h);
+        layout->height = MIN(layout->at_y - layout->bounds.y, layout->bounds.h);
 
         /* draw the correct footer */
-        footer.x = window->x;
-        footer.w = window->w + scrollbar_size;
+        footer.x = window->bounds.x;
+        footer.w = window->bounds.w + scrollbar_size;
         footer.h = layout->footer_h;
         if (layout->flags & GUI_WINDOW_COMBO_MENU)
-            footer.y = window->y + layout->height;
-        else footer.y = window->y + layout->height + layout->footer_h;
+            footer.y = window->bounds.y + layout->height;
+        else footer.y = window->bounds.y + layout->height + layout->footer_h;
         gui_command_buffer_push_rect(out, footer, 0, config->colors[GUI_COLOR_WINDOW]);
 
         if (!(layout->flags & GUI_WINDOW_COMBO_MENU)) {
             struct gui_rect bounds;
-            bounds.x = layout->x;
-            bounds.y = window->y + layout->height;
+            bounds.x = layout->bounds.x;
+            bounds.y = window->bounds.y + layout->height;
             bounds.w = layout->width;
             bounds.h = layout->row.height;
             gui_command_buffer_push_rect(out, bounds, 0, config->colors[GUI_COLOR_WINDOW]);
@@ -3357,8 +3353,8 @@ gui_end(struct gui_context *layout, struct gui_window *window)
         scroll.border = config->colors[GUI_COLOR_BORDER];
         {
             /* vertical scollbar */
-            bounds.x = layout->x + layout->width;
-            bounds.y = (layout->flags & GUI_WINDOW_BORDER) ? layout->y + 1 : layout->y;
+            bounds.x = layout->bounds.x + layout->width;
+            bounds.y = (layout->flags & GUI_WINDOW_BORDER) ? layout->bounds.y + 1 : layout->bounds.y;
             bounds.y += layout->header.h + layout->menu.h;
             bounds.w = scrollbar_size;
             bounds.h = layout->height;
@@ -3366,17 +3362,17 @@ gui_end(struct gui_context *layout, struct gui_window *window)
 
             scroll_offset = layout->offset.y;
             scroll_step = layout->height * 0.10f;
-            scroll_target = (layout->at_y-layout->y)-(layout->header.h+2*item_spacing.y);
+            scroll_target = (layout->at_y-layout->bounds.y)-(layout->header.h+2*item_spacing.y);
             scroll.has_scrolling = (layout->flags & GUI_WINDOW_ACTIVE);
             window->offset.y = gui_widget_scrollbarv(out, bounds, scroll_offset,
                                 scroll_target, scroll_step, &scroll, in);
         }
         {
             /* horizontal scrollbar */
-            bounds.x = layout->x + window_padding.x;
+            bounds.x = layout->bounds.x + window_padding.x;
             if (layout->flags & GUI_WINDOW_TAB) {
                 bounds.h = scrollbar_size;
-                bounds.y = (layout->flags & GUI_WINDOW_BORDER) ? layout->y + 1 : layout->y;
+                bounds.y = (layout->flags & GUI_WINDOW_BORDER) ? layout->bounds.y + 1 : layout->bounds.y;
                 bounds.y += layout->header.h + layout->menu.h + layout->height;
                 bounds.w = layout->width - scrollbar_size;
             } else if (layout->flags & GUI_WINDOW_DYNAMIC) {
@@ -3385,7 +3381,7 @@ gui_end(struct gui_context *layout, struct gui_window *window)
                 bounds.y = footer.y;
             } else {
                 bounds.h = MIN(scrollbar_size, layout->footer_h);
-                bounds.y = layout->y + window->h - MAX(layout->footer_h, scrollbar_size);
+                bounds.y = layout->bounds.y + window->bounds.h - MAX(layout->footer_h, scrollbar_size);
                 bounds.w = layout->width - 2 * window_padding.x;
             }
 
@@ -3405,11 +3401,11 @@ gui_end(struct gui_context *layout, struct gui_window *window)
         struct gui_color col = config->colors[GUI_COLOR_SCALER];
         gui_float scaler_w = MAX(0, scaler_size.x - item_padding.x);
         gui_float scaler_h = MAX(0, scaler_size.y - item_padding.y);
-        gui_float scaler_x = (layout->x + layout->w) - (item_padding.x + scaler_w);
+        gui_float scaler_x = (layout->bounds.x + layout->bounds.w) - (item_padding.x + scaler_w);
 
         if (layout->flags & GUI_WINDOW_DYNAMIC)
             scaler_y = footer.y + layout->footer_h - scaler_size.y;
-        else scaler_y = layout->y + layout->h - scaler_size.y;
+        else scaler_y = layout->bounds.y + layout->bounds.h - scaler_size.y;
         gui_command_buffer_push_triangle(out, scaler_x + scaler_w, scaler_y,
             scaler_x + scaler_w, scaler_y + scaler_h, scaler_x, scaler_y + scaler_h, col);
 
@@ -3420,10 +3416,10 @@ gui_end(struct gui_context *layout, struct gui_window *window)
             struct gui_vec2 window_size = gui_style_property(config, GUI_PROPERTY_SIZE);
             incursor = GUI_INBOX(prev_x,prev_y,scaler_x,scaler_y,scaler_w,scaler_h);
             if (in->mouse_down && incursor) {
-                window->w = MAX(window_size.x, window->w + in->mouse_delta.x);
+                window->bounds.w = MAX(window_size.x, window->bounds.w + in->mouse_delta.x);
                 /* draging in y-direction is only possible if static window */
                 if (!(layout->flags & GUI_WINDOW_DYNAMIC))
-                    window->h = MAX(window_size.y, window->h + in->mouse_delta.y);
+                    window->bounds.h = MAX(window_size.y, window->bounds.h + in->mouse_delta.y);
             }
         }
     }
@@ -3433,21 +3429,21 @@ gui_end(struct gui_context *layout, struct gui_window *window)
         const gui_float width = (layout->flags & GUI_WINDOW_NO_SCROLLBAR) ?
             layout->width: layout->width + scrollbar_size;
         const gui_float padding_y = (!layout->valid) ?
-                window->y + layout->header.h:
+                window->bounds.y + layout->header.h:
                 (layout->flags & GUI_WINDOW_DYNAMIC) ?
                 layout->footer_h + footer.y:
-                layout->y + layout->h;
+                layout->bounds.y + layout->bounds.h;
 
         if (window->flags & GUI_WINDOW_BORDER_HEADER)
-            gui_command_buffer_push_line(out, window->x, window->y + layout->header.h,
-                window->x + window->w, window->y + layout->header.h,
+            gui_command_buffer_push_line(out, window->bounds.x, window->bounds.y + layout->header.h,
+                window->bounds.x + window->bounds.w, window->bounds.y + layout->header.h,
                 config->colors[GUI_COLOR_BORDER]);
-        gui_command_buffer_push_line(out, window->x, padding_y, window->x + width,
+        gui_command_buffer_push_line(out, window->bounds.x, padding_y, window->bounds.x + width,
                 padding_y, config->colors[GUI_COLOR_BORDER]);
-        gui_command_buffer_push_line(out, window->x, window->y, window->x,
+        gui_command_buffer_push_line(out, window->bounds.x, window->bounds.y, window->bounds.x,
                 padding_y, config->colors[GUI_COLOR_BORDER]);
-        gui_command_buffer_push_line(out, window->x + width, window->y, window->x + width,
-                padding_y, config->colors[GUI_COLOR_BORDER]);
+        gui_command_buffer_push_line(out, window->bounds.x + width, window->bounds.y,
+                window->bounds.x + width, padding_y, config->colors[GUI_COLOR_BORDER]);
     }
 
     gui_command_buffer_push_scissor(out, gui_rect(0, 0, gui_null_rect.w, gui_null_rect.h));
@@ -3511,20 +3507,20 @@ gui_header_begin(struct gui_context *layout)
     layout->row.height += layout->header.h;
     if (layout->valid)
         gui_command_buffer_push_rect(out,
-            gui_rect(layout->x, layout->y + layout->header.h,
-            layout->w, layout->row.height), 0, c->colors[GUI_COLOR_WINDOW]);
+            gui_rect(layout->bounds.x, layout->bounds.y + layout->header.h,
+            layout->bounds.w, layout->row.height), 0, c->colors[GUI_COLOR_WINDOW]);
 
     /* setup header bounds and growable icon space */
-    layout->header.x = layout->x + panel_padding.x;
-    layout->header.y = layout->y + panel_padding.y;
-    layout->header.w = MAX(layout->w, 2 * panel_padding.x);
+    layout->header.x = layout->bounds.x + panel_padding.x;
+    layout->header.y = layout->bounds.y + panel_padding.y;
+    layout->header.w = MAX(layout->bounds.w, 2 * panel_padding.x);
     layout->header.w -= 2 * panel_padding.x;
     layout->header.front = layout->header.x;
     layout->header.back = layout->header.x + layout->header.w;
-    layout->height = layout->h - (layout->header.h + 2 * item_spacing.y);
+    layout->height = layout->bounds.h - (layout->header.h + 2 * item_spacing.y);
     layout->height -= layout->footer_h;
-    gui_command_buffer_push_rect(out, gui_rect(layout->x, layout->y, layout->w,
-        layout->header.h), 0, c->colors[GUI_COLOR_HEADER]);
+    gui_command_buffer_push_rect(out, gui_rect(layout->bounds.x, layout->bounds.y,
+        layout->bounds.w, layout->header.h), 0, c->colors[GUI_COLOR_HEADER]);
 }
 
 gui_bool
@@ -3751,21 +3747,22 @@ gui_header_end(struct gui_context *layout)
         const gui_float width = layout->width + scrollbar_width;
 
         /* draw the header border lines */
-        gui_command_buffer_push_line(out, layout->x, layout->y, layout->x,
-                layout->y + layout->header.h, c->colors[GUI_COLOR_BORDER]);
-        gui_command_buffer_push_line(out, layout->x + width, layout->y, layout->x + width,
-                layout->y + layout->header.h, c->colors[GUI_COLOR_BORDER]);
+        gui_command_buffer_push_line(out, layout->bounds.x, layout->bounds.y, layout->bounds.x,
+                layout->bounds.y + layout->header.h, c->colors[GUI_COLOR_BORDER]);
+        gui_command_buffer_push_line(out, layout->bounds.x + width, layout->bounds.y,
+                layout->bounds.x + width, layout->bounds.y + layout->header.h,
+                c->colors[GUI_COLOR_BORDER]);
         if (layout->flags & GUI_WINDOW_BORDER_HEADER)
-            gui_command_buffer_push_line(out, layout->x, layout->y + layout->header.h,
-                layout->x + layout->w, layout->y + layout->header.h,
+            gui_command_buffer_push_line(out, layout->bounds.x, layout->bounds.y + layout->header.h,
+                layout->bounds.x + layout->bounds.w, layout->bounds.y + layout->header.h,
                 c->colors[GUI_COLOR_BORDER]);
     }
 
     /* update the panel clipping rect to include the header */
-    layout->clip.x = layout->x;
-    layout->clip.w = layout->w;
-    layout->clip.y = layout->y + layout->header.h;
-    layout->clip.h = layout->h - (layout->footer_h + layout->header.h);
+    layout->clip.x = layout->bounds.x;
+    layout->clip.w = layout->bounds.w;
+    layout->clip.y = layout->bounds.y + layout->header.h;
+    layout->clip.h = layout->bounds.h - (layout->footer_h + layout->header.h);
     layout->clip.h -= (panel_padding.y + item_padding.y);
     gui_command_buffer_push_scissor(out, layout->clip);
 }
@@ -3819,7 +3816,7 @@ gui_menubar_begin(struct gui_context *layout)
     if (!layout || layout->flags & GUI_WINDOW_HIDDEN || layout->flags & GUI_WINDOW_MINIMIZED)
         return;
     layout->menu.x = layout->at_x;
-    layout->menu.y = layout->y + layout->header.h;
+    layout->menu.y = layout->bounds.y + layout->header.h;
     layout->menu.w = layout->width;
     layout->menu.offset = layout->offset;
     layout->offset.y = 0;
@@ -3843,10 +3840,10 @@ gui_menubar_end(struct gui_context *layout)
     item_padding = gui_style_property(c, GUI_PROPERTY_ITEM_PADDING);
 
     layout->menu.h = (layout->at_y + layout->row.height-1) - layout->menu.y;
-    layout->clip.y = layout->y + layout->header.h + layout->menu.h;
+    layout->clip.y = layout->bounds.y + layout->header.h + layout->menu.h;
     layout->height -= layout->menu.h;
     layout->offset = layout->menu.offset;
-    layout->clip.h = layout->h - (layout->footer_h + layout->header.h + layout->menu.h);
+    layout->clip.h = layout->bounds.h - (layout->footer_h + layout->header.h + layout->menu.h);
     layout->clip.h -= (panel_padding.y + item_padding.y);
     gui_command_buffer_push_scissor(out, layout->clip);
 }
@@ -3888,8 +3885,8 @@ gui_panel_layout(struct gui_context *layout, gui_float height, gui_size cols)
     layout->row.height = height + item_spacing.y;
     layout->row.item_offset = 0;
     if (layout->flags & GUI_WINDOW_DYNAMIC)
-        gui_command_buffer_push_rect(out,  gui_rect(layout->x, layout->at_y,
-            layout->w, height + panel_padding.y), 0, *color);
+        gui_command_buffer_push_rect(out,  gui_rect(layout->bounds.x, layout->at_y,
+            layout->bounds.w, height + panel_padding.y), 0, *color);
 }
 
 static void
@@ -4056,6 +4053,42 @@ gui_layout_row_space_push(struct gui_context *layout, struct gui_rect rect)
     if (!layout) return;
     if (!layout->valid) return;
     layout->row.item = rect;
+}
+
+struct gui_vec2
+gui_layout_row_space_to_screen(struct gui_context *layout, struct gui_vec2 ret)
+{
+    GUI_ASSERT(layout);
+    ret.x = ret.x + layout->clip.x + layout->offset.x;
+    ret.y = ret.y + layout->clip.y + layout->offset.y;
+    return ret;
+}
+
+struct gui_vec2
+gui_layout_row_space_to_local(struct gui_context *layout, struct gui_vec2 ret)
+{
+    GUI_ASSERT(layout);
+    ret.x = ret.x - (layout->clip.x + layout->offset.x);
+    ret.y = ret.y - (layout->clip.y + layout->offset.y);
+    return ret;
+}
+
+struct gui_rect
+gui_layout_row_space_rect_to_screen(struct gui_context *layout, struct gui_rect ret)
+{
+    GUI_ASSERT(layout);
+    ret.x = ret.x + layout->clip.x + layout->offset.x;
+    ret.y = ret.y + layout->clip.y + layout->offset.y;
+    return ret;
+}
+
+struct gui_rect
+gui_layout_row_space_rect_to_local(struct gui_context *layout, struct gui_rect ret)
+{
+    GUI_ASSERT(layout);
+    ret.x = ret.x - (layout->clip.x + layout->offset.x);
+    ret.y = ret.y - (layout->clip.y + layout->offset.y);
+    return ret;
 }
 
 void
@@ -5309,7 +5342,7 @@ gui_popup_begin(struct gui_context *parent, struct gui_context *popup,
     flags |= GUI_WINDOW_BORDER|GUI_WINDOW_TAB;
     if (type == GUI_POPUP_DYNAMIC)
         flags |= GUI_WINDOW_DYNAMIC;
-    gui_window_init(&panel, rect.x, rect.y, rect.w, rect.h,flags, 0,
+    gui_window_init(&panel, gui_rect(rect.x, rect.y, rect.w, rect.h),flags, 0,
         parent->style, parent->input);
 
     /* begin sub-buffer and create panel layout  */
@@ -5353,10 +5386,10 @@ gui_popup_end(struct gui_context *parent, struct gui_context *popup)
     }
 
     out = parent->buffer;
-    pan.x = popup->x;
-    pan.y = popup->y;
-    pan.w = popup->width;
-    pan.h = popup->height;
+    pan.bounds.x = popup->bounds.x;
+    pan.bounds.y = popup->bounds.y;
+    pan.bounds.w = popup->width;
+    pan.bounds.h = popup->height;
     pan.flags = GUI_WINDOW_BORDER|GUI_WINDOW_TAB;
 
     /* end popup and reset clipping rect back to parent panel */
@@ -5378,7 +5411,8 @@ gui_popup_nonblock_begin(struct gui_context *parent,
         gui_bool inbody = GUI_INBOX(in->mouse_clicked_pos.x,
             in->mouse_clicked_pos.y, body.x, body.y, body.w, body.h);
         gui_bool inpanel = GUI_INBOX(in->mouse_clicked_pos.x,
-            in->mouse_clicked_pos.y, parent->x, parent->y, parent->w, parent->h);
+            in->mouse_clicked_pos.y, parent->bounds.x, parent->bounds.y,
+            parent->bounds.w, parent->bounds.h);
         if ((in->mouse_down && in->mouse_clicked) && !inbody && inpanel)
             is_active = gui_false;
     }
@@ -5613,7 +5647,7 @@ gui_menu_begin(struct gui_context *parent, struct gui_context *menu,
         body.x = header.x;
         body.w = width;
         body.y = header.y + header.h;
-        body.h = (parent->y + parent->h) - body.y;
+        body.h = (parent->bounds.y + parent->bounds.h) - body.y;
         if (!gui_popup_nonblock_begin(parent, menu, GUI_WINDOW_NO_SCROLLBAR, active,
             is_active, body)) goto failed;
         menu->flags |= GUI_WINDOW_COMBO_MENU;
@@ -5917,7 +5951,8 @@ gui_group_begin(struct gui_context *p, struct gui_context *g,
     if (p->flags & GUI_WINDOW_ROM)
         flags |= GUI_WINDOW_ROM;
 
-    gui_window_init(&panel, bounds.x, bounds.y,bounds.w,bounds.h,flags, 0, p->style, p->input);
+    gui_window_init(&panel, gui_rect(bounds.x, bounds.y,bounds.w,bounds.h),
+        flags, 0, p->style, p->input);
     panel.buffer = *p->buffer;
     gui_begin(g, &panel);
     *p->buffer = panel.buffer;
@@ -5966,14 +6001,15 @@ gui_group_end(struct gui_context *p, struct gui_context *g)
     gui_zero(&pan, sizeof(pan));
 
     out = p->buffer;
-    pan.x = g->x;
-    pan.y = g->y;
-    pan.w = g->width;
-    pan.h = g->height;
+    pan.bounds.x = g->bounds.x;
+    pan.bounds.y = g->bounds.y;
+    pan.bounds.w = g->width;
+    pan.bounds.h = g->height;
     pan.flags = g->flags|GUI_WINDOW_TAB;
 
     /* setup clipping rect to finalize group panel drawing back to parent */
-    gui_unify(&clip, &p->clip, g->clip.x, g->clip.y, g->x + g->w, g->y + g->h);
+    gui_unify(&clip, &p->clip, g->clip.x, g->clip.y, g->bounds.x + g->bounds.w,
+        g->bounds.y + g->bounds.h);
     gui_command_buffer_push_scissor(out, clip);
     gui_end(g, &pan);
     gui_command_buffer_push_scissor(out, p->clip);
@@ -6091,8 +6127,8 @@ gui_shelf_begin(struct gui_context *parent, struct gui_context *shelf,
         flags = GUI_WINDOW_BORDER|GUI_WINDOW_TAB;
         if (parent->flags & GUI_WINDOW_ROM)
             flags |= GUI_WINDOW_ROM;
-        gui_window_init(&panel, bounds.x, bounds.y, bounds.w, bounds.h, flags,
-            0, config, parent->input);
+        gui_window_init(&panel, gui_rect(bounds.x, bounds.y, bounds.w, bounds.h),
+            flags, 0, config, parent->input);
 
         panel.buffer = *parent->buffer;
         gui_begin(shelf, &panel);
@@ -6136,11 +6172,11 @@ gui_shelf_end(struct gui_context *p, struct gui_context *s)
     gui_zero(&pan, sizeof(pan));
 
     out = p->buffer;
-    pan.x = s->x; pan.y = s->y;
-    pan.w = s->w; pan.h = s->h;
+    pan.bounds = s->bounds;
     pan.flags = s->flags|GUI_WINDOW_TAB;
 
-    gui_unify(&clip, &p->clip, s->clip.x, s->clip.y, s->x + s->w, s->y + s->h);
+    gui_unify(&clip, &p->clip, s->clip.x, s->clip.y,
+        s->bounds.x + s->bounds.w, s->bounds.y + s->bounds.h);
     gui_command_buffer_push_scissor(out, clip);
     gui_end(s, &pan);
     gui_command_buffer_push_scissor(out, p->clip);

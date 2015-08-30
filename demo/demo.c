@@ -698,10 +698,10 @@ init_demo(struct demo_gui *gui, struct gui_font *font)
     gui_style_default(config, GUI_DEFAULT_ALL, font);
 
     /* panel */
-    gui_window_init(&gui->panel, 30, 30, 280, 530,
+    gui_window_init(&gui->panel, gui_rect(30, 30, 280, 530),
         GUI_WINDOW_BORDER|GUI_WINDOW_MOVEABLE|GUI_WINDOW_SCALEABLE,
         &gui->queue, config, gui->input);
-    gui_window_init(&gui->sub, 400, 50, 220, 180,
+    gui_window_init(&gui->sub, gui_rect(400, 50, 220, 180),
         GUI_WINDOW_BORDER|GUI_WINDOW_MOVEABLE|GUI_WINDOW_SCALEABLE,
         &gui->queue, config, gui->input);
 

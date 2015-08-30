@@ -1892,10 +1892,8 @@ enum gui_window_flags {
 };
 
 struct gui_window {
-    gui_float x, y;
-    /* position in the os window */
-    gui_float w, h;
-    /* size with width and height of the window */
+    struct gui_rect bounds;
+    /* size with width and height and position of the window */
     gui_flags flags;
     /* window flags modifing its behavior */
     struct gui_vec2 offset;
@@ -1910,8 +1908,8 @@ struct gui_window {
     /* input state for updating the window and all its widgets */
 };
 
-void gui_window_init(struct gui_window*, gui_float x, gui_float y, gui_float w,
-                    gui_float h, gui_flags flags, struct gui_command_queue*,
+void gui_window_init(struct gui_window*, struct gui_rect bounds,
+                    gui_flags flags, struct gui_command_queue*,
                     const struct gui_style*, const struct gui_input *in);
 /*  this function initilizes and setups the window
     Input:
@@ -2025,7 +2023,7 @@ struct gui_menu {
 struct gui_context {
     gui_flags flags;
     /* window flags modifing its behavior */
-    gui_float x, y, w, h;
+    struct gui_rect bounds;
     /* position and size of the window in the os window */
     struct gui_vec2 offset;
     /* window scrollbar offset */
@@ -2216,15 +2214,19 @@ void gui_menubar_end(struct gui_context*);
     but offers the most positioning freedom.
 
     window layout function API
-    gui_layout_row               -- user defined widget row layout
-    gui_layout_row_dynamic       -- scaling fixed column row layout
-    gui_layout_row_static        -- fixed width fixed column row layout
-    gui_layout_row_begin         -- begins the row build up process
-    gui_layout_row_push          -- pushes the next widget width
-    gui_layout_row_end           -- ends the row build up process
-    gui_layout_row_space_begin   -- creates a free placing space in the window
-    gui_layout_row_space_widget  -- pushes a widget into the space
-    gui_layout_row_space_end     -- finishes the free drawingp process
+    gui_layout_row                      -- user defined widget row layout
+    gui_layout_row_dynamic              -- scaling fixed column row layout
+    gui_layout_row_static               -- fixed width fixed column row layout
+    gui_layout_row_begin                -- begins the row build up process
+    gui_layout_row_push                 -- pushes the next widget width
+    gui_layout_row_end                  -- ends the row build up process
+    gui_layout_row_space_begin          -- creates a free placing space in the window
+    gui_layout_row_space_widget         -- pushes a widget into the space
+    gui_layout_row_space_to_screen      -- converts from local space to screen
+    gui_layout_row_space_to_local       -- conversts from screen to local space
+    gui_layout_row_space_rect_to_screen -- converts from local space to screen
+    gui_layout_row_space_rect_to_local  -- conversts from screen to local space
+    gui_layout_row_space_end            -- finishes the free drawingp process
 
     window tree layout function API
     gui_context_push            -- pushes a new node/collapseable header/tab
@@ -2292,6 +2294,34 @@ void gui_layout_row_space_push(struct gui_context*, struct gui_rect);
     be added into the previously allocated window space
     Input:
     - rectangle with position and size as a ratio of the next widget to add
+*/
+struct gui_vec2 gui_layout_row_space_to_screen(struct gui_context*, struct gui_vec2);
+/*  this functions calculates a position from local space to screen space
+    Input:
+    - position in local layout space
+    Output:
+    - position in screen space
+*/
+struct gui_vec2 gui_layout_row_space_to_local(struct gui_context*, struct gui_vec2);
+/*  this functions calculates a position from screen space to local space
+    Input:
+    - position in screen layout space
+    Output:
+    - position in local layout space
+*/
+struct gui_rect gui_layout_row_space_rect_to_screen(struct gui_context*, struct gui_rect);
+/*  this functions calculates a rectange from local space to screen space
+    Input:
+    - rectangle in local layout space
+    Output:
+    - rectangle in screen space
+*/
+struct gui_rect gui_layout_row_space_rect_to_local(struct gui_context*, struct gui_rect);
+/*  this functions calculates a rectangle from screen space to local space
+    Input:
+    - rectangle in screen space
+    Output:
+    - rectangle in local space
 */
 void gui_layout_row_space_end(struct gui_context*);
 /*  this functions finishes the scaleable space filling process */
