@@ -2070,6 +2070,10 @@ void gui_end(struct gui_context*, struct gui_window*);
 /*  this function ends the window layout build up process and updates the window */
 struct gui_command_buffer* gui_canvas(struct gui_context*);
 /* this functions returns the currently used draw command buffer */
+const struct gui_input *gui_input(struct gui_context*);
+/* this functions returns the currently used input */
+struct gui_command_queue *gui_queue(struct gui_context*);
+/* this functions returns the currently used input */
 /*
  * --------------------------------------------------------------
  *                          HEADER

@@ -2178,7 +2178,7 @@ gui_widget_slider(struct gui_command_buffer *out, struct gui_rect slider,
     /* calculate slider background bar bounds */
     bar.x = slider.x;
     bar.y = slider.y;
-    bar.w = (slider.w - (2 * s->padding.x));
+    bar.w = slider.w;
     bar.h = slider.h;
 
     /* updated the slider value by user input */
@@ -2207,8 +2207,8 @@ gui_widget_slider(struct gui_command_buffer *out, struct gui_rect slider,
         struct gui_rect fill;
         cursor.w = cursor.h;
         cursor.x = (slider_value <= slider_min) ? cursor.x:
-            (slider_value >= slider_max) ? ((bar.x + bar.w) - cursor.h) :
-            cursor.x + (cursor.w/2) - cursor.h/2;
+            (slider_value >= slider_max) ? ((bar.x + bar.w) - cursor.w) :
+            cursor.x - (cursor.w/2);
 
         fill.x = bar.x + 2;
         fill.y = bar.y + 2;
@@ -3177,7 +3177,8 @@ gui_begin(struct gui_context *context, struct gui_window *window)
                     const struct gui_window *cur;
                     cur = GUI_CONTAINER_OF_CONST(iter, struct gui_window, buffer);
                     if (GUI_INBOX(in->mouse_prev.x,in->mouse_prev.y,cur->x,cur->y,cur->w,cur->h) &&
-                      !(cur->flags & GUI_WINDOW_MINIMIZED) && !(cur->flags & GUI_WINDOW_HIDDEN)) break;
+                      !(cur->flags & GUI_WINDOW_MINIMIZED) && !(cur->flags & GUI_WINDOW_HIDDEN))
+                        break;
                     iter = iter->next;
                 }
                 /* current panel is active panel in that position so transfer to top
@@ -3244,7 +3245,8 @@ gui_begin(struct gui_context *context, struct gui_window *window)
     }
 
     context->flags = window->flags;
-    context->valid = !(window->flags & GUI_WINDOW_HIDDEN) && !(window->flags & GUI_WINDOW_MINIMIZED);
+    context->valid = !(window->flags & GUI_WINDOW_HIDDEN) &&
+        !(window->flags & GUI_WINDOW_MINIMIZED);
     context->footer_h = scaler_size.y + item_padding.y;
 
     /* calculate the window size and window footer height */
@@ -3467,6 +3469,13 @@ struct gui_command_buffer*
 gui_canvas(struct gui_context *layout)
 {return layout->buffer;}
 
+const struct gui_input*
+gui_input(struct gui_context *layout)
+{return layout->input;}
+
+struct gui_command_queue*
+gui_queue(struct gui_context *layout)
+{return layout->queue;}
 /*
  * -------------------------------------------------------------
  *
