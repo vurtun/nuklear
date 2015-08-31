@@ -77,7 +77,7 @@ while (1) {
         if (gui_option(&context, "easy", option == EASY)) option = EASY;
         if (gui_option(&context, "hard", option == HARD)) option = HARD;
         gui_label(&context, "Weapon:", GUI_TEXT_LEFT);
-        gui_combo(&context, items, LEN(items), &selected, 20, &combo->active);
+        gui_combo(&context, items, LEN(items), &item, 20, &active);
     }
     gui_end(&context, &panel);
 
