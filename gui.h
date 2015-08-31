@@ -91,17 +91,18 @@ typedef unsigned long gui_size;
 typedef unsigned long gui_ptr;
 #endif
 
+/* Basic types */
 enum {gui_false, gui_true};
 enum gui_heading {GUI_UP, GUI_RIGHT, GUI_DOWN, GUI_LEFT};
 struct gui_color {gui_byte r,g,b,a;};
 struct gui_vec2 {gui_float x,y;};
 struct gui_vec2i {gui_short x, y;};
 struct gui_rect {gui_float x,y,w,h;};
-struct gui_key {gui_bool down, clicked;};
 typedef gui_char gui_glyph[GUI_UTF_SIZE];
+struct gui_key {gui_bool down; gui_uint clicked;};
 typedef union {void *ptr; gui_int id;} gui_handle;
 struct gui_image {gui_handle handle; gui_ushort w, h; gui_ushort region[4];};
-enum gui_widget_states {GUI_INACTIVE = gui_false, GUI_AYOUT_ACTIVE = gui_true};
+enum gui_widget_states {GUI_INACTIVE = gui_false, GUI_ACTIVE = gui_true};
 enum gui_collapse_states {GUI_MINIMIZED = gui_false, GUI_MAXIMIZED = gui_true};
 
 /* Callbacks */
@@ -228,27 +229,49 @@ enum gui_keys {
     GUI_KEY_MAX
 };
 
-struct gui_input {
+/* every used mouse button */
+enum gui_buttons {
+    GUI_BUTTON_LEFT,
+    GUI_BUTTON_RIGHT,
+    GUI_BUTTON_MAX
+};
+
+struct gui_mouse_button {
+    gui_bool down;
+    /* current button state */
+    gui_uint clicked;
+    /* button state change */
+    struct gui_vec2 clicked_pos;
+    /* mouse position of last state change */
+};
+
+struct gui_mouse {
+    struct gui_mouse_button buttons[GUI_BUTTON_MAX];
+    /* mouse button states */
+    struct gui_vec2 pos;
+    /* current mouse position */
+    struct gui_vec2 prev;
+    /* mouse position in the last frame */
+    struct gui_vec2 delta;
+    /* mouse travelling distance from last to current frame */
+    gui_float scroll_delta;
+    /* number of steps in the up or down scroll direction */
+};
+
+struct gui_keyboard {
     struct gui_key keys[GUI_KEY_MAX];
     /* state of every used key */
     gui_char text[GUI_INPUT_MAX];
     /* utf8 text input frame buffer */
     gui_size text_len;
     /* text input frame buffer length in bytes */
-    struct gui_vec2 mouse_pos;
-    /* current mouse position */
-    struct gui_vec2 mouse_prev;
-    /* mouse position in the last frame */
-    struct gui_vec2 mouse_delta;
-    /* mouse travelling distance from last to current frame */
-    gui_bool mouse_down;
-    /* current mouse button state */
-    gui_uint mouse_clicked;
-    /* number of mouse button state transistions between frames */
-    gui_float scroll_delta;
-    /* number of steps in the up or down scroll direction */
-    struct gui_vec2 mouse_clicked_pos;
-    /* mouse position of the last mouse button state change */
+};
+
+struct gui_input {
+    struct gui_keyboard keyboard;
+    /* current keyboard key + text input state */
+    struct gui_mouse mouse;
+    /* current mouse button and position state */
 };
 
 void gui_input_begin(struct gui_input*);
@@ -265,9 +288,10 @@ void gui_input_key(struct gui_input*, enum gui_keys, gui_bool down);
     - key identifier
     - the new state of the key
 */
-void gui_input_button(struct gui_input*, gui_int x, gui_int y, gui_bool down);
+void gui_input_button(struct gui_input*, enum gui_buttons, gui_int x, gui_int y, gui_bool down);
 /*  this function updates the current state of the button
     Input:
+    - mouse button identifier
     - local os window X position
     - local os window Y position
     - the new state of the button
@@ -289,16 +313,25 @@ void gui_input_char(struct gui_input*, char);
 */
 void gui_input_end(struct gui_input*);
 /*  this function sets the input state to readable */
-gui_bool gui_input_is_mouse_click_in_rect(const struct gui_input*, struct gui_rect);
-/*  this function returns true if a mouse click inside a rectangle occured */
+gui_bool gui_input_has_mouse_click_in_rect(const struct gui_input*, enum gui_buttons, struct gui_rect);
+/*  this function returns true if a mouse click inside a rectangle occured in prev frames */
+gui_bool gui_input_has_mouse_click_down_in_rect(const struct gui_input*, enum gui_buttons,
+                                                struct gui_rect, gui_bool down);
+/*  this function returns true if a mouse down click inside a rectangle occured in prev frames */
+gui_bool gui_input_is_mouse_click_in_rect(const struct gui_input*, enum gui_buttons, struct gui_rect);
+/*  this function returns true if a mouse click inside a rectangle occured and was just clicked */
+gui_bool gui_input_is_mouse_prev_hovering_rect(const struct gui_input*, struct gui_rect);
+/*  this function returns true if the mouse hovers over a rectangle */
 gui_bool gui_input_is_mouse_hovering_rect(const struct gui_input*, struct gui_rect);
 /*  this function returns true if the mouse hovers over a rectangle */
-gui_bool gui_input_mouse_clicked(const struct gui_input*, struct gui_rect);
+gui_bool gui_input_mouse_clicked(const struct gui_input*, enum gui_buttons, struct gui_rect);
 /*  this function returns true if a mouse click inside a rectangle occured
     and the mouse still hovers over the rectangle*/
-gui_bool gui_input_is_mouse_down(const struct gui_input*);
+gui_bool gui_input_is_mouse_down(const struct gui_input*, enum gui_buttons);
 /*  this function returns true if the current mouse button is down */
-gui_bool gui_input_is_mouse_released(const struct gui_input*);
+gui_bool gui_input_is_mouse_pressed(const struct gui_input*, enum gui_buttons);
+/*  this function returns true if the current mouse button is down and state change*/
+gui_bool gui_input_is_mouse_released(const struct gui_input*, enum gui_buttons);
 /*  this function returns true if the mouse button was previously pressed but
     was now released */
 gui_bool gui_input_is_key_pressed(const struct gui_input*, enum gui_keys);
@@ -1144,7 +1177,7 @@ enum gui_button_behavior {
     /* button only returns on activation */
     GUI_BUTTON_REPEATER,
     /* button returns as long as the button is pressed */
-    GUI_BUTTON_MAX
+    GUI_BUTTON_BEHAVIOR_MAX
 };
 
 struct gui_text {

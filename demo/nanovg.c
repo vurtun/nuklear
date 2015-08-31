@@ -214,7 +214,9 @@ btn(struct gui_input *in, SDL_Event *evt, gui_bool down)
     const gui_int x = evt->button.x;
     const gui_int y = evt->button.y;
     if (evt->button.button == SDL_BUTTON_LEFT)
-        gui_input_button(in, x, y, down);
+        gui_input_button(in, GUI_BUTTON_LEFT, x, y, down);
+    else if (evt->button.button == SDL_BUTTON_LEFT)
+        gui_input_button(in, GUI_BUTTON_RIGHT, x, y, down);
 }
 
 static void

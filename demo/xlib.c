@@ -418,7 +418,9 @@ btn(struct gui_input *in, XEvent *evt, gui_bool down)
     const gui_int x = evt->xbutton.x;
     const gui_int y = evt->xbutton.y;
     if (evt->xbutton.button == Button1)
-        gui_input_button(in, x, y, down);
+        gui_input_button(in, GUI_BUTTON_LEFT, x, y, down);
+    else if (evt->xbutton.button == Button3)
+        gui_input_button(in, GUI_BUTTON_RIGHT, x, y, down);
 }
 
 static void

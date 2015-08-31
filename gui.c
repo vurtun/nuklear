@@ -446,12 +446,13 @@ gui_input_begin(struct gui_input *in)
     GUI_ASSERT(in);
     if (!in) return;
 
-    in->mouse_clicked = 0;
-    in->text_len = 0;
-    in->scroll_delta = 0;
-    gui_vec2_mov(in->mouse_prev, in->mouse_pos);
+    for (i = 0; i < GUI_BUTTON_MAX; ++i)
+        in->mouse.buttons[i].clicked = 0;
+    in->keyboard.text_len = 0;
+    in->mouse.scroll_delta = 0;
+    gui_vec2_mov(in->mouse.prev, in->mouse.pos);
     for (i = 0; i < GUI_KEY_MAX; i++)
-        in->keys[i].clicked = 0;
+        in->keyboard.keys[i].clicked = 0;
 }
 
 void
@@ -459,8 +460,8 @@ gui_input_motion(struct gui_input *in, gui_int x, gui_int y)
 {
     GUI_ASSERT(in);
     if (!in) return;
-    in->mouse_pos.x = (gui_float)x;
-    in->mouse_pos.y = (gui_float)y;
+    in->mouse.pos.x = (gui_float)x;
+    in->mouse.pos.y = (gui_float)y;
 }
 
 void
@@ -468,21 +469,23 @@ gui_input_key(struct gui_input *in, enum gui_keys key, gui_bool down)
 {
     GUI_ASSERT(in);
     if (!in) return;
-    if (in->keys[key].down == down) return;
-    in->keys[key].down = down;
-    in->keys[key].clicked++;
+    if (in->keyboard.keys[key].down == down) return;
+    in->keyboard.keys[key].down = down;
+    in->keyboard.keys[key].clicked++;
 }
 
 void
-gui_input_button(struct gui_input *in, gui_int x, gui_int y, gui_bool down)
+gui_input_button(struct gui_input *in, enum gui_buttons id, gui_int x, gui_int y, gui_bool down)
 {
+    struct gui_mouse_button *btn;
     GUI_ASSERT(in);
     if (!in) return;
-    if (in->mouse_down == down) return;
-    in->mouse_clicked_pos.x = (gui_float)x;
-    in->mouse_clicked_pos.y = (gui_float)y;
-    in->mouse_down = down;
-    in->mouse_clicked++;
+    if (in->mouse.buttons[id].down == down) return;
+    btn = &in->mouse.buttons[id];
+    btn->clicked_pos.x = (gui_float)x;
+    btn->clicked_pos.y = (gui_float)y;
+    btn->down = down;
+    btn->clicked++;
 }
 
 void
@@ -490,7 +493,7 @@ gui_input_scroll(struct gui_input *in, gui_float y)
 {
     GUI_ASSERT(in);
     if (!in) return;
-    in->scroll_delta += y;
+    in->mouse.scroll_delta += y;
 }
 
 void
@@ -502,9 +505,10 @@ gui_input_glyph(struct gui_input *in, const gui_glyph glyph)
     if (!in) return;
 
     len = gui_utf_decode(glyph, &unicode, GUI_UTF_SIZE);
-    if (len && ((in->text_len + len) < GUI_INPUT_MAX)) {
-        gui_utf_encode(unicode, &in->text[in->text_len], GUI_INPUT_MAX - in->text_len);
-        in->text_len += len;
+    if (len && ((in->keyboard.text_len + len) < GUI_INPUT_MAX)) {
+        gui_utf_encode(unicode, &in->keyboard.text[in->keyboard.text_len],
+            GUI_INPUT_MAX - in->keyboard.text_len);
+        in->keyboard.text_len += len;
     }
 }
 
@@ -522,45 +526,87 @@ gui_input_end(struct gui_input *in)
 {
     GUI_ASSERT(in);
     if (!in) return;
-    in->mouse_delta = gui_vec2_sub(in->mouse_pos, in->mouse_prev);
+    in->mouse.delta = gui_vec2_sub(in->mouse.pos, in->mouse.prev);
 }
 
 gui_bool
-gui_input_is_mouse_click_in_rect(const struct gui_input *i, struct gui_rect b)
+gui_input_has_mouse_click_in_rect(const struct gui_input *i, enum gui_buttons id,
+    struct gui_rect b)
 {
+    const struct gui_mouse_button *btn;
     if (!i) return gui_false;
-    if (!GUI_INBOX(i->mouse_clicked_pos.x,i->mouse_clicked_pos.y,b.x,b.y,b.w,b.h))
+    btn = &i->mouse.buttons[id];
+    if (!GUI_INBOX(btn->clicked_pos.x,btn->clicked_pos.y,b.x,b.y,b.w,b.h))
         return gui_false;
-    return (i->mouse_down && i->mouse_clicked) ? gui_true : gui_false;
+    return gui_true;
+}
+
+gui_bool
+gui_input_has_mouse_click_down_in_rect(const struct gui_input *i, enum gui_buttons id,
+    struct gui_rect b, gui_bool down)
+{
+    const struct gui_mouse_button *btn;
+    if (!i) return gui_false;
+    btn = &i->mouse.buttons[id];
+    return gui_input_has_mouse_click_in_rect(i, id, b) && (btn->down == down);
+}
+
+gui_bool
+gui_input_is_mouse_click_in_rect(const struct gui_input *i, enum gui_buttons id,
+    struct gui_rect b)
+{
+    const struct gui_mouse_button *btn;
+    if (!i) return gui_false;
+    btn = &i->mouse.buttons[id];
+    return (gui_input_has_mouse_click_down_in_rect(i, id, b, gui_true) &&
+            btn->clicked) ? gui_true : gui_false;
 }
 
 gui_bool
 gui_input_is_mouse_hovering_rect(const struct gui_input *i, struct gui_rect rect)
 {
     if (!i) return gui_false;
-    return GUI_INBOX(i->mouse_pos.x, i->mouse_pos.y, rect.x, rect.y, rect.w, rect.h);
+    return GUI_INBOX(i->mouse.pos.x, i->mouse.pos.y, rect.x, rect.y, rect.w, rect.h);
 }
 
 gui_bool
-gui_input_mouse_clicked(const struct gui_input *i, struct gui_rect rect)
+gui_input_is_mouse_prev_hovering_rect(const struct gui_input *i, struct gui_rect rect)
+{
+    if (!i) return gui_false;
+    return GUI_INBOX(i->mouse.prev.x, i->mouse.prev.y, rect.x, rect.y, rect.w, rect.h);
+}
+
+gui_bool
+gui_input_mouse_clicked(const struct gui_input *i, enum gui_buttons id, struct gui_rect rect)
 {
     if (!i) return gui_false;
     if (!gui_input_is_mouse_hovering_rect(i, rect)) return gui_false;
-    return gui_input_is_mouse_click_in_rect(i, rect);
+    return gui_input_is_mouse_click_in_rect(i, id, rect);
 }
 
 gui_bool
-gui_input_is_mouse_down(const struct gui_input *i)
+gui_input_is_mouse_down(const struct gui_input *i, enum gui_buttons id)
 {
     if (!i) return gui_false;
-    return i->mouse_down;
+    return i->mouse.buttons[id].down;
 }
 
 gui_bool
-gui_input_is_mouse_released(const struct gui_input *i)
+gui_input_is_mouse_pressed(const struct gui_input *i, enum gui_buttons id)
+{
+    const struct gui_mouse_button *b;
+    if (!i) return gui_false;
+    b = &i->mouse.buttons[id];
+    if (b->down && b->clicked)
+        return gui_true;
+    return gui_false;
+}
+
+gui_bool
+gui_input_is_mouse_released(const struct gui_input *i, enum gui_buttons id)
 {
     if (!i) return gui_false;
-    return (!i->mouse_down && i->mouse_clicked) ? gui_true : gui_false;
+    return (!i->mouse.buttons[id].down && i->mouse.buttons[id].clicked) ? gui_true : gui_false;
 }
 
 gui_bool
@@ -568,7 +614,7 @@ gui_input_is_key_pressed(const struct gui_input *i, enum gui_keys key)
 {
     const struct gui_key *k;
     if (!i) return gui_false;
-    k = &i->keys[key];
+    k = &i->keyboard.keys[key];
     if (k->down && k->clicked)
         return gui_true;
     return gui_false;
@@ -579,7 +625,7 @@ gui_input_is_key_released(const struct gui_input *i, enum gui_keys key)
 {
     const struct gui_key *k;
     if (!i) return gui_false;
-    k = &i->keys[key];
+    k = &i->keyboard.keys[key];
     if (!k->down && k->clicked)
         return gui_true;
     return gui_false;
@@ -590,7 +636,7 @@ gui_input_is_key_down(const struct gui_input *i, enum gui_keys key)
 {
     const struct gui_key *k;
     if (!i) return gui_false;
-    k = &i->keys[key];
+    k = &i->keyboard.keys[key];
     if (k->down) return gui_true;
     return gui_false;
 }
@@ -1635,16 +1681,17 @@ gui_edit_box_buffer_input(struct gui_edit_box *box, const struct gui_input *i)
     if (!box || !i) return 0;
 
     /* add user provided text to buffer until either no input or buffer space left*/
-    glyph_len = gui_utf_decode(i->text, &unicode, i->text_len);
-    while (glyph_len && ((text_len+glyph_len) <= i->text_len)) {
+    glyph_len = gui_utf_decode(i->keyboard.text, &unicode, i->keyboard.text_len);
+    while (glyph_len && ((text_len+glyph_len) <= i->keyboard.text_len)) {
         /* filter to make sure the value is correct */
         if (box->filter(unicode)) {
-            gui_edit_box_add(box, &i->text[text_len], glyph_len);
+            gui_edit_box_add(box, &i->keyboard.text[text_len], glyph_len);
             text_len += glyph_len;
             glyphes++;
         }
         src_len = src_len + glyph_len;
-        glyph_len = gui_utf_decode(i->text + src_len, &unicode, i->text_len - src_len);
+        glyph_len = gui_utf_decode(i->keyboard.text + src_len, &unicode,
+            i->keyboard.text_len - src_len);
     }
     return glyphes;
 }
@@ -1853,10 +1900,12 @@ gui_widget_do_button(struct gui_command_buffer *o, struct gui_rect r,
     background = b->normal;
     if (gui_input_is_mouse_hovering_rect(i, r)) {
         background = b->hover;
-        if (gui_input_is_mouse_click_in_rect(i, r)) {
+        if (gui_input_is_mouse_down(i, GUI_BUTTON_LEFT))
             background = b->active;
-            ret = (behavior != GUI_BUTTON_DEFAULT) ? i->mouse_down:
-                (i->mouse_down && i->mouse_clicked);
+        if (gui_input_has_mouse_click_in_rect(i, GUI_BUTTON_LEFT, r)) {
+            ret = (behavior != GUI_BUTTON_DEFAULT) ?
+                gui_input_is_mouse_down(i, GUI_BUTTON_LEFT):
+                gui_input_is_mouse_pressed(i, GUI_BUTTON_LEFT);
         }
     }
     gui_command_buffer_push_rect(o, r, b->rounding, b->border);
@@ -1887,8 +1936,9 @@ gui_widget_button_text(struct gui_command_buffer *o, struct gui_rect r,
     t.padding = gui_vec2(0,0);
     ret = gui_widget_do_button(o, r, &b->base, i, behavior, &content);
     if (gui_input_is_mouse_hovering_rect(i, r)) {
-        t.background = (ret) ? b->base.active: b->base.hover;
-        t.text = (ret) ? b->active : b->hover;
+        gui_bool is_down = gui_input_is_mouse_down(i, GUI_BUTTON_LEFT);
+        t.background =  (is_down) ? b->base.active: b->base.hover;
+        t.text = (is_down) ? b->active : b->hover;
     }
     gui_widget_text(o, content, string, gui_strsiz(string), &t, b->alignment, f);
     return ret;
@@ -1968,8 +2018,9 @@ gui_widget_button_symbol(struct gui_command_buffer *out, struct gui_rect r,
 
     ret = gui_widget_do_button(out, r, &b->base, in, bh, &content);
     if (gui_input_is_mouse_hovering_rect(in, r)) {
-        background = (ret) ? b->base.active : b->base.hover;
-        color = (ret) ? b->active : b->hover;
+        gui_bool is_down = gui_input_is_mouse_down(in, GUI_BUTTON_LEFT);
+        background = (is_down) ? b->base.active : b->base.hover;
+        color = (is_down) ? b->active : b->hover;
     } else {
         background = b->base.normal;
         color = b->normal;
@@ -2013,8 +2064,9 @@ gui_widget_button_text_symbol(struct gui_command_buffer *out, struct gui_rect r,
 
     ret = gui_widget_button_text(out, r, text, behavior, button, i, f);
     if (gui_input_is_mouse_hovering_rect(i, r)) {
-        background = (ret) ? button->base.active : button->base.hover;
-        color = (ret) ? button->active : button->hover;
+        gui_bool is_down = gui_input_is_mouse_down(i, GUI_BUTTON_LEFT);
+        background = (is_down) ? button->base.active : button->base.hover;
+        color = (is_down) ? button->active : button->hover;
     } else {
         background = button->base.normal;
         color = button->normal;
@@ -2096,8 +2148,9 @@ gui_widget_toggle(struct gui_command_buffer *out, struct gui_rect r,
     cursor.y = select.y + cursor_pad;
 
     /* update toggle state with user input */
-    toggle_active = gui_input_mouse_clicked(in, cursor) ? !toggle_active : toggle_active;
-    if (in && GUI_INBOX(in->mouse_pos.x, in->mouse_pos.y, cursor.x, cursor.y, cursor.w, cursor.h))
+    toggle_active = gui_input_mouse_clicked(in, GUI_BUTTON_LEFT, cursor) ?
+        !toggle_active : toggle_active;
+    if (in && gui_input_is_mouse_hovering_rect(in, cursor))
         col = toggle->hover;
     else col = toggle->normal;
 
@@ -2182,19 +2235,17 @@ gui_widget_slider(struct gui_command_buffer *out, struct gui_rect slider,
     bar.h = slider.h;
 
     /* updated the slider value by user input */
-    inslider = in && GUI_INBOX(in->mouse_pos.x,in->mouse_pos.y,slider.x,
-                        slider.y,slider.w,slider.h);
-    incursor = in && GUI_INBOX(in->mouse_clicked_pos.x,in->mouse_clicked_pos.y,
-                        slider.x, slider.y,slider.w,slider.h);
+    inslider = in && gui_input_is_mouse_hovering_rect(in, slider);
+    incursor = in && gui_input_has_mouse_click_down_in_rect(in, GUI_BUTTON_LEFT, slider, gui_true);
     col = (inslider) ? s->hover: s->normal;
 
-    if (in && in->mouse_down && inslider && incursor)
+    if (in && inslider && incursor)
     {
-        const float d = in->mouse_pos.x - (cursor.x + cursor.w / 2.0f);
+        const float d = in->mouse.pos.x - (cursor.x + cursor.w / 2.0f);
         const float pxstep = (slider.w - (2 * s->padding.x)) / slider_steps;
         /* only update value if the next slider step is reached*/
         col = s->active;
-        if (in->mouse_down && GUI_ABS(d) >= pxstep) {
+        if (GUI_ABS(d) >= pxstep) {
             const gui_float steps = (gui_float)((gui_int)(GUI_ABS(d) / pxstep));
             slider_value += (d > 0) ? (step * steps) : -(step * steps);
             slider_value = CLAMP(slider_min, slider_value, slider_max);
@@ -2247,9 +2298,9 @@ gui_widget_progress(struct gui_command_buffer *out, struct gui_rect r,
     prog_value = MIN(value, max);
 
     /* update progress by user input if modifyable */
-    if (in && modifyable && GUI_INBOX(in->mouse_pos.x, in->mouse_pos.y, r.x, r.y, r.w, r.h)){
-        if (in->mouse_down) {
-            gui_float ratio = (gui_float)(in->mouse_pos.x - r.x) / (gui_float)r.w;
+    if (in && modifyable && gui_input_is_mouse_hovering_rect(in, r)) {
+        if (gui_input_is_mouse_down(in, GUI_BUTTON_LEFT)) {
+            gui_float ratio = (gui_float)(in->mouse.pos.x - r.x) / (gui_float)r.w;
             prog_value = (gui_size)((gui_float)max * ratio);
             col = prog->active;
         } else col = prog->hover;
@@ -2348,8 +2399,8 @@ gui_widget_editbox(struct gui_command_buffer *out, struct gui_rect r,
         field->rounding, field->background);
 
     /* check if the editbox is activated/deactivated */
-    if (in && in->mouse_clicked && in->mouse_down)
-        box->active = GUI_INBOX(in->mouse_pos.x,in->mouse_pos.y,r.x,r.y,r.w,r.h);
+    if (in && in->mouse.buttons[GUI_BUTTON_LEFT].clicked && in->mouse.buttons[GUI_BUTTON_LEFT].down)
+        box->active = GUI_INBOX(in->mouse.pos.x,in->mouse.pos.y,r.x,r.y,r.w,r.h);
 
     /* input handling */
     if (box->active && in) {
@@ -2368,7 +2419,7 @@ gui_widget_editbox(struct gui_command_buffer *out, struct gui_rect r,
                 gui_edit_box_remove(box);
             gui_edit_box_add(box, " ", 1);
         }
-        if (in->text_len) {
+        if (in->keyboard.text_len) {
             if (diff && box->cursor != box->glyphes) {
                 /* replace text selection */
                 gui_edit_box_remove(box);
@@ -2456,10 +2507,10 @@ gui_widget_editbox(struct gui_command_buffer *out, struct gui_rect r,
         }
 
         /* set cursor by mouse click and handle text selection */
-        if (in && field->show_cursor && in->mouse_down && box->active) {
+        if (in && field->show_cursor && in->mouse.buttons[GUI_BUTTON_LEFT].down && box->active) {
             const gui_char *visible = &buffer[offset];
-            gui_float xoff = in->mouse_pos.x-(r.x+field->padding.x+field->border_size);
-            if (GUI_INBOX(in->mouse_pos.x, in->mouse_pos.y, r.x, r.y, r.w, r.h))
+            gui_float xoff = in->mouse.pos.x-(r.x+field->padding.x+field->border_size);
+            if (GUI_INBOX(in->mouse.pos.x, in->mouse.pos.y, r.x, r.y, r.w, r.h))
             {
                 /* text selection in the current text frame */
                 gui_size glyph_index;
@@ -2480,12 +2531,13 @@ gui_widget_editbox(struct gui_command_buffer *out, struct gui_rect r,
                         box->sel.active = gui_true;
                     }
                 }
-            } else if (!GUI_INBOX(in->mouse_pos.x,in->mouse_pos.y,r.x,r.y,r.w,r.h) &&
-                GUI_INBOX(in->mouse_clicked_pos.x,in->mouse_clicked_pos.y,r.x,r.y,r.w,r.h)
+            } else if (!GUI_INBOX(in->mouse.pos.x,in->mouse.pos.y,r.x,r.y,r.w,r.h) &&
+                GUI_INBOX(in->mouse.buttons[GUI_BUTTON_LEFT].clicked_pos.x,
+                    in->mouse.buttons[GUI_BUTTON_LEFT].clicked_pos.y,r.x,r.y,r.w,r.h)
                 && box->cursor != box->glyphes && box->cursor > 0)
             {
                 /* text selection out of the current text frame */
-                gui_size glyph = ((in->mouse_pos.x > r.x) &&
+                gui_size glyph = ((in->mouse.pos.x > r.x) &&
                     box->cursor+1 < box->glyphes) ?
                     box->cursor+1: box->cursor-1;
                 gui_edit_box_set_cursor(box, glyph);
@@ -2675,23 +2727,19 @@ gui_widget_scrollbarv(struct gui_command_buffer *out, struct gui_rect scroll,
 
     col = s->normal;
     if (i) {
-        const struct gui_vec2 mouse_pos = i->mouse_pos;
-        const struct gui_vec2 mouse_prev = i->mouse_prev;
-        inscroll=GUI_INBOX(mouse_pos.x,mouse_pos.y,scroll.x,scroll.y,scroll.w,scroll.h);
-        incursor=GUI_INBOX(mouse_prev.x, mouse_prev.y, cursor.x, cursor.y,
-                                cursor.w, cursor.h);
-
-        if (GUI_INBOX(mouse_pos.x,mouse_pos.y,cursor.x,cursor.y,cursor.w,cursor.h))
+        inscroll = gui_input_is_mouse_hovering_rect(i, scroll);
+        incursor = gui_input_is_mouse_prev_hovering_rect(i, cursor);
+        if (gui_input_is_mouse_hovering_rect(i, cursor))
             col = s->hover;
-        if (i->mouse_down && inscroll && incursor) {
+        if (i->mouse.buttons[GUI_BUTTON_LEFT].down && inscroll && incursor) {
             /* update cursor by mouse dragging */
-            const gui_float pixel = i->mouse_delta.y;
+            const gui_float pixel = i->mouse.delta.y;
             const gui_float delta =  (pixel / scroll.h) * target;
             scroll_offset = CLAMP(0, scroll_offset + delta, target - scroll.h);
             col = s->active;
-        } else if (s->has_scrolling && ((i->scroll_delta < 0) || (i->scroll_delta>0))) {
+        } else if (s->has_scrolling && ((i->mouse.scroll_delta < 0) || (i->mouse.scroll_delta>0))) {
             /* update cursor by mouse scrolling */
-            scroll_offset = scroll_offset + scroll_step * (-i->scroll_delta);
+            scroll_offset = scroll_offset + scroll_step * (-i->mouse.scroll_delta);
             scroll_offset = CLAMP(0, scroll_offset, target - scroll.h);
         }
         scroll_off = scroll_offset / target;
@@ -2743,23 +2791,20 @@ gui_widget_scrollbarh(struct gui_command_buffer *out, struct gui_rect scroll,
 
     col = s->normal;
     if (i) {
-        const struct gui_vec2 mouse_pos = i->mouse_pos;
-        const struct gui_vec2 mouse_prev = i->mouse_prev;
-        inscroll=GUI_INBOX(mouse_pos.x,mouse_pos.y,scroll.x,scroll.y,scroll.w,scroll.h);
-        incursor = GUI_INBOX(mouse_prev.x, mouse_prev.y, cursor.x, cursor.y,
-                                cursor.w, cursor.h);
-
-        if (GUI_INBOX(mouse_pos.x,mouse_pos.y,cursor.x,cursor.y,cursor.w,cursor.h))
+        inscroll = gui_input_is_mouse_hovering_rect(i, scroll);
+        incursor = gui_input_is_mouse_prev_hovering_rect(i, cursor);
+        if (gui_input_is_mouse_hovering_rect(i, cursor))
             col = s->hover;
-        if (i->mouse_down && inscroll && incursor) {
+
+        if (i->mouse.buttons[GUI_BUTTON_LEFT].down && inscroll && incursor) {
             /* update cursor by mouse dragging */
-            const gui_float pixel = i->mouse_delta.x;
+            const gui_float pixel = i->mouse.delta.x;
             const gui_float delta =  (pixel / scroll.w) * target;
             scroll_offset = CLAMP(0, scroll_offset + delta, target - scroll.w);
             col = s->active;
-        } else if (s->has_scrolling && ((i->scroll_delta < 0) || (i->scroll_delta>0))) {
+        } else if (s->has_scrolling && ((i->mouse.scroll_delta < 0) || (i->mouse.scroll_delta>0))) {
             /* update cursor by mouse scrolling */
-            scroll_offset = scroll_offset + scroll_step * (-i->scroll_delta);
+            scroll_offset = scroll_offset + scroll_step * (-i->mouse.scroll_delta);
             scroll_offset = CLAMP(0, scroll_offset, target - scroll.w);
         }
         scroll_off = scroll_offset / target;
@@ -3164,16 +3209,14 @@ gui_begin(struct gui_context *context, struct gui_window *window)
             gui_bool inpanel;
             gui_float x, y, w, h;
             struct gui_command_buffer_list *s = &window->queue->list;
-            x = window->bounds.x; y = window->bounds.y;
-            w = window->bounds.w; h = window->bounds.h;
-            inpanel = GUI_INBOX(in->mouse_prev.x, in->mouse_prev.y, x, y, w, h);
-            if (in->mouse_down && in->mouse_clicked && inpanel && &window->buffer != s->end) {
+            inpanel = gui_input_mouse_clicked(in, GUI_BUTTON_LEFT, window->bounds);
+            if (inpanel && (&window->buffer != s->end)) {
                 const struct gui_command_buffer *iter = window->buffer.next;
                 while (iter) {
                     /* try to find a panel with higher priorty in the same position */
                     const struct gui_window *cur;
                     cur = GUI_CONTAINER_OF_CONST(iter, struct gui_window, buffer);
-                    if (GUI_INBOX(in->mouse_prev.x, in->mouse_prev.y, cur->bounds.x,
+                    if (GUI_INBOX(in->mouse.prev.x, in->mouse.prev.y, cur->bounds.x,
                         cur->bounds.y, cur->bounds.w, cur->bounds.h) &&
                       !(cur->flags & GUI_WINDOW_MINIMIZED) && !(cur->flags & GUI_WINDOW_HIDDEN))
                         break;
@@ -3197,15 +3240,15 @@ gui_begin(struct gui_context *context, struct gui_window *window)
     context->header.h += window_padding.y;
     if ((window->flags & GUI_WINDOW_MOVEABLE) && !(window->flags & GUI_WINDOW_ROM)) {
         gui_bool incursor;
-        const gui_float move_x = window->bounds.x;
-        const gui_float move_y = window->bounds.y;
-        const gui_float move_w = window->bounds.w;
-        const gui_float move_h = context->header.h;
-        incursor = GUI_INBOX(in->mouse_prev.x, in->mouse_prev.y,
-                    move_x, move_y, move_w, move_h);
-        if (in->mouse_down && incursor) {
-         window->bounds.x = MAX(0, window->bounds.x + in->mouse_delta.x);
-         window->bounds.y = MAX(0, window->bounds.y + in->mouse_delta.y);
+        struct gui_rect move;
+        move.x = window->bounds.x;
+        move.y = window->bounds.y;
+        move.w = window->bounds.w;
+        move.h = context->header.h;
+        incursor = gui_input_is_mouse_prev_hovering_rect(in, move);
+        if (gui_input_is_mouse_down(in, GUI_BUTTON_LEFT) && incursor) {
+            window->bounds.x = MAX(0, window->bounds.x + in->mouse.delta.x);
+            window->bounds.y = MAX(0, window->bounds.y + in->mouse.delta.y);
         }
     }
 
@@ -3230,9 +3273,9 @@ gui_begin(struct gui_context *context, struct gui_window *window)
 
     /* panel activation by clicks inside of the panel */
     if (!(window->flags & GUI_WINDOW_TAB) && !(window->flags & GUI_WINDOW_ROM)) {
-        gui_float clicked_x = in->mouse_clicked_pos.x;
-        gui_float clicked_y = in->mouse_clicked_pos.y;
-        if (in->mouse_down) {
+        gui_float clicked_x = in->mouse.buttons[GUI_BUTTON_LEFT].clicked_pos.x;
+        gui_float clicked_y = in->mouse.buttons[GUI_BUTTON_LEFT].clicked_pos.y;
+        if (gui_input_is_mouse_down(in, GUI_BUTTON_LEFT)) {
             if (GUI_INBOX(clicked_x, clicked_y, window->bounds.x, window->bounds.y,
                 window->bounds.w, window->bounds.h))
                 window->flags |= GUI_WINDOW_ACTIVE;
@@ -3411,15 +3454,16 @@ gui_end(struct gui_context *layout, struct gui_window *window)
 
         if (!(window->flags & GUI_WINDOW_ROM)) {
             gui_bool incursor;
-            gui_float prev_x = in->mouse_prev.x;
-            gui_float prev_y = in->mouse_prev.y;
+            gui_float prev_x = in->mouse.prev.x;
+            gui_float prev_y = in->mouse.prev.y;
             struct gui_vec2 window_size = gui_style_property(config, GUI_PROPERTY_SIZE);
             incursor = GUI_INBOX(prev_x,prev_y,scaler_x,scaler_y,scaler_w,scaler_h);
-            if (in->mouse_down && incursor) {
-                window->bounds.w = MAX(window_size.x, window->bounds.w + in->mouse_delta.x);
+
+            if (gui_input_is_mouse_down(in, GUI_BUTTON_LEFT) && incursor) {
+                window->bounds.w = MAX(window_size.x, window->bounds.w + in->mouse.delta.x);
                 /* draging in y-direction is only possible if static window */
                 if (!(layout->flags & GUI_WINDOW_DYNAMIC))
-                    window->bounds.h = MAX(window_size.y, window->bounds.h + in->mouse_delta.y);
+                    window->bounds.h = MAX(window_size.y, window->bounds.h + in->mouse.delta.y);
             }
         }
     }
@@ -3631,13 +3675,14 @@ gui_header_button(struct gui_context *layout,
 
     /* check if the icon has been pressed */
     if (!(layout->flags & GUI_WINDOW_ROM)) {
-        gui_float clicked_x = layout->input->mouse_clicked_pos.x;
-        gui_float clicked_y = layout->input->mouse_clicked_pos.y;
-        gui_float mouse_x = layout->input->mouse_pos.x;
-        gui_float mouse_y = layout->input->mouse_pos.y;
+        gui_float clicked_x = layout->input->mouse.buttons[GUI_BUTTON_LEFT].clicked_pos.x;
+        gui_float clicked_y = layout->input->mouse.buttons[GUI_BUTTON_LEFT].clicked_pos.y;
+        gui_float mouse_x = layout->input->mouse.pos.x;
+        gui_float mouse_y = layout->input->mouse.pos.y;
         if (GUI_INBOX(mouse_x, mouse_y, sym.x, sym.y, sym_bw, sym.h)) {
             if (GUI_INBOX(clicked_x, clicked_y, sym.x, sym.y, sym_bw, sym.h))
-                ret = (layout->input->mouse_down && layout->input->mouse_clicked);
+                ret = (layout->input->mouse.buttons[GUI_BUTTON_LEFT].down &&
+                        layout->input->mouse.buttons[GUI_BUTTON_LEFT].clicked);
         }
     }
 
@@ -4307,13 +4352,14 @@ gui_layout_push(struct gui_context *layout,
 
     /* update node state */
     if (!(layout->flags & GUI_WINDOW_ROM)) {
-        gui_float clicked_x = layout->input->mouse_clicked_pos.x;
-        gui_float clicked_y = layout->input->mouse_clicked_pos.y;
-        gui_float mouse_x = layout->input->mouse_pos.x;
-        gui_float mouse_y = layout->input->mouse_pos.y;
+        gui_float clicked_x = layout->input->mouse.buttons[GUI_BUTTON_LEFT].clicked_pos.x;
+        gui_float clicked_y = layout->input->mouse.buttons[GUI_BUTTON_LEFT].clicked_pos.y;
+        gui_float mouse_x = layout->input->mouse.pos.x;
+        gui_float mouse_y = layout->input->mouse.pos.y;
         if (GUI_INBOX(mouse_x, mouse_y, sym.x, sym.y, sym.w, sym.h)) {
             if (GUI_INBOX(clicked_x, clicked_y, sym.x, sym.y, sym.w, sym.h)) {
-                if (layout->input->mouse_down && layout->input->mouse_clicked)
+                if (layout->input->mouse.buttons[GUI_BUTTON_LEFT].down &&
+                    layout->input->mouse.buttons[GUI_BUTTON_LEFT].clicked)
                     *state = (*state == GUI_MAXIMIZED) ? GUI_MINIMIZED : GUI_MAXIMIZED;
             }
         }
@@ -5032,8 +5078,9 @@ gui_graph_push_line(struct gui_context *layout,
         g->last.x = g->x;
         g->last.y = (g->y + g->h) - ratio * (gui_float)g->h;
         if (!(layout->flags & GUI_WINDOW_ROM) &&
-            GUI_INBOX(i->mouse_pos.x,i->mouse_pos.y,g->last.x-3,g->last.y-3,6,6)){
-            selected = (i->mouse_down && i->mouse_clicked) ? gui_true: gui_false;
+            GUI_INBOX(i->mouse.pos.x,i->mouse.pos.y,g->last.x-3,g->last.y-3,6,6)){
+            selected = (i->mouse.buttons[GUI_BUTTON_LEFT].down &&
+                i->mouse.buttons[GUI_BUTTON_LEFT].clicked) ? gui_true: gui_false;
             color = config->colors[GUI_COLOR_PLOT_HIGHLIGHT];
         }
         gui_command_buffer_push_rect(out,
@@ -5050,8 +5097,9 @@ gui_graph_push_line(struct gui_context *layout,
 
     /* user selection of the current data point */
     if (!(layout->flags & GUI_WINDOW_ROM) &&
-        GUI_INBOX(i->mouse_pos.x, i->mouse_pos.y, cur.x-3, cur.y-3, 6, 6)) {
-        selected = (i->mouse_down && i->mouse_clicked) ? gui_true: gui_false;
+        GUI_INBOX(i->mouse.pos.x, i->mouse.pos.y, cur.x-3, cur.y-3, 6, 6)) {
+        selected = (i->mouse.buttons[GUI_BUTTON_LEFT].down &&
+            i->mouse.buttons[GUI_BUTTON_LEFT].clicked) ? gui_true: gui_false;
         color = config->colors[GUI_COLOR_PLOT_HIGHLIGHT];
     } else color = config->colors[GUI_COLOR_PLOT_LINES];
     gui_command_buffer_push_rect(out, gui_rect(cur.x - 3, cur.y - 3, 6, 6), 0, color);
@@ -5097,8 +5145,9 @@ gui_graph_push_column(struct gui_context *layout,
 
     /* user graph bar selection */
     if (!(layout->flags & GUI_WINDOW_ROM) &&
-        GUI_INBOX(in->mouse_pos.x,in->mouse_pos.y,item.x,item.y,item.w,item.h)) {
-        selected = (in->mouse_down && in->mouse_clicked) ? (gui_int)graph->index: selected;
+        GUI_INBOX(in->mouse.pos.x,in->mouse.pos.y,item.x,item.y,item.w,item.h)) {
+        selected = (in->mouse.buttons[GUI_BUTTON_LEFT].down &&
+                in->mouse.buttons[GUI_BUTTON_LEFT].clicked) ? (gui_int)graph->index: selected;
         color = config->colors[GUI_COLOR_HISTO_HIGHLIGHT];
     }
     gui_command_buffer_push_rect(out, item, 0, color);
@@ -5408,12 +5457,9 @@ gui_popup_nonblock_begin(struct gui_context *parent,
     /* deactivate popup if user clicked outside the popup*/
     const struct gui_input *in = parent->input;
     if (in && *active) {
-        gui_bool inbody = GUI_INBOX(in->mouse_clicked_pos.x,
-            in->mouse_clicked_pos.y, body.x, body.y, body.w, body.h);
-        gui_bool inpanel = GUI_INBOX(in->mouse_clicked_pos.x,
-            in->mouse_clicked_pos.y, parent->bounds.x, parent->bounds.y,
-            parent->bounds.w, parent->bounds.h);
-        if ((in->mouse_down && in->mouse_clicked) && !inbody && inpanel)
+        gui_bool inbody = gui_input_is_mouse_click_in_rect(in, GUI_BUTTON_LEFT, body);
+        gui_bool inpanel = gui_input_is_mouse_click_in_rect(in, GUI_BUTTON_LEFT, parent->bounds);
+        if (!inbody && inpanel)
             is_active = gui_false;
     }
 
@@ -5803,7 +5849,7 @@ gui_tree_node(struct gui_tree *tree, enum gui_tree_node_symbol symbol,
         /* parent node */
         struct gui_vec2 points[3];
         enum gui_heading heading;
-        if (gui_input_mouse_clicked(i, sym)) {
+        if (gui_input_mouse_clicked(i, GUI_BUTTON_LEFT, sym)) {
             if (*state & GUI_NODE_ACTIVE)
                 *state &= ~(gui_flags)GUI_NODE_ACTIVE;
             else *state |= GUI_NODE_ACTIVE;
@@ -5820,7 +5866,7 @@ gui_tree_node(struct gui_tree *tree, enum gui_tree_node_symbol symbol,
 
     if (!(layout->flags & GUI_WINDOW_ROM)) {
         /* node selection */
-        if (gui_input_mouse_clicked(i, label)) {
+        if (gui_input_mouse_clicked(i, GUI_BUTTON_LEFT, label)) {
             if (*state & GUI_NODE_SELECTED)
                 *state &= ~(gui_flags)GUI_NODE_SELECTED;
             else *state |= GUI_NODE_SELECTED;
