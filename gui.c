@@ -4100,6 +4100,17 @@ gui_layout_row_space_push(struct gui_context *layout, struct gui_rect rect)
     layout->row.item = rect;
 }
 
+struct gui_rect
+gui_layout_row_space_bounds(struct gui_context *ctx)
+{
+    struct gui_rect ret;
+    ret.x = ctx->clip.x;
+    ret.y = ctx->clip.y;
+    ret.w = ctx->clip.w;
+    ret.h = ctx->row.height;
+    return ret;
+}
+
 struct gui_vec2
 gui_layout_row_space_to_screen(struct gui_context *layout, struct gui_vec2 ret)
 {
@@ -5450,7 +5461,7 @@ gui_popup_end(struct gui_context *parent, struct gui_context *popup)
 }
 
 static gui_bool
-gui_popup_nonblock_begin(struct gui_context *parent,
+gui_popup_nonblocking_begin(struct gui_context *parent,
     struct gui_context *popup, gui_flags flags, gui_state *active, gui_state is_active,
     struct gui_rect body)
 {
@@ -5486,7 +5497,7 @@ gui_popup_nonblock_begin(struct gui_context *parent,
 }
 
 static void
-gui_popup_nonblock_end(struct gui_context *parent,
+gui_popup_nonblocking_end(struct gui_context *parent,
     struct gui_context *popup)
 {
     GUI_ASSERT(parent);
@@ -5495,6 +5506,39 @@ gui_popup_nonblock_end(struct gui_context *parent,
     if (!parent->valid) return;
     if (!(popup->flags & GUI_WINDOW_MINIMIZED))
         gui_popup_end(parent, popup);
+}
+
+void
+gui_popup_nonblock_begin(struct gui_context *parent, struct gui_context *popup,
+    gui_flags flags, gui_state *active, struct gui_rect body)
+{
+    GUI_ASSERT(parent);
+    GUI_ASSERT(popup);
+    GUI_ASSERT(active);
+    if (!parent || !popup || !active) return;
+    gui_popup_nonblocking_begin(parent, popup, flags, active, *active, body);
+}
+
+gui_state
+gui_popup_nonblock_close(struct gui_context *popup)
+{
+    GUI_ASSERT(popup);
+    if (!popup) return GUI_INACTIVE;
+    gui_popup_close(popup);
+    popup->flags |= GUI_WINDOW_HIDDEN;
+    return GUI_INACTIVE;
+}
+
+void
+gui_popup_nonblock_end(struct gui_context *parent, struct gui_context *popup)
+{
+    GUI_ASSERT(parent);
+    GUI_ASSERT(popup);
+    if (!parent || !popup) return;
+    if ((!parent->valid || !popup->valid) && !(popup->flags & GUI_WINDOW_HIDDEN))
+        return;
+    gui_popup_nonblocking_end(parent, popup);
+    return;
 }
 
 /*
@@ -5581,7 +5625,7 @@ gui_combo_begin(struct gui_context *parent, struct gui_context *combo,
         body.w = header.w;
         body.y = header.y + header.h;
         body.h = gui_null_rect.h;
-        if (!gui_popup_nonblock_begin(parent,combo,GUI_WINDOW_NO_SCROLLBAR, active,is_active,body))
+        if (!gui_popup_nonblocking_begin(parent,combo,GUI_WINDOW_NO_SCROLLBAR, active,is_active,body))
             goto failed;
         combo->flags |= GUI_WINDOW_COMBO_MENU;
     }
@@ -5603,7 +5647,7 @@ gui_combo_end(struct gui_context *parent, struct gui_context *combo)
     if (!parent || !combo) return;
     if ((!parent->valid || !combo->valid) && !(combo->flags & GUI_WINDOW_HIDDEN))
         return;
-    gui_popup_nonblock_end(parent, combo);
+    gui_popup_nonblocking_end(parent, combo);
     return;
 }
 
@@ -5694,7 +5738,7 @@ gui_menu_begin(struct gui_context *parent, struct gui_context *menu,
         body.w = width;
         body.y = header.y + header.h;
         body.h = (parent->bounds.y + parent->bounds.h) - body.y;
-        if (!gui_popup_nonblock_begin(parent, menu, GUI_WINDOW_NO_SCROLLBAR, active,
+        if (!gui_popup_nonblocking_begin(parent, menu, GUI_WINDOW_NO_SCROLLBAR, active,
             is_active, body)) goto failed;
         menu->flags |= GUI_WINDOW_COMBO_MENU;
     }
@@ -5724,7 +5768,7 @@ gui_menu_end(struct gui_context *parent, struct gui_context *menu)
     if (!parent || !menu) return gui_vec2(0,0);
     if (!parent->valid)
         return menu->offset;
-    gui_popup_nonblock_end(parent, menu);
+    gui_popup_nonblocking_end(parent, menu);
     return menu->offset;
 }
 

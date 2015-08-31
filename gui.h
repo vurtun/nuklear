@@ -2322,6 +2322,8 @@ void gui_layout_row_space_begin(struct gui_context*,
     - height of the row and therefore each widget inside
     - number of widget that will be added into that space
 */
+struct gui_rect gui_layout_row_space_bounds(struct gui_context*);
+/*  this functions returns the complete bounds of the space in the panel */
 void gui_layout_row_space_push(struct gui_context*, struct gui_rect);
 /*  this functions pushes the position and size of the next widget that will
     be added into the previously allocated window space
@@ -2744,10 +2746,15 @@ struct gui_vec2 gui_shelf_end(struct gui_context*, struct gui_context*);
     care of the closing process. Finally if the popup window was completly created
     the `gui_popup_end` function finializes the popup.
 
-    window popup API
-    gui_popup_begin   -- adds a popup inside a window
-    gui_popup_close   -- closes the popup window
-    gui_popup_end     -- ends the popup building process
+    window blocking popup API
+    gui_popup_begin         -- adds a popup inside a window
+    gui_popup_close         -- closes the popup window
+    gui_popup_end           -- ends the popup building process
+
+    window non-blocking popup API
+    gui_popup_menu_begin    -- begin a popup context menu
+    gui_popup_menu_close    -- closes a popup context menu
+    gui_popup_menu_end      -- ends the popup building process
 */
 enum gui_popup_type {
     GUI_POPUP_STATIC, /* static fixed height non growing popup */
@@ -2756,10 +2763,12 @@ enum gui_popup_type {
 gui_flags gui_popup_begin(struct gui_context *parent,
                             struct gui_context *popup, enum gui_popup_type,
                             gui_flags, struct gui_rect bounds, struct gui_vec2 offset);
-/*  this function adds a grouped child window into the parent window
+/*  this function adds a overlapping blocking popup menu
     Input:
+    - type of the popup as either growing or static
+    - additonal popup window flags
     - popup position and size of the popup (NOTE: local position)
-    - scrollbar pixel offsets for the popup
+    - scrollbar offset of wanted
     Output:
     - popup layout to fill with widgets
 */
@@ -2771,6 +2780,24 @@ struct gui_vec2 gui_popup_end(struct gui_context *parent,
     Output:
     - The from user input updated popup scrollbar pixel offset
 */
+void gui_popup_nonblock_begin(struct gui_context *parent, struct gui_context *popup,
+                        gui_flags flags, gui_state *active, struct gui_rect body);
+/*  this function adds a context menu popup
+    Input:
+    - type of the popup as either growing or static
+    - additonal popup window flags
+    - popup position and size of the popup (NOTE: local position)
+    - scrollbar offset of wanted
+    Output:
+    - popup layout to fill with widgets
+*/
+gui_state gui_popup_nonblock_close(struct gui_context *popup);
+/*  this functions closes the context menu
+     Output:
+    - update state of the context menu
+*/
+void gui_popup_nonblock_end(struct gui_context *parent, struct gui_context *popup);
+/*  this functions closes a previously opened context menu */
 /*
  * -------------------------------------------------------------
  *                          GRAPH
