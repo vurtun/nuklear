@@ -961,7 +961,7 @@ gui_command_buffer_push_line(struct gui_command_buffer *b, gui_float x0, gui_flo
 
 void
 gui_command_buffer_push_quad(struct gui_command_buffer *b, gui_float ax, gui_float ay,
-    gui_float bx, gui_float by,  gui_float ctrlx, gui_float ctrly, struct gui_color col)
+ gui_float ctrlx, gui_float ctrly, gui_float bx, gui_float by, struct gui_color col)
 {
     struct gui_command_quad *cmd;
     cmd = (struct gui_command_quad*)
@@ -979,8 +979,8 @@ gui_command_buffer_push_quad(struct gui_command_buffer *b, gui_float ax, gui_flo
 
 void
 gui_command_buffer_push_curve(struct gui_command_buffer *b, gui_float ax, gui_float ay,
-    gui_float bx, gui_float by,  gui_float ctrl0x, gui_float ctrl0y,
-    gui_float ctrl1x, gui_float ctrl1y, struct gui_color col)
+    gui_float ctrl0x, gui_float ctrl0y, gui_float ctrl1x, gui_float ctrl1y,
+    gui_float bx, gui_float by, struct gui_color col)
 {
     struct gui_command_curve *cmd;
     GUI_ASSERT(b);

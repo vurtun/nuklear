@@ -723,8 +723,8 @@ void gui_command_buffer_push_quad(struct gui_command_buffer*, gui_float, gui_flo
     Input:
     - buffer to push the clip rectangle command into
     - starting point (x,y) of the line
-    - ending point (x,y) of the line
     - control point (x,y) of the line
+    - ending point (x,y) of the line
     - color of the line to draw
 */
 void gui_command_buffer_push_curve(struct gui_command_buffer*, gui_float, gui_float,
@@ -734,9 +734,9 @@ void gui_command_buffer_push_curve(struct gui_command_buffer*, gui_float, gui_fl
     Input:
     - buffer to push the clip rectangle command into
     - starting point (x,y) of the line
-    - ending point (x,y) of the line
     - first control point (x,y) of the line
     - second control point (x,y) of the line
+    - ending point (x,y) of the line
     - color of the line to draw
 */
 void
