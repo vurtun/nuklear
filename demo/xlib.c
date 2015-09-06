@@ -363,8 +363,9 @@ draw(XSurface *surf, struct gui_command_queue *queue)
         case GUI_COMMAND_TEXT: {
             const struct gui_command_text *t = gui_command(text, cmd);
             surface_draw_text(surf, t->x, t->y, t->w, t->h, (const char*)t->string,
-                    t->length, (XFont*)t->font.ptr, t->background, t->foreground);
+                    t->length, (XFont*)t->font->userdata.ptr, t->background, t->foreground);
         } break;
+        case GUI_COMMAND_CURVE:
         case GUI_COMMAND_IMAGE:
         case GUI_COMMAND_MAX:
         default: break;
@@ -439,8 +440,6 @@ main(int argc, char *argv[])
     long started;
     XWindow xw;
 
-    struct gui_input in;
-    struct gui_font font;
     struct demo_gui gui;
 
     /* Platform */
@@ -467,31 +466,29 @@ main(int argc, char *argv[])
     xw.font = font_create(xw.dpy, "fixed");
 
     /* GUI */
-    memset(&in, 0, sizeof in);
     memset(&gui, 0, sizeof gui);
-    font.userdata.ptr = xw.font;
-    font.height = (gui_float)xw.font->height;
-    font.width = font_get_text_width;
-    gui.memory = calloc(MAX_MEMORY, 1);
-    gui.input = &in;
-    init_demo(&gui, &font);
+    gui_buffer_init_fixed(&gui.memory, calloc(MAX_MEMORY, 1), MAX_MEMORY);
+    gui.font.userdata.ptr = xw.font;
+    gui.font.height = (gui_float)xw.font->height;
+    gui.font.width = font_get_text_width;
+    init_demo(&gui);
 
     while (gui.running) {
         /* Input */
         XEvent evt;
         started = timestamp();
-        gui_input_begin(&in);
+        gui_input_begin(&gui.input);
         while (XCheckWindowEvent(xw.dpy, xw.win, xw.swa.event_mask, &evt)) {
             if (evt.type == KeyPress)
-                key(&xw, &in, &evt, gui_true);
-            else if (evt.type == KeyRelease) key(&xw, &in, &evt, gui_false);
-            else if (evt.type == ButtonPress) btn(&in, &evt, gui_true);
-            else if (evt.type == ButtonRelease) btn(&in, &evt, gui_false);
-            else if (evt.type == MotionNotify) motion(&in, &evt);
+                key(&xw, &gui.input, &evt, gui_true);
+            else if (evt.type == KeyRelease) key(&xw, &gui.input, &evt, gui_false);
+            else if (evt.type == ButtonPress) btn(&gui.input, &evt, gui_true);
+            else if (evt.type == ButtonRelease) btn(&gui.input, &evt, gui_false);
+            else if (evt.type == MotionNotify) motion(&gui.input, &evt);
             else if (evt.type == Expose || evt.type == ConfigureNotify)
                 resize(&xw, xw.surf);
         }
-        gui_input_end(&in);
+        gui_input_end(&gui.input);
 
         /* GUI */
         run_demo(&gui);
@@ -509,7 +506,7 @@ main(int argc, char *argv[])
             sleep_for(DTIME - dt);
     }
 
-    free(gui.memory);
+    free(gui_buffer_memory(&gui.memory));
     font_del(xw.dpy, xw.font);
     surface_del(xw.surf);
     XUnmapWindow(xw.dpy, xw.win);

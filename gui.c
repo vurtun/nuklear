@@ -34,12 +34,10 @@
 #define GUI_CONTAINS(x, y, w, h, bx, by, bw, bh)\
     (GUI_INBOX(x,y, bx, by, bw, bh) && GUI_INBOX(x+w,y+h, bx, by, bw, bh))
 
-
 #define gui_vec2_mov(to,from) (to).x = (from).x, (to).y = (from).y
 #define gui_vec2_sub(a, b) gui_vec2((a).x - (b).x, (a).y - (b).y)
 #define gui_vec2_add(a, b) gui_vec2((a).x + (b).x, (a).y + (b).y)
 #define gui_vec2_len_sqr(a) ((a).x*(a).x+(a).y*(a).y)
-#define gui_vec2_len(a) gui_sqrt(gui_vec2_len_sqr(a))
 #define gui_vec2_inv_len(a) gui_inv_sqrt(gui_vec2_len_sqr(a))
 #define gui_vec2_muls(a, t) gui_vec2((a).x * (t), (a).y * (t))
 #define gui_vec2_lerp(a, b, t) gui_vec2(GUI_LERP((a).x, (b).x, t), GUI_LERP((a).y, (b).y, t))
@@ -65,12 +63,11 @@ template<typename T> struct gui_alignof{struct Big {T x; char c;}; enum {
 #endif
 
 enum gui_tree_node_symbol {GUI_TREE_NODE_BULLET, GUI_TREE_NODE_TRIANGLE};
-static const struct gui_rect gui_null_rect = {-9999.0f, -9999.0f, 2*9999.0f, 2*9999.0f};
+static const struct gui_rect gui_null_rect = {-8192.0f, -8192.0f, 16384, 16384};
 static const gui_byte gui_utfbyte[GUI_UTF_SIZE+1] = {0x80, 0, 0xC0, 0xE0, 0xF0};
 static const gui_byte gui_utfmask[GUI_UTF_SIZE+1] = {0xC0, 0x80, 0xE0, 0xF0, 0xF8};
 static const long gui_utfmin[GUI_UTF_SIZE+1] = {0, 0, 0x80, 0x800, 0x100000};
 static const long gui_utfmax[GUI_UTF_SIZE+1] = {0x10FFFF, 0x7F, 0x7FF, 0xFFFF, 0x10FFFF};
-
 /*
  * ==============================================================
  *
@@ -78,6 +75,19 @@ static const long gui_utfmax[GUI_UTF_SIZE+1] = {0x10FFFF, 0x7F, 0x7FF, 0xFFFF, 0
  *
  * ===============================================================
  */
+static gui_float
+gui_inv_sqrt(gui_float number)
+{
+    gui_float x2;
+    const gui_float threehalfs = 1.5f;
+    union {gui_uint i; gui_float f;} conv;
+    conv.f = number;
+    x2 = number * 0.5f;
+    conv.i = 0x5f375A84 - (conv.i >> 1);
+    conv.f = conv.f * (threehalfs - (x2 * conv.f * conv.f));
+    return conv.f;
+}
+
 struct gui_rect
 gui_get_null_rect(void)
 {
@@ -809,7 +819,6 @@ gui_buffer_reset(struct gui_buffer *buffer, enum gui_buffer_allocation_type type
         else buffer->size = buffer->memory.size;
     } else {
         /* reset front buffer either back to back marker or empty */
-        buffer->marker[type].offset = buffer->allocated;
         if (buffer->marker[type].active)
             buffer->allocated = buffer->marker[type].offset;
         else buffer->allocated = 0;
@@ -849,6 +858,22 @@ gui_buffer_info(struct gui_memory_status *s, struct gui_buffer *b)
     s->needed = b->needed;
     s->memory = b->memory.ptr;
     s->calls = b->calls;
+}
+
+void*
+gui_buffer_memory(struct gui_buffer *buffer)
+{
+    GUI_ASSERT(buffer);
+    if (!buffer) return 0;
+    return buffer->memory.ptr;
+}
+
+gui_size
+gui_buffer_total(struct gui_buffer *buffer)
+{
+    GUI_ASSERT(buffer);
+    if (!buffer) return 0;
+    return buffer->memory.size;
 }
 /*
  * ==============================================================
@@ -960,24 +985,6 @@ gui_command_buffer_push_line(struct gui_command_buffer *b, gui_float x0, gui_flo
 }
 
 void
-gui_command_buffer_push_quad(struct gui_command_buffer *b, gui_float ax, gui_float ay,
- gui_float ctrlx, gui_float ctrly, gui_float bx, gui_float by, struct gui_color col)
-{
-    struct gui_command_quad *cmd;
-    cmd = (struct gui_command_quad*)
-        gui_command_buffer_push(b, GUI_COMMAND_QUAD, sizeof(*cmd));
-    if (!cmd) return;
-    cmd->begin.x = (gui_short)ax;
-    cmd->begin.y = (gui_short)ay;
-    cmd->end.x = (gui_short)bx;
-    cmd->end.y = (gui_short)by;
-    cmd->ctrl.x = (gui_short)ctrlx;
-    cmd->ctrl.y = (gui_short)ctrly;
-    cmd->color = col;
-    b->stats.lines++;
-}
-
-void
 gui_command_buffer_push_curve(struct gui_command_buffer *b, gui_float ax, gui_float ay,
     gui_float ctrl0x, gui_float ctrl0y, gui_float ctrl1x, gui_float ctrl1y,
     gui_float bx, gui_float by, struct gui_color col)
@@ -991,12 +998,12 @@ gui_command_buffer_push_curve(struct gui_command_buffer *b, gui_float ax, gui_fl
     if (!cmd) return;
     cmd->begin.x = (gui_short)ax;
     cmd->begin.y = (gui_short)ay;
-    cmd->end.x = (gui_short)bx;
-    cmd->end.y = (gui_short)by;
     cmd->ctrl[0].x = (gui_short)ctrl0x;
     cmd->ctrl[0].y = (gui_short)ctrl0y;
     cmd->ctrl[1].x = (gui_short)ctrl1x;
     cmd->ctrl[1].y = (gui_short)ctrl1y;
+    cmd->end.x = (gui_short)bx;
+    cmd->end.y = (gui_short)by;
     cmd->color = col;
     b->stats.lines++;
 }
@@ -1104,7 +1111,7 @@ gui_command_buffer_push_image(struct gui_command_buffer *b, struct gui_rect r,
 
 void
 gui_command_buffer_push_text(struct gui_command_buffer *b, struct gui_rect r,
-    const gui_char *string, gui_size length, const struct gui_font *font,
+    const gui_char *string, gui_size length, const struct gui_user_font *font,
     struct gui_color bg, struct gui_color fg)
 {
     struct gui_command_text *cmd;
@@ -1126,7 +1133,7 @@ gui_command_buffer_push_text(struct gui_command_buffer *b, struct gui_rect r,
     cmd->h = (gui_ushort)r.h;
     cmd->background = bg;
     cmd->foreground = fg;
-    cmd->font = font->userdata;
+    cmd->font = font;
     cmd->length = length;
     gui_memcopy(cmd->string, string, length);
     cmd->string[length] = '\0';
@@ -1350,6 +1357,7 @@ gui_command_queue_finish(struct gui_command_queue *queue,
     struct gui_command_buffer *buffer)
 {
     void *memory;
+    gui_size size;
     gui_size i = 0;
     struct gui_command_sub_buffer *iter;
     struct gui_command_sub_buffer_stack *stack;
@@ -1362,10 +1370,11 @@ gui_command_queue_finish(struct gui_command_queue *queue,
     buffer->end = queue->buffer.allocated;
     if (!stack->count) return;
 
-    /* fix buffer command list for subbuffers  */
     memory = queue->buffer.memory.ptr;
-    iter = gui_ptr_add(struct gui_command_sub_buffer, memory, (queue->buffer.memory.size - stack->begin));
+    size = queue->buffer.memory.size;
+    iter = gui_ptr_add(struct gui_command_sub_buffer, memory, (size - stack->begin));
 
+    /* fix buffer command list for subbuffers  */
     for (i = 0; i < stack->count; ++i) {
         struct gui_command *parent_last, *sublast, *last;
         parent_last = gui_ptr_add(struct gui_command, memory, iter->parent_last);
@@ -1379,7 +1388,7 @@ gui_command_queue_finish(struct gui_command_queue *queue,
         last->next = iter->begin;
         buffer->last = iter->last;
         buffer->end = iter->end;
-        iter = gui_ptr_add(struct gui_command_sub_buffer, memory, queue->buffer.memory.size - iter->next);
+        iter = gui_ptr_add(struct gui_command_sub_buffer, memory, size - iter->next);
     }
     queue->stack.count = 0;
     gui_buffer_reset(&queue->buffer, GUI_BUFFER_BACK);
@@ -1462,6 +1471,988 @@ gui_command_queue_next(struct gui_command_queue *queue, const struct gui_command
     next = gui_ptr_add_const(struct gui_command, buffer, cmd->next);
     return next;
 }
+/* ==============================================================
+ *
+ *                      Draw List
+ *
+ * ===============================================================*/
+#if GUI_COMPILE_WITH_VERTEX_BUFFER
+void
+gui_draw_list_init(struct gui_draw_list *list, struct gui_buffer *cmds,
+    struct gui_buffer *vertexes, struct gui_buffer *elements,
+    gui_sin_f sine, gui_cos_f cosine, struct gui_draw_null_texture null,
+    enum gui_anti_aliasing AA)
+{
+    gui_zero(list, sizeof(*list));
+    list->sin = sine;
+    list->cos = cosine;
+    list->null = null;
+    list->clip_rect = gui_null_rect;
+    list->vertexes = vertexes;
+    list->elements = elements;
+    list->buffer = cmds;
+    list->AA = AA;
+}
+
+void
+gui_draw_list_load(struct gui_draw_list *list, struct gui_command_queue *queue,
+    gui_float line_thickness, gui_uint curve_segments)
+{
+    const struct gui_command *cmd;
+    GUI_ASSERT(list);
+    GUI_ASSERT(list->vertexes);
+    GUI_ASSERT(list->elements);
+    GUI_ASSERT(queue);
+    line_thickness = MAX(line_thickness, 1.0f);
+    if (!list || !queue || !list->vertexes || !list->elements) return;
+
+    gui_foreach_command(cmd, queue) {
+        switch (cmd->type) {
+        case GUI_COMMAND_NOP: break;
+        case GUI_COMMAND_SCISSOR: {
+            const struct gui_command_scissor *s = gui_command(scissor, cmd);
+            gui_draw_list_add_clip(list, gui_rect(s->x, s->y, s->w, s->h));
+        } break;
+        case GUI_COMMAND_LINE: {
+            const struct gui_command_line *l = gui_command(line, cmd);
+            gui_draw_list_add_line(list, gui_vec2(l->begin.x, l->begin.y),
+                gui_vec2(l->end.x, l->end.y), l->color, line_thickness);
+        } break;
+        case GUI_COMMAND_CURVE: {
+            const struct gui_command_curve *q = gui_command(curve, cmd);
+            gui_draw_list_add_curve(list, gui_vec2(q->begin.x, q->begin.y),
+                gui_vec2(q->ctrl[0].x, q->ctrl[0].y), gui_vec2(q->ctrl[1].x, q->ctrl[1].y),
+                gui_vec2(q->end.x, q->end.y), q->color, curve_segments, line_thickness);
+        } break;
+        case GUI_COMMAND_RECT: {
+            const struct gui_command_rect *r = gui_command(rect, cmd);
+            gui_draw_list_add_rect_filled(list, gui_rect(r->x, r->y, r->w, r->h),
+                r->color, (gui_float)r->rounding);
+        } break;
+        case GUI_COMMAND_CIRCLE: {
+            const struct gui_command_circle *c = gui_command(circle, cmd);
+            gui_draw_list_add_circle_filled(list, gui_vec2((gui_float)c->x + (gui_float)c->w/2,
+                (gui_float)c->y + c->h/2), c->w/2, c->color, curve_segments);
+        } break;
+        case GUI_COMMAND_TRIANGLE: {
+            const struct gui_command_triangle *t = gui_command(triangle, cmd);
+            gui_draw_list_add_triangle_filled(list, gui_vec2(t->a.x, t->a.y),
+                gui_vec2(t->b.x, t->b.y), gui_vec2(t->c.x, t->c.y), t->color);
+        } break;
+        case GUI_COMMAND_TEXT: {
+            const struct gui_command_text *t = gui_command(text, cmd);
+            gui_draw_list_add_text(list, t->font, gui_rect(t->x, t->y, t->w, t->h),
+                t->string, t->length, t->background, t->foreground);
+        } break;
+        case GUI_COMMAND_IMAGE: {
+            const struct gui_command_image *i = gui_command(image, cmd);
+            gui_draw_list_add_image(list, i->img, gui_rect(i->x, i->y, i->w, i->h),
+                gui_rgb(255, 255, 255));
+        } break;
+        case GUI_COMMAND_MAX:
+        default: break;
+        }
+    }
+}
+
+void
+gui_draw_list_clear(struct gui_draw_list *list)
+{
+    GUI_ASSERT(list);
+    if (!list) return;
+    if (list->buffer)
+        gui_buffer_clear(list->buffer);
+    if (list->elements)
+        gui_buffer_clear(list->vertexes);
+    if (list->vertexes)
+        gui_buffer_clear(list->elements);
+    list->element_count = 0;
+    list->vertex_count = 0;
+    list->cmd_offset = 0;
+    list->cmd_count = 0;
+    list->path_count = 0;
+    list->vertexes = 0;
+    list->elements = 0;
+    list->clip_rect = gui_null_rect;
+}
+
+gui_bool
+gui_draw_list_is_empty(struct gui_draw_list *list)
+{
+    GUI_ASSERT(list);
+    if (!list) return gui_true;
+    return (list->cmd_count == 0);
+}
+
+const struct gui_draw_command*
+gui_draw_list_begin(const struct gui_draw_list *list)
+{
+    gui_byte *memory;
+    gui_size offset;
+    const struct gui_draw_command *cmd;
+    GUI_ASSERT(list);
+    GUI_ASSERT(list->buffer);
+    if (!list || !list->buffer || !list->cmd_count) return 0;
+    memory = (gui_byte*)list->buffer->memory.ptr;
+    offset = list->buffer->memory.size - list->cmd_offset;
+    cmd = gui_ptr_add(const struct gui_draw_command, memory, offset);
+    return cmd;
+}
+
+const struct gui_draw_command*
+gui_draw_list_next(const struct gui_draw_list *list, const struct gui_draw_command *cmd)
+{
+    gui_byte *memory;
+    gui_size offset;
+    const struct gui_draw_command *end;
+    GUI_ASSERT(list);
+    if (!list || !list->buffer || !list->cmd_count) return 0;
+    memory = (gui_byte*)list->buffer->memory.ptr;
+    offset = list->buffer->memory.size - list->cmd_offset;
+    end = gui_ptr_add(const struct gui_draw_command, memory, offset);
+    end -= (list->cmd_count-1);
+    if (cmd <= end) return 0;
+    return (cmd - 1);
+}
+
+static struct gui_vec2*
+gui_draw_list_alloc_path(struct gui_draw_list *list, gui_size count)
+{
+    void *memory;
+    struct gui_vec2 *points;
+    static const gui_size point_align = GUI_ALIGNOF(struct gui_vec2);
+    static const gui_size point_size = sizeof(struct gui_vec2);
+    points = (struct gui_vec2*)
+        gui_buffer_alloc(list->buffer, GUI_BUFFER_FRONT, point_size * count, point_align);
+    if (!points) return 0;
+    if (!list->path_offset) {
+        memory = gui_buffer_memory(list->buffer);
+        list->path_offset = (gui_uint)((gui_byte*)points - (gui_byte*)memory);
+    }
+    list->path_count += (gui_uint)count;
+    return points;
+}
+
+static struct gui_vec2
+gui_draw_list_path_last(struct gui_draw_list *list)
+{
+    void *memory;
+    struct gui_vec2 *point;
+    GUI_ASSERT(list->path_count);
+    memory = gui_buffer_memory(list->buffer);
+    point = gui_ptr_add(struct gui_vec2, memory, list->path_offset);
+    point += (list->path_count-1);
+    return *point;
+}
+
+static struct gui_draw_command*
+gui_draw_list_push_command(struct gui_draw_list *list, struct gui_rect clip,
+    gui_handle texture)
+{
+    static const gui_size cmd_align = GUI_ALIGNOF(struct gui_draw_command);
+    static const gui_size cmd_size = sizeof(struct gui_draw_command);
+    struct gui_draw_command *cmd;
+
+    GUI_ASSERT(list);
+    cmd = (struct gui_draw_command*)
+        gui_buffer_alloc(list->buffer, GUI_BUFFER_BACK, cmd_size, cmd_align);
+    if (!cmd) return 0;
+    if (!list->cmd_count) {
+        gui_byte *memory = (gui_byte*)gui_buffer_memory(list->buffer);
+        gui_size total = gui_buffer_total(list->buffer);
+        memory = gui_ptr_add(gui_byte, memory, total);
+        list->cmd_offset = (gui_size)(memory - (gui_byte*)cmd);
+    }
+
+    cmd->elem_count = 0;
+    cmd->clip_rect = clip;
+    cmd->texture = texture;
+    list->cmd_count++;
+    list->clip_rect = clip;
+    return cmd;
+}
+
+static struct gui_draw_command*
+gui_draw_list_command_last(struct gui_draw_list *list)
+{
+    void *memory;
+    gui_size size;
+    struct gui_draw_command *cmd;
+    GUI_ASSERT(list->cmd_count);
+    memory = gui_buffer_memory(list->buffer);
+    size = gui_buffer_total(list->buffer);
+    cmd = gui_ptr_add(struct gui_draw_command, memory, size - list->cmd_offset);
+    return (cmd - (list->cmd_count-1));
+}
+
+void
+gui_draw_list_add_clip(struct gui_draw_list *list, struct gui_rect rect)
+{
+    GUI_ASSERT(list);
+    if (!list) return;
+    if (!list->cmd_count) {
+        gui_draw_list_push_command(list, rect, list->null.texture);
+    } else {
+        struct gui_draw_command *prev = gui_draw_list_command_last(list);
+        gui_draw_list_push_command(list, rect, prev->texture);
+    }
+}
+
+static void
+gui_draw_list_push_image(struct gui_draw_list *list, gui_handle texture)
+{
+    GUI_ASSERT(list);
+    if (!list) return;
+    if (!list->cmd_count) {
+        gui_draw_list_push_command(list, gui_null_rect, list->null.texture);
+    } else {
+        struct gui_draw_command *prev = gui_draw_list_command_last(list);
+        gui_draw_list_push_command(list, prev->clip_rect, texture);
+    }
+}
+
+static struct gui_draw_vertex*
+gui_draw_list_alloc_vertexes(struct gui_draw_list *list, gui_size count)
+{
+    struct gui_draw_vertex *vtx;
+    static const gui_size vtx_align = GUI_ALIGNOF(struct gui_draw_vertex);
+    static const gui_size vtx_size = sizeof(struct gui_draw_vertex);
+    GUI_ASSERT(list);
+    if (!list) return 0;
+    vtx = (struct gui_draw_vertex*)
+        gui_buffer_alloc(list->vertexes, GUI_BUFFER_FRONT, vtx_size * count, vtx_align);
+    if (!vtx) return 0;
+    list->vertex_count += (gui_uint)count;
+    return vtx;
+}
+
+static gui_draw_index*
+gui_draw_list_alloc_elements(struct gui_draw_list *list, gui_size count)
+{
+    gui_draw_index *ids;
+    struct gui_draw_command *cmd;
+    static const gui_size elem_align = GUI_ALIGNOF(gui_draw_index);
+    static const gui_size elem_size = sizeof(gui_draw_index);
+    GUI_ASSERT(list);
+    if (!list) return 0;
+    ids = (gui_draw_index*)
+        gui_buffer_alloc(list->elements, GUI_BUFFER_FRONT, elem_size * count, elem_align);
+    if (!ids) return 0;
+    cmd = gui_draw_list_command_last(list);
+    list->element_count += (gui_uint)count;
+    cmd->elem_count += (gui_uint)count;
+    return ids;
+}
+
+static gui_draw_vertex_color
+gui_color32(struct gui_color in)
+{
+    gui_draw_vertex_color out = (gui_draw_vertex_color)in.r;
+    out |= ((gui_draw_vertex_color)in.g << 8);
+    out |= ((gui_draw_vertex_color)in.b << 16);
+    out |= ((gui_draw_vertex_color)in.a << 24);
+    return out;
+}
+
+static struct gui_draw_vertex
+gui_draw_vertex(struct gui_vec2 pos, struct gui_vec2 uv, gui_draw_vertex_color col)
+{
+    struct gui_draw_vertex out;
+    out.position = pos;
+    out.uv = uv;
+    out.col = col;
+    return out;
+}
+
+static void
+gui_draw_list_add_poly_line(struct gui_draw_list *list, struct gui_vec2 *points,
+    const gui_uint points_count, struct gui_color color, gui_bool closed,
+    gui_float thickness, enum gui_anti_aliasing aliasing)
+{
+    gui_size count;
+    gui_bool thick_line;
+    gui_draw_vertex_color col = gui_color32(color);
+    GUI_ASSERT(list);
+    if (!list) return;
+    if (!list || points_count < 2) return;
+
+    count = points_count;
+    if (!closed) count = points_count-1;
+    thick_line = thickness > 1.0f;
+
+    if (aliasing == GUI_ANTI_ALIASING_ON) {
+        /* ANTI-ALIASED STROKE */
+        const gui_float AA_SIZE = 1.0f;
+        static const gui_size pnt_align = GUI_ALIGNOF(struct gui_vec2);
+        static const gui_size pnt_size = sizeof(struct gui_vec2);
+        const gui_draw_vertex_color col_trans = col & 0x00ffffff;
+
+        /* allocate vertexes and elements  */
+        gui_size i1 = 0;
+        gui_size index = list->vertex_count;
+        const gui_size idx_count = (thick_line) ?  (count * 18) : (count * 12);
+        const gui_size vtx_count = (thick_line) ? (points_count * 4): (points_count *3);
+        struct gui_draw_vertex *vtx = gui_draw_list_alloc_vertexes(list, vtx_count);
+        gui_draw_index *ids = gui_draw_list_alloc_elements(list, idx_count);
+
+        struct gui_vec2 *normals, *temp;
+        gui_size size;
+        if (!vtx || !ids) return;
+
+        /* temporary allocate normals + points */
+        gui_buffer_mark(list->vertexes, GUI_BUFFER_FRONT);
+        size = pnt_size * ((thick_line) ? 5 : 3) * points_count;
+        normals = (struct gui_vec2*)
+            gui_buffer_alloc(list->vertexes, GUI_BUFFER_FRONT, size, pnt_align);
+        if (!normals) return;
+        temp = normals + points_count;
+
+        /* calculate normals */
+        for (i1 = 0; i1 < count; ++i1) {
+            const gui_size i2 = ((i1 + 1) == points_count) ? 0 : (i1 + 1);
+            struct gui_vec2 diff = gui_vec2_sub(points[i2], points[i1]);
+            gui_float len;
+
+            /* vec2 inverted lenth  */
+            len = gui_vec2_len_sqr(diff);
+            if (len != 0.0f)
+                len = gui_inv_sqrt(len);
+            else len = 1.0f;
+
+            diff = gui_vec2_muls(diff, len);
+            normals[i1].x = diff.y;
+            normals[i1].y = -diff.x;
+        }
+
+        if (!closed)
+            normals[points_count-1] = normals[points_count-2];
+
+        if (!thick_line) {
+            gui_size idx1, i;
+            if (!closed) {
+                struct gui_vec2 d;
+                temp[0] = gui_vec2_add(points[0], gui_vec2_muls(normals[0], AA_SIZE));
+                temp[1] = gui_vec2_sub(points[0], gui_vec2_muls(normals[0], AA_SIZE));
+                d = gui_vec2_muls(normals[points_count-1], AA_SIZE);
+                temp[(points_count-1) * 2 + 0] = gui_vec2_add(points[points_count-1], d);
+                temp[(points_count-1) * 2 + 1] = gui_vec2_sub(points[points_count-1], d);
+            }
+
+            /* fill elements */
+            idx1 = index;
+            for (i1 = 0; i1 < count; i1++) {
+                struct gui_vec2 dm;
+                gui_float dmr2;
+                gui_size i2 = ((i1 + 1) == points_count) ? 0 : (i1 + 1);
+                gui_size idx2 = ((i1+1) == points_count) ? index: (idx1 + 3);
+
+                /* average normals */
+                dm = gui_vec2_muls(gui_vec2_add(normals[i1], normals[i2]), 0.5f);
+                dmr2 = dm.x * dm.x + dm.y* dm.y;
+                if (dmr2 > 0.000001f) {
+                    gui_float scale = 1.0f/dmr2;
+                    scale = MIN(100.0f, scale);
+                    dm = gui_vec2_muls(dm, scale);
+                }
+
+                dm = gui_vec2_muls(dm, AA_SIZE);
+                temp[i2*2+0] = gui_vec2_add(points[i2], dm);
+                temp[i2*2+1] = gui_vec2_sub(points[i2], dm);
+
+                ids[0] = (gui_draw_index)(idx2 + 0); ids[1] = (gui_draw_index)(idx1+0);
+                ids[2] = (gui_draw_index)(idx1 + 2); ids[3] = (gui_draw_index)(idx1+2);
+                ids[4] = (gui_draw_index)(idx2 + 2); ids[5] = (gui_draw_index)(idx2+0);
+                ids[6] = (gui_draw_index)(idx2 + 1); ids[7] = (gui_draw_index)(idx1+1);
+                ids[8] = (gui_draw_index)(idx1 + 0); ids[9] = (gui_draw_index)(idx1+0);
+                ids[10]= (gui_draw_index)(idx2 + 0); ids[11]= (gui_draw_index)(idx2+1);
+                ids += 12;
+                idx1 = idx2;
+            }
+
+            /* fill vertexes */
+            for (i = 0; i < points_count; ++i) {
+                const struct gui_vec2 uv = list->null.uv;
+                vtx[0] = gui_draw_vertex(points[i], uv, col);
+                vtx[1] = gui_draw_vertex(temp[i*2+0], uv, col_trans);
+                vtx[2] = gui_draw_vertex(temp[i*2+1], uv, col_trans);
+                vtx += 3;
+            }
+        } else {
+            gui_size idx1, i;
+            const gui_float half_inner_thickness = (thickness - AA_SIZE) * 0.5f;
+            if (!closed) {
+                struct gui_vec2 d1, d2;
+                d1 = gui_vec2_muls(normals[0], half_inner_thickness + AA_SIZE);
+                d2 = gui_vec2_muls(normals[0], half_inner_thickness);
+
+                temp[0] = gui_vec2_add(points[0], d1);
+                temp[1] = gui_vec2_add(points[0], d2);
+                temp[2] = gui_vec2_sub(points[0], d2);
+                temp[3] = gui_vec2_sub(points[0], d1);
+
+                d1 = gui_vec2_muls(normals[points_count-1], half_inner_thickness + AA_SIZE);
+                d2 = gui_vec2_muls(normals[points_count-1], half_inner_thickness);
+
+                temp[(points_count-1)*4+0] = gui_vec2_add(points[points_count-1], d1);
+                temp[(points_count-1)*4+1] = gui_vec2_add(points[points_count-1], d2);
+                temp[(points_count-1)*4+2] = gui_vec2_sub(points[points_count-1], d2);
+                temp[(points_count-1)*4+3] = gui_vec2_sub(points[points_count-1], d1);
+            }
+
+            /* add all elements */
+            idx1 = index;
+            for (i1 = 0; i1 < count; ++i1) {
+                gui_float dmr2;
+                struct gui_vec2 dm_out, dm_in, dm;
+                const gui_size i2 = ((i1+1) == points_count) ? 0: (i1 + 1);
+                gui_size idx2 = ((i1+1) == points_count) ? index: (idx1 + 4);
+
+                /* average normals */
+                dm = gui_vec2_muls(gui_vec2_add(normals[i1], normals[i2]), 0.5f);
+                dmr2 = dm.x * dm.x + dm.y* dm.y;
+                if (dmr2 > 0.000001f) {
+                    gui_float scale = 1.0f/dmr2;
+                    scale = MIN(100.0f, scale);
+                    dm = gui_vec2_muls(dm, scale);
+                }
+
+                dm_out = gui_vec2_muls(dm, ((half_inner_thickness) + AA_SIZE));
+                dm_in = gui_vec2_muls(dm, half_inner_thickness);
+                temp[i2*4+0] = gui_vec2_add(points[i2], dm_out);
+                temp[i2*4+1] = gui_vec2_add(points[i2], dm_in);
+                temp[i2*4+2] = gui_vec2_sub(points[i2], dm_in);
+                temp[i2*4+3] = gui_vec2_sub(points[i2], dm_out);
+
+                /* add indexes */
+                ids[0] = (gui_draw_index)(idx2 + 1); ids[1] = (gui_draw_index)(idx1+1);
+                ids[2] = (gui_draw_index)(idx1 + 2); ids[3] = (gui_draw_index)(idx1+2);
+                ids[4] = (gui_draw_index)(idx2 + 2); ids[5] = (gui_draw_index)(idx2+1);
+                ids[6] = (gui_draw_index)(idx2 + 1); ids[7] = (gui_draw_index)(idx1+1);
+                ids[8] = (gui_draw_index)(idx1 + 0); ids[9] = (gui_draw_index)(idx1+0);
+                ids[10]= (gui_draw_index)(idx2 + 0); ids[11] = (gui_draw_index)(idx2+1);
+                ids[12]= (gui_draw_index)(idx2 + 2); ids[13] = (gui_draw_index)(idx1+2);
+                ids[14]= (gui_draw_index)(idx1 + 3); ids[15] = (gui_draw_index)(idx1+3);
+                ids[16]= (gui_draw_index)(idx2 + 3); ids[17] = (gui_draw_index)(idx2+2);
+                ids += 18;
+                idx1 = idx2;
+            }
+
+            /* add vertexes */
+            for (i = 0; i < points_count; ++i) {
+                const struct gui_vec2 uv = list->null.uv;
+                vtx[0] = gui_draw_vertex(temp[i*4+0], uv, col_trans);
+                vtx[1] = gui_draw_vertex(temp[i*4+1], uv, col);
+                vtx[2] = gui_draw_vertex(temp[i*4+2], uv, col);
+                vtx[3] = gui_draw_vertex(temp[i*4+3], uv, col_trans);
+                vtx += 4;
+            }
+        }
+
+        /* free temporary normals + points */
+        gui_buffer_reset(list->vertexes, GUI_BUFFER_FRONT);
+    } else {
+        /* NON ANTI-ALIASED STROKE */
+        gui_size i1 = 0;
+        gui_size idx = list->vertex_count;
+        const gui_size idx_count = count * 6;
+        const gui_size vtx_count = count * 4;
+        struct gui_draw_vertex *vtx = gui_draw_list_alloc_vertexes(list, vtx_count);
+        gui_draw_index *ids = gui_draw_list_alloc_elements(list, idx_count);
+        if (!vtx || !ids) return;
+
+        for (i1 = 0; i1 < count; ++i1) {
+            gui_float dx, dy;
+            const struct gui_vec2 uv = list->null.uv;
+            const gui_size i2 = ((i1+1) == points_count) ? 0 : i1 + 1;
+            const struct gui_vec2 p1 = points[i1];
+            const struct gui_vec2 p2 = points[i2];
+            struct gui_vec2 diff = gui_vec2_sub(p2, p1);
+            gui_float len;
+
+            /* vec2 inverted lenth  */
+            len = gui_vec2_len_sqr(diff);
+            if (len != 0.0f)
+                len = gui_inv_sqrt(len);
+            else len = 1.0f;
+            diff = gui_vec2_muls(diff, len);
+
+            /* add vertexes */
+            dx = diff.x * (thickness * 0.5f);
+            dy = diff.y * (thickness * 0.5f);
+
+            vtx[0] = gui_draw_vertex(gui_vec2(p1.x + dy, p1.y - dx), uv, col);
+            vtx[1] = gui_draw_vertex(gui_vec2(p2.x + dy, p2.y - dx), uv, col);
+            vtx[2] = gui_draw_vertex(gui_vec2(p2.x - dy, p2.y + dx), uv, col);
+            vtx[3] = gui_draw_vertex(gui_vec2(p1.x - dy, p1.y + dx), uv, col);
+            vtx += 4;
+
+            ids[0] = (gui_draw_index)(idx+0); ids[1] = (gui_draw_index)(idx+1);
+            ids[2] = (gui_draw_index)(idx+2); ids[3] = (gui_draw_index)(idx+0);
+            ids[4] = (gui_draw_index)(idx+2); ids[5] = (gui_draw_index)(idx+3);
+            ids += 6;
+            idx += 4;
+        }
+    }
+}
+
+static void
+gui_draw_list_add_poly_convex(struct gui_draw_list *list, struct gui_vec2 *points,
+    const gui_uint points_count, struct gui_color color, enum gui_anti_aliasing aliasing)
+{
+    static const gui_size pnt_align = GUI_ALIGNOF(struct gui_vec2);
+    static const gui_size pnt_size = sizeof(struct gui_vec2);
+    gui_draw_vertex_color col = gui_color32(color);
+    GUI_ASSERT(list);
+    if (!list || points_count < 3) return;
+
+    if (aliasing == GUI_ANTI_ALIASING_ON) {
+        gui_size i = 0;
+        gui_size i0 = 0, i1 = 0;
+
+        const gui_float AA_SIZE = 1.0f;
+        const gui_draw_vertex_color col_trans = col & 0x00ffffff;
+        gui_size index = list->vertex_count;
+        const gui_size idx_count = (points_count-2)*3 + points_count*6;
+        const gui_size vtx_count = (points_count*2);
+        struct gui_draw_vertex *vtx = gui_draw_list_alloc_vertexes(list, vtx_count);
+        gui_draw_index *ids = gui_draw_list_alloc_elements(list, idx_count);
+
+        gui_uint vtx_inner_idx = (gui_uint)(index + 0);
+        gui_uint vtx_outer_idx = (gui_uint)(index + 1);
+        struct gui_vec2 *normals;
+        gui_size size;
+        if (!vtx || !ids) return;
+
+        /* temporary allocate normals */
+        gui_buffer_mark(list->vertexes, GUI_BUFFER_FRONT);
+        size = pnt_size * points_count;
+        normals = (struct gui_vec2*)
+            gui_buffer_alloc(list->vertexes, GUI_BUFFER_FRONT, size, pnt_align);
+        if (!normals) return;
+
+        /* add elements */
+        for (i = 2; i < points_count; i++) {
+            ids[0] = (gui_draw_index)(vtx_inner_idx);
+            ids[1] = (gui_draw_index)(vtx_inner_idx + ((i-1) << 1));
+            ids[2] = (gui_draw_index)(vtx_inner_idx + (i << 1));
+            ids += 3;
+        }
+
+        /* compute normals */
+        for (i0 = points_count-1, i1 = 0; i1 < points_count; i0 = i1++) {
+            struct gui_vec2 p0 = points[i0];
+            struct gui_vec2 p1 = points[i1];
+            struct gui_vec2 diff = gui_vec2_sub(p1, p0);
+            gui_float len;
+
+            /* vec2 inverted lenth  */
+            len = gui_vec2_len_sqr(diff);
+            if (len != 0.0f)
+                len = gui_inv_sqrt(len);
+            else len = 1.0f;
+            diff = gui_vec2_muls(diff, len);
+
+            normals[i0].x = diff.y;
+            normals[i0].y = -diff.x;
+        }
+
+        /* add vertexes + indexes */
+        for (i0 = points_count-1, i1 = 0; i1 < points_count; i0 = i1++) {
+            const struct gui_vec2 uv = list->null.uv;
+            struct gui_vec2 n0 = normals[i0];
+            struct gui_vec2 n1 = normals[i1];
+            struct gui_vec2 dm = gui_vec2_muls(gui_vec2_add(n0, n1), 0.5f);
+
+            gui_float dmr2 = dm.x*dm.x + dm.y*dm.y;
+            if (dmr2 > 0.000001f) {
+                gui_float scale = 1.0f / dmr2;
+                scale = MIN(scale, 100.0f);
+                dm = gui_vec2_muls(dm, scale);
+            }
+            dm = gui_vec2_muls(dm, AA_SIZE * 0.5f);
+
+            /* add vertexes */
+            vtx[0] = gui_draw_vertex(gui_vec2_sub(points[i1], dm), uv, col);
+            vtx[1] = gui_draw_vertex(gui_vec2_add(points[i1], dm), uv, col_trans);
+            vtx += 2;
+
+            /* add indexes */
+            ids[0] = (gui_draw_index)(vtx_inner_idx+(i1<<1));
+            ids[1] = (gui_draw_index)(vtx_inner_idx+(i0<<1));
+            ids[2] = (gui_draw_index)(vtx_outer_idx+(i0<<1));
+            ids[3] = (gui_draw_index)(vtx_outer_idx+(i0<<1));
+            ids[4] = (gui_draw_index)(vtx_outer_idx+(i1<<1));
+            ids[5] = (gui_draw_index)(vtx_inner_idx+(i1<<1));
+            ids += 6;
+        }
+        /* free temporary normals + points */
+        gui_buffer_reset(list->vertexes, GUI_BUFFER_FRONT);
+    } else {
+        gui_size i;
+        gui_size index = list->vertex_count;
+        const gui_size idx_count = (points_count-2)*3;
+        const gui_size vtx_count = points_count;
+        struct gui_draw_vertex *vtx = gui_draw_list_alloc_vertexes(list, vtx_count);
+        gui_draw_index *ids = gui_draw_list_alloc_elements(list, idx_count);
+        if (!vtx || !ids) return;
+        for (i = 0; i < vtx_count; ++i) {
+            vtx[0] = gui_draw_vertex(points[i], list->null.uv, col);
+            vtx++;
+        }
+        for (i = 2; i < points_count; ++i) {
+            ids[0] = (gui_draw_index)index;
+            ids[1] = (gui_draw_index)(index+ i - 1);
+            ids[2] = (gui_draw_index)(index+i);
+            ids += 3;
+        }
+    }
+}
+
+void
+gui_draw_list_add_line(struct gui_draw_list *list, struct gui_vec2 a,
+    struct gui_vec2 b, struct gui_color col, gui_float thickness)
+{
+    GUI_ASSERT(list);
+    if (!list || !col.a) return;
+    gui_draw_list_path_line_to(list, gui_vec2_add(a, gui_vec2(0.5f, 0.5f)));
+    gui_draw_list_path_line_to(list, gui_vec2_add(b, gui_vec2(0.5f, 0.5f)));
+    gui_draw_list_path_stroke(list,  col, GUI_STROKE_OPEN, thickness);
+}
+
+void
+gui_draw_list_add_rect(struct gui_draw_list *list, struct gui_rect rect,
+    struct gui_color col, gui_float rounding, gui_float line_thickness)
+{
+    GUI_ASSERT(list);
+    if (!list || !col.a) return;
+    gui_draw_list_path_rect_to(list, gui_vec2(rect.x + 0.5f, rect.y + 0.5f),
+        gui_vec2(rect.x + rect.w + 0.5f, rect.y + rect.h + 0.5f), rounding);
+    gui_draw_list_path_stroke(list,  col, GUI_STROKE_CLOSED, line_thickness);
+}
+
+void
+gui_draw_list_add_rect_filled(struct gui_draw_list *list, struct gui_rect rect,
+    struct gui_color col, gui_float rounding)
+{
+    GUI_ASSERT(list);
+    if (!list || !col.a) return;
+    gui_draw_list_path_rect_to(list, gui_vec2(rect.x + 0.5f, rect.y + 0.5f),
+        gui_vec2(rect.x + rect.w + 0.5f, rect.y + rect.h + 0.5f), rounding);
+    gui_draw_list_path_fill(list,  col);
+}
+
+void
+gui_draw_list_add_triangle(struct gui_draw_list *list, struct gui_vec2 a, struct gui_vec2 b,
+    struct gui_vec2 c, struct gui_color col, gui_float line_thickness)
+{
+    GUI_ASSERT(list);
+    if (!list) return;
+    if (!col.a) return;
+    gui_draw_list_path_line_to(list, a);
+    gui_draw_list_path_line_to(list, b);
+    gui_draw_list_path_line_to(list, c);
+    gui_draw_list_path_stroke(list, col, GUI_STROKE_CLOSED, line_thickness);
+}
+
+void
+gui_draw_list_add_triangle_filled(struct gui_draw_list *list, struct gui_vec2 a,
+    struct gui_vec2 b, struct gui_vec2 c, struct gui_color col)
+{
+    GUI_ASSERT(list);
+    if (!list || !col.a) return;
+    gui_draw_list_path_line_to(list, a);
+    gui_draw_list_path_line_to(list, b);
+    gui_draw_list_path_line_to(list, c);
+    gui_draw_list_path_fill(list, col);
+}
+
+void
+gui_draw_list_add_circle(struct gui_draw_list *list, struct gui_vec2 center,
+    gui_float radius, struct gui_color col, gui_uint segs, gui_float line_thickness)
+{
+    gui_float a_max;
+    GUI_ASSERT(list);
+    if (!list || !col.a) return;
+    a_max = GUI_PI * 2.0f * ((gui_float)segs - 1.0f) / (gui_float)segs;
+    gui_draw_list_path_arc_to(list, center, radius, 0.0f, a_max, segs);
+    gui_draw_list_path_stroke(list, col, GUI_STROKE_CLOSED, line_thickness);
+}
+
+void
+gui_draw_list_add_circle_filled(struct gui_draw_list *list, struct gui_vec2 center,
+    gui_float radius, struct gui_color col, gui_uint segs)
+{
+    gui_float a_max;
+    GUI_ASSERT(list);
+    if (!list || !col.a) return;
+    a_max = GUI_PI * 2.0f * ((gui_float)segs - 1.0f) / (gui_float)segs;
+    gui_draw_list_path_arc_to(list, center, radius, 0.0f, a_max, segs);
+    gui_draw_list_path_fill(list, col);
+}
+
+void
+gui_draw_list_add_curve(struct gui_draw_list *list, struct gui_vec2 p0,
+    struct gui_vec2 cp0, struct gui_vec2 cp1, struct gui_vec2 p1,
+    struct gui_color col, gui_uint segments, gui_float thickness)
+{
+    GUI_ASSERT(list);
+    if (!list || !col.a) return;
+    gui_draw_list_path_line_to(list, p0);
+    gui_draw_list_path_curve_to(list, cp0, cp1, p1, segments);
+    gui_draw_list_path_stroke(list, col, GUI_STROKE_OPEN, thickness);
+}
+
+static void
+gui_draw_list_push_rect_uv(struct gui_draw_list *list, struct gui_vec2 a,
+    struct gui_vec2 c, struct gui_vec2 uva, struct gui_vec2 uvc, struct gui_color color)
+{
+    gui_draw_vertex_color col = gui_color32(color);
+    struct gui_draw_vertex *vtx;
+    struct gui_vec2 uvb, uvd;
+    struct gui_vec2 b,d;
+    gui_draw_index *idx;
+    gui_draw_index index;
+    GUI_ASSERT(list);
+    if (!list) return;
+
+    uvb = gui_vec2(uvc.x, uva.y);
+    uvd = gui_vec2(uva.x, uvc.y);
+    b = gui_vec2(c.x, a.y);
+    d = gui_vec2(a.x, c.y);
+
+    index = (gui_draw_index)list->vertex_count;
+    vtx = gui_draw_list_alloc_vertexes(list, 4);
+    idx = gui_draw_list_alloc_elements(list, 6);
+    if (!vtx || !idx) return;
+
+    idx[0] = (gui_draw_index)(index+0); idx[1] = (gui_draw_index)(index+1);
+    idx[2] = (gui_draw_index)(index+2); idx[3] = (gui_draw_index)(index+0);
+    idx[4] = (gui_draw_index)(index+2); idx[5] = (gui_draw_index)(index+3);
+
+    vtx[0] = gui_draw_vertex(a, uva, col);
+    vtx[1] = gui_draw_vertex(b, uvb, col);
+    vtx[2] = gui_draw_vertex(c, uvc, col);
+    vtx[3] = gui_draw_vertex(d, uvd, col);
+}
+
+void
+gui_draw_list_add_image(struct gui_draw_list *list, struct gui_image texture,
+    struct gui_rect rect, struct gui_color color)
+{
+    GUI_ASSERT(list);
+    if (!list) return;
+    /* push new command with given texture */
+    gui_draw_list_push_image(list, texture.handle);
+    if (gui_image_is_subimage(&texture)) {
+        /* add region inside of the texture  */
+        struct gui_vec2 uv[2];
+        uv[0].x = (gui_float)texture.region[0]/(gui_float)texture.w;
+        uv[0].y = (gui_float)texture.region[1]/(gui_float)texture.h;
+        uv[1].x = (gui_float)(texture.region[0] + texture.region[2])/(gui_float)texture.w;
+        uv[1].y = (gui_float)(texture.region[1] + texture.region[3])/(gui_float)texture.h;
+        gui_draw_list_push_rect_uv(list, gui_vec2(rect.x, rect.y),
+            gui_vec2(rect.x + rect.w, rect.y + rect.h),  uv[0], uv[1], color);
+    } else gui_draw_list_push_rect_uv(list, gui_vec2(rect.x, rect.y),
+            gui_vec2(rect.x + rect.w, rect.y + rect.h),
+            gui_vec2(0.0f, 0.0f), gui_vec2(1.0f, 1.0f),color);
+}
+
+void
+gui_draw_list_add_text(struct gui_draw_list *list, const struct gui_user_font *font,
+    struct gui_rect rect, const gui_char *text, gui_size len,
+    struct gui_color bg, struct gui_color fg)
+{
+    gui_float x;
+    gui_size text_len;
+    gui_long unicode, next;
+    gui_size glyph_len, next_glyph_len;
+    struct gui_user_font_glyph g;
+    GUI_ASSERT(list);
+    if (!list || !len || !text) return;
+
+    /* draw text background */
+    gui_draw_list_add_rect_filled(list, rect, bg, 0.0f);
+    gui_draw_list_push_image(list, font->texture);
+
+    /* draw every glyph image */
+    x = rect.x;
+    glyph_len = text_len = gui_utf_decode(text, &unicode, len);
+    if (!glyph_len) return;
+    while (text_len <= len && glyph_len) {
+        gui_float gx, gy, gh, gw;
+        gui_float char_width = 0;
+        if (unicode == GUI_UTF_INVALID) break;
+
+        /* query currently drawn glyph information */
+        next_glyph_len = gui_utf_decode(text + text_len, &next, len - text_len);
+        font->query(font->userdata, &g, unicode, (next == GUI_UTF_INVALID) ? '\0' : next);
+
+        /* calculate and draw glyph drawing rectangle and image */
+        gx = x + g.offset.x;
+        gy = rect.y + (font->height/2) + (rect.h/2) - g.offset.y;
+        gw = g.width; gh = g.height;
+        char_width = g.xadvance;
+        gui_draw_list_push_rect_uv(list, gui_vec2(gx,gy), gui_vec2(gx + gw, gy+ gh),
+            g.uv[0], g.uv[1], fg);
+
+        /* offset next glyph */
+        text_len += glyph_len;
+        x += char_width;
+        glyph_len = next_glyph_len;
+        unicode = next;
+    }
+}
+
+void
+gui_draw_list_path_clear(struct gui_draw_list *list)
+{
+    GUI_ASSERT(list);
+    if (!list) return;
+    gui_buffer_reset(list->buffer, GUI_BUFFER_FRONT);
+    list->path_count = 0;
+    list->path_offset = 0;
+}
+
+void
+gui_draw_list_path_line_to(struct gui_draw_list *list, struct gui_vec2 pos)
+{
+    struct gui_vec2 *points;
+    struct gui_draw_command *cmd;
+    GUI_ASSERT(list);
+    if (!list) return;
+    if (!list->cmd_count)
+        gui_draw_list_add_clip(list, gui_null_rect);
+    cmd = gui_draw_list_command_last(list);
+    if (cmd->texture.ptr != list->null.texture.ptr)
+        gui_draw_list_push_image(list, list->null.texture);
+
+    points = gui_draw_list_alloc_path(list, 1);
+    if (!points) return;
+    points[0] = pos;
+}
+
+static void
+gui_draw_list_path_arc_to_fast(struct gui_draw_list *list, struct gui_vec2 center,
+    gui_float radius, gui_int a_min, gui_int a_max)
+{
+    static struct gui_vec2 circle_vtx[12];
+    static gui_bool circle_vtx_builds = gui_false;
+    static const gui_int circle_vtx_count = GUI_LEN(circle_vtx);
+
+    GUI_ASSERT(list);
+    if (!list) return;
+    if (!circle_vtx_builds) {
+        gui_int i = 0;
+        for (i = 0; i < circle_vtx_count; ++i) {
+            const gui_float a = ((gui_float)i / (gui_float)circle_vtx_count) * 2 * GUI_PI;
+            circle_vtx[i].x = list->cos(a);
+            circle_vtx[i].y = list->sin(a);
+        }
+        circle_vtx_builds = gui_true;
+    }
+
+    if (a_min <= a_max) {
+        gui_int a = 0;
+        for (a = a_min; a <= a_max; a++) {
+            const struct gui_vec2 c = circle_vtx[a % circle_vtx_count];
+            const gui_float x = center.x + c.x * radius;
+            const gui_float y = center.y + c.y * radius;
+            gui_draw_list_path_line_to(list, gui_vec2(x, y));
+        }
+    }
+}
+
+void
+gui_draw_list_path_arc_to(struct gui_draw_list *list, struct gui_vec2 center,
+    gui_float radius, gui_float a_min, gui_float a_max, gui_uint segments)
+{
+    gui_uint i = 0;
+    GUI_ASSERT(list);
+    if (!list) return;
+    if (radius == 0.0f) return;
+    for (i = 0; i <= segments; ++i) {
+        const gui_float a = a_min + ((gui_float)i / (gui_float)segments) * (a_max - a_min);
+        const gui_float x = center.x + list->cos(a) * radius;
+        const gui_float y = center.y + list->sin(a) * radius;
+        gui_draw_list_path_line_to(list, gui_vec2(x, y));
+    }
+}
+
+void
+gui_draw_list_path_rect_to(struct gui_draw_list *list, struct gui_vec2 a,
+    struct gui_vec2 b, gui_float rounding)
+{
+    gui_float r;
+    GUI_ASSERT(list);
+    if (!list) return;
+    r = rounding;
+    r = MIN(r, ((b.x-a.x) < 0) ? -(b.x-a.x): (b.x-a.x));
+    r = MIN(r, ((b.y-a.y) < 0) ? -(b.y-a.y): (b.y-a.y));
+    if (r == 0.0f) {
+        gui_draw_list_path_line_to(list, a);
+        gui_draw_list_path_line_to(list, gui_vec2(b.x,a.y));
+        gui_draw_list_path_line_to(list, b);
+        gui_draw_list_path_line_to(list, gui_vec2(a.x,b.y));
+    } else {
+        gui_draw_list_path_arc_to_fast(list, gui_vec2(a.x + r, a.y + r), r, 6, 9);
+        gui_draw_list_path_arc_to_fast(list, gui_vec2(b.x - r, a.y + r), r, 9, 12);
+        gui_draw_list_path_arc_to_fast(list, gui_vec2(b.x - r, b.y - r), r, 0, 3);
+        gui_draw_list_path_arc_to_fast(list, gui_vec2(a.x + r, b.y - r), r, 3, 6);
+    }
+}
+
+void
+gui_draw_list_path_curve_to(struct gui_draw_list *list, struct gui_vec2 p2,
+    struct gui_vec2 p3, struct gui_vec2 p4, gui_uint num_segments)
+{
+    gui_uint i_step;
+    gui_float t_step;
+    struct gui_vec2 p1;
+
+    GUI_ASSERT(list);
+    GUI_ASSERT(list->path_count);
+    if (!list || !list->path_count) return;
+    num_segments = MAX(num_segments, 1);
+
+    p1 = gui_draw_list_path_last(list);
+    t_step = 1.0f/(gui_float)num_segments;
+    for (i_step = 1; i_step <= num_segments; ++i_step) {
+        gui_float t = t_step * (gui_float)i_step;
+        gui_float u = 1.0f - t;
+        gui_float w1 = u*u*u;
+        gui_float w2 = 3*u*u*t;
+        gui_float w3 = 3*u*t*t;
+        gui_float w4 = t * t *t;
+        gui_float x = w1 * p1.x + w2 * p2.x + w3 * p3.x + w4 * p4.x;
+        gui_float y = w1 * p1.y + w2 * p2.y + w3 * p3.y + w4 * p4.y;
+        gui_draw_list_path_line_to(list, gui_vec2(x,y));
+    }
+}
+
+void
+gui_draw_list_path_fill(struct gui_draw_list *list, struct gui_color color)
+{
+    struct gui_vec2 *points;
+    GUI_ASSERT(list);
+    if (!list) return;
+    points = (struct gui_vec2*)gui_buffer_memory(list->buffer);
+    gui_draw_list_add_poly_convex(list, points, list->path_count, color, list->AA);
+    gui_draw_list_path_clear(list);
+}
+
+void
+gui_draw_list_path_stroke(struct gui_draw_list *list, struct gui_color color,
+    gui_bool closed, gui_float thickness)
+{
+    struct gui_vec2 *points;
+    GUI_ASSERT(list);
+    if (!list) return;
+    points = (struct gui_vec2*)gui_buffer_memory(list->buffer);
+    gui_draw_list_add_poly_line(list, points, list->path_count, color,
+        closed, thickness, list->AA);
+    gui_draw_list_path_clear(list);
+}
+#endif
 /*
  * ==============================================================
  *
@@ -1838,6 +2829,14 @@ gui_edit_box_len(struct gui_edit_box *eb)
 /*
  * ==============================================================
  *
+ *                          Font
+ *
+ * ===============================================================
+ */
+
+/*
+ * ==============================================================
+ *
  *                          Widgets
  *
  * ===============================================================
@@ -1845,7 +2844,7 @@ gui_edit_box_len(struct gui_edit_box *eb)
 void
 gui_widget_text(struct gui_command_buffer *o, struct gui_rect b,
     const char *string, gui_size len, const struct gui_text *t,
-    enum gui_text_align a, const struct gui_font *f)
+    enum gui_text_align a, const struct gui_user_font *f)
 {
     struct gui_rect label;
     gui_size text_width;
@@ -1918,7 +2917,7 @@ gui_bool
 gui_widget_button_text(struct gui_command_buffer *o, struct gui_rect r,
      const char *string, enum gui_button_behavior behavior,
     const struct gui_button_text *b, const struct gui_input *i,
-    const struct gui_font *f)
+    const struct gui_user_font *f)
 {
     struct gui_text t;
     struct gui_rect content;
@@ -1947,7 +2946,7 @@ gui_widget_button_text(struct gui_command_buffer *o, struct gui_rect r,
 static void
 gui_draw_symbol(struct gui_command_buffer *out, enum gui_symbol symbol,
     struct gui_rect content, struct gui_color background, struct gui_color foreground,
-    gui_float border_width, const struct gui_font *font)
+    gui_float border_width, const struct gui_user_font *font)
 {
     switch (symbol) {
     case GUI_SYMBOL_X:
@@ -2004,7 +3003,7 @@ gui_bool
 gui_widget_button_symbol(struct gui_command_buffer *out, struct gui_rect r,
     enum gui_symbol symbol, enum gui_button_behavior bh,
     const struct gui_button_symbol *b, const struct gui_input *in,
-    const struct gui_font *font)
+    const struct gui_user_font *font)
 {
     gui_bool ret;
     struct gui_color background;
@@ -2050,7 +3049,7 @@ gui_bool
 gui_widget_button_text_symbol(struct gui_command_buffer *out, struct gui_rect r,
     enum gui_symbol symbol, const char *text, enum gui_text_align align,
     enum gui_button_behavior behavior, const struct gui_button_text *button,
-    const struct gui_font *f, const struct gui_input *i)
+    const struct gui_user_font *f, const struct gui_input *i)
 {
     gui_bool ret;
     struct gui_rect tri;
@@ -2087,7 +3086,7 @@ gui_bool
 gui_widget_button_text_image(struct gui_command_buffer *out, struct gui_rect r,
     struct gui_image img, const char* text, enum gui_text_align align,
     enum gui_button_behavior behavior, const struct gui_button_text *button,
-    const struct gui_font *f, const struct gui_input *i)
+    const struct gui_user_font *f, const struct gui_input *i)
 {
     gui_bool pressed;
     struct gui_rect icon;
@@ -2111,7 +3110,7 @@ void
 gui_widget_toggle(struct gui_command_buffer *out, struct gui_rect r,
     gui_bool *active, const char *string, enum gui_toggle_type type,
     const struct gui_toggle *toggle, const struct gui_input *in,
-    const struct gui_font *font)
+    const struct gui_user_font *font)
 {
     gui_bool toggle_active;
     struct gui_rect select;
@@ -2254,7 +3253,6 @@ gui_widget_slider(struct gui_command_buffer *out, struct gui_rect slider,
     }
 
     {
-        /* NOTE: this is a shitty hack since I am to stupid for math */
         struct gui_rect fill;
         cursor.w = cursor.h;
         cursor.x = (slider_value <= slider_min) ? cursor.x:
@@ -2324,7 +3322,7 @@ gui_widget_progress(struct gui_command_buffer *out, struct gui_rect r,
 }
 
 static gui_size
-gui_font_glyph_index_at_pos(const struct gui_font *font, const char *text,
+gui_user_font_glyph_index_at_pos(const struct gui_user_font *font, const char *text,
     gui_size text_len, gui_float xoff)
 {
     gui_long unicode;
@@ -2346,7 +3344,7 @@ gui_font_glyph_index_at_pos(const struct gui_font *font, const char *text,
 }
 
 static gui_size
-gui_font_glyphes_fitting_in_space(const struct gui_font *font, const char *text,
+gui_user_font_glyphes_fitting_in_space(const struct gui_user_font *font, const char *text,
     gui_size text_len, gui_float space, gui_size *glyphes, gui_float *text_width)
 {
     gui_size glyph_len;
@@ -2378,7 +3376,7 @@ gui_font_glyphes_fitting_in_space(const struct gui_font *font, const char *text,
 void
 gui_widget_editbox(struct gui_command_buffer *out, struct gui_rect r,
     struct gui_edit_box *box, const struct gui_edit *field,
-    const struct gui_input *in, const struct gui_font *font)
+    const struct gui_input *in, const struct gui_user_font *font)
 {
     gui_char *buffer;
     gui_size len;
@@ -2399,7 +3397,8 @@ gui_widget_editbox(struct gui_command_buffer *out, struct gui_rect r,
         field->rounding, field->background);
 
     /* check if the editbox is activated/deactivated */
-    if (in && in->mouse.buttons[GUI_BUTTON_LEFT].clicked && in->mouse.buttons[GUI_BUTTON_LEFT].down)
+    if (in && in->mouse.buttons[GUI_BUTTON_LEFT].clicked &&
+        in->mouse.buttons[GUI_BUTTON_LEFT].down)
         box->active = GUI_INBOX(in->mouse.pos.x,in->mouse.pos.y,r.x,r.y,r.w,r.h);
 
     /* input handling */
@@ -2493,7 +3492,7 @@ gui_widget_editbox(struct gui_command_buffer *out, struct gui_rect r,
             while (text_len) {
                 frames++;
                 offset += frame_len;
-                frame_len = gui_font_glyphes_fitting_in_space(font,
+                frame_len = gui_user_font_glyphes_fitting_in_space(font,
                     &buffer[offset], text_len, space, &glyphes, &text_width);
                 glyph_off += glyphes;
                 if (glyph_off > box->cursor)
@@ -2514,7 +3513,7 @@ gui_widget_editbox(struct gui_command_buffer *out, struct gui_rect r,
             {
                 /* text selection in the current text frame */
                 gui_size glyph_index;
-                gui_size glyph_pos=gui_font_glyph_index_at_pos(font,visible,text_len,xoff);
+                gui_size glyph_pos=gui_user_font_glyph_index_at_pos(font,visible,text_len,xoff);
                 if (glyph_cnt + glyph_off >= box->glyphes)
                     glyph_index = glyph_off + MIN(glyph_pos, glyph_cnt);
                 else glyph_index = glyph_off + MIN(glyph_pos, glyph_cnt-1);
@@ -2655,7 +3654,7 @@ gui_size
 gui_widget_edit_filtered(struct gui_command_buffer *out, struct gui_rect r,
     gui_char *buffer, gui_size len, gui_size max, gui_state *active,
     gui_size *cursor,  const struct gui_edit *field, gui_filter filter,
-    const struct gui_input *in, const struct gui_font *font)
+    const struct gui_input *in, const struct gui_user_font *font)
 {
     struct gui_edit_box box;
     gui_edit_box_init_fixed(&box, buffer, max, 0, filter);
@@ -2675,7 +3674,7 @@ gui_size
 gui_widget_edit(struct gui_command_buffer *out, struct gui_rect r,
     gui_char *buffer, gui_size len, gui_size max, gui_state *active,
     gui_size *cursor, const struct gui_edit *field, enum gui_input_filter f,
-    const struct gui_input *in, const struct gui_font *font)
+    const struct gui_input *in, const struct gui_user_font *font)
 {
     static const gui_filter filter[] = {
         gui_filter_default,
@@ -2737,7 +3736,7 @@ gui_widget_scrollbarv(struct gui_command_buffer *out, struct gui_rect scroll,
             const gui_float delta =  (pixel / scroll.h) * target;
             scroll_offset = CLAMP(0, scroll_offset + delta, target - scroll.h);
             col = s->active;
-        } else if (s->has_scrolling && ((i->mouse.scroll_delta < 0) || (i->mouse.scroll_delta>0))) {
+        } else if (s->has_scrolling && ((i->mouse.scroll_delta<0) || (i->mouse.scroll_delta>0))) {
             /* update cursor by mouse scrolling */
             scroll_offset = scroll_offset + scroll_step * (-i->mouse.scroll_delta);
             scroll_offset = CLAMP(0, scroll_offset, target - scroll.h);
@@ -2802,7 +3801,7 @@ gui_widget_scrollbarh(struct gui_command_buffer *out, struct gui_rect scroll,
             const gui_float delta =  (pixel / scroll.w) * target;
             scroll_offset = CLAMP(0, scroll_offset + delta, target - scroll.w);
             col = s->active;
-        } else if (s->has_scrolling && ((i->mouse.scroll_delta < 0) || (i->mouse.scroll_delta>0))) {
+        } else if (s->has_scrolling && ((i->mouse.scroll_delta<0) || (i->mouse.scroll_delta>0))) {
             /* update cursor by mouse scrolling */
             scroll_offset = scroll_offset + scroll_step * (-i->mouse.scroll_delta);
             scroll_offset = CLAMP(0, scroll_offset, target - scroll.w);
@@ -2821,7 +3820,7 @@ static gui_int
 gui_widget_spinner_base(struct gui_command_buffer *out, struct gui_rect r,
     const struct gui_spinner *s, gui_char *buffer, gui_size *len,
     enum gui_input_filter filter, gui_state *active,
-    const struct gui_input *in, const struct gui_font *font)
+    const struct gui_input *in, const struct gui_user_font *font)
 {
     gui_int ret = 0;
     struct gui_rect bounds;
@@ -2871,7 +3870,7 @@ gui_int
 gui_widget_spinner(struct gui_command_buffer *out, struct gui_rect r,
     const struct gui_spinner *s, gui_int min, gui_int value,
     gui_int max, gui_int step, gui_state *active, const struct gui_input *in,
-    const struct gui_font *font)
+    const struct gui_user_font *font)
 {
     gui_int res;
     gui_char string[GUI_MAX_NUMBER_BUFFER];
@@ -2981,7 +3980,7 @@ gui_style_default_color(struct gui_style *style)
 
 void
 gui_style_default(struct gui_style *style, gui_flags flags,
-    const struct gui_font *font)
+    const struct gui_user_font *font)
 {
     GUI_ASSERT(style);
     if (!style) return;
@@ -2997,7 +3996,7 @@ gui_style_default(struct gui_style *style, gui_flags flags,
 }
 
 void
-gui_style_set_font(struct gui_style *style, const struct gui_font *font)
+gui_style_set_font(struct gui_style *style, const struct gui_user_font *font)
 {
     GUI_ASSERT(style);
     if (!style) return;
@@ -3142,6 +4141,79 @@ gui_window_set_config(struct gui_window *panel, const struct gui_style *config)
 }
 
 void
+gui_window_unlink(struct gui_window *window)
+{
+    GUI_ASSERT(window);
+    GUI_ASSERT(window->queue);
+    if (!window || !window->queue) return;
+    gui_command_queue_remove(window->queue, &window->buffer);
+    window->queue = 0;
+}
+
+void
+gui_window_set_queue(struct gui_window *panel, struct gui_command_queue *queue)
+{
+    GUI_ASSERT(panel);
+    GUI_ASSERT(queue);
+    if (!panel || !queue) return;
+    if (panel->queue)
+        gui_window_unlink(panel);
+    gui_command_queue_insert_back(queue, &panel->buffer);
+    panel->queue = queue;
+}
+
+void
+gui_window_set_input(struct gui_window *window, const struct gui_input *in)
+{
+    GUI_ASSERT(window);
+    GUI_ASSERT(in);
+    if (!window || !in) return;
+    window->input = in;
+}
+
+struct gui_vec2
+gui_window_get_scrollbar(struct gui_window *window)
+{GUI_ASSERT(window); return window->offset;}
+
+void
+gui_window_set_scrollbar(struct gui_window *window, struct gui_vec2 offset)
+{GUI_ASSERT(window); if (!window) return; window->offset = offset;}
+
+void
+gui_window_set_position(struct gui_window *window, struct gui_vec2 offset)
+{
+    GUI_ASSERT(window);
+    if (!window) return;
+    window->bounds.x = offset.x;
+    window->bounds.y = offset.y;
+}
+
+struct gui_vec2
+gui_window_get_position(struct gui_window *window)
+{GUI_ASSERT(window);return gui_vec2(window->bounds.x, window->bounds.y);}
+
+void
+gui_window_set_size(struct gui_window *window, struct gui_vec2 size)
+{
+    GUI_ASSERT(window);
+    if (!window) return;
+    window->bounds.w = size.x;
+    window->bounds.h = size.y;
+}
+
+struct gui_vec2
+gui_window_get_size(struct gui_window *window)
+{GUI_ASSERT(window);return gui_vec2(window->bounds.w, window->bounds.h);}
+
+void
+gui_window_set_bounds(struct gui_window *window, struct gui_rect bounds)
+{GUI_ASSERT(window); if (!window) return; window->bounds = bounds;}
+
+struct gui_rect
+gui_window_get_bounds(struct gui_window *window)
+{GUI_ASSERT(window);return window->bounds;}
+
+void
 gui_window_add_flag(struct gui_window *panel, gui_flags f)
 {panel->flags |= f;}
 
@@ -3207,7 +4279,6 @@ gui_begin(struct gui_context *context, struct gui_window *window)
         gui_command_queue_start(window->queue, &window->buffer);
         {
             gui_bool inpanel;
-            gui_float x, y, w, h;
             struct gui_command_buffer_list *s = &window->queue->list;
             inpanel = gui_input_mouse_clicked(in, GUI_BUTTON_LEFT, window->bounds);
             if (inpanel && (&window->buffer != s->end)) {
@@ -3358,6 +4429,8 @@ gui_end(struct gui_context *layout, struct gui_window *window)
 
     /* update the current Y-position to point over the last added widget */
     layout->at_y += layout->row.height;
+
+    /* draw footer and fill empty spaces inside a dynamically growing panel */
     if (layout->valid && (layout->flags & GUI_WINDOW_DYNAMIC) &&
         !(layout->valid & GUI_WINDOW_NO_SCROLLBAR)) {
         /* calculate the dynamic window footer bounds */
@@ -3397,7 +4470,7 @@ gui_end(struct gui_context *layout, struct gui_window *window)
         {
             /* vertical scollbar */
             bounds.x = layout->bounds.x + layout->width;
-            bounds.y = (layout->flags & GUI_WINDOW_BORDER) ? layout->bounds.y + 1 : layout->bounds.y;
+            bounds.y = (layout->flags & GUI_WINDOW_BORDER) ? layout->bounds.y+1:layout->bounds.y;
             bounds.y += layout->header.h + layout->menu.h;
             bounds.w = scrollbar_size;
             bounds.h = layout->height;
@@ -3498,6 +4571,8 @@ gui_end(struct gui_context *layout, struct gui_window *window)
         /* window is visible and not tab */
         else gui_command_queue_finish(window->queue, &window->buffer);
     }
+
+    /* the remove ROM flag was set so remove ROM FLAG*/
     if (layout->flags & GUI_WINDOW_REMOVE_ROM) {
         layout->flags &= ~(gui_flags)GUI_WINDOW_ROM;
         layout->flags &= ~(gui_flags)GUI_WINDOW_REMOVE_ROM;
@@ -4191,7 +5266,7 @@ gui_panel_alloc_space(struct gui_rect *bounds, struct gui_context *layout)
     spacing = gui_style_property(config, GUI_PROPERTY_ITEM_SPACING);
     padding = gui_style_property(config, GUI_PROPERTY_PADDING);
 
-    /* check if the end of the row was hit and begin new row if so */
+    /* check if the end of the row has been hit and begin new row if so */
     if (layout->row.index >= layout->row.columns)
         gui_panel_alloc_row(layout);
 
@@ -4335,7 +5410,7 @@ gui_layout_push(struct gui_context *layout,
         sym.y = header.y + item_padding.y + config->font.height/2;
         sym.x = header.x + panel_padding.x;
 
-        /* calculate the triangle vertexes and draw triangle */
+        /* calculate the triangle points and draw triangle */
         gui_triangle_from_direction(points, sym, 0, 0, heading);
         gui_command_buffer_push_triangle(layout->buffer,  points[0].x, points[0].y,
             points[1].x, points[1].y, points[2].x, points[2].y, config->colors[GUI_COLOR_TEXT]);
@@ -4623,7 +5698,8 @@ gui_button_symbol(struct gui_context *layout, enum gui_symbol symbol,
     button.normal = config->colors[GUI_COLOR_TEXT];
     button.hover = config->colors[GUI_COLOR_TEXT_HOVERING];
     button.active = config->colors[GUI_COLOR_TEXT_ACTIVE];
-    return gui_widget_button_symbol(layout->buffer, bounds, symbol, behavior, &button, i, &config->font);
+    return gui_widget_button_symbol(layout->buffer, bounds, symbol,
+            behavior, &button, i, &config->font);
 }
 
 gui_bool
@@ -4723,7 +5799,7 @@ gui_button_text_image(struct gui_context *layout, struct gui_image img,
 }
 
 gui_bool
-gui_button_invisible(struct gui_context *layout,  const char *text,
+gui_button_fitting(struct gui_context *layout,  const char *text,
     enum gui_text_align align, enum gui_button_behavior behavior)
 {
     struct gui_rect bounds;
@@ -5277,101 +6353,6 @@ gui_graph_callback(struct gui_context *layout, enum gui_graph_type type,
 /*
  * -------------------------------------------------------------
  *
- *                          TABLE
- *
- * --------------------------------------------------------------
- */
-static void
-gui_table_horizontal_line(struct gui_context *l, gui_size row_height)
-{
-    gui_float x, y, w;
-    struct gui_command_buffer *out = l->buffer;
-    const struct gui_style *c = l->style;
-    const struct gui_vec2 item_padding = gui_style_property(c, GUI_PROPERTY_ITEM_PADDING);
-    const struct gui_vec2 item_spacing = gui_style_property(c, GUI_PROPERTY_ITEM_SPACING);
-    if (!l->valid) return;
-
-    /* draws a horizontal line under the current item */
-    w = MAX(l->width, (2 * item_spacing.x + 2 * item_padding.x));
-    y = (l->at_y + (gui_float)row_height + item_padding.y) - l->offset.y;
-    x = l->at_x + item_spacing.x + item_padding.x - l->offset.x;
-    w = w - (2 * item_spacing.x + 2 * item_padding.x);
-    gui_command_buffer_push_line(out, x, y, x + w, y, c->colors[GUI_COLOR_TABLE_LINES]);
-}
-
-static void
-gui_table_vertical_line(struct gui_context *layout, gui_size cols)
-{
-    gui_size i;
-    struct gui_command_buffer *out;
-    const struct gui_style *config;
-
-    GUI_ASSERT(layout);
-    GUI_ASSERT(cols);
-    if (!layout || !cols) return;
-    if (!layout->valid) return;
-
-    out = layout->buffer;
-    config = layout->style;
-    for (i = 0; i < cols - 1; ++i) {
-        gui_float y, h;
-        struct gui_rect bounds;
-
-        /* draw a line between every item in the current row */
-        gui_panel_alloc_space(&bounds, layout);
-        y = layout->at_y + layout->row.height;
-        h = layout->row.height;
-        gui_command_buffer_push_line(out,  bounds.x + bounds.w, y,
-            bounds.x + bounds.w, h, config->colors[GUI_COLOR_TABLE_LINES]);
-    }
-    layout->row.index -= i;
-}
-
-void
-gui_table_begin(struct gui_context *layout, gui_flags flags,
-    gui_size row_height, gui_size cols)
-{
-    GUI_ASSERT(layout);
-    if (!layout || !layout->valid) return;
-
-    layout->is_table = gui_true;
-    layout->tbl_flags = flags;
-    gui_layout_row_dynamic(layout,  (gui_float)row_height, cols);
-    if (layout->tbl_flags & GUI_TABLE_HHEADER)
-        gui_table_horizontal_line(layout, row_height);
-    if (layout->tbl_flags & GUI_TABLE_VHEADER)
-        gui_table_vertical_line(layout, cols);
-}
-
-void
-gui_table_row(struct gui_context *layout)
-{
-    const struct gui_style *config;
-    struct gui_vec2 item_spacing;
-    GUI_ASSERT(layout);
-    if (!layout) return;
-    if (!layout->valid) return;
-
-    config = layout->style;
-    item_spacing = gui_style_property(config, GUI_PROPERTY_ITEM_SPACING);
-    gui_layout_row_dynamic(layout, layout->row.height-item_spacing.y,layout->row.columns);
-    if (layout->tbl_flags & GUI_TABLE_HBODY)
-        gui_table_horizontal_line(layout,
-            (gui_size)(layout->row.height - item_spacing.y));
-    if (layout->tbl_flags & GUI_TABLE_VBODY)
-        gui_table_vertical_line(layout, layout->row.columns);
-}
-
-void
-gui_table_end(struct gui_context *layout)
-{
-    /* I personally don't like the flag but it is the easiest way to achieve a table */
-    layout->is_table = gui_false;
-}
-
-/*
- * -------------------------------------------------------------
- *
  *                          POPUP
  *
  * --------------------------------------------------------------
@@ -5540,7 +6521,6 @@ gui_popup_nonblock_end(struct gui_context *parent, struct gui_context *popup)
     gui_popup_nonblocking_end(parent, popup);
     return;
 }
-
 /*
  * -------------------------------------------------------------
  *
@@ -5625,8 +6605,8 @@ gui_combo_begin(struct gui_context *parent, struct gui_context *combo,
         body.w = header.w;
         body.y = header.y + header.h;
         body.h = gui_null_rect.h;
-        if (!gui_popup_nonblocking_begin(parent,combo,GUI_WINDOW_NO_SCROLLBAR, active,is_active,body))
-            goto failed;
+        if (!gui_popup_nonblocking_begin(parent, combo, GUI_WINDOW_NO_SCROLLBAR,
+                active, is_active, body)) goto failed;
         combo->flags |= GUI_WINDOW_COMBO_MENU;
     }
     return;
@@ -5679,7 +6659,7 @@ gui_combo(struct gui_context *layout, const char **entries,
     gui_layout_row_dynamic(&combo, (gui_float)row_height, 1);
     for (i = 0; i < count; ++i) {
         if (i == *current) continue;
-        if (gui_button_invisible(&combo,entries[i], GUI_TEXT_LEFT, GUI_BUTTON_DEFAULT)) {
+        if (gui_button_fitting(&combo,entries[i], GUI_TEXT_LEFT, GUI_BUTTON_DEFAULT)) {
             gui_combo_close(&combo);
             *active = gui_false;
             *current = i;
@@ -5791,7 +6771,7 @@ gui_menu(struct gui_context *layout, const char *title,
     gui_menu_begin(layout, &menu, title, width, active);
     gui_layout_row_dynamic(&menu, (gui_float)row_height, 1);
     for (i = 0; i < count; ++i) {
-        if (gui_button_invisible(&menu, entries[i], GUI_TEXT_LEFT, GUI_BUTTON_DEFAULT)) {
+        if (gui_button_fitting(&menu, entries[i], GUI_TEXT_LEFT, GUI_BUTTON_DEFAULT)) {
             gui_combo_close(&menu);
             *active = gui_false;
             sel = (gui_int)i;
@@ -6119,7 +7099,7 @@ gui_shelf_begin(struct gui_context *parent, struct gui_context *shelf,
 {
     const struct gui_style *config;
     struct gui_command_buffer *out;
-    const struct gui_font *font;
+    const struct gui_user_font *font;
     struct gui_vec2 item_padding;
     struct gui_vec2 panel_padding;
 

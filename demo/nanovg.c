@@ -98,14 +98,6 @@ draw(NVGcontext *nvg, struct gui_command_queue *queue, int width, int height)
             nvgFillColor(nvg, nvgRGBA(l->color.r, l->color.g, l->color.b, l->color.a));
             nvgFill(nvg);
         } break;
-        case GUI_COMMAND_QUAD: {
-            const struct gui_command_quad *q = gui_command(quad, cmd);
-            nvgBeginPath(nvg);
-            nvgMoveTo(nvg, q->begin.x, q->begin.y);
-            nvgQuadTo(nvg, q->ctrl.x, q->ctrl.y, q->end.x, q->end.y);
-            nvgStrokeColor(nvg, nvgRGBA(q->color.r, q->color.g, q->color.b, q->color.a));
-            nvgStroke(nvg);
-        } break;
         case GUI_COMMAND_CURVE: {
             const struct gui_command_curve *q = gui_command(curve, cmd);
             nvgBeginPath(nvg);
@@ -248,8 +240,6 @@ main(int argc, char *argv[])
     unsigned int dt;
 
     /* GUI */
-    struct gui_input in;
-    struct gui_font font;
     struct demo_gui gui;
 
     if (argc < 2) {
@@ -283,32 +273,31 @@ main(int argc, char *argv[])
     nvgTextAlign(vg, NVG_ALIGN_LEFT|NVG_ALIGN_MIDDLE);
 
     /* GUI */
-    memset(&in, 0, sizeof in);
     memset(&gui, 0, sizeof gui);
-    gui.memory = malloc(MAX_MEMORY);
-    font.userdata.ptr = vg;
-    nvgTextMetrics(vg, NULL, NULL, &font.height);
-    font.width = font_get_width;
-    gui.input = &in;
-    init_demo(&gui, &font);
+    gui_buffer_init_fixed(&gui.memory, calloc(MAX_MEMORY, 1), MAX_MEMORY);
+    gui.font.userdata.ptr = vg;
+    gui.font.width = font_get_width;
+    nvgTextMetrics(vg, NULL, NULL, &gui.font.height);
+    init_demo(&gui);
 
     while (gui.running) {
         /* Input */
         SDL_Event evt;
         started = SDL_GetTicks();
-        gui_input_begin(&in);
+        gui_input_begin(&gui.input);
         while (SDL_PollEvent(&evt)) {
             if (evt.type == SDL_WINDOWEVENT) resize(&evt);
             else if (evt.type == SDL_QUIT) goto cleanup;
-            else if (evt.type == SDL_KEYUP) key(&in, &evt, gui_false);
-            else if (evt.type == SDL_KEYDOWN) key(&in, &evt, gui_true);
-            else if (evt.type == SDL_MOUSEBUTTONDOWN) btn(&in, &evt, gui_true);
-            else if (evt.type == SDL_MOUSEBUTTONUP) btn(&in, &evt, gui_false);
-            else if (evt.type == SDL_MOUSEMOTION) motion(&in, &evt);
-            else if (evt.type == SDL_TEXTINPUT) text(&in, &evt);
-            else if (evt.type == SDL_MOUSEWHEEL) gui_input_scroll(&in, evt.wheel.y);
+            else if (evt.type == SDL_KEYUP) key(&gui.input, &evt, gui_false);
+            else if (evt.type == SDL_KEYDOWN) key(&gui.input, &evt, gui_true);
+            else if (evt.type == SDL_MOUSEBUTTONDOWN) btn(&gui.input, &evt, gui_true);
+            else if (evt.type == SDL_MOUSEBUTTONUP) btn(&gui.input, &evt, gui_false);
+            else if (evt.type == SDL_MOUSEMOTION) motion(&gui.input, &evt);
+            else if (evt.type == SDL_TEXTINPUT) text(&gui.input, &evt);
+            else if (evt.type == SDL_MOUSEWHEEL)
+                gui_input_scroll(&gui.input,(float)evt.wheel.y);
         }
-        gui_input_end(&in);
+        gui_input_end(&gui.input);
 
         /* GUI */
         SDL_GetWindowSize(win, &width, &height);
@@ -328,7 +317,7 @@ main(int argc, char *argv[])
 
 cleanup:
     /* Cleanup */
-    free(gui.memory);
+    free(gui_buffer_memory(&gui.memory));
     nvgDeleteGLES2(vg);
     SDL_GL_DeleteContext(glContext);
     SDL_DestroyWindow(win);

@@ -47,6 +47,17 @@ extern "C" {
 #define GUI_COMPILE_WITH_ASSERT 1
 /* setting this define to 1 adds the <assert.h> header for the assert macro
   IMPORTANT: it also adds clib so only use it if wanted */
+#define GUI_COMPILE_WITH_VERTEX_BUFFER 1
+/* setting this define to 1 adds a vertex draw command list backend to this library,
+  which allows you to convert queue commands into vertex draw commands.
+  If you do not want or need a default backend you can set this flag to zero
+  and the module of the library will not be compiled */
+#define GUI_COMPILE_WITH_FONT 1
+/* setting this define to 1 adds the `stb_truetype` and `stb_rect_pack` header
+ to this library and provided a default font for font loading and rendering.
+ If you already have a font or do not want to use this font you can just set this
+ define to zero and the font module will not be compiled and the two header
+ will not be needed. */
 /*
  * ==============================================================
  *
@@ -106,13 +117,15 @@ enum gui_widget_states {GUI_INACTIVE = gui_false, GUI_ACTIVE = gui_true};
 enum gui_collapse_states {GUI_MINIMIZED = gui_false, GUI_MAXIMIZED = gui_true};
 
 /* Callbacks */
-struct gui_font;
+struct gui_user_font;
 struct gui_edit_box;
-struct gui_font_glyph;
+struct gui_user_font_glyph;
 typedef gui_bool(*gui_filter)(gui_long unicode);
 typedef void(*gui_paste_f)(gui_handle, struct gui_edit_box*);
 typedef void(*gui_copy_f)(gui_handle, const char*, gui_size size);
 typedef gui_size(*gui_text_width_f)(gui_handle, const gui_char*, gui_size);
+typedef void(*gui_query_font_glyph_f)(gui_handle, struct gui_user_font_glyph*,
+                            gui_long codepoint, gui_long next_codepoint);
 /*
  * ==============================================================
  *
@@ -387,6 +400,10 @@ gui_bool gui_input_is_key_down(const struct gui_input*, enum gui_keys);
     gui_buffer_alloc        -- allocates a block of memory from the buffer
     gui_buffer_clear        -- resets the buffer back to an empty state
     gui_buffer_free         -- frees all memory if the buffer is dynamic
+    gui_buffer_mark         -- marks the current buffer size for later resetting
+    gui_buffer_reset        -- resets the buffer either back to zero or up to marker if set
+    gui_buffer_memory       -- returns the internal memory
+    gui_buffer_total        -- returns the current total size of the memory
 */
 struct gui_memory_status {
     void *memory;
@@ -469,7 +486,7 @@ void gui_buffer_init(struct gui_buffer*, const struct gui_allocator*,
     - dynamically growing buffer
 */
 void gui_buffer_init_fixed(struct gui_buffer*, void *memory, gui_size size);
-/*  this function initializes a fixed size buffer
+/*  this function initializes a fixed sized buffer
     Input:
     - fixed size previously allocated memory block
     - size of the memory block
@@ -494,17 +511,21 @@ void *gui_buffer_alloc(struct gui_buffer*, enum gui_buffer_allocation_type,
     - memory block with given size and alignment requirement
 */
 void gui_buffer_mark(struct gui_buffer*, enum gui_buffer_allocation_type);
-/* sets a marker either for the back or front buffer */
+/* sets a marker either for the back or front buffer for later resetting */
 void gui_buffer_reset(struct gui_buffer*, enum gui_buffer_allocation_type);
 /* resets the buffer back to the previously set marker or if not set the begining */
 void gui_buffer_clear(struct gui_buffer*);
 /*  this functions resets the buffer back into an empty state */
 void gui_buffer_free(struct gui_buffer*);
 /*  this functions frees all memory inside a dynamically growing buffer */
+void *gui_buffer_memory(struct gui_buffer*);
+/* returns the memory inside the buffer */
+gui_size gui_buffer_total(struct gui_buffer*);
+/* returns the total size of the buffer */
 /*
  * ==============================================================
  *
- *                          Command Buffer
+ *                      Command Buffer
  *
  * ===============================================================
  */
@@ -518,7 +539,7 @@ void gui_buffer_free(struct gui_buffer*);
     widget output.
     The actual draw command execution is done by the user and is build up in a
     interpreter like fashion by iterating over all commands and executing each
-    command differently depending on the command type.
+    command depending on the command type.
 
     USAGE
     ----------------------------
@@ -538,25 +559,25 @@ void gui_buffer_free(struct gui_buffer*);
 
     command queue function API
     gui_command_buffer_push         -- pushes and enqueues a command into the buffer
-    gui_command_buffer_push_scissor -- pushes a clipping rectangle into the command queue
-    gui_command_buffer_push_line    -- pushes a line into the command queue
-    gui_command_buffer_push_rect    -- pushes a rectange into the command queue
-    gui_command_buffer_push_circle  -- pushes a circle into the command queue
-    gui_command_buffer_push_triangle-- pushes a triangle command into the queue
-    gui_command_buffer_push_image   -- pushes a image draw command into the queue
-    gui_command_buffer_push_text    -- pushes a text draw command into the queue
+    gui_command_buffer_push_scissor -- pushes a clipping rectangle into the command buffer
+    gui_command_buffer_push_line    -- pushes a line into the command buffer
+    gui_command_buffer_push_rect    -- pushes a rectange into the command buffer
+    gui_command_buffer_push_circle  -- pushes a circle into the command buffer
+    gui_command_buffer_push_triangle-- pushes a triangle command into the buffer
+    gui_command_buffer_push_cruve   -- pushes a bezier cruve command into the buffer
+    gui_command_buffer_push_image   -- pushes a image draw command into the buffer
+    gui_command_buffer_push_text    -- pushes a text draw command into the buffer
 
     command iterator function API
-    gui_command_buffer_begin        -- returns the first command in a queue
-    gui_command_buffer_next         -- returns the next command in a queue
-    gui_foreach_buffer_command      -- iterates over all commands in a queue
+    gui_command_buffer_begin        -- returns the first command in a buffer
+    gui_command_buffer_next         -- returns the next command in a buffer
+    gui_foreach_buffer_command      -- iterates over all commands in a buffer
 */
 /* command type of every used drawing primitive */
 enum gui_command_type {
     GUI_COMMAND_NOP,
     GUI_COMMAND_SCISSOR,
     GUI_COMMAND_LINE,
-    GUI_COMMAND_QUAD,
     GUI_COMMAND_CURVE,
     GUI_COMMAND_RECT,
     GUI_COMMAND_CIRCLE,
@@ -587,14 +608,6 @@ struct gui_command_line {
     struct gui_color color;
 };
 
-struct gui_command_quad {
-    struct gui_command header;
-    struct gui_vec2i begin;
-    struct gui_vec2i end;
-    struct gui_vec2i ctrl;
-    struct gui_color color;
-};
-
 struct gui_command_curve {
     struct gui_command header;
     struct gui_vec2i begin;
@@ -618,13 +631,6 @@ struct gui_command_circle {
     struct gui_color color;
 };
 
-struct gui_command_image {
-    struct gui_command header;
-    gui_short x, y;
-    gui_ushort w, h;
-    struct gui_image img;
-};
-
 struct gui_command_triangle {
     struct gui_command header;
     struct gui_vec2i a;
@@ -633,9 +639,16 @@ struct gui_command_triangle {
     struct gui_color color;
 };
 
+struct gui_command_image {
+    struct gui_command header;
+    gui_short x, y;
+    gui_ushort w, h;
+    struct gui_image img;
+};
+
 struct gui_command_text {
     struct gui_command header;
-    gui_handle font;
+    const struct gui_user_font *font;
     struct gui_color background;
     struct gui_color foreground;
     gui_short x, y;
@@ -716,17 +729,6 @@ void gui_command_buffer_push_line(struct gui_command_buffer*, gui_float, gui_flo
     - ending point of the line
     - color of the line to draw
 */
-void gui_command_buffer_push_quad(struct gui_command_buffer*, gui_float, gui_float,
-                                    gui_float, gui_float,  gui_float, gui_float,
-                                    struct gui_color);
-/*  this function pushes a quad bezier line draw command into the buffer
-    Input:
-    - buffer to push the clip rectangle command into
-    - starting point (x,y) of the line
-    - control point (x,y) of the line
-    - ending point (x,y) of the line
-    - color of the line to draw
-*/
 void gui_command_buffer_push_curve(struct gui_command_buffer*, gui_float, gui_float,
                                     gui_float, gui_float,  gui_float, gui_float,
                                     gui_float, gui_float, struct gui_color);
@@ -777,7 +779,7 @@ void gui_command_buffer_push_image(struct gui_command_buffer*, struct gui_rect,
     - color of the triangle to draw
 */
 void gui_command_buffer_push_text(struct gui_command_buffer*, struct gui_rect,
-                                    const gui_char*, gui_size, const struct gui_font*,
+                                    const gui_char*, gui_size, const struct gui_user_font*,
                                     struct gui_color, struct gui_color);
 /*  this function pushes a text draw command into the buffer
     Input:
@@ -807,15 +809,13 @@ const struct gui_command *gui_command_buffer_next(struct gui_command_buffer*,
     ----------------------------
     The command queue extends the command buffer with the possiblity to use
     more than one command buffer on one memory buffer and still only need
-    to iterate over one command list. Therefore it is possible to have mutliple
+    to iterate over one command list. Therefore it is possible to have multiple
     windows without having to manage each windows individual memory. This greatly
     simplifies and reduces the amount of code needed with just using command buffers.
 
     Internally the command queue has a list of command buffers which can be
     modified to create a certain sequence, for example the `gui_window_begin`
-    function changes the list to create overlapping windows, while the
-    `gui_window_begin_tiled` function makes sure that its command buffers will
-    always be drawn first since window in tiled layouts are always in the background.
+    function changes the list to create overlapping windows.
 
     USAGE
     ----------------------------
@@ -947,7 +947,7 @@ void gui_command_queue_free(struct gui_command_queue*);
 void gui_command_queue_clear(struct gui_command_queue*);
 /*  this function reset the internal buffer and has to be called every frame */
 #define gui_foreach_command(i, q)\
-    for((i)=gui_command_queue_begin(q); (i)!=NULL; (i)=gui_command_queue_next(q,i))
+    for((i)=gui_command_queue_begin(q); (i)!=0; (i)=gui_command_queue_next(q,i))
 /*  this function iterates over each command inside the command queue
     Input:
     - iterator gui_command pointer to iterate over all commands
@@ -961,6 +961,381 @@ const struct gui_command *gui_command_queue_begin(struct gui_command_queue*);
 const struct gui_command* gui_command_queue_next(struct gui_command_queue*,
                                                 const struct gui_command*);
 /*  this function returns the next command of a given command*/
+/*
+ * ===============================================================
+ *
+ *                          Draw List
+ *
+ * ===============================================================
+ */
+#if GUI_COMPILE_WITH_VERTEX_BUFFER
+/*  DRAW LIST
+    ----------------------------
+    The optional draw list provides a way to convert the gui library
+    drawing command output into a hardware accessible format.
+    This consists of vertex, element and draw batch command buffer output which
+    can be interpreted by render frameworks (OpenGL, DirectX, ...).
+    In addition to just provide a way to convert commands the draw list has
+    a primitives and stateful path drawing API, which allows to draw into the
+    draw list as well. The actuall drawing support in addition Anti-aliasing.
+
+    The draw list consist internaly of three user provided buffers that will be
+    filled with data. The first buffer is the the draw command and temporary
+    path buffer which permanetly stores all draw batch commands. The vertex and
+    element buffer are the same buffers as their hardware renderer counter-parts,
+    in fact it is even possible to directly map one of these buffers and fill
+    them with data.
+
+    The reason why the draw list is optional or is not the default library output
+    is that basic commands provide an easy way to abstract over other libraries
+    which already provide a drawing API and do not need or want the output the
+    draw list provides.
+
+    USAGE
+    ----------------------------
+    To actually use the draw list you first need the initialize the draw list
+    by providing three filled buffers to be filled while drawing. The reason
+    buffers need to be provided and not memory or an allocator is to provide
+    more fine grained control over the memory inside the draw list, which in term
+    requires more work from the user.
+
+    After the draw list has been initialized you can fill the draw list by
+    a.) converting the content of a command queue into the draw list format
+    b.) adding primtive filled shapes or only the outline of rectangles, circle, etc.
+    c.) using the stateful path API for fine grained drawing control
+
+    Finaly for the drawing process you have to iterate over each draw command
+    inside the `gui_draw_list` by using the function `gui_foreach_draw_command`
+    which contains drawing state like clip rectangle, current textue a number
+    of element to draw with the current state.
+
+    draw list buffer functions
+    gui_draw_list_init              - initializes a command buffer with memory
+    gui_draw_list_clear             - clears and resets the buffer
+    gui_draw_list_load              - load the draw buffer from a command queue
+    gui_draw_list_begin             - returns the first command in the draw buffer
+    gui_draw_list_next              - returns the next command in the draw buffer or NULL
+    gui_draw_list_is_empty          - returns if the buffer has no vertexes or commands
+    gui_foreach_draw_command        - iterates over all commands in the draw buffer
+
+    draw list primitives drawing functions
+    gui_draw_list_add_line          - pushes a line into the draw list
+    gui_draw_list_add_rect          - pushes a rectangle into the draw list
+    gui_draw_list_add_rect_filled   - pushes a filled rectangle into the draw list
+    gui_draw_list_add_triangle      - pushes a triangle into the draw list
+    gui_draw_list_add_triangle_filled -pushes a filled triangle into the draw list
+    gui_draw_list_add_circle        - pushes circle into the draw list
+    gui_draw_list_add_circle_filled - pushes a filled circle into the draw list
+    gui_draw_list_add_text          - pushes text into the draw list
+    gui_draw_list_add_image         - pushes an image into the draw list
+
+    stateful path functions
+    gui_draw_list_path_clear        - resets the current path
+    gui_draw_list_path_line_to      - adds a point into the path
+    gui_draw_list_path_arc_to       - adds a arc into the path
+    gui_draw_list_path_curve_to     - adds a bezier curve into the path
+    gui_draw_list_path_rect_to      - adds a rectangle into the path
+    gui_draw_list_path_fill         - fills the path as a convex polygon
+    gui_draw_list_path_stroke       - connects each point in the path
+*/
+typedef gui_ushort gui_draw_index;
+typedef gui_uint gui_draw_vertex_color;
+typedef gui_float(*gui_sin_f)(gui_float);
+typedef gui_float(*gui_cos_f)(gui_float);
+
+enum gui_anti_aliasing {
+    GUI_ANTI_ALIASING_OFF = gui_false,
+    /* renderes all primitives without anit-aliasing  */
+    GUI_ANTI_ALIASING_ON,
+    /* renderes all primitives with anit-aliasing  */
+    GUI_ANTI_ALIASING_MAX
+};
+
+struct gui_draw_vertex {
+    struct gui_vec2 position;
+    struct gui_vec2 uv;
+    gui_draw_vertex_color col;
+};
+
+enum gui_draw_list_stroke {
+    GUI_STROKE_OPEN = gui_false,
+    GUI_STROKE_CLOSED = gui_true
+};
+
+struct gui_draw_command {
+    gui_uint elem_count;
+    /* number of elements in the current draw batch */
+    struct gui_rect clip_rect;
+    /* current screen clipping rectangle */
+    gui_handle texture;
+    /* current texture to set */
+};
+
+struct gui_draw_null_texture {
+    gui_handle texture;
+    /* texture handle to a texture with a white pixel */
+    struct gui_vec2 uv;
+    /* coordinates to the white pixel in the texture  */
+};
+
+struct gui_draw_list {
+    enum gui_anti_aliasing AA;
+    /* flag indicating if anti-aliasing should be used to render primtives */
+    struct gui_draw_null_texture null;
+    /* texture with white pixel for easy primitive drawing */
+    struct gui_rect clip_rect;
+    /* current clipping rectangle */
+    gui_cos_f cos; gui_sin_f sin;
+    /* cosine/sine calculation callback since this library does not use clib  */
+    struct gui_buffer *buffer;
+    /* buffer to store draw commands and temporarily store path */
+    struct gui_buffer *vertexes;
+    /* buffer to store each draw vertex */
+    struct gui_buffer *elements;
+    /* buffer to store each draw element index */
+    gui_uint element_count;
+    /* total number of elements inside the elements buffer */
+    gui_uint vertex_count;
+    /* total number of vertexes inside the vertex buffer */
+    gui_size cmd_offset;
+    /* offset to the first command in the buffer */
+    gui_uint cmd_count;
+    /* number of commands inside the buffer  */
+    gui_uint path_count;
+    /* current number of points inside the path */
+    gui_uint path_offset;
+    /* offset to the first point in the buffer */
+};
+/* ---------------------------------------------------------------
+ *                          MAIN
+ * ---------------------------------------------------------------*/
+void gui_draw_list_init(struct gui_draw_list*, struct gui_buffer *cmds,
+                        struct gui_buffer *vertexes, struct gui_buffer *elements,
+                        gui_sin_f, gui_cos_f, struct gui_draw_null_texture,
+                        enum gui_anti_aliasing AA);
+/*  this function initializes the draw list
+    Input:
+    - command memory buffer to fill with commands and provided temporary memory for path
+    - vertex memory buffer to fill with draw vertexeses
+    - element memory buffer to fill with draw indexes
+    - sine function callback since this library does not use clib (default: just use sinf)
+    - cosine function callback since this library does not use clib (default: just use cosf)
+    - special null structure which holds a texture with a white pixel
+    - Anti-aliasing flag for turning on/off anti-aliased primitives drawing
+*/
+void gui_draw_list_load(struct gui_draw_list*, struct gui_command_queue *queue,
+                        gui_float line_thickness, gui_uint curve_segments);
+/*  this function loads the draw list from command queue commands
+    Input:
+    - queue with draw commands to fill the draw list with
+    - line thickness for all lines and non-filled primitives
+    - number of segments used for drawing circles and curves
+*/
+void gui_draw_list_clear(struct gui_draw_list *list);
+/*  this function clears all buffers inside the draw list */
+gui_bool gui_draw_list_is_empty(struct gui_draw_list *list);
+/*  this function returns if the draw list is empty */
+#define gui_foreach_draw_command(i, q)\
+    for((i)=gui_draw_list_begin(q); (i)!=NULL; (i)=gui_draw_list_next(q,i))
+/*  this function iterates over each draw command inside the draw list
+    Input:
+    - iterator gui_draw_command pointer to iterate over all commands
+    - draw list to iterate over
+*/
+const struct gui_draw_command *gui_draw_list_begin(const struct gui_draw_list *list);
+/*  this function returns the first draw command in the draw list */
+const struct gui_draw_command* gui_draw_list_next(const struct gui_draw_list *list,
+                                                    const struct gui_draw_command*);
+/*  this function returns the next draw command of a given draw command*/
+/* ---------------------------------------------------------------
+ *                          PRIMITIVES
+ * ---------------------------------------------------------------*/
+void gui_draw_list_add_clip(struct gui_draw_list*, struct gui_rect);
+/*  this function pushes a new clipping rectangle into the draw list
+    Input:
+    - new clipping rectangle
+*/
+void gui_draw_list_add_line(struct gui_draw_list*, struct gui_vec2 a,
+                            struct gui_vec2 b, struct gui_color col,
+                            gui_float thickness);
+/*  this function pushes a new clipping rectangle into the draw list
+    Input:
+    - beginning point of the line
+    - end point of the line
+    - used line color
+    - line thickness in pixel
+*/
+void gui_draw_list_add_rect(struct gui_draw_list*, struct gui_rect rect,
+                            struct gui_color col, gui_float rounding,
+                            gui_float line_thickness);
+/*  this function pushes a rectangle into the draw list
+    Input:
+    - rectangle to render into the draw list
+    - rectangle outline color
+    - rectangle edge rounding (0 == no edge rounding)
+    - rectangle outline thickness
+*/
+void gui_draw_list_add_rect_filled(struct gui_draw_list*, struct gui_rect rect,
+                                    struct gui_color col, gui_float rounding);
+/*  this function pushes a filled rectangle into the draw list
+    Input:
+    - rectangle to render into the draw list
+    - color to fill the rectangle with
+    - rectangle edge rounding (0 == no edge rounding)
+*/
+void gui_draw_list_add_triangle(struct gui_draw_list*, struct gui_vec2 a,
+                                struct gui_vec2 b, struct gui_vec2 c,
+                                struct gui_color, gui_float line_thickness);
+/*  this function pushes a triangle into the draw list
+    Input:
+    - first point of the triangle
+    - second point of the triangle
+    - third point of the triangle
+    - color of the triangle outline
+    - triangle outline line thickness
+*/
+void gui_draw_list_add_triangle_filled(struct gui_draw_list*, struct gui_vec2 a,
+                                        struct gui_vec2 b, struct gui_vec2 c,
+                                        struct gui_color col);
+/*  this function pushes a filled triangle into the draw list
+    Input:
+    - first point of the triangle
+    - second point of the triangle
+    - third point of the triangle
+    - color to fill the triangle with
+*/
+void gui_draw_list_add_circle(struct gui_draw_list*, struct gui_vec2 center,
+                            gui_float radius, struct gui_color col, gui_uint segs,
+                            gui_float line_thickness);
+/*  this function pushes a circle outline into the draw list
+    Input:
+    - center point of the circle
+    - circle radius
+    - circle outlone color
+    - number of segement that make up the circle
+*/
+void gui_draw_list_add_circle_filled(struct gui_draw_list*, struct gui_vec2 center,
+                                    gui_float radius, struct gui_color col, gui_uint);
+/*  this function pushes a filled circle into the draw list
+    Input:
+    - center point of the circle
+    - circle radius
+    - color to fill the circle with
+    - number of segement that make up the circle
+*/
+void gui_draw_list_add_curve(struct gui_draw_list*, struct gui_vec2 p0,
+                            struct gui_vec2 cp0, struct gui_vec2 cp1, struct gui_vec2 p1,
+                            struct gui_color col, gui_uint segments, gui_float thickness);
+/*  this function pushes a bezier curve into the draw list
+    Input:
+    - beginning point of the curve
+    - first curve control point
+    - second curve control point
+    - end point of the curve
+    - color of the curve
+    - number of segement that make up the circle
+    - line thickness of the curve
+*/
+void gui_draw_list_add_text(struct gui_draw_list*, const struct gui_user_font*,
+                            struct gui_rect, const gui_char*, gui_size length,
+                            struct gui_color bg, struct gui_color fg);
+/*  this function renders text
+    Input:
+    - user font to draw the text with
+    - the rectangle the text will be drawn into
+    - string text to draw
+    - length of the string to draw
+    - text background color
+    - text color
+*/
+void gui_draw_list_add_image(struct gui_draw_list *list, struct gui_image texture,
+                            struct gui_rect rect, struct gui_color color);
+/*  this function renders an image
+    Input:
+    - image texture handle to draw
+    - rectangle with position and size of the image
+    - color to blend with the image
+*/
+/* ---------------------------------------------------------------
+ *                          PATH
+ * ---------------------------------------------------------------*/
+void gui_draw_list_path_clear(struct gui_draw_list*);
+/* clears the statefull drawing path previously build */
+void gui_draw_list_path_line_to(struct gui_draw_list*, struct gui_vec2 pos);
+/* adds a point into the path that will make up a line or a convex polygon */
+void gui_draw_list_path_arc_to(struct gui_draw_list*, struct gui_vec2 center,
+                                gui_float radius, gui_float a_min, gui_float a_max,
+                                gui_uint segments);
+/* adds an arc made up of a number of segments into the path */
+void gui_draw_list_path_rect_to(struct gui_draw_list*, struct gui_vec2 a,
+                                struct gui_vec2 b, gui_float rounding);
+/* adds a rectangle into the path */
+void gui_draw_list_path_curve_to(struct gui_draw_list*, struct gui_vec2 p1,
+                                struct gui_vec2 p2, struct gui_vec2 p3,
+                                gui_uint num_segments);
+/* adds a bezier curve into the path where the first point has to be already in the path */
+void gui_draw_list_path_fill(struct gui_draw_list*, struct gui_color);
+/* uses all points inside the path to draw a convex polygon  */
+void gui_draw_list_path_stroke(struct gui_draw_list*, struct gui_color,
+                                gui_bool closed, gui_float thickness);
+/* uses all points inside the path to draw a line/outline */
+#endif
+/*
+ * ==============================================================
+ *
+ *                          Font
+ *
+ * ===============================================================
+ */
+struct gui_user_font_glyph {
+    struct gui_vec2 uv[2];
+    struct gui_vec2 offset;
+    gui_float width, height;
+    gui_float xadvance;
+};
+
+struct gui_user_font {
+    gui_handle userdata;
+    /* user provided font handle */
+    gui_float height;
+    /* max height of the font */
+    gui_text_width_f width;
+    /* font string width in pixel callback */
+#if GUI_COMPILE_WITH_VERTEX_BUFFER
+    gui_query_font_glyph_f query;
+    /* font glyph callback to query drawing info */
+    gui_handle texture;
+    /* texture handle to the used font atlas or texture */
+#endif
+};
+
+#ifdef GUI_COMPILE_WITH_FONT
+struct gui_font_atlas {
+    gui_byte *pixels;
+    gui_int tex_width;
+    gui_int tex_height;
+    struct gui_vec2 white_pixel;
+};
+
+struct gui_font_glyph {
+    gui_long codepoint;
+    gui_float xadvance;
+    struct gui_vec2 point[2];
+    struct gui_vec2 uv[2];
+};
+
+struct gui_font {
+    gui_float size;
+    gui_float scale;
+    struct gui_vec2 offset;
+    gui_float ascent, descent;
+    struct gui_buffer glyphes;
+    gui_long fallback_code;
+    struct gui_font_glyph *fallback_glyph;
+    gui_float fallback_xadvance;
+    struct gui_user_font handle;
+};
+#endif
 /*
  * ===============================================================
  *
@@ -983,14 +1358,24 @@ const struct gui_command* gui_command_queue_next(struct gui_command_queue*,
     added and removed with `gui_edit_box_add` and `gui_edit_box_remove`.
 
     Widget function API
-    gui_edit_box_init         -- initialize a dynamically growing edit box
-    gui_edit_box_init_fixed   -- initialize a statically edit box
-    gui_edit_box_reset        -- resets the edit box back to the beginning
-    gui_edit_box_clear        -- frees all memory of a dynamic edit box
-    gui_edit_box_add          -- adds a symbol to the editbox
-    gui_edit_box_remove       -- removes a symbol from the editbox
-    gui_edit_box_get          -- returns the string inside the editbox
-    gui_edit_box_len          -- returns the length of the string inside the edditbox
+    gui_edit_box_init       -- initialize a dynamically growing edit box
+    gui_edit_box_init_fixed -- initialize a fixed size edit box
+    gui_edit_box_reset      -- resets the edit box back to the beginning
+    gui_edit_box_clear      -- frees all memory of a dynamic edit box
+    gui_edit_box_add        -- adds a symbol to the editbox
+    gui_edit_box_remove     -- removes a symbol from the editbox
+    gui_edit_box_get        -- returns the string inside the editbox
+    gui_edit_box_get_const  -- returns the const string inside the editbox
+    gui_edit_box_len        -- returns the length of the string inside the edditbox
+    gui_edit_box_free       -- frees all memory in a dynamic editbox
+    gui_edit_box_info       -- fills a memory info struct with data
+    gui_edit_box_at         -- returns the glyph at the given position
+    gui_edit_box_at_cursor  -- returns the glyph at the cursor position
+    gui_edit_box_at_char    -- returns the char at the given position
+    gui_edit_box_set_cursor -- sets the cursor to a given glyph
+    gui_edit_box_get_cursor -- returns the position of the cursor
+    gui_edit_box_len_char   -- returns the length of the string in byte
+    gui_edit_box_len        -- returns the length of the string in glyphes
 */
 struct gui_clipboard {
     gui_handle userdata;
@@ -1157,15 +1542,6 @@ gui_size gui_edit_box_len(struct gui_edit_box*);
     gui_scrollbarv                  -- vertical scrollbar widget imeplementation
     gui_scrollbarh                  -- horizontal scrollbar widget imeplementation
 */
-struct gui_font {
-    gui_handle userdata;
-    /* user provided font handle */
-    gui_float height;
-    /* max height of the font */
-    gui_text_width_f width;
-    /* font string width in pixel callback */
-};
-
 enum gui_text_align {
     GUI_TEXT_LEFT,
     GUI_TEXT_CENTERED,
@@ -1379,7 +1755,7 @@ struct gui_spinner {
 
 void gui_widget_text(struct gui_command_buffer*, struct gui_rect,
                 const char*, gui_size, const struct gui_text*,
-                enum gui_text_align, const struct gui_font*);
+                enum gui_text_align, const struct gui_user_font*);
 /*  this function executes a text widget with text alignment
     Input:
     - output command buffer for drawing
@@ -1393,7 +1769,7 @@ void gui_widget_text(struct gui_command_buffer*, struct gui_rect,
 gui_bool gui_widget_button_text(struct gui_command_buffer*, struct gui_rect,
                                 const char*, enum gui_button_behavior,
                                 const struct gui_button_text*,
-                                const struct gui_input*, const struct gui_font*);
+                                const struct gui_input*, const struct gui_user_font*);
 /*  this function executes a text button widget
     Input:
     - output command buffer for drawing
@@ -1424,7 +1800,7 @@ gui_bool gui_widget_button_image(struct gui_command_buffer*, struct gui_rect,
 gui_bool gui_widget_button_symbol(struct gui_command_buffer*, struct gui_rect,
                                 enum gui_symbol, enum gui_button_behavior,
                                 const struct gui_button_symbol*, const struct gui_input*,
-                                const struct gui_font*);
+                                const struct gui_user_font*);
 /*  this function executes a triangle button widget
     Input:
     - output command buffer for drawing
@@ -1438,8 +1814,10 @@ gui_bool gui_widget_button_symbol(struct gui_command_buffer*, struct gui_rect,
 */
 gui_bool gui_widget_button_text_symbol(struct gui_command_buffer*, struct gui_rect,
                                         enum gui_symbol, const char*, enum gui_text_align,
-                                        enum gui_button_behavior, const struct gui_button_text*,
-                                        const struct gui_font*, const struct gui_input*);
+                                        enum gui_button_behavior,
+                                        const struct gui_button_text*,
+                                        const struct gui_user_font*,
+                                        const struct gui_input*);
 /*  this function executes a button with text and a triangle widget
     Input:
     - output command buffer for drawing
@@ -1456,8 +1834,9 @@ gui_bool gui_widget_button_text_symbol(struct gui_command_buffer*, struct gui_re
 */
 gui_bool gui_widget_button_text_image(struct gui_command_buffer*, struct gui_rect,
                                     struct gui_image, const char*, enum gui_text_align,
-                                    enum gui_button_behavior, const struct gui_button_text*,
-                                    const struct gui_font*, const struct gui_input*);
+                                    enum gui_button_behavior,
+                                    const struct gui_button_text*,
+                                    const struct gui_user_font*, const struct gui_input*);
 /*  this function executes a button widget with text and an icon
     Input:
     - output command buffer for drawing
@@ -1475,7 +1854,7 @@ gui_bool gui_widget_button_text_image(struct gui_command_buffer*, struct gui_rec
 void gui_widget_toggle(struct gui_command_buffer*, struct gui_rect,
                         gui_bool*, const char *string, enum gui_toggle_type,
                         const struct gui_toggle*, const struct gui_input*,
-                        const struct gui_font*);
+                        const struct gui_user_font*);
 /*  this function executes a toggle (checkbox, radiobutton) widget
     Input:
     - output command buffer for drawing
@@ -1521,7 +1900,7 @@ gui_size gui_widget_progress(struct gui_command_buffer*, struct gui_rect,
 */
 void gui_widget_editbox(struct gui_command_buffer*, struct gui_rect,
                         struct gui_edit_box*, const struct gui_edit*,
-                        const struct gui_input*, const struct gui_font*);
+                        const struct gui_input*, const struct gui_user_font*);
 /*  this function executes a editbox widget
     Input:
     - output command buffer for drawing
@@ -1535,7 +1914,7 @@ void gui_widget_editbox(struct gui_command_buffer*, struct gui_rect,
 gui_size gui_widget_edit(struct gui_command_buffer*, struct gui_rect, gui_char*, gui_size,
                         gui_size max, gui_state*, gui_size *cursor, const struct gui_edit*,
                         enum gui_input_filter filter, const struct gui_input*,
-                        const struct gui_font*);
+                        const struct gui_user_font*);
 /*  this function executes a editbox widget
     Input:
     - output command buffer for drawing
@@ -1557,7 +1936,7 @@ gui_size gui_widget_edit_filtered(struct gui_command_buffer*, struct gui_rect,
                                 gui_char*, gui_size, gui_size max, gui_state*,
                                 gui_size *cursor, const struct gui_edit*,
                                 gui_filter filter, const struct gui_input*,
-                                const struct gui_font*);
+                                const struct gui_user_font*);
 /*  this function executes a editbox widget
     Input:
     - output command buffer for drawing
@@ -1578,7 +1957,7 @@ gui_size gui_widget_edit_filtered(struct gui_command_buffer*, struct gui_rect,
 gui_int gui_widget_spinner(struct gui_command_buffer*, struct gui_rect,
                         const struct gui_spinner*, gui_int min, gui_int value,
                         gui_int max, gui_int step, gui_state *active,
-                        const struct gui_input*, const struct gui_font*);
+                        const struct gui_input*, const struct gui_user_font*);
 /*  this function executes a integer spinner widget
     Input:
     - output command buffer for draw commands
@@ -1769,7 +2148,7 @@ struct gui_style_mod_stack  {
 };
 
 struct gui_style {
-    struct gui_font font;
+    struct gui_user_font font;
     /* the from the user provided font */
     gui_float rounding[GUI_ROUNDING_MAX];
     /* rectangle widget rounding */
@@ -1781,7 +2160,7 @@ struct gui_style {
     /* modification stack */
 };
 
-void gui_style_default(struct gui_style*, gui_flags, const struct gui_font*);
+void gui_style_default(struct gui_style*, gui_flags, const struct gui_user_font*);
 /*  this function load the window configuration with default values
     Input:
     - config flags which part of the configuration should be loaded with default values
@@ -1789,7 +2168,7 @@ void gui_style_default(struct gui_style*, gui_flags, const struct gui_font*);
     Output:
     - configuration structure holding the default window style
 */
-void gui_style_set_font(struct gui_style*, const struct gui_font*);
+void gui_style_set_font(struct gui_style*, const struct gui_user_font*);
 /*  this function changes the used font and can be used even inside a frame
     Input:
     - user font reference structure describing the font used inside the window
@@ -1859,35 +2238,55 @@ void gui_style_reset(struct gui_style*);
  *                          Window
  *
  * ===============================================================
-    Window
-    The window function API is used to initialize a window, create
-    a stack based window layout, control the build up process and to
-    modify the window state. The modification of the window is only allowed
-    outside both sequence points `gui_window_begin` and `gui_window_end`, therefore
-    all modification inside them is undefined behavior.
+    WINDOW
+    The window groups widgets together and allows collective operation
+    on these widgets like movement, scrolling, window minimizing and closing.
+    Windows are divided into a persistent state window struct and a temporary
+    context which is used each frame to fill the window. All direct build up
+    function therefore work on the context and not on the actual window.
+    Each window is linked inside a queue which in term allows for an easy
+    way to buffer output commands but requires that the window is unlinked
+    from the queue if removed.
 
     USAGE
-    To work a window needs to be initialized by calling `gui_window_init` with
-    a reference to a valid command buffer and configuration structure.
-    The references have to be valid over the life time of the window and can be
-    changed by setter functions. In addition to being initialized
-    the window needs a window layout in every frame to fill and use as temporary
-    state to fill the window with widgets.
-    The window layout hereby does NOT have to be kept around outside of the build
-    up process and multiple windows can share one window layout. The reason why
-    window and layout are split is to seperate the temporary changing state
-    of the window layout from the persistent state of the window. In addition
-    the window only needs a fraction of the needed space and state of the window layout.
+    The window needs to be initialized by `gui_window_init` and can be updated
+    by all the `gui_window_set_xxx` function. Important to note is that each
+    window is linked inside a queue by an internal memory buffer. So if you want
+    to remove the window you first have to remove the window from the queue
+    or if you want to change to queue use `gui_window_queue_set`.
 
     window function API
-    gui_window_init          -- initializes the window with position, size and flags
-    gui_window_begin         -- begin sequence point in the window layout build up process
-    gui_window_end           -- end squeunce point which finializes the window build up
-    gui_window_set_config    -- updates the used window configuration
-    gui_window_add_flag      -- adds a behavior flag to the window
-    gui_window_remove_flag   -- removes a behavior flag from the window
-    gui_window_has_flag      -- check if a given behavior flag is set in the window
-    gui_window_is_minimized  -- return wether the window is minimized
+    ------------------
+    gui_window_init         -- initializes the window with position, size and flags
+    gui_window_unlink       -- remove the window from the command queue
+    gui_window_set_config   -- updates the used window configuration
+    gui_window_add_flag     -- adds a behavior flag to the window
+    gui_window_remove_flag  -- removes a behavior flag from the window
+    gui_window_has_flag     -- check if a given behavior flag is set in the window
+    gui_window_is_minimized -- return wether the window is minimized
+    gui_window_set_position -- set the position of the window
+    gui_window_get_position -- returns the currnet position of the window
+    gui_window_set_size     -- update thes size of the window
+    gui_window_get_size     -- returns the size of the window
+    gui_window_set_bounds   -- updates position and size of the window
+    gui_window_get_bounds   -- returns position and size of the window
+    gui_window_set_queue    -- removes the window from the old queue and insert it into another
+    gui_window_set_input    -- changes the input source of the window
+    gui_window_get_scrollbar-- returns the current X-/Y- offset of the scrollbar
+    gui_window_set_scrollbar-- updates the offset of the scrollbar
+
+    APIs
+    -----------------
+    Window Context API      -- The context is temporary state that is used every frame to build a window
+    Window Header API       -- Responsible for creating a header at the top of a window
+    Window Layout API       -- The window layout is responsible for placing widget in the window
+    Window Widget API       -- Different widget that can be placed inside the window
+    Window Tree API         -- Tree widget that allows to visualize and mofify a tree
+    Window Combobox API     -- Combobox widget for collapsable popup content
+    Window Group API        -- Create a subwindow inside a window which again can be filled with widgets
+    Window Shelf API        -- Group window with tabs which can be filled with widget
+    Window Popup API        -- Popup window with either non-blocking or blocking capabilities
+    Window Menu API         -- Popup menus with currently one single depth
 */
 enum gui_window_flags {
     GUI_WINDOW_HIDDEN = 0x01,
@@ -1915,7 +2314,7 @@ enum gui_window_flags {
     GUI_WINDOW_ACTIVE = 0x10000,
     /* INTERNAL ONLY!: marks the window as active, used by the window stack */
     GUI_WINDOW_TAB = 0x20000,
-    /* INTERNAL ONLY!: Marks the window as an subwindow of another window(Groups/Tabs/Shelf)*/
+    /* INTERNAL ONLY!: Marks the window as subwindow of another window(Groups/Tabs/Shelf)*/
     GUI_WINDOW_COMBO_MENU = 0x40000,
     /* INTERNAL ONLY!: Marks the window as an combo box or menu */
     GUI_WINDOW_REMOVE_ROM = 0x80000,
@@ -1953,43 +2352,79 @@ void gui_window_init(struct gui_window*, struct gui_rect bounds,
     Output:
     - a newly initialized window
 */
+void gui_window_unlink(struct gui_window*);
+/*  this function unlinks the window from its queue */
+void gui_window_set_position(struct gui_window*, struct gui_vec2);
+/*  this function updates the window position on screen */
+struct gui_vec2 gui_window_get_position(struct gui_window*);
+/*  this function returns the window position on screen */
+void gui_window_set_size(struct gui_window*, struct gui_vec2);
+/*  this function returns the window size */
+struct gui_vec2 gui_window_get_size(struct gui_window*);
+/*  this function updates the window size */
+void gui_window_set_bounds(struct gui_window*, struct gui_rect);
+/*  this function updates the window bounds */
+struct gui_rect gui_window_get_bounds(struct gui_window*);
+/*  this function returns the window bounds */
 void gui_window_set_config(struct gui_window*, const struct gui_style*);
 /*  this function updateds the window configuration pointer */
-void gui_window_set_buffer(struct gui_window*, struct gui_command_buffer*);
+void gui_window_set_queue(struct gui_window*, struct gui_command_queue*);
 /*  this function updateds the used window command buffer */
+void gui_window_set_input(struct gui_window*, const struct gui_input*);
+/*  this function updateds the used window input structure */
+struct gui_vec2 gui_window_get_scrollbar(struct gui_window*);
+/* returns the window scrollbar offset */
+void gui_window_set_scrollbar(struct gui_window*, struct gui_vec2);
+/* updates the window scrollbar offset */
 void gui_window_add_flag(struct gui_window*, gui_flags);
-/*  this function adds window flags to the window
-    Input:
-    - window flags to add the window
-*/
+/*  this function adds window flags to the window */
 void gui_window_remove_flag(struct gui_window*, gui_flags);
-/*  this function removes window flags from the window
-    Input:
-    - window flags to remove from the window
-*/
+/*  this function removes window flags from the window */
 gui_bool gui_window_has_flag(struct gui_window*, gui_flags);
-/*  this function checks if a window has given flag(s)
-    Input:
-    - window flags to check for
-*/
+/*  this function checks if a window has given flag(s) */
 gui_bool gui_window_is_minimized(struct gui_window*);
 /*  this function checks if the window is minimized */
-
 /*
- * ==============================================================
- *
+ * --------------------------------------------------------------
  *                          Context
- *
- * ===============================================================
- */
+ * --------------------------------------------------------------
+    CONTEXT
+    The context is temporary window state that is used in the window drawing
+    and build up process. The reason the window and context are divided is that
+    the context has far more state which is not needed outside of the build up
+    phase. The context is not only useful for normal windows. It is used for
+    more complex widget or layout as well. This includes a window inside a window,
+    popup windows, menus, comboboxes, etc. In each case the context allows to
+    fill a space with widgets. Therefore the context provides the base
+    and key stone of the flexibility in the library. The context is used
+    for all APIs for the window.
+
+    USAGE
+    The context from a window is created by `gui_begin` and finilized by
+    `gui_end`. Between these two sequence points the context can be used
+    to setup the window with widgets. Other widgets which also use a context
+    have each their own `gui_xxx_begin` and `gui_xxx_end` function pair and act
+    the same as a window context.
+
+    context function API
+    ------------------
+    gui_begin   -- starts the window build up process by filling a context with window state
+    gui_end     -- ends the window build up process and update the window state
+    gui_canvas  -- returns the currently used drawing command buffer
+    gui_input   -- returns the from the context used input struct
+    gui_queue   -- returns the queue of the window
+*/
 enum gui_widget_state {
-    GUI_WIDGET_INVALID, /* The widget cannot be seen and is completly out of view */
-    GUI_WIDGET_VALID, /* The widget is completly inside the window can be updated + drawn */
-    GUI_WIDGET_ROM /* The widget is partially visible and cannot be updated */
+    GUI_WIDGET_INVALID,
+    /* The widget cannot be seen and is completly out of view */
+    GUI_WIDGET_VALID,
+    /* The widget is completly inside the window can be updated */
+    GUI_WIDGET_ROM
+    /* The widget is partially visible and cannot be updated */
 };
 
 enum gui_row_layout_type {
-    /* ----------------- INTERNAL ------------------------------ */
+    /* INTERNAL */
     GUI_LAYOUT_DYNAMIC_FIXED,
     /* fixed widget ratio width window layout */
     GUI_LAYOUT_DYNAMIC_ROW,
@@ -2091,7 +2526,7 @@ struct gui_context {
 };
 
 void gui_begin(struct gui_context*, struct gui_window*);
-/*  this function begins the window build up process
+/*  this function begins the window build up process by creating context to fill
     Input:
     - input structure holding all user generated state changes
     Output:
@@ -2104,7 +2539,7 @@ struct gui_command_buffer* gui_canvas(struct gui_context*);
 const struct gui_input *gui_input(struct gui_context*);
 /* this functions returns the currently used input */
 struct gui_command_queue *gui_queue(struct gui_context*);
-/* this functions returns the currently used input */
+/* this functions returns the currently used queue */
 /*
  * --------------------------------------------------------------
  *                          HEADER
@@ -2161,8 +2596,7 @@ enum gui_header_align {
 };
 
 gui_flags gui_header(struct gui_context*, const char *title,
-                            gui_flags show, gui_flags notify,
-                            enum gui_header_align);
+                    gui_flags show, gui_flags notify, enum gui_header_align);
 /*  this function is a shorthand for the header build up process
     flag by the user
     Input:
@@ -2172,9 +2606,8 @@ gui_flags gui_header(struct gui_context*, const char *title,
 */
 void gui_header_begin(struct gui_context*);
 /*  this function begins the window header build up process */
-gui_bool gui_header_button(struct gui_context *layout,
-                                enum gui_symbol symbol,
-                                enum gui_header_align);
+gui_bool gui_header_button(struct gui_context *layout, enum gui_symbol symbol,
+                            enum gui_header_align);
 /*  this function adds a header button icon
     Input:
     -
@@ -2190,10 +2623,9 @@ gui_bool gui_header_button_icon(struct gui_context*, struct gui_image,
     Output:
     - gui_true if the button was pressed gui_false otherwise
 */
-gui_bool gui_header_toggle(struct gui_context*,
-                            enum gui_symbol inactive,
-                            enum gui_symbol active,
-                            enum gui_header_align, gui_bool state);
+gui_bool gui_header_toggle(struct gui_context*, enum gui_symbol inactive,
+                            enum gui_symbol active, enum gui_header_align,
+                            gui_bool state);
 /*  this function adds a header toggle button
     Input:
     - symbol that will be drawn if the toggle is inactive
@@ -2202,11 +2634,9 @@ gui_bool gui_header_toggle(struct gui_context*,
     Output:
     - updated state of the toggle
 */
-gui_bool gui_header_flag(struct gui_context *layout,
-                                enum gui_symbol inactive,
-                                enum gui_symbol active,
-                                enum gui_header_align,
-                                enum gui_window_flags flag);
+gui_bool gui_header_flag(struct gui_context *layout, enum gui_symbol inactive,
+                        enum gui_symbol active, enum gui_header_align,
+                        enum gui_window_flags flag);
 /*  this function adds a header toggle button for modifing a certain window flag
     Input:
     - symbol that will be drawn if the flag is inactive
@@ -2262,8 +2692,8 @@ void gui_menubar_end(struct gui_context*);
     gui_layout_row_space_end            -- finishes the free drawingp process
 
     window tree layout function API
-    gui_context_push            -- pushes a new node/collapseable header/tab
-    gui_context_pop             -- pops the the previously added node
+    gui_layout_push     -- pushes a new node/collapseable header/tab
+    gui_layout_pop      -- pops the the previously added node
 
 */
 enum gui_row_layout_format {
@@ -2408,7 +2838,7 @@ void gui_layout_pop(struct gui_context*);
     gui_button_toggle         -- toggle button with either active or inactive state
     gui_button_text_image     -- button widget with text and icon
     gui_button_text_symbol    -- button widget with text and a triangle
-    gui_button_invisible      -- button widget without border and fitting space
+    gui_button_fitting        -- button widget without border and fitting space
     gui_image                 -- image widget for outputing a image to a window
     gui_check                 -- add a checkbox widget
     gui_option                -- radiobutton widget
@@ -2564,7 +2994,7 @@ gui_bool gui_button_text_image(struct gui_context *layout, struct gui_image img,
     - gui_true if the button was transistioned from unpressed to pressed with
         default button behavior or pressed if repeater behavior.
 */
-gui_bool gui_button_invisible(struct gui_context *layout,  const char *text,
+gui_bool gui_button_fitting(struct gui_context *layout,  const char *text,
                             enum gui_text_align align, enum gui_button_behavior behavior);
 /*  this function creates a fitting  button without border
     Input:
@@ -2757,12 +3187,15 @@ struct gui_vec2 gui_shelf_end(struct gui_context*, struct gui_context*);
     gui_popup_menu_end      -- ends the popup building process
 */
 enum gui_popup_type {
-    GUI_POPUP_STATIC, /* static fixed height non growing popup */
-    GUI_POPUP_DYNAMIC /* dynamically growing popup with maximum height */
+    GUI_POPUP_STATIC,
+    /* static fixed height non growing popup */
+    GUI_POPUP_DYNAMIC
+    /* dynamically growing popup with maximum height */
 };
 gui_flags gui_popup_begin(struct gui_context *parent,
                             struct gui_context *popup, enum gui_popup_type,
-                            gui_flags, struct gui_rect bounds, struct gui_vec2 offset);
+                            gui_flags, struct gui_rect bounds,
+                            struct gui_vec2 offset);
 /*  this function adds a overlapping blocking popup menu
     Input:
     - type of the popup as either growing or static
@@ -2949,6 +3382,8 @@ void gui_combo_end(struct gui_context *parent, struct gui_context *combo);
     be opened/closed by clicking on the menu button. It is normally
     placed at the top of the window and is independent of the parent
     scrollbar offset. But if needed the menu can even be placed inside the window.
+    At the moment the menu only allows a single depth but that will change
+    in the future.
 
     menu widget API
     gui_menu_begin    -- begins the menu item build up processs
@@ -3098,45 +3533,7 @@ enum gui_tree_node_operation gui_tree_leaf_icon(struct gui_tree*,
 */
 struct gui_vec2 gui_tree_end(struct gui_context*, struct gui_tree*);
 /*  this function ends a the tree building process */
-/*
- * -------------------------------------------------------------
- *                          TABLE
- * --------------------------------------------------------------
-    TABLE
-    Temporary table widget. Needs to be rewritten to be actually useful.
 
-    Table widget API
-    gui_table_begin           -- begin table build up process
-    gui_table_row             -- seperates tables rows
-    gui_table_end             -- ends the table build up process
-*/
-enum gui_table_lines {
-    GUI_TABLE_HHEADER = 0x01,
-    /* Horizontal table header lines */
-    GUI_TABLE_VHEADER = 0x02,
-    /* Vertical table header lines */
-    GUI_TABLE_HBODY = 0x04,
-    /* Horizontal table body lines */
-    GUI_TABLE_VBODY = 0x08
-    /* Vertical table body lines */
-};
-
-void gui_table_begin(struct gui_context*, gui_flags flags,
-                            gui_size row_height, gui_size cols);
-/*  this function set the window to a table state which enable you to create a
-    table with the standart window row layout
-    Input:
-    - table row and column line seperator flags
-    - height of each table row
-    - number of columns inside the table
-*/
-void gui_table_row(struct gui_context*);
-/*  this function add a row with line seperator into asa table marked table
-*/
-void gui_table_end(struct gui_context*);
-/*  this function finished the table build up process and reverts the window back
-    to its normal state.
-*/
 #ifdef __cplusplus
 }
 #endif

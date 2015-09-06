@@ -1,5 +1,6 @@
 #define MAX_BUFFER  64
-#define MAX_MEMORY  (16 * 1024)
+#define MAX_MEMORY  (32 * 1024)
+#define MAX_COMMAND_MEMORY  (16 * 1024)
 #define WINDOW_WIDTH 1200
 #define WINDOW_HEIGHT 800
 
@@ -479,11 +480,11 @@ struct state {
 
 struct demo_gui {
     gui_bool running;
-    void *memory;
-    const struct gui_input *input;
+    struct gui_buffer memory;
+    struct gui_input input;
     struct gui_command_queue queue;
     struct gui_style config;
-    struct gui_font font;
+    struct gui_user_font font;
     struct gui_window panel;
     struct gui_window sub;
     struct state state;
@@ -543,7 +544,7 @@ widget_panel(struct gui_context *panel, struct state *demo)
 
     /* combo boxes  */
     if (!demo->scaleable) gui_layout_row_static(panel, 30, 150, 1);
-    else gui_layout_row_dynamic(panel, 25, 1);
+    else gui_layout_row_dynamic(panel, 30, 1);
     combo_box(panel, &demo->combo, weapons, LEN(weapons));
     prog_combo_box(panel, demo->prog_values, LEN(demo->prog_values), &demo->progcom);
     color_combo_box(panel, &demo->colcom);
@@ -564,23 +565,6 @@ widget_panel(struct gui_context *panel, struct state *demo)
         }
         gui_layout_row_end(panel);
     }
-}
-
-static void
-table_panel(struct gui_context *panel)
-{
-    gui_size i = 0;
-    const char *table[] = {"Move forward", "w", "Move back", "s", "Move left", "a",
-        "Move right", "d", "Jump", "SPACE", "Duck", "CTRL"};
-    gui_table_begin(panel, GUI_TABLE_HHEADER, 30, 2);
-    gui_label_colored(panel, "MOVEMENT", GUI_TEXT_CENTERED, gui_rgba(178, 122, 1, 255));
-    gui_label_colored(panel, "KEY/BUTTON", GUI_TEXT_CENTERED, gui_rgba(178, 122, 1, 255));
-    for (i = 0; i < LEN(table); i += 2) {
-        gui_table_row(panel);
-        gui_label(panel, table[i], GUI_TEXT_LEFT);
-        gui_label(panel, table[i+1], GUI_TEXT_CENTERED);
-    }
-    gui_table_end(panel);
 }
 
 /* -----------------------------------------------------------------
@@ -686,24 +670,25 @@ paste(gui_handle handle, struct gui_edit_box *box)
  *  INIT
  * ----------------------------------------------------------------- */
 static void
-init_demo(struct demo_gui *gui, struct gui_font *font)
+init_demo(struct demo_gui *gui)
 {
+    void *memory;
     struct gui_style *config = &gui->config;
     struct state *win = &gui->state;
     struct gui_clipboard clip;
-    gui->font = *font;
     gui->running = gui_true;
 
-    gui_command_queue_init_fixed(&gui->queue, gui->memory, MAX_MEMORY);
-    gui_style_default(config, GUI_DEFAULT_ALL, font);
+    memory = gui_buffer_alloc(&gui->memory, GUI_BUFFER_FRONT, MAX_COMMAND_MEMORY, 0);
+    gui_command_queue_init_fixed(&gui->queue, memory, MAX_COMMAND_MEMORY);
+    gui_style_default(config, GUI_DEFAULT_ALL, &gui->font);
 
     /* panel */
     gui_window_init(&gui->panel, gui_rect(30, 30, 280, 530),
         GUI_WINDOW_BORDER|GUI_WINDOW_MOVEABLE|GUI_WINDOW_SCALEABLE,
-        &gui->queue, config, gui->input);
+        &gui->queue, config, &gui->input);
     gui_window_init(&gui->sub, gui_rect(400, 50, 220, 180),
         GUI_WINDOW_BORDER|GUI_WINDOW_MOVEABLE|GUI_WINDOW_SCALEABLE,
-        &gui->queue, config, gui->input);
+        &gui->queue, config, &gui->input);
 
     /* widget state */
     tree_init(&win->test);
@@ -853,12 +838,6 @@ run_demo(struct demo_gui *gui)
             }
             state->shelf = gui_shelf_end(&layout, &tab);
         }
-
-        /* table */
-        gui_layout_row_dynamic(&layout, 180, 1);
-        gui_group_begin(&layout, &tab, "Table", 0, state->table);
-        table_panel(&tab);
-        state->table = gui_group_end(&layout, &tab);
 
         {
             /* tree */
