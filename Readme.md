@@ -3,27 +3,17 @@
 
 This is a bloat free minimal state immediate mode graphical user interface toolkit
 written in ANSI C. It was designed as a simple embeddable user interface for
-application and does not have any direct dependencies. The toolkit was mainly
-developed to have a simple GUI for the X11 window system but can be used
-with other platforms like win32 or libraries like nanovg. The library uses
-no heap allocation outside of draw commands and as a whole has a low default 
-heap memory footprint.
+application and does not have any direct dependencies.
 
 ## Features
 - Immediate mode graphical user interface toolkit
 - Written in C89 (ANSI C)
-- Small codebase (~6kLOC)
+- Small codebase (~7kLOC)
 - Focus on portability, efficiency, simplicity and minimal internal state
 - No global or hidden state
 - No direct dependencies (not even libc!)
 - Configurable style and colors
 - UTF-8 support
-
-## Limitations
-- Does NOT provide os window/input management
-- Does NOT implement a render backend
-- Does NOT implement a font library  
-Summary: It is only responsible for the actual user interface
 
 ## Gallery
 ![gui demo](/screen/demo.png?raw=true)
@@ -272,10 +262,6 @@ platform (Xlib, Win32) itself already provides a solution.
 ## References
 - [Tutorial from Jari Komppa about imgui libraries](http://www.johno.se/book/imgui.html)
 - [Johannes 'johno' Norneby's article](http://iki.fi/sol/imgui/)
-- [Casey Muratori's original introduction to imgui's](http:://mollyrocket.com/861?node=861)
-- [Casey Muratori's imgui panel design (1/2)](http://mollyrocket.com/casey/stream_0019.html)
-- [Casey Muratori's imgui panel design (2/2)](http://mollyrocket.com/casey/stream_0020.html)
-- [Casey Muratori: Designing and Evaluation Reusable Components](http://mollyrocket.com/casey/stream_0028.html)
 - [ImGui: The inspiration for this project](https://github.com/ocornut/imgui)
 - [Nvidia's imgui toolkit](https://code.google.com/p/nvidia-widgets/)
 
