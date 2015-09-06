@@ -77,7 +77,7 @@ struct gui {
     struct gui_input input;
     struct gui_command_queue queue;
     struct gui_style config;
-    struct gui_font font;
+    struct gui_user_font font;
 };
 
 /* =================================================================
@@ -288,22 +288,22 @@ node_editor_draw(struct gui_window *win, struct node_editor *nodedit,
                         nodedit->bounds);
                     gui_layout_row_dynamic(&menu, 25, 1);
                     if (!nodedit->selected) {
-                        if (gui_button_invisible(&menu, "New", GUI_TEXT_CENTERED, GUI_BUTTON_DEFAULT)) {
+                        if (gui_button_fitting(&menu, "New", GUI_TEXT_CENTERED, GUI_BUTTON_DEFAULT)) {
                             fprintf(stdout, "pressed new!\n");
                             nodedit->menu = gui_popup_nonblock_close(&menu);
                             node_editor_add(nodedit, "New", gui_rect(400, 260, 180, 220),
                                     gui_rgb(255, 255, 255), 2, 2);
                         }
                     } else {
-                        if (gui_button_invisible(&menu, "Delete", GUI_TEXT_CENTERED, GUI_BUTTON_DEFAULT)) {
+                        if (gui_button_fitting(&menu, "Delete", GUI_TEXT_CENTERED, GUI_BUTTON_DEFAULT)) {
                             fprintf(stdout, "pressed delete!\n");
                             nodedit->menu = gui_popup_nonblock_close(&menu);
                         }
-                        if (gui_button_invisible(&menu, "Rename", GUI_TEXT_CENTERED, GUI_BUTTON_DEFAULT)) {
+                        if (gui_button_fitting(&menu, "Rename", GUI_TEXT_CENTERED, GUI_BUTTON_DEFAULT)) {
                             fprintf(stdout, "pressed rename!\n");
                             nodedit->menu = gui_popup_nonblock_close(&menu);
                         }
-                        if (gui_button_invisible(&menu, "Copy", GUI_TEXT_CENTERED, GUI_BUTTON_DEFAULT)) {
+                        if (gui_button_fitting(&menu, "Copy", GUI_TEXT_CENTERED, GUI_BUTTON_DEFAULT)) {
                             fprintf(stdout, "pressed copy!\n");
                             nodedit->menu = gui_popup_nonblock_close(&menu);
                         }
@@ -385,14 +385,6 @@ draw(NVGcontext *nvg, struct gui_command_queue *queue, int width, int height)
             nvgLineTo(nvg, l->end.x, l->end.y);
             nvgFillColor(nvg, nvgRGBA(l->color.r, l->color.g, l->color.b, l->color.a));
             nvgFill(nvg);
-        } break;
-        case GUI_COMMAND_QUAD: {
-            const struct gui_command_quad *q = gui_command(quad, cmd);
-            nvgBeginPath(nvg);
-            nvgMoveTo(nvg, q->begin.x, q->begin.y);
-            nvgQuadTo(nvg, q->ctrl.x, q->ctrl.y, q->end.x, q->end.y);
-            nvgStrokeColor(nvg, nvgRGBA(q->color.r, q->color.g, q->color.b, q->color.a));
-            nvgStroke(nvg);
         } break;
         case GUI_COMMAND_CURVE: {
             const struct gui_command_curve *q = gui_command(curve, cmd);
