@@ -989,12 +989,13 @@ const struct gui_command* gui_command_queue_next(struct gui_command_queue*,
     The reason why the draw list is optional or is not the default library output
     is that basic commands provide an easy way to abstract over other libraries
     which already provide a drawing API and do not need or want the output the
-    draw list provides.
+    draw list provides. In addition it is way easier and takes less memory
+    to serialize commands decribing primitives than vertex data.
 
     USAGE
     ----------------------------
     To actually use the draw list you first need the initialize the draw list
-    by providing three filled buffers to be filled while drawing. The reason
+    by providing three buffers to be filled while drawing. The reason
     buffers need to be provided and not memory or an allocator is to provide
     more fine grained control over the memory inside the draw list, which in term
     requires more work from the user.
@@ -1006,8 +1007,8 @@ const struct gui_command* gui_command_queue_next(struct gui_command_queue*,
 
     Finaly for the drawing process you have to iterate over each draw command
     inside the `gui_draw_list` by using the function `gui_foreach_draw_command`
-    which contains drawing state like clip rectangle, current textue a number
-    of element to draw with the current state.
+    which contains drawing state like clip rectangle, current texture and a number
+    of elements to draw with the current state.
 
     draw list buffer functions
     gui_draw_list_init              - initializes a command buffer with memory
@@ -1366,7 +1367,6 @@ struct gui_font {
     gui_edit_box_remove     -- removes a symbol from the editbox
     gui_edit_box_get        -- returns the string inside the editbox
     gui_edit_box_get_const  -- returns the const string inside the editbox
-    gui_edit_box_len        -- returns the length of the string inside the edditbox
     gui_edit_box_free       -- frees all memory in a dynamic editbox
     gui_edit_box_info       -- fills a memory info struct with data
     gui_edit_box_at         -- returns the glyph at the given position
@@ -1374,7 +1374,7 @@ struct gui_font {
     gui_edit_box_at_char    -- returns the char at the given position
     gui_edit_box_set_cursor -- sets the cursor to a given glyph
     gui_edit_box_get_cursor -- returns the position of the cursor
-    gui_edit_box_len_char   -- returns the length of the string in byte
+    gui_edit_box_len_char   -- returns the length of the string in bytes
     gui_edit_box_len        -- returns the length of the string in glyphes
 */
 struct gui_clipboard {
@@ -2056,7 +2056,6 @@ enum gui_style_colors {
     GUI_COLOR_BUTTON_HOVER,
     GUI_COLOR_BUTTON_ACTIVE,
     GUI_COLOR_TOGGLE,
-    GUI_COLOR_TOGGLE_BACK,
     GUI_COLOR_TOGGLE_HOVER,
     GUI_COLOR_TOGGLE_CURSOR,
     GUI_COLOR_SLIDER,
