@@ -513,7 +513,6 @@ widget_panel(struct gui_context *panel, struct state *demo)
         fprintf(stdout, "right triangle button pressed!\n");
     if (gui_button_text_symbol(panel,GUI_SYMBOL_TRIANGLE_LEFT,"previous",GUI_TEXT_RIGHT,GUI_BUTTON_DEFAULT))
         fprintf(stdout, "left triangle button pressed!\n");
-    demo->toggle = gui_button_toggle(panel, "toggle", demo->toggle);
 
     /* Checkbox + Radio buttons */
     demo->checkbox = gui_check(panel, "checkbox", demo->checkbox);

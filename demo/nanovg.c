@@ -304,7 +304,7 @@ main(int argc, char *argv[])
         run_demo(&gui);
 
         /* Draw */
-        glClearColor(0.4f, 0.4f, 0.4f, 1.0f);
+        glClearColor(0.8588f, 0.835f, 0.86f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         draw(vg, &gui.queue, width, height);
         SDL_GL_SwapWindow(win);

@@ -977,7 +977,7 @@ const struct gui_command* gui_command_queue_next(struct gui_command_queue*,
     can be interpreted by render frameworks (OpenGL, DirectX, ...).
     In addition to just provide a way to convert commands the draw list has
     a primitives and stateful path drawing API, which allows to draw into the
-    draw list as well. The actuall drawing support in addition Anti-aliasing.
+    draw list even with anti-aliasing.
 
     The draw list consist internaly of three user provided buffers that will be
     filled with data. The first buffer is the the draw command and temporary
@@ -1642,11 +1642,13 @@ struct gui_toggle {
     struct gui_vec2 padding;
     /* padding between bounds and content */
     struct gui_color font;
-    /* text color */
+    /* text background  */
+    struct gui_color background;
+    /* text color background */
     struct gui_color normal;
-    /* toggle normal background color*/
+    /* toggle cursor background normal color*/
     struct gui_color hover;
-    /* toggle hover background color*/
+    /* toggle cursor background hove color*/
     struct gui_color cursor;
     /* toggle cursor color*/
 };
@@ -2054,6 +2056,7 @@ enum gui_style_colors {
     GUI_COLOR_BUTTON_HOVER,
     GUI_COLOR_BUTTON_ACTIVE,
     GUI_COLOR_TOGGLE,
+    GUI_COLOR_TOGGLE_BACK,
     GUI_COLOR_TOGGLE_HOVER,
     GUI_COLOR_TOGGLE_CURSOR,
     GUI_COLOR_SLIDER,
@@ -2495,10 +2498,6 @@ struct gui_context {
     /* position and size of the window in the os window */
     struct gui_vec2 offset;
     /* window scrollbar offset */
-    gui_bool is_table;
-    /* flag indicating if the window is currently creating a table */
-    gui_flags tbl_flags;
-    /* flags describing the line drawing for every row in the table */
     gui_bool valid;
     /* flag inidicating if the window is visible */
     gui_float at_x, at_y, max_x;
@@ -2835,7 +2834,6 @@ void gui_layout_pop(struct gui_context*);
     gui_button_color          -- colored button widget without content
     gui_button_symbol         -- button with triangle either up-/down-/left- or right
     gui_button_image          -- button widget width icon content
-    gui_button_toggle         -- toggle button with either active or inactive state
     gui_button_text_image     -- button widget with text and icon
     gui_button_text_symbol    -- button widget with text and a triangle
     gui_button_fitting        -- button widget without border and fitting space
@@ -3004,14 +3002,6 @@ gui_bool gui_button_fitting(struct gui_context *layout,  const char *text,
     Output:
     - gui_true if the button was transistioned from unpressed to pressed with
         default button behavior or pressed if repeater behavior.
-*/
-gui_bool gui_button_toggle(struct gui_context*, const char*,gui_bool value);
-/*  this function creates a toggle button which is either active or inactive
-    Input:
-    - label describing the toggle button
-    - current state of the toggle
-    Output:
-    - from user input updated toggle state
 */
 gui_float gui_slider(struct gui_context*, gui_float min, gui_float val,
                             gui_float max, gui_float step);

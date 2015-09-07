@@ -1165,7 +1165,6 @@ gui_command_buffer_next(struct gui_command_buffer *buffer,
     memory = (gui_byte*)buffer->base->memory.ptr;
     return gui_ptr_add_const(struct gui_command, memory, cmd->next);
 }
-
 /*
  * ==============================================================
  *
@@ -2456,6 +2455,14 @@ gui_draw_list_path_stroke(struct gui_draw_list *list, struct gui_color color,
 /*
  * ==============================================================
  *
+ *                          Font
+ *
+ * ===============================================================
+ */
+
+/*
+ * ==============================================================
+ *
  *                      Edit Box
  *
  * ===============================================================
@@ -2825,15 +2832,6 @@ gui_edit_box_len(struct gui_edit_box *eb)
     GUI_ASSERT(eb);
     return eb->glyphes;
 }
-
-/*
- * ==============================================================
- *
- *                          Font
- *
- * ===============================================================
- */
-
 /*
  * ==============================================================
  *
@@ -3210,8 +3208,8 @@ gui_widget_slider(struct gui_command_buffer *out, struct gui_rect slider,
     /* make sure the provided values are correct */
     slider.x = slider.x + s->padding.x;
     slider.y = slider.y + s->padding.y;
-    slider.h = MAX(slider.h, 2 * s->padding.y + 5);
-    slider.w = MAX(slider.w, 1 + slider.h + 2 * s->padding.x + 5);
+    slider.h = MAX(slider.h, 2 * s->padding.y);
+    slider.w = MAX(slider.w, 1 + slider.h + 2 * s->padding.x);
     slider.h -= 2 * s->padding.y;
     slider.w -= 2 * s->padding.y;
     slider_max = MAX(min, max);
@@ -3229,9 +3227,9 @@ gui_widget_slider(struct gui_command_buffer *out, struct gui_rect slider,
 
     /* calculate slider background bar bounds */
     bar.x = slider.x;
-    bar.y = slider.y;
+    bar.y = (slider.y + cursor.h/2) - cursor.h/8;
     bar.w = slider.w;
-    bar.h = slider.h;
+    bar.h = slider.h/4;
 
     /* updated the slider value by user input */
     inslider = in && gui_input_is_mouse_hovering_rect(in, slider);
@@ -3259,18 +3257,15 @@ gui_widget_slider(struct gui_command_buffer *out, struct gui_rect slider,
             (slider_value >= slider_max) ? ((bar.x + bar.w) - cursor.w) :
             cursor.x - (cursor.w/2);
 
-        fill.x = bar.x + 2;
-        fill.y = bar.y + 2;
+        fill.x = bar.x;
+        fill.y = bar.y;
         fill.w = (cursor.x + (cursor.w/2.0f)) - bar.x;
-        fill.h = bar.h - 4;
+        fill.h = bar.h;
 
         /* draw slider with background and circle cursor*/
-        gui_command_buffer_push_rect(out, bar, s->rounding, s->border);
-        gui_command_buffer_push_rect(out, gui_shrink_rect(bar, 1), s->rounding, s->bg);
-        gui_command_buffer_push_rect(out, fill, s->rounding, s->border);
-        gui_command_buffer_push_rect(out, gui_shrink_rect(fill,1), s->rounding, col);
-        gui_command_buffer_push_circle(out, cursor, s->border);
-        gui_command_buffer_push_circle(out, gui_shrink_rect(cursor, 1), col);
+        gui_command_buffer_push_rect(out, bar, 0, s->bg);
+        gui_command_buffer_push_rect(out, fill, 0, col);
+        gui_command_buffer_push_circle(out, cursor, col);
     }
     return slider_value;
 }
@@ -3280,7 +3275,6 @@ gui_widget_progress(struct gui_command_buffer *out, struct gui_rect r,
     gui_size value, gui_size max, gui_bool modifyable,
     const struct gui_progress *prog, const struct gui_input *in)
 {
-    struct gui_rect cursor;
     gui_float prog_scale;
     gui_size prog_value;
     struct gui_color col;
@@ -3309,15 +3303,10 @@ gui_widget_progress(struct gui_command_buffer *out, struct gui_rect r,
     prog_value = MIN(prog_value, max);
     prog_scale = (gui_float)prog_value / (gui_float)max;
 
-    /* calculate progress bar cursor */
-    cursor = gui_shrink_rect(r, 2);
-    cursor.w = (r.w - 2) * prog_scale;
-
     /* draw progressbar width background and cursor */
-    gui_command_buffer_push_rect(out, r, prog->rounding, prog->border);
-    gui_command_buffer_push_rect(out, gui_shrink_rect(r, 1), prog->rounding, prog->background);
-    gui_command_buffer_push_rect(out, cursor, prog->rounding, prog->border);
-    gui_command_buffer_push_rect(out, gui_shrink_rect(cursor,1), prog->rounding, col);
+    gui_command_buffer_push_rect(out, r, prog->rounding, prog->background);
+    r.w = (r.w - 2) * prog_scale;
+    gui_command_buffer_push_rect(out, r, prog->rounding, col);
     return prog_value;
 }
 
@@ -3923,9 +3912,9 @@ gui_style_default_rounding(struct gui_style *style)
 {
     style->rounding[GUI_ROUNDING_BUTTON] = 4.0f;
     style->rounding[GUI_ROUNDING_SLIDER] = 8.0f;
-    style->rounding[GUI_ROUNDING_PROGRESS] = 8.0f;
+    style->rounding[GUI_ROUNDING_PROGRESS] = 4.0f;
     style->rounding[GUI_ROUNDING_CHECK] = 0.0f;
-    style->rounding[GUI_ROUNDING_INPUT] = 4.0f;
+    style->rounding[GUI_ROUNDING_INPUT] = 0.0f;
     style->rounding[GUI_ROUNDING_GRAPH] = 4.0f;
     style->rounding[GUI_ROUNDING_SCROLLBAR] = 5.0f;
 }
@@ -3945,11 +3934,11 @@ gui_style_default_color(struct gui_style *style)
     style->colors[GUI_COLOR_TOGGLE] = gui_rgba(100, 100, 100, 255);
     style->colors[GUI_COLOR_TOGGLE_HOVER] = gui_rgba(120, 120, 120, 255);
     style->colors[GUI_COLOR_TOGGLE_CURSOR] = gui_rgba(45, 45, 45, 255);
-    style->colors[GUI_COLOR_SLIDER] = gui_rgba(43, 43, 43, 255);
+    style->colors[GUI_COLOR_SLIDER] = gui_rgba(38, 38, 38, 255);
     style->colors[GUI_COLOR_SLIDER_CURSOR] = gui_rgba(100, 100, 100, 255);
     style->colors[GUI_COLOR_SLIDER_CURSOR_HOVER] = gui_rgba(120, 120, 120, 255);
     style->colors[GUI_COLOR_SLIDER_CURSOR_ACTIVE] = gui_rgba(150, 150, 150, 255);
-    style->colors[GUI_COLOR_PROGRESS] = gui_rgba(43, 43, 43, 255);
+    style->colors[GUI_COLOR_PROGRESS] = gui_rgba(38, 38, 38, 255);
     style->colors[GUI_COLOR_PROGRESS_CURSOR] = gui_rgba(100, 100, 100, 255);
     style->colors[GUI_COLOR_PROGRESS_CURSOR_HOVER] = gui_rgba(120, 120, 120, 255);
     style->colors[GUI_COLOR_PROGRESS_CURSOR_ACTIVE] = gui_rgba(150, 150, 150, 255);
@@ -5719,42 +5708,6 @@ gui_button_image(struct gui_context *layout, struct gui_image image,
 }
 
 gui_bool
-gui_button_toggle(struct gui_context *layout, const char *str, gui_bool value)
-{
-    struct gui_rect bounds;
-    struct gui_button_text button;
-    const struct gui_style *config;
-
-    const struct gui_input *i;
-    enum gui_widget_state state;
-    state = gui_button(&button.base, &bounds, layout);
-    if (!state) return value;
-    i = (state == GUI_WIDGET_ROM || layout->flags & GUI_WINDOW_ROM) ? 0 : layout->input;
-
-    config = layout->style;
-    button.base.border = config->colors[GUI_COLOR_BORDER];
-    button.alignment = GUI_TEXT_CENTERED;
-    if (!value) {
-        button.base.normal = config->colors[GUI_COLOR_BUTTON];
-        button.base.hover = config->colors[GUI_COLOR_BUTTON_HOVER];
-        button.base.active = config->colors[GUI_COLOR_BUTTON_ACTIVE];
-        button.normal = config->colors[GUI_COLOR_TEXT];
-        button.hover = config->colors[GUI_COLOR_TEXT_HOVERING];
-        button.active = config->colors[GUI_COLOR_TEXT_ACTIVE];
-    } else {
-        button.base.normal = config->colors[GUI_COLOR_BUTTON_ACTIVE];
-        button.base.hover = config->colors[GUI_COLOR_BUTTON_HOVER];
-        button.base.active = config->colors[GUI_COLOR_BUTTON];
-        button.normal = config->colors[GUI_COLOR_TEXT_ACTIVE];
-        button.hover = config->colors[GUI_COLOR_TEXT_HOVERING];
-        button.active = config->colors[GUI_COLOR_TEXT];
-    }
-    if (gui_widget_button_text(layout->buffer, bounds, str, GUI_BUTTON_DEFAULT,
-        &button, i, &config->font)) value = !value;
-    return value;
-}
-
-gui_bool
 gui_button_text_symbol(struct gui_context *layout, enum gui_symbol symbol,
     const char *text, enum gui_text_align align, enum gui_button_behavior behavior)
 {
@@ -6582,15 +6535,20 @@ gui_combo_begin(struct gui_context *parent, struct gui_context *combo,
     {
         /* button setup and execution */
         struct gui_button_symbol button;
-        bounds.y = header.y;
-        bounds.h = header.h;
-        bounds.w = header.h;
-        bounds.x = header.x + header.w - bounds.w;
+        bounds.y = header.y + 1;
+        bounds.h = MAX(2, header.h);
+        bounds.h = bounds.h - 2;
+        bounds.w = bounds.h - 2;
+        bounds.x = (header.x + header.w) - (bounds.w+2);
 
-        gui_fill_button(config, &button.base);
         button.base.rounding = 0;
+        button.base.border_width = 0;
         button.base.padding.x = bounds.w/4.0f;
         button.base.padding.y = bounds.h/4.0f;
+        button.base.border = config->colors[GUI_COLOR_SPINNER];
+        button.base.normal = config->colors[GUI_COLOR_SPINNER];
+        button.base.hover = config->colors[GUI_COLOR_SPINNER];
+        button.base.active = config->colors[GUI_COLOR_SPINNER];
         button.normal = config->colors[GUI_COLOR_TEXT];
         button.hover = config->colors[GUI_COLOR_TEXT_HOVERING];
         button.active = config->colors[GUI_COLOR_TEXT_ACTIVE];

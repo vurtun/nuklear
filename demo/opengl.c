@@ -476,7 +476,7 @@ device_init(struct device *dev)
         glBindTexture(GL_TEXTURE_2D, dev->null_tex);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 64, 64, 0,
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 64, 64, 0,
             GL_RGBA, GL_UNSIGNED_BYTE, mem);
         free(mem);
         glerror();
@@ -549,7 +549,6 @@ device_draw(struct device *dev, struct gui_command_queue *queue, int width, int 
         const struct gui_draw_command *cmd;
         static const GLsizeiptr max_vertex_memory = 128 * 1024;
         static const GLsizeiptr max_element_memory = 32 * 1024;
-        struct gui_buffer vbuf, ebuf;
         void *vertexes, *elements;
         const gui_draw_index *offset = NULL;
 
@@ -566,6 +565,7 @@ device_draw(struct device *dev, struct gui_command_queue *queue, int width, int 
         vertexes = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
         elements = glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
         {
+            struct gui_buffer vbuf, ebuf;
             gui_buffer_init_fixed(&vbuf, vertexes, (gui_size)max_vertex_memory);
             gui_buffer_init_fixed(&ebuf, elements, (gui_size)max_element_memory);
             gui_draw_list_init(&draw_list, &dev->cmds, &vbuf, &ebuf,
@@ -667,7 +667,6 @@ resize(SDL_Event *evt)
     glViewport(0, 0, evt->window.data1, evt->window.data2);
 }
 
-
 int
 main(int argc, char *argv[])
 {
@@ -746,7 +745,7 @@ main(int argc, char *argv[])
 
         /* Draw */
         glClear(GL_COLOR_BUFFER_BIT);
-        glClearColor(0.4f, 0.4f, 0.4f, 1.0f);
+        glClearColor(0.8588f, 0.835f, 0.86f, 1.0f);
         device_draw(&device, &gui.queue, width, height);
         SDL_GL_SwapWindow(win);
 
