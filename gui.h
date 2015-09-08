@@ -55,9 +55,9 @@ extern "C" {
 #define GUI_COMPILE_WITH_FONT 1
 /* setting this define to 1 adds the `stb_truetype` and `stb_rect_pack` header
  to this library and provided a default font for font loading and rendering.
- If you already have a font or do not want to use this font you can just set this
- define to zero and the font module will not be compiled and the two header
- will not be needed. */
+ If you already have font handling or do not want to use this font handler
+ you can just set this define to zero and the font module will not be compiled
+ and the two header will not be needed. */
 /*
  * ==============================================================
  *
@@ -2830,6 +2830,7 @@ void gui_layout_pop(struct gui_context*);
     gui_label                 -- text widget for printing zero terminated strings
     gui_label_colored         -- widget for printing colored zero terminiated strings
     gui_button_text           -- button widget with text content
+    gui_button_toggle         -- button toggle widget with text content
     gui_button_color          -- colored button widget without content
     gui_button_symbol         -- button with triangle either up-/down-/left- or right
     gui_button_image          -- button widget width icon content
@@ -3001,6 +3002,14 @@ gui_bool gui_button_fitting(struct gui_context *layout,  const char *text,
     Output:
     - gui_true if the button was transistioned from unpressed to pressed with
         default button behavior or pressed if repeater behavior.
+*/
+gui_bool gui_button_toggle(struct gui_context*, const char*,gui_bool value);
+/*  this function creates a toggle button which is either active or inactive
+    Input:
+    - label describing the toggle button
+    - current state of the toggle
+    Output:
+    - from user input updated toggle state
 */
 gui_float gui_slider(struct gui_context*, gui_float min, gui_float val,
                             gui_float max, gui_float step);

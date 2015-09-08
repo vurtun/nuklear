@@ -2574,6 +2574,7 @@ gui_edit_buffer_at(gui_edit_buffer *buffer, gui_int pos, gui_long *unicode,
             *len = glyph_len;
             break;
         }
+
         i++;
         src_len = src_len + glyph_len;
         glyph_len = gui_utf_decode(text + src_len, unicode, text_len - src_len);
@@ -3303,7 +3304,7 @@ gui_widget_progress(struct gui_command_buffer *out, struct gui_rect r,
     prog_value = MIN(prog_value, max);
     prog_scale = (gui_float)prog_value / (gui_float)max;
 
-    /* draw progressbar width background and cursor */
+    /* draw progressbar with background and cursor */
     gui_command_buffer_push_rect(out, r, prog->rounding, prog->background);
     r.w = (r.w - 2) * prog_scale;
     gui_command_buffer_push_rect(out, r, prog->rounding, col);
@@ -5783,6 +5784,42 @@ gui_button_fitting(struct gui_context *layout,  const char *text,
     button.alignment = align;
     return gui_widget_button_text(layout->buffer, bounds, text,  behavior,
             &button, i, &config->font);
+}
+
+gui_bool
+gui_button_toggle(struct gui_context *layout, const char *str, gui_bool value)
+{
+    struct gui_rect bounds;
+    struct gui_button_text button;
+    const struct gui_style *config;
+
+    const struct gui_input *i;
+    enum gui_widget_state state;
+    state = gui_button(&button.base, &bounds, layout);
+    if (!state) return value;
+    i = (state == GUI_WIDGET_ROM || layout->flags & GUI_WINDOW_ROM) ? 0 : layout->input;
+
+    config = layout->style;
+    button.base.border = config->colors[GUI_COLOR_BORDER];
+    button.alignment = GUI_TEXT_CENTERED;
+    if (!value) {
+        button.base.normal = config->colors[GUI_COLOR_BUTTON];
+        button.base.hover = config->colors[GUI_COLOR_BUTTON_HOVER];
+        button.base.active = config->colors[GUI_COLOR_BUTTON_ACTIVE];
+        button.normal = config->colors[GUI_COLOR_TEXT];
+        button.hover = config->colors[GUI_COLOR_TEXT_HOVERING];
+        button.active = config->colors[GUI_COLOR_TEXT_ACTIVE];
+    } else {
+        button.base.normal = config->colors[GUI_COLOR_BUTTON_ACTIVE];
+        button.base.hover = config->colors[GUI_COLOR_BUTTON_HOVER];
+        button.base.active = config->colors[GUI_COLOR_BUTTON];
+        button.normal = config->colors[GUI_COLOR_TEXT_ACTIVE];
+        button.hover = config->colors[GUI_COLOR_TEXT_HOVERING];
+        button.active = config->colors[GUI_COLOR_TEXT];
+    }
+    if (gui_widget_button_text(layout->buffer, bounds, str, GUI_BUTTON_DEFAULT,
+        &button, i, &config->font)) value = !value;
+    return value;
 }
 
 static enum gui_widget_state
