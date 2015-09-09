@@ -5376,7 +5376,7 @@ gui_layout_row_tiled_begin(struct gui_context *layout,
     if (!layout->valid) return;
 
     layout->row.tiled = tiled;
-    gui_panel_layout(layout, (gui_size)tiled->height, 2);
+    gui_panel_layout(layout, tiled->height, 2);
     if (tiled->fmt == GUI_STATIC) {
         /* calculate bounds of the tiled layout */
         struct gui_rect clip, space;
@@ -5431,7 +5431,7 @@ gui_layout_row_tiled_push(struct gui_context *layout,
     spacing = config->properties[GUI_PROPERTY_ITEM_SPACING];
     if (s->format == GUI_SLOT_HORIZONTAL) {
         slot_bounds.h -= (2 * spacing.y);
-        slot_bounds.w -= s->capacity * spacing.x;
+        slot_bounds.w -= (gui_float)s->capacity * spacing.x;
 
         layout->row.item.h = slot_bounds.h;
         layout->row.item.y = slot_bounds.y;
@@ -5440,9 +5440,9 @@ gui_layout_row_tiled_push(struct gui_context *layout,
     } else {
         layout->row.item.x = slot_bounds.x + spacing.x;
         layout->row.item.w = slot_bounds.w - (2 * spacing.x);
-        layout->row.item.h = (slot_bounds.h - s->capacity * spacing.y)/(gui_float)s->capacity;
+        layout->row.item.h = (slot_bounds.h - (gui_float)s->capacity * spacing.y)/(gui_float)s->capacity;
         layout->row.item.y = slot_bounds.y + (gui_float)index * layout->row.item.h;
-        layout->row.item.y += (index * spacing.y);
+        layout->row.item.y += ((gui_float)index * spacing.y);
     }
 }
 
@@ -5768,6 +5768,30 @@ gui_spacing(struct gui_context *l, gui_size cols)
             gui_panel_alloc_space(&nil, l);
     }
     l->row.index = index;
+}
+
+void
+gui_seperator(struct gui_context *layout)
+{
+    struct gui_command_buffer *out;
+    const struct gui_style *config;
+    struct gui_vec2 item_padding;
+    struct gui_vec2 item_spacing;
+    struct gui_rect bounds;
+    GUI_ASSERT(layout);
+    if (!layout) return;
+
+    out = layout->buffer;
+    config = layout->style;
+    item_padding = gui_style_property(config, GUI_PROPERTY_ITEM_PADDING);
+    item_spacing = gui_style_property(config, GUI_PROPERTY_ITEM_SPACING);
+
+    bounds.w = MAX(layout->width, 2 * item_spacing.x + 2 * item_padding.x);
+    bounds.y = (layout->at_y + layout->row.height + item_padding.y) - layout->offset.y;
+    bounds.x = layout->at_x + item_spacing.x + item_padding.x - layout->offset.x;
+    bounds.w = bounds.w - (2 * item_spacing.x + 2 * item_padding.x);
+    gui_command_buffer_push_line(out, bounds.x, bounds.y, bounds.x + bounds.w,
+        bounds.y + bounds.h, config->colors[GUI_COLOR_BORDER]);
 }
 
 enum gui_widget_state

@@ -2960,6 +2960,7 @@ void gui_layout_pop(struct gui_context*);
     window widget API
     gui_widget                -- base function for all widgets to allocate space
     gui_spacing               -- column seperator and is basically an empty widget
+    gui_seperator             -- adds either a horizontal or vertical seperator
     gui_text                  -- text widget for printing text with length
     gui_text_colored          -- colored text widget for printing string by length
     gui_label                 -- text widget for printing zero terminated strings
@@ -2995,6 +2996,8 @@ void gui_spacing(struct gui_context*, gui_size cols);
     Input:
     - number of columns or widget to jump over
 */
+void gui_seperator(struct gui_context*);
+/*  this function creates a seperator line */
 void gui_text(struct gui_context*, const char*, gui_size,
                     enum gui_text_align);
 /*  this function creates a bounded non terminated text widget with either
