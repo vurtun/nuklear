@@ -14,7 +14,7 @@ application and does not have any direct dependencies.
 - No direct dependencies (not even libc!)
 - Configurable style and colors
 - UTF-8 support
-- Optional vertex output
+- Optional vertex buffer output
 
 ## Gallery
 ![gui demo](/screen/demo.png?raw=true)
@@ -23,11 +23,6 @@ application and does not have any direct dependencies.
 
 ## Example
 ```c
-/* allocate memory to hold the draw commands */
-struct gui_command_queue queue;
-void *memory = malloc(MEMORY_SIZE);
-gui_command_queue_init_fixed(&queue, memory, MEMORY_SIZE);
-
 /* setup configuration */
 struct gui_font font;
 struct gui_style style;
@@ -35,6 +30,11 @@ font.userdata.ptr = your_font_data;
 font.height = your_font_data.height;
 font.width = your_font_string_width_callback_function;
 gui_style_default(&style, GUI_DEFAULT_ALL, &font);
+
+/* allocate memory to hold draw commands */
+struct gui_command_queue queue;
+void *memory = malloc(MEMORY_SIZE);
+gui_command_queue_init_fixed(&queue, memory, MEMORY_SIZE);
 
 /* initialize panel */
 struct gui_window panel;

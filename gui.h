@@ -2237,6 +2237,103 @@ void gui_style_reset(struct gui_style*);
 /*
  * ==============================================================
  *
+ *                          Tiling
+ *
+ * ===============================================================
+    TILING
+
+    tiling API
+    ----------------------------
+    gui_tiled_begin         -- starts the definition of a tiled layout
+    gui_tiled_slot_bounds   -- returns the bounds of a slot in the tiled layout
+    gui_tiled_bounds        -- returns the bounds of a widget in the tiled layout
+    gui_tiled_slot          -- activates and setups a slot inside the tile layout
+    gui_tiled_end           -- ends the definiition of the tiled layout slots
+*/
+enum gui_tiled_layout_slot_index {
+    GUI_SLOT_TOP,
+    GUI_SLOT_BOTTOM,
+    GUI_SLOT_LEFT,
+    GUI_SLOT_CENTER,
+    GUI_SLOT_RIGHT,
+    GUI_SLOT_MAX
+};
+
+enum gui_layout_format {
+    GUI_DYNAMIC, /* row layout which scales with the window */
+    GUI_STATIC /* row layout with fixed pixel width */
+};
+
+enum gui_tiled_slot_format {
+    GUI_SLOT_HORIZONTAL,
+    /* widgets in slots are added left to right */
+    GUI_SLOT_VERTICAL
+    /* widgets in slots are added top to bottom */
+};
+
+struct gui_tiled_slot {
+    gui_uint capacity;
+    /* number of widget inside the slot */
+    gui_float value;
+    /* temp value for layout build up */
+    struct gui_vec2 size;
+    /* horizontal and vertical window (ratio/width) */
+    struct gui_vec2 pos;
+    /* position of the slot in the window */
+    enum gui_tiled_slot_format format;
+    /* layout filling format  */
+};
+
+struct gui_tiled_layout {
+    struct gui_tiled_slot slots[GUI_SLOT_MAX];
+    /* tiled layout slots */
+    enum gui_layout_format fmt;
+    /* row layout format */
+    gui_float width, height;
+    /* width/height of the layout */
+};
+
+void gui_tiled_begin(struct gui_tiled_layout*, enum gui_layout_format,
+                    gui_float width, gui_float height);
+/*  this functions begins the definitions of a tiled layout
+    Input:
+    - layout format with either dynamic ratio based or fixed pixel based slots
+    - pixel width of the tiled layout space
+    - pixel height of the tiled layout space
+*/
+void gui_tiled_slot_bounds(struct gui_rect*, const struct gui_tiled_layout*,
+                            enum gui_tiled_layout_slot_index);
+/*  this functions queries the bounds (position + size) of a tiled layout slot
+    Input:
+    - slot identifier
+    Output:
+    - rectangle with position and size of the slot
+*/
+void gui_tiled_bounds(struct gui_rect*, const struct gui_tiled_layout*,
+                        enum gui_tiled_layout_slot_index, gui_uint);
+/*  this functions queries the bounds (position + size) of a tiled layout slot entry
+    Input:
+    - slot identifier
+    - index of the widget inside the slot
+    Output:
+    - rectangle with position and size of the slot entry
+*/
+void gui_tiled_slot(struct gui_tiled_layout *layout,
+                    enum gui_tiled_layout_slot_index, gui_float ratio,
+                    enum gui_tiled_slot_format, gui_uint widget_count);
+/*  this functions defines a slot in the tiled layout which then can be filled
+ *  with widgets
+    Input:
+    - slot identifier
+    - either ratio or pixel size of the slot
+    - slot filling format with either horizontal or vertical filling
+    - number of widgets inside the slot
+*/
+void gui_tiled_end(struct gui_tiled_layout*);
+/*  this functions ends the definitions of the tiled layout slots */
+/*
+ * ==============================================================
+ *
  *                          Window
  *
  * ===============================================================
@@ -2433,6 +2530,8 @@ enum gui_row_layout_type {
     /* immediate mode widget specific widget width ratio layout */
     GUI_LAYOUT_DYNAMIC_FREE,
     /* free ratio based placing of widget in a local space  */
+    GUI_LAYOUT_DYNAMIC_TILED,
+    /* dynamic Border layout */
     GUI_LAYOUT_DYNAMIC,
     /* retain mode widget specific widget ratio width*/
     GUI_LAYOUT_STATIC_FIXED,
@@ -2441,15 +2540,10 @@ enum gui_row_layout_type {
     /* immediate mode widget specific widget pixel width layout */
     GUI_LAYOUT_STATIC_FREE,
     /* free pixel based placing of widget in a local space  */
+    GUI_LAYOUT_STATIC_TILED,
+    /* static Border layout */
     GUI_LAYOUT_STATIC
     /* retain mode widget specific widget pixel width layout */
-};
-
-enum gui_layout_node_type {
-    GUI_LAYOUT_NODE,
-    /* a node is a space which can be minimized or maximized */
-    GUI_LAYOUT_TAB
-    /* a tab is a node with a header */
 };
 
 #define GUI_UNDEFINED (-1.0f)
@@ -2474,6 +2568,8 @@ struct gui_row_layout {
     /* item bounds */
     struct gui_rect clip;
     /* temporary clipping rect */
+    struct gui_tiled_layout *tiled;
+    /* tiled border layout */
 };
 
 struct gui_header {
@@ -2524,7 +2620,16 @@ struct gui_context {
 };
 
 void gui_begin(struct gui_context*, struct gui_window*);
-/*  this function begins the window build up process by creating context to fill
+/*  this function begins the window build up process by creating a context to fill
+    Input:
+    - input structure holding all user generated state changes
+    Output:
+    - window context to fill up with widgets
+*/
+void gui_begin_tiled(struct gui_context*, struct gui_window*, struct gui_tiled_layout*,
+                    enum gui_tiled_layout_slot_index slot, gui_uint index);
+/*  this function begins the window build up process by creating a context to fill
+    and placing the window inside a tiled layout on the screen.
     Input:
     - input structure holding all user generated state changes
     Output:
@@ -2654,13 +2759,14 @@ void gui_menubar_begin(struct gui_context*);
 /*  this function begins the window menubar build up process */
 void gui_menubar_end(struct gui_context*);
 /*  this function ends the window menubar build up process */
+
 /*
  * --------------------------------------------------------------
- *                          LAYOUT
+ *                          Layout
  * --------------------------------------------------------------
     LAYOUT
     The layout API is for positioning of widget inside a window context. In general there
-    are three different ways to position widget. The first one is a table with
+    are four different ways to position widget. The first one is a table with
     fixed size columns. This like the other three comes in two flavors. First
     the scaleable width as a ratio of the window width and the other is a
     non-scaleable fixed pixel value for static windows.
@@ -2669,34 +2775,49 @@ void gui_menubar_end(struct gui_context*);
     in an immediate mode API which sets each size of a widget directly before
     it is called or a retain mode API which stores the size of every widget as
     an array.
-    The final way to position widgets is by allocating a fixed space from
+    The third way to position widgets is by allocating a fixed space from
     the window and directly positioning each widget with position and size.
     This requires the least amount of work for the API and the most for the user,
     but offers the most positioning freedom.
+    The final row layout is a tiled layout which divides a space in the panel
+    into a Top, Left, Center, Right and Bottom slot. Each slot can be filled
+    with widgets either horizontally or vertically.
 
-    window layout function API
-    gui_layout_row                      -- user defined widget row layout
+    fixed width widget layout API
     gui_layout_row_dynamic              -- scaling fixed column row layout
     gui_layout_row_static               -- fixed width fixed column row layout
+
+    custom width widget layout API
+    gui_layout_row                      -- user defined widget row layout
     gui_layout_row_begin                -- begins the row build up process
     gui_layout_row_push                 -- pushes the next widget width
     gui_layout_row_end                  -- ends the row build up process
+
+    custom widget placing layout API
     gui_layout_row_space_begin          -- creates a free placing space in the window
-    gui_layout_row_space_widget         -- pushes a widget into the space
     gui_layout_row_space_to_screen      -- converts from local space to screen
-    gui_layout_row_space_to_local       -- conversts from screen to local space
-    gui_layout_row_space_rect_to_screen -- converts from local space to screen
-    gui_layout_row_space_rect_to_local  -- conversts from screen to local space
+    gui_layout_row_space_to_local       -- converts from screen to local space
+    gui_layout_row_space_rect_to_screen -- converts rect from local space to screen
+    gui_layout_row_space_rect_to_local  -- converts rect from screen to local space
+    gui_layout_row_space_push           -- pushes a widget into the space
     gui_layout_row_space_end            -- finishes the free drawingp process
 
-    window tree layout function API
-    gui_layout_push     -- pushes a new node/collapseable header/tab
-    gui_layout_pop      -- pops the the previously added node
+    tiled widget placing layout API
+    gui_layout_row_tiled_begin          -- begins tiled layout based placing of widgets
+    gui_layout_row_tiled_slot_bounds    -- returns the bounds of a slot in the tiled layout
+    gui_layout_row_tiled_bounds         -- returns the bounds of a widget in the tiled layout
+    gui_layout_row_tiled_push           -- pushes a widget into a slot in the tiled layout
+    gui_layout_row_tiled_end            -- ends tiled layout based placing of widgets
 
+    window tree layout function API
+    gui_layout_push                     -- pushes a new node/collapseable header/tab
+    gui_layout_pop                      -- pops the the previously added node
 */
-enum gui_row_layout_format {
-    GUI_DYNAMIC, /* row layout which scales with the window */
-    GUI_STATIC /* row layout with fixed pixel width */
+enum gui_layout_node_type {
+    GUI_LAYOUT_NODE,
+    /* a node is a space which can be minimized or maximized */
+    GUI_LAYOUT_TAB
+    /* a tab is a node with a header */
 };
 
 void gui_layout_row_dynamic(struct gui_context*, gui_float height, gui_size cols);
@@ -2714,7 +2835,7 @@ void gui_layout_row_static(struct gui_context*, gui_float row_height,
     - number of widget inside the row that will divide the space
 */
 void gui_layout_row_begin(struct gui_context*,
-                        enum gui_row_layout_format,
+                        enum gui_layout_format,
                         gui_float row_height, gui_size cols);
 /*  this function start a new scaleable row that can be filled with different
     sized widget
@@ -2731,7 +2852,7 @@ void gui_layout_row_push(struct gui_context*, gui_float value);
 */
 void gui_layout_row_end(struct gui_context*);
 /*  this function ends the previously started scaleable row */
-void gui_layout_row(struct gui_context*, enum gui_row_layout_format,
+void gui_layout_row(struct gui_context*, enum gui_layout_format,
                     gui_float height, gui_size cols, const gui_float *ratio);
 /*  this function sets the row layout as an array of ratios/width for
     every widget that will be inserted into that row
@@ -2742,7 +2863,7 @@ void gui_layout_row(struct gui_context*, enum gui_row_layout_format,
     - window ratio/pixel width array for each widget
 */
 void gui_layout_row_space_begin(struct gui_context*,
-                                enum gui_row_layout_format,
+                                enum gui_layout_format,
                                 gui_float height, gui_size widget_count);
 /*  this functions starts a space where widgets can be added
     at any given position and the user has to make sure no overlap occures
@@ -2788,6 +2909,20 @@ struct gui_rect gui_layout_row_space_rect_to_local(struct gui_context*, struct g
 */
 void gui_layout_row_space_end(struct gui_context*);
 /*  this functions finishes the scaleable space filling process */
+void gui_layout_row_tiled_begin(struct gui_context*, struct gui_tiled_layout*);
+/*  this functions begins the tiled layout
+    Input:
+    - row height of the complete layout to allocate from the window
+*/
+void gui_layout_row_tiled_push(struct gui_context*, enum gui_tiled_layout_slot_index,
+                                gui_uint index);
+/*  this functions pushes a widget into a tiled layout slot
+    Input:
+    - slot identifier
+    - widget index in the slot
+*/
+void gui_layout_row_tiled_end(struct gui_context*);
+/*  this functions ends the tiled layout */
 gui_bool gui_layout_push(struct gui_context*, enum gui_layout_node_type,
                         const char *title, gui_state*);
 /*  this functions pushes either a tree node or collapseable header into
@@ -3190,6 +3325,7 @@ enum gui_popup_type {
     GUI_POPUP_DYNAMIC
     /* dynamically growing popup with maximum height */
 };
+
 gui_flags gui_popup_begin(struct gui_context *parent,
                             struct gui_context *popup, enum gui_popup_type,
                             gui_flags, struct gui_rect bounds,

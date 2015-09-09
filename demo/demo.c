@@ -289,10 +289,11 @@ color_picker(struct gui_context *panel, struct color_picker* control,
         iter = &control->color.r;
         gui_layout_row_dynamic(&popup, 30, 2);
         for (i = 0; i < 4; ++i, iter++) {
-            gui_float t = *iter;
+            gui_float t;
+            *iter = (gui_byte)gui_spinner(&popup, 0, *iter, 255, 1, NULL);
+            t = *iter;
             t = gui_slider(&popup, 0, t, 255, 10);
             *iter = (gui_byte)t;
-            *iter = (gui_byte)gui_spinner(&popup, 0, *iter, 255, 1, NULL);
         }
 
         gui_layout_row_dynamic(&popup, 30, 3);
@@ -444,6 +445,7 @@ struct state {
     struct test_tree test;
 
     /* widgets state */
+    gui_bool list[4];
     gui_size prog_values[4];
     gui_bool check_values[WEAPON_MAX];
     gui_bool scaleable;
@@ -528,7 +530,7 @@ widget_panel(struct gui_context *panel, struct state *demo)
         /* custom row layout by array */
         const gui_float ratio[] = {0.8f, 0.2f};
         const gui_float pixel[] = {150.0f, 30.0f};
-        enum gui_row_layout_format fmt = (demo->scaleable) ? GUI_DYNAMIC : GUI_STATIC;
+        enum gui_layout_format fmt = (demo->scaleable) ? GUI_DYNAMIC : GUI_STATIC;
         gui_layout_row(panel, fmt, 30, 2, (fmt == GUI_DYNAMIC) ? ratio: pixel);
         demo->slider = gui_slider(panel, 0, demo->slider, 10, 1.0f);
         gui_labelf(panel, GUI_TEXT_LEFT, "%.2f", demo->slider);
@@ -536,8 +538,41 @@ widget_panel(struct gui_context *panel, struct state *demo)
         gui_labelf(panel, GUI_TEXT_LEFT, "%lu", demo->progressbar);
     }
 
+    {
+        /* tiled widgets layout  */
+        gui_uint i = 0;
+        struct gui_tiled_layout tiled;
+        const char *items[] = {"item0", "item1", "item2", "item3"};
+        enum gui_layout_format fmt = (demo->scaleable) ? GUI_DYNAMIC : GUI_STATIC;
+
+        /* setup tiled layout  */
+        gui_tiled_begin(&tiled, fmt, 300, 150);
+        if (!demo->scaleable) {
+            gui_tiled_slot(&tiled, GUI_SLOT_LEFT, 150, GUI_SLOT_VERTICAL, 4);
+            gui_tiled_slot(&tiled, GUI_SLOT_RIGHT, 150, GUI_SLOT_VERTICAL, 4);
+        } else {
+            gui_tiled_slot(&tiled, GUI_SLOT_LEFT, 0.50, GUI_SLOT_VERTICAL, 4);
+            gui_tiled_slot(&tiled, GUI_SLOT_RIGHT, 0.50, GUI_SLOT_VERTICAL, 4);
+        }
+        gui_tiled_end(&tiled);
+
+        /* setup widgets with tiled layout  */
+        gui_layout_row_tiled_begin(panel, &tiled);
+        {
+            for (i = 0; i < 4; ++i) {
+                gui_layout_row_tiled_push(panel, GUI_SLOT_LEFT, i);
+                demo->list[i] = gui_button_toggle(panel, items[i], demo->list[i]);
+            }
+            gui_layout_row_tiled_push(panel, GUI_SLOT_RIGHT, 1);
+            gui_label(panel, "Test0", GUI_TEXT_CENTERED);
+            gui_layout_row_tiled_push(panel, GUI_SLOT_RIGHT, 2);
+            gui_label(panel, "Test1", GUI_TEXT_CENTERED);
+        }
+        gui_layout_row_tiled_end(panel);
+    }
+
     /* item selection  */
-    if (!demo->scaleable) gui_layout_row_static(panel, 30, 150, 1);
+    if (!demo->scaleable) gui_layout_row_static(panel, 30, 30, 1);
     else gui_layout_row_dynamic(panel, 30, 1);
     demo->spinner = gui_spinner(panel, 0, demo->spinner, 250, 10, &demo->spinner_active);
 
@@ -551,7 +586,7 @@ widget_panel(struct gui_context *panel, struct state *demo)
 
     {
         /* immediate mode custom row layout */
-        enum gui_row_layout_format fmt = (demo->scaleable) ? GUI_DYNAMIC : GUI_STATIC;
+        enum gui_layout_format fmt = (demo->scaleable) ? GUI_DYNAMIC : GUI_STATIC;
         gui_layout_row_begin(panel, fmt, 30, 2);
         {
             gui_layout_row_push(panel,(fmt == GUI_DYNAMIC) ? 0.7f : 100);
@@ -705,6 +740,7 @@ init_demo(struct demo_gui *gui)
     win->slider = 2.0f;
     win->progressbar = 50;
     win->spinner = 100;
+
 }
 
 /* -----------------------------------------------------------------

@@ -3826,7 +3826,6 @@ gui_widget_spinner_base(struct gui_command_buffer *out, struct gui_rect r,
     bounds.h = r.h / 2;
     bounds.w = r.h - s->padding.x;
     bounds.x = r.x + r.w - bounds.w;
-
     button_up_clicked = gui_widget_button_symbol(out, bounds, GUI_SYMBOL_TRIANGLE_UP,
         GUI_BUTTON_DEFAULT, &s->button, in, font);
     if (button_up_clicked) ret = 1;
@@ -4089,7 +4088,124 @@ gui_style_reset(struct gui_style *style)
     gui_style_reset_colors(style);
     gui_style_reset_properties(style);
 }
+/*
+ * ==============================================================
+ *
+ *                          Tiling
+ *
+ * ===============================================================
+ */
+void
+gui_tiled_begin(struct gui_tiled_layout *layout, enum gui_layout_format fmt,
+    gui_float width, gui_float height)
+{
+    GUI_ASSERT(layout);
+    if (!layout) return;
+    gui_zero(layout->slots, sizeof(layout->slots));
+    layout->fmt = fmt;
+    layout->width = width;
+    layout->height = height;
+}
 
+void
+gui_tiled_slot(struct gui_tiled_layout *layout,
+    enum gui_tiled_layout_slot_index slot, gui_float ratio,
+    enum gui_tiled_slot_format fmt, gui_uint widget_count)
+{
+    GUI_ASSERT(layout);
+    if (!layout) return;
+    layout->slots[slot].capacity = widget_count;
+    layout->slots[slot].format = fmt;
+    layout->slots[slot].value = ratio;
+}
+
+void
+gui_tiled_slot_bounds(struct gui_rect *bounds,
+    const struct gui_tiled_layout *layout, enum gui_tiled_layout_slot_index slot)
+{
+    gui_float width, height;
+    const struct gui_tiled_slot *s;
+    GUI_ASSERT(layout);
+    if (!layout) return;
+
+    s = &layout->slots[slot];
+    if (layout->fmt == GUI_DYNAMIC) {
+        bounds->x = s->pos.x * (gui_float)layout->width;
+        bounds->y = s->pos.y * (gui_float)layout->height;
+        bounds->w = s->size.x * (gui_float)layout->width;
+        bounds->h = s->size.y * (gui_float)layout->height;
+    } else {
+        bounds->x = s->pos.x;
+        bounds->y = s->pos.y;
+        bounds->w = s->size.x;
+        bounds->h = s->size.y;
+    }
+}
+
+void
+gui_tiled_bounds(struct gui_rect *bounds, const struct gui_tiled_layout *layout,
+    enum gui_tiled_layout_slot_index slot, gui_uint index)
+{
+    struct gui_rect slot_bounds;
+    const struct gui_tiled_slot *s;
+    GUI_ASSERT(layout);
+    if (!layout) return;
+
+    GUI_ASSERT(slot < GUI_SLOT_MAX);
+    s = &layout->slots[slot];
+    GUI_ASSERT(index < s->capacity);
+    gui_tiled_slot_bounds(&slot_bounds, layout, slot);
+    if (s->format == GUI_SLOT_HORIZONTAL) {
+        bounds->h = slot_bounds.h;
+        bounds->y = slot_bounds.y;
+        bounds->w = slot_bounds.w / (gui_float)s->capacity;
+        bounds->x = slot_bounds.x + (gui_float)index * bounds->w;
+    } else {
+        bounds->x = slot_bounds.x;
+        bounds->w = slot_bounds.w;
+        bounds->h = slot_bounds.h/(gui_float)s->capacity;
+        bounds->y = slot_bounds.y + (gui_float)index * bounds->h;
+    }
+}
+
+void
+gui_tiled_end(struct gui_tiled_layout *layout)
+{
+    gui_float w;
+    gui_float centerh, centerv;
+    const struct gui_tiled_slot *top, *bottom;
+    const struct gui_tiled_slot *left, *right;
+    GUI_ASSERT(layout);
+    if (!layout) return;
+
+    top = &layout->slots[GUI_SLOT_TOP];
+    bottom = &layout->slots[GUI_SLOT_BOTTOM];
+    left = &layout->slots[GUI_SLOT_LEFT];
+    right = &layout->slots[GUI_SLOT_RIGHT];
+
+    if (layout->fmt == GUI_DYNAMIC) {
+        layout->width = 1.0f;
+        centerh = MAX(0.0f, 1.0f - (left->value + right->value));
+        centerv = MAX(0.0f, 1.0f - (top->value + bottom->value));
+    } else {
+        centerh = MAX(0.0f, layout->width - (left->value + right->value));
+        centerv = MAX(0.0f, layout->height - (top->value + bottom->value));
+    }
+
+    /* calculate the slot size */
+    layout->slots[GUI_SLOT_CENTER].size = gui_vec2(centerh, centerv);
+    layout->slots[GUI_SLOT_TOP].size = gui_vec2(layout->width, top->value);
+    layout->slots[GUI_SLOT_LEFT].size = gui_vec2(left->value, centerv);
+    layout->slots[GUI_SLOT_BOTTOM].size = gui_vec2(layout->width, bottom->value);
+    layout->slots[GUI_SLOT_RIGHT].size = gui_vec2(right->value, centerv);
+
+    /* calculate the slot window position */
+    layout->slots[GUI_SLOT_TOP].pos = gui_vec2(0.0f, 0.0f);
+    layout->slots[GUI_SLOT_LEFT].pos = gui_vec2(0.0f, top->value);
+    layout->slots[GUI_SLOT_BOTTOM].pos = gui_vec2(0.0f, top->value + centerv);
+    layout->slots[GUI_SLOT_RIGHT].pos = gui_vec2(left->value + centerh, top->value);
+    layout->slots[GUI_SLOT_CENTER].pos = gui_vec2(left->value, top->value);
+}
 /*
  * ==============================================================
  *
@@ -4222,7 +4338,7 @@ gui_window_is_minimized(struct gui_window *panel)
 /*
  * ==============================================================
  *
- *                          Window
+ *                          Context
  *
  * ===============================================================
  */
@@ -4379,6 +4495,31 @@ gui_begin(struct gui_context *context, struct gui_window *window)
     context->clip.h = window->bounds.h - (context->footer_h + context->header.h);
     context->clip.h -= (window_padding.y + item_padding.y);
     gui_command_buffer_push_scissor(out, context->clip);
+}
+
+void
+gui_begin_tiled(struct gui_context *context, struct gui_window *window,
+    struct gui_tiled_layout *tiled, enum gui_tiled_layout_slot_index slot,
+    gui_uint index)
+{
+    struct gui_command_queue *queue;
+    GUI_ASSERT(context);
+    GUI_ASSERT(window);
+    GUI_ASSERT(tiled);
+    GUI_ASSERT(slot < GUI_SLOT_MAX);
+    GUI_ASSERT(index < tiled->slots[slot].capacity);
+    if (!context || !window || !tiled) return;
+
+    /* make sure that correct flags are set */
+    window->flags &= (gui_flags)~GUI_WINDOW_MOVEABLE;
+    window->flags &= (gui_flags)~GUI_WINDOW_SCALEABLE;
+    window->flags &= (gui_flags)~GUI_WINDOW_DYNAMIC;
+
+    /* place window inside layout and set window to background  */
+    gui_tiled_bounds(&window->bounds, tiled, slot, index);
+    gui_begin(context, window);
+    gui_command_queue_remove(window->queue, &window->buffer);
+    gui_command_queue_insert_front(window->queue, &window->buffer);
 }
 
 void
@@ -4740,10 +4881,10 @@ gui_header_button(struct gui_context *layout,
 
     /* check if the icon has been pressed */
     if (!(layout->flags & GUI_WINDOW_ROM)) {
-        gui_float clicked_x = layout->input->mouse.buttons[GUI_BUTTON_LEFT].clicked_pos.x;
-        gui_float clicked_y = layout->input->mouse.buttons[GUI_BUTTON_LEFT].clicked_pos.y;
         gui_float mouse_x = layout->input->mouse.pos.x;
         gui_float mouse_y = layout->input->mouse.pos.y;
+        gui_float clicked_x = layout->input->mouse.buttons[GUI_BUTTON_LEFT].clicked_pos.x;
+        gui_float clicked_y = layout->input->mouse.buttons[GUI_BUTTON_LEFT].clicked_pos.y;
         if (GUI_INBOX(mouse_x, mouse_y, sym.x, sym.y, sym_bw, sym.h)) {
             if (GUI_INBOX(clicked_x, clicked_y, sym.x, sym.y, sym_bw, sym.h))
                 ret = (layout->input->mouse.buttons[GUI_BUTTON_LEFT].down &&
@@ -4883,7 +5024,6 @@ gui_header(struct gui_context *layout, const char *title,
 {
     gui_flags ret = 0;
     gui_flags old = layout->flags;
-
     GUI_ASSERT(layout);
     if (!layout || layout->flags & GUI_WINDOW_HIDDEN)
         return gui_false;
@@ -4957,7 +5097,6 @@ gui_menubar_end(struct gui_context *layout)
     layout->clip.h -= (panel_padding.y + item_padding.y);
     gui_command_buffer_push_scissor(out, layout->clip);
 }
-
 /*
  * -------------------------------------------------------------
  *
@@ -5001,7 +5140,7 @@ gui_panel_layout(struct gui_context *layout, gui_float height, gui_size cols)
 
 static void
 gui_row_layout(struct gui_context *layout,
-    enum gui_row_layout_format fmt, gui_float height, gui_size cols,
+    enum gui_layout_format fmt, gui_float height, gui_size cols,
     gui_size width)
 {
     GUI_ASSERT(layout);
@@ -5034,7 +5173,7 @@ gui_layout_row_static(struct gui_context *layout, gui_float height,
 
 void
 gui_layout_row_begin(struct gui_context *layout,
-    enum gui_row_layout_format fmt, gui_float row_height, gui_size cols)
+    enum gui_layout_format fmt, gui_float row_height, gui_size cols)
 {
     GUI_ASSERT(layout);
     GUI_ASSERT(layout->style);
@@ -5082,7 +5221,7 @@ gui_layout_row_end(struct gui_context *layout)
 }
 
 void
-gui_layout_row(struct gui_context *layout, enum gui_row_layout_format fmt,
+gui_layout_row(struct gui_context *layout, enum gui_layout_format fmt,
     gui_float height, gui_size cols, const gui_float *ratio)
 {
     gui_size i;
@@ -5121,7 +5260,7 @@ gui_layout_row(struct gui_context *layout, enum gui_row_layout_format fmt,
 
 void
 gui_layout_row_space_begin(struct gui_context *layout,
-    enum gui_row_layout_format fmt, gui_float height, gui_size widget_count)
+    enum gui_layout_format fmt, gui_float height, gui_size widget_count)
 {
     GUI_ASSERT(layout);
     GUI_ASSERT(layout->style);
@@ -5223,8 +5362,105 @@ gui_layout_row_space_end(struct gui_context *layout)
     layout->row.item_width = 0;
     layout->row.item_height = 0;
     layout->row.item_offset = 0;
+    gui_zero(&layout->row.item, sizeof(layout->row.item));
     if (layout->row.type == GUI_LAYOUT_STATIC_FREE)
         gui_command_buffer_push_scissor(layout->buffer, layout->clip);
+}
+
+void
+gui_layout_row_tiled_begin(struct gui_context *layout,
+    struct gui_tiled_layout *tiled)
+{
+    GUI_ASSERT(layout);
+    if (!layout) return;
+    if (!layout->valid) return;
+
+    layout->row.tiled = tiled;
+    gui_panel_layout(layout, (gui_size)tiled->height, 2);
+    if (tiled->fmt == GUI_STATIC) {
+        /* calculate bounds of the tiled layout */
+        struct gui_rect clip, space;
+        space.x = layout->at_x;
+        space.y = layout->at_y;
+        space.w = layout->width;
+        space.h = layout->row.height;
+
+        /* setup clipping rect for the free space to prevent overdraw  */
+        gui_unify(&clip, &layout->clip, space.x, space.y, space.x + space.w, space.y + space.h);
+        gui_command_buffer_push_scissor(layout->buffer, clip);
+        layout->row.clip = layout->clip;
+        layout->clip = clip;
+        layout->row.type = GUI_LAYOUT_STATIC_TILED;
+    } else layout->row.type = GUI_LAYOUT_DYNAMIC_TILED;
+
+    layout->row.ratio = 0;
+    layout->row.item_width = 0;
+    layout->row.item_offset = 0;
+    layout->row.filled = 0;
+}
+
+void
+gui_layout_row_tiled_push(struct gui_context *layout,
+    enum gui_tiled_layout_slot_index slot, gui_uint index)
+{
+    struct gui_rect slot_bounds;
+    const struct gui_tiled_slot *s;
+    struct gui_vec2 spacing;
+    const struct gui_style *config;
+    struct gui_tiled_layout *tiled;
+
+    GUI_ASSERT(layout);
+    GUI_ASSERT(layout->style);
+    GUI_ASSERT(layout->buffer);
+    GUI_ASSERT(layout->row.tiled);
+    if (!layout) return;
+    if (!layout->valid) return;
+
+    GUI_ASSERT(layout);
+    if (!layout) return;
+
+    tiled = layout->row.tiled;
+    s = &tiled->slots[slot];
+    GUI_ASSERT(index < s->capacity);
+
+    if (tiled->fmt == GUI_DYNAMIC)
+        tiled->width = layout->width;
+    gui_tiled_slot_bounds(&slot_bounds, tiled, slot);
+
+    config = layout->style;
+    spacing = config->properties[GUI_PROPERTY_ITEM_SPACING];
+    if (s->format == GUI_SLOT_HORIZONTAL) {
+        slot_bounds.h -= (2 * spacing.y);
+        slot_bounds.w -= s->capacity * spacing.x;
+
+        layout->row.item.h = slot_bounds.h;
+        layout->row.item.y = slot_bounds.y;
+        layout->row.item.w = slot_bounds.w / (gui_float)s->capacity;
+        layout->row.item.x = slot_bounds.x + (gui_float)index * layout->row.item.w;
+    } else {
+        layout->row.item.x = slot_bounds.x + spacing.x;
+        layout->row.item.w = slot_bounds.w - (2 * spacing.x);
+        layout->row.item.h = (slot_bounds.h - s->capacity * spacing.y)/(gui_float)s->capacity;
+        layout->row.item.y = slot_bounds.y + (gui_float)index * layout->row.item.h;
+        layout->row.item.y += (index * spacing.y);
+    }
+}
+
+void
+gui_layout_row_tiled_end(struct gui_context *layout)
+{
+    GUI_ASSERT(layout);
+    GUI_ASSERT(layout->style);
+    if (!layout) return;
+    if (!layout->valid) return;
+
+    layout->row.item_width = 0;
+    layout->row.item_height = 0;
+    layout->row.item_offset = 0;
+    gui_zero(&layout->row.item, sizeof(layout->row.item));
+    if (layout->row.tiled->fmt == GUI_STATIC)
+        gui_command_buffer_push_scissor(layout->buffer, layout->clip);
+    layout->row.tiled = 0;
 }
 
 static void
@@ -5283,8 +5519,21 @@ gui_panel_alloc_space(struct gui_rect *bounds, struct gui_context *layout)
         layout->row.filled += layout->row.item_width;
         layout->row.index = 0;
     } break;
+    case GUI_LAYOUT_DYNAMIC_TILED: {
+        /* dynamic tiled layout widget placing */
+        bounds->x = layout->at_x + layout->row.item.x + padding.x;
+        bounds->x -= layout->offset.x;
+        bounds->y = layout->at_y + layout->row.item.y;
+        bounds->y -= layout->offset.y;
+        bounds->w = layout->row.item.w;
+        bounds->h = layout->row.item.h;
+        layout->row.index = 0;
+        if ((bounds->x + bounds->w) > layout->max_x)
+            layout->max_x = bounds->x + bounds->w;
+        return;
+    } break;
     case GUI_LAYOUT_DYNAMIC_FREE: {
-        /*panel width depended free widget placing */
+        /* panel width depended free widget placing */
         bounds->x = layout->at_x + (layout->width * layout->row.item.x);
         bounds->x -= layout->offset.x;
         bounds->y = layout->at_y + (layout->row.height * layout->row.item.y);
@@ -5322,6 +5571,9 @@ gui_panel_alloc_space(struct gui_rect *bounds, struct gui_context *layout)
         layout->row.item_offset += item_width + spacing.x;
         layout->row.index = 0;
     } break;
+    case GUI_LAYOUT_STATIC_TILED:
+        /* static tiled layout widget placing */
+        layout->row.index = 0;
     case GUI_LAYOUT_STATIC_FREE: {
         /* free widget placing */
         bounds->x = layout->clip.x + layout->row.item.x;
@@ -5428,10 +5680,10 @@ gui_layout_push(struct gui_context *layout,
 
     /* update node state */
     if (!(layout->flags & GUI_WINDOW_ROM)) {
-        gui_float clicked_x = layout->input->mouse.buttons[GUI_BUTTON_LEFT].clicked_pos.x;
-        gui_float clicked_y = layout->input->mouse.buttons[GUI_BUTTON_LEFT].clicked_pos.y;
         gui_float mouse_x = layout->input->mouse.pos.x;
         gui_float mouse_y = layout->input->mouse.pos.y;
+        gui_float clicked_x = layout->input->mouse.buttons[GUI_BUTTON_LEFT].clicked_pos.x;
+        gui_float clicked_y = layout->input->mouse.buttons[GUI_BUTTON_LEFT].clicked_pos.y;
         if (GUI_INBOX(mouse_x, mouse_y, sym.x, sym.y, sym.w, sym.h)) {
             if (GUI_INBOX(clicked_x, clicked_y, sym.x, sym.y, sym.w, sym.h)) {
                 if (layout->input->mouse.buttons[GUI_BUTTON_LEFT].down &&
@@ -5479,7 +5731,6 @@ gui_layout_pop(struct gui_context *layout)
     layout->at_x -= panel_padding.x;
     layout->width += 2 * panel_padding.x;
 }
-
 /*
  * -------------------------------------------------------------
  *
@@ -7247,4 +7498,5 @@ gui_shelf_end(struct gui_context *p, struct gui_context *s)
     gui_command_buffer_push_scissor(out, p->clip);
     return pan.offset;
 }
+
 
