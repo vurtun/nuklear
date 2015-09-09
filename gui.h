@@ -2483,8 +2483,7 @@ gui_bool gui_window_has_flag(struct gui_window*, gui_flags);
 /*  this function checks if a window has given flag(s) */
 gui_bool gui_window_is_minimized(struct gui_window*);
 /*  this function checks if the window is minimized */
-/*
- * --------------------------------------------------------------
+/* --------------------------------------------------------------
  *                          Context
  * --------------------------------------------------------------
     CONTEXT
@@ -2643,8 +2642,7 @@ const struct gui_input *gui_input(struct gui_context*);
 /* this functions returns the currently used input */
 struct gui_command_queue *gui_queue(struct gui_context*);
 /* this functions returns the currently used queue */
-/*
- * --------------------------------------------------------------
+/* --------------------------------------------------------------
  *                          HEADER
  * --------------------------------------------------------------
     HEADER
@@ -2760,8 +2758,7 @@ void gui_menubar_begin(struct gui_context*);
 void gui_menubar_end(struct gui_context*);
 /*  this function ends the window menubar build up process */
 
-/*
- * --------------------------------------------------------------
+/* --------------------------------------------------------------
  *                          Layout
  * --------------------------------------------------------------
     LAYOUT
@@ -2937,8 +2934,7 @@ gui_bool gui_layout_push(struct gui_context*, enum gui_layout_node_type,
 */
 void gui_layout_pop(struct gui_context*);
 /*  this functions ends the previously added node */
-/*
- * --------------------------------------------------------------
+/* --------------------------------------------------------------
  *                          WIDGETS
  * --------------------------------------------------------------
     WIDGET
@@ -3213,8 +3209,7 @@ gui_int gui_spinner(struct gui_context*, gui_int min, gui_int value,
     - the from user input updated spinner value
     - current state of the editbox with active(gui_true) or inactive(gui_false)
 */
-/*
- * -------------------------------------------------------------
+/* --------------------------------------------------------------
  *                          Group
  * --------------------------------------------------------------
  *
@@ -3252,8 +3247,7 @@ struct gui_vec2 gui_group_end(struct gui_context*, struct gui_context*);
     Output:
     - The from user input updated group scrollbar pixel offset
 */
-/*
- * -------------------------------------------------------------
+/* --------------------------------------------------------------
  *                          SHELF
  * --------------------------------------------------------------
     SHELF
@@ -3290,8 +3284,7 @@ struct gui_vec2 gui_shelf_end(struct gui_context*, struct gui_context*);
     Output:
     - The from user input updated shelf scrollbar pixel offset
 */
-/*
- * -------------------------------------------------------------
+/* --------------------------------------------------------------
  *                          POPUP
  * --------------------------------------------------------------
     POPUP
@@ -3368,8 +3361,7 @@ gui_state gui_popup_nonblock_close(struct gui_context *popup);
 */
 void gui_popup_nonblock_end(struct gui_context *parent, struct gui_context *popup);
 /*  this functions closes a previously opened context menu */
-/*
- * -------------------------------------------------------------
+/* --------------------------------------------------------------
  *                          GRAPH
  * --------------------------------------------------------------
     GRAPH
@@ -3457,8 +3449,7 @@ gui_int gui_graph_callback(struct gui_context*, enum gui_graph_type,
     - callback to access the values inside your datastrucutre
     - userdata to pull the graph values from
 */
-/*
- * --------------------------------------------------------------
+/* --------------------------------------------------------------
  *                          COMBO BOX
  * --------------------------------------------------------------
     COMBO BOX
@@ -3510,8 +3501,7 @@ void gui_combo_close(struct gui_context *combo);
 /*  this function closes a opened combobox */
 void gui_combo_end(struct gui_context *parent, struct gui_context *combo);
 /*  this function ends the combobox build up process */
-/*
- * --------------------------------------------------------------
+/*----------------------------------------------------------------
  *                          MENU
  * --------------------------------------------------------------
     MENU
@@ -3553,6 +3543,7 @@ void gui_menu_begin(struct gui_context *parent,
     - title of the menu to
     - the current state of the menu with either gui_true (open) or gui_false else
 */
+
 void gui_menu_close(struct gui_context *menu);
 /*  this function closes a opened menu */
 struct gui_vec2 gui_menu_end(struct gui_context *parent,

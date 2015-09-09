@@ -5386,7 +5386,7 @@ gui_layout_row_tiled_begin(struct gui_context *layout,
         space.h = layout->row.height;
 
         /* setup clipping rect for the free space to prevent overdraw  */
-        gui_unify(&clip, &layout->clip, space.x, space.y, space.x + space.w, space.y + space.h);
+        gui_unify(&clip, &layout->clip, space.x,space.y,space.x+space.w,space.y+space.h);
         gui_command_buffer_push_scissor(layout->buffer, clip);
         layout->row.clip = layout->clip;
         layout->clip = clip;
@@ -5406,8 +5406,10 @@ gui_layout_row_tiled_push(struct gui_context *layout,
     struct gui_rect slot_bounds;
     const struct gui_tiled_slot *s;
     struct gui_vec2 spacing;
+    struct gui_vec2 padding;
     const struct gui_style *config;
     struct gui_tiled_layout *tiled;
+    gui_float temp;
 
     GUI_ASSERT(layout);
     GUI_ASSERT(layout->style);
@@ -5423,12 +5425,16 @@ gui_layout_row_tiled_push(struct gui_context *layout,
     s = &tiled->slots[slot];
     GUI_ASSERT(index < s->capacity);
 
-    if (tiled->fmt == GUI_DYNAMIC)
-        tiled->width = layout->width;
-    gui_tiled_slot_bounds(&slot_bounds, tiled, slot);
-
     config = layout->style;
     spacing = config->properties[GUI_PROPERTY_ITEM_SPACING];
+    padding = config->properties[GUI_PROPERTY_PADDING];
+
+    temp = tiled->width;
+    if (tiled->fmt == GUI_DYNAMIC)
+        tiled->width = layout->width - (2 * padding.x);
+    gui_tiled_slot_bounds(&slot_bounds, tiled, slot);
+    tiled->width = temp;
+
     if (s->format == GUI_SLOT_HORIZONTAL) {
         slot_bounds.h -= (2 * spacing.y);
         slot_bounds.w -= (gui_float)s->capacity * spacing.x;
@@ -5440,7 +5446,8 @@ gui_layout_row_tiled_push(struct gui_context *layout,
     } else {
         layout->row.item.x = slot_bounds.x + spacing.x;
         layout->row.item.w = slot_bounds.w - (2 * spacing.x);
-        layout->row.item.h = (slot_bounds.h - (gui_float)s->capacity * spacing.y)/(gui_float)s->capacity;
+        layout->row.item.h = (slot_bounds.h - (gui_float)s->capacity * spacing.y);
+        layout->row.item.h /= (gui_float)s->capacity;
         layout->row.item.y = slot_bounds.y + (gui_float)index * layout->row.item.h;
         layout->row.item.y += ((gui_float)index * spacing.y);
     }
