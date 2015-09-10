@@ -308,8 +308,8 @@ gui_triangle_from_direction(struct gui_vec2 *result, struct gui_rect r,
     gui_float w_half, h_half;
     GUI_ASSERT(result);
 
-    r.w = MAX(4 * pad_x, r.w);
-    r.h = MAX(4 * pad_y, r.h);
+    r.w = MAX(2 * pad_x, r.w);
+    r.h = MAX(2 * pad_y, r.h);
     r.w = r.w - 2 * pad_x;
     r.h = r.h - 2 * pad_y;
 
@@ -321,20 +321,20 @@ gui_triangle_from_direction(struct gui_vec2 *result, struct gui_rect r,
 
     if (direction == GUI_UP) {
         result[0] = gui_vec2(r.x + w_half, r.y);
-        result[1] = gui_vec2(r.x, r.y + r.h);
-        result[2] = gui_vec2(r.x + r.w, r.y + r.h);
+        result[1] = gui_vec2(r.x + r.w, r.y + r.h);
+        result[2] = gui_vec2(r.x, r.y + r.h);
     } else if (direction == GUI_RIGHT) {
         result[0] = gui_vec2(r.x, r.y);
-        result[1] = gui_vec2(r.x, r.y + r.h);
-        result[2] = gui_vec2(r.x + r.w, r.y + h_half);
+        result[1] = gui_vec2(r.x + r.w, r.y + h_half);
+        result[2] = gui_vec2(r.x, r.y + r.h);
     } else if (direction == GUI_DOWN) {
         result[0] = gui_vec2(r.x, r.y);
-        result[1] = gui_vec2(r.x + w_half, r.y + r.h);
-        result[2] = gui_vec2(r.x + r.w, r.y);
+        result[1] = gui_vec2(r.x + r.w, r.y);
+        result[2] = gui_vec2(r.x + w_half, r.y + r.h);
     } else {
         result[0] = gui_vec2(r.x, r.y + h_half);
-        result[1] = gui_vec2(r.x + r.w, r.y + r.h);
-        result[2] = gui_vec2(r.x + r.w, r.y);
+        result[1] = gui_vec2(r.x + r.w, r.y);
+        result[2] = gui_vec2(r.x + r.w, r.y + r.h);
     }
 }
 
@@ -771,8 +771,8 @@ gui_buffer_alloc(struct gui_buffer *b, enum gui_buffer_allocation_type type,
 
     /* check if buffer has enough memory*/
     if (type == GUI_BUFFER_FRONT)
-        full = ((b->allocated + size + alignment) >= b->size);
-    else full = ((b->size - (size + alignment)) < b->allocated);
+        full = ((b->allocated + size + alignment) > b->size);
+    else full = ((b->size - (size + alignment)) <= b->allocated);
 
     if (full) {
         /* buffer is full so allocate bigger buffer if dynamic */
@@ -2455,14 +2455,6 @@ gui_draw_list_path_stroke(struct gui_draw_list *list, struct gui_color color,
 /*
  * ==============================================================
  *
- *                          Font
- *
- * ===============================================================
- */
-
-/*
- * ==============================================================
- *
  *                      Edit Box
  *
  * ===============================================================
@@ -2967,7 +2959,6 @@ gui_draw_symbol(struct gui_command_buffer *out, enum gui_symbol symbol,
     case GUI_SYMBOL_RECT:
     case GUI_SYMBOL_RECT_FILLED: {
         /* simple empty/filled shapes */
-
         if (symbol == GUI_SYMBOL_RECT || symbol == GUI_SYMBOL_RECT_FILLED) {
             gui_command_buffer_push_rect(out, content,  0, foreground);
             if (symbol == GUI_SYMBOL_RECT_FILLED)
