@@ -5331,7 +5331,7 @@ gui_header_begin(struct gui_context *layout)
     item_spacing = gui_style_property(c, GUI_PROPERTY_ITEM_SPACING);
 
     /* update the header height and first row height */
-    layout->header.h = c->font.height + 4 * item_padding.y;
+    layout->header.h = c->font.height + 2 * item_padding.y;
     layout->header.h += panel_padding.y;
     layout->row.height += layout->header.h;
     if (layout->valid)
@@ -5341,7 +5341,7 @@ gui_header_begin(struct gui_context *layout)
 
     /* setup header bounds and growable icon space */
     layout->header.x = layout->bounds.x + panel_padding.x;
-    layout->header.y = layout->bounds.y + panel_padding.y;
+    layout->header.y = layout->bounds.y + item_padding.y;
     layout->header.w = MAX(layout->bounds.w, 2 * panel_padding.x);
     layout->header.w -= 2 * panel_padding.x;
     layout->header.front = layout->header.x;
@@ -6199,7 +6199,7 @@ gui_layout_push(struct gui_context *layout,
     panel_padding = gui_style_property(config, GUI_PROPERTY_PADDING);
 
     /* calculate header bounds and draw background */
-    gui_layout_row_dynamic(layout, config->font.height + 4 * item_padding.y, 1);
+    gui_layout_row_dynamic(layout, config->font.height + 2 * item_padding.y, 1);
     gui_panel_alloc_space(&header, layout);
     if (type == GUI_LAYOUT_TAB)
         gui_command_buffer_push_rect(out, header, 0, config->colors[GUI_COLOR_TAB_HEADER]);
@@ -6212,7 +6212,7 @@ gui_layout_push(struct gui_context *layout,
 
         /* calculate the triangle bounds */
         sym.w = sym.h = config->font.height;
-        sym.y = header.y + item_padding.y + config->font.height/2;
+        sym.y = header.y + item_padding.y;
         sym.x = header.x + panel_padding.x;
 
         /* calculate the triangle points and draw triangle */
