@@ -14,10 +14,7 @@ application and does not have any direct dependencies.
 - No direct dependencies
 - Configurable style and colors
 - UTF-8 support
-
-## Optional
-- vertex buffer output
-- font handling
+- optional vertex buffer output and font handling
 
 ## Gallery
 ![gui demo](/screen/demo.png?raw=true)
