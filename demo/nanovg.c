@@ -275,7 +275,7 @@ main(int argc, char *argv[])
     /* GUI */
     memset(&gui, 0, sizeof gui);
     gui_buffer_init_fixed(&gui.memory, calloc(MAX_MEMORY, 1), MAX_MEMORY);
-    gui.font.userdata.ptr = vg;
+    gui.font.userdata = gui_handle_ptr(vg);
     gui.font.width = font_get_width;
     nvgTextMetrics(vg, NULL, NULL, &gui.font.height);
     init_demo(&gui);
@@ -304,7 +304,7 @@ main(int argc, char *argv[])
         run_demo(&gui);
 
         /* Draw */
-        glClearColor(0.8588f, 0.835f, 0.86f, 1.0f);
+        glClearColor(0.4f, 0.4f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         draw(vg, &gui.queue, width, height);
         SDL_GL_SwapWindow(win);

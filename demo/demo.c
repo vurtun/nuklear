@@ -87,7 +87,6 @@ enum menu_edit_items {
 #undef ITEM
     MENU_EDIT_MAX
 };
-
 static const char *weapons[] = {
 #define WEAPON(id,name) name,
     WEAPON_MAP(WEAPON)
@@ -296,7 +295,7 @@ color_picker(struct gui_context *panel, struct color_picker* control,
             *iter = (gui_byte)t;
         }
 
-        gui_layout_row_dynamic(&popup, 30, 3);
+        gui_layout_row_dynamic(&popup, 30, 4);
         gui_spacing(&popup, 1);
         if (gui_button_text(&popup, "ok", GUI_BUTTON_DEFAULT)) {
             gui_popup_close(&popup);
@@ -540,15 +539,13 @@ widget_panel(struct gui_context *panel, struct state *demo)
 
     {
         /* tiled widgets layout  */
-        gui_uint i = 0;
         struct gui_tiled_layout tiled;
-        const char *items[] = {"item0", "item1", "item2", "item3"};
         enum gui_layout_format fmt = (demo->scaleable) ? GUI_DYNAMIC : GUI_STATIC;
 
         /* setup tiled layout  */
-        gui_tiled_begin(&tiled, fmt, 300, 150);
+        gui_tiled_begin(&tiled, fmt, 250, 150);
         if (!demo->scaleable) {
-            gui_tiled_slot(&tiled, GUI_SLOT_LEFT, 150, GUI_SLOT_VERTICAL, 4);
+            gui_tiled_slot(&tiled, GUI_SLOT_LEFT, 100, GUI_SLOT_VERTICAL, 4);
             gui_tiled_slot(&tiled, GUI_SLOT_RIGHT, 150, GUI_SLOT_VERTICAL, 4);
         } else {
             gui_tiled_slot(&tiled, GUI_SLOT_LEFT, 0.50, GUI_SLOT_VERTICAL, 4);
@@ -559,20 +556,22 @@ widget_panel(struct gui_context *panel, struct state *demo)
         /* setup widgets with tiled layout  */
         gui_layout_row_tiled_begin(panel, &tiled);
         {
+            gui_uint i = 0;
+            gui_layout_row_tiled_push(panel, GUI_SLOT_LEFT, 1);
+            gui_label(panel, "Test0", GUI_TEXT_CENTERED);
+            gui_layout_row_tiled_push(panel, GUI_SLOT_LEFT, 2);
+            gui_label(panel, "Test1", GUI_TEXT_CENTERED);
             for (i = 0; i < 4; ++i) {
-                gui_layout_row_tiled_push(panel, GUI_SLOT_LEFT, i);
+                const char *items[] = {"item0", "item1", "item2", "item3"};
+                gui_layout_row_tiled_push(panel, GUI_SLOT_RIGHT, i);
                 demo->list[i] = gui_button_toggle(panel, items[i], demo->list[i]);
             }
-            gui_layout_row_tiled_push(panel, GUI_SLOT_RIGHT, 1);
-            gui_label(panel, "Test0", GUI_TEXT_CENTERED);
-            gui_layout_row_tiled_push(panel, GUI_SLOT_RIGHT, 2);
-            gui_label(panel, "Test1", GUI_TEXT_CENTERED);
         }
         gui_layout_row_tiled_end(panel);
     }
 
     /* item selection  */
-    if (!demo->scaleable) gui_layout_row_static(panel, 30, 30, 1);
+    if (!demo->scaleable) gui_layout_row_static(panel, 30, 150, 1);
     else gui_layout_row_dynamic(panel, 30, 1);
     demo->spinner = gui_spinner(panel, 0, demo->spinner, 250, 10, &demo->spinner_active);
 
@@ -585,7 +584,7 @@ widget_panel(struct gui_context *panel, struct state *demo)
     check_combo_box(panel, demo->check_values, LEN(demo->check_values), &demo->checkcom);
 
     {
-        /* immediate mode custom row layout */
+        /* custom row layout by im */
         enum gui_layout_format fmt = (demo->scaleable) ? GUI_DYNAMIC : GUI_STATIC;
         gui_layout_row_begin(panel, fmt, 30, 2);
         {
@@ -830,7 +829,8 @@ run_demo(struct demo_gui *gui)
         }
 
         /* popup panel */
-        if (state->popup) {
+        if (state->popup)
+        {
             gui_popup_begin(&layout, &tab, GUI_POPUP_STATIC, 0, gui_rect(20, 100, 220, 150), gui_vec2(0,0));
             {
                 if (gui_header(&tab, "Popup", GUI_CLOSEABLE, GUI_CLOSEABLE, GUI_HEADER_LEFT)) {

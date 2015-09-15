@@ -8,13 +8,16 @@ application and does not have any direct dependencies.
 ## Features
 - Immediate mode graphical user interface toolkit
 - Written in C89 (ANSI C)
-- Small codebase (~7kLOC)
+- Small codebase (~8kLOC)
 - Focus on portability, efficiency, simplicity and minimal internal state
 - No global or hidden state
-- No direct dependencies (not even libc!)
+- No direct dependencies
 - Configurable style and colors
 - UTF-8 support
-- Optional vertex buffer output
+
+## Optional
+- vertex buffer output
+- font handling
 
 ## Gallery
 ![gui demo](/screen/demo.png?raw=true)
@@ -24,11 +27,8 @@ application and does not have any direct dependencies.
 ## Example
 ```c
 /* setup configuration */
-struct gui_font font;
 struct gui_style style;
-font.userdata.ptr = your_font_data;
-font.height = your_font_data.height;
-font.width = your_font_string_width_callback_function;
+struct gui_user_font font = {...};
 gui_style_default(&style, GUI_DEFAULT_ALL, &font);
 
 /* allocate memory to hold draw commands */
@@ -84,138 +84,19 @@ while (1) {
 Immediate mode in contrast to classical retained mode GUIs store as little state as possible
 by using procedural function calls as "widgets" instead of storing objects.
 Each "widget" function call takes hereby all its necessary data and immediately returns
-the through the user modified state back to the caller. Immediate mode graphical
+the user modified state back to the caller. Immediate mode graphical
 user interfaces therefore combine drawing and input handling into one unit
 instead of separating them like retain mode GUIs.
 
 Since there is no to minimal internal state in immediate mode user interfaces,
-updates have to occur every frame which on one hand is more drawing expensive than classic
+updates have to occur every frame, on every user input update or program state change
+which on one hand is more drawing expensive than classic
 retained GUI implementations but on the other hand grants a lot more flexibility and
 support for overall layout changes. In addition without any state there is no
 duplicated state between your program, the gui and the user which greatly
 simplifies code. Further traits of immediate mode graphic user interfaces are a
 code driven style, centralized flow control, easy extensibility and
 understandability.
-
-### Input
-The `gui_input` struct holds the user input over the course of the frame and
-manages the complete modification of widget and panel state. To fill the
-structure with data over the frame there are a number of functions provided for
-key, motion, button and text input. The input is hereby completly independent of
-the underlying platform or way of input so even touch or other ways of input are
-possible.
-Like the panel and the buffer, input is based on an immediate mode API and
-consist of an begin sequence with `gui_input_begin` and a end sequence point
-with `gui_input_end`. All modifications can only occur between both of these
-sequence points while all outside modification provoke undefined behavior.
-
-```c
-struct gui_input input = {0};
-while (1) {
-    gui_input_begin(&input);
-    if (/*mouse moved*/)
-        gui_input_motion(&input, mouse.x, mouse.y);
-    if (/*key pressed*/)
-        gui_input_key(&input, key, gui_true);
-    if (/*key released*/)
-        gui_input_key(&input, key, gui_false);
-    if (/*mouse button pressed*/)
-        gui_input_button(&input, mouse.x, mouse.y, gui_true);
-    if (/*mouse button released */)
-        gui_input_button(&input, mouse.x, mouse.y, gui_false);
-    gui_input_end(&input);
-}
-```
-
-### Configuration
-The gui toolkit provides a number of different attributes that can be
-configured, like spacing, padding, size and color.
-While the widget API even expects you to provide the configuration
-for each and every widget the panel layer provides you with a set of
-attributes in the `gui_config` structure. The structure either needs to be
-filled by the user or can be setup with some default values by the function
-`gui_config_default`. Modification on the fly to the `gui_config` struct is in
-true immediate mode fashion possible and supported.
-
-```c
-struct gui_style {
-    gui_float rounding[GUI_ROUNDING_MAX];
-    struct gui_vec2 properties[GUI_PROPERTY_MAX];
-    struct gui_color colors[GUI_COLOR_COUNT];
-};
-```
-In addition to modifing the `gui_style` struct directly the styleration API
-enables you to temporarily change a property or color and revert back directly
-after the change is no longer needed. The number of temporary changes are
-limited but can be changed with constants `GUI_MAX_COLOR_STACK` and
-`GUI_MAX_ATTRIB_STACK`.
-
-
-```c
-gui_style_push_color(style, GUI_COLORS_PANEL, 255, 0, 0, 255);
-gui_style_push_attribute(style, GUI_ATTRIBUTE_PADDING, 10.0f, 5.0f);
-/* use the styleuration data */
-gui_style_pop_attribute(style);
-gui_style_pop_color(style);
-```
-
-Since there is no direct font implementation in the toolkit but font handling is
-still an aspect of a gui implementation, the `gui_font` struct was introduced. It only
-contains the bare minimum of what is needed for font handling.
-For widgets the `gui_font` data has to be persistent while the
-panel hold the font internally. Important to node is that the font does not hold
-your font data but merely references it so you have to make sure that the font
-always points to a valid object.
-
-```c
-struct gui_font {
-    gui_handle userdata;
-    gui_float height;
-    gui_text_width_f width;
-};
-
-font.userdata.ptr = your_font_data;
-font.height = your_font_data.height;
-font.width = your_font_string_width_callback_function;
-```
-
-### Memory
-Almost all memory as well as object management for the toolkit
-is left to the user for maximum control. In fact a big subset of the toolkit can
-be used without any heap allocation at all. The only place where heap allocation
-is needed at all is for buffering draw calls. While the standart way of
-memory allocation in that case for libraries is to just provide allocator callbacks
-which is implemented aswell with the `gui_allocator`
-structure, there are two addition ways to provided memory. The
-first one is to just providing a static fixed size memory block to fill up which
-is handy for UIs with roughly known memory requirements. The other way of memory
-managment is to extend the fixed size block with the abiltiy to resize your block
-at the end of the frame if there is not enough memory.
-For the purpose of resizable fixed size memory blocks and for general
-information about memory consumption the `gui_memory_info` structure was
-added. It contains information about the allocated amount of data in the current
-frame as well as the needed amount if not enough memory was provided.
-
-```c
-/* fixed size queue */
-void *memory = malloc(size);
-gui_command_queue queue;
-gui_command_queue_init_fixed(&queue, memory, MEMORY_SIZE, GUI_CLIP);
-```
-
-```c
-/* dynamically growing queue */
-struct gui_allocator alloc;
-alloc.userdata = your_allocator;
-alloc.alloc = your_allocation_callback;
-alloc.relloac = your_reallocation_callback;
-alloc.free = your_free_callback;
-
-struct gui_command_queue queue;
-const gui_size initial_size = 4*1024;
-const gui_float grow_factor = 2.0f;
-gui_command_queue_init(&queue, &alloc, initial_size, grow_factor);
-```
 
 ## FAQ
 #### Where is the demo/example code?
@@ -261,7 +142,7 @@ platform (Xlib, Win32) itself already provides a solution.
 ## References
 - [Tutorial from Jari Komppa about imgui libraries](http://www.johno.se/book/imgui.html)
 - [Johannes 'johno' Norneby's article](http://iki.fi/sol/imgui/)
-- [ImGui: The inspiration for this project](https://github.com/ocornut/imgui)
+- [ImGui: The inspiration for this project from ocornut](https://github.com/ocornut/imgui)
 - [Nvidia's imgui toolkit](https://code.google.com/p/nvidia-widgets/)
 
 # License

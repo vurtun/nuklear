@@ -17,14 +17,8 @@
 #include <GL/glu.h>
 #include <SDL2/SDL.h>
 
-#include <ft2build.h>
-#include FT_FREETYPE_H
-#include FT_GLYPH_H
-
 /* macros */
 #define DTIME       17
-#define FONT_ATLAS_DEPTH 4
-
 #define MAX_DRAW_COMMAND_MEMORY (4 * 1024)
 
 #define MIN(a,b)    ((a) < (b) ? (a) : (b))
@@ -72,286 +66,6 @@ file_load(const char* path, size_t* siz)
     return buf;
 }
 
-/* ==============================================================
- *
- *                      Font
- *
- * ===============================================================*/
-struct texCoord {
-    float u;
-    float v;
-};
-
-enum font_atlas_dimension {
-    FONT_ATLAS_DIM_64 = 64,
-    FONT_ATLAS_DIM_128 = 128,
-    FONT_ATLAS_DIM_256 = 256,
-    FONT_ATLAS_DIM_512 = 512,
-    FONT_ATLAS_DIM_1024 = 1024,
-    FONT_ATLAS_DIM_2048 = 2048
-};
-
-struct font_atlas {
-    enum font_atlas_dimension dim;
-    gui_size range;
-    gui_size size;
-    gui_byte *memory;
-};
-
-struct font_glyph {
-    unsigned int code;
-    float xadvance;
-    short width, height;
-    float xoff, yoff;
-    struct texCoord uv[2];
-};
-
-struct font {
-    float height;
-    float scale;
-    GLuint texture;
-    unsigned int glyph_count;
-    struct font_glyph *glyphes;
-    const struct font_glyph *fallback;
-};
-
-static void
-font_load_glyph(unsigned int code, struct font_glyph *glyph, FT_GlyphSlot slot)
-{
-    glyph->code = code;
-    glyph->width = (short)slot->bitmap.width;
-    glyph->height = (short)slot->bitmap.rows;
-    glyph->xoff = (float)slot->bitmap_left;
-    glyph->yoff = (float)slot->bitmap_top;
-    glyph->xadvance = (float)(slot->advance.x >> 6);
-}
-
-static void
-font_load_glyphes(FT_Face face, struct font *font, size_t range)
-{
-    size_t i;
-    int ft_err;
-    for (i = 0; i < range; ++i) {
-        unsigned int index = FT_Get_Char_Index(face, i);
-        if (!index) continue;
-        ft_err = FT_Load_Glyph(face, index, 0);
-        if (ft_err) continue;
-        ft_err = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL);
-        if (ft_err) continue;
-        font_load_glyph(index, &font->glyphes[i], face->glyph);
-    }
-}
-
-static void
-font_pack_glyphes(struct font *font, float width, float height, size_t range)
-{
-    size_t i;
-    float xoff = 0, yoff = 0;
-    float max_height = 0.0f;
-    for (i = 0; i < range; ++i) {
-        struct font_glyph *glyph = &font->glyphes[i];
-        if ((xoff + glyph->width) > width) {
-            yoff += max_height;
-            max_height = 0.0f;
-            xoff = 0.0f;
-        }
-
-        glyph->uv[0].u = xoff / width;
-        glyph->uv[0].v = yoff / height;
-        glyph->uv[1].u = (xoff + glyph->width) / width;
-        glyph->uv[1].v = (yoff + glyph->height) / height;
-        if (glyph->height > max_height)
-            max_height = glyph->height;
-        xoff += glyph->width;
-    }
-}
-
-static void
-font_atlas_blit(struct font_atlas *atlas, FT_GlyphSlot glyph,
-        size_t off_x, size_t off_y)
-{
-    size_t y, x;
-    size_t width = glyph->bitmap.width;
-    size_t height = glyph->bitmap.rows;
-    const size_t pitch = atlas->dim * FONT_ATLAS_DEPTH;
-    for (y = 0; y < height; y++) {
-        size_t x_off = off_x * FONT_ATLAS_DEPTH;
-        size_t y_off = (off_y + y) * pitch;
-        unsigned char *dst = &atlas->memory[y_off + x_off];
-        for (x = 0; x < width; ++x) {
-            dst[0] = 255;
-            dst[1] = 255;
-            dst[2] = 255;
-            dst[3] = glyph->bitmap.buffer[y * width + x];
-            dst += FONT_ATLAS_DEPTH;
-        }
-    }
-}
-
-static void
-font_bake_glyphes(FT_Face face, struct font_atlas *atlas,
-    const struct font *font)
-{
-    size_t i;
-    int ft_err;
-    for (i = 0; i < atlas->range; ++i) {
-        size_t x, y;
-        struct font_glyph *glyph = &font->glyphes[i];
-        unsigned int index = FT_Get_Char_Index(face, i);
-
-        if (!index) continue;
-        ft_err = FT_Load_Glyph(face, index, 0);
-        if (ft_err) continue;
-        ft_err = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL);
-        if (ft_err) continue;
-
-        x = (gui_size)(glyph->uv[0].u * (gui_float)atlas->dim);
-        y = (gui_size)(glyph->uv[0].v * (gui_float)atlas->dim);
-        font_atlas_blit(atlas, face->glyph, x, y);
-    }
-}
-
-static int
-font_load(struct font *font, struct font_atlas *atlas, unsigned int height,
-    const unsigned char *data, size_t size)
-{
-    int ret = 1;
-    FT_Library ft_lib;
-    FT_Face ft_face;
-
-    assert(font);
-    assert(atlas);
-    assert(font->glyphes);
-    assert(atlas->memory);
-
-    if (!font || !atlas)
-        return gui_false;
-    if (!font->glyphes || !atlas->memory)
-        return gui_false;
-    if (FT_Init_FreeType(&ft_lib))
-        return gui_false;
-    if (FT_New_Memory_Face(ft_lib, data, (FT_Long)size, 0, &ft_face))
-        goto cleanup;
-    if (FT_Select_Charmap(ft_face, FT_ENCODING_UNICODE))
-        goto failed;
-    if (FT_Set_Char_Size(ft_face, height << 6, height << 6, 96, 96))
-        goto failed;
-
-    font_load_glyphes(ft_face, font, atlas->range);
-    font_pack_glyphes(font, atlas->dim, atlas->dim, atlas->range);
-    font_bake_glyphes(ft_face, atlas, font);
-
-failed:
-    FT_Done_Face(ft_face);
-cleanup:
-    FT_Done_FreeType(ft_lib);
-    return ret;
-}
-
-static gui_size
-font_get_text_width(gui_handle handle, const gui_char *t, gui_size l)
-{
-    long unicode;
-    size_t text_width = 0;
-    const struct font_glyph *glyph;
-    size_t text_len = 0;
-    size_t glyph_len;
-    struct font *font = (struct font*)handle.ptr;
-    assert(font);
-    if (!t || !l) return 0;
-
-    glyph_len = gui_utf_decode(t, &unicode, l);
-    while (text_len < l && glyph_len) {
-        if (unicode == GUI_UTF_INVALID) return 0;
-        glyph = (unicode < font->glyph_count) ? &font->glyphes[unicode] : font->fallback;
-        glyph = (glyph->code == 0) ? font->fallback : glyph;
-
-        text_len += glyph_len;
-        text_width += (gui_size)((float)glyph->xadvance * font->scale);
-        glyph_len = gui_utf_decode(t + text_len, &unicode, l - text_len);
-    }
-    return text_width;
-}
-
-static void
-font_query_font_glyph(gui_handle handle, struct gui_user_font_glyph *glyph,
-    gui_long unicode, gui_long next_codepoint)
-{
-    const struct font_glyph *g;
-    const struct font *font = (struct font*)handle.ptr;
-    UNUSED(next_codepoint);
-    if (unicode == GUI_UTF_INVALID) return;
-    g = (unicode < font->glyph_count) ?
-        &font->glyphes[unicode] :
-        font->fallback;
-    g = (g->code == 0) ? font->fallback : g;
-
-    glyph->offset.x = g->xoff * font->scale;
-    glyph->offset.y = g->yoff * font->scale;
-    glyph->width = g->width * font->scale;
-    glyph->height = g->height * font->scale;
-    glyph->xadvance = g->xadvance * font->scale;
-    glyph->uv[0] = gui_vec2(g->uv[0].u, g->uv[0].v);
-    glyph->uv[1] = gui_vec2(g->uv[1].u, g->uv[1].v);
-}
-
-static void
-font_del(struct font *font)
-{
-    glDeleteTextures(1, &font->texture);
-    free(font->glyphes);
-    free(font);
-}
-
-static struct font*
-font_new(const char *path, unsigned int font_height, unsigned int bake_height,
-    size_t range, enum font_atlas_dimension dim)
-{
-    gui_byte *ttf_blob;
-    gui_size ttf_blob_size;
-    struct font_atlas atlas;
-    struct font *font = (struct font*)calloc(sizeof(struct font), 1);
-
-    atlas.dim = dim;
-    atlas.range = range;
-    atlas.size = atlas.dim * atlas.dim * FONT_ATLAS_DEPTH;
-    atlas.memory = (gui_byte*)calloc((gui_size)atlas.size, 1);
-
-    font->glyph_count = (unsigned int)atlas.range;
-    font->glyphes = (struct font_glyph*)calloc(atlas.range, sizeof(struct font_glyph));
-    font->fallback = &font->glyphes['?'];
-    font->scale = (float)font_height / (gui_float)bake_height;
-    font->height = (float)font_height;
-
-    ttf_blob = (unsigned char*)file_load(path, &ttf_blob_size);
-    if (!font_load(font, &atlas, bake_height, ttf_blob, ttf_blob_size))
-        goto failed;
-
-    glGenTextures(1, &font->texture);
-    glBindTexture(GL_TEXTURE_2D, font->texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, dim, dim, 0,
-            GL_RGBA, GL_UNSIGNED_BYTE, atlas.memory);
-
-    free(atlas.memory);
-    free(ttf_blob);
-    return font;
-
-failed:
-    free(atlas.memory);
-    free(ttf_blob);
-    font_del(font);
-    return NULL;
-}
-
-/* ==============================================================
- *
- *                      Draw
- *
- * ===============================================================*/
 struct device {
     GLuint vbo, vao, ebo;
     GLuint prog;
@@ -362,8 +76,7 @@ struct device {
     GLint attrib_col;
     GLint uniform_tex;
     GLint uniform_proj;
-    GLuint null_tex;
-    struct gui_draw_list draw_list;
+    GLuint font_tex;
     struct gui_draw_null_texture null;
     struct gui_buffer cmds;
 };
@@ -466,29 +179,97 @@ device_init(struct device *dev)
         glerror();
     }
 
-    {
-        /* create default white texture which is needed to draw primitives. Any
-         texture with a white pixel would do but since I do not have one I have
-         to create one. */
-        void *mem = calloc(64*64*4, 1);
-        memset(mem, 255, 64*64*4);
-        glGenTextures(1, &dev->null_tex);
-        glBindTexture(GL_TEXTURE_2D, dev->null_tex);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 64, 64, 0,
-            GL_RGBA, GL_UNSIGNED_BYTE, mem);
-        free(mem);
-        glerror();
-    }
-    dev->null.texture.id = (gui_int)dev->null_tex;
-    dev->null.uv = gui_vec2(0.0f, 0.0f);
-
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
     glerror();
+}
+
+static struct gui_user_font
+font_bake_and_upload(struct device *dev, struct gui_font *font,
+    const char *path, unsigned int font_height, const gui_long *range)
+{
+    gui_size glyph_count;
+    gui_size img_width, img_height;
+    struct gui_font_glyph *glyphes;
+    struct gui_baked_font baked_font;
+    struct gui_user_font user_font;
+    struct gui_recti custom;
+
+    memset(&baked_font, 0, sizeof(baked_font));
+    memset(&user_font, 0, sizeof(user_font));
+    memset(&custom, 0, sizeof(custom));
+
+    {
+        /* bake and upload font texture */
+        void *img, *tmp;
+        size_t ttf_size;
+        gui_size tmp_size, img_size;
+        const char *custom_data = "....";
+        struct gui_font_config config;
+        char *ttf_blob = file_load(path, &ttf_size);
+        if (!ttf_blob)
+            die("[Font]: %s is not a file or cannot be found!\n", path);
+
+        /* setup font configuration */
+        memset(&config, 0, sizeof(config));
+        config.ttf_blob = ttf_blob;
+        config.ttf_size = ttf_size;
+        config.font = &baked_font;
+        config.coord_type = GUI_COORD_UV;
+        config.range = range;
+        config.pixel_snap = gui_false;
+        config.size = font_height;
+        config.spacing = gui_vec2(0,0);
+        config.oversample_h = 3;
+        config.oversample_v = 1;
+
+        /* query needed amount of memory for the font baking process */
+        gui_font_bake_memory(&tmp_size, &glyph_count, &config, 1);
+        glyphes = (struct gui_font_glyph*)calloc(sizeof(struct gui_font_glyph), glyph_count);
+        tmp = calloc(1, tmp_size);
+
+        /* pack all glyphes and return needed image width height and memory size*/
+        custom.w = 2; custom.h = 2;
+        if (!gui_font_bake_pack(&img_size, &img_width,&img_height,&custom,tmp,tmp_size,&config, 1))
+            die("[Font]: failed to load font!\n");
+
+        /* bake all glyphes and custom white pixel into image */
+        img = calloc(1, img_size);
+        gui_font_bake(img, img_width, img_height, tmp, tmp_size, glyphes, glyph_count, &config, 1);
+        gui_font_bake_custom_data(img, img_width, img_height, custom, custom_data, 2, 2, '.', 'X');
+        {
+            /* convert alpha8 image into rgba8 image */
+            void *img_rgba = calloc(4, img_height * img_width);
+            gui_font_bake_convert(img_rgba, (gui_ushort)img_width, (gui_ushort)img_height, img);
+            free(img);
+            img = img_rgba;
+        }
+        {
+            /* upload baked font image */
+            glGenTextures(1, &dev->font_tex);
+            glBindTexture(GL_TEXTURE_2D, dev->font_tex);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)img_width, (GLsizei)img_height, 0,
+                        GL_RGBA, GL_UNSIGNED_BYTE, img);
+        }
+        free(ttf_blob);
+        free(tmp);
+        free(img);
+    }
+
+    /* default white pixel in a texture which is needed to draw primitives */
+    dev->null.texture.id = (gui_int)dev->font_tex;
+    dev->null.uv = gui_vec2((custom.x + 0.5f)/(gui_float)img_width, (custom.y + 0.5f)/(gui_float)img_height);
+    /* setup font with glyphes. IMPORTANT: the font only references the glyphes
+      this was done to have the possibility to have multible fonts with one
+      total glyph array. Not quite sure if it is a good thing since the
+      glyphes have to be freed as well. */
+    gui_font_init(font, font_height, '?', glyphes, &baked_font, dev->null.texture);
+    user_font = gui_font_ref(font);
+    return user_font;
 }
 
 static void
@@ -499,10 +280,14 @@ device_shutdown(struct device *dev)
     glDeleteShader(dev->vert_shdr);
     glDeleteShader(dev->frag_shdr);
     glDeleteProgram(dev->prog);
-    glDeleteTextures(1, &dev->null_tex);
+    glDeleteTextures(1, &dev->font_tex);
     glDeleteBuffers(1, &dev->vbo);
     glDeleteBuffers(1, &dev->ebo);
 }
+
+/* this is stupid but needed for C89 since sinf and cosf do not exist in that library version */
+static gui_float fsin(gui_float f) {return (gui_float)sin(f);}
+static gui_float fcos(gui_float f) {return (gui_float)cos(f);}
 
 static void
 device_draw(struct device *dev, struct gui_command_queue *queue, int width, int height)
@@ -557,6 +342,7 @@ device_draw(struct device *dev, struct gui_command_queue *queue, int width, int 
         glBindVertexArray(dev->vao);
         glBindBuffer(GL_ARRAY_BUFFER, dev->vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, dev->ebo);
+
         glBufferData(GL_ARRAY_BUFFER, max_vertex_memory, NULL, GL_STREAM_DRAW);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, max_element_memory, NULL, GL_STREAM_DRAW);
         glerror();
@@ -569,7 +355,7 @@ device_draw(struct device *dev, struct gui_command_queue *queue, int width, int 
             gui_buffer_init_fixed(&vbuf, vertexes, (gui_size)max_vertex_memory);
             gui_buffer_init_fixed(&ebuf, elements, (gui_size)max_element_memory);
             gui_draw_list_init(&draw_list, &dev->cmds, &vbuf, &ebuf,
-                sinf, cosf, dev->null, GUI_ANTI_ALIASING_ON);
+                fsin, fcos, dev->null, GUI_ANTI_ALIASING_ON);
             gui_draw_list_load(&draw_list, queue, 1.0f, 22);
         }
         glUnmapBuffer(GL_ARRAY_BUFFER);
@@ -595,17 +381,12 @@ device_draw(struct device *dev, struct gui_command_queue *queue, int width, int 
     glUseProgram((GLuint)last_prog);
     glBindTexture(GL_TEXTURE_2D, (GLuint)last_tex);
     glBindBuffer(GL_ARRAY_BUFFER, (GLuint)last_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, (GLuint)last_ebo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, (GLuint)last_ebo);
     glBindVertexArray((GLuint)last_vao);
     glDisable(GL_SCISSOR_TEST);
     glerror();
 }
 
-/* ==============================================================
- *
- *                      APP
- *
- * ===============================================================*/
 static void
 key(struct gui_input *in, SDL_Event *evt, gui_bool down)
 {
@@ -675,7 +456,6 @@ main(int argc, char *argv[])
     const char *font_path;
     SDL_Window *win;
     SDL_GLContext glContext;
-    struct font *glfont;
     int win_width, win_height;
     unsigned int started;
     unsigned int dt;
@@ -684,6 +464,8 @@ main(int argc, char *argv[])
     /* GUI */
     struct device device;
     struct demo_gui gui;
+    struct gui_font font;
+
     font_path = argv[1];
     if (argc < 2)
         die("Missing TTF Font file argument!");
@@ -699,7 +481,6 @@ main(int argc, char *argv[])
 
     /* OpenGL */
     glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-    glfont = font_new(font_path, 10, 10, 255, FONT_ATLAS_DIM_256);
     glewExperimental = 1;
     if (glewInit() != GLEW_OK)
         die("Failed to setup GLEW\n");
@@ -707,13 +488,10 @@ main(int argc, char *argv[])
     /* GUI */
     memset(&gui, 0, sizeof gui);
     gui_buffer_init_fixed(&gui.memory, calloc(MAX_MEMORY, 1), MAX_MEMORY);
-    gui.font.userdata.ptr = glfont;
-    gui.font.height = glfont->height;
-    gui.font.width = font_get_text_width;
-    gui.font.query = font_query_font_glyph;
-    gui.font.texture.id = (gui_int)glfont->texture;
     mem = gui_buffer_alloc(&gui.memory, GUI_BUFFER_FRONT, MAX_DRAW_COMMAND_MEMORY, 0);
     gui_buffer_init_fixed(&device.cmds, mem, MAX_DRAW_COMMAND_MEMORY);
+    gui.font = font_bake_and_upload(&device, &font, font_path, 14,
+                                    gui_font_default_glyph_ranges());
 
     init_demo(&gui);
     device_init(&device);
@@ -757,8 +535,8 @@ main(int argc, char *argv[])
 
 cleanup:
     /* Cleanup */
+    free(font.glyphes);
     free(gui_buffer_memory(&gui.memory));
-    font_del(glfont);
     device_shutdown(&device);
     SDL_GL_DeleteContext(glContext);
     SDL_DestroyWindow(win);

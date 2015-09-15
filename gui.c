@@ -23,6 +23,7 @@
 #define GUI_UTF_INVALID 0xFFFD
 #define GUI_MAX_NUMBER_BUFFER 64
 
+#define GUI_UNUSED(x) ((void)(x))
 #define GUI_LERP(a, b, t) ((a) + ((b) - (a)) * (t))
 #define GUI_SATURATE(x) (MAX(0, MIN(1.0f, x)))
 #define GUI_LEN(a) (sizeof(a)/sizeof(a)[0])
@@ -75,6 +76,19 @@ static const long gui_utfmax[GUI_UTF_SIZE+1] = {0x10FFFF, 0x7F, 0x7FF, 0xFFFF, 0
  *
  * ===============================================================
  */
+static gui_uint
+gui_round_up_pow2(gui_uint v)
+{
+    v--;
+    v |= v >> 1;
+    v |= v >> 2;
+    v |= v >> 4;
+    v |= v >> 8;
+    v |= v >> 16;
+    v++;
+    return v;
+}
+
 static gui_float
 gui_inv_sqrt(gui_float number)
 {
@@ -162,6 +176,22 @@ gui_rgb(gui_byte r, gui_byte g, gui_byte b)
     ret.r = r; ret.g = g;
     ret.b = b; ret.a = 255;
     return ret;
+}
+
+gui_handle
+gui_handle_ptr(void *ptr)
+{
+    gui_handle handle;
+    handle.ptr = ptr;
+    return handle;
+}
+
+gui_handle
+gui_handle_id(gui_int id)
+{
+    gui_handle handle;
+    handle.id = id;
+    return handle;
 }
 
 struct gui_image
@@ -1706,7 +1736,8 @@ gui_draw_list_push_image(struct gui_draw_list *list, gui_handle texture)
         gui_draw_list_push_command(list, gui_null_rect, list->null.texture);
     } else {
         struct gui_draw_command *prev = gui_draw_list_command_last(list);
-        gui_draw_list_push_command(list, prev->clip_rect, texture);
+        if (prev->texture.id != texture.id)
+            gui_draw_list_push_command(list, prev->clip_rect, texture);
     }
 }
 
@@ -2268,6 +2299,10 @@ gui_draw_list_add_text(struct gui_draw_list *list, const struct gui_user_font *f
     struct gui_user_font_glyph g;
     GUI_ASSERT(list);
     if (!list || !len || !text) return;
+    if (rect.x > (list->clip_rect.x + list->clip_rect.w) ||
+        rect.y > (list->clip_rect.y + list->clip_rect.h) ||
+        rect.x < list->clip_rect.x || rect.y < list->clip_rect.y)
+        return;
 
     /* draw text background */
     gui_draw_list_add_rect_filled(list, rect, bg, 0.0f);
@@ -2288,7 +2323,8 @@ gui_draw_list_add_text(struct gui_draw_list *list, const struct gui_user_font *f
 
         /* calculate and draw glyph drawing rectangle and image */
         gx = x + g.offset.x;
-        gy = rect.y + (font->height/2) + (rect.h/2) - g.offset.y;
+        /*gy = rect.y + (font->height/2) + (rect.h/2) - g.offset.y;*/
+        gy = rect.y + (rect.h/2) - (font->height/2) + g.offset.y;
         gw = g.width; gh = g.height;
         char_width = g.xadvance;
         gui_draw_list_push_rect_uv(list, gui_vec2(gx,gy), gui_vec2(gx + gw, gy+ gh),
@@ -2455,6 +2491,563 @@ gui_draw_list_path_stroke(struct gui_draw_list *list, struct gui_color color,
 /*
  * ==============================================================
  *
+ *                          Font
+ *
+ * ===============================================================
+ */
+#ifdef GUI_COMPILE_WITH_FONT
+
+/* this is a bloody mess but 'fixing' both stb libraries would be a pain */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wsign-conversion"
+#pragma clang diagnostic ignored "-Wfloat-equal"
+#pragma clang diagnostic ignored "-Wbad-function-cast"
+#pragma clang diagnostic ignored "-Wcast-qual"
+#pragma clang diagnostic ignored "-Wshadow"
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+#pragma clang diagnostic ignored "-Wdeclaration-after-statement"
+#pragma clang diagnostic ignored "-Wunused-function"
+#elif defined(__GNUC__) || defined(__GNUG__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wfloat-equal"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+#pragma GCC diagnostic ignored "-Wconversion"
+#pragma GCC diagnostic ignored "-Wbad-function-cast"
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#pragma GCC diagnostic ignored "-Wdeclaration-after-statement"
+#pragma GCC diagnostic ignored "-Wtype-limits"
+#pragma GCC diagnostic ignored "-Wswitch-default"
+#pragma GCC diagnostic ignored "-Wunused-function"
+#elif _MSC_VER
+#pragma warning (push)
+#pragma warning (disable: 4456)
+#endif
+
+#ifndef GUI_DISABLE_STB_RECT_PACK_IMPLEMENTATION
+#define STBRP_STATIC
+#define STB_RECT_PACK_IMPLEMENTATION
+#endif
+#include "stb_rect_pack.h"
+
+#ifndef GUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION
+#define STBTT_STATIC
+#define STB_TRUETYPE_IMPLEMENTATION
+#endif
+#include "stb_truetype.h"
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#elif defined(__GNUC__) || defined(__GNUG__)
+#pragma GCC diagnostic pop
+#elif _MSC_VER
+#pragma warning (pop)
+#endif
+
+struct gui_font_bake_data {
+    stbtt_fontinfo info;
+    stbrp_rect *rects;
+    stbtt_pack_range *ranges;
+    gui_uint range_count;
+};
+
+struct gui_font_baker {
+    stbtt_pack_context spc;
+    struct gui_font_bake_data *build;
+    stbtt_packedchar *packed_chars;
+    stbrp_rect *rects;
+    stbtt_pack_range *ranges;
+};
+
+static const gui_size gui_rect_align = GUI_ALIGNOF(stbrp_rect);
+static const gui_size gui_range_align = GUI_ALIGNOF(stbtt_pack_range);
+static const gui_size gui_char_align = GUI_ALIGNOF(stbtt_packedchar);
+static const gui_size gui_build_align = GUI_ALIGNOF(struct gui_font_bake_data);
+static const gui_size gui_baker_align = GUI_ALIGNOF(struct gui_font_baker);
+
+static gui_size
+gui_range_count(const gui_long *range)
+{
+    const gui_long *iter = range;
+    GUI_ASSERT(range);
+    if (!range) return 0;
+    while (*(iter++) != 0);
+    return (iter == range) ? 0 : (gui_size)((iter - range)/2);
+}
+
+static gui_size
+gui_range_glyph_count(const gui_long *range, gui_size count)
+{
+    gui_size i = 0;
+    gui_size total_glyphes = 0;
+    for (i = 0; i < count; ++i) {
+        gui_size diff;
+        gui_long f = range[(i*2)+0];
+        gui_long t = range[(i*2)+1];
+        GUI_ASSERT(t >= f);
+        diff = (gui_size)((t - f) + 1);
+        total_glyphes += diff;
+    }
+    return total_glyphes;
+}
+
+const gui_long*
+gui_font_default_glyph_ranges(void)
+{
+    static const gui_long ranges[] = {0x0020, 0x00FF, 0};
+    return ranges;
+}
+
+const gui_long*
+gui_font_chinese_glyph_ranges(void)
+{
+    static const gui_long ranges[] = {
+        0x0020, 0x00FF,
+        0x3000, 0x30FF,
+        0x31F0, 0x31FF,
+        0xFF00, 0xFFEF,
+        0x4e00, 0x9FAF,
+        0
+    };
+    return ranges;
+}
+
+const gui_long*
+gui_font_cyrillic_glyph_ranges(void)
+{
+    static const gui_long ranges[] = {
+        0x0020, 0x00FF,
+        0x0400, 0x052F,
+        0x2DE0, 0x2DFF,
+        0xA640, 0xA69F,
+        0
+    };
+    return ranges;
+}
+
+void gui_font_bake_memory(gui_size *temp, gui_size *glyph_count,
+    struct gui_font_config *config, gui_size count)
+{
+    gui_size i;
+    gui_size range_count = 0;
+
+    GUI_ASSERT(config);
+    GUI_ASSERT(glyph_count);
+    if (!config) {
+        *temp = 0;
+        *glyph_count = 0;
+        return;
+    }
+
+    *glyph_count = 0;
+    if (!config->range)
+        config->range = gui_font_default_glyph_ranges();
+    for (i = 0; i < count; ++i) {
+        range_count += gui_range_count(config[i].range);
+        *glyph_count += gui_range_glyph_count(config[i].range, range_count);
+    }
+
+    *temp = *glyph_count * sizeof(stbrp_rect);
+    *temp += range_count * sizeof(stbtt_pack_range);
+    *temp += *glyph_count * sizeof(stbtt_packedchar);
+    *temp += count * sizeof(struct gui_font_bake_data);
+    *temp += sizeof(struct gui_font_baker);
+    *temp += gui_rect_align + gui_range_align + gui_char_align;
+    *temp += gui_build_align + gui_baker_align;
+}
+
+static struct gui_font_baker*
+gui_font_baker(void *memory, gui_size glyph_count, gui_size count)
+{
+    struct gui_font_baker *baker;
+    if (!memory) return 0;
+    /* setup baker inside a memory block  */
+    baker = (struct gui_font_baker*)GUI_ALIGN_PTR(memory, gui_baker_align);
+    baker->build = (struct gui_font_bake_data*)GUI_ALIGN_PTR((baker + 1), gui_build_align);
+    baker->packed_chars = (stbtt_packedchar*)GUI_ALIGN_PTR((baker->build + count), gui_char_align);
+    baker->rects = (stbrp_rect*)GUI_ALIGN_PTR((baker->packed_chars + glyph_count), gui_rect_align);
+    baker->ranges = (stbtt_pack_range*)GUI_ALIGN_PTR((baker->rects + glyph_count), gui_range_align);
+    return baker;
+}
+
+gui_bool
+gui_font_bake_pack(gui_size *image_memory, gui_size *width, gui_size *height,
+    struct gui_recti *custom, void *temp, gui_size temp_size,
+    const struct gui_font_config *config, gui_size count)
+{
+    static const gui_size max_height = 1024 * 32;
+    struct gui_font_baker* baker;
+    gui_size total_glyph_count = 0;
+    gui_size total_range_count = 0;
+    gui_size i = 0;
+
+    GUI_ASSERT(image_memory);
+    GUI_ASSERT(width);
+    GUI_ASSERT(height);
+    GUI_ASSERT(config);
+    GUI_ASSERT(temp);
+    GUI_ASSERT(temp_size);
+    GUI_ASSERT(count);
+    if (!image_memory || !width || !height || !config || !temp ||
+        !temp_size || !count) return gui_false;
+
+    for (i = 0; i < count; ++i) {
+        total_range_count += gui_range_count(config[i].range);
+        total_glyph_count += gui_range_glyph_count(config[i].range, total_range_count);
+    }
+
+    /* setup font baker from temporary memory */
+    gui_zero(temp, temp_size);
+    baker = gui_font_baker(temp, total_glyph_count, count);
+    if (!baker) return gui_false;
+    for (i = 0; i < count; ++i) {
+        const struct gui_font_config *cfg = &config[i];
+        if (!stbtt_InitFont(&baker->build[i].info, (const unsigned char*)cfg->ttf_blob, 0))
+            return gui_false;
+    }
+
+    *height = 0;
+    *width = (total_glyph_count > 1000) ? 1024 : 512;
+    stbtt_PackBegin(&baker->spc, NULL, (gui_int)*width, (int)max_height, 0, 1, 0);
+    {
+        gui_size input_i = 0;
+        gui_size range_n = 0, rect_n = 0, char_n = 0;
+
+        /* pack custom user data first so it will be in the upper left corner  */
+        if (custom) {
+            stbrp_rect custom_space;
+            gui_zero(&custom_space, sizeof(custom_space));
+            custom_space.w = (stbrp_coord)((custom->w * 2) + 1);
+            custom_space.h = (stbrp_coord)(custom->h + 1);
+
+            stbtt_PackSetOversampling(&baker->spc, 1, 1);
+            stbrp_pack_rects((stbrp_context*)baker->spc.pack_info, &custom_space, 1);
+            *height = MAX(*height, (size_t)(custom_space.y + custom_space.h));
+
+            custom->x = custom_space.x;
+            custom->y = custom_space.y;
+            custom->w = custom_space.w;
+            custom->h = custom_space.h;
+        }
+
+        /* first font pass: pack all glyphes */
+        for (input_i = 0; input_i < count; input_i++) {
+            gui_size n = 0;
+            const gui_long *in_range;
+            const struct gui_font_config *cfg = &config[input_i];
+            struct gui_font_bake_data *tmp = &baker->build[input_i];
+            gui_size glyph_count, range_count;
+
+            /* count glyphes + ranges in current font */
+            glyph_count = 0; range_count = 0;
+            for (in_range = cfg->range; in_range[0] && in_range[1]; in_range += 2) {
+                glyph_count += (gui_size)(in_range[1] - in_range[0]) + 1;
+                range_count++;
+            }
+
+            /* setup ranges  */
+            tmp->ranges = baker->ranges + range_n;
+            tmp->range_count = (gui_uint)range_count;
+            range_n += range_count;
+            for (i = 0; i < range_count; ++i) {
+                /*stbtt_pack_range *range = &tmp->ranges[i];*/
+                in_range = &cfg->range[i * 2];
+                tmp->ranges[i].font_size = cfg->size;
+                tmp->ranges[i].first_unicode_codepoint_in_range = (gui_int)in_range[0];
+                tmp->ranges[i].num_chars = (gui_int)(in_range[1]- in_range[0]) + 1;
+                tmp->ranges[i].chardata_for_range = baker->packed_chars + char_n;
+                char_n += (gui_size)tmp->ranges[i].num_chars;
+            }
+
+            /* pack */
+            tmp->rects = baker->rects + rect_n;
+            rect_n += glyph_count;
+            stbtt_PackSetOversampling(&baker->spc, cfg->oversample_h, cfg->oversample_v);
+            n = (gui_size)stbtt_PackFontRangesGatherRects(&baker->spc, &tmp->info,
+                tmp->ranges, (gui_int)tmp->range_count, tmp->rects);
+            stbrp_pack_rects((stbrp_context*)baker->spc.pack_info, tmp->rects, (gui_int)n);
+
+            /* texture height */
+            for (i = 0; i < n; ++i) {
+                if (tmp->rects[i].was_packed)
+                    *height = MAX(*height, (gui_size)(tmp->rects[i].y + tmp->rects[i].h));
+            }
+        }
+        GUI_ASSERT(rect_n == total_glyph_count);
+        GUI_ASSERT(char_n == total_glyph_count);
+        GUI_ASSERT(range_n == total_range_count);
+    }
+    *height = gui_round_up_pow2((gui_uint)*height);
+    *image_memory = (*width) * (*height);
+    return gui_true;
+}
+
+void
+gui_font_bake(void *image_memory, gui_size width, gui_size height,
+    void *temp, gui_size temp_size, struct gui_font_glyph *glyphes,
+    gui_size glyphes_count, const struct gui_font_config *config, gui_size font_count)
+{
+    gui_size input_i = 0;
+    struct gui_font_baker* baker;
+    gui_long glyph_n = 0;
+
+    GUI_ASSERT(image_memory);
+    GUI_ASSERT(width);
+    GUI_ASSERT(height);
+    GUI_ASSERT(config);
+    GUI_ASSERT(temp);
+    GUI_ASSERT(temp_size);
+    GUI_ASSERT(font_count);
+    GUI_ASSERT(glyphes_count);
+    if (!image_memory || !width || !height || !config || !temp ||
+        !temp_size || !font_count || !glyphes || !glyphes_count)
+        return;
+
+    /* second font pass: render glyphes */
+    baker = (struct gui_font_baker*)temp;
+    gui_zero(image_memory, width * height);
+    baker->spc.pixels = (unsigned char*)image_memory;
+    baker->spc.height = (gui_int)height;
+    for (input_i = 0; input_i < font_count; ++input_i) {
+        const struct gui_font_config *cfg = &config[input_i];
+        struct gui_font_bake_data *tmp = &baker->build[input_i];
+        stbtt_PackSetOversampling(&baker->spc, cfg->oversample_h, cfg->oversample_v);
+        stbtt_PackFontRangesRenderIntoRects(&baker->spc, &tmp->info, tmp->ranges,
+            (gui_int)tmp->range_count, tmp->rects);
+    }
+    stbtt_PackEnd(&baker->spc);
+
+    /* third pass: setup font and glyphes */
+    for (input_i = 0; input_i < font_count; ++input_i)  {
+        gui_size i = 0;
+        gui_int char_idx = 0;
+        gui_uint glyph_count = 0;
+        const struct gui_font_config *cfg = &config[input_i];
+        struct gui_font_bake_data *tmp = &baker->build[input_i];
+        struct gui_baked_font *dst_font = cfg->font;
+
+        gui_float font_scale = stbtt_ScaleForPixelHeight(&tmp->info, cfg->size);
+        gui_int unscaled_ascent, unscaled_descent, unscaled_line_gap;
+        stbtt_GetFontVMetrics(&tmp->info, &unscaled_ascent, &unscaled_descent,
+                                &unscaled_line_gap);
+
+        /* fill baked font */
+        dst_font->ranges = cfg->range;
+        dst_font->height = cfg->size;
+        dst_font->ascent = ((gui_float)unscaled_ascent * font_scale);
+        dst_font->descent = ((gui_float)unscaled_descent * font_scale);
+        dst_font->glyph_offset = glyph_n;
+
+        /* fill own baked font glyph array */
+        for (i = 0; i < tmp->range_count; ++i) {
+            stbtt_pack_range *range = &tmp->ranges[i];
+            for (char_idx = 0; char_idx < range->num_chars; char_idx++) {
+                gui_int codepoint = 0;
+                gui_float dummy_x = 0, dummy_y = 0;
+                stbtt_aligned_quad q;
+                struct gui_font_glyph *glyph;
+
+                const stbtt_packedchar *pc = &range->chardata_for_range[char_idx];
+                glyph_count++;
+                if (!pc->x0 && !pc->x1 && !pc->y0 && !pc->y1) continue;
+                codepoint = range->first_unicode_codepoint_in_range + char_idx;
+                stbtt_GetPackedQuad(range->chardata_for_range, (gui_int)width,
+                    (gui_int)height, char_idx, &dummy_x, &dummy_y, &q, 0);
+
+                /* fill own glyph type with data */
+                glyph = &glyphes[dst_font->glyph_offset + char_idx];
+                glyph->codepoint = (gui_long)codepoint;
+                glyph->x0 = q.x0; glyph->y0 = q.y0; glyph->x1 = q.x1; glyph->y1 = q.y1;
+                glyph->y0 += (dst_font->ascent + 0.5f);
+                glyph->y1 += (dst_font->ascent + 0.5f);
+                if (cfg->coord_type == GUI_COORD_PIXEL) {
+                    glyph->u0 = q.s0 * (gui_float)width;
+                    glyph->v0 = q.t0 * (gui_float)height;
+                    glyph->u1 = q.s1 * (gui_float)width;
+                    glyph->v1 = q.t1 * (gui_float)height;
+                } else {
+                    glyph->u0 = q.s0;
+                    glyph->v0 = q.t0;
+                    glyph->u1 = q.s1;
+                    glyph->v1 = q.t1;
+                }
+                glyph->xadvance = (pc->xadvance + cfg->spacing.x);
+                if (cfg->pixel_snap)
+                    glyph->xadvance = (gui_float)(gui_int)(glyph->xadvance + 0.5f);
+            }
+        }
+        dst_font->glyph_count = glyph_count;
+        glyph_n += dst_font->glyph_count;
+    }
+}
+
+void
+gui_font_bake_custom_data(void *img_memory, gui_size img_width, gui_size img_height,
+    struct gui_recti img_dst, const char *texture_data_mask, gui_size tex_width,
+    gui_size tex_height, gui_char white, gui_char black)
+{
+    gui_byte *pixels;
+    gui_size y = 0, x = 0, n = 0;
+    GUI_ASSERT(img_memory);
+    GUI_ASSERT(img_width);
+    GUI_ASSERT(img_height);
+    GUI_ASSERT(texture_data_mask);
+    GUI_UNUSED(tex_height);
+    if (!img_memory || !img_width || !img_height || !texture_data_mask)
+        return;
+
+    pixels = (gui_byte*)img_memory;
+    for (y = 0, n = 0; y < tex_height; ++y) {
+        for (x = 0; x < tex_width; ++x, ++n) {
+            const gui_size off0 = (img_dst.x + x) + (img_dst.y + y) * img_width;
+            const gui_size off1 = off0 + 1 + tex_width;
+            pixels[off0] = (texture_data_mask[n] == white) ? 0xFF : 0x00;
+            pixels[off1] = (texture_data_mask[n] == black) ? 0xFF : 0x00;
+        }
+    }
+}
+
+void
+gui_font_bake_convert(void *out_memory, gui_ushort img_width, gui_ushort img_height,
+    const void *in_memory)
+{
+    gui_int n = 0;
+    const gui_byte *src;
+    gui_uint *dst;
+    GUI_ASSERT(out_memory);
+    GUI_ASSERT(in_memory);
+    GUI_ASSERT(img_width);
+    GUI_ASSERT(img_height);
+    if (!out_memory || !in_memory || !img_height || !img_width) return;
+
+    dst = (gui_uint*)out_memory;
+    src = (const gui_byte*)in_memory;
+    for (n = (gui_int)(img_width * img_height); n > 0; n--)
+        *dst++ = ((gui_uint)(*src++) << 24) | 0x00FFFFFF;
+}
+/*
+ * -------------------------------------------------------------
+ *
+ *                          Font
+ *
+ * --------------------------------------------------------------
+ */
+void
+gui_font_init(struct gui_font *font, gui_float pixel_height,
+    gui_long fallback_codepoint, struct gui_font_glyph *glyphes,
+    const struct gui_baked_font *baked_font, gui_handle atlas)
+{
+    GUI_ASSERT(font);
+    GUI_ASSERT(glyphes);
+    GUI_ASSERT(baked_font);
+    if (!font || !glyphes || !baked_font)
+        return;
+
+    gui_zero(font, sizeof(*font));
+    font->ascent = baked_font->ascent;
+    font->descent = baked_font->descent;
+    font->size = baked_font->height;
+    font->scale = (gui_float)pixel_height / (gui_float)font->size;
+    font->glyphes = &glyphes[baked_font->glyph_offset];
+    font->glyph_count = baked_font->glyph_count;
+    font->ranges = baked_font->ranges;
+    font->atlas = atlas;
+    font->fallback_codepoint = fallback_codepoint;
+    font->fallback = gui_font_find_glyph(font, fallback_codepoint);
+}
+
+const struct gui_font_glyph*
+gui_font_find_glyph(struct gui_font *font, gui_long unicode)
+{
+    gui_size i = 0;
+    gui_size count;
+    gui_size total_glyphes = 0;
+    const struct gui_font_glyph *glyph = 0;
+    GUI_ASSERT(font);
+
+    glyph = font->fallback;
+    count = gui_range_count(font->ranges);
+    for (i = 0; i < count; ++i) {
+        gui_size diff;
+        gui_long f = font->ranges[(i*2)+0];
+        gui_long t = font->ranges[(i*2)+1];
+        diff = (gui_size)((t - f) + 1);
+        if (unicode >= f && unicode <= t)
+            return &font->glyphes[(total_glyphes + (gui_size)(unicode - f))];
+        total_glyphes += diff;
+    }
+    return glyph;
+}
+
+static gui_size
+gui_font_text_width(gui_handle handle, const gui_char *text, gui_size len)
+{
+    gui_long unicode;
+    const struct gui_font_glyph *glyph;
+    struct gui_font *font;
+    gui_size text_len  = 0;
+    gui_size text_width = 0;
+    gui_size glyph_len;
+    font = (struct gui_font*)handle.ptr;
+    GUI_ASSERT(font);
+    if (!font || !text || !len)
+        return 0;
+
+    glyph_len = gui_utf_decode(text, &unicode, len);
+    while (text_len < len && glyph_len) {
+        if (unicode == GUI_UTF_INVALID) return 0;
+        glyph = gui_font_find_glyph(font, unicode);
+        text_len += glyph_len;
+        text_width += (gui_size)((glyph->xadvance * font->scale));
+        glyph_len = gui_utf_decode(text + text_len, &unicode, len - text_len);
+    }
+    return text_width;
+}
+
+#if GUI_COMPILE_WITH_VERTEX_BUFFER
+static void
+gui_font_query_font_glyph(gui_handle handle, struct gui_user_font_glyph *glyph,
+        gui_long codepoint, gui_long next_codepoint)
+{
+    const struct gui_font_glyph *g;
+    struct gui_font *font;
+    GUI_ASSERT(glyph);
+    GUI_UNUSED(next_codepoint);
+    font = (struct gui_font*)handle.ptr;
+    GUI_ASSERT(font);
+    if (!font || !glyph)
+        return;
+
+    g = gui_font_find_glyph(font, codepoint);
+    glyph->width = (g->x1 - g->x0) * font->scale;
+    glyph->height = (g->y1 - g->y0) * font->scale;
+    glyph->offset = gui_vec2(g->x0 * font->scale, g->y0 * font->scale);
+    glyph->xadvance = (g->xadvance * font->scale);
+    glyph->uv[0] = gui_vec2(g->u0, g->v0);
+    glyph->uv[1] = gui_vec2(g->u1, g->v1);
+}
+#endif
+
+struct gui_user_font
+gui_font_ref(struct gui_font *font)
+{
+    struct gui_user_font user_font;
+    gui_zero(&user_font, sizeof(user_font));
+    user_font.height = font->size * font->scale;
+    user_font.width = gui_font_text_width;
+    user_font.userdata.ptr = font;
+#if GUI_COMPILE_WITH_VERTEX_BUFFER
+    user_font.query = gui_font_query_font_glyph;
+    user_font.texture = font->atlas;
+#endif
+    return user_font;
+}
+#endif
+/*
+ * ==============================================================
+ *
  *                      Edit Box
  *
  * ===============================================================
@@ -2488,7 +3081,6 @@ gui_edit_buffer_insert(gui_edit_buffer *buffer, gui_size pos,
         gui_edit_buffer_append(buffer, str, len);
         return 1;
     }
-
     mem = gui_buffer_alloc(buffer, GUI_BUFFER_FRONT, len * sizeof(char), 0);
     if (!mem) return 0;
 
@@ -4114,7 +4706,6 @@ void
 gui_tiled_slot_bounds(struct gui_rect *bounds,
     const struct gui_tiled_layout *layout, enum gui_tiled_layout_slot_index slot)
 {
-    gui_float width, height;
     const struct gui_tiled_slot *s;
     GUI_ASSERT(layout);
     if (!layout) return;
@@ -4162,7 +4753,6 @@ gui_tiled_bounds(struct gui_rect *bounds, const struct gui_tiled_layout *layout,
 void
 gui_tiled_end(struct gui_tiled_layout *layout)
 {
-    gui_float w;
     gui_float centerh, centerv;
     const struct gui_tiled_slot *top, *bottom;
     const struct gui_tiled_slot *left, *right;
@@ -4227,7 +4817,6 @@ gui_window_init(struct gui_window *window, struct gui_rect bounds,
         gui_command_queue_insert_back(queue, &window->buffer);
     }
 }
-
 void
 gui_window_set_config(struct gui_window *panel, const struct gui_style *config)
 {
@@ -4327,11 +4916,11 @@ gui_window_is_minimized(struct gui_window *panel)
 {return panel->flags & GUI_WINDOW_MINIMIZED;}
 
 /*
- * ==============================================================
+ * -------------------------------------------------------------
  *
  *                          Context
  *
- * ===============================================================
+ * --------------------------------------------------------------
  */
 void
 gui_begin(struct gui_context *context, struct gui_window *window)
@@ -4493,7 +5082,6 @@ gui_begin_tiled(struct gui_context *context, struct gui_window *window,
     struct gui_tiled_layout *tiled, enum gui_tiled_layout_slot_index slot,
     gui_uint index)
 {
-    struct gui_command_queue *queue;
     GUI_ASSERT(context);
     GUI_ASSERT(window);
     GUI_ASSERT(tiled);
@@ -5368,26 +5956,9 @@ gui_layout_row_tiled_begin(struct gui_context *layout,
 
     layout->row.tiled = tiled;
     gui_panel_layout(layout, tiled->height, 2);
-    if (tiled->fmt == GUI_STATIC) {
-        /* calculate bounds of the tiled layout */
-        struct gui_rect clip, space;
-        space.x = layout->at_x;
-        space.y = layout->at_y;
-        space.w = layout->width;
-        space.h = layout->row.height;
-
-        /* setup clipping rect for the free space to prevent overdraw  */
-        gui_unify(&clip, &layout->clip, space.x,space.y,space.x+space.w,space.y+space.h);
-        gui_command_buffer_push_scissor(layout->buffer, clip);
-        layout->row.clip = layout->clip;
-        layout->clip = clip;
-        layout->row.type = GUI_LAYOUT_STATIC_TILED;
-    } else layout->row.type = GUI_LAYOUT_DYNAMIC_TILED;
-
-    layout->row.ratio = 0;
-    layout->row.item_width = 0;
-    layout->row.item_offset = 0;
-    layout->row.filled = 0;
+    layout->row.type = (tiled->fmt == GUI_STATIC) ?
+        GUI_LAYOUT_STATIC_TILED:
+        GUI_LAYOUT_DYNAMIC_TILED;
 }
 
 void
@@ -5452,13 +6023,9 @@ gui_layout_row_tiled_end(struct gui_context *layout)
     if (!layout) return;
     if (!layout->valid) return;
 
-    layout->row.item_width = 0;
-    layout->row.item_height = 0;
-    layout->row.item_offset = 0;
     gui_zero(&layout->row.item, sizeof(layout->row.item));
-    if (layout->row.tiled->fmt == GUI_STATIC)
-        gui_command_buffer_push_scissor(layout->buffer, layout->clip);
     layout->row.tiled = 0;
+    layout->row.columns = 0;
 }
 
 static void
@@ -5517,6 +6084,7 @@ gui_panel_alloc_space(struct gui_rect *bounds, struct gui_context *layout)
         layout->row.filled += layout->row.item_width;
         layout->row.index = 0;
     } break;
+    case GUI_LAYOUT_STATIC_TILED:
     case GUI_LAYOUT_DYNAMIC_TILED: {
         /* dynamic tiled layout widget placing */
         bounds->x = layout->at_x + layout->row.item.x + padding.x;
@@ -5569,9 +6137,6 @@ gui_panel_alloc_space(struct gui_rect *bounds, struct gui_context *layout)
         layout->row.item_offset += item_width + spacing.x;
         layout->row.index = 0;
     } break;
-    case GUI_LAYOUT_STATIC_TILED:
-        /* static tiled layout widget placing */
-        layout->row.index = 0;
     case GUI_LAYOUT_STATIC_FREE: {
         /* free widget placing */
         bounds->x = layout->clip.x + layout->row.item.x;
@@ -6612,7 +7177,6 @@ gui_graph_callback(struct gui_context *layout, enum gui_graph_type type,
     gui_graph_end(layout, &graph);
     return index;
 }
-
 /*
  * -------------------------------------------------------------
  *

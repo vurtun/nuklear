@@ -468,7 +468,7 @@ main(int argc, char *argv[])
     /* GUI */
     memset(&gui, 0, sizeof gui);
     gui_buffer_init_fixed(&gui.memory, calloc(MAX_MEMORY, 1), MAX_MEMORY);
-    gui.font.userdata.ptr = xw.font;
+    gui.font.userdata = gui_handle_ptr(xw.font);
     gui.font.height = (gui_float)xw.font->height;
     gui.font.width = font_get_text_width;
     init_demo(&gui);

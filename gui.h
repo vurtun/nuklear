@@ -54,10 +54,10 @@ extern "C" {
   and the module of the library will not be compiled */
 #define GUI_COMPILE_WITH_FONT 1
 /* setting this define to 1 adds the `stb_truetype` and `stb_rect_pack` header
- to this library and provided a default font for font loading and rendering.
+ to this library and provides a default font for font loading and rendering.
  If you already have font handling or do not want to use this font handler
  you can just set this define to zero and the font module will not be compiled
- and the two header will not be needed. */
+ and the two headers will not be needed. */
 /*
  * ==============================================================
  *
@@ -109,6 +109,7 @@ struct gui_color {gui_byte r,g,b,a;};
 struct gui_vec2 {gui_float x,y;};
 struct gui_vec2i {gui_short x, y;};
 struct gui_rect {gui_float x,y,w,h;};
+struct gui_recti {gui_ushort x,y,w,h;};
 typedef gui_char gui_glyph[GUI_UTF_SIZE];
 struct gui_key {gui_bool down; gui_uint clicked;};
 typedef union {void *ptr; gui_int id;} gui_handle;
@@ -120,12 +121,6 @@ enum gui_collapse_states {GUI_MINIMIZED = gui_false, GUI_MAXIMIZED = gui_true};
 struct gui_user_font;
 struct gui_edit_box;
 struct gui_user_font_glyph;
-typedef gui_bool(*gui_filter)(gui_long unicode);
-typedef void(*gui_paste_f)(gui_handle, struct gui_edit_box*);
-typedef void(*gui_copy_f)(gui_handle, const char*, gui_size size);
-typedef gui_size(*gui_text_width_f)(gui_handle, const gui_char*, gui_size);
-typedef void(*gui_query_font_glyph_f)(gui_handle, struct gui_user_font_glyph*,
-                            gui_long codepoint, gui_long next_codepoint);
 /*
  * ==============================================================
  *
@@ -167,6 +162,8 @@ struct gui_rect gui_get_null_rect(void);
 gui_size gui_utf_decode(const gui_char*, gui_long*, gui_size);
 gui_size gui_utf_encode(gui_long, gui_char*, gui_size);
 gui_size gui_utf_len(const gui_char*, gui_size len);
+gui_handle gui_handle_ptr(void*);
+gui_handle gui_handle_id(gui_int);
 struct gui_image gui_image_ptr(void*);
 struct gui_image gui_image_id(gui_int);
 struct gui_image gui_subimage_ptr(void*, gui_ushort w, gui_ushort h, struct gui_rect);
@@ -326,12 +323,14 @@ void gui_input_char(struct gui_input*, char);
 */
 void gui_input_end(struct gui_input*);
 /*  this function sets the input state to readable */
-gui_bool gui_input_has_mouse_click_in_rect(const struct gui_input*, enum gui_buttons, struct gui_rect);
+gui_bool gui_input_has_mouse_click_in_rect(const struct gui_input*,enum gui_buttons,
+                                            struct gui_rect);
 /*  this function returns true if a mouse click inside a rectangle occured in prev frames */
 gui_bool gui_input_has_mouse_click_down_in_rect(const struct gui_input*, enum gui_buttons,
                                                 struct gui_rect, gui_bool down);
 /*  this function returns true if a mouse down click inside a rectangle occured in prev frames */
-gui_bool gui_input_is_mouse_click_in_rect(const struct gui_input*, enum gui_buttons, struct gui_rect);
+gui_bool gui_input_is_mouse_click_in_rect(const struct gui_input*, enum gui_buttons,
+                                            struct gui_rect);
 /*  this function returns true if a mouse click inside a rectangle occured and was just clicked */
 gui_bool gui_input_is_mouse_prev_hovering_rect(const struct gui_input*, struct gui_rect);
 /*  this function returns true if the mouse hovers over a rectangle */
@@ -814,8 +813,10 @@ const struct gui_command *gui_command_buffer_next(struct gui_command_buffer*,
     simplifies and reduces the amount of code needed with just using command buffers.
 
     Internally the command queue has a list of command buffers which can be
-    modified to create a certain sequence, for example the `gui_window_begin`
-    function changes the list to create overlapping windows.
+    modified to create a certain sequence, for example the `gui_begin`
+    function changes the list to create overlapping windows, while `gui_begin_tiled`
+    always draws all its windows in the background by pushing its buffers to the
+    beginning of the list.
 
     USAGE
     ----------------------------
@@ -885,7 +886,7 @@ struct gui_command_queue {
     struct gui_command_buffer_list list;
     /* list of each memory buffer inside the queue */
     struct gui_command_sub_buffer_stack stack;
-    /* subbuffer stack for overlapping child windows in windows */
+    /* subbuffer stack for overlapping popup windows in windows */
     gui_bool build;
     /* flag indicating if a complete command list was build inside the queue*/
 };
@@ -1060,7 +1061,9 @@ struct gui_draw_vertex {
 
 enum gui_draw_list_stroke {
     GUI_STROKE_OPEN = gui_false,
+    /* build up path has no connection back to the beginning */
     GUI_STROKE_CLOSED = gui_true
+    /* build up path has a connection back to the beginning */
 };
 
 struct gui_draw_command {
@@ -1288,12 +1291,72 @@ void gui_draw_list_path_stroke(struct gui_draw_list*, struct gui_color,
  *
  * ===============================================================
  */
+/*  FONT
+    ----------------------------
+    Font handling in this library can be achived in three different ways.
+    The first and simplest ways is by just using your font handling mechanism
+    and provide a simple callback for text string width calculation with
+    `gui_user_font`. This requires the default drawing output
+    and is not possible for the optional vertex buffer output.
+
+    The second way of font handling is by using the same `gui_user_font` struct
+    to reference a font as before but providing a second callback for
+    `gui_user_font_glyph` querying which is used for text drawing in the optional vertex
+    buffer output. In addition to the callback it is also required to provide
+    a texture atlas from the font to draw.
+
+    The final and most complex way is to use the optional font baker
+    and font handling function, which requires two additional headers for
+    TTF font baking. While the previous two methods did no need any functions
+    outside callbacks and are therefore rather simple to handle, the final
+    font handling method quite complex and you need to handle the complex
+    font baking API. The reason why it is complex is because there are multible
+    ways of using the API. For example it must be possible to use the font
+    for default command output as well as vertex buffer output. So for example
+    texture coordinates can either be UV for vertex buffer output or absolute pixel
+    for drawing function based on pixels. Furthermore it is possible to incoperate
+    custom user data into the resulting baked image (for example a white pixel for the
+    vertex buffer output). In addition and probably the most complex aspect of
+    the baking API was to incoperate baking of multible fonts into one image.
+
+    In general the font baking API can be understood as having a number of
+    loaded in memory TTF-fonts, font baking configuration and optional custom
+    render data as input, while the output is made of font specific data, a big
+    glyph array of all baked glyphes and the baked image. The API
+    was designed that way to have a typical file format and not
+    a perfectly ready in memory library instance of a font. The reason is more
+    control and seperates the font baking code from the in library used font format.
+
+    USAGE
+    ----------------------------
+    font baking functions
+    gui_font_bake_memory            -- calculates the needed font baking memory
+    gui_font_bake_pack              -- packs all glyphes and calculates needed image memory
+    gui_font_bake                   -- renders all glyphes inside an image and setups glyphes
+    gui_font_bake_custom_data       -- renders custom user data into the image
+    gui_font_bake_convert           -- converts the baked image from alpha8 to rgba8
+
+    font functions
+    gui_font_init                   -- initilizes the font
+    gui_font_ref                    -- create a user font out of the font
+    gui_font_find_glyph             -- finds and returns a glyph from the font
+*/
+typedef gui_size(*gui_text_width_f)(gui_handle, const gui_char*, gui_size);
+typedef void(*gui_query_font_glyph_f)(gui_handle, struct gui_user_font_glyph*,
+        gui_long codepoint, gui_long next_codepoint);
+
+#if GUI_COMPILE_WITH_VERTEX_BUFFER
 struct gui_user_font_glyph {
     struct gui_vec2 uv[2];
+    /* texture coordinates */
     struct gui_vec2 offset;
+    /* offset between top left and glyph */
     gui_float width, height;
+    /* size of the glyph  */
     gui_float xadvance;
+    /* offset to the next glyph */
 };
+#endif
 
 struct gui_user_font {
     gui_handle userdata;
@@ -1311,31 +1374,187 @@ struct gui_user_font {
 };
 
 #ifdef GUI_COMPILE_WITH_FONT
-struct gui_font_atlas {
-    gui_byte *pixels;
-    gui_int tex_width;
-    gui_int tex_height;
-    struct gui_vec2 white_pixel;
+enum gui_font_coord_type {
+    GUI_COORD_UV,
+    /* texture coordinates inside font glyphes are clamped between 0.0f and 1.0f */
+    GUI_COORD_PIXEL
+    /* texture coordinates inside font glyphes are in absolute pixel */
+};
+
+struct gui_baked_font {
+    gui_float height;
+    /* height of the font  */
+    gui_float ascent, descent;
+    /* font glyphes ascent and descent  */
+    gui_long glyph_offset;
+    /* glyph array offset inside the font glyph baking output array  */
+    gui_long glyph_count;
+    /* number of glyphes of this font inside the glyph baking array output */
+    const gui_long *ranges;
+    /* font codepoint ranges as pairs of (from/to) and 0 as last element */
+};
+
+struct gui_font_config {
+    void *ttf_blob;
+    /* pointer to loaded TTF file memory block */
+    gui_size ttf_size;
+    /* size of the loaded TTF file memory block */
+    gui_float size;
+    /* bake pixel height of the font */
+    gui_uint oversample_h, oversample_v;
+    /* rasterize at hight quality for sub-pixel position */
+    gui_bool pixel_snap;
+    /* align very character to pixel boundry (if true set oversample (1,1)) */
+    enum gui_font_coord_type coord_type;
+    /* baked glyph texture coordinate format with either pixel or UV coordinates */
+    struct gui_vec2 spacing;
+    /* extra pixel spacing between glyphs  */
+    const gui_long *range;
+    /* list of unicode ranges (2 values per range, zero terminated) */
+    struct gui_baked_font *font;
+    /* font to setup in the baking process  */
 };
 
 struct gui_font_glyph {
     gui_long codepoint;
+    /* unicode codepoint */
     gui_float xadvance;
-    struct gui_vec2 point[2];
-    struct gui_vec2 uv[2];
+    /* xoffset to the next character  */
+    gui_float x0, y0, x1, y1;
+    /* glyph bounding points in pixel inside the glyph image with top left and bottom right */
+    gui_float u0, v0, u1, v1;
+    /* texture coordinates either in pixel or clamped (0.0 - 1.0) */
 };
 
 struct gui_font {
     gui_float size;
+    /* pixel height of the font */
     gui_float scale;
-    struct gui_vec2 offset;
+    /* scale factor for different font size */
     gui_float ascent, descent;
-    struct gui_buffer glyphes;
-    gui_long fallback_code;
-    struct gui_font_glyph *fallback_glyph;
-    gui_float fallback_xadvance;
-    struct gui_user_font handle;
+    /* font ascent and descent  */
+    struct gui_font_glyph *glyphes;
+    /* font glyph array  */
+    const struct gui_font_glyph *fallback;
+    /* fallback glyph */
+    gui_long fallback_codepoint;
+    /* fallback glyph codepoint */
+    gui_long glyph_count;
+    /* font glyph array size */
+    const gui_long *ranges;
+    /* glyph unicode ranges in the font */
+    gui_handle atlas;
+    /* font image atlas handle */
 };
+
+/* some language glyph codepoint ranges */
+const gui_long *gui_font_default_glyph_ranges(void);
+const gui_long *gui_font_chinese_glyph_ranges(void);
+const gui_long *gui_font_cyrillic_glyph_ranges(void);
+
+/* ---------------------------------------------------------------
+ *                          Baking
+ * ---------------------------------------------------------------*/
+/* font baking functions (need to be called sequentially top to bottom) */
+void gui_font_bake_memory(gui_size *temporary_memory, gui_size *glyph_count,
+                            struct gui_font_config*, gui_size count);
+/*  this function calculates the needed memory for the baking process
+    Input:
+    - array of configuration for every font that should be baked into one image
+    - number of configuration fonts in the array
+    Output:
+    - amount of memory needed in the baking process
+    - total number of glyphes that need to be allocated
+*/
+gui_bool gui_font_bake_pack(gui_size *img_memory, gui_size *img_width, gui_size *img_height,
+                            struct gui_recti *custom_space,
+                            void *temporary_memory, gui_size temporary_size,
+                            const struct gui_font_config*, gui_size font_count);
+/*  this function packs together all glyphes and an optional space into one
+    total image space and returns the needed image width and height.
+    Input:
+    - NULL or custom space inside the image with width and height will be updated!
+    - temporary memory block that will be used in the baking process
+    - size of the temporary memory block
+    - array of configuration for every font that should be baked into one image
+    - number of configuration fonts in the array
+    Output:
+    - calculated resulting size of the image in bytes
+    - pixel width of the resulting image
+    - pixel height of the resulting image
+    - custom space bounds with position and size inside image which can be filled by the user
+*/
+void gui_font_bake(void *image_memory, gui_size image_width, gui_size image_height,
+                    void *temporary_memory, gui_size temporary_memory_size,
+                    struct gui_font_glyph*, gui_size glyphes_count,
+                    const struct gui_font_config*, gui_size font_count);
+/*  this function bakes all glyphes into the pre-allocated image and
+    fills a glyph array with information.
+    Input:
+    - image memory buffer to bake the glyph into
+    - pixel width/height of the image
+    - temporary memory block that will be used in the baking process
+    - size of the temporary memory block
+    Output:
+    - image filled with glyphes
+    - filled glyph array
+*/
+void gui_font_bake_custom_data(void *img_memory, gui_size img_width, gui_size img_height,
+                                struct gui_recti img_dst, const char *texture_data_mask,
+                                gui_size tex_width, gui_size tex_height,
+                                gui_char white, gui_char black);
+/*  this function bakes custom data in string format with white, black and zero
+    alpha pixels into the font image. The zero alpha pixel is represented as
+    any character beside the black and zero pixel character.
+    Input:
+    - image memory buffer to bake the custom data into
+    - image size (width/height) of the image in pixels
+    - custom texture data in string format
+    - texture size (width/height) of the custom image content
+    - character representing a white pixel in the texture data format
+    - character representing a black pixel in the texture data format
+    Output:
+    - image filled with custom texture data
+*/
+void gui_font_bake_convert(void *out_memory, gui_ushort img_width, gui_ushort img_height,
+                            const void *in_memory);
+/*  this function converts the alpha8 baking input image into a
+    preallocated rgba8 output image.
+    Input:
+    - image pixel size (width, height)
+    - memory block containing the alpha8 image
+    Output:
+    - rgba8 output image
+*/
+/* ---------------------------------------------------------------
+ *                          Font
+ * ---------------------------------------------------------------*/
+void gui_font_init(struct gui_font*, gui_float pixel_height,
+                    gui_long fallback_codepoint, struct gui_font_glyph*,
+                    const struct gui_baked_font*, gui_handle atlas);
+/*  this function initializes a font. IMPORTANT: The font only references
+ *  its glyphes since it allows to have multible font glyph in one big array.
+    Input:
+    - pixel height of the font can be different than the baked font height
+    - unicode fallback codepoint for a glyph that will be used if a glyph is requested
+        that does not exist in the font
+    - glyph array of all glyphes inside the font
+    - number of glyphes inside the glyph array
+    - font information for this font from the baking process
+    - handle to the baked font image atlas
+*/
+struct gui_user_font gui_font_ref(struct gui_font*);
+/*  this function
+    Output:
+    - gui font handle used in the library
+*/
+const struct gui_font_glyph* gui_font_find_glyph(struct gui_font*, gui_long unicode);
+/*  this function
+    Input:
+    - unicode glyph codepoint of the glyph
+    Output:
+    - either the glyph with the given codepoint or a fallback glyph if does not exist
+*/
 #endif
 /*
  * ===============================================================
@@ -1377,6 +1596,10 @@ struct gui_font {
     gui_edit_box_len_char   -- returns the length of the string in bytes
     gui_edit_box_len        -- returns the length of the string in glyphes
 */
+typedef gui_bool(*gui_filter)(gui_long unicode);
+typedef void(*gui_paste_f)(gui_handle, struct gui_edit_box*);
+typedef void(*gui_copy_f)(gui_handle, const char*, gui_size size);
+
 struct gui_clipboard {
     gui_handle userdata;
     /* user memory for callback */
@@ -2241,14 +2464,48 @@ void gui_style_reset(struct gui_style*);
  *
  * ===============================================================
     TILING
+    ----------------------------
+    Tiling provides a way to divide a space into fixed slots which again can be
+    divided into either horizontal or vertical spaces. The tiled layout consists
+    of five slots (Top, Left, Center, Right and Bottom) what is also known
+    as a Border layout. Since slots can either be filled or empty, horizontally or
+    vertically fillable, have either none, one or many subspaces and can even
+    have a tiled layout inside it is possible to achive a great number of layout.
+
+    In addition it is possible to define the space inside the tiled layout either
+    in pixel or as a ratio. Ratio based layout are great for scaling but
+    are less usefull in cases where scaling destroys the UI. Pixel based layouts
+    provided a layout which always look the same but are less flexible.
+
+    The tiled layout is used in the library inside windows as a widget layout
+    and for window placing inside the screen with each case having its own functions
+    to handle and use the tiled layout.
+
+    USAGE
+    ----------------------------
+    To use the tiled layout you have to define which slot inside the layout
+    should be active, how the slot should be filled and how much space the
+    it takes. To define each slot you first have to call `gui_tiled_begin`
+    to start the layout slot definiton and to end the definition
+    the corresponding function `gui_tiled_end` has to be called.
+    Between both sequence points you can define each slot with `gui_tiled_slot`.
+
+    -----------------------------
+    |           TOP             |
+    -----------------------------
+    |       |           |       |
+    | LEFT  |   CENTER  | RIGHT |
+    |       |           |       |
+    -----------------------------
+    |           BOTTOM          |
+    -----------------------------
 
     tiling API
-    ----------------------------
     gui_tiled_begin         -- starts the definition of a tiled layout
-    gui_tiled_slot_bounds   -- returns the bounds of a slot in the tiled layout
-    gui_tiled_bounds        -- returns the bounds of a widget in the tiled layout
     gui_tiled_slot          -- activates and setups a slot inside the tile layout
     gui_tiled_end           -- ends the definiition of the tiled layout slots
+    gui_tiled_slot_bounds   -- returns the bounds of a slot in the tiled layout
+    gui_tiled_bounds        -- returns the bounds of a widget in the tiled layout
 */
 enum gui_tiled_layout_slot_index {
     GUI_SLOT_TOP,
@@ -2301,6 +2558,20 @@ void gui_tiled_begin(struct gui_tiled_layout*, enum gui_layout_format,
     - pixel width of the tiled layout space
     - pixel height of the tiled layout space
 */
+void gui_tiled_slot(struct gui_tiled_layout *layout,
+                    enum gui_tiled_layout_slot_index, gui_float ratio,
+                    enum gui_tiled_slot_format, gui_uint widget_count);
+/*  this functions defines a slot in the tiled layout which then can be filled
+ *  with widgets
+    Input:
+    - slot identifier
+    - either ratio or pixel size of the slot
+    - slot filling format with either horizontal or vertical filling
+    - number of widgets inside the slot
+*/
+void gui_tiled_end(struct gui_tiled_layout*);
+/*  this functions ends the definitions of the tiled layout slots */
+
 void gui_tiled_slot_bounds(struct gui_rect*, const struct gui_tiled_layout*,
                             enum gui_tiled_layout_slot_index);
 /*  this functions queries the bounds (position + size) of a tiled layout slot
@@ -2318,19 +2589,6 @@ void gui_tiled_bounds(struct gui_rect*, const struct gui_tiled_layout*,
     Output:
     - rectangle with position and size of the slot entry
 */
-void gui_tiled_slot(struct gui_tiled_layout *layout,
-                    enum gui_tiled_layout_slot_index, gui_float ratio,
-                    enum gui_tiled_slot_format, gui_uint widget_count);
-/*  this functions defines a slot in the tiled layout which then can be filled
- *  with widgets
-    Input:
-    - slot identifier
-    - either ratio or pixel size of the slot
-    - slot filling format with either horizontal or vertical filling
-    - number of widgets inside the slot
-*/
-void gui_tiled_end(struct gui_tiled_layout*);
-/*  this functions ends the definitions of the tiled layout slots */
 /*
  * ==============================================================
  *
@@ -3322,9 +3580,8 @@ enum gui_popup_type {
     /* dynamically growing popup with maximum height */
 };
 
-gui_flags gui_popup_begin(struct gui_context *parent,
-                            struct gui_context *popup, enum gui_popup_type,
-                            gui_flags, struct gui_rect bounds,
+gui_flags gui_popup_begin(struct gui_context *parent, struct gui_context *popup,
+                            enum gui_popup_type, gui_flags, struct gui_rect bounds,
                             struct gui_vec2 offset);
 /*  this function adds a overlapping blocking popup menu
     Input:
@@ -3606,9 +3863,8 @@ struct gui_tree {
     /* current depth of the tree */
 };
 
-void gui_tree_begin(struct gui_context*, struct gui_tree*,
-                            const char*, gui_float row_height,
-                            struct gui_vec2 scrollbar);
+void gui_tree_begin(struct gui_context*, struct gui_tree*, const char *title,
+                    gui_float row_height, struct gui_vec2 scrollbar);
 /*  this function begins the tree building process
     Input:
     - title describing the tree or NULL
@@ -3618,7 +3874,7 @@ void gui_tree_begin(struct gui_context*, struct gui_tree*,
     - tree build up state structure
 */
 enum gui_tree_node_operation gui_tree_begin_node(struct gui_tree*, const char*,
-                                                        gui_state*);
+                                                gui_state*);
 /*  this function begins a parent node
     Input:
     - title of the node
