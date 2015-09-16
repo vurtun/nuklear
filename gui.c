@@ -3712,7 +3712,7 @@ gui_widget_toggle(struct gui_command_buffer *out, struct gui_rect r,
     toggle_active = *active;
 
     /* calculate the size of the complete toggle */
-    select.w = MAX(font->height + 2 * toggle->padding.y, 1);
+    select.w = MIN(r.h, font->height + toggle->padding.y);
     select.h = select.w;
     select.x = r.x + toggle->padding.x;
     select.y = (r.y + toggle->padding.y + (select.w / 2)) - (font->height / 2);
@@ -3723,7 +3723,7 @@ gui_widget_toggle(struct gui_command_buffer *out, struct gui_rect r,
         (gui_float)(gui_int)(select.h / 8);
 
     select.h = MAX(select.w, cursor_pad * 2);
-    cursor.h = select.w - cursor_pad * 2;
+    cursor.h = select.h - cursor_pad * 2;
     cursor.w = cursor.h;
     cursor.x = select.x + cursor_pad;
     cursor.y = select.y + cursor_pad;
