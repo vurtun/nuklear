@@ -3720,7 +3720,7 @@ gui_widget_toggle(struct gui_command_buffer *out, struct gui_rect r,
     /* calculate the bounds of the cursor inside the toggle */
     cursor_pad = (type == GUI_TOGGLE_OPTION) ?
         (gui_float)(gui_int)(select.w / 4):
-        (gui_float)(gui_int)(select.h / 8);
+        (gui_float)(gui_int)(select.h / 6);
 
     select.h = MAX(select.w, cursor_pad * 2);
     cursor.h = select.h - cursor_pad * 2;
