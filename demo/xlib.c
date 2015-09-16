@@ -227,30 +227,6 @@ surface_draw_line(XSurface *surf, gui_short x0, gui_short y0, gui_short x1,
 }
 
 static void
-surface_draw_round_rect(XSurface* surf, gui_short x, gui_short y, gui_ushort w,
-    gui_ushort h, gui_ushort r, struct gui_color col)
-{
-    unsigned long c = color_from_byte(&col.r);
-    gui_int mx, my;
-    gui_int mw, mh;
-    mx = x + r; my = y + r;
-    mw = w - (r * 2);
-    mh = h - (r * 2);
-
-    XSetForeground(surf->dpy, surf->gc, c);
-    XFillRectangle(surf->dpy, surf->drawable, surf->gc, mx, my, (gui_ushort)mw, (gui_ushort)mh);
-    XFillRectangle(surf->dpy, surf->drawable, surf->gc, mx, y, (gui_ushort)mw, r);
-    XFillRectangle(surf->dpy, surf->drawable, surf->gc, mx+mw, my, r, (gui_ushort)mh);
-    XFillRectangle(surf->dpy, surf->drawable, surf->gc, mx, my+mh, (gui_ushort)mw, r);
-    XFillRectangle(surf->dpy, surf->drawable, surf->gc, x, my, r, (gui_ushort)mh);
-
-    XFillArc(surf->dpy, surf->drawable, surf->gc, x, y, 2*r, 2*r, 90 * 64, 90 * 64);
-    XFillArc(surf->dpy, surf->drawable, surf->gc, mx+mw-r, y, 2*r, 2*r, 90 * 64, -90 * 64);
-    XFillArc(surf->dpy, surf->drawable, surf->gc, mx+mw-r, my+mh-r, r*2, r*2, 0 * 64, -90 * 64);
-    XFillArc(surf->dpy, surf->drawable, surf->gc, x, my+mh-r, r*2, r*2, -90 * 64, -90 * 64);
-}
-
-static void
 surface_draw_rect(XSurface* surf, gui_short x, gui_short y, gui_ushort w,
     gui_ushort h, struct gui_color col)
 {
@@ -346,10 +322,7 @@ draw(XSurface *surf, struct gui_command_queue *queue)
         } break;
         case GUI_COMMAND_RECT: {
             const struct gui_command_rect *r = gui_command(rect, cmd);
-            if (r->rounding)
-                surface_draw_round_rect(surf,r->x,r->y,r->w,r->h,
-                    (gui_ushort)r->rounding, r->color);
-            else surface_draw_rect(surf, r->x, r->y, r->w, r->h, r->color);
+            surface_draw_rect(surf, r->x, r->y, r->w, r->h, r->color);
         } break;
         case GUI_COMMAND_CIRCLE: {
             const struct gui_command_circle *c = gui_command(circle, cmd);
@@ -422,6 +395,10 @@ btn(struct gui_input *in, XEvent *evt, gui_bool down)
         gui_input_button(in, GUI_BUTTON_LEFT, x, y, down);
     else if (evt->xbutton.button == Button3)
         gui_input_button(in, GUI_BUTTON_RIGHT, x, y, down);
+    else if (evt->xbutton.button == Button4)
+        gui_input_scroll(in, 1.0f);
+    else if (evt->xbutton.button == Button5)
+        gui_input_scroll(in, -1.0f);
 }
 
 static void
@@ -452,8 +429,10 @@ main(int argc, char *argv[])
     xw.cmap = XCreateColormap(xw.dpy,xw.root,xw.vis,AllocNone);
     xw.swa.colormap = xw.cmap;
     xw.swa.event_mask =
-        ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPress |
-        ButtonReleaseMask | ButtonMotionMask | Button1MotionMask | PointerMotionMask;
+        ExposureMask | KeyPressMask | KeyReleaseMask |
+        ButtonPress | ButtonReleaseMask| ButtonMotionMask |
+        Button1MotionMask | Button3MotionMask | Button4MotionMask | Button5MotionMask|
+        PointerMotionMask;
     xw.win = XCreateWindow(xw.dpy, xw.root, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, 0,
         XDefaultDepth(xw.dpy, xw.screen), InputOutput,
         xw.vis, CWEventMask | CWColormap, &xw.swa);

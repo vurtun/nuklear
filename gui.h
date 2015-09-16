@@ -2634,16 +2634,16 @@ void gui_tiled_bounds(struct gui_rect*, const struct gui_tiled_layout*,
 
     APIs
     -----------------
-    Window Context API      -- The context is temporary state that is used every frame to build a window
-    Window Header API       -- Responsible for creating a header at the top of a window
-    Window Layout API       -- The window layout is responsible for placing widget in the window
-    Window Widget API       -- Different widget that can be placed inside the window
-    Window Tree API         -- Tree widget that allows to visualize and mofify a tree
-    Window Combobox API     -- Combobox widget for collapsable popup content
-    Window Group API        -- Create a subwindow inside a window which again can be filled with widgets
-    Window Shelf API        -- Group window with tabs which can be filled with widget
-    Window Popup API        -- Popup window with either non-blocking or blocking capabilities
-    Window Menu API         -- Popup menus with currently one single depth
+    Window Context API  -- The context is temporary state that is used every frame to build a window
+    Window Header API   -- Responsible for creating a header at the top of a window
+    Window Layout API   -- The window layout is responsible for placing widget in the window
+    Window Widget API   -- Different widget that can be placed inside the window
+    Window Tree API     -- Tree widget that allows to visualize and mofify a tree
+    Window Combobox API -- Combobox widget for collapsable popup content
+    Window Group API    -- Create a subwindow inside a window which again can be filled with widgets
+    Window Shelf API    -- Group window with tabs which can be filled with widget
+    Window Popup API    -- Popup window with either non-blocking or blocking capabilities
+    Window Menu API     -- Popup menus with currently one single depth
 */
 enum gui_window_flags {
     GUI_WINDOW_HIDDEN = 0x01,

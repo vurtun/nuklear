@@ -222,7 +222,7 @@ font_bake_and_upload(struct device *dev, struct gui_font *font,
         config.pixel_snap = gui_false;
         config.size = font_height;
         config.spacing = gui_vec2(0,0);
-        config.oversample_h = 3;
+        config.oversample_h = 1;
         config.oversample_v = 1;
 
         /* query needed amount of memory for the font baking process */
@@ -262,7 +262,8 @@ font_bake_and_upload(struct device *dev, struct gui_font *font,
 
     /* default white pixel in a texture which is needed to draw primitives */
     dev->null.texture.id = (gui_int)dev->font_tex;
-    dev->null.uv = gui_vec2((custom.x + 0.5f)/(gui_float)img_width, (custom.y + 0.5f)/(gui_float)img_height);
+    dev->null.uv = gui_vec2((custom.x + 0.5f)/(gui_float)img_width,
+                            (custom.y + 0.5f)/(gui_float)img_height);
     /* setup font with glyphes. IMPORTANT: the font only references the glyphes
       this was done to have the possibility to have multible fonts with one
       total glyph array. Not quite sure if it is a good thing since the

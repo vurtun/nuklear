@@ -856,7 +856,7 @@ run_demo(struct demo_gui *gui)
         {
             /* shelf + graphes  */
             static const char *shelfs[] = {"Histogram", "Lines"};
-            gui_layout_row_dynamic(&layout, 180, 1);
+            gui_layout_row_dynamic(&layout, 190, 1);
             state->shelf_selection = gui_shelf_begin(&layout, &tab, shelfs,
                 LEN(shelfs), state->shelf_selection, state->shelf);
             {

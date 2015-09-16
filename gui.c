@@ -2752,7 +2752,6 @@ gui_font_bake_pack(gui_size *image_memory, gui_size *width, gui_size *height,
             tmp->range_count = (gui_uint)range_count;
             range_n += range_count;
             for (i = 0; i < range_count; ++i) {
-                /*stbtt_pack_range *range = &tmp->ranges[i];*/
                 in_range = &cfg->range[i * 2];
                 tmp->ranges[i].font_size = cfg->size;
                 tmp->ranges[i].first_unicode_codepoint_in_range = (gui_int)in_range[0];
@@ -2849,6 +2848,7 @@ gui_font_bake(void *image_memory, gui_size width, gui_size height,
                 stbtt_aligned_quad q;
                 struct gui_font_glyph *glyph;
 
+                /* query glyph bounds from stb_truetype */
                 const stbtt_packedchar *pc = &range->chardata_for_range[char_idx];
                 glyph_count++;
                 if (!pc->x0 && !pc->x1 && !pc->y0 && !pc->y1) continue;
@@ -4081,7 +4081,7 @@ gui_widget_editbox(struct gui_command_buffer *out, struct gui_rect r,
         /* set cursor by mouse click and handle text selection */
         if (in && field->show_cursor && in->mouse.buttons[GUI_BUTTON_LEFT].down && box->active) {
             const gui_char *visible = &buffer[offset];
-            gui_float xoff = in->mouse.pos.x-(r.x+field->padding.x+field->border_size);
+            gui_float xoff = in->mouse.pos.x - (r.x + field->padding.x + field->border_size);
             if (GUI_INBOX(in->mouse.pos.x, in->mouse.pos.y, r.x, r.y, r.w, r.h))
             {
                 /* text selection in the current text frame */
@@ -4119,7 +4119,6 @@ gui_widget_editbox(struct gui_command_buffer *out, struct gui_rect r,
                 }
             } else box->sel.active = gui_false;
         } else box->sel.active = gui_false;
-
 
         /* calculate the text bounds */
         label.x = r.x + field->padding.x + field->border_size;
@@ -5668,12 +5667,12 @@ gui_menubar_end(struct gui_context *layout)
     panel_padding = gui_style_property(c, GUI_PROPERTY_PADDING);
     item_padding = gui_style_property(c, GUI_PROPERTY_ITEM_PADDING);
 
-    layout->menu.h = (layout->at_y + layout->row.height-1) - layout->menu.y;
-    layout->clip.y = layout->bounds.y + layout->header.h + layout->menu.h;
+    layout->menu.h = layout->at_y - layout->menu.y;
+    layout->clip.y = layout->bounds.y + layout->header.h + layout->menu.h + layout->row.height;
     layout->height -= layout->menu.h;
     layout->offset = layout->menu.offset;
-    layout->clip.h = layout->bounds.h - (layout->footer_h + layout->header.h + layout->menu.h);
-    layout->clip.h -= (panel_padding.y + item_padding.y);
+    layout->clip.h -= layout->menu.h + layout->row.height;
+    layout->at_y = layout->menu.y + layout->menu.h;
     gui_command_buffer_push_scissor(out, layout->clip);
 }
 /*

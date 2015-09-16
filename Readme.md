@@ -35,7 +35,8 @@ gui_command_queue_init_fixed(&queue, malloc(MEMORY_SIZE), MEMORY_SIZE);
 /* initialize panel */
 struct gui_window panel;
 gui_window_init(&panel, 50, 50, 220, 180,
-    GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE, &queue, &style, &input);
+    GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE,
+    &queue, &style, &input);
 
 /* setup widget data */
 enum {EASY, HARD};
