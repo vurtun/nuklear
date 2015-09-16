@@ -14,7 +14,7 @@ application and does not have any direct dependencies.
 - No direct dependencies
 - Configurable style and colors
 - UTF-8 support
-- optional vertex buffer output and font handling
+- Optional vertex buffer output and font handling
 
 ## Gallery
 ![gui demo](/screen/demo.png?raw=true)
@@ -118,23 +118,6 @@ and therefore does not provide the fixed sized types that I need. Therefore
 I defined my own types which need to be set to the correct size for each
 platform. But if your development environment provides the header file you can define
 `GUI_USE_FIXED_SIZE_TYPES` to directly use the correct types.
-
-#### Why is font/input/window management not provided?
-As for window and input management it is a ton of work to abstract over
-all possible platforms and there are already libraries like SDL or SFML or even
-the platform itself which provide you with the functionality.
-So instead of reinventing the wheel and trying to do everything the project tries
-to be as independent and out of the users way as possible.
-This means in practice a little bit more work on the users behalf but grants a
-lot more freedom especially because the toolkit is designed to be embeddable.
-
-The font management on the other hand is litte bit more tricky. In the beginning
-the toolkit had some basic font handling but I removed it later. This is mainly
-a question of if font handling should be part of a gui toolkit or not. As for a
-framework the question would definitely be yes but for a toolkit library the
-question is not as easy. In the end the project does not have font handling
-since there are already a number of font handling libraries in existence or even the
-platform (Xlib, Win32) itself already provides a solution.
 
 ## References
 - [Tutorial from Jari Komppa about imgui libraries](http://www.johno.se/book/imgui.html)
