@@ -367,7 +367,6 @@ gui_triangle_from_direction(struct gui_vec2 *result, struct gui_rect r,
         result[2] = gui_vec2(r.x + r.w, r.y + r.h);
     }
 }
-
 /*
  * ==============================================================
  *
@@ -471,7 +470,6 @@ gui_utf_len(const gui_char *str, gui_size len)
     }
     return src_len;
 }
-
 /*
  * ==============================================================
  *
@@ -5146,21 +5144,29 @@ gui_end(struct gui_context *layout, struct gui_window *window)
         layout->height = MIN(layout->at_y - layout->bounds.y, layout->bounds.h);
 
         /* draw the correct footer */
-        footer.x = window->bounds.x;
-        footer.w = window->bounds.w + scrollbar_size;
-        footer.h = layout->footer_h;
-        if (layout->flags & GUI_WINDOW_COMBO_MENU)
-            footer.y = window->bounds.y + layout->height;
-        else footer.y = window->bounds.y + layout->height + layout->footer_h;
-        gui_command_buffer_push_rect(out, footer, 0, config->colors[GUI_COLOR_WINDOW]);
+        if (layout->offset.x > 0) {
+            footer.x = window->bounds.x;
+            footer.w = window->bounds.w + scrollbar_size;
+            footer.h = layout->footer_h;
+            if (layout->flags & GUI_WINDOW_COMBO_MENU)
+                footer.y = window->bounds.y + layout->height;
+            else footer.y = window->bounds.y + layout->height + layout->footer_h;
+            gui_command_buffer_push_rect(out, footer, 0, config->colors[GUI_COLOR_WINDOW]);
 
-        if (!(layout->flags & GUI_WINDOW_COMBO_MENU)) {
-            struct gui_rect bounds;
-            bounds.x = layout->bounds.x;
-            bounds.y = window->bounds.y + layout->height;
-            bounds.w = layout->width;
-            bounds.h = layout->row.height;
-            gui_command_buffer_push_rect(out, bounds, 0, config->colors[GUI_COLOR_WINDOW]);
+            if (!(layout->flags & GUI_WINDOW_COMBO_MENU)) {
+                struct gui_rect bounds;
+                bounds.x = layout->bounds.x;
+                bounds.y = window->bounds.y + layout->height;
+                bounds.w = layout->width;
+                bounds.h = layout->row.height;
+                gui_command_buffer_push_rect(out, bounds, 0, config->colors[GUI_COLOR_WINDOW]);
+            }
+        } else {
+            footer.x = window->bounds.x;
+            footer.y = window->bounds.y + layout->height;
+            footer.w = window->bounds.w + scrollbar_size;
+            footer.h = 0;
+            layout->footer_h = 0;
         }
     }
 
