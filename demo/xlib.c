@@ -22,10 +22,10 @@
 #define LEN(a)      (sizeof(a)/sizeof(a)[0])
 #define UNUSED(a)   ((void)(a))
 
-#include "../gui.h"
+#include "../zahnrad.h"
 
 static void clipboard_set(const char *text){UNUSED(text);}
-static gui_bool clipboard_is_filled(void){return gui_false;}
+static zr_bool clipboard_is_filled(void){return zr_false;}
 static const char* clipboard_get(void) {return NULL;}
 
 #include "demo.c"
@@ -138,12 +138,12 @@ font_create(Display *dpy, const char *name)
     return font;
 }
 
-static gui_size
-font_get_text_width(gui_handle handle, const gui_char *text, gui_size len)
+static zr_size
+font_get_text_width(zr_handle handle, const zr_char *text, zr_size len)
 {
     XFont *font = (XFont*)handle.ptr;
     XRectangle r;
-    gui_size width;
+    zr_size width;
     if(!font || !text)
         return 0;
 
@@ -152,7 +152,7 @@ font_get_text_width(gui_handle handle, const gui_char *text, gui_size len)
         return r.width;
     }
     else {
-        return (gui_size)XTextWidth(font->xfont, (const char*)text, (int)len);
+        return (zr_size)XTextWidth(font->xfont, (const char*)text, (int)len);
     }
     return width;
 }
@@ -169,7 +169,7 @@ font_del(Display *dpy, XFont *font)
 }
 
 static unsigned long
-color_from_byte(const gui_byte *c)
+color_from_byte(const zr_byte *c)
 {
     /* NOTE(vurtun): this only works for little-endian */
     unsigned long res = 0;
@@ -218,8 +218,8 @@ surface_scissor(XSurface *surf, float x, float y, float w, float h)
 }
 
 static void
-surface_draw_line(XSurface *surf, gui_short x0, gui_short y0, gui_short x1,
-    gui_short y1, struct gui_color col)
+surface_draw_line(XSurface *surf, zr_short x0, zr_short y0, zr_short x1,
+    zr_short y1, struct zr_color col)
 {
     unsigned long c = color_from_byte(&col.r);
     XSetForeground(surf->dpy, surf->gc, c);
@@ -227,8 +227,8 @@ surface_draw_line(XSurface *surf, gui_short x0, gui_short y0, gui_short x1,
 }
 
 static void
-surface_draw_rect(XSurface* surf, gui_short x, gui_short y, gui_ushort w,
-    gui_ushort h, struct gui_color col)
+surface_draw_rect(XSurface* surf, zr_short x, zr_short y, zr_ushort w,
+    zr_ushort h, struct zr_color col)
 {
     unsigned long c = color_from_byte(&col.r);
     XSetForeground(surf->dpy, surf->gc, c);
@@ -236,8 +236,8 @@ surface_draw_rect(XSurface* surf, gui_short x, gui_short y, gui_ushort w,
 }
 
 static void
-surface_draw_triangle(XSurface *surf, gui_short x0, gui_short y0, gui_short x1,
-    gui_short y1, gui_short x2, gui_short y2, struct gui_color col)
+surface_draw_triangle(XSurface *surf, zr_short x0, zr_short y0, zr_short x1,
+    zr_short y1, zr_short x2, zr_short y2, struct zr_color col)
 {
     XPoint pnts[3];
     unsigned long c = color_from_byte(&col.r);
@@ -252,8 +252,8 @@ surface_draw_triangle(XSurface *surf, gui_short x0, gui_short y0, gui_short x1,
 }
 
 static void
-surface_draw_circle(XSurface *surf, gui_short x, gui_short y, gui_ushort w,
-    gui_ushort h, struct gui_color col)
+surface_draw_circle(XSurface *surf, zr_short x, zr_short y, zr_ushort w,
+    zr_ushort h, struct zr_color col)
 {
     unsigned long c = color_from_byte(&col.r);
     XSetForeground(surf->dpy, surf->gc, c);
@@ -262,8 +262,8 @@ surface_draw_circle(XSurface *surf, gui_short x, gui_short y, gui_ushort w,
 }
 
 static void
-surface_draw_text(XSurface *surf, gui_short x, gui_short y, gui_ushort w, gui_ushort h,
-    const char *text, size_t len, XFont *font, struct gui_color cbg, struct gui_color cfg)
+surface_draw_text(XSurface *surf, zr_short x, zr_short y, zr_ushort w, zr_ushort h,
+    const char *text, size_t len, XFont *font, struct zr_color cbg, struct zr_color cfg)
 {
     int tx, ty, th;
     unsigned long bg = color_from_byte(&cbg.r);
@@ -305,100 +305,100 @@ surface_del(XSurface *surf)
 }
 
 static void
-draw(XSurface *surf, struct gui_command_queue *queue)
+draw(XSurface *surf, struct zr_command_queue *queue)
 {
-    const struct gui_command *cmd;
-    gui_foreach_command(cmd, queue) {
+    const struct zr_command *cmd;
+    zr_foreach_command(cmd, queue) {
         switch (cmd->type) {
-        case GUI_COMMAND_NOP: break;
-        case GUI_COMMAND_SCISSOR: {
-            const struct gui_command_scissor *s = gui_command(scissor, cmd);
+        case ZR_COMMAND_NOP: break;
+        case ZR_COMMAND_SCISSOR: {
+            const struct zr_command_scissor *s = zr_command(scissor, cmd);
             surface_scissor(surf, s->x, s->y, s->w, s->h);
         } break;
-        case GUI_COMMAND_LINE: {
-            const struct gui_command_line *l = gui_command(line, cmd);
+        case ZR_COMMAND_LINE: {
+            const struct zr_command_line *l = zr_command(line, cmd);
             surface_draw_line(surf, l->begin.x, l->begin.y, l->end.x,
                 l->end.y, l->color);
         } break;
-        case GUI_COMMAND_RECT: {
-            const struct gui_command_rect *r = gui_command(rect, cmd);
+        case ZR_COMMAND_RECT: {
+            const struct zr_command_rect *r = zr_command(rect, cmd);
             surface_draw_rect(surf, r->x, r->y, r->w, r->h, r->color);
         } break;
-        case GUI_COMMAND_CIRCLE: {
-            const struct gui_command_circle *c = gui_command(circle, cmd);
+        case ZR_COMMAND_CIRCLE: {
+            const struct zr_command_circle *c = zr_command(circle, cmd);
             surface_draw_circle(surf, c->x, c->y, c->w, c->h, c->color);
         } break;
-        case GUI_COMMAND_TRIANGLE: {
-            const struct gui_command_triangle *t = gui_command(triangle, cmd);
+        case ZR_COMMAND_TRIANGLE: {
+            const struct zr_command_triangle *t = zr_command(triangle, cmd);
             surface_draw_triangle(surf, t->a.x, t->a.y, t->b.x, t->b.y,
                 t->c.x, t->c.y, t->color);
         } break;
-        case GUI_COMMAND_TEXT: {
-            const struct gui_command_text *t = gui_command(text, cmd);
+        case ZR_COMMAND_TEXT: {
+            const struct zr_command_text *t = zr_command(text, cmd);
             surface_draw_text(surf, t->x, t->y, t->w, t->h, (const char*)t->string,
                     t->length, (XFont*)t->font->userdata.ptr, t->background, t->foreground);
         } break;
-        case GUI_COMMAND_CURVE:
-        case GUI_COMMAND_IMAGE:
-        case GUI_COMMAND_MAX:
+        case ZR_COMMAND_CURVE:
+        case ZR_COMMAND_IMAGE:
+        case ZR_COMMAND_MAX:
         default: break;
         }
     }
-    gui_command_queue_clear(queue);
+    zr_command_queue_clear(queue);
 }
 
 static void
-key(struct XWindow *xw, struct gui_input *in, XEvent *evt, gui_bool down)
+key(struct XWindow *xw, struct zr_input *in, XEvent *evt, zr_bool down)
 {
     int ret;
     KeySym *code = XGetKeyboardMapping(xw->dpy, (KeyCode)evt->xkey.keycode, 1, &ret);
     if (*code == XK_Shift_L || *code == XK_Shift_R)
-        gui_input_key(in, GUI_KEY_SHIFT, down);
+        zr_input_key(in, ZR_KEY_SHIFT, down);
     else if (*code == XK_Delete)
-        gui_input_key(in, GUI_KEY_DEL, down);
+        zr_input_key(in, ZR_KEY_DEL, down);
     else if (*code == XK_Return)
-        gui_input_key(in, GUI_KEY_ENTER, down);
+        zr_input_key(in, ZR_KEY_ENTER, down);
     else if (*code == XK_space)
-        gui_input_key(in, GUI_KEY_SPACE, down);
+        zr_input_key(in, ZR_KEY_SPACE, down);
     else if (*code == XK_Left)
-        gui_input_key(in, GUI_KEY_LEFT, down);
+        zr_input_key(in, ZR_KEY_LEFT, down);
     else if (*code == XK_Right)
-        gui_input_key(in, GUI_KEY_RIGHT, down);
+        zr_input_key(in, ZR_KEY_RIGHT, down);
     else if (*code == XK_BackSpace)
-        gui_input_key(in, GUI_KEY_BACKSPACE, down);
+        zr_input_key(in, ZR_KEY_BACKSPACE, down);
     else if (*code > 32 && *code < 128) {
         if (*code == 'c')
-            gui_input_key(in, GUI_KEY_COPY, down && (evt->xkey.state & ControlMask));
+            zr_input_key(in, ZR_KEY_COPY, down && (evt->xkey.state & ControlMask));
         else if (*code == 'v')
-            gui_input_key(in, GUI_KEY_PASTE, down && (evt->xkey.state & ControlMask));
+            zr_input_key(in, ZR_KEY_PASTE, down && (evt->xkey.state & ControlMask));
         else if (*code == 'x')
-            gui_input_key(in, GUI_KEY_CUT, down && (evt->xkey.state & ControlMask));
-        if (!down) gui_input_char(in, (char)*code);
+            zr_input_key(in, ZR_KEY_CUT, down && (evt->xkey.state & ControlMask));
+        if (!down) zr_input_char(in, (char)*code);
     }
     XFree(code);
 }
 
 static void
-motion(struct gui_input *in, XEvent *evt)
+motion(struct zr_input *in, XEvent *evt)
 {
-    const gui_int x = evt->xmotion.x;
-    const gui_int y = evt->xmotion.y;
-    gui_input_motion(in, x, y);
+    const zr_int x = evt->xmotion.x;
+    const zr_int y = evt->xmotion.y;
+    zr_input_motion(in, x, y);
 }
 
 static void
-btn(struct gui_input *in, XEvent *evt, gui_bool down)
+btn(struct zr_input *in, XEvent *evt, zr_bool down)
 {
-    const gui_int x = evt->xbutton.x;
-    const gui_int y = evt->xbutton.y;
+    const zr_int x = evt->xbutton.x;
+    const zr_int y = evt->xbutton.y;
     if (evt->xbutton.button == Button1)
-        gui_input_button(in, GUI_BUTTON_LEFT, x, y, down);
+        zr_input_button(in, ZR_BUTTON_LEFT, x, y, down);
     else if (evt->xbutton.button == Button3)
-        gui_input_button(in, GUI_BUTTON_RIGHT, x, y, down);
+        zr_input_button(in, ZR_BUTTON_RIGHT, x, y, down);
     else if (evt->xbutton.button == Button4)
-        gui_input_scroll(in, 1.0f);
+        zr_input_scroll(in, 1.0f);
     else if (evt->xbutton.button == Button5)
-        gui_input_scroll(in, -1.0f);
+        zr_input_scroll(in, -1.0f);
 }
 
 static void
@@ -446,9 +446,9 @@ main(int argc, char *argv[])
 
     /* GUI */
     memset(&gui, 0, sizeof gui);
-    gui_buffer_init_fixed(&gui.memory, calloc(MAX_MEMORY, 1), MAX_MEMORY);
-    gui.font.userdata = gui_handle_ptr(xw.font);
-    gui.font.height = (gui_float)xw.font->height;
+    zr_buffer_init_fixed(&gui.memory, calloc(MAX_MEMORY, 1), MAX_MEMORY);
+    gui.font.userdata = zr_handle_ptr(xw.font);
+    gui.font.height = (zr_float)xw.font->height;
     gui.font.width = font_get_text_width;
     init_demo(&gui);
 
@@ -456,18 +456,18 @@ main(int argc, char *argv[])
         /* Input */
         XEvent evt;
         started = timestamp();
-        gui_input_begin(&gui.input);
+        zr_input_begin(&gui.input);
         while (XCheckWindowEvent(xw.dpy, xw.win, xw.swa.event_mask, &evt)) {
             if (evt.type == KeyPress)
-                key(&xw, &gui.input, &evt, gui_true);
-            else if (evt.type == KeyRelease) key(&xw, &gui.input, &evt, gui_false);
-            else if (evt.type == ButtonPress) btn(&gui.input, &evt, gui_true);
-            else if (evt.type == ButtonRelease) btn(&gui.input, &evt, gui_false);
+                key(&xw, &gui.input, &evt, zr_true);
+            else if (evt.type == KeyRelease) key(&xw, &gui.input, &evt, zr_false);
+            else if (evt.type == ButtonPress) btn(&gui.input, &evt, zr_true);
+            else if (evt.type == ButtonRelease) btn(&gui.input, &evt, zr_false);
             else if (evt.type == MotionNotify) motion(&gui.input, &evt);
             else if (evt.type == Expose || evt.type == ConfigureNotify)
                 resize(&xw, xw.surf);
         }
-        gui_input_end(&gui.input);
+        zr_input_end(&gui.input);
 
         /* GUI */
         run_demo(&gui);
@@ -485,7 +485,7 @@ main(int argc, char *argv[])
             sleep_for(DTIME - dt);
     }
 
-    free(gui_buffer_memory(&gui.memory));
+    free(zr_buffer_memory(&gui.memory));
     font_del(xw.dpy, xw.font);
     surface_del(xw.surf);
     XUnmapWindow(xw.dpy, xw.win);

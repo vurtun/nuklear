@@ -25,20 +25,20 @@
 #include "nanovg/nanovg_gl_utils.h"
 
 /* macros */
-#define DTIME       16
+#define DTIME       33
 #define MIN(a,b)    ((a) < (b) ? (a) : (b))
 #define MAX(a,b)    ((a) < (b) ? (b) : (a))
 #define CLAMP(i,v,x) (MAX(MIN(v,x), i))
 #define LEN(a)      (sizeof(a)/sizeof(a)[0])
 #define UNUSED(a)   ((void)(a))
 
-#include "../gui.h"
+#include "../zahnrad.h"
 
 static void
 clipboard_set(const char *text)
 {SDL_SetClipboardText(text);}
 
-static gui_bool
+static zr_bool
 clipboard_is_filled(void)
 {return SDL_HasClipboardText();}
 
@@ -59,21 +59,21 @@ die(const char *fmt, ...)
     exit(EXIT_FAILURE);
 }
 
-static gui_size
-font_get_width(gui_handle handle, const gui_char *text, gui_size len)
+static zr_size
+font_get_width(zr_handle handle, const zr_char *text, zr_size len)
 {
-    gui_size width;
+    zr_size width;
     float bounds[4];
     NVGcontext *ctx = (NVGcontext*)handle.ptr;
     nvgTextBounds(ctx, 0, 0, text, &text[len], bounds);
-    width = (gui_size)(bounds[2] - bounds[0]);
+    width = (zr_size)(bounds[2] - bounds[0]);
     return width;
 }
 
 static void
-draw(NVGcontext *nvg, struct gui_command_queue *queue, int width, int height)
+draw(NVGcontext *nvg, struct zr_command_queue *queue, int width, int height)
 {
-    const struct gui_command *cmd;
+    const struct zr_command *cmd;
     glPushAttrib(GL_ENABLE_BIT|GL_COLOR_BUFFER_BIT);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -83,45 +83,45 @@ draw(NVGcontext *nvg, struct gui_command_queue *queue, int width, int height)
     glEnable(GL_TEXTURE_2D);
 
     nvgBeginFrame(nvg, width, height, ((float)width/(float)height));
-    gui_foreach_command(cmd, queue) {
+    zr_foreach_command(cmd, queue) {
         switch (cmd->type) {
-        case GUI_COMMAND_NOP: break;
-        case GUI_COMMAND_SCISSOR: {
-            const struct gui_command_scissor *s = gui_command(scissor, cmd);
+        case ZR_COMMAND_NOP: break;
+        case ZR_COMMAND_SCISSOR: {
+            const struct zr_command_scissor *s = zr_command(scissor, cmd);
             nvgScissor(nvg, s->x, s->y, s->w, s->h);
         } break;
-        case GUI_COMMAND_LINE: {
-            const struct gui_command_line *l = gui_command(line, cmd);
+        case ZR_COMMAND_LINE: {
+            const struct zr_command_line *l = zr_command(line, cmd);
             nvgBeginPath(nvg);
             nvgMoveTo(nvg, l->begin.x, l->begin.y);
             nvgLineTo(nvg, l->end.x, l->end.y);
             nvgFillColor(nvg, nvgRGBA(l->color.r, l->color.g, l->color.b, l->color.a));
             nvgFill(nvg);
         } break;
-        case GUI_COMMAND_CURVE: {
-            const struct gui_command_curve *q = gui_command(curve, cmd);
+        case ZR_COMMAND_CURVE: {
+            const struct zr_command_curve *q = zr_command(curve, cmd);
             nvgBeginPath(nvg);
             nvgMoveTo(nvg, q->begin.x, q->begin.y);
             nvgBezierTo(nvg, q->ctrl[0].x, q->ctrl[0].y, q->ctrl[1].x, q->ctrl[1].y, q->end.x, q->end.y);
             nvgStrokeColor(nvg, nvgRGBA(q->color.r, q->color.g, q->color.b, q->color.a));
             nvgStroke(nvg);
         } break;
-        case GUI_COMMAND_RECT: {
-            const struct gui_command_rect *r = gui_command(rect, cmd);
+        case ZR_COMMAND_RECT: {
+            const struct zr_command_rect *r = zr_command(rect, cmd);
             nvgBeginPath(nvg);
             nvgRoundedRect(nvg, r->x, r->y, r->w, r->h, r->rounding);
             nvgFillColor(nvg, nvgRGBA(r->color.r, r->color.g, r->color.b, r->color.a));
             nvgFill(nvg);
         } break;
-        case GUI_COMMAND_CIRCLE: {
-            const struct gui_command_circle *c = gui_command(circle, cmd);
+        case ZR_COMMAND_CIRCLE: {
+            const struct zr_command_circle *c = zr_command(circle, cmd);
             nvgBeginPath(nvg);
             nvgCircle(nvg, c->x + (c->w/2.0f), c->y + c->w/2.0f, c->w/2.0f);
             nvgFillColor(nvg, nvgRGBA(c->color.r, c->color.g, c->color.b, c->color.a));
             nvgFill(nvg);
         } break;
-        case GUI_COMMAND_TRIANGLE: {
-            const struct gui_command_triangle *t = gui_command(triangle, cmd);
+        case ZR_COMMAND_TRIANGLE: {
+            const struct zr_command_triangle *t = zr_command(triangle, cmd);
             nvgBeginPath(nvg);
             nvgMoveTo(nvg, t->a.x, t->a.y);
             nvgLineTo(nvg, t->b.x, t->b.y);
@@ -130,8 +130,8 @@ draw(NVGcontext *nvg, struct gui_command_queue *queue, int width, int height)
             nvgFillColor(nvg, nvgRGBA(t->color.r, t->color.g, t->color.b, t->color.a));
             nvgFill(nvg);
         } break;
-        case GUI_COMMAND_TEXT: {
-            const struct gui_command_text *t = gui_command(text, cmd);
+        case ZR_COMMAND_TEXT: {
+            const struct zr_command_text *t = zr_command(text, cmd);
             nvgBeginPath(nvg);
             nvgRoundedRect(nvg, t->x, t->y, t->w, t->h, 0);
             nvgFillColor(nvg, nvgRGBA(t->background.r, t->background.g,
@@ -145,8 +145,8 @@ draw(NVGcontext *nvg, struct gui_command_queue *queue, int width, int height)
             nvgText(nvg, t->x, t->y + t->h * 0.5f, t->string, &t->string[t->length]);
             nvgFill(nvg);
         } break;
-        case GUI_COMMAND_IMAGE: {
-            const struct gui_command_image *i = gui_command(image, cmd);
+        case ZR_COMMAND_IMAGE: {
+            const struct zr_command_image *i = zr_command(image, cmd);
             NVGpaint imgpaint;
             imgpaint = nvgImagePattern(nvg, i->x, i->y, i->w, i->h, 0, i->img.handle.id, 1.0f);
             nvgBeginPath(nvg);
@@ -154,11 +154,11 @@ draw(NVGcontext *nvg, struct gui_command_queue *queue, int width, int height)
             nvgFillPaint(nvg, imgpaint);
             nvgFill(nvg);
         } break;
-        case GUI_COMMAND_MAX:
+        case ZR_COMMAND_MAX:
         default: break;
         }
     }
-    gui_command_queue_clear(queue);
+    zr_command_queue_clear(queue);
 
     nvgResetScissor(nvg);
     nvgEndFrame(nvg);
@@ -166,57 +166,57 @@ draw(NVGcontext *nvg, struct gui_command_queue *queue, int width, int height)
 }
 
 static void
-key(struct gui_input *in, SDL_Event *evt, gui_bool down)
+key(struct zr_input *in, SDL_Event *evt, zr_bool down)
 {
     const Uint8* state = SDL_GetKeyboardState(NULL);
     SDL_Keycode sym = evt->key.keysym.sym;
     if (sym == SDLK_RSHIFT || sym == SDLK_LSHIFT)
-        gui_input_key(in, GUI_KEY_SHIFT, down);
+        zr_input_key(in, ZR_KEY_SHIFT, down);
     else if (sym == SDLK_DELETE)
-        gui_input_key(in, GUI_KEY_DEL, down);
+        zr_input_key(in, ZR_KEY_DEL, down);
     else if (sym == SDLK_RETURN)
-        gui_input_key(in, GUI_KEY_ENTER, down);
+        zr_input_key(in, ZR_KEY_ENTER, down);
     else if (sym == SDLK_SPACE)
-        gui_input_key(in, GUI_KEY_SPACE, down);
+        zr_input_key(in, ZR_KEY_SPACE, down);
     else if (sym == SDLK_BACKSPACE)
-        gui_input_key(in, GUI_KEY_BACKSPACE, down);
+        zr_input_key(in, ZR_KEY_BACKSPACE, down);
     else if (sym == SDLK_LEFT)
-        gui_input_key(in, GUI_KEY_LEFT, down);
+        zr_input_key(in, ZR_KEY_LEFT, down);
     else if (sym == SDLK_RIGHT)
-        gui_input_key(in, GUI_KEY_RIGHT, down);
+        zr_input_key(in, ZR_KEY_RIGHT, down);
     else if (sym == SDLK_c)
-        gui_input_key(in, GUI_KEY_COPY, down && state[SDL_SCANCODE_LCTRL]);
+        zr_input_key(in, ZR_KEY_COPY, down && state[SDL_SCANCODE_LCTRL]);
     else if (sym == SDLK_v)
-        gui_input_key(in, GUI_KEY_PASTE, down && state[SDL_SCANCODE_LCTRL]);
+        zr_input_key(in, ZR_KEY_PASTE, down && state[SDL_SCANCODE_LCTRL]);
     else if (sym == SDLK_x)
-        gui_input_key(in, GUI_KEY_CUT, down && state[SDL_SCANCODE_LCTRL]);
+        zr_input_key(in, ZR_KEY_CUT, down && state[SDL_SCANCODE_LCTRL]);
 }
 
 static void
-motion(struct gui_input *in, SDL_Event *evt)
+motion(struct zr_input *in, SDL_Event *evt)
 {
-    const gui_int x = evt->motion.x;
-    const gui_int y = evt->motion.y;
-    gui_input_motion(in, x, y);
+    const zr_int x = evt->motion.x;
+    const zr_int y = evt->motion.y;
+    zr_input_motion(in, x, y);
 }
 
 static void
-btn(struct gui_input *in, SDL_Event *evt, gui_bool down)
+btn(struct zr_input *in, SDL_Event *evt, zr_bool down)
 {
-    const gui_int x = evt->button.x;
-    const gui_int y = evt->button.y;
+    const zr_int x = evt->button.x;
+    const zr_int y = evt->button.y;
     if (evt->button.button == SDL_BUTTON_LEFT)
-        gui_input_button(in, GUI_BUTTON_LEFT, x, y, down);
+        zr_input_button(in, ZR_BUTTON_LEFT, x, y, down);
     else if (evt->button.button == SDL_BUTTON_LEFT)
-        gui_input_button(in, GUI_BUTTON_RIGHT, x, y, down);
+        zr_input_button(in, ZR_BUTTON_RIGHT, x, y, down);
 }
 
 static void
-text(struct gui_input *in, SDL_Event *evt)
+text(struct zr_input *in, SDL_Event *evt)
 {
-    gui_glyph glyph;
-    memcpy(glyph, evt->text.text, GUI_UTF_SIZE);
-    gui_input_glyph(in, glyph);
+    zr_glyph glyph;
+    memcpy(glyph, evt->text.text, ZR_UTF_SIZE);
+    zr_input_glyph(in, glyph);
 }
 
 static void
@@ -232,7 +232,7 @@ main(int argc, char *argv[])
     /* Platform */
     int width, height;
     const char *font_path;
-    gui_size font_height;
+    zr_size font_height;
     SDL_Window *win;
     SDL_GLContext glContext;
     NVGcontext *vg = NULL;
@@ -274,8 +274,8 @@ main(int argc, char *argv[])
 
     /* GUI */
     memset(&gui, 0, sizeof gui);
-    gui_buffer_init_fixed(&gui.memory, calloc(MAX_MEMORY, 1), MAX_MEMORY);
-    gui.font.userdata = gui_handle_ptr(vg);
+    zr_buffer_init_fixed(&gui.memory, calloc(MAX_MEMORY, 1), MAX_MEMORY);
+    gui.font.userdata = zr_handle_ptr(vg);
     gui.font.width = font_get_width;
     nvgTextMetrics(vg, NULL, NULL, &gui.font.height);
     init_demo(&gui);
@@ -284,20 +284,20 @@ main(int argc, char *argv[])
         /* Input */
         SDL_Event evt;
         started = SDL_GetTicks();
-        gui_input_begin(&gui.input);
+        zr_input_begin(&gui.input);
         while (SDL_PollEvent(&evt)) {
             if (evt.type == SDL_WINDOWEVENT) resize(&evt);
             else if (evt.type == SDL_QUIT) goto cleanup;
-            else if (evt.type == SDL_KEYUP) key(&gui.input, &evt, gui_false);
-            else if (evt.type == SDL_KEYDOWN) key(&gui.input, &evt, gui_true);
-            else if (evt.type == SDL_MOUSEBUTTONDOWN) btn(&gui.input, &evt, gui_true);
-            else if (evt.type == SDL_MOUSEBUTTONUP) btn(&gui.input, &evt, gui_false);
+            else if (evt.type == SDL_KEYUP) key(&gui.input, &evt, zr_false);
+            else if (evt.type == SDL_KEYDOWN) key(&gui.input, &evt, zr_true);
+            else if (evt.type == SDL_MOUSEBUTTONDOWN) btn(&gui.input, &evt, zr_true);
+            else if (evt.type == SDL_MOUSEBUTTONUP) btn(&gui.input, &evt, zr_false);
             else if (evt.type == SDL_MOUSEMOTION) motion(&gui.input, &evt);
             else if (evt.type == SDL_TEXTINPUT) text(&gui.input, &evt);
             else if (evt.type == SDL_MOUSEWHEEL)
-                gui_input_scroll(&gui.input,(float)evt.wheel.y);
+                zr_input_scroll(&gui.input,(float)evt.wheel.y);
         }
-        gui_input_end(&gui.input);
+        zr_input_end(&gui.input);
 
         /* GUI */
         SDL_GetWindowSize(win, &width, &height);
@@ -317,7 +317,7 @@ main(int argc, char *argv[])
 
 cleanup:
     /* Cleanup */
-    free(gui_buffer_memory(&gui.memory));
+    free(zr_buffer_memory(&gui.memory));
     nvgDeleteGLES2(vg);
     SDL_GL_DeleteContext(glContext);
     SDL_DestroyWindow(win);

@@ -18,7 +18,7 @@
 #include <SDL2/SDL.h>
 
 /* macros */
-#define DTIME       17
+#define DTIME       33
 #define MAX_DRAW_COMMAND_MEMORY (4 * 1024)
 
 #define MIN(a,b)    ((a) < (b) ? (a) : (b))
@@ -27,10 +27,10 @@
 #define LEN(a)      (sizeof(a)/sizeof(a)[0])
 #define UNUSED(a)   ((void)(a))
 
-#include "../gui.h"
+#include "../zahnrad.h"
 
 static void clipboard_set(const char *text){SDL_SetClipboardText(text);}
-static gui_bool clipboard_is_filled(void) {return SDL_HasClipboardText();}
+static zr_bool clipboard_is_filled(void) {return SDL_HasClipboardText();}
 static const char* clipboard_get(void){return SDL_GetClipboardText();}
 
 #include "demo.c"
@@ -77,8 +77,8 @@ struct device {
     GLint uniform_tex;
     GLint uniform_proj;
     GLuint font_tex;
-    struct gui_draw_null_texture null;
-    struct gui_buffer cmds;
+    struct zr_draw_null_texture null;
+    struct zr_buffer cmds;
 };
 
 #define glerror() glerror_(__FILE__, __LINE__)
@@ -152,13 +152,12 @@ device_init(struct device *dev)
     dev->attrib_col = glGetAttribLocation(dev->prog, "Color");
     glerror();
 
-
     {
         /* buffer setup */
-        size_t vs = sizeof(struct gui_draw_vertex);
-        size_t vp = offsetof(struct gui_draw_vertex, position);
-        size_t vt = offsetof(struct gui_draw_vertex, uv);
-        size_t vc = offsetof(struct gui_draw_vertex, col);
+        size_t vs = sizeof(struct zr_draw_vertex);
+        size_t vp = offsetof(struct zr_draw_vertex, position);
+        size_t vt = offsetof(struct zr_draw_vertex, uv);
+        size_t vc = offsetof(struct zr_draw_vertex, col);
 
         glGenBuffers(1, &dev->vbo);
         glGenBuffers(1, &dev->ebo);
@@ -186,16 +185,16 @@ device_init(struct device *dev)
     glerror();
 }
 
-static struct gui_user_font
-font_bake_and_upload(struct device *dev, struct gui_font *font,
-    const char *path, unsigned int font_height, const gui_long *range)
+static struct zr_user_font
+font_bake_and_upload(struct device *dev, struct zr_font *font,
+    const char *path, unsigned int font_height, const zr_long *range)
 {
-    gui_size glyph_count;
-    gui_size img_width, img_height;
-    struct gui_font_glyph *glyphes;
-    struct gui_baked_font baked_font;
-    struct gui_user_font user_font;
-    struct gui_recti custom;
+    zr_size glyph_count;
+    zr_size img_width, img_height;
+    struct zr_font_glyph *glyphes;
+    struct zr_baked_font baked_font;
+    struct zr_user_font user_font;
+    struct zr_recti custom;
 
     memset(&baked_font, 0, sizeof(baked_font));
     memset(&user_font, 0, sizeof(user_font));
@@ -205,9 +204,9 @@ font_bake_and_upload(struct device *dev, struct gui_font *font,
         /* bake and upload font texture */
         void *img, *tmp;
         size_t ttf_size;
-        gui_size tmp_size, img_size;
+        zr_size tmp_size, img_size;
         const char *custom_data = "....";
-        struct gui_font_config config;
+        struct zr_font_config config;
         char *ttf_blob = file_load(path, &ttf_size);
         if (!ttf_blob)
             die("[Font]: %s is not a file or cannot be found!\n", path);
@@ -217,32 +216,32 @@ font_bake_and_upload(struct device *dev, struct gui_font *font,
         config.ttf_blob = ttf_blob;
         config.ttf_size = ttf_size;
         config.font = &baked_font;
-        config.coord_type = GUI_COORD_UV;
+        config.coord_type = ZR_COORD_UV;
         config.range = range;
-        config.pixel_snap = gui_false;
+        config.pixel_snap = zr_false;
         config.size = font_height;
-        config.spacing = gui_vec2(0,0);
+        config.spacing = zr_vec2(0,0);
         config.oversample_h = 1;
         config.oversample_v = 1;
 
         /* query needed amount of memory for the font baking process */
-        gui_font_bake_memory(&tmp_size, &glyph_count, &config, 1);
-        glyphes = (struct gui_font_glyph*)calloc(sizeof(struct gui_font_glyph), glyph_count);
+        zr_font_bake_memory(&tmp_size, &glyph_count, &config, 1);
+        glyphes = (struct zr_font_glyph*)calloc(sizeof(struct zr_font_glyph), glyph_count);
         tmp = calloc(1, tmp_size);
 
         /* pack all glyphes and return needed image width height and memory size*/
         custom.w = 2; custom.h = 2;
-        if (!gui_font_bake_pack(&img_size, &img_width,&img_height,&custom,tmp,tmp_size,&config, 1))
+        if (!zr_font_bake_pack(&img_size, &img_width,&img_height,&custom,tmp,tmp_size,&config, 1))
             die("[Font]: failed to load font!\n");
 
         /* bake all glyphes and custom white pixel into image */
         img = calloc(1, img_size);
-        gui_font_bake(img, img_width, img_height, tmp, tmp_size, glyphes, glyph_count, &config, 1);
-        gui_font_bake_custom_data(img, img_width, img_height, custom, custom_data, 2, 2, '.', 'X');
+        zr_font_bake(img, img_width, img_height, tmp, tmp_size, glyphes, glyph_count, &config, 1);
+        zr_font_bake_custom_data(img, img_width, img_height, custom, custom_data, 2, 2, '.', 'X');
         {
             /* convert alpha8 image into rgba8 image */
             void *img_rgba = calloc(4, img_height * img_width);
-            gui_font_bake_convert(img_rgba, (gui_ushort)img_width, (gui_ushort)img_height, img);
+            zr_font_bake_convert(img_rgba, (zr_ushort)img_width, (zr_ushort)img_height, img);
             free(img);
             img = img_rgba;
         }
@@ -261,15 +260,15 @@ font_bake_and_upload(struct device *dev, struct gui_font *font,
     }
 
     /* default white pixel in a texture which is needed to draw primitives */
-    dev->null.texture.id = (gui_int)dev->font_tex;
-    dev->null.uv = gui_vec2((custom.x + 0.5f)/(gui_float)img_width,
-                            (custom.y + 0.5f)/(gui_float)img_height);
+    dev->null.texture.id = (zr_int)dev->font_tex;
+    dev->null.uv = zr_vec2((custom.x + 0.5f)/(zr_float)img_width,
+                            (custom.y + 0.5f)/(zr_float)img_height);
     /* setup font with glyphes. IMPORTANT: the font only references the glyphes
       this was done to have the possibility to have multible fonts with one
       total glyph array. Not quite sure if it is a good thing since the
       glyphes have to be freed as well. */
-    gui_font_init(font, font_height, '?', glyphes, &baked_font, dev->null.texture);
-    user_font = gui_font_ref(font);
+    zr_font_init(font, font_height, '?', glyphes, &baked_font, dev->null.texture);
+    user_font = zr_font_ref(font);
     return user_font;
 }
 
@@ -286,12 +285,12 @@ device_shutdown(struct device *dev)
     glDeleteBuffers(1, &dev->ebo);
 }
 
-/* this is stupid but needed for C89 since sinf and cosf do not exist in that library version */
-static gui_float fsin(gui_float f) {return (gui_float)sin(f);}
-static gui_float fcos(gui_float f) {return (gui_float)cos(f);}
+/* this is stupid but needed for C89 since sinf and cosf do not exist */
+static zr_float fsin(zr_float f) {return (zr_float)sin(f);}
+static zr_float fcos(zr_float f) {return (zr_float)cos(f);}
 
 static void
-device_draw(struct device *dev, struct gui_command_queue *queue, int width, int height)
+device_draw(struct device *dev, struct zr_command_queue *queue, int width, int height)
 {
     GLint last_prog, last_tex;
     GLint last_ebo, last_vbo, last_vao;
@@ -331,12 +330,12 @@ device_draw(struct device *dev, struct gui_command_queue *queue, int width, int 
 
     {
         /* convert from command queue into draw list and draw to screen */
-        struct gui_draw_list draw_list;
-        const struct gui_draw_command *cmd;
+        struct zr_draw_list draw_list;
+        const struct zr_draw_command *cmd;
         static const GLsizeiptr max_vertex_memory = 128 * 1024;
         static const GLsizeiptr max_element_memory = 32 * 1024;
         void *vertexes, *elements;
-        const gui_draw_index *offset = NULL;
+        const zr_draw_index *offset = NULL;
 
         /* allocate vertex and element buffer */
         memset(&draw_list, 0, sizeof(draw_list));
@@ -352,19 +351,19 @@ device_draw(struct device *dev, struct gui_command_queue *queue, int width, int 
         vertexes = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
         elements = glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
         {
-            struct gui_buffer vbuf, ebuf;
-            gui_buffer_init_fixed(&vbuf, vertexes, (gui_size)max_vertex_memory);
-            gui_buffer_init_fixed(&ebuf, elements, (gui_size)max_element_memory);
-            gui_draw_list_init(&draw_list, &dev->cmds, &vbuf, &ebuf,
-                fsin, fcos, dev->null, GUI_ANTI_ALIASING_ON);
-            gui_draw_list_load(&draw_list, queue, 1.0f, 22);
+            struct zr_buffer vbuf, ebuf;
+            zr_buffer_init_fixed(&vbuf, vertexes, (zr_size)max_vertex_memory);
+            zr_buffer_init_fixed(&ebuf, elements, (zr_size)max_element_memory);
+            zr_draw_list_init(&draw_list, &dev->cmds, &vbuf, &ebuf,
+                fsin, fcos, dev->null, ZR_ANTI_ALIASING_ON);
+            zr_draw_list_load(&draw_list, queue, 1.0f, 22);
         }
         glUnmapBuffer(GL_ARRAY_BUFFER);
         glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
         glerror();
 
         /* iterate and execute each draw command */
-        gui_foreach_draw_command(cmd, &draw_list) {
+        zr_foreach_draw_command(cmd, &draw_list) {
             glBindTexture(GL_TEXTURE_2D, (GLuint)cmd->texture.id);
             glScissor((GLint)cmd->clip_rect.x,
                 height - (GLint)(cmd->clip_rect.y + cmd->clip_rect.h),
@@ -374,8 +373,8 @@ device_draw(struct device *dev, struct gui_command_queue *queue, int width, int 
             glerror();
         }
 
-        gui_command_queue_clear(queue);
-        gui_draw_list_clear(&draw_list);
+        zr_command_queue_clear(queue);
+        zr_draw_list_clear(&draw_list);
     }
 
     /* restore old state */
@@ -389,57 +388,57 @@ device_draw(struct device *dev, struct gui_command_queue *queue, int width, int 
 }
 
 static void
-key(struct gui_input *in, SDL_Event *evt, gui_bool down)
+key(struct zr_input *in, SDL_Event *evt, zr_bool down)
 {
     const Uint8* state = SDL_GetKeyboardState(NULL);
     SDL_Keycode sym = evt->key.keysym.sym;
     if (sym == SDLK_RSHIFT || sym == SDLK_LSHIFT)
-        gui_input_key(in, GUI_KEY_SHIFT, down);
+        zr_input_key(in, ZR_KEY_SHIFT, down);
     else if (sym == SDLK_DELETE)
-        gui_input_key(in, GUI_KEY_DEL, down);
+        zr_input_key(in, ZR_KEY_DEL, down);
     else if (sym == SDLK_RETURN)
-        gui_input_key(in, GUI_KEY_ENTER, down);
+        zr_input_key(in, ZR_KEY_ENTER, down);
     else if (sym == SDLK_SPACE)
-        gui_input_key(in, GUI_KEY_SPACE, down);
+        zr_input_key(in, ZR_KEY_SPACE, down);
     else if (sym == SDLK_BACKSPACE)
-        gui_input_key(in, GUI_KEY_BACKSPACE, down);
+        zr_input_key(in, ZR_KEY_BACKSPACE, down);
     else if (sym == SDLK_LEFT)
-        gui_input_key(in, GUI_KEY_LEFT, down);
+        zr_input_key(in, ZR_KEY_LEFT, down);
     else if (sym == SDLK_RIGHT)
-        gui_input_key(in, GUI_KEY_RIGHT, down);
+        zr_input_key(in, ZR_KEY_RIGHT, down);
     else if (sym == SDLK_c)
-        gui_input_key(in, GUI_KEY_COPY, down && state[SDL_SCANCODE_LCTRL]);
+        zr_input_key(in, ZR_KEY_COPY, down && state[SDL_SCANCODE_LCTRL]);
     else if (sym == SDLK_v)
-        gui_input_key(in, GUI_KEY_PASTE, down && state[SDL_SCANCODE_LCTRL]);
+        zr_input_key(in, ZR_KEY_PASTE, down && state[SDL_SCANCODE_LCTRL]);
     else if (sym == SDLK_x)
-        gui_input_key(in, GUI_KEY_CUT, down && state[SDL_SCANCODE_LCTRL]);
+        zr_input_key(in, ZR_KEY_CUT, down && state[SDL_SCANCODE_LCTRL]);
 }
 
 static void
-motion(struct gui_input *in, SDL_Event *evt)
+motion(struct zr_input *in, SDL_Event *evt)
 {
-    const gui_int x = evt->motion.x;
-    const gui_int y = evt->motion.y;
-    gui_input_motion(in, x, y);
+    const zr_int x = evt->motion.x;
+    const zr_int y = evt->motion.y;
+    zr_input_motion(in, x, y);
 }
 
 static void
-btn(struct gui_input *in, SDL_Event *evt, gui_bool down)
+btn(struct zr_input *in, SDL_Event *evt, zr_bool down)
 {
-    const gui_int x = evt->button.x;
-    const gui_int y = evt->button.y;
+    const zr_int x = evt->button.x;
+    const zr_int y = evt->button.y;
     if (evt->button.button == SDL_BUTTON_LEFT)
-        gui_input_button(in, GUI_BUTTON_LEFT, x, y, down);
+        zr_input_button(in, ZR_BUTTON_LEFT, x, y, down);
     if (evt->button.button == SDL_BUTTON_RIGHT)
-        gui_input_button(in, GUI_BUTTON_RIGHT, x, y, down);
+        zr_input_button(in, ZR_BUTTON_RIGHT, x, y, down);
 }
 
 static void
-text(struct gui_input *in, SDL_Event *evt)
+text(struct zr_input *in, SDL_Event *evt)
 {
-    gui_glyph glyph;
-    memcpy(glyph, evt->text.text, GUI_UTF_SIZE);
-    gui_input_glyph(in, glyph);
+    zr_glyph glyph;
+    memcpy(glyph, evt->text.text, ZR_UTF_SIZE);
+    zr_input_glyph(in, glyph);
 }
 
 static void
@@ -465,7 +464,7 @@ main(int argc, char *argv[])
     /* GUI */
     struct device device;
     struct demo_gui gui;
-    struct gui_font font;
+    struct zr_font font;
 
     font_path = argv[1];
     if (argc < 2)
@@ -488,11 +487,11 @@ main(int argc, char *argv[])
 
     /* GUI */
     memset(&gui, 0, sizeof gui);
-    gui_buffer_init_fixed(&gui.memory, calloc(MAX_MEMORY, 1), MAX_MEMORY);
-    mem = gui_buffer_alloc(&gui.memory, GUI_BUFFER_FRONT, MAX_DRAW_COMMAND_MEMORY, 0);
-    gui_buffer_init_fixed(&device.cmds, mem, MAX_DRAW_COMMAND_MEMORY);
+    zr_buffer_init_fixed(&gui.memory, calloc(MAX_MEMORY, 1), MAX_MEMORY);
+    mem = zr_buffer_alloc(&gui.memory, ZR_BUFFER_FRONT, MAX_DRAW_COMMAND_MEMORY, 0);
+    zr_buffer_init_fixed(&device.cmds, mem, MAX_DRAW_COMMAND_MEMORY);
     gui.font = font_bake_and_upload(&device, &font, font_path, 14,
-                                    gui_font_default_glyph_ranges());
+                                    zr_font_default_glyph_ranges());
 
     init_demo(&gui);
     device_init(&device);
@@ -501,25 +500,25 @@ main(int argc, char *argv[])
         /* Input */
         SDL_Event evt;
         started = SDL_GetTicks();
-        gui_input_begin(&gui.input);
+        zr_input_begin(&gui.input);
         while (SDL_PollEvent(&evt)) {
             if (evt.type == SDL_WINDOWEVENT) resize(&evt);
             else if (evt.type == SDL_QUIT) goto cleanup;
-            else if (evt.type == SDL_KEYUP) key(&gui.input, &evt, gui_false);
-            else if (evt.type == SDL_KEYDOWN) key(&gui.input, &evt, gui_true);
-            else if (evt.type == SDL_MOUSEBUTTONDOWN) btn(&gui.input, &evt, gui_true);
-            else if (evt.type == SDL_MOUSEBUTTONUP) btn(&gui.input, &evt, gui_false);
+            else if (evt.type == SDL_KEYUP) key(&gui.input, &evt, zr_false);
+            else if (evt.type == SDL_KEYDOWN) key(&gui.input, &evt, zr_true);
+            else if (evt.type == SDL_MOUSEBUTTONDOWN) btn(&gui.input, &evt, zr_true);
+            else if (evt.type == SDL_MOUSEBUTTONUP) btn(&gui.input, &evt, zr_false);
             else if (evt.type == SDL_MOUSEMOTION) motion(&gui.input, &evt);
             else if (evt.type == SDL_TEXTINPUT) text(&gui.input, &evt);
             else if (evt.type == SDL_MOUSEWHEEL)
-                gui_input_scroll(&gui.input,(float)evt.wheel.y);
+                zr_input_scroll(&gui.input,(float)evt.wheel.y);
         }
-        gui_input_end(&gui.input);
+        zr_input_end(&gui.input);
 
         /* GUI */
         SDL_GetWindowSize(win, &width, &height);
-        gui.w = (gui_size)width;
-        gui.h = (gui_size)height;
+        gui.w = (zr_size)width;
+        gui.h = (zr_size)height;
         run_demo(&gui);
 
         /* Draw */
@@ -537,7 +536,7 @@ main(int argc, char *argv[])
 cleanup:
     /* Cleanup */
     free(font.glyphes);
-    free(gui_buffer_memory(&gui.memory));
+    free(zr_buffer_memory(&gui.memory));
     device_shutdown(&device);
     SDL_GL_DeleteContext(glContext);
     SDL_DestroyWindow(win);

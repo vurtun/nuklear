@@ -21,22 +21,21 @@ render backends it only focuses on the actual GUI.
 - UTF-8 support
 - Optional vertex buffer output and font handling
 
-The library is self-contained with four different files that only have to be
-copied and compiled into your application. Files gui.c and gui.h make up
+The library is self-contained within four different files that only have to be
+copied and compiled into your application. Files zahnrad.c and zahnrad.h make up
 the core of the library, while stb_rect_pack.h and stb_truetype.h are
 for a optional font handling implementation and can be removed if not needed.
-- gui.c
-- gui.h
+- zahnrad.c
+- zahnrad.h
 - stb_rect_pack.h
 - stb_truetype.h
 
-There are no dependencies or particular building process required. You just have
-to compile the .c file and and #include gui.h into your project. To actually
+There are no dependencies or a particular building process required. You just have
+to compile the .c file and #include zahnrad.h into your project. To actually
 run you have to provide the input state, configuration style and memory
 for draw commands to the library. After the GUI was executed all draw commands
 have to be either executed or optionally converted into a vertex buffer to
 draw the GUI.
-
 
 ## Gallery
 ![gui
@@ -49,56 +48,56 @@ nodedit](https://cloud.githubusercontent.com/assets/8057201/9937243/24f6a5ea-5d6
 ## Example
 ```c
 /* setup configuration */
-struct gui_style style;
-struct gui_user_font font = {...};
-gui_style_default(&style, GUI_DEFAULT_ALL, &font);
+struct zr_style style;
+struct zr_user_font font = {...};
+zr_style_default(&style, ZR_DEFAULT_ALL, &font);
 
 /* allocate memory to hold draw commands */
-struct gui_command_queue queue;
-gui_command_queue_init_fixed(&queue, malloc(MEMORY_SIZE), MEMORY_SIZE);
+struct zr_command_queue queue;
+zr_command_queue_init_fixed(&queue, malloc(MEMORY_SIZE), MEMORY_SIZE);
 
 /* initialize window */
-struct gui_window window;
-gui_window_init(&window, 50, 50, 220, 180,
-    GUI_PANEL_BORDER|GUI_PANEL_MOVEABLE|GUI_PANEL_SCALEABLE,
+struct zr_window window;
+zr_window_init(&window, 50, 50, 220, 180,
+    ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALEABLE,
     &queue, &style, &input);
 
 /* setup widget data */
 enum {EASY, HARD};
-gui_size option = EASY;
-gui_size item = 0;
-gui_state active = 0;
+zr_size option = EASY;
+zr_size item = 0;
+zr_state active = 0;
 
-struct gui_input input = {0};
+struct zr_input input = {0};
 while (1) {
-    gui_input_begin(&input);
+    zr_input_begin(&input);
     /* record input */
-    gui_input_end(&input);
+    zr_input_end(&input);
 
     /* GUI */
-    struct gui_context context;
-    gui_begin(&context, &window);
+    struct zr_context context;
+    zr_begin(&context, &window);
     {
         const char *items[] = {"Fist", "Pistol", "Railgun", "BFG"};
-        gui_header(&context, "Show", GUI_CLOSEABLE, 0, GUI_HEADER_LEFT);
-        gui_layout_row_static(&context, 30, 80, 1);
-        if (gui_button_text(&context, "button", GUI_BUTTON_DEFAULT)) {
+        zr_header(&context, "Show", ZR_CLOSEABLE, 0, ZR_HEADER_LEFT);
+        zr_layout_row_static(&context, 30, 80, 1);
+        if (zr_button_text(&context, "button", ZR_BUTTON_DEFAULT)) {
             /* event handling */
         }
-        gui_layout_row_dynamic(&context, 30, 2);
-        if (gui_option(&context, "easy", option == EASY)) option = EASY;
-        if (gui_option(&context, "hard", option == HARD)) option = HARD;
-        gui_label(&context, "Weapon:", GUI_TEXT_LEFT);
-        gui_combo(&context, items, LEN(items), &item, 20, &active);
+        zr_layout_row_dynamic(&context, 30, 2);
+        if (zr_option(&context, "easy", option == EASY)) option = EASY;
+        if (zr_option(&context, "hard", option == HARD)) option = HARD;
+        zr_label(&context, "Weapon:", ZR_TEXT_LEFT);
+        zr_combo(&context, items, LEN(items), &item, 20, &active);
     }
-    gui_end(&context, &window);
+    zr_end(&context, &window);
 
     /* draw */
-    const struct gui_command *cmd;
-    gui_foreach_command(cmd, &queue) {
+    const struct zr_command *cmd;
+    zr_foreach_command(cmd, &queue) {
         /* execute draw call command */
     }
-    gui_command_queue_clear(&queue);
+    zr_command_queue_clear(&queue);
 }
 ```
 ![gui
@@ -146,7 +145,7 @@ This Project uses ANSI C which does not have the header file `<stdint.h>`
 and therefore does not provide the fixed sized types that I need. Therefore
 I defined my own types which need to be set to the correct size for each
 platform. But if your development environment provides the header file you can define
-`GUI_USE_FIXED_SIZE_TYPES` to directly use the correct types.
+`ZR_USE_FIXED_SIZE_TYPES` to directly use the correct types.
 
 ## References
 - [stb_rect_pack.h and stb_truetype.h by Sean Barret (public domain)](https:://github.com/nothings/stb/)
