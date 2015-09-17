@@ -29,6 +29,7 @@ for a optional font handling implementation and can be removed if not needed.
 - gui.h
 - stb_rect_pack.h
 - stb_truetype.h
+
 There are no dependencies or particular building process required. You just have
 to compile the .c file and and #include gui.h into your project. To actually
 run you have to provide the input state, configuration style and memory
@@ -41,7 +42,7 @@ draw the GUI.
 ![gui
 demo](https://cloud.githubusercontent.com/assets/8057201/9937241/24f55e7e-5d60-11e5-9957-c010cf763f15.png)
 ![gui
-explorer](http://cloud.githubusercontent.com/assets/8057201/9937240/24f509ce-5d60-11e5-894a-e7e9e228de30.png)
+explorer](https://cloud.githubusercontent.com/assets/8057201/9937240/24f509ce-5d60-11e5-894a-e7e9e228de30.png)
 ![gui
 nodedit](https://cloud.githubusercontent.com/assets/8057201/9937243/24f6a5ea-5d60-11e5-81bc-21de3b6f4b1b.png)
 
