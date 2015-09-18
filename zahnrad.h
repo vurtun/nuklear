@@ -2892,8 +2892,12 @@ zr_flags zr_begin_tiled(struct zr_context*, struct zr_window*, struct zr_tiled_l
     - window context to fill up with widgets
     - ZR_WINDOW_MOVABLE if window was moved
 */
-void zr_end(struct zr_context*, struct zr_window*);
-/*  this function ends the window layout build up process and updates the window */
+zr_flags zr_end(struct zr_context*, struct zr_window*);
+/*  this function ends the window layout build up process and updates the window
+    and placing the window inside a tiled layout on the screen.
+    Output:
+    - ZR_WINDOW_SCALEABLE if window was scaled
+*/
 struct zr_rect zr_space(struct zr_context*);
 /* this function returns the drawable space inside the window */
 struct zr_command_buffer* zr_canvas(struct zr_context*);

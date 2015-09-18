@@ -5084,9 +5084,10 @@ zr_begin_tiled(struct zr_context *context, struct zr_window *window,
     return ret;
 }
 
-void
+zr_flags
 zr_end(struct zr_context *layout, struct zr_window *window)
 {
+    zr_flags ret = 0;
     const struct zr_input *in;
     const struct zr_style *config;
     struct zr_command_buffer *out;
@@ -5099,7 +5100,7 @@ zr_end(struct zr_context *layout, struct zr_window *window)
 
     ZR_ASSERT(layout);
     ZR_ASSERT(window);
-    if (!window || !layout) return;
+    if (!window || !layout) return ret;
 
     config = layout->style;
     out = layout->buffer;
@@ -5238,6 +5239,7 @@ zr_end(struct zr_context *layout, struct zr_window *window)
             if (zr_input_is_mouse_down(in, ZR_BUTTON_LEFT) && incursor) {
                 window->bounds.w = MAX(window_size.x, window->bounds.w + in->mouse.delta.x);
                 /* draging in y-direction is only possible if static window */
+                ret = ZR_WINDOW_SCALEABLE;
                 if (!(layout->flags & ZR_WINDOW_DYNAMIC))
                     window->bounds.h = MAX(window_size.y, window->bounds.h + in->mouse.delta.y);
             }
@@ -5281,6 +5283,7 @@ zr_end(struct zr_context *layout, struct zr_window *window)
         layout->flags &= ~(zr_flags)ZR_WINDOW_REMOVE_ROM;
     }
     window->flags = layout->flags;
+    return ret;
 }
 
 struct zr_command_buffer*
