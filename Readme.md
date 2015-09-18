@@ -38,12 +38,9 @@ have to be either executed or optionally converted into a vertex buffer to
 draw the GUI.
 
 ## Gallery
-![gui
-demo](https://cloud.githubusercontent.com/assets/8057201/9937241/24f55e7e-5d60-11e5-9957-c010cf763f15.png)
-![gui
-explorer](https://cloud.githubusercontent.com/assets/8057201/9937240/24f509ce-5d60-11e5-894a-e7e9e228de30.png)
-![gui
-nodedit](https://cloud.githubusercontent.com/assets/8057201/9937243/24f6a5ea-5d60-11e5-81bc-21de3b6f4b1b.png)
+![gui demo](https://cloud.githubusercontent.com/assets/8057201/9937241/24f55e7e-5d60-11e5-9957-c010cf763f15.png)
+![gui explorer](https://cloud.githubusercontent.com/assets/8057201/9937240/24f509ce-5d60-11e5-894a-e7e9e228de30.png)
+![node](https://cloud.githubusercontent.com/assets/8057201/9965640/c24ee01e-5e37-11e5-9d3c-d36bc5a912b4.gif)
 
 ## Example
 ```c
