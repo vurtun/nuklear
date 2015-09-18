@@ -2501,11 +2501,13 @@ void zr_style_reset(struct zr_style*);
     -----------------------------
 
     Tiling API
-    zr_tiled_begin         -- starts the definition of a tiled layout
-    zr_tiled_slot          -- activates and setups a slot inside the tile layout
-    zr_tiled_end           -- ends the definiition of the tiled layout slots
-    zr_tiled_slot_bounds   -- returns the bounds of a slot in the tiled layout
-    zr_tiled_bounds        -- returns the bounds of a widget in the tiled layout
+    zr_tiled_begin      -- starts the definition of a tiled layout
+    zr_tiled_begin_local-- starts the definition inside the first depth of a window
+    zr_tiled_slot       -- activates and setups a slot inside the tile layout
+    zr_tiled_end        -- ends the definiition of the tiled layout slots
+    zr_tiled_slot_bounds-- returns the bounds of a slot in the tiled layout
+    zr_tiled_bounds     -- returns the bounds of a widget in the tiled layout
+    zr_tiled_load       -- loads another tiled layout from slot
 */
 enum zr_tiled_layout_slot_index {
     ZR_SLOT_TOP,
@@ -2546,17 +2548,36 @@ struct zr_tiled_layout {
     /* tiled layout slots */
     enum zr_layout_format fmt;
     /* row layout format */
-    zr_float width, height;
-    /* width/height of the layout */
+    struct zr_rect bounds;
+    /* bounding rect of the layout */
+    struct zr_vec2 spacing;
 };
 
 void zr_tiled_begin(struct zr_tiled_layout*, enum zr_layout_format,
-                    zr_float width, zr_float height);
+                    struct zr_rect bounds, struct zr_vec2 spacing);
 /*  this functions begins the definitions of a tiled layout
     Input:
     - layout format with either dynamic ratio based or fixed pixel based slots
-    - pixel width of the tiled layout space
+    - pixel position and size of a window inside the screen
+    - spacing between slot entries
+*/
+void zr_tiled_begin_local(struct zr_tiled_layout*, enum zr_layout_format,
+                        zr_float width, zr_float height);
+/*  this functions begins the definitions of a tiled local layout.
+ *  IMPORTANT:  is only used for the first depth of a tiled window widget layout
+                all other types of tiled layouts need to use `zr_tiled_begin`.
+    Input:
+    - layout format with either dynamic ratio based or fixed pixel based slots
+    - pixel width of the tiled layout space (IMPORTANT: not used for dynamic tiled layouts)
     - pixel height of the tiled layout space
+*/
+void zr_tiled_begin(struct zr_tiled_layout*, enum zr_layout_format,
+                    struct zr_rect bounds, struct zr_vec2 spacing);
+/*  this functions begins the definitions of a tiled global layout for windows
+    Input:
+    - layout format with either dynamic ratio based or fixed pixel based slots
+    - pixel position and size of a window inside the screen
+    - spacing between slot entries
 */
 void zr_tiled_slot(struct zr_tiled_layout *layout,
                     enum zr_tiled_layout_slot_index, zr_float ratio,
@@ -2571,7 +2592,6 @@ void zr_tiled_slot(struct zr_tiled_layout *layout,
 */
 void zr_tiled_end(struct zr_tiled_layout*);
 /*  this functions ends the definitions of the tiled layout slots */
-
 void zr_tiled_slot_bounds(struct zr_rect*, const struct zr_tiled_layout*,
                             enum zr_tiled_layout_slot_index);
 /*  this functions queries the bounds (position + size) of a tiled layout slot
@@ -2588,6 +2608,17 @@ void zr_tiled_bounds(struct zr_rect*, const struct zr_tiled_layout*,
     - index of the widget inside the slot
     Output:
     - rectangle with position and size of the slot entry
+*/
+void zr_tiled_load(struct zr_tiled_layout *parent, struct zr_tiled_layout *child,
+                    enum zr_layout_format fmt, enum zr_tiled_layout_slot_index slot,
+                    zr_uint index);
+/*  this functions load a tiled layout from another tiled layout slot
+    Input:
+    - slot filling format with either horizontal or vertical filling
+    - slot identifier
+    - index of the widget inside the slot
+    Output:
+    - loaded child tiled layout inside the parent tiled layout
 */
 /*
  * ==============================================================
@@ -2794,8 +2825,6 @@ struct zr_row_layout {
     /* item bounds */
     struct zr_rect clip;
     /* temporary clipping rect */
-    struct zr_tiled_layout *tiled;
-    /* tiled border layout */
 };
 
 struct zr_header {
@@ -3136,13 +3165,16 @@ struct zr_rect zr_layout_row_space_rect_to_local(struct zr_context*, struct zr_r
 */
 void zr_layout_row_space_end(struct zr_context*);
 /*  this functions finishes the scaleable space filling process */
+
+
+
 void zr_layout_row_tiled_begin(struct zr_context*, struct zr_tiled_layout*);
 /*  this functions begins the tiled layout
     Input:
     - row height of the complete layout to allocate from the window
 */
-void zr_layout_row_tiled_push(struct zr_context*, enum zr_tiled_layout_slot_index,
-                                zr_uint index);
+void zr_layout_row_tiled_push(struct zr_context*, struct zr_tiled_layout*,
+                            enum zr_tiled_layout_slot_index, zr_uint index);
 /*  this functions pushes a widget into a tiled layout slot
     Input:
     - slot identifier
@@ -3150,6 +3182,10 @@ void zr_layout_row_tiled_push(struct zr_context*, enum zr_tiled_layout_slot_inde
 */
 void zr_layout_row_tiled_end(struct zr_context*);
 /*  this functions ends the tiled layout */
+
+
+
+
 zr_bool zr_layout_push(struct zr_context*, enum zr_layout_node_type,
                         const char *title, zr_state*);
 /*  this functions pushes either a tree node or collapseable header into
