@@ -7175,6 +7175,7 @@ zr_popup_begin(struct zr_context *parent, struct zr_context *popup,
         parent->style, parent->input);
 
     /* begin sub-buffer and create panel layout  */
+    zr_command_buffer_push_scissor(parent->buffer, zr_null_rect);
     zr_command_queue_start_child(parent->queue, parent->buffer);
     panel.buffer = *parent->buffer;
     zr_begin(popup, &panel);
