@@ -2874,14 +2874,15 @@ struct zr_context {
     /* command draw call output command buffer */
 };
 
-void zr_begin(struct zr_context*, struct zr_window*);
+zr_flags zr_begin(struct zr_context*, struct zr_window*);
 /*  this function begins the window build up process by creating a context to fill
     Input:
     - input structure holding all user generated state changes
     Output:
     - window context to fill up with widgets
+    - ZR_WINDOW_MOVABLE if window was moved
 */
-void zr_begin_tiled(struct zr_context*, struct zr_window*, struct zr_tiled_layout*,
+zr_flags zr_begin_tiled(struct zr_context*, struct zr_window*, struct zr_tiled_layout*,
                     enum zr_tiled_layout_slot_index slot, zr_uint index);
 /*  this function begins the window build up process by creating a context to fill
     and placing the window inside a tiled layout on the screen.
@@ -2889,6 +2890,7 @@ void zr_begin_tiled(struct zr_context*, struct zr_window*, struct zr_tiled_layou
     - input structure holding all user generated state changes
     Output:
     - window context to fill up with widgets
+    - ZR_WINDOW_MOVABLE if window was moved
 */
 void zr_end(struct zr_context*, struct zr_window*);
 /*  this function ends the window layout build up process and updates the window */

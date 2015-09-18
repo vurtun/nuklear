@@ -4881,9 +4881,10 @@ zr_window_is_minimized(struct zr_window *panel)
  *
  * --------------------------------------------------------------
  */
-void
+zr_flags
 zr_begin(struct zr_context *context, struct zr_window *window)
 {
+    zr_flags ret = 0;
     const struct zr_style *c;
     zr_float scrollbar_size;
     struct zr_vec2 item_padding;
@@ -4907,14 +4908,14 @@ zr_begin(struct zr_context *context, struct zr_window *window)
     scaler_size = zr_style_property(c, ZR_PROPERTY_SCALER_SIZE);
 
     /* check arguments */
-    if (!window || !context) return;
+    if (!window || !context) return ret;
     zr_zero(context, sizeof(*context));
     if (window->flags & ZR_WINDOW_HIDDEN) {
         context->flags = window->flags;
         context->valid = zr_false;
         context->style = window->style;
         context->buffer = &window->buffer;
-        return;
+        return ret;
     }
 
     /* overlapping panels */
@@ -4963,9 +4964,9 @@ zr_begin(struct zr_context *context, struct zr_window *window)
         move.h = context->header.h;
         incursor = zr_input_is_mouse_prev_hovering_rect(in, move);
         if (zr_input_is_mouse_down(in, ZR_BUTTON_LEFT) && incursor) {
-            struct zr_rect clip = window->buffer.clip;
-            window->bounds.x = MAX(clip.x, window->bounds.x + in->mouse.delta.x);
-            window->bounds.y = MAX(clip.y, window->bounds.y + in->mouse.delta.y);
+            window->bounds.x = window->bounds.x + in->mouse.delta.x;
+            window->bounds.y = window->bounds.y + in->mouse.delta.y;
+            ret = ZR_WINDOW_MOVEABLE;
         }
     }
 
@@ -5054,19 +5055,21 @@ zr_begin(struct zr_context *context, struct zr_window *window)
             context->buffer->clip.w -= 2;
         }
     }
+    return ret;
 }
 
-void
+zr_flags
 zr_begin_tiled(struct zr_context *context, struct zr_window *window,
     struct zr_tiled_layout *tiled, enum zr_tiled_layout_slot_index slot,
     zr_uint index)
 {
+    zr_flags ret = 0;
     ZR_ASSERT(context);
     ZR_ASSERT(window);
     ZR_ASSERT(tiled);
     ZR_ASSERT(slot < ZR_SLOT_MAX);
     ZR_ASSERT(index < tiled->slots[slot].capacity);
-    if (!context || !window || !tiled) return;
+    if (!context || !window || !tiled) return ret;
 
     /* make sure that correct flags are set */
     window->flags &= (zr_flags)~ZR_WINDOW_MOVEABLE;
@@ -5075,9 +5078,10 @@ zr_begin_tiled(struct zr_context *context, struct zr_window *window,
 
     /* place window inside layout and set window to background  */
     zr_tiled_bounds(&window->bounds, tiled, slot, index);
-    zr_begin(context, window);
+    ret = zr_begin(context, window);
     zr_command_queue_remove(window->queue, &window->buffer);
     zr_command_queue_insert_front(window->queue, &window->buffer);
+    return ret;
 }
 
 void
