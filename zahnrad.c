@@ -4963,8 +4963,9 @@ zr_begin(struct zr_context *context, struct zr_window *window)
         move.h = context->header.h;
         incursor = zr_input_is_mouse_prev_hovering_rect(in, move);
         if (zr_input_is_mouse_down(in, ZR_BUTTON_LEFT) && incursor) {
-            window->bounds.x = MAX(0, window->bounds.x + in->mouse.delta.x);
-            window->bounds.y = MAX(0, window->bounds.y + in->mouse.delta.y);
+            struct zr_rect clip = window->buffer.clip;
+            window->bounds.x = MAX(clip.x, window->bounds.x + in->mouse.delta.x);
+            window->bounds.y = MAX(clip.y, window->bounds.y + in->mouse.delta.y);
         }
     }
 
@@ -5894,8 +5895,8 @@ struct zr_vec2
 zr_layout_row_space_to_screen(struct zr_context *layout, struct zr_vec2 ret)
 {
     ZR_ASSERT(layout);
-    ret.x = ret.x + layout->clip.x + layout->offset.x;
-    ret.y = ret.y + layout->clip.y + layout->offset.y;
+    ret.x += layout->clip.x - layout->offset.x;
+    ret.y += layout->clip.y - layout->offset.y;
     return ret;
 }
 
@@ -5903,8 +5904,8 @@ struct zr_vec2
 zr_layout_row_space_to_local(struct zr_context *layout, struct zr_vec2 ret)
 {
     ZR_ASSERT(layout);
-    ret.x = ret.x - (layout->clip.x + layout->offset.x);
-    ret.y = ret.y - (layout->clip.y + layout->offset.y);
+    ret.x += -layout->clip.x + layout->offset.x;
+    ret.y += -layout->clip.y + layout->offset.y;
     return ret;
 }
 
@@ -5912,8 +5913,8 @@ struct zr_rect
 zr_layout_row_space_rect_to_screen(struct zr_context *layout, struct zr_rect ret)
 {
     ZR_ASSERT(layout);
-    ret.x = ret.x + layout->clip.x + layout->offset.x;
-    ret.y = ret.y + layout->clip.y + layout->offset.y;
+    ret.x += layout->clip.x - layout->offset.x;
+    ret.y += layout->clip.y - layout->offset.y;
     return ret;
 }
 
@@ -5921,8 +5922,8 @@ struct zr_rect
 zr_layout_row_space_rect_to_local(struct zr_context *layout, struct zr_rect ret)
 {
     ZR_ASSERT(layout);
-    ret.x = ret.x - (layout->clip.x + layout->offset.x);
-    ret.y = ret.y - (layout->clip.y + layout->offset.y);
+    ret.x += -layout->clip.x + layout->offset.x;
+    ret.y += -layout->clip.y + layout->offset.y;
     return ret;
 }
 
