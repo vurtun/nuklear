@@ -7867,7 +7867,6 @@ zr_group_end(struct zr_context *p, struct zr_context *g)
 {
     struct zr_window pan;
     struct zr_command_buffer *out;
-    struct zr_rect parent;
     struct zr_rect clip;
 
     ZR_ASSERT(p);
