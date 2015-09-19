@@ -4343,21 +4343,20 @@ zr_widget_scrollbarh(struct zr_command_buffer *out, struct zr_rect scroll,
     scroll.h = MAX(scroll.h, 1);
     scroll.w = MAX(scroll.w, 2 * scroll.h);
     if (target <= scroll.w) return 0;
-    zr_command_buffer_push_rect(out, scroll, s->rounding,s->background);
 
     /* calculate scrollbar constants */
-    scroll.w = scroll.w - 2 * scroll.h;
-    scroll.x = scroll.x + scroll.h;
+    scroll.w = scroll.w;
+    scroll.x = scroll.x;
     scroll_step = MIN(step, scroll.w);
-    scroll_offset = MIN(offset, target - scroll.h);
+    scroll_offset = MIN(offset, target - scroll.w);
     scroll_ratio = scroll.w / target;
     scroll_off = scroll_offset / target;
 
     /* calculate scrollbar cursor bounds */
-    cursor.w = scroll_ratio * scroll.w;
-    cursor.x = scroll.x + (scroll_off * scroll.w);
-    cursor.h = scroll.h;
-    cursor.y = scroll.y;
+    cursor.w = scroll_ratio * scroll.w - 2;
+    cursor.x = scroll.x + (scroll_off * scroll.w) + 1;
+    cursor.h = scroll.h - 2;
+    cursor.y = scroll.y + 1;
 
     col = s->normal;
     if (i) {
@@ -4382,6 +4381,8 @@ zr_widget_scrollbarh(struct zr_command_buffer *out, struct zr_rect scroll,
     }
 
     /* draw scrollbar cursor */
+    zr_command_buffer_push_rect(out, zr_shrink_rect(scroll,1), s->rounding, s->border);
+    zr_command_buffer_push_rect(out, scroll, s->rounding, s->background);
     zr_command_buffer_push_rect(out, cursor, s->rounding, col);
     return scroll_offset;
 
@@ -5205,10 +5206,9 @@ zr_end(struct zr_context *layout, struct zr_window *window)
                 bounds.y = layout->bounds.y + window->bounds.h - MAX(layout->footer_h, scrollbar_size);
                 bounds.w = layout->width - 2 * window_padding.x;
             }
-
             scroll_offset = layout->offset.x;
-            scroll_step = layout->max_x * 0.05f;
-            scroll_target = (layout->max_x - bounds.x) - window_padding.x;
+            scroll_target = layout->max_x - bounds.x;
+            scroll_step = bounds.w * 0.05f;
             scroll.has_scrolling = zr_false;
             window->offset.x = zr_widget_scrollbarh(out, bounds, scroll_offset,
                                     scroll_target, scroll_step, &scroll, in);
