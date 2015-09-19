@@ -40,7 +40,7 @@ draw the GUI.
 ## Gallery
 ![gui demo](https://cloud.githubusercontent.com/assets/8057201/9937241/24f55e7e-5d60-11e5-9957-c010cf763f15.png)
 ![gui explorer](https://cloud.githubusercontent.com/assets/8057201/9937240/24f509ce-5d60-11e5-894a-e7e9e228de30.png)
-![node](https://cloud.githubusercontent.com/assets/8057201/9965640/c24ee01e-5e37-11e5-9d3c-d36bc5a912b4.gif)
+![node](https://cloud.githubusercontent.com/assets/8057201/9975569/7acbb454-5ec0-11e5-99e6-95973ff6f624.gif)
 
 ## Example
 ```c
