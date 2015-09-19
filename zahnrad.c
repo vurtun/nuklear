@@ -4686,6 +4686,7 @@ zr_tiled_begin_local(struct zr_tiled_layout *layout, enum zr_layout_format fmt,
     layout->fmt = fmt;
     layout->bounds.w = width;
     layout->bounds.h = height;
+    layout->spacing = zr_vec2(0,0);
 }
 
 void
@@ -5207,7 +5208,7 @@ zr_end(struct zr_context *layout, struct zr_window *window)
 
             scroll_offset = layout->offset.x;
             scroll_step = layout->max_x * 0.05f;
-            scroll_target = (layout->max_x - layout->at_x) - 2 * window_padding.x;
+            scroll_target = (layout->max_x - bounds.x) - window_padding.x;
             scroll.has_scrolling = zr_false;
             window->offset.x = zr_widget_scrollbarh(out, bounds, scroll_offset,
                                     scroll_target, scroll_step, &scroll, in);
@@ -5967,7 +5968,7 @@ zr_layout_row_tiled_begin(struct zr_context *layout,
 
     config = layout->style;
     padding = config->properties[ZR_PROPERTY_PADDING];
-    padding = config->properties[ZR_PROPERTY_ITEM_SPACING];
+    spacing = config->properties[ZR_PROPERTY_ITEM_SPACING];
     tiled->spacing = spacing;
     tiled->bounds.x = layout->at_x + padding.x - layout->offset.x;
     tiled->bounds.y = layout->at_y - layout->offset.y;
@@ -6063,8 +6064,8 @@ zr_panel_alloc_space(struct zr_rect *bounds, struct zr_context *layout)
         bounds->w = layout->row.item.w;
         bounds->h = layout->row.item.h;
         layout->row.index = 0;
-        if ((bounds->x + bounds->w) > layout->max_x)
-            layout->max_x = bounds->x + bounds->w;
+        if ((bounds->x + bounds->w + layout->offset.x) > layout->max_x)
+            layout->max_x = bounds->x + bounds->w + layout->offset.x;
         return;
     } break;
     case ZR_LAYOUT_DYNAMIC_FREE: {
@@ -6114,8 +6115,8 @@ zr_panel_alloc_space(struct zr_rect *bounds, struct zr_context *layout)
         bounds->y -= layout->offset.y;
         bounds->w = layout->row.item.w;
         bounds->h = layout->row.item.h;
-        if ((bounds->x + bounds->w) > layout->max_x)
-            layout->max_x = bounds->x + bounds->w;
+        if ((bounds->x + bounds->w + layout->offset.x) > layout->max_x)
+            layout->max_x = bounds->x + bounds->w + layout->offset.x;
         return;
     } break;
     case ZR_LAYOUT_STATIC: {

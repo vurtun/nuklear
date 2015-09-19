@@ -362,8 +362,8 @@ zr_bool zr_input_is_key_down(const struct zr_input*, enum zr_keys);
  */
 /*  BUFFER
     ----------------------------
-    A basic (double)-buffer API with linear allocation and resetting as only freeing.
-    The buffer main purpose is to control all memory management inside
+    A basic (double)-buffer API with linear allocation and resetting as only
+    freeing policy. The buffers main purpose is to control all memory management inside
     the GUI toolkit and still leave memory control as much as possible in the hand
     of the user. The memory is provided in three different ways.
     The first way is to use a fixed size block of memory to be filled up.
@@ -387,7 +387,7 @@ zr_bool zr_input_is_key_down(const struct zr_input*, enum zr_keys);
     initialization function and provide a memory block in the first case and
     an allocator in the second case.
     To allocate memory from the buffer you would call zr_buffer_alloc with a request
-    memory block size aswell as an alignment for the block. Finally to reset the memory
+    memory block size as well as an alignment for the block. Finally to reset the memory
     at the end of the frame and when the memory buffer inside the buffer is no longer
     needed you would call zr_buffer_reset. To free all memory that has been allocated
     by an allocator if the buffer is no longer being used you have to call
@@ -1300,7 +1300,7 @@ void zr_draw_list_path_stroke(struct zr_draw_list*, struct zr_color,
     and is not possible for the optional vertex buffer output.
 
     The second way of font handling is by using the same `zr_user_font` struct
-    to reference a font as before but providing a second callback for
+    to referencing a font as before but providing a second callback for
     `zr_user_font_glyph` querying which is used for text drawing in the optional vertex
     buffer output. In addition to the callback it is also required to provide
     a texture atlas from the font to draw.
@@ -3054,6 +3054,13 @@ void zr_menubar_end(struct zr_context*);
     zr_layout_row_push                 -- pushes the next widget width
     zr_layout_row_end                  -- ends the row build up process
 
+    tiled widget placing layout API
+    zr_layout_row_tiled_begin          -- begins tiled layout based placing of widgets
+    zr_layout_row_tiled_slot_bounds    -- returns the bounds of a slot in the tiled layout
+    zr_layout_row_tiled_bounds         -- returns the bounds of a widget in the tiled layout
+    zr_layout_row_tiled_push           -- pushes a widget into a slot in the tiled layout
+    zr_layout_row_tiled_end            -- ends tiled layout based placing of widgets
+
     custom widget placing layout API
     zr_layout_row_space_begin          -- creates a free placing space in the window
     zr_layout_row_space_push           -- pushes a widget into the space
@@ -3063,13 +3070,6 @@ void zr_menubar_end(struct zr_context*);
     zr_layout_row_space_to_local       -- converts from screen to local space
     zr_layout_row_space_rect_to_screen -- converts rect from local space to screen
     zr_layout_row_space_rect_to_local  -- converts rect from screen to local space
-
-    tiled widget placing layout API
-    zr_layout_row_tiled_begin          -- begins tiled layout based placing of widgets
-    zr_layout_row_tiled_slot_bounds    -- returns the bounds of a slot in the tiled layout
-    zr_layout_row_tiled_bounds         -- returns the bounds of a widget in the tiled layout
-    zr_layout_row_tiled_push           -- pushes a widget into a slot in the tiled layout
-    zr_layout_row_tiled_end            -- ends tiled layout based placing of widgets
 
     window tree layout function API
     zr_layout_push                     -- pushes a new node/collapseable header/tab
@@ -3171,9 +3171,6 @@ struct zr_rect zr_layout_row_space_rect_to_local(struct zr_context*, struct zr_r
 */
 void zr_layout_row_space_end(struct zr_context*);
 /*  this functions finishes the scaleable space filling process */
-
-
-
 void zr_layout_row_tiled_begin(struct zr_context*, struct zr_tiled_layout*);
 /*  this functions begins the tiled layout
     Input:
@@ -3188,10 +3185,6 @@ void zr_layout_row_tiled_push(struct zr_context*, struct zr_tiled_layout*,
 */
 void zr_layout_row_tiled_end(struct zr_context*);
 /*  this functions ends the tiled layout */
-
-
-
-
 zr_bool zr_layout_push(struct zr_context*, enum zr_layout_node_type,
                         const char *title, zr_state*);
 /*  this functions pushes either a tree node or collapseable header into
@@ -3241,7 +3234,6 @@ void zr_layout_pop(struct zr_context*);
     zr_button_text_image     -- button widget with text and icon
     zr_button_text_symbol    -- button widget with text and a triangle
     zr_button_fitting        -- button widget without border and fitting space
-    zr_button_toggle_fitting -- toggle widget without border and fitting space
     zr_image                 -- image widget for outputing a image to a window
     zr_check                 -- add a checkbox widget
     zr_option                -- radiobutton widget
