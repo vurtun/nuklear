@@ -446,7 +446,7 @@ main(int argc, char *argv[])
 
     /* GUI */
     memset(&gui, 0, sizeof gui);
-    zr_buffer_init_fixed(&gui.memory, calloc(MAX_MEMORY, 1), MAX_MEMORY);
+    zr_command_queue_init_fixed(&gui.queue, calloc(MAX_MEMORY, 1), MAX_MEMORY);
     gui.font.userdata = zr_handle_ptr(xw.font);
     gui.font.height = (zr_float)xw.font->height;
     gui.font.width = font_get_text_width;
@@ -485,7 +485,7 @@ main(int argc, char *argv[])
             sleep_for(DTIME - dt);
     }
 
-    free(zr_buffer_memory(&gui.memory));
+    free(zr_buffer_memory(&gui.queue.buffer));
     font_del(xw.dpy, xw.font);
     surface_del(xw.surf);
     XUnmapWindow(xw.dpy, xw.win);

@@ -662,7 +662,7 @@ enum zr_command_clipping {
     ZR_CLIP = zr_true
 };
 
-struct zr_command_buffer_stats {
+struct zr_command_stats {
     zr_uint lines;
     /* number of lines inside the buffer */
     zr_uint rectangles;
@@ -687,7 +687,7 @@ struct zr_command_buffer {
     /* current clipping rectangle */
     zr_bool use_clipping;
     /* flag if the command buffer should clip commands */
-    struct zr_command_buffer_stats stats;
+    struct zr_command_stats stats;
     /* stats about the content of the buffer */
     struct zr_command_queue *queue;
     struct zr_command_buffer *next;
@@ -1756,14 +1756,13 @@ zr_size zr_edit_box_len(struct zr_edit_box*);
     zr_widget_button_text_image    -- button widget with image and text content
     zr_widget_toggle               -- either a checkbox or radiobutton widget
     zr_widget_slider               -- floating point slider widget
-    zr_progress                    -- unsigned integer progressbar widget
-    zr_editbox                     -- Editbox widget for complex user input
-    zr_edit                        -- Editbox wiget for basic user input
-    zr_edit_filtered               -- Editbox with utf8 gylph filter capabilities
-    zr_spinner                     -- integer spinner widget
-    zr_selector                    -- string selector widget
-    zr_scrollbarv                  -- vertical scrollbar widget imeplementation
-    zr_scrollbarh                  -- horizontal scrollbar widget imeplementation
+    zr_widget_progress             -- unsigned integer progressbar widget
+    zr_widget_editbox              -- Editbox widget for complex user input
+    zr_widget_edit                 -- Editbox wiget for basic user input
+    zr_widget_edit_filtered        -- Editbox with utf8 gylph filter capabilities
+    zr_widget_spinner              -- integer spinner widget
+    zr_widget_scrollbarv           -- vertical scrollbar widget imeplementation
+    zr_widget_scrollbarh           -- horizontal scrollbar widget imeplementation
 */
 enum zr_text_align {
     ZR_TEXT_LEFT,
@@ -3247,7 +3246,7 @@ void zr_layout_pop(struct zr_context*);
 */
 enum zr_widget_state zr_widget(struct zr_rect*, struct zr_context*);
 /*  this function represents the base of every widget and calculates the bounds
- *  and allocated space for a widget inside a window.
+ *  and allocates space for a widget inside a window.
     Output:
     - allocated space for a widget to draw into
     - zr_true if the widget is visible and should be updated zr_false if not
@@ -3617,7 +3616,7 @@ struct zr_vec2 zr_popup_end(struct zr_context *parent,
 */
 void zr_popup_nonblock_begin(struct zr_context *parent, struct zr_context *popup,
                         zr_flags flags, zr_state *active, struct zr_rect body);
-/*  this function adds a context menu popup
+/*  this function adds a no-blocking context menu popup
     Input:
     - type of the popup as either growing or static
     - additonal popup window flags

@@ -699,6 +699,7 @@ zr_buffer_init(struct zr_buffer *b, const struct zr_allocator *a,
     b->type = ZR_BUFFER_DYNAMIC;
     b->memory.ptr = a->alloc(a->userdata, initial_size);
     b->memory.size = initial_size;
+    b->size = initial_size;
     b->grow_factor = grow_factor;
     b->pool = *a;
 }
@@ -806,6 +807,7 @@ zr_buffer_alloc(struct zr_buffer *b, enum zr_buffer_allocation_type type,
         /* buffer is full so allocate bigger buffer if dynamic */
         if (b->type != ZR_BUFFER_DYNAMIC || !b->pool.realloc) return 0;
         cap = (zr_size)((zr_float)b->memory.size * b->grow_factor);
+        cap = MAX(cap, zr_round_up_pow2((zr_uint)(b->allocated + size)));
         b->memory.ptr = zr_buffer_realloc(b, cap, &b->memory.size);
         if (!b->memory.ptr) return 0;
 
@@ -842,11 +844,13 @@ zr_buffer_reset(struct zr_buffer *buffer, enum zr_buffer_allocation_type type)
     if (!buffer) return;
     if (type == ZR_BUFFER_BACK) {
         /* reset back buffer either back to back marker or empty */
+        buffer->needed -= (buffer->memory.size - buffer->marker[type].offset);
         if (buffer->marker[type].active)
             buffer->size = buffer->marker[type].offset;
         else buffer->size = buffer->memory.size;
     } else {
         /* reset front buffer either back to back marker or empty */
+        buffer->needed -= (buffer->allocated - buffer->marker[type].offset);
         if (buffer->marker[type].active)
             buffer->allocated = buffer->marker[type].offset;
         else buffer->allocated = 0;
@@ -1428,6 +1432,7 @@ zr_command_queue_free(struct zr_command_queue *queue)
     ZR_ASSERT(queue);
     if (!queue) return;
     zr_buffer_clear(&queue->buffer);
+    zr_buffer_free(&queue->buffer);
 }
 
 void
@@ -1499,6 +1504,7 @@ zr_command_queue_next(struct zr_command_queue *queue, const struct zr_command *c
     next = zr_ptr_add_const(struct zr_command, buffer, cmd->next);
     return next;
 }
+
 /* ==============================================================
  *
  *                      Draw List

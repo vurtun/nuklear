@@ -481,7 +481,6 @@ struct state {
 
 struct demo_gui {
     zr_bool running;
-    struct zr_buffer memory;
     struct zr_input input;
     struct zr_command_queue queue;
     struct zr_style config;
@@ -538,7 +537,7 @@ widget_panel(struct zr_context *panel, struct state *demo)
     }
 
     {
-        /* tiled widgets layout  */
+        /* tiled layout  */
         struct zr_tiled_layout tiled;
         enum zr_layout_format fmt = (demo->scaleable) ? ZR_DYNAMIC : ZR_STATIC;
 
@@ -711,11 +710,8 @@ init_demo(struct demo_gui *gui)
     struct zr_clipboard clip;
     gui->running = zr_true;
 
-    memory = zr_buffer_alloc(&gui->memory, ZR_BUFFER_FRONT, MAX_COMMAND_MEMORY, 0);
-    zr_command_queue_init_fixed(&gui->queue, memory, MAX_COMMAND_MEMORY);
-    zr_style_default(config, ZR_DEFAULT_ALL, &gui->font);
-
     /* panel */
+    zr_style_default(config, ZR_DEFAULT_ALL, &gui->font);
     zr_window_init(&gui->panel, zr_rect(30, 30, 280, 530),
         ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALEABLE,
         &gui->queue, config, &gui->input);
@@ -739,7 +735,7 @@ init_demo(struct demo_gui *gui)
     win->slider = 2.0f;
     win->progressbar = 50;
     win->spinner = 100;
-
+    win->widget_tab = ZR_MINIMIZED;
 }
 
 /* -----------------------------------------------------------------

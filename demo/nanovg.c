@@ -274,7 +274,7 @@ main(int argc, char *argv[])
 
     /* GUI */
     memset(&gui, 0, sizeof gui);
-    zr_buffer_init_fixed(&gui.memory, calloc(MAX_MEMORY, 1), MAX_MEMORY);
+    zr_command_queue_init_fixed(&gui.queue, calloc(MAX_MEMORY, 1), MAX_MEMORY);
     gui.font.userdata = zr_handle_ptr(vg);
     gui.font.width = font_get_width;
     nvgTextMetrics(vg, NULL, NULL, &gui.font.height);
@@ -317,7 +317,7 @@ main(int argc, char *argv[])
 
 cleanup:
     /* Cleanup */
-    free(zr_buffer_memory(&gui.memory));
+    free(zr_buffer_memory(&gui.queue.buffer));
     nvgDeleteGLES2(vg);
     SDL_GL_DeleteContext(glContext);
     SDL_DestroyWindow(win);

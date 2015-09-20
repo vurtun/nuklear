@@ -448,6 +448,14 @@ resize(SDL_Event *evt)
     glViewport(0, 0, evt->window.data1, evt->window.data2);
 }
 
+
+static void* mem_alloc(zr_handle unused, zr_size size)
+{UNUSED(unused); return calloc(1, size);}
+static void* mem_realloc(zr_handle unused, void *ptr, zr_size size)
+{UNUSED(unused); return realloc(ptr, size);}
+static void mem_free(zr_handle unused, void *ptr)
+{UNUSED(unused); free(ptr);}
+
 int
 main(int argc, char *argv[])
 {
@@ -462,6 +470,7 @@ main(int argc, char *argv[])
     int width = 0, height = 0;
 
     /* GUI */
+    struct zr_allocator alloc;
     struct device device;
     struct demo_gui gui;
     struct zr_font font;
@@ -486,10 +495,13 @@ main(int argc, char *argv[])
         die("Failed to setup GLEW\n");
 
     /* GUI */
+    alloc.userdata.ptr = NULL;
+    alloc.alloc = mem_alloc;
+    alloc.realloc = mem_realloc;
+    alloc.free = mem_free;
     memset(&gui, 0, sizeof gui);
-    zr_buffer_init_fixed(&gui.memory, calloc(MAX_MEMORY, 1), MAX_MEMORY);
-    mem = zr_buffer_alloc(&gui.memory, ZR_BUFFER_FRONT, MAX_DRAW_COMMAND_MEMORY, 0);
-    zr_buffer_init_fixed(&device.cmds, mem, MAX_DRAW_COMMAND_MEMORY);
+    zr_buffer_init(&device.cmds, &alloc, 1024, 2.0f);
+    zr_command_queue_init(&gui.queue, &alloc, 1024, 2.0f);
     gui.font = font_bake_and_upload(&device, &font, font_path, 14,
                                     zr_font_default_glyph_ranges());
 
@@ -536,7 +548,8 @@ main(int argc, char *argv[])
 cleanup:
     /* Cleanup */
     free(font.glyphes);
-    free(zr_buffer_memory(&gui.memory));
+    zr_command_queue_free(&gui.queue);
+    zr_buffer_free(&device.cmds);
     device_shutdown(&device);
     SDL_GL_DeleteContext(glContext);
     SDL_DestroyWindow(win);
