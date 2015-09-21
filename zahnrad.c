@@ -1,7 +1,21 @@
 /*
-    Copyright (c) 2015
-    vurtun <polygone@gmx.net>
-    MIT licence
+    Copyright (c) 2015 Micha Mettke
+
+    This software is provided 'as-is', without any express or implied
+    warranty.  In no event will the authors be held liable for any damages
+    arising from the use of this software.
+
+    Permission is granted to anyone to use this software for any purpose,
+    including commercial applications, and to alter it and redistribute it
+    freely, subject to the following restrictions:
+
+    1.  The origin of this software must not be misrepresented; you must not
+        claim that you wrote the original software. If you use this software
+        in a product, an acknowledgment in the product documentation would be
+        appreciated but is not required.
+    2.  Altered source versions must be plainly marked as such, and must not be
+        misrepresented as being the original software.
+    3.  This notice may not be removed or altered from any source distribution.
 */
 #include "zahnrad.h"
 
@@ -778,7 +792,7 @@ zr_buffer_realloc(struct zr_buffer *b, zr_size capacity, zr_size *size)
     return temp;
 }
 
-void*
+static void*
 zr_buffer_alloc(struct zr_buffer *b, enum zr_buffer_allocation_type type,
     zr_size size, zr_size align)
 {
@@ -789,6 +803,7 @@ zr_buffer_alloc(struct zr_buffer *b, enum zr_buffer_allocation_type type,
     void *memory;
 
     ZR_ASSERT(b);
+    ZR_ASSERT(size);
     if (!b || !size) return 0;
     b->needed += size;
 
@@ -811,7 +826,7 @@ zr_buffer_alloc(struct zr_buffer *b, enum zr_buffer_allocation_type type,
         b->memory.ptr = zr_buffer_realloc(b, cap, &b->memory.size);
         if (!b->memory.ptr) return 0;
 
-        /* align newly allocated pointer to memory */
+        /* align newly allocated pointer */
         if (type == ZR_BUFFER_FRONT)
             unaligned = zr_ptr_add(void, b->memory.ptr, b->allocated);
         else unaligned = zr_ptr_add(void, b->memory.ptr, b->size);
@@ -824,6 +839,24 @@ zr_buffer_alloc(struct zr_buffer *b, enum zr_buffer_allocation_type type,
     b->needed += alignment;
     b->calls++;
     return memory;
+}
+
+zr_bool
+zr_buffer_push(struct zr_buffer *buffer, enum zr_buffer_allocation_type type,
+    void *data, zr_size size, zr_size align)
+{
+    zr_size i = 0;
+    zr_byte *dst, *src;
+    ZR_ASSERT(buffer);
+    ZR_ASSERT(data);
+    ZR_ASSERT(size);
+
+    src = (zr_byte*)data;
+    dst = (zr_byte*)zr_buffer_alloc(buffer, type, size, align);
+    if (!dst) return zr_false;
+    for (i = 0; i < size; ++i)
+        dst[i] = src[i];
+    return zr_true;
 }
 
 void
@@ -843,17 +876,19 @@ zr_buffer_reset(struct zr_buffer *buffer, enum zr_buffer_allocation_type type)
     ZR_ASSERT(buffer);
     if (!buffer) return;
     if (type == ZR_BUFFER_BACK) {
-        /* reset back buffer either back to back marker or empty */
+        /* reset back buffer either back to marker or empty */
         buffer->needed -= (buffer->memory.size - buffer->marker[type].offset);
         if (buffer->marker[type].active)
             buffer->size = buffer->marker[type].offset;
         else buffer->size = buffer->memory.size;
+        buffer->marker[type].active = zr_false;
     } else {
         /* reset front buffer either back to back marker or empty */
         buffer->needed -= (buffer->allocated - buffer->marker[type].offset);
         if (buffer->marker[type].active)
             buffer->allocated = buffer->marker[type].offset;
         else buffer->allocated = 0;
+        buffer->marker[type].active = zr_false;
     }
 }
 

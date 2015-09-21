@@ -704,7 +704,6 @@ paste(zr_handle handle, struct zr_edit_box *box)
 static void
 init_demo(struct demo_gui *gui)
 {
-    void *memory;
     struct zr_style *config = &gui->config;
     struct state *win = &gui->state;
     struct zr_clipboard clip;

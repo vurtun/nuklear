@@ -152,4 +152,4 @@ platform. But if your development environment provides the header file you can d
 - [Nvidia's imgui toolkit](https://code.google.com/p/nvidia-widgets/)
 
 # License
-    (The MIT License)
+    (The zlib License)

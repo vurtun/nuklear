@@ -1,14 +1,21 @@
 /*
-    Copyright (c) 2015
-    vurtun <polygone@gmx.net>
-    MIT licence
+    Copyright (c) 2015 Micha Mettke
 
-    Zahnrad
-    -----------------------
-    These two file provide both the interface and implementation for a bloat free
-    minimal state immediate mode graphical user interface toolkit. The Toolkit
-    does not have any library or runtine dependencies like libc but does not
-    handle os window/input management.
+    This software is provided 'as-is', without any express or implied
+    warranty.  In no event will the authors be held liable for any damages
+    arising from the use of this software.
+
+    Permission is granted to anyone to use this software for any purpose,
+    including commercial applications, and to alter it and redistribute it
+    freely, subject to the following restrictions:
+
+    1.  The origin of this software must not be misrepresented; you must not
+        claim that you wrote the original software. If you use this software
+        in a product, an acknowledgment in the product documentation would be
+        appreciated but is not required.
+    2.  Altered source versions must be plainly marked as such, and must not be
+        misrepresented as being the original software.
+    3.  This notice may not be removed or altered from any source distribution.
 */
 #ifndef ZR_H_
 #define ZR_H_
@@ -500,15 +507,16 @@ void zr_buffer_info(struct zr_memory_status*, struct zr_buffer*);
     Output:
     - buffer memory information
 */
-void *zr_buffer_alloc(struct zr_buffer*, enum zr_buffer_allocation_type,
-                        zr_size size, zr_size align);
-/*  this functions allocated a aligned memory block from a buffer
+zr_bool zr_buffer_push(struct zr_buffer*,enum zr_buffer_allocation_type type,
+                        void *data, zr_size size, zr_size align);
+/*  this functions allocates a aligned memory block from a buffer and fill
+    the block with data
     Input:
     - buffer to allocate memory from
     - size of the requested memory block
     - alignment requirement for the memory block
     Output:
-    - memory block with given size and alignment requirement
+    - 'zr_true' if succesfully pushed 'zr_false' otherwise
 */
 void zr_buffer_mark(struct zr_buffer*, enum zr_buffer_allocation_type);
 /* sets a marker either for the back or front buffer for later resetting */
@@ -3249,7 +3257,7 @@ enum zr_widget_state zr_widget(struct zr_rect*, struct zr_context*);
  *  and allocates space for a widget inside a window.
     Output:
     - allocated space for a widget to draw into
-    - zr_true if the widget is visible and should be updated zr_false if not
+    - state of widget the widget with invisible, renderable and render + updateable
 */
 void zr_spacing(struct zr_context*, zr_size cols);
 /*  this function creates a seperator to fill space
