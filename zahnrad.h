@@ -1058,7 +1058,6 @@ enum zr_anti_aliasing {
     /* renderes all primitives without anit-aliasing  */
     ZR_ANTI_ALIASING_ON,
     /* renderes all primitives with anit-aliasing  */
-    ZR_ANTI_ALIASING_MAX
 };
 
 struct zr_draw_vertex {
@@ -2247,7 +2246,7 @@ zr_float zr_widget_scrollbarh(struct zr_command_buffer*, struct zr_rect,
  */
 /*  STYLE
     ----------------------------
-    The window style consists of properties, color and rectangle roundingo
+    The window style consists of properties, color and rectangle rounding
     information that is used for the general style and looks of window.
     In addition for temporary modification the configuration structure consists
     of a stack for pushing and pop either color or property values.
