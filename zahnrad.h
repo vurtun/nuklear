@@ -3389,17 +3389,6 @@ zr_bool zr_button_text_image(struct zr_context *layout, struct zr_image img,
     - zr_true if the button was transistioned from unpressed to pressed with
         default button behavior or pressed if repeater behavior.
 */
-zr_bool zr_button_fitting(struct zr_context *layout,  const char *text,
-                            enum zr_text_align align, enum zr_button_behavior behavior);
-/*  this function creates a fitting  button without border
-    Input:
-    - button label describing the button
-    - text alignment with either left, centered or right alignment
-    - button behavior with either default or repeater behavior
-    Output:
-    - zr_true if the button was transistioned from unpressed to pressed with
-        default button behavior or pressed if repeater behavior.
-*/
 zr_bool zr_button_toggle(struct zr_context*, const char*,zr_bool value);
 /*  this function creates a toggle button which is either active or inactive
     Input:
@@ -3788,21 +3777,6 @@ void zr_combo_end(struct zr_context *parent, struct zr_context *combo);
     zr_menu_end      -- ends the menu item build up process
     zr_menu          -- shorthand retain mode array version
 */
-#define ZR_NONE (-1)
-zr_int zr_menu(struct zr_context*, const zr_char *title,
-                    const char **entries, zr_size count, zr_size row_height,
-                    zr_float width, zr_state *active);
-/*  this function creates a standart text based combobox
-    Input:
-    - parent window layout the combo box will be placed into
-    - string array of all items inside the menu
-    - number of menu items inside the string array
-    - the height of every widget inside the combobox
-    - the current state of the menu
-    Output:
-    - updated state of the menu
-    - index of the selected menu item or -1 otherwise
-*/
 void zr_menu_begin(struct zr_context *parent,
                         struct zr_context *menu, const char *title,
                         zr_float width, zr_state *active);
@@ -3813,11 +3787,16 @@ void zr_menu_begin(struct zr_context *parent,
     - title of the menu to
     - the current state of the menu with either zr_true (open) or zr_false else
 */
-
+zr_bool zr_menu_item(struct zr_context *menu, enum zr_text_align align, const char*);
+/*  this function execute a menu item
+    Input:
+    - title of the item
+    Output
+    - `zr_true` if has been clicked `zr_false` otherwise
+*/
 void zr_menu_close(struct zr_context *menu);
 /*  this function closes a opened menu */
-struct zr_vec2 zr_menu_end(struct zr_context *parent,
-                            struct zr_context *menu);
+zr_state zr_menu_end(struct zr_context *parent, struct zr_context *menu);
 /*  this function ends the menu build up process */
 /*
  * --------------------------------------------------------------

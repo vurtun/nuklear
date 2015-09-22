@@ -758,40 +758,26 @@ run_demo(struct demo_gui *gui)
         /* menubar */
         zr_menubar_begin(&layout);
         {
+            zr_size i = 0;
             zr_layout_row_begin(&layout, ZR_STATIC, 18, 2);
-            {
-                zr_int sel;
-                zr_layout_row_push(&layout, config->font.width(config->font.userdata, "__FILE__", 8));
-                sel = zr_menu(&layout, "FILE", file_items, LEN(file_items), 25, 100,
-                    &state->file_open);
-                switch (sel) {
-                case MENU_FILE_OPEN:
-                    fprintf(stdout, "[Menu:File] open clicked!\n"); break;
-                case MENU_FILE_CLOSE:
-                    fprintf(stdout, "[Menu:File] close clicked!\n"); break;
-                case MENU_FILE_QUIT:
-                    fprintf(stdout, "[Menu:File] quit clicked!\n"); break;
-                case ZR_NONE:
-                default: break;
-                }
+            zr_layout_row_push(&layout, 45);
 
-                zr_layout_row_push(&layout, config->font.width(config->font.userdata, "__EDIT__", 8));
-                sel = zr_menu(&layout, "EDIT", edit_items, LEN(edit_items), 25, 100,
-                    &state->edit_open);
-                switch (sel) {
-                case MENU_EDIT_COPY:
-                    fprintf(stdout, "[Menu:Edit] copy clicked!\n"); break;
-                case MENU_EDIT_CUT:
-                    fprintf(stdout, "[Menu:Edit] cut clicked!\n"); break;
-                case MENU_EDIT_DELETE:
-                    fprintf(stdout, "[Menu:Edit] delete clicked!\n"); break;
-                case MENU_EDIT_PASTE:
-                    fprintf(stdout, "[Menu:Edit] paste clicked!\n"); break;
-                case ZR_NONE:
-                default: break;
-                }
+            zr_menu_begin(&layout, &tab, "FILE", 100, &state->file_open);
+            zr_layout_row_dynamic(&tab, 25, 1);
+            for (i = 0; i < LEN(file_items); ++i) {
+                if (zr_menu_item(&tab, ZR_TEXT_LEFT, file_items[i]))
+                    fprintf(stdout, "[Menu:File] %s clicked!\n", file_items[i]);
             }
-            zr_layout_row_end(&layout);
+            state->file_open = zr_menu_end(&layout, &tab);
+
+            zr_layout_row_push(&layout, 45);
+            zr_menu_begin(&layout, &tab, "EDIT", 100, &state->edit_open);
+            zr_layout_row_dynamic(&tab, 25, 1);
+            for (i = 0; i < LEN(edit_items); ++i) {
+                if (zr_menu_item(&tab, ZR_TEXT_LEFT, edit_items[i]))
+                    fprintf(stdout, "[Menu:Edit] %s clicked!\n", edit_items[i]);
+            }
+            state->edit_open = zr_menu_end(&layout, &tab);
         }
         zr_menubar_end(&layout);
 

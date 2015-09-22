@@ -6601,7 +6601,7 @@ zr_button_text_image(struct zr_context *layout, struct zr_image img,
                                 behavior, &button, &config->font, i);
 }
 
-zr_bool
+static zr_bool
 zr_button_fitting(struct zr_context *layout,  const char *text,
     enum zr_text_align align, enum zr_button_behavior behavior)
 {
@@ -7576,55 +7576,39 @@ failed:
     menu->queue = parent->queue;
 }
 
+zr_bool
+zr_menu_item(struct zr_context *menu, enum zr_text_align align, const char *title)
+{
+    if (zr_button_fitting(menu, title, align, ZR_BUTTON_DEFAULT)) {
+        zr_menu_close(menu);
+        return zr_true;
+    }
+    return zr_false;
+}
+
 void
 zr_menu_close(struct zr_context *menu)
 {
     ZR_ASSERT(menu);
     if (!menu) return;
     zr_popup_close(menu);
+    menu->flags |= ZR_WINDOW_HIDDEN;
 }
 
-struct zr_vec2
+zr_state
 zr_menu_end(struct zr_context *parent, struct zr_context *menu)
 {
     ZR_ASSERT(parent);
     ZR_ASSERT(menu);
-    if (!parent || !menu) return zr_vec2(0,0);
-    if (!parent->valid)
-        return menu->offset;
+    if (!parent || !menu) return zr_false;
+    if (!parent->valid) return zr_false;
+    if ((!parent->valid || !menu->valid) && !(menu->flags & ZR_WINDOW_HIDDEN))
+        return zr_false;
     zr_popup_nonblocking_end(parent, menu);
-    return menu->offset;
+    if (menu->flags & ZR_WINDOW_HIDDEN)
+        return zr_false;
+    return zr_true;
 }
-
-zr_int
-zr_menu(struct zr_context *layout, const char *title,
-    const char **entries, zr_size count, zr_size row_height,
-    zr_float width, zr_state *active)
-{
-    zr_size i;
-    zr_int sel = -1;
-    struct zr_context menu;
-
-    ZR_ASSERT(layout);
-    ZR_ASSERT(entries);
-    ZR_ASSERT(title);
-    ZR_ASSERT(active);
-    if (!layout || !layout->valid || !entries || !title || !active) return -1;
-    if (!count) return -1;
-
-    zr_menu_begin(layout, &menu, title, width, active);
-    zr_layout_row_dynamic(&menu, (zr_float)row_height, 1);
-    for (i = 0; i < count; ++i) {
-        if (zr_button_fitting(&menu, entries[i], ZR_TEXT_LEFT, ZR_BUTTON_DEFAULT)) {
-            zr_combo_close(&menu);
-            *active = zr_false;
-            sel = (zr_int)i;
-        }
-    }
-    zr_menu_end(layout, &menu);
-    return sel;
-}
-
 /*
  * -------------------------------------------------------------
  *
