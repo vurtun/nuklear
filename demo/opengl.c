@@ -95,25 +95,6 @@ struct device {
     struct zr_buffer cmds;
 };
 
-#define glerror() glerror_(__FILE__, __LINE__)
-static void
-glerror_(const char *file, int line)
-{
-    const GLenum code = glGetError();
-    if (code == GL_INVALID_ENUM)
-        fprintf(stdout, "[GL] Error: (%s:%d) invalid value!\n", file, line);
-    else if (code == GL_INVALID_OPERATION)
-        fprintf(stdout, "[GL] Error: (%s:%d) invalid operation!\n", file, line);
-    else if (code == GL_INVALID_FRAMEBUFFER_OPERATION)
-        fprintf(stdout, "[GL] Error: (%s:%d) invalid frame op!\n", file, line);
-    else if (code == GL_OUT_OF_MEMORY)
-        fprintf(stdout, "[GL] Error: (%s:%d) out of memory!\n", file, line);
-    else if (code == GL_STACK_UNDERFLOW)
-        fprintf(stdout, "[GL] Error: (%s:%d) stack underflow!\n", file, line);
-    else if (code == GL_STACK_OVERFLOW)
-        fprintf(stdout, "[GL] Error: (%s:%d) stack overflow!\n", file, line);
-}
-
 static void
 device_init(struct device *dev)
 {
@@ -164,11 +145,10 @@ device_init(struct device *dev)
     dev->attrib_pos = glGetAttribLocation(dev->prog, "Position");
     dev->attrib_uv = glGetAttribLocation(dev->prog, "TexCoord");
     dev->attrib_col = glGetAttribLocation(dev->prog, "Color");
-    glerror();
 
     {
         /* buffer setup */
-        size_t vs = sizeof(struct zr_draw_vertex);
+        GLsizei vs = sizeof(struct zr_draw_vertex);
         size_t vp = offsetof(struct zr_draw_vertex, position);
         size_t vt = offsetof(struct zr_draw_vertex, uv);
         size_t vc = offsetof(struct zr_draw_vertex, col);
@@ -180,7 +160,6 @@ device_init(struct device *dev)
         glBindVertexArray(dev->vao);
         glBindBuffer(GL_ARRAY_BUFFER, dev->vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, dev->ebo);
-        glerror();
 
         glEnableVertexAttribArray((GLuint)dev->attrib_pos);
         glEnableVertexAttribArray((GLuint)dev->attrib_uv);
@@ -189,14 +168,12 @@ device_init(struct device *dev)
         glVertexAttribPointer((GLuint)dev->attrib_pos, 2, GL_FLOAT, GL_FALSE, vs, (void*)vp);
         glVertexAttribPointer((GLuint)dev->attrib_uv, 2, GL_FLOAT, GL_FALSE, vs, (void*)vt);
         glVertexAttribPointer((GLuint)dev->attrib_col, 4, GL_UNSIGNED_BYTE, GL_TRUE, vs, (void*)vc);
-        glerror();
     }
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
-    glerror();
 }
 
 static struct zr_user_font
@@ -233,7 +210,7 @@ font_bake_and_upload(struct device *dev, struct zr_font *font,
         config.coord_type = ZR_COORD_UV;
         config.range = range;
         config.pixel_snap = zr_false;
-        config.size = font_height;
+        config.size = (zr_float)font_height;
         config.spacing = zr_vec2(0,0);
         config.oversample_h = 1;
         config.oversample_v = 1;
@@ -281,7 +258,7 @@ font_bake_and_upload(struct device *dev, struct zr_font *font,
       this was done to have the possibility to have multible fonts with one
       total glyph array. Not quite sure if it is a good thing since the
       glyphes have to be freed as well. */
-    zr_font_init(font, font_height, '?', glyphes, &baked_font, dev->null.texture);
+    zr_font_init(font, (zr_float)font_height, '?', glyphes, &baked_font, dev->null.texture);
     user_font = zr_font_ref(font);
     return user_font;
 }
@@ -323,7 +300,6 @@ device_draw(struct device *dev, struct zr_command_queue *queue, int width, int h
     glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_vao);
     glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &last_ebo);
     glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vbo);
-    glerror();
 
     /* setup global state */
     glViewport(0, 0, width, height);
@@ -334,13 +310,11 @@ device_draw(struct device *dev, struct zr_command_queue *queue, int width, int h
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_SCISSOR_TEST);
     glActiveTexture(GL_TEXTURE0);
-    glerror();
 
     /* setup program */
     glUseProgram(dev->prog);
     glUniform1i(dev->uniform_tex, 0);
     glUniformMatrix4fv(dev->uniform_proj, 1, GL_FALSE, &ortho[0][0]);
-    glerror();
 
     {
         /* convert from command queue into draw list and draw to screen */
@@ -359,7 +333,6 @@ device_draw(struct device *dev, struct zr_command_queue *queue, int width, int h
 
         glBufferData(GL_ARRAY_BUFFER, max_vertex_memory, NULL, GL_STREAM_DRAW);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, max_element_memory, NULL, GL_STREAM_DRAW);
-        glerror();
 
         /* load draw vertexes & elements directly into vertex + element buffer */
         vertexes = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
@@ -374,7 +347,6 @@ device_draw(struct device *dev, struct zr_command_queue *queue, int width, int h
         }
         glUnmapBuffer(GL_ARRAY_BUFFER);
         glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
-        glerror();
 
         /* iterate and execute each draw command */
         zr_foreach_draw_command(cmd, &draw_list) {
@@ -384,7 +356,6 @@ device_draw(struct device *dev, struct zr_command_queue *queue, int width, int h
                 (GLint)cmd->clip_rect.w, (GLint)cmd->clip_rect.h);
             glDrawElements(GL_TRIANGLES, (GLsizei)cmd->elem_count, GL_UNSIGNED_SHORT, offset);
             offset += cmd->elem_count;
-            glerror();
         }
 
         zr_command_queue_clear(queue);
@@ -398,7 +369,6 @@ device_draw(struct device *dev, struct zr_command_queue *queue, int width, int h
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, (GLuint)last_ebo);
     glBindVertexArray((GLuint)last_vao);
     glDisable(GL_SCISSOR_TEST);
-    glerror();
 }
 
 static void

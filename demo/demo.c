@@ -353,7 +353,17 @@ static void
 combo_box(struct zr_context *panel, struct combobox *combo,
     const char**values, zr_size count)
 {
-    zr_combo(panel, values, count, &combo->selected, 20, &combo->active);
+    zr_size i = 0;
+    struct zr_context layout;
+    zr_combo_begin(panel, &layout, values[combo->selected], &combo->active);
+    zr_layout_row_dynamic(&layout, 25, 1);
+    for (i = 0; i < count; ++i) {
+        if (combo->selected == i) continue;
+        if (zr_combo_item(&layout, ZR_TEXT_LEFT, values[i])) {
+            combo->selected = i;
+        }
+    }
+    combo->active = zr_combo_end(panel, &layout);
 }
 
 static void
@@ -427,6 +437,45 @@ check_combo_box(struct zr_context *panel, zr_bool *values, zr_size count,
     zr_combo_end(panel, &combo);
 }
 
+/* -----------------------------------------------------------------
+ *  GRAPH
+ * ----------------------------------------------------------------- */
+static int
+graph(struct zr_context *layout, enum zr_graph_type type,
+    const zr_float *values, zr_size count, zr_size offset)
+{
+    zr_size i;
+    zr_int index = -1;
+    zr_float min_value;
+    zr_float max_value;
+    struct zr_graph graph;
+
+    ZR_ASSERT(layout);
+    ZR_ASSERT(values);
+    ZR_ASSERT(count);
+    if (!layout || !layout->valid || !values || !count)
+        return -1;
+
+    /* find min and max graph value */
+    max_value = values[0];
+    min_value = values[0];
+    for (i = offset; i < count; ++i) {
+        if (values[i] > max_value)
+            max_value = values[i];
+        if (values[i] < min_value)
+            min_value = values[i];
+    }
+
+    /* execute graph */
+    zr_graph_begin(layout, &graph, type, count, min_value, max_value);
+    for (i = offset; i < count; ++i) {
+        if (zr_graph_push(layout, &graph, values[i]))
+            index = (zr_int)i;
+    }
+    zr_graph_end(layout, &graph);
+    return index;
+}
+
 /* =================================================================
  *
  *                          DEMO
@@ -490,6 +539,7 @@ struct demo_gui {
     struct state state;
     zr_size w, h;
 };
+
 
 /* -----------------------------------------------------------------
  *  WIDGETS
@@ -846,9 +896,9 @@ run_demo(struct demo_gui *gui)
                 zr_layout_row_dynamic(&tab, 100, 1);
                 switch (state->shelf_selection) {
                 case COLUMNS:
-                    zr_graph(&tab, ZR_GRAPH_COLUMN, values, LEN(values), 0); break;
+                    graph(&tab, ZR_GRAPH_COLUMN, values, LEN(values), 0); break;
                 case LINES:
-                    zr_graph(&tab, ZR_GRAPH_LINES, values, LEN(values), 0); break;
+                    graph(&tab, ZR_GRAPH_LINES, values, LEN(values), 0); break;
                 default: break;
                 }
             }

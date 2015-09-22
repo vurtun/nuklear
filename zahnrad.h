@@ -3602,9 +3602,12 @@ struct zr_vec2 zr_popup_end(struct zr_context *parent,
     Output:
     - The from user input updated popup scrollbar pixel offset
 */
-void zr_popup_nonblock_begin(struct zr_context *parent, struct zr_context *popup,
+/* --------------------------------------------------------------
+ *                      CONTEXTUAL
+ * --------------------------------------------------------------*/
+void zr_contextual_begin(struct zr_context *parent, struct zr_context *popup,
                         zr_flags flags, zr_state *active, struct zr_rect body);
-/*  this function adds a no-blocking context menu popup
+/*  this function adds a context menu popup
     Input:
     - type of the popup as either growing or static
     - additonal popup window flags
@@ -3613,13 +3616,100 @@ void zr_popup_nonblock_begin(struct zr_context *parent, struct zr_context *popup
     Output:
     - popup layout to fill with widgets
 */
-zr_state zr_popup_nonblock_close(struct zr_context *popup);
+zr_bool zr_contextual_item(struct zr_context *menu, const char*, enum zr_text_align align);
+/*  this function execute contextual menu item
+    Input:
+    - text alignment of the title
+    - title of the item
+    Output
+    - `zr_true` if has been clicked `zr_false` otherwise
+*/
+void zr_contextual_close(struct zr_context *popup);
 /*  this functions closes the context menu
      Output:
     - update state of the context menu
 */
-void zr_popup_nonblock_end(struct zr_context *parent, struct zr_context *popup);
+zr_state zr_contextual_end(struct zr_context *parent, struct zr_context *popup);
 /*  this functions closes a previously opened context menu */
+/* --------------------------------------------------------------
+ *                          COMBO BOX
+ * --------------------------------------------------------------
+    COMBO BOX
+    The combo box is a minimizable popup window and extends the old school
+    text combo box with the possibility to fill combo boxes with any kind of widgets.
+    The combo box is internall implemented with a dynamic popup window
+    and can only be as height as the window allows.
+    There are two different ways to create a combo box. The first one is a
+    standart text combo box which has it own function `zr_combo`. The second
+    way is the more complex immediate mode API which allows to create
+    any kind of content inside the combo box. In case of the second API it is
+    additionally possible and sometimes wanted to close the combo box popup
+    window This can be achived with `zr_combo_close`.
+
+    combo box API
+    zr_combo_begin   -- begins the combo box popup window
+    zr_combo_close   -- closes the previously opened combo box
+    zr_combo_end     -- ends the combo box build up process
+*/
+void zr_combo_begin(struct zr_context *parent,
+                        struct zr_context *combo, const char *selected,
+                        zr_state *active);
+/*  this function begins the combobox build up process
+    Input:
+    - parent window layout the combo box will be placed into
+    - ouput combo box window layout which will be needed to fill the combo box
+    - title of the combo box or in the case of the text combo box the selected item
+    - the current state of the combobox with either zr_true (active) or zr_false else
+    - the current scrollbar offset of the combo box popup window
+*/
+zr_bool zr_combo_item(struct zr_context *menu, enum zr_text_align align, const char*);
+/*  this function execute a combo item
+    Input:
+    - title of the item
+    Output
+    - `zr_true` if has been clicked `zr_false` otherwise
+*/
+void zr_combo_close(struct zr_context *combo);
+/*  this function closes a opened combobox */
+zr_state zr_combo_end(struct zr_context *parent, struct zr_context *combo);
+/*  this function ends the combobox build up process */
+/*----------------------------------------------------------------
+ *                          MENU
+ * --------------------------------------------------------------
+    MENU
+    The menu widget provides a overlapping popup window which can
+    be opened/closed by clicking on the menu button. It is normally
+    placed at the top of the window and is independent of the parent
+    scrollbar offset. But if needed the menu can even be placed inside the window.
+    At the moment the menu only allows a single depth but that will change
+    in the future.
+
+    menu widget API
+    zr_menu_begin    -- begins the menu item build up processs
+    zr_menu_push     -- adds a item into the menu
+    zr_menu_end      -- ends the menu item build up process
+*/
+void zr_menu_begin(struct zr_context *parent,
+                        struct zr_context *menu, const char *title,
+                        zr_float width, zr_state *active);
+/*  this function begins the menu build up process
+    Input:
+    - parent window layout the menu will be placed into
+    - ouput menu window layout
+    - title of the menu to
+    - the current state of the menu with either zr_true (open) or zr_false else
+*/
+zr_bool zr_menu_item(struct zr_context *menu, enum zr_text_align align, const char*);
+/*  this function execute a menu item
+    Input:
+    - title of the item
+    Output
+    - `zr_true` if has been clicked `zr_false` otherwise
+*/
+void zr_menu_close(struct zr_context *menu);
+/*  this function closes a opened menu */
+zr_state zr_menu_end(struct zr_context *parent, struct zr_context *menu);
+/*  this function ends the menu build up process */
 /* --------------------------------------------------------------
  *                          GRAPH
  * --------------------------------------------------------------
@@ -3686,118 +3776,7 @@ zr_bool zr_graph_push(struct zr_context*,struct zr_graph*,zr_float);
     - value data point to fill into the graph either as point or as bar
 */
 void zr_graph_end(struct zr_context *layout, struct zr_graph*);
-/*  this function pops the graph from being used
-*/
-zr_int zr_graph(struct zr_context*, enum zr_graph_type,
-                        const zr_float *values, zr_size count, zr_size offset);
-/*  this function create a graph with given type from an array of value
-    Input:
-    - type of the graph with either line or bar graph
-    - graph values in continues array form
-    - number of graph values
-    - offset into the value array from which to begin drawing
-*/
-zr_int zr_graph_callback(struct zr_context*, enum zr_graph_type,
-                            zr_size count, zr_float(*get_value)(void*, zr_size),
-                            void *userdata);
-/*  this function create a graph with given type from callback providing the
-    graph with values
-    Input:
-    - type of the graph with either line or bar graph
-    - number of values inside the graph
-    - callback to access the values inside your datastrucutre
-    - userdata to pull the graph values from
-*/
-/* --------------------------------------------------------------
- *                          COMBO BOX
- * --------------------------------------------------------------
-    COMBO BOX
-    The combo box is a minimizable popup window and extends the old school
-    text combo box with the possibility to fill combo boxes with any kind of widgets.
-    The combo box is internall implemented with a dynamic popup window
-    and can only be as height as the window allows.
-    There are two different ways to create a combo box. The first one is a
-    standart text combo box which has it own function `zr_combo`. The second
-    way is the more complex immediate mode API which allows to create
-    any kind of content inside the combo box. In case of the second API it is
-    additionally possible and sometimes wanted to close the combo box popup
-    window This can be achived with `zr_combo_close`.
-
-    combo box API
-    zr_combo_begin   -- begins the combo box popup window
-    zr_combo_close   -- closes the previously opened combo box
-    zr_combo_end     -- ends the combo box build up process
-    zr_combo         -- shorthand version for a text based combo box
-*/
-void zr_combo(struct zr_context*, const char **entries,
-                    zr_size count, zr_size *current, zr_size row_height,
-                    zr_state *active);
-/*  this function creates a standart text based combobox
-    Input:
-    - parent window layout the combo box will be placed into
-    - string array of all items inside the combo box
-    - number of items inside the string array
-    - the index of the currently selected item
-    - the height of every widget inside the combobox
-    - the current state of the combobox
-    - the scrollbar offset of the window scrollbar
-    Output:
-    - updated currently selected index
-   - updated state of the combo box
-*/
-void zr_combo_begin(struct zr_context *parent,
-                        struct zr_context *combo, const char *selected,
-                        zr_state *active);
-/*  this function begins the combobox build up process
-    Input:
-    - parent window layout the combo box will be placed into
-    - ouput combo box window layout which will be needed to fill the combo box
-    - title of the combo box or in the case of the text combo box the selected item
-    - the current state of the combobox with either zr_true (active) or zr_false else
-    - the current scrollbar offset of the combo box popup window
-*/
-void zr_combo_close(struct zr_context *combo);
-/*  this function closes a opened combobox */
-void zr_combo_end(struct zr_context *parent, struct zr_context *combo);
-/*  this function ends the combobox build up process */
-/*----------------------------------------------------------------
- *                          MENU
- * --------------------------------------------------------------
-    MENU
-    The menu widget provides a overlapping popup window which can
-    be opened/closed by clicking on the menu button. It is normally
-    placed at the top of the window and is independent of the parent
-    scrollbar offset. But if needed the menu can even be placed inside the window.
-    At the moment the menu only allows a single depth but that will change
-    in the future.
-
-    menu widget API
-    zr_menu_begin    -- begins the menu item build up processs
-    zr_menu_push     -- adds a item into the menu
-    zr_menu_end      -- ends the menu item build up process
-    zr_menu          -- shorthand retain mode array version
-*/
-void zr_menu_begin(struct zr_context *parent,
-                        struct zr_context *menu, const char *title,
-                        zr_float width, zr_state *active);
-/*  this function begins the menu build up process
-    Input:
-    - parent window layout the menu will be placed into
-    - ouput menu window layout
-    - title of the menu to
-    - the current state of the menu with either zr_true (open) or zr_false else
-*/
-zr_bool zr_menu_item(struct zr_context *menu, enum zr_text_align align, const char*);
-/*  this function execute a menu item
-    Input:
-    - title of the item
-    Output
-    - `zr_true` if has been clicked `zr_false` otherwise
-*/
-void zr_menu_close(struct zr_context *menu);
-/*  this function closes a opened menu */
-zr_state zr_menu_end(struct zr_context *parent, struct zr_context *menu);
-/*  this function ends the menu build up process */
+/*  this function pops the graph from being used */
 /*
  * --------------------------------------------------------------
  *                          TREE

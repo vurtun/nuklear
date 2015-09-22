@@ -7114,80 +7114,6 @@ zr_graph_end(struct zr_context *layout, struct zr_graph *graph)
     graph->w = 0;
     graph->h = 0;
 }
-
-zr_int
-zr_graph(struct zr_context *layout, enum zr_graph_type type,
-    const zr_float *values, zr_size count, zr_size offset)
-{
-    zr_size i;
-    zr_int index = -1;
-    zr_float min_value;
-    zr_float max_value;
-    struct zr_graph graph;
-
-    ZR_ASSERT(layout);
-    ZR_ASSERT(values);
-    ZR_ASSERT(count);
-    if (!layout || !layout->valid || !values || !count)
-        return -1;
-
-    /* find min and max graph value */
-    max_value = values[0];
-    min_value = values[0];
-    for (i = offset; i < count; ++i) {
-        if (values[i] > max_value)
-            max_value = values[i];
-        if (values[i] < min_value)
-            min_value = values[i];
-    }
-
-    /* execute graph */
-    zr_graph_begin(layout, &graph, type, count, min_value, max_value);
-    for (i = offset; i < count; ++i) {
-        if (zr_graph_push(layout, &graph, values[i]))
-            index = (zr_int)i;
-    }
-    zr_graph_end(layout, &graph);
-    return index;
-}
-
-zr_int
-zr_graph_callback(struct zr_context *layout, enum zr_graph_type type,
-    zr_size count, zr_float(*get_value)(void*, zr_size), void *userdata)
-{
-    zr_size i;
-    zr_int index = -1;
-    zr_float min_value;
-    zr_float max_value;
-    struct zr_graph graph;
-
-    ZR_ASSERT(layout);
-    ZR_ASSERT(get_value);
-    ZR_ASSERT(count);
-    if (!layout || !layout->valid || !get_value || !count)
-        return -1;
-
-    /* find min and max graph value */
-    max_value = get_value(userdata, 0);
-    min_value = max_value;
-    for (i = 1; i < count; ++i) {
-        zr_float value = get_value(userdata, i);
-        if (value > max_value)
-            max_value = value;
-        if (value < min_value)
-            min_value = value;
-    }
-
-    /* execute graph */
-    zr_graph_begin(layout, &graph, type, count, min_value, max_value);
-    for (i = 0; i < count; ++i) {
-        zr_float value = get_value(userdata, i);
-        if (zr_graph_push(layout, &graph, value))
-            index = (zr_int)i;
-    }
-    zr_graph_end(layout, &graph);
-    return index;
-}
 /*
  * -------------------------------------------------------------
  *
@@ -7280,6 +7206,13 @@ zr_popup_end(struct zr_context *parent, struct zr_context *popup)
     return pan.offset;
 }
 
+/*
+ * -------------------------------------------------------------
+ *
+ *                          CONTEXTUAL
+ *
+ * --------------------------------------------------------------
+ */
 static zr_bool
 zr_popup_nonblocking_begin(struct zr_context *parent,
     struct zr_context *popup, zr_flags flags, zr_state *active, zr_state is_active,
@@ -7329,7 +7262,7 @@ zr_popup_nonblocking_end(struct zr_context *parent,
 }
 
 void
-zr_popup_nonblock_begin(struct zr_context *parent, struct zr_context *popup,
+zr_contextual_begin(struct zr_context *parent, struct zr_context *popup,
     zr_flags flags, zr_state *active, struct zr_rect body)
 {
     ZR_ASSERT(parent);
@@ -7339,26 +7272,39 @@ zr_popup_nonblock_begin(struct zr_context *parent, struct zr_context *popup,
     zr_popup_nonblocking_begin(parent, popup, flags, active, *active, body);
 }
 
-zr_state
-zr_popup_nonblock_close(struct zr_context *popup)
+zr_bool
+zr_contextual_item(struct zr_context *menu, const char *title, enum zr_text_align align)
 {
-    ZR_ASSERT(popup);
-    if (!popup) return ZR_INACTIVE;
-    zr_popup_close(popup);
-    popup->flags |= ZR_WINDOW_HIDDEN;
-    return ZR_INACTIVE;
+    ZR_ASSERT(menu);
+    if (zr_button_fitting(menu, title, align, ZR_BUTTON_DEFAULT)) {
+        zr_contextual_close(menu);
+        return zr_true;
+    }
+    return zr_false;
 }
 
 void
-zr_popup_nonblock_end(struct zr_context *parent, struct zr_context *popup)
+zr_contextual_close(struct zr_context *popup)
+{
+    ZR_ASSERT(popup);
+    if (!popup) return;
+    zr_popup_close(popup);
+    popup->flags |= ZR_WINDOW_HIDDEN;
+}
+
+zr_state
+zr_contextual_end(struct zr_context *parent, struct zr_context *menu)
 {
     ZR_ASSERT(parent);
-    ZR_ASSERT(popup);
-    if (!parent || !popup) return;
-    if ((!parent->valid || !popup->valid) && !(popup->flags & ZR_WINDOW_HIDDEN))
-        return;
-    zr_popup_nonblocking_end(parent, popup);
-    return;
+    ZR_ASSERT(menu);
+    if (!parent || !menu) return zr_false;
+    if (!parent->valid) return zr_false;
+    if ((!parent->valid || !menu->valid) && !(menu->flags & ZR_WINDOW_HIDDEN))
+        return zr_false;
+    zr_popup_nonblocking_end(parent, menu);
+    if (menu->flags & ZR_WINDOW_HIDDEN)
+        return zr_false;
+    return zr_true;
 }
 /*
  * -------------------------------------------------------------
@@ -7463,54 +7409,17 @@ failed:
     combo->queue = parent->queue;
 }
 
-void
-zr_combo_end(struct zr_context *parent, struct zr_context *combo)
-{
-    ZR_ASSERT(parent);
-    ZR_ASSERT(combo);
-    if (!parent || !combo) return;
-    if ((!parent->valid || !combo->valid) && !(combo->flags & ZR_WINDOW_HIDDEN))
-        return;
-    zr_popup_nonblocking_end(parent, combo);
-    return;
-}
+zr_bool
+zr_combo_item(struct zr_context *combo, enum zr_text_align align, const char *title)
+{return zr_contextual_item(combo, title, align);}
+
+zr_state
+zr_combo_end(struct zr_context *parent, struct zr_context *menu)
+{return zr_contextual_end(parent, menu);}
 
 void
 zr_combo_close(struct zr_context *combo)
-{
-    ZR_ASSERT(combo);
-    if (!combo) return;
-    zr_popup_close(combo);
-    combo->flags |= ZR_WINDOW_HIDDEN;
-}
-
-void
-zr_combo(struct zr_context *layout, const char **entries,
-    zr_size count, zr_size *current, zr_size row_height,
-    zr_state *active)
-{
-    zr_size i;
-    struct zr_context combo;
-    ZR_ASSERT(layout);
-    ZR_ASSERT(entries);
-    ZR_ASSERT(current);
-    ZR_ASSERT(active);
-    if (!layout || !layout->valid || !entries || !current || !active) return;
-    if (!count) return;
-
-    zr_zero(&combo, sizeof(combo));
-    zr_combo_begin(layout, &combo, entries[*current], active);
-    zr_layout_row_dynamic(&combo, (zr_float)row_height, 1);
-    for (i = 0; i < count; ++i) {
-        if (i == *current) continue;
-        if (zr_button_fitting(&combo,entries[i], ZR_TEXT_LEFT, ZR_BUTTON_DEFAULT)) {
-            zr_combo_close(&combo);
-            *active = zr_false;
-            *current = i;
-        }
-    }
-    zr_combo_end(layout, &combo);
-}
+{zr_contextual_close(combo);}
 /*
  * -------------------------------------------------------------
  *
@@ -7578,37 +7487,15 @@ failed:
 
 zr_bool
 zr_menu_item(struct zr_context *menu, enum zr_text_align align, const char *title)
-{
-    if (zr_button_fitting(menu, title, align, ZR_BUTTON_DEFAULT)) {
-        zr_menu_close(menu);
-        return zr_true;
-    }
-    return zr_false;
-}
+{return zr_contextual_item(menu, title, align);}
 
 void
 zr_menu_close(struct zr_context *menu)
-{
-    ZR_ASSERT(menu);
-    if (!menu) return;
-    zr_popup_close(menu);
-    menu->flags |= ZR_WINDOW_HIDDEN;
-}
+{zr_contextual_close(menu);}
 
 zr_state
 zr_menu_end(struct zr_context *parent, struct zr_context *menu)
-{
-    ZR_ASSERT(parent);
-    ZR_ASSERT(menu);
-    if (!parent || !menu) return zr_false;
-    if (!parent->valid) return zr_false;
-    if ((!parent->valid || !menu->valid) && !(menu->flags & ZR_WINDOW_HIDDEN))
-        return zr_false;
-    zr_popup_nonblocking_end(parent, menu);
-    if (menu->flags & ZR_WINDOW_HIDDEN)
-        return zr_false;
-    return zr_true;
-}
+{return zr_contextual_end(parent, menu);}
 /*
  * -------------------------------------------------------------
  *
