@@ -7858,7 +7858,8 @@ zr_group_begin(struct zr_context *p, struct zr_context *g,
     c = &p->clip;
     zr_panel_alloc_space(&bounds, p);
     zr_zero(g, sizeof(*g));
-    if (!ZR_INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h))
+    if (!ZR_INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h) &&
+        !(flags & ZR_WINDOW_MOVEABLE))
         goto failed;
 
     /* initialize a fake panel to create the layout from */

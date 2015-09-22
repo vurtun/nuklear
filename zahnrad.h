@@ -1056,7 +1056,7 @@ typedef zr_float(*zr_cos_f)(zr_float);
 enum zr_anti_aliasing {
     ZR_ANTI_ALIASING_OFF = zr_false,
     /* renderes all primitives without anit-aliasing  */
-    ZR_ANTI_ALIASING_ON,
+    ZR_ANTI_ALIASING_ON
     /* renderes all primitives with anit-aliasing  */
 };
 
@@ -2576,14 +2576,6 @@ void zr_tiled_begin_local(struct zr_tiled_layout*, enum zr_layout_format,
     - layout format with either dynamic ratio based or fixed pixel based slots
     - pixel width of the tiled layout space (IMPORTANT: not used for dynamic tiled layouts)
     - pixel height of the tiled layout space
-*/
-void zr_tiled_begin(struct zr_tiled_layout*, enum zr_layout_format,
-                    struct zr_rect bounds, struct zr_vec2 spacing);
-/*  this functions begins the definitions of a tiled global layout for windows
-    Input:
-    - layout format with either dynamic ratio based or fixed pixel based slots
-    - pixel position and size of a window inside the screen
-    - spacing between slot entries
 */
 void zr_tiled_slot(struct zr_tiled_layout *layout,
                     enum zr_tiled_layout_slot_index, zr_float ratio,
