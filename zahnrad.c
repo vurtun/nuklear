@@ -766,13 +766,15 @@ zr_buffer_realloc(struct zr_buffer *b, zr_size capacity, zr_size *size)
 
     ZR_ASSERT(b);
     ZR_ASSERT(size);
-    if (!b || !size || !b->pool.realloc)
+    if (!b || !size || !b->pool.alloc || !b->pool.free)
         return 0;
 
     buffer_size = b->memory.size;
-    temp = b->pool.realloc(b->pool.userdata, b->memory.ptr, capacity);
+    temp = b->pool.alloc(b->pool.userdata, capacity);
     ZR_ASSERT(temp);
     if (!temp) return 0;
+    zr_memcopy(temp, b->memory.ptr, buffer_size);
+    b->pool.free(b->pool.userdata, b->memory.ptr);
     *size = capacity;
 
     if (b->size == buffer_size) {
@@ -820,7 +822,7 @@ zr_buffer_alloc(struct zr_buffer *b, enum zr_buffer_allocation_type type,
 
     if (full) {
         /* buffer is full so allocate bigger buffer if dynamic */
-        if (b->type != ZR_BUFFER_DYNAMIC || !b->pool.realloc) return 0;
+        if (b->type != ZR_BUFFER_DYNAMIC || !b->pool.alloc || !b->pool.free) return 0;
         cap = (zr_size)((zr_float)b->memory.size * b->grow_factor);
         cap = MAX(cap, zr_round_up_pow2((zr_uint)(b->allocated + size)));
         b->memory.ptr = zr_buffer_realloc(b, cap, &b->memory.size);
@@ -6308,7 +6310,7 @@ zr_layout_pop(struct zr_context *layout)
 /*
  * -------------------------------------------------------------
  *
- *                      PANEL WIDGETS
+ *                      WINDOW WIDGETS
  *
  * --------------------------------------------------------------
  */
@@ -7409,16 +7411,13 @@ failed:
     combo->queue = parent->queue;
 }
 
-zr_bool
-zr_combo_item(struct zr_context *combo, enum zr_text_align align, const char *title)
+zr_bool zr_combo_item(struct zr_context *combo, enum zr_text_align align, const char *title)
 {return zr_contextual_item(combo, title, align);}
 
-zr_state
-zr_combo_end(struct zr_context *parent, struct zr_context *menu)
+zr_state zr_combo_end(struct zr_context *parent, struct zr_context *menu)
 {return zr_contextual_end(parent, menu);}
 
-void
-zr_combo_close(struct zr_context *combo)
+void zr_combo_close(struct zr_context *combo)
 {zr_contextual_close(combo);}
 /*
  * -------------------------------------------------------------
@@ -7485,16 +7484,13 @@ failed:
     menu->queue = parent->queue;
 }
 
-zr_bool
-zr_menu_item(struct zr_context *menu, enum zr_text_align align, const char *title)
+zr_bool zr_menu_item(struct zr_context *menu, enum zr_text_align align, const char *title)
 {return zr_contextual_item(menu, title, align);}
 
-void
-zr_menu_close(struct zr_context *menu)
+void zr_menu_close(struct zr_context *menu)
 {zr_contextual_close(menu);}
 
-zr_state
-zr_menu_end(struct zr_context *parent, struct zr_context *menu)
+zr_state zr_menu_end(struct zr_context *parent, struct zr_context *menu)
 {return zr_contextual_end(parent, menu);}
 /*
  * -------------------------------------------------------------

@@ -432,7 +432,6 @@ struct zr_allocator {
     /* handle to your own allocator */
     void*(*alloc)(zr_handle, zr_size);
     /* allocation function pointer */
-    void*(*realloc)(zr_handle, void*, zr_size);
     /* reallocation pointer of a previously allocated memory block */
     void(*free)(zr_handle, void*);
     /* callback function pointer to finally free all allocated memory */
@@ -3052,14 +3051,14 @@ void zr_menubar_end(struct zr_context*);
     zr_layout_row_push                 -- pushes the next widget width
     zr_layout_row_end                  -- ends the row build up process
 
-    tiled widget placing layout API
+    tiled layout widget placing API
     zr_layout_row_tiled_begin          -- begins tiled layout based placing of widgets
     zr_layout_row_tiled_slot_bounds    -- returns the bounds of a slot in the tiled layout
     zr_layout_row_tiled_bounds         -- returns the bounds of a widget in the tiled layout
     zr_layout_row_tiled_push           -- pushes a widget into a slot in the tiled layout
     zr_layout_row_tiled_end            -- ends tiled layout based placing of widgets
 
-    custom widget placing layout API
+    custom widget placing API
     zr_layout_row_space_begin          -- creates a free placing space in the window
     zr_layout_row_space_push           -- pushes a widget into the space
     zr_layout_row_space_end            -- finishes the free drawingp process
@@ -3556,14 +3555,13 @@ struct zr_vec2 zr_shelf_end(struct zr_context*, struct zr_context*);
 
     USAGE
     To create an popup the `zr_window_popup_begin` function needs to be called
-    with to the parent window local position and size and the wanted type with
+    with the parent window local position and size and the wanted type with
     static or dynamic window. A static window has a fixed size and behaves like a
     normal window inside a window, but a dynamic window only takes up as much
     height as needed up to a given maximum height. Dynamic windows are for example
     combo boxes while static window make sense for messsages or tooltips.
     To close a popup you can use the `zr_pop_close` function which takes
-    care of the closing process. Finally if the popup window was completly created
-    the `zr_popup_end` function finializes the popup.
+    care of the closing process. Finally `zr_popup_end` finializes the popup.
 
     window blocking popup API
     zr_popup_begin         -- adds a popup inside a window
@@ -3759,9 +3757,8 @@ struct zr_graph {
     /* number of values inside the graph */
 };
 
-void zr_graph_begin(struct zr_context*, struct zr_graph*,
-                            enum zr_graph_type, zr_size count,
-                            zr_float min, zr_float max);
+void zr_graph_begin(struct zr_context*, struct zr_graph*, enum zr_graph_type,
+                    zr_size count, zr_float min, zr_float max);
 /*  this function begins a graph building widget
     Input:
     - type of the graph with either lines or bars

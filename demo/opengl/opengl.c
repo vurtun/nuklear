@@ -435,8 +435,6 @@ resize(SDL_Event *evt)
 
 static void* mem_alloc(zr_handle unused, zr_size size)
 {UNUSED(unused); return calloc(1, size);}
-static void* mem_realloc(zr_handle unused, void *ptr, zr_size size)
-{UNUSED(unused); return realloc(ptr, size);}
 static void mem_free(zr_handle unused, void *ptr)
 {UNUSED(unused); free(ptr);}
 
@@ -480,7 +478,6 @@ main(int argc, char *argv[])
     /* GUI */
     alloc.userdata.ptr = NULL;
     alloc.alloc = mem_alloc;
-    alloc.realloc = mem_realloc;
     alloc.free = mem_free;
     memset(&gui, 0, sizeof gui);
     zr_buffer_init(&device.cmds, &alloc, 1024, 2.0f);
