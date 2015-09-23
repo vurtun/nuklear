@@ -36,13 +36,13 @@
 #define LEN(a)      (sizeof(a)/sizeof(a)[0])
 #define UNUSED(a)   ((void)(a))
 
-#include "../zahnrad.h"
+#include "../../zahnrad.h"
 
 static void clipboard_set(const char *text){UNUSED(text);}
 static zr_bool clipboard_is_filled(void){return zr_false;}
 static const char* clipboard_get(void) {return NULL;}
 
-#include "demo.c"
+#include "../demo.c"
 
 typedef struct XFont XFont;
 typedef struct XSurface XSurface;

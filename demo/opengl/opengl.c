@@ -41,13 +41,13 @@
 #define LEN(a)      (sizeof(a)/sizeof(a)[0])
 #define UNUSED(a)   ((void)(a))
 
-#include "../zahnrad.h"
+#include "../../zahnrad.h"
 
 static void clipboard_set(const char *text){SDL_SetClipboardText(text);}
 static zr_bool clipboard_is_filled(void) {return SDL_HasClipboardText();}
 static const char* clipboard_get(void){return SDL_GetClipboardText();}
 
-#include "demo.c"
+#include "../demo.c"
 
 /* ==============================================================
  *
