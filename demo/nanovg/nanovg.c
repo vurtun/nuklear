@@ -251,8 +251,6 @@ main(int argc, char *argv[])
     SDL_Window *win;
     SDL_GLContext glContext;
     NVGcontext *vg = NULL;
-    unsigned int started;
-    unsigned int dt;
 
     /* GUI */
     struct demo_gui gui;
@@ -298,7 +296,6 @@ main(int argc, char *argv[])
     while (gui.running) {
         /* Input */
         SDL_Event evt;
-        started = SDL_GetTicks();
         zr_input_begin(&gui.input);
         while (SDL_PollEvent(&evt)) {
             if (evt.type == SDL_WINDOWEVENT) resize(&evt);
@@ -323,11 +320,6 @@ main(int argc, char *argv[])
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         draw(vg, &gui.queue, width, height);
         SDL_GL_SwapWindow(win);
-
-        /* Timing */
-        dt = SDL_GetTicks() - started;
-        if (dt < DTIME)
-            SDL_Delay(DTIME - dt);
     }
 
 cleanup:
