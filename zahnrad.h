@@ -3217,6 +3217,7 @@ void zr_layout_pop(struct zr_context*);
 
     window widget API
     zr_widget                -- base function for all widgets to allocate space
+    zr_widget_fitting        -- special base function for widget without padding/spacing
     zr_spacing               -- column seperator and is basically an empty widget
     zr_seperator             -- adds either a horizontal or vertical seperator
     zr_text                  -- text widget for printing text with length
@@ -3245,6 +3246,13 @@ void zr_layout_pop(struct zr_context*);
 enum zr_widget_state zr_widget(struct zr_rect*, struct zr_context*);
 /*  this function represents the base of every widget and calculates the bounds
  *  and allocates space for a widget inside a window.
+    Output:
+    - allocated space for a widget to draw into
+    - state of widget the widget with invisible, renderable and render + updateable
+*/
+enum zr_widget_state zr_widget_fitting(struct zr_rect*, struct zr_context*);
+/*  this function represents calculates the bounds of a perfectly and completly
+ *  fitting widget inside the window and allocates the space inside a window.
     Output:
     - allocated space for a widget to draw into
     - state of widget the widget with invisible, renderable and render + updateable
@@ -3622,6 +3630,26 @@ zr_bool zr_contextual_item(struct zr_context *menu, const char*, enum zr_text_al
     Output
     - `zr_true` if has been clicked `zr_false` otherwise
 */
+zr_bool zr_contextual_item_icon(struct zr_context *menu, struct zr_image,
+                                const char*, enum zr_text_align align);
+/*  this function execute contextual menu item
+    Input:
+    - icon to draw into the menu item
+    - text alignment of the title
+    - title of the item
+    Output
+    - `zr_true` if has been clicked `zr_false` otherwise
+*/
+zr_bool zr_contextual_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
+                                    const char*, enum zr_text_align align);
+/*  this function execute contextual menu item
+    Input:
+    - symbol to draw into the menu item
+    - text alignment of the title
+    - title of the item
+    Output
+    - `zr_true` if has been clicked `zr_false` otherwise
+*/
 void zr_contextual_close(struct zr_context *popup);
 /*  this functions closes the context menu
      Output:
@@ -3645,9 +3673,12 @@ zr_state zr_contextual_end(struct zr_context *parent, struct zr_context *popup);
     window This can be achived with `zr_combo_close`.
 
     combo box API
-    zr_combo_begin   -- begins the combo box popup window
-    zr_combo_close   -- closes the previously opened combo box
-    zr_combo_end     -- ends the combo box build up process
+    zr_combo_begin          -- begins the combo box popup window
+    zr_combo_item           -- adds a text item into the combobox
+    zr_combo_item_icon      -- adds a text image item into the combobox
+    zr_combo_item_symbol    -- adds a text symbol item into the combobox
+    zr_combo_close          -- closes the previously opened combo box
+    zr_combo_end            -- ends the combo box build up process
 */
 void zr_combo_begin(struct zr_context *parent,
                         struct zr_context *combo, const char *selected,
@@ -3661,8 +3692,28 @@ void zr_combo_begin(struct zr_context *parent,
     - the current scrollbar offset of the combo box popup window
 */
 zr_bool zr_combo_item(struct zr_context *menu, enum zr_text_align align, const char*);
-/*  this function execute a combo item
+/*  this function execute a combo box item
     Input:
+    - title of the item
+    Output
+    - `zr_true` if has been clicked `zr_false` otherwise
+*/
+zr_bool zr_combo_item_icon(struct zr_context *menu, struct zr_image,
+                                const char*, enum zr_text_align align);
+/*  this function execute combo box icon item
+    Input:
+    - icon to draw into the combo box item
+    - text alignment of the title
+    - title of the item
+    Output
+    - `zr_true` if has been clicked `zr_false` otherwise
+*/
+zr_bool zr_combo_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
+                                    const char*, enum zr_text_align align);
+/*  this function execute combo box symbol item
+    Input:
+    - symbol to draw into the combo box item
+    - text alignment of the title
     - title of the item
     Output
     - `zr_true` if has been clicked `zr_false` otherwise
@@ -3683,9 +3734,12 @@ zr_state zr_combo_end(struct zr_context *parent, struct zr_context *combo);
     in the future.
 
     menu widget API
-    zr_menu_begin    -- begins the menu item build up processs
-    zr_menu_push     -- adds a item into the menu
-    zr_menu_end      -- ends the menu item build up process
+    zr_menu_begin       -- begins the menu item build up processs
+    zr_menu_item        -- adds a item into the menu
+    zr_menu_item_icon   -- adds a text + image item into the menu
+    zr_menu_item_symbol -- adds a text + symbol item into the menu
+    zr_menu_close       -- closes the menu
+    zr_menu_end         -- ends the menu item build up process
 */
 void zr_menu_begin(struct zr_context *parent,
                         struct zr_context *menu, const char *title,
@@ -3704,9 +3758,29 @@ zr_bool zr_menu_item(struct zr_context *menu, enum zr_text_align align, const ch
     Output
     - `zr_true` if has been clicked `zr_false` otherwise
 */
-void zr_menu_close(struct zr_context *menu);
+zr_bool zr_menu_item_icon(struct zr_context *menu, struct zr_image,
+                                const char*, enum zr_text_align align);
+/*  this function execute menu text icon item
+    Input:
+    - icon to draw into the menu item
+    - text alignment of the title
+    - title of the item
+    Output
+    - `zr_true` if has been clicked `zr_false` otherwise
+*/
+zr_bool zr_menu_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
+                                    const char*, enum zr_text_align align);
+/*  this function execute menu text symbol item
+    Input:
+    - symbol to draw into the menu item
+    - text alignment of the title
+    - title of the item
+    Output
+    - `zr_true` if has been clicked `zr_false` otherwise
+*/
+zr_state zr_menu_close(struct zr_context *menu);
 /*  this function closes a opened menu */
-zr_state zr_menu_end(struct zr_context *parent, struct zr_context *menu);
+void zr_menu_end(struct zr_context *parent, struct zr_context *menu);
 /*  this function ends the menu build up process */
 /* --------------------------------------------------------------
  *                          GRAPH

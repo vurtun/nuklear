@@ -1350,6 +1350,7 @@ zr_command_queue_start_child(struct zr_command_queue *queue,
     struct zr_command_sub_buffer *buf;
     struct zr_command_sub_buffer *end;
     zr_size offset;
+    zr_size size;
     void *memory;
 
     ZR_ASSERT(queue);
@@ -1361,6 +1362,7 @@ zr_command_queue_start_child(struct zr_command_queue *queue,
     buf = (struct zr_command_sub_buffer*)
         zr_buffer_alloc(&queue->buffer, ZR_BUFFER_BACK, buf_size, buf_align);
     if (!buf) return zr_false;
+    zr_zero(buf, sizeof(*buf));
     offset = (zr_size)(((zr_byte*)memory + queue->buffer.memory.size) - (zr_byte*)buf);
 
     /* setup sub buffer */
@@ -1380,7 +1382,8 @@ zr_command_queue_start_child(struct zr_command_queue *queue,
     }
 
     /* add sub-buffer at the end of the stack */
-    end = zr_ptr_add(struct zr_command_sub_buffer, memory, stack->end);
+    size = queue->buffer.memory.size;
+    end = zr_ptr_add(struct zr_command_sub_buffer, memory, (size - stack->end));
     end->next = offset;
     buf->next = offset;
     stack->count++;
@@ -1460,7 +1463,6 @@ zr_command_queue_finish(struct zr_command_queue *queue,
         iter = zr_ptr_add(struct zr_command_sub_buffer, memory, size - iter->next);
     }
     queue->stack.count = 0;
-    zr_buffer_reset(&queue->buffer, ZR_BUFFER_BACK);
 }
 
 void
@@ -5170,13 +5172,14 @@ zr_end(struct zr_context *layout, struct zr_window *window)
     layout->at_y += layout->row.height;
 
     /* draw footer and fill empty spaces inside a dynamically growing panel */
-    if (layout->valid && (layout->flags & ZR_WINDOW_DYNAMIC) &&
-        !(layout->valid & ZR_WINDOW_NO_SCROLLBAR)) {
-        /* calculate the dynamic window footer bounds */
+    if (layout->valid && (layout->flags & ZR_WINDOW_DYNAMIC)) {
         layout->height = MIN(layout->at_y - layout->bounds.y, layout->bounds.h);
-
-        /* draw the correct footer */
-        if (layout->offset.x > 0) {
+        if ((layout->offset.x == 0) || (layout->flags & ZR_WINDOW_NO_SCROLLBAR)) {
+            footer.x = window->bounds.x;
+            footer.y = window->bounds.y + layout->height + item_spacing.y;
+            footer.w = window->bounds.w + scrollbar_size;
+            layout->footer_h = 0;
+        } else {
             footer.x = window->bounds.x;
             footer.w = window->bounds.w + scrollbar_size;
             footer.h = layout->footer_h;
@@ -5193,12 +5196,6 @@ zr_end(struct zr_context *layout, struct zr_window *window)
                 bounds.h = layout->row.height;
                 zr_command_buffer_push_rect(out, bounds, 0, config->colors[ZR_COLOR_WINDOW]);
             }
-        } else {
-            layout->footer_h = 0;
-            footer.x = window->bounds.x;
-            footer.y = window->bounds.y + layout->height;
-            footer.w = window->bounds.w + scrollbar_size;
-            footer.h = layout->footer_h;
         }
     }
 
@@ -5295,10 +5292,10 @@ zr_end(struct zr_context *layout, struct zr_window *window)
         const zr_float width = (layout->flags & ZR_WINDOW_NO_SCROLLBAR) ?
             layout->width: layout->width + scrollbar_size;
         const zr_float padding_y = (!layout->valid) ?
-                window->bounds.y + layout->header.h:
-                (layout->flags & ZR_WINDOW_DYNAMIC) ?
-                layout->footer_h + footer.y:
-                layout->bounds.y + layout->bounds.h;
+            window->bounds.y + layout->header.h:
+            (layout->flags & ZR_WINDOW_DYNAMIC)?
+            layout->footer_h + footer.y:
+            layout->bounds.y + layout->bounds.h;
 
         if (window->flags & ZR_WINDOW_BORDER_HEADER)
             zr_command_buffer_push_line(out, window->bounds.x, window->bounds.y + layout->header.h,
@@ -6391,6 +6388,32 @@ zr_widget(struct zr_rect *bounds, struct zr_context *layout)
     return ZR_WIDGET_VALID;
 }
 
+enum zr_widget_state
+zr_widget_fitting(struct zr_rect *bounds, struct zr_context *layout)
+{
+    /* update the bounds to stand without padding  */
+    enum zr_widget_state state;
+    const struct zr_style *config;
+
+    ZR_ASSERT(layout);
+    ZR_ASSERT(layout->style);
+    ZR_ASSERT(layout->buffer);
+    if (!layout) return ZR_WIDGET_INVALID;
+    if (!layout->valid || !layout->style || !layout->buffer)
+        return ZR_WIDGET_INVALID;
+
+    config = layout->style;
+    state = zr_widget(bounds, layout);
+    if (layout->row.index == 1) {
+        bounds->w += layout->style->properties[ZR_PROPERTY_PADDING].x;
+        bounds->x -= layout->style->properties[ZR_PROPERTY_PADDING].x;
+    } else bounds->x -= layout->style->properties[ZR_PROPERTY_ITEM_PADDING].x;
+    if (layout->row.index == layout->row.columns)
+        bounds->w += layout->style->properties[ZR_PROPERTY_PADDING].x;
+    else bounds->w += layout->style->properties[ZR_PROPERTY_ITEM_PADDING].x;
+    return state;
+}
+
 void
 zr_text_colored(struct zr_context *layout, const char *str, zr_size len,
     enum zr_text_align alignment, struct zr_color color)
@@ -6466,14 +6489,18 @@ zr_fill_button(const struct zr_style *config, struct zr_button *button)
     button->padding.y = item_padding.y;
 }
 
+enum zr_button_alloc {ZR_BUTTON_NORMAL, ZR_BUTTON_FITTING};
 static enum zr_widget_state
 zr_button(struct zr_button *button, struct zr_rect *bounds,
-    struct zr_context *layout)
+    struct zr_context *layout, enum zr_button_alloc type)
 {
     const struct zr_style *config;
     enum zr_widget_state state;
-    state = zr_widget(bounds, layout);
+    if (type == ZR_BUTTON_NORMAL)
+        state = zr_widget(bounds, layout);
+    else state = zr_widget_fitting(bounds, layout);
     if (!state) return state;
+    zr_zero(button, sizeof(*button));
     config = layout->style;
     zr_fill_button(config, button);
     return state;
@@ -6489,7 +6516,7 @@ zr_button_text(struct zr_context *layout, const char *str,
 
     const struct zr_input *i;
     enum zr_widget_state state;
-    state = zr_button(&button.base, &bounds, layout);
+    state = zr_button(&button.base, &bounds, layout, ZR_BUTTON_NORMAL);
     if (!state) return zr_false;
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
 
@@ -6511,7 +6538,7 @@ zr_button_color(struct zr_context *layout,
     const struct zr_input *i;
 
     enum zr_widget_state state;
-    state = zr_button(&button, &bounds, layout);
+    state = zr_button(&button, &bounds, layout, ZR_BUTTON_NORMAL);
     if (!state) return zr_false;
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
 
@@ -6531,7 +6558,7 @@ zr_button_symbol(struct zr_context *layout, enum zr_symbol symbol,
 
     const struct zr_input *i;
     enum zr_widget_state state;
-    state = zr_button(&button.base, &bounds, layout);
+    state = zr_button(&button.base, &bounds, layout, ZR_BUTTON_NORMAL);
     if (!state) return zr_false;
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
 
@@ -6552,7 +6579,7 @@ zr_button_image(struct zr_context *layout, struct zr_image image,
 
     const struct zr_input *i;
     enum zr_widget_state state;
-    state = zr_button(&button.base, &bounds, layout);
+    state = zr_button(&button.base, &bounds, layout, ZR_BUTTON_NORMAL);
     if (!state) return zr_false;
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
     button.padding = zr_vec2(0,0);
@@ -6569,7 +6596,7 @@ zr_button_text_symbol(struct zr_context *layout, enum zr_symbol symbol,
 
     const struct zr_input *i;
     enum zr_widget_state state;
-    state = zr_button(&button.base, &bounds, layout);
+    state = zr_button(&button.base, &bounds, layout, ZR_BUTTON_NORMAL);
     if (!state) return zr_false;
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
 
@@ -6591,7 +6618,7 @@ zr_button_text_image(struct zr_context *layout, struct zr_image img,
 
     const struct zr_input *i;
     enum zr_widget_state state;
-    state = zr_button(&button.base, &bounds, layout);
+    state = zr_button(&button.base, &bounds, layout, ZR_BUTTON_NORMAL);
     if (!state) return zr_false;
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
 
@@ -6603,40 +6630,6 @@ zr_button_text_image(struct zr_context *layout, struct zr_image img,
                                 behavior, &button, &config->font, i);
 }
 
-static zr_bool
-zr_button_fitting(struct zr_context *layout,  const char *text,
-    enum zr_text_align align, enum zr_button_behavior behavior)
-{
-    struct zr_rect bounds;
-    struct zr_button_text button;
-    const struct zr_style *config;
-
-    const struct zr_input *i;
-    enum zr_widget_state state;
-    state = zr_button(&button.base, &bounds, layout);
-    if (!state) return zr_false;
-    i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
-
-    /* update the bounds to stand without padding  */
-    if (layout->row.index == 1) {
-        bounds.w += layout->style->properties[ZR_PROPERTY_PADDING].x;
-        bounds.x -= layout->style->properties[ZR_PROPERTY_PADDING].x;
-    } else bounds.x -= layout->style->properties[ZR_PROPERTY_ITEM_PADDING].x;
-    if (layout->row.index == layout->row.columns)
-        bounds.w += layout->style->properties[ZR_PROPERTY_PADDING].x;
-    else bounds.w += layout->style->properties[ZR_PROPERTY_ITEM_PADDING].x;
-
-    config = layout->style;
-    button.base.border_width = 0;
-    button.base.normal = config->colors[ZR_COLOR_WINDOW];
-    button.normal = config->colors[ZR_COLOR_TEXT];
-    button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
-    button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
-    button.alignment = align;
-    return zr_widget_button_text(layout->buffer, bounds, text,  behavior,
-            &button, i, &config->font);
-}
-
 zr_bool
 zr_button_toggle(struct zr_context *layout, const char *str, zr_bool value)
 {
@@ -6646,7 +6639,7 @@ zr_button_toggle(struct zr_context *layout, const char *str, zr_bool value)
 
     const struct zr_input *i;
     enum zr_widget_state state;
-    state = zr_button(&button.base, &bounds, layout);
+    state = zr_button(&button.base, &bounds, layout, ZR_BUTTON_NORMAL);
     if (!state) return value;
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
 
@@ -7274,11 +7267,111 @@ zr_contextual_begin(struct zr_context *parent, struct zr_context *popup,
     zr_popup_nonblocking_begin(parent, popup, flags, active, *active, body);
 }
 
+static zr_bool
+zr_contextual_button(struct zr_context *layout, const char *text,
+    enum zr_text_align align, enum zr_button_behavior behavior)
+{
+    struct zr_rect bounds;
+    struct zr_button_text button;
+    const struct zr_style *config;
+
+    const struct zr_input *i;
+    enum zr_widget_state state;
+    state = zr_button(&button.base, &bounds, layout, ZR_BUTTON_FITTING);
+    if (!state) return zr_false;
+    i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
+
+    config = layout->style;
+    button.base.border_width = 0;
+    button.base.normal = config->colors[ZR_COLOR_WINDOW];
+    button.base.border = config->colors[ZR_COLOR_WINDOW];
+    button.normal = config->colors[ZR_COLOR_TEXT];
+    button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
+    button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
+    button.alignment = align;
+    return zr_widget_button_text(layout->buffer, bounds, text,  behavior,
+            &button, i, &config->font);
+}
+
+static zr_bool
+zr_contextual_button_symbol(struct zr_context *layout, enum zr_symbol symbol,
+    const char *text, enum zr_text_align align, enum zr_button_behavior behavior)
+{
+    struct zr_rect bounds;
+    struct zr_button_text button;
+    const struct zr_style *config;
+
+    const struct zr_input *i;
+    enum zr_widget_state state;
+    state = zr_button(&button.base, &bounds, layout, ZR_BUTTON_FITTING);
+    if (!state) return zr_false;
+    i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
+
+    config = layout->style;
+    button.base.border_width = 0;
+    button.base.normal = config->colors[ZR_COLOR_WINDOW];
+    button.base.border = config->colors[ZR_COLOR_WINDOW];
+    button.normal = config->colors[ZR_COLOR_TEXT];
+    button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
+    button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
+    return zr_widget_button_text_symbol(layout->buffer, bounds, symbol, text, align,
+            behavior, &button, &config->font, i);
+}
+
+static zr_bool
+zr_contextual_button_icon(struct zr_context *layout, struct zr_image img,
+    const char *text, enum zr_text_align align, enum zr_button_behavior behavior)
+{
+    struct zr_rect bounds;
+    struct zr_button_text button;
+    const struct zr_style *config;
+
+    const struct zr_input *i;
+    enum zr_widget_state state;
+    state = zr_button(&button.base, &bounds, layout, ZR_BUTTON_FITTING);
+    if (!state) return zr_false;
+    i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
+
+    config = layout->style;
+    button.base.border_width = 0;
+    button.base.normal = config->colors[ZR_COLOR_WINDOW];
+    button.base.border = config->colors[ZR_COLOR_WINDOW];
+    button.normal = config->colors[ZR_COLOR_TEXT];
+    button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
+    button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
+    return zr_widget_button_text_image(layout->buffer, bounds, img, text, align,
+                                behavior, &button, &config->font, i);
+}
+
 zr_bool
 zr_contextual_item(struct zr_context *menu, const char *title, enum zr_text_align align)
 {
     ZR_ASSERT(menu);
-    if (zr_button_fitting(menu, title, align, ZR_BUTTON_DEFAULT)) {
+    if (zr_contextual_button(menu, title, align, ZR_BUTTON_DEFAULT)) {
+        zr_contextual_close(menu);
+        return zr_true;
+    }
+    return zr_false;
+}
+
+zr_bool
+zr_contextual_item_icon(struct zr_context *menu, struct zr_image img,
+    const char *title, enum zr_text_align align)
+{
+    ZR_ASSERT(menu);
+    if (zr_contextual_button_icon(menu, img, title, align, ZR_BUTTON_DEFAULT)){
+        zr_contextual_close(menu);
+        return zr_true;
+    }
+    return zr_false;
+}
+
+zr_bool
+zr_contextual_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
+    const char *title, enum zr_text_align align)
+{
+    ZR_ASSERT(menu);
+    if (zr_contextual_button_symbol(menu, symbol, title, align, ZR_BUTTON_DEFAULT)){
         zr_contextual_close(menu);
         return zr_true;
     }
@@ -7301,7 +7394,7 @@ zr_contextual_end(struct zr_context *parent, struct zr_context *menu)
     ZR_ASSERT(menu);
     if (!parent || !menu) return zr_false;
     if (!parent->valid) return zr_false;
-    if ((!parent->valid || !menu->valid) && !(menu->flags & ZR_WINDOW_HIDDEN))
+    if ((!parent->valid) || (!menu->valid && !(menu->flags & ZR_WINDOW_HIDDEN)))
         return zr_false;
     zr_popup_nonblocking_end(parent, menu);
     if (menu->flags & ZR_WINDOW_HIDDEN)
@@ -7404,6 +7497,7 @@ zr_combo_begin(struct zr_context *parent, struct zr_context *combo,
     return;
 
 failed:
+    zr_zero(combo, sizeof(*combo));
     combo->valid = zr_false;
     combo->style = parent->style;
     combo->buffer = parent->buffer;
@@ -7413,6 +7507,14 @@ failed:
 
 zr_bool zr_combo_item(struct zr_context *combo, enum zr_text_align align, const char *title)
 {return zr_contextual_item(combo, title, align);}
+
+zr_bool zr_combo_item_icon(struct zr_context *menu, struct zr_image img,
+    const char *title, enum zr_text_align align)
+{return zr_contextual_item_icon(menu, img, title, align);}
+
+zr_bool zr_combo_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
+    const char *title, enum zr_text_align align)
+{return zr_contextual_item_symbol(menu, symbol, title, align);}
 
 zr_state zr_combo_end(struct zr_context *parent, struct zr_context *menu)
 {return zr_contextual_end(parent, menu);}
@@ -7449,7 +7551,8 @@ zr_menu_begin(struct zr_context *parent, struct zr_context *menu,
     {
         /* exeucte menu button for open/closing the popup */
         struct zr_button_text button;
-        zr_button(&button.base, &header, parent);
+        zr_zero(&button, sizeof(header));
+        zr_button(&button.base, &header, parent, ZR_BUTTON_NORMAL);
         button.alignment = ZR_TEXT_CENTERED;
         button.base.rounding = 0;
         button.base.border = config->colors[ZR_COLOR_WINDOW];
@@ -7459,9 +7562,9 @@ zr_menu_begin(struct zr_context *parent, struct zr_context *menu,
         button.normal = config->colors[ZR_COLOR_TEXT];
         button.active = config->colors[ZR_COLOR_TEXT];
         button.hover = config->colors[ZR_COLOR_TEXT];
-        button.base.rounding = config->rounding[ZR_ROUNDING_BUTTON];
         if (zr_widget_button_text(parent->buffer, header, title, ZR_BUTTON_DEFAULT,
-                &button, in, &config->font)) is_active = !is_active;
+                &button, in, &config->font))
+            is_active = !is_active;
     }
     {
         /* calculate the maximum height of the menu */
@@ -7477,6 +7580,7 @@ zr_menu_begin(struct zr_context *parent, struct zr_context *menu,
     return;
 
 failed:
+    zr_zero(menu, sizeof(*menu));
     menu->valid = zr_false;
     menu->style = parent->style;
     menu->buffer = parent->buffer;
@@ -7487,11 +7591,26 @@ failed:
 zr_bool zr_menu_item(struct zr_context *menu, enum zr_text_align align, const char *title)
 {return zr_contextual_item(menu, title, align);}
 
-void zr_menu_close(struct zr_context *menu)
-{zr_contextual_close(menu);}
+zr_bool zr_menu_item_icon(struct zr_context *menu, struct zr_image img,
+    const char *title, enum zr_text_align align)
+{return zr_contextual_item_icon(menu, img, title, align);}
 
-zr_state zr_menu_end(struct zr_context *parent, struct zr_context *menu)
-{return zr_contextual_end(parent, menu);}
+zr_bool zr_menu_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
+    const char *title, enum zr_text_align align)
+{return zr_contextual_item_symbol(menu, symbol, title, align);}
+
+zr_state zr_menu_close(struct zr_context *menu)
+{zr_popup_close(menu); return zr_false;}
+
+void
+zr_menu_end(struct zr_context *parent, struct zr_context *menu)
+{
+    ZR_ASSERT(parent);
+    ZR_ASSERT(menu);
+    if (!parent || !menu) return;
+    if (!parent->valid) return;
+    zr_popup_nonblocking_end(parent, menu);
+}
 /*
  * -------------------------------------------------------------
  *

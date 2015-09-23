@@ -519,6 +519,7 @@ struct state {
     /* open/close state */
     zr_state file_open;
     zr_state edit_open;
+    zr_state next_open;
     zr_state config_tab;
     zr_state widget_tab;
     zr_state combo_tab;
@@ -784,7 +785,8 @@ init_demo(struct demo_gui *gui)
     win->slider = 2.0f;
     win->progressbar = 50;
     win->spinner = 100;
-    win->widget_tab = ZR_MINIMIZED;
+    win->widget_tab = ZR_MAXIMIZED;
+    win->edit_open = ZR_MAXIMIZED;
 }
 
 /* -----------------------------------------------------------------
@@ -815,19 +817,23 @@ run_demo(struct demo_gui *gui)
             zr_menu_begin(&layout, &tab, "FILE", 100, &state->file_open);
             zr_layout_row_dynamic(&tab, 25, 1);
             for (i = 0; i < LEN(file_items); ++i) {
-                if (zr_menu_item(&tab, ZR_TEXT_LEFT, file_items[i]))
+                if (zr_menu_item(&tab, ZR_TEXT_LEFT, file_items[i])) {
                     fprintf(stdout, "[Menu:File] %s clicked!\n", file_items[i]);
+                    state->file_open = zr_menu_close(&tab);
+                }
             }
-            state->file_open = zr_menu_end(&layout, &tab);
+            zr_menu_end(&layout, &tab);
 
             zr_layout_row_push(&layout, 45);
             zr_menu_begin(&layout, &tab, "EDIT", 100, &state->edit_open);
             zr_layout_row_dynamic(&tab, 25, 1);
             for (i = 0; i < LEN(edit_items); ++i) {
-                if (zr_menu_item(&tab, ZR_TEXT_LEFT, edit_items[i]))
+                if (zr_menu_item(&tab, ZR_TEXT_LEFT, edit_items[i])) {
                     fprintf(stdout, "[Menu:Edit] %s clicked!\n", edit_items[i]);
+                    state->edit_open = zr_menu_close(&tab);
+                }
             }
-            state->edit_open = zr_menu_end(&layout, &tab);
+            zr_menu_end(&layout, &tab);
         }
         zr_menubar_end(&layout);
 
