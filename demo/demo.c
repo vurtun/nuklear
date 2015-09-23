@@ -785,8 +785,6 @@ init_demo(struct demo_gui *gui)
     win->slider = 2.0f;
     win->progressbar = 50;
     win->spinner = 100;
-    win->widget_tab = ZR_MAXIMIZED;
-    win->edit_open = ZR_MAXIMIZED;
 }
 
 /* -----------------------------------------------------------------
