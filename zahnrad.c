@@ -274,7 +274,7 @@ zr_rgba32(zr_uint in)
     ret.r = (in & 0xFF);
     ret.g = ((in >> 8) & 0xFF);
     ret.b = ((in >> 16) & 0xFF);
-    ret.a = ((in >> 24) & 0xFF);
+    ret.a = (zr_byte)((in >> 24) & 0xFF);
     return ret;
 }
 
@@ -4193,7 +4193,7 @@ zr_widget_editbox(struct zr_command_buffer *out, struct zr_rect r,
 
     /* check if the editbox is activated/deactivated */
     if (in && in->mouse.buttons[ZR_BUTTON_LEFT].clicked &&
-        in->mouse.buttons[ZR_BUTTON_LEFT].down)
+            in->mouse.buttons[ZR_BUTTON_LEFT].down)
         box->active = ZR_INBOX(in->mouse.pos.x,in->mouse.pos.y,r.x,r.y,r.w,r.h);
 
     /* input handling */
@@ -4638,7 +4638,8 @@ zr_widget_spinner_base(struct zr_command_buffer *out, struct zr_rect r,
     bounds.y = r.y + bounds.h;
     button_down_clicked = zr_widget_button_symbol(out, bounds, ZR_SYMBOL_TRIANGLE_DOWN,
         ZR_BUTTON_DEFAULT, &s->button, in, font);
-    if (button_down_clicked) ret = -1;
+    if (button_down_clicked)
+        ret = -1;
 
     /* editbox setup and execution */
     bounds.x = r.x;
@@ -4654,9 +4655,11 @@ zr_widget_spinner_base(struct zr_command_buffer *out, struct zr_rect r,
     field.background = s->color;
     field.border = s->border;
     field.text = s->text;
+    field.cursor = s->text;
     *len = zr_widget_edit(out, bounds, buffer, *len, ZR_MAX_NUMBER_BUFFER,
         &is_active, 0, &field, filter, in, font);
-    if (active) *active = is_active;
+    if (active)
+        *active = is_active;
     return ret;
 }
 
@@ -4682,7 +4685,7 @@ zr_widget_spinner(struct zr_command_buffer *out, struct zr_rect r,
     is_active = (active) ? *active : zr_false;
     old_len = len;
 
-    res = zr_widget_spinner_base(out, r, s, string, &len, ZR_INPUT_DEC, active, in, font);
+    res = zr_widget_spinner_base(out, r, s, string, &len, ZR_INPUT_DEC, &is_active, in, font);
     if (res) {
         value += (res > 0) ? step : -step;
         value = CLAMP(min, value, max);
@@ -7111,7 +7114,7 @@ zr_spinner_base(struct zr_context *layout, struct zr_rect *bounds,
     spinner->color = config->colors[ZR_COLOR_SPINNER];
     spinner->border = config->colors[ZR_COLOR_BORDER];
     spinner->text = config->colors[ZR_COLOR_TEXT];
-    spinner->show_cursor = zr_false;
+    spinner->show_cursor = zr_true;
     return state;
 }
 
@@ -7551,14 +7554,13 @@ zr_group_begin(struct zr_context *p, struct zr_context *g,
         !(flags & ZR_WINDOW_MOVEABLE))
         goto failed;
 
-    /* initialize a fake panel to create the layout from */
+    /* initialize a fake window to create the layout from */
     flags |= ZR_WINDOW_BORDER|ZR_WINDOW_TAB;
     if (p->flags & ZR_WINDOW_ROM)
         flags |= ZR_WINDOW_ROM;
-
     temp = p->buffer->clip;
-    zr_window_init(&panel, zr_rect(bounds.x, bounds.y,bounds.w,bounds.h),
-        flags, 0, p->style, p->input);
+    zr_window_init(&panel, bounds, flags, 0, p->style, p->input);
+
     panel.buffer = *p->buffer;
     zr_begin(g, &panel);
     *p->buffer = panel.buffer;

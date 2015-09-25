@@ -3262,7 +3262,7 @@ void zr_layout_pop(struct zr_context*);
     at it will automaticall update the widget state as well as `draw` the widget
     by adding draw command into the window command buffer.
 
-    window widget API
+    window widgets API
     zr_widget                -- base function for all widgets to allocate space
     zr_widget_fitting        -- special base function for widget without padding/spacing
     zr_spacing               -- column seperator and is basically an empty widget
@@ -3653,7 +3653,7 @@ zr_bool zr_graph_push(struct zr_context*,struct zr_graph*,zr_float);
     - value data point to fill into the graph either as point or as bar
 */
 void zr_graph_end(struct zr_context *layout, struct zr_graph*);
-/*  this function pops the graph from being used */
+/*  this function ends the graph */
 /*
  * --------------------------------------------------------------
  *                          TREE
