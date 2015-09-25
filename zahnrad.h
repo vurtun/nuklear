@@ -109,20 +109,14 @@ typedef unsigned long zr_size;
 typedef unsigned long zr_ptr;
 #endif
 
-/* Basic types */
-enum {zr_false, zr_true};
-enum zr_heading {ZR_UP, ZR_RIGHT, ZR_DOWN, ZR_LEFT};
-struct zr_color {zr_byte r,g,b,a;};
-struct zr_vec2 {zr_float x,y;};
-struct zr_vec2i {zr_short x, y;};
-struct zr_rect {zr_float x,y,w,h;};
-struct zr_recti {zr_ushort x,y,w,h;};
-typedef zr_char zr_glyph[ZR_UTF_SIZE];
-struct zr_key {zr_bool down; zr_uint clicked;};
-typedef union {void *ptr; zr_int id;} zr_handle;
-struct zr_image {zr_handle handle; zr_ushort w, h; zr_ushort region[4];};
-enum zr_widget_states {ZR_INACTIVE = zr_false, ZR_ACTIVE = zr_true};
-enum zr_collapse_states {ZR_MINIMIZED = zr_false, ZR_MAXIMIZED = zr_true};
+#if ZR_COMPILE_WITH_ASSERT
+#ifndef ZR_ASSERT
+#include <assert.h>
+#define ZR_ASSERT(expr) assert(expr)
+#endif
+#else
+#define ZR_ASSERT(expr)
+#endif
 
 /* Callbacks */
 struct zr_user_font;
@@ -156,19 +150,37 @@ struct zr_user_font_glyph;
     zr_rgba            -- create a gui color struct from rgba color code
     zr_rgb             -- create a gui color struct from rgb color code
 */
-#if ZR_COMPILE_WITH_ASSERT
-#ifndef ZR_ASSERT
-#include <assert.h>
-#define ZR_ASSERT(expr) assert(expr)
-#endif
-#else
-#define ZR_ASSERT(expr)
-#endif
+enum {zr_false, zr_true};
+enum zr_heading {ZR_UP, ZR_RIGHT, ZR_DOWN, ZR_LEFT};
+struct zr_color {zr_byte r,g,b,a;};
+struct zr_vec2 {zr_float x,y;};
+struct zr_vec2i {zr_short x, y;};
+struct zr_rect {zr_float x,y,w,h;};
+struct zr_recti {zr_ushort x,y,w,h;};
+typedef zr_char zr_glyph[ZR_UTF_SIZE];
+typedef union {void *ptr; zr_int id;} zr_handle;
+struct zr_image {zr_handle handle; zr_ushort w, h; zr_ushort region[4];};
 
+/* -----------------------  POINTER ---------------------------------*/
+#define zr_ptr_add(t, p, i) ((t*)((void*)((zr_byte*)(p) + (i))))
+#define zr_ptr_sub(t, p, i) ((t*)((void*)((zr_byte*)(p) - (i))))
+#define zr_ptr_add_const(t, p, i) ((const t*)((const void*)((const zr_byte*)(p) + (i))))
+#define zr_ptr_sub_const(t, p, i) ((const t*)((const void*)((const zr_byte*)(p) - (i))))
+/* -----------------------  MATH ---------------------------------*/
 struct zr_rect zr_get_null_rect(void);
-zr_size zr_utf_decode(const zr_char*, zr_long*, zr_size);
-zr_size zr_utf_encode(zr_long, zr_char*, zr_size);
-zr_size zr_utf_len(const zr_char*, zr_size len);
+struct zr_rect zr_rect(zr_float x, zr_float y, zr_float w, zr_float h);
+struct zr_vec2 zr_vec2(zr_float x, zr_float y);
+/* -----------------------  COLOR ---------------------------------*/
+struct zr_color zr_rgba(zr_byte r, zr_byte g, zr_byte b, zr_byte a);
+struct zr_color zr_rgb(zr_byte r, zr_byte g, zr_byte b);
+struct zr_color zr_rgba_f(zr_float r, zr_float g, zr_float b, zr_float a);
+struct zr_color zr_rgb_f(zr_float r, zr_float g, zr_float b);
+struct zr_color zr_hsv(zr_float h, zr_float s, zr_float v);
+struct zr_color zr_rgba32(zr_uint);
+zr_uint zr_color32(struct zr_color);
+void zr_colorf(zr_float *r, zr_float *g, zr_float *b, zr_float *a, struct zr_color);
+void zr_color_hsv(zr_float *out_h, zr_float *out_s, zr_float *out_v, struct zr_color);
+/* -----------------------  IMAGE ---------------------------------*/
 zr_handle zr_handle_ptr(void*);
 zr_handle zr_handle_id(zr_int);
 struct zr_image zr_image_ptr(void*);
@@ -176,14 +188,10 @@ struct zr_image zr_image_id(zr_int);
 struct zr_image zr_subimage_ptr(void*, zr_ushort w, zr_ushort h, struct zr_rect);
 struct zr_image zr_subimage_id(zr_int, zr_ushort w, zr_ushort h, struct zr_rect);
 zr_bool zr_image_is_subimage(const struct zr_image* img);
-struct zr_rect zr_rect(zr_float x, zr_float y, zr_float w, zr_float h);
-struct zr_vec2 zr_vec2(zr_float x, zr_float y);
-struct zr_color zr_rgba(zr_byte r, zr_byte g, zr_byte b, zr_byte a);
-struct zr_color zr_rgb(zr_byte r, zr_byte g, zr_byte b);
-#define zr_ptr_add(t, p, i) ((t*)((void*)((zr_byte*)(p) + (i))))
-#define zr_ptr_sub(t, p, i) ((t*)((void*)((zr_byte*)(p) - (i))))
-#define zr_ptr_add_const(t, p, i) ((const t*)((const void*)((const zr_byte*)(p) + (i))))
-#define zr_ptr_sub_const(t, p, i) ((const t*)((const void*)((const zr_byte*)(p) - (i))))
+/* -----------------------  UTF-8 ---------------------------------*/
+zr_size zr_utf_decode(const zr_char*, zr_long*, zr_size);
+zr_size zr_utf_encode(zr_long, zr_char*, zr_size);
+zr_size zr_utf_len(const zr_char*, zr_size len);
 /*
  * ==============================================================
  *
@@ -276,6 +284,7 @@ struct zr_mouse {
     /* number of steps in the up or down scroll direction */
 };
 
+struct zr_key {zr_bool down; zr_uint clicked;};
 struct zr_keyboard {
     struct zr_key keys[ZR_KEY_MAX];
     /* state of every used key */
@@ -2786,6 +2795,16 @@ zr_bool zr_window_is_minimized(struct zr_window*);
     zr_queue   -- returns the queue of the window
     zr_space   -- returns the drawable space inside the window
 */
+enum zr_widget_states {
+    ZR_INACTIVE = zr_false,
+    ZR_ACTIVE = zr_true
+};
+
+enum zr_collapse_states {
+    ZR_MINIMIZED = zr_false,
+    ZR_MAXIMIZED = zr_true
+};
+
 enum zr_widget_state {
     ZR_WIDGET_INVALID,
     /* The widget cannot be seen and is completly out of view */

@@ -29,11 +29,13 @@
 #define CLAMP(i,v,x) (MAX(MIN(v,x), i))
 #endif
 
+/* ==============================================================
+ *                          MATH
+ * =============================================================== */
 #define ZR_PI 3.141592654f
 #define ZR_PI2 (ZR_PI * 2.0f)
 #define ZR_4_DIV_PI (1.27323954f)
 #define ZR_4_DIV_PI_SQRT (0.405284735f)
-
 #define ZR_UTF_INVALID 0xFFFD
 #define ZR_MAX_NUMBER_BUFFER 64
 
@@ -57,6 +59,11 @@
 #define zr_vec2_muls(a, t) zr_vec2((a).x * (t), (a).y * (t))
 #define zr_vec2_lerp(a, b, t) zr_vec2(ZR_LERP((a).x, (b).x, t), ZR_LERP((a).y, (b).y, t))
 
+enum zr_tree_node_symbol {ZR_TREE_NODE_BULLET, ZR_TREE_NODE_TRIANGLE};
+static const struct zr_rect zr_null_rect = {-8192.0f, -8192.0f, 16384, 16384};
+/* ==============================================================
+ *                          ALIGNMENT
+ * =============================================================== */
 #define ZR_ALIGN_PTR(x, mask) (void*)((zr_ptr)((zr_byte*)(x) + (mask-1)) & ~(mask-1))
 #define ZR_ALIGN_PTR_BACK(x, mask)(void*)((zr_ptr)((zr_byte*)(x)) & ~(mask-1));
 #define ZR_ALIGN(x, mask) ((x) + (mask-1)) & ~(mask-1)
@@ -76,17 +83,10 @@ template<typename T> struct zr_alignof{struct Big {T x; char c;}; enum {
 #else
 #define ZR_ALIGNOF(t) ((char*)(&((struct {char c; t _h;}*)0)->_h) - (char*)0)
 #endif
-
-enum zr_tree_node_symbol {ZR_TREE_NODE_BULLET, ZR_TREE_NODE_TRIANGLE};
-static const struct zr_rect zr_null_rect = {-8192.0f, -8192.0f, 16384, 16384};
-static const zr_byte zr_utfbyte[ZR_UTF_SIZE+1] = {0x80, 0, 0xC0, 0xE0, 0xF0};
-static const zr_byte zr_utfmask[ZR_UTF_SIZE+1] = {0xC0, 0x80, 0xE0, 0xF0, 0xF8};
-static const long zr_utfmin[ZR_UTF_SIZE+1] = {0, 0, 0x80, 0x800, 0x100000};
-static const long zr_utfmax[ZR_UTF_SIZE+1] = {0x10FFFF, 0x7F, 0x7FF, 0xFFFF, 0x10FFFF};
 /*
  * ==============================================================
  *
- *                          Utility
+ *                          MATH
  *
  * ===============================================================
  */
@@ -162,7 +162,13 @@ zr_vec2(zr_float x, zr_float y)
     ret.x = x; ret.y = y;
     return ret;
 }
-
+/*
+ * ==============================================================
+ *
+ *                          STANDART
+ *
+ * ===============================================================
+ */
 static void*
 zr_memcopy(void *dst, const void *src, zr_size size)
 {
@@ -174,6 +180,75 @@ zr_memcopy(void *dst, const void *src, zr_size size)
     return dst;
 }
 
+static void
+zr_zero(void *dst, zr_size size)
+{
+    zr_size i;
+    char *d = (char*)dst;
+    ZR_ASSERT(dst);
+    for (i = 0; i < size; ++i) d[i] = 0;
+}
+
+static zr_size
+zr_strsiz(const char *str)
+{
+    zr_size siz = 0;
+    ZR_ASSERT(str);
+    while (str && *str++ != '\0') siz++;
+    return siz;
+}
+
+static zr_int
+zr_strtoi(zr_int *number, const char *buffer, zr_size len)
+{
+    zr_size i;
+    ZR_ASSERT(number);
+    ZR_ASSERT(buffer);
+    if (!number || !buffer) return 0;
+    *number = 0;
+    for (i = 0; i < len; ++i)
+        *number = *number * 10 + (buffer[i] - '0');
+    return 1;
+}
+
+static zr_size
+zr_itos(char *buffer, zr_int num)
+{
+    static const char digit[] = "0123456789";
+    zr_int shifter;
+    zr_size len = 0;
+    char *p = buffer;
+
+    ZR_ASSERT(buffer);
+    if (!buffer)
+        return 0;
+
+    if (num < 0) {
+        num = ZR_ABS(num);
+        *p++ = '-';
+    }
+    shifter = num;
+
+    do {
+        ++p;
+        shifter = shifter/10;
+    } while (shifter);
+    *p = '\0';
+
+    len = (zr_size)(p - buffer);
+    do {
+        *--p = digit[num % 10];
+        num = num / 10;
+    } while (num);
+    return len;
+}
+/*
+ * ==============================================================
+ *
+ *                          COLOR
+ *
+ * ===============================================================
+ */
 struct zr_color
 zr_rgba(zr_byte r, zr_byte g, zr_byte b, zr_byte a)
 {
@@ -192,6 +267,144 @@ zr_rgb(zr_byte r, zr_byte g, zr_byte b)
     return ret;
 }
 
+struct zr_color
+zr_rgba32(zr_uint in)
+{
+    struct zr_color ret;
+    ret.r = (in & 0xFF);
+    ret.g = ((in >> 8) & 0xFF);
+    ret.b = ((in >> 16) & 0xFF);
+    ret.a = ((in >> 24) & 0xFF);
+    return ret;
+}
+
+struct zr_color
+zr_rgba_f(zr_float r, zr_float g, zr_float b, zr_float a)
+{
+    struct zr_color ret;
+    ret.r = (zr_byte)ZR_SATURATE(r * 255.0f);
+    ret.g = (zr_byte)ZR_SATURATE(g * 255.0f);
+    ret.b = (zr_byte)ZR_SATURATE(b * 255.0f);
+    ret.a = (zr_byte)ZR_SATURATE(a * 255.0f);
+    return ret;
+}
+
+struct zr_color
+zr_rgb_f(zr_float r, zr_float g, zr_float b)
+{
+    struct zr_color ret;
+    ret.r = (zr_byte)ZR_SATURATE(r * 255.0f);
+    ret.g = (zr_byte)ZR_SATURATE(g * 255.0f);
+    ret.b = (zr_byte)ZR_SATURATE(b * 255.0f);
+    ret.a = 255;
+    return ret;
+}
+
+struct zr_color
+zr_hsv(zr_float h, zr_float s, zr_float v)
+{
+    struct zr_colorf {zr_float r,g,b,a;} out;
+    zr_float hh, p, q, t, ff;
+    zr_long i;
+
+    if (s <= 0.0f) {
+        out.r = v; out.g = v; out.b = v;
+        return zr_rgb_f(out.r, out.g, out.b);
+    }
+
+    hh = h;
+    if (hh >= 360.0f) hh = 0;
+    hh /= 60.0f;
+    i = (zr_long)hh;
+    ff = hh - (zr_float)i;
+    p = v * (1.0f - s);
+    q = v * (1.0f - (s * ff));
+    t = v * (1.0f - (s * (1.0f - ff)));
+
+    switch (i) {
+    case 0:
+        out.r = v;
+        out.g = t;
+        out.b = p;
+        break;
+    case 1:
+        out.r = q;
+        out.g = v;
+        out.b = p;
+        break;
+    case 2:
+        out.r = p;
+        out.g = v;
+        out.b = t;
+        break;
+    case 3:
+        out.r = p;
+        out.g = q;
+        out.b = v;
+        break;
+    case 4:
+        out.r = t;
+        out.g = p;
+        out.b = v;
+        break;
+    case 5:
+    default:
+        out.r = v;
+        out.g = p;
+        out.b = q;
+        break;
+    }
+    return zr_rgb_f(out.r, out.g, out.b);
+}
+
+zr_uint
+zr_color32(struct zr_color in)
+{
+    zr_uint out = (zr_draw_vertex_color)in.r;
+    out |= ((zr_draw_vertex_color)in.g << 8);
+    out |= ((zr_draw_vertex_color)in.b << 16);
+    out |= ((zr_draw_vertex_color)in.a << 24);
+    return out;
+}
+
+void
+zr_colorf(zr_float *r, zr_float *g, zr_float *b, zr_float *a, struct zr_color in)
+{
+    static const zr_float s = 1.0f/255.0f;
+    *r = (zr_float)in.r * s;
+    *g = (zr_float)in.g * s;
+    *b = (zr_float)in.b * s;
+    *a = (zr_float)in.a * s;
+}
+
+void
+zr_color_hsv(zr_float *out_h, zr_float *out_s, zr_float *out_v, struct zr_color in)
+{
+    zr_float chroma;
+    zr_float K = 0.0f;
+    zr_float r,g,b,a;
+
+    zr_colorf(&r,&g,&b,&a, in);
+    if (g < b) {
+        const zr_float t = g; g = b; b = t;
+        K = -1.f;
+    }
+    if (a < g) {
+        const zr_float t = r; r = g; g = t;
+        K = -2.f/6.0f - K;
+    }
+    chroma = r - ((g < b) ? g: b);
+    *out_h = ZR_ABS(K + (g - b)/(6.0f * chroma + 1e-20f));
+    *out_s = chroma / (r + 1e-20f);
+    *out_v = r;
+}
+/*
+ * ==============================================================
+ *
+ *                          IMAGE
+ *
+ * ===============================================================
+ */
 zr_handle
 zr_handle_ptr(void *ptr)
 {
@@ -269,69 +482,6 @@ zr_image_is_subimage(const struct zr_image* img)
 }
 
 static void
-zr_zero(void *dst, zr_size size)
-{
-    zr_size i;
-    char *d = (char*)dst;
-    ZR_ASSERT(dst);
-    for (i = 0; i < size; ++i) d[i] = 0;
-}
-
-static zr_size
-zr_strsiz(const char *str)
-{
-    zr_size siz = 0;
-    ZR_ASSERT(str);
-    while (str && *str++ != '\0') siz++;
-    return siz;
-}
-
-static zr_int
-zr_strtoi(zr_int *number, const char *buffer, zr_size len)
-{
-    zr_size i;
-    ZR_ASSERT(number);
-    ZR_ASSERT(buffer);
-    if (!number || !buffer) return 0;
-    *number = 0;
-    for (i = 0; i < len; ++i)
-        *number = *number * 10 + (buffer[i] - '0');
-    return 1;
-}
-
-static zr_size
-zr_itos(char *buffer, zr_int num)
-{
-    static const char digit[] = "0123456789";
-    zr_int shifter;
-    zr_size len = 0;
-    char *p = buffer;
-
-    ZR_ASSERT(buffer);
-    if (!buffer)
-        return 0;
-
-    if (num < 0) {
-        num = ZR_ABS(num);
-        *p++ = '-';
-    }
-    shifter = num;
-
-    do {
-        ++p;
-        shifter = shifter/10;
-    } while (shifter);
-    *p = '\0';
-
-    len = (zr_size)(p - buffer);
-    do {
-        *--p = digit[num % 10];
-        num = num / 10;
-    } while (num);
-    return len;
-}
-
-static void
 zr_unify(struct zr_rect *clip, const struct zr_rect *a, zr_float x0, zr_float y0,
     zr_float x1, zr_float y1)
 {
@@ -388,6 +538,11 @@ zr_triangle_from_direction(struct zr_vec2 *result, struct zr_rect r,
  *
  * ===============================================================
  */
+static const zr_byte zr_utfbyte[ZR_UTF_SIZE+1] = {0x80, 0, 0xC0, 0xE0, 0xF0};
+static const zr_byte zr_utfmask[ZR_UTF_SIZE+1] = {0xC0, 0x80, 0xE0, 0xF0, 0xF8};
+static const long zr_utfmin[ZR_UTF_SIZE+1] = {0, 0, 0x80, 0x800, 0x100000};
+static const long zr_utfmax[ZR_UTF_SIZE+1] = {0x10FFFF, 0x7F, 0x7FF, 0xFFFF, 0x10FFFF};
+
 static zr_size
 zr_utf_validate(zr_long *u, zr_size i)
 {
@@ -1837,16 +1992,6 @@ zr_draw_list_alloc_elements(struct zr_draw_list *list, zr_size count)
     list->element_count += (zr_uint)count;
     cmd->elem_count += (zr_uint)count;
     return ids;
-}
-
-static zr_draw_vertex_color
-zr_color32(struct zr_color in)
-{
-    zr_draw_vertex_color out = (zr_draw_vertex_color)in.r;
-    out |= ((zr_draw_vertex_color)in.g << 8);
-    out |= ((zr_draw_vertex_color)in.b << 16);
-    out |= ((zr_draw_vertex_color)in.a << 24);
-    return out;
 }
 
 static struct zr_draw_vertex
@@ -8162,11 +8307,10 @@ zr_tooltip_begin(struct zr_context *parent, struct zr_context *tip, zr_float wid
 
     in = parent->input;
 
-    bounds.x = in->mouse.pos.x;
-    bounds.y = in->mouse.pos.y;
     bounds.w = width;
     bounds.h = zr_null_rect.h;
-    bounds = zr_layout_row_space_rect_to_local(parent, bounds);
+    bounds.x = in->mouse.pos.x - parent->clip.x;
+    bounds.y = in->mouse.pos.y - parent->clip.y;
     zr_popup_begin(parent, tip, ZR_POPUP_DYNAMIC, ZR_WINDOW_NO_SCROLLBAR, bounds, zr_vec2(0,0));
 }
 
