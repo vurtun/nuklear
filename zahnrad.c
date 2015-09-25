@@ -1128,6 +1128,22 @@ zr_command_buffer_push_circle(struct zr_command_buffer *b, struct zr_rect r,
 }
 
 void
+zr_command_buffer_push_arc(struct zr_command_buffer *b, zr_float cx,
+    zr_float cy, zr_float radius, zr_float a_min, zr_float a_max, struct zr_color c)
+{
+    struct zr_command_arc *cmd;
+    cmd = (struct zr_command_arc*)
+        zr_command_buffer_push(b, ZR_COMMAND_ARC, sizeof(*cmd));
+    if (!cmd) return;
+    cmd->cx = (zr_short)cx;
+    cmd->cy = (zr_short)cy;
+    cmd->r = (zr_ushort)radius;
+    cmd->a[0] = a_min;
+    cmd->a[1] = a_max;
+    cmd->color = c;
+}
+
+void
 zr_command_buffer_push_triangle(struct zr_command_buffer *b,zr_float x0,zr_float y0,
     zr_float x1, zr_float y1, zr_float x2, zr_float y2, struct zr_color c)
 {
@@ -1607,6 +1623,12 @@ zr_draw_list_load(struct zr_draw_list *list, struct zr_command_queue *queue,
             zr_draw_list_add_circle_filled(list, zr_vec2((zr_float)c->x + (zr_float)c->w/2,
                 (zr_float)c->y + c->h/2), c->w/2, c->color, curve_segments);
         } break;
+        case ZR_COMMAND_ARC: {
+            const struct zr_command_arc *c = zr_command(arc, cmd);
+            zr_draw_list_path_arc_to(list, zr_vec2(c->cx, c->cy), c->r,
+                c->a[0], c->a[1], curve_segments);
+            zr_draw_list_path_fill(list, c->color);
+        } break;
         case ZR_COMMAND_TRIANGLE: {
             const struct zr_command_triangle *t = zr_command(triangle, cmd);
             zr_draw_list_add_triangle_filled(list, zr_vec2(t->a.x, t->a.y),
@@ -1622,7 +1644,6 @@ zr_draw_list_load(struct zr_draw_list *list, struct zr_command_queue *queue,
             zr_draw_list_add_image(list, i->img, zr_rect(i->x, i->y, i->w, i->h),
                 zr_rgb(255, 255, 255));
         } break;
-        case ZR_COMMAND_MAX:
         default: break;
         }
     }
@@ -2666,6 +2687,18 @@ zr_font_cyrillic_glyph_ranges(void)
         0x0400, 0x052F,
         0x2DE0, 0x2DFF,
         0xA640, 0xA69F,
+        0
+    };
+    return ranges;
+}
+
+const zr_long*
+zr_font_korean_glyph_ranges(void)
+{
+    static const zr_long ranges[] = {
+        0x0020, 0x00FF,
+        0x3131, 0x3163,
+        0xAC00, 0xD79D,
         0
     };
     return ranges;
@@ -6050,7 +6083,8 @@ zr_panel_alloc_row(struct zr_context *layout)
 }
 
 static void
-zr_panel_alloc_space(struct zr_rect *bounds, struct zr_context *layout)
+zr_layout_widget_space(struct zr_rect *bounds, struct zr_context *layout,
+    zr_bool modify)
 {
     const struct zr_style *config;
     zr_float panel_padding, panel_spacing, panel_space;
@@ -6069,9 +6103,6 @@ zr_panel_alloc_space(struct zr_rect *bounds, struct zr_context *layout)
     spacing = zr_style_property(config, ZR_PROPERTY_ITEM_SPACING);
     padding = zr_style_property(config, ZR_PROPERTY_PADDING);
 
-    /* check if the end of the row has been hit and begin new row if so */
-    if (layout->row.index >= layout->row.columns)
-        zr_panel_alloc_row(layout);
 
     /* calculate the useable panel space */
     panel_padding = 2 * padding.x;
@@ -6092,9 +6123,11 @@ zr_panel_alloc_space(struct zr_rect *bounds, struct zr_context *layout)
         item_offset = layout->row.item_offset;
         item_spacing = (zr_float)layout->row.index * spacing.x;
 
-        layout->row.item_offset += item_width + spacing.x;
-        layout->row.filled += layout->row.item_width;
-        layout->row.index = 0;
+        if (modify) {
+            layout->row.item_offset += item_width + spacing.x;
+            layout->row.filled += layout->row.item_width;
+            layout->row.index = 0;
+        }
     } break;
     case ZR_LAYOUT_STATIC_TILED:
     case ZR_LAYOUT_DYNAMIC_TILED: {
@@ -6104,7 +6137,7 @@ zr_panel_alloc_space(struct zr_rect *bounds, struct zr_context *layout)
         bounds->w = layout->row.item.w;
         bounds->h = layout->row.item.h;
         layout->row.index = 0;
-        if ((bounds->x + bounds->w + layout->offset.x) > layout->max_x)
+        if (((bounds->x + bounds->w + layout->offset.x) > layout->max_x) && modify)
             layout->max_x = bounds->x + bounds->w + layout->offset.x;
         return;
     } break;
@@ -6130,8 +6163,10 @@ zr_panel_alloc_space(struct zr_rect *bounds, struct zr_context *layout)
         else item_width = (ratio * panel_space);
 
         item_offset = layout->row.item_offset;
-        layout->row.item_offset += item_width + spacing.x;
-        layout->row.filled += ratio;
+        if (modify) {
+            layout->row.item_offset += item_width + spacing.x;
+            layout->row.filled += ratio;
+        }
     } break;
     case ZR_LAYOUT_STATIC_FIXED: {
         /* non-scaling fixed widgets item width */
@@ -6144,8 +6179,10 @@ zr_panel_alloc_space(struct zr_rect *bounds, struct zr_context *layout)
         item_width = layout->row.item_width;
         item_offset = layout->row.item_offset;
         item_spacing = (zr_float)layout->row.index * spacing.x;
-        layout->row.item_offset += item_width + spacing.x;
-        layout->row.index = 0;
+        if (modify) {
+            layout->row.item_offset += item_width + spacing.x;
+            layout->row.index = 0;
+        }
     } break;
     case ZR_LAYOUT_STATIC_FREE: {
         /* free widget placing */
@@ -6155,7 +6192,7 @@ zr_panel_alloc_space(struct zr_rect *bounds, struct zr_context *layout)
         bounds->y -= layout->offset.y;
         bounds->w = layout->row.item.w;
         bounds->h = layout->row.item.h;
-        if ((bounds->x + bounds->w + layout->offset.x) > layout->max_x)
+        if (((bounds->x + bounds->w + layout->offset.x) > layout->max_x) && modify)
             layout->max_x = bounds->x + bounds->w + layout->offset.x;
         return;
     } break;
@@ -6164,7 +6201,7 @@ zr_panel_alloc_space(struct zr_rect *bounds, struct zr_context *layout)
         item_spacing = (zr_float)layout->row.index * spacing.x;
         item_width = layout->row.ratio[layout->row.index];
         item_offset = layout->row.item_offset;
-        layout->row.item_offset += item_width + spacing.x;
+        if (modify) layout->row.item_offset += item_width + spacing.x;
         } break;
     default: break;
     };
@@ -6174,10 +6211,34 @@ zr_panel_alloc_space(struct zr_rect *bounds, struct zr_context *layout)
     bounds->y = layout->at_y - layout->offset.y;
     bounds->w = item_width;
     bounds->h = layout->row.height - spacing.y;
-
-    layout->row.index++;
-    if ((bounds->x + bounds->w) > layout->max_x)
+    if (((bounds->x + bounds->w) > layout->max_x) && modify)
         layout->max_x = bounds->x + bounds->w;
+}
+
+static void
+zr_panel_alloc_space(struct zr_rect *bounds, struct zr_context *layout)
+{
+    /* check if the end of the row has been hit and begin new row if so */
+    if (layout->row.index >= layout->row.columns)
+        zr_panel_alloc_row(layout);
+
+    /* calculate widget position and size */
+    zr_layout_widget_space(bounds, layout, zr_true);
+    layout->row.index++;
+}
+
+void
+zr_layout_peek(struct zr_rect *bounds, struct zr_context *layout)
+{
+    zr_float y = layout->at_y;
+    zr_size index = layout->row.index;
+    if (layout->row.index >= layout->row.columns) {
+        layout->at_y += layout->row.height;
+        layout->row.index = 0;
+    }
+    zr_layout_widget_space(bounds, layout, zr_false);
+    layout->at_y = y;
+    layout->row.index = index;
 }
 
 zr_bool
@@ -7112,6 +7173,478 @@ zr_graph_end(struct zr_context *layout, struct zr_graph *graph)
 /*
  * -------------------------------------------------------------
  *
+ *                          TREE
+ *
+ * --------------------------------------------------------------
+ */
+void
+zr_tree_begin(struct zr_context *p, struct zr_tree *tree,
+    const char *title, zr_float height, struct zr_vec2 offset)
+{
+    struct zr_vec2 padding;
+    const struct zr_style *config;
+    ZR_ASSERT(p);
+    ZR_ASSERT(tree);
+    ZR_ASSERT(title);
+    if (!p || !tree || !title) return;
+
+    zr_group_begin(p, &tree->group, title, 0, offset);
+    zr_panel_layout(&tree->group, height, 1);
+
+    config = tree->group.style;
+    padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
+
+    tree->at_x = 0;
+    tree->skip = -1;
+    tree->depth = 0;
+    tree->x_off = tree->group.style->font.height + 2 * padding.x;
+}
+
+static enum zr_tree_node_operation
+zr_tree_node(struct zr_tree *tree, enum zr_tree_node_symbol symbol,
+    const char *title, struct zr_image *img, zr_state *state)
+{
+    struct zr_text text;
+    struct zr_rect bounds = {0,0,0,0};
+    struct zr_rect sym, label, icon;
+    struct zr_context *layout;
+    enum zr_tree_node_operation op = ZR_NODE_NOP;
+
+    const struct zr_input *i;
+    const struct zr_style *config;
+    struct zr_vec2 item_padding;
+    struct zr_color col;
+
+    ZR_ASSERT(tree);
+    ZR_ASSERT(state);
+    ZR_ASSERT(title);
+    if (!tree || !state || !title)
+        return ZR_NODE_NOP;
+
+    layout = &tree->group;
+    if (tree->skip >= 0 || !zr_widget(&bounds, layout)) {
+        if (!tree->depth) tree->at_x = bounds.x;
+        return op;
+    }
+
+    if (tree->depth){
+        bounds.w = (bounds.x + bounds.w) - tree->at_x;
+        bounds.x = tree->at_x;
+    } else tree->at_x = bounds.x;
+
+    /* fetch some configuration constants */
+    i = layout->input;
+    config = layout->style;
+    item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
+    col = zr_style_color(config, ZR_COLOR_TEXT);
+
+    /* calculate symbol bounds */
+    sym.x = bounds.x;
+    sym.y = bounds.y + (bounds.h/2) - (config->font.height/2);
+    sym.w = config->font.height;
+    sym.h = config->font.height;
+
+    if (img) {
+        icon.x = sym.x + sym.w + item_padding.x;
+        icon.y = sym.y;
+        icon.w = bounds.h;
+        icon.h = bounds.h;
+        label.x = icon.x + icon.w + item_padding.x;
+    } else label.x = sym.x + sym.w + item_padding.x;
+
+    /* calculate text bounds */
+    label.y = bounds.y;
+    label.h = bounds.h;
+    label.w = bounds.w - (sym.w + 2 * item_padding.x);
+
+    /* output symbol */
+    if (symbol == ZR_TREE_NODE_TRIANGLE) {
+        /* parent node */
+        struct zr_vec2 points[3];
+        enum zr_heading heading;
+        if (zr_input_mouse_clicked(i, ZR_BUTTON_LEFT, sym)) {
+            if (*state & ZR_NODE_ACTIVE)
+                *state &= ~(zr_flags)ZR_NODE_ACTIVE;
+            else *state |= ZR_NODE_ACTIVE;
+        }
+
+        heading = (*state & ZR_NODE_ACTIVE) ? ZR_DOWN : ZR_RIGHT;
+        zr_triangle_from_direction(points, sym, 0, 0, heading);
+        zr_command_buffer_push_triangle(layout->buffer,  points[0].x, points[0].y,
+            points[1].x, points[1].y, points[2].x, points[2].y, col);
+    } else {
+        /* leaf node */
+        zr_command_buffer_push_circle(layout->buffer, sym, col);
+    }
+
+    if (!(layout->flags & ZR_WINDOW_ROM)) {
+        /* node selection */
+        if (zr_input_mouse_clicked(i, ZR_BUTTON_LEFT, label)) {
+            if (*state & ZR_NODE_SELECTED)
+                *state &= ~(zr_flags)ZR_NODE_SELECTED;
+            else *state |= ZR_NODE_SELECTED;
+        }
+
+        /* tree node operations */
+        if (zr_input_is_key_pressed(i, ZR_KEY_DEL) && (*state & ZR_NODE_SELECTED)) {
+            *state &= ~(zr_flags)ZR_NODE_SELECTED;
+            op = ZR_NODE_DELETE;
+        } else if (zr_input_is_key_pressed(i, ZR_KEY_COPY) &&
+            (*state & ZR_NODE_SELECTED)) {
+            *state &= ~(zr_flags)ZR_NODE_SELECTED;
+            op = ZR_NODE_CLONE;
+        } else if (zr_input_is_key_pressed(i, ZR_KEY_CUT) &&
+            (*state & ZR_NODE_SELECTED)) {
+            *state &= ~(zr_flags)ZR_NODE_SELECTED;
+            op = ZR_NODE_CUT;
+        } else if (zr_input_is_key_pressed(i, ZR_KEY_PASTE) &&
+            (*state & ZR_NODE_SELECTED)) {
+            *state &= ~(zr_flags)ZR_NODE_SELECTED;
+            op = ZR_NODE_PASTE;
+        }
+    }
+
+    /* output label */
+    text.padding.x = item_padding.x;
+    text.padding.y = item_padding.y;
+    text.text = config->colors[ZR_COLOR_TEXT];
+    text.background = (*state & ZR_NODE_SELECTED) ?
+        config->colors[ZR_COLOR_BUTTON_HOVER]:
+        config->colors[ZR_COLOR_WINDOW];
+    zr_widget_text(layout->buffer, label, title, zr_strsiz(title), &text,
+            ZR_TEXT_LEFT, &config->font);
+    return op;
+}
+
+enum zr_tree_node_operation
+zr_tree_begin_node(struct zr_tree *tree, const char *title,
+    zr_state *state)
+{
+    enum zr_tree_node_operation op;
+    ZR_ASSERT(tree);
+    ZR_ASSERT(state);
+    ZR_ASSERT(title);
+    if (!tree || !state || !title)
+        return ZR_NODE_NOP;
+
+    op = zr_tree_node(tree, ZR_TREE_NODE_TRIANGLE, title, 0, state);
+    tree->at_x += tree->x_off;
+    if (tree->skip < 0 && !(*state & ZR_NODE_ACTIVE))
+        tree->skip = tree->depth;
+    tree->depth++;
+    return op;
+}
+
+enum zr_tree_node_operation
+zr_tree_begin_node_icon(struct zr_tree *tree, const char *title,
+    struct zr_image img, zr_state *state)
+{
+    enum zr_tree_node_operation op;
+    ZR_ASSERT(tree);
+    ZR_ASSERT(state);
+    ZR_ASSERT(title);
+    if (!tree || !state || !title)
+        return ZR_NODE_NOP;
+
+    op = zr_tree_node(tree, ZR_TREE_NODE_TRIANGLE, title, &img, state);
+    tree->at_x += tree->x_off;
+    if (tree->skip < 0 && !(*state & ZR_NODE_ACTIVE))
+        tree->skip = tree->depth;
+    tree->depth++;
+    return op;
+}
+
+enum zr_tree_node_operation
+zr_tree_leaf(struct zr_tree *tree, const char *title, zr_state *state)
+{return zr_tree_node(tree, ZR_TREE_NODE_BULLET, title, 0, state);}
+
+enum zr_tree_node_operation
+zr_tree_leaf_icon(struct zr_tree *tree, const char *title, struct zr_image img,
+    zr_state *state)
+{return zr_tree_node(tree, ZR_TREE_NODE_BULLET, title, &img, state);}
+
+void
+zr_tree_end_node(struct zr_tree *tree)
+{
+    ZR_ASSERT(tree->depth);
+    tree->depth--;
+    tree->at_x -= tree->x_off;
+    if (tree->skip == tree->depth)
+        tree->skip = -1;
+}
+
+struct zr_vec2
+zr_tree_end(struct zr_context *p, struct zr_tree* tree)
+{return zr_group_end(p, &tree->group);}
+/*
+ * -------------------------------------------------------------
+ *
+ *                          GROUPS
+ *
+ * --------------------------------------------------------------
+ */
+void
+zr_group_begin(struct zr_context *p, struct zr_context *g,
+    const char *title, zr_flags flags, struct zr_vec2 offset)
+{
+    struct zr_rect bounds;
+    struct zr_window panel;
+    const struct zr_rect *c;
+    struct zr_rect temp;
+
+    ZR_ASSERT(p);
+    ZR_ASSERT(g);
+    if (!p || !g) return;
+    if (!p->valid)
+        goto failed;
+
+    /* allocate space for the group panel inside the panel */
+    c = &p->clip;
+    zr_panel_alloc_space(&bounds, p);
+    zr_zero(g, sizeof(*g));
+    if (!ZR_INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h) &&
+        !(flags & ZR_WINDOW_MOVEABLE))
+        goto failed;
+
+    /* initialize a fake panel to create the layout from */
+    flags |= ZR_WINDOW_BORDER|ZR_WINDOW_TAB;
+    if (p->flags & ZR_WINDOW_ROM)
+        flags |= ZR_WINDOW_ROM;
+
+    temp = p->buffer->clip;
+    zr_window_init(&panel, zr_rect(bounds.x, bounds.y,bounds.w,bounds.h),
+        flags, 0, p->style, p->input);
+    panel.buffer = *p->buffer;
+    zr_begin(g, &panel);
+    *p->buffer = panel.buffer;
+    g->buffer = p->buffer;
+    g->offset = offset;
+    g->queue = p->queue;
+
+    {
+        /* setup correct clipping rectangle for the group */
+        struct zr_rect clip;
+        struct zr_command_buffer *out = p->buffer;
+        zr_unify(&clip, &temp, g->bounds.x, g->clip.y, g->clip.x + g->bounds.w,
+            g->clip.y + g->clip.h);
+        zr_command_buffer_push_scissor(out, clip);
+
+        /* calculate the group clipping rect */
+        if (title) zr_header(g, title, 0, 0, ZR_HEADER_LEFT);
+        zr_unify(&clip, &p->clip, g->clip.x, g->clip.y, g->clip.x + g->clip.w,
+            g->clip.y + g->clip.h);
+
+        zr_command_buffer_push_scissor(out, clip);
+        g->clip = clip;
+    }
+    return;
+
+failed:
+    /* invalid panels still need correct data */
+    g->valid = zr_false;
+    g->style = p->style;
+    g->buffer = p->buffer;
+    g->input = p->input;
+    g->queue = p->queue;
+}
+
+struct zr_vec2
+zr_group_end(struct zr_context *p, struct zr_context *g)
+{
+    struct zr_window pan;
+    struct zr_command_buffer *out;
+    struct zr_rect clip;
+
+    ZR_ASSERT(p);
+    ZR_ASSERT(g);
+    if (!p || !g) return zr_vec2(0,0);
+    if (!p->valid) return zr_vec2(0,0);
+    zr_zero(&pan, sizeof(pan));
+
+    out = p->buffer;
+    pan.bounds.x = g->bounds.x;
+    pan.bounds.y = g->bounds.y;
+    pan.bounds.w = g->width;
+    pan.bounds.h = g->height;
+    pan.flags = g->flags|ZR_WINDOW_TAB;
+
+    /* setup clipping rect to finalize group panel drawing back to parent */
+    zr_unify(&clip, &p->clip, g->bounds.x, g->clip.y, g->bounds.x + g->bounds.w,
+        g->bounds.y + g->bounds.h);
+    zr_command_buffer_push_scissor(out, clip);
+    zr_end(g, &pan);
+    zr_command_buffer_push_scissor(out, p->clip);
+    return pan.offset;
+}
+/*
+ * -------------------------------------------------------------
+ *
+ *                          SHELF
+ *
+ * --------------------------------------------------------------
+ */
+zr_size
+zr_shelf_begin(struct zr_context *parent, struct zr_context *shelf,
+    const char *tabs[], zr_size size, zr_size active, struct zr_vec2 offset)
+{
+    const struct zr_style *config;
+    struct zr_command_buffer *out;
+    const struct zr_user_font *font;
+    struct zr_vec2 item_padding;
+    struct zr_vec2 panel_padding;
+
+    struct zr_rect bounds;
+    struct zr_rect *c;
+    struct zr_window panel;
+
+    zr_float header_x, header_y;
+    zr_float header_w, header_h;
+
+    ZR_ASSERT(parent);
+    ZR_ASSERT(tabs);
+    ZR_ASSERT(shelf);
+    ZR_ASSERT(active < size);
+    if (!parent || !shelf || !tabs || active >= size)
+        return active;
+    if (!parent->valid)
+        goto failed;
+
+    config = parent->style;
+    out = parent->buffer;
+    font = &config->font;
+    item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
+    panel_padding = zr_style_property(config, ZR_PROPERTY_PADDING);
+
+    /* allocate space for the shelf */
+    zr_panel_alloc_space(&bounds, parent);
+    zr_zero(shelf, sizeof(*shelf));
+    c = &parent->clip;
+    if (!ZR_INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h))
+        goto failed;
+
+    /* calculate the header height for the tabs */
+    header_x = bounds.x;
+    header_y = bounds.y;
+    header_w = bounds.w;
+    header_h = panel_padding.y + 3 * item_padding.y + config->font.height;
+
+    {
+        /* basic button setup valid for every tab */
+        const struct zr_input *input;
+        struct zr_button_text button;
+        zr_float item_width;
+        zr_size i;
+
+        input = (parent->flags & ZR_WINDOW_ROM) ? 0 : parent->input;
+        item_width = (header_w - (zr_float)size) / (zr_float)size;
+        zr_fill_button(config, &button.base);
+        button.base.rounding = 0;
+        button.alignment = ZR_TEXT_CENTERED;
+        for (i = 0; i < size; i++) {
+            struct zr_rect b = {0,0,0,0};
+            /* calculate the needed space for the tab text */
+            zr_size text_width = font->width(font->userdata,
+                (const zr_char*)tabs[i], zr_strsiz(tabs[i]));
+            text_width = text_width + (zr_size)(4 * item_padding.x);
+
+            /* calculate current tab button bounds */
+            b.y = header_y;
+            b.h = header_h;
+            b.x = header_x;
+            b.w = MIN(item_width, (zr_float)text_width);
+            header_x += MIN(item_width, (zr_float)text_width);
+
+            /* set different color for active or inactive tab */
+            if ((b.x + b.w) >= (bounds.x + bounds.w)) break;
+            if (active != i) {
+                b.y += item_padding.y;
+                b.h -= item_padding.y;
+                button.base.normal = config->colors[ZR_COLOR_SHELF];
+                button.base.hover = config->colors[ZR_COLOR_SHELF];
+                button.base.active = config->colors[ZR_COLOR_SHELF];
+
+                button.normal = config->colors[ZR_COLOR_SHELF_TEXT];
+                button.hover = config->colors[ZR_COLOR_SHELF_TEXT];
+                button.active = config->colors[ZR_COLOR_SHELF_TEXT];
+            } else {
+                button.base.normal = config->colors[ZR_COLOR_SHELF_ACTIVE];
+                button.base.hover = config->colors[ZR_COLOR_SHELF_ACTIVE];
+                button.base.active = config->colors[ZR_COLOR_SHELF_ACTIVE];
+
+                button.normal = config->colors[ZR_COLOR_SHELF_ACTIVE_TEXT];
+                button.hover = config->colors[ZR_COLOR_SHELF_ACTIVE_TEXT];
+                button.active = config->colors[ZR_COLOR_SHELF_ACTIVE_TEXT];
+            }
+            if (zr_widget_button_text(out, b, tabs[i], ZR_BUTTON_DEFAULT, &button,
+                input, &config->font)) active = i;
+        }
+    }
+    bounds.y += header_h;
+    bounds.h -= header_h;
+    {
+        /* setup fake panel to create a panel layout */
+        zr_flags flags;
+        flags = ZR_WINDOW_BORDER|ZR_WINDOW_TAB;
+        if (parent->flags & ZR_WINDOW_ROM)
+            flags |= ZR_WINDOW_ROM;
+        zr_window_init(&panel, zr_rect(bounds.x, bounds.y, bounds.w, bounds.h),
+            flags, 0, config, parent->input);
+
+        panel.buffer = *parent->buffer;
+        zr_begin(shelf, &panel);
+        *parent->buffer = panel.buffer;
+        shelf->buffer = parent->buffer;
+        shelf->offset = offset;
+        shelf->height -= header_h;
+        shelf->queue = parent->queue;
+    }
+    {
+        /* setup clip rect for the shelf panel */
+        struct zr_rect clip;
+        zr_unify(&clip, &parent->clip, shelf->clip.x, shelf->clip.y,
+            shelf->clip.x + shelf->clip.w, shelf->clip.y + shelf->clip.h);
+        zr_command_buffer_push_scissor(out, clip);
+        shelf->clip = clip;
+    }
+    return active;
+
+failed:
+    /* invalid panels still need correct data */
+    shelf->valid = zr_false;
+    shelf->style = parent->style;
+    shelf->buffer = parent->buffer;
+    shelf->input = parent->input;
+    shelf->queue = parent->queue;
+    return active;
+}
+
+struct zr_vec2
+zr_shelf_end(struct zr_context *p, struct zr_context *s)
+{
+    struct zr_command_buffer *out;
+    struct zr_rect clip;
+    struct zr_window pan;
+
+    ZR_ASSERT(p);
+    ZR_ASSERT(s);
+    if (!p || !s) return zr_vec2(0,0);
+    if (!p->valid) return zr_vec2(0,0);
+    zr_zero(&pan, sizeof(pan));
+
+    out = p->buffer;
+    pan.bounds = s->bounds;
+    pan.flags = s->flags|ZR_WINDOW_TAB;
+
+    zr_unify(&clip, &p->clip, s->bounds.x, s->bounds.y,
+        s->bounds.x + s->bounds.w, s->bounds.y + s->bounds.h);
+    zr_command_buffer_push_scissor(out, clip);
+    zr_end(s, &pan);
+    zr_command_buffer_push_scissor(out, p->clip);
+    return pan.offset;
+}
+/*
+ * -------------------------------------------------------------
+ *
  *                          POPUP
  *
  * --------------------------------------------------------------
@@ -7194,13 +7727,12 @@ zr_popup_end(struct zr_context *parent, struct zr_context *popup)
     pan.flags = ZR_WINDOW_BORDER|ZR_WINDOW_TAB;
 
     /* end popup and reset clipping rect back to parent panel */
-    zr_command_buffer_push_scissor(out, parent->clip);
+    zr_command_buffer_push_scissor(out, zr_null_rect);
     zr_end(popup, &pan);
     zr_command_queue_finish_child(parent->queue, parent->buffer);
     zr_command_buffer_push_scissor(out, parent->clip);
     return pan.offset;
 }
-
 /*
  * -------------------------------------------------------------
  *
@@ -7614,476 +8146,69 @@ zr_menu_end(struct zr_context *parent, struct zr_context *menu)
 /*
  * -------------------------------------------------------------
  *
- *                          TREE
+ *                          TOOLTIP
  *
  * --------------------------------------------------------------
  */
 void
-zr_tree_begin(struct zr_context *p, struct zr_tree *tree,
-    const char *title, zr_float height, struct zr_vec2 offset)
+zr_tooltip_begin(struct zr_context *parent, struct zr_context *tip, zr_float width)
 {
-    struct zr_vec2 padding;
-    const struct zr_style *config;
-    ZR_ASSERT(p);
-    ZR_ASSERT(tree);
-    ZR_ASSERT(title);
-    if (!p || !tree || !title) return;
-
-    zr_group_begin(p, &tree->group, title, 0, offset);
-    zr_panel_layout(&tree->group, height, 1);
-
-    config = tree->group.style;
-    padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
-
-    tree->at_x = 0;
-    tree->skip = -1;
-    tree->depth = 0;
-    tree->x_off = tree->group.style->font.height + 2 * padding.x;
-}
-
-static enum zr_tree_node_operation
-zr_tree_node(struct zr_tree *tree, enum zr_tree_node_symbol symbol,
-    const char *title, struct zr_image *img, zr_state *state)
-{
-    struct zr_text text;
-    struct zr_rect bounds = {0,0,0,0};
-    struct zr_rect sym, label, icon;
-    struct zr_context *layout;
-    enum zr_tree_node_operation op = ZR_NODE_NOP;
-
-    const struct zr_input *i;
-    const struct zr_style *config;
-    struct zr_vec2 item_padding;
-    struct zr_color col;
-
-    ZR_ASSERT(tree);
-    ZR_ASSERT(state);
-    ZR_ASSERT(title);
-    if (!tree || !state || !title)
-        return ZR_NODE_NOP;
-
-    layout = &tree->group;
-    if (tree->skip >= 0 || !zr_widget(&bounds, layout)) {
-        if (!tree->depth) tree->at_x = bounds.x;
-        return op;
-    }
-
-    if (tree->depth){
-        bounds.w = (bounds.x + bounds.w) - tree->at_x;
-        bounds.x = tree->at_x;
-    } else tree->at_x = bounds.x;
-
-    /* fetch some configuration constants */
-    i = layout->input;
-    config = layout->style;
-    item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
-    col = zr_style_color(config, ZR_COLOR_TEXT);
-
-    /* calculate symbol bounds */
-    sym.x = bounds.x;
-    sym.y = bounds.y + (bounds.h/2) - (config->font.height/2);
-    sym.w = config->font.height;
-    sym.h = config->font.height;
-
-    if (img) {
-        icon.x = sym.x + sym.w + item_padding.x;
-        icon.y = sym.y;
-        icon.w = bounds.h;
-        icon.h = bounds.h;
-        label.x = icon.x + icon.w + item_padding.x;
-    } else label.x = sym.x + sym.w + item_padding.x;
-
-    /* calculate text bounds */
-    label.y = bounds.y;
-    label.h = bounds.h;
-    label.w = bounds.w - (sym.w + 2 * item_padding.x);
-
-    /* output symbol */
-    if (symbol == ZR_TREE_NODE_TRIANGLE) {
-        /* parent node */
-        struct zr_vec2 points[3];
-        enum zr_heading heading;
-        if (zr_input_mouse_clicked(i, ZR_BUTTON_LEFT, sym)) {
-            if (*state & ZR_NODE_ACTIVE)
-                *state &= ~(zr_flags)ZR_NODE_ACTIVE;
-            else *state |= ZR_NODE_ACTIVE;
-        }
-
-        heading = (*state & ZR_NODE_ACTIVE) ? ZR_DOWN : ZR_RIGHT;
-        zr_triangle_from_direction(points, sym, 0, 0, heading);
-        zr_command_buffer_push_triangle(layout->buffer,  points[0].x, points[0].y,
-            points[1].x, points[1].y, points[2].x, points[2].y, col);
-    } else {
-        /* leaf node */
-        zr_command_buffer_push_circle(layout->buffer, sym, col);
-    }
-
-    if (!(layout->flags & ZR_WINDOW_ROM)) {
-        /* node selection */
-        if (zr_input_mouse_clicked(i, ZR_BUTTON_LEFT, label)) {
-            if (*state & ZR_NODE_SELECTED)
-                *state &= ~(zr_flags)ZR_NODE_SELECTED;
-            else *state |= ZR_NODE_SELECTED;
-        }
-
-        /* tree node operations */
-        if (zr_input_is_key_pressed(i, ZR_KEY_DEL) && (*state & ZR_NODE_SELECTED)) {
-            *state &= ~(zr_flags)ZR_NODE_SELECTED;
-            op = ZR_NODE_DELETE;
-        } else if (zr_input_is_key_pressed(i, ZR_KEY_COPY) &&
-            (*state & ZR_NODE_SELECTED)) {
-            *state &= ~(zr_flags)ZR_NODE_SELECTED;
-            op = ZR_NODE_CLONE;
-        } else if (zr_input_is_key_pressed(i, ZR_KEY_CUT) &&
-            (*state & ZR_NODE_SELECTED)) {
-            *state &= ~(zr_flags)ZR_NODE_SELECTED;
-            op = ZR_NODE_CUT;
-        } else if (zr_input_is_key_pressed(i, ZR_KEY_PASTE) &&
-            (*state & ZR_NODE_SELECTED)) {
-            *state &= ~(zr_flags)ZR_NODE_SELECTED;
-            op = ZR_NODE_PASTE;
-        }
-    }
-
-    /* output label */
-    text.padding.x = item_padding.x;
-    text.padding.y = item_padding.y;
-    text.text = config->colors[ZR_COLOR_TEXT];
-    text.background = (*state & ZR_NODE_SELECTED) ?
-        config->colors[ZR_COLOR_BUTTON_HOVER]:
-        config->colors[ZR_COLOR_WINDOW];
-    zr_widget_text(layout->buffer, label, title, zr_strsiz(title), &text,
-            ZR_TEXT_LEFT, &config->font);
-    return op;
-}
-
-enum zr_tree_node_operation
-zr_tree_begin_node(struct zr_tree *tree, const char *title,
-    zr_state *state)
-{
-    enum zr_tree_node_operation op;
-    ZR_ASSERT(tree);
-    ZR_ASSERT(state);
-    ZR_ASSERT(title);
-    if (!tree || !state || !title)
-        return ZR_NODE_NOP;
-
-    op = zr_tree_node(tree, ZR_TREE_NODE_TRIANGLE, title, 0, state);
-    tree->at_x += tree->x_off;
-    if (tree->skip < 0 && !(*state & ZR_NODE_ACTIVE))
-        tree->skip = tree->depth;
-    tree->depth++;
-    return op;
-}
-
-enum zr_tree_node_operation
-zr_tree_begin_node_icon(struct zr_tree *tree, const char *title,
-    struct zr_image img, zr_state *state)
-{
-    enum zr_tree_node_operation op;
-    ZR_ASSERT(tree);
-    ZR_ASSERT(state);
-    ZR_ASSERT(title);
-    if (!tree || !state || !title)
-        return ZR_NODE_NOP;
-
-    op = zr_tree_node(tree, ZR_TREE_NODE_TRIANGLE, title, &img, state);
-    tree->at_x += tree->x_off;
-    if (tree->skip < 0 && !(*state & ZR_NODE_ACTIVE))
-        tree->skip = tree->depth;
-    tree->depth++;
-    return op;
-}
-
-enum zr_tree_node_operation
-zr_tree_leaf(struct zr_tree *tree, const char *title, zr_state *state)
-{return zr_tree_node(tree, ZR_TREE_NODE_BULLET, title, 0, state);}
-
-enum zr_tree_node_operation
-zr_tree_leaf_icon(struct zr_tree *tree, const char *title, struct zr_image img,
-    zr_state *state)
-{return zr_tree_node(tree, ZR_TREE_NODE_BULLET, title, &img, state);}
-
-void
-zr_tree_end_node(struct zr_tree *tree)
-{
-    ZR_ASSERT(tree->depth);
-    tree->depth--;
-    tree->at_x -= tree->x_off;
-    if (tree->skip == tree->depth)
-        tree->skip = -1;
-}
-
-struct zr_vec2
-zr_tree_end(struct zr_context *p, struct zr_tree* tree)
-{return zr_group_end(p, &tree->group);}
-
-/*
- * -------------------------------------------------------------
- *
- *                          GROUPS
- *
- * --------------------------------------------------------------
- */
-void
-zr_group_begin(struct zr_context *p, struct zr_context *g,
-    const char *title, zr_flags flags, struct zr_vec2 offset)
-{
+    const struct zr_input *in;
     struct zr_rect bounds;
-    struct zr_window panel;
-    const struct zr_rect *c;
-    struct zr_rect temp;
-
-    ZR_ASSERT(p);
-    ZR_ASSERT(g);
-    if (!p || !g) return;
-    if (!p->valid)
-        goto failed;
-
-    /* allocate space for the group panel inside the panel */
-    c = &p->clip;
-    zr_panel_alloc_space(&bounds, p);
-    zr_zero(g, sizeof(*g));
-    if (!ZR_INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h) &&
-        !(flags & ZR_WINDOW_MOVEABLE))
-        goto failed;
-
-    /* initialize a fake panel to create the layout from */
-    flags |= ZR_WINDOW_BORDER|ZR_WINDOW_TAB;
-    if (p->flags & ZR_WINDOW_ROM)
-        flags |= ZR_WINDOW_ROM;
-
-    temp = p->buffer->clip;
-    zr_window_init(&panel, zr_rect(bounds.x, bounds.y,bounds.w,bounds.h),
-        flags, 0, p->style, p->input);
-    panel.buffer = *p->buffer;
-    zr_begin(g, &panel);
-    *p->buffer = panel.buffer;
-    g->buffer = p->buffer;
-    g->offset = offset;
-    g->queue = p->queue;
-
-    {
-        /* setup correct clipping rectangle for the group */
-        struct zr_rect clip;
-        struct zr_command_buffer *out = p->buffer;
-        zr_unify(&clip, &temp, g->bounds.x, g->clip.y, g->clip.x + g->bounds.w,
-            g->clip.y + g->clip.h);
-        zr_command_buffer_push_scissor(out, clip);
-
-        /* calculate the group clipping rect */
-        if (title) zr_header(g, title, 0, 0, ZR_HEADER_LEFT);
-        zr_unify(&clip, &p->clip, g->clip.x, g->clip.y, g->clip.x + g->clip.w,
-            g->clip.y + g->clip.h);
-
-        zr_command_buffer_push_scissor(out, clip);
-        g->clip = clip;
-    }
-    return;
-
-failed:
-    /* invalid panels still need correct data */
-    g->valid = zr_false;
-    g->style = p->style;
-    g->buffer = p->buffer;
-    g->input = p->input;
-    g->queue = p->queue;
-}
-
-struct zr_vec2
-zr_group_end(struct zr_context *p, struct zr_context *g)
-{
-    struct zr_window pan;
-    struct zr_command_buffer *out;
-    struct zr_rect clip;
-
-    ZR_ASSERT(p);
-    ZR_ASSERT(g);
-    if (!p || !g) return zr_vec2(0,0);
-    if (!p->valid) return zr_vec2(0,0);
-    zr_zero(&pan, sizeof(pan));
-
-    out = p->buffer;
-    pan.bounds.x = g->bounds.x;
-    pan.bounds.y = g->bounds.y;
-    pan.bounds.w = g->width;
-    pan.bounds.h = g->height;
-    pan.flags = g->flags|ZR_WINDOW_TAB;
-
-    /* setup clipping rect to finalize group panel drawing back to parent */
-    zr_unify(&clip, &p->clip, g->bounds.x, g->clip.y, g->bounds.x + g->bounds.w,
-        g->bounds.y + g->bounds.h);
-    zr_command_buffer_push_scissor(out, clip);
-    zr_end(g, &pan);
-    zr_command_buffer_push_scissor(out, p->clip);
-    return pan.offset;
-}
-
-/*
- * -------------------------------------------------------------
- *
- *                          SHELF
- *
- * --------------------------------------------------------------
- */
-zr_size
-zr_shelf_begin(struct zr_context *parent, struct zr_context *shelf,
-    const char *tabs[], zr_size size, zr_size active, struct zr_vec2 offset)
-{
-    const struct zr_style *config;
-    struct zr_command_buffer *out;
-    const struct zr_user_font *font;
-    struct zr_vec2 item_padding;
-    struct zr_vec2 panel_padding;
-
-    struct zr_rect bounds;
-    struct zr_rect *c;
-    struct zr_window panel;
-
-    zr_float header_x, header_y;
-    zr_float header_w, header_h;
-
+    ZR_ASSERT(tip);
     ZR_ASSERT(parent);
-    ZR_ASSERT(tabs);
-    ZR_ASSERT(shelf);
-    ZR_ASSERT(active < size);
-    if (!parent || !shelf || !tabs || active >= size)
-        return active;
-    if (!parent->valid)
-        goto failed;
+    if (!tip || !parent)
+        return;
 
-    config = parent->style;
-    out = parent->buffer;
-    font = &config->font;
-    item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
-    panel_padding = zr_style_property(config, ZR_PROPERTY_PADDING);
+    in = parent->input;
 
-    /* allocate space for the shelf */
-    zr_panel_alloc_space(&bounds, parent);
-    zr_zero(shelf, sizeof(*shelf));
-    c = &parent->clip;
-    if (!ZR_INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h))
-        goto failed;
-
-    /* calculate the header height for the tabs */
-    header_x = bounds.x;
-    header_y = bounds.y;
-    header_w = bounds.w;
-    header_h = panel_padding.y + 3 * item_padding.y + config->font.height;
-
-    {
-        /* basic button setup valid for every tab */
-        const struct zr_input *input;
-        struct zr_button_text button;
-        zr_float item_width;
-        zr_size i;
-
-        input = (parent->flags & ZR_WINDOW_ROM) ? 0 : parent->input;
-        item_width = (header_w - (zr_float)size) / (zr_float)size;
-        zr_fill_button(config, &button.base);
-        button.base.rounding = 0;
-        button.alignment = ZR_TEXT_CENTERED;
-        for (i = 0; i < size; i++) {
-            struct zr_rect b = {0,0,0,0};
-            /* calculate the needed space for the tab text */
-            zr_size text_width = font->width(font->userdata,
-                (const zr_char*)tabs[i], zr_strsiz(tabs[i]));
-            text_width = text_width + (zr_size)(4 * item_padding.x);
-
-            /* calculate current tab button bounds */
-            b.y = header_y;
-            b.h = header_h;
-            b.x = header_x;
-            b.w = MIN(item_width, (zr_float)text_width);
-            header_x += MIN(item_width, (zr_float)text_width);
-
-            /* set different color for active or inactive tab */
-            if ((b.x + b.w) >= (bounds.x + bounds.w)) break;
-            if (active != i) {
-                b.y += item_padding.y;
-                b.h -= item_padding.y;
-                button.base.normal = config->colors[ZR_COLOR_SHELF];
-                button.base.hover = config->colors[ZR_COLOR_SHELF];
-                button.base.active = config->colors[ZR_COLOR_SHELF];
-
-                button.normal = config->colors[ZR_COLOR_SHELF_TEXT];
-                button.hover = config->colors[ZR_COLOR_SHELF_TEXT];
-                button.active = config->colors[ZR_COLOR_SHELF_TEXT];
-            } else {
-                button.base.normal = config->colors[ZR_COLOR_SHELF_ACTIVE];
-                button.base.hover = config->colors[ZR_COLOR_SHELF_ACTIVE];
-                button.base.active = config->colors[ZR_COLOR_SHELF_ACTIVE];
-
-                button.normal = config->colors[ZR_COLOR_SHELF_ACTIVE_TEXT];
-                button.hover = config->colors[ZR_COLOR_SHELF_ACTIVE_TEXT];
-                button.active = config->colors[ZR_COLOR_SHELF_ACTIVE_TEXT];
-            }
-            if (zr_widget_button_text(out, b, tabs[i], ZR_BUTTON_DEFAULT, &button,
-                input, &config->font)) active = i;
-        }
-    }
-    bounds.y += header_h;
-    bounds.h -= header_h;
-    {
-        /* setup fake panel to create a panel layout */
-        zr_flags flags;
-        flags = ZR_WINDOW_BORDER|ZR_WINDOW_TAB;
-        if (parent->flags & ZR_WINDOW_ROM)
-            flags |= ZR_WINDOW_ROM;
-        zr_window_init(&panel, zr_rect(bounds.x, bounds.y, bounds.w, bounds.h),
-            flags, 0, config, parent->input);
-
-        panel.buffer = *parent->buffer;
-        zr_begin(shelf, &panel);
-        *parent->buffer = panel.buffer;
-        shelf->buffer = parent->buffer;
-        shelf->offset = offset;
-        shelf->height -= header_h;
-        shelf->queue = parent->queue;
-    }
-    {
-        /* setup clip rect for the shelf panel */
-        struct zr_rect clip;
-        zr_unify(&clip, &parent->clip, shelf->clip.x, shelf->clip.y,
-            shelf->clip.x + shelf->clip.w, shelf->clip.y + shelf->clip.h);
-        zr_command_buffer_push_scissor(out, clip);
-        shelf->clip = clip;
-    }
-    return active;
-
-failed:
-    /* invalid panels still need correct data */
-    shelf->valid = zr_false;
-    shelf->style = parent->style;
-    shelf->buffer = parent->buffer;
-    shelf->input = parent->input;
-    shelf->queue = parent->queue;
-    return active;
+    bounds.x = in->mouse.pos.x;
+    bounds.y = in->mouse.pos.y;
+    bounds.w = width;
+    bounds.h = zr_null_rect.h;
+    bounds = zr_layout_row_space_rect_to_local(parent, bounds);
+    zr_popup_begin(parent, tip, ZR_POPUP_DYNAMIC, ZR_WINDOW_NO_SCROLLBAR, bounds, zr_vec2(0,0));
 }
 
-struct zr_vec2
-zr_shelf_end(struct zr_context *p, struct zr_context *s)
+void
+zr_tooltip_end(struct zr_context *parent, struct zr_context *tip)
 {
-    struct zr_command_buffer *out;
-    struct zr_rect clip;
-    struct zr_window pan;
-
-    ZR_ASSERT(p);
-    ZR_ASSERT(s);
-    if (!p || !s) return zr_vec2(0,0);
-    if (!p->valid) return zr_vec2(0,0);
-    zr_zero(&pan, sizeof(pan));
-
-    out = p->buffer;
-    pan.bounds = s->bounds;
-    pan.flags = s->flags|ZR_WINDOW_TAB;
-
-    zr_unify(&clip, &p->clip, s->bounds.x, s->bounds.y,
-        s->bounds.x + s->bounds.w, s->bounds.y + s->bounds.h);
-    zr_command_buffer_push_scissor(out, clip);
-    zr_end(s, &pan);
-    zr_command_buffer_push_scissor(out, p->clip);
-    return pan.offset;
+    zr_popup_close(tip);
+    zr_popup_end(parent, tip);
 }
 
+void
+zr_tooltip(struct zr_context *layout, const char *text)
+{
+    zr_size text_len;
+    zr_size text_width;
+    zr_size text_height;
+
+    struct zr_context tip;
+    const struct zr_style *config;
+    struct zr_vec2 item_padding;
+    struct zr_vec2 padding;
+    struct zr_vec2 spacing;
+
+    ZR_ASSERT(layout);
+    ZR_ASSERT(text);
+    if (!layout || !text)
+        return;
+
+    /* calculate size of the text and tooltip */
+    config = layout->style;
+    padding = config->properties[ZR_PROPERTY_PADDING];
+    spacing = config->properties[ZR_PROPERTY_ITEM_SPACING];
+    item_padding = config->properties[ZR_PROPERTY_ITEM_PADDING];
+
+    text_len = zr_strsiz(text);
+    text_width = config->font.width(config->font.userdata, text, text_len);
+    text_width += (zr_size)(2 * padding.x + 2 * item_padding.x);
+    text_height = (zr_size)(config->font.height + 2 * item_padding.y);
+
+    zr_tooltip_begin(layout, &tip, (zr_float)text_width);
+    zr_layout_row_dynamic(&tip, (zr_float)text_height, 1);
+    zr_text(&tip, text, text_len, ZR_TEXT_LEFT);
+    zr_tooltip_end(layout, &tip);
+}
 

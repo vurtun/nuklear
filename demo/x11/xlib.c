@@ -185,7 +185,6 @@ font_del(Display *dpy, XFont *font)
 static unsigned long
 color_from_byte(const zr_byte *c)
 {
-    /* NOTE(vurtun): this only works for little-endian */
     unsigned long res = 0;
     res |= (unsigned long)c[0] << 16;
     res |= (unsigned long)c[1] << 8;
@@ -222,10 +221,10 @@ static void
 surface_scissor(XSurface *surf, float x, float y, float w, float h)
 {
     XRectangle clip_rect;
-    clip_rect.x = (short)x;
-    clip_rect.y = (short)y;
-    clip_rect.width = (unsigned short)w;
-    clip_rect.height = (unsigned short)h;
+    clip_rect.x = (short)(x - 1);
+    clip_rect.y = (short)(y - 1);
+    clip_rect.width = (unsigned short)(w + 2);
+    clip_rect.height = (unsigned short)(h + 2);
     clip_rect.width = (unsigned short)MIN(surf->w, clip_rect.width);
     clip_rect.height = (unsigned short)MIN(surf->h, clip_rect.height);
     XSetClipRectangles(surf->dpy, surf->gc, 0, 0, &clip_rect, 1, Unsorted);
@@ -354,7 +353,7 @@ draw(XSurface *surf, struct zr_command_queue *queue)
         } break;
         case ZR_COMMAND_CURVE:
         case ZR_COMMAND_IMAGE:
-        case ZR_COMMAND_MAX:
+        case ZR_COMMAND_ARC:
         default: break;
         }
     }
@@ -430,7 +429,6 @@ main(int argc, char *argv[])
     long dt;
     long started;
     XWindow xw;
-
     struct demo_gui gui;
 
     /* Platform */

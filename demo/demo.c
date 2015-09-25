@@ -557,6 +557,15 @@ widget_panel(struct zr_context *panel, struct state *demo)
     zr_label(panel, "text center", ZR_TEXT_CENTERED);
     zr_label(panel, "text right", ZR_TEXT_RIGHT);
 
+    {
+        struct zr_rect bounds;
+        const struct zr_input *in = zr_input(panel);
+        zr_layout_peek(&bounds, panel);
+        zr_label(panel, "Hover me for tooltip", ZR_TEXT_CENTERED);
+        if (zr_input_is_mouse_hovering_rect(in, bounds))
+            zr_tooltip(panel, "This is a tooltip");
+    }
+
     /* Buttons */
     if (zr_button_text(panel, "button", ZR_BUTTON_DEFAULT))
         demo->popup = zr_true;
@@ -762,7 +771,7 @@ init_demo(struct demo_gui *gui)
 
     /* panel */
     zr_style_default(config, ZR_DEFAULT_ALL, &gui->font);
-    zr_window_init(&gui->panel, zr_rect(30, 30, 280, 530),
+    zr_window_init(&gui->panel, zr_rect(30, 30, 280, 600),
         ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALEABLE,
         &gui->queue, config, &gui->input);
     zr_window_init(&gui->sub, zr_rect(400, 50, 220, 180),

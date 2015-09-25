@@ -169,7 +169,7 @@ draw(NVGcontext *nvg, struct zr_command_queue *queue, int width, int height)
             nvgFillPaint(nvg, imgpaint);
             nvgFill(nvg);
         } break;
-        case ZR_COMMAND_MAX:
+        case ZR_COMMAND_ARC:
         default: break;
         }
     }

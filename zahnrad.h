@@ -588,10 +588,10 @@ enum zr_command_type {
     ZR_COMMAND_CURVE,
     ZR_COMMAND_RECT,
     ZR_COMMAND_CIRCLE,
+    ZR_COMMAND_ARC,
     ZR_COMMAND_TRIANGLE,
     ZR_COMMAND_TEXT,
-    ZR_COMMAND_IMAGE,
-    ZR_COMMAND_MAX
+    ZR_COMMAND_IMAGE
 };
 
 /* command base and header of every comand inside the buffer */
@@ -635,6 +635,14 @@ struct zr_command_circle {
     struct zr_command header;
     zr_short x, y;
     zr_ushort w, h;
+    struct zr_color color;
+};
+
+struct zr_command_arc {
+    struct zr_command header;
+    zr_short cx, cy;
+    zr_ushort r;
+    zr_float a[2];
     struct zr_color color;
 };
 
@@ -764,6 +772,16 @@ void zr_command_buffer_push_circle(struct zr_command_buffer*, struct zr_rect,
     - buffer to push the circle draw command into
     - rectangle bounds of the circle
     - color of the circle to draw
+*/
+void zr_command_buffer_push_arc(struct zr_command_buffer*, zr_float cx,
+                                zr_float cy, zr_float radius, zr_float a_min,
+                                zr_float a_max, struct zr_color);
+/*  this function pushes an arc draw command into the buffer
+    Input:
+    - buffer to push the circle draw command into
+    - center position (x,y) of the arc
+    - start and end angle of the arc
+    - color of the arc
 */
 void zr_command_buffer_push_triangle(struct zr_command_buffer*, zr_float, zr_float,
                                         zr_float, zr_float, zr_float, zr_float,
@@ -1457,6 +1475,7 @@ struct zr_font {
 const zr_long *zr_font_default_glyph_ranges(void);
 const zr_long *zr_font_chinese_glyph_ranges(void);
 const zr_long *zr_font_cyrillic_glyph_ranges(void);
+const zr_long *zr_font_korean_glyph_ranges(void);
 
 /* ---------------------------------------------------------------
  *                          Baking
@@ -3053,8 +3072,6 @@ void zr_menubar_end(struct zr_context*);
 
     tiled layout widget placing API
     zr_layout_row_tiled_begin          -- begins tiled layout based placing of widgets
-    zr_layout_row_tiled_slot_bounds    -- returns the bounds of a slot in the tiled layout
-    zr_layout_row_tiled_bounds         -- returns the bounds of a widget in the tiled layout
     zr_layout_row_tiled_push           -- pushes a widget into a slot in the tiled layout
     zr_layout_row_tiled_end            -- ends tiled layout based placing of widgets
 
@@ -3079,6 +3096,13 @@ enum zr_layout_node_type {
     /* a tab is a node with a header */
 };
 
+void zr_layout_peek(struct zr_rect *bounds, struct zr_context*);
+/*  this function peeks at the next widget position and size that will be
+ *  allocated from the window without actually allocation the space
+    output:
+    - widget position and size of the next allocate space in the panel
+*/
+/* ------------------------------ Fixed ----------------------------------- */
 void zr_layout_row_dynamic(struct zr_context*, zr_float height, zr_size cols);
 /*  this function sets the row layout to dynamically fixed size widget
     Input:
@@ -3093,6 +3117,7 @@ void zr_layout_row_static(struct zr_context*, zr_float row_height,
     - width in pixel measurement of each widget in the row
     - number of widget inside the row that will divide the space
 */
+/* ------------------------------ Custom ----------------------------------- */
 void zr_layout_row_begin(struct zr_context*,
                         enum zr_layout_format,
                         zr_float row_height, zr_size cols);
@@ -3121,6 +3146,7 @@ void zr_layout_row(struct zr_context*, enum zr_layout_format,
     - number of widget inside the row
     - window ratio/pixel width array for each widget
 */
+/* ------------------------------ User ----------------------------------- */
 void zr_layout_row_space_begin(struct zr_context*,
                                 enum zr_layout_format,
                                 zr_float height, zr_size widget_count);
@@ -3168,6 +3194,7 @@ struct zr_rect zr_layout_row_space_rect_to_local(struct zr_context*, struct zr_r
 */
 void zr_layout_row_space_end(struct zr_context*);
 /*  this functions finishes the scaleable space filling process */
+/* ------------------------------ Tiled ----------------------------------- */
 void zr_layout_row_tiled_begin(struct zr_context*, struct zr_tiled_layout*);
 /*  this functions begins the tiled layout
     Input:
@@ -3182,6 +3209,7 @@ void zr_layout_row_tiled_push(struct zr_context*, struct zr_tiled_layout*,
 */
 void zr_layout_row_tiled_end(struct zr_context*);
 /*  this functions ends the tiled layout */
+/* ------------------------------ Tree ----------------------------------- */
 zr_bool zr_layout_push(struct zr_context*, enum zr_layout_node_type,
                         const char *title, zr_state*);
 /*  this functions pushes either a tree node or collapseable header into
@@ -3477,187 +3505,6 @@ zr_int zr_spinner(struct zr_context*, zr_int min, zr_int value,
     - current state of the editbox with active(zr_true) or inactive(zr_false)
 */
 /* --------------------------------------------------------------
- *                          Group
- * --------------------------------------------------------------
- *
-    GROUP
-    A group window represents a window inside a window. The group thereby has a fixed height
-    but just like a normal window has a scrollbar. It main promise is to group together
-    a group of widgets into a small space inside a window and to provide a scrollable
-    space inside a window.
-
-    USAGE
-    To create a group you first have to allocate space in a window. This is done
-    by the group row layout API and works the same as widgets. After that the
-    `zr_group_begin` has to be called with the parent layout to create
-    the group in and a group layout to create a new window inside the window.
-    Just like a window layout structures the group layout only has a lifetime
-    between the `zr_group_begin` and `zr_group_end` and does
-    not have to be persistent.
-
-    group window API
-    zr_group_begin -- adds a scrollable fixed space inside the window
-    zr_group_begin -- ends the scrollable space
-*/
-void zr_group_begin(struct zr_context*, struct zr_context *tab,
-                    const char *title, zr_flags, struct zr_vec2);
-/*  this function adds a grouped group window into the parent window
-    IMPORTANT: You need to set the height of the group with zr_row_layout
-    Input:
-    - group title to write into the header
-    - group scrollbar offset
-    Output:
-    - group layout to fill with widgets
-*/
-struct zr_vec2 zr_group_end(struct zr_context*, struct zr_context*);
-/*  this function finishes the previously started group layout
-    Output:
-    - The from user input updated group scrollbar pixel offset
-*/
-/* --------------------------------------------------------------
- *                          SHELF
- * --------------------------------------------------------------
-    SHELF
-    A shelf extends the concept of a group as an window inside a window
-    with the possibility to decide which content should be drawn into the group.
-    This is achieved by tabs on the top of the group window with one selected
-    tab. The selected tab thereby defines which content should be drawn inside
-    the group window by an index it returns. So you just have to check the returned
-    index and depending on it draw the wanted content.
-
-    shelf API
-    zr_shelf_begin   -- begins a shelf with a number of selectable tabs
-    zr_shelf_end     -- ends a previously started shelf build up process
-
-*/
-zr_size zr_shelf_begin(struct zr_context*, struct zr_context*,
-                        const char *tabs[], zr_size size,
-                        zr_size active, struct zr_vec2 offset);
-/*  this function adds a shelf child window into the parent window
-    IMPORTANT: You need to set the height of the shelf with zr_row_layout
-    Input:
-    - all possible selectible tabs of the shelf with names as a string array
-    - number of seletectible tabs
-    - current active tab array index
-    - scrollbar pixel offset for the shelf
-    Output:
-    - group layout to fill with widgets
-    - the from user input updated current shelf tab index
-*/
-struct zr_vec2 zr_shelf_end(struct zr_context*, struct zr_context*);
-/*  this function finishes the previously started shelf layout
-    Input:
-    - previously started group layout
-    Output:
-    - The from user input updated shelf scrollbar pixel offset
-*/
-/* --------------------------------------------------------------
- *                          POPUP
- * --------------------------------------------------------------
-    POPUP
-    The popup extends the normal window with an overlapping blocking
-    window that needs to be closed before the underlining main window can
-    be used again. Therefore popups are designed for messages,tooltips and
-    are used to create the combo box. Internally the popup creates a subbuffer
-    inside a command queue that will be drawn after the complete parent window.
-
-    USAGE
-    To create an popup the `zr_window_popup_begin` function needs to be called
-    with the parent window local position and size and the wanted type with
-    static or dynamic window. A static window has a fixed size and behaves like a
-    normal window inside a window, but a dynamic window only takes up as much
-    height as needed up to a given maximum height. Dynamic windows are for example
-    combo boxes while static window make sense for messsages or tooltips.
-    To close a popup you can use the `zr_pop_close` function which takes
-    care of the closing process. Finally `zr_popup_end` finializes the popup.
-
-    window blocking popup API
-    zr_popup_begin         -- adds a popup inside a window
-    zr_popup_close         -- closes the popup window
-    zr_popup_end           -- ends the popup building process
-
-    window non-blocking popup API
-    zr_popup_menu_begin    -- begin a popup context menu
-    zr_popup_menu_close    -- closes a popup context menu
-    zr_popup_menu_end      -- ends the popup building process
-*/
-enum zr_popup_type {
-    ZR_POPUP_STATIC,
-    /* static fixed height non growing popup */
-    ZR_POPUP_DYNAMIC
-    /* dynamically growing popup with maximum height */
-};
-
-zr_flags zr_popup_begin(struct zr_context *parent, struct zr_context *popup,
-                            enum zr_popup_type, zr_flags, struct zr_rect bounds,
-                            struct zr_vec2 offset);
-/*  this function adds a overlapping blocking popup menu
-    Input:
-    - type of the popup as either growing or static
-    - additonal popup window flags
-    - popup position and size of the popup (NOTE: local position)
-    - scrollbar offset of wanted
-    Output:
-    - popup layout to fill with widgets
-*/
-void zr_popup_close(struct zr_context *popup);
-/*  this functions closes a previously opened popup */
-struct zr_vec2 zr_popup_end(struct zr_context *parent,
-                            struct zr_context *popup);
-/*  this function finishes the previously started popup layout
-    Output:
-    - The from user input updated popup scrollbar pixel offset
-*/
-/* --------------------------------------------------------------
- *                      CONTEXTUAL
- * --------------------------------------------------------------*/
-void zr_contextual_begin(struct zr_context *parent, struct zr_context *popup,
-                        zr_flags flags, zr_state *active, struct zr_rect body);
-/*  this function adds a context menu popup
-    Input:
-    - type of the popup as either growing or static
-    - additonal popup window flags
-    - popup position and size of the popup (NOTE: local position)
-    - scrollbar offset of wanted
-    Output:
-    - popup layout to fill with widgets
-*/
-zr_bool zr_contextual_item(struct zr_context *menu, const char*, enum zr_text_align align);
-/*  this function execute contextual menu item
-    Input:
-    - text alignment of the title
-    - title of the item
-    Output
-    - `zr_true` if has been clicked `zr_false` otherwise
-*/
-zr_bool zr_contextual_item_icon(struct zr_context *menu, struct zr_image,
-                                const char*, enum zr_text_align align);
-/*  this function execute contextual menu item
-    Input:
-    - icon to draw into the menu item
-    - text alignment of the title
-    - title of the item
-    Output
-    - `zr_true` if has been clicked `zr_false` otherwise
-*/
-zr_bool zr_contextual_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
-                                    const char*, enum zr_text_align align);
-/*  this function execute contextual menu item
-    Input:
-    - symbol to draw into the menu item
-    - text alignment of the title
-    - title of the item
-    Output
-    - `zr_true` if has been clicked `zr_false` otherwise
-*/
-void zr_contextual_close(struct zr_context *popup);
-/*  this functions closes the context menu
-     Output:
-    - update state of the context menu
-*/
-zr_state zr_contextual_end(struct zr_context *parent, struct zr_context *popup);
-/*  this functions closes a previously opened context menu */
-/* --------------------------------------------------------------
  *                          COMBO BOX
  * --------------------------------------------------------------
     COMBO BOX
@@ -3722,66 +3569,6 @@ void zr_combo_close(struct zr_context *combo);
 /*  this function closes a opened combobox */
 zr_state zr_combo_end(struct zr_context *parent, struct zr_context *combo);
 /*  this function ends the combobox build up process */
-/*----------------------------------------------------------------
- *                          MENU
- * --------------------------------------------------------------
-    MENU
-    The menu widget provides a overlapping popup window which can
-    be opened/closed by clicking on the menu button. It is normally
-    placed at the top of the window and is independent of the parent
-    scrollbar offset. But if needed the menu can even be placed inside the window.
-    At the moment the menu only allows a single depth but that will change
-    in the future.
-
-    menu widget API
-    zr_menu_begin       -- begins the menu item build up processs
-    zr_menu_item        -- adds a item into the menu
-    zr_menu_item_icon   -- adds a text + image item into the menu
-    zr_menu_item_symbol -- adds a text + symbol item into the menu
-    zr_menu_close       -- closes the menu
-    zr_menu_end         -- ends the menu item build up process
-*/
-void zr_menu_begin(struct zr_context *parent,
-                        struct zr_context *menu, const char *title,
-                        zr_float width, zr_state *active);
-/*  this function begins the menu build up process
-    Input:
-    - parent window layout the menu will be placed into
-    - ouput menu window layout
-    - title of the menu to
-    - the current state of the menu with either zr_true (open) or zr_false else
-*/
-zr_bool zr_menu_item(struct zr_context *menu, enum zr_text_align align, const char*);
-/*  this function execute a menu item
-    Input:
-    - title of the item
-    Output
-    - `zr_true` if has been clicked `zr_false` otherwise
-*/
-zr_bool zr_menu_item_icon(struct zr_context *menu, struct zr_image,
-                                const char*, enum zr_text_align align);
-/*  this function execute menu text icon item
-    Input:
-    - icon to draw into the menu item
-    - text alignment of the title
-    - title of the item
-    Output
-    - `zr_true` if has been clicked `zr_false` otherwise
-*/
-zr_bool zr_menu_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
-                                    const char*, enum zr_text_align align);
-/*  this function execute menu text symbol item
-    Input:
-    - symbol to draw into the menu item
-    - text alignment of the title
-    - title of the item
-    Output
-    - `zr_true` if has been clicked `zr_false` otherwise
-*/
-zr_state zr_menu_close(struct zr_context *menu);
-/*  this function closes a opened menu */
-void zr_menu_end(struct zr_context *parent, struct zr_context *menu);
-/*  this function ends the menu build up process */
 /* --------------------------------------------------------------
  *                          GRAPH
  * --------------------------------------------------------------
@@ -3959,6 +3746,292 @@ enum zr_tree_node_operation zr_tree_leaf_icon(struct zr_tree*,
 */
 struct zr_vec2 zr_tree_end(struct zr_context*, struct zr_tree*);
 /*  this function ends a the tree building process */
+/* --------------------------------------------------------------
+ *                          POPUP
+ * --------------------------------------------------------------
+    POPUP
+    The popup extends the normal window with an overlapping blocking
+    window that needs to be closed before the underlining main window can
+    be used again. Therefore popups are designed for messages,tooltips and
+    are used to create the combo box. Internally the popup creates a subbuffer
+    inside a command queue that will be drawn after the complete parent window.
+
+    USAGE
+    To create an popup the `zr_window_popup_begin` function needs to be called
+    with the parent window local position and size and the wanted type with
+    static or dynamic window. A static window has a fixed size and behaves like a
+    normal window inside a window, but a dynamic window only takes up as much
+    height as needed up to a given maximum height. Dynamic windows are for example
+    combo boxes while static window make sense for messsages or tooltips.
+    To close a popup you can use the `zr_pop_close` function which takes
+    care of the closing process. Finally `zr_popup_end` finializes the popup.
+
+    window blocking popup API
+    zr_popup_begin         -- adds a popup inside a window
+    zr_popup_close         -- closes the popup window
+    zr_popup_end           -- ends the popup building process
+
+    window non-blocking popup API
+    zr_popup_menu_begin    -- begin a popup context menu
+    zr_popup_menu_close    -- closes a popup context menu
+    zr_popup_menu_end      -- ends the popup building process
+*/
+enum zr_popup_type {
+    ZR_POPUP_STATIC,
+    /* static fixed height non growing popup */
+    ZR_POPUP_DYNAMIC
+    /* dynamically growing popup with maximum height */
+};
+
+zr_flags zr_popup_begin(struct zr_context *parent, struct zr_context *popup,
+                            enum zr_popup_type, zr_flags, struct zr_rect bounds,
+                            struct zr_vec2 offset);
+/*  this function adds a overlapping blocking popup menu
+    Input:
+    - type of the popup as either growing or static
+    - additonal popup window flags
+    - popup position and size of the popup (NOTE: local position)
+    - scrollbar offset of wanted
+    Output:
+    - popup layout to fill with widgets
+*/
+void zr_popup_close(struct zr_context *popup);
+/*  this functions closes a previously opened popup */
+struct zr_vec2 zr_popup_end(struct zr_context *parent,
+                            struct zr_context *popup);
+/*  this function finishes the previously started popup layout
+    Output:
+    - The from user input updated popup scrollbar pixel offset
+*/
+/* --------------------------------------------------------------
+ *                      CONTEXTUAL
+ * --------------------------------------------------------------
+    CONTEXTUAL
+    A contextual menu is a dynamic non-blocking popup window. It was mainly
+    designed to create a typical right-click menu with items but can be filled with
+    any content. The reason special menu items were added was to make the content
+    fit the menu. Since the contextual menu is non-blocking in contrast to
+    normal popups a click outside of the menu results in a closed menu. In addition
+    if one of the menu items function is called a call to one of the items results
+    in a closed menu as well. The final method of closing the contextual menu is
+    by hand by calling the close function.
+
+    contextual API
+    zr_contextual_begin         -- begins the contextual menu popup window
+    zr_contextual_item          -- adds a text item into the contextual menu
+    zr_contextual_item_icon     -- adds a text image item into the contextual menu
+    zr_contextual_item_symbol   -- adds a text symbol item into the contextual menu
+    zr_contextual_close         -- closes the previously opened contextual menu
+    zr_contextual_end           -- ends the contextual menu build up process
+*/
+void zr_contextual_begin(struct zr_context *parent, struct zr_context *popup,
+                        zr_flags flags, zr_state *active, struct zr_rect body);
+/*  this function adds a context menu popup
+    Input:
+    - type of the popup as either growing or static
+    - additonal popup window flags
+    - popup position and size of the popup (NOTE: local position)
+    - scrollbar offset of wanted
+    Output:
+    - popup layout to fill with widgets
+*/
+zr_bool zr_contextual_item(struct zr_context *menu, const char*, enum zr_text_align align);
+/*  this function execute contextual menu item
+    Input:
+    - text alignment of the title
+    - title of the item
+    Output
+    - `zr_true` if has been clicked `zr_false` otherwise
+*/
+zr_bool zr_contextual_item_icon(struct zr_context *menu, struct zr_image,
+                                const char*, enum zr_text_align align);
+/*  this function execute contextual menu item
+    Input:
+    - icon to draw into the menu item
+    - text alignment of the title
+    - title of the item
+    Output
+    - `zr_true` if has been clicked `zr_false` otherwise
+*/
+zr_bool zr_contextual_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
+                                    const char*, enum zr_text_align align);
+/*  this function execute contextual menu item
+    Input:
+    - symbol to draw into the menu item
+    - text alignment of the title
+    - title of the item
+    Output
+    - `zr_true` if has been clicked `zr_false` otherwise
+*/
+void zr_contextual_close(struct zr_context *popup);
+/*  this functions closes the context menu
+     Output:
+    - update state of the context menu
+*/
+zr_state zr_contextual_end(struct zr_context *parent, struct zr_context *popup);
+/*  this functions closes a previously opened context menu */
+/*----------------------------------------------------------------
+ *                          MENU
+ * --------------------------------------------------------------
+    MENU
+    The menu widget provides a overlapping popup window which can
+    be opened/closed by clicking on the menu button. It is normally
+    placed at the top of the window and is independent of the parent
+    scrollbar offset. But if needed the menu can even be placed inside the window.
+    At the moment the menu only allows a single depth but that will change
+    in the future.
+
+    menu widget API
+    zr_menu_begin       -- begins the menu item build up processs
+    zr_menu_item        -- adds a item into the menu
+    zr_menu_item_icon   -- adds a text + image item into the menu
+    zr_menu_item_symbol -- adds a text + symbol item into the menu
+    zr_menu_close       -- closes the menu
+    zr_menu_end         -- ends the menu item build up process
+*/
+void zr_menu_begin(struct zr_context *parent,
+                        struct zr_context *menu, const char *title,
+                        zr_float width, zr_state *active);
+/*  this function begins the menu build up process
+    Input:
+    - parent window layout the menu will be placed into
+    - ouput menu window layout
+    - title of the menu to
+    - the current state of the menu with either zr_true (open) or zr_false else
+*/
+zr_bool zr_menu_item(struct zr_context *menu, enum zr_text_align align, const char*);
+/*  this function execute a menu item
+    Input:
+    - title of the item
+    Output
+    - `zr_true` if has been clicked `zr_false` otherwise
+*/
+zr_bool zr_menu_item_icon(struct zr_context *menu, struct zr_image,
+                                const char*, enum zr_text_align align);
+/*  this function execute menu text icon item
+    Input:
+    - icon to draw into the menu item
+    - text alignment of the title
+    - title of the item
+    Output
+    - `zr_true` if has been clicked `zr_false` otherwise
+*/
+zr_bool zr_menu_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
+                                    const char*, enum zr_text_align align);
+/*  this function execute menu text symbol item
+    Input:
+    - symbol to draw into the menu item
+    - text alignment of the title
+    - title of the item
+    Output
+    - `zr_true` if has been clicked `zr_false` otherwise
+*/
+zr_state zr_menu_close(struct zr_context *menu);
+/*  this function closes a opened menu */
+void zr_menu_end(struct zr_context *parent, struct zr_context *menu);
+/*  this function ends the menu build up process */
+/* --------------------------------------------------------------
+ *                          TOOLTIP
+ * --------------------------------------------------------------
+    TOOLTIP
+    The tooltip widget can be used to provide the user with information
+    by creating a popup window under the mouse cursor which decribes a function.
+    To use it you should first test if the mouse hovers over the thing you want
+    to provide information for before calling this.
+
+    tooltip widget API
+    zr_tooltip          -- creates a simple tooltip popup under the mouse cursor
+    zr_tooltip_begin    -- begins a start window popup to be filled
+    zr_tooltip_end      -- ends the window popup
+*/
+void zr_tooltip(struct zr_context*, const char *text);
+/*  this function create a simple text tooltip window under the mouse cursor,
+    Input:
+    - output text to display inside the tooltip
+*/
+void zr_tooltip_begin(struct zr_context *parent, struct zr_context *tip,
+                        zr_float width);
+/*  this function begins a popup tooltip window under the mouse cursor
+    Input:
+    - width of the tooltip window
+*/
+void zr_tooltip_end(struct zr_context *parent, struct zr_context *tip);
+/*  this function ends the tooltip window */
+/* --------------------------------------------------------------
+ *                          Group
+ * --------------------------------------------------------------
+ *
+    GROUP
+    A group window represents a window inside a window. The group thereby has a fixed height
+    but just like a normal window has a scrollbar. It main promise is to group together
+    a group of widgets into a small space inside a window and to provide a scrollable
+    space inside a window.
+
+    USAGE
+    To create a group you first have to allocate space in a window. This is done
+    by the group row layout API and works the same as widgets. After that the
+    `zr_group_begin` has to be called with the parent layout to create
+    the group in and a group layout to create a new window inside the window.
+    Just like a window layout structures the group layout only has a lifetime
+    between the `zr_group_begin` and `zr_group_end` and does
+    not have to be persistent.
+
+    group window API
+    zr_group_begin -- adds a scrollable fixed space inside the window
+    zr_group_begin -- ends the scrollable space
+*/
+void zr_group_begin(struct zr_context*, struct zr_context *tab,
+                    const char *title, zr_flags, struct zr_vec2);
+/*  this function adds a grouped group window into the parent window
+    IMPORTANT: You need to set the height of the group with zr_row_layout
+    Input:
+    - group title to write into the header
+    - group scrollbar offset
+    Output:
+    - group layout to fill with widgets
+*/
+struct zr_vec2 zr_group_end(struct zr_context*, struct zr_context*);
+/*  this function finishes the previously started group layout
+    Output:
+    - The from user input updated group scrollbar pixel offset
+*/
+/* --------------------------------------------------------------
+ *                          SHELF
+ * --------------------------------------------------------------
+    SHELF
+    A shelf extends the concept of a group as an window inside a window
+    with the possibility to decide which content should be drawn into the group.
+    This is achieved by tabs on the top of the group window with one selected
+    tab. The selected tab thereby defines which content should be drawn inside
+    the group window by an index it returns. So you just have to check the returned
+    index and depending on it draw the wanted content.
+
+    shelf API
+    zr_shelf_begin   -- begins a shelf with a number of selectable tabs
+    zr_shelf_end     -- ends a previously started shelf build up process
+
+*/
+zr_size zr_shelf_begin(struct zr_context*, struct zr_context*,
+                        const char *tabs[], zr_size size,
+                        zr_size active, struct zr_vec2 offset);
+/*  this function adds a shelf child window into the parent window
+    IMPORTANT: You need to set the height of the shelf with zr_row_layout
+    Input:
+    - all possible selectible tabs of the shelf with names as a string array
+    - number of seletectible tabs
+    - current active tab array index
+    - scrollbar pixel offset for the shelf
+    Output:
+    - group layout to fill with widgets
+    - the from user input updated current shelf tab index
+*/
+struct zr_vec2 zr_shelf_end(struct zr_context*, struct zr_context*);
+/*  this function finishes the previously started shelf layout
+    Input:
+    - previously started group layout
+    Output:
+    - The from user input updated shelf scrollbar pixel offset
+*/
 
 #ifdef __cplusplus
 }
