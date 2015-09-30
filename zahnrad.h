@@ -334,21 +334,21 @@ void zr_input_glyph(struct zr_input*, const zr_glyph);
     - utf8 glyph to add to the text buffer
 */
 void zr_input_char(struct zr_input*, char);
-/*  this function adds char into the internal text frame buffer
+/* this function adds char into the internal text frame buffer
     Input:
     - character to add to the text buffer
 */
 void zr_input_end(struct zr_input*);
-/*  this function sets the input state to readable */
+/* this function sets the input state to readable */
 zr_bool zr_input_has_mouse_click_in_rect(const struct zr_input*,enum zr_buttons,
                                             struct zr_rect);
-/*  this function returns true if a mouse click inside a rectangle occured in prev frames */
+/* this function returns true if a mouse click inside a rectangle occured in prev frames */
 zr_bool zr_input_has_mouse_click_down_in_rect(const struct zr_input*, enum zr_buttons,
                                                 struct zr_rect, zr_bool down);
 /*  this function returns true if a mouse down click inside a rectangle occured in prev frames */
 zr_bool zr_input_is_mouse_click_in_rect(const struct zr_input*, enum zr_buttons,
                                             struct zr_rect);
-/*  this function returns true if a mouse click inside a rectangle occured and was just clicked */
+/* this function returns true if a mouse click inside a rectangle occured and was just clicked */
 zr_bool zr_input_is_mouse_prev_hovering_rect(const struct zr_input*, struct zr_rect);
 /*  this function returns true if the mouse hovers over a rectangle */
 zr_bool zr_input_is_mouse_hovering_rect(const struct zr_input*, struct zr_rect);

@@ -1779,7 +1779,7 @@ zr_draw_list_load(struct zr_draw_list *list, struct zr_command_queue *queue,
         case ZR_COMMAND_CIRCLE: {
             const struct zr_command_circle *c = zr_command(circle, cmd);
             zr_draw_list_add_circle_filled(list, zr_vec2((zr_float)c->x + (zr_float)c->w/2,
-                (zr_float)c->y + c->h/2), c->w/2, c->color, curve_segments);
+                (zr_float)c->y + (zr_float)c->h/2), (zr_float)c->w/2, c->color, curve_segments);
         } break;
         case ZR_COMMAND_ARC: {
             const struct zr_command_arc *c = zr_command(arc, cmd);
