@@ -4357,7 +4357,7 @@ zr_widget_editbox(struct zr_command_buffer *out, struct zr_rect r,
                         label.y, (zr_float)cursor_w, label.h), 0, field->cursor);
             } else {
                 /* draw text selection */
-                zr_size l, s;
+                zr_size l = 0, s;
                 zr_long unicode;
                 zr_char *begin, *end;
                 zr_size off_begin, off_end;
@@ -5880,20 +5880,12 @@ zr_menubar_begin(struct zr_context *layout)
 void
 zr_menubar_end(struct zr_context *layout)
 {
-    const struct zr_style *c;
     struct zr_command_buffer *out;
-    struct zr_vec2 item_padding;
-    struct zr_vec2 panel_padding;
-
     ZR_ASSERT(layout);
     if (!layout || layout->flags & ZR_WINDOW_HIDDEN || layout->flags & ZR_WINDOW_MINIMIZED)
         return;
 
-    c = layout->style;
     out = layout->buffer;
-    panel_padding = zr_style_property(c, ZR_PROPERTY_PADDING);
-    item_padding = zr_style_property(c, ZR_PROPERTY_ITEM_PADDING);
-
     layout->menu.h = layout->at_y - layout->menu.y;
     layout->clip.y = layout->bounds.y + layout->header.h + layout->menu.h + layout->row.height;
     layout->height -= layout->menu.h;
@@ -6568,6 +6560,7 @@ zr_seperator(struct zr_context *layout)
     item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
     item_spacing = zr_style_property(config, ZR_PROPERTY_ITEM_SPACING);
 
+    bounds.h = 1;
     bounds.w = MAX(layout->width, 2 * item_spacing.x + 2 * item_padding.x);
     bounds.y = (layout->at_y + layout->row.height + item_padding.y) - layout->offset.y;
     bounds.x = layout->at_x + item_spacing.x + item_padding.x - layout->offset.x;
@@ -6602,8 +6595,6 @@ zr_widget_fitting(struct zr_rect *bounds, struct zr_context *layout)
 {
     /* update the bounds to stand without padding  */
     enum zr_widget_state state;
-    const struct zr_style *config;
-
     ZR_ASSERT(layout);
     ZR_ASSERT(layout->style);
     ZR_ASSERT(layout->buffer);
@@ -6611,7 +6602,6 @@ zr_widget_fitting(struct zr_rect *bounds, struct zr_context *layout)
     if (!layout->valid || !layout->style || !layout->buffer)
         return ZR_WIDGET_INVALID;
 
-    config = layout->style;
     state = zr_widget(bounds, layout);
     if (layout->row.index == 1) {
         bounds->w += layout->style->properties[ZR_PROPERTY_PADDING].x;
@@ -8342,7 +8332,6 @@ zr_tooltip(struct zr_context *layout, const char *text)
     const struct zr_style *config;
     struct zr_vec2 item_padding;
     struct zr_vec2 padding;
-    struct zr_vec2 spacing;
 
     ZR_ASSERT(layout);
     ZR_ASSERT(text);
@@ -8352,7 +8341,6 @@ zr_tooltip(struct zr_context *layout, const char *text)
     /* calculate size of the text and tooltip */
     config = layout->style;
     padding = config->properties[ZR_PROPERTY_PADDING];
-    spacing = config->properties[ZR_PROPERTY_ITEM_SPACING];
     item_padding = config->properties[ZR_PROPERTY_ITEM_PADDING];
 
     text_len = zr_strsiz(text);
