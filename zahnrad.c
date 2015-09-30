@@ -977,7 +977,10 @@ zr_buffer_alloc(struct zr_buffer *b, enum zr_buffer_allocation_type type,
 
     if (full) {
         /* buffer is full so allocate bigger buffer if dynamic */
+        ZR_ASSERT(b->type == ZR_BUFFER_DYNAMIC);
+        ZR_ASSERT(b->pool.alloc && b->pool.free);
         if (b->type != ZR_BUFFER_DYNAMIC || !b->pool.alloc || !b->pool.free) return 0;
+
         cap = (zr_size)((zr_float)b->memory.size * b->grow_factor);
         cap = MAX(cap, zr_round_up_pow2((zr_uint)(b->allocated + size)));
         b->memory.ptr = zr_buffer_realloc(b, cap, &b->memory.size);
