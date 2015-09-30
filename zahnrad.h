@@ -2448,16 +2448,14 @@ struct zr_color zr_style_color(const struct zr_style*, enum zr_style_colors);
     Output:
     - color value that has been asked for
 */
-void zr_style_push_property(struct zr_style*, enum zr_style_properties,
-                                struct zr_vec2);
+void zr_style_push_property(struct zr_style*, enum zr_style_properties, struct zr_vec2);
 /*  this function temporarily changes a property in a stack to be reseted later
     Input:
     - Configuration structure to push the change to
     - Property idenfifier to change
     - new value of the property
 */
-void zr_style_push_color(struct zr_style*, enum zr_style_colors,
-                            struct zr_color);
+void zr_style_push_color(struct zr_style*, enum zr_style_colors, struct zr_color);
 /*  this function temporarily changes a color in a stack like fashion to be reseted later
     Input:
     - Configuration structure to push the change to
@@ -2743,9 +2741,9 @@ struct zr_window {
     /* input state for updating the window and all its widgets */
 };
 
-void zr_window_init(struct zr_window*, struct zr_rect bounds,
-                    zr_flags flags, struct zr_command_queue*,
-                    const struct zr_style*, const struct zr_input *in);
+void zr_window_init(struct zr_window*, struct zr_rect bounds, zr_flags flags,
+                    struct zr_command_queue*, const struct zr_style*,
+                    const struct zr_input *in);
 /*  this function initilizes and setups the window
     Input:
     - bounds of the window with x,y position and width and height
@@ -2995,8 +2993,8 @@ enum zr_header_align {
     /* header elements are added at the right side of the header */
 };
 
-zr_flags zr_header(struct zr_context*, const char *title,
-                    zr_flags show, zr_flags notify, enum zr_header_align);
+zr_flags zr_header(struct zr_context*, const char *title, zr_flags show,
+                    zr_flags notify, enum zr_header_align);
 /*  this function is a shorthand for the header build up process
     flag by the user
     Input:
@@ -3137,8 +3135,7 @@ void zr_layout_row_static(struct zr_context*, zr_float row_height,
     - number of widget inside the row that will divide the space
 */
 /* ------------------------------ Custom ----------------------------------- */
-void zr_layout_row_begin(struct zr_context*,
-                        enum zr_layout_format,
+void zr_layout_row_begin(struct zr_context*, enum zr_layout_format,
                         zr_float row_height, zr_size cols);
 /*  this function start a new scaleable row that can be filled with different
     sized widget
@@ -3155,8 +3152,8 @@ void zr_layout_row_push(struct zr_context*, zr_float value);
 */
 void zr_layout_row_end(struct zr_context*);
 /*  this function ends the previously started scaleable row */
-void zr_layout_row(struct zr_context*, enum zr_layout_format,
-                    zr_float height, zr_size cols, const zr_float *ratio);
+void zr_layout_row(struct zr_context*, enum zr_layout_format, zr_float height,
+                    zr_size cols, const zr_float *ratio);
 /*  this function sets the row layout as an array of ratios/width for
     every widget that will be inserted into that row
     Input:
@@ -3166,8 +3163,7 @@ void zr_layout_row(struct zr_context*, enum zr_layout_format,
     - window ratio/pixel width array for each widget
 */
 /* ------------------------------ User ----------------------------------- */
-void zr_layout_row_space_begin(struct zr_context*,
-                                enum zr_layout_format,
+void zr_layout_row_space_begin(struct zr_context*, enum zr_layout_format,
                                 zr_float height, zr_size widget_count);
 /*  this functions starts a space where widgets can be added
     at any given position and the user has to make sure no overlap occures
@@ -3311,8 +3307,7 @@ void zr_spacing(struct zr_context*, zr_size cols);
 */
 void zr_seperator(struct zr_context*);
 /*  this function creates a seperator line */
-void zr_text(struct zr_context*, const char*, zr_size,
-                    enum zr_text_align);
+void zr_text(struct zr_context*, const char*, zr_size, enum zr_text_align);
 /*  this function creates a bounded non terminated text widget with either
     left, centered or right alignment
     Input:
@@ -3320,8 +3315,8 @@ void zr_text(struct zr_context*, const char*, zr_size,
     - number of bytes the text is long
     - text alignment with either left, centered or right alignment
 */
-void zr_text_colored(struct zr_context*, const char*, zr_size,
-                            enum zr_text_align, struct zr_color);
+void zr_text_colored(struct zr_context*, const char*, zr_size, enum zr_text_align,
+                    struct zr_color);
 /*  this function creates a bounded non terminated color text widget with either
     left, centered or right alignment
     Input:
@@ -3337,8 +3332,7 @@ void zr_label(struct zr_context*, const char*, enum zr_text_align);
     - string pointer to text that should be drawn
     - text alignment with either left, centered or right alignment
 */
-void zr_label_colored(struct zr_context*, const char*,
-                            enum zr_text_align, struct zr_color);
+void zr_label_colored(struct zr_context*, const char*, enum zr_text_align, struct zr_color);
 /*  this function creates a zero terminated colored text widget with either
     left, centered or right alignment
     Input:
@@ -3367,8 +3361,7 @@ zr_bool zr_option(struct zr_context*, const char*, zr_bool active);
     Output:
     - from user input updated state of the radiobutton
 */
-zr_size zr_option_group(struct zr_context*, const char**,
-                                zr_size cnt, zr_size cur);
+zr_size zr_option_group(struct zr_context*, const char**, zr_size cnt, zr_size cur);
 /*  this function creates a radiobutton group widget with only one active radiobutton
     Input:
     - radiobutton label array describing the content of each radiobutton
@@ -3377,8 +3370,7 @@ zr_size zr_option_group(struct zr_context*, const char**,
     Output:
     - the from user input updated index of the active radiobutton
 */
-zr_bool zr_button_text(struct zr_context*, const char*,
-                                enum zr_button_behavior);
+zr_bool zr_button_text(struct zr_context*, const char*, enum zr_button_behavior);
 /*  this function creates a text button
     Input:
     - button label describing the button
@@ -3388,8 +3380,7 @@ zr_bool zr_button_text(struct zr_context*, const char*,
     - zr_true if the button was transistioned from unpressed to pressed with
         default button behavior or pressed if repeater behavior.
 */
-zr_bool zr_button_color(struct zr_context*, struct zr_color,
-                                enum zr_button_behavior);
+zr_bool zr_button_color(struct zr_context*, struct zr_color, enum zr_button_behavior);
 /*  this function creates a colored button without content
     Input:
     - color the button should be drawn with
@@ -3407,8 +3398,7 @@ zr_bool zr_button_symbol(struct zr_context*, enum zr_symbol, enum zr_button_beha
     - zr_true if the button was transistioned from unpressed to pressed with
         default button behavior or pressed if repeater behavior.
 */
-zr_bool zr_button_image(struct zr_context*, struct zr_image img,
-                                enum zr_button_behavior);
+zr_bool zr_button_image(struct zr_context*, struct zr_image img, enum zr_button_behavior);
 /*  this function creates a button with an icon as content
     Input:
     - icon image handle to draw into the button
@@ -3417,9 +3407,8 @@ zr_bool zr_button_image(struct zr_context*, struct zr_image img,
     - zr_true if the button was transistioned from unpressed to pressed with
         default button behavior or pressed if repeater behavior.
 */
-zr_bool zr_button_text_symbol(struct zr_context*, enum zr_symbol,
-                                const char*, enum zr_text_align,
-                                enum zr_button_behavior);
+zr_bool zr_button_text_symbol(struct zr_context*, enum zr_symbol, const char*,
+                                enum zr_text_align, enum zr_button_behavior);
 /*  this function creates a button with a triangle and text
     Input:
     - symbol to draw with the text
@@ -3431,8 +3420,8 @@ zr_bool zr_button_text_symbol(struct zr_context*, enum zr_symbol,
         default button behavior or pressed if repeater behavior.
 */
 zr_bool zr_button_text_image(struct zr_context *layout, struct zr_image img,
-                                    const char *text, enum zr_text_align align,
-                                    enum zr_button_behavior behavior);
+                            const char *text, enum zr_text_align align,
+                            enum zr_button_behavior behavior);
 /*  this function creates a button with an icon and text
     Input:
     - image or subimage to use as an icon
@@ -3459,8 +3448,8 @@ zr_bool zr_button_toggle_fitting(struct zr_context*, const char*,zr_bool value);
     Output:
     - from user input updated toggle state
 */
-zr_float zr_slider(struct zr_context*, zr_float min, zr_float val,
-                            zr_float max, zr_float step);
+zr_float zr_slider(struct zr_context*, zr_float min, zr_float val, zr_float max,
+                    zr_float step);
 /*  this function creates a slider for value manipulation
     Input:
     - minimal slider value that will not be underflown
@@ -3470,8 +3459,7 @@ zr_float zr_slider(struct zr_context*, zr_float min, zr_float val,
     Output:
     - the from user input updated slider value
 */
-zr_size zr_progress(struct zr_context*, zr_size cur, zr_size max,
-                            zr_bool modifyable);
+zr_size zr_progress(struct zr_context*, zr_size cur, zr_size max, zr_bool modifyable);
 /*  this function creates an either user or program controlled progressbar
     Input:
     - current progressbar value
@@ -3482,9 +3470,8 @@ zr_size zr_progress(struct zr_context*, zr_size cur, zr_size max,
 */
 void zr_editbox(struct zr_context*, struct zr_edit_box*);
 /*  this function creates an editbox with copy & paste functionality and text buffering */
-zr_size zr_edit(struct zr_context*, zr_char *buffer, zr_size len,
-                        zr_size max, zr_state *active, zr_size *cursor,
-                        enum zr_input_filter);
+zr_size zr_edit(struct zr_context*, zr_char *buffer, zr_size len, zr_size max,
+                zr_state *active, zr_size *cursor, enum zr_input_filter);
 /*  this function creates an editbox to updated/insert user text input
     Input:
     - buffer to fill with user input
@@ -3496,9 +3483,8 @@ zr_size zr_edit(struct zr_context*, zr_char *buffer, zr_size len,
     - length of the buffer after user input update
     - current state of the editbox with active(zr_true) or inactive(zr_false)
 */
-zr_size zr_edit_filtered(struct zr_context*, zr_char *buffer,
-                                zr_size len, zr_size max,  zr_state *active,
-                                zr_size *cursor, zr_filter);
+zr_size zr_edit_filtered(struct zr_context*, zr_char *buffer, zr_size len,
+                        zr_size max,  zr_state *active, zr_size *cursor, zr_filter);
 /*  this function creates an editbox to updated/insert filtered user text input
     Input:
     - buffer to fill with user input
@@ -3510,8 +3496,8 @@ zr_size zr_edit_filtered(struct zr_context*, zr_char *buffer,
     - length of the buffer after user input update
     - current state of the editbox with active(zr_true) or inactive(zr_false)
 */
-zr_int zr_spinner(struct zr_context*, zr_int min, zr_int value,
-                                zr_int max, zr_int step, zr_state *active);
+zr_int zr_spinner(struct zr_context*, zr_int min, zr_int value, zr_int max,
+                    zr_int step, zr_state *active);
 /*  this function creates a integer spinner widget
     Input:
     - min value that will not be underflown
@@ -3546,9 +3532,8 @@ zr_int zr_spinner(struct zr_context*, zr_int min, zr_int value,
     zr_combo_close          -- closes the previously opened combo box
     zr_combo_end            -- ends the combo box build up process
 */
-void zr_combo_begin(struct zr_context *parent,
-                        struct zr_context *combo, const char *selected,
-                        zr_state *active);
+void zr_combo_begin(struct zr_context *parent, struct zr_context *combo,
+                    const char *selected, zr_state *active);
 /*  this function begins the combobox build up process
     Input:
     - parent window layout the combo box will be placed into
@@ -3586,7 +3571,7 @@ zr_bool zr_combo_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
 */
 void zr_combo_close(struct zr_context *combo);
 /*  this function closes a opened combobox */
-zr_state zr_combo_end(struct zr_context *parent, struct zr_context *combo);
+void zr_combo_end(struct zr_context *parent, struct zr_context *combo, zr_state*);
 /*  this function ends the combobox build up process */
 /* --------------------------------------------------------------
  *                          GRAPH
@@ -3763,7 +3748,7 @@ enum zr_tree_node_operation zr_tree_leaf_icon(struct zr_tree*,
     Output:
     - operation identifier what should be done with this node
 */
-struct zr_vec2 zr_tree_end(struct zr_context*, struct zr_tree*);
+void zr_tree_end(struct zr_context*, struct zr_tree*, struct zr_vec2 *scrollbar);
 /*  this function ends a the tree building process */
 /* --------------------------------------------------------------
  *                          POPUP
@@ -3816,8 +3801,8 @@ zr_flags zr_popup_begin(struct zr_context *parent, struct zr_context *popup,
 */
 void zr_popup_close(struct zr_context *popup);
 /*  this functions closes a previously opened popup */
-struct zr_vec2 zr_popup_end(struct zr_context *parent,
-                            struct zr_context *popup);
+void zr_popup_end(struct zr_context *parent, struct zr_context *popup,
+                struct zr_vec2 *scrollbar);
 /*  this function finishes the previously started popup layout
     Output:
     - The from user input updated popup scrollbar pixel offset
@@ -3887,7 +3872,7 @@ void zr_contextual_close(struct zr_context *popup);
      Output:
     - update state of the context menu
 */
-zr_state zr_contextual_end(struct zr_context *parent, struct zr_context *popup);
+void zr_contextual_end(struct zr_context *parent, struct zr_context *popup, zr_state*);
 /*  this functions closes a previously opened context menu */
 /*----------------------------------------------------------------
  *                          MENU
@@ -3936,7 +3921,7 @@ zr_bool zr_menu_item_icon(struct zr_context *menu, struct zr_image,
     - `zr_true` if has been clicked `zr_false` otherwise
 */
 zr_bool zr_menu_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
-                                    const char*, enum zr_text_align align);
+                            const char*, enum zr_text_align align);
 /*  this function execute menu text symbol item
     Input:
     - symbol to draw into the menu item
@@ -4009,7 +3994,7 @@ void zr_group_begin(struct zr_context*, struct zr_context *tab,
     Output:
     - group layout to fill with widgets
 */
-struct zr_vec2 zr_group_end(struct zr_context*, struct zr_context*);
+void zr_group_end(struct zr_context*, struct zr_context*, struct zr_vec2 *scrollbar);
 /*  this function finishes the previously started group layout
     Output:
     - The from user input updated group scrollbar pixel offset
@@ -4044,7 +4029,7 @@ zr_size zr_shelf_begin(struct zr_context*, struct zr_context*,
     - group layout to fill with widgets
     - the from user input updated current shelf tab index
 */
-struct zr_vec2 zr_shelf_end(struct zr_context*, struct zr_context*);
+void zr_shelf_end(struct zr_context *p, struct zr_context *s, struct zr_vec2 *scrollbar);
 /*  this function finishes the previously started shelf layout
     Input:
     - previously started group layout

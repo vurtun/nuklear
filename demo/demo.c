@@ -307,7 +307,7 @@ color_picker(struct zr_context *panel, struct color_picker* control,
             ret = zr_false;
         }
     }
-    zr_popup_end(panel, &popup);
+    zr_popup_end(panel, &popup, NULL);
     control->active = (zr_state)ret;
     return ret;
 }
@@ -356,14 +356,16 @@ combo_box(struct zr_context *panel, struct combobox *combo,
     zr_size i = 0;
     struct zr_context layout;
     zr_combo_begin(panel, &layout, values[combo->selected], &combo->active);
-    zr_layout_row_dynamic(&layout, 25, 1);
-    for (i = 0; i < count; ++i) {
-        if (combo->selected == i) continue;
-        if (zr_combo_item(&layout, ZR_TEXT_LEFT, values[i])) {
-            combo->selected = i;
+    {
+        zr_layout_row_dynamic(&layout, 25, 1);
+        for (i = 0; i < count; ++i) {
+            if (combo->selected == i) continue;
+            if (zr_combo_item(&layout, ZR_TEXT_LEFT, values[i])) {
+                combo->selected = i;
+            }
         }
     }
-    combo->active = zr_combo_end(panel, &layout);
+    zr_combo_end(panel, &layout, &combo->active);
 }
 
 static void
@@ -385,7 +387,7 @@ prog_combo_box(struct zr_context *panel, zr_size *values, zr_size count,
         for (i = 0; i < count; ++i)
             values[i] = zr_progress(&combo, values[i], 100, zr_true);
     }
-    zr_combo_end(panel, &combo);
+    zr_combo_end(panel, &combo, NULL);
 }
 
 static void
@@ -411,7 +413,7 @@ color_combo_box(struct zr_context *panel, struct color_combo_box *demo)
             *iter = (zr_byte)t;
         }
     }
-    zr_combo_end(panel, &combo);
+    zr_combo_end(panel, &combo, NULL);
 }
 
 static void
@@ -434,7 +436,7 @@ check_combo_box(struct zr_context *panel, zr_bool *values, zr_size count,
         for (i = 0; i < count; ++i)
             values[i] = zr_check(&combo, weapons[i], values[i]);
     }
-    zr_combo_end(panel, &combo);
+    zr_combo_end(panel, &combo, NULL);
 }
 
 /* -----------------------------------------------------------------
@@ -509,6 +511,7 @@ struct state {
     zr_state popup;
     zr_size cur;
     zr_size op;
+    zr_float value;
 
     /* subpanels */
     struct zr_vec2 shelf;
@@ -794,6 +797,7 @@ init_demo(struct demo_gui *gui)
     win->slider = 2.0f;
     win->progressbar = 50;
     win->spinner = 100;
+    win->value = 0.6f;
 }
 
 /* -----------------------------------------------------------------
@@ -894,7 +898,7 @@ run_demo(struct demo_gui *gui)
                     state->popup = zr_false;
                 }
             }
-            zr_popup_end(&layout, &tab);
+            zr_popup_end(&layout, &tab, NULL);
         }
 
         {
@@ -915,7 +919,7 @@ run_demo(struct demo_gui *gui)
                 default: break;
                 }
             }
-            state->shelf = zr_shelf_end(&layout, &tab);
+            zr_shelf_end(&layout, &tab, &state->shelf);
         }
 
         {
@@ -924,7 +928,7 @@ run_demo(struct demo_gui *gui)
             zr_layout_row_dynamic(&layout, 250, 1);
             zr_tree_begin(&layout, &tree, "Tree", 20, state->tree);
             upload_tree(&state->test, &tree, &state->test.root);
-            state->tree = zr_tree_end(&layout, &tree);
+            zr_tree_end(&layout, &tree, &state->tree);
         }
     }
     zr_end(&layout, &gui->panel);
@@ -941,6 +945,14 @@ run_demo(struct demo_gui *gui)
         zr_layout_row_dynamic(&layout, 30, 2);
         if (zr_option(&layout, "easy", state->op == EASY)) state->op = EASY;
         if (zr_option(&layout, "hard", state->op == HARD)) state->op = HARD;
+        zr_layout_row_begin(&layout, ZR_STATIC, 30, 2);
+        {
+            zr_layout_row_push(&layout, 50);
+            zr_label(&layout, "Volume:", ZR_TEXT_LEFT);
+            zr_layout_row_push(&layout, 110);
+            state->value = zr_slider(&layout, 0, state->value, 1.0f, 0.1f);
+        }
+        zr_layout_row_end(&layout);
     }
     zr_end(&layout, &gui->sub);
 }

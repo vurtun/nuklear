@@ -38,7 +38,7 @@ have to be either executed or optionally converted into a vertex buffer to
 draw the GUI.
 
 ## Gallery
-![gui demo](https://cloud.githubusercontent.com/assets/8057201/9937241/24f55e7e-5d60-11e5-9957-c010cf763f15.png)
+![demo](https://cloud.githubusercontent.com/assets/8057201/10187981/584ecd68-675c-11e5-897c-822ef534a876.png)
 ![gui explorer](https://cloud.githubusercontent.com/assets/8057201/9937240/24f509ce-5d60-11e5-894a-e7e9e228de30.png)
 ![node](https://cloud.githubusercontent.com/assets/8057201/9976995/e81ac04a-5ef7-11e5-872b-acd54fbeee03.gif)
 
@@ -62,8 +62,7 @@ zr_window_init(&window, 50, 50, 220, 180,
 /* setup widget data */
 enum {EASY, HARD};
 zr_size option = EASY;
-zr_size item = 0;
-zr_state active = 0;
+zr_float value = 0.6f;
 
 struct zr_input input = {0};
 while (1) {
@@ -84,8 +83,14 @@ while (1) {
         zr_layout_row_dynamic(&context, 30, 2);
         if (zr_option(&context, "easy", option == EASY)) option = EASY;
         if (zr_option(&context, "hard", option == HARD)) option = HARD;
-        zr_label(&context, "Weapon:", ZR_TEXT_LEFT);
-        zr_combo(&context, items, LEN(items), &item, 20, &active);
+        zr_layout_row_begin(&context, ZR_STATIC, 30, 2);
+        {
+            zr_layout_row_push(&context, 50);
+            zr_label(&context, "Volume:", ZR_TEXT_LEFT);
+            zr_layout_row_push(&context, 110);
+            value = zr_slider(&context, 0, value, 1.0f, 0.1f);
+        }
+        zr_layout_row_end(&context);
     }
     zr_end(&context, &window);
 

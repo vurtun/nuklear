@@ -254,7 +254,6 @@ main(int argc, char *argv[])
 
     /* GUI */
     struct demo_gui gui;
-
     if (argc < 2) {
         fprintf(stdout,"Missing TTF Font file argument: gui <path>\n");
         exit(EXIT_FAILURE);

@@ -360,10 +360,10 @@ zr_hsv(zr_float h, zr_float s, zr_float v)
 zr_uint
 zr_color32(struct zr_color in)
 {
-    zr_uint out = (zr_draw_vertex_color)in.r;
-    out |= ((zr_draw_vertex_color)in.g << 8);
-    out |= ((zr_draw_vertex_color)in.b << 16);
-    out |= ((zr_draw_vertex_color)in.a << 24);
+    zr_uint out = (zr_uint)in.r;
+    out |= ((zr_uint)in.g << 8);
+    out |= ((zr_uint)in.b << 16);
+    out |= ((zr_uint)in.a << 24);
     return out;
 }
 
@@ -2932,7 +2932,7 @@ zr_font_bake_pack(zr_size *image_memory, zr_size *width, zr_size *height,
 
     *height = 0;
     *width = (total_glyph_count > 1000) ? 1024 : 512;
-    stbtt_PackBegin(&baker->spc, NULL, (zr_int)*width, (int)max_height, 0, 1, 0);
+    stbtt_PackBegin(&baker->spc, 0, (zr_int)*width, (int)max_height, 0, 1, 0);
     {
         zr_size input_i = 0;
         zr_size range_n = 0, rect_n = 0, char_n = 0;
@@ -7521,9 +7521,9 @@ zr_tree_end_node(struct zr_tree *tree)
         tree->skip = -1;
 }
 
-struct zr_vec2
-zr_tree_end(struct zr_context *p, struct zr_tree* tree)
-{return zr_group_end(p, &tree->group);}
+void
+zr_tree_end(struct zr_context *p, struct zr_tree* tree, struct zr_vec2 *scrollbar)
+{zr_group_end(p, &tree->group, scrollbar);}
 /*
  * -------------------------------------------------------------
  *
@@ -7595,8 +7595,8 @@ failed:
     g->queue = p->queue;
 }
 
-struct zr_vec2
-zr_group_end(struct zr_context *p, struct zr_context *g)
+void
+zr_group_end(struct zr_context *p, struct zr_context *g, struct zr_vec2 *scrollbar)
 {
     struct zr_window pan;
     struct zr_command_buffer *out;
@@ -7604,8 +7604,8 @@ zr_group_end(struct zr_context *p, struct zr_context *g)
 
     ZR_ASSERT(p);
     ZR_ASSERT(g);
-    if (!p || !g) return zr_vec2(0,0);
-    if (!p->valid) return zr_vec2(0,0);
+    if (!p || !g) return;
+    if (!p->valid) return;
     zr_zero(&pan, sizeof(pan));
 
     out = p->buffer;
@@ -7621,7 +7621,8 @@ zr_group_end(struct zr_context *p, struct zr_context *g)
     zr_command_buffer_push_scissor(out, clip);
     zr_end(g, &pan);
     zr_command_buffer_push_scissor(out, p->clip);
-    return pan.offset;
+    if (scrollbar)
+        *scrollbar = pan.offset;
 }
 /*
  * -------------------------------------------------------------
@@ -7765,8 +7766,8 @@ failed:
     return active;
 }
 
-struct zr_vec2
-zr_shelf_end(struct zr_context *p, struct zr_context *s)
+void
+zr_shelf_end(struct zr_context *p, struct zr_context *s, struct zr_vec2 *scrollbar)
 {
     struct zr_command_buffer *out;
     struct zr_rect clip;
@@ -7774,8 +7775,8 @@ zr_shelf_end(struct zr_context *p, struct zr_context *s)
 
     ZR_ASSERT(p);
     ZR_ASSERT(s);
-    if (!p || !s) return zr_vec2(0,0);
-    if (!p->valid) return zr_vec2(0,0);
+    if (!p || !s) return;
+    if (!p->valid) return;
     zr_zero(&pan, sizeof(pan));
 
     out = p->buffer;
@@ -7787,7 +7788,8 @@ zr_shelf_end(struct zr_context *p, struct zr_context *s)
     zr_command_buffer_push_scissor(out, clip);
     zr_end(s, &pan);
     zr_command_buffer_push_scissor(out, p->clip);
-    return pan.offset;
+    if (scrollbar)
+        *scrollbar = pan.offset;
 }
 /*
  * -------------------------------------------------------------
@@ -7848,16 +7850,17 @@ zr_popup_close(struct zr_context *popup)
     popup->valid = zr_false;
 }
 
-struct zr_vec2
-zr_popup_end(struct zr_context *parent, struct zr_context *popup)
+void
+zr_popup_end(struct zr_context *parent, struct zr_context *popup,
+    struct zr_vec2 *scrollbar)
 {
     struct zr_window pan;
     struct zr_command_buffer *out;
 
     ZR_ASSERT(parent);
     ZR_ASSERT(popup);
-    if (!parent || !popup) return zr_vec2(0,0);
-    if (!parent->valid) return zr_vec2(0,0);
+    if (!parent || !popup) return;
+    if (!parent->valid) return;
 
     zr_zero(&pan, sizeof(pan));
     if (popup->flags & ZR_WINDOW_HIDDEN) {
@@ -7878,7 +7881,8 @@ zr_popup_end(struct zr_context *parent, struct zr_context *popup)
     zr_end(popup, &pan);
     zr_command_queue_finish_child(parent->queue, parent->buffer);
     zr_command_buffer_push_scissor(out, parent->clip);
-    return pan.offset;
+    if (scrollbar)
+        *scrollbar = pan.offset;
 }
 /*
  * -------------------------------------------------------------
@@ -7890,7 +7894,7 @@ zr_popup_end(struct zr_context *parent, struct zr_context *popup)
 static zr_bool
 zr_popup_nonblocking_begin(struct zr_context *parent,
     struct zr_context *popup, zr_flags flags, zr_state *active, zr_state is_active,
-    struct zr_rect body)
+    struct zr_rect body, struct zr_vec2 scrollbar)
 {
     /* deactivate popup if user clicked outside the popup*/
     const struct zr_input *in = parent->input;
@@ -7907,7 +7911,7 @@ zr_popup_nonblocking_begin(struct zr_context *parent,
 
     /* if active create popup otherwise deactive the panel layout  */
     if (!is_active && *active) {
-        zr_popup_begin(parent, popup, ZR_POPUP_DYNAMIC, flags, body, zr_vec2(0,0));
+        zr_popup_begin(parent, popup, ZR_POPUP_DYNAMIC, flags, body, scrollbar);
         zr_popup_close(popup);
         popup->flags &= ~(zr_flags)ZR_WINDOW_MINIMIZED;
         parent->flags &= ~(zr_flags)ZR_WINDOW_ROM;
@@ -7925,14 +7929,14 @@ zr_popup_nonblocking_begin(struct zr_context *parent,
 
 static void
 zr_popup_nonblocking_end(struct zr_context *parent,
-    struct zr_context *popup)
+    struct zr_context *popup, struct zr_vec2 *scrollbar)
 {
     ZR_ASSERT(parent);
     ZR_ASSERT(popup);
     if (!parent || !popup) return;
     if (!parent->valid) return;
     if (!(popup->flags & ZR_WINDOW_MINIMIZED))
-        zr_popup_end(parent, popup);
+        zr_popup_end(parent, popup, scrollbar);
 }
 
 void
@@ -7943,7 +7947,7 @@ zr_contextual_begin(struct zr_context *parent, struct zr_context *popup,
     ZR_ASSERT(popup);
     ZR_ASSERT(active);
     if (!parent || !popup || !active) return;
-    zr_popup_nonblocking_begin(parent, popup, flags, active, *active, body);
+    zr_popup_nonblocking_begin(parent, popup, flags, active, *active, body, zr_vec2(0,0));
 }
 
 static zr_bool
@@ -8066,19 +8070,24 @@ zr_contextual_close(struct zr_context *popup)
     popup->flags |= ZR_WINDOW_HIDDEN;
 }
 
-zr_state
-zr_contextual_end(struct zr_context *parent, struct zr_context *menu)
+void
+zr_contextual_end(struct zr_context *parent, struct zr_context *menu, zr_state *state)
 {
     ZR_ASSERT(parent);
     ZR_ASSERT(menu);
-    if (!parent || !menu) return zr_false;
-    if (!parent->valid) return zr_false;
+    if (!parent || !menu)
+        goto failed;
+    if (!parent->valid)
+        goto failed;
     if ((!parent->valid) || (!menu->valid && !(menu->flags & ZR_WINDOW_HIDDEN)))
-        return zr_false;
-    zr_popup_nonblocking_end(parent, menu);
+        goto failed;
+    zr_popup_nonblocking_end(parent, menu, 0);
     if (menu->flags & ZR_WINDOW_HIDDEN)
-        return zr_false;
-    return zr_true;
+        goto failed;
+    if (state) *state = zr_true;
+    return;
+failed:
+    if (state) *state = zr_false;
 }
 /*
  * -------------------------------------------------------------
@@ -8170,7 +8179,7 @@ zr_combo_begin(struct zr_context *parent, struct zr_context *combo,
         body.y = header.y + header.h;
         body.h = zr_null_rect.h;
         if (!zr_popup_nonblocking_begin(parent, combo, ZR_WINDOW_NO_SCROLLBAR,
-                active, is_active, body)) goto failed;
+                active, is_active, body, zr_vec2(0,0))) goto failed;
         combo->flags |= ZR_WINDOW_COMBO_MENU;
     }
     return;
@@ -8195,8 +8204,8 @@ zr_bool zr_combo_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
     const char *title, enum zr_text_align align)
 {return zr_contextual_item_symbol(menu, symbol, title, align);}
 
-zr_state zr_combo_end(struct zr_context *parent, struct zr_context *menu)
-{return zr_contextual_end(parent, menu);}
+void zr_combo_end(struct zr_context *parent, struct zr_context *menu, zr_state *state)
+{zr_contextual_end(parent, menu, state);}
 
 void zr_combo_close(struct zr_context *combo)
 {zr_contextual_close(combo);}
@@ -8253,7 +8262,7 @@ zr_menu_begin(struct zr_context *parent, struct zr_context *menu,
         body.y = header.y + header.h;
         body.h = (parent->bounds.y + parent->bounds.h) - body.y;
         if (!zr_popup_nonblocking_begin(parent, menu, ZR_WINDOW_NO_SCROLLBAR, active,
-            is_active, body)) goto failed;
+            is_active, body, zr_vec2(0,0))) goto failed;
         menu->flags |= ZR_WINDOW_COMBO_MENU;
     }
     return;
@@ -8288,7 +8297,7 @@ zr_menu_end(struct zr_context *parent, struct zr_context *menu)
     ZR_ASSERT(menu);
     if (!parent || !menu) return;
     if (!parent->valid) return;
-    zr_popup_nonblocking_end(parent, menu);
+    zr_popup_nonblocking_end(parent, menu, 0);
 }
 /*
  * -------------------------------------------------------------
@@ -8308,11 +8317,10 @@ zr_tooltip_begin(struct zr_context *parent, struct zr_context *tip, zr_float wid
         return;
 
     in = parent->input;
-
     bounds.w = width;
     bounds.h = zr_null_rect.h;
-    bounds.x = in->mouse.pos.x - parent->clip.x;
-    bounds.y = in->mouse.pos.y - parent->clip.y;
+    bounds.x = (in->mouse.pos.x + 1) - parent->clip.x;
+    bounds.y = (in->mouse.pos.y + 1) - parent->clip.y;
     zr_popup_begin(parent, tip, ZR_POPUP_DYNAMIC, ZR_WINDOW_NO_SCROLLBAR, bounds, zr_vec2(0,0));
 }
 
@@ -8320,7 +8328,7 @@ void
 zr_tooltip_end(struct zr_context *parent, struct zr_context *tip)
 {
     zr_popup_close(tip);
-    zr_popup_end(parent, tip);
+    zr_popup_end(parent, tip, 0);
 }
 
 void

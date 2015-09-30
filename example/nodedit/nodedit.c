@@ -200,6 +200,7 @@ node_editor_draw(struct zr_context *layout, struct node_editor *nodedit,
     struct zr_command_buffer *canvas = zr_canvas(layout);
     struct node *updated = 0;
 
+    /* allocate complete window space */
     total_space = zr_space(layout);
     zr_layout_row_space_begin(layout, ZR_STATIC, total_space.h, (zr_size)nodedit->node_count);
     {
@@ -218,7 +219,7 @@ node_editor_draw(struct zr_context *layout, struct node_editor *nodedit,
                 zr_command_buffer_push_line(canvas, size.x, y+size.y, size.x+size.w, y+size.y, grid_color);
         }
 
-        /* execute each node */
+        /* execute each node as a moveable group */
         zr_style_push_color(config, ZR_COLOR_WINDOW, zr_rgb(48, 48, 48));
         while (it) {
             /* draw node */
@@ -347,30 +348,29 @@ node_editor_draw(struct zr_context *layout, struct node_editor *nodedit,
             node_editor_push(nodedit, updated);
         }
 
-        {
-            /* right click popup context menu activation */
-            if (nodedit->menu == ZR_INACTIVE &&
-                zr_input_mouse_clicked(in, ZR_BUTTON_RIGHT, zr_layout_row_space_bounds(layout))) {
-                it = nodedit->begin;
-                nodedit->selected = NULL;
-                nodedit->menu = ZR_ACTIVE;
-                nodedit->bounds = zr_rect(in->mouse.pos.x, in->mouse.pos.y, 100, 200);
-                while (it) {
-                    struct zr_rect b = zr_layout_row_space_rect_to_screen(layout, it->bounds);
-                    b.x -= nodedit->scrolling.x;
-                    b.y -= nodedit->scrolling.y;
-                    if (zr_input_is_mouse_hovering_rect(in, b))
-                        nodedit->selected = it;
-                    it = it->next;
-                }
+        /* node selection + right click popup context menu activation */
+        if (nodedit->menu == ZR_INACTIVE &&
+            zr_input_mouse_clicked(in, ZR_BUTTON_RIGHT, zr_layout_row_space_bounds(layout))) {
+            it = nodedit->begin;
+            nodedit->selected = NULL;
+            nodedit->menu = ZR_ACTIVE;
+            nodedit->bounds = zr_rect(in->mouse.pos.x, in->mouse.pos.y, 100, 200);
+            while (it) {
+                struct zr_rect b = zr_layout_row_space_rect_to_screen(layout, it->bounds);
+                b.x -= nodedit->scrolling.x;
+                b.y -= nodedit->scrolling.y;
+                if (zr_input_is_mouse_hovering_rect(in, b))
+                    nodedit->selected = it;
+                it = it->next;
             }
+        }
 
-            /* popup context menu */
-            if (nodedit->menu == ZR_ACTIVE) {
-                struct zr_context menu;
-                const char *grid_option[] = {"Show Grid", "Hide Grid"};
-                zr_contextual_begin(layout, &menu, ZR_WINDOW_NO_SCROLLBAR, &nodedit->menu,
-                    nodedit->bounds);
+        /* popup context menu */
+        if (nodedit->menu == ZR_ACTIVE) {
+            struct zr_context menu;
+            const char *grid_option[] = {"Show Grid", "Hide Grid"};
+            zr_contextual_begin(layout, &menu, ZR_WINDOW_NO_SCROLLBAR, &nodedit->menu, nodedit->bounds);
+            {
                 zr_layout_row_dynamic(&menu, 25, 1);
                 if (!nodedit->selected) {
                     /* menu content if no selected node */
@@ -389,8 +389,8 @@ node_editor_draw(struct zr_context *layout, struct node_editor *nodedit,
                     if (zr_contextual_item(&menu, "Copy", ZR_TEXT_CENTERED))
                         fprintf(stdout, "pressed copy!\n");
                 }
-                nodedit->menu = zr_contextual_end(layout, &menu);
             }
+            nodedit->menu = zr_contextual_end(layout, &menu);
         }
     }
     zr_layout_row_space_end(layout);
