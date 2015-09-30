@@ -55,7 +55,7 @@ zr_command_queue_init_fixed(&queue, malloc(MEMORY_SIZE), MEMORY_SIZE);
 
 /* initialize window */
 struct zr_window window;
-zr_window_init(&window, 50, 50, 220, 180,
+zr_window_init(&window, zr_rect(50, 50, 220, 180),
     ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALEABLE,
     &queue, &style, &input);
 
