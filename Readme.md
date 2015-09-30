@@ -38,8 +38,8 @@ have to be either executed or optionally converted into a vertex buffer to
 draw the GUI.
 
 ## Gallery
-![demo](https://cloud.githubusercontent.com/assets/8057201/10187981/584ecd68-675c-11e5-897c-822ef534a876.png)
-![gui explorer](https://cloud.githubusercontent.com/assets/8057201/9937240/24f509ce-5d60-11e5-894a-e7e9e228de30.png)
+![demo](https://cloud.githubusercontent.com/assets/8057201/10188098/1d5fe5b0-675d-11e5-83f7-967b71bbd1d4.png)
+![explorer](https://cloud.githubusercontent.com/assets/8057201/9937240/24f509ce-5d60-11e5-894a-e7e9e228de30.png)
 ![node](https://cloud.githubusercontent.com/assets/8057201/9976995/e81ac04a-5ef7-11e5-872b-acd54fbeee03.gif)
 
 ## Example
@@ -102,8 +102,7 @@ while (1) {
     zr_command_queue_clear(&queue);
 }
 ```
-![gui
-screenshot](https://cloud.githubusercontent.com/assets/8057201/9937242/24f58b9c-5d60-11e5-94df-780232ca613e.png)
+![example](https://cloud.githubusercontent.com/assets/8057201/10187981/584ecd68-675c-11e5-897c-822ef534a876.png)
 
 ## IMGUIs
 Immediate mode in contrast to classical retained mode GUIs store as little state as possible
