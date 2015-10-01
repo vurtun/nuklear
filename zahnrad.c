@@ -3859,9 +3859,9 @@ zr_widget_button_text_symbol(struct zr_command_buffer *out, struct zr_rect r,
     const struct zr_user_font *f, const struct zr_input *i)
 {
     zr_bool ret;
-    struct zr_rect tri;
-    struct zr_color background;
-    struct zr_color color;
+    struct zr_rect tri = {0,0,0,0};
+    struct zr_color background = zr_rgba(0,0,0,0);
+    struct zr_color color = zr_rgba(0,0,0,0);
 
     ZR_ASSERT(button);
     ZR_ASSERT(out);
@@ -3880,7 +3880,7 @@ zr_widget_button_text_symbol(struct zr_command_buffer *out, struct zr_rect r,
 
     /* calculate symbol bounds */
     tri.y = r.y + (r.h/2) - f->height/2;
-    tri.w = tri.h = f->height;
+    tri.w = f->height; tri.h = f->height;
     if (align == ZR_TEXT_LEFT) {
         tri.x = (r.x + r.w) - (2 * button->base.padding.x + tri.w);
         tri.x = MAX(tri.x, 0);
@@ -5776,8 +5776,8 @@ zr_header_title(struct zr_context *layout, const char *title,
     label.y = layout->header.y;
     label.h = c->font.height + 2 * item_padding.y;
     if (align == ZR_HEADER_LEFT)
-        label.w = MAX((zr_float)t + 2 * item_padding.x, 3 * item_padding.x);
-    else label.w = MAX((zr_float)t + 2 * item_padding.x, 3 * item_padding.x);
+        label.w = MAX((zr_float)t + 2 * item_padding.x, 4 * item_padding.x);
+    else label.w = MAX((zr_float)t + 2 * item_padding.x, 4 * item_padding.x);
     label.w -= (3 * item_padding.x);
     zr_command_buffer_push_text(out, label, (const zr_char*)title, text_len,
         &c->font, c->colors[ZR_COLOR_HEADER], c->colors[ZR_COLOR_TEXT]);
@@ -6680,6 +6680,7 @@ static void
 zr_fill_button(const struct zr_style *config, struct zr_button *button)
 {
     struct zr_vec2 item_padding;
+    zr_zero(button, sizeof(*button));
     item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
     button->rounding = config->rounding[ZR_ROUNDING_BUTTON];
     button->normal = config->colors[ZR_COLOR_BUTTON];
@@ -6803,6 +6804,7 @@ zr_button_text_symbol(struct zr_context *layout, enum zr_symbol symbol,
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
 
     config = layout->style;
+    button.alignment = ZR_TEXT_CENTERED;
     button.normal = config->colors[ZR_COLOR_TEXT];
     button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
     button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
@@ -6829,7 +6831,7 @@ zr_button_text_image(struct zr_context *layout, struct zr_image img,
     button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
     button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
     return zr_widget_button_text_image(layout->buffer, bounds, img, text, align,
-                                behavior, &button, &config->font, i);
+            behavior, &button, &config->font, i);
 }
 
 zr_bool
