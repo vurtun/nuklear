@@ -256,7 +256,7 @@ node_editor_draw(struct zr_context *layout, struct node_editor *nodedit,
                 }
                 /* ====================================================*/
             }
-            zr_group_end(layout, &node);
+            zr_group_end(layout, &node, NULL);
 
             {
                 /* node connector and linking */
@@ -390,7 +390,7 @@ node_editor_draw(struct zr_context *layout, struct node_editor *nodedit,
                         fprintf(stdout, "pressed copy!\n");
                 }
             }
-            nodedit->menu = zr_contextual_end(layout, &menu);
+            zr_contextual_end(layout, &menu, &nodedit->menu);
         }
     }
     zr_layout_row_space_end(layout);
