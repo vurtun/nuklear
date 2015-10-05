@@ -35,12 +35,6 @@
 #define DTIME       33
 #define MAX_DRAW_COMMAND_MEMORY (4 * 1024)
 
-#define MIN(a,b)    ((a) < (b) ? (a) : (b))
-#define MAX(a,b)    ((a) < (b) ? (b) : (a))
-#define CLAMP(i,v,x) (MAX(MIN(v,x), i))
-#define LEN(a)      (sizeof(a)/sizeof(a)[0])
-#define UNUSED(a)   ((void)(a))
-
 #include "../../zahnrad.h"
 
 static void clipboard_set(const char *text){SDL_SetClipboardText(text);}

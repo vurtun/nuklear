@@ -14,11 +14,6 @@
 
 /* macros */
 #define DTIME       16
-#define MIN(a,b)    ((a) < (b) ? (a) : (b))
-#define MAX(a,b)    ((a) < (b) ? (b) : (a))
-#define CLAMP(i,v,x) (MAX(MIN(v,x), i))
-#define LEN(a)      (sizeof(a)/sizeof(a)[0])
-#define UNUSED(a)   ((void)(a))
 
 #include "../../zahnrad.h"
 

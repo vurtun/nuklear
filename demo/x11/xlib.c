@@ -30,14 +30,9 @@
 
 /* macros */
 #define DTIME       16
-#define MIN(a,b)    ((a) < (b) ? (a) : (b))
-#define MAX(a,b)    ((a) < (b) ? (b) : (a))
-#define CLAMP(i,v,x) (MAX(MIN(v,x), i))
-#define LEN(a)      (sizeof(a)/sizeof(a)[0])
-#define UNUSED(a)   ((void)(a))
-
 #include "../../zahnrad.h"
 
+#define UNUSED(a)   ((void)(a))
 static void clipboard_set(const char *text){UNUSED(text);}
 static zr_bool clipboard_is_filled(void){return zr_false;}
 static const char* clipboard_get(void) {return NULL;}

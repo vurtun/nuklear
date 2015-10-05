@@ -40,7 +40,6 @@ extern "C" {
 /* defines the number of temporary configuration color changes that can be stored */
 #define ZR_MAX_ATTRIB_STACK 32
 /* defines the number of temporary configuration attribute changes that can be stored */
-
 /*
  * ==============================================================
  *
@@ -3054,7 +3053,6 @@ void zr_menubar_begin(struct zr_context*);
 /*  this function begins the window menubar build up process */
 void zr_menubar_end(struct zr_context*);
 /*  this function ends the window menubar build up process */
-
 /* --------------------------------------------------------------
  *                          Layout
  * --------------------------------------------------------------

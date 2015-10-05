@@ -847,7 +847,6 @@ zr_input_is_key_down(const struct zr_input *i, enum zr_keys key)
     if (k->down) return zr_true;
     return zr_false;
 }
-
 /*
  * ==============================================================
  *
@@ -4571,8 +4570,6 @@ zr_widget_scrollbarh(struct zr_command_buffer *out, struct zr_rect scroll,
     if (target <= scroll.w) return 0;
 
     /* calculate scrollbar constants */
-    scroll.w = scroll.w;
-    scroll.x = scroll.x;
     scroll_step = MIN(step, scroll.w);
     scroll_offset = MIN(offset, target - scroll.w);
     scroll_ratio = scroll.w / target;
@@ -5270,6 +5267,7 @@ zr_begin(struct zr_context *context, struct zr_window *window)
             context->clip.x = window->bounds.x;
             context->clip.w = context->width;
         }
+
         context->clip.y = window->bounds.y;
         context->clip.h = window->bounds.h - (context->footer_h + context->header.h);
         context->clip.h -= (window_padding.y + item_padding.y);
