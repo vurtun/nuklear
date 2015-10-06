@@ -5776,7 +5776,6 @@ zr_header_title(struct zr_context *layout, const char *title,
     if (align == ZR_HEADER_LEFT)
         label.w = MAX((zr_float)t + 2 * item_padding.x, 4 * item_padding.x);
     else label.w = MAX((zr_float)t + 2 * item_padding.x, 4 * item_padding.x);
-    label.w -= (3 * item_padding.x);
     zr_command_buffer_push_text(out, label, (const zr_char*)title, text_len,
         &c->font, c->colors[ZR_COLOR_HEADER], c->colors[ZR_COLOR_TEXT]);
 }

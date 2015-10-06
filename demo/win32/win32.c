@@ -13,10 +13,9 @@
 #include <string.h>
 
 /* macros */
-#define DTIME       16
-
 #include "../../zahnrad.h"
 
+#define UNUSED(a)   ((void)(a))
 static void clipboard_set(const char *text){UNUSED(text);}
 static zr_bool clipboard_is_filled(void){return zr_false;}
 static const char* clipboard_get(void) {return NULL;}
@@ -313,31 +312,31 @@ draw(XSurface *surf, struct zr_command_queue *queue)
 }
 
 static void
-key(struct zr_input *in, MSG *msg, zr_bool down)
+input_key(struct zr_input *in, MSG *msg, zr_bool down)
 {
-    if (msg->lParam == VK_SHIFT)
-        zr_input_key(in, ZR_KEY_SHIFT, down);
-    else if (msg->lParam == VK_DELETE)
-        zr_input_key(in, ZR_KEY_DEL, down);
-    else if (msg->lParam == VK_RETURN)
-        zr_input_key(in, ZR_KEY_ENTER, down);
-    else if (msg->lParam == VK_SPACE)
-        zr_input_key(in, ZR_KEY_SPACE, down);
-    else if (msg->lParam == VK_BACK)
-        zr_input_key(in, ZR_KEY_BACKSPACE, down);
+    switch (msg->wParam) {
+    case VK_SHIFT: zr_input_key(in, ZR_KEY_SHIFT, down); break;
+    case VK_DELETE: zr_input_key(in, ZR_KEY_DEL, down); break;
+    case VK_RETURN: zr_input_key(in, ZR_KEY_ENTER, down); break;
+    case VK_SPACE: zr_input_key(in, ZR_KEY_SPACE, down); break;
+    case VK_BACK: zr_input_key(in, ZR_KEY_BACKSPACE, down); break;
+    case VK_LEFT: zr_input_key(in, ZR_KEY_LEFT, down); break;
+    case VK_RIGHT: zr_input_key(in, ZR_KEY_RIGHT, down); break;
+    default: break;
+    }
 }
 
 static void
-text(struct zr_input *in, MSG *msg)
+input_text(struct zr_input *in, MSG *msg)
 {
     char glyph;
-    if (msg->wParam < 32 && msg->wParam >= 128) return;
+    if (msg->wParam < 32 || msg->wParam >= 128) return;
     glyph = (zr_char)msg->wParam;
     zr_input_char(in, glyph);
 }
 
 static void
-motion(struct zr_input *in, MSG *msg)
+input_motion(struct zr_input *in, MSG *msg)
 {
     const zr_int x = GET_X_LPARAM(msg->lParam);
     const zr_int y = GET_Y_LPARAM(msg->lParam);
@@ -345,7 +344,7 @@ motion(struct zr_input *in, MSG *msg)
 }
 
 static void
-btn(struct zr_input *in, MSG *msg, zr_bool down)
+input_btn(struct zr_input *in, MSG *msg, zr_bool down)
 {
     const zr_int x = GET_X_LPARAM(msg->lParam);
     const zr_int y = GET_Y_LPARAM(msg->lParam);
@@ -376,15 +375,10 @@ wnd_proc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 INT WINAPI
 WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int shown)
 {
-    LARGE_INTEGER freq;
-    long long start;
-    long long dt;
-
     /* GUI */
     struct demo_gui gui;
 
     /* Window */
-    QueryPerformanceFrequency(&freq);
     xw.wc.style = CS_HREDRAW|CS_VREDRAW;
     xw.wc.lpfnWndProc = wnd_proc;
     xw.wc.hInstance = hInstance;
@@ -415,15 +409,20 @@ WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int shown)
     while (gui.running) {
         /* Input */
         MSG msg;
-        start = timestamp(freq);
         zr_input_begin(&gui.input);
         while (PeekMessage(&msg, xw.hWnd, 0, 0, PM_REMOVE)) {
-            if (msg.message == WM_KEYDOWN) key(&gui.input, &msg, zr_true);
-            else if (msg.message == WM_KEYUP) key(&gui.input, &msg, zr_false);
-            else if (msg.message == WM_LBUTTONDOWN) btn(&gui.input, &msg, zr_true);
-            else if (msg.message == WM_LBUTTONUP) btn(&gui.input, &msg, zr_false);
-            else if (msg.message == WM_MOUSEMOVE) motion(&gui.input, &msg);
-            else if (msg.message == WM_CHAR) text(&gui.input, &msg);
+            if (msg.message == WM_KEYDOWN)
+                input_key(&gui.input, &msg, zr_true);
+            else if (msg.message == WM_KEYUP)
+                input_key(&gui.input, &msg, zr_false);
+            else if (msg.message == WM_LBUTTONDOWN)
+                input_btn(&gui.input, &msg, zr_true);
+            else if (msg.message == WM_LBUTTONUP)
+                input_btn(&gui.input, &msg, zr_false);
+            else if (msg.message == WM_MOUSEMOVE)
+                input_motion(&gui.input, &msg);
+            else if (msg.message == WM_CHAR)
+                input_text(&gui.input, &msg);
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
@@ -437,10 +436,6 @@ WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int shown)
         surface_clear(xw.backbuffer, 100, 100, 100);
         draw(xw.backbuffer, &gui.queue);
         surface_end(xw.backbuffer, xw.hdc);
-
-        /* Timing */
-        dt = timestamp(freq) - start;
-        if (dt < DTIME) Sleep(DTIME - (DWORD)dt);
     }
 
     free(zr_buffer_memory(&gui.queue.buffer));
