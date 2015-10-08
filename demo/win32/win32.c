@@ -423,6 +423,8 @@ WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int shown)
                 input_motion(&gui.input, &msg);
             else if (msg.message == WM_CHAR)
                 input_text(&gui.input, &msg);
+            else if (msg.message == WM_MOUSEWHEEL)
+                zr_input_scroll(&gui.input, GET_WHEEL_DELTA_WPARAM(msg.wParam)/120);
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
