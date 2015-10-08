@@ -4696,7 +4696,6 @@ zr_widget_spinner(struct zr_command_buffer *out, struct zr_rect r,
     if (active) *active = is_active;
     return value;
 }
-
 /*
  * ==============================================================
  *
@@ -8305,8 +8304,15 @@ zr_tooltip_begin(struct zr_context *parent, struct zr_context *tip, zr_float wid
     struct zr_rect bounds;
     ZR_ASSERT(tip);
     ZR_ASSERT(parent);
-    if (!tip || !parent)
+    if (!tip || !parent || !parent->valid || parent->flags & ZR_WINDOW_ROM) {
+        zr_zero(tip, sizeof(*tip));
+        tip->valid = zr_false;
+        tip->style = parent->style;
+        tip->buffer = parent->buffer;
+        tip->input = parent->input;
+        tip->queue = parent->queue;
         return;
+    }
 
     in = parent->input;
     bounds.w = width;
@@ -8319,6 +8325,7 @@ zr_tooltip_begin(struct zr_context *parent, struct zr_context *tip, zr_float wid
 void
 zr_tooltip_end(struct zr_context *parent, struct zr_context *tip)
 {
+    if (!parent || !tip || !parent->valid) return;
     zr_popup_close(tip);
     zr_popup_end(parent, tip, 0);
 }
@@ -8337,7 +8344,7 @@ zr_tooltip(struct zr_context *layout, const char *text)
 
     ZR_ASSERT(layout);
     ZR_ASSERT(text);
-    if (!layout || !text)
+    if (!layout || !text || !layout->valid || layout->flags & ZR_WINDOW_ROM)
         return;
 
     /* calculate size of the text and tooltip */
