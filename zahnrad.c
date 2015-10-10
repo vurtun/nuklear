@@ -2313,10 +2313,13 @@ zr_draw_list_add_poly_convex(struct zr_draw_list *list, struct zr_vec2 *points,
             }
             dm = zr_vec2_muls(dm, AA_SIZE * 0.5f);
 
-            /* add vertexes */
-            vtx[0] = zr_draw_vertex(zr_vec2_sub(points[i1], dm), uv, col);
-            vtx[1] = zr_draw_vertex(zr_vec2_add(points[i1], dm), uv, col_trans);
-            vtx += 2;
+            {
+                /* add vertexes */
+                struct zr_vec2 v = zr_vec2_sub(points[i1], dm);
+                vtx[0] = zr_draw_vertex(v, uv, col);
+                vtx[1] = zr_draw_vertex(v, uv, col_trans);
+                vtx += 2;
+            }
 
             /* add indexes */
             ids[0] = (zr_draw_index)(vtx_inner_idx+(i1<<1));
@@ -3523,11 +3526,13 @@ zr_edit_box_remove(struct zr_edit_box *box)
         zr_long unicode;
         zr_char *begin, *end;
 
-        /* delete text selection */
+        /* calculate text selection byte position and size */
         begin = zr_edit_buffer_at(&box->buffer, (zr_int)min, &unicode, &len);
         end = zr_edit_buffer_at(&box->buffer, (zr_int)maxi, &unicode, &len);
         len = (zr_size)(end - begin);
         off = (zr_size)(begin - buf);
+
+        /* delete text selection */
         zr_edit_buffer_del(&box->buffer, off, len);
         box->glyphes = zr_utf_len(buf, box->buffer.allocated);
     } else {
@@ -3540,6 +3545,7 @@ zr_edit_box_remove(struct zr_edit_box *box)
         cursor = (zr_int)box->cursor - 1;
         glyph = zr_edit_buffer_at(&box->buffer, cursor, &unicode, &len);
         if (!glyph || !len) return;
+
         offset = (zr_size)(glyph - (zr_char*)box->buffer.memory.ptr);
         zr_edit_buffer_del(&box->buffer, offset, len);
         box->glyphes--;
@@ -3685,8 +3691,8 @@ zr_widget_text(struct zr_command_buffer *o, struct zr_rect b,
         len, f, t->background, t->text);
 }
 
-static zr_bool
-zr_widget_do_button(struct zr_command_buffer *o, struct zr_rect r,
+zr_bool
+zr_widget_button(struct zr_command_buffer *o, struct zr_rect r,
     const struct zr_button *b, const struct zr_input *i,
     enum zr_button_behavior behavior, struct zr_rect *content)
 {
@@ -3740,7 +3746,7 @@ zr_widget_button_text(struct zr_command_buffer *o, struct zr_rect r,
     t.text = b->normal;
     t.background = b->base.normal;
     t.padding = zr_vec2(0,0);
-    ret = zr_widget_do_button(o, r, &b->base, i, behavior, &content);
+    ret = zr_widget_button(o, r, &b->base, i, behavior, &content);
     if (zr_input_is_mouse_hovering_rect(i, r)) {
         zr_bool is_down = zr_input_is_mouse_down(i, ZR_BUTTON_LEFT);
         t.background =  (is_down) ? b->base.active: b->base.hover;
@@ -3821,7 +3827,7 @@ zr_widget_button_symbol(struct zr_command_buffer *out, struct zr_rect r,
     if (!out || !b)
         return zr_false;
 
-    ret = zr_widget_do_button(out, r, &b->base, in, bh, &content);
+    ret = zr_widget_button(out, r, &b->base, in, bh, &content);
     if (zr_input_is_mouse_hovering_rect(in, r)) {
         zr_bool is_down = zr_input_is_mouse_down(in, ZR_BUTTON_LEFT);
         background = (is_down) ? b->base.active : b->base.hover;
@@ -3846,7 +3852,7 @@ zr_widget_button_image(struct zr_command_buffer *out, struct zr_rect r,
     if (!out || !button)
         return zr_false;
 
-    pressed = zr_widget_do_button(out, r, &button->base, in, b, &bounds);
+    pressed = zr_widget_button(out, r, &button->base, in, b, &bounds);
     zr_command_buffer_push_image(out, bounds, &img);
     return pressed;
 }
@@ -6744,7 +6750,7 @@ zr_button_color(struct zr_context *layout,
     button.normal = color;
     button.hover = color;
     button.active = color;
-    return zr_widget_do_button(layout->buffer, bounds, &button, i, behavior, &bounds);
+    return zr_widget_button(layout->buffer, bounds, &button, i, behavior, &bounds);
 }
 
 zr_bool
@@ -8347,16 +8353,18 @@ zr_tooltip(struct zr_context *layout, const char *text)
     if (!layout || !text || !layout->valid || layout->flags & ZR_WINDOW_ROM)
         return;
 
-    /* calculate size of the text and tooltip */
+    /* fetch configuration data */
     config = layout->style;
     padding = config->properties[ZR_PROPERTY_PADDING];
     item_padding = config->properties[ZR_PROPERTY_ITEM_PADDING];
 
+    /* calculate size of the text and tooltip */
     text_len = zr_strsiz(text);
     text_width = config->font.width(config->font.userdata, text, text_len);
     text_width += (zr_size)(2 * padding.x + 2 * item_padding.x);
     text_height = (zr_size)(config->font.height + 2 * item_padding.y);
 
+    /* execute tooltip and fill with text */
     zr_tooltip_begin(layout, &tip, (zr_float)text_width);
     zr_layout_row_dynamic(&tip, (zr_float)text_height, 1);
     zr_text(&tip, text, text_len, ZR_TEXT_LEFT);

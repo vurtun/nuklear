@@ -833,7 +833,7 @@ const struct zr_command *zr_command_buffer_next(struct zr_command_buffer*,
 /*
  * ==============================================================
  *
- *                          Command Queue
+ *                      Command Queue
  *
  * ===============================================================
  */
@@ -2022,6 +2022,18 @@ void zr_widget_text(struct zr_command_buffer*, struct zr_rect,
     - visual widget style structure describing the text
     - text alignment with either left, center and right
     - font structure for text drawing
+*/
+zr_bool zr_widget_button(struct zr_command_buffer*, struct zr_rect,
+                        const struct zr_button *b, const struct zr_input*,
+                        enum zr_button_behavior behavior, struct zr_rect*);
+/*  this function is the basis for all buttons
+    Input:
+    - output command buffer for drawing
+    - bounds with position and size of the button
+    - visual widget style structure describing the text
+    - input structure to update the button with
+    Output:
+    - internal content bounds
 */
 zr_bool zr_widget_button_text(struct zr_command_buffer*, struct zr_rect,
                                 const char*, enum zr_button_behavior,
