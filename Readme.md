@@ -74,7 +74,6 @@ while (1) {
     struct zr_context context;
     zr_begin(&context, &window);
     {
-        const char *items[] = {"Fist", "Pistol", "Railgun", "BFG"};
         zr_header(&context, "Show", ZR_CLOSEABLE, 0, ZR_HEADER_LEFT);
         zr_layout_row_static(&context, 30, 80, 1);
         if (zr_button_text(&context, "button", ZR_BUTTON_DEFAULT)) {
