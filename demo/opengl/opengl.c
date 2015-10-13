@@ -34,6 +34,8 @@
 /* macros */
 #define DTIME       33
 #define MAX_DRAW_COMMAND_MEMORY (4 * 1024)
+#define MAX_VERTEX_MEMORY 128 * 1024
+#define MAX_ELEMENT_MEMORY 32 * 1024
 
 #include "../../zahnrad.h"
 
@@ -314,8 +316,6 @@ device_draw(struct device *dev, struct zr_command_queue *queue, int width, int h
         /* convert from command queue into draw list and draw to screen */
         struct zr_draw_list draw_list;
         const struct zr_draw_command *cmd;
-        static const GLsizeiptr max_vertex_memory = 128 * 1024;
-        static const GLsizeiptr max_element_memory = 32 * 1024;
         void *vertexes, *elements;
         const zr_draw_index *offset = NULL;
 
@@ -325,16 +325,16 @@ device_draw(struct device *dev, struct zr_command_queue *queue, int width, int h
         glBindBuffer(GL_ARRAY_BUFFER, dev->vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, dev->ebo);
 
-        glBufferData(GL_ARRAY_BUFFER, max_vertex_memory, NULL, GL_STREAM_DRAW);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, max_element_memory, NULL, GL_STREAM_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, MAX_VERTEX_MEMORY, NULL, GL_STREAM_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, MAX_ELEMENT_MEMORY, NULL, GL_STREAM_DRAW);
 
         /* load draw vertexes & elements directly into vertex + element buffer */
         vertexes = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
         elements = glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
         {
             struct zr_buffer vbuf, ebuf;
-            zr_buffer_init_fixed(&vbuf, vertexes, (zr_size)max_vertex_memory);
-            zr_buffer_init_fixed(&ebuf, elements, (zr_size)max_element_memory);
+            zr_buffer_init_fixed(&vbuf, vertexes, (zr_size)MAX_VERTEX_MEMORY);
+            zr_buffer_init_fixed(&ebuf, elements, (zr_size)MAX_ELEMENT_MEMORY);
             zr_draw_list_init(&draw_list, &dev->cmds, &vbuf, &ebuf,
                 fsin, fcos, dev->null, ZR_ANTI_ALIASING_ON);
             zr_draw_list_load(&draw_list, queue, 1.0f, 22);
@@ -366,7 +366,7 @@ device_draw(struct device *dev, struct zr_command_queue *queue, int width, int h
 }
 
 static void
-key(struct zr_input *in, SDL_Event *evt, zr_bool down)
+input_key(struct zr_input *in, SDL_Event *evt, zr_bool down)
 {
     const Uint8* state = SDL_GetKeyboardState(NULL);
     SDL_Keycode sym = evt->key.keysym.sym;
@@ -376,8 +376,6 @@ key(struct zr_input *in, SDL_Event *evt, zr_bool down)
         zr_input_key(in, ZR_KEY_DEL, down);
     else if (sym == SDLK_RETURN)
         zr_input_key(in, ZR_KEY_ENTER, down);
-    else if (sym == SDLK_SPACE)
-        zr_input_key(in, ZR_KEY_SPACE, down);
     else if (sym == SDLK_BACKSPACE)
         zr_input_key(in, ZR_KEY_BACKSPACE, down);
     else if (sym == SDLK_LEFT)
@@ -393,7 +391,7 @@ key(struct zr_input *in, SDL_Event *evt, zr_bool down)
 }
 
 static void
-motion(struct zr_input *in, SDL_Event *evt)
+input_motion(struct zr_input *in, SDL_Event *evt)
 {
     const zr_int x = evt->motion.x;
     const zr_int y = evt->motion.y;
@@ -401,7 +399,7 @@ motion(struct zr_input *in, SDL_Event *evt)
 }
 
 static void
-btn(struct zr_input *in, SDL_Event *evt, zr_bool down)
+input_button(struct zr_input *in, SDL_Event *evt, zr_bool down)
 {
     const zr_int x = evt->button.x;
     const zr_int y = evt->button.y;
@@ -412,7 +410,7 @@ btn(struct zr_input *in, SDL_Event *evt, zr_bool down)
 }
 
 static void
-text(struct zr_input *in, SDL_Event *evt)
+input_text(struct zr_input *in, SDL_Event *evt)
 {
     zr_glyph glyph;
     memcpy(glyph, evt->text.text, ZR_UTF_SIZE);
@@ -425,7 +423,6 @@ resize(SDL_Event *evt)
     if (evt->window.event != SDL_WINDOWEVENT_RESIZED) return;
     glViewport(0, 0, evt->window.data1, evt->window.data2);
 }
-
 
 static void* mem_alloc(zr_handle unused, zr_size size)
 {UNUSED(unused); return calloc(1, size);}
@@ -487,12 +484,18 @@ main(int argc, char *argv[])
         while (SDL_PollEvent(&evt)) {
             if (evt.type == SDL_WINDOWEVENT) resize(&evt);
             else if (evt.type == SDL_QUIT) goto cleanup;
-            else if (evt.type == SDL_KEYUP) key(&gui.input, &evt, zr_false);
-            else if (evt.type == SDL_KEYDOWN) key(&gui.input, &evt, zr_true);
-            else if (evt.type == SDL_MOUSEBUTTONDOWN) btn(&gui.input, &evt, zr_true);
-            else if (evt.type == SDL_MOUSEBUTTONUP) btn(&gui.input, &evt, zr_false);
-            else if (evt.type == SDL_MOUSEMOTION) motion(&gui.input, &evt);
-            else if (evt.type == SDL_TEXTINPUT) text(&gui.input, &evt);
+            else if (evt.type == SDL_KEYUP)
+                input_key(&gui.input, &evt, zr_false);
+            else if (evt.type == SDL_KEYDOWN)
+                input_key(&gui.input, &evt, zr_true);
+            else if (evt.type == SDL_MOUSEBUTTONDOWN)
+                input_button(&gui.input, &evt, zr_true);
+            else if (evt.type == SDL_MOUSEBUTTONUP)
+                input_button(&gui.input, &evt, zr_false);
+            else if (evt.type == SDL_MOUSEMOTION)
+                input_motion(&gui.input, &evt);
+            else if (evt.type == SDL_TEXTINPUT)
+                input_text(&gui.input, &evt);
             else if (evt.type == SDL_MOUSEWHEEL)
                 zr_input_scroll(&gui.input,(float)evt.wheel.y);
         }

@@ -184,8 +184,6 @@ key(struct zr_input *in, SDL_Event *evt, zr_bool down)
         zr_input_key(in, ZR_KEY_DEL, down);
     else if (sym == SDLK_RETURN)
         zr_input_key(in, ZR_KEY_ENTER, down);
-    else if (sym == SDLK_SPACE)
-        zr_input_key(in, ZR_KEY_SPACE, down);
     else if (sym == SDLK_BACKSPACE)
         zr_input_key(in, ZR_KEY_BACKSPACE, down);
     else if (sym == SDLK_LEFT)

@@ -244,7 +244,6 @@ enum zr_keys {
     ZR_KEY_DEL,
     ZR_KEY_ENTER,
     ZR_KEY_BACKSPACE,
-    ZR_KEY_SPACE,
     ZR_KEY_COPY,
     ZR_KEY_CUT,
     ZR_KEY_PASTE,
@@ -1080,9 +1079,9 @@ typedef zr_float(*zr_cos_f)(zr_float);
 
 enum zr_anti_aliasing {
     ZR_ANTI_ALIASING_OFF = zr_false,
-    /* renderes all primitives without anit-aliasing  */
+    /* renderes all primitives without anti-aliasing  */
     ZR_ANTI_ALIASING_ON
-    /* renderes all primitives with anit-aliasing  */
+    /* renderes all primitives with anti-aliasing  */
 };
 
 struct zr_draw_vertex {

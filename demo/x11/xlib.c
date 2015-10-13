@@ -25,11 +25,13 @@
 #include <time.h>
 #include <sys/time.h>
 #include <unistd.h>
+
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
 /* macros */
 #define DTIME       16
+#define CURVE_STEPS 22
 #include "../../zahnrad.h"
 
 #define UNUSED(a)   ((void)(a))
@@ -281,6 +283,8 @@ surface_draw_text(XSurface *surf, zr_short x, zr_short y, zr_ushort w, zr_ushort
     XFillRectangle(surf->dpy, surf->drawable, surf->gc, (int)x, (int)y, (unsigned)w, (unsigned)h);
     if(!text || !font || !len) return;
 
+
+
     tx = (int)x;
     th = font->ascent + font->descent;
     ty = (int)y + ((int)h / 2) - (th / 2) + font->ascent;
@@ -356,7 +360,7 @@ draw(XSurface *surf, struct zr_command_queue *queue)
 }
 
 static void
-key(struct XWindow *xw, struct zr_input *in, XEvent *evt, zr_bool down)
+input_key(struct XWindow *xw, struct zr_input *in, XEvent *evt, zr_bool down)
 {
     int ret;
     KeySym *code = XGetKeyboardMapping(xw->dpy, (KeyCode)evt->xkey.keycode, 1, &ret);
@@ -366,8 +370,8 @@ key(struct XWindow *xw, struct zr_input *in, XEvent *evt, zr_bool down)
         zr_input_key(in, ZR_KEY_DEL, down);
     else if (*code == XK_Return)
         zr_input_key(in, ZR_KEY_ENTER, down);
-    else if (*code == XK_space)
-        zr_input_key(in, ZR_KEY_SPACE, down);
+    else if (*code == XK_space && !down)
+        zr_input_char(in, ' ');
     else if (*code == XK_Left)
         zr_input_key(in, ZR_KEY_LEFT, down);
     else if (*code == XK_Right)
@@ -387,7 +391,7 @@ key(struct XWindow *xw, struct zr_input *in, XEvent *evt, zr_bool down)
 }
 
 static void
-motion(struct zr_input *in, XEvent *evt)
+input_motion(struct zr_input *in, XEvent *evt)
 {
     const zr_int x = evt->xmotion.x;
     const zr_int y = evt->xmotion.y;
@@ -395,7 +399,7 @@ motion(struct zr_input *in, XEvent *evt)
 }
 
 static void
-btn(struct zr_input *in, XEvent *evt, zr_bool down)
+input_button(struct zr_input *in, XEvent *evt, zr_bool down)
 {
     const zr_int x = evt->xbutton.x;
     const zr_int y = evt->xbutton.y;
@@ -466,11 +470,15 @@ main(int argc, char *argv[])
         zr_input_begin(&gui.input);
         while (XCheckWindowEvent(xw.dpy, xw.win, xw.swa.event_mask, &evt)) {
             if (evt.type == KeyPress)
-                key(&xw, &gui.input, &evt, zr_true);
-            else if (evt.type == KeyRelease) key(&xw, &gui.input, &evt, zr_false);
-            else if (evt.type == ButtonPress) btn(&gui.input, &evt, zr_true);
-            else if (evt.type == ButtonRelease) btn(&gui.input, &evt, zr_false);
-            else if (evt.type == MotionNotify) motion(&gui.input, &evt);
+                input_key(&xw, &gui.input, &evt, zr_true);
+            else if (evt.type == KeyRelease)
+                input_key(&xw, &gui.input, &evt, zr_false);
+            else if (evt.type == ButtonPress)
+                input_button(&gui.input, &evt, zr_true);
+            else if (evt.type == ButtonRelease)
+                input_button(&gui.input, &evt, zr_false);
+            else if (evt.type == MotionNotify)
+                input_motion(&gui.input, &evt);
             else if (evt.type == Expose || evt.type == ConfigureNotify)
                 resize(&xw, xw.surf);
         }

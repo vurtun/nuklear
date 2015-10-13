@@ -1817,6 +1817,7 @@ zr_draw_list_clear(struct zr_draw_list *list)
         zr_buffer_clear(list->vertexes);
     if (list->vertexes)
         zr_buffer_clear(list->elements);
+
     list->element_count = 0;
     list->vertex_count = 0;
     list->cmd_offset = 0;
@@ -1844,6 +1845,7 @@ zr_draw_list_begin(const struct zr_draw_list *list)
     ZR_ASSERT(list);
     ZR_ASSERT(list->buffer);
     if (!list || !list->buffer || !list->cmd_count) return 0;
+
     memory = (zr_byte*)list->buffer->memory.ptr;
     offset = list->buffer->memory.size - list->cmd_offset;
     cmd = zr_ptr_add(const struct zr_draw_command, memory, offset);
@@ -1858,6 +1860,7 @@ zr_draw_list_next(const struct zr_draw_list *list, const struct zr_draw_command 
     const struct zr_draw_command *end;
     ZR_ASSERT(list);
     if (!list || !list->buffer || !list->cmd_count) return 0;
+
     memory = (zr_byte*)list->buffer->memory.ptr;
     offset = list->buffer->memory.size - list->cmd_offset;
     end = zr_ptr_add(const struct zr_draw_command, memory, offset);
@@ -1875,6 +1878,7 @@ zr_draw_list_alloc_path(struct zr_draw_list *list, zr_size count)
     static const zr_size point_size = sizeof(struct zr_vec2);
     points = (struct zr_vec2*)
         zr_buffer_alloc(list->buffer, ZR_BUFFER_FRONT, point_size * count, point_align);
+
     if (!points) return 0;
     if (!list->path_offset) {
         memory = zr_buffer_memory(list->buffer);
@@ -1930,6 +1934,7 @@ zr_draw_list_command_last(struct zr_draw_list *list)
     zr_size size;
     struct zr_draw_command *cmd;
     ZR_ASSERT(list->cmd_count);
+
     memory = zr_buffer_memory(list->buffer);
     size = zr_buffer_total(list->buffer);
     cmd = zr_ptr_add(struct zr_draw_command, memory, size - list->cmd_offset);
@@ -1971,6 +1976,7 @@ zr_draw_list_alloc_vertexes(struct zr_draw_list *list, zr_size count)
     static const zr_size vtx_size = sizeof(struct zr_draw_vertex);
     ZR_ASSERT(list);
     if (!list) return 0;
+
     vtx = (struct zr_draw_vertex*)
         zr_buffer_alloc(list->vertexes, ZR_BUFFER_FRONT, vtx_size * count, vtx_align);
     if (!vtx) return 0;
@@ -1987,6 +1993,7 @@ zr_draw_list_alloc_elements(struct zr_draw_list *list, zr_size count)
     static const zr_size elem_size = sizeof(zr_draw_index);
     ZR_ASSERT(list);
     if (!list) return 0;
+
     ids = (zr_draw_index*)
         zr_buffer_alloc(list->elements, ZR_BUFFER_FRONT, elem_size * count, elem_align);
     if (!ids) return 0;
@@ -2037,8 +2044,8 @@ zr_draw_list_add_poly_line(struct zr_draw_list *list, struct zr_vec2 *points,
         struct zr_draw_vertex *vtx = zr_draw_list_alloc_vertexes(list, vtx_count);
         zr_draw_index *ids = zr_draw_list_alloc_elements(list, idx_count);
 
-        struct zr_vec2 *normals, *temp;
         zr_size size;
+        struct zr_vec2 *normals, *temp;
         if (!vtx || !ids) return;
 
         /* temporary allocate normals + points */
@@ -2123,9 +2130,8 @@ zr_draw_list_add_poly_line(struct zr_draw_list *list, struct zr_vec2 *points,
             zr_size idx1, i;
             const zr_float half_inner_thickness = (thickness - AA_SIZE) * 0.5f;
             if (!closed) {
-                struct zr_vec2 d1, d2;
-                d1 = zr_vec2_muls(normals[0], half_inner_thickness + AA_SIZE);
-                d2 = zr_vec2_muls(normals[0], half_inner_thickness);
+                struct zr_vec2 d1 = zr_vec2_muls(normals[0], half_inner_thickness + AA_SIZE);
+                struct zr_vec2 d2 = zr_vec2_muls(normals[0], half_inner_thickness);
 
                 temp[0] = zr_vec2_add(points[0], d1);
                 temp[1] = zr_vec2_add(points[0], d2);
@@ -2144,14 +2150,13 @@ zr_draw_list_add_poly_line(struct zr_draw_list *list, struct zr_vec2 *points,
             /* add all elements */
             idx1 = index;
             for (i1 = 0; i1 < count; ++i1) {
-                zr_float dmr2;
-                struct zr_vec2 dm_out, dm_in, dm;
+                struct zr_vec2 dm_out, dm_in;
                 const zr_size i2 = ((i1+1) == points_count) ? 0: (i1 + 1);
                 zr_size idx2 = ((i1+1) == points_count) ? index: (idx1 + 4);
 
                 /* average normals */
-                dm = zr_vec2_muls(zr_vec2_add(normals[i1], normals[i2]), 0.5f);
-                dmr2 = dm.x * dm.x + dm.y* dm.y;
+                struct zr_vec2 dm = zr_vec2_muls(zr_vec2_add(normals[i1], normals[i2]), 0.5f);
+                zr_float dmr2 = dm.x * dm.x + dm.y* dm.y;
                 if (dmr2 > 0.000001f) {
                     zr_float scale = 1.0f/dmr2;
                     scale = MIN(100.0f, scale);
@@ -3216,14 +3221,14 @@ zr_font_text_width(zr_handle handle, const zr_char *text, zr_size len)
     struct zr_font *font;
     zr_size text_len  = 0;
     zr_size text_width = 0;
-    zr_size glyph_len;
+    zr_size glyph_len = 0;
     font = (struct zr_font*)handle.ptr;
     ZR_ASSERT(font);
     if (!font || !text || !len)
         return 0;
 
     glyph_len = zr_utf_decode(text, &unicode, len);
-    while (text_len < len && glyph_len) {
+    while (text_len < len) {
         if (unicode == ZR_UTF_INVALID) return 0;
         glyph = zr_font_find_glyph(font, unicode);
         text_len += glyph_len;
@@ -4216,11 +4221,6 @@ zr_widget_editbox(struct zr_command_buffer *out, struct zr_rect r,
             zr_edit_box_remove(box);
         if (zr_input_is_key_pressed(in, ZR_KEY_ENTER))
             box->active = zr_false;
-        if (zr_input_is_key_pressed(in, ZR_KEY_SPACE)) {
-            if (diff && box->cursor != box->glyphes)
-                zr_edit_box_remove(box);
-            zr_edit_box_add(box, " ", 1);
-        }
         if (in->keyboard.text_len) {
             if (diff && box->cursor != box->glyphes) {
                 /* replace text selection */
@@ -5529,7 +5529,6 @@ zr_queue(struct zr_context *layout)
 struct zr_rect
 zr_space(struct zr_context *layout)
 {ZR_ASSERT(layout); return layout->clip;}
-
 /*
  * -------------------------------------------------------------
  *
@@ -6055,7 +6054,6 @@ zr_layout_row(struct zr_context *layout, enum zr_layout_format fmt,
         layout->row.item_width = 0;
         layout->row.item_offset = 0;
     }
-
     layout->row.item_offset = 0;
     layout->row.filled = 0;
 }
@@ -6187,6 +6185,7 @@ zr_layout_row_tiled_begin(struct zr_context *layout,
     config = layout->style;
     padding = config->properties[ZR_PROPERTY_PADDING];
     spacing = config->properties[ZR_PROPERTY_ITEM_SPACING];
+
     tiled->spacing = spacing;
     tiled->bounds.x = layout->at_x + padding.x - layout->offset.x;
     tiled->bounds.y = layout->at_y - layout->offset.y;
@@ -6234,8 +6233,7 @@ zr_layout_widget_space(struct zr_rect *bounds, struct zr_context *layout,
     const struct zr_style *config;
     zr_float panel_padding, panel_spacing, panel_space;
     zr_float item_offset = 0, item_width = 0, item_spacing = 0;
-    struct zr_vec2 spacing;
-    struct zr_vec2 padding;
+    struct zr_vec2 spacing, padding;
 
     ZR_ASSERT(layout);
     ZR_ASSERT(layout->style);
@@ -6247,7 +6245,6 @@ zr_layout_widget_space(struct zr_rect *bounds, struct zr_context *layout,
     config = layout->style;
     spacing = zr_style_property(config, ZR_PROPERTY_ITEM_SPACING);
     padding = zr_style_property(config, ZR_PROPERTY_PADDING);
-
 
     /* calculate the useable panel space */
     panel_padding = 2 * padding.x;
@@ -7132,7 +7129,6 @@ zr_spinner(struct zr_context *layout, zr_int min, zr_int value,
     return zr_widget_spinner(out, bounds, &spinner, min, value, max, step, active,
                         i, &layout->style->font);
 }
-
 /*
  * -------------------------------------------------------------
  *

@@ -318,7 +318,6 @@ input_key(struct zr_input *in, MSG *msg, zr_bool down)
     case VK_SHIFT: zr_input_key(in, ZR_KEY_SHIFT, down); break;
     case VK_DELETE: zr_input_key(in, ZR_KEY_DEL, down); break;
     case VK_RETURN: zr_input_key(in, ZR_KEY_ENTER, down); break;
-    case VK_SPACE: zr_input_key(in, ZR_KEY_SPACE, down); break;
     case VK_BACK: zr_input_key(in, ZR_KEY_BACKSPACE, down); break;
     case VK_LEFT: zr_input_key(in, ZR_KEY_LEFT, down); break;
     case VK_RIGHT: zr_input_key(in, ZR_KEY_RIGHT, down); break;
