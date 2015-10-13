@@ -1716,7 +1716,6 @@ zr_command_queue_next(struct zr_command_queue *queue, const struct zr_command *c
     next = zr_ptr_add_const(struct zr_command, buffer, cmd->next);
     return next;
 }
-
 /* ==============================================================
  *
  *                      Draw List
@@ -2266,8 +2265,8 @@ zr_draw_list_add_poly_convex(struct zr_draw_list *list, struct zr_vec2 *points,
 
         zr_uint vtx_inner_idx = (zr_uint)(index + 0);
         zr_uint vtx_outer_idx = (zr_uint)(index + 1);
-        struct zr_vec2 *normals;
-        zr_size size;
+        struct zr_vec2 *normals = 0;
+        zr_size size = 0;
         if (!vtx || !ids) return;
 
         /* temporary allocate normals */
@@ -2290,10 +2289,9 @@ zr_draw_list_add_poly_convex(struct zr_draw_list *list, struct zr_vec2 *points,
             struct zr_vec2 p0 = points[i0];
             struct zr_vec2 p1 = points[i1];
             struct zr_vec2 diff = zr_vec2_sub(p1, p0);
-            zr_float len;
 
             /* vec2 inverted lenth  */
-            len = zr_vec2_len_sqr(diff);
+            zr_float len = zr_vec2_len_sqr(diff);
             if (len != 0.0f)
                 len = zr_inv_sqrt(len);
             else len = 1.0f;
@@ -2318,13 +2316,10 @@ zr_draw_list_add_poly_convex(struct zr_draw_list *list, struct zr_vec2 *points,
             }
             dm = zr_vec2_muls(dm, AA_SIZE * 0.5f);
 
-            {
-                /* add vertexes */
-                struct zr_vec2 v = zr_vec2_sub(points[i1], dm);
-                vtx[0] = zr_draw_vertex(v, uv, col);
-                vtx[1] = zr_draw_vertex(v, uv, col_trans);
-                vtx += 2;
-            }
+            /* add vertexes */
+            vtx[0] = zr_draw_vertex(zr_vec2_sub(points[i1], dm), uv, col);
+            vtx[1] = zr_draw_vertex(zr_vec2_add(points[i1], dm), uv, col_trans);
+            vtx += 2;
 
             /* add indexes */
             ids[0] = (zr_draw_index)(vtx_inner_idx+(i1<<1));
@@ -2338,7 +2333,7 @@ zr_draw_list_add_poly_convex(struct zr_draw_list *list, struct zr_vec2 *points,
         /* free temporary normals + points */
         zr_buffer_reset(list->vertexes, ZR_BUFFER_FRONT);
     } else {
-        zr_size i;
+        zr_size i = 0;
         zr_size index = list->vertex_count;
         const zr_size idx_count = (points_count-2)*3;
         const zr_size vtx_count = points_count;

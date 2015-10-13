@@ -277,7 +277,8 @@ static zr_float fsin(zr_float f) {return (zr_float)sin(f);}
 static zr_float fcos(zr_float f) {return (zr_float)cos(f);}
 
 static void
-device_draw(struct device *dev, struct zr_command_queue *queue, int width, int height)
+device_draw(struct device *dev, struct zr_command_queue *queue, int width, int height,
+    enum zr_anti_aliasing AA)
 {
     GLint last_prog, last_tex;
     GLint last_ebo, last_vbo, last_vao;
@@ -333,16 +334,16 @@ device_draw(struct device *dev, struct zr_command_queue *queue, int width, int h
         elements = glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
         {
             struct zr_buffer vbuf, ebuf;
-            zr_buffer_init_fixed(&vbuf, vertexes, (zr_size)MAX_VERTEX_MEMORY);
-            zr_buffer_init_fixed(&ebuf, elements, (zr_size)MAX_ELEMENT_MEMORY);
+            zr_buffer_init_fixed(&vbuf, vertexes, MAX_VERTEX_MEMORY);
+            zr_buffer_init_fixed(&ebuf, elements, MAX_ELEMENT_MEMORY);
             zr_draw_list_init(&draw_list, &dev->cmds, &vbuf, &ebuf,
-                fsin, fcos, dev->null, ZR_ANTI_ALIASING_ON);
+                fsin, fcos, dev->null, AA);
             zr_draw_list_load(&draw_list, queue, 1.0f, 22);
         }
         glUnmapBuffer(GL_ARRAY_BUFFER);
         glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
 
-        /* iterate and execute each draw command */
+        /* iterate over and execute each draw command */
         zr_foreach_draw_command(cmd, &draw_list) {
             glBindTexture(GL_TEXTURE_2D, (GLuint)cmd->texture.id);
             glScissor((GLint)cmd->clip_rect.x,
@@ -510,7 +511,7 @@ main(int argc, char *argv[])
         /* Draw */
         glClear(GL_COLOR_BUFFER_BIT);
         glClearColor(0.4f, 0.4f, 0.4f, 1.0f);
-        device_draw(&device, &gui.queue, width, height);
+        device_draw(&device, &gui.queue, width, height, ZR_ANTI_ALIASING_ON);
         SDL_GL_SwapWindow(win);
     }
 
