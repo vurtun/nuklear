@@ -729,6 +729,16 @@ zr_input_char(struct zr_input *in, char c)
 }
 
 void
+zr_input_unicode(struct zr_input *in, zr_uint unicode)
+{
+    zr_size len;
+    zr_glyph rune;
+    ZR_ASSERT(in);
+    zr_utf_encode(unicode, rune, ZR_UTF_SIZE);
+    zr_input_glyph(in, rune);
+}
+
+void
 zr_input_end(struct zr_input *in)
 {
     ZR_ASSERT(in);

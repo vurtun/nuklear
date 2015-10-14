@@ -336,6 +336,11 @@ void zr_input_char(struct zr_input*, char);
     Input:
     - character to add to the text buffer
 */
+void zr_input_unicode(struct zr_input *in, zr_uint unicode);
+/* this function adds a unicode character into the internal text frame buffer
+    Input:
+    - unicode character to add to the text buffer
+*/
 void zr_input_end(struct zr_input*);
 /* this function sets the input state to readable */
 zr_bool zr_input_has_mouse_click_in_rect(const struct zr_input*,enum zr_buttons,

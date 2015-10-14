@@ -348,7 +348,7 @@ draw(XSurface *surf, struct zr_command_queue *queue)
         case ZR_COMMAND_TEXT: {
             const struct zr_command_text *t = zr_command(text, cmd);
             surface_draw_text(surf, t->x, t->y, t->w, t->h, (const char*)t->string,
-                    t->length, (XFont*)t->font->userdata.ptr, t->background, t->foreground);
+                t->length, (XFont*)t->font->userdata.ptr, t->background, t->foreground);
         } break;
         case ZR_COMMAND_CURVE:
         case ZR_COMMAND_IMAGE:
@@ -385,7 +385,8 @@ input_key(struct XWindow *xw, struct zr_input *in, XEvent *evt, zr_bool down)
             zr_input_key(in, ZR_KEY_PASTE, down && (evt->xkey.state & ControlMask));
         else if (*code == 'x')
             zr_input_key(in, ZR_KEY_CUT, down && (evt->xkey.state & ControlMask));
-        if (!down) zr_input_char(in, (char)*code);
+        if (!down)
+            zr_input_unicode(in, (zr_uint)*code);
     }
     XFree(code);
 }
