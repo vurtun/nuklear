@@ -64,9 +64,29 @@ static const struct zr_rect zr_null_rect = {-8192.0f, -8192.0f, 16384, 16384};
 /* ==============================================================
  *                          ALIGNMENT
  * =============================================================== */
-#define ZR_ALIGN_PTR(x, mask) (void*)((zr_ptr)((zr_byte*)(x) + (mask-1)) & ~(mask-1))
-#define ZR_ALIGN_PTR_BACK(x, mask)(void*)((zr_ptr)((zr_byte*)(x)) & ~(mask-1));
+/* Pointer to Integer type conversion for pointer alignment */
+#if defined(__PTRDIFF_TYPE__) /* This case should work for GCC*/
+# define ZR_UINT_TO_PTR(x) ((void*)(__PTRDIFF_TYPE__)(x))
+# define ZR_PTR_TO_UINT(x) ((zr_size)(__PTRDIFF_TYPE__)(x))
+#elif !defined(__GNUC__) /* works for compilers other than LLVM */
+# define ZR_UINT_TO_PTR(x) ((void*)&((char*)0)[x])
+# define ZR_PTR_TO_UINT(x) ((zr_size)(((char*)x)-(char*)0))
+#elif defined(ZR_USE_FIXED_TYPES) /* used if we have <stdint.h> */
+# define ZR_UINT_TO_PTR(x) ((void*)(uintptr_t)(x))
+# define ZR_PTR_TO_UINT(x) ((uintptr_t)(x))
+#else /* generates warning but works */
+# define ZR_UINT_TO_PTR(x) ((void*)(x))
+# define ZR_PTR_TO_UINT(x) ((zr_size)(x))
+#endif
+
+#define ZR_MIN(a,b) (((a)<(b))?(a):(b))
+#define ZR_MAX(a,b) (((a)>(b))?(a):(b))
 #define ZR_ALIGN(x, mask) ((x) + (mask-1)) & ~(mask-1)
+#define ZR_ALIGN_PTR(x, mask)\
+    (ZR_UINT_TO_PTR((ZR_PTR_TO_UINT((zr_byte*)(x) + (mask-1)) & ~(mask-1))))
+#define ZR_ALIGN_PTR_BACK(x, mask)\
+    (ZR_UINT_TO_PTR((ZR_PTR_TO_UINT((zr_byte*)(x)) & ~(mask-1))))
+
 #define ZR_OFFSETOF(st, m) ((zr_size)(&((st *)0)->m))
 #define ZR_CONTAINER_OF_CONST(ptr, type, member)\
     ((const type*)((const void*)((const zr_byte*)ptr - ZR_OFFSETOF(type, member))))
