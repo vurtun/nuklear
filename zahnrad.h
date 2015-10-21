@@ -2588,8 +2588,6 @@ struct zr_tiled_slot {
 };
 
 struct zr_tiled_layout {
-    zr_float scaler_width;
-    /* widht of the scaling line between slots */
     struct zr_tiled_slot slots[ZR_SLOT_MAX];
     /* tiled layout slots */
     enum zr_layout_format fmt;
@@ -2600,8 +2598,7 @@ struct zr_tiled_layout {
 };
 
 void zr_tiled_begin(struct zr_tiled_layout*, enum zr_layout_format,
-                    struct zr_rect bounds, struct zr_vec2 spacing,
-                    zr_float scaler_width);
+                    struct zr_rect bounds, struct zr_vec2 spacing);
 /*  this functions begins the definitions of a tiled layout
     Input:
     - layout format with either dynamic ratio based or fixed pixel based slots

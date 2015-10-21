@@ -4948,7 +4948,7 @@ zr_tiled_begin_local(struct zr_tiled_layout *layout, enum zr_layout_format fmt,
 
 void
 zr_tiled_begin(struct zr_tiled_layout *layout, enum zr_layout_format fmt,
-    struct zr_rect bounds, struct zr_vec2 spacing, zr_float scaler_width)
+    struct zr_rect bounds, struct zr_vec2 spacing)
 {
     ZR_ASSERT(layout);
     if (!layout) return;
@@ -4956,7 +4956,6 @@ zr_tiled_begin(struct zr_tiled_layout *layout, enum zr_layout_format fmt,
     layout->fmt = fmt;
     layout->bounds = bounds;
     layout->spacing = spacing;
-    layout->scaler_width = scaler_width;
 }
 
 void
@@ -4970,7 +4969,6 @@ zr_tiled_begin_inside(struct zr_tiled_layout *parent, struct zr_tiled_layout *ch
     child->fmt = fmt;
     child->bounds = bounds;
     child->spacing = parent->spacing;
-    child->scaler_width = parent->scaler_width;
 }
 
 void
