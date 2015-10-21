@@ -3062,7 +3062,7 @@ zr_font_bake(void *image_memory, zr_size width, zr_size height,
         return;
 
     /* second font pass: render glyphes */
-    baker = (struct zr_font_baker*)temp;
+    baker = (struct zr_font_baker*)ZR_ALIGN_PTR(temp, zr_baker_align);
     zr_zero(image_memory, width * height);
     baker->spc.pixels = (unsigned char*)image_memory;
     baker->spc.height = (zr_int)height;
@@ -3926,9 +3926,9 @@ zr_widget_button_text_symbol(struct zr_command_buffer *out, struct zr_rect r,
 
 zr_bool
 zr_widget_button_text_image(struct zr_command_buffer *out, struct zr_rect r,
-    struct zr_image img, const char* text, enum zr_text_align align,
-    enum zr_button_behavior behavior, const struct zr_button_text *button,
-    const struct zr_user_font *f, const struct zr_input *i)
+    struct zr_image img, const char* text, enum zr_button_behavior behavior,
+    const struct zr_button_text *button, const struct zr_user_font *f,
+    const struct zr_input *i)
 {
     zr_bool pressed;
     struct zr_rect icon;
@@ -3940,7 +3940,7 @@ zr_widget_button_text_image(struct zr_command_buffer *out, struct zr_rect r,
     pressed = zr_widget_button_text(out, r, text, behavior, button, i, f);
     icon.y = r.y + button->base.padding.y;
     icon.w = icon.h = r.h - 2 * button->base.padding.y;
-    if (align == ZR_TEXT_LEFT) {
+    if (button->alignment == ZR_TEXT_LEFT) {
         icon.x = (r.x + r.w) - (2 * button->base.padding.x + icon.w);
         icon.x = MAX(icon.x, 0);
     } else icon.x = r.x + 2 * button->base.padding.x;
@@ -4730,7 +4730,7 @@ zr_widget_spinner(struct zr_command_buffer *out, struct zr_rect r,
 /*
  * ==============================================================
  *
- *                          Config
+ *                          Style
  *
  * ===============================================================
  */
@@ -4948,7 +4948,7 @@ zr_tiled_begin_local(struct zr_tiled_layout *layout, enum zr_layout_format fmt,
 
 void
 zr_tiled_begin(struct zr_tiled_layout *layout, enum zr_layout_format fmt,
-    struct zr_rect bounds, struct zr_vec2 spacing)
+    struct zr_rect bounds, struct zr_vec2 spacing, zr_float scaler_width)
 {
     ZR_ASSERT(layout);
     if (!layout) return;
@@ -4956,6 +4956,21 @@ zr_tiled_begin(struct zr_tiled_layout *layout, enum zr_layout_format fmt,
     layout->fmt = fmt;
     layout->bounds = bounds;
     layout->spacing = spacing;
+    layout->scaler_width = scaler_width;
+}
+
+void
+zr_tiled_begin_inside(struct zr_tiled_layout *parent, struct zr_tiled_layout *child,
+    enum zr_layout_format fmt, enum zr_tiled_layout_slot_index slot, zr_uint index)
+{
+    struct zr_rect bounds;
+    ZR_ASSERT(parent);
+    ZR_ASSERT(child);
+    zr_tiled_bounds(&bounds, parent, slot, index);
+    child->fmt = fmt;
+    child->bounds = bounds;
+    child->spacing = parent->spacing;
+    child->scaler_width = parent->scaler_width;
 }
 
 void
@@ -5022,19 +5037,6 @@ zr_tiled_bounds(struct zr_rect *bounds, const struct zr_tiled_layout *layout,
         bounds->y = slot_bounds.y + (zr_float)index * bounds->h;
         bounds->y += ((zr_float)index * layout->spacing.y);
     }
-}
-
-void
-zr_tiled_load(struct zr_tiled_layout *parent, struct zr_tiled_layout *child,
-    enum zr_layout_format fmt, enum zr_tiled_layout_slot_index slot, zr_uint index)
-{
-    struct zr_rect bounds;
-    ZR_ASSERT(parent);
-    ZR_ASSERT(child);
-    zr_tiled_bounds(&bounds, parent, slot, index);
-    child->fmt = fmt;
-    child->bounds = bounds;
-    child->spacing = parent->spacing;
 }
 
 void
@@ -6851,10 +6853,11 @@ zr_button_text_image(struct zr_context *layout, struct zr_image img,
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
 
     config = layout->style;
+    button.alignment = align;
     button.normal = config->colors[ZR_COLOR_TEXT];
     button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
     button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
-    return zr_widget_button_text_image(layout->buffer, bounds, img, text, align,
+    return zr_widget_button_text_image(layout->buffer, bounds, img, text,
             behavior, &button, &config->font, i);
 }
 
@@ -8040,7 +8043,8 @@ zr_contextual_button_icon(struct zr_context *layout, struct zr_image img,
     button.normal = config->colors[ZR_COLOR_TEXT];
     button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
     button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
-    return zr_widget_button_text_image(layout->buffer, bounds, img, text, align,
+    button.alignment = align;
+    return zr_widget_button_text_image(layout->buffer, bounds, img, text,
                                 behavior, &button, &config->font, i);
 }
 

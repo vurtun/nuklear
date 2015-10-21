@@ -2105,8 +2105,7 @@ zr_bool zr_widget_button_text_symbol(struct zr_command_buffer*, struct zr_rect,
     - returns zr_true if the button was pressed zr_false otherwise
 */
 zr_bool zr_widget_button_text_image(struct zr_command_buffer*, struct zr_rect,
-                                    struct zr_image, const char*, enum zr_text_align,
-                                    enum zr_button_behavior,
+                                    struct zr_image, const char*,  enum zr_button_behavior,
                                     const struct zr_button_text*,
                                     const struct zr_user_font*, const struct zr_input*);
 /*  this function executes a button widget with text and an icon
@@ -2589,6 +2588,8 @@ struct zr_tiled_slot {
 };
 
 struct zr_tiled_layout {
+    zr_float scaler_width;
+    /* widht of the scaling line between slots */
     struct zr_tiled_slot slots[ZR_SLOT_MAX];
     /* tiled layout slots */
     enum zr_layout_format fmt;
@@ -2599,7 +2600,8 @@ struct zr_tiled_layout {
 };
 
 void zr_tiled_begin(struct zr_tiled_layout*, enum zr_layout_format,
-                    struct zr_rect bounds, struct zr_vec2 spacing);
+                    struct zr_rect bounds, struct zr_vec2 spacing,
+                    zr_float scaler_width);
 /*  this functions begins the definitions of a tiled layout
     Input:
     - layout format with either dynamic ratio based or fixed pixel based slots
@@ -2615,6 +2617,17 @@ void zr_tiled_begin_local(struct zr_tiled_layout*, enum zr_layout_format,
     - layout format with either dynamic ratio based or fixed pixel based slots
     - pixel width of the tiled layout space (IMPORTANT: not used for dynamic tiled layouts)
     - pixel height of the tiled layout space
+*/
+void zr_tiled_begin_inside(struct zr_tiled_layout *parent, struct zr_tiled_layout *child,
+                            enum zr_layout_format fmt, enum zr_tiled_layout_slot_index slot,
+                            zr_uint index);
+/*  this functions load a tiled layout from another tiled layout slot
+    Input:
+    - slot filling format with either horizontal or vertical filling
+    - slot identifier
+    - index of the widget inside the slot
+    Output:
+    - loaded child tiled layout inside the parent tiled layout
 */
 void zr_tiled_slot(struct zr_tiled_layout *layout,
                     enum zr_tiled_layout_slot_index, zr_float ratio,
@@ -2645,17 +2658,6 @@ void zr_tiled_bounds(struct zr_rect*, const struct zr_tiled_layout*,
     - index of the widget inside the slot
     Output:
     - rectangle with position and size of the slot entry
-*/
-void zr_tiled_load(struct zr_tiled_layout *parent, struct zr_tiled_layout *child,
-                    enum zr_layout_format fmt, enum zr_tiled_layout_slot_index slot,
-                    zr_uint index);
-/*  this functions load a tiled layout from another tiled layout slot
-    Input:
-    - slot filling format with either horizontal or vertical filling
-    - slot identifier
-    - index of the widget inside the slot
-    Output:
-    - loaded child tiled layout inside the parent tiled layout
 */
 /*
  * ==============================================================

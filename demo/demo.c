@@ -567,6 +567,7 @@ widget_panel(struct zr_context *panel, struct state *demo)
     zr_label(panel, "text right", ZR_TEXT_RIGHT);
 
     {
+        /* Tooltip */
         struct zr_rect bounds;
         const struct zr_input *in = zr_input(panel);
         zr_layout_peek(&bounds, panel);
@@ -614,10 +615,10 @@ widget_panel(struct zr_context *panel, struct state *demo)
         zr_tiled_begin_local(&tiled, fmt, 250, 150);
         if (!demo->scaleable) {
             zr_tiled_slot(&tiled, ZR_SLOT_LEFT, 100, ZR_SLOT_VERTICAL, 4);
-            zr_tiled_slot(&tiled, ZR_SLOT_RIGHT, 150, ZR_SLOT_VERTICAL, 4);
+            zr_tiled_slot(&tiled, ZR_SLOT_RIGHT, 150, ZR_SLOT_VERTICAL,  4);
         } else {
-            zr_tiled_slot(&tiled, ZR_SLOT_LEFT, 0.50, ZR_SLOT_VERTICAL, 4);
-            zr_tiled_slot(&tiled, ZR_SLOT_RIGHT, 0.50, ZR_SLOT_VERTICAL, 4);
+            zr_tiled_slot(&tiled, ZR_SLOT_LEFT, 0.50, ZR_SLOT_VERTICAL,  4);
+            zr_tiled_slot(&tiled, ZR_SLOT_RIGHT, 0.50, ZR_SLOT_VERTICAL,  4);
         }
         zr_tiled_end(&tiled);
 
@@ -885,7 +886,7 @@ run_demo(struct demo_gui *gui)
         /* popup panel */
         if (state->popup)
         {
-            zr_popup_begin(&layout, &tab, ZR_POPUP_STATIC, 0, zr_rect(20, 100, 220, 150), zr_vec2(0,0));
+            zr_popup_begin(&layout, &tab, ZR_POPUP_STATIC, 0, zr_rect(20, 100, 220, 180), zr_vec2(0,0));
             {
                 if (zr_header(&tab, "Popup", ZR_CLOSEABLE, ZR_CLOSEABLE, ZR_HEADER_LEFT)) {
                     zr_popup_close(&tab);
