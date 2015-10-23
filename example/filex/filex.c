@@ -474,6 +474,7 @@ file_browser_run(struct file_browser *browser, int width, int height)
 
     zr_begin_tiled(&context, &browser->sel, &browser->tiled, ZR_SLOT_LEFT, 0);
     {
+        /* output special important directory in own window */
         struct zr_image home = icons->home.img;
         struct zr_image desktop = icons->desktop.img;
         struct zr_image computer = icons->computer.img;
@@ -492,11 +493,11 @@ file_browser_run(struct file_browser *browser, int width, int height)
 
     zr_begin_tiled(&context, &browser->dir, &browser->tiled, ZR_SLOT_CENTER, 0);
     {
+        zr_menubar_begin(&context);
         {
             /* output path directory selector */
             char *d = browser->directory;
             char *begin = d + 1;
-            zr_style_push_property(&browser->config, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 0));
             zr_layout_row_dynamic(&context, 25, 6);
             while (*d++) {
                 if (*d == '/') {
@@ -510,8 +511,9 @@ file_browser_run(struct file_browser *browser, int width, int height)
                     begin = d + 1;
                 }
             }
-            zr_style_pop_property(&browser->config);
         }
+        zr_menubar_end(&context);
+
         {
             /* output directory content */
             int index = -1;
