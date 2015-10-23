@@ -3895,9 +3895,7 @@ zr_widget_button_text_symbol(struct zr_command_buffer *out, struct zr_rect r,
 {
     zr_bool ret;
     struct zr_rect tri = {0,0,0,0};
-    struct zr_color background = zr_rgba(0,0,0,0);
-    struct zr_color color = zr_rgba(0,0,0,0);
-
+    struct zr_color background, color;
     ZR_ASSERT(button);
     ZR_ASSERT(out);
     if (!out || !button)
