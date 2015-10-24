@@ -394,10 +394,11 @@ struct file_browser {
     struct zr_command_queue queue;
     struct zr_style config;
     struct zr_user_font font;
-    struct zr_tiled_layout tiled;
-    struct zr_window dir;
-    struct zr_window sel;
-    zr_float left, center;
+    struct zr_window window;
+    struct zr_vec2 dir;
+    struct zr_vec2 sel;
+    zr_float ratio_dir;
+    zr_float ratio_sel;
 };
 
 static void
@@ -412,7 +413,7 @@ file_browser_reload_directory_content(struct file_browser *browser, const char *
 
 static void
 file_browser_init(struct file_browser *browser, NVGcontext *vg,
-    struct zr_user_font *font)
+    struct zr_user_font *font, int width, int height)
 {
     memset(browser, 0, sizeof(*browser));
     media_init(&browser->media, vg);
@@ -423,9 +424,8 @@ file_browser_init(struct file_browser *browser, NVGcontext *vg,
         memset(&browser->input, 0, sizeof(browser->input));
         zr_command_queue_init_fixed(&browser->queue, browser->memory, MAX_COMMAND_MEMORY);
         zr_style_default(&browser->config, ZR_DEFAULT_ALL, &browser->font);
-        zr_window_init(&browser->dir, zr_rect(0,0,0,0), 0, &browser->queue, &browser->config, &browser->input);
-        zr_window_init(&browser->sel, zr_rect(0,0,0,0), 0, &browser->queue, &browser->config, &browser->input);
-        browser->left = 0.25; browser->center = 0.75f;
+        zr_window_init(&browser->window, zr_rect(0,0,width,height), 0, &browser->queue, &browser->config, &browser->input);
+        browser->ratio_dir = 0.75; browser->ratio_sel = 0.25f;
     }
     {
         /* load files and sub-directory list */
@@ -466,39 +466,21 @@ file_browser_run(struct file_browser *browser, int width, int height)
     struct zr_context context;
     struct media *media = &browser->media;
     struct icons *icons = &media->icons;
+    struct zr_rect total_space;
 
-    zr_tiled_begin(&browser->tiled,ZR_DYNAMIC,zr_rect(0,0,(zr_float)width,(zr_float)height),zr_vec2(0,0));
-    zr_tiled_slot(&browser->tiled, ZR_SLOT_LEFT, browser->left, ZR_SLOT_VERTICAL, 1);
-    zr_tiled_slot(&browser->tiled, ZR_SLOT_CENTER, browser->center, ZR_SLOT_VERTICAL,  1);
-    zr_tiled_end(&browser->tiled);
-
-    zr_begin_tiled(&context, &browser->sel, &browser->tiled, ZR_SLOT_LEFT, 0);
+    browser->window.bounds.w = width;
+    browser->window.bounds.h = height;
+    zr_begin(&context, &browser->window);
     {
-        /* output special important directory in own window */
-        struct zr_image home = icons->home.img;
-        struct zr_image desktop = icons->desktop.img;
-        struct zr_image computer = icons->computer.img;
-
-        zr_layout_row_dynamic(&context, 40, 1);
-        zr_style_push_property(&browser->config, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 1));
-        if (zr_button_text_image(&context, home, "home", ZR_TEXT_CENTERED, ZR_BUTTON_DEFAULT))
-            file_browser_reload_directory_content(browser, browser->home);
-        if (zr_button_text_image(&context,desktop,"desktop",ZR_TEXT_CENTERED, ZR_BUTTON_DEFAULT))
-            file_browser_reload_directory_content(browser, browser->desktop);
-        if (zr_button_text_image(&context,computer,"computer",ZR_TEXT_CENTERED,ZR_BUTTON_DEFAULT))
-            file_browser_reload_directory_content(browser, "/");
-        zr_style_pop_property(&browser->config);
-    }
-    zr_end(&context, &browser->sel);
-
-    zr_begin_tiled(&context, &browser->dir, &browser->tiled, ZR_SLOT_CENTER, 0);
-    {
+        struct zr_context sub;
+        zr_float row_layout[3];
+        /* output path directory selector in the menubar */
         zr_menubar_begin(&context);
         {
-            /* output path directory selector */
             char *d = browser->directory;
             char *begin = d + 1;
             zr_layout_row_dynamic(&context, 25, 6);
+            zr_style_push_property(&browser->config, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 4));
             while (*d++) {
                 if (*d == '/') {
                     *d = '\0';
@@ -511,11 +493,57 @@ file_browser_run(struct file_browser *browser, int width, int height)
                     begin = d + 1;
                 }
             }
+            zr_style_pop_property(&browser->config);
         }
         zr_menubar_end(&context);
 
+        /* window layout */
+        total_space = zr_space(&context);
+        row_layout[0] = (total_space.w - 8) * browser->ratio_sel;
+        row_layout[1] = 8;
+        row_layout[2] = (total_space.w - 8) * browser->ratio_dir;
+        zr_layout_row(&context, ZR_STATIC, total_space.h, 3, row_layout);
+        zr_style_push_property(&browser->config, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 4));
+
+        /* output special important directory list in own window */
+        zr_group_begin(&context, &sub, NULL,0, browser->sel);
         {
-            /* output directory content */
+            struct zr_image home = icons->home.img;
+            struct zr_image desktop = icons->desktop.img;
+            struct zr_image computer = icons->computer.img;
+
+            zr_layout_row_dynamic(&sub, 40, 1);
+            zr_style_push_property(&browser->config, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 0));
+            if (zr_button_text_image(&sub, home, "home", ZR_TEXT_CENTERED, ZR_BUTTON_DEFAULT))
+                file_browser_reload_directory_content(browser, browser->home);
+            if (zr_button_text_image(&sub,desktop,"desktop",ZR_TEXT_CENTERED, ZR_BUTTON_DEFAULT))
+                file_browser_reload_directory_content(browser, browser->desktop);
+            if (zr_button_text_image(&sub,computer,"computer",ZR_TEXT_CENTERED,ZR_BUTTON_DEFAULT))
+                file_browser_reload_directory_content(browser, "/");
+            zr_style_pop_property(&browser->config);
+        }
+        zr_group_end(&context, &sub, &browser->sel);
+
+        {
+            /* scaler */
+            struct zr_rect bounds;
+            struct zr_input *in = &browser->input;
+            zr_layout_peek(&bounds, &context);
+            zr_spacing(&context, 1);
+            if ((zr_input_is_mouse_hovering_rect(in, bounds) ||
+                zr_input_is_mouse_prev_hovering_rect(in, bounds)) &&
+                zr_input_is_mouse_down(in, ZR_BUTTON_LEFT))
+            {
+                zr_float sel = row_layout[0] + in->mouse.delta.x;
+                zr_float dir = row_layout[2] - in->mouse.delta.x;
+                browser->ratio_sel = sel / (total_space.w - 8);
+                browser->ratio_dir = dir / (total_space.w - 8);
+            }
+        }
+
+        /* output directory content window */
+        zr_group_begin(&context, &sub, NULL, 0, browser->dir);
+        {
             int index = -1;
             size_t i = 0, j = 0, k = 0;
             size_t rows = 0, cols = 0;
@@ -527,21 +555,20 @@ file_browser_run(struct file_browser *browser, int width, int height)
                 {
                     /* draw one row of icons */
                     size_t n = j + cols;
-                    zr_layout_row_dynamic(&context, 140, cols);
-                    zr_style_push_property(&browser->config, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 0));
+                    zr_layout_row_dynamic(&sub, 120, cols);
                     zr_style_push_color(&browser->config, ZR_COLOR_BUTTON, zr_rgb(45, 45, 45));
                     zr_style_push_color(&browser->config, ZR_COLOR_BORDER, zr_rgb(45, 45, 45));
                     for (; j < count && j < n; ++j) {
                         if (j < browser->dir_count) {
                             /* draw and execute directory buttons */
-                            if (zr_button_image(&context,icons->directory.img,ZR_BUTTON_DEFAULT))
+                            if (zr_button_image(&sub,icons->directory.img,ZR_BUTTON_DEFAULT))
                                 index = (int)j;
                         } else {
                             /* draw and execute files buttons */
                             struct icon *icon;
                             size_t fileIndex = ((size_t)j - browser->dir_count);
                             icon = media_icon_for_file(media,browser->files[fileIndex]);
-                            if (zr_button_image(&context, icon->img, ZR_BUTTON_DEFAULT)) {
+                            if (zr_button_image(&sub, icon->img, ZR_BUTTON_DEFAULT)) {
                                 strncpy(browser->file, browser->directory, MAX_PATH_LEN);
                                 n = strlen(browser->file);
                                 strncpy(browser->file + n, browser->files[fileIndex], MAX_PATH_LEN - n);
@@ -551,22 +578,19 @@ file_browser_run(struct file_browser *browser, int width, int height)
                     }
                     zr_style_pop_color(&browser->config);
                     zr_style_pop_color(&browser->config);
-                    zr_style_pop_property(&browser->config);
                 }
                 {
                     /* draw one row of labels */
                     size_t n = k + cols;
-                    zr_layout_row_dynamic(&context, 20, cols);
-                    zr_style_push_property(&browser->config, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 0));
+                    zr_layout_row_dynamic(&sub, 20, cols);
                     for (; k < count && k < n; k++) {
                         if (k < browser->dir_count) {
-                            zr_label(&context, browser->directories[k], ZR_TEXT_CENTERED);
+                            zr_label(&sub, browser->directories[k], ZR_TEXT_CENTERED);
                         } else {
                             size_t t = k-browser->dir_count;
-                            zr_label(&context,browser->files[t],ZR_TEXT_CENTERED);
+                            zr_label(&sub,browser->files[t],ZR_TEXT_CENTERED);
                         }
                     }
-                    zr_style_pop_property(&browser->config);
                 }
             }
 
@@ -581,8 +605,10 @@ file_browser_run(struct file_browser *browser, int width, int height)
                 file_browser_reload_directory_content(browser, browser->directory);
             }
         }
+        zr_group_end(&context, &sub, &browser->dir);
+        zr_style_pop_property(&browser->config);
     }
-    zr_end(&context, &browser->dir);
+    zr_end(&context, &browser->window);
     return 1;
 }
 /* =================================================================
@@ -811,7 +837,7 @@ main(int argc, char *argv[])
     font.userdata.ptr = vg;
     nvgTextMetrics(vg, NULL, NULL, &font.height);
     font.width = font_get_width;
-    file_browser_init(&browser, vg, &font);
+    file_browser_init(&browser, vg, &font, width, height);
 
     while (running) {
         /* Input */
