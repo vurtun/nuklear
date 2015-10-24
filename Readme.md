@@ -39,7 +39,7 @@ draw the GUI.
 
 ## Gallery
 ![demo](https://cloud.githubusercontent.com/assets/8057201/10188098/1d5fe5b0-675d-11e5-83f7-967b71bbd1d4.png)
-![explorer](https://cloud.githubusercontent.com/assets/8057201/10710732/e4565e58-7a66-11e5-8dbc-56628bc9400a.png)
+![explorer](https://cloud.githubusercontent.com/assets/8057201/9937240/24f509ce-5d60-11e5-894a-e7e9e228de30.png)
 ![node](https://cloud.githubusercontent.com/assets/8057201/9976995/e81ac04a-5ef7-11e5-872b-acd54fbeee03.gif)
 
 ## Example
