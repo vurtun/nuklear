@@ -4927,156 +4927,6 @@ zr_style_reset(struct zr_style *style)
 /*
  * ==============================================================
  *
- *                          Tiling
- *
- * ===============================================================
- */
-void
-zr_tiled_begin_local(struct zr_tiled_layout *layout, enum zr_layout_format fmt,
-    zr_float width, zr_float height)
-{
-    ZR_ASSERT(layout);
-    if (!layout) return;
-    zr_zero(layout->slots, sizeof(layout->slots));
-    layout->fmt = fmt;
-    layout->bounds.w = width;
-    layout->bounds.h = height;
-    layout->spacing = zr_vec2(0,0);
-}
-
-void
-zr_tiled_begin(struct zr_tiled_layout *layout, enum zr_layout_format fmt,
-    struct zr_rect bounds, struct zr_vec2 spacing)
-{
-    ZR_ASSERT(layout);
-    if (!layout) return;
-    zr_zero(layout->slots, sizeof(layout->slots));
-    layout->fmt = fmt;
-    layout->bounds = bounds;
-    layout->spacing = spacing;
-}
-
-void
-zr_tiled_begin_inside(struct zr_tiled_layout *parent, struct zr_tiled_layout *child,
-    enum zr_layout_format fmt, enum zr_tiled_layout_slot_index slot, zr_uint index)
-{
-    struct zr_rect bounds;
-    ZR_ASSERT(parent);
-    ZR_ASSERT(child);
-    zr_tiled_bounds(&bounds, parent, slot, index);
-    child->fmt = fmt;
-    child->bounds = bounds;
-    child->spacing = parent->spacing;
-}
-
-void
-zr_tiled_slot(struct zr_tiled_layout *layout,
-    enum zr_tiled_layout_slot_index slot, zr_float ratio,
-    enum zr_tiled_slot_format fmt, zr_uint widget_count)
-{
-    ZR_ASSERT(layout);
-    if (!layout) return;
-    layout->slots[slot].capacity = widget_count;
-    layout->slots[slot].format = fmt;
-    layout->slots[slot].value = ratio;
-}
-
-void
-zr_tiled_slot_bounds(struct zr_rect *bounds,
-    const struct zr_tiled_layout *layout, enum zr_tiled_layout_slot_index slot)
-{
-    const struct zr_tiled_slot *s;
-    ZR_ASSERT(layout);
-    if (!layout) return;
-
-    s = &layout->slots[slot];
-    if (layout->fmt == ZR_DYNAMIC) {
-        bounds->x = layout->bounds.x + s->pos.x * (zr_float)layout->bounds.w;
-        bounds->y = layout->bounds.y + s->pos.y * (zr_float)layout->bounds.h;
-        bounds->w = s->size.x * (zr_float)layout->bounds.w;
-        bounds->h = s->size.y * (zr_float)layout->bounds.h;
-    } else {
-        bounds->x = layout->bounds.x + s->pos.x;
-        bounds->y = layout->bounds.y + s->pos.y;
-        bounds->w = s->size.x;
-        bounds->h = s->size.y;
-    }
-}
-
-void
-zr_tiled_bounds(struct zr_rect *bounds, const struct zr_tiled_layout *layout,
-    enum zr_tiled_layout_slot_index slot, zr_uint index)
-{
-    struct zr_rect slot_bounds;
-    const struct zr_tiled_slot *s;
-    ZR_ASSERT(layout);
-    if (!layout) return;
-
-    ZR_ASSERT(slot < ZR_SLOT_MAX);
-    s = &layout->slots[slot];
-    ZR_ASSERT(index < s->capacity);
-    zr_tiled_slot_bounds(&slot_bounds, layout, slot);
-
-    if (s->format == ZR_SLOT_HORIZONTAL) {
-        slot_bounds.h -= (2 * layout->spacing.y);
-        slot_bounds.w -= (zr_float)s->capacity * layout->spacing.x;
-
-        bounds->h = slot_bounds.h;
-        bounds->y = slot_bounds.y;
-        bounds->w = slot_bounds.w / (zr_float)s->capacity;
-        bounds->x = slot_bounds.x + (zr_float)index * bounds->w;
-    } else {
-        bounds->x = slot_bounds.x + layout->spacing.x;
-        bounds->w = slot_bounds.w - (2 * layout->spacing.x);
-        bounds->h = (slot_bounds.h - (zr_float)s->capacity * layout->spacing.y);
-        bounds->h /= (zr_float)s->capacity;
-        bounds->y = slot_bounds.y + (zr_float)index * bounds->h;
-        bounds->y += ((zr_float)index * layout->spacing.y);
-    }
-}
-
-void
-zr_tiled_end(struct zr_tiled_layout *layout)
-{
-    zr_float w;
-    zr_float centerh, centerv;
-    const struct zr_tiled_slot *top, *bottom;
-    const struct zr_tiled_slot *left, *right;
-    ZR_ASSERT(layout);
-    if (!layout) return;
-
-    top = &layout->slots[ZR_SLOT_TOP];
-    bottom = &layout->slots[ZR_SLOT_BOTTOM];
-    left = &layout->slots[ZR_SLOT_LEFT];
-    right = &layout->slots[ZR_SLOT_RIGHT];
-
-    if (layout->fmt == ZR_DYNAMIC) {
-        w = 1.0f;
-        centerh = MAX(0.0f, 1.0f - (left->value + right->value));
-        centerv = MAX(0.0f, 1.0f - (top->value + bottom->value));
-    } else {
-        w = layout->bounds.w;
-        centerh = MAX(0.0f, layout->bounds.w - (left->value + right->value));
-        centerv = MAX(0.0f, layout->bounds.h - (top->value + bottom->value));
-    }
-
-    /* calculate the slot size */
-    layout->slots[ZR_SLOT_CENTER].size = zr_vec2(centerh, centerv);
-    layout->slots[ZR_SLOT_TOP].size = zr_vec2(w, top->value);
-    layout->slots[ZR_SLOT_LEFT].size = zr_vec2(left->value, centerv);
-    layout->slots[ZR_SLOT_BOTTOM].size = zr_vec2(w, bottom->value);
-    layout->slots[ZR_SLOT_RIGHT].size = zr_vec2(right->value, centerv);
-
-    /* calculate the slot window position */
-    layout->slots[ZR_SLOT_TOP].pos = zr_vec2(0.0f, 0.0f);
-    layout->slots[ZR_SLOT_LEFT].pos = zr_vec2(0.0f, top->value);
-    layout->slots[ZR_SLOT_BOTTOM].pos = zr_vec2(0.0f, top->value + centerv);
-    layout->slots[ZR_SLOT_RIGHT].pos = zr_vec2(left->value + centerh, top->value);
-    layout->slots[ZR_SLOT_CENTER].pos = zr_vec2(left->value, top->value);
-}
-/*
- * ==============================================================
- *
  *                          Window
  *
  * ===============================================================
@@ -5312,32 +5162,6 @@ zr_begin(struct zr_context *context, struct zr_window *window)
             context->buffer->clip.w -= 2;
         }
     }
-    return ret;
-}
-
-zr_flags
-zr_begin_tiled(struct zr_context *context, struct zr_window *window,
-    struct zr_tiled_layout *tiled, enum zr_tiled_layout_slot_index slot,
-    zr_uint index)
-{
-    zr_flags ret = 0;
-    ZR_ASSERT(context);
-    ZR_ASSERT(window);
-    ZR_ASSERT(tiled);
-    ZR_ASSERT(slot < ZR_SLOT_MAX);
-    ZR_ASSERT(index < tiled->slots[slot].capacity);
-    if (!context || !window || !tiled) return ret;
-
-    /* make sure that correct flags are set */
-    window->flags &= (zr_flags)~ZR_WINDOW_MOVEABLE;
-    window->flags &= (zr_flags)~ZR_WINDOW_SCALEABLE;
-    window->flags &= (zr_flags)~ZR_WINDOW_DYNAMIC;
-
-    /* place window inside layout and set window to background  */
-    zr_tiled_bounds(&window->bounds, tiled, slot, index);
-    ret = zr_begin(context, window);
-    zr_command_queue_remove(window->queue, &window->buffer);
-    zr_command_queue_insert_front(window->queue, &window->buffer);
     return ret;
 }
 
@@ -6190,56 +6014,6 @@ zr_layout_row_space_end(struct zr_context *layout)
         zr_command_buffer_push_scissor(layout->buffer, layout->clip);
 }
 
-void
-zr_layout_row_tiled_begin(struct zr_context *layout,
-    struct zr_tiled_layout *tiled)
-{
-    const struct zr_style *config;
-    struct zr_vec2 padding;
-    struct zr_vec2 spacing;
-    ZR_ASSERT(layout);
-    if (!layout) return;
-    if (!layout->valid) return;
-
-    zr_panel_layout(layout, tiled->bounds.h, 2);
-    layout->row.type = (tiled->fmt == ZR_STATIC) ?
-        ZR_LAYOUT_STATIC_TILED: ZR_LAYOUT_DYNAMIC_TILED;
-
-    config = layout->style;
-    padding = config->properties[ZR_PROPERTY_PADDING];
-    spacing = config->properties[ZR_PROPERTY_ITEM_SPACING];
-
-    tiled->spacing = spacing;
-    tiled->bounds.x = layout->at_x + padding.x - layout->offset.x;
-    tiled->bounds.y = layout->at_y - layout->offset.y;
-    if (tiled->fmt == ZR_DYNAMIC)
-        tiled->bounds.w = layout->width - (2 * padding.x);
-}
-
-void
-zr_layout_row_tiled_push(struct zr_context *layout, struct zr_tiled_layout *tiled,
-    enum zr_tiled_layout_slot_index slot, zr_uint index)
-{
-    ZR_ASSERT(layout);
-    ZR_ASSERT(layout->style);
-    ZR_ASSERT(layout->buffer);
-    if (!layout) return;
-    if (!layout->valid) return;
-    zr_tiled_bounds(&layout->row.item, tiled, slot, index);
-}
-
-void
-zr_layout_row_tiled_end(struct zr_context *layout)
-{
-    ZR_ASSERT(layout);
-    ZR_ASSERT(layout->style);
-    if (!layout) return;
-    if (!layout->valid) return;
-
-    zr_zero(&layout->row.item, sizeof(layout->row.item));
-    layout->row.columns = 0;
-}
-
 static void
 zr_panel_alloc_row(struct zr_context *layout)
 {
@@ -6293,18 +6067,6 @@ zr_layout_widget_space(struct zr_rect *bounds, struct zr_context *layout,
             layout->row.filled += layout->row.item_width;
             layout->row.index = 0;
         }
-    } break;
-    case ZR_LAYOUT_STATIC_TILED:
-    case ZR_LAYOUT_DYNAMIC_TILED: {
-        /* dynamic tiled layout widget placing */
-        bounds->x = layout->row.item.x;
-        bounds->y = layout->row.item.y;
-        bounds->w = layout->row.item.w;
-        bounds->h = layout->row.item.h;
-        layout->row.index = 0;
-        if (((bounds->x + bounds->w + layout->offset.x) > layout->max_x) && modify)
-            layout->max_x = bounds->x + bounds->w + layout->offset.x;
-        return;
     } break;
     case ZR_LAYOUT_DYNAMIC_FREE: {
         /* panel width depended free widget placing */
