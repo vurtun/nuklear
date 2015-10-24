@@ -606,39 +606,6 @@ widget_panel(struct zr_context *panel, struct state *demo)
         zr_labelf(panel, ZR_TEXT_LEFT, "%lu", demo->progressbar);
     }
 
-    {
-        /* tiled layout  */
-        struct zr_tiled_layout tiled;
-        enum zr_layout_format fmt = (demo->scaleable) ? ZR_DYNAMIC : ZR_STATIC;
-
-        /* setup tiled window layout  */
-        zr_tiled_begin_local(&tiled, fmt, 250, 150);
-        if (!demo->scaleable) {
-            zr_tiled_slot(&tiled, ZR_SLOT_LEFT, 100, ZR_SLOT_VERTICAL, 4);
-            zr_tiled_slot(&tiled, ZR_SLOT_RIGHT, 150, ZR_SLOT_VERTICAL,  4);
-        } else {
-            zr_tiled_slot(&tiled, ZR_SLOT_LEFT, 0.50, ZR_SLOT_VERTICAL,  4);
-            zr_tiled_slot(&tiled, ZR_SLOT_RIGHT, 0.50, ZR_SLOT_VERTICAL,  4);
-        }
-        zr_tiled_end(&tiled);
-
-        /* setup widgets with tiled layout  */
-        zr_layout_row_tiled_begin(panel, &tiled);
-        {
-            zr_uint i = 0;
-            zr_layout_row_tiled_push(panel, &tiled, ZR_SLOT_LEFT, 1);
-            zr_label(panel, "Test0", ZR_TEXT_CENTERED);
-            zr_layout_row_tiled_push(panel, &tiled, ZR_SLOT_LEFT, 2);
-            zr_label(panel, "Test1", ZR_TEXT_CENTERED);
-            for (i = 0; i < 4; ++i) {
-                const char *items[] = {"item0", "item1", "item2", "item3"};
-                zr_layout_row_tiled_push(panel, &tiled, ZR_SLOT_RIGHT, i);
-                demo->list[i] = zr_button_toggle(panel, items[i], demo->list[i]);
-            }
-        }
-        zr_layout_row_tiled_end(panel);
-    }
-
     /* item selection  */
     if (!demo->scaleable) zr_layout_row_static(panel, 30, 150, 1);
     else zr_layout_row_dynamic(panel, 30, 1);

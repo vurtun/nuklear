@@ -851,10 +851,7 @@ const struct zr_command *zr_command_buffer_next(struct zr_command_buffer*,
 
     Internally the command queue has a list of command buffers which can be
     modified to create a certain sequence, for example the `zr_begin`
-    function changes the list to create overlapping windows, while `zr_begin_tiled`
-    always draws all its windows in the background by pushing its buffers to the
-    beginning of the list.
-
+    function changes the list to create overlapping windows.
     USAGE
     ----------------------------
     The command queue owns a memory buffer internaly that needs to be initialized
@@ -2504,161 +2501,6 @@ void zr_style_reset(struct zr_style*);
 /*
  * ==============================================================
  *
- *                          Tiling
- *
- * ===============================================================
-    TILING
-    ----------------------------
-    Tiling provides a way to divide a space into fixed slots which again can be
-    divided into either horizontal or vertical spaces. The tiled layout consists
-    of five slots (Top, Left, Center, Right and Bottom) what is also known
-    as a Border layout. Since slots can either be filled or empty, horizontally or
-    vertically fillable, have either none, one or many subspaces and can even
-    have a tiled layout inside it is possible to achive a great number of layout.
-
-    In addition it is possible to define the space inside the tiled layout either
-    in pixel or as a ratio. Ratio based layout are great for scaling but
-    are less usefull in cases where scaling destroys the UI. Pixel based layouts
-    provided a layout which always look the same but are less flexible.
-
-    The tiled layout is used in the library inside windows as a widget layout
-    and for window placing inside the screen with each case having its own functions
-    to handle and use the tiled layout.
-
-    USAGE
-    ----------------------------
-    To use the tiled layout you have to define which slot inside the layout
-    should be active, how the slot should be filled and how much space the
-    it takes. To define each slot you first have to call `zr_tiled_begin`
-    to start the layout slot definiton and to end the definition
-    the corresponding function `zr_tiled_end` has to be called.
-    Between both sequence points you can define each slot with `zr_tiled_slot`.
-
-    -----------------------------
-    |           TOP             |
-    -----------------------------
-    |       |           |       |
-    | LEFT  |   CENTER  | RIGHT |
-    |       |           |       |
-    -----------------------------
-    |           BOTTOM          |
-    -----------------------------
-
-    Tiling API
-    zr_tiled_begin      -- starts the definition of a tiled layout
-    zr_tiled_begin_local-- starts the definition inside the first depth of a window
-    zr_tiled_slot       -- activates and setups a slot inside the tile layout
-    zr_tiled_end        -- ends the definiition of the tiled layout slots
-    zr_tiled_slot_bounds-- returns the bounds of a slot in the tiled layout
-    zr_tiled_bounds     -- returns the bounds of a widget in the tiled layout
-    zr_tiled_load       -- loads another tiled layout from slot
-*/
-enum zr_tiled_layout_slot_index {
-    ZR_SLOT_TOP,
-    ZR_SLOT_BOTTOM,
-    ZR_SLOT_LEFT,
-    ZR_SLOT_CENTER,
-    ZR_SLOT_RIGHT,
-    ZR_SLOT_MAX
-};
-
-enum zr_layout_format {
-    ZR_DYNAMIC, /* row layout which scales with the window */
-    ZR_STATIC /* row layout with fixed pixel width */
-};
-
-enum zr_tiled_slot_format {
-    ZR_SLOT_HORIZONTAL,
-    /* widgets in slots are added left to right */
-    ZR_SLOT_VERTICAL
-    /* widgets in slots are added top to bottom */
-};
-
-struct zr_tiled_slot {
-    zr_uint capacity;
-    /* number of widget inside the slot */
-    zr_float value;
-    /* temp value for layout build up */
-    struct zr_vec2 size;
-    /* horizontal and vertical window (ratio/width) */
-    struct zr_vec2 pos;
-    /* position of the slot in the window */
-    enum zr_tiled_slot_format format;
-    /* layout filling format  */
-};
-
-struct zr_tiled_layout {
-    struct zr_tiled_slot slots[ZR_SLOT_MAX];
-    /* tiled layout slots */
-    enum zr_layout_format fmt;
-    /* row layout format */
-    struct zr_rect bounds;
-    /* bounding rect of the layout */
-    struct zr_vec2 spacing;
-};
-
-void zr_tiled_begin(struct zr_tiled_layout*, enum zr_layout_format,
-                    struct zr_rect bounds, struct zr_vec2 spacing);
-/*  this functions begins the definitions of a tiled layout
-    Input:
-    - layout format with either dynamic ratio based or fixed pixel based slots
-    - pixel position and size of a window inside the screen
-    - spacing between slot entries
-*/
-void zr_tiled_begin_local(struct zr_tiled_layout*, enum zr_layout_format,
-                        zr_float width, zr_float height);
-/*  this functions begins the definitions of a tiled local layout.
- *  IMPORTANT:  is only used for the first depth of a tiled window widget layout
-                all other types of tiled layouts need to use `zr_tiled_begin`.
-    Input:
-    - layout format with either dynamic ratio based or fixed pixel based slots
-    - pixel width of the tiled layout space (IMPORTANT: not used for dynamic tiled layouts)
-    - pixel height of the tiled layout space
-*/
-void zr_tiled_begin_inside(struct zr_tiled_layout *parent, struct zr_tiled_layout *child,
-                            enum zr_layout_format fmt, enum zr_tiled_layout_slot_index slot,
-                            zr_uint index);
-/*  this functions load a tiled layout from another tiled layout slot
-    Input:
-    - slot filling format with either horizontal or vertical filling
-    - slot identifier
-    - index of the widget inside the slot
-    Output:
-    - loaded child tiled layout inside the parent tiled layout
-*/
-void zr_tiled_slot(struct zr_tiled_layout *layout,
-                    enum zr_tiled_layout_slot_index, zr_float ratio,
-                    enum zr_tiled_slot_format, zr_uint widget_count);
-/*  this functions defines a slot in the tiled layout which then can be filled
- *  with widgets
-    Input:
-    - slot identifier
-    - either ratio or pixel size of the slot
-    - slot filling format with either horizontal or vertical filling
-    - number of widgets inside the slot
-*/
-void zr_tiled_end(struct zr_tiled_layout*);
-/*  this functions ends the definitions of the tiled layout slots */
-void zr_tiled_slot_bounds(struct zr_rect*, const struct zr_tiled_layout*,
-                            enum zr_tiled_layout_slot_index);
-/*  this functions queries the bounds (position + size) of a tiled layout slot
-    Input:
-    - slot identifier
-    Output:
-    - rectangle with position and size of the slot
-*/
-void zr_tiled_bounds(struct zr_rect*, const struct zr_tiled_layout*,
-                        enum zr_tiled_layout_slot_index, zr_uint);
-/*  this functions queries the bounds (position + size) of a tiled layout slot entry
-    Input:
-    - slot identifier
-    - index of the widget inside the slot
-    Output:
-    - rectangle with position and size of the slot entry
-*/
-/*
- * ==============================================================
- *
  *                          Window
  *
  * ===============================================================
@@ -2806,6 +2648,11 @@ zr_bool zr_window_is_minimized(struct zr_window*);
     zr_queue   -- returns the queue of the window
     zr_space   -- returns the drawable space inside the window
 */
+enum zr_layout_format {
+    ZR_DYNAMIC, /* row layout which scales with the window */
+    ZR_STATIC /* row layout with fixed pixel width */
+};
+
 enum zr_widget_states {
     ZR_INACTIVE = zr_false,
     ZR_ACTIVE = zr_true
@@ -2833,8 +2680,6 @@ enum zr_row_layout_type {
     /* immediate mode widget specific widget width ratio layout */
     ZR_LAYOUT_DYNAMIC_FREE,
     /* free ratio based placing of widget in a local space  */
-    ZR_LAYOUT_DYNAMIC_TILED,
-    /* dynamic Border layout */
     ZR_LAYOUT_DYNAMIC,
     /* retain mode widget specific widget ratio width*/
     ZR_LAYOUT_STATIC_FIXED,
@@ -2843,8 +2688,6 @@ enum zr_row_layout_type {
     /* immediate mode widget specific widget pixel width layout */
     ZR_LAYOUT_STATIC_FREE,
     /* free pixel based placing of widget in a local space  */
-    ZR_LAYOUT_STATIC_TILED,
-    /* static Border layout */
     ZR_LAYOUT_STATIC
     /* retain mode widget specific widget pixel width layout */
 };
@@ -2928,19 +2771,8 @@ zr_flags zr_begin(struct zr_context*, struct zr_window*);
     - window context to fill up with widgets
     - ZR_WINDOW_MOVABLE if window was moved
 */
-zr_flags zr_begin_tiled(struct zr_context*, struct zr_window*, struct zr_tiled_layout*,
-                    enum zr_tiled_layout_slot_index slot, zr_uint index);
-/*  this function begins the window build up process by creating a context to fill
-    and placing the window inside a tiled layout on the screen.
-    Input:
-    - input structure holding all user generated state changes
-    Output:
-    - window context to fill up with widgets
-    - ZR_WINDOW_MOVABLE if window was moved
-*/
 zr_flags zr_end(struct zr_context*, struct zr_window*);
-/*  this function ends the window layout build up process and updates the window
-    and placing the window inside a tiled layout on the screen.
+/*  this function ends the window layout build up process and updates the window.
     Output:
     - ZR_WINDOW_SCALEABLE if window was scaled
 */
@@ -3085,9 +2917,6 @@ void zr_menubar_end(struct zr_context*);
     the window and directly positioning each widget with position and size.
     This requires the least amount of work for the API and the most for the user,
     but offers the most positioning freedom.
-    The final row layout is a tiled layout which divides a space in the panel
-    into a Top, Left, Center, Right and Bottom slot. Each slot can be filled
-    with widgets either horizontally or vertically.
 
     fixed width widget layout API
     zr_layout_row_dynamic              -- scaling fixed column row layout
@@ -3098,11 +2927,6 @@ void zr_menubar_end(struct zr_context*);
     zr_layout_row_begin                -- begins the row build up process
     zr_layout_row_push                 -- pushes the next widget width
     zr_layout_row_end                  -- ends the row build up process
-
-    tiled layout widget placing API
-    zr_layout_row_tiled_begin          -- begins tiled layout based placing of widgets
-    zr_layout_row_tiled_push           -- pushes a widget into a slot in the tiled layout
-    zr_layout_row_tiled_end            -- ends tiled layout based placing of widgets
 
     custom widget placing API
     zr_layout_row_space_begin          -- creates a free placing space in the window
@@ -3221,21 +3045,6 @@ struct zr_rect zr_layout_row_space_rect_to_local(struct zr_context*, struct zr_r
 */
 void zr_layout_row_space_end(struct zr_context*);
 /*  this functions finishes the scaleable space filling process */
-/* ------------------------------ Tiled ----------------------------------- */
-void zr_layout_row_tiled_begin(struct zr_context*, struct zr_tiled_layout*);
-/*  this functions begins the tiled layout
-    Input:
-    - row height of the complete layout to allocate from the window
-*/
-void zr_layout_row_tiled_push(struct zr_context*, struct zr_tiled_layout*,
-                            enum zr_tiled_layout_slot_index, zr_uint index);
-/*  this functions pushes a widget into a tiled layout slot
-    Input:
-    - slot identifier
-    - widget index in the slot
-*/
-void zr_layout_row_tiled_end(struct zr_context*);
-/*  this functions ends the tiled layout */
 /* ------------------------------ Tree ----------------------------------- */
 zr_bool zr_layout_push(struct zr_context*, enum zr_layout_node_type,
                         const char *title, zr_state*);
