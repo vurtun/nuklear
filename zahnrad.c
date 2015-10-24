@@ -4082,7 +4082,7 @@ zr_widget_slider(struct zr_command_buffer *out, struct zr_rect slider,
     {
         const float d = in->mouse.pos.x - (cursor.x + cursor.w / 2.0f);
         const float pxstep = (slider.w - (2 * s->padding.x)) / slider_steps;
-        /* only update value if the next slider step is reached*/
+        /* only update value if the next slider step is reached */
         col = s->active;
         if (ZR_ABS(d) >= pxstep) {
             const zr_float steps = (zr_float)((zr_int)(ZR_ABS(d) / pxstep));
@@ -6315,7 +6315,7 @@ zr_spacing(struct zr_context *l, zr_size cols)
     index = (l->row.index + cols) % l->row.columns;
     n = index - l->row.index;
 
-    /* spacing over the row boundries */
+    /* spacing over row boundries */
     if (l->row.index + cols > l->row.columns) {
         zr_size rows = (l->row.index + cols) / l->row.columns;
         for (i = 0; i < rows; ++i)
@@ -6717,20 +6717,6 @@ zr_option(struct zr_context *layout, const char *text, zr_bool is_active)
     zr_widget_toggle(layout->buffer, bounds, &is_active, text, ZR_TOGGLE_OPTION,
                         &toggle, i, &config->font);
     return is_active;
-}
-
-zr_size
-zr_option_group(struct zr_context *layout, const char **options,
-    zr_size count, zr_size current)
-{
-    zr_size i;
-    ZR_ASSERT(layout && options && count);
-    if (!layout || !options || !count) return current;
-    for (i = 0; i < count; ++i) {
-        if (zr_option(layout, options[i], i == current))
-            current = i;
-    }
-    return current;
 }
 
 zr_float
@@ -7436,6 +7422,7 @@ zr_shelf_begin(struct zr_context *parent, struct zr_context *shelf,
     if (!parent->valid)
         goto failed;
 
+    /* cache some config data */
     config = parent->style;
     out = parent->buffer;
     font = &config->font;
@@ -7509,7 +7496,7 @@ zr_shelf_begin(struct zr_context *parent, struct zr_context *shelf,
     bounds.y += header_h;
     bounds.h -= header_h;
     {
-        /* setup fake panel to create a panel layout */
+        /* setup fake window to create a context */
         zr_flags flags;
         flags = ZR_WINDOW_BORDER|ZR_WINDOW_TAB;
         if (parent->flags & ZR_WINDOW_ROM)
@@ -7599,7 +7586,7 @@ zr_popup_begin(struct zr_context *parent, struct zr_context *popup,
     rect.y += parent->clip.y;
     parent->flags |= ZR_WINDOW_ROM;
 
-    /* initialize a fake panel */
+    /* initialize a fake window */
     flags |= ZR_WINDOW_BORDER|ZR_WINDOW_TAB;
     if (type == ZR_POPUP_DYNAMIC)
         flags |= ZR_WINDOW_DYNAMIC;

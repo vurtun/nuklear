@@ -583,7 +583,7 @@ zr_size zr_buffer_total(struct zr_buffer*);
     zr_command_buffer_push_rect    -- pushes a rectange into the command buffer
     zr_command_buffer_push_circle  -- pushes a circle into the command buffer
     zr_command_buffer_push_triangle-- pushes a triangle command into the buffer
-    zr_command_buffer_push_cruve   -- pushes a bezier cruve command into the buffer
+    zr_command_buffer_push_curve   -- pushes a bezier cruve command into the buffer
     zr_command_buffer_push_image   -- pushes a image draw command into the buffer
     zr_command_buffer_push_text    -- pushes a text draw command into the buffer
 
@@ -860,7 +860,7 @@ const struct zr_command *zr_command_buffer_next(struct zr_command_buffer*,
     queue in the `zr_window_init` with the `zr_command_queue_add` function
     but removing a window requires a manual call of `zr_command_queue_remove`.
     Internally the window calls the `zr_command_queue_start` and
-    `zr_commanmd_queue_finish` function that setup and finilize a command buffer for
+    `zr_command_queue_finish` function that setup and finilize a command buffer for
     command queuing. Finally to iterate over all commands in all command buffers
     the iterator API is provided. It allows to iterate over each command in a
     foreach loop.
@@ -3099,7 +3099,6 @@ void zr_layout_pop(struct zr_context*);
     zr_image                 -- image widget for outputing a image to a window
     zr_check                 -- add a checkbox widget
     zr_option                -- radiobutton widget
-    zr_option_group          -- radiobutton group for automatic single selection
     zr_slider                -- slider widget with min,max,step value
     zr_progress              -- progressbar widget
     zr_edit                  -- edit textbox widget for text input
@@ -3181,15 +3180,6 @@ zr_bool zr_option(struct zr_context*, const char*, zr_bool active);
     - state of the radiobutton with either active or inactive
     Output:
     - from user input updated state of the radiobutton
-*/
-zr_size zr_option_group(struct zr_context*, const char**, zr_size cnt, zr_size cur);
-/*  this function creates a radiobutton group widget with only one active radiobutton
-    Input:
-    - radiobutton label array describing the content of each radiobutton
-    - number of radiobuttons
-    - index of the current active radiobutton
-    Output:
-    - the from user input updated index of the active radiobutton
 */
 zr_bool zr_button_text(struct zr_context*, const char*, enum zr_button_behavior);
 /*  this function creates a text button

@@ -506,7 +506,7 @@ file_browser_run(struct file_browser *browser, int width, int height)
         zr_style_push_property(&browser->config, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 4));
 
         /* output special important directory list in own window */
-        zr_group_begin(&context, &sub, NULL,0, browser->sel);
+        zr_group_begin(&context, &sub, NULL, ZR_WINDOW_NO_SCROLLBAR, browser->sel);
         {
             struct zr_image home = icons->home.img;
             struct zr_image desktop = icons->desktop.img;
