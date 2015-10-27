@@ -659,6 +659,85 @@ zr_utf_len(const zr_char *str, zr_size len)
     }
     return src_len;
 }
+
+static zr_size
+zr_user_font_glyph_index_at_pos(const struct zr_user_font *font, const char *text,
+    zr_size text_len, zr_float xoff)
+{
+    zr_long unicode;
+    zr_size glyph_offset = 0;
+    zr_size glyph_len = zr_utf_decode(text, &unicode, text_len);
+    zr_size text_width = font->width(font->userdata, text, glyph_len);
+    zr_size src_len = glyph_len;
+
+    while (text_len && glyph_len) {
+        if (text_width >= xoff)
+            return glyph_offset;
+        glyph_offset++;
+        text_len -= glyph_len;
+        glyph_len = zr_utf_decode(text + src_len, &unicode, text_len);
+        src_len += glyph_len;
+        text_width = font->width(font->userdata, text, src_len);
+    }
+    return glyph_offset;
+}
+
+static zr_size
+zr_use_font_glyph_clamp(const struct zr_user_font *font, const char *text,
+    zr_size text_len, zr_float space, zr_size *glyphes, zr_float *text_width)
+{
+    zr_size len = 0;
+    zr_size glyph_len;
+    zr_float width = 0;
+    zr_float last_width = 0;
+    zr_long unicode;
+    zr_size g = 0;
+
+    glyph_len = zr_utf_decode(text, &unicode, text_len);
+    while (glyph_len && (width < space) && (len < text_len)) {
+        zr_size s;
+        len += glyph_len;
+        s = font->width(font->userdata, text, len);
+        last_width = width;
+        width = (zr_float)s;
+        glyph_len = zr_utf_decode(&text[len], &unicode, text_len - len);
+        g++;
+    }
+
+    *glyphes = g;
+    *text_width = last_width;
+    return len;
+}
+
+static zr_size
+zr_user_font_glyphes_fitting_in_space(const struct zr_user_font *font, const char *text,
+    zr_size text_len, zr_float space, zr_size *glyphes, zr_float *text_width)
+{
+    zr_size glyph_len;
+    zr_float width = 0;
+    zr_float last_width = 0;
+    zr_long unicode;
+    zr_size offset = 0;
+    zr_size g = 0;
+    zr_size s;
+
+    glyph_len = zr_utf_decode(text, &unicode, text_len);
+    s = font->width(font->userdata, text, glyph_len);
+    width = last_width = (zr_float)s;
+    while ((width < space) && text_len) {
+        g++;
+        offset += glyph_len;
+        text_len -= glyph_len;
+        last_width = width;
+        glyph_len = zr_utf_decode(&text[offset], &unicode, text_len);
+        s = font->width(font->userdata, &text[offset], glyph_len);
+        width += (zr_float)s;
+    }
+
+    *glyphes = g;
+    *text_width = last_width;
+    return offset;
+}
 /*
  * ==============================================================
  *
@@ -1387,6 +1466,7 @@ zr_command_buffer_push_text(struct zr_command_buffer *b, struct zr_rect r,
     const zr_char *string, zr_size length, const struct zr_user_font *font,
     struct zr_color bg, struct zr_color fg)
 {
+    zr_size text_width = 0;
     struct zr_command_text *cmd;
     ZR_ASSERT(b);
     ZR_ASSERT(font);
@@ -1397,6 +1477,15 @@ zr_command_buffer_push_text(struct zr_command_buffer *b, struct zr_rect r,
             return;
     }
 
+    /* make sure text fits inside bounds */
+    text_width = font->width(font->userdata, string, length);
+    if (text_width > r.w){
+        zr_float txt_width = (zr_float)text_width;
+        zr_size glyphes = 0;
+        length = zr_use_font_glyph_clamp(font, string, length, r.w, &glyphes, &txt_width);
+    }
+
+    if (!length) return;
     cmd = (struct zr_command_text*)
         zr_command_buffer_push(b, ZR_COMMAND_TEXT, sizeof(*cmd) + length + 1);
     if (!cmd) return;
@@ -2542,6 +2631,7 @@ zr_draw_list_add_text(struct zr_draw_list *list, const struct zr_user_font *font
     zr_long unicode, next;
     zr_size glyph_len, next_glyph_len;
     struct zr_user_font_glyph g;
+
     ZR_ASSERT(list);
     if (!list || !len || !text) return;
     if (rect.x > (list->clip_rect.x + list->clip_rect.w) ||
@@ -2568,7 +2658,6 @@ zr_draw_list_add_text(struct zr_draw_list *list, const struct zr_user_font *font
 
         /* calculate and draw glyph drawing rectangle and image */
         gx = x + g.offset.x;
-        /*gy = rect.y + (font->height/2) + (rect.h/2) - g.offset.y;*/
         gy = rect.y + (rect.h/2) - (font->height/2) + g.offset.y;
         gw = g.width; gh = g.height;
         char_width = g.xadvance;
@@ -2602,6 +2691,7 @@ zr_draw_list_path_line_to(struct zr_draw_list *list, struct zr_vec2 pos)
     if (!list) return;
     if (!list->cmd_count)
         zr_draw_list_add_clip(list, zr_null_rect);
+
     cmd = zr_draw_list_command_last(list);
     if (cmd->texture.ptr != list->null.texture.ptr)
         zr_draw_list_push_image(list, list->null.texture);
@@ -2668,6 +2758,7 @@ zr_draw_list_path_rect_to(struct zr_draw_list *list, struct zr_vec2 a,
     r = rounding;
     r = MIN(r, ((b.x-a.x) < 0) ? -(b.x-a.x): (b.x-a.x));
     r = MIN(r, ((b.y-a.y) < 0) ? -(b.y-a.y): (b.y-a.y));
+
     if (r == 0.0f) {
         zr_draw_list_path_line_to(list, a);
         zr_draw_list_path_line_to(list, zr_vec2(b.x,a.y));
@@ -3700,8 +3791,9 @@ zr_widget_text(struct zr_command_buffer *o, struct zr_rect b,
     label.x = 0; label.w = 0;
     label.y = b.y + t->padding.y;
     label.h = MAX(0, b.h - 2 * t->padding.y);
+
     text_width = f->width(f->userdata, (const zr_char*)string, len);
-    b.w = MAX(b.w, (2 * t->padding.x + (zr_float)text_width));
+    text_width += (zr_size)(2 * t->padding.x);
 
     if (a == ZR_TEXT_LEFT) {
         label.x = b.x + t->padding.x;
@@ -3709,12 +3801,12 @@ zr_widget_text(struct zr_command_buffer *o, struct zr_rect b,
     } else if (a == ZR_TEXT_CENTERED) {
         label.w = MAX(1, 2 * t->padding.x + (zr_float)text_width);
         label.x = (b.x + t->padding.x + ((b.w - 2 * t->padding.x)/2));
-        if (label.x > label.w/2) label.x -= (label.w/2);
+        if (label.x >= label.w/2) label.x -= (label.w/2);
         label.x = MAX(b.x + t->padding.x, label.x);
         label.w = MIN(b.x + b.w, label.x + label.w);
-        if (label.w > label.x) label.w -= label.x;
+        if (label.w >= label.x) label.w -= label.x;
     } else if (a == ZR_TEXT_RIGHT) {
-        label.x = (b.x + b.w) - (2 * t->padding.x + (zr_float)text_width);
+        label.x = MAX(b.x + t->padding.x, (b.x + b.w) - (2 * t->padding.x + (zr_float)text_width));
         label.w = (zr_float)text_width + 2 * t->padding.x;
     } else return;
     zr_command_buffer_push_text(o, label, (const zr_char*)string,
@@ -4150,58 +4242,6 @@ zr_widget_progress(struct zr_command_buffer *out, struct zr_rect r,
     r.w = (r.w - 2) * prog_scale;
     zr_command_buffer_push_rect(out, r, prog->rounding, col);
     return prog_value;
-}
-
-static zr_size
-zr_user_font_glyph_index_at_pos(const struct zr_user_font *font, const char *text,
-    zr_size text_len, zr_float xoff)
-{
-    zr_long unicode;
-    zr_size glyph_offset = 0;
-    zr_size glyph_len = zr_utf_decode(text, &unicode, text_len);
-    zr_size text_width = font->width(font->userdata, text, glyph_len);
-    zr_size src_len = glyph_len;
-
-    while (text_len && glyph_len) {
-        if (text_width >= xoff)
-            return glyph_offset;
-        glyph_offset++;
-        text_len -= glyph_len;
-        glyph_len = zr_utf_decode(text + src_len, &unicode, text_len);
-        src_len += glyph_len;
-        text_width = font->width(font->userdata, text, src_len);
-    }
-    return glyph_offset;
-}
-
-static zr_size
-zr_user_font_glyphes_fitting_in_space(const struct zr_user_font *font, const char *text,
-    zr_size text_len, zr_float space, zr_size *glyphes, zr_float *text_width)
-{
-    zr_size glyph_len;
-    zr_float width = 0;
-    zr_float last_width = 0;
-    zr_long unicode;
-    zr_size offset = 0;
-    zr_size g = 0;
-    zr_size s;
-
-    glyph_len = zr_utf_decode(text, &unicode, text_len);
-    s = font->width(font->userdata, text, glyph_len);
-    width = last_width = (zr_float)s;
-    while ((width < space) && text_len) {
-        g++;
-        offset += glyph_len;
-        text_len -= glyph_len;
-        last_width = width;
-        glyph_len = zr_utf_decode(&text[offset], &unicode, text_len);
-        s = font->width(font->userdata, &text[offset], glyph_len);
-        width += (zr_float)s;
-    }
-
-    *glyphes = g;
-    *text_width = last_width;
-    return offset;
 }
 
 void

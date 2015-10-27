@@ -555,7 +555,7 @@ file_browser_run(struct file_browser *browser, int width, int height)
                 {
                     /* draw one row of icons */
                     size_t n = j + cols;
-                    zr_layout_row_dynamic(&sub, 120, cols);
+                    zr_layout_row_dynamic(&sub, 130, cols);
                     zr_style_push_color(&browser->config, ZR_COLOR_BUTTON, zr_rgb(45, 45, 45));
                     zr_style_push_color(&browser->config, ZR_COLOR_BORDER, zr_rgb(45, 45, 45));
                     for (; j < count && j < n; ++j) {
@@ -581,6 +581,7 @@ file_browser_run(struct file_browser *browser, int width, int height)
                 }
                 {
                     /* draw one row of labels */
+                    zr_style_push_property(&browser->config, ZR_PROPERTY_ITEM_SPACING, zr_vec2(4, 4));
                     size_t n = k + cols;
                     zr_layout_row_dynamic(&sub, 20, cols);
                     for (; k < count && k < n; k++) {
@@ -591,6 +592,7 @@ file_browser_run(struct file_browser *browser, int width, int height)
                             zr_label(&sub,browser->files[t],ZR_TEXT_CENTERED);
                         }
                     }
+                    zr_style_pop_property(&browser->config);
                 }
             }
 

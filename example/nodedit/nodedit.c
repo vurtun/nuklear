@@ -222,9 +222,11 @@ node_editor_draw(struct zr_context *layout, struct node_editor *nodedit,
         /* execute each node as a moveable group */
         zr_style_push_color(config, ZR_COLOR_WINDOW, zr_rgb(48, 48, 48));
         while (it) {
-            /* draw node */
+            /* calculate node group space */
             zr_layout_row_space_push(layout, zr_rect(it->bounds.x - nodedit->scrolling.x,
                 it->bounds.y - nodedit->scrolling.y, it->bounds.w, it->bounds.h));
+
+            /* execute node window */
             zr_group_begin(layout, &node, it->name,
                 ZR_WINDOW_MOVEABLE|ZR_WINDOW_NO_SCROLLBAR, zr_vec2(0,0));
             {
@@ -394,6 +396,8 @@ node_editor_draw(struct zr_context *layout, struct node_editor *nodedit,
         }
     }
     zr_layout_row_space_end(layout);
+
+    /* window content scrolling */
     if (zr_input_is_mouse_hovering_rect(in, layout->bounds) &&
         zr_input_is_mouse_down(in, ZR_BUTTON_MIDDLE)) {
         nodedit->scrolling.x += in->mouse.delta.x;

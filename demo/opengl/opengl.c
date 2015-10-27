@@ -250,6 +250,7 @@ font_bake_and_upload(struct device *dev, struct zr_font *font,
     dev->null.texture.id = (zr_int)dev->font_tex;
     dev->null.uv = zr_vec2((custom.x + 0.5f)/(zr_float)img_width,
                             (custom.y + 0.5f)/(zr_float)img_height);
+
     /* setup font with glyphes. IMPORTANT: the font only references the glyphes
       this was done to have the possibility to have multible fonts with one
       total glyph array. Not quite sure if it is a good thing since the

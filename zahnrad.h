@@ -1015,7 +1015,7 @@ const struct zr_command* zr_command_queue_next(struct zr_command_queue*,
     draw list even with anti-aliasing.
 
     The draw list consist internaly of three user provided buffers that will be
-    filled with data. The first buffer is the the draw command and temporary
+    filled with data. The first buffer is the draw command and temporary
     path buffer which permanetly stores all draw batch commands. The vertex and
     element buffer are the same buffers as their hardware renderer counter-parts,
     in fact it is even possible to directly map one of these buffers and fill
@@ -3562,6 +3562,80 @@ enum zr_tree_node_operation zr_tree_leaf_icon(struct zr_tree*,
 void zr_tree_end(struct zr_context*, struct zr_tree*, struct zr_vec2 *scrollbar);
 /*  this function ends a the tree building process */
 /* --------------------------------------------------------------
+ *                          Group
+ * --------------------------------------------------------------
+    GROUP
+    A group window represents a window inside a window. The group thereby has a fixed height
+    but just like a normal window has a scrollbar. It main promise is to group together
+    a group of widgets into a small space inside a window and to provide a scrollable
+    space inside a window.
+
+    USAGE
+    To create a group you first have to allocate space in a window. This is done
+    by the group row layout API and works the same as widgets. After that the
+    `zr_group_begin` has to be called with the parent layout to create
+    the group in and a group layout to create a new window inside the window.
+    Just like a window layout structures the group layout only has a lifetime
+    between the `zr_group_begin` and `zr_group_end` and does
+    not have to be persistent.
+
+    group window API
+    zr_group_begin -- adds a scrollable fixed space inside the window
+    zr_group_begin -- ends the scrollable space
+*/
+void zr_group_begin(struct zr_context*, struct zr_context *tab,
+                    const char *title, zr_flags, struct zr_vec2);
+/*  this function adds a grouped group window into the parent window
+    IMPORTANT: You need to set the height of the group with zr_row_layout
+    Input:
+    - group title to write into the header
+    - group scrollbar offset
+    Output:
+    - group layout to fill with widgets
+*/
+void zr_group_end(struct zr_context*, struct zr_context*, struct zr_vec2 *scrollbar);
+/*  this function finishes the previously started group layout
+    Output:
+    - The from user input updated group scrollbar pixel offset
+*/
+/* --------------------------------------------------------------
+ *                          SHELF
+ * --------------------------------------------------------------
+    SHELF
+    A shelf extends the concept of a group as an window inside a window
+    with the possibility to decide which content should be drawn into the group.
+    This is achieved by tabs on the top of the group window with one selected
+    tab. The selected tab thereby defines which content should be drawn inside
+    the group window by an index it returns. So you just have to check the returned
+    index and depending on it draw the wanted content.
+
+    shelf API
+    zr_shelf_begin   -- begins a shelf with a number of selectable tabs
+    zr_shelf_end     -- ends a previously started shelf build up process
+
+*/
+zr_size zr_shelf_begin(struct zr_context*, struct zr_context*,
+                        const char *tabs[], zr_size size,
+                        zr_size active, struct zr_vec2 offset);
+/*  this function adds a shelf child window into the parent window
+    IMPORTANT: You need to set the height of the shelf with zr_row_layout
+    Input:
+    - all possible selectible tabs of the shelf with names as a string array
+    - number of seletectible tabs
+    - current active tab array index
+    - scrollbar pixel offset for the shelf
+    Output:
+    - group layout to fill with widgets
+    - the from user input updated current shelf tab index
+*/
+void zr_shelf_end(struct zr_context *p, struct zr_context *s, struct zr_vec2 *scrollbar);
+/*  this function finishes the previously started shelf layout
+    Input:
+    - previously started group layout
+    Output:
+    - The from user input updated shelf scrollbar pixel offset
+*/
+/* --------------------------------------------------------------
  *                          POPUP
  * --------------------------------------------------------------
     POPUP
@@ -3772,82 +3846,6 @@ void zr_tooltip_begin(struct zr_context *parent, struct zr_context *tip,
 */
 void zr_tooltip_end(struct zr_context *parent, struct zr_context *tip);
 /*  this function ends the tooltip window */
-/* --------------------------------------------------------------
- *                          Group
- * --------------------------------------------------------------
- *
-    GROUP
-    A group window represents a window inside a window. The group thereby has a fixed height
-    but just like a normal window has a scrollbar. It main promise is to group together
-    a group of widgets into a small space inside a window and to provide a scrollable
-    space inside a window.
-
-    USAGE
-    To create a group you first have to allocate space in a window. This is done
-    by the group row layout API and works the same as widgets. After that the
-    `zr_group_begin` has to be called with the parent layout to create
-    the group in and a group layout to create a new window inside the window.
-    Just like a window layout structures the group layout only has a lifetime
-    between the `zr_group_begin` and `zr_group_end` and does
-    not have to be persistent.
-
-    group window API
-    zr_group_begin -- adds a scrollable fixed space inside the window
-    zr_group_begin -- ends the scrollable space
-*/
-void zr_group_begin(struct zr_context*, struct zr_context *tab,
-                    const char *title, zr_flags, struct zr_vec2);
-/*  this function adds a grouped group window into the parent window
-    IMPORTANT: You need to set the height of the group with zr_row_layout
-    Input:
-    - group title to write into the header
-    - group scrollbar offset
-    Output:
-    - group layout to fill with widgets
-*/
-void zr_group_end(struct zr_context*, struct zr_context*, struct zr_vec2 *scrollbar);
-/*  this function finishes the previously started group layout
-    Output:
-    - The from user input updated group scrollbar pixel offset
-*/
-/* --------------------------------------------------------------
- *                          SHELF
- * --------------------------------------------------------------
-    SHELF
-    A shelf extends the concept of a group as an window inside a window
-    with the possibility to decide which content should be drawn into the group.
-    This is achieved by tabs on the top of the group window with one selected
-    tab. The selected tab thereby defines which content should be drawn inside
-    the group window by an index it returns. So you just have to check the returned
-    index and depending on it draw the wanted content.
-
-    shelf API
-    zr_shelf_begin   -- begins a shelf with a number of selectable tabs
-    zr_shelf_end     -- ends a previously started shelf build up process
-
-*/
-zr_size zr_shelf_begin(struct zr_context*, struct zr_context*,
-                        const char *tabs[], zr_size size,
-                        zr_size active, struct zr_vec2 offset);
-/*  this function adds a shelf child window into the parent window
-    IMPORTANT: You need to set the height of the shelf with zr_row_layout
-    Input:
-    - all possible selectible tabs of the shelf with names as a string array
-    - number of seletectible tabs
-    - current active tab array index
-    - scrollbar pixel offset for the shelf
-    Output:
-    - group layout to fill with widgets
-    - the from user input updated current shelf tab index
-*/
-void zr_shelf_end(struct zr_context *p, struct zr_context *s, struct zr_vec2 *scrollbar);
-/*  this function finishes the previously started shelf layout
-    Input:
-    - previously started group layout
-    Output:
-    - The from user input updated shelf scrollbar pixel offset
-*/
-
 #ifdef __cplusplus
 }
 #endif
