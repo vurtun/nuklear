@@ -44,14 +44,14 @@ draw the GUI.
 
 ## Example
 ```c
+/* allocate memory to hold draw commands */
+struct zr_command_queue queue;
+zr_command_queue_init_fixed(&queue, malloc(MEMORY_SIZE), MEMORY_SIZE);
+
 /* setup configuration */
 struct zr_style style;
 struct zr_user_font font = {...};
 zr_style_default(&style, ZR_DEFAULT_ALL, &font);
-
-/* allocate memory to hold draw commands */
-struct zr_command_queue queue;
-zr_command_queue_init_fixed(&queue, malloc(MEMORY_SIZE), MEMORY_SIZE);
 
 /* initialize window */
 struct zr_window window;
