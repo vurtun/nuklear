@@ -1781,21 +1781,24 @@ zr_size zr_edit_box_len(struct zr_edit_box*);
     the toolkit so everything has to be stored byte the user.
 
     Widget function API
-    zr_widget_text                 -- draws a string inside a box
-    zr_widget_button_text          -- button widget with text content
-    zr_widget_button_image         -- button widget with icon content
-    zr_widget_button_triangle      -- button widget with triangle content
-    zr_widget_button_text_triangle -- button widget with triangle and text content
-    zr_widget_button_text_image    -- button widget with image and text content
-    zr_widget_toggle               -- either a checkbox or radiobutton widget
-    zr_widget_slider               -- floating point slider widget
-    zr_widget_progress             -- unsigned integer progressbar widget
-    zr_widget_editbox              -- Editbox widget for complex user input
-    zr_widget_edit                 -- Editbox wiget for basic user input
-    zr_widget_edit_filtered        -- Editbox with utf8 gylph filter capabilities
-    zr_widget_spinner              -- integer spinner widget
-    zr_widget_scrollbarv           -- vertical scrollbar widget imeplementation
-    zr_widget_scrollbarh           -- horizontal scrollbar widget imeplementation
+    zr_widget_text                  -- draws a string inside a box
+    zr_widget_button_text           -- button widget with text content
+    zr_widget_button_image          -- button widget with icon content
+    zr_widget_button_triangle       -- button widget with triangle content
+    zr_widget_button_text_triangle  -- button widget with triangle and text content
+    zr_widget_button_text_image     -- button widget with image and text content
+    zr_widget_toggle                -- either a checkbox or radiobutton widget
+    zr_widget_slider                -- floating point slider widget
+    zr_widget_progress              -- unsigned integer progressbar widget
+    zr_widget_editbox               -- Editbox widget for complex user input
+    zr_widget_edit                  -- Editbox wiget for basic user input
+    zr_widget_edit_filtered         -- Editbox with utf8 gylph filter capabilities
+    zr_widget_spinner_int           -- integer spinner widget
+    zr_widget_spinner_float         -- float spinner widget
+    zr_widget_drag_int              -- integer dragging widget
+    zr_widget_drag_float            -- float dragging widget
+    zr_widget_scrollbarv            -- vertical scrollbar widget imeplementation
+    zr_widget_scrollbarh            -- horizontal scrollbar widget imeplementation
 */
 enum zr_text_align {
     ZR_TEXT_LEFT,
@@ -2222,7 +2225,7 @@ zr_size zr_widget_edit_filtered(struct zr_command_buffer*, struct zr_rect,
     - state of the editbox with either active or inactive
     - returns the size of the buffer in bytes after the modification
 */
-zr_int zr_widget_spinner(struct zr_command_buffer*, struct zr_rect,
+zr_int zr_widget_spinner_int(struct zr_command_buffer*, struct zr_rect,
                         const struct zr_spinner*, zr_int min, zr_int value,
                         zr_int max, zr_int step, zr_state *active,
                         const struct zr_input*, const struct zr_user_font*);
@@ -2240,6 +2243,25 @@ zr_int zr_widget_spinner(struct zr_command_buffer*, struct zr_rect,
     Output:
     - returns the from the user input updated spinner value
 */
+zr_float zr_widget_spinner_float(struct zr_command_buffer*, struct zr_rect,
+                        const struct zr_spinner*, zr_float min, zr_float value,
+                        zr_float max, zr_float step, zr_state *active,
+                        const struct zr_input*, const struct zr_user_font*);
+/*  this function executes a float spinner widget
+    Input:
+    - output command buffer for draw commands
+    - bounds of the spinner widget
+    - visual widget style structure describing the spinner
+    - minimal spinner value that will no be underflown
+    - spinner value that will be updated
+    - maximal spinner value that will no be overflown
+    - spinner input state with either active or inactive
+    - input structure to update the slider with
+    - font structure for text drawing
+    Output:
+    - returns the from the user input updated spinner value
+*/
+
 zr_float zr_widget_scrollbarv(struct zr_command_buffer*, struct zr_rect,
                                 zr_float offset, zr_float target,
                                 zr_float step, const struct zr_scrollbar*,
@@ -3307,9 +3329,22 @@ zr_size zr_edit_filtered(struct zr_context*, zr_char *buffer, zr_size len,
     - length of the buffer after user input update
     - current state of the editbox with active(zr_true) or inactive(zr_false)
 */
-zr_int zr_spinner(struct zr_context*, zr_int min, zr_int value, zr_int max,
+zr_int zr_spinner_int(struct zr_context*, zr_int min, zr_int value, zr_int max,
                     zr_int step, zr_state *active);
 /*  this function creates a integer spinner widget
+    Input:
+    - min value that will not be underflown
+    - current spinner value to be updated by user input
+    - max value that will not be overflown
+    - spinner value modificaton stepping intervall
+    - current state of the spinner with active as currently modfied by user input
+    Output:
+    - the from user input updated spinner value
+    - current state of the editbox with active(zr_true) or inactive(zr_false)
+*/
+zr_float zr_spinner_float(struct zr_context*, zr_float min, zr_float value, zr_float max,
+                    zr_float step, zr_state *active);
+/*  this function creates a float spinner widget
     Input:
     - min value that will not be underflown
     - current spinner value to be updated by user input

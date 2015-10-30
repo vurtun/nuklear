@@ -38,6 +38,7 @@
 #define ZR_4_DIV_PI_SQRT (0.405284735f)
 #define ZR_UTF_INVALID 0xFFFD
 #define ZR_MAX_NUMBER_BUFFER 64
+#define ZR_MAX_FLOAT_PRECISION 2
 
 #define ZR_UNUSED(x) ((void)(x))
 #define ZR_LERP(a, b, t) ((a) + ((b) - (a)) * (t))
@@ -61,6 +62,7 @@
 
 enum zr_tree_node_symbol {ZR_TREE_NODE_BULLET, ZR_TREE_NODE_TRIANGLE};
 static const struct zr_rect zr_null_rect = {-8192.0f, -8192.0f, 16384, 16384};
+static const double ZR_DOUBLE_PRECISION = 0.00000000000001;
 /* ==============================================================
  *                          ALIGNMENT
  * =============================================================== */
@@ -231,6 +233,59 @@ zr_strtoi(zr_int *number, const char *buffer, zr_size len)
     return 1;
 }
 
+static zr_int
+zr_strtof(zr_float *number, const char *buffer)
+{
+    zr_int i;
+    zr_float m;
+    zr_bool div;
+    zr_int pow;
+    const zr_char *p = buffer;
+    zr_float floatvalue = 0;
+
+    ZR_ASSERT(number);
+    ZR_ASSERT(buffer);
+    if (!number || !buffer) return 0;
+    *number = 0;
+
+    while( *p && *p != '.' && *p != 'e' ) {
+        floatvalue = floatvalue * 10.0f + (zr_float) (*p - '0');
+        p++;
+    }
+
+    if ( *p == '.' ) {
+        p++;
+        for(m = 0.1f; *p && *p != 'e'; p++ ) {
+            floatvalue = floatvalue + (zr_float) (*p - '0') * m;
+            m *= 0.1f;
+        }
+    }
+    if ( *p == 'e' ) {
+        p++;
+        if ( *p == '-' ) {
+            div = zr_true;
+            p++;
+        }
+        else if ( *p == '+' ) {
+            div = zr_false;
+            p++;
+        }
+        else div = zr_false;
+
+        for ( pow = 0; *p; p++ )
+            pow = pow * 10 + (int) (*p - '0');
+
+        for ( m = 1.0, i = 0; i < pow; i++ )
+            m *= 10.0f;
+
+        if ( div )
+            floatvalue /= m;
+        else floatvalue *= m;
+    }
+    *number = floatvalue;
+    return 1;
+}
+
 static zr_size
 zr_itos(char *buffer, zr_int num)
 {
@@ -262,6 +317,155 @@ zr_itos(char *buffer, zr_int num)
     } while (num);
     return len;
 }
+
+static zr_double
+zr_pow(double x, int n)
+{
+    /*  check the sign of n */
+    zr_double r = 1;
+    int plus = n >= 0;
+    n = (plus) ? n : -n;
+    while (n > 0) {
+        if ((n & 1) == 1)
+            r *= x;
+        n /= 2;
+        x *= x;
+    }
+    return plus ? r : 1.0 / r;
+}
+
+static zr_int
+zr_isinf(double x)
+{
+    union {zr_ulong u; double f;} ieee754;
+    ieee754.f = x;
+    return ( (unsigned)(ieee754.u >> 32) & 0x7fffffff ) == 0x7ff00000 &&
+           ( (unsigned)ieee754.u == 0 );
+}
+
+static int
+zr_isnan(double x)
+{
+    union {zr_ulong u; double f;} ieee754;
+    ieee754.f = x;
+    return ( (unsigned)(ieee754.u >> 32) & 0x7fffffff ) +
+           ( (unsigned)ieee754.u != 0 ) > 0x7ff00000;
+}
+
+static zr_double
+zr_fabs(zr_double x)
+{
+    if (x < 0) return -x;
+    return x;
+}
+
+static zr_double
+zr_floor(zr_double x)
+{
+    return (zr_double)((zr_int)x - ((x < 0.0) ? 1 : 0));
+}
+
+static zr_int
+zr_log10(zr_double n)
+{
+    zr_int neg;
+    zr_int ret;
+    zr_int exp = 0;
+
+    neg = (n < 0) ? 1 : 0;
+    ret = (neg) ? (zr_int)-n : (zr_int)n;
+    while ((ret / 10) > 0) {
+        ret /= 10;
+        exp++;
+    }
+    if (neg) exp = -exp;
+    return exp;
+}
+
+static zr_size
+zr_dtos(char *s, zr_double n)
+{
+    zr_int useExp;
+    zr_int digit, m, m1;
+    zr_char *c = s;
+    zr_int neg;
+
+    if (zr_isnan(n)) {
+        s[0] = 'n'; s[1] = 'a'; s[2] = 'n'; s[3] = '\0';
+        return 3;
+    } else if (zr_isinf(n)) {
+        s[0] = 'i'; s[1] = 'n'; s[2] = 'f'; s[3] = '\0';
+        return 3;
+    } else if (n == 0.0) {
+        s[0] = '0'; s[1] = '\0';
+        return 1;
+    }
+
+    neg = (n < 0);
+    if (neg) n = -n;
+
+    /* calculate magnitude */
+    m = zr_log10(n);
+    useExp = (m >= 14 || (neg && m >= 9) || m <= -9);
+    if (neg) *(c++) = '-';
+
+    /* set up for scientific notation */
+    if (useExp) {
+        if (m < 0)
+           m -= 1;
+        n = n / zr_pow(10.0, m);
+        m1 = m;
+        m = 0;
+    }
+    if (m < 1.0) {
+        m = 0;
+    }
+
+    /* convert the number */
+    while (n > ZR_DOUBLE_PRECISION || m >= 0) {
+        zr_double tmp;
+        zr_double weight = zr_pow(10.0, m);
+        if (weight > 0 && !zr_isinf(weight)) {
+            zr_double t = (zr_double)n / weight;
+            tmp = zr_floor(t);
+            digit = (zr_int)tmp;
+            n -= (digit * weight);
+            *(c++) = (zr_char)('0' + (zr_char)digit);
+        }
+        if (m == 0 && n > 0)
+            *(c++) = '.';
+        m--;
+    }
+
+    if (useExp) {
+        /* convert the exponent */
+        int i, j;
+        *(c++) = 'e';
+        if (m1 > 0) {
+            *(c++) = '+';
+        } else {
+            *(c++) = '-';
+            m1 = -m1;
+        }
+        m = 0;
+        while (m1 > 0) {
+            *(c++) = (zr_char)('0' + (zr_char)(m1 % 10));
+            m1 /= 10;
+            m++;
+        }
+        c -= m;
+        for (i = 0, j = m-1; i<j; i++, j--) {
+            /* swap without temporary */
+            c[i] ^= c[j];
+            c[j] ^= c[i];
+            c[i] ^= c[j];
+        }
+        c += m;
+    }
+    *(c) = '\0';
+    return (zr_size)(c - s);
+}
+
 /*
  * ==============================================================
  *
@@ -956,6 +1160,7 @@ zr_input_is_key_down(const struct zr_input *i, enum zr_keys key)
     if (k->down) return zr_true;
     return zr_false;
 }
+
 /*
  * ==============================================================
  *
@@ -4732,8 +4937,9 @@ zr_widget_spinner_base(struct zr_command_buffer *out, struct zr_rect r,
     return ret;
 }
 
+
 zr_int
-zr_widget_spinner(struct zr_command_buffer *out, struct zr_rect r,
+zr_widget_spinner_int(struct zr_command_buffer *out, struct zr_rect r,
     const struct zr_spinner *s, zr_int min, zr_int value,
     zr_int max, zr_int step, zr_state *active, const struct zr_input *in,
     const struct zr_user_font *font)
@@ -4762,6 +4968,70 @@ zr_widget_spinner(struct zr_command_buffer *out, struct zr_rect r,
 
     if (old_len != len)
         zr_strtoi(&value, string, len);
+    if (active) *active = is_active;
+    return value;
+}
+
+static zr_size
+zr_string_float_limit(char *string, zr_int prec)
+{
+    zr_int dot = 0;
+    char *c = string;
+    while (*c) {
+        if (*c == '.') {
+            dot = 1;
+            c++;
+            continue;
+        }
+        if (dot == (prec+1)) {
+            *c = 0;
+            break;
+        }
+        if (dot > 0) dot++;
+        c++;
+    }
+    return (zr_size)(c - string);
+}
+
+zr_float
+zr_widget_spinner_float(struct zr_command_buffer *out, struct zr_rect r,
+    const struct zr_spinner *s, zr_float min, zr_float value, zr_float max,
+    zr_float step, zr_state *active, const struct zr_input *in,
+    const struct zr_user_font *font)
+{
+    zr_int res;
+    char string[ZR_MAX_NUMBER_BUFFER];
+    zr_size len, old_len;
+    zr_state is_active;
+
+    ZR_ASSERT(out);
+    ZR_ASSERT(s);
+    ZR_ASSERT(font);
+    if (!out || !s || !font) return value;
+
+    /* make sure given values are correct */
+    value = CLAMP(min, value, max);
+    len = zr_dtos(string, value);
+    len = zr_string_float_limit(string, ZR_MAX_FLOAT_PRECISION);
+    is_active = (active) ? *active : zr_false;
+    old_len = len;
+
+    res = zr_widget_spinner_base(out, r, s, string, &len, ZR_INPUT_FLOAT, &is_active, in, font);
+    if (res) {
+        zr_int val;
+        zr_float f = (zr_float)zr_pow(10.0, ZR_MAX_FLOAT_PRECISION);
+        value += (res > 0) ? step : -step;
+        value = CLAMP(min, value, max);
+        val = (zr_int)(value * f);
+        val = ((val + (zr_int)((step*f)*0.5f)) / (zr_int)(step*f)) * (zr_int)(step*f);
+        value = (zr_float)val / f;
+    }
+
+    if (old_len != len) {
+        zr_float old = value;
+        zr_string_float_limit(string, ZR_MAX_FLOAT_PRECISION);
+        zr_strtof(&value, string);
+    }
     if (active) *active = is_active;
     return value;
 }
@@ -4798,7 +5068,7 @@ zr_style_default_rounding(struct zr_style *style)
 static void
 zr_style_default_color(struct zr_style *style)
 {
-    style->colors[ZR_COLOR_TEXT] = zr_rgba(135, 135, 135, 255);
+    style->colors[ZR_COLOR_TEXT] = zr_rgba(165, 165, 165, 255);
     style->colors[ZR_COLOR_TEXT_HOVERING] = zr_rgba(120, 120, 120, 255);
     style->colors[ZR_COLOR_TEXT_ACTIVE] = zr_rgba(100, 100, 100, 255);
     style->colors[ZR_COLOR_WINDOW] = zr_rgba(45, 45, 45, 255);
@@ -6925,7 +7195,7 @@ zr_spinner_base(struct zr_context *layout, struct zr_rect *bounds,
 }
 
 zr_int
-zr_spinner(struct zr_context *layout, zr_int min, zr_int value,
+zr_spinner_int(struct zr_context *layout, zr_int min, zr_int value,
     zr_int max, zr_int step, zr_state *active)
 {
     struct zr_rect bounds;
@@ -6938,7 +7208,25 @@ zr_spinner(struct zr_context *layout, zr_int min, zr_int value,
     if (!state) return value;
     out = layout->buffer;
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
-    return zr_widget_spinner(out, bounds, &spinner, min, value, max, step, active,
+    return zr_widget_spinner_int(out, bounds, &spinner, min, value, max, step, active,
+                        i, &layout->style->font);
+}
+
+zr_float
+zr_spinner_float(struct zr_context *layout, zr_float min, zr_float value,
+    zr_float max, zr_float step, zr_state *active)
+{
+    struct zr_rect bounds;
+    struct zr_spinner spinner;
+    struct zr_command_buffer *out;
+    const struct zr_input *i;
+    enum zr_widget_state state;
+
+    state = zr_spinner_base(layout, &bounds, &spinner);
+    if (!state) return value;
+    out = layout->buffer;
+    i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
+    return zr_widget_spinner_float(out, bounds, &spinner, min, value, max, step, active,
                         i, &layout->style->font);
 }
 /*

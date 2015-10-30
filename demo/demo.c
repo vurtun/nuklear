@@ -295,7 +295,7 @@ color_picker(struct zr_context *panel, struct color_picker* control,
         zr_layout_row_dynamic(&popup, 30, 2);
         for (i = 0; i < 4; ++i, iter++) {
             zr_float t;
-            *iter = (zr_byte)zr_spinner(&popup, 0, *iter, 255, 1, NULL);
+            *iter = (zr_byte)zr_spinner_int(&popup, 0, *iter, 255, 1, NULL);
             t = *iter;
             t = zr_slider(&popup, 0, t, 255, 10);
             *iter = (zr_byte)t;
@@ -509,7 +509,9 @@ struct state {
     zr_float slider;
     zr_size progressbar;
     zr_int spinner;
+    zr_float spinnerf;
     zr_state spinner_active;
+    zr_state spinnerf_active;
     zr_size item_current;
     zr_size shelf_selection;
     zr_bool toggle;
@@ -608,7 +610,8 @@ widget_panel(struct zr_context *panel, struct state *demo)
     /* item selection  */
     if (!demo->scaleable) zr_layout_row_static(panel, 30, 150, 1);
     else zr_layout_row_dynamic(panel, 30, 1);
-    demo->spinner = zr_spinner(panel, 0, demo->spinner, 250, 10, &demo->spinner_active);
+    demo->spinner = zr_spinner_int(panel, 0, demo->spinner, 250, 10, &demo->spinner_active);
+    demo->spinnerf = zr_spinner_float(panel, 0.0f, demo->spinnerf, 8.0f, 0.5f, &demo->spinnerf_active);
 
     /* combo boxes  */
     if (!demo->scaleable) zr_layout_row_static(panel, 30, 150, 1);
@@ -665,8 +668,8 @@ properties_tab(struct zr_context *panel, struct zr_style *config)
     for (i = 0; i <= ZR_PROPERTY_SCROLLBAR_SIZE; ++i) {
         zr_int tx, ty;
         zr_label(panel, properties[i], ZR_TEXT_LEFT);
-        tx = zr_spinner(panel,0,(zr_int)config->properties[i].x, 20, 1, NULL);
-        ty = zr_spinner(panel,0,(zr_int)config->properties[i].y, 20, 1, NULL);
+        tx = zr_spinner_int(panel,0,(zr_int)config->properties[i].x, 20, 1, NULL);
+        ty = zr_spinner_int(panel,0,(zr_int)config->properties[i].y, 20, 1, NULL);
         config->properties[i].x = (float)tx;
         config->properties[i].y = (float)ty;
     }
@@ -683,7 +686,7 @@ round_tab(struct zr_context *panel, struct zr_style *config)
     for (i = 0; i < ZR_ROUNDING_MAX; ++i) {
         zr_int t;
         zr_label(panel, rounding[i], ZR_TEXT_LEFT);
-        t = zr_spinner(panel,0,(zr_int)config->rounding[i], 20, 1, NULL);
+        t = zr_spinner_int(panel,0,(zr_int)config->rounding[i], 20, 1, NULL);
         config->rounding[i] = (float)t;
     }
 }
@@ -770,7 +773,8 @@ init_demo(struct demo_gui *gui)
     win->slider = 2.0f;
     win->progressbar = 50;
     win->spinner = 100;
-    win->value = 0.6f;
+    win->spinnerf = 0.5f;
+    win->value = 0.5f;
 }
 
 /* -----------------------------------------------------------------
