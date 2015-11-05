@@ -7078,7 +7078,7 @@ zr_button_text_image(struct zr_context *layout, struct zr_image img,
 }
 
 zr_bool
-zr_selectable(struct zr_context *layout, const char *str,
+zr_select(struct zr_context *layout, const char *str,
     enum zr_text_align align, zr_bool value)
 {
     struct zr_rect bounds;
@@ -7119,6 +7119,16 @@ zr_selectable(struct zr_context *layout, const char *str,
     return value;
 }
 
+zr_bool
+zr_selectable(struct zr_context *layout, const char *str,
+    enum zr_text_align align, zr_bool *value)
+{
+    zr_bool old = *value;
+    zr_bool ret = zr_select(layout, str, align, old);
+    *value = ret;
+    ret = ret != old;
+}
+
 static enum zr_widget_state
 zr_toggle_base(struct zr_toggle *toggle, struct zr_rect *bounds,
     struct zr_context *layout)
@@ -7138,8 +7148,15 @@ zr_toggle_base(struct zr_toggle *toggle, struct zr_rect *bounds,
     return state;
 }
 
+zr_bool
+zr_check(struct zr_context *layout, const char *text, zr_bool active)
+{
+    zr_checkbox(layout, text, &active);
+    return active;
+}
+
 void
-zr_check(struct zr_context *layout, const char *text, zr_bool *is_active)
+zr_checkbox(struct zr_context *layout, const char *text, zr_bool *is_active)
 {
     struct zr_rect bounds;
     struct zr_toggle toggle;
@@ -7158,6 +7175,12 @@ zr_check(struct zr_context *layout, const char *text, zr_bool *is_active)
     toggle.hover = config->colors[ZR_COLOR_TOGGLE_HOVER];
     zr_widget_toggle(layout->buffer, bounds, is_active, text, ZR_TOGGLE_CHECK,
                         &toggle, i, &config->font);
+}
+
+void
+zr_radio(struct zr_context *layout, const char *text, zr_bool *active)
+{
+    *active = zr_option(layout, text, *active);
 }
 
 zr_bool

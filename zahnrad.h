@@ -3241,13 +3241,29 @@ void zr_image(struct zr_context*, struct zr_image);
     Input:
     - string pointer to text that should be drawn
 */
-void zr_check(struct zr_context*, const char*, zr_bool *active);
+zr_bool zr_check(struct zr_context*, const char*, zr_bool active);
 /*  this function creates a checkbox widget with either active or inactive state
     Input:
     - checkbox label describing the content
     - state of the checkbox with either active or inactive
     Output:
     - from user input updated state of the checkbox
+*/
+void zr_checkbox(struct zr_context*, const char*, zr_bool *active);
+/*  this function creates a checkbox widget with either active or inactive state
+    Input:
+    - checkbox label describing the content
+    - state of the checkbox with either active or inactive
+    Output:
+    - from user input updated state of the checkbox
+*/
+void zr_radio(struct zr_context*, const char*, zr_bool *active);
+/*  this function creates a radiobutton widget with either active or inactive state
+    Input:
+    - radiobutton label describing the content
+    - state of the radiobutton with either active or inactive
+    Output:
+    - from user input updated state of the radiobutton
 */
 zr_bool zr_option(struct zr_context*, const char*, zr_bool active);
 /*  this function creates a radiobutton widget with either active or inactive state
@@ -3320,13 +3336,22 @@ zr_bool zr_button_text_image(struct zr_context *layout, struct zr_image img,
         default button behavior or pressed if repeater behavior.
 */
 zr_bool zr_selectable(struct zr_context *layout, const char *str,
-                        enum zr_text_align align, zr_bool value);
-/*  this function creates a toggle button which is either active or inactive
+                        enum zr_text_align align, zr_bool *value);
+/*  this function creates a selectable item which is either active or inactive
     Input:
     - selectable text to draw
     - current state of the toggle
     Output:
-    - returns whether the selectable was selected
+    - returns whether the selectable was changed
+*/
+zr_bool zr_select(struct zr_context *layout, const char *str,
+                    enum zr_text_align align, zr_bool value);
+/*  this function creates a selectable item which is either active or inactive
+    Input:
+    - selectable text to draw
+    - current state of the toggle
+    Output:
+    - returns the updated selectable state
 */
 void zr_slider_float(struct zr_context*, zr_float min, zr_float *val, zr_float max,
                     zr_float step);
