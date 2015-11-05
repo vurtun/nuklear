@@ -4002,7 +4002,7 @@ zr_widget_text(struct zr_command_buffer *o, struct zr_rect b,
     b.h = MAX(b.h, 2 * t->padding.y);
     label.x = 0; label.w = 0;
     label.y = b.y + t->padding.y;
-    label.h = MAX(0, b.h - 2 * t->padding.y);
+    label.h = b.h - 2 * t->padding.y;
 
     text_width = f->width(f->userdata, (const zr_char*)string, len);
     text_width += (zr_size)(2 * t->padding.x);
@@ -4023,6 +4023,45 @@ zr_widget_text(struct zr_command_buffer *o, struct zr_rect b,
     } else return;
     zr_command_buffer_push_text(o, label, (const zr_char*)string,
         len, f, t->background, t->text);
+}
+
+void
+zr_widget_text_wrap(struct zr_command_buffer *o, struct zr_rect b,
+    const char *string, zr_size len, const struct zr_text *t,
+    const struct zr_user_font *f)
+{
+    zr_float width;
+    zr_size glyphes = 0;
+    zr_size fitting = 0;
+    zr_size done = 0;
+    struct zr_rect line;
+    struct zr_text text;
+
+    ZR_ASSERT(o);
+    ZR_ASSERT(t);
+    if (!o || !t) return;
+
+    text.padding = zr_vec2(0,0);
+    text.background = t->background;
+    text.text = t->text;
+
+    b.w = MAX(b.w, 2 * t->padding.x);
+    b.h = MAX(b.h, 2 * t->padding.y);
+    b.h = b.h - 2 * t->padding.y;
+
+    line.x = b.x + t->padding.x;
+    line.y = b.y + t->padding.y;
+    line.w = b.w - 2 * t->padding.x;
+    line.h = 2 * t->padding.y + f->height;
+
+    fitting = zr_use_font_glyph_clamp(f, string, len, line.w, &glyphes, &width);
+    while (done < len) {
+        if (!fitting || line.y + line.h >= (b.y + b.h)) break;
+        zr_widget_text(o, line, &string[done], fitting, &text, ZR_TEXT_LEFT, f);
+        done += fitting;
+        line.y += f->height + 2 * t->padding.y;
+        fitting = zr_use_font_glyph_clamp(f, &string[done], len-done, line.w, &glyphes, &width);
+    }
 }
 
 zr_bool
@@ -6808,9 +6847,39 @@ zr_text_colored(struct zr_context *layout, const char *str, zr_size len,
 }
 
 void
+zr_text_wrap_colored(struct zr_context *layout, const char *str,
+    zr_size len, struct zr_color color)
+{
+    struct zr_rect bounds;
+    struct zr_text text;
+    const struct zr_style *config;
+    struct zr_vec2 item_padding;
+
+    ZR_ASSERT(layout);
+    ZR_ASSERT(layout->style);
+    ZR_ASSERT(layout->buffer);
+
+    if (!layout) return;
+    if (!layout->valid || !layout->style || !layout->buffer) return;
+    zr_panel_alloc_space(&bounds, layout);
+    config = layout->style;
+    item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
+
+    text.padding.x = item_padding.x;
+    text.padding.y = item_padding.y;
+    text.background = config->colors[ZR_COLOR_WINDOW];
+    text.text = color;
+    zr_widget_text_wrap(layout->buffer, bounds, str, len, &text, &config->font);
+}
+
+void
+zr_text_wrap(struct zr_context *l, const char *str, zr_size len)
+{zr_text_wrap_colored(l, str, len, l->style->colors[ZR_COLOR_TEXT]);}
+
+void
 zr_text(struct zr_context *l, const char *str, zr_size len,
     enum zr_text_align alignment)
-{zr_text_colored(l, str, len, alignment,l->style->colors[ZR_COLOR_TEXT]);}
+{zr_text_colored(l, str, len, alignment, l->style->colors[ZR_COLOR_TEXT]);}
 
 void
 zr_label_colored(struct zr_context *layout, const char *text,
@@ -6821,6 +6890,14 @@ void
 zr_label(struct zr_context *layout, const char *text,
     enum zr_text_align align)
 {zr_text(layout, text, zr_strsiz(text), align);}
+
+void
+zr_label_wrap(struct zr_context *l, const char *str)
+{zr_text_wrap(l, str, zr_strsiz(str));}
+
+void
+zr_label_colored_wrap(struct zr_context *l, const char *str, struct zr_color color)
+{zr_text_wrap_colored(l, str, zr_strsiz(str), color);}
 
 void
 zr_image(struct zr_context *layout, struct zr_image img)
@@ -7360,7 +7437,7 @@ zr_graph_begin(struct zr_context *layout, struct zr_graph *graph,
     graph->last.x = 0; graph->last.y = 0;
 }
 
-static zr_bool
+static zr_flags
 zr_graph_push_line(struct zr_context *layout,
     struct zr_graph *g, zr_float value)
 {
@@ -7368,9 +7445,10 @@ zr_graph_push_line(struct zr_context *layout,
     const struct zr_style *config = layout->style;
     const struct zr_input *i = layout->input;
     struct zr_color color = config->colors[ZR_COLOR_PLOT_LINES];
-    zr_bool selected = zr_false;
+    zr_flags ret = 0;
     zr_float step, range, ratio;
     struct zr_vec2 cur;
+    struct zr_rect bounds;
 
     ZR_ASSERT(g);
     ZR_ASSERT(layout);
@@ -7386,16 +7464,21 @@ zr_graph_push_line(struct zr_context *layout,
         /* special case for the first data point since it does not have a connection */
         g->last.x = g->x;
         g->last.y = (g->y + g->h) - ratio * (zr_float)g->h;
+        bounds.x = g->last.x - 3;
+        bounds.y = g->last.y - 3;
+        bounds.w = 6;
+        bounds.h = 6;
+
         if (!(layout->flags & ZR_WINDOW_ROM) &&
             ZR_INBOX(i->mouse.pos.x,i->mouse.pos.y,g->last.x-3,g->last.y-3,6,6)){
-            selected = (i->mouse.buttons[ZR_BUTTON_LEFT].down &&
-                i->mouse.buttons[ZR_BUTTON_LEFT].clicked) ? zr_true: zr_false;
+            ret = zr_input_is_mouse_hovering_rect(i, bounds) ? ZR_GRAPH_HOVERING : 0;
+            ret |= (i->mouse.buttons[ZR_BUTTON_LEFT].down &&
+                i->mouse.buttons[ZR_BUTTON_LEFT].clicked) ? ZR_GRAPH_CLICKED: 0;
             color = config->colors[ZR_COLOR_PLOT_HIGHLIGHT];
         }
-        zr_command_buffer_push_rect(out,
-            zr_rect(g->last.x - 3, g->last.y - 3, 6, 6), 0, color);
+        zr_command_buffer_push_rect(out, bounds, 0, color);
         g->index++;
-        return selected;
+        return ret;
     }
 
     /* draw a line between the last data point and the new one */
@@ -7404,11 +7487,16 @@ zr_graph_push_line(struct zr_context *layout,
     zr_command_buffer_push_line(out, g->last.x, g->last.y, cur.x, cur.y,
         config->colors[ZR_COLOR_PLOT_LINES]);
 
+    bounds.x = cur.x - 3;
+    bounds.y = cur.y - 3;
+    bounds.w = 6;
+    bounds.h = 6;
+
     /* user selection of the current data point */
-    if (!(layout->flags & ZR_WINDOW_ROM) &&
-        ZR_INBOX(i->mouse.pos.x, i->mouse.pos.y, cur.x-3, cur.y-3, 6, 6)) {
-        selected = (i->mouse.buttons[ZR_BUTTON_LEFT].down &&
-            i->mouse.buttons[ZR_BUTTON_LEFT].clicked) ? zr_true: zr_false;
+    if (!(layout->flags & ZR_WINDOW_ROM) && zr_input_is_mouse_hovering_rect(i, bounds)) {
+        ret = ZR_GRAPH_HOVERING;
+        ret |= (i->mouse.buttons[ZR_BUTTON_LEFT].down &&
+            i->mouse.buttons[ZR_BUTTON_LEFT].clicked) ? ZR_GRAPH_CLICKED: 0;
         color = config->colors[ZR_COLOR_PLOT_HIGHLIGHT];
     } else color = config->colors[ZR_COLOR_PLOT_LINES];
     zr_command_buffer_push_rect(out, zr_rect(cur.x - 3, cur.y - 3, 6, 6), 0, color);
@@ -7417,10 +7505,10 @@ zr_graph_push_line(struct zr_context *layout,
     g->last.x = cur.x;
     g->last.y = cur.y;
     g->index++;
-    return selected;
+    return ret;
 }
 
-static zr_bool
+static zr_flags
 zr_graph_push_column(struct zr_context *layout,
     struct zr_graph *graph, zr_float value)
 {
@@ -7431,7 +7519,7 @@ zr_graph_push_column(struct zr_context *layout,
     struct zr_color color;
 
     zr_float ratio;
-    zr_bool selected = zr_false;
+    zr_flags ret = 0;
     struct zr_rect item = {0,0,0,0};
     item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
 
@@ -7455,16 +7543,17 @@ zr_graph_push_column(struct zr_context *layout,
     /* user graph bar selection */
     if (!(layout->flags & ZR_WINDOW_ROM) &&
         ZR_INBOX(in->mouse.pos.x,in->mouse.pos.y,item.x,item.y,item.w,item.h)) {
-        selected = (in->mouse.buttons[ZR_BUTTON_LEFT].down &&
-                in->mouse.buttons[ZR_BUTTON_LEFT].clicked) ? (zr_int)graph->index: selected;
+        ret = ZR_GRAPH_HOVERING;
+        ret |= (in->mouse.buttons[ZR_BUTTON_LEFT].down &&
+                in->mouse.buttons[ZR_BUTTON_LEFT].clicked) ? ZR_GRAPH_CLICKED: 0;
         color = config->colors[ZR_COLOR_HISTO_HIGHLIGHT];
     }
     zr_command_buffer_push_rect(out, item, 0, color);
     graph->index++;
-    return selected;
+    return ret;
 }
 
-zr_bool
+zr_flags
 zr_graph_push(struct zr_context *layout, struct zr_graph *graph,
     zr_float value)
 {
@@ -7506,16 +7595,15 @@ zr_graph_end(struct zr_context *layout, struct zr_graph *graph)
  */
 void
 zr_tree_begin(struct zr_context *p, struct zr_tree *tree,
-    const char *title, zr_float height, struct zr_vec2 offset)
+    const char *title, zr_flags flags, zr_float height, struct zr_vec2 offset)
 {
     struct zr_vec2 padding;
     const struct zr_style *config;
     ZR_ASSERT(p);
     ZR_ASSERT(tree);
-    ZR_ASSERT(title);
-    if (!p || !tree || !title) return;
+    if (!p || !tree) return;
 
-    zr_group_begin(p, &tree->group, title, 0, offset);
+    zr_group_begin(p, &tree->group, title, flags, offset);
     zr_panel_layout(&tree->group, height, 1);
 
     config = tree->group.style;

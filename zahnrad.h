@@ -23,7 +23,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 /*
  * ==============================================================
  *
@@ -2028,6 +2027,18 @@ void zr_widget_text(struct zr_command_buffer*, struct zr_rect,
     - text alignment with either left, center and right
     - font structure for text drawing
 */
+void zr_widget_text_wrap(struct zr_command_buffer*, struct zr_rect,
+                        const char*, zr_size, const struct zr_text*,
+                        const struct zr_user_font*);
+/*  this function executes a wrapping text widget with text alignment
+    Input:
+    - output command buffer for drawing
+    - text bounds
+    - string to draw
+    - length of the string
+    - visual widget style structure describing the text
+    - font structure for text drawing
+*/
 zr_bool zr_widget_button(struct zr_command_buffer*, struct zr_rect,
                         const struct zr_button *b, const struct zr_input*,
                         enum zr_button_behavior behavior, struct zr_rect*);
@@ -3122,6 +3133,8 @@ void zr_layout_pop(struct zr_context*);
     zr_seperator            -- adds either a horizontal or vertical seperator
     zr_text                 -- text widget for printing text with length
     zr_text_colored         -- colored text widget for printing string by length
+    zr_text_wrap            -- wraping text widget for printing text with length
+    zr_text_wrap_colored    -- wraping colored text widget for printing string by length
     zr_label                -- text widget for printing zero terminated strings
     zr_label_colored        -- widget for printing colored zero terminiated strings
     zr_button_text          -- button widget with text content
@@ -3182,6 +3195,19 @@ void zr_text_colored(struct zr_context*, const char*, zr_size, enum zr_text_alig
     - text alignment with either left, centered or right alignment
     - color the text should be drawn
 */
+void zr_text_wrap(struct zr_context*, const char*, zr_size);
+/*  this function creates a bounded non terminated multiline text widget
+    Input:
+    - string pointer to text that should be drawn
+    - number of bytes the text is long
+*/
+void zr_text_wrap_colored(struct zr_context*, const char*, zr_size, struct zr_color);
+/*  this function creates a bounded nonterminated multiline colored text widget
+    Input:
+    - string pointer to text that should be drawn
+    - number of bytes the text is long
+    - color the text should be drawn
+*/
 void zr_label(struct zr_context*, const char*, enum zr_text_align);
 /*  this function creates a zero terminated text widget with either
     left, centered or right alignment
@@ -3195,6 +3221,19 @@ void zr_label_colored(struct zr_context*, const char*, enum zr_text_align, struc
     Input:
     - string pointer to text that should be drawn
     - text alignment with either left, centered or right alignment
+    - color the label should be drawn
+*/
+void zr_label_wrap(struct zr_context*, const char*);
+/*  this function creates a zero terminated wraping text widget with either
+    left, centered or right alignment
+    Input:
+    - string pointer to text that should be drawn
+*/
+void zr_label_colored_wrap(struct zr_context*, const char*, struct zr_color);
+/*  this function creates a zero terminated wraping colored text widget with either
+    left, centered or right alignment
+    Input:
+    - string pointer to text that should be drawn
     - color the label should be drawn
 */
 void zr_image(struct zr_context*, struct zr_image);
@@ -3468,6 +3507,13 @@ enum zr_graph_type {
     ZR_GRAPH_MAX
 };
 
+enum zr_graph_event {
+    ZR_GRAPH_HOVERING = 0x01,
+    /* Mouse hoveres over current value */
+    ZR_GRAPH_CLICKED = 0x02
+    /* Mouse click on current value */
+};
+
 struct zr_graph {
     zr_bool valid;
     /* graph valid flag to make sure that the graph is visible */
@@ -3497,10 +3543,12 @@ void zr_graph_begin(struct zr_context*, struct zr_graph*, enum zr_graph_type,
     Output:
     - graph stack object that can be filled with values
 */
-zr_bool zr_graph_push(struct zr_context*,struct zr_graph*,zr_float);
+zr_flags zr_graph_push(struct zr_context*,struct zr_graph*,zr_float);
 /*  this function pushes a value inside the pushed graph
     Input:
     - value data point to fill into the graph either as point or as bar
+    Output:
+    - event with either currently pushed value is hovered and/or clicked
 */
 void zr_graph_end(struct zr_context *layout, struct zr_graph*);
 /*  this function ends the graph */
@@ -3562,7 +3610,7 @@ struct zr_tree {
 };
 
 void zr_tree_begin(struct zr_context*, struct zr_tree*, const char *title,
-                    zr_float row_height, struct zr_vec2 scrollbar);
+                    zr_flags flags, zr_float row_height, struct zr_vec2 scrollbar);
 /*  this function begins the tree building process
     Input:
     - title describing the tree or NULL
