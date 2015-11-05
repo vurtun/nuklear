@@ -375,7 +375,7 @@ INT WINAPI
 WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int shown)
 {
     /* GUI */
-    struct demo_gui gui;
+    struct demo gui;
 
     /* Window */
     xw.wc.style = CS_HREDRAW|CS_VREDRAW;
