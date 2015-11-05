@@ -444,7 +444,7 @@ main(int argc, char *argv[])
     /* GUI */
     struct zr_allocator alloc;
     struct device device;
-    struct demo_gui gui;
+    struct demo gui;
     struct zr_font font;
 
     font_path = argv[1];
@@ -511,7 +511,7 @@ main(int argc, char *argv[])
 
         /* Draw */
         glClear(GL_COLOR_BUFFER_BIT);
-        glClearColor(0.4f, 0.4f, 0.4f, 1.0f);
+        glClearColor(0.9f, 0.9f, 0.9f, 1.0f);
         device_draw(&device, &gui.queue, width, height, ZR_ANTI_ALIASING_ON);
         SDL_GL_SwapWindow(win);
     }

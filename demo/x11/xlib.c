@@ -218,12 +218,10 @@ static void
 surface_scissor(XSurface *surf, float x, float y, float w, float h)
 {
     XRectangle clip_rect;
-    clip_rect.x = (short)(x - 1);
-    clip_rect.y = (short)(y - 1);
+    clip_rect.x = (short)(x-1);
+    clip_rect.y = (short)(y-1);
     clip_rect.width = (unsigned short)(w + 2);
     clip_rect.height = (unsigned short)(h + 2);
-    clip_rect.width = (unsigned short)MIN(surf->w, clip_rect.width);
-    clip_rect.height = (unsigned short)MIN(surf->h, clip_rect.height);
     XSetClipRectangles(surf->dpy, surf->gc, 0, 0, &clip_rect, 1, Unsorted);
 }
 
@@ -282,8 +280,6 @@ surface_draw_text(XSurface *surf, zr_short x, zr_short y, zr_ushort w, zr_ushort
     XSetForeground(surf->dpy, surf->gc, bg);
     XFillRectangle(surf->dpy, surf->drawable, surf->gc, (int)x, (int)y, (unsigned)w, (unsigned)h);
     if(!text || !font || !len) return;
-
-
 
     tx = (int)x;
     th = font->ascent + font->descent;
@@ -429,7 +425,7 @@ main(int argc, char *argv[])
     long dt;
     long started;
     XWindow xw;
-    struct demo_gui gui;
+    struct demo gui;
 
     /* Platform */
     UNUSED(argc); UNUSED(argv);
@@ -490,7 +486,7 @@ main(int argc, char *argv[])
 
         /* Draw */
         XClearWindow(xw.dpy, xw.win);
-        surface_clear(xw.surf, 0x00646464);
+        surface_clear(xw.surf, 0x00FFFFFF);
         draw(xw.surf, &gui.queue);
         surface_blit(xw.win, xw.surf, xw.width, xw.height);
         XFlush(xw.dpy);

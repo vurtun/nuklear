@@ -10,119 +10,8 @@
 #define WINDOW_WIDTH 1200
 #define WINDOW_HEIGHT 800
 
-#include <stdio.h>
+enum theme {THEME_BLACK, THEME_WHITE};
 
-#define WEAPON_MAP(WEAPON)\
-    WEAPON(FIST, "fist")\
-    WEAPON(PISTOL, "pistol")\
-    WEAPON(SHOTGUN, "shotgun")\
-    WEAPON(RAILGUN, "railgun")\
-    WEAPON(BFG, "bfg")
-
-#define MENU_FILE_ITEMS(ITEM)\
-    ITEM(OPEN, "open")\
-    ITEM(CLOSE, "close")\
-    ITEM(QUIT, "quit")
-
-#define MENU_EDIT_ITEMS(ITEM)\
-    ITEM(COPY, "copy")\
-    ITEM(CUT, "cut")\
-    ITEM(DELETE, "delete")\
-    ITEM(PASTE, "paste")
-
-#define COLOR_MAP(COLOR)\
-    COLOR(text)\
-    COLOR(text_hovering)\
-    COLOR(text_active)\
-    COLOR(window)\
-    COLOR(header)\
-    COLOR(border)\
-    COLOR(button)\
-    COLOR(button_hover)\
-    COLOR(button_active)\
-    COLOR(toggle)\
-    COLOR(toggle_hover)\
-    COLOR(toggle_cursor)\
-    COLOR(slider)\
-    COLOR(slider_cursor)\
-    COLOR(slider_cursor_hover)\
-    COLOR(slider_cursor_active)\
-    COLOR(progress)\
-    COLOR(progress_cursor)\
-    COLOR(progress_cursor_hover)\
-    COLOR(progress_cursor_active)\
-    COLOR(input)\
-    COLOR(input_cursor)\
-    COLOR(input_text)\
-    COLOR(spinner)\
-    COLOR(spinner_triangle)\
-    COLOR(histo)\
-    COLOR(histo_bars)\
-    COLOR(histo_negative)\
-    COLOR(histo_highlight)\
-    COLOR(plot)\
-    COLOR(plot_lines)\
-    COLOR(plot_highlight)\
-    COLOR(scrollbar)\
-    COLOR(scrollbar_cursor)\
-    COLOR(scrollbar_cursor_hover)\
-    COLOR(scrollbar_cursor_active)\
-    COLOR(table_lines)\
-    COLOR(tab_header)\
-    COLOR(shelf)\
-    COLOR(shelf_text)\
-    COLOR(shelf_active)\
-    COLOR(shelf_active_text)\
-    COLOR(scaler)
-
-enum weapon_types {
-#define WEAPON(id, name) WEAPON_##id,
-    WEAPON_MAP(WEAPON)
-#undef WEAPON
-    WEAPON_MAX
-};
-enum menu_file_items {
-#define ITEM(id, name) MENU_FILE_##id,
-    MENU_FILE_ITEMS(ITEM)
-#undef ITEM
-    MENU_FILE_MAX
-};
-enum menu_edit_items {
-#define ITEM(id, name) MENU_EDIT_##id,
-    MENU_EDIT_ITEMS(ITEM)
-#undef ITEM
-    MENU_EDIT_MAX
-};
-static const char *weapons[] = {
-#define WEAPON(id,name) name,
-    WEAPON_MAP(WEAPON)
-#undef WEAPON
-};
-static const char *file_items[] = {
-#define ITEM(id,name) name,
-    MENU_FILE_ITEMS(ITEM)
-#undef ITEM
-};
-static const char *edit_items[] = {
-#define ITEM(id,name) name,
-    MENU_EDIT_ITEMS(ITEM)
-#undef ITEM
-};
-static const char *colors[] = {
-#define COLOR(name) #name,
-    COLOR_MAP(COLOR)
-#undef COLOR
-};
-
-/* =================================================================
- *
- *                      CUSTOM WIDGET
- *
- * =================================================================
- */
-/* -----------------------------------------------------------------
- *  TREE WIDGET
- * ----------------------------------------------------------------- */
 struct tree_node {
     zr_state state;
     const char *name;
@@ -137,6 +26,32 @@ struct test_tree {
     struct tree_node nodes[8];
     int count;
 };
+
+struct demo {
+    zr_bool running;
+    struct zr_input input;
+    struct zr_command_queue queue;
+    struct zr_style config_black;
+    struct zr_style config_white;
+    struct zr_user_font font;
+    struct zr_window panel;
+    struct zr_window sub;
+    struct test_tree tree;
+    zr_size w, h;
+    enum theme theme;
+};
+
+static void
+zr_labelf(struct zr_context *panel, enum zr_text_align align, const zr_char *fmt, ...)
+{
+    zr_char buffer[1024];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buffer, sizeof(buffer), fmt, args);
+    buffer[1023] = 0;
+    zr_label(panel, buffer, align);
+    va_end(args);
+}
 
 static void
 tree_init(struct test_tree *tree)
@@ -263,674 +178,754 @@ upload_tree(struct test_tree *base, struct zr_tree *tree, struct tree_node *node
     return 1;
 }
 
-/* -----------------------------------------------------------------
- *  COLOR PICKER POPUP
- * ----------------------------------------------------------------- */
-struct color_picker {
-    zr_state active;
-    struct zr_color color;
-    zr_state r, g, b, a;
-    zr_size index;
-};
-
-static zr_bool
-color_picker(struct zr_context *panel, struct color_picker* control,
-    const char *name, struct zr_color *color)
+static int
+show_test_window(struct zr_window *window, struct zr_style *config, enum theme *theme,
+    struct test_tree *test_tree)
 {
-    int i;
-    zr_byte *iter;
-    zr_bool ret = zr_true;
-    struct zr_context popup;
-    zr_popup_begin(panel, &popup, ZR_POPUP_STATIC,0, zr_rect(10, 100, 280, 280), zr_vec2(0,0));
-    {
-        if (zr_header(&popup, "Color", ZR_CLOSEABLE, ZR_CLOSEABLE, ZR_HEADER_LEFT)) {
-            zr_popup_close(&popup);
-            return zr_false;
-        }
-        zr_layout_row_dynamic(&popup, 30, 2);
-        zr_label(&popup, name, ZR_TEXT_LEFT);
-        zr_button_color(&popup, control->color, ZR_BUTTON_DEFAULT);
+    int closed;
+    zr_flags ret;
+    struct zr_context layout;
 
-        iter = &control->color.r;
-        zr_layout_row_dynamic(&popup, 30, 2);
-        for (i = 0; i < 4; ++i, iter++) {
-            zr_float t;
-            *iter = (zr_byte)zr_spinner_int(&popup, 0, *iter, 255, 1, NULL);
-            t = *iter;
-            t = zr_slider(&popup, 0, t, 255, 10);
-            *iter = (zr_byte)t;
+    /* window flags */
+    static zr_bool show_menu = zr_true;
+    static zr_bool titlebar = zr_true;
+    static zr_bool border = zr_true;
+    static zr_bool resize = zr_true;
+    static zr_bool moveable = zr_true;
+    static zr_bool no_scrollbar = zr_false;
+    static zr_flags window_flags = 0;
+
+    /* header flags */
+    static zr_bool minimizable = zr_true;
+    static zr_bool close = zr_true;
+    static zr_bool scale = zr_false;
+    static zr_bool move = zr_false;
+    static zr_flags header_flags = 0;
+
+    /* collapsable headers */
+    static zr_state window_option_state = ZR_MINIMIZED;
+    static zr_state header_option_state = ZR_MINIMIZED;
+    static zr_state widget_state = ZR_MINIMIZED;
+    static zr_state graph_state = ZR_MINIMIZED;
+    static zr_state style_state = ZR_MINIMIZED;
+    static zr_state group_state = ZR_MINIMIZED;
+    static zr_state shelf_state = ZR_MINIMIZED;
+
+    /* popups */
+    static enum zr_header_align header_align = ZR_HEADER_RIGHT;
+    static zr_bool show_app_about = zr_false;
+    static zr_bool show_close_popup = zr_false;
+    static zr_bool show_color_picker_popup = zr_false;
+    static zr_int color_picker_index;
+    static struct zr_color color_picker_color;
+
+    /* window flags */
+    window->style = config;
+    window_flags = 0;
+    if (border) window_flags |= ZR_WINDOW_BORDER;
+    if (resize) window_flags |= ZR_WINDOW_SCALEABLE;
+    if (moveable) window_flags |= ZR_WINDOW_MOVEABLE;
+    if (no_scrollbar) window_flags |= ZR_WINDOW_NO_SCROLLBAR;
+
+    /* header flags */
+    header_flags = 0;
+    if (minimizable) header_flags |= ZR_MINIMIZABLE;
+    if (close) header_flags |= ZR_CLOSEABLE;
+    if (scale) header_flags |= ZR_SCALEABLE;
+    if (move) header_flags |= ZR_MOVEABLE;
+
+    /* main window */
+    window->flags = window_flags;
+    zr_begin(&layout, window);
+    ret = zr_header(&layout, (titlebar)? "Zahnrad":"", header_flags, header_flags, header_align);
+    if (ret & ZR_CLOSEABLE) {
+        layout.flags &= (zr_flags)~ZR_WINDOW_HIDDEN;
+        layout.valid = zr_true;
+        show_close_popup = zr_true;
+    }
+
+    if (show_menu)
+    {
+        /* menubar */
+        zr_size i = 0;
+        struct zr_context menu;
+        static zr_state file_state = ZR_MINIMIZED;
+        static zr_state edit_state = ZR_MINIMIZED;
+        static zr_size mprog = 60;
+        static zr_int mslider = 10;
+        static zr_bool mcheck = zr_true;
+
+        zr_menubar_begin(&layout);
+
+        zr_layout_row_begin(&layout, ZR_STATIC, 25, 2);
+        zr_layout_row_push(&layout, 45);
+        zr_menu_begin(&layout, &menu, "MENU", 100, &file_state);
+        {
+            static zr_size prog = 40;
+            static zr_int slider = 10;
+            static zr_bool check = zr_true;
+            zr_layout_row_dynamic(&menu, 25, 1);
+            zr_progress(&menu, &prog, 100, ZR_MODIFYABLE);
+            zr_slider_int(&menu, 0, &slider, 16, 1);
+            zr_checkbox(&menu, "check", &check);
+            if (zr_menu_item(&menu, ZR_TEXT_CENTERED, "Hide")) {
+                show_menu = zr_false;
+                zr_menu_close(&menu, &file_state);
+            }
+            if (zr_menu_item(&menu, ZR_TEXT_CENTERED, "About")) {
+                show_app_about = zr_true;
+                zr_menu_close(&menu, &file_state);
+            }
+            if (zr_menu_item(&menu, ZR_TEXT_CENTERED, "Quit")) {
+                show_close_popup = zr_true;
+                zr_menu_close(&menu, &file_state);
+            }
         }
+        zr_menu_end(&layout, &menu);
+
+        zr_layout_row_push(&layout, 60);
+        zr_progress(&layout, &mprog, 100, ZR_MODIFYABLE);
+        zr_slider_int(&layout, 0, &mslider, 16, 1);
+        zr_checkbox(&layout, "check", &mcheck);
+
+        zr_menubar_end(&layout);
+    }
+
+    if (show_app_about)
+    {
+        /* about popup */
+        struct zr_context popup;
+        static struct zr_vec2 about_scrollbar;
+        static struct zr_rect s = {20, 100, 300, 160};
+        zr_popup_begin(&layout, &popup, ZR_POPUP_STATIC, 0, s, about_scrollbar);
+        if (zr_header(&popup, "About", ZR_CLOSEABLE, ZR_CLOSEABLE, ZR_HEADER_LEFT)){
+            show_app_about = zr_false;
+            zr_popup_close(&popup);
+        }
+        zr_layout_row_dynamic(&popup, 20, 1);
+        zr_label(&popup, "Zahnrad", ZR_TEXT_LEFT);
+        zr_label(&popup, "By Micha Mettke", ZR_TEXT_LEFT);
+        zr_label(&popup, "Zahnrad is licensed under the MIT License.",  ZR_TEXT_LEFT);
+        zr_label(&popup, "See LICENSE for more information", ZR_TEXT_LEFT);
+        zr_popup_end(&layout, &popup, &about_scrollbar);
+    }
+
+    if (show_close_popup)
+    {
+        /* close popup */
+        struct zr_context popup;
+        static struct zr_vec2 close_scrollbar = {0,0};
+        static const struct zr_rect s = {20, 150, 230, 150};
+        zr_popup_begin(&layout, &popup, ZR_POPUP_STATIC, 0, s, close_scrollbar);
+        if (zr_header(&popup, "Quit", ZR_CLOSEABLE, ZR_CLOSEABLE, ZR_HEADER_LEFT)) {
+            show_close_popup = zr_false;
+            zr_popup_close(&popup);
+        }
+        zr_layout_row_dynamic(&popup, 30, 1);
+        zr_label(&popup, "Are you sure you want to exit?", ZR_TEXT_LEFT);
+        zr_layout_row_dynamic(&popup, 30, 4);
+        zr_spacing(&popup, 1);
+        if (zr_button_text(&popup, "Yes", ZR_BUTTON_DEFAULT)) {
+            show_close_popup = zr_false;
+            zr_popup_close(&popup);
+            return 0;
+        }
+        if (zr_button_text(&popup, "No", ZR_BUTTON_DEFAULT)) {
+            show_close_popup = zr_false;
+            zr_popup_close(&popup);
+        }
+        zr_popup_end(&layout, &popup, NULL);
+    }
+
+    if (show_color_picker_popup)
+    {
+        /* color picker popup */
+        static zr_state active[4];
+        struct zr_context popup;
+        zr_int r,g,b,a;
+        zr_popup_begin(&layout, &popup, ZR_POPUP_STATIC,0, zr_rect(10, 100, 280, 280), zr_vec2(0,0));
+        if (zr_header(&popup, "Color", ZR_CLOSEABLE, ZR_CLOSEABLE, ZR_HEADER_LEFT))
+        {
+            zr_popup_close(&popup);
+            show_color_picker_popup = zr_false;
+            memset(active, 0, sizeof(active));
+        }
+
+        zr_layout_row_dynamic(&popup, 30, 2);
+        zr_label(&popup, zr_style_color_name(color_picker_index), ZR_TEXT_LEFT);
+        zr_button_color(&popup, color_picker_color, ZR_BUTTON_DEFAULT);
+
+        zr_layout_row_dynamic(&popup, 30, 2);
+        r = color_picker_color.r, g = color_picker_color.g, b = color_picker_color.b, a = color_picker_color.a;
+        zr_spinner_int(&popup, 0, &r, 255, 1, &active[0]);
+        zr_slider_int(&popup, 0, &r,  255, 10);
+        zr_spinner_int(&popup, 0, &g, 255, 1, &active[1]);
+        zr_slider_int(&popup, 0, &g,  255, 10);
+        zr_spinner_int(&popup, 0, &b, 255, 1, &active[2]);
+        zr_slider_int(&popup, 0, &b,  255, 10);
+        zr_spinner_int(&popup, 0, &a, 255, 1, &active[3]);
+        zr_slider_int(&popup, 0, &a,  255, 10);
+        color_picker_color = zr_rgba((zr_byte)r,(zr_byte)g,(zr_byte)b,(zr_byte)a);
 
         zr_layout_row_dynamic(&popup, 30, 4);
         zr_spacing(&popup, 1);
-        if (zr_button_text(&popup, "ok", ZR_BUTTON_DEFAULT)) {
-            zr_popup_close(&popup);
-            *color = control->color;
-            ret = zr_false;
-        }
-        if (zr_button_text(&popup, "cancel", ZR_BUTTON_DEFAULT)) {
-            zr_popup_close(&popup);
-            ret = zr_false;
-        }
-    }
-    zr_popup_end(panel, &popup, NULL);
-    control->active = (zr_state)ret;
-    return ret;
-}
-
-/* -----------------------------------------------------------------
- *  LABEL
- * ----------------------------------------------------------------- */
-static void
-zr_labelf(struct zr_context *panel, enum zr_text_align align, const zr_char *fmt, ...)
-{
-    zr_char buffer[1024];
-    va_list args;
-    va_start(args, fmt);
-    vsnprintf(buffer, sizeof(buffer), fmt, args);
-    buffer[1023] = 0;
-    zr_label(panel, buffer, align);
-    va_end(args);
-}
-
-/* -----------------------------------------------------------------
- *  COMBOBOXES
- * ----------------------------------------------------------------- */
-struct combobox {
-    zr_size selected;
-    zr_state active;
-};
-
-struct check_combo_box {
-    zr_bool values[4];
-    zr_state active;
-};
-
-struct prog_combo_box {
-    zr_state active;
-};
-
-struct color_combo_box {
-    zr_state active;
-    struct zr_color color;
-};
-
-static void
-combo_box(struct zr_context *panel, struct combobox *combo,
-    const char**values, zr_size count)
-{
-    zr_size i = 0;
-    struct zr_context layout;
-    zr_combo_begin(panel, &layout, values[combo->selected], &combo->active);
-    {
-        zr_layout_row_dynamic(&layout, 25, 1);
-        for (i = 0; i < count; ++i) {
-            if (combo->selected == i) continue;
-            if (zr_combo_item(&layout, ZR_TEXT_LEFT, values[i])) {
-                combo->selected = i;
-            }
-        }
-    }
-    zr_combo_end(panel, &layout, &combo->active);
-}
-
-static void
-prog_combo_box(struct zr_context *panel, zr_size *values, zr_size count,
-    struct prog_combo_box *demo)
-{
-    zr_size i = 0;
-    zr_int sum = 0;
-    zr_char buffer[64];
-    struct zr_context combo;
-    memset(&combo, 0, sizeof(combo));
-    for (i = 0; i < count; ++i)
-        sum += (zr_int)values[i];
-
-    sprintf(buffer, "%d", sum);
-    zr_combo_begin(panel, &combo, buffer, &demo->active);
-    {
-        zr_layout_row_dynamic(&combo, 30, 1);
-        for (i = 0; i < count; ++i)
-            values[i] = zr_progress(&combo, values[i], 100, zr_true);
-    }
-    zr_combo_end(panel, &combo, NULL);
-}
-
-static void
-color_combo_box(struct zr_context *panel, struct color_combo_box *demo)
-{
-    /* color slider progressbar */
-    zr_char buffer[32];
-    struct zr_context combo;
-    memset(&combo, 0, sizeof(combo));
-    sprintf(buffer, "#%02x%02x%02x%02x", demo->color.r, demo->color.g,
-            demo->color.b, demo->color.a);
-    zr_combo_begin(panel, &combo, buffer,  &demo->active);
-    {
-        int i;
-        const char *color_names[] = {"R:", "G:", "B:", "A:"};
-        zr_float ratios[] = {0.15f, 0.85f};
-        zr_byte *iter = &demo->color.r;
-        zr_layout_row(&combo, ZR_DYNAMIC, 30, 2, ratios);
-        for (i = 0; i < 4; ++i, iter++) {
-            zr_float t = *iter;
-            zr_label(&combo, color_names[i], ZR_TEXT_LEFT);
-            t = zr_slider(&combo, 0, t, 255, 5);
-            *iter = (zr_byte)t;
-        }
-    }
-    zr_combo_end(panel, &combo, NULL);
-}
-
-static void
-check_combo_box(struct zr_context *panel, zr_bool *values, zr_size count,
-    struct check_combo_box *demo)
-{
-    /* checkbox combobox  */
-    zr_int sum = 0;
-    zr_size i = 0;
-    zr_char buffer[64];
-    struct zr_context combo;
-    memset(&combo, 0, sizeof(combo));
-    for (i = 0; i < count; ++i)
-        sum += (zr_int)values[i];
-
-    sprintf(buffer, "%d", sum);
-    zr_combo_begin(panel, &combo, buffer,  &demo->active);
-    {
-        zr_layout_row_dynamic(&combo, 30, 1);
-        for (i = 0; i < count; ++i)
-            values[i] = zr_check(&combo, weapons[i], values[i]);
-    }
-    zr_combo_end(panel, &combo, NULL);
-}
-
-/* -----------------------------------------------------------------
- *  GRAPH
- * ----------------------------------------------------------------- */
-static int
-graph(struct zr_context *layout, enum zr_graph_type type,
-    const zr_float *values, zr_size count, zr_size offset)
-{
-    zr_size i;
-    zr_int index = -1;
-    zr_float min_value;
-    zr_float max_value;
-    struct zr_graph graph;
-
-    ZR_ASSERT(layout);
-    ZR_ASSERT(values);
-    ZR_ASSERT(count);
-    if (!layout || !layout->valid || !values || !count)
-        return -1;
-
-    /* find min and max graph value */
-    max_value = values[0];
-    min_value = values[0];
-    for (i = offset; i < count; ++i) {
-        if (values[i] > max_value)
-            max_value = values[i];
-        if (values[i] < min_value)
-            min_value = values[i];
-    }
-
-    /* execute graph */
-    zr_graph_begin(layout, &graph, type, count, min_value, max_value);
-    for (i = offset; i < count; ++i) {
-        if (zr_graph_push(layout, &graph, values[i]))
-            index = (zr_int)i;
-    }
-    zr_graph_end(layout, &graph);
-    return index;
-}
-
-/* =================================================================
- *
- *                          DEMO
- *
- * =================================================================
- */
-struct state {
-    zr_char edit_buffer[MAX_BUFFER];
-    struct zr_edit_box edit;
-    struct color_picker picker;
-    struct check_combo_box checkcom;
-    struct prog_combo_box progcom;
-    struct color_combo_box colcom;
-    struct combobox combo;
-    struct test_tree test;
-
-    /* widgets state */
-    zr_bool list[4];
-    zr_size prog_values[4];
-    zr_bool check_values[WEAPON_MAX];
-    zr_bool scaleable;
-    zr_bool checkbox;
-    zr_float slider;
-    zr_size progressbar;
-    zr_int spinner;
-    zr_float spinnerf;
-    zr_state spinner_active;
-    zr_state spinnerf_active;
-    zr_size item_current;
-    zr_size shelf_selection;
-    zr_bool toggle;
-    zr_int option;
-    zr_state popup;
-    zr_size cur;
-    zr_size op;
-    zr_float value;
-
-    /* subpanels */
-    struct zr_vec2 shelf;
-    struct zr_vec2 table;
-    struct zr_vec2 tree;
-    struct zr_vec2 menu;
-
-    /* open/close state */
-    zr_state file_open;
-    zr_state edit_open;
-    zr_state next_open;
-    zr_state config_tab;
-    zr_state widget_tab;
-    zr_state combo_tab;
-    zr_state style_tab;
-    zr_state round_tab;
-    zr_state color_tab;
-    zr_state flag_tab;
-};
-
-struct demo_gui {
-    zr_bool running;
-    struct zr_input input;
-    struct zr_command_queue queue;
-    struct zr_style config;
-    struct zr_user_font font;
-    struct zr_window panel;
-    struct zr_window sub;
-    struct state state;
-    zr_size w, h;
-};
-
-/* -----------------------------------------------------------------
- *  WIDGETS
- * ----------------------------------------------------------------- */
-static void
-widget_panel(struct zr_context *panel, struct state *demo)
-{
-    /* Labels */
-    zr_layout_row_dynamic(panel, 30, 1);
-    demo->scaleable = zr_check(panel, "Scaleable Layout", demo->scaleable);
-    if (!demo->scaleable)
-        zr_layout_row_static(panel, 30, 150, 1);
-    zr_label(panel, "text left", ZR_TEXT_LEFT);
-    zr_label(panel, "text center", ZR_TEXT_CENTERED);
-    zr_label(panel, "text right", ZR_TEXT_RIGHT);
-
-    {
-        /* Tooltip */
-        struct zr_rect bounds;
-        const struct zr_input *in = zr_input(panel);
-        zr_layout_peek(&bounds, panel);
-        zr_label(panel, "Hover me for tooltip", ZR_TEXT_CENTERED);
-        if (zr_input_is_mouse_hovering_rect(in, bounds))
-            zr_tooltip(panel, "This is a tooltip");
-    }
-
-    /* Buttons */
-    if (zr_button_text(panel, "button", ZR_BUTTON_DEFAULT))
-        demo->popup = zr_true;
-    if (zr_button_text_symbol(panel, ZR_SYMBOL_TRIANGLE_RIGHT, "next", ZR_TEXT_LEFT, ZR_BUTTON_DEFAULT))
-        fprintf(stdout, "right triangle button pressed!\n");
-    if (zr_button_text_symbol(panel,ZR_SYMBOL_TRIANGLE_LEFT,"previous",ZR_TEXT_RIGHT,ZR_BUTTON_DEFAULT))
-        fprintf(stdout, "left triangle button pressed!\n");
-
-    /* Checkbox + Radio buttons */
-    demo->checkbox = zr_check(panel, "checkbox", demo->checkbox);
-    if (!demo->scaleable)
-        zr_layout_row_static(panel, 30, 75, 2);
-    else zr_layout_row_dynamic(panel, 30, 2);
-    if (zr_option(panel, "option 0", demo->option == 0))
-        demo->option = 0;
-    if (zr_option(panel, "option 1", demo->option == 1))
-        demo->option = 1;
-
-    {
-        /* custom row layout by array */
-        const zr_float ratio[] = {0.8f, 0.2f};
-        const zr_float pixel[] = {150.0f, 30.0f};
-        enum zr_layout_format fmt = (demo->scaleable) ? ZR_DYNAMIC : ZR_STATIC;
-        zr_layout_row(panel, fmt, 30, 2, (fmt == ZR_DYNAMIC) ? ratio: pixel);
-        demo->slider = zr_slider(panel, 0, demo->slider, 10, 1.0f);
-        zr_labelf(panel, ZR_TEXT_LEFT, "%.2f", demo->slider);
-        demo->progressbar = zr_progress(panel, demo->progressbar, 100, zr_true);
-        zr_labelf(panel, ZR_TEXT_LEFT, "%lu", demo->progressbar);
-    }
-
-    /* item selection  */
-    if (!demo->scaleable) zr_layout_row_static(panel, 30, 150, 1);
-    else zr_layout_row_dynamic(panel, 30, 1);
-    demo->spinner = zr_spinner_int(panel, 0, demo->spinner, 250, 10, &demo->spinner_active);
-    demo->spinnerf = zr_spinner_float(panel, 0.0f, demo->spinnerf, 8.0f, 0.5f, &demo->spinnerf_active);
-
-    /* combo boxes  */
-    if (!demo->scaleable) zr_layout_row_static(panel, 30, 150, 1);
-    else zr_layout_row_dynamic(panel, 30, 1);
-    combo_box(panel, &demo->combo, weapons, LEN(weapons));
-    prog_combo_box(panel, demo->prog_values, LEN(demo->prog_values), &demo->progcom);
-    color_combo_box(panel, &demo->colcom);
-    check_combo_box(panel, demo->check_values, LEN(demo->check_values), &demo->checkcom);
-
-    {
-        /* custom row layout by im */
-        enum zr_layout_format fmt = (demo->scaleable) ? ZR_DYNAMIC : ZR_STATIC;
-        zr_layout_row_begin(panel, fmt, 30, 2);
+        if (zr_button_text(&popup, "ok", ZR_BUTTON_DEFAULT))
         {
-            zr_layout_row_push(panel,(fmt == ZR_DYNAMIC) ? 0.7f : 100);
-            zr_editbox(panel, &demo->edit);
-            zr_layout_row_push(panel, (fmt == ZR_DYNAMIC) ? 0.3f : 80);
-            if (zr_button_text(panel, "submit", ZR_BUTTON_DEFAULT)) {
-                zr_edit_box_clear(&demo->edit);
-                fprintf(stdout, "command executed!\n");
+            zr_popup_close(&popup);
+            show_color_picker_popup = zr_false;
+            config->colors[color_picker_index] = color_picker_color;
+            memset(active, 0, sizeof(active));
+        }
+        if (zr_button_text(&popup, "cancel", ZR_BUTTON_DEFAULT))
+        {
+            zr_popup_close(&popup);
+            show_color_picker_popup = zr_false;
+            memset(active, 0, sizeof(active));
+        }
+        zr_popup_end(&layout, &popup, NULL);
+    }
+
+    if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "Window", &window_option_state))
+    {
+        /* window options */
+        zr_layout_row_dynamic(&layout, 30, 2);
+        zr_checkbox(&layout, "Titlebar", &titlebar);
+        zr_checkbox(&layout, "Menu", &show_menu);
+        zr_checkbox(&layout, "Border", &border);
+        zr_checkbox(&layout, "Resizable", &resize);
+        zr_checkbox(&layout, "Moveable", &moveable);
+        zr_checkbox(&layout, "No Scrollbar", &no_scrollbar);
+        zr_layout_pop(&layout);
+    }
+
+    if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "Header", &header_option_state))
+    {
+        /* header options */
+        zr_layout_row_dynamic(&layout, 30, 2);
+        zr_checkbox(&layout, "Minimizable", &minimizable);
+        zr_checkbox(&layout, "Closeable", &close);
+        zr_checkbox(&layout, "Scaleable", &scale);
+        zr_checkbox(&layout, "Moveable", &move);
+        zr_layout_pop(&layout);
+    }
+
+    if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "Style", &style_state))
+    {
+        /* style editor */
+        static zr_state property_state = ZR_MINIMIZED;
+        static zr_state rounding_state = ZR_MINIMIZED;
+        static zr_state color_state = ZR_MINIMIZED;
+        struct zr_context combo;
+        static const char *themes[] = {"Black", "White"};
+        static zr_state theme_active = zr_false;
+
+        /* theme */
+        zr_layout_row_static(&layout, 30, 80, 2);
+        zr_label(&layout, "Theme:", ZR_TEXT_LEFT);
+        zr_combo_begin(&layout, &combo, themes[*theme], &theme_active);
+        zr_layout_row_dynamic(&combo, 25, 1);
+        *theme = zr_combo_item(&combo, themes[THEME_BLACK], ZR_TEXT_CENTERED) ? THEME_BLACK : *theme;
+        *theme = zr_combo_item(&combo, themes[THEME_WHITE], ZR_TEXT_CENTERED) ? THEME_WHITE : *theme;
+        zr_combo_end(&layout, &combo, &theme_active);
+
+        if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Properties", &property_state))
+        {
+            /* properties */
+            zr_size i = 0;
+            zr_layout_row_dynamic(&layout, 30, 3);
+            for (i = 0; i <= ZR_PROPERTY_SCROLLBAR_SIZE; ++i) {
+                zr_label(&layout, zr_style_property_name(i), ZR_TEXT_LEFT);
+                zr_spinner_float(&layout, 0, &config->properties[i].x, 20, 1, NULL);
+                zr_spinner_float(&layout, 0, &config->properties[i].y, 20, 1, NULL);
             }
+            zr_layout_pop(&layout);
         }
-        zr_layout_row_end(panel);
-    }
-}
 
-/* -----------------------------------------------------------------
- *  STYLE
- * ----------------------------------------------------------------- */
-static void
-update_flags(struct zr_context *panel)
-{
-    zr_size n = 0;
-    zr_flags res = 0;
-    zr_flags i = 0x01;
-    const char *options[]={"Hidden","Border","Header Border", "Moveable","Scaleable", "Minimized", "ROM"};
-    zr_layout_row_dynamic(panel, 30, 2);
-    do {
-        if (zr_check(panel,options[n++],(panel->flags & i)?zr_true:zr_false))
-            res |= i;
-        i = i << 1;
-    } while (i <= ZR_WINDOW_ROM);
-    panel->flags = res;
-}
-
-static void
-properties_tab(struct zr_context *panel, struct zr_style *config)
-{
-    int i = 0;
-    const char *properties[] = {"item spacing:", "item padding:", "panel padding:",
-        "scaler size:", "scrollbar:"};
-
-    zr_layout_row_dynamic(panel, 30, 3);
-    for (i = 0; i <= ZR_PROPERTY_SCROLLBAR_SIZE; ++i) {
-        zr_int tx, ty;
-        zr_label(panel, properties[i], ZR_TEXT_LEFT);
-        tx = zr_spinner_int(panel,0,(zr_int)config->properties[i].x, 20, 1, NULL);
-        ty = zr_spinner_int(panel,0,(zr_int)config->properties[i].y, 20, 1, NULL);
-        config->properties[i].x = (float)tx;
-        config->properties[i].y = (float)ty;
-    }
-}
-
-static void
-round_tab(struct zr_context *panel, struct zr_style *config)
-{
-    int i = 0;
-    const char *rounding[] = {"panel:", "button:", "checkbox:", "progress:", "input: ",
-        "graph:", "scrollbar:"};
-
-    zr_layout_row_dynamic(panel, 30, 2);
-    for (i = 0; i < ZR_ROUNDING_MAX; ++i) {
-        zr_int t;
-        zr_label(panel, rounding[i], ZR_TEXT_LEFT);
-        t = zr_spinner_int(panel,0,(zr_int)config->rounding[i], 20, 1, NULL);
-        config->rounding[i] = (float)t;
-    }
-}
-
-static void
-color_tab(struct zr_context *panel, struct state *control, struct zr_style *config)
-{
-    zr_size i = 0;
-    zr_layout_row_dynamic(panel, 30, 2);
-    for (i = 0; i < ZR_COLOR_COUNT; ++i) {
-        struct zr_color c = config->colors[i];
-        zr_label(panel, colors[i], ZR_TEXT_LEFT);
-        if (zr_button_color(panel, c, ZR_BUTTON_DEFAULT)) {
-            control->picker.active = zr_true;
-            control->picker.color = config->colors[i];
-            control->picker.index = i;
+        if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Rounding", &rounding_state))
+        {
+            /* rounding */
+            zr_size i = 0;
+            zr_layout_row_dynamic(&layout, 30, 2);
+            for (i = 0; i < ZR_ROUNDING_MAX; ++i) {
+                zr_label(&layout, zr_style_rounding_name(i), ZR_TEXT_LEFT);
+                zr_spinner_float(&layout, 0, &config->rounding[i], 20, 1, NULL);
+            }
+            zr_layout_pop(&layout);
         }
+
+        if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Color", &color_state))
+        {
+            /* color */
+            zr_size i = 0;
+            struct zr_context tab;
+            static struct zr_vec2 scrollbar;
+            zr_layout_row_dynamic(&layout, 400, 1);
+            zr_group_begin(&layout, &tab, NULL, 0, scrollbar);
+            for (i = 0; i < ZR_COLOR_COUNT; ++i) {
+                zr_layout_row_dynamic(&tab, 30, 2);
+                zr_label(&tab, zr_style_color_name(i), ZR_TEXT_LEFT);
+                if (zr_button_color(&tab, config->colors[i], ZR_BUTTON_DEFAULT)) {
+                    show_color_picker_popup = zr_true;
+                    color_picker_index = (zr_int)i;
+                    color_picker_color = config->colors[i];
+                }
+            }
+            zr_group_end(&layout, &tab, &scrollbar);
+            zr_layout_pop(&layout);
+        }
+        zr_layout_pop(&layout);
     }
-    if (control->picker.active) {
-        color_picker(panel, &control->picker, colors[control->picker.index],
-            &config->colors[control->picker.index]);
+
+    if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "Widgets", &widget_state))
+    {
+        static zr_state text_state = zr_false;
+        static zr_state main_state = zr_false;
+        static zr_state button_state = zr_false;
+        static zr_state combo_state = zr_false;
+        static zr_state sel_state = zr_false;
+
+        enum options {A,B,C};
+        static zr_bool checkbox;
+        static zr_bool option;
+
+        if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Text", &text_state))
+        {
+            /* Text Widgets */
+            zr_layout_row_dynamic(&layout, 20, 1);
+            zr_label(&layout, "Label aligned left", ZR_TEXT_LEFT);
+            zr_label(&layout, "Label aligned centered", ZR_TEXT_CENTERED);
+            zr_label(&layout, "Label aligned right", ZR_TEXT_RIGHT);
+            zr_label_colored(&layout, "Blue text", ZR_TEXT_LEFT, zr_rgb(0,0,255));
+            zr_label_colored(&layout, "Yellow text", ZR_TEXT_LEFT, zr_rgb(255,255,0));
+            zr_text(&layout, "Text without /0", 15, ZR_TEXT_RIGHT);
+
+            zr_layout_row_static(&layout, 100, 200, 1);
+            zr_label_wrap(&layout, "This is a very long line to hopefully get this text to be wrapped into multiple lines to show line wrapping");
+            zr_layout_row_dynamic(&layout, 100, 1);
+            zr_label_wrap(&layout, "This is another long text to show dynamic window changes on multiline text");
+            zr_layout_pop(&layout);
+        }
+
+        if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Button", &button_state))
+        {
+            /* Buttons Widgets */
+            static zr_bool toggle = zr_false;
+            zr_layout_row_static(&layout, 30, 100, 3);
+            if (zr_button_text(&layout, "Button", ZR_BUTTON_DEFAULT))
+                fprintf(stdout, "Button pressed!\n");
+            if (zr_button_text(&layout, "Repeater", ZR_BUTTON_REPEATER))
+                fprintf(stdout, "Repeater is being pressed!\n");
+            zr_button_color(&layout, zr_rgb(0,0,255), ZR_BUTTON_DEFAULT);
+
+            zr_layout_row_static(&layout, 20, 20, 8);
+            zr_button_symbol(&layout, ZR_SYMBOL_CIRCLE, ZR_BUTTON_DEFAULT);
+            zr_button_symbol(&layout, ZR_SYMBOL_CIRCLE_FILLED, ZR_BUTTON_DEFAULT);
+            zr_button_symbol(&layout, ZR_SYMBOL_RECT, ZR_BUTTON_DEFAULT);
+            zr_button_symbol(&layout, ZR_SYMBOL_RECT_FILLED, ZR_BUTTON_DEFAULT);
+            zr_button_symbol(&layout, ZR_SYMBOL_TRIANGLE_UP, ZR_BUTTON_DEFAULT);
+            zr_button_symbol(&layout, ZR_SYMBOL_TRIANGLE_DOWN, ZR_BUTTON_DEFAULT);
+            zr_button_symbol(&layout, ZR_SYMBOL_TRIANGLE_LEFT, ZR_BUTTON_DEFAULT);
+            zr_button_symbol(&layout, ZR_SYMBOL_TRIANGLE_RIGHT, ZR_BUTTON_DEFAULT);
+
+            zr_layout_row_static(&layout, 30, 100, 2);
+            zr_button_text_symbol(&layout, ZR_SYMBOL_TRIANGLE_LEFT, "prev", ZR_TEXT_RIGHT, ZR_BUTTON_DEFAULT);
+            zr_button_text_symbol(&layout, ZR_SYMBOL_TRIANGLE_RIGHT, "next", ZR_TEXT_LEFT, ZR_BUTTON_DEFAULT);
+            zr_layout_pop(&layout);
+        }
+
+        if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Basic", &main_state))
+        {
+            /* Basic widgets */
+            static zr_int int_slider = 5;
+            static zr_float float_slider = 2.5f;
+            static zr_size prog_value = 40;
+            static const zr_float ratio[] = {100, 150};
+            const struct zr_input *in = zr_input(&layout);
+            struct zr_rect bounds;
+
+            zr_layout_row_static(&layout, 30, 100, 1);
+            zr_checkbox(&layout, "Checkbox", &checkbox);
+
+            zr_layout_row_static(&layout, 30, 80, 3);
+            option = zr_option(&layout, "optionA", option == A) ? A : option;
+            option = zr_option(&layout, "optionB", option == B) ? B : option;
+            option = zr_option(&layout, "optionC", option == C) ? C : option;
+
+            zr_layout_row_static(&layout, 30, 150, 1);
+            zr_layout_peek(&bounds, &layout);
+            zr_label(&layout, "Hover me for tooltip", ZR_TEXT_LEFT);
+            if (zr_input_is_mouse_hovering_rect(in, bounds))
+                zr_tooltip(&layout, "This is a tooltip");
+
+            zr_layout_row(&layout, ZR_STATIC, 30, 2, ratio);
+            zr_labelf(&layout, ZR_TEXT_LEFT, "Slider(%d):", int_slider);
+            zr_slider_int(&layout, 0, &int_slider, 10, 1);
+            zr_labelf(&layout, ZR_TEXT_LEFT, "Slider(%.2f):", float_slider);
+            zr_slider_float(&layout, 0, &float_slider, 5.0, 0.5f);
+            zr_labelf(&layout, ZR_TEXT_LEFT, "Progressbar(%lu):" , prog_value);
+            zr_progress(&layout, &prog_value, 100, ZR_MODIFYABLE);
+
+            zr_layout_pop(&layout);
+        }
+
+        if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Selectable", &sel_state))
+        {
+            static zr_state basic_state = ZR_MINIMIZED;
+            static zr_state list_state = ZR_MINIMIZED;
+            static zr_state grid_state = ZR_MINIMIZED;
+            if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Basic", &basic_state))
+            {
+                zr_layout_row_static(&layout, 18, 100, 2);
+                zr_select(&layout, "Selected", ZR_TEXT_LEFT, zr_true);
+                zr_select(&layout, "Not Selected", ZR_TEXT_LEFT, zr_false);
+                zr_layout_pop(&layout);
+            }
+            if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "List", &list_state))
+            {
+                static zr_bool selected[4] = {zr_false, zr_false, zr_true, zr_false};
+                zr_layout_row_static(&layout, 18, 100, 1);
+                zr_selectable(&layout, "Selectable", ZR_TEXT_LEFT, &selected[0]);
+                zr_selectable(&layout, "Selectable", ZR_TEXT_LEFT, &selected[1]);
+                zr_label(&layout, "Not Selectable", ZR_TEXT_LEFT);
+                zr_selectable(&layout, "Selectable", ZR_TEXT_LEFT, &selected[2]);
+                zr_selectable(&layout, "Selectable", ZR_TEXT_LEFT, &selected[3]);
+                zr_layout_pop(&layout);
+            }
+            if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Grid", &grid_state))
+            {
+                int i, k;
+                static zr_bool selected[16];
+                zr_layout_row_static(&layout, 50, 50, 4);
+                for (i = 0; i < 16; ++i) {
+                    if (zr_selectable(&layout, "Z", ZR_TEXT_CENTERED, &selected[i])) {
+                        zr_int x = (i % 4), y = i / 4;
+                        if (x > 0) selected[i - 1] ^= 1;
+                        if (x < 3) selected[i + 1] ^= 1;
+                        if (y > 0) selected[i - 4] ^= 1;
+                        if (y < 3) selected[i + 4] ^= 1;
+                    }
+                }
+                zr_layout_pop(&layout);
+            }
+            zr_layout_pop(&layout);
+        }
+
+        if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Combo", &combo_state))
+        {
+            /* Combobox Widgets */
+            static zr_flags group_flags;
+            static zr_state weapon_active = zr_false;
+            static zr_state com_color_active = zr_false;
+            static zr_state prog_active = zr_false;
+            static zr_state check_active = zr_false;
+
+            static const char *weapons[] = {"Fist","Pistol","Shotgun","Plasma","BFG"};
+            static zr_size current_weapon = 0;
+            static zr_bool check_values[5];
+            static zr_int r = 130, g = 50, b = 50, a = 255;
+            static zr_size x =  20, y = 40, z = 10, w = 90;
+
+            struct zr_context combo;
+            zr_char buffer[32];
+            zr_size sum = 0;
+
+            /* default combobox */
+            zr_layout_row_static(&layout, 30, 200, 1);
+            zr_combo_begin(&layout, &combo, weapons[current_weapon], &weapon_active);
+            {
+                zr_size i = 0;
+                zr_layout_row_dynamic(&combo, 25, 1);
+                for (i = 0; i < LEN(weapons); ++i) {
+                    if (zr_combo_item(&combo, weapons[i], ZR_TEXT_LEFT))
+                        current_weapon = i;
+                }
+            }
+            zr_combo_end(&layout, &combo, &weapon_active);
+
+            /* slider color combobox */
+            sprintf(buffer, "#%02x%02x%02x%02x", r, g, b, a);
+            zr_style_push_color(config, ZR_COLOR_SPINNER, zr_rgba((zr_byte)r,(zr_byte)g,(zr_byte)b,(zr_byte)a));
+            zr_combo_begin(&layout, &combo, buffer, &com_color_active);
+            {
+                zr_size i = 0;
+                zr_float ratios[] = {0.15f, 0.85f};
+                zr_layout_row(&combo, ZR_DYNAMIC, 30, 2, ratios);
+                zr_label(&combo, "R", ZR_TEXT_LEFT);
+                zr_slider_int(&combo, 0, &r, 255, 5);
+                zr_label(&combo, "G", ZR_TEXT_LEFT);
+                zr_slider_int(&combo, 0, &g, 255, 5);
+                zr_label(&combo, "B", ZR_TEXT_LEFT);
+                zr_slider_int(&combo, 0, &b, 255, 5);
+                zr_label(&combo, "A", ZR_TEXT_LEFT);
+                zr_slider_int(&combo, 0, &a, 255, 5);
+            }
+            zr_combo_end(&layout, &combo, NULL);
+            zr_style_pop_color(config);
+
+            /* progressbar combobox */
+            sum = x + y + z + w;
+            sprintf(buffer, "%lu", sum);
+            zr_combo_begin(&layout, &combo, buffer, &prog_active);
+            {
+                zr_layout_row_dynamic(&combo, 30, 1);
+                zr_progress(&combo, &x, 100, ZR_MODIFYABLE);
+                zr_progress(&combo, &y, 100, ZR_MODIFYABLE);
+                zr_progress(&combo, &z, 100, ZR_MODIFYABLE);
+                zr_progress(&combo, &w, 100, ZR_MODIFYABLE);
+            }
+            zr_combo_end(&layout, &combo, NULL);
+
+            /* checkbox combobox */
+            sum = (zr_size)(check_values[0] + check_values[1] + check_values[2] + check_values[3] + check_values[4]);
+            sprintf(buffer, "%lu", sum);
+            zr_combo_begin(&layout, &combo, buffer, &check_active);
+            {
+                zr_layout_row_dynamic(&combo, 30, 1);
+                zr_checkbox(&combo, weapons[0], &check_values[0]);
+                zr_checkbox(&combo, weapons[1], &check_values[1]);
+                zr_checkbox(&combo, weapons[2], &check_values[2]);
+                zr_checkbox(&combo, weapons[3], &check_values[3]);
+            }
+            zr_combo_end(&layout, &combo, NULL);
+
+            zr_layout_pop(&layout);
+        }
+        zr_layout_pop(&layout);
     }
+
+    if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "Graph", &graph_state))
+    {
+        static const zr_float values[]={8.0f,15.0f,20.0f,12.0f,30.0f,12.0f,35.0f,40.0f,20.0f};
+        static zr_int col_index = -1;
+        static zr_int line_index = -1;
+        static struct zr_vec2 scrollbar;
+
+        zr_size i;
+        zr_float min_value;
+        zr_float max_value;
+        zr_int index = -1;
+        struct zr_rect bounds;
+        struct zr_graph graph;
+        struct zr_tree tree;
+        char buffer[64];
+
+        /* find min and max graph value */
+        max_value = values[0];
+        min_value = values[0];
+        for (i = 0; i < LEN(values); ++i) {
+            if (values[i] > max_value)
+                max_value = values[i];
+            if (values[i] < min_value)
+                min_value = values[i];
+        }
+
+        /* column graph */
+        zr_layout_row_dynamic(&layout, 100, 1);
+        zr_layout_peek(&bounds, &layout);
+        zr_graph_begin(&layout, &graph, ZR_GRAPH_COLUMN, LEN(values), min_value, max_value);
+        for (i = 0; i < LEN(values); ++i) {
+            zr_flags res = zr_graph_push(&layout, &graph, values[i]);
+            if (res & ZR_GRAPH_HOVERING)
+                index = (zr_int)i;
+            if (res & ZR_GRAPH_CLICKED)
+                col_index = (zr_int)i;
+        }
+        zr_graph_end(&layout, &graph);
+
+        if (index != -1) {
+            sprintf(buffer, "Value: %.2f", values[index]);
+            zr_tooltip(&layout, buffer);
+        }
+        if (col_index != -1) {
+            zr_layout_row_dynamic(&layout, 20, 1);
+            zr_labelf(&layout, ZR_TEXT_LEFT, "Selected value: %.2f", values[col_index]);
+        }
+
+        /* line graph */
+        index = -1;
+        zr_layout_row_dynamic(&layout, 100, 1);
+        zr_layout_peek(&bounds, &layout);
+        zr_graph_begin(&layout, &graph, ZR_GRAPH_LINES, LEN(values), min_value, max_value);
+        for (i = 0; i < LEN(values); ++i) {
+            zr_flags res = zr_graph_push(&layout, &graph, values[i]);
+            if (res & ZR_GRAPH_HOVERING)
+                index = (zr_int)i;
+            if (res & ZR_GRAPH_CLICKED)
+                line_index = (zr_int)i;
+        }
+        zr_graph_end(&layout, &graph);
+
+        if (index != -1) {
+            sprintf(buffer, "Value: %.2f", values[index]);
+            zr_tooltip(&layout, buffer);
+        }
+        if (line_index != -1) {
+            zr_layout_row_dynamic(&layout, 20, 1);
+            zr_labelf(&layout, ZR_TEXT_LEFT, "Selected value: %.2f", values[line_index]);
+        }
+
+        /* tree */
+        zr_layout_row_dynamic(&layout, 220, 1);
+        zr_tree_begin(&layout, &tree, NULL, 0, 20, scrollbar);
+        upload_tree(test_tree, &tree, &test_tree->root);
+        zr_tree_end(&layout, &tree, &scrollbar);
+
+        zr_layout_pop(&layout);
+    }
+
+    if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "Groups", &group_state))
+    {
+        static zr_bool group_titlebar = zr_false;
+        static zr_bool group_border = zr_true;
+        static zr_bool group_no_scrollbar = zr_false;
+        static zr_int group_width = 320;
+        static zr_int group_height = 200;
+        static struct zr_vec2 scrollbar;
+        static zr_state width_active, height_active;
+        struct zr_context tab;
+
+        zr_flags group_flags = 0;
+        if (group_border) group_flags |= ZR_WINDOW_BORDER;
+        if (group_no_scrollbar) group_flags |= ZR_WINDOW_NO_SCROLLBAR;
+
+        zr_layout_row_dynamic(&layout, 30, 3);
+        zr_checkbox(&layout, "Titlebar", &group_titlebar);
+        zr_checkbox(&layout, "Border", &group_border);
+        zr_checkbox(&layout, "No Scrollbar", &group_no_scrollbar);
+
+        zr_layout_row_begin(&layout, ZR_STATIC, 30, 2);
+        zr_layout_row_push(&layout, 50);
+        zr_label(&layout, "size:", ZR_TEXT_LEFT);
+        zr_layout_row_push(&layout, 130);
+        zr_spinner_int(&layout, 100, &group_width, 500, 10, &width_active);
+        zr_layout_row_push(&layout, 130);
+        zr_spinner_int(&layout, 100, &group_height, 500, 10, &height_active);
+        zr_layout_row_end(&layout);
+
+        zr_layout_row_static(&layout, (zr_float)group_height, (zr_size)group_width, 2);
+        zr_group_begin(&layout, &tab, group_titlebar ? "Group" : NULL, group_flags, scrollbar);
+        {
+            int i = 0;
+            static zr_bool selected[16];
+            zr_layout_row_static(&tab, 18, 100, 1);
+            for (i = 0; i < 16; ++i)
+                zr_selectable(&tab, (selected[i]) ? "Selected": "Unselected", ZR_TEXT_CENTERED, &selected[i]);
+        }
+        zr_group_end(&layout, &tab, &scrollbar);
+        zr_layout_pop(&layout);
+    }
+
+    if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "Shelf", &shelf_state))
+    {
+        static const char *tabs[] = {"Up","Down","Left","Right"};
+        static zr_size active = 0;
+        static struct zr_vec2 scrollbar;
+        struct zr_context tab;
+
+        zr_layout_row_dynamic(&layout, 140, 1);
+        zr_shelf_begin(&layout, &tab, tabs, LEN(tabs), &active, scrollbar);
+        zr_layout_row_static(&tab, 50, 50, 4);
+        if (active == 0) {
+            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_UP, ZR_BUTTON_DEFAULT);
+            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_DOWN, ZR_BUTTON_DEFAULT);
+            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_LEFT, ZR_BUTTON_DEFAULT);
+            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_RIGHT, ZR_BUTTON_DEFAULT);
+        } else if (active == 1) {
+            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_DOWN, ZR_BUTTON_DEFAULT);
+            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_LEFT, ZR_BUTTON_DEFAULT);
+            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_RIGHT, ZR_BUTTON_DEFAULT);
+            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_UP, ZR_BUTTON_DEFAULT);
+        } else if (active == 2) {
+            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_LEFT, ZR_BUTTON_DEFAULT);
+            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_RIGHT, ZR_BUTTON_DEFAULT);
+            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_UP, ZR_BUTTON_DEFAULT);
+            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_DOWN, ZR_BUTTON_DEFAULT);
+        } else if (active == 3) {
+            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_RIGHT, ZR_BUTTON_DEFAULT);
+            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_UP, ZR_BUTTON_DEFAULT);
+            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_DOWN, ZR_BUTTON_DEFAULT);
+            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_LEFT, ZR_BUTTON_DEFAULT);
+        }
+        zr_shelf_end(&layout, &tab, &scrollbar);
+        zr_layout_pop(&layout);
+    }
+    zr_end(&layout, window);
+    return 1;
 }
 
-/* -----------------------------------------------------------------
- *  COPY & PASTE
- * ----------------------------------------------------------------- */
 static void
-copy(zr_handle handle, const char *text, zr_size size)
+init_demo(struct demo *gui)
 {
-    zr_char buffer[1024];
-    UNUSED(handle);
-    if (size >= 1023) return;
-    memcpy(buffer, text, size);
-    buffer[size] = '\0';
-    clipboard_set(buffer);
-}
-
-static void
-paste(zr_handle handle, struct zr_edit_box *box)
-{
-    zr_size len;
-    const char *text;
-    UNUSED(handle);
-    if (!clipboard_is_filled()) return;
-    text = clipboard_get();
-    len = strlen(text);
-    zr_edit_box_add(box, text, len);
-}
-
-/* -----------------------------------------------------------------
- *  INIT
- * ----------------------------------------------------------------- */
-static void
-init_demo(struct demo_gui *gui)
-{
-    struct zr_style *config = &gui->config;
-    struct state *win = &gui->state;
+    static char buffer[256];
     struct zr_clipboard clip;
     gui->running = zr_true;
+    gui->theme = THEME_WHITE;
+    tree_init(&gui->tree);
 
-    /* panel */
-    zr_style_default(config, ZR_DEFAULT_ALL, &gui->font);
-    zr_window_init(&gui->panel, zr_rect(30, 30, 280, 600),
+    /* themes */
+    zr_style_default(&gui->config_black, ZR_DEFAULT_ALL, &gui->font);
+    zr_style_default(&gui->config_white, ZR_DEFAULT_ALL, &gui->font);
+
+    gui->config_white.colors[ZR_COLOR_TEXT] = zr_rgba(70, 70, 70, 255);
+    gui->config_white.colors[ZR_COLOR_TEXT_HOVERING] = zr_rgba(10, 10, 10, 255);
+    gui->config_white.colors[ZR_COLOR_TEXT_ACTIVE] = zr_rgba(20, 20, 20, 255);
+    gui->config_white.colors[ZR_COLOR_WINDOW] = zr_rgba(175, 175, 175, 255);
+    gui->config_white.colors[ZR_COLOR_HEADER] = zr_rgba(175, 175, 175, 255);
+    gui->config_white.colors[ZR_COLOR_BORDER] = zr_rgba(0, 0, 0, 255);
+    gui->config_white.colors[ZR_COLOR_BUTTON] = zr_rgba(185, 185, 185, 255);
+    gui->config_white.colors[ZR_COLOR_BUTTON_HOVER] = zr_rgba(170, 170, 170, 255);
+    gui->config_white.colors[ZR_COLOR_BUTTON_ACTIVE] = zr_rgba(160, 160, 160, 255);
+    gui->config_white.colors[ZR_COLOR_TOGGLE] = zr_rgba(150, 150, 150, 255);
+    gui->config_white.colors[ZR_COLOR_TOGGLE_HOVER] = zr_rgba(120, 120, 120, 255);
+    gui->config_white.colors[ZR_COLOR_TOGGLE_CURSOR] = zr_rgba(175, 175, 175, 255);
+    gui->config_white.colors[ZR_COLOR_SELECTABLE] = zr_rgba(190, 190, 190, 255);
+    gui->config_white.colors[ZR_COLOR_SELECTABLE_HOVER] = zr_rgba(150, 150, 150, 255);
+    gui->config_white.colors[ZR_COLOR_SELECTABLE_TEXT] = zr_rgba(70, 70, 70, 255);
+    gui->config_white.colors[ZR_COLOR_SLIDER] = zr_rgba(190, 190, 190, 255);
+    gui->config_white.colors[ZR_COLOR_SLIDER_CURSOR] = zr_rgba(80, 80, 80, 255);
+    gui->config_white.colors[ZR_COLOR_SLIDER_CURSOR_HOVER] = zr_rgba(70, 70, 70, 255);
+    gui->config_white.colors[ZR_COLOR_SLIDER_CURSOR_ACTIVE] = zr_rgba(60, 60, 60, 255);
+    gui->config_white.colors[ZR_COLOR_PROGRESS] = zr_rgba(190, 190, 190, 255);
+    gui->config_white.colors[ZR_COLOR_PROGRESS_CURSOR] = zr_rgba(80, 80, 80, 255);
+    gui->config_white.colors[ZR_COLOR_PROGRESS_CURSOR_HOVER] = zr_rgba(70, 70, 70, 255);
+    gui->config_white.colors[ZR_COLOR_PROGRESS_CURSOR_ACTIVE] = zr_rgba(60, 60, 60, 255);
+    gui->config_white.colors[ZR_COLOR_INPUT] = zr_rgba(150, 150, 150, 255);
+    gui->config_white.colors[ZR_COLOR_INPUT_CURSOR] = zr_rgba(0, 0, 0, 255);
+    gui->config_white.colors[ZR_COLOR_INPUT_TEXT] = zr_rgba(0, 0, 0, 255);
+    gui->config_white.colors[ZR_COLOR_SPINNER] = zr_rgba(175, 175, 175, 255);
+    gui->config_white.colors[ZR_COLOR_SPINNER_TRIANGLE] = zr_rgba(0, 0, 0, 255);
+    gui->config_white.colors[ZR_COLOR_HISTO] = zr_rgba(160, 160, 160, 255);
+    gui->config_white.colors[ZR_COLOR_HISTO_BARS] = zr_rgba(45, 45, 45, 255);
+    gui->config_white.colors[ZR_COLOR_HISTO_NEGATIVE] = zr_rgba(255, 255, 255, 255);
+    gui->config_white.colors[ZR_COLOR_HISTO_HIGHLIGHT] = zr_rgba( 255, 0, 0, 255);
+    gui->config_white.colors[ZR_COLOR_PLOT] = zr_rgba(160, 160, 160, 255);
+    gui->config_white.colors[ZR_COLOR_PLOT_LINES] = zr_rgba(45, 45, 45, 255);
+    gui->config_white.colors[ZR_COLOR_PLOT_HIGHLIGHT] = zr_rgba(255, 0, 0, 255);
+    gui->config_white.colors[ZR_COLOR_SCROLLBAR] = zr_rgba(180, 180, 180, 255);
+    gui->config_white.colors[ZR_COLOR_SCROLLBAR_CURSOR] = zr_rgba(140, 140, 140, 255);
+    gui->config_white.colors[ZR_COLOR_SCROLLBAR_CURSOR_HOVER] = zr_rgba(150, 150, 150, 255);
+    gui->config_white.colors[ZR_COLOR_SCROLLBAR_CURSOR_ACTIVE] = zr_rgba(160, 160, 160, 255);
+    gui->config_white.colors[ZR_COLOR_TABLE_LINES] = zr_rgba(100, 100, 100, 255);
+    gui->config_white.colors[ZR_COLOR_TAB_HEADER] = zr_rgba(180, 180, 180, 255);
+    gui->config_white.colors[ZR_COLOR_SHELF] = zr_rgba(150, 150, 150, 255);
+    gui->config_white.colors[ZR_COLOR_SHELF_TEXT] = zr_rgba(0, 0, 0, 255);
+    gui->config_white.colors[ZR_COLOR_SHELF_ACTIVE] = zr_rgba(180, 180, 180, 255);
+    gui->config_white.colors[ZR_COLOR_SHELF_ACTIVE_TEXT] = zr_rgba(0, 0, 0, 255);
+    gui->config_white.colors[ZR_COLOR_SCALER] = zr_rgba(100, 100, 100, 255);
+
+    /* windows */
+    zr_window_init(&gui->panel, zr_rect(30, 30, 400, 600),
         ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALEABLE,
-        &gui->queue, config, &gui->input);
+        &gui->queue, &gui->config_black, &gui->input);
     zr_window_init(&gui->sub, zr_rect(400, 50, 220, 180),
         ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALEABLE,
-        &gui->queue, config, &gui->input);
-
-    /* widget state */
-    tree_init(&win->test);
-    clip.userdata.ptr = NULL,
-    clip.copy = copy;
-    clip.paste = paste;
-    zr_edit_box_init_fixed(&win->edit, win->edit_buffer, MAX_BUFFER, &clip, NULL);
-
-    win->prog_values[0] = 30;
-    win->prog_values[1] = 80;
-    win->prog_values[2] = 70;
-    win->prog_values[3] = 50;
-
-    win->scaleable = zr_true;
-    win->slider = 2.0f;
-    win->progressbar = 50;
-    win->spinner = 100;
-    win->spinnerf = 0.5f;
-    win->value = 0.5f;
+        &gui->queue, &gui->config_black, &gui->input);
 }
 
-/* -----------------------------------------------------------------
- *  RUN
- * ----------------------------------------------------------------- */
 static void
-run_demo(struct demo_gui *gui)
+run_demo(struct demo *gui)
 {
-    struct zr_context layout;
-    struct state *state = &gui->state;
-    struct zr_context tab;
-    struct zr_style *config = &gui->config;
-
-    /* first window */
-    zr_begin(&layout, &gui->panel);
-    {
-        /* header */
-        gui->running = !zr_header(&layout, "Demo",
-            ZR_CLOSEABLE|ZR_MINIMIZABLE, ZR_CLOSEABLE, ZR_HEADER_RIGHT);
-
-        /* menubar */
-        zr_menubar_begin(&layout);
-        {
-            zr_size i = 0;
-            zr_layout_row_begin(&layout, ZR_STATIC, 18, 2);
-            zr_layout_row_push(&layout, 45);
-
-            zr_menu_begin(&layout, &tab, "FILE", 100, &state->file_open);
-            zr_layout_row_dynamic(&tab, 25, 1);
-            for (i = 0; i < LEN(file_items); ++i) {
-                if (zr_menu_item(&tab, ZR_TEXT_LEFT, file_items[i])) {
-                    fprintf(stdout, "[Menu:File] %s clicked!\n", file_items[i]);
-                    state->file_open = zr_menu_close(&tab);
-                }
-            }
-            zr_menu_end(&layout, &tab);
-
-            zr_layout_row_push(&layout, 45);
-            zr_menu_begin(&layout, &tab, "EDIT", 100, &state->edit_open);
-            zr_layout_row_dynamic(&tab, 25, 1);
-            for (i = 0; i < LEN(edit_items); ++i) {
-                if (zr_menu_item(&tab, ZR_TEXT_LEFT, edit_items[i])) {
-                    fprintf(stdout, "[Menu:Edit] %s clicked!\n", edit_items[i]);
-                    state->edit_open = zr_menu_close(&tab);
-                }
-            }
-            zr_menu_end(&layout, &tab);
-        }
-        zr_menubar_end(&layout);
-
-        /* panel style configuration  */
-        if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "Style", &state->config_tab))
-        {
-            if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Options", &state->flag_tab)) {
-                update_flags(&layout);
-                zr_layout_pop(&layout);
-            }
-            if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Properties", &state->style_tab)) {
-                properties_tab(&layout, config);
-                zr_layout_pop(&layout);
-            }
-            if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Rounding", &state->round_tab)) {
-                round_tab(&layout, config);
-                zr_layout_pop(&layout);
-            }
-            if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Color", &state->color_tab)) {
-                color_tab(&layout, state, config);
-                zr_layout_pop(&layout);
-            }
-            zr_layout_pop(&layout);
-        }
-
-        /* widgets examples */
-        if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "Widgets", &state->widget_tab)) {
-            widget_panel(&layout, state);
-            zr_layout_pop(&layout);
-        }
-
-        /* popup panel */
-        if (state->popup)
-        {
-            zr_popup_begin(&layout, &tab, ZR_POPUP_STATIC, 0, zr_rect(20, 100, 220, 180), zr_vec2(0,0));
-            {
-                if (zr_header(&tab, "Popup", ZR_CLOSEABLE, ZR_CLOSEABLE, ZR_HEADER_LEFT)) {
-                    zr_popup_close(&tab);
-                    state->popup = zr_false;
-                }
-                zr_layout_row_dynamic(&tab, 30, 1);
-                zr_label(&tab, "Are you sure you want to exit?", ZR_TEXT_LEFT);
-                zr_layout_row_dynamic(&tab, 30, 4);
-                zr_spacing(&tab, 1);
-                if (zr_button_text(&tab, "Yes", ZR_BUTTON_DEFAULT)) {
-                    zr_popup_close(&tab);
-                    state->popup = zr_false;
-                }
-                if (zr_button_text(&tab, "No", ZR_BUTTON_DEFAULT)) {
-                    zr_popup_close(&tab);
-                    state->popup = zr_false;
-                }
-            }
-            zr_popup_end(&layout, &tab, NULL);
-        }
-
-        {
-            /* shelf + graphes  */
-            static const char *shelfs[] = {"Histogram", "Lines"};
-            zr_layout_row_dynamic(&layout, 190, 1);
-            state->shelf_selection = zr_shelf_begin(&layout, &tab, shelfs,
-                LEN(shelfs), state->shelf_selection, state->shelf);
-            {
-                enum {COLUMNS, LINES};
-                static const zr_float values[]={8.0f,15.0f,20.0f,12.0f,30.0f,12.0f,35.0f,40.0f,20.0f};
-                zr_layout_row_dynamic(&tab, 100, 1);
-                switch (state->shelf_selection) {
-                case COLUMNS:
-                    graph(&tab, ZR_GRAPH_COLUMN, values, LEN(values), 0); break;
-                case LINES:
-                    graph(&tab, ZR_GRAPH_LINES, values, LEN(values), 0); break;
-                default: break;
-                }
-            }
-            zr_shelf_end(&layout, &tab, &state->shelf);
-        }
-
-        {
-            /* tree */
-            struct zr_tree tree;
-            zr_layout_row_dynamic(&layout, 250, 1);
-            zr_tree_begin(&layout, &tree, "Tree", 20, state->tree);
-            upload_tree(&state->test, &tree, &state->test.root);
-            zr_tree_end(&layout, &tree, &state->tree);
-        }
-    }
-    zr_end(&layout, &gui->panel);
-
-    /* second panel */
-    zr_begin(&layout, &gui->sub);
-    {
-        enum {EASY, HARD};
-        zr_header(&layout, "Show", ZR_CLOSEABLE, 0, ZR_HEADER_LEFT);
-        zr_layout_row_static(&layout, 30, 80, 1);
-        if (zr_button_text(&layout, "button", ZR_BUTTON_DEFAULT)) {
-            /* event handling */
-        }
-        zr_layout_row_dynamic(&layout, 30, 2);
-        if (zr_option(&layout, "easy", state->op == EASY)) state->op = EASY;
-        if (zr_option(&layout, "hard", state->op == HARD)) state->op = HARD;
-        zr_layout_row_begin(&layout, ZR_STATIC, 30, 2);
-        {
-            zr_layout_row_push(&layout, 50);
-            zr_label(&layout, "Volume:", ZR_TEXT_LEFT);
-            zr_layout_row_push(&layout, 110);
-            state->value = zr_slider(&layout, 0, state->value, 1.0f, 0.1f);
-        }
-        zr_layout_row_end(&layout);
-    }
-    zr_end(&layout, &gui->sub);
+    struct zr_style *current = (gui->theme == THEME_BLACK) ? &gui->config_black : &gui->config_white;
+    gui->running = show_test_window(&gui->panel, current, &gui->theme, &gui->tree);
 }
 

@@ -103,8 +103,8 @@ draw(NVGcontext *nvg, struct zr_command_queue *queue, int width, int height)
             nvgBeginPath(nvg);
             nvgMoveTo(nvg, l->begin.x, l->begin.y);
             nvgLineTo(nvg, l->end.x, l->end.y);
-            nvgFillColor(nvg, nvgRGBA(l->color.r, l->color.g, l->color.b, l->color.a));
-            nvgFill(nvg);
+            nvgStrokeColor(nvg, nvgRGBA(l->color.r, l->color.g, l->color.b, l->color.a));
+            nvgStroke(nvg);
         } break;
         case ZR_COMMAND_CURVE: {
             const struct zr_command_curve *q = zr_command(curve, cmd);
@@ -244,7 +244,7 @@ main(int argc, char *argv[])
     NVGcontext *vg = NULL;
 
     /* GUI */
-    struct demo_gui gui;
+    struct demo gui;
     if (argc < 2) {
         fprintf(stdout,"Missing TTF Font file argument: gui <path>\n");
         exit(EXIT_FAILURE);
@@ -306,7 +306,7 @@ main(int argc, char *argv[])
         run_demo(&gui);
 
         /* Draw */
-        glClearColor(0.4f, 0.4f, 0.4f, 1.0f);
+        glClearColor(0.9f, 0.9f, 0.9f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         draw(vg, &gui.queue, width, height);
         SDL_GL_SwapWindow(win);
