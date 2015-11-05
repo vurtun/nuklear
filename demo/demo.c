@@ -925,7 +925,35 @@ init_demo(struct demo *gui)
 static void
 run_demo(struct demo *gui)
 {
+    struct zr_context layout;
     struct zr_style *current = (gui->theme == THEME_BLACK) ? &gui->config_black : &gui->config_white;
     gui->running = show_test_window(&gui->panel, current, &gui->theme, &gui->tree);
+
+    /* second window */
+    gui->sub.style = current;
+    zr_begin(&layout, &gui->sub);
+    {
+        enum {EASY, HARD};
+        static zr_int op = EASY;
+        static zr_float value = 0.5f;
+        zr_header(&layout, "Show", ZR_CLOSEABLE, 0, ZR_HEADER_LEFT);
+        zr_layout_row_static(&layout, 30, 80, 1);
+        if (zr_button_text(&layout, "button", ZR_BUTTON_DEFAULT)) {
+            /* event handling */
+        }
+        zr_layout_row_dynamic(&layout, 30, 2);
+        if (zr_option(&layout, "easy", op == EASY)) op = EASY;
+        if (zr_option(&layout, "hard", op == HARD)) op = HARD;
+        zr_layout_row_begin(&layout, ZR_STATIC, 30, 2);
+        {
+            zr_layout_row_push(&layout, 50);
+            zr_label(&layout, "Volume:", ZR_TEXT_LEFT);
+            zr_layout_row_push(&layout, 110);
+            zr_slider_float(&layout, 0, &value, 1.0f, 0.1f);
+        }
+        zr_layout_row_end(&layout);
+    }
+    zr_end(&layout, &gui->sub);
+
 }
 
