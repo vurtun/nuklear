@@ -226,6 +226,9 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
     if (resize) window_flags |= ZR_WINDOW_SCALEABLE;
     if (moveable) window_flags |= ZR_WINDOW_MOVEABLE;
     if (no_scrollbar) window_flags |= ZR_WINDOW_NO_SCROLLBAR;
+    if (window->flags & ZR_WINDOW_ACTIVE) window_flags |= ZR_WINDOW_ACTIVE;
+    if (window->flags & ZR_WINDOW_ROM) window_flags |= ZR_WINDOW_ROM;
+    if (window->flags & ZR_WINDOW_MINIMIZED) window_flags |= ZR_WINDOW_MINIMIZED;
 
     /* header flags */
     header_flags = 0;
@@ -235,6 +238,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
     if (move) header_flags |= ZR_MOVEABLE;
 
     /* main window */
+
     window->flags = window_flags;
     zr_begin(&layout, window);
     ret = zr_header(&layout, (titlebar)? "Zahnrad":"", header_flags, header_flags, header_align);
