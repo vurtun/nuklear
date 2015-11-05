@@ -5847,8 +5847,8 @@ zr_header_begin(struct zr_context *layout)
     zr_unify(&clip, &layout->buffer->clip, layout->bounds.x, layout->bounds.y,
         layout->bounds.x + layout->bounds.w, layout->bounds.y + layout->bounds.h);
     zr_command_buffer_push_scissor(out, clip);
-    zr_command_buffer_push_rect(out, zr_rect(layout->bounds.x, layout->bounds.y,
-        layout->bounds.w, layout->header.h), 0, c->colors[ZR_COLOR_HEADER]);
+    zr_command_buffer_push_rect(out, zr_rect(layout->bounds.x, layout->bounds.y+1,
+        layout->bounds.w, layout->header.h-2), 0, c->colors[ZR_COLOR_HEADER]);
 }
 
 zr_bool
@@ -6072,13 +6072,12 @@ zr_header_end(struct zr_context *layout)
     /* draw panel header border */
     if (layout->flags & ZR_WINDOW_BORDER) {
         zr_float scrollbar_width = zr_style_property(c, ZR_PROPERTY_SCROLLBAR_SIZE).x;
-        const zr_float width = layout->width + scrollbar_width;
 
         /* draw the header border lines */
         zr_command_buffer_push_line(out, layout->bounds.x, layout->bounds.y, layout->bounds.x,
                 layout->bounds.y + layout->header.h, c->colors[ZR_COLOR_BORDER]);
-        zr_command_buffer_push_line(out, layout->bounds.x + width, layout->bounds.y,
-                layout->bounds.x + width, layout->bounds.y + layout->header.h,
+        zr_command_buffer_push_line(out, layout->bounds.x + layout->bounds.w, layout->bounds.y,
+                layout->bounds.x + layout->bounds.w, layout->bounds.y + layout->header.h,
                 c->colors[ZR_COLOR_BORDER]);
         if (layout->flags & ZR_WINDOW_BORDER_HEADER)
             zr_command_buffer_push_line(out, layout->bounds.x, layout->bounds.y + layout->header.h,
@@ -6677,13 +6676,13 @@ zr_layout_push(struct zr_context *layout,
     if (type == ZR_LAYOUT_TAB) {
         /* special node with border around the header */
         zr_command_buffer_push_line(out, header.x, header.y,
-            header.x + header.w, header.y, config->colors[ZR_COLOR_BORDER]);
+            header.x + header.w-1, header.y, config->colors[ZR_COLOR_BORDER]);
         zr_command_buffer_push_line(out, header.x, header.y,
             header.x, header.y + header.h, config->colors[ZR_COLOR_BORDER]);
-        zr_command_buffer_push_line(out, header.x + header.w, header.y,
-            header.x + header.w, header.y + header.h, config->colors[ZR_COLOR_BORDER]);
+        zr_command_buffer_push_line(out, header.x + header.w-1, header.y,
+            header.x + header.w-1, header.y + header.h, config->colors[ZR_COLOR_BORDER]);
         zr_command_buffer_push_line(out, header.x, header.y + header.h,
-            header.x + header.w, header.y + header.h, config->colors[ZR_COLOR_BORDER]);
+            header.x + header.w-1, header.y + header.h, config->colors[ZR_COLOR_BORDER]);
     }
 
     if (*state == ZR_MAXIMIZED) {
@@ -7467,7 +7466,7 @@ zr_graph_push_line(struct zr_context *layout,
     struct zr_command_buffer *out = layout->buffer;
     const struct zr_style *config = layout->style;
     const struct zr_input *i = layout->input;
-    struct zr_color color = config->colors[ZR_COLOR_PLOT_LINES];
+    struct zr_color color;
     zr_flags ret = 0;
     zr_float step, range, ratio;
     struct zr_vec2 cur;
@@ -7492,8 +7491,9 @@ zr_graph_push_line(struct zr_context *layout,
         bounds.w = 6;
         bounds.h = 6;
 
+        color = config->colors[ZR_COLOR_PLOT_LINES];
         if (!(layout->flags & ZR_WINDOW_ROM) &&
-            ZR_INBOX(i->mouse.pos.x,i->mouse.pos.y,g->last.x-3,g->last.y-3,6,6)){
+            ZR_INBOX(i->mouse.pos.x,i->mouse.pos.y, g->last.x-3, g->last.y-3, 6, 6)){
             ret = zr_input_is_mouse_hovering_rect(i, bounds) ? ZR_GRAPH_HOVERING : 0;
             ret |= (i->mouse.buttons[ZR_BUTTON_LEFT].down &&
                 i->mouse.buttons[ZR_BUTTON_LEFT].clicked) ? ZR_GRAPH_CLICKED: 0;
@@ -7516,12 +7516,15 @@ zr_graph_push_line(struct zr_context *layout,
     bounds.h = 6;
 
     /* user selection of the current data point */
-    if (!(layout->flags & ZR_WINDOW_ROM) && zr_input_is_mouse_hovering_rect(i, bounds)) {
-        ret = ZR_GRAPH_HOVERING;
-        ret |= (i->mouse.buttons[ZR_BUTTON_LEFT].down &&
-            i->mouse.buttons[ZR_BUTTON_LEFT].clicked) ? ZR_GRAPH_CLICKED: 0;
-        color = config->colors[ZR_COLOR_PLOT_HIGHLIGHT];
-    } else color = config->colors[ZR_COLOR_PLOT_LINES];
+    color = config->colors[ZR_COLOR_PLOT_LINES];
+    if (!(layout->flags & ZR_WINDOW_ROM)) {
+        if (zr_input_is_mouse_hovering_rect(i, bounds)) {
+            ret = ZR_GRAPH_HOVERING;
+            ret |= (i->mouse.buttons[ZR_BUTTON_LEFT].down &&
+                i->mouse.buttons[ZR_BUTTON_LEFT].clicked) ? ZR_GRAPH_CLICKED: 0;
+            color = config->colors[ZR_COLOR_PLOT_HIGHLIGHT];
+        }
+    }
     zr_command_buffer_push_rect(out, zr_rect(cur.x - 3, cur.y - 3, 6, 6), 0, color);
 
     /* save current data point position */
@@ -8046,6 +8049,7 @@ zr_shelf_begin(struct zr_context *parent, struct zr_context *shelf,
         zr_command_buffer_push_scissor(out, clip);
         shelf->clip = clip;
     }
+    return;
 
 failed:
     /* invalid panels still need correct data */
@@ -8441,11 +8445,11 @@ zr_combo_begin(struct zr_context *parent, struct zr_context *combo,
     {
         /* button setup and execution */
         struct zr_button_symbol button;
-        bounds.y = header.y + 1;
+        bounds.y = header.y + 2;
         bounds.h = MAX(2, header.h);
-        bounds.h = bounds.h - 2;
-        bounds.w = bounds.h - 2;
-        bounds.x = (header.x + header.w) - (bounds.w+2);
+        bounds.h = bounds.h - 4;
+        bounds.w = bounds.h - 4;
+        bounds.x = (header.x + header.w) - (bounds.w+4);
 
         button.base.rounding = 0;
         button.base.border_width = 0;
