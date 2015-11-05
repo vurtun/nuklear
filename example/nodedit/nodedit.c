@@ -230,10 +230,8 @@ node_editor_draw(struct zr_context *layout, struct node_editor *nodedit,
             zr_group_begin(layout, &node, it->name,
                 ZR_WINDOW_MOVEABLE|ZR_WINDOW_NO_SCROLLBAR, zr_vec2(0,0));
             {
-                struct zr_color color;
-                const char *str[] = {"R:", "G:", "B:", "A:"};
+                zr_int r,g,b;
                 zr_float ratio[] = {0.25f, 0.75f};
-                zr_byte *iter = &it->color.r;
 
                 /* always have last selected node on top */
                 if (zr_input_mouse_clicked(in, ZR_BUTTON_LEFT, node.bounds) &&
@@ -246,16 +244,17 @@ node_editor_draw(struct zr_context *layout, struct node_editor *nodedit,
 
                 /* ================= NODE CONTENT =====================*/
                 zr_layout_row_dynamic(&node, 30, 1);
-                color = it->color;
-                zr_button_color(&node, color, ZR_BUTTON_DEFAULT);
+                r = it->color.r, g = it->color.g, b = it->color.b;
+                zr_button_color(&node, it->color, ZR_BUTTON_DEFAULT);
                 zr_layout_row(&node, ZR_DYNAMIC, 30, 2, ratio);
-                for (n = 0; n < 3; ++n) {
-                    zr_float t = *iter;
-                    zr_label(&node, str[n], ZR_TEXT_LEFT);
-                    t = zr_slider(&node, 0, t, 255, 10);
-                    *iter = (zr_byte)t;
-                    iter++;
-                }
+
+                zr_label(&node, "R:", ZR_TEXT_LEFT);
+                zr_slider_int(&node, 0, &r, 255, 10);
+                zr_label(&node, "G:", ZR_TEXT_LEFT);
+                zr_slider_int(&node, 0, &g, 255, 10);
+                zr_label(&node, "B:", ZR_TEXT_LEFT);
+                zr_slider_int(&node, 0, &b, 255, 10);
+                it->color.r = r; it->color.g = g; it->color.b = b;
                 /* ====================================================*/
             }
             zr_group_end(layout, &node, NULL);

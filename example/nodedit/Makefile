@@ -1,5 +1,5 @@
 # Install
-BIN = zahnrad
+BIN = nodedit
 
 # Compiler
 CC = clang
