@@ -51,7 +51,7 @@ extern "C" {
 /* setting this define to 1 adds header <stdint.h> for fixed sized types
  * if 0 each type has to be set to the correct size*/
 #define ZR_COMPILE_WITH_ASSERT 1
-/* setting this define to 1 adds the <assert.h> header for the assert macro
+/* setting this define to 1 adds header <assert.h> for the assert macro
   IMPORTANT: it also adds clib so only use it if wanted */
 #define ZR_COMPILE_WITH_VERTEX_BUFFER 1
 /* setting this define to 1 adds a vertex draw command list backend to this library,
@@ -151,6 +151,7 @@ struct zr_user_font_glyph;
 */
 enum {zr_false, zr_true};
 enum zr_heading {ZR_UP, ZR_RIGHT, ZR_DOWN, ZR_LEFT};
+enum zr_modify {ZR_FIXED = zr_false, ZR_MODIFYABLE = zr_true};
 struct zr_color {zr_byte r,g,b,a;};
 struct zr_vec2 {zr_float x,y;};
 struct zr_vec2i {zr_short x, y;};
@@ -160,16 +161,16 @@ typedef zr_char zr_glyph[ZR_UTF_SIZE];
 typedef union {void *ptr; zr_int id;} zr_handle;
 struct zr_image {zr_handle handle; zr_ushort w, h; zr_ushort region[4];};
 
-/* -----------------------  POINTER ---------------------------------*/
+/* ----------------------- POINTER ---------------------------------*/
 #define zr_ptr_add(t, p, i) ((t*)((void*)((zr_byte*)(p) + (i))))
 #define zr_ptr_sub(t, p, i) ((t*)((void*)((zr_byte*)(p) - (i))))
 #define zr_ptr_add_const(t, p, i) ((const t*)((const void*)((const zr_byte*)(p) + (i))))
 #define zr_ptr_sub_const(t, p, i) ((const t*)((const void*)((const zr_byte*)(p) - (i))))
-/* -----------------------  MATH ---------------------------------*/
+/* ----------------------- MATH ---------------------------------*/
 struct zr_rect zr_get_null_rect(void);
 struct zr_rect zr_rect(zr_float x, zr_float y, zr_float w, zr_float h);
 struct zr_vec2 zr_vec2(zr_float x, zr_float y);
-/* -----------------------  COLOR ---------------------------------*/
+/* ----------------------- COLOR ---------------------------------*/
 struct zr_color zr_rgba(zr_byte r, zr_byte g, zr_byte b, zr_byte a);
 struct zr_color zr_rgb(zr_byte r, zr_byte g, zr_byte b);
 struct zr_color zr_rgba_f(zr_float r, zr_float g, zr_float b, zr_float a);
@@ -179,7 +180,7 @@ struct zr_color zr_rgba32(zr_uint);
 zr_uint zr_color32(struct zr_color);
 void zr_colorf(zr_float *r, zr_float *g, zr_float *b, zr_float *a, struct zr_color);
 void zr_color_hsv(zr_float *out_h, zr_float *out_s, zr_float *out_v, struct zr_color);
-/* -----------------------  IMAGE ---------------------------------*/
+/* ----------------------- IMAGE ---------------------------------*/
 zr_handle zr_handle_ptr(void*);
 zr_handle zr_handle_id(zr_int);
 struct zr_image zr_image_ptr(void*);
@@ -187,7 +188,7 @@ struct zr_image zr_image_id(zr_int);
 struct zr_image zr_subimage_ptr(void*, zr_ushort w, zr_ushort h, struct zr_rect);
 struct zr_image zr_subimage_id(zr_int, zr_ushort w, zr_ushort h, struct zr_rect);
 zr_bool zr_image_is_subimage(const struct zr_image* img);
-/* -----------------------  UTF-8 ---------------------------------*/
+/* ----------------------- UTF-8 ---------------------------------*/
 zr_size zr_utf_decode(const zr_char*, zr_long*, zr_size);
 zr_size zr_utf_encode(zr_long, zr_char*, zr_size);
 zr_size zr_utf_len(const zr_char*, zr_size len);
@@ -389,14 +390,14 @@ zr_bool zr_input_is_key_down(const struct zr_input*, enum zr_keys);
     Biggest advantage is a simple memory model. Downside is that if the buffer
     is full there is no way to accesses more memory, which fits target application
     with a GUI with roughly known memory consumptions.
-    The second way to mnamge memory is by extending the fixed size block by querying
+    The second way to manage memory is by extending the fixed size block by querying
     information from the buffer about the used size and needed size and allocate new
     memory if the buffer is full. While this approach is still better than just using
     a fixed size memory block the reallocation still has one invalid frame as consquence
     since the used memory information is only available at the end of the frame which leads
     to the last way of handling memory.
     The last and most complicated way of handling memory is by allocator callbacks.
-    The user hereby registers callbacks to be called to allocate, free and reallocate
+    The user hereby registers callbacks to be called to allocate and free
     memory if needed. While this solves most allocation problems it causes some
     loss of flow control on the user side.
 
@@ -567,7 +568,7 @@ zr_size zr_buffer_total(struct zr_buffer*);
     calling the appropriate zr_command_buffer_XXX for each primitive.
     To iterate over each commands inside the buffer zr_foreach_buffer_command is
     provided. Finally to reuse the buffer after the frame use the
-    zr_command_buffer_reset function. If used without a command queue the command
+    zr_command_buffer_clear function. If used without a command queue the command
     buffer has be cleared after each frame to reset the buffer back into a
     empty state.
 
@@ -852,6 +853,7 @@ const struct zr_command *zr_command_buffer_next(struct zr_command_buffer*,
     Internally the command queue has a list of command buffers which can be
     modified to create a certain sequence, for example the `zr_begin`
     function changes the list to create overlapping windows.
+
     USAGE
     ----------------------------
     The command queue owns a memory buffer internaly that needs to be initialized
@@ -1600,7 +1602,7 @@ const struct zr_font_glyph* zr_font_find_glyph(struct zr_font*, zr_long unicode)
     ----------------------------
     The Editbox is for text input with either a fixed or dynamically growing
     buffer. It extends the basic functionality of basic input over `zr_edit`
-    and `zr_edit` with basic copy and paste functionality and the possiblity
+    and `zr_edit_filtered` with basic copy and paste functionality and the possiblity
     to use a extending buffer.
 
     USAGE
@@ -2346,6 +2348,9 @@ enum zr_style_colors {
     ZR_COLOR_TOGGLE,
     ZR_COLOR_TOGGLE_HOVER,
     ZR_COLOR_TOGGLE_CURSOR,
+    ZR_COLOR_SELECTABLE,
+    ZR_COLOR_SELECTABLE_HOVER,
+    ZR_COLOR_SELECTABLE_TEXT,
     ZR_COLOR_SLIDER,
     ZR_COLOR_SLIDER_CURSOR,
     ZR_COLOR_SLIDER_CURSOR_HOVER,
@@ -2520,6 +2525,12 @@ void zr_style_reset(struct zr_style*);
     Input:
     - Configuration structure to pop the change from and to
 */
+const char *zr_style_color_name(enum zr_style_colors);
+/*  this function returns the string name of a given color type */
+const char *zr_style_rounding_name(enum zr_style_rounding);
+/*  this function returns the string name of a given rounding type */
+const char *zr_style_property_name(enum zr_style_properties);
+/*  this function returns the string name of a given property type */
 /*
  * ==============================================================
  *
@@ -2545,13 +2556,14 @@ void zr_style_reset(struct zr_style*);
 
     window function API
     ------------------
-    zr_window_init         -- initializes the window with position, size and flags
-    zr_window_unlink       -- remove the window from the command queue
-    zr_window_set_config   -- updates the used window configuration
-    zr_window_add_flag     -- adds a behavior flag to the window
-    zr_window_remove_flag  -- removes a behavior flag from the window
-    zr_window_has_flag     -- check if a given behavior flag is set in the window
-    zr_window_is_minimized -- return wether the window is minimized
+    zr_window_init          -- initializes the window with position, size and flags
+    zr_window_unlink        -- remove the window from the command queue
+    zr_window_link          -- links a previously unlinked window into a command queue
+    zr_window_set_config    -- updates the used window configuration
+    zr_window_add_flag      -- adds a behavior flag to the window
+    zr_window_remove_flag   -- removes a behavior flag from the window
+    zr_window_has_flag      -- check if a given behavior flag is set in the window
+    zr_window_is_minimized  -- return wether the window is minimized
 
     APIs
     -----------------
@@ -2632,6 +2644,8 @@ void zr_window_init(struct zr_window*, struct zr_rect bounds, zr_flags flags,
 */
 void zr_window_unlink(struct zr_window*);
 /*  this function unlinks the window from its queue */
+void zr_window_link(struct zr_window*, struct zr_command_queue*);
+/*  this function links a previously unlinked the window into a queue */
 void zr_window_add_flag(struct zr_window*, zr_flags);
 /*  this function adds window flags to the window */
 void zr_window_remove_flag(struct zr_window*, zr_flags);
@@ -3102,31 +3116,32 @@ void zr_layout_pop(struct zr_context*);
     by adding draw command into the window command buffer.
 
     window widgets API
-    zr_widget                -- base function for all widgets to allocate space
-    zr_widget_fitting        -- special base function for widget without padding/spacing
-    zr_spacing               -- column seperator and is basically an empty widget
-    zr_seperator             -- adds either a horizontal or vertical seperator
-    zr_text                  -- text widget for printing text with length
-    zr_text_colored          -- colored text widget for printing string by length
-    zr_label                 -- text widget for printing zero terminated strings
-    zr_label_colored         -- widget for printing colored zero terminiated strings
-    zr_button_text           -- button widget with text content
-    zr_button_toggle         -- button toggle widget with text content
-    zr_button_color          -- colored button widget without content
-    zr_button_symbol         -- button with triangle either up-/down-/left- or right
-    zr_button_image          -- button widget width icon content
-    zr_button_text_image     -- button widget with text and icon
-    zr_button_text_symbol    -- button widget with text and a triangle
-    zr_button_fitting        -- button widget without border and fitting space
-    zr_image                 -- image widget for outputing a image to a window
-    zr_check                 -- add a checkbox widget
-    zr_option                -- radiobutton widget
-    zr_slider                -- slider widget with min,max,step value
-    zr_progress              -- progressbar widget
-    zr_edit                  -- edit textbox widget for text input
-    zr_edit_filtered         -- edit textbox widget for text input with filter input
-    zr_editbox               -- edit textbox with cursor, clipboard and filter
-    zr_spinner               -- spinner widget with keyboard or mouse modification
+    zr_widget               -- base function for all widgets to allocate space
+    zr_widget_fitting       -- special base function for widget without padding/spacing
+    zr_spacing              -- column seperator and is basically an empty widget
+    zr_seperator            -- adds either a horizontal or vertical seperator
+    zr_text                 -- text widget for printing text with length
+    zr_text_colored         -- colored text widget for printing string by length
+    zr_label                -- text widget for printing zero terminated strings
+    zr_label_colored        -- widget for printing colored zero terminiated strings
+    zr_button_text          -- button widget with text content
+    zr_button_color         -- colored button widget without content
+    zr_button_symbol        -- button with triangle either up-/down-/left- or right
+    zr_button_image         -- button widget width icon content
+    zr_button_text_image    -- button widget with text and icon
+    zr_button_text_symbol   -- button widget with text and a triangle
+    zr_button_fitting       -- button widget without border and fitting space
+    zr_image                -- image widget for outputing a image to a window
+    zr_check                -- add a checkbox widget
+    zr_option               -- radiobutton widget
+    zr_slider_int           -- integer slider widget with min,max,step value
+    zr_slider_float         -- float slider widget with min,max,step value
+    zr_progress             -- progressbar widget
+    zr_edit                 -- edit textbox widget for text input
+    zr_edit_filtered        -- edit textbox widget for text input with filter input
+    zr_editbox              -- edit textbox with cursor, clipboard and filter
+    zr_spinner_int          -- integer spinner widget with keyboard or mouse modification
+    zr_spinner_float        -- float spinner widget with keyboard or mouse modification
 */
 enum zr_widget_state zr_widget(struct zr_rect*, struct zr_context*);
 /*  this function represents the base of every widget and calculates the bounds
@@ -3187,7 +3202,7 @@ void zr_image(struct zr_context*, struct zr_image);
     Input:
     - string pointer to text that should be drawn
 */
-zr_bool zr_check(struct zr_context*, const char*, zr_bool active);
+void zr_check(struct zr_context*, const char*, zr_bool *active);
 /*  this function creates a checkbox widget with either active or inactive state
     Input:
     - checkbox label describing the content
@@ -3265,25 +3280,18 @@ zr_bool zr_button_text_image(struct zr_context *layout, struct zr_image img,
     - zr_true if the button was transistioned from unpressed to pressed with
         default button behavior or pressed if repeater behavior.
 */
-zr_bool zr_button_toggle(struct zr_context*, const char*,zr_bool value);
+zr_bool zr_selectable(struct zr_context *layout, const char *str,
+                        enum zr_text_align align, zr_bool value);
 /*  this function creates a toggle button which is either active or inactive
     Input:
-    - label describing the toggle button
+    - selectable text to draw
     - current state of the toggle
     Output:
-    - from user input updated toggle state
+    - returns whether the selectable was selected
 */
-zr_bool zr_button_toggle_fitting(struct zr_context*, const char*,zr_bool value);
-/*  this function creates a fitting toggle button which is either active or inactive
-    Input:
-    - label describing the toggle button
-    - current state of the toggle
-    Output:
-    - from user input updated toggle state
-*/
-zr_float zr_slider(struct zr_context*, zr_float min, zr_float val, zr_float max,
+void zr_slider_float(struct zr_context*, zr_float min, zr_float *val, zr_float max,
                     zr_float step);
-/*  this function creates a slider for value manipulation
+/*  this function creates a float slider for value manipulation
     Input:
     - minimal slider value that will not be underflown
     - slider value which shall be updated
@@ -3292,7 +3300,18 @@ zr_float zr_slider(struct zr_context*, zr_float min, zr_float val, zr_float max,
     Output:
     - the from user input updated slider value
 */
-zr_size zr_progress(struct zr_context*, zr_size cur, zr_size max, zr_bool modifyable);
+void zr_slider_int(struct zr_context*, zr_int min, zr_int *val, zr_int max,
+                    zr_int step);
+/*  this function creates a int slider for value manipulation
+    Input:
+    - minimal slider value that will not be underflown
+    - slider value which shall be updated
+    - maximal slider value that will not be overflown
+    - step intervall to change the slider with
+    Output:
+    - the from user input updated slider value
+*/
+void zr_progress(struct zr_context*, zr_size *cur, zr_size max, zr_bool modifyable);
 /*  this function creates an either user or program controlled progressbar
     Input:
     - current progressbar value
@@ -3303,7 +3322,7 @@ zr_size zr_progress(struct zr_context*, zr_size cur, zr_size max, zr_bool modify
 */
 void zr_editbox(struct zr_context*, struct zr_edit_box*);
 /*  this function creates an editbox with copy & paste functionality and text buffering */
-zr_size zr_edit(struct zr_context*, zr_char *buffer, zr_size len, zr_size max,
+void zr_edit(struct zr_context*, zr_char *buffer, zr_size *len, zr_size max,
                 zr_state *active, zr_size *cursor, enum zr_input_filter);
 /*  this function creates an editbox to updated/insert user text input
     Input:
@@ -3316,7 +3335,7 @@ zr_size zr_edit(struct zr_context*, zr_char *buffer, zr_size len, zr_size max,
     - length of the buffer after user input update
     - current state of the editbox with active(zr_true) or inactive(zr_false)
 */
-zr_size zr_edit_filtered(struct zr_context*, zr_char *buffer, zr_size len,
+void zr_edit_filtered(struct zr_context*, zr_char *buffer, zr_size *len,
                         zr_size max,  zr_state *active, zr_size *cursor, zr_filter);
 /*  this function creates an editbox to updated/insert filtered user text input
     Input:
@@ -3329,7 +3348,7 @@ zr_size zr_edit_filtered(struct zr_context*, zr_char *buffer, zr_size len,
     - length of the buffer after user input update
     - current state of the editbox with active(zr_true) or inactive(zr_false)
 */
-zr_int zr_spinner_int(struct zr_context*, zr_int min, zr_int value, zr_int max,
+void zr_spinner_int(struct zr_context*, zr_int min, zr_int *value, zr_int max,
                     zr_int step, zr_state *active);
 /*  this function creates a integer spinner widget
     Input:
@@ -3342,7 +3361,7 @@ zr_int zr_spinner_int(struct zr_context*, zr_int min, zr_int value, zr_int max,
     - the from user input updated spinner value
     - current state of the editbox with active(zr_true) or inactive(zr_false)
 */
-zr_float zr_spinner_float(struct zr_context*, zr_float min, zr_float value, zr_float max,
+void zr_spinner_float(struct zr_context*, zr_float min, zr_float *value, zr_float max,
                     zr_float step, zr_state *active);
 /*  this function creates a float spinner widget
     Input:
@@ -3388,7 +3407,7 @@ void zr_combo_begin(struct zr_context *parent, struct zr_context *combo,
     - the current state of the combobox with either zr_true (active) or zr_false else
     - the current scrollbar offset of the combo box popup window
 */
-zr_bool zr_combo_item(struct zr_context *menu, enum zr_text_align align, const char*);
+zr_bool zr_combo_item(struct zr_context *menu, const char*, enum zr_text_align align);
 /*  this function execute a combo box item
     Input:
     - title of the item
@@ -3649,9 +3668,9 @@ void zr_group_end(struct zr_context*, struct zr_context*, struct zr_vec2 *scroll
     zr_shelf_end     -- ends a previously started shelf build up process
 
 */
-zr_size zr_shelf_begin(struct zr_context*, struct zr_context*,
+void zr_shelf_begin(struct zr_context*, struct zr_context*,
                         const char *tabs[], zr_size size,
-                        zr_size active, struct zr_vec2 offset);
+                        zr_size *active, struct zr_vec2 offset);
 /*  this function adds a shelf child window into the parent window
     IMPORTANT: You need to set the height of the shelf with zr_row_layout
     Input:
@@ -3850,7 +3869,7 @@ zr_bool zr_menu_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
     Output
     - `zr_true` if has been clicked `zr_false` otherwise
 */
-zr_state zr_menu_close(struct zr_context *menu);
+void zr_menu_close(struct zr_context *menu, zr_state*);
 /*  this function closes a opened menu */
 void zr_menu_end(struct zr_context *parent, struct zr_context *menu);
 /*  this function ends the menu build up process */

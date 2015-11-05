@@ -864,6 +864,13 @@ zr_utf_len(const zr_char *str, zr_size len)
     return src_len;
 }
 
+/*
+ * ==============================================================
+ *
+ *                          USER FONT
+ *
+ * ===============================================================
+ */
 static zr_size
 zr_user_font_glyph_index_at_pos(const struct zr_user_font *font, const char *text,
     zr_size text_len, zr_float xoff)
@@ -3601,7 +3608,7 @@ zr_font_ref(struct zr_font *font)
 /*
  * ==============================================================
  *
- *                      Edit Box
+ *                          Edit Box
  *
  * ===============================================================
  */
@@ -4035,7 +4042,7 @@ zr_widget_button(struct zr_command_buffer *o, struct zr_rect r,
     pad.y = b->padding.y + b->border_width;
     *content = zr_pad_rect(r, pad);
 
-    /* general button user input logic */
+    /* general button user input behavior */
     background = b->normal;
     if (zr_input_is_mouse_hovering_rect(i, r)) {
         background = b->hover;
@@ -5035,82 +5042,132 @@ zr_widget_spinner_float(struct zr_command_buffer *out, struct zr_rect r,
     if (active) *active = is_active;
     return value;
 }
-/*
- * ==============================================================
+/* ==============================================================
  *
- *                          Style
+ *                          STYLE
  *
- * ===============================================================
- */
+ * ===============================================================*/
+#define ZR_STYLE_PROPERTY_MAP(PROPERTY)\
+    PROPERTY(SCROLLBAR_SIZE,    14.0f, 14.0f)\
+    PROPERTY(PADDING,           15.0f, 10.0f)\
+    PROPERTY(SIZE,              64.0f, 64.0f)\
+    PROPERTY(ITEM_SPACING,      4.0f, 4.0f)\
+    PROPERTY(ITEM_PADDING,      4.0f, 4.0f)\
+    PROPERTY(SCALER_SIZE,       16.0f, 16.0f)
+
+#define ZR_STYLE_ROUNDING_MAP(ROUNDING)\
+    ROUNDING(BUTTON,    4.0f)\
+    ROUNDING(SLIDER,    8.0f)\
+    ROUNDING(PROGRESS,  4.0f)\
+    ROUNDING(CHECK,     0.0f)\
+    ROUNDING(INPUT,     0.0f)\
+    ROUNDING(GRAPH,     4.0f)\
+    ROUNDING(SCROLLBAR, 5.0f)
+
+#define ZR_STYLE_COLOR_MAP(COLOR)\
+    COLOR(TEXT,                     175, 175, 175, 255)\
+    COLOR(TEXT_HOVERING,            120, 120, 120, 255)\
+    COLOR(TEXT_ACTIVE,              100, 100, 100, 255)\
+    COLOR(WINDOW,                   45, 45, 45, 255)\
+    COLOR(HEADER,                   40, 40, 40, 255)\
+    COLOR(BORDER,                   65, 65, 65, 255)\
+    COLOR(BUTTON,                   50, 50, 50, 255)\
+    COLOR(BUTTON_HOVER,             35, 35, 35, 255)\
+    COLOR(BUTTON_ACTIVE,            40, 40, 40, 255)\
+    COLOR(TOGGLE,                   100, 100, 100, 255)\
+    COLOR(TOGGLE_HOVER,             120, 120, 120, 255)\
+    COLOR(TOGGLE_CURSOR,            45, 45, 45, 255)\
+    COLOR(SELECTABLE,               100, 100, 100, 255)\
+    COLOR(SELECTABLE_HOVER,         80, 80, 80, 255)\
+    COLOR(SELECTABLE_TEXT,          45, 45, 45, 255)\
+    COLOR(SLIDER,                   38, 38, 38, 255)\
+    COLOR(SLIDER_CURSOR,            100, 100, 100, 255)\
+    COLOR(SLIDER_CURSOR_HOVER,      120, 120, 120, 255)\
+    COLOR(SLIDER_CURSOR_ACTIVE,     150, 150, 150, 255)\
+    COLOR(PROGRESS,                 38, 38, 38, 255)\
+    COLOR(PROGRESS_CURSOR,          100, 100, 100, 255)\
+    COLOR(PROGRESS_CURSOR_HOVER,    120, 120, 120, 255)\
+    COLOR(PROGRESS_CURSOR_ACTIVE,   150, 150, 150, 255)\
+    COLOR(INPUT,                    45, 45, 45, 255)\
+    COLOR(INPUT_CURSOR,             100, 100, 100, 255)\
+    COLOR(INPUT_TEXT,               135, 135, 135, 255)\
+    COLOR(SPINNER,                  45, 45, 45, 255)\
+    COLOR(SPINNER_TRIANGLE,         100, 100, 100, 255)\
+    COLOR(HISTO,                    120, 120, 120, 255)\
+    COLOR(HISTO_BARS,               45, 45, 45, 255)\
+    COLOR(HISTO_NEGATIVE,           255, 255, 255, 255)\
+    COLOR(HISTO_HIGHLIGHT,          255, 0, 0, 255)\
+    COLOR(PLOT,                     120, 120, 120, 255)\
+    COLOR(PLOT_LINES,               45, 45, 45, 255)\
+    COLOR(PLOT_HIGHLIGHT,           255, 0, 0, 255)\
+    COLOR(SCROLLBAR,                40, 40, 40, 255)\
+    COLOR(SCROLLBAR_CURSOR,         100, 100, 100, 255)\
+    COLOR(SCROLLBAR_CURSOR_HOVER,   120, 120, 120, 255)\
+    COLOR(SCROLLBAR_CURSOR_ACTIVE,  150, 150, 150, 255)\
+    COLOR(TABLE_LINES,              100, 100, 100, 255)\
+    COLOR(TAB_HEADER,               40, 40, 40, 255)\
+    COLOR(SHELF,                    40, 40, 40, 255)\
+    COLOR(SHELF_TEXT,               150, 150, 150, 255)\
+    COLOR(SHELF_ACTIVE,             30, 30, 30, 255)\
+    COLOR(SHELF_ACTIVE_TEXT,        150, 150, 150, 255)\
+    COLOR(SCALER,                   100, 100, 100, 255)
+
+static const char *zr_style_color_names[] = {
+    #define COLOR(a,b,c,d,e) #a,
+        ZR_STYLE_COLOR_MAP(COLOR)
+    #undef COLOR
+};
+static const char *zr_style_rounding_names[] = {
+    #define ROUNDING(a,b) #a,
+        ZR_STYLE_ROUNDING_MAP(ROUNDING)
+    #undef ROUNDING
+};
+static const char *zr_style_property_names[] = {
+    #define PROPERTY(a,b,c) #a,
+        ZR_STYLE_PROPERTY_MAP(PROPERTY)
+    #undef PROPERTY
+};
+
+const char*
+zr_style_color_name(enum zr_style_colors color)
+{
+    return zr_style_color_names[color];
+}
+
+const char*
+zr_style_rounding_name(enum zr_style_rounding rounding)
+{
+    return zr_style_rounding_names[rounding];
+}
+
+const char*
+zr_style_property_name(enum zr_style_properties property)
+{
+    return zr_style_property_names[property];
+}
+
 static void
 zr_style_default_properties(struct zr_style *style)
 {
-    style->properties[ZR_PROPERTY_SCROLLBAR_SIZE] = zr_vec2(14, 14);
-    style->properties[ZR_PROPERTY_PADDING] = zr_vec2(15.0f, 10.0f);
-    style->properties[ZR_PROPERTY_SIZE] = zr_vec2(64.0f, 64.0f);
-    style->properties[ZR_PROPERTY_ITEM_SPACING] = zr_vec2(4.0f, 4.0f);
-    style->properties[ZR_PROPERTY_ITEM_PADDING] = zr_vec2(4.0f, 4.0f);
-    style->properties[ZR_PROPERTY_SCALER_SIZE] = zr_vec2(16.0f, 16.0f);
+    #define PROPERTY(a,b,c) style->properties[ZR_PROPERTY_##a] = zr_vec2(b, c);
+        ZR_STYLE_PROPERTY_MAP(PROPERTY)
+    #undef PROPERTY
 }
 
 static void
 zr_style_default_rounding(struct zr_style *style)
 {
-    style->rounding[ZR_ROUNDING_BUTTON] = 4.0f;
-    style->rounding[ZR_ROUNDING_SLIDER] = 8.0f;
-    style->rounding[ZR_ROUNDING_PROGRESS] = 4.0f;
-    style->rounding[ZR_ROUNDING_CHECK] = 0.0f;
-    style->rounding[ZR_ROUNDING_INPUT] = 0.0f;
-    style->rounding[ZR_ROUNDING_GRAPH] = 4.0f;
-    style->rounding[ZR_ROUNDING_SCROLLBAR] = 5.0f;
+    #define ROUNDING(a,b) style->rounding[ZR_ROUNDING_##a] = b;
+        ZR_STYLE_ROUNDING_MAP(ROUNDING)
+    #undef ROUNDING
 }
 
 static void
 zr_style_default_color(struct zr_style *style)
 {
-    style->colors[ZR_COLOR_TEXT] = zr_rgba(165, 165, 165, 255);
-    style->colors[ZR_COLOR_TEXT_HOVERING] = zr_rgba(120, 120, 120, 255);
-    style->colors[ZR_COLOR_TEXT_ACTIVE] = zr_rgba(100, 100, 100, 255);
-    style->colors[ZR_COLOR_WINDOW] = zr_rgba(45, 45, 45, 255);
-    style->colors[ZR_COLOR_HEADER] = zr_rgba(40, 40, 40, 255);
-    style->colors[ZR_COLOR_BORDER] = zr_rgba(38, 38, 38, 255);
-    style->colors[ZR_COLOR_BUTTON] = zr_rgba(50, 50, 50, 255);
-    style->colors[ZR_COLOR_BUTTON_HOVER] = zr_rgba(35, 35, 35, 255);
-    style->colors[ZR_COLOR_BUTTON_ACTIVE] = zr_rgba(40, 40, 40, 255);
-    style->colors[ZR_COLOR_TOGGLE] = zr_rgba(100, 100, 100, 255);
-    style->colors[ZR_COLOR_TOGGLE_HOVER] = zr_rgba(120, 120, 120, 255);
-    style->colors[ZR_COLOR_TOGGLE_CURSOR] = zr_rgba(45, 45, 45, 255);
-    style->colors[ZR_COLOR_SLIDER] = zr_rgba(38, 38, 38, 255);
-    style->colors[ZR_COLOR_SLIDER_CURSOR] = zr_rgba(100, 100, 100, 255);
-    style->colors[ZR_COLOR_SLIDER_CURSOR_HOVER] = zr_rgba(120, 120, 120, 255);
-    style->colors[ZR_COLOR_SLIDER_CURSOR_ACTIVE] = zr_rgba(150, 150, 150, 255);
-    style->colors[ZR_COLOR_PROGRESS] = zr_rgba(38, 38, 38, 255);
-    style->colors[ZR_COLOR_PROGRESS_CURSOR] = zr_rgba(100, 100, 100, 255);
-    style->colors[ZR_COLOR_PROGRESS_CURSOR_HOVER] = zr_rgba(120, 120, 120, 255);
-    style->colors[ZR_COLOR_PROGRESS_CURSOR_ACTIVE] = zr_rgba(150, 150, 150, 255);
-    style->colors[ZR_COLOR_INPUT] = zr_rgba(45, 45, 45, 255);
-    style->colors[ZR_COLOR_INPUT_CURSOR] = zr_rgba(100, 100, 100, 255);
-    style->colors[ZR_COLOR_INPUT_TEXT] = zr_rgba(135, 135, 135, 255);
-    style->colors[ZR_COLOR_SPINNER] = zr_rgba(45, 45, 45, 255);
-    style->colors[ZR_COLOR_SPINNER_TRIANGLE] = zr_rgba(100, 100, 100, 255);
-    style->colors[ZR_COLOR_HISTO] = zr_rgba(120, 120, 120, 255);
-    style->colors[ZR_COLOR_HISTO_BARS] = zr_rgba(45, 45, 45, 255);
-    style->colors[ZR_COLOR_HISTO_NEGATIVE] = zr_rgba(255, 255, 255, 255);
-    style->colors[ZR_COLOR_HISTO_HIGHLIGHT] = zr_rgba( 255, 0, 0, 255);
-    style->colors[ZR_COLOR_PLOT] = zr_rgba(100, 100, 100, 255);
-    style->colors[ZR_COLOR_PLOT_LINES] = zr_rgba(45, 45, 45, 255);
-    style->colors[ZR_COLOR_PLOT_HIGHLIGHT] = zr_rgba(255, 0, 0, 255);
-    style->colors[ZR_COLOR_SCROLLBAR] = zr_rgba(40, 40, 40, 255);
-    style->colors[ZR_COLOR_SCROLLBAR_CURSOR] = zr_rgba(100, 100, 100, 255);
-    style->colors[ZR_COLOR_SCROLLBAR_CURSOR_HOVER] = zr_rgba(120, 120, 120, 255);
-    style->colors[ZR_COLOR_SCROLLBAR_CURSOR_ACTIVE] = zr_rgba(150, 150, 150, 255);
-    style->colors[ZR_COLOR_TABLE_LINES] = zr_rgba(100, 100, 100, 255);
-    style->colors[ZR_COLOR_TAB_HEADER] = zr_rgba(40, 40, 40, 255);
-    style->colors[ZR_COLOR_SHELF] = zr_rgba(40, 40, 40, 255);
-    style->colors[ZR_COLOR_SHELF_TEXT] = zr_rgba(150, 150, 150, 255);
-    style->colors[ZR_COLOR_SHELF_ACTIVE] = zr_rgba(30, 30, 30, 255);
-    style->colors[ZR_COLOR_SHELF_ACTIVE_TEXT] = zr_rgba(150, 150, 150, 255);
-    style->colors[ZR_COLOR_SCALER] = zr_rgba(100, 100, 100, 255);
+    #define COLOR(a,b,c,d,e) style->colors[ZR_COLOR_##a] = zr_rgba(b,c,d,e);
+        ZR_STYLE_COLOR_MAP(COLOR)
+    #undef COLOR
 }
 
 void
@@ -5264,6 +5321,19 @@ zr_window_init(struct zr_window *window, struct zr_rect bounds,
         zr_command_queue_insert_back(queue, &window->buffer);
     }
 }
+
+void
+zr_window_link(struct zr_window *window, struct zr_command_queue *queue)
+{
+    ZR_ASSERT(window);
+    ZR_ASSERT(window->queue);
+    if (!window || !window->queue) return;
+    if (queue) {
+        zr_command_buffer_init(&window->buffer, &queue->buffer, ZR_CLIP);
+        zr_command_queue_insert_back(queue, &window->buffer);
+    }
+}
+
 void
 zr_window_unlink(struct zr_window *window)
 {
@@ -5662,7 +5732,7 @@ zr_end(struct zr_context *layout, struct zr_window *window)
         else zr_command_queue_finish(window->queue, &window->buffer);
     }
 
-    /* the remove ROM flag was set so remove ROM FLAG*/
+    /* remove ROM flag was set so remove ROM FLAG*/
     if (layout->flags & ZR_WINDOW_REMOVE_ROM) {
         layout->flags &= ~(zr_flags)ZR_WINDOW_ROM;
         layout->flags &= ~(zr_flags)ZR_WINDOW_REMOVE_ROM;
@@ -5841,7 +5911,7 @@ zr_header_button(struct zr_context *layout,
         zr_command_buffer_push_triangle(layout->buffer,  points[0].x, points[0].y,
             points[1].x, points[1].y, points[2].x, points[2].y, c->colors[ZR_COLOR_TEXT]);
 
-        /* calculate the space the icon occupied */
+        /* calculate the space the icon occupies */
         sym.w = c->font.height + 2 * item_padding.x;
         } break;
     case ZR_SYMBOL_MAX:
@@ -6144,6 +6214,7 @@ zr_layout_row_begin(struct zr_context *layout,
     if (fmt == ZR_DYNAMIC)
         layout->row.type = ZR_LAYOUT_DYNAMIC_ROW;
     else layout->row.type = ZR_LAYOUT_STATIC_ROW;
+
     layout->row.ratio = 0;
     layout->row.item_width = 0;
     layout->row.item_offset = 0;
@@ -6358,7 +6429,7 @@ zr_layout_widget_space(struct zr_rect *bounds, struct zr_context *layout,
     panel_spacing = (zr_float)(layout->row.columns - 1) * spacing.x;
     panel_space  = layout->width - panel_padding - panel_spacing;
 
-    /* calculate the width of one item inside the panel row */
+    /* calculate the width of one item inside the current layout space */
     switch (layout->row.type) {
     case ZR_LAYOUT_DYNAMIC_FIXED: {
         /* scaling fixed size widgets item width */
@@ -6930,38 +7001,44 @@ zr_button_text_image(struct zr_context *layout, struct zr_image img,
 }
 
 zr_bool
-zr_button_toggle(struct zr_context *layout, const char *str, zr_bool value)
+zr_selectable(struct zr_context *layout, const char *str,
+    enum zr_text_align align, zr_bool value)
 {
     struct zr_rect bounds;
-    struct zr_button_text button;
+    struct zr_text text;
     const struct zr_style *config;
+    struct zr_vec2 item_padding;
+    struct zr_color background;
 
-    const struct zr_input *i;
-    enum zr_widget_state state;
-    state = zr_button(&button.base, &bounds, layout, ZR_BUTTON_NORMAL);
-    if (!state) return value;
-    i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
+    ZR_ASSERT(layout);
+    ZR_ASSERT(layout->style);
+    ZR_ASSERT(layout->buffer);
 
+    if (!layout) return value;
+    if (!layout->valid || !layout->style || !layout->buffer) return value;
+    zr_panel_alloc_space(&bounds, layout);
     config = layout->style;
-    button.base.border = config->colors[ZR_COLOR_BORDER];
-    button.alignment = ZR_TEXT_CENTERED;
-    if (!value) {
-        button.base.normal = config->colors[ZR_COLOR_BUTTON];
-        button.base.hover = config->colors[ZR_COLOR_BUTTON_HOVER];
-        button.base.active = config->colors[ZR_COLOR_BUTTON_ACTIVE];
-        button.normal = config->colors[ZR_COLOR_TEXT];
-        button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
-        button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
-    } else {
-        button.base.normal = config->colors[ZR_COLOR_BUTTON_ACTIVE];
-        button.base.hover = config->colors[ZR_COLOR_BUTTON_HOVER];
-        button.base.active = config->colors[ZR_COLOR_BUTTON];
-        button.normal = config->colors[ZR_COLOR_TEXT_ACTIVE];
-        button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
-        button.active = config->colors[ZR_COLOR_TEXT];
+    item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
+
+    background = (!value) ? config->colors[ZR_COLOR_WINDOW]:
+        config->colors[ZR_COLOR_SELECTABLE];
+    if (zr_input_is_mouse_hovering_rect(layout->input, bounds)) {
+        background = config->colors[ZR_COLOR_SELECTABLE_HOVER];
+        if (zr_input_has_mouse_click_in_rect(layout->input, ZR_BUTTON_LEFT, bounds)) {
+            if (zr_input_is_mouse_down(layout->input, ZR_BUTTON_LEFT))
+                value = !value;
+        }
     }
-    if (zr_widget_button_text(layout->buffer, bounds, str, ZR_BUTTON_DEFAULT,
-        &button, i, &config->font)) value = !value;
+
+    text.padding.x = item_padding.x;
+    text.padding.y = item_padding.y;
+    text.background = background;
+    text.text = (!value) ? config->colors[ZR_COLOR_TEXT] :
+        config->colors[ZR_COLOR_SELECTABLE_TEXT];
+
+    zr_command_buffer_push_rect(layout->buffer, bounds, 0, background);
+    zr_widget_text(layout->buffer, bounds, str, zr_strsiz(str),
+        &text, align, &config->font);
     return value;
 }
 
@@ -6984,8 +7061,8 @@ zr_toggle_base(struct zr_toggle *toggle, struct zr_rect *bounds,
     return state;
 }
 
-zr_bool
-zr_check(struct zr_context *layout, const char *text, zr_bool is_active)
+void
+zr_check(struct zr_context *layout, const char *text, zr_bool *is_active)
 {
     struct zr_rect bounds;
     struct zr_toggle toggle;
@@ -6994,7 +7071,7 @@ zr_check(struct zr_context *layout, const char *text, zr_bool is_active)
     const struct zr_input *i;
     enum zr_widget_state state;
     state = zr_toggle_base(&toggle, &bounds, layout);
-    if (!state) return is_active;
+    if (!state) return;
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
 
     config = layout->style;
@@ -7002,9 +7079,8 @@ zr_check(struct zr_context *layout, const char *text, zr_bool is_active)
     toggle.cursor = config->colors[ZR_COLOR_TOGGLE_CURSOR];
     toggle.normal = config->colors[ZR_COLOR_TOGGLE];
     toggle.hover = config->colors[ZR_COLOR_TOGGLE_HOVER];
-    zr_widget_toggle(layout->buffer, bounds, &is_active, text, ZR_TOGGLE_CHECK,
+    zr_widget_toggle(layout->buffer, bounds, is_active, text, ZR_TOGGLE_CHECK,
                         &toggle, i, &config->font);
-    return is_active;
 }
 
 zr_bool
@@ -7029,8 +7105,8 @@ zr_option(struct zr_context *layout, const char *text, zr_bool is_active)
     return is_active;
 }
 
-zr_float
-zr_slider(struct zr_context *layout, zr_float min_value, zr_float value,
+void
+zr_slider_float(struct zr_context *layout, zr_float min_value, zr_float *value,
     zr_float max_value, zr_float value_step)
 {
     struct zr_rect bounds;
@@ -7041,7 +7117,7 @@ zr_slider(struct zr_context *layout, zr_float min_value, zr_float value,
     const struct zr_input *i;
     enum zr_widget_state state;
     state = zr_widget(&bounds, layout);
-    if (!state) return value;
+    if (!state) return;
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
 
     config = layout->style;
@@ -7054,12 +7130,22 @@ zr_slider(struct zr_context *layout, zr_float min_value, zr_float value,
     slider.active = config->colors[ZR_COLOR_SLIDER_CURSOR_ACTIVE];
     slider.border = config->colors[ZR_COLOR_BORDER];
     slider.rounding = config->rounding[ZR_ROUNDING_SLIDER];
-    return zr_widget_slider(layout->buffer, bounds, min_value, value, max_value,
+    *value = zr_widget_slider(layout->buffer, bounds, min_value, *value, max_value,
                         value_step, &slider, i);
 }
 
-zr_size
-zr_progress(struct zr_context *layout, zr_size cur_value, zr_size max_value,
+void
+zr_slider_int(struct zr_context *layout, zr_int min_value, zr_int *value,
+    zr_int max_value, zr_int value_step)
+{
+    zr_float val = (zr_float)*value;
+    zr_slider_float(layout, (zr_float)min_value, &val,
+        (zr_float)max_value, (zr_float)value_step);
+    *value = (zr_int)val;
+}
+
+void
+zr_progress(struct zr_context *layout, zr_size *cur_value, zr_size max_value,
     zr_bool is_modifyable)
 {
     struct zr_rect bounds;
@@ -7070,7 +7156,7 @@ zr_progress(struct zr_context *layout, zr_size cur_value, zr_size max_value,
     const struct zr_input *i;
     enum zr_widget_state state;
     state = zr_widget(&bounds, layout);
-    if (!state) return cur_value;
+    if (!state) return;
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
 
     config = layout->style;
@@ -7084,7 +7170,7 @@ zr_progress(struct zr_context *layout, zr_size cur_value, zr_size max_value,
     prog.hover = config->colors[ZR_COLOR_PROGRESS_CURSOR_HOVER];
     prog.active = config->colors[ZR_COLOR_PROGRESS_CURSOR_ACTIVE];
     prog.rounding = config->rounding[ZR_ROUNDING_PROGRESS];
-    return zr_widget_progress(layout->buffer, bounds, cur_value, max_value,
+    *cur_value = zr_widget_progress(layout->buffer, bounds, *cur_value, max_value,
                         is_modifyable, &prog, i);
 }
 
@@ -7126,8 +7212,8 @@ zr_editbox(struct zr_context *layout, struct zr_edit_box *box)
     zr_widget_editbox(layout->buffer, bounds, box, &field, i, &config->font);
 }
 
-zr_size
-zr_edit(struct zr_context *layout, zr_char *buffer, zr_size len,
+void
+zr_edit(struct zr_context *layout, zr_char *buffer, zr_size *len,
     zr_size max, zr_state *active, zr_size *cursor, enum zr_input_filter filter)
 {
     struct zr_rect bounds;
@@ -7137,14 +7223,14 @@ zr_edit(struct zr_context *layout, zr_char *buffer, zr_size len,
     enum zr_widget_state state;
 
     state = zr_edit_base(&bounds, &field, layout);
-    if (!state) return len;
+    if (!state) return;
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
-    return zr_widget_edit(layout->buffer, bounds,  buffer, len, max, active, cursor,
+    *len = zr_widget_edit(layout->buffer, bounds,  buffer, *len, max, active, cursor,
                     &field, filter, i, &config->font);
 }
 
-zr_size
-zr_edit_filtered(struct zr_context *layout, zr_char *buffer, zr_size len,
+void
+zr_edit_filtered(struct zr_context *layout, zr_char *buffer, zr_size *len,
     zr_size max, zr_state *active, zr_size *cursor, zr_filter filter)
 {
     struct zr_rect bounds;
@@ -7154,9 +7240,9 @@ zr_edit_filtered(struct zr_context *layout, zr_char *buffer, zr_size len,
     enum zr_widget_state state;
 
     state = zr_edit_base(&bounds, &field, layout);
-    if (!state) return len;
+    if (!state) return;
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
-    return zr_widget_edit_filtered(layout->buffer, bounds, buffer, len, max, active,
+    *len = zr_widget_edit_filtered(layout->buffer, bounds, buffer, *len, max, active,
                             cursor, &field, filter, i, &config->font);
 }
 
@@ -7194,8 +7280,8 @@ zr_spinner_base(struct zr_context *layout, struct zr_rect *bounds,
     return state;
 }
 
-zr_int
-zr_spinner_int(struct zr_context *layout, zr_int min, zr_int value,
+void
+zr_spinner_int(struct zr_context *layout, zr_int min, zr_int *value,
     zr_int max, zr_int step, zr_state *active)
 {
     struct zr_rect bounds;
@@ -7205,15 +7291,15 @@ zr_spinner_int(struct zr_context *layout, zr_int min, zr_int value,
     enum zr_widget_state state;
 
     state = zr_spinner_base(layout, &bounds, &spinner);
-    if (!state) return value;
+    if (!state) return;
     out = layout->buffer;
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
-    return zr_widget_spinner_int(out, bounds, &spinner, min, value, max, step, active,
+    *value = zr_widget_spinner_int(out, bounds, &spinner, min, *value, max, step, active,
                         i, &layout->style->font);
 }
 
-zr_float
-zr_spinner_float(struct zr_context *layout, zr_float min, zr_float value,
+void
+zr_spinner_float(struct zr_context *layout, zr_float min, zr_float *value,
     zr_float max, zr_float step, zr_state *active)
 {
     struct zr_rect bounds;
@@ -7223,11 +7309,11 @@ zr_spinner_float(struct zr_context *layout, zr_float min, zr_float value,
     enum zr_widget_state state;
 
     state = zr_spinner_base(layout, &bounds, &spinner);
-    if (!state) return value;
+    if (!state) return;
     out = layout->buffer;
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
-    return zr_widget_spinner_float(out, bounds, &spinner, min, value, max, step, active,
-                        i, &layout->style->font);
+    *value = zr_widget_spinner_float(out, bounds, &spinner, min, *value, max, step,
+                active, i, &layout->style->font);
 }
 /*
  * -------------------------------------------------------------
@@ -7648,7 +7734,7 @@ zr_group_begin(struct zr_context *p, struct zr_context *g,
         goto failed;
 
     /* initialize a fake window to create the layout from */
-    flags |= ZR_WINDOW_BORDER|ZR_WINDOW_TAB;
+    flags |= ZR_WINDOW_TAB;
     if (p->flags & ZR_WINDOW_ROM)
         flags |= ZR_WINDOW_ROM;
     temp = p->buffer->clip;
@@ -7724,9 +7810,9 @@ zr_group_end(struct zr_context *p, struct zr_context *g, struct zr_vec2 *scrollb
  *
  * --------------------------------------------------------------
  */
-zr_size
+void
 zr_shelf_begin(struct zr_context *parent, struct zr_context *shelf,
-    const char *tabs[], zr_size size, zr_size active, struct zr_vec2 offset)
+    const char *tabs[], zr_size size, zr_size *active, struct zr_vec2 offset)
 {
     const struct zr_style *config;
     struct zr_command_buffer *out;
@@ -7744,9 +7830,10 @@ zr_shelf_begin(struct zr_context *parent, struct zr_context *shelf,
     ZR_ASSERT(parent);
     ZR_ASSERT(tabs);
     ZR_ASSERT(shelf);
-    ZR_ASSERT(active < size);
-    if (!parent || !shelf || !tabs || active >= size)
-        return active;
+    ZR_ASSERT(active);
+    ZR_ASSERT(*active < size);
+    if (!parent || !shelf || !tabs || *active >= size)
+        return;
     if (!parent->valid)
         goto failed;
 
@@ -7798,7 +7885,7 @@ zr_shelf_begin(struct zr_context *parent, struct zr_context *shelf,
 
             /* set different color for active or inactive tab */
             if ((b.x + b.w) >= (bounds.x + bounds.w)) break;
-            if (active != i) {
+            if (*active != i) {
                 b.y += item_padding.y;
                 b.h -= item_padding.y;
                 button.base.normal = config->colors[ZR_COLOR_SHELF];
@@ -7818,7 +7905,7 @@ zr_shelf_begin(struct zr_context *parent, struct zr_context *shelf,
                 button.active = config->colors[ZR_COLOR_SHELF_ACTIVE_TEXT];
             }
             if (zr_widget_button_text(out, b, tabs[i], ZR_BUTTON_DEFAULT, &button,
-                input, &config->font)) active = i;
+                input, &config->font)) *active = i;
         }
     }
     bounds.y += header_h;
@@ -7848,7 +7935,6 @@ zr_shelf_begin(struct zr_context *parent, struct zr_context *shelf,
         zr_command_buffer_push_scissor(out, clip);
         shelf->clip = clip;
     }
-    return active;
 
 failed:
     /* invalid panels still need correct data */
@@ -7857,7 +7943,6 @@ failed:
     shelf->buffer = parent->buffer;
     shelf->input = parent->input;
     shelf->queue = parent->queue;
-    return active;
 }
 
 void
@@ -8288,7 +8373,7 @@ failed:
     combo->queue = parent->queue;
 }
 
-zr_bool zr_combo_item(struct zr_context *combo, enum zr_text_align align, const char *title)
+zr_bool zr_combo_item(struct zr_context *combo, const char *title, enum zr_text_align align)
 {return zr_contextual_item(combo, title, align);}
 
 zr_bool zr_combo_item_icon(struct zr_context *menu, struct zr_image img,
@@ -8382,8 +8467,8 @@ zr_bool zr_menu_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
     const char *title, enum zr_text_align align)
 {return zr_contextual_item_symbol(menu, symbol, title, align);}
 
-zr_state zr_menu_close(struct zr_context *menu)
-{zr_popup_close(menu); return zr_false;}
+void zr_menu_close(struct zr_context *menu, zr_state *state)
+{zr_popup_close(menu); *state = zr_false;}
 
 void
 zr_menu_end(struct zr_context *parent, struct zr_context *menu)
