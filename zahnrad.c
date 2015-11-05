@@ -7099,7 +7099,7 @@ zr_select(struct zr_context *layout, const char *str,
 
     background = (!value) ? config->colors[ZR_COLOR_WINDOW]:
         config->colors[ZR_COLOR_SELECTABLE];
-    if (zr_input_is_mouse_hovering_rect(layout->input, bounds)) {
+    if (zr_input_is_mouse_click_in_rect(layout->input, ZR_BUTTON_LEFT, bounds)) {
         background = config->colors[ZR_COLOR_SELECTABLE_HOVER];
         if (zr_input_has_mouse_click_in_rect(layout->input, ZR_BUTTON_LEFT, bounds)) {
             if (zr_input_is_mouse_down(layout->input, ZR_BUTTON_LEFT))
@@ -7126,7 +7126,7 @@ zr_selectable(struct zr_context *layout, const char *str,
     zr_bool old = *value;
     zr_bool ret = zr_select(layout, str, align, old);
     *value = ret;
-    ret = ret != old;
+    return ret != old;
 }
 
 static enum zr_widget_state
