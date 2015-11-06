@@ -211,7 +211,6 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
     static zr_state group_state = ZR_MINIMIZED;
     static zr_state shelf_state = ZR_MINIMIZED;
     static zr_state splitter_state = ZR_MINIMIZED;
-    static zr_state excel_state = ZR_MINIMIZED;
 
     /* popups */
     static enum zr_header_align header_align = ZR_HEADER_RIGHT;
@@ -886,50 +885,158 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         zr_layout_pop(&layout);
     }
 
-#if 0
     if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "Splitter", &splitter_state))
     {
-        static zr_float ratios[] = {0,0,0}
-        struct zr_rect total_space;
-        row_layout[0] = (total_space.w - 8) * browser->ratio_sel;
-        row_layout[1] = 8;
-        row_layout[2] = (total_space.w - 8) * browser->ratio_dir;
+        static zr_state vertical_state = ZR_MINIMIZED;
+        static zr_state horizontal_state = ZR_MINIMIZED;
+        const struct zr_input *in = window->input;
 
-        zr_layout_row(&context, ZR_DYNAMIC, 200, 3, row_layout);
-        total_space = zr_space(&context);
-        zr_style_push_property(&browser->config, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 4));
-
-        zr_group_begin(&context, &sub, NULL, ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER, browser->sel);
-        zr_group_end(&context, &sub, &browser->sel);
-
+        if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Vertical", &vertical_state))
         {
+            static zr_float a = 100, b = 100, c = 100;
+            static zr_state a_active, b_active, c_active;
+            struct zr_rect bounds, total_space;
+            struct zr_context sub;
+
+            zr_float row_layout[5];
+            total_space = zr_space(&layout);
+            row_layout[0] = a;
+            row_layout[1] = 8;
+            row_layout[2] = b;
+            row_layout[3] = 8;
+            row_layout[4] = c;
+
+            /* header */
+            zr_layout_row_static(&layout, 20, 400, 1);
+            zr_label(&layout, "Use slider and spinner to change tile size", ZR_TEXT_LEFT);
+            zr_label(&layout, "Drag the space between tiles to change tile ratio", ZR_TEXT_LEFT);
+
+            zr_layout_row_static(&layout, 30, 100, 3);
+            zr_label(&layout, "left:", ZR_TEXT_LEFT);
+            zr_slider_float(&layout, 10.0f, &a, 200.0f, 10.0f);
+            zr_spinner_float(&layout, 10.0f, &a, 200.0f, 1.0f, &a_active);
+
+            zr_label(&layout, "middle:", ZR_TEXT_LEFT);
+            zr_slider_float(&layout, 10.0f, &b, 200.0f, 10.0f);
+            zr_spinner_float(&layout, 10.0f, &b, 200.0f, 1.0f, &b_active);
+
+            zr_label(&layout, "right:", ZR_TEXT_LEFT);
+            zr_slider_float(&layout, 10.0f, &c, 200.0f, 10.0f);
+            zr_spinner_float(&layout, 10.0f, &c, 200.0f, 1.0f, &c_active);
+
+            /* tiles */
+            zr_layout_row(&layout, ZR_STATIC, 200, 5, row_layout);
+            zr_style_push_property(config, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 4));
+
+            /* left space */
+            zr_group_begin(&layout, &sub, NULL, ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER, zr_vec2(0,0));
+            zr_group_end(&layout, &sub, NULL);
+
             /* scaler */
-            struct zr_rect bounds;
-            struct zr_input *in = window->input;
-            zr_layout_peek(&bounds, &context);
-            zr_spacing(&context, 1);
+            zr_layout_peek(&bounds, &layout);
+            zr_spacing(&layout, 1);
             if ((zr_input_is_mouse_hovering_rect(in, bounds) ||
                 zr_input_is_mouse_prev_hovering_rect(in, bounds)) &&
                 zr_input_is_mouse_down(in, ZR_BUTTON_LEFT))
             {
-                zr_float sel = row_layout[0] + in->mouse.delta.x;
-                zr_float dir = row_layout[2] - in->mouse.delta.x;
-                browser->ratio_sel = sel / (total_space.w - 8);
-                browser->ratio_dir = dir / (total_space.w - 8);
+                a = row_layout[0] + in->mouse.delta.x;
+                b = row_layout[2] - in->mouse.delta.x;
             }
+
+            /* middle space */
+            zr_group_begin(&layout, &sub, NULL, ZR_WINDOW_BORDER, zr_vec2(0,0));
+            zr_group_end(&layout, &sub, NULL);
+
+            /* scaler */
+            zr_layout_peek(&bounds, &layout);
+            zr_spacing(&layout, 1);
+            if ((zr_input_is_mouse_hovering_rect(in, bounds) ||
+                zr_input_is_mouse_prev_hovering_rect(in, bounds)) &&
+                zr_input_is_mouse_down(in, ZR_BUTTON_LEFT))
+            {
+                b = (row_layout[2] + in->mouse.delta.x);
+                c = (row_layout[4] - in->mouse.delta.x);
+            }
+
+            /* right space */
+            zr_group_begin(&layout, &sub, NULL, ZR_WINDOW_BORDER, zr_vec2(0,0));
+            zr_group_end(&layout, &sub, NULL);
+
+            zr_style_pop_property(config);
+            zr_layout_pop(&layout);
         }
 
-        zr_group_begin(&context, &sub, NULL, ZR_WINDOW_BORDER, browser->dir);
-        zr_group_end(&context, &sub, &browser->sel);
+        if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Horizontal", &horizontal_state))
+        {
+            static zr_float a = 100, b = 100, c = 100;
+            static zr_state a_active, b_active, c_active;
+            struct zr_context sub;
+            struct zr_rect bounds;
+
+            /* header */
+            zr_layout_row_static(&layout, 20, 400, 1);
+            zr_label(&layout, "Use slider and spinner to change tile size", ZR_TEXT_LEFT);
+            zr_label(&layout, "Drag the space between tiles to change tile ratio", ZR_TEXT_LEFT);
+
+            zr_layout_row_static(&layout, 30, 100, 3);
+            zr_label(&layout, "top:", ZR_TEXT_LEFT);
+            zr_slider_float(&layout, 10.0f, &a, 200.0f, 10.0f);
+            zr_spinner_float(&layout, 10.0f, &a, 200.0f, 1.0f, &a_active);
+
+            zr_label(&layout, "middle:", ZR_TEXT_LEFT);
+            zr_slider_float(&layout, 10.0f, &b, 200.0f, 10.0f);
+            zr_spinner_float(&layout, 10.0f, &b, 200.0f, 1.0f, &b_active);
+
+            zr_label(&layout, "bottom:", ZR_TEXT_LEFT);
+            zr_slider_float(&layout, 10.0f, &c, 200.0f, 10.0f);
+            zr_spinner_float(&layout, 10.0f, &c, 200.0f, 1.0f, &c_active);
+
+            zr_style_push_property(config, ZR_PROPERTY_ITEM_SPACING, zr_vec2(4, 0));
+
+            /* top space */
+            zr_layout_row_dynamic(&layout, a, 1);
+            zr_group_begin(&layout, &sub, NULL, ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER, zr_vec2(0,0));
+            zr_group_end(&layout, &sub, NULL);
+
+            /* scaler */
+            zr_layout_row_dynamic(&layout, 8, 1);
+            zr_layout_peek(&bounds, &layout);
+            zr_spacing(&layout, 1);
+            if ((zr_input_is_mouse_hovering_rect(in, bounds) ||
+                zr_input_is_mouse_prev_hovering_rect(in, bounds)) &&
+                zr_input_is_mouse_down(in, ZR_BUTTON_LEFT))
+            {
+                a = a + in->mouse.delta.y;
+                b = b - in->mouse.delta.y;
+            }
+
+            /* middle space */
+            zr_layout_row_dynamic(&layout, b, 1);
+            zr_group_begin(&layout, &sub, NULL, ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER, zr_vec2(0,0));
+            zr_group_end(&layout, &sub, NULL);
+
+            /* scaler */
+            zr_layout_row_dynamic(&layout, 8, 1);
+            zr_layout_peek(&bounds, &layout);
+            zr_spacing(&layout, 1);
+            if ((zr_input_is_mouse_hovering_rect(in, bounds) ||
+                zr_input_is_mouse_prev_hovering_rect(in, bounds)) &&
+                zr_input_is_mouse_down(in, ZR_BUTTON_LEFT))
+            {
+                b = b + in->mouse.delta.y;
+                c = c - in->mouse.delta.y;
+            }
+
+            /* bottom space */
+            zr_layout_row_dynamic(&layout, c, 1);
+            zr_group_begin(&layout, &sub, NULL, ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER, zr_vec2(0,0));
+            zr_group_end(&layout, &sub, NULL);
+
+            zr_style_pop_property(config);
+            zr_layout_pop(&layout);
+        }
+        zr_layout_pop(&layout);
     }
-
-    if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "excel", &excel_state))
-    {
-
-    }
-#endif
-
-
     zr_end(&layout, window);
     return 1;
 }
