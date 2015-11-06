@@ -238,7 +238,6 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
     if (move) header_flags |= ZR_MOVEABLE;
 
     /* main window */
-
     window->flags = window_flags;
     zr_begin(&layout, window);
     ret = zr_header(&layout, (titlebar)? "Zahnrad":"", header_flags, header_flags, header_align);
@@ -543,6 +542,9 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             static zr_int int_slider = 5;
             static zr_float float_slider = 2.5f;
             static zr_size prog_value = 40;
+            static zr_float float_spinner = 5.5f;
+            static zr_int int_spinner = 2;
+            static zr_state spinneri_active, spinnerf_active;
             static const zr_float ratio[] = {100, 150};
             const struct zr_input *in = zr_input(&layout);
             struct zr_rect bounds;
@@ -564,11 +566,14 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             zr_layout_row(&layout, ZR_STATIC, 30, 2, ratio);
             zr_labelf(&layout, ZR_TEXT_LEFT, "Slider(%d):", int_slider);
             zr_slider_int(&layout, 0, &int_slider, 10, 1);
-            zr_labelf(&layout, ZR_TEXT_LEFT, "Slider(%.2f):", float_slider);
+            zr_labelf(&layout, ZR_TEXT_LEFT, "Slider int: %.2f:", float_slider);
             zr_slider_float(&layout, 0, &float_slider, 5.0, 0.5f);
-            zr_labelf(&layout, ZR_TEXT_LEFT, "Progressbar(%lu):" , prog_value);
+            zr_labelf(&layout, ZR_TEXT_LEFT, "Progressbar: %lu:" , prog_value);
             zr_progress(&layout, &prog_value, 100, ZR_MODIFYABLE);
-
+            zr_label(&layout, "Spinner int:", ZR_TEXT_LEFT);
+            zr_spinner_int(&layout, 0, &int_spinner, 50.0, 1, &spinneri_active);
+            zr_label(&layout, "Spinner float:", ZR_TEXT_LEFT);
+            zr_spinner_float(&layout, 0, &float_slider, 5.0, 0.5f, &spinnerf_active);
             zr_layout_pop(&layout);
         }
 
