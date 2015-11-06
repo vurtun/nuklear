@@ -36,6 +36,7 @@ struct demo {
     struct zr_user_font font;
     struct zr_window panel;
     struct zr_window sub;
+    struct zr_window metrics;
     struct test_tree tree;
     zr_size w, h;
     enum theme theme;
@@ -216,11 +217,11 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
     static enum zr_header_align header_align = ZR_HEADER_RIGHT;
     static zr_bool show_app_about = zr_false;
     static zr_state show_contextual = zr_false;
+    static struct zr_rect contextual_bounds;
     static zr_bool show_close_popup = zr_false;
     static zr_bool show_color_picker_popup = zr_false;
     static zr_int color_picker_index;
     static struct zr_color color_picker_color;
-    static struct zr_rect contextual_bounds;
 
     /* window flags */
     window->style = config;
@@ -1108,6 +1109,10 @@ init_demo(struct demo *gui)
     zr_window_init(&gui->sub, zr_rect(400, 50, 220, 180),
         ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALEABLE,
         &gui->queue, &gui->config_black, &gui->input);
+    zr_window_init(&gui->metrics, zr_rect(200, 400, 250, 300),
+        ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALEABLE,
+        &gui->queue, &gui->config_black, &gui->input);
+
 }
 
 static void
@@ -1117,7 +1122,7 @@ run_demo(struct demo *gui)
     struct zr_style *current = (gui->theme == THEME_BLACK) ? &gui->config_black : &gui->config_white;
     gui->running = show_test_window(&gui->panel, current, &gui->theme, &gui->tree);
 
-    /* second window */
+    /* ussage example  */
     gui->sub.style = current;
     zr_begin(&layout, &gui->sub);
     {
@@ -1143,5 +1148,55 @@ run_demo(struct demo *gui)
     }
     zr_end(&layout, &gui->sub);
 
+    /* metrics window */
+    gui->metrics.style = current;
+    zr_begin(&layout, &gui->metrics);
+    {
+        static zr_state prim_state = ZR_MINIMIZED;
+        static zr_state mem_state = ZR_MINIMIZED;
+        struct zr_memory_status status;
+        struct zr_command_stats *stats = &gui->panel.buffer.stats;
+        zr_buffer_info(&status, &gui->queue.buffer);
+
+        zr_header(&layout, "Metrics", ZR_CLOSEABLE, 0, ZR_HEADER_LEFT);
+        if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Memory", &mem_state))
+        {
+            zr_layout_row_dynamic(&layout, 20, 2);
+            zr_label(&layout,"Total:", ZR_TEXT_LEFT);
+            zr_labelf(&layout, ZR_TEXT_LEFT, "%lu", status.size);
+            zr_label(&layout,"Used:", ZR_TEXT_LEFT);
+            zr_labelf(&layout, ZR_TEXT_LEFT, "%lu", status.allocated);
+            zr_label(&layout,"Required:", ZR_TEXT_LEFT);
+            zr_labelf(&layout, ZR_TEXT_LEFT, "%lu", status.needed);
+            zr_label(&layout,"Calls:", ZR_TEXT_LEFT);
+            zr_labelf(&layout, ZR_TEXT_LEFT, "%lu", status.calls);
+            zr_layout_pop(&layout);
+        }
+
+        if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Primitives", &prim_state))
+        {
+            zr_layout_row_dynamic(&layout, 20, 2);
+            zr_label(&layout,"Scissor:", ZR_TEXT_LEFT);
+            zr_labelf(&layout, ZR_TEXT_LEFT, "%u", stats->scissors);
+            zr_label(&layout,"Lines:", ZR_TEXT_LEFT);
+            zr_labelf(&layout, ZR_TEXT_LEFT, "%u", stats->lines);
+            zr_label(&layout,"Curves:", ZR_TEXT_LEFT);
+            zr_labelf(&layout, ZR_TEXT_LEFT, "%u", stats->curves);
+            zr_label(&layout,"Rectangles:", ZR_TEXT_LEFT);
+            zr_labelf(&layout, ZR_TEXT_LEFT, "%u", stats->rectangles);
+            zr_label(&layout,"Circles:", ZR_TEXT_LEFT);
+            zr_labelf(&layout, ZR_TEXT_LEFT, "%u", stats->circles);
+            zr_label(&layout,"Triangles:", ZR_TEXT_LEFT);
+            zr_labelf(&layout, ZR_TEXT_LEFT, "%u", stats->triangles);
+            zr_label(&layout,"Images:", ZR_TEXT_LEFT);
+            zr_labelf(&layout, ZR_TEXT_LEFT, "%u", stats->images);
+            zr_label(&layout,"Text:", ZR_TEXT_LEFT);
+            zr_labelf(&layout, ZR_TEXT_LEFT, "%u", stats->text);
+            zr_label(&layout,"Glyphes:", ZR_TEXT_LEFT);
+            zr_labelf(&layout, ZR_TEXT_LEFT, "%u", stats->glyphes);
+            zr_layout_pop(&layout);
+        }
+    }
+    zr_end(&layout, &gui->metrics);
 }
 
