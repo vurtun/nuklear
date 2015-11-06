@@ -210,14 +210,18 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
     static zr_state style_state = ZR_MINIMIZED;
     static zr_state group_state = ZR_MINIMIZED;
     static zr_state shelf_state = ZR_MINIMIZED;
+    static zr_state splitter_state = ZR_MINIMIZED;
+    static zr_state excel_state = ZR_MINIMIZED;
 
     /* popups */
     static enum zr_header_align header_align = ZR_HEADER_RIGHT;
     static zr_bool show_app_about = zr_false;
+    static zr_state show_contextual = zr_false;
     static zr_bool show_close_popup = zr_false;
     static zr_bool show_color_picker_popup = zr_false;
     static zr_int color_picker_index;
     static struct zr_color color_picker_color;
+    static struct zr_rect contextual_bounds;
 
     /* window flags */
     window->style = config;
@@ -386,6 +390,29 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             memset(active, 0, sizeof(active));
         }
         zr_popup_end(&layout, &popup, NULL);
+    }
+
+    /* contextual menu */
+    if (zr_input_mouse_clicked(layout.input, ZR_BUTTON_RIGHT, layout.bounds)) {
+        contextual_bounds = zr_rect(layout.input->mouse.pos.x, layout.input->mouse.pos.y, 100, 200);
+        show_contextual = zr_true;
+    }
+    if (show_contextual) {
+        struct zr_context menu;
+        static zr_size prog = 40;
+        static zr_int slider = 10;
+        static zr_bool check = zr_true;
+
+        zr_contextual_begin(&layout, &menu, ZR_WINDOW_NO_SCROLLBAR, &show_contextual, contextual_bounds);
+        zr_layout_row_dynamic(&menu, 25, 1);
+        zr_checkbox(&menu, "Menu", &show_menu);
+        zr_progress(&menu, &prog, 100, ZR_MODIFYABLE);
+        zr_slider_int(&menu, 0, &slider, 16, 1);
+        if (zr_contextual_item(&menu, "About", ZR_TEXT_CENTERED))
+            show_app_about = zr_true;
+        if (zr_contextual_item(&menu, "Quit", ZR_TEXT_CENTERED))
+            show_close_popup = zr_true;
+        zr_contextual_end(&layout, &menu, &show_contextual);
     }
 
     if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "Window", &window_option_state))
@@ -782,7 +809,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         zr_layout_pop(&layout);
     }
 
-    if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "Groups", &group_state))
+    if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "Group", &group_state))
     {
         static zr_bool group_titlebar = zr_false;
         static zr_bool group_border = zr_true;
@@ -858,6 +885,51 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         zr_shelf_end(&layout, &tab, &scrollbar);
         zr_layout_pop(&layout);
     }
+
+#if 0
+    if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "Splitter", &splitter_state))
+    {
+        static zr_float ratios[] = {0,0,0}
+        struct zr_rect total_space;
+        row_layout[0] = (total_space.w - 8) * browser->ratio_sel;
+        row_layout[1] = 8;
+        row_layout[2] = (total_space.w - 8) * browser->ratio_dir;
+
+        zr_layout_row(&context, ZR_DYNAMIC, 200, 3, row_layout);
+        total_space = zr_space(&context);
+        zr_style_push_property(&browser->config, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 4));
+
+        zr_group_begin(&context, &sub, NULL, ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER, browser->sel);
+        zr_group_end(&context, &sub, &browser->sel);
+
+        {
+            /* scaler */
+            struct zr_rect bounds;
+            struct zr_input *in = window->input;
+            zr_layout_peek(&bounds, &context);
+            zr_spacing(&context, 1);
+            if ((zr_input_is_mouse_hovering_rect(in, bounds) ||
+                zr_input_is_mouse_prev_hovering_rect(in, bounds)) &&
+                zr_input_is_mouse_down(in, ZR_BUTTON_LEFT))
+            {
+                zr_float sel = row_layout[0] + in->mouse.delta.x;
+                zr_float dir = row_layout[2] - in->mouse.delta.x;
+                browser->ratio_sel = sel / (total_space.w - 8);
+                browser->ratio_dir = dir / (total_space.w - 8);
+            }
+        }
+
+        zr_group_begin(&context, &sub, NULL, ZR_WINDOW_BORDER, browser->dir);
+        zr_group_end(&context, &sub, &browser->sel);
+    }
+
+    if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "excel", &excel_state))
+    {
+
+    }
+#endif
+
+
     zr_end(&layout, window);
     return 1;
 }
