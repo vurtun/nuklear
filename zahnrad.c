@@ -1512,6 +1512,7 @@ zr_command_buffer_push_scissor(struct zr_command_buffer *b, struct zr_rect r)
     cmd->y = (zr_short)r.y;
     cmd->w = (zr_ushort)MAX(0, r.w);
     cmd->h = (zr_ushort)MAX(0, r.h);
+    b->stats.scissors++;
 }
 
 void
@@ -1553,7 +1554,7 @@ zr_command_buffer_push_curve(struct zr_command_buffer *b, zr_float ax, zr_float 
     cmd->end.x = (zr_short)bx;
     cmd->end.y = (zr_short)by;
     cmd->color = col;
-    b->stats.lines++;
+    b->stats.curves++;
 }
 
 void

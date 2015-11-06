@@ -692,6 +692,8 @@ enum zr_command_clipping {
 struct zr_command_stats {
     zr_uint lines;
     /* number of lines inside the buffer */
+    zr_uint curves;
+    /* number of lines inside the buffer */
     zr_uint rectangles;
     /* number of rectangles in the buffer */
     zr_uint circles;
@@ -703,6 +705,8 @@ struct zr_command_stats {
     zr_uint text;
     /* number of text commands in the buffer */
     zr_uint glyphes;
+    /* number of text glyphes in the buffer */
+    zr_uint scissors;
     /* number of text glyphes in the buffer */
 };
 
