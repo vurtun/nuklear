@@ -564,7 +564,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             static zr_int int_slider = 5;
             static zr_float float_slider = 2.5f;
             static zr_size prog_value = 40;
-            static zr_float float_spinner = 5.5f;
+            static zr_float float_spinner = 2.5f;
             static zr_int int_spinner = 20;
             static zr_state spinneri_active, spinnerf_active;
             static const zr_float ratio[] = {100, 150};
@@ -589,13 +589,13 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             zr_labelf(&layout, ZR_TEXT_LEFT, "Slider(%d):", int_slider);
             zr_slider_int(&layout, 0, &int_slider, 10, 1);
             zr_labelf(&layout, ZR_TEXT_LEFT, "Slider int: %.2f:", float_slider);
-            zr_slider_float(&layout, 0, &float_spinner, 5.0, 0.5f);
+            zr_slider_float(&layout, 0, &float_slider, 5.0, 0.5f);
             zr_labelf(&layout, ZR_TEXT_LEFT, "Progressbar: %lu:" , prog_value);
             zr_progress(&layout, &prog_value, 100, ZR_MODIFYABLE);
             zr_label(&layout, "Spinner int:", ZR_TEXT_LEFT);
             zr_spinner_int(&layout, 0, &int_spinner, 50.0, 1, &spinneri_active);
             zr_label(&layout, "Spinner float:", ZR_TEXT_LEFT);
-            zr_spinner_float(&layout, 0, &float_slider, 5.0, 0.5f, &spinnerf_active);
+            zr_spinner_float(&layout, 0, &float_spinner, 5.0, 0.5f, &spinnerf_active);
             zr_layout_pop(&layout);
         }
 
@@ -885,6 +885,10 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         static zr_state horizontal_state = ZR_MINIMIZED;
         const struct zr_input *in = window->input;
 
+        zr_layout_row_static(&layout, 20, 320, 1);
+        zr_label(&layout, "Use slider and spinner to change tile size", ZR_TEXT_LEFT);
+        zr_label(&layout, "Drag the space between tiles to change tile ratio", ZR_TEXT_LEFT);
+
         if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Vertical", &vertical_state))
         {
             static zr_float a = 100, b = 100, c = 100;
@@ -901,10 +905,6 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             row_layout[4] = c;
 
             /* header */
-            zr_layout_row_static(&layout, 20, 400, 1);
-            zr_label(&layout, "Use slider and spinner to change tile size", ZR_TEXT_LEFT);
-            zr_label(&layout, "Drag the space between tiles to change tile ratio", ZR_TEXT_LEFT);
-
             zr_layout_row_static(&layout, 30, 100, 3);
             zr_label(&layout, "left:", ZR_TEXT_LEFT);
             zr_slider_float(&layout, 10.0f, &a, 200.0f, 10.0f);
@@ -968,10 +968,6 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             struct zr_rect bounds;
 
             /* header */
-            zr_layout_row_static(&layout, 20, 400, 1);
-            zr_label(&layout, "Use slider and spinner to change tile size", ZR_TEXT_LEFT);
-            zr_label(&layout, "Drag the space between tiles to change tile ratio", ZR_TEXT_LEFT);
-
             zr_layout_row_static(&layout, 30, 100, 3);
             zr_label(&layout, "top:", ZR_TEXT_LEFT);
             zr_slider_float(&layout, 10.0f, &a, 200.0f, 10.0f);
