@@ -353,13 +353,6 @@ zr_isnan(double x)
 }
 
 static zr_double
-zr_fabs(zr_double x)
-{
-    if (x < 0) return -x;
-    return x;
-}
-
-static zr_double
 zr_floor(zr_double x)
 {
     return (zr_double)((zr_int)x - ((x < 0.0) ? 1 : 0));
@@ -1041,7 +1034,6 @@ zr_input_char(struct zr_input *in, char c)
 void
 zr_input_unicode(struct zr_input *in, zr_uint unicode)
 {
-    zr_size len;
     zr_glyph rune;
     ZR_ASSERT(in);
     zr_utf_encode(unicode, rune, ZR_UTF_SIZE);
@@ -5075,7 +5067,6 @@ zr_widget_spinner_float(struct zr_command_buffer *out, struct zr_rect r,
     }
 
     if (old_len != len) {
-        zr_float old = value;
         zr_string_float_limit(string, ZR_MAX_FLOAT_PRECISION);
         zr_strtof(&value, string);
     }
@@ -6072,8 +6063,6 @@ zr_header_end(struct zr_context *layout)
 
     /* draw panel header border */
     if (layout->flags & ZR_WINDOW_BORDER) {
-        zr_float scrollbar_width = zr_style_property(c, ZR_PROPERTY_SCROLLBAR_SIZE).x;
-
         /* draw the header border lines */
         zr_command_buffer_push_line(out, layout->bounds.x, layout->bounds.y, layout->bounds.x,
                 layout->bounds.y + layout->header.h, c->colors[ZR_COLOR_BORDER]);

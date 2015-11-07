@@ -183,7 +183,6 @@ static int
 show_test_window(struct zr_window *window, struct zr_style *config, enum theme *theme,
     struct test_tree *test_tree)
 {
-    int closed;
     zr_flags ret;
     struct zr_context layout;
 
@@ -254,10 +253,8 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
     if (show_menu)
     {
         /* menubar */
-        zr_size i = 0;
         struct zr_context menu;
         static zr_state file_state = ZR_MINIMIZED;
-        static zr_state edit_state = ZR_MINIMIZED;
         static zr_size mprog = 60;
         static zr_int mslider = 10;
         static zr_bool mcheck = zr_true;
@@ -359,7 +356,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         }
 
         zr_layout_row_dynamic(&popup, 30, 2);
-        zr_label(&popup, zr_style_color_name(color_picker_index), ZR_TEXT_LEFT);
+        zr_label(&popup, zr_style_color_name((enum zr_style_colors)color_picker_index), ZR_TEXT_LEFT);
         zr_button_color(&popup, color_picker_color, ZR_BUTTON_DEFAULT);
 
         zr_layout_row_dynamic(&popup, 30, 2);
@@ -401,7 +398,6 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         struct zr_context menu;
         static zr_size prog = 40;
         static zr_int slider = 10;
-        static zr_bool check = zr_true;
 
         zr_contextual_begin(&layout, &menu, ZR_WINDOW_NO_SCROLLBAR, &show_contextual, contextual_bounds);
         zr_layout_row_dynamic(&menu, 25, 1);
@@ -464,7 +460,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             zr_size i = 0;
             zr_layout_row_dynamic(&layout, 30, 3);
             for (i = 0; i <= ZR_PROPERTY_SCROLLBAR_SIZE; ++i) {
-                zr_label(&layout, zr_style_property_name(i), ZR_TEXT_LEFT);
+                zr_label(&layout, zr_style_property_name((enum zr_style_properties)i), ZR_TEXT_LEFT);
                 zr_spinner_float(&layout, 0, &config->properties[i].x, 20, 1, NULL);
                 zr_spinner_float(&layout, 0, &config->properties[i].y, 20, 1, NULL);
             }
@@ -477,7 +473,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             zr_size i = 0;
             zr_layout_row_dynamic(&layout, 30, 2);
             for (i = 0; i < ZR_ROUNDING_MAX; ++i) {
-                zr_label(&layout, zr_style_rounding_name(i), ZR_TEXT_LEFT);
+                zr_label(&layout, zr_style_rounding_name((enum zr_style_rounding)i), ZR_TEXT_LEFT);
                 zr_spinner_float(&layout, 0, &config->rounding[i], 20, 1, NULL);
             }
             zr_layout_pop(&layout);
@@ -493,7 +489,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             zr_group_begin(&layout, &tab, NULL, 0, scrollbar);
             for (i = 0; i < ZR_COLOR_COUNT; ++i) {
                 zr_layout_row_dynamic(&tab, 30, 2);
-                zr_label(&tab, zr_style_color_name(i), ZR_TEXT_LEFT);
+                zr_label(&tab, zr_style_color_name((enum zr_style_colors)i), ZR_TEXT_LEFT);
                 if (zr_button_color(&tab, config->colors[i], ZR_BUTTON_DEFAULT)) {
                     show_color_picker_popup = zr_true;
                     color_picker_index = (zr_int)i;
@@ -539,7 +535,6 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Button", &button_state))
         {
             /* Buttons Widgets */
-            static zr_bool toggle = zr_false;
             zr_layout_row_static(&layout, 30, 100, 3);
             if (zr_button_text(&layout, "Button", ZR_BUTTON_DEFAULT))
                 fprintf(stdout, "Button pressed!\n");
@@ -570,7 +565,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             static zr_float float_slider = 2.5f;
             static zr_size prog_value = 40;
             static zr_float float_spinner = 5.5f;
-            static zr_int int_spinner = 2;
+            static zr_int int_spinner = 20;
             static zr_state spinneri_active, spinnerf_active;
             static const zr_float ratio[] = {100, 150};
             const struct zr_input *in = zr_input(&layout);
@@ -594,7 +589,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             zr_labelf(&layout, ZR_TEXT_LEFT, "Slider(%d):", int_slider);
             zr_slider_int(&layout, 0, &int_slider, 10, 1);
             zr_labelf(&layout, ZR_TEXT_LEFT, "Slider int: %.2f:", float_slider);
-            zr_slider_float(&layout, 0, &float_slider, 5.0, 0.5f);
+            zr_slider_float(&layout, 0, &float_spinner, 5.0, 0.5f);
             zr_labelf(&layout, ZR_TEXT_LEFT, "Progressbar: %lu:" , prog_value);
             zr_progress(&layout, &prog_value, 100, ZR_MODIFYABLE);
             zr_label(&layout, "Spinner int:", ZR_TEXT_LEFT);
@@ -629,7 +624,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             }
             if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Grid", &grid_state))
             {
-                int i, k;
+                int i;
                 static zr_bool selected[16];
                 zr_layout_row_static(&layout, 50, 50, 4);
                 for (i = 0; i < 16; ++i) {
@@ -649,7 +644,6 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Combo", &combo_state))
         {
             /* Combobox Widgets */
-            static zr_flags group_flags;
             static zr_state weapon_active = zr_false;
             static zr_state com_color_active = zr_false;
             static zr_state prog_active = zr_false;
@@ -683,7 +677,6 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             zr_style_push_color(config, ZR_COLOR_SPINNER, zr_rgba((zr_byte)r,(zr_byte)g,(zr_byte)b,(zr_byte)a));
             zr_combo_begin(&layout, &combo, buffer, &com_color_active);
             {
-                zr_size i = 0;
                 zr_float ratios[] = {0.15f, 0.85f};
                 zr_layout_row(&combo, ZR_DYNAMIC, 30, 2, ratios);
                 zr_label(&combo, "R", ZR_TEXT_LEFT);
@@ -1045,8 +1038,6 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
 static void
 init_demo(struct demo *gui)
 {
-    static char buffer[256];
-    struct zr_clipboard clip;
     gui->running = zr_true;
     gui->theme = THEME_WHITE;
     tree_init(&gui->tree);
