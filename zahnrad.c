@@ -192,14 +192,57 @@ zr_vec2(zr_float x, zr_float y)
  * ===============================================================
  */
 static void*
-zr_memcopy(void *dst, const void *src, zr_size size)
+zr_memcopy(void *dst0, const void *src0, zr_size length)
 {
-    zr_size i = 0;
-    char *d = (char*)dst;
-    const char *s = (const char*)src;
-    for (i = 0; i < size; ++i)
-        d[i] = s[i];
-    return dst;
+    zr_ptr t;
+    typedef int word;
+    char *dst = dst0;
+    const char *src = src0;
+    if (length == 0 || dst == src)
+        goto done;
+
+    #define wsize sizeof(word)
+    #define wmask (wsize-1)
+    #define TLOOP(s) if (t) TLOOP1(s)
+    #define TLOOP1(s) do { s; } while (--t)
+
+    if ((unsigned long)dst < (unsigned long)src) {
+        t = (zr_ptr)src; /* only need low bits */
+        if ((t | (zr_ptr)dst) & wmask) {
+            if ((t ^ (zr_ptr)dst) & wmask || length < wsize)
+                t = length;
+            else
+                t = wsize - (t & wmask);
+            length -= t;
+            TLOOP1(*dst++ = *src++);
+        }
+        t = length / wsize;
+        TLOOP(*(word*)(void*)dst = *(const word*)(const void*)src; src += wsize; dst += wsize);
+        t = length & wmask;
+        TLOOP(*dst++ = *src++);
+    } else {
+        src += length;
+        dst += length;
+        t = (zr_ptr)src;
+        if ((t | (zr_ptr)dst) & wmask) {
+            if ((t ^ (zr_ptr)dst) & wmask || length <= wsize)
+                t = length;
+            else
+                t &= wmask;
+            length -= t;
+            TLOOP1(*--dst = *--src);
+        }
+        t = length / wsize;
+        TLOOP(src -= wsize; dst -= wsize; *(word*)(void*)dst = *(const word*)(const void*)src);
+        t = length & wmask;
+        TLOOP(*--dst = *--src);
+    }
+    #undef wsize
+    #undef wmask
+    #undef TLOOP
+    #undef TLOOP1
+done:
+    return (dst0);
 }
 
 static void
