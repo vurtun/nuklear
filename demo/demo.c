@@ -300,7 +300,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         /* about popup */
         struct zr_context popup;
         static struct zr_vec2 about_scrollbar;
-        static struct zr_rect s = {20, 100, 300, 160};
+        static struct zr_rect s = {20, 100, 300, 190};
         zr_popup_begin(&layout, &popup, ZR_POPUP_STATIC, 0, s, about_scrollbar);
         if (zr_header(&popup, "About", ZR_CLOSEABLE, ZR_CLOSEABLE, ZR_HEADER_LEFT)){
             show_app_about = zr_false;

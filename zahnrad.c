@@ -5641,12 +5641,15 @@ zr_end(struct zr_context *layout, struct zr_window *window)
     out = layout->buffer;
     in = (layout->flags & ZR_WINDOW_ROM) ? 0 :layout->input;
     if (!(layout->flags & ZR_WINDOW_TAB)) {
+#if 0
         struct zr_rect clip;
-        clip.x = MAX(0, (layout->bounds.x - 1));
-        clip.y = MAX(0, (layout->bounds.y - 1));
+        clip.x = layout->bounds.x - 1;
+        clip.y = layout->bounds.y - 1;
         clip.w = layout->bounds.w + 1;
         clip.h = layout->bounds.h + 1;
         zr_command_buffer_push_scissor(out, clip);
+#endif
+        zr_command_buffer_push_scissor(out, zr_null_rect);
     }
 
     /* cache configuration data */
@@ -5797,7 +5800,7 @@ zr_end(struct zr_context *layout, struct zr_window *window)
                 window->bounds.x + width, padding_y, config->colors[ZR_COLOR_BORDER]);
     }
 
-    zr_command_buffer_push_scissor(out, zr_rect(0, 0, zr_null_rect.w, zr_null_rect.h));
+    /*zr_command_buffer_push_scissor(out, zr_rect(0, 0, zr_null_rect.w, zr_null_rect.h));*/
     if (!(window->flags & ZR_WINDOW_TAB)) {
         /* window is hidden so clear command buffer  */
         if (layout->flags & ZR_WINDOW_HIDDEN)
