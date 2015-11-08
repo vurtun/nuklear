@@ -8185,7 +8185,7 @@ zr_popup_end(struct zr_context *parent, struct zr_context *popup,
     zr_zero(&pan, sizeof(pan));
     if (popup->flags & ZR_WINDOW_HIDDEN) {
         parent->flags |= ZR_WINDOW_REMOVE_ROM;
-        popup->flags &= ~(zr_flags)~ZR_WINDOW_HIDDEN;
+        popup->flags &= (zr_flags)~ZR_WINDOW_HIDDEN;
         popup->valid = zr_true;
     }
 
