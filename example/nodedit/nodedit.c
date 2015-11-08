@@ -228,7 +228,7 @@ node_editor_draw(struct zr_context *layout, struct node_editor *nodedit,
 
             /* execute node window */
             zr_group_begin(layout, &node, it->name,
-                ZR_WINDOW_MOVEABLE|ZR_WINDOW_NO_SCROLLBAR, zr_vec2(0,0));
+                ZR_WINDOW_MOVEABLE|ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER, zr_vec2(0,0));
             {
                 zr_int r,g,b;
                 zr_float ratio[] = {0.25f, 0.75f};
