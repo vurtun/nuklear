@@ -5640,17 +5640,8 @@ zr_end(struct zr_context *layout, struct zr_window *window)
     config = layout->style;
     out = layout->buffer;
     in = (layout->flags & ZR_WINDOW_ROM) ? 0 :layout->input;
-    if (!(layout->flags & ZR_WINDOW_TAB)) {
-#if 0
-        struct zr_rect clip;
-        clip.x = layout->bounds.x - 1;
-        clip.y = layout->bounds.y - 1;
-        clip.w = layout->bounds.w + 1;
-        clip.h = layout->bounds.h + 1;
-        zr_command_buffer_push_scissor(out, clip);
-#endif
+    if (!(layout->flags & ZR_WINDOW_TAB))
         zr_command_buffer_push_scissor(out, zr_null_rect);
-    }
 
     /* cache configuration data */
     item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
