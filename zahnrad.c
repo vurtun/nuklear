@@ -5791,7 +5791,6 @@ zr_end(struct zr_context *layout, struct zr_window *window)
                 window->bounds.x + width, padding_y, config->colors[ZR_COLOR_BORDER]);
     }
 
-    /*zr_command_buffer_push_scissor(out, zr_rect(0, 0, zr_null_rect.w, zr_null_rect.h));*/
     if (!(window->flags & ZR_WINDOW_TAB)) {
         /* window is hidden so clear command buffer  */
         if (layout->flags & ZR_WINDOW_HIDDEN)
@@ -8460,14 +8459,8 @@ zr_combo_begin(struct zr_context *parent, struct zr_context *combo,
         label.w = header.w - (header.h + 2 * item_padding.x);
         label.h = header.h - 2 * item_padding.y;
         text_len = zr_strsiz(selected);
-
-        /* set correct clipping rectangle and draw title */
-        zr_unify(&clip, &parent->clip, label.x, label.y, label.x + label.w,
-            label.y + label.h);
-        zr_command_buffer_push_scissor(out, clip);
         zr_command_buffer_push_text(out, label, selected, text_len, &config->font,
                 config->colors[ZR_COLOR_WINDOW], config->colors[ZR_COLOR_TEXT]);
-        zr_command_buffer_push_scissor(out, parent->clip);
     }
     {
         /* button setup and execution */
