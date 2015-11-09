@@ -38,7 +38,9 @@ have to be either executed or optionally converted into a vertex buffer to
 draw the GUI.
 
 ## Gallery
-![demo](https://cloud.githubusercontent.com/assets/8057201/10188098/1d5fe5b0-675d-11e5-83f7-967b71bbd1d4.png)
+![1](https://cloud.githubusercontent.com/assets/8057201/11033668/59ab5d04-86e5-11e5-8091-c56f16411565.png)
+![2](https://cloud.githubusercontent.com/assets/8057201/11033664/5074a588-86e5-11e5-8308-8e1f4724ae85.png)
+![3](https://cloud.githubusercontent.com/assets/8057201/11033654/3f0c5a5c-86e5-11e5-8529-4bb5ac3b357a.png)
 ![explorer](https://cloud.githubusercontent.com/assets/8057201/10718115/02a9ba08-7b6b-11e5-950f-adacdd637739.png)
 ![node](https://cloud.githubusercontent.com/assets/8057201/9976995/e81ac04a-5ef7-11e5-872b-acd54fbeee03.gif)
 
@@ -87,7 +89,7 @@ while (1) {
             zr_layout_row_push(&context, 50);
             zr_label(&context, "Volume:", ZR_TEXT_LEFT);
             zr_layout_row_push(&context, 110);
-            value = zr_slider(&context, 0, value, 1.0f, 0.1f);
+            value = zr_slider_float(&context, 0, value, 1.0f, 0.1f);
         }
         zr_layout_row_end(&context);
     }
