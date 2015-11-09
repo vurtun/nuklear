@@ -4822,7 +4822,8 @@ zr_widget_edit_filtered(struct zr_command_buffer *out, struct zr_rect r,
 
     zr_widget_editbox(out, r, &box, field, in, font);
     *active = box.active;
-    *cursor = box.cursor;
+    if (cursor)
+        *cursor = box.cursor;
     return zr_edit_box_len(&box);
 }
 
