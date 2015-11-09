@@ -308,12 +308,10 @@ zr_strtof(zr_float *number, const char *buffer)
         if ( *p == '-' ) {
             div = zr_true;
             p++;
-        }
-        else if ( *p == '+' ) {
+        } else if ( *p == '+' ) {
             div = zr_false;
             p++;
-        }
-        else div = zr_false;
+        } else div = zr_false;
 
         for ( pow = 0; *p; p++ )
             pow = pow * 10 + (int) (*p - '0');
@@ -4814,11 +4812,17 @@ zr_widget_edit_filtered(struct zr_command_buffer *out, struct zr_rect r,
     box.buffer.allocated = len;
     box.active = *active;
     box.glyphes = zr_utf_len(buffer, len);
-    if (!cursor) box.cursor = box.glyphes;
-    else box.cursor = MIN(*cursor, box.glyphes);
+    if (!cursor) {
+        box.cursor = box.glyphes;
+    } else{
+        box.cursor = MIN(*cursor, box.glyphes);
+        box.sel.begin = box.cursor;
+        box.sel.end = box.cursor;
+    }
 
     zr_widget_editbox(out, r, &box, field, in, font);
     *active = box.active;
+    *cursor = box.cursor;
     return zr_edit_box_len(&box);
 }
 
@@ -5564,20 +5568,22 @@ zr_begin(struct zr_context *context, struct zr_window *window)
     context->flags = window->flags;
     context->valid = !(window->flags & ZR_WINDOW_HIDDEN) &&
         !(window->flags & ZR_WINDOW_MINIMIZED);
-    context->footer_h = scaler_size.y + item_padding.y;
 
-    /* calculate the window size and window footer height */
+    /* calculate window footer height */
+    if ((window->flags & ZR_WINDOW_SCALEABLE))
+        context->footer_h = scaler_size.y + item_padding.y;
+    else context->footer_h = 0;
+
+    /* calculate the window size */
     if (!(window->flags & ZR_WINDOW_NO_SCROLLBAR))
         context->width = window->bounds.w - scrollbar_size;
     context->height = window->bounds.h - (context->header.h + 2 * item_spacing.y);
-    if (context->flags & ZR_WINDOW_SCALEABLE)
-        context->height -= context->footer_h;
+    context->height -= context->footer_h;
 
     /* draw window background if not a dynamic window */
     if (!(context->flags & ZR_WINDOW_DYNAMIC) && context->valid) {
         zr_command_buffer_push_rect(out, context->bounds, 0, c->colors[ZR_COLOR_WINDOW]);
     } else{
-        context->footer_h = scaler_size.y + item_padding.y;
         zr_command_buffer_push_rect(out, zr_rect(context->bounds.x, context->bounds.y,
             context->bounds.w, context->row.height), 0, c->colors[ZR_COLOR_WINDOW]);
     }
@@ -7887,16 +7893,17 @@ zr_group_begin(struct zr_context *p, struct zr_context *g,
     g->offset = offset;
     g->queue = p->queue;
 
+    if (title)
     {
-        /* setup correct clipping rectangle for the group */
+        /* setup correct clipping rectangle for the header */
         struct zr_rect clip;
         struct zr_command_buffer *out = p->buffer;
+
         zr_unify(&clip, &temp, g->bounds.x, g->clip.y, g->clip.x + g->bounds.w,
             g->clip.y + g->clip.h);
         zr_command_buffer_push_scissor(out, clip);
 
-        /* calculate the group clipping rect */
-        if (title) zr_header(g, title, 0, 0, ZR_HEADER_LEFT);
+        zr_header(g, title, 0, 0, ZR_HEADER_LEFT);
         zr_unify(&clip, &p->clip, g->clip.x, g->clip.y, g->clip.x + g->clip.w,
             g->clip.y + g->clip.h);
 
