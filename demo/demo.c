@@ -37,9 +37,11 @@ struct demo {
     struct zr_window panel;
     struct zr_window sub;
     struct zr_window metrics;
-    struct test_tree tree;
     zr_size w, h;
     enum theme theme;
+
+    struct test_tree tree;
+    struct zr_edit_box text;
 };
 
 static void
@@ -181,7 +183,7 @@ upload_tree(struct test_tree *base, struct zr_tree *tree, struct tree_node *node
 
 static int
 show_test_window(struct zr_window *window, struct zr_style *config, enum theme *theme,
-    struct test_tree *test_tree)
+    struct test_tree *test_tree, struct zr_edit_box *edit_box)
 {
     zr_flags ret;
     struct zr_context layout;
@@ -508,6 +510,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         static zr_state main_state = zr_false;
         static zr_state button_state = zr_false;
         static zr_state combo_state = zr_false;
+        static zr_state input_state = zr_false;
         static zr_state sel_state = zr_false;
 
         enum options {A,B,C};
@@ -588,7 +591,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             zr_layout_row(&layout, ZR_STATIC, 30, 2, ratio);
             zr_labelf(&layout, ZR_TEXT_LEFT, "Slider(%d):", int_slider);
             zr_slider_int(&layout, 0, &int_slider, 10, 1);
-            zr_labelf(&layout, ZR_TEXT_LEFT, "Slider int: %.2f:", float_slider);
+            zr_labelf(&layout, ZR_TEXT_LEFT, "Slider(%.2f):", float_slider);
             zr_slider_float(&layout, 0, &float_slider, 5.0, 0.5f);
             zr_labelf(&layout, ZR_TEXT_LEFT, "Progressbar: %lu:" , prog_value);
             zr_progress(&layout, &prog_value, 100, ZR_MODIFYABLE);
@@ -716,6 +719,32 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
                 zr_checkbox(&combo, weapons[3], &check_values[3]);
             }
             zr_combo_end(&layout, &combo, NULL);
+
+            zr_layout_pop(&layout);
+        }
+        if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Input", &input_state))
+        {
+            static char text[7][64];
+            static zr_size text_len[7];
+            static zr_state text_active[7];
+            static zr_size text_cursor[7];
+            static const zr_float ratio[] = {120, 100};
+
+            zr_layout_row(&layout, ZR_STATIC, 25, 2, ratio);
+            zr_label(&layout, "Default:", ZR_TEXT_LEFT);
+            zr_edit(&layout, text[0], &text_len[0], 64, &text_active[0], &text_cursor[0], ZR_INPUT_DEFAULT);
+            zr_label(&layout, "Int:", ZR_TEXT_LEFT);
+            zr_edit(&layout, text[1], &text_len[1], 64, &text_active[1], &text_cursor[1], ZR_INPUT_DEC);
+            zr_label(&layout, "Float:", ZR_TEXT_LEFT);
+            zr_edit(&layout, text[2], &text_len[2], 64, &text_active[2], &text_cursor[2], ZR_INPUT_FLOAT);
+            zr_label(&layout, "Hex:", ZR_TEXT_LEFT);
+            zr_edit(&layout, text[4], &text_len[4], 64, &text_active[4], &text_cursor[4], ZR_INPUT_HEX);
+            zr_label(&layout, "Octal:", ZR_TEXT_LEFT);
+            zr_edit(&layout, text[5], &text_len[5], 64, &text_active[5], &text_cursor[5], ZR_INPUT_OCT);
+            zr_label(&layout, "Binary:", ZR_TEXT_LEFT);
+            zr_edit(&layout, text[6], &text_len[6], 64, &text_active[6], &text_cursor[6], ZR_INPUT_BIN);
+            zr_label(&layout, "Editbox:", ZR_TEXT_LEFT);
+            zr_editbox(&layout, edit_box);
 
             zr_layout_pop(&layout);
         }
@@ -1032,6 +1061,29 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
 }
 
 static void
+copy_callback(zr_handle handle, const char *text, zr_size size)
+{
+    zr_char buffer[1024];
+    UNUSED(handle);
+    if (size >= 1023) return;
+    memcpy(buffer, text, size);
+    buffer[size] = '\0';
+    clipboard_set(buffer);
+}
+
+static void
+paste_callback(zr_handle handle, struct zr_edit_box *box)
+{
+    zr_size len;
+    const char *text;
+    UNUSED(handle);
+    if (!clipboard_is_filled())return;
+    text = clipboard_get();
+    len = strlen(text);
+    zr_edit_box_add(box, text, len);
+}
+
+static void
 init_demo(struct demo *gui)
 {
     gui->running = zr_true;
@@ -1100,6 +1152,15 @@ init_demo(struct demo *gui)
         ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALEABLE,
         &gui->queue, &gui->config_black, &gui->input);
 
+    {
+        /* edit box */
+        static char text[64];
+        struct zr_clipboard clip;
+        clip.userdata.ptr = 0;
+        clip.paste = paste_callback;
+        clip.copy = copy_callback;
+        zr_edit_box_init_fixed(&gui->text, text, 64, &clip, 0);
+    }
 }
 
 static void
@@ -1107,7 +1168,7 @@ run_demo(struct demo *gui)
 {
     struct zr_context layout;
     struct zr_style *current = (gui->theme == THEME_BLACK) ? &gui->config_black : &gui->config_white;
-    gui->running = show_test_window(&gui->panel, current, &gui->theme, &gui->tree);
+    gui->running = show_test_window(&gui->panel, current, &gui->theme, &gui->tree, &gui->text);
 
     /* ussage example  */
     gui->sub.style = current;
