@@ -789,6 +789,27 @@ zr_triangle_from_direction(struct zr_vec2 *result, struct zr_rect r,
         result[2] = zr_vec2(r.x + r.w, r.y + r.h);
     }
 }
+
+static zr_size
+zr_string_float_limit(char *string, zr_int prec)
+{
+    zr_int dot = 0;
+    char *c = string;
+    while (*c) {
+        if (*c == '.') {
+            dot = 1;
+            c++;
+            continue;
+        }
+        if (dot == (prec+1)) {
+            *c = 0;
+            break;
+        }
+        if (dot > 0) dot++;
+        c++;
+    }
+    return (zr_size)(c - string);
+}
 /*
  * ==============================================================
  *
@@ -4489,6 +4510,78 @@ zr_widget_slider(struct zr_command_buffer *out, struct zr_rect slider,
     return slider_value;
 }
 
+zr_float
+zr_widget_drag(struct zr_command_buffer *out, struct zr_rect drag,
+    zr_float min, zr_float val, zr_float max,
+    zr_float inc_per_pixel, const struct zr_drag *d,
+    const struct zr_input *in, const struct zr_user_font *f)
+{
+    struct zr_text t;
+    struct zr_color col;
+    struct zr_color background;
+
+    zr_float drag_range;
+    zr_float drag_min, drag_max;
+    zr_float drag_value, drag_steps;
+    zr_float cursor_offset;
+    char string[ZR_MAX_NUMBER_BUFFER];
+    zr_size len;
+
+    zr_bool left_mouse_down;
+    zr_bool left_mouse_click_in_cursor;
+
+    ZR_ASSERT(d);
+    ZR_ASSERT(out);
+    ZR_ASSERT(f);
+    if (!out || !d)
+        return 0;
+
+    /* make sure the provided values are correct */
+    drag.x = drag.x + d->padding.x;
+    drag.y = drag.y + d->padding.y;
+    drag.h = MAX(drag.h, 2 * d->padding.y);
+    drag.w = MAX(drag.w, 1 + drag.h + 2 * d->padding.x);
+    drag.h -= 2 * d->padding.y;
+    drag.w -= 2 * d->padding.y;
+    drag_max = MAX(min, max);
+    drag_min = MIN(min, max);
+    drag_value = CLAMP(drag_min, val, drag_max);
+
+    /* update value user input */
+    left_mouse_down = in && in->mouse.buttons[ZR_BUTTON_LEFT].down;
+    left_mouse_click_in_cursor = in && zr_input_has_mouse_click_down_in_rect(in,
+        ZR_BUTTON_LEFT, drag, zr_true);
+
+    t.text = d->text;
+    background = d->normal;
+    if (zr_input_is_mouse_hovering_rect(in, drag))
+        background = d->hover;
+
+    if (left_mouse_down && left_mouse_click_in_cursor) {
+        zr_float delta, pixels;
+        background = d->active;
+        t.text = d->text_active;
+
+        pixels = in->mouse.delta.x;
+        delta = pixels * inc_per_pixel;
+        drag_value += delta;
+        drag_value = CLAMP(drag_min, drag_value, drag_max);
+    }
+
+    /* draw border + background */
+    zr_command_buffer_push_rect(out, drag, d->rounding, d->border);
+    drag = zr_shrink_rect(drag, d->border_width);
+    zr_command_buffer_push_rect(out, drag, d->rounding, background);
+
+    /* draw value as text */
+    t.background = background;
+    t.padding = zr_vec2(0,0);
+    len = zr_dtos(string, drag_value);
+    len = zr_string_float_limit(string, ZR_MAX_FLOAT_PRECISION);
+    zr_widget_text(out, drag, string, len, &t, ZR_TEXT_CENTERED, f);
+    return drag_value;
+}
+
 zr_size
 zr_widget_progress(struct zr_command_buffer *out, struct zr_rect r,
     zr_size value, zr_size max, zr_bool modifyable,
@@ -5034,7 +5127,6 @@ zr_widget_spinner_base(struct zr_command_buffer *out, struct zr_rect r,
     return ret;
 }
 
-
 zr_int
 zr_widget_spinner_int(struct zr_command_buffer *out, struct zr_rect r,
     const struct zr_spinner *s, zr_int min, zr_int value,
@@ -5067,27 +5159,6 @@ zr_widget_spinner_int(struct zr_command_buffer *out, struct zr_rect r,
         zr_strtoi(&value, string, len);
     if (active) *active = is_active;
     return value;
-}
-
-static zr_size
-zr_string_float_limit(char *string, zr_int prec)
-{
-    zr_int dot = 0;
-    char *c = string;
-    while (*c) {
-        if (*c == '.') {
-            dot = 1;
-            c++;
-            continue;
-        }
-        if (dot == (prec+1)) {
-            *c = 0;
-            break;
-        }
-        if (dot > 0) dot++;
-        c++;
-    }
-    return (zr_size)(c - string);
 }
 
 zr_float
@@ -5177,6 +5248,9 @@ zr_widget_spinner_float(struct zr_command_buffer *out, struct zr_rect r,
     COLOR(PROGRESS_CURSOR,          100, 100, 100, 255)\
     COLOR(PROGRESS_CURSOR_HOVER,    120, 120, 120, 255)\
     COLOR(PROGRESS_CURSOR_ACTIVE,   150, 150, 150, 255)\
+    COLOR(DRAG,                     38, 38, 38, 255)\
+    COLOR(DRAG_HOVER,               50, 50, 50, 255)\
+    COLOR(DRAG_ACTIVE,              60, 60, 60, 255)\
     COLOR(INPUT,                    45, 45, 45, 255)\
     COLOR(INPUT_CURSOR,             100, 100, 100, 255)\
     COLOR(INPUT_TEXT,               135, 135, 135, 255)\
@@ -7284,6 +7358,46 @@ zr_slider_int(struct zr_context *layout, zr_int min_value, zr_int *value,
     zr_slider_float(layout, (zr_float)min_value, &val,
         (zr_float)max_value, (zr_float)value_step);
     *value = (zr_int)val;
+}
+
+void
+zr_drag_float(struct zr_context *layout, zr_float min, zr_float *val,
+    zr_float max, zr_float inc_per_pixel)
+{
+    struct zr_rect bounds;
+    struct zr_drag drag;
+    const struct zr_style *config;
+    struct zr_vec2 item_padding;
+
+    const struct zr_input *i;
+    enum zr_widget_state state;
+    state = zr_widget(&bounds, layout);
+    if (!state) return;
+    i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
+
+    config = layout->style;
+    item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
+
+    drag.padding.x = item_padding.x;
+    drag.padding.y = item_padding.y;
+    drag.border = config->colors[ZR_COLOR_BORDER];
+    drag.normal = config->colors[ZR_COLOR_DRAG];
+    drag.hover = config->colors[ZR_COLOR_DRAG_HOVER];
+    drag.active = config->colors[ZR_COLOR_DRAG_ACTIVE];
+    drag.text = config->colors[ZR_COLOR_TEXT];
+    drag.text_active = config->colors[ZR_COLOR_TEXT_ACTIVE];
+    drag.rounding = config->rounding[ZR_ROUNDING_SLIDER];
+    *val = zr_widget_drag(layout->buffer, bounds, min, *val, max,
+                        inc_per_pixel, &drag, i, &config->font);
+}
+
+void zr_drag_int(struct zr_context *layout, zr_int min, zr_int *val,
+    zr_int max, zr_int inc_per_pixel)
+{
+    zr_float value = (zr_float)*val;
+    zr_drag_float(layout, (zr_float)min, &value,
+        (zr_float)max, (zr_float)inc_per_pixel);
+    *val = (zr_int)value;
 }
 
 void

@@ -1800,8 +1800,6 @@ zr_size zr_edit_box_len(struct zr_edit_box*);
     zr_widget_edit_filtered         -- Editbox with utf8 gylph filter capabilities
     zr_widget_spinner_int           -- integer spinner widget
     zr_widget_spinner_float         -- float spinner widget
-    zr_widget_drag_int              -- integer dragging widget
-    zr_widget_drag_float            -- float dragging widget
     zr_widget_scrollbarv            -- vertical scrollbar widget imeplementation
     zr_widget_scrollbarh            -- horizontal scrollbar widget imeplementation
 */
@@ -1948,6 +1946,27 @@ struct zr_slider {
     /* slider cursor color */
     zr_float rounding;
     /* slider rounding */
+};
+
+struct zr_drag {
+    struct zr_vec2 padding;
+    /* padding between bounds and content */
+    struct zr_color border;
+    /* dragging widget cursor border color */
+    struct zr_color normal;
+    /* dragging widget cursor color */
+    struct zr_color hover;
+    /* dragging widget cursor color */
+    struct zr_color active;
+    /* dragging widget cursor color */
+    struct zr_color text;
+    /* dragging widget text color */
+    struct zr_color text_active;
+    /* dragging widget active widget text color */
+    zr_float rounding;
+    /* dragging widget rounding */
+    zr_float border_width;
+    /* dragging widget border width */
 };
 
 struct zr_scrollbar {
@@ -2170,6 +2189,23 @@ zr_float zr_widget_slider(struct zr_command_buffer*, struct zr_rect,
     Output:
     - returns the from the user input updated value
 */
+zr_float zr_widget_drag(struct zr_command_buffer*, struct zr_rect,
+                        zr_float min, zr_float val, zr_float max,
+                        zr_float inc_per_pixel, const struct zr_drag*,
+                        const struct zr_input*, const struct zr_user_font*);
+/*  this function executes a dragging widget
+    Input:
+    - output command buffer for drawing
+    - bounds of the slider
+    - minimal draging value that will not be underflown
+    - dragging value to be updated by the user
+    - maximal draggin value that will not be overflown
+    - incrementing value per dragged pixel
+    - visual style structure describing the dragging widget
+    - input structure to update the dragging widget with
+    Output:
+    - returns the from the user input updated value
+*/
 zr_size zr_widget_progress(struct zr_command_buffer*, struct zr_rect,
                             zr_size value, zr_size max, zr_bool modifyable,
                             const struct zr_progress*, const struct zr_input*);
@@ -2374,6 +2410,9 @@ enum zr_style_colors {
     ZR_COLOR_PROGRESS_CURSOR,
     ZR_COLOR_PROGRESS_CURSOR_HOVER,
     ZR_COLOR_PROGRESS_CURSOR_ACTIVE,
+    ZR_COLOR_DRAG,
+    ZR_COLOR_DRAG_HOVER,
+    ZR_COLOR_DRAG_ACTIVE,
     ZR_COLOR_INPUT,
     ZR_COLOR_INPUT_CURSOR,
     ZR_COLOR_INPUT_TEXT,
@@ -2404,6 +2443,7 @@ enum zr_style_rounding {
     ZR_ROUNDING_BUTTON,
     ZR_ROUNDING_SLIDER,
     ZR_ROUNDING_PROGRESS,
+    ZR_ROUNDING_DRAG,
     ZR_ROUNDING_CHECK,
     ZR_ROUNDING_INPUT,
     ZR_ROUNDING_GRAPH,
@@ -3378,6 +3418,31 @@ void zr_slider_int(struct zr_context*, zr_int min, zr_int *val, zr_int max,
     - step intervall to change the slider with
     Output:
     - the from user input updated slider value
+*/
+
+void zr_drag_float(struct zr_context*, zr_float min, zr_float *val,
+                        zr_float max, zr_float inc_per_pixel);
+/*  this function executes a dragable float widget
+    Input:
+    - minimal dragging value that will not be underflown
+    - slider dragging which shall be updated
+    - maximal dragging value that will not be overflown
+    - value increment per dragged pixel delta
+    - dragging axis with either ZR_AXIS_X or ZR_AXIS_Y
+    Output:
+    - returns the from the user input updated value
+*/
+void zr_drag_int(struct zr_context*, zr_int min, zr_int *val,
+                        zr_int max, zr_int inc_per_pixel);
+/*  this function executes a dragable int value widget
+    Input:
+    - minimal dragging value that will not be underflown
+    - slider dragging which shall be updated
+    - maximal dragging value that will not be overflown
+    - value increment per dragged pixel delta
+    - dragging axis with either ZR_AXIS_X or ZR_AXIS_Y
+    Output:
+    - returns the from the user input updated value
 */
 void zr_progress(struct zr_context*, zr_size *cur, zr_size max, zr_bool modifyable);
 /*  this function creates an either user or program controlled progressbar
