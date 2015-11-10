@@ -559,7 +559,29 @@ zr_rgb_f(zr_float r, zr_float g, zr_float b)
 }
 
 struct zr_color
-zr_hsv(zr_float h, zr_float s, zr_float v)
+zr_hsv(zr_byte h, zr_byte s, zr_byte v)
+{
+    return zr_hsva(h, s, v, 255);
+}
+
+struct zr_color
+zr_hsv_f(zr_float h, zr_float s, zr_float v)
+{
+    return zr_hsva_f(h, s, v, 1.0f);
+}
+
+struct zr_color
+zr_hsva(zr_byte h, zr_byte s, zr_byte v, zr_byte a)
+{
+    float hf = (zr_float)h / 255.0f;
+    float sf = (zr_float)s / 255.0f;
+    float vf = (zr_float)v / 255.0f;
+    float af = (zr_float)a / 255.0f;
+    return zr_hsva_f(hf, sf, vf, a);
+}
+
+struct zr_color
+zr_hsva_f(zr_float h, zr_float s, zr_float v, zr_float a)
 {
     struct zr_colorf {zr_float r,g,b,a;} out;
     zr_float hh, p, q, t, ff;
@@ -612,7 +634,7 @@ zr_hsv(zr_float h, zr_float s, zr_float v)
         out.b = q;
         break;
     }
-    return zr_rgb_f(out.r, out.g, out.b);
+    return zr_rgba_f(out.r, out.g, out.b, a);
 }
 
 zr_uint
@@ -636,7 +658,15 @@ zr_colorf(zr_float *r, zr_float *g, zr_float *b, zr_float *a, struct zr_color in
 }
 
 void
-zr_color_hsv(zr_float *out_h, zr_float *out_s, zr_float *out_v, struct zr_color in)
+zr_color_hsv_f(zr_float *out_h, zr_float *out_s, zr_float *out_v, struct zr_color in)
+{
+    zr_float a;
+    zr_color_hsva_f(out_h, out_s, out_v, &a, in);
+}
+
+void
+zr_color_hsva_f(zr_float *out_h, zr_float *out_s,
+    zr_float *out_v, zr_float *out_a, struct zr_color in)
 {
     zr_float chroma;
     zr_float K = 0.0f;
@@ -655,6 +685,26 @@ zr_color_hsv(zr_float *out_h, zr_float *out_s, zr_float *out_v, struct zr_color 
     *out_h = ZR_ABS(K + (g - b)/(6.0f * chroma + 1e-20f));
     *out_s = chroma / (r + 1e-20f);
     *out_v = r;
+    *out_a = (zr_float)in.a / 255.0f;
+}
+
+void
+zr_color_hsva(zr_int *out_h, zr_int *out_s, zr_int *out_v,
+                zr_int *out_a, struct zr_color in)
+{
+    zr_float h,s,v,a;
+    zr_color_hsva_f(&h, &s, &v, &a, in);
+    *out_h = (zr_byte)(h * 255.0f);
+    *out_s = (zr_byte)(s * 255.0f);
+    *out_v = (zr_byte)(v * 255.0f);
+    *out_a = (zr_byte)(a * 255.0f);
+}
+
+void
+zr_color_hsv(zr_int *out_h, zr_int *out_s, zr_int *out_v, struct zr_color in)
+{
+    zr_int a;
+    zr_color_hsva(out_h, out_s, out_v, &a, in);
 }
 /*
  * ==============================================================

@@ -174,11 +174,19 @@ struct zr_color zr_rgba(zr_byte r, zr_byte g, zr_byte b, zr_byte a);
 struct zr_color zr_rgb(zr_byte r, zr_byte g, zr_byte b);
 struct zr_color zr_rgba_f(zr_float r, zr_float g, zr_float b, zr_float a);
 struct zr_color zr_rgb_f(zr_float r, zr_float g, zr_float b);
-struct zr_color zr_hsv(zr_float h, zr_float s, zr_float v);
+struct zr_color zr_hsv(zr_byte h, zr_byte s, zr_byte v);
+struct zr_color zr_hsv_f(zr_float h, zr_float s, zr_float v);
+struct zr_color zr_hsva(zr_byte h, zr_byte s, zr_byte v, zr_byte a);
+struct zr_color zr_hsva_f(zr_float h, zr_float s, zr_float v, zr_float a);
 struct zr_color zr_rgba32(zr_uint);
 zr_uint zr_color32(struct zr_color);
 void zr_colorf(zr_float *r, zr_float *g, zr_float *b, zr_float *a, struct zr_color);
-void zr_color_hsv(zr_float *out_h, zr_float *out_s, zr_float *out_v, struct zr_color);
+void zr_color_hsv(zr_int *out_h, zr_int *out_s, zr_int *out_v, struct zr_color);
+void zr_color_hsv_f(zr_float *out_h, zr_float *out_s, zr_float *out_v, struct zr_color);
+void zr_color_hsva(zr_int *out_h, zr_int *out_s, zr_int *out_v,
+                    zr_int *out_a, struct zr_color);
+void zr_color_hsva_f(zr_float *out_h, zr_float *out_s, zr_float *out_v,
+                    zr_float *out_a, struct zr_color);
 /* ----------------------- IMAGE ---------------------------------*/
 zr_handle zr_handle_ptr(void*);
 zr_handle zr_handle_id(zr_int);
