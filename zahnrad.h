@@ -1971,8 +1971,6 @@ struct zr_drag {
     /* dragging widget text color */
     struct zr_color text_active;
     /* dragging widget active widget text color */
-    zr_float rounding;
-    /* dragging widget rounding */
     zr_float border_width;
     /* dragging widget border width */
 };
@@ -2451,7 +2449,6 @@ enum zr_style_rounding {
     ZR_ROUNDING_BUTTON,
     ZR_ROUNDING_SLIDER,
     ZR_ROUNDING_PROGRESS,
-    ZR_ROUNDING_DRAG,
     ZR_ROUNDING_CHECK,
     ZR_ROUNDING_INPUT,
     ZR_ROUNDING_GRAPH,

@@ -4619,9 +4619,9 @@ zr_widget_drag(struct zr_command_buffer *out, struct zr_rect drag,
     }
 
     /* draw border + background */
-    zr_command_buffer_push_rect(out, drag, d->rounding, d->border);
+    zr_command_buffer_push_rect(out, drag, 0, d->border);
     drag = zr_shrink_rect(drag, d->border_width);
-    zr_command_buffer_push_rect(out, drag, d->rounding, background);
+    zr_command_buffer_push_rect(out, drag, 0, background);
 
     /* draw value as text */
     t.background = background;
@@ -7421,6 +7421,7 @@ zr_drag_float(struct zr_context *layout, zr_float min, zr_float *val,
 
     const struct zr_input *i;
     enum zr_widget_state state;
+    zr_zero(&drag, sizeof(drag));
     state = zr_widget(&bounds, layout);
     if (!state) return;
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
@@ -7436,7 +7437,6 @@ zr_drag_float(struct zr_context *layout, zr_float min, zr_float *val,
     drag.active = config->colors[ZR_COLOR_DRAG_ACTIVE];
     drag.text = config->colors[ZR_COLOR_TEXT];
     drag.text_active = config->colors[ZR_COLOR_TEXT_ACTIVE];
-    drag.rounding = config->rounding[ZR_ROUNDING_SLIDER];
     *val = zr_widget_drag(layout->buffer, bounds, min, *val, max,
                         inc_per_pixel, &drag, i, &config->font);
 }
