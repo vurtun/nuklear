@@ -540,10 +540,10 @@ struct zr_color
 zr_rgba_f(zr_float r, zr_float g, zr_float b, zr_float a)
 {
     struct zr_color ret;
-    ret.r = (zr_byte)ZR_SATURATE(r * 255.0f);
-    ret.g = (zr_byte)ZR_SATURATE(g * 255.0f);
-    ret.b = (zr_byte)ZR_SATURATE(b * 255.0f);
-    ret.a = (zr_byte)ZR_SATURATE(a * 255.0f);
+    ret.r = (zr_byte)(ZR_SATURATE(r) * 255.0f);
+    ret.g = (zr_byte)(ZR_SATURATE(g) * 255.0f);
+    ret.b = (zr_byte)(ZR_SATURATE(b) * 255.0f);
+    ret.a = (zr_byte)(ZR_SATURATE(a) * 255.0f);
     return ret;
 }
 
@@ -551,9 +551,9 @@ struct zr_color
 zr_rgb_f(zr_float r, zr_float g, zr_float b)
 {
     struct zr_color ret;
-    ret.r = (zr_byte)ZR_SATURATE(r * 255.0f);
-    ret.g = (zr_byte)ZR_SATURATE(g * 255.0f);
-    ret.b = (zr_byte)ZR_SATURATE(b * 255.0f);
+    ret.r = (zr_byte)(ZR_SATURATE(r) * 255.0f);
+    ret.g = (zr_byte)(ZR_SATURATE(g) * 255.0f);
+    ret.b = (zr_byte)(ZR_SATURATE(b) * 255.0f);
     ret.a = 255;
     return ret;
 }
@@ -577,7 +577,7 @@ zr_hsva(zr_byte h, zr_byte s, zr_byte v, zr_byte a)
     float sf = (zr_float)s / 255.0f;
     float vf = (zr_float)v / 255.0f;
     float af = (zr_float)a / 255.0f;
-    return zr_hsva_f(hf, sf, vf, a);
+    return zr_hsva_f(hf, sf, vf, af);
 }
 
 struct zr_color
