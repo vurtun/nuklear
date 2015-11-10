@@ -4849,13 +4849,12 @@ zr_widget_edit(struct zr_command_buffer *out, struct zr_rect r,
 zr_float
 zr_widget_scrollbarv(struct zr_command_buffer *out, struct zr_rect scroll,
     zr_float offset, zr_float target, zr_float step, const struct zr_scrollbar *s,
-    const struct zr_input *i)
+    struct zr_input *i)
 {
     struct zr_rect cursor;
     zr_float scroll_step;
     zr_float scroll_offset;
     zr_float scroll_off, scroll_ratio;
-    zr_bool inscroll, incursor;
     struct zr_color col;
 
     ZR_ASSERT(out);
@@ -4883,16 +4882,25 @@ zr_widget_scrollbarv(struct zr_command_buffer *out, struct zr_rect scroll,
 
     col = s->normal;
     if (i) {
-        inscroll = zr_input_is_mouse_hovering_rect(i, scroll);
-        incursor = zr_input_is_mouse_prev_hovering_rect(i, cursor);
+        zr_bool left_mouse_down, left_mouse_click_in_cursor;
+        left_mouse_down = i->mouse.buttons[ZR_BUTTON_LEFT].down;
+        left_mouse_click_in_cursor = zr_input_has_mouse_click_down_in_rect(i,
+            ZR_BUTTON_LEFT, cursor, zr_true);
         if (zr_input_is_mouse_hovering_rect(i, cursor))
             col = s->hover;
-        if (i->mouse.buttons[ZR_BUTTON_LEFT].down && inscroll && incursor) {
+
+        if (left_mouse_down && left_mouse_click_in_cursor) {
             /* update cursor by mouse dragging */
             const zr_float pixel = i->mouse.delta.y;
             const zr_float delta =  (pixel / scroll.h) * target;
             scroll_offset = CLAMP(0, scroll_offset + delta, target - scroll.h);
             col = s->active;
+            /* This is probably one of my most distgusting hacks I have ever done.
+             * This basically changes the mouse clicked position with the moving
+             * cursor. This allows for better scroll behavior but resulted into me
+             * having to remove const correctness for input. But in the end I believe
+             * it is worth it. */
+            i->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.y += i->mouse.delta.y;
         } else if (s->has_scrolling && ((i->mouse.scroll_delta<0) || (i->mouse.scroll_delta>0))) {
             /* update cursor by mouse scrolling */
             scroll_offset = scroll_offset + scroll_step * (-i->mouse.scroll_delta);
@@ -4912,13 +4920,12 @@ zr_widget_scrollbarv(struct zr_command_buffer *out, struct zr_rect scroll,
 zr_float
 zr_widget_scrollbarh(struct zr_command_buffer *out, struct zr_rect scroll,
     zr_float offset, zr_float target, zr_float step, const struct zr_scrollbar *s,
-    const struct zr_input *i)
+    struct zr_input *i)
 {
     struct zr_rect cursor;
     zr_float scroll_step;
     zr_float scroll_offset;
     zr_float scroll_off, scroll_ratio;
-    zr_bool inscroll, incursor;
     struct zr_color col;
 
     ZR_ASSERT(out);
@@ -4944,17 +4951,20 @@ zr_widget_scrollbarh(struct zr_command_buffer *out, struct zr_rect scroll,
 
     col = s->normal;
     if (i) {
-        inscroll = zr_input_is_mouse_hovering_rect(i, scroll);
-        incursor = zr_input_is_mouse_prev_hovering_rect(i, cursor);
+        zr_bool left_mouse_down, left_mouse_click_in_cursor;
+        left_mouse_down = i->mouse.buttons[ZR_BUTTON_LEFT].down;
+        left_mouse_click_in_cursor = zr_input_has_mouse_click_down_in_rect(i,
+            ZR_BUTTON_LEFT, cursor, zr_true);
         if (zr_input_is_mouse_hovering_rect(i, cursor))
             col = s->hover;
 
-        if (i->mouse.buttons[ZR_BUTTON_LEFT].down && inscroll && incursor) {
+        if (left_mouse_down && left_mouse_click_in_cursor) {
             /* update cursor by mouse dragging */
             const zr_float pixel = i->mouse.delta.x;
             const zr_float delta =  (pixel / scroll.w) * target;
             scroll_offset = CLAMP(0, scroll_offset + delta, target - scroll.w);
             col = s->active;
+            i->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.x += i->mouse.delta.x;
         } else if (s->has_scrolling && ((i->mouse.scroll_delta<0) || (i->mouse.scroll_delta>0))) {
             /* update cursor by mouse scrolling */
             scroll_offset = scroll_offset + scroll_step * (-i->mouse.scroll_delta);
@@ -5380,7 +5390,7 @@ zr_style_reset(struct zr_style *style)
 void
 zr_window_init(struct zr_window *window, struct zr_rect bounds,
     zr_flags flags, struct zr_command_queue *queue,
-    const struct zr_style *style, const struct zr_input *input)
+    struct zr_style *style, struct zr_input *input)
 {
     ZR_ASSERT(window);
     ZR_ASSERT(style);
@@ -5457,7 +5467,7 @@ zr_begin(struct zr_context *context, struct zr_window *window)
     struct zr_vec2 window_padding;
     struct zr_vec2 scaler_size;
     struct zr_command_buffer *out;
-    const struct zr_input *in;
+    struct zr_input *in;
 
     ZR_ASSERT(context);
     ZR_ASSERT(window);
@@ -5630,7 +5640,7 @@ zr_flags
 zr_end(struct zr_context *layout, struct zr_window *window)
 {
     zr_flags ret = 0;
-    const struct zr_input *in;
+    struct zr_input *in;
     const struct zr_style *config;
     struct zr_command_buffer *out;
     zr_float scrollbar_size;
@@ -7962,7 +7972,7 @@ void
 zr_shelf_begin(struct zr_context *parent, struct zr_context *shelf,
     const char *tabs[], zr_size size, zr_size *active, struct zr_vec2 offset)
 {
-    const struct zr_style *config;
+    struct zr_style *config;
     struct zr_command_buffer *out;
     const struct zr_user_font *font;
     struct zr_vec2 item_padding;

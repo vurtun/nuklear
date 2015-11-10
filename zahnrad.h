@@ -2282,7 +2282,7 @@ zr_float zr_widget_spinner_float(struct zr_command_buffer*, struct zr_rect,
 zr_float zr_widget_scrollbarv(struct zr_command_buffer*, struct zr_rect,
                                 zr_float offset, zr_float target,
                                 zr_float step, const struct zr_scrollbar*,
-                                const struct zr_input*);
+                                struct zr_input*);
 /*  this function executes a vertical scrollbar widget
     Input:
     - output command buffer for draw commands
@@ -2299,7 +2299,7 @@ zr_float zr_widget_scrollbarv(struct zr_command_buffer*, struct zr_rect,
 zr_float zr_widget_scrollbarh(struct zr_command_buffer*, struct zr_rect,
                                 zr_float offset, zr_float target,
                                 zr_float step, const struct zr_scrollbar*,
-                                const struct zr_input*);
+                                struct zr_input*);
 /*  this function executes a horizontal scrollbar widget
     Input:
     - output command buffer for draw commands
@@ -2635,19 +2635,19 @@ struct zr_window {
     /* window flags modifing its behavior */
     struct zr_vec2 offset;
     /* scrollbar x- and y-offset */
-    const struct zr_style *style;
+    struct zr_style *style;
     /* configuration reference describing the window style */
     struct zr_command_buffer buffer;
     /* output command buffer queuing all drawing calls */
     struct zr_command_queue *queue;
     /* output command queue which hold the command buffer */
-    const struct zr_input *input;
+    struct zr_input *input;
     /* input state for updating the window and all its widgets */
 };
 
 void zr_window_init(struct zr_window*, struct zr_rect bounds, zr_flags flags,
-                    struct zr_command_queue*, const struct zr_style*,
-                    const struct zr_input *in);
+                    struct zr_command_queue*, struct zr_style*,
+                    struct zr_input *in);
 /*  this function initilizes and setups the window
     Input:
     - bounds of the window with x,y position and width and height
@@ -2799,9 +2799,9 @@ struct zr_context {
     /* window menubar bounds */
     struct zr_row_layout row;
     /* currently used window row layout */
-    const struct zr_style *style;
+    struct zr_style *style;
     /* configuration data describing the visual style of the window */
-    const struct zr_input *input;
+    struct zr_input *input;
     /* current input state for updating the window and all its widgets */
     struct zr_command_buffer *buffer;
     /* command draw call output command buffer */
