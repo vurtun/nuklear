@@ -349,7 +349,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         static zr_state active[4];
         struct zr_context popup;
         zr_int r,g,b,a;
-        zr_popup_begin(&layout, &popup, ZR_POPUP_STATIC,0, zr_rect(10, 100, 280, 280), zr_vec2(0,0));
+        zr_popup_begin(&layout, &popup, ZR_POPUP_STATIC,0, zr_rect(10, 100, 350, 280), zr_vec2(0,0));
         if (zr_header(&popup, "Color", ZR_CLOSEABLE, ZR_CLOSEABLE, ZR_HEADER_LEFT))
         {
             zr_popup_close(&popup);
@@ -361,14 +361,24 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         zr_label(&popup, zr_style_color_name((enum zr_style_colors)color_picker_index), ZR_TEXT_LEFT);
         zr_button_color(&popup, color_picker_color, ZR_BUTTON_DEFAULT);
 
-        zr_layout_row_dynamic(&popup, 30, 2);
-        r = color_picker_color.r, g = color_picker_color.g, b = color_picker_color.b, a = color_picker_color.a;
+        zr_layout_row_dynamic(&popup, 30, 3);
+        r = color_picker_color.r; g = color_picker_color.g;
+        b = color_picker_color.b; a = color_picker_color.a;
+
+        /* color selection */
+        zr_drag_int(&popup, 0, &r, 255, 1);
         zr_spinner_int(&popup, 0, &r, 255, 1, &active[0]);
         zr_slider_int(&popup, 0, &r,  255, 10);
+
+        zr_drag_int(&popup, 0, &g, 255, 1);
         zr_spinner_int(&popup, 0, &g, 255, 1, &active[1]);
         zr_slider_int(&popup, 0, &g,  255, 10);
+
+        zr_drag_int(&popup, 0, &b, 255, 1);
         zr_spinner_int(&popup, 0, &b, 255, 1, &active[2]);
         zr_slider_int(&popup, 0, &b,  255, 10);
+
+        zr_drag_int(&popup, 0, &a, 255, 1);
         zr_spinner_int(&popup, 0, &a, 255, 1, &active[3]);
         zr_slider_int(&popup, 0, &a,  255, 10);
         color_picker_color = zr_rgba((zr_byte)r,(zr_byte)g,(zr_byte)b,(zr_byte)a);
@@ -571,10 +581,13 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             static zr_int int_spinner = 20;
             static zr_float drag_float = 2;
             static zr_int drag_int = 10;
+            static zr_int r = 255,g = 160, b = 0;
+            static zr_int h = 100, s = 70, v = 20;
             static zr_state spinneri_active, spinnerf_active;
             static const zr_float ratio[] = {100, 150};
             const struct zr_input *in = zr_input(&layout);
             struct zr_rect bounds;
+            struct zr_color color;
 
             zr_layout_row_static(&layout, 30, 100, 1);
             zr_checkbox(&layout, "Checkbox", &checkbox);
@@ -593,19 +606,39 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             zr_layout_row(&layout, ZR_STATIC, 30, 2, ratio);
             zr_labelf(&layout, ZR_TEXT_LEFT, "Slider int: %d", int_slider);
             zr_slider_int(&layout, 0, &int_slider, 10, 1);
+
             zr_labelf(&layout, ZR_TEXT_LEFT, "Slider float: %.2f", float_slider);
             zr_slider_float(&layout, 0, &float_slider, 5.0, 0.5f);
             zr_labelf(&layout, ZR_TEXT_LEFT, "Progressbar: %lu:" , prog_value);
             zr_progress(&layout, &prog_value, 100, ZR_MODIFYABLE);
+
+            zr_layout_row(&layout, ZR_STATIC, 30, 2, ratio);
+            zr_label(&layout, "Spinner int:", ZR_TEXT_LEFT);
+            zr_spinner_int(&layout, 0, &int_spinner, 50.0, 1, &spinneri_active);
+            zr_label(&layout, "Spinner float:", ZR_TEXT_LEFT);
+            zr_spinner_float(&layout, 0, &float_spinner, 5.0, 0.5f, &spinnerf_active);
+
             zr_label(&layout, "Drag float:", ZR_TEXT_LEFT);
             zr_drag_float(&layout, 0, &drag_float, 64.0f, 0.1f);
             zr_label(&layout, "Drag int:", ZR_TEXT_LEFT);
             zr_drag_int(&layout, 0, &drag_int, 100, 1);
 
-            zr_label(&layout, "Spinner int:", ZR_TEXT_LEFT);
-            zr_spinner_int(&layout, 0, &int_spinner, 50.0, 1, &spinneri_active);
-            zr_label(&layout, "Spinner float:", ZR_TEXT_LEFT);
-            zr_spinner_float(&layout, 0, &float_spinner, 5.0, 0.5f, &spinnerf_active);
+            zr_layout_row_dynamic(&layout, 30, 6);
+            zr_label(&layout, "RGB:", ZR_TEXT_LEFT);
+            zr_drag_int(&layout, 0, &r, 255, 1);
+            zr_drag_int(&layout, 0, &g, 255, 1);
+            zr_drag_int(&layout, 0, &b, 255, 1);
+            color = zr_rgb((zr_byte)r,(zr_byte)g,(zr_byte)b);
+            zr_button_color(&layout, color, ZR_BUTTON_DEFAULT);
+
+            zr_layout_row_dynamic(&layout, 30, 6);
+            zr_label(&layout, "HSV:", ZR_TEXT_LEFT);
+            zr_drag_int(&layout, 0, &h, 255, 1);
+            zr_drag_int(&layout, 0, &s, 255, 1);
+            zr_drag_int(&layout, 0, &v, 255, 1);
+            color = zr_hsv((zr_byte)h,(zr_byte)s,(zr_byte)v);
+            zr_button_color(&layout, color, ZR_BUTTON_DEFAULT);
+
             zr_layout_pop(&layout);
         }
 
