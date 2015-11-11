@@ -795,10 +795,10 @@ zr_unify(struct zr_rect *clip, const struct zr_rect *a, zr_float x0, zr_float y0
 {
     ZR_ASSERT(a);
     ZR_ASSERT(clip);
-    clip->x = MAX(a->x, x0) - 1;
-    clip->y = MAX(a->y, y0) - 1;
-    clip->w = MIN(a->x + a->w, x1) - clip->x+ 2;
-    clip->h = MIN(a->y + a->h, y1) - clip->y + 2;
+    clip->x = MAX(a->x, x0);
+    clip->y = MAX(a->y, y0);
+    clip->w = MIN(a->x + a->w, x1) - clip->x;
+    clip->h = MIN(a->y + a->h, y1) - clip->y;
     clip->w = MAX(0, clip->w);
     clip->h = MAX(0, clip->h);
 }
@@ -5739,7 +5739,7 @@ zr_begin(struct zr_context *context, struct zr_window *window)
             context->clip.w = context->width;
         }
 
-        context->clip.y = window->bounds.y;
+        context->clip.y = window->bounds.y + context->header.h;
         context->clip.h = window->bounds.h - (context->footer_h + context->header.h);
         context->clip.h -= (window_padding.y + item_padding.y);
         zr_unify(&clip, &context->buffer->clip, context->clip.x, context->clip.y,
@@ -5750,10 +5750,6 @@ zr_begin(struct zr_context *context, struct zr_window *window)
         context->buffer->clip.w = context->width;
         if (!(window->flags & ZR_WINDOW_NO_SCROLLBAR))
             context->buffer->clip.w += scrollbar_size;
-        if (context->flags & ZR_WINDOW_BORDER) {
-            context->buffer->clip.x -= 1;
-            context->buffer->clip.w -= 2;
-        }
     }
     return ret;
 }
@@ -5978,6 +5974,7 @@ zr_header_begin(struct zr_context *layout)
     struct zr_vec2 panel_padding;
     struct zr_command_buffer *out;
     struct zr_rect clip;
+    zr_float old;
 
     ZR_ASSERT(layout);
     if (!layout) return;
@@ -5991,6 +5988,11 @@ zr_header_begin(struct zr_context *layout)
     panel_padding = zr_style_property(c, ZR_PROPERTY_PADDING);
     item_padding = zr_style_property(c, ZR_PROPERTY_ITEM_PADDING);
     item_spacing = zr_style_property(c, ZR_PROPERTY_ITEM_SPACING);
+
+    old = layout->header.h;
+    if (layout->valid)
+        zr_command_buffer_push_scissor(out,
+            zr_rect(out->clip.x, out->clip.y - old, out->clip.w, out->clip.h));
 
     /* update the header height and first row height */
     layout->header.h = c->font.height + 2 * item_padding.y;
@@ -6255,8 +6257,8 @@ zr_header_end(struct zr_context *layout)
                 c->colors[ZR_COLOR_BORDER]);
     }
 
-    /* update the panel clipping rect to include the header */
-    layout->clip.y = layout->bounds.y + layout->header.h;
+    /* update the panel clipping rect to exclude the header */
+    layout->clip.y = layout->bounds.y + layout->header.h + 1;
     layout->clip.h = layout->bounds.h - (layout->footer_h + layout->header.h);
     layout->clip.h -= (panel_padding.y + item_padding.y);
     zr_command_buffer_push_scissor(out, layout->clip);
@@ -8120,8 +8122,9 @@ zr_group_end(struct zr_context *p, struct zr_context *g, struct zr_vec2 *scrollb
     pan.flags = g->flags|ZR_WINDOW_TAB;
 
     /* setup clipping rect to finalize group panel drawing back to parent */
-    zr_unify(&clip, &p->clip, g->bounds.x, g->clip.y, g->bounds.x + g->bounds.w,
-        g->bounds.y + g->bounds.h);
+    zr_unify(&clip, &p->clip, g->bounds.x, g->clip.y - g->header.h, g->bounds.x + g->bounds.w+1,
+        g->bounds.y + g->bounds.h + 1);
+
     zr_command_buffer_push_scissor(out, clip);
     zr_end(g, &pan);
     zr_command_buffer_push_scissor(out, p->clip);
