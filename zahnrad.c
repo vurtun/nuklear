@@ -6014,8 +6014,13 @@ zr_header_begin(struct zr_context *layout)
     zr_unify(&clip, &layout->buffer->clip, layout->bounds.x, layout->bounds.y,
         layout->bounds.x + layout->bounds.w, layout->bounds.y + layout->bounds.h);
     zr_command_buffer_push_scissor(out, clip);
-    zr_command_buffer_push_rect(out, zr_rect(layout->bounds.x, layout->bounds.y,
-        layout->bounds.w, layout->header.h), 0, c->colors[ZR_COLOR_HEADER]);
+    if (!(layout->flags & ZR_WINDOW_BORDER)) {
+        zr_command_buffer_push_rect(out, zr_rect(layout->bounds.x, layout->bounds.y,
+            layout->bounds.w, layout->header.h), 0, c->colors[ZR_COLOR_HEADER]);
+    } else {
+        zr_command_buffer_push_rect(out, zr_rect(layout->bounds.x, layout->bounds.y+1,
+            layout->bounds.w, layout->header.h), 0, c->colors[ZR_COLOR_HEADER]);
+    }
 }
 
 zr_bool
