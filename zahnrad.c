@@ -4626,7 +4626,7 @@ zr_widget_drag(struct zr_command_buffer *out, struct zr_rect drag,
     /* draw value as text */
     t.background = background;
     t.padding = zr_vec2(0,0);
-    len = zr_dtos(string, drag_value);
+    zr_dtos(string, drag_value);
     len = zr_string_float_limit(string, ZR_MAX_FLOAT_PRECISION);
     zr_widget_text(out, drag, string, len, &t, ZR_TEXT_CENTERED, f);
     return drag_value;
@@ -5682,8 +5682,8 @@ zr_begin(struct zr_context *context, struct zr_window *window)
     context->row.ratio = 0;
     context->row.item_width = 0;
     context->offset = window->offset;
-    context->header.h = 1;
-    context->row.height = context->header.h + 2 * item_spacing.y;
+    context->header.h = 2 * item_spacing.y;
+    context->row.height = context->header.h;
     out = &window->buffer;
 
     /* panel activation by clicks inside of the panel */
@@ -5718,7 +5718,7 @@ zr_begin(struct zr_context *context, struct zr_window *window)
         zr_command_buffer_push_rect(out, context->bounds, 0, c->colors[ZR_COLOR_WINDOW]);
     } else{
         zr_command_buffer_push_rect(out, zr_rect(context->bounds.x, context->bounds.y,
-            context->bounds.w, context->row.height), 0, c->colors[ZR_COLOR_WINDOW]);
+            context->bounds.w, context->row.height + window_padding.y), 0, c->colors[ZR_COLOR_WINDOW]);
     }
 
     /* draw top border line */
@@ -6014,8 +6014,8 @@ zr_header_begin(struct zr_context *layout)
     zr_unify(&clip, &layout->buffer->clip, layout->bounds.x, layout->bounds.y,
         layout->bounds.x + layout->bounds.w, layout->bounds.y + layout->bounds.h);
     zr_command_buffer_push_scissor(out, clip);
-    zr_command_buffer_push_rect(out, zr_rect(layout->bounds.x, layout->bounds.y+1,
-        layout->bounds.w, layout->header.h-2), 0, c->colors[ZR_COLOR_HEADER]);
+    zr_command_buffer_push_rect(out, zr_rect(layout->bounds.x, layout->bounds.y,
+        layout->bounds.w, layout->header.h), 0, c->colors[ZR_COLOR_HEADER]);
 }
 
 zr_bool
