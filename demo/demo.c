@@ -497,6 +497,8 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             zr_size i = 0;
             struct zr_context tab;
             static struct zr_vec2 scrollbar;
+            zr_layout_row_dynamic(&layout, 20, 1);
+            zr_label(&layout, "Click on the color to modify", ZR_TEXT_LEFT);
             zr_layout_row_dynamic(&layout, 400, 1);
             zr_group_begin(&layout, &tab, NULL, 0, scrollbar);
             for (i = 0; i < ZR_COLOR_COUNT; ++i) {
@@ -971,11 +973,10 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         {
             static zr_float a = 100, b = 100, c = 100;
             static zr_state a_active, b_active, c_active;
-            struct zr_rect bounds, total_space;
+            struct zr_rect bounds;
             struct zr_context sub;
 
             zr_float row_layout[5];
-            total_space = zr_space(&layout);
             row_layout[0] = a;
             row_layout[1] = 8;
             row_layout[2] = b;
