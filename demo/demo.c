@@ -584,7 +584,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             static zr_int r = 255,g = 160, b = 0;
             static zr_int h = 100, s = 70, v = 20;
             static zr_state spinneri_active, spinnerf_active;
-            static const zr_float ratio[] = {100, 150};
+            static const zr_float ratio[] = {120, 150};
             const struct zr_input *in = zr_input(&layout);
             struct zr_rect bounds;
             struct zr_color color;
@@ -764,10 +764,10 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         }
         if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Input", &input_state))
         {
-            static char text[7][64];
-            static zr_size text_len[7];
-            static zr_state text_active[7];
-            static zr_size text_cursor[7];
+            static char text[8][64];
+            static zr_size text_len[8];
+            static zr_state text_active[8];
+            static zr_size text_cursor[8];
             static const zr_float ratio[] = {120, 100};
 
             zr_layout_row(&layout, ZR_STATIC, 25, 2, ratio);
@@ -786,6 +786,15 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             zr_label(&layout, "Editbox:", ZR_TEXT_LEFT);
             zr_editbox(&layout, edit_box);
 
+            zr_edit(&layout, text[7], &text_len[7], 64, &text_active[7], &text_cursor[7], ZR_INPUT_ASCII);
+            if (zr_button_text(&layout, "Submit", ZR_BUTTON_DEFAULT)
+                ||(text_active[7] && zr_input_is_key_pressed(window->input, ZR_KEY_ENTER))) {
+                text_active[7] = 0;
+                text_cursor[7] = 0;
+                text_len[7] = 0;
+            }
+
+            zr_layout_row_end(&layout);
             zr_layout_pop(&layout);
         }
         zr_layout_pop(&layout);
@@ -1127,7 +1136,6 @@ static void
 init_demo(struct demo *gui)
 {
     gui->running = zr_true;
-    gui->theme = THEME_WHITE;
     tree_init(&gui->tree);
 
     /* themes */
