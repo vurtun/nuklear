@@ -4710,8 +4710,6 @@ zr_widget_editbox(struct zr_command_buffer *out, struct zr_rect r,
         if (zr_input_is_key_pressed(in,ZR_KEY_DEL) ||
             zr_input_is_key_pressed(in,ZR_KEY_BACKSPACE))
             zr_edit_box_remove(box);
-        if (zr_input_is_key_pressed(in, ZR_KEY_ENTER))
-            box->active = zr_false;
         if (in->keyboard.text_len) {
             if (diff && box->cursor != box->glyphes) {
                 /* replace text selection */
