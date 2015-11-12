@@ -81,6 +81,7 @@ typedef float zr_float;
 typedef double zr_double;
 typedef uint16_t zr_ushort;
 typedef uint32_t zr_uint;
+typedef uint32_t zr_rune;
 typedef uint64_t zr_ulong;
 typedef uint32_t zr_flags;
 typedef zr_flags zr_state;
@@ -98,6 +99,7 @@ typedef float zr_float;
 typedef double zr_double;
 typedef unsigned short zr_ushort;
 typedef unsigned int zr_uint;
+typedef unsigned int zr_rune;
 typedef unsigned long zr_ulong;
 typedef unsigned int zr_flags;
 typedef zr_flags zr_state;
@@ -196,8 +198,8 @@ struct zr_image zr_subimage_ptr(void*, zr_ushort w, zr_ushort h, struct zr_rect)
 struct zr_image zr_subimage_id(zr_int, zr_ushort w, zr_ushort h, struct zr_rect);
 zr_bool zr_image_is_subimage(const struct zr_image* img);
 /* ----------------------- UTF-8 ---------------------------------*/
-zr_size zr_utf_decode(const zr_char*, zr_long*, zr_size);
-zr_size zr_utf_encode(zr_long, zr_char*, zr_size);
+zr_size zr_utf_decode(const zr_char*, zr_rune*, zr_size);
+zr_size zr_utf_encode(zr_rune, zr_char*, zr_size);
 zr_size zr_utf_len(const zr_char*, zr_size len);
 /*
  * ==============================================================
@@ -1389,7 +1391,7 @@ void zr_draw_list_path_stroke(struct zr_draw_list*, struct zr_color,
 */
 typedef zr_size(*zr_text_width_f)(zr_handle, const zr_char*, zr_size);
 typedef void(*zr_query_font_glyph_f)(zr_handle, struct zr_user_font_glyph*,
-        zr_long codepoint, zr_long next_codepoint);
+        zr_rune codepoint, zr_rune next_codepoint);
 
 #if ZR_COMPILE_WITH_VERTEX_BUFFER
 struct zr_user_font_glyph {
@@ -1432,11 +1434,11 @@ struct zr_baked_font {
     /* height of the font  */
     zr_float ascent, descent;
     /* font glyphes ascent and descent  */
-    zr_long glyph_offset;
+    zr_rune glyph_offset;
     /* glyph array offset inside the font glyph baking output array  */
-    zr_long glyph_count;
+    zr_rune glyph_count;
     /* number of glyphes of this font inside the glyph baking array output */
-    const zr_long *ranges;
+    const zr_uint *ranges;
     /* font codepoint ranges as pairs of (from/to) and 0 as last element */
 };
 
@@ -1455,14 +1457,14 @@ struct zr_font_config {
     /* baked glyph texture coordinate format with either pixel or UV coordinates */
     struct zr_vec2 spacing;
     /* extra pixel spacing between glyphs  */
-    const zr_long *range;
+    const zr_rune *range;
     /* list of unicode ranges (2 values per range, zero terminated) */
     struct zr_baked_font *font;
     /* font to setup in the baking process  */
 };
 
 struct zr_font_glyph {
-    zr_long codepoint;
+    zr_uint codepoint;
     /* unicode codepoint */
     zr_float xadvance;
     /* xoffset to the next character  */
@@ -1483,21 +1485,21 @@ struct zr_font {
     /* font glyph array  */
     const struct zr_font_glyph *fallback;
     /* fallback glyph */
-    zr_long fallback_codepoint;
+    zr_uint fallback_codepoint;
     /* fallback glyph codepoint */
-    zr_long glyph_count;
+    zr_uint glyph_count;
     /* font glyph array size */
-    const zr_long *ranges;
+    const zr_uint *ranges;
     /* glyph unicode ranges in the font */
     zr_handle atlas;
     /* font image atlas handle */
 };
 
 /* some language glyph codepoint ranges */
-const zr_long *zr_font_default_glyph_ranges(void);
-const zr_long *zr_font_chinese_glyph_ranges(void);
-const zr_long *zr_font_cyrillic_glyph_ranges(void);
-const zr_long *zr_font_korean_glyph_ranges(void);
+const zr_rune *zr_font_default_glyph_ranges(void);
+const zr_rune *zr_font_chinese_glyph_ranges(void);
+const zr_rune *zr_font_cyrillic_glyph_ranges(void);
+const zr_rune *zr_font_korean_glyph_ranges(void);
 /* ---------------------------------------------------------------
  *                          Baking
  * ---------------------------------------------------------------*/
@@ -1576,7 +1578,7 @@ void zr_font_bake_convert(void *out_memory, zr_ushort img_width, zr_ushort img_h
  *                          Font
  * ---------------------------------------------------------------*/
 void zr_font_init(struct zr_font*, zr_float pixel_height,
-                    zr_long fallback_codepoint, struct zr_font_glyph*,
+                    zr_uint fallback_codepoint, struct zr_font_glyph*,
                     const struct zr_baked_font*, zr_handle atlas);
 /*  this function initializes a font. IMPORTANT: The font only references
  *  its glyphes since it allows to have multible font glyph in one big array.
@@ -1594,7 +1596,7 @@ struct zr_user_font zr_font_ref(struct zr_font*);
     Output:
     - gui font handle used in the library
 */
-const struct zr_font_glyph* zr_font_find_glyph(struct zr_font*, zr_long unicode);
+const struct zr_font_glyph* zr_font_find_glyph(struct zr_font*, zr_uint unicode);
 /*  this function
     Input:
     - unicode glyph codepoint of the glyph
@@ -1642,7 +1644,7 @@ const struct zr_font_glyph* zr_font_find_glyph(struct zr_font*, zr_long unicode)
     zr_edit_box_len_char   -- returns the length of the string in bytes
     zr_edit_box_len        -- returns the length of the string in glyphes
 */
-typedef zr_bool(*zr_filter)(zr_long unicode);
+typedef zr_bool(*zr_filter)(zr_uint unicode);
 typedef void(*zr_paste_f)(zr_handle, struct zr_edit_box*);
 typedef void(*zr_copy_f)(zr_handle, const char*, zr_size size);
 
@@ -1683,13 +1685,13 @@ struct zr_edit_box {
 };
 
 /* filter function */
-zr_bool zr_filter_default(zr_long unicode);
-zr_bool zr_filter_ascii(zr_long unicode);
-zr_bool zr_filter_float(zr_long unicode);
-zr_bool zr_filter_decimal(zr_long unicode);
-zr_bool zr_filter_hex(zr_long unicode);
-zr_bool zr_filter_oct(zr_long unicode);
-zr_bool zr_filter_binary(zr_long unicode);
+zr_bool zr_filter_default(zr_uint unicode);
+zr_bool zr_filter_ascii(zr_uint unicode);
+zr_bool zr_filter_float(zr_uint unicode);
+zr_bool zr_filter_decimal(zr_uint unicode);
+zr_bool zr_filter_hex(zr_uint unicode);
+zr_bool zr_filter_oct(zr_uint unicode);
+zr_bool zr_filter_binary(zr_uint unicode);
 
 /* editbox */
 void zr_edit_box_init(struct zr_edit_box*, struct zr_allocator*, zr_size initial,
@@ -2260,7 +2262,7 @@ zr_size zr_widget_edit(struct zr_command_buffer*, struct zr_rect, zr_char*, zr_s
     - font structure for text drawing
     Output:
     - state of the editbox with either active or inactive
-    - returns the size of the buffer in bytes after the modification
+    - returns the size of the buffer in BYTES after the modification
 */
 zr_size zr_widget_edit_filtered(struct zr_command_buffer*, struct zr_rect,
                                 zr_char*, zr_size, zr_size max, zr_state*,
@@ -2282,7 +2284,7 @@ zr_size zr_widget_edit_filtered(struct zr_command_buffer*, struct zr_rect,
     - font structure for text drawing
     Output:
     - state of the editbox with either active or inactive
-    - returns the size of the buffer in bytes after the modification
+    - returns the size of the buffer in BYTES after the modification
 */
 zr_int zr_widget_spinner_int(struct zr_command_buffer*, struct zr_rect,
                         const struct zr_spinner*, zr_int min, zr_int value,
