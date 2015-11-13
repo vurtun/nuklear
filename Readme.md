@@ -89,7 +89,7 @@ while (1) {
             zr_layout_row_push(&context, 50);
             zr_label(&context, "Volume:", ZR_TEXT_LEFT);
             zr_layout_row_push(&context, 110);
-            value = zr_slider_float(&context, 0, value, 1.0f, 0.1f);
+            zr_slider_float(&context, 0, &value, 1.0f, 0.1f);
         }
         zr_layout_row_end(&context);
     }
