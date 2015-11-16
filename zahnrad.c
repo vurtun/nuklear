@@ -5692,6 +5692,7 @@ zr_begin(struct zr_context *context, struct zr_window *window)
     }
 
     /* setup panel context */
+    out = &window->buffer;
     context->input = in;
     context->bounds = window->bounds;
     context->at_x = window->bounds.x;
@@ -5706,9 +5707,15 @@ zr_begin(struct zr_context *context, struct zr_window *window)
     context->row.ratio = 0;
     context->row.item_width = 0;
     context->offset = window->offset;
-    context->header.h = 2 * item_spacing.y;
-    context->row.height = context->header.h;
-    out = &window->buffer;
+
+    /* window header */
+    if (window->flags & ZR_WINDOW_MINIMIZED) {
+        context->header.h = 0;
+        context->row.height = 0;
+    } else {
+        context->header.h = 2 * item_spacing.y;
+        context->row.height = context->header.h;
+    }
 
     /* panel activation by clicks inside of the panel */
     if (!(window->flags & ZR_WINDOW_TAB) && !(window->flags & ZR_WINDOW_ROM)) {
@@ -8769,7 +8776,8 @@ zr_menu_begin(struct zr_context *parent, struct zr_context *menu,
         zr_button(&button.base, &header, parent, ZR_BUTTON_NORMAL);
         button.alignment = ZR_TEXT_CENTERED;
         button.base.rounding = 0;
-        button.base.border = config->colors[ZR_COLOR_WINDOW];
+        button.base.border = (*active) ? config->colors[ZR_COLOR_BORDER]:
+            config->colors[ZR_COLOR_WINDOW];
         button.base.normal = (is_active) ? config->colors[ZR_COLOR_BUTTON_HOVER]:
             config->colors[ZR_COLOR_WINDOW];
         button.base.active = config->colors[ZR_COLOR_WINDOW];
