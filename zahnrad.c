@@ -972,21 +972,6 @@ zr_utf_len(const char *str, zr_size len)
     return glyphes;
 }
 
-static const char*
-zr_utf_strchr(const char *s, zr_rune u)
-{
-    zr_rune r;
-    zr_size i, j, len;
-    len = zr_strsiz(s);
-    for (i = 0, j = 0; i < len; i += j) {
-        if (!(j = zr_utf_decode(&s[i], &r, len - i)))
-            break;
-        if (r == u)
-            return &(s[i]);
-    }
-    return 0;
-}
-
 /*
  * ==============================================================
  *
@@ -4061,7 +4046,7 @@ zr_edit_box_at_cursor(struct zr_edit_box *eb, zr_glyph g, zr_size *len)
     const char *text;
     zr_size text_len;
     zr_size glyph_len = 0;
-    zr_size cursor = 0;
+
     ZR_ASSERT(eb);
     ZR_ASSERT(g);
     ZR_ASSERT(len);
@@ -4686,13 +4671,10 @@ zr_widget_drag(struct zr_command_buffer *out, struct zr_rect drag,
     const struct zr_input *in, const struct zr_user_font *f)
 {
     struct zr_text t;
-    struct zr_color col;
     struct zr_color background;
 
-    float drag_range;
     float drag_min, drag_max;
-    float drag_value, drag_steps;
-    float cursor_offset;
+    float drag_value;
     char string[ZR_MAX_NUMBER_BUFFER];
     zr_size len;
 
@@ -8590,7 +8572,6 @@ zr_combo_begin(struct zr_context *parent, struct zr_context *combo,
     {
         /* print currently selected item */
         zr_size text_len;
-        struct zr_rect clip;
         struct zr_rect label;
         label.x = header.x + item_padding.x;
         label.y = header.y + item_padding.y;
