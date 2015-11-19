@@ -12,23 +12,8 @@
 
 enum theme {THEME_BLACK, THEME_WHITE};
 
-struct tree_node {
-    zr_state state;
-    const char *name;
-    struct tree_node *parent;
-    struct tree_node *children[8];
-    int count;
-};
-
-struct test_tree {
-    struct tree_node root;
-    struct tree_node *clipboard[16];
-    struct tree_node nodes[8];
-    int count;
-};
-
 struct demo {
-    zr_bool running;
+    int running;
     struct zr_input input;
     struct zr_command_queue queue;
     struct zr_style config_black;
@@ -37,17 +22,15 @@ struct demo {
     struct zr_window panel;
     struct zr_window sub;
     struct zr_window metrics;
-    zr_size w, h;
+    size_t w, h;
     enum theme theme;
-
-    struct test_tree tree;
     struct zr_edit_box text;
 };
 
 static void
-zr_labelf(struct zr_context *panel, enum zr_text_align align, const zr_char *fmt, ...)
+zr_labelf(struct zr_context *panel, enum zr_text_align align, const char *fmt, ...)
 {
-    zr_char buffer[1024];
+    char buffer[1024];
     va_list args;
     va_start(args, fmt);
     vsnprintf(buffer, sizeof(buffer), fmt, args);
@@ -56,172 +39,47 @@ zr_labelf(struct zr_context *panel, enum zr_text_align align, const zr_char *fmt
     va_end(args);
 }
 
-static void
-tree_init(struct test_tree *tree)
-{
-    /* this is just test data */
-    tree->root.state = ZR_NODE_ACTIVE;
-    tree->root.name = "Primitives";
-    tree->root.parent = NULL;
-    tree->root.count = 2;
-    tree->root.children[0] = &tree->nodes[0];
-    tree->root.children[1] = &tree->nodes[4];
-
-    tree->nodes[0].state = 0;
-    tree->nodes[0].name = "Boxes";
-    tree->nodes[0].parent = &tree->root;
-    tree->nodes[0].count = 2;
-    tree->nodes[0].children[0] = &tree->nodes[1];
-    tree->nodes[0].children[1] = &tree->nodes[2];
-
-    tree->nodes[1].state = 0;
-    tree->nodes[1].name = "Box0";
-    tree->nodes[1].parent = &tree->nodes[0];
-    tree->nodes[1].count = 0;
-
-    tree->nodes[2].state = 0;
-    tree->nodes[2].name = "Box1";
-    tree->nodes[2].parent = &tree->nodes[0];
-    tree->nodes[2].count = 0;
-
-    tree->nodes[4].state = ZR_NODE_ACTIVE;
-    tree->nodes[4].name = "Cylinders";
-    tree->nodes[4].parent = &tree->root;
-    tree->nodes[4].count = 2;
-    tree->nodes[4].children[0] = &tree->nodes[5];
-    tree->nodes[4].children[1] = &tree->nodes[6];
-
-    tree->nodes[5].state = 0;
-    tree->nodes[5].name = "Cylinder0";
-    tree->nodes[5].parent = &tree->nodes[4];
-    tree->nodes[5].count = 0;
-
-    tree->nodes[6].state = 0;
-    tree->nodes[6].name = "Cylinder1";
-    tree->nodes[6].parent = &tree->nodes[4];
-    tree->nodes[6].count = 0;
-}
-
-static void
-tree_remove_node(struct tree_node *parent, struct tree_node *child)
-{
-    int i = 0;
-    child->parent = NULL;
-    if (!parent->count) return;
-    if (parent->count == 1) {
-        parent->count = 0;
-        return;
-    }
-    for (i = 0; i < parent->count; ++i) {
-        if (parent->children[i] == child)
-            break;
-    }
-    if (i == parent->count) return;
-    if (i == parent->count - 1) {
-        parent->count--;
-        return;
-    } else{
-        parent->children[i] = parent->children[parent->count-1];
-        parent->count--;
-    }
-}
-
-static void
-tree_add_node(struct tree_node *parent, struct tree_node *child)
-{
-    assert(parent->count < 8);
-    child->parent = parent;
-    parent->children[parent->count++] = child;
-}
-
-static void
-tree_push_node(struct test_tree *tree, struct tree_node *node)
-{
-    assert(tree->count < 16);
-    tree->clipboard[tree->count++] = node;
-}
-
-static struct tree_node*
-tree_pop_node(struct test_tree *tree)
-{
-    assert(tree->count > 0);
-    return tree->clipboard[--tree->count];
-}
-
-static int
-upload_tree(struct test_tree *base, struct zr_tree *tree, struct tree_node *node)
-{
-    int i = 0, n = 0;
-    enum zr_tree_node_operation op;
-    if (node->count) {
-        i = 0;
-        op = zr_tree_begin_node(tree, node->name, &node->state);
-        while (i < node->count)
-            i += upload_tree(base, tree, node->children[i]);
-        zr_tree_end_node(tree);
-    }
-    else op = zr_tree_leaf(tree, node->name, &node->state);
-
-    switch (op) {
-    case ZR_NODE_NOP: break;
-    case ZR_NODE_CUT:
-        tree_remove_node(node->parent, node);
-        tree_push_node(base, node);
-        return 0;
-    case ZR_NODE_DELETE:
-        tree_remove_node(node->parent, node); break;
-        return 0;
-    case ZR_NODE_PASTE:
-        i = 0; n = base->count;
-        while (i++ < n)
-            tree_add_node(node, tree_pop_node(base));
-    case ZR_NODE_CLONE:
-    default:break;
-    }
-    return 1;
-}
-
 static int
 show_test_window(struct zr_window *window, struct zr_style *config, enum theme *theme,
-    struct test_tree *test_tree, struct zr_edit_box *edit_box)
+    struct zr_edit_box *edit_box)
 {
     zr_flags ret;
     struct zr_context layout;
 
     /* window flags */
-    static zr_bool show_menu = zr_true;
-    static zr_bool titlebar = zr_true;
-    static zr_bool border = zr_true;
-    static zr_bool resize = zr_true;
-    static zr_bool moveable = zr_true;
-    static zr_bool no_scrollbar = zr_false;
+    static int show_menu = zr_true;
+    static int titlebar = zr_true;
+    static int border = zr_true;
+    static int resize = zr_true;
+    static int moveable = zr_true;
+    static int no_scrollbar = zr_false;
     static zr_flags window_flags = 0;
 
     /* header flags */
-    static zr_bool minimizable = zr_true;
-    static zr_bool close = zr_true;
-    static zr_bool scale = zr_false;
-    static zr_bool move = zr_false;
+    static int minimizable = zr_true;
+    static int close = zr_true;
+    static int scale = zr_false;
+    static int move = zr_false;
     static zr_flags header_flags = 0;
 
     /* collapsable headers */
-    static zr_state window_option_state = ZR_MINIMIZED;
-    static zr_state header_option_state = ZR_MINIMIZED;
-    static zr_state widget_state = ZR_MINIMIZED;
-    static zr_state graph_state = ZR_MINIMIZED;
-    static zr_state style_state = ZR_MINIMIZED;
-    static zr_state group_state = ZR_MINIMIZED;
-    static zr_state shelf_state = ZR_MINIMIZED;
-    static zr_state splitter_state = ZR_MINIMIZED;
+    static int window_option_state = ZR_MINIMIZED;
+    static int header_option_state = ZR_MINIMIZED;
+    static int widget_state = ZR_MINIMIZED;
+    static int graph_state = ZR_MINIMIZED;
+    static int style_state = ZR_MINIMIZED;
+    static int group_state = ZR_MINIMIZED;
+    static int shelf_state = ZR_MINIMIZED;
+    static int splitter_state = ZR_MINIMIZED;
 
     /* popups */
     static enum zr_header_align header_align = ZR_HEADER_RIGHT;
-    static zr_bool show_app_about = zr_false;
-    static zr_state show_contextual = zr_false;
+    static int show_app_about = zr_false;
+    static int show_contextual = zr_false;
     static struct zr_rect contextual_bounds;
-    static zr_bool show_close_popup = zr_false;
-    static zr_bool show_color_picker_popup = zr_false;
-    static zr_int color_picker_index;
+    static int show_close_popup = zr_false;
+    static int show_color_picker_popup = zr_false;
+    static int color_picker_index;
     static struct zr_color color_picker_color;
 
     /* window flags */
@@ -249,17 +107,17 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
     if (ret & ZR_CLOSEABLE) {
         layout.flags &= (zr_flags)~ZR_WINDOW_HIDDEN;
         layout.valid = zr_true;
-        show_close_popup = zr_true;
+        return 0;
     }
 
     if (show_menu)
     {
         /* menubar */
         struct zr_context menu;
-        static zr_state file_state = ZR_MINIMIZED;
-        static zr_size mprog = 60;
-        static zr_int mslider = 10;
-        static zr_bool mcheck = zr_true;
+        static int file_state = ZR_MINIMIZED;
+        static size_t mprog = 60;
+        static int mslider = 10;
+        static int mcheck = zr_true;
 
         zr_menubar_begin(&layout);
 
@@ -267,9 +125,9 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         zr_layout_row_push(&layout, 45);
         zr_menu_begin(&layout, &menu, "MENU", 100, &file_state);
         {
-            static zr_size prog = 40;
-            static zr_int slider = 10;
-            static zr_bool check = zr_true;
+            static size_t prog = 40;
+            static int slider = 10;
+            static int check = zr_true;
             zr_layout_row_dynamic(&menu, 25, 1);
             zr_progress(&menu, &prog, 100, ZR_MODIFYABLE);
             zr_slider_int(&menu, 0, &slider, 16, 1);
@@ -346,9 +204,9 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
     if (show_color_picker_popup)
     {
         /* color picker popup */
-        static zr_state active[4];
+        static int active[4];
         struct zr_context popup;
-        zr_int r,g,b,a;
+        int r,g,b,a;
         zr_popup_begin(&layout, &popup, ZR_POPUP_STATIC,0, zr_rect(10, 100, 350, 280), zr_vec2(0,0));
         if (zr_header(&popup, "Color", ZR_CLOSEABLE, ZR_CLOSEABLE, ZR_HEADER_LEFT))
         {
@@ -408,8 +266,8 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
     }
     if (show_contextual) {
         struct zr_context menu;
-        static zr_size prog = 40;
-        static zr_int slider = 10;
+        static size_t prog = 40;
+        static int slider = 10;
 
         zr_contextual_begin(&layout, &menu, ZR_WINDOW_NO_SCROLLBAR, &show_contextual, contextual_bounds);
         zr_layout_row_dynamic(&menu, 25, 1);
@@ -450,12 +308,12 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
     if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "Style", &style_state))
     {
         /* style editor */
-        static zr_state property_state = ZR_MINIMIZED;
-        static zr_state rounding_state = ZR_MINIMIZED;
-        static zr_state color_state = ZR_MINIMIZED;
+        static int property_state = ZR_MINIMIZED;
+        static int rounding_state = ZR_MINIMIZED;
+        static int color_state = ZR_MINIMIZED;
         struct zr_context combo;
         static const char *themes[] = {"Black", "White"};
-        static zr_state theme_active = zr_false;
+        static int theme_active = zr_false;
 
         /* theme */
         zr_layout_row_static(&layout, 30, 80, 2);
@@ -469,7 +327,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Properties", &property_state))
         {
             /* properties */
-            zr_size i = 0;
+            size_t i = 0;
             zr_layout_row_dynamic(&layout, 30, 3);
             for (i = 0; i <= ZR_PROPERTY_SCROLLBAR_SIZE; ++i) {
                 zr_label(&layout, zr_style_property_name((enum zr_style_properties)i), ZR_TEXT_LEFT);
@@ -482,7 +340,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Rounding", &rounding_state))
         {
             /* rounding */
-            zr_size i = 0;
+            size_t i = 0;
             zr_layout_row_dynamic(&layout, 30, 2);
             for (i = 0; i < ZR_ROUNDING_MAX; ++i) {
                 zr_label(&layout, zr_style_rounding_name((enum zr_style_rounding)i), ZR_TEXT_LEFT);
@@ -494,7 +352,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Color", &color_state))
         {
             /* color */
-            zr_size i = 0;
+            size_t i = 0;
             struct zr_context tab;
             static struct zr_vec2 scrollbar;
             zr_layout_row_dynamic(&layout, 20, 1);
@@ -506,7 +364,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
                 zr_label(&tab, zr_style_color_name((enum zr_style_colors)i), ZR_TEXT_LEFT);
                 if (zr_button_color(&tab, config->colors[i], ZR_BUTTON_DEFAULT)) {
                     show_color_picker_popup = zr_true;
-                    color_picker_index = (zr_int)i;
+                    color_picker_index = (int)i;
                     color_picker_color = config->colors[i];
                 }
             }
@@ -518,16 +376,16 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
 
     if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "Widgets", &widget_state))
     {
-        static zr_state text_state = zr_false;
-        static zr_state main_state = zr_false;
-        static zr_state button_state = zr_false;
-        static zr_state combo_state = zr_false;
-        static zr_state input_state = zr_false;
-        static zr_state sel_state = zr_false;
+        static int text_state = zr_false;
+        static int main_state = zr_false;
+        static int button_state = zr_false;
+        static int combo_state = zr_false;
+        static int input_state = zr_false;
+        static int sel_state = zr_false;
 
         enum options {A,B,C};
-        static zr_bool checkbox;
-        static zr_bool option;
+        static int checkbox;
+        static int option;
 
         if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Text", &text_state))
         {
@@ -576,17 +434,17 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Basic", &main_state))
         {
             /* Basic widgets */
-            static zr_int int_slider = 5;
-            static zr_float float_slider = 2.5f;
-            static zr_size prog_value = 40;
-            static zr_float float_spinner = 2.5f;
-            static zr_int int_spinner = 20;
-            static zr_float drag_float = 2;
-            static zr_int drag_int = 10;
-            static zr_int r = 255,g = 160, b = 0;
-            static zr_int h = 100, s = 70, v = 20;
-            static zr_state spinneri_active, spinnerf_active;
-            static const zr_float ratio[] = {120, 150};
+            static int int_slider = 5;
+            static float float_slider = 2.5f;
+            static size_t prog_value = 40;
+            static float float_spinner = 2.5f;
+            static int int_spinner = 20;
+            static float drag_float = 2;
+            static int drag_int = 10;
+            static int r = 255,g = 160, b = 0;
+            static int h = 100, s = 70, v = 20;
+            static int spinneri_active, spinnerf_active;
+            static const float ratio[] = {120, 150};
             const struct zr_input *in = zr_input(&layout);
             struct zr_rect bounds;
             struct zr_color color;
@@ -646,9 +504,9 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
 
         if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Selectable", &sel_state))
         {
-            static zr_state basic_state = ZR_MINIMIZED;
-            static zr_state list_state = ZR_MINIMIZED;
-            static zr_state grid_state = ZR_MINIMIZED;
+            static int basic_state = ZR_MINIMIZED;
+            static int list_state = ZR_MINIMIZED;
+            static int grid_state = ZR_MINIMIZED;
             if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Basic", &basic_state))
             {
                 zr_layout_row_static(&layout, 18, 100, 2);
@@ -658,7 +516,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             }
             if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "List", &list_state))
             {
-                static zr_bool selected[4] = {zr_false, zr_false, zr_true, zr_false};
+                static int selected[4] = {zr_false, zr_false, zr_true, zr_false};
                 zr_layout_row_static(&layout, 18, 100, 1);
                 zr_selectable(&layout, "Selectable", ZR_TEXT_LEFT, &selected[0]);
                 zr_selectable(&layout, "Selectable", ZR_TEXT_LEFT, &selected[1]);
@@ -670,11 +528,11 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Grid", &grid_state))
             {
                 int i;
-                static zr_bool selected[16];
+                static int selected[16];
                 zr_layout_row_static(&layout, 50, 50, 4);
                 for (i = 0; i < 16; ++i) {
                     if (zr_selectable(&layout, "Z", ZR_TEXT_CENTERED, &selected[i])) {
-                        zr_int x = (i % 4), y = i / 4;
+                        int x = (i % 4), y = i / 4;
                         if (x > 0) selected[i - 1] ^= 1;
                         if (x < 3) selected[i + 1] ^= 1;
                         if (y > 0) selected[i - 4] ^= 1;
@@ -689,26 +547,26 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Combo", &combo_state))
         {
             /* Combobox Widgets */
-            static zr_state weapon_active = zr_false;
-            static zr_state com_color_active = zr_false;
-            static zr_state prog_active = zr_false;
-            static zr_state check_active = zr_false;
+            static int weapon_active = zr_false;
+            static int com_color_active = zr_false;
+            static int prog_active = zr_false;
+            static int check_active = zr_false;
 
             static const char *weapons[] = {"Fist","Pistol","Shotgun","Plasma","BFG"};
-            static zr_size current_weapon = 0;
-            static zr_bool check_values[5];
-            static zr_int r = 130, g = 50, b = 50, a = 255;
-            static zr_size x =  20, y = 40, z = 10, w = 90;
+            static size_t current_weapon = 0;
+            static int check_values[5];
+            static int r = 130, g = 50, b = 50, a = 255;
+            static size_t x =  20, y = 40, z = 10, w = 90;
 
             struct zr_context combo;
-            zr_char buffer[32];
-            zr_size sum = 0;
+            char buffer[32];
+            size_t sum = 0;
 
             /* default combobox */
             zr_layout_row_static(&layout, 30, 200, 1);
             zr_combo_begin(&layout, &combo, weapons[current_weapon], &weapon_active);
             {
-                zr_size i = 0;
+                size_t i = 0;
                 zr_layout_row_dynamic(&combo, 25, 1);
                 for (i = 0; i < LEN(weapons); ++i) {
                     if (zr_combo_item(&combo, weapons[i], ZR_TEXT_LEFT))
@@ -722,7 +580,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             zr_style_push_color(config, ZR_COLOR_SPINNER, zr_rgba((zr_byte)r,(zr_byte)g,(zr_byte)b,(zr_byte)a));
             zr_combo_begin(&layout, &combo, buffer, &com_color_active);
             {
-                zr_float ratios[] = {0.15f, 0.85f};
+                float ratios[] = {0.15f, 0.85f};
                 zr_layout_row(&combo, ZR_DYNAMIC, 30, 2, ratios);
                 zr_label(&combo, "R", ZR_TEXT_LEFT);
                 zr_slider_int(&combo, 0, &r, 255, 5);
@@ -750,7 +608,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             zr_combo_end(&layout, &combo, NULL);
 
             /* checkbox combobox */
-            sum = (zr_size)(check_values[0] + check_values[1] + check_values[2] + check_values[3] + check_values[4]);
+            sum = (size_t)(check_values[0] + check_values[1] + check_values[2] + check_values[3] + check_values[4]);
             sprintf(buffer, "%lu", sum);
             zr_combo_begin(&layout, &combo, buffer, &check_active);
             {
@@ -767,10 +625,10 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Input", &input_state))
         {
             static char text[8][64];
-            static zr_size text_len[8];
-            static zr_state text_active[8];
-            static zr_size text_cursor[8];
-            static const zr_float ratio[] = {120, 100};
+            static size_t text_len[8];
+            static int text_active[8];
+            static size_t text_cursor[8];
+            static const float ratio[] = {120, 100};
 
             zr_layout_row(&layout, ZR_STATIC, 25, 2, ratio);
             zr_label(&layout, "Default:", ZR_TEXT_LEFT);
@@ -804,18 +662,17 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
 
     if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "Graph", &graph_state))
     {
-        static const zr_float values[]={8.0f,15.0f,20.0f,12.0f,30.0f,12.0f,35.0f,40.0f,20.0f};
-        static zr_int col_index = -1;
-        static zr_int line_index = -1;
+        static const float values[]={8.0f,15.0f,20.0f,12.0f,30.0f,12.0f,35.0f,40.0f,20.0f};
+        static int col_index = -1;
+        static int line_index = -1;
         static struct zr_vec2 scrollbar;
 
-        zr_size i;
-        zr_float min_value;
-        zr_float max_value;
-        zr_int index = -1;
+        size_t i;
+        float min_value;
+        float max_value;
+        int index = -1;
         struct zr_rect bounds;
         struct zr_graph graph;
-        struct zr_tree tree;
         char buffer[64];
 
         /* find min and max graph value */
@@ -835,9 +692,9 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         for (i = 0; i < LEN(values); ++i) {
             zr_flags res = zr_graph_push(&layout, &graph, values[i]);
             if (res & ZR_GRAPH_HOVERING)
-                index = (zr_int)i;
+                index = (int)i;
             if (res & ZR_GRAPH_CLICKED)
-                col_index = (zr_int)i;
+                col_index = (int)i;
         }
         zr_graph_end(&layout, &graph);
 
@@ -858,9 +715,9 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         for (i = 0; i < LEN(values); ++i) {
             zr_flags res = zr_graph_push(&layout, &graph, values[i]);
             if (res & ZR_GRAPH_HOVERING)
-                index = (zr_int)i;
+                index = (int)i;
             if (res & ZR_GRAPH_CLICKED)
-                line_index = (zr_int)i;
+                line_index = (int)i;
         }
         zr_graph_end(&layout, &graph);
 
@@ -872,25 +729,18 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             zr_layout_row_dynamic(&layout, 20, 1);
             zr_labelf(&layout, ZR_TEXT_LEFT, "Selected value: %.2f", values[line_index]);
         }
-
-        /* tree */
-        zr_layout_row_dynamic(&layout, 220, 1);
-        zr_tree_begin(&layout, &tree, NULL, 0, 20, scrollbar);
-        upload_tree(test_tree, &tree, &test_tree->root);
-        zr_tree_end(&layout, &tree, &scrollbar);
-
         zr_layout_pop(&layout);
     }
 
     if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "Group", &group_state))
     {
-        static zr_bool group_titlebar = zr_false;
-        static zr_bool group_border = zr_true;
-        static zr_bool group_no_scrollbar = zr_false;
-        static zr_int group_width = 320;
-        static zr_int group_height = 200;
+        static int group_titlebar = zr_false;
+        static int group_border = zr_true;
+        static int group_no_scrollbar = zr_false;
+        static int group_width = 320;
+        static int group_height = 200;
         static struct zr_vec2 scrollbar;
-        static zr_state width_active, height_active;
+        static int width_active, height_active;
         struct zr_context tab;
 
         zr_flags group_flags = 0;
@@ -911,11 +761,11 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         zr_spinner_int(&layout, 100, &group_height, 500, 10, &height_active);
         zr_layout_row_end(&layout);
 
-        zr_layout_row_static(&layout, (zr_float)group_height, (zr_size)group_width, 2);
+        zr_layout_row_static(&layout, (float)group_height, (size_t)group_width, 2);
         zr_group_begin(&layout, &tab, group_titlebar ? "Group" : NULL, group_flags, scrollbar);
         {
             int i = 0;
-            static zr_bool selected[16];
+            static int selected[16];
             zr_layout_row_static(&tab, 18, 100, 1);
             for (i = 0; i < 16; ++i)
                 zr_selectable(&tab, (selected[i]) ? "Selected": "Unselected", ZR_TEXT_CENTERED, &selected[i]);
@@ -927,7 +777,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
     if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "Shelf", &shelf_state))
     {
         static const char *tabs[] = {"Up","Down","Left","Right"};
-        static zr_size active = 0;
+        static int active = 0;
         static struct zr_vec2 scrollbar;
         struct zr_context tab;
 
@@ -961,8 +811,8 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
 
     if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "Splitter", &splitter_state))
     {
-        static zr_state vertical_state = ZR_MINIMIZED;
-        static zr_state horizontal_state = ZR_MINIMIZED;
+        static int vertical_state = ZR_MINIMIZED;
+        static int horizontal_state = ZR_MINIMIZED;
         const struct zr_input *in = window->input;
 
         zr_layout_row_static(&layout, 20, 320, 1);
@@ -971,12 +821,12 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
 
         if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Vertical", &vertical_state))
         {
-            static zr_float a = 100, b = 100, c = 100;
-            static zr_state a_active, b_active, c_active;
+            static float a = 100, b = 100, c = 100;
+            static int a_active, b_active, c_active;
             struct zr_rect bounds;
             struct zr_context sub;
 
-            zr_float row_layout[5];
+            float row_layout[5];
             row_layout[0] = a;
             row_layout[1] = 8;
             row_layout[2] = b;
@@ -1041,8 +891,8 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
 
         if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Horizontal", &horizontal_state))
         {
-            static zr_float a = 100, b = 100, c = 100;
-            static zr_state a_active, b_active, c_active;
+            static float a = 100, b = 100, c = 100;
+            static int a_active, b_active, c_active;
             struct zr_context sub;
             struct zr_rect bounds;
 
@@ -1111,9 +961,9 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
 }
 
 static void
-copy_callback(zr_handle handle, const char *text, zr_size size)
+copy_callback(zr_handle handle, const char *text, size_t size)
 {
-    zr_char buffer[1024];
+    char buffer[1024];
     UNUSED(handle);
     if (size >= 1023) return;
     memcpy(buffer, text, size);
@@ -1124,7 +974,7 @@ copy_callback(zr_handle handle, const char *text, zr_size size)
 static void
 paste_callback(zr_handle handle, struct zr_edit_box *box)
 {
-    zr_size len;
+    size_t len;
     const char *text;
     UNUSED(handle);
     if (!clipboard_is_filled())return;
@@ -1137,7 +987,6 @@ static void
 init_demo(struct demo *gui)
 {
     gui->running = zr_true;
-    tree_init(&gui->tree);
 
     /* themes */
     zr_style_default(&gui->config_black, ZR_DEFAULT_ALL, &gui->font);
@@ -1220,15 +1069,15 @@ run_demo(struct demo *gui)
 {
     struct zr_context layout;
     struct zr_style *current = (gui->theme == THEME_BLACK) ? &gui->config_black : &gui->config_white;
-    gui->running = show_test_window(&gui->panel, current, &gui->theme, &gui->tree, &gui->text);
+    gui->running = show_test_window(&gui->panel, current, &gui->theme, &gui->text);
 
     /* ussage example  */
     gui->sub.style = current;
     zr_begin(&layout, &gui->sub);
     {
         enum {EASY, HARD};
-        static zr_int op = EASY;
-        static zr_float value = 0.5f;
+        static int op = EASY;
+        static float value = 0.5f;
         zr_header(&layout, "Show", ZR_CLOSEABLE, 0, ZR_HEADER_LEFT);
         zr_layout_row_static(&layout, 30, 80, 1);
         if (zr_button_text(&layout, "button", ZR_BUTTON_DEFAULT)) {
@@ -1252,8 +1101,8 @@ run_demo(struct demo *gui)
     gui->metrics.style = current;
     zr_begin(&layout, &gui->metrics);
     {
-        static zr_state prim_state = ZR_MINIMIZED;
-        static zr_state mem_state = ZR_MINIMIZED;
+        static int prim_state = ZR_MINIMIZED;
+        static int mem_state = ZR_MINIMIZED;
         struct zr_memory_status status;
         struct zr_command_stats *stats = &gui->panel.buffer.stats;
         zr_buffer_info(&status, &gui->queue.buffer);

@@ -62,7 +62,7 @@
 
 enum zr_tree_node_symbol {ZR_TREE_NODE_BULLET, ZR_TREE_NODE_TRIANGLE};
 static const struct zr_rect zr_null_rect = {-8192.0f, -8192.0f, 16384, 16384};
-static const double ZR_DOUBLE_PRECISION = 0.00000000000001;
+static const double double_PRECISION = 0.00000000000001;
 
 /* ==============================================================
  *                          ALIGNMENT
@@ -113,8 +113,8 @@ template<typename T> struct zr_alignof{struct Big {T x; char c;}; enum {
  *
  * ===============================================================
  */
-static zr_uint
-zr_round_up_pow2(zr_uint v)
+static uint32_t
+zr_round_up_pow2(uint32_t v)
 {
     v--;
     v |= v >> 1;
@@ -126,12 +126,12 @@ zr_round_up_pow2(zr_uint v)
     return v;
 }
 
-static zr_float
-zr_inv_sqrt(zr_float number)
+static float
+zr_inv_sqrt(float number)
 {
-    zr_float x2;
-    const zr_float threehalfs = 1.5f;
-    union {zr_uint i; zr_float f;} conv;
+    float x2;
+    const float threehalfs = 1.5f;
+    union {uint32_t i; float f;} conv;
     conv.f = number;
     x2 = number * 0.5f;
     conv.i = 0x5f375A84 - (conv.i >> 1);
@@ -146,7 +146,7 @@ zr_get_null_rect(void)
 }
 
 struct zr_rect
-zr_rect(zr_float x, zr_float y, zr_float w, zr_float h)
+zr_rect(float x, float y, float w, float h)
 {
     struct zr_rect r;
     r.x = x, r.y = y;
@@ -155,7 +155,7 @@ zr_rect(zr_float x, zr_float y, zr_float w, zr_float h)
 }
 
 static struct zr_rect
-zr_shrink_rect(struct zr_rect r, zr_float amount)
+zr_shrink_rect(struct zr_rect r, float amount)
 {
     struct zr_rect res;
     r.w = MAX(r.w, 2 * amount);
@@ -179,7 +179,7 @@ zr_pad_rect(struct zr_rect r, struct zr_vec2 pad)
 }
 
 struct zr_vec2
-zr_vec2(zr_float x, zr_float y)
+zr_vec2(float x, float y)
 {
     struct zr_vec2 ret;
     ret.x = x; ret.y = y;
@@ -264,8 +264,8 @@ zr_strsiz(const char *str)
     return siz;
 }
 
-static zr_int
-zr_strtoi(zr_int *number, const char *buffer, zr_size len)
+static int
+zr_strtoi(int *number, const char *buffer, zr_size len)
 {
     zr_size i;
     ZR_ASSERT(number);
@@ -277,15 +277,15 @@ zr_strtoi(zr_int *number, const char *buffer, zr_size len)
     return 1;
 }
 
-static zr_int
-zr_strtof(zr_float *number, const char *buffer)
+static int
+zr_strtof(float *number, const char *buffer)
 {
-    zr_int i;
-    zr_float m;
-    zr_bool div;
-    zr_int pow;
-    const zr_char *p = buffer;
-    zr_float floatvalue = 0;
+    int i;
+    float m;
+    int div;
+    int pow;
+    const char *p = buffer;
+    float floatvalue = 0;
 
     ZR_ASSERT(number);
     ZR_ASSERT(buffer);
@@ -293,14 +293,14 @@ zr_strtof(zr_float *number, const char *buffer)
     *number = 0;
 
     while( *p && *p != '.' && *p != 'e' ) {
-        floatvalue = floatvalue * 10.0f + (zr_float) (*p - '0');
+        floatvalue = floatvalue * 10.0f + (float) (*p - '0');
         p++;
     }
 
     if ( *p == '.' ) {
         p++;
         for(m = 0.1f; *p && *p != 'e'; p++ ) {
-            floatvalue = floatvalue + (zr_float) (*p - '0') * m;
+            floatvalue = floatvalue + (float) (*p - '0') * m;
             m *= 0.1f;
         }
     }
@@ -329,10 +329,10 @@ zr_strtof(zr_float *number, const char *buffer)
 }
 
 static zr_size
-zr_itos(char *buffer, zr_int num)
+zr_itos(char *buffer, int num)
 {
     static const char digit[] = "0123456789";
-    zr_int shifter;
+    int shifter;
     zr_size len = 0;
     char *p = buffer;
 
@@ -360,11 +360,11 @@ zr_itos(char *buffer, zr_int num)
     return len;
 }
 
-static zr_double
+static double
 zr_pow(double x, int n)
 {
     /*  check the sign of n */
-    zr_double r = 1;
+    double r = 1;
     int plus = n >= 0;
     n = (plus) ? n : -n;
     while (n > 0) {
@@ -376,39 +376,39 @@ zr_pow(double x, int n)
     return plus ? r : 1.0 / r;
 }
 
-static zr_int
+static int32_t
 zr_isinf(double x)
 {
-    union {zr_ulong u; double f;} ieee754;
+    union {uint64_t u; double f;} ieee754;
     ieee754.f = x;
     return ( (unsigned)(ieee754.u >> 32) & 0x7fffffff ) == 0x7ff00000 &&
            ( (unsigned)ieee754.u == 0 );
 }
 
-static int
+static int32_t
 zr_isnan(double x)
 {
-    union {zr_ulong u; double f;} ieee754;
+    union {uint64_t u; double f;} ieee754;
     ieee754.f = x;
     return ( (unsigned)(ieee754.u >> 32) & 0x7fffffff ) +
            ( (unsigned)ieee754.u != 0 ) > 0x7ff00000;
 }
 
-static zr_double
-zr_floor(zr_double x)
+static double
+zr_floor(double x)
 {
-    return (zr_double)((zr_int)x - ((x < 0.0) ? 1 : 0));
+    return (double)((int)x - ((x < 0.0) ? 1 : 0));
 }
 
-static zr_int
-zr_log10(zr_double n)
+static int
+zr_log10(double n)
 {
-    zr_int neg;
-    zr_int ret;
-    zr_int exp = 0;
+    int neg;
+    int ret;
+    int exp = 0;
 
     neg = (n < 0) ? 1 : 0;
-    ret = (neg) ? (zr_int)-n : (zr_int)n;
+    ret = (neg) ? (int)-n : (int)n;
     while ((ret / 10) > 0) {
         ret /= 10;
         exp++;
@@ -418,12 +418,12 @@ zr_log10(zr_double n)
 }
 
 static zr_size
-zr_dtos(char *s, zr_double n)
+zr_dtos(char *s, double n)
 {
-    zr_int useExp;
-    zr_int digit, m, m1;
-    zr_char *c = s;
-    zr_int neg;
+    int useExp;
+    int digit, m, m1;
+    char *c = s;
+    int neg;
 
     if (zr_isnan(n)) {
         s[0] = 'n'; s[1] = 'a'; s[2] = 'n'; s[3] = '\0';
@@ -457,15 +457,15 @@ zr_dtos(char *s, zr_double n)
     }
 
     /* convert the number */
-    while (n > ZR_DOUBLE_PRECISION || m >= 0) {
-        zr_double tmp;
-        zr_double weight = zr_pow(10.0, m);
+    while (n > double_PRECISION || m >= 0) {
+        double tmp;
+        double weight = zr_pow(10.0, m);
         if (weight > 0 && !zr_isinf(weight)) {
-            zr_double t = (zr_double)n / weight;
+            double t = (double)n / weight;
             tmp = zr_floor(t);
-            digit = (zr_int)tmp;
+            digit = (int)tmp;
             n -= (digit * weight);
-            *(c++) = (zr_char)('0' + (zr_char)digit);
+            *(c++) = (char)('0' + (char)digit);
         }
         if (m == 0 && n > 0)
             *(c++) = '.';
@@ -484,7 +484,7 @@ zr_dtos(char *s, zr_double n)
         }
         m = 0;
         while (m1 > 0) {
-            *(c++) = (zr_char)('0' + (zr_char)(m1 % 10));
+            *(c++) = (char)('0' + (char)(m1 % 10));
             m1 /= 10;
             m++;
         }
@@ -527,7 +527,7 @@ zr_rgb(zr_byte r, zr_byte g, zr_byte b)
 }
 
 struct zr_color
-zr_rgba32(zr_uint in)
+zr_rgba32(uint32_t in)
 {
     struct zr_color ret;
     ret.r = (in & 0xFF);
@@ -538,7 +538,7 @@ zr_rgba32(zr_uint in)
 }
 
 struct zr_color
-zr_rgba_f(zr_float r, zr_float g, zr_float b, zr_float a)
+zr_rgba_f(float r, float g, float b, float a)
 {
     struct zr_color ret;
     ret.r = (zr_byte)(ZR_SATURATE(r) * 255.0f);
@@ -549,7 +549,7 @@ zr_rgba_f(zr_float r, zr_float g, zr_float b, zr_float a)
 }
 
 struct zr_color
-zr_rgb_f(zr_float r, zr_float g, zr_float b)
+zr_rgb_f(float r, float g, float b)
 {
     struct zr_color ret;
     ret.r = (zr_byte)(ZR_SATURATE(r) * 255.0f);
@@ -566,7 +566,7 @@ zr_hsv(zr_byte h, zr_byte s, zr_byte v)
 }
 
 struct zr_color
-zr_hsv_f(zr_float h, zr_float s, zr_float v)
+zr_hsv_f(float h, float s, float v)
 {
     return zr_hsva_f(h, s, v, 1.0f);
 }
@@ -574,19 +574,19 @@ zr_hsv_f(zr_float h, zr_float s, zr_float v)
 struct zr_color
 zr_hsva(zr_byte h, zr_byte s, zr_byte v, zr_byte a)
 {
-    float hf = (zr_float)h / 255.0f;
-    float sf = (zr_float)s / 255.0f;
-    float vf = (zr_float)v / 255.0f;
-    float af = (zr_float)a / 255.0f;
+    float hf = (float)h / 255.0f;
+    float sf = (float)s / 255.0f;
+    float vf = (float)v / 255.0f;
+    float af = (float)a / 255.0f;
     return zr_hsva_f(hf, sf, vf, af);
 }
 
 struct zr_color
-zr_hsva_f(zr_float h, zr_float s, zr_float v, zr_float a)
+zr_hsva_f(float h, float s, float v, float a)
 {
-    struct zr_colorf {zr_float r,g,b,a;} out;
-    zr_float hh, p, q, t, ff;
-    zr_uint i;
+    struct zr_colorf {float r,g,b,a;} out;
+    float hh, p, q, t, ff;
+    uint32_t i;
 
     if (s <= 0.0f) {
         out.r = v; out.g = v; out.b = v;
@@ -596,8 +596,8 @@ zr_hsva_f(zr_float h, zr_float s, zr_float v, zr_float a)
     hh = h;
     if (hh >= 360.0f) hh = 0;
     hh /= 60.0f;
-    i = (zr_uint)hh;
-    ff = hh - (zr_float)i;
+    i = (uint32_t)hh;
+    ff = hh - (float)i;
     p = v * (1.0f - s);
     q = v * (1.0f - (s * ff));
     t = v * (1.0f - (s * (1.0f - ff)));
@@ -638,62 +638,62 @@ zr_hsva_f(zr_float h, zr_float s, zr_float v, zr_float a)
     return zr_rgba_f(out.r, out.g, out.b, a);
 }
 
-zr_uint
+uint32_t
 zr_color32(struct zr_color in)
 {
-    zr_uint out = (zr_uint)in.r;
-    out |= ((zr_uint)in.g << 8);
-    out |= ((zr_uint)in.b << 16);
-    out |= ((zr_uint)in.a << 24);
+    uint32_t out = (uint32_t)in.r;
+    out |= ((uint32_t)in.g << 8);
+    out |= ((uint32_t)in.b << 16);
+    out |= ((uint32_t)in.a << 24);
     return out;
 }
 
 void
-zr_colorf(zr_float *r, zr_float *g, zr_float *b, zr_float *a, struct zr_color in)
+zr_colorf(float *r, float *g, float *b, float *a, struct zr_color in)
 {
-    static const zr_float s = 1.0f/255.0f;
-    *r = (zr_float)in.r * s;
-    *g = (zr_float)in.g * s;
-    *b = (zr_float)in.b * s;
-    *a = (zr_float)in.a * s;
+    static const float s = 1.0f/255.0f;
+    *r = (float)in.r * s;
+    *g = (float)in.g * s;
+    *b = (float)in.b * s;
+    *a = (float)in.a * s;
 }
 
 void
-zr_color_hsv_f(zr_float *out_h, zr_float *out_s, zr_float *out_v, struct zr_color in)
+zr_color_hsv_f(float *out_h, float *out_s, float *out_v, struct zr_color in)
 {
-    zr_float a;
+    float a;
     zr_color_hsva_f(out_h, out_s, out_v, &a, in);
 }
 
 void
-zr_color_hsva_f(zr_float *out_h, zr_float *out_s,
-    zr_float *out_v, zr_float *out_a, struct zr_color in)
+zr_color_hsva_f(float *out_h, float *out_s,
+    float *out_v, float *out_a, struct zr_color in)
 {
-    zr_float chroma;
-    zr_float K = 0.0f;
-    zr_float r,g,b,a;
+    float chroma;
+    float K = 0.0f;
+    float r,g,b,a;
 
     zr_colorf(&r,&g,&b,&a, in);
     if (g < b) {
-        const zr_float t = g; g = b; b = t;
+        const float t = g; g = b; b = t;
         K = -1.f;
     }
     if (a < g) {
-        const zr_float t = r; r = g; g = t;
+        const float t = r; r = g; g = t;
         K = -2.f/6.0f - K;
     }
     chroma = r - ((g < b) ? g: b);
     *out_h = ZR_ABS(K + (g - b)/(6.0f * chroma + 1e-20f));
     *out_s = chroma / (r + 1e-20f);
     *out_v = r;
-    *out_a = (zr_float)in.a / 255.0f;
+    *out_a = (float)in.a / 255.0f;
 }
 
 void
-zr_color_hsva(zr_int *out_h, zr_int *out_s, zr_int *out_v,
-                zr_int *out_a, struct zr_color in)
+zr_color_hsva(int *out_h, int *out_s, int *out_v,
+                int *out_a, struct zr_color in)
 {
-    zr_float h,s,v,a;
+    float h,s,v,a;
     zr_color_hsva_f(&h, &s, &v, &a, in);
     *out_h = (zr_byte)(h * 255.0f);
     *out_s = (zr_byte)(s * 255.0f);
@@ -702,9 +702,9 @@ zr_color_hsva(zr_int *out_h, zr_int *out_s, zr_int *out_v,
 }
 
 void
-zr_color_hsv(zr_int *out_h, zr_int *out_s, zr_int *out_v, struct zr_color in)
+zr_color_hsv(int *out_h, int *out_s, int *out_v, struct zr_color in)
 {
-    zr_int a;
+    int a;
     zr_color_hsva(out_h, out_s, out_v, &a, in);
 }
 /*
@@ -723,7 +723,7 @@ zr_handle_ptr(void *ptr)
 }
 
 zr_handle
-zr_handle_id(zr_int id)
+zr_handle_id(int id)
 {
     zr_handle handle;
     handle.id = id;
@@ -731,28 +731,28 @@ zr_handle_id(zr_int id)
 }
 
 struct zr_image
-zr_subimage_ptr(void *ptr, zr_ushort w, zr_ushort h, struct zr_rect r)
+zr_subimage_ptr(void *ptr, unsigned short w, unsigned short h, struct zr_rect r)
 {
     struct zr_image s;
     s.handle.ptr = ptr;
     s.w = w; s.h = h;
-    s.region[0] = (zr_ushort)r.x;
-    s.region[1] = (zr_ushort)r.y;
-    s.region[2] = (zr_ushort)r.w;
-    s.region[3] = (zr_ushort)r.h;
+    s.region[0] = (unsigned short)r.x;
+    s.region[1] = (unsigned short)r.y;
+    s.region[2] = (unsigned short)r.w;
+    s.region[3] = (unsigned short)r.h;
     return s;
 }
 
 struct zr_image
-zr_subimage_id(zr_int id, zr_ushort w, zr_ushort h, struct zr_rect r)
+zr_subimage_id(int id, unsigned short w, unsigned short h, struct zr_rect r)
 {
     struct zr_image s;
     s.handle.id = id;
     s.w = w; s.h = h;
-    s.region[0] = (zr_ushort)r.x;
-    s.region[1] = (zr_ushort)r.y;
-    s.region[2] = (zr_ushort)r.w;
-    s.region[3] = (zr_ushort)r.h;
+    s.region[0] = (unsigned short)r.x;
+    s.region[1] = (unsigned short)r.y;
+    s.region[2] = (unsigned short)r.w;
+    s.region[3] = (unsigned short)r.h;
     return s;
 }
 
@@ -771,7 +771,7 @@ zr_image_ptr(void *ptr)
 }
 
 struct zr_image
-zr_image_id(zr_int id)
+zr_image_id(int id)
 {
     struct zr_image s;
     s.handle.id = id;
@@ -783,7 +783,7 @@ zr_image_id(zr_int id)
     return s;
 }
 
-zr_bool
+int
 zr_image_is_subimage(const struct zr_image* img)
 {
     ZR_ASSERT(img);
@@ -791,8 +791,8 @@ zr_image_is_subimage(const struct zr_image* img)
 }
 
 static void
-zr_unify(struct zr_rect *clip, const struct zr_rect *a, zr_float x0, zr_float y0,
-    zr_float x1, zr_float y1)
+zr_unify(struct zr_rect *clip, const struct zr_rect *a, float x0, float y0,
+    float x1, float y1)
 {
     ZR_ASSERT(a);
     ZR_ASSERT(clip);
@@ -806,9 +806,9 @@ zr_unify(struct zr_rect *clip, const struct zr_rect *a, zr_float x0, zr_float y0
 
 static void
 zr_triangle_from_direction(struct zr_vec2 *result, struct zr_rect r,
-    zr_float pad_x, zr_float pad_y, enum zr_heading direction)
+    float pad_x, float pad_y, enum zr_heading direction)
 {
-    zr_float w_half, h_half;
+    float w_half, h_half;
     ZR_ASSERT(result);
 
     r.w = MAX(2 * pad_x, r.w);
@@ -842,9 +842,9 @@ zr_triangle_from_direction(struct zr_vec2 *result, struct zr_rect r,
 }
 
 static zr_size
-zr_string_float_limit(char *string, zr_int prec)
+zr_string_float_limit(char *string, int prec)
 {
-    zr_int dot = 0;
+    int dot = 0;
     char *c = string;
     while (*c) {
         if (*c == '.') {
@@ -874,7 +874,7 @@ static const long zr_utfmin[ZR_UTF_SIZE+1] = {0, 0, 0x80, 0x800, 0x100000};
 static const long zr_utfmax[ZR_UTF_SIZE+1] = {0x10FFFF, 0x7F, 0x7FF, 0xFFFF, 0x10FFFF};
 
 static zr_size
-zr_utf_validate(zr_uint *u, zr_size i)
+zr_utf_validate(zr_rune *u, zr_size i)
 {
     ZR_ASSERT(u);
     if (!u) return 0;
@@ -885,8 +885,8 @@ zr_utf_validate(zr_uint *u, zr_size i)
     return i;
 }
 
-static zr_uint
-zr_utf_decode_byte(zr_char c, zr_size *i)
+static zr_rune
+zr_utf_decode_byte(char c, zr_size *i)
 {
     ZR_ASSERT(i);
     if (!i) return 0;
@@ -898,7 +898,7 @@ zr_utf_decode_byte(zr_char c, zr_size *i)
 }
 
 zr_size
-zr_utf_decode(const zr_char *c, zr_rune *u, zr_size clen)
+zr_utf_decode(const char *c, zr_rune *u, zr_size clen)
 {
     zr_size i, j, len, type=0;
     zr_rune udecoded;
@@ -926,14 +926,14 @@ zr_utf_decode(const zr_char *c, zr_rune *u, zr_size clen)
     return len;
 }
 
-static zr_char
+static char
 zr_utf_encode_byte(zr_rune u, zr_size i)
 {
-    return (zr_char)((zr_utfbyte[i]) | ((zr_byte)u & ~zr_utfmask[i]));
+    return (char)((zr_utfbyte[i]) | ((zr_byte)u & ~zr_utfmask[i]));
 }
 
 zr_size
-zr_utf_encode(zr_rune u, zr_char *c, zr_size clen)
+zr_utf_encode(zr_rune u, char *c, zr_size clen)
 {
     zr_size len, i;
     len = zr_utf_validate(&u, 0);
@@ -949,9 +949,9 @@ zr_utf_encode(zr_rune u, zr_char *c, zr_size clen)
 }
 
 zr_size
-zr_utf_len(const zr_char *str, zr_size len)
+zr_utf_len(const char *str, zr_size len)
 {
-    const zr_char *text;
+    const char *text;
     zr_size glyphes = 0;
     zr_size text_len;
     zr_size glyph_len;
@@ -996,7 +996,7 @@ zr_utf_strchr(const char *s, zr_rune u)
  */
 static zr_size
 zr_user_font_glyph_index_at_pos(const struct zr_user_font *font, const char *text,
-    zr_size text_len, zr_float xoff)
+    zr_size text_len, float xoff)
 {
     zr_rune unicode;
     zr_size glyph_offset = 0;
@@ -1018,12 +1018,12 @@ zr_user_font_glyph_index_at_pos(const struct zr_user_font *font, const char *tex
 
 static zr_size
 zr_use_font_glyph_clamp(const struct zr_user_font *font, const char *text,
-    zr_size text_len, zr_float space, zr_size *glyphes, zr_float *text_width)
+    zr_size text_len, float space, zr_size *glyphes, float *text_width)
 {
     zr_size len = 0;
     zr_size glyph_len;
-    zr_float width = 0;
-    zr_float last_width = 0;
+    float width = 0;
+    float last_width = 0;
     zr_rune unicode;
     zr_size g = 0;
 
@@ -1033,7 +1033,7 @@ zr_use_font_glyph_clamp(const struct zr_user_font *font, const char *text,
         len += glyph_len;
         s = font->width(font->userdata, text, len);
         last_width = width;
-        width = (zr_float)s;
+        width = (float)s;
         glyph_len = zr_utf_decode(&text[len], &unicode, text_len - len);
         g++;
     }
@@ -1045,11 +1045,11 @@ zr_use_font_glyph_clamp(const struct zr_user_font *font, const char *text,
 
 static zr_size
 zr_user_font_glyphes_fitting_in_space(const struct zr_user_font *font, const char *text,
-    zr_size text_len, zr_float space, zr_size *glyphes, zr_float *text_width)
+    zr_size text_len, float space, zr_size *glyphes, float *text_width)
 {
     zr_size glyph_len;
-    zr_float width = 0;
-    zr_float last_width = 0;
+    float width = 0;
+    float last_width = 0;
     zr_rune unicode;
     zr_size offset = 0;
     zr_size g = 0;
@@ -1057,7 +1057,7 @@ zr_user_font_glyphes_fitting_in_space(const struct zr_user_font *font, const cha
 
     glyph_len = zr_utf_decode(text, &unicode, text_len);
     s = font->width(font->userdata, text, glyph_len);
-    width = last_width = (zr_float)s;
+    width = last_width = (float)s;
     while ((width < space) && text_len) {
         g++;
         offset += glyph_len;
@@ -1065,7 +1065,7 @@ zr_user_font_glyphes_fitting_in_space(const struct zr_user_font *font, const cha
         last_width = width;
         glyph_len = zr_utf_decode(&text[offset], &unicode, text_len);
         s = font->width(font->userdata, &text[offset], glyph_len);
-        width += (zr_float)s;
+        width += (float)s;
     }
 
     *glyphes = g;
@@ -1096,16 +1096,16 @@ zr_input_begin(struct zr_input *in)
 }
 
 void
-zr_input_motion(struct zr_input *in, zr_int x, zr_int y)
+zr_input_motion(struct zr_input *in, int x, int y)
 {
     ZR_ASSERT(in);
     if (!in) return;
-    in->mouse.pos.x = (zr_float)x;
-    in->mouse.pos.y = (zr_float)y;
+    in->mouse.pos.x = (float)x;
+    in->mouse.pos.y = (float)y;
 }
 
 void
-zr_input_key(struct zr_input *in, enum zr_keys key, zr_bool down)
+zr_input_key(struct zr_input *in, enum zr_keys key, int down)
 {
     ZR_ASSERT(in);
     if (!in) return;
@@ -1115,21 +1115,21 @@ zr_input_key(struct zr_input *in, enum zr_keys key, zr_bool down)
 }
 
 void
-zr_input_button(struct zr_input *in, enum zr_buttons id, zr_int x, zr_int y, zr_bool down)
+zr_input_button(struct zr_input *in, enum zr_buttons id, int x, int y, int down)
 {
     struct zr_mouse_button *btn;
     ZR_ASSERT(in);
     if (!in) return;
     if (in->mouse.buttons[id].down == down) return;
     btn = &in->mouse.buttons[id];
-    btn->clicked_pos.x = (zr_float)x;
-    btn->clicked_pos.y = (zr_float)y;
+    btn->clicked_pos.x = (float)x;
+    btn->clicked_pos.y = (float)y;
     btn->down = down;
     btn->clicked++;
 }
 
 void
-zr_input_scroll(struct zr_input *in, zr_float y)
+zr_input_scroll(struct zr_input *in, float y)
 {
     ZR_ASSERT(in);
     if (!in) return;
@@ -1178,7 +1178,7 @@ zr_input_end(struct zr_input *in)
     in->mouse.delta = zr_vec2_sub(in->mouse.pos, in->mouse.prev);
 }
 
-zr_bool
+int
 zr_input_has_mouse_click_in_rect(const struct zr_input *i, enum zr_buttons id,
     struct zr_rect b)
 {
@@ -1190,9 +1190,9 @@ zr_input_has_mouse_click_in_rect(const struct zr_input *i, enum zr_buttons id,
     return zr_true;
 }
 
-zr_bool
+int
 zr_input_has_mouse_click_down_in_rect(const struct zr_input *i, enum zr_buttons id,
-    struct zr_rect b, zr_bool down)
+    struct zr_rect b, int down)
 {
     const struct zr_mouse_button *btn;
     if (!i) return zr_false;
@@ -1200,7 +1200,7 @@ zr_input_has_mouse_click_down_in_rect(const struct zr_input *i, enum zr_buttons 
     return zr_input_has_mouse_click_in_rect(i, id, b) && (btn->down == down);
 }
 
-zr_bool
+int
 zr_input_is_mouse_click_in_rect(const struct zr_input *i, enum zr_buttons id,
     struct zr_rect b)
 {
@@ -1211,21 +1211,21 @@ zr_input_is_mouse_click_in_rect(const struct zr_input *i, enum zr_buttons id,
             btn->clicked) ? zr_true : zr_false;
 }
 
-zr_bool
+int
 zr_input_is_mouse_hovering_rect(const struct zr_input *i, struct zr_rect rect)
 {
     if (!i) return zr_false;
     return ZR_INBOX(i->mouse.pos.x, i->mouse.pos.y, rect.x, rect.y, rect.w, rect.h);
 }
 
-zr_bool
+int
 zr_input_is_mouse_prev_hovering_rect(const struct zr_input *i, struct zr_rect rect)
 {
     if (!i) return zr_false;
     return ZR_INBOX(i->mouse.prev.x, i->mouse.prev.y, rect.x, rect.y, rect.w, rect.h);
 }
 
-zr_bool
+int
 zr_input_mouse_clicked(const struct zr_input *i, enum zr_buttons id, struct zr_rect rect)
 {
     if (!i) return zr_false;
@@ -1233,14 +1233,14 @@ zr_input_mouse_clicked(const struct zr_input *i, enum zr_buttons id, struct zr_r
     return zr_input_is_mouse_click_in_rect(i, id, rect);
 }
 
-zr_bool
+int
 zr_input_is_mouse_down(const struct zr_input *i, enum zr_buttons id)
 {
     if (!i) return zr_false;
     return i->mouse.buttons[id].down;
 }
 
-zr_bool
+int
 zr_input_is_mouse_pressed(const struct zr_input *i, enum zr_buttons id)
 {
     const struct zr_mouse_button *b;
@@ -1251,14 +1251,14 @@ zr_input_is_mouse_pressed(const struct zr_input *i, enum zr_buttons id)
     return zr_false;
 }
 
-zr_bool
+int
 zr_input_is_mouse_released(const struct zr_input *i, enum zr_buttons id)
 {
     if (!i) return zr_false;
     return (!i->mouse.buttons[id].down && i->mouse.buttons[id].clicked) ? zr_true : zr_false;
 }
 
-zr_bool
+int
 zr_input_is_key_pressed(const struct zr_input *i, enum zr_keys key)
 {
     const struct zr_key *k;
@@ -1269,7 +1269,7 @@ zr_input_is_key_pressed(const struct zr_input *i, enum zr_keys key)
     return zr_false;
 }
 
-zr_bool
+int
 zr_input_is_key_released(const struct zr_input *i, enum zr_keys key)
 {
     const struct zr_key *k;
@@ -1280,7 +1280,7 @@ zr_input_is_key_released(const struct zr_input *i, enum zr_keys key)
     return zr_false;
 }
 
-zr_bool
+int
 zr_input_is_key_down(const struct zr_input *i, enum zr_keys key)
 {
     const struct zr_key *k;
@@ -1299,7 +1299,7 @@ zr_input_is_key_down(const struct zr_input *i, enum zr_keys key)
  */
 void
 zr_buffer_init(struct zr_buffer *b, const struct zr_allocator *a,
-    zr_size initial_size, zr_float grow_factor)
+    zr_size initial_size, float grow_factor)
 {
     ZR_ASSERT(b);
     ZR_ASSERT(a);
@@ -1395,7 +1395,7 @@ static void*
 zr_buffer_alloc(struct zr_buffer *b, enum zr_buffer_allocation_type type,
     zr_size size, zr_size align)
 {
-    zr_bool full;
+    int full;
     zr_size cap;
     zr_size alignment;
     void *unaligned;
@@ -1423,8 +1423,8 @@ zr_buffer_alloc(struct zr_buffer *b, enum zr_buffer_allocation_type type,
         ZR_ASSERT(b->pool.alloc && b->pool.free);
         if (b->type != ZR_BUFFER_DYNAMIC || !b->pool.alloc || !b->pool.free) return 0;
 
-        cap = (zr_size)((zr_float)b->memory.size * b->grow_factor);
-        cap = MAX(cap, zr_round_up_pow2((zr_uint)(b->allocated + size)));
+        cap = (zr_size)((float)b->memory.size * b->grow_factor);
+        cap = MAX(cap, zr_round_up_pow2((uint32_t)(b->allocated + size)));
         b->memory.ptr = zr_buffer_realloc(b, cap, &b->memory.size);
         if (!b->memory.ptr) return 0;
 
@@ -1443,7 +1443,7 @@ zr_buffer_alloc(struct zr_buffer *b, enum zr_buffer_allocation_type type,
     return memory;
 }
 
-zr_bool
+int
 zr_buffer_push(struct zr_buffer *buffer, enum zr_buffer_allocation_type type,
     void *data, zr_size size, zr_size align)
 {
@@ -1630,16 +1630,16 @@ zr_command_buffer_push_scissor(struct zr_command_buffer *b, struct zr_rect r)
     cmd = (struct zr_command_scissor*)
         zr_command_buffer_push(b, ZR_COMMAND_SCISSOR, sizeof(*cmd));
     if (!cmd) return;
-    cmd->x = (zr_short)r.x;
-    cmd->y = (zr_short)r.y;
-    cmd->w = (zr_ushort)MAX(0, r.w);
-    cmd->h = (zr_ushort)MAX(0, r.h);
+    cmd->x = (short)r.x;
+    cmd->y = (short)r.y;
+    cmd->w = (unsigned short)MAX(0, r.w);
+    cmd->h = (unsigned short)MAX(0, r.h);
     b->stats.scissors++;
 }
 
 void
-zr_command_buffer_push_line(struct zr_command_buffer *b, zr_float x0, zr_float y0,
-    zr_float x1, zr_float y1, struct zr_color c)
+zr_command_buffer_push_line(struct zr_command_buffer *b, float x0, float y0,
+    float x1, float y1, struct zr_color c)
 {
     struct zr_command_line *cmd;
     ZR_ASSERT(b);
@@ -1647,18 +1647,18 @@ zr_command_buffer_push_line(struct zr_command_buffer *b, zr_float x0, zr_float y
     cmd = (struct zr_command_line*)
         zr_command_buffer_push(b, ZR_COMMAND_LINE, sizeof(*cmd));
     if (!cmd) return;
-    cmd->begin.x = (zr_short)x0;
-    cmd->begin.y = (zr_short)y0;
-    cmd->end.x = (zr_short)x1;
-    cmd->end.y = (zr_short)y1;
+    cmd->begin.x = (short)x0;
+    cmd->begin.y = (short)y0;
+    cmd->end.x = (short)x1;
+    cmd->end.y = (short)y1;
     cmd->color = c;
     b->stats.lines++;
 }
 
 void
-zr_command_buffer_push_curve(struct zr_command_buffer *b, zr_float ax, zr_float ay,
-    zr_float ctrl0x, zr_float ctrl0y, zr_float ctrl1x, zr_float ctrl1y,
-    zr_float bx, zr_float by, struct zr_color col)
+zr_command_buffer_push_curve(struct zr_command_buffer *b, float ax, float ay,
+    float ctrl0x, float ctrl0y, float ctrl1x, float ctrl1y,
+    float bx, float by, struct zr_color col)
 {
     struct zr_command_curve *cmd;
     ZR_ASSERT(b);
@@ -1667,21 +1667,21 @@ zr_command_buffer_push_curve(struct zr_command_buffer *b, zr_float ax, zr_float 
     cmd = (struct zr_command_curve*)
         zr_command_buffer_push(b, ZR_COMMAND_CURVE, sizeof(*cmd));
     if (!cmd) return;
-    cmd->begin.x = (zr_short)ax;
-    cmd->begin.y = (zr_short)ay;
-    cmd->ctrl[0].x = (zr_short)ctrl0x;
-    cmd->ctrl[0].y = (zr_short)ctrl0y;
-    cmd->ctrl[1].x = (zr_short)ctrl1x;
-    cmd->ctrl[1].y = (zr_short)ctrl1y;
-    cmd->end.x = (zr_short)bx;
-    cmd->end.y = (zr_short)by;
+    cmd->begin.x = (short)ax;
+    cmd->begin.y = (short)ay;
+    cmd->ctrl[0].x = (short)ctrl0x;
+    cmd->ctrl[0].y = (short)ctrl0y;
+    cmd->ctrl[1].x = (short)ctrl1x;
+    cmd->ctrl[1].y = (short)ctrl1y;
+    cmd->end.x = (short)bx;
+    cmd->end.y = (short)by;
     cmd->color = col;
     b->stats.curves++;
 }
 
 void
 zr_command_buffer_push_rect(struct zr_command_buffer *b, struct zr_rect rect,
-    zr_float rounding, struct zr_color c)
+    float rounding, struct zr_color c)
 {
     struct zr_command_rect *cmd;
     ZR_ASSERT(b);
@@ -1695,11 +1695,11 @@ zr_command_buffer_push_rect(struct zr_command_buffer *b, struct zr_rect rect,
     cmd = (struct zr_command_rect*)
         zr_command_buffer_push(b, ZR_COMMAND_RECT, sizeof(*cmd));
     if (!cmd) return;
-    cmd->rounding = (zr_uint)rounding;
-    cmd->x = (zr_short)rect.x;
-    cmd->y = (zr_short)rect.y;
-    cmd->w = (zr_ushort)MAX(0, rect.w);
-    cmd->h = (zr_ushort)MAX(0, rect.h);
+    cmd->rounding = (uint32_t)rounding;
+    cmd->x = (short)rect.x;
+    cmd->y = (short)rect.y;
+    cmd->w = (unsigned short)MAX(0, rect.w);
+    cmd->h = (unsigned short)MAX(0, rect.h);
     cmd->color = c;
     b->stats.rectangles++;
 }
@@ -1720,33 +1720,33 @@ zr_command_buffer_push_circle(struct zr_command_buffer *b, struct zr_rect r,
     cmd = (struct zr_command_circle*)
         zr_command_buffer_push(b, ZR_COMMAND_CIRCLE, sizeof(*cmd));
     if (!cmd) return;
-    cmd->x = (zr_short)r.x;
-    cmd->y = (zr_short)r.y;
-    cmd->w = (zr_ushort)MAX(r.w, 0);
-    cmd->h = (zr_ushort)MAX(r.h, 0);
+    cmd->x = (short)r.x;
+    cmd->y = (short)r.y;
+    cmd->w = (unsigned short)MAX(r.w, 0);
+    cmd->h = (unsigned short)MAX(r.h, 0);
     cmd->color = c;
     b->stats.circles++;
 }
 
 void
-zr_command_buffer_push_arc(struct zr_command_buffer *b, zr_float cx,
-    zr_float cy, zr_float radius, zr_float a_min, zr_float a_max, struct zr_color c)
+zr_command_buffer_push_arc(struct zr_command_buffer *b, float cx,
+    float cy, float radius, float a_min, float a_max, struct zr_color c)
 {
     struct zr_command_arc *cmd;
     cmd = (struct zr_command_arc*)
         zr_command_buffer_push(b, ZR_COMMAND_ARC, sizeof(*cmd));
     if (!cmd) return;
-    cmd->cx = (zr_short)cx;
-    cmd->cy = (zr_short)cy;
-    cmd->r = (zr_ushort)radius;
+    cmd->cx = (short)cx;
+    cmd->cy = (short)cy;
+    cmd->r = (unsigned short)radius;
     cmd->a[0] = a_min;
     cmd->a[1] = a_max;
     cmd->color = c;
 }
 
 void
-zr_command_buffer_push_triangle(struct zr_command_buffer *b,zr_float x0,zr_float y0,
-    zr_float x1, zr_float y1, zr_float x2, zr_float y2, struct zr_color c)
+zr_command_buffer_push_triangle(struct zr_command_buffer *b,float x0,float y0,
+    float x1, float y1, float x2, float y2, struct zr_color c)
 {
     struct zr_command_triangle *cmd;
     ZR_ASSERT(b);
@@ -1762,12 +1762,12 @@ zr_command_buffer_push_triangle(struct zr_command_buffer *b,zr_float x0,zr_float
     cmd = (struct zr_command_triangle*)
         zr_command_buffer_push(b, ZR_COMMAND_TRIANGLE, sizeof(*cmd));
     if (!cmd) return;
-    cmd->a.x = (zr_short)x0;
-    cmd->a.y = (zr_short)y0;
-    cmd->b.x = (zr_short)x1;
-    cmd->b.y = (zr_short)y1;
-    cmd->c.x = (zr_short)x2;
-    cmd->c.y = (zr_short)y2;
+    cmd->a.x = (short)x0;
+    cmd->a.y = (short)y0;
+    cmd->b.x = (short)x1;
+    cmd->b.y = (short)y1;
+    cmd->c.x = (short)x2;
+    cmd->c.y = (short)y2;
     cmd->color = c;
     b->stats.triangles++;
 }
@@ -1788,17 +1788,17 @@ zr_command_buffer_push_image(struct zr_command_buffer *b, struct zr_rect r,
     cmd = (struct zr_command_image*)
         zr_command_buffer_push(b, ZR_COMMAND_IMAGE, sizeof(*cmd));
     if (!cmd) return;
-    cmd->x = (zr_short)r.x;
-    cmd->y = (zr_short)r.y;
-    cmd->w = (zr_ushort)MAX(0, r.w);
-    cmd->h = (zr_ushort)MAX(0, r.h);
+    cmd->x = (short)r.x;
+    cmd->y = (short)r.y;
+    cmd->w = (unsigned short)MAX(0, r.w);
+    cmd->h = (unsigned short)MAX(0, r.h);
     cmd->img = *img;
     b->stats.images++;
 }
 
 void
 zr_command_buffer_push_text(struct zr_command_buffer *b, struct zr_rect r,
-    const zr_char *string, zr_size length, const struct zr_user_font *font,
+    const char *string, zr_size length, const struct zr_user_font *font,
     struct zr_color bg, struct zr_color fg)
 {
     zr_size text_width = 0;
@@ -1815,7 +1815,7 @@ zr_command_buffer_push_text(struct zr_command_buffer *b, struct zr_rect r,
     /* make sure text fits inside bounds */
     text_width = font->width(font->userdata, string, length);
     if (text_width > r.w){
-        zr_float txt_width = (zr_float)text_width;
+        float txt_width = (float)text_width;
         zr_size glyphes = 0;
         length = zr_use_font_glyph_clamp(font, string, length, r.w, &glyphes, &txt_width);
     }
@@ -1824,10 +1824,10 @@ zr_command_buffer_push_text(struct zr_command_buffer *b, struct zr_rect r,
     cmd = (struct zr_command_text*)
         zr_command_buffer_push(b, ZR_COMMAND_TEXT, sizeof(*cmd) + length + 1);
     if (!cmd) return;
-    cmd->x = (zr_short)r.x;
-    cmd->y = (zr_short)r.y;
-    cmd->w = (zr_ushort)r.w;
-    cmd->h = (zr_ushort)r.h;
+    cmd->x = (short)r.x;
+    cmd->y = (short)r.y;
+    cmd->w = (unsigned short)r.w;
+    cmd->h = (unsigned short)r.h;
     cmd->background = bg;
     cmd->foreground = fg;
     cmd->font = font;
@@ -1835,7 +1835,7 @@ zr_command_buffer_push_text(struct zr_command_buffer *b, struct zr_rect r,
     zr_memcopy(cmd->string, string, length);
     cmd->string[length] = '\0';
     b->stats.text++;
-    b->stats.glyphes += (zr_uint)length;
+    b->stats.glyphes += (unsigned int)length;
 }
 
 const struct zr_command*
@@ -1871,7 +1871,7 @@ zr_command_buffer_next(struct zr_command_buffer *buffer,
  */
 void
 zr_command_queue_init(struct zr_command_queue *queue,
-    const struct zr_allocator *alloc, zr_size initial_size, zr_float grow_factor)
+    const struct zr_allocator *alloc, zr_size initial_size, float grow_factor)
 {
     ZR_ASSERT(alloc);
     ZR_ASSERT(queue);
@@ -1967,7 +1967,7 @@ zr_command_queue_remove(struct zr_command_queue *queue,
     list->count--;
 }
 
-zr_bool
+int
 zr_command_queue_start_child(struct zr_command_queue *queue,
     struct zr_command_buffer *buffer)
 {
@@ -2195,7 +2195,7 @@ zr_draw_list_init(struct zr_draw_list *list, struct zr_buffer *cmds,
 
 void
 zr_draw_list_load(struct zr_draw_list *list, struct zr_command_queue *queue,
-    zr_float line_thickness, zr_uint curve_segments)
+    float line_thickness, unsigned int curve_segments)
 {
     const struct zr_command *cmd;
     ZR_ASSERT(list);
@@ -2226,12 +2226,12 @@ zr_draw_list_load(struct zr_draw_list *list, struct zr_command_queue *queue,
         case ZR_COMMAND_RECT: {
             const struct zr_command_rect *r = zr_command(rect, cmd);
             zr_draw_list_add_rect_filled(list, zr_rect(r->x, r->y, r->w, r->h),
-                r->color, (zr_float)r->rounding);
+                r->color, (float)r->rounding);
         } break;
         case ZR_COMMAND_CIRCLE: {
             const struct zr_command_circle *c = zr_command(circle, cmd);
-            zr_draw_list_add_circle_filled(list, zr_vec2((zr_float)c->x + (zr_float)c->w/2,
-                (zr_float)c->y + (zr_float)c->h/2), (zr_float)c->w/2, c->color, curve_segments);
+            zr_draw_list_add_circle_filled(list, zr_vec2((float)c->x + (float)c->w/2,
+                (float)c->y + (float)c->h/2), (float)c->w/2, c->color, curve_segments);
         } break;
         case ZR_COMMAND_ARC: {
             const struct zr_command_arc *c = zr_command(arc, cmd);
@@ -2281,7 +2281,7 @@ zr_draw_list_clear(struct zr_draw_list *list)
     list->clip_rect = zr_null_rect;
 }
 
-zr_bool
+int
 zr_draw_list_is_empty(struct zr_draw_list *list)
 {
     ZR_ASSERT(list);
@@ -2335,9 +2335,9 @@ zr_draw_list_alloc_path(struct zr_draw_list *list, zr_size count)
     if (!points) return 0;
     if (!list->path_offset) {
         memory = zr_buffer_memory(list->buffer);
-        list->path_offset = (zr_uint)((zr_byte*)points - (zr_byte*)memory);
+        list->path_offset = (unsigned int)((zr_byte*)points - (zr_byte*)memory);
     }
-    list->path_count += (zr_uint)count;
+    list->path_count += (unsigned int)count;
     return points;
 }
 
@@ -2433,7 +2433,7 @@ zr_draw_list_alloc_vertexes(struct zr_draw_list *list, zr_size count)
     vtx = (struct zr_draw_vertex*)
         zr_buffer_alloc(list->vertexes, ZR_BUFFER_FRONT, vtx_size * count, vtx_align);
     if (!vtx) return 0;
-    list->vertex_count += (zr_uint)count;
+    list->vertex_count += (unsigned int)count;
     return vtx;
 }
 
@@ -2451,8 +2451,8 @@ zr_draw_list_alloc_elements(struct zr_draw_list *list, zr_size count)
         zr_buffer_alloc(list->elements, ZR_BUFFER_FRONT, elem_size * count, elem_align);
     if (!ids) return 0;
     cmd = zr_draw_list_command_last(list);
-    list->element_count += (zr_uint)count;
-    cmd->elem_count += (zr_uint)count;
+    list->element_count += (unsigned int)count;
+    cmd->elem_count += (unsigned int)count;
     return ids;
 }
 
@@ -2468,11 +2468,11 @@ zr_draw_vertex(struct zr_vec2 pos, struct zr_vec2 uv, zr_draw_vertex_color col)
 
 static void
 zr_draw_list_add_poly_line(struct zr_draw_list *list, struct zr_vec2 *points,
-    const zr_uint points_count, struct zr_color color, zr_bool closed,
-    zr_float thickness, enum zr_anti_aliasing aliasing)
+    const unsigned int points_count, struct zr_color color, int closed,
+    float thickness, enum zr_anti_aliasing aliasing)
 {
     zr_size count;
-    zr_bool thick_line;
+    int thick_line;
     zr_draw_vertex_color col = zr_color32(color);
     ZR_ASSERT(list);
     if (!list) return;
@@ -2484,7 +2484,7 @@ zr_draw_list_add_poly_line(struct zr_draw_list *list, struct zr_vec2 *points,
 
     if (aliasing == ZR_ANTI_ALIASING_ON) {
         /* ANTI-ALIASED STROKE */
-        const zr_float AA_SIZE = 1.0f;
+        const float AA_SIZE = 1.0f;
         static const zr_size pnt_align = ZR_ALIGNOF(struct zr_vec2);
         static const zr_size pnt_size = sizeof(struct zr_vec2);
         const zr_draw_vertex_color col_trans = col & 0x00ffffff;
@@ -2513,7 +2513,7 @@ zr_draw_list_add_poly_line(struct zr_draw_list *list, struct zr_vec2 *points,
         for (i1 = 0; i1 < count; ++i1) {
             const zr_size i2 = ((i1 + 1) == points_count) ? 0 : (i1 + 1);
             struct zr_vec2 diff = zr_vec2_sub(points[i2], points[i1]);
-            zr_float len;
+            float len;
 
             /* vec2 inverted lenth  */
             len = zr_vec2_len_sqr(diff);
@@ -2544,7 +2544,7 @@ zr_draw_list_add_poly_line(struct zr_draw_list *list, struct zr_vec2 *points,
             idx1 = index;
             for (i1 = 0; i1 < count; i1++) {
                 struct zr_vec2 dm;
-                zr_float dmr2;
+                float dmr2;
                 zr_size i2 = ((i1 + 1) == points_count) ? 0 : (i1 + 1);
                 zr_size idx2 = ((i1+1) == points_count) ? index: (idx1 + 3);
 
@@ -2552,7 +2552,7 @@ zr_draw_list_add_poly_line(struct zr_draw_list *list, struct zr_vec2 *points,
                 dm = zr_vec2_muls(zr_vec2_add(normals[i1], normals[i2]), 0.5f);
                 dmr2 = dm.x * dm.x + dm.y* dm.y;
                 if (dmr2 > 0.000001f) {
-                    zr_float scale = 1.0f/dmr2;
+                    float scale = 1.0f/dmr2;
                     scale = MIN(100.0f, scale);
                     dm = zr_vec2_muls(dm, scale);
                 }
@@ -2581,7 +2581,7 @@ zr_draw_list_add_poly_line(struct zr_draw_list *list, struct zr_vec2 *points,
             }
         } else {
             zr_size idx1, i;
-            const zr_float half_inner_thickness = (thickness - AA_SIZE) * 0.5f;
+            const float half_inner_thickness = (thickness - AA_SIZE) * 0.5f;
             if (!closed) {
                 struct zr_vec2 d1 = zr_vec2_muls(normals[0], half_inner_thickness + AA_SIZE);
                 struct zr_vec2 d2 = zr_vec2_muls(normals[0], half_inner_thickness);
@@ -2609,9 +2609,9 @@ zr_draw_list_add_poly_line(struct zr_draw_list *list, struct zr_vec2 *points,
 
                 /* average normals */
                 struct zr_vec2 dm = zr_vec2_muls(zr_vec2_add(normals[i1], normals[i2]), 0.5f);
-                zr_float dmr2 = dm.x * dm.x + dm.y* dm.y;
+                float dmr2 = dm.x * dm.x + dm.y* dm.y;
                 if (dmr2 > 0.000001f) {
-                    zr_float scale = 1.0f/dmr2;
+                    float scale = 1.0f/dmr2;
                     scale = MIN(100.0f, scale);
                     dm = zr_vec2_muls(dm, scale);
                 }
@@ -2661,13 +2661,13 @@ zr_draw_list_add_poly_line(struct zr_draw_list *list, struct zr_vec2 *points,
         if (!vtx || !ids) return;
 
         for (i1 = 0; i1 < count; ++i1) {
-            zr_float dx, dy;
+            float dx, dy;
             const struct zr_vec2 uv = list->null.uv;
             const zr_size i2 = ((i1+1) == points_count) ? 0 : i1 + 1;
             const struct zr_vec2 p1 = points[i1];
             const struct zr_vec2 p2 = points[i2];
             struct zr_vec2 diff = zr_vec2_sub(p2, p1);
-            zr_float len;
+            float len;
 
             /* vec2 inverted lenth  */
             len = zr_vec2_len_sqr(diff);
@@ -2697,7 +2697,7 @@ zr_draw_list_add_poly_line(struct zr_draw_list *list, struct zr_vec2 *points,
 
 static void
 zr_draw_list_add_poly_convex(struct zr_draw_list *list, struct zr_vec2 *points,
-    const zr_uint points_count, struct zr_color color, enum zr_anti_aliasing aliasing)
+    const unsigned int points_count, struct zr_color color, enum zr_anti_aliasing aliasing)
 {
     static const zr_size pnt_align = ZR_ALIGNOF(struct zr_vec2);
     static const zr_size pnt_size = sizeof(struct zr_vec2);
@@ -2709,7 +2709,7 @@ zr_draw_list_add_poly_convex(struct zr_draw_list *list, struct zr_vec2 *points,
         zr_size i = 0;
         zr_size i0 = 0, i1 = 0;
 
-        const zr_float AA_SIZE = 1.0f;
+        const float AA_SIZE = 1.0f;
         const zr_draw_vertex_color col_trans = col & 0x00ffffff;
         zr_size index = list->vertex_count;
         const zr_size idx_count = (points_count-2)*3 + points_count*6;
@@ -2717,8 +2717,8 @@ zr_draw_list_add_poly_convex(struct zr_draw_list *list, struct zr_vec2 *points,
         struct zr_draw_vertex *vtx = zr_draw_list_alloc_vertexes(list, vtx_count);
         zr_draw_index *ids = zr_draw_list_alloc_elements(list, idx_count);
 
-        zr_uint vtx_inner_idx = (zr_uint)(index + 0);
-        zr_uint vtx_outer_idx = (zr_uint)(index + 1);
+        unsigned int vtx_inner_idx = (unsigned int)(index + 0);
+        unsigned int vtx_outer_idx = (unsigned int)(index + 1);
         struct zr_vec2 *normals = 0;
         zr_size size = 0;
         if (!vtx || !ids) return;
@@ -2745,7 +2745,7 @@ zr_draw_list_add_poly_convex(struct zr_draw_list *list, struct zr_vec2 *points,
             struct zr_vec2 diff = zr_vec2_sub(p1, p0);
 
             /* vec2 inverted lenth  */
-            zr_float len = zr_vec2_len_sqr(diff);
+            float len = zr_vec2_len_sqr(diff);
             if (len != 0.0f)
                 len = zr_inv_sqrt(len);
             else len = 1.0f;
@@ -2762,9 +2762,9 @@ zr_draw_list_add_poly_convex(struct zr_draw_list *list, struct zr_vec2 *points,
             struct zr_vec2 n1 = normals[i1];
             struct zr_vec2 dm = zr_vec2_muls(zr_vec2_add(n0, n1), 0.5f);
 
-            zr_float dmr2 = dm.x*dm.x + dm.y*dm.y;
+            float dmr2 = dm.x*dm.x + dm.y*dm.y;
             if (dmr2 > 0.000001f) {
-                zr_float scale = 1.0f / dmr2;
+                float scale = 1.0f / dmr2;
                 scale = MIN(scale, 100.0f);
                 dm = zr_vec2_muls(dm, scale);
             }
@@ -2809,7 +2809,7 @@ zr_draw_list_add_poly_convex(struct zr_draw_list *list, struct zr_vec2 *points,
 
 void
 zr_draw_list_add_line(struct zr_draw_list *list, struct zr_vec2 a,
-    struct zr_vec2 b, struct zr_color col, zr_float thickness)
+    struct zr_vec2 b, struct zr_color col, float thickness)
 {
     ZR_ASSERT(list);
     if (!list || !col.a) return;
@@ -2820,7 +2820,7 @@ zr_draw_list_add_line(struct zr_draw_list *list, struct zr_vec2 a,
 
 void
 zr_draw_list_add_rect(struct zr_draw_list *list, struct zr_rect rect,
-    struct zr_color col, zr_float rounding, zr_float line_thickness)
+    struct zr_color col, float rounding, float line_thickness)
 {
     ZR_ASSERT(list);
     if (!list || !col.a) return;
@@ -2831,7 +2831,7 @@ zr_draw_list_add_rect(struct zr_draw_list *list, struct zr_rect rect,
 
 void
 zr_draw_list_add_rect_filled(struct zr_draw_list *list, struct zr_rect rect,
-    struct zr_color col, zr_float rounding)
+    struct zr_color col, float rounding)
 {
     ZR_ASSERT(list);
     if (!list || !col.a) return;
@@ -2842,7 +2842,7 @@ zr_draw_list_add_rect_filled(struct zr_draw_list *list, struct zr_rect rect,
 
 void
 zr_draw_list_add_triangle(struct zr_draw_list *list, struct zr_vec2 a, struct zr_vec2 b,
-    struct zr_vec2 c, struct zr_color col, zr_float line_thickness)
+    struct zr_vec2 c, struct zr_color col, float line_thickness)
 {
     ZR_ASSERT(list);
     if (!list) return;
@@ -2867,24 +2867,24 @@ zr_draw_list_add_triangle_filled(struct zr_draw_list *list, struct zr_vec2 a,
 
 void
 zr_draw_list_add_circle(struct zr_draw_list *list, struct zr_vec2 center,
-    zr_float radius, struct zr_color col, zr_uint segs, zr_float line_thickness)
+    float radius, struct zr_color col, unsigned int segs, float line_thickness)
 {
-    zr_float a_max;
+    float a_max;
     ZR_ASSERT(list);
     if (!list || !col.a) return;
-    a_max = ZR_PI * 2.0f * ((zr_float)segs - 1.0f) / (zr_float)segs;
+    a_max = ZR_PI * 2.0f * ((float)segs - 1.0f) / (float)segs;
     zr_draw_list_path_arc_to(list, center, radius, 0.0f, a_max, segs);
     zr_draw_list_path_stroke(list, col, ZR_STROKE_CLOSED, line_thickness);
 }
 
 void
 zr_draw_list_add_circle_filled(struct zr_draw_list *list, struct zr_vec2 center,
-    zr_float radius, struct zr_color col, zr_uint segs)
+    float radius, struct zr_color col, unsigned int segs)
 {
-    zr_float a_max;
+    float a_max;
     ZR_ASSERT(list);
     if (!list || !col.a) return;
-    a_max = ZR_PI * 2.0f * ((zr_float)segs - 1.0f) / (zr_float)segs;
+    a_max = ZR_PI * 2.0f * ((float)segs - 1.0f) / (float)segs;
     zr_draw_list_path_arc_to(list, center, radius, 0.0f, a_max, segs);
     zr_draw_list_path_fill(list, col);
 }
@@ -2892,7 +2892,7 @@ zr_draw_list_add_circle_filled(struct zr_draw_list *list, struct zr_vec2 center,
 void
 zr_draw_list_add_curve(struct zr_draw_list *list, struct zr_vec2 p0,
     struct zr_vec2 cp0, struct zr_vec2 cp1, struct zr_vec2 p1,
-    struct zr_color col, zr_uint segments, zr_float thickness)
+    struct zr_color col, unsigned int segments, float thickness)
 {
     ZR_ASSERT(list);
     if (!list || !col.a) return;
@@ -2945,10 +2945,10 @@ zr_draw_list_add_image(struct zr_draw_list *list, struct zr_image texture,
     if (zr_image_is_subimage(&texture)) {
         /* add region inside of the texture  */
         struct zr_vec2 uv[2];
-        uv[0].x = (zr_float)texture.region[0]/(zr_float)texture.w;
-        uv[0].y = (zr_float)texture.region[1]/(zr_float)texture.h;
-        uv[1].x = (zr_float)(texture.region[0] + texture.region[2])/(zr_float)texture.w;
-        uv[1].y = (zr_float)(texture.region[1] + texture.region[3])/(zr_float)texture.h;
+        uv[0].x = (float)texture.region[0]/(float)texture.w;
+        uv[0].y = (float)texture.region[1]/(float)texture.h;
+        uv[1].x = (float)(texture.region[0] + texture.region[2])/(float)texture.w;
+        uv[1].y = (float)(texture.region[1] + texture.region[3])/(float)texture.h;
         zr_draw_list_push_rect_uv(list, zr_vec2(rect.x, rect.y),
             zr_vec2(rect.x + rect.w, rect.y + rect.h),  uv[0], uv[1], color);
     } else zr_draw_list_push_rect_uv(list, zr_vec2(rect.x, rect.y),
@@ -2958,10 +2958,10 @@ zr_draw_list_add_image(struct zr_draw_list *list, struct zr_image texture,
 
 void
 zr_draw_list_add_text(struct zr_draw_list *list, const struct zr_user_font *font,
-    struct zr_rect rect, const zr_char *text, zr_size len,
+    struct zr_rect rect, const char *text, zr_size len,
     struct zr_color bg, struct zr_color fg)
 {
-    zr_float x;
+    float x;
     zr_size text_len;
     zr_rune unicode, next;
     zr_size glyph_len, next_glyph_len;
@@ -2983,8 +2983,8 @@ zr_draw_list_add_text(struct zr_draw_list *list, const struct zr_user_font *font
     glyph_len = text_len = zr_utf_decode(text, &unicode, len);
     if (!glyph_len) return;
     while (text_len <= len && glyph_len) {
-        zr_float gx, gy, gh, gw;
-        zr_float char_width = 0;
+        float gx, gy, gh, gw;
+        float char_width = 0;
         if (unicode == ZR_UTF_INVALID) break;
 
         /* query currently drawn glyph information */
@@ -3038,18 +3038,18 @@ zr_draw_list_path_line_to(struct zr_draw_list *list, struct zr_vec2 pos)
 
 static void
 zr_draw_list_path_arc_to_fast(struct zr_draw_list *list, struct zr_vec2 center,
-    zr_float radius, zr_int a_min, zr_int a_max)
+    float radius, int a_min, int a_max)
 {
     static struct zr_vec2 circle_vtx[12];
-    static zr_bool circle_vtx_builds = zr_false;
-    static const zr_int circle_vtx_count = ZR_LEN(circle_vtx);
+    static int circle_vtx_builds = zr_false;
+    static const int circle_vtx_count = ZR_LEN(circle_vtx);
 
     ZR_ASSERT(list);
     if (!list) return;
     if (!circle_vtx_builds) {
-        zr_int i = 0;
+        int i = 0;
         for (i = 0; i < circle_vtx_count; ++i) {
-            const zr_float a = ((zr_float)i / (zr_float)circle_vtx_count) * 2 * ZR_PI;
+            const float a = ((float)i / (float)circle_vtx_count) * 2 * ZR_PI;
             circle_vtx[i].x = list->cos(a);
             circle_vtx[i].y = list->sin(a);
         }
@@ -3057,11 +3057,11 @@ zr_draw_list_path_arc_to_fast(struct zr_draw_list *list, struct zr_vec2 center,
     }
 
     if (a_min <= a_max) {
-        zr_int a = 0;
+        int a = 0;
         for (a = a_min; a <= a_max; a++) {
             const struct zr_vec2 c = circle_vtx[a % circle_vtx_count];
-            const zr_float x = center.x + c.x * radius;
-            const zr_float y = center.y + c.y * radius;
+            const float x = center.x + c.x * radius;
+            const float y = center.y + c.y * radius;
             zr_draw_list_path_line_to(list, zr_vec2(x, y));
         }
     }
@@ -3069,25 +3069,25 @@ zr_draw_list_path_arc_to_fast(struct zr_draw_list *list, struct zr_vec2 center,
 
 void
 zr_draw_list_path_arc_to(struct zr_draw_list *list, struct zr_vec2 center,
-    zr_float radius, zr_float a_min, zr_float a_max, zr_uint segments)
+    float radius, float a_min, float a_max, unsigned int segments)
 {
-    zr_uint i = 0;
+    unsigned int i = 0;
     ZR_ASSERT(list);
     if (!list) return;
     if (radius == 0.0f) return;
     for (i = 0; i <= segments; ++i) {
-        const zr_float a = a_min + ((zr_float)i / (zr_float)segments) * (a_max - a_min);
-        const zr_float x = center.x + list->cos(a) * radius;
-        const zr_float y = center.y + list->sin(a) * radius;
+        const float a = a_min + ((float)i / (float)segments) * (a_max - a_min);
+        const float x = center.x + list->cos(a) * radius;
+        const float y = center.y + list->sin(a) * radius;
         zr_draw_list_path_line_to(list, zr_vec2(x, y));
     }
 }
 
 void
 zr_draw_list_path_rect_to(struct zr_draw_list *list, struct zr_vec2 a,
-    struct zr_vec2 b, zr_float rounding)
+    struct zr_vec2 b, float rounding)
 {
-    zr_float r;
+    float r;
     ZR_ASSERT(list);
     if (!list) return;
     r = rounding;
@@ -3109,10 +3109,10 @@ zr_draw_list_path_rect_to(struct zr_draw_list *list, struct zr_vec2 a,
 
 void
 zr_draw_list_path_curve_to(struct zr_draw_list *list, struct zr_vec2 p2,
-    struct zr_vec2 p3, struct zr_vec2 p4, zr_uint num_segments)
+    struct zr_vec2 p3, struct zr_vec2 p4, unsigned int num_segments)
 {
-    zr_uint i_step;
-    zr_float t_step;
+    unsigned int i_step;
+    float t_step;
     struct zr_vec2 p1;
 
     ZR_ASSERT(list);
@@ -3121,16 +3121,16 @@ zr_draw_list_path_curve_to(struct zr_draw_list *list, struct zr_vec2 p2,
     num_segments = MAX(num_segments, 1);
 
     p1 = zr_draw_list_path_last(list);
-    t_step = 1.0f/(zr_float)num_segments;
+    t_step = 1.0f/(float)num_segments;
     for (i_step = 1; i_step <= num_segments; ++i_step) {
-        zr_float t = t_step * (zr_float)i_step;
-        zr_float u = 1.0f - t;
-        zr_float w1 = u*u*u;
-        zr_float w2 = 3*u*u*t;
-        zr_float w3 = 3*u*t*t;
-        zr_float w4 = t * t *t;
-        zr_float x = w1 * p1.x + w2 * p2.x + w3 * p3.x + w4 * p4.x;
-        zr_float y = w1 * p1.y + w2 * p2.y + w3 * p3.y + w4 * p4.y;
+        float t = t_step * (float)i_step;
+        float u = 1.0f - t;
+        float w1 = u*u*u;
+        float w2 = 3*u*u*t;
+        float w3 = 3*u*t*t;
+        float w4 = t * t *t;
+        float x = w1 * p1.x + w2 * p2.x + w3 * p3.x + w4 * p4.x;
+        float y = w1 * p1.y + w2 * p2.y + w3 * p3.y + w4 * p4.y;
         zr_draw_list_path_line_to(list, zr_vec2(x,y));
     }
 }
@@ -3148,7 +3148,7 @@ zr_draw_list_path_fill(struct zr_draw_list *list, struct zr_color color)
 
 void
 zr_draw_list_path_stroke(struct zr_draw_list *list, struct zr_color color,
-    zr_bool closed, zr_float thickness)
+    int closed, float thickness)
 {
     struct zr_vec2 *points;
     ZR_ASSERT(list);
@@ -3221,7 +3221,7 @@ struct zr_font_bake_data {
     stbtt_fontinfo info;
     stbrp_rect *rects;
     stbtt_pack_range *ranges;
-    zr_uint range_count;
+    zr_rune range_count;
 };
 
 struct zr_font_baker {
@@ -3234,31 +3234,31 @@ struct zr_font_baker {
 
 static const zr_size zr_rect_align = ZR_ALIGNOF(stbrp_rect);
 static const zr_size zr_range_align = ZR_ALIGNOF(stbtt_pack_range);
-static const zr_size zr_char_align = ZR_ALIGNOF(stbtt_packedchar);
+static const zr_size char_align = ZR_ALIGNOF(stbtt_packedchar);
 static const zr_size zr_build_align = ZR_ALIGNOF(struct zr_font_bake_data);
 static const zr_size zr_baker_align = ZR_ALIGNOF(struct zr_font_baker);
 
-static zr_size
-zr_range_count(const zr_uint *range)
+static int
+zr_range_count(const zr_rune *range)
 {
-    const zr_uint *iter = range;
+    const zr_rune *iter = range;
     ZR_ASSERT(range);
     if (!range) return 0;
     while (*(iter++) != 0);
-    return (iter == range) ? 0 : (zr_size)((iter - range)/2);
+    return (iter == range) ? 0 : (int)((iter - range)/2);
 }
 
-static zr_size
-zr_range_glyph_count(const zr_uint *range, zr_size count)
+static int
+zr_range_glyph_count(const zr_rune *range, int count)
 {
-    zr_size i = 0;
-    zr_size total_glyphes = 0;
+    int i = 0;
+    int total_glyphes = 0;
     for (i = 0; i < count; ++i) {
-        zr_size diff;
-        zr_uint f = range[(i*2)+0];
-        zr_uint t = range[(i*2)+1];
+        int diff;
+        zr_rune f = range[(i*2)+0];
+        zr_rune t = range[(i*2)+1];
         ZR_ASSERT(t >= f);
-        diff = (zr_size)((t - f) + 1);
+        diff = (int)((t - f) + 1);
         total_glyphes += diff;
     }
     return total_glyphes;
@@ -3310,11 +3310,10 @@ zr_font_korean_glyph_ranges(void)
     return ranges;
 }
 
-void zr_font_bake_memory(zr_size *temp, zr_size *glyph_count,
-    struct zr_font_config *config, zr_size count)
+void zr_font_bake_memory(zr_size *temp, int *glyph_count,
+    struct zr_font_config *config, int count)
 {
-    zr_size i;
-    zr_size range_count = 0;
+    int i, range_count = 0;
 
     ZR_ASSERT(config);
     ZR_ASSERT(glyph_count);
@@ -3332,39 +3331,39 @@ void zr_font_bake_memory(zr_size *temp, zr_size *glyph_count,
         *glyph_count += zr_range_glyph_count(config[i].range, range_count);
     }
 
-    *temp = *glyph_count * sizeof(stbrp_rect);
-    *temp += range_count * sizeof(stbtt_pack_range);
-    *temp += *glyph_count * sizeof(stbtt_packedchar);
-    *temp += count * sizeof(struct zr_font_bake_data);
+    *temp = (zr_size)*glyph_count * sizeof(stbrp_rect);
+    *temp += (zr_size)range_count * sizeof(stbtt_pack_range);
+    *temp += (zr_size)*glyph_count * sizeof(stbtt_packedchar);
+    *temp += (zr_size)count * sizeof(struct zr_font_bake_data);
     *temp += sizeof(struct zr_font_baker);
-    *temp += zr_rect_align + zr_range_align + zr_char_align;
+    *temp += zr_rect_align + zr_range_align + char_align;
     *temp += zr_build_align + zr_baker_align;
 }
 
 static struct zr_font_baker*
-zr_font_baker(void *memory, zr_size glyph_count, zr_size count)
+zr_font_baker(void *memory, int glyph_count, int count)
 {
     struct zr_font_baker *baker;
     if (!memory) return 0;
     /* setup baker inside a memory block  */
     baker = (struct zr_font_baker*)ZR_ALIGN_PTR(memory, zr_baker_align);
     baker->build = (struct zr_font_bake_data*)ZR_ALIGN_PTR((baker + 1), zr_build_align);
-    baker->packed_chars = (stbtt_packedchar*)ZR_ALIGN_PTR((baker->build + count), zr_char_align);
+    baker->packed_chars = (stbtt_packedchar*)ZR_ALIGN_PTR((baker->build + count), char_align);
     baker->rects = (stbrp_rect*)ZR_ALIGN_PTR((baker->packed_chars + glyph_count), zr_rect_align);
     baker->ranges = (stbtt_pack_range*)ZR_ALIGN_PTR((baker->rects + glyph_count), zr_range_align);
     return baker;
 }
 
-zr_bool
-zr_font_bake_pack(zr_size *image_memory, zr_size *width, zr_size *height,
+int
+zr_font_bake_pack(zr_size *image_memory, int *width, int *height,
     struct zr_recti *custom, void *temp, zr_size temp_size,
-    const struct zr_font_config *config, zr_size count)
+    const struct zr_font_config *config, int count)
 {
     static const zr_size max_height = 1024 * 32;
     struct zr_font_baker* baker;
-    zr_size total_glyph_count = 0;
-    zr_size total_range_count = 0;
-    zr_size i = 0;
+    int total_glyph_count = 0;
+    int total_range_count = 0;
+    int i = 0;
 
     ZR_ASSERT(image_memory);
     ZR_ASSERT(width);
@@ -3393,10 +3392,10 @@ zr_font_bake_pack(zr_size *image_memory, zr_size *width, zr_size *height,
 
     *height = 0;
     *width = (total_glyph_count > 1000) ? 1024 : 512;
-    stbtt_PackBegin(&baker->spc, 0, (zr_int)*width, (int)max_height, 0, 1, 0);
+    stbtt_PackBegin(&baker->spc, 0, (int)*width, (int)max_height, 0, 1, 0);
     {
-        zr_size input_i = 0;
-        zr_size range_n = 0, rect_n = 0, char_n = 0;
+        int input_i = 0;
+        int range_n = 0, rect_n = 0, char_n = 0;
 
         /* pack custom user data first so it will be in the upper left corner  */
         if (custom) {
@@ -3407,40 +3406,40 @@ zr_font_bake_pack(zr_size *image_memory, zr_size *width, zr_size *height,
 
             stbtt_PackSetOversampling(&baker->spc, 1, 1);
             stbrp_pack_rects((stbrp_context*)baker->spc.pack_info, &custom_space, 1);
-            *height = MAX(*height, (size_t)(custom_space.y + custom_space.h));
+            *height = MAX(*height, (int)(custom_space.y + custom_space.h));
 
-            custom->x = custom_space.x;
-            custom->y = custom_space.y;
-            custom->w = custom_space.w;
-            custom->h = custom_space.h;
+            custom->x = (short)custom_space.x;
+            custom->y = (short)custom_space.y;
+            custom->w = (short)custom_space.w;
+            custom->h = (short)custom_space.h;
         }
 
         /* first font pass: pack all glyphes */
         for (input_i = 0; input_i < count; input_i++) {
-            zr_size n = 0;
-            const zr_uint *in_range;
+            int n = 0;
+            const zr_rune *in_range;
             const struct zr_font_config *cfg = &config[input_i];
             struct zr_font_bake_data *tmp = &baker->build[input_i];
-            zr_size glyph_count, range_count;
+            int glyph_count, range_count;
 
             /* count glyphes + ranges in current font */
             glyph_count = 0; range_count = 0;
             for (in_range = cfg->range; in_range[0] && in_range[1]; in_range += 2) {
-                glyph_count += (zr_size)(in_range[1] - in_range[0]) + 1;
+                glyph_count += (int)(in_range[1] - in_range[0]) + 1;
                 range_count++;
             }
 
             /* setup ranges  */
             tmp->ranges = baker->ranges + range_n;
-            tmp->range_count = (zr_uint)range_count;
+            tmp->range_count = (zr_rune)range_count;
             range_n += range_count;
             for (i = 0; i < range_count; ++i) {
                 in_range = &cfg->range[i * 2];
                 tmp->ranges[i].font_size = cfg->size;
-                tmp->ranges[i].first_unicode_codepoint_in_range = (zr_int)in_range[0];
-                tmp->ranges[i].num_chars = (zr_int)(in_range[1]- in_range[0]) + 1;
+                tmp->ranges[i].first_unicode_codepoint_in_range = (int)in_range[0];
+                tmp->ranges[i].num_chars = (int)(in_range[1]- in_range[0]) + 1;
                 tmp->ranges[i].chardata_for_range = baker->packed_chars + char_n;
-                char_n += (zr_size)tmp->ranges[i].num_chars;
+                char_n += tmp->ranges[i].num_chars;
             }
 
             /* pack */
@@ -3448,32 +3447,32 @@ zr_font_bake_pack(zr_size *image_memory, zr_size *width, zr_size *height,
             rect_n += glyph_count;
             stbtt_PackSetOversampling(&baker->spc, cfg->oversample_h, cfg->oversample_v);
             n = (zr_size)stbtt_PackFontRangesGatherRects(&baker->spc, &tmp->info,
-                tmp->ranges, (zr_int)tmp->range_count, tmp->rects);
-            stbrp_pack_rects((stbrp_context*)baker->spc.pack_info, tmp->rects, (zr_int)n);
+                tmp->ranges, (int)tmp->range_count, tmp->rects);
+            stbrp_pack_rects((stbrp_context*)baker->spc.pack_info, tmp->rects, (int)n);
 
             /* texture height */
             for (i = 0; i < n; ++i) {
                 if (tmp->rects[i].was_packed)
-                    *height = MAX(*height, (zr_size)(tmp->rects[i].y + tmp->rects[i].h));
+                    *height = MAX(*height, tmp->rects[i].y + tmp->rects[i].h);
             }
         }
         ZR_ASSERT(rect_n == total_glyph_count);
         ZR_ASSERT(char_n == total_glyph_count);
         ZR_ASSERT(range_n == total_range_count);
     }
-    *height = zr_round_up_pow2((zr_uint)*height);
-    *image_memory = (*width) * (*height);
+    *height = (int32_t)zr_round_up_pow2((uint32_t)*height);
+    *image_memory = (zr_size)((*width) * (*height));
     return zr_true;
 }
 
 void
-zr_font_bake(void *image_memory, zr_size width, zr_size height,
+zr_font_bake(void *image_memory, int width, int height,
     void *temp, zr_size temp_size, struct zr_font_glyph *glyphes,
-    zr_size glyphes_count, const struct zr_font_config *config, zr_size font_count)
+    int glyphes_count, const struct zr_font_config *config, int font_count)
 {
-    zr_size input_i = 0;
+    int input_i = 0;
     struct zr_font_baker* baker;
-    zr_uint glyph_n = 0;
+    zr_rune glyph_n = 0;
 
     ZR_ASSERT(image_memory);
     ZR_ASSERT(width);
@@ -3489,37 +3488,37 @@ zr_font_bake(void *image_memory, zr_size width, zr_size height,
 
     /* second font pass: render glyphes */
     baker = (struct zr_font_baker*)ZR_ALIGN_PTR(temp, zr_baker_align);
-    zr_zero(image_memory, width * height);
+    zr_zero(image_memory, (zr_size)(width * height));
     baker->spc.pixels = (unsigned char*)image_memory;
-    baker->spc.height = (zr_int)height;
+    baker->spc.height = (int)height;
     for (input_i = 0; input_i < font_count; ++input_i) {
         const struct zr_font_config *cfg = &config[input_i];
         struct zr_font_bake_data *tmp = &baker->build[input_i];
         stbtt_PackSetOversampling(&baker->spc, cfg->oversample_h, cfg->oversample_v);
         stbtt_PackFontRangesRenderIntoRects(&baker->spc, &tmp->info, tmp->ranges,
-            (zr_int)tmp->range_count, tmp->rects);
+            (int)tmp->range_count, tmp->rects);
     }
     stbtt_PackEnd(&baker->spc);
 
     /* third pass: setup font and glyphes */
     for (input_i = 0; input_i < font_count; ++input_i)  {
         zr_size i = 0;
-        zr_int char_idx = 0;
-        zr_uint glyph_count = 0;
+        int char_idx = 0;
+        zr_rune glyph_count = 0;
         const struct zr_font_config *cfg = &config[input_i];
         struct zr_font_bake_data *tmp = &baker->build[input_i];
         struct zr_baked_font *dst_font = cfg->font;
 
-        zr_float font_scale = stbtt_ScaleForPixelHeight(&tmp->info, cfg->size);
-        zr_int unscaled_ascent, unscaled_descent, unscaled_line_gap;
+        float font_scale = stbtt_ScaleForPixelHeight(&tmp->info, cfg->size);
+        int unscaled_ascent, unscaled_descent, unscaled_line_gap;
         stbtt_GetFontVMetrics(&tmp->info, &unscaled_ascent, &unscaled_descent,
                                 &unscaled_line_gap);
 
         /* fill baked font */
         dst_font->ranges = cfg->range;
         dst_font->height = cfg->size;
-        dst_font->ascent = ((zr_float)unscaled_ascent * font_scale);
-        dst_font->descent = ((zr_float)unscaled_descent * font_scale);
+        dst_font->ascent = ((float)unscaled_ascent * font_scale);
+        dst_font->descent = ((float)unscaled_descent * font_scale);
         dst_font->glyph_offset = glyph_n;
 
         /* fill own baked font glyph array */
@@ -3527,7 +3526,7 @@ zr_font_bake(void *image_memory, zr_size width, zr_size height,
             stbtt_pack_range *range = &tmp->ranges[i];
             for (char_idx = 0; char_idx < range->num_chars; char_idx++) {
                 zr_rune codepoint = 0;
-                zr_float dummy_x = 0, dummy_y = 0;
+                float dummy_x = 0, dummy_y = 0;
                 stbtt_aligned_quad q;
                 struct zr_font_glyph *glyph;
 
@@ -3536,20 +3535,20 @@ zr_font_bake(void *image_memory, zr_size width, zr_size height,
                 glyph_count++;
                 if (!pc->x0 && !pc->x1 && !pc->y0 && !pc->y1) continue;
                 codepoint = (zr_rune)(range->first_unicode_codepoint_in_range + char_idx);
-                stbtt_GetPackedQuad(range->chardata_for_range, (zr_int)width,
-                    (zr_int)height, char_idx, &dummy_x, &dummy_y, &q, 0);
+                stbtt_GetPackedQuad(range->chardata_for_range, (int)width,
+                    (int)height, char_idx, &dummy_x, &dummy_y, &q, 0);
 
                 /* fill own glyph type with data */
-                glyph = &glyphes[dst_font->glyph_offset + (zr_uint)char_idx];
+                glyph = &glyphes[dst_font->glyph_offset + (unsigned int)char_idx];
                 glyph->codepoint = codepoint;
                 glyph->x0 = q.x0; glyph->y0 = q.y0; glyph->x1 = q.x1; glyph->y1 = q.y1;
                 glyph->y0 += (dst_font->ascent + 0.5f);
                 glyph->y1 += (dst_font->ascent + 0.5f);
                 if (cfg->coord_type == ZR_COORD_PIXEL) {
-                    glyph->u0 = q.s0 * (zr_float)width;
-                    glyph->v0 = q.t0 * (zr_float)height;
-                    glyph->u1 = q.s1 * (zr_float)width;
-                    glyph->v1 = q.t1 * (zr_float)height;
+                    glyph->u0 = q.s0 * (float)width;
+                    glyph->v0 = q.t0 * (float)height;
+                    glyph->u1 = q.s1 * (float)width;
+                    glyph->v1 = q.t1 * (float)height;
                 } else {
                     glyph->u0 = q.s0;
                     glyph->v0 = q.t0;
@@ -3558,7 +3557,7 @@ zr_font_bake(void *image_memory, zr_size width, zr_size height,
                 }
                 glyph->xadvance = (pc->xadvance + cfg->spacing.x);
                 if (cfg->pixel_snap)
-                    glyph->xadvance = (zr_float)(zr_int)(glyph->xadvance + 0.5f);
+                    glyph->xadvance = (float)(int)(glyph->xadvance + 0.5f);
             }
         }
         dst_font->glyph_count = glyph_count;
@@ -3567,12 +3566,12 @@ zr_font_bake(void *image_memory, zr_size width, zr_size height,
 }
 
 void
-zr_font_bake_custom_data(void *img_memory, zr_size img_width, zr_size img_height,
-    struct zr_recti img_dst, const char *texture_data_mask, zr_size tex_width,
-    zr_size tex_height, zr_char white, zr_char black)
+zr_font_bake_custom_data(void *img_memory, int img_width, int img_height,
+    struct zr_recti img_dst, const char *texture_data_mask, int tex_width,
+    int tex_height, char white, char black)
 {
     zr_byte *pixels;
-    zr_size y = 0, x = 0, n = 0;
+    int y = 0, x = 0, n = 0;
     ZR_ASSERT(img_memory);
     ZR_ASSERT(img_width);
     ZR_ASSERT(img_height);
@@ -3584,8 +3583,8 @@ zr_font_bake_custom_data(void *img_memory, zr_size img_width, zr_size img_height
     pixels = (zr_byte*)img_memory;
     for (y = 0, n = 0; y < tex_height; ++y) {
         for (x = 0; x < tex_width; ++x, ++n) {
-            const zr_size off0 = (img_dst.x + x) + (img_dst.y + y) * img_width;
-            const zr_size off1 = off0 + 1 + tex_width;
+            const int off0 = ((img_dst.x + x) + (img_dst.y + y) * img_width);
+            const int off1 = off0 + 1 + tex_width;
             pixels[off0] = (texture_data_mask[n] == white) ? 0xFF : 0x00;
             pixels[off1] = (texture_data_mask[n] == black) ? 0xFF : 0x00;
         }
@@ -3593,22 +3592,22 @@ zr_font_bake_custom_data(void *img_memory, zr_size img_width, zr_size img_height
 }
 
 void
-zr_font_bake_convert(void *out_memory, zr_ushort img_width, zr_ushort img_height,
+zr_font_bake_convert(void *out_memory, int img_width, int img_height,
     const void *in_memory)
 {
-    zr_int n = 0;
+    int n = 0;
     const zr_byte *src;
-    zr_uint *dst;
+    uint32_t *dst;
     ZR_ASSERT(out_memory);
     ZR_ASSERT(in_memory);
     ZR_ASSERT(img_width);
     ZR_ASSERT(img_height);
     if (!out_memory || !in_memory || !img_height || !img_width) return;
 
-    dst = (zr_uint*)out_memory;
+    dst = (uint32_t*)out_memory;
     src = (const zr_byte*)in_memory;
-    for (n = (zr_int)(img_width * img_height); n > 0; n--)
-        *dst++ = ((zr_uint)(*src++) << 24) | 0x00FFFFFF;
+    for (n = (int)(img_width * img_height); n > 0; n--)
+        *dst++ = ((uint32_t)(*src++) << 24) | 0x00FFFFFF;
 }
 /*
  * -------------------------------------------------------------
@@ -3618,8 +3617,8 @@ zr_font_bake_convert(void *out_memory, zr_ushort img_width, zr_ushort img_height
  * --------------------------------------------------------------
  */
 void
-zr_font_init(struct zr_font *font, zr_float pixel_height,
-    zr_uint fallback_codepoint, struct zr_font_glyph *glyphes,
+zr_font_init(struct zr_font *font, float pixel_height,
+    zr_rune fallback_codepoint, struct zr_font_glyph *glyphes,
     const struct zr_baked_font *baked_font, zr_handle atlas)
 {
     ZR_ASSERT(font);
@@ -3632,7 +3631,7 @@ zr_font_init(struct zr_font *font, zr_float pixel_height,
     font->ascent = baked_font->ascent;
     font->descent = baked_font->descent;
     font->size = baked_font->height;
-    font->scale = (zr_float)pixel_height / (zr_float)font->size;
+    font->scale = (float)pixel_height / (float)font->size;
     font->glyphes = &glyphes[baked_font->glyph_offset];
     font->glyph_count = baked_font->glyph_count;
     font->ranges = baked_font->ranges;
@@ -3644,28 +3643,28 @@ zr_font_init(struct zr_font *font, zr_float pixel_height,
 const struct zr_font_glyph*
 zr_font_find_glyph(struct zr_font *font, zr_rune unicode)
 {
-    zr_size i = 0;
-    zr_size count;
-    zr_size total_glyphes = 0;
+    int i = 0;
+    int count;
+    int total_glyphes = 0;
     const struct zr_font_glyph *glyph = 0;
     ZR_ASSERT(font);
 
     glyph = font->fallback;
     count = zr_range_count(font->ranges);
     for (i = 0; i < count; ++i) {
-        zr_size diff;
-        zr_uint f = font->ranges[(i*2)+0];
-        zr_uint t = font->ranges[(i*2)+1];
-        diff = (zr_size)((t - f) + 1);
+        int diff;
+        zr_rune f = font->ranges[(i*2)+0];
+        zr_rune t = font->ranges[(i*2)+1];
+        diff = (int)((t - f) + 1);
         if (unicode >= f && unicode <= t)
-            return &font->glyphes[(total_glyphes + (zr_size)(unicode - f))];
+            return &font->glyphes[((zr_rune)total_glyphes + (unicode - f))];
         total_glyphes += diff;
     }
     return glyph;
 }
 
 static zr_size
-zr_font_text_width(zr_handle handle, const zr_char *text, zr_size len)
+zr_font_text_width(zr_handle handle, const char *text, zr_size len)
 {
     zr_rune unicode;
     const struct zr_font_glyph *glyph;
@@ -3692,7 +3691,7 @@ zr_font_text_width(zr_handle handle, const zr_char *text, zr_size len)
 #if ZR_COMPILE_WITH_VERTEX_BUFFER
 static void
 zr_font_query_font_glyph(zr_handle handle, struct zr_user_font_glyph *glyph,
-        zr_uint codepoint, zr_uint next_codepoint)
+        zr_rune codepoint, zr_rune next_codepoint)
 {
     const struct zr_font_glyph *g;
     struct zr_font *font;
@@ -3814,13 +3813,13 @@ zr_edit_buffer_at_char(zr_edit_buffer *buffer, zr_size pos)
 }
 
 static char*
-zr_edit_buffer_at(zr_edit_buffer *buffer, zr_int pos, zr_uint *unicode,
+zr_edit_buffer_at(zr_edit_buffer *buffer, int pos, zr_rune *unicode,
     zr_size *len)
 {
-    zr_int i = 0;
+    int i = 0;
     zr_size src_len = 0;
     zr_size glyph_len = 0;
-    zr_char *text;
+    char *text;
     zr_size text_len;
 
     ZR_ASSERT(buffer);
@@ -3833,7 +3832,7 @@ zr_edit_buffer_at(zr_edit_buffer *buffer, zr_int pos, zr_uint *unicode,
         return 0;
     }
 
-    text = (zr_char*)buffer->memory.ptr;
+    text = (char*)buffer->memory.ptr;
     text_len = buffer->allocated;
     glyph_len = zr_utf_decode(text, unicode, text_len);
     while (glyph_len) {
@@ -3852,7 +3851,7 @@ zr_edit_buffer_at(zr_edit_buffer *buffer, zr_int pos, zr_uint *unicode,
 
 void
 zr_edit_box_init(struct zr_edit_box *eb, struct zr_allocator *a,
-    zr_size initial_size, zr_float grow_fac, const struct zr_clipboard *clip,
+    zr_size initial_size, float grow_fac, const struct zr_clipboard *clip,
     zr_filter f)
 {
     ZR_ASSERT(eb);
@@ -3914,7 +3913,7 @@ zr_edit_box_info(struct zr_memory_status *status, struct zr_edit_box *box)
 void
 zr_edit_box_add(struct zr_edit_box *eb, const char *str, zr_size len)
 {
-    zr_int res = 0;
+    int res = 0;
     ZR_ASSERT(eb);
     if (!eb || !str || !len) return;
     if (eb->cursor == eb->glyphes) {
@@ -3922,9 +3921,9 @@ zr_edit_box_add(struct zr_edit_box *eb, const char *str, zr_size len)
     } else {
         zr_size l = 0;
         zr_rune unicode;
-        zr_int cursor = (eb->cursor) ? (zr_int)(eb->cursor) : 0;
-        zr_char *sym = zr_edit_buffer_at(&eb->buffer, cursor, &unicode, &l);
-        zr_size offset = (zr_size)(sym - (zr_char*)eb->buffer.memory.ptr);
+        int cursor = (eb->cursor) ? (int)(eb->cursor) : 0;
+        char *sym = zr_edit_buffer_at(&eb->buffer, cursor, &unicode, &l);
+        zr_size offset = (zr_size)(sym - (char*)eb->buffer.memory.ptr);
         res = zr_edit_buffer_insert(&eb->buffer, offset, str, len);
     }
     if (res) {
@@ -3966,13 +3965,13 @@ void
 zr_edit_box_remove(struct zr_edit_box *box)
 {
     zr_size len;
-    zr_char *buf;
+    char *buf;
     zr_size min, maxi, diff;
     ZR_ASSERT(box);
     if (!box) return;
     if (!box->glyphes) return;
 
-    buf = (zr_char*)box->buffer.memory.ptr;
+    buf = (char*)box->buffer.memory.ptr;
     min = MIN(box->sel.end, box->sel.begin);
     maxi = MAX(box->sel.end, box->sel.begin);
     diff = maxi - min;
@@ -3980,11 +3979,11 @@ zr_edit_box_remove(struct zr_edit_box *box)
     if (diff && box->cursor != box->glyphes) {
         zr_size off;
         zr_rune unicode;
-        zr_char *begin, *end;
+        char *begin, *end;
 
         /* calculate text selection byte position and size */
-        begin = zr_edit_buffer_at(&box->buffer, (zr_int)min, &unicode, &len);
-        end = zr_edit_buffer_at(&box->buffer, (zr_int)maxi, &unicode, &len);
+        begin = zr_edit_buffer_at(&box->buffer, (int)min, &unicode, &len);
+        end = zr_edit_buffer_at(&box->buffer, (int)maxi, &unicode, &len);
         len = (zr_size)(end - begin);
         off = (zr_size)(begin - buf);
 
@@ -3993,16 +3992,16 @@ zr_edit_box_remove(struct zr_edit_box *box)
         box->glyphes = zr_utf_len(buf, box->buffer.allocated);
     } else {
         zr_rune unicode;
-        zr_int cursor;
-        zr_char *glyph;
+        int cursor;
+        char *glyph;
         zr_size offset;
 
         /* remove last glyph */
-        cursor = (zr_int)box->cursor - 1;
+        cursor = (int)box->cursor - 1;
         glyph = zr_edit_buffer_at(&box->buffer, cursor, &unicode, &len);
         if (!glyph || !len) return;
 
-        offset = (zr_size)(glyph - (zr_char*)box->buffer.memory.ptr);
+        offset = (zr_size)(glyph - (char*)box->buffer.memory.ptr);
         zr_edit_buffer_del(&box->buffer, offset, len);
         box->glyphes--;
     }
@@ -4010,26 +4009,26 @@ zr_edit_box_remove(struct zr_edit_box *box)
     else if (box->cursor > 0) box->cursor--;
 }
 
-zr_char*
+char*
 zr_edit_box_get(struct zr_edit_box *eb)
 {
     ZR_ASSERT(eb);
     if (!eb) return 0;
-    return (zr_char*)eb->buffer.memory.ptr;
+    return (char*)eb->buffer.memory.ptr;
 }
 
-const zr_char*
+const char*
 zr_edit_box_get_const(struct zr_edit_box *eb)
 {
     ZR_ASSERT(eb);
     if (!eb) return 0;
-    return (zr_char*)eb->buffer.memory.ptr;
+    return (char*)eb->buffer.memory.ptr;
 }
 
-zr_char
+char
 zr_edit_box_at_char(struct zr_edit_box *eb, zr_size pos)
 {
-    zr_char *c;
+    char *c;
     ZR_ASSERT(eb);
     if (!eb || pos >= eb->buffer.allocated) return 0;
     c = zr_edit_buffer_at_char(&eb->buffer, pos);
@@ -4039,7 +4038,7 @@ zr_edit_box_at_char(struct zr_edit_box *eb, zr_size pos)
 void
 zr_edit_box_at(struct zr_edit_box *eb, zr_size pos, zr_glyph g, zr_size *len)
 {
-    zr_char *sym;
+    char *sym;
     zr_rune unicode;
 
     ZR_ASSERT(eb);
@@ -4051,7 +4050,7 @@ zr_edit_box_at(struct zr_edit_box *eb, zr_size pos, zr_glyph g, zr_size *len)
         *len = 0;
         return;
     }
-    sym = zr_edit_buffer_at(&eb->buffer, (zr_int)pos, &unicode, len);
+    sym = zr_edit_buffer_at(&eb->buffer, (int)pos, &unicode, len);
     if (!sym) return;
     zr_memcopy(g, sym, *len);
 }
@@ -4073,7 +4072,7 @@ zr_edit_box_at_cursor(struct zr_edit_box *eb, zr_glyph g, zr_size *len)
         return;
     }
 
-    text = (zr_char*)eb->buffer.memory.ptr;
+    text = (char*)eb->buffer.memory.ptr;
     text_len = eb->buffer.allocated;
     glyph_len = zr_utf_len(text, text_len);
     zr_edit_box_at(eb, glyph_len, g, len);
@@ -4109,14 +4108,19 @@ zr_edit_box_len(struct zr_edit_box *eb)
     ZR_ASSERT(eb);
     return eb->glyphes;
 }
-/*
- * ==============================================================
+
+/* ===============================================================
  *
- *                          Widgets
+ *                          TEXT
  *
- * ===============================================================
- */
-void
+ * ===============================================================*/
+struct zr_text {
+    struct zr_vec2 padding;
+    struct zr_color background;
+    struct zr_color text;
+};
+
+static void
 zr_widget_text(struct zr_command_buffer *o, struct zr_rect b,
     const char *string, zr_size len, const struct zr_text *t,
     enum zr_text_align a, const struct zr_user_font *f)
@@ -4133,33 +4137,33 @@ zr_widget_text(struct zr_command_buffer *o, struct zr_rect b,
     label.y = b.y + t->padding.y;
     label.h = b.h - 2 * t->padding.y;
 
-    text_width = f->width(f->userdata, (const zr_char*)string, len);
+    text_width = f->width(f->userdata, (const char*)string, len);
     text_width += (zr_size)(2 * t->padding.x);
 
     if (a == ZR_TEXT_LEFT) {
         label.x = b.x + t->padding.x;
         label.w = MAX(0, b.w - 2 * t->padding.x);
     } else if (a == ZR_TEXT_CENTERED) {
-        label.w = MAX(1, 2 * t->padding.x + (zr_float)text_width);
+        label.w = MAX(1, 2 * t->padding.x + (float)text_width);
         label.x = (b.x + t->padding.x + ((b.w - 2 * t->padding.x)/2));
         if (label.x >= label.w/2) label.x -= (label.w/2);
         label.x = MAX(b.x + t->padding.x, label.x);
         label.w = MIN(b.x + b.w, label.x + label.w);
         if (label.w >= label.x) label.w -= label.x;
     } else if (a == ZR_TEXT_RIGHT) {
-        label.x = MAX(b.x + t->padding.x, (b.x + b.w) - (2 * t->padding.x + (zr_float)text_width));
-        label.w = (zr_float)text_width + 2 * t->padding.x;
+        label.x = MAX(b.x + t->padding.x, (b.x + b.w) - (2 * t->padding.x + (float)text_width));
+        label.w = (float)text_width + 2 * t->padding.x;
     } else return;
-    zr_command_buffer_push_text(o, label, (const zr_char*)string,
+    zr_command_buffer_push_text(o, label, (const char*)string,
         len, f, t->background, t->text);
 }
 
-void
+static void
 zr_widget_text_wrap(struct zr_command_buffer *o, struct zr_rect b,
     const char *string, zr_size len, const struct zr_text *t,
     const struct zr_user_font *f)
 {
-    zr_float width;
+    float width;
     zr_size glyphes = 0;
     zr_size fitting = 0;
     zr_size done = 0;
@@ -4193,75 +4197,45 @@ zr_widget_text_wrap(struct zr_command_buffer *o, struct zr_rect b,
     }
 }
 
-zr_bool
-zr_widget_button(struct zr_command_buffer *o, struct zr_rect r,
-    const struct zr_button *b, const struct zr_input *i,
-    enum zr_button_behavior behavior, struct zr_rect *content)
-{
-    zr_bool ret = zr_false;
-    struct zr_color background;
-    struct zr_vec2 pad;
-    ZR_ASSERT(b);
-    if (!o || !b)
-        return zr_false;
+/* ===============================================================
+ *
+ *                          BUTTON
+ *
+ * ===============================================================*/
+struct zr_button {
+    float border_width;
+    float rounding;
+    struct zr_vec2 padding;
+    struct zr_color border;
+    struct zr_color normal;
+    struct zr_color hover;
+    struct zr_color active;
+};
 
-    /* calculate button content space */
-    pad.x = b->padding.x + b->border_width;
-    pad.y = b->padding.y + b->border_width;
-    *content = zr_pad_rect(r, pad);
+struct zr_button_text {
+    struct zr_button base;
+    enum zr_text_align alignment;
+    struct zr_color normal;
+    struct zr_color hover;
+    struct zr_color active;
+};
 
-    /* general button user input behavior */
-    background = b->normal;
-    if (zr_input_is_mouse_hovering_rect(i, r)) {
-        background = b->hover;
-        if (zr_input_is_mouse_down(i, ZR_BUTTON_LEFT))
-            background = b->active;
-        if (zr_input_has_mouse_click_in_rect(i, ZR_BUTTON_LEFT, r)) {
-            ret = (behavior != ZR_BUTTON_DEFAULT) ?
-                zr_input_is_mouse_down(i, ZR_BUTTON_LEFT):
-                zr_input_is_mouse_pressed(i, ZR_BUTTON_LEFT);
-        }
-    }
-    zr_command_buffer_push_rect(o, r, b->rounding, b->border);
-    zr_command_buffer_push_rect(o, zr_shrink_rect(r, b->border_width),
-                                    b->rounding, background);
-    return ret;
-}
+struct zr_button_symbol {
+    struct zr_button base;
+    struct zr_color normal;
+    struct zr_color hover;
+    struct zr_color active;
+};
 
-zr_bool
-zr_widget_button_text(struct zr_command_buffer *o, struct zr_rect r,
-     const char *string, enum zr_button_behavior behavior,
-    const struct zr_button_text *b, const struct zr_input *i,
-    const struct zr_user_font *f)
-{
-    struct zr_text t;
-    struct zr_rect content;
-    zr_bool ret = zr_false;
-
-    ZR_ASSERT(b);
-    ZR_ASSERT(o);
-    ZR_ASSERT(string);
-    ZR_ASSERT(f);
-    if (!o || !b || !f)
-        return zr_false;
-
-    t.text = b->normal;
-    t.background = b->base.normal;
-    t.padding = zr_vec2(0,0);
-    ret = zr_widget_button(o, r, &b->base, i, behavior, &content);
-    if (zr_input_is_mouse_hovering_rect(i, r)) {
-        zr_bool is_down = zr_input_is_mouse_down(i, ZR_BUTTON_LEFT);
-        t.background =  (is_down) ? b->base.active: b->base.hover;
-        t.text = (is_down) ? b->active : b->hover;
-    }
-    zr_widget_text(o, content, string, zr_strsiz(string), &t, b->alignment, f);
-    return ret;
-}
+struct zr_button_icon {
+    struct zr_button base;
+    struct zr_vec2 padding;
+};
 
 static void
 zr_draw_symbol(struct zr_command_buffer *out, enum zr_symbol symbol,
     struct zr_rect content, struct zr_color background, struct zr_color foreground,
-    zr_float border_width, const struct zr_user_font *font)
+    float border_width, const struct zr_user_font *font)
 {
     switch (symbol) {
     case ZR_SYMBOL_X:
@@ -4269,7 +4243,7 @@ zr_draw_symbol(struct zr_command_buffer *out, enum zr_symbol symbol,
     case ZR_SYMBOL_PLUS:
     case ZR_SYMBOL_MINUS: {
         /* single character text symbol */
-        const zr_char *X = (symbol == ZR_SYMBOL_X) ? "x":
+        const char *X = (symbol == ZR_SYMBOL_X) ? "x":
             (symbol == ZR_SYMBOL_UNDERSCORE) ? "_":
             (symbol == ZR_SYMBOL_PLUS) ? "+": "-";
         struct zr_text text;
@@ -4313,13 +4287,78 @@ zr_draw_symbol(struct zr_command_buffer *out, enum zr_symbol symbol,
     }
 }
 
-zr_bool
+static int
+zr_widget_button(struct zr_command_buffer *o, struct zr_rect r,
+    const struct zr_button *b, const struct zr_input *i,
+    enum zr_button_behavior behavior, struct zr_rect *content)
+{
+    int ret = zr_false;
+    struct zr_color background;
+    struct zr_vec2 pad;
+    ZR_ASSERT(b);
+    if (!o || !b)
+        return zr_false;
+
+    /* calculate button content space */
+    pad.x = b->padding.x + b->border_width;
+    pad.y = b->padding.y + b->border_width;
+    *content = zr_pad_rect(r, pad);
+
+    /* general button user input behavior */
+    background = b->normal;
+    if (zr_input_is_mouse_hovering_rect(i, r)) {
+        background = b->hover;
+        if (zr_input_is_mouse_down(i, ZR_BUTTON_LEFT))
+            background = b->active;
+        if (zr_input_has_mouse_click_in_rect(i, ZR_BUTTON_LEFT, r)) {
+            ret = (behavior != ZR_BUTTON_DEFAULT) ?
+                zr_input_is_mouse_down(i, ZR_BUTTON_LEFT):
+                zr_input_is_mouse_pressed(i, ZR_BUTTON_LEFT);
+        }
+    }
+    zr_command_buffer_push_rect(o, r, b->rounding, b->border);
+    zr_command_buffer_push_rect(o, zr_shrink_rect(r, b->border_width),
+                                    b->rounding, background);
+    return ret;
+}
+
+static int
+zr_widget_button_text(struct zr_command_buffer *o, struct zr_rect r,
+     const char *string, enum zr_button_behavior behavior,
+    const struct zr_button_text *b, const struct zr_input *i,
+    const struct zr_user_font *f)
+{
+    struct zr_text t;
+    struct zr_rect content;
+    int ret = zr_false;
+
+    ZR_ASSERT(b);
+    ZR_ASSERT(o);
+    ZR_ASSERT(string);
+    ZR_ASSERT(f);
+    if (!o || !b || !f)
+        return zr_false;
+
+    t.text = b->normal;
+    t.background = b->base.normal;
+    t.padding = zr_vec2(0,0);
+    ret = zr_widget_button(o, r, &b->base, i, behavior, &content);
+    if (zr_input_is_mouse_hovering_rect(i, r)) {
+        int is_down = zr_input_is_mouse_down(i, ZR_BUTTON_LEFT);
+        t.background =  (is_down) ? b->base.active: b->base.hover;
+        t.text = (is_down) ? b->active : b->hover;
+    }
+    zr_widget_text(o, content, string, zr_strsiz(string), &t, b->alignment, f);
+    return ret;
+}
+
+static int
 zr_widget_button_symbol(struct zr_command_buffer *out, struct zr_rect r,
     enum zr_symbol symbol, enum zr_button_behavior bh,
     const struct zr_button_symbol *b, const struct zr_input *in,
     const struct zr_user_font *font)
 {
-    zr_bool ret;
+    int ret;
     struct zr_color background;
     struct zr_color color;
     struct zr_rect content;
@@ -4331,7 +4370,7 @@ zr_widget_button_symbol(struct zr_command_buffer *out, struct zr_rect r,
 
     ret = zr_widget_button(out, r, &b->base, in, bh, &content);
     if (zr_input_is_mouse_hovering_rect(in, r)) {
-        zr_bool is_down = zr_input_is_mouse_down(in, ZR_BUTTON_LEFT);
+        int is_down = zr_input_is_mouse_down(in, ZR_BUTTON_LEFT);
         background = (is_down) ? b->base.active : b->base.hover;
         color = (is_down) ? b->active : b->hover;
     } else {
@@ -4342,12 +4381,12 @@ zr_widget_button_symbol(struct zr_command_buffer *out, struct zr_rect r,
     return ret;
 }
 
-zr_bool
+static int
 zr_widget_button_image(struct zr_command_buffer *out, struct zr_rect r,
     struct zr_image img, enum zr_button_behavior b,
     const struct zr_button_icon *button, const struct zr_input *in)
 {
-    zr_bool pressed;
+    int pressed;
     struct zr_rect bounds;
     ZR_ASSERT(button);
     ZR_ASSERT(out);
@@ -4359,13 +4398,13 @@ zr_widget_button_image(struct zr_command_buffer *out, struct zr_rect r,
     return pressed;
 }
 
-zr_bool
+static int
 zr_widget_button_text_symbol(struct zr_command_buffer *out, struct zr_rect r,
     enum zr_symbol symbol, const char *text, enum zr_text_align align,
     enum zr_button_behavior behavior, const struct zr_button_text *button,
     const struct zr_user_font *f, const struct zr_input *i)
 {
-    zr_bool ret;
+    int ret;
     struct zr_rect tri = {0,0,0,0};
     struct zr_color background, color;
     ZR_ASSERT(button);
@@ -4375,7 +4414,7 @@ zr_widget_button_text_symbol(struct zr_command_buffer *out, struct zr_rect r,
 
     ret = zr_widget_button_text(out, r, text, behavior, button, i, f);
     if (zr_input_is_mouse_hovering_rect(i, r)) {
-        zr_bool is_down = zr_input_is_mouse_down(i, ZR_BUTTON_LEFT);
+        int is_down = zr_input_is_mouse_down(i, ZR_BUTTON_LEFT);
         background = (is_down) ? button->base.active : button->base.hover;
         color = (is_down) ? button->active : button->hover;
     } else {
@@ -4394,13 +4433,13 @@ zr_widget_button_text_symbol(struct zr_command_buffer *out, struct zr_rect r,
     return ret;
 }
 
-zr_bool
+static int
 zr_widget_button_text_image(struct zr_command_buffer *out, struct zr_rect r,
     struct zr_image img, const char* text, enum zr_button_behavior behavior,
     const struct zr_button_text *button, const struct zr_user_font *f,
     const struct zr_input *i)
 {
-    zr_bool pressed;
+    int pressed;
     struct zr_rect icon;
     ZR_ASSERT(button);
     ZR_ASSERT(out);
@@ -4418,16 +4457,36 @@ zr_widget_button_text_image(struct zr_command_buffer *out, struct zr_rect r,
     return pressed;
 }
 
-void
+/* ===============================================================
+ *
+ *                          TOGGLE
+ *
+ * ===============================================================*/
+enum zr_toggle_type {
+    ZR_TOGGLE_CHECK,
+    ZR_TOGGLE_OPTION
+};
+
+struct zr_toggle {
+    float rounding;
+    struct zr_vec2 padding;
+    struct zr_color font;
+    struct zr_color background;
+    struct zr_color normal;
+    struct zr_color hover;
+    struct zr_color cursor;
+};
+
+static void
 zr_widget_toggle(struct zr_command_buffer *out, struct zr_rect r,
-    zr_bool *active, const char *string, enum zr_toggle_type type,
+    int *active, const char *string, enum zr_toggle_type type,
     const struct zr_toggle *toggle, const struct zr_input *in,
     const struct zr_user_font *font)
 {
-    zr_bool toggle_active;
+    int toggle_active;
     struct zr_rect select;
     struct zr_rect cursor;
-    zr_float cursor_pad;
+    float cursor_pad;
     struct zr_color col;
 
     ZR_ASSERT(toggle);
@@ -4449,8 +4508,8 @@ zr_widget_toggle(struct zr_command_buffer *out, struct zr_rect r,
 
     /* calculate the bounds of the cursor inside the toggle */
     cursor_pad = (type == ZR_TOGGLE_OPTION) ?
-        (zr_float)(zr_int)(select.w / 4):
-        (zr_float)(zr_int)(select.h / 6);
+        (float)(int)(select.w / 4):
+        (float)(int)(select.h / 6);
 
     select.h = MAX(select.w, cursor_pad * 2);
     cursor.h = select.h - cursor_pad * 2;
@@ -4499,20 +4558,56 @@ zr_widget_toggle(struct zr_command_buffer *out, struct zr_rect r,
     *active = toggle_active;
 }
 
-zr_float
+/* ===============================================================
+ *
+ *                          SLIDER
+ *
+ * ===============================================================*/
+struct zr_progress {
+    float rounding;
+    struct zr_vec2 padding;
+    struct zr_color border;
+    struct zr_color background;
+    struct zr_color normal;
+    struct zr_color hover;
+    struct zr_color active;
+};
+
+struct zr_slider {
+    struct zr_vec2 padding;
+    struct zr_color border;
+    struct zr_color bg;
+    struct zr_color normal;
+    struct zr_color hover;
+    struct zr_color active;
+    float rounding;
+};
+
+struct zr_drag {
+    struct zr_vec2 padding;
+    struct zr_color border;
+    struct zr_color normal;
+    struct zr_color hover;
+    struct zr_color active;
+    struct zr_color text;
+    struct zr_color text_active;
+    float border_width;
+};
+
+static float
 zr_widget_slider(struct zr_command_buffer *out, struct zr_rect slider,
-    zr_float min, zr_float val, zr_float max, zr_float step,
+    float min, float val, float max, float step,
     const struct zr_slider *s, const struct zr_input *in)
 {
-    zr_float slider_range;
-    zr_float slider_min, slider_max;
-    zr_float slider_value, slider_steps;
-    zr_float cursor_offset;
+    float slider_range;
+    float slider_min, slider_max;
+    float slider_value, slider_steps;
+    float cursor_offset;
     struct zr_rect cursor;
     struct zr_rect bar;
     struct zr_color col;
-    zr_bool inslider;
-    zr_bool incursor;
+    int inslider;
+    int incursor;
 
     ZR_ASSERT(s);
     ZR_ASSERT(out);
@@ -4557,7 +4652,7 @@ zr_widget_slider(struct zr_command_buffer *out, struct zr_rect slider,
         /* only update value if the next slider step is reached */
         col = s->active;
         if (ZR_ABS(d) >= pxstep) {
-            const zr_float steps = (zr_float)((zr_int)(ZR_ABS(d) / pxstep));
+            const float steps = (float)((int)(ZR_ABS(d) / pxstep));
             slider_value += (d > 0) ? (step * steps) : -(step * steps);
             slider_value = CLAMP(slider_min, slider_value, slider_max);
             cursor.x = slider.x + (cursor.w * ((slider_value - slider_min) / step));
@@ -4584,25 +4679,25 @@ zr_widget_slider(struct zr_command_buffer *out, struct zr_rect slider,
     return slider_value;
 }
 
-zr_float
+static float
 zr_widget_drag(struct zr_command_buffer *out, struct zr_rect drag,
-    zr_float min, zr_float val, zr_float max,
-    zr_float inc_per_pixel, const struct zr_drag *d,
+    float min, float val, float max,
+    float inc_per_pixel, const struct zr_drag *d,
     const struct zr_input *in, const struct zr_user_font *f)
 {
     struct zr_text t;
     struct zr_color col;
     struct zr_color background;
 
-    zr_float drag_range;
-    zr_float drag_min, drag_max;
-    zr_float drag_value, drag_steps;
-    zr_float cursor_offset;
+    float drag_range;
+    float drag_min, drag_max;
+    float drag_value, drag_steps;
+    float cursor_offset;
     char string[ZR_MAX_NUMBER_BUFFER];
     zr_size len;
 
-    zr_bool left_mouse_down;
-    zr_bool left_mouse_click_in_cursor;
+    int left_mouse_down;
+    int left_mouse_click_in_cursor;
 
     ZR_ASSERT(d);
     ZR_ASSERT(out);
@@ -4632,7 +4727,7 @@ zr_widget_drag(struct zr_command_buffer *out, struct zr_rect drag,
         background = d->hover;
 
     if (left_mouse_down && left_mouse_click_in_cursor) {
-        zr_float delta, pixels;
+        float delta, pixels;
         background = d->active;
         t.text = d->text_active;
 
@@ -4656,12 +4751,12 @@ zr_widget_drag(struct zr_command_buffer *out, struct zr_rect drag,
     return drag_value;
 }
 
-zr_size
+static zr_size
 zr_widget_progress(struct zr_command_buffer *out, struct zr_rect r,
-    zr_size value, zr_size max, zr_bool modifyable,
+    zr_size value, zr_size max, int modifyable,
     const struct zr_progress *prog, const struct zr_input *in)
 {
-    zr_float prog_scale;
+    float prog_scale;
     zr_size prog_value;
     struct zr_color col;
 
@@ -4678,8 +4773,8 @@ zr_widget_progress(struct zr_command_buffer *out, struct zr_rect r,
     /* update progress by user input if modifyable */
     if (in && modifyable && zr_input_is_mouse_hovering_rect(in, r)) {
         if (zr_input_is_mouse_down(in, ZR_BUTTON_LEFT)) {
-            zr_float ratio = (zr_float)(in->mouse.pos.x - r.x) / (zr_float)r.w;
-            prog_value = (zr_size)((zr_float)max * ratio);
+            float ratio = (float)(in->mouse.pos.x - r.x) / (float)r.w;
+            prog_value = (zr_size)((float)max * ratio);
             col = prog->active;
         } else col = prog->hover;
     } else col = prog->normal;
@@ -4687,7 +4782,7 @@ zr_widget_progress(struct zr_command_buffer *out, struct zr_rect r,
     /* make sure calculated values are correct */
     if (!max) return prog_value;
     prog_value = MIN(prog_value, max);
-    prog_scale = (zr_float)prog_value / (zr_float)max;
+    prog_scale = (float)prog_value / (float)max;
 
     /* draw progressbar with background and cursor */
     zr_command_buffer_push_rect(out, r, prog->rounding, prog->background);
@@ -4696,12 +4791,28 @@ zr_widget_progress(struct zr_command_buffer *out, struct zr_rect r,
     return prog_value;
 }
 
-void
+/* ===============================================================
+ *
+ *                          EDIT
+ *
+ * ===============================================================*/
+struct zr_edit {
+    float border_size;
+    float rounding;
+    struct zr_vec2 padding;
+    int show_cursor;
+    struct zr_color background;
+    struct zr_color border;
+    struct zr_color cursor;
+    struct zr_color text;
+};
+
+static void
 zr_widget_editbox(struct zr_command_buffer *out, struct zr_rect r,
     struct zr_edit_box *box, const struct zr_edit *field,
     const struct zr_input *in, const struct zr_user_font *font)
 {
-    zr_char *buffer;
+    char *buffer;
     zr_size len;
     ZR_ASSERT(out);
     ZR_ASSERT(font);
@@ -4752,7 +4863,7 @@ zr_widget_editbox(struct zr_command_buffer *out, struct zr_rect r,
 
         /* cursor key movement */
         if (zr_input_is_key_pressed(in, ZR_KEY_LEFT)) {
-            box->cursor = (zr_size)MAX(0, (zr_int)(box->cursor - 1));
+            box->cursor = (zr_size)MAX(0, (int)(box->cursor - 1));
             box->sel.begin = box->cursor;
             box->sel.end = box->cursor;
         }
@@ -4771,9 +4882,9 @@ zr_widget_editbox(struct zr_command_buffer *out, struct zr_rect r,
                 /* copy or cut text selection */
                 zr_size l;
                 zr_rune unicode;
-                zr_char *begin, *end;
-                begin = zr_edit_buffer_at(&box->buffer, (zr_int)min, &unicode, &l);
-                end = zr_edit_buffer_at(&box->buffer, (zr_int)maxi, &unicode, &l);
+                char *begin, *end;
+                begin = zr_edit_buffer_at(&box->buffer, (int)min, &unicode, &l);
+                end = zr_edit_buffer_at(&box->buffer, (int)maxi, &unicode, &l);
                 box->clip.copy(box->clip.userdata, begin, (zr_size)(end - begin));
                 if (zr_input_is_key_pressed(in, ZR_KEY_CUT))
                     zr_edit_box_remove(box);
@@ -4789,12 +4900,12 @@ zr_widget_editbox(struct zr_command_buffer *out, struct zr_rect r,
     {
         /* text management */
         struct zr_rect label;
-        zr_size  cursor_w = font->width(font->userdata,(const zr_char*)"X", 1);
+        zr_size  cursor_w = font->width(font->userdata,(const char*)"X", 1);
         zr_size text_len = len;
         zr_size glyph_off = 0;
         zr_size glyph_cnt = 0;
         zr_size offset = 0;
-        zr_float text_width = 0;
+        float text_width = 0;
 
         /* calculate text frame */
         label.w = MAX(r.w,  - 2 * field->padding.x - 2 * field->border_size);
@@ -4803,8 +4914,8 @@ zr_widget_editbox(struct zr_command_buffer *out, struct zr_rect r,
             zr_size frames = 0;
             zr_size glyphes = 0;
             zr_size frame_len = 0;
-            zr_float space = MAX(label.w, (zr_float)cursor_w);
-            space -= (zr_float)cursor_w;
+            float space = MAX(label.w, (float)cursor_w);
+            space -= (float)cursor_w;
             while (text_len) {
                 frames++;
                 offset += frame_len;
@@ -4823,8 +4934,8 @@ zr_widget_editbox(struct zr_command_buffer *out, struct zr_rect r,
 
         /* set cursor by mouse click and handle text selection */
         if (in && field->show_cursor && in->mouse.buttons[ZR_BUTTON_LEFT].down && box->active) {
-            const zr_char *visible = &buffer[offset];
-            zr_float xoff = in->mouse.pos.x - (r.x + field->padding.x + field->border_size);
+            const char *visible = &buffer[offset];
+            float xoff = in->mouse.pos.x - (r.x + field->padding.x + field->border_size);
             if (ZR_INBOX(in->mouse.pos.x, in->mouse.pos.y, r.x, r.y, r.w, r.h))
             {
                 /* text selection in the current text frame */
@@ -4874,30 +4985,30 @@ zr_widget_editbox(struct zr_command_buffer *out, struct zr_rect r,
         if (box->active && field->show_cursor) {
             if (box->cursor == box->glyphes) {
                 /* draw the cursor at the end of the string */
-                zr_command_buffer_push_rect(out, zr_rect(label.x+(zr_float)text_width,
-                        label.y, (zr_float)cursor_w, label.h), 0, field->cursor);
+                zr_command_buffer_push_rect(out, zr_rect(label.x+(float)text_width,
+                        label.y, (float)cursor_w, label.h), 0, field->cursor);
             } else {
                 /* draw text selection */
                 zr_size l = 0, s;
                 zr_rune unicode;
-                zr_char *begin, *end;
+                char *begin, *end;
                 zr_size off_begin, off_end;
                 zr_size min = MIN(box->sel.end, box->sel.begin);
                 zr_size maxi = MAX(box->sel.end, box->sel.begin);
                 struct zr_rect clip = out->clip;
 
                 /* calculate selection text range */
-                begin = zr_edit_buffer_at(&box->buffer, (zr_int)min, &unicode, &l);
-                end = zr_edit_buffer_at(&box->buffer, (zr_int)maxi, &unicode, &l);
-                off_begin = (zr_size)(begin - (zr_char*)box->buffer.memory.ptr);
-                off_end = (zr_size)(end - (zr_char*)box->buffer.memory.ptr);
+                begin = zr_edit_buffer_at(&box->buffer, (int)min, &unicode, &l);
+                end = zr_edit_buffer_at(&box->buffer, (int)maxi, &unicode, &l);
+                off_begin = (zr_size)(begin - (char*)box->buffer.memory.ptr);
+                off_end = (zr_size)(end - (char*)box->buffer.memory.ptr);
 
                 /* calculate selected text width */
                 zr_command_buffer_push_scissor(out, label);
                 s = font->width(font->userdata, buffer + offset, off_begin - offset);
-                label.x += (zr_float)s;
+                label.x += (float)s;
                 s = font->width(font->userdata, begin, MAX(l, off_end - off_begin));
-                label.w = (zr_float)s;
+                label.w = (float)s;
 
                 /* draw selected text */
                 zr_command_buffer_push_text(out , label, begin,
@@ -4908,66 +5019,9 @@ zr_widget_editbox(struct zr_command_buffer *out, struct zr_rect r,
     }
 }
 
-zr_bool
-zr_filter_default(zr_rune unicode)
-{
-    (void)unicode;
-    return zr_true;
-}
-
-zr_bool
-zr_filter_ascii(zr_rune unicode)
-{
-    if (unicode > 128)
-        return zr_false;
-    return zr_true;
-}
-
-zr_bool
-zr_filter_float(zr_rune unicode)
-{
-    if ((unicode < '0' || unicode > '9') && unicode != '.' && unicode != '-')
-        return zr_false;
-    return zr_true;
-}
-
-zr_bool
-zr_filter_decimal(zr_rune unicode)
-{
-    if (unicode < '0' || unicode > '9')
-        return zr_false;
-    return zr_true;
-}
-
-zr_bool
-zr_filter_hex(zr_rune unicode)
-{
-    if ((unicode < '0' || unicode > '9') &&
-        (unicode < 'a' || unicode > 'f') &&
-        (unicode < 'A' || unicode > 'F'))
-        return zr_false;
-    return zr_true;
-}
-
-zr_bool
-zr_filter_oct(zr_rune unicode)
-{
-    if (unicode < '0' || unicode > '7')
-        return zr_false;
-    return zr_true;
-}
-
-zr_bool
-zr_filter_binary(zr_rune unicode)
-{
-    if (unicode < '0' || unicode > '1')
-        return zr_false;
-    return zr_true;
-}
-
-zr_size
+static zr_size
 zr_widget_edit_filtered(struct zr_command_buffer *out, struct zr_rect r,
-    zr_char *buffer, zr_size len, zr_size max, zr_state *active,
+    char *buffer, zr_size len, zr_size max, int *active,
     zr_size *cursor,  const struct zr_edit *field, zr_filter filter,
     const struct zr_input *in, const struct zr_user_font *font)
 {
@@ -4992,9 +5046,61 @@ zr_widget_edit_filtered(struct zr_command_buffer *out, struct zr_rect r,
     return zr_edit_box_len_char(&box);
 }
 
-zr_size
+int zr_filter_default(zr_rune unicode)
+{(void)unicode;return zr_true;}
+
+int
+zr_filter_ascii(zr_rune unicode)
+{
+    if (unicode > 128) return zr_false;
+    else return zr_true;
+}
+
+int
+zr_filter_float(zr_rune unicode)
+{
+    if ((unicode < '0' || unicode > '9') && unicode != '.' && unicode != '-')
+        return zr_false;
+    else return zr_true;
+}
+
+int
+zr_filter_decimal(zr_rune unicode)
+{
+    if (unicode < '0' || unicode > '9')
+        return zr_false;
+    else return zr_true;
+}
+
+int
+zr_filter_hex(zr_rune unicode)
+{
+    if ((unicode < '0' || unicode > '9') &&
+        (unicode < 'a' || unicode > 'f') &&
+        (unicode < 'A' || unicode > 'F'))
+        return zr_false;
+    else return zr_true;
+}
+
+int
+zr_filter_oct(zr_rune unicode)
+{
+    if (unicode < '0' || unicode > '7')
+        return zr_false;
+    else return zr_true;
+}
+
+int
+zr_filter_binary(zr_rune unicode)
+{
+    if (unicode < '0' || unicode > '1')
+        return zr_false;
+    else return zr_true;
+}
+
+static zr_size
 zr_widget_edit(struct zr_command_buffer *out, struct zr_rect r,
-    zr_char *buffer, zr_size len, zr_size max, zr_state *active,
+    char *buffer, zr_size len, zr_size max, int *active,
     zr_size *cursor, const struct zr_edit *field, enum zr_input_filter f,
     const struct zr_input *in, const struct zr_user_font *font)
 {
@@ -5011,15 +5117,30 @@ zr_widget_edit(struct zr_command_buffer *out, struct zr_rect r,
             cursor, field, filter[f], in, font);
 }
 
-zr_float
+/* ===============================================================
+ *
+ *                      SCROLLBAR
+ *
+ * ===============================================================*/
+struct zr_scrollbar {
+    float rounding;
+    struct zr_color border;
+    struct zr_color background;
+    struct zr_color normal;
+    struct zr_color hover;
+    struct zr_color active;
+    int has_scrolling;
+};
+
+static float
 zr_widget_scrollbarv(struct zr_command_buffer *out, struct zr_rect scroll,
-    zr_float offset, zr_float target, zr_float step, const struct zr_scrollbar *s,
+    float offset, float target, float step, const struct zr_scrollbar *s,
     struct zr_input *i)
 {
     struct zr_rect cursor;
-    zr_float scroll_step;
-    zr_float scroll_offset;
-    zr_float scroll_off, scroll_ratio;
+    float scroll_step;
+    float scroll_offset;
+    float scroll_off, scroll_ratio;
     struct zr_color col;
 
     ZR_ASSERT(out);
@@ -5047,7 +5168,7 @@ zr_widget_scrollbarv(struct zr_command_buffer *out, struct zr_rect scroll,
 
     col = s->normal;
     if (i) {
-        zr_bool left_mouse_down, left_mouse_click_in_cursor;
+        int left_mouse_down, left_mouse_click_in_cursor;
         left_mouse_down = i->mouse.buttons[ZR_BUTTON_LEFT].down;
         left_mouse_click_in_cursor = zr_input_has_mouse_click_down_in_rect(i,
             ZR_BUTTON_LEFT, cursor, zr_true);
@@ -5056,8 +5177,8 @@ zr_widget_scrollbarv(struct zr_command_buffer *out, struct zr_rect scroll,
 
         if (left_mouse_down && left_mouse_click_in_cursor) {
             /* update cursor by mouse dragging */
-            const zr_float pixel = i->mouse.delta.y;
-            const zr_float delta =  (pixel / scroll.h) * target;
+            const float pixel = i->mouse.delta.y;
+            const float delta =  (pixel / scroll.h) * target;
             scroll_offset = CLAMP(0, scroll_offset + delta, target - scroll.h);
             col = s->active;
             /* This is probably one of my most distgusting hacks I have ever done.
@@ -5082,15 +5203,15 @@ zr_widget_scrollbarv(struct zr_command_buffer *out, struct zr_rect scroll,
     return scroll_offset;
 }
 
-zr_float
+static float
 zr_widget_scrollbarh(struct zr_command_buffer *out, struct zr_rect scroll,
-    zr_float offset, zr_float target, zr_float step, const struct zr_scrollbar *s,
+    float offset, float target, float step, const struct zr_scrollbar *s,
     struct zr_input *i)
 {
     struct zr_rect cursor;
-    zr_float scroll_step;
-    zr_float scroll_offset;
-    zr_float scroll_off, scroll_ratio;
+    float scroll_step;
+    float scroll_offset;
+    float scroll_off, scroll_ratio;
     struct zr_color col;
 
     ZR_ASSERT(out);
@@ -5116,7 +5237,7 @@ zr_widget_scrollbarh(struct zr_command_buffer *out, struct zr_rect scroll,
 
     col = s->normal;
     if (i) {
-        zr_bool left_mouse_down, left_mouse_click_in_cursor;
+        int left_mouse_down, left_mouse_click_in_cursor;
         left_mouse_down = i->mouse.buttons[ZR_BUTTON_LEFT].down;
         left_mouse_click_in_cursor = zr_input_has_mouse_click_down_in_rect(i,
             ZR_BUTTON_LEFT, cursor, zr_true);
@@ -5125,8 +5246,8 @@ zr_widget_scrollbarh(struct zr_command_buffer *out, struct zr_rect scroll,
 
         if (left_mouse_down && left_mouse_click_in_cursor) {
             /* update cursor by mouse dragging */
-            const zr_float pixel = i->mouse.delta.x;
-            const zr_float delta =  (pixel / scroll.w) * target;
+            const float pixel = i->mouse.delta.x;
+            const float delta =  (pixel / scroll.w) * target;
             scroll_offset = CLAMP(0, scroll_offset + delta, target - scroll.w);
             col = s->active;
             i->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.x += i->mouse.delta.x;
@@ -5147,20 +5268,34 @@ zr_widget_scrollbarh(struct zr_command_buffer *out, struct zr_rect scroll,
 
 }
 
-static zr_int
+/* ===============================================================
+ *
+ *                          SPINNER
+ *
+ * ===============================================================*/
+struct zr_spinner {
+    struct zr_button_symbol button;
+    struct zr_color color;
+    struct zr_color border;
+    struct zr_color text;
+    struct zr_vec2 padding;
+    int show_cursor;
+};
+
+static int
 zr_widget_spinner_base(struct zr_command_buffer *out, struct zr_rect r,
-    const struct zr_spinner *s, zr_char *buffer, zr_size *len,
-    enum zr_input_filter filter, zr_state *active,
+    const struct zr_spinner *s, char *buffer, zr_size *len,
+    enum zr_input_filter filter, int *active,
     const struct zr_input *in, const struct zr_user_font *font)
 {
-    zr_int ret = 0;
+    int ret = 0;
     struct zr_rect bounds;
     struct zr_edit field;
-    zr_bool button_up_clicked, button_down_clicked;
-    zr_state is_active = (active) ? *active : zr_false;
+    int button_up_clicked, button_down_clicked;
+    int is_active = (active) ? *active : zr_false;
 
     r.h = MAX(r.h, font->height + 2 * s->padding.x);
-    r.w = MAX(r.w, r.h - (s->padding.x + (zr_float)s->button.base.border_width * 2));
+    r.w = MAX(r.w, r.h - (s->padding.x + (float)s->button.base.border_width * 2));
 
     /* up/down button setup and execution */
     bounds.y = r.y;
@@ -5199,16 +5334,16 @@ zr_widget_spinner_base(struct zr_command_buffer *out, struct zr_rect r,
     return ret;
 }
 
-zr_int
+static int
 zr_widget_spinner_int(struct zr_command_buffer *out, struct zr_rect r,
-    const struct zr_spinner *s, zr_int min, zr_int value,
-    zr_int max, zr_int step, zr_state *active, const struct zr_input *in,
+    const struct zr_spinner *s, int min, int value,
+    int max, int step, int *active, const struct zr_input *in,
     const struct zr_user_font *font)
 {
-    zr_int res;
-    zr_char string[ZR_MAX_NUMBER_BUFFER];
+    int res;
+    char string[ZR_MAX_NUMBER_BUFFER];
     zr_size len, old_len;
-    zr_state is_active;
+    int is_active;
 
     ZR_ASSERT(out);
     ZR_ASSERT(s);
@@ -5233,16 +5368,16 @@ zr_widget_spinner_int(struct zr_command_buffer *out, struct zr_rect r,
     return value;
 }
 
-zr_float
+static float
 zr_widget_spinner_float(struct zr_command_buffer *out, struct zr_rect r,
-    const struct zr_spinner *s, zr_float min, zr_float value, zr_float max,
-    zr_float step, zr_state *active, const struct zr_input *in,
+    const struct zr_spinner *s, float min, float value, float max,
+    float step, int *active, const struct zr_input *in,
     const struct zr_user_font *font)
 {
-    zr_int res;
+    int res;
     char string[ZR_MAX_NUMBER_BUFFER];
     zr_size len, old_len;
-    zr_state is_active;
+    int is_active;
 
     ZR_ASSERT(out);
     ZR_ASSERT(s);
@@ -5258,13 +5393,13 @@ zr_widget_spinner_float(struct zr_command_buffer *out, struct zr_rect r,
 
     res = zr_widget_spinner_base(out, r, s, string, &len, ZR_INPUT_FLOAT, &is_active, in, font);
     if (res) {
-        zr_int val;
-        zr_float f = (zr_float)zr_pow(10.0, ZR_MAX_FLOAT_PRECISION);
+        int val;
+        float f = (float)zr_pow(10.0, ZR_MAX_FLOAT_PRECISION);
         value += (res > 0) ? step : -step;
         value = CLAMP(min, value, max);
-        val = (zr_int)(value * f);
-        val = ((val + (zr_int)((step*f)*0.5f)) / (zr_int)(step*f)) * (zr_int)(step*f);
-        value = (zr_float)val / f;
+        val = (int)(value * f);
+        val = ((val + (int)((step*f)*0.5f)) / (int)(step*f)) * (int)(step*f);
+        value = (float)val / f;
     }
 
     if (old_len != len) {
@@ -5274,6 +5409,7 @@ zr_widget_spinner_float(struct zr_command_buffer *out, struct zr_rect r,
     if (active) *active = is_active;
     return value;
 }
+
 /* ==============================================================
  *
  *                          STYLE
@@ -5526,13 +5662,12 @@ zr_style_reset(struct zr_style *style)
     zr_style_reset_colors(style);
     zr_style_reset_properties(style);
 }
-/*
- * ==============================================================
+
+/* ==============================================================
  *
- *                          Window
+ *                          WINDOW
  *
- * ===============================================================
- */
+ * ===============================================================*/
 void
 zr_window_init(struct zr_window *window, struct zr_rect bounds,
     zr_flags flags, struct zr_command_queue *queue,
@@ -5587,27 +5722,25 @@ void
 zr_window_remove_flag(struct zr_window *panel, zr_flags f)
 {panel->flags &= (zr_flags)~f;}
 
-zr_bool
+int
 zr_window_has_flag(struct zr_window *panel, zr_flags f)
 {return (panel->flags & f) ? zr_true: zr_false;}
 
-zr_bool
+int
 zr_window_is_minimized(struct zr_window *panel)
 {return panel->flags & ZR_WINDOW_MINIMIZED;}
 
-/*
- * -------------------------------------------------------------
+/*-------------------------------------------------------------
  *
- *                          Context
+ *                          CONTEXT
  *
- * --------------------------------------------------------------
- */
+ * --------------------------------------------------------------*/
 zr_flags
 zr_begin(struct zr_context *context, struct zr_window *window)
 {
     zr_flags ret = 0;
     const struct zr_style *c;
-    zr_float scrollbar_size;
+    float scrollbar_size;
     struct zr_vec2 item_padding;
     struct zr_vec2 item_spacing;
     struct zr_vec2 window_padding;
@@ -5645,7 +5778,7 @@ zr_begin(struct zr_context *context, struct zr_window *window)
         context->queue = window->queue;
         zr_command_queue_start(window->queue, &window->buffer);
         {
-            zr_bool inpanel;
+            int inpanel;
             struct zr_command_buffer_list *s = &window->queue->list;
             inpanel = zr_input_mouse_clicked(in, ZR_BUTTON_LEFT, window->bounds);
             if (inpanel && (&window->buffer != s->end)) {
@@ -5677,7 +5810,7 @@ zr_begin(struct zr_context *context, struct zr_window *window)
     context->header.h = c->font.height + 4 * item_padding.y;
     context->header.h += window_padding.y;
     if ((window->flags & ZR_WINDOW_MOVEABLE) && !(window->flags & ZR_WINDOW_ROM)) {
-        zr_bool incursor;
+        int incursor;
         struct zr_rect move;
         move.x = window->bounds.x;
         move.y = window->bounds.y;
@@ -5719,13 +5852,13 @@ zr_begin(struct zr_context *context, struct zr_window *window)
 
     /* panel activation by clicks inside of the panel */
     if (!(window->flags & ZR_WINDOW_TAB) && !(window->flags & ZR_WINDOW_ROM)) {
-        zr_float clicked_x = in->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.x;
-        zr_float clicked_y = in->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.y;
+        float clicked_x = in->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.x;
+        float clicked_y = in->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.y;
         if (zr_input_is_mouse_down(in, ZR_BUTTON_LEFT)) {
             if (ZR_INBOX(clicked_x, clicked_y, window->bounds.x, window->bounds.y,
                 window->bounds.w, window->bounds.h))
                 window->flags |= ZR_WINDOW_ACTIVE;
-            else window->flags &= (zr_flag)~ZR_WINDOW_ACTIVE;
+            else window->flags &= (zr_flags)~ZR_WINDOW_ACTIVE;
         }
     }
 
@@ -5792,7 +5925,7 @@ zr_end(struct zr_context *layout, struct zr_window *window)
     struct zr_input *in;
     const struct zr_style *config;
     struct zr_command_buffer *out;
-    zr_float scrollbar_size;
+    float scrollbar_size;
     struct zr_vec2 item_padding;
     struct zr_vec2 item_spacing;
     struct zr_vec2 window_padding;
@@ -5850,7 +5983,7 @@ zr_end(struct zr_context *layout, struct zr_window *window)
     /* scrollbars */
     if (layout->valid && !(layout->flags & ZR_WINDOW_NO_SCROLLBAR)) {
         struct zr_rect bounds;
-        zr_float scroll_target, scroll_offset, scroll_step;
+        float scroll_target, scroll_offset, scroll_step;
 
         struct zr_scrollbar scroll;
         scroll.rounding = config->rounding[ZR_ROUNDING_SCROLLBAR];
@@ -5906,11 +6039,11 @@ zr_end(struct zr_context *layout, struct zr_window *window)
     /* draw the panel scaler into the right corner of the panel footer and
      * update panel size if user drags the scaler */
     if ((layout->flags & ZR_WINDOW_SCALEABLE) && layout->valid && in) {
-        zr_float scaler_y;
+        float scaler_y;
         struct zr_color col = config->colors[ZR_COLOR_SCALER];
-        zr_float scaler_w = MAX(0, scaler_size.x - item_padding.x);
-        zr_float scaler_h = MAX(0, scaler_size.y - item_padding.y);
-        zr_float scaler_x = (layout->bounds.x + layout->bounds.w) - (item_padding.x + scaler_w);
+        float scaler_w = MAX(0, scaler_size.x - item_padding.x);
+        float scaler_h = MAX(0, scaler_size.y - item_padding.y);
+        float scaler_x = (layout->bounds.x + layout->bounds.w) - (item_padding.x + scaler_w);
 
         if (layout->flags & ZR_WINDOW_DYNAMIC)
             scaler_y = footer.y + layout->footer_h - scaler_size.y;
@@ -5919,9 +6052,9 @@ zr_end(struct zr_context *layout, struct zr_window *window)
             scaler_x + scaler_w, scaler_y + scaler_h, scaler_x, scaler_y + scaler_h, col);
 
         if (!(window->flags & ZR_WINDOW_ROM)) {
-            zr_bool incursor;
-            zr_float prev_x = in->mouse.prev.x;
-            zr_float prev_y = in->mouse.prev.y;
+            int incursor;
+            float prev_x = in->mouse.prev.x;
+            float prev_y = in->mouse.prev.y;
             struct zr_vec2 window_size = zr_style_property(config, ZR_PROPERTY_SIZE);
             incursor = ZR_INBOX(prev_x,prev_y,scaler_x,scaler_y,scaler_w,scaler_h);
 
@@ -5937,9 +6070,9 @@ zr_end(struct zr_context *layout, struct zr_window *window)
 
     if (layout->flags & ZR_WINDOW_BORDER) {
         /* draw the border around the complete panel */
-        const zr_float width = (layout->flags & ZR_WINDOW_NO_SCROLLBAR) ?
+        const float width = (layout->flags & ZR_WINDOW_NO_SCROLLBAR) ?
             layout->width: layout->width + scrollbar_size;
-        const zr_float padding_y = (!layout->valid) ?
+        const float padding_y = (!layout->valid) ?
             window->bounds.y + layout->header.h:
             (layout->flags & ZR_WINDOW_DYNAMIC)?
             layout->footer_h + footer.y:
@@ -5989,13 +6122,12 @@ zr_queue(struct zr_context *layout)
 struct zr_rect
 zr_space(struct zr_context *layout)
 {ZR_ASSERT(layout); return layout->clip;}
-/*
- * -------------------------------------------------------------
+
+/* -------------------------------------------------------------
  *
- *                          Header
+ *                          HEADER
  *
- * --------------------------------------------------------------
- */
+ * --------------------------------------------------------------*/
 void
 zr_header_begin(struct zr_context *layout)
 {
@@ -6005,7 +6137,7 @@ zr_header_begin(struct zr_context *layout)
     struct zr_vec2 panel_padding;
     struct zr_command_buffer *out;
     struct zr_rect clip;
-    zr_float old;
+    float old;
 
     ZR_ASSERT(layout);
     if (!layout) return;
@@ -6056,14 +6188,14 @@ zr_header_begin(struct zr_context *layout)
     }
 }
 
-zr_bool
+int
 zr_header_button(struct zr_context *layout,
     enum zr_symbol symbol, enum zr_header_align align)
 {
     /* calculate the position of the close icon position and draw it */
     struct zr_rect sym = {0,0,0,0};
-    zr_float sym_bw = 0;
-    zr_bool ret = zr_false;
+    float sym_bw = 0;
+    int ret = zr_false;
 
     const struct zr_style *c;
     struct zr_command_buffer *out;
@@ -6089,15 +6221,15 @@ zr_header_button(struct zr_context *layout,
     case ZR_SYMBOL_UNDERSCORE:
     case ZR_SYMBOL_X: {
         /* single character text icon */
-        const zr_char *X = (symbol == ZR_SYMBOL_X) ? "x":
+        const char *X = (symbol == ZR_SYMBOL_X) ? "x":
             (symbol == ZR_SYMBOL_UNDERSCORE) ? "_":
             (symbol == ZR_SYMBOL_PLUS) ? "+": "-";
         const zr_size t = c->font.width(c->font.userdata, X, 1);
-        const zr_float text_width = (zr_float)t;
+        const float text_width = (float)t;
 
         /* calculate bounds of the icon */
         sym_bw = text_width;
-        sym.w = (zr_float)text_width + 2 * item_padding.x;
+        sym.w = (float)text_width + 2 * item_padding.x;
         sym.h = c->font.height + 2 * item_padding.y;
         if (align == ZR_HEADER_RIGHT)
             sym.x = layout->header.back - sym.w;
@@ -6164,10 +6296,10 @@ zr_header_button(struct zr_context *layout,
 
     /* check if the icon has been pressed */
     if (!(layout->flags & ZR_WINDOW_ROM)) {
-        zr_float mouse_x = layout->input->mouse.pos.x;
-        zr_float mouse_y = layout->input->mouse.pos.y;
-        zr_float clicked_x = layout->input->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.x;
-        zr_float clicked_y = layout->input->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.y;
+        float mouse_x = layout->input->mouse.pos.x;
+        float mouse_y = layout->input->mouse.pos.y;
+        float clicked_x = layout->input->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.x;
+        float clicked_y = layout->input->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.y;
         if (ZR_INBOX(mouse_x, mouse_y, sym.x, sym.y, sym_bw, sym.h)) {
             if (ZR_INBOX(clicked_x, clicked_y, sym.x, sym.y, sym_bw, sym.h))
                 ret = (layout->input->mouse.buttons[ZR_BUTTON_LEFT].down &&
@@ -6182,24 +6314,24 @@ zr_header_button(struct zr_context *layout,
     return ret;
 }
 
-zr_bool
+int
 zr_header_toggle(struct zr_context *layout,
     enum zr_symbol inactive, enum zr_symbol active,
-    enum zr_header_align align, zr_bool state)
+    enum zr_header_align align, int state)
 {
-    zr_bool ret = zr_header_button(layout, (state) ? active : inactive, align);
+    int ret = zr_header_button(layout, (state) ? active : inactive, align);
     if (ret) return !state;
     return state;
 }
 
-zr_bool
+int
 zr_header_flag(struct zr_context *layout, enum zr_symbol inactive,
     enum zr_symbol active, enum zr_header_align align,
     enum zr_window_flags flag)
 {
     zr_flags flags = layout->flags;
-    zr_bool state = (flags & flag) ? zr_true : zr_false;
-    zr_bool ret = zr_header_toggle(layout, inactive, active, align, state);
+    int state = (flags & flag) ? zr_true : zr_false;
+    int ret = zr_header_toggle(layout, inactive, active, align, state);
     if (ret != ((flags & flag) ? zr_true : zr_false)) {
         /* the state of the toggle icon has been changed  */
         if (!ret) layout->flags &= ~flag;
@@ -6238,20 +6370,20 @@ zr_header_title(struct zr_context *layout, const char *title,
     /* calculate and allocate space from the header */
     t = c->font.width(c->font.userdata, title, text_len);
     if (align == ZR_HEADER_RIGHT) {
-        layout->header.back = layout->header.back - (3 * item_padding.x + (zr_float)t);
+        layout->header.back = layout->header.back - (3 * item_padding.x + (float)t);
         label.x = layout->header.back;
     } else {
         label.x = layout->header.front;
-        layout->header.front += 3 * item_padding.x + (zr_float)t;
+        layout->header.front += 3 * item_padding.x + (float)t;
     }
 
     /* calculate label bounds and draw text */
     label.y = layout->header.y;
     label.h = c->font.height + 2 * item_padding.y;
     if (align == ZR_HEADER_LEFT)
-        label.w = MAX((zr_float)t + 2 * item_padding.x, 4 * item_padding.x);
-    else label.w = MAX((zr_float)t + 2 * item_padding.x, 4 * item_padding.x);
-    zr_command_buffer_push_text(out, label, (const zr_char*)title, text_len,
+        label.w = MAX((float)t + 2 * item_padding.x, 4 * item_padding.x);
+    else label.w = MAX((float)t + 2 * item_padding.x, 4 * item_padding.x);
+    zr_command_buffer_push_text(out, label, (const char*)title, text_len,
         &c->font, c->colors[ZR_COLOR_HEADER], c->colors[ZR_COLOR_TEXT]);
 }
 
@@ -6374,7 +6506,7 @@ zr_menubar_end(struct zr_context *layout)
  * --------------------------------------------------------------
  */
 static void
-zr_panel_layout(struct zr_context *layout, zr_float height, zr_size cols)
+zr_panel_layout(struct zr_context *layout, float height, zr_size cols)
 {
     const struct zr_style *config;
     const struct zr_color *color;
@@ -6409,7 +6541,7 @@ zr_panel_layout(struct zr_context *layout, zr_float height, zr_size cols)
 
 static void
 zr_row_layout(struct zr_context *layout,
-    enum zr_layout_format fmt, zr_float height, zr_size cols,
+    enum zr_layout_format fmt, float height, zr_size cols,
     zr_size width)
 {
     ZR_ASSERT(layout);
@@ -6425,24 +6557,24 @@ zr_row_layout(struct zr_context *layout,
         layout->row.type = ZR_LAYOUT_DYNAMIC_FIXED;
     else layout->row.type = ZR_LAYOUT_STATIC_FIXED;
 
-    layout->row.item_width = (zr_float)width;
+    layout->row.item_width = (float)width;
     layout->row.ratio = 0;
     layout->row.item_offset = 0;
     layout->row.filled = 0;
 }
 
 void
-zr_layout_row_dynamic(struct zr_context *layout, zr_float height, zr_size cols)
+zr_layout_row_dynamic(struct zr_context *layout, float height, zr_size cols)
 {zr_row_layout(layout, ZR_DYNAMIC, height, cols, 0);}
 
 void
-zr_layout_row_static(struct zr_context *layout, zr_float height,
+zr_layout_row_static(struct zr_context *layout, float height,
     zr_size item_width, zr_size cols)
 {zr_row_layout(layout, ZR_STATIC, height, cols, item_width);}
 
 void
 zr_layout_row_begin(struct zr_context *layout,
-    enum zr_layout_format fmt, zr_float row_height, zr_size cols)
+    enum zr_layout_format fmt, float row_height, zr_size cols)
 {
     ZR_ASSERT(layout);
     ZR_ASSERT(layout->style);
@@ -6464,14 +6596,14 @@ zr_layout_row_begin(struct zr_context *layout,
 }
 
 void
-zr_layout_row_push(struct zr_context *layout, zr_float ratio_or_width)
+zr_layout_row_push(struct zr_context *layout, float ratio_or_width)
 {
     ZR_ASSERT(layout);
     ZR_ASSERT(layout->style);
     if (!layout || !layout->valid) return;
 
     if (layout->row.type == ZR_LAYOUT_DYNAMIC_ROW) {
-        zr_float ratio = ratio_or_width;
+        float ratio = ratio_or_width;
         if ((ratio + layout->row.filled) > 1.0f) return;
         if (ratio > 0.0f)
             layout->row.item_width = ZR_SATURATE(ratio);
@@ -6492,11 +6624,11 @@ zr_layout_row_end(struct zr_context *layout)
 
 void
 zr_layout_row(struct zr_context *layout, enum zr_layout_format fmt,
-    zr_float height, zr_size cols, const zr_float *ratio)
+    float height, zr_size cols, const float *ratio)
 {
     zr_size i;
     zr_size n_undef = 0;
-    zr_float r = 0;
+    float r = 0;
 
     ZR_ASSERT(layout);
     ZR_ASSERT(layout->style);
@@ -6516,7 +6648,7 @@ zr_layout_row(struct zr_context *layout, enum zr_layout_format fmt,
         }
         r = ZR_SATURATE(1.0f - r);
         layout->row.type = ZR_LAYOUT_DYNAMIC;
-        layout->row.item_width = (r > 0 && n_undef > 0) ? (r / (zr_float)n_undef):0;
+        layout->row.item_width = (r > 0 && n_undef > 0) ? (r / (float)n_undef):0;
     } else {
         layout->row.ratio = ratio;
         layout->row.type = ZR_LAYOUT_STATIC;
@@ -6529,7 +6661,7 @@ zr_layout_row(struct zr_context *layout, enum zr_layout_format fmt,
 
 void
 zr_layout_row_space_begin(struct zr_context *layout,
-    enum zr_layout_format fmt, zr_float height, zr_size widget_count)
+    enum zr_layout_format fmt, float height, zr_size widget_count)
 {
     ZR_ASSERT(layout);
     ZR_ASSERT(layout->style);
@@ -6641,17 +6773,17 @@ zr_panel_alloc_row(struct zr_context *layout)
 {
     const struct zr_style *c = layout->style;
     struct zr_vec2 spacing = zr_style_property(c, ZR_PROPERTY_ITEM_SPACING);
-    const zr_float row_height = layout->row.height - spacing.y;
+    const float row_height = layout->row.height - spacing.y;
     zr_panel_layout(layout, row_height, layout->row.columns);
 }
 
 static void
 zr_layout_widget_space(struct zr_rect *bounds, struct zr_context *layout,
-    zr_bool modify)
+    int modify)
 {
     const struct zr_style *config;
-    zr_float panel_padding, panel_spacing, panel_space;
-    zr_float item_offset = 0, item_width = 0, item_spacing = 0;
+    float panel_padding, panel_spacing, panel_space;
+    float item_offset = 0, item_width = 0, item_spacing = 0;
     struct zr_vec2 spacing, padding;
 
     ZR_ASSERT(layout);
@@ -6667,22 +6799,22 @@ zr_layout_widget_space(struct zr_rect *bounds, struct zr_context *layout,
 
     /* calculate the useable panel space */
     panel_padding = 2 * padding.x;
-    panel_spacing = (zr_float)(layout->row.columns - 1) * spacing.x;
+    panel_spacing = (float)(layout->row.columns - 1) * spacing.x;
     panel_space  = layout->width - panel_padding - panel_spacing;
 
     /* calculate the width of one item inside the current layout space */
     switch (layout->row.type) {
     case ZR_LAYOUT_DYNAMIC_FIXED: {
         /* scaling fixed size widgets item width */
-        item_width = panel_space / (zr_float)layout->row.columns;
-        item_offset = (zr_float)layout->row.index * item_width;
-        item_spacing = (zr_float)layout->row.index * spacing.x;
+        item_width = panel_space / (float)layout->row.columns;
+        item_offset = (float)layout->row.index * item_width;
+        item_spacing = (float)layout->row.index * spacing.x;
     } break;
     case ZR_LAYOUT_DYNAMIC_ROW: {
         /* scaling single ratio widget width */
         item_width = layout->row.item_width * panel_space;
         item_offset = layout->row.item_offset;
-        item_spacing = (zr_float)layout->row.index * spacing.x;
+        item_spacing = (float)layout->row.index * spacing.x;
 
         if (modify) {
             layout->row.item_offset += item_width + spacing.x;
@@ -6701,12 +6833,12 @@ zr_layout_widget_space(struct zr_rect *bounds, struct zr_context *layout,
     } break;
     case ZR_LAYOUT_DYNAMIC: {
         /* scaling arrays of panel width ratios for every widget */
-        zr_float ratio;
+        float ratio;
         ZR_ASSERT(layout->row.ratio);
         ratio = (layout->row.ratio[layout->row.index] < 0) ?
             layout->row.item_width : layout->row.ratio[layout->row.index];
 
-        item_spacing = (zr_float)layout->row.index * spacing.x;
+        item_spacing = (float)layout->row.index * spacing.x;
         if (layout->row.index < layout->row.columns-1)
             item_width = (ratio * panel_space) - spacing.x;
         else item_width = (ratio * panel_space);
@@ -6720,14 +6852,14 @@ zr_layout_widget_space(struct zr_rect *bounds, struct zr_context *layout,
     case ZR_LAYOUT_STATIC_FIXED: {
         /* non-scaling fixed widgets item width */
         item_width = layout->row.item_width;
-        item_offset = (zr_float)layout->row.index * item_width;
-        item_spacing = (zr_float)layout->row.index * spacing.x;
+        item_offset = (float)layout->row.index * item_width;
+        item_spacing = (float)layout->row.index * spacing.x;
     } break;
     case ZR_LAYOUT_STATIC_ROW: {
         /* scaling single ratio widget width */
         item_width = layout->row.item_width;
         item_offset = layout->row.item_offset;
-        item_spacing = (zr_float)layout->row.index * spacing.x;
+        item_spacing = (float)layout->row.index * spacing.x;
         if (modify) {
             layout->row.item_offset += item_width + spacing.x;
             layout->row.index = 0;
@@ -6747,7 +6879,7 @@ zr_layout_widget_space(struct zr_rect *bounds, struct zr_context *layout,
     } break;
     case ZR_LAYOUT_STATIC: {
         /* non-scaling array of panel pixel width for every widget */
-        item_spacing = (zr_float)layout->row.index * spacing.x;
+        item_spacing = (float)layout->row.index * spacing.x;
         item_width = layout->row.ratio[layout->row.index];
         item_offset = layout->row.item_offset;
         if (modify) layout->row.item_offset += item_width + spacing.x;
@@ -6779,7 +6911,7 @@ zr_panel_alloc_space(struct zr_rect *bounds, struct zr_context *layout)
 void
 zr_layout_peek(struct zr_rect *bounds, struct zr_context *layout)
 {
-    zr_float y = layout->at_y;
+    float y = layout->at_y;
     zr_size index = layout->row.index;
     if (layout->row.index >= layout->row.columns) {
         layout->at_y += layout->row.height;
@@ -6790,10 +6922,10 @@ zr_layout_peek(struct zr_rect *bounds, struct zr_context *layout)
     layout->row.index = index;
 }
 
-zr_bool
+int
 zr_layout_push(struct zr_context *layout,
     enum zr_layout_node_type type,
-    const char *title, zr_state *state)
+    const char *title, int *state)
 {
     const struct zr_style *config;
     struct zr_command_buffer *out;
@@ -6857,16 +6989,16 @@ zr_layout_push(struct zr_context *layout,
         text_len = zr_strsiz(title);
         color = (type == ZR_LAYOUT_TAB) ? config->colors[ZR_COLOR_TAB_HEADER]:
             config->colors[ZR_COLOR_WINDOW];
-        zr_command_buffer_push_text(out, label, (const zr_char*)title, text_len,
+        zr_command_buffer_push_text(out, label, (const char*)title, text_len,
             &config->font, color, config->colors[ZR_COLOR_TEXT]);
     }
 
     /* update node state */
     if (!(layout->flags & ZR_WINDOW_ROM)) {
-        zr_float mouse_x = layout->input->mouse.pos.x;
-        zr_float mouse_y = layout->input->mouse.pos.y;
-        zr_float clicked_x = layout->input->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.x;
-        zr_float clicked_y = layout->input->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.y;
+        float mouse_x = layout->input->mouse.pos.x;
+        float mouse_y = layout->input->mouse.pos.y;
+        float clicked_x = layout->input->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.x;
+        float clicked_y = layout->input->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.y;
         if (ZR_INBOX(mouse_x, mouse_y, sym.x, sym.y, sym.w, sym.h)) {
             if (ZR_INBOX(clicked_x, clicked_y, sym.x, sym.y, sym.w, sym.h)) {
                 if (layout->input->mouse.buttons[ZR_BUTTON_LEFT].down &&
@@ -7153,7 +7285,7 @@ zr_button(struct zr_button *button, struct zr_rect *bounds,
     return state;
 }
 
-zr_bool
+int
 zr_button_text(struct zr_context *layout, const char *str,
     enum zr_button_behavior behavior)
 {
@@ -7176,7 +7308,7 @@ zr_button_text(struct zr_context *layout, const char *str,
             &button, i, &config->font);
 }
 
-zr_bool
+int
 zr_button_color(struct zr_context *layout,
    struct zr_color color, enum zr_button_behavior behavior)
 {
@@ -7195,7 +7327,7 @@ zr_button_color(struct zr_context *layout,
     return zr_widget_button(layout->buffer, bounds, &button, i, behavior, &bounds);
 }
 
-zr_bool
+int
 zr_button_symbol(struct zr_context *layout, enum zr_symbol symbol,
     enum zr_button_behavior behavior)
 {
@@ -7217,7 +7349,7 @@ zr_button_symbol(struct zr_context *layout, enum zr_symbol symbol,
             behavior, &button, i, &config->font);
 }
 
-zr_bool
+int
 zr_button_image(struct zr_context *layout, struct zr_image image,
     enum zr_button_behavior behavior)
 {
@@ -7233,7 +7365,7 @@ zr_button_image(struct zr_context *layout, struct zr_image image,
     return zr_widget_button_image(layout->buffer, bounds, image, behavior, &button, i);
 }
 
-zr_bool
+int
 zr_button_text_symbol(struct zr_context *layout, enum zr_symbol symbol,
     const char *text, enum zr_text_align align, enum zr_button_behavior behavior)
 {
@@ -7256,7 +7388,7 @@ zr_button_text_symbol(struct zr_context *layout, enum zr_symbol symbol,
             behavior, &button, &config->font, i);
 }
 
-zr_bool
+int
 zr_button_text_image(struct zr_context *layout, struct zr_image img,
     const char *text, enum zr_text_align align, enum zr_button_behavior behavior)
 {
@@ -7279,9 +7411,9 @@ zr_button_text_image(struct zr_context *layout, struct zr_image img,
             behavior, &button, &config->font, i);
 }
 
-zr_bool
+int
 zr_select(struct zr_context *layout, const char *str,
-    enum zr_text_align align, zr_bool value)
+    enum zr_text_align align, int value)
 {
     struct zr_rect bounds;
     struct zr_text text;
@@ -7321,12 +7453,12 @@ zr_select(struct zr_context *layout, const char *str,
     return value;
 }
 
-zr_bool
+int
 zr_selectable(struct zr_context *layout, const char *str,
-    enum zr_text_align align, zr_bool *value)
+    enum zr_text_align align, int *value)
 {
-    zr_bool old = *value;
-    zr_bool ret = zr_select(layout, str, align, old);
+    int old = *value;
+    int ret = zr_select(layout, str, align, old);
     *value = ret;
     return ret != old;
 }
@@ -7350,15 +7482,15 @@ zr_toggle_base(struct zr_toggle *toggle, struct zr_rect *bounds,
     return state;
 }
 
-zr_bool
-zr_check(struct zr_context *layout, const char *text, zr_bool active)
+int
+zr_check(struct zr_context *layout, const char *text, int active)
 {
     zr_checkbox(layout, text, &active);
     return active;
 }
 
 void
-zr_checkbox(struct zr_context *layout, const char *text, zr_bool *is_active)
+zr_checkbox(struct zr_context *layout, const char *text, int *is_active)
 {
     struct zr_rect bounds;
     struct zr_toggle toggle;
@@ -7380,13 +7512,13 @@ zr_checkbox(struct zr_context *layout, const char *text, zr_bool *is_active)
 }
 
 void
-zr_radio(struct zr_context *layout, const char *text, zr_bool *active)
+zr_radio(struct zr_context *layout, const char *text, int *active)
 {
     *active = zr_option(layout, text, *active);
 }
 
-zr_bool
-zr_option(struct zr_context *layout, const char *text, zr_bool is_active)
+int
+zr_option(struct zr_context *layout, const char *text, int is_active)
 {
     struct zr_rect bounds;
     struct zr_toggle toggle;
@@ -7408,8 +7540,8 @@ zr_option(struct zr_context *layout, const char *text, zr_bool is_active)
 }
 
 void
-zr_slider_float(struct zr_context *layout, zr_float min_value, zr_float *value,
-    zr_float max_value, zr_float value_step)
+zr_slider_float(struct zr_context *layout, float min_value, float *value,
+    float max_value, float value_step)
 {
     struct zr_rect bounds;
     struct zr_slider slider;
@@ -7437,18 +7569,18 @@ zr_slider_float(struct zr_context *layout, zr_float min_value, zr_float *value,
 }
 
 void
-zr_slider_int(struct zr_context *layout, zr_int min_value, zr_int *value,
-    zr_int max_value, zr_int value_step)
+zr_slider_int(struct zr_context *layout, int min_value, int *value,
+    int max_value, int value_step)
 {
-    zr_float val = (zr_float)*value;
-    zr_slider_float(layout, (zr_float)min_value, &val,
-        (zr_float)max_value, (zr_float)value_step);
-    *value = (zr_int)val;
+    float val = (float)*value;
+    zr_slider_float(layout, (float)min_value, &val,
+        (float)max_value, (float)value_step);
+    *value = (int)val;
 }
 
 void
-zr_drag_float(struct zr_context *layout, zr_float min, zr_float *val,
-    zr_float max, zr_float inc_per_pixel)
+zr_drag_float(struct zr_context *layout, float min, float *val,
+    float max, float inc_per_pixel)
 {
     struct zr_rect bounds;
     struct zr_drag drag;
@@ -7477,18 +7609,18 @@ zr_drag_float(struct zr_context *layout, zr_float min, zr_float *val,
                         inc_per_pixel, &drag, i, &config->font);
 }
 
-void zr_drag_int(struct zr_context *layout, zr_int min, zr_int *val,
-    zr_int max, zr_int inc_per_pixel)
+void zr_drag_int(struct zr_context *layout, int min, int *val,
+    int max, int inc_per_pixel)
 {
-    zr_float value = (zr_float)*val;
-    zr_drag_float(layout, (zr_float)min, &value,
-        (zr_float)max, (zr_float)inc_per_pixel);
-    *val = (zr_int)value;
+    float value = (float)*val;
+    zr_drag_float(layout, (float)min, &value,
+        (float)max, (float)inc_per_pixel);
+    *val = (int)value;
 }
 
 void
 zr_progress(struct zr_context *layout, zr_size *cur_value, zr_size max_value,
-    zr_bool is_modifyable)
+    int is_modifyable)
 {
     struct zr_rect bounds;
     struct zr_progress prog;
@@ -7555,8 +7687,8 @@ zr_editbox(struct zr_context *layout, struct zr_edit_box *box)
 }
 
 void
-zr_edit(struct zr_context *layout, zr_char *buffer, zr_size *len,
-    zr_size max, zr_state *active, zr_size *cursor, enum zr_input_filter filter)
+zr_edit(struct zr_context *layout, char *buffer, zr_size *len,
+    zr_size max, int *active, zr_size *cursor, enum zr_input_filter filter)
 {
     struct zr_rect bounds;
     struct zr_edit field;
@@ -7572,8 +7704,8 @@ zr_edit(struct zr_context *layout, zr_char *buffer, zr_size *len,
 }
 
 void
-zr_edit_filtered(struct zr_context *layout, zr_char *buffer, zr_size *len,
-    zr_size max, zr_state *active, zr_size *cursor, zr_filter filter)
+zr_edit_filtered(struct zr_context *layout, char *buffer, zr_size *len,
+    zr_size max, int *active, zr_size *cursor, zr_filter filter)
 {
     struct zr_rect bounds;
     struct zr_edit field;
@@ -7623,8 +7755,8 @@ zr_spinner_base(struct zr_context *layout, struct zr_rect *bounds,
 }
 
 void
-zr_spinner_int(struct zr_context *layout, zr_int min, zr_int *value,
-    zr_int max, zr_int step, zr_state *active)
+zr_spinner_int(struct zr_context *layout, int min, int *value,
+    int max, int step, int *active)
 {
     struct zr_rect bounds;
     struct zr_spinner spinner;
@@ -7641,8 +7773,8 @@ zr_spinner_int(struct zr_context *layout, zr_int min, zr_int *value,
 }
 
 void
-zr_spinner_float(struct zr_context *layout, zr_float min, zr_float *value,
-    zr_float max, zr_float step, zr_state *active)
+zr_spinner_float(struct zr_context *layout, float min, float *value,
+    float max, float step, int *active)
 {
     struct zr_rect bounds;
     struct zr_spinner spinner;
@@ -7657,16 +7789,14 @@ zr_spinner_float(struct zr_context *layout, zr_float min, zr_float *value,
     *value = zr_widget_spinner_float(out, bounds, &spinner, min, *value, max, step,
                 active, i, &layout->style->font);
 }
-/*
- * -------------------------------------------------------------
+/* -------------------------------------------------------------
  *
  *                          GRAPH
  *
- * --------------------------------------------------------------
- */
+ * --------------------------------------------------------------*/
 void
 zr_graph_begin(struct zr_context *layout, struct zr_graph *graph,
-    enum zr_graph_type type, zr_size count, zr_float min_value, zr_float max_value)
+    enum zr_graph_type type, zr_size count, float min_value, float max_value)
 {
     struct zr_rect bounds = {0, 0, 0, 0};
     const struct zr_style *config;
@@ -7704,14 +7834,14 @@ zr_graph_begin(struct zr_context *layout, struct zr_graph *graph,
 
 static zr_flags
 zr_graph_push_line(struct zr_context *layout,
-    struct zr_graph *g, zr_float value)
+    struct zr_graph *g, float value)
 {
     struct zr_command_buffer *out = layout->buffer;
     const struct zr_style *config = layout->style;
     const struct zr_input *i = layout->input;
     struct zr_color color;
     zr_flags ret = 0;
-    zr_float step, range, ratio;
+    float step, range, ratio;
     struct zr_vec2 cur;
     struct zr_rect bounds;
 
@@ -7721,14 +7851,14 @@ zr_graph_push_line(struct zr_context *layout,
     if (!g || !layout || !g->valid || g->index >= g->count)
         return zr_false;
 
-    step = g->w / (zr_float)g->count;
+    step = g->w / (float)g->count;
     range = g->max - g->min;
     ratio = (value - g->min) / range;
 
     if (g->index == 0) {
         /* special case for the first data point since it does not have a connection */
         g->last.x = g->x;
-        g->last.y = (g->y + g->h) - ratio * (zr_float)g->h;
+        g->last.y = (g->y + g->h) - ratio * (float)g->h;
         bounds.x = g->last.x - 3;
         bounds.y = g->last.y - 3;
         bounds.w = 6;
@@ -7748,8 +7878,8 @@ zr_graph_push_line(struct zr_context *layout,
     }
 
     /* draw a line between the last data point and the new one */
-    cur.x = g->x + (zr_float)(step * (zr_float)g->index);
-    cur.y = (g->y + g->h) - (ratio * (zr_float)g->h);
+    cur.x = g->x + (float)(step * (float)g->index);
+    cur.y = (g->y + g->h) - (ratio * (float)g->h);
     zr_command_buffer_push_line(out, g->last.x, g->last.y, cur.x, cur.y,
         config->colors[ZR_COLOR_PLOT_LINES]);
 
@@ -7779,7 +7909,7 @@ zr_graph_push_line(struct zr_context *layout,
 
 static zr_flags
 zr_graph_push_column(struct zr_context *layout,
-    struct zr_graph *graph, zr_float value)
+    struct zr_graph *graph, float value)
 {
     struct zr_command_buffer *out = layout->buffer;
     const struct zr_style *config = layout->style;
@@ -7787,7 +7917,7 @@ zr_graph_push_column(struct zr_context *layout,
     struct zr_vec2 item_padding;
     struct zr_color color;
 
-    zr_float ratio;
+    float ratio;
     zr_flags ret = 0;
     struct zr_rect item = {0,0,0,0};
     item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
@@ -7795,8 +7925,8 @@ zr_graph_push_column(struct zr_context *layout,
     if (!graph->valid || graph->index >= graph->count)
         return zr_false;
     if (graph->count) {
-        zr_float padding = (zr_float)(graph->count-1) * item_padding.x;
-        item.w = (graph->w - padding) / (zr_float)(graph->count);
+        float padding = (float)(graph->count-1) * item_padding.x;
+        item.w = (graph->w - padding) / (float)(graph->count);
     }
 
     ratio = ZR_ABS(value) / graph->max;
@@ -7806,8 +7936,8 @@ zr_graph_push_column(struct zr_context *layout,
     /* calculate bounds of the current bar graph entry */
     item.h = graph->h * ratio;
     item.y = (graph->y + graph->h) - item.h;
-    item.x = graph->x + ((zr_float)graph->index * item.w);
-    item.x = item.x + ((zr_float)graph->index * item_padding.x);
+    item.x = graph->x + ((float)graph->index * item.w);
+    item.x = item.x + ((float)graph->index * item_padding.x);
 
     /* user graph bar selection */
     if (!(layout->flags & ZR_WINDOW_ROM) &&
@@ -7824,7 +7954,7 @@ zr_graph_push_column(struct zr_context *layout,
 
 zr_flags
 zr_graph_push(struct zr_context *layout, struct zr_graph *graph,
-    zr_float value)
+    float value)
 {
     ZR_ASSERT(layout);
     ZR_ASSERT(graph);
@@ -7855,218 +7985,12 @@ zr_graph_end(struct zr_context *layout, struct zr_graph *graph)
     graph->w = 0;
     graph->h = 0;
 }
-/*
- * -------------------------------------------------------------
- *
- *                          TREE
- *
- * --------------------------------------------------------------
- */
-void
-zr_tree_begin(struct zr_context *p, struct zr_tree *tree,
-    const char *title, zr_flags flags, zr_float height, struct zr_vec2 offset)
-{
-    struct zr_vec2 padding;
-    const struct zr_style *config;
-    ZR_ASSERT(p);
-    ZR_ASSERT(tree);
-    if (!p || !tree) return;
 
-    zr_group_begin(p, &tree->group, title, flags, offset);
-    zr_panel_layout(&tree->group, height, 1);
-
-    config = tree->group.style;
-    padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
-
-    tree->at_x = 0;
-    tree->skip = -1;
-    tree->depth = 0;
-    tree->x_off = tree->group.style->font.height + 2 * padding.x;
-}
-
-static enum zr_tree_node_operation
-zr_tree_node(struct zr_tree *tree, enum zr_tree_node_symbol symbol,
-    const char *title, struct zr_image *img, zr_state *state)
-{
-    struct zr_text text;
-    struct zr_rect bounds = {0,0,0,0};
-    struct zr_rect sym, label, icon;
-    struct zr_context *layout;
-    enum zr_tree_node_operation op = ZR_NODE_NOP;
-
-    const struct zr_input *i;
-    const struct zr_style *config;
-    struct zr_vec2 item_padding;
-    struct zr_color col;
-
-    ZR_ASSERT(tree);
-    ZR_ASSERT(state);
-    ZR_ASSERT(title);
-    if (!tree || !state || !title)
-        return ZR_NODE_NOP;
-
-    layout = &tree->group;
-    if (tree->skip >= 0 || !zr_widget(&bounds, layout)) {
-        if (!tree->depth) tree->at_x = bounds.x;
-        return op;
-    }
-
-    if (tree->depth){
-        bounds.w = (bounds.x + bounds.w) - tree->at_x;
-        bounds.x = tree->at_x;
-    } else tree->at_x = bounds.x;
-
-    /* fetch some configuration constants */
-    i = layout->input;
-    config = layout->style;
-    item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
-    col = zr_style_color(config, ZR_COLOR_TEXT);
-
-    /* calculate symbol bounds */
-    sym.x = bounds.x;
-    sym.y = bounds.y + (bounds.h/2) - (config->font.height/2);
-    sym.w = config->font.height;
-    sym.h = config->font.height;
-
-    if (img) {
-        icon.x = sym.x + sym.w + item_padding.x;
-        icon.y = sym.y;
-        icon.w = bounds.h;
-        icon.h = bounds.h;
-        label.x = icon.x + icon.w + item_padding.x;
-    } else label.x = sym.x + sym.w + item_padding.x;
-
-    /* calculate text bounds */
-    label.y = bounds.y;
-    label.h = bounds.h;
-    label.w = bounds.w - (sym.w + 2 * item_padding.x);
-
-    /* output symbol */
-    if (symbol == ZR_TREE_NODE_TRIANGLE) {
-        /* parent node */
-        struct zr_vec2 points[3];
-        enum zr_heading heading;
-        if (zr_input_mouse_clicked(i, ZR_BUTTON_LEFT, sym)) {
-            if (*state & ZR_NODE_ACTIVE)
-                *state &= ~(zr_flags)ZR_NODE_ACTIVE;
-            else *state |= ZR_NODE_ACTIVE;
-        }
-
-        heading = (*state & ZR_NODE_ACTIVE) ? ZR_DOWN : ZR_RIGHT;
-        zr_triangle_from_direction(points, sym, 0, 0, heading);
-        zr_command_buffer_push_triangle(layout->buffer,  points[0].x, points[0].y,
-            points[1].x, points[1].y, points[2].x, points[2].y, col);
-    } else {
-        /* leaf node */
-        zr_command_buffer_push_circle(layout->buffer, sym, col);
-    }
-
-    if (!(layout->flags & ZR_WINDOW_ROM)) {
-        /* node selection */
-        if (zr_input_mouse_clicked(i, ZR_BUTTON_LEFT, label)) {
-            if (*state & ZR_NODE_SELECTED)
-                *state &= ~(zr_flags)ZR_NODE_SELECTED;
-            else *state |= ZR_NODE_SELECTED;
-        }
-
-        /* tree node operations */
-        if (zr_input_is_key_pressed(i, ZR_KEY_DEL) && (*state & ZR_NODE_SELECTED)) {
-            *state &= ~(zr_flags)ZR_NODE_SELECTED;
-            op = ZR_NODE_DELETE;
-        } else if (zr_input_is_key_pressed(i, ZR_KEY_COPY) &&
-            (*state & ZR_NODE_SELECTED)) {
-            *state &= ~(zr_flags)ZR_NODE_SELECTED;
-            op = ZR_NODE_CLONE;
-        } else if (zr_input_is_key_pressed(i, ZR_KEY_CUT) &&
-            (*state & ZR_NODE_SELECTED)) {
-            *state &= ~(zr_flags)ZR_NODE_SELECTED;
-            op = ZR_NODE_CUT;
-        } else if (zr_input_is_key_pressed(i, ZR_KEY_PASTE) &&
-            (*state & ZR_NODE_SELECTED)) {
-            *state &= ~(zr_flags)ZR_NODE_SELECTED;
-            op = ZR_NODE_PASTE;
-        }
-    }
-
-    /* output label */
-    text.padding.x = item_padding.x;
-    text.padding.y = item_padding.y;
-    text.text = config->colors[ZR_COLOR_TEXT];
-    text.background = (*state & ZR_NODE_SELECTED) ?
-        config->colors[ZR_COLOR_BUTTON_HOVER]:
-        config->colors[ZR_COLOR_WINDOW];
-    zr_widget_text(layout->buffer, label, title, zr_strsiz(title), &text,
-            ZR_TEXT_LEFT, &config->font);
-    return op;
-}
-
-enum zr_tree_node_operation
-zr_tree_begin_node(struct zr_tree *tree, const char *title,
-    zr_state *state)
-{
-    enum zr_tree_node_operation op;
-    ZR_ASSERT(tree);
-    ZR_ASSERT(state);
-    ZR_ASSERT(title);
-    if (!tree || !state || !title)
-        return ZR_NODE_NOP;
-
-    op = zr_tree_node(tree, ZR_TREE_NODE_TRIANGLE, title, 0, state);
-    tree->at_x += tree->x_off;
-    if (tree->skip < 0 && !(*state & ZR_NODE_ACTIVE))
-        tree->skip = tree->depth;
-    tree->depth++;
-    return op;
-}
-
-enum zr_tree_node_operation
-zr_tree_begin_node_icon(struct zr_tree *tree, const char *title,
-    struct zr_image img, zr_state *state)
-{
-    enum zr_tree_node_operation op;
-    ZR_ASSERT(tree);
-    ZR_ASSERT(state);
-    ZR_ASSERT(title);
-    if (!tree || !state || !title)
-        return ZR_NODE_NOP;
-
-    op = zr_tree_node(tree, ZR_TREE_NODE_TRIANGLE, title, &img, state);
-    tree->at_x += tree->x_off;
-    if (tree->skip < 0 && !(*state & ZR_NODE_ACTIVE))
-        tree->skip = tree->depth;
-    tree->depth++;
-    return op;
-}
-
-enum zr_tree_node_operation
-zr_tree_leaf(struct zr_tree *tree, const char *title, zr_state *state)
-{return zr_tree_node(tree, ZR_TREE_NODE_BULLET, title, 0, state);}
-
-enum zr_tree_node_operation
-zr_tree_leaf_icon(struct zr_tree *tree, const char *title, struct zr_image img,
-    zr_state *state)
-{return zr_tree_node(tree, ZR_TREE_NODE_BULLET, title, &img, state);}
-
-void
-zr_tree_end_node(struct zr_tree *tree)
-{
-    ZR_ASSERT(tree->depth);
-    tree->depth--;
-    tree->at_x -= tree->x_off;
-    if (tree->skip == tree->depth)
-        tree->skip = -1;
-}
-
-void
-zr_tree_end(struct zr_context *p, struct zr_tree* tree, struct zr_vec2 *scrollbar)
-{zr_group_end(p, &tree->group, scrollbar);}
-/*
- * -------------------------------------------------------------
+/* -------------------------------------------------------------
  *
  *                          GROUPS
  *
- * --------------------------------------------------------------
- */
+ * --------------------------------------------------------------*/
 void
 zr_group_begin(struct zr_context *p, struct zr_context *g,
     const char *title, zr_flags flags, struct zr_vec2 offset)
@@ -8162,16 +8086,14 @@ zr_group_end(struct zr_context *p, struct zr_context *g, struct zr_vec2 *scrollb
     if (scrollbar)
         *scrollbar = pan.offset;
 }
-/*
- * -------------------------------------------------------------
+/* -------------------------------------------------------------
  *
  *                          SHELF
  *
- * --------------------------------------------------------------
- */
+ * --------------------------------------------------------------*/
 void
 zr_shelf_begin(struct zr_context *parent, struct zr_context *shelf,
-    const char *tabs[], zr_size size, zr_size *active, struct zr_vec2 offset)
+    const char *tabs[], int size, int *active, struct zr_vec2 offset)
 {
     struct zr_style *config;
     struct zr_command_buffer *out;
@@ -8183,8 +8105,8 @@ zr_shelf_begin(struct zr_context *parent, struct zr_context *shelf,
     struct zr_rect *c;
     struct zr_window panel;
 
-    zr_float header_x, header_y;
-    zr_float header_w, header_h;
+    float header_x, header_y;
+    float header_w, header_h;
 
     ZR_ASSERT(parent);
     ZR_ASSERT(tabs);
@@ -8220,11 +8142,11 @@ zr_shelf_begin(struct zr_context *parent, struct zr_context *shelf,
         /* basic button setup valid for every tab */
         const struct zr_input *input;
         struct zr_button_text button;
-        zr_float item_width;
-        zr_size i;
+        float item_width;
+        int i;
 
         input = (parent->flags & ZR_WINDOW_ROM) ? 0 : parent->input;
-        item_width = (header_w - (zr_float)size) / (zr_float)size;
+        item_width = (header_w - (float)size) / (float)size;
         zr_fill_button(config, &button.base);
         button.base.rounding = 0;
         button.alignment = ZR_TEXT_CENTERED;
@@ -8232,15 +8154,15 @@ zr_shelf_begin(struct zr_context *parent, struct zr_context *shelf,
             struct zr_rect b = {0,0,0,0};
             /* calculate the needed space for the tab text */
             zr_size text_width = font->width(font->userdata,
-                (const zr_char*)tabs[i], zr_strsiz(tabs[i]));
+                (const char*)tabs[i], zr_strsiz(tabs[i]));
             text_width = text_width + (zr_size)(4 * item_padding.x);
 
             /* calculate current tab button bounds */
             b.y = header_y;
             b.h = header_h;
             b.x = header_x;
-            b.w = MIN(item_width, (zr_float)text_width);
-            header_x += MIN(item_width, (zr_float)text_width);
+            b.w = MIN(item_width, (float)text_width);
+            header_x += MIN(item_width, (float)text_width);
 
             /* set different color for active or inactive tab */
             if ((b.x + b.w) >= (bounds.x + bounds.w)) break;
@@ -8429,16 +8351,16 @@ zr_popup_end(struct zr_context *parent, struct zr_context *popup,
  *
  * --------------------------------------------------------------
  */
-static zr_bool
+static int
 zr_popup_nonblocking_begin(struct zr_context *parent,
-    struct zr_context *popup, zr_flags flags, zr_state *active, zr_state is_active,
+    struct zr_context *popup, zr_flags flags, int *active, int is_active,
     struct zr_rect body, struct zr_vec2 scrollbar)
 {
     /* deactivate popup if user clicked outside the popup*/
     const struct zr_input *in = parent->input;
     if (in && *active) {
-        zr_bool inbody = zr_input_is_mouse_click_in_rect(in, ZR_BUTTON_LEFT, body);
-        zr_bool inpanel = zr_input_is_mouse_click_in_rect(in, ZR_BUTTON_LEFT, parent->bounds);
+        int inbody = zr_input_is_mouse_click_in_rect(in, ZR_BUTTON_LEFT, body);
+        int inpanel = zr_input_is_mouse_click_in_rect(in, ZR_BUTTON_LEFT, parent->bounds);
         if (!inbody && inpanel)
             is_active = zr_false;
     }
@@ -8479,7 +8401,7 @@ zr_popup_nonblocking_end(struct zr_context *parent,
 
 void
 zr_contextual_begin(struct zr_context *parent, struct zr_context *popup,
-    zr_flags flags, zr_state *active, struct zr_rect body)
+    zr_flags flags, int *active, struct zr_rect body)
 {
     ZR_ASSERT(parent);
     ZR_ASSERT(popup);
@@ -8488,7 +8410,7 @@ zr_contextual_begin(struct zr_context *parent, struct zr_context *popup,
     zr_popup_nonblocking_begin(parent, popup, flags, active, *active, body, zr_vec2(0,0));
 }
 
-static zr_bool
+static int
 zr_contextual_button(struct zr_context *layout, const char *text,
     enum zr_text_align align, enum zr_button_behavior behavior)
 {
@@ -8514,7 +8436,7 @@ zr_contextual_button(struct zr_context *layout, const char *text,
             &button, i, &config->font);
 }
 
-static zr_bool
+static int
 zr_contextual_button_symbol(struct zr_context *layout, enum zr_symbol symbol,
     const char *text, enum zr_text_align align, enum zr_button_behavior behavior)
 {
@@ -8539,7 +8461,7 @@ zr_contextual_button_symbol(struct zr_context *layout, enum zr_symbol symbol,
             behavior, &button, &config->font, i);
 }
 
-static zr_bool
+static int
 zr_contextual_button_icon(struct zr_context *layout, struct zr_image img,
     const char *text, enum zr_text_align align, enum zr_button_behavior behavior)
 {
@@ -8565,7 +8487,7 @@ zr_contextual_button_icon(struct zr_context *layout, struct zr_image img,
                                 behavior, &button, &config->font, i);
 }
 
-zr_bool
+int
 zr_contextual_item(struct zr_context *menu, const char *title, enum zr_text_align align)
 {
     ZR_ASSERT(menu);
@@ -8576,7 +8498,7 @@ zr_contextual_item(struct zr_context *menu, const char *title, enum zr_text_alig
     return zr_false;
 }
 
-zr_bool
+int
 zr_contextual_item_icon(struct zr_context *menu, struct zr_image img,
     const char *title, enum zr_text_align align)
 {
@@ -8588,7 +8510,7 @@ zr_contextual_item_icon(struct zr_context *menu, struct zr_image img,
     return zr_false;
 }
 
-zr_bool
+int
 zr_contextual_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
     const char *title, enum zr_text_align align)
 {
@@ -8610,7 +8532,7 @@ zr_contextual_close(struct zr_context *popup)
 }
 
 void
-zr_contextual_end(struct zr_context *parent, struct zr_context *menu, zr_state *state)
+zr_contextual_end(struct zr_context *parent, struct zr_context *menu, int *state)
 {
     ZR_ASSERT(parent);
     ZR_ASSERT(menu);
@@ -8628,16 +8550,14 @@ zr_contextual_end(struct zr_context *parent, struct zr_context *menu, zr_state *
 failed:
     if (state) *state = zr_false;
 }
-/*
- * -------------------------------------------------------------
+/* -------------------------------------------------------------
  *
  *                          COMBO
  *
- * --------------------------------------------------------------
- */
+ * --------------------------------------------------------------*/
 void
 zr_combo_begin(struct zr_context *parent, struct zr_context *combo,
-    const char *selected, zr_state *active)
+    const char *selected, int *active)
 {
     struct zr_rect bounds = {0,0,0,0};
     const struct zr_input *in;
@@ -8645,7 +8565,7 @@ zr_combo_begin(struct zr_context *parent, struct zr_context *combo,
     struct zr_command_buffer *out;
     struct zr_vec2 item_padding;
     struct zr_rect header;
-    zr_state is_active;
+    int is_active;
 
     ZR_ASSERT(parent);
     ZR_ASSERT(combo);
@@ -8726,18 +8646,18 @@ failed:
     combo->queue = parent->queue;
 }
 
-zr_bool zr_combo_item(struct zr_context *combo, const char *title, enum zr_text_align align)
+int zr_combo_item(struct zr_context *combo, const char *title, enum zr_text_align align)
 {return zr_contextual_item(combo, title, align);}
 
-zr_bool zr_combo_item_icon(struct zr_context *menu, struct zr_image img,
+int zr_combo_item_icon(struct zr_context *menu, struct zr_image img,
     const char *title, enum zr_text_align align)
 {return zr_contextual_item_icon(menu, img, title, align);}
 
-zr_bool zr_combo_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
+int zr_combo_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
     const char *title, enum zr_text_align align)
 {return zr_contextual_item_symbol(menu, symbol, title, align);}
 
-void zr_combo_end(struct zr_context *parent, struct zr_context *menu, zr_state *state)
+void zr_combo_end(struct zr_context *parent, struct zr_context *menu, int *state)
 {zr_contextual_end(parent, menu, state);}
 
 void zr_combo_close(struct zr_context *combo)
@@ -8751,12 +8671,12 @@ void zr_combo_close(struct zr_context *combo)
  */
 void
 zr_menu_begin(struct zr_context *parent, struct zr_context *menu,
-    const char *title, zr_float width, zr_state *active)
+    const char *title, float width, int *active)
 {
     const struct zr_input *in;
     const struct zr_style *config;
     struct zr_rect header;
-    zr_state is_active;
+    int is_active;
 
     ZR_ASSERT(parent);
     ZR_ASSERT(menu);
@@ -8810,18 +8730,18 @@ failed:
     menu->queue = parent->queue;
 }
 
-zr_bool zr_menu_item(struct zr_context *menu, enum zr_text_align align, const char *title)
+int zr_menu_item(struct zr_context *menu, enum zr_text_align align, const char *title)
 {return zr_contextual_item(menu, title, align);}
 
-zr_bool zr_menu_item_icon(struct zr_context *menu, struct zr_image img,
+int zr_menu_item_icon(struct zr_context *menu, struct zr_image img,
     const char *title, enum zr_text_align align)
 {return zr_contextual_item_icon(menu, img, title, align);}
 
-zr_bool zr_menu_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
+int zr_menu_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
     const char *title, enum zr_text_align align)
 {return zr_contextual_item_symbol(menu, symbol, title, align);}
 
-void zr_menu_close(struct zr_context *menu, zr_state *state)
+void zr_menu_close(struct zr_context *menu, int *state)
 {zr_popup_close(menu); *state = zr_false;}
 
 void
@@ -8841,7 +8761,7 @@ zr_menu_end(struct zr_context *parent, struct zr_context *menu)
  * --------------------------------------------------------------
  */
 void
-zr_tooltip_begin(struct zr_context *parent, struct zr_context *tip, zr_float width)
+zr_tooltip_begin(struct zr_context *parent, struct zr_context *tip, float width)
 {
     const struct zr_input *in;
     struct zr_rect bounds;
@@ -8902,8 +8822,8 @@ zr_tooltip(struct zr_context *layout, const char *text)
     text_height = (zr_size)(config->font.height + 2 * item_padding.y);
 
     /* execute tooltip and fill with text */
-    zr_tooltip_begin(layout, &tip, (zr_float)text_width);
-    zr_layout_row_dynamic(&tip, (zr_float)text_height, 1);
+    zr_tooltip_begin(layout, &tip, (float)text_width);
+    zr_layout_row_dynamic(&tip, (float)text_height, 1);
     zr_text(&tip, text, text_len, ZR_TEXT_LEFT);
     zr_tooltip_end(layout, &tip);
 }
