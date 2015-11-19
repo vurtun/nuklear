@@ -3446,7 +3446,7 @@ zr_font_bake_pack(zr_size *image_memory, int *width, int *height,
             tmp->rects = baker->rects + rect_n;
             rect_n += glyph_count;
             stbtt_PackSetOversampling(&baker->spc, cfg->oversample_h, cfg->oversample_v);
-            n = (zr_size)stbtt_PackFontRangesGatherRects(&baker->spc, &tmp->info,
+            n = stbtt_PackFontRangesGatherRects(&baker->spc, &tmp->info,
                 tmp->ranges, (int)tmp->range_count, tmp->rects);
             stbrp_pack_rects((stbrp_context*)baker->spc.pack_info, tmp->rects, (int)n);
 
