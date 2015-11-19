@@ -35,12 +35,12 @@
 #define DTIME       33
 #define MAX_DRAW_COMMAND_MEMORY (4 * 1024)
 #define MAX_VERTEX_MEMORY 128 * 1024
-#define MAX_ELEMENT_MEMORY 32 * 1024
+#define MAX_ELEMENT_MEMORY 64 * 1024
 
 #include "../../zahnrad.h"
 
 static void clipboard_set(const char *text){SDL_SetClipboardText(text);}
-static zr_bool clipboard_is_filled(void) {return SDL_HasClipboardText();}
+static int clipboard_is_filled(void) {return SDL_HasClipboardText();}
 static const char* clipboard_get(void){return SDL_GetClipboardText();}
 
 #include "../demo.c"
@@ -174,10 +174,10 @@ device_init(struct device *dev)
 
 static struct zr_user_font
 font_bake_and_upload(struct device *dev, struct zr_font *font,
-    const char *path, unsigned int font_height, const zr_long *range)
+    const char *path, unsigned int font_height, const zr_rune *range)
 {
-    zr_size glyph_count;
-    zr_size img_width, img_height;
+    int glyph_count;
+    int img_width, img_height;
     struct zr_font_glyph *glyphes;
     struct zr_baked_font baked_font;
     struct zr_user_font user_font;
@@ -191,7 +191,7 @@ font_bake_and_upload(struct device *dev, struct zr_font *font,
         /* bake and upload font texture */
         void *img, *tmp;
         size_t ttf_size;
-        zr_size tmp_size, img_size;
+        size_t tmp_size, img_size;
         const char *custom_data = "....";
         struct zr_font_config config;
         char *ttf_blob = file_load(path, &ttf_size);
@@ -206,14 +206,14 @@ font_bake_and_upload(struct device *dev, struct zr_font *font,
         config.coord_type = ZR_COORD_UV;
         config.range = range;
         config.pixel_snap = zr_false;
-        config.size = (zr_float)font_height;
+        config.size = (float)font_height;
         config.spacing = zr_vec2(0,0);
         config.oversample_h = 1;
         config.oversample_v = 1;
 
         /* query needed amount of memory for the font baking process */
         zr_font_bake_memory(&tmp_size, &glyph_count, &config, 1);
-        glyphes = (struct zr_font_glyph*)calloc(sizeof(struct zr_font_glyph), glyph_count);
+        glyphes = (struct zr_font_glyph*)calloc(sizeof(struct zr_font_glyph), (size_t)glyph_count);
         tmp = calloc(1, tmp_size);
 
         /* pack all glyphes and return needed image width height and memory size*/
@@ -227,8 +227,8 @@ font_bake_and_upload(struct device *dev, struct zr_font *font,
         zr_font_bake_custom_data(img, img_width, img_height, custom, custom_data, 2, 2, '.', 'X');
         {
             /* convert alpha8 image into rgba8 image */
-            void *img_rgba = calloc(4, img_height * img_width);
-            zr_font_bake_convert(img_rgba, (zr_ushort)img_width, (zr_ushort)img_height, img);
+            void *img_rgba = calloc(4, (size_t)(img_height * img_width));
+            zr_font_bake_convert(img_rgba, img_width, img_height, img);
             free(img);
             img = img_rgba;
         }
@@ -247,15 +247,15 @@ font_bake_and_upload(struct device *dev, struct zr_font *font,
     }
 
     /* default white pixel in a texture which is needed to draw primitives */
-    dev->null.texture.id = (zr_int)dev->font_tex;
-    dev->null.uv = zr_vec2((custom.x + 0.5f)/(zr_float)img_width,
-                            (custom.y + 0.5f)/(zr_float)img_height);
+    dev->null.texture.id = (int)dev->font_tex;
+    dev->null.uv = zr_vec2((custom.x + 0.5f)/(float)img_width,
+                            (custom.y + 0.5f)/(float)img_height);
 
     /* setup font with glyphes. IMPORTANT: the font only references the glyphes
       this was done to have the possibility to have multible fonts with one
       total glyph array. Not quite sure if it is a good thing since the
       glyphes have to be freed as well. */
-    zr_font_init(font, (zr_float)font_height, '?', glyphes, &baked_font, dev->null.texture);
+    zr_font_init(font, (float)font_height, '?', glyphes, &baked_font, dev->null.texture);
     user_font = zr_font_ref(font);
     return user_font;
 }
@@ -274,8 +274,8 @@ device_shutdown(struct device *dev)
 }
 
 /* this is stupid but needed for C89 since sinf and cosf do not exist */
-static zr_float fsin(zr_float f) {return (zr_float)sin(f);}
-static zr_float fcos(zr_float f) {return (zr_float)cos(f);}
+static float fsin(float f) {return (float)sin(f);}
+static float fcos(float f) {return (float)cos(f);}
 
 static void
 device_draw(struct device *dev, struct zr_command_queue *queue, int width, int height,
@@ -346,6 +346,7 @@ device_draw(struct device *dev, struct zr_command_queue *queue, int width, int h
 
         /* iterate over and execute each draw command */
         zr_foreach_draw_command(cmd, &draw_list) {
+            if (!cmd->elem_count) continue;
             glBindTexture(GL_TEXTURE_2D, (GLuint)cmd->texture.id);
             glScissor((GLint)cmd->clip_rect.x,
                 height - (GLint)(cmd->clip_rect.y + cmd->clip_rect.h),
@@ -368,7 +369,7 @@ device_draw(struct device *dev, struct zr_command_queue *queue, int width, int h
 }
 
 static void
-input_key(struct zr_input *in, SDL_Event *evt, zr_bool down)
+input_key(struct zr_input *in, SDL_Event *evt, int down)
 {
     const Uint8* state = SDL_GetKeyboardState(NULL);
     SDL_Keycode sym = evt->key.keysym.sym;
@@ -395,16 +396,16 @@ input_key(struct zr_input *in, SDL_Event *evt, zr_bool down)
 static void
 input_motion(struct zr_input *in, SDL_Event *evt)
 {
-    const zr_int x = evt->motion.x;
-    const zr_int y = evt->motion.y;
+    const int x = evt->motion.x;
+    const int y = evt->motion.y;
     zr_input_motion(in, x, y);
 }
 
 static void
-input_button(struct zr_input *in, SDL_Event *evt, zr_bool down)
+input_button(struct zr_input *in, SDL_Event *evt, int down)
 {
-    const zr_int x = evt->button.x;
-    const zr_int y = evt->button.y;
+    const int x = evt->button.x;
+    const int y = evt->button.y;
     if (evt->button.button == SDL_BUTTON_LEFT)
         zr_input_button(in, ZR_BUTTON_LEFT, x, y, down);
     if (evt->button.button == SDL_BUTTON_RIGHT)
@@ -426,7 +427,7 @@ resize(SDL_Event *evt)
     glViewport(0, 0, evt->window.data1, evt->window.data2);
 }
 
-static void* mem_alloc(zr_handle unused, zr_size size)
+static void* mem_alloc(zr_handle unused, size_t size)
 {UNUSED(unused); return calloc(1, size);}
 static void mem_free(zr_handle unused, void *ptr)
 {UNUSED(unused); free(ptr);}
@@ -505,8 +506,8 @@ main(int argc, char *argv[])
 
         /* GUI */
         SDL_GetWindowSize(win, &width, &height);
-        gui.w = (zr_size)width;
-        gui.h = (zr_size)height;
+        gui.w = (size_t)width;
+        gui.h = (size_t)height;
         run_demo(&gui);
 
         /* Draw */

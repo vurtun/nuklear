@@ -464,12 +464,12 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
                 zr_tooltip(&layout, "This is a tooltip");
 
             zr_layout_row(&layout, ZR_STATIC, 30, 2, ratio);
-            zr_labelf(&layout, ZR_TEXT_LEFT, "Slider int: %d", int_slider);
+            zr_labelf(&layout, ZR_TEXT_LEFT, "Slider int");
             zr_slider_int(&layout, 0, &int_slider, 10, 1);
 
-            zr_labelf(&layout, ZR_TEXT_LEFT, "Slider float: %.2f", float_slider);
+            zr_label(&layout, "Slider float", ZR_TEXT_LEFT);
             zr_slider_float(&layout, 0, &float_slider, 5.0, 0.5f);
-            zr_labelf(&layout, ZR_TEXT_LEFT, "Progressbar: %lu:" , prog_value);
+            zr_labelf(&layout, ZR_TEXT_LEFT, "Progressbar" , prog_value);
             zr_progress(&layout, &prog_value, 100, ZR_MODIFYABLE);
 
             zr_layout_row(&layout, ZR_STATIC, 30, 2, ratio);
@@ -1124,7 +1124,7 @@ run_demo(struct demo *gui)
 
         if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Primitives", &prim_state))
         {
-            zr_layout_row_dynamic(&layout, 20, 2);
+            zr_layout_row_dynamic(&layout, 25, 2);
             zr_label(&layout,"Scissor:", ZR_TEXT_LEFT);
             zr_labelf(&layout, ZR_TEXT_LEFT, "%u", stats->scissors);
             zr_label(&layout,"Lines:", ZR_TEXT_LEFT);

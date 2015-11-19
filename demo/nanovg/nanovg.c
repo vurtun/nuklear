@@ -33,7 +33,7 @@
 #include <GL/glu.h>
 #include <SDL2/SDL.h>
 
-#define NANOVG_GLES2_IMPLEMENTATION
+#define NANOVG_GLES3_IMPLEMENTATION
 #include "dep/nanovg.h"
 #include "dep/nanovg_gl.h"
 #include "dep/nanovg_gl_utils.h"
@@ -46,7 +46,7 @@ static void
 clipboard_set(const char *text)
 {SDL_SetClipboardText(text);}
 
-static zr_bool
+static int
 clipboard_is_filled(void)
 {return SDL_HasClipboardText();}
 
@@ -67,14 +67,14 @@ die(const char *fmt, ...)
     exit(EXIT_FAILURE);
 }
 
-static zr_size
-font_get_width(zr_handle handle, const zr_char *text, zr_size len)
+static size_t
+font_get_width(zr_handle handle, const char *text, size_t len)
 {
-    zr_size width;
+    size_t width;
     float bounds[4];
     NVGcontext *ctx = (NVGcontext*)handle.ptr;
     nvgTextBounds(ctx, 0, 0, text, &text[len], bounds);
-    width = (zr_size)(bounds[2] - bounds[0]);
+    width = (size_t)(bounds[2] - bounds[0]);
     return width;
 }
 
@@ -149,6 +149,7 @@ draw(NVGcontext *nvg, struct zr_command_queue *queue, int width, int height)
             nvgBeginPath(nvg);
             nvgFillColor(nvg, nvgRGBA(t->foreground.r, t->foreground.g,
                 t->foreground.b, t->foreground.a));
+            nvgFontSize(nvg, (float)t->height);
             nvgTextAlign(nvg, NVG_ALIGN_MIDDLE);
             nvgText(nvg, t->x, t->y + t->h * 0.5f, t->string, &t->string[t->length]);
             nvgFill(nvg);
@@ -174,7 +175,7 @@ draw(NVGcontext *nvg, struct zr_command_queue *queue, int width, int height)
 }
 
 static void
-key(struct zr_input *in, SDL_Event *evt, zr_bool down)
+key(struct zr_input *in, SDL_Event *evt, int down)
 {
     const Uint8* state = SDL_GetKeyboardState(NULL);
     SDL_Keycode sym = evt->key.keysym.sym;
@@ -201,16 +202,16 @@ key(struct zr_input *in, SDL_Event *evt, zr_bool down)
 static void
 motion(struct zr_input *in, SDL_Event *evt)
 {
-    const zr_int x = evt->motion.x;
-    const zr_int y = evt->motion.y;
+    const int x = evt->motion.x;
+    const int y = evt->motion.y;
     zr_input_motion(in, x, y);
 }
 
 static void
-btn(struct zr_input *in, SDL_Event *evt, zr_bool down)
+btn(struct zr_input *in, SDL_Event *evt, int down)
 {
-    const zr_int x = evt->button.x;
-    const zr_int y = evt->button.y;
+    const int x = evt->button.x;
+    const int y = evt->button.y;
     if (evt->button.button == SDL_BUTTON_LEFT)
         zr_input_button(in, ZR_BUTTON_LEFT, x, y, down);
     else if (evt->button.button == SDL_BUTTON_LEFT)
@@ -238,7 +239,7 @@ main(int argc, char *argv[])
     /* Platform */
     int width, height;
     const char *font_path;
-    zr_size font_height;
+    int font_height;
     SDL_Window *win;
     SDL_GLContext glContext;
     NVGcontext *vg = NULL;
@@ -246,11 +247,11 @@ main(int argc, char *argv[])
     /* GUI */
     struct demo gui;
     if (argc < 2) {
-        fprintf(stdout,"Missing TTF Font file argument: gui <path>\n");
+        fprintf(stdout,"Missing TTF Font file argument: binary <font-path>\n");
         exit(EXIT_FAILURE);
     }
     font_path = argv[1];
-    font_height = 10;
+    font_height = 14;
 
     /* SDL */
     SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER|SDL_INIT_EVENTS);
@@ -268,7 +269,7 @@ main(int argc, char *argv[])
     glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
     /* nanovg */
-    vg = nvgCreateGLES2(NVG_ANTIALIAS|NVG_DEBUG);
+    vg = nvgCreateGLES3(NVG_ANTIALIAS);
     if (!vg) die("[NVG]: failed to init\n");
     nvgCreateFont(vg, "fixed", font_path);
     nvgFontFace(vg, "fixed");
@@ -286,6 +287,7 @@ main(int argc, char *argv[])
     while (gui.running) {
         /* Input */
         SDL_Event evt;
+        uint64_t dt, started = SDL_GetTicks();
         zr_input_begin(&gui.input);
         while (SDL_PollEvent(&evt)) {
             if (evt.type == SDL_WINDOWEVENT) resize(&evt);
@@ -309,13 +311,15 @@ main(int argc, char *argv[])
         glClearColor(0.9f, 0.9f, 0.9f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         draw(vg, &gui.queue, width, height);
+        dt = SDL_GetTicks() - started;
+        /*fprintf(stdout, "%lu\n", dt);*/
         SDL_GL_SwapWindow(win);
     }
 
 cleanup:
     /* Cleanup */
     free(zr_buffer_memory(&gui.queue.buffer));
-    nvgDeleteGLES2(vg);
+    nvgDeleteGLES3(vg);
     SDL_GL_DeleteContext(glContext);
     SDL_DestroyWindow(win);
     SDL_Quit();

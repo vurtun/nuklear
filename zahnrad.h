@@ -670,6 +670,7 @@ struct zr_command_text {
     struct zr_color foreground;
     short x, y;
     unsigned short w, h;
+    float height;
     zr_size length;
     char string[1];
 };
@@ -1269,7 +1270,7 @@ void zr_draw_list_add_curve(struct zr_draw_list*, struct zr_vec2 p0,
 */
 void zr_draw_list_add_text(struct zr_draw_list*, const struct zr_user_font*,
                             struct zr_rect, const char*, zr_size length,
-                            struct zr_color bg, struct zr_color fg);
+                            float font_height, struct zr_color bg, struct zr_color fg);
 /*  this function renders text
     Input:
     - user font to draw the text with

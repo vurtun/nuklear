@@ -1057,13 +1057,11 @@ zr_user_font_glyphes_fitting_in_space(const struct zr_user_font *font, const cha
     *text_width = last_width;
     return offset;
 }
-/*
- * ==============================================================
+/* ==============================================================
  *
  *                          Input
  *
- * ===============================================================
- */
+ * ===============================================================*/
 void
 zr_input_begin(struct zr_input *in)
 {
@@ -1817,6 +1815,7 @@ zr_command_buffer_push_text(struct zr_command_buffer *b, struct zr_rect r,
     cmd->foreground = fg;
     cmd->font = font;
     cmd->length = length;
+    cmd->height = font->height;
     zr_memcopy(cmd->string, string, length);
     cmd->string[length] = '\0';
     b->stats.text++;
@@ -2232,7 +2231,7 @@ zr_draw_list_load(struct zr_draw_list *list, struct zr_command_queue *queue,
         case ZR_COMMAND_TEXT: {
             const struct zr_command_text *t = zr_command(text, cmd);
             zr_draw_list_add_text(list, t->font, zr_rect(t->x, t->y, t->w, t->h),
-                t->string, t->length, t->background, t->foreground);
+                t->string, t->length, t->height, t->background, t->foreground);
         } break;
         case ZR_COMMAND_IMAGE: {
             const struct zr_command_image *i = zr_command(image, cmd);
@@ -2943,14 +2942,15 @@ zr_draw_list_add_image(struct zr_draw_list *list, struct zr_image texture,
 
 void
 zr_draw_list_add_text(struct zr_draw_list *list, const struct zr_user_font *font,
-    struct zr_rect rect, const char *text, zr_size len,
+    struct zr_rect rect, const char *text, zr_size len, float font_height,
     struct zr_color bg, struct zr_color fg)
 {
-    float x;
+    float x, scale;
     zr_size text_len;
     zr_rune unicode, next;
     zr_size glyph_len, next_glyph_len;
     struct zr_user_font_glyph g;
+    scale = font_height / font->height;
 
     ZR_ASSERT(list);
     if (!list || !len || !text) return;
@@ -2977,10 +2977,10 @@ zr_draw_list_add_text(struct zr_draw_list *list, const struct zr_user_font *font
         font->query(font->userdata, &g, unicode, (next == ZR_UTF_INVALID) ? '\0' : next);
 
         /* calculate and draw glyph drawing rectangle and image */
-        gx = x + g.offset.x;
-        gy = rect.y + (rect.h/2) - (font->height/2) + g.offset.y;
-        gw = g.width; gh = g.height;
-        char_width = g.xadvance;
+        gx = x + g.offset.x * scale;
+        gy = rect.y + (rect.h/2) - (font->height/2) + g.offset.y * scale;
+        gw = g.width * scale; gh = g.height * scale;
+        char_width = g.xadvance * scale;
         zr_draw_list_push_rect_uv(list, zr_vec2(gx,gy), zr_vec2(gx + gw, gy+ gh),
             g.uv[0], g.uv[1], fg);
 
