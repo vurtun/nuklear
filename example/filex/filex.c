@@ -397,8 +397,8 @@ struct file_browser {
     struct zr_window window;
     struct zr_vec2 dir;
     struct zr_vec2 sel;
-    zr_float ratio_dir;
-    zr_float ratio_sel;
+    float ratio_dir;
+    float ratio_sel;
 };
 
 static void
@@ -473,7 +473,7 @@ file_browser_run(struct file_browser *browser, int width, int height)
     zr_begin(&context, &browser->window);
     {
         struct zr_context sub;
-        zr_float row_layout[3];
+        float row_layout[3];
         /* output path directory selector in the menubar */
         zr_menubar_begin(&context);
         {
@@ -534,8 +534,8 @@ file_browser_run(struct file_browser *browser, int width, int height)
                 zr_input_is_mouse_prev_hovering_rect(in, bounds)) &&
                 zr_input_is_mouse_down(in, ZR_BUTTON_LEFT))
             {
-                zr_float sel = row_layout[0] + in->mouse.delta.x;
-                zr_float dir = row_layout[2] - in->mouse.delta.x;
+                float sel = row_layout[0] + in->mouse.delta.x;
+                float dir = row_layout[2] - in->mouse.delta.x;
                 browser->ratio_sel = sel / (total_space.w - 8);
                 browser->ratio_dir = dir / (total_space.w - 8);
             }
@@ -555,7 +555,7 @@ file_browser_run(struct file_browser *browser, int width, int height)
                 {
                     /* draw one row of icons */
                     size_t n = j + cols;
-                    zr_layout_row_dynamic(&sub, 130, cols);
+                    zr_layout_row_dynamic(&sub, 135, cols);
                     zr_style_push_color(&browser->config, ZR_COLOR_BUTTON, zr_rgb(45, 45, 45));
                     zr_style_push_color(&browser->config, ZR_COLOR_BORDER, zr_rgb(45, 45, 45));
                     for (; j < count && j < n; ++j) {
@@ -581,7 +581,6 @@ file_browser_run(struct file_browser *browser, int width, int height)
                 }
                 {
                     /* draw one row of labels */
-                    zr_style_push_property(&browser->config, ZR_PROPERTY_ITEM_SPACING, zr_vec2(4, 4));
                     size_t n = k + cols;
                     zr_layout_row_dynamic(&sub, 20, cols);
                     for (; k < count && k < n; k++) {
@@ -592,7 +591,6 @@ file_browser_run(struct file_browser *browser, int width, int height)
                             zr_label(&sub,browser->files[t],ZR_TEXT_CENTERED);
                         }
                     }
-                    zr_style_pop_property(&browser->config);
                 }
             }
 
@@ -619,7 +617,7 @@ file_browser_run(struct file_browser *browser, int width, int height)
  *
  * ================================================================= */
 static zr_size
-font_get_width(zr_handle handle, const zr_char *text, zr_size len)
+font_get_width(zr_handle handle, const char *text, zr_size len)
 {
     zr_size width;
     float bounds[4];
@@ -730,7 +728,7 @@ draw(NVGcontext *nvg, struct zr_command_queue *queue, int width, int height)
 }
 
 static void
-key(struct zr_input *in, SDL_Event *evt, zr_bool down)
+key(struct zr_input *in, SDL_Event *evt, int down)
 {
     const Uint8* state = SDL_GetKeyboardState(NULL);
     SDL_Keycode sym = evt->key.keysym.sym;
@@ -757,16 +755,16 @@ key(struct zr_input *in, SDL_Event *evt, zr_bool down)
 static void
 motion(struct zr_input *in, SDL_Event *evt)
 {
-    const zr_int x = evt->motion.x;
-    const zr_int y = evt->motion.y;
+    const int x = evt->motion.x;
+    const int y = evt->motion.y;
     zr_input_motion(in, x, y);
 }
 
 static void
-btn(struct zr_input *in, SDL_Event *evt, zr_bool down)
+btn(struct zr_input *in, SDL_Event *evt, int down)
 {
-    const zr_int x = evt->button.x;
-    const zr_int y = evt->button.y;
+    const int x = evt->button.x;
+    const int y = evt->button.y;
     if (evt->button.button == SDL_BUTTON_LEFT)
         zr_input_button(in, ZR_BUTTON_LEFT, x, y, down);
     else if (evt->button.button == SDL_BUTTON_RIGHT)

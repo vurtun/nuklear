@@ -59,10 +59,10 @@ struct node {
     int ID;
     char name[32];
     struct zr_rect bounds;
-    zr_float value;
+    float value;
     struct zr_color color;
-    zr_int input_count;
-    zr_int output_count;
+    int input_count;
+    int output_count;
     struct node *next;
     struct node *prev;
 };
@@ -77,7 +77,7 @@ struct node_link {
 };
 
 struct node_linking {
-    zr_bool active;
+    int active;
     struct node *node;
     int input_id;
     int input_slot;
@@ -90,10 +90,10 @@ struct node_editor {
     struct node *end;
     int node_count;
     int link_count;
-    zr_state menu;
+    int menu;
     struct zr_rect bounds;
     struct node *selected;
-    zr_bool show_grid;
+    int show_grid;
     struct zr_vec2 scrolling;
     struct node_linking linking;
 };
@@ -210,12 +210,12 @@ node_editor_draw(struct zr_context *layout, struct node_editor *nodedit,
 
         if (nodedit->show_grid) {
             /* display grid */
-            zr_float x, y;
-            const zr_float grid_size = 32.0f;
+            float x, y;
+            const float grid_size = 32.0f;
             const struct zr_color grid_color = zr_rgb(50, 50, 50);
-            for (x = fmod(size.x - nodedit->scrolling.x, grid_size); x < size.w; x += grid_size)
+            for (x = (float)fmod(size.x - nodedit->scrolling.x, grid_size); x < size.w; x += grid_size)
                 zr_command_buffer_push_line(canvas, x+size.x, size.y, x+size.x, size.y+size.h, grid_color);
-            for (y = fmod(size.y - nodedit->scrolling.y, grid_size); y < size.h; y += grid_size)
+            for (y = (float)fmod(size.y - nodedit->scrolling.y, grid_size); y < size.h; y += grid_size)
                 zr_command_buffer_push_line(canvas, size.x, y+size.y, size.x+size.w, y+size.y, grid_color);
         }
 
@@ -230,8 +230,8 @@ node_editor_draw(struct zr_context *layout, struct node_editor *nodedit,
             zr_group_begin(layout, &node, it->name,
                 ZR_WINDOW_MOVEABLE|ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER, zr_vec2(0,0));
             {
-                zr_int r,g,b;
-                zr_float ratio[] = {0.25f, 0.75f};
+                int r,g,b;
+                float ratio[] = {0.25f, 0.75f};
 
                 /* always have last selected node on top */
                 if (zr_input_mouse_clicked(in, ZR_BUTTON_LEFT, node.bounds) &&
@@ -254,14 +254,14 @@ node_editor_draw(struct zr_context *layout, struct node_editor *nodedit,
                 zr_slider_int(&node, 0, &g, 255, 10);
                 zr_label(&node, "B:", ZR_TEXT_LEFT);
                 zr_slider_int(&node, 0, &b, 255, 10);
-                it->color.r = r; it->color.g = g; it->color.b = b;
+                it->color.r = (zr_byte)r; it->color.g = (zr_byte)g; it->color.b = (zr_byte)b;
                 /* ====================================================*/
             }
             zr_group_end(layout, &node, NULL);
 
             {
                 /* node connector and linking */
-                zr_float space;
+                float space;
                 struct zr_rect bounds;
                 bounds = zr_layout_row_space_rect_to_local(layout, node.bounds);
                 bounds.x += nodedit->scrolling.x;
@@ -327,8 +327,8 @@ node_editor_draw(struct zr_context *layout, struct node_editor *nodedit,
             struct node_link *link = &nodedit->links[n];
             struct node *ni = node_editor_find(nodedit, link->input_id);
             struct node *no = node_editor_find(nodedit, link->output_id);
-            zr_float spacei = node.bounds.h / ((ni->output_count) + 1);
-            zr_float spaceo = node.bounds.h / ((no->input_count) + 1);
+            float spacei = node.bounds.h / ((ni->output_count) + 1);
+            float spaceo = node.bounds.h / ((no->input_count) + 1);
             struct zr_vec2 l0 = zr_layout_row_space_to_screen(layout,
                 zr_vec2(ni->bounds.x + ni->bounds.w, 3+ni->bounds.y + spacei * (link->input_slot+1)));
             struct zr_vec2 l1 = zr_layout_row_space_to_screen(layout,
@@ -436,7 +436,7 @@ die(const char *fmt, ...)
 }
 
 static zr_size
-font_get_width(zr_handle handle, const zr_char *text, zr_size len)
+font_get_width(zr_handle handle, const char *text, zr_size len)
 {
     zr_size width;
     float bounds[4];
@@ -543,7 +543,7 @@ draw(NVGcontext *nvg, struct zr_command_queue *queue, int width, int height)
 }
 
 static void
-key(struct zr_input *in, SDL_Event *evt, zr_bool down)
+key(struct zr_input *in, SDL_Event *evt, int down)
 {
     const Uint8* state = SDL_GetKeyboardState(NULL);
     SDL_Keycode sym = evt->key.keysym.sym;
@@ -570,16 +570,16 @@ key(struct zr_input *in, SDL_Event *evt, zr_bool down)
 static void
 motion(struct zr_input *in, SDL_Event *evt)
 {
-    const zr_int x = evt->motion.x;
-    const zr_int y = evt->motion.y;
+    const int x = evt->motion.x;
+    const int y = evt->motion.y;
     zr_input_motion(in, x, y);
 }
 
 static void
-btn(struct zr_input *in, SDL_Event *evt, zr_bool down)
+btn(struct zr_input *in, SDL_Event *evt, int down)
 {
-    const zr_int x = evt->button.x;
-    const zr_int y = evt->button.y;
+    const int x = evt->button.x;
+    const int y = evt->button.y;
     if (evt->button.button == SDL_BUTTON_LEFT)
         zr_input_button(in, ZR_BUTTON_LEFT, x, y, down);
     else if (evt->button.button == SDL_BUTTON_RIGHT)
@@ -614,7 +614,7 @@ main(int argc, char *argv[])
     SDL_Window *win;
     SDL_GLContext glContext;
     NVGcontext *vg = NULL;
-    zr_bool running = zr_true;
+    int running = zr_true;
     unsigned int started;
     unsigned int dt;
 
@@ -689,7 +689,7 @@ main(int argc, char *argv[])
         zr_input_end(&gui.input);
 
         {
-            zr_bool incursor;
+            int incursor;
             struct zr_context layout;
             struct zr_rect bounds = gui.window.bounds;
 
