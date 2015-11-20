@@ -5894,8 +5894,6 @@ zr_begin(struct zr_context *context, struct zr_window *window)
     return ret;
 }
 
-#include <stdio.h>
-
 zr_flags
 zr_end(struct zr_context *layout, struct zr_window *window)
 {
@@ -6007,7 +6005,6 @@ zr_end(struct zr_context *layout, struct zr_window *window)
             }
             scroll_offset = layout->offset.x;
             scroll_target = layout->max_x - bounds.x;
-            fprintf(stdout, "target: %.2f\n", scroll_target);
             scroll_step = layout->max_x * 0.05f;
             scroll.has_scrolling = zr_false;
             window->offset.x = zr_widget_scrollbarh(out, bounds, scroll_offset,
