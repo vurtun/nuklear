@@ -1833,10 +1833,6 @@ enum zr_style_colors {
     ZR_COLOR_SCROLLBAR_CURSOR_ACTIVE,
     ZR_COLOR_TABLE_LINES,
     ZR_COLOR_TAB_HEADER,
-    ZR_COLOR_SHELF,
-    ZR_COLOR_SHELF_TEXT,
-    ZR_COLOR_SHELF_ACTIVE,
-    ZR_COLOR_SHELF_ACTIVE_TEXT,
     ZR_COLOR_SCALER,
     ZR_COLOR_COUNT
 };
@@ -2030,7 +2026,6 @@ const char *zr_style_property_name(enum zr_style_properties);
     Window Tree API     -- Tree widget that allows to visualize and mofify a tree
     Window Combobox API -- Combobox widget for collapsable popup content
     Window Group API    -- Create a subwindow inside a window which again can be filled with widgets
-    Window Shelf API    -- Group window with tabs which can be filled with widget
     Window Popup API    -- Popup window with either non-blocking or blocking capabilities
     Window Menu API     -- Popup menus with currently one single depth
 */
@@ -2060,7 +2055,7 @@ enum zr_window_flags {
     ZR_WINDOW_ACTIVE = 0x10000,
     /* INTERNAL ONLY!: marks the window as active, used by the window stack */
     ZR_WINDOW_TAB = 0x20000,
-    /* INTERNAL ONLY!: Marks the window as subwindow of another window(Groups/Tabs/Shelf)*/
+    /* INTERNAL ONLY!: Marks the window as subwindow of another window(Groups/Tabs)*/
     ZR_WINDOW_COMBO_MENU = 0x40000,
     /* INTERNAL ONLY!: Marks the window as an combo box or menu */
     ZR_WINDOW_REMOVE_ROM = 0x80000,
@@ -3141,47 +3136,6 @@ void zr_group_end(struct zr_context*, struct zr_context*, struct zr_vec2 *scroll
     Output:
     - The from user input updated group scrollbar pixel offset
 */
-
-/* --------------------------------------------------------------
- *
- *                          SHELF
- *
- * --------------------------------------------------------------
-    SHELF
-    A shelf extends the concept of a group as an window inside a window
-    with the possibility to decide which content should be drawn into the group.
-    This is achieved by tabs on the top of the group window with one selected
-    tab. The selected tab thereby defines which content should be drawn inside
-    the group window by an index it returns. So you just have to check the returned
-    index and depending on it draw the wanted content.
-
-    shelf API
-    zr_shelf_begin   -- begins a shelf with a number of selectable tabs
-    zr_shelf_end     -- ends a previously started shelf build up process
-
-*/
-void zr_shelf_begin(struct zr_context*, struct zr_context*,
-                        const char *tabs[], int size,
-                        int *active, struct zr_vec2 offset);
-/*  this function adds a shelf child window into the parent window
-    IMPORTANT: You need to set the height of the shelf with zr_row_layout
-    Input:
-    - all possible selectible tabs of the shelf with names as a string array
-    - number of seletectible tabs
-    - current active tab array index
-    - scrollbar pixel offset for the shelf
-    Output:
-    - group layout to fill with widgets
-    - the from user input updated current shelf tab index
-*/
-void zr_shelf_end(struct zr_context *p, struct zr_context *s, struct zr_vec2 *scrollbar);
-/*  this function finishes the previously started shelf layout
-    Input:
-    - previously started group layout
-    Output:
-    - The from user input updated shelf scrollbar pixel offset
-*/
-
 /* --------------------------------------------------------------
  *
  *                          POPUP
