@@ -5815,6 +5815,7 @@ zr_begin(struct zr_context *context, struct zr_window *window)
     context->row.ratio = 0;
     context->row.item_width = 0;
     context->offset = window->offset;
+    context->max_x = 0;
 
     /* window header */
     if (window->flags & ZR_WINDOW_MINIMIZED) {
@@ -5892,6 +5893,8 @@ zr_begin(struct zr_context *context, struct zr_window *window)
     }
     return ret;
 }
+
+#include <stdio.h>
 
 zr_flags
 zr_end(struct zr_context *layout, struct zr_window *window)
@@ -6004,7 +6007,8 @@ zr_end(struct zr_context *layout, struct zr_window *window)
             }
             scroll_offset = layout->offset.x;
             scroll_target = layout->max_x - bounds.x;
-            scroll_step = bounds.w * 0.05f;
+            fprintf(stdout, "target: %.2f\n", scroll_target);
+            scroll_step = layout->max_x * 0.05f;
             scroll.has_scrolling = zr_false;
             window->offset.x = zr_widget_scrollbarh(out, bounds, scroll_offset,
                                     scroll_target, scroll_step, &scroll, in);
@@ -6843,13 +6847,13 @@ zr_layout_widget_space(struct zr_rect *bounds, struct zr_context *layout,
     case ZR_LAYOUT_STATIC_FREE: {
         /* free widget placing */
         bounds->x = layout->clip.x + layout->row.item.x;
+        if (((bounds->x + bounds->w) > layout->max_x) && modify)
+            layout->max_x = (bounds->x + bounds->w);
         bounds->x -= layout->offset.x;
         bounds->y = layout->clip.y + layout->row.item.y;
         bounds->y -= layout->offset.y;
         bounds->w = layout->row.item.w;
         bounds->h = layout->row.item.h;
-        if (((bounds->x + bounds->w + layout->offset.x) > layout->max_x) && modify)
-            layout->max_x = bounds->x + bounds->w + layout->offset.x;
         return;
     } break;
     case ZR_LAYOUT_STATIC: {
@@ -6863,12 +6867,13 @@ zr_layout_widget_space(struct zr_rect *bounds, struct zr_context *layout,
     };
 
     /* set the bounds of the newly allocated widget */
-    bounds->x = layout->at_x + item_offset + item_spacing + padding.x - layout->offset.x;
-    bounds->y = layout->at_y - layout->offset.y;
     bounds->w = item_width;
     bounds->h = layout->row.height - spacing.y;
+    bounds->y = layout->at_y - layout->offset.y;
+    bounds->x = layout->at_x + item_offset + item_spacing + padding.x;
     if (((bounds->x + bounds->w) > layout->max_x) && modify)
         layout->max_x = bounds->x + bounds->w;
+    bounds->x -= layout->offset.x;
 }
 
 static void
@@ -6996,7 +7001,7 @@ zr_layout_push(struct zr_context *layout,
     }
 
     if (*state == ZR_MAXIMIZED) {
-        layout->at_x = header.x;
+        layout->at_x = header.x + layout->offset.x;
         layout->width = MAX(layout->width, 2 * panel_padding.x);
         layout->width -= 2 * panel_padding.x;
         return zr_true;
