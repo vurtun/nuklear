@@ -861,13 +861,11 @@ zr_string_float_limit(char *string, int prec)
     }
     return (zr_size)(c - string);
 }
-/*
- * ==============================================================
+/* ==============================================================
  *
  *                          UTF-8
  *
- * ===============================================================
- */
+ * ===============================================================*/
 static const zr_byte zr_utfbyte[ZR_UTF_SIZE+1] = {0x80, 0, 0xC0, 0xE0, 0xF0};
 static const zr_byte zr_utfmask[ZR_UTF_SIZE+1] = {0xC0, 0x80, 0xE0, 0xF0, 0xF8};
 static const long zr_utfmin[ZR_UTF_SIZE+1] = {0, 0, 0x80, 0x800, 0x100000};
@@ -986,7 +984,7 @@ zr_user_font_glyph_index_at_pos(const struct zr_user_font *font, const char *tex
     zr_rune unicode;
     zr_size glyph_offset = 0;
     zr_size glyph_len = zr_utf_decode(text, &unicode, text_len);
-    zr_size text_width = font->width(font->userdata, text, glyph_len);
+    zr_size text_width = font->width(font->userdata, font->height, text, glyph_len);
     zr_size src_len = glyph_len;
 
     while (text_len && glyph_len) {
@@ -996,7 +994,7 @@ zr_user_font_glyph_index_at_pos(const struct zr_user_font *font, const char *tex
         text_len -= glyph_len;
         glyph_len = zr_utf_decode(text + src_len, &unicode, text_len);
         src_len += glyph_len;
-        text_width = font->width(font->userdata, text, src_len);
+        text_width = font->width(font->userdata, font->height, text, src_len);
     }
     return glyph_offset;
 }
@@ -1016,7 +1014,7 @@ zr_use_font_glyph_clamp(const struct zr_user_font *font, const char *text,
     while (glyph_len && (width < space) && (len < text_len)) {
         zr_size s;
         len += glyph_len;
-        s = font->width(font->userdata, text, len);
+        s = font->width(font->userdata, font->height, text, len);
         last_width = width;
         width = (float)s;
         glyph_len = zr_utf_decode(&text[len], &unicode, text_len - len);
@@ -1041,7 +1039,7 @@ zr_user_font_glyphes_fitting_in_space(const struct zr_user_font *font, const cha
     zr_size s;
 
     glyph_len = zr_utf_decode(text, &unicode, text_len);
-    s = font->width(font->userdata, text, glyph_len);
+    s = font->width(font->userdata, font->height, text, glyph_len);
     width = last_width = (float)s;
     while ((width < space) && text_len) {
         g++;
@@ -1049,7 +1047,7 @@ zr_user_font_glyphes_fitting_in_space(const struct zr_user_font *font, const cha
         text_len -= glyph_len;
         last_width = width;
         glyph_len = zr_utf_decode(&text[offset], &unicode, text_len);
-        s = font->width(font->userdata, &text[offset], glyph_len);
+        s = font->width(font->userdata, font->height, &text[offset], glyph_len);
         width += (float)s;
     }
 
@@ -1273,13 +1271,11 @@ zr_input_is_key_down(const struct zr_input *i, enum zr_keys key)
     return zr_false;
 }
 
-/*
- * ==============================================================
+/* ==============================================================
  *
  *                          Buffer
  *
- * ===============================================================
- */
+ * ===============================================================*/
 void
 zr_buffer_init(struct zr_buffer *b, const struct zr_allocator *a,
     zr_size initial_size, float grow_factor)
@@ -1527,13 +1523,11 @@ zr_buffer_total(struct zr_buffer *buffer)
     if (!buffer) return 0;
     return buffer->memory.size;
 }
-/*
- * ==============================================================
+/* ==============================================================
  *
  *                      Command buffer
  *
- * ===============================================================
- */
+ * ===============================================================*/
 void
 zr_command_buffer_init(struct zr_command_buffer *cmdbuf,
     struct zr_buffer *buffer, enum zr_command_clipping clip)
@@ -1796,7 +1790,7 @@ zr_command_buffer_push_text(struct zr_command_buffer *b, struct zr_rect r,
     }
 
     /* make sure text fits inside bounds */
-    text_width = font->width(font->userdata, string, length);
+    text_width = font->width(font->userdata, font->height, string, length);
     if (text_width > r.w){
         float txt_width = (float)text_width;
         zr_size glyphes = 0;
@@ -1846,13 +1840,11 @@ zr_command_buffer_next(struct zr_command_buffer *buffer,
     memory = (zr_byte*)buffer->base->memory.ptr;
     return zr_ptr_add_const(struct zr_command, memory, cmd->next);
 }
-/*
- * ==============================================================
+/* ==============================================================
  *
  *                      Command Queue
  *
- * ===============================================================
- */
+ * ===============================================================*/
 void
 zr_command_queue_init(struct zr_command_queue *queue,
     const struct zr_allocator *alloc, zr_size initial_size, float grow_factor)
@@ -2974,7 +2966,7 @@ zr_draw_list_add_text(struct zr_draw_list *list, const struct zr_user_font *font
 
         /* query currently drawn glyph information */
         next_glyph_len = zr_utf_decode(text + text_len, &next, len - text_len);
-        font->query(font->userdata, &g, unicode, (next == ZR_UTF_INVALID) ? '\0' : next);
+        font->query(font->userdata, font->height, &g, unicode, (next == ZR_UTF_INVALID) ? '\0' : next);
 
         /* calculate and draw glyph drawing rectangle and image */
         gx = x + g.offset.x * scale;
@@ -3594,13 +3586,11 @@ zr_font_bake_convert(void *out_memory, int img_width, int img_height,
     for (n = (int)(img_width * img_height); n > 0; n--)
         *dst++ = ((uint32_t)(*src++) << 24) | 0x00FFFFFF;
 }
-/*
- * -------------------------------------------------------------
+/* -------------------------------------------------------------
  *
- *                          Font
+ *                          FONT
  *
- * --------------------------------------------------------------
- */
+ * --------------------------------------------------------------*/
 void
 zr_font_init(struct zr_font *font, float pixel_height,
     zr_rune fallback_codepoint, struct zr_font_glyph *glyphes,
@@ -3649,7 +3639,7 @@ zr_font_find_glyph(struct zr_font *font, zr_rune unicode)
 }
 
 static zr_size
-zr_font_text_width(zr_handle handle, const char *text, zr_size len)
+zr_font_text_width(zr_handle handle, float height, const char *text, zr_size len)
 {
     zr_rune unicode;
     const struct zr_font_glyph *glyph;
@@ -3657,17 +3647,19 @@ zr_font_text_width(zr_handle handle, const char *text, zr_size len)
     zr_size text_len  = 0;
     zr_size text_width = 0;
     zr_size glyph_len = 0;
+    float scale = 0;
     font = (struct zr_font*)handle.ptr;
     ZR_ASSERT(font);
     if (!font || !text || !len)
         return 0;
 
+    scale = height/font->size;
     glyph_len = zr_utf_decode(text, &unicode, len);
     while (text_len < len) {
         if (unicode == ZR_UTF_INVALID) return 0;
         glyph = zr_font_find_glyph(font, unicode);
         text_len += glyph_len;
-        text_width += (zr_size)((glyph->xadvance * font->scale));
+        text_width += (zr_size)((glyph->xadvance * scale));
         glyph_len = zr_utf_decode(text + text_len, &unicode, len - text_len);
     }
     return text_width;
@@ -3675,9 +3667,10 @@ zr_font_text_width(zr_handle handle, const char *text, zr_size len)
 
 #if ZR_COMPILE_WITH_VERTEX_BUFFER
 static void
-zr_font_query_font_glyph(zr_handle handle, struct zr_user_font_glyph *glyph,
+zr_font_query_font_glyph(zr_handle handle, float height, struct zr_user_font_glyph *glyph,
         zr_rune codepoint, zr_rune next_codepoint)
 {
+    float scale;
     const struct zr_font_glyph *g;
     struct zr_font *font;
     ZR_ASSERT(glyph);
@@ -3687,11 +3680,12 @@ zr_font_query_font_glyph(zr_handle handle, struct zr_user_font_glyph *glyph,
     if (!font || !glyph)
         return;
 
+    scale = height/font->size;
     g = zr_font_find_glyph(font, codepoint);
-    glyph->width = (g->x1 - g->x0) * font->scale;
-    glyph->height = (g->y1 - g->y0) * font->scale;
-    glyph->offset = zr_vec2(g->x0 * font->scale, g->y0 * font->scale);
-    glyph->xadvance = (g->xadvance * font->scale);
+    glyph->width = (g->x1 - g->x0) * scale;
+    glyph->height = (g->y1 - g->y0) * scale;
+    glyph->offset = zr_vec2(g->x0 * scale, g->y0 * scale);
+    glyph->xadvance = (g->xadvance * scale);
     glyph->uv[0] = zr_vec2(g->u0, g->v0);
     glyph->uv[1] = zr_vec2(g->u1, g->v1);
 }
@@ -4122,7 +4116,7 @@ zr_widget_text(struct zr_command_buffer *o, struct zr_rect b,
     label.y = b.y + t->padding.y;
     label.h = b.h - 2 * t->padding.y;
 
-    text_width = f->width(f->userdata, (const char*)string, len);
+    text_width = f->width(f->userdata, f->height, (const char*)string, len);
     text_width += (zr_size)(2 * t->padding.x);
 
     if (a == ZR_TEXT_LEFT) {
@@ -4882,7 +4876,7 @@ zr_widget_editbox(struct zr_command_buffer *out, struct zr_rect r,
     {
         /* text management */
         struct zr_rect label;
-        zr_size  cursor_w = font->width(font->userdata,(const char*)"X", 1);
+        zr_size  cursor_w = font->width(font->userdata,font->height,(const char*)"X", 1);
         zr_size text_len = len;
         zr_size glyph_off = 0;
         zr_size glyph_cnt = 0;
@@ -4987,9 +4981,9 @@ zr_widget_editbox(struct zr_command_buffer *out, struct zr_rect r,
 
                 /* calculate selected text width */
                 zr_command_buffer_push_scissor(out, label);
-                s = font->width(font->userdata, buffer + offset, off_begin - offset);
+                s = font->width(font->userdata, font->height, buffer + offset, off_begin - offset);
                 label.x += (float)s;
-                s = font->width(font->userdata, begin, MAX(l, off_end - off_begin));
+                s = font->width(font->userdata, font->height, begin, MAX(l, off_end - off_begin));
                 label.w = (float)s;
 
                 /* draw selected text */
@@ -5247,7 +5241,6 @@ zr_widget_scrollbarh(struct zr_command_buffer *out, struct zr_rect scroll,
     zr_command_buffer_push_rect(out, scroll, s->rounding, s->background);
     zr_command_buffer_push_rect(out, cursor, s->rounding, col);
     return scroll_offset;
-
 }
 
 /* ===============================================================
@@ -6206,7 +6199,7 @@ zr_header_button(struct zr_context *layout,
         const char *X = (symbol == ZR_SYMBOL_X) ? "x":
             (symbol == ZR_SYMBOL_UNDERSCORE) ? "_":
             (symbol == ZR_SYMBOL_PLUS) ? "+": "-";
-        const zr_size t = c->font.width(c->font.userdata, X, 1);
+        const zr_size t = c->font.width(c->font.userdata, c->font.height, X, 1);
         const float text_width = (float)t;
 
         /* calculate bounds of the icon */
@@ -6350,7 +6343,7 @@ zr_header_title(struct zr_context *layout, const char *title,
     text_len = zr_strsiz(title);
 
     /* calculate and allocate space from the header */
-    t = c->font.width(c->font.userdata, title, text_len);
+    t = c->font.width(c->font.userdata, c->font.height, title, text_len);
     if (align == ZR_HEADER_RIGHT) {
         layout->header.back = layout->header.back - (3 * item_padding.x + (float)t);
         label.x = layout->header.back;
@@ -7028,13 +7021,11 @@ zr_layout_pop(struct zr_context *layout)
     layout->at_x -= panel_padding.x;
     layout->width += 2 * panel_padding.x;
 }
-/*
- * -------------------------------------------------------------
+/*----------------------------------------------------------------
  *
  *                      WINDOW WIDGETS
  *
- * --------------------------------------------------------------
- */
+ * --------------------------------------------------------------*/
 void
 zr_spacing(struct zr_context *l, zr_size cols)
 {
@@ -8135,7 +8126,7 @@ zr_shelf_begin(struct zr_context *parent, struct zr_context *shelf,
         for (i = 0; i < size; i++) {
             struct zr_rect b = {0,0,0,0};
             /* calculate the needed space for the tab text */
-            zr_size text_width = font->width(font->userdata,
+            zr_size text_width = font->width(font->userdata, font->height,
                 (const char*)tabs[i], zr_strsiz(tabs[i]));
             text_width = text_width + (zr_size)(4 * item_padding.x);
 
@@ -8798,7 +8789,7 @@ zr_tooltip(struct zr_context *layout, const char *text)
 
     /* calculate size of the text and tooltip */
     text_len = zr_strsiz(text);
-    text_width = config->font.width(config->font.userdata, text, text_len);
+    text_width = config->font.width(config->font.userdata, config->font.height, text, text_len);
     text_width += (zr_size)(2 * padding.x + 2 * item_padding.x);
     text_height = (zr_size)(config->font.height + 2 * item_padding.y);
 

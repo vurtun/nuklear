@@ -1368,8 +1368,8 @@ void zr_draw_list_path_stroke(struct zr_draw_list*, struct zr_color,
     zr_font_ref                    -- create a user font out of the font
     zr_font_find_glyph             -- finds and returns a glyph from the font
 */
-typedef zr_size(*zr_text_width_f)(zr_handle, const char*, zr_size);
-typedef void(*zr_query_font_glyph_f)(zr_handle, struct zr_user_font_glyph*,
+typedef zr_size(*zr_text_width_f)(zr_handle, float, const char*, zr_size);
+typedef void(*zr_query_font_glyph_f)(zr_handle, float, struct zr_user_font_glyph*,
         zr_rune codepoint, zr_rune next_codepoint);
 
 #if ZR_COMPILE_WITH_VERTEX_BUFFER
