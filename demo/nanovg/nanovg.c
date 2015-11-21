@@ -68,11 +68,12 @@ die(const char *fmt, ...)
 }
 
 static size_t
-font_get_width(zr_handle handle, const char *text, size_t len)
+font_get_width(zr_handle handle, float height, const char *text, size_t len)
 {
     size_t width;
     float bounds[4];
     NVGcontext *ctx = (NVGcontext*)handle.ptr;
+    nvgFontSize(ctx, (float)height);
     nvgTextBounds(ctx, 0, 0, text, &text[len], bounds);
     width = (size_t)(bounds[2] - bounds[0]);
     return width;

@@ -36,7 +36,7 @@
 
 #define UNUSED(a)   ((void)(a))
 static void clipboard_set(const char *text){UNUSED(text);}
-static zr_bool clipboard_is_filled(void){return zr_false;}
+static int clipboard_is_filled(void){return zr_false;}
 static const char* clipboard_get(void) {return NULL;}
 
 #include "../demo.c"
@@ -150,7 +150,7 @@ font_create(Display *dpy, const char *name)
 }
 
 static zr_size
-font_get_text_width(zr_handle handle, const zr_char *text, zr_size len)
+font_get_text_width(zr_handle handle, float height, const char *text, zr_size len)
 {
     XFont *font = (XFont*)handle.ptr;
     XRectangle r;
@@ -158,6 +158,7 @@ font_get_text_width(zr_handle handle, const zr_char *text, zr_size len)
     if(!font || !text)
         return 0;
 
+    height = 0;
     if(font->set) {
         XmbTextExtents(font->set, (const char*)text, (int)len, NULL, &r);
         return r.width;
@@ -226,8 +227,8 @@ surface_scissor(XSurface *surf, float x, float y, float w, float h)
 }
 
 static void
-surface_draw_line(XSurface *surf, zr_short x0, zr_short y0, zr_short x1,
-    zr_short y1, struct zr_color col)
+surface_draw_line(XSurface *surf, int16_t x0, int16_t y0, int16_t x1,
+    int16_t y1, struct zr_color col)
 {
     unsigned long c = color_from_byte(&col.r);
     XSetForeground(surf->dpy, surf->gc, c);
@@ -235,8 +236,8 @@ surface_draw_line(XSurface *surf, zr_short x0, zr_short y0, zr_short x1,
 }
 
 static void
-surface_draw_rect(XSurface* surf, zr_short x, zr_short y, zr_ushort w,
-    zr_ushort h, struct zr_color col)
+surface_draw_rect(XSurface* surf, int16_t x, int16_t y, uint16_t w,
+    uint16_t h, struct zr_color col)
 {
     unsigned long c = color_from_byte(&col.r);
     XSetForeground(surf->dpy, surf->gc, c);
@@ -244,8 +245,8 @@ surface_draw_rect(XSurface* surf, zr_short x, zr_short y, zr_ushort w,
 }
 
 static void
-surface_draw_triangle(XSurface *surf, zr_short x0, zr_short y0, zr_short x1,
-    zr_short y1, zr_short x2, zr_short y2, struct zr_color col)
+surface_draw_triangle(XSurface *surf, int16_t x0, int16_t y0, int16_t x1,
+    int16_t y1, int16_t x2, int16_t y2, struct zr_color col)
 {
     XPoint pnts[3];
     unsigned long c = color_from_byte(&col.r);
@@ -260,8 +261,8 @@ surface_draw_triangle(XSurface *surf, zr_short x0, zr_short y0, zr_short x1,
 }
 
 static void
-surface_draw_circle(XSurface *surf, zr_short x, zr_short y, zr_ushort w,
-    zr_ushort h, struct zr_color col)
+surface_draw_circle(XSurface *surf, int16_t x, int16_t y, uint16_t w,
+    uint16_t h, struct zr_color col)
 {
     unsigned long c = color_from_byte(&col.r);
     XSetForeground(surf->dpy, surf->gc, c);
@@ -270,7 +271,7 @@ surface_draw_circle(XSurface *surf, zr_short x, zr_short y, zr_ushort w,
 }
 
 static void
-surface_draw_text(XSurface *surf, zr_short x, zr_short y, zr_ushort w, zr_ushort h,
+surface_draw_text(XSurface *surf, int16_t x, int16_t y, uint16_t w, uint16_t h,
     const char *text, size_t len, XFont *font, struct zr_color cbg, struct zr_color cfg)
 {
     int tx, ty, th;
@@ -356,7 +357,7 @@ draw(XSurface *surf, struct zr_command_queue *queue)
 }
 
 static void
-input_key(struct XWindow *xw, struct zr_input *in, XEvent *evt, zr_bool down)
+input_key(struct XWindow *xw, struct zr_input *in, XEvent *evt, int down)
 {
     int ret;
     KeySym *code = XGetKeyboardMapping(xw->dpy, (KeyCode)evt->xkey.keycode, 1, &ret);
@@ -382,7 +383,7 @@ input_key(struct XWindow *xw, struct zr_input *in, XEvent *evt, zr_bool down)
         else if (*code == 'x')
             zr_input_key(in, ZR_KEY_CUT, down && (evt->xkey.state & ControlMask));
         if (!down)
-            zr_input_unicode(in, (zr_uint)*code);
+            zr_input_unicode(in, (zr_rune)*code);
     }
     XFree(code);
 }
@@ -390,16 +391,16 @@ input_key(struct XWindow *xw, struct zr_input *in, XEvent *evt, zr_bool down)
 static void
 input_motion(struct zr_input *in, XEvent *evt)
 {
-    const zr_int x = evt->xmotion.x;
-    const zr_int y = evt->xmotion.y;
+    const int x = evt->xmotion.x;
+    const int y = evt->xmotion.y;
     zr_input_motion(in, x, y);
 }
 
 static void
-input_button(struct zr_input *in, XEvent *evt, zr_bool down)
+input_button(struct zr_input *in, XEvent *evt, int down)
 {
-    const zr_int x = evt->xbutton.x;
-    const zr_int y = evt->xbutton.y;
+    const int x = evt->xbutton.x;
+    const int y = evt->xbutton.y;
     if (evt->xbutton.button == Button1)
         zr_input_button(in, ZR_BUTTON_LEFT, x, y, down);
     else if (evt->xbutton.button == Button3)
@@ -456,7 +457,7 @@ main(int argc, char *argv[])
     memset(&gui, 0, sizeof gui);
     zr_command_queue_init_fixed(&gui.queue, calloc(MAX_MEMORY, 1), MAX_MEMORY);
     gui.font.userdata = zr_handle_ptr(xw.font);
-    gui.font.height = (zr_float)xw.font->height;
+    gui.font.height = (float)xw.font->height;
     gui.font.width = font_get_text_width;
     init_demo(&gui);
 

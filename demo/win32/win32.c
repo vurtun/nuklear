@@ -17,7 +17,7 @@
 
 #define UNUSED(a)   ((void)(a))
 static void clipboard_set(const char *text){UNUSED(text);}
-static zr_bool clipboard_is_filled(void){return zr_false;}
+static int clipboard_is_filled(void){return zr_false;}
 static const char* clipboard_get(void) {return NULL;}
 
 #include "../demo.c"
@@ -94,8 +94,8 @@ font_new(HDC hdc, const char *name, int height)
     return font;
 }
 
-zr_size
-font_get_text_width(zr_handle handle, const zr_char *text, zr_size len)
+size_t
+font_get_text_width(zr_handle handle, const char *text, size_t len)
 {
     SIZE size;
     HFONT old;
@@ -312,7 +312,7 @@ draw(XSurface *surf, struct zr_command_queue *queue)
 }
 
 static void
-input_key(struct zr_input *in, MSG *msg, zr_bool down)
+input_key(struct zr_input *in, MSG *msg, int down)
 {
     switch (msg->wParam) {
     case VK_SHIFT: zr_input_key(in, ZR_KEY_SHIFT, down); break;
@@ -330,23 +330,23 @@ input_text(struct zr_input *in, MSG *msg)
 {
     char glyph;
     if (msg->wParam < 32 || msg->wParam >= 128) return;
-    glyph = (zr_char)msg->wParam;
+    glyph = (char)msg->wParam;
     zr_input_char(in, glyph);
 }
 
 static void
 input_motion(struct zr_input *in, MSG *msg)
 {
-    const zr_int x = GET_X_LPARAM(msg->lParam);
-    const zr_int y = GET_Y_LPARAM(msg->lParam);
+    const int x = GET_X_LPARAM(msg->lParam);
+    const int y = GET_Y_LPARAM(msg->lParam);
     zr_input_motion(in, x, y);
 }
 
 static void
-input_btn(struct zr_input *in, MSG *msg, zr_bool down)
+input_btn(struct zr_input *in, MSG *msg, int down)
 {
-    const zr_int x = GET_X_LPARAM(msg->lParam);
-    const zr_int y = GET_Y_LPARAM(msg->lParam);
+    const int x = GET_X_LPARAM(msg->lParam);
+    const int y = GET_Y_LPARAM(msg->lParam);
     zr_input_button(in, ZR_BUTTON_LEFT, x, y, down);
 }
 
