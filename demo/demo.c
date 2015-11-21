@@ -69,7 +69,6 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
     static int graph_state = ZR_MINIMIZED;
     static int style_state = ZR_MINIMIZED;
     static int group_state = ZR_MINIMIZED;
-    static int shelf_state = ZR_MINIMIZED;
     static int splitter_state = ZR_MINIMIZED;
 
     /* popups */
@@ -774,41 +773,6 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         zr_layout_pop(&layout);
     }
 
-    if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "Shelf", &shelf_state))
-    {
-        static const char *tabs[] = {"Up","Down","Left","Right"};
-        static int active = 0;
-        static struct zr_vec2 scrollbar;
-        struct zr_context tab;
-
-        zr_layout_row_dynamic(&layout, 140, 1);
-        zr_shelf_begin(&layout, &tab, tabs, LEN(tabs), &active, scrollbar);
-        zr_layout_row_static(&tab, 50, 50, 4);
-        if (active == 0) {
-            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_UP, ZR_BUTTON_DEFAULT);
-            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_DOWN, ZR_BUTTON_DEFAULT);
-            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_LEFT, ZR_BUTTON_DEFAULT);
-            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_RIGHT, ZR_BUTTON_DEFAULT);
-        } else if (active == 1) {
-            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_DOWN, ZR_BUTTON_DEFAULT);
-            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_LEFT, ZR_BUTTON_DEFAULT);
-            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_RIGHT, ZR_BUTTON_DEFAULT);
-            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_UP, ZR_BUTTON_DEFAULT);
-        } else if (active == 2) {
-            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_LEFT, ZR_BUTTON_DEFAULT);
-            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_RIGHT, ZR_BUTTON_DEFAULT);
-            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_UP, ZR_BUTTON_DEFAULT);
-            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_DOWN, ZR_BUTTON_DEFAULT);
-        } else if (active == 3) {
-            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_RIGHT, ZR_BUTTON_DEFAULT);
-            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_UP, ZR_BUTTON_DEFAULT);
-            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_DOWN, ZR_BUTTON_DEFAULT);
-            zr_button_symbol(&tab, ZR_SYMBOL_TRIANGLE_LEFT, ZR_BUTTON_DEFAULT);
-        }
-        zr_shelf_end(&layout, &tab, &scrollbar);
-        zr_layout_pop(&layout);
-    }
-
     if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "Splitter", &splitter_state))
     {
         static int vertical_state = ZR_MINIMIZED;
@@ -1036,10 +1000,6 @@ init_demo(struct demo *gui)
     gui->config_white.colors[ZR_COLOR_SCROLLBAR_CURSOR_ACTIVE] = zr_rgba(160, 160, 160, 255);
     gui->config_white.colors[ZR_COLOR_TABLE_LINES] = zr_rgba(100, 100, 100, 255);
     gui->config_white.colors[ZR_COLOR_TAB_HEADER] = zr_rgba(180, 180, 180, 255);
-    gui->config_white.colors[ZR_COLOR_SHELF] = zr_rgba(150, 150, 150, 255);
-    gui->config_white.colors[ZR_COLOR_SHELF_TEXT] = zr_rgba(0, 0, 0, 255);
-    gui->config_white.colors[ZR_COLOR_SHELF_ACTIVE] = zr_rgba(180, 180, 180, 255);
-    gui->config_white.colors[ZR_COLOR_SHELF_ACTIVE_TEXT] = zr_rgba(0, 0, 0, 255);
     gui->config_white.colors[ZR_COLOR_SCALER] = zr_rgba(100, 100, 100, 255);
 
     /* windows */

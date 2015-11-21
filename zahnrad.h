@@ -2951,7 +2951,6 @@ void zr_spinner_float(struct zr_context*, float min, float *value, float max,
     - the from user input updated spinner value
     - current state of the editbox with active(zr_true) or inactive(zr_false)
 */
-
 /* --------------------------------------------------------------
  *
  *                          COMBO BOX
@@ -3195,7 +3194,6 @@ void zr_popup_end(struct zr_context *parent, struct zr_context *popup,
     Output:
     - The from user input updated popup scrollbar pixel offset
 */
-
 /* --------------------------------------------------------------
  *
  *                      CONTEXTUAL

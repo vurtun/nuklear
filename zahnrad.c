@@ -1973,14 +1973,14 @@ zr_command_queue_start_child(struct zr_command_queue *queue,
     buf->end = buffer->end;
     buf->parent_last = buffer->last;
     buf->last = buf->begin;
+    buf->next = 0;
 
     /* add first sub-buffer into the stack */
     stack = &queue->stack;
+    stack->count++;
     if (!stack->begin) {
-        buf->next = 0;
         stack->begin = offset;
         stack->end = offset;
-        stack->count = 1;
         return zr_true;
     }
 
@@ -1988,8 +1988,7 @@ zr_command_queue_start_child(struct zr_command_queue *queue,
     size = queue->buffer.memory.size;
     end = zr_ptr_add(struct zr_command_sub_buffer, memory, (size - stack->end));
     end->next = offset;
-    buf->next = offset;
-    stack->count++;
+    stack->end = offset;
     return zr_true;
 }
 
@@ -2050,15 +2049,16 @@ zr_command_queue_finish(struct zr_command_queue *queue,
     iter = zr_ptr_add(struct zr_command_sub_buffer, memory, (size - stack->begin));
 
     /* fix buffer command list for subbuffers  */
-    for (i = 0; i < stack->count; ++i) {
+    for (i = 0; i < queue->stack.count; ++i) {
         struct zr_command *parent_last, *sublast, *last;
+
         parent_last = zr_ptr_add(struct zr_command, memory, iter->parent_last);
         sublast = zr_ptr_add(struct zr_command, memory, iter->last);
         last = zr_ptr_add(struct zr_command, memory, buffer->last);
 
         /* redirect the subbuffer to the end of the current command buffer */
         parent_last->next = iter->end;
-        if (i == (stack->count - 1))
+        if (i == (queue->stack.count-1))
             sublast->next = last->next;
         last->next = iter->begin;
         buffer->last = iter->last;
@@ -2066,6 +2066,8 @@ zr_command_queue_finish(struct zr_command_queue *queue,
         iter = zr_ptr_add(struct zr_command_sub_buffer, memory, size - iter->next);
     }
     queue->stack.count = 0;
+    queue->stack.begin = 0;
+    queue->stack.end = 0;
 }
 
 void
