@@ -435,14 +435,15 @@ die(const char *fmt, ...)
     exit(EXIT_FAILURE);
 }
 
-static zr_size
-font_get_width(zr_handle handle, const char *text, zr_size len)
+static size_t
+font_get_width(zr_handle handle, float height, const char *text, size_t len)
 {
-    zr_size width;
+    size_t width;
     float bounds[4];
     NVGcontext *ctx = (NVGcontext*)handle.ptr;
+    nvgFontSize(ctx, (float)height);
     nvgTextBounds(ctx, 0, 0, text, &text[len], bounds);
-    width = (zr_size)(bounds[2] - bounds[0]);
+    width = (size_t)(bounds[2] - bounds[0]);
     return width;
 }
 
@@ -519,6 +520,7 @@ draw(NVGcontext *nvg, struct zr_command_queue *queue, int width, int height)
             nvgBeginPath(nvg);
             nvgFillColor(nvg, nvgRGBA(t->foreground.r, t->foreground.g,
                 t->foreground.b, t->foreground.a));
+            nvgFontSize(nvg, (float)t->height);
             nvgTextAlign(nvg, NVG_ALIGN_MIDDLE);
             nvgText(nvg, t->x, t->y + t->h * 0.5f, t->string, &t->string[t->length]);
             nvgFill(nvg);
@@ -627,7 +629,7 @@ main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
     font_path = argv[1];
-    font_height = 12;
+    font_height = 14;
 
     /* SDL */
     SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER|SDL_INIT_EVENTS);
