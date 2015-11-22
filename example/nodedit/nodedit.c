@@ -666,9 +666,10 @@ main(int argc, char *argv[])
     nvgTextMetrics(vg, NULL, NULL, &gui.font.height);
     gui.font.width = font_get_width;
     zr_style_default(&gui.config, ZR_DEFAULT_ALL, &gui.font);
+    gui.config.header.align = ZR_HEADER_RIGHT;
 
     zr_window_init(&gui.window, zr_rect(0, 0, width, height),
-        ZR_WINDOW_BORDER|ZR_WINDOW_NO_SCROLLBAR,
+        ZR_WINDOW_BORDER|ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_CLOSEABLE,
         &gui.queue, &gui.config, &gui.input);
     node_editor_init(&nodedit);
 
@@ -694,14 +695,15 @@ main(int argc, char *argv[])
             int incursor;
             struct zr_context layout;
             struct zr_rect bounds = gui.window.bounds;
+            zr_flags ret;
 
-            zr_begin(&layout, &gui.window);
-            if (zr_header(&layout, "Node Editor", ZR_CLOSEABLE, ZR_CLOSEABLE, ZR_HEADER_RIGHT))
+            ret = zr_begin(&layout, &gui.window, "Node Editor");
+            if (ret & ZR_WINDOW_CLOSEABLE)
                 goto cleanup;
 
             /* borderless os window dragging */
             incursor = zr_input_is_mouse_hovering_rect(&gui.input,
-                zr_rect(layout.bounds.x, layout.bounds.y, layout.bounds.w, layout.header.h));
+                zr_rect(layout.bounds.x, layout.bounds.y, layout.bounds.w, layout.header_h));
             if (zr_input_is_mouse_down(&gui.input, ZR_BUTTON_LEFT) && incursor) {
                 x += gui.input.mouse.delta.x;
                 y += gui.input.mouse.delta.y;

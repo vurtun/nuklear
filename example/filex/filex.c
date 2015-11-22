@@ -470,7 +470,7 @@ file_browser_run(struct file_browser *browser, int width, int height)
 
     browser->window.bounds.w = width;
     browser->window.bounds.h = height;
-    zr_begin(&context, &browser->window);
+    zr_begin(&context, &browser->window, NULL);
     {
         struct zr_context sub;
         float row_layout[3];

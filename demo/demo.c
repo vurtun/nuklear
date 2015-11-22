@@ -54,13 +54,10 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
     static int moveable = zr_true;
     static int no_scrollbar = zr_false;
     static zr_flags window_flags = 0;
-
-    /* header flags */
     static int minimizable = zr_true;
     static int close = zr_true;
     static int scale = zr_false;
     static int move = zr_false;
-    static zr_flags header_flags = 0;
 
     /* collapsable headers */
     static int window_option_state = ZR_MINIMIZED;
@@ -72,7 +69,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
     static int splitter_state = ZR_MINIMIZED;
 
     /* popups */
-    static enum zr_header_align header_align = ZR_HEADER_RIGHT;
+    static enum zr_style_header_align header_align = ZR_HEADER_RIGHT;
     static int show_app_about = zr_false;
     static int show_contextual = zr_false;
     static struct zr_rect contextual_bounds;
@@ -82,6 +79,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
     static struct zr_color color_picker_color;
 
     /* window flags */
+    config->header.align = header_align;
     window->style = config;
     window_flags = 0;
     if (border) window_flags |= ZR_WINDOW_BORDER;
@@ -91,23 +89,14 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
     if (window->flags & ZR_WINDOW_ACTIVE) window_flags |= ZR_WINDOW_ACTIVE;
     if (window->flags & ZR_WINDOW_ROM) window_flags |= ZR_WINDOW_ROM;
     if (window->flags & ZR_WINDOW_MINIMIZED) window_flags |= ZR_WINDOW_MINIMIZED;
-
-    /* header flags */
-    header_flags = 0;
-    if (minimizable) header_flags |= ZR_MINIMIZABLE;
-    if (close) header_flags |= ZR_CLOSEABLE;
-    if (scale) header_flags |= ZR_SCALEABLE;
-    if (move) header_flags |= ZR_MOVEABLE;
+    if (minimizable) window_flags |= ZR_WINDOW_MINIMIZABLE;
+    if (close) window_flags |= ZR_WINDOW_CLOSEABLE;
 
     /* main window */
     window->flags = window_flags;
-    zr_begin(&layout, window);
-    ret = zr_header(&layout, (titlebar)? "Zahnrad":"", header_flags, header_flags, header_align);
-    if (ret & ZR_CLOSEABLE) {
-        layout.flags &= (zr_flags)~ZR_WINDOW_HIDDEN;
-        layout.valid = zr_true;
+    ret = zr_begin(&layout, window, (titlebar)? "Zahnrad":"");
+    if (ret & ZR_WINDOW_CLOSEABLE)
         return 0;
-    }
 
     if (show_menu)
     {
@@ -160,11 +149,13 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         struct zr_context popup;
         static struct zr_vec2 about_scrollbar;
         static struct zr_rect s = {20, 100, 300, 190};
-        zr_popup_begin(&layout, &popup, ZR_POPUP_STATIC, 0, s, about_scrollbar);
-        if (zr_header(&popup, "About", ZR_CLOSEABLE, ZR_CLOSEABLE, ZR_HEADER_LEFT)){
+        zr_flags r = zr_popup_begin(&layout, &popup, ZR_POPUP_STATIC, "About",
+            ZR_WINDOW_CLOSEABLE, s, about_scrollbar);
+        if (r & ZR_WINDOW_CLOSEABLE){
             show_app_about = zr_false;
             zr_popup_close(&popup);
         }
+
         zr_layout_row_dynamic(&popup, 20, 1);
         zr_label(&popup, "Zahnrad", ZR_TEXT_LEFT);
         zr_label(&popup, "By Micha Mettke", ZR_TEXT_LEFT);
@@ -179,8 +170,9 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         struct zr_context popup;
         static struct zr_vec2 close_scrollbar = {0,0};
         static const struct zr_rect s = {20, 150, 230, 150};
-        zr_popup_begin(&layout, &popup, ZR_POPUP_STATIC, 0, s, close_scrollbar);
-        if (zr_header(&popup, "Quit", ZR_CLOSEABLE, ZR_CLOSEABLE, ZR_HEADER_LEFT)) {
+        zr_flags r = zr_popup_begin(&layout, &popup, ZR_POPUP_STATIC, "Quit",
+            ZR_WINDOW_CLOSEABLE, s, close_scrollbar);
+        if (r & ZR_WINDOW_CLOSEABLE) {
             show_close_popup = zr_false;
             zr_popup_close(&popup);
         }
@@ -206,8 +198,9 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         static int active[4];
         struct zr_context popup;
         int r,g,b,a;
-        zr_popup_begin(&layout, &popup, ZR_POPUP_STATIC,0, zr_rect(10, 100, 350, 280), zr_vec2(0,0));
-        if (zr_header(&popup, "Color", ZR_CLOSEABLE, ZR_CLOSEABLE, ZR_HEADER_LEFT))
+        zr_flags res = zr_popup_begin(&layout, &popup, ZR_POPUP_STATIC, "Color Picker",
+            ZR_WINDOW_CLOSEABLE, zr_rect(10, 100, 350, 280), zr_vec2(0,0));
+        if (res & ZR_WINDOW_CLOSEABLE)
         {
             zr_popup_close(&popup);
             show_color_picker_popup = zr_false;
@@ -1004,13 +997,16 @@ init_demo(struct demo *gui)
 
     /* windows */
     zr_window_init(&gui->panel, zr_rect(30, 30, 400, 600),
-        ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALEABLE,
+        ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALEABLE|
+        ZR_WINDOW_CLOSEABLE|ZR_WINDOW_MINIMIZABLE,
         &gui->queue, &gui->config_black, &gui->input);
     zr_window_init(&gui->sub, zr_rect(400, 50, 220, 180),
-        ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALEABLE,
+        ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALEABLE|
+        ZR_WINDOW_CLOSEABLE|ZR_WINDOW_MINIMIZABLE,
         &gui->queue, &gui->config_black, &gui->input);
     zr_window_init(&gui->metrics, zr_rect(200, 400, 250, 300),
-        ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALEABLE,
+        ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALEABLE|
+        ZR_WINDOW_CLOSEABLE|ZR_WINDOW_MINIMIZABLE,
         &gui->queue, &gui->config_black, &gui->input);
 
     {
@@ -1027,18 +1023,18 @@ init_demo(struct demo *gui)
 static void
 run_demo(struct demo *gui)
 {
+    int res;
     struct zr_context layout;
     struct zr_style *current = (gui->theme == THEME_BLACK) ? &gui->config_black : &gui->config_white;
     gui->running = show_test_window(&gui->panel, current, &gui->theme, &gui->text);
 
     /* ussage example  */
     gui->sub.style = current;
-    zr_begin(&layout, &gui->sub);
+    zr_begin(&layout, &gui->sub, "Show");
     {
         enum {EASY, HARD};
         static int op = EASY;
         static float value = 0.5f;
-        zr_header(&layout, "Show", ZR_CLOSEABLE, 0, ZR_HEADER_LEFT);
         zr_layout_row_static(&layout, 30, 80, 1);
         if (zr_button_text(&layout, "button", ZR_BUTTON_DEFAULT)) {
             /* event handling */
@@ -1059,7 +1055,7 @@ run_demo(struct demo *gui)
 
     /* metrics window */
     gui->metrics.style = current;
-    zr_begin(&layout, &gui->metrics);
+    zr_begin(&layout, &gui->metrics, "Metrics");
     {
         static int prim_state = ZR_MINIMIZED;
         static int mem_state = ZR_MINIMIZED;
@@ -1067,7 +1063,6 @@ run_demo(struct demo *gui)
         struct zr_command_stats *stats = &gui->panel.buffer.stats;
         zr_buffer_info(&status, &gui->queue.buffer);
 
-        zr_header(&layout, "Metrics", ZR_CLOSEABLE, 0, ZR_HEADER_LEFT);
         if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Memory", &mem_state))
         {
             zr_layout_row_dynamic(&layout, 20, 2);

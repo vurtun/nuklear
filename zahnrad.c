@@ -5529,6 +5529,11 @@ zr_style_default(struct zr_style *style, zr_flags flags,
         zr_style_default_properties(style);
     if (flags & ZR_DEFAULT_ROUNDING)
         zr_style_default_rounding(style);
+
+    style->header.align = ZR_HEADER_RIGHT;
+    style->header.close_symbol = 'x';
+    style->header.minimize_symbol = '-';
+    style->header.maximize_symbol = '+';
 }
 
 void
@@ -5705,12 +5710,116 @@ zr_window_is_minimized(struct zr_window *panel)
 
 /*-------------------------------------------------------------
  *
+ *                          HEADER
+ *
+ * --------------------------------------------------------------*/
+struct zr_window_header {
+    float x, y, w, h;
+    float front, back;
+};
+
+static int
+zr_header_button(struct zr_context *layout, struct zr_window_header *header,
+   zr_rune symbol, enum zr_style_header_align align)
+{
+    /* calculate the position of the close icon position and draw it */
+    zr_glyph glyph;
+    struct zr_rect sym = {0,0,0,0};
+    float sym_bw = 0;
+    int ret = zr_false;
+
+    const struct zr_style *c;
+    struct zr_command_buffer *out;
+    struct zr_vec2 item_padding;
+
+    ZR_ASSERT(layout);
+    ZR_ASSERT(layout->buffer);
+    ZR_ASSERT(layout->style);
+    if (!layout || layout->flags & ZR_WINDOW_HIDDEN)
+        return zr_false;
+
+    /* cache configuration data */
+    c = layout->style;
+    out = layout->buffer;
+    item_padding = zr_style_property(c, ZR_PROPERTY_ITEM_PADDING);
+
+    sym.x = header->front;
+    sym.y = header->y;
+    {
+        /* single unicode rune text icon */
+        const char *X = glyph;
+        const zr_size len = zr_utf_encode(symbol, glyph, sizeof(glyph));
+        const zr_size t = c->font.width(c->font.userdata, c->font.height, X, len);
+        const float text_width = (float)t;
+
+        /* calculate bounds of the icon */
+        sym_bw = text_width;
+        sym.w = (float)text_width + 2 * item_padding.x;
+        sym.h = c->font.height + 2 * item_padding.y;
+        if (align == ZR_HEADER_RIGHT)
+            sym.x = header->back - sym.w;
+        zr_command_buffer_push_text(out, sym, X, len, &c->font,
+            c->colors[ZR_COLOR_HEADER],c->colors[ZR_COLOR_TEXT]);
+    }
+
+    /* check if the icon has been pressed */
+    if (!(layout->flags & ZR_WINDOW_ROM)) {
+        float mouse_x = layout->input->mouse.pos.x;
+        float mouse_y = layout->input->mouse.pos.y;
+        float clicked_x = layout->input->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.x;
+        float clicked_y = layout->input->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.y;
+        if (ZR_INBOX(mouse_x, mouse_y, sym.x, sym.y, sym_bw, sym.h)) {
+            if (ZR_INBOX(clicked_x, clicked_y, sym.x, sym.y, sym_bw, sym.h))
+                ret = (layout->input->mouse.buttons[ZR_BUTTON_LEFT].down &&
+                        layout->input->mouse.buttons[ZR_BUTTON_LEFT].clicked);
+        }
+    }
+
+    /* update the header space */
+    if (align == ZR_HEADER_RIGHT)
+        header->back -= (sym.w + item_padding.x);
+    else header->front += sym.w + item_padding.x;
+    return ret;
+}
+
+static int
+zr_header_toggle(struct zr_context *layout,struct zr_window_header *header,
+    zr_rune active, zr_rune inactive, enum zr_style_header_align align, int state)
+{
+    int ret = zr_header_button(layout, header,(state) ? active : inactive, align);
+    if (ret) return !state;
+    return state;
+}
+
+static int
+zr_header_flag(struct zr_context *layout, struct zr_window_header *header,
+    zr_rune inactive, zr_rune active, enum zr_style_header_align align,
+    enum zr_window_flags flag)
+{
+    zr_flags flags = layout->flags;
+    int state = (flags & flag) ? zr_true : zr_false;
+    int ret = zr_header_toggle(layout, header, inactive, active, align, state);
+    if (ret != ((flags & flag) ? zr_true : zr_false)) {
+        /* the state of the toggle icon has been changed  */
+        if (!ret) layout->flags &= ~flag;
+        else layout->flags |= flag;
+        /* update the state of the panel since the flag have changed */
+        layout->valid = !(layout->flags & ZR_WINDOW_HIDDEN) &&
+                        !(layout->flags & ZR_WINDOW_MINIMIZED);
+        return zr_true;
+    }
+    return zr_false;
+}
+
+/*-------------------------------------------------------------
+ *
  *                          CONTEXT
  *
  * --------------------------------------------------------------*/
 zr_flags
-zr_begin(struct zr_context *context, struct zr_window *window)
+zr_begin(struct zr_context *context, struct zr_window *window, const char *title)
 {
+    int header_active = 0;
     zr_flags ret = 0;
     const struct zr_style *c;
     float scrollbar_size;
@@ -5780,15 +5889,15 @@ zr_begin(struct zr_context *context, struct zr_window *window)
     }
 
     /* move panel position if requested */
-    context->header.h = c->font.height + 4 * item_padding.y;
-    context->header.h += window_padding.y;
+    context->header_h = c->font.height + 4 * item_padding.y;
+    context->header_h += window_padding.y;
     if ((window->flags & ZR_WINDOW_MOVEABLE) && !(window->flags & ZR_WINDOW_ROM)) {
         int incursor;
         struct zr_rect move;
         move.x = window->bounds.x;
         move.y = window->bounds.y;
         move.w = window->bounds.w;
-        move.h = context->header.h;
+        move.h = context->header_h;
         incursor = zr_input_is_mouse_prev_hovering_rect(in, move);
         if (zr_input_is_mouse_down(in, ZR_BUTTON_LEFT) && incursor) {
             window->bounds.x = window->bounds.x + in->mouse.delta.x;
@@ -5817,14 +5926,14 @@ zr_begin(struct zr_context *context, struct zr_window *window)
 
     /* window header */
     if (window->flags & ZR_WINDOW_MINIMIZED) {
-        context->header.h = 0;
+        context->header_h = 0;
         context->row.height = 0;
     } else {
-        context->header.h = 2 * item_spacing.y;
-        context->row.height = context->header.h;
+        context->header_h = 2 * item_spacing.y;
+        context->row.height = context->header_h;
     }
 
-    /* panel activation by clicks inside of the panel */
+    /* window activation by click inside */
     if (!(window->flags & ZR_WINDOW_TAB) && !(window->flags & ZR_WINDOW_ROM)) {
         float clicked_x = in->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.x;
         float clicked_y = in->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.y;
@@ -5848,7 +5957,7 @@ zr_begin(struct zr_context *context, struct zr_window *window)
     /* calculate the window size */
     if (!(window->flags & ZR_WINDOW_NO_SCROLLBAR))
         context->width = window->bounds.w - scrollbar_size;
-    context->height = window->bounds.h - (context->header.h + 2 * item_spacing.y);
+    context->height = window->bounds.h - (context->header_h + 2 * item_spacing.y);
     context->height -= context->footer_h;
 
     /* draw window background if not a dynamic window */
@@ -5859,7 +5968,87 @@ zr_begin(struct zr_context *context, struct zr_window *window)
             context->bounds.w, context->row.height + window_padding.y), 0, c->colors[ZR_COLOR_WINDOW]);
     }
 
-    /* draw top border line */
+    /* window header */
+    header_active = (window->flags & (ZR_WINDOW_CLOSEABLE|ZR_WINDOW_MINIMIZABLE));
+    header_active = header_active || (title != 0);
+    header_active = header_active && !(window->flags & ZR_WINDOW_HIDDEN);
+    if (header_active) {
+        zr_flags old;
+        struct zr_rect old_clip = out->clip;
+        struct zr_window_header header, sym;
+
+        /* This is a little bit of a performace hack. To make sure the header does
+         * not get overdrawn with text you do not have to push a scissor rect. This
+         * is possible because the command buffer automatically clips text by using
+         * its clipping rectangle. But since the clipping rect gets reused to calculate
+         * the window clipping rect the old clipping rect has to be stored and reset afterwards. */
+        out->clip.x = header.x = context->bounds.x + window_padding.x;
+        out->clip.y = header.y = context->bounds.y + item_padding.y;
+        out->clip.w = header.w = MAX(context->bounds.w, 2 * window_padding.x);
+        out->clip.h = header.w -= 2 * window_padding.x;
+
+        /* update the header height and first row height */
+        context->header_h = c->font.height + 2 * item_padding.y;
+        context->header_h += window_padding.y;
+        context->row.height += context->header_h;
+
+        header.h = context->header_h;
+        header.back = header.x + header.w;
+        header.front = header.x;
+
+        context->height = context->bounds.h - (header.h + 2 * item_spacing.y);
+        context->height -= context->footer_h;
+
+        /* draw header background */
+        if (!(context->flags & ZR_WINDOW_BORDER)) {
+            zr_command_buffer_push_rect(out, zr_rect(context->bounds.x, context->bounds.y,
+                context->bounds.w, context->header_h), 0, c->colors[ZR_COLOR_HEADER]);
+        } else {
+            zr_command_buffer_push_rect(out, zr_rect(context->bounds.x, context->bounds.y+1,
+                context->bounds.w, context->header_h), 0, c->colors[ZR_COLOR_HEADER]);
+        }
+
+        /* window header icons */
+        old = window->flags;
+        if (window->flags & ZR_WINDOW_CLOSEABLE)
+            zr_header_flag(context, &header, c->header.close_symbol, c->header.close_symbol,
+                c->header.align, ZR_WINDOW_HIDDEN);
+        if (window->flags & ZR_WINDOW_MINIMIZABLE)
+            zr_header_flag(context, &header, c->header.maximize_symbol, c->header.minimize_symbol,
+                c->header.align, ZR_WINDOW_MINIMIZED);
+
+        /* window state change notifcations */
+        if ((old & ZR_WINDOW_HIDDEN) ^ (context->flags & ZR_WINDOW_HIDDEN))
+            ret |= ZR_WINDOW_CLOSEABLE;
+        if ((old & ZR_WINDOW_MINIMIZED) ^ (context->flags & ZR_WINDOW_MINIMIZED))
+            ret |= ZR_WINDOW_MINIMIZABLE;
+
+        /* window header title */
+        if (title) {
+            zr_size text_len = zr_strsiz(title);
+            struct zr_rect label = {0,0,0,0};
+
+            /* calculate and allocate space from the header */
+            zr_size t = c->font.width(c->font.userdata, c->font.height, title, text_len);
+            if (c->header.align == ZR_HEADER_LEFT) {
+                header.back = header.back - (3 * item_padding.x + (float)t);
+                label.x = header.back;
+            } else {
+                label.x = header.front;
+                header.front += 3 * item_padding.x + (float)t;
+            }
+
+            /* calculate label bounds and draw text */
+            label.y = header.y;
+            label.h = c->font.height + 2 * item_padding.y;
+            label.w = MAX((float)t + 2 * item_padding.x, 4 * item_padding.x);
+            zr_command_buffer_push_text(out, label, (const char*)title, text_len,
+                &c->font, c->colors[ZR_COLOR_HEADER], c->colors[ZR_COLOR_TEXT]);
+        }
+        out->clip = old_clip;
+    }
+
+    /* draw top window border line */
     if (context->flags & ZR_WINDOW_BORDER) {
         zr_command_buffer_push_line(out, context->bounds.x, context->bounds.y,
             context->bounds.x + context->bounds.w, context->bounds.y,
@@ -5877,9 +6066,15 @@ zr_begin(struct zr_context *context, struct zr_window *window)
             context->clip.w = context->width;
         }
 
-        context->clip.y = window->bounds.y + context->header.h;
-        context->clip.h = window->bounds.h - (context->footer_h + context->header.h);
+        context->clip.h = window->bounds.h - (context->footer_h + context->header_h);
         context->clip.h -= (window_padding.y + item_padding.y);
+        context->clip.y = window->bounds.y;
+        if (!(window->flags & ZR_WINDOW_COMBO_MENU) && header_active)
+            context->clip.y += context->header_h;
+        if (window->flags & ZR_WINDOW_BORDER) {
+            context->clip.y += 1;
+            context->clip.h -= 1;
+        }
         zr_unify(&clip, &context->buffer->clip, context->clip.x, context->clip.y,
             context->clip.x + context->clip.w, context->clip.y + context->clip.h);
         zr_command_buffer_push_scissor(out, clip);
@@ -5971,14 +6166,14 @@ zr_end(struct zr_context *layout, struct zr_window *window)
             bounds.x = layout->bounds.x + layout->width;
             bounds.y = (layout->flags & ZR_WINDOW_BORDER) ?
                         layout->bounds.y + 1 : layout->bounds.y;
-            bounds.y += layout->header.h + layout->menu.h;
+            bounds.y += layout->header_h + layout->menu.h;
             bounds.w = scrollbar_size;
             bounds.h = layout->height;
             if (layout->flags & ZR_WINDOW_BORDER) bounds.h -= 1;
 
             scroll_offset = layout->offset.y;
             scroll_step = layout->clip.h * 0.10f;
-            scroll_target = (layout->at_y - layout->bounds.y)-(layout->header.h+2*item_spacing.y);
+            scroll_target = (layout->at_y - layout->bounds.y)-(layout->header_h+2*item_spacing.y);
             scroll.has_scrolling = (layout->flags & ZR_WINDOW_ACTIVE);
             window->offset.y = zr_widget_scrollbarv(out, bounds, scroll_offset,
                                 scroll_target, scroll_step, &scroll, in);
@@ -5990,7 +6185,7 @@ zr_end(struct zr_context *layout, struct zr_window *window)
                 bounds.h = scrollbar_size;
                 bounds.y = (layout->flags & ZR_WINDOW_BORDER) ?
                             layout->bounds.y + 1 : layout->bounds.y;
-                bounds.y += layout->header.h + layout->menu.h + layout->height;
+                bounds.y += layout->header_h + layout->menu.h + layout->height;
                 bounds.w = layout->clip.w;
             } else if (layout->flags & ZR_WINDOW_DYNAMIC) {
                 bounds.h = MIN(scrollbar_size, layout->footer_h);
@@ -6047,14 +6242,14 @@ zr_end(struct zr_context *layout, struct zr_window *window)
         const float width = (layout->flags & ZR_WINDOW_NO_SCROLLBAR) ?
             layout->width: layout->width + scrollbar_size;
         const float padding_y = (!layout->valid) ?
-            window->bounds.y + layout->header.h:
+            window->bounds.y + layout->header_h:
             (layout->flags & ZR_WINDOW_DYNAMIC)?
             layout->footer_h + footer.y:
             layout->bounds.y + layout->bounds.h;
 
         if (window->flags & ZR_WINDOW_BORDER_HEADER)
-            zr_command_buffer_push_line(out, window->bounds.x, window->bounds.y + layout->header.h,
-                window->bounds.x + window->bounds.w, window->bounds.y + layout->header.h,
+            zr_command_buffer_push_line(out, window->bounds.x, window->bounds.y + layout->header_h,
+                window->bounds.x + window->bounds.w, window->bounds.y + layout->header_h,
                 config->colors[ZR_COLOR_BORDER]);
         zr_command_buffer_push_line(out, window->bounds.x, padding_y, window->bounds.x + width,
                 padding_y, config->colors[ZR_COLOR_BORDER]);
@@ -6097,351 +6292,6 @@ struct zr_rect
 zr_space(struct zr_context *layout)
 {ZR_ASSERT(layout); return layout->clip;}
 
-/* -------------------------------------------------------------
- *
- *                          HEADER
- *
- * --------------------------------------------------------------*/
-void
-zr_header_begin(struct zr_context *layout)
-{
-    const struct zr_style *c;
-    struct zr_vec2 item_padding;
-    struct zr_vec2 item_spacing;
-    struct zr_vec2 panel_padding;
-    struct zr_command_buffer *out;
-    struct zr_rect clip;
-    float old;
-
-    ZR_ASSERT(layout);
-    if (!layout) return;
-    if (layout->flags & ZR_WINDOW_HIDDEN)
-        return;
-
-    c = layout->style;
-    out = layout->buffer;
-
-    /* cache some configuration data */
-    panel_padding = zr_style_property(c, ZR_PROPERTY_PADDING);
-    item_padding = zr_style_property(c, ZR_PROPERTY_ITEM_PADDING);
-    item_spacing = zr_style_property(c, ZR_PROPERTY_ITEM_SPACING);
-
-    old = layout->header.h;
-    if (layout->valid)
-        zr_command_buffer_push_scissor(out,
-            zr_rect(out->clip.x, out->clip.y - old, out->clip.w, out->clip.h));
-
-    /* update the header height and first row height */
-    layout->header.h = c->font.height + 2 * item_padding.y;
-    layout->header.h += panel_padding.y;
-    layout->row.height += layout->header.h;
-    if (layout->valid)
-        zr_command_buffer_push_rect(out,
-            zr_rect(layout->bounds.x, layout->bounds.y + layout->header.h,
-            layout->bounds.w, layout->row.height), 0, c->colors[ZR_COLOR_WINDOW]);
-
-    /* setup header bounds and growable icon space */
-    layout->header.x = layout->bounds.x + panel_padding.x;
-    layout->header.y = layout->bounds.y + item_padding.y;
-    layout->header.w = MAX(layout->bounds.w, 2 * panel_padding.x);
-    layout->header.w -= 2 * panel_padding.x;
-    layout->header.front = layout->header.x;
-    layout->header.back = layout->header.x + layout->header.w;
-    layout->height = layout->bounds.h - (layout->header.h + 2 * item_spacing.y);
-    layout->height -= layout->footer_h;
-
-    zr_unify(&clip, &layout->buffer->clip, layout->bounds.x, layout->bounds.y,
-        layout->bounds.x + layout->bounds.w, layout->bounds.y + layout->bounds.h);
-    zr_command_buffer_push_scissor(out, clip);
-    if (!(layout->flags & ZR_WINDOW_BORDER)) {
-        zr_command_buffer_push_rect(out, zr_rect(layout->bounds.x, layout->bounds.y,
-            layout->bounds.w, layout->header.h), 0, c->colors[ZR_COLOR_HEADER]);
-    } else {
-        zr_command_buffer_push_rect(out, zr_rect(layout->bounds.x, layout->bounds.y+1,
-            layout->bounds.w, layout->header.h), 0, c->colors[ZR_COLOR_HEADER]);
-    }
-}
-
-int
-zr_header_button(struct zr_context *layout,
-    enum zr_symbol symbol, enum zr_header_align align)
-{
-    /* calculate the position of the close icon position and draw it */
-    struct zr_rect sym = {0,0,0,0};
-    float sym_bw = 0;
-    int ret = zr_false;
-
-    const struct zr_style *c;
-    struct zr_command_buffer *out;
-    struct zr_vec2 item_padding;
-
-    ZR_ASSERT(layout);
-    ZR_ASSERT(layout->buffer);
-    ZR_ASSERT(layout->style);
-    if (!layout || layout->flags & ZR_WINDOW_HIDDEN)
-        return zr_false;
-
-    /* cache configuration data */
-    c = layout->style;
-    out = layout->buffer;
-    item_padding = zr_style_property(c, ZR_PROPERTY_ITEM_PADDING);
-
-    sym.x = layout->header.front;
-    sym.y = layout->header.y;
-
-    switch (symbol) {
-    case ZR_SYMBOL_MINUS:
-    case ZR_SYMBOL_PLUS:
-    case ZR_SYMBOL_UNDERSCORE:
-    case ZR_SYMBOL_X: {
-        /* single character text icon */
-        const char *X = (symbol == ZR_SYMBOL_X) ? "x":
-            (symbol == ZR_SYMBOL_UNDERSCORE) ? "_":
-            (symbol == ZR_SYMBOL_PLUS) ? "+": "-";
-        const zr_size t = c->font.width(c->font.userdata, c->font.height, X, 1);
-        const float text_width = (float)t;
-
-        /* calculate bounds of the icon */
-        sym_bw = text_width;
-        sym.w = (float)text_width + 2 * item_padding.x;
-        sym.h = c->font.height + 2 * item_padding.y;
-        if (align == ZR_HEADER_RIGHT)
-            sym.x = layout->header.back - sym.w;
-        zr_command_buffer_push_text(out, sym, X, 1, &c->font, c->colors[ZR_COLOR_HEADER],
-                                        c->colors[ZR_COLOR_TEXT]);
-        } break;
-    case ZR_SYMBOL_CIRCLE_FILLED:
-    case ZR_SYMBOL_CIRCLE:
-    case ZR_SYMBOL_RECT_FILLED:
-    case ZR_SYMBOL_RECT: {
-        /* simple empty/filled shapes */
-        sym_bw = sym.w = c->font.height;
-        sym.h = c->font.height;
-        sym.y = sym.y + c->font.height/2;
-        if (align == ZR_HEADER_RIGHT)
-            sym.x = layout->header.back - (c->font.height + 2 * item_padding.x);
-
-        if (symbol == ZR_SYMBOL_RECT || symbol == ZR_SYMBOL_RECT_FILLED) {
-            /* rectangle shape  */
-            zr_command_buffer_push_rect(out, sym,  0, c->colors[ZR_COLOR_TEXT]);
-            if (symbol == ZR_SYMBOL_RECT_FILLED)
-                zr_command_buffer_push_rect(out, zr_shrink_rect(sym, 1),
-                    0, c->colors[ZR_COLOR_HEADER]);
-        } else {
-            /* circle shape  */
-            zr_command_buffer_push_circle(out, sym, c->colors[ZR_COLOR_TEXT]);
-            if (symbol == ZR_SYMBOL_CIRCLE_FILLED)
-                zr_command_buffer_push_circle(out, zr_shrink_rect(sym, 1),
-                    c->colors[ZR_COLOR_HEADER]);
-        }
-
-        /* calculate the space the icon occupied */
-        sym.w = c->font.height + 2 * item_padding.x;
-        } break;
-    case ZR_SYMBOL_TRIANGLE_UP:
-    case ZR_SYMBOL_TRIANGLE_DOWN:
-    case ZR_SYMBOL_TRIANGLE_LEFT:
-    case ZR_SYMBOL_TRIANGLE_RIGHT: {
-        /* triangle icon with direction */
-        enum zr_heading heading;
-        struct zr_vec2 points[3];
-        heading = (symbol == ZR_SYMBOL_TRIANGLE_RIGHT) ? ZR_RIGHT :
-            (symbol == ZR_SYMBOL_TRIANGLE_LEFT) ? ZR_LEFT:
-            (symbol == ZR_SYMBOL_TRIANGLE_UP) ? ZR_UP: ZR_DOWN;
-
-        /* calculate bounds of the icon */
-        sym_bw = sym.w = c->font.height;
-        sym.h = c->font.height;
-        sym.y = sym.y + c->font.height/2;
-        if (align == ZR_HEADER_RIGHT)
-            sym.x = layout->header.back - (c->font.height + 2 * item_padding.x);
-
-        /* calculate the triangle point positions and draw triangle */
-        zr_triangle_from_direction(points, sym, 0, 0, heading);
-        zr_command_buffer_push_triangle(layout->buffer,  points[0].x, points[0].y,
-            points[1].x, points[1].y, points[2].x, points[2].y, c->colors[ZR_COLOR_TEXT]);
-
-        /* calculate the space the icon occupies */
-        sym.w = c->font.height + 2 * item_padding.x;
-        } break;
-    case ZR_SYMBOL_MAX:
-    default: return ret;
-    }
-
-    /* check if the icon has been pressed */
-    if (!(layout->flags & ZR_WINDOW_ROM)) {
-        float mouse_x = layout->input->mouse.pos.x;
-        float mouse_y = layout->input->mouse.pos.y;
-        float clicked_x = layout->input->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.x;
-        float clicked_y = layout->input->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.y;
-        if (ZR_INBOX(mouse_x, mouse_y, sym.x, sym.y, sym_bw, sym.h)) {
-            if (ZR_INBOX(clicked_x, clicked_y, sym.x, sym.y, sym_bw, sym.h))
-                ret = (layout->input->mouse.buttons[ZR_BUTTON_LEFT].down &&
-                        layout->input->mouse.buttons[ZR_BUTTON_LEFT].clicked);
-        }
-    }
-
-    /* update the header space */
-    if (align == ZR_HEADER_RIGHT)
-        layout->header.back -= (sym.w + item_padding.x);
-    else layout->header.front += sym.w + item_padding.x;
-    return ret;
-}
-
-int
-zr_header_toggle(struct zr_context *layout,
-    enum zr_symbol inactive, enum zr_symbol active,
-    enum zr_header_align align, int state)
-{
-    int ret = zr_header_button(layout, (state) ? active : inactive, align);
-    if (ret) return !state;
-    return state;
-}
-
-int
-zr_header_flag(struct zr_context *layout, enum zr_symbol inactive,
-    enum zr_symbol active, enum zr_header_align align,
-    enum zr_window_flags flag)
-{
-    zr_flags flags = layout->flags;
-    int state = (flags & flag) ? zr_true : zr_false;
-    int ret = zr_header_toggle(layout, inactive, active, align, state);
-    if (ret != ((flags & flag) ? zr_true : zr_false)) {
-        /* the state of the toggle icon has been changed  */
-        if (!ret) layout->flags &= ~flag;
-        else layout->flags |= flag;
-        /* update the state of the panel since the flag have changed */
-        layout->valid = !(layout->flags & ZR_WINDOW_HIDDEN) &&
-                        !(layout->flags & ZR_WINDOW_MINIMIZED);
-        return zr_true;
-    }
-    return zr_false;
-}
-
-void
-zr_header_title(struct zr_context *layout, const char *title,
-    enum zr_header_align align)
-{
-    struct zr_rect label = {0,0,0,0};
-    const struct zr_style *c;
-    struct zr_command_buffer *out;
-    struct zr_vec2 item_padding;
-    zr_size text_len;
-    zr_size t;
-
-    /* make sure correct values and layout state */
-    ZR_ASSERT(layout);
-    if (!layout || !title) return;
-    if (layout->flags & ZR_WINDOW_HIDDEN)
-        return;
-
-    /* cache configuration and title length */
-    c = layout->style;
-    out = layout->buffer;
-    item_padding = zr_style_property(c, ZR_PROPERTY_ITEM_PADDING);
-    text_len = zr_strsiz(title);
-
-    /* calculate and allocate space from the header */
-    t = c->font.width(c->font.userdata, c->font.height, title, text_len);
-    if (align == ZR_HEADER_RIGHT) {
-        layout->header.back = layout->header.back - (3 * item_padding.x + (float)t);
-        label.x = layout->header.back;
-    } else {
-        label.x = layout->header.front;
-        layout->header.front += 3 * item_padding.x + (float)t;
-    }
-
-    /* calculate label bounds and draw text */
-    label.y = layout->header.y;
-    label.h = c->font.height + 2 * item_padding.y;
-    if (align == ZR_HEADER_LEFT)
-        label.w = MAX((float)t + 2 * item_padding.x, 4 * item_padding.x);
-    else label.w = MAX((float)t + 2 * item_padding.x, 4 * item_padding.x);
-    zr_command_buffer_push_text(out, label, (const char*)title, text_len,
-        &c->font, c->colors[ZR_COLOR_HEADER], c->colors[ZR_COLOR_TEXT]);
-}
-
-void
-zr_header_end(struct zr_context *layout)
-{
-    const struct zr_style *c;
-    struct zr_command_buffer *out;
-    struct zr_vec2 item_padding;
-    struct zr_vec2 panel_padding;
-
-    ZR_ASSERT(layout);
-    if (!layout) return;
-    if (layout->flags & ZR_WINDOW_HIDDEN)
-        return;
-
-    /* cache configuration data */
-    c = layout->style;
-    out = layout->buffer;
-    panel_padding = zr_style_property(c, ZR_PROPERTY_PADDING);
-    item_padding = zr_style_property(c, ZR_PROPERTY_ITEM_PADDING);
-
-    /* draw panel header border */
-    if (layout->flags & ZR_WINDOW_BORDER) {
-        /* draw the header border lines */
-        zr_command_buffer_push_line(out, layout->bounds.x, layout->bounds.y, layout->bounds.x,
-                layout->bounds.y + layout->header.h, c->colors[ZR_COLOR_BORDER]);
-        zr_command_buffer_push_line(out, layout->bounds.x + layout->bounds.w, layout->bounds.y,
-                layout->bounds.x + layout->bounds.w, layout->bounds.y + layout->header.h,
-                c->colors[ZR_COLOR_BORDER]);
-        if (layout->flags & ZR_WINDOW_BORDER_HEADER)
-            zr_command_buffer_push_line(out, layout->bounds.x, layout->bounds.y + layout->header.h,
-                layout->bounds.x + layout->bounds.w, layout->bounds.y + layout->header.h,
-                c->colors[ZR_COLOR_BORDER]);
-    }
-
-    /* update the panel clipping rect to exclude the header */
-    layout->clip.y = layout->bounds.y + layout->header.h + 1;
-    layout->clip.h = layout->bounds.h - (layout->footer_h + layout->header.h);
-    layout->clip.h -= (panel_padding.y + item_padding.y);
-    zr_command_buffer_push_scissor(out, layout->clip);
-}
-
-zr_flags
-zr_header(struct zr_context *layout, const char *title,
-    zr_flags flags, zr_flags notify, enum zr_header_align align)
-{
-    zr_flags ret = 0;
-    zr_flags old = layout->flags;
-    ZR_ASSERT(layout);
-    if (!layout || layout->flags & ZR_WINDOW_HIDDEN)
-        return zr_false;
-
-    /* basic standart header with fixed icon/title sequence */
-    zr_header_begin(layout);
-    {
-        if (flags & ZR_CLOSEABLE)
-            zr_header_flag(layout, ZR_SYMBOL_X, ZR_SYMBOL_X,
-                align, ZR_WINDOW_HIDDEN);
-        if (flags & ZR_MINIMIZABLE)
-            zr_header_flag(layout, ZR_SYMBOL_MINUS, ZR_SYMBOL_PLUS,
-                align, ZR_WINDOW_MINIMIZED);
-        if (flags & ZR_SCALEABLE)
-            zr_header_flag(layout, ZR_SYMBOL_RECT, ZR_SYMBOL_RECT_FILLED,
-                align, ZR_WINDOW_SCALEABLE);
-        if (flags & ZR_MOVEABLE)
-            zr_header_flag(layout, ZR_SYMBOL_CIRCLE,
-                ZR_SYMBOL_CIRCLE_FILLED, align, ZR_WINDOW_MOVEABLE);
-        if (title) zr_header_title(layout, title, ZR_HEADER_LEFT);
-    }
-    zr_header_end(layout);
-
-    /* notifcation if one if the icon buttons has been pressed */
-    if ((notify & ZR_CLOSEABLE) && ((old & ZR_CLOSEABLE) ^ (layout->flags & ZR_CLOSEABLE)))
-        ret |= ZR_CLOSEABLE;
-    if ((notify & ZR_MINIMIZABLE) && ((old & ZR_MINIMIZABLE)^(layout->flags&ZR_MINIMIZABLE)))
-        ret |= ZR_MINIMIZABLE;
-    if ((notify & ZR_SCALEABLE) && ((old & ZR_SCALEABLE) ^ (layout->flags & ZR_SCALEABLE)))
-        ret |= ZR_SCALEABLE;
-    if ((notify & ZR_MOVEABLE) && ((old & ZR_MOVEABLE) ^ (layout->flags & ZR_MOVEABLE)))
-        ret |= ZR_MOVEABLE;
-    return ret;
-}
-
 void
 zr_menubar_begin(struct zr_context *layout)
 {
@@ -6449,7 +6299,7 @@ zr_menubar_begin(struct zr_context *layout)
     if (!layout || layout->flags & ZR_WINDOW_HIDDEN || layout->flags & ZR_WINDOW_MINIMIZED)
         return;
     layout->menu.x = layout->at_x;
-    layout->menu.y = layout->bounds.y + layout->header.h;
+    layout->menu.y = layout->bounds.y + layout->header_h;
     layout->menu.w = layout->width;
     layout->menu.offset = layout->offset;
     layout->offset.y = 0;
@@ -6465,7 +6315,7 @@ zr_menubar_end(struct zr_context *layout)
 
     out = layout->buffer;
     layout->menu.h = layout->at_y - layout->menu.y;
-    layout->clip.y = layout->bounds.y + layout->header.h + layout->menu.h + layout->row.height;
+    layout->clip.y = layout->bounds.y + layout->header_h + layout->menu.h + layout->row.height;
     layout->height -= layout->menu.h;
     layout->offset = layout->menu.offset;
     layout->clip.h -= layout->menu.h + layout->row.height;
@@ -7039,10 +6889,8 @@ zr_spacing(struct zr_context *l, zr_size cols)
     if (!l) return;
     if (!l->valid) return;
 
-    index = (l->row.index + cols) % l->row.columns;
-    n = index - l->row.index;
-
     /* spacing over row boundries */
+    index = (l->row.index + cols) % l->row.columns;
     if (l->row.index + cols > l->row.columns) {
         zr_size rows = (l->row.index + cols) / l->row.columns;
         for (i = 0; i < rows; ++i)
@@ -7052,7 +6900,7 @@ zr_spacing(struct zr_context *l, zr_size cols)
     /* non table layout need to allocate space */
     if (l->row.type != ZR_LAYOUT_DYNAMIC_FIXED &&
         l->row.type != ZR_LAYOUT_STATIC_FIXED) {
-        for (i = 0; i < n; ++i)
+        for (i = 0; i < index; ++i)
             zr_panel_alloc_space(&nil, l);
     }
     l->row.index = index;
@@ -7995,29 +7843,11 @@ zr_group_begin(struct zr_context *p, struct zr_context *g,
     zr_window_init(&panel, bounds, flags, 0, p->style, p->input);
 
     panel.buffer = *p->buffer;
-    zr_begin(g, &panel);
+    zr_begin(g, &panel, title);
     *p->buffer = panel.buffer;
     g->buffer = p->buffer;
     g->offset = offset;
     g->queue = p->queue;
-
-    if (title)
-    {
-        /* setup correct clipping rectangle for the header */
-        struct zr_rect clip;
-        struct zr_command_buffer *out = p->buffer;
-
-        zr_unify(&clip, &temp, g->bounds.x, g->clip.y, g->clip.x + g->bounds.w,
-            g->clip.y + g->clip.h);
-        zr_command_buffer_push_scissor(out, clip);
-
-        zr_header(g, title, 0, 0, ZR_HEADER_LEFT);
-        zr_unify(&clip, &p->clip, g->clip.x, g->clip.y, g->clip.x + g->clip.w,
-            g->clip.y + g->clip.h);
-
-        zr_command_buffer_push_scissor(out, clip);
-        g->clip = clip;
-    }
     return;
 
 failed:
@@ -8050,7 +7880,7 @@ zr_group_end(struct zr_context *p, struct zr_context *g, struct zr_vec2 *scrollb
     pan.flags = g->flags|ZR_WINDOW_TAB;
 
     /* setup clipping rect to finalize group panel drawing back to parent */
-    zr_unify(&clip, &p->clip, g->bounds.x, g->clip.y - g->header.h, g->bounds.x + g->bounds.w+1,
+    zr_unify(&clip, &p->clip, g->bounds.x, g->clip.y - g->header_h, g->bounds.x + g->bounds.w+1,
         g->bounds.y + g->bounds.h + 1);
 
     zr_command_buffer_push_scissor(out, clip);
@@ -8068,9 +7898,10 @@ zr_group_end(struct zr_context *p, struct zr_context *g, struct zr_vec2 *scrollb
  */
 zr_flags
 zr_popup_begin(struct zr_context *parent, struct zr_context *popup,
-    enum zr_popup_type type, zr_flags flags,
+    enum zr_popup_type type, const char *title, zr_flags flags,
     struct zr_rect rect, struct zr_vec2 scrollbar)
 {
+    zr_flags ret;
     struct zr_window panel;
     ZR_ASSERT(parent);
     ZR_ASSERT(popup);
@@ -8099,14 +7930,14 @@ zr_popup_begin(struct zr_context *parent, struct zr_context *popup,
     zr_command_buffer_push_scissor(parent->buffer, zr_null_rect);
     zr_command_queue_start_child(parent->queue, parent->buffer);
     panel.buffer = *parent->buffer;
-    zr_begin(popup, &panel);
+    ret = zr_begin(popup, &panel, title);
     *parent->buffer = panel.buffer;
     parent->flags |= ZR_WINDOW_ROM;
 
     popup->buffer = parent->buffer;
     popup->offset = scrollbar;
     popup->queue = parent->queue;
-    return 1;
+    return ret;
 }
 
 void
@@ -8178,7 +8009,7 @@ zr_popup_nonblocking_begin(struct zr_context *parent,
 
     /* if active create popup otherwise deactive the panel layout  */
     if (!is_active && *active) {
-        zr_popup_begin(parent, popup, ZR_POPUP_DYNAMIC, flags, body, scrollbar);
+        zr_popup_begin(parent, popup, ZR_POPUP_DYNAMIC, 0, flags, body, scrollbar);
         zr_popup_close(popup);
         popup->flags &= ~(zr_flags)ZR_WINDOW_MINIMIZED;
         parent->flags &= ~(zr_flags)ZR_WINDOW_ROM;
@@ -8187,7 +8018,7 @@ zr_popup_nonblocking_begin(struct zr_context *parent,
         popup->flags |= ZR_WINDOW_MINIMIZED;
         return zr_false;
     } else {
-        zr_popup_begin(parent, popup, ZR_POPUP_DYNAMIC, flags, body, zr_vec2(0,0));
+        zr_popup_begin(parent, popup, ZR_POPUP_DYNAMIC, 0, flags, body, zr_vec2(0,0));
         popup->flags &= ~(zr_flags)ZR_WINDOW_MINIMIZED;
     }
     *active = is_active;
@@ -8437,9 +8268,8 @@ zr_combo_begin(struct zr_context *parent, struct zr_context *combo,
         body.w = header.w;
         body.y = header.y + header.h;
         body.h = zr_null_rect.h;
-        if (!zr_popup_nonblocking_begin(parent, combo, ZR_WINDOW_NO_SCROLLBAR,
+        if (!zr_popup_nonblocking_begin(parent, combo, ZR_WINDOW_COMBO_MENU|ZR_WINDOW_NO_SCROLLBAR,
                 active, is_active, body, zr_vec2(0,0))) goto failed;
-        combo->flags |= ZR_WINDOW_COMBO_MENU;
     }
     return;
 
@@ -8521,9 +8351,8 @@ zr_menu_begin(struct zr_context *parent, struct zr_context *menu,
         body.w = width;
         body.y = header.y + header.h;
         body.h = (parent->bounds.y + parent->bounds.h) - body.y;
-        if (!zr_popup_nonblocking_begin(parent, menu, ZR_WINDOW_NO_SCROLLBAR, active,
+        if (!zr_popup_nonblocking_begin(parent, menu, ZR_WINDOW_COMBO_MENU|ZR_WINDOW_NO_SCROLLBAR, active,
             is_active, body, zr_vec2(0,0))) goto failed;
-        menu->flags |= ZR_WINDOW_COMBO_MENU;
     }
     return;
 
@@ -8588,7 +8417,7 @@ zr_tooltip_begin(struct zr_context *parent, struct zr_context *tip, float width)
     bounds.h = zr_null_rect.h;
     bounds.x = (in->mouse.pos.x + 1) - parent->clip.x;
     bounds.y = (in->mouse.pos.y + 1) - parent->clip.y;
-    zr_popup_begin(parent, tip, ZR_POPUP_DYNAMIC, ZR_WINDOW_NO_SCROLLBAR, bounds, zr_vec2(0,0));
+    zr_popup_begin(parent, tip, ZR_POPUP_DYNAMIC, 0, ZR_WINDOW_NO_SCROLLBAR, bounds, zr_vec2(0,0));
 }
 
 void

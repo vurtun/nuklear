@@ -1858,6 +1858,11 @@ enum zr_style_properties {
     ZR_PROPERTY_MAX
 };
 
+enum zr_style_header_align {
+    ZR_HEADER_LEFT,
+    ZR_HEADER_RIGHT
+};
+
 struct zr_saved_property {
     enum zr_style_properties type;
     /* identifier of the current modified property */
@@ -1894,11 +1899,24 @@ struct zr_style_mod_stack  {
     /* current color stack pushing index */
 };
 
+struct zr_style_header {
+    enum zr_style_header_align align;
+    /* header content alignment */
+    zr_rune close_symbol;
+    /* header close icon unicode rune */
+    zr_rune minimize_symbol;
+    /* header minimize icon unicode rune */
+    zr_rune maximize_symbol;
+    /* header maximize icon unicode rune */
+};
+
 struct zr_style {
     struct zr_user_font font;
     /* the from the user provided font */
     float rounding[ZR_ROUNDING_MAX];
     /* rectangle widget rounding */
+    struct zr_style_header header;
+    /* window header style */
     struct zr_vec2 properties[ZR_PROPERTY_MAX];
     /* configuration properties to modify the style */
     struct zr_color colors[ZR_COLOR_COUNT];
@@ -2029,39 +2047,43 @@ const char *zr_style_property_name(enum zr_style_properties);
     Window Popup API    -- Popup window with either non-blocking or blocking capabilities
     Window Menu API     -- Popup menus with currently one single depth
 */
+#define ZR_FLAG(x) (1 << (x))
 enum zr_window_flags {
-    ZR_WINDOW_HIDDEN = 0x01,
+    ZR_WINDOW_HIDDEN        = ZR_FLAG(0),
     /* Hiddes the window and stops any window interaction and drawing can be set
      * by user input or by closing the window */
-    ZR_WINDOW_BORDER = 0x02,
-    /* Draws a border around the window to visually seperate the window from the
-     * background */
-    ZR_WINDOW_BORDER_HEADER = 0x04,
+    ZR_WINDOW_MINIMIZED     = ZR_FLAG(1),
+    /* marks the window as minimized */
+    ZR_WINDOW_BORDER        = ZR_FLAG(2),
+    /* Draws a border around the window to visually seperate the window from the background */
+    ZR_WINDOW_BORDER_HEADER = ZR_FLAG(3),
     /* Draws a border between window header and body */
-    ZR_WINDOW_MOVEABLE = 0x08,
+    ZR_WINDOW_MOVEABLE      = ZR_FLAG(4),
     /* The moveable flag inidicates that a window can be move by user input by
      * dragging the window header */
-    ZR_WINDOW_SCALEABLE = 0x10,
+    ZR_WINDOW_SCALEABLE     = ZR_FLAG(5),
     /* The scaleable flag indicates that a window can be scaled by user input
      * by dragging a scaler icon at the button of the window */
-    ZR_WINDOW_MINIMIZED = 0x20,
-    /* marks the window as minimized */
-    ZR_WINDOW_ROM = 0x40,
+    ZR_WINDOW_CLOSEABLE     = ZR_FLAG(6),
+    /* adds a closeable icon into the header */
+    ZR_WINDOW_MINIMIZABLE   = ZR_FLAG(7),
+    /* adds a minimize icon into the header */
+    ZR_WINDOW_ROM           = ZR_FLAG(8),
     /* sets the window into a read only mode and does not allow input changes */
-    ZR_WINDOW_DYNAMIC = 0x80,
+    ZR_WINDOW_DYNAMIC       = ZR_FLAG(9),
     /* special type of window which grows up in height while being filled to a
      * certain maximum height. It is mainly used for combo boxes but can be
      * used to create perfectly fitting windows as well */
-    ZR_WINDOW_ACTIVE = 0x10000,
+    ZR_WINDOW_NO_SCROLLBAR  = ZR_FLAG(10),
+    /* Removes the scrollbar from the window */
+    ZR_WINDOW_ACTIVE        = ZR_FLAG(11),
     /* INTERNAL ONLY!: marks the window as active, used by the window stack */
-    ZR_WINDOW_TAB = 0x20000,
+    ZR_WINDOW_TAB           = ZR_FLAG(12),
     /* INTERNAL ONLY!: Marks the window as subwindow of another window(Groups/Tabs)*/
-    ZR_WINDOW_COMBO_MENU = 0x40000,
-    /* INTERNAL ONLY!: Marks the window as an combo box or menu */
-    ZR_WINDOW_REMOVE_ROM = 0x80000,
+    ZR_WINDOW_COMBO_MENU    = ZR_FLAG(13),
+    /* INTERNAL ONLY!: Marks the window as a combo box or menu */
+    ZR_WINDOW_REMOVE_ROM    = ZR_FLAG(14)
     /* INTERNAL ONLY!: removes the read only mode at the end of the window */
-    ZR_WINDOW_NO_SCROLLBAR = 0x100000
-    /* INTERNAL ONLY!: removes the scrollbar from the window */
 };
 
 struct zr_window {
@@ -2201,13 +2223,6 @@ struct zr_row_layout {
     /* temporary clipping rect */
 };
 
-struct zr_header {
-    float x, y, w, h;
-    /* header bounds */
-    float front, back;
-    /* visual header filling deque */
-};
-
 struct zr_menu {
     float x, y, w, h;
     /* menu bounds */
@@ -2230,10 +2245,10 @@ struct zr_context {
     /* size of the actual useable space inside the window */
     float footer_h;
     /* height of the window footer space */
+    float header_h;
+    /* height of the window footer space */
     struct zr_rect clip;
     /* window clipping rect */
-    struct zr_header header;
-    /* window header bounds */
     struct zr_menu menu;
     /* window menubar bounds */
     struct zr_row_layout row;
@@ -2248,13 +2263,16 @@ struct zr_context {
     /* command draw call output command buffer */
 };
 
-zr_flags zr_begin(struct zr_context*, struct zr_window*);
+zr_flags zr_begin(struct zr_context*, struct zr_window*, const char *title);
 /*  this function begins the window build up process by creating a context to fill
     Input:
     - input structure holding all user generated state changes
     Output:
     - window context to fill up with widgets
-    - ZR_WINDOW_MOVABLE if window was moved
+    - flags :
+        o ZR_WINDOW_MOVABLE if window was moved
+        o ZR_WINDOW_MINIMIZABLE if window was minimized/maximized
+        o ZR_WINDOW_CLOSEABLE if window was closed
 */
 zr_flags zr_end(struct zr_context*, struct zr_window*);
 /*  this function ends the window layout build up process and updates the window.
@@ -2272,117 +2290,9 @@ struct zr_command_queue *zr_queue(struct zr_context*);
 
 /* --------------------------------------------------------------
  *
- *                          HEADER
+ *                          MENUBAR
  *
- * --------------------------------------------------------------
-    HEADER
-    The header API is for adding a window space at the top of the window for
-    buttons, icons and window title. It is useful for toggling the visiblity
-    aswell as minmized state of the window. The header can be filled with buttons
-    and icons from the left and as well as the right side and allows therefore
-    a wide range of header layouts.
-
-    USAGE
-    To create a header you have to call one of two API after the window layout
-    has been created with `zr_begin`. The first and easiest way is to
-    just call `zr_header` which provides a basic header with
-    with title and button and buton pressed notification if a button was pressed.
-    The layout supported is hereby limited and custom button and icons cannot be
-    added. To achieve that you have to use the more extensive header API.
-    You start by calling `zr_header_begin` after `zr_begin` and
-    call the different `zr_header_xxx` functions to add icons or the title
-    either at the left or right side of the window. Each function returns if the
-    icon or button has been pressed or in the case of the toggle the current state.
-    Finally if all button/icons/toggles have been added the process is finished
-    by calling `zr_header_end`.
-
-    window header function API
-    zr_header_begin          -- begins the header build up process
-    zr_header_button         -- adds a button into the header
-    zr_header_button_icon    -- adds a image button into the header
-    zr_header_toggle         -- adds a toggle button into the header
-    zr_header_flag           -- adds a window flag toggle button
-    zr_header_title          -- adds the title of the window into the header
-    zr_header_end            -- finishes the header build up process
-    zr_header                -- short cut version of the header build up process
-    zr_menubar_begin         -- marks the beginning of the menubar building process
-    zr_menubar_end           -- marks the end the menubar build up process
-*/
-enum zr_header_flags {
-    ZR_CLOSEABLE = 0x01,
-    /* adds a closeable icon into the header */
-    ZR_MINIMIZABLE = 0x02,
-    /* adds a minimize icon into the header */
-    ZR_SCALEABLE = 0x04,
-    /* adds a scaleable flag icon into the header */
-    ZR_MOVEABLE = 0x08
-    /* adds a moveable flag icon into the header */
-};
-
-enum zr_header_align {
-    ZR_HEADER_LEFT,
-    /* header elements are added at the left side of the header */
-    ZR_HEADER_RIGHT
-    /* header elements are added at the right side of the header */
-};
-
-zr_flags zr_header(struct zr_context*, const char *title, zr_flags show,
-                    zr_flags notify, enum zr_header_align);
-/*  this function is a shorthand for the header build up process
-    flag by the user
-    Input:
-    - title of the header or NULL if not needed
-    - flags indicating which icons should be drawn to the header
-    - flags indicating which icons should notify if clicked
-*/
-void zr_header_begin(struct zr_context*);
-/*  this function begins the window header build up process */
-int zr_header_button(struct zr_context *layout, enum zr_symbol symbol,
-                            enum zr_header_align);
-/*  this function adds a header button icon
-    Input:
-    -
-    - symbol that shall be shown in the header as a icon
-    Output:
-    - zr_true if the button was pressed zr_false otherwise
-*/
-int zr_header_button_icon(struct zr_context*, struct zr_image,
-                                    enum zr_header_align);
-/*  this function adds a header image button icon
-    Input:
-    - symbol that shall be shown in the header as a icon
-    Output:
-    - zr_true if the button was pressed zr_false otherwise
-*/
-int zr_header_toggle(struct zr_context*, enum zr_symbol inactive,
-                            enum zr_symbol active, enum zr_header_align,
-                            int state);
-/*  this function adds a header toggle button
-    Input:
-    - symbol that will be drawn if the toggle is inactive
-    - symbol that will be drawn if the toggle is active
-    - state of the toggle with either active or inactive
-    Output:
-    - updated state of the toggle
-*/
-int zr_header_flag(struct zr_context *layout, enum zr_symbol inactive,
-                        enum zr_symbol active, enum zr_header_align,
-                        enum zr_window_flags flag);
-/*  this function adds a header toggle button for modifing a certain window flag
-    Input:
-    - symbol that will be drawn if the flag is inactive
-    - symbol that will be drawn if the flag is active
-    - window flag whose state will be display by the toggle button
-    Output:
-    - zr_true if the button was pressed zr_false otherwise
-*/
-void zr_header_title(struct zr_context*, const char*, enum zr_header_align);
-/*  this function adds a title to the window header
-    Input:
-    - title of the header
-*/
-void zr_header_end(struct zr_context*);
-/*  this function ends the window header build up process */
+ * --------------------------------------------------------------*/
 void zr_menubar_begin(struct zr_context*);
 /*  this function begins the window menubar build up process */
 void zr_menubar_end(struct zr_context*);
@@ -3175,8 +3085,8 @@ enum zr_popup_type {
 };
 
 zr_flags zr_popup_begin(struct zr_context *parent, struct zr_context *popup,
-                            enum zr_popup_type, zr_flags, struct zr_rect bounds,
-                            struct zr_vec2 offset);
+                            enum zr_popup_type, const char *title,
+                            zr_flags, struct zr_rect bounds, struct zr_vec2 offset);
 /*  this function adds a overlapping blocking popup menu
     Input:
     - type of the popup as either growing or static
