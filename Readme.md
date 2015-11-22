@@ -53,9 +53,8 @@ zr_size option = EASY;
 zr_float value = 0.6f;
 
 struct zr_context context;
-zr_begin(&context, &window);
+zr_begin(&context, &window, "Show");
 {
-    zr_header(&context, "Show", ZR_CLOSEABLE, 0, ZR_HEADER_LEFT);
     zr_layout_row_static(&context, 30, 80, 1);
     if (zr_button_text(&context, "button", ZR_BUTTON_DEFAULT)) {
         /* event handling */
