@@ -61,7 +61,6 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
 
     /* collapsable headers */
     static int window_option_state = ZR_MINIMIZED;
-    static int header_option_state = ZR_MINIMIZED;
     static int widget_state = ZR_MINIMIZED;
     static int graph_state = ZR_MINIMIZED;
     static int style_state = ZR_MINIMIZED;
@@ -283,17 +282,8 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         zr_checkbox(&layout, "Resizable", &resize);
         zr_checkbox(&layout, "Moveable", &moveable);
         zr_checkbox(&layout, "No Scrollbar", &no_scrollbar);
-        zr_layout_pop(&layout);
-    }
-
-    if (zr_layout_push(&layout, ZR_LAYOUT_TAB, "Header", &header_option_state))
-    {
-        /* header options */
-        zr_layout_row_dynamic(&layout, 30, 2);
         zr_checkbox(&layout, "Minimizable", &minimizable);
         zr_checkbox(&layout, "Closeable", &close);
-        zr_checkbox(&layout, "Scaleable", &scale);
-        zr_checkbox(&layout, "Moveable", &move);
         zr_layout_pop(&layout);
     }
 

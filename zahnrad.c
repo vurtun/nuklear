@@ -6879,8 +6879,7 @@ zr_layout_pop(struct zr_context *layout)
 void
 zr_spacing(struct zr_context *l, zr_size cols)
 {
-    zr_size i, n;
-    zr_size index;
+    zr_size i, index, rows;
     struct zr_rect nil;
 
     ZR_ASSERT(l);
@@ -6891,16 +6890,17 @@ zr_spacing(struct zr_context *l, zr_size cols)
 
     /* spacing over row boundries */
     index = (l->row.index + cols) % l->row.columns;
-    if (l->row.index + cols > l->row.columns) {
-        zr_size rows = (l->row.index + cols) / l->row.columns;
+    rows = (l->row.index + cols) / l->row.columns;
+    if (rows) {
         for (i = 0; i < rows; ++i)
             zr_panel_alloc_row(l);
+        cols = index;
     }
 
     /* non table layout need to allocate space */
     if (l->row.type != ZR_LAYOUT_DYNAMIC_FIXED &&
         l->row.type != ZR_LAYOUT_STATIC_FIXED) {
-        for (i = 0; i < index; ++i)
+        for (i = 0; i < cols; ++i)
             zr_panel_alloc_space(&nil, l);
     }
     l->row.index = index;
