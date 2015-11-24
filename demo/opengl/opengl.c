@@ -216,7 +216,7 @@ font_bake_and_upload(struct device *dev, struct zr_font *font,
         glyphes = (struct zr_font_glyph*)calloc(sizeof(struct zr_font_glyph), (size_t)glyph_count);
         tmp = calloc(1, tmp_size);
 
-        /* pack all glyphes and return needed image width height and memory size*/
+        /* pack all glyphes and return needed image width, height and memory size*/
         custom.w = 2; custom.h = 2;
         if (!zr_font_bake_pack(&img_size, &img_width,&img_height,&custom,tmp,tmp_size,&config, 1))
             die("[Font]: failed to load font!\n");

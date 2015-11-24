@@ -2462,7 +2462,7 @@ void zr_layout_row(struct zr_context*, enum zr_layout_format, float height,
     - window ratio/pixel width array for each widget
 */
 /* --------------------------------------------------------------
- *                          USER
+ *                      USER DEFINED
  * --------------------------------------------------------------*/
 void zr_layout_row_space_begin(struct zr_context*, enum zr_layout_format,
                                 float height, zr_size widget_count);
