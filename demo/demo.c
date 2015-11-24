@@ -56,8 +56,6 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
     static zr_flags window_flags = 0;
     static int minimizable = zr_true;
     static int close = zr_true;
-    static int scale = zr_false;
-    static int move = zr_false;
 
     /* collapsable headers */
     static int window_option_state = ZR_MINIMIZED;
@@ -647,7 +645,6 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         static const float values[]={8.0f,15.0f,20.0f,12.0f,30.0f,12.0f,35.0f,40.0f,20.0f};
         static int col_index = -1;
         static int line_index = -1;
-        static struct zr_vec2 scrollbar;
 
         size_t i;
         float min_value;
@@ -1013,7 +1010,6 @@ init_demo(struct demo *gui)
 static void
 run_demo(struct demo *gui)
 {
-    int res;
     struct zr_context layout;
     struct zr_style *current = (gui->theme == THEME_BLACK) ? &gui->config_black : &gui->config_white;
     gui->running = show_test_window(&gui->panel, current, &gui->theme, &gui->text);

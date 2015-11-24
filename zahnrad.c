@@ -5610,7 +5610,6 @@ zr_style_push_font(struct zr_style *style, struct zr_user_font font)
 void
 zr_style_push_font_height(struct zr_style *style, float font_height)
 {
-    struct zr_saved_font *f;
     ZR_ASSERT(style);
     if (!style) return;
     if (style->stack.font >= ZR_MAX_FONT_HEIGHT_STACK) return;
@@ -6055,7 +6054,7 @@ zr_begin(struct zr_context *context, struct zr_window *window, const char *title
     if (header_active) {
         zr_flags old;
         struct zr_rect old_clip = out->clip;
-        struct zr_window_header header, sym;
+        struct zr_window_header header;
 
         /* This is a little bit of a performace hack. To make sure the header does
          * not get overdrawn with text you do not have to push a scissor rect. This
