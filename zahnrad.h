@@ -39,6 +39,10 @@ extern "C" {
 /* defines the number of temporary configuration color changes that can be stored */
 #define ZR_MAX_ATTRIB_STACK 32
 /* defines the number of temporary configuration attribute changes that can be stored */
+#define ZR_MAX_FONT_STACK 32
+/* defines the number of temporary configuration user font changes that can be stored */
+#define ZR_MAX_FONT_HEIGHT_STACK 32
+/* defines the number of temporary configuration font height changes that can be stored */
 /*
  * ==============================================================
  *
@@ -1877,6 +1881,15 @@ struct zr_saved_color {
     /* color value that has been saveed */
 };
 
+struct zr_saved_font {
+    struct zr_user_font value;
+    /* user font reference */
+    zr_size font_height_begin;
+    /* style font height stack begin */
+    zr_size font_height_end;
+    /* user font height stack end */
+};
+
 enum zr_style_components {
     ZR_DEFAULT_COLOR = 0x01,
     /* default all colors inside the configuration struct */
@@ -1893,10 +1906,18 @@ struct zr_style_mod_stack  {
     /* current property stack pushing index */
     struct zr_saved_property properties[ZR_MAX_ATTRIB_STACK];
     /* saved property stack */
-    struct zr_saved_color colors[ZR_MAX_COLOR_STACK];
-    /* saved color stack */
     zr_size color;
     /* current color stack pushing index */
+    struct zr_saved_color colors[ZR_MAX_COLOR_STACK];
+    /* saved color stack */
+    zr_size font;
+    /* current font stack pushing index */
+    struct zr_saved_font fonts[ZR_MAX_FONT_STACK];
+    /* saved user font stack */
+    zr_size font_height;
+    /* current font stack pushing index */
+    float font_heights[ZR_MAX_FONT_HEIGHT_STACK];
+    /* saved user font stack */
 };
 
 struct zr_style_header {
@@ -1969,6 +1990,18 @@ void zr_style_push_color(struct zr_style*, enum zr_style_colors, struct zr_color
     - color idenfifier to change
     - new color
 */
+void zr_style_push_font(struct zr_style*, struct zr_user_font font);
+/*  this function temporarily changes the used font in a stack like fashion to be reseted later
+    Input:
+    - Configuration structure to push the change to
+    - user font to use from now on
+*/
+void zr_style_push_font_height(struct zr_style*, float font_height);
+/*  this function temporarily changes the used font in a stack like fashion to be reseted later
+    Input:
+    - Configuration structure to push the change to
+    - user font to use from now on
+*/
 void zr_style_pop_color(struct zr_style*);
 /*  this function reverts back a previously pushed temporary color change
     Input:
@@ -1979,6 +2012,16 @@ void zr_style_pop_property(struct zr_style*);
     Input:
     - Configuration structure to pop the change from and to
 */
+void zr_style_pop_font(struct zr_style*);
+/*  this function reverts back a previously pushed temporary font change
+    Input:
+    - Configuration structure to pop the change from and to
+*/
+void zr_style_pop_font_height(struct zr_style*);
+/*  this function reverts back a previously pushed temporary font height change
+    Input:
+    - Configuration structure to pop the change from and to
+*/
 void zr_style_reset_colors(struct zr_style*);
 /*  this function reverts back all previously pushed temporary color changes
     Input:
@@ -1986,6 +2029,16 @@ void zr_style_reset_colors(struct zr_style*);
 */
 void zr_style_reset_properties(struct zr_style*);
 /*  this function reverts back all previously pushed temporary color changes
+    Input:
+    - Configuration structure to pop the change from and to
+*/
+void zr_style_reset_font(struct zr_style*);
+/*  this function reverts back all previously pushed temporary font changes
+    Input:
+    - Configuration structure to pop the change from and to
+*/
+void zr_style_reset_font_height(struct zr_style*);
+/*  this function reverts back all previously pushed temporary font height changes
     Input:
     - Configuration structure to pop the change from and to
 */

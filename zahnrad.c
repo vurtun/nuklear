@@ -5593,6 +5593,35 @@ zr_style_push_property(struct zr_style *style, enum zr_style_properties index,
 }
 
 void
+zr_style_push_font(struct zr_style *style, struct zr_user_font font)
+{
+    struct zr_saved_font *f;
+    ZR_ASSERT(style);
+    if (!style) return;
+    if (style->stack.font >= ZR_MAX_FONT_STACK) return;
+
+    f = &style->stack.fonts[style->stack.font++];
+    f->font_height_begin = style->stack.font_height;
+    f->font_height_end = style->stack.font_height;
+    f->value = style->font;
+    style->font = font;
+}
+
+void
+zr_style_push_font_height(struct zr_style *style, float font_height)
+{
+    struct zr_saved_font *f;
+    ZR_ASSERT(style);
+    if (!style) return;
+    if (style->stack.font >= ZR_MAX_FONT_HEIGHT_STACK) return;
+
+    style->stack.font_heights[style->stack.font_height++] = style->font.height;
+    if (style->stack.font)
+        style->stack.fonts[style->stack.font-1].font_height_end++;
+    style->font.height = font_height;
+}
+
+void
 zr_style_pop_color(struct zr_style *style)
 {
     struct zr_saved_color *c;
@@ -5615,6 +5644,36 @@ zr_style_pop_property(struct zr_style *style)
 }
 
 void
+zr_style_pop_font(struct zr_style *style)
+{
+    struct zr_saved_font *f;
+    ZR_ASSERT(style);
+    if (!style) return;
+    if (!style->stack.font) return;
+
+    f = &style->stack.fonts[--style->stack.font];
+    style->stack.font_height = f->font_height_begin;
+    style->font = f->value;
+    if (style->stack.font_height)
+        style->font.height = style->stack.font_heights[style->stack.font_height-1];
+}
+
+void
+zr_style_pop_font_height(struct zr_style *style)
+{
+    float font_height;
+    ZR_ASSERT(style);
+    if (!style) return;
+    if (!style->stack.font_height) return;
+    font_height = style->stack.font_heights[--style->stack.font_height];
+    style->font.height = font_height;
+    if (style->stack.font) {
+        ZR_ASSERT(style->stack.fonts[style->stack.font-1].font_height_end);
+        style->stack.fonts[style->stack.font-1].font_height_end--;
+    }
+}
+
+void
 zr_style_reset_colors(struct zr_style *style)
 {
     ZR_ASSERT(style);
@@ -5633,12 +5692,32 @@ zr_style_reset_properties(struct zr_style *style)
 }
 
 void
+zr_style_reset_font(struct zr_style *style)
+{
+    ZR_ASSERT(style);
+    if (!style) return;
+    while (style->stack.font)
+        zr_style_pop_font(style);
+}
+
+void
+zr_style_reset_font_height(struct zr_style *style)
+{
+    ZR_ASSERT(style);
+    if (!style) return;
+    while (style->stack.font_height)
+        zr_style_pop_font_height(style);
+}
+
+void
 zr_style_reset(struct zr_style *style)
 {
     ZR_ASSERT(style);
     if (!style) return;
     zr_style_reset_colors(style);
     zr_style_reset_properties(style);
+    zr_style_reset_font(style);
+    zr_style_reset_font_height(style);
 }
 
 /* ==============================================================
@@ -5930,7 +6009,7 @@ zr_begin(struct zr_context *context, struct zr_window *window, const char *title
         context->row.height = 0;
     } else {
         context->header_h = 2 * item_spacing.y;
-        context->row.height = context->header_h;
+        context->row.height = context->header_h + 1;
     }
 
     /* window activation by click inside */
@@ -5950,7 +6029,8 @@ zr_begin(struct zr_context *context, struct zr_window *window, const char *title
         !(window->flags & ZR_WINDOW_MINIMIZED);
 
     /* calculate window footer height */
-    if ((window->flags & ZR_WINDOW_SCALEABLE))
+    if (!(window->flags & ZR_WINDOW_COMBO_MENU) &&
+        (!(window->flags & ZR_WINDOW_NO_SCROLLBAR) || (window->flags & ZR_WINDOW_SCALEABLE)))
         context->footer_h = scaler_size.y + item_padding.y;
     else context->footer_h = 0;
 
@@ -6069,12 +6149,13 @@ zr_begin(struct zr_context *context, struct zr_window *window, const char *title
         context->clip.h = window->bounds.h - (context->footer_h + context->header_h);
         context->clip.h -= (window_padding.y + item_padding.y);
         context->clip.y = window->bounds.y;
-        if (!(window->flags & ZR_WINDOW_COMBO_MENU) && header_active)
+        if (!(window->flags & ZR_WINDOW_COMBO_MENU))
             context->clip.y += context->header_h;
         if (window->flags & ZR_WINDOW_BORDER) {
             context->clip.y += 1;
             context->clip.h -= 1;
         }
+
         zr_unify(&clip, &context->buffer->clip, context->clip.x, context->clip.y,
             context->clip.x + context->clip.w, context->clip.y + context->clip.h);
         zr_command_buffer_push_scissor(out, clip);
