@@ -1,5 +1,5 @@
 # Install
-BIN = zahnrad
+BIN = demo
 
 # Compiler
 CC = clang
@@ -8,7 +8,7 @@ DCC = gcc
 # Flags
 CFLAGS = -std=c89 -pedantic
 
-SRC = ../../zahnrad.c opengl.c
+SRC = ../../zahnrad.c sdl.c
 OBJ = $(SRC:.c=.o)
 
 # Modes
