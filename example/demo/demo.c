@@ -126,8 +126,6 @@ button_demo(struct zr_window *window, struct zr_style *config, struct icons *img
     static int toggle0 = 1;
     static int toggle1 = 0;
     static int toggle2 = 1;
-    static const float ratio[] = {0.15f, 0.85f};
-
     zr_begin(&layout, window, "Button Demo");
 
     /*------------------------------------------------
@@ -207,7 +205,6 @@ basic_demo(struct zr_window *window, struct zr_style *config, struct icons *img)
     static int combo_active = 0;
     static int selected_item = 0;
     static int selected_image = 2;
-    static const float ratio[] = {0.15f, 0.85f};
     static const char *items[] = {"Item 0","item 1","item 2"};
 
     int i = 0;
