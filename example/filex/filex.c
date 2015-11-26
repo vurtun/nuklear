@@ -25,16 +25,14 @@
 #include <assert.h>
 #include <math.h>
 
-#ifdef _WIN32
-#error "windows is not supported"
-#else
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <errno.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <fcntl.h>
-#include <pwd.h>
+#ifndef _WIN32
+# include <pwd.h>
 #endif
 
 #include <GL/glew.h>
@@ -430,6 +428,9 @@ file_browser_init(struct file_browser *browser, NVGcontext *vg,
     {
         /* load files and sub-directory list */
         const char *home = getenv("HOME");
+#ifdef _WIN32
+        if (!home) home = getenv("USERPROFILE");
+#else
         if (!home) home = getpwuid(getuid())->pw_dir;
         {
             size_t l;
@@ -438,6 +439,7 @@ file_browser_init(struct file_browser *browser, NVGcontext *vg,
             strcpy(browser->home + l, "/");
             strcpy(browser->directory, browser->home);
         }
+#endif
         {
             size_t l;
             strcpy(browser->desktop, browser->home);
