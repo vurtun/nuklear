@@ -1483,6 +1483,7 @@ const zr_rune *zr_font_default_glyph_ranges(void);
 const zr_rune *zr_font_chinese_glyph_ranges(void);
 const zr_rune *zr_font_cyrillic_glyph_ranges(void);
 const zr_rune *zr_font_korean_glyph_ranges(void);
+const zr_rune* zr_font_japanese_glyph_range(void);
 
 /* ---------------------------------------------------------------
  *                          BAKING
