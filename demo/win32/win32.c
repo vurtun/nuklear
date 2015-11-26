@@ -95,7 +95,7 @@ font_new(HDC hdc, const char *name, int height)
 }
 
 size_t
-font_get_text_width(zr_handle handle, const char *text, size_t len)
+font_get_text_width(zr_handle handle, float font_height, const char *text, size_t len)
 {
     SIZE size;
     HFONT old;
@@ -401,7 +401,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE prev, LPSTR lpCmdLine, int shown)
     memset(&gui, 0, sizeof gui);
     zr_command_queue_init_fixed(&gui.queue, calloc(MAX_MEMORY, 1), MAX_MEMORY);
     gui.font.userdata = zr_handle_ptr(&xw);
-    gui.font.height = (zr_float)xw.font->height;
+    gui.font.height = (float)xw.font->height;
     gui.font.width =  font_get_text_width;
     init_demo(&gui);
 

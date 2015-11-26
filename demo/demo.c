@@ -100,7 +100,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         /* menubar */
         struct zr_context menu;
         static int file_state = ZR_MINIMIZED;
-        static size_t mprog = 60;
+        static zr_size mprog = 60;
         static int mslider = 10;
         static int mcheck = zr_true;
 
@@ -111,7 +111,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         zr_menu_begin(&layout, &menu, "MENU", 100, &file_state);
         {
             static size_t prog = 40;
-            static int slider = 10;
+            static zr_size slider = 10;
             static int check = zr_true;
             zr_layout_row_dynamic(&menu, 25, 1);
             zr_progress(&menu, &prog, 100, ZR_MODIFYABLE);
