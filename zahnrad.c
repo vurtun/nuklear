@@ -207,7 +207,7 @@ zr_memcopy(void *dst0, const void *src0, zr_size length)
     #define TLOOP(s) if (t) TLOOP1(s)
     #define TLOOP1(s) do { s; } while (--t)
 
-    if ((unsigned long)dst < (unsigned long)src) {
+    if (dst < src) {
         t = (zr_ptr)src; /* only need low bits */
         if ((t | (zr_ptr)dst) & wmask) {
             if ((t ^ (zr_ptr)dst) & wmask || length < wsize)

@@ -576,7 +576,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
 
             /* progressbar combobox */
             sum = x + y + z + w;
-            sprintf(buffer, "%lu", sum);
+            sprintf(buffer, "%" PRIu64, sum);
             zr_combo_begin(&layout, &combo, buffer, &prog_active);
             {
                 zr_layout_row_dynamic(&combo, 30, 1);
@@ -589,7 +589,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
 
             /* checkbox combobox */
             sum = (size_t)(check_values[0] + check_values[1] + check_values[2] + check_values[3] + check_values[4]);
-            sprintf(buffer, "%lu", sum);
+            sprintf(buffer, "%" PRIu64, sum);
             zr_combo_begin(&layout, &combo, buffer, &check_active);
             {
                 zr_layout_row_dynamic(&combo, 30, 1);
