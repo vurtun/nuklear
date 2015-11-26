@@ -9,6 +9,13 @@ CFLAGS = -std=c99
 SRC = demo.c ../../zahnrad.c
 OBJ = $(SRC:.c=.o)
 
+ifeq ($(OS),Windows_NT)
+BIN := $(BIN).exe
+LIBS = -lmingw32 -lSDL2main -lSDL2 -lopengl32 -lm -lGLU32 -lGLEW32
+else
+LIBS = -lSDL2 -lGL -lm -lGLU -lGLEW
+endif
+
 # Modes
 .PHONY: clang
 clang: CC = clang
@@ -21,5 +28,5 @@ gcc: $(BIN)
 $(BIN):
 	@mkdir -p bin
 	rm -f bin/$(BIN) $(OBJS)
-	$(CC) $(SRC) $(CFLAGS) -o bin/$(BIN) -lSDL2 -lGL -lm -lGLU -lGLEW
+	$(CC) $(SRC) $(CFLAGS) -o bin/$(BIN) $(LIBS)
 

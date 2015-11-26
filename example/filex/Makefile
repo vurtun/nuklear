@@ -17,6 +17,13 @@ CFLAGS += -Wswitch-enum -Winvalid-pch -Wbad-function-cast -fno-omit-frame-pointe
 SRC = filex.c ../../zahnrad.c
 OBJ = $(SRC:.c=.o)
 
+ifeq ($(OS),Windows_NT)
+BIN := $(BIN).exe
+LIBS = -lmingw32 -lSDL2main -lSDL2 -lopengl32 -lm -lGLU32 -lGLEW32
+else
+LIBS = -lSDL2 -lGL -lm -lGLU -lGLEW
+endif
+
 # Modes
 .PHONY: clang
 clang: CC = clang
@@ -29,4 +36,4 @@ gcc: $(BIN)
 $(BIN):
 	@mkdir -p bin
 	rm -f bin/$(BIN) $(OBJS)
-	$(CC) $(SRC) $(CFLAGS) -D_POSIX_C_SOURCE=200809L -o bin/$(BIN) -lSDL2 -lGL -lm -lGLU -lGLEW
+	$(CC) $(SRC) $(CFLAGS) -D_POSIX_C_SOURCE=200809L -o bin/$(BIN) $(LIBS)
