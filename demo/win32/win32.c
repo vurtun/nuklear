@@ -11,6 +11,9 @@
 #include <windowsx.h>
 #include <assert.h>
 #include <string.h>
+#if defined(__MINGW32__) || defined(__MINGW64__)
+# include <inttypes.h>
+#endif
 
 /* macros */
 #include "../../zahnrad.h"
