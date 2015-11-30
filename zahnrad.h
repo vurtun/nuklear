@@ -240,6 +240,7 @@ enum zr_keys {
     ZR_KEY_SHIFT,
     ZR_KEY_DEL,
     ZR_KEY_ENTER,
+    ZR_KEY_TAB,
     ZR_KEY_BACKSPACE,
     ZR_KEY_COPY,
     ZR_KEY_CUT,
@@ -1593,7 +1594,7 @@ const struct zr_font_glyph* zr_font_find_glyph(struct zr_font*, zr_rune unicode)
 /*
  * ===============================================================
  *
- *                          EDITBOX
+ *                          EDIT BOX
  *
  * ===============================================================
  */
@@ -1668,6 +1669,9 @@ struct zr_edit_box {
     /* input filter callback */
     struct zr_selection sel;
     /* text selection */
+    float scrollbar;
+    /* edit field scrollbar */
+    int text_inserted;
 };
 
 /* filter function */
@@ -2060,7 +2064,7 @@ const char *zr_style_property_name(enum zr_style_properties);
  *
  *                          WINDOW
  *
- * ===============================================================
+ * =============================================================
     WINDOW
     The window groups widgets together and allows collective operation
     on these widgets like movement, scrolling, window minimizing and closing.
@@ -2113,7 +2117,7 @@ enum zr_window_flags {
     ZR_WINDOW_BORDER_HEADER = ZR_FLAG(3),
     /* Draws a border between window header and body */
     ZR_WINDOW_MOVEABLE      = ZR_FLAG(4),
-    /* The moveable flag inidicates that a window can be move by user input by
+    /* The moveable flag inidicates that a window can be moved by user input or by
      * dragging the window header */
     ZR_WINDOW_SCALEABLE     = ZR_FLAG(5),
     /* The scaleable flag indicates that a window can be scaled by user input
@@ -2126,16 +2130,16 @@ enum zr_window_flags {
     /* sets the window into a read only mode and does not allow input changes */
     ZR_WINDOW_DYNAMIC       = ZR_FLAG(9),
     /* special type of window which grows up in height while being filled to a
-     * certain maximum height. It is mainly used for combo boxes but can be
+     * certain maximum height. It is mainly used for combo boxes/menus but can be
      * used to create perfectly fitting windows as well */
     ZR_WINDOW_NO_SCROLLBAR  = ZR_FLAG(10),
     /* Removes the scrollbar from the window */
     ZR_WINDOW_ACTIVE        = ZR_FLAG(11),
     /* INTERNAL ONLY!: marks the window as active, used by the window stack */
     ZR_WINDOW_TAB           = ZR_FLAG(12),
-    /* INTERNAL ONLY!: Marks the window as subwindow of another window(Groups/Tabs)*/
+    /* INTERNAL ONLY!: marks the window as subwindow of another window(Groups/Tabs)*/
     ZR_WINDOW_COMBO_MENU    = ZR_FLAG(13),
-    /* INTERNAL ONLY!: Marks the window as a combo box or menu */
+    /* INTERNAL ONLY!: marks the window as a combo box or menu */
     ZR_WINDOW_REMOVE_ROM    = ZR_FLAG(14)
     /* INTERNAL ONLY!: removes the read only mode at the end of the window */
 };
@@ -2574,9 +2578,12 @@ void zr_layout_pop(struct zr_context*);
     zr_slider_int           -- integer slider widget with min,max,step value
     zr_slider_float         -- float slider widget with min,max,step value
     zr_progress             -- progressbar widget
+    zr_drag_float           -- float value draggable
+    zr_drag_int             -- integer value dragable
     zr_edit                 -- edit textbox widget for text input
     zr_edit_filtered        -- edit textbox widget for text input with filter input
-    zr_editbox              -- edit textbox with cursor, clipboard and filter
+    zr_edit_field           -- edit text field with cursor, clipboard and filter
+    zr_edit_box             -- edit text box with cursor, clipboard and filter
     zr_spinner_int          -- integer spinner widget with keyboard or mouse modification
     zr_spinner_float        -- float spinner widget with keyboard or mouse modification
 */
@@ -2861,8 +2868,11 @@ void zr_progress(struct zr_context*, zr_size *cur, zr_size max, int modifyable);
     Output:
     - the from user input updated progressbar value if modifyable progressbar
 */
-void zr_editbox(struct zr_context*, struct zr_edit_box*);
+void zr_edit_field(struct zr_context*, struct zr_edit_box*);
 /*  this function creates an editbox with copy & paste functionality and text buffering */
+void zr_edit_box(struct zr_context*, struct zr_edit_box*, int modifyable);
+/*  this function creates an multiline editbox with copy & paste functionality and text
+    buffering. NOTE: this is interhintly slow so please do not use it for heavy workloads. */
 void zr_edit(struct zr_context*, char *buffer, zr_size *len, zr_size max,
                 int *active, zr_size *cursor, enum zr_input_filter);
 /*  this function creates an editbox to updated/insert user text input
@@ -3062,7 +3072,7 @@ void zr_graph_end(struct zr_context *layout, struct zr_graph*);
 
 /* --------------------------------------------------------------
  *
- *                          Group
+ *                          GROUP
  *
  * --------------------------------------------------------------
     GROUP

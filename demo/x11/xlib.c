@@ -367,6 +367,8 @@ input_key(struct XWindow *xw, struct zr_input *in, XEvent *evt, int down)
         zr_input_key(in, ZR_KEY_DEL, down);
     else if (*code == XK_Return)
         zr_input_key(in, ZR_KEY_ENTER, down);
+    else if (*code == XK_Tab)
+        zr_input_key(in, ZR_KEY_TAB, down);
     else if (*code == XK_space && !down)
         zr_input_char(in, ' ');
     else if (*code == XK_Left)

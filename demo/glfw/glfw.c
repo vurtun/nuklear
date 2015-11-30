@@ -393,6 +393,8 @@ input_key(GLFWwindow *window, int key, int scancode, int action, int mods)
         zr_input_key(&gui.input, ZR_KEY_DEL, down);
     else if (key == GLFW_KEY_ENTER)
         zr_input_key(&gui.input, ZR_KEY_ENTER, down);
+    else if (key == GLFW_KEY_TAB)
+        zr_input_key(&gui.input, ZR_KEY_TAB, down);
     else if (key == GLFW_KEY_BACKSPACE)
         zr_input_key(&gui.input, ZR_KEY_BACKSPACE, down);
     else if (key == GLFW_KEY_LEFT)

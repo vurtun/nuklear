@@ -25,6 +25,7 @@ struct demo {
     size_t w, h;
     enum theme theme;
     struct zr_edit_box text;
+    struct zr_edit_box field;
 };
 
 static void
@@ -41,7 +42,7 @@ zr_labelf(struct zr_context *panel, enum zr_text_align align, const char *fmt, .
 
 static int
 show_test_window(struct zr_window *window, struct zr_style *config, enum theme *theme,
-    struct zr_edit_box *edit_box)
+    struct zr_edit_box *edit_field, struct zr_edit_box *edit_box)
 {
     zr_flags ret;
     struct zr_context layout;
@@ -576,7 +577,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
 
             /* progressbar combobox */
             sum = x + y + z + w;
-            sprintf(buffer, "%" PRIu64, sum);
+            sprintf(buffer, "%lu", sum);
             zr_combo_begin(&layout, &combo, buffer, &prog_active);
             {
                 zr_layout_row_dynamic(&combo, 30, 1);
@@ -589,7 +590,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
 
             /* checkbox combobox */
             sum = (size_t)(check_values[0] + check_values[1] + check_values[2] + check_values[3] + check_values[4]);
-            sprintf(buffer, "%" PRIu64, sum);
+            sprintf(buffer, "%lu", sum);
             zr_combo_begin(&layout, &combo, buffer, &check_active);
             {
                 zr_layout_row_dynamic(&combo, 30, 1);
@@ -623,12 +624,21 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             zr_edit(&layout, text[5], &text_len[5], 64, &text_active[5], &text_cursor[5], ZR_INPUT_OCT);
             zr_label(&layout, "Binary:", ZR_TEXT_LEFT);
             zr_edit(&layout, text[6], &text_len[6], 64, &text_active[6], &text_cursor[6], ZR_INPUT_BIN);
-            zr_label(&layout, "Editbox:", ZR_TEXT_LEFT);
-            zr_editbox(&layout, edit_box);
+            zr_label(&layout, "Field:", ZR_TEXT_LEFT);
+            zr_edit_field(&layout, edit_field);
 
+            zr_label(&layout, "Box:", ZR_TEXT_LEFT);
+            zr_layout_row_static(&layout, 75, 228, 1);
+            zr_edit_box(&layout, edit_box, ZR_MODIFYABLE);
+
+            zr_layout_row(&layout, ZR_STATIC, 25, 2, ratio);
             zr_edit(&layout, text[7], &text_len[7], 64, &text_active[7], &text_cursor[7], ZR_INPUT_ASCII);
             if (zr_button_text(&layout, "Submit", ZR_BUTTON_DEFAULT)
                 ||(text_active[7] && zr_input_is_key_pressed(window->input, ZR_KEY_ENTER))) {
+
+                text[7][text_len[7]] = '\n';
+                text_len[7]++;
+                zr_edit_box_add(edit_box, text[7], text_len[7]);
                 text_active[7] = 0;
                 text_cursor[7] = 0;
                 text_len[7] = 0;
@@ -1003,8 +1013,18 @@ init_demo(struct demo *gui)
         clip.userdata.ptr = 0;
         clip.paste = paste_callback;
         clip.copy = copy_callback;
-        zr_edit_box_init_fixed(&gui->text, text, 64, &clip, 0);
+        zr_edit_box_init_fixed(&gui->text, text, sizeof(text), &clip, 0);
     }
+    {
+        /* edit field */
+        static char field[512];
+        struct zr_clipboard clip;
+        clip.userdata.ptr = 0;
+        clip.paste = paste_callback;
+        clip.copy = copy_callback;
+        zr_edit_box_init_fixed(&gui->field, field, sizeof(field), &clip, 0);
+    }
+
 }
 
 static void
@@ -1012,7 +1032,7 @@ run_demo(struct demo *gui)
 {
     struct zr_context layout;
     struct zr_style *current = (gui->theme == THEME_BLACK) ? &gui->config_black : &gui->config_white;
-    gui->running = show_test_window(&gui->panel, current, &gui->theme, &gui->text);
+    gui->running = show_test_window(&gui->panel, current, &gui->theme, &gui->text, &gui->field);
 
     /* ussage example  */
     gui->sub.style = current;
