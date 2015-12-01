@@ -2218,9 +2218,15 @@ int zr_window_is_minimized(struct zr_window*);
     zr_queue   -- returns the queue of the window
     zr_space   -- returns the drawable space inside the window
 */
+enum zr_orientation {
+    ZR_VERTICAL,
+    ZR_HORIZONTAL
+};
+
 enum zr_widget_states {
-    ZR_INACTIVE = zr_false,
-    ZR_ACTIVE = zr_true
+    ZR_INACTIVE,
+    ZR_HOVERED,
+    ZR_ACTIVE
 };
 
 enum zr_collapse_states {
@@ -2933,7 +2939,7 @@ void zr_spinner_float(struct zr_context*, float min, float *value, float max,
     COMBO BOX
     The combo box is a minimizable popup window and extends the old school
     text combo box with the possibility to fill combo boxes with any kind of widgets.
-    The combo box is internall implemented with a dynamic popup window
+    The combo box is internaly implemented with a dynamic popup window
     and can only be as height as the window allows.
     There are two different ways to create a combo box. The first one is a
     standart text combo box which has it own function `zr_combo`. The second
@@ -2968,7 +2974,7 @@ int zr_combo_item(struct zr_context *menu, const char*, enum zr_text_align align
     - `zr_true` if has been clicked `zr_false` otherwise
 */
 int zr_combo_item_icon(struct zr_context *menu, struct zr_image,
-                                const char*, enum zr_text_align align);
+                        const char*, enum zr_text_align align);
 /*  this function execute combo box icon item
     Input:
     - icon to draw into the combo box item

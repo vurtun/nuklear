@@ -4379,12 +4379,51 @@ zr_draw_symbol(struct zr_command_buffer *out, enum zr_symbol symbol,
 }
 
 static int
-zr_widget_button(struct zr_command_buffer *o, struct zr_rect r,
+zr_button_behavior(enum zr_widget_states *state, struct zr_rect r,
+    const struct zr_input *i, enum zr_button_behavior behavior)
+{
+    int ret = 0;
+    *state = ZR_INACTIVE;
+    if (zr_input_is_mouse_hovering_rect(i, r)) {
+        *state = ZR_HOVERED;
+        if (zr_input_is_mouse_down(i, ZR_BUTTON_LEFT))
+            *state = ZR_ACTIVE;
+        if (zr_input_has_mouse_click_in_rect(i, ZR_BUTTON_LEFT, r)) {
+            ret = (behavior != ZR_BUTTON_DEFAULT) ?
+                zr_input_is_mouse_down(i, ZR_BUTTON_LEFT):
+                zr_input_is_mouse_pressed(i, ZR_BUTTON_LEFT);
+        }
+    }
+    return ret;
+}
+
+static void
+zr_button_draw(struct zr_command_buffer *o, struct zr_rect r,
+    const struct zr_button *b, enum zr_widget_states state,
+    enum zr_button_behavior behavior)
+{
+    struct zr_color background;
+    switch (state) {
+    default:
+    case ZR_INACTIVE:
+        background = b->normal; break;
+    case ZR_HOVERED:
+        background = b->hover; break;
+    case ZR_ACTIVE:
+        background = b->active; break;
+    }
+    zr_command_buffer_push_rect(o, r, b->rounding, b->border);
+    zr_command_buffer_push_rect(o, zr_shrink_rect(r, b->border_width),
+                                    b->rounding, background);
+}
+
+static int
+zr_do_button(enum zr_widget_states *state,
+    struct zr_command_buffer *o, struct zr_rect r,
     const struct zr_button *b, const struct zr_input *i,
     enum zr_button_behavior behavior, struct zr_rect *content)
 {
     int ret = zr_false;
-    struct zr_color background;
     struct zr_vec2 pad;
     ZR_ASSERT(b);
     if (!o || !b)
@@ -4394,28 +4433,15 @@ zr_widget_button(struct zr_command_buffer *o, struct zr_rect r,
     pad.x = b->padding.x + b->border_width;
     pad.y = b->padding.y + b->border_width;
     *content = zr_pad_rect(r, pad);
-
-    /* general button user input behavior */
-    background = b->normal;
-    if (zr_input_is_mouse_hovering_rect(i, r)) {
-        background = b->hover;
-        if (zr_input_is_mouse_down(i, ZR_BUTTON_LEFT))
-            background = b->active;
-        if (zr_input_has_mouse_click_in_rect(i, ZR_BUTTON_LEFT, r)) {
-            ret = (behavior != ZR_BUTTON_DEFAULT) ?
-                zr_input_is_mouse_down(i, ZR_BUTTON_LEFT):
-                zr_input_is_mouse_pressed(i, ZR_BUTTON_LEFT);
-        }
-    }
-    zr_command_buffer_push_rect(o, r, b->rounding, b->border);
-    zr_command_buffer_push_rect(o, zr_shrink_rect(r, b->border_width),
-                                    b->rounding, background);
+    ret = zr_button_behavior(state, r, i, behavior);
+    zr_button_draw(o, r, b, *state, behavior);
     return ret;
 }
 
 static int
-zr_widget_button_text(struct zr_command_buffer *o, struct zr_rect r,
-     const char *string, enum zr_button_behavior behavior,
+zr_do_button_text(enum zr_widget_states *state,
+    struct zr_command_buffer *o, struct zr_rect r,
+    const char *string, enum zr_button_behavior behavior,
     const struct zr_button_text *b, const struct zr_input *i,
     const struct zr_user_font *f)
 {
@@ -4430,121 +4456,148 @@ zr_widget_button_text(struct zr_command_buffer *o, struct zr_rect r,
     if (!o || !b || !f)
         return zr_false;
 
-    t.text = b->normal;
-    t.background = b->base.normal;
-    t.padding = zr_vec2(0,0);
-    ret = zr_widget_button(o, r, &b->base, i, behavior, &content);
-    if (zr_input_is_mouse_hovering_rect(i, r)) {
-        int is_down = zr_input_is_mouse_down(i, ZR_BUTTON_LEFT);
-        t.background =  (is_down) ? b->base.active: b->base.hover;
-        t.text = (is_down) ? b->active : b->hover;
+    ret = zr_do_button(state, o, r, &b->base, i, behavior, &content);
+    switch (*state) {
+    default:
+    case ZR_INACTIVE:
+        t.background = b->base.normal;
+        t.text = b->normal;
+        break;
+    case ZR_HOVERED:
+        t.background = b->base.hover;
+        t.text = b->hover;
+        break;
+    case ZR_ACTIVE:
+        t.background = b->base.active;
+        t.text = b->active;
+        break;
     }
+    t.padding = zr_vec2(0,0);
     zr_widget_text(o, content, string, zr_strsiz(string), &t, b->alignment, f);
     return ret;
 }
 
 static int
-zr_widget_button_symbol(struct zr_command_buffer *out, struct zr_rect r,
+zr_do_button_symbol(enum zr_widget_states *state,
+    struct zr_command_buffer *out, struct zr_rect r,
     enum zr_symbol symbol, enum zr_button_behavior bh,
     const struct zr_button_symbol *b, const struct zr_input *in,
     const struct zr_user_font *font)
 {
-    int ret;
     struct zr_color background;
     struct zr_color color;
     struct zr_rect content;
+    int ret;
 
     ZR_ASSERT(b);
     ZR_ASSERT(out);
     if (!out || !b)
         return zr_false;
 
-    ret = zr_widget_button(out, r, &b->base, in, bh, &content);
-    if (zr_input_is_mouse_hovering_rect(in, r)) {
-        int is_down = zr_input_is_mouse_down(in, ZR_BUTTON_LEFT);
-        background = (is_down) ? b->base.active : b->base.hover;
-        color = (is_down) ? b->active : b->hover;
-    } else {
+    ret = zr_do_button(state, out, r, &b->base, in, bh, &content);
+    switch (*state) {
+    default:
+    case ZR_INACTIVE:
         background = b->base.normal;
         color = b->normal;
+        break;
+    case ZR_HOVERED:
+        background = b->base.hover;
+        color = b->hover;
+        break;
+    case ZR_ACTIVE:
+        background = b->base.active;
+        color = b->active;
+        break;
     }
     zr_draw_symbol(out, symbol, content, background, color, b->base.border_width, font);
     return ret;
 }
 
 static int
-zr_widget_button_image(struct zr_command_buffer *out, struct zr_rect r,
+zr_do_button_image(enum zr_widget_states *state,
+    struct zr_command_buffer *out, struct zr_rect r,
     struct zr_image img, enum zr_button_behavior b,
     const struct zr_button_icon *button, const struct zr_input *in)
 {
     int pressed;
     struct zr_rect bounds;
+
     ZR_ASSERT(button);
     ZR_ASSERT(out);
     if (!out || !button)
         return zr_false;
 
-    pressed = zr_widget_button(out, r, &button->base, in, b, &bounds);
+    pressed = zr_do_button(state, out, r, &button->base, in, b, &bounds);
     zr_command_buffer_push_image(out, bounds, &img);
     return pressed;
 }
 
 static int
-zr_widget_button_text_symbol(struct zr_command_buffer *out, struct zr_rect r,
+zr_do_button_text_symbol(enum zr_widget_states *state,
+    struct zr_command_buffer *out, struct zr_rect r,
     enum zr_symbol symbol, const char *text, enum zr_text_align align,
-    enum zr_button_behavior behavior, const struct zr_button_text *button,
+    enum zr_button_behavior behavior, const struct zr_button_text *b,
     const struct zr_user_font *f, const struct zr_input *i)
 {
     int ret;
     struct zr_rect tri = {0,0,0,0};
     struct zr_color background, color;
-    ZR_ASSERT(button);
+
+    ZR_ASSERT(b);
     ZR_ASSERT(out);
-    if (!out || !button)
+    if (!out || !b)
         return zr_false;
 
-    ret = zr_widget_button_text(out, r, text, behavior, button, i, f);
-    if (zr_input_is_mouse_hovering_rect(i, r)) {
-        int is_down = zr_input_is_mouse_down(i, ZR_BUTTON_LEFT);
-        background = (is_down) ? button->base.active : button->base.hover;
-        color = (is_down) ? button->active : button->hover;
-    } else {
-        background = button->base.normal;
-        color = button->normal;
+    ret = zr_do_button_text(state, out, r, text, behavior, b, i, f);
+    switch (*state) {
+    default:
+    case ZR_INACTIVE:
+        background = b->base.normal;
+        color = b->normal;
+        break;
+    case ZR_HOVERED:
+        background = b->base.hover;
+        color = b->hover;
+        break;
+    case ZR_ACTIVE:
+        background = b->base.active;
+        color = b->active;
+        break;
     }
 
     /* calculate symbol bounds */
     tri.y = r.y + (r.h/2) - f->height/2;
     tri.w = f->height; tri.h = f->height;
     if (align == ZR_TEXT_LEFT) {
-        tri.x = (r.x + r.w) - (2 * button->base.padding.x + tri.w);
+        tri.x = (r.x + r.w) - (2 * b->base.padding.x + tri.w);
         tri.x = MAX(tri.x, 0);
-    } else tri.x = r.x + 2 * button->base.padding.x;
-    zr_draw_symbol(out, symbol, tri, background, color, button->base.border_width, f);
+    } else tri.x = r.x + 2 * b->base.padding.x;
+    zr_draw_symbol(out, symbol, tri, background, color, b->base.border_width, f);
     return ret;
 }
 
 static int
-zr_widget_button_text_image(struct zr_command_buffer *out, struct zr_rect r,
+zr_do_button_text_image(enum zr_widget_states *state,
+    struct zr_command_buffer *out, struct zr_rect r,
     struct zr_image img, const char* text, enum zr_text_align align,
-    enum zr_button_behavior behavior, const struct zr_button_text *button,
+    enum zr_button_behavior behavior, const struct zr_button_text *b,
     const struct zr_user_font *f, const struct zr_input *i)
 {
     int pressed;
     struct zr_rect icon;
-    ZR_ASSERT(button);
+    ZR_ASSERT(b);
     ZR_ASSERT(out);
-    if (!out || !button)
+    if (!out || !b)
         return zr_false;
 
-    pressed = zr_widget_button_text(out, r, text, behavior, button, i, f);
-    icon.y = r.y + button->base.padding.y;
-    icon.w = icon.h = r.h - 2 * button->base.padding.y;
+    pressed = zr_do_button_text(state, out, r, text, behavior, b, i, f);
+    icon.y = r.y + b->base.padding.y;
+    icon.w = icon.h = r.h - 2 * b->base.padding.y;
     if (align == ZR_TEXT_LEFT) {
-        icon.x = (r.x + r.w) - (2 * button->base.padding.x + icon.w);
+        icon.x = (r.x + r.w) - (2 * b->base.padding.x + icon.w);
         icon.x = MAX(icon.x, 0);
-    } else icon.x = r.x + 2 * button->base.padding.x;
-
+    } else icon.x = r.x + 2 * b->base.padding.x;
     zr_command_buffer_push_image(out, icon, &img);
     return pressed;
 }
@@ -4569,50 +4622,49 @@ struct zr_toggle {
     struct zr_color cursor;
 };
 
-static void
-zr_widget_toggle(struct zr_command_buffer *out, struct zr_rect r,
-    int *active, const char *string, enum zr_toggle_type type,
-    const struct zr_toggle *toggle, const struct zr_input *in,
-    const struct zr_user_font *font)
+static int
+zr_toggle_behavior(const struct zr_input *in, struct zr_rect select,
+    enum zr_widget_states *state, int active)
 {
-    int toggle_active;
+    int clicked;
+    *state = ZR_INACTIVE;
+    if (in && zr_input_is_mouse_hovering_rect(in, select))
+        *state = ZR_HOVERED;
+    if (zr_input_mouse_clicked(in, ZR_BUTTON_LEFT, select)) {
+        *state = ZR_ACTIVE;
+        active = !active;
+    }
+    return active;
+}
+
+static void
+zr_toggle_draw(struct zr_command_buffer *out,
+    enum zr_widget_states state,
+    const struct zr_toggle *toggle, int active,
+    enum zr_toggle_type type, struct zr_rect r,
+    const char *string, const struct zr_user_font *font)
+{
     struct zr_rect select;
-    struct zr_rect cursor;
-    float cursor_pad;
     struct zr_color col;
+    float cursor_pad;
+    struct zr_rect cursor;
 
-    ZR_ASSERT(toggle);
-    ZR_ASSERT(out);
-    ZR_ASSERT(font);
-    if (!out || !toggle || !font || !active)
-        return;
-
-    /* make sure correct values */
-    r.w = MAX(r.w, font->height + 2 * toggle->padding.x);
-    r.h = MAX(r.h, font->height + 2 * toggle->padding.y);
-    toggle_active = *active;
-
-    /* calculate the size of the complete toggle */
     select.w = MIN(r.h, font->height + toggle->padding.y);
     select.h = select.w;
     select.x = r.x + toggle->padding.x;
     select.y = (r.y + toggle->padding.y + (select.w / 2)) - (font->height / 2);
-
-    /* calculate the bounds of the cursor inside the toggle */
     cursor_pad = (type == ZR_TOGGLE_OPTION) ?
         (float)(int)(select.w / 4):
         (float)(int)(select.h / 6);
 
+    /* calculate the bounds of the cursor inside the toggle */
     select.h = MAX(select.w, cursor_pad * 2);
     cursor.h = select.h - cursor_pad * 2;
     cursor.w = cursor.h;
     cursor.x = select.x + cursor_pad;
     cursor.y = select.y + cursor_pad;
 
-    /* update toggle state with user input */
-    toggle_active = zr_input_mouse_clicked(in, ZR_BUTTON_LEFT, cursor) ?
-        !toggle_active : toggle_active;
-    if (in && zr_input_is_mouse_hovering_rect(in, cursor))
+    if (state == ZR_HOVERED || state == ZR_ACTIVE)
         col = toggle->hover;
     else col = toggle->normal;
 
@@ -4622,7 +4674,7 @@ zr_widget_toggle(struct zr_command_buffer *out, struct zr_rect r,
     else zr_command_buffer_push_circle(out, select, col);
 
     /* draw radiobutton/checkbox cursor if active */
-    if (toggle_active) {
+    if (active) {
         if (type == ZR_TOGGLE_CHECK)
             zr_command_buffer_push_rect(out, cursor, toggle->rounding, toggle->cursor);
         else zr_command_buffer_push_circle(out, cursor, toggle->cursor);
@@ -4647,7 +4699,25 @@ zr_widget_toggle(struct zr_command_buffer *out, struct zr_rect r,
         text.text = toggle->font;
         zr_widget_text(out, inner, string, zr_strsiz(string), &text, ZR_TEXT_LEFT, font);
     }
-    *active = toggle_active;
+}
+
+static void
+zr_do_toggle(enum zr_widget_states *state,
+    struct zr_command_buffer *out, struct zr_rect r,
+    int *active, const char *string, enum zr_toggle_type type,
+    const struct zr_toggle *toggle, const struct zr_input *in,
+    const struct zr_user_font *font)
+{
+    ZR_ASSERT(toggle);
+    ZR_ASSERT(out);
+    ZR_ASSERT(font);
+    if (!out || !toggle || !font || !active)
+        return;
+
+    r.w = MAX(r.w, font->height + 2 * toggle->padding.x);
+    r.h = MAX(r.h, font->height + 2 * toggle->padding.y);
+    *active = zr_toggle_behavior(in, r, state, *active);
+    zr_toggle_draw(out, *state, toggle, *active, type, r, string, font);
 }
 
 /* ===============================================================
@@ -4655,16 +4725,6 @@ zr_widget_toggle(struct zr_command_buffer *out, struct zr_rect r,
  *                          SLIDER
  *
  * ===============================================================*/
-struct zr_progress {
-    float rounding;
-    struct zr_vec2 padding;
-    struct zr_color border;
-    struct zr_color background;
-    struct zr_color normal;
-    struct zr_color hover;
-    struct zr_color active;
-};
-
 struct zr_slider {
     struct zr_vec2 padding;
     struct zr_color border;
@@ -4675,19 +4735,70 @@ struct zr_slider {
     float rounding;
 };
 
-struct zr_drag {
-    struct zr_vec2 padding;
-    struct zr_color border;
-    struct zr_color normal;
-    struct zr_color hover;
-    struct zr_color active;
-    struct zr_color text;
-    struct zr_color text_active;
-    float border_width;
-};
+static float
+zr_slider_behavior(enum zr_widget_states *state, struct zr_rect *cursor,
+    const struct zr_input *in, const struct zr_slider *s, struct zr_rect slider,
+    float slider_min, float slider_max, float slider_value,
+    float slider_step, float slider_steps)
+{
+    int inslider, incursor;
+    inslider = in && zr_input_is_mouse_hovering_rect(in, slider);
+    incursor = in && zr_input_has_mouse_click_down_in_rect(in, ZR_BUTTON_LEFT, slider, zr_true);
+
+    *state = (inslider) ? ZR_HOVERED: ZR_INACTIVE;
+    if (in && inslider && incursor)
+    {
+        const float d = in->mouse.pos.x - (cursor->x + cursor->w / 2.0f);
+        const float pxstep = (slider.w - (2 * s->padding.x)) / slider_steps;
+        /* only update value if the next slider step is reached */
+        *state = ZR_ACTIVE;
+        if (ZR_ABS(d) >= pxstep) {
+            const float steps = (float)((int)(ZR_ABS(d) / pxstep));
+            slider_value += (d > 0) ? (slider_step * steps) : -(slider_step * steps);
+            slider_value = CLAMP(slider_min, slider_value, slider_max);
+            cursor->x = slider.x + (cursor->w * ((slider_value - slider_min) / slider_step));
+        }
+    }
+    return slider_value;
+}
+
+static void
+zr_slider_draw(struct zr_command_buffer *out,
+    enum zr_widget_states state, const struct zr_slider *s,
+    struct zr_rect bar, struct zr_rect cursor,
+    float slider_min, float slider_max, float slider_value)
+{
+    struct zr_color col;
+    struct zr_rect fill;
+
+    switch (state) {
+    default:
+    case ZR_INACTIVE:
+        col = s->normal; break;
+    case ZR_HOVERED:
+        col = s->hover; break;
+    case ZR_ACTIVE:
+        col = s->active; break;
+    }
+
+    cursor.w = cursor.h;
+    cursor.x = (slider_value <= slider_min) ? cursor.x:
+        (slider_value >= slider_max) ? ((bar.x + bar.w) - cursor.w) :
+        cursor.x - (cursor.w/2);
+
+    fill.x = bar.x;
+    fill.y = bar.y;
+    fill.w = (cursor.x + (cursor.w/2.0f)) - bar.x;
+    fill.h = bar.h;
+
+    zr_command_buffer_push_rect(out, bar, 0, s->bg);
+    zr_command_buffer_push_rect(out, fill, 0, col);
+    zr_command_buffer_push_circle(out, cursor, col);
+}
 
 static float
-zr_widget_slider(struct zr_command_buffer *out, struct zr_rect slider,
+zr_do_slider(enum zr_widget_states *state,
+    struct zr_command_buffer *out, struct zr_rect slider,
     float min, float val, float max, float step,
     const struct zr_slider *s, const struct zr_input *in)
 {
@@ -4698,8 +4809,6 @@ zr_widget_slider(struct zr_command_buffer *out, struct zr_rect slider,
     struct zr_rect cursor;
     struct zr_rect bar;
     struct zr_color col;
-    int inslider;
-    int incursor;
 
     ZR_ASSERT(s);
     ZR_ASSERT(out);
@@ -4732,61 +4841,176 @@ zr_widget_slider(struct zr_command_buffer *out, struct zr_rect slider,
     bar.w = slider.w;
     bar.h = slider.h/4;
 
-    /* updated the slider value by user input */
-    inslider = in && zr_input_is_mouse_hovering_rect(in, slider);
-    incursor = in && zr_input_has_mouse_click_down_in_rect(in, ZR_BUTTON_LEFT, slider, zr_true);
-    col = (inslider) ? s->hover: s->normal;
-
-    if (in && inslider && incursor)
-    {
-        const float d = in->mouse.pos.x - (cursor.x + cursor.w / 2.0f);
-        const float pxstep = (slider.w - (2 * s->padding.x)) / slider_steps;
-        /* only update value if the next slider step is reached */
-        col = s->active;
-        if (ZR_ABS(d) >= pxstep) {
-            const float steps = (float)((int)(ZR_ABS(d) / pxstep));
-            slider_value += (d > 0) ? (step * steps) : -(step * steps);
-            slider_value = CLAMP(slider_min, slider_value, slider_max);
-            cursor.x = slider.x + (cursor.w * ((slider_value - slider_min) / step));
-        }
-    }
-
-    {
-        struct zr_rect fill;
-        cursor.w = cursor.h;
-        cursor.x = (slider_value <= slider_min) ? cursor.x:
-            (slider_value >= slider_max) ? ((bar.x + bar.w) - cursor.w) :
-            cursor.x - (cursor.w/2);
-
-        fill.x = bar.x;
-        fill.y = bar.y;
-        fill.w = (cursor.x + (cursor.w/2.0f)) - bar.x;
-        fill.h = bar.h;
-
-        /* draw slider with background and circle cursor*/
-        zr_command_buffer_push_rect(out, bar, 0, s->bg);
-        zr_command_buffer_push_rect(out, fill, 0, col);
-        zr_command_buffer_push_circle(out, cursor, col);
-    }
+    slider_value = zr_slider_behavior(state, &cursor, in, s, slider,
+        slider_min, slider_max, slider_value, step, slider_steps);
+    zr_slider_draw(out, *state, s, bar, cursor, slider_min, slider_max, slider_value);
     return slider_value;
 }
 
+/* ===============================================================
+ *
+ *                          PROGRESSBAR
+ *
+ * ===============================================================*/
+struct zr_progress {
+    float rounding;
+    struct zr_vec2 padding;
+    struct zr_color border;
+    struct zr_color background;
+    struct zr_color normal;
+    struct zr_color hover;
+    struct zr_color active;
+};
+
+static zr_size
+zr_progress_behavior(enum zr_widget_states *state, const struct zr_input *in,
+    struct zr_rect r, zr_size max, zr_size value, int modifyable)
+{
+    *state = ZR_INACTIVE;
+    if (in && modifyable && zr_input_is_mouse_hovering_rect(in, r)) {
+        if (zr_input_is_mouse_down(in, ZR_BUTTON_LEFT)) {
+            float ratio = (float)(in->mouse.pos.x - r.x) / (float)r.w;
+            value = (zr_size)((float)max * ratio);
+            *state = ZR_ACTIVE;
+        } else *state = ZR_HOVERED;
+    }
+    if (!max) return value;
+    value = MIN(value, max);
+    return value;
+}
+
+static void
+zr_progress_draw(struct zr_command_buffer *out, const struct zr_progress *p,
+    enum zr_widget_states state, struct zr_rect r, zr_size max, zr_size value)
+{
+    struct zr_color col;
+    float prog_scale;
+    switch (state) {
+    default:
+    case ZR_INACTIVE:
+        col = p->normal; break;
+    case ZR_HOVERED:
+        col = p->hover; break;
+    case ZR_ACTIVE:
+        col = p->active; break;
+    }
+
+    prog_scale = (float)value / (float)max;
+    zr_command_buffer_push_rect(out, r, p->rounding, p->background);
+    r.w = (r.w - 2) * prog_scale;
+    zr_command_buffer_push_rect(out, r, p->rounding, col);
+}
+
+static zr_size
+zr_do_progress(enum zr_widget_states *state,
+    struct zr_command_buffer *out, struct zr_rect r,
+    zr_size value, zr_size max, int modifyable,
+    const struct zr_progress *prog, const struct zr_input *in)
+{
+    float prog_scale;
+    zr_size prog_value;
+
+    ZR_ASSERT(prog);
+    ZR_ASSERT(out);
+    if (!out || !prog) return 0;
+
+    r.w = MAX(r.w, 2 * prog->padding.x + 5);
+    r.h = MAX(r.h, 2 * prog->padding.y + 5);
+    r = zr_pad_rect(r, zr_vec2(prog->padding.x, prog->padding.y));
+
+    prog_value = MIN(value, max);
+    prog_value = zr_progress_behavior(state, in, r, max, prog_value, modifyable);
+    zr_progress_draw(out, prog, *state, r, max, value);
+    return prog_value;
+}
+
+/* ===============================================================
+ *
+ *                          DRAGGABLE
+ *
+ * ===============================================================*/
+struct zr_drag {
+    struct zr_vec2 padding;
+    struct zr_color border;
+    struct zr_color normal;
+    struct zr_color hover;
+    struct zr_color active;
+    struct zr_color text;
+    struct zr_color text_active;
+    float border_width;
+};
+
 static float
-zr_widget_drag(struct zr_command_buffer *out, struct zr_rect drag,
+zr_drag_behavior(enum zr_widget_states *state, const struct zr_input *in,
+    struct zr_rect drag, float min, float val, float max, float inc_per_pixel)
+{
+    int left_mouse_down = in && in->mouse.buttons[ZR_BUTTON_LEFT].down;
+    int left_mouse_click_in_cursor = in && zr_input_has_mouse_click_down_in_rect(in,
+        ZR_BUTTON_LEFT, drag, zr_true);
+
+    *state = ZR_INACTIVE;
+    if (zr_input_is_mouse_hovering_rect(in, drag))
+        *state = ZR_HOVERED;
+
+    if (left_mouse_down && left_mouse_click_in_cursor) {
+        float delta, pixels;
+        pixels = in->mouse.delta.x;
+        delta = pixels * inc_per_pixel;
+        val += delta;
+        val = CLAMP(min, val, max);
+        *state = ZR_ACTIVE;
+    }
+    return val;
+}
+
+static void
+zr_drag_draw(struct zr_command_buffer *out, struct zr_rect drag,
+    enum zr_widget_states state, float val, const struct zr_drag *d,
+    const struct zr_user_font *f)
+{
+    struct zr_text t;
+    struct zr_color background;
+    char string[ZR_MAX_NUMBER_BUFFER];
+    zr_size len;
+
+    switch (state) {
+    default:
+    case ZR_INACTIVE:
+        background = d->normal;
+        t.text = d->text;
+        break;
+    case ZR_HOVERED:
+        background = d->hover;
+        t.text = d->text_active;
+        break;
+    case ZR_ACTIVE:
+        background = d->active;
+        t.text = d->text_active;
+        break;
+    }
+
+    zr_command_buffer_push_rect(out, drag, 0, d->border);
+    drag = zr_shrink_rect(drag, d->border_width);
+    zr_command_buffer_push_rect(out, drag, 0, background);
+
+    t.text = d->text;
+    t.background = background;
+    t.padding = zr_vec2(0,0);
+    zr_dtos(string, val);
+    len = zr_string_float_limit(string, ZR_MAX_FLOAT_PRECISION);
+    zr_widget_text(out, drag, string, len, &t, ZR_TEXT_CENTERED, f);
+}
+
+static float
+zr_do_drag(enum zr_widget_states *state,
+    struct zr_command_buffer *out, struct zr_rect drag,
     float min, float val, float max,
     float inc_per_pixel, const struct zr_drag *d,
     const struct zr_input *in, const struct zr_user_font *f)
 {
-    struct zr_text t;
-    struct zr_color background;
-
-    float drag_min, drag_max;
+    float drag_min;
+    float drag_max;
     float drag_value;
-    char string[ZR_MAX_NUMBER_BUFFER];
-    zr_size len;
-
-    int left_mouse_down;
-    int left_mouse_click_in_cursor;
 
     ZR_ASSERT(d);
     ZR_ASSERT(out);
@@ -4805,84 +5029,15 @@ zr_widget_drag(struct zr_command_buffer *out, struct zr_rect drag,
     drag_min = MIN(min, max);
     drag_value = CLAMP(drag_min, val, drag_max);
 
-    /* update value user input */
-    left_mouse_down = in && in->mouse.buttons[ZR_BUTTON_LEFT].down;
-    left_mouse_click_in_cursor = in && zr_input_has_mouse_click_down_in_rect(in,
-        ZR_BUTTON_LEFT, drag, zr_true);
-
-    t.text = d->text;
-    background = d->normal;
-    if (zr_input_is_mouse_hovering_rect(in, drag))
-        background = d->hover;
-
-    if (left_mouse_down && left_mouse_click_in_cursor) {
-        float delta, pixels;
-        background = d->active;
-        t.text = d->text_active;
-
-        pixels = in->mouse.delta.x;
-        delta = pixels * inc_per_pixel;
-        drag_value += delta;
-        drag_value = CLAMP(drag_min, drag_value, drag_max);
-    }
-
-    /* draw border + background */
-    zr_command_buffer_push_rect(out, drag, 0, d->border);
-    drag = zr_shrink_rect(drag, d->border_width);
-    zr_command_buffer_push_rect(out, drag, 0, background);
-
-    /* draw value as text */
-    t.background = background;
-    t.padding = zr_vec2(0,0);
-    zr_dtos(string, drag_value);
-    len = zr_string_float_limit(string, ZR_MAX_FLOAT_PRECISION);
-    zr_widget_text(out, drag, string, len, &t, ZR_TEXT_CENTERED, f);
+    drag_value = zr_drag_behavior(state, in, drag, drag_min, drag_value,
+        drag_max, inc_per_pixel);
+    zr_drag_draw(out, drag, *state, drag_value, d, f);
     return drag_value;
-}
-
-static zr_size
-zr_widget_progress(struct zr_command_buffer *out, struct zr_rect r,
-    zr_size value, zr_size max, int modifyable,
-    const struct zr_progress *prog, const struct zr_input *in)
-{
-    float prog_scale;
-    zr_size prog_value;
-    struct zr_color col;
-
-    ZR_ASSERT(prog);
-    ZR_ASSERT(out);
-    if (!out || !prog) return 0;
-
-    /* make sure given values are correct */
-    r.w = MAX(r.w, 2 * prog->padding.x + 5);
-    r.h = MAX(r.h, 2 * prog->padding.y + 5);
-    r = zr_pad_rect(r, zr_vec2(prog->padding.x, prog->padding.y));
-    prog_value = MIN(value, max);
-
-    /* update progress by user input if modifyable */
-    if (in && modifyable && zr_input_is_mouse_hovering_rect(in, r)) {
-        if (zr_input_is_mouse_down(in, ZR_BUTTON_LEFT)) {
-            float ratio = (float)(in->mouse.pos.x - r.x) / (float)r.w;
-            prog_value = (zr_size)((float)max * ratio);
-            col = prog->active;
-        } else col = prog->hover;
-    } else col = prog->normal;
-
-    /* make sure calculated values are correct */
-    if (!max) return prog_value;
-    prog_value = MIN(prog_value, max);
-    prog_scale = (float)prog_value / (float)max;
-
-    /* draw progressbar with background and cursor */
-    zr_command_buffer_push_rect(out, r, prog->rounding, prog->background);
-    r.w = (r.w - 2) * prog_scale;
-    zr_command_buffer_push_rect(out, r, prog->rounding, col);
-    return prog_value;
 }
 
 /* ===============================================================
  *
- *                      SCROLLBAR
+ *                          SCROLLBAR
  *
  * ===============================================================*/
 struct zr_scrollbar {
@@ -4896,7 +5051,73 @@ struct zr_scrollbar {
 };
 
 static float
-zr_widget_scrollbarv(struct zr_command_buffer *out, struct zr_rect scroll,
+zr_scrollbar_behavior(enum zr_widget_states *state, struct zr_input *in,
+    const struct zr_scrollbar *s, struct zr_rect scroll,
+    struct zr_rect cursor, float scroll_offset,
+    float target, float scroll_step, enum zr_orientation o)
+{
+    int left_mouse_down, left_mouse_click_in_cursor;
+    if (!in) return scroll_offset;
+
+    *state = ZR_INACTIVE;
+    left_mouse_down = in->mouse.buttons[ZR_BUTTON_LEFT].down;
+    left_mouse_click_in_cursor = zr_input_has_mouse_click_down_in_rect(in,
+        ZR_BUTTON_LEFT, cursor, zr_true);
+    if (zr_input_is_mouse_hovering_rect(in, cursor))
+        *state = ZR_HOVERED;
+
+    if (left_mouse_down && left_mouse_click_in_cursor) {
+        /* update cursor by mouse dragging */
+        float pixel, delta;
+        *state = ZR_ACTIVE;
+        if (o == ZR_VERTICAL) {
+            pixel = in->mouse.delta.y;
+            delta = (pixel / scroll.h) * target;
+            scroll_offset = CLAMP(0, scroll_offset + delta, target - scroll.h);
+            /* This is probably one of my most distgusting hacks I have ever done.
+             * This basically changes the mouse clicked position with the moving
+             * cursor. This allows for better scroll behavior but resulted into me
+             * having to remove const correctness for input. But in the end I believe
+             * it is worth it. */
+            in->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.y += in->mouse.delta.y;
+        } else {
+            pixel = in->mouse.delta.x;
+            delta = (pixel / scroll.w) * target;
+            scroll_offset = CLAMP(0, scroll_offset + delta, target - scroll.w);
+            in->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.x += in->mouse.delta.x;
+        }
+    } else if (s->has_scrolling && ((in->mouse.scroll_delta<0) || (in->mouse.scroll_delta>0))){
+        /* update cursor by mouse scrolling */
+        scroll_offset = scroll_offset + scroll_step * (-in->mouse.scroll_delta);
+        if (o == ZR_VERTICAL)
+            scroll_offset = CLAMP(0, scroll_offset, target - scroll.h);
+        else scroll_offset = CLAMP(0, scroll_offset, target - scroll.w);
+    }
+    return scroll_offset;
+}
+
+static void
+zr_scrollbar_draw(struct zr_command_buffer *out, const struct zr_scrollbar *s,
+    enum zr_widget_states state, struct zr_rect scroll, struct zr_rect cursor)
+{
+    struct zr_color col;
+    switch (state) {
+    default:
+    case ZR_INACTIVE:
+        col = s->normal; break;
+    case ZR_HOVERED:
+        col = s->hover; break;
+    case ZR_ACTIVE:
+        col = s->active; break;
+    }
+    zr_command_buffer_push_rect(out, zr_shrink_rect(scroll,1), s->rounding, s->border);
+    zr_command_buffer_push_rect(out, scroll, s->rounding, s->background);
+    zr_command_buffer_push_rect(out, cursor, s->rounding, col);
+}
+
+static float
+zr_do_scrollbarv(enum zr_widget_states *state,
+    struct zr_command_buffer *out, struct zr_rect scroll,
     float offset, float target, float step, const struct zr_scrollbar *s,
     struct zr_input *i)
 {
@@ -4904,10 +5125,10 @@ zr_widget_scrollbarv(struct zr_command_buffer *out, struct zr_rect scroll,
     float scroll_step;
     float scroll_offset;
     float scroll_off, scroll_ratio;
-    struct zr_color col;
 
     ZR_ASSERT(out);
     ZR_ASSERT(s);
+    ZR_ASSERT(state);
     if (!out || !s) return 0;
 
     /* scrollbar background */
@@ -4929,45 +5150,17 @@ zr_widget_scrollbarv(struct zr_command_buffer *out, struct zr_rect scroll,
     cursor.w = scroll.w - 2;
     cursor.x = scroll.x + 1;
 
-    col = s->normal;
-    if (i) {
-        int left_mouse_down, left_mouse_click_in_cursor;
-        left_mouse_down = i->mouse.buttons[ZR_BUTTON_LEFT].down;
-        left_mouse_click_in_cursor = zr_input_has_mouse_click_down_in_rect(i,
-            ZR_BUTTON_LEFT, cursor, zr_true);
-        if (zr_input_is_mouse_hovering_rect(i, cursor))
-            col = s->hover;
-
-        if (left_mouse_down && left_mouse_click_in_cursor) {
-            /* update cursor by mouse dragging */
-            const float pixel = i->mouse.delta.y;
-            const float delta =  (pixel / scroll.h) * target;
-            scroll_offset = CLAMP(0, scroll_offset + delta, target - scroll.h);
-            col = s->active;
-            /* This is probably one of my most distgusting hacks I have ever done.
-             * This basically changes the mouse clicked position with the moving
-             * cursor. This allows for better scroll behavior but resulted into me
-             * having to remove const correctness for input. But in the end I believe
-             * it is worth it. */
-            i->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.y += i->mouse.delta.y;
-        } else if (s->has_scrolling && ((i->mouse.scroll_delta<0) || (i->mouse.scroll_delta>0))) {
-            /* update cursor by mouse scrolling */
-            scroll_offset = scroll_offset + scroll_step * (-i->mouse.scroll_delta);
-            scroll_offset = CLAMP(0, scroll_offset, target - scroll.h);
-        }
-        scroll_off = scroll_offset / target;
-        cursor.y = scroll.y + (scroll_off * scroll.h);
-    }
-
-    /* draw scrollbar cursor */
-    zr_command_buffer_push_rect(out, zr_shrink_rect(scroll,1), s->rounding, s->border);
-    zr_command_buffer_push_rect(out, scroll, s->rounding, s->background);
-    zr_command_buffer_push_rect(out, cursor, s->rounding, col);
+    scroll_offset = zr_scrollbar_behavior(state, i, s, scroll, cursor,
+        scroll_offset, target, scroll_step, ZR_VERTICAL);
+    scroll_off = scroll_offset / target;
+    cursor.y = scroll.y + (scroll_off * scroll.h);
+    zr_scrollbar_draw(out, s, *state, scroll, cursor);
     return scroll_offset;
 }
 
 static float
-zr_widget_scrollbarh(struct zr_command_buffer *out, struct zr_rect scroll,
+zr_do_scrollbarh(enum zr_widget_states *state,
+    struct zr_command_buffer *out, struct zr_rect scroll,
     float offset, float target, float step, const struct zr_scrollbar *s,
     struct zr_input *i)
 {
@@ -4998,35 +5191,11 @@ zr_widget_scrollbarh(struct zr_command_buffer *out, struct zr_rect scroll,
     cursor.h = scroll.h - 2;
     cursor.y = scroll.y + 1;
 
-    col = s->normal;
-    if (i) {
-        int left_mouse_down, left_mouse_click_in_cursor;
-        left_mouse_down = i->mouse.buttons[ZR_BUTTON_LEFT].down;
-        left_mouse_click_in_cursor = zr_input_has_mouse_click_down_in_rect(i,
-            ZR_BUTTON_LEFT, cursor, zr_true);
-        if (zr_input_is_mouse_hovering_rect(i, cursor))
-            col = s->hover;
-
-        if (left_mouse_down && left_mouse_click_in_cursor) {
-            /* update cursor by mouse dragging */
-            const float pixel = i->mouse.delta.x;
-            const float delta =  (pixel / scroll.w) * target;
-            scroll_offset = CLAMP(0, scroll_offset + delta, target - scroll.w);
-            col = s->active;
-            i->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.x += i->mouse.delta.x;
-        } else if (s->has_scrolling && ((i->mouse.scroll_delta<0) || (i->mouse.scroll_delta>0))) {
-            /* update cursor by mouse scrolling */
-            scroll_offset = scroll_offset + scroll_step * (-i->mouse.scroll_delta);
-            scroll_offset = CLAMP(0, scroll_offset, target - scroll.w);
-        }
-        scroll_off = scroll_offset / target;
-        cursor.x = scroll.x + (scroll_off * scroll.w);
-    }
-
-    /* draw scrollbar cursor */
-    zr_command_buffer_push_rect(out, zr_shrink_rect(scroll,1), s->rounding, s->border);
-    zr_command_buffer_push_rect(out, scroll, s->rounding, s->background);
-    zr_command_buffer_push_rect(out, cursor, s->rounding, col);
+    scroll_offset = zr_scrollbar_behavior(state, i, s, scroll, cursor,
+        scroll_offset, target, scroll_step, ZR_HORIZONTAL);
+    scroll_off = scroll_offset / target;
+    cursor.x = scroll.x + (scroll_off * scroll.w);
+    zr_scrollbar_draw(out, s, *state, scroll, cursor);
     return scroll_offset;
 }
 
@@ -5471,6 +5640,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
         struct zr_rect bounds;
         float scroll_target, scroll_offset, scroll_step;
         struct zr_scrollbar scroll = field->scroll;
+        enum zr_widget_states state;
 
         bounds.x = (r.x + r.w) - (field->scrollbar_width + field->border_size);
         bounds.y = r.y + field->border_size + field->padding.y;
@@ -5481,7 +5651,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
         scroll_step = total_height * 0.10f;
         scroll_target = total_height;
         scroll.has_scrolling = box->active;
-        box->scrollbar = zr_widget_scrollbarv(out, bounds, scroll_offset,
+        box->scrollbar = zr_do_scrollbarv(&state, out, bounds, scroll_offset,
                             scroll_target, scroll_step, &scroll, in);
     }
     {
@@ -5779,6 +5949,7 @@ zr_widget_spinner_base(struct zr_command_buffer *out, struct zr_rect r,
     struct zr_edit field;
     int button_up_clicked, button_down_clicked;
     int is_active = (active) ? *active : zr_false;
+    enum zr_widget_states state;
 
     r.h = MAX(r.h, font->height + 2 * s->padding.x);
     r.w = MAX(r.w, r.h - (s->padding.x + (float)s->button.base.border_width * 2));
@@ -5788,12 +5959,12 @@ zr_widget_spinner_base(struct zr_command_buffer *out, struct zr_rect r,
     bounds.h = r.h / 2;
     bounds.w = r.h - s->padding.x;
     bounds.x = r.x + r.w - bounds.w;
-    button_up_clicked = zr_widget_button_symbol(out, bounds, ZR_SYMBOL_TRIANGLE_UP,
+    button_up_clicked = zr_do_button_symbol(&state, out, bounds, ZR_SYMBOL_TRIANGLE_UP,
         ZR_BUTTON_DEFAULT, &s->button, in, font);
     if (button_up_clicked) ret = 1;
 
     bounds.y = r.y + bounds.h;
-    button_down_clicked = zr_widget_button_symbol(out, bounds, ZR_SYMBOL_TRIANGLE_DOWN,
+    button_down_clicked = zr_do_button_symbol(&state, out, bounds, ZR_SYMBOL_TRIANGLE_DOWN,
         ZR_BUTTON_DEFAULT, &s->button, in, font);
     if (button_down_clicked)
         ret = -1;
@@ -6752,6 +6923,7 @@ zr_end(struct zr_context *layout, struct zr_window *window)
         scroll.border = config->colors[ZR_COLOR_BORDER];
         {
             /* vertical scollbar */
+            enum zr_widget_states state;
             bounds.x = layout->bounds.x + layout->width;
             bounds.y = layout->clip.y;
             bounds.w = scrollbar_size;
@@ -6762,11 +6934,12 @@ zr_end(struct zr_context *layout, struct zr_window *window)
             scroll_step = layout->clip.h * 0.10f;
             scroll_target = (layout->at_y - layout->clip.y);
             scroll.has_scrolling = (layout->flags & ZR_WINDOW_ACTIVE);
-            window->offset.y = zr_widget_scrollbarv(out, bounds, scroll_offset,
+            window->offset.y = zr_do_scrollbarv(&state, out, bounds, scroll_offset,
                                 scroll_target, scroll_step, &scroll, in);
         }
         {
             /* horizontal scrollbar */
+            enum zr_widget_states state;
             bounds.x = layout->bounds.x + window_padding.x;
             if (layout->flags & ZR_WINDOW_TAB) {
                 bounds.h = scrollbar_size;
@@ -6787,7 +6960,7 @@ zr_end(struct zr_context *layout, struct zr_window *window)
             scroll_target = layout->max_x - bounds.x;
             scroll_step = layout->max_x * 0.05f;
             scroll.has_scrolling = zr_false;
-            window->offset.x = zr_widget_scrollbarh(out, bounds, scroll_offset,
+            window->offset.x = zr_do_scrollbarh(&state, out, bounds, scroll_offset,
                                     scroll_target, scroll_step, &scroll, in);
         }
     };
@@ -7700,6 +7873,7 @@ zr_button_text(struct zr_context *layout, const char *str,
     struct zr_rect bounds;
     struct zr_button_text button;
     const struct zr_style *config;
+    enum zr_widget_states ws;
 
     const struct zr_input *i;
     enum zr_widget_state state;
@@ -7712,7 +7886,7 @@ zr_button_text(struct zr_context *layout, const char *str,
     button.normal = config->colors[ZR_COLOR_TEXT];
     button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
     button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
-    return zr_widget_button_text(layout->buffer, bounds, str, behavior,
+    return zr_do_button_text(&ws, layout->buffer, bounds, str, behavior,
             &button, i, &config->font);
 }
 
@@ -7723,6 +7897,7 @@ zr_button_color(struct zr_context *layout,
     struct zr_rect bounds;
     struct zr_button button;
     const struct zr_input *i;
+    enum zr_widget_states ws;
 
     enum zr_widget_state state;
     state = zr_button(&button, &bounds, layout, ZR_BUTTON_NORMAL);
@@ -7732,7 +7907,7 @@ zr_button_color(struct zr_context *layout,
     button.normal = color;
     button.hover = color;
     button.active = color;
-    return zr_widget_button(layout->buffer, bounds, &button, i, behavior, &bounds);
+    return zr_do_button(&ws, layout->buffer, bounds, &button, i, behavior, &bounds);
 }
 
 int
@@ -7742,6 +7917,7 @@ zr_button_symbol(struct zr_context *layout, enum zr_symbol symbol,
     struct zr_rect bounds;
     struct zr_button_symbol button;
     const struct zr_style *config;
+    enum zr_widget_states ws;
 
     const struct zr_input *i;
     enum zr_widget_state state;
@@ -7753,7 +7929,7 @@ zr_button_symbol(struct zr_context *layout, enum zr_symbol symbol,
     button.normal = config->colors[ZR_COLOR_TEXT];
     button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
     button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
-    return zr_widget_button_symbol(layout->buffer, bounds, symbol,
+    return zr_do_button_symbol(&ws, layout->buffer, bounds, symbol,
             behavior, &button, i, &config->font);
 }
 
@@ -7763,6 +7939,7 @@ zr_button_image(struct zr_context *layout, struct zr_image image,
 {
     struct zr_rect bounds;
     struct zr_button_icon button;
+    enum zr_widget_states ws;
 
     const struct zr_input *i;
     enum zr_widget_state state;
@@ -7770,7 +7947,7 @@ zr_button_image(struct zr_context *layout, struct zr_image image,
     if (!state) return zr_false;
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
     button.padding = zr_vec2(0,0);
-    return zr_widget_button_image(layout->buffer, bounds, image, behavior, &button, i);
+    return zr_do_button_image(&ws, layout->buffer, bounds, image, behavior, &button, i);
 }
 
 int
@@ -7780,6 +7957,7 @@ zr_button_text_symbol(struct zr_context *layout, enum zr_symbol symbol,
     struct zr_rect bounds;
     struct zr_button_text button;
     const struct zr_style *config;
+    enum zr_widget_states ws;
 
     const struct zr_input *i;
     enum zr_widget_state state;
@@ -7792,7 +7970,7 @@ zr_button_text_symbol(struct zr_context *layout, enum zr_symbol symbol,
     button.normal = config->colors[ZR_COLOR_TEXT];
     button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
     button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
-    return zr_widget_button_text_symbol(layout->buffer, bounds, symbol, text, align,
+    return zr_do_button_text_symbol(&ws, layout->buffer, bounds, symbol, text, align,
             behavior, &button, &config->font, i);
 }
 
@@ -7803,6 +7981,7 @@ zr_button_text_image(struct zr_context *layout, struct zr_image img,
     struct zr_rect bounds;
     struct zr_button_text button;
     const struct zr_style *config;
+    enum zr_widget_states ws;
 
     const struct zr_input *i;
     enum zr_widget_state state;
@@ -7815,7 +7994,7 @@ zr_button_text_image(struct zr_context *layout, struct zr_image img,
     button.normal = config->colors[ZR_COLOR_TEXT];
     button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
     button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
-    return zr_widget_button_text_image(layout->buffer, bounds, img, text, align,
+    return zr_do_button_text_image(&ws, layout->buffer, bounds, img, text, align,
             behavior, &button, &config->font, i);
 }
 
@@ -7903,6 +8082,7 @@ zr_checkbox(struct zr_context *layout, const char *text, int *is_active)
     struct zr_rect bounds;
     struct zr_toggle toggle;
     const struct zr_style *config;
+    enum zr_widget_states ws;
 
     const struct zr_input *i;
     enum zr_widget_state state;
@@ -7915,7 +8095,7 @@ zr_checkbox(struct zr_context *layout, const char *text, int *is_active)
     toggle.cursor = config->colors[ZR_COLOR_TOGGLE_CURSOR];
     toggle.normal = config->colors[ZR_COLOR_TOGGLE];
     toggle.hover = config->colors[ZR_COLOR_TOGGLE_HOVER];
-    zr_widget_toggle(layout->buffer, bounds, is_active, text, ZR_TOGGLE_CHECK,
+    zr_do_toggle(&ws, layout->buffer, bounds, is_active, text, ZR_TOGGLE_CHECK,
                         &toggle, i, &config->font);
 }
 
@@ -7931,6 +8111,7 @@ zr_option(struct zr_context *layout, const char *text, int is_active)
     struct zr_rect bounds;
     struct zr_toggle toggle;
     const struct zr_style *config;
+    enum zr_widget_states ws;
 
     const struct zr_input *i;
     enum zr_widget_state state;
@@ -7942,7 +8123,7 @@ zr_option(struct zr_context *layout, const char *text, int is_active)
     toggle.cursor = config->colors[ZR_COLOR_TOGGLE_CURSOR];
     toggle.normal = config->colors[ZR_COLOR_TOGGLE];
     toggle.hover = config->colors[ZR_COLOR_TOGGLE_HOVER];
-    zr_widget_toggle(layout->buffer, bounds, &is_active, text, ZR_TOGGLE_OPTION,
+    zr_do_toggle(&ws, layout->buffer, bounds, &is_active, text, ZR_TOGGLE_OPTION,
                         &toggle, i, &config->font);
     return is_active;
 }
@@ -7955,6 +8136,7 @@ zr_slider_float(struct zr_context *layout, float min_value, float *value,
     struct zr_slider slider;
     const struct zr_style *config;
     struct zr_vec2 item_padding;
+    enum zr_widget_states ws;
 
     const struct zr_input *i;
     enum zr_widget_state state;
@@ -7972,7 +8154,7 @@ zr_slider_float(struct zr_context *layout, float min_value, float *value,
     slider.active = config->colors[ZR_COLOR_SLIDER_CURSOR_ACTIVE];
     slider.border = config->colors[ZR_COLOR_BORDER];
     slider.rounding = config->rounding[ZR_ROUNDING_SLIDER];
-    *value = zr_widget_slider(layout->buffer, bounds, min_value, *value, max_value,
+    *value = zr_do_slider(&ws, layout->buffer, bounds, min_value, *value, max_value,
                         value_step, &slider, i);
 }
 
@@ -7994,6 +8176,7 @@ zr_drag_float(struct zr_context *layout, float min, float *val,
     struct zr_drag drag;
     const struct zr_style *config;
     struct zr_vec2 item_padding;
+    enum zr_widget_states ws;
 
     const struct zr_input *i;
     enum zr_widget_state state;
@@ -8013,7 +8196,7 @@ zr_drag_float(struct zr_context *layout, float min, float *val,
     drag.active = config->colors[ZR_COLOR_DRAG_ACTIVE];
     drag.text = config->colors[ZR_COLOR_TEXT];
     drag.text_active = config->colors[ZR_COLOR_TEXT_ACTIVE];
-    *val = zr_widget_drag(layout->buffer, bounds, min, *val, max,
+    *val = zr_do_drag(&ws, layout->buffer, bounds, min, *val, max,
                         inc_per_pixel, &drag, i, &config->font);
 }
 
@@ -8034,6 +8217,7 @@ zr_progress(struct zr_context *layout, zr_size *cur_value, zr_size max_value,
     struct zr_progress prog;
     const struct zr_style *config;
     struct zr_vec2 item_padding;
+    enum zr_widget_states ws;
 
     const struct zr_input *i;
     enum zr_widget_state state;
@@ -8052,7 +8236,7 @@ zr_progress(struct zr_context *layout, zr_size *cur_value, zr_size max_value,
     prog.hover = config->colors[ZR_COLOR_PROGRESS_CURSOR_HOVER];
     prog.active = config->colors[ZR_COLOR_PROGRESS_CURSOR_ACTIVE];
     prog.rounding = config->rounding[ZR_ROUNDING_PROGRESS];
-    *cur_value = zr_widget_progress(layout->buffer, bounds, *cur_value, max_value,
+    *cur_value = zr_do_progress(&ws, layout->buffer, bounds, *cur_value, max_value,
                         is_modifyable, &prog, i);
 }
 
@@ -8666,6 +8850,7 @@ zr_contextual_button(struct zr_context *layout, const char *text,
     struct zr_rect bounds;
     struct zr_button_text button;
     const struct zr_style *config;
+    enum zr_widget_states ws;
 
     const struct zr_input *i;
     enum zr_widget_state state;
@@ -8681,7 +8866,7 @@ zr_contextual_button(struct zr_context *layout, const char *text,
     button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
     button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
     button.alignment = align;
-    return zr_widget_button_text(layout->buffer, bounds, text,  behavior,
+    return zr_do_button_text(&ws, layout->buffer, bounds, text,  behavior,
             &button, i, &config->font);
 }
 
@@ -8692,6 +8877,7 @@ zr_contextual_button_symbol(struct zr_context *layout, enum zr_symbol symbol,
     struct zr_rect bounds;
     struct zr_button_text button;
     const struct zr_style *config;
+    enum zr_widget_states ws;
 
     const struct zr_input *i;
     enum zr_widget_state state;
@@ -8706,7 +8892,7 @@ zr_contextual_button_symbol(struct zr_context *layout, enum zr_symbol symbol,
     button.normal = config->colors[ZR_COLOR_TEXT];
     button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
     button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
-    return zr_widget_button_text_symbol(layout->buffer, bounds, symbol, text, align,
+    return zr_do_button_text_symbol(&ws, layout->buffer, bounds, symbol, text, align,
             behavior, &button, &config->font, i);
 }
 
@@ -8717,6 +8903,7 @@ zr_contextual_button_icon(struct zr_context *layout, struct zr_image img,
     struct zr_rect bounds;
     struct zr_button_text button;
     const struct zr_style *config;
+    enum zr_widget_states ws;
 
     const struct zr_input *i;
     enum zr_widget_state state;
@@ -8732,7 +8919,7 @@ zr_contextual_button_icon(struct zr_context *layout, struct zr_image img,
     button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
     button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
     button.alignment = ZR_TEXT_CENTERED;
-    return zr_widget_button_text_image(layout->buffer, bounds, img, text, align,
+    return zr_do_button_text_image(&ws, layout->buffer, bounds, img, text, align,
                                 behavior, &button, &config->font, i);
 }
 
@@ -8850,6 +9037,7 @@ zr_combo_begin(struct zr_context *parent, struct zr_context *combo,
     }
     {
         /* button setup and execution */
+        enum zr_widget_states state;
         struct zr_button_symbol button;
         bounds.y = header.y + 2;
         bounds.h = MAX(2, header.h);
@@ -8868,7 +9056,7 @@ zr_combo_begin(struct zr_context *parent, struct zr_context *combo,
         button.normal = config->colors[ZR_COLOR_TEXT];
         button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
         button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
-        if (zr_widget_button_symbol(out, bounds, ZR_SYMBOL_TRIANGLE_DOWN,
+        if (zr_do_button_symbol(&state, out, bounds, ZR_SYMBOL_TRIANGLE_DOWN,
             ZR_BUTTON_DEFAULT, &button, in, &config->font))
             is_active = !is_active;
     }
@@ -8939,6 +9127,7 @@ zr_menu_begin(struct zr_context *parent, struct zr_context *menu,
     {
         /* exeucte menu button for open/closing the popup */
         struct zr_button_text button;
+        enum zr_widget_states state;
         zr_zero(&button, sizeof(header));
         zr_button(&button.base, &header, parent, ZR_BUTTON_NORMAL);
         button.alignment = ZR_TEXT_CENTERED;
@@ -8951,7 +9140,7 @@ zr_menu_begin(struct zr_context *parent, struct zr_context *menu,
         button.normal = config->colors[ZR_COLOR_TEXT];
         button.active = config->colors[ZR_COLOR_TEXT];
         button.hover = config->colors[ZR_COLOR_TEXT];
-        if (zr_widget_button_text(parent->buffer, header, title, ZR_BUTTON_DEFAULT,
+        if (zr_do_button_text(&state, parent->buffer, header, title, ZR_BUTTON_DEFAULT,
                 &button, in, &config->font))
             is_active = !is_active;
     }
