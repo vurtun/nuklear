@@ -49,8 +49,8 @@ draw the GUI.
 ## Example
 ```c
 enum {EASY, HARD};
-zr_size option = EASY;
-zr_float value = 0.6f;
+int option = EASY;
+float value = 0.6f;
 
 struct zr_context context;
 zr_begin(&context, &window, "Show");
@@ -100,61 +100,4 @@ actual example application use cases for this library. Filex is a simple file br
 and shows how to do window tiling. The node editor on the other hand is probably the more
 interesting of the two since it shows how far you can bend this library to your
 specific problem on hand.
-
-### Concept
-The most important question of course is what are immediate mode graphics user interfaces and
-what properties, advantages and disadvantages do they have in contrast to classic retain mode
-graphical user interfaces.
-Before explaining what immediate mode stands for I think it is best to first define what it is not.
-First of immediate mode GUIs have NOTHING to do with immediate mode rendering. These are totally
-different things and this library does not need immediate mode rendering to draw. You could
-use immediate mode rendering to draw the UI but it is not required or the fastest
-drawing method.
-Second immediate mode GUIs has nothing to do with procedul programming. This library
-uses procedual programming but mainly because I use ANSI C.
-
-So while I spend some time explaining what imguis are not the question of course is then what
-immediate mode GUIs are. The core difference is the different approach on how window content
-and drawing is handled.
-
-Classic GUIs use an even based system while only drawing and updating
-the UI if necessary. The results relies heavyly on callbacks and other even more complex control
-flow constructs like lamdas to react to changes in the UI. Additionally most state is stored
-inside datastructures inside the library and UI changes consist of accessing these by removing,
-moving, copying and inserting widgets which is often cumbersome and an annoyance at best.
-Biggest upside is the control of the library to control the UI and make things easy for users
-because everything is stored and basically a copied state of the application
-inside the library. Finally not so much a problem of retain mode GUIs in itself but more
-a problem of existing library is that they all follow a layered API approach which
-dictates everything from OS window + input handling up to drawing backends, which basically
-makes them hard to embed into applications.
-
-Immediate mode graphical user interfaces on the other hand are based on frame based polling
-on UI updates. This generally results in a design that requires almost no state inside the library
-and transfers a lot of control back to the user. On the other hand it is more resource intensive
-to update and draw the UI each frame. While definitly worrying in theory in praxis it is not an
-issue with todays hardware. Especially if you are able to modify your application to only update
-the GUI if a change of state inside the application requires it like for example user input changes.
-
-Inherintly both approaches have their up and downsides and uses cases but for the user it often
-comes down of which data you prefer to create the UI out of. Classical GUIs often takes a
-data-driven approach of reading the UI from a file. Immediate mode GUIs on the hand are
-code-based UIs which generally makes them easier to use but are bound to the written code.
-
-### Overview
-After it is hopefully clear what immediate mode graphical user interfaces are
-the question is where does zahnrad fit into this. Zahnrad in addition of being an IMGUI,
-leaves a lot of control in the hand of the user by using a modular approach instead of classical
-layering and stores as little state as possible in the library. To extend the challenge even more
-I decided to have no dependencies in the library and don't rely on global or hidden state.
-The result is a more complex API with a bigger number of user controlled parts then otherwise
-relying on global state but I believe the additional freedom is worth it.
-
-The concept of zahnrad is best understood by looking at the library as a moduluar component
-which requires input in form of user input, style configuration, font and widgets state
-and output consisting of draw commands and updated widget state.
-In general I would divided the library roughly into memory management,
-font handling, style configuration, user input handling, draw command output, windows,
-widget layouting and widgets. I will describe each part and its connection in the library
-but if you want a more detailed explaination please look inside the header.
 
