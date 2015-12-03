@@ -700,10 +700,10 @@ struct zr_command_stats {
     /* number of images in the buffer */
     unsigned int text;
     /* number of text commands in the buffer */
-    unsigned int glyphes;
-    /* number of text glyphes in the buffer */
+    unsigned int glyphs;
+    /* number of text glyphs in the buffer */
     unsigned int scissors;
-    /* number of text glyphes in the buffer */
+    /* number of text glyphs in the buffer */
 };
 
 struct zr_command_queue;
@@ -1354,7 +1354,7 @@ void zr_draw_list_path_stroke(struct zr_draw_list*, struct zr_color,
     In general the font baking API can be understood as having a number of
     loaded in memory TTF-fonts, font baking configuration and optional custom
     render data as input, while the output is made of font specific data, a big
-    glyph array of all baked glyphes and the baked image. The API
+    glyph array of all baked glyphs and the baked image. The API
     was designed that way to have a typical file format and not
     a perfectly ready in memory library instance of a font. The reason is more
     control and seperates the font baking code from the in library used font format.
@@ -1363,8 +1363,8 @@ void zr_draw_list_path_stroke(struct zr_draw_list*, struct zr_color,
     ----------------------------
     font baking functions
     zr_font_bake_memory            -- calculates the needed font baking memory
-    zr_font_bake_pack              -- packs all glyphes and calculates needed image memory
-    zr_font_bake                   -- renders all glyphes inside an image and setups glyphes
+    zr_font_bake_pack              -- packs all glyphs and calculates needed image memory
+    zr_font_bake                   -- renders all glyphs inside an image and setups glyphs
     zr_font_bake_custom_data       -- renders custom user data into the image
     zr_font_bake_convert           -- converts the baked image from alpha8 to rgba8
 
@@ -1408,20 +1408,20 @@ struct zr_user_font {
 #ifdef ZR_COMPILE_WITH_FONT
 enum zr_font_coord_type {
     ZR_COORD_UV,
-    /* texture coordinates inside font glyphes are clamped between 0.0f and 1.0f */
+    /* texture coordinates inside font glyphs are clamped between 0.0f and 1.0f */
     ZR_COORD_PIXEL
-    /* texture coordinates inside font glyphes are in absolute pixel */
+    /* texture coordinates inside font glyphs are in absolute pixel */
 };
 
 struct zr_baked_font {
     float height;
     /* height of the font  */
     float ascent, descent;
-    /* font glyphes ascent and descent  */
+    /* font glyphs ascent and descent  */
     zr_rune glyph_offset;
     /* glyph array offset inside the font glyph baking output array  */
     zr_rune glyph_count;
-    /* number of glyphes of this font inside the glyph baking array output */
+    /* number of glyphs of this font inside the glyph baking array output */
     const zr_rune *ranges;
     /* font codepoint ranges as pairs of (from/to) and 0 as last element */
 };
@@ -1465,7 +1465,7 @@ struct zr_font {
     /* scale factor for different font size */
     float ascent, descent;
     /* font ascent and descent  */
-    struct zr_font_glyph *glyphes;
+    struct zr_font_glyph *glyphs;
     /* font glyph array  */
     const struct zr_font_glyph *fallback;
     /* fallback glyph */
@@ -1498,13 +1498,13 @@ void zr_font_bake_memory(zr_size *temporary_memory, int *glyph_count,
     - number of configuration fonts in the array
     Output:
     - amount of memory needed in the baking process
-    - total number of glyphes that need to be allocated
+    - total number of glyphs that need to be allocated
 */
 int zr_font_bake_pack(zr_size *img_memory, int *img_width, int *img_height,
                             struct zr_recti *custom_space,
                             void *temporary_memory, zr_size temporary_size,
                             const struct zr_font_config*, int font_count);
-/*  this function packs together all glyphes and optional space into one
+/*  this function packs together all glyphs and optional space into one
     total image space and returns the needed image width and height.
     Input:
     - NULL or custom space inside the image with width and height (will be updated!)
@@ -1520,9 +1520,9 @@ int zr_font_bake_pack(zr_size *img_memory, int *img_width, int *img_height,
 */
 void zr_font_bake(void *image_memory, int image_width, int image_height,
                     void *temporary_memory, zr_size temporary_memory_size,
-                    struct zr_font_glyph*, int glyphes_count,
+                    struct zr_font_glyph*, int glyphs_count,
                     const struct zr_font_config*, int font_count);
-/*  this function bakes all glyphes into the pre-allocated image and
+/*  this function bakes all glyphs into the pre-allocated image and
     fills a glyph array with information.
     Input:
     - image memory buffer to bake the glyph into
@@ -1530,7 +1530,7 @@ void zr_font_bake(void *image_memory, int image_width, int image_height,
     - temporary memory block that will be used in the baking process
     - size of the temporary memory block
     Output:
-    - image filled with glyphes
+    - image filled with glyphs
     - filled glyph array
 */
 void zr_font_bake_custom_data(void *img_memory, int img_width, int img_height,
@@ -1567,13 +1567,13 @@ void zr_font_init(struct zr_font*, float pixel_height,
                     zr_rune fallback_codepoint, struct zr_font_glyph*,
                     const struct zr_baked_font*, zr_handle atlas);
 /*  this function initializes a font. IMPORTANT: The font only references
- *  its glyphes since it allows to have multible font glyph in one big array.
+ *  its glyphs since it allows to have multible font glyph in one big array.
     Input:
     - pixel height of the font can be different than the baked font height
     - unicode fallback codepoint for a glyph that will be used if a glyph is requested
         that does not exist in the font
-    - glyph array of all glyphes inside the font
-    - number of glyphes inside the glyph array
+    - glyph array of all glyphs inside the font
+    - number of glyphs inside the glyph array
     - font information for this font from the baking process
     - handle to the baked font image atlas
 */
@@ -1628,7 +1628,7 @@ const struct zr_font_glyph* zr_font_find_glyph(struct zr_font*, zr_rune unicode)
     zr_edit_box_set_cursor -- sets the cursor to a given glyph
     zr_edit_box_get_cursor -- returns the position of the cursor
     zr_edit_box_len_char   -- returns the length of the string in bytes
-    zr_edit_box_len        -- returns the length of the string in glyphes
+    zr_edit_box_len        -- returns the length of the string in glyphs
 */
 typedef int(*zr_filter)(zr_rune unicode);
 typedef void(*zr_paste_f)(zr_handle, struct zr_edit_box*);
@@ -1660,8 +1660,8 @@ struct zr_edit_box {
     /* flag indicating if the buffer is currently being modified  */
     zr_size cursor;
     /* current glyph (not byte) cursor position */
-    zr_size glyphes;
-    /* number of glyphes inside the edit box */
+    zr_size glyphs;
+    /* number of glyphs inside the edit box */
     struct zr_clipboard clip;
     /* copy paste callbacks */
     zr_filter filter;
@@ -1757,7 +1757,7 @@ zr_size zr_edit_box_len_char(struct zr_edit_box*);
     - string buffer byte length
 */
 zr_size zr_edit_box_len(struct zr_edit_box*);
-/*  this function returns length of the buffer in glyphes
+/*  this function returns length of the buffer in glyphs
     Output:
     - string buffer glyph length
 */
@@ -2899,7 +2899,7 @@ void zr_edit_filtered(struct zr_context*, char *buffer, zr_size *len,
     - current length of the buffer in bytes
     - maximal number of bytes the buffer can be filled with
     - state of the editbox with active as currently modified by the user
-    - filter callback to limit the glyphes the user can input into the editbox
+    - filter callback to limit the glyphs the user can input into the editbox
     Output:
     - length of the buffer after user input update
     - current state of the editbox with active(zr_true) or inactive(zr_false)

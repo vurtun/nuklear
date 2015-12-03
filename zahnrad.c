@@ -950,7 +950,7 @@ zr_size
 zr_utf_len(const char *str, zr_size len)
 {
     const char *text;
-    zr_size glyphes = 0;
+    zr_size glyphs = 0;
     zr_size text_len;
     zr_size glyph_len;
     zr_size src_len = 0;
@@ -963,11 +963,11 @@ zr_utf_len(const char *str, zr_size len)
     text_len = len;
     glyph_len = zr_utf_decode(text, &unicode, text_len);
     while (glyph_len && src_len < len) {
-        glyphes++;
+        glyphs++;
         src_len = src_len + glyph_len;
         glyph_len = zr_utf_decode(text + src_len, &unicode, text_len - src_len);
     }
-    return glyphes;
+    return glyphs;
 }
 
 static const char*
@@ -1038,7 +1038,7 @@ zr_user_font_glyph_index_at_pos(const struct zr_user_font *font, const char *tex
 
 static zr_size
 zr_use_font_glyph_clamp(const struct zr_user_font *font, const char *text,
-    zr_size text_len, float space, zr_size *glyphes, float *text_width)
+    zr_size text_len, float space, zr_size *glyphs, float *text_width)
 {
     zr_size len = 0;
     zr_size glyph_len;
@@ -1058,14 +1058,14 @@ zr_use_font_glyph_clamp(const struct zr_user_font *font, const char *text,
         g++;
     }
 
-    *glyphes = g;
+    *glyphs = g;
     *text_width = last_width;
     return len;
 }
 
 static zr_size
-zr_user_font_glyphes_fitting_in_space(const struct zr_user_font *font, const char *text,
-    zr_size text_len, float space, zr_size *row_len, zr_size *glyphes,
+zr_user_font_glyphs_fitting_in_space(const struct zr_user_font *font, const char *text,
+    zr_size text_len, float space, zr_size *row_len, zr_size *glyphs,
     float *text_width, int has_newline)
 {
     zr_size glyph_len;
@@ -1099,7 +1099,7 @@ zr_user_font_glyphes_fitting_in_space(const struct zr_user_font *font, const cha
         width += (float)s;
     }
 
-    *glyphes = g;
+    *glyphs = g;
     *text_width = last_width;
     *row_len = l;
     return offset;
@@ -1842,8 +1842,8 @@ zr_command_buffer_push_text(struct zr_command_buffer *b, struct zr_rect r,
     text_width = font->width(font->userdata, font->height, string, length);
     if (text_width > r.w){
         float txt_width = (float)text_width;
-        zr_size glyphes = 0;
-        length = zr_use_font_glyph_clamp(font, string, length, r.w, &glyphes, &txt_width);
+        zr_size glyphs = 0;
+        length = zr_use_font_glyph_clamp(font, string, length, r.w, &glyphs, &txt_width);
     }
 
     if (!length) return;
@@ -1862,7 +1862,7 @@ zr_command_buffer_push_text(struct zr_command_buffer *b, struct zr_rect r,
     zr_memcopy(cmd->string, string, length);
     cmd->string[length] = '\0';
     b->stats.text++;
-    b->stats.glyphes += (unsigned int)length;
+    b->stats.glyphs += (unsigned int)length;
 }
 
 const struct zr_command*
@@ -3280,16 +3280,16 @@ static int
 zr_range_glyph_count(const zr_rune *range, int count)
 {
     int i = 0;
-    int total_glyphes = 0;
+    int total_glyphs = 0;
     for (i = 0; i < count; ++i) {
         int diff;
         zr_rune f = range[(i*2)+0];
         zr_rune t = range[(i*2)+1];
         ZR_ASSERT(t >= f);
         diff = (int)((t - f) + 1);
-        total_glyphes += diff;
+        total_glyphs += diff;
     }
-    return total_glyphes;
+    return total_glyphs;
 }
 
 const zr_rune*
@@ -3499,7 +3499,7 @@ zr_font_bake_pack(zr_size *image_memory, int *width, int *height,
             custom->h = (short)custom_space.h;
         }
 
-        /* first font pass: pack all glyphes */
+        /* first font pass: pack all glyphs */
         for (input_i = 0; input_i < count; input_i++) {
             int n = 0;
             const zr_rune *in_range;
@@ -3507,7 +3507,7 @@ zr_font_bake_pack(zr_size *image_memory, int *width, int *height,
             struct zr_font_bake_data *tmp = &baker->build[input_i];
             int glyph_count, range_count;
 
-            /* count glyphes + ranges in current font */
+            /* count glyphs + ranges in current font */
             glyph_count = 0; range_count = 0;
             for (in_range = cfg->range; in_range[0] && in_range[1]; in_range += 2) {
                 glyph_count += (int)(in_range[1] - in_range[0]) + 1;
@@ -3552,8 +3552,8 @@ zr_font_bake_pack(zr_size *image_memory, int *width, int *height,
 
 void
 zr_font_bake(void *image_memory, int width, int height,
-    void *temp, zr_size temp_size, struct zr_font_glyph *glyphes,
-    int glyphes_count, const struct zr_font_config *config, int font_count)
+    void *temp, zr_size temp_size, struct zr_font_glyph *glyphs,
+    int glyphs_count, const struct zr_font_config *config, int font_count)
 {
     int input_i = 0;
     struct zr_font_baker* baker;
@@ -3566,12 +3566,12 @@ zr_font_bake(void *image_memory, int width, int height,
     ZR_ASSERT(temp);
     ZR_ASSERT(temp_size);
     ZR_ASSERT(font_count);
-    ZR_ASSERT(glyphes_count);
+    ZR_ASSERT(glyphs_count);
     if (!image_memory || !width || !height || !config || !temp ||
-        !temp_size || !font_count || !glyphes || !glyphes_count)
+        !temp_size || !font_count || !glyphs || !glyphs_count)
         return;
 
-    /* second font pass: render glyphes */
+    /* second font pass: render glyphs */
     baker = (struct zr_font_baker*)ZR_ALIGN_PTR(temp, zr_baker_align);
     zr_zero(image_memory, (zr_size)((zr_size)width * (zr_size)height));
     baker->spc.pixels = (unsigned char*)image_memory;
@@ -3585,7 +3585,7 @@ zr_font_bake(void *image_memory, int width, int height,
     }
     stbtt_PackEnd(&baker->spc);
 
-    /* third pass: setup font and glyphes */
+    /* third pass: setup font and glyphs */
     for (input_i = 0; input_i < font_count; ++input_i)  {
         zr_size i = 0;
         int char_idx = 0;
@@ -3624,7 +3624,7 @@ zr_font_bake(void *image_memory, int width, int height,
                     (int)height, char_idx, &dummy_x, &dummy_y, &q, 0);
 
                 /* fill own glyph type with data */
-                glyph = &glyphes[dst_font->glyph_offset + (unsigned int)char_idx];
+                glyph = &glyphs[dst_font->glyph_offset + (unsigned int)char_idx];
                 glyph->codepoint = codepoint;
                 glyph->x0 = q.x0; glyph->y0 = q.y0; glyph->x1 = q.x1; glyph->y1 = q.y1;
                 glyph->y0 += (dst_font->ascent + 0.5f);
@@ -3701,13 +3701,13 @@ zr_font_bake_convert(void *out_memory, int img_width, int img_height,
  * --------------------------------------------------------------*/
 void
 zr_font_init(struct zr_font *font, float pixel_height,
-    zr_rune fallback_codepoint, struct zr_font_glyph *glyphes,
+    zr_rune fallback_codepoint, struct zr_font_glyph *glyphs,
     const struct zr_baked_font *baked_font, zr_handle atlas)
 {
     ZR_ASSERT(font);
-    ZR_ASSERT(glyphes);
+    ZR_ASSERT(glyphs);
     ZR_ASSERT(baked_font);
-    if (!font || !glyphes || !baked_font)
+    if (!font || !glyphs || !baked_font)
         return;
 
     zr_zero(font, sizeof(*font));
@@ -3715,7 +3715,7 @@ zr_font_init(struct zr_font *font, float pixel_height,
     font->descent = baked_font->descent;
     font->size = baked_font->height;
     font->scale = (float)pixel_height / (float)font->size;
-    font->glyphes = &glyphes[baked_font->glyph_offset];
+    font->glyphs = &glyphs[baked_font->glyph_offset];
     font->glyph_count = baked_font->glyph_count;
     font->ranges = baked_font->ranges;
     font->atlas = atlas;
@@ -3728,7 +3728,7 @@ zr_font_find_glyph(struct zr_font *font, zr_rune unicode)
 {
     int i = 0;
     int count;
-    int total_glyphes = 0;
+    int total_glyphs = 0;
     const struct zr_font_glyph *glyph = 0;
     ZR_ASSERT(font);
 
@@ -3740,8 +3740,8 @@ zr_font_find_glyph(struct zr_font *font, zr_rune unicode)
         zr_rune t = font->ranges[(i*2)+1];
         diff = (int)((t - f) + 1);
         if (unicode >= f && unicode <= t)
-            return &font->glyphes[((zr_rune)total_glyphes + (unicode - f))];
-        total_glyphes += diff;
+            return &font->glyphs[((zr_rune)total_glyphs + (unicode - f))];
+        total_glyphs += diff;
     }
     return glyph;
 }
@@ -3952,7 +3952,7 @@ zr_edit_box_init(struct zr_edit_box *eb, struct zr_allocator *a,
     if (f) eb->filter = f;
     else eb->filter = zr_filter_default;
     eb->cursor = 0;
-    eb->glyphes = 0;
+    eb->glyphs = 0;
 }
 
 void
@@ -3967,7 +3967,7 @@ zr_edit_box_init_fixed(struct zr_edit_box *eb, void *memory, zr_size size,
     if (f) eb->filter = f;
     else eb->filter = zr_filter_default;
     eb->cursor = 0;
-    eb->glyphes = 0;
+    eb->glyphs = 0;
 }
 
 void
@@ -3976,7 +3976,7 @@ zr_edit_box_clear(struct zr_edit_box *box)
     ZR_ASSERT(box);
     if (!box) return;
     zr_buffer_clear(&box->buffer);
-    box->cursor = box->glyphes = 0;
+    box->cursor = box->glyphs = 0;
 }
 
 void
@@ -3985,7 +3985,7 @@ zr_edit_box_free(struct zr_edit_box *box)
     ZR_ASSERT(box);
     if (!box) return;
     zr_buffer_free(&box->buffer);
-    box->cursor = box->glyphes = 0;
+    box->cursor = box->glyphs = 0;
 }
 
 void
@@ -4004,7 +4004,7 @@ zr_edit_box_add(struct zr_edit_box *eb, const char *str, zr_size len)
     ZR_ASSERT(eb);
     if (!eb || !str || !len) return;
 
-    if (eb->cursor != eb->glyphes) {
+    if (eb->cursor != eb->glyphs) {
         zr_size l = 0;
         zr_rune unicode;
         int cursor = (eb->cursor) ? (int)(eb->cursor) : 0;
@@ -4015,7 +4015,7 @@ zr_edit_box_add(struct zr_edit_box *eb, const char *str, zr_size len)
 
     if (res) {
         zr_size l = zr_utf_len(str, len);
-        eb->glyphes += l;
+        eb->glyphs += l;
         eb->cursor += l;
         eb->text_inserted = 1;
     }
@@ -4027,7 +4027,7 @@ zr_edit_box_buffer_input(struct zr_edit_box *box, const struct zr_input *i)
     zr_rune unicode;
     zr_size src_len = 0;
     zr_size text_len = 0, glyph_len = 0;
-    zr_size glyphes = 0;
+    zr_size glyphs = 0;
 
     ZR_ASSERT(box);
     ZR_ASSERT(i);
@@ -4040,13 +4040,13 @@ zr_edit_box_buffer_input(struct zr_edit_box *box, const struct zr_input *i)
         if (box->filter(unicode)) {
             zr_edit_box_add(box, &i->keyboard.text[text_len], glyph_len);
             text_len += glyph_len;
-            glyphes++;
+            glyphs++;
         }
         src_len = src_len + glyph_len;
         glyph_len = zr_utf_decode(i->keyboard.text + src_len, &unicode,
             i->keyboard.text_len - src_len);
     }
-    return glyphes;
+    return glyphs;
 }
 
 void
@@ -4057,14 +4057,14 @@ zr_edit_box_remove(struct zr_edit_box *box)
     zr_size min, maxi, diff;
     ZR_ASSERT(box);
     if (!box) return;
-    if (!box->glyphes) return;
+    if (!box->glyphs) return;
 
     buf = (char*)box->buffer.memory.ptr;
     min = MIN(box->sel.end, box->sel.begin);
     maxi = MAX(box->sel.end, box->sel.begin);
     diff = MAX(1, maxi - min);
 
-    if (diff && box->cursor != box->glyphes) {
+    if (diff && box->cursor != box->glyphs) {
         zr_size off;
         zr_rune unicode;
         char *begin, *end;
@@ -4077,7 +4077,7 @@ zr_edit_box_remove(struct zr_edit_box *box)
 
         /* delete text selection */
         zr_edit_buffer_del(&box->buffer, off, len);
-        box->glyphes = zr_utf_len(buf, box->buffer.allocated);
+        box->glyphs = zr_utf_len(buf, box->buffer.allocated);
     } else {
         zr_rune unicode;
         int cursor;
@@ -4091,11 +4091,11 @@ zr_edit_box_remove(struct zr_edit_box *box)
 
         offset = (zr_size)(glyph - (char*)box->buffer.memory.ptr);
         zr_edit_buffer_del(&box->buffer, offset, len);
-        box->glyphes--;
+        box->glyphs--;
     }
 
-    if (box->cursor >= box->glyphes)
-        box->cursor = box->glyphes;
+    if (box->cursor >= box->glyphs)
+        box->cursor = box->glyphs;
     else if (box->cursor > 0)
         box->cursor--;
 }
@@ -4137,7 +4137,7 @@ zr_edit_box_at(struct zr_edit_box *eb, zr_size pos, zr_glyph g, zr_size *len)
     ZR_ASSERT(len);
 
     if (!eb || !len || !g) return;
-    if (pos >= eb->glyphes) {
+    if (pos >= eb->glyphs) {
         *len = 0;
         return;
     }
@@ -4173,8 +4173,8 @@ void
 zr_edit_box_set_cursor(struct zr_edit_box *eb, zr_size pos)
 {
     ZR_ASSERT(eb);
-    ZR_ASSERT(eb->glyphes >= pos);
-    if (!eb || pos > eb->glyphes) return;
+    ZR_ASSERT(eb->glyphs >= pos);
+    if (!eb || pos > eb->glyphs) return;
     eb->cursor = pos;
 }
 
@@ -4197,7 +4197,7 @@ zr_size
 zr_edit_box_len(struct zr_edit_box *eb)
 {
     ZR_ASSERT(eb);
-    return eb->glyphes;
+    return eb->glyphs;
 }
 
 /* ===============================================================
@@ -4255,7 +4255,7 @@ zr_widget_text_wrap(struct zr_command_buffer *o, struct zr_rect b,
     const struct zr_user_font *f)
 {
     float width;
-    zr_size glyphes = 0;
+    zr_size glyphs = 0;
     zr_size fitting = 0;
     zr_size done = 0;
     struct zr_rect line;
@@ -4278,13 +4278,13 @@ zr_widget_text_wrap(struct zr_command_buffer *o, struct zr_rect b,
     line.w = b.w - 2 * t->padding.x;
     line.h = 2 * t->padding.y + f->height;
 
-    fitting = zr_use_font_glyph_clamp(f, string, len, line.w, &glyphes, &width);
+    fitting = zr_use_font_glyph_clamp(f, string, len, line.w, &glyphs, &width);
     while (done < len) {
         if (!fitting || line.y + line.h >= (b.y + b.h)) break;
         zr_widget_text(o, line, &string[done], fitting, &text, ZR_TEXT_LEFT, f);
         done += fitting;
         line.y += f->height + 2 * t->padding.y;
-        fitting = zr_use_font_glyph_clamp(f, &string[done], len-done, line.w, &glyphes, &width);
+        fitting = zr_use_font_glyph_clamp(f, &string[done], len-done, line.w, &glyphs, &width);
     }
 }
 
@@ -5235,7 +5235,7 @@ zr_edit_box_handle_input(struct zr_edit_box *box, const struct zr_input *in, int
     enter = has_special && zr_input_is_key_pressed(in, ZR_KEY_ENTER);
     tab = has_special && zr_input_is_key_pressed(in, ZR_KEY_TAB);
     if (in->keyboard.text_len || enter || tab) {
-        if (diff && box->cursor != box->glyphes) {
+        if (diff && box->cursor != box->glyphs) {
             /* replace text selection */
             zr_edit_box_remove(box);
             box->cursor = min;
@@ -5254,8 +5254,8 @@ zr_edit_box_handle_input(struct zr_edit_box *box, const struct zr_input *in, int
         box->sel.begin = box->cursor;
         box->sel.end = box->cursor;
     }
-    if (zr_input_is_key_pressed(in, ZR_KEY_RIGHT) && box->cursor < box->glyphes) {
-        box->cursor = MIN((!box->glyphes) ? 0 : box->glyphes, box->cursor + 1);
+    if (zr_input_is_key_pressed(in, ZR_KEY_RIGHT) && box->cursor < box->glyphs) {
+        box->cursor = MIN((!box->glyphs) ? 0 : box->glyphs, box->cursor + 1);
         box->sel.begin = box->cursor;
         box->sel.end = box->cursor;
     }
@@ -5265,7 +5265,7 @@ zr_edit_box_handle_input(struct zr_edit_box *box, const struct zr_input *in, int
         box->clip.paste(box->clip.userdata, box);
     if ((zr_input_is_key_pressed(in, ZR_KEY_COPY) && box->clip.copy) ||
         (zr_input_is_key_pressed(in, ZR_KEY_CUT) && box->clip.copy)) {
-        if (diff && box->cursor != box->glyphes) {
+        if (diff && box->cursor != box->glyphs) {
             /* copy or cut text selection */
             zr_size l;
             zr_rune unicode;
@@ -5332,7 +5332,7 @@ zr_widget_edit_field(struct zr_command_buffer *out, struct zr_rect r,
         label.w -= 2 * field->padding.x - 2 * field->border_size;
         {
             zr_size frames = 0;
-            zr_size glyphes = 0;
+            zr_size glyphs = 0;
             zr_size frame_len = 0;
             zr_size row_len = 0;
             float space = MAX(label.w, (float)cursor_w);
@@ -5340,17 +5340,17 @@ zr_widget_edit_field(struct zr_command_buffer *out, struct zr_rect r,
             while (text_len) {
                 frames++;
                 offset += frame_len;
-                frame_len = zr_user_font_glyphes_fitting_in_space(font,
-                    &buffer[offset], text_len, space, &row_len, &glyphes, &text_width, 0);
+                frame_len = zr_user_font_glyphs_fitting_in_space(font,
+                    &buffer[offset], text_len, space, &row_len, &glyphs, &text_width, 0);
 
-                glyph_off += glyphes;
+                glyph_off += glyphs;
                 if (glyph_off > box->cursor)
                     break;
                 text_len -= frame_len;
             }
             text_len = frame_len;
-            glyph_cnt = glyphes;
-            glyph_off = (frames <= 1) ? 0 : (glyph_off - glyphes);
+            glyph_cnt = glyphs;
+            glyph_off = (frames <= 1) ? 0 : (glyph_off - glyphs);
             offset = (frames <= 1) ? 0 : offset;
         }
 
@@ -5363,7 +5363,7 @@ zr_widget_edit_field(struct zr_command_buffer *out, struct zr_rect r,
                 /* text selection in the current text frame */
                 zr_size glyph_index;
                 zr_size glyph_pos=zr_user_font_glyph_index_at_pos(font,visible,text_len,xoff);
-                if (glyph_cnt + glyph_off >= box->glyphes)
+                if (glyph_cnt + glyph_off >= box->glyphs)
                     glyph_index = glyph_off + MIN(glyph_pos, glyph_cnt);
                 else glyph_index = glyph_off + MIN(glyph_pos, glyph_cnt-1);
 
@@ -5382,11 +5382,11 @@ zr_widget_edit_field(struct zr_command_buffer *out, struct zr_rect r,
             } else if (!ZR_INBOX(in->mouse.pos.x,in->mouse.pos.y,r.x,r.y,r.w,r.h) &&
                 ZR_INBOX(in->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.x,
                     in->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.y,r.x,r.y,r.w,r.h)
-                && box->cursor != box->glyphes && box->cursor > 0)
+                && box->cursor != box->glyphs && box->cursor > 0)
             {
                 /* text selection out of the current text frame */
                 zr_size glyph = ((in->mouse.pos.x > r.x) &&
-                    box->cursor+1 < box->glyphes) ?
+                    box->cursor+1 < box->glyphs) ?
                     box->cursor+1: box->cursor-1;
                 zr_edit_box_set_cursor(box, glyph);
                 if (box->sel.active) {
@@ -5405,7 +5405,7 @@ zr_widget_edit_field(struct zr_command_buffer *out, struct zr_rect r,
 
         /* draw selected text */
         if (box->active && field->show_cursor) {
-            if (box->cursor == box->glyphes) {
+            if (box->cursor == box->glyphs) {
                 /* draw the cursor at the end of the string */
                 zr_command_buffer_push_rect(out, zr_rect(label.x+(float)text_width,
                         label.y, (float)cursor_w, label.h), 0, field->cursor);
@@ -5495,7 +5495,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
     {
         /* calulate total number of needed rows */
         zr_size rows = 0;
-        zr_size glyphes = 0;
+        zr_size glyphs = 0;
         zr_size row_off = 0;
         zr_size text_len = len;
         zr_size offset = 0, glyph_off = 0;
@@ -5506,13 +5506,13 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
         while (text_len) {
             total_rows++;
             offset += row_off;
-            row_off = zr_user_font_glyphes_fitting_in_space(font,
-                &buffer[offset], text_len, space, &row_len, &glyphes, &text_width, 1);
+            row_off = zr_user_font_glyphs_fitting_in_space(font,
+                &buffer[offset], text_len, space, &row_len, &glyphs, &text_width, 1);
 
-            glyph_off += glyphes;
+            glyph_off += glyphs;
             text_len -= row_off;
         }
-        glyph_count = glyphes;
+        glyph_count = glyphs;
         total_height = (float)total_rows * (float)row_height;
     }
 
@@ -5521,7 +5521,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
     {
         /* make sure cursor is always in current visible field while writing */
         box->text_inserted = 0;
-        if (box->cursor == box->glyphes && !box->sel.active) {
+        if (box->cursor == box->glyphs && !box->sel.active) {
             /* cursor is at end of text and out of visible frame */
             float row_offset = (float)(total_rows - visible_rows);
             box->scrollbar = (font->height + field->padding.x) * row_offset;
@@ -5529,7 +5529,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
             /* cursor is inside text and out of visible frame */
             float text_width;
             zr_size cur_row = 0;
-            zr_size glyphes = 0;
+            zr_size glyphs = 0;
             zr_size row_off = 0;
             zr_size row_len = 0;
             zr_size text_len = len;
@@ -5540,11 +5540,11 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
             /* find cursor row */
             while (text_len) {
                 offset += row_off;
-                row_off = zr_user_font_glyphes_fitting_in_space(font,
-                    &buffer[offset], text_len, total_width, &row_len, &glyphes, &text_width, 1);
-                if (cursor >= glyph_off && cursor < glyph_off + glyphes)
+                row_off = zr_user_font_glyphs_fitting_in_space(font,
+                    &buffer[offset], text_len, total_width, &row_len, &glyphs, &text_width, 1);
+                if (cursor >= glyph_off && cursor < glyph_off + glyphs)
                     break;
-                glyph_off += glyphes;
+                glyph_off += glyphs;
                 text_len -= row_off;
                 cur_row++;
             }
@@ -5583,8 +5583,8 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
             zr_size row;
 
             zr_size cur_row = 0;
-            zr_size glyphes = 0;
-            zr_size row_off = box->glyphes;
+            zr_size glyphs = 0;
+            zr_size row_off = box->glyphs;
             zr_size row_len = 0;
             zr_size text_len = len;
             zr_size offset = 0, glyph_off = 0;
@@ -5599,25 +5599,25 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
             /* find selected row */
             if (text_len) {
                 while (text_len && cur_row <= row) {
-                    row_off = zr_user_font_glyphes_fitting_in_space(font,
-                        &buffer[offset], text_len, total_width, &row_len, &glyphes, &text_width, 1);
+                    row_off = zr_user_font_glyphs_fitting_in_space(font,
+                        &buffer[offset], text_len, total_width, &row_len, &glyphs, &text_width, 1);
 
-                    glyph_off += glyphes;
+                    glyph_off += glyphs;
                     text_len -= row_off;
                     visible += row_off;
                     offset += row_off;
                     cur_row++;
                 }
-                glyph_off -= glyphes;
+                glyph_off -= glyphs;
                 visible -= row_off;
             }
 
-            /* find selected glyphes in row */
+            /* find selected glyphs in row */
             if (text_width + r.x + field->padding.y + field->border_size > xoff) {
                 glyph_pos = zr_user_font_glyph_index_at_pos(font, visible, row_len, xoff);
-                if (glyph_pos + glyph_off >= box->glyphes)
-                    glyph_index = box->glyphes;
-                else glyph_index = glyph_off + MIN(glyph_pos, glyphes-1);
+                if (glyph_pos + glyph_off >= box->glyphs)
+                    glyph_index = box->glyphs;
+                else glyph_index = glyph_off + MIN(glyph_pos, glyphs-1);
 
                 zr_edit_box_set_cursor(box, glyph_index);
                 if (!box->sel.active) {
@@ -5660,7 +5660,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
         zr_size offset = 0;
         zr_size row_off = 0;
         zr_size row_len = 0;
-        zr_size glyphes = 0;
+        zr_size glyphs = 0;
         zr_size glyph_off = 0;
         float text_width;
         struct zr_rect scissor;
@@ -5690,12 +5690,12 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
             zr_size end = MAX(box->sel.end, box->sel.begin);
 
             offset += row_off;
-            row_off = zr_user_font_glyphes_fitting_in_space(font,
-                &buffer[offset], text_len, total_width, &row_len, &glyphes, &text_width, 1);
+            row_off = zr_user_font_glyphs_fitting_in_space(font,
+                &buffer[offset], text_len, total_width, &row_len, &glyphs, &text_width, 1);
             label.w = text_width;
 
             /* draw either unselected or selected row */
-            if (glyph_off < begin && glyph_off + glyphes >= begin && glyph_off + glyphes <= end+1 && box->active) {
+            if (glyph_off < begin && glyph_off + glyphs >= begin && glyph_off + glyphs <= end+1 && box->active) {
                 /* first case with selection beginning in current row */
                 zr_size l = 0, s, sel_begin, sel_len;
                 zr_size unselected_text_width;
@@ -5719,9 +5719,9 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
 
                 /* draw unselected text part */
                 unselected_text_width = font->width(font->userdata, font->height, &buffer[offset],
-                    glyphes - sel_len);
+                    glyphs - sel_len);
                 zr_command_buffer_push_text(out , label, &buffer[offset],
-                    glyphes - sel_len, font, field->background, field->text);
+                    glyphs - sel_len, font, field->background, field->text);
 
                 /* draw selected text part */
                 label.x += (float)(unselected_text_width);
@@ -5730,12 +5730,12 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                     sel_len, font, field->text, field->background);
                 label.x -= (float)unselected_text_width;
                 label.w += (float)(unselected_text_width);
-            } else if (glyph_off > begin && glyph_off + glyphes < end && box->active) {
+            } else if (glyph_off > begin && glyph_off + glyphs < end && box->active) {
                 /* second case with selection spanning over current row */
                 zr_command_buffer_push_text(out, label, &buffer[offset],
                     row_len, font, field->text, field->background);
-            } else if (glyph_off >= begin && glyph_off + glyphes > end && box->active &&
-                        end >= glyph_off && end <= glyph_off + glyphes) {
+            } else if (glyph_off >= begin && glyph_off + glyphs > end && box->active &&
+                        end >= glyph_off && end <= glyph_off + glyphs) {
                 /* third case with selection ending in current row */
                 zr_size l = 0, s, sel_end, sel_len;
                 zr_size selected_text_width;
@@ -5757,11 +5757,11 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                 label.x += (float)selected_text_width;
                 label.w -= (float)(selected_text_width);
                 zr_command_buffer_push_text(out , label, &buffer[offset + sel_end+1],
-                    glyphes - sel_len, font, field->background, field->text);
+                    glyphs - sel_len, font, field->background, field->text);
                 label.x -= (float)selected_text_width;
                 label.w += (float)(selected_text_width);
-            } else if (glyph_off < begin && glyph_off + glyphes >= begin && box->active &&
-                glyph_off < end && glyph_off + glyphes > end) {
+            } else if (glyph_off < begin && glyph_off + glyphs >= begin && box->active &&
+                glyph_off < end && glyph_off + glyphs > end) {
                 /* fourth case with selection beginning and ending in current row */
                 zr_size l = 0, s;
                 zr_size cur_text_width;
@@ -5808,7 +5808,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                     row_len, font, field->background, field->text);
             }
 
-            glyph_off += glyphes;
+            glyph_off += glyphs;
             text_len -= row_off;
             label.y += font->height + field->padding.y;
             rows++;
@@ -5816,7 +5816,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
 
         /* draw the cursor at the end of the string */
         if (box->active && field->show_cursor) {
-            if (box->cursor == box->glyphes) {
+            if (box->cursor == box->glyphs) {
                 if (len) label.y -= (font->height + field->padding.y);
                 zr_command_buffer_push_rect(out, zr_rect(label.x+(float)text_width,
                     label.y, (float)cursor_w, label.h), 0, field->cursor);
@@ -5837,11 +5837,11 @@ zr_widget_edit_filtered(struct zr_command_buffer *out, struct zr_rect r,
 
     box.buffer.allocated = len;
     box.active = *active;
-    box.glyphes = zr_utf_len(buffer, len);
+    box.glyphs = zr_utf_len(buffer, len);
     if (!cursor) {
-        box.cursor = box.glyphes;
+        box.cursor = box.glyphs;
     } else{
-        box.cursor = MIN(*cursor, box.glyphes);
+        box.cursor = MIN(*cursor, box.glyphs);
         box.sel.begin = box.cursor;
         box.sel.end = box.cursor;
     }

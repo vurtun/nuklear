@@ -1102,8 +1102,8 @@ run_demo(struct demo *gui)
             zr_labelf(&layout, ZR_TEXT_LEFT, "%u", stats->images);
             zr_label(&layout,"Text:", ZR_TEXT_LEFT);
             zr_labelf(&layout, ZR_TEXT_LEFT, "%u", stats->text);
-            zr_label(&layout,"Glyphes:", ZR_TEXT_LEFT);
-            zr_labelf(&layout, ZR_TEXT_LEFT, "%u", stats->glyphes);
+            zr_label(&layout,"glyphs:", ZR_TEXT_LEFT);
+            zr_labelf(&layout, ZR_TEXT_LEFT, "%u", stats->glyphs);
             zr_layout_pop(&layout);
         }
     }
