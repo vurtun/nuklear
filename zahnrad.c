@@ -3546,7 +3546,7 @@ zr_font_bake_pack(zr_size *image_memory, int *width, int *height,
         ZR_ASSERT(range_n == total_range_count);
     }
     *height = (int32_t)zr_round_up_pow2((uint32_t)*height);
-    *image_memory = (zr_size)((*width) * (*height));
+    *image_memory = (zr_size)(*width) * (zr_size)(*height);
     return zr_true;
 }
 
@@ -3573,7 +3573,7 @@ zr_font_bake(void *image_memory, int width, int height,
 
     /* second font pass: render glyphes */
     baker = (struct zr_font_baker*)ZR_ALIGN_PTR(temp, zr_baker_align);
-    zr_zero(image_memory, (zr_size)(width * height));
+    zr_zero(image_memory, (zr_size)((zr_size)width * (zr_size)height));
     baker->spc.pixels = (unsigned char*)image_memory;
     baker->spc.height = (int)height;
     for (input_i = 0; input_i < font_count; ++input_i) {
@@ -4399,8 +4399,7 @@ zr_button_behavior(enum zr_widget_states *state, struct zr_rect r,
 
 static void
 zr_button_draw(struct zr_command_buffer *o, struct zr_rect r,
-    const struct zr_button *b, enum zr_widget_states state,
-    enum zr_button_behavior behavior)
+    const struct zr_button *b, enum zr_widget_states state)
 {
     struct zr_color background;
     switch (state) {
@@ -4433,8 +4432,10 @@ zr_do_button(enum zr_widget_states *state,
     pad.x = b->padding.x + b->border_width;
     pad.y = b->padding.y + b->border_width;
     *content = zr_pad_rect(r, pad);
+
+    /* execute and draw button */
     ret = zr_button_behavior(state, r, i, behavior);
-    zr_button_draw(o, r, b, *state, behavior);
+    zr_button_draw(o, r, b, *state);
     return ret;
 }
 
@@ -4681,7 +4682,7 @@ zr_toggle_draw(struct zr_command_buffer *out,
     }
 
     /* draw toggle text */
-    if (font && string) {
+    if (string) {
         struct zr_text text;
         struct zr_rect inner;
 
@@ -4864,10 +4865,10 @@ struct zr_progress {
 
 static zr_size
 zr_progress_behavior(enum zr_widget_states *state, const struct zr_input *in,
-    struct zr_rect r, zr_size max, zr_size value, int modifyable)
+    struct zr_rect r, zr_size max, zr_size value, int modifiable)
 {
     *state = ZR_INACTIVE;
-    if (in && modifyable && zr_input_is_mouse_hovering_rect(in, r)) {
+    if (in && modifiable && zr_input_is_mouse_hovering_rect(in, r)) {
         if (zr_input_is_mouse_down(in, ZR_BUTTON_LEFT)) {
             float ratio = (float)(in->mouse.pos.x - r.x) / (float)r.w;
             value = (zr_size)((float)max * ratio);
@@ -4904,7 +4905,7 @@ zr_progress_draw(struct zr_command_buffer *out, const struct zr_progress *p,
 static zr_size
 zr_do_progress(enum zr_widget_states *state,
     struct zr_command_buffer *out, struct zr_rect r,
-    zr_size value, zr_size max, int modifyable,
+    zr_size value, zr_size max, int modifiable,
     const struct zr_progress *prog, const struct zr_input *in)
 {
     float prog_scale;
@@ -4919,7 +4920,7 @@ zr_do_progress(enum zr_widget_states *state,
     r = zr_pad_rect(r, zr_vec2(prog->padding.x, prog->padding.y));
 
     prog_value = MIN(value, max);
-    prog_value = zr_progress_behavior(state, in, r, max, prog_value, modifyable);
+    prog_value = zr_progress_behavior(state, in, r, max, prog_value, modifiable);
     zr_progress_draw(out, prog, *state, r, max, value);
     return prog_value;
 }
@@ -5137,8 +5138,6 @@ zr_do_scrollbarv(enum zr_widget_states *state,
     if (target <= scroll.h) return 0;
 
     /* calculate scrollbar constants */
-    scroll.h = scroll.h;
-    scroll.y = scroll.y;
     scroll_step = MIN(step, scroll.h);
     scroll_offset = MIN(offset, target - scroll.h);
     scroll_ratio = scroll.h / target;
@@ -5205,7 +5204,7 @@ zr_do_scrollbarh(enum zr_widget_states *state,
  *
  * ===============================================================*/
 struct zr_edit {
-    int modifyable;
+    int modifiable;
     float border_size;
     float rounding;
     float scrollbar_width;
@@ -5486,7 +5485,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
         box->active = ZR_INBOX(in->mouse.pos.x,in->mouse.pos.y,r.x,r.y,r.w,r.h);
 
     /* input handling */
-    if (box->active && in && field->modifyable)
+    if (box->active && in && field->modifiable)
         zr_edit_box_handle_input(box, in, 1);
 
     buffer = zr_edit_box_get(box);
@@ -5768,7 +5767,8 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                 zr_size cur_text_width;
                 zr_size sel_begin, sel_end, sel_len;
                 zr_rune unicode;
-                float label_x = label.x, label_w = label.w;
+                float label_x = label.x;
+                float label_w = label.w;
 
                 const char *from = zr_utf_at(&buffer[offset], row_len,
                     (int)(begin - glyph_off), &unicode, &l);
@@ -7082,13 +7082,11 @@ zr_menubar_end(struct zr_context *layout)
     layout->at_y = layout->menu.y + layout->menu.h;
     zr_command_buffer_push_scissor(out, layout->clip);
 }
-/*
- * -------------------------------------------------------------
+/* -------------------------------------------------------------
  *
  *                          LAYOUT
  *
- * --------------------------------------------------------------
- */
+ * --------------------------------------------------------------*/
 static void
 zr_panel_layout(struct zr_context *layout, float height, zr_size cols)
 {
@@ -8211,7 +8209,7 @@ void zr_drag_int(struct zr_context *layout, int min, int *val,
 
 void
 zr_progress(struct zr_context *layout, zr_size *cur_value, zr_size max_value,
-    int is_modifyable)
+    int is_modifiable)
 {
     struct zr_rect bounds;
     struct zr_progress prog;
@@ -8237,7 +8235,7 @@ zr_progress(struct zr_context *layout, zr_size *cur_value, zr_size max_value,
     prog.active = config->colors[ZR_COLOR_PROGRESS_CURSOR_ACTIVE];
     prog.rounding = config->rounding[ZR_ROUNDING_PROGRESS];
     *cur_value = zr_do_progress(&ws, layout->buffer, bounds, *cur_value, max_value,
-                        is_modifyable, &prog, i);
+                        is_modifiable, &prog, i);
 }
 
 static enum zr_widget_state
@@ -8282,12 +8280,12 @@ zr_edit_field(struct zr_context *layout, struct zr_edit_box *box)
     state = zr_edit_base(&bounds, &field, layout);
     if (!state) return;
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
-    field.modifyable = 1;
+    field.modifiable = 1;
     zr_widget_edit_field(layout->buffer, bounds, box, &field, i, &config->font);
 }
 
 void
-zr_edit_box(struct zr_context *layout, struct zr_edit_box *box, int modifyable)
+zr_edit_box(struct zr_context *layout, struct zr_edit_box *box, int modifiable)
 {
     struct zr_rect bounds;
     struct zr_edit field;
@@ -8298,7 +8296,7 @@ zr_edit_box(struct zr_context *layout, struct zr_edit_box *box, int modifyable)
     state = zr_edit_base(&bounds, &field, layout);
     if (!state) return;
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
-    field.modifyable = modifyable;
+    field.modifiable = modifiable;
     zr_widget_edit_box(layout->buffer, bounds, box, &field, i, &config->font);
 }
 

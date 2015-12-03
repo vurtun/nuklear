@@ -115,7 +115,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             static int slider = 10;
             static int check = zr_true;
             zr_layout_row_dynamic(&menu, 25, 1);
-            zr_progress(&menu, &prog, 100, ZR_MODIFYABLE);
+            zr_progress(&menu, &prog, 100, ZR_MODIFIABLE);
             zr_slider_int(&menu, 0, &slider, 16, 1);
             zr_checkbox(&menu, "check", &check);
             if (zr_menu_item(&menu, ZR_TEXT_CENTERED, "Hide")) {
@@ -134,7 +134,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         zr_menu_end(&layout, &menu);
 
         zr_layout_row_push(&layout, 60);
-        zr_progress(&layout, &mprog, 100, ZR_MODIFYABLE);
+        zr_progress(&layout, &mprog, 100, ZR_MODIFIABLE);
         zr_slider_int(&layout, 0, &mslider, 16, 1);
         zr_checkbox(&layout, "check", &mcheck);
 
@@ -262,7 +262,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         zr_contextual_begin(&layout, &menu, ZR_WINDOW_NO_SCROLLBAR, &show_contextual, contextual_bounds);
         zr_layout_row_dynamic(&menu, 25, 1);
         zr_checkbox(&menu, "Menu", &show_menu);
-        zr_progress(&menu, &prog, 100, ZR_MODIFYABLE);
+        zr_progress(&menu, &prog, 100, ZR_MODIFIABLE);
         zr_slider_int(&menu, 0, &slider, 16, 1);
         if (zr_contextual_item(&menu, "About", ZR_TEXT_CENTERED))
             show_app_about = zr_true;
@@ -451,7 +451,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             zr_label(&layout, "Slider float", ZR_TEXT_LEFT);
             zr_slider_float(&layout, 0, &float_slider, 5.0, 0.5f);
             zr_labelf(&layout, ZR_TEXT_LEFT, "Progressbar" , prog_value);
-            zr_progress(&layout, &prog_value, 100, ZR_MODIFYABLE);
+            zr_progress(&layout, &prog_value, 100, ZR_MODIFIABLE);
 
             zr_layout_row(&layout, ZR_STATIC, 30, 2, ratio);
             zr_label(&layout, "Spinner int:", ZR_TEXT_LEFT);
@@ -581,10 +581,10 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             zr_combo_begin(&layout, &combo, buffer, &prog_active);
             {
                 zr_layout_row_dynamic(&combo, 30, 1);
-                zr_progress(&combo, &x, 100, ZR_MODIFYABLE);
-                zr_progress(&combo, &y, 100, ZR_MODIFYABLE);
-                zr_progress(&combo, &z, 100, ZR_MODIFYABLE);
-                zr_progress(&combo, &w, 100, ZR_MODIFYABLE);
+                zr_progress(&combo, &x, 100, ZR_MODIFIABLE);
+                zr_progress(&combo, &y, 100, ZR_MODIFIABLE);
+                zr_progress(&combo, &z, 100, ZR_MODIFIABLE);
+                zr_progress(&combo, &w, 100, ZR_MODIFIABLE);
             }
             zr_combo_end(&layout, &combo, NULL);
 
@@ -629,7 +629,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
 
             zr_label(&layout, "Box:", ZR_TEXT_LEFT);
             zr_layout_row_static(&layout, 75, 228, 1);
-            zr_edit_box(&layout, edit_box, ZR_MODIFYABLE);
+            zr_edit_box(&layout, edit_box, ZR_MODIFIABLE);
 
             zr_layout_row(&layout, ZR_STATIC, 25, 2, ratio);
             zr_edit(&layout, text[7], &text_len[7], 64, &text_active[7], &text_cursor[7], ZR_INPUT_ASCII);

@@ -124,7 +124,7 @@ struct zr_user_font_glyph;
 */
 enum {zr_false, zr_true};
 enum zr_heading {ZR_UP, ZR_RIGHT, ZR_DOWN, ZR_LEFT};
-enum zr_modify {ZR_FIXED = zr_false, ZR_MODIFYABLE = zr_true};
+enum zr_modify {ZR_FIXED = zr_false, ZR_MODIFIABLE = zr_true};
 struct zr_color {zr_byte r,g,b,a;};
 struct zr_vec2 {float x,y;};
 struct zr_vec2i {short x, y;};
@@ -197,18 +197,18 @@ zr_size zr_utf_len(const char*, zr_size len);
  */
 /*  INPUT
     ----------------------------
-    The input API is responsible for holding input by keeping track of
-    mouse, key and text input state. The core of the API is the persistent
+    The input API is responsible for holding the input state by keeping track of
+    mouse, key and text. The core of the API is a persistent
     zr_input struct which holds the input state while running.
     It is important to note that no direct os or window handling is done by the input
-    API, instead all the input state has to be provided from the user. This in one hand
+    API, instead all the input state has to be provided by the user. This in one hand
     expects more work from the user and complicates the usage but on the other hand
     provides simple abstraction over a big number of platforms, libraries and other
     already provided functionality.
 
     USAGE
     ----------------------------
-    To instantiate the Input API the zr_input structure has to be zeroed at
+    To instantiate the Input API the zr_input structure has to be zeroed in
     the beginning of the program by either using memset or setting it to {0},
     since the internal state is persistent over all frames.
 
@@ -1560,7 +1560,6 @@ void zr_font_bake_convert(void *out_memory, int img_width, int img_height,
     Output:
     - rgba8 output image
 */
-
 /* ---------------------------------------------------------------
  *                          FONT
  * ---------------------------------------------------------------*/
