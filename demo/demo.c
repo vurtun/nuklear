@@ -22,11 +22,34 @@ struct demo {
     struct zr_window panel;
     struct zr_window sub;
     struct zr_window metrics;
-    size_t w, h;
     enum theme theme;
-    struct zr_edit_box text;
-    struct zr_edit_box field;
+    size_t w, h;
+
 };
+
+static void
+copy_callback(zr_handle handle, const char *text, size_t size)
+{
+    char buffer[1024];
+    UNUSED(handle);
+    if (size >= 1023) return;
+    memcpy(buffer, text, size);
+    buffer[size] = '\0';
+    clipboard_set(buffer);
+}
+
+static void
+paste_callback(zr_handle handle, struct zr_edit_box *box)
+{
+    size_t len;
+    const char *text;
+    UNUSED(handle);
+    if (!clipboard_is_filled())return;
+    text = clipboard_get();
+    len = strlen(text);
+    zr_edit_box_add(box, text, len);
+}
+
 
 static void
 zr_labelf(struct zr_context *panel, enum zr_text_align align, const char *fmt, ...)
@@ -41,8 +64,7 @@ zr_labelf(struct zr_context *panel, enum zr_text_align align, const char *fmt, .
 }
 
 static int
-show_test_window(struct zr_window *window, struct zr_style *config, enum theme *theme,
-    struct zr_edit_box *edit_field, struct zr_edit_box *edit_box)
+show_test_window(struct zr_window *window, struct zr_style *config, enum theme *theme)
 {
     zr_flags ret;
     struct zr_context layout;
@@ -605,11 +627,27 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         }
         if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Input", &input_state))
         {
-            static char text[8][64];
-            static size_t text_len[8];
-            static int text_active[8];
+            static char field_buffer[64];
+            static char box_buffer[512];
+            static char text[9][64];
+            static size_t text_len[9];
+            static int text_active[9];
             static size_t text_cursor[8];
             static const float ratio[] = {120, 100};
+            static struct zr_edit_box box;
+            static struct zr_edit_box field;
+            static int input_init = 0;
+
+            if (!input_init)
+            {
+                struct zr_clipboard clip;
+                clip.userdata.ptr = 0;
+                clip.paste = paste_callback;
+                clip.copy = copy_callback;
+                zr_edit_box_init_fixed(&field, field_buffer, sizeof(field_buffer), &clip, 0);
+                zr_edit_box_init_fixed(&box, box_buffer, sizeof(box_buffer), &clip, 0);
+                input_init = 1;
+            }
 
             zr_layout_row(&layout, ZR_STATIC, 25, 2, ratio);
             zr_label(&layout, "Default:", ZR_TEXT_LEFT);
@@ -625,11 +663,24 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             zr_label(&layout, "Binary:", ZR_TEXT_LEFT);
             zr_edit(&layout, text[6], &text_len[6], 64, &text_active[6], &text_cursor[6], ZR_INPUT_BIN);
             zr_label(&layout, "Field:", ZR_TEXT_LEFT);
-            zr_edit_field(&layout, edit_field);
+            zr_edit_field(&layout, &field);
+            zr_label(&layout, "Password:", ZR_TEXT_LEFT);
+            {
+                size_t i = 0;
+                size_t old_len = text_len[8];
+                char buffer[16];
+                for (i = 0; i < text_len[8]; ++i)
+                    buffer[i] = '*';
+                zr_edit(&layout, buffer, &text_len[8], 64, &text_active[8], NULL, ZR_INPUT_DEFAULT);
+                if (old_len < text_len[8])
+                    memcpy(&text[8][old_len], &buffer[old_len], text_len[8] - old_len);
+                if (text_len[8])
+                    fprintf(stdout, "%.*s\n", (int)text_len[8], text[8]);
+            }
 
             zr_label(&layout, "Box:", ZR_TEXT_LEFT);
             zr_layout_row_static(&layout, 75, 228, 1);
-            zr_edit_box(&layout, edit_box, ZR_MODIFIABLE);
+            zr_edit_box(&layout, &box, ZR_MODIFIABLE);
 
             zr_layout_row(&layout, ZR_STATIC, 25, 2, ratio);
             zr_edit(&layout, text[7], &text_len[7], 64, &text_active[7], &text_cursor[7], ZR_INPUT_ASCII);
@@ -638,7 +689,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
 
                 text[7][text_len[7]] = '\n';
                 text_len[7]++;
-                zr_edit_box_add(edit_box, text[7], text_len[7]);
+                zr_edit_box_add(&box, text[7], text_len[7]);
                 text_active[7] = 0;
                 text_cursor[7] = 0;
                 text_len[7] = 0;
@@ -915,29 +966,6 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
 }
 
 static void
-copy_callback(zr_handle handle, const char *text, size_t size)
-{
-    char buffer[1024];
-    UNUSED(handle);
-    if (size >= 1023) return;
-    memcpy(buffer, text, size);
-    buffer[size] = '\0';
-    clipboard_set(buffer);
-}
-
-static void
-paste_callback(zr_handle handle, struct zr_edit_box *box)
-{
-    size_t len;
-    const char *text;
-    UNUSED(handle);
-    if (!clipboard_is_filled())return;
-    text = clipboard_get();
-    len = strlen(text);
-    zr_edit_box_add(box, text, len);
-}
-
-static void
 init_demo(struct demo *gui)
 {
     gui->running = zr_true;
@@ -1006,25 +1034,6 @@ init_demo(struct demo *gui)
         ZR_WINDOW_CLOSEABLE|ZR_WINDOW_MINIMIZABLE,
         &gui->queue, &gui->config_black, &gui->input);
 
-    {
-        /* edit box */
-        static char text[64];
-        struct zr_clipboard clip;
-        clip.userdata.ptr = 0;
-        clip.paste = paste_callback;
-        clip.copy = copy_callback;
-        zr_edit_box_init_fixed(&gui->text, text, sizeof(text), &clip, 0);
-    }
-    {
-        /* edit field */
-        static char field[512];
-        struct zr_clipboard clip;
-        clip.userdata.ptr = 0;
-        clip.paste = paste_callback;
-        clip.copy = copy_callback;
-        zr_edit_box_init_fixed(&gui->field, field, sizeof(field), &clip, 0);
-    }
-
 }
 
 static void
@@ -1032,7 +1041,7 @@ run_demo(struct demo *gui)
 {
     struct zr_context layout;
     struct zr_style *current = (gui->theme == THEME_BLACK) ? &gui->config_black : &gui->config_white;
-    gui->running = show_test_window(&gui->panel, current, &gui->theme, &gui->text, &gui->field);
+    gui->running = show_test_window(&gui->panel, current, &gui->theme);
 
     /* ussage example  */
     gui->sub.style = current;
