@@ -674,8 +674,6 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
                 zr_edit(&layout, buffer, &text_len[8], 64, &text_active[8], NULL, ZR_INPUT_DEFAULT);
                 if (old_len < text_len[8])
                     memcpy(&text[8][old_len], &buffer[old_len], text_len[8] - old_len);
-                if (text_len[8])
-                    fprintf(stdout, "%.*s\n", (int)text_len[8], text[8]);
             }
 
             zr_label(&layout, "Box:", ZR_TEXT_LEFT);
