@@ -4574,7 +4574,7 @@ zr_do_button_text_symbol(enum zr_widget_states *state,
         tri.x = (r.x + r.w) - (2 * b->base.padding.x + tri.w);
         tri.x = MAX(tri.x, 0);
     } else tri.x = r.x + 2 * b->base.padding.x;
-    zr_draw_symbol(out, symbol, tri, background, color, b->base.border_width, f);
+    zr_draw_symbol(out, symbol, tri, background, color, 1.0f, f);
     return ret;
 }
 
@@ -5241,8 +5241,7 @@ zr_edit_box_handle_input(struct zr_edit_box *box, const struct zr_input *in, int
             box->cursor = min;
         }
         if (enter) zr_edit_box_add(box, "\n", 1);
-        else if (tab)
-            zr_edit_box_add(box, "    ", 4);
+        else if (tab) zr_edit_box_add(box, "    ", 4);
         else zr_edit_box_buffer_input(box, in);
         box->sel.begin = box->cursor;
         box->sel.end = box->cursor;
@@ -8884,6 +8883,7 @@ zr_contextual_button_symbol(struct zr_context *layout, enum zr_symbol symbol,
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
 
     config = layout->style;
+    button.alignment = ZR_TEXT_CENTERED;
     button.base.border_width = 0;
     button.base.normal = config->colors[ZR_COLOR_WINDOW];
     button.base.border = config->colors[ZR_COLOR_WINDOW];
@@ -8910,6 +8910,7 @@ zr_contextual_button_icon(struct zr_context *layout, struct zr_image img,
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : layout->input;
 
     config = layout->style;
+    button.alignment = ZR_TEXT_CENTERED;
     button.base.border_width = 0;
     button.base.normal = config->colors[ZR_COLOR_WINDOW];
     button.base.border = config->colors[ZR_COLOR_WINDOW];

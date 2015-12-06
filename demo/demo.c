@@ -24,7 +24,6 @@ struct demo {
     struct zr_window metrics;
     enum theme theme;
     size_t w, h;
-
 };
 
 static void
@@ -64,7 +63,8 @@ zr_labelf(struct zr_context *panel, enum zr_text_align align, const char *fmt, .
 }
 
 static int
-show_test_window(struct zr_window *window, struct zr_style *config, enum theme *theme)
+show_test_window(struct zr_window *window, struct zr_style *config, enum theme *theme,
+    struct demo *demo)
 {
     zr_flags ret;
     struct zr_context layout;
@@ -121,36 +121,66 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
     if (show_menu)
     {
         /* menubar */
+        enum menu_states {MENU_DEFAULT, MENU_TEST};
         struct zr_context menu;
         static int file_state = ZR_MINIMIZED;
         static zr_size mprog = 60;
         static int mslider = 10;
         static int mcheck = zr_true;
+        static int menu_state = MENU_DEFAULT;
 
         zr_menubar_begin(&layout);
 
         zr_layout_row_begin(&layout, ZR_STATIC, 25, 2);
         zr_layout_row_push(&layout, 45);
-        zr_menu_begin(&layout, &menu, "MENU", 100, &file_state);
+        zr_menu_begin(&layout, &menu, "MENU", 120, &file_state);
         {
-            static size_t prog = 40;
-            static int slider = 10;
-            static int check = zr_true;
             zr_layout_row_dynamic(&menu, 25, 1);
-            zr_progress(&menu, &prog, 100, ZR_MODIFIABLE);
-            zr_slider_int(&menu, 0, &slider, 16, 1);
-            zr_checkbox(&menu, "check", &check);
-            if (zr_menu_item(&menu, ZR_TEXT_CENTERED, "Hide")) {
-                show_menu = zr_false;
-                zr_menu_close(&menu, &file_state);
-            }
-            if (zr_menu_item(&menu, ZR_TEXT_CENTERED, "About")) {
-                show_app_about = zr_true;
-                zr_menu_close(&menu, &file_state);
-            }
-            if (zr_menu_item(&menu, ZR_TEXT_CENTERED, "Quit")) {
-                show_close_popup = zr_true;
-                zr_menu_close(&menu, &file_state);
+            switch (menu_state) {
+            default:
+            case MENU_DEFAULT: {
+                static size_t prog = 40;
+                static int slider = 10;
+                static int check = zr_true;
+                zr_progress(&menu, &prog, 100, ZR_MODIFIABLE);
+                zr_slider_int(&menu, 0, &slider, 16, 1);
+                zr_checkbox(&menu, "check", &check);
+                if (zr_menu_item(&menu, ZR_TEXT_CENTERED, "Hide")) {
+                    show_menu = zr_false;
+                    zr_menu_close(&menu, &file_state);
+                }
+                if (zr_menu_item(&menu, ZR_TEXT_CENTERED, "About")) {
+                    show_app_about = zr_true;
+                    zr_menu_close(&menu, &file_state);
+                }
+                if (zr_menu_item_symbol(&menu, ZR_SYMBOL_TRIANGLE_RIGHT, "Windows", ZR_TEXT_LEFT))
+                    menu_state = MENU_TEST;
+                if (zr_menu_item(&menu, ZR_TEXT_CENTERED, "Quit")) {
+                    show_close_popup = zr_true;
+                    zr_menu_close(&menu, &file_state);
+                }
+            } break;
+            case MENU_TEST: {
+                if (zr_menu_item_symbol(&menu, (demo->sub.flags & ZR_WINDOW_HIDDEN)?
+                    ZR_SYMBOL_RECT : ZR_SYMBOL_RECT_FILLED, "Demo", ZR_TEXT_RIGHT)) {
+                    menu_state = MENU_DEFAULT;
+                    if (demo->sub.flags & ZR_WINDOW_HIDDEN)
+                        demo->sub.flags &= ~(unsigned)ZR_WINDOW_HIDDEN;
+                    else demo->sub.flags |= ZR_WINDOW_HIDDEN;
+                    zr_menu_close(&menu, &file_state);
+                }
+                if (zr_menu_item_symbol(&menu, (demo->metrics.flags & ZR_WINDOW_HIDDEN)?
+                    ZR_SYMBOL_RECT : ZR_SYMBOL_RECT_FILLED, "Metrics", ZR_TEXT_RIGHT)) {
+                    menu_state = MENU_DEFAULT;
+                    if (demo->metrics.flags & ZR_WINDOW_HIDDEN)
+                        demo->metrics.flags &= ~(unsigned)ZR_WINDOW_HIDDEN;
+                    else demo->metrics.flags |= ZR_WINDOW_HIDDEN;
+
+                    zr_menu_close(&menu, &file_state);
+                }
+                if (zr_menu_item_symbol(&menu,  ZR_SYMBOL_TRIANGLE_LEFT, "BACK", ZR_TEXT_RIGHT))
+                    menu_state = MENU_DEFAULT;
+            } break;
             }
         }
         zr_menu_end(&layout, &menu);
@@ -1025,11 +1055,11 @@ init_demo(struct demo *gui)
         &gui->queue, &gui->config_black, &gui->input);
     zr_window_init(&gui->sub, zr_rect(400, 50, 220, 180),
         ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALEABLE|
-        ZR_WINDOW_CLOSEABLE|ZR_WINDOW_MINIMIZABLE,
+        ZR_WINDOW_CLOSEABLE|ZR_WINDOW_MINIMIZABLE|ZR_WINDOW_HIDDEN,
         &gui->queue, &gui->config_black, &gui->input);
     zr_window_init(&gui->metrics, zr_rect(200, 400, 250, 300),
         ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALEABLE|
-        ZR_WINDOW_CLOSEABLE|ZR_WINDOW_MINIMIZABLE,
+        ZR_WINDOW_CLOSEABLE|ZR_WINDOW_MINIMIZABLE|ZR_WINDOW_HIDDEN,
         &gui->queue, &gui->config_black, &gui->input);
 
 }
@@ -1039,7 +1069,7 @@ run_demo(struct demo *gui)
 {
     struct zr_context layout;
     struct zr_style *current = (gui->theme == THEME_BLACK) ? &gui->config_black : &gui->config_white;
-    gui->running = show_test_window(&gui->panel, current, &gui->theme);
+    gui->running = show_test_window(&gui->panel, current, &gui->theme, gui);
 
     /* ussage example  */
     gui->sub.style = current;
