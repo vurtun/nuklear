@@ -9103,8 +9103,33 @@ void zr_combo_close(struct zr_context *combo)
  *
  * --------------------------------------------------------------
  */
-void
+static int
 zr_menu_begin(struct zr_context *parent, struct zr_context *menu,
+    struct zr_rect header, float width, int *active, int is_active)
+{
+    struct zr_rect body;
+    body.x = header.x;
+    body.w = width;
+    body.y = header.y + header.h;
+    body.h = (parent->bounds.y + parent->bounds.h) - body.y;
+    if (!zr_popup_nonblocking_begin(parent, menu, ZR_WINDOW_COMBO_MENU|ZR_WINDOW_NO_SCROLLBAR,
+            active, is_active, body, zr_vec2(0,0))) return 0;
+    return 1;
+}
+
+static void
+zr_menu_failed(struct zr_context *parent, struct zr_context *menu)
+{
+    zr_zero(menu, sizeof(*menu));
+    menu->valid = zr_false;
+    menu->style = parent->style;
+    menu->buffer = parent->buffer;
+    menu->input = parent->input;
+    menu->queue = parent->queue;
+}
+
+void
+zr_menu_text_begin(struct zr_context *parent, struct zr_context *menu,
     const char *title, float width, int *active)
 {
     const struct zr_input *in;
@@ -9117,25 +9142,28 @@ zr_menu_begin(struct zr_context *parent, struct zr_context *menu,
     ZR_ASSERT(title);
     ZR_ASSERT(active);
     if (!parent || !menu || !title || !active) return;
-    if (!parent->valid) goto failed;
+    if (!parent->valid) {
+        zr_menu_failed(parent, menu);
+        return;
+    }
 
     is_active = *active;
     in = parent->input;
     config = parent->style;
     zr_zero(menu, sizeof(*menu));
     {
-        /* exeucte menu button for open/closing the popup */
+        /* exeucte menu text button for open/closing the popup */
         struct zr_button_text button;
         enum zr_widget_states state;
-        zr_zero(&button, sizeof(header));
+        zr_zero(&button, sizeof(button));
         zr_button(&button.base, &header, parent, ZR_BUTTON_NORMAL);
-        button.alignment = ZR_TEXT_CENTERED;
         button.base.rounding = 0;
-        button.base.border = (*active) ? config->colors[ZR_COLOR_BORDER]:
+        button.base.border = (active) ? config->colors[ZR_COLOR_BORDER]:
             config->colors[ZR_COLOR_WINDOW];
         button.base.normal = (is_active) ? config->colors[ZR_COLOR_BUTTON_HOVER]:
             config->colors[ZR_COLOR_WINDOW];
         button.base.active = config->colors[ZR_COLOR_WINDOW];
+        button.alignment = ZR_TEXT_CENTERED;
         button.normal = config->colors[ZR_COLOR_TEXT];
         button.active = config->colors[ZR_COLOR_TEXT];
         button.hover = config->colors[ZR_COLOR_TEXT];
@@ -9143,25 +9171,93 @@ zr_menu_begin(struct zr_context *parent, struct zr_context *menu,
                 &button, in, &config->font))
             is_active = !is_active;
     }
-    {
-        /* calculate the maximum height of the menu */
-        struct zr_rect body;
-        body.x = header.x;
-        body.w = width;
-        body.y = header.y + header.h;
-        body.h = (parent->bounds.y + parent->bounds.h) - body.y;
-        if (!zr_popup_nonblocking_begin(parent, menu, ZR_WINDOW_COMBO_MENU|ZR_WINDOW_NO_SCROLLBAR, active,
-            is_active, body, zr_vec2(0,0))) goto failed;
-    }
-    return;
+    if (!zr_menu_begin(parent, menu, header, width, active, is_active))
+        zr_menu_failed(parent, menu);
+}
 
-failed:
+void
+zr_menu_icon_begin(struct zr_context *parent, struct zr_context *menu,
+    struct zr_image img, float width, int *active)
+{
+    const struct zr_input *in;
+    const struct zr_style *config;
+    struct zr_rect header;
+    int is_active;
+
+    ZR_ASSERT(parent);
+    ZR_ASSERT(menu);
+    ZR_ASSERT(active);
+    if (!parent || !menu || !active) return;
+    if (!parent->valid) {
+        zr_menu_failed(parent, menu);
+        return;
+    }
+
+    is_active = *active;
+    in = parent->input;
+    config = parent->style;
     zr_zero(menu, sizeof(*menu));
-    menu->valid = zr_false;
-    menu->style = parent->style;
-    menu->buffer = parent->buffer;
-    menu->input = parent->input;
-    menu->queue = parent->queue;
+    {
+        /* execute menu icon button for open/closing the popup */
+        struct zr_button_icon button;
+        enum zr_widget_states state;
+        zr_zero(&button, sizeof(button));
+        zr_button(&button.base, &header, parent, ZR_BUTTON_NORMAL);
+        button.base.rounding = 1;
+        button.base.border = config->colors[ZR_COLOR_BORDER];
+        button.base.normal = (is_active) ? config->colors[ZR_COLOR_BUTTON_HOVER]:
+            config->colors[ZR_COLOR_WINDOW];
+        button.base.active = config->colors[ZR_COLOR_WINDOW];
+        button.padding = config->properties[ZR_PROPERTY_ITEM_PADDING];
+        if (zr_do_button_image(&state, parent->buffer, header, img, ZR_BUTTON_DEFAULT,
+                &button, in)) is_active = !is_active;
+    }
+    if (!zr_menu_begin(parent, menu, header, width, active, is_active))
+        zr_menu_failed(parent, menu);
+}
+
+void
+zr_menu_symbol_begin(struct zr_context *parent,
+    struct zr_context *menu, enum zr_symbol sym, float width, int *active)
+{
+    const struct zr_input *in;
+    const struct zr_style *config;
+    struct zr_rect header;
+    int is_active;
+
+    ZR_ASSERT(parent);
+    ZR_ASSERT(menu);
+    ZR_ASSERT(active);
+    if (!parent || !menu || !active) return;
+    if (!parent->valid) {
+        zr_menu_failed(parent, menu);
+        return;
+    }
+
+    is_active = *active;
+    in = parent->input;
+    config = parent->style;
+    zr_zero(menu, sizeof(*menu));
+    {
+        /* execute menu symbol button for open/closing the popup */
+        struct zr_button_symbol button;
+        enum zr_widget_states state;
+        zr_zero(&button, sizeof(button));
+        zr_button(&button.base, &header, parent, ZR_BUTTON_NORMAL);
+        button.base.rounding = 1;
+        button.base.border = config->colors[ZR_COLOR_BORDER];
+        button.base.normal = (is_active) ? config->colors[ZR_COLOR_BUTTON_HOVER]:
+            config->colors[ZR_COLOR_WINDOW];
+        button.base.active = config->colors[ZR_COLOR_WINDOW];
+        button.normal = config->colors[ZR_COLOR_TEXT];
+        button.active = config->colors[ZR_COLOR_TEXT];
+        button.hover = config->colors[ZR_COLOR_TEXT];
+        if (zr_do_button_symbol(&state, parent->buffer, header, sym, ZR_BUTTON_DEFAULT,
+                &button, in, &config->font)) is_active = !is_active;
+    }
+    if (!zr_menu_begin(parent, menu, header, width, active, is_active))
+        zr_menu_failed(parent, menu);
+
 }
 
 int zr_menu_item(struct zr_context *menu, enum zr_text_align align, const char *title)

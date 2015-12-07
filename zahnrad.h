@@ -3257,21 +3257,44 @@ void zr_contextual_end(struct zr_context *parent, struct zr_context *popup, int*
     in the future.
 
     menu widget API
-    zr_menu_begin       -- begins the menu item build up processs
+    zr_menu_xxx_begin   -- begins the menu item build up processs
     zr_menu_item        -- adds a item into the menu
     zr_menu_item_icon   -- adds a text + image item into the menu
     zr_menu_item_symbol -- adds a text + symbol item into the menu
     zr_menu_close       -- closes the menu
     zr_menu_end         -- ends the menu item build up process
 */
-void zr_menu_begin(struct zr_context *parent,
+void zr_menu_text_begin(struct zr_context *parent,
                         struct zr_context *menu, const char *title,
                         float width, int *active);
-/*  this function begins the menu build up process
+/*  this function begins the menu build up process and provides a clickable text button
+ *  to open and close the menu popup panel
     Input:
     - parent window layout the menu will be placed into
     - ouput menu window layout
     - title of the menu to
+    - the current state of the menu with either zr_true (open) or zr_false else
+*/
+void zr_menu_icon_begin(struct zr_context *parent,
+                        struct zr_context *menu, struct zr_image,
+                        float width, int *active);
+/*  this function begins the menu build up process and provides a clickable icon button
+ *  to open and close the menu popup panel
+    Input:
+    - parent window layout the menu will be placed into
+    - ouput menu window layout
+    - title of the menu to
+    - the current state of the menu with either zr_true (open) or zr_false else
+*/
+void zr_menu_symbol_begin(struct zr_context *parent,
+                        struct zr_context *menu, enum zr_symbol,
+                        float width, int *active);
+/*  this function begins the menu build up process and provides a clickable symbol button
+ *  to open and close the menu popup panel
+    Input:
+    - parent window layout the menu will be placed into
+    - ouput menu window layout
+    - symbol to add into the button
     - the current state of the menu with either zr_true (open) or zr_false else
 */
 int zr_menu_item(struct zr_context *menu, enum zr_text_align align, const char*);

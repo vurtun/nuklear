@@ -61,7 +61,11 @@ struct icons {
     struct zr_image rocket;
     struct zr_image cloud;
     struct zr_image pen;
-    struct zr_image settings;
+    struct zr_image play;
+    struct zr_image pause;
+    struct zr_image stop;
+    struct zr_image prev;
+    struct zr_image next;
     struct zr_image tools;
     struct zr_image directory;
     struct zr_image images[9];
@@ -122,21 +126,41 @@ static void
 button_demo(struct zr_window *window, struct zr_style *config, struct icons *img)
 {
     struct zr_context layout;
+    struct zr_context menu;
     static int option = 1;
     static int toggle0 = 1;
     static int toggle1 = 0;
     static int toggle2 = 1;
+    static int music_active = 0;
     zr_begin(&layout, window, "Button Demo");
 
     /*------------------------------------------------
      *                  MENU
      *------------------------------------------------*/
     zr_menubar_begin(&layout);
-    zr_layout_row_static(&layout, 40, 40, 4);
-    zr_button_image(&layout, img->settings, ZR_BUTTON_DEFAULT);
-    zr_button_image(&layout, img->tools, ZR_BUTTON_DEFAULT);
-    zr_button_image(&layout, img->cloud, ZR_BUTTON_DEFAULT);
-    zr_button_image(&layout, img->pen, ZR_BUTTON_DEFAULT);
+    {
+        /* toolbar */
+        zr_layout_row_static(&layout, 40, 40, 4);
+        zr_menu_icon_begin(&layout, &menu, img->play, 120, &music_active);
+        {
+            /* settings */
+            zr_layout_row_dynamic(&menu, 25, 1);
+            if (zr_menu_item_icon(&menu, img->play, "Play", ZR_TEXT_RIGHT))
+                zr_menu_close(&menu, &music_active);
+            if (zr_menu_item_icon(&menu, img->stop, "Stop", ZR_TEXT_RIGHT))
+                zr_menu_close(&menu, &music_active);
+            if (zr_menu_item_icon(&menu, img->pause, "Pause", ZR_TEXT_RIGHT))
+                zr_menu_close(&menu, &music_active);
+            if (zr_menu_item_icon(&menu, img->next, "Next", ZR_TEXT_RIGHT))
+                zr_menu_close(&menu, &music_active);
+            if (zr_menu_item_icon(&menu, img->next, "Prev", ZR_TEXT_RIGHT))
+                zr_menu_close(&menu, &music_active);
+        }
+        zr_menu_end(&layout, &menu);
+        zr_button_image(&layout, img->tools, ZR_BUTTON_DEFAULT);
+        zr_button_image(&layout, img->cloud, ZR_BUTTON_DEFAULT);
+        zr_button_image(&layout, img->pen, ZR_BUTTON_DEFAULT);
+    }
     zr_menubar_end(&layout);
 
     /*------------------------------------------------
@@ -521,7 +545,11 @@ main(int argc, char *argv[])
     int rocket;
     int cloud;
     int pen;
-    int settings;
+    int play;
+    int stop;
+    int pause;
+    int next;
+    int prev;
     int tools;
     int directory;
     int images[9];
@@ -567,7 +595,11 @@ main(int argc, char *argv[])
     rocket = nvgCreateImage(vg, "../icon/rocket.png", 0);
     cloud = nvgCreateImage(vg, "../icon/cloud.png", 0);
     pen = nvgCreateImage(vg, "../icon/pen.png", 0);
-    settings = nvgCreateImage(vg, "../icon/settings.png", 0);
+    play = nvgCreateImage(vg, "../icon/play.png", 0);
+    pause = nvgCreateImage(vg, "../icon/pause.png", 0);
+    stop = nvgCreateImage(vg, "../icon/stop.png", 0);
+    next =  nvgCreateImage(vg, "../icon/next.png", 0);
+    prev =  nvgCreateImage(vg, "../icon/prev.png", 0);
     tools = nvgCreateImage(vg, "../icon/tools.png", 0);
     directory = nvgCreateImage(vg, "../icon/directory.png", 0);
     for (i = 0; i < 9; ++i) {
@@ -582,9 +614,14 @@ main(int argc, char *argv[])
     icons.rocket = zr_image_id(rocket);
     icons.cloud = zr_image_id(cloud);
     icons.pen = zr_image_id(pen);
-    icons.settings = zr_image_id(settings);
+    icons.play = zr_image_id(play);
     icons.tools = zr_image_id(tools);
     icons.directory = zr_image_id(directory);
+    icons.pause = zr_image_id(pause);
+    icons.stop = zr_image_id(stop);
+    icons.prev = zr_image_id(prev);
+    icons.next = zr_image_id(next);
+
     for (i = 0; i < 9; ++i)
         icons.images[i] = zr_image_id(images[i]);
 
@@ -656,7 +693,11 @@ cleanup:
     nvgDeleteImage(vg, rocket);
     nvgDeleteImage(vg, cloud);
     nvgDeleteImage(vg, pen);
-    nvgDeleteImage(vg, settings);
+    nvgDeleteImage(vg, play);
+    nvgDeleteImage(vg, pause);
+    nvgDeleteImage(vg, stop);
+    nvgDeleteImage(vg, next);
+    nvgDeleteImage(vg, prev);
     nvgDeleteImage(vg, tools);
     nvgDeleteImage(vg, directory);
 

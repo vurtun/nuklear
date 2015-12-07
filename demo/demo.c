@@ -133,7 +133,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
 
         zr_layout_row_begin(&layout, ZR_STATIC, 25, 2);
         zr_layout_row_push(&layout, 45);
-        zr_menu_begin(&layout, &menu, "MENU", 120, &file_state);
+        zr_menu_text_begin(&layout, &menu, "MENU", 120, &file_state);
         {
             zr_layout_row_dynamic(&menu, 25, 1);
             switch (menu_state) {
