@@ -163,20 +163,15 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             case MENU_TEST: {
                 if (zr_menu_item_symbol(&menu, (demo->sub.flags & ZR_WINDOW_HIDDEN)?
                     ZR_SYMBOL_RECT : ZR_SYMBOL_RECT_FILLED, "Demo", ZR_TEXT_RIGHT)) {
-                    menu_state = MENU_DEFAULT;
                     if (demo->sub.flags & ZR_WINDOW_HIDDEN)
                         demo->sub.flags &= ~(unsigned)ZR_WINDOW_HIDDEN;
                     else demo->sub.flags |= ZR_WINDOW_HIDDEN;
-                    zr_menu_close(&menu, &file_state);
                 }
                 if (zr_menu_item_symbol(&menu, (demo->metrics.flags & ZR_WINDOW_HIDDEN)?
                     ZR_SYMBOL_RECT : ZR_SYMBOL_RECT_FILLED, "Metrics", ZR_TEXT_RIGHT)) {
-                    menu_state = MENU_DEFAULT;
                     if (demo->metrics.flags & ZR_WINDOW_HIDDEN)
                         demo->metrics.flags &= ~(unsigned)ZR_WINDOW_HIDDEN;
                     else demo->metrics.flags |= ZR_WINDOW_HIDDEN;
-
-                    zr_menu_close(&menu, &file_state);
                 }
                 if (zr_menu_item_symbol(&menu,  ZR_SYMBOL_TRIANGLE_LEFT, "BACK", ZR_TEXT_RIGHT))
                     menu_state = MENU_DEFAULT;

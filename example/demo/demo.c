@@ -68,6 +68,10 @@ struct icons {
     struct zr_image next;
     struct zr_image tools;
     struct zr_image directory;
+    struct zr_image copy;
+    struct zr_image convert;
+    struct zr_image delete;
+    struct zr_image edit;
     struct zr_image images[9];
 };
 
@@ -132,8 +136,11 @@ button_demo(struct zr_window *window, struct zr_style *config, struct icons *img
     static int toggle1 = 0;
     static int toggle2 = 1;
     static int music_active = 0;
-    zr_begin(&layout, window, "Button Demo");
+    static int contextual_active = 0;
+    static struct zr_rect contextual_bounds;
 
+    config->font.height = 20;
+    zr_begin(&layout, window, "Button Demo");
     /*------------------------------------------------
      *                  MENU
      *------------------------------------------------*/
@@ -214,7 +221,28 @@ button_demo(struct zr_window *window, struct zr_style *config, struct icons *img
     if (zr_button_text_symbol(&layout, (option == 2)?ZR_SYMBOL_CIRCLE_FILLED:ZR_SYMBOL_CIRCLE,
             "Select", ZR_TEXT_LEFT, ZR_BUTTON_DEFAULT)) option = 2;
 
-    config->font.height = 18;
+    /*------------------------------------------------
+     *                  CONTEXTUAL
+     *------------------------------------------------*/
+    if (zr_input_mouse_clicked(zr_input(&layout), ZR_BUTTON_RIGHT, layout.bounds)) {
+        const struct zr_input *in = zr_input(&layout);
+        contextual_bounds = zr_rect(in->mouse.pos.x, in->mouse.pos.y, 120, 200);
+        contextual_active = ZR_ACTIVE;
+    }
+    if (contextual_active) {
+        config->font.height = 18;
+        zr_contextual_begin(&layout, &menu, ZR_WINDOW_NO_SCROLLBAR, &contextual_active, contextual_bounds);
+        zr_layout_row_dynamic(&menu, 25, 1);
+        if (zr_contextual_item_icon(&menu, img->copy, "Clone", ZR_TEXT_RIGHT))
+            fprintf(stdout, "pressed clone!\n");
+        if (zr_contextual_item_icon(&menu, img->delete, "Delete", ZR_TEXT_RIGHT))
+            fprintf(stdout, "pressed delete!\n");
+        if (zr_contextual_item_icon(&menu, img->convert, "Convert", ZR_TEXT_RIGHT))
+            fprintf(stdout, "pressed convert!\n");
+        if (zr_contextual_item_icon(&menu, img->edit, "Edit", ZR_TEXT_RIGHT))
+            fprintf(stdout, "pressed edit!\n");
+        zr_contextual_end(&layout, &menu, &contextual_active);
+    }
     zr_end(&layout, window);
 }
 
@@ -517,11 +545,6 @@ text(struct zr_input *in, SDL_Event *evt)
     zr_input_glyph(in, glyph);
 }
 
-static void
-resize(SDL_Event *evt)
-{
-}
-
 int
 main(int argc, char *argv[])
 {
@@ -553,6 +576,10 @@ main(int argc, char *argv[])
     int tools;
     int directory;
     int images[9];
+    int copy;
+    int convert;
+    int delete;
+    int edit;
 
     /* GUI */
     struct gui gui;
@@ -602,6 +629,10 @@ main(int argc, char *argv[])
     prev =  nvgCreateImage(vg, "../icon/prev.png", 0);
     tools = nvgCreateImage(vg, "../icon/tools.png", 0);
     directory = nvgCreateImage(vg, "../icon/directory.png", 0);
+    copy = nvgCreateImage(vg, "../icon/copy.png", 0);
+    convert = nvgCreateImage(vg, "../icon/export.png", 0);
+    delete = nvgCreateImage(vg, "../icon/delete.png", 0);
+    edit = nvgCreateImage(vg, "../icon/edit.png", 0);
     for (i = 0; i < 9; ++i) {
         char buffer[64];
         sprintf(buffer, "../images/image%d.jpg", (i+1));
@@ -621,6 +652,10 @@ main(int argc, char *argv[])
     icons.stop = zr_image_id(stop);
     icons.prev = zr_image_id(prev);
     icons.next = zr_image_id(next);
+    icons.copy = zr_image_id(copy);
+    icons.convert = zr_image_id(convert);
+    icons.delete = zr_image_id(delete);
+    icons.edit = zr_image_id(edit);
 
     for (i = 0; i < 9; ++i)
         icons.images[i] = zr_image_id(images[i]);
