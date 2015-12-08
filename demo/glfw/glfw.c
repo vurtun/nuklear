@@ -532,7 +532,7 @@ main(int argc, char *argv[])
 
 cleanup:
     /* Cleanup */
-    free(font.glyphes);
+    free(font.glyphs);
     zr_command_queue_free(&gui.queue);
     zr_buffer_free(&device.cmds);
     device_shutdown(&device);
