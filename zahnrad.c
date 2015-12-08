@@ -9158,7 +9158,8 @@ zr_menu_text_begin(struct zr_context *parent, struct zr_context *menu,
         zr_zero(&button, sizeof(button));
         zr_button(&button.base, &header, parent, ZR_BUTTON_NORMAL);
         button.base.rounding = 0;
-        button.base.border = (active) ? config->colors[ZR_COLOR_BORDER]:
+        button.base.border_width = 0;
+        button.base.border = (is_active) ? config->colors[ZR_COLOR_BORDER]:
             config->colors[ZR_COLOR_WINDOW];
         button.base.normal = (is_active) ? config->colors[ZR_COLOR_BUTTON_HOVER]:
             config->colors[ZR_COLOR_WINDOW];
@@ -9168,8 +9169,7 @@ zr_menu_text_begin(struct zr_context *parent, struct zr_context *menu,
         button.active = config->colors[ZR_COLOR_TEXT];
         button.hover = config->colors[ZR_COLOR_TEXT];
         if (zr_do_button_text(&state, parent->buffer, header, title, ZR_BUTTON_DEFAULT,
-                &button, in, &config->font))
-            is_active = !is_active;
+                &button, in, &config->font)) is_active = !is_active;
     }
     if (!zr_menu_begin(parent, menu, header, width, active, is_active))
         zr_menu_failed(parent, menu);
@@ -9261,15 +9261,33 @@ zr_menu_symbol_begin(struct zr_context *parent,
 }
 
 int zr_menu_item(struct zr_context *menu, enum zr_text_align align, const char *title)
-{return zr_contextual_item(menu, title, align);}
+{
+    int valid = menu->valid;
+    int ret = zr_contextual_item(menu, title, align);
+    menu->flags &= ~(unsigned)ZR_WINDOW_HIDDEN;
+    menu->valid = valid;
+    return ret;
+}
 
 int zr_menu_item_icon(struct zr_context *menu, struct zr_image img,
     const char *title, enum zr_text_align align)
-{return zr_contextual_item_icon(menu, img, title, align);}
+{
+    int valid = menu->valid;
+    int ret = zr_contextual_item_icon(menu, img, title, align);
+    menu->flags &= ~(unsigned)ZR_WINDOW_HIDDEN;
+    menu->valid = valid;
+    return ret;
+}
 
 int zr_menu_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
     const char *title, enum zr_text_align align)
-{return zr_contextual_item_symbol(menu, symbol, title, align);}
+{
+    int valid = menu->valid;
+    int ret = zr_contextual_item_symbol(menu, symbol, title, align);
+    menu->flags &= ~(unsigned)ZR_WINDOW_HIDDEN;
+    menu->valid = valid;
+    return ret;
+}
 
 void zr_menu_close(struct zr_context *menu, int *state)
 {zr_popup_close(menu); *state = zr_false;}

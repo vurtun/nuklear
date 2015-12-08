@@ -2098,7 +2098,6 @@ const char *zr_style_property_name(enum zr_style_properties);
     Window Header API   -- Responsible for creating a header at the top of a window
     Window Layout API   -- The window layout is responsible for placing widget in the window
     Window Widget API   -- Different widget that can be placed inside the window
-    Window Tree API     -- Tree widget that allows to visualize and mofify a tree
     Window Combobox API -- Combobox widget for collapsable popup content
     Window Group API    -- Create a subwindow inside a window which again can be filled with widgets
     Window Popup API    -- Popup window with either non-blocking or blocking capabilities
@@ -3264,9 +3263,8 @@ void zr_contextual_end(struct zr_context *parent, struct zr_context *popup, int*
     zr_menu_close       -- closes the menu
     zr_menu_end         -- ends the menu item build up process
 */
-void zr_menu_text_begin(struct zr_context *parent,
-                        struct zr_context *menu, const char *title,
-                        float width, int *active);
+void zr_menu_text_begin(struct zr_context *parent, struct zr_context *menu,
+                        const char *title, float width, int *active);
 /*  this function begins the menu build up process and provides a clickable text button
  *  to open and close the menu popup panel
     Input:
@@ -3275,9 +3273,8 @@ void zr_menu_text_begin(struct zr_context *parent,
     - title of the menu to
     - the current state of the menu with either zr_true (open) or zr_false else
 */
-void zr_menu_icon_begin(struct zr_context *parent,
-                        struct zr_context *menu, struct zr_image,
-                        float width, int *active);
+void zr_menu_icon_begin(struct zr_context *parent, struct zr_context *menu,
+                        struct zr_image, float width, int *active);
 /*  this function begins the menu build up process and provides a clickable icon button
  *  to open and close the menu popup panel
     Input:
@@ -3286,9 +3283,8 @@ void zr_menu_icon_begin(struct zr_context *parent,
     - title of the menu to
     - the current state of the menu with either zr_true (open) or zr_false else
 */
-void zr_menu_symbol_begin(struct zr_context *parent,
-                        struct zr_context *menu, enum zr_symbol,
-                        float width, int *active);
+void zr_menu_symbol_begin(struct zr_context *parent, struct zr_context *menu,
+                        enum zr_symbol, float width, int *active);
 /*  this function begins the menu build up process and provides a clickable symbol button
  *  to open and close the menu popup panel
     Input:
