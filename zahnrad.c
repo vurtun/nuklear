@@ -2203,6 +2203,22 @@ zr_command_queue_next(struct zr_command_queue *queue, const struct zr_command *c
  *
  * ===============================================================*/
 #if ZR_COMPILE_WITH_VERTEX_BUFFER
+static struct zr_vec2 zr_circle_vtx[12];
+static int zr_circle_vtx_builds = zr_false;
+static const int zr_circle_vtx_count = ZR_LEN(zr_circle_vtx);
+
+void
+zr_draw_list_setup(zr_sin_f sine, zr_cos_f cosine)
+{
+    int i = 0;
+    for (i = 0; i < zr_circle_vtx_count; ++i) {
+        const float a = ((float)i / (float)zr_circle_vtx_count) * 2 * ZR_PI;
+        zr_circle_vtx[i].x = cosine(a);
+        zr_circle_vtx[i].y = sine(a);
+    }
+    zr_circle_vtx_builds = zr_true;
+}
+
 void
 zr_draw_list_init(struct zr_draw_list *list, struct zr_buffer *cmds,
     struct zr_buffer *vertexes, struct zr_buffer *elements,
@@ -3068,26 +3084,15 @@ static void
 zr_draw_list_path_arc_to_fast(struct zr_draw_list *list, struct zr_vec2 center,
     float radius, int a_min, int a_max)
 {
-    static struct zr_vec2 circle_vtx[12];
-    static int circle_vtx_builds = zr_false;
-    static const int circle_vtx_count = ZR_LEN(circle_vtx);
-
     ZR_ASSERT(list);
     if (!list) return;
-    if (!circle_vtx_builds) {
-        int i = 0;
-        for (i = 0; i < circle_vtx_count; ++i) {
-            const float a = ((float)i / (float)circle_vtx_count) * 2 * ZR_PI;
-            circle_vtx[i].x = list->cos(a);
-            circle_vtx[i].y = list->sin(a);
-        }
-        circle_vtx_builds = zr_true;
-    }
+    if (!zr_circle_vtx_builds)
+        zr_draw_list_setup(list->sin, list->cos);
 
     if (a_min <= a_max) {
         int a = 0;
         for (a = a_min; a <= a_max; a++) {
-            const struct zr_vec2 c = circle_vtx[a % circle_vtx_count];
+            const struct zr_vec2 c = zr_circle_vtx[a % zr_circle_vtx_count];
             const float x = center.x + c.x * radius;
             const float y = center.y + c.y * radius;
             zr_draw_list_path_line_to(list, zr_vec2(x, y));

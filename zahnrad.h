@@ -1145,6 +1145,13 @@ struct zr_draw_list {
 /* ---------------------------------------------------------------
  *                          MAIN
  * ---------------------------------------------------------------*/
+void zr_draw_list_setup(zr_sin_f sine, zr_cos_f cosine);
+/*  this function setups global lookup tables.
+ *  IMPORTANT: only needs to be called if you call the draw list API in a multithreaded fashion
+    Input:
+    - sine function callback since this library does not use clib (default: just use sinf)
+    - cosine function callback since this library does not use clib (default: just use cosf)
+*/
 void zr_draw_list_init(struct zr_draw_list*, struct zr_buffer *cmds,
                         struct zr_buffer *vertexes, struct zr_buffer *elements,
                         zr_sin_f, zr_cos_f, struct zr_draw_null_texture,
@@ -1485,7 +1492,8 @@ const zr_rune *zr_font_chinese_glyph_ranges(void);
 const zr_rune *zr_font_cyrillic_glyph_ranges(void);
 const zr_rune *zr_font_korean_glyph_ranges(void);
 const zr_rune* zr_font_japanese_glyph_range(void);
-
+/* if you want to call zr_font_japanese_glyph_range with multithreading
+ * please call it once without to initialize the internal lookup table */
 /* ---------------------------------------------------------------
  *                          BAKING
  * ---------------------------------------------------------------*/
