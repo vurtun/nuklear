@@ -6226,7 +6226,7 @@ zr_style_set_font(struct zr_style *style, const struct zr_user_font *font)
 struct zr_vec2
 zr_style_property(const struct zr_style *style, enum zr_style_properties index)
 {
-    static struct zr_vec2 zero;
+    static const struct zr_vec2 zero;
     ZR_ASSERT(style);
     if (!style) return zero;
     return style->properties[index];
@@ -6235,7 +6235,7 @@ zr_style_property(const struct zr_style *style, enum zr_style_properties index)
 struct zr_color
 zr_style_color(const struct zr_style *style, enum zr_style_colors index)
 {
-    static struct zr_color zero;
+    static const struct zr_color zero;
     ZR_ASSERT(style);
     if (!style) return zero;
     return style->colors[index];
