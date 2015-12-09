@@ -1141,6 +1141,8 @@ struct zr_draw_list {
     /* current number of points inside the path */
     unsigned int path_offset;
     /* offset to the first point in the buffer */
+    struct zr_vec2 circle_vtx[12];
+    /* small lookup table for fast circle drawing */
 };
 /* ---------------------------------------------------------------
  *                          MAIN
@@ -1491,9 +1493,6 @@ const zr_rune *zr_font_default_glyph_ranges(void);
 const zr_rune *zr_font_chinese_glyph_ranges(void);
 const zr_rune *zr_font_cyrillic_glyph_ranges(void);
 const zr_rune *zr_font_korean_glyph_ranges(void);
-const zr_rune* zr_font_japanese_glyph_range(void);
-/* if you want to call zr_font_japanese_glyph_range with multithreading
- * please call it once without to initialize the internal lookup table */
 /* ---------------------------------------------------------------
  *                          BAKING
  * ---------------------------------------------------------------*/
