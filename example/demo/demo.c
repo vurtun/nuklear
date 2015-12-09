@@ -227,7 +227,7 @@ button_demo(struct zr_window *window, struct zr_style *config, struct icons *img
     if (zr_input_mouse_clicked(zr_input(&layout), ZR_BUTTON_RIGHT, layout.bounds)) {
         const struct zr_input *in = zr_input(&layout);
         contextual_bounds = zr_rect(in->mouse.pos.x, in->mouse.pos.y, 120, 200);
-        contextual_active = ZR_ACTIVE;
+        contextual_active = zr_true;
     }
     if (contextual_active) {
         config->font.height = 18;

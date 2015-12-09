@@ -350,11 +350,10 @@ node_editor_draw(struct zr_context *layout, struct node_editor *nodedit,
         }
 
         /* node selection + right click popup context menu activation */
-        if (nodedit->menu == ZR_INACTIVE &&
-            zr_input_mouse_clicked(in, ZR_BUTTON_RIGHT, zr_layout_row_space_bounds(layout))) {
+        if (!nodedit->menu && zr_input_mouse_clicked(in, ZR_BUTTON_RIGHT, zr_layout_row_space_bounds(layout))) {
             it = nodedit->begin;
             nodedit->selected = NULL;
-            nodedit->menu = ZR_ACTIVE;
+            nodedit->menu = zr_true;
             nodedit->bounds = zr_rect(in->mouse.pos.x, in->mouse.pos.y, 100, 200);
             while (it) {
                 struct zr_rect b = zr_layout_row_space_rect_to_screen(layout, it->bounds);
@@ -367,29 +366,26 @@ node_editor_draw(struct zr_context *layout, struct node_editor *nodedit,
         }
 
         /* popup context menu */
-        if (nodedit->menu == ZR_ACTIVE) {
+        if (nodedit->menu) {
             struct zr_context menu;
             const char *grid_option[] = {"Show Grid", "Hide Grid"};
             zr_contextual_begin(layout, &menu, ZR_WINDOW_NO_SCROLLBAR, &nodedit->menu, nodedit->bounds);
-            {
-                zr_layout_row_dynamic(&menu, 25, 1);
-                if (!nodedit->selected) {
-                    /* menu content if no selected node */
-                    if (zr_contextual_item(&menu, "New", ZR_TEXT_CENTERED)) {
-                        node_editor_add(nodedit, "New", zr_rect(400, 260, 180, 220),
-                                zr_rgb(255, 255, 255), 1, 2);
-                    }
-                    if (zr_contextual_item(&menu, grid_option[nodedit->show_grid],ZR_TEXT_CENTERED))
-                        nodedit->show_grid = !nodedit->show_grid;
-                } else {
-                    /* menu content if selected node */
-                    if (zr_contextual_item(&menu, "Delete", ZR_TEXT_CENTERED))
-                        fprintf(stdout, "pressed delete!\n");
-                    if (zr_contextual_item(&menu, "Rename", ZR_TEXT_CENTERED))
-                        fprintf(stdout, "pressed rename!\n");
-                    if (zr_contextual_item(&menu, "Copy", ZR_TEXT_CENTERED))
-                        fprintf(stdout, "pressed copy!\n");
-                }
+            zr_layout_row_dynamic(&menu, 25, 1);
+            if (!nodedit->selected) {
+                /* menu content if no selected node */
+                if (zr_contextual_item(&menu, "New", ZR_TEXT_CENTERED))
+                    node_editor_add(nodedit, "New", zr_rect(400, 260, 180, 220),
+                            zr_rgb(255, 255, 255), 1, 2);
+                if (zr_contextual_item(&menu, grid_option[nodedit->show_grid],ZR_TEXT_CENTERED))
+                    nodedit->show_grid = !nodedit->show_grid;
+            } else {
+                /* menu content if selected node */
+                if (zr_contextual_item(&menu, "Delete", ZR_TEXT_CENTERED))
+                    fprintf(stdout, "pressed delete!\n");
+                if (zr_contextual_item(&menu, "Rename", ZR_TEXT_CENTERED))
+                    fprintf(stdout, "pressed rename!\n");
+                if (zr_contextual_item(&menu, "Copy", ZR_TEXT_CENTERED))
+                    fprintf(stdout, "pressed copy!\n");
             }
             zr_contextual_end(layout, &menu, &nodedit->menu);
         }
