@@ -3074,10 +3074,10 @@ static void
 zr_draw_list_path_arc_to_fast(struct zr_draw_list *list, struct zr_vec2 center,
     float radius, int a_min, int a_max)
 {
+    int a = 0;
     ZR_ASSERT(list);
     if (!list) return;
     if (a_min <= a_max) {
-        int a = 0;
         for (a = a_min; a <= a_max; a++) {
             const struct zr_vec2 c = list->circle_vtx[(zr_size)a % ZR_LEN(list->circle_vtx)];
             const float x = center.x + c.x * radius;
@@ -6866,7 +6866,7 @@ zr_end(struct zr_context *layout, struct zr_window *window)
 
             scroll_offset = layout->offset.y;
             scroll_step = layout->clip.h * 0.10f;
-            scroll_target = (layout->at_y - layout->clip.y);
+            scroll_target = (float)(int)(layout->at_y - layout->clip.y);
             scroll.has_scrolling = (layout->flags & ZR_WINDOW_ACTIVE);
             window->offset.y = zr_do_scrollbarv(&state, out, bounds, scroll_offset,
                                 scroll_target, scroll_step, &scroll, in);
@@ -6891,7 +6891,7 @@ zr_end(struct zr_context *layout, struct zr_window *window)
                 bounds.w = layout->width - 2 * window_padding.x;
             }
             scroll_offset = layout->offset.x;
-            scroll_target = layout->max_x - bounds.x;
+            scroll_target = (float)(int)(layout->max_x - bounds.x);
             scroll_step = layout->max_x * 0.05f;
             scroll.has_scrolling = zr_false;
             window->offset.x = zr_do_scrollbarh(&state, out, bounds, scroll_offset,
