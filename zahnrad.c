@@ -9199,7 +9199,6 @@ int zr_menu_item(struct zr_context *menu, enum zr_text_align align, const char *
 {
     int valid = menu->valid;
     int ret = zr_contextual_item(menu, title, align);
-    menu->flags &= ~(unsigned)ZR_WINDOW_HIDDEN;
     menu->valid = valid;
     return ret;
 }
@@ -9209,7 +9208,6 @@ int zr_menu_item_icon(struct zr_context *menu, struct zr_image img,
 {
     int valid = menu->valid;
     int ret = zr_contextual_item_icon(menu, img, title, align);
-    menu->flags &= ~(unsigned)ZR_WINDOW_HIDDEN;
     menu->valid = valid;
     return ret;
 }
@@ -9219,13 +9217,12 @@ int zr_menu_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
 {
     int valid = menu->valid;
     int ret = zr_contextual_item_symbol(menu, symbol, title, align);
-    menu->flags &= ~(unsigned)ZR_WINDOW_HIDDEN;
     menu->valid = valid;
     return ret;
 }
 
 void zr_menu_close(struct zr_context *menu, int *state)
-{zr_popup_close(menu); *state = zr_false;}
+{zr_contextual_close(menu); *state = zr_false;}
 
 void
 zr_menu_end(struct zr_context *parent, struct zr_context *menu)

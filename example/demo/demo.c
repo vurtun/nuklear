@@ -103,7 +103,7 @@ ui_header(struct zr_context *layout, struct zr_style *config, const char *title)
     zr_style_reset_font_height(config);
     zr_style_push_font_height(config, 18);
     zr_layout_row_dynamic(layout, 20, 1);
-    zr_label(layout, "Push buttons", ZR_TEXT_LEFT);
+    zr_label(layout, title, ZR_TEXT_LEFT);
 }
 
 static void
@@ -656,7 +656,6 @@ main(int argc, char *argv[])
     icons.convert = zr_image_id(convert);
     icons.delete = zr_image_id(delete);
     icons.edit = zr_image_id(edit);
-
     for (i = 0; i < 9; ++i)
         icons.images[i] = zr_image_id(images[i]);
 
@@ -672,7 +671,7 @@ main(int argc, char *argv[])
     zr_style_default(&gui.config, ZR_DEFAULT_ALL, &gui.font);
     gui.config.rounding[ZR_ROUNDING_BUTTON] = 3;
 
-    zr_window_init(&gui.button_demo, zr_rect(50, 50, 250, 600),
+    zr_window_init(&gui.button_demo, zr_rect(50, 50, 255, 600),
         ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_BORDER_HEADER,
         &gui.queue, &gui.config, &gui.input);
     zr_window_init(&gui.basic_demo, zr_rect(320, 50, 275, 600),
@@ -681,7 +680,6 @@ main(int argc, char *argv[])
     zr_window_init(&gui.grid_demo, zr_rect(600, 350, 275, 250),
         ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_BORDER_HEADER|ZR_WINDOW_NO_SCROLLBAR,
         &gui.queue, &gui.config, &gui.input);
-
 
     while (running) {
         /* Input */
