@@ -56,23 +56,23 @@
 #include "../../zahnrad.h"
 
 struct icons {
-    struct zr_image unchecked;
-    struct zr_image checked;
-    struct zr_image rocket;
-    struct zr_image cloud;
-    struct zr_image pen;
-    struct zr_image play;
-    struct zr_image pause;
-    struct zr_image stop;
-    struct zr_image prev;
-    struct zr_image next;
-    struct zr_image tools;
-    struct zr_image directory;
-    struct zr_image copy;
-    struct zr_image convert;
-    struct zr_image delete;
-    struct zr_image edit;
-    struct zr_image images[9];
+    int unchecked;
+    int checked;
+    int rocket;
+    int cloud;
+    int pen;
+    int play;
+    int pause;
+    int stop;
+    int prev;
+    int next;
+    int tools;
+    int directory;
+    int copy;
+    int convert;
+    int delete;
+    int edit;
+    int images[9];
 };
 
 struct gui {
@@ -148,25 +148,25 @@ button_demo(struct zr_window *window, struct zr_style *config, struct icons *img
     {
         /* toolbar */
         zr_layout_row_static(&layout, 40, 40, 4);
-        zr_menu_icon_begin(&layout, &menu, img->play, 120, &music_active);
+        zr_menu_icon_begin(&layout, &menu, zr_image_id(img->play), 120, &music_active);
         {
             /* settings */
             zr_layout_row_dynamic(&menu, 25, 1);
-            if (zr_menu_item_icon(&menu, img->play, "Play", ZR_TEXT_RIGHT))
+            if (zr_menu_item_icon(&menu, zr_image_id(img->play), "Play", ZR_TEXT_RIGHT))
                 zr_menu_close(&menu, &music_active);
-            if (zr_menu_item_icon(&menu, img->stop, "Stop", ZR_TEXT_RIGHT))
+            if (zr_menu_item_icon(&menu, zr_image_id(img->stop), "Stop", ZR_TEXT_RIGHT))
                 zr_menu_close(&menu, &music_active);
-            if (zr_menu_item_icon(&menu, img->pause, "Pause", ZR_TEXT_RIGHT))
+            if (zr_menu_item_icon(&menu, zr_image_id(img->pause), "Pause", ZR_TEXT_RIGHT))
                 zr_menu_close(&menu, &music_active);
-            if (zr_menu_item_icon(&menu, img->next, "Next", ZR_TEXT_RIGHT))
+            if (zr_menu_item_icon(&menu, zr_image_id(img->next), "Next", ZR_TEXT_RIGHT))
                 zr_menu_close(&menu, &music_active);
-            if (zr_menu_item_icon(&menu, img->next, "Prev", ZR_TEXT_RIGHT))
+            if (zr_menu_item_icon(&menu, zr_image_id(img->prev), "Prev", ZR_TEXT_RIGHT))
                 zr_menu_close(&menu, &music_active);
         }
         zr_menu_end(&layout, &menu);
-        zr_button_image(&layout, img->tools, ZR_BUTTON_DEFAULT);
-        zr_button_image(&layout, img->cloud, ZR_BUTTON_DEFAULT);
-        zr_button_image(&layout, img->pen, ZR_BUTTON_DEFAULT);
+        zr_button_image(&layout, zr_image_id(img->tools), ZR_BUTTON_DEFAULT);
+        zr_button_image(&layout, zr_image_id(img->cloud), ZR_BUTTON_DEFAULT);
+        zr_button_image(&layout, zr_image_id(img->pen), ZR_BUTTON_DEFAULT);
     }
     zr_menubar_end(&layout);
 
@@ -177,9 +177,8 @@ button_demo(struct zr_window *window, struct zr_style *config, struct icons *img
     ui_widget(&layout, config, 35, 22);
     if (zr_button_text(&layout, "Push me", ZR_BUTTON_DEFAULT))
         fprintf(stdout, "pushed!\n");
-
     ui_widget(&layout, config, 35, 22);
-    if (zr_button_text_image(&layout, img->rocket,
+    if (zr_button_text_image(&layout, zr_image_id(img->rocket),
         "Styled", ZR_TEXT_CENTERED, ZR_BUTTON_DEFAULT))
         fprintf(stdout, "rocket!\n");
 
@@ -196,16 +195,19 @@ button_demo(struct zr_window *window, struct zr_style *config, struct icons *img
      *------------------------------------------------*/
     ui_header(&layout, config, "Toggle buttons");
     ui_widget(&layout, config, 35, 22);
-    if (zr_button_text_image(&layout, (toggle0) ? img->checked: img->unchecked,
-        "Toggle", ZR_TEXT_LEFT, ZR_BUTTON_DEFAULT)) toggle0 = !toggle0;
+    if (zr_button_text_image(&layout, (toggle0) ? zr_image_id(img->checked):
+        zr_image_id(img->unchecked), "Toggle", ZR_TEXT_LEFT, ZR_BUTTON_DEFAULT))
+        toggle0 = !toggle0;
 
     ui_widget(&layout, config, 35, 22);
-    if (zr_button_text_image(&layout, (toggle1) ? img->checked: img->unchecked,
-        "Toggle", ZR_TEXT_LEFT, ZR_BUTTON_DEFAULT)) toggle1 = !toggle1;
+    if (zr_button_text_image(&layout, (toggle1) ? zr_image_id(img->checked):
+        zr_image_id(img->unchecked), "Toggle", ZR_TEXT_LEFT, ZR_BUTTON_DEFAULT))
+        toggle1 = !toggle1;
 
     ui_widget(&layout, config, 35, 22);
-    if (zr_button_text_image(&layout, (toggle2) ? img->checked: img->unchecked,
-        "Toggle", ZR_TEXT_LEFT, ZR_BUTTON_DEFAULT)) toggle2 = !toggle2;
+    if (zr_button_text_image(&layout, (toggle2) ? zr_image_id(img->checked):
+        zr_image_id(img->unchecked), "Toggle", ZR_TEXT_LEFT, ZR_BUTTON_DEFAULT))
+        toggle2 = !toggle2;
 
     /*------------------------------------------------
      *                  RADIO
@@ -233,13 +235,13 @@ button_demo(struct zr_window *window, struct zr_style *config, struct icons *img
         config->font.height = 18;
         zr_contextual_begin(&layout, &menu, ZR_WINDOW_NO_SCROLLBAR, &contextual_active, contextual_bounds);
         zr_layout_row_dynamic(&menu, 25, 1);
-        if (zr_contextual_item_icon(&menu, img->copy, "Clone", ZR_TEXT_RIGHT))
+        if (zr_contextual_item_icon(&menu, zr_image_id(img->copy), "Clone", ZR_TEXT_RIGHT))
             fprintf(stdout, "pressed clone!\n");
-        if (zr_contextual_item_icon(&menu, img->delete, "Delete", ZR_TEXT_RIGHT))
+        if (zr_contextual_item_icon(&menu, zr_image_id(img->delete), "Delete", ZR_TEXT_RIGHT))
             fprintf(stdout, "pressed delete!\n");
-        if (zr_contextual_item_icon(&menu, img->convert, "Convert", ZR_TEXT_RIGHT))
+        if (zr_contextual_item_icon(&menu, zr_image_id(img->convert), "Convert", ZR_TEXT_RIGHT))
             fprintf(stdout, "pressed convert!\n");
-        if (zr_contextual_item_icon(&menu, img->edit, "Edit", ZR_TEXT_RIGHT))
+        if (zr_contextual_item_icon(&menu, zr_image_id(img->edit), "Edit", ZR_TEXT_RIGHT))
             fprintf(stdout, "pressed edit!\n");
         zr_contextual_end(&layout, &menu, &contextual_active);
     }
@@ -270,7 +272,7 @@ basic_demo(struct zr_window *window, struct zr_style *config, struct icons *img)
      *------------------------------------------------*/
     ui_header(&layout, config, "Popup & Scrollbar & Images");
     ui_widget(&layout, config, 35, 22);
-    if (zr_button_text_image(&layout, img->directory,
+    if (zr_button_text_image(&layout, zr_image_id(img->directory),
         "Images", ZR_TEXT_CENTERED, ZR_BUTTON_DEFAULT))
         image_active = !image_active;
 
@@ -279,7 +281,7 @@ basic_demo(struct zr_window *window, struct zr_style *config, struct icons *img)
      *------------------------------------------------*/
     ui_header(&layout, config, "Selected Image");
     ui_widget_centered(&layout, config, 100, 22);
-    zr_image(&layout, img->images[selected_image]);
+    zr_image(&layout, zr_image_id(img->images[selected_image]));
 
     /*------------------------------------------------
      *                  IMAGE POPUP
@@ -288,10 +290,10 @@ basic_demo(struct zr_window *window, struct zr_style *config, struct icons *img)
         struct zr_context popup;
         static struct zr_vec2 scrollbar;
         zr_popup_begin(&layout, &popup, ZR_POPUP_STATIC, 0, 0,
-            zr_rect(265, 0, 300, 200), scrollbar);
+            zr_rect(265, 0, 300, 220), scrollbar);
         zr_layout_row_static(&popup, 82, 82, 3);
         for (i = 0; i < 9; ++i) {
-            if (zr_button_image(&popup, img->images[i], ZR_BUTTON_DEFAULT)) {
+            if (zr_button_image(&popup, zr_image_id(img->images[i]), ZR_BUTTON_DEFAULT)) {
                 selected_image = i;
                 image_active = 0;
                 zr_popup_close(&popup);
@@ -563,23 +565,6 @@ main(int argc, char *argv[])
 
     /* images */
     struct icons icons;
-    int unchecked;
-    int checked;
-    int rocket;
-    int cloud;
-    int pen;
-    int play;
-    int stop;
-    int pause;
-    int next;
-    int prev;
-    int tools;
-    int directory;
-    int images[9];
-    int copy;
-    int convert;
-    int delete;
-    int edit;
 
     /* GUI */
     struct gui gui;
@@ -616,48 +601,28 @@ main(int argc, char *argv[])
     nvgFontSize(vg, font_height);
     nvgTextAlign(vg, NVG_ALIGN_LEFT|NVG_ALIGN_MIDDLE);
 
-    /* images */
-    unchecked = nvgCreateImage(vg, "../icon/unchecked.png", 0);
-    checked = nvgCreateImage(vg, "../icon/checked.png", 0);
-    rocket = nvgCreateImage(vg, "../icon/rocket.png", 0);
-    cloud = nvgCreateImage(vg, "../icon/cloud.png", 0);
-    pen = nvgCreateImage(vg, "../icon/pen.png", 0);
-    play = nvgCreateImage(vg, "../icon/play.png", 0);
-    pause = nvgCreateImage(vg, "../icon/pause.png", 0);
-    stop = nvgCreateImage(vg, "../icon/stop.png", 0);
-    next =  nvgCreateImage(vg, "../icon/next.png", 0);
-    prev =  nvgCreateImage(vg, "../icon/prev.png", 0);
-    tools = nvgCreateImage(vg, "../icon/tools.png", 0);
-    directory = nvgCreateImage(vg, "../icon/directory.png", 0);
-    copy = nvgCreateImage(vg, "../icon/copy.png", 0);
-    convert = nvgCreateImage(vg, "../icon/export.png", 0);
-    delete = nvgCreateImage(vg, "../icon/delete.png", 0);
-    edit = nvgCreateImage(vg, "../icon/edit.png", 0);
+    /* icons */
+    icons.unchecked = nvgCreateImage(vg, "../icon/unchecked.png", 0);
+    icons.checked = nvgCreateImage(vg, "../icon/checked.png", 0);
+    icons.rocket = nvgCreateImage(vg, "../icon/rocket.png", 0);
+    icons.cloud = nvgCreateImage(vg, "../icon/cloud.png", 0);
+    icons.pen = nvgCreateImage(vg, "../icon/pen.png", 0);
+    icons.play = nvgCreateImage(vg, "../icon/play.png", 0);
+    icons.pause = nvgCreateImage(vg, "../icon/pause.png", 0);
+    icons.stop = nvgCreateImage(vg, "../icon/stop.png", 0);
+    icons.next =  nvgCreateImage(vg, "../icon/next.png", 0);
+    icons.prev =  nvgCreateImage(vg, "../icon/prev.png", 0);
+    icons.tools = nvgCreateImage(vg, "../icon/tools.png", 0);
+    icons.directory = nvgCreateImage(vg, "../icon/directory.png", 0);
+    icons.copy = nvgCreateImage(vg, "../icon/copy.png", 0);
+    icons.convert = nvgCreateImage(vg, "../icon/export.png", 0);
+    icons.delete = nvgCreateImage(vg, "../icon/delete.png", 0);
+    icons.edit = nvgCreateImage(vg, "../icon/edit.png", 0);
     for (i = 0; i < 9; ++i) {
         char buffer[64];
         sprintf(buffer, "../images/image%d.jpg", (i+1));
-        images[i] = nvgCreateImage(vg, buffer, 0);
+        icons.images[i] = nvgCreateImage(vg, buffer, 0);
     }
-
-    /* icons */
-    icons.unchecked = zr_image_id(unchecked);
-    icons.checked = zr_image_id(checked);
-    icons.rocket = zr_image_id(rocket);
-    icons.cloud = zr_image_id(cloud);
-    icons.pen = zr_image_id(pen);
-    icons.play = zr_image_id(play);
-    icons.tools = zr_image_id(tools);
-    icons.directory = zr_image_id(directory);
-    icons.pause = zr_image_id(pause);
-    icons.stop = zr_image_id(stop);
-    icons.prev = zr_image_id(prev);
-    icons.next = zr_image_id(next);
-    icons.copy = zr_image_id(copy);
-    icons.convert = zr_image_id(convert);
-    icons.delete = zr_image_id(delete);
-    icons.edit = zr_image_id(edit);
-    for (i = 0; i < 9; ++i)
-        icons.images[i] = zr_image_id(images[i]);
 
     /* GUI */
     memset(&gui, 0, sizeof gui);
@@ -721,18 +686,18 @@ main(int argc, char *argv[])
 
 cleanup:
     /* Cleanup */
-    nvgDeleteImage(vg, unchecked);
-    nvgDeleteImage(vg, checked);
-    nvgDeleteImage(vg, rocket);
-    nvgDeleteImage(vg, cloud);
-    nvgDeleteImage(vg, pen);
-    nvgDeleteImage(vg, play);
-    nvgDeleteImage(vg, pause);
-    nvgDeleteImage(vg, stop);
-    nvgDeleteImage(vg, next);
-    nvgDeleteImage(vg, prev);
-    nvgDeleteImage(vg, tools);
-    nvgDeleteImage(vg, directory);
+    nvgDeleteImage(vg, icons.unchecked);
+    nvgDeleteImage(vg, icons.checked);
+    nvgDeleteImage(vg, icons.rocket);
+    nvgDeleteImage(vg, icons.cloud);
+    nvgDeleteImage(vg, icons.pen);
+    nvgDeleteImage(vg, icons.play);
+    nvgDeleteImage(vg, icons.pause);
+    nvgDeleteImage(vg, icons.stop);
+    nvgDeleteImage(vg, icons.next);
+    nvgDeleteImage(vg, icons.prev);
+    nvgDeleteImage(vg, icons.tools);
+    nvgDeleteImage(vg, icons.directory);
 
     free(gui.memory);
     nvgDeleteGLES2(vg);
