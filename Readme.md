@@ -3,9 +3,9 @@
 
 This is a minimal state immediate mode graphical user interface toolkit
 written in ANSI C and licensed under zlib. It was designed as a simple embeddable user interface for
-application and does not have any direct dependencies. It does not have
-a default renderbackend, os window and input handling but instead provides a very modular
-library approach by providing a simple input state storage for input and draw
+application and does not have any direct dependencies,
+a default renderbackend or OS window and input handling but instead provides a very modular
+library approach by using simple input state for input and draw
 commands describing primitive shapes as output. So instead of providing a
 layered library that tries to abstract over a number of platform and
 render backends it only focuses on the actual UI.
@@ -15,8 +15,8 @@ render backends it only focuses on the actual UI.
 - Written in C89 (ANSI C)
 - Small codebase (~8kLOC)
 - Focus on portability, efficiency, simplicity and minimal internal state
+- No dependencies (not even the standard library)
 - No global or hidden state
-- No direct dependencies
 - Configurable style and colors
 - UTF-8 support
 
@@ -71,33 +71,28 @@ zr_end(&context, &window);
 ![example](https://cloud.githubusercontent.com/assets/8057201/10187981/584ecd68-675c-11e5-897c-822ef534a876.png)
 
 ## Documentation
-For code related documentation and information on how to link each single part to a whole I
-would recommend reading the documentation inside the `zahnrad.h` header file wich has
-information and descriptions about each part, struct, members and functions. In addition
-I would especially recommend reading the examples and the demo.
+Zahnrad currently relies heavily on documentation provided inside the `zahnrad.h` header file, consisting
+of descriptions and important information about modules, data types and functions.
+While being quite limited in delivering information about the general high-level libray composition it
+should still offer some understanding about the inner workings and stand as a practical usage reference. 
 
-If you want to dive into the example code I would recommand starting with `example/demo/demo.c`,
-even if you don't know or want to use nanovg. It contains the usage code for every simple to use
-core part of the library while providing a good looking UI. It also introduces a small set
-of widgets while providing a simple example of how to do layouting.
+## Examples
+A number of usage examples can be found inside the `example` and `demo` folder which should yield a
+basic overview how to embed the libray into different platforms with varying APIs and provided functionality
+and hopefully offer a basic understanding of zahnrad's UI API.
+In general it is advised to start by reading `example/demo`. It consists of a basic embedding example into
+SDL, OpenGL and [NanoVG](https://github.com/memononen/nanovg) with a very simple set of used widgets and layouting.
 
-As soon as you have a basic grip of how to use the library I would recommend looking at
-`demo/demo.c`. It only contains the actual UI part of the GUI but offers example ussage
-code for all widgets in the library. So it functions more as a reference to look how
-a widget is supposed to be used.
+As soon as a basic understanding of the library is accumulated it is recommended to look into the `demo/` folder with your platform
+of choice. For now a basic platform layer was implemented for Linux(X11), Windows(win32) and OpenGL with SDL and GLFW. 
+Both platform specific demos (X11, win32) use their respectable window, input, draw and font API and don't have any
+outside dependencies which should qualify them as the first platform to compile, run and test.
+For hardware supported rendering, font both the SDL and GLFW version use zahnrad's internal vertex buffer output
+and font baker.
 
-On how to do the platform and render backend depended part I would recommend looking at
-some example platform implementations for Win32 (`demo/win32/win32.c`) for windows and
-X11 (`demo/x11.xlib.c`) for linux. Both provide the absolute minimum needed platform
-dependend code without using any libraries. Finally for the most complex plaform demos
-it is definitely worth it to read the OpenGL examples with `demo/sdl/sdl.c` for
-zahnrad integration with SDL2, OpenGL and GLEW and `demo/glfw/glfw.c` for integration
-with GLFW, OpenGL and GLEW. They also include usage code for the optional zahnrad font handling
-and vertex buffer output.
-
-The final two examples `example/filex/filex.c` and `example/nodedit/nodedit.c` both provide
-actual example application use cases for this library. Filex is a simple file browser for Linux
-and shows how to do window tiling. The node editor on the other hand is probably the more
-interesting of the two since it shows how far you can bend this library to your
-specific problem on hand.
+Up until now you should hopefully have a basic grip of how to use zahnrad UI API and be able to embed zahnrad into
+your plaform. From here on `demo/demo.c` should provide a basic reference on how use most widgets and layouting.
+Finally for some small actual working example apps both `example/filex` with implementation of a linux only
+file browser and `example/nodedit` with a basic node editor skeleton are provided. Especially the `nodedit` example
+should show how far you can bend the this library to your own needs.
 
