@@ -128,25 +128,6 @@ ui_widget_centered(struct zr_context *layout, struct zr_style *config, float hei
 }
 
 static int
-zr_button_behavior(enum zr_widget_states *state, struct zr_rect r,
-    const struct zr_input *i, enum zr_button_behavior behavior)
-{
-    int ret = 0;
-    *state = ZR_INACTIVE;
-    if (zr_input_is_mouse_hovering_rect(i, r)) {
-        *state = ZR_HOVERED;
-        if (zr_input_is_mouse_down(i, ZR_BUTTON_LEFT))
-            *state = ZR_ACTIVE;
-        if (zr_input_has_mouse_click_in_rect(i, ZR_BUTTON_LEFT, r)) {
-            ret = (behavior != ZR_BUTTON_DEFAULT) ?
-                zr_input_is_mouse_down(i, ZR_BUTTON_LEFT):
-                zr_input_is_mouse_pressed(i, ZR_BUTTON_LEFT);
-        }
-    }
-    return ret;
-}
-
-static int
 ui_piemenu(struct zr_context *layout, struct zr_style *config,
     struct zr_vec2 pos, float radius, int *icons, int item_count)
 {
