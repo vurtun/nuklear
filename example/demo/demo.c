@@ -73,6 +73,7 @@ struct icons {
     int delete;
     int edit;
     int images[9];
+    int menu[6];
 };
 
 struct gui {
@@ -124,6 +125,125 @@ ui_widget_centered(struct zr_context *layout, struct zr_style *config, float hei
     zr_style_push_font_height(config, font_height);
     zr_layout_row(layout, ZR_DYNAMIC, height, 3, ratio);
     zr_spacing(layout, 1);
+}
+
+static int
+zr_button_behavior(enum zr_widget_states *state, struct zr_rect r,
+    const struct zr_input *i, enum zr_button_behavior behavior)
+{
+    int ret = 0;
+    *state = ZR_INACTIVE;
+    if (zr_input_is_mouse_hovering_rect(i, r)) {
+        *state = ZR_HOVERED;
+        if (zr_input_is_mouse_down(i, ZR_BUTTON_LEFT))
+            *state = ZR_ACTIVE;
+        if (zr_input_has_mouse_click_in_rect(i, ZR_BUTTON_LEFT, r)) {
+            ret = (behavior != ZR_BUTTON_DEFAULT) ?
+                zr_input_is_mouse_down(i, ZR_BUTTON_LEFT):
+                zr_input_is_mouse_pressed(i, ZR_BUTTON_LEFT);
+        }
+    }
+    return ret;
+}
+
+static int
+ui_piemenu(struct zr_context *layout, struct zr_style *config,
+    struct zr_vec2 pos, float radius, int *icons, int item_count)
+{
+    int ret = -1;
+    struct zr_rect total_space;
+    struct zr_context menu;
+    enum zr_widget_state state;
+    struct zr_color border;
+    struct zr_rect bounds;
+    int active = 0;
+
+    zr_style_push_color(config, ZR_COLOR_WINDOW, zr_rgba(0,0,0,0));
+    border = config->colors[ZR_COLOR_BORDER];
+    zr_style_push_color(config, ZR_COLOR_BORDER, zr_rgba(0,0,0,0));
+
+    /* pie menu popup */
+    zr_popup_begin(layout, &menu, ZR_POPUP_STATIC, 0, ZR_WINDOW_NO_SCROLLBAR,
+        zr_rect(pos.x-layout->clip.x-radius,pos.y-radius-layout->clip.y,
+        2*radius,2*radius), zr_vec2(0,0));
+    total_space = zr_space(&menu);
+
+    zr_layout_row_space_begin(&menu, ZR_STATIC, total_space.h, 1);
+    {
+        int i = 0;
+        struct zr_command_buffer* out = zr_canvas(&menu);
+        const struct zr_input *in = zr_input(&menu);
+        {
+            /* allocate complete popup space for the menu */
+            enum zr_widget_states states;
+            total_space = zr_space(&menu);
+            total_space.x = total_space.y = 0;
+            zr_layout_row_space_push(&menu, total_space);
+            state = zr_widget(&bounds, &menu);
+        }
+
+        /* outer circle */
+        zr_command_buffer_push_circle(out, bounds, zr_rgb(50,50,50));
+
+        {
+            /* circle buttons */
+            float step = (2 * 3.141592654f) / (float)(MAX(1,item_count));
+            float a_min = 0; float a_max = step;
+            struct zr_vec2 center = zr_vec2(bounds.x + bounds.w / 2.0f, center.y = bounds.y + bounds.h / 2.0f);
+            struct zr_vec2 drag = zr_vec2(in->mouse.pos.x - center.x, in->mouse.pos.y - center.y);
+            float angle = (float)atan2(drag.y, drag.x);
+            if (angle < -0.5f * step) angle += 2.0f * 3.141592654f;
+            active = (int)(angle/step);
+            for (i = 0; i < item_count; ++i) {
+                struct zr_image img;
+                struct zr_rect content;
+                float rx, ry, dx, dy, a;
+                zr_command_buffer_push_arc(out, center.x, center.y, (bounds.w/2.0f),
+                    a_min, a_max, (active == i) ? zr_rgb(45,100,255) : zr_rgb(75,75,75));
+
+                /* seperator line */
+                rx = bounds.w/2.0f; ry = 0;
+                dx = rx * (float)cos(a_min) - ry * (float)sin(a_min);
+                dy = rx * (float)sin(a_min) + ry * (float)cos(a_min);
+                zr_command_buffer_push_line(out, center.x, center.y,
+                    center.x + dx, center.y + dy, zr_rgb(50,50,50));
+
+                /* button content */
+                a = a_min + (a_max - a_min)/2.0f;
+                rx = bounds.w/2.5f; ry = 0;
+                content.w = 30; content.h = 30;
+                content.x = center.x + ((rx * (float)cos(a) - ry * (float)sin(a)) - content.w/2.0f);
+                content.y = center.y + (rx * (float)sin(a) + ry * (float)cos(a) - content.h/2.0f);
+                img = zr_image_id(icons[i]);
+                zr_command_buffer_push_image(out, content, &img);
+                a_min = a_max; a_max += step;
+            }
+        }
+        {
+            /* inner circle */
+            struct zr_rect inner;
+            struct zr_image img;
+            inner.x = bounds.x + bounds.w/2 - bounds.w/4;
+            inner.y = bounds.y + bounds.h/2 - bounds.h/4;
+            inner.w = bounds.w/2; inner.h = bounds.h/2;
+            zr_command_buffer_push_circle(out, inner, zr_rgb(45,45,45));
+
+            /* active icon content */
+            bounds.w = inner.w / 2.0f;
+            bounds.h = inner.h / 2.0f;
+            bounds.x = inner.x + inner.w/2 - bounds.w/2;
+            bounds.y = inner.y + inner.h/2 - bounds.h/2;
+            img = zr_image_id(icons[active]);
+            zr_command_buffer_push_image(out, bounds, &img);
+        }
+    }
+    zr_layout_row_space_end(&menu);
+    zr_popup_end(layout, &menu, 0);
+    zr_style_reset_colors(config);
+    zr_style_reset_properties(config);
+    if (!zr_input_is_mouse_down(zr_input(layout), ZR_BUTTON_RIGHT))
+        return active;
+    else return ret;
 }
 
 static void
@@ -260,6 +380,7 @@ basic_demo(struct zr_window *window, struct zr_style *config, struct icons *img)
     static int selected_item = 0;
     static int selected_image = 2;
     static const char *items[] = {"Item 0","item 1","item 2"};
+    static int piemenu_active = 0;
 
     int i = 0;
     struct zr_context layout;
@@ -336,6 +457,20 @@ basic_demo(struct zr_window *window, struct zr_style *config, struct icons *img)
     ui_header(&layout, config, "Slider");
     ui_widget(&layout, config, 35, 22);
     zr_slider_int(&layout, 0, &slider, 100, 10);
+
+    /*------------------------------------------------
+     *                  PIEMENU
+     *------------------------------------------------*/
+    if (zr_input_is_mouse_down(zr_input(&layout), ZR_BUTTON_RIGHT) &&
+        zr_input_is_mouse_hovering_rect(zr_input(&layout), layout.bounds))
+        piemenu_active = 1;
+    if (piemenu_active) {
+        int ret = ui_piemenu(&layout, config, zr_vec2(WINDOW_WIDTH/2-150, WINDOW_HEIGHT/2-150), 140, &img->menu[0], 6);
+        if (ret != -1) {
+            fprintf(stdout, "piemenu selected: %d\n", ret);
+            piemenu_active = 0;
+        }
+    }
     zr_end(&layout, window);
 }
 
@@ -444,6 +579,14 @@ draw(NVGcontext *nvg, struct zr_command_queue *queue, int width, int height)
             const struct zr_command_circle *c = zr_command(circle, cmd);
             nvgBeginPath(nvg);
             nvgCircle(nvg, c->x + (c->w/2.0f), c->y + c->w/2.0f, c->w/2.0f);
+            nvgFillColor(nvg, nvgRGBA(c->color.r, c->color.g, c->color.b, c->color.a));
+            nvgFill(nvg);
+        } break;
+        case ZR_COMMAND_ARC: {
+            const struct zr_command_arc *c = zr_command(arc, cmd);
+            nvgBeginPath(nvg);
+            nvgMoveTo(nvg, c->cx, c->cy);
+            nvgArc(nvg, c->cx, c->cy, c->r, c->a[0], c->a[1], NVG_CW);
             nvgFillColor(nvg, nvgRGBA(c->color.r, c->color.g, c->color.b, c->color.a));
             nvgFill(nvg);
         } break;
@@ -618,6 +761,12 @@ main(int argc, char *argv[])
     icons.convert = nvgCreateImage(vg, "../icon/export.png", 0);
     icons.delete = nvgCreateImage(vg, "../icon/delete.png", 0);
     icons.edit = nvgCreateImage(vg, "../icon/edit.png", 0);
+    icons.menu[0] = nvgCreateImage(vg, "../icon/home.png", 0);
+    icons.menu[1] = nvgCreateImage(vg, "../icon/phone.png", 0);
+    icons.menu[2] = nvgCreateImage(vg, "../icon/plane.png", 0);
+    icons.menu[3] = nvgCreateImage(vg, "../icon/wifi.png", 0);
+    icons.menu[4] = nvgCreateImage(vg, "../icon/settings.png", 0);
+    icons.menu[5] = nvgCreateImage(vg, "../icon/volume.png", 0);
     for (i = 0; i < 9; ++i) {
         char buffer[64];
         sprintf(buffer, "../images/image%d.jpg", (i+1));
@@ -698,6 +847,10 @@ cleanup:
     nvgDeleteImage(vg, icons.prev);
     nvgDeleteImage(vg, icons.tools);
     nvgDeleteImage(vg, icons.directory);
+    for (i = 0; i < 9; ++i)
+        nvgDeleteImage(vg, icons.images[i]);
+    for (i = 0; i < 6; ++i)
+        nvgDeleteImage(vg, icons.menu[i]);
 
     free(gui.memory);
     nvgDeleteGLES2(vg);
