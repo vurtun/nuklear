@@ -271,6 +271,7 @@ device_shutdown(struct device *dev)
     glDeleteTextures(1, &dev->font_tex);
     glDeleteBuffers(1, &dev->vbo);
     glDeleteBuffers(1, &dev->ebo);
+    glDeleteVertexArrays(1, &dev->vao);
 }
 
 /* this is stupid but needed for C89 since sinf and cosf do not exist */
