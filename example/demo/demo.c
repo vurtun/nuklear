@@ -162,10 +162,8 @@ ui_piemenu(struct zr_context *layout, struct zr_style *config,
             zr_layout_row_space_push(&menu, total_space);
             state = zr_widget(&bounds, &menu);
         }
-
         /* outer circle */
         zr_command_buffer_push_circle(out, bounds, zr_rgb(50,50,50));
-
         {
             /* circle buttons */
             float step = (2 * 3.141592654f) / (float)(MAX(1,item_count));
@@ -174,8 +172,11 @@ ui_piemenu(struct zr_context *layout, struct zr_style *config,
             struct zr_vec2 center = zr_vec2(bounds.x + bounds.w / 2.0f, center.y = bounds.y + bounds.h / 2.0f);
             struct zr_vec2 drag = zr_vec2(in->mouse.pos.x - center.x, in->mouse.pos.y - center.y);
             float angle = (float)atan2(drag.y, drag.x);
-            if (angle < -0.5f * step) angle += 2.0f * 3.141592654f;
+            if (angle < -0.0f) angle += 2.0f * 3.141592654f;
             active = (int)(angle/step);
+
+            #define RAD2DEG(a) ((a)*(180.0f/3.141592654f))
+            fprintf(stdout, "%.2f %d\n", RAD2DEG(angle), active);
 
             for (i = 0; i < item_count; ++i) {
                 struct zr_image img;
@@ -449,7 +450,7 @@ basic_demo(struct zr_window *window, struct zr_style *config, struct icons *img)
         zr_input_is_mouse_hovering_rect(zr_input(&layout), layout.bounds))
         piemenu_active = 1;
     if (piemenu_active) {
-        int ret = ui_piemenu(&layout, config, zr_vec2(WINDOW_WIDTH/2-150, WINDOW_HEIGHT/2-150), 140, &img->menu[0], 6);
+        int ret = ui_piemenu(&layout, config, zr_vec2(WINDOW_WIDTH/2-140, WINDOW_HEIGHT/2-140), 140, &img->menu[0], 6);
         if (ret != -1) {
             fprintf(stdout, "piemenu selected: %d\n", ret);
             piemenu_active = 0;
