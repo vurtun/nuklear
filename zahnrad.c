@@ -106,6 +106,14 @@ template<typename T> struct zr_alignof{struct Big {T x; char c;}; enum {
 #else
 #define ZR_ALIGNOF(t) ((char*)(&((struct {char c; t _h;}*)0)->_h) - (char*)0)
 #endif
+
+/* make sure correct type size */
+typedef int zr__check_size[(sizeof(void*) == sizeof(zr_size)) ? 1 : -1];
+typedef int zr__check_ptr[(sizeof(void*) == sizeof(zr_ptr)) ? 1 : -1];
+typedef int zr__check_flags[(sizeof(zr_flags) >= 4) ? 1 : -1];
+typedef int zr__check_rune[(sizeof(zr_rune) >= 4) ? 1 : -1];
+typedef int zr__check_uint[(sizeof(zr_uint) == 4) ? 1 : -1];
+typedef int zr__check_ulong[(sizeof(zr_ulong) == 8) ? 1 : -1];
 /*
  * ==============================================================
  *
@@ -113,8 +121,8 @@ template<typename T> struct zr_alignof{struct Big {T x; char c;}; enum {
  *
  * ===============================================================
  */
-static uint32_t
-zr_round_up_pow2(uint32_t v)
+static zr_uint
+zr_round_up_pow2(zr_uint v)
 {
     v--;
     v |= v >> 1;
@@ -131,7 +139,7 @@ zr_inv_sqrt(float number)
 {
     float x2;
     const float threehalfs = 1.5f;
-    union {uint32_t i; float f;} conv;
+    union {zr_uint i; float f;} conv;
     conv.f = number;
     x2 = number * 0.5f;
     conv.i = 0x5f375A84 - (conv.i >> 1);
@@ -376,22 +384,22 @@ zr_pow(double x, int n)
     return plus ? r : 1.0 / r;
 }
 
-static int32_t
+static zr_uint
 zr_isinf(double x)
 {
-    union {uint64_t u; double f;} ieee754;
+    union {zr_ulong u; double f;} ieee754;
     ieee754.f = x;
-    return ( (unsigned)(ieee754.u >> 32) & 0x7fffffff ) == 0x7ff00000 &&
-           ( (unsigned)ieee754.u == 0 );
+    return ( (zr_uint)(ieee754.u >> 32) & 0x7fffffff ) == 0x7ff00000 &&
+           ( (zr_uint)ieee754.u == 0 );
 }
 
-static int32_t
+static zr_uint
 zr_isnan(double x)
 {
-    union {uint64_t u; double f;} ieee754;
+    union {zr_ulong u; double f;} ieee754;
     ieee754.f = x;
-    return ( (unsigned)(ieee754.u >> 32) & 0x7fffffff ) +
-           ( (unsigned)ieee754.u != 0 ) > 0x7ff00000;
+    return ((zr_uint)(ieee754.u >> 32) & 0x7fffffff ) +
+           ((zr_uint)ieee754.u != 0 ) > 0x7ff00000;
 }
 
 static double
@@ -527,7 +535,7 @@ zr_rgb(zr_byte r, zr_byte g, zr_byte b)
 }
 
 struct zr_color
-zr_rgba32(uint32_t in)
+zr_rgba32(zr_uint in)
 {
     struct zr_color ret;
     ret.r = (in & 0xFF);
@@ -586,7 +594,7 @@ zr_hsva_f(float h, float s, float v, float a)
 {
     struct zr_colorf {float r,g,b,a;} out;
     float hh, p, q, t, ff;
-    uint32_t i;
+    zr_uint i;
 
     if (s <= 0.0f) {
         out.r = v; out.g = v; out.b = v;
@@ -596,7 +604,7 @@ zr_hsva_f(float h, float s, float v, float a)
     hh = h;
     if (hh >= 360.0f) hh = 0;
     hh /= 60.0f;
-    i = (uint32_t)hh;
+    i = (zr_uint)hh;
     ff = hh - (float)i;
     p = v * (1.0f - s);
     q = v * (1.0f - (s * ff));
@@ -638,13 +646,13 @@ zr_hsva_f(float h, float s, float v, float a)
     return zr_rgba_f(out.r, out.g, out.b, a);
 }
 
-uint32_t
+zr_uint
 zr_color32(struct zr_color in)
 {
-    uint32_t out = (uint32_t)in.r;
-    out |= ((uint32_t)in.g << 8);
-    out |= ((uint32_t)in.b << 16);
-    out |= ((uint32_t)in.a << 24);
+    zr_uint out = (zr_uint)in.r;
+    out |= ((zr_uint)in.g << 8);
+    out |= ((zr_uint)in.b << 16);
+    out |= ((zr_uint)in.a << 24);
     return out;
 }
 
@@ -1452,7 +1460,7 @@ zr_buffer_alloc(struct zr_buffer *b, enum zr_buffer_allocation_type type,
         if (b->type != ZR_BUFFER_DYNAMIC || !b->pool.alloc || !b->pool.free) return 0;
 
         cap = (zr_size)((float)b->memory.size * b->grow_factor);
-        cap = MAX(cap, zr_round_up_pow2((uint32_t)(b->allocated + size)));
+        cap = MAX(cap, zr_round_up_pow2((zr_uint)(b->allocated + size)));
         b->memory.ptr = zr_buffer_realloc(b, cap, &b->memory.size);
         if (!b->memory.ptr) return 0;
 
@@ -1721,7 +1729,7 @@ zr_command_buffer_push_rect(struct zr_command_buffer *b, struct zr_rect rect,
     cmd = (struct zr_command_rect*)
         zr_command_buffer_push(b, ZR_COMMAND_RECT, sizeof(*cmd));
     if (!cmd) return;
-    cmd->rounding = (uint32_t)rounding;
+    cmd->rounding = (unsigned int)rounding;
     cmd->x = (short)rect.x;
     cmd->y = (short)rect.y;
     cmd->w = (unsigned short)MAX(0, rect.w);
@@ -2397,6 +2405,7 @@ zr_draw_list_push_command(struct zr_draw_list *list, struct zr_rect clip,
     ZR_ASSERT(list);
     cmd = (struct zr_draw_command*)
         zr_buffer_alloc(list->buffer, ZR_BUFFER_BACK, cmd_size, cmd_align);
+
     if (!cmd) return 0;
     if (!list->cmd_count) {
         zr_byte *memory = (zr_byte*)zr_buffer_memory(list->buffer);
@@ -2408,6 +2417,7 @@ zr_draw_list_push_command(struct zr_draw_list *list, struct zr_rect clip,
     cmd->elem_count = 0;
     cmd->clip_rect = clip;
     cmd->texture = texture;
+
     list->cmd_count++;
     list->clip_rect = clip;
     return cmd;
@@ -3480,7 +3490,7 @@ zr_font_bake_pack(zr_size *image_memory, int *width, int *height,
         ZR_ASSERT(char_n == total_glyph_count);
         ZR_ASSERT(range_n == total_range_count);
     }
-    *height = (int32_t)zr_round_up_pow2((uint32_t)*height);
+    *height = (int)zr_round_up_pow2((zr_uint)*height);
     *image_memory = (zr_size)(*width) * (zr_size)(*height);
     return zr_true;
 }
@@ -3617,17 +3627,17 @@ zr_font_bake_convert(void *out_memory, int img_width, int img_height,
 {
     int n = 0;
     const zr_byte *src;
-    uint32_t *dst;
+    zr_rune *dst;
     ZR_ASSERT(out_memory);
     ZR_ASSERT(in_memory);
     ZR_ASSERT(img_width);
     ZR_ASSERT(img_height);
     if (!out_memory || !in_memory || !img_height || !img_width) return;
 
-    dst = (uint32_t*)out_memory;
+    dst = (zr_rune*)out_memory;
     src = (const zr_byte*)in_memory;
     for (n = (int)(img_width * img_height); n > 0; n--)
-        *dst++ = ((uint32_t)(*src++) << 24) | 0x00FFFFFF;
+        *dst++ = ((zr_rune)(*src++) << 24) | 0x00FFFFFF;
 }
 /* -------------------------------------------------------------
  *
@@ -5985,6 +5995,7 @@ zr_widget_spinner_float(struct zr_command_buffer *out, struct zr_rect r,
     res = zr_widget_spinner_base(out, r, s, string, &len, ZR_INPUT_FLOAT, &is_active, in, font);
     if (res) {
         int val;
+        /* account for floating point error */
         float f = (float)zr_pow(10.0, ZR_MAX_FLOAT_PRECISION);
         value += (res > 0) ? step : -step;
         value = CLAMP(min, value, max);
@@ -6356,6 +6367,7 @@ zr_window_init(struct zr_window *window, struct zr_rect bounds,
     window->offset.y = 0;
     window->queue = queue;
     window->input = input;
+
     if (queue) {
         zr_command_buffer_init(&window->buffer, &queue->buffer, ZR_CLIP);
         zr_command_queue_insert_back(queue, &window->buffer);
@@ -6598,7 +6610,7 @@ zr_begin(struct zr_context *context, struct zr_window *window, const char *title
         }
     }
 
-    /* setup panel context */
+    /* setup window context */
     out = &window->buffer;
     context->input = in;
     context->bounds = window->bounds;
@@ -7044,7 +7056,7 @@ zr_panel_layout(struct zr_context *layout, float height, zr_size cols)
     item_spacing = zr_style_property(config, ZR_PROPERTY_ITEM_SPACING);
     panel_padding = zr_style_property(config, ZR_PROPERTY_PADDING);
 
-    /* draw the current row and set the current row layout */
+    /* update the current row and set the current row layout */
     layout->row.index = 0;
     layout->at_y += layout->row.height;
     layout->row.columns = cols;
@@ -7067,7 +7079,7 @@ zr_row_layout(struct zr_context *layout,
     if (!layout) return;
     if (!layout->valid) return;
 
-    /* draw the current row and set the current row layout */
+    /* update the current row and set the current row layout */
     zr_panel_layout(layout, height, cols);
     if (fmt == ZR_DYNAMIC)
         layout->row.type = ZR_LAYOUT_DYNAMIC_FIXED;

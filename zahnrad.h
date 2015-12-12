@@ -55,7 +55,7 @@ extern "C" {
  * if 0 each type has to be set to the correct size*/
 #define ZR_COMPILE_WITH_ASSERT 1
 /* setting this define to 1 adds header <assert.h> for the assert macro
-  IMPORTANT: it also adds clib so only use it if wanted */
+  IMPORTANT: it also adds the standard library assert so only use it if wanted */
 #define ZR_COMPILE_WITH_VERTEX_BUFFER 1
 /* setting this define to 1 adds a vertex draw command list backend to this library,
   which allows you to convert queue commands into vertex draw commands.
@@ -74,12 +74,24 @@ extern "C" {
  *
  * ===============================================================
  */
+#if ZR_COMPILE_WITH_FIXED_TYPES
 #include <stdint.h>
+typedef uint32_t zr_uint;
+typedef uint64_t zr_ulong;
 typedef uint64_t zr_size;
 typedef uintptr_t zr_ptr;
 typedef uint32_t zr_flags;
 typedef uint32_t zr_rune;
 typedef uint8_t zr_byte;
+#else
+typedef unsigned int zr_uint;
+typedef unsigned long zr_ulong;
+typedef unsigned long zr_size;
+typedef zr_size zr_ptr;
+typedef unsigned int zr_flags;
+typedef unsigned int zr_rune;
+typedef unsigned char zr_byte;
+#endif
 
 #if ZR_COMPILE_WITH_ASSERT
 #ifndef ZR_ASSERT
@@ -168,8 +180,8 @@ struct zr_color zr_hsv(zr_byte h, zr_byte s, zr_byte v);
 struct zr_color zr_hsv_f(float h, float s, float v);
 struct zr_color zr_hsva(zr_byte h, zr_byte s, zr_byte v, zr_byte a);
 struct zr_color zr_hsva_f(float h, float s, float v, float a);
-struct zr_color zr_rgba32(uint32_t);
-uint32_t zr_color32(struct zr_color);
+struct zr_color zr_rgba32(zr_uint);
+zr_uint zr_color32(struct zr_color);
 void zr_colorf(float *r, float *g, float *b, float *a, struct zr_color);
 void zr_color_hsv(int *out_h, int *out_s, int *out_v, struct zr_color);
 void zr_color_hsv_f(float *out_h, float *out_s, float *out_v, struct zr_color);
@@ -632,7 +644,7 @@ struct zr_command_curve {
 
 struct zr_command_rect {
     struct zr_command header;
-    uint32_t rounding;
+    unsigned int rounding;
     short x, y;
     unsigned short w, h;
     struct zr_color color;
@@ -1074,7 +1086,7 @@ const struct zr_command* zr_command_queue_next(struct zr_command_queue*,
     zr_draw_list_path_stroke       - connects each point in the path
 */
 typedef unsigned short zr_draw_index;
-typedef uint32_t zr_draw_vertex_color;
+typedef zr_uint zr_draw_vertex_color;
 typedef float(*zr_sin_f)(float);
 typedef float(*zr_cos_f)(float);
 
@@ -1099,7 +1111,7 @@ enum zr_draw_list_stroke {
 };
 
 struct zr_draw_command {
-    uint32_t elem_count;
+    unsigned int elem_count;
     /* number of elements in the current draw batch */
     struct zr_rect clip_rect;
     /* current screen clipping rectangle */
