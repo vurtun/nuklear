@@ -42,7 +42,7 @@ have to be either executed or optionally converted into a vertex buffer to
 draw the GUI.
 
 ## Gallery
-![screenshot](https://cloud.githubusercontent.com/assets/8057201/11300153/08473cca-8f8d-11e5-821b-b97228007b4d.png)
+![screenshot](https://cloud.githubusercontent.com/assets/8057201/11761525/ae06f0ca-a0c6-11e5-819d-5610b25f6ef4.gif)
 ![demo](https://cloud.githubusercontent.com/assets/8057201/11282359/3325e3c6-8eff-11e5-86cb-cf02b0596087.png)
 ![node](https://cloud.githubusercontent.com/assets/8057201/9976995/e81ac04a-5ef7-11e5-872b-acd54fbeee03.gif)
 
