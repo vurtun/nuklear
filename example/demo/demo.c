@@ -134,11 +134,11 @@ ui_piemenu(struct zr_context *layout, struct zr_style *config,
     int ret = -1;
     struct zr_rect total_space;
     struct zr_context menu;
-    enum zr_widget_state state;
-    struct zr_color border;
     struct zr_rect bounds;
-    int active = 0;
+    int active_item = 0;
 
+    /* hide popup background */
+    struct zr_color border;
     zr_style_push_color(config, ZR_COLOR_WINDOW, zr_rgba(0,0,0,0));
     border = config->colors[ZR_COLOR_BORDER];
     zr_style_push_color(config, ZR_COLOR_BORDER, zr_rgba(0,0,0,0));
@@ -156,6 +156,7 @@ ui_piemenu(struct zr_context *layout, struct zr_style *config,
         const struct zr_input *in = zr_input(&menu);
         {
             /* allocate complete popup space for the menu */
+            enum zr_widget_state state;
             enum zr_widget_states states;
             total_space = zr_space(&menu);
             total_space.x = total_space.y = 0;
@@ -173,14 +174,14 @@ ui_piemenu(struct zr_context *layout, struct zr_style *config,
             struct zr_vec2 drag = zr_vec2(in->mouse.pos.x - center.x, in->mouse.pos.y - center.y);
             float angle = (float)atan2(drag.y, drag.x);
             if (angle < -0.0f) angle += 2.0f * 3.141592654f;
-            active = (int)(angle/step);
+            active_item = (int)(angle/step);
 
             for (i = 0; i < item_count; ++i) {
                 struct zr_image img;
                 struct zr_rect content;
                 float rx, ry, dx, dy, a;
                 zr_command_buffer_push_arc(out, center.x, center.y, (bounds.w/2.0f),
-                    a_min, a_max, (active == i) ? zr_rgb(45,100,255) : zr_rgb(75,75,75));
+                    a_min, a_max, (active_item == i) ? zr_rgb(45,100,255) : zr_rgb(75,75,75));
 
                 /* seperator line */
                 rx = bounds.w/2.0f; ry = 0;
@@ -214,7 +215,7 @@ ui_piemenu(struct zr_context *layout, struct zr_style *config,
             bounds.h = inner.h / 2.0f;
             bounds.x = inner.x + inner.w/2 - bounds.w/2;
             bounds.y = inner.y + inner.h/2 - bounds.h/2;
-            img = zr_image_id(icons[active]);
+            img = zr_image_id(icons[active_item]);
             zr_command_buffer_push_image(out, bounds, &img);
         }
     }
@@ -223,7 +224,7 @@ ui_piemenu(struct zr_context *layout, struct zr_style *config,
     zr_style_reset_colors(config);
     zr_style_reset_properties(config);
     if (!zr_input_is_mouse_down(zr_input(layout), ZR_BUTTON_RIGHT))
-        return active;
+        return active_item;
     else return ret;
 }
 
