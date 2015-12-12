@@ -4,7 +4,7 @@ BIN = demo
 CC = clang
 DCC = gcc
 
-CFLAGS = -std=c99
+CFLAGS = -std=c99 -O2
 
 SRC = demo.c ../../zahnrad.c
 OBJ = $(SRC:.c=.o)

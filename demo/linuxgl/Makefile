@@ -6,7 +6,7 @@ CC = clang
 DCC = gcc
 
 # Flags
-CFLAGS = -std=c89 -pedantic
+CFLAGS = -std=c89 -pedantic -O2
 
 SRC = linuxgl.c ../../zahnrad.c
 OBJ = $(SRC:.c=.o)

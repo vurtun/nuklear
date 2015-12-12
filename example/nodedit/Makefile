@@ -5,7 +5,7 @@ BIN = nodedit
 CC = clang
 DCC = gcc
 
-CFLAGS = -std=c99 -pedantic
+CFLAGS = -std=c99 -pedantic -O2
 
 SRC = nodedit.c ../../zahnrad.c
 OBJ = $(SRC:.c=.o)

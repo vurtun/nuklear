@@ -5,7 +5,7 @@ BIN = zahnrad
 CC = clang
 DCC = gcc
 
-CFLAGS = -std=c99
+CFLAGS = -std=c99 -O2
 
 SRC = nanovg.c ../../zahnrad.c
 OBJ = $(SRC:.c=.o)

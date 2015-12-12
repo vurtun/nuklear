@@ -4,15 +4,7 @@ BIN = filex
 CC = clang
 DCC = gcc
 
-CFLAGS = -std=c99 -pedantic -Wdeprecated-declarations
-CFLAGS += -g -Wall -Wextra -Wformat-security -Wunreachable-code
-CFLAGS += -fstack-protector-strong -Winline -Wshadow -Wwrite-strings -fstrict-aliasing
-CFLAGS += -Wstrict-prototypes -Wold-style-definition -Wconversion -Wfloat-equal
-CFLAGS += -Wredundant-decls -Wnested-externs -Wmissing-include-dirs
-CFLAGS += -Wshadow  -Wcast-qual -Wcast-align -Wmissing-prototypes -Wconversion
-CFLAGS += -Wswitch-default -Wundef -Wno-unused -Wstrict-overflow=5 -Wsign-conversion
-CFLAGS += -Winit-self -Wstrict-aliasing -ftrapv -Wpointer-arith
-CFLAGS += -Wswitch-enum -Winvalid-pch -Wbad-function-cast -fno-omit-frame-pointer
+CFLAGS = -std=c99 -pedantic -O2
 
 SRC = filex.c ../../zahnrad.c
 OBJ = $(SRC:.c=.o)
