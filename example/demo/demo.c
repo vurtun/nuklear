@@ -170,11 +170,13 @@ ui_piemenu(struct zr_context *layout, struct zr_style *config,
             /* circle buttons */
             float step = (2 * 3.141592654f) / (float)(MAX(1,item_count));
             float a_min = 0; float a_max = step;
+
             struct zr_vec2 center = zr_vec2(bounds.x + bounds.w / 2.0f, center.y = bounds.y + bounds.h / 2.0f);
             struct zr_vec2 drag = zr_vec2(in->mouse.pos.x - center.x, in->mouse.pos.y - center.y);
             float angle = (float)atan2(drag.y, drag.x);
             if (angle < -0.5f * step) angle += 2.0f * 3.141592654f;
             active = (int)(angle/step);
+
             for (i = 0; i < item_count; ++i) {
                 struct zr_image img;
                 struct zr_rect content;
@@ -327,7 +329,8 @@ button_demo(struct zr_window *window, struct zr_style *config, struct icons *img
     /*------------------------------------------------
      *                  CONTEXTUAL
      *------------------------------------------------*/
-    if (zr_input_mouse_clicked(zr_input(&layout), ZR_BUTTON_RIGHT, layout.bounds)) {
+    if (zr_input_mouse_clicked(zr_input(&layout), ZR_BUTTON_RIGHT, layout.bounds) &&
+        layout.flags & ZR_WINDOW_ACTIVE) {
         const struct zr_input *in = zr_input(&layout);
         contextual_bounds = zr_rect(in->mouse.pos.x, in->mouse.pos.y, 120, 200);
         contextual_active = zr_true;
@@ -786,13 +789,20 @@ main(int argc, char *argv[])
                 evt.window.event == SDL_WINDOWEVENT_RESIZED)
                 glViewport(0, 0, evt.window.data1, evt.window.data2);
             else if (evt.type == SDL_QUIT) goto cleanup;
-            else if (evt.type == SDL_KEYUP) key(&gui.input, &evt, zr_false);
-            else if (evt.type == SDL_KEYDOWN) key(&gui.input, &evt, zr_true);
-            else if (evt.type == SDL_MOUSEBUTTONDOWN) btn(&gui.input, &evt, zr_true);
-            else if (evt.type == SDL_MOUSEBUTTONUP) btn(&gui.input, &evt, zr_false);
-            else if (evt.type == SDL_MOUSEMOTION) motion(&gui.input, &evt);
-            else if (evt.type == SDL_TEXTINPUT) text(&gui.input, &evt);
-            else if (evt.type == SDL_MOUSEWHEEL) zr_input_scroll(&gui.input, evt.wheel.y);
+            else if (evt.type == SDL_KEYUP)
+                key(&gui.input, &evt, zr_false);
+            else if (evt.type == SDL_KEYDOWN)
+                key(&gui.input, &evt, zr_true);
+            else if (evt.type == SDL_MOUSEBUTTONDOWN)
+                btn(&gui.input, &evt, zr_true);
+            else if (evt.type == SDL_MOUSEBUTTONUP)
+                btn(&gui.input, &evt, zr_false);
+            else if (evt.type == SDL_MOUSEMOTION)
+                motion(&gui.input, &evt);
+            else if (evt.type == SDL_TEXTINPUT)
+                text(&gui.input, &evt);
+            else if (evt.type == SDL_MOUSEWHEEL)
+                zr_input_scroll(&gui.input, evt.wheel.y);
         }
         zr_input_end(&gui.input);
 
