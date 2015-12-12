@@ -175,9 +175,6 @@ ui_piemenu(struct zr_context *layout, struct zr_style *config,
             if (angle < -0.0f) angle += 2.0f * 3.141592654f;
             active = (int)(angle/step);
 
-            #define RAD2DEG(a) ((a)*(180.0f/3.141592654f))
-            fprintf(stdout, "%.2f %d\n", RAD2DEG(angle), active);
-
             for (i = 0; i < item_count; ++i) {
                 struct zr_image img;
                 struct zr_rect content;
