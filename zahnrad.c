@@ -196,7 +196,7 @@ zr_vec2(float x, float y)
 /*
  * ==============================================================
  *
- *                          STANDART
+ *                          STANDARD
  *
  * ===============================================================
  */
@@ -1079,6 +1079,7 @@ zr_user_font_glyphs_fitting_in_space(const struct zr_user_font *font, const char
     zr_size glyph_len;
     float width = 0;
     float last_width = 0;
+
     zr_rune unicode;
     zr_size offset = 0;
     zr_size g = 0;
