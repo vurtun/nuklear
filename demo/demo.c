@@ -244,7 +244,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         struct zr_context popup;
         int r,g,b,a;
         zr_flags res = zr_popup_begin(&layout, &popup, ZR_POPUP_STATIC, "Color Picker",
-            ZR_WINDOW_CLOSEABLE, zr_rect(10, 100, 350, 280), zr_vec2(0,0));
+            ZR_WINDOW_CLOSEABLE, zr_rect(10, 100, 360, 280), zr_vec2(0,0));
         if (res & ZR_WINDOW_CLOSEABLE)
         {
             zr_popup_close(&popup);
