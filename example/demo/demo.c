@@ -157,7 +157,6 @@ ui_piemenu(struct zr_context *layout, struct zr_style *config,
         {
             /* allocate complete popup space for the menu */
             enum zr_widget_state state;
-            enum zr_widget_states states;
             total_space = zr_space(&menu);
             total_space.x = total_space.y = 0;
             zr_layout_row_space_push(&menu, total_space);
