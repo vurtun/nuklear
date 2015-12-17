@@ -359,8 +359,10 @@ basic_demo(struct zr_window *window, struct zr_style *config, struct icons *img)
     static int slider = 30;
     static size_t prog = 80;
     static int combo_active = 0;
+    static int combo2_active = 0;
     static int selected_item = 0;
     static int selected_image = 2;
+    static int selected_icon = 0;
     static const char *items[] = {"Item 0","item 1","item 2"};
     static int piemenu_active = 0;
 
@@ -410,12 +412,21 @@ basic_demo(struct zr_window *window, struct zr_style *config, struct icons *img)
      *------------------------------------------------*/
     ui_header(&layout, config, "Combo box");
     ui_widget(&layout, config, 40, 22);
-    zr_combo_begin(&layout, &combo, items[selected_item], &combo_active);
+    zr_combo_begin_text(&layout, &combo, items[selected_item], &combo_active, 200, 0);
     zr_layout_row_dynamic(&combo, 35, 1);
     for (i = 0; i < 3; ++i)
         if (zr_combo_item(&combo, items[i], ZR_TEXT_LEFT))
             selected_item = i;
-    zr_combo_end(&layout, &combo, &combo_active);
+    zr_combo_end(&layout, &combo, &combo_active, 0);
+
+    ui_widget(&layout, config, 40, 22);
+    zr_combo_begin_icon(&layout, &combo, items[selected_icon],
+        zr_image_id(img->images[selected_icon]), &combo2_active, 200, 0);
+    zr_layout_row_dynamic(&combo, 35, 1);
+    for (i = 0; i < 3; ++i)
+        if (zr_combo_item_icon(&combo, zr_image_id(img->images[i]), items[i], ZR_TEXT_RIGHT))
+            selected_icon = i;
+    zr_combo_end(&layout, &combo, &combo2_active, 0);
 
     /*------------------------------------------------
      *                  CHECKBOX
@@ -486,12 +497,12 @@ grid_demo(struct zr_window *window, struct zr_style *config)
     zr_label(&layout, "Checkbox:", ZR_TEXT_RIGHT);
     zr_checkbox(&layout, "Check me", &check);
     zr_label(&layout, "Combobox:", ZR_TEXT_RIGHT);
-    zr_combo_begin(&layout, &combo, items[selected_item], &combo_active);
+    zr_combo_begin_text(&layout, &combo, items[selected_item], &combo_active, 200, 0);
     zr_layout_row_dynamic(&combo, 30, 1);
     for (i = 0; i < 3; ++i)
         if (zr_combo_item(&combo, items[i], ZR_TEXT_LEFT))
             selected_item = i;
-    zr_combo_end(&layout, &combo, &combo_active);
+    zr_combo_end(&layout, &combo, &combo_active, 0);
     zr_end(&layout, window);
 }
 
@@ -770,7 +781,7 @@ main(int argc, char *argv[])
     zr_window_init(&gui.button_demo, zr_rect(50, 50, 255, 600),
         ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_BORDER_HEADER,
         &gui.queue, &gui.config, &gui.input);
-    zr_window_init(&gui.basic_demo, zr_rect(320, 50, 275, 600),
+    zr_window_init(&gui.basic_demo, zr_rect(320, 50, 275, 610),
         ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_BORDER_HEADER,
         &gui.queue, &gui.config, &gui.input);
     zr_window_init(&gui.grid_demo, zr_rect(600, 350, 275, 250),

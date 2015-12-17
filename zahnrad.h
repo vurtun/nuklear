@@ -43,6 +43,7 @@ extern "C" {
 /* defines the number of temporary configuration user font changes that can be stored */
 #define ZR_MAX_FONT_HEIGHT_STACK 32
 /* defines the number of temporary configuration font height changes that can be stored */
+#define ZR_MAX_NUMBER_BUFFER 64
 /*
  * ==============================================================
  *
@@ -1839,14 +1840,13 @@ enum zr_style_colors {
     ZR_COLOR_PROGRESS_CURSOR,
     ZR_COLOR_PROGRESS_CURSOR_HOVER,
     ZR_COLOR_PROGRESS_CURSOR_ACTIVE,
-    ZR_COLOR_DRAG,
-    ZR_COLOR_DRAG_HOVER,
-    ZR_COLOR_DRAG_ACTIVE,
+    ZR_COLOR_PROPERTY,
+    ZR_COLOR_PROPERTY_HOVER,
+    ZR_COLOR_PROPERTY_ACTIVE,
     ZR_COLOR_INPUT,
     ZR_COLOR_INPUT_CURSOR,
     ZR_COLOR_INPUT_TEXT,
-    ZR_COLOR_SPINNER,
-    ZR_COLOR_SPINNER_TRIANGLE,
+    ZR_COLOR_COMBO,
     ZR_COLOR_HISTO,
     ZR_COLOR_HISTO_BARS,
     ZR_COLOR_HISTO_NEGATIVE,
@@ -1870,6 +1870,7 @@ enum zr_style_rounding {
     ZR_ROUNDING_PROGRESS,
     ZR_ROUNDING_CHECK,
     ZR_ROUNDING_INPUT,
+    ZR_ROUNDING_PROPERTY,
     ZR_ROUNDING_GRAPH,
     ZR_ROUNDING_SCROLLBAR,
     ZR_ROUNDING_MAX
@@ -2161,6 +2162,17 @@ enum zr_window_flags {
     /* INTERNAL ONLY!: removes the read only mode at the end of the window */
 };
 
+struct zr_value {
+    int active, prev;
+    char buffer[ZR_MAX_NUMBER_BUFFER];
+    zr_size length;
+    zr_size cursor;
+    zr_ulong name;
+    unsigned int seq;
+    unsigned int old;
+    int state;
+};
+
 struct zr_window {
     struct zr_rect bounds;
     /* size with width and height and position of the window */
@@ -2176,6 +2188,8 @@ struct zr_window {
     /* output command queue which hold the command buffer */
     struct zr_input *input;
     /* input state for updating the window and all its widgets */
+    struct zr_value property;
+    /* currently active property */
 };
 
 void zr_window_init(struct zr_window*, struct zr_rect bounds, zr_flags flags,
@@ -2202,7 +2216,6 @@ int zr_window_has_flag(struct zr_window*, zr_flags);
 /*  this function checks if a window has given flag(s) */
 int zr_window_is_minimized(struct zr_window*);
 /*  this function checks if the window is minimized */
-
 /* --------------------------------------------------------------
  *
  *                          CONTEXT
@@ -2342,6 +2355,8 @@ struct zr_context {
     /* command draw call output command buffer */
     struct zr_command_queue *queue;
     /* command draw call output command buffer */
+    struct zr_value *property;
+    /* currently active property */
 };
 
 zr_flags zr_begin(struct zr_context*, struct zr_window*, const char *title);
@@ -2601,14 +2616,10 @@ void zr_layout_pop(struct zr_context*);
     zr_slider_int           -- integer slider widget with min,max,step value
     zr_slider_float         -- float slider widget with min,max,step value
     zr_progress             -- progressbar widget
-    zr_drag_float           -- float value draggable
-    zr_drag_int             -- integer value dragable
     zr_edit                 -- edit textbox widget for text input
     zr_edit_filtered        -- edit textbox widget for text input with filter input
     zr_edit_field           -- edit text field with cursor, clipboard and filter
     zr_edit_box             -- edit text box with cursor, clipboard and filter
-    zr_spinner_int          -- integer spinner widget with keyboard or mouse modification
-    zr_spinner_float        -- float spinner widget with keyboard or mouse modification
 */
 enum zr_text_align {
     ZR_TEXT_LEFT,
@@ -2858,29 +2869,27 @@ void zr_slider_int(struct zr_context*, int min, int *val, int max,
     Output:
     - the from user input updated slider value
 */
-void zr_drag_float(struct zr_context*, float min, float *val,
-                        float max, float inc_per_pixel);
-/*  this function executes a dragable float widget
+
+float zr_slide_float(struct zr_context*, float min, float val, float max,
+                    float step);
+/*  this function creates a float slider for value manipulation
     Input:
-    - minimal dragging value that will not be underflown
-    - slider dragging which shall be updated
-    - maximal dragging value that will not be overflown
-    - value increment per dragged pixel delta
-    - dragging axis with either ZR_AXIS_X or ZR_AXIS_Y
+    - minimal slider value that will not be underflown
+    - slider value which shall be updated
+    - maximal slider value that will not be overflown
+    - step intervall to change the slider with
     Output:
-    - returns the from the user input updated value
+    - the from user input updated slider value
 */
-void zr_drag_int(struct zr_context*, int min, int *val,
-                        int max, int inc_per_pixel);
-/*  this function executes a dragable int value widget
+int zr_slide_int(struct zr_context*, int min, int val, int max, int step);
+/*  this function creates a int slider for value manipulation
     Input:
-    - minimal dragging value that will not be underflown
-    - slider dragging which shall be updated
-    - maximal dragging value that will not be overflown
-    - value increment per dragged pixel delta
-    - dragging axis with either ZR_AXIS_X or ZR_AXIS_Y
+    - minimal slider value that will not be underflown
+    - slider value which shall be updated
+    - maximal slider value that will not be overflown
+    - step intervall to change the slider with
     Output:
-    - returns the from the user input updated value
+    - the from user input updated slider value
 */
 void zr_progress(struct zr_context*, zr_size *cur, zr_size max, int modifyable);
 /*  this function creates an either user or program controlled progressbar
@@ -2922,9 +2931,9 @@ void zr_edit_filtered(struct zr_context*, char *buffer, zr_size *len,
     - length of the buffer after user input update
     - current state of the editbox with active(zr_true) or inactive(zr_false)
 */
-void zr_spinner_int(struct zr_context*, int min, int *value, int max,
-                    int step, int *active);
-/*  this function creates a integer spinner widget
+void zr_property_float(struct zr_context *layout, const char *name,
+                        float min, float *val, float max, float step, float inc_per_pixel);
+/*  this function creates a float property widget
     Input:
     - min value that will not be underflown
     - current spinner value to be updated by user input
@@ -2935,9 +2944,35 @@ void zr_spinner_int(struct zr_context*, int min, int *value, int max,
     - the from user input updated spinner value
     - current state of the editbox with active(zr_true) or inactive(zr_false)
 */
-void zr_spinner_float(struct zr_context*, float min, float *value, float max,
-                    float step, int *active);
-/*  this function creates a float spinner widget
+void zr_property_int(struct zr_context *layout, const char *name,
+                    int min, int *val, int max, int step, int inc_per_pixel);
+/*  this function creates a float property widget
+    Input:
+    - min value that will not be underflown
+    - current spinner value to be updated by user input
+    - max value that will not be overflown
+    - spinner value modificaton stepping intervall
+    - current state of the spinner with active as currently modfied by user input
+    Output:
+    - the from user input updated spinner value
+    - current state of the editbox with active(zr_true) or inactive(zr_false)
+*/
+float zr_propertyf(struct zr_context *layout, const char *name, float min, float val, float max,
+                    float step, float inc_per_pixel);
+/*  this function creates a float property widget
+    Input:
+    - min value that will not be underflown
+    - current spinner value to be updated by user input
+    - max value that will not be overflown
+    - spinner value modificaton stepping intervall
+    - current state of the spinner with active as currently modfied by user input
+    Output:
+    - the from user input updated spinner value
+    - current state of the editbox with active(zr_true) or inactive(zr_false)
+*/
+int zr_propertyi(struct zr_context *layout, const char *name, int min, int val, int max,
+                int step, int inc_per_pixel);
+/*  this function creates a float property widget
     Input:
     - min value that will not be underflown
     - current spinner value to be updated by user input
@@ -2973,13 +3008,46 @@ void zr_spinner_float(struct zr_context*, float min, float *value, float max,
     zr_combo_close          -- closes the previously opened combo box
     zr_combo_end            -- ends the combo box build up process
 */
-void zr_combo_begin(struct zr_context *parent, struct zr_context *combo,
-                    const char *selected, int *active);
-/*  this function begins the combobox build up process
+void zr_combo_begin_text(struct zr_context *parent, struct zr_context *combo,
+                    const char *selected, int *active, int height, struct zr_vec2 *scrollbar);
+/*  this function begins the combobox build up process with a text header
     Input:
     - parent window layout the combo box will be placed into
     - ouput combo box window layout which will be needed to fill the combo box
     - title of the combo box or in the case of the text combo box the selected item
+    - the current state of the combobox with either zr_true (active) or zr_false else
+    - the current scrollbar offset of the combo box popup window
+*/
+void zr_combo_begin_color(struct zr_context *parent, struct zr_context *combo,
+                        struct zr_color color, int *active, int height,
+                        struct zr_vec2 *scrollbar);
+/*  this function begins the combobox build up process with a color header
+    Input:
+    - parent window layout the combo box will be placed into
+    - ouput combo box window layout which will be needed to fill the combo box
+    - title color to show
+    - the current state of the combobox with either zr_true (active) or zr_false else
+    - the current scrollbar offset of the combo box popup window
+*/
+void zr_combo_begin_image(struct zr_context *parent, struct zr_context *combo,
+                            struct zr_image img, int *active, int height,
+                            struct zr_vec2 *scrollbar);
+/*  this function begins the combobox build up process with a image header
+    Input:
+    - parent window layout the combo box will be placed into
+    - ouput combo box window layout which will be needed to fill the combo box
+    - title color to show
+    - the current state of the combobox with either zr_true (active) or zr_false else
+    - the current scrollbar offset of the combo box popup window
+*/
+void zr_combo_begin_icon(struct zr_context *parent, struct zr_context *combo,
+                        const char *selected, struct zr_image img, int *active, int height,
+                        struct zr_vec2 *scrollbar);
+/*  this function begins the combobox build up process with a icon text header
+    Input:
+    - parent window layout the combo box will be placed into
+    - ouput combo box window layout which will be needed to fill the combo box
+    - title color to show
     - the current state of the combobox with either zr_true (active) or zr_false else
     - the current scrollbar offset of the combo box popup window
 */
@@ -3010,11 +3078,11 @@ int zr_combo_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
     Output
     - `zr_true` if has been clicked `zr_false` otherwise
 */
-void zr_combo_close(struct zr_context *combo);
+void zr_combo_close(struct zr_context *combo, int *state);
 /*  this function closes a opened combobox */
-void zr_combo_end(struct zr_context *parent, struct zr_context *combo, int*);
+void zr_combo_end(struct zr_context *parent, struct zr_context *menu,
+                    int *state, struct zr_vec2 *scrollbar);
 /*  this function ends the combobox build up process */
-
 /* --------------------------------------------------------------
  *
  *                          GRAPH
@@ -3092,7 +3160,6 @@ zr_flags zr_graph_push(struct zr_context*,struct zr_graph*,float);
 */
 void zr_graph_end(struct zr_context *layout, struct zr_graph*);
 /*  this function ends the graph */
-
 /* --------------------------------------------------------------
  *
  *                          GROUP

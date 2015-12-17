@@ -240,43 +240,25 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
     if (show_color_picker_popup)
     {
         /* color picker popup */
-        static int active[4];
         struct zr_context popup;
-        int r,g,b,a;
         zr_flags res = zr_popup_begin(&layout, &popup, ZR_POPUP_STATIC, "Color Picker",
             ZR_WINDOW_CLOSEABLE, zr_rect(10, 100, 360, 280), zr_vec2(0,0));
         if (res & ZR_WINDOW_CLOSEABLE)
         {
             zr_popup_close(&popup);
             show_color_picker_popup = zr_false;
-            memset(active, 0, sizeof(active));
         }
 
         zr_layout_row_dynamic(&popup, 30, 2);
         zr_label(&popup, zr_style_color_name((enum zr_style_colors)color_picker_index), ZR_TEXT_LEFT);
         zr_button_color(&popup, color_picker_color, ZR_BUTTON_DEFAULT);
 
-        zr_layout_row_dynamic(&popup, 30, 3);
-        r = color_picker_color.r; g = color_picker_color.g;
-        b = color_picker_color.b; a = color_picker_color.a;
-
         /* color selection */
-        zr_drag_int(&popup, 0, &r, 255, 1);
-        zr_spinner_int(&popup, 0, &r, 255, 1, &active[0]);
-        zr_slider_int(&popup, 0, &r,  255, 10);
-
-        zr_drag_int(&popup, 0, &g, 255, 1);
-        zr_spinner_int(&popup, 0, &g, 255, 1, &active[1]);
-        zr_slider_int(&popup, 0, &g,  255, 10);
-
-        zr_drag_int(&popup, 0, &b, 255, 1);
-        zr_spinner_int(&popup, 0, &b, 255, 1, &active[2]);
-        zr_slider_int(&popup, 0, &b,  255, 10);
-
-        zr_drag_int(&popup, 0, &a, 255, 1);
-        zr_spinner_int(&popup, 0, &a, 255, 1, &active[3]);
-        zr_slider_int(&popup, 0, &a,  255, 10);
-        color_picker_color = zr_rgba((zr_byte)r,(zr_byte)g,(zr_byte)b,(zr_byte)a);
+        zr_layout_row_dynamic(&popup, 30, 2);
+        color_picker_color.r = (zr_byte)zr_propertyi(&popup, "#R:", 0, color_picker_color.r, 255, 1,1);
+        color_picker_color.g = (zr_byte)zr_propertyi(&popup, "#G:", 0, color_picker_color.g, 255, 1,1);
+        color_picker_color.b = (zr_byte)zr_propertyi(&popup, "#B", 0, color_picker_color.b, 255, 1,1);
+        color_picker_color.a = (zr_byte)zr_propertyi(&popup, "#A", 0, color_picker_color.a, 255, 1,1);
 
         zr_layout_row_dynamic(&popup, 30, 4);
         zr_spacing(&popup, 1);
@@ -285,13 +267,11 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             zr_popup_close(&popup);
             show_color_picker_popup = zr_false;
             config->colors[color_picker_index] = color_picker_color;
-            memset(active, 0, sizeof(active));
         }
         if (zr_button_text(&popup, "cancel", ZR_BUTTON_DEFAULT))
         {
             zr_popup_close(&popup);
             show_color_picker_popup = zr_false;
-            memset(active, 0, sizeof(active));
         }
         zr_popup_end(&layout, &popup, NULL);
     }
@@ -346,11 +326,11 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         /* theme */
         zr_layout_row_static(&layout, 30, 80, 2);
         zr_label(&layout, "Theme:", ZR_TEXT_LEFT);
-        zr_combo_begin(&layout, &combo, themes[*theme], &theme_active);
+        zr_combo_begin_text(&layout, &combo, themes[*theme], &theme_active, 200, 0);
         zr_layout_row_dynamic(&combo, 25, 1);
         *theme = zr_combo_item(&combo, themes[THEME_BLACK], ZR_TEXT_CENTERED) ? THEME_BLACK : *theme;
         *theme = zr_combo_item(&combo, themes[THEME_WHITE], ZR_TEXT_CENTERED) ? THEME_WHITE : *theme;
-        zr_combo_end(&layout, &combo, &theme_active);
+        zr_combo_end(&layout, &combo, &theme_active, 0);
 
         if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Properties", &property_state))
         {
@@ -359,8 +339,8 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             zr_layout_row_dynamic(&layout, 30, 3);
             for (i = 0; i <= ZR_PROPERTY_SCROLLBAR_SIZE; ++i) {
                 zr_label(&layout, zr_style_property_name((enum zr_style_properties)i), ZR_TEXT_LEFT);
-                zr_spinner_float(&layout, 0, &config->properties[i].x, 20, 1, NULL);
-                zr_spinner_float(&layout, 0, &config->properties[i].y, 20, 1, NULL);
+                zr_property_float(&layout, "#X:", 0, &config->properties[i].x, 20, 1, 1);
+                zr_property_float(&layout, "#Y:", 0, &config->properties[i].y, 20, 1, 1);
             }
             zr_layout_pop(&layout);
         }
@@ -372,7 +352,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             zr_layout_row_dynamic(&layout, 30, 2);
             for (i = 0; i < ZR_ROUNDING_MAX; ++i) {
                 zr_label(&layout, zr_style_rounding_name((enum zr_style_rounding)i), ZR_TEXT_LEFT);
-                zr_spinner_float(&layout, 0, &config->rounding[i], 20, 1, NULL);
+                zr_property_float(&layout, "#R:", 0, &config->rounding[i], 20, 1, 1);
             }
             zr_layout_pop(&layout);
         }
@@ -467,11 +447,10 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             static size_t prog_value = 40;
             static float float_spinner = 2.5f;
             static int int_spinner = 20;
-            static float drag_float = 2;
-            static int drag_int = 10;
-            static int r = 255,g = 160, b = 0;
-            static int h = 100, s = 70, v = 20;
-            static int spinneri_active, spinnerf_active;
+
+            static float property_float = 2;
+            static int property_int = 10;
+
             static const float ratio[] = {120, 150};
             const struct zr_input *in = zr_input(&layout);
             struct zr_rect bounds;
@@ -500,33 +479,10 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             zr_labelf(&layout, ZR_TEXT_LEFT, "Progressbar" , prog_value);
             zr_progress(&layout, &prog_value, 100, ZR_MODIFIABLE);
 
-            zr_layout_row(&layout, ZR_STATIC, 30, 2, ratio);
-            zr_label(&layout, "Spinner int:", ZR_TEXT_LEFT);
-            zr_spinner_int(&layout, 0, &int_spinner, 50.0, 1, &spinneri_active);
-            zr_label(&layout, "Spinner float:", ZR_TEXT_LEFT);
-            zr_spinner_float(&layout, 0, &float_spinner, 5.0, 0.5f, &spinnerf_active);
-
-            zr_label(&layout, "Drag float:", ZR_TEXT_LEFT);
-            zr_drag_float(&layout, 0, &drag_float, 64.0f, 0.1f);
-            zr_label(&layout, "Drag int:", ZR_TEXT_LEFT);
-            zr_drag_int(&layout, 0, &drag_int, 100, 1);
-
-            zr_layout_row_dynamic(&layout, 30, 6);
-            zr_label(&layout, "RGB:", ZR_TEXT_LEFT);
-            zr_drag_int(&layout, 0, &r, 255, 1);
-            zr_drag_int(&layout, 0, &g, 255, 1);
-            zr_drag_int(&layout, 0, &b, 255, 1);
-            color = zr_rgb((zr_byte)r,(zr_byte)g,(zr_byte)b);
-            zr_button_color(&layout, color, ZR_BUTTON_DEFAULT);
-
-            zr_layout_row_dynamic(&layout, 30, 6);
-            zr_label(&layout, "HSV:", ZR_TEXT_LEFT);
-            zr_drag_int(&layout, 0, &h, 255, 1);
-            zr_drag_int(&layout, 0, &s, 255, 1);
-            zr_drag_int(&layout, 0, &v, 255, 1);
-            color = zr_hsv((zr_byte)h,(zr_byte)s,(zr_byte)v);
-            zr_button_color(&layout, color, ZR_BUTTON_DEFAULT);
-
+            zr_label(&layout, "Property float:", ZR_TEXT_LEFT);
+            zr_property_float(&layout, "Float:", 0, &property_float, 64.0f, 0.1f, 0.2f);
+            zr_label(&layout, "Property int:", ZR_TEXT_LEFT);
+            zr_property_int(&layout, "Int:", 0, &property_int, 100.0f, 1, 1);
             zr_layout_pop(&layout);
         }
 
@@ -579,11 +535,13 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             static int com_color_active = zr_false;
             static int prog_active = zr_false;
             static int check_active = zr_false;
-
+            static const float values[]={8.0f,15.0f,20.0f,30.0f,35.0f,40.0f};
+            static float graph_selection = 8.0f;
+            static int graph_active = 0;
             static const char *weapons[] = {"Fist","Pistol","Shotgun","Plasma","BFG"};
             static size_t current_weapon = 0;
             static int check_values[5];
-            static int r = 130, g = 50, b = 50, a = 255;
+            static struct zr_color combo_color = {130, 50, 50, 255};
             static size_t x =  20, y = 40, z = 10, w = 90;
 
             struct zr_context combo;
@@ -592,7 +550,7 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
 
             /* default combobox */
             zr_layout_row_static(&layout, 30, 200, 1);
-            zr_combo_begin(&layout, &combo, weapons[current_weapon], &weapon_active);
+            zr_combo_begin_text(&layout, &combo, weapons[current_weapon], &weapon_active, 200, 0);
             {
                 size_t i = 0;
                 zr_layout_row_dynamic(&combo, 25, 1);
@@ -601,31 +559,28 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
                         current_weapon = i;
                 }
             }
-            zr_combo_end(&layout, &combo, &weapon_active);
+            zr_combo_end(&layout, &combo, &weapon_active, 0);
 
             /* slider color combobox */
-            sprintf(buffer, "#%02x%02x%02x%02x", r, g, b, a);
-            zr_style_push_color(config, ZR_COLOR_SPINNER, zr_rgba((zr_byte)r,(zr_byte)g,(zr_byte)b,(zr_byte)a));
-            zr_combo_begin(&layout, &combo, buffer, &com_color_active);
+            zr_combo_begin_color(&layout, &combo, combo_color, &com_color_active, 200, 0);
             {
                 float ratios[] = {0.15f, 0.85f};
                 zr_layout_row(&combo, ZR_DYNAMIC, 30, 2, ratios);
                 zr_label(&combo, "R", ZR_TEXT_LEFT);
-                zr_slider_int(&combo, 0, &r, 255, 5);
+                combo_color.r = (zr_byte)zr_slide_int(&combo, 0, combo_color.r, 255, 5);
                 zr_label(&combo, "G", ZR_TEXT_LEFT);
-                zr_slider_int(&combo, 0, &g, 255, 5);
+                combo_color.g = (zr_byte)zr_slide_int(&combo, 0, combo_color.g, 255, 5);
                 zr_label(&combo, "B", ZR_TEXT_LEFT);
-                zr_slider_int(&combo, 0, &b, 255, 5);
+                combo_color.b = (zr_byte)zr_slide_int(&combo, 0, combo_color.b, 255, 5);
                 zr_label(&combo, "A", ZR_TEXT_LEFT);
-                zr_slider_int(&combo, 0, &a, 255, 5);
+                combo_color.a = (zr_byte)zr_slide_int(&combo, 0, combo_color.a , 255, 5);
             }
-            zr_combo_end(&layout, &combo, NULL);
-            zr_style_pop_color(config);
+            zr_combo_end(&layout, &combo, NULL, 0);
 
             /* progressbar combobox */
             sum = x + y + z + w;
             sprintf(buffer, "%lu", sum);
-            zr_combo_begin(&layout, &combo, buffer, &prog_active);
+            zr_combo_begin_text(&layout, &combo, buffer, &prog_active, 200, 0);
             {
                 zr_layout_row_dynamic(&combo, 30, 1);
                 zr_progress(&combo, &x, 100, ZR_MODIFIABLE);
@@ -633,12 +588,12 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
                 zr_progress(&combo, &z, 100, ZR_MODIFIABLE);
                 zr_progress(&combo, &w, 100, ZR_MODIFIABLE);
             }
-            zr_combo_end(&layout, &combo, NULL);
+            zr_combo_end(&layout, &combo, NULL, 0);
 
             /* checkbox combobox */
             sum = (size_t)(check_values[0] + check_values[1] + check_values[2] + check_values[3] + check_values[4]);
             sprintf(buffer, "%lu", sum);
-            zr_combo_begin(&layout, &combo, buffer, &check_active);
+            zr_combo_begin_text(&layout, &combo, buffer, &check_active, 200, 0);
             {
                 zr_layout_row_dynamic(&combo, 30, 1);
                 zr_checkbox(&combo, weapons[0], &check_values[0]);
@@ -646,8 +601,26 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
                 zr_checkbox(&combo, weapons[2], &check_values[2]);
                 zr_checkbox(&combo, weapons[3], &check_values[3]);
             }
-            zr_combo_end(&layout, &combo, NULL);
+            zr_combo_end(&layout, &combo, NULL, 0);
 
+            /* graph combobox */
+            sprintf(buffer, "%.1f", graph_selection);
+            zr_combo_begin_text(&layout, &combo, buffer, &graph_active, 200, 0);
+            {
+                size_t i = 0;
+                struct zr_graph graph;
+                zr_layout_row_dynamic(&combo, 120, 1);
+                zr_graph_begin(&combo, &graph, ZR_GRAPH_COLUMN, LEN(values), 0, 50);
+                for (i = 0; i < LEN(values); ++i) {
+                    zr_flags res = zr_graph_push(&combo, &graph, values[i]);
+                    if (res & ZR_GRAPH_CLICKED) {
+                        graph_selection = values[i];
+                        zr_combo_close(&combo, &graph_active);
+                    }
+                }
+                zr_graph_end(&combo, &graph);
+            }
+            zr_combo_end(&layout, &combo, NULL, 0);
             zr_layout_pop(&layout);
         }
         if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Input", &input_state))
@@ -803,7 +776,6 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         static int group_width = 320;
         static int group_height = 200;
         static struct zr_vec2 scrollbar;
-        static int width_active, height_active;
         struct zr_context tab;
 
         zr_flags group_flags = 0;
@@ -819,9 +791,9 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         zr_layout_row_push(&layout, 50);
         zr_label(&layout, "size:", ZR_TEXT_LEFT);
         zr_layout_row_push(&layout, 130);
-        zr_spinner_int(&layout, 100, &group_width, 500, 10, &width_active);
+        zr_property_int(&layout, "#Width:", 100, &group_width, 500, 10, 1);
         zr_layout_row_push(&layout, 130);
-        zr_spinner_int(&layout, 100, &group_height, 500, 10, &height_active);
+        zr_property_int(&layout, "#Height:", 100, &group_height, 500, 10, 1);
         zr_layout_row_end(&layout);
 
         zr_layout_row_static(&layout, (float)group_height, (size_t)group_width, 2);
@@ -850,7 +822,6 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
         if (zr_layout_push(&layout, ZR_LAYOUT_NODE, "Vertical", &vertical_state))
         {
             static float a = 100, b = 100, c = 100;
-            static int a_active, b_active, c_active;
             struct zr_rect bounds;
             struct zr_context sub;
 
@@ -862,18 +833,15 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             row_layout[4] = c;
 
             /* header */
-            zr_layout_row_static(&layout, 30, 100, 3);
+            zr_layout_row_static(&layout, 30, 100, 2);
             zr_label(&layout, "left:", ZR_TEXT_LEFT);
             zr_slider_float(&layout, 10.0f, &a, 200.0f, 10.0f);
-            zr_spinner_float(&layout, 10.0f, &a, 200.0f, 1.0f, &a_active);
 
             zr_label(&layout, "middle:", ZR_TEXT_LEFT);
             zr_slider_float(&layout, 10.0f, &b, 200.0f, 10.0f);
-            zr_spinner_float(&layout, 10.0f, &b, 200.0f, 1.0f, &b_active);
 
             zr_label(&layout, "right:", ZR_TEXT_LEFT);
             zr_slider_float(&layout, 10.0f, &c, 200.0f, 10.0f);
-            zr_spinner_float(&layout, 10.0f, &c, 200.0f, 1.0f, &c_active);
 
             /* tiles */
             zr_layout_row(&layout, ZR_STATIC, 200, 5, row_layout);
@@ -925,18 +893,15 @@ show_test_window(struct zr_window *window, struct zr_style *config, enum theme *
             struct zr_rect bounds;
 
             /* header */
-            zr_layout_row_static(&layout, 30, 100, 3);
+            zr_layout_row_static(&layout, 30, 100, 2);
             zr_label(&layout, "top:", ZR_TEXT_LEFT);
             zr_slider_float(&layout, 10.0f, &a, 200.0f, 10.0f);
-            zr_spinner_float(&layout, 10.0f, &a, 200.0f, 1.0f, &a_active);
 
             zr_label(&layout, "middle:", ZR_TEXT_LEFT);
             zr_slider_float(&layout, 10.0f, &b, 200.0f, 10.0f);
-            zr_spinner_float(&layout, 10.0f, &b, 200.0f, 1.0f, &b_active);
 
             zr_label(&layout, "bottom:", ZR_TEXT_LEFT);
             zr_slider_float(&layout, 10.0f, &c, 200.0f, 10.0f);
-            zr_spinner_float(&layout, 10.0f, &c, 200.0f, 1.0f, &c_active);
 
             zr_style_push_property(config, ZR_PROPERTY_ITEM_SPACING, zr_vec2(4, 0));
 
@@ -1020,14 +985,13 @@ init_demo(struct demo *gui)
     gui->config_white.colors[ZR_COLOR_PROGRESS_CURSOR] = zr_rgba(80, 80, 80, 255);
     gui->config_white.colors[ZR_COLOR_PROGRESS_CURSOR_HOVER] = zr_rgba(70, 70, 70, 255);
     gui->config_white.colors[ZR_COLOR_PROGRESS_CURSOR_ACTIVE] = zr_rgba(60, 60, 60, 255);
-    gui->config_white.colors[ZR_COLOR_DRAG] = zr_rgba(150, 150, 150, 255);
-    gui->config_white.colors[ZR_COLOR_DRAG_HOVER] = zr_rgba(160, 160, 160, 255);
-    gui->config_white.colors[ZR_COLOR_DRAG_ACTIVE] = zr_rgba(165, 165, 165, 255);
+    gui->config_white.colors[ZR_COLOR_PROPERTY] = zr_rgba(150, 150, 150, 255);
+    gui->config_white.colors[ZR_COLOR_PROPERTY_HOVER] = zr_rgba(160, 160, 160, 255);
+    gui->config_white.colors[ZR_COLOR_PROPERTY_ACTIVE] = zr_rgba(165, 165, 165, 255);
     gui->config_white.colors[ZR_COLOR_INPUT] = zr_rgba(150, 150, 150, 255);
     gui->config_white.colors[ZR_COLOR_INPUT_CURSOR] = zr_rgba(0, 0, 0, 255);
     gui->config_white.colors[ZR_COLOR_INPUT_TEXT] = zr_rgba(0, 0, 0, 255);
-    gui->config_white.colors[ZR_COLOR_SPINNER] = zr_rgba(175, 175, 175, 255);
-    gui->config_white.colors[ZR_COLOR_SPINNER_TRIANGLE] = zr_rgba(0, 0, 0, 255);
+    gui->config_white.colors[ZR_COLOR_COMBO] = zr_rgba(175, 175, 175, 255);
     gui->config_white.colors[ZR_COLOR_HISTO] = zr_rgba(160, 160, 160, 255);
     gui->config_white.colors[ZR_COLOR_HISTO_BARS] = zr_rgba(45, 45, 45, 255);
     gui->config_white.colors[ZR_COLOR_HISTO_NEGATIVE] = zr_rgba(255, 255, 255, 255);
