@@ -1,6 +1,8 @@
 # Zahnrad
 [![Coverity Status](https://scan.coverity.com/projects/5863/badge.svg)](https://scan.coverity.com/projects/5863)
 
+# CURRENTLY UNDER HEAVY REFACTORING! (do not use at the moment)
+
 This is a minimal state immediate mode graphical user interface toolkit
 written in ANSI C and licensed under zlib. It was designed as a simple embeddable user interface for
 application and does not have any direct dependencies,
