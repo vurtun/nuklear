@@ -152,6 +152,7 @@ ui_piemenu(struct zr_context *ctx,
             zr_layout_space_push(ctx, total_space);
             state = zr_widget(&bounds, ctx);
         }
+
         /* outer circle */
         zr_draw_circle(out, bounds, zr_rgb(50,50,50));
         {
@@ -210,8 +211,10 @@ ui_piemenu(struct zr_context *ctx,
     }
     zr_layout_space_end(ctx);
     zr_popup_end(ctx);
+
     zr_style_reset_colors(&ctx->style);
     zr_style_reset_properties(&ctx->style);
+
     if (!zr_input_is_mouse_down(&ctx->input, ZR_BUTTON_RIGHT))
         return active_item;
     else return ret;
@@ -444,50 +447,45 @@ basic_demo(struct zr_context *ctx, struct icons *img)
     zr_end(ctx);
 }
 
-#if 0
-zr_window_init(&gui.grid_demo, zr_rect(600, 350, 275, 250),
-    ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_BORDER_HEADER|ZR_WINDOW_NO_SCROLLBAR,
-    &gui.queue, &gui.config, &gui.input);
-
 static void
-grid_demo(struct zr_window *window, struct zr_style *config)
+grid_demo(struct zr_context *ctx)
 {
     static char text[3][64];
     static size_t text_len[3];
-    static int text_active[3];
-    static size_t text_cursor[3];
     static const char *items[] = {"Item 0","item 1","item 2"};
     static int selected_item = 0;
-    static int combo_active = 0;
     static int check = 1;
 
     int i;
-    struct zr_context layout;
-    struct zr_context combo;
+    struct zr_layout layout;
+    struct zr_layout combo;
 
-    config->font.height = 20;
-    zr_begin(ctx, window, "Grid Demo");
+    ctx->style.font.height = 20;
+    zr_begin(ctx, &layout, "Grid Demo", zr_rect(600, 350, 275, 250),
+        ZR_WINDOW_TITLE|ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|
+        ZR_WINDOW_BORDER_HEADER|ZR_WINDOW_NO_SCROLLBAR);
 
-    config->font.height = 18;
+    ctx->style.font.height = 18;
     zr_layout_row_dynamic(ctx, 30, 2);
     zr_label(ctx, "Floating point:", ZR_TEXT_RIGHT);
-    zr_edit(ctx, text[0], &text_len[0], 64, &text_active[0], &text_cursor[0], ZR_INPUT_FLOAT);
+    zr_edit_string(ctx, ZR_EDIT_FIELD, text[0], &text_len[0], 64, zr_filter_float);
     zr_label(ctx, "Hexadeximal:", ZR_TEXT_RIGHT);
-    zr_edit(ctx, text[1], &text_len[1], 64, &text_active[1], &text_cursor[1], ZR_INPUT_HEX);
+    zr_edit_string(ctx, ZR_EDIT_FIELD, text[1], &text_len[1], 64, zr_filter_hex);
     zr_label(ctx, "Binary:", ZR_TEXT_RIGHT);
-    zr_edit(ctx, text[2], &text_len[2], 64, &text_active[2], &text_cursor[2], ZR_INPUT_BIN);
+    zr_edit_string(ctx, ZR_EDIT_FIELD, text[2], &text_len[2], 64, zr_filter_binary);
     zr_label(ctx, "Checkbox:", ZR_TEXT_RIGHT);
     zr_checkbox(ctx, "Check me", &check);
     zr_label(ctx, "Combobox:", ZR_TEXT_RIGHT);
-    zr_combo_begin_text(ctx, &combo, items[selected_item], &combo_active, 200, 0);
-    zr_layout_row_dynamic(&combo, 30, 1);
-    for (i = 0; i < 3; ++i)
-        if (zr_combo_item(&combo, items[i], ZR_TEXT_LEFT))
-            selected_item = i;
-    zr_combo_end(ctx, &combo, &combo_active, 0);
-    zr_end(ctx, window);
+
+    if (zr_combo_begin_text(ctx, &combo, "combo", items[selected_item], 200)) {
+        zr_layout_row_dynamic(ctx, 30, 1);
+        for (i = 0; i < 3; ++i)
+            if (zr_combo_item(ctx, items[i], ZR_TEXT_LEFT))
+                selected_item = i;
+        zr_combo_end(ctx);
+    }
+    zr_end(ctx);
 }
-#endif
 
 /* =================================================================
  *
@@ -790,6 +788,7 @@ main(int argc, char *argv[])
         /* GUI */
         button_demo(&ctx, &icons);
         basic_demo(&ctx, &icons);
+        grid_demo(&ctx);
 
         /* Draw */
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
