@@ -90,21 +90,11 @@ struct node_editor {
     struct node *end;
     int node_count;
     int link_count;
-    int menu;
     struct zr_rect bounds;
     struct node *selected;
     int show_grid;
     struct zr_vec2 scrolling;
     struct node_linking linking;
-};
-
-struct gui {
-    void *memory;
-    struct zr_window window;
-    struct zr_input input;
-    struct zr_command_queue queue;
-    struct zr_style config;
-    struct zr_user_font font;
 };
 
 /* =================================================================
@@ -191,22 +181,21 @@ node_editor_link(struct node_editor *editor, int in_id, int in_slot,
 }
 
 static void
-node_editor_draw(struct zr_context *layout, struct node_editor *nodedit,
-    struct zr_style *config)
+node_editor_draw(struct zr_context *ctx, struct node_editor *nodedit)
 {
     int i = 0, n = 0;
     struct zr_rect total_space;
-    const struct zr_input *in = zr_input(layout);
-    struct zr_command_buffer *canvas = zr_canvas(layout);
+    const struct zr_input *in = &ctx->input;
+    struct zr_command_buffer *canvas = zr_window_get_canvas(ctx);
     struct node *updated = 0;
 
     /* allocate complete window space */
-    total_space = zr_space(layout);
-    zr_layout_row_space_begin(layout, ZR_STATIC, total_space.h, (zr_size)nodedit->node_count);
+    total_space = zr_window_get_content_region(ctx);
+    zr_layout_space_begin(ctx, ZR_STATIC, total_space.h, (zr_size)nodedit->node_count);
     {
-        struct zr_context node;
+        struct zr_layout node, menu;
         struct node *it = nodedit->begin;
-        struct zr_rect size = zr_layout_row_space_bounds(layout);
+        struct zr_rect size = zr_layout_space_bounds(ctx);
 
         if (nodedit->show_grid) {
             /* display grid */
@@ -214,56 +203,52 @@ node_editor_draw(struct zr_context *layout, struct node_editor *nodedit,
             const float grid_size = 32.0f;
             const struct zr_color grid_color = zr_rgb(50, 50, 50);
             for (x = (float)fmod(size.x - nodedit->scrolling.x, grid_size); x < size.w; x += grid_size)
-                zr_command_buffer_push_line(canvas, x+size.x, size.y, x+size.x, size.y+size.h, grid_color);
+                zr_draw_line(canvas, x+size.x, size.y, x+size.x, size.y+size.h, grid_color);
             for (y = (float)fmod(size.y - nodedit->scrolling.y, grid_size); y < size.h; y += grid_size)
-                zr_command_buffer_push_line(canvas, size.x, y+size.y, size.x+size.w, y+size.y, grid_color);
+                zr_draw_line(canvas, size.x, y+size.y, size.x+size.w, y+size.y, grid_color);
         }
 
         /* execute each node as a moveable group */
-        zr_style_push_color(config, ZR_COLOR_WINDOW, zr_rgb(48, 48, 48));
+        zr_style_push_color(&ctx->style, ZR_COLOR_WINDOW, zr_rgb(48, 48, 48));
         while (it) {
-            /* calculate node group space */
-            zr_layout_row_space_push(layout, zr_rect(it->bounds.x - nodedit->scrolling.x,
+
+            /* calculate scrolled node window position and size */
+            zr_layout_space_push(ctx, zr_rect(it->bounds.x - nodedit->scrolling.x,
                 it->bounds.y - nodedit->scrolling.y, it->bounds.w, it->bounds.h));
 
             /* execute node window */
-            zr_group_begin(layout, &node, it->name,
-                ZR_WINDOW_MOVEABLE|ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER, zr_vec2(0,0));
+            if (zr_group_begin(ctx, &node, it->name, ZR_WINDOW_MOVEABLE|ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER|ZR_WINDOW_TITLE))
             {
-                int r,g,b;
-                float ratio[] = {0.25f, 0.75f};
-
+                static const float ratio[] = {0.25f, 0.75f};
                 /* always have last selected node on top */
                 if (zr_input_mouse_clicked(in, ZR_BUTTON_LEFT, node.bounds) &&
                     (!(it->prev && zr_input_mouse_clicked(in, ZR_BUTTON_LEFT,
-                    zr_layout_row_space_rect_to_screen(layout, node.bounds)))) &&
+                    zr_layout_space_rect_to_screen(ctx, node.bounds)))) &&
                     nodedit->end != it)
                 {
                     updated = it;
                 }
 
                 /* ================= NODE CONTENT =====================*/
-                zr_layout_row_dynamic(&node, 30, 1);
-                r = it->color.r, g = it->color.g, b = it->color.b;
-                zr_button_color(&node, it->color, ZR_BUTTON_DEFAULT);
-                zr_layout_row(&node, ZR_DYNAMIC, 30, 2, ratio);
+                zr_layout_row_dynamic(ctx, 30, 1);
+                zr_button_color(ctx, it->color, ZR_BUTTON_DEFAULT);
+                zr_layout_row(ctx, ZR_DYNAMIC, 30, 2, ratio);
 
-                zr_label(&node, "R:", ZR_TEXT_LEFT);
-                zr_slider_int(&node, 0, &r, 255, 10);
-                zr_label(&node, "G:", ZR_TEXT_LEFT);
-                zr_slider_int(&node, 0, &g, 255, 10);
-                zr_label(&node, "B:", ZR_TEXT_LEFT);
-                zr_slider_int(&node, 0, &b, 255, 10);
-                it->color.r = (zr_byte)r; it->color.g = (zr_byte)g; it->color.b = (zr_byte)b;
+                zr_label(ctx, "R:", ZR_TEXT_LEFT);
+                it->color.r = (zr_byte)zr_slide_int(ctx, 0, it->color.r, 255, 10);
+                zr_label(ctx, "G:", ZR_TEXT_LEFT);
+                it->color.g = (zr_byte)zr_slide_int(ctx, 0, it->color.g, 255, 10);
+                zr_label(ctx, "B:", ZR_TEXT_LEFT);
+                it->color.b = (zr_byte)zr_slide_int(ctx, 0, it->color.b, 255, 10);
                 /* ====================================================*/
+                zr_group_end(ctx);
             }
-            zr_group_end(layout, &node, NULL);
 
             {
                 /* node connector and linking */
                 float space;
                 struct zr_rect bounds;
-                bounds = zr_layout_row_space_rect_to_local(layout, node.bounds);
+                bounds = zr_layout_space_rect_to_local(ctx, node.bounds);
                 bounds.x += nodedit->scrolling.x;
                 bounds.y += nodedit->scrolling.y;
                 it->bounds = bounds;
@@ -275,7 +260,7 @@ node_editor_draw(struct zr_context *layout, struct node_editor *nodedit,
                     circle.x = node.bounds.x + node.bounds.w-4;
                     circle.y = node.bounds.y + space * (n+1);
                     circle.w = 8; circle.h = 8;
-                    zr_command_buffer_push_circle(canvas, circle, zr_rgb(100, 100, 100));
+                    zr_draw_circle(canvas, circle, zr_rgb(100, 100, 100));
 
                     /* start linking process */
                     if (zr_input_is_mouse_click_in_rect(in, ZR_BUTTON_LEFT, circle)) {
@@ -290,7 +275,7 @@ node_editor_draw(struct zr_context *layout, struct node_editor *nodedit,
                         nodedit->linking.input_slot == n) {
                         struct zr_vec2 l0 = zr_vec2(circle.x + 3, circle.y + 3);
                         struct zr_vec2 l1 = in->mouse.pos;
-                        zr_command_buffer_push_curve(canvas, l0.x, l0.y, l0.x + 50.0f, l0.y,
+                        zr_draw_curve(canvas, l0.x, l0.y, l0.x + 50.0f, l0.y,
                             l1.x - 50.0f, l1.y, l1.x, l1.y, zr_rgb(100, 100, 100));
                     }
                 }
@@ -302,7 +287,7 @@ node_editor_draw(struct zr_context *layout, struct node_editor *nodedit,
                     circle.x = node.bounds.x-4;
                     circle.y = node.bounds.y + space * (n+1);
                     circle.w = 8; circle.h = 8;
-                    zr_command_buffer_push_circle(canvas, circle, zr_rgb(100, 100, 100));
+                    zr_draw_circle(canvas, circle, zr_rgb(100, 100, 100));
                     if (zr_input_is_mouse_released(in, ZR_BUTTON_LEFT) &&
                         zr_input_is_mouse_hovering_rect(in, circle) &&
                         nodedit->linking.active && nodedit->linking.node != it) {
@@ -329,34 +314,33 @@ node_editor_draw(struct zr_context *layout, struct node_editor *nodedit,
             struct node *no = node_editor_find(nodedit, link->output_id);
             float spacei = node.bounds.h / ((ni->output_count) + 1);
             float spaceo = node.bounds.h / ((no->input_count) + 1);
-            struct zr_vec2 l0 = zr_layout_row_space_to_screen(layout,
+            struct zr_vec2 l0 = zr_layout_space_to_screen(ctx,
                 zr_vec2(ni->bounds.x + ni->bounds.w, 3+ni->bounds.y + spacei * (link->input_slot+1)));
-            struct zr_vec2 l1 = zr_layout_row_space_to_screen(layout,
+            struct zr_vec2 l1 = zr_layout_space_to_screen(ctx,
                 zr_vec2(no->bounds.x, 3 + no->bounds.y + spaceo * (link->output_slot+1)));
 
             l0.x -= nodedit->scrolling.x;
             l0.y -= nodedit->scrolling.y;
             l1.x -= nodedit->scrolling.x;
             l1.y -= nodedit->scrolling.y;
-            zr_command_buffer_push_curve(canvas, l0.x, l0.y, l0.x + 50.0f, l0.y,
+            zr_draw_curve(canvas, l0.x, l0.y, l0.x + 50.0f, l0.y,
                 l1.x - 50.0f, l1.y, l1.x, l1.y, zr_rgb(100, 100, 100));
         }
-        zr_style_pop_color(config);
+        zr_style_pop_color(&ctx->style);
 
         if (updated) {
-            /* reshuffle nodes to have last recently selected node on the top */
+            /* reshuffle nodes to have last recently selected node on top */
             node_editor_pop(nodedit, updated);
             node_editor_push(nodedit, updated);
         }
 
-        /* node selection + right click popup context menu activation */
-        if (!nodedit->menu && zr_input_mouse_clicked(in, ZR_BUTTON_RIGHT, zr_layout_row_space_bounds(layout))) {
+        /* node selection */
+        if (zr_input_mouse_clicked(in, ZR_BUTTON_LEFT, zr_layout_space_bounds(ctx))) {
             it = nodedit->begin;
             nodedit->selected = NULL;
-            nodedit->menu = zr_true;
             nodedit->bounds = zr_rect(in->mouse.pos.x, in->mouse.pos.y, 100, 200);
             while (it) {
-                struct zr_rect b = zr_layout_row_space_rect_to_screen(layout, it->bounds);
+                struct zr_rect b = zr_layout_space_rect_to_screen(ctx, it->bounds);
                 b.x -= nodedit->scrolling.x;
                 b.y -= nodedit->scrolling.y;
                 if (zr_input_is_mouse_hovering_rect(in, b))
@@ -365,35 +349,22 @@ node_editor_draw(struct zr_context *layout, struct node_editor *nodedit,
             }
         }
 
-        /* popup context menu */
-        if (nodedit->menu) {
-            struct zr_context menu;
+        /* contextual menu */
+        if (zr_contextual_begin(ctx, &menu, 0, zr_vec2(100, 220))) {
             const char *grid_option[] = {"Show Grid", "Hide Grid"};
-            zr_contextual_begin(layout, &menu, ZR_WINDOW_NO_SCROLLBAR, &nodedit->menu, nodedit->bounds);
-            zr_layout_row_dynamic(&menu, 25, 1);
-            if (!nodedit->selected) {
-                /* menu content if no selected node */
-                if (zr_contextual_item(&menu, "New", ZR_TEXT_CENTERED))
-                    node_editor_add(nodedit, "New", zr_rect(400, 260, 180, 220),
-                            zr_rgb(255, 255, 255), 1, 2);
-                if (zr_contextual_item(&menu, grid_option[nodedit->show_grid],ZR_TEXT_CENTERED))
-                    nodedit->show_grid = !nodedit->show_grid;
-            } else {
-                /* menu content if selected node */
-                if (zr_contextual_item(&menu, "Delete", ZR_TEXT_CENTERED))
-                    fprintf(stdout, "pressed delete!\n");
-                if (zr_contextual_item(&menu, "Rename", ZR_TEXT_CENTERED))
-                    fprintf(stdout, "pressed rename!\n");
-                if (zr_contextual_item(&menu, "Copy", ZR_TEXT_CENTERED))
-                    fprintf(stdout, "pressed copy!\n");
-            }
-            zr_contextual_end(layout, &menu, &nodedit->menu);
+            zr_layout_row_dynamic(ctx, 25, 1);
+            if (zr_contextual_item(ctx, "New", ZR_TEXT_CENTERED))
+                node_editor_add(nodedit, "New", zr_rect(400, 260, 180, 220),
+                        zr_rgb(255, 255, 255), 1, 2);
+            if (zr_contextual_item(ctx, grid_option[nodedit->show_grid],ZR_TEXT_CENTERED))
+                nodedit->show_grid = !nodedit->show_grid;
+            zr_contextual_end(ctx);
         }
     }
-    zr_layout_row_space_end(layout);
+    zr_layout_space_end(ctx);
 
     /* window content scrolling */
-    if (zr_input_is_mouse_hovering_rect(in, layout->bounds) &&
+    if (zr_input_is_mouse_hovering_rect(in, zr_window_get_bounds(ctx)) &&
         zr_input_is_mouse_down(in, ZR_BUTTON_MIDDLE)) {
         nodedit->scrolling.x += in->mouse.delta.x;
         nodedit->scrolling.y += in->mouse.delta.y;
@@ -444,7 +415,7 @@ font_get_width(zr_handle handle, float height, const char *text, size_t len)
 }
 
 static void
-draw(NVGcontext *nvg, struct zr_command_queue *queue, int width, int height)
+draw(NVGcontext *nvg, struct zr_context *ctx, int width, int height)
 {
     const struct zr_command *cmd;
     glPushAttrib(GL_ENABLE_BIT|GL_COLOR_BUFFER_BIT);
@@ -456,7 +427,7 @@ draw(NVGcontext *nvg, struct zr_command_queue *queue, int width, int height)
     glEnable(GL_TEXTURE_2D);
 
     nvgBeginFrame(nvg, width, height, ((float)width/(float)height));
-    zr_foreach_command(cmd, queue) {
+    zr_foreach(cmd, ctx) {
         switch (cmd->type) {
         case ZR_COMMAND_NOP: break;
         case ZR_COMMAND_SCISSOR: {
@@ -468,17 +439,15 @@ draw(NVGcontext *nvg, struct zr_command_queue *queue, int width, int height)
             nvgBeginPath(nvg);
             nvgMoveTo(nvg, l->begin.x, l->begin.y);
             nvgLineTo(nvg, l->end.x, l->end.y);
-            nvgFillColor(nvg, nvgRGBA(l->color.r, l->color.g, l->color.b, l->color.a));
-            nvgFill(nvg);
+            nvgStrokeColor(nvg, nvgRGBA(l->color.r, l->color.g, l->color.b, l->color.a));
+            nvgStroke(nvg);
         } break;
         case ZR_COMMAND_CURVE: {
             const struct zr_command_curve *q = zr_command(curve, cmd);
             nvgBeginPath(nvg);
             nvgMoveTo(nvg, q->begin.x, q->begin.y);
-            nvgBezierTo(nvg, q->ctrl[0].x, q->ctrl[0].y, q->ctrl[1].x,
-                q->ctrl[1].y, q->end.x, q->end.y);
+            nvgBezierTo(nvg, q->ctrl[0].x, q->ctrl[0].y, q->ctrl[1].x, q->ctrl[1].y, q->end.x, q->end.y);
             nvgStrokeColor(nvg, nvgRGBA(q->color.r, q->color.g, q->color.b, q->color.a));
-            nvgStrokeWidth(nvg, 3);
             nvgStroke(nvg);
         } break;
         case ZR_COMMAND_RECT: {
@@ -530,10 +499,11 @@ draw(NVGcontext *nvg, struct zr_command_queue *queue, int width, int height)
             nvgFillPaint(nvg, imgpaint);
             nvgFill(nvg);
         } break;
+        case ZR_COMMAND_ARC:
         default: break;
         }
     }
-    zr_command_queue_clear(queue);
+    zr_clear(ctx);
 
     nvgResetScissor(nvg);
     nvgEndFrame(nvg);
@@ -608,17 +578,20 @@ main(int argc, char *argv[])
     int x, y, width, height;
     const char *font_path;
     zr_size font_height;
+
     SDL_SysWMinfo info;
     SDL_Window *win;
     SDL_GLContext glContext;
     NVGcontext *vg = NULL;
+
     int running = zr_true;
     unsigned int started;
     unsigned int dt;
 
     /* GUI */
     struct node_editor nodedit;
-    struct gui gui;
+    struct zr_context ctx;
+    void *memory;
 
     if (argc < 2) {
         fprintf(stdout,"Missing TTF Font file argument: gui <path>\n");
@@ -653,67 +626,53 @@ main(int argc, char *argv[])
     nvgFontSize(vg, font_height);
     nvgTextAlign(vg, NVG_ALIGN_LEFT|NVG_ALIGN_MIDDLE);
 
-    /* GUI */
-    memset(&gui, 0, sizeof gui);
-    gui.memory = malloc(MAX_MEMORY);
-    zr_command_queue_init_fixed(&gui.queue, gui.memory, MAX_MEMORY);
+    {
+        /* GUI */
+        struct zr_user_font font;
+        memset(&ctx, 0, sizeof ctx);
+        memory = malloc(MAX_MEMORY);
 
-    gui.font.userdata.ptr = vg;
-    nvgTextMetrics(vg, NULL, NULL, &gui.font.height);
-    gui.font.width = font_get_width;
-    zr_style_default(&gui.config, ZR_DEFAULT_ALL, &gui.font);
-    gui.config.header.align = ZR_HEADER_RIGHT;
-
-    zr_window_init(&gui.window, zr_rect(0, 0, width, height),
-        ZR_WINDOW_BORDER|ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_CLOSEABLE,
-        &gui.queue, &gui.config, &gui.input);
+        font.userdata.ptr = vg;
+        nvgTextMetrics(vg, NULL, NULL, &font.height);
+        font.width = font_get_width;
+        zr_init_fixed(&ctx, memory, MAX_MEMORY, &font, sin, cos);
+        ctx.style.header.align = ZR_HEADER_RIGHT;
+    }
     node_editor_init(&nodedit);
 
     while (running) {
         /* Input */
         SDL_Event evt;
         started = SDL_GetTicks();
-        zr_input_begin(&gui.input);
+        zr_input_begin(&ctx.input);
         while (SDL_PollEvent(&evt)) {
             if (evt.type == SDL_WINDOWEVENT) resize(&evt);
             else if (evt.type == SDL_QUIT) goto cleanup;
-            else if (evt.type == SDL_KEYUP) key(&gui.input, &evt, zr_false);
-            else if (evt.type == SDL_KEYDOWN) key(&gui.input, &evt, zr_true);
-            else if (evt.type == SDL_MOUSEBUTTONDOWN) btn(&gui.input, &evt, zr_true);
-            else if (evt.type == SDL_MOUSEBUTTONUP) btn(&gui.input, &evt, zr_false);
-            else if (evt.type == SDL_MOUSEMOTION) motion(&gui.input, &evt);
-            else if (evt.type == SDL_TEXTINPUT) text(&gui.input, &evt);
-            else if (evt.type == SDL_MOUSEWHEEL) zr_input_scroll(&gui.input, evt.wheel.y);
+            else if (evt.type == SDL_KEYUP) key(&ctx.input, &evt, zr_false);
+            else if (evt.type == SDL_KEYDOWN) key(&ctx.input, &evt, zr_true);
+            else if (evt.type == SDL_MOUSEBUTTONDOWN) btn(&ctx.input, &evt, zr_true);
+            else if (evt.type == SDL_MOUSEBUTTONUP) btn(&ctx.input, &evt, zr_false);
+            else if (evt.type == SDL_MOUSEMOTION) motion(&ctx.input, &evt);
+            else if (evt.type == SDL_TEXTINPUT) text(&ctx.input, &evt);
+            else if (evt.type == SDL_MOUSEWHEEL) zr_input_scroll(&ctx.input, evt.wheel.y);
         }
-        zr_input_end(&gui.input);
+        zr_input_end(&ctx.input);
 
         {
             int incursor;
-            struct zr_context layout;
-            struct zr_rect bounds = gui.window.bounds;
-            zr_flags ret;
-
-            ret = zr_begin(&layout, &gui.window, "Node Editor");
-            if (ret & ZR_WINDOW_CLOSEABLE)
-                goto cleanup;
-
-            /* borderless os window dragging */
-            incursor = zr_input_is_mouse_hovering_rect(&gui.input,
-                zr_rect(layout.bounds.x, layout.bounds.y, layout.bounds.w, layout.header_h));
-            if (zr_input_is_mouse_down(&gui.input, ZR_BUTTON_LEFT) && incursor) {
-                x += gui.input.mouse.delta.x;
-                y += gui.input.mouse.delta.y;
-                SDL_SetWindowPosition(win, x, y);
-            }
-            node_editor_draw(&layout, &nodedit, &gui.config);
-            zr_end(&layout, &gui.window);
+            struct zr_layout layout;
+            if (zr_begin(&ctx, &layout, "Nodedit", zr_rect(0,0,width,height),
+                ZR_WINDOW_BORDER|ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_CLOSEABLE))
+                node_editor_draw(&ctx, &nodedit);
+            else goto cleanup;
+            zr_end(&ctx);
         }
 
         /* GUI */
         glClearColor(0.4f, 0.4f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         SDL_GetWindowSize(win, &width, &height);
-        draw(vg, &gui.queue, width, height);
+        draw(vg, &ctx, width, height);
         SDL_GL_SwapWindow(win);
 
         /* Timing */
@@ -724,7 +683,7 @@ main(int argc, char *argv[])
 
 cleanup:
     /* Cleanup */
-    free(gui.memory);
+    free(memory);
     nvgDeleteGLES2(vg);
     SDL_GL_DeleteContext(glContext);
     SDL_DestroyWindow(win);

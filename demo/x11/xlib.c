@@ -25,13 +25,13 @@
 #include <time.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <math.h>
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
 /* macros */
 #define DTIME       16
-#define CURVE_STEPS 22
 #include "../../zahnrad.h"
 
 #define UNUSED(a)   ((void)(a))
@@ -158,7 +158,7 @@ font_get_text_width(zr_handle handle, float height, const char *text, zr_size le
     if(!font || !text)
         return 0;
 
-    height = 0;
+    UNUSED(height);
     if(font->set) {
         XmbTextExtents(font->set, (const char*)text, (int)len, NULL, &r);
         return r.width;
@@ -221,8 +221,8 @@ surface_scissor(XSurface *surf, float x, float y, float w, float h)
     XRectangle clip_rect;
     clip_rect.x = (short)(x-1);
     clip_rect.y = (short)(y-1);
-    clip_rect.width = (unsigned short)(w + 2);
-    clip_rect.height = (unsigned short)(h + 2);
+    clip_rect.width = (unsigned short)(w+2);
+    clip_rect.height = (unsigned short)(h+2);
     XSetClipRectangles(surf->dpy, surf->gc, 0, 0, &clip_rect, 1, Unsorted);
 }
 
@@ -314,49 +314,6 @@ surface_del(XSurface *surf)
 }
 
 static void
-draw(XSurface *surf, struct zr_command_queue *queue)
-{
-    const struct zr_command *cmd;
-    zr_foreach_command(cmd, queue) {
-        switch (cmd->type) {
-        case ZR_COMMAND_NOP: break;
-        case ZR_COMMAND_SCISSOR: {
-            const struct zr_command_scissor *s = zr_command(scissor, cmd);
-            surface_scissor(surf, s->x, s->y, s->w, s->h);
-        } break;
-        case ZR_COMMAND_LINE: {
-            const struct zr_command_line *l = zr_command(line, cmd);
-            surface_draw_line(surf, l->begin.x, l->begin.y, l->end.x,
-                l->end.y, l->color);
-        } break;
-        case ZR_COMMAND_RECT: {
-            const struct zr_command_rect *r = zr_command(rect, cmd);
-            surface_draw_rect(surf, r->x, r->y, r->w, r->h, r->color);
-        } break;
-        case ZR_COMMAND_CIRCLE: {
-            const struct zr_command_circle *c = zr_command(circle, cmd);
-            surface_draw_circle(surf, c->x, c->y, c->w, c->h, c->color);
-        } break;
-        case ZR_COMMAND_TRIANGLE: {
-            const struct zr_command_triangle *t = zr_command(triangle, cmd);
-            surface_draw_triangle(surf, t->a.x, t->a.y, t->b.x, t->b.y,
-                t->c.x, t->c.y, t->color);
-        } break;
-        case ZR_COMMAND_TEXT: {
-            const struct zr_command_text *t = zr_command(text, cmd);
-            surface_draw_text(surf, t->x, t->y, t->w, t->h, (const char*)t->string,
-                t->length, (XFont*)t->font->userdata.ptr, t->background, t->foreground);
-        } break;
-        case ZR_COMMAND_CURVE:
-        case ZR_COMMAND_IMAGE:
-        case ZR_COMMAND_ARC:
-        default: break;
-        }
-    }
-    zr_command_queue_clear(queue);
-}
-
-static void
 input_key(struct XWindow *xw, struct zr_input *in, XEvent *evt, int down)
 {
     int ret;
@@ -429,8 +386,10 @@ main(int argc, char *argv[])
     long started;
     XWindow xw;
     struct demo gui;
+    struct zr_user_font font;
+    int running = 1;
 
-    /* Platform */
+    /* X11 */
     UNUSED(argc); UNUSED(argv);
     memset(&xw, 0, sizeof xw);
     xw.dpy = XOpenDisplay(NULL);
@@ -456,41 +415,82 @@ main(int argc, char *argv[])
     xw.font = font_create(xw.dpy, "fixed");
 
     /* GUI */
+    font.userdata = zr_handle_ptr(xw.font);
+    font.height = (float)xw.font->height;
+    font.width = font_get_text_width;
     memset(&gui, 0, sizeof gui);
-    zr_command_queue_init_fixed(&gui.queue, calloc(MAX_MEMORY, 1), MAX_MEMORY);
-    gui.font.userdata = zr_handle_ptr(xw.font);
-    gui.font.height = (float)xw.font->height;
-    gui.font.width = font_get_text_width;
-    init_demo(&gui);
+    gui.memory = calloc(MAX_MEMORY, 1);
+    zr_init_fixed(&gui.ctx, gui.memory, MAX_MEMORY, &font, sin, cos);
 
-    while (gui.running) {
+    while (running) {
         /* Input */
         XEvent evt;
         started = timestamp();
-        zr_input_begin(&gui.input);
+        zr_input_begin(&gui.ctx.input);
         while (XCheckWindowEvent(xw.dpy, xw.win, xw.swa.event_mask, &evt)) {
             if (evt.type == KeyPress)
-                input_key(&xw, &gui.input, &evt, zr_true);
+                input_key(&xw, &gui.ctx.input, &evt, zr_true);
             else if (evt.type == KeyRelease)
-                input_key(&xw, &gui.input, &evt, zr_false);
+                input_key(&xw, &gui.ctx.input, &evt, zr_false);
             else if (evt.type == ButtonPress)
-                input_button(&gui.input, &evt, zr_true);
+                input_button(&gui.ctx.input, &evt, zr_true);
             else if (evt.type == ButtonRelease)
-                input_button(&gui.input, &evt, zr_false);
+                input_button(&gui.ctx.input, &evt, zr_false);
             else if (evt.type == MotionNotify)
-                input_motion(&gui.input, &evt);
+                input_motion(&gui.ctx.input, &evt);
             else if (evt.type == Expose || evt.type == ConfigureNotify)
                 resize(&xw, xw.surf);
         }
-        zr_input_end(&gui.input);
+        zr_input_end(&gui.ctx.input);
 
         /* GUI */
-        run_demo(&gui);
+        running = run_demo(&gui);
 
         /* Draw */
         XClearWindow(xw.dpy, xw.win);
-        surface_clear(xw.surf, 0x00FFFFFF);
-        draw(xw.surf, &gui.queue);
+        surface_clear(xw.surf, 0x00303030);
+        {
+            const struct zr_command *cmd;
+            zr_foreach(cmd, &gui.ctx) {
+                switch (cmd->type) {
+                case ZR_COMMAND_NOP: break;
+                case ZR_COMMAND_SCISSOR: {
+                    const struct zr_command_scissor *s = zr_command(scissor, cmd);
+                    surface_scissor(xw.surf, s->x, s->y, s->w, s->h);
+                } break;
+                case ZR_COMMAND_LINE: {
+                    const struct zr_command_line *l = zr_command(line, cmd);
+                    surface_draw_line(xw.surf, l->begin.x, l->begin.y, l->end.x,
+                        l->end.y, l->color);
+                } break;
+                case ZR_COMMAND_RECT: {
+                    const struct zr_command_rect *r = zr_command(rect, cmd);
+                    surface_draw_rect(xw.surf, r->x, r->y, r->w, r->h, r->color);
+                } break;
+                case ZR_COMMAND_CIRCLE: {
+                    const struct zr_command_circle *c = zr_command(circle, cmd);
+                    surface_draw_circle(xw.surf, c->x, c->y, c->w, c->h, c->color);
+                } break;
+                case ZR_COMMAND_TRIANGLE: {
+                    const struct zr_command_triangle *t = zr_command(triangle, cmd);
+                    surface_draw_triangle(xw.surf, t->a.x, t->a.y, t->b.x, t->b.y,
+                        t->c.x, t->c.y, t->color);
+                } break;
+                case ZR_COMMAND_TEXT: {
+                    const struct zr_command_text *t = zr_command(text, cmd);
+                    surface_draw_text(xw.surf, t->x, t->y, t->w, t->h,
+                        (const char*)t->string, t->length,
+                        (XFont*)t->font->userdata.ptr,
+                        t->background, t->foreground);
+                } break;
+                case ZR_COMMAND_CURVE:
+                case ZR_COMMAND_IMAGE:
+                case ZR_COMMAND_ARC:
+                default: break;
+                }
+            }
+            zr_clear(&gui.ctx);
+        }
         surface_blit(xw.win, xw.surf, xw.width, xw.height);
         XFlush(xw.dpy);
 
@@ -500,7 +500,7 @@ main(int argc, char *argv[])
             sleep_for(DTIME - dt);
     }
 
-    free(zr_buffer_memory(&gui.queue.buffer));
+    free(gui.memory);
     font_del(xw.dpy, xw.font);
     surface_del(xw.surf);
     XUnmapWindow(xw.dpy, xw.win);

@@ -386,13 +386,7 @@ struct file_browser {
     size_t dir_count;
 
     /* gui  */
-    void *memory;
     struct media media;
-    struct zr_input input;
-    struct zr_command_queue queue;
-    struct zr_style config;
-    struct zr_user_font font;
-    struct zr_window window;
     struct zr_vec2 dir;
     struct zr_vec2 sel;
     float ratio_dir;
@@ -410,21 +404,11 @@ file_browser_reload_directory_content(struct file_browser *browser, const char *
 }
 
 static void
-file_browser_init(struct file_browser *browser, NVGcontext *vg,
-    struct zr_user_font *font, int width, int height)
+file_browser_init(struct file_browser *browser, NVGcontext *vg)
 {
     memset(browser, 0, sizeof(*browser));
+    browser->ratio_dir = 0.75; browser->ratio_sel = 0.25f;
     media_init(&browser->media, vg);
-    {
-        /* gui */
-        browser->font = *font;
-        browser->memory = calloc(1, MAX_COMMAND_MEMORY);
-        memset(&browser->input, 0, sizeof(browser->input));
-        zr_command_queue_init_fixed(&browser->queue, browser->memory, MAX_COMMAND_MEMORY);
-        zr_style_default(&browser->config, ZR_DEFAULT_ALL, &browser->font);
-        zr_window_init(&browser->window, zr_rect(0,0,width,height), 0, &browser->queue, &browser->config, &browser->input);
-        browser->ratio_dir = 0.75; browser->ratio_sel = 0.25f;
-    }
     {
         /* load files and sub-directory list */
         const char *home = getenv("HOME");
@@ -463,30 +447,28 @@ file_browser_free(struct file_browser *browser)
 }
 
 static int
-file_browser_run(struct file_browser *browser, int width, int height)
+file_browser_run(struct file_browser *browser, struct zr_context *ctx, int width, int height)
 {
-    struct zr_context context;
+    struct zr_layout layout;
     struct media *media = &browser->media;
     struct icons *icons = &media->icons;
     struct zr_rect total_space;
 
-    browser->window.bounds.w = width;
-    browser->window.bounds.h = height;
-    zr_begin(&context, &browser->window, NULL);
+    if (zr_begin(ctx, &layout, "File Browser", zr_rect(0,0,width,height), 0))
     {
-        struct zr_context sub;
+        struct zr_layout sub;
         float row_layout[3];
         /* output path directory selector in the menubar */
-        zr_menubar_begin(&context);
+        zr_menubar_begin(ctx);
         {
             char *d = browser->directory;
             char *begin = d + 1;
-            zr_layout_row_dynamic(&context, 25, 6);
-            zr_style_push_property(&browser->config, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 4));
+            zr_layout_row_dynamic(ctx, 25, 6);
+            zr_style_push_property(&ctx->style, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 4));
             while (*d++) {
                 if (*d == '/') {
                     *d = '\0';
-                    if (zr_button_text(&context, begin, ZR_BUTTON_DEFAULT)) {
+                    if (zr_button_text(ctx, begin, ZR_BUTTON_DEFAULT)) {
                         *d++ = '/'; *d = '\0';
                         file_browser_reload_directory_content(browser, browser->directory);
                         break;
@@ -495,43 +477,43 @@ file_browser_run(struct file_browser *browser, int width, int height)
                     begin = d + 1;
                 }
             }
-            zr_style_pop_property(&browser->config);
+            zr_style_pop_property(&ctx->style);
         }
-        zr_menubar_end(&context);
+        zr_menubar_end(ctx);
 
         /* window layout */
-        total_space = zr_space(&context);
+        total_space = zr_window_get_content_region(ctx);
         row_layout[0] = (total_space.w - 8) * browser->ratio_sel;
         row_layout[1] = 8;
         row_layout[2] = (total_space.w - 8) * browser->ratio_dir;
-        zr_layout_row(&context, ZR_STATIC, total_space.h, 3, row_layout);
-        zr_style_push_property(&browser->config, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 4));
+        zr_layout_row(ctx, ZR_STATIC, total_space.h, 3, row_layout);
+        zr_style_push_property(&ctx->style, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 4));
 
         /* output special important directory list in own window */
-        zr_group_begin(&context, &sub, NULL, ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER, browser->sel);
+        zr_group_begin(ctx, &sub, "Special", ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER);
         {
             struct zr_image home = icons->home.img;
             struct zr_image desktop = icons->desktop.img;
             struct zr_image computer = icons->computer.img;
 
-            zr_layout_row_dynamic(&sub, 40, 1);
-            zr_style_push_property(&browser->config, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 0));
-            if (zr_button_text_image(&sub, home, "home", ZR_TEXT_CENTERED, ZR_BUTTON_DEFAULT))
+            zr_layout_row_dynamic(ctx, 40, 1);
+            zr_style_push_property(&ctx->style, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 0));
+            if (zr_button_text_image(ctx, home, "home", ZR_TEXT_CENTERED, ZR_BUTTON_DEFAULT))
                 file_browser_reload_directory_content(browser, browser->home);
-            if (zr_button_text_image(&sub,desktop,"desktop",ZR_TEXT_CENTERED, ZR_BUTTON_DEFAULT))
+            if (zr_button_text_image(ctx,desktop,"desktop",ZR_TEXT_CENTERED, ZR_BUTTON_DEFAULT))
                 file_browser_reload_directory_content(browser, browser->desktop);
-            if (zr_button_text_image(&sub,computer,"computer",ZR_TEXT_CENTERED,ZR_BUTTON_DEFAULT))
+            if (zr_button_text_image(ctx,computer,"computer",ZR_TEXT_CENTERED,ZR_BUTTON_DEFAULT))
                 file_browser_reload_directory_content(browser, "/");
-            zr_style_pop_property(&browser->config);
+            zr_style_pop_property(&ctx->style);
+            zr_group_end(ctx);
         }
-        zr_group_end(&context, &sub, &browser->sel);
 
         {
             /* scaler */
             struct zr_rect bounds;
-            struct zr_input *in = &browser->input;
-            zr_layout_peek(&bounds, &context);
-            zr_spacing(&context, 1);
+            struct zr_input *in = &ctx->input;
+            zr_layout_peek(&bounds, ctx);
+            zr_spacing(ctx, 1);
             if ((zr_input_is_mouse_hovering_rect(in, bounds) ||
                 zr_input_is_mouse_prev_hovering_rect(in, bounds)) &&
                 zr_input_is_mouse_down(in, ZR_BUTTON_LEFT))
@@ -544,7 +526,7 @@ file_browser_run(struct file_browser *browser, int width, int height)
         }
 
         /* output directory content window */
-        zr_group_begin(&context, &sub, NULL, ZR_WINDOW_BORDER, browser->dir);
+        zr_group_begin(ctx, &sub, "Content", ZR_WINDOW_BORDER);
         {
             int index = -1;
             size_t i = 0, j = 0, k = 0;
@@ -557,20 +539,20 @@ file_browser_run(struct file_browser *browser, int width, int height)
                 {
                     /* draw one row of icons */
                     size_t n = j + cols;
-                    zr_layout_row_dynamic(&sub, 135, cols);
-                    zr_style_push_color(&browser->config, ZR_COLOR_BUTTON, zr_rgb(45, 45, 45));
-                    zr_style_push_color(&browser->config, ZR_COLOR_BORDER, zr_rgb(45, 45, 45));
+                    zr_layout_row_dynamic(ctx, 135, cols);
+                    zr_style_push_color(&ctx->style, ZR_COLOR_BUTTON, zr_rgb(45, 45, 45));
+                    zr_style_push_color(&ctx->style, ZR_COLOR_BORDER, zr_rgb(45, 45, 45));
                     for (; j < count && j < n; ++j) {
                         if (j < browser->dir_count) {
                             /* draw and execute directory buttons */
-                            if (zr_button_image(&sub,icons->directory.img,ZR_BUTTON_DEFAULT))
+                            if (zr_button_image(ctx,icons->directory.img,ZR_BUTTON_DEFAULT))
                                 index = (int)j;
                         } else {
                             /* draw and execute files buttons */
                             struct icon *icon;
                             size_t fileIndex = ((size_t)j - browser->dir_count);
                             icon = media_icon_for_file(media,browser->files[fileIndex]);
-                            if (zr_button_image(&sub, icon->img, ZR_BUTTON_DEFAULT)) {
+                            if (zr_button_image(ctx, icon->img, ZR_BUTTON_DEFAULT)) {
                                 strncpy(browser->file, browser->directory, MAX_PATH_LEN);
                                 n = strlen(browser->file);
                                 strncpy(browser->file + n, browser->files[fileIndex], MAX_PATH_LEN - n);
@@ -578,19 +560,19 @@ file_browser_run(struct file_browser *browser, int width, int height)
                             }
                         }
                     }
-                    zr_style_pop_color(&browser->config);
-                    zr_style_pop_color(&browser->config);
+                    zr_style_pop_color(&ctx->style);
+                    zr_style_pop_color(&ctx->style);
                 }
                 {
                     /* draw one row of labels */
                     size_t n = k + cols;
-                    zr_layout_row_dynamic(&sub, 20, cols);
+                    zr_layout_row_dynamic(ctx, 20, cols);
                     for (; k < count && k < n; k++) {
                         if (k < browser->dir_count) {
-                            zr_label(&sub, browser->directories[k], ZR_TEXT_CENTERED);
+                            zr_label(ctx, browser->directories[k], ZR_TEXT_CENTERED);
                         } else {
                             size_t t = k-browser->dir_count;
-                            zr_label(&sub,browser->files[t],ZR_TEXT_CENTERED);
+                            zr_label(ctx,browser->files[t],ZR_TEXT_CENTERED);
                         }
                     }
                 }
@@ -606,11 +588,11 @@ file_browser_run(struct file_browser *browser, int width, int height)
                 }
                 file_browser_reload_directory_content(browser, browser->directory);
             }
+            zr_group_end(ctx);
         }
-        zr_group_end(&context, &sub, &browser->dir);
-        zr_style_pop_property(&browser->config);
+        zr_style_pop_property(&ctx->style);
     }
-    zr_end(&context, &browser->window);
+    zr_end(ctx);
     return 1;
 }
 /* =================================================================
@@ -631,7 +613,7 @@ font_get_width(zr_handle handle, float height, const char *text, size_t len)
 }
 
 static void
-draw(NVGcontext *nvg, struct zr_command_queue *queue, int width, int height)
+draw(NVGcontext *nvg, struct zr_context *ctx, int width, int height)
 {
     const struct zr_command *cmd;
     glPushAttrib(GL_ENABLE_BIT|GL_COLOR_BUFFER_BIT);
@@ -643,7 +625,7 @@ draw(NVGcontext *nvg, struct zr_command_queue *queue, int width, int height)
     glEnable(GL_TEXTURE_2D);
 
     nvgBeginFrame(nvg, width, height, ((float)width/(float)height));
-    zr_foreach_command(cmd, queue) {
+    zr_foreach(cmd, ctx) {
         switch (cmd->type) {
         case ZR_COMMAND_NOP: break;
         case ZR_COMMAND_SCISSOR: {
@@ -724,7 +706,7 @@ draw(NVGcontext *nvg, struct zr_command_queue *queue, int width, int height)
         default: break;
         }
     }
-    zr_command_queue_clear(queue);
+    zr_clear(ctx);
 
     nvgResetScissor(nvg);
     nvgEndFrame(nvg);
@@ -795,15 +777,14 @@ resize(SDL_Event *evt)
 int
 main(int argc, char *argv[])
 {
-    int x,y,width, height;
+    int width, height;
     SDL_Window *win;
     SDL_GLContext glContext;
     NVGcontext *vg = NULL;
+    struct zr_context ctx;
+    void *memory;
 
     int running = 1;
-    unsigned int started;
-    unsigned int dt;
-    struct zr_user_font font;
     struct file_browser browser;
     const char *font_path;
     int icon_sheet;
@@ -820,7 +801,6 @@ main(int argc, char *argv[])
         WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_OPENGL|SDL_WINDOW_SHOWN);
     glContext = SDL_GL_CreateContext(win);
     SDL_GetWindowSize(win, &width, &height);
-    SDL_GetWindowPosition(win, &x, &y);
 
     /* OpenGL */
     glewExperimental = 1;
@@ -836,44 +816,47 @@ main(int argc, char *argv[])
     nvgFontSize(vg, 14);
     nvgTextAlign(vg, NVG_ALIGN_LEFT|NVG_ALIGN_MIDDLE);
 
-    /* GUI */
-    memset(&browser, 0, sizeof browser);
-    font.userdata.ptr = vg;
-    nvgTextMetrics(vg, NULL, NULL, &font.height);
-    font.width = font_get_width;
-    file_browser_init(&browser, vg, &font, width, height);
+    {
+        /* GUI */
+        struct zr_user_font font;
+        memory = malloc(MAX_MEMORY);
+        font.userdata.ptr = vg;
+        font.width = font_get_width;
+        nvgTextMetrics(vg, NULL, NULL, &font.height);
+        zr_init_fixed(&ctx, memory, MAX_MEMORY, &font, sin, cos);
+        file_browser_init(&browser, vg);
+    }
 
     while (running) {
         /* Input */
         SDL_Event evt;
-        started = SDL_GetTicks();
-        zr_input_begin(&browser.input);
+        zr_input_begin(&ctx.input);
         while (SDL_PollEvent(&evt)) {
             if (evt.type == SDL_WINDOWEVENT) resize(&evt);
             else if (evt.type == SDL_QUIT) goto cleanup;
-            else if (evt.type == SDL_KEYUP) key(&browser.input, &evt, zr_false);
-            else if (evt.type == SDL_KEYDOWN) key(&browser.input, &evt, zr_true);
-            else if (evt.type == SDL_MOUSEBUTTONDOWN) btn(&browser.input, &evt, zr_true);
-            else if (evt.type == SDL_MOUSEBUTTONUP) btn(&browser.input, &evt, zr_false);
-            else if (evt.type == SDL_MOUSEMOTION) motion(&browser.input, &evt);
-            else if (evt.type == SDL_TEXTINPUT) text(&browser.input, &evt);
-            else if (evt.type == SDL_MOUSEWHEEL) zr_input_scroll(&browser.input, evt.wheel.y);
+            else if (evt.type == SDL_KEYUP) key(&ctx.input, &evt, zr_false);
+            else if (evt.type == SDL_KEYDOWN) key(&ctx.input, &evt, zr_true);
+            else if (evt.type == SDL_MOUSEBUTTONDOWN) btn(&ctx.input, &evt, zr_true);
+            else if (evt.type == SDL_MOUSEBUTTONUP) btn(&ctx.input, &evt, zr_false);
+            else if (evt.type == SDL_MOUSEMOTION) motion(&ctx.input, &evt);
+            else if (evt.type == SDL_TEXTINPUT) text(&ctx.input, &evt);
+            else if (evt.type == SDL_MOUSEWHEEL) zr_input_scroll(&ctx.input, evt.wheel.y);
         }
-        zr_input_end(&browser.input);
+        zr_input_end(&ctx.input);
 
         SDL_GetWindowSize(win, &width, &height);
-        running = file_browser_run(&browser, width, height);
+        running = file_browser_run(&browser, &ctx, width, height);
 
         /* Draw */
         glClearColor(0.4f, 0.4f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-        draw(vg, &browser.queue, width, height);
+        draw(vg, &ctx, width, height);
         SDL_GL_SwapWindow(win);
     }
 
 cleanup:
     /* Cleanup */
-    free(browser.memory);
+    free(memory);
     nvgDeleteGLES2(vg);
     SDL_GL_DeleteContext(glContext);
     SDL_DestroyWindow(win);

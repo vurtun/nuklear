@@ -143,10 +143,6 @@ struct opengl {
     float version;
     int major_version;
     int minor_version;
-    /* constants  */
-    int max_texture_size;
-    int max_texture_coords;
-    int max_texture_image_units;
     /* extensions */
     int glsl_available;
     int vertex_buffer_obj_available;
@@ -443,12 +439,8 @@ device_shutdown(struct device *dev)
     glDeleteVertexArrays(1, &dev->vao);
 }
 
-/* this is stupid but needed for C89 since sinf and cosf do not exist */
-static float fsin(float f) {return (float)sin(f);}
-static float fcos(float f) {return (float)cos(f);}
-
 static void
-device_draw(struct device *dev, struct zr_command_queue *queue, int width, int height,
+device_draw(struct device *dev, struct zr_context *ctx, int width, int height,
     enum zr_anti_aliasing AA)
 {
     GLint last_prog, last_tex;
@@ -485,13 +477,11 @@ device_draw(struct device *dev, struct zr_command_queue *queue, int width, int h
 
     {
         /* convert from command queue into draw list and draw to screen */
-        struct zr_draw_list draw_list;
-        const struct zr_draw_command *cmd;
         void *vertexes, *elements;
+        const struct zr_draw_command *cmd;
         const zr_draw_index *offset = NULL;
 
         /* allocate vertex and element buffer */
-        memset(&draw_list, 0, sizeof(draw_list));
         glBindVertexArray(dev->vao);
         glBindBuffer(GL_ARRAY_BUFFER, dev->vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, dev->ebo);
@@ -506,15 +496,13 @@ device_draw(struct device *dev, struct zr_command_queue *queue, int width, int h
             struct zr_buffer vbuf, ebuf;
             zr_buffer_init_fixed(&vbuf, vertexes, MAX_VERTEX_MEMORY);
             zr_buffer_init_fixed(&ebuf, elements, MAX_ELEMENT_MEMORY);
-            zr_draw_list_init(&draw_list, &dev->cmds, &vbuf, &ebuf,
-                fsin, fcos, dev->null, AA);
-            zr_draw_list_load(&draw_list, queue, 1.0f, 22);
+            zr_convert(ctx, &dev->cmds, &vbuf, &ebuf, dev->null, AA, 1.0f, 22);
         }
         glUnmapBuffer(GL_ARRAY_BUFFER);
         glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
 
         /* iterate over and execute each draw command */
-        zr_foreach_draw_command(cmd, &draw_list) {
+        zr_draw_foreach(cmd, ctx, &dev->cmds) {
             if (!cmd->elem_count) continue;
             glBindTexture(GL_TEXTURE_2D, (GLuint)cmd->texture.id);
             glScissor((GLint)cmd->clip_rect.x,
@@ -523,9 +511,7 @@ device_draw(struct device *dev, struct zr_command_queue *queue, int width, int h
             glDrawElements(GL_TRIANGLES, (GLsizei)cmd->elem_count, GL_UNSIGNED_SHORT, offset);
             offset += cmd->elem_count;
         }
-
-        zr_command_queue_clear(queue);
-        zr_draw_list_clear(&draw_list);
+        zr_clear(ctx);
     }
 
     /* restore old state */
@@ -602,14 +588,13 @@ static void mem_free(zr_handle unused, void *ptr)
 
 int main(int argc, char **argv)
 {
+    int running = 1;
     const char *font_path;
-    struct XWindow win;
     struct opengl gl;
-
-    struct zr_allocator alloc;
     struct device device;
     struct demo gui;
     struct zr_font font;
+    struct XWindow win;
 
     memset(&gl, 0, sizeof(gl));
     memset(&win, 0, sizeof(win));
@@ -692,7 +677,7 @@ int main(int argc, char **argv)
             win.vis->visual, CWBorderPixel|CWColormap|CWEventMask, &win.swa);
         if (!win.win) die("[X11]: Failed to create window\n");
         XFree(win.vis);
-        XStoreName(win.dpy, win.win, "QuakEd");
+        XStoreName(win.dpy, win.win, "Zahnrad");
         fprintf(stdout, "[X11]: Mapping window\n");
         XMapWindow(win.dpy, win.win);
     }
@@ -840,53 +825,59 @@ int main(int argc, char **argv)
     win.width = win.attr.width;
     win.height = win.attr.height;
 
-    /* GUI */
-    alloc.userdata.ptr = NULL;
-    alloc.alloc = mem_alloc;
-    alloc.free = mem_free;
-    zr_buffer_init(&device.cmds, &alloc, 1024, 2.0f);
-    zr_command_queue_init(&gui.queue, &alloc, 1024, 2.0f);
-    gui.font = font_bake_and_upload(&device, &font, font_path, 14,
-                                    zr_font_default_glyph_ranges());
+    {
+        /* GUI */
+        struct zr_user_font usrfnt;
+        struct zr_allocator alloc;
+        alloc.userdata.ptr = NULL;
+        alloc.alloc = mem_alloc;
+        alloc.free = mem_free;
 
-    init_demo(&gui);
+        zr_buffer_init(&device.cmds, &alloc, 4024);
+        usrfnt = font_bake_and_upload(&device, &font, font_path, 14,
+                        zr_font_default_glyph_ranges());
+        zr_init(&gui.ctx, &alloc, &usrfnt, sin, cos);
+    }
+
     device_init(&device);
-
-    /* main loop */
-    while (gui.running) {
+    while (running) {
         /* input */
         XEvent evt;
-        zr_input_begin(&gui.input);
+        zr_input_begin(&gui.ctx.input);
         while (XCheckWindowEvent(win.dpy, win.win, win.swa.event_mask, &evt)) {
             if (evt.type == KeyPress)
-                input_key(&win, &gui.input, &evt, zr_true);
+                input_key(&win, &gui.ctx.input, &evt, zr_true);
             else if (evt.type == KeyRelease)
-                input_key(&win, &gui.input, &evt, zr_false);
+                input_key(&win, &gui.ctx.input, &evt, zr_false);
             else if (evt.type == ButtonPress)
-                input_button(&gui.input, &evt, zr_true);
+                input_button(&gui.ctx.input, &evt, zr_true);
             else if (evt.type == ButtonRelease)
-                input_button(&gui.input, &evt, zr_false);
+                input_button(&gui.ctx.input, &evt, zr_false);
             else if (evt.type == MotionNotify)
-                input_motion(&gui.input, &evt);
+                input_motion(&gui.ctx.input, &evt);
+            else if (evt.type == Expose || evt.type == ConfigureNotify) {
+                XGetWindowAttributes(win.dpy, win.win, &win.attr);
+                win.width = win.attr.width;
+                win.height = win.attr.height;
+            }
         }
-        zr_input_end(&gui.input);
+        zr_input_end(&gui.ctx.input);
 
         /* GUI */
         XGetWindowAttributes(win.dpy, win.win, &win.attr);
-        gui.w = (size_t)win.width, gui.h = (size_t)win.height;
-        run_demo(&gui);
+        running = run_demo(&gui);
 
         /* Draw */
         glClear(GL_COLOR_BUFFER_BIT);
-        glClearColor(0.9f, 0.9f, 0.9f, 1.0f);
+        glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
         glViewport(0, 0, win.width, win.height);
-        device_draw(&device, &gui.queue, win.width, win.height, ZR_ANTI_ALIASING_ON);
+        device_draw(&device, &gui.ctx, win.width, win.height, ZR_ANTI_ALIASING_ON);
         glXSwapBuffers(win.dpy, win.win);
     }
 
 cleanup:
     free(font.glyphs);
-    zr_command_queue_free(&gui.queue);
+    zr_free(&gui.ctx);
     zr_buffer_free(&device.cmds);
     device_shutdown(&device);
 

@@ -69,7 +69,7 @@ extern "C" {
  you can just set this define to zero and the font module will not be compiled
  and the two headers will not be needed. */
 /*
- * ==============================================================
+* ==============================================================
  *
  *                          BASIC
  *
@@ -78,6 +78,7 @@ extern "C" {
 #if ZR_COMPILE_WITH_FIXED_TYPES
 #include <stdint.h>
 typedef uint32_t zr_uint;
+typedef uint32_t zr_hash;
 typedef uint64_t zr_ulong;
 typedef uint64_t zr_size;
 typedef uintptr_t zr_ptr;
@@ -86,6 +87,7 @@ typedef uint32_t zr_rune;
 typedef uint8_t zr_byte;
 #else
 typedef unsigned int zr_uint;
+typedef unsigned int zr_hash;
 typedef unsigned long zr_ulong;
 typedef unsigned long zr_size;
 typedef zr_size zr_ptr;
@@ -107,37 +109,11 @@ typedef unsigned char zr_byte;
 struct zr_user_font;
 struct zr_edit_box;
 struct zr_user_font_glyph;
-/*
- * ==============================================================
- *
- *                          UTILITY
- *
- * ===============================================================
- */
-/*  Utility
-    ----------------------------
-    The utility API provides a number of object construction function
-    for some gui specific objects like image handle, vector, color and rectangle.
 
-    USAGE
-    ----------------------------
-    Utility function API
-    zr_get_null_rect   -- returns a default clipping rectangle
-    zr_utf_decode      -- decodes a utf-8 glyph into u32 unicode glyph and len
-    zr_utf_encode      -- encodes a u32 unicode glyph into a utf-8 glyph
-    zr_image_ptr       -- create a image handle from pointer
-    zr_image_id        -- create a image handle from integer id
-    zr_subimage_ptr    -- create a sub-image handle from pointer and region
-    zr_subimage_id     -- create a sub-image handle from integer id and region
-    zr_rect_is_valid   -- check if a rectangle inside the image command is valid
-    zr_rect            -- creates a rectangle from x,y-Position and width and height
-    zr_vec2            -- creates a 2D floating point vector
-    zr_rgba            -- create a gui color struct from rgba color code
-    zr_rgb             -- create a gui color struct from rgb color code
-*/
+/*================================================================
+ *                          UTILITY
+ * ===============================================================*/
 enum {zr_false, zr_true};
-enum zr_heading {ZR_UP, ZR_RIGHT, ZR_DOWN, ZR_LEFT};
-enum zr_modify {ZR_FIXED = zr_false, ZR_MODIFIABLE = zr_true};
 struct zr_color {zr_byte r,g,b,a;};
 struct zr_vec2 {float x,y;};
 struct zr_vec2i {short x, y;};
@@ -146,33 +122,27 @@ struct zr_recti {short x,y,w,h;};
 typedef char zr_glyph[ZR_UTF_SIZE];
 typedef union {void *ptr; int id;} zr_handle;
 struct zr_image {zr_handle handle; unsigned short w, h; unsigned short region[4];};
+struct zr_scroll {unsigned short x, y;};
+typedef double(*zr_sin_f)(double);
+typedef double(*zr_cos_f)(double);
 
-enum zr_symbol {
-    ZR_SYMBOL_X,
-    ZR_SYMBOL_UNDERSCORE,
-    ZR_SYMBOL_CIRCLE,
-    ZR_SYMBOL_CIRCLE_FILLED,
-    ZR_SYMBOL_RECT,
-    ZR_SYMBOL_RECT_FILLED,
-    ZR_SYMBOL_TRIANGLE_UP,
-    ZR_SYMBOL_TRIANGLE_DOWN,
-    ZR_SYMBOL_TRIANGLE_LEFT,
-    ZR_SYMBOL_TRIANGLE_RIGHT,
-    ZR_SYMBOL_PLUS,
-    ZR_SYMBOL_MINUS,
-    ZR_SYMBOL_MAX
-};
-
-/* ----------------------- POINTER ---------------------------------*/
+/* pointer */
 #define zr_ptr_add(t, p, i) ((t*)((void*)((zr_byte*)(p) + (i))))
 #define zr_ptr_sub(t, p, i) ((t*)((void*)((zr_byte*)(p) - (i))))
 #define zr_ptr_add_const(t, p, i) ((const t*)((const void*)((const zr_byte*)(p) + (i))))
 #define zr_ptr_sub_const(t, p, i) ((const t*)((const void*)((const zr_byte*)(p) - (i))))
-/* ----------------------- MATH ---------------------------------*/
+
+/* math */
 struct zr_rect zr_get_null_rect(void);
 struct zr_rect zr_rect(float x, float y, float w, float h);
 struct zr_vec2 zr_vec2(float x, float y);
-/* ----------------------- COLOR ---------------------------------*/
+
+/* UTF-8 */
+zr_size zr_utf_decode(const char*, zr_rune*, zr_size);
+zr_size zr_utf_encode(zr_rune, char*, zr_size);
+zr_size zr_utf_len(const char*, zr_size byte_len);
+
+/* color */
 struct zr_color zr_rgba(zr_byte r, zr_byte g, zr_byte b, zr_byte a);
 struct zr_color zr_rgb(zr_byte r, zr_byte g, zr_byte b);
 struct zr_color zr_rgba_f(float r, float g, float b, float a);
@@ -189,7 +159,8 @@ void zr_color_hsv_f(float *out_h, float *out_s, float *out_v, struct zr_color);
 void zr_color_hsva(int *out_h, int *out_s, int *out_v, int *out_a, struct zr_color);
 void zr_color_hsva_f(float *out_h, float *out_s, float *out_v,
                     float *out_a, struct zr_color);
-/* ----------------------- IMAGE ---------------------------------*/
+
+/* image */
 zr_handle zr_handle_ptr(void*);
 zr_handle zr_handle_id(int);
 struct zr_image zr_image_ptr(void*);
@@ -197,20 +168,11 @@ struct zr_image zr_image_id(int);
 struct zr_image zr_subimage_ptr(void*, unsigned short w, unsigned short h, struct zr_rect);
 struct zr_image zr_subimage_id(int, unsigned short w, unsigned short h, struct zr_rect);
 int zr_image_is_subimage(const struct zr_image* img);
-/* ----------------------- UTF-8 ---------------------------------*/
-zr_size zr_utf_decode(const char*, zr_rune*, zr_size);
-zr_size zr_utf_encode(zr_rune, char*, zr_size);
-zr_size zr_utf_len(const char*, zr_size len);
 
 /* ==============================================================
- *
  *                          INPUT
- *
- * ===============================================================
- */
-/*  INPUT
-    ----------------------------
-    The input API is responsible for holding the input state by keeping track of
+ * ===============================================================*/
+/*  The input API is responsible for holding the input state by keeping track of
     mouse, key and text. The core of the API is a persistent
     zr_input struct which holds the input state while running.
     It is important to note that no direct os or window handling is done by the input
@@ -218,37 +180,7 @@ zr_size zr_utf_len(const char*, zr_size len);
     expects more work from the user and complicates the usage but on the other hand
     provides simple abstraction over a big number of platforms, libraries and other
     already provided functionality.
-
-    USAGE
-    ----------------------------
-    To instantiate the Input API the zr_input structure has to be zeroed in
-    the beginning of the program by either using memset or setting it to {0},
-    since the internal state is persistent over all frames.
-
-    To modify the internal input state you have to first set the zr_input struct
-    into a modifiable state with zr_input_begin. After the zr_input struct is
-    now ready you can add input state changes until everything is up to date.
-    Finally to revert back into a read state you have to call zr_input_end.
-
-    Input function API
-    zr_input_begin         -- begins the modification state
-    zr_input_motion        -- notifies of a cursor motion update
-    zr_input_key           -- notifies of a keyboard key update
-    zr_input_button        -- notifies of a action event
-    zr_input_char          -- adds a text glyph to zr_input
-    zr_input_end           -- ends the modification state
-
-    Input query function API
-    zr_input_is_mouse_click_in_rect    - checks for up/down click in a rectangle
-    zr_input_is_mouse_hovering_rect    - checks if the mouse hovers over a rectangle
-    zr_input_mouse_clicked             - checks if hover + down + clicked in rectangle
-    zr_input_is_mouse_down             - checks if the current mouse button is down
-    zr_input_is_mouse_released         - checks if mouse button previously released
-    zr_input_is_key_pressed            - checks if key was up and now is down
-    zr_input_is_key_released           - checks if key was down and is now up
-    zr_input_is_key_down               - checks if key is currently down
 */
-/* every key that is being used inside the library */
 enum zr_keys {
     ZR_KEY_SHIFT,
     ZR_KEY_DEL,
@@ -293,7 +225,11 @@ struct zr_mouse {
     /* number of steps in the up or down scroll direction */
 };
 
-struct zr_key {int down; unsigned int clicked;};
+struct zr_key {
+    int down;
+    unsigned int clicked;
+};
+
 struct zr_keyboard {
     struct zr_key keys[ZR_KEY_MAX];
     /* state of every used key */
@@ -310,87 +246,37 @@ struct zr_input {
     /* current mouse button and position state */
 };
 
+/* gathering input state */
 void zr_input_begin(struct zr_input*);
-/*  this function sets the input state to writeable */
 void zr_input_motion(struct zr_input*, int x, int y);
-/*  this function updates the current mouse position
-    Input:
-    - local os window X position
-    - local os window Y position
-*/
 void zr_input_key(struct zr_input*, enum zr_keys, int down);
-/*  this function updates the current state of a key
-    Input:
-    - key identifier
-    - the new state of the key
-*/
 void zr_input_button(struct zr_input*, enum zr_buttons, int x, int y, int down);
-/*  this function updates the current state of the button
-    Input:
-    - mouse button identifier
-    - local os window X position
-    - local os window Y position
-    - the new state of the button
-*/
 void zr_input_scroll(struct zr_input*, float y);
-/*  this function updates the current page scroll delta
-    Input:
-    - vector with each direction (< 0 down > 0 up and scroll distance)
-*/
 void zr_input_glyph(struct zr_input*, const zr_glyph);
-/*  this function adds a utf-8 glpyh into the internal text frame buffer
-    Input:
-    - utf8 glyph to add to the text buffer
-*/
 void zr_input_char(struct zr_input*, char);
-/* this function adds char into the internal text frame buffer
-    Input:
-    - character to add to the text buffer
-*/
 void zr_input_unicode(struct zr_input *in, zr_rune unicode);
-/* this function adds a unicode character into the internal text frame buffer
-    Input:
-    - unicode character to add to the text buffer
-*/
 void zr_input_end(struct zr_input*);
-/* this function sets the input state to readable */
-int zr_input_has_mouse_click_in_rect(const struct zr_input*,enum zr_buttons,
-                                            struct zr_rect);
-/* this function returns true if a mouse click inside a rectangle occured in prev frames */
+
+/* query input state */
+int zr_input_has_mouse_click_in_rect(const struct zr_input*,enum zr_buttons, struct zr_rect);
 int zr_input_has_mouse_click_down_in_rect(const struct zr_input*, enum zr_buttons,
-                                                struct zr_rect, int down);
-/*  this function returns true if a mouse down click inside a rectangle occured in prev frames */
+                                        struct zr_rect, int down);
 int zr_input_is_mouse_click_in_rect(const struct zr_input*, enum zr_buttons, struct zr_rect);
-/* this function returns true if a mouse click inside a rectangle occured and was just clicked */
+int zr_input_any_mouse_click_in_rect(const struct zr_input*, struct zr_rect);
 int zr_input_is_mouse_prev_hovering_rect(const struct zr_input*, struct zr_rect);
-/*  this function returns true if the mouse hovers over a rectangle */
 int zr_input_is_mouse_hovering_rect(const struct zr_input*, struct zr_rect);
-/*  this function returns true if the mouse hovers over a rectangle */
 int zr_input_mouse_clicked(const struct zr_input*, enum zr_buttons, struct zr_rect);
-/*  this function returns true if a mouse click inside a rectangle occured
-    and the mouse still hovers over the rectangle*/
 int zr_input_is_mouse_down(const struct zr_input*, enum zr_buttons);
-/*  this function returns true if the current mouse button is down */
 int zr_input_is_mouse_pressed(const struct zr_input*, enum zr_buttons);
-/*  this function returns true if the current mouse button is down and state change*/
 int zr_input_is_mouse_released(const struct zr_input*, enum zr_buttons);
-/*  this function returns true if the mouse button was previously pressed but
-    was now released */
 int zr_input_is_key_pressed(const struct zr_input*, enum zr_keys);
-/*  this function returns true if the given key was up and is now pressed */
 int zr_input_is_key_released(const struct zr_input*, enum zr_keys);
-/*  this function returns true if the given key was down and is now up */
 int zr_input_is_key_down(const struct zr_input*, enum zr_keys);
-/*  this function returns true if the given key was down and is now up */
 
 /* ==============================================================
- *
- *                          BUFFER
- *
+ *                          MEMORY BUFFER
  * =============================================================== */
-/*  BUFFER
-    ----------------------------
-    A basic (double)-buffer API with linear allocation and resetting as only
+/*  A basic (double)-buffer API with linear allocation and resetting as only
     freeing policy. The buffers main purpose is to control all memory management inside
     the GUI toolkit and still leave memory control as much as possible in the hand
     of the user. The memory is provided in three different ways.
@@ -420,18 +306,6 @@ int zr_input_is_key_down(const struct zr_input*, enum zr_keys);
     needed you would call zr_buffer_reset. To free all memory that has been allocated
     by an allocator if the buffer is no longer being used you have to call
     zr_buffer_clear.
-
-    Buffer function API
-    zr_buffer_init         -- initializes a dynamic buffer
-    zr_buffer_init_fixed   -- initializes a static buffer
-    zr_buffer_info         -- provides buffer memory information
-    zr_buffer_alloc        -- allocates a block of memory from the buffer
-    zr_buffer_clear        -- resets the buffer back to an empty state
-    zr_buffer_free         -- frees all memory if the buffer is dynamic
-    zr_buffer_mark         -- marks the current buffer size for later resetting
-    zr_buffer_reset        -- resets the buffer either back to zero or up to marker if set
-    zr_buffer_memory       -- returns the internal memory
-    zr_buffer_total        -- returns the current total size of the memory
 */
 struct zr_memory_status {
     void *memory;
@@ -458,7 +332,7 @@ struct zr_allocator {
     /* callback function pointer to finally free all allocated memory */
 };
 
-enum zr_buffer_type {
+enum zr_allocation_type {
     ZR_BUFFER_FIXED,
     /* fixed size memory buffer */
     ZR_BUFFER_DYNAMIC
@@ -486,7 +360,7 @@ struct zr_buffer {
     /* buffer marker to free a buffer to a certain offset */
     struct zr_allocator pool;
     /* allocator callback for dynamic buffers */
-    enum zr_buffer_type type;
+    enum zr_allocation_type type;
     /* memory type management type */
     struct zr_memory memory;
     /* memory and size of the current memory block */
@@ -502,852 +376,19 @@ struct zr_buffer {
     /* current size of the buffer */
 };
 
-void zr_buffer_init(struct zr_buffer*, const struct zr_allocator*,
-                        zr_size initial_size, float grow_factor);
-/*  this function initializes a growing buffer
-    Input:
-    - allocator holding your own alloctator and memory allocation callbacks
-    - initial size of the buffer
-    - factor to grow the buffer by if the buffer is full
-    Output:
-    - dynamically growing buffer
-*/
+void zr_buffer_init(struct zr_buffer*, const struct zr_allocator*, zr_size initial_size);
 void zr_buffer_init_fixed(struct zr_buffer*, void *memory, zr_size size);
-/*  this function initializes a fixed sized buffer
-    Input:
-    - fixed size previously allocated memory block
-    - size of the memory block
-    Output:
-    - fixed size buffer
-*/
 void zr_buffer_info(struct zr_memory_status*, struct zr_buffer*);
-/*  this function requests memory information from a buffer
-    Input:
-    - buffer to get the inforamtion from
-    Output:
-    - buffer memory information
-*/
-int zr_buffer_push(struct zr_buffer*,enum zr_buffer_allocation_type type,
-                        void *data, zr_size size, zr_size align);
-/*  this functions allocates a aligned memory block from a buffer and fill
-    the block with data
-    Input:
-    - buffer to allocate memory from
-    - size of the requested memory block
-    - alignment requirement for the memory block
-    Output:
-    - 'zr_true' if succesfully pushed 'zr_false' otherwise
-*/
-void zr_buffer_mark(struct zr_buffer*, enum zr_buffer_allocation_type);
-/* sets a marker either for the back or front buffer for later resetting */
-void zr_buffer_reset(struct zr_buffer*, enum zr_buffer_allocation_type);
-/* resets the buffer back to the previously set marker or if not set the begining */
-void zr_buffer_clear(struct zr_buffer*);
-/*  this functions resets the buffer back into an empty state */
 void zr_buffer_free(struct zr_buffer*);
-/*  this functions frees all memory inside a dynamically growing buffer */
 void *zr_buffer_memory(struct zr_buffer*);
-/* returns the memory inside the buffer */
 zr_size zr_buffer_total(struct zr_buffer*);
-/* returns the total size of the buffer */
-
-/* ==============================================================
- *
- *                          COMMAND BUFFER
- *
- * ===============================================================*/
-/*  COMMAND BUFFER
-    ----------------------------
-    The command buffer API queues draw calls as commands into a buffer and
-    therefore abstracts over drawing routines and enables defered drawing.
-    The API offers a number of drawing primitives like lines, rectangles, circles,
-    triangles, images, text and clipping rectangles, that have to be drawn by the user.
-    Therefore the command buffer is the main toolkit output besides the actual
-    widget output.
-    The actual draw command execution is done by the user and is build up in a
-    interpreter like fashion by iterating over all commands and executing each
-    command depending on the command type.
-
-    USAGE
-    ----------------------------
-    To use the command buffer you first have to initiate the command buffer with a
-    buffer. After the initilization you can add primitives by
-    calling the appropriate zr_command_buffer_XXX for each primitive.
-    To iterate over each commands inside the buffer zr_foreach_buffer_command is
-    provided. Finally to reuse the buffer after the frame use the
-    zr_command_buffer_clear function. If used without a command queue the command
-    buffer has be cleared after each frame to reset the buffer back into a
-    empty state.
-
-    command buffer function API
-    zr_command_buffer_init         -- initializes a command buffer with a buffer
-    zr_command_buffer_clear        -- resets the command buffer and internal buffer
-    zr_command_buffer_reset        -- resets the command buffer but not the buffer
-
-    command queue function API
-    zr_command_buffer_push         -- pushes and enqueues a command into the buffer
-    zr_command_buffer_push_scissor -- pushes a clipping rectangle into the command buffer
-    zr_command_buffer_push_line    -- pushes a line into the command buffer
-    zr_command_buffer_push_rect    -- pushes a rectange into the command buffer
-    zr_command_buffer_push_circle  -- pushes a circle into the command buffer
-    zr_command_buffer_push_triangle-- pushes a triangle command into the buffer
-    zr_command_buffer_push_curve   -- pushes a bezier cruve command into the buffer
-    zr_command_buffer_push_image   -- pushes a image draw command into the buffer
-    zr_command_buffer_push_text    -- pushes a text draw command into the buffer
-
-    command iterator function API
-    zr_command_buffer_begin        -- returns the first command in a buffer
-    zr_command_buffer_next         -- returns the next command in a buffer
-    zr_foreach_buffer_command      -- iterates over all commands in a buffer
-*/
-/* command type of every used drawing primitive */
-enum zr_command_type {
-    ZR_COMMAND_NOP,
-    ZR_COMMAND_SCISSOR,
-    ZR_COMMAND_LINE,
-    ZR_COMMAND_CURVE,
-    ZR_COMMAND_RECT,
-    ZR_COMMAND_CIRCLE,
-    ZR_COMMAND_ARC,
-    ZR_COMMAND_TRIANGLE,
-    ZR_COMMAND_TEXT,
-    ZR_COMMAND_IMAGE
-};
-
-/* command base and header of every comand inside the buffer */
-struct zr_command {
-    enum zr_command_type type;
-    /* the type of the current command */
-    zr_size next;
-    /* absolute base pointer offset to the next command */
-};
-
-struct zr_command_scissor {
-    struct zr_command header;
-    short x, y;
-    unsigned short w, h;
-};
-
-struct zr_command_line {
-    struct zr_command header;
-    struct zr_vec2i begin;
-    struct zr_vec2i end;
-    struct zr_color color;
-};
-
-struct zr_command_curve {
-    struct zr_command header;
-    struct zr_vec2i begin;
-    struct zr_vec2i end;
-    struct zr_vec2i ctrl[2];
-    struct zr_color color;
-};
-
-struct zr_command_rect {
-    struct zr_command header;
-    unsigned int rounding;
-    short x, y;
-    unsigned short w, h;
-    struct zr_color color;
-};
-
-struct zr_command_circle {
-    struct zr_command header;
-    short x, y;
-    unsigned short w, h;
-    struct zr_color color;
-};
-
-struct zr_command_arc {
-    struct zr_command header;
-    short cx, cy;
-    unsigned short r;
-    float a[2];
-    struct zr_color color;
-};
-
-struct zr_command_triangle {
-    struct zr_command header;
-    struct zr_vec2i a;
-    struct zr_vec2i b;
-    struct zr_vec2i c;
-    struct zr_color color;
-};
-
-struct zr_command_image {
-    struct zr_command header;
-    short x, y;
-    unsigned short w, h;
-    struct zr_image img;
-};
-
-struct zr_command_text {
-    struct zr_command header;
-    const struct zr_user_font *font;
-    struct zr_color background;
-    struct zr_color foreground;
-    short x, y;
-    unsigned short w, h;
-    float height;
-    zr_size length;
-    char string[1];
-};
-
-enum zr_command_clipping {
-    ZR_NOCLIP = zr_false,
-    ZR_CLIP = zr_true
-};
-
-struct zr_command_stats {
-    unsigned int lines;
-    /* number of lines inside the buffer */
-    unsigned int curves;
-    /* number of lines inside the buffer */
-    unsigned int rectangles;
-    /* number of rectangles in the buffer */
-    unsigned int circles;
-    /* number of circles in the buffer */
-    unsigned int triangles;
-    /* number of triangles in the buffer */
-    unsigned int images;
-    /* number of images in the buffer */
-    unsigned int text;
-    /* number of text commands in the buffer */
-    unsigned int glyphs;
-    /* number of text glyphs in the buffer */
-    unsigned int scissors;
-    /* number of text glyphs in the buffer */
-};
-
-struct zr_command_queue;
-struct zr_command_buffer {
-    struct zr_buffer *base;
-    /* memory buffer to store the command */
-    struct zr_rect clip;
-    /* current clipping rectangle */
-    int use_clipping;
-    /* flag if the command buffer should clip commands */
-    struct zr_command_stats stats;
-    /* stats about the content of the buffer */
-    struct zr_command_queue *queue;
-    struct zr_command_buffer *next;
-    struct zr_command_buffer *prev;
-    zr_size begin, end, last;
-    /* INTERNAL: references into a command queue */
-};
-
-void zr_command_buffer_init(struct zr_command_buffer*, struct zr_buffer*,
-                                enum zr_command_clipping);
-/*  this function intializes the command buffer
-    Input:
-    - memory buffer to store the commands into
-    - clipping flag for removing non-visible draw commands
-*/
-void zr_command_buffer_reset(struct zr_command_buffer*);
-/*  this function clears the command buffer but not the internal memory buffer */
-void zr_command_buffer_clear(struct zr_command_buffer*);
-/*  this function clears the command buffer and internal memory buffer */
-void *zr_command_buffer_push(struct zr_command_buffer*, unsigned int type, zr_size size);
-/*  this function push enqueues a command into the buffer
-    Input:
-    - buffer to push the command into
-    - type of the command
-    - amount of memory that is needed for the specified command
-*/
-void zr_command_buffer_push_scissor(struct zr_command_buffer*, struct zr_rect);
-/*  this function push a clip rectangle command into the buffer
-    Input:
-    - buffer to push the clip rectangle command into
-    - x,y and width and height of the clip rectangle
-*/
-void zr_command_buffer_push_line(struct zr_command_buffer*, float, float,
-                                    float, float, struct zr_color);
-/*  this function pushes a line draw command into the buffer
-    Input:
-    - buffer to push the clip rectangle command into
-    - starting point of the line
-    - ending point of the line
-    - color of the line to draw
-*/
-void zr_command_buffer_push_curve(struct zr_command_buffer*, float, float,
-                                    float, float,  float, float,
-                                    float, float, struct zr_color);
-/*  this function pushes a quad bezier line draw command into the buffer
-    Input:
-    - buffer to push the clip rectangle command into
-    - starting point (x,y) of the line
-    - first control point (x,y) of the line
-    - second control point (x,y) of the line
-    - ending point (x,y) of the line
-    - color of the line to draw
-*/
-void zr_command_buffer_push_rect(struct zr_command_buffer*, struct zr_rect,
-                                float rounding, struct zr_color color);
-/*  this function pushes a rectangle draw command into the buffer
-    Input:
-    - buffer to push the draw rectangle command into
-    - rectangle bounds
-    - rectangle edge rounding
-    - color of the rectangle to draw
-*/
-void zr_command_buffer_push_circle(struct zr_command_buffer*, struct zr_rect,
-                                    struct zr_color c);
-/*  this function pushes a circle draw command into the buffer
-    Input:
-    - buffer to push the circle draw command into
-    - rectangle bounds of the circle
-    - color of the circle to draw
-*/
-void zr_command_buffer_push_arc(struct zr_command_buffer*, float cx,
-                                float cy, float radius, float a_min,
-                                float a_max, struct zr_color);
-/*  this function pushes an arc draw command into the buffer
-    Input:
-    - buffer to push the circle draw command into
-    - center position (x,y) of the arc
-    - start and end angle of the arc
-    - color of the arc
-*/
-void zr_command_buffer_push_triangle(struct zr_command_buffer*, float, float,
-                                        float, float, float, float,
-                                        struct zr_color);
-/*  this function pushes a triangle draw command into the buffer
-    Input:
-    - buffer to push the draw triangle command into
-    - (x,y) coordinates of all three points
-    - rectangle diameter of the circle
-    - color of the triangle to draw
-*/
-void zr_command_buffer_push_image(struct zr_command_buffer*, struct zr_rect,
-                                    struct zr_image*);
-/*  this function pushes a image draw command into the buffer
-    Input:
-    - buffer to push the draw image command into
-    - bounds of the image to draw with position, width and height
-    - rectangle diameter of the circle
-    - color of the triangle to draw
-*/
-void zr_command_buffer_push_text(struct zr_command_buffer*, struct zr_rect,
-                                    const char*, zr_size, const struct zr_user_font*,
-                                    struct zr_color, struct zr_color);
-/*  this function pushes a text draw command into the buffer
-    Input:
-    - buffer to push the draw text command into
-    - top left position of the text with x,y position
-    - maixmal size of the text to draw with width and height
-    - color of the triangle to draw
-*/
-#define zr_command(t, c) ((const struct zr_command_##t*)c)
-/*  this is a small helper makro to cast from a general to a specific command */
-#define zr_foreach_buffer_command(i, b)\
-    for((i)=zr_command_buffer_begin(b); (i)!=NULL; (i)=zr_command_buffer_next(b,i))
-/*  this loop header allow to iterate over each command in a command buffer */
-const struct zr_command *zr_command_buffer_begin(struct zr_command_buffer*);
-/*  this function returns the first command in the command buffer */
-const struct zr_command *zr_command_buffer_next(struct zr_command_buffer*,
-                                                struct zr_command*);
-/*  this function returns the next command of a given command*/
-
-/*==============================================================
- *
- *                      COMMAND QUEUE
- *
- * ===============================================================*/
-/*  COMMAND QUEUE
-    ----------------------------
-    The command queue extends the command buffer with the possiblity to use
-    more than one command buffer on one memory buffer and still only need
-    to iterate over one command list. Therefore it is possible to have multiple
-    windows without having to manage each windows individual memory. This greatly
-    simplifies and reduces the amount of code needed with just using command buffers.
-
-    Internally the command queue has a list of command buffers which can be
-    modified to create a certain sequence, for example the `zr_begin`
-    function changes the list to create overlapping windows.
-
-    USAGE
-    ----------------------------
-    The command queue owns a memory buffer internaly that needs to be initialized
-    either as a fixed size or dynamic buffer with functions `zr_commmand_queue_init'
-    or `zr_command_queue_init_fixed`. Windows are automaticall added to the command
-    queue in the `zr_window_init` with the `zr_command_queue_add` function
-    but removing a window requires a manual call of `zr_command_queue_remove`.
-    Internally the window calls the `zr_command_queue_start` and
-    `zr_command_queue_finish` function that setup and finilize a command buffer for
-    command queuing. Finally to iterate over all commands in all command buffers
-    the iterator API is provided. It allows to iterate over each command in a
-    foreach loop.
-
-    command queue function API
-    zr_command_queue_init          -- initializes a dynamic command queue
-    zr_command_queue_init_fixed    -- initializes a static command queue
-    zr_command_queue_clear         -- frees all memory if the command queue is dynamic
-    zr_command_queue_insert_font   -- adds a command buffer in the front of the queue
-    zr_command_queue_insert_back   -- adds a command buffer in the back of the queue
-    zr_command_queue_remove        -- removes a command buffer from the queue
-    zr_command_queue_start         -- begins the command buffer filling process
-    zr_command_queue_start_child   -- begins the child command buffer filling process
-    zr_command_queue_finish_child  -- ends the child command buffer filling process
-    zr_command_queue_finish        -- ends the command buffer filling process
-
-    command iterator function API
-    zr_command_queue_begin         -- returns the first command in a queue
-    zr_command_queue_next          -- returns the next command in a queue or NULL
-    zr_foreach_command             -- iterates over all commands in a queue
-*/
-struct zr_command_buffer_list {
-    zr_size count;
-    /* number of windows inside the stack */
-    struct zr_command_buffer *begin;
-    /* first window inside the window which will be drawn first */
-    struct zr_command_buffer *end;
-    /* currently active window which will be drawn last */
-};
-
-struct zr_command_sub_buffer {
-    zr_size begin;
-    /* begin of the subbuffer */
-    zr_size parent_last;
-    /* last entry before the sub buffer*/
-    zr_size last;
-    /* last entry in the sub buffer*/
-    zr_size end;
-    /* end of the subbuffer */
-    zr_size next;
-};
-
-struct zr_command_sub_buffer_stack {
-    zr_size count;
-    /* number of subbuffers */
-    zr_size begin;
-    /* buffer offset of the first subbuffer*/
-    zr_size end;
-    /* buffer offset of the last subbuffer*/
-    zr_size size;
-    /* real size of the buffer */
-};
-
-struct zr_command_queue {
-    struct zr_buffer buffer;
-    /* memory buffer the hold all commands */
-    struct zr_command_buffer_list list;
-    /* list of each memory buffer inside the queue */
-    struct zr_command_sub_buffer_stack stack;
-    /* subbuffer stack for overlapping popup windows in windows */
-    int build;
-    /* flag indicating if a complete command list was build inside the queue*/
-};
-
-void zr_command_queue_init(struct zr_command_queue*, const struct zr_allocator*,
-                            zr_size initial_size, float grow_factor);
-/*  this function initializes a growing command queue
-    Input:
-    - allocator holding your own alloctator and memory allocation callbacks
-    - initial size of the buffer
-    - factor to grow the buffer by if the buffer is full
-*/
-void zr_command_queue_init_fixed(struct zr_command_queue*, void*, zr_size);
-/*  this function initializes a fixed size command queue
-    Input:
-    - fixed size previously allocated memory block
-    - size of the memory block
-*/
-void zr_command_queue_insert_back(struct zr_command_queue*, struct zr_command_buffer*);
-/*  this function adds a command buffer into the back of the queue
-    Input:
-    - command buffer to add into the queue
-*/
-void zr_command_queue_insert_front(struct zr_command_queue*, struct zr_command_buffer*);
-/*  this function adds a command buffer into the beginning of the queue
-    Input:
-    - command buffer to add into the queue
-*/
-void zr_command_queue_remove(struct zr_command_queue*, struct zr_command_buffer*);
-/*  this function removes a command buffer from the queue
-    Input:
-    - command buffer to remove from the queue
-*/
-void zr_command_queue_start(struct zr_command_queue*, struct zr_command_buffer*);
-/*  this function sets up the command buffer to be filled up
-    Input:
-    - command buffer to fill with commands
-*/
-void zr_command_queue_finish(struct zr_command_queue*, struct zr_command_buffer*);
-/*  this function finishes the command buffer fill up process
-    Input:
-    - the now filled command buffer
-*/
-int zr_command_queue_start_child(struct zr_command_queue*,
-                                        struct zr_command_buffer*);
-/*  this function sets up a child buffer inside a command buffer to be filled up
-    Input:
-    - command buffer to begin the child buffer in
-    Output:
-    - zr_true if successful zr_false otherwise
-*/
-void zr_command_queue_finish_child(struct zr_command_queue*, struct zr_command_buffer*);
-/*  this function finishes the child buffer inside the command buffer fill up process
-    Input:
-    - the command buffer to create the child command buffer in
-*/
-void zr_command_queue_free(struct zr_command_queue*);
-/*  this function clears the internal buffer if it is a dynamic buffer */
-void zr_command_queue_clear(struct zr_command_queue*);
-/*  this function reset the internal buffer and has to be called every frame */
-#define zr_foreach_command(i, q)\
-    for((i)=zr_command_queue_begin(q); (i)!=0; (i)=zr_command_queue_next(q,i))
-/*  this function iterates over each command inside the command queue
-    Input:
-    - iterator zr_command pointer to iterate over all commands
-    - queue to iterate over
-*/
-void zr_command_queue_build(struct zr_command_queue*);
-/*  this function builds the internal queue commmand list out of all buffers.
- *  Only needs be called if zr_command_queue_begin is called in parallel */
-const struct zr_command *zr_command_queue_begin(struct zr_command_queue*);
-/*  this function returns the first command in the command queue */
-const struct zr_command* zr_command_queue_next(struct zr_command_queue*,
-                                                const struct zr_command*);
-/*  this function returns the next command of a given command*/
-
-/* ===============================================================
- *
- *                          DRAW LIST
- *
- * ===============================================================*/
-#if ZR_COMPILE_WITH_VERTEX_BUFFER
-/*  DRAW LIST
-    ----------------------------
-    The optional draw list provides a way to convert the gui library
-    drawing command output into a hardware accessible format.
-    This consists of vertex, element and draw batch command buffer output which
-    can be interpreted by render frameworks (OpenGL, DirectX, ...).
-    In addition to just provide a way to convert commands the draw list has
-    a primitives and stateful path drawing API, which allows to draw into the
-    draw list even with anti-aliasing.
-
-    The draw list consist internaly of three user provided buffers that will be
-    filled with data. The first buffer is the draw command and temporary
-    path buffer which permanetly stores all draw batch commands. The vertex and
-    element buffer are the same buffers as their hardware renderer counter-parts,
-    in fact it is even possible to directly map one of these buffers and fill
-    them with data.
-
-    The reason why the draw list is optional or is not the default library output
-    is that basic commands provide an easy way to abstract over other libraries
-    which already provide a drawing API and do not need or want the output the
-    draw list provides. In addition it is way easier and takes less memory
-    to serialize commands decribing primitives than vertex data.
-
-    USAGE
-    ----------------------------
-    To actually use the draw list you first need the initialize the draw list
-    by providing three buffers to be filled while drawing. The reason
-    buffers need to be provided and not memory or an allocator is to provide
-    more fine grained control over the memory inside the draw list, which in term
-    requires more work from the user.
-
-    After the draw list has been initialized you can fill the draw list by
-    a.) converting the content of a command queue into the draw list format
-    b.) adding primtive filled shapes or only the outline of rectangles, circle, etc.
-    c.) using the stateful path API for fine grained drawing control
-
-    Finaly for the drawing process you have to iterate over each draw command
-    inside the `zr_draw_list` by using the function `zr_foreach_draw_command`
-    which contains drawing state like clip rectangle, current texture and a number
-    of elements to draw with the current state.
-
-    draw list buffer functions
-    zr_draw_list_init              - initializes a command buffer with memory
-    zr_draw_list_clear             - clears and resets the buffer
-    zr_draw_list_load              - load the draw buffer from a command queue
-    zr_draw_list_begin             - returns the first command in the draw buffer
-    zr_draw_list_next              - returns the next command in the draw buffer or NULL
-    zr_draw_list_is_empty          - returns if the buffer has no vertexes or commands
-    zr_foreach_draw_command        - iterates over all commands in the draw buffer
-
-    draw list primitives drawing functions
-    zr_draw_list_add_line          - pushes a line into the draw list
-    zr_draw_list_add_rect          - pushes a rectangle into the draw list
-    zr_draw_list_add_rect_filled   - pushes a filled rectangle into the draw list
-    zr_draw_list_add_triangle      - pushes a triangle into the draw list
-    zr_draw_list_add_triangle_filled -pushes a filled triangle into the draw list
-    zr_draw_list_add_circle        - pushes circle into the draw list
-    zr_draw_list_add_circle_filled - pushes a filled circle into the draw list
-    zr_draw_list_add_text          - pushes text into the draw list
-    zr_draw_list_add_image         - pushes an image into the draw list
-
-    stateful path functions
-    zr_draw_list_path_clear        - resets the current path
-    zr_draw_list_path_line_to      - adds a point into the path
-    zr_draw_list_path_arc_to       - adds a arc into the path
-    zr_draw_list_path_curve_to     - adds a bezier curve into the path
-    zr_draw_list_path_rect_to      - adds a rectangle into the path
-    zr_draw_list_path_fill         - fills the path as a convex polygon
-    zr_draw_list_path_stroke       - connects each point in the path
-*/
-typedef unsigned short zr_draw_index;
-typedef zr_uint zr_draw_vertex_color;
-typedef float(*zr_sin_f)(float);
-typedef float(*zr_cos_f)(float);
-
-enum zr_anti_aliasing {
-    ZR_ANTI_ALIASING_OFF = zr_false,
-    /* renderes all primitives without anti-aliasing  */
-    ZR_ANTI_ALIASING_ON
-    /* renderes all primitives with anti-aliasing  */
-};
-
-struct zr_draw_vertex {
-    struct zr_vec2 position;
-    struct zr_vec2 uv;
-    zr_draw_vertex_color col;
-};
-
-enum zr_draw_list_stroke {
-    ZR_STROKE_OPEN = zr_false,
-    /* build up path has no connection back to the beginning */
-    ZR_STROKE_CLOSED = zr_true
-    /* build up path has a connection back to the beginning */
-};
-
-struct zr_draw_command {
-    unsigned int elem_count;
-    /* number of elements in the current draw batch */
-    struct zr_rect clip_rect;
-    /* current screen clipping rectangle */
-    zr_handle texture;
-    /* current texture to set */
-};
-
-struct zr_draw_null_texture {
-    zr_handle texture;
-    /* texture handle to a texture with a white pixel */
-    struct zr_vec2 uv;
-    /* coordinates to the white pixel in the texture  */
-};
-
-struct zr_draw_list {
-    enum zr_anti_aliasing AA;
-    /* flag indicating if anti-aliasing should be used to render primtives */
-    struct zr_draw_null_texture null;
-    /* texture with white pixel for easy primitive drawing */
-    struct zr_rect clip_rect;
-    /* current clipping rectangle */
-    zr_cos_f cos; zr_sin_f sin;
-    /* cosine/sine calculation callback since this library does not use libc  */
-    struct zr_buffer *buffer;
-    /* buffer to store draw commands and temporarily store path */
-    struct zr_buffer *vertexes;
-    /* buffer to store each draw vertex */
-    struct zr_buffer *elements;
-    /* buffer to store each draw element index */
-    unsigned int element_count;
-    /* total number of elements inside the elements buffer */
-    unsigned int vertex_count;
-    /* total number of vertexes inside the vertex buffer */
-    zr_size cmd_offset;
-    /* offset to the first command in the buffer */
-    unsigned int cmd_count;
-    /* number of commands inside the buffer  */
-    unsigned int path_count;
-    /* current number of points inside the path */
-    unsigned int path_offset;
-    /* offset to the first point in the buffer */
-    struct zr_vec2 circle_vtx[12];
-    /* small lookup table for fast circle drawing */
-};
-/* ---------------------------------------------------------------
- *                          MAIN
- * ---------------------------------------------------------------*/
-void zr_draw_list_setup(zr_sin_f sine, zr_cos_f cosine);
-/*  this function setups global lookup tables.
- *  IMPORTANT: only needs to be called if you call the draw list API in a multithreaded fashion
-    Input:
-    - sine function callback since this library does not use clib (default: just use sinf)
-    - cosine function callback since this library does not use clib (default: just use cosf)
-*/
-void zr_draw_list_init(struct zr_draw_list*, struct zr_buffer *cmds,
-                        struct zr_buffer *vertexes, struct zr_buffer *elements,
-                        zr_sin_f, zr_cos_f, struct zr_draw_null_texture,
-                        enum zr_anti_aliasing AA);
-/*  this function initializes the draw list
-    Input:
-    - command memory buffer to fill with commands and provided temporary memory for path
-    - vertex memory buffer to fill with draw vertexeses
-    - element memory buffer to fill with draw indexes
-    - sine function callback since this library does not use clib (default: just use sinf)
-    - cosine function callback since this library does not use clib (default: just use cosf)
-    - special null structure which holds a texture with a white pixel
-    - Anti-aliasing flag for turning on/off anti-aliased primitives drawing
-*/
-void zr_draw_list_load(struct zr_draw_list*, struct zr_command_queue *queue,
-                        float line_thickness, unsigned int curve_segments);
-/*  this function loads the draw list from command queue commands
-    Input:
-    - queue with draw commands to fill the draw list with
-    - line thickness for all lines and non-filled primitives
-    - number of segments used for drawing circles and curves
-*/
-void zr_draw_list_clear(struct zr_draw_list *list);
-/*  this function clears all buffers inside the draw list */
-int zr_draw_list_is_empty(struct zr_draw_list *list);
-/*  this function returns if the draw list is empty */
-#define zr_foreach_draw_command(i, q)\
-    for((i)=zr_draw_list_begin(q); (i)!=NULL; (i)=zr_draw_list_next(q,i))
-/*  this function iterates over each draw command inside the draw list
-    Input:
-    - iterator zr_draw_command pointer to iterate over all commands
-    - draw list to iterate over
-*/
-const struct zr_draw_command *zr_draw_list_begin(const struct zr_draw_list *list);
-/*  this function returns the first draw command in the draw list */
-const struct zr_draw_command* zr_draw_list_next(const struct zr_draw_list *list,
-                                                const struct zr_draw_command*);
-/*  this function returns the next draw command of a given draw command*/
-
-/* ---------------------------------------------------------------
- *                          PRIMITIVES
- * ---------------------------------------------------------------*/
-void zr_draw_list_add_clip(struct zr_draw_list*, struct zr_rect);
-/*  this function pushes a new clipping rectangle into the draw list
-    Input:
-    - new clipping rectangle
-*/
-void zr_draw_list_add_line(struct zr_draw_list*, struct zr_vec2 a,
-                            struct zr_vec2 b, struct zr_color col,
-                            float thickness);
-/*  this function pushes a new clipping rectangle into the draw list
-    Input:
-    - beginning point of the line
-    - end point of the line
-    - used line color
-    - line thickness in pixel
-*/
-void zr_draw_list_add_rect(struct zr_draw_list*, struct zr_rect rect,
-                            struct zr_color col, float rounding,
-                            float line_thickness);
-/*  this function pushes a rectangle into the draw list
-    Input:
-    - rectangle to render into the draw list
-    - rectangle outline color
-    - rectangle edge rounding (0 == no edge rounding)
-    - rectangle outline thickness
-*/
-void zr_draw_list_add_rect_filled(struct zr_draw_list*, struct zr_rect rect,
-                                    struct zr_color col, float rounding);
-/*  this function pushes a filled rectangle into the draw list
-    Input:
-    - rectangle to render into the draw list
-    - color to fill the rectangle with
-    - rectangle edge rounding (0 == no edge rounding)
-*/
-void zr_draw_list_add_triangle(struct zr_draw_list*, struct zr_vec2 a,
-                                struct zr_vec2 b, struct zr_vec2 c,
-                                struct zr_color, float line_thickness);
-/*  this function pushes a triangle into the draw list
-    Input:
-    - first point of the triangle
-    - second point of the triangle
-    - third point of the triangle
-    - color of the triangle outline
-    - triangle outline line thickness
-*/
-void zr_draw_list_add_triangle_filled(struct zr_draw_list*, struct zr_vec2 a,
-                                        struct zr_vec2 b, struct zr_vec2 c,
-                                        struct zr_color col);
-/*  this function pushes a filled triangle into the draw list
-    Input:
-    - first point of the triangle
-    - second point of the triangle
-    - third point of the triangle
-    - color to fill the triangle with
-*/
-void zr_draw_list_add_circle(struct zr_draw_list*, struct zr_vec2 center,
-                            float radius, struct zr_color col, unsigned int segs,
-                            float line_thickness);
-/*  this function pushes a circle outline into the draw list
-    Input:
-    - center point of the circle
-    - circle radius
-    - circle outlone color
-    - number of segement that make up the circle
-*/
-void zr_draw_list_add_circle_filled(struct zr_draw_list*, struct zr_vec2 center,
-                                    float radius, struct zr_color col, unsigned int);
-/*  this function pushes a filled circle into the draw list
-    Input:
-    - center point of the circle
-    - circle radius
-    - color to fill the circle with
-    - number of segement that make up the circle
-*/
-void zr_draw_list_add_curve(struct zr_draw_list*, struct zr_vec2 p0,
-                            struct zr_vec2 cp0, struct zr_vec2 cp1, struct zr_vec2 p1,
-                            struct zr_color col, unsigned int segments, float thickness);
-/*  this function pushes a bezier curve into the draw list
-    Input:
-    - beginning point of the curve
-    - first curve control point
-    - second curve control point
-    - end point of the curve
-    - color of the curve
-    - number of segement that make up the circle
-    - line thickness of the curve
-*/
-void zr_draw_list_add_text(struct zr_draw_list*, const struct zr_user_font*,
-                            struct zr_rect, const char*, zr_size length,
-                            float font_height, struct zr_color bg, struct zr_color fg);
-/*  this function renders text
-    Input:
-    - user font to draw the text with
-    - the rectangle the text will be drawn into
-    - string text to draw
-    - length of the string to draw
-    - text background color
-    - text color
-*/
-void zr_draw_list_add_image(struct zr_draw_list *list, struct zr_image texture,
-                            struct zr_rect rect, struct zr_color color);
-/*  this function renders an image
-    Input:
-    - image texture handle to draw
-    - rectangle with position and size of the image
-    - color to blend with the image
-*/
-/* ---------------------------------------------------------------
- *                          PATH
- * ---------------------------------------------------------------*/
-void zr_draw_list_path_clear(struct zr_draw_list*);
-/* clears the statefull drawing path previously build */
-void zr_draw_list_path_line_to(struct zr_draw_list*, struct zr_vec2 pos);
-/* adds a point into the path that will make up a line or a convex polygon */
-void zr_draw_list_path_arc_to(struct zr_draw_list*, struct zr_vec2 center,
-                                float radius, float a_min, float a_max,
-                                unsigned int segments);
-/* adds an arc made up of a number of segments into the path */
-void zr_draw_list_path_rect_to(struct zr_draw_list*, struct zr_vec2 a,
-                                struct zr_vec2 b, float rounding);
-/* adds a rectangle into the path */
-void zr_draw_list_path_curve_to(struct zr_draw_list*, struct zr_vec2 p1,
-                                struct zr_vec2 p2, struct zr_vec2 p3,
-                                unsigned int num_segments);
-/* adds a bezier curve into the path where the first point has to be already in the path */
-void zr_draw_list_path_fill(struct zr_draw_list*, struct zr_color);
-/* uses all points inside the path to draw a convex polygon  */
-void zr_draw_list_path_stroke(struct zr_draw_list*, struct zr_color,
-                                int closed, float thickness);
-/* uses all points inside the path to draw a line/outline */
-#endif
 
 /* ==============================================================
  *
  *                          FONT
  *
  * ===============================================================*/
-/*  FONT
-    ----------------------------
-    Font handling in this library can be achived in three different ways.
+/*  Font handling in this library can be achived in three different ways.
     The first and simplest ways is by just using your font handling mechanism
     and provide a simple callback for text string width calculation with
     `zr_user_font`. This requires the default drawing output
@@ -1380,24 +421,10 @@ void zr_draw_list_path_stroke(struct zr_draw_list*, struct zr_color,
     was designed that way to have a typical file format and not
     a perfectly ready in memory library instance of a font. The reason is more
     control and seperates the font baking code from the in library used font format.
-
-    USAGE
-    ----------------------------
-    font baking functions
-    zr_font_bake_memory            -- calculates the needed font baking memory
-    zr_font_bake_pack              -- packs all glyphs and calculates needed image memory
-    zr_font_bake                   -- renders all glyphs inside an image and setups glyphs
-    zr_font_bake_custom_data       -- renders custom user data into the image
-    zr_font_bake_convert           -- converts the baked image from alpha8 to rgba8
-
-    font functions
-    zr_font_init                   -- initilizes the font
-    zr_font_ref                    -- create a user font out of the font
-    zr_font_find_glyph             -- finds and returns a glyph from the font
 */
 typedef zr_size(*zr_text_width_f)(zr_handle, float, const char*, zr_size);
 typedef void(*zr_query_font_glyph_f)(zr_handle, float, struct zr_user_font_glyph*,
-        zr_rune codepoint, zr_rune next_codepoint);
+                                    zr_rune codepoint, zr_rune next_codepoint);
 
 #if ZR_COMPILE_WITH_VERTEX_BUFFER
 struct zr_user_font_glyph {
@@ -1506,9 +533,7 @@ const zr_rune *zr_font_default_glyph_ranges(void);
 const zr_rune *zr_font_chinese_glyph_ranges(void);
 const zr_rune *zr_font_cyrillic_glyph_ranges(void);
 const zr_rune *zr_font_korean_glyph_ranges(void);
-/* ---------------------------------------------------------------
- *                          BAKING
- * ---------------------------------------------------------------*/
+
 /* font baking functions (need to be called sequentially top to bottom) */
 void zr_font_bake_memory(zr_size *temporary_memory, int *glyph_count,
                             struct zr_font_config*, int count);
@@ -1555,8 +580,7 @@ void zr_font_bake(void *image_memory, int image_width, int image_height,
 */
 void zr_font_bake_custom_data(void *img_memory, int img_width, int img_height,
                                 struct zr_recti img_dst, const char *texture_data_mask,
-                                int tex_width, int tex_height,
-                                char white, char black);
+                                int tex_width, int tex_height, char white, char black);
 /*  this function bakes custom data in string format with white, black and zero
     alpha pixels into the font image. The zero alpha pixel is represented as
     any character beside the black and zero pixel character.
@@ -1570,252 +594,217 @@ void zr_font_bake_custom_data(void *img_memory, int img_width, int img_height,
     Output:
     - image filled with custom texture data
 */
-void zr_font_bake_convert(void *out_memory, int img_width, int img_height,
-                            const void *in_memory);
-/*  this function converts the alpha8 baking input image into a
-    preallocated rgba8 output image.
-    Input:
-    - image pixel size (width, height)
-    - memory block containing the alpha8 image
-    Output:
-    - rgba8 output image
-*/
-/* ---------------------------------------------------------------
- *                          FONT
- * ---------------------------------------------------------------*/
-void zr_font_init(struct zr_font*, float pixel_height,
-                    zr_rune fallback_codepoint, struct zr_font_glyph*,
-                    const struct zr_baked_font*, zr_handle atlas);
-/*  this function initializes a font. IMPORTANT: The font only references
- *  its glyphs since it allows to have multible font glyph in one big array.
-    Input:
-    - pixel height of the font can be different than the baked font height
-    - unicode fallback codepoint for a glyph that will be used if a glyph is requested
-        that does not exist in the font
-    - glyph array of all glyphs inside the font
-    - number of glyphs inside the glyph array
-    - font information for this font from the baking process
-    - handle to the baked font image atlas
-*/
+void zr_font_bake_convert(void *out_memory, int image_width, int image_height, const void *in_memory);
+/*  this function converts the alpha8 baking input image into a preallocated rgba8 output image.*/
+void zr_font_init(struct zr_font*, float pixel_height, zr_rune fallback_codepoint,
+                    struct zr_font_glyph*, const struct zr_baked_font*, zr_handle atlas);
 struct zr_user_font zr_font_ref(struct zr_font*);
-/*  this function
-    Output:
-    - gui font handle used in the library
-*/
 const struct zr_font_glyph* zr_font_find_glyph(struct zr_font*, zr_rune unicode);
-/*  this function
-    Input:
-    - unicode glyph codepoint of the glyph
-    Output:
-    - either the glyph with the given codepoint or a fallback glyph if does not exist
-*/
+
 #endif
-/*
- * ===============================================================
+/* ===============================================================
  *
- *                          EDIT BOX
- *
- * ===============================================================
- */
-/*  EDIT BOX
-    ----------------------------
-    The Editbox is for text input with either a fixed or dynamically growing
-    buffer. It extends the basic functionality of basic input over `zr_edit`
-    and `zr_edit_filtered` with basic copy and paste functionality and the possiblity
-    to use a extending buffer.
-
-    USAGE
-    ----------------------------
-    The Editbox first needs to be initialized either with a fixed size
-    memory block or a allocator. After that it can be used by either the
-    `zr_editobx` or `zr_editbox` function. In addition symbols can be
-    added and removed with `zr_edit_box_add` and `zr_edit_box_remove`.
-
-    Widget function API
-    zr_edit_box_init       -- initialize a dynamically growing edit box
-    zr_edit_box_init_fixed -- initialize a fixed size edit box
-    zr_edit_box_reset      -- resets the edit box back to the beginning
-    zr_edit_box_clear      -- frees all memory of a dynamic edit box
-    zr_edit_box_add        -- adds a symbol to the editbox
-    zr_edit_box_remove     -- removes a symbol from the editbox
-    zr_edit_box_get        -- returns the string inside the editbox
-    zr_edit_box_get_const  -- returns the const string inside the editbox
-    zr_edit_box_free       -- frees all memory in a dynamic editbox
-    zr_edit_box_info       -- fills a memory info struct with data
-    zr_edit_box_at         -- returns the glyph at the given position
-    zr_edit_box_at_cursor  -- returns the glyph at the cursor position
-    zr_edit_box_at_char    -- returns the char at the given position
-    zr_edit_box_set_cursor -- sets the cursor to a given glyph
-    zr_edit_box_get_cursor -- returns the position of the cursor
-    zr_edit_box_len_char   -- returns the length of the string in bytes
-    zr_edit_box_len        -- returns the length of the string in glyphs
-*/
-typedef int(*zr_filter)(zr_rune unicode);
-typedef void(*zr_paste_f)(zr_handle, struct zr_edit_box*);
-typedef void(*zr_copy_f)(zr_handle, const char*, zr_size size);
-
-struct zr_clipboard {
-    zr_handle userdata;
-    /* user memory for callback */
-    zr_paste_f paste;
-    /* paste callback for the edit box  */
-    zr_copy_f copy;
-    /* copy callback for the edit box  */
-};
-
-struct zr_selection {
-    int active;
-    /* current selection state */
-    zr_size begin;
-    /* text selection beginning glyph index */
-    zr_size end;
-    /* text selection ending glyph index */
-};
-
-typedef struct zr_buffer zr_edit_buffer;
-struct zr_edit_box {
-    zr_edit_buffer buffer;
-    /* glyph buffer to add text into */
-    int active;
-    /* flag indicating if the buffer is currently being modified  */
-    zr_size cursor;
-    /* current glyph (not byte) cursor position */
-    zr_size glyphs;
-    /* number of glyphs inside the edit box */
-    struct zr_clipboard clip;
-    /* copy paste callbacks */
-    zr_filter filter;
-    /* input filter callback */
-    struct zr_selection sel;
-    /* text selection */
-    float scrollbar;
-    /* edit field scrollbar */
-    int text_inserted;
-};
-
-/* filter function */
-int zr_filter_default(zr_rune unicode);
-int zr_filter_ascii(zr_rune unicode);
-int zr_filter_float(zr_rune unicode);
-int zr_filter_decimal(zr_rune unicode);
-int zr_filter_hex(zr_rune unicode);
-int zr_filter_oct(zr_rune unicode);
-int zr_filter_binary(zr_rune unicode);
-
-/* editbox */
-void zr_edit_box_init(struct zr_edit_box*, struct zr_allocator*, zr_size initial,
-                        float grow_fac, const struct zr_clipboard*, zr_filter);
-/*  this function initializes the editbox a growing buffer
-    Input:
-    - allocator implementation
-    - initital buffer size
-    - buffer growing factor
-    - clipboard implementation for copy&paste or NULL of not needed
-    - character filtering callback to limit input or NULL of not needed
-*/
-void zr_edit_box_init_fixed(struct zr_edit_box*, void *memory, zr_size size,
-                                const struct zr_clipboard*, zr_filter);
-/*  this function initializes the editbox a static buffer
-    Input:
-    - memory block to fill
-    - sizeo of the memory block
-    - clipboard implementation for copy&paste or NULL of not needed
-    - character filtering callback to limit input or NULL of not needed
-*/
-void zr_edit_box_clear(struct zr_edit_box*);
-/*  this function resets the buffer and sets everything back into a clean state */
-void zr_edit_box_free(struct zr_edit_box*);
-/*  this function frees all internal memory in a dynamically growing buffer */
-void zr_edit_box_info(struct zr_memory_status*, struct zr_edit_box*);
-/* this function returns information about the memory in use  */
-void zr_edit_box_add(struct zr_edit_box*, const char*, zr_size);
-/*  this function adds text at the current cursor position
-    Input:
-    - string buffer or glyph to copy/add to the buffer
-    - length of the string buffer or glyph
-*/
-void zr_edit_box_remove(struct zr_edit_box*);
-/*  removes the glyph at the current cursor position */
-char *zr_edit_box_get(struct zr_edit_box*);
-/* returns the string buffer inside the edit box */
-const char *zr_edit_box_get_const(struct zr_edit_box*);
-/* returns the constant string buffer inside the edit box */
-void zr_edit_box_at(struct zr_edit_box*, zr_size pos, zr_glyph, zr_size*);
-/*  this function returns the glyph at a given offset
-    Input:
-    - glyph offset inside the buffer
-    Output:
-    - utf8 glyph at the given position
-    - byte length of the glyph
-*/
-void zr_edit_box_at_cursor(struct zr_edit_box*, zr_glyph, zr_size*);
-/*  this function returns the glyph at the cursor
-    Output:
-    - utf8 glyph at the cursor position
-    - byte length of the glyph
-*/
-char zr_edit_box_at_char(struct zr_edit_box*, zr_size pos);
-/*  this function returns the character at a given byte position
-    Input:
-    - character offset inside the buffer
-    Output:
-    - character at the given position
-*/
-void zr_edit_box_set_cursor(struct zr_edit_box*, zr_size pos);
-/*  this function sets the cursor at a given glyph position
-    Input:
-    - glyph offset inside the buffer
-*/
-zr_size zr_edit_box_get_cursor(struct zr_edit_box *eb);
-/*  this function returns the cursor glyph position
-    Output:
-    - cursor glyph offset inside the buffer
-*/
-zr_size zr_edit_box_len_char(struct zr_edit_box*);
-/*  this function returns length of the buffer in bytes
-    Output:
-    - string buffer byte length
-*/
-zr_size zr_edit_box_len(struct zr_edit_box*);
-/*  this function returns length of the buffer in glyphs
-    Output:
-    - string buffer glyph length
-*/
-/* ==============================================================
- *
- *                          STYLE
+ *                          CANVAS
  *
  * ===============================================================*/
-/*  STYLE
-    ----------------------------
-    The window style consists of properties, color and rectangle rounding
-    information that is used for the general style and looks of window.
-    In addition for temporary modification the configuration structure consists
-    of a stack for pushing and pop either color or property values.
+enum zr_command_type {
+    ZR_COMMAND_NOP,
+    ZR_COMMAND_SCISSOR,
+    ZR_COMMAND_LINE,
+    ZR_COMMAND_CURVE,
+    ZR_COMMAND_RECT,
+    ZR_COMMAND_CIRCLE,
+    ZR_COMMAND_ARC,
+    ZR_COMMAND_TRIANGLE,
+    ZR_COMMAND_TEXT,
+    ZR_COMMAND_IMAGE
+};
 
-    USAGE
-    ----------------------------
-    To use the configuration file you either initialize every value yourself besides
-    the internal stack which needs to be initialized to zero or use the default
-    configuration by calling the function zr_config_default.
-    To add and remove temporary configuration states the zr_config_push_xxxx
-    for adding and zr_config_pop_xxxx for removing either color or property values
-    from the stack. To reset all previously modified values the zr_config_reset_xxx
-    were added.
+/* command base and header of every comand inside the buffer */
+struct zr_command {
+    enum zr_command_type type;
+    /* the type of the current command */
+    zr_size next;
+    /* absolute base pointer offset to the next command */
+};
 
-    Configuration function API
-    zr_style_default          -- initializes a default style
-    zr_style_set_font         -- changes the used font
-    zr_style_property         -- returns the property value from an id
-    zr_style_color            -- returns the color value from an id
-    zr_style_push_property    -- push old property onto stack and sets a new value
-    zr_style_push_color       -- push old color onto stack and sets a new value
-    zr_style_pop_color        -- resets an old color value from the internal stack
-    zr_style_pop_property     -- resets an old property value from the internal stack
-    zr_style_reset_colors     -- reverts back all temporary color changes from the style
-    zr_style_reset_properties -- reverts back all temporary property changes
-    zr_style_reset            -- reverts back all temporary all changes from the config
-*/
+struct zr_command_scissor {
+    struct zr_command header;
+    short x, y;
+    unsigned short w, h;
+};
+
+struct zr_command_line {
+    struct zr_command header;
+    struct zr_vec2i begin;
+    struct zr_vec2i end;
+    struct zr_color color;
+};
+
+struct zr_command_curve {
+    struct zr_command header;
+    struct zr_vec2i begin;
+    struct zr_vec2i end;
+    struct zr_vec2i ctrl[2];
+    struct zr_color color;
+};
+
+struct zr_command_rect {
+    struct zr_command header;
+    unsigned int rounding;
+    short x, y;
+    unsigned short w, h;
+    struct zr_color color;
+};
+
+struct zr_command_circle {
+    struct zr_command header;
+    short x, y;
+    unsigned short w, h;
+    struct zr_color color;
+};
+
+struct zr_command_arc {
+    struct zr_command header;
+    short cx, cy;
+    unsigned short r;
+    float a[2];
+    struct zr_color color;
+};
+
+struct zr_command_triangle {
+    struct zr_command header;
+    struct zr_vec2i a;
+    struct zr_vec2i b;
+    struct zr_vec2i c;
+    struct zr_color color;
+};
+
+struct zr_command_image {
+    struct zr_command header;
+    short x, y;
+    unsigned short w, h;
+    struct zr_image img;
+};
+
+struct zr_command_text {
+    struct zr_command header;
+    const struct zr_user_font *font;
+    struct zr_color background;
+    struct zr_color foreground;
+    short x, y;
+    unsigned short w, h;
+    float height;
+    zr_size length;
+    char string[1];
+};
+
+enum zr_command_clipping {
+    ZR_CLIPPING_OFF = zr_false,
+    ZR_CLIPPING_ON = zr_true
+};
+
+struct zr_command_buffer {
+    struct zr_buffer *base;
+    /* memory buffer to store the command */
+    struct zr_rect clip;
+    /* current clipping rectangle */
+    int use_clipping;
+    /* flag if the command buffer should clip commands */
+    zr_size begin, end, last;
+};
+
+#if ZR_COMPILE_WITH_VERTEX_BUFFER
+typedef unsigned short zr_draw_index;
+typedef zr_uint zr_draw_vertex_color;
+
+enum zr_anti_aliasing {
+    ZR_ANTI_ALIASING_OFF = zr_false,
+    /* renderes all primitives without anti-aliasing  */
+    ZR_ANTI_ALIASING_ON
+    /* renderes all primitives with anti-aliasing  */
+};
+
+struct zr_draw_vertex {
+    struct zr_vec2 position;
+    struct zr_vec2 uv;
+    zr_draw_vertex_color col;
+};
+
+enum zr_draw_list_stroke {
+    ZR_STROKE_OPEN = zr_false,
+    /* build up path has no connection back to the beginning */
+    ZR_STROKE_CLOSED = zr_true
+    /* build up path has a connection back to the beginning */
+};
+
+struct zr_draw_command {
+    unsigned int elem_count;
+    /* number of elements in the current draw batch */
+    struct zr_rect clip_rect;
+    /* current screen clipping rectangle */
+    zr_handle texture;
+    /* current texture to set */
+};
+
+struct zr_draw_null_texture {
+    zr_handle texture;
+    /* texture handle to a texture with a white pixel */
+    struct zr_vec2 uv;
+    /* coordinates to the white pixel in the texture  */
+};
+
+struct zr_canvas {
+    enum zr_anti_aliasing AA;
+    /* flag indicating if anti-aliasing should be used to render primtives */
+    struct zr_draw_null_texture null;
+    /* texture with white pixel for easy primitive drawing */
+    struct zr_rect clip_rect;
+    /* current clipping rectangle */
+    zr_cos_f cos; zr_sin_f sin;
+    /* cosine/sine calculation callback since this library does not use libc  */
+    struct zr_buffer *buffer;
+    /* buffer to store draw commands and temporarily store path */
+    struct zr_buffer *vertexes;
+    /* buffer to store each draw vertex */
+    struct zr_buffer *elements;
+    /* buffer to store each draw element index */
+    unsigned int element_count;
+    /* total number of elements inside the elements buffer */
+    unsigned int vertex_count;
+    /* total number of vertexes inside the vertex buffer */
+    zr_size cmd_offset;
+    /* offset to the first command in the buffer */
+    unsigned int cmd_count;
+    /* number of commands inside the buffer  */
+    unsigned int path_count;
+    /* current number of points inside the path */
+    unsigned int path_offset;
+    /* offset to the first point in the buffer */
+    struct zr_vec2 circle_vtx[12];
+    /* small lookup table for fast circle drawing */
+};
+
+#endif
+
+/* drawing routines */
+#define zr_command(t, c) ((const struct zr_command_##t*)c)
+void zr_draw_scissor(struct zr_command_buffer*, struct zr_rect);
+void zr_draw_line(struct zr_command_buffer*, float, float, float, float, struct zr_color);
+void zr_draw_curve(struct zr_command_buffer*, float, float, float, float,  float, float,
+                    float, float, struct zr_color);
+void zr_draw_rect(struct zr_command_buffer*, struct zr_rect, float rounding, struct zr_color);
+void zr_draw_circle(struct zr_command_buffer*, struct zr_rect, struct zr_color c);
+void zr_draw_arc(struct zr_command_buffer*, float cx, float cy, float radius, float a_min,
+                    float a_max, struct zr_color);
+void zr_draw_triangle(struct zr_command_buffer*, float, float, float, float, float, float, struct zr_color);
+void zr_draw_image(struct zr_command_buffer*, struct zr_rect, struct zr_image*);
+void zr_draw_text(struct zr_command_buffer*, struct zr_rect, const char*, zr_size,
+                    const struct zr_user_font*, struct zr_color, struct zr_color);
+
+/* ==============================================================
+ *                          STYLE
+ * ===============================================================*/
 enum zr_style_colors {
     ZR_COLOR_TEXT,
     ZR_COLOR_TEXT_HOVERING,
@@ -1849,7 +838,6 @@ enum zr_style_colors {
     ZR_COLOR_COMBO,
     ZR_COLOR_HISTO,
     ZR_COLOR_HISTO_BARS,
-    ZR_COLOR_HISTO_NEGATIVE,
     ZR_COLOR_HISTO_HIGHLIGHT,
     ZR_COLOR_PLOT,
     ZR_COLOR_PLOT_LINES,
@@ -1891,6 +879,17 @@ enum zr_style_header_align {
     ZR_HEADER_RIGHT
 };
 
+enum zr_style_components {
+    ZR_DEFAULT_COLOR = 0x01,
+    /* default all colors inside the configuration struct */
+    ZR_DEFAULT_PROPERTIES = 0x02,
+    /* default all properites inside the configuration struct */
+    ZR_DEFAULT_ROUNDING = 0x04,
+    /* default all rounding values inside the configuration struct */
+    ZR_DEFAULT_ALL = 0xFFFF
+    /* default the complete configuration struct */
+};
+
 struct zr_saved_property {
     enum zr_style_properties type;
     /* identifier of the current modified property */
@@ -1908,21 +907,10 @@ struct zr_saved_color {
 struct zr_saved_font {
     struct zr_user_font value;
     /* user font reference */
-    zr_size font_height_begin;
+    int font_height_begin;
     /* style font height stack begin */
-    zr_size font_height_end;
+    int font_height_end;
     /* user font height stack end */
-};
-
-enum zr_style_components {
-    ZR_DEFAULT_COLOR = 0x01,
-    /* default all colors inside the configuration struct */
-    ZR_DEFAULT_PROPERTIES = 0x02,
-    /* default all properites inside the configuration struct */
-    ZR_DEFAULT_ROUNDING = 0x04,
-    /* default all rounding values inside the configuration struct */
-    ZR_DEFAULT_ALL = 0xFFFF
-    /* default the complete configuration struct */
 };
 
 struct zr_style_mod_stack  {
@@ -1930,15 +918,15 @@ struct zr_style_mod_stack  {
     /* current property stack pushing index */
     struct zr_saved_property properties[ZR_MAX_ATTRIB_STACK];
     /* saved property stack */
-    zr_size color;
+    int color;
     /* current color stack pushing index */
     struct zr_saved_color colors[ZR_MAX_COLOR_STACK];
     /* saved color stack */
-    zr_size font;
+    int font;
     /* current font stack pushing index */
     struct zr_saved_font fonts[ZR_MAX_FONT_STACK];
     /* saved user font stack */
-    zr_size font_height;
+    int font_height;
     /* current font stack pushing index */
     float font_heights[ZR_MAX_FONT_HEIGHT_STACK];
     /* saved user font stack */
@@ -1970,160 +958,256 @@ struct zr_style {
     /* modification stack */
 };
 
+/* style setup and access */
+struct zr_style;
 void zr_style_default(struct zr_style*, zr_flags, const struct zr_user_font*);
-/*  this function load the window configuration with default values
-    Input:
-    - config flags which part of the configuration should be loaded with default values
-    - user font reference structure describing the font used inside the window
-    Output:
-    - configuration structure holding the default window style
-*/
 void zr_style_set_font(struct zr_style*, const struct zr_user_font*);
-/*  this function changes the used font and can be used even inside a frame
-    Input:
-    - user font reference structure describing the font used inside the window
-*/
-struct zr_vec2 zr_style_property(const struct zr_style*,
-                                            enum zr_style_properties);
-/*  this function accesses a configuration property over an identifier
-    Input:
-    - Configuration the get the property from
-    - Configuration property idenfifier describing the property to get
-    Output:
-    - Property value that has been asked for
-*/
+struct zr_vec2 zr_style_property(const struct zr_style*, enum zr_style_properties);
 struct zr_color zr_style_color(const struct zr_style*, enum zr_style_colors);
-/*  this function accesses a configuration color over an identifier
-    Input:
-    - Configuration the get the color from
-    - Configuration color idenfifier describing the color to get
-    Output:
-    - color value that has been asked for
-*/
+
+/* temporarily modify a style value and save the old value in a stack*/
 void zr_style_push_property(struct zr_style*, enum zr_style_properties, struct zr_vec2);
-/*  this function temporarily changes a property in a stack to be reseted later
-    Input:
-    - Configuration structure to push the change to
-    - Property idenfifier to change
-    - new value of the property
-*/
 void zr_style_push_color(struct zr_style*, enum zr_style_colors, struct zr_color);
-/*  this function temporarily changes a color in a stack like fashion to be reseted later
-    Input:
-    - Configuration structure to push the change to
-    - color idenfifier to change
-    - new color
-*/
 void zr_style_push_font(struct zr_style*, struct zr_user_font font);
-/*  this function temporarily changes the used font in a stack like fashion to be reseted later
-    Input:
-    - Configuration structure to push the change to
-    - user font to use from now on
-*/
 void zr_style_push_font_height(struct zr_style*, float font_height);
-/*  this function temporarily changes the used font in a stack like fashion to be reseted later
-    Input:
-    - Configuration structure to push the change to
-    - user font to use from now on
-*/
+
+/* restores a previously saved style value */
 void zr_style_pop_color(struct zr_style*);
-/*  this function reverts back a previously pushed temporary color change
-    Input:
-    - Configuration structure to pop the change from and to
-*/
 void zr_style_pop_property(struct zr_style*);
-/*  this function reverts back a previously pushed temporary property change
-    Input:
-    - Configuration structure to pop the change from and to
-*/
 void zr_style_pop_font(struct zr_style*);
-/*  this function reverts back a previously pushed temporary font change
-    Input:
-    - Configuration structure to pop the change from and to
-*/
 void zr_style_pop_font_height(struct zr_style*);
-/*  this function reverts back a previously pushed temporary font height change
-    Input:
-    - Configuration structure to pop the change from and to
-*/
+
+/* resets the style back into the beginning state */
 void zr_style_reset_colors(struct zr_style*);
-/*  this function reverts back all previously pushed temporary color changes
-    Input:
-    - Configuration structure to pop the change from and to
-*/
 void zr_style_reset_properties(struct zr_style*);
-/*  this function reverts back all previously pushed temporary color changes
-    Input:
-    - Configuration structure to pop the change from and to
-*/
 void zr_style_reset_font(struct zr_style*);
-/*  this function reverts back all previously pushed temporary font changes
-    Input:
-    - Configuration structure to pop the change from and to
-*/
 void zr_style_reset_font_height(struct zr_style*);
-/*  this function reverts back all previously pushed temporary font height changes
-    Input:
-    - Configuration structure to pop the change from and to
-*/
 void zr_style_reset(struct zr_style*);
-/*  this function reverts back all previously pushed temporary color and
- *  property changes
-    Input:
-    - Configuration structure to pop the change from and to
-*/
+
+/* return string representation of different styles values */
 const char *zr_style_color_name(enum zr_style_colors);
-/*  this function returns the string name of a given color type */
 const char *zr_style_rounding_name(enum zr_style_rounding);
-/*  this function returns the string name of a given rounding type */
 const char *zr_style_property_name(enum zr_style_properties);
-/*  this function returns the string name of a given property type */
+
+/*===============================================================
+ *                          EDIT BOX
+ * ===============================================================*/
+typedef int(*zr_filter)(zr_rune unicode);
+typedef void(*zr_paste_f)(zr_handle, struct zr_edit_box*);
+typedef void(*zr_copy_f)(zr_handle, const char*, zr_size size);
+
+/* filter function */
+int zr_filter_default(zr_rune unicode);
+int zr_filter_ascii(zr_rune unicode);
+int zr_filter_float(zr_rune unicode);
+int zr_filter_decimal(zr_rune unicode);
+int zr_filter_hex(zr_rune unicode);
+int zr_filter_oct(zr_rune unicode);
+int zr_filter_binary(zr_rune unicode);
+
+/* editbox */
+struct zr_edit_box;
+void zr_edit_box_clear(struct zr_edit_box*);
+void zr_edit_box_add(struct zr_edit_box*, const char*, zr_size);
+void zr_edit_box_remove(struct zr_edit_box*);
+char *zr_edit_box_get(struct zr_edit_box*);
+const char *zr_edit_box_get_const(struct zr_edit_box*);
+void zr_edit_box_at(struct zr_edit_box*, zr_size pos, zr_glyph, zr_size*);
+void zr_edit_box_at_cursor(struct zr_edit_box*, zr_glyph, zr_size*);
+char zr_edit_box_at_char(struct zr_edit_box*, zr_size pos);
+void zr_edit_box_set_cursor(struct zr_edit_box*, zr_size pos);
+zr_size zr_edit_box_get_cursor(struct zr_edit_box *eb);
+zr_size zr_edit_box_len_char(struct zr_edit_box*);
+zr_size zr_edit_box_len(struct zr_edit_box*);
 
 /*==============================================================
  *
- *                          WINDOW
+ *                          GUI
  *
- * =============================================================
-    WINDOW
-    The window groups widgets together and allows collective operation
-    on these widgets like movement, scrolling, window minimizing and closing.
-    Windows are divided into a persistent state window struct and a temporary
-    context which is used each frame to fill the window. All direct build up
-    function therefore work on the context and not on the actual window.
-    Each window is linked inside a queue which in term allows for an easy
-    way to buffer output commands but requires that the window is unlinked
-    from the queue if removed.
-
-    USAGE
-    The window needs to be initialized by `zr_window_init` and can be updated
-    by all the `zr_window_set_xxx` function. Important to note is that each
-    window is linked inside a queue by an internal memory buffer. So if you want
-    to remove the window you first have to remove the window from the queue
-    or if you want to change to queue use `zr_window_queue_set`.
-
-    window function API
-    ------------------
-    zr_window_init          -- initializes the window with position, size and flags
-    zr_window_unlink        -- remove the window from the command queue
-    zr_window_link          -- links a previously unlinked window into a command queue
-    zr_window_set_config    -- updates the used window configuration
-    zr_window_add_flag      -- adds a behavior flag to the window
-    zr_window_remove_flag   -- removes a behavior flag from the window
-    zr_window_has_flag      -- check if a given behavior flag is set in the window
-    zr_window_is_minimized  -- return wether the window is minimized
-
-    APIs
-    -----------------
-    Window Context API  -- The context is temporary state that is used every frame to build a window
-    Window Header API   -- Responsible for creating a header at the top of a window
-    Window Layout API   -- The window layout is responsible for placing widget in the window
-    Window Widget API   -- Different widget that can be placed inside the window
-    Window Combobox API -- Combobox widget for collapsable popup content
-    Window Group API    -- Create a subwindow inside a window which again can be filled with widgets
-    Window Popup API    -- Popup window with either non-blocking or blocking capabilities
-    Window Menu API     -- Popup menus with currently one single depth
-*/
+ * =============================================================*/
+#define ZR_UNDEFINED (-1.0f)
 #define ZR_FLAG(x) (1 << (x))
+
+enum zr_modify {
+    ZR_FIXED = zr_false,
+    ZR_MODIFIABLE = zr_true
+};
+
+enum zr_symbol {
+    ZR_SYMBOL_X,
+    ZR_SYMBOL_UNDERSCORE,
+    ZR_SYMBOL_CIRCLE,
+    ZR_SYMBOL_CIRCLE_FILLED,
+    ZR_SYMBOL_RECT,
+    ZR_SYMBOL_RECT_FILLED,
+    ZR_SYMBOL_TRIANGLE_UP,
+    ZR_SYMBOL_TRIANGLE_DOWN,
+    ZR_SYMBOL_TRIANGLE_LEFT,
+    ZR_SYMBOL_TRIANGLE_RIGHT,
+    ZR_SYMBOL_PLUS,
+    ZR_SYMBOL_MINUS,
+    ZR_SYMBOL_MAX
+};
+
+struct zr_clipboard {
+    zr_handle userdata;
+    /* user memory for callback */
+    zr_paste_f paste;
+    /* paste callback for the edit box  */
+    zr_copy_f copy;
+    /* copy callback for the edit box  */
+};
+
+enum zr_widget_status {
+    ZR_INACTIVE,
+    ZR_HOVERED,
+    ZR_ACTIVE
+};
+
+enum zr_collapse_states {
+    ZR_MINIMIZED = zr_false,
+    ZR_MAXIMIZED = zr_true
+};
+
+enum zr_widget_state {
+    ZR_WIDGET_INVALID,
+    /* The widget cannot be seen and is completly out of view */
+    ZR_WIDGET_VALID,
+    /* The widget is completly inside the window can be updated */
+    ZR_WIDGET_ROM
+    /* The widget is partially visible and cannot be updated */
+};
+
+enum zr_text_align {
+    ZR_TEXT_LEFT,
+    /* text is aligned on the left */
+    ZR_TEXT_CENTERED,
+    /* text is aligned in the center */
+    ZR_TEXT_RIGHT
+    /* text is aligned on the right */
+};
+
+enum zr_button_behavior {
+    ZR_BUTTON_DEFAULT,
+    /* default push button behavior */
+    ZR_BUTTON_REPEATER
+    /* repeater behavior will trigger as long as button is down */
+};
+
+enum zr_edit_flags {
+    ZR_EDIT_READ_ONLY   = ZR_FLAG(0),
+    ZR_EDIT_CURSOR      = ZR_FLAG(1),
+    ZR_EDIT_SELECTABLE  = ZR_FLAG(2),
+    ZR_EDIT_CLIPBOARD   = ZR_FLAG(3),
+    ZR_EDIT_MULTILINE   = ZR_FLAG(4)
+};
+
+enum zr_edit_types {
+    ZR_EDIT_SIMPLE = 0,
+    ZR_EDIT_FIELD = (ZR_EDIT_CURSOR|ZR_EDIT_SELECTABLE|ZR_EDIT_CLIPBOARD),
+    ZR_EDIT_BOX = (ZR_EDIT_CURSOR|ZR_EDIT_SELECTABLE|ZR_EDIT_CLIPBOARD|ZR_EDIT_MULTILINE)
+};
+
+enum zr_graph_type {
+    ZR_GRAPH_LINES,
+    /* Line graph with each data point being connected with its previous and next node */
+    ZR_GRAPH_COLUMN,
+    /* Column graph/Histogram with value represented as bars */
+    ZR_GRAPH_MAX
+};
+
+enum zr_graph_event {
+    ZR_GRAPH_HOVERING = 0x01,
+    /* mouse hoveres over current value */
+    ZR_GRAPH_CLICKED = 0x02
+    /* mouse click on current value */
+};
+
+enum zr_popup_type {
+    ZR_POPUP_STATIC,
+    /* static fixed height non growing popup */
+    ZR_POPUP_DYNAMIC
+    /* dynamically growing popup with maximum height */
+};
+
+enum zr_layout_format {
+    ZR_DYNAMIC, /* row layout which scales with the window */
+    ZR_STATIC /* row layout with fixed pixel width */
+};
+
+enum zr_layout_node_type {
+    ZR_LAYOUT_NODE,
+    /* a node is a space which can be minimized or maximized */
+    ZR_LAYOUT_TAB
+    /* a tab is a node with a header */
+};
+
+struct zr_graph {
+    enum zr_graph_type type;
+    /* graph type with either line or column graph */
+    float x, y;
+    /* graph canvas space position */
+    float w, h;
+    /* graph canvas space size */
+    float min, max, range;
+    /* min and max value for correct scaling of values */
+    struct zr_vec2 last;
+    /* last line graph point to connect to. Only used by the line graph */
+    zr_size index;
+    /* current graph value index*/
+    zr_size count;
+    /* number of values inside the graph */
+};
+
+enum zr_row_layout_type {
+    ZR_LAYOUT_DYNAMIC_FIXED,
+    /* fixed widget ratio width window layout */
+    ZR_LAYOUT_DYNAMIC_ROW,
+    /* immediate mode widget specific widget width ratio layout */
+    ZR_LAYOUT_DYNAMIC_FREE,
+    /* free ratio based placing of widget in a local space  */
+    ZR_LAYOUT_DYNAMIC,
+    /* retain mode widget specific widget ratio width*/
+    ZR_LAYOUT_STATIC_FIXED,
+    /* fixed widget pixel width window layout */
+    ZR_LAYOUT_STATIC_ROW,
+    /* immediate mode widget specific widget pixel width layout */
+    ZR_LAYOUT_STATIC_FREE,
+    /* free pixel based placing of widget in a local space  */
+    ZR_LAYOUT_STATIC
+    /* retain mode widget specific widget pixel width layout */
+};
+
+struct zr_row_layout {
+    enum zr_row_layout_type type;
+    /* type of the row layout */
+    zr_size index;
+    /* index of the current widget in the current window row */
+    float height;
+    /* height of the current row */
+    zr_size columns;
+    /* number of columns in the current row */
+    const float *ratio;
+    /* row widget width ratio */
+    float item_width, item_height;
+    /* current width of very item */
+    float item_offset;
+    /* x positon offset of the current item */
+    float filled;
+    /* total fill ratio */
+    struct zr_rect item;
+    /* item bounds */
+    struct zr_rect clip;
+    /* temporary clipping rect */
+};
+
+struct zr_menu {
+    float x, y, w, h;
+    /* menu bounds */
+    struct zr_scroll offset;
+    /* saved window scrollbar offset */
+};
+
 enum zr_window_flags {
     ZR_WINDOW_HIDDEN        = ZR_FLAG(0),
     /* Hiddes the window and stops any window interaction and drawing can be set
@@ -2152,187 +1236,29 @@ enum zr_window_flags {
      * used to create perfectly fitting windows as well */
     ZR_WINDOW_NO_SCROLLBAR  = ZR_FLAG(10),
     /* Removes the scrollbar from the window */
-    ZR_WINDOW_ACTIVE        = ZR_FLAG(11),
-    /* INTERNAL ONLY!: marks the window as active, used by the window stack */
-    ZR_WINDOW_TAB           = ZR_FLAG(12),
-    /* INTERNAL ONLY!: marks the window as subwindow of another window(Groups/Tabs)*/
-    ZR_WINDOW_COMBO_MENU    = ZR_FLAG(13),
-    /* INTERNAL ONLY!: marks the window as a combo box or menu */
-    ZR_WINDOW_REMOVE_ROM    = ZR_FLAG(14)
-    /* INTERNAL ONLY!: removes the read only mode at the end of the window */
+    ZR_WINDOW_TITLE         = ZR_FLAG(11)
+    /* Removes the scrollbar from the window */
 };
 
-struct zr_value {
-    int active, prev;
-    char buffer[ZR_MAX_NUMBER_BUFFER];
-    zr_size length;
-    zr_size cursor;
-    zr_ulong name;
-    unsigned int seq;
-    unsigned int old;
-    int state;
+struct zr_popup_buffer {
+    zr_size begin;
+    /* begin of the subbuffer */
+    zr_size parent;
+    /* last entry before the sub buffer*/
+    zr_size last;
+    /* last entry in the sub buffer*/
+    zr_size end;
+    /* end of the subbuffer */
+    int active;
 };
 
-struct zr_window {
-    struct zr_rect bounds;
-    /* size with width and height and position of the window */
-    zr_flags flags;
-    /* window flags modifing its behavior */
-    struct zr_vec2 offset;
-    /* scrollbar x- and y-offset */
-    struct zr_style *style;
-    /* configuration reference describing the window style */
-    struct zr_command_buffer buffer;
-    /* output command buffer queuing all drawing calls */
-    struct zr_command_queue *queue;
-    /* output command queue which hold the command buffer */
-    struct zr_input *input;
-    /* input state for updating the window and all its widgets */
-    struct zr_value property;
-    /* currently active property */
-};
-
-void zr_window_init(struct zr_window*, struct zr_rect bounds, zr_flags flags,
-                    struct zr_command_queue*, struct zr_style*,
-                    struct zr_input *in);
-/*  this function initilizes and setups the window
-    Input:
-    - bounds of the window with x,y position and width and height
-    - window flags for modified window behavior
-    - reference to a output command queue to push draw calls into
-    - configuration file containing the style, color and font for the window
-    Output:
-    - a newly initialized window
-*/
-void zr_window_unlink(struct zr_window*);
-/*  this function unlinks the window from its queue */
-void zr_window_link(struct zr_window*, struct zr_command_queue*);
-/*  this function links a previously unlinked the window into a queue */
-void zr_window_add_flag(struct zr_window*, zr_flags);
-/*  this function adds window flags to the window */
-void zr_window_remove_flag(struct zr_window*, zr_flags);
-/*  this function removes window flags from the window */
-int zr_window_has_flag(struct zr_window*, zr_flags);
-/*  this function checks if a window has given flag(s) */
-int zr_window_is_minimized(struct zr_window*);
-/*  this function checks if the window is minimized */
-/* --------------------------------------------------------------
- *
- *                          CONTEXT
- *
- * --------------------------------------------------------------
-    CONTEXT
-    The context is temporary window state that is used in the window drawing
-    and build up process. The reason the window and context are divided is that
-    the context has far more state which is not needed outside of the build up
-    phase. The context is not only useful for normal windows. It is used for
-    more complex widget or layout as well. This includes a window inside a window,
-    popup windows, menus, comboboxes, etc. In each case the context allows to
-    fill a space with widgets. Therefore the context provides the base
-    and key stone of the flexibility in the library. The context is used
-    for all APIs for the window.
-
-    USAGE
-    The context from a window is created by `zr_begin` and finilized by
-    `zr_end`. Between these two sequence points the context can be used
-    to setup the window with widgets. Other widgets which also use a context
-    have each their own `zr_xxx_begin` and `zr_xxx_end` function pair and act
-    the same as a window context.
-
-    context function API
-    ------------------
-    zr_begin   -- starts the window build up process by filling a context with window state
-    zr_end     -- ends the window build up process and update the window state
-    zr_canvas  -- returns the currently used drawing command buffer
-    zr_input   -- returns the from the context used input struct
-    zr_queue   -- returns the queue of the window
-    zr_space   -- returns the drawable space inside the window
-*/
-enum zr_orientation {
-    ZR_VERTICAL,
-    ZR_HORIZONTAL
-};
-
-enum zr_widget_states {
-    ZR_INACTIVE,
-    ZR_HOVERED,
-    ZR_ACTIVE
-};
-
-enum zr_collapse_states {
-    ZR_MINIMIZED = zr_false,
-    ZR_MAXIMIZED = zr_true
-};
-
-enum zr_widget_state {
-    ZR_WIDGET_INVALID,
-    /* The widget cannot be seen and is completly out of view */
-    ZR_WIDGET_VALID,
-    /* The widget is completly inside the window can be updated */
-    ZR_WIDGET_ROM
-    /* The widget is partially visible and cannot be updated */
-};
-
-enum zr_row_layout_type {
-    /* INTERNAL */
-    ZR_LAYOUT_DYNAMIC_FIXED,
-    /* fixed widget ratio width window layout */
-    ZR_LAYOUT_DYNAMIC_ROW,
-    /* immediate mode widget specific widget width ratio layout */
-    ZR_LAYOUT_DYNAMIC_FREE,
-    /* free ratio based placing of widget in a local space  */
-    ZR_LAYOUT_DYNAMIC,
-    /* retain mode widget specific widget ratio width*/
-    ZR_LAYOUT_STATIC_FIXED,
-    /* fixed widget pixel width window layout */
-    ZR_LAYOUT_STATIC_ROW,
-    /* immediate mode widget specific widget pixel width layout */
-    ZR_LAYOUT_STATIC_FREE,
-    /* free pixel based placing of widget in a local space  */
-    ZR_LAYOUT_STATIC
-    /* retain mode widget specific widget pixel width layout */
-};
-
-#define ZR_UNDEFINED (-1.0f)
-struct zr_row_layout {
-    enum zr_row_layout_type type;
-    /* type of the row layout */
-    zr_size index;
-    /* index of the current widget in the current window row */
-    float height;
-    /* height of the current row */
-    zr_size columns;
-    /* number of columns in the current row */
-    const float *ratio;
-    /* row widget width ratio */
-    float item_width, item_height;
-    /* current width of very item */
-    float item_offset;
-    /* x positon offset of the current item */
-    float filled;
-    /* total fill ratio */
-    struct zr_rect item;
-    /* item bounds */
-    struct zr_rect clip;
-    /* temporary clipping rect */
-};
-
-struct zr_menu {
-    float x, y, w, h;
-    /* menu bounds */
-    struct zr_vec2 offset;
-    /* saved window scrollbar offset */
-};
-
-struct zr_context {
+struct zr_layout {
     zr_flags flags;
     /* window flags modifing its behavior */
     struct zr_rect bounds;
     /* position and size of the window in the os window */
-    struct zr_vec2 offset;
+    struct zr_scroll *offset;
     /* window scrollbar offset */
-    int valid;
-    /* flag inidicating if the window is visible */
     float at_x, at_y, max_x;
     /* index position of the current widget row and column  */
     float width, height;
@@ -2347,1099 +1273,242 @@ struct zr_context {
     /* window menubar bounds */
     struct zr_row_layout row;
     /* currently used window row layout */
-    struct zr_style *style;
-    /* configuration data describing the visual style of the window */
-    struct zr_input *input;
-    /* current input state for updating the window and all its widgets */
+    struct zr_graph graph;
+    /* graph state */
+    struct zr_popup_buffer popup_buffer;
+    /* output command buffer queuing all popup drawing calls */
     struct zr_command_buffer *buffer;
-    /* command draw call output command buffer */
-    struct zr_command_queue *queue;
-    /* command draw call output command buffer */
-    struct zr_value *property;
-    /* currently active property */
+    struct zr_layout *parent;
 };
 
-zr_flags zr_begin(struct zr_context*, struct zr_window*, const char *title);
-/*  this function begins the window build up process by creating a context to fill
-    Input:
-    - input structure holding all user generated state changes
-    Output:
-    - window context to fill up with widgets
-    - flags :
-        o ZR_WINDOW_MOVABLE if window was moved
-        o ZR_WINDOW_MINIMIZABLE if window was minimized/maximized
-        o ZR_WINDOW_CLOSEABLE if window was closed
-*/
-zr_flags zr_end(struct zr_context*, struct zr_window*);
-/*  this function ends the window layout build up process and updates the window.
-    Output:
-    - ZR_WINDOW_SCALEABLE if window was scaled
-*/
-struct zr_rect zr_space(struct zr_context*);
-/* this function returns the drawable space inside the window */
-struct zr_command_buffer* zr_canvas(struct zr_context*);
-/* this functions returns the currently used draw command buffer */
-const struct zr_input *zr_input(struct zr_context*);
-/* this functions returns the currently used input */
-struct zr_command_queue *zr_queue(struct zr_context*);
-/* this functions returns the currently used queue */
+struct zr_context {
+    unsigned int seq;
+    struct zr_input input;
+    struct zr_style style;
+    struct zr_buffer memory;
+    struct zr_clipboard clip;
+    void *pool;
 
-/* --------------------------------------------------------------
- *
- *                          MENUBAR
- *
- * --------------------------------------------------------------*/
-void zr_menubar_begin(struct zr_context*);
-/*  this function begins the window menubar build up process */
-void zr_menubar_end(struct zr_context*);
-/*  this function ends the window menubar build up process */
+#if ZR_COMPILE_WITH_VERTEX_BUFFER
+    struct zr_canvas canvas;
+#endif
 
-/* --------------------------------------------------------------
- *
- *                          LAYOUT
- *
- * --------------------------------------------------------------
-    LAYOUT
-    The layout API is for positioning of widget inside a window context. In general there
-    are four different ways to position widget. The first one is a table with
-    fixed size columns. This like the other three comes in two flavors. First
-    the scaleable width as a ratio of the window width and the other is a
-    non-scaleable fixed pixel value for static windows.
-    Since sometimes widgets with different sizes in a row is needed another set
-    of row layout has been added. The first set is for dynamically size widgets
-    in an immediate mode API which sets each size of a widget directly before
-    it is called or a retain mode API which stores the size of every widget as
-    an array.
-    The third way to position widgets is by allocating a fixed space from
-    the window and directly positioning each widget with position and size.
-    This requires the least amount of work for the API and the most for the user,
-    but offers the most positioning freedom.
-
-    fixed width widget layout API
-    zr_layout_row_dynamic              -- scaling fixed column row layout
-    zr_layout_row_static               -- fixed width fixed column row layout
-
-    custom width widget layout API
-    zr_layout_row                      -- user defined widget row layout
-    zr_layout_row_begin                -- begins the row build up process
-    zr_layout_row_push                 -- pushes the next widget width
-    zr_layout_row_end                  -- ends the row build up process
-
-    custom widget placing API
-    zr_layout_row_space_begin          -- creates a free placing space in the window
-    zr_layout_row_space_push           -- pushes a widget into the space
-    zr_layout_row_space_end            -- finishes the free drawingp process
-    zr_layout_row_space_bounds         -- totally allocated space in window
-    zr_layout_row_space_to_screen      -- converts from local space to screen
-    zr_layout_row_space_to_local       -- converts from screen to local space
-    zr_layout_row_space_rect_to_screen -- converts rect from local space to screen
-    zr_layout_row_space_rect_to_local  -- converts rect from screen to local space
-
-    window tree layout function API
-    zr_layout_push                     -- pushes a new node/collapseable header/tab
-    zr_layout_pop                      -- pops the the previously added node
-*/
-enum zr_layout_format {
-    ZR_DYNAMIC, /* row layout which scales with the window */
-    ZR_STATIC /* row layout with fixed pixel width */
+    int build;
+    struct zr_window *begin;
+    struct zr_window *end;
+    struct zr_window *active;
+    struct zr_window *current;
+    struct zr_window *freelist;
+    unsigned int count;
 };
 
-enum zr_layout_node_type {
-    ZR_LAYOUT_NODE,
-    /* a node is a space which can be minimized or maximized */
-    ZR_LAYOUT_TAB
-    /* a tab is a node with a header */
-};
+/*--------------------------------------------------------------
+ *                          CONTEXT
+ * -------------------------------------------------------------*/
+int zr_init_fixed(struct zr_context*, void *memory, zr_size size,
+                    const struct zr_user_font*, zr_sin_f, zr_cos_f);
+int zr_init_custom(struct zr_context*, struct zr_buffer *cmds,
+                    struct zr_buffer *pool, const struct zr_user_font*,
+                    zr_sin_f, zr_cos_f);
+int zr_init(struct zr_context*, struct zr_allocator*,
+            const struct zr_user_font*, zr_sin_f, zr_cos_f);
+void zr_convert(struct zr_context*, struct zr_buffer *cmds,
+                struct zr_buffer *vertexes, struct zr_buffer *elements,
+                struct zr_draw_null_texture , enum zr_anti_aliasing,
+                float line_thickness, unsigned int circle_segment_count);
+void zr_clear(struct zr_context*);
+void zr_free(struct zr_context*);
 
+/* window */
+int zr_begin(struct zr_context*, struct zr_layout*, const char *title,
+            struct zr_rect bounds, unsigned int flags);
+void zr_end(struct zr_context*);
+
+struct zr_rect zr_window_get_bounds(const struct zr_context*);
+struct zr_vec2 zr_window_get_position(const struct zr_context*);
+struct zr_vec2 zr_window_get_size(const struct zr_context*);
+float zr_window_get_width(const struct zr_context*);
+float zr_window_get_height(const struct zr_context*);
+struct zr_rect zr_window_get_content_region(struct zr_context*);
+struct zr_vec2 zr_window_get_content_region_min(struct zr_context*);
+struct zr_vec2 zr_window_get_content_region_max(struct zr_context*);
+struct zr_vec2 zr_window_get_content_region_size(struct zr_context*);
+struct zr_command_buffer* zr_window_get_canvas(struct zr_context*);
+int zr_window_has_focus(const struct zr_context*);
+int zr_window_is_collapsed(struct zr_context*, const char *name);
+int zr_window_is_closed(struct zr_context*, const char *name);
+
+void zr_window_set_bounds(struct zr_context*, struct zr_rect);
+void zr_window_set_position(struct zr_context*, struct zr_vec2);
+void zr_window_set_size(struct zr_context*, struct zr_vec2);
+void zr_window_collapse(struct zr_context *ctx, const char *name, enum zr_collapse_states);
+void zr_window_collapse_if(struct zr_context *ctx, const char *name, enum zr_collapse_states, int cond);
+void zr_window_set_focus(struct zr_context *ctx, const char *name);
+
+/* drawing */
+#define zr_foreach(c, ctx) for((c)=zr__begin(ctx); (c)!=0; (c)=zr__next(ctx, c))
+#define zr_draw_foreach(cmd,ctx, b) for((cmd)=zr__draw_begin(ctx, b); (cmd)!=0; (cmd)=zr__draw_next(cmd, b, ctx))
+const struct zr_command* zr__next(struct zr_context*, const struct zr_command*);
+const struct zr_command* zr__begin(struct zr_context*);
+const struct zr_draw_command* zr__draw_begin(const struct zr_context*, const struct zr_buffer*);
+const struct zr_draw_command* zr__draw_next(const struct zr_draw_command*,
+                                        const struct zr_buffer*,
+                                        const struct zr_context*);
+
+/*--------------------------------------------------------------
+ *                      Layout
+ * -------------------------------------------------------------*/
+/* layout query functions */
 void zr_layout_peek(struct zr_rect *bounds, struct zr_context*);
-/*  this function peeks at the next widget position and size that will be
- *  allocated from the window without actually allocation the space
-    output:
-    - widget position and size of the next allocate space in the panel
-*/
-/* --------------------------------------------------------------
- *                          FIXED
- * --------------------------------------------------------------*/
+
+/* columns based layouting with generated position and width and fixed height*/
 void zr_layout_row_dynamic(struct zr_context*, float height, zr_size cols);
-/*  this function sets the row layout to dynamically fixed size widget
-    Input:
-    - height of the row that will be filled
-    - number of widget inside the row that will divide the space
-*/
-void zr_layout_row_static(struct zr_context*, float row_height,
-                        zr_size item_width, zr_size cols);
-/*  this function sets the row layout to static fixed size widget
-    Input:
-    - height of the row that will be filled
-    - width in pixel measurement of each widget in the row
-    - number of widget inside the row that will divide the space
-*/
-/* --------------------------------------------------------------
- *                          CUSTOM
- * --------------------------------------------------------------*/
+void zr_layout_row_static(struct zr_context*, float height, zr_size item_width, zr_size cols);
+
+/* widget layouting with custom widget width and fixed height */
 void zr_layout_row_begin(struct zr_context*, enum zr_layout_format,
                         float row_height, zr_size cols);
-/*  this function start a new scaleable row that can be filled with different
-    sized widget
-    Input:
-    - scaleable or fixed row format
-    - height of the row that will be filled
-    - number of widget inside the row that will divide the space
-*/
 void zr_layout_row_push(struct zr_context*, float value);
-/*  this function pushes a widget into the previously start row with the given
-    window width ratio or pixel width
-    Input:
-    - value with either a ratio for ZR_DYNAMIC or a pixel width for ZR_STATIC layout
-*/
 void zr_layout_row_end(struct zr_context*);
-/*  this function ends the previously started scaleable row */
 void zr_layout_row(struct zr_context*, enum zr_layout_format, float height,
                     zr_size cols, const float *ratio);
-/*  this function sets the row layout as an array of ratios/width for
-    every widget that will be inserted into that row
-    Input:
-    - scaleable or fixed row format
-    - height of the row and there each widget inside
-    - number of widget inside the row
-    - window ratio/pixel width array for each widget
-*/
-/* --------------------------------------------------------------
- *                      USER DEFINED
- * --------------------------------------------------------------*/
-void zr_layout_row_space_begin(struct zr_context*, enum zr_layout_format,
-                                float height, zr_size widget_count);
-/*  this functions starts a space where widgets can be added
-    at any given position and the user has to make sure no overlap occures
-    Input:
-    - height of the row and therefore each widget inside
-    - number of widget that will be added into that space
-*/
-struct zr_rect zr_layout_row_space_bounds(struct zr_context*);
-/*  this functions returns the complete bounds of the space in the panel */
-void zr_layout_row_space_push(struct zr_context*, struct zr_rect);
-/*  this functions pushes the position and size of the next widget that will
-    be added into the previously allocated window space
-    Input:
-    - rectangle with position and size as a ratio of the next widget to add
-*/
-struct zr_vec2 zr_layout_row_space_to_screen(struct zr_context*, struct zr_vec2);
-/*  this functions calculates a position from local space to screen space
-    Input:
-    - position in local layout space
-    Output:
-    - position in screen space
-*/
-struct zr_vec2 zr_layout_row_space_to_local(struct zr_context*, struct zr_vec2);
-/*  this functions calculates a position from screen space to local space
-    Input:
-    - position in screen layout space
-    Output:
-    - position in local layout space
-*/
-struct zr_rect zr_layout_row_space_rect_to_screen(struct zr_context*, struct zr_rect);
-/*  this functions calculates a rectange from local space to screen space
-    Input:
-    - rectangle in local layout space
-    Output:
-    - rectangle in screen space
-*/
-struct zr_rect zr_layout_row_space_rect_to_local(struct zr_context*, struct zr_rect);
-/*  this functions calculates a rectangle from screen space to local space
-    Input:
-    - rectangle in screen space
-    Output:
-    - rectangle in local space
-*/
-void zr_layout_row_space_end(struct zr_context*);
-/*  this functions finishes the scaleable space filling process */
-/* --------------------------------------------------------------
- *                          TREE
- * --------------------------------------------------------------*/
-int zr_layout_push(struct zr_context*, enum zr_layout_node_type,
-                        const char *title, int*);
-/*  this functions pushes either a tree node or collapseable header into
- *  the current window layout
-    Input:
-    - title of the node to push into the window
-    - type of then node with either default node, collapseable header or tab
-    - state of the node with either ZR_MINIMIZED or ZR_MAXIMIZED
-    Output:
-    - returns the updated state as either zr_true if open and zr_false otherwise
-    - updates the state of the node pointer to the updated state
-*/
+
+/* layouting with custom position and width and height of widgets */
+void zr_layout_space_begin(struct zr_context*, enum zr_layout_format,
+                            float height, zr_size widget_count);
+void zr_layout_space_push(struct zr_context*, struct zr_rect);
+void zr_layout_space_end(struct zr_context*);
+
+/* utility functions for custom size + position widgets */
+struct zr_rect zr_layout_space_bounds(struct zr_context*);
+struct zr_vec2 zr_layout_space_to_screen(struct zr_context*, struct zr_vec2);
+struct zr_vec2 zr_layout_space_to_local(struct zr_context*, struct zr_vec2);
+struct zr_rect zr_layout_space_rect_to_screen(struct zr_context*, struct zr_rect);
+struct zr_rect zr_layout_space_rect_to_local(struct zr_context*, struct zr_rect);
+
+/* group */
+int zr_group_begin(struct zr_context*, struct zr_layout*, const char *title, zr_flags);
+void zr_group_end(struct zr_context *ctx);
+
+/* tree layout */
+int zr_layout_push(struct zr_context*, enum zr_layout_node_type, const char *title);
 void zr_layout_pop(struct zr_context*);
-/*  this functions ends the previously added node */
 
-/* --------------------------------------------------------------
- *
- *                          WIDGETS
- *
- * --------------------------------------------------------------
-    WIDGET
-    The layout API uses the layout API to provide and add widget to the window.
-    IMPORTANT: the widget API does NOT work without a layout so if you have
-    visual glitches then the problem probably stems from not using the layout
-    correctly. The window widget API does not implement any widget itself, instead
-    it uses the general Widget API under the hood and is only responsible for
-    calling the correct widget API function with correct position, size and style.
-    All widgets do NOT store any state instead everything has to be managed by
-    the user.
-
-    USAGE
-    To use the Widget API you first have to call one of the layout API funtions
-    to setup the widget. After that you can just call one of the widget functions
-    at it will automaticall update the widget state as well as `draw` the widget
-    by adding draw command into the window command buffer.
-
-    window widgets API
-    zr_widget               -- base function for all widgets to allocate space
-    zr_widget_fitting       -- special base function for widget without padding/spacing
-    zr_spacing              -- column seperator and is basically an empty widget
-    zr_seperator            -- adds either a horizontal or vertical seperator
-    zr_text                 -- text widget for printing text with length
-    zr_text_colored         -- colored text widget for printing string by length
-    zr_text_wrap            -- wraping text widget for printing text with length
-    zr_text_wrap_colored    -- wraping colored text widget for printing string by length
-    zr_label                -- text widget for printing zero terminated strings
-    zr_label_colored        -- widget for printing colored zero terminiated strings
-    zr_button_text          -- button widget with text content
-    zr_button_color         -- colored button widget without content
-    zr_button_symbol        -- button with triangle either up-/down-/left- or right
-    zr_button_image         -- button widget width icon content
-    zr_button_text_image    -- button widget with text and icon
-    zr_button_text_symbol   -- button widget with text and a triangle
-    zr_button_fitting       -- button widget without border and fitting space
-    zr_image                -- image widget for outputing a image to a window
-    zr_check                -- add a checkbox widget
-    zr_option               -- radiobutton widget
-    zr_slider_int           -- integer slider widget with min,max,step value
-    zr_slider_float         -- float slider widget with min,max,step value
-    zr_progress             -- progressbar widget
-    zr_edit                 -- edit textbox widget for text input
-    zr_edit_filtered        -- edit textbox widget for text input with filter input
-    zr_edit_field           -- edit text field with cursor, clipboard and filter
-    zr_edit_box             -- edit text box with cursor, clipboard and filter
-*/
-enum zr_text_align {
-    ZR_TEXT_LEFT,
-    ZR_TEXT_CENTERED,
-    ZR_TEXT_RIGHT
-};
-
-enum zr_button_behavior {
-    ZR_BUTTON_DEFAULT,
-    ZR_BUTTON_REPEATER,
-    ZR_BUTTON_BEHAVIOR_MAX
-};
-
-enum zr_input_filter {
-    ZR_INPUT_DEFAULT,
-    /* everything goes */
-    ZR_INPUT_ASCII,
-    /* ASCII characters (0-127)*/
-    ZR_INPUT_FLOAT,
-    /* only float point numbers */
-    ZR_INPUT_DEC,
-    /* only integer numbers */
-    ZR_INPUT_HEX,
-    /* only hex numbers */
-    ZR_INPUT_OCT,
-    /* only octal numbers */
-    ZR_INPUT_BIN
-    /* only binary numbers */
-};
-
-enum zr_widget_state zr_widget(struct zr_rect*, struct zr_context*);
-/*  this function represents the base of every widget and calculates the bounds
- *  and allocates space for a widget inside a window.
-    Output:
-    - allocated space for a widget to draw into
-    - state of widget the widget with invisible, renderable and render + updateable
-*/
+/*--------------------------------------------------------------
+ *                      Widgets
+ * -------------------------------------------------------------*/
+/* base function called by all widgets (needs to be called for custom widgets) */
+enum zr_widget_state zr_widget(struct zr_rect*, const struct zr_context*);
 enum zr_widget_state zr_widget_fitting(struct zr_rect*, struct zr_context*);
-/*  this function represents calculates the bounds of a perfectly and completly
- *  fitting widget inside the window and allocates the space inside a window.
-    Output:
-    - allocated space for a widget to draw into
-    - state of widget the widget with invisible, renderable and render + updateable
-*/
 void zr_spacing(struct zr_context*, zr_size cols);
-/*  this function creates a seperator to fill space
-    Input:
-    - number of columns or widget to jump over
-*/
 void zr_seperator(struct zr_context*);
-/*  this function creates a seperator line */
+
+/* content output widgets */
 void zr_text(struct zr_context*, const char*, zr_size, enum zr_text_align);
-/*  this function creates a bounded non terminated text widget with either
-    left, centered or right alignment
-    Input:
-    - string pointer to text that should be drawn
-    - number of bytes the text is long
-    - text alignment with either left, centered or right alignment
-*/
 void zr_text_colored(struct zr_context*, const char*, zr_size, enum zr_text_align,
                     struct zr_color);
-/*  this function creates a bounded non terminated color text widget with either
-    left, centered or right alignment
-    Input:
-    - string pointer to text that should be drawn
-    - number of bytes the text is long
-    - text alignment with either left, centered or right alignment
-    - color the text should be drawn
-*/
 void zr_text_wrap(struct zr_context*, const char*, zr_size);
-/*  this function creates a bounded non terminated multiline text widget
-    Input:
-    - string pointer to text that should be drawn
-    - number of bytes the text is long
-*/
 void zr_text_wrap_colored(struct zr_context*, const char*, zr_size, struct zr_color);
-/*  this function creates a bounded nonterminated multiline colored text widget
-    Input:
-    - string pointer to text that should be drawn
-    - number of bytes the text is long
-    - color the text should be drawn
-*/
 void zr_label(struct zr_context*, const char*, enum zr_text_align);
-/*  this function creates a zero terminated text widget with either
-    left, centered or right alignment
-    Input:
-    - string pointer to text that should be drawn
-    - text alignment with either left, centered or right alignment
-*/
 void zr_label_colored(struct zr_context*, const char*, enum zr_text_align, struct zr_color);
-/*  this function creates a zero terminated colored text widget with either
-    left, centered or right alignment
-    Input:
-    - string pointer to text that should be drawn
-    - text alignment with either left, centered or right alignment
-    - color the label should be drawn
-*/
 void zr_label_wrap(struct zr_context*, const char*);
-/*  this function creates a zero terminated wraping text widget with either
-    left, centered or right alignment
-    Input:
-    - string pointer to text that should be drawn
-*/
 void zr_label_colored_wrap(struct zr_context*, const char*, struct zr_color);
-/*  this function creates a zero terminated wraping colored text widget with either
-    left, centered or right alignment
-    Input:
-    - string pointer to text that should be drawn
-    - color the label should be drawn
-*/
 void zr_image(struct zr_context*, struct zr_image);
-/*  this function creates an image widget
-    Input:
-    - string pointer to text that should be drawn
-*/
-int zr_check(struct zr_context*, const char*, int active);
-/*  this function creates a checkbox widget with either active or inactive state
-    Input:
-    - checkbox label describing the content
-    - state of the checkbox with either active or inactive
-    Output:
-    - from user input updated state of the checkbox
-*/
-void zr_checkbox(struct zr_context*, const char*, int *active);
-/*  this function creates a checkbox widget with either active or inactive state
-    Input:
-    - checkbox label describing the content
-    - state of the checkbox with either active or inactive
-    Output:
-    - from user input updated state of the checkbox
-*/
-void zr_radio(struct zr_context*, const char*, int *active);
-/*  this function creates a radiobutton widget with either active or inactive state
-    Input:
-    - radiobutton label describing the content
-    - state of the radiobutton with either active or inactive
-    Output:
-    - from user input updated state of the radiobutton
-*/
-int zr_option(struct zr_context*, const char*, int active);
-/*  this function creates a radiobutton widget with either active or inactive state
-    Input:
-    - radiobutton label describing the content
-    - state of the radiobutton with either active or inactive
-    Output:
-    - from user input updated state of the radiobutton
-*/
-int zr_button_text(struct zr_context*, const char*, enum zr_button_behavior);
-/*  this function creates a text button
-    Input:
-    - button label describing the button
-    - string label
-    - button behavior with either default or repeater behavior
-    Output:
-    - zr_true if the button was transistioned from unpressed to pressed with
-        default button behavior or pressed if repeater behavior.
-*/
-int zr_button_color(struct zr_context*, struct zr_color, enum zr_button_behavior);
-/*  this function creates a colored button without content
-    Input:
-    - color the button should be drawn with
-    - button behavior with either default or repeater behavior
-    Output:
-    - zr_true if the button was transistioned from unpressed to pressed with
-        default button behavior or pressed if repeater behavior.
-*/
-int zr_button_symbol(struct zr_context*, enum zr_symbol, enum zr_button_behavior);
-/*  this function creates a button with a triangle pointing in one of four directions
-    Input:
-    - triangle direction with either up, down, left or right direction
-    - button behavior with either default or repeater behavior
-    Output:
-    - zr_true if the button was transistioned from unpressed to pressed with
-        default button behavior or pressed if repeater behavior.
-*/
-int zr_button_image(struct zr_context*, struct zr_image img, enum zr_button_behavior);
-/*  this function creates a button with an icon as content
-    Input:
-    - icon image handle to draw into the button
-    - button behavior with either default or repeater behavior
-    Output:
-    - zr_true if the button was transistioned from unpressed to pressed with
-        default button behavior or pressed if repeater behavior.
-*/
-int zr_button_text_symbol(struct zr_context*, enum zr_symbol, const char*,
-                                enum zr_text_align, enum zr_button_behavior);
-/*  this function creates a button with a triangle and text
-    Input:
-    - symbol to draw with the text
-    - button label describing the button
-    - text alignment with either left, centered or right alignment
-    - button behavior with either default or repeater behavior
-    Output:
-    - zr_true if the button was transistioned from unpressed to pressed with
-        default button behavior or pressed if repeater behavior.
-*/
-int zr_button_text_image(struct zr_context *layout, struct zr_image img,
-                            const char *text, enum zr_text_align align,
-                            enum zr_button_behavior behavior);
-/*  this function creates a button with an icon and text
-    Input:
-    - image or subimage to use as an icon
-    - button label describing the button
-    - text alignment with either left, centered or right alignment
-    - button behavior with either default or repeater behavior
-    Output:
-    - zr_true if the button was transistioned from unpressed to pressed with
-        default button behavior or pressed if repeater behavior.
-*/
-int zr_selectable(struct zr_context *layout, const char *str,
-                        enum zr_text_align align, int *value);
-/*  this function creates a selectable item which is either active or inactive
-    Input:
-    - selectable text to draw
-    - current state of the toggle
-    Output:
-    - returns whether the selectable was changed
-*/
-int zr_select(struct zr_context *layout, const char *str,
-                    enum zr_text_align align, int value);
-/*  this function creates a selectable item which is either active or inactive
-    Input:
-    - selectable text to draw
-    - current state of the toggle
-    Output:
-    - returns the updated selectable state
-*/
-void zr_slider_float(struct zr_context*, float min, float *val, float max,
-                    float step);
-/*  this function creates a float slider for value manipulation
-    Input:
-    - minimal slider value that will not be underflown
-    - slider value which shall be updated
-    - maximal slider value that will not be overflown
-    - step intervall to change the slider with
-    Output:
-    - the from user input updated slider value
-*/
-void zr_slider_int(struct zr_context*, int min, int *val, int max,
-                    int step);
-/*  this function creates a int slider for value manipulation
-    Input:
-    - minimal slider value that will not be underflown
-    - slider value which shall be updated
-    - maximal slider value that will not be overflown
-    - step intervall to change the slider with
-    Output:
-    - the from user input updated slider value
-*/
 
-float zr_slide_float(struct zr_context*, float min, float val, float max,
-                    float step);
-/*  this function creates a float slider for value manipulation
-    Input:
-    - minimal slider value that will not be underflown
-    - slider value which shall be updated
-    - maximal slider value that will not be overflown
-    - step intervall to change the slider with
-    Output:
-    - the from user input updated slider value
-*/
-int zr_slide_int(struct zr_context*, int min, int val, int max, int step);
-/*  this function creates a int slider for value manipulation
-    Input:
-    - minimal slider value that will not be underflown
-    - slider value which shall be updated
-    - maximal slider value that will not be overflown
-    - step intervall to change the slider with
-    Output:
-    - the from user input updated slider value
-*/
+/* toggle value  */
+int zr_check(struct zr_context*, const char*, int active);
+void zr_checkbox(struct zr_context*, const char*, int *active);
+void zr_radio(struct zr_context*, const char*, int *active);
+int zr_option(struct zr_context*, const char*, int active);
+int zr_selectable(struct zr_context*, const char*, enum zr_text_align, int *value);
+int zr_select(struct zr_context*, const char*, enum zr_text_align, int value);
+
+/* buttons (push/press) */
+int zr_button_text(struct zr_context*, const char*, enum zr_button_behavior);
+int zr_button_color(struct zr_context*, struct zr_color, enum zr_button_behavior);
+int zr_button_symbol(struct zr_context*, enum zr_symbol, enum zr_button_behavior);
+int zr_button_image(struct zr_context*, struct zr_image img, enum zr_button_behavior);
+int zr_button_text_symbol(struct zr_context*, enum zr_symbol, const char*,
+                            enum zr_text_align, enum zr_button_behavior);
+int zr_button_text_image(struct zr_context*, struct zr_image img, const char*,
+                            enum zr_text_align align, enum zr_button_behavior);
+
+/* simple value modifier by sliding */
 void zr_progress(struct zr_context*, zr_size *cur, zr_size max, int modifyable);
-/*  this function creates an either user or program controlled progressbar
-    Input:
-    - current progressbar value
-    - maximal progressbar value that will not be overflown
-    - flag indicating if the progressbar should be changeable by user input
-    Output:
-    - the from user input updated progressbar value if modifyable progressbar
-*/
-void zr_edit_field(struct zr_context*, struct zr_edit_box*);
-/*  this function creates an editbox with copy & paste functionality and text buffering */
-void zr_edit_box(struct zr_context*, struct zr_edit_box*, int modifyable);
-/*  this function creates an multiline editbox with copy & paste functionality and text
-    buffering. NOTE: this is interhintly slow so please do not use it for heavy workloads. */
-void zr_edit(struct zr_context*, char *buffer, zr_size *len, zr_size max,
-                int *active, zr_size *cursor, enum zr_input_filter);
-/*  this function creates an editbox to updated/insert user text input
-    Input:
-    - buffer to fill with user input
-    - current length of the buffer in bytes
-    - maximal number of bytes the buffer can be filled with
-    - state of the editbox with active as currently modified by the user
-    - filter type to limit the glyph the user can input into the editbox
-    Output:
-    - length of the buffer after user input update
-    - current state of the editbox with active(zr_true) or inactive(zr_false)
-*/
-void zr_edit_filtered(struct zr_context*, char *buffer, zr_size *len,
-                        zr_size max,  int *active, zr_size *cursor, zr_filter);
-/*  this function creates an editbox to updated/insert filtered user text input
-    Input:
-    - buffer to fill with user input
-    - current length of the buffer in bytes
-    - maximal number of bytes the buffer can be filled with
-    - state of the editbox with active as currently modified by the user
-    - filter callback to limit the glyphs the user can input into the editbox
-    Output:
-    - length of the buffer after user input update
-    - current state of the editbox with active(zr_true) or inactive(zr_false)
-*/
+void zr_slider_float(struct zr_context*, float min, float *val, float max, float step);
+void zr_slider_int(struct zr_context*, int min, int *val, int max, int step);
+float zr_slide_float(struct zr_context*, float min, float val, float max, float step);
+int zr_slide_int(struct zr_context*, int min, int val, int max, int step);
+
+/* extended value modifier by dragging, increment/decrement and text input */
 void zr_property_float(struct zr_context *layout, const char *name,
                         float min, float *val, float max, float step, float inc_per_pixel);
-/*  this function creates a float property widget
-    Input:
-    - min value that will not be underflown
-    - current spinner value to be updated by user input
-    - max value that will not be overflown
-    - spinner value modificaton stepping intervall
-    - current state of the spinner with active as currently modfied by user input
-    Output:
-    - the from user input updated spinner value
-    - current state of the editbox with active(zr_true) or inactive(zr_false)
-*/
 void zr_property_int(struct zr_context *layout, const char *name,
                     int min, int *val, int max, int step, int inc_per_pixel);
-/*  this function creates a float property widget
-    Input:
-    - min value that will not be underflown
-    - current spinner value to be updated by user input
-    - max value that will not be overflown
-    - spinner value modificaton stepping intervall
-    - current state of the spinner with active as currently modfied by user input
-    Output:
-    - the from user input updated spinner value
-    - current state of the editbox with active(zr_true) or inactive(zr_false)
-*/
 float zr_propertyf(struct zr_context *layout, const char *name, float min, float val, float max,
                     float step, float inc_per_pixel);
-/*  this function creates a float property widget
-    Input:
-    - min value that will not be underflown
-    - current spinner value to be updated by user input
-    - max value that will not be overflown
-    - spinner value modificaton stepping intervall
-    - current state of the spinner with active as currently modfied by user input
-    Output:
-    - the from user input updated spinner value
-    - current state of the editbox with active(zr_true) or inactive(zr_false)
-*/
 int zr_propertyi(struct zr_context *layout, const char *name, int min, int val, int max,
                 int step, int inc_per_pixel);
-/*  this function creates a float property widget
-    Input:
-    - min value that will not be underflown
-    - current spinner value to be updated by user input
-    - max value that will not be overflown
-    - spinner value modificaton stepping intervall
-    - current state of the spinner with active as currently modfied by user input
-    Output:
-    - the from user input updated spinner value
-    - current state of the editbox with active(zr_true) or inactive(zr_false)
-*/
-/* --------------------------------------------------------------
- *
- *                          COMBO BOX
- *
- * --------------------------------------------------------------
-    COMBO BOX
-    The combo box is a minimizable popup window and extends the old school
-    text combo box with the possibility to fill combo boxes with any kind of widgets.
-    The combo box is internaly implemented with a dynamic popup window
-    and can only be as height as the window allows.
-    There are two different ways to create a combo box. The first one is a
-    standart text combo box which has it own function `zr_combo`. The second
-    way is the more complex immediate mode API which allows to create
-    any kind of content inside the combo box. In case of the second API it is
-    additionally possible and sometimes wanted to close the combo box popup
-    window This can be achived with `zr_combo_close`.
 
-    combo box API
-    zr_combo_begin          -- begins the combo box popup window
-    zr_combo_item           -- adds a text item into the combobox
-    zr_combo_item_icon      -- adds a text image item into the combobox
-    zr_combo_item_symbol    -- adds a text symbol item into the combobox
-    zr_combo_close          -- closes the previously opened combo box
-    zr_combo_end            -- ends the combo box build up process
-*/
-void zr_combo_begin_text(struct zr_context *parent, struct zr_context *combo,
-                    const char *selected, int *active, int height, struct zr_vec2 *scrollbar);
-/*  this function begins the combobox build up process with a text header
-    Input:
-    - parent window layout the combo box will be placed into
-    - ouput combo box window layout which will be needed to fill the combo box
-    - title of the combo box or in the case of the text combo box the selected item
-    - the current state of the combobox with either zr_true (active) or zr_false else
-    - the current scrollbar offset of the combo box popup window
-*/
-void zr_combo_begin_color(struct zr_context *parent, struct zr_context *combo,
-                        struct zr_color color, int *active, int height,
-                        struct zr_vec2 *scrollbar);
-/*  this function begins the combobox build up process with a color header
-    Input:
-    - parent window layout the combo box will be placed into
-    - ouput combo box window layout which will be needed to fill the combo box
-    - title color to show
-    - the current state of the combobox with either zr_true (active) or zr_false else
-    - the current scrollbar offset of the combo box popup window
-*/
-void zr_combo_begin_image(struct zr_context *parent, struct zr_context *combo,
-                            struct zr_image img, int *active, int height,
-                            struct zr_vec2 *scrollbar);
-/*  this function begins the combobox build up process with a image header
-    Input:
-    - parent window layout the combo box will be placed into
-    - ouput combo box window layout which will be needed to fill the combo box
-    - title color to show
-    - the current state of the combobox with either zr_true (active) or zr_false else
-    - the current scrollbar offset of the combo box popup window
-*/
-void zr_combo_begin_icon(struct zr_context *parent, struct zr_context *combo,
-                        const char *selected, struct zr_image img, int *active, int height,
-                        struct zr_vec2 *scrollbar);
-/*  this function begins the combobox build up process with a icon text header
-    Input:
-    - parent window layout the combo box will be placed into
-    - ouput combo box window layout which will be needed to fill the combo box
-    - title color to show
-    - the current state of the combobox with either zr_true (active) or zr_false else
-    - the current scrollbar offset of the combo box popup window
-*/
-int zr_combo_item(struct zr_context *menu, const char*, enum zr_text_align align);
-/*  this function execute a combo box item
-    Input:
-    - title of the item
-    Output
-    - `zr_true` if has been clicked `zr_false` otherwise
-*/
-int zr_combo_item_icon(struct zr_context *menu, struct zr_image,
-                        const char*, enum zr_text_align align);
-/*  this function execute combo box icon item
-    Input:
-    - icon to draw into the combo box item
-    - text alignment of the title
-    - title of the item
-    Output
-    - `zr_true` if has been clicked `zr_false` otherwise
-*/
-int zr_combo_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
-                                    const char*, enum zr_text_align align);
-/*  this function execute combo box symbol item
-    Input:
-    - symbol to draw into the combo box item
-    - text alignment of the title
-    - title of the item
-    Output
-    - `zr_true` if has been clicked `zr_false` otherwise
-*/
-void zr_combo_close(struct zr_context *combo, int *state);
-/*  this function closes a opened combobox */
-void zr_combo_end(struct zr_context *parent, struct zr_context *menu,
-                    int *state, struct zr_vec2 *scrollbar);
-/*  this function ends the combobox build up process */
-/* --------------------------------------------------------------
- *
- *                          GRAPH
- *
- * --------------------------------------------------------------
-    GRAPH
-    The graph widget provided a way to visualize data in either a line or
-    column graph.
+/* text manipulation */
+int zr_edit_string(struct zr_context*, zr_flags, char *buffer, zr_size *len, zr_size max, zr_filter);
+int zr_edit_buffer(struct zr_context*, zr_flags, struct zr_buffer*, zr_filter);
 
-    USAGE
-    To create a graph three different ways are provided. The first one
-    is an immediate mode API which allows the push values one by one
-    into the graph. The second one is a retain mode function which takes
-    an array of float values and converts them into a graph. The final
-    function is based on a callback and is mainly a good option if you
-    want to draw a mathematical function like for example sine or cosine.
+/* simple graph */
+void zr_graph_begin(struct zr_context*, enum zr_graph_type, zr_size num, float min, float max);
+zr_flags zr_graph_push(struct zr_context*, float);
+void zr_graph_end(struct zr_context*);
 
-    graph widget API
-    zr_graph_begin   -- immediate mode graph building begin sequence point
-    zr_graph_push    -- push a value into a graph
-    zr_graph_end     -- immediate mode graph building end sequence point
-    zr_graph         -- retained mode graph with array of values
-    zr_graph_ex      -- ratained mode graph with getter callback
-*/
-enum zr_graph_type {
-    ZR_GRAPH_LINES,
-    /* Line graph with each data point being connected with its previous and next node */
-    ZR_GRAPH_COLUMN,
-    /* Column graph/Histogram with value represented as bars */
-    ZR_GRAPH_MAX
-};
+/*--------------------------------------------------------------
+ *                      Popups
+ * -------------------------------------------------------------*/
+int zr_popup_begin(struct zr_context*, struct zr_layout*, enum zr_popup_type,
+                    const char *title, zr_flags, struct zr_rect bounds);
+void zr_popup_close(struct zr_context*);
+void zr_popup_end(struct zr_context*);
 
-enum zr_graph_event {
-    ZR_GRAPH_HOVERING = 0x01,
-    /* Mouse hoveres over current value */
-    ZR_GRAPH_CLICKED = 0x02
-    /* Mouse click on current value */
-};
+/* abstract combo box */
+int zr_combo_begin_text(struct zr_context*, struct zr_layout*, const char *id,
+                        const char *selected, int max_height);
+int zr_combo_begin_color(struct zr_context*, struct zr_layout*, const char *id,
+                        struct zr_color color, int max_height);
+int zr_combo_begin_image(struct zr_context*, struct zr_layout*, const char *id,
+                        struct zr_image img,  int max_height);
+int zr_combo_begin_icon(struct zr_context*, struct zr_layout*, const char *id,
+                        const char *selected, struct zr_image img, int height);
+int zr_combo_item(struct zr_context*, const char*, enum zr_text_align);
+int zr_combo_item_icon(struct zr_context*, struct zr_image, const char*, enum zr_text_align align);
+int zr_combo_item_symbol(struct zr_context*, enum zr_symbol symbol, const char*, enum zr_text_align align);
+void zr_combo_close(struct zr_context*);
+void zr_combo_end(struct zr_context*);
 
-struct zr_graph {
-    int valid;
-    /* graph valid flag to make sure that the graph is visible */
-    enum zr_graph_type type;
-    /* graph type with either line or column graph */
-    float x, y;
-    /* graph canvas space position */
-    float w, h;
-    /* graph canvas space size */
-    float min, max;
-    /* min and max value for correct scaling of values */
-    struct zr_vec2 last;
-    /* last line graph point to connect to. Only used by the line graph */
-    zr_size index;
-    /* current graph value index*/
-    zr_size count;
-    /* number of values inside the graph */
-};
+/* contextual menu */
+int zr_contextual_begin(struct zr_context*, struct zr_layout*, zr_flags flags, struct zr_vec2 size);
+int zr_contextual_item(struct zr_context*, const char*, enum zr_text_align align);
+int zr_contextual_item_icon(struct zr_context*, struct zr_image, const char*, enum zr_text_align);
+int zr_contextual_item_symbol(struct zr_context*, enum zr_symbol, const char*, enum zr_text_align);
+void zr_contextual_close(struct zr_context*);
+void zr_contextual_end(struct zr_context*);
 
-void zr_graph_begin(struct zr_context*, struct zr_graph*, enum zr_graph_type,
-                    zr_size count, float min, float max);
-/*  this function begins a graph building widget
-    Input:
-    - type of the graph with either lines or bars
-    - minimal graph value for the lower bounds of the graph
-    - maximal graph value for the upper bounds of the graph
-    Output:
-    - graph stack object that can be filled with values
-*/
-zr_flags zr_graph_push(struct zr_context*,struct zr_graph*,float);
-/*  this function pushes a value inside the pushed graph
-    Input:
-    - value data point to fill into the graph either as point or as bar
-    Output:
-    - event with either currently pushed value is hovered and/or clicked
-*/
-void zr_graph_end(struct zr_context *layout, struct zr_graph*);
-/*  this function ends the graph */
-/* --------------------------------------------------------------
- *
- *                          GROUP
- *
- * --------------------------------------------------------------
-    GROUP
-    A group window represents a window inside a window. The group thereby has a fixed height
-    but just like a normal window has a scrollbar. It main promise is to group together
-    a group of widgets into a small space inside a window and to provide a scrollable
-    space inside a window.
-
-    USAGE
-    To create a group you first have to allocate space in a window. This is done
-    by the group row layout API and works the same as widgets. After that the
-    `zr_group_begin` has to be called with the parent layout to create
-    the group in and a group layout to create a new window inside the window.
-    Just like a window layout structures the group layout only has a lifetime
-    between the `zr_group_begin` and `zr_group_end` and does
-    not have to be persistent.
-
-    group window API
-    zr_group_begin -- adds a scrollable fixed space inside the window
-    zr_group_begin -- ends the scrollable space
-*/
-void zr_group_begin(struct zr_context*, struct zr_context *tab,
-                    const char *title, zr_flags, struct zr_vec2);
-/*  this function adds a grouped group window into the parent window
-    IMPORTANT: You need to set the height of the group with zr_row_layout
-    Input:
-    - group title to write into the header
-    - group scrollbar offset
-    Output:
-    - group layout to fill with widgets
-*/
-void zr_group_end(struct zr_context*, struct zr_context*, struct zr_vec2 *scrollbar);
-/*  this function finishes the previously started group layout
-    Output:
-    - The from user input updated group scrollbar pixel offset
-*/
-/* --------------------------------------------------------------
- *
- *                          POPUP
- *
- * --------------------------------------------------------------
-    POPUP
-    The popup extends the normal window with an overlapping blocking
-    window that needs to be closed before the underlining main window can
-    be used again. Therefore popups are designed for messages,tooltips and
-    are used to create the combo box. Internally the popup creates a subbuffer
-    inside a command queue that will be drawn after the complete parent window.
-
-    USAGE
-    To create an popup the `zr_window_popup_begin` function needs to be called
-    with the parent window local position and size and the wanted type with
-    static or dynamic window. A static window has a fixed size and behaves like a
-    normal window inside a window, but a dynamic window only takes up as much
-    height as needed up to a given maximum height. Dynamic windows are for example
-    combo boxes while static window make sense for messsages or tooltips.
-    To close a popup you can use the `zr_pop_close` function which takes
-    care of the closing process. Finally `zr_popup_end` finializes the popup.
-
-    window blocking popup API
-    zr_popup_begin         -- adds a popup inside a window
-    zr_popup_close         -- closes the popup window
-    zr_popup_end           -- ends the popup building process
-
-    window non-blocking popup API
-    zr_popup_menu_begin    -- begin a popup context menu
-    zr_popup_menu_close    -- closes a popup context menu
-    zr_popup_menu_end      -- ends the popup building process
-*/
-enum zr_popup_type {
-    ZR_POPUP_STATIC,
-    /* static fixed height non growing popup */
-    ZR_POPUP_DYNAMIC
-    /* dynamically growing popup with maximum height */
-};
-
-zr_flags zr_popup_begin(struct zr_context *parent, struct zr_context *popup,
-                            enum zr_popup_type, const char *title,
-                            zr_flags, struct zr_rect bounds, struct zr_vec2 offset);
-/*  this function adds a overlapping blocking popup menu
-    Input:
-    - type of the popup as either growing or static
-    - additonal popup window flags
-    - popup position and size of the popup (NOTE: local position)
-    - scrollbar offset of wanted
-    Output:
-    - popup layout to fill with widgets
-*/
-void zr_popup_close(struct zr_context *popup);
-/*  this functions closes a previously opened popup */
-void zr_popup_end(struct zr_context *parent, struct zr_context *popup,
-                struct zr_vec2 *scrollbar);
-/*  this function finishes the previously started popup layout
-    Output:
-    - The from user input updated popup scrollbar pixel offset
-*/
-/* --------------------------------------------------------------
- *
- *                      CONTEXTUAL
- *
- * --------------------------------------------------------------
-    CONTEXTUAL
-    A contextual menu is a dynamic non-blocking popup window. It was mainly
-    designed to create a typical right-click menu with items but can be filled with
-    any content. The reason special menu items were added was to make the content
-    fit the menu. Since the contextual menu is non-blocking in contrast to
-    normal popups a click outside of the menu results in a closed menu. In addition
-    if one of the menu items function is called a call to one of the items results
-    in a closed menu as well. The final method of closing the contextual menu is
-    by hand by calling the close function.
-
-    contextual API
-    zr_contextual_begin         -- begins the contextual menu popup window
-    zr_contextual_item          -- adds a text item into the contextual menu
-    zr_contextual_item_icon     -- adds a text image item into the contextual menu
-    zr_contextual_item_symbol   -- adds a text symbol item into the contextual menu
-    zr_contextual_close         -- closes the previously opened contextual menu
-    zr_contextual_end           -- ends the contextual menu build up process
-*/
-void zr_contextual_begin(struct zr_context *parent, struct zr_context *popup,
-                        zr_flags flags, int *active, struct zr_rect body);
-/*  this function adds a context menu popup
-    Input:
-    - type of the popup as either growing or static
-    - additonal popup window flags
-    - popup position and size of the popup (NOTE: local position)
-    - scrollbar offset of wanted
-    Output:
-    - popup layout to fill with widgets
-*/
-int zr_contextual_item(struct zr_context *menu, const char*, enum zr_text_align align);
-/*  this function execute contextual menu item
-    Input:
-    - text alignment of the title
-    - title of the item
-    Output
-    - `zr_true` if has been clicked `zr_false` otherwise
-*/
-int zr_contextual_item_icon(struct zr_context *menu, struct zr_image,
-                            const char*, enum zr_text_align align);
-/*  this function execute contextual menu item
-    Input:
-    - icon to draw into the menu item
-    - text alignment of the title
-    - title of the item
-    Output
-    - `zr_true` if has been clicked `zr_false` otherwise
-*/
-int zr_contextual_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
-                            const char*, enum zr_text_align align);
-/*  this function execute contextual menu item
-    Input:
-    - symbol to draw into the menu item
-    - text alignment of the title
-    - title of the item
-    Output
-    - `zr_true` if has been clicked `zr_false` otherwise
-*/
-void zr_contextual_close(struct zr_context *popup);
-/*  this functions closes the context menu
-     Output:
-    - update state of the context menu
-*/
-void zr_contextual_end(struct zr_context *parent, struct zr_context *popup, int*);
-/*  this functions closes a previously opened context menu */
-
-/*----------------------------------------------------------------
- *
- *                          MENU
- *
- * --------------------------------------------------------------
-    MENU
-    The menu widget provides a overlapping popup window which can
-    be opened/closed by clicking on the menu button. It is normally
-    placed at the top of the window and is independent of the parent
-    scrollbar offset. But if needed the menu can even be placed inside the window.
-    At the moment the menu only allows a single depth but that will change
-    in the future.
-
-    menu widget API
-    zr_menu_xxx_begin   -- begins the menu item build up processs
-    zr_menu_item        -- adds a item into the menu
-    zr_menu_item_icon   -- adds a text + image item into the menu
-    zr_menu_item_symbol -- adds a text + symbol item into the menu
-    zr_menu_close       -- closes the menu
-    zr_menu_end         -- ends the menu item build up process
-*/
-void zr_menu_text_begin(struct zr_context *parent, struct zr_context *menu,
-                        const char *title, float width, int *active);
-/*  this function begins the menu build up process and provides a clickable text button
- *  to open and close the menu popup panel
-    Input:
-    - parent window layout the menu will be placed into
-    - ouput menu window layout
-    - title of the menu to
-    - the current state of the menu with either zr_true (open) or zr_false else
-*/
-void zr_menu_icon_begin(struct zr_context *parent, struct zr_context *menu,
-                        struct zr_image, float width, int *active);
-/*  this function begins the menu build up process and provides a clickable icon button
- *  to open and close the menu popup panel
-    Input:
-    - parent window layout the menu will be placed into
-    - ouput menu window layout
-    - title of the menu to
-    - the current state of the menu with either zr_true (open) or zr_false else
-*/
-void zr_menu_symbol_begin(struct zr_context *parent, struct zr_context *menu,
-                        enum zr_symbol, float width, int *active);
-/*  this function begins the menu build up process and provides a clickable symbol button
- *  to open and close the menu popup panel
-    Input:
-    - parent window layout the menu will be placed into
-    - ouput menu window layout
-    - symbol to add into the button
-    - the current state of the menu with either zr_true (open) or zr_false else
-*/
-int zr_menu_item(struct zr_context *menu, enum zr_text_align align, const char*);
-/*  this function execute a menu item
-    Input:
-    - title of the item
-    Output
-    - `zr_true` if has been clicked `zr_false` otherwise
-*/
-int zr_menu_item_icon(struct zr_context *menu, struct zr_image,
-                        const char*, enum zr_text_align align);
-/*  this function execute menu text icon item
-    Input:
-    - icon to draw into the menu item
-    - text alignment of the title
-    - title of the item
-    Output
-    - `zr_true` if has been clicked `zr_false` otherwise
-*/
-int zr_menu_item_symbol(struct zr_context *menu, enum zr_symbol symbol,
-                        const char*, enum zr_text_align align);
-/*  this function execute menu text symbol item
-    Input:
-    - symbol to draw into the menu item
-    - text alignment of the title
-    - title of the item
-    Output
-    - `zr_true` if has been clicked `zr_false` otherwise
-*/
-void zr_menu_close(struct zr_context *menu, int*);
-/*  this function closes a opened menu */
-void zr_menu_end(struct zr_context *parent, struct zr_context *menu);
-/*  this function ends the menu build up process */
-
-/* --------------------------------------------------------------
- *
- *                          TOOLTIP
- *
- * --------------------------------------------------------------
-    TOOLTIP
-    The tooltip widget can be used to provide the user with information
-    by creating a popup window under the mouse cursor which decribes a function.
-    To use it you should first test if the mouse hovers over the thing you want
-    to provide information for before calling this.
-
-    tooltip widget API
-    zr_tooltip          -- creates a simple tooltip popup under the mouse cursor
-    zr_tooltip_begin    -- begins a start window popup to be filled
-    zr_tooltip_end      -- ends the window popup
-*/
+/* tooltip */
 void zr_tooltip(struct zr_context*, const char *text);
-/*  this function create a simple text tooltip window under the mouse cursor,
-    Input:
-    - output text to display inside the tooltip
-*/
-void zr_tooltip_begin(struct zr_context *parent, struct zr_context *tip,
-                        float width);
-/*  this function begins a popup tooltip window under the mouse cursor
-    Input:
-    - width of the tooltip window
-*/
-void zr_tooltip_end(struct zr_context *parent, struct zr_context *tip);
-/*  this function ends the tooltip window */
+int zr_tooltip_begin(struct zr_context*, struct zr_layout*, float width);
+void zr_tooltip_end(struct zr_context*);
+
+/*--------------------------------------------------------------
+ *                          MENU
+ * -------------------------------------------------------------*/
+void zr_menubar_begin(struct zr_context*);
+void zr_menubar_end(struct zr_context*);
+
+int zr_menu_text_begin(struct zr_context*, struct zr_layout*, const char *title, float width);
+int zr_menu_icon_begin(struct zr_context*, struct zr_layout*, const char *id, struct zr_image, float width);
+int zr_menu_symbol_begin(struct zr_context*, struct zr_layout*, const char *id,  enum zr_symbol, float width);
+int zr_menu_item(struct zr_context*, enum zr_text_align align, const char*);
+int zr_menu_item_icon(struct zr_context*, struct zr_image, const char*, enum zr_text_align);
+int zr_menu_item_symbol(struct zr_context*, enum zr_symbol, const char*, enum zr_text_align);
+void zr_menu_close(struct zr_context*);
+void zr_menu_end(struct zr_context*);
 
 #ifdef __cplusplus
 }

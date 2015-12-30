@@ -1,8 +1,6 @@
 # Zahnrad
 [![Coverity Status](https://scan.coverity.com/projects/5863/badge.svg)](https://scan.coverity.com/projects/5863)
 
-# CURRENTLY UNDER HEAVY REFACTORING! (do not use at the moment)
-
 This is a minimal state immediate mode graphical user interface toolkit
 written in ANSI C and licensed under zlib. It was designed as a simple embeddable user interface for
 application and does not have any direct dependencies,
@@ -50,25 +48,55 @@ draw the GUI.
 
 ## Example
 ```c
-enum {EASY, HARD};
-int option = EASY;
-float value = 0.6f;
+/* init gui state */
+struct zr_context ctx;
+zr_init_fixed(&ctx, calloc(1, MAX_MEMORY), MAX_MEMORY, &font, sinf, cosf);
 
-struct zr_context context;
-zr_begin(&context, &window, "Show");
-{
-    zr_layout_row_static(&context, 30, 80, 1);
-    if (zr_button_text(&context, "button", ZR_BUTTON_DEFAULT)) {
-        /* event handling */
+enum {EASY, HARD};
+int op = EASY;
+float value = 0.6f;
+int i =  20;
+
+while (1) {
+    zr_input_begin(&ctx.input);
+    /* generate input  */
+    zr_input_end(&ctx.input);
+
+    zr_begin(&ctx, "Show", zr_rect(50, 50, 220, 220),
+        ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALEABLE|
+        ZR_WINDOW_CLOSEABLE|ZR_WINDOW_MINIMIZABLE);
+    {
+        /* fixed widget pixel width */
+        zr_layout_row_static(&ctx, 30, 80, 1);
+        if (zr_button_text(&ctx, "button", ZR_BUTTON_DEFAULT)) {
+            /* event handling */
+        }
+
+        /* fixed widget window ration width */
+        zr_layout_row_dynamic(&ctx, 30, 2);
+        if (zr_option(&ctx, "easy", op == EASY)) op = EASY;
+        if (zr_option(&ctx, "hard", op == HARD)) op = HARD;
+
+        zr_layout_row_dynamic(&ctx, 30, 1);
+        zr_property_int(&ctx, "Compression:", 0, &i, 100, 10, 1);
+
+        /* custom widget pixel width */
+        zr_layout_row_begin(&ctx, ZR_STATIC, 30, 2);
+        {
+            zr_layout_row_push(&ctx, 50);
+            zr_label(&ctx, "Volume:", ZR_TEXT_LEFT);
+            zr_layout_row_push(&ctx, 110);
+            zr_slider_float(&ctx, 0, &value, 1.0f, 0.1f);
+        }
+        zr_layout_row_end(&ctx);
     }
-    zr_layout_row_dynamic(&context, 30, 2);
-    if (zr_option(&context, "easy", option == EASY)) option = EASY;
-    if (zr_option(&context, "hard", option == HARD)) option = HARD;
-    zr_label(&context, "Volume:", ZR_TEXT_LEFT);
-    zr_slider_float(&context, 0, &value, 1.0f, 0.1f);
-    zr_layout_row_end(&context);
+    zr_end(ctx);
+
+    struct zr_command *cmd;
+    zr_foreach(cmd, &ctx) {
+        /* execute draw command */
+    }
 }
-zr_end(&context, &window);
 ```
 ![example](https://cloud.githubusercontent.com/assets/8057201/10187981/584ecd68-675c-11e5-897c-822ef534a876.png)
 

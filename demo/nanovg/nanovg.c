@@ -80,7 +80,7 @@ font_get_width(zr_handle handle, float height, const char *text, size_t len)
 }
 
 static void
-draw(NVGcontext *nvg, struct zr_command_queue *queue, int width, int height)
+draw(NVGcontext *nvg, struct zr_context *ctx, int width, int height)
 {
     const struct zr_command *cmd;
     glPushAttrib(GL_ENABLE_BIT|GL_COLOR_BUFFER_BIT);
@@ -92,7 +92,7 @@ draw(NVGcontext *nvg, struct zr_command_queue *queue, int width, int height)
     glEnable(GL_TEXTURE_2D);
 
     nvgBeginFrame(nvg, width, height, ((float)width/(float)height));
-    zr_foreach_command(cmd, queue) {
+    zr_foreach(cmd, ctx) {
         switch (cmd->type) {
         case ZR_COMMAND_NOP: break;
         case ZR_COMMAND_SCISSOR: {
@@ -168,7 +168,7 @@ draw(NVGcontext *nvg, struct zr_command_queue *queue, int width, int height)
         default: break;
         }
     }
-    zr_command_queue_clear(queue);
+    zr_clear(ctx);
 
     nvgResetScissor(nvg);
     nvgEndFrame(nvg);
@@ -238,6 +238,7 @@ int
 main(int argc, char *argv[])
 {
     /* Platform */
+    int running = 1;
     int width, height;
     const char *font_path;
     int font_height;
@@ -277,41 +278,45 @@ main(int argc, char *argv[])
     nvgFontSize(vg, font_height);
     nvgTextAlign(vg, NVG_ALIGN_LEFT|NVG_ALIGN_MIDDLE);
 
-    /* GUI */
-    memset(&gui, 0, sizeof gui);
-    zr_command_queue_init_fixed(&gui.queue, calloc(MAX_MEMORY, 1), MAX_MEMORY);
-    gui.font.userdata = zr_handle_ptr(vg);
-    gui.font.width = font_get_width;
-    nvgTextMetrics(vg, NULL, NULL, &gui.font.height);
-    init_demo(&gui);
+    {
+        /* GUI */
+        struct zr_user_font usrfnt;
+        usrfnt.userdata = zr_handle_ptr(vg);
+        usrfnt.width = font_get_width;
+        nvgTextMetrics(vg, NULL, NULL, &usrfnt.height);
 
-    while (gui.running) {
+        memset(&gui, 0, sizeof gui);
+        gui.memory = calloc(MAX_MEMORY, 1);
+        zr_init_fixed(&gui.ctx, gui.memory, MAX_MEMORY, &usrfnt, sin, cos);
+    }
+
+    while (running) {
         /* Input */
         SDL_Event evt;
         uint64_t dt, started = SDL_GetTicks();
-        zr_input_begin(&gui.input);
+        zr_input_begin(&gui.ctx.input);
         while (SDL_PollEvent(&evt)) {
             if (evt.type == SDL_WINDOWEVENT) resize(&evt);
             else if (evt.type == SDL_QUIT) goto cleanup;
-            else if (evt.type == SDL_KEYUP) key(&gui.input, &evt, zr_false);
-            else if (evt.type == SDL_KEYDOWN) key(&gui.input, &evt, zr_true);
-            else if (evt.type == SDL_MOUSEBUTTONDOWN) btn(&gui.input, &evt, zr_true);
-            else if (evt.type == SDL_MOUSEBUTTONUP) btn(&gui.input, &evt, zr_false);
-            else if (evt.type == SDL_MOUSEMOTION) motion(&gui.input, &evt);
-            else if (evt.type == SDL_TEXTINPUT) text(&gui.input, &evt);
+            else if (evt.type == SDL_KEYUP) key(&gui.ctx.input, &evt, zr_false);
+            else if (evt.type == SDL_KEYDOWN) key(&gui.ctx.input, &evt, zr_true);
+            else if (evt.type == SDL_MOUSEBUTTONDOWN) btn(&gui.ctx.input, &evt, zr_true);
+            else if (evt.type == SDL_MOUSEBUTTONUP) btn(&gui.ctx.input, &evt, zr_false);
+            else if (evt.type == SDL_MOUSEMOTION) motion(&gui.ctx.input, &evt);
+            else if (evt.type == SDL_TEXTINPUT) text(&gui.ctx.input, &evt);
             else if (evt.type == SDL_MOUSEWHEEL)
-                zr_input_scroll(&gui.input,(float)evt.wheel.y);
+                zr_input_scroll(&gui.ctx.input,(float)evt.wheel.y);
         }
-        zr_input_end(&gui.input);
+        zr_input_end(&gui.ctx.input);
 
         /* GUI */
         SDL_GetWindowSize(win, &width, &height);
-        run_demo(&gui);
+        running = run_demo(&gui);
 
         /* Draw */
-        glClearColor(0.9f, 0.9f, 0.9f, 1.0f);
+        glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-        draw(vg, &gui.queue, width, height);
+        draw(vg, &gui.ctx, width, height);
         dt = SDL_GetTicks() - started;
         /*fprintf(stdout, "%lu\n", dt);*/
         SDL_GL_SwapWindow(win);
@@ -319,7 +324,7 @@ main(int argc, char *argv[])
 
 cleanup:
     /* Cleanup */
-    free(zr_buffer_memory(&gui.queue.buffer));
+    free(gui.memory);
     nvgDeleteGLES3(vg);
     SDL_GL_DeleteContext(glContext);
     SDL_DestroyWindow(win);
