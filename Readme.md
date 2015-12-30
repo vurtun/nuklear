@@ -72,13 +72,10 @@ while (1) {
             /* event handling */
         }
 
-        /* fixed widget window ration width */
+        /* fixed widget window ratio width */
         zr_layout_row_dynamic(&ctx, 30, 2);
         if (zr_option(&ctx, "easy", op == EASY)) op = EASY;
         if (zr_option(&ctx, "hard", op == HARD)) op = HARD;
-
-        zr_layout_row_dynamic(&ctx, 30, 1);
-        zr_property_int(&ctx, "Compression:", 0, &i, 100, 10, 1);
 
         /* custom widget pixel width */
         zr_layout_row_begin(&ctx, ZR_STATIC, 30, 2);
