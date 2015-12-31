@@ -1156,6 +1156,7 @@ zr_utf_at(const char *buffer, zr_size length, int index,
     ZR_ASSERT(buffer);
     ZR_ASSERT(unicode);
     ZR_ASSERT(len);
+
     if (!buffer || !unicode || !len) return 0;
     if (index < 0) {
         *unicode = ZR_UTF_INVALID;
@@ -1254,10 +1255,12 @@ zr_user_font_glyphs_fitting_in_space(const struct zr_user_font *font, const char
     glyph_len = zr_utf_decode(text, &unicode, text_len);
     s = font->width(font->userdata, font->height, text, glyph_len);
     width = last_width = (float)s;
+
     while ((width <= space) && text_len) {
         text_len -= glyph_len;
         offset += glyph_len;
         g++; l++;
+
         if (has_newline && (unicode == '\n' || unicode == '\r')) {
             zr_rune next = 0;
             zr_utf_decode(&text[offset], &next, text_len);
@@ -3352,6 +3355,7 @@ zr_font_bake(void *image_memory, int width, int height,
                 glyph->x0 = q.x0; glyph->y0 = q.y0; glyph->x1 = q.x1; glyph->y1 = q.y1;
                 glyph->y0 += (dst_font->ascent + 0.5f);
                 glyph->y1 += (dst_font->ascent + 0.5f);
+
                 if (cfg->coord_type == ZR_COORD_PIXEL) {
                     glyph->u0 = q.s0 * (float)width;
                     glyph->v0 = q.t0 * (float)height;
@@ -4846,7 +4850,7 @@ zr_edit_box_handle_input(struct zr_edit_box *box, const struct zr_input *in, int
         box->sel.end = box->cursor;
     }
 
-    /* copy & cut & paste functionatlity */
+    /* copy & cut & paste functionlity */
     if (zr_input_is_key_pressed(in, ZR_KEY_PASTE) && box->clip.paste)
         box->clip.paste(box->clip.userdata, box);
     if ((zr_input_is_key_pressed(in, ZR_KEY_COPY) && box->clip.copy) ||
@@ -4923,6 +4927,7 @@ zr_widget_edit_field(struct zr_command_buffer *out, struct zr_rect r,
             zr_size row_len = 0;
             float space = MAX(label.w, (float)cursor_w);
             space -= (float)cursor_w;
+
             while (text_len) {
                 frames++;
                 offset += frame_len;
@@ -4934,6 +4939,7 @@ zr_widget_edit_field(struct zr_command_buffer *out, struct zr_rect r,
                     break;
                 text_len -= frame_len;
             }
+
             text_len = frame_len;
             glyph_cnt = glyphs;
             glyph_off = (frames <= 1) ? 0 : (glyph_off - glyphs);
@@ -5162,9 +5168,8 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
 
         if (ZR_INBOX(in->mouse.pos.x, in->mouse.pos.y, r.x, r.y, r.w, r.h) && in_space && in_region)
         {
-            zr_size glyph_index = 0, glyph_pos = 0;
             zr_size row;
-
+            zr_size glyph_index = 0, glyph_pos = 0;
             zr_size cur_row = 0;
             zr_size glyphs = 0;
             zr_size row_off = box->glyphs;
@@ -7067,7 +7072,6 @@ zr_layout_begin(struct zr_context *ctx, const char *title)
     header_active = header_active && !(win->flags & ZR_WINDOW_HIDDEN) && title;
 
     if (header_active) {
-        zr_flags old;
         struct zr_rect old_clip = out->clip;
         struct zr_window_header header;
 
@@ -7103,7 +7107,6 @@ zr_layout_begin(struct zr_context *ctx, const char *title)
         }
 
         /* window header icons */
-        old = win->flags;
         if (win->flags & ZR_WINDOW_CLOSEABLE)
             zr_header_flag(ctx, &header, c->header.close_symbol, c->header.close_symbol,
                 c->header.align, ZR_WINDOW_HIDDEN);
@@ -7852,12 +7855,12 @@ zr_layout_widget_space(struct zr_rect *bounds, const struct zr_context *ctx,
     case ZR_LAYOUT_STATIC_FREE: {
         /* free widget placing */
         bounds->x = layout->clip.x + layout->row.item.x;
+        bounds->w = layout->row.item.w;
         if (((bounds->x + bounds->w) > layout->max_x) && modify)
             layout->max_x = (bounds->x + bounds->w);
         bounds->x -= layout->offset->x;
         bounds->y = layout->clip.y + layout->row.item.y;
         bounds->y -= layout->offset->y;
-        bounds->w = layout->row.item.w;
         bounds->h = layout->row.item.h;
         return;
     } break;
@@ -8176,14 +8179,12 @@ zr_text_colored(struct zr_context *ctx, const char *str, zr_size len,
     struct zr_vec2 item_padding;
 
     struct zr_window *win;
-    struct zr_layout *layout;
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
     if (!ctx || !ctx->current)
         return;
 
     win = ctx->current;
-    layout = win->layout;
     zr_panel_alloc_space(&bounds, ctx);
     config = &ctx->style;
     item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
@@ -8205,14 +8206,12 @@ zr_text_wrap_colored(struct zr_context *ctx, const char *str,
     struct zr_vec2 item_padding;
 
     struct zr_window *win;
-    struct zr_layout *layout;
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
     if (!ctx || !ctx->current)
         return;
 
     win = ctx->current;
-    layout = win->layout;
     zr_panel_alloc_space(&bounds, ctx);
     config = &ctx->style;
     item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
@@ -9156,13 +9155,11 @@ zr_graph_push_column(const struct zr_context *ctx, struct zr_window *win,
     const struct zr_style *config = &ctx->style;
     const struct zr_input *in = &ctx->input;
     struct zr_layout *layout = win->layout;
-    struct zr_vec2 item_padding;
     struct zr_color color;
 
     float ratio;
     zr_flags ret = 0;
     struct zr_rect item = {0,0,0,0};
-    item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
 
     if (graph->index >= graph->count)
         return zr_false;
@@ -9201,14 +9198,12 @@ zr_flags
 zr_graph_push(struct zr_context *ctx, float value)
 {
     struct zr_window *win;
-    struct zr_layout *layout;
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
     if (!ctx || !ctx->current)
         return zr_false;
 
     win = ctx->current;
-    layout = win->layout;
     switch (win->layout->graph.type) {
     case ZR_GRAPH_LINES:
         return zr_graph_push_line(ctx, win, &win->layout->graph, value);
@@ -9522,6 +9517,7 @@ zr_tooltip_begin(struct zr_context *ctx, struct zr_layout *layout, float width)
     bounds.h = zr_null_rect.h;
     bounds.x = (in->mouse.pos.x + 1) - win->layout->clip.x;
     bounds.y = (in->mouse.pos.y + 1) - win->layout->clip.y;
+
     ret = zr_popup_begin(ctx, layout, ZR_POPUP_DYNAMIC,
         "__##Tooltip##__", ZR_WINDOW_NO_SCROLLBAR, bounds);
     if (ret) win->layout->flags &= ~(zr_flags)ZR_WINDOW_ROM;
@@ -9548,12 +9544,10 @@ zr_tooltip(struct zr_context *ctx, const char *text)
     const struct zr_style *config;
     struct zr_vec2 item_padding;
     struct zr_vec2 padding;
-    struct zr_window *win;
     struct zr_layout layout;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    win = ctx->current;
     ZR_ASSERT(text);
 
     /* fetch configuration data */
