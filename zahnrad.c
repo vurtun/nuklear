@@ -6146,13 +6146,13 @@ zr_free_window(struct zr_context *ctx, struct zr_window *win)
     if (win == ctx->begin)
         ctx->begin = win->next;
     if (win == ctx->end)
-        ctx->begin = win->prev;
+        ctx->end = win->prev;
 
     win->next = 0;
     win->prev = 0;
 
     while (it) {
-        /* window state tables */
+        /*free window state tables */
         n = it->next;
         if (it->seq != ctx->seq) {
             zr_remove_table(win, it);
@@ -6985,12 +6985,13 @@ zr_layout_begin(struct zr_context *ctx, const char *title)
     struct zr_command_buffer *out;
 
     ZR_ASSERT(ctx);
-    if (!ctx) return 0;
+    ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return 0;
+
     c = &ctx->style;
     in = &ctx->input;
-    ZR_ASSERT(ctx->current);
     win = ctx->current;
-    ZR_ASSERT(win->layout);
     layout = win->layout;
 
     /* cache style data */
@@ -7194,11 +7195,13 @@ zr_layout_end(struct zr_context *ctx)
 
     struct zr_window *window;
     struct zr_layout *layout;
+
     ZR_ASSERT(ctx);
-    if (!ctx) return;
+    ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
 
     /* cache configuration data */
-    ZR_ASSERT(ctx->current);
     window = ctx->current;
     layout = window->layout;
     config = &ctx->style;
@@ -7398,6 +7401,9 @@ zr_menubar_begin(struct zr_context *ctx)
     struct zr_layout *layout;
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
+
     layout = ctx->current->layout;
     if (layout->flags & ZR_WINDOW_HIDDEN || layout->flags & ZR_WINDOW_MINIMIZED)
         return;
@@ -7418,7 +7424,9 @@ zr_menubar_end(struct zr_context *ctx)
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx) return;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
+
     win = ctx->current;
     layout = win->layout;
     if (!ctx || layout->flags & ZR_WINDOW_HIDDEN || layout->flags & ZR_WINDOW_MINIMIZED)
@@ -7450,6 +7458,9 @@ zr_panel_layout(const struct zr_context *ctx, struct zr_window *win,
     struct zr_layout *layout;
 
     ZR_ASSERT(ctx);
+    ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
     layout = win->layout;
 
     /* prefetch some configuration data */
@@ -7476,8 +7487,10 @@ zr_row_layout(struct zr_context *ctx, enum zr_layout_format fmt,
 {
     /* update the current row and set the current row layout */
     struct zr_window *win;
+    ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx->current) return;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
 
     win = ctx->current;
     zr_panel_layout(ctx, win, height, cols);
@@ -7506,9 +7519,11 @@ zr_layout_row_begin(struct zr_context *ctx,
 {
     struct zr_window *win;
     struct zr_layout *layout;
+
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current) return;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
 
     win = ctx->current;
     layout = win->layout;
@@ -7530,9 +7545,11 @@ zr_layout_row_push(struct zr_context *ctx, float ratio_or_width)
 {
     struct zr_window *win;
     struct zr_layout *layout;
+
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current) return;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
 
     win = ctx->current;
     layout = win->layout;
@@ -7551,9 +7568,11 @@ zr_layout_row_end(struct zr_context *ctx)
 {
     struct zr_window *win;
     struct zr_layout *layout;
+
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current) return;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
 
     win = ctx->current;
     layout = win->layout;
@@ -7571,9 +7590,11 @@ zr_layout_row(struct zr_context *ctx, enum zr_layout_format fmt,
 
     struct zr_window *win;
     struct zr_layout *layout;
+
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current) return;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
 
     win = ctx->current;
     layout = win->layout;
@@ -7605,9 +7626,11 @@ zr_layout_space_begin(struct zr_context *ctx,
 {
     struct zr_window *win;
     struct zr_layout *layout;
+
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current) return;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
 
     win = ctx->current;
     layout = win->layout;
@@ -7643,7 +7666,9 @@ zr_layout_space_push(struct zr_context *ctx, struct zr_rect rect)
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current) return;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
+
     win = ctx->current;
     layout = win->layout;
     layout->row.item = rect;
@@ -7658,6 +7683,7 @@ zr_layout_space_bounds(struct zr_context *ctx)
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
     win = ctx->current;
     layout = win->layout;
 
@@ -7676,6 +7702,7 @@ zr_layout_space_to_screen(struct zr_context *ctx, struct zr_vec2 ret)
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
     win = ctx->current;
     layout = win->layout;
 
@@ -7692,6 +7719,7 @@ zr_layout_space_to_local(struct zr_context *ctx, struct zr_vec2 ret)
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
     win = ctx->current;
     layout = win->layout;
 
@@ -7708,6 +7736,7 @@ zr_layout_space_rect_to_screen(struct zr_context *ctx, struct zr_rect ret)
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
     win = ctx->current;
     layout = win->layout;
 
@@ -7724,6 +7753,7 @@ zr_layout_space_rect_to_local(struct zr_context *ctx, struct zr_rect ret)
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
     win = ctx->current;
     layout = win->layout;
 
@@ -7737,9 +7767,11 @@ zr_layout_space_end(struct zr_context *ctx)
 {
     struct zr_window *win;
     struct zr_layout *layout;
+
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current) return;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
 
     win = ctx->current;
     layout = win->layout;
@@ -7773,7 +7805,8 @@ zr_layout_widget_space(struct zr_rect *bounds, const struct zr_context *ctx,
     struct zr_layout *layout;
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current) return;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
 
     win = ctx->current;
     layout = win->layout;
@@ -7889,9 +7922,11 @@ zr_panel_alloc_space(struct zr_rect *bounds, const struct zr_context *ctx)
 {
     struct zr_window *win;
     struct zr_layout *layout;
+
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current) return;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
 
     /* check if the end of the row has been hit and begin new row if so */
     win = ctx->current;
@@ -7911,9 +7946,11 @@ zr_layout_peek(struct zr_rect *bounds, struct zr_context *ctx)
     zr_size index;
     struct zr_window *win;
     struct zr_layout *layout;
+
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current) return;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
 
     win = ctx->current;
     layout = win->layout;
@@ -7945,9 +7982,11 @@ zr_layout_push(struct zr_context *ctx, enum zr_layout_node_type type, const char
 
     struct zr_window *win;
     struct zr_layout *layout;
+
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current) return zr_false;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return zr_false;
 
     /* cache some data */
     win = ctx->current;
@@ -8041,9 +8080,11 @@ zr_layout_pop(struct zr_context *ctx)
 
     struct zr_window *win;
     struct zr_layout *layout;
+
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current) return;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
 
     win = ctx->current;
     layout = win->layout;
@@ -8067,7 +8108,8 @@ zr_spacing(struct zr_context *ctx, zr_size cols)
     struct zr_layout *layout;
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current) return;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
 
     /* spacing over row boundries */
     win = ctx->current;
@@ -8102,6 +8144,7 @@ zr_seperator(struct zr_context *ctx)
     struct zr_layout *layout;
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
     if (!ctx || !ctx->current || !ctx->current->layout)
         return;
 
@@ -8127,8 +8170,10 @@ zr_widget(struct zr_rect *bounds, const struct zr_context *ctx)
     struct zr_rect *c = 0;
     struct zr_window *win;
     struct zr_layout *layout;
+
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
     if (!ctx || !ctx->current || !ctx->current->layout)
         return ZR_WIDGET_INVALID;
 
@@ -8151,8 +8196,10 @@ zr_widget_fitting(struct zr_rect *bounds, struct zr_context *ctx)
     enum zr_widget_state state;
     struct zr_window *win;
     struct zr_layout *layout;
+
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
     if (!ctx || !ctx->current || !ctx->current->layout)
         return ZR_WIDGET_INVALID;
 
@@ -8181,7 +8228,8 @@ zr_text_colored(struct zr_context *ctx, const char *str, zr_size len,
     struct zr_window *win;
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current)
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout)
         return;
 
     win = ctx->current;
@@ -8208,7 +8256,8 @@ zr_text_wrap_colored(struct zr_context *ctx, const char *str,
     struct zr_window *win;
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current)
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout)
         return;
 
     win = ctx->current;
@@ -8259,7 +8308,8 @@ zr_image(struct zr_context *ctx, struct zr_image img)
     struct zr_window *win;
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current)
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout)
         return;
 
     win = ctx->current;
@@ -8323,9 +8373,11 @@ zr_button_text(struct zr_context *ctx, const char *str,
 
     struct zr_window *win;
     struct zr_layout *layout;
+
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current)
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout)
         return zr_false;
 
     win = ctx->current;
@@ -8355,9 +8407,11 @@ zr_button_color(struct zr_context *ctx,
     enum zr_widget_state state;
     struct zr_window *win;
     struct zr_layout *layout;
+
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current)
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout)
         return zr_false;
 
     win = ctx->current;
@@ -8386,9 +8440,11 @@ zr_button_symbol(struct zr_context *ctx, enum zr_symbol symbol,
 
     struct zr_window *win;
     struct zr_layout *layout;
+
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current)
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout)
         return zr_false;
 
     win = ctx->current;
@@ -8418,9 +8474,11 @@ zr_button_image(struct zr_context *ctx, struct zr_image image,
 
     struct zr_window *win;
     struct zr_layout *layout;
+
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current)
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout)
         return zr_false;
 
     win = ctx->current;
@@ -8446,9 +8504,11 @@ zr_button_text_symbol(struct zr_context *ctx, enum zr_symbol symbol,
 
     struct zr_window *win;
     struct zr_layout *layout;
+
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current)
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout)
         return zr_false;
 
     win = ctx->current;
@@ -8513,7 +8573,8 @@ zr_select(struct zr_context *ctx, const char *str,
     struct zr_window *win;
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current)
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout)
         return value;
 
     win = ctx->current;
@@ -8592,9 +8653,11 @@ zr_checkbox(struct zr_context *ctx, const char *text, int *is_active)
 
     struct zr_window *win;
     struct zr_layout *layout;
+
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current)
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout)
         return;
 
     win = ctx->current;
@@ -8631,9 +8694,11 @@ zr_option(struct zr_context *ctx, const char *text, int is_active)
 
     struct zr_window *win;
     struct zr_layout *layout;
+
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current)
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout)
         return is_active;
 
     win = ctx->current;
@@ -8673,9 +8738,11 @@ zr_slider_float(struct zr_context *ctx, float min_value, float *value,
 
     struct zr_window *win;
     struct zr_layout *layout;
+
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current) return;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
 
     win = ctx->current;
     layout = win->layout;
@@ -8723,7 +8790,8 @@ zr_progress(struct zr_context *ctx, zr_size *cur_value, zr_size max_value,
     struct zr_layout *layout;
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current) return;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
 
     win = ctx->current;
     layout = win->layout;
@@ -8815,7 +8883,8 @@ zr_edit_buffer(struct zr_context *ctx, zr_flags flags,
     ZR_ASSERT(buffer);
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
-    if (!ctx || !buffer) return 0;
+    if (!ctx || !ctx->current || !ctx->current->layout)
+        return 0;
 
     win = ctx->current;
     state = zr_edit_base(&bounds, &field, ctx);
@@ -8940,7 +9009,8 @@ zr_property(struct zr_context *ctx, const char *name,
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current) return;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
 
     win = ctx->current;
     layout = win->layout;
@@ -9046,9 +9116,12 @@ zr_graph_begin(struct zr_context *ctx, enum zr_graph_type type,
     struct zr_window *win = ctx->current;
     struct zr_graph *graph = &win->layout->graph;
 
-    if (!ctx || !ctx->current) return;
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
     if (!zr_widget(&bounds, ctx)) {
-        zr_zero(graph, sizeof(graph));
+        zr_zero(graph, sizeof(*graph));
         return;
     }
 
@@ -9258,8 +9331,8 @@ zr_group_begin(struct zr_context *ctx, struct zr_layout *layout,
     ZR_ASSERT(ctx);
     ZR_ASSERT(title);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !ctx->current || !title)
-        return 0;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout || !title) return 0;
 
     /* allocate space for the group panel inside the panel */
     win = ctx->current;
@@ -9369,6 +9442,8 @@ zr_popup_begin(struct zr_context *ctx, struct zr_layout *layout,
     ZR_ASSERT(ctx);
     ZR_ASSERT(title);
     ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return 0;
 
     win = ctx->current;
     ZR_ASSERT(!(win->flags & ZR_WINDOW_POPUP));
@@ -9420,6 +9495,7 @@ zr_nonblock_begin(struct zr_layout *layout, struct zr_context *ctx,
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return 0;
 
     /* try to find group window */
     win = ctx->current;
@@ -9478,8 +9554,11 @@ zr_popup_end(struct zr_context *ctx)
 {
     struct zr_window *win;
     struct zr_window *popup;
+
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
 
     popup = ctx->current;
     ZR_ASSERT(popup->parent);
@@ -9508,10 +9587,10 @@ zr_tooltip_begin(struct zr_context *ctx, struct zr_layout *layout, float width)
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    win = ctx->current;
-    ZR_ASSERT(win->layout);
-    if (!ctx || !ctx->current) return 0;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return 0;
 
+    win = ctx->current;
     in = &ctx->input;
     bounds.w = width;
     bounds.h = zr_null_rect.h;
@@ -9548,7 +9627,9 @@ zr_tooltip(struct zr_context *ctx, const char *text)
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
     ZR_ASSERT(text);
+    if (!ctx || !ctx->current || !ctx->current->layout || !text) return;
 
     /* fetch configuration data */
     config = &ctx->style;
@@ -9592,6 +9673,8 @@ zr_contextual_begin(struct zr_context *ctx, struct zr_layout *layout,
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return 0;
     win = ctx->current;
 
     popup = win->popup.win;
@@ -9626,6 +9709,12 @@ zr_contextual_button(struct zr_context *ctx, const char *text,
 
     const struct zr_input *i;
     enum zr_widget_state state;
+
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return 0;
+
     state = zr_button(&button.base, &bounds, ctx, ZR_BUTTON_FITTING);
     if (!state) return zr_false;
     i = (state == ZR_WIDGET_ROM || win->layout->flags & ZR_WINDOW_ROM) ? 0 : &ctx->input;
@@ -9654,6 +9743,12 @@ zr_contextual_button_symbol(struct zr_context *ctx, enum zr_symbol symbol,
 
     const struct zr_input *i;
     enum zr_widget_state state;
+
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return 0;
+
     state = zr_button(&button.base, &bounds, ctx, ZR_BUTTON_FITTING);
     if (!state) return zr_false;
     i = (state == ZR_WIDGET_ROM || win->layout->flags & ZR_WINDOW_ROM) ? 0 : &ctx->input;
@@ -9682,6 +9777,12 @@ zr_contextual_button_icon(struct zr_context *ctx, struct zr_image img,
 
     const struct zr_input *i;
     enum zr_widget_state state;
+
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return 0;
+
     state = zr_button(&button.base, &bounds, ctx, ZR_BUTTON_FITTING);
     if (!state) return zr_false;
     i = (state == ZR_WIDGET_ROM || win->layout->flags & ZR_WINDOW_ROM) ? 0 : &ctx->input;
@@ -9704,6 +9805,9 @@ zr_contextual_item(struct zr_context *ctx, const char *title, enum zr_text_align
 {
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return 0;
+
     if (zr_contextual_button(ctx, title, align, ZR_BUTTON_DEFAULT)) {
         zr_contextual_close(ctx);
         return zr_true;
@@ -9717,6 +9821,9 @@ zr_contextual_item_icon(struct zr_context *ctx, struct zr_image img,
 {
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return 0;
+
     if (zr_contextual_button_icon(ctx, img, title, align, ZR_BUTTON_DEFAULT)){
         zr_contextual_close(ctx);
         return zr_true;
@@ -9730,6 +9837,9 @@ zr_contextual_item_symbol(struct zr_context *ctx, enum zr_symbol symbol,
 {
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return 0;
+
     if (zr_contextual_button_symbol(ctx, symbol, title, align, ZR_BUTTON_DEFAULT)){
         zr_contextual_close(ctx);
         return zr_true;
@@ -9742,6 +9852,9 @@ zr_contextual_close(struct zr_context *ctx)
 {
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
+
     if (!ctx->current) return;
     zr_popup_close(ctx);
 }
@@ -9775,6 +9888,11 @@ zr_combo_begin(struct zr_layout *layout, struct zr_context *ctx, struct zr_windo
     struct zr_window *popup;
     zr_hash hash = zr_murmur_hash(id, (int)zr_strsiz(id), ZR_WINDOW_COMBO);
 
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return 0;
+
     body.x = header.x;
     body.w = header.w;
     body.y = header.y + header.h-1;
@@ -9803,8 +9921,11 @@ zr_combo_begin_text(struct zr_context *ctx, struct zr_layout *layout,
     int is_active = zr_false;
 
     ZR_ASSERT(ctx);
+    ZR_ASSERT(selected);
     ZR_ASSERT(ctx->current);
-    if (!ctx || !selected) return 0;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout || !selected) return 0;
+
     win = ctx->current;
     if (!zr_widget(&header, ctx))
         return 0;
@@ -9855,7 +9976,9 @@ zr_combo_begin_color(struct zr_context *ctx, struct zr_layout *layout,
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx) return 0;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return 0;
+
     win = ctx->current;
     if (!zr_widget(&header, ctx))
         return 0;
@@ -9904,7 +10027,9 @@ zr_combo_begin_image(struct zr_context *ctx, struct zr_layout *layout,
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx) return 0;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return 0;
+
     win = ctx->current;
     if (!zr_widget(&header, ctx))
         return 0;
@@ -9953,7 +10078,9 @@ zr_combo_begin_icon(struct zr_context *ctx, struct zr_layout *layout, const char
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx) return 0;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return 0;
+
     win = ctx->current;
     if (!zr_widget(&header, ctx))
         return 0;
@@ -10038,6 +10165,11 @@ zr_menu_begin(struct zr_layout *layout, struct zr_context *ctx, struct zr_window
     struct zr_window *popup;
     zr_hash hash = zr_murmur_hash(id, (int)zr_strsiz(id), ZR_WINDOW_MENU);
 
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return 0;
+
     body.x = header.x;
     body.w = width;
     body.y = header.y + header.h;
@@ -10065,9 +10197,10 @@ zr_menu_text_begin(struct zr_context *ctx, struct zr_layout *layout,
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx) return 0;
-    win = ctx->current;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return 0;
 
+    win = ctx->current;
     {
         /* execute menu text button for open/closing the popup */
         struct zr_button_text button;
@@ -10100,9 +10233,10 @@ zr_menu_icon_begin(struct zr_context *ctx, struct zr_layout *layout,
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx) return 0;
-    win = ctx->current;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return 0;
 
+    win = ctx->current;
     {
         /* execute menu icon button for open/closing the popup */
         struct zr_button_icon button;
@@ -10130,9 +10264,10 @@ zr_menu_symbol_begin(struct zr_context *ctx, struct zr_layout *layout,
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
-    if (!ctx) return 0;
-    win = ctx->current;
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return 0;
 
+    win = ctx->current;
     {
         /* execute menu symbol button for open/closing the popup */
         struct zr_button_symbol button;
