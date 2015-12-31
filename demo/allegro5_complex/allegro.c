@@ -372,7 +372,6 @@ main(int argc, char *argv[])
             else if (evt.type == ALLEGRO_EVENT_MOUSE_BUTTON_UP)
                 input_button(&gui.ctx.input, &evt, zr_false);
             else if (evt.type == ALLEGRO_EVENT_MOUSE_AXES) {
-                zr_input_scroll(&gui.ctx.input,(float)evt.mouse.z);
                 zr_input_motion(&gui.ctx.input, evt.mouse.x, evt.mouse.y);
             } else if (evt.type == ALLEGRO_EVENT_KEY_CHAR) {
                 if (evt.keyboard.display == dev.display)
