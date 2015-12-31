@@ -50,7 +50,7 @@ draw the GUI.
 ```c
 /* init gui state */
 struct zr_context ctx;
-zr_init_fixed(&ctx, calloc(1, MAX_MEMORY), MAX_MEMORY, &font, sinf, cosf);
+zr_init_fixed(&ctx, calloc(1, MAX_MEMORY), MAX_MEMORY, &font, sin, cos);
 
 enum {EASY, HARD};
 int op = EASY;
@@ -63,8 +63,7 @@ while (1) {
     zr_input_end(&ctx.input);
 
     zr_begin(&ctx, "Show", zr_rect(50, 50, 220, 220),
-        ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALEABLE|
-        ZR_WINDOW_CLOSEABLE|ZR_WINDOW_MINIMIZABLE);
+        ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_CLOSEABLE);
     {
         /* fixed widget pixel width */
         zr_layout_row_static(&ctx, 30, 80, 1);
