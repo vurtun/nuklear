@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2015 Micha Mettke
+    Copyright (c) 2016 Micha Mettke
 
     This software is provided 'as-is', without any express or implied
     warranty.  In no event will the authors be held liable for any damages
@@ -407,6 +407,7 @@ basic_demo(struct zr_context *ctx, struct icons *img)
                 selected_icon = i;
         zr_combo_end(ctx);
     }
+
     /*------------------------------------------------
      *                  CHECKBOX
      *------------------------------------------------*/
@@ -682,7 +683,6 @@ main(int argc, char *argv[])
     struct icons icons;
     struct zr_context ctx;
     void *memory;
-
     if (argc < 2) {
         fprintf(stdout,"Missing TTF Font file argument: demo <path>\n");
         exit(EXIT_FAILURE);

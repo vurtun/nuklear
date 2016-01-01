@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2015 Micha Mettke
+    Copyright (c) 2016 Micha Mettke
 
     This software is provided 'as-is', without any express or implied
     warranty.  In no event will the authors be held liable for any damages
@@ -1373,20 +1373,19 @@ void zr_layout_row_end(struct zr_context*);
 void zr_layout_row(struct zr_context*, enum zr_layout_format, float height,
                     zr_size cols, const float *ratio);
 
-/* layouting with custom position and width and height of widgets */
+/* layouting with custom position and size of widgets */
 void zr_layout_space_begin(struct zr_context*, enum zr_layout_format,
                             float height, zr_size widget_count);
 void zr_layout_space_push(struct zr_context*, struct zr_rect);
 void zr_layout_space_end(struct zr_context*);
 
-/* utility functions for custom size + position widgets */
 struct zr_rect zr_layout_space_bounds(struct zr_context*);
 struct zr_vec2 zr_layout_space_to_screen(struct zr_context*, struct zr_vec2);
 struct zr_vec2 zr_layout_space_to_local(struct zr_context*, struct zr_vec2);
 struct zr_rect zr_layout_space_rect_to_screen(struct zr_context*, struct zr_rect);
 struct zr_rect zr_layout_space_rect_to_local(struct zr_context*, struct zr_rect);
 
-/* group */
+/* group layout */
 int zr_group_begin(struct zr_context*, struct zr_layout*, const char *title, zr_flags);
 void zr_group_end(struct zr_context *ctx);
 
