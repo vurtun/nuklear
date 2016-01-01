@@ -70,6 +70,11 @@ struct zr_edit_box {
 };
 
 enum zr_internal_window_flags {
+    ZR_WINDOW_HIDDEN        = ZR_FLAG(10),
+    /* Hiddes the window and stops any window interaction and drawing can be set
+     * by user input or by closing the window */
+    ZR_WINDOW_MINIMIZED     = ZR_FLAG(11),
+    /* marks the window as minimized */
     ZR_WINDOW_SUB               = ZR_FLAG(12),
     /* Marks the window as subwindow of another window*/
     ZR_WINDOW_GROUP             = ZR_FLAG(13),
@@ -6601,7 +6606,11 @@ zr_begin(struct zr_context *ctx, struct zr_layout *layout,
         win->bounds = bounds;
         win->name = title_hash;
         win->popup.win = 0;
-    } else win->seq++;
+    } else {
+        win->flags &= ~(zr_flags)(ZR_WINDOW_HIDDEN-1);
+        win->flags |= flags;
+        win->seq++;
+    }
     if (win->flags & ZR_WINDOW_HIDDEN) return 0;
 
     /* overlapping window */
@@ -6952,7 +6961,7 @@ zr_header_toggle(struct zr_context *ctx, struct zr_window_header *header,
 static int
 zr_header_flag(struct zr_context *ctx, struct zr_window_header *header,
     zr_rune inactive, zr_rune active, enum zr_style_header_align align,
-    enum zr_window_flags flag)
+    zr_flags flag)
 {
     struct zr_window *win = ctx->current;
     struct zr_layout *layout = win->layout;

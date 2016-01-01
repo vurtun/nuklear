@@ -1209,34 +1209,29 @@ struct zr_menu {
 };
 
 enum zr_window_flags {
-    ZR_WINDOW_HIDDEN        = ZR_FLAG(0),
-    /* Hiddes the window and stops any window interaction and drawing can be set
-     * by user input or by closing the window */
-    ZR_WINDOW_MINIMIZED     = ZR_FLAG(1),
-    /* marks the window as minimized */
-    ZR_WINDOW_BORDER        = ZR_FLAG(2),
+    ZR_WINDOW_BORDER        = ZR_FLAG(0),
     /* Draws a border around the window to visually seperate the window from the background */
-    ZR_WINDOW_BORDER_HEADER = ZR_FLAG(3),
+    ZR_WINDOW_BORDER_HEADER = ZR_FLAG(1),
     /* Draws a border between window header and body */
-    ZR_WINDOW_MOVEABLE      = ZR_FLAG(4),
+    ZR_WINDOW_MOVEABLE      = ZR_FLAG(2),
     /* The moveable flag inidicates that a window can be moved by user input or by
      * dragging the window header */
-    ZR_WINDOW_SCALEABLE     = ZR_FLAG(5),
+    ZR_WINDOW_SCALEABLE     = ZR_FLAG(3),
     /* The scaleable flag indicates that a window can be scaled by user input
      * by dragging a scaler icon at the button of the window */
-    ZR_WINDOW_CLOSEABLE     = ZR_FLAG(6),
+    ZR_WINDOW_CLOSEABLE     = ZR_FLAG(4),
     /* adds a closeable icon into the header */
-    ZR_WINDOW_MINIMIZABLE   = ZR_FLAG(7),
+    ZR_WINDOW_MINIMIZABLE   = ZR_FLAG(5),
     /* adds a minimize icon into the header */
-    ZR_WINDOW_ROM           = ZR_FLAG(8),
+    ZR_WINDOW_ROM           = ZR_FLAG(6),
     /* sets the window into a read only mode and does not allow input changes */
-    ZR_WINDOW_DYNAMIC       = ZR_FLAG(9),
+    ZR_WINDOW_DYNAMIC       = ZR_FLAG(7),
     /* special type of window which grows up in height while being filled to a
      * certain maximum height. It is mainly used for combo boxes/menus but can be
      * used to create perfectly fitting windows as well */
-    ZR_WINDOW_NO_SCROLLBAR  = ZR_FLAG(10),
+    ZR_WINDOW_NO_SCROLLBAR  = ZR_FLAG(8),
     /* Removes the scrollbar from the window */
-    ZR_WINDOW_TITLE         = ZR_FLAG(11)
+    ZR_WINDOW_TITLE         = ZR_FLAG(9)
     /* Removes the scrollbar from the window */
 };
 
