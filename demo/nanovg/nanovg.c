@@ -40,6 +40,7 @@
 #include "dep/nanovg.c"
 
 /* macros */
+#define DTIME       30
 #include "../../zahnrad.h"
 
 static void
@@ -245,6 +246,7 @@ main(int argc, char *argv[])
     SDL_Window *win;
     SDL_GLContext glContext;
     NVGcontext *vg = NULL;
+    int poll = 1;
 
     /* GUI */
     struct demo gui;
@@ -253,7 +255,7 @@ main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
     font_path = argv[1];
-    font_height = 14;
+    font_height = 15;
 
     /* SDL */
     SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER|SDL_INIT_EVENTS);
@@ -292,10 +294,17 @@ main(int argc, char *argv[])
 
     while (running) {
         /* Input */
+        int ret;
         SDL_Event evt;
         uint64_t dt, started = SDL_GetTicks();
+
+
         zr_input_begin(&gui.ctx.input);
-        while (SDL_PollEvent(&evt)) {
+        if (!poll) {
+            ret = SDL_WaitEvent(&evt);
+            poll = 1;
+        } else ret = SDL_PollEvent(&evt);
+        while (ret) {
             if (evt.type == SDL_WINDOWEVENT) resize(&evt);
             else if (evt.type == SDL_QUIT) goto cleanup;
             else if (evt.type == SDL_KEYUP) key(&gui.ctx.input, &evt, zr_false);
@@ -306,6 +315,7 @@ main(int argc, char *argv[])
             else if (evt.type == SDL_TEXTINPUT) text(&gui.ctx.input, &evt);
             else if (evt.type == SDL_MOUSEWHEEL)
                 zr_input_scroll(&gui.ctx.input,(float)evt.wheel.y);
+            ret = SDL_PollEvent(&evt);
         }
         zr_input_end(&gui.ctx.input);
 
@@ -317,9 +327,8 @@ main(int argc, char *argv[])
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         draw(vg, &gui.ctx, width, height);
-        dt = SDL_GetTicks() - started;
-        /*fprintf(stdout, "%lu\n", dt);*/
         SDL_GL_SwapWindow(win);
+        poll = ((poll+1) & 4);
     }
 
 cleanup:

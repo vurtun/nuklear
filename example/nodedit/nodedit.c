@@ -647,13 +647,12 @@ main(int argc, char *argv[])
         SDL_Event evt;
         started = SDL_GetTicks();
 
+        zr_input_begin(&ctx.input);
         if (!poll) {
             ret = SDL_WaitEvent(&evt);
             poll = 1;
-        }
-
-        zr_input_begin(&ctx.input);
-        while (SDL_PollEvent(&evt)) {
+        } else ret = SDL_PollEvent(&evt);
+        while (ret) {
             if (evt.type == SDL_WINDOWEVENT) resize(&evt);
             else if (evt.type == SDL_QUIT) goto cleanup;
             else if (evt.type == SDL_KEYUP) key(&ctx.input, &evt, zr_false);
@@ -663,6 +662,7 @@ main(int argc, char *argv[])
             else if (evt.type == SDL_MOUSEMOTION) motion(&ctx.input, &evt);
             else if (evt.type == SDL_TEXTINPUT) text(&ctx.input, &evt);
             else if (evt.type == SDL_MOUSEWHEEL) zr_input_scroll(&ctx.input, evt.wheel.y);
+            ret = SDL_PollEvent(&evt);
         }
         zr_input_end(&ctx.input);
 
@@ -682,12 +682,7 @@ main(int argc, char *argv[])
         SDL_GetWindowSize(win, &width, &height);
         draw(vg, &ctx, width, height);
         SDL_GL_SwapWindow(win);
-        poll = (!((poll+1) & 4));
-
-        /* Timing */
-        dt = SDL_GetTicks() - started;
-        if (dt < DTIME)
-            SDL_Delay(DTIME - dt);
+        poll = ((poll+1) & 4);
     }
 
 cleanup:
