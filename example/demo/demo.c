@@ -43,7 +43,7 @@
 
 /* macros */
 #define MAX_BUFFER  64
-#define MAX_MEMORY  (16 * 1024)
+#define MAX_MEMORY  (32 * 1024)
 #define WINDOW_WIDTH 1200
 #define WINDOW_HEIGHT 800
 #define DTIME       40
@@ -375,7 +375,7 @@ basic_demo(struct zr_context *ctx, struct icons *img)
     if (image_active) {
         struct zr_layout popup;
         zr_popup_begin(ctx, &popup, ZR_POPUP_STATIC, "Image Popup", 0,
-            zr_rect(265, 0, 300, 220));
+            zr_rect(265, 0, 320, 220));
         zr_layout_row_static(ctx, 82, 82, 3);
         for (i = 0; i < 9; ++i) {
             if (zr_button_image(ctx, zr_image_id(img->images[i]), ZR_BUTTON_DEFAULT)) {
@@ -678,6 +678,7 @@ main(int argc, char *argv[])
     unsigned int started;
     unsigned int dt;
     int i = 0;
+    int poll = 1;
 
     /* GUI */
     struct icons icons;
@@ -760,9 +761,16 @@ main(int argc, char *argv[])
 
     while (running) {
         /* Input */
+        int ret;
         SDL_Event evt;
         started = SDL_GetTicks();
         zr_input_begin(&ctx.input);
+
+        if (!poll) {
+            ret = SDL_WaitEvent(&evt);
+            poll = 1;
+        }
+
         while (SDL_PollEvent(&evt)) {
             if (evt.type == SDL_WINDOWEVENT &&
                 evt.window.event == SDL_WINDOWEVENT_RESIZED)
@@ -796,6 +804,7 @@ main(int argc, char *argv[])
         SDL_GetWindowSize(win, &width, &height);
         draw(vg, &ctx, width, height);
         SDL_GL_SwapWindow(win);
+        poll = (!((poll+1) & 4));
 
         /* Timing */
         dt = SDL_GetTicks() - started;

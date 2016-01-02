@@ -575,6 +575,7 @@ int
 main(int argc, char *argv[])
 {
     /* Platform */
+    int poll = 1;
     int x, y, width, height;
     const char *font_path;
     zr_size font_height;
@@ -642,8 +643,15 @@ main(int argc, char *argv[])
 
     while (running) {
         /* Input */
+        int ret;
         SDL_Event evt;
         started = SDL_GetTicks();
+
+        if (!poll) {
+            ret = SDL_WaitEvent(&evt);
+            poll = 1;
+        }
+
         zr_input_begin(&ctx.input);
         while (SDL_PollEvent(&evt)) {
             if (evt.type == SDL_WINDOWEVENT) resize(&evt);
@@ -674,6 +682,7 @@ main(int argc, char *argv[])
         SDL_GetWindowSize(win, &width, &height);
         draw(vg, &ctx, width, height);
         SDL_GL_SwapWindow(win);
+        poll = (!((poll+1) & 4));
 
         /* Timing */
         dt = SDL_GetTicks() - started;

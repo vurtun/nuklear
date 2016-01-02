@@ -783,6 +783,7 @@ main(int argc, char *argv[])
     NVGcontext *vg = NULL;
     struct zr_context ctx;
     void *memory;
+    int poll = 1;
 
     int running = 1;
     struct file_browser browser;
@@ -830,6 +831,11 @@ main(int argc, char *argv[])
     while (running) {
         /* Input */
         SDL_Event evt;
+        if (!poll) {
+            SDL_WaitEvent(&evt);
+            poll = 1;
+        }
+
         zr_input_begin(&ctx.input);
         while (SDL_PollEvent(&evt)) {
             if (evt.type == SDL_WINDOWEVENT) resize(&evt);
@@ -852,6 +858,7 @@ main(int argc, char *argv[])
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         draw(vg, &ctx, width, height);
         SDL_GL_SwapWindow(win);
+        poll = (!((poll+1) & 4));
     }
 
 cleanup:
