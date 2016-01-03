@@ -24,7 +24,7 @@
  *                          INTERNAL
  *
  * =============================================================== */
-#define ZR_POOL_DEFAULT_CAPACTIY 16
+#define ZR_POOL_DEFAULT_CAPACITY 16
 #define ZR_VALUE_PAGE_CAPACITY 32
 #define ZR_DEFAULT_COMMAND_BUFFER_SIZE (4*1024)
 
@@ -6157,9 +6157,9 @@ zr_pool_init_fixed(struct zr_pool *pool, void *memory, zr_size size)
 {
     zr_zero(pool, sizeof(*pool));
     /* make sure pages have correct granularity to at least fit one page into memory */
-    if (size < sizeof(struct zr_window_page) + ZR_POOL_DEFAULT_CAPACTIY * sizeof(struct zr_window))
+    if (size < sizeof(struct zr_window_page) + ZR_POOL_DEFAULT_CAPACITY * sizeof(struct zr_window))
         pool->capacity = (unsigned)(size - sizeof(struct zr_window_page)) / sizeof(struct zr_window);
-    else pool->capacity = ZR_POOL_DEFAULT_CAPACTIY;
+    else pool->capacity = ZR_POOL_DEFAULT_CAPACITY;
     pool->pages = memory;
     pool->type = ZR_BUFFER_FIXED;
     pool->size = size;
@@ -6180,7 +6180,7 @@ zr_pool_alloc(struct zr_pool *pool)
             return 0;
         } else {
             zr_size size = sizeof(struct zr_window_page);
-            size += ZR_POOL_DEFAULT_CAPACTIY * sizeof(union zr_page_data);
+            size += ZR_POOL_DEFAULT_CAPACITY * sizeof(union zr_page_data);
             page = pool->alloc.alloc(pool->alloc.userdata, size);
             page->size = 0;
             page->next = pool->pages;
@@ -6628,7 +6628,7 @@ zr_init_custom(struct zr_context *ctx, struct zr_buffer *cmds,
         /* create dynamic pool from buffer allocator */
         struct zr_allocator *alloc = &pool->pool;
         ctx->pool = alloc->alloc(alloc->userdata, sizeof(struct zr_pool));
-        zr_pool_init(ctx->pool, alloc, ZR_POOL_DEFAULT_CAPACTIY);
+        zr_pool_init(ctx->pool, alloc, ZR_POOL_DEFAULT_CAPACITY);
     }
     return 1;
 }
@@ -6642,7 +6642,7 @@ zr_init(struct zr_context *ctx, struct zr_allocator *alloc,
     zr_setup(ctx, font);
     zr_buffer_init(&ctx->memory, alloc, ZR_DEFAULT_COMMAND_BUFFER_SIZE);
     ctx->pool = alloc->alloc(alloc->userdata, sizeof(struct zr_pool));
-    zr_pool_init(ctx->pool, alloc, ZR_POOL_DEFAULT_CAPACTIY);
+    zr_pool_init(ctx->pool, alloc, ZR_POOL_DEFAULT_CAPACITY);
     return 1;
 }
 
