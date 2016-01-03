@@ -7251,7 +7251,6 @@ zr_layout_end(struct zr_context *ctx)
     config = &ctx->style;
     out = &window->buffer;
     in = (layout->flags & ZR_WINDOW_ROM) ? 0 :&ctx->input;
-
     if (!(layout->flags & ZR_WINDOW_SUB))
         zr_draw_scissor(out, zr_null_rect);
 
@@ -9569,13 +9568,16 @@ zr_nonblock_begin(struct zr_layout *layout, struct zr_context *ctx,
         popup->flags = flags;
         popup->flags |= ZR_WINDOW_BORDER|ZR_WINDOW_POPUP;
         popup->flags |= ZR_WINDOW_DYNAMIC|ZR_WINDOW_SUB;
+        popup->seq = ctx->seq;
 
         zr_start_child(ctx, win);
+        popup->buffer = win->buffer;
+        zr_draw_scissor(&popup->buffer, zr_null_rect);
         ctx->current = popup;
-        popup->buffer.clip = zr_null_rect;
+
         zr_layout_begin(ctx, 0);
+        win->buffer = popup->buffer;
         win->layout->flags |= ZR_WINDOW_ROM;
-        popup->seq = ctx->seq;
         layout->offset = &popup->scrollbar;
     }
     return is_active;
@@ -9610,8 +9612,10 @@ zr_popup_end(struct zr_context *ctx)
     if (popup->flags & ZR_WINDOW_HIDDEN)
         win->layout->flags |= ZR_WINDOW_REMOVE_ROM;
 
-    zr_draw_scissor(&win->buffer, zr_null_rect);
+    zr_draw_scissor(&popup->buffer, zr_null_rect);
     zr_end(ctx);
+
+    win->buffer = popup->buffer;
     zr_finish_child(ctx, win);
     ctx->current = win;
     zr_draw_scissor(&win->buffer, win->layout->clip);
