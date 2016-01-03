@@ -7185,7 +7185,7 @@ zr_layout_begin(struct zr_context *ctx, const char *title)
 
     /* calculate window footer height */
     if (!(win->flags & ZR_WINDOW_NONBLOCK) &&
-        (!(win->flags & ZR_WINDOW_NO_SCROLLBAR) || (win->flags & ZR_WINDOW_SCALEABLE)))
+        (!(win->flags & ZR_WINDOW_NO_SCROLLBAR) || (win->flags & ZR_WINDOW_SCALABLE)))
         layout->footer_h = scaler_size.y + item_padding.y;
     else layout->footer_h = 0;
 
@@ -7447,7 +7447,7 @@ zr_layout_end(struct zr_context *ctx)
 
     /* draw the panel scaler into the right corner of the panel footer and
      * update panel size if user drags the scaler */
-    if ((layout->flags & ZR_WINDOW_SCALEABLE) && in && !(layout->flags & ZR_WINDOW_MINIMIZED)) {
+    if ((layout->flags & ZR_WINDOW_SCALABLE) && in && !(layout->flags & ZR_WINDOW_MINIMIZED)) {
         struct zr_color col = config->colors[ZR_COLOR_SCALER];
         float scaler_w = MAX(0, scaler_size.x - item_padding.x);
         float scaler_h = MAX(0, scaler_size.y - item_padding.y);

@@ -1131,7 +1131,7 @@ enum zr_window_flags {
     ZR_WINDOW_MOVEABLE      = ZR_FLAG(2),
     /* The moveable flag inidicates that a window can be moved by user input or by
      * dragging the window header */
-    ZR_WINDOW_SCALEABLE     = ZR_FLAG(3),
+    ZR_WINDOW_SCALABLE     = ZR_FLAG(3),
     /* The scaleable flag indicates that a window can be scaled by user input
      * by dragging a scaler icon at the button of the window */
     ZR_WINDOW_CLOSEABLE     = ZR_FLAG(4),

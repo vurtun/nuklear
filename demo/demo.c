@@ -111,7 +111,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
     window_flags = 0;
     ctx->style.header.align = header_align;
     if (border) window_flags |= ZR_WINDOW_BORDER;
-    if (resize) window_flags |= ZR_WINDOW_SCALEABLE;
+    if (resize) window_flags |= ZR_WINDOW_SCALABLE;
     if (moveable) window_flags |= ZR_WINDOW_MOVEABLE;
     if (no_scrollbar) window_flags |= ZR_WINDOW_NO_SCROLLBAR;
     if (minimizable) window_flags |= ZR_WINDOW_MINIMIZABLE;
@@ -860,7 +860,7 @@ run_demo(struct demo *gui)
 
     /* simple demo window */
     if (zr_begin(ctx, &layout, "Show", zr_rect(20, 20, 200, 200),
-        ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALEABLE|
+        ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALABLE|
         ZR_WINDOW_CLOSEABLE|ZR_WINDOW_MINIMIZABLE|ZR_WINDOW_TITLE))
     {
         enum {EASY, HARD};
@@ -882,7 +882,7 @@ run_demo(struct demo *gui)
 
     /* metrics window */
     if (zr_begin(ctx, &layout, "Metrics", zr_rect(50, 600, 250, 300),
-        ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALEABLE|
+        ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALABLE|
         ZR_WINDOW_CLOSEABLE|ZR_WINDOW_MINIMIZABLE))
     {
         struct zr_memory_status status;
