@@ -170,8 +170,8 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 zr_label(ctx, "By Micha Mettke", ZR_TEXT_LEFT);
                 zr_label(ctx, "Zahnrad is licensed under the MIT License.",  ZR_TEXT_LEFT);
                 zr_label(ctx, "See LICENSE for more information", ZR_TEXT_LEFT);
+                zr_popup_end(ctx);
             } else show_app_about = zr_false;
-            zr_popup_end(ctx);
         }
 
         if (show_close_popup)
@@ -191,8 +191,8 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                     show_close_popup = zr_false;
                     zr_popup_close(ctx);
                 }
+                zr_popup_end(ctx);
             } else show_close_popup = zr_false;
-            zr_popup_end(ctx);
         }
 
         if (show_color_picker_popup)
@@ -224,8 +224,8 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                     zr_popup_close(ctx);
                     show_color_picker_popup = zr_false;
                 }
+                zr_popup_end(ctx);
             } else show_color_picker_popup = zr_false;
-            zr_popup_end(ctx);
         }
 
         /* contextual menu */
@@ -590,7 +590,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
             zr_layout_pop(ctx);
         }
 
-        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "chart"))
+        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Chart"))
         {
             float id = 0;
             static int col_index = -1;

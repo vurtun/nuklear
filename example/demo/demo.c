@@ -375,17 +375,17 @@ basic_demo(struct zr_context *ctx, struct icons *img)
      *------------------------------------------------*/
     if (image_active) {
         struct zr_layout popup;
-        zr_popup_begin(ctx, &popup, ZR_POPUP_STATIC, "Image Popup", 0,
-            zr_rect(265, 0, 320, 220));
-        zr_layout_row_static(ctx, 82, 82, 3);
-        for (i = 0; i < 9; ++i) {
-            if (zr_button_image(ctx, zr_image_id(img->images[i]), ZR_BUTTON_DEFAULT)) {
-                selected_image = i;
-                image_active = 0;
-                zr_popup_close(ctx);
+        if (zr_popup_begin(ctx, &popup, ZR_POPUP_STATIC, "Image Popup", 0, zr_rect(265, 0, 320, 220))) {
+            zr_layout_row_static(ctx, 82, 82, 3);
+            for (i = 0; i < 9; ++i) {
+                if (zr_button_image(ctx, zr_image_id(img->images[i]), ZR_BUTTON_DEFAULT)) {
+                    selected_image = i;
+                    image_active = 0;
+                    zr_popup_close(ctx);
+                }
             }
+            zr_popup_end(ctx);
         }
-        zr_popup_end(ctx);
     }
     /*------------------------------------------------
      *                  COMBOBOX

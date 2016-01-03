@@ -9790,8 +9790,8 @@ zr_tooltip(struct zr_context *ctx, const char *text)
     if (zr_tooltip_begin(ctx, &layout, (float)text_width)) {
         zr_layout_row_dynamic(ctx, (float)text_height, 1);
         zr_text(ctx, text, text_len, ZR_TEXT_LEFT);
+        zr_tooltip_end(ctx);
     }
-    zr_tooltip_end(ctx);
 }
 
 /*
