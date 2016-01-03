@@ -447,7 +447,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
             if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Combo"))
             {
                 /* Combobox Widgets */
-                static float graph_selection = 8.0f;
+                static float chart_selection = 8.0f;
                 static const char *weapons[] = {"Fist","Pistol","Shotgun","Plasma","BFG"};
                 static size_t current_weapon = 0;
                 static int check_values[5];
@@ -509,21 +509,21 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                     zr_combo_end(ctx);
                 }
 
-                /* graph combobox */
-                sprintf(buffer, "%.1f", graph_selection);
-                if (zr_combo_begin_text(ctx, &combo, "Graph", buffer, 250)) {
+                /* chart combobox */
+                sprintf(buffer, "%.1f", chart_selection);
+                if (zr_combo_begin_text(ctx, &combo, "Charts", buffer, 250)) {
                     size_t i = 0;
                     static const float values[]={30.0f,15.0f,25.0f,10.0f,20.0f,40.0f};
                     zr_layout_row_dynamic(ctx, 150, 1);
-                    zr_graph_begin(ctx, ZR_GRAPH_COLUMN, LEN(values), 0, 50);
+                    zr_chart_begin(ctx, ZR_CHART_COLUMN, LEN(values), 0, 50);
                     for (i = 0; i < LEN(values); ++i) {
-                        zr_flags res = zr_graph_push(ctx, values[i]);
-                        if (res & ZR_GRAPH_CLICKED) {
-                            graph_selection = values[i];
+                        zr_flags res = zr_chart_push(ctx, values[i]);
+                        if (res & ZR_CHART_CLICKED) {
+                            chart_selection = values[i];
                             zr_combo_close(ctx);
                         }
                     }
-                    zr_graph_end(ctx);
+                    zr_chart_end(ctx);
                     zr_combo_end(ctx);
                 }
                 zr_layout_pop(ctx);
@@ -590,7 +590,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
             zr_layout_pop(ctx);
         }
 
-        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Graph"))
+        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "chart"))
         {
             float id = 0;
             static int col_index = -1;
@@ -601,19 +601,19 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
             int index = -1;
             struct zr_rect bounds;
 
-            /* column graph */
+            /* column chart */
             zr_layout_row_dynamic(ctx, 100, 1);
             zr_layout_peek(&bounds, ctx);
-            zr_graph_begin(ctx, ZR_GRAPH_COLUMN, 32, 0.0f, 1.0f);
+            zr_chart_begin(ctx, ZR_CHART_COLUMN, 32, 0.0f, 1.0f);
             for (i = 0; i < 32; ++i) {
-                zr_flags res = zr_graph_push(ctx, (float)fabs(sin(id)));
-                if (res & ZR_GRAPH_HOVERING)
+                zr_flags res = zr_chart_push(ctx, (float)fabs(sin(id)));
+                if (res & ZR_CHART_HOVERING)
                     index = (int)i;
-                if (res & ZR_GRAPH_CLICKED)
+                if (res & ZR_CHART_CLICKED)
                     col_index = (int)i;
                 id += step;
             }
-            zr_graph_end(ctx);
+            zr_chart_end(ctx);
 
             if (index != -1) {
                 char buffer[ZR_MAX_NUMBER_BUFFER];
@@ -625,21 +625,21 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 zr_labelf(ctx, ZR_TEXT_LEFT, "Selected value: %.2f", (float)fabs(sin(step * (float)col_index)));
             }
 
-            /* line graph */
+            /* line chart */
             id = 0;
             index = -1;
             zr_layout_row_dynamic(ctx, 100, 1);
             zr_layout_peek(&bounds, ctx);
-            zr_graph_begin(ctx, ZR_GRAPH_LINES, 32, -1.0f, 1.0f);
+            zr_chart_begin(ctx, ZR_CHART_LINES, 32, -1.0f, 1.0f);
             for (i = 0; i < 32; ++i) {
-                zr_flags res = zr_graph_push(ctx, (float)cos(id));
-                if (res & ZR_GRAPH_HOVERING)
+                zr_flags res = zr_chart_push(ctx, (float)cos(id));
+                if (res & ZR_CHART_HOVERING)
                     index = (int)i;
-                if (res & ZR_GRAPH_CLICKED)
+                if (res & ZR_CHART_CLICKED)
                     line_index = (int)i;
                 id += step;
             }
-            zr_graph_end(ctx);
+            zr_chart_end(ctx);
 
             if (index != -1) {
                 char buffer[ZR_MAX_NUMBER_BUFFER];

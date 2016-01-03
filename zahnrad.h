@@ -816,7 +816,7 @@ enum zr_style_rounding {
     ZR_ROUNDING_CHECK,
     ZR_ROUNDING_INPUT,
     ZR_ROUNDING_PROPERTY,
-    ZR_ROUNDING_GRAPH,
+    ZR_ROUNDING_CHART,
     ZR_ROUNDING_SCROLLBAR,
     ZR_ROUNDING_MAX
 };
@@ -1023,18 +1023,18 @@ enum zr_edit_types {
     ZR_EDIT_BOX = (ZR_EDIT_CURSOR|ZR_EDIT_SELECTABLE|ZR_EDIT_CLIPBOARD|ZR_EDIT_MULTILINE)
 };
 
-enum zr_graph_type {
-    ZR_GRAPH_LINES,
-    /* Line graph with each data point being connected with its previous and next node */
-    ZR_GRAPH_COLUMN,
-    /* Column graph/Histogram with value represented as bars */
-    ZR_GRAPH_MAX
+enum zr_chart_type {
+    ZR_CHART_LINES,
+    /* Line chart with each data point being connected with its previous and next node */
+    ZR_CHART_COLUMN,
+    /* Histogram with value represented as bars */
+    ZR_CHART_MAX
 };
 
-enum zr_graph_event {
-    ZR_GRAPH_HOVERING = 0x01,
+enum zr_chart_event {
+    ZR_CHART_HOVERING = 0x01,
     /* mouse hoveres over current value */
-    ZR_GRAPH_CLICKED = 0x02
+    ZR_CHART_CLICKED = 0x02
     /* mouse click on current value */
 };
 
@@ -1057,8 +1057,8 @@ enum zr_layout_node_type {
     /* a tab is a node with a header */
 };
 
-struct zr_graph {
-    enum zr_graph_type type;
+struct zr_chart {
+    enum zr_chart_type type;
     /* graph type with either line or column graph */
     float x, y;
     /* graph canvas space position */
@@ -1183,7 +1183,7 @@ struct zr_layout {
     /* window menubar bounds */
     struct zr_row_layout row;
     /* currently used window row layout */
-    struct zr_graph graph;
+    struct zr_chart chart;
     /* graph state */
     struct zr_popup_buffer popup_buffer;
     /* output command buffer queuing all popup drawing calls */
@@ -1450,9 +1450,9 @@ int zr_edit_string(struct zr_context*, zr_flags, char *buffer, zr_size *len, zr_
 int zr_edit_buffer(struct zr_context*, zr_flags, struct zr_buffer*, zr_filter);
 
 /* simple graph */
-void zr_graph_begin(struct zr_context*, enum zr_graph_type, zr_size num, float min, float max);
-zr_flags zr_graph_push(struct zr_context*, float);
-void zr_graph_end(struct zr_context*);
+void zr_chart_begin(struct zr_context*, enum zr_chart_type, zr_size num, float min, float max);
+zr_flags zr_chart_push(struct zr_context*, float);
+void zr_chart_end(struct zr_context*);
 
 /*--------------------------------------------------------------
  *                      Popups

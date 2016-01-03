@@ -5774,7 +5774,7 @@ zr_input_is_key_down(const struct zr_input *i, enum zr_keys key)
     ROUNDING(CHECK,     0.0f)\
     ROUNDING(INPUT,     0.0f)\
     ROUNDING(PROPERTY,  10.0f)\
-    ROUNDING(GRAPH,     4.0f)\
+    ROUNDING(CHART,     4.0f)\
     ROUNDING(SCROLLBAR, 5.0f)
 
 #define ZR_STYLE_COLOR_MAP(COLOR)\
@@ -9240,11 +9240,11 @@ zr_propertyi(struct zr_context *ctx, const char *name, int min, int val, int max
 
 /* -------------------------------------------------------------
  *
- *                          GRAPH
+ *                          CHART
  *
  * --------------------------------------------------------------*/
 void
-zr_graph_begin(struct zr_context *ctx, enum zr_graph_type type,
+zr_chart_begin(struct zr_context *ctx, enum zr_chart_type type,
     zr_size count, float min_value, float max_value)
 {
     struct zr_rect bounds = {0, 0, 0, 0};
@@ -9253,45 +9253,45 @@ zr_graph_begin(struct zr_context *ctx, enum zr_graph_type type,
     struct zr_color color;
     struct zr_vec2 item_padding;
     struct zr_window *win = ctx->current;
-    struct zr_graph *graph = &win->layout->graph;
+    struct zr_chart *chart = &win->layout->chart;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
     if (!ctx || !ctx->current || !ctx->current->layout) return;
     if (!zr_widget(&bounds, ctx)) {
-        zr_zero(graph, sizeof(*graph));
+        zr_zero(chart, sizeof(*chart));
         return;
     }
 
-    /* draw graph background */
+    /* draw chart background */
     config = &ctx->style;
     out = &win->buffer;
     item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
-    color = (type == ZR_GRAPH_LINES) ?
+    color = (type == ZR_CHART_LINES) ?
         config->colors[ZR_COLOR_PLOT]: config->colors[ZR_COLOR_HISTO];
-    zr_draw_rect(out, bounds, config->rounding[ZR_ROUNDING_GRAPH], color);
+    zr_draw_rect(out, bounds, config->rounding[ZR_ROUNDING_CHART], color);
 
-    /* setup basic generic graph  */
-    zr_zero(graph, sizeof(graph));
-    graph->type = type;
-    graph->index = 0;
-    graph->count = count;
-    graph->min = MIN(min_value, max_value);
-    graph->max = MAX(min_value, max_value);
-    graph->range = graph->max - graph->min;
-    graph->x = bounds.x + item_padding.x;
-    graph->y = bounds.y + item_padding.y;
-    graph->w = bounds.w - 2 * item_padding.x;
-    graph->h = bounds.h - 2 * item_padding.y;
-    graph->w = MAX(graph->w, 2 * item_padding.x);
-    graph->h = MAX(graph->h, 2 * item_padding.y);
-    graph->last.x = 0; graph->last.y = 0;
+    /* setup basic generic chart  */
+    zr_zero(chart, sizeof(chart));
+    chart->type = type;
+    chart->index = 0;
+    chart->count = count;
+    chart->min = MIN(min_value, max_value);
+    chart->max = MAX(min_value, max_value);
+    chart->range = chart->max - chart->min;
+    chart->x = bounds.x + item_padding.x;
+    chart->y = bounds.y + item_padding.y;
+    chart->w = bounds.w - 2 * item_padding.x;
+    chart->h = bounds.h - 2 * item_padding.y;
+    chart->w = MAX(chart->w, 2 * item_padding.x);
+    chart->h = MAX(chart->h, 2 * item_padding.y);
+    chart->last.x = 0; chart->last.y = 0;
 }
 
 static zr_flags
-zr_graph_push_line(struct zr_context *ctx, struct zr_window *win,
-    struct zr_graph *g, float value)
+zr_chart_push_line(struct zr_context *ctx, struct zr_window *win,
+    struct zr_chart *g, float value)
 {
     struct zr_command_buffer *out = &win->buffer;
     const struct zr_style *config = &ctx->style;
@@ -9319,9 +9319,9 @@ zr_graph_push_line(struct zr_context *ctx, struct zr_window *win,
         color = config->colors[ZR_COLOR_PLOT_LINES];
         if (!(layout->flags & ZR_WINDOW_ROM) &&
             ZR_INBOX(i->mouse.pos.x,i->mouse.pos.y, g->last.x-3, g->last.y-3, 6, 6)){
-            ret = zr_input_is_mouse_hovering_rect(i, bounds) ? ZR_GRAPH_HOVERING : 0;
+            ret = zr_input_is_mouse_hovering_rect(i, bounds) ? ZR_CHART_HOVERING : 0;
             ret |= (i->mouse.buttons[ZR_BUTTON_LEFT].down &&
-                i->mouse.buttons[ZR_BUTTON_LEFT].clicked) ? ZR_GRAPH_CLICKED: 0;
+                i->mouse.buttons[ZR_BUTTON_LEFT].clicked) ? ZR_CHART_CLICKED: 0;
             color = config->colors[ZR_COLOR_PLOT_HIGHLIGHT];
         }
         zr_draw_rect(out, bounds, 0, color);
@@ -9344,9 +9344,9 @@ zr_graph_push_line(struct zr_context *ctx, struct zr_window *win,
     color = config->colors[ZR_COLOR_PLOT_LINES];
     if (!(layout->flags & ZR_WINDOW_ROM)) {
         if (zr_input_is_mouse_hovering_rect(i, bounds)) {
-            ret = ZR_GRAPH_HOVERING;
+            ret = ZR_CHART_HOVERING;
             ret |= (i->mouse.buttons[ZR_BUTTON_LEFT].down &&
-                i->mouse.buttons[ZR_BUTTON_LEFT].clicked) ? ZR_GRAPH_CLICKED: 0;
+                i->mouse.buttons[ZR_BUTTON_LEFT].clicked) ? ZR_CHART_CLICKED: 0;
             color = config->colors[ZR_COLOR_PLOT_HIGHLIGHT];
         }
     }
@@ -9360,8 +9360,8 @@ zr_graph_push_line(struct zr_context *ctx, struct zr_window *win,
 }
 
 static zr_flags
-zr_graph_push_column(const struct zr_context *ctx, struct zr_window *win,
-    struct zr_graph *graph, float value)
+zr_chart_push_column(const struct zr_context *ctx, struct zr_window *win,
+    struct zr_chart *chart, float value)
 {
     struct zr_command_buffer *out = &win->buffer;
     const struct zr_style *config = &ctx->style;
@@ -9373,41 +9373,41 @@ zr_graph_push_column(const struct zr_context *ctx, struct zr_window *win,
     zr_flags ret = 0;
     struct zr_rect item = {0,0,0,0};
 
-    if (graph->index >= graph->count)
+    if (chart->index >= chart->count)
         return zr_false;
-    if (graph->count) {
-        float padding = (float)(graph->count-1);
-        item.w = (graph->w - padding) / (float)(graph->count);
+    if (chart->count) {
+        float padding = (float)(chart->count-1);
+        item.w = (chart->w - padding) / (float)(chart->count);
     }
 
-    /* calculate bounds of the current bar graph entry */
+    /* calculate bounds of the current bar chart entry */
     color = config->colors[ZR_COLOR_HISTO_BARS];
-    item.h = graph->h * ZR_ABS((value/graph->range));
+    item.h = chart->h * ZR_ABS((value/chart->range));
     if (value >= 0) {
-        ratio = (value + ZR_ABS(graph->min)) / ZR_ABS(graph->range);
-        item.y = (graph->y + graph->h) - graph->h * ratio;
+        ratio = (value + ZR_ABS(chart->min)) / ZR_ABS(chart->range);
+        item.y = (chart->y + chart->h) - chart->h * ratio;
     } else {
-        ratio = (value - graph->max) / graph->range;
-        item.y = graph->y + (graph->h * ZR_ABS(ratio)) - item.h;
+        ratio = (value - chart->max) / chart->range;
+        item.y = chart->y + (chart->h * ZR_ABS(ratio)) - item.h;
     }
-    item.x = graph->x + ((float)graph->index * item.w);
-    item.x = item.x + ((float)graph->index);
+    item.x = chart->x + ((float)chart->index * item.w);
+    item.x = item.x + ((float)chart->index);
 
-    /* user graph bar selection */
+    /* user chart bar selection */
     if (!(layout->flags & ZR_WINDOW_ROM) &&
         ZR_INBOX(in->mouse.pos.x,in->mouse.pos.y,item.x,item.y,item.w,item.h)) {
-        ret = ZR_GRAPH_HOVERING;
+        ret = ZR_CHART_HOVERING;
         ret |= (in->mouse.buttons[ZR_BUTTON_LEFT].down &&
-                in->mouse.buttons[ZR_BUTTON_LEFT].clicked) ? ZR_GRAPH_CLICKED: 0;
+                in->mouse.buttons[ZR_BUTTON_LEFT].clicked) ? ZR_CHART_CLICKED: 0;
         color = config->colors[ZR_COLOR_HISTO_HIGHLIGHT];
     }
     zr_draw_rect(out, item, 0, color);
-    graph->index++;
+    chart->index++;
     return ret;
 }
 
 zr_flags
-zr_graph_push(struct zr_context *ctx, float value)
+zr_chart_push(struct zr_context *ctx, float value)
 {
     struct zr_window *win;
     ZR_ASSERT(ctx);
@@ -9416,37 +9416,37 @@ zr_graph_push(struct zr_context *ctx, float value)
         return zr_false;
 
     win = ctx->current;
-    switch (win->layout->graph.type) {
-    case ZR_GRAPH_LINES:
-        return zr_graph_push_line(ctx, win, &win->layout->graph, value);
-    case ZR_GRAPH_COLUMN:
-        return zr_graph_push_column(ctx, win, &win->layout->graph, value);
-    case ZR_GRAPH_MAX:
+    switch (win->layout->chart.type) {
+    case ZR_CHART_LINES:
+        return zr_chart_push_line(ctx, win, &win->layout->chart, value);
+    case ZR_CHART_COLUMN:
+        return zr_chart_push_column(ctx, win, &win->layout->chart, value);
+    case ZR_CHART_MAX:
     default: return zr_false;
     }
 }
 
 void
-zr_graph_end(struct zr_context *ctx)
+zr_chart_end(struct zr_context *ctx)
 {
     struct zr_window *win;
-    struct zr_graph *graph;
+    struct zr_chart *chart;
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
     if (!ctx || !ctx->current)
         return;
 
     win = ctx->current;
-    graph = &win->layout->graph;
-    graph->type = ZR_GRAPH_MAX;
-    graph->index = 0;
-    graph->count = 0;
-    graph->min = 0;
-    graph->max = 0;
-    graph->x = 0;
-    graph->y = 0;
-    graph->w = 0;
-    graph->h = 0;
+    chart = &win->layout->chart;
+    chart->type = ZR_CHART_MAX;
+    chart->index = 0;
+    chart->count = 0;
+    chart->min = 0;
+    chart->max = 0;
+    chart->x = 0;
+    chart->y = 0;
+    chart->w = 0;
+    chart->h = 0;
 }
 
 /* -------------------------------------------------------------
