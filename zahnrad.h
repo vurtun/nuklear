@@ -168,112 +168,10 @@ struct zr_image zr_subimage_id(int, unsigned short w, unsigned short h, struct z
 int zr_image_is_subimage(const struct zr_image* img);
 
 /* ==============================================================
- *                          INPUT
- * ===============================================================*/
-/*  The input API is responsible for holding the input state by keeping track of
-    mouse, key and text. The core of the API is a persistent
-    zr_input struct which holds the input state while running.
-    It is important to note that no direct os or window handling is done by the input
-    API, instead all the input state has to be provided by the user. This in one hand
-    expects more work from the user and complicates the usage but on the other hand
-    provides simple abstraction over a big number of platforms, libraries and other
-    already provided functionality.
-*/
-enum zr_keys {
-    ZR_KEY_SHIFT,
-    ZR_KEY_DEL,
-    ZR_KEY_ENTER,
-    ZR_KEY_TAB,
-    ZR_KEY_BACKSPACE,
-    ZR_KEY_COPY,
-    ZR_KEY_CUT,
-    ZR_KEY_PASTE,
-    ZR_KEY_LEFT,
-    ZR_KEY_RIGHT,
-    ZR_KEY_MAX
-};
-
-/* every used mouse button */
-enum zr_buttons {
-    ZR_BUTTON_LEFT,
-    ZR_BUTTON_MIDDLE,
-    ZR_BUTTON_RIGHT,
-    ZR_BUTTON_MAX
-};
-
-struct zr_mouse_button {
-    int down;
-    /* current button state */
-    unsigned int clicked;
-    /* button state change */
-    struct zr_vec2 clicked_pos;
-    /* mouse position of last state change */
-};
-
-struct zr_mouse {
-    struct zr_mouse_button buttons[ZR_BUTTON_MAX];
-    /* mouse button states */
-    struct zr_vec2 pos;
-    /* current mouse position */
-    struct zr_vec2 prev;
-    /* mouse position in the last frame */
-    struct zr_vec2 delta;
-    /* mouse travelling distance from last to current frame */
-    float scroll_delta;
-    /* number of steps in the up or down scroll direction */
-};
-
-struct zr_key {
-    int down;
-    unsigned int clicked;
-};
-
-struct zr_keyboard {
-    struct zr_key keys[ZR_KEY_MAX];
-    /* state of every used key */
-    char text[ZR_INPUT_MAX];
-    /* utf8 text input frame buffer */
-    zr_size text_len;
-    /* text input frame buffer length in bytes */
-};
-
-struct zr_input {
-    struct zr_keyboard keyboard;
-    /* current keyboard key + text input state */
-    struct zr_mouse mouse;
-    /* current mouse button and position state */
-};
-
-/* gathering input state */
-void zr_input_begin(struct zr_input*);
-void zr_input_motion(struct zr_input*, int x, int y);
-void zr_input_key(struct zr_input*, enum zr_keys, int down);
-void zr_input_button(struct zr_input*, enum zr_buttons, int x, int y, int down);
-void zr_input_scroll(struct zr_input*, float y);
-void zr_input_glyph(struct zr_input*, const zr_glyph);
-void zr_input_char(struct zr_input*, char);
-void zr_input_unicode(struct zr_input *in, zr_rune unicode);
-void zr_input_end(struct zr_input*);
-
-/* query input state */
-int zr_input_has_mouse_click_in_rect(const struct zr_input*,enum zr_buttons, struct zr_rect);
-int zr_input_has_mouse_click_down_in_rect(const struct zr_input*, enum zr_buttons,
-                                        struct zr_rect, int down);
-int zr_input_is_mouse_click_in_rect(const struct zr_input*, enum zr_buttons, struct zr_rect);
-int zr_input_any_mouse_click_in_rect(const struct zr_input*, struct zr_rect);
-int zr_input_is_mouse_prev_hovering_rect(const struct zr_input*, struct zr_rect);
-int zr_input_is_mouse_hovering_rect(const struct zr_input*, struct zr_rect);
-int zr_input_mouse_clicked(const struct zr_input*, enum zr_buttons, struct zr_rect);
-int zr_input_is_mouse_down(const struct zr_input*, enum zr_buttons);
-int zr_input_is_mouse_pressed(const struct zr_input*, enum zr_buttons);
-int zr_input_is_mouse_released(const struct zr_input*, enum zr_buttons);
-int zr_input_is_key_pressed(const struct zr_input*, enum zr_keys);
-int zr_input_is_key_released(const struct zr_input*, enum zr_keys);
-int zr_input_is_key_down(const struct zr_input*, enum zr_keys);
-
-/* ==============================================================
+ *
  *                          MEMORY BUFFER
- * =============================================================== */
+ *
+ * ===============================================================*/
 /*  A basic (double)-buffer API with linear allocation and resetting as only
     freeing policy. The buffers main purpose is to control all memory management inside
     the GUI toolkit and still leave memory control as much as possible in the hand
@@ -600,11 +498,25 @@ struct zr_user_font zr_font_ref(struct zr_font*);
 const struct zr_font_glyph* zr_font_find_glyph(struct zr_font*, zr_rune unicode);
 
 #endif
+
 /* ===============================================================
  *
- *                          CANVAS
+ *                          RENDERING
  *
  * ===============================================================*/
+/*  This library was designed to be render backend agnostic so it does
+    not draw anything to the screen. Instead all drawn primitives, widgets
+    are made of, are buffered into memory and make up a command queue.
+    Each frame therefore fills the command buffer with draw commands
+    that than need to be executed by the user and his own render backend.
+    After that the command buffer needs to be cleared and a new frame can be started.
+
+    The reason for buffering simple primitives as draw commands instead of
+    directly buffering a hardware accessible format with vertex and element
+    buffer was to support native render backends like X11 and Win32.
+    That being said it is possible to convert the command buffer into a
+    hardware accessible format to support hardware based rendering as well.
+*/
 enum zr_command_type {
     ZR_COMMAND_NOP,
     ZR_COMMAND_SCISSOR,
@@ -745,39 +657,7 @@ struct zr_draw_null_texture {
     /* coordinates to the white pixel in the texture  */
 };
 
-struct zr_canvas {
-    enum zr_anti_aliasing AA;
-    /* flag indicating if anti-aliasing should be used to render primtives */
-    struct zr_draw_null_texture null;
-    /* texture with white pixel for easy primitive drawing */
-    struct zr_rect clip_rect;
-    /* current clipping rectangle */
-    /* cosine/sine calculation callback since this library does not use libc  */
-    struct zr_buffer *buffer;
-    /* buffer to store draw commands and temporarily store path */
-    struct zr_buffer *vertexes;
-    /* buffer to store each draw vertex */
-    struct zr_buffer *elements;
-    /* buffer to store each draw element index */
-    unsigned int element_count;
-    /* total number of elements inside the elements buffer */
-    unsigned int vertex_count;
-    /* total number of vertexes inside the vertex buffer */
-    zr_size cmd_offset;
-    /* offset to the first command in the buffer */
-    unsigned int cmd_count;
-    /* number of commands inside the buffer  */
-    unsigned int path_count;
-    /* current number of points inside the path */
-    unsigned int path_offset;
-    /* offset to the first point in the buffer */
-    struct zr_vec2 circle_vtx[12];
-    /* small lookup table for fast circle drawing */
-};
-#endif
-
-/* drawing routines */
-#define zr_command(t, c) ((const struct zr_command_##t*)c)
+/* drawing routines for custom widgets */
 void zr_draw_scissor(struct zr_command_buffer*, struct zr_rect);
 void zr_draw_line(struct zr_command_buffer*, float, float, float, float, struct zr_color);
 void zr_draw_curve(struct zr_command_buffer*, float, float, float, float,  float, float,
@@ -790,6 +670,94 @@ void zr_draw_triangle(struct zr_command_buffer*, float, float, float, float, flo
 void zr_draw_image(struct zr_command_buffer*, struct zr_rect, struct zr_image*);
 void zr_draw_text(struct zr_command_buffer*, struct zr_rect, const char*, zr_size,
                     const struct zr_user_font*, struct zr_color, struct zr_color);
+
+#endif
+/* ===============================================================
+ *
+ *                          GUI
+ *
+ * ===============================================================*/
+enum zr_keys {
+    ZR_KEY_SHIFT,
+    ZR_KEY_DEL,
+    ZR_KEY_ENTER,
+    ZR_KEY_TAB,
+    ZR_KEY_BACKSPACE,
+    ZR_KEY_COPY,
+    ZR_KEY_CUT,
+    ZR_KEY_PASTE,
+    ZR_KEY_LEFT,
+    ZR_KEY_RIGHT,
+    ZR_KEY_MAX
+};
+
+/* every used mouse button */
+enum zr_buttons {
+    ZR_BUTTON_LEFT,
+    ZR_BUTTON_MIDDLE,
+    ZR_BUTTON_RIGHT,
+    ZR_BUTTON_MAX
+};
+
+struct zr_mouse_button {
+    int down;
+    /* current button state */
+    unsigned int clicked;
+    /* button state change */
+    struct zr_vec2 clicked_pos;
+    /* mouse position of last state change */
+};
+
+struct zr_mouse {
+    struct zr_mouse_button buttons[ZR_BUTTON_MAX];
+    /* mouse button states */
+    struct zr_vec2 pos;
+    /* current mouse position */
+    struct zr_vec2 prev;
+    /* mouse position in the last frame */
+    struct zr_vec2 delta;
+    /* mouse travelling distance from last to current frame */
+    float scroll_delta;
+    /* number of steps in the up or down scroll direction */
+};
+
+struct zr_key {
+    int down;
+    unsigned int clicked;
+};
+
+struct zr_keyboard {
+    struct zr_key keys[ZR_KEY_MAX];
+    /* state of every used key */
+    char text[ZR_INPUT_MAX];
+    /* utf8 text input frame buffer */
+    zr_size text_len;
+    /* text input frame buffer length in bytes */
+};
+
+struct zr_input {
+    struct zr_keyboard keyboard;
+    /* current keyboard key + text input state */
+    struct zr_mouse mouse;
+    /* current mouse button and position state */
+};
+
+/* query input state */
+int zr_input_has_mouse_click_in_rect(const struct zr_input*,enum zr_buttons, struct zr_rect);
+int zr_input_has_mouse_click_down_in_rect(const struct zr_input*, enum zr_buttons,
+                                        struct zr_rect, int down);
+int zr_input_is_mouse_click_in_rect(const struct zr_input*, enum zr_buttons, struct zr_rect);
+int zr_input_any_mouse_click_in_rect(const struct zr_input*, struct zr_rect);
+int zr_input_is_mouse_prev_hovering_rect(const struct zr_input*, struct zr_rect);
+int zr_input_is_mouse_hovering_rect(const struct zr_input*, struct zr_rect);
+int zr_input_mouse_clicked(const struct zr_input*, enum zr_buttons, struct zr_rect);
+int zr_input_is_mouse_down(const struct zr_input*, enum zr_buttons);
+int zr_input_is_mouse_pressed(const struct zr_input*, enum zr_buttons);
+int zr_input_is_mouse_released(const struct zr_input*, enum zr_buttons);
+int zr_input_is_key_pressed(const struct zr_input*, enum zr_keys);
+int zr_input_is_key_released(const struct zr_input*, enum zr_keys);
+int zr_input_is_key_down(const struct zr_input*, enum zr_keys);
+
 
 /* ==============================================================
  *                          STYLE
@@ -947,37 +915,6 @@ struct zr_style {
     /* modification stack */
 };
 
-/* style setup and access */
-struct zr_style;
-void zr_style_default(struct zr_style*, zr_flags, const struct zr_user_font*);
-void zr_style_set_font(struct zr_style*, const struct zr_user_font*);
-struct zr_vec2 zr_style_property(const struct zr_style*, enum zr_style_properties);
-struct zr_color zr_style_color(const struct zr_style*, enum zr_style_colors);
-
-/* temporarily modify a style value and save the old value in a stack*/
-void zr_style_push_property(struct zr_style*, enum zr_style_properties, struct zr_vec2);
-void zr_style_push_color(struct zr_style*, enum zr_style_colors, struct zr_color);
-void zr_style_push_font(struct zr_style*, struct zr_user_font font);
-void zr_style_push_font_height(struct zr_style*, float font_height);
-
-/* restores a previously saved style value */
-void zr_style_pop_color(struct zr_style*);
-void zr_style_pop_property(struct zr_style*);
-void zr_style_pop_font(struct zr_style*);
-void zr_style_pop_font_height(struct zr_style*);
-
-/* resets the style back into the beginning state */
-void zr_style_reset_colors(struct zr_style*);
-void zr_style_reset_properties(struct zr_style*);
-void zr_style_reset_font(struct zr_style*);
-void zr_style_reset_font_height(struct zr_style*);
-void zr_style_reset(struct zr_style*);
-
-/* return string representation of different styles values */
-const char *zr_style_color_name(enum zr_style_colors);
-const char *zr_style_rounding_name(enum zr_style_rounding);
-const char *zr_style_property_name(enum zr_style_properties);
-
 /*===============================================================
  *                          EDIT BOX
  * ===============================================================*/
@@ -1010,9 +947,7 @@ zr_size zr_edit_box_len_char(struct zr_edit_box*);
 zr_size zr_edit_box_len(struct zr_edit_box*);
 
 /*==============================================================
- *
- *                          GUI
- *
+ *                          WINDOW
  * =============================================================*/
 #define ZR_UNDEFINED (-1.0f)
 #define ZR_FLAG(x) (1 << (x))
@@ -1036,15 +971,6 @@ enum zr_symbol {
     ZR_SYMBOL_PLUS,
     ZR_SYMBOL_MINUS,
     ZR_SYMBOL_MAX
-};
-
-struct zr_clipboard {
-    zr_handle userdata;
-    /* user memory for callback */
-    zr_paste_f paste;
-    /* paste callback for the edit box  */
-    zr_copy_f copy;
-    /* copy callback for the edit box  */
 };
 
 enum zr_widget_status {
@@ -1265,6 +1191,48 @@ struct zr_layout {
     struct zr_layout *parent;
 };
 
+/*==============================================================
+ *                          CONTEXT
+ * =============================================================*/
+struct zr_clipboard {
+    zr_handle userdata;
+    /* user memory for callback */
+    zr_paste_f paste;
+    /* paste callback for the edit box  */
+    zr_copy_f copy;
+    /* copy callback for the edit box  */
+};
+
+struct zr_canvas {
+    enum zr_anti_aliasing AA;
+    /* flag indicating if anti-aliasing should be used to render primtives */
+    struct zr_draw_null_texture null;
+    /* texture with white pixel for easy primitive drawing */
+    struct zr_rect clip_rect;
+    /* current clipping rectangle */
+    /* cosine/sine calculation callback since this library does not use libc  */
+    struct zr_buffer *buffer;
+    /* buffer to store draw commands and temporarily store path */
+    struct zr_buffer *vertexes;
+    /* buffer to store each draw vertex */
+    struct zr_buffer *elements;
+    /* buffer to store each draw element index */
+    unsigned int element_count;
+    /* total number of elements inside the elements buffer */
+    unsigned int vertex_count;
+    /* total number of vertexes inside the vertex buffer */
+    zr_size cmd_offset;
+    /* offset to the first command in the buffer */
+    unsigned int cmd_count;
+    /* number of commands inside the buffer  */
+    unsigned int path_count;
+    /* current number of points inside the path */
+    unsigned int path_offset;
+    /* offset to the first point in the buffer */
+    struct zr_vec2 circle_vtx[12];
+    /* small lookup table for fast circle drawing */
+};
+
 struct zr_context {
     unsigned int seq;
     struct zr_input input;
@@ -1293,10 +1261,6 @@ int zr_init_fixed(struct zr_context*, void *memory, zr_size size, const struct z
 int zr_init_custom(struct zr_context*, struct zr_buffer *cmds,
                     struct zr_buffer *pool, const struct zr_user_font*);
 int zr_init(struct zr_context*, struct zr_allocator*, const struct zr_user_font*);
-void zr_convert(struct zr_context*, struct zr_buffer *cmds,
-                struct zr_buffer *vertexes, struct zr_buffer *elements,
-                struct zr_draw_null_texture , enum zr_anti_aliasing,
-                float line_thickness, unsigned int circle_segment_count);
 void zr_clear(struct zr_context*);
 void zr_free(struct zr_context*);
 
@@ -1327,20 +1291,71 @@ void zr_window_collapse(struct zr_context *ctx, const char *name, enum zr_collap
 void zr_window_collapse_if(struct zr_context *ctx, const char *name, enum zr_collapse_states, int cond);
 void zr_window_set_focus(struct zr_context *ctx, const char *name);
 
-/* drawing */
+/*--------------------------------------------------------------
+ *                      DRAWING
+ * -------------------------------------------------------------*/
+/* command drawing */
+#define zr_command(t, c) ((const struct zr_command_##t*)c)
 #define zr_foreach(c, ctx) for((c)=zr__begin(ctx); (c)!=0; (c)=zr__next(ctx, c))
-#define zr_draw_foreach(cmd,ctx, b) for((cmd)=zr__draw_begin(ctx, b); (cmd)!=0; (cmd)=zr__draw_next(cmd, b, ctx))
 const struct zr_command* zr__next(struct zr_context*, const struct zr_command*);
 const struct zr_command* zr__begin(struct zr_context*);
+
+/* vertex command drawing */
+#define zr_draw_foreach(cmd,ctx, b) for((cmd)=zr__draw_begin(ctx, b); (cmd)!=0; (cmd)=zr__draw_next(cmd, b, ctx))
+void zr_convert(struct zr_context*, struct zr_buffer *cmds,
+                struct zr_buffer *vertexes, struct zr_buffer *elements,
+                struct zr_draw_null_texture , enum zr_anti_aliasing,
+                float line_thickness, unsigned int circle_segment_count);
 const struct zr_draw_command* zr__draw_begin(const struct zr_context*, const struct zr_buffer*);
 const struct zr_draw_command* zr__draw_next(const struct zr_draw_command*,
-                                        const struct zr_buffer*,
-                                        const struct zr_context*);
+                                        const struct zr_buffer*, const struct zr_context*);
+
+/*--------------------------------------------------------------
+ *                      INPUT
+ * -------------------------------------------------------------*/
+void zr_input_begin(struct zr_context*);
+void zr_input_motion(struct zr_context*, int x, int y);
+void zr_input_key(struct zr_context*, enum zr_keys, int down);
+void zr_input_button(struct zr_context*, enum zr_buttons, int x, int y, int down);
+void zr_input_scroll(struct zr_context*, float y);
+void zr_input_glyph(struct zr_context*, const zr_glyph);
+void zr_input_char(struct zr_context*, char);
+void zr_input_unicode(struct zr_context *in, zr_rune unicode);
+void zr_input_end(struct zr_context*);
+
+/*--------------------------------------------------------------
+ *                      STYLE
+ * -------------------------------------------------------------*/
+void zr_load_default_style(struct zr_context*, zr_flags);
+void zr_set_font(struct zr_context*, const struct zr_user_font*);
+struct zr_vec2 zr_get_property(const struct zr_context*, enum zr_style_properties);
+struct zr_color zr_get_color(const struct zr_context*, enum zr_style_colors);
+const char *zr_get_color_name(enum zr_style_colors);
+const char *zr_get_rounding_name(enum zr_style_rounding);
+const char *zr_get_property_name(enum zr_style_properties);
+
+/* temporarily modify a style value and save the old value in a stack*/
+void zr_push_property(struct zr_context*, enum zr_style_properties, struct zr_vec2);
+void zr_push_color(struct zr_context*, enum zr_style_colors, struct zr_color);
+void zr_push_font(struct zr_context*, struct zr_user_font font);
+void zr_push_font_height(struct zr_context*, float font_height);
+
+/* restores a previously saved style value */
+void zr_pop_color(struct zr_context*);
+void zr_pop_property(struct zr_context*);
+void zr_pop_font(struct zr_context*);
+void zr_pop_font_height(struct zr_context*);
+
+/* resets the style back into the beginning state */
+void zr_reset_colors(struct zr_context*);
+void zr_reset_properties(struct zr_context*);
+void zr_reset_font(struct zr_context*);
+void zr_reset_font_height(struct zr_context*);
+void zr_reset(struct zr_context*);
 
 /*--------------------------------------------------------------
  *                      Layout
  * -------------------------------------------------------------*/
-/* layout query functions */
 void zr_layout_peek(struct zr_rect *bounds, struct zr_context*);
 
 /* columns based layouting with generated position and width and fixed height*/
@@ -1378,7 +1393,6 @@ void zr_layout_pop(struct zr_context*);
 /*--------------------------------------------------------------
  *                      Widgets
  * -------------------------------------------------------------*/
-/* base function called by all widgets (needs to be called for custom widgets) */
 enum zr_widget_state zr_widget(struct zr_rect*, const struct zr_context*);
 enum zr_widget_state zr_widget_fitting(struct zr_rect*, struct zr_context*);
 void zr_spacing(struct zr_context*, zr_size cols);

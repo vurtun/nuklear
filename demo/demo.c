@@ -79,8 +79,7 @@ set_style(struct zr_context *ctx, enum theme theme)
         ctx->style.colors[ZR_COLOR_SCALER] = zr_rgba(100, 100, 100, 255);
     }
     else {
-        struct zr_user_font fnt = ctx->style.font;
-        zr_style_default(&ctx->style, ZR_DEFAULT_ALL, &fnt);
+        zr_load_default_style(ctx, ZR_DEFAULT_ALL);
     }
 }
 
@@ -204,7 +203,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 ZR_WINDOW_CLOSEABLE, zr_rect(10, 100, 360, 280)))
             {
                 zr_layout_row_dynamic(ctx, 30, 2);
-                zr_label(ctx, zr_style_color_name((enum zr_style_colors)color_picker_index), ZR_TEXT_LEFT);
+                zr_label(ctx, zr_get_color_name((enum zr_style_colors)color_picker_index), ZR_TEXT_LEFT);
                 zr_button_color(ctx, color_picker_color, ZR_BUTTON_DEFAULT);
 
                 /* color selection */
@@ -281,7 +280,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 size_t i = 0;
                 zr_layout_row_dynamic(ctx, 30, 3);
                 for (i = 0; i <= ZR_PROPERTY_SCROLLBAR_SIZE; ++i) {
-                    zr_label(ctx, zr_style_property_name((enum zr_style_properties)i), ZR_TEXT_LEFT);
+                    zr_label(ctx, zr_get_property_name((enum zr_style_properties)i), ZR_TEXT_LEFT);
                     zr_property_float(ctx, "#X:", 0, &ctx->style.properties[i].x, 20, 1, 1);
                     zr_property_float(ctx, "#Y:", 0, &ctx->style.properties[i].y, 20, 1, 1);
                 }
@@ -292,7 +291,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 size_t i = 0;
                 zr_layout_row_dynamic(ctx, 30, 2);
                 for (i = 0; i < ZR_ROUNDING_MAX; ++i) {
-                    zr_label(ctx, zr_style_rounding_name((enum zr_style_rounding)i), ZR_TEXT_LEFT);
+                    zr_label(ctx, zr_get_rounding_name((enum zr_style_rounding)i), ZR_TEXT_LEFT);
                     zr_property_float(ctx, "#R:", 0, &ctx->style.rounding[i], 20, 1, 1);
                 }
                 zr_layout_pop(ctx);
@@ -307,7 +306,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 if (zr_group_begin(ctx, &tab, "Color_Picker", 0)) {
                     for (i = 0; i < ZR_COLOR_COUNT; ++i) {
                         zr_layout_row_dynamic(ctx, 30, 2);
-                        zr_label(ctx, zr_style_color_name((enum zr_style_colors)i), ZR_TEXT_LEFT);
+                        zr_label(ctx, zr_get_color_name((enum zr_style_colors)i), ZR_TEXT_LEFT);
                         if (zr_button_color(ctx, ctx->style.colors[i], ZR_BUTTON_DEFAULT)) {
                             show_color_picker_popup = zr_true;
                             color_picker_index = (int)i;
@@ -728,7 +727,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
 
                 /* tiles */
                 zr_layout_row(ctx, ZR_STATIC, 200, 5, row_layout);
-                zr_style_push_property(&ctx->style, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 4));
+                zr_push_property(ctx, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 4));
 
                 /* left space */
                 if (zr_group_begin(ctx, &sub, "left", ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER)) {
@@ -770,7 +769,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                     zr_group_end(ctx);
                 }
 
-                zr_style_pop_property(&ctx->style);
+                zr_pop_property(ctx);
                 zr_layout_pop(ctx);
             }
 
@@ -791,7 +790,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 zr_label(ctx, "bottom:", ZR_TEXT_LEFT);
                 zr_slider_float(ctx, 10.0f, &c, 200.0f, 10.0f);
 
-                zr_style_push_property(&ctx->style, ZR_PROPERTY_ITEM_SPACING, zr_vec2(4, 0));
+                zr_push_property(ctx, ZR_PROPERTY_ITEM_SPACING, zr_vec2(4, 0));
 
                 /* top space */
                 zr_layout_row_dynamic(ctx, a, 1);
@@ -838,7 +837,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                     zr_group_end(ctx);
                 }
 
-                zr_style_pop_property(&ctx->style);
+                zr_pop_property(ctx);
                 zr_layout_pop(ctx);
             }
             zr_layout_pop(ctx);

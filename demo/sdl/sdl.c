@@ -359,57 +359,57 @@ device_draw(struct device *dev, struct zr_context *ctx, int width, int height,
 }
 
 static void
-input_key(struct zr_input *in, SDL_Event *evt, int down)
+input_key(struct zr_context *ctx, SDL_Event *evt, int down)
 {
     const Uint8* state = SDL_GetKeyboardState(NULL);
     SDL_Keycode sym = evt->key.keysym.sym;
     if (sym == SDLK_RSHIFT || sym == SDLK_LSHIFT)
-        zr_input_key(in, ZR_KEY_SHIFT, down);
+        zr_input_key(ctx, ZR_KEY_SHIFT, down);
     else if (sym == SDLK_DELETE)
-        zr_input_key(in, ZR_KEY_DEL, down);
+        zr_input_key(ctx, ZR_KEY_DEL, down);
     else if (sym == SDLK_RETURN)
-        zr_input_key(in, ZR_KEY_ENTER, down);
+        zr_input_key(ctx, ZR_KEY_ENTER, down);
     else if (sym == SDLK_TAB)
-        zr_input_key(in, ZR_KEY_TAB, down);
+        zr_input_key(ctx, ZR_KEY_TAB, down);
     else if (sym == SDLK_BACKSPACE)
-        zr_input_key(in, ZR_KEY_BACKSPACE, down);
+        zr_input_key(ctx, ZR_KEY_BACKSPACE, down);
     else if (sym == SDLK_LEFT)
-        zr_input_key(in, ZR_KEY_LEFT, down);
+        zr_input_key(ctx, ZR_KEY_LEFT, down);
     else if (sym == SDLK_RIGHT)
-        zr_input_key(in, ZR_KEY_RIGHT, down);
+        zr_input_key(ctx, ZR_KEY_RIGHT, down);
     else if (sym == SDLK_c)
-        zr_input_key(in, ZR_KEY_COPY, down && state[SDL_SCANCODE_LCTRL]);
+        zr_input_key(ctx, ZR_KEY_COPY, down && state[SDL_SCANCODE_LCTRL]);
     else if (sym == SDLK_v)
-        zr_input_key(in, ZR_KEY_PASTE, down && state[SDL_SCANCODE_LCTRL]);
+        zr_input_key(ctx, ZR_KEY_PASTE, down && state[SDL_SCANCODE_LCTRL]);
     else if (sym == SDLK_x)
-        zr_input_key(in, ZR_KEY_CUT, down && state[SDL_SCANCODE_LCTRL]);
+        zr_input_key(ctx, ZR_KEY_CUT, down && state[SDL_SCANCODE_LCTRL]);
 }
 
 static void
-input_motion(struct zr_input *in, SDL_Event *evt)
+input_motion(struct zr_context *ctx, SDL_Event *evt)
 {
     const int x = evt->motion.x;
     const int y = evt->motion.y;
-    zr_input_motion(in, x, y);
+    zr_input_motion(ctx, x, y);
 }
 
 static void
-input_button(struct zr_input *in, SDL_Event *evt, int down)
+input_button(struct zr_context *ctx, SDL_Event *evt, int down)
 {
     const int x = evt->button.x;
     const int y = evt->button.y;
     if (evt->button.button == SDL_BUTTON_LEFT)
-        zr_input_button(in, ZR_BUTTON_LEFT, x, y, down);
+        zr_input_button(ctx, ZR_BUTTON_LEFT, x, y, down);
     if (evt->button.button == SDL_BUTTON_RIGHT)
-        zr_input_button(in, ZR_BUTTON_RIGHT, x, y, down);
+        zr_input_button(ctx, ZR_BUTTON_RIGHT, x, y, down);
 }
 
 static void
-input_text(struct zr_input *in, SDL_Event *evt)
+input_text(struct zr_context *ctx, SDL_Event *evt)
 {
     zr_glyph glyph;
     memcpy(glyph, evt->text.text, ZR_UTF_SIZE);
-    zr_input_glyph(in, glyph);
+    zr_input_glyph(ctx, glyph);
 }
 
 static void
@@ -476,26 +476,26 @@ main(int argc, char *argv[])
     while (running) {
         /* Input */
         SDL_Event evt;
-        zr_input_begin(&gui.ctx.input);
+        zr_input_begin(&gui.ctx);
         while (SDL_PollEvent(&evt)) {
             if (evt.type == SDL_WINDOWEVENT) resize(&evt);
             else if (evt.type == SDL_QUIT) goto cleanup;
             else if (evt.type == SDL_KEYUP)
-                input_key(&gui.ctx.input, &evt, zr_false);
+                input_key(&gui.ctx, &evt, zr_false);
             else if (evt.type == SDL_KEYDOWN)
-                input_key(&gui.ctx.input, &evt, zr_true);
+                input_key(&gui.ctx, &evt, zr_true);
             else if (evt.type == SDL_MOUSEBUTTONDOWN)
-                input_button(&gui.ctx.input, &evt, zr_true);
+                input_button(&gui.ctx, &evt, zr_true);
             else if (evt.type == SDL_MOUSEBUTTONUP)
-                input_button(&gui.ctx.input, &evt, zr_false);
+                input_button(&gui.ctx, &evt, zr_false);
             else if (evt.type == SDL_MOUSEMOTION)
-                input_motion(&gui.ctx.input, &evt);
+                input_motion(&gui.ctx, &evt);
             else if (evt.type == SDL_TEXTINPUT)
-                input_text(&gui.ctx.input, &evt);
+                input_text(&gui.ctx, &evt);
             else if (evt.type == SDL_MOUSEWHEEL)
-                zr_input_scroll(&gui.ctx.input,(float)evt.wheel.y);
+                zr_input_scroll(&gui.ctx,(float)evt.wheel.y);
         }
-        zr_input_end(&gui.ctx.input);
+        zr_input_end(&gui.ctx);
 
         /* GUI */
         SDL_GetWindowSize(win, &width, &height);

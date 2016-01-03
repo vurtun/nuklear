@@ -1323,231 +1323,6 @@ zr_user_font_glyphs_fitting_in_space(const struct zr_user_font *font, const char
 }
 /* ==============================================================
  *
- *                          Input
- *
- * ===============================================================*/
-void
-zr_input_begin(struct zr_input *in)
-{
-    zr_size i;
-    ZR_ASSERT(in);
-    if (!in) return;
-
-    for (i = 0; i < ZR_BUTTON_MAX; ++i)
-        in->mouse.buttons[i].clicked = 0;
-    in->keyboard.text_len = 0;
-    in->mouse.scroll_delta = 0;
-    zr_vec2_mov(in->mouse.prev, in->mouse.pos);
-    for (i = 0; i < ZR_KEY_MAX; i++)
-        in->keyboard.keys[i].clicked = 0;
-}
-
-void
-zr_input_motion(struct zr_input *in, int x, int y)
-{
-    ZR_ASSERT(in);
-    if (!in) return;
-    in->mouse.pos.x = (float)x;
-    in->mouse.pos.y = (float)y;
-}
-
-void
-zr_input_key(struct zr_input *in, enum zr_keys key, int down)
-{
-    ZR_ASSERT(in);
-    if (!in) return;
-    if (in->keyboard.keys[key].down == down) return;
-    in->keyboard.keys[key].down = down;
-    in->keyboard.keys[key].clicked++;
-}
-
-void
-zr_input_button(struct zr_input *in, enum zr_buttons id, int x, int y, int down)
-{
-    struct zr_mouse_button *btn;
-    ZR_ASSERT(in);
-    if (!in) return;
-    if (in->mouse.buttons[id].down == down) return;
-    btn = &in->mouse.buttons[id];
-    btn->clicked_pos.x = (float)x;
-    btn->clicked_pos.y = (float)y;
-    btn->down = down;
-    btn->clicked++;
-}
-
-void
-zr_input_scroll(struct zr_input *in, float y)
-{
-    ZR_ASSERT(in);
-    if (!in) return;
-    in->mouse.scroll_delta += y;
-}
-
-void
-zr_input_glyph(struct zr_input *in, const zr_glyph glyph)
-{
-    zr_size len = 0;
-    zr_rune unicode;
-    ZR_ASSERT(in);
-    if (!in) return;
-
-    len = zr_utf_decode(glyph, &unicode, ZR_UTF_SIZE);
-    if (len && ((in->keyboard.text_len + len) < ZR_INPUT_MAX)) {
-        zr_utf_encode(unicode, &in->keyboard.text[in->keyboard.text_len],
-            ZR_INPUT_MAX - in->keyboard.text_len);
-        in->keyboard.text_len += len;
-    }
-}
-
-void
-zr_input_char(struct zr_input *in, char c)
-{
-    zr_glyph glyph;
-    ZR_ASSERT(in);
-    glyph[0] = c;
-    zr_input_glyph(in, glyph);
-}
-
-void
-zr_input_unicode(struct zr_input *in, zr_rune unicode)
-{
-    zr_glyph rune;
-    ZR_ASSERT(in);
-    zr_utf_encode(unicode, rune, ZR_UTF_SIZE);
-    zr_input_glyph(in, rune);
-}
-
-void
-zr_input_end(struct zr_input *in)
-{
-    ZR_ASSERT(in);
-    if (!in) return;
-    in->mouse.delta = zr_vec2_sub(in->mouse.pos, in->mouse.prev);
-}
-
-int
-zr_input_has_mouse_click_in_rect(const struct zr_input *i, enum zr_buttons id,
-    struct zr_rect b)
-{
-    const struct zr_mouse_button *btn;
-    if (!i) return zr_false;
-    btn = &i->mouse.buttons[id];
-    if (!ZR_INBOX(btn->clicked_pos.x,btn->clicked_pos.y,b.x,b.y,b.w,b.h))
-        return zr_false;
-    return zr_true;
-}
-
-int
-zr_input_has_mouse_click_down_in_rect(const struct zr_input *i, enum zr_buttons id,
-    struct zr_rect b, int down)
-{
-    const struct zr_mouse_button *btn;
-    if (!i) return zr_false;
-    btn = &i->mouse.buttons[id];
-    return zr_input_has_mouse_click_in_rect(i, id, b) && (btn->down == down);
-}
-
-int
-zr_input_is_mouse_click_in_rect(const struct zr_input *i, enum zr_buttons id,
-    struct zr_rect b)
-{
-    const struct zr_mouse_button *btn;
-    if (!i) return zr_false;
-    btn = &i->mouse.buttons[id];
-    return (zr_input_has_mouse_click_down_in_rect(i, id, b, zr_true) &&
-            btn->clicked) ? zr_true : zr_false;
-}
-
-int
-zr_input_any_mouse_click_in_rect(const struct zr_input *in, struct zr_rect b)
-{
-    int i, down = 0;
-    for (i = 0; i < ZR_BUTTON_MAX; ++i)
-        down = down || zr_input_is_mouse_click_in_rect(in, (enum zr_buttons)i, b);
-    return down;
-}
-
-int
-zr_input_is_mouse_hovering_rect(const struct zr_input *i, struct zr_rect rect)
-{
-    if (!i) return zr_false;
-    return ZR_INBOX(i->mouse.pos.x, i->mouse.pos.y, rect.x, rect.y, rect.w, rect.h);
-}
-
-int
-zr_input_is_mouse_prev_hovering_rect(const struct zr_input *i, struct zr_rect rect)
-{
-    if (!i) return zr_false;
-    return ZR_INBOX(i->mouse.prev.x, i->mouse.prev.y, rect.x, rect.y, rect.w, rect.h);
-}
-
-int
-zr_input_mouse_clicked(const struct zr_input *i, enum zr_buttons id, struct zr_rect rect)
-{
-    if (!i) return zr_false;
-    if (!zr_input_is_mouse_hovering_rect(i, rect)) return zr_false;
-    return zr_input_is_mouse_click_in_rect(i, id, rect);
-}
-
-int
-zr_input_is_mouse_down(const struct zr_input *i, enum zr_buttons id)
-{
-    if (!i) return zr_false;
-    return i->mouse.buttons[id].down;
-}
-
-int
-zr_input_is_mouse_pressed(const struct zr_input *i, enum zr_buttons id)
-{
-    const struct zr_mouse_button *b;
-    if (!i) return zr_false;
-    b = &i->mouse.buttons[id];
-    if (b->down && b->clicked)
-        return zr_true;
-    return zr_false;
-}
-
-int
-zr_input_is_mouse_released(const struct zr_input *i, enum zr_buttons id)
-{
-    if (!i) return zr_false;
-    return (!i->mouse.buttons[id].down && i->mouse.buttons[id].clicked) ? zr_true : zr_false;
-}
-
-int
-zr_input_is_key_pressed(const struct zr_input *i, enum zr_keys key)
-{
-    const struct zr_key *k;
-    if (!i) return zr_false;
-    k = &i->keyboard.keys[key];
-    if (k->down && k->clicked)
-        return zr_true;
-    return zr_false;
-}
-
-int
-zr_input_is_key_released(const struct zr_input *i, enum zr_keys key)
-{
-    const struct zr_key *k;
-    if (!i) return zr_false;
-    k = &i->keyboard.keys[key];
-    if (!k->down && k->clicked)
-        return zr_true;
-    return zr_false;
-}
-
-int
-zr_input_is_key_down(const struct zr_input *i, enum zr_keys key)
-{
-    const struct zr_key *k;
-    if (!i) return zr_false;
-    k = &i->keyboard.keys[key];
-    if (k->down) return zr_true;
-    return zr_false;
-}
-
-/* ==============================================================
- *
  *                          BUFFER
  *
  * ===============================================================*/
@@ -5735,6 +5510,249 @@ zr_do_property(enum zr_widget_status *ws,
     }
     return property_value;
 }
+/* ==============================================================
+ *
+ *                          INPUT
+ *
+ * ===============================================================*/
+void
+zr_input_begin(struct zr_context *ctx)
+{
+    zr_size i;
+    struct zr_input *in;
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+
+    in = &ctx->input;
+    for (i = 0; i < ZR_BUTTON_MAX; ++i)
+        in->mouse.buttons[i].clicked = 0;
+    in->keyboard.text_len = 0;
+    in->mouse.scroll_delta = 0;
+    zr_vec2_mov(in->mouse.prev, in->mouse.pos);
+    for (i = 0; i < ZR_KEY_MAX; i++)
+        in->keyboard.keys[i].clicked = 0;
+}
+
+void
+zr_input_motion(struct zr_context *ctx, int x, int y)
+{
+    struct zr_input *in;
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+
+    in = &ctx->input;
+    in->mouse.pos.x = (float)x;
+    in->mouse.pos.y = (float)y;
+}
+
+void
+zr_input_key(struct zr_context *ctx, enum zr_keys key, int down)
+{
+    struct zr_input *in;
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+    in = &ctx->input;
+    if (in->keyboard.keys[key].down == down) return;
+
+    in->keyboard.keys[key].down = down;
+    in->keyboard.keys[key].clicked++;
+}
+
+void
+zr_input_button(struct zr_context *ctx, enum zr_buttons id, int x, int y, int down)
+{
+    struct zr_mouse_button *btn;
+    struct zr_input *in;
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+    in = &ctx->input;
+    if (in->mouse.buttons[id].down == down) return;
+
+    btn = &in->mouse.buttons[id];
+    btn->clicked_pos.x = (float)x;
+    btn->clicked_pos.y = (float)y;
+    btn->down = down;
+    btn->clicked++;
+}
+
+void
+zr_input_scroll(struct zr_context *ctx, float y)
+{
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+    ctx->input.mouse.scroll_delta += y;
+}
+
+void
+zr_input_glyph(struct zr_context *ctx, const zr_glyph glyph)
+{
+    zr_size len = 0;
+    zr_rune unicode;
+
+    struct zr_input *in;
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+    in = &ctx->input;
+
+    len = zr_utf_decode(glyph, &unicode, ZR_UTF_SIZE);
+    if (len && ((in->keyboard.text_len + len) < ZR_INPUT_MAX)) {
+        zr_utf_encode(unicode, &in->keyboard.text[in->keyboard.text_len],
+            ZR_INPUT_MAX - in->keyboard.text_len);
+        in->keyboard.text_len += len;
+    }
+}
+
+void
+zr_input_char(struct zr_context *ctx, char c)
+{
+    zr_glyph glyph;
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+    glyph[0] = c;
+    zr_input_glyph(ctx, glyph);
+}
+
+void
+zr_input_unicode(struct zr_context *ctx, zr_rune unicode)
+{
+    zr_glyph rune;
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+    zr_utf_encode(unicode, rune, ZR_UTF_SIZE);
+    zr_input_glyph(ctx, rune);
+}
+
+void
+zr_input_end(struct zr_context *ctx)
+{
+    struct zr_input *in;
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+    in = &ctx->input;
+    in->mouse.delta = zr_vec2_sub(in->mouse.pos, in->mouse.prev);
+}
+
+int
+zr_input_has_mouse_click_in_rect(const struct zr_input *i, enum zr_buttons id,
+    struct zr_rect b)
+{
+    const struct zr_mouse_button *btn;
+    if (!i) return zr_false;
+    btn = &i->mouse.buttons[id];
+    if (!ZR_INBOX(btn->clicked_pos.x,btn->clicked_pos.y,b.x,b.y,b.w,b.h))
+        return zr_false;
+    return zr_true;
+}
+
+int
+zr_input_has_mouse_click_down_in_rect(const struct zr_input *i, enum zr_buttons id,
+    struct zr_rect b, int down)
+{
+    const struct zr_mouse_button *btn;
+    if (!i) return zr_false;
+    btn = &i->mouse.buttons[id];
+    return zr_input_has_mouse_click_in_rect(i, id, b) && (btn->down == down);
+}
+
+int
+zr_input_is_mouse_click_in_rect(const struct zr_input *i, enum zr_buttons id,
+    struct zr_rect b)
+{
+    const struct zr_mouse_button *btn;
+    if (!i) return zr_false;
+    btn = &i->mouse.buttons[id];
+    return (zr_input_has_mouse_click_down_in_rect(i, id, b, zr_true) &&
+            btn->clicked) ? zr_true : zr_false;
+}
+
+int
+zr_input_any_mouse_click_in_rect(const struct zr_input *in, struct zr_rect b)
+{
+    int i, down = 0;
+    for (i = 0; i < ZR_BUTTON_MAX; ++i)
+        down = down || zr_input_is_mouse_click_in_rect(in, (enum zr_buttons)i, b);
+    return down;
+}
+
+int
+zr_input_is_mouse_hovering_rect(const struct zr_input *i, struct zr_rect rect)
+{
+    if (!i) return zr_false;
+    return ZR_INBOX(i->mouse.pos.x, i->mouse.pos.y, rect.x, rect.y, rect.w, rect.h);
+}
+
+int
+zr_input_is_mouse_prev_hovering_rect(const struct zr_input *i, struct zr_rect rect)
+{
+    if (!i) return zr_false;
+    return ZR_INBOX(i->mouse.prev.x, i->mouse.prev.y, rect.x, rect.y, rect.w, rect.h);
+}
+
+int
+zr_input_mouse_clicked(const struct zr_input *i, enum zr_buttons id, struct zr_rect rect)
+{
+    if (!i) return zr_false;
+    if (!zr_input_is_mouse_hovering_rect(i, rect)) return zr_false;
+    return zr_input_is_mouse_click_in_rect(i, id, rect);
+}
+
+int
+zr_input_is_mouse_down(const struct zr_input *i, enum zr_buttons id)
+{
+    if (!i) return zr_false;
+    return i->mouse.buttons[id].down;
+}
+
+int
+zr_input_is_mouse_pressed(const struct zr_input *i, enum zr_buttons id)
+{
+    const struct zr_mouse_button *b;
+    if (!i) return zr_false;
+    b = &i->mouse.buttons[id];
+    if (b->down && b->clicked)
+        return zr_true;
+    return zr_false;
+}
+
+int
+zr_input_is_mouse_released(const struct zr_input *i, enum zr_buttons id)
+{
+    if (!i) return zr_false;
+    return (!i->mouse.buttons[id].down && i->mouse.buttons[id].clicked) ? zr_true : zr_false;
+}
+
+int
+zr_input_is_key_pressed(const struct zr_input *i, enum zr_keys key)
+{
+    const struct zr_key *k;
+    if (!i) return zr_false;
+    k = &i->keyboard.keys[key];
+    if (k->down && k->clicked)
+        return zr_true;
+    return zr_false;
+}
+
+int
+zr_input_is_key_released(const struct zr_input *i, enum zr_keys key)
+{
+    const struct zr_key *k;
+    if (!i) return zr_false;
+    k = &i->keyboard.keys[key];
+    if (!k->down && k->clicked)
+        return zr_true;
+    return zr_false;
+}
+
+int
+zr_input_is_key_down(const struct zr_input *i, enum zr_keys key)
+{
+    const struct zr_key *k;
+    if (!i) return zr_false;
+    k = &i->keyboard.keys[key];
+    if (k->down) return zr_true;
+    return zr_false;
+}
+
 
 /* ==============================================================
  *
@@ -5821,15 +5839,15 @@ static const char *zr_style_property_names[] = {
 };
 
 const char*
-zr_style_color_name(enum zr_style_colors color)
+zr_get_color_name(enum zr_style_colors color)
 {return zr_style_color_names[color];}
 
 const char*
-zr_style_rounding_name(enum zr_style_rounding rounding)
+zr_get_rounding_name(enum zr_style_rounding rounding)
 {return zr_style_rounding_names[rounding];}
 
 const char*
-zr_style_property_name(enum zr_style_properties property)
+zr_get_property_name(enum zr_style_properties property)
 {return zr_style_property_names[property];}
 
 static void
@@ -5857,13 +5875,13 @@ zr_style_default_color(struct zr_style *style)
 }
 
 void
-zr_style_default(struct zr_style *style, zr_flags flags,
-    const struct zr_user_font *font)
+zr_load_default_style(struct zr_context *ctx, zr_flags flags)
 {
-    ZR_ASSERT(style);
-    if (!style) return;
+    struct zr_style *style;
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+    style = &ctx->style;
     zr_zero(style, sizeof(*style));
-    style->font = *font;
 
     if (flags & ZR_DEFAULT_COLOR)
         zr_style_default_color(style);
@@ -5879,39 +5897,46 @@ zr_style_default(struct zr_style *style, zr_flags flags,
 }
 
 void
-zr_style_set_font(struct zr_style *style, const struct zr_user_font *font)
+zr_set_font(struct zr_context *ctx, const struct zr_user_font *font)
 {
-    ZR_ASSERT(style);
-    if (!style) return;
+    struct zr_style *style;
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+    style = &ctx->style;
     style->font = *font;
 }
 
 struct zr_vec2
-zr_style_property(const struct zr_style *style, enum zr_style_properties index)
+zr_get_property(const struct zr_context *ctx, enum zr_style_properties index)
 {
+    const struct zr_style *style;
     static const struct zr_vec2 zero;
-    ZR_ASSERT(style);
-    if (!style) return zero;
+    ZR_ASSERT(ctx);
+    if (!ctx) return zero;
+    style = &ctx->style;
     return style->properties[index];
-        /* draw open/close symbol */
 }
 
 struct zr_color
-zr_style_color(const struct zr_style *style, enum zr_style_colors index)
+zr_get_color(const struct zr_context *ctx, enum zr_style_colors index)
 {
+    const struct zr_style *style;
     static const struct zr_color zero;
-    ZR_ASSERT(style);
-    if (!style) return zero;
+    ZR_ASSERT(ctx);
+    if (!ctx) return zero;
+    style = &ctx->style;
     return style->colors[index];
 }
 
 void
-zr_style_push_color(struct zr_style *style, enum zr_style_colors index,
+zr_push_color(struct zr_context *ctx, enum zr_style_colors index,
     struct zr_color col)
 {
+    struct zr_style *style;
     struct zr_saved_color *c;
-    ZR_ASSERT(style);
-    if (!style) return;
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+    style = &ctx->style;
     if (style->stack.color >= ZR_MAX_COLOR_STACK) return;
 
     c = &style->stack.colors[style->stack.color++];
@@ -5921,12 +5946,14 @@ zr_style_push_color(struct zr_style *style, enum zr_style_colors index,
 }
 
 void
-zr_style_push_property(struct zr_style *style, enum zr_style_properties index,
+zr_push_property(struct zr_context *ctx, enum zr_style_properties index,
     struct zr_vec2 v)
 {
+    struct zr_style *style;
     struct zr_saved_property *p;
-    ZR_ASSERT(style);
-    if (!style) return;
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+    style = &ctx->style;
     if (style->stack.property >= ZR_MAX_ATTRIB_STACK) return;
 
     p = &style->stack.properties[style->stack.property++];
@@ -5936,11 +5963,13 @@ zr_style_push_property(struct zr_style *style, enum zr_style_properties index,
 }
 
 void
-zr_style_push_font(struct zr_style *style, struct zr_user_font font)
+zr_push_font(struct zr_context *ctx, struct zr_user_font font)
 {
+    struct zr_style *style;
     struct zr_saved_font *f;
-    ZR_ASSERT(style);
-    if (!style) return;
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+    style = &ctx->style;
     if (style->stack.font >= ZR_MAX_FONT_STACK) return;
 
     f = &style->stack.fonts[style->stack.font++];
@@ -5951,10 +5980,12 @@ zr_style_push_font(struct zr_style *style, struct zr_user_font font)
 }
 
 void
-zr_style_push_font_height(struct zr_style *style, float font_height)
+zr_push_font_height(struct zr_context *ctx, float font_height)
 {
-    ZR_ASSERT(style);
-    if (!style) return;
+    struct zr_style *style;
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+    style = &ctx->style;
     if (style->stack.font >= ZR_MAX_FONT_HEIGHT_STACK) return;
 
     style->stack.font_heights[style->stack.font_height++] = style->font.height;
@@ -5964,33 +5995,44 @@ zr_style_push_font_height(struct zr_style *style, float font_height)
 }
 
 void
-zr_style_pop_color(struct zr_style *style)
+zr_pop_color(struct zr_context *ctx)
 {
+    struct zr_style *style;
     struct zr_saved_color *c;
-    ZR_ASSERT(style);
-    if (!style) return;
+    ZR_ASSERT(ctx);
+
+    if (!ctx) return;
+    style = &ctx->style;
     if (!style->stack.color) return;
+
     c = &style->stack.colors[--style->stack.color];
     style->colors[c->type] = c->value;
 }
 
 void
-zr_style_pop_property(struct zr_style *style)
+zr_pop_property(struct zr_context *ctx)
 {
+    struct zr_style *style;
     struct zr_saved_property *p;
-    ZR_ASSERT(style);
-    if (!style) return;
+
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+    style = &ctx->style;
     if (!style->stack.property) return;
+
     p = &style->stack.properties[--style->stack.property];
     style->properties[p->type] = p->value;
 }
 
 void
-zr_style_pop_font(struct zr_style *style)
+zr_pop_font(struct zr_context *ctx)
 {
+    struct zr_style *style;
     struct zr_saved_font *f;
-    ZR_ASSERT(style);
-    if (!style) return;
+
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+    style = &ctx->style;
     if (!style->stack.font) return;
 
     f = &style->stack.fonts[--style->stack.font];
@@ -6001,12 +6043,16 @@ zr_style_pop_font(struct zr_style *style)
 }
 
 void
-zr_style_pop_font_height(struct zr_style *style)
+zr_pop_font_height(struct zr_context *ctx)
 {
+    struct zr_style *style;
     float font_height;
-    ZR_ASSERT(style);
-    if (!style) return;
+
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+    style = &ctx->style;
     if (!style->stack.font_height) return;
+
     font_height = style->stack.font_heights[--style->stack.font_height];
     style->font.height = font_height;
     if (style->stack.font) {
@@ -6016,50 +6062,61 @@ zr_style_pop_font_height(struct zr_style *style)
 }
 
 void
-zr_style_reset_colors(struct zr_style *style)
+zr_reset_colors(struct zr_context *ctx)
 {
-    ZR_ASSERT(style);
-    if (!style) return;
+    struct zr_style *style;
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+    style = &ctx->style;
     while (style->stack.color)
-        zr_style_pop_color(style);
+        zr_pop_color(ctx);
 }
 
 void
-zr_style_reset_properties(struct zr_style *style)
+zr_reset_properties(struct zr_context *ctx)
 {
-    ZR_ASSERT(style);
-    if (!style) return;
+    struct zr_style *style;
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+    style = &ctx->style;
     while (style->stack.property)
-        zr_style_pop_property(style);
+        zr_pop_property(ctx);
 }
 
 void
-zr_style_reset_font(struct zr_style *style)
+zr_reset_font(struct zr_context *ctx)
 {
-    ZR_ASSERT(style);
-    if (!style) return;
+    struct zr_style *style;
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+    style = &ctx->style;
     while (style->stack.font)
-        zr_style_pop_font(style);
+        zr_pop_font(ctx);
 }
 
 void
-zr_style_reset_font_height(struct zr_style *style)
+zr_reset_font_height(struct zr_context *ctx)
 {
-    ZR_ASSERT(style);
-    if (!style) return;
+    struct zr_style *style;
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+    style = &ctx->style;
     while (style->stack.font_height)
-        zr_style_pop_font_height(style);
+        zr_pop_font_height(ctx);
 }
 
 void
-zr_style_reset(struct zr_style *style)
+zr_reset(struct zr_context *ctx)
 {
-    ZR_ASSERT(style);
-    if (!style) return;
-    zr_style_reset_colors(style);
-    zr_style_reset_properties(style);
-    zr_style_reset_font(style);
-    zr_style_reset_font_height(style);
+    struct zr_style *style;
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+    style = &ctx->style;
+
+    zr_reset_colors(ctx);
+    zr_reset_properties(ctx);
+    zr_reset_font(ctx);
+    zr_reset_font_height(ctx);
 }
 
 /* ===============================================================
@@ -6527,8 +6584,12 @@ zr_clear(struct zr_context *ctx)
 static void
 zr_setup(struct zr_context *ctx, const struct zr_user_font *font)
 {
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(font);
+    if (!ctx || !font) return;
     zr_zero(ctx, sizeof(*ctx));
-    zr_style_default(&ctx->style, ZR_DEFAULT_ALL, font);
+    zr_load_default_style(ctx, ZR_DEFAULT_ALL);
+    ctx->style.font = *font;
 #if ZR_COMPILE_WITH_VERTEX_BUFFER
     zr_canvas_init(&ctx->canvas);
 #endif
@@ -6977,7 +7038,7 @@ zr_header_button(struct zr_context *ctx, struct zr_window_header *header,
     layout = win->layout;
     c = &ctx->style;
     out = &win->buffer;
-    item_padding = zr_style_property(c, ZR_PROPERTY_ITEM_PADDING);
+    item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
 
     sym.x = header->front;
     sym.y = header->y;
@@ -7070,11 +7131,11 @@ zr_layout_begin(struct zr_context *ctx, const char *title)
     layout = win->layout;
 
     /* cache style data */
-    scrollbar_size = zr_style_property(c, ZR_PROPERTY_SCROLLBAR_SIZE).x;
-    window_padding = zr_style_property(c, ZR_PROPERTY_PADDING);
-    item_padding = zr_style_property(c, ZR_PROPERTY_ITEM_PADDING);
-    item_spacing = zr_style_property(c, ZR_PROPERTY_ITEM_SPACING);
-    scaler_size = zr_style_property(c, ZR_PROPERTY_SCALER_SIZE);
+    scrollbar_size = zr_get_property(ctx, ZR_PROPERTY_SCROLLBAR_SIZE).x;
+    window_padding = zr_get_property(ctx, ZR_PROPERTY_PADDING);
+    item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
+    item_spacing = zr_get_property(ctx, ZR_PROPERTY_ITEM_SPACING);
+    scaler_size = zr_get_property(ctx, ZR_PROPERTY_SCALER_SIZE);
 
     /* check arguments */
     zr_zero(layout, sizeof(*layout));
@@ -7288,11 +7349,11 @@ zr_layout_end(struct zr_context *ctx)
         zr_draw_scissor(out, zr_null_rect);
 
     /* cache configuration data */
-    item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
-    item_spacing = zr_style_property(config, ZR_PROPERTY_ITEM_SPACING);
-    window_padding = zr_style_property(config, ZR_PROPERTY_PADDING);
-    scrollbar_size = zr_style_property(config, ZR_PROPERTY_SCROLLBAR_SIZE).x;
-    scaler_size = zr_style_property(config, ZR_PROPERTY_SCALER_SIZE);
+    item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
+    item_spacing = zr_get_property(ctx, ZR_PROPERTY_ITEM_SPACING);
+    window_padding = zr_get_property(ctx, ZR_PROPERTY_PADDING);
+    scrollbar_size = zr_get_property(ctx, ZR_PROPERTY_SCROLLBAR_SIZE).x;
+    scaler_size = zr_get_property(ctx, ZR_PROPERTY_SCALER_SIZE);
 
     /* update the current cursor Y-position to point over the last added widget */
     layout->at_y += layout->row.height;
@@ -7402,7 +7463,7 @@ zr_layout_end(struct zr_context *ctx)
         if (!(window->flags & ZR_WINDOW_ROM)) {
             float prev_x = in->mouse.prev.x;
             float prev_y = in->mouse.prev.y;
-            struct zr_vec2 window_size = zr_style_property(config, ZR_PROPERTY_SIZE);
+            struct zr_vec2 window_size = zr_get_property(ctx, ZR_PROPERTY_SIZE);
             int incursor = ZR_INBOX(prev_x,prev_y,scaler_x,scaler_y,scaler_w,scaler_h);
 
             if (zr_input_is_mouse_down(in, ZR_BUTTON_LEFT) && incursor) {
@@ -7544,8 +7605,8 @@ zr_panel_layout(const struct zr_context *ctx, struct zr_window *win,
     config = &ctx->style;
     out = &win->buffer;
     color = &config->colors[ZR_COLOR_WINDOW];
-    item_spacing = zr_style_property(config, ZR_PROPERTY_ITEM_SPACING);
-    panel_padding = zr_style_property(config, ZR_PROPERTY_PADDING);
+    item_spacing = zr_get_property(ctx, ZR_PROPERTY_ITEM_SPACING);
+    panel_padding = zr_get_property(ctx, ZR_PROPERTY_PADDING);
 
     /* update the current row and set the current row layout */
     layout->row.index = 0;
@@ -7865,7 +7926,7 @@ zr_panel_alloc_row(const struct zr_context *ctx, struct zr_window *win)
 {
     struct zr_layout *layout = win->layout;
     const struct zr_style *c = &ctx->style;
-    struct zr_vec2 spacing = zr_style_property(c, ZR_PROPERTY_ITEM_SPACING);
+    struct zr_vec2 spacing = zr_get_property(ctx, ZR_PROPERTY_ITEM_SPACING);
     const float row_height = layout->row.height - spacing.y;
     zr_panel_layout(ctx, win, row_height, layout->row.columns);
 }
@@ -7891,8 +7952,8 @@ zr_layout_widget_space(struct zr_rect *bounds, const struct zr_context *ctx,
 
     /* cache some configuration data */
     config = &ctx->style;
-    spacing = zr_style_property(config, ZR_PROPERTY_ITEM_SPACING);
-    padding = zr_style_property(config, ZR_PROPERTY_PADDING);
+    spacing = zr_get_property(ctx, ZR_PROPERTY_ITEM_SPACING);
+    padding = zr_get_property(ctx, ZR_PROPERTY_PADDING);
 
     /* calculate the useable panel space */
     panel_padding = 2 * padding.x;
@@ -8071,9 +8132,9 @@ zr_layout_push(struct zr_context *ctx, enum zr_layout_node_type type, const char
     out = &win->buffer;
     config = &ctx->style;
 
-    item_spacing = zr_style_property(config, ZR_PROPERTY_ITEM_SPACING);
-    item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
-    panel_padding = zr_style_property(config, ZR_PROPERTY_PADDING);
+    item_spacing = zr_get_property(ctx, ZR_PROPERTY_ITEM_SPACING);
+    item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
+    panel_padding = zr_get_property(ctx, ZR_PROPERTY_PADDING);
 
     /* calculate header bounds and draw background */
     zr_layout_row_dynamic(ctx, config->font.height + 2 * item_padding.y, 1);
@@ -8166,7 +8227,7 @@ zr_layout_pop(struct zr_context *ctx)
     win = ctx->current;
     layout = win->layout;
     config = &ctx->style;
-    panel_padding = zr_style_property(config, ZR_PROPERTY_PADDING);
+    panel_padding = zr_get_property(ctx, ZR_PROPERTY_PADDING);
     layout->at_x -= panel_padding.x;
     layout->width += 2 * panel_padding.x;
 }
@@ -8229,8 +8290,8 @@ zr_seperator(struct zr_context *ctx)
     layout = win->layout;
     out = &win->buffer;
     config = &ctx->style;
-    item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
-    item_spacing = zr_style_property(config, ZR_PROPERTY_ITEM_SPACING);
+    item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
+    item_spacing = zr_get_property(ctx, ZR_PROPERTY_ITEM_SPACING);
 
     bounds.h = 1;
     bounds.w = MAX(layout->width, 2 * item_spacing.x + 2 * item_padding.x);
@@ -8312,7 +8373,7 @@ zr_text_colored(struct zr_context *ctx, const char *str, zr_size len,
     win = ctx->current;
     zr_panel_alloc_space(&bounds, ctx);
     config = &ctx->style;
-    item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
+    item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
 
     text.padding.x = item_padding.x;
     text.padding.y = item_padding.y;
@@ -8340,7 +8401,7 @@ zr_text_wrap_colored(struct zr_context *ctx, const char *str,
     win = ctx->current;
     zr_panel_alloc_space(&bounds, ctx);
     config = &ctx->style;
-    item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
+    item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
 
     text.padding.x = item_padding.x;
     text.padding.y = item_padding.y;
@@ -8394,7 +8455,7 @@ zr_image(struct zr_context *ctx, struct zr_image img)
         return;
 
     config = &ctx->style;
-    item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
+    item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
     bounds.x += item_padding.x;
     bounds.y += item_padding.y;
     bounds.w -= 2 * item_padding.x;
@@ -8403,11 +8464,12 @@ zr_image(struct zr_context *ctx, struct zr_image img)
 }
 
 static void
-zr_fill_button(const struct zr_style *config, struct zr_button *button)
+zr_fill_button(const struct zr_context *ctx, struct zr_button *button)
 {
     struct zr_vec2 item_padding;
+    const struct zr_style *config = &ctx->style;
     zr_zero(button, sizeof(*button));
-    item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
+    item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
     button->rounding = config->rounding[ZR_ROUNDING_BUTTON];
     button->normal = config->colors[ZR_COLOR_BUTTON];
     button->hover = config->colors[ZR_COLOR_BUTTON_HOVER];
@@ -8432,7 +8494,7 @@ zr_button(struct zr_button *button, struct zr_rect *bounds,
     if (!state) return state;
     zr_zero(button, sizeof(*button));
     config = &ctx->style;
-    zr_fill_button(config, button);
+    zr_fill_button(ctx, button);
     return state;
 }
 
@@ -8657,7 +8719,7 @@ zr_select(struct zr_context *ctx, const char *str,
     win = ctx->current;
     zr_panel_alloc_space(&bounds, ctx);
     config = &ctx->style;
-    item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
+    item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
 
     background = (!value) ? config->colors[ZR_COLOR_WINDOW]:
         config->colors[ZR_COLOR_SELECTABLE];
@@ -8702,7 +8764,7 @@ zr_toggle_base(struct zr_toggle *toggle, struct zr_rect *bounds,
     if (!state) return state;
 
     config = &ctx->style;
-    item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
+    item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
     toggle->rounding = 0;
     toggle->padding.x = item_padding.x;
     toggle->padding.y = item_padding.y;
@@ -8828,7 +8890,7 @@ zr_slider_float(struct zr_context *ctx, float min_value, float *value,
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : &ctx->input;
 
     config = &ctx->style;
-    item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
+    item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
     slider.padding.x = item_padding.x;
     slider.padding.y = item_padding.y;
     slider.bg = config->colors[ZR_COLOR_SLIDER];
@@ -8877,7 +8939,7 @@ zr_progress(struct zr_context *ctx, zr_size *cur_value, zr_size max_value,
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : &ctx->input;
 
     config = &ctx->style;
-    item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
+    item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
     prog.rounding = config->rounding[ZR_ROUNDING_PROGRESS];
     prog.padding.x = item_padding.x;
     prog.padding.y = item_padding.y;
@@ -8901,7 +8963,7 @@ zr_edit_base(struct zr_rect *bounds, struct zr_edit *field,
     if (!state) return state;
 
     config = &ctx->style;
-    item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
+    item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
     field->border_size = 1;
     field->scrollbar_width = config->properties[ZR_PROPERTY_SCROLLBAR_SIZE].x;
     field->rounding = config->rounding[ZR_ROUNDING_INPUT];
@@ -9116,7 +9178,7 @@ zr_property(struct zr_context *ctx, const char *name,
 
     /* execute property widget */
     config = &ctx->style;
-    item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
+    item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
     prop.border_size = 1;
     prop.rounding = config->rounding[ZR_ROUNDING_PROPERTY];
     prop.padding = item_padding;
@@ -9205,7 +9267,7 @@ zr_graph_begin(struct zr_context *ctx, enum zr_graph_type type,
     /* draw graph background */
     config = &ctx->style;
     out = &win->buffer;
-    item_padding = zr_style_property(config, ZR_PROPERTY_ITEM_PADDING);
+    item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
     color = (type == ZR_GRAPH_LINES) ?
         config->colors[ZR_COLOR_PLOT]: config->colors[ZR_COLOR_HISTO];
     zr_draw_rect(out, bounds, config->rounding[ZR_ROUNDING_GRAPH], color);
@@ -10013,7 +10075,7 @@ zr_combo_begin_text(struct zr_context *ctx, struct zr_layout *layout,
     if (!zr_widget(&header, ctx))
         return 0;
 
-    item_padding = zr_style_property(&ctx->style, ZR_PROPERTY_ITEM_PADDING);
+    item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
     if (zr_button_behavior(&state, header, &ctx->input, ZR_BUTTON_DEFAULT))
         is_active = zr_true;
 
@@ -10066,7 +10128,7 @@ zr_combo_begin_color(struct zr_context *ctx, struct zr_layout *layout,
     if (!zr_widget(&header, ctx))
         return 0;
 
-    item_padding = zr_style_property(&ctx->style, ZR_PROPERTY_ITEM_PADDING);
+    item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
     if (zr_button_behavior(&state, header, &ctx->input, ZR_BUTTON_DEFAULT))
         is_active = !is_active;
 
@@ -10117,7 +10179,7 @@ zr_combo_begin_image(struct zr_context *ctx, struct zr_layout *layout,
     if (!zr_widget(&header, ctx))
         return 0;
 
-    item_padding = zr_style_property(&ctx->style, ZR_PROPERTY_ITEM_PADDING);
+    item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
     if (zr_button_behavior(&state, header, &ctx->input, ZR_BUTTON_DEFAULT))
         is_active = !is_active;
 
@@ -10168,7 +10230,7 @@ zr_combo_begin_icon(struct zr_context *ctx, struct zr_layout *layout, const char
     if (!zr_widget(&header, ctx))
         return 0;
 
-    item_padding = zr_style_property(&ctx->style, ZR_PROPERTY_ITEM_PADDING);
+    item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
     if (zr_button_behavior(&state, header, &ctx->input, ZR_BUTTON_DEFAULT))
         is_active = !is_active;
 

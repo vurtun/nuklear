@@ -119,40 +119,40 @@ font_get_width(zr_handle handle, float height, const char *text, size_t len)
 }
 
 static void
-input_key(struct zr_input *in, ALLEGRO_EVENT *evt, int down)
+input_key(struct zr_context *ctx, ALLEGRO_EVENT *evt, int down)
 {
     int sym = evt->keyboard.keycode;
     if (sym == ALLEGRO_KEY_RSHIFT || sym == ALLEGRO_KEY_LSHIFT)
-        zr_input_key(in, ZR_KEY_SHIFT, down);
+        zr_input_key(ctx, ZR_KEY_SHIFT, down);
     else if (sym == ALLEGRO_KEY_DELETE)
-        zr_input_key(in, ZR_KEY_DEL, down);
+        zr_input_key(ctx, ZR_KEY_DEL, down);
     else if (sym == ALLEGRO_KEY_ENTER)
-        zr_input_key(in, ZR_KEY_ENTER, down);
+        zr_input_key(ctx, ZR_KEY_ENTER, down);
     else if (sym == ALLEGRO_KEY_TAB)
-        zr_input_key(in, ZR_KEY_TAB, down);
+        zr_input_key(ctx, ZR_KEY_TAB, down);
     else if (sym == ALLEGRO_KEY_BACKSPACE)
-        zr_input_key(in, ZR_KEY_BACKSPACE, down);
+        zr_input_key(ctx, ZR_KEY_BACKSPACE, down);
     else if (sym == ALLEGRO_KEY_LEFT)
-        zr_input_key(in, ZR_KEY_LEFT, down);
+        zr_input_key(ctx, ZR_KEY_LEFT, down);
     else if (sym == ALLEGRO_KEY_RIGHT)
-        zr_input_key(in, ZR_KEY_RIGHT, down);
+        zr_input_key(ctx, ZR_KEY_RIGHT, down);
     else if (sym == ALLEGRO_KEY_C)
-        zr_input_key(in, ZR_KEY_COPY, down && evt->keyboard.modifiers & ALLEGRO_KEYMOD_CTRL);
+        zr_input_key(ctx, ZR_KEY_COPY, down && evt->keyboard.modifiers & ALLEGRO_KEYMOD_CTRL);
     else if (sym == ALLEGRO_KEY_V)
-        zr_input_key(in, ZR_KEY_PASTE, down && evt->keyboard.modifiers & ALLEGRO_KEYMOD_CTRL);
+        zr_input_key(ctx, ZR_KEY_PASTE, down && evt->keyboard.modifiers & ALLEGRO_KEYMOD_CTRL);
     else if (sym == ALLEGRO_KEY_X)
-        zr_input_key(in, ZR_KEY_CUT, down && evt->keyboard.modifiers & ALLEGRO_KEYMOD_CTRL);
+        zr_input_key(ctx, ZR_KEY_CUT, down && evt->keyboard.modifiers & ALLEGRO_KEYMOD_CTRL);
 }
 
 static void
-input_button(struct zr_input *in, ALLEGRO_EVENT *evt, int down)
+input_button(struct zr_context *ctx, ALLEGRO_EVENT *evt, int down)
 {
     const int x = evt->mouse.x;
     const int y = evt->mouse.y;
     if (evt->mouse.button == 1)
-        zr_input_button(in, ZR_BUTTON_LEFT, x, y, down);
+        zr_input_button(ctx, ZR_BUTTON_LEFT, x, y, down);
     if (evt->mouse.button == 2)
-        zr_input_button(in, ZR_BUTTON_RIGHT, x, y, down);
+        zr_input_button(ctx, ZR_BUTTON_RIGHT, x, y, down);
 }
 
 static void* mem_alloc(zr_handle unused, size_t size)
@@ -211,26 +211,26 @@ main(int argc, char *argv[])
     while (running) {
         /* Input */
         ALLEGRO_EVENT evt;
-        zr_input_begin(&gui.ctx.input);
+        zr_input_begin(&gui.ctx);
         while (al_get_next_event(queue, &evt)) {
             if (evt.type == ALLEGRO_EVENT_DISPLAY_CLOSE) goto cleanup;
             else if (evt.type == ALLEGRO_EVENT_KEY_UP && evt.keyboard.display == display)
-                input_key(&gui.ctx.input, &evt, zr_false);
+                input_key(&gui.ctx, &evt, zr_false);
             else if (evt.type == ALLEGRO_EVENT_KEY_DOWN && evt.keyboard.display == display)
-                input_key(&gui.ctx.input, &evt, zr_true);
+                input_key(&gui.ctx, &evt, zr_true);
             else if (evt.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
-                input_button(&gui.ctx.input, &evt, zr_true);
+                input_button(&gui.ctx, &evt, zr_true);
             else if (evt.type == ALLEGRO_EVENT_MOUSE_BUTTON_UP)
-                input_button(&gui.ctx.input, &evt, zr_false);
+                input_button(&gui.ctx, &evt, zr_false);
             else if (evt.type == ALLEGRO_EVENT_MOUSE_AXES) {
-                zr_input_motion(&gui.ctx.input, evt.mouse.x, evt.mouse.y);
+                zr_input_motion(&gui.ctx, evt.mouse.x, evt.mouse.y);
             } else if (evt.type == ALLEGRO_EVENT_KEY_CHAR) {
                 if (evt.keyboard.display == display)
                     if (evt.keyboard.unichar > 0 && evt.keyboard.unichar < 0x10000)
-                        zr_input_unicode(&gui.ctx.input, (zr_rune)evt.keyboard.unichar);
+                        zr_input_unicode(&gui.ctx, (zr_rune)evt.keyboard.unichar);
             }
         }
-        zr_input_end(&gui.ctx.input);
+        zr_input_end(&gui.ctx);
 
         /* GUI */
         width = al_get_display_width(display);

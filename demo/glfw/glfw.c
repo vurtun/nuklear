@@ -380,25 +380,25 @@ input_key(GLFWwindow *window, int key, int scancode, int action, int mods)
     UNUSED(window);
     UNUSED(scancode);
     if (key == GLFW_KEY_RIGHT_SHIFT || key == GLFW_KEY_LEFT_SHIFT)
-        zr_input_key(&gui.ctx.input, ZR_KEY_SHIFT, down);
+        zr_input_key(&gui.ctx, ZR_KEY_SHIFT, down);
     else if (key == GLFW_KEY_DELETE)
-        zr_input_key(&gui.ctx.input, ZR_KEY_DEL, down);
+        zr_input_key(&gui.ctx, ZR_KEY_DEL, down);
     else if (key == GLFW_KEY_ENTER)
-        zr_input_key(&gui.ctx.input, ZR_KEY_ENTER, down);
+        zr_input_key(&gui.ctx, ZR_KEY_ENTER, down);
     else if (key == GLFW_KEY_TAB)
-        zr_input_key(&gui.ctx.input, ZR_KEY_TAB, down);
+        zr_input_key(&gui.ctx, ZR_KEY_TAB, down);
     else if (key == GLFW_KEY_BACKSPACE)
-        zr_input_key(&gui.ctx.input, ZR_KEY_BACKSPACE, down);
+        zr_input_key(&gui.ctx, ZR_KEY_BACKSPACE, down);
     else if (key == GLFW_KEY_LEFT)
-        zr_input_key(&gui.ctx.input, ZR_KEY_LEFT, down);
+        zr_input_key(&gui.ctx, ZR_KEY_LEFT, down);
     else if (key == GLFW_KEY_RIGHT)
-        zr_input_key(&gui.ctx.input, ZR_KEY_RIGHT, down);
+        zr_input_key(&gui.ctx, ZR_KEY_RIGHT, down);
     else if (key == GLFW_KEY_C)
-        zr_input_key(&gui.ctx.input, ZR_KEY_COPY, down && (mods & GLFW_MOD_CONTROL));
+        zr_input_key(&gui.ctx, ZR_KEY_COPY, down && (mods & GLFW_MOD_CONTROL));
     else if (key == GLFW_KEY_V)
-        zr_input_key(&gui.ctx.input, ZR_KEY_PASTE, down && (mods & GLFW_MOD_CONTROL));
+        zr_input_key(&gui.ctx, ZR_KEY_PASTE, down && (mods & GLFW_MOD_CONTROL));
     else if (key == GLFW_KEY_X)
-        zr_input_key(&gui.ctx.input, ZR_KEY_CUT, down && (mods & GLFW_MOD_CONTROL));
+        zr_input_key(&gui.ctx, ZR_KEY_CUT, down && (mods & GLFW_MOD_CONTROL));
 }
 
 static void
@@ -409,28 +409,27 @@ input_motion(GLFWwindow *window, double xpos, double ypos)
     UNUSED(window);
     mouse_pos_x = x;
     mouse_pos_y = y;
-    zr_input_motion(&gui.ctx.input, x, y);
+    zr_input_motion(&gui.ctx, x, y);
 }
 
 static void
 input_button(GLFWwindow *window, int button, int action, int mods)
 {
-    struct zr_input *in = &gui.ctx.input;
     int x = mouse_pos_x;
     int y = mouse_pos_y;
     UNUSED(window);
     UNUSED(mods);
     if (button == 0)
-        zr_input_button(in, ZR_BUTTON_LEFT, x, y, action == GLFW_PRESS);
+        zr_input_button(&gui.ctx, ZR_BUTTON_LEFT, x, y, action == GLFW_PRESS);
     if (button == 1)
-        zr_input_button(in, ZR_BUTTON_RIGHT, x, y, action == GLFW_PRESS);
+        zr_input_button(&gui.ctx, ZR_BUTTON_RIGHT, x, y, action == GLFW_PRESS);
 }
 
 static void
 input_text(GLFWwindow *window, unsigned int codepoint)
 {
     UNUSED(window);
-    zr_input_unicode(&gui.ctx.input, codepoint);
+    zr_input_unicode(&gui.ctx, codepoint);
 }
 
 static void
@@ -438,7 +437,7 @@ input_scroll(GLFWwindow *window, double xoffset, double yoffset)
 {
     UNUSED(window);
     UNUSED(xoffset);
-    zr_input_scroll(&gui.ctx.input, (float)yoffset);
+    zr_input_scroll(&gui.ctx, (float)yoffset);
 }
 
 static void* mem_alloc(zr_handle unused, size_t size)
@@ -505,9 +504,9 @@ main(int argc, char *argv[])
     device_init(&device);
     while (!glfwWindowShouldClose(win) && running) {
         /* Input */
-        zr_input_begin(&gui.ctx.input);
+        zr_input_begin(&gui.ctx);
         glfwPollEvents();
-        zr_input_end(&gui.ctx.input);
+        zr_input_end(&gui.ctx);
 
         /* GUI */
         glfwGetWindowSize(win, &width, &height);

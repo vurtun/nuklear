@@ -208,7 +208,7 @@ node_editor_draw(struct zr_context *ctx, struct node_editor *nodedit)
         }
 
         /* execute each node as a moveable group */
-        zr_style_push_color(&ctx->style, ZR_COLOR_WINDOW, zr_rgb(48, 48, 48));
+        zr_push_color(ctx, ZR_COLOR_WINDOW, zr_rgb(48, 48, 48));
         while (it) {
 
             /* calculate scrolled node window position and size */
@@ -325,7 +325,7 @@ node_editor_draw(struct zr_context *ctx, struct node_editor *nodedit)
             zr_draw_curve(canvas, l0.x, l0.y, l0.x + 50.0f, l0.y,
                 l1.x - 50.0f, l1.y, l1.x, l1.y, zr_rgb(100, 100, 100));
         }
-        zr_style_pop_color(&ctx->style);
+        zr_pop_color(ctx);
 
         if (updated) {
             /* reshuffle nodes to have last recently selected node on top */
@@ -510,57 +510,57 @@ draw(NVGcontext *nvg, struct zr_context *ctx, int width, int height)
 }
 
 static void
-key(struct zr_input *in, SDL_Event *evt, int down)
+key(struct zr_context *ctx, SDL_Event *evt, int down)
 {
     const Uint8* state = SDL_GetKeyboardState(NULL);
     SDL_Keycode sym = evt->key.keysym.sym;
     if (sym == SDLK_RSHIFT || sym == SDLK_LSHIFT)
-        zr_input_key(in, ZR_KEY_SHIFT, down);
+        zr_input_key(ctx, ZR_KEY_SHIFT, down);
     else if (sym == SDLK_DELETE)
-        zr_input_key(in, ZR_KEY_DEL, down);
+        zr_input_key(ctx, ZR_KEY_DEL, down);
     else if (sym == SDLK_RETURN)
-        zr_input_key(in, ZR_KEY_ENTER, down);
+        zr_input_key(ctx, ZR_KEY_ENTER, down);
     else if (sym == SDLK_BACKSPACE)
-        zr_input_key(in, ZR_KEY_BACKSPACE, down);
+        zr_input_key(ctx, ZR_KEY_BACKSPACE, down);
     else if (sym == SDLK_LEFT)
-        zr_input_key(in, ZR_KEY_LEFT, down);
+        zr_input_key(ctx, ZR_KEY_LEFT, down);
     else if (sym == SDLK_RIGHT)
-        zr_input_key(in, ZR_KEY_RIGHT, down);
+        zr_input_key(ctx, ZR_KEY_RIGHT, down);
     else if (sym == SDLK_c)
-        zr_input_key(in, ZR_KEY_COPY, down && state[SDL_SCANCODE_LCTRL]);
+        zr_input_key(ctx, ZR_KEY_COPY, down && state[SDL_SCANCODE_LCTRL]);
     else if (sym == SDLK_v)
-        zr_input_key(in, ZR_KEY_PASTE, down && state[SDL_SCANCODE_LCTRL]);
+        zr_input_key(ctx, ZR_KEY_PASTE, down && state[SDL_SCANCODE_LCTRL]);
     else if (sym == SDLK_x)
-        zr_input_key(in, ZR_KEY_CUT, down && state[SDL_SCANCODE_LCTRL]);
+        zr_input_key(ctx, ZR_KEY_CUT, down && state[SDL_SCANCODE_LCTRL]);
 }
 
 static void
-motion(struct zr_input *in, SDL_Event *evt)
+motion(struct zr_context *ctx, SDL_Event *evt)
 {
     const int x = evt->motion.x;
     const int y = evt->motion.y;
-    zr_input_motion(in, x, y);
+    zr_input_motion(ctx, x, y);
 }
 
 static void
-btn(struct zr_input *in, SDL_Event *evt, int down)
+btn(struct zr_context *ctx, SDL_Event *evt, int down)
 {
     const int x = evt->button.x;
     const int y = evt->button.y;
     if (evt->button.button == SDL_BUTTON_LEFT)
-        zr_input_button(in, ZR_BUTTON_LEFT, x, y, down);
+        zr_input_button(ctx, ZR_BUTTON_LEFT, x, y, down);
     else if (evt->button.button == SDL_BUTTON_RIGHT)
-        zr_input_button(in, ZR_BUTTON_RIGHT, x, y, down);
+        zr_input_button(ctx, ZR_BUTTON_RIGHT, x, y, down);
     else if (evt->button.button == SDL_BUTTON_MIDDLE)
-        zr_input_button(in, ZR_BUTTON_MIDDLE, x, y, down);
+        zr_input_button(ctx, ZR_BUTTON_MIDDLE, x, y, down);
 }
 
 static void
-text(struct zr_input *in, SDL_Event *evt)
+text(struct zr_context *ctx, SDL_Event *evt)
 {
     zr_glyph glyph;
     memcpy(glyph, evt->text.text, ZR_UTF_SIZE);
-    zr_input_glyph(in, glyph);
+    zr_input_glyph(ctx, glyph);
 }
 
 static void
@@ -646,7 +646,7 @@ main(int argc, char *argv[])
         SDL_Event evt;
         started = SDL_GetTicks();
 
-        zr_input_begin(&ctx.input);
+        zr_input_begin(&ctx);
         if (!poll) {
             ret = SDL_WaitEvent(&evt);
             poll = 1;
@@ -654,16 +654,16 @@ main(int argc, char *argv[])
         while (ret) {
             if (evt.type == SDL_WINDOWEVENT) resize(&evt);
             else if (evt.type == SDL_QUIT) goto cleanup;
-            else if (evt.type == SDL_KEYUP) key(&ctx.input, &evt, zr_false);
-            else if (evt.type == SDL_KEYDOWN) key(&ctx.input, &evt, zr_true);
-            else if (evt.type == SDL_MOUSEBUTTONDOWN) btn(&ctx.input, &evt, zr_true);
-            else if (evt.type == SDL_MOUSEBUTTONUP) btn(&ctx.input, &evt, zr_false);
-            else if (evt.type == SDL_MOUSEMOTION) motion(&ctx.input, &evt);
-            else if (evt.type == SDL_TEXTINPUT) text(&ctx.input, &evt);
-            else if (evt.type == SDL_MOUSEWHEEL) zr_input_scroll(&ctx.input, evt.wheel.y);
+            else if (evt.type == SDL_KEYUP) key(&ctx, &evt, zr_false);
+            else if (evt.type == SDL_KEYDOWN) key(&ctx, &evt, zr_true);
+            else if (evt.type == SDL_MOUSEBUTTONDOWN) btn(&ctx, &evt, zr_true);
+            else if (evt.type == SDL_MOUSEBUTTONUP) btn(&ctx, &evt, zr_false);
+            else if (evt.type == SDL_MOUSEMOTION) motion(&ctx, &evt);
+            else if (evt.type == SDL_TEXTINPUT) text(&ctx, &evt);
+            else if (evt.type == SDL_MOUSEWHEEL) zr_input_scroll(&ctx, evt.wheel.y);
             ret = SDL_PollEvent(&evt);
         }
-        zr_input_end(&ctx.input);
+        zr_input_end(&ctx);
 
         {
             int incursor;

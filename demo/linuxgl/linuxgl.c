@@ -544,60 +544,60 @@ device_draw(struct device *dev, struct zr_context *ctx, int width, int height,
 
 
 static void
-input_key(struct XWindow *xw, struct zr_input *in, XEvent *evt, int down)
+input_key(struct XWindow *xw, struct zr_context *ctx, XEvent *evt, int down)
 {
     int ret;
     KeySym *code = XGetKeyboardMapping(xw->dpy, (KeyCode)evt->xkey.keycode, 1, &ret);
     if (*code == XK_Shift_L || *code == XK_Shift_R)
-        zr_input_key(in, ZR_KEY_SHIFT, down);
+        zr_input_key(ctx, ZR_KEY_SHIFT, down);
     else if (*code == XK_Delete)
-        zr_input_key(in, ZR_KEY_DEL, down);
+        zr_input_key(ctx, ZR_KEY_DEL, down);
     else if (*code == XK_Return)
-        zr_input_key(in, ZR_KEY_ENTER, down);
+        zr_input_key(ctx, ZR_KEY_ENTER, down);
     else if (*code == XK_Tab)
-        zr_input_key(in, ZR_KEY_TAB, down);
+        zr_input_key(ctx, ZR_KEY_TAB, down);
     else if (*code == XK_space && !down)
-        zr_input_char(in, ' ');
+        zr_input_char(ctx, ' ');
     else if (*code == XK_Left)
-        zr_input_key(in, ZR_KEY_LEFT, down);
+        zr_input_key(ctx, ZR_KEY_LEFT, down);
     else if (*code == XK_Right)
-        zr_input_key(in, ZR_KEY_RIGHT, down);
+        zr_input_key(ctx, ZR_KEY_RIGHT, down);
     else if (*code == XK_BackSpace)
-        zr_input_key(in, ZR_KEY_BACKSPACE, down);
+        zr_input_key(ctx, ZR_KEY_BACKSPACE, down);
     else if (*code > 32 && *code < 128) {
         if (*code == 'c')
-            zr_input_key(in, ZR_KEY_COPY, down && (evt->xkey.state & ControlMask));
+            zr_input_key(ctx, ZR_KEY_COPY, down && (evt->xkey.state & ControlMask));
         else if (*code == 'v')
-            zr_input_key(in, ZR_KEY_PASTE, down && (evt->xkey.state & ControlMask));
+            zr_input_key(ctx, ZR_KEY_PASTE, down && (evt->xkey.state & ControlMask));
         else if (*code == 'x')
-            zr_input_key(in, ZR_KEY_CUT, down && (evt->xkey.state & ControlMask));
+            zr_input_key(ctx, ZR_KEY_CUT, down && (evt->xkey.state & ControlMask));
         if (!down)
-            zr_input_unicode(in, (zr_rune)*code);
+            zr_input_unicode(ctx, (zr_rune)*code);
     }
     XFree(code);
 }
 
 static void
-input_motion(struct zr_input *in, XEvent *evt)
+input_motion(struct zr_context *ctx, XEvent *evt)
 {
     const int x = evt->xmotion.x;
     const int y = evt->xmotion.y;
-    zr_input_motion(in, x, y);
+    zr_input_motion(ctx, x, y);
 }
 
 static void
-input_button(struct zr_input *in, XEvent *evt, int down)
+input_button(struct zr_context *ctx, XEvent *evt, int down)
 {
     const int x = evt->xbutton.x;
     const int y = evt->xbutton.y;
     if (evt->xbutton.button == Button1)
-        zr_input_button(in, ZR_BUTTON_LEFT, x, y, down);
+        zr_input_button(ctx, ZR_BUTTON_LEFT, x, y, down);
     else if (evt->xbutton.button == Button3)
-        zr_input_button(in, ZR_BUTTON_RIGHT, x, y, down);
+        zr_input_button(ctx, ZR_BUTTON_RIGHT, x, y, down);
     else if (evt->xbutton.button == Button4)
-        zr_input_scroll(in, 1.0f);
+        zr_input_scroll(ctx, 1.0f);
     else if (evt->xbutton.button == Button5)
-        zr_input_scroll(in, -1.0f);
+        zr_input_scroll(ctx, -1.0f);
 }
 
 static void* mem_alloc(zr_handle unused, size_t size)
@@ -862,25 +862,25 @@ int main(int argc, char **argv)
     while (running) {
         /* input */
         XEvent evt;
-        zr_input_begin(&gui.ctx.input);
+        zr_input_begin(&gui.ctx);
         while (XCheckWindowEvent(win.dpy, win.win, win.swa.event_mask, &evt)) {
             if (evt.type == KeyPress)
-                input_key(&win, &gui.ctx.input, &evt, zr_true);
+                input_key(&win, &gui.ctx, &evt, zr_true);
             else if (evt.type == KeyRelease)
-                input_key(&win, &gui.ctx.input, &evt, zr_false);
+                input_key(&win, &gui.ctx, &evt, zr_false);
             else if (evt.type == ButtonPress)
-                input_button(&gui.ctx.input, &evt, zr_true);
+                input_button(&gui.ctx, &evt, zr_true);
             else if (evt.type == ButtonRelease)
-                input_button(&gui.ctx.input, &evt, zr_false);
+                input_button(&gui.ctx, &evt, zr_false);
             else if (evt.type == MotionNotify)
-                input_motion(&gui.ctx.input, &evt);
+                input_motion(&gui.ctx, &evt);
             else if (evt.type == Expose || evt.type == ConfigureNotify) {
                 XGetWindowAttributes(win.dpy, win.win, &win.attr);
                 win.width = win.attr.width;
                 win.height = win.attr.height;
             }
         }
-        zr_input_end(&gui.ctx.input);
+        zr_input_end(&gui.ctx);
 
         /* GUI */
         XGetWindowAttributes(win.dpy, win.win, &win.attr);

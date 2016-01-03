@@ -90,8 +90,8 @@ die(const char *fmt, ...)
 static void
 ui_header(struct zr_context *ctx, const char *title)
 {
-    zr_style_reset_font_height(&ctx->style);
-    zr_style_push_font_height(&ctx->style, 18);
+    zr_reset_font_height(ctx);
+    zr_push_font_height(ctx, 18);
     zr_layout_row_dynamic(ctx, 20, 1);
     zr_label(ctx, title, ZR_TEXT_LEFT);
 }
@@ -100,8 +100,8 @@ static void
 ui_widget(struct zr_context *ctx, float height, float font_height)
 {
     static const float ratio[] = {0.15f, 0.85f};
-    zr_style_reset_font_height(&ctx->style);
-    zr_style_push_font_height(&ctx->style, font_height);
+    zr_reset_font_height(ctx);
+    zr_push_font_height(ctx, font_height);
     zr_layout_row(ctx, ZR_DYNAMIC, height, 2, ratio);
     zr_spacing(ctx, 1);
 }
@@ -110,8 +110,8 @@ static void
 ui_widget_centered(struct zr_context *ctx, float height, float font_height)
 {
     static const float ratio[] = {0.15f, 0.50f, 0.35f};
-    zr_style_reset_font_height(&ctx->style);
-    zr_style_push_font_height(&ctx->style, font_height);
+    zr_reset_font_height(ctx);
+    zr_push_font_height(ctx, font_height);
     zr_layout_row(ctx, ZR_DYNAMIC, height, 3, ratio);
     zr_spacing(ctx, 1);
 }
@@ -128,9 +128,9 @@ ui_piemenu(struct zr_context *ctx,
 
     /* hide popup background */
     struct zr_color border;
-    zr_style_push_color(&ctx->style, ZR_COLOR_WINDOW, zr_rgba(0,0,0,0));
+    zr_push_color(ctx, ZR_COLOR_WINDOW, zr_rgba(0,0,0,0));
     border = ctx->style.colors[ZR_COLOR_BORDER];
-    zr_style_push_color(&ctx->style, ZR_COLOR_BORDER, zr_rgba(0,0,0,0));
+    zr_push_color(ctx, ZR_COLOR_BORDER, zr_rgba(0,0,0,0));
     if (ctx->current != ctx->active) return 0;
 
     /* pie menu popup */
@@ -213,8 +213,8 @@ ui_piemenu(struct zr_context *ctx,
     zr_layout_space_end(ctx);
     zr_popup_end(ctx);
 
-    zr_style_reset_colors(&ctx->style);
-    zr_style_reset_properties(&ctx->style);
+    zr_reset_colors(ctx);
+    zr_reset_properties(ctx);
 
     if (!zr_input_is_mouse_down(&ctx->input, ZR_BUTTON_RIGHT))
         return active_item;
@@ -611,57 +611,57 @@ draw(NVGcontext *nvg, struct zr_context *ctx, int width, int height)
 
 
 static void
-key(struct zr_input *in, SDL_Event *evt, int down)
+key(struct zr_context *ctx, SDL_Event *evt, int down)
 {
     const Uint8* state = SDL_GetKeyboardState(NULL);
     SDL_Keycode sym = evt->key.keysym.sym;
     if (sym == SDLK_RSHIFT || sym == SDLK_LSHIFT)
-        zr_input_key(in, ZR_KEY_SHIFT, down);
+        zr_input_key(ctx, ZR_KEY_SHIFT, down);
     else if (sym == SDLK_DELETE)
-        zr_input_key(in, ZR_KEY_DEL, down);
+        zr_input_key(ctx, ZR_KEY_DEL, down);
     else if (sym == SDLK_RETURN)
-        zr_input_key(in, ZR_KEY_ENTER, down);
+        zr_input_key(ctx, ZR_KEY_ENTER, down);
     else if (sym == SDLK_BACKSPACE)
-        zr_input_key(in, ZR_KEY_BACKSPACE, down);
+        zr_input_key(ctx, ZR_KEY_BACKSPACE, down);
     else if (sym == SDLK_LEFT)
-        zr_input_key(in, ZR_KEY_LEFT, down);
+        zr_input_key(ctx, ZR_KEY_LEFT, down);
     else if (sym == SDLK_RIGHT)
-        zr_input_key(in, ZR_KEY_RIGHT, down);
+        zr_input_key(ctx, ZR_KEY_RIGHT, down);
     else if (sym == SDLK_c)
-        zr_input_key(in, ZR_KEY_COPY, down && state[SDL_SCANCODE_LCTRL]);
+        zr_input_key(ctx, ZR_KEY_COPY, down && state[SDL_SCANCODE_LCTRL]);
     else if (sym == SDLK_v)
-        zr_input_key(in, ZR_KEY_PASTE, down && state[SDL_SCANCODE_LCTRL]);
+        zr_input_key(ctx, ZR_KEY_PASTE, down && state[SDL_SCANCODE_LCTRL]);
     else if (sym == SDLK_x)
-        zr_input_key(in, ZR_KEY_CUT, down && state[SDL_SCANCODE_LCTRL]);
+        zr_input_key(ctx, ZR_KEY_CUT, down && state[SDL_SCANCODE_LCTRL]);
 }
 
 static void
-motion(struct zr_input *in, SDL_Event *evt)
+motion(struct zr_context *ctx, SDL_Event *evt)
 {
     const int x = evt->motion.x;
     const int y = evt->motion.y;
-    zr_input_motion(in, x, y);
+    zr_input_motion(ctx, x, y);
 }
 
 static void
-btn(struct zr_input *in, SDL_Event *evt, int down)
+btn(struct zr_context *ctx, SDL_Event *evt, int down)
 {
     const int x = evt->button.x;
     const int y = evt->button.y;
     if (evt->button.button == SDL_BUTTON_LEFT)
-        zr_input_button(in, ZR_BUTTON_LEFT, x, y, down);
+        zr_input_button(ctx, ZR_BUTTON_LEFT, x, y, down);
     else if (evt->button.button == SDL_BUTTON_RIGHT)
-        zr_input_button(in, ZR_BUTTON_RIGHT, x, y, down);
+        zr_input_button(ctx, ZR_BUTTON_RIGHT, x, y, down);
     else if (evt->button.button == SDL_BUTTON_MIDDLE)
-        zr_input_button(in, ZR_BUTTON_MIDDLE, x, y, down);
+        zr_input_button(ctx, ZR_BUTTON_MIDDLE, x, y, down);
 }
 
 static void
-text(struct zr_input *in, SDL_Event *evt)
+text(struct zr_context *ctx, SDL_Event *evt)
 {
     zr_glyph glyph;
     memcpy(glyph, evt->text.text, ZR_UTF_SIZE);
-    zr_input_glyph(in, glyph);
+    zr_input_glyph(ctx, glyph);
 }
 
 int
@@ -765,7 +765,7 @@ main(int argc, char *argv[])
         int ret;
         SDL_Event evt;
         started = SDL_GetTicks();
-        zr_input_begin(&ctx.input);
+        zr_input_begin(&ctx);
 
         if (!poll) {
             ret = SDL_WaitEvent(&evt);
@@ -778,22 +778,22 @@ main(int argc, char *argv[])
                 glViewport(0, 0, evt.window.data1, evt.window.data2);
             else if (evt.type == SDL_QUIT) goto cleanup;
             else if (evt.type == SDL_KEYUP)
-                key(&ctx.input, &evt, zr_false);
+                key(&ctx, &evt, zr_false);
             else if (evt.type == SDL_KEYDOWN)
-                key(&ctx.input, &evt, zr_true);
+                key(&ctx, &evt, zr_true);
             else if (evt.type == SDL_MOUSEBUTTONDOWN)
-                btn(&ctx.input, &evt, zr_true);
+                btn(&ctx, &evt, zr_true);
             else if (evt.type == SDL_MOUSEBUTTONUP)
-                btn(&ctx.input, &evt, zr_false);
+                btn(&ctx, &evt, zr_false);
             else if (evt.type == SDL_MOUSEMOTION)
-                motion(&ctx.input, &evt);
+                motion(&ctx, &evt);
             else if (evt.type == SDL_TEXTINPUT)
-                text(&ctx.input, &evt);
+                text(&ctx, &evt);
             else if (evt.type == SDL_MOUSEWHEEL)
-                zr_input_scroll(&ctx.input, evt.wheel.y);
+                zr_input_scroll(&ctx, evt.wheel.y);
             ret = SDL_PollEvent(&evt);
         }
-        zr_input_end(&ctx.input);
+        zr_input_end(&ctx);
 
         /* GUI */
         button_demo(&ctx, &icons);
