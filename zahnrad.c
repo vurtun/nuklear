@@ -6651,11 +6651,28 @@ zr_begin(struct zr_context *ctx, struct zr_layout *layout,
     /* overlapping window */
     if (!(win->flags & ZR_WINDOW_SUB) && !(win->flags & ZR_WINDOW_HIDDEN))
     {
-        int inpanel;
+        int inpanel, ishovered;
+        const struct zr_window *iter = win;
+
         zr_start(ctx, win);
         inpanel = zr_input_mouse_clicked(&ctx->input, ZR_BUTTON_LEFT, win->bounds);
-        if (inpanel && (win != ctx->end)) {
-            const struct zr_window *iter = win->next;
+        ishovered = zr_input_is_mouse_hovering_rect(&ctx->input, win->bounds);
+
+        /* activate window if hovered and no other window is overlapping this window*/
+        if ((win != ctx->end) && ishovered) {
+            iter = win->next;
+            while (iter) {
+                if (ZR_INTERSECT(win->bounds.x, win->bounds.y, win->bounds.w, win->bounds.h,
+                    iter->bounds.x, iter->bounds.y, iter->bounds.w, iter->bounds.h) &&
+                  !(iter->flags & ZR_WINDOW_MINIMIZED) && !(iter->flags & ZR_WINDOW_HIDDEN))
+                    break;
+                iter = iter->next;
+            }
+        }
+
+        /* activate window if clicked */
+        if (iter && inpanel && (win != ctx->end)) {
+            iter = win->next;
             while (iter) {
                 /* try to find a panel with higher priorty in the same position */
                 if (ZR_INBOX(ctx->input.mouse.prev.x, ctx->input.mouse.prev.y, iter->bounds.x,
@@ -6664,18 +6681,20 @@ zr_begin(struct zr_context *ctx, struct zr_layout *layout,
                     break;
                 iter = iter->next;
             }
-            if (!iter) {
-                /* current panel is active panel in that position so transfer to top
-                 * at the highest priority in stack */
-                zr_remove_window(ctx, win);
-                zr_insert_window(ctx, win);
+        }
 
-                win->flags &= ~(zr_flags)ZR_WINDOW_ROM;
-                ctx->active = win;
-            }
+        if (!iter) {
+            /* current window is active in that position so transfer to top
+             * at the highest priority in stack */
+            zr_remove_window(ctx, win);
+            zr_insert_window(ctx, win);
+
+            win->flags &= ~(zr_flags)ZR_WINDOW_ROM;
+            ctx->active = win;
         }
         if (ctx->end != win)
             win->flags |= ZR_WINDOW_ROM;
+
     }
 
     win->layout = layout;
@@ -7221,12 +7240,14 @@ zr_layout_begin(struct zr_context *ctx, const char *title)
         layout->clip.h = win->bounds.h - (layout->footer_h + layout->header_h);
         layout->clip.h -= (window_padding.y + item_padding.y);
         layout->clip.y = win->bounds.y;
-        if (!(win->flags & ZR_WINDOW_COMBO) && !(win->flags & ZR_WINDOW_MENU))
-            layout->clip.y += layout->header_h;
         if (win->flags & ZR_WINDOW_BORDER) {
             layout->clip.y += 1;
             layout->clip.h -= 2;
         }
+
+        /* combo box and menu do not have header space */
+        if (!(win->flags & ZR_WINDOW_COMBO) && !(win->flags & ZR_WINDOW_MENU))
+            layout->clip.y += layout->header_h;
 
         zr_unify(&clip, &win->buffer.clip, layout->clip.x, layout->clip.y,
             layout->clip.x + layout->clip.w, layout->clip.y + layout->clip.h);
@@ -7277,7 +7298,7 @@ zr_layout_end(struct zr_context *ctx)
     scrollbar_size = zr_style_property(config, ZR_PROPERTY_SCROLLBAR_SIZE).x;
     scaler_size = zr_style_property(config, ZR_PROPERTY_SCALER_SIZE);
 
-    /* update the current Y-position to point over the last added widget */
+    /* update the current cursor Y-position to point over the last added widget */
     layout->at_y += layout->row.height;
 
     /* draw footer and fill empty spaces inside a dynamically growing panel */
@@ -7313,6 +7334,7 @@ zr_layout_end(struct zr_context *ctx)
         struct zr_rect bounds;
         float scroll_target, scroll_offset, scroll_step;
 
+        /* fill basic scrollbar style */
         struct zr_scrollbar scroll;
         scroll.rounding = config->rounding[ZR_ROUNDING_SCROLLBAR];
         scroll.background = config->colors[ZR_COLOR_SCROLLBAR];
