@@ -499,7 +499,7 @@ main(int argc, char *argv[])
         zr_buffer_init(&device.cmds, &alloc, 1024);
         usrfnt = font_bake_and_upload(&device, &font, font_path, 14,
                         zr_font_default_glyph_ranges());
-        zr_init(&gui.ctx, &alloc, &usrfnt, sin, cos);
+        zr_init(&gui.ctx, &alloc, &usrfnt);
     }
 
     device_init(&device);

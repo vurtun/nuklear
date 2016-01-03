@@ -289,7 +289,7 @@ main(int argc, char *argv[])
 
         memset(&gui, 0, sizeof gui);
         gui.memory = calloc(MAX_MEMORY, 1);
-        zr_init_fixed(&gui.ctx, gui.memory, MAX_MEMORY, &usrfnt, sin, cos);
+        zr_init_fixed(&gui.ctx, gui.memory, MAX_MEMORY, &usrfnt);
     }
 
     while (running) {

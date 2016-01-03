@@ -23,7 +23,6 @@
 #include <stdarg.h>
 #include <string.h>
 #include <assert.h>
-#include <math.h>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -824,7 +823,7 @@ main(int argc, char *argv[])
         font.userdata.ptr = vg;
         font.width = font_get_width;
         nvgTextMetrics(vg, NULL, NULL, &font.height);
-        zr_init_fixed(&ctx, memory, MAX_MEMORY, &font, sin, cos);
+        zr_init_fixed(&ctx, memory, MAX_MEMORY, &font);
         file_browser_init(&browser, vg);
     }
 

@@ -205,7 +205,7 @@ main(int argc, char *argv[])
         usrfnt.userdata = zr_handle_ptr(font);
         usrfnt.width = font_get_width;
         usrfnt.height = al_get_font_line_height(font);
-        zr_init(&gui.ctx, &alloc, &usrfnt, sin, cos);
+        zr_init(&gui.ctx, &alloc, &usrfnt);
     }
 
     while (running) {

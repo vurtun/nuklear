@@ -420,7 +420,7 @@ main(int argc, char *argv[])
     font.width = font_get_text_width;
     memset(&gui, 0, sizeof gui);
     gui.memory = calloc(MAX_MEMORY, 1);
-    zr_init_fixed(&gui.ctx, gui.memory, MAX_MEMORY, &font, sin, cos);
+    zr_init_fixed(&gui.ctx, gui.memory, MAX_MEMORY, &font);
 
     while (running) {
         /* Input */

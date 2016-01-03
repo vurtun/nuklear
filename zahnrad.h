@@ -123,8 +123,6 @@ typedef char zr_glyph[ZR_UTF_SIZE];
 typedef union {void *ptr; int id;} zr_handle;
 struct zr_image {zr_handle handle; unsigned short w, h; unsigned short region[4];};
 struct zr_scroll {unsigned short x, y;};
-typedef double(*zr_sin_f)(double);
-typedef double(*zr_cos_f)(double);
 
 /* pointer */
 #define zr_ptr_add(t, p, i) ((t*)((void*)((zr_byte*)(p) + (i))))
@@ -361,7 +359,7 @@ struct zr_buffer {
     struct zr_allocator pool;
     /* allocator callback for dynamic buffers */
     enum zr_allocation_type type;
-    /* memory type management type */
+    /* memory management type */
     struct zr_memory memory;
     /* memory and size of the current memory block */
     float grow_factor;
@@ -731,13 +729,6 @@ struct zr_draw_vertex {
     zr_draw_vertex_color col;
 };
 
-enum zr_draw_list_stroke {
-    ZR_STROKE_OPEN = zr_false,
-    /* build up path has no connection back to the beginning */
-    ZR_STROKE_CLOSED = zr_true
-    /* build up path has a connection back to the beginning */
-};
-
 struct zr_draw_command {
     unsigned int elem_count;
     /* number of elements in the current draw batch */
@@ -761,7 +752,6 @@ struct zr_canvas {
     /* texture with white pixel for easy primitive drawing */
     struct zr_rect clip_rect;
     /* current clipping rectangle */
-    zr_cos_f cos; zr_sin_f sin;
     /* cosine/sine calculation callback since this library does not use libc  */
     struct zr_buffer *buffer;
     /* buffer to store draw commands and temporarily store path */
@@ -784,7 +774,6 @@ struct zr_canvas {
     struct zr_vec2 circle_vtx[12];
     /* small lookup table for fast circle drawing */
 };
-
 #endif
 
 /* drawing routines */
@@ -1300,13 +1289,10 @@ struct zr_context {
 /*--------------------------------------------------------------
  *                          CONTEXT
  * -------------------------------------------------------------*/
-int zr_init_fixed(struct zr_context*, void *memory, zr_size size,
-                    const struct zr_user_font*, zr_sin_f, zr_cos_f);
+int zr_init_fixed(struct zr_context*, void *memory, zr_size size, const struct zr_user_font*);
 int zr_init_custom(struct zr_context*, struct zr_buffer *cmds,
-                    struct zr_buffer *pool, const struct zr_user_font*,
-                    zr_sin_f, zr_cos_f);
-int zr_init(struct zr_context*, struct zr_allocator*,
-            const struct zr_user_font*, zr_sin_f, zr_cos_f);
+                    struct zr_buffer *pool, const struct zr_user_font*);
+int zr_init(struct zr_context*, struct zr_allocator*, const struct zr_user_font*);
 void zr_convert(struct zr_context*, struct zr_buffer *cmds,
                 struct zr_buffer *vertexes, struct zr_buffer *elements,
                 struct zr_draw_null_texture , enum zr_anti_aliasing,

@@ -755,7 +755,7 @@ main(int argc, char *argv[])
         font.userdata.ptr = vg;
         font.width = font_get_width;
         font.height = 20;
-        zr_init_fixed(&ctx, memory, MAX_MEMORY, &font, sin, cos);
+        zr_init_fixed(&ctx, memory, MAX_MEMORY, &font);
         ctx.style.rounding[ZR_ROUNDING_BUTTON] = 3;
     }
 

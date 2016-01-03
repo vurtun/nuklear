@@ -23,7 +23,6 @@
 #include <stdarg.h>
 #include <string.h>
 #include <assert.h>
-#include <math.h>
 
 #ifdef _WIN32
     #include <windows.h>
@@ -636,7 +635,7 @@ main(int argc, char *argv[])
         font.userdata.ptr = vg;
         nvgTextMetrics(vg, NULL, NULL, &font.height);
         font.width = font_get_width;
-        zr_init_fixed(&ctx, memory, MAX_MEMORY, &font, sin, cos);
+        zr_init_fixed(&ctx, memory, MAX_MEMORY, &font);
         ctx.style.header.align = ZR_HEADER_RIGHT;
     }
     node_editor_init(&nodedit);

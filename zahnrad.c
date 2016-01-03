@@ -40,6 +40,13 @@ enum zr_orientation {
     ZR_HORIZONTAL
 };
 
+enum zr_draw_list_stroke {
+    ZR_STROKE_OPEN = zr_false,
+    /* build up path has no connection back to the beginning */
+    ZR_STROKE_CLOSED = zr_true
+    /* build up path has a connection back to the beginning */
+};
+
 struct zr_text_selection {
     int active;
     /* current selection state */
@@ -303,6 +310,34 @@ zr_inv_sqrt(float number)
     conv.i = 0x5f375A84 - (conv.i >> 1);
     conv.f = conv.f * (threehalfs - (x2 * conv.f * conv.f));
     return conv.f;
+}
+
+static double
+zr_sin(double x)
+{
+    static const double a0 = +1.91059300966915117e-31;
+    static const double a1 = +1.00086760103908896;
+    static const double a2 = -1.21276126894734565e-2;
+    static const double a3 = -1.38078780785773762e-1;
+    static const double a4 = -2.67353392911981221e-2;
+    static const double a5 = +2.08026600266304389e-2;
+    static const double a6 = -3.03996055049204407e-3;
+    static const double a7 = +1.38235642404333740e-4;
+    return a0 + x * (a1 + x * (a2 + x * (a3 + x * (a4 + x * (a5 + x *(a6 + x * a7))))));
+}
+
+static double
+zr_cos(double x)
+{
+    static const double a0 = +1.00238601909309722;
+    static const double a1 = -3.81919947353040024e-2;
+    static const double a2 = -3.94382342128062756e-1;
+    static const double a3 = -1.18134036025221444e-1;
+    static const double a4 = +1.07123798512170878e-1;
+    static const double a5 = -1.86637164165180873e-2;
+    static const double a6 = +9.90140908664079833e-4;
+    static const double a7 = -5.23022132118824778e-14;
+    return a0 + x * (a1 + x * (a2 + x * (a3 + x * (a4 + x * (a5 + x *(a6 + x * a7))))));
 }
 
 struct zr_rect
@@ -2024,16 +2059,14 @@ zr_draw_text(struct zr_command_buffer *b, struct zr_rect r,
  * ===============================================================*/
 #if ZR_COMPILE_WITH_VERTEX_BUFFER
 static void
-zr_canvas_init(struct zr_canvas *list, zr_sin_f sine, zr_cos_f cosine)
+zr_canvas_init(struct zr_canvas *list)
 {
     zr_size i = 0;
     zr_zero(list, sizeof(*list));
-    list->sin = sine;
-    list->cos = cosine;
     for (i = 0; i < ZR_LEN(list->circle_vtx); ++i) {
         const float a = ((float)i / (float)ZR_LEN(list->circle_vtx)) * 2 * ZR_PI;
-        list->circle_vtx[i].x = (float)cosine(a);
-        list->circle_vtx[i].y = (float)sine(a);
+        list->circle_vtx[i].x = (float)zr_cos(a);
+        list->circle_vtx[i].y = (float)zr_sin(a);
     }
 }
 
@@ -2616,8 +2649,12 @@ zr_canvas_path_arc_to(struct zr_canvas *list, struct zr_vec2 center,
     if (radius == 0.0f) return;
     for (i = 0; i <= segments; ++i) {
         const float a = a_min + ((float)i / (float)segments) * (a_max - a_min);
+        const float x = center.x + (float)zr_cos(a) * radius;
+        const float y = center.y + (float)zr_sin(a) * radius;
+#if 0
         const float x = center.x + (float)list->cos(a) * radius;
         const float y = center.y + (float)list->sin(a) * radius;
+#endif
         zr_canvas_path_line_to(list, zr_vec2(x, y));
     }
 }
@@ -6492,23 +6529,22 @@ zr_clear(struct zr_context *ctx)
 }
 
 static void
-zr_setup(struct zr_context *ctx, const struct zr_user_font *font,
-    zr_sin_f sine, zr_cos_f cosine)
+zr_setup(struct zr_context *ctx, const struct zr_user_font *font)
 {
     zr_zero(ctx, sizeof(*ctx));
     zr_style_default(&ctx->style, ZR_DEFAULT_ALL, font);
 #if ZR_COMPILE_WITH_VERTEX_BUFFER
-    if (sine && cosine) zr_canvas_init(&ctx->canvas, sine, cosine);
+    zr_canvas_init(&ctx->canvas);
 #endif
 }
 
 int
 zr_init_fixed(struct zr_context *ctx, void *memory, zr_size size,
-    const struct zr_user_font *font, zr_sin_f sine, zr_cos_f cosine)
+    const struct zr_user_font *font)
 {
     ZR_ASSERT(memory);
     if (!memory) return 0;
-    zr_setup(ctx, font, sine, cosine);
+    zr_setup(ctx, font);
     zr_buffer_init_fixed(&ctx->memory, memory, size);
     ctx->pool = 0;
     return 1;
@@ -6516,13 +6552,12 @@ zr_init_fixed(struct zr_context *ctx, void *memory, zr_size size,
 
 int
 zr_init_custom(struct zr_context *ctx, struct zr_buffer *cmds,
-    struct zr_buffer *pool, const struct zr_user_font *font,
-    zr_sin_f sine, zr_cos_f cosine)
+    struct zr_buffer *pool, const struct zr_user_font *font)
 {
     ZR_ASSERT(cmds);
     ZR_ASSERT(pool);
     if (!cmds || !pool) return 0;
-    zr_setup(ctx, font, sine, cosine);
+    zr_setup(ctx, font);
     ctx->memory = *cmds;
     if (pool->type == ZR_BUFFER_FIXED) {
         /* take memory from buffer and alloc fixed pool */
@@ -6543,11 +6578,11 @@ zr_init_custom(struct zr_context *ctx, struct zr_buffer *cmds,
 
 int
 zr_init(struct zr_context *ctx, struct zr_allocator *alloc,
-    const struct zr_user_font *font, zr_sin_f sine, zr_cos_f cosine)
+    const struct zr_user_font *font)
 {
     ZR_ASSERT(alloc);
     if (!alloc) return 0;
-    zr_setup(ctx, font, sine, cosine);
+    zr_setup(ctx, font);
     zr_buffer_init(&ctx->memory, alloc, ZR_DEFAULT_COMMAND_BUFFER_SIZE);
     ctx->pool = alloc->alloc(alloc->userdata, sizeof(struct zr_pool));
     zr_pool_init(ctx->pool, alloc, ZR_POOL_DEFAULT_CAPACTIY);
