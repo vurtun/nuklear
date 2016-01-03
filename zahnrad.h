@@ -508,7 +508,7 @@ const struct zr_font_glyph* zr_font_find_glyph(struct zr_font*, zr_rune unicode)
     not draw anything to the screen. Instead all drawn primitives, widgets
     are made of, are buffered into memory and make up a command queue.
     Each frame therefore fills the command buffer with draw commands
-    that than need to be executed by the user and his own render backend.
+    that then need to be executed by the user and his own render backend.
     After that the command buffer needs to be cleared and a new frame can be started.
 
     The reason for buffering simple primitives as draw commands instead of
@@ -1059,19 +1059,19 @@ enum zr_layout_node_type {
 
 struct zr_chart {
     enum zr_chart_type type;
-    /* graph type with either line or column graph */
+    /* chart type with either line or column chart */
     float x, y;
-    /* graph canvas space position */
+    /* chart canvas space position */
     float w, h;
-    /* graph canvas space size */
+    /* chart canvas space size */
     float min, max, range;
     /* min and max value for correct scaling of values */
     struct zr_vec2 last;
-    /* last line graph point to connect to. Only used by the line graph */
+    /* last line chart point to connect to. Only used by the line chart */
     zr_size index;
-    /* current graph value index*/
+    /* current chart value index*/
     zr_size count;
-    /* number of values inside the graph */
+    /* number of values inside the chart */
 };
 
 enum zr_row_layout_type {
@@ -1184,7 +1184,7 @@ struct zr_layout {
     struct zr_row_layout row;
     /* currently used window row layout */
     struct zr_chart chart;
-    /* graph state */
+    /* chart state */
     struct zr_popup_buffer popup_buffer;
     /* output command buffer queuing all popup drawing calls */
     struct zr_command_buffer *buffer;
@@ -1449,7 +1449,7 @@ int zr_propertyi(struct zr_context *layout, const char *name, int min, int val, 
 int zr_edit_string(struct zr_context*, zr_flags, char *buffer, zr_size *len, zr_size max, zr_filter);
 int zr_edit_buffer(struct zr_context*, zr_flags, struct zr_buffer*, zr_filter);
 
-/* simple graph */
+/* simple chart */
 void zr_chart_begin(struct zr_context*, enum zr_chart_type, zr_size num, float min, float max);
 zr_flags zr_chart_push(struct zr_context*, float);
 void zr_chart_end(struct zr_context*);
