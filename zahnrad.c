@@ -6831,6 +6831,22 @@ zr_window_is_closed(struct zr_context *ctx, const char *name)
     return win->flags & ZR_WINDOW_HIDDEN;
 }
 
+int
+zr_window_is_active(struct zr_context *ctx, const char *name)
+{
+    int title_len;
+    zr_hash title_hash;
+    struct zr_window *win;
+    ZR_ASSERT(ctx);
+    if (!ctx) return 0;
+
+    title_len = (int)zr_strsiz(name);
+    title_hash = zr_murmur_hash(name, (int)title_len, ZR_WINDOW_TITLE);
+    win = zr_find_window(ctx, title_hash);
+    if (!win) return 0;
+    return win == ctx->active;
+}
+
 void
 zr_window_set_bounds(struct zr_context *ctx, struct zr_rect bounds)
 {
@@ -9729,6 +9745,7 @@ zr_contextual_begin(struct zr_context *ctx, struct zr_layout *layout,
     is_clicked = zr_input_is_mouse_click_in_rect(&ctx->input, ZR_BUTTON_RIGHT, win->layout->bounds);
     is_open = (popup && (popup->flags & ZR_WINDOW_CONTEXTUAL) && win->popup.type == ZR_WINDOW_CONTEXTUAL);
     if ((is_clicked && is_open && !is_active) || (!is_open && !is_active && !is_clicked)) return 0;
+    if (ctx->current != ctx->active) return 0;
 
     if (is_clicked) {
         body.x = ctx->input.mouse.pos.x;

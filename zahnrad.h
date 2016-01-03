@@ -1318,6 +1318,7 @@ struct zr_command_buffer* zr_window_get_canvas(struct zr_context*);
 int zr_window_has_focus(const struct zr_context*);
 int zr_window_is_collapsed(struct zr_context*, const char *name);
 int zr_window_is_closed(struct zr_context*, const char *name);
+int zr_window_is_active(struct zr_context*, const char *name);
 
 void zr_window_set_bounds(struct zr_context*, struct zr_rect);
 void zr_window_set_position(struct zr_context*, struct zr_vec2);

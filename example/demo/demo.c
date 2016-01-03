@@ -131,6 +131,7 @@ ui_piemenu(struct zr_context *ctx,
     zr_style_push_color(&ctx->style, ZR_COLOR_WINDOW, zr_rgba(0,0,0,0));
     border = ctx->style.colors[ZR_COLOR_BORDER];
     zr_style_push_color(&ctx->style, ZR_COLOR_BORDER, zr_rgba(0,0,0,0));
+    if (ctx->current != ctx->active) return 0;
 
     /* pie menu popup */
     total_space  = zr_window_get_content_region(ctx);
