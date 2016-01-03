@@ -2651,10 +2651,6 @@ zr_canvas_path_arc_to(struct zr_canvas *list, struct zr_vec2 center,
         const float a = a_min + ((float)i / (float)segments) * (a_max - a_min);
         const float x = center.x + (float)zr_cos(a) * radius;
         const float y = center.y + (float)zr_sin(a) * radius;
-#if 0
-        const float x = center.x + (float)list->cos(a) * radius;
-        const float y = center.y + (float)list->sin(a) * radius;
-#endif
         zr_canvas_path_line_to(list, zr_vec2(x, y));
     }
 }
