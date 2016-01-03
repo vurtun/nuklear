@@ -233,7 +233,7 @@ button_demo(struct zr_context *ctx, struct icons *img)
 
     ctx->style.font.height = 20;
     zr_begin(ctx, &layout, "Button Demo", zr_rect(50,50,255,610),
-        ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_BORDER_HEADER|ZR_WINDOW_TITLE);
+        ZR_WINDOW_BORDER|ZR_WINDOW_MOVABLE|ZR_WINDOW_BORDER_HEADER|ZR_WINDOW_TITLE);
 
     /*------------------------------------------------
      *                  MENU
@@ -352,7 +352,7 @@ basic_demo(struct zr_context *ctx, struct icons *img)
     struct zr_layout combo;
     ctx->style.font.height = 20;
     zr_begin(ctx, &layout, "Basic Demo", zr_rect(320, 50, 275, 610),
-        ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_BORDER_HEADER|ZR_WINDOW_TITLE);
+        ZR_WINDOW_BORDER|ZR_WINDOW_MOVABLE|ZR_WINDOW_BORDER_HEADER|ZR_WINDOW_TITLE);
 
     /*------------------------------------------------
      *                  POPUP BUTTON
@@ -464,7 +464,7 @@ grid_demo(struct zr_context *ctx)
 
     ctx->style.font.height = 20;
     zr_begin(ctx, &layout, "Grid Demo", zr_rect(600, 350, 275, 250),
-        ZR_WINDOW_TITLE|ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|
+        ZR_WINDOW_TITLE|ZR_WINDOW_BORDER|ZR_WINDOW_MOVABLE|
         ZR_WINDOW_BORDER_HEADER|ZR_WINDOW_NO_SCROLLBAR);
 
     ctx->style.font.height = 18;

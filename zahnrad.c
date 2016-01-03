@@ -7145,7 +7145,7 @@ zr_layout_begin(struct zr_context *ctx, const char *title)
     /* move panel position if requested */
     layout->header_h = c->font.height + 4 * item_padding.y;
     layout->header_h += window_padding.y;
-    if ((win->flags & ZR_WINDOW_MOVEABLE) && !(win->flags & ZR_WINDOW_ROM)) {
+    if ((win->flags & ZR_WINDOW_MOVABLE) && !(win->flags & ZR_WINDOW_ROM)) {
         int incursor;
         struct zr_rect move;
         move.x = win->bounds.x;
@@ -7204,7 +7204,7 @@ zr_layout_begin(struct zr_context *ctx, const char *title)
     }
 
     /* window header */
-    header_active = (win->flags & (ZR_WINDOW_CLOSEABLE|ZR_WINDOW_MINIMIZABLE));
+    header_active = (win->flags & (ZR_WINDOW_CLOSABLE|ZR_WINDOW_MINIMIZABLE));
     header_active = header_active || (win->flags & ZR_WINDOW_TITLE);
     header_active = header_active && !(win->flags & ZR_WINDOW_HIDDEN) && title;
 
@@ -7244,7 +7244,7 @@ zr_layout_begin(struct zr_context *ctx, const char *title)
         }
 
         /* window header icons */
-        if (win->flags & ZR_WINDOW_CLOSEABLE)
+        if (win->flags & ZR_WINDOW_CLOSABLE)
             zr_header_flag(ctx, &header, c->header.close_symbol, c->header.close_symbol,
                 c->header.align, ZR_WINDOW_HIDDEN);
         if (win->flags & ZR_WINDOW_MINIMIZABLE)
@@ -9489,7 +9489,7 @@ zr_group_begin(struct zr_context *ctx, struct zr_layout *layout,
     }
 
     if (!ZR_INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h) &&
-        !(flags & ZR_WINDOW_MOVEABLE)) {
+        !(flags & ZR_WINDOW_MOVABLE)) {
         return 0;
     }
 

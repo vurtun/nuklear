@@ -216,7 +216,7 @@ node_editor_draw(struct zr_context *ctx, struct node_editor *nodedit)
                 it->bounds.y - nodedit->scrolling.y, it->bounds.w, it->bounds.h));
 
             /* execute node window */
-            if (zr_group_begin(ctx, &node, it->name, ZR_WINDOW_MOVEABLE|ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER|ZR_WINDOW_TITLE))
+            if (zr_group_begin(ctx, &node, it->name, ZR_WINDOW_MOVABLE|ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER|ZR_WINDOW_TITLE))
             {
                 static const float ratio[] = {0.25f, 0.75f};
                 /* always have last selected node on top */
@@ -669,7 +669,7 @@ main(int argc, char *argv[])
             int incursor;
             struct zr_layout layout;
             if (zr_begin(&ctx, &layout, "Nodedit", zr_rect(0,0,width,height),
-                ZR_WINDOW_BORDER|ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_CLOSEABLE))
+                ZR_WINDOW_BORDER|ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_CLOSABLE))
                 node_editor_draw(&ctx, &nodedit);
             else goto cleanup;
             zr_end(&ctx);

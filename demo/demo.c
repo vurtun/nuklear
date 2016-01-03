@@ -112,10 +112,10 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
     ctx->style.header.align = header_align;
     if (border) window_flags |= ZR_WINDOW_BORDER;
     if (resize) window_flags |= ZR_WINDOW_SCALABLE;
-    if (moveable) window_flags |= ZR_WINDOW_MOVEABLE;
+    if (moveable) window_flags |= ZR_WINDOW_MOVABLE;
     if (no_scrollbar) window_flags |= ZR_WINDOW_NO_SCROLLBAR;
     if (minimizable) window_flags |= ZR_WINDOW_MINIMIZABLE;
-    if (close) window_flags |= ZR_WINDOW_CLOSEABLE;
+    if (close) window_flags |= ZR_WINDOW_CLOSABLE;
 
     /* main window */
     if (zr_begin(ctx, layout, "Demo", zr_rect(30, 30, 400, 600), window_flags))
@@ -163,7 +163,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
             /* about popup */
             struct zr_layout popup;
             static struct zr_rect s = {20, 100, 300, 190};
-            if (zr_popup_begin(ctx, &popup, ZR_POPUP_STATIC, "About", ZR_WINDOW_CLOSEABLE, s))
+            if (zr_popup_begin(ctx, &popup, ZR_POPUP_STATIC, "About", ZR_WINDOW_CLOSABLE, s))
             {
                 zr_layout_row_dynamic(ctx, 20, 1);
                 zr_label(ctx, "Zahnrad", ZR_TEXT_LEFT);
@@ -179,7 +179,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
             /* close popup */
             struct zr_layout popup;
             static const struct zr_rect s = {20, 150, 230, 150};
-            if(zr_popup_begin(ctx, &popup, ZR_POPUP_STATIC, "Quit", ZR_WINDOW_CLOSEABLE, s))
+            if(zr_popup_begin(ctx, &popup, ZR_POPUP_STATIC, "Quit", ZR_WINDOW_CLOSABLE, s))
             {
                 zr_layout_row_dynamic(ctx, 30, 1);
                 zr_label(ctx, "Are you sure you want to exit?", ZR_TEXT_LEFT);
@@ -200,7 +200,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
             /* color picker popup */
             struct zr_layout popup;
             if (zr_popup_begin(ctx, &popup, ZR_POPUP_STATIC, "Color Picker",
-                ZR_WINDOW_CLOSEABLE, zr_rect(10, 100, 360, 280)))
+                ZR_WINDOW_CLOSABLE, zr_rect(10, 100, 360, 280)))
             {
                 zr_layout_row_dynamic(ctx, 30, 2);
                 zr_label(ctx, zr_get_color_name((enum zr_style_colors)color_picker_index), ZR_TEXT_LEFT);
@@ -860,8 +860,8 @@ run_demo(struct demo *gui)
 
     /* simple demo window */
     if (zr_begin(ctx, &layout, "Show", zr_rect(20, 20, 200, 200),
-        ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALABLE|
-        ZR_WINDOW_CLOSEABLE|ZR_WINDOW_MINIMIZABLE|ZR_WINDOW_TITLE))
+        ZR_WINDOW_BORDER|ZR_WINDOW_MOVABLE|ZR_WINDOW_SCALABLE|
+        ZR_WINDOW_CLOSABLE|ZR_WINDOW_MINIMIZABLE|ZR_WINDOW_TITLE))
     {
         enum {EASY, HARD};
         static int op = EASY;
@@ -882,8 +882,8 @@ run_demo(struct demo *gui)
 
     /* metrics window */
     if (zr_begin(ctx, &layout, "Metrics", zr_rect(50, 600, 250, 300),
-        ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_SCALABLE|
-        ZR_WINDOW_CLOSEABLE|ZR_WINDOW_MINIMIZABLE))
+        ZR_WINDOW_BORDER|ZR_WINDOW_MOVABLE|ZR_WINDOW_SCALABLE|
+        ZR_WINDOW_CLOSABLE|ZR_WINDOW_MINIMIZABLE))
     {
         struct zr_memory_status status;
         zr_buffer_info(&status, &ctx->memory);

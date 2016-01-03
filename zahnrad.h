@@ -1128,13 +1128,13 @@ enum zr_window_flags {
     /* Draws a border around the window to visually seperate the window from the background */
     ZR_WINDOW_BORDER_HEADER = ZR_FLAG(1),
     /* Draws a border between window header and body */
-    ZR_WINDOW_MOVEABLE      = ZR_FLAG(2),
+    ZR_WINDOW_MOVABLE      = ZR_FLAG(2),
     /* The moveable flag inidicates that a window can be moved by user input or by
      * dragging the window header */
     ZR_WINDOW_SCALABLE     = ZR_FLAG(3),
     /* The scaleable flag indicates that a window can be scaled by user input
      * by dragging a scaler icon at the button of the window */
-    ZR_WINDOW_CLOSEABLE     = ZR_FLAG(4),
+    ZR_WINDOW_CLOSABLE     = ZR_FLAG(4),
     /* adds a closeable icon into the header */
     ZR_WINDOW_MINIMIZABLE   = ZR_FLAG(5),
     /* adds a minimize icon into the header */
