@@ -9844,7 +9844,7 @@ zr_contextual_begin(struct zr_context *ctx, struct zr_layout *layout,
 
     body.w = size.x;
     body.h = size.y;
-    ret = zr_nonblock_begin(layout, ctx, flags|ZR_WINDOW_CONTEXTUAL, body, null_rect);
+    ret = zr_nonblock_begin(layout, ctx, flags|ZR_WINDOW_CONTEXTUAL|ZR_WINDOW_NO_SCROLLBAR, body, null_rect);
     if (ret) win->popup.type = ZR_WINDOW_CONTEXTUAL;
     return ret;
 }
