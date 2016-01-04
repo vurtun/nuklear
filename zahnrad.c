@@ -5884,8 +5884,6 @@ zr_load_default_style(struct zr_context *ctx, zr_flags flags)
     ZR_ASSERT(ctx);
     if (!ctx) return;
     style = &ctx->style;
-    zr_zero(style, sizeof(*style));
-
     if (flags & ZR_DEFAULT_COLOR)
         zr_style_default_color(style);
     if (flags & ZR_DEFAULT_PROPERTIES)
