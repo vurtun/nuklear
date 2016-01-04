@@ -2788,7 +2788,7 @@ zr__draw_next(const struct zr_draw_command *cmd,
 /*
  * ==============================================================
  *
- *                          Font
+ *                          FONT
  *
  * ===============================================================
  */
@@ -5467,8 +5467,8 @@ zr_do_property(enum zr_widget_status *ws,
     }
     edit.w =  (float)size + 2 * p->padding.x;
     edit.x = right.x - (edit.w + p->padding.x);
-    edit.y = property.y + p->border_size;
-    edit.h = property.h - 2 * p->border_size;
+    edit.y = property.y + p->border_size + 1;
+    edit.h = property.h - (2 * p->border_size + 2);
 
     /* empty left space activator */
     empty.w = edit.x - (label.x + label.w);
@@ -9820,7 +9820,7 @@ zr_contextual_begin(struct zr_context *ctx, struct zr_layout *layout,
     struct zr_window *win;
     struct zr_window *popup;
     struct zr_rect body;
-    static struct zr_rect null_rect;
+    static const struct zr_rect null_rect;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
