@@ -150,7 +150,6 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                     show_close_popup = zr_true;
                 zr_menu_end(ctx);
             }
-
             zr_layout_row_push(ctx, 60);
             zr_progress(ctx, &mprog, 100, ZR_MODIFIABLE);
             zr_slider_int(ctx, 0, &mslider, 16, 1);

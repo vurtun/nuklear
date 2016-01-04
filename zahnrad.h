@@ -1138,15 +1138,13 @@ enum zr_window_flags {
     /* adds a closeable icon into the header */
     ZR_WINDOW_MINIMIZABLE   = ZR_FLAG(5),
     /* adds a minimize icon into the header */
-    ZR_WINDOW_ROM           = ZR_FLAG(6),
-    /* sets the window into a read only mode and does not allow input changes */
-    ZR_WINDOW_DYNAMIC       = ZR_FLAG(7),
+    ZR_WINDOW_DYNAMIC       = ZR_FLAG(6),
     /* special type of window which grows up in height while being filled to a
      * certain maximum height. It is mainly used for combo boxes/menus but can be
      * used to create perfectly fitting windows as well */
-    ZR_WINDOW_NO_SCROLLBAR  = ZR_FLAG(8),
+    ZR_WINDOW_NO_SCROLLBAR  = ZR_FLAG(7),
     /* Removes the scrollbar from the window */
-    ZR_WINDOW_TITLE         = ZR_FLAG(9)
+    ZR_WINDOW_TITLE         = ZR_FLAG(8)
     /* Removes the scrollbar from the window */
 };
 

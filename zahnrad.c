@@ -77,6 +77,8 @@ struct zr_edit_box {
 };
 
 enum zr_internal_window_flags {
+    ZR_WINDOW_ROM           = ZR_FLAG(9),
+    /* sets the window into a read only mode and does not allow input changes */
     ZR_WINDOW_HIDDEN        = ZR_FLAG(10),
     /* Hiddes the window and stops any window interaction and drawing can be set
      * by user input or by closing the window */
@@ -3904,6 +3906,7 @@ zr_button_behavior(enum zr_widget_status *state, struct zr_rect r,
 {
     int ret = 0;
     *state = ZR_INACTIVE;
+    if (!i) return 0;
     if (zr_input_is_mouse_hovering_rect(i, r)) {
         *state = ZR_HOVERED;
         if (zr_input_is_mouse_down(i, ZR_BUTTON_LEFT))
@@ -6407,13 +6410,13 @@ zr_add_value(struct zr_context *ctx, struct zr_window *win, zr_hash name, zr_uin
     return &win->tables->values[win->table_size++];
 }
 
-static int
+static void
 zr_start_child(struct zr_context *ctx, struct zr_window *win)
 {
     struct zr_popup_buffer *buf;
     ZR_ASSERT(ctx);
     ZR_ASSERT(win);
-    if (!ctx || !win) return zr_false;
+    if (!ctx || !win) return;
 
     buf = &win->layout->popup_buffer;
     buf->begin = win->buffer.end;
@@ -6421,7 +6424,6 @@ zr_start_child(struct zr_context *ctx, struct zr_window *win)
     buf->parent = win->buffer.last;
     buf->last = buf->begin;
     buf->active = zr_true;
-    return zr_true;
 }
 
 static void
@@ -6699,7 +6701,7 @@ zr_begin(struct zr_context *ctx, struct zr_layout *layout,
         win->name = title_hash;
         win->popup.win = 0;
     } else {
-        win->flags &= ~(zr_flags)(ZR_WINDOW_HIDDEN-1);
+        win->flags &= ~(zr_flags)(ZR_WINDOW_ROM-1);
         win->flags |= flags;
         win->seq++;
     }
@@ -9572,11 +9574,11 @@ int
 zr_popup_begin(struct zr_context *ctx, struct zr_layout *layout,
     enum zr_popup_type type, const char *title, zr_flags flags, struct zr_rect rect)
 {
-    int ret;
     struct zr_window *popup;
     struct zr_window *win;
     zr_hash title_hash;
     int title_len;
+    zr_size allocated;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(title);
@@ -9612,15 +9614,22 @@ zr_popup_begin(struct zr_context *ctx, struct zr_layout *layout,
     if (type == ZR_POPUP_DYNAMIC)
         popup->flags |= ZR_WINDOW_DYNAMIC;
 
-    zr_start_child(ctx, win);
     popup->buffer = win->buffer;
+    zr_start_child(ctx, win);
+    allocated = ctx->memory.allocated;
     zr_draw_scissor(&popup->buffer, zr_null_rect);
-    ret = zr_layout_begin(ctx, title);
-    win->buffer = popup->buffer;
-    layout->offset = &popup->scrollbar;
-    if (ret) win->layout->flags |= ZR_WINDOW_ROM;
-    else zr_popup_close(ctx);
-    return ret;
+    if (zr_layout_begin(ctx, title)) {
+        win->layout->flags |= ZR_WINDOW_ROM;
+        win->layout->flags &= ~(zr_flags)ZR_WINDOW_REMOVE_ROM;
+        layout->offset = &popup->scrollbar;
+        return 1;
+    } else {
+        win->layout->flags |= ZR_WINDOW_REMOVE_ROM;
+        win->layout->popup_buffer.active = 0;
+        ctx->memory.allocated = allocated;
+        ctx->current = win;
+        return 0;
+    }
 }
 
 static int
@@ -10059,8 +10068,10 @@ int
 zr_combo_begin_text(struct zr_context *ctx, struct zr_layout *layout,
     const char *id, const char *selected, int height)
 {
+    const struct zr_input *in;
     struct zr_window *win;
     enum zr_widget_status state;
+    enum zr_widget_state s;
     struct zr_vec2 item_padding;
     struct zr_rect header;
     int is_active = zr_false;
@@ -10072,11 +10083,13 @@ zr_combo_begin_text(struct zr_context *ctx, struct zr_layout *layout,
     if (!ctx || !ctx->current || !ctx->current->layout || !selected) return 0;
 
     win = ctx->current;
-    if (!zr_widget(&header, ctx))
+    s = zr_widget(&header, ctx);
+    if (s == ZR_WIDGET_INVALID)
         return 0;
 
+    in = (win->layout->flags & ZR_WINDOW_ROM || s == ZR_WIDGET_ROM)? 0: &ctx->input;
     item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
-    if (zr_button_behavior(&state, header, &ctx->input, ZR_BUTTON_DEFAULT))
+    if (zr_button_behavior(&state, header, in, ZR_BUTTON_DEFAULT))
         is_active = zr_true;
 
     /* draw combo box header background and border */
@@ -10114,7 +10127,9 @@ zr_combo_begin_color(struct zr_context *ctx, struct zr_layout *layout,
     const char *id, struct zr_color color, int height)
 {
     struct zr_window *win;
+    const struct zr_input *in;
     enum zr_widget_status state;
+    enum zr_widget_state s;
     struct zr_vec2 item_padding;
     struct zr_rect header;
     int is_active = zr_false;
@@ -10125,11 +10140,13 @@ zr_combo_begin_color(struct zr_context *ctx, struct zr_layout *layout,
     if (!ctx || !ctx->current || !ctx->current->layout) return 0;
 
     win = ctx->current;
-    if (!zr_widget(&header, ctx))
+    s = zr_widget(&header, ctx);
+    if (s == ZR_WIDGET_INVALID)
         return 0;
 
+    in = (win->layout->flags & ZR_WINDOW_ROM || s == ZR_WIDGET_ROM)? 0: &ctx->input;
     item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
-    if (zr_button_behavior(&state, header, &ctx->input, ZR_BUTTON_DEFAULT))
+    if (zr_button_behavior(&state, header, in, ZR_BUTTON_DEFAULT))
         is_active = !is_active;
 
     /* draw combo box header background and border */
@@ -10165,10 +10182,12 @@ zr_combo_begin_image(struct zr_context *ctx, struct zr_layout *layout,
     const char *id, struct zr_image img, int height)
 {
     struct zr_window *win;
+    const struct zr_input *in;
     enum zr_widget_status state;
     struct zr_vec2 item_padding;
     struct zr_rect header;
     int is_active = zr_false;
+    enum zr_widget_state s;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -10176,11 +10195,13 @@ zr_combo_begin_image(struct zr_context *ctx, struct zr_layout *layout,
     if (!ctx || !ctx->current || !ctx->current->layout) return 0;
 
     win = ctx->current;
-    if (!zr_widget(&header, ctx))
+    s = zr_widget(&header, ctx);
+    if (s == ZR_WIDGET_INVALID)
         return 0;
 
+    in = (win->layout->flags & ZR_WINDOW_ROM || s == ZR_WIDGET_ROM)? 0: &ctx->input;
     item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
-    if (zr_button_behavior(&state, header, &ctx->input, ZR_BUTTON_DEFAULT))
+    if (zr_button_behavior(&state, header, in, ZR_BUTTON_DEFAULT))
         is_active = !is_active;
 
     /* draw combo box header background and border */
@@ -10306,6 +10327,7 @@ zr_menu_begin(struct zr_layout *layout, struct zr_context *ctx, struct zr_window
     /* calculate the maximum height of the combo box*/
     int is_open = 0;
     int is_active = 0;
+    int is_valid = 0;
     struct zr_rect body;
     struct zr_window *popup;
     zr_hash hash = zr_murmur_hash(id, (int)zr_strsiz(id), ZR_WINDOW_MENU);
@@ -10361,7 +10383,7 @@ zr_menu_text_begin(struct zr_context *ctx, struct zr_layout *layout,
         button.active = ctx->style.colors[ZR_COLOR_TEXT];
         button.hover = ctx->style.colors[ZR_COLOR_TEXT];
         if (zr_do_button_text(&state, &win->buffer, header, title, ZR_BUTTON_DEFAULT,
-                &button, &ctx->input, &ctx->style.font))
+                &button,(win->layout->flags & ZR_WINDOW_ROM) ? 0: &ctx->input, &ctx->style.font))
             is_clicked = zr_true;
     }
     return zr_menu_begin(layout, ctx, win, title, is_clicked, header, width);
@@ -10393,7 +10415,8 @@ zr_menu_icon_begin(struct zr_context *ctx, struct zr_layout *layout,
         button.base.active = ctx->style.colors[ZR_COLOR_WINDOW];
         button.padding = ctx->style.properties[ZR_PROPERTY_ITEM_PADDING];
         if (zr_do_button_image(&state, &win->buffer, header, img, ZR_BUTTON_DEFAULT,
-                &button, &ctx->input)) is_clicked = zr_true;
+                &button, (win->layout->flags & ZR_WINDOW_ROM)?0:&ctx->input))
+            is_clicked = zr_true;
     }
     return zr_menu_begin(layout, ctx, win, id, is_clicked, header, width);
 }
@@ -10426,7 +10449,8 @@ zr_menu_symbol_begin(struct zr_context *ctx, struct zr_layout *layout,
         button.active = ctx->style.colors[ZR_COLOR_TEXT];
         button.hover = ctx->style.colors[ZR_COLOR_TEXT];
         if (zr_do_button_symbol(&state, &win->buffer, header, sym, ZR_BUTTON_DEFAULT,
-                &button, &ctx->input, &ctx->style.font)) is_clicked = zr_true;
+                &button, (win->layout->flags & ZR_WINDOW_ROM)?0:&ctx->input, &ctx->style.font))
+            is_clicked = zr_true;
     }
     return zr_menu_begin(layout, ctx, win, id, is_clicked, header, width);
 }
