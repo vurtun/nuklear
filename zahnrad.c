@@ -5099,7 +5099,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
             label.w = text_width;
 
             /* draw either unselected or selected row */
-            if (glyph_off < begin && glyph_off + glyphs >= begin && glyph_off + glyphs <= end+1 && box->active) {
+            if (glyph_off <= begin && glyph_off + glyphs >= begin && glyph_off + glyphs <= end+1 && box->active) {
                 /* first case with selection beginning in current row */
                 zr_size l = 0, sel_begin, sel_len;
                 zr_size unselected_text_width;
@@ -5138,7 +5138,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                 /* second case with selection spanning over current row */
                 zr_draw_text(out, label, &buffer[offset],
                     row_len, font, field->text, field->background);
-            } else if (glyph_off >= begin && glyph_off + glyphs > end && box->active &&
+            } else if (glyph_off > begin && glyph_off + glyphs >= end && box->active &&
                         end >= glyph_off && end <= glyph_off + glyphs) {
                 /* third case with selection ending in current row */
                 zr_size l = 0, sel_end, sel_len;
@@ -5165,7 +5165,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                 label.x -= (float)selected_text_width;
                 label.w += (float)(selected_text_width);
             } else if (glyph_off < begin && glyph_off + glyphs >= begin && box->active &&
-                glyph_off < end && glyph_off + glyphs > end) {
+                glyph_off <= end && glyph_off + glyphs > end) {
                 /* fourth case with selection beginning and ending in current row */
                 zr_size l = 0;
                 zr_size cur_text_width;
