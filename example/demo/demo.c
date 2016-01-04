@@ -138,9 +138,9 @@ ui_piemenu(struct zr_context *ctx,
     zr_popup_begin(ctx, &popup,  ZR_POPUP_STATIC, "piemenu", ZR_WINDOW_NO_SCROLLBAR,
         zr_rect(pos.x - total_space.x - radius, pos.y - radius - total_space.y,
         2*radius,2*radius));
-    total_space = zr_window_get_content_region(ctx);
 
-    zr_layout_space_begin(ctx, ZR_STATIC, total_space.h, 1);
+    total_space = zr_window_get_content_region(ctx);
+    zr_layout_row_dynamic(ctx, total_space.h, 1);
     {
         int i = 0;
         struct zr_command_buffer* out = zr_window_get_canvas(ctx);
@@ -150,7 +150,6 @@ ui_piemenu(struct zr_context *ctx,
             enum zr_widget_state state;
             total_space = zr_window_get_content_region(ctx);
             total_space.x = total_space.y = 0;
-            zr_layout_space_push(ctx, total_space);
             state = zr_widget(&bounds, ctx);
         }
 
@@ -315,7 +314,7 @@ button_demo(struct zr_context *ctx, struct icons *img)
     /*------------------------------------------------
      *                  CONTEXTUAL
      *------------------------------------------------*/
-    if (zr_contextual_begin(ctx, &menu, ZR_WINDOW_NO_SCROLLBAR, zr_vec2(120, 200))) {
+    if (zr_contextual_begin(ctx, &menu, ZR_WINDOW_NO_SCROLLBAR, zr_vec2(120, 200), zr_window_get_bounds(ctx))) {
         ctx->style.font.height = 18;
         zr_layout_row_dynamic(ctx, 25, 1);
         if (zr_contextual_item_icon(ctx, zr_image_id(img->copy), "Clone", ZR_TEXT_RIGHT))

@@ -349,7 +349,7 @@ node_editor_draw(struct zr_context *ctx, struct node_editor *nodedit)
         }
 
         /* contextual menu */
-        if (zr_contextual_begin(ctx, &menu, 0, zr_vec2(100, 220))) {
+        if (zr_contextual_begin(ctx, &menu, 0, zr_vec2(100, 220), zr_window_get_bounds(ctx))) {
             const char *grid_option[] = {"Show Grid", "Hide Grid"};
             zr_layout_row_dynamic(ctx, 25, 1);
             if (zr_contextual_item(ctx, "New", ZR_TEXT_CENTERED))

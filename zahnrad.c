@@ -5423,12 +5423,8 @@ zr_do_property(enum zr_widget_status *ws,
     struct zr_rect empty;
 
     /* make sure the provided values are correct */
-    property.x = property.x + p->padding.x;
-    property.y = property.y + p->padding.y;
-    property.h = MAX(property.h, 2 * p->padding.y);
-    property.w = MAX(property.w, 1 + property.h + 2 * p->padding.x);
-    property.h -= 2 * p->padding.y;
-    property.w -= 2 * p->padding.y;
+    property.x = property.x;
+    property.y = property.y;
     property_max = MAX(min, max);
     property_min = MIN(min, max);
     property_value = CLAMP(property_min, val, property_max);
@@ -7775,25 +7771,37 @@ zr_layout_space_begin(struct zr_context *ctx,
     zr_panel_layout(ctx, win, height, widget_count);
     if (fmt == ZR_STATIC) {
         /* calculate bounds of the free to use panel space */
-        struct zr_rect clip, space;
+        struct zr_rect space;
         space.x = layout->at_x;
         space.y = layout->at_y;
         space.w = layout->width;
         space.h = layout->row.height;
-
-        /* setup clipping rect for the free space to prevent overdraw  */
-        zr_unify(&clip, &layout->clip, space.x, space.y, space.x + space.w, space.y + space.h);
-        zr_draw_scissor(&win->buffer, clip);
-
         layout->row.type = ZR_LAYOUT_STATIC_FREE;
-        layout->row.clip = layout->clip;
-        layout->clip = clip;
     } else layout->row.type = ZR_LAYOUT_DYNAMIC_FREE;
 
     layout->row.ratio = 0;
     layout->row.item_width = 0;
     layout->row.item_offset = 0;
     layout->row.filled = 0;
+}
+
+void
+zr_layout_space_end(struct zr_context *ctx)
+{
+    struct zr_window *win;
+    struct zr_layout *layout;
+
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(ctx->current);
+    ZR_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
+
+    win = ctx->current;
+    layout = win->layout;
+    layout->row.item_width = 0;
+    layout->row.item_height = 0;
+    layout->row.item_offset = 0;
+    zr_zero(&layout->row.item, sizeof(layout->row.item));
 }
 
 void
@@ -7844,8 +7852,8 @@ zr_layout_space_to_screen(struct zr_context *ctx, struct zr_vec2 ret)
     win = ctx->current;
     layout = win->layout;
 
-    ret.x += layout->clip.x - layout->offset->x;
-    ret.y += layout->clip.y - layout->offset->y;
+    ret.x += layout->at_x - layout->offset->x;
+    ret.y += layout->at_y - layout->offset->y;
     return ret;
 }
 
@@ -7861,8 +7869,8 @@ zr_layout_space_to_local(struct zr_context *ctx, struct zr_vec2 ret)
     win = ctx->current;
     layout = win->layout;
 
-    ret.x += -layout->clip.x + layout->offset->x;
-    ret.y += -layout->clip.y + layout->offset->y;
+    ret.x += -layout->at_x + layout->offset->x;
+    ret.y += -layout->at_y + layout->offset->y;
     return ret;
 }
 
@@ -7878,8 +7886,8 @@ zr_layout_space_rect_to_screen(struct zr_context *ctx, struct zr_rect ret)
     win = ctx->current;
     layout = win->layout;
 
-    ret.x += layout->clip.x - layout->offset->x;
-    ret.y += layout->clip.y - layout->offset->y;
+    ret.x += layout->at_x - layout->offset->x;
+    ret.y += layout->at_y - layout->offset->y;
     return ret;
 }
 
@@ -7895,30 +7903,9 @@ zr_layout_space_rect_to_local(struct zr_context *ctx, struct zr_rect ret)
     win = ctx->current;
     layout = win->layout;
 
-    ret.x += -layout->clip.x + layout->offset->x;
-    ret.y += -layout->clip.y + layout->offset->y;
+    ret.x += -layout->at_x + layout->offset->x;
+    ret.y += -layout->at_y + layout->offset->y;
     return ret;
-}
-
-void
-zr_layout_space_end(struct zr_context *ctx)
-{
-    struct zr_window *win;
-    struct zr_layout *layout;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-    ZR_ASSERT(ctx->current->layout);
-    if (!ctx || !ctx->current || !ctx->current->layout) return;
-
-    win = ctx->current;
-    layout = win->layout;
-    layout->row.item_width = 0;
-    layout->row.item_height = 0;
-    layout->row.item_offset = 0;
-    zr_zero(&layout->row.item, sizeof(layout->row.item));
-    if (layout->row.type == ZR_LAYOUT_STATIC_FREE)
-        zr_draw_scissor(&win->buffer, layout->clip);
 }
 
 static void
@@ -8025,12 +8012,12 @@ zr_layout_widget_space(struct zr_rect *bounds, const struct zr_context *ctx,
     } break;
     case ZR_LAYOUT_STATIC_FREE: {
         /* free widget placing */
-        bounds->x = layout->clip.x + layout->row.item.x;
+        bounds->x = layout->at_x + layout->row.item.x;
         bounds->w = layout->row.item.w;
         if (((bounds->x + bounds->w) > layout->max_x) && modify)
             layout->max_x = (bounds->x + bounds->w);
         bounds->x -= layout->offset->x;
-        bounds->y = layout->clip.y + layout->row.item.y;
+        bounds->y = layout->at_y + layout->row.item.y;
         bounds->y -= layout->offset->y;
         bounds->h = layout->row.item.h;
         return;
@@ -9810,7 +9797,7 @@ zr_tooltip(struct zr_context *ctx, const char *text)
  */
 int
 zr_contextual_begin(struct zr_context *ctx, struct zr_layout *layout,
-    zr_flags flags, struct zr_vec2 size)
+    zr_flags flags, struct zr_vec2 size, struct zr_rect trigger_bounds)
 {
     int ret;
     int is_active = 0;
@@ -9829,10 +9816,9 @@ zr_contextual_begin(struct zr_context *ctx, struct zr_layout *layout,
     win = ctx->current;
 
     popup = win->popup.win;
-    is_clicked = zr_input_is_mouse_click_in_rect(&ctx->input, ZR_BUTTON_RIGHT, win->layout->bounds);
+    is_clicked = zr_input_is_mouse_click_in_rect(&ctx->input, ZR_BUTTON_RIGHT, trigger_bounds);
     is_open = (popup && (popup->flags & ZR_WINDOW_CONTEXTUAL) && win->popup.type == ZR_WINDOW_CONTEXTUAL);
     if ((is_clicked && is_open && !is_active) || (!is_open && !is_active && !is_clicked)) return 0;
-    if (ctx->current != ctx->active) return 0;
 
     if (is_clicked) {
         body.x = ctx->input.mouse.pos.x;

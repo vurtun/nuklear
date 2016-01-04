@@ -57,42 +57,31 @@ int op = EASY;
 float value = 0.6f;
 int i =  20;
 
-while (1) {
-    zr_input_begin(&ctx.input);
-    /* generate input  */
-    zr_input_end(&ctx.input);
+zr_begin(&ctx, "Show", zr_rect(50, 50, 220, 220),
+    ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_CLOSEABLE);
+{
+    /* fixed widget pixel width */
+    zr_layout_row_static(&ctx, 30, 80, 1);
+    if (zr_button_text(&ctx, "button", ZR_BUTTON_DEFAULT)) {
+        /* event handling */
+    }
 
-    zr_begin(&ctx, "Show", zr_rect(50, 50, 220, 220),
-        ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_CLOSEABLE);
+    /* fixed widget window ratio width */
+    zr_layout_row_dynamic(&ctx, 30, 2);
+    if (zr_option(&ctx, "easy", op == EASY)) op = EASY;
+    if (zr_option(&ctx, "hard", op == HARD)) op = HARD;
+
+    /* custom widget pixel width */
+    zr_layout_row_begin(&ctx, ZR_STATIC, 30, 2);
     {
-        /* fixed widget pixel width */
-        zr_layout_row_static(&ctx, 30, 80, 1);
-        if (zr_button_text(&ctx, "button", ZR_BUTTON_DEFAULT)) {
-            /* event handling */
-        }
-
-        /* fixed widget window ratio width */
-        zr_layout_row_dynamic(&ctx, 30, 2);
-        if (zr_option(&ctx, "easy", op == EASY)) op = EASY;
-        if (zr_option(&ctx, "hard", op == HARD)) op = HARD;
-
-        /* custom widget pixel width */
-        zr_layout_row_begin(&ctx, ZR_STATIC, 30, 2);
-        {
-            zr_layout_row_push(&ctx, 50);
-            zr_label(&ctx, "Volume:", ZR_TEXT_LEFT);
-            zr_layout_row_push(&ctx, 110);
-            zr_slider_float(&ctx, 0, &value, 1.0f, 0.1f);
-        }
-        zr_layout_row_end(&ctx);
+        zr_layout_row_push(&ctx, 50);
+        zr_label(&ctx, "Volume:", ZR_TEXT_LEFT);
+        zr_layout_row_push(&ctx, 110);
+        zr_slider_float(&ctx, 0, &value, 1.0f, 0.1f);
     }
-    zr_end(ctx);
-
-    struct zr_command *cmd;
-    zr_foreach(cmd, &ctx) {
-        /* execute draw command */
-    }
+    zr_layout_row_end(&ctx);
 }
+zr_end(ctx);
 ```
 ![example](https://cloud.githubusercontent.com/assets/8057201/10187981/584ecd68-675c-11e5-897c-822ef534a876.png)
 

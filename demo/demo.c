@@ -1,3 +1,5 @@
+#include "limits.h"
+
 #define MIN(a,b)    ((a) < (b) ? (a) : (b))
 #define MAX(a,b)    ((a) < (b) ? (b) : (a))
 #define CLAMP(i,v,x) (MAX(MIN(v,x), i))
@@ -228,7 +230,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
         }
 
         /* contextual menu */
-        if (zr_contextual_begin(ctx, &menu, 0, zr_vec2(100, 200))) {
+        if (zr_contextual_begin(ctx, &menu, 0, zr_vec2(100, 200), zr_window_get_bounds(ctx))) {
             static size_t prog = 40;
             static int slider = 10;
             zr_layout_row_dynamic(ctx, 25, 1);
@@ -277,7 +279,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
 
             if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Properties")) {
                 size_t i = 0;
-                zr_layout_row_dynamic(ctx, 30, 3);
+                zr_layout_row_dynamic(ctx, 22, 3);
                 for (i = 0; i <= ZR_PROPERTY_SCROLLBAR_SIZE; ++i) {
                     zr_label(ctx, zr_get_property_name((enum zr_style_properties)i), ZR_TEXT_LEFT);
                     zr_property_float(ctx, "#X:", 0, &ctx->style.properties[i].x, 20, 1, 1);
@@ -288,7 +290,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
 
             if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Rounding")) {
                 size_t i = 0;
-                zr_layout_row_dynamic(ctx, 30, 2);
+                zr_layout_row_dynamic(ctx, 22, 2);
                 for (i = 0; i < ZR_ROUNDING_MAX; ++i) {
                     zr_label(ctx, zr_get_rounding_name((enum zr_style_rounding)i), ZR_TEXT_LEFT);
                     zr_property_float(ctx, "#R:", 0, &ctx->style.rounding[i], 20, 1, 1);
@@ -304,7 +306,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 zr_layout_row_dynamic(ctx, 400, 1);
                 if (zr_group_begin(ctx, &tab, "Color_Picker", 0)) {
                     for (i = 0; i < ZR_COLOR_COUNT; ++i) {
-                        zr_layout_row_dynamic(ctx, 30, 2);
+                        zr_layout_row_dynamic(ctx, 22, 2);
                         zr_label(ctx, zr_get_color_name((enum zr_style_colors)i), ZR_TEXT_LEFT);
                         if (zr_button_color(ctx, ctx->style.colors[i], ZR_BUTTON_DEFAULT)) {
                             show_color_picker_popup = zr_true;
@@ -377,6 +379,13 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 static float property_float = 2;
                 static int property_int = 10;
 
+                static float range_float_min = 0;
+                static float range_float_max = 100;
+                static float range_float_value = 50;
+                static int range_int_min = 0;
+                static int range_int_value = 2048;
+                static int range_int_max = 4096;
+
                 static const float ratio[] = {120, 150};
                 const struct zr_input *in = &ctx->input;
                 struct zr_rect bounds;
@@ -404,10 +413,23 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 zr_labelf(ctx, ZR_TEXT_LEFT, "Progressbar" , prog_value);
                 zr_progress(ctx, &prog_value, 100, ZR_MODIFIABLE);
 
+                zr_layout_row(ctx, ZR_STATIC, 25, 2, ratio);
                 zr_label(ctx, "Property float:", ZR_TEXT_LEFT);
                 zr_property_float(ctx, "Float:", 0, &property_float, 64.0f, 0.1f, 0.2f);
                 zr_label(ctx, "Property int:", ZR_TEXT_LEFT);
                 zr_property_int(ctx, "Int:", 0, &property_int, 100.0f, 1, 1);
+
+                zr_layout_row_dynamic(ctx, 25, 1);
+                zr_label(ctx, "Range:", ZR_TEXT_LEFT);
+                zr_layout_row_dynamic(ctx, 25, 3);
+                zr_property_float(ctx, "#min:", 0, &range_float_min, range_float_max, 1.0f, 0.2f);
+                zr_property_float(ctx, "#float:", range_float_min, &range_float_value, range_float_max, 1.0f, 0.2f);
+                zr_property_float(ctx, "#max:", range_float_min, &range_float_max, 100, 1.0f, 0.2f);
+
+                zr_property_int(ctx, "#min:", INT_MIN, &range_int_min, range_int_value, 1, 10);
+                zr_property_int(ctx, "#int:", range_int_min, &range_int_value, range_int_max, 1, 10);
+                zr_property_int(ctx, "#max:", range_int_value, &range_int_max, INT_MAX, 1, 10);
+
                 zr_layout_pop(ctx);
             }
 
@@ -427,7 +449,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Grid"))
                 {
                     int i;
-                    static int selected[16];
+                    static int selected[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
                     zr_layout_row_static(ctx, 50, 50, 4);
                     for (i = 0; i < 16; ++i) {
                         if (zr_selectable(ctx, "Z", ZR_TEXT_CENTERED, &selected[i])) {
@@ -570,7 +592,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
 
                 zr_label(ctx, "Box:", ZR_TEXT_LEFT);
                 zr_layout_row_static(ctx, 75, 278, 1);
-                zr_edit_string(ctx, ZR_EDIT_BOX, box_buffer, &box_len, 64, zr_filter_default);
+                zr_edit_string(ctx, ZR_EDIT_BOX, box_buffer, &box_len, 512, zr_filter_default);
 
                 zr_layout_row(ctx, ZR_STATIC, 25, 2, ratio);
                 active = zr_edit_string(ctx, ZR_EDIT_FIELD, text[7], &text_len[7], 64,  zr_filter_ascii);
@@ -653,194 +675,326 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
             zr_layout_pop(ctx);
         }
 
-        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Group"))
+        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Layout"))
         {
-            static int group_titlebar = zr_false;
-            static int group_border = zr_true;
-            static int group_no_scrollbar = zr_false;
-            static int group_width = 320;
-            static int group_height = 200;
-            struct zr_layout tab;
+            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Group"))
+            {
+                static int group_titlebar = zr_false;
+                static int group_border = zr_true;
+                static int group_no_scrollbar = zr_false;
+                static int group_width = 320;
+                static int group_height = 200;
+                struct zr_layout tab;
 
-            zr_flags group_flags = 0;
-            if (group_border) group_flags |= ZR_WINDOW_BORDER;
-            if (group_no_scrollbar) group_flags |= ZR_WINDOW_NO_SCROLLBAR;
-            if (group_titlebar) group_flags |= ZR_WINDOW_TITLE;
+                zr_flags group_flags = 0;
+                if (group_border) group_flags |= ZR_WINDOW_BORDER;
+                if (group_no_scrollbar) group_flags |= ZR_WINDOW_NO_SCROLLBAR;
+                if (group_titlebar) group_flags |= ZR_WINDOW_TITLE;
 
-            zr_layout_row_dynamic(ctx, 30, 3);
-            zr_checkbox(ctx, "Titlebar", &group_titlebar);
-            zr_checkbox(ctx, "Border", &group_border);
-            zr_checkbox(ctx, "No Scrollbar", &group_no_scrollbar);
+                zr_layout_row_dynamic(ctx, 30, 3);
+                zr_checkbox(ctx, "Titlebar", &group_titlebar);
+                zr_checkbox(ctx, "Border", &group_border);
+                zr_checkbox(ctx, "No Scrollbar", &group_no_scrollbar);
 
-            zr_layout_row_begin(ctx, ZR_STATIC, 30, 2);
-            zr_layout_row_push(ctx, 50);
-            zr_label(ctx, "size:", ZR_TEXT_LEFT);
-            zr_layout_row_push(ctx, 130);
-            zr_property_int(ctx, "#Width:", 100, &group_width, 500, 10, 1);
-            zr_layout_row_push(ctx, 130);
-            zr_property_int(ctx, "#Height:", 100, &group_height, 500, 10, 1);
-            zr_layout_row_end(ctx);
+                zr_layout_row_begin(ctx, ZR_STATIC, 22, 2);
+                zr_layout_row_push(ctx, 50);
+                zr_label(ctx, "size:", ZR_TEXT_LEFT);
+                zr_layout_row_push(ctx, 130);
+                zr_property_int(ctx, "#Width:", 100, &group_width, 500, 10, 1);
+                zr_layout_row_push(ctx, 130);
+                zr_property_int(ctx, "#Height:", 100, &group_height, 500, 10, 1);
+                zr_layout_row_end(ctx);
 
-            zr_layout_row_static(ctx, (float)group_height, (size_t)group_width, 2);
-            if (zr_group_begin(ctx, &tab, "Group", group_flags)) {
-                int i = 0;
-                static int selected[16];
-                zr_layout_row_static(ctx, 18, 100, 1);
-                for (i = 0; i < 16; ++i)
-                    zr_selectable(ctx, (selected[i]) ? "Selected": "Unselected", ZR_TEXT_CENTERED, &selected[i]);
-                zr_group_end(ctx);
+                zr_layout_row_static(ctx, (float)group_height, (size_t)group_width, 2);
+                if (zr_group_begin(ctx, &tab, "Group", group_flags)) {
+                    int i = 0;
+                    static int selected[16];
+                    zr_layout_row_static(ctx, 18, 100, 1);
+                    for (i = 0; i < 16; ++i)
+                        zr_selectable(ctx, (selected[i]) ? "Selected": "Unselected", ZR_TEXT_CENTERED, &selected[i]);
+                    zr_group_end(ctx);
+                }
+                zr_layout_pop(ctx);
+            }
+
+            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Simple"))
+            {
+                struct zr_layout tab;
+                zr_layout_row_dynamic(ctx, 300, 2);
+                if (zr_group_begin(ctx, &tab, "Group_Without_Border", 0)) {
+                    int i = 0;
+                    char buffer[64];
+                    zr_layout_row_static(ctx, 18, 150, 1);
+                    for (i = 0; i < 64; ++i) {
+                        sprintf(buffer, "0x%02x", i);
+                        zr_labelf(ctx, ZR_TEXT_LEFT, "%s: scrollable region", buffer);
+                    }
+                    zr_group_end(ctx);
+                }
+                if (zr_group_begin(ctx, &tab, "Group_With_Border", ZR_WINDOW_BORDER)) {
+                    int i = 0;
+                    char buffer[64];
+                    zr_layout_row_dynamic(ctx, 25, 2);
+                    for (i = 0; i < 64; ++i) {
+                        sprintf(buffer, "%08d", ((((i%7)*10)^32))+(64+(i%2)*2));
+                        zr_button_text(ctx, buffer, ZR_BUTTON_DEFAULT);
+                    }
+                    zr_group_end(ctx);
+                }
+                zr_layout_pop(ctx);
+            }
+
+            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Complex"))
+            {
+                int i;
+                struct zr_layout tab;
+                zr_layout_space_begin(ctx, ZR_STATIC, 500, 64);
+                zr_layout_space_push(ctx, zr_rect(0,0,150,500));
+                if (zr_group_begin(ctx, &tab, "Group_left", ZR_WINDOW_BORDER)) {
+                    static int selected[32];
+                    zr_layout_row_static(ctx, 18, 100, 1);
+                    for (i = 0; i < 32; ++i)
+                        zr_selectable(ctx, (selected[i]) ? "Selected": "Unselected", ZR_TEXT_CENTERED, &selected[i]);
+                    zr_group_end(ctx);
+                }
+
+                zr_layout_space_push(ctx, zr_rect(160,0,150,240));
+                if (zr_group_begin(ctx, &tab, "Group_top", ZR_WINDOW_BORDER)) {
+                    zr_layout_row_dynamic(ctx, 25, 1);
+                    zr_button_text(ctx, "#FFAA", ZR_BUTTON_DEFAULT);
+                    zr_button_text(ctx, "#FFBB", ZR_BUTTON_DEFAULT);
+                    zr_button_text(ctx, "#FFCC", ZR_BUTTON_DEFAULT);
+                    zr_button_text(ctx, "#FFDD", ZR_BUTTON_DEFAULT);
+                    zr_button_text(ctx, "#FFEE", ZR_BUTTON_DEFAULT);
+                    zr_button_text(ctx, "#FFFF", ZR_BUTTON_DEFAULT);
+                    zr_group_end(ctx);
+                }
+
+                zr_layout_space_push(ctx, zr_rect(160,250,150,250));
+                if (zr_group_begin(ctx, &tab, "Group_buttom", ZR_WINDOW_BORDER)) {
+                    zr_layout_row_dynamic(ctx, 25, 1);
+                    zr_button_text(ctx, "#FFAA", ZR_BUTTON_DEFAULT);
+                    zr_button_text(ctx, "#FFBB", ZR_BUTTON_DEFAULT);
+                    zr_button_text(ctx, "#FFCC", ZR_BUTTON_DEFAULT);
+                    zr_button_text(ctx, "#FFDD", ZR_BUTTON_DEFAULT);
+                    zr_button_text(ctx, "#FFEE", ZR_BUTTON_DEFAULT);
+                    zr_button_text(ctx, "#FFFF", ZR_BUTTON_DEFAULT);
+                    zr_group_end(ctx);
+                }
+
+                zr_layout_space_push(ctx, zr_rect(320,0,150,150));
+                if (zr_group_begin(ctx, &tab, "Group_right_top", ZR_WINDOW_BORDER)) {
+                    static int selected[4];
+                    zr_layout_row_static(ctx, 18, 100, 1);
+                    for (i = 0; i < 4; ++i)
+                        zr_selectable(ctx, (selected[i]) ? "Selected": "Unselected", ZR_TEXT_CENTERED, &selected[i]);
+                    zr_group_end(ctx);
+                }
+
+                zr_layout_space_push(ctx, zr_rect(320,160,150,150));
+                if (zr_group_begin(ctx, &tab, "Group_right_center", ZR_WINDOW_BORDER)) {
+                    static int selected[4];
+                    zr_layout_row_static(ctx, 18, 100, 1);
+                    for (i = 0; i < 4; ++i)
+                        zr_selectable(ctx, (selected[i]) ? "Selected": "Unselected", ZR_TEXT_CENTERED, &selected[i]);
+                    zr_group_end(ctx);
+                }
+
+                zr_layout_space_push(ctx, zr_rect(320,320,150,150));
+                if (zr_group_begin(ctx, &tab, "Group_right_bottom", ZR_WINDOW_BORDER)) {
+                    static int selected[4];
+                    zr_layout_row_static(ctx, 18, 100, 1);
+                    for (i = 0; i < 4; ++i)
+                        zr_selectable(ctx, (selected[i]) ? "Selected": "Unselected", ZR_TEXT_CENTERED, &selected[i]);
+                    zr_group_end(ctx);
+                }
+                zr_layout_space_end(ctx);
+                zr_layout_pop(ctx);
+            }
+
+            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Splitter"))
+            {
+                const struct zr_input *in = &ctx->input;
+                zr_layout_row_static(ctx, 20, 320, 1);
+                zr_label(ctx, "Use slider and spinner to change tile size", ZR_TEXT_LEFT);
+                zr_label(ctx, "Drag the space between tiles to change tile ratio", ZR_TEXT_LEFT);
+
+                if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Vertical"))
+                {
+                    static float a = 100, b = 100, c = 100;
+                    struct zr_rect bounds;
+                    struct zr_layout sub;
+
+                    float row_layout[5];
+                    row_layout[0] = a;
+                    row_layout[1] = 8;
+                    row_layout[2] = b;
+                    row_layout[3] = 8;
+                    row_layout[4] = c;
+
+                    /* header */
+                    zr_layout_row_static(ctx, 30, 100, 2);
+                    zr_label(ctx, "left:", ZR_TEXT_LEFT);
+                    zr_slider_float(ctx, 10.0f, &a, 200.0f, 10.0f);
+
+                    zr_label(ctx, "middle:", ZR_TEXT_LEFT);
+                    zr_slider_float(ctx, 10.0f, &b, 200.0f, 10.0f);
+
+                    zr_label(ctx, "right:", ZR_TEXT_LEFT);
+                    zr_slider_float(ctx, 10.0f, &c, 200.0f, 10.0f);
+
+                    /* tiles */
+                    zr_layout_row(ctx, ZR_STATIC, 200, 5, row_layout);
+                    zr_push_property(ctx, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 4));
+
+                    /* left space */
+                    if (zr_group_begin(ctx, &sub, "left", ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER|ZR_WINDOW_NO_SCROLLBAR)) {
+                        zr_layout_row_dynamic(ctx, 25, 1);
+                        zr_button_text(ctx, "#FFAA", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFBB", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFCC", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFDD", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFEE", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFFF", ZR_BUTTON_DEFAULT);
+                        zr_group_end(ctx);
+                    }
+
+                    /* scaler */
+                    zr_layout_peek(&bounds, ctx);
+                    zr_spacing(ctx, 1);
+                    if ((zr_input_is_mouse_hovering_rect(in, bounds) ||
+                        zr_input_is_mouse_prev_hovering_rect(in, bounds)) &&
+                        zr_input_is_mouse_down(in, ZR_BUTTON_LEFT))
+                    {
+                        a = row_layout[0] + in->mouse.delta.x;
+                        b = row_layout[2] - in->mouse.delta.x;
+                    }
+
+                    /* middle space */
+                    if (zr_group_begin(ctx, &sub, "center", ZR_WINDOW_BORDER|ZR_WINDOW_NO_SCROLLBAR)) {
+                        zr_layout_row_dynamic(ctx, 25, 1);
+                        zr_button_text(ctx, "#FFAA", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFBB", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFCC", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFDD", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFEE", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFFF", ZR_BUTTON_DEFAULT);
+                        zr_group_end(ctx);
+                    }
+
+                    /* scaler */
+                    zr_layout_peek(&bounds, ctx);
+                    zr_spacing(ctx, 1);
+                    if ((zr_input_is_mouse_hovering_rect(in, bounds) ||
+                        zr_input_is_mouse_prev_hovering_rect(in, bounds)) &&
+                        zr_input_is_mouse_down(in, ZR_BUTTON_LEFT))
+                    {
+                        b = (row_layout[2] + in->mouse.delta.x);
+                        c = (row_layout[4] - in->mouse.delta.x);
+                    }
+
+                    /* right space */
+                    if (zr_group_begin(ctx, &sub, "right", ZR_WINDOW_BORDER|ZR_WINDOW_NO_SCROLLBAR)) {
+                        zr_layout_row_dynamic(ctx, 25, 1);
+                        zr_button_text(ctx, "#FFAA", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFBB", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFCC", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFDD", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFEE", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFFF", ZR_BUTTON_DEFAULT);
+                        zr_group_end(ctx);
+                    }
+
+                    zr_pop_property(ctx);
+                    zr_layout_pop(ctx);
+                }
+
+                if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Horizontal"))
+                {
+                    static float a = 100, b = 100, c = 100;
+                    struct zr_layout sub;
+                    struct zr_rect bounds;
+
+                    /* header */
+                    zr_layout_row_static(ctx, 30, 100, 2);
+                    zr_label(ctx, "top:", ZR_TEXT_LEFT);
+                    zr_slider_float(ctx, 10.0f, &a, 200.0f, 10.0f);
+
+                    zr_label(ctx, "middle:", ZR_TEXT_LEFT);
+                    zr_slider_float(ctx, 10.0f, &b, 200.0f, 10.0f);
+
+                    zr_label(ctx, "bottom:", ZR_TEXT_LEFT);
+                    zr_slider_float(ctx, 10.0f, &c, 200.0f, 10.0f);
+
+                    /* top space */
+                    zr_layout_row_dynamic(ctx, a, 1);
+                    if (zr_group_begin(ctx, &sub, "top", ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER)) {
+                        zr_layout_row_dynamic(ctx, 25, 3);
+                        zr_button_text(ctx, "#FFAA", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFBB", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFCC", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFDD", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFEE", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFFF", ZR_BUTTON_DEFAULT);
+                        zr_group_end(ctx);
+                    }
+
+                    /* scaler */
+                    zr_layout_row_dynamic(ctx, 8, 1);
+                    zr_layout_peek(&bounds, ctx);
+                    zr_spacing(ctx, 1);
+                    if ((zr_input_is_mouse_hovering_rect(in, bounds) ||
+                        zr_input_is_mouse_prev_hovering_rect(in, bounds)) &&
+                        zr_input_is_mouse_down(in, ZR_BUTTON_LEFT))
+                    {
+                        a = a + in->mouse.delta.y;
+                        b = b - in->mouse.delta.y;
+                    }
+
+                    /* middle space */
+                    zr_layout_row_dynamic(ctx, b, 1);
+                    if (zr_group_begin(ctx, &sub, "middle", ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER)) {
+                        zr_layout_row_dynamic(ctx, 25, 3);
+                        zr_button_text(ctx, "#FFAA", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFBB", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFCC", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFDD", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFEE", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFFF", ZR_BUTTON_DEFAULT);
+                        zr_group_end(ctx);
+                    }
+
+                    /* scaler */
+                    zr_layout_row_dynamic(ctx, 8, 1);
+                    zr_layout_peek(&bounds, ctx);
+                    zr_spacing(ctx, 1);
+                    if ((zr_input_is_mouse_hovering_rect(in, bounds) ||
+                        zr_input_is_mouse_prev_hovering_rect(in, bounds)) &&
+                        zr_input_is_mouse_down(in, ZR_BUTTON_LEFT))
+                    {
+                        b = b + in->mouse.delta.y;
+                        c = c - in->mouse.delta.y;
+                    }
+
+                    /* bottom space */
+                    zr_layout_row_dynamic(ctx, c, 1);
+                    if (zr_group_begin(ctx, &sub, "bottom", ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER)) {
+                        zr_layout_row_dynamic(ctx, 25, 3);
+                        zr_button_text(ctx, "#FFAA", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFBB", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFCC", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFDD", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFEE", ZR_BUTTON_DEFAULT);
+                        zr_button_text(ctx, "#FFFF", ZR_BUTTON_DEFAULT);
+                        zr_group_end(ctx);
+                    }
+                    zr_layout_pop(ctx);
+                }
+                zr_layout_pop(ctx);
             }
             zr_layout_pop(ctx);
         }
 
-        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Splitter"))
-        {
-            const struct zr_input *in = &ctx->input;
-            zr_layout_row_static(ctx, 20, 320, 1);
-            zr_label(ctx, "Use slider and spinner to change tile size", ZR_TEXT_LEFT);
-            zr_label(ctx, "Drag the space between tiles to change tile ratio", ZR_TEXT_LEFT);
-
-            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Vertical"))
-            {
-                static float a = 100, b = 100, c = 100;
-                struct zr_rect bounds;
-                struct zr_layout sub;
-
-                float row_layout[5];
-                row_layout[0] = a;
-                row_layout[1] = 8;
-                row_layout[2] = b;
-                row_layout[3] = 8;
-                row_layout[4] = c;
-
-                /* header */
-                zr_layout_row_static(ctx, 30, 100, 2);
-                zr_label(ctx, "left:", ZR_TEXT_LEFT);
-                zr_slider_float(ctx, 10.0f, &a, 200.0f, 10.0f);
-
-                zr_label(ctx, "middle:", ZR_TEXT_LEFT);
-                zr_slider_float(ctx, 10.0f, &b, 200.0f, 10.0f);
-
-                zr_label(ctx, "right:", ZR_TEXT_LEFT);
-                zr_slider_float(ctx, 10.0f, &c, 200.0f, 10.0f);
-
-                /* tiles */
-                zr_layout_row(ctx, ZR_STATIC, 200, 5, row_layout);
-                zr_push_property(ctx, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 4));
-
-                /* left space */
-                if (zr_group_begin(ctx, &sub, "left", ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER)) {
-                    /* TODO: group content */
-                    zr_group_end(ctx);
-                }
-
-                /* scaler */
-                zr_layout_peek(&bounds, ctx);
-                zr_spacing(ctx, 1);
-                if ((zr_input_is_mouse_hovering_rect(in, bounds) ||
-                    zr_input_is_mouse_prev_hovering_rect(in, bounds)) &&
-                    zr_input_is_mouse_down(in, ZR_BUTTON_LEFT))
-                {
-                    a = row_layout[0] + in->mouse.delta.x;
-                    b = row_layout[2] - in->mouse.delta.x;
-                }
-
-                /* middle space */
-                if (zr_group_begin(ctx, &sub, "center", ZR_WINDOW_BORDER)) {
-                    /* TODO: group content */
-                    zr_group_end(ctx);
-                }
-
-                /* scaler */
-                zr_layout_peek(&bounds, ctx);
-                zr_spacing(ctx, 1);
-                if ((zr_input_is_mouse_hovering_rect(in, bounds) ||
-                    zr_input_is_mouse_prev_hovering_rect(in, bounds)) &&
-                    zr_input_is_mouse_down(in, ZR_BUTTON_LEFT))
-                {
-                    b = (row_layout[2] + in->mouse.delta.x);
-                    c = (row_layout[4] - in->mouse.delta.x);
-                }
-
-                /* right space */
-                if (zr_group_begin(ctx, &sub, "right", ZR_WINDOW_BORDER)) {
-                    /* TODO: group content */
-                    zr_group_end(ctx);
-                }
-
-                zr_pop_property(ctx);
-                zr_layout_pop(ctx);
-            }
-
-            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Horizontal"))
-            {
-                static float a = 100, b = 100, c = 100;
-                struct zr_layout sub;
-                struct zr_rect bounds;
-
-                /* header */
-                zr_layout_row_static(ctx, 30, 100, 2);
-                zr_label(ctx, "top:", ZR_TEXT_LEFT);
-                zr_slider_float(ctx, 10.0f, &a, 200.0f, 10.0f);
-
-                zr_label(ctx, "middle:", ZR_TEXT_LEFT);
-                zr_slider_float(ctx, 10.0f, &b, 200.0f, 10.0f);
-
-                zr_label(ctx, "bottom:", ZR_TEXT_LEFT);
-                zr_slider_float(ctx, 10.0f, &c, 200.0f, 10.0f);
-
-                zr_push_property(ctx, ZR_PROPERTY_ITEM_SPACING, zr_vec2(4, 0));
-
-                /* top space */
-                zr_layout_row_dynamic(ctx, a, 1);
-                if (zr_group_begin(ctx, &sub, "top", ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER)) {
-                    /* TODO: group content */
-                    zr_group_end(ctx);
-                }
-
-                /* scaler */
-                zr_layout_row_dynamic(ctx, 8, 1);
-                zr_layout_peek(&bounds, ctx);
-                zr_spacing(ctx, 1);
-                if ((zr_input_is_mouse_hovering_rect(in, bounds) ||
-                    zr_input_is_mouse_prev_hovering_rect(in, bounds)) &&
-                    zr_input_is_mouse_down(in, ZR_BUTTON_LEFT))
-                {
-                    a = a + in->mouse.delta.y;
-                    b = b - in->mouse.delta.y;
-                }
-
-                /* middle space */
-                zr_layout_row_dynamic(ctx, b, 1);
-                if (zr_group_begin(ctx, &sub, "middle", ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER)) {
-                    /* TODO: group content */
-                    zr_group_end(ctx);
-                }
-
-                /* scaler */
-                zr_layout_row_dynamic(ctx, 8, 1);
-                zr_layout_peek(&bounds, ctx);
-                zr_spacing(ctx, 1);
-                if ((zr_input_is_mouse_hovering_rect(in, bounds) ||
-                    zr_input_is_mouse_prev_hovering_rect(in, bounds)) &&
-                    zr_input_is_mouse_down(in, ZR_BUTTON_LEFT))
-                {
-                    b = b + in->mouse.delta.y;
-                    c = c - in->mouse.delta.y;
-                }
-
-                /* bottom space */
-                zr_layout_row_dynamic(ctx, c, 1);
-                if (zr_group_begin(ctx, &sub, "bottom", ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER)) {
-                    /* TODO: group content */
-                    zr_group_end(ctx);
-                }
-
-                zr_pop_property(ctx);
-                zr_layout_pop(ctx);
-            }
-            zr_layout_pop(ctx);
-        }
     }
     zr_end(ctx);
     return !zr_window_is_closed(ctx, "Demo");
@@ -874,7 +1028,7 @@ run_demo(struct demo *gui)
         if (zr_option(ctx, "easy", op == EASY)) op = EASY;
         if (zr_option(ctx, "hard", op == HARD)) op = HARD;
 
-        zr_layout_row_dynamic(ctx, 30, 1);
+        zr_layout_row_dynamic(ctx, 22, 1);
         zr_property_int(ctx, "Compression:", 0, &property, 100, 10, 1);
     }
     zr_end(ctx);

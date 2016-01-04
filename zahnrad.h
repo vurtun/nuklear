@@ -758,7 +758,6 @@ int zr_input_is_key_pressed(const struct zr_input*, enum zr_keys);
 int zr_input_is_key_released(const struct zr_input*, enum zr_keys);
 int zr_input_is_key_down(const struct zr_input*, enum zr_keys);
 
-
 /* ==============================================================
  *                          STYLE
  * ===============================================================*/
@@ -1112,8 +1111,6 @@ struct zr_row_layout {
     /* total fill ratio */
     struct zr_rect item;
     /* item bounds */
-    struct zr_rect clip;
-    /* temporary clipping rect */
 };
 
 struct zr_menu {
@@ -1476,7 +1473,8 @@ void zr_combo_close(struct zr_context*);
 void zr_combo_end(struct zr_context*);
 
 /* contextual menu */
-int zr_contextual_begin(struct zr_context*, struct zr_layout*, zr_flags flags, struct zr_vec2 size);
+int zr_contextual_begin(struct zr_context*, struct zr_layout*, zr_flags flags,
+                        struct zr_vec2 size, struct zr_rect trigger_bounds);
 int zr_contextual_item(struct zr_context*, const char*, enum zr_text_align align);
 int zr_contextual_item_icon(struct zr_context*, struct zr_image, const char*, enum zr_text_align);
 int zr_contextual_item_symbol(struct zr_context*, enum zr_symbol, const char*, enum zr_text_align);
