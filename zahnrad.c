@@ -106,6 +106,7 @@ struct zr_popup {
     struct zr_window *win;
     enum zr_internal_window_flags type;
     zr_ulong name;
+    int active;
 };
 
 struct zr_edit_state {
@@ -7344,6 +7345,15 @@ zr_layout_end(struct zr_context *ctx)
             footer.y = window->bounds.y + layout->height + item_spacing.y;
             footer.w = window->bounds.w + scrollbar_size;
             layout->footer_h = 0;
+
+            if ((layout->offset->x == 0) && !(layout->flags & ZR_WINDOW_NO_SCROLLBAR)) {
+                struct zr_rect bounds;
+                bounds.x = layout->bounds.x + layout->width;
+                bounds.y = layout->clip.y;
+                bounds.w = scrollbar_size;
+                bounds.h = layout->height;
+                zr_draw_rect(out, bounds, 0, config->colors[ZR_COLOR_WINDOW]);
+            }
         } else {
             footer.x = window->bounds.x;
             footer.w = window->bounds.w + scrollbar_size;
@@ -9540,12 +9550,17 @@ zr_popup_begin(struct zr_context *ctx, struct zr_layout *layout,
     if (!popup) {
         popup = zr_create_window(ctx);
         win->popup.win = popup;
+        win->popup.active = 0;
     }
 
     if (win->popup.name != title_hash) {
-        zr_zero(popup, sizeof(*popup));
-        win->popup.name = title_hash;
+        if (!win->popup.active) {
+            zr_zero(popup, sizeof(*popup));
+            win->popup.name = title_hash;
+            win->popup.active = 1;
+        } else return 0;
     }
+
     ctx->current = popup;
     rect.x += win->layout->clip.x;
     rect.y += win->layout->clip.y;
@@ -9566,11 +9581,13 @@ zr_popup_begin(struct zr_context *ctx, struct zr_layout *layout,
     if (zr_layout_begin(ctx, title)) {
         win->layout->flags |= ZR_WINDOW_ROM;
         win->layout->flags &= ~(zr_flags)ZR_WINDOW_REMOVE_ROM;
+        win->popup.active = 1;
         layout->offset = &popup->scrollbar;
         return 1;
     } else {
         win->layout->flags |= ZR_WINDOW_REMOVE_ROM;
         win->layout->popup_buffer.active = 0;
+        win->popup.active = 0;
         ctx->memory.allocated = allocated;
         ctx->current = win;
         return 0;
@@ -9659,9 +9676,10 @@ zr_popup_end(struct zr_context *ctx)
     popup = ctx->current;
     ZR_ASSERT(popup->parent);
     win = popup->parent;
-    if (popup->flags & ZR_WINDOW_HIDDEN)
+    if (popup->flags & ZR_WINDOW_HIDDEN) {
         win->layout->flags |= ZR_WINDOW_REMOVE_ROM;
-
+        win->popup.active = 0;
+    }
     zr_draw_scissor(&popup->buffer, zr_null_rect);
     zr_end(ctx);
 
@@ -9757,11 +9775,10 @@ zr_tooltip(struct zr_context *ctx, const char *text)
  */
 int
 zr_contextual_begin(struct zr_context *ctx, struct zr_layout *layout,
-    zr_flags flags, struct zr_vec2 size, struct zr_rect trigger_bounds)
+    zr_flags flags, struct zr_vec2 size, int is_clicked)
 {
     int ret;
     int is_active = 0;
-    int is_clicked = 0;
     int is_open = 0;
 
     struct zr_window *win;
@@ -9776,7 +9793,6 @@ zr_contextual_begin(struct zr_context *ctx, struct zr_layout *layout,
     win = ctx->current;
 
     popup = win->popup.win;
-    is_clicked = zr_input_is_mouse_click_in_rect(&ctx->input, ZR_BUTTON_RIGHT, trigger_bounds);
     is_open = (popup && (popup->flags & ZR_WINDOW_CONTEXTUAL) && win->popup.type == ZR_WINDOW_CONTEXTUAL);
     if ((is_clicked && is_open && !is_active) || (!is_open && !is_active && !is_clicked)) return 0;
 

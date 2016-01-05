@@ -229,21 +229,6 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
             } else show_color_picker_popup = zr_false;
         }
 
-        /* contextual menu */
-        if (zr_contextual_begin(ctx, &menu, 0, zr_vec2(100, 200), zr_window_get_bounds(ctx))) {
-            static size_t prog = 40;
-            static int slider = 10;
-            zr_layout_row_dynamic(ctx, 25, 1);
-            zr_checkbox(ctx, "Menu", &show_menu);
-            zr_progress(ctx, &prog, 100, ZR_MODIFIABLE);
-            zr_slider_int(ctx, 0, &slider, 16, 1);
-            if (zr_contextual_item(ctx, "About", ZR_TEXT_CENTERED))
-                show_app_about = zr_true;
-            if (zr_contextual_item(ctx, "Quit", ZR_TEXT_CENTERED))
-                show_close_popup = zr_true;
-            zr_contextual_end(ctx);
-        }
-
         /* window flags */
         if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Window")) {
             zr_layout_row_dynamic(ctx, 30, 2);
@@ -385,10 +370,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 static int range_int_min = 0;
                 static int range_int_value = 2048;
                 static int range_int_max = 4096;
-
                 static const float ratio[] = {120, 150};
-                const struct zr_input *in = &ctx->input;
-                struct zr_rect bounds;
 
                 zr_layout_row_static(ctx, 30, 100, 1);
                 zr_checkbox(ctx, "Checkbox", &checkbox);
@@ -398,11 +380,6 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 option = zr_option(ctx, "optionB", option == B) ? B : option;
                 option = zr_option(ctx, "optionC", option == C) ? C : option;
 
-                zr_layout_row_static(ctx, 30, 150, 1);
-                zr_layout_peek(&bounds, ctx);
-                zr_label(ctx, "Hover me for tooltip", ZR_TEXT_LEFT);
-                if (zr_input_is_mouse_hovering_rect(in, bounds))
-                    zr_tooltip(ctx, "This is a tooltip");
 
                 zr_layout_row(ctx, ZR_STATIC, 30, 2, ratio);
                 zr_labelf(ctx, ZR_TEXT_LEFT, "Slider int");
@@ -604,7 +581,6 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                     box_len += text_len[7];
                     text_len[7] = 0;
                 }
-
                 zr_layout_row_end(ctx);
                 zr_layout_pop(ctx);
             }
@@ -675,8 +651,177 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
             zr_layout_pop(ctx);
         }
 
+        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Popup"))
+        {
+            enum {NONE=0, MENU=1, COLOR=2};
+            static int active = MENU;
+            static struct zr_color color = {255,0,0, 255};
+            static int select[4];
+            static int popup_active;
+
+            const struct zr_input *in = &ctx->input;
+            struct zr_rect menu_bounds, color_bounds, bounds;
+            int is_menu, is_color;
+            struct zr_vec2 size;
+
+            /* contextual */
+            zr_layout_row_static(ctx, 30, 150, 1);
+            zr_layout_peek(&menu_bounds, ctx);
+            zr_label(ctx, "Right click me for menu", ZR_TEXT_LEFT);
+
+            /* color contextual */
+            zr_layout_row_begin(ctx, ZR_STATIC, 30, 2);
+            zr_layout_row_push(ctx, 100);
+            zr_label(ctx, "Right Click here:", ZR_TEXT_LEFT);
+            zr_layout_row_push(ctx, 50);
+            zr_layout_peek(&color_bounds, ctx);
+            zr_button_color(ctx, color, ZR_BUTTON_DEFAULT);
+            zr_layout_row_end(ctx);
+
+            /* This is a shitty hack to accomplish multiple contextual menus */
+            is_menu = zr_input_mouse_clicked(in, ZR_BUTTON_RIGHT, menu_bounds);
+            is_color = zr_input_mouse_clicked(in, ZR_BUTTON_RIGHT, color_bounds);
+            size = (is_color || active == COLOR) ? zr_vec2(350, 60): zr_vec2(100, 200);
+            if (zr_contextual_begin(ctx, &menu, 0, size, is_color|is_menu)) {
+                if (is_menu || active == MENU) {
+                    static size_t prog = 40;
+                    static int slider = 10;
+
+                    active = MENU;
+                    zr_layout_row_dynamic(ctx, 25, 1);
+                    zr_checkbox(ctx, "Menu", &show_menu);
+                    zr_progress(ctx, &prog, 100, ZR_MODIFIABLE);
+                    zr_slider_int(ctx, 0, &slider, 16, 1);
+                    zr_selectable(ctx, select[0]?"Unselect":"Select", ZR_TEXT_LEFT, &select[0]);
+                    zr_selectable(ctx, select[1]?"Unselect":"Select", ZR_TEXT_LEFT, &select[1]);
+                    zr_selectable(ctx, select[2]?"Unselect":"Select", ZR_TEXT_LEFT, &select[2]);
+                    zr_selectable(ctx, select[3]?"Unselect":"Select", ZR_TEXT_LEFT, &select[3]);
+                    if (zr_contextual_item(ctx, "About", ZR_TEXT_CENTERED))
+                        show_app_about = zr_true;
+                    if (zr_contextual_item(ctx, "Quit", ZR_TEXT_CENTERED))
+                        show_close_popup = zr_true;
+                } else if (is_color || active == COLOR){
+                    active = COLOR;
+                    zr_layout_row_dynamic(ctx, 30, 4);
+                    color.r = (zr_byte)zr_propertyi(ctx, "#r", 0, color.r, 255, 1, 1);
+                    color.g = (zr_byte)zr_propertyi(ctx, "#g", 0, color.g, 255, 1, 1);
+                    color.b = (zr_byte)zr_propertyi(ctx, "#b", 0, color.b, 255, 1, 1);
+                    color.a = (zr_byte)zr_propertyi(ctx, "#a", 0, color.a, 255, 1, 1);
+                }
+                zr_contextual_end(ctx);
+            } else active = NONE;
+
+            /* popup */
+            zr_layout_row_begin(ctx, ZR_STATIC, 30, 2);
+            zr_layout_row_push(ctx, 100);
+            zr_label(ctx, "Popup:", ZR_TEXT_LEFT);
+            zr_layout_row_push(ctx, 50);
+            if (zr_button_text(ctx, "Popup", ZR_BUTTON_DEFAULT))
+                popup_active = 1;
+            zr_layout_row_end(ctx);
+
+            if (popup_active)
+            {
+                static struct zr_rect s = {20, 100, 220, 150};
+                if (zr_popup_begin(ctx, &menu, ZR_POPUP_STATIC, "Error", ZR_WINDOW_DYNAMIC, s))
+                {
+                    zr_layout_row_dynamic(ctx, 25, 1);
+                    zr_label(ctx, "A terrible error as occured", ZR_TEXT_LEFT);
+                    zr_layout_row_dynamic(ctx, 25, 2);
+                    if (zr_button_text(ctx, "OK", ZR_BUTTON_DEFAULT)) {
+                        popup_active = 0;
+                        zr_popup_close(ctx);
+                    }
+                    if (zr_button_text(ctx, "Cancel", ZR_BUTTON_DEFAULT)) {
+                        popup_active = 0;
+                        zr_popup_close(ctx);
+                    }
+                    zr_popup_end(ctx);
+                } else popup_active = zr_false;
+            }
+
+            /* tooltip */
+            zr_layout_row_static(ctx, 30, 150, 1);
+            zr_layout_peek(&bounds, ctx);
+            zr_label(ctx, "Hover me for tooltip", ZR_TEXT_LEFT);
+            if (zr_input_is_mouse_hovering_rect(in, bounds))
+                zr_tooltip(ctx, "This is a tooltip");
+
+            zr_layout_pop(ctx);
+        }
+
         if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Layout"))
         {
+            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Widget"))
+            {
+                float ratio_two[] = {0.2f, 0.6f, 0.2f};
+                float width_two[] = {100, 200, 50};
+
+                zr_layout_row_dynamic(ctx, 30, 1);
+                zr_label(ctx, "Dynamic fixed column layout with generated position and size:", ZR_TEXT_LEFT);
+                zr_layout_row_dynamic(ctx, 30, 3);
+                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+
+                zr_layout_row_dynamic(ctx, 30, 1);
+                zr_label(ctx, "static fixed column layout with generated position and size:", ZR_TEXT_LEFT);
+                zr_layout_row_static(ctx, 30, 100, 3);
+                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+
+                zr_layout_row_dynamic(ctx, 30, 1);
+                zr_label(ctx, "Dynamic array-based custom column layout with generated position and custom size:",ZR_TEXT_LEFT);
+                zr_layout_row(ctx, ZR_DYNAMIC, 30, 3, ratio_two);
+                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+
+                zr_layout_row_dynamic(ctx, 30, 1);
+                zr_label(ctx, "Static array-based custom column layout with generated position and custom size:",ZR_TEXT_LEFT );
+                zr_layout_row(ctx, ZR_STATIC, 30, 3, width_two);
+                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+
+                zr_layout_row_dynamic(ctx, 30, 1);
+                zr_label(ctx, "Dynamic immediate mode custom column layout with generated position and custom size:",ZR_TEXT_LEFT);
+                zr_layout_row_begin(ctx, ZR_DYNAMIC, 30, 3);
+                zr_layout_row_push(ctx, 0.2f);
+                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_layout_row_push(ctx, 0.6f);
+                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_layout_row_push(ctx, 0.2f);
+                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_layout_row_end(ctx);
+
+                zr_layout_row_dynamic(ctx, 30, 1);
+                zr_label(ctx, "Static immmediate mode custom column layout with generated position and custom size:", ZR_TEXT_LEFT);
+                zr_layout_row_begin(ctx, ZR_STATIC, 30, 3);
+                zr_layout_row_push(ctx, 100);
+                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_layout_row_push(ctx, 200);
+                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_layout_row_push(ctx, 50);
+                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_layout_row_end(ctx);
+
+                zr_layout_row_dynamic(ctx, 30, 1);
+                zr_label(ctx, "Static free space with custom position and custom size:", ZR_TEXT_LEFT);
+                zr_layout_space_begin(ctx, ZR_STATIC, 120, 4);
+                zr_layout_space_push(ctx, zr_rect(100, 0, 100, 30));
+                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_layout_space_push(ctx, zr_rect(0, 15, 100, 30));
+                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_layout_space_push(ctx, zr_rect(200, 15, 100, 30));
+                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_layout_space_push(ctx, zr_rect(100, 30, 100, 30));
+                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_layout_space_end(ctx);
+                zr_layout_pop(ctx);
+            }
+
             if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Group"))
             {
                 static int group_titlebar = zr_false;

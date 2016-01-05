@@ -131,7 +131,6 @@ ui_piemenu(struct zr_context *ctx,
     zr_push_color(ctx, ZR_COLOR_WINDOW, zr_rgba(0,0,0,0));
     border = ctx->style.colors[ZR_COLOR_BORDER];
     zr_push_color(ctx, ZR_COLOR_BORDER, zr_rgba(0,0,0,0));
-    if (ctx->current != ctx->active) return 0;
 
     /* pie menu popup */
     total_space  = zr_window_get_content_region(ctx);
@@ -229,6 +228,7 @@ button_demo(struct zr_context *ctx, struct icons *img)
     static int toggle0 = 1;
     static int toggle1 = 0;
     static int toggle2 = 1;
+    int clicked = 0;
 
     ctx->style.font.height = 20;
     zr_begin(ctx, &layout, "Button Demo", zr_rect(50,50,255,610),
@@ -314,7 +314,8 @@ button_demo(struct zr_context *ctx, struct icons *img)
     /*------------------------------------------------
      *                  CONTEXTUAL
      *------------------------------------------------*/
-    if (zr_contextual_begin(ctx, &menu, ZR_WINDOW_NO_SCROLLBAR, zr_vec2(120, 200), zr_window_get_bounds(ctx))) {
+    clicked = zr_input_mouse_clicked(&ctx->input, ZR_BUTTON_RIGHT, zr_window_get_bounds(ctx));
+    if (zr_contextual_begin(ctx, &menu, ZR_WINDOW_NO_SCROLLBAR, zr_vec2(120, 200), clicked)) {
         ctx->style.font.height = 18;
         zr_layout_row_dynamic(ctx, 25, 1);
         if (zr_contextual_item_icon(ctx, zr_image_id(img->copy), "Clone", ZR_TEXT_RIGHT))
