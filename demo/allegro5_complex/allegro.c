@@ -30,13 +30,10 @@
 #include <allegro5/allegro_primitives.h>
 
 /* macros */
-#define DTIME       33
-#define MAX_DRAW_COMMAND_MEMORY (4 * 1024)
 #define MAX_VERTEX_MEMORY 128 * 1024
 #define MAX_ELEMENT_MEMORY 64 * 1024
 
 #include "../../zahnrad.h"
-
 #include "../demo.c"
 
 struct device {
@@ -317,17 +314,10 @@ static void mem_free(zr_handle unused, void *ptr)
 int
 main(int argc, char *argv[])
 {
-    /* Platform */
-    const char *font_path;
-    int win_width, win_height;
-    int width = 0, height = 0;
-    int running = 1;
-
-    /* GUI */
     struct device dev;
     struct demo gui;
-
-    font_path = argv[1];
+    int running = 1;
+    const char *font_path = argv[1];
     if (argc < 2)
         die("Missing TTF Font file argument!");
 

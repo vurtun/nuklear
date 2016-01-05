@@ -482,12 +482,12 @@ file_browser_run(struct file_browser *browser, struct zr_context *ctx, int width
         zr_menubar_end(ctx);
 
         /* window layout */
+        zr_push_property(ctx, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 4));
         total_space = zr_window_get_content_region(ctx);
         row_layout[0] = (total_space.w - 8) * browser->ratio_sel;
         row_layout[1] = 8;
         row_layout[2] = (total_space.w - 8) * browser->ratio_dir;
         zr_layout_row(ctx, ZR_STATIC, total_space.h, 3, row_layout);
-        zr_push_property(ctx, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 4));
 
         /* output special important directory list in own window */
         /* TODO: maybe allow to add current directory into list? */

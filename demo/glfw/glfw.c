@@ -32,22 +32,14 @@
 #include <GLFW/glfw3.h>
 
 /* macros */
-#define DTIME       33
-#define MAX_DRAW_COMMAND_MEMORY (4 * 1024)
 #define MAX_VERTEX_MEMORY 128 * 1024
 #define MAX_ELEMENT_MEMORY 64 * 1024
 
 #include "../../zahnrad.h"
-
-
-static GLFWwindow *win;
-static void clipboard_set(const char *text){glfwSetClipboardString(win, text);}
-static int clipboard_is_filled(void) {return glfwGetClipboardString(win) != NULL;}
-static const char* clipboard_get(void){return glfwGetClipboardString(win);}
-
 #include "../demo.c"
 
-/* FUCK CALLBACKS */
+/* sign: is there any way to pass a user pointer to glfw? */
+static GLFWwindow *win;
 static int mouse_pos_x = 0;
 static int mouse_pos_y = 0;
 static struct demo gui;
@@ -450,7 +442,6 @@ main(int argc, char *argv[])
 {
     /* Platform */
     const char *font_path;
-    int win_width, win_height;
     int width = 0, height = 0;
     int running = 1;
 
@@ -520,7 +511,6 @@ main(int argc, char *argv[])
         glfwSwapBuffers(win);
     }
 
-cleanup:
     /* Cleanup */
     free(font.glyphs);
     zr_free(&gui.ctx);

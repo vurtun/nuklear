@@ -41,31 +41,15 @@
 #endif
 
 #include "../../zahnrad.h"
-
-#define UNUSED(a)   ((void)(a))
-static void clipboard_set(const char *text){UNUSED(text);}
-static int clipboard_is_filled(void){return zr_false;}
-static const char* clipboard_get(void) {return NULL;}
-
 #include "../demo.c"
-
-#define RAD(a)          ((a) * (FPI / 180.0f))
-#define DEG(a)          ((a) * (180.0f / FPI))
-#define MIN(a,b)        ((a) < (b) ? (a) : (b))
-#define MAX(a,b)        ((a) < (b) ? (b) : (a))
-#define ABS(x)          (((a) < 0) ? (-(a)) : (a))
-#define SIGN(x)         (((x) > 0) - ((x) < 0))
-#define CLAMP(i,v,x)    (MAX(MIN(v,x), i))
-#define LEN(a)          (sizeof(a)/sizeof(a)[0])
-#define UNUSED(a)       ((void)(a))
 
 /* prefered OpenGL version */
 #define OGL_MAJOR_VERSION 3
 #define OGL_MINOR_VERSION 0
 
-#define MAX_DRAW_COMMAND_MEMORY (4 * 1024)
 #define MAX_VERTEX_MEMORY 128 * 1024
 #define MAX_ELEMENT_MEMORY 64 * 1024
+#define UNUSED(a)   ((void)(a))
 
 typedef GLXContext(*glxCreateContext)(Display*, GLXFBConfig, GLXContext, Bool, const int*);
 /* GL_ARB_vertex_buffer_object */

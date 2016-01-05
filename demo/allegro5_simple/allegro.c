@@ -32,13 +32,7 @@
 #include <allegro5/allegro_ttf.h>
 
 /* macros */
-#define DTIME       33
-#define MAX_DRAW_COMMAND_MEMORY (4 * 1024)
-#define MAX_VERTEX_MEMORY 128 * 1024
-#define MAX_ELEMENT_MEMORY 64 * 1024
-
 #include "../../zahnrad.h"
-
 #include "../demo.c"
 
 static void
@@ -68,9 +62,7 @@ draw(struct zr_context *ctx, int width, int height)
             al_draw_line(l->begin.x, l->begin.y, l->end.x, l->end.y,
                 al_map_rgba(l->color.r, l->color.g, l->color.g, l->color.a), 1.0f);
         } break;
-        case ZR_COMMAND_CURVE: {
-            const struct zr_command_curve *q = zr_command(curve, cmd);
-        } break;
+        case ZR_COMMAND_CURVE: break;
         case ZR_COMMAND_RECT: {
             const struct zr_command_rect *r = zr_command(rect, cmd);
             al_draw_filled_rounded_rectangle(r->x, r->y, r->x + r->w, r->y + r->h,
@@ -165,7 +157,6 @@ main(int argc, char *argv[])
 {
     /* Platform */
     const char *font_path;
-    int win_width, win_height;
     int width = 0, height = 0;
     int running = 1;
 

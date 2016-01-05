@@ -32,17 +32,10 @@
 #include <SDL2/SDL.h>
 
 /* macros */
-#define DTIME       33
-#define MAX_DRAW_COMMAND_MEMORY (4 * 1024)
 #define MAX_VERTEX_MEMORY 128 * 1024
 #define MAX_ELEMENT_MEMORY 64 * 1024
 
 #include "../../zahnrad.h"
-
-static void clipboard_set(const char *text){SDL_SetClipboardText(text);}
-static int clipboard_is_filled(void) {return SDL_HasClipboardText();}
-static const char* clipboard_get(void){return SDL_GetClipboardText();}
-
 #include "../demo.c"
 
 /* ==============================================================

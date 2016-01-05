@@ -33,12 +33,6 @@
 /* macros */
 #define DTIME       16
 #include "../../zahnrad.h"
-
-#define UNUSED(a)   ((void)(a))
-static void clipboard_set(const char *text){UNUSED(text);}
-static int clipboard_is_filled(void){return zr_false;}
-static const char* clipboard_get(void) {return NULL;}
-
 #include "../demo.c"
 
 typedef struct XFont XFont;
@@ -154,7 +148,6 @@ font_get_text_width(zr_handle handle, float height, const char *text, zr_size le
 {
     XFont *font = (XFont*)handle.ptr;
     XRectangle r;
-    zr_size width;
     if(!font || !text)
         return 0;
 
@@ -162,11 +155,7 @@ font_get_text_width(zr_handle handle, float height, const char *text, zr_size le
     if(font->set) {
         XmbTextExtents(font->set, (const char*)text, (int)len, NULL, &r);
         return r.width;
-    }
-    else {
-        return (zr_size)XTextWidth(font->xfont, (const char*)text, (int)len);
-    }
-    return width;
+    } else return (zr_size)XTextWidth(font->xfont, (const char*)text, (int)len);
 }
 
 static void

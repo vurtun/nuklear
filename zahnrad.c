@@ -201,14 +201,10 @@ struct zr_pool {
 #endif
 
 #define ZR_PI 3.141592654f
-#define ZR_PI2 (ZR_PI * 2.0f)
-#define ZR_4_DIV_PI (1.27323954f)
-#define ZR_4_DIV_PI_SQRT (0.405284735f)
 #define ZR_UTF_INVALID 0xFFFD
 #define ZR_MAX_FLOAT_PRECISION 2
 
 #define ZR_UNUSED(x) ((void)(x))
-#define ZR_LERP(a, b, t) ((a) + ((b) - (a)) * (t))
 #define ZR_SATURATE(x) (MAX(0, MIN(1.0f, x)))
 #define ZR_LEN(a) (sizeof(a)/sizeof(a)[0])
 #define ZR_ABS(a) (((a) < 0) ? -(a) : (a))
@@ -223,9 +219,7 @@ struct zr_pool {
 #define zr_vec2_sub(a, b) zr_vec2((a).x - (b).x, (a).y - (b).y)
 #define zr_vec2_add(a, b) zr_vec2((a).x + (b).x, (a).y + (b).y)
 #define zr_vec2_len_sqr(a) ((a).x*(a).x+(a).y*(a).y)
-#define zr_vec2_inv_len(a) zr_inv_sqrt(zr_vec2_len_sqr(a))
 #define zr_vec2_muls(a, t) zr_vec2((a).x * (t), (a).y * (t))
-#define zr_vec2_lerp(a, b, t) zr_vec2(ZR_LERP((a).x, (b).x, t), ZR_LERP((a).y, (b).y, t))
 
 enum zr_tree_node_symbol {ZR_TREE_NODE_BULLET, ZR_TREE_NODE_TRIANGLE};
 static const struct zr_rect zr_null_rect = {-8192.0f, -8192.0f, 16384, 16384};
@@ -249,19 +243,10 @@ static const double double_PRECISION = 0.00000000000001;
 # define ZR_PTR_TO_UINT(x) ((zr_size)(x))
 #endif
 
-#define ZR_MIN(a,b) (((a)<(b))?(a):(b))
-#define ZR_MAX(a,b) (((a)>(b))?(a):(b))
-#define ZR_ALIGN(x, mask) ((x) + (mask-1)) & ~(mask-1)
 #define ZR_ALIGN_PTR(x, mask)\
     (ZR_UINT_TO_PTR((ZR_PTR_TO_UINT((zr_byte*)(x) + (mask-1)) & ~(mask-1))))
 #define ZR_ALIGN_PTR_BACK(x, mask)\
     (ZR_UINT_TO_PTR((ZR_PTR_TO_UINT((zr_byte*)(x)) & ~(mask-1))))
-
-#define ZR_OFFSETOF(st, m) ((zr_size)(&((st *)0)->m))
-#define ZR_CONTAINER_OF_CONST(ptr, type, member)\
-    ((const type*)((const void*)((const zr_byte*)ptr - ZR_OFFSETOF(type, member))))
-#define ZR_CONTAINER_OF(ptr, type, member)\
-    ((type*)((void*)((zr_byte*)ptr - ZR_OFFSETOF(type, member))))
 
 #ifdef __cplusplus
 template<typename T> struct zr_alignof;
@@ -578,10 +563,10 @@ zr_log10(double n)
 static zr_size
 zr_dtos(char *s, double n)
 {
-    int useExp;
-    int digit, m, m1;
+    int useExp = 0;
+    int digit = 0, m = 0, m1 = 0;
     char *c = s;
-    int neg;
+    int neg = 0;
 
     if (zr_isnan(n)) {
         s[0] = 'n'; s[1] = 'a'; s[2] = 'n'; s[3] = '\0';
@@ -3895,8 +3880,8 @@ zr_draw_symbol(struct zr_command_buffer *out, enum zr_symbol symbol,
         zr_draw_triangle(out,  points[0].x, points[0].y,
             points[1].x, points[1].y, points[2].x, points[2].y, foreground);
     } break;
-    case ZR_SYMBOL_MAX:
-    default: break;
+    default:
+    case ZR_SYMBOL_MAX: break;
     }
 }
 
@@ -4907,7 +4892,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
         zr_size offset = 0, glyph_off = 0;
         zr_size row_len;
         float space = total_width;
-        float text_width;
+        float text_width = 0;
 
         while (text_len) {
             total_rows++;
@@ -5066,7 +5051,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
         zr_size row_len = 0;
         zr_size glyphs = 0;
         zr_size glyph_off = 0;
-        float text_width;
+        float text_width = 0;
         struct zr_rect scissor;
         struct zr_rect clip;
 
@@ -6105,11 +6090,8 @@ zr_reset_font_height(struct zr_context *ctx)
 void
 zr_reset(struct zr_context *ctx)
 {
-    struct zr_style *style;
     ZR_ASSERT(ctx);
     if (!ctx) return;
-    style = &ctx->style;
-
     zr_reset_colors(ctx);
     zr_reset_properties(ctx);
     zr_reset_font(ctx);
@@ -7769,15 +7751,9 @@ zr_layout_space_begin(struct zr_context *ctx,
     win = ctx->current;
     layout = win->layout;
     zr_panel_layout(ctx, win, height, widget_count);
-    if (fmt == ZR_STATIC) {
-        /* calculate bounds of the free to use panel space */
-        struct zr_rect space;
-        space.x = layout->at_x;
-        space.y = layout->at_y;
-        space.w = layout->width;
-        space.h = layout->row.height;
+    if (fmt == ZR_STATIC)
         layout->row.type = ZR_LAYOUT_STATIC_FREE;
-    } else layout->row.type = ZR_LAYOUT_DYNAMIC_FREE;
+    else layout->row.type = ZR_LAYOUT_DYNAMIC_FREE;
 
     layout->row.ratio = 0;
     layout->row.item_width = 0;
@@ -7912,7 +7888,6 @@ static void
 zr_panel_alloc_row(const struct zr_context *ctx, struct zr_window *win)
 {
     struct zr_layout *layout = win->layout;
-    const struct zr_style *c = &ctx->style;
     struct zr_vec2 spacing = zr_get_property(ctx, ZR_PROPERTY_ITEM_SPACING);
     const float row_height = layout->row.height - spacing.y;
     zr_panel_layout(ctx, win, row_height, layout->row.columns);
@@ -7922,7 +7897,6 @@ static void
 zr_layout_widget_space(struct zr_rect *bounds, const struct zr_context *ctx,
     struct zr_window *win, int modify)
 {
-    const struct zr_style *config;
     float panel_padding, panel_spacing, panel_space;
     float item_offset = 0, item_width = 0, item_spacing = 0;
     struct zr_vec2 spacing, padding;
@@ -7938,7 +7912,6 @@ zr_layout_widget_space(struct zr_rect *bounds, const struct zr_context *ctx,
     ZR_ASSERT(bounds);
 
     /* cache some configuration data */
-    config = &ctx->style;
     spacing = zr_get_property(ctx, ZR_PROPERTY_ITEM_SPACING);
     padding = zr_get_property(ctx, ZR_PROPERTY_PADDING);
 
@@ -7975,7 +7948,7 @@ zr_layout_widget_space(struct zr_rect *bounds, const struct zr_context *ctx,
         bounds->w = layout->width  * layout->row.item.w;
         bounds->h = layout->row.height * layout->row.item.h;
         return;
-    } break;
+    };
     case ZR_LAYOUT_DYNAMIC: {
         /* scaling arrays of panel width ratios for every widget */
         float ratio;
@@ -8021,7 +7994,7 @@ zr_layout_widget_space(struct zr_rect *bounds, const struct zr_context *ctx,
         bounds->y -= layout->offset->y;
         bounds->h = layout->row.item.h;
         return;
-    } break;
+    };
     case ZR_LAYOUT_STATIC: {
         /* non-scaling array of panel pixel width for every widget */
         item_spacing = (float)layout->row.index * spacing.x;
@@ -8029,7 +8002,7 @@ zr_layout_widget_space(struct zr_rect *bounds, const struct zr_context *ctx,
         item_offset = layout->row.item_offset;
         if (modify) layout->row.item_offset += item_width + spacing.x;
         } break;
-    default: break;
+    default: ZR_ASSERT(0); break;
     };
 
     /* set the bounds of the newly allocated widget */
@@ -8200,11 +8173,9 @@ zr_layout_push(struct zr_context *ctx, enum zr_layout_node_type type, const char
 void
 zr_layout_pop(struct zr_context *ctx)
 {
-    const struct zr_style *config;
     struct zr_vec2 panel_padding;
-
-    struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_window *win = 0;
+    struct zr_layout *layout = 0;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -8213,7 +8184,6 @@ zr_layout_pop(struct zr_context *ctx)
 
     win = ctx->current;
     layout = win->layout;
-    config = &ctx->style;
     panel_padding = zr_get_property(ctx, ZR_PROPERTY_PADDING);
     layout->at_x -= panel_padding.x;
     layout->width += 2 * panel_padding.x;
@@ -8426,7 +8396,6 @@ zr_label_colored_wrap(struct zr_context *ctx, const char *str, struct zr_color c
 void
 zr_image(struct zr_context *ctx, struct zr_image img)
 {
-    const struct zr_style *config;
     struct zr_vec2 item_padding;
     struct zr_rect bounds;
 
@@ -8441,7 +8410,6 @@ zr_image(struct zr_context *ctx, struct zr_image img)
     if (!zr_widget(&bounds, ctx))
         return;
 
-    config = &ctx->style;
     item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
     bounds.x += item_padding.x;
     bounds.y += item_padding.y;
@@ -8450,11 +8418,19 @@ zr_image(struct zr_context *ctx, struct zr_image img)
     zr_draw_image(&win->buffer, bounds, &img);
 }
 
-static void
-zr_fill_button(const struct zr_context *ctx, struct zr_button *button)
+enum zr_button_alloc {ZR_BUTTON_NORMAL, ZR_BUTTON_FITTING};
+static enum zr_widget_state
+zr_button(struct zr_button *button, struct zr_rect *bounds,
+    struct zr_context *ctx, enum zr_button_alloc type)
 {
+    enum zr_widget_state state;
     struct zr_vec2 item_padding;
     const struct zr_style *config = &ctx->style;
+    if (type == ZR_BUTTON_NORMAL)
+        state = zr_widget(bounds, ctx);
+    else state = zr_widget_fitting(bounds, ctx);
+    if (!state) return state;
+
     zr_zero(button, sizeof(*button));
     item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
     button->rounding = config->rounding[ZR_ROUNDING_BUTTON];
@@ -8462,26 +8438,9 @@ zr_fill_button(const struct zr_context *ctx, struct zr_button *button)
     button->hover = config->colors[ZR_COLOR_BUTTON_HOVER];
     button->active = config->colors[ZR_COLOR_BUTTON_ACTIVE];
     button->border = config->colors[ZR_COLOR_BORDER];
-    button->border_width = 1;
     button->padding.x = item_padding.x;
     button->padding.y = item_padding.y;
-}
-
-enum zr_button_alloc {ZR_BUTTON_NORMAL, ZR_BUTTON_FITTING};
-static enum zr_widget_state
-zr_button(struct zr_button *button, struct zr_rect *bounds,
-    struct zr_context *ctx, enum zr_button_alloc type)
-{
-    const struct zr_style *config;
-    enum zr_widget_state state;
-
-    if (type == ZR_BUTTON_NORMAL)
-        state = zr_widget(bounds, ctx);
-    else state = zr_widget_fitting(bounds, ctx);
-    if (!state) return state;
-    zr_zero(button, sizeof(*button));
-    config = &ctx->style;
-    zr_fill_button(ctx, button);
+    button->border_width = 1;
     return state;
 }
 
@@ -9408,8 +9367,9 @@ zr_chart_push(struct zr_context *ctx, float value)
         return zr_chart_push_line(ctx, win, &win->layout->chart, value);
     case ZR_CHART_COLUMN:
         return zr_chart_push_column(ctx, win, &win->layout->chart, value);
+    default:
     case ZR_CHART_MAX:
-    default: return zr_false;
+        return zr_false;
     }
 }
 
@@ -10311,7 +10271,6 @@ zr_menu_begin(struct zr_layout *layout, struct zr_context *ctx, struct zr_window
     /* calculate the maximum height of the combo box*/
     int is_open = 0;
     int is_active = 0;
-    int is_valid = 0;
     struct zr_rect body;
     struct zr_window *popup;
     zr_hash hash = zr_murmur_hash(id, (int)zr_strsiz(id), ZR_WINDOW_MENU);

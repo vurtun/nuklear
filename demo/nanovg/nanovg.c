@@ -40,21 +40,7 @@
 #include "dep/nanovg.c"
 
 /* macros */
-#define DTIME       30
 #include "../../zahnrad.h"
-
-static void
-clipboard_set(const char *text)
-{SDL_SetClipboardText(text);}
-
-static int
-clipboard_is_filled(void)
-{return SDL_HasClipboardText();}
-
-static const char*
-clipboard_get(void)
-{return SDL_GetClipboardText();}
-
 #include "../demo.c"
 
 static void
@@ -298,9 +284,6 @@ main(int argc, char *argv[])
         /* Input */
         int ret;
         SDL_Event evt;
-        uint64_t dt, started = SDL_GetTicks();
-
-
         zr_input_begin(&gui.ctx);
         if (!poll) {
             ret = SDL_WaitEvent(&evt);
