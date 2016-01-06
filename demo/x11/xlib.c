@@ -228,11 +228,54 @@ surface_draw_line(XSurface *surf, int16_t x0, int16_t y0, int16_t x1,
 
 static void
 surface_draw_rect(XSurface* surf, int16_t x, int16_t y, uint16_t w,
-    uint16_t h, struct zr_color col)
+    uint16_t h, uint16_t r, struct zr_color col)
 {
+    XPoint pnts[12];
     unsigned long c = color_from_byte(&col.r);
+    short xc = x + r;
+    short yc = y + r;
+    short wc = (short)(w - 2 * r);
+    short hc = (short)(h - 2 * r);
+
     XSetForeground(surf->dpy, surf->gc, c);
-    XFillRectangle(surf->dpy, surf->drawable, surf->gc, x, y, w, h);
+    pnts[0].x = x;
+    pnts[0].y = yc;
+    pnts[1].x = xc;
+    pnts[1].y = yc;
+    pnts[2].x = xc;
+    pnts[2].y = y;
+
+    pnts[3].x = xc + wc;
+    pnts[3].y = y;
+    pnts[4].x = xc + wc;
+    pnts[4].y = yc;
+    pnts[5].x = x + w;
+    pnts[5].y = yc;
+
+    pnts[6].x = x + w;
+    pnts[6].y = yc + hc;
+    pnts[7].x = xc + wc;
+    pnts[7].y = yc + hc;
+    pnts[8].x = xc + wc;
+    pnts[8].y = y + h;
+
+    pnts[9].x = xc;
+    pnts[9].y = y + h;
+    pnts[10].x = xc;
+    pnts[10].y = yc + hc;
+    pnts[11].x = x;
+    pnts[11].y = yc + hc;
+
+    XFillPolygon(surf->dpy, surf->drawable, surf->gc, pnts, 12, Convex, CoordModeOrigin);
+    XFillArc(surf->dpy, surf->drawable, surf->gc, xc + wc - r, y,
+        (unsigned)r*2, (unsigned)r*2, 0 * 64, 90 * 64);
+    XFillArc(surf->dpy, surf->drawable, surf->gc, x, y,
+        (unsigned)r*2, (unsigned)r*2, 90 * 64, 90 * 64);
+    XFillArc(surf->dpy, surf->drawable, surf->gc, x, yc + hc - r,
+        (unsigned)r*2, (unsigned)2*r, 180 * 64, 90 * 64);
+    XFillArc(surf->dpy, surf->drawable, surf->gc, xc + wc - r, yc + hc - r,
+        (unsigned)r*2, (unsigned)2*r, -90 * 64, 90 * 64);
+
 }
 
 static void
@@ -326,7 +369,6 @@ input_key(struct XWindow *xw, struct zr_context *ctx, XEvent *evt, int down)
     else if (*code == XK_BackSpace)
         zr_input_key(ctx, ZR_KEY_BACKSPACE, down);
     else {
-
         if (*code == 'c' && (evt->xkey.state & ControlMask))
             zr_input_key(ctx, ZR_KEY_COPY, down);
         else if (*code == 'v' && (evt->xkey.state & ControlMask))
@@ -469,7 +511,7 @@ main(int argc, char *argv[])
                 } break;
                 case ZR_COMMAND_RECT: {
                     const struct zr_command_rect *r = zr_command(rect, cmd);
-                    surface_draw_rect(xw.surf, r->x, r->y, r->w, r->h, r->color);
+                    surface_draw_rect(xw.surf, r->x, r->y, r->w, r->h, (uint16_t)r->rounding, r->color);
                 } break;
                 case ZR_COMMAND_CIRCLE: {
                     const struct zr_command_circle *c = zr_command(circle, cmd);
