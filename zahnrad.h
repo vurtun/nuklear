@@ -69,7 +69,7 @@ extern "C" {
  you can just set this define to zero and the font module will not be compiled
  and the two headers will not be needed. */
 /*
-* ==============================================================
+ * ===============================================================
  *
  *                          BASIC
  *
@@ -110,7 +110,7 @@ struct zr_user_font;
 struct zr_edit_box;
 struct zr_user_font_glyph;
 
-/*================================================================
+/* ===============================================================
  *                          UTILITY
  * ===============================================================*/
 enum {zr_false, zr_true};
@@ -279,7 +279,7 @@ void zr_buffer_free(struct zr_buffer*);
 void *zr_buffer_memory(struct zr_buffer*);
 zr_size zr_buffer_total(struct zr_buffer*);
 
-/* ==============================================================
+/* ===============================================================
  *
  *                          FONT
  *
@@ -970,6 +970,11 @@ enum zr_symbol {
     ZR_SYMBOL_PLUS,
     ZR_SYMBOL_MINUS,
     ZR_SYMBOL_MAX
+};
+
+enum zr_orientation {
+    ZR_VERTICAL,
+    ZR_HORIZONTAL
 };
 
 enum zr_widget_status {

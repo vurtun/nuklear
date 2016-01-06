@@ -29,6 +29,8 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/Xresource.h>
+#include <X11/Xlocale.h>
 
 /* macros */
 #define DTIME       16
@@ -323,15 +325,20 @@ input_key(struct XWindow *xw, struct zr_context *ctx, XEvent *evt, int down)
         zr_input_key(ctx, ZR_KEY_RIGHT, down);
     else if (*code == XK_BackSpace)
         zr_input_key(ctx, ZR_KEY_BACKSPACE, down);
-    else if (*code > 32 && *code < 128) {
-        if (*code == 'c')
-            zr_input_key(ctx, ZR_KEY_COPY, down && (evt->xkey.state & ControlMask));
-        else if (*code == 'v')
-            zr_input_key(ctx, ZR_KEY_PASTE, down && (evt->xkey.state & ControlMask));
-        else if (*code == 'x')
-            zr_input_key(ctx, ZR_KEY_CUT, down && (evt->xkey.state & ControlMask));
-        if (!down)
-            zr_input_unicode(ctx, (zr_rune)*code);
+    else {
+
+        if (*code == 'c' && (evt->xkey.state & ControlMask))
+            zr_input_key(ctx, ZR_KEY_COPY, down);
+        else if (*code == 'v' && (evt->xkey.state & ControlMask))
+            zr_input_key(ctx, ZR_KEY_PASTE, down);
+        else if (*code == 'x' && (evt->xkey.state & ControlMask))
+            zr_input_key(ctx, ZR_KEY_CUT, down);
+        else if (!down) {
+            KeySym keysym = 0;
+            char buf[32];
+            XLookupString((XKeyEvent*)evt, buf, 32, &keysym, NULL);
+            zr_input_glyph(ctx, buf);
+        }
     }
     XFree(code);
 }
@@ -381,6 +388,10 @@ main(int argc, char *argv[])
     /* X11 */
     UNUSED(argc); UNUSED(argv);
     memset(&xw, 0, sizeof xw);
+    if (setlocale(LC_ALL, "") == NULL) return 9;
+    if (!XSupportsLocale()) return 10;
+    if (!XSetLocaleModifiers("@im=none")) return 11;
+
     xw.dpy = XOpenDisplay(NULL);
     xw.root = DefaultRootWindow(xw.dpy);
     xw.screen = XDefaultScreen(xw.dpy);
@@ -391,12 +402,13 @@ main(int argc, char *argv[])
         ExposureMask | KeyPressMask | KeyReleaseMask |
         ButtonPress | ButtonReleaseMask| ButtonMotionMask |
         Button1MotionMask | Button3MotionMask | Button4MotionMask | Button5MotionMask|
-        PointerMotionMask;
+        PointerMotionMask | KeymapStateMask;
     xw.win = XCreateWindow(xw.dpy, xw.root, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, 0,
         XDefaultDepth(xw.dpy, xw.screen), InputOutput,
         xw.vis, CWEventMask | CWColormap, &xw.swa);
     XStoreName(xw.dpy, xw.win, "X11");
     XMapWindow(xw.dpy, xw.win);
+
     XGetWindowAttributes(xw.dpy, xw.win, &xw.attr);
     xw.width = (unsigned int)xw.attr.width;
     xw.height = (unsigned int)xw.attr.height;
@@ -417,6 +429,7 @@ main(int argc, char *argv[])
         started = timestamp();
         zr_input_begin(&gui.ctx);
         while (XCheckWindowEvent(xw.dpy, xw.win, xw.swa.event_mask, &evt)) {
+            if (XFilterEvent(&evt, xw.win)) continue;
             if (evt.type == KeyPress)
                 input_key(&xw, &gui.ctx, &evt, zr_true);
             else if (evt.type == KeyRelease)
@@ -429,6 +442,8 @@ main(int argc, char *argv[])
                 input_motion(&gui.ctx, &evt);
             else if (evt.type == Expose || evt.type == ConfigureNotify)
                 resize(&xw, xw.surf);
+            else if (evt.type == KeymapNotify)
+                XRefreshKeyboardMapping(&evt.xmapping);
         }
         zr_input_end(&gui.ctx);
 
