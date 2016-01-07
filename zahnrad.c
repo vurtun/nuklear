@@ -102,6 +102,9 @@ struct zr_popup {
     enum zr_internal_window_flags type;
     zr_ulong name;
     int active;
+
+    unsigned con_count, con_old;
+    unsigned active_con;
 };
 
 struct zr_edit_state {
@@ -7557,6 +7560,16 @@ zr_layout_end(struct zr_context *ctx)
         window->edit.prev = window->edit.active;
         window->edit.seq = 0;
     }
+
+    /* contextual garabe collector */
+    if (window->popup.active_con && window->popup.con_old != window->popup.con_count) {
+        window->popup.con_count = 0;
+        window->popup.con_old = 0;
+        window->popup.active_con = 0;
+    } else {
+        window->popup.con_old = window->popup.con_count;
+        window->popup.con_count = 0;
+    }
 }
 
 void
@@ -9745,6 +9758,7 @@ zr_tooltip_begin(struct zr_context *ctx, struct zr_layout *layout, float width)
     if (!ctx || !ctx->current || !ctx->current->layout) return 0;
 
     win = ctx->current;
+    if (win->popup.active_con) return 0;
     in = &ctx->input;
     bounds.w = width;
     bounds.h = zr_null_rect.h;
@@ -9813,11 +9827,12 @@ zr_tooltip(struct zr_context *ctx, const char *text)
  */
 int
 zr_contextual_begin(struct zr_context *ctx, struct zr_layout *layout,
-    zr_flags flags, struct zr_vec2 size, int is_clicked)
+    zr_flags flags, struct zr_vec2 size, struct zr_rect trigger_bounds)
 {
     int ret;
     int is_active = 0;
     int is_open = 0;
+    int is_clicked = 0;
 
     struct zr_window *win;
     struct zr_window *popup;
@@ -9829,11 +9844,15 @@ zr_contextual_begin(struct zr_context *ctx, struct zr_layout *layout,
     ZR_ASSERT(ctx->current->layout);
     if (!ctx || !ctx->current || !ctx->current->layout) return 0;
     win = ctx->current;
+    ++win->popup.con_count;
 
     popup = win->popup.win;
     is_open = (popup && (popup->flags & ZR_WINDOW_CONTEXTUAL) && win->popup.type == ZR_WINDOW_CONTEXTUAL);
+    is_clicked = zr_input_mouse_clicked(&ctx->input, ZR_BUTTON_RIGHT, trigger_bounds);
+    if (win->popup.active_con && win->popup.con_count != win->popup.active_con) return 0;
     if ((is_clicked && is_open && !is_active) || (!is_open && !is_active && !is_clicked)) return 0;
 
+    win->popup.active_con = win->popup.con_count;
     if (is_clicked) {
         body.x = ctx->input.mouse.pos.x;
         body.y = ctx->input.mouse.pos.y;
@@ -9846,6 +9865,10 @@ zr_contextual_begin(struct zr_context *ctx, struct zr_layout *layout,
     body.h = size.y;
     ret = zr_nonblock_begin(layout, ctx, flags|ZR_WINDOW_CONTEXTUAL|ZR_WINDOW_NO_SCROLLBAR, body, null_rect);
     if (ret) win->popup.type = ZR_WINDOW_CONTEXTUAL;
+    else {
+        win->popup.active_con = 0;
+        win->popup.win->flags = 0;
+    }
     return ret;
 }
 

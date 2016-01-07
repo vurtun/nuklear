@@ -1479,7 +1479,7 @@ void zr_combo_end(struct zr_context*);
 
 /* contextual menu */
 int zr_contextual_begin(struct zr_context*, struct zr_layout*, zr_flags flags,
-                        struct zr_vec2 size, int is_clicked);
+                        struct zr_vec2 size, struct zr_rect trigger_bounds);
 int zr_contextual_item(struct zr_context*, const char*, enum zr_text_align align);
 int zr_contextual_item_icon(struct zr_context*, struct zr_image, const char*, enum zr_text_align);
 int zr_contextual_item_symbol(struct zr_context*, enum zr_symbol, const char*, enum zr_text_align);

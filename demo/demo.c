@@ -169,7 +169,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 zr_layout_row_dynamic(ctx, 20, 1);
                 zr_label(ctx, "Zahnrad", ZR_TEXT_LEFT);
                 zr_label(ctx, "By Micha Mettke", ZR_TEXT_LEFT);
-                zr_label(ctx, "Zahnrad is licensed under the MIT License.",  ZR_TEXT_LEFT);
+                zr_label(ctx, "Zahnrad is licensed under the zlib License.",  ZR_TEXT_LEFT);
                 zr_label(ctx, "See LICENSE for more information", ZR_TEXT_LEFT);
                 zr_popup_end(ctx);
             } else show_app_about = zr_false;
@@ -653,63 +653,53 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
 
         if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Popup"))
         {
-            enum {NONE=0, MENU=1, COLOR=2};
-            static int active = MENU;
             static struct zr_color color = {255,0,0, 255};
             static int select[4];
             static int popup_active;
-
             const struct zr_input *in = &ctx->input;
-            struct zr_rect menu_bounds, color_bounds, bounds;
-            int is_menu, is_color;
-            struct zr_vec2 size;
+            struct zr_rect bounds;
 
-            /* contextual */
+            /* menu contextual */
             zr_layout_row_static(ctx, 30, 150, 1);
-            zr_layout_peek(&menu_bounds, ctx);
+            zr_layout_peek(&bounds, ctx);
             zr_label(ctx, "Right click me for menu", ZR_TEXT_LEFT);
+
+            if (zr_contextual_begin(ctx, &menu, 0, zr_vec2(100, 200), bounds)) {
+                static size_t prog = 40;
+                static int slider = 10;
+
+                zr_layout_row_dynamic(ctx, 25, 1);
+                zr_checkbox(ctx, "Menu", &show_menu);
+                zr_progress(ctx, &prog, 100, ZR_MODIFIABLE);
+                zr_slider_int(ctx, 0, &slider, 16, 1);
+                zr_selectable(ctx, select[0]?"Unselect":"Select", ZR_TEXT_LEFT, &select[0]);
+                zr_selectable(ctx, select[1]?"Unselect":"Select", ZR_TEXT_LEFT, &select[1]);
+                zr_selectable(ctx, select[2]?"Unselect":"Select", ZR_TEXT_LEFT, &select[2]);
+                zr_selectable(ctx, select[3]?"Unselect":"Select", ZR_TEXT_LEFT, &select[3]);
+                if (zr_contextual_item(ctx, "About", ZR_TEXT_CENTERED))
+                    show_app_about = zr_true;
+                if (zr_contextual_item(ctx, "Quit", ZR_TEXT_CENTERED))
+                    show_close_popup = zr_true;
+                zr_contextual_end(ctx);
+            }
 
             /* color contextual */
             zr_layout_row_begin(ctx, ZR_STATIC, 30, 2);
             zr_layout_row_push(ctx, 100);
             zr_label(ctx, "Right Click here:", ZR_TEXT_LEFT);
             zr_layout_row_push(ctx, 50);
-            zr_layout_peek(&color_bounds, ctx);
+            zr_layout_peek(&bounds, ctx);
             zr_button_color(ctx, color, ZR_BUTTON_DEFAULT);
             zr_layout_row_end(ctx);
 
-            /* This is a shitty hack to accomplish multiple contextual menus */
-            is_menu = zr_input_mouse_clicked(in, ZR_BUTTON_RIGHT, menu_bounds);
-            is_color = zr_input_mouse_clicked(in, ZR_BUTTON_RIGHT, color_bounds);
-            size = (is_color || active == COLOR) ? zr_vec2(350, 60): zr_vec2(100, 200);
-            if (zr_contextual_begin(ctx, &menu, 0, size, is_color|is_menu)) {
-                if (is_menu || active == MENU) {
-                    static size_t prog = 40;
-                    static int slider = 10;
-
-                    active = MENU;
-                    zr_layout_row_dynamic(ctx, 25, 1);
-                    zr_checkbox(ctx, "Menu", &show_menu);
-                    zr_progress(ctx, &prog, 100, ZR_MODIFIABLE);
-                    zr_slider_int(ctx, 0, &slider, 16, 1);
-                    zr_selectable(ctx, select[0]?"Unselect":"Select", ZR_TEXT_LEFT, &select[0]);
-                    zr_selectable(ctx, select[1]?"Unselect":"Select", ZR_TEXT_LEFT, &select[1]);
-                    zr_selectable(ctx, select[2]?"Unselect":"Select", ZR_TEXT_LEFT, &select[2]);
-                    zr_selectable(ctx, select[3]?"Unselect":"Select", ZR_TEXT_LEFT, &select[3]);
-                    if (zr_contextual_item(ctx, "About", ZR_TEXT_CENTERED))
-                        show_app_about = zr_true;
-                    if (zr_contextual_item(ctx, "Quit", ZR_TEXT_CENTERED))
-                        show_close_popup = zr_true;
-                } else if (is_color || active == COLOR){
-                    active = COLOR;
-                    zr_layout_row_dynamic(ctx, 30, 4);
-                    color.r = (zr_byte)zr_propertyi(ctx, "#r", 0, color.r, 255, 1, 1);
-                    color.g = (zr_byte)zr_propertyi(ctx, "#g", 0, color.g, 255, 1, 1);
-                    color.b = (zr_byte)zr_propertyi(ctx, "#b", 0, color.b, 255, 1, 1);
-                    color.a = (zr_byte)zr_propertyi(ctx, "#a", 0, color.a, 255, 1, 1);
-                }
+            if (zr_contextual_begin(ctx, &menu, 0, zr_vec2(350, 60), bounds)) {
+                zr_layout_row_dynamic(ctx, 30, 4);
+                color.r = (zr_byte)zr_propertyi(ctx, "#r", 0, color.r, 255, 1, 1);
+                color.g = (zr_byte)zr_propertyi(ctx, "#g", 0, color.g, 255, 1, 1);
+                color.b = (zr_byte)zr_propertyi(ctx, "#b", 0, color.b, 255, 1, 1);
+                color.a = (zr_byte)zr_propertyi(ctx, "#a", 0, color.a, 255, 1, 1);
                 zr_contextual_end(ctx);
-            } else active = NONE;
+            }
 
             /* popup */
             zr_layout_row_begin(ctx, ZR_STATIC, 30, 2);
@@ -1109,16 +1099,17 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                         zr_group_end(ctx);
                     }
 
-                    /* scaler */
-                    zr_layout_row_dynamic(ctx, 8, 1);
-                    zr_layout_peek(&bounds, ctx);
-                    zr_spacing(ctx, 1);
-                    if ((zr_input_is_mouse_hovering_rect(in, bounds) ||
-                        zr_input_is_mouse_prev_hovering_rect(in, bounds)) &&
-                        zr_input_is_mouse_down(in, ZR_BUTTON_LEFT))
                     {
-                        b = b + in->mouse.delta.y;
-                        c = c - in->mouse.delta.y;
+                        /* scaler */
+                        zr_layout_row_dynamic(ctx, 8, 1);
+                        zr_layout_peek(&bounds, ctx);
+                        if ((zr_input_is_mouse_hovering_rect(in, bounds) ||
+                            zr_input_is_mouse_prev_hovering_rect(in, bounds)) &&
+                            zr_input_is_mouse_down(in, ZR_BUTTON_LEFT))
+                        {
+                            b = b + in->mouse.delta.y;
+                            c = c - in->mouse.delta.y;
+                        }
                     }
 
                     /* bottom space */
