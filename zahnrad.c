@@ -270,9 +270,9 @@ typedef int zr__check_ulong[(sizeof(zr_ulong) == 8) ? 1 : -1];
  * ===============================================================
  */
 /*  Since Zahnrad is supposed to work on all systems providing floating point math
-    without any dependencies I also had implement my own math functions for
+    without any dependencies I also had to implement my own math functions for
     sqrt, sin and cos. Since the actual highly accurate implementations for the standard
-    function are quite complex and I do not need high precision for my use cases
+    library functions are quite complex and I do not need high precision for my use cases
     I use approximations.
 
     Sqrt
@@ -288,12 +288,12 @@ typedef int zr__check_ulong[(sizeof(zr_ulong) == 8) ? 1 : -1];
     All constants inside both function are generated Remez's minimax
     approximations for value range 0...2*PI. The reason why I decided to
     approximate exactly that range is that zahnrad only needs sine and
-    cosine to generate circles which only require that exact range.
+    cosine to generate circles which only requires that exact range.
     In addition I used Remez instead of Taylor for additional precision:
     www.lolengine.net/blog/2011/12/21/better-function-approximatations.
 
     The tool I used to generate constants for both sine and cosine
-    (it can actually approximate alot more functions) can be
+    (it can actually approximate a lot more functions) can be
     found here: www.lolengine.net/wiki/oss/lolremez
 */
 static float
@@ -1568,11 +1568,14 @@ zr_buffer_total(struct zr_buffer *buffer)
     if (!buffer) return 0;
     return buffer->memory.size;
 }
-/* ==============================================================
+
+/*
+ * ==============================================================
  *
  *                      Command buffer
  *
- * ===============================================================*/
+ * ===============================================================
+*/
 static void
 zr_command_buffer_init(struct zr_command_buffer *cmdbuf,
     struct zr_buffer *buffer, enum zr_command_clipping clip)
@@ -4285,6 +4288,7 @@ zr_slider_behavior(enum zr_widget_status *state, struct zr_rect *cursor,
     {
         const float d = in->mouse.pos.x - (cursor->x + cursor->w / 2.0f);
         const float pxstep = (slider.w - (2 * s->padding.x)) / slider_steps;
+
         /* only update value if the next slider step is reached */
         *state = ZR_ACTIVE;
         if (ZR_ABS(d) >= pxstep) {
