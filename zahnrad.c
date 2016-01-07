@@ -269,19 +269,33 @@ typedef int zr__check_ulong[(sizeof(zr_ulong) == 8) ? 1 : -1];
  *
  * ===============================================================
  */
-static zr_uint
-zr_round_up_pow2(zr_uint v)
-{
-    v--;
-    v |= v >> 1;
-    v |= v >> 2;
-    v |= v >> 4;
-    v |= v >> 8;
-    v |= v >> 16;
-    v++;
-    return v;
-}
+/*  Since Zahnrad is supposed to work on all systems providing floating point math
+    without any dependencies I also had implement my own math functions for
+    sqrt, sin and cos. Since the actual highly accurate implementations for the standard
+    function are quite complex and I do not need high precision for my use cases
+    I use approximations.
 
+    Sqrt
+    ----
+    For square root zahnrad uses the famous fast inverse square root:
+    https://en.wikipedia.org/wiki/Fast_inverse_square_root with
+    slightly tweaked magic constant. While on todays hardware it is
+    probably not faster it is still fast and accurate enough for
+    zahnrads use cases.
+
+    Sine/Cosine
+    -----------
+    All constants inside both function are generated Remez's minimax
+    approximations for value range 0...2*PI. The reason why I decided to
+    approximate exactly that range is that zahnrad only needs sine and
+    cosine to generate circles which only require that exact range.
+    In addition I used Remez instead of Taylor for additional precision:
+    www.lolengine.net/blog/2011/12/21/better-function-approximatations.
+
+    The tool I used to generate constants for both sine and cosine
+    (it can actually approximate alot more functions) can be
+    found here: www.lolengine.net/wiki/oss/lolremez
+*/
 static float
 zr_inv_sqrt(float number)
 {
@@ -298,7 +312,6 @@ zr_inv_sqrt(float number)
 static double
 zr_sin(double x)
 {
-    /* this function only works from range sin(0) -> sin(2*PI) */
     static const double a0 = +1.91059300966915117e-31;
     static const double a1 = +1.00086760103908896;
     static const double a2 = -1.21276126894734565e-2;
@@ -313,7 +326,6 @@ zr_sin(double x)
 static double
 zr_cos(double x)
 {
-    /* this function only works from range cos(0) -> cos(2*PI) */
     static const double a0 = +1.00238601909309722;
     static const double a1 = -3.81919947353040024e-2;
     static const double a2 = -3.94382342128062756e-1;
@@ -323,6 +335,19 @@ zr_cos(double x)
     static const double a6 = +9.90140908664079833e-4;
     static const double a7 = -5.23022132118824778e-14;
     return a0 + x * (a1 + x * (a2 + x * (a3 + x * (a4 + x * (a5 + x *(a6 + x * a7))))));
+}
+
+static zr_uint
+zr_round_up_pow2(zr_uint v)
+{
+    v--;
+    v |= v >> 1;
+    v |= v >> 2;
+    v |= v >> 4;
+    v |= v >> 8;
+    v |= v >> 16;
+    v++;
+    return v;
 }
 
 struct zr_rect
