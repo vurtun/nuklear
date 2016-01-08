@@ -50,7 +50,7 @@ draw the GUI.
 ```c
 /* init gui state */
 struct zr_context ctx;
-zr_init_fixed(&ctx, calloc(1, MAX_MEMORY), MAX_MEMORY, &font, sin, cos);
+zr_init_fixed(&ctx, calloc(1, MAX_MEMORY), MAX_MEMORY, &font);
 
 enum {EASY, HARD};
 int op = EASY;
