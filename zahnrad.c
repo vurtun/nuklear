@@ -93,6 +93,8 @@ enum zr_internal_window_flags {
     /* Marks the window as a combo box */
     ZR_WINDOW_MENU              = ZR_FLAG(18),
     /* Marks the window as a menu */
+    ZR_WINDOW_TOOLTIP           = ZR_FLAG(18),
+    /* Marks the window as a menu */
     ZR_WINDOW_REMOVE_ROM        = ZR_FLAG(19)
     /* Removes the read only mode at the end of the window */
 };
@@ -304,7 +306,7 @@ zr_inv_sqrt(float number)
 {
     float x2;
     const float threehalfs = 1.5f;
-    union {zr_uint i; float f;} conv;
+    union {zr_uint i; float f;} conv = {0};
     conv.f = number;
     x2 = number * 0.5f;
     conv.i = 0x5f375A84 - (conv.i >> 1);
@@ -481,10 +483,7 @@ zr_strsiz(const char *str)
 static int
 zr_strtof(float *number, const char *buffer)
 {
-    int i;
     float m;
-    int div;
-    int pow;
     const char *p = buffer;
     float floatvalue = 0;
 
@@ -506,6 +505,7 @@ zr_strtof(float *number, const char *buffer)
         }
     }
     if ( *p == 'e' ) {
+        int i, pow, div;
         p++;
         if ( *p == '-' ) {
             div = zr_true;
@@ -548,7 +548,7 @@ zr_pow(double x, int n)
 static zr_uint
 zr_isinf(double x)
 {
-    union {zr_ulong u; double f;} ieee754;
+    union {zr_ulong u; double f;} ieee754 = {0};
     ieee754.f = x;
     return ( (zr_uint)(ieee754.u >> 32) & 0x7fffffff ) == 0x7ff00000 &&
            ( (zr_uint)ieee754.u == 0 );
@@ -627,11 +627,10 @@ zr_dtos(char *s, double n)
 
     /* convert the number */
     while (n > double_PRECISION || m >= 0) {
-        double tmp;
         double weight = zr_pow(10.0, m);
         if (weight > 0 && !zr_isinf(weight)) {
             double t = (double)n / weight;
-            tmp = zr_floor(t);
+            double tmp = zr_floor(t);
             digit = (int)tmp;
             n -= (digit * weight);
             *(c++) = (char)('0' + (char)digit);
@@ -675,7 +674,7 @@ zr_murmur_hash(const void * key, int len, zr_hash seed)
 {
     /* 32-Bit MurmurHash3 from: https://code.google.com/p/smhasher/wiki/MurmurHash3 */
     #define ZR_ROTL(x,r) ((x) << (r) | ((x) >> (32 - r)))
-    union {const zr_uint *i; const zr_byte *b;} conv;
+    union {const zr_uint *i; const zr_byte *b;} conv = {0};
     const zr_byte *data = (const zr_byte*)key;
     const int nblocks = len/4;
     zr_uint h1 = seed;
@@ -810,7 +809,7 @@ zr_hsva(zr_byte h, zr_byte s, zr_byte v, zr_byte a)
 struct zr_color
 zr_hsva_f(float h, float s, float v, float a)
 {
-    struct zr_colorf {float r,g,b,a;} out;
+    struct zr_colorf {float r,g,b;} out = {0,0,0};
     float hh, p, q, t, ff;
     zr_uint i;
 
@@ -943,7 +942,7 @@ zr_color_hsv(int *out_h, int *out_s, int *out_v, struct zr_color in)
 zr_handle
 zr_handle_ptr(void *ptr)
 {
-    zr_handle handle;
+    zr_handle handle = {0};
     handle.ptr = ptr;
     return handle;
 }
@@ -960,6 +959,7 @@ struct zr_image
 zr_subimage_ptr(void *ptr, unsigned short w, unsigned short h, struct zr_rect r)
 {
     struct zr_image s;
+    zr_zero(&s, sizeof(s));
     s.handle.ptr = ptr;
     s.w = w; s.h = h;
     s.region[0] = (unsigned short)r.x;
@@ -973,6 +973,7 @@ struct zr_image
 zr_subimage_id(int id, unsigned short w, unsigned short h, struct zr_rect r)
 {
     struct zr_image s;
+    zr_zero(&s, sizeof(s));
     s.handle.id = id;
     s.w = w; s.h = h;
     s.region[0] = (unsigned short)r.x;
@@ -986,6 +987,7 @@ struct zr_image
 zr_image_ptr(void *ptr)
 {
     struct zr_image s;
+    zr_zero(&s, sizeof(s));
     ZR_ASSERT(ptr);
     s.handle.ptr = ptr;
     s.w = 0; s.h = 0;
@@ -1000,6 +1002,7 @@ struct zr_image
 zr_image_id(int id)
 {
     struct zr_image s;
+    zr_zero(&s, sizeof(s));
     s.handle.id = id;
     s.w = 0; s.h = 0;
     s.region[0] = 0;
@@ -1904,7 +1907,6 @@ zr_canvas_clear(struct zr_canvas *list)
 static struct zr_vec2*
 zr_canvas_alloc_path(struct zr_canvas *list, zr_size count)
 {
-    void *memory;
     struct zr_vec2 *points;
     static const zr_size point_align = ZR_ALIGNOF(struct zr_vec2);
     static const zr_size point_size = sizeof(struct zr_vec2);
@@ -1913,7 +1915,7 @@ zr_canvas_alloc_path(struct zr_canvas *list, zr_size count)
 
     if (!points) return 0;
     if (!list->path_offset) {
-        memory = zr_buffer_memory(list->buffer);
+        void *memory = zr_buffer_memory(list->buffer);
         list->path_offset = (unsigned int)((zr_byte*)points - (zr_byte*)memory);
     }
     list->path_count += (unsigned int)count;
@@ -2421,10 +2423,10 @@ static void
 zr_canvas_path_arc_to_fast(struct zr_canvas *list, struct zr_vec2 center,
     float radius, int a_min, int a_max)
 {
-    int a = 0;
     ZR_ASSERT(list);
     if (!list) return;
     if (a_min <= a_max) {
+        int a = 0;
         for (a = a_min; a <= a_max; a++) {
             const struct zr_vec2 c = list->circle_vtx[(zr_size)a % ZR_LEN(list->circle_vtx)];
             const float x = center.x + c.x * radius;
@@ -3310,13 +3312,12 @@ static zr_size
 zr_font_text_width(zr_handle handle, float height, const char *text, zr_size len)
 {
     zr_rune unicode;
-    const struct zr_font_glyph *glyph;
-    struct zr_font *font;
     zr_size text_len  = 0;
     zr_size text_width = 0;
     zr_size glyph_len = 0;
     float scale = 0;
-    font = (struct zr_font*)handle.ptr;
+
+    struct zr_font *font = (struct zr_font*)handle.ptr;
     ZR_ASSERT(font);
     if (!font || !text || !len)
         return 0;
@@ -3324,6 +3325,7 @@ zr_font_text_width(zr_handle handle, float height, const char *text, zr_size len
     scale = height/font->size;
     glyph_len = zr_utf_decode(text, &unicode, len);
     while (text_len < len) {
+        const struct zr_font_glyph *glyph;
         if (unicode == ZR_UTF_INVALID) return 0;
         glyph = zr_font_find_glyph(font, unicode);
         text_len += glyph_len;
@@ -3438,15 +3440,14 @@ zr_edit_buffer_remove(struct zr_buffer *buffer, zr_size len)
 static void
 zr_edit_buffer_del(struct zr_buffer *buffer, zr_size pos, zr_size len)
 {
-    char *src, *dst;
     ZR_ASSERT(buffer);
     if (!buffer || !len || pos > buffer->allocated ||
         pos + len > buffer->allocated) return;
 
     if (pos + len < buffer->allocated) {
         /* memmove */
-        dst = zr_ptr_add(char, buffer->memory.ptr, pos);
-        src = zr_ptr_add(char, buffer->memory.ptr, pos + len);
+        char *dst = zr_ptr_add(char, buffer->memory.ptr, pos);
+        char *src = zr_ptr_add(char, buffer->memory.ptr, pos + len);
         zr_memcopy(dst, src, buffer->allocated - (pos + len));
         ZR_ASSERT(((int)buffer->allocated - (int)len) >= 0);
         buffer->allocated -= len;
@@ -4925,7 +4926,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
         zr_size glyphs = 0;
         zr_size row_off = 0;
         zr_size text_len = len;
-        zr_size offset = 0, glyph_off = 0;
+        zr_size offset = 0;
         zr_size row_len;
 
         float space = total_width;
@@ -4936,8 +4937,6 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
             offset += row_off;
             row_off = zr_user_font_glyphs_fitting_in_space(font,
                 &buffer[offset], text_len, space, &row_len, &glyphs, &text_width, 1);
-
-            glyph_off += glyphs;
             text_len -= row_off;
         }
         total_height = (float)total_rows * (float)row_height;
@@ -4971,6 +4970,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                     &buffer[offset], text_len, total_width, &row_len, &glyphs, &text_width, 1);
                 if (cursor >= glyph_off && cursor < glyph_off + glyphs)
                     break;
+
                 glyph_off += glyphs;
                 text_len -= row_off;
                 cur_row++;
@@ -5081,7 +5081,6 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
     }
     {
         /* draw text */
-        zr_size rows = 0;
         zr_size text_len = len;
         zr_size offset = 0;
         zr_size row_off = 0;
@@ -5241,7 +5240,6 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
             glyph_off += glyphs;
             text_len -= row_off;
             label.y += font->height + field->padding.y;
-            rows++;
         }
 
         /* draw the cursor at the end of the string */
@@ -5449,8 +5447,6 @@ zr_do_property(enum zr_widget_status *ws,
     struct zr_rect empty;
 
     /* make sure the provided values are correct */
-    property.x = property.x;
-    property.y = property.y;
     property_max = MAX(min, max);
     property_min = MIN(min, max);
     property_value = CLAMP(property_min, val, property_max);
@@ -5481,7 +5477,7 @@ zr_do_property(enum zr_widget_status *ws,
         length = len;
         dst = buffer;
     } else {
-        num_len = zr_dtos(string, property_value);
+        zr_dtos(string, property_value);
         num_len = zr_string_float_limit(string, ZR_MAX_FLOAT_PRECISION);
         size = f->width(f->userdata, f->height, string, num_len);
         dst = string;
@@ -7763,8 +7759,6 @@ zr_layout_row(struct zr_context *ctx, enum zr_layout_format fmt,
 {
     zr_size i;
     zr_size n_undef = 0;
-    float r = 0;
-
     struct zr_window *win;
     struct zr_layout *layout;
 
@@ -7778,6 +7772,7 @@ zr_layout_row(struct zr_context *ctx, enum zr_layout_format fmt,
     zr_panel_layout(ctx, win, height, cols);
     if (fmt == ZR_DYNAMIC) {
         /* calculate width of undefined widget ratios */
+        float r = 0;
         layout->row.ratio = ratio;
         for (i = 0; i < cols; ++i) {
             if (ratio[i] < 0.0f)
@@ -9604,6 +9599,7 @@ zr_popup_begin(struct zr_context *ctx, struct zr_layout *layout,
         win->popup.active = 0;
     }
 
+    /* make sure we have to correct popup */
     if (win->popup.name != title_hash) {
         if (!win->popup.active) {
             zr_zero(popup, sizeof(*popup));
@@ -9612,10 +9608,12 @@ zr_popup_begin(struct zr_context *ctx, struct zr_layout *layout,
         } else return 0;
     }
 
+    /* popup position is local to window */
     ctx->current = popup;
     rect.x += win->layout->clip.x;
     rect.y += win->layout->clip.y;
 
+    /* setup popup data */
     popup->parent = win;
     popup->bounds = rect;
     popup->seq = ctx->seq;
@@ -9630,12 +9628,14 @@ zr_popup_begin(struct zr_context *ctx, struct zr_layout *layout,
     allocated = ctx->memory.allocated;
     zr_draw_scissor(&popup->buffer, zr_null_rect);
     if (zr_layout_begin(ctx, title)) {
+        /* popup is running therefore invalidate parent window  */
         win->layout->flags |= ZR_WINDOW_ROM;
         win->layout->flags &= ~(zr_flags)ZR_WINDOW_REMOVE_ROM;
         win->popup.active = 1;
         layout->offset = &popup->scrollbar;
         return 1;
     } else {
+        /* popup was closed/is invalid so cleanup */
         win->layout->flags |= ZR_WINDOW_REMOVE_ROM;
         win->layout->popup_buffer.active = 0;
         win->popup.active = 0;
@@ -9658,7 +9658,7 @@ zr_nonblock_begin(struct zr_layout *layout, struct zr_context *ctx,
     ZR_ASSERT(ctx->current->layout);
     if (!ctx || !ctx->current || !ctx->current->layout) return 0;
 
-    /* try to find group window */
+    /* popups cannot have popups */
     win = ctx->current;
     ZR_ASSERT(!(win->flags & ZR_WINDOW_POPUP));
     popup = win->popup.win;
@@ -9668,6 +9668,7 @@ zr_nonblock_begin(struct zr_layout *layout, struct zr_context *ctx,
         win->popup.win = popup;
         zr_command_buffer_init(&popup->buffer, &ctx->memory, ZR_CLIPPING_ON);
     } else {
+        /* check if user clicked outside the popup and close if so */
         int in_panel, in_body, in_header;
         in_panel = zr_input_is_mouse_click_in_rect(&ctx->input, ZR_BUTTON_LEFT, win->layout->bounds);
         in_body = zr_input_is_mouse_click_in_rect(&ctx->input, ZR_BUTTON_LEFT, body);
@@ -9678,26 +9679,28 @@ zr_nonblock_begin(struct zr_layout *layout, struct zr_context *ctx,
 
     if (!is_active) {
         win->layout->flags |= ZR_WINDOW_REMOVE_ROM;
-    } else {
-        /* if active create popup otherwise deactive the panel layout  */
-        popup->bounds = body;
-        popup->parent = win;
-        popup->layout = layout;
-        popup->flags = flags;
-        popup->flags |= ZR_WINDOW_BORDER|ZR_WINDOW_POPUP;
-        popup->flags |= ZR_WINDOW_DYNAMIC|ZR_WINDOW_SUB;
-        popup->seq = ctx->seq;
-
-        zr_start_child(ctx, win);
-        popup->buffer = win->buffer;
-        zr_draw_scissor(&popup->buffer, zr_null_rect);
-        ctx->current = popup;
-
-        zr_layout_begin(ctx, 0);
-        win->buffer = popup->buffer;
-        win->layout->flags |= ZR_WINDOW_ROM;
-        layout->offset = &popup->scrollbar;
+        return is_active;
     }
+
+    /* if active create popup otherwise deactive the panel layout  */
+    popup->bounds = body;
+    popup->parent = win;
+    popup->layout = layout;
+    popup->flags = flags;
+    popup->flags |= ZR_WINDOW_BORDER|ZR_WINDOW_POPUP;
+    popup->flags |= ZR_WINDOW_DYNAMIC|ZR_WINDOW_SUB;
+    popup->flags |= ZR_WINDOW_NONBLOCK;
+    popup->seq = ctx->seq;
+
+    zr_start_child(ctx, win);
+    popup->buffer = win->buffer;
+    zr_draw_scissor(&popup->buffer, zr_null_rect);
+    ctx->current = popup;
+
+    zr_layout_begin(ctx, 0);
+    win->buffer = popup->buffer;
+    win->layout->flags |= ZR_WINDOW_ROM;
+    layout->offset = &popup->scrollbar;
     return is_active;
 }
 
@@ -9757,16 +9760,19 @@ zr_tooltip_begin(struct zr_context *ctx, struct zr_layout *layout, float width)
     ZR_ASSERT(ctx->current->layout);
     if (!ctx || !ctx->current || !ctx->current->layout) return 0;
 
+    /* make sure that no nonblocking popup is currently active */
     win = ctx->current;
-    if (win->popup.active_con) return 0;
     in = &ctx->input;
+    if (win->popup.win && (win->popup.win->flags & ZR_WINDOW_NONBLOCK))
+        return 0;
+
     bounds.w = width;
     bounds.h = zr_null_rect.h;
     bounds.x = (in->mouse.pos.x + 1) - win->layout->clip.x;
     bounds.y = (in->mouse.pos.y + 1) - win->layout->clip.y;
 
     ret = zr_popup_begin(ctx, layout, ZR_POPUP_DYNAMIC,
-        "__##Tooltip##__", ZR_WINDOW_NO_SCROLLBAR, bounds);
+        "__##Tooltip##__", ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_TOOLTIP, bounds);
     if (ret) win->layout->flags &= ~(zr_flags)ZR_WINDOW_ROM;
     return ret;
 }
