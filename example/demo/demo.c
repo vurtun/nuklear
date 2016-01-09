@@ -228,7 +228,6 @@ button_demo(struct zr_context *ctx, struct icons *img)
     static int toggle0 = 1;
     static int toggle1 = 0;
     static int toggle2 = 1;
-    int clicked = 0;
 
     ctx->style.font.height = 20;
     zr_begin(ctx, &layout, "Button Demo", zr_rect(50,50,255,610),
@@ -314,8 +313,7 @@ button_demo(struct zr_context *ctx, struct icons *img)
     /*------------------------------------------------
      *                  CONTEXTUAL
      *------------------------------------------------*/
-    clicked = zr_input_mouse_clicked(&ctx->input, ZR_BUTTON_RIGHT, zr_window_get_bounds(ctx));
-    if (zr_contextual_begin(ctx, &menu, ZR_WINDOW_NO_SCROLLBAR, zr_vec2(120, 200), clicked)) {
+    if (zr_contextual_begin(ctx, &menu, ZR_WINDOW_NO_SCROLLBAR, zr_vec2(120, 200), zr_window_get_bounds(ctx))) {
         ctx->style.font.height = 18;
         zr_layout_row_dynamic(ctx, 25, 1);
         if (zr_contextual_item_icon(ctx, zr_image_id(img->copy), "Clone", ZR_TEXT_RIGHT))
