@@ -172,7 +172,7 @@ int zr_image_is_subimage(const struct zr_image* img);
  *                          MEMORY BUFFER
  *
  * ===============================================================*/
-/*  A basic (double)-buffer API with linear allocation and resetting as only
+/*  A basic (double)-buffer with linear allocation and resetting as only
     freeing policy. The buffers main purpose is to control all memory management inside
     the GUI toolkit and still leave memory control as much as possible in the hand
     of the user. The memory is provided in three different ways.
@@ -300,7 +300,7 @@ zr_size zr_buffer_total(struct zr_buffer*);
     and font handling function, which requires two additional headers for
     TTF font baking. While the previous two methods did no need any functions
     outside callbacks and are therefore rather simple to handle, the final
-    font handling method quite complex and you need to handle the complex
+    font handling method is quite complex and you need to handle the complex
     font baking API. The reason why it is complex is because there are multible
     ways of using the API. For example it must be possible to use the font
     for default command output as well as vertex buffer output. So for example
@@ -1301,11 +1301,11 @@ const struct zr_command* zr__next(struct zr_context*, const struct zr_command*);
 const struct zr_command* zr__begin(struct zr_context*);
 
 /* vertex command drawing */
-#define zr_draw_foreach(cmd,ctx, b) for((cmd)=zr__draw_begin(ctx, b); (cmd)!=0; (cmd)=zr__draw_next(cmd, b, ctx))
 void zr_convert(struct zr_context*, struct zr_buffer *cmds,
                 struct zr_buffer *vertexes, struct zr_buffer *elements,
                 struct zr_draw_null_texture , enum zr_anti_aliasing,
                 float line_thickness, unsigned int circle_segment_count);
+#define zr_draw_foreach(cmd,ctx, b) for((cmd)=zr__draw_begin(ctx, b); (cmd)!=0; (cmd)=zr__draw_next(cmd, b, ctx))
 const struct zr_draw_command* zr__draw_begin(const struct zr_context*, const struct zr_buffer*);
 const struct zr_draw_command* zr__draw_next(const struct zr_draw_command*,
                                         const struct zr_buffer*, const struct zr_context*);
@@ -1387,7 +1387,8 @@ int zr_group_begin(struct zr_context*, struct zr_layout*, const char *title, zr_
 void zr_group_end(struct zr_context *ctx);
 
 /* tree layout */
-int zr_layout_push(struct zr_context*, enum zr_layout_node_type, const char *title);
+int zr_layout_push(struct zr_context*, enum zr_layout_node_type, const char *title,
+                    enum zr_collapse_states initial_state);
 void zr_layout_pop(struct zr_context*);
 
 /*--------------------------------------------------------------

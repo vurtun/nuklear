@@ -230,7 +230,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
         }
 
         /* window flags */
-        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Window")) {
+        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Window", ZR_MINIMIZED)) {
             zr_layout_row_dynamic(ctx, 30, 2);
             zr_checkbox(ctx, "Titlebar", &titlebar);
             zr_checkbox(ctx, "Menu", &show_menu);
@@ -243,7 +243,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
             zr_layout_pop(ctx);
         }
 
-        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Style"))
+        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Style", ZR_MINIMIZED))
         {
             /* style editor */
             static const char *themes[] = {"Black", "White"};
@@ -262,7 +262,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 zr_combo_end(ctx);
             }
 
-            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Properties")) {
+            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Properties", ZR_MAXIMIZED)) {
                 size_t i = 0;
                 zr_layout_row_dynamic(ctx, 22, 3);
                 for (i = 0; i <= ZR_PROPERTY_SCROLLBAR_SIZE; ++i) {
@@ -273,7 +273,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 zr_layout_pop(ctx);
             }
 
-            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Rounding")) {
+            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Rounding", ZR_MINIMIZED)) {
                 size_t i = 0;
                 zr_layout_row_dynamic(ctx, 22, 2);
                 for (i = 0; i < ZR_ROUNDING_MAX; ++i) {
@@ -283,7 +283,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 zr_layout_pop(ctx);
             }
 
-            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Colors")){
+            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Colors", ZR_MINIMIZED)){
                 size_t i = 0;
                 struct zr_layout tab;
                 zr_layout_row_dynamic(ctx, 20, 1);
@@ -306,12 +306,12 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
             zr_layout_pop(ctx);
         }
 
-        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Widgets"))
+        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Widgets", ZR_MINIMIZED))
         {
             enum options {A,B,C};
             static int checkbox;
             static int option;
-            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Text"))
+            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Text", ZR_MINIMIZED))
             {
                 /* Text Widgets */
                 zr_layout_row_dynamic(ctx, 20, 1);
@@ -329,7 +329,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 zr_layout_pop(ctx);
             }
 
-            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Button"))
+            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Button", ZR_MINIMIZED))
             {
                 /* Buttons Widgets */
                 zr_layout_row_static(ctx, 30, 100, 3);
@@ -355,7 +355,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 zr_layout_pop(ctx);
             }
 
-            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Basic"))
+            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Basic", ZR_MINIMIZED))
             {
                 /* Basic widgets */
                 static int int_slider = 5;
@@ -410,9 +410,9 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 zr_layout_pop(ctx);
             }
 
-            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Selectable"))
+            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Selectable", ZR_MINIMIZED))
             {
-                if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "List"))
+                if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "List", ZR_MINIMIZED))
                 {
                     static int selected[4] = {zr_false, zr_false, zr_true, zr_false};
                     zr_layout_row_static(ctx, 18, 100, 1);
@@ -423,7 +423,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                     zr_selectable(ctx, "Selectable", ZR_TEXT_LEFT, &selected[3]);
                     zr_layout_pop(ctx);
                 }
-                if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Grid"))
+                if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Grid", ZR_MINIMIZED))
                 {
                     int i;
                     static int selected[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
@@ -442,7 +442,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 zr_layout_pop(ctx);
             }
 
-            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Combo"))
+            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Combo", ZR_MINIMIZED))
             {
                 /* Combobox Widgets */
                 static float chart_selection = 8.0f;
@@ -527,7 +527,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 zr_layout_pop(ctx);
             }
 
-            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Input"))
+            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Input", ZR_MINIMIZED))
             {
                 static const float ratio[] = {120, 150};
                 static char field_buffer[64];
@@ -587,7 +587,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
             zr_layout_pop(ctx);
         }
 
-        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Chart"))
+        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Chart", ZR_MINIMIZED))
         {
             float id = 0;
             static int col_index = -1;
@@ -651,7 +651,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
             zr_layout_pop(ctx);
         }
 
-        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Popup"))
+        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Popup", ZR_MINIMIZED))
         {
             static struct zr_color color = {255,0,0, 255};
             static int select[4];
@@ -740,9 +740,9 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
             zr_layout_pop(ctx);
         }
 
-        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Layout"))
+        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Layout", ZR_MINIMIZED))
         {
-            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Widget"))
+            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Widget", ZR_MINIMIZED))
             {
                 float ratio_two[] = {0.2f, 0.6f, 0.2f};
                 float width_two[] = {100, 200, 50};
@@ -812,7 +812,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 zr_layout_pop(ctx);
             }
 
-            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Group"))
+            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Group", ZR_MINIMIZED))
             {
                 static int group_titlebar = zr_false;
                 static int group_border = zr_true;
@@ -852,7 +852,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 zr_layout_pop(ctx);
             }
 
-            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Simple"))
+            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Simple", ZR_MINIMIZED))
             {
                 struct zr_layout tab;
                 zr_layout_row_dynamic(ctx, 300, 2);
@@ -879,7 +879,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 zr_layout_pop(ctx);
             }
 
-            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Complex"))
+            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Complex", ZR_MINIMIZED))
             {
                 int i;
                 struct zr_layout tab;
@@ -947,14 +947,14 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 zr_layout_pop(ctx);
             }
 
-            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Splitter"))
+            if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Splitter", ZR_MINIMIZED))
             {
                 const struct zr_input *in = &ctx->input;
                 zr_layout_row_static(ctx, 20, 320, 1);
                 zr_label(ctx, "Use slider and spinner to change tile size", ZR_TEXT_LEFT);
                 zr_label(ctx, "Drag the space between tiles to change tile ratio", ZR_TEXT_LEFT);
 
-                if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Vertical"))
+                if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Vertical", ZR_MINIMIZED))
                 {
                     static float a = 100, b = 100, c = 100;
                     struct zr_rect bounds;
@@ -1044,7 +1044,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                     zr_layout_pop(ctx);
                 }
 
-                if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Horizontal"))
+                if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Horizontal", ZR_MINIMIZED))
                 {
                     static float a = 100, b = 100, c = 100;
                     struct zr_layout sub;
