@@ -7377,12 +7377,14 @@ zr_layout_end(struct zr_context *ctx)
 
     /* draw footer and fill empty spaces inside a dynamically growing panel */
     if (layout->flags & ZR_WINDOW_DYNAMIC && !(layout->flags & ZR_WINDOW_MINIMIZED)) {
-        layout->height = MIN(layout->at_y - layout->bounds.y, layout->bounds.h);
+        layout->height = layout->at_y - layout->bounds.y;
+        layout->height = MIN(layout->height, layout->bounds.h);
         if ((layout->offset->x == 0) || (layout->flags & ZR_WINDOW_NO_SCROLLBAR)) {
             footer.x = window->bounds.x;
             footer.y = window->bounds.y + layout->height + item_spacing.y;
             footer.w = window->bounds.w + scrollbar_size;
             layout->footer_h = 0;
+            footer.h = 0;
 
             if ((layout->offset->x == 0) && !(layout->flags & ZR_WINDOW_NO_SCROLLBAR)) {
                 struct zr_rect bounds;
@@ -7396,12 +7398,14 @@ zr_layout_end(struct zr_context *ctx)
             footer.x = window->bounds.x;
             footer.w = window->bounds.w + scrollbar_size;
             footer.h = layout->footer_h;
-            if ((layout->flags & ZR_WINDOW_COMBO) || (layout->flags & ZR_WINDOW_MENU))
+            if ((layout->flags & ZR_WINDOW_COMBO) || (layout->flags & ZR_WINDOW_MENU) ||
+                (layout->flags & ZR_WINDOW_CONTEXTUAL))
                 footer.y = window->bounds.y + layout->height;
             else footer.y = window->bounds.y + layout->height + layout->footer_h;
             zr_draw_rect(out, footer, 0, config->colors[ZR_COLOR_WINDOW]);
 
             if (!(layout->flags & ZR_WINDOW_COMBO) && !(layout->flags & ZR_WINDOW_MENU)) {
+                /* fill empty scrollbar space */
                 struct zr_rect bounds;
                 bounds.x = layout->bounds.x;
                 bounds.y = window->bounds.y + layout->height;

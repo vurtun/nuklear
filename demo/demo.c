@@ -664,7 +664,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
             zr_layout_peek(&bounds, ctx);
             zr_label(ctx, "Right click me for menu", ZR_TEXT_LEFT);
 
-            if (zr_contextual_begin(ctx, &menu, 0, zr_vec2(100, 200), bounds)) {
+            if (zr_contextual_begin(ctx, &menu, 0, zr_vec2(100, 300), bounds)) {
                 static size_t prog = 40;
                 static int slider = 10;
 
@@ -672,14 +672,14 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 zr_checkbox(ctx, "Menu", &show_menu);
                 zr_progress(ctx, &prog, 100, ZR_MODIFIABLE);
                 zr_slider_int(ctx, 0, &slider, 16, 1);
-                zr_selectable(ctx, select[0]?"Unselect":"Select", ZR_TEXT_LEFT, &select[0]);
-                zr_selectable(ctx, select[1]?"Unselect":"Select", ZR_TEXT_LEFT, &select[1]);
-                zr_selectable(ctx, select[2]?"Unselect":"Select", ZR_TEXT_LEFT, &select[2]);
-                zr_selectable(ctx, select[3]?"Unselect":"Select", ZR_TEXT_LEFT, &select[3]);
                 if (zr_contextual_item(ctx, "About", ZR_TEXT_CENTERED))
                     show_app_about = zr_true;
                 if (zr_contextual_item(ctx, "Quit", ZR_TEXT_CENTERED))
                     show_close_popup = zr_true;
+                zr_selectable(ctx, select[0]?"Unselect":"Select", ZR_TEXT_LEFT, &select[0]);
+                zr_selectable(ctx, select[1]?"Unselect":"Select", ZR_TEXT_LEFT, &select[1]);
+                zr_selectable(ctx, select[2]?"Unselect":"Select", ZR_TEXT_LEFT, &select[2]);
+                zr_selectable(ctx, select[3]?"Unselect":"Select", ZR_TEXT_LEFT, &select[3]);
                 zr_contextual_end(ctx);
             }
 
