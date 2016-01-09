@@ -32,8 +32,8 @@
 #include <GLFW/glfw3.h>
 
 /* macros */
-#define MAX_VERTEX_MEMORY 128 * 1024
-#define MAX_ELEMENT_MEMORY 64 * 1024
+#define MAX_VERTEX_MEMORY 512 * 1024
+#define MAX_ELEMENT_MEMORY 128 * 1024
 
 #include "../../zahnrad.h"
 #include "../demo.c"

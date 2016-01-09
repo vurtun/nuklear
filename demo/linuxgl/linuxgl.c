@@ -47,8 +47,8 @@
 #define OGL_MAJOR_VERSION 3
 #define OGL_MINOR_VERSION 0
 
-#define MAX_VERTEX_MEMORY 128 * 1024
-#define MAX_ELEMENT_MEMORY 64 * 1024
+#define MAX_VERTEX_MEMORY 512 * 1024
+#define MAX_ELEMENT_MEMORY 128 * 1024
 #define UNUSED(a)   ((void)(a))
 
 typedef GLXContext(*glxCreateContext)(Display*, GLXFBConfig, GLXContext, Bool, const int*);
