@@ -124,12 +124,6 @@ typedef union {void *ptr; int id;} zr_handle;
 struct zr_image {zr_handle handle; unsigned short w, h; unsigned short region[4];};
 struct zr_scroll {unsigned short x, y;};
 
-/* pointer */
-#define zr_ptr_add(t, p, i) ((t*)((void*)((zr_byte*)(p) + (i))))
-#define zr_ptr_sub(t, p, i) ((t*)((void*)((zr_byte*)(p) - (i))))
-#define zr_ptr_add_const(t, p, i) ((const t*)((const void*)((const zr_byte*)(p) + (i))))
-#define zr_ptr_sub_const(t, p, i) ((const t*)((const void*)((const zr_byte*)(p) - (i))))
-
 /* math */
 struct zr_rect zr_get_null_rect(void);
 struct zr_rect zr_rect(float x, float y, float w, float h);
@@ -1130,13 +1124,13 @@ enum zr_window_flags {
     /* Draws a border around the window to visually seperate the window from the background */
     ZR_WINDOW_BORDER_HEADER = ZR_FLAG(1),
     /* Draws a border between window header and body */
-    ZR_WINDOW_MOVABLE      = ZR_FLAG(2),
+    ZR_WINDOW_MOVABLE       = ZR_FLAG(2),
     /* The moveable flag inidicates that a window can be moved by user input or by
      * dragging the window header */
-    ZR_WINDOW_SCALABLE     = ZR_FLAG(3),
+    ZR_WINDOW_SCALABLE      = ZR_FLAG(3),
     /* The scaleable flag indicates that a window can be scaled by user input
      * by dragging a scaler icon at the button of the window */
-    ZR_WINDOW_CLOSABLE     = ZR_FLAG(4),
+    ZR_WINDOW_CLOSABLE      = ZR_FLAG(4),
     /* adds a closeable icon into the header */
     ZR_WINDOW_MINIMIZABLE   = ZR_FLAG(5),
     /* adds a minimize icon into the header */
@@ -1413,7 +1407,7 @@ void zr_image(struct zr_context*, struct zr_image);
 
 /* toggle value  */
 int zr_check(struct zr_context*, const char*, int active);
-void zr_checkbox(struct zr_context*, const char*, int *active);
+int zr_checkbox(struct zr_context*, const char*, int *active);
 void zr_radio(struct zr_context*, const char*, int *active);
 int zr_option(struct zr_context*, const char*, int active);
 int zr_selectable(struct zr_context*, const char*, enum zr_text_align, int *value);

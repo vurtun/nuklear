@@ -222,7 +222,9 @@ struct zr_pool {
 #define zr_vec2_len_sqr(a) ((a).x*(a).x+(a).y*(a).y)
 #define zr_vec2_muls(a, t) zr_vec2((a).x * (t), (a).y * (t))
 
-enum zr_tree_node_symbol {ZR_TREE_NODE_BULLET, ZR_TREE_NODE_TRIANGLE};
+#define zr_ptr_add(t, p, i) ((t*)((void*)((zr_byte*)(p) + (i))))
+#define zr_ptr_add_const(t, p, i) ((const t*)((const void*)((const zr_byte*)(p) + (i))))
+
 static const struct zr_rect zr_null_rect = {-8192.0f, -8192.0f, 16384, 16384};
 static const double double_PRECISION = 0.00000000000001;
 
@@ -2645,7 +2647,7 @@ zr_canvas_add_image(struct zr_canvas *list, struct zr_image texture,
 static void
 zr_canvas_add_text(struct zr_canvas *list, const struct zr_user_font *font,
     struct zr_rect rect, const char *text, zr_size len, float font_height,
-    struct zr_color bg, struct zr_color fg)
+    struct zr_color color)
 {
     float x, scale;
     zr_size text_len;
@@ -2662,7 +2664,6 @@ zr_canvas_add_text(struct zr_canvas *list, const struct zr_user_font *font,
         return;
 
     /* draw text background */
-    zr_canvas_add_rect(list, rect, bg, 0.0f);
     zr_canvas_push_image(list, font->texture);
 
     /* draw every glyph image */
@@ -2684,7 +2685,7 @@ zr_canvas_add_text(struct zr_canvas *list, const struct zr_user_font *font,
         gw = g.width * scale; gh = g.height * scale;
         char_width = g.xadvance * scale;
         zr_canvas_push_rect_uv(list, zr_vec2(gx,gy), zr_vec2(gx + gw, gy+ gh),
-            g.uv[0], g.uv[1], fg);
+            g.uv[0], g.uv[1], color);
 
         /* offset next glyph */
         text_len += glyph_len;
@@ -2748,7 +2749,7 @@ zr_canvas_load(struct zr_canvas *list, struct zr_context *queue,
         case ZR_COMMAND_TEXT: {
             const struct zr_command_text *t = zr_command(text, cmd);
             zr_canvas_add_text(list, t->font, zr_rect(t->x, t->y, t->w, t->h),
-                t->string, t->length, t->height, t->background, t->foreground);
+                t->string, t->length, t->height, t->foreground);
         } break;
         case ZR_COMMAND_IMAGE: {
             const struct zr_command_image *i = zr_command(image, cmd);
@@ -8790,7 +8791,7 @@ zr_check(struct zr_context *ctx, const char *text, int active)
     return active;
 }
 
-void
+int
 zr_checkbox(struct zr_context *ctx, const char *text, int *is_active)
 {
     struct zr_rect bounds;
@@ -8801,6 +8802,7 @@ zr_checkbox(struct zr_context *ctx, const char *text, int *is_active)
     const struct zr_input *i;
     enum zr_widget_state state;
 
+    int old;
     struct zr_window *win;
     struct zr_layout *layout;
 
@@ -8808,12 +8810,13 @@ zr_checkbox(struct zr_context *ctx, const char *text, int *is_active)
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
     if (!ctx || !ctx->current || !ctx->current->layout)
-        return;
+        return 0;
 
+    old = *is_active;
     win = ctx->current;
     layout = win->layout;
     state = zr_toggle_base(&toggle, &bounds, ctx);
-    if (!state) return;
+    if (!state) return 0;
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : &ctx->input;
 
     config = &ctx->style;
@@ -8823,6 +8826,7 @@ zr_checkbox(struct zr_context *ctx, const char *text, int *is_active)
     toggle.hover = config->colors[ZR_COLOR_TOGGLE_HOVER];
     zr_do_toggle(&ws, &win->buffer, bounds, is_active, text, ZR_TOGGLE_CHECK,
                         &toggle, i, &config->font);
+    return old != *is_active;
 }
 
 void
