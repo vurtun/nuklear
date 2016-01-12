@@ -6744,7 +6744,7 @@ zr_begin(struct zr_context *ctx, struct zr_layout *layout,
             while (iter) {
                 if (ZR_INTERSECT(win->bounds.x, win->bounds.y, win->bounds.w, win->bounds.h,
                     iter->bounds.x, iter->bounds.y, iter->bounds.w, iter->bounds.h) &&
-                  !(iter->flags & ZR_WINDOW_MINIMIZED) && !(iter->flags & ZR_WINDOW_HIDDEN))
+                    !(iter->flags & ZR_WINDOW_HIDDEN))
                     break;
                 iter = iter->next;
             }
@@ -6756,8 +6756,7 @@ zr_begin(struct zr_context *ctx, struct zr_layout *layout,
             while (iter) {
                 /* try to find a panel with higher priorty in the same position */
                 if (ZR_INBOX(ctx->input.mouse.prev.x, ctx->input.mouse.prev.y, iter->bounds.x,
-                    iter->bounds.y, iter->bounds.w, iter->bounds.h) &&
-                  !(iter->flags & ZR_WINDOW_MINIMIZED) && !(iter->flags & ZR_WINDOW_HIDDEN))
+                    iter->bounds.y, iter->bounds.w, iter->bounds.h) && !(iter->flags & ZR_WINDOW_HIDDEN))
                     break;
                 iter = iter->next;
             }
