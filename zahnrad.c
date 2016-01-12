@@ -1315,7 +1315,7 @@ zr_user_font_glyphs_fitting_in_space(const struct zr_user_font *font, const char
     s = font->width(font->userdata, font->height, text, glyph_len);
     width = last_width = (float)s;
 
-    while ((width <= space) && text_len) {
+    while ((width <= space) && text_len && glyph_len) {
         text_len -= glyph_len;
         offset += glyph_len;
         g++; l += glyph_len;
@@ -4773,8 +4773,7 @@ zr_widget_edit_field(struct zr_command_buffer *out, struct zr_rect r,
                     &buffer[offset], text_len, space, &row_len, &glyphs, &text_width, 0);
 
                 glyph_off += glyphs;
-                if (glyph_off > box->cursor)
-                    break;
+                if (glyph_off > box->cursor || !frame_len) break;
                 text_len -= frame_len;
             }
 
@@ -4939,7 +4938,9 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
             offset += row_off;
             row_off = zr_user_font_glyphs_fitting_in_space(font,
                 &buffer[offset], text_len, space, &row_len, &glyphs, &text_width, 1);
-            text_len -= row_off;
+            if (!row_off){
+                text_len = 0;
+            } else text_len -= row_off;
         }
         total_height = (float)total_rows * (float)row_height;
     }
@@ -4970,7 +4971,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                 offset += row_off;
                 row_off = zr_user_font_glyphs_fitting_in_space(font,
                     &buffer[offset], text_len, total_width, &row_len, &glyphs, &text_width, 1);
-                if (cursor >= glyph_off && cursor < glyph_off + glyphs)
+                if ((cursor >= glyph_off && cursor < glyph_off + glyphs) || !row_off)
                     break;
 
                 glyph_off += glyphs;
@@ -5029,6 +5030,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                 while (text_len && cur_row <= row) {
                     row_off = zr_user_font_glyphs_fitting_in_space(font,
                         &buffer[offset], text_len, total_width, &row_len, &glyphs, &text_width, 1);
+                    if (!row_off) break;
 
                     glyph_off += glyphs;
                     text_len -= row_off;
@@ -5120,6 +5122,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
             row_off = zr_user_font_glyphs_fitting_in_space(font,
                 &buffer[offset], text_len, total_width, &row_len, &glyphs, &text_width, 1);
             label.w = text_width;
+            if (!row_off || !row_len) break;
 
             /* draw either unselected or selected row */
             if (glyph_off <= begin && glyph_off + glyphs >= begin && glyph_off + glyphs <= end+1 && box->active) {
@@ -5146,9 +5149,10 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
 
                 /* draw unselected text part */
                 unselected_text_width = font->width(font->userdata, font->height, &buffer[offset],
-                    row_len - sel_len);
+                    (row_len >= sel_len) ? row_len - sel_len: 0);
                 zr_draw_text(out , label, &buffer[offset],
-                    row_len - sel_len, font, field->background, field->text);
+                    (row_len >= sel_len) ? row_len - sel_len: 0,
+                    font, field->background, field->text);
 
                 /* draw selected text part */
                 label.x += (float)(unselected_text_width);
@@ -5184,7 +5188,8 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                 label.x += (float)selected_text_width;
                 label.w -= (float)(selected_text_width);
                 zr_draw_text(out, label, &buffer[offset + sel_end],
-                    row_len - sel_len, font, field->background, field->text);
+                    (row_len >= sel_len) ? row_len - sel_len: 0,
+                    font, field->background, field->text);
                 label.x -= (float)selected_text_width;
                 label.w += (float)(selected_text_width);
             } else if (glyph_off <= begin && glyph_off + glyphs >= begin && box->active &&
@@ -5215,7 +5220,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
 
                 /* draw beginning unselected text part */
                 cur_text_width = font->width(font->userdata, font->height, &buffer[offset], sel_begin);
-                zr_draw_text(out , label, &buffer[offset],
+                zr_draw_text(out, label, &buffer[offset],
                     sel_begin, font, field->background, field->text);
 
                 /* draw selected text part */
@@ -8129,20 +8134,24 @@ int
 zr_layout_push(struct zr_context *ctx, enum zr_layout_node_type type, const char *title,
     enum zr_collapse_states initial_state)
 {
+    struct zr_window *win;
+    struct zr_layout *layout;
     const struct zr_style *config;
     struct zr_command_buffer *out;
+    const struct zr_input *input;
+
     struct zr_vec2 item_spacing;
     struct zr_vec2 item_padding;
     struct zr_vec2 panel_padding;
     struct zr_rect header = {0,0,0,0};
     struct zr_rect sym = {0,0,0,0};
+
     enum zr_widget_status ws;
+    enum zr_widget_state widget_state;
+
     zr_hash title_hash;
     int title_len;
     zr_uint *state = 0;
-
-    struct zr_window *win;
-    struct zr_layout *layout;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -8161,7 +8170,7 @@ zr_layout_push(struct zr_context *ctx, enum zr_layout_node_type type, const char
 
     /* calculate header bounds and draw background */
     zr_layout_row_dynamic(ctx, config->font.height + 2 * item_padding.y, 1);
-    zr_panel_alloc_space(&header, ctx);
+    widget_state = zr_widget(&header, ctx);
     if (type == ZR_LAYOUT_TAB)
         zr_draw_rect(out, header, 0, config->colors[ZR_COLOR_TAB_HEADER]);
 
@@ -8175,8 +8184,9 @@ zr_layout_push(struct zr_context *ctx, enum zr_layout_node_type type, const char
     }
 
     /* update node state */
-    if (zr_button_behavior(&ws, header,
-        (!(layout->flags & ZR_WINDOW_ROM)) ? &ctx->input : 0, ZR_BUTTON_DEFAULT))
+    input = (!(layout->flags & ZR_WINDOW_ROM)) ? &ctx->input: 0;
+    input = (input && widget_state == ZR_WIDGET_VALID) ? &ctx->input : 0;
+    if (zr_button_behavior(&ws, header, input, ZR_BUTTON_DEFAULT))
         *state = (*state == ZR_MAXIMIZED) ? ZR_MINIMIZED : ZR_MAXIMIZED;
 
     {
@@ -9004,10 +9014,13 @@ zr_edit_string(struct zr_context *ctx, zr_flags flags,
 {
     int active;
     struct zr_buffer buffer;
+    max = MAX(1, max);
+    *len = MIN(*len, max-1);
     zr_buffer_init_fixed(&buffer, memory, max);
     buffer.allocated = *len;
     active = zr_edit_buffer(ctx, flags, &buffer, filter);
     *len = buffer.allocated;
+    *len = MIN(*len, max-1);
     return active;
 }
 

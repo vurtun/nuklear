@@ -105,7 +105,6 @@ typedef unsigned char zr_byte;
 #define ZR_ASSERT(expr)
 #endif
 
-/* Callbacks */
 struct zr_user_font;
 struct zr_edit_box;
 struct zr_user_font_glyph;
@@ -492,7 +491,6 @@ struct zr_user_font zr_font_ref(struct zr_font*);
 const struct zr_font_glyph* zr_font_find_glyph(struct zr_font*, zr_rune unicode);
 
 #endif
-
 /* ===============================================================
  *
  *                          RENDERING
