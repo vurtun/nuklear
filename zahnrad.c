@@ -102,7 +102,7 @@ enum zr_internal_window_flags {
 struct zr_popup {
     struct zr_window *win;
     enum zr_internal_window_flags type;
-    zr_ulong name;
+    zr_hash name;
     int active;
 
     unsigned con_count, con_old;
@@ -6770,7 +6770,7 @@ zr_begin(struct zr_context *ctx, struct zr_layout *layout,
 
             /* NOTE: I am not really sure if activating a window should directly
              * happen on that frame or the following frame. Directly would simplify
-             * clicking window closing/minimizing but could case wrong behavior.
+             * clicking window closing/minimizing but could cause wrong behavior.
              * For now I activate the window on the next frame to prevent wrong
              * behavior. If not wanted just replace line with:
              * win->flags &= ~(zr_flags)ZR_WINDOW_ROM; */
@@ -6779,7 +6779,7 @@ zr_begin(struct zr_context *ctx, struct zr_layout *layout,
         }
         if (ctx->end != win)
             win->flags |= ZR_WINDOW_ROM;
-    }
+   }
 
     win->layout = layout;
     ctx->current = win;

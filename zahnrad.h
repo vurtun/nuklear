@@ -80,7 +80,7 @@ extern "C" {
 typedef uint32_t zr_uint;
 typedef uint32_t zr_hash;
 typedef uint64_t zr_ulong;
-typedef uint64_t zr_size;
+typedef uintptr_t zr_size;
 typedef uintptr_t zr_ptr;
 typedef uint32_t zr_flags;
 typedef uint32_t zr_rune;
