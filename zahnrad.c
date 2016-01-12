@@ -610,7 +610,7 @@ zr_ftos(char *s, float n)
             float t = (float)n / weight;
             float tmp = zr_floor(t);
             digit = (int)tmp;
-            n -= (digit * weight);
+            n -= ((float)digit * weight);
             *(c++) = (char)('0' + (char)digit);
         }
         if (m == 0 && n > 0)
@@ -1075,8 +1075,8 @@ zr_string_float_limit(char *string, int prec)
  * ===============================================================*/
 static const zr_byte zr_utfbyte[ZR_UTF_SIZE+1] = {0x80, 0, 0xC0, 0xE0, 0xF0};
 static const zr_byte zr_utfmask[ZR_UTF_SIZE+1] = {0xC0, 0x80, 0xE0, 0xF0, 0xF8};
-static const long zr_utfmin[ZR_UTF_SIZE+1] = {0, 0, 0x80, 0x800, 0x10000};
-static const long zr_utfmax[ZR_UTF_SIZE+1] = {0x10FFFF, 0x7F, 0x7FF, 0xFFFF, 0x10FFFF};
+static const zr_uint zr_utfmin[ZR_UTF_SIZE+1] = {0, 0, 0x80, 0x800, 0x10000};
+static const zr_uint zr_utfmax[ZR_UTF_SIZE+1] = {0x10FFFF, 0x7F, 0x7FF, 0xFFFF, 0x10FFFF};
 
 static zr_size
 zr_utf_validate(zr_rune *u, zr_size i)
