@@ -79,7 +79,6 @@ extern "C" {
 #include <stdint.h>
 typedef uint32_t zr_uint;
 typedef uint32_t zr_hash;
-typedef uint64_t zr_ulong;
 typedef uintptr_t zr_size;
 typedef uintptr_t zr_ptr;
 typedef uint32_t zr_flags;
@@ -88,7 +87,6 @@ typedef uint8_t zr_byte;
 #else
 typedef unsigned int zr_uint;
 typedef unsigned int zr_hash;
-typedef unsigned long zr_ulong;
 typedef unsigned long zr_size;
 typedef zr_size zr_ptr;
 typedef unsigned int zr_flags;

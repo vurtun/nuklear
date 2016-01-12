@@ -226,7 +226,7 @@ struct zr_pool {
 #define zr_ptr_add_const(t, p, i) ((const t*)((const void*)((const zr_byte*)(p) + (i))))
 
 static const struct zr_rect zr_null_rect = {-8192.0f, -8192.0f, 16384, 16384};
-static const double double_PRECISION = 0.00000000000001;
+static const float FLOAT_PRECISION = 0.00000000000001f;
 
 /* ==============================================================
  *                          ALIGNMENT
@@ -263,12 +263,11 @@ template<typename T> struct zr_alignof{struct Big {T x; char c;}; enum {
 #endif
 
 /* make sure correct type size */
-typedef int zr__check_size[(sizeof(void*) == sizeof(zr_size)) ? 1 : -1];
-typedef int zr__check_ptr[(sizeof(void*) == sizeof(zr_ptr)) ? 1 : -1];
+typedef int zr__check_size[(sizeof(zr_size) >= sizeof(void*)) ? 1 : -1];
+typedef int zr__check_ptr[(sizeof(zr_ptr) == sizeof(void*)) ? 1 : -1];
 typedef int zr__check_flags[(sizeof(zr_flags) >= 4) ? 1 : -1];
 typedef int zr__check_rune[(sizeof(zr_rune) >= 4) ? 1 : -1];
 typedef int zr__check_uint[(sizeof(zr_uint) == 4) ? 1 : -1];
-typedef int zr__check_ulong[(sizeof(zr_ulong) == 8) ? 1 : -1];
 typedef int zr__check_byte[(sizeof(zr_byte) == 1) ? 1 : -1];
 /*
  * ==============================================================
@@ -317,31 +316,31 @@ zr_inv_sqrt(float number)
     return conv.f;
 }
 
-static double
-zr_sin(double x)
+static float
+zr_sin(float x)
 {
-    static const double a0 = +1.91059300966915117e-31;
-    static const double a1 = +1.00086760103908896;
-    static const double a2 = -1.21276126894734565e-2;
-    static const double a3 = -1.38078780785773762e-1;
-    static const double a4 = -2.67353392911981221e-2;
-    static const double a5 = +2.08026600266304389e-2;
-    static const double a6 = -3.03996055049204407e-3;
-    static const double a7 = +1.38235642404333740e-4;
+    static const float a0 = +1.91059300966915117e-31f;
+    static const float a1 = +1.00086760103908896f;
+    static const float a2 = -1.21276126894734565e-2f;
+    static const float a3 = -1.38078780785773762e-1f;
+    static const float a4 = -2.67353392911981221e-2f;
+    static const float a5 = +2.08026600266304389e-2f;
+    static const float a6 = -3.03996055049204407e-3f;
+    static const float a7 = +1.38235642404333740e-4f;
     return a0 + x * (a1 + x * (a2 + x * (a3 + x * (a4 + x * (a5 + x *(a6 + x * a7))))));
 }
 
-static double
-zr_cos(double x)
+static float
+zr_cos(float x)
 {
-    static const double a0 = +1.00238601909309722;
-    static const double a1 = -3.81919947353040024e-2;
-    static const double a2 = -3.94382342128062756e-1;
-    static const double a3 = -1.18134036025221444e-1;
-    static const double a4 = +1.07123798512170878e-1;
-    static const double a5 = -1.86637164165180873e-2;
-    static const double a6 = +9.90140908664079833e-4;
-    static const double a7 = -5.23022132118824778e-14;
+    static const float a0 = +1.00238601909309722f;
+    static const float a1 = -3.81919947353040024e-2f;
+    static const float a2 = -3.94382342128062756e-1f;
+    static const float a3 = -1.18134036025221444e-1f;
+    static const float a4 = +1.07123798512170878e-1f;
+    static const float a5 = -1.86637164165180873e-2f;
+    static const float a6 = +9.90140908664079833e-4f;
+    static const float a7 = -5.23022132118824778e-14f;
     return a0 + x * (a1 + x * (a2 + x * (a3 + x * (a4 + x * (a5 + x *(a6 + x * a7))))));
 }
 
@@ -532,11 +531,11 @@ zr_strtof(float *number, const char *buffer)
     return 1;
 }
 
-static double
-zr_pow(double x, int n)
+static float
+zr_pow(float x, int n)
 {
     /*  check the sign of n */
-    double r = 1;
+    float r = 1;
     int plus = n >= 0;
     n = (plus) ? n : -n;
     while (n > 0) {
@@ -545,35 +544,17 @@ zr_pow(double x, int n)
         n /= 2;
         x *= x;
     }
-    return plus ? r : 1.0 / r;
+    return plus ? r : 1.0f / r;
 }
 
-static zr_uint
-zr_isinf(double x)
+static float
+zr_floor(float x)
 {
-    union {zr_ulong u; double f;} ieee754 = {0};
-    ieee754.f = x;
-    return ( (zr_uint)(ieee754.u >> 32) & 0x7fffffff ) == 0x7ff00000 &&
-           ( (zr_uint)ieee754.u == 0 );
-}
-
-static zr_uint
-zr_isnan(double x)
-{
-    union {zr_ulong u; double f;} ieee754;
-    ieee754.f = x;
-    return ((zr_uint)(ieee754.u >> 32) & 0x7fffffff ) +
-           ((zr_uint)ieee754.u != 0 ) > 0x7ff00000;
-}
-
-static double
-zr_floor(double x)
-{
-    return (double)((int)x - ((x < 0.0) ? 1 : 0));
+    return (float)((int)x - ((x < 0.0) ? 1 : 0));
 }
 
 static int
-zr_log10(double n)
+zr_log10(float n)
 {
     int neg;
     int ret;
@@ -590,20 +571,14 @@ zr_log10(double n)
 }
 
 static zr_size
-zr_dtos(char *s, double n)
+zr_ftos(char *s, float n)
 {
     int useExp = 0;
     int digit = 0, m = 0, m1 = 0;
     char *c = s;
     int neg = 0;
 
-    if (zr_isnan(n)) {
-        s[0] = 'n'; s[1] = 'a'; s[2] = 'n'; s[3] = '\0';
-        return 3;
-    } else if (zr_isinf(n)) {
-        s[0] = 'i'; s[1] = 'n'; s[2] = 'f'; s[3] = '\0';
-        return 3;
-    } else if (n == 0.0) {
+    if (n == 0.0) {
         s[0] = '0'; s[1] = '\0';
         return 1;
     }
@@ -629,11 +604,11 @@ zr_dtos(char *s, double n)
     }
 
     /* convert the number */
-    while (n > double_PRECISION || m >= 0) {
-        double weight = zr_pow(10.0, m);
-        if (weight > 0 && !zr_isinf(weight)) {
-            double t = (double)n / weight;
-            double tmp = zr_floor(t);
+    while (n > FLOAT_PRECISION || m >= 0) {
+        float weight = zr_pow(10.0, m);
+        if (weight > 0) {
+            float t = (float)n / weight;
+            float tmp = zr_floor(t);
             digit = (int)tmp;
             n -= (digit * weight);
             *(c++) = (char)('0' + (char)digit);
@@ -5484,7 +5459,7 @@ zr_do_property(enum zr_widget_status *ws,
         length = len;
         dst = buffer;
     } else {
-        zr_dtos(string, property_value);
+        zr_ftos(string, property_value);
         num_len = zr_string_float_limit(string, ZR_MAX_FLOAT_PRECISION);
         size = f->width(f->userdata, f->height, string, num_len);
         dst = string;
