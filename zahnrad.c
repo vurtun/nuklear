@@ -6768,12 +6768,17 @@ zr_begin(struct zr_context *ctx, struct zr_layout *layout,
             zr_remove_window(ctx, win);
             zr_insert_window(ctx, win);
 
-            win->flags &= ~(zr_flags)ZR_WINDOW_ROM;
+            /* NOTE: I am not really sure if activating a window should directly
+             * happen on that frame or the following frame. Directly would simplify
+             * clicking window closing/minimizing but could case wrong behavior.
+             * For now I activate the window on the next frame to prevent wrong
+             * behavior. If not wanted just replace line with:
+             * win->flags &= ~(zr_flags)ZR_WINDOW_ROM; */
+            win->flags |= ZR_WINDOW_REMOVE_ROM;
             ctx->active = win;
         }
         if (ctx->end != win)
             win->flags |= ZR_WINDOW_ROM;
-
     }
 
     win->layout = layout;
