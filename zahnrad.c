@@ -7333,7 +7333,6 @@ zr_layout_begin(struct zr_context *ctx, const char *title)
 
     if (layout->flags & ZR_WINDOW_MINIMIZED) {
         /* draw window background if minimized */
-        layout->header_h = 0;
         layout->row.height = 0;
         zr_draw_rect(out, zr_rect(layout->bounds.x, layout->bounds.y,
             layout->bounds.w, layout->row.height), 0, c->colors[ZR_COLOR_WINDOW]);
