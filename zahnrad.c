@@ -7254,14 +7254,6 @@ zr_layout_begin(struct zr_context *ctx, const char *title)
     layout->height = win->bounds.h - (layout->header_h + 2 * item_spacing.y);
     layout->height -= layout->footer_h;
 
-    /* draw window background if not a dynamic window */
-    if (!(layout->flags & ZR_WINDOW_DYNAMIC) && !(layout->flags & ZR_WINDOW_MINIMIZED)) {
-        zr_draw_rect(out, layout->bounds, 0, c->colors[ZR_COLOR_WINDOW]);
-    } else{
-        zr_draw_rect(out, zr_rect(layout->bounds.x, layout->bounds.y,
-            layout->bounds.w, layout->row.height + window_padding.y), 0, c->colors[ZR_COLOR_WINDOW]);
-    }
-
     /* window header */
     header_active = (win->flags & (ZR_WINDOW_CLOSABLE|ZR_WINDOW_MINIMIZABLE));
     header_active = header_active || (win->flags & ZR_WINDOW_TITLE);
@@ -7333,6 +7325,28 @@ zr_layout_begin(struct zr_context *ctx, const char *title)
                 &c->font, c->colors[ZR_COLOR_HEADER], c->colors[ZR_COLOR_TEXT]);
         }
         out->clip = old_clip;
+    }
+
+    /* fix header height for transistion between minimized and maximized window state */
+    if (win->flags & ZR_WINDOW_MINIMIZED && !(layout->flags & ZR_WINDOW_MINIMIZED))
+        layout->row.height += 2 * item_spacing.y + 1;
+
+    if (layout->flags & ZR_WINDOW_MINIMIZED) {
+        /* draw window background if minimized */
+        layout->header_h = 0;
+        layout->row.height = 0;
+        zr_draw_rect(out, zr_rect(layout->bounds.x, layout->bounds.y,
+            layout->bounds.w, layout->row.height), 0, c->colors[ZR_COLOR_WINDOW]);
+    } else if (!(layout->flags & ZR_WINDOW_DYNAMIC)) {
+        /* draw static window body */
+        struct zr_rect body = layout->bounds;
+        body.y += layout->header_h;
+        body.h -= layout->header_h;
+        zr_draw_rect(out, body, 0, c->colors[ZR_COLOR_WINDOW]);
+    } else {
+        /* draw dynamic window body */
+        zr_draw_rect(out, zr_rect(layout->bounds.x, layout->bounds.y,
+            layout->bounds.w, layout->row.height + window_padding.y), 0, c->colors[ZR_COLOR_WINDOW]);
     }
 
     /* draw top window border line */
