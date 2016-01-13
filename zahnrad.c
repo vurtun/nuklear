@@ -8779,7 +8779,7 @@ zr_select(struct zr_context *ctx, const char *str,
     if (zr_input_is_mouse_click_in_rect(&ctx->input, ZR_BUTTON_LEFT, bounds)) {
         background = config->colors[ZR_COLOR_SELECTABLE_HOVER];
         if (zr_input_has_mouse_click_in_rect(&ctx->input, ZR_BUTTON_LEFT, bounds)) {
-            if (zr_input_is_mouse_down(&ctx->input, ZR_BUTTON_LEFT))
+            if (!zr_input_is_mouse_down(&ctx->input, ZR_BUTTON_LEFT))
                 value = !value;
         }
     }
