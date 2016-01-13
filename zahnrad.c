@@ -465,12 +465,64 @@ done:
 }
 
 static void
-zr_zero(void *dst, zr_size size)
+zr_memset(void *ptr, int c0, zr_size size)
 {
-    zr_size i;
-    char *d = (char*)dst;
-    ZR_ASSERT(dst);
-    for (i = 0; i < size; ++i) d[i] = 0;
+    #define word unsigned
+    #define wsize sizeof(word)
+    #define wmask (wsize - 1)
+    zr_byte *dst = (zr_byte*)ptr;
+    unsigned c = 0;
+    zr_size t = 0;
+
+    if ((c = (zr_byte)c0) != 0) {
+        c = (c << 8) | c; /* at least 16-bits  */
+        if (sizeof(unsigned int) > 2)
+            c = (c << 16) | c; /* at least 32-bits*/
+    }
+
+    /* to small of a word count */
+    dst = (zr_byte*)ptr;
+    if (size < 3 * wsize) {
+        while (size--) *dst++ = (zr_byte)c0;
+        return;
+    }
+
+    /* align destination */
+    if ((t = ZR_PTR_TO_UINT(dst) & wmask) != 0) {
+        t = wsize -t;
+        size -= t;
+        do {
+            *dst++ = (zr_byte)c0;
+        } while (--t != 0);
+    }
+
+    /* fill word */
+    t = size / wsize;
+    do {
+        *(word*)((void*)dst) = c;
+        dst += wsize;
+    } while (--t != 0);
+
+    /* fill trailing bytes */
+    t = (size & wmask);
+    if (t != 0) {
+        do {
+            *dst++ = (zr_byte)c0;
+        } while (--t != 0);
+    }
+
+    #undef word
+    #undef wsize
+    #undef wmask
+}
+
+#define zr_zero_struct(s) zr_zero(&s, sizeof(s))
+
+static void
+zr_zero(void *ptr, zr_size size)
+{
+    ZR_ASSERT(ptr);
+    zr_memset(ptr, 0, size);
 }
 
 static zr_size
@@ -3301,7 +3353,7 @@ zr_font_text_width(zr_handle handle, float height, const char *text, zr_size len
 
     scale = height/font->size;
     glyph_len = zr_utf_decode(text, &unicode, len);
-    while (text_len < len) {
+    while (text_len < len && glyph_len) {
         const struct zr_font_glyph *glyph;
         if (unicode == ZR_UTF_INVALID) return 0;
         glyph = zr_font_find_glyph(font, unicode);
@@ -3910,7 +3962,7 @@ zr_button_behavior(enum zr_widget_status *state, struct zr_rect r,
         if (zr_input_has_mouse_click_in_rect(i, ZR_BUTTON_LEFT, r)) {
             ret = (behavior != ZR_BUTTON_DEFAULT) ?
                 zr_input_is_mouse_down(i, ZR_BUTTON_LEFT):
-                zr_input_is_mouse_pressed(i, ZR_BUTTON_LEFT);
+                zr_input_is_mouse_released(i, ZR_BUTTON_LEFT);
         }
     }
     return ret;
@@ -5665,7 +5717,7 @@ zr_input_is_mouse_click_in_rect(const struct zr_input *i, enum zr_buttons id,
     const struct zr_mouse_button *btn;
     if (!i) return zr_false;
     btn = &i->mouse.buttons[id];
-    return (zr_input_has_mouse_click_down_in_rect(i, id, b, zr_true) &&
+    return (zr_input_has_mouse_click_down_in_rect(i, id, b, zr_false) &&
             btn->clicked) ? zr_true : zr_false;
 }
 
@@ -6585,7 +6637,7 @@ zr_setup(struct zr_context *ctx, const struct zr_user_font *font)
     ZR_ASSERT(ctx);
     ZR_ASSERT(font);
     if (!ctx || !font) return;
-    zr_zero(ctx, sizeof(*ctx));
+    zr_zero_struct(*ctx);
     zr_load_default_style(ctx, ZR_DEFAULT_ALL);
     ctx->style.font = *font;
 #if ZR_COMPILE_WITH_VERTEX_BUFFER
@@ -9357,7 +9409,7 @@ zr_chart_push_line(struct zr_context *ctx, struct zr_window *win,
     if (!(layout->flags & ZR_WINDOW_ROM)) {
         if (zr_input_is_mouse_hovering_rect(i, bounds)) {
             ret = ZR_CHART_HOVERING;
-            ret |= (i->mouse.buttons[ZR_BUTTON_LEFT].down &&
+            ret |= (!i->mouse.buttons[ZR_BUTTON_LEFT].down &&
                 i->mouse.buttons[ZR_BUTTON_LEFT].clicked) ? ZR_CHART_CLICKED: 0;
             color = config->colors[ZR_COLOR_PLOT_HIGHLIGHT];
         }
@@ -9409,7 +9461,7 @@ zr_chart_push_column(const struct zr_context *ctx, struct zr_window *win,
     if (!(layout->flags & ZR_WINDOW_ROM) &&
         ZR_INBOX(in->mouse.pos.x,in->mouse.pos.y,item.x,item.y,item.w,item.h)) {
         ret = ZR_CHART_HOVERING;
-        ret |= (in->mouse.buttons[ZR_BUTTON_LEFT].down &&
+        ret |= (!in->mouse.buttons[ZR_BUTTON_LEFT].down &&
                 in->mouse.buttons[ZR_BUTTON_LEFT].clicked) ? ZR_CHART_CLICKED: 0;
         color = config->colors[ZR_COLOR_HISTO_HIGHLIGHT];
     }
