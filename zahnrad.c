@@ -6773,6 +6773,11 @@ zr_begin(struct zr_context *ctx, struct zr_layout *layout,
                     iter->bounds.x, iter->bounds.y, iter->bounds.w, iter->bounds.h) &&
                     !(iter->flags & ZR_WINDOW_HIDDEN))
                     break;
+                if (iter->popup.win && iter->popup.active && !(iter->flags & ZR_WINDOW_HIDDEN) &&
+                    ZR_INTERSECT(win->bounds.x, win->bounds.y, win->bounds.w, win->bounds.h,
+                    iter->popup.win->bounds.x, iter->popup.win->bounds.y,
+                    iter->popup.win->bounds.w, iter->popup.win->bounds.h))
+                    break;
                 iter = iter->next;
             }
         }
@@ -9753,6 +9758,7 @@ zr_nonblock_begin(struct zr_layout *layout, struct zr_context *ctx,
     popup->flags |= ZR_WINDOW_DYNAMIC|ZR_WINDOW_SUB;
     popup->flags |= ZR_WINDOW_NONBLOCK;
     popup->seq = ctx->seq;
+    win->popup.active = 1;
 
     zr_start_child(ctx, win);
     popup->buffer = win->buffer;
