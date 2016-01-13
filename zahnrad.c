@@ -7259,7 +7259,8 @@ zr_layout_begin(struct zr_context *ctx, const char *title)
     header_active = header_active || (win->flags & ZR_WINDOW_TITLE);
     header_active = header_active && !(win->flags & ZR_WINDOW_HIDDEN) && title;
 
-    if (header_active) {
+    if (header_active)
+    {
         struct zr_rect old_clip = out->clip;
         struct zr_window_header header;
 
@@ -7339,8 +7340,10 @@ zr_layout_begin(struct zr_context *ctx, const char *title)
     } else if (!(layout->flags & ZR_WINDOW_DYNAMIC)) {
         /* draw static window body */
         struct zr_rect body = layout->bounds;
-        body.y += layout->header_h;
-        body.h -= layout->header_h;
+        if (header_active) {
+            body.y += layout->header_h;
+            body.h -= layout->header_h;
+        }
         zr_draw_rect(out, body, 0, c->colors[ZR_COLOR_WINDOW]);
     } else {
         /* draw dynamic window body */
