@@ -5425,9 +5425,9 @@ zr_property_behavior(enum zr_widget_status *ws, const struct zr_input *in,
     if (*state == ZR_PROPERTY_DEFAULT) {
         if (zr_button_behavior(ws, empty, in, ZR_BUTTON_DEFAULT))
             *state = ZR_PROPERTY_EDIT;
-        else if (zr_button_behavior(ws, label, in, ZR_BUTTON_DEFAULT))
+        else if (zr_input_has_mouse_click_in_rect(in, ZR_BUTTON_LEFT, label))
             *state = ZR_PROPERTY_DRAG;
-        else if (zr_button_behavior(ws, edit, in, ZR_BUTTON_DEFAULT))
+        else if (zr_input_has_mouse_click_in_rect(in, ZR_BUTTON_LEFT, edit))
             *state = ZR_PROPERTY_DRAG;
     }
     if (*state == ZR_PROPERTY_DRAG) {
