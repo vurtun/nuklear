@@ -1906,14 +1906,15 @@ static void
 zr_canvas_setup(struct zr_canvas *list, struct zr_buffer *cmds,
     struct zr_buffer *vertexes, struct zr_buffer *elements,
     struct zr_draw_null_texture null,
-    enum zr_anti_aliasing AA)
+    enum zr_anti_aliasing line_AA, enum zr_anti_aliasing shape_AA)
 {
     list->null = null;
     list->clip_rect = zr_null_rect;
     list->vertexes = vertexes;
     list->elements = elements;
     list->buffer = cmds;
-    list->AA = AA;
+    list->line_AA = line_AA;
+    list->shape_AA = shape_AA;
 }
 
 static void
@@ -2545,7 +2546,7 @@ zr_canvas_path_fill(struct zr_canvas *list, struct zr_color color)
     ZR_ASSERT(list);
     if (!list) return;
     points = (struct zr_vec2*)zr_buffer_memory(list->buffer);
-    zr_canvas_add_poly_convex(list, points, list->path_count, color, list->AA);
+    zr_canvas_add_poly_convex(list, points, list->path_count, color, list->shape_AA);
     zr_canvas_path_clear(list);
 }
 
@@ -2558,7 +2559,7 @@ zr_canvas_path_stroke(struct zr_canvas *list, struct zr_color color,
     if (!list) return;
     points = (struct zr_vec2*)zr_buffer_memory(list->buffer);
     zr_canvas_add_poly_line(list, points, list->path_count, color,
-        closed, thickness, list->AA);
+        closed, thickness, list->line_AA);
     zr_canvas_path_clear(list);
 }
 
@@ -2795,11 +2796,12 @@ zr_canvas_load(struct zr_canvas *list, struct zr_context *queue,
 void
 zr_convert(struct zr_context *ctx, struct zr_buffer *cmds,
     struct zr_buffer *vertexes, struct zr_buffer *elements,
-    struct zr_draw_null_texture null, enum zr_anti_aliasing AA,
-    float line_thickness, unsigned int circle_segment_count)
+    const struct zr_convert_config *config)
 {
-    zr_canvas_setup(&ctx->canvas, cmds, vertexes, elements, null, AA);
-    zr_canvas_load(&ctx->canvas, ctx, line_thickness, circle_segment_count);
+    zr_canvas_setup(&ctx->canvas, cmds, vertexes, elements,
+        config->null, config->line_AA, config->shape_AA);
+    zr_canvas_load(&ctx->canvas, ctx, config->line_thickness,
+        config->circle_segment_count);
 }
 
 const struct zr_draw_command*
@@ -5817,12 +5819,12 @@ zr_input_is_key_down(const struct zr_input *i, enum zr_keys key)
  *
  * ===============================================================*/
 #define ZR_STYLE_PROPERTY_MAP(PROPERTY)\
-    PROPERTY(SCROLLBAR_SIZE,    14.0f, 14.0f)\
-    PROPERTY(PADDING,           15.0f, 10.0f)\
-    PROPERTY(SIZE,              64.0f, 64.0f)\
     PROPERTY(ITEM_SPACING,      4.0f, 4.0f)\
     PROPERTY(ITEM_PADDING,      4.0f, 4.0f)\
-    PROPERTY(SCALER_SIZE,       16.0f, 16.0f)
+    PROPERTY(PADDING,           15.0f, 10.0f)\
+    PROPERTY(SCALER_SIZE,       16.0f, 16.0f)\
+    PROPERTY(SCROLLBAR_SIZE,    14.0f, 14.0f)\
+    PROPERTY(SIZE,              64.0f, 64.0f)
 
 #define ZR_STYLE_ROUNDING_MAP(ROUNDING)\
     ROUNDING(BUTTON,    4.0f)\

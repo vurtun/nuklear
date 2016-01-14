@@ -812,11 +812,17 @@ enum zr_style_rounding {
 
 enum zr_style_properties {
     ZR_PROPERTY_ITEM_SPACING,
+    /* space between widgets */
     ZR_PROPERTY_ITEM_PADDING,
+    /* padding inside widet between content */
     ZR_PROPERTY_PADDING,
+    /* padding between window and widgets  */
     ZR_PROPERTY_SCALER_SIZE,
+    /* width and height of the window scaler */
     ZR_PROPERTY_SCROLLBAR_SIZE,
+    /* width for vertical scrollbar and height for horizontal scrollbar*/
     ZR_PROPERTY_SIZE,
+    /* min size of a window that cannot be undercut */
     ZR_PROPERTY_MAX
 };
 
@@ -1194,8 +1200,10 @@ struct zr_clipboard {
 };
 
 struct zr_canvas {
-    enum zr_anti_aliasing AA;
-    /* flag indicating if anti-aliasing should be used to render primtives */
+    enum zr_anti_aliasing shape_AA;
+    /* flag indicating if anti-aliasing should be used to render shapes */
+    enum zr_anti_aliasing line_AA;
+    /* flag indicating if anti-aliasing should be used to render lines */
     struct zr_draw_null_texture null;
     /* texture with white pixel for easy primitive drawing */
     struct zr_rect clip_rect;
@@ -1291,10 +1299,22 @@ const struct zr_command* zr__next(struct zr_context*, const struct zr_command*);
 const struct zr_command* zr__begin(struct zr_context*);
 
 /* vertex command drawing */
+struct zr_convert_config {
+    float line_thickness;
+    /* line thickness should generally default to 1*/
+    enum zr_anti_aliasing line_AA;
+    /* line anti-aliasing flag can be turned off if you are thight on memory */
+    enum zr_anti_aliasing shape_AA;
+    /* shape anti-aliasing flag can be turned off if you are thight on memory */
+    unsigned int circle_segment_count;
+    /* number of segments used for circle and curves: default to 22 */
+    struct zr_draw_null_texture null;
+    /* handle to texture with a white pixel to draw text */
+};
+
 void zr_convert(struct zr_context*, struct zr_buffer *cmds,
                 struct zr_buffer *vertexes, struct zr_buffer *elements,
-                struct zr_draw_null_texture , enum zr_anti_aliasing,
-                float line_thickness, unsigned int circle_segment_count);
+                const struct zr_convert_config*);
 #define zr_draw_foreach(cmd,ctx, b) for((cmd)=zr__draw_begin(ctx, b); (cmd)!=0; (cmd)=zr__draw_next(cmd, b, ctx))
 const struct zr_draw_command* zr__draw_begin(const struct zr_context*, const struct zr_buffer*);
 const struct zr_draw_command* zr__draw_next(const struct zr_draw_command*,
