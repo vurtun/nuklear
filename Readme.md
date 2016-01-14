@@ -57,7 +57,8 @@ int op = EASY;
 float value = 0.6f;
 int i =  20;
 
-zr_begin(&ctx, "Show", zr_rect(50, 50, 220, 220),
+struct zr_layout layout;
+zr_begin(&ctx, &layout, "Show", zr_rect(50, 50, 220, 220),
     ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_CLOSEABLE);
 {
     /* fixed widget pixel width */

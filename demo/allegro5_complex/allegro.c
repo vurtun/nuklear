@@ -220,10 +220,19 @@ device_draw(struct device *dev, struct zr_context *ctx, enum zr_anti_aliasing AA
         struct allegro_vertex *vertexes = 0;
         int *indicies = 0;
 
+        /* fill converting configuration */
+        struct zr_convert_config config;
+        memset(&config, 0, sizeof(config));
+        config.shape_AA = AA;
+        config.line_AA = AA;
+        config.circle_segment_count = 22;
+        config.line_thickness = 1.0f;
+        config.null = dev->null;
+
         /* convert from command into hardware format */
         zr_buffer_init_fixed(&vbuf, dev->vertex_buffer, MAX_VERTEX_MEMORY);
         zr_buffer_init_fixed(&ebuf, dev->element_buffer, MAX_ELEMENT_MEMORY);
-        zr_convert(ctx, &dev->cmds, &vbuf, &ebuf, dev->null, AA, 1.0f, 22);
+            zr_convert(ctx, &dev->cmds, &vbuf, &ebuf, &config);
 
         {
             /* <sign> allegro does not support 32-bit packed color */

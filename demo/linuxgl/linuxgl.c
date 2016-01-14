@@ -497,9 +497,20 @@ device_draw(struct device *dev, struct zr_context *ctx, int width, int height,
         elements = glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
         {
             struct zr_buffer vbuf, ebuf;
+
+            /* fill converting configuration */
+            struct zr_convert_config config;
+            memset(&config, 0, sizeof(config));
+            config.shape_AA = AA;
+            config.line_AA = AA;
+            config.circle_segment_count = 22;
+            config.line_thickness = 1.0f;
+            config.null = dev->null;
+
+            /* setup buffers to load vertexes and elements */
             zr_buffer_init_fixed(&vbuf, vertexes, MAX_VERTEX_MEMORY);
             zr_buffer_init_fixed(&ebuf, elements, MAX_ELEMENT_MEMORY);
-            zr_convert(ctx, &dev->cmds, &vbuf, &ebuf, dev->null, AA, 1.0f, 22);
+            zr_convert(ctx, &dev->cmds, &vbuf, &ebuf, &config);
         }
         glUnmapBuffer(GL_ARRAY_BUFFER);
         glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
