@@ -72,30 +72,32 @@ struct zr_edit_box {
 };
 
 enum zr_internal_window_flags {
-    ZR_WINDOW_ROM           = ZR_FLAG(9),
+    ZR_WINDOW_PRIVATE       = ZR_FLAG(9),
+    /* dummy flag which mark the beginning of the private window flag part */
+    ZR_WINDOW_ROM           = ZR_FLAG(10),
     /* sets the window into a read only mode and does not allow input changes */
-    ZR_WINDOW_HIDDEN        = ZR_FLAG(10),
+    ZR_WINDOW_HIDDEN        = ZR_FLAG(11),
     /* Hiddes the window and stops any window interaction and drawing can be set
      * by user input or by closing the window */
-    ZR_WINDOW_MINIMIZED     = ZR_FLAG(11),
+    ZR_WINDOW_MINIMIZED     = ZR_FLAG(12),
     /* marks the window as minimized */
-    ZR_WINDOW_SUB               = ZR_FLAG(12),
+    ZR_WINDOW_SUB           = ZR_FLAG(13),
     /* Marks the window as subwindow of another window*/
-    ZR_WINDOW_GROUP             = ZR_FLAG(13),
+    ZR_WINDOW_GROUP         = ZR_FLAG(14),
     /* Marks the window as window widget group */
-    ZR_WINDOW_POPUP             = ZR_FLAG(14),
+    ZR_WINDOW_POPUP         = ZR_FLAG(15),
     /* Marks the window as a popup window */
-    ZR_WINDOW_NONBLOCK          = ZR_FLAG(15),
+    ZR_WINDOW_NONBLOCK      = ZR_FLAG(16),
     /* Marks the window as a nonblock popup window */
-    ZR_WINDOW_CONTEXTUAL        = ZR_FLAG(16),
+    ZR_WINDOW_CONTEXTUAL    = ZR_FLAG(17),
     /* Marks the window as a combo box or menu */
-    ZR_WINDOW_COMBO              = ZR_FLAG(17),
+    ZR_WINDOW_COMBO         = ZR_FLAG(18),
     /* Marks the window as a combo box */
-    ZR_WINDOW_MENU              = ZR_FLAG(18),
+    ZR_WINDOW_MENU          = ZR_FLAG(19),
     /* Marks the window as a menu */
-    ZR_WINDOW_TOOLTIP           = ZR_FLAG(18),
+    ZR_WINDOW_TOOLTIP       = ZR_FLAG(20),
     /* Marks the window as a menu */
-    ZR_WINDOW_REMOVE_ROM        = ZR_FLAG(19)
+    ZR_WINDOW_REMOVE_ROM    = ZR_FLAG(21)
     /* Removes the read only mode at the end of the window */
 };
 
@@ -1287,6 +1289,7 @@ zr_user_font_glyph_index_at_pos(const struct zr_user_font *font, const char *tex
     while (text_len && glyph_len) {
         if (text_width >= xoff)
             return glyph_offset;
+
         glyph_offset++;
         text_len -= glyph_len;
         glyph_len = zr_utf_decode(text + src_len, &unicode, text_len);
@@ -1332,7 +1335,7 @@ zr_user_font_glyphs_fitting_in_space(const struct zr_user_font *font, const char
     float width = 0;
     float last_width = 0;
 
-    zr_rune unicode;
+    zr_rune unicode = 0;
     zr_size offset = 0;
     zr_size g = 0;
     zr_size l = 0;
@@ -1679,6 +1682,7 @@ zr_draw_scissor(struct zr_command_buffer *b, struct zr_rect r)
     b->clip.h = r.h;
     cmd = (struct zr_command_scissor*)
         zr_command_buffer_push(b, ZR_COMMAND_SCISSOR, sizeof(*cmd));
+
     if (!cmd) return;
     cmd->x = (short)r.x;
     cmd->y = (short)r.y;
@@ -2989,7 +2993,6 @@ void zr_font_bake_memory(zr_size *temp, int *glyph_count,
     struct zr_font_config *config, int count)
 {
     int i, range_count = 0;
-
     ZR_ASSERT(config);
     ZR_ASSERT(glyph_count);
     if (!config) {
@@ -3442,7 +3445,6 @@ zr_edit_buffer_insert(struct zr_buffer *buffer, zr_size pos,
         zr_edit_buffer_append(buffer, str, len);
         return 1;
     }
-
     mem = zr_buffer_alloc(buffer, ZR_BUFFER_FRONT, len * sizeof(char), 0);
     if (!mem) return 0;
 
@@ -3806,8 +3808,7 @@ zr_widget_text(struct zr_command_buffer *o, struct zr_rect b,
         label.w = MAX(0, b.w - 2 * t->padding.x);
     } else if (a == ZR_TEXT_CENTERED) {
         label.w = MAX(1, 2 * t->padding.x + (float)text_width);
-        label.x = (b.x + t->padding.x + ((b.w - 2 * t->padding.x)/2));
-        if (label.x >= label.w/2) label.x -= (label.w/2);
+        label.x = (b.x + t->padding.x + ((b.w - 2 * t->padding.x) - label.w) / 2);
         label.x = MAX(b.x + t->padding.x, label.x);
         label.w = MIN(b.x + b.w, label.x + label.w);
         if (label.w >= label.x) label.w -= label.x;
@@ -4215,9 +4216,9 @@ zr_toggle_draw(struct zr_command_buffer *out,
     enum zr_toggle_type type, struct zr_rect r,
     const char *string, const struct zr_user_font *font)
 {
-    struct zr_rect select;
-    struct zr_color col;
     float cursor_pad;
+    struct zr_color col;
+    struct zr_rect select;
     struct zr_rect cursor;
 
     select.w = MIN(r.h, font->height + toggle->padding.y);
@@ -5125,7 +5126,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
         struct zr_rect label;
         struct zr_rect old_clip = out->clip;
 
-        /* calculate clipping rect because of scrollbar */
+        /* calculate clipping rect because for scrollbar */
         clip = zr_shrink_rect(r, field->border_size);
         clip.x += field->padding.x;
         clip.y += field->padding.y;
@@ -6744,12 +6745,14 @@ zr_begin(struct zr_context *ctx, struct zr_layout *layout,
         zr_command_buffer_init(&win->buffer, &ctx->memory, ZR_CLIPPING_ON);
         ZR_ASSERT(win);
         if (!win) return 0;
+
         win->flags = flags;
         win->bounds = bounds;
         win->name = title_hash;
         win->popup.win = 0;
     } else {
-        win->flags &= ~(zr_flags)(ZR_WINDOW_ROM-1);
+        /* update public window flags */
+        win->flags &= ~(zr_flags)(ZR_WINDOW_PRIVATE-1);
         win->flags |= flags;
         win->seq++;
     }
@@ -8400,7 +8403,7 @@ zr_widget(struct zr_rect *bounds, const struct zr_context *ctx)
     if (!ctx || !ctx->current || !ctx->current->layout)
         return ZR_WIDGET_INVALID;
 
-    /* allocated space for the panel and check if the widget needs to be updated */
+    /* allocate space  and check if the widget needs to be updated and drawn */
     win = ctx->current;
     layout = win->layout;
     zr_panel_alloc_space(bounds, ctx);
