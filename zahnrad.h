@@ -815,6 +815,8 @@ enum zr_style_properties {
     /* space between widgets */
     ZR_PROPERTY_ITEM_PADDING,
     /* padding inside widet between content */
+    ZR_PROPERTY_TOUCH_PADDING,
+    /* extra padding for touch devices */
     ZR_PROPERTY_PADDING,
     /* padding between window and widgets  */
     ZR_PROPERTY_SCALER_SIZE,

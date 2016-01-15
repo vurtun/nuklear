@@ -278,7 +278,7 @@ typedef int zr__check_byte[(sizeof(zr_byte) == 1) ? 1 : -1];
  *
  * ===============================================================
  */
-/*  Since Zahnrad is supposed to work on all systems providing floating point math
+/*  Since zahnrad is supposed to work on all systems providing floating point math
     without any dependencies I also had to implement my own math functions for
     sqrt, sin and cos. Since the actual highly accurate implementations for the standard
     library functions are quite complex and I do not need high precision for my use cases
@@ -3870,6 +3870,7 @@ struct zr_button {
     float border_width;
     float rounding;
     struct zr_vec2 padding;
+    struct zr_vec2 touch_pad;
     struct zr_color border;
     struct zr_color normal;
     struct zr_color hover;
@@ -3998,6 +3999,7 @@ zr_do_button(enum zr_widget_status *state,
 {
     int ret = zr_false;
     struct zr_vec2 pad;
+    struct zr_rect bounds;
     ZR_ASSERT(b);
     if (!o || !b)
         return zr_false;
@@ -4008,7 +4010,11 @@ zr_do_button(enum zr_widget_status *state,
     *content = zr_pad_rect(r, pad);
 
     /* execute and draw button */
-    ret = zr_button_behavior(state, r, i, behavior);
+    bounds.x = r.x - b->touch_pad.x;
+    bounds.y = r.y - b->touch_pad.y;
+    bounds.w = r.w + 2 * b->touch_pad.x;
+    bounds.h = r.h + 2 * b->touch_pad.y;
+    ret = zr_button_behavior(state, bounds, i, behavior);
     zr_button_draw(o, r, b, *state);
     return ret;
 }
@@ -4189,6 +4195,7 @@ enum zr_toggle_type {
 
 struct zr_toggle {
     float rounding;
+    struct zr_vec2 touch_pad;
     struct zr_vec2 padding;
     struct zr_color font;
     struct zr_color background;
@@ -4282,6 +4289,7 @@ zr_do_toggle(enum zr_widget_status *state,
     const struct zr_toggle *toggle, const struct zr_input *in,
     const struct zr_user_font *font)
 {
+    struct zr_rect bounds;
     ZR_ASSERT(toggle);
     ZR_ASSERT(out);
     ZR_ASSERT(font);
@@ -4290,7 +4298,13 @@ zr_do_toggle(enum zr_widget_status *state,
 
     r.w = MAX(r.w, font->height + 2 * toggle->padding.x);
     r.h = MAX(r.h, font->height + 2 * toggle->padding.y);
-    *active = zr_toggle_behavior(in, r, state, *active);
+
+    bounds.x = r.x - toggle->touch_pad.x;
+    bounds.y = r.y - toggle->touch_pad.y;
+    bounds.w = r.w + 2 * toggle->touch_pad.x;
+    bounds.h = r.h + 2 * toggle->touch_pad.y;
+
+    *active = zr_toggle_behavior(in, bounds, state, *active);
     zr_toggle_draw(out, *state, toggle, *active, type, r, string, font);
 }
 
@@ -4910,6 +4924,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
     zr_size visible_rows = 0;
     zr_size total_rows = 0;
     zr_size cursor_w;
+    int prev_state;
 
     float total_width = 0;
     float total_height = 0;
@@ -4940,9 +4955,11 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
     if (!visible_rows) return;
 
     /* check if the editbox is activated/deactivated */
+    prev_state = box->active;
     if (in && in->mouse.buttons[ZR_BUTTON_LEFT].clicked &&
         in->mouse.buttons[ZR_BUTTON_LEFT].down)
         box->active = ZR_INBOX(in->mouse.pos.x,in->mouse.pos.y,r.x,r.y,r.w,r.h);
+
 
     /* input handling */
     if (box->active && in && field->modifiable)
@@ -4973,6 +4990,12 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
             } else text_len -= row_off;
         }
         total_height = (float)total_rows * (float)row_height;
+    }
+
+    if (!box->active || (!prev_state && box->active)) {
+        /* make sure edit box points to the end of the buffer if not active */
+        if (total_rows > visible_rows)
+            box->scrollbar = (total_rows - visible_rows) * row_height;
     }
 
     if ((in && in->keyboard.text_len && total_rows >= visible_rows && box->active) ||
@@ -5821,6 +5844,7 @@ zr_input_is_key_down(const struct zr_input *i, enum zr_keys key)
 #define ZR_STYLE_PROPERTY_MAP(PROPERTY)\
     PROPERTY(ITEM_SPACING,      4.0f, 4.0f)\
     PROPERTY(ITEM_PADDING,      4.0f, 4.0f)\
+    PROPERTY(TOUCH_PADDING,     0.0f, 0.0f)\
     PROPERTY(PADDING,           15.0f, 10.0f)\
     PROPERTY(SCALER_SIZE,       16.0f, 16.0f)\
     PROPERTY(SCROLLBAR_SIZE,    14.0f, 14.0f)\
@@ -8566,6 +8590,7 @@ zr_button(struct zr_button *button, struct zr_rect *bounds,
 
     zr_zero(button, sizeof(*button));
     item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
+    button->touch_pad = zr_get_property(ctx, ZR_PROPERTY_TOUCH_PADDING);
     button->rounding = config->rounding[ZR_ROUNDING_BUTTON];
     button->normal = config->colors[ZR_COLOR_BUTTON];
     button->hover = config->colors[ZR_COLOR_BUTTON_HOVER];
@@ -8887,6 +8912,7 @@ zr_checkbox(struct zr_context *ctx, const char *text, int *is_active)
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : &ctx->input;
 
     config = &ctx->style;
+    toggle.touch_pad = zr_get_property(ctx, ZR_PROPERTY_TOUCH_PADDING);
     toggle.rounding = config->rounding[ZR_ROUNDING_CHECK];
     toggle.cursor = config->colors[ZR_COLOR_TOGGLE_CURSOR];
     toggle.normal = config->colors[ZR_COLOR_TOGGLE];
@@ -8929,6 +8955,7 @@ zr_option(struct zr_context *ctx, const char *text, int is_active)
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : &ctx->input;
 
     config = &ctx->style;
+    toggle.touch_pad = zr_get_property(ctx, ZR_PROPERTY_TOUCH_PADDING);
     toggle.cursor = config->colors[ZR_COLOR_TOGGLE_CURSOR];
     toggle.normal = config->colors[ZR_COLOR_TOGGLE];
     toggle.hover = config->colors[ZR_COLOR_TOGGLE_HOVER];
