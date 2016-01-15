@@ -26,9 +26,10 @@ If you have an idea for new features just [open an issue](https://github.com/vur
   * Seperator widget is currently bugged and does not work as intended
   * Text handling is still a little bit janky and probably needs to be further tested and polished
   * Text pixel width is bugged at the moment if you edit text with enabled font baking and vertex buffer API.
+  * `zr_layout_space_xxx` with `ZR_DYNAMIC` currently does not work
 
 ## Coding conventions
-  * Only use a C89 (ANSI C) rather style
+  * Only use C89 (ANSI C)
   * Do not use any compiler specific extensions
   * For indent use four spaces
   * Do not typedef structs, unions and enums
