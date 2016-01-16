@@ -3897,24 +3897,30 @@ struct zr_button_icon {
     struct zr_vec2 padding;
 };
 
+struct zr_symbol {
+    enum zr_symbol_type type;
+    struct zr_color background;
+    struct zr_color foreground;
+    float border_width;
+};
+
 static void
-zr_draw_symbol(struct zr_command_buffer *out, enum zr_symbol symbol,
-    struct zr_rect content, struct zr_color background, struct zr_color foreground,
-    float border_width, const struct zr_user_font *font)
+zr_draw_symbol(struct zr_command_buffer *out, const struct zr_symbol *sym,
+    struct zr_rect content, const struct zr_user_font *font)
 {
-    switch (symbol) {
+    switch (sym->type) {
     case ZR_SYMBOL_X:
     case ZR_SYMBOL_UNDERSCORE:
     case ZR_SYMBOL_PLUS:
     case ZR_SYMBOL_MINUS: {
         /* single character text symbol */
-        const char *X = (symbol == ZR_SYMBOL_X) ? "x":
-            (symbol == ZR_SYMBOL_UNDERSCORE) ? "_":
-            (symbol == ZR_SYMBOL_PLUS) ? "+": "-";
+        const char *X = (sym->type == ZR_SYMBOL_X) ? "x":
+            (sym->type == ZR_SYMBOL_UNDERSCORE) ? "_":
+            (sym->type == ZR_SYMBOL_PLUS) ? "+": "-";
         struct zr_text text;
         text.padding = zr_vec2(0,0);
-        text.background = background;
-        text.text = foreground;
+        text.background = sym->background;
+        text.text = sym->foreground;
         zr_widget_text(out, content, X, 1, &text, ZR_TEXT_CENTERED, font);
     } break;
     case ZR_SYMBOL_CIRCLE:
@@ -3922,16 +3928,16 @@ zr_draw_symbol(struct zr_command_buffer *out, enum zr_symbol symbol,
     case ZR_SYMBOL_RECT:
     case ZR_SYMBOL_RECT_FILLED: {
         /* simple empty/filled shapes */
-        if (symbol == ZR_SYMBOL_RECT || symbol == ZR_SYMBOL_RECT_FILLED) {
-            zr_draw_rect(out, content,  0, foreground);
-            if (symbol == ZR_SYMBOL_RECT_FILLED)
+        if (sym->type == ZR_SYMBOL_RECT || sym->type == ZR_SYMBOL_RECT_FILLED) {
+            zr_draw_rect(out, content,  0, sym->foreground);
+            if (sym->type == ZR_SYMBOL_RECT_FILLED)
                 zr_draw_rect(out, zr_shrink_rect(content,
-                    border_width), 0, background);
+                    sym->border_width), 0, sym->background);
         } else {
-            zr_draw_circle(out, content, foreground);
-            if (symbol == ZR_SYMBOL_CIRCLE_FILLED)
+            zr_draw_circle(out, content, sym->foreground);
+            if (sym->type == ZR_SYMBOL_CIRCLE_FILLED)
                 zr_draw_circle(out, zr_shrink_rect(content, 1),
-                    background);
+                    sym->background);
         }
     } break;
     case ZR_SYMBOL_TRIANGLE_UP:
@@ -3940,12 +3946,12 @@ zr_draw_symbol(struct zr_command_buffer *out, enum zr_symbol symbol,
     case ZR_SYMBOL_TRIANGLE_RIGHT: {
         enum zr_heading heading;
         struct zr_vec2 points[3];
-        heading = (symbol == ZR_SYMBOL_TRIANGLE_RIGHT) ? ZR_RIGHT :
-            (symbol == ZR_SYMBOL_TRIANGLE_LEFT) ? ZR_LEFT:
-            (symbol == ZR_SYMBOL_TRIANGLE_UP) ? ZR_UP: ZR_DOWN;
+        heading = (sym->type == ZR_SYMBOL_TRIANGLE_RIGHT) ? ZR_RIGHT :
+            (sym->type == ZR_SYMBOL_TRIANGLE_LEFT) ? ZR_LEFT:
+            (sym->type == ZR_SYMBOL_TRIANGLE_UP) ? ZR_UP: ZR_DOWN;
         zr_triangle_from_direction(points, content, 0, 0, heading);
         zr_draw_triangle(out,  points[0].x, points[0].y,
-            points[1].x, points[1].y, points[2].x, points[2].y, foreground);
+            points[1].x, points[1].y, points[2].x, points[2].y, sym->foreground);
     } break;
     default:
     case ZR_SYMBOL_MAX: break;
@@ -4061,10 +4067,11 @@ zr_do_button_text(enum zr_widget_status *state,
 static int
 zr_do_button_symbol(enum zr_widget_status *state,
     struct zr_command_buffer *out, struct zr_rect r,
-    enum zr_symbol symbol, enum zr_button_behavior bh,
+    enum zr_symbol_type symbol, enum zr_button_behavior bh,
     const struct zr_button_symbol *b, const struct zr_input *in,
     const struct zr_user_font *font)
 {
+    struct zr_symbol sym;
     struct zr_color background;
     struct zr_color color;
     struct zr_rect content;
@@ -4091,7 +4098,11 @@ zr_do_button_symbol(enum zr_widget_status *state,
         color = b->active;
         break;
     }
-    zr_draw_symbol(out, symbol, content, background, color, b->base.border_width, font);
+    sym.type = symbol;
+    sym.background = background;
+    sym.foreground = color;
+    sym.border_width = b->base.border_width;
+    zr_draw_symbol(out, &sym, content, font);
     return ret;
 }
 
@@ -4117,13 +4128,14 @@ zr_do_button_image(enum zr_widget_status *state,
 static int
 zr_do_button_text_symbol(enum zr_widget_status *state,
     struct zr_command_buffer *out, struct zr_rect r,
-    enum zr_symbol symbol, const char *text, enum zr_text_align align,
+    enum zr_symbol_type symbol, const char *text, enum zr_text_align align,
     enum zr_button_behavior behavior, const struct zr_button_text *b,
     const struct zr_user_font *f, const struct zr_input *i)
 {
     int ret;
     struct zr_rect tri = {0,0,0,0};
     struct zr_color background, color;
+    struct zr_symbol sym;
 
     ZR_ASSERT(b);
     ZR_ASSERT(out);
@@ -4154,7 +4166,12 @@ zr_do_button_text_symbol(enum zr_widget_status *state,
         tri.x = (r.x + r.w) - (2 * b->base.padding.x + tri.w);
         tri.x = MAX(tri.x, 0);
     } else tri.x = r.x + 2 * b->base.padding.x;
-    zr_draw_symbol(out, symbol, tri, background, color, 1.0f, f);
+
+    sym.type = symbol;
+    sym.background = background;
+    sym.foreground = color;
+    sym.border_width = 1.0f;
+    zr_draw_symbol(out, &sym, tri, f);
     return ret;
 }
 
@@ -5470,12 +5487,21 @@ zr_property_draw(struct zr_command_buffer *out,
     struct zr_rect label, const char *name, zr_size len,
     const struct zr_user_font *f)
 {
+    struct zr_symbol sym;
     /* background */
     zr_draw_rect(out, property, p->rounding, p->border);
     zr_draw_rect(out, zr_shrink_rect(property,p->border_size), p->rounding, p->normal);
+
     /* buttons */
-    zr_draw_symbol(out, ZR_SYMBOL_TRIANGLE_LEFT, left, p->normal, p->text, 0, f);
-    zr_draw_symbol(out, ZR_SYMBOL_TRIANGLE_RIGHT, right, p->normal, p->text, 0, f);
+    sym.type = ZR_SYMBOL_TRIANGLE_LEFT;
+    sym.background = p->normal;
+    sym.foreground = p->text;
+    sym.border_width = 0;
+
+    zr_draw_symbol(out, &sym, left, f);
+    sym.type = ZR_SYMBOL_TRIANGLE_RIGHT;
+    zr_draw_symbol(out, &sym, right, f);
+
     /* label */
     zr_draw_text(out, label, name, len, f, p->normal, p->text);
 }
@@ -8675,7 +8701,7 @@ zr_button_color(struct zr_context *ctx,
 }
 
 int
-zr_button_symbol(struct zr_context *ctx, enum zr_symbol symbol,
+zr_button_symbol(struct zr_context *ctx, enum zr_symbol_type symbol,
     enum zr_button_behavior behavior)
 {
     struct zr_rect bounds;
@@ -8739,7 +8765,7 @@ zr_button_image(struct zr_context *ctx, struct zr_image image,
 }
 
 int
-zr_button_text_symbol(struct zr_context *ctx, enum zr_symbol symbol,
+zr_button_text_symbol(struct zr_context *ctx, enum zr_symbol_type symbol,
     const char *text, enum zr_text_align align, enum zr_button_behavior behavior)
 {
     struct zr_rect bounds;
@@ -10037,7 +10063,7 @@ zr_contextual_button(struct zr_context *ctx, const char *text,
 }
 
 static int
-zr_contextual_button_symbol(struct zr_context *ctx, enum zr_symbol symbol,
+zr_contextual_button_symbol(struct zr_context *ctx, enum zr_symbol_type symbol,
     const char *text, enum zr_text_align align, enum zr_button_behavior behavior)
 {
     struct zr_rect bounds;
@@ -10138,7 +10164,7 @@ zr_contextual_item_icon(struct zr_context *ctx, struct zr_image img,
 }
 
 int
-zr_contextual_item_symbol(struct zr_context *ctx, enum zr_symbol symbol,
+zr_contextual_item_symbol(struct zr_context *ctx, enum zr_symbol_type symbol,
     const char *title, enum zr_text_align align)
 {
     ZR_ASSERT(ctx);
@@ -10252,6 +10278,7 @@ zr_combo_begin_text(struct zr_context *ctx, struct zr_layout *layout,
     {
         /* print currently selected string */
         struct zr_rect label;
+        struct zr_symbol sym;
         struct zr_rect bounds = {0,0,0,0};
         zr_size text_len = zr_strsiz(selected);
 
@@ -10266,9 +10293,12 @@ zr_combo_begin_text(struct zr_context *ctx, struct zr_layout *layout,
         bounds.y = label.y + label.h/2 - ctx->style.font.height/2;
         bounds.w = bounds.h = ctx->style.font.height;
         bounds.x = (header.x + header.w) - (bounds.w + 2 * item_padding.x);
-        zr_draw_symbol(&win->buffer, ZR_SYMBOL_TRIANGLE_DOWN, bounds,
-            ctx->style.colors[ZR_COLOR_COMBO], ctx->style.colors[ZR_COLOR_TEXT],
-            1, &ctx->style.font);
+
+        sym.type = ZR_SYMBOL_TRIANGLE_DOWN;
+        sym.background = ctx->style.colors[ZR_COLOR_COMBO];
+        sym.foreground = ctx->style.colors[ZR_COLOR_TEXT];
+        sym.border_width = 1.0f;
+        zr_draw_symbol(&win->buffer, &sym, bounds, &ctx->style.font);
     }
     return zr_combo_begin(layout, ctx, win, id, height, is_active, header);
 }
@@ -10308,6 +10338,7 @@ zr_combo_begin_color(struct zr_context *ctx, struct zr_layout *layout,
     {
         /* print currently selected string */
         struct zr_rect content;
+        struct zr_symbol sym;
         struct zr_rect bounds = {0,0,0,0};
 
         content.h = header.h - 4 * item_padding.y;
@@ -10321,9 +10352,12 @@ zr_combo_begin_color(struct zr_context *ctx, struct zr_layout *layout,
             ctx->style.font.height/2;
         bounds.w = bounds.h = ctx->style.font.height;
         bounds.x = (header.x + header.w) - (bounds.w + 2 * item_padding.x);
-        zr_draw_symbol(&win->buffer, ZR_SYMBOL_TRIANGLE_DOWN, bounds,
-            ctx->style.colors[ZR_COLOR_COMBO], ctx->style.colors[ZR_COLOR_TEXT],
-            1, &ctx->style.font);
+
+        sym.type = ZR_SYMBOL_TRIANGLE_DOWN;
+        sym.background = ctx->style.colors[ZR_COLOR_COMBO];
+        sym.foreground = ctx->style.colors[ZR_COLOR_TEXT];
+        sym.border_width = 1.0f;
+        zr_draw_symbol(&win->buffer, &sym, bounds, &ctx->style.font);
     }
     return zr_combo_begin(layout, ctx, win, id, height, is_active, header);
 }
@@ -10362,6 +10396,7 @@ zr_combo_begin_image(struct zr_context *ctx, struct zr_layout *layout,
 
     {
         struct zr_rect bounds = {0,0,0,0};
+        struct zr_symbol sym;
         struct zr_rect content;
         content.h = header.h - 4 * item_padding.y;
         content.y = header.y + 2 * item_padding.y;
@@ -10374,9 +10409,12 @@ zr_combo_begin_image(struct zr_context *ctx, struct zr_layout *layout,
             ctx->style.font.height/2;
         bounds.w = bounds.h = ctx->style.font.height;
         bounds.x = (header.x + header.w) - (bounds.w + 2 * item_padding.x);
-        zr_draw_symbol(&win->buffer, ZR_SYMBOL_TRIANGLE_DOWN, bounds,
-            ctx->style.colors[ZR_COLOR_COMBO], ctx->style.colors[ZR_COLOR_TEXT],
-            1, &ctx->style.font);
+
+        sym.type = ZR_SYMBOL_TRIANGLE_DOWN;
+        sym.background = ctx->style.colors[ZR_COLOR_COMBO];
+        sym.foreground = ctx->style.colors[ZR_COLOR_TEXT];
+        sym.border_width = 1.0f;
+        zr_draw_symbol(&win->buffer, &sym, bounds, &ctx->style.font);
     }
     return zr_combo_begin(layout, ctx, win, id, height, is_active, header);
 }
@@ -10411,6 +10449,7 @@ zr_combo_begin_icon(struct zr_context *ctx, struct zr_layout *layout, const char
 
     {
         zr_size text_len;
+        struct zr_symbol sym;
         struct zr_rect content;
         struct zr_rect label, icon;
         struct zr_rect bounds = {0,0,0,0};
@@ -10438,9 +10477,12 @@ zr_combo_begin_icon(struct zr_context *ctx, struct zr_layout *layout, const char
             ctx->style.font.height/2;
         bounds.w = bounds.h = ctx->style.font.height;
         bounds.x = (header.x + header.w) - (bounds.w + 2 * item_padding.x);
-        zr_draw_symbol(&win->buffer, ZR_SYMBOL_TRIANGLE_DOWN, bounds,
-            ctx->style.colors[ZR_COLOR_COMBO], ctx->style.colors[ZR_COLOR_TEXT],
-            1, &ctx->style.font);
+
+        sym.type = ZR_SYMBOL_TRIANGLE_DOWN;
+        sym.background = ctx->style.colors[ZR_COLOR_COMBO];
+        sym.foreground = ctx->style.colors[ZR_COLOR_TEXT];
+        sym.border_width = 1.0f;
+        zr_draw_symbol(&win->buffer, &sym, bounds, &ctx->style.font);
     }
     return zr_combo_begin(layout, ctx, win, id, height, is_active, header);
 }
@@ -10452,7 +10494,7 @@ int zr_combo_item_icon(struct zr_context *ctx, struct zr_image img,
     const char *title, enum zr_text_align align)
 {return zr_contextual_item_icon(ctx, img, title, align);}
 
-int zr_combo_item_symbol(struct zr_context *ctx, enum zr_symbol symbol,
+int zr_combo_item_symbol(struct zr_context *ctx, enum zr_symbol_type symbol,
     const char *title, enum zr_text_align align)
 {return zr_contextual_item_symbol(ctx, symbol, title, align);}
 
@@ -10572,7 +10614,7 @@ zr_menu_icon_begin(struct zr_context *ctx, struct zr_layout *layout,
 
 int
 zr_menu_symbol_begin(struct zr_context *ctx, struct zr_layout *layout,
-    const char *id, enum zr_symbol sym, float width)
+    const char *id, enum zr_symbol_type sym, float width)
 {
     struct zr_window *win;
     enum zr_widget_status state;
@@ -10612,7 +10654,7 @@ int zr_menu_item_icon(struct zr_context *ctx, struct zr_image img,
     const char *title, enum zr_text_align align)
 { return zr_contextual_item_icon(ctx, img, title, align);}
 
-int zr_menu_item_symbol(struct zr_context *ctx, enum zr_symbol symbol,
+int zr_menu_item_symbol(struct zr_context *ctx, enum zr_symbol_type symbol,
     const char *title, enum zr_text_align align)
 {return zr_contextual_item_symbol(ctx, symbol, title, align);}
 

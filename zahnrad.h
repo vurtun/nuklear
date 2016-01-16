@@ -954,7 +954,7 @@ enum zr_modify {
     ZR_MODIFIABLE = zr_true
 };
 
-enum zr_symbol {
+enum zr_symbol_type {
     ZR_SYMBOL_X,
     ZR_SYMBOL_UNDERSCORE,
     ZR_SYMBOL_CIRCLE,
@@ -1434,9 +1434,9 @@ int zr_select(struct zr_context*, const char*, enum zr_text_align, int value);
 /* buttons (push/press) */
 int zr_button_text(struct zr_context*, const char*, enum zr_button_behavior);
 int zr_button_color(struct zr_context*, struct zr_color, enum zr_button_behavior);
-int zr_button_symbol(struct zr_context*, enum zr_symbol, enum zr_button_behavior);
+int zr_button_symbol(struct zr_context*, enum zr_symbol_type, enum zr_button_behavior);
 int zr_button_image(struct zr_context*, struct zr_image img, enum zr_button_behavior);
-int zr_button_text_symbol(struct zr_context*, enum zr_symbol, const char*,
+int zr_button_text_symbol(struct zr_context*, enum zr_symbol_type, const char*,
                             enum zr_text_align, enum zr_button_behavior);
 int zr_button_text_image(struct zr_context*, struct zr_image img, const char*,
                             enum zr_text_align align, enum zr_button_behavior);
@@ -1486,7 +1486,7 @@ int zr_combo_begin_icon(struct zr_context*, struct zr_layout*, const char *id,
                         const char *selected, struct zr_image img, int height);
 int zr_combo_item(struct zr_context*, const char*, enum zr_text_align);
 int zr_combo_item_icon(struct zr_context*, struct zr_image, const char*, enum zr_text_align align);
-int zr_combo_item_symbol(struct zr_context*, enum zr_symbol symbol, const char*, enum zr_text_align align);
+int zr_combo_item_symbol(struct zr_context*, enum zr_symbol_type symbol, const char*, enum zr_text_align align);
 void zr_combo_close(struct zr_context*);
 void zr_combo_end(struct zr_context*);
 
@@ -1495,7 +1495,7 @@ int zr_contextual_begin(struct zr_context*, struct zr_layout*, zr_flags flags,
                         struct zr_vec2 size, struct zr_rect trigger_bounds);
 int zr_contextual_item(struct zr_context*, const char*, enum zr_text_align align);
 int zr_contextual_item_icon(struct zr_context*, struct zr_image, const char*, enum zr_text_align);
-int zr_contextual_item_symbol(struct zr_context*, enum zr_symbol, const char*, enum zr_text_align);
+int zr_contextual_item_symbol(struct zr_context*, enum zr_symbol_type, const char*, enum zr_text_align);
 void zr_contextual_close(struct zr_context*);
 void zr_contextual_end(struct zr_context*);
 
@@ -1512,10 +1512,10 @@ void zr_menubar_end(struct zr_context*);
 
 int zr_menu_text_begin(struct zr_context*, struct zr_layout*, const char *title, float width);
 int zr_menu_icon_begin(struct zr_context*, struct zr_layout*, const char *id, struct zr_image, float width);
-int zr_menu_symbol_begin(struct zr_context*, struct zr_layout*, const char *id,  enum zr_symbol, float width);
+int zr_menu_symbol_begin(struct zr_context*, struct zr_layout*, const char *id,  enum zr_symbol_type, float width);
 int zr_menu_item(struct zr_context*, enum zr_text_align align, const char*);
 int zr_menu_item_icon(struct zr_context*, struct zr_image, const char*, enum zr_text_align);
-int zr_menu_item_symbol(struct zr_context*, enum zr_symbol, const char*, enum zr_text_align);
+int zr_menu_item_symbol(struct zr_context*, enum zr_symbol_type, const char*, enum zr_text_align);
 void zr_menu_close(struct zr_context*);
 void zr_menu_end(struct zr_context*);
 
