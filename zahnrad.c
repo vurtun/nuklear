@@ -6307,19 +6307,23 @@ zr_free_window(struct zr_context *ctx, struct zr_window *win)
 {
     /* unlink windows from list */
     struct zr_table *n, *it = win->tables;
-    if (win->next)
-        win->next->prev = win->next;
-    if (win->prev)
-        win->prev->next = win->next;
+
+    if (win == ctx->begin) {
+        ctx->begin = win->next;
+        ctx->begin->prev = 0;
+    } else if (win == ctx->end) {
+        ctx->end = win->prev;
+        ctx->end->next = 0;
+    } else {
+        if (win->next)
+            win->next->prev = win->next;
+        if (win->prev)
+            win->prev->next = win->prev;
+    }
     if (win->popup.win) {
         zr_free_window(ctx, win->popup.win);
         win->popup.win = 0;
     }
-
-    if (win == ctx->begin)
-        ctx->begin = win->next;
-    if (win == ctx->end)
-        ctx->end = win->prev;
 
     win->next = 0;
     win->prev = 0;
@@ -6652,6 +6656,7 @@ zr_clear(struct zr_context *ctx)
         if (iter->seq != ctx->seq) {
             next = iter->next;
             zr_free_window(ctx, iter);
+            ctx->count--;
             iter = next;
         } else iter = iter->next;
     }
