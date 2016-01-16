@@ -1114,6 +1114,7 @@ struct zr_row_layout {
     /* total fill ratio */
     struct zr_rect item;
     /* item bounds */
+    int tree_depth;
 };
 
 struct zr_menu {

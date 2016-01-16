@@ -7290,6 +7290,7 @@ zr_layout_begin(struct zr_context *ctx, const char *title)
     layout->row.height = 0;
     layout->row.ratio = 0;
     layout->row.item_width = 0;
+    layout->row.tree_depth = 0;
     layout->max_x = 0;
     layout->flags = win->flags;
 
@@ -7689,6 +7690,9 @@ zr_layout_end(struct zr_context *ctx)
         window->popup.con_old = window->popup.con_count;
         window->popup.con_count = 0;
     }
+    /* helper to make sure you have a 'zr_layout_push'
+     * for every 'zr_layout_pop' */
+    ZR_ASSERT(!layout->row.tree_depth);
 }
 
 void
@@ -8324,17 +8328,17 @@ zr_layout_push(struct zr_context *ctx, enum zr_layout_node_type type, const char
         /* draw node label */
         struct zr_color color;
         struct zr_rect label;
-        zr_size text_len;
 
         header.w = MAX(header.w, sym.w + item_spacing.y + panel_padding.x);
         label.x = sym.x + sym.w + item_spacing.x;
         label.y = sym.y;
         label.w = header.w - (sym.w + item_spacing.y + panel_padding.x);
         label.h = config->font.height;
-        text_len = zr_strsiz(title);
-        color = (type == ZR_LAYOUT_TAB) ? config->colors[ZR_COLOR_TAB_HEADER]:
+
+        color = (type == ZR_LAYOUT_TAB) ?
+            config->colors[ZR_COLOR_TAB_HEADER]:
             config->colors[ZR_COLOR_WINDOW];
-        zr_draw_text(out, label, (const char*)title, text_len,
+        zr_draw_text(out, label, (const char*)title, zr_strsiz(title),
             &config->font, color, config->colors[ZR_COLOR_TEXT]);
     }
 
@@ -8354,6 +8358,7 @@ zr_layout_push(struct zr_context *ctx, enum zr_layout_node_type type, const char
         layout->at_x = header.x + layout->offset->x;
         layout->width = MAX(layout->width, 2 * panel_padding.x);
         layout->width -= 2 * panel_padding.x;
+        layout->row.tree_depth++;
         return zr_true;
     } else return zr_false;
 }
@@ -8375,6 +8380,8 @@ zr_layout_pop(struct zr_context *ctx)
     panel_padding = zr_get_property(ctx, ZR_PROPERTY_PADDING);
     layout->at_x -= panel_padding.x;
     layout->width += 2 * panel_padding.x;
+    ZR_ASSERT(layout->row.tree_depth);
+    layout->row.tree_depth--;
 }
 /*----------------------------------------------------------------
  *
@@ -9459,6 +9466,7 @@ zr_chart_push_line(struct zr_context *ctx, struct zr_window *win,
         /* special case for the first data point since it does not have a connection */
         g->last.x = g->x;
         g->last.y = (g->y + g->h) - ratio * (float)g->h;
+
         bounds.x = g->last.x - 2;
         bounds.y = g->last.y - 2;
         bounds.w = 4;
