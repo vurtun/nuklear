@@ -1,0 +1,288 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		500B20661C4B4AB00002B53F /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 500B20651C4B4AB00002B53F /* main.m */; };
+		500B208A1C4B4D460002B53F /* ZahnradBackend.m in Sources */ = {isa = PBXBuildFile; fileRef = 500B20891C4B4D460002B53F /* ZahnradBackend.m */; };
+		500B208C1C4B4D580002B53F /* zahnrad.c in Sources */ = {isa = PBXBuildFile; fileRef = 500B208B1C4B4D580002B53F /* zahnrad.c */; };
+		500B20921C4B4D700002B53F /* DroidSans.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 500B208E1C4B4D700002B53F /* DroidSans.ttf */; };
+		500B20931C4B4D700002B53F /* Roboto-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 500B208F1C4B4D700002B53F /* Roboto-Bold.ttf */; };
+		500B20941C4B4D700002B53F /* Roboto-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 500B20901C4B4D700002B53F /* Roboto-Light.ttf */; };
+		500B20951C4B4D700002B53F /* Roboto-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 500B20911C4B4D700002B53F /* Roboto-Regular.ttf */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		500B20611C4B4AB00002B53F /* tvOS_GL_ES.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = tvOS_GL_ES.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		500B20651C4B4AB00002B53F /* main.m */ = {isa = PBXFileReference; indentWidth = 4; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; tabWidth = 4; };
+		500B20741C4B4AB00002B53F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		500B20881C4B4D460002B53F /* ZahnradBackend.h */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 4; lastKnownFileType = sourcecode.c.h; path = ZahnradBackend.h; sourceTree = SOURCE_ROOT; tabWidth = 4; };
+		500B20891C4B4D460002B53F /* ZahnradBackend.m */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 4; lastKnownFileType = sourcecode.c.objc; path = ZahnradBackend.m; sourceTree = SOURCE_ROOT; tabWidth = 4; };
+		500B208B1C4B4D580002B53F /* zahnrad.c */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 4; lastKnownFileType = sourcecode.c.c; name = zahnrad.c; path = ../../../zahnrad.c; sourceTree = "<group>"; tabWidth = 5; };
+		500B208E1C4B4D700002B53F /* DroidSans.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = DroidSans.ttf; sourceTree = "<group>"; };
+		500B208F1C4B4D700002B53F /* Roboto-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Roboto-Bold.ttf"; sourceTree = "<group>"; };
+		500B20901C4B4D700002B53F /* Roboto-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Roboto-Light.ttf"; sourceTree = "<group>"; };
+		500B20911C4B4D700002B53F /* Roboto-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Roboto-Regular.ttf"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		500B205E1C4B4AB00002B53F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		500B20581C4B4AB00002B53F = {
+			isa = PBXGroup;
+			children = (
+				500B20631C4B4AB00002B53F /* tvOS_GL_ES */,
+				500B208D1C4B4D700002B53F /* font */,
+				500B20621C4B4AB00002B53F /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		500B20621C4B4AB00002B53F /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				500B20611C4B4AB00002B53F /* tvOS_GL_ES.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		500B20631C4B4AB00002B53F /* tvOS_GL_ES */ = {
+			isa = PBXGroup;
+			children = (
+				500B20881C4B4D460002B53F /* ZahnradBackend.h */,
+				500B20891C4B4D460002B53F /* ZahnradBackend.m */,
+				500B20651C4B4AB00002B53F /* main.m */,
+				500B208B1C4B4D580002B53F /* zahnrad.c */,
+				500B20741C4B4AB00002B53F /* Info.plist */,
+			);
+			path = tvOS_GL_ES;
+			sourceTree = "<group>";
+		};
+		500B208D1C4B4D700002B53F /* font */ = {
+			isa = PBXGroup;
+			children = (
+				500B208E1C4B4D700002B53F /* DroidSans.ttf */,
+				500B208F1C4B4D700002B53F /* Roboto-Bold.ttf */,
+				500B20901C4B4D700002B53F /* Roboto-Light.ttf */,
+				500B20911C4B4D700002B53F /* Roboto-Regular.ttf */,
+			);
+			name = font;
+			path = ../../font;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		500B20601C4B4AB00002B53F /* tvOS_GL_ES */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 500B20771C4B4AB00002B53F /* Build configuration list for PBXNativeTarget "tvOS_GL_ES" */;
+			buildPhases = (
+				500B205D1C4B4AB00002B53F /* Sources */,
+				500B205E1C4B4AB00002B53F /* Frameworks */,
+				500B205F1C4B4AB00002B53F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = tvOS_GL_ES;
+			productName = tvOS_GL_ES;
+			productReference = 500B20611C4B4AB00002B53F /* tvOS_GL_ES.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		500B20591C4B4AB00002B53F /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0720;
+				ORGANIZATIONNAME = richi;
+				TargetAttributes = {
+					500B20601C4B4AB00002B53F = {
+						CreatedOnToolsVersion = 7.2;
+					};
+				};
+			};
+			buildConfigurationList = 500B205C1C4B4AB00002B53F /* Build configuration list for PBXProject "tvOS_GL_ES" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 500B20581C4B4AB00002B53F;
+			productRefGroup = 500B20621C4B4AB00002B53F /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				500B20601C4B4AB00002B53F /* tvOS_GL_ES */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		500B205F1C4B4AB00002B53F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				500B20931C4B4D700002B53F /* Roboto-Bold.ttf in Resources */,
+				500B20921C4B4D700002B53F /* DroidSans.ttf in Resources */,
+				500B20951C4B4D700002B53F /* Roboto-Regular.ttf in Resources */,
+				500B20941C4B4D700002B53F /* Roboto-Light.ttf in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		500B205D1C4B4AB00002B53F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				500B20661C4B4AB00002B53F /* main.m in Sources */,
+				500B208C1C4B4D580002B53F /* zahnrad.c in Sources */,
+				500B208A1C4B4D460002B53F /* ZahnradBackend.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		500B20751C4B4AB00002B53F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = appletvos;
+				TARGETED_DEVICE_FAMILY = 3;
+				TVOS_DEPLOYMENT_TARGET = 9.1;
+			};
+			name = Debug;
+		};
+		500B20761C4B4AB00002B53F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = appletvos;
+				TARGETED_DEVICE_FAMILY = 3;
+				TVOS_DEPLOYMENT_TARGET = 9.1;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		500B20781C4B4AB00002B53F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INFOPLIST_FILE = tvOS_GL_ES/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.richi.tvOS-GL-ES";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		500B20791C4B4AB00002B53F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INFOPLIST_FILE = tvOS_GL_ES/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.richi.tvOS-GL-ES";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		500B205C1C4B4AB00002B53F /* Build configuration list for PBXProject "tvOS_GL_ES" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				500B20751C4B4AB00002B53F /* Debug */,
+				500B20761C4B4AB00002B53F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		500B20771C4B4AB00002B53F /* Build configuration list for PBXNativeTarget "tvOS_GL_ES" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				500B20781C4B4AB00002B53F /* Debug */,
+				500B20791C4B4AB00002B53F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 500B20591C4B4AB00002B53F /* Project object */;
+}
