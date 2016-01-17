@@ -6336,10 +6336,12 @@ zr_free_window(struct zr_context *ctx, struct zr_window *win)
 
     if (win == ctx->begin) {
         ctx->begin = win->next;
-        ctx->begin->prev = 0;
+        if (win->next)
+            ctx->begin->prev = 0;
     } else if (win == ctx->end) {
         ctx->end = win->prev;
-        ctx->end->next = 0;
+        if (win->prev)
+            ctx->end->next = 0;
     } else {
         if (win->next)
             win->next->prev = win->next;
