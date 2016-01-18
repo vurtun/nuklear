@@ -801,7 +801,6 @@ enum zr_style_colors {
 enum zr_style_rounding {
     ZR_ROUNDING_BUTTON,
     ZR_ROUNDING_SLIDER,
-    ZR_ROUNDING_PROGRESS,
     ZR_ROUNDING_CHECK,
     ZR_ROUNDING_INPUT,
     ZR_ROUNDING_PROPERTY,
