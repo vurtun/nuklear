@@ -24,12 +24,15 @@
 #import "ZahnradBackend.h"
 
 
-@interface GameViewController : GLKViewController
+@interface GameViewController : GLKViewController <UIKeyInput>
 @end
 
 
 @implementation GameViewController
 {
+    BOOL keyboardAllowed;
+    NSUInteger keyboardHash;
+    
     EAGLContext* context;
     ZahnradBackend* zr;
 }
@@ -38,6 +41,8 @@
 - (void) viewDidLoad
 {
     [super viewDidLoad];
+    
+    keyboardHash = -1;
     
     context = [[EAGLContext alloc] initWithAPI: kEAGLRenderingAPIOpenGLES3];
     assert(context != nil);
@@ -110,6 +115,58 @@
 }
 
 
+- (void) insertText: (NSString*) text
+{
+    [zr addEvent: @{@"type" : @12, @"txt" : text, @"mod" : @0}];
+}
+
+
+- (void) deleteBackward
+{
+    [zr addEvent: @{@"type" : @12, @"txt" : @"\b", @"mod" : @0}];
+}
+
+
+- (BOOL) hasText
+{
+    return NO;
+}
+
+
+- (BOOL) canBecomeFirstResponder
+{
+    return keyboardAllowed;
+}
+
+
+- (BOOL) canResignFirstResponder
+{
+    return YES;
+}
+
+
+- (void) showKeyboard: (NSDictionary*) info
+{
+    NSUInteger hash = [info[@"hash"] unsignedIntegerValue];
+    
+    if (hash != keyboardHash)
+    {
+        keyboardHash = hash;
+        keyboardAllowed = YES;
+        if (!self.isFirstResponder)
+            [self becomeFirstResponder];
+    }
+}
+
+
+- (void) hideKeyboard
+{
+    keyboardHash = -1;
+    keyboardAllowed = NO;
+    [self resignFirstResponder];
+}
+
+
 @end
 
 
@@ -119,6 +176,7 @@
 @interface AppDelegate : UIResponder <UIApplicationDelegate>
 
 @property (strong, nonatomic) UIWindow* window;
+@property (strong, nonatomic) GameViewController* gameViewController;
 
 @end
 
@@ -126,10 +184,27 @@
 @implementation AppDelegate
 
 
+- (void) showKeyboard: (NSDictionary*) info
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self.gameViewController showKeyboard: info];
+    });
+}
+
+
+- (void) hideKeyboard
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self.gameViewController hideKeyboard];
+    });
+}
+
+
 - (BOOL) application: (UIApplication*) application didFinishLaunchingWithOptions: (NSDictionary*) launchOptions
 {
     _window = [[UIWindow alloc] initWithFrame: [[UIScreen mainScreen] bounds]];
-    _window.rootViewController = [GameViewController new];
+    _gameViewController = [GameViewController new];
+    _window.rootViewController = _gameViewController;
     [_window makeKeyAndVisible];
     
     return YES;

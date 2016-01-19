@@ -24,7 +24,7 @@
 #define SIMULATE_TOUCH 0
 
 #if (TARGET_OS_IPHONE && (!TARGET_OS_TV)) || SIMULATE_TOUCH
-    #define ZR_REFRESH_ON_EVENT_ONLY 1
+    #define ZR_REFRESH_ON_EVENT_ONLY 0
     #define ZR_TOUCH_SCREEN 1
 #endif
 
@@ -45,6 +45,7 @@
 
 @interface ZahnradBackend : NSObject
 
+
 @property (readonly) GLVIEW* view;
 
 - (instancetype) initWithView: (GLVIEW*) view;
@@ -55,4 +56,22 @@
 
 @end
 
+
+struct zr_context;
+struct zr_buffer;
+struct zr_allocator;
+struct zr_user_font;
+
+
+@interface ZahnradBackend (Adapter)
+
+
+- (struct zr_context*) createContextWithBuffer: (struct zr_buffer*) cmds
+                                     allocator: (struct zr_allocator*) alloc
+                                   defaultFont: (struct zr_user_font*) defFont;
+
+- (int) fillFrame;
+
+
+@end
 

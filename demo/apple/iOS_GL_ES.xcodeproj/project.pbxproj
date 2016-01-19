@@ -7,13 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		500B1FFA1C4B410F0002B53F /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 500B1FF91C4B410F0002B53F /* main.m */; };
 		500B20321C4B42B60002B53F /* ZahnradBackend.m in Sources */ = {isa = PBXBuildFile; fileRef = 500B20311C4B42B60002B53F /* ZahnradBackend.m */; };
 		500B20341C4B43010002B53F /* zahnrad.c in Sources */ = {isa = PBXBuildFile; fileRef = 500B20331C4B43010002B53F /* zahnrad.c */; };
 		500B203A1C4B43380002B53F /* DroidSans.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 500B20361C4B43380002B53F /* DroidSans.ttf */; };
 		500B203B1C4B43380002B53F /* Roboto-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 500B20371C4B43380002B53F /* Roboto-Bold.ttf */; };
 		500B203C1C4B43380002B53F /* Roboto-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 500B20381C4B43380002B53F /* Roboto-Light.ttf */; };
 		500B203D1C4B43380002B53F /* Roboto-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 500B20391C4B43380002B53F /* Roboto-Regular.ttf */; };
+		504DFDF11C4EA36500D3714A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 500B1FF91C4B410F0002B53F /* main.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,6 +27,8 @@
 		500B20371C4B43380002B53F /* Roboto-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Roboto-Bold.ttf"; sourceTree = "<group>"; };
 		500B20381C4B43380002B53F /* Roboto-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Roboto-Light.ttf"; sourceTree = "<group>"; };
 		500B20391C4B43380002B53F /* Roboto-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Roboto-Regular.ttf"; sourceTree = "<group>"; };
+		504DFDEB1C4EA2EE00D3714A /* zahnrad.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = zahnrad.h; path = ../../../zahnrad.h; sourceTree = "<group>"; };
+		504DFDEF1C4EA36200D3714A /* demo.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = demo.c; path = ../../demo.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -60,9 +62,11 @@
 		500B1FF71C4B410F0002B53F /* iOS_GL_ES */ = {
 			isa = PBXGroup;
 			children = (
+				504DFDEF1C4EA36200D3714A /* demo.c */,
 				500B20301C4B42B60002B53F /* ZahnradBackend.h */,
 				500B20311C4B42B60002B53F /* ZahnradBackend.m */,
 				500B1FF91C4B410F0002B53F /* main.m */,
+				504DFDEB1C4EA2EE00D3714A /* zahnrad.h */,
 				500B20331C4B43010002B53F /* zahnrad.c */,
 				500B200D1C4B410F0002B53F /* Info.plist */,
 			);
@@ -152,8 +156,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				500B1FFA1C4B410F0002B53F /* main.m in Sources */,
 				500B20341C4B43010002B53F /* zahnrad.c in Sources */,
+				504DFDF11C4EA36500D3714A /* main.m in Sources */,
 				500B20321C4B42B60002B53F /* ZahnradBackend.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

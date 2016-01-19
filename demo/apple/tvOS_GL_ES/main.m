@@ -24,23 +24,29 @@
 #import "ZahnradBackend.h"
 
 
-@interface GameViewController : GLKViewController
+@interface GameViewController : GLKViewController <UITextFieldDelegate>
 @end
 
 
 @implementation GameViewController
 {
-    EAGLContext* context;
-    ZahnradBackend* zr;
-
+    NSUInteger keyboardHash;
+    UITextField* textInputField;
+    
     CGPoint cursor;
     UIView* cursorView;
+
+    EAGLContext* context;
+    ZahnradBackend* zr;
+    
 }
 
 
 - (void) viewDidLoad
 {
     [super viewDidLoad];
+    
+    keyboardHash = -1;
     
     context = [[EAGLContext alloc] initWithAPI: kEAGLRenderingAPIOpenGLES3];
     assert(context != nil);
@@ -53,10 +59,14 @@
     
     UIPanGestureRecognizer* panRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action: @selector(pan:)];
     [self.view addGestureRecognizer:panRecognizer];
-    
-    cursorView = [[UIView alloc] initWithFrame: CGRectMake(100, 100, 10, 10)];
-    cursorView.backgroundColor = UIColor.redColor;
-    [self.view addSubview: cursorView];
+
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        cursor = CGPointMake(95, 70);
+        cursorView = [[UIView alloc] initWithFrame: CGRectMake(cursor.x, cursor.y, 10, 10)];
+        cursorView.backgroundColor = UIColor.redColor;
+        [self.view addSubview: cursorView];
+        [zr addEvent: @{@"type" : @2, @"pos" : NSStringFromCGPoint(cursor)}];
+    });
 }
 
 
@@ -85,8 +95,23 @@
 {
     CGPoint delta = [panRecognizer translationInView: self.view];
     
-    cursor.x += delta.x / 33.0;
-    cursor.y += delta.y / 33.0;
+#if 0
+    
+    CGFloat s = 33.0;
+    
+    cursor.x += delta.x / s;
+    cursor.y += delta.y / s;
+
+#else
+    
+    CGFloat s = 150.0;
+    
+    if (delta.x != 0.0)
+        cursor.x += pow(2.0, fabs(delta.x / s)) * (delta.x > 0.0 ? 1.0 : -1.0);
+    if (delta.y != 0.0)
+        cursor.y += pow(2.0, fabs(delta.y / s)) * (delta.y > 0.0 ? 1.0 : -1.0);
+#endif
+    
     
     CGRect bounds = self.view.bounds;
     if (cursor.x < CGRectGetMinX(bounds)) cursor.x = CGRectGetMinX(bounds);
@@ -95,7 +120,7 @@
     if (cursor.y > CGRectGetMaxY(bounds)) cursor.y = CGRectGetMaxY(bounds);
     
     cursorView.center = cursor;
-
+    
     [zr addEvent: @{@"type" : @2, @"pos" : NSStringFromCGPoint(cursor)}];
 }
 
@@ -124,6 +149,53 @@
 }
 
 
+
+- (BOOL) textFieldShouldReturn: (UITextField*) textField
+{
+    return YES;
+}
+
+
+- (void) textFieldDidEndEditing: (UITextField*) textField
+{
+    [textInputField resignFirstResponder];
+    [textInputField removeFromSuperview];
+    textInputField = nil;
+
+    [zr addEvent: @{@"type" : @12, @"txt" : textField.text, @"mod" : @0}];
+}
+
+
+- (void) showKeyboard: (NSDictionary*) info
+{
+    NSUInteger hash = [info[@"hash"] unsignedIntegerValue];
+    
+    if (hash != keyboardHash)
+    {
+        keyboardHash = hash;
+        if (!textInputField)
+        {
+            CGRect frame = CGRectFromString(info[@"frame"]);
+            textInputField = [[UITextField alloc] initWithFrame: frame];
+            textInputField.delegate = self;
+            textInputField.text = info[@"text"];
+            [self.view addSubview: textInputField];
+            [textInputField becomeFirstResponder];
+        }
+    }
+}
+
+
+- (void) hideKeyboard
+{
+    [textInputField resignFirstResponder];
+    [textInputField removeFromSuperview];
+    textInputField = nil;
+
+    keyboardHash = -1;
+}
+
+
 @end
 
 
@@ -133,6 +205,7 @@
 @interface AppDelegate : UIResponder <UIApplicationDelegate>
 
 @property (strong, nonatomic) UIWindow* window;
+@property (strong, nonatomic) GameViewController* gameViewController;
 
 @end
 
@@ -140,10 +213,27 @@
 @implementation AppDelegate
 
 
+- (void) showKeyboard: (NSDictionary*) info
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self.gameViewController showKeyboard: info];
+    });
+}
+
+
+- (void) hideKeyboard
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self.gameViewController hideKeyboard];
+    });
+}
+
+
 - (BOOL) application: (UIApplication*) application didFinishLaunchingWithOptions: (NSDictionary*) launchOptions
 {
     _window = [[UIWindow alloc] initWithFrame: [[UIScreen mainScreen] bounds]];
-    _window.rootViewController = [GameViewController new];
+    _gameViewController = [GameViewController new];
+    _window.rootViewController = _gameViewController;
     [_window makeKeyAndVisible];
     
     return YES;
