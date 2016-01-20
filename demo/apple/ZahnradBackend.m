@@ -726,15 +726,17 @@ void zr_backend_hide_keyboard(void)
 
 int zr_touch_edit_string(struct zr_context *ctx, zr_flags flags, char *text, zr_size *len, zr_size max, zr_filter filter, zr_hash unique_id)
 {
-    zr_flags state = zr_edit_string(ctx, flags, text, len, max, filter);
+    zr_flags state;
+    struct zr_rect bounds;
+    
+    zr_layout_peek(&bounds, ctx);
+    state = zr_edit_string(ctx, flags, text, len, max, filter);
     if (state & ZR_EDIT_ACTIVATED)
     {
-        struct zr_rect bounds;
         struct zr_buffer buffer;
         zr_buffer_init_fixed(&buffer, text, max);
         buffer.allocated = *len;
         
-        zr_layout_peek(&bounds, ctx);
         zr_backend_show_keyboard((zr_hash)unique_id, bounds, &buffer);
     }
     else if (state & ZR_EDIT_DEACTIVATED)
