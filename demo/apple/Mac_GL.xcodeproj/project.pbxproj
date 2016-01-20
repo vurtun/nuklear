@@ -27,6 +27,8 @@
 		500B20451C4B43BC0002B53F /* Roboto-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Roboto-Bold.ttf"; sourceTree = "<group>"; };
 		500B20461C4B43BC0002B53F /* Roboto-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Roboto-Light.ttf"; sourceTree = "<group>"; };
 		500B20471C4B43BC0002B53F /* Roboto-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Roboto-Regular.ttf"; sourceTree = "<group>"; };
+		504DFDEA1C4EA2CD00D3714A /* zahnrad.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = zahnrad.h; path = ../../../zahnrad.h; sourceTree = "<group>"; };
+		504DFDED1C4EA34800D3714A /* demo.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = demo.c; path = ../../demo.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -60,9 +62,11 @@
 		500B201E1C4B41870002B53F /* Mac_GL */ = {
 			isa = PBXGroup;
 			children = (
+				504DFDED1C4EA34800D3714A /* demo.c */,
 				500B203E1C4B43930002B53F /* ZahnradBackend.h */,
 				500B203F1C4B43930002B53F /* ZahnradBackend.m */,
 				500B20231C4B41870002B53F /* main.m */,
+				504DFDEA1C4EA2CD00D3714A /* zahnrad.h */,
 				500B20411C4B43A30002B53F /* zahnrad.c */,
 				500B202A1C4B41880002B53F /* Info.plist */,
 			);
