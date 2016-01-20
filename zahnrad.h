@@ -36,13 +36,13 @@ extern "C" {
 #define ZR_INPUT_MAX 16
 /* defines the max number of bytes to be added as text input in one frame */
 #define ZR_MAX_COLOR_STACK 32
-/* defines the number of temporary configuration color changes that can be stored */
+/* Number of temporary configuration color changes that can be stored */
 #define ZR_MAX_ATTRIB_STACK 32
-/* defines the number of temporary configuration attribute changes that can be stored */
+/* Number of temporary configuration attribute changes that can be stored */
 #define ZR_MAX_FONT_STACK 32
-/* defines the number of temporary configuration user font changes that can be stored */
+/* Number of temporary configuration user font changes that can be stored */
 #define ZR_MAX_FONT_HEIGHT_STACK 32
-/* defines the number of temporary configuration font height changes that can be stored */
+/* Number of temporary configuration font height changes that can be stored */
 #define ZR_MAX_NUMBER_BUFFER 64
 /*
  * ==============================================================
@@ -56,14 +56,14 @@ extern "C" {
  * if 0 each type has to be set to the correct size*/
 #define ZR_COMPILE_WITH_ASSERT 1
 /* setting this define to 1 adds header <assert.h> for the assert macro
-  IMPORTANT: it also adds the standard library assert so only use it if wanted */
+  IMPORTANT: it also adds the standard library assert so only use it if wanted*/
 #define ZR_COMPILE_WITH_VERTEX_BUFFER 1
-/* setting this define to 1 adds a vertex draw command list backend to this library,
-  which allows you to convert queue commands into vertex draw commands.
-  If you do not want or need a default backend you can set this flag to zero
-  and the module of the library will not be compiled */
+/* setting this to 1 adds a vertex draw command list backend to this
+ library, which allows you to convert queue commands into vertex draw commands.
+ If you do not want or need a default backend you can set this flag to zero
+ and the module of the library will not be compiled */
 #define ZR_COMPILE_WITH_FONT 1
-/* setting this define to 1 adds the `stb_truetype` and `stb_rect_pack` header
+/* setting this to 1 adds the `stb_truetype` and `stb_rect_pack` header
  to this library and provides a default font for font loading and rendering.
  If you already have font handling or do not want to use this font handler
  you can just set this define to zero and the font module will not be compiled
@@ -118,7 +118,7 @@ struct zr_rect {float x,y,w,h;};
 struct zr_recti {short x,y,w,h;};
 typedef char zr_glyph[ZR_UTF_SIZE];
 typedef union {void *ptr; int id;} zr_handle;
-struct zr_image {zr_handle handle; unsigned short w, h; unsigned short region[4];};
+struct zr_image {zr_handle handle;unsigned short w,h;unsigned short region[4];};
 struct zr_scroll {unsigned short x, y;};
 
 /* math */
@@ -145,7 +145,7 @@ zr_uint zr_color32(struct zr_color);
 void zr_colorf(float *r, float *g, float *b, float *a, struct zr_color);
 void zr_color_hsv(int *out_h, int *out_s, int *out_v, struct zr_color);
 void zr_color_hsv_f(float *out_h, float *out_s, float *out_v, struct zr_color);
-void zr_color_hsva(int *out_h, int *out_s, int *out_v, int *out_a, struct zr_color);
+void zr_color_hsva(int *h, int *s, int *v, int *a, struct zr_color);
 void zr_color_hsva_f(float *out_h, float *out_s, float *out_v,
                     float *out_a, struct zr_color);
 
@@ -154,9 +154,11 @@ zr_handle zr_handle_ptr(void*);
 zr_handle zr_handle_id(int);
 struct zr_image zr_image_ptr(void*);
 struct zr_image zr_image_id(int);
-struct zr_image zr_subimage_ptr(void*, unsigned short w, unsigned short h, struct zr_rect);
-struct zr_image zr_subimage_id(int, unsigned short w, unsigned short h, struct zr_rect);
 int zr_image_is_subimage(const struct zr_image* img);
+struct zr_image zr_subimage_ptr(void*, unsigned short w, unsigned short h,
+                                struct zr_rect sub_region);
+struct zr_image zr_subimage_id(int, unsigned short w, unsigned short h,
+                                struct zr_rect sub_region);
 
 /* ==============================================================
  *
@@ -164,39 +166,40 @@ int zr_image_is_subimage(const struct zr_image* img);
  *
  * ===============================================================*/
 /*  A basic (double)-buffer with linear allocation and resetting as only
-    freeing policy. The buffers main purpose is to control all memory management inside
-    the GUI toolkit and still leave memory control as much as possible in the hand
-    of the user. The memory is provided in three different ways.
+    freeing policy. The buffers main purpose is to control all memory management
+    inside the GUI toolkit and still leave memory control as much as possible in
+    the hand of the user. The memory is provided in three different ways.
     The first way is to use a fixed size block of memory to be filled up.
     Biggest advantage is a simple memory model. Downside is that if the buffer
-    is full there is no way to accesses more memory, which fits target application
-    with a GUI with roughly known memory consumptions.
-    The second way to manage memory is by extending the fixed size block by querying
-    information from the buffer about the used size and needed size and allocate new
-    memory if the buffer is full. While this approach is still better than just using
-    a fixed size memory block the reallocation still has one invalid frame as consquence
-    since the used memory information is only available at the end of the frame which leads
-    to the last way of handling memory.
-    The last and most complicated way of handling memory is by allocator callbacks.
-    The user hereby registers callbacks to be called to allocate and free
-    memory if needed. While this solves most allocation problems it causes some
-    loss of flow control on the user side.
+    is full there is no way to accesses more memory, which fits target
+    application with a GUI with roughly known memory consumptions.
+    The second way to manage memory is by extending the fixed size block by
+    querying information from the buffer about the used size and needed size and
+    allocate new memory if the buffer is full. While this approach is still
+    better than just using a fixed size memory block the reallocation still has
+    one invalid frame as consquence since the used memory information is only
+    available at the end of the frame which leads to the last way of handling
+    memory.
+    The last and most complicated way of handling memory is by allocator
+    callbacks. The user hereby registers callbacks to be called to allocate and
+    free memory if needed. While this solves most allocation problems it causes
+    some loss of flow control on the user side.
 
     USAGE
     ----------------------------
-    To instantiate the buffer you either have to call the fixed size or allocator
-    initialization function and provide a memory block in the first case and
-    an allocator in the second case.
-    To allocate memory from the buffer you would call zr_buffer_alloc with a request
-    memory block size as well as an alignment for the block. Finally to reset the memory
-    at the end of the frame and when the memory buffer inside the buffer is no longer
-    needed you would call zr_buffer_reset. To free all memory that has been allocated
-    by an allocator if the buffer is no longer being used you have to call
-    zr_buffer_clear.
+    To instantiate the buffer you either have to call the fixed size or
+    allocator initialization function and provide a memory block in the first
+    case and an allocator in the second case.
+    To allocate memory from the buffer you would call zr_buffer_alloc with a
+    request memory block size as well as an alignment for the block.
+    Finally to reset the memory at the end of the frame and when the memory
+    buffer inside the buffer is no longer needed you would call zr_buffer_reset.
+    To free all memory that has been allocated by an allocator if the buffer is
+    no longer being used you have to call zr_buffer_clear.
 */
 struct zr_memory_status {
     void *memory;
-    /* pointer to the currently used memory block inside the referenced buffer */
+    /* pointer to the currently used memory block inside the referenced buffer*/
     unsigned int type;
     /* type of the buffer which is either fixed size or dynamic */
     zr_size size;
@@ -204,7 +207,7 @@ struct zr_memory_status {
     zr_size allocated;
     /* allocated amount of memory */
     zr_size needed;
-    /* memory size that would have been allocated if enough memory was present */
+    /* memory size that would have been allocated if enough memory was present*/
     zr_size calls;
     /* number of allocation calls referencing this buffer */
 };
@@ -256,14 +259,14 @@ struct zr_buffer {
     zr_size allocated;
     /* total amount of memory allocated */
     zr_size needed;
-    /* total amount of memory allocated if enough memory would have been present */
+    /* totally consumed memory given that enough memory is present */
     zr_size calls;
     /* number of allocation calls */
     zr_size size;
     /* current size of the buffer */
 };
 
-void zr_buffer_init(struct zr_buffer*, const struct zr_allocator*, zr_size initial_size);
+void zr_buffer_init(struct zr_buffer*, const struct zr_allocator*, zr_size size);
 void zr_buffer_init_fixed(struct zr_buffer*, void *memory, zr_size size);
 void zr_buffer_info(struct zr_memory_status*, struct zr_buffer*);
 void zr_buffer_free(struct zr_buffer*);
@@ -283,9 +286,9 @@ zr_size zr_buffer_total(struct zr_buffer*);
 
     The second way of font handling is by using the same `zr_user_font` struct
     to referencing a font as before but providing a second callback for
-    `zr_user_font_glyph` querying which is used for text drawing in the optional vertex
-    buffer output. In addition to the callback it is also required to provide
-    a texture atlas from the font to draw.
+    `zr_user_font_glyph` querying which is used for text drawing in the optional
+    vertex buffer output. In addition to the callback it is also required to
+    provide a texture atlas from the font to draw.
 
     The final and most complex way is to use the optional font baker
     and font handling function, which requires two additional headers for
@@ -295,11 +298,12 @@ zr_size zr_buffer_total(struct zr_buffer*);
     font baking API. The reason why it is complex is because there are multible
     ways of using the API. For example it must be possible to use the font
     for default command output as well as vertex buffer output. So for example
-    texture coordinates can either be UV for vertex buffer output or absolute pixel
-    for drawing function based on pixels. Furthermore it is possible to incoperate
-    custom user data into the resulting baked image (for example a white pixel for the
-    vertex buffer output). In addition and probably the most complex aspect of
-    the baking API was to incoperate baking of multible fonts into one image.
+    texture coordinates can either be UV for vertex buffer output or absolute
+    pixel for drawing function based on pixels. Furthermore it is possible to
+    incoperate custom user data into the resulting baked image (for example a
+    white pixel for the vertex buffer output).
+    In addition and probably the most complex aspect of the baking API was to
+    incoperate baking of multible fonts into one image.
 
     In general the font baking API can be understood as having a number of
     loaded in memory TTF-fonts, font baking configuration and optional custom
@@ -307,10 +311,12 @@ zr_size zr_buffer_total(struct zr_buffer*);
     glyph array of all baked glyphs and the baked image. The API
     was designed that way to have a typical file format and not
     a perfectly ready in memory library instance of a font. The reason is more
-    control and seperates the font baking code from the in library used font format.
+    control and seperates the font baking code from the in library used font
+    format.
 */
-typedef zr_size(*zr_text_width_f)(zr_handle, float, const char*, zr_size);
-typedef void(*zr_query_font_glyph_f)(zr_handle, float, struct zr_user_font_glyph*,
+typedef zr_size(*zr_text_width_f)(zr_handle, float h, const char*, zr_size len);
+typedef void(*zr_query_font_glyph_f)(zr_handle handle, float font_height,
+                                    struct zr_user_font_glyph *glyph,
                                     zr_rune codepoint, zr_rune next_codepoint);
 
 #if ZR_COMPILE_WITH_VERTEX_BUFFER
@@ -344,7 +350,7 @@ struct zr_user_font {
 #ifdef ZR_COMPILE_WITH_FONT
 enum zr_font_coord_type {
     ZR_COORD_UV,
-    /* texture coordinates inside font glyphs are clamped between 0.0f and 1.0f */
+    /* texture coordinates inside font glyphs are clamped between 0-1 */
     ZR_COORD_PIXEL
     /* texture coordinates inside font glyphs are in absolute pixel */
 };
@@ -374,7 +380,7 @@ struct zr_font_config {
     int pixel_snap;
     /* align very character to pixel boundry (if true set oversample (1,1)) */
     enum zr_font_coord_type coord_type;
-    /* baked glyph texture coordinate format with either pixel or UV coordinates */
+    /* texture coordinate format with either pixel or UV coordinates */
     struct zr_vec2 spacing;
     /* extra pixel spacing between glyphs  */
     const zr_rune *range;
@@ -389,7 +395,8 @@ struct zr_font_glyph {
     float xadvance;
     /* xoffset to the next character  */
     float x0, y0, x1, y1;
-    /* glyph bounding points in pixel inside the glyph image with top left and bottom right */
+    /* glyph bounding points in pixel inside the glyph image with top
+     * left and bottom right */
     float u0, v0, u1, v1;
     /* texture coordinates either in pixel or clamped (0.0 - 1.0) */
 };
@@ -439,7 +446,7 @@ int zr_font_bake_pack(zr_size *img_memory, int *img_width, int *img_height,
 /*  this function packs together all glyphs and optional space into one
     total image space and returns the needed image width and height.
     Input:
-    - NULL or custom space inside the image with width and height (will be updated!)
+    - NULL or custom space inside the image (will be modifed to fit!)
     - temporary memory block that will be used in the baking process
     - size of the temporary memory block
     - array of configuration for every font that should be baked into one image
@@ -448,7 +455,8 @@ int zr_font_bake_pack(zr_size *img_memory, int *img_width, int *img_height,
     - calculated resulting size of the image in bytes
     - pixel width of the resulting image
     - pixel height of the resulting image
-    - custom space bounds with position and size inside image which can be filled by the user
+    - custom space bounds with position and size inside image which can be
+        filled by the user
 */
 void zr_font_bake(void *image_memory, int image_width, int image_height,
                     void *temporary_memory, zr_size temporary_memory_size,
@@ -466,8 +474,8 @@ void zr_font_bake(void *image_memory, int image_width, int image_height,
     - filled glyph array
 */
 void zr_font_bake_custom_data(void *img_memory, int img_width, int img_height,
-                                struct zr_recti img_dst, const char *texture_data_mask,
-                                int tex_width, int tex_height, char white, char black);
+                            struct zr_recti img_dst, const char *image_data_mask,
+                            int tex_width, int tex_height,char white,char black);
 /*  this function bakes custom data in string format with white, black and zero
     alpha pixels into the font image. The zero alpha pixel is represented as
     any character beside the black and zero pixel character.
@@ -481,10 +489,12 @@ void zr_font_bake_custom_data(void *img_memory, int img_width, int img_height,
     Output:
     - image filled with custom texture data
 */
-void zr_font_bake_convert(void *out_memory, int image_width, int image_height, const void *in_memory);
-/*  this function converts the alpha8 baking input image into a preallocated rgba8 output image.*/
+void zr_font_bake_convert(void *out_memory, int image_width, int image_height,
+                            const void *in_memory);
+/*  this function converts alpha8 baking input image into a rgba8 output image.*/
 void zr_font_init(struct zr_font*, float pixel_height, zr_rune fallback_codepoint,
-                    struct zr_font_glyph*, const struct zr_baked_font*, zr_handle atlas);
+                    struct zr_font_glyph*, const struct zr_baked_font*,
+                    zr_handle atlas);
 struct zr_user_font zr_font_ref(struct zr_font*);
 const struct zr_font_glyph* zr_font_find_glyph(struct zr_font*, zr_rune unicode);
 
@@ -499,7 +509,8 @@ const struct zr_font_glyph* zr_font_find_glyph(struct zr_font*, zr_rune unicode)
     are made of, are buffered into memory and make up a command queue.
     Each frame therefore fills the command buffer with draw commands
     that then need to be executed by the user and his own render backend.
-    After that the command buffer needs to be cleared and a new frame can be started.
+    After that the command buffer needs to be cleared and a new frame can be
+    started.
 
     The reason for buffering simple primitives as draw commands instead of
     directly buffering a hardware accessible format with vertex and element
@@ -649,17 +660,21 @@ struct zr_draw_null_texture {
 
 /* drawing routines for custom widgets */
 void zr_draw_scissor(struct zr_command_buffer*, struct zr_rect);
-void zr_draw_line(struct zr_command_buffer*, float, float, float, float, struct zr_color);
-void zr_draw_curve(struct zr_command_buffer*, float, float, float, float,  float, float,
+void zr_draw_line(struct zr_command_buffer*, float, float, float,
+                    float, struct zr_color);
+void zr_draw_curve(struct zr_command_buffer*, float, float, float, float,
+                    float, float, float, float, struct zr_color);
+void zr_draw_rect(struct zr_command_buffer*, struct zr_rect,
+                    float rounding, struct zr_color);
+void zr_draw_circle(struct zr_command_buffer*, struct zr_rect, struct zr_color);
+void zr_draw_arc(struct zr_command_buffer*, float cx, float cy, float radius,
+                float a_min, float a_max, struct zr_color);
+void zr_draw_triangle(struct zr_command_buffer*, float, float, float, float,
                     float, float, struct zr_color);
-void zr_draw_rect(struct zr_command_buffer*, struct zr_rect, float rounding, struct zr_color);
-void zr_draw_circle(struct zr_command_buffer*, struct zr_rect, struct zr_color c);
-void zr_draw_arc(struct zr_command_buffer*, float cx, float cy, float radius, float a_min,
-                    float a_max, struct zr_color);
-void zr_draw_triangle(struct zr_command_buffer*, float, float, float, float, float, float, struct zr_color);
 void zr_draw_image(struct zr_command_buffer*, struct zr_rect, struct zr_image*);
-void zr_draw_text(struct zr_command_buffer*, struct zr_rect, const char*, zr_size,
-                    const struct zr_user_font*, struct zr_color, struct zr_color);
+void zr_draw_text(struct zr_command_buffer*, struct zr_rect,
+                    const char *text, zr_size len, const struct zr_user_font*,
+                    struct zr_color, struct zr_color);
 
 #endif
 /* ===============================================================
@@ -733,10 +748,12 @@ struct zr_input {
 };
 
 /* query input state */
-int zr_input_has_mouse_click_in_rect(const struct zr_input*,enum zr_buttons, struct zr_rect);
+int zr_input_has_mouse_click_in_rect(const struct zr_input*,
+                                    enum zr_buttons, struct zr_rect);
 int zr_input_has_mouse_click_down_in_rect(const struct zr_input*, enum zr_buttons,
                                         struct zr_rect, int down);
-int zr_input_is_mouse_click_in_rect(const struct zr_input*, enum zr_buttons, struct zr_rect);
+int zr_input_is_mouse_click_in_rect(const struct zr_input*,
+                                    enum zr_buttons, struct zr_rect);
 int zr_input_any_mouse_click_in_rect(const struct zr_input*, struct zr_rect);
 int zr_input_is_mouse_prev_hovering_rect(const struct zr_input*, struct zr_rect);
 int zr_input_is_mouse_hovering_rect(const struct zr_input*, struct zr_rect);
@@ -801,7 +818,6 @@ enum zr_style_colors {
 enum zr_style_rounding {
     ZR_ROUNDING_BUTTON,
     ZR_ROUNDING_SLIDER,
-    ZR_ROUNDING_PROGRESS,
     ZR_ROUNDING_CHECK,
     ZR_ROUNDING_INPUT,
     ZR_ROUNDING_PROPERTY,
@@ -1013,21 +1029,38 @@ enum zr_button_behavior {
 
 enum zr_edit_flags {
     ZR_EDIT_READ_ONLY   = ZR_FLAG(0),
+    /* text inside the edit widget cannot be modified */
     ZR_EDIT_CURSOR      = ZR_FLAG(1),
+    /* edit widget will have a movable cursor */
     ZR_EDIT_SELECTABLE  = ZR_FLAG(2),
+    /* edit widget allows text selection */
     ZR_EDIT_CLIPBOARD   = ZR_FLAG(3),
+    /* edit widget tries to use the clipbard callback for copy & paste */
     ZR_EDIT_MULTILINE   = ZR_FLAG(4)
+    /* edit widget with text wrapping text editing */
 };
 
 enum zr_edit_types {
     ZR_EDIT_SIMPLE = 0,
     ZR_EDIT_FIELD = (ZR_EDIT_CURSOR|ZR_EDIT_SELECTABLE|ZR_EDIT_CLIPBOARD),
-    ZR_EDIT_BOX = (ZR_EDIT_CURSOR|ZR_EDIT_SELECTABLE|ZR_EDIT_CLIPBOARD|ZR_EDIT_MULTILINE)
+    ZR_EDIT_BOX = (ZR_EDIT_CURSOR|ZR_EDIT_SELECTABLE|
+                   ZR_EDIT_CLIPBOARD|ZR_EDIT_MULTILINE)
+};
+
+enum zr_edit_return_flags {
+    ZR_EDIT_ACTIVE      = ZR_FLAG(0),
+    /* edit widget is currently being modified */
+    ZR_EDIT_INACTIVE    = ZR_FLAG(1),
+    /* edit widget is not active and is not being modified */
+    ZR_EDIT_ACTIVATED   = ZR_FLAG(2),
+    /* edit widget went from state inactive to state active */
+    ZR_EDIT_DEACTIVATED = ZR_FLAG(3)
+    /* edit widget went from state active to state inactive */
 };
 
 enum zr_chart_type {
     ZR_CHART_LINES,
-    /* Line chart with each data point being connected with its previous and next node */
+    /* Line chart with data points connected by lines */
     ZR_CHART_COLUMN,
     /* Histogram with value represented as bars */
     ZR_CHART_MAX
@@ -1126,12 +1159,13 @@ struct zr_menu {
 
 enum zr_window_flags {
     ZR_WINDOW_BORDER        = ZR_FLAG(0),
-    /* Draws a border around the window to visually seperate the window from the background */
+    /* Draws a border around the window to visually seperate the window
+     * from the background */
     ZR_WINDOW_BORDER_HEADER = ZR_FLAG(1),
     /* Draws a border between window header and body */
     ZR_WINDOW_MOVABLE       = ZR_FLAG(2),
-    /* The moveable flag inidicates that a window can be moved by user input or by
-     * dragging the window header */
+    /* The moveable flag inidicates that a window can be moved by user input or
+     * by dragging the window header */
     ZR_WINDOW_SCALABLE      = ZR_FLAG(3),
     /* The scaleable flag indicates that a window can be scaled by user input
      * by dragging a scaler icon at the button of the window */
@@ -1141,8 +1175,8 @@ enum zr_window_flags {
     /* adds a minimize icon into the header */
     ZR_WINDOW_DYNAMIC       = ZR_FLAG(6),
     /* special type of window which grows up in height while being filled to a
-     * certain maximum height. It is mainly used for combo boxes/menus but can be
-     * used to create perfectly fitting windows as well */
+     * certain maximum height. It is mainly used for combo boxes/menus but can
+     * be used to create perfectly fitting windows as well */
     ZR_WINDOW_NO_SCROLLBAR  = ZR_FLAG(7),
     /* Removes the scrollbar from the window */
     ZR_WINDOW_TITLE         = ZR_FLAG(8)
@@ -1211,7 +1245,6 @@ struct zr_canvas {
     /* texture with white pixel for easy primitive drawing */
     struct zr_rect clip_rect;
     /* current clipping rectangle */
-    /* cosine/sine calculation callback since this library does not use libc  */
     struct zr_buffer *buffer;
     /* buffer to store draw commands and temporarily store path */
     struct zr_buffer *vertexes;
@@ -1258,10 +1291,12 @@ struct zr_context {
 /*--------------------------------------------------------------
  *                          CONTEXT
  * -------------------------------------------------------------*/
-int zr_init_fixed(struct zr_context*, void *memory, zr_size size, const struct zr_user_font*);
+int zr_init_fixed(struct zr_context*, void *memory, zr_size size,
+                    const struct zr_user_font*);
 int zr_init_custom(struct zr_context*, struct zr_buffer *cmds,
                     struct zr_buffer *pool, const struct zr_user_font*);
-int zr_init(struct zr_context*, struct zr_allocator*, const struct zr_user_font*);
+int zr_init(struct zr_context*, struct zr_allocator*,
+            const struct zr_user_font*);
 void zr_clear(struct zr_context*);
 void zr_free(struct zr_context*);
 
@@ -1288,9 +1323,11 @@ int zr_window_is_active(struct zr_context*, const char *name);
 void zr_window_set_bounds(struct zr_context*, struct zr_rect);
 void zr_window_set_position(struct zr_context*, struct zr_vec2);
 void zr_window_set_size(struct zr_context*, struct zr_vec2);
-void zr_window_collapse(struct zr_context *ctx, const char *name, enum zr_collapse_states);
-void zr_window_collapse_if(struct zr_context *ctx, const char *name, enum zr_collapse_states, int cond);
 void zr_window_set_focus(struct zr_context *ctx, const char *name);
+void zr_window_collapse(struct zr_context *ctx, const char *name,
+                        enum zr_collapse_states);
+void zr_window_collapse_if(struct zr_context *ctx, const char *name,
+                            enum zr_collapse_states, int cond);
 
 /*--------------------------------------------------------------
  *                      DRAWING
@@ -1318,10 +1355,13 @@ struct zr_convert_config {
 void zr_convert(struct zr_context*, struct zr_buffer *cmds,
                 struct zr_buffer *vertexes, struct zr_buffer *elements,
                 const struct zr_convert_config*);
-#define zr_draw_foreach(cmd,ctx, b) for((cmd)=zr__draw_begin(ctx, b); (cmd)!=0; (cmd)=zr__draw_next(cmd, b, ctx))
-const struct zr_draw_command* zr__draw_begin(const struct zr_context*, const struct zr_buffer*);
+#define zr_draw_foreach(cmd,ctx, b)\
+    for((cmd)=zr__draw_begin(ctx, b); (cmd)!=0; (cmd)=zr__draw_next(cmd, b, ctx))
+const struct zr_draw_command* zr__draw_begin(const struct zr_context*,
+                                            const struct zr_buffer*);
 const struct zr_draw_command* zr__draw_next(const struct zr_draw_command*,
-                                        const struct zr_buffer*, const struct zr_context*);
+                                            const struct zr_buffer*,
+                                            const struct zr_context*);
 
 /*--------------------------------------------------------------
  *                      INPUT
@@ -1333,7 +1373,7 @@ void zr_input_button(struct zr_context*, enum zr_buttons, int x, int y, int down
 void zr_input_scroll(struct zr_context*, float y);
 void zr_input_glyph(struct zr_context*, const zr_glyph);
 void zr_input_char(struct zr_context*, char);
-void zr_input_unicode(struct zr_context *in, zr_rune unicode);
+void zr_input_unicode(struct zr_context *in, zr_rune);
 void zr_input_end(struct zr_context*);
 
 /*--------------------------------------------------------------
@@ -1373,7 +1413,8 @@ void zr_layout_peek(struct zr_rect *bounds, struct zr_context*);
 
 /* columns based layouting with generated position and width and fixed height*/
 void zr_layout_row_dynamic(struct zr_context*, float height, zr_size cols);
-void zr_layout_row_static(struct zr_context*, float height, zr_size item_width, zr_size cols);
+void zr_layout_row_static(struct zr_context*, float height, zr_size item_width,
+                            zr_size cols);
 
 /* widget layouting with custom widget width and fixed height */
 void zr_layout_row_begin(struct zr_context*, enum zr_layout_format,
@@ -1419,7 +1460,8 @@ void zr_text_colored(struct zr_context*, const char*, zr_size, enum zr_text_alig
 void zr_text_wrap(struct zr_context*, const char*, zr_size);
 void zr_text_wrap_colored(struct zr_context*, const char*, zr_size, struct zr_color);
 void zr_label(struct zr_context*, const char*, enum zr_text_align);
-void zr_label_colored(struct zr_context*, const char*, enum zr_text_align, struct zr_color);
+void zr_label_colored(struct zr_context*, const char*, enum zr_text_align,
+                    struct zr_color);
 void zr_label_wrap(struct zr_context*, const char*);
 void zr_label_colored_wrap(struct zr_context*, const char*, struct zr_color);
 void zr_image(struct zr_context*, struct zr_image);
@@ -1451,20 +1493,23 @@ int zr_slide_int(struct zr_context*, int min, int val, int max, int step);
 
 /* extended value modifier by dragging, increment/decrement and text input */
 void zr_property_float(struct zr_context *layout, const char *name,
-                        float min, float *val, float max, float step, float inc_per_pixel);
+                        float min, float *val, float max, float step,
+                        float inc_per_pixel);
 void zr_property_int(struct zr_context *layout, const char *name,
                     int min, int *val, int max, int step, int inc_per_pixel);
-float zr_propertyf(struct zr_context *layout, const char *name, float min, float val, float max,
-                    float step, float inc_per_pixel);
-int zr_propertyi(struct zr_context *layout, const char *name, int min, int val, int max,
-                int step, int inc_per_pixel);
+float zr_propertyf(struct zr_context *layout, const char *name, float min,
+                    float val, float max, float step, float inc_per_pixel);
+int zr_propertyi(struct zr_context *layout, const char *name, int min, int val,
+                int max, int step, int inc_per_pixel);
 
 /* text manipulation */
-int zr_edit_string(struct zr_context*, zr_flags, char *buffer, zr_size *len, zr_size max, zr_filter);
-int zr_edit_buffer(struct zr_context*, zr_flags, struct zr_buffer*, zr_filter);
+zr_flags zr_edit_string(struct zr_context*, zr_flags, char *buffer, zr_size *len,
+                    zr_size max, zr_filter);
+zr_flags zr_edit_buffer(struct zr_context*, zr_flags, struct zr_buffer*, zr_filter);
 
 /* simple chart */
-void zr_chart_begin(struct zr_context*, enum zr_chart_type, zr_size num, float min, float max);
+void zr_chart_begin(struct zr_context*, enum zr_chart_type, zr_size num,
+                    float min, float max);
 zr_flags zr_chart_push(struct zr_context*, float);
 void zr_chart_end(struct zr_context*);
 
@@ -1486,8 +1531,10 @@ int zr_combo_begin_image(struct zr_context*, struct zr_layout*, const char *id,
 int zr_combo_begin_icon(struct zr_context*, struct zr_layout*, const char *id,
                         const char *selected, struct zr_image img, int height);
 int zr_combo_item(struct zr_context*, const char*, enum zr_text_align);
-int zr_combo_item_icon(struct zr_context*, struct zr_image, const char*, enum zr_text_align align);
-int zr_combo_item_symbol(struct zr_context*, enum zr_symbol_type symbol, const char*, enum zr_text_align align);
+int zr_combo_item_icon(struct zr_context*, struct zr_image, const char*,
+                        enum zr_text_align align);
+int zr_combo_item_symbol(struct zr_context*, enum zr_symbol_type symbol,
+                        const char*, enum zr_text_align align);
 void zr_combo_close(struct zr_context*);
 void zr_combo_end(struct zr_context*);
 
@@ -1495,8 +1542,10 @@ void zr_combo_end(struct zr_context*);
 int zr_contextual_begin(struct zr_context*, struct zr_layout*, zr_flags flags,
                         struct zr_vec2 size, struct zr_rect trigger_bounds);
 int zr_contextual_item(struct zr_context*, const char*, enum zr_text_align align);
-int zr_contextual_item_icon(struct zr_context*, struct zr_image, const char*, enum zr_text_align);
-int zr_contextual_item_symbol(struct zr_context*, enum zr_symbol_type, const char*, enum zr_text_align);
+int zr_contextual_item_icon(struct zr_context*, struct zr_image,
+                            const char*, enum zr_text_align);
+int zr_contextual_item_symbol(struct zr_context*, enum zr_symbol_type,
+                            const char*, enum zr_text_align);
 void zr_contextual_close(struct zr_context*);
 void zr_contextual_end(struct zr_context*);
 
@@ -1511,12 +1560,17 @@ void zr_tooltip_end(struct zr_context*);
 void zr_menubar_begin(struct zr_context*);
 void zr_menubar_end(struct zr_context*);
 
-int zr_menu_text_begin(struct zr_context*, struct zr_layout*, const char *title, float width);
-int zr_menu_icon_begin(struct zr_context*, struct zr_layout*, const char *id, struct zr_image, float width);
-int zr_menu_symbol_begin(struct zr_context*, struct zr_layout*, const char *id,  enum zr_symbol_type, float width);
-int zr_menu_item(struct zr_context*, enum zr_text_align align, const char*);
-int zr_menu_item_icon(struct zr_context*, struct zr_image, const char*, enum zr_text_align);
-int zr_menu_item_symbol(struct zr_context*, enum zr_symbol_type, const char*, enum zr_text_align);
+int zr_menu_text_begin(struct zr_context*, struct zr_layout*,
+                        const char *title, float width);
+int zr_menu_icon_begin(struct zr_context*, struct zr_layout*, const char *id,
+                        struct zr_image, float width);
+int zr_menu_symbol_begin(struct zr_context*, struct zr_layout*, const char *id,
+                        enum zr_symbol_type, float width);
+int zr_menu_item(struct zr_context*, enum zr_text_align align, const char *id);
+int zr_menu_item_icon(struct zr_context*, struct zr_image, const char*,
+                        enum zr_text_align);
+int zr_menu_item_symbol(struct zr_context*, enum zr_symbol_type, const char *id,
+                        enum zr_text_align);
 void zr_menu_close(struct zr_context*);
 void zr_menu_end(struct zr_context*);
 
@@ -1525,3 +1579,4 @@ void zr_menu_end(struct zr_context*);
 #endif
 
 #endif /* ZR_H_ */
+
