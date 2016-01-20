@@ -19,6 +19,18 @@
  3.  This notice may not be removed or altered from any source distribution.
  */
 
+
+#define MAX_VERTEX_MEMORY   (512 * 1024)
+#define MAX_ELEMENT_MEMORY  (128 * 1024)
+
+
+// This is the adapter for demo.c.
+// #else does provide a generic version to start
+// your own project.
+
+#if 1
+
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,17 +38,106 @@
 #include <string.h>
 #include <math.h>
 
-#include "../../zahnrad.h"
+#include "zahnrad.h"
 #include "../demo.c"
 
 #undef MAX
 #undef MIN
 
-
 #import "ZahnradBackend.h"
 
-#define MAX_VERTEX_MEMORY   (512 * 1024)
-#define MAX_ELEMENT_MEMORY  (128 * 1024)
+
+@implementation ZahnradBackend (Adapter)
+
+static struct demo gui;
+
+
+- (struct zr_context*) createContextWithBuffer: (struct zr_buffer*) cmds
+                                     allocator: (struct zr_allocator*) alloc
+                                   defaultFont: (struct zr_user_font*) defFont
+{
+    memset(&gui, 0, sizeof(gui));
+    
+    zr_buffer_init(cmds, alloc, 4096);
+    zr_init(&gui.ctx, alloc, defFont);
+    
+    return &gui.ctx;
+}
+
+
+- (int) fillFrame;
+{
+    return run_demo(&gui);
+    
+}
+
+
+@end
+
+
+#else
+
+
+#import "ZahnradBackend.h"
+#import "zahnrad.h"
+
+
+@implementation ZahnradBackend (Adapter)
+
+static struct zr_context context;
+
+
+- (struct zr_context*) createContextWithBuffer: (struct zr_buffer*) cmds
+                                     allocator: (struct zr_allocator*) alloc
+                                   defaultFont: (struct zr_user_font*) defFont
+{
+    memset(&context, 0, sizeof(context));
+    
+    zr_buffer_init(cmds, alloc, 4096);
+    zr_init(&context, alloc, defFont);
+    
+    return &context;
+}
+
+
+- (int) fillFrame;
+{
+    return 1;
+}
+
+@end
+
+
+#endif
+
+
+@implementation ZahnradBackend
+{
+    struct zr_context* context;
+    
+    struct zr_allocator alloc;
+    struct zr_user_font sysFnt;
+    struct zr_font font;
+    struct zr_draw_null_texture nullTexture;
+    
+    struct zr_buffer cmds;
+    NSMutableArray* bufferedCommands;
+    NSMutableArray* events;
+    
+    struct
+    {
+        GLuint vbo, vao, ebo;
+        GLuint program;
+        GLuint vertexShader;
+        GLuint fragmentShader;
+        GLint attributePosition;
+        GLint attributeUV;
+        GLint attributeColor;
+        GLint uniformTexture;
+        GLint uniformProjection;
+        GLuint fontTexture;
+    } device;
+}
 
 
 static void* mem_alloc(zr_handle unused, size_t size)
@@ -51,36 +152,6 @@ static void mem_free(zr_handle unused, void* ptr)
 }
 
 
-struct device
-{
-    GLuint vbo, vao, ebo;
-    GLuint prog;
-    GLuint vert_shdr;
-    GLuint frag_shdr;
-    GLint attrib_pos;
-    GLint attrib_uv;
-    GLint attrib_col;
-    GLint uniform_tex;
-    GLint uniform_proj;
-    GLuint font_tex;
-    struct zr_draw_null_texture null;
-    struct zr_buffer cmds;
-};
-
-
-@implementation ZahnradBackend
-{
-    struct demo gui;
-    struct device device;
-    struct zr_font font;
-    struct zr_user_font usrfnt;
-    struct zr_allocator alloc;
-    
-    NSMutableArray* events;
-    NSMutableArray* drawCommands;
-}
-
-
 #pragma mark - Setup -
 
 
@@ -91,7 +162,7 @@ struct device
     _view = view;
     
     events = [NSMutableArray new];
-    drawCommands = [NSMutableArray new];
+    bufferedCommands = [NSMutableArray new];
     
     [self setupGL];
     
@@ -102,10 +173,9 @@ struct device
     alloc.alloc = mem_alloc;
     alloc.free = mem_free;
     
-    zr_buffer_init(&device.cmds, &alloc, 4096);
-    usrfnt = [self fontFromUrl: fontURL height: 14 range: zr_font_default_glyph_ranges()];
-    zr_init(&gui.ctx, &alloc, &usrfnt);
+    sysFnt = [self fontFromUrl: fontURL height: 14 range: zr_font_default_glyph_ranges()];
     
+    context = [self createContextWithBuffer: &cmds allocator: &alloc defaultFont: &sysFnt];
     [self fillFrame];
     
     return self;
@@ -149,67 +219,67 @@ struct device
     "   Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
     "}\n";
     
-    device.prog = glCreateProgram();
-    device.vert_shdr = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(device.vert_shdr, 1, &vss, 0);
-    glCompileShader(device.vert_shdr);
+    device.program = glCreateProgram();
+    device.vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(device.vertexShader, 1, &vss, 0);
+    glCompileShader(device.vertexShader);
     
 #if defined(DEBUG)
     GLint logLength;
-    glGetShaderiv(device.vert_shdr, GL_INFO_LOG_LENGTH, &logLength);
+    glGetShaderiv(device.vertexShader, GL_INFO_LOG_LENGTH, &logLength);
     if (logLength > 0)
     {
         GLchar* log = (GLchar*)malloc(logLength);
-        glGetShaderInfoLog(device.vert_shdr, logLength, &logLength, log);
+        glGetShaderInfoLog(device.vertexShader, logLength, &logLength, log);
         NSLog(@"Shader compile log:\n%s", log);
         free(log);
     }
 #endif
     
-    glGetShaderiv(device.vert_shdr, GL_COMPILE_STATUS, &status);
+    glGetShaderiv(device.vertexShader, GL_COMPILE_STATUS, &status);
     assert(status == GL_TRUE);
     
-    device.frag_shdr = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(device.frag_shdr, 1, &fss, 0);
-    glCompileShader(device.frag_shdr);
+    device.fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(device.fragmentShader, 1, &fss, 0);
+    glCompileShader(device.fragmentShader);
     
 #if defined(DEBUG)
-    glGetShaderiv(device.frag_shdr, GL_INFO_LOG_LENGTH, &logLength);
+    glGetShaderiv(device.fragmentShader, GL_INFO_LOG_LENGTH, &logLength);
     if (logLength > 0)
     {
         GLchar* log = (GLchar*)malloc(logLength);
-        glGetShaderInfoLog(device.frag_shdr, logLength, &logLength, log);
+        glGetShaderInfoLog(device.fragmentShader, logLength, &logLength, log);
         NSLog(@"Shader compile log:\n%s", log);
         free(log);
     }
 #endif
     
-    glGetShaderiv(device.frag_shdr, GL_COMPILE_STATUS, &status);
+    glGetShaderiv(device.fragmentShader, GL_COMPILE_STATUS, &status);
     assert(status == GL_TRUE);
     
-    glAttachShader(device.prog, device.vert_shdr);
-    glAttachShader(device.prog, device.frag_shdr);
-    glLinkProgram(device.prog);
+    glAttachShader(device.program, device.vertexShader);
+    glAttachShader(device.program, device.fragmentShader);
+    glLinkProgram(device.program);
     
 #if defined(DEBUG)
-    glGetProgramiv(device.prog, GL_INFO_LOG_LENGTH, &logLength);
+    glGetProgramiv(device.program, GL_INFO_LOG_LENGTH, &logLength);
     if (logLength > 0)
     {
         GLchar* log = (GLchar*)malloc(logLength);
-        glGetProgramInfoLog(device.prog, logLength, &logLength, log);
+        glGetProgramInfoLog(device.program, logLength, &logLength, log);
         NSLog(@"Program link log:\n%s", log);
         free(log);
     }
 #endif
     
-    glGetProgramiv(device.prog, GL_LINK_STATUS, &status);
+    glGetProgramiv(device.program, GL_LINK_STATUS, &status);
     assert(status == GL_TRUE);
     
-    device.uniform_tex = glGetUniformLocation(device.prog, "Texture");
-    device.uniform_proj = glGetUniformLocation(device.prog, "ProjMtx");
-    device.attrib_pos = glGetAttribLocation(device.prog, "Position");
-    device.attrib_uv = glGetAttribLocation(device.prog, "TexCoord");
-    device.attrib_col = glGetAttribLocation(device.prog, "Color");
+    device.uniformTexture = glGetUniformLocation(device.program, "Texture");
+    device.uniformProjection = glGetUniformLocation(device.program, "ProjMtx");
+    device.attributePosition = glGetAttribLocation(device.program, "Position");
+    device.attributeUV = glGetAttribLocation(device.program, "TexCoord");
+    device.attributeColor = glGetAttribLocation(device.program, "Color");
     
     // buffer setup
     GLsizei vs = sizeof(struct zr_draw_vertex);
@@ -229,13 +299,13 @@ struct device
     glBufferData(GL_ARRAY_BUFFER, MAX_VERTEX_MEMORY, NULL, GL_STREAM_DRAW);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, MAX_ELEMENT_MEMORY, NULL, GL_STREAM_DRAW);
     
-    glEnableVertexAttribArray((GLuint)device.attrib_pos);
-    glEnableVertexAttribArray((GLuint)device.attrib_uv);
-    glEnableVertexAttribArray((GLuint)device.attrib_col);
+    glEnableVertexAttribArray((GLuint)device.attributePosition);
+    glEnableVertexAttribArray((GLuint)device.attributeUV);
+    glEnableVertexAttribArray((GLuint)device.attributeColor);
     
-    glVertexAttribPointer((GLuint)device.attrib_pos, 2, GL_FLOAT, GL_FALSE, vs, (void*)vp);
-    glVertexAttribPointer((GLuint)device.attrib_uv, 2, GL_FLOAT, GL_FALSE, vs, (void*)vt);
-    glVertexAttribPointer((GLuint)device.attrib_col, 4, GL_UNSIGNED_BYTE, GL_TRUE, vs, (void*)vc);
+    glVertexAttribPointer((GLuint)device.attributePosition, 2, GL_FLOAT, GL_FALSE, vs, (void*)vp);
+    glVertexAttribPointer((GLuint)device.attributeUV, 2, GL_FLOAT, GL_FALSE, vs, (void*)vt);
+    glVertexAttribPointer((GLuint)device.attributeColor, 4, GL_UNSIGNED_BYTE, GL_TRUE, vs, (void*)vc);
     
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -297,8 +367,8 @@ struct device
     img = img_rgba;
     
     // upload baked font image
-    glGenTextures(1, &device.font_tex);
-    glBindTexture(GL_TEXTURE_2D, device.font_tex);
+    glGenTextures(1, &device.fontTexture);
+    glBindTexture(GL_TEXTURE_2D, device.fontTexture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)img_width, (GLsizei)img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img);
@@ -307,16 +377,15 @@ struct device
     free(img);
     
     // default white pixel in a texture which is needed to draw primitives
-    device.null.texture.id = (int)device.font_tex;
-    device.null.uv = zr_vec2((custom.x + 0.5f) / (float)img_width,
-                             (custom.y + 0.5f) / (float)img_height);
+    nullTexture.texture.id = (int)device.fontTexture;
+    nullTexture.uv = zr_vec2((custom.x + 0.5f) / (float)img_width, (custom.y + 0.5f) / (float)img_height);
     
     /* setup font with glyphes. IMPORTANT: the font only references the glyphes
      this was done to have the possibility to have multible fonts with one
      total glyph array. Not quite sure if it is a good thing since the
      glyphes have to be freed as well.
      */
-    zr_font_init(&font, (float)fontHeight, '?', glyphes, &baked_font, device.null.texture);
+    zr_font_init(&font, (float)fontHeight, '?', glyphes, &baked_font, nullTexture.texture);
     
     return zr_font_ref(&font);
 }
@@ -354,9 +423,9 @@ struct device
     };
     ortho[0][0] /= width;
     ortho[1][1] /= height;
-    glUseProgram(device.prog);
-    glUniform1i(device.uniform_tex, 0);
-    glUniformMatrix4fv(device.uniform_proj, 1, GL_FALSE, &ortho[0][0]);
+    glUseProgram(device.program);
+    glUniform1i(device.uniformTexture, 0);
+    glUniformMatrix4fv(device.uniformProjection, 1, GL_FALSE, &ortho[0][0]);
     
     // activate vertex and element buffer
     glBindVertexArray(device.vao);
@@ -364,18 +433,18 @@ struct device
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, device.ebo);
 
     // if draw commands have been buffered we will draw only those
-    if (drawCommands.count)
+    if (bufferedCommands.count)
     {
         const struct zr_draw_command* cmd;
         const zr_draw_index* offset = NULL;
         
         // iterate over and execute each draw command
-        for (NSData* data in drawCommands)
+        for (NSData* data in bufferedCommands)
         {
             cmd = data.bytes;
             glBindTexture(GL_TEXTURE_2D, (GLuint)cmd->texture.id);
             glScissor((GLint)(cmd->clip_rect.x * scale),
-                      (GLint)((height - (GLint)(cmd->clip_rect.y + cmd->clip_rect.h)) * scale),
+                      (GLint)((height - (cmd->clip_rect.y + cmd->clip_rect.h)) * scale),
                       (GLint)(cmd->clip_rect.w * scale),
                       (GLint)(cmd->clip_rect.h * scale));
             glDrawElements(GL_TRIANGLES, (GLsizei)cmd->elem_count, GL_UNSIGNED_SHORT, offset);
@@ -384,8 +453,8 @@ struct device
     }
     else
     {
-        // load draw vertexes & elements  into vertex + element buffer
-        void* vertexes = glMapBufferRange(GL_ARRAY_BUFFER, 0, MAX_VERTEX_MEMORY, GL_MAP_WRITE_BIT);
+        // load draw vertices & elements  into vertex + element buffer
+        void* vertices = glMapBufferRange(GL_ARRAY_BUFFER, 0, MAX_VERTEX_MEMORY, GL_MAP_WRITE_BIT);
         void* elements = glMapBufferRange(GL_ELEMENT_ARRAY_BUFFER, 0, MAX_ELEMENT_MEMORY, GL_MAP_WRITE_BIT);
         
         // fill converting configuration
@@ -395,13 +464,13 @@ struct device
         config.line_AA = ZR_ANTI_ALIASING_ON;
         config.circle_segment_count = 22;
         config.line_thickness = 1.0f;
-        config.null = device.null;
+        config.null = nullTexture;
         
-        // setup buffers to load vertexes and elements
+        // setup buffers to load vertices and elements
         struct zr_buffer vbuf, ebuf;
-        zr_buffer_init_fixed(&vbuf, vertexes, MAX_VERTEX_MEMORY);
+        zr_buffer_init_fixed(&vbuf, vertices, MAX_VERTEX_MEMORY);
         zr_buffer_init_fixed(&ebuf, elements, MAX_ELEMENT_MEMORY);
-        zr_convert(&gui.ctx, &device.cmds, &vbuf, &ebuf, &config);
+        zr_convert(context, &cmds, &vbuf, &ebuf, &config);
 
         glUnmapBuffer(GL_ARRAY_BUFFER);
         glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
@@ -410,15 +479,15 @@ struct device
         const struct zr_draw_command* cmd;
         const zr_draw_index* offset = NULL;
         
-        [drawCommands removeAllObjects];
+        [bufferedCommands removeAllObjects];
         
         // iterate over and execute each draw command
-        zr_draw_foreach(cmd, &gui.ctx, &device.cmds)
+        zr_draw_foreach(cmd, context, &cmds)
         {
             if (cmd->elem_count > 0)
             {
 #if ZR_REFRESH_ON_EVENT_ONLY
-                [drawCommands addObject: [NSData dataWithBytes: cmd length: sizeof(struct zr_draw_command)]];
+                [bufferedCommands addObject: [NSData dataWithBytes: cmd length: sizeof(struct zr_draw_command)]];
 #endif
                 glBindTexture(GL_TEXTURE_2D, (GLuint)cmd->texture.id);
                 glScissor((GLint)(cmd->clip_rect.x * scale),
@@ -430,8 +499,8 @@ struct device
             }
         }
         
-        zr_clear(&gui.ctx);
-   }
+        zr_clear(context);
+    }
     
     // restore old state
     glUseProgram((GLuint)last_prog);
@@ -440,12 +509,6 @@ struct device
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, (GLuint)last_ebo);
     glBindVertexArray((GLuint)last_vao);
     glDisable(GL_SCISSOR_TEST);
-}
-
-
-- (void) fillFrame
-{
-    run_demo(&gui);
 }
 
 
@@ -470,7 +533,7 @@ struct device
     NSArray* currentEvents = events.copy;
     [events removeAllObjects];
     
-    zr_input_begin(&gui.ctx);
+    zr_input_begin(context);
     
     for (NSDictionary* event in currentEvents)
     {
@@ -487,55 +550,55 @@ struct device
         
         switch (type)
         {
+                
 #if ZR_REFRESH_ON_EVENT_ONLY || ZR_TOUCH_SCREEN
                 
             case 2: case 3: case 4:
-                zr_input_motion(&gui.ctx, x, y);
+                zr_input_motion(context, x, y);
                 break;
             case 5:
-                zr_input_motion(&gui.ctx, x, y);
-                zr_input_end(&gui.ctx);
-                zr_input_begin(&gui.ctx);
-                zr_input_button(&gui.ctx, ZR_BUTTON_LEFT, x, y, zr_true);
+                zr_input_motion(context, x, y);
+                zr_input_end(context);
+                zr_input_begin(context);
+                zr_input_button(context, ZR_BUTTON_LEFT, x, y, zr_true);
                 break;
             case 6:
-                zr_input_button(&gui.ctx, ZR_BUTTON_LEFT, x, y, zr_false);
-                zr_input_end(&gui.ctx);
+                zr_input_button(context, ZR_BUTTON_LEFT, x, y, zr_false);
+                zr_input_end(context);
                 [self fillFrame];
-                zr_clear(&gui.ctx);
-                zr_input_begin(&gui.ctx);
-                zr_input_motion(&gui.ctx, INT_MAX, INT_MAX);
+                zr_clear(context);
+                zr_input_begin(context);
+                zr_input_motion(context, INT_MAX, INT_MAX);
                 break;
 
 #else
                 
             case 1: case 2: case 3: case 4:
-                zr_input_motion(&gui.ctx, x, y);
+                zr_input_motion(context, x, y);
                 break;
             case 5:
-                zr_input_button(&gui.ctx, ZR_BUTTON_LEFT, x, y, zr_true);
+                zr_input_button(context, ZR_BUTTON_LEFT, x, y, zr_true);
                 break;
             case 6:
-                zr_input_button(&gui.ctx, ZR_BUTTON_LEFT, x, y, zr_false);
+                zr_input_button(context, ZR_BUTTON_LEFT, x, y, zr_false);
                 break;
             case 7:
-                zr_input_button(&gui.ctx, ZR_BUTTON_RIGHT, x, y, zr_true);
+                zr_input_button(context, ZR_BUTTON_RIGHT, x, y, zr_true);
                 break;
             case 8:
-                zr_input_button(&gui.ctx, ZR_BUTTON_RIGHT, x, y, zr_false);
+                zr_input_button(context, ZR_BUTTON_RIGHT, x, y, zr_false);
                 break;
             case 9:
-                zr_input_button(&gui.ctx, ZR_BUTTON_MIDDLE, x, y, zr_true);
+                zr_input_button(context, ZR_BUTTON_MIDDLE, x, y, zr_true);
                 break;
             case 10:
-                zr_input_button(&gui.ctx, ZR_BUTTON_MIDDLE, x, y, zr_false);
+                zr_input_button(context, ZR_BUTTON_MIDDLE, x, y, zr_false);
                 break;
             case 11:
-                zr_input_scroll(&gui.ctx, -[event[@"deltaY"] floatValue]);
+                zr_input_scroll(context, -[event[@"deltaY"] floatValue]);
                 break;
-
-#if !TARGET_OS_IPHONE
-
+#endif
+                
             case 12:
             case 13:
             {
@@ -544,6 +607,29 @@ struct device
                 NSData* data = [str dataUsingEncoding: NSUTF32LittleEndianStringEncoding];
                 const uint32_t* c = data.bytes;
                 NSInteger n = data.length / sizeof(uint32_t);
+                
+#if TARGET_OS_IPHONE
+                
+                if (down)
+                {
+                    if (n && *c == '\b')
+                    {
+                        zr_input_key(context, ZR_KEY_BACKSPACE, zr_true);
+                        zr_input_end(context);
+                        [self fillFrame];
+                        zr_clear(context);
+                        zr_input_begin(context);
+                        zr_input_key(context, ZR_KEY_BACKSPACE, zr_false);
+                    }
+                    else
+                    {
+                        for (NSInteger i = 0; i < n; i += 1, c += 1)
+                            zr_input_unicode(context, *c);
+                    }
+                }
+                
+#else
+                
                 for (NSInteger i = 0; i < n; i += 1, c += 1)
                 {
                     if (*c == 127 || *c < ' ' || *c >= NSUpArrowFunctionKey)
@@ -551,28 +637,28 @@ struct device
                         switch (*c)
                         {
                             case NSLeftArrowFunctionKey:
-                                zr_input_key(&gui.ctx, ZR_KEY_LEFT, down);
+                                zr_input_key(context, ZR_KEY_LEFT, down);
                                 break;
                             case NSRightArrowFunctionKey:
-                                zr_input_key(&gui.ctx, ZR_KEY_RIGHT, down);
+                                zr_input_key(context, ZR_KEY_RIGHT, down);
                                 break;
                             case 3:
-                                zr_input_key(&gui.ctx, ZR_KEY_COPY, down);
+                                zr_input_key(context, ZR_KEY_COPY, down);
                                 break;
                             case 22:
-                                zr_input_key(&gui.ctx, ZR_KEY_PASTE, down);
+                                zr_input_key(context, ZR_KEY_PASTE, down);
                                 break;
                             case 24:
-                                zr_input_key(&gui.ctx, ZR_KEY_CUT, down);
+                                zr_input_key(context, ZR_KEY_CUT, down);
                                 break;
                             case 9:
-                                zr_input_key(&gui.ctx, ZR_KEY_TAB, down);
+                                zr_input_key(context, ZR_KEY_TAB, down);
                                 break;
                             case 13:
-                                zr_input_key(&gui.ctx, ZR_KEY_ENTER, down);
+                                zr_input_key(context, ZR_KEY_ENTER, down);
                                 break;
                             case 127:
-                                zr_input_key(&gui.ctx, ZR_KEY_BACKSPACE, down);
+                                zr_input_key(context, ZR_KEY_BACKSPACE, down);
                                 break;
                             default:
                                 break;
@@ -580,28 +666,80 @@ struct device
                     }
                     else if (down)
                     {
-                        zr_input_unicode(&gui.ctx, *c);
+                        zr_input_unicode(context, *c);
                     }
                 }
+#endif
             }
             break;
-#endif
-#endif
                 
             default:
                 break;
         }
     }
     
-    zr_input_end(&gui.ctx);
+    zr_input_end(context);
 }
 
 
 - (void) addEvent: (NSDictionary*) event
 {
-    [drawCommands removeAllObjects];
+    [bufferedCommands removeAllObjects];
     [events addObject: event];
 }
 
 
 @end
+
+
+@protocol ZahnradKeyboardDelegate <NSObject>
+
+- (void) showKeyboard: (NSDictionary*) info;
+- (void) hideKeyboard;
+
+@end
+
+
+#if TARGET_OS_IPHONE
+
+
+void zr_backend_show_keyboard(zr_hash zrHash, struct zr_rect zrBounds, struct zr_buffer* zrText)
+{
+    CGRect frame = CGRectMake(zrBounds.x, zrBounds.y, zrBounds.w, zrBounds.h);
+    id ad = [[UIApplication sharedApplication] delegate];
+    if ([ad respondsToSelector: @selector(showKeyboard:)])
+    {
+        char str[zrText->allocated + 1];
+        strncpy(str, zrText->memory.ptr, zrText->allocated);
+        str[zrText->allocated] = 0;
+        NSString* text = [NSString stringWithCString: str encoding: NSUTF8StringEncoding];
+        [ad performSelector: @selector(showKeyboard:) withObject: @{@"hash" : @(zrHash), @"text" : text, @"frame" : NSStringFromCGRect(frame)}];
+    }
+}
+
+
+void zr_backend_hide_keyboard(void)
+{
+    id ad = [[UIApplication sharedApplication] delegate];
+    if ([ad respondsToSelector: @selector(hideKeyboard)])
+        [ad performSelector: @selector(hideKeyboard)];
+}
+
+
+#else
+
+
+void zr_backend_show_keyboard(zr_hash zrHash, struct zr_rect zrBounds)
+{
+}
+
+
+void zr_backend_hide_keyboard(void)
+{
+}
+
+
+#endif
+
+
+
