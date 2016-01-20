@@ -536,7 +536,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 static size_t text_len[9];
                 static size_t field_len;
                 static size_t box_len;
-                int active;
+                zr_flags active;
 
                 zr_layout_row(ctx, ZR_STATIC, 25, 2, ratio);
                 zr_label(ctx, "Default:", ZR_TEXT_LEFT);
@@ -574,7 +574,9 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 zr_layout_row(ctx, ZR_STATIC, 25, 2, ratio);
                 active = zr_edit_string(ctx, ZR_EDIT_FIELD, text[7], &text_len[7], 64,  zr_filter_ascii);
                 if (zr_button_text(ctx, "Submit", ZR_BUTTON_DEFAULT)
-                    ||(active && zr_input_is_key_pressed(&ctx->input, ZR_KEY_ENTER))) {
+                    || ((active & ZR_EDIT_ACTIVE) &&
+                    zr_input_is_key_pressed(&ctx->input, ZR_KEY_ENTER)))
+                {
                     text[7][text_len[7]] = '\n';
                     text_len[7]++;
                     memcpy(&box_buffer[box_len], &text[7], text_len[7]);

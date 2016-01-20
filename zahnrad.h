@@ -1029,10 +1029,15 @@ enum zr_button_behavior {
 
 enum zr_edit_flags {
     ZR_EDIT_READ_ONLY   = ZR_FLAG(0),
+    /* text inside the edit widget cannot be modified */
     ZR_EDIT_CURSOR      = ZR_FLAG(1),
+    /* edit widget will have a movable cursor */
     ZR_EDIT_SELECTABLE  = ZR_FLAG(2),
+    /* edit widget allows text selection */
     ZR_EDIT_CLIPBOARD   = ZR_FLAG(3),
+    /* edit widget tries to use the clipbard callback for copy & paste */
     ZR_EDIT_MULTILINE   = ZR_FLAG(4)
+    /* edit widget with text wrapping text editing */
 };
 
 enum zr_edit_types {
@@ -1040,6 +1045,17 @@ enum zr_edit_types {
     ZR_EDIT_FIELD = (ZR_EDIT_CURSOR|ZR_EDIT_SELECTABLE|ZR_EDIT_CLIPBOARD),
     ZR_EDIT_BOX = (ZR_EDIT_CURSOR|ZR_EDIT_SELECTABLE|
                    ZR_EDIT_CLIPBOARD|ZR_EDIT_MULTILINE)
+};
+
+enum zr_edit_return_flags {
+    ZR_EDIT_ACTIVE      = ZR_FLAG(0),
+    /* edit widget is currently being modified */
+    ZR_EDIT_INACTIVE    = ZR_FLAG(1),
+    /* edit widget is not active and is not being modified */
+    ZR_EDIT_ACTIVATED   = ZR_FLAG(2),
+    /* edit widget went from state inactive to state active */
+    ZR_EDIT_DEACTIVATED = ZR_FLAG(3)
+    /* edit widget went from state active to state inactive */
 };
 
 enum zr_chart_type {
@@ -1487,9 +1503,9 @@ int zr_propertyi(struct zr_context *layout, const char *name, int min, int val,
                 int max, int step, int inc_per_pixel);
 
 /* text manipulation */
-int zr_edit_string(struct zr_context*, zr_flags, char *buffer, zr_size *len,
+zr_flags zr_edit_string(struct zr_context*, zr_flags, char *buffer, zr_size *len,
                     zr_size max, zr_filter);
-int zr_edit_buffer(struct zr_context*, zr_flags, struct zr_buffer*, zr_filter);
+zr_flags zr_edit_buffer(struct zr_context*, zr_flags, struct zr_buffer*, zr_filter);
 
 /* simple chart */
 void zr_chart_begin(struct zr_context*, enum zr_chart_type, zr_size num,

@@ -4113,6 +4113,7 @@ zr_do_button_symbol(enum zr_widget_status *state,
         color = b->active;
         break;
     }
+
     sym.type = symbol;
     sym.background = background;
     sym.foreground = color;
@@ -9196,11 +9197,11 @@ zr_edit_base(struct zr_rect *bounds, struct zr_edit *field,
     return state;
 }
 
-int
+zr_flags
 zr_edit_string(struct zr_context *ctx, zr_flags flags,
     char *memory, zr_size *len, zr_size max, zr_filter filter)
 {
-    int active;
+    zr_flags active;
     struct zr_buffer buffer;
     max = MAX(1, max);
     *len = MIN(*len, max-1);
@@ -9211,12 +9212,13 @@ zr_edit_string(struct zr_context *ctx, zr_flags flags,
     return active;
 }
 
-int
+zr_flags
 zr_edit_buffer(struct zr_context *ctx, zr_flags flags,
     struct zr_buffer *buffer, zr_filter filter)
 {
     struct zr_window *win;
     struct zr_input *i;
+    zr_flags old_flags, ret_flags = 0;
 
     enum zr_widget_state state;
     struct zr_rect bounds;
@@ -9263,6 +9265,7 @@ zr_edit_buffer(struct zr_context *ctx, zr_flags flags,
         sel =  &dummy_sel;
     }
 
+    old_flags = (*active) ? ZR_EDIT_ACTIVE: ZR_EDIT_INACTIVE;
     if (!flags || flags == ZR_EDIT_CURSOR) {
         int old = *active;
         if (!flags) {
@@ -9319,6 +9322,7 @@ zr_edit_buffer(struct zr_context *ctx, zr_flags flags,
 
         if (box.active) {
             /* update hot edit widget state */
+            *active = 1;
             win->edit.active = 1;
             win->edit.name = hash;
             win->edit.scrollbar = box.scrollbar;
@@ -9329,7 +9333,14 @@ zr_edit_buffer(struct zr_context *ctx, zr_flags flags,
             win->edit.active = 0;
         }
     }
-    return *active;
+
+    /* compress edit widget state and state changes into flags */
+    ret_flags = (*active) ? ZR_EDIT_ACTIVE: ZR_EDIT_INACTIVE;
+    if (old_flags == ZR_EDIT_INACTIVE && ret_flags & ZR_EDIT_ACTIVE)
+        ret_flags |= ZR_EDIT_ACTIVATED;
+    else if (old_flags == ZR_EDIT_ACTIVE && ret_flags & ZR_EDIT_INACTIVE)
+        ret_flags |= ZR_EDIT_DEACTIVATED;
+    return ret_flags;
 }
 
 static void
