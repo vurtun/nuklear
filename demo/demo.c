@@ -1,8 +1,14 @@
 #include "limits.h"
 
-#define MIN(a,b)    ((a) < (b) ? (a) : (b))
-#define MAX(a,b)    ((a) < (b) ? (b) : (a))
+#ifndef MIN
+#define MIN(a,b) ((a) < (b) ? (a) : (b))
+#endif
+#ifndef MAX
+#define MAX(a,b) ((a) < (b) ? (b) : (a))
+#endif
+#ifndef CLAMP
 #define CLAMP(i,v,x) (MAX(MIN(v,x), i))
+#endif
 #define LEN(a)      (sizeof(a)/sizeof(a)[0])
 #define UNUSED(a)   ((void)(a))
 

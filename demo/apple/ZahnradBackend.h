@@ -21,6 +21,8 @@
 
 #import <Foundation/Foundation.h>
 
+#import "zahnrad.h"
+
 #define SIMULATE_TOUCH 0
 
 #if (TARGET_OS_IPHONE && (!TARGET_OS_TV)) || SIMULATE_TOUCH
@@ -57,12 +59,6 @@
 @end
 
 
-struct zr_context;
-struct zr_buffer;
-struct zr_allocator;
-struct zr_user_font;
-
-
 @interface ZahnradBackend (Adapter)
 
 
@@ -74,4 +70,12 @@ struct zr_user_font;
 
 
 @end
+
+
+void zr_backend_show_keyboard(zr_hash hash, struct zr_rect bounds, struct zr_buffer* text);
+void zr_backend_hide_keyboard(void);
+
+int zr_touch_edit_string(struct zr_context *ctx, zr_flags flags, char *text, zr_size *len, zr_size max, zr_filter filter, zr_hash unique_id);
+
+
 

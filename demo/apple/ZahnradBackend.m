@@ -19,6 +19,8 @@
  3.  This notice may not be removed or altered from any source distribution.
  */
 
+#import "ZahnradBackend.h"
+
 
 #define MAX_VERTEX_MEMORY   (512 * 1024)
 #define MAX_ELEMENT_MEMORY  (128 * 1024)
@@ -28,23 +30,17 @@
 // #else does provide a generic version to start
 // your own project.
 
+
 #if 1
 
+#if TARGET_OS_IPHONE
 
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <string.h>
-#include <math.h>
+#define zr_edit_string(_ct, _fl, _bu, _le, _ma, _fi) zr_touch_edit_string(_ct, _fl, _bu, _le, _ma, _fi, (zr_hash)__COUNTER__)
 
-#include "zahnrad.h"
+#endif
+
+
 #include "../demo.c"
-
-#undef MAX
-#undef MIN
-
-#import "ZahnradBackend.h"
 
 
 @implementation ZahnradBackend (Adapter)
@@ -79,7 +75,6 @@ static struct demo gui;
 
 
 #import "ZahnradBackend.h"
-#import "zahnrad.h"
 
 
 @implementation ZahnradBackend (Adapter)
@@ -700,6 +695,9 @@ static void mem_free(zr_handle unused, void* ptr)
 @end
 
 
+#undef zr_edit_string
+
+
 #if TARGET_OS_IPHONE
 
 
@@ -726,16 +724,46 @@ void zr_backend_hide_keyboard(void)
 }
 
 
+int zr_touch_edit_string(struct zr_context *ctx, zr_flags flags, char *text, zr_size *len, zr_size max, zr_filter filter, zr_hash unique_id)
+{
+    zr_flags state;
+    struct zr_rect bounds;
+    
+    zr_layout_peek(&bounds, ctx);
+    state = zr_edit_string(ctx, flags, text, len, max, filter);
+    if (state & ZR_EDIT_ACTIVATED)
+    {
+        struct zr_buffer buffer;
+        zr_buffer_init_fixed(&buffer, text, max);
+        buffer.allocated = *len;
+        
+        zr_backend_show_keyboard((zr_hash)unique_id, bounds, &buffer);
+    }
+    else if (state & ZR_EDIT_DEACTIVATED)
+    {
+        zr_backend_hide_keyboard();
+    }
+    
+    return state;
+}
+
+
 #else
 
 
-void zr_backend_show_keyboard(zr_hash zrHash, struct zr_rect zrBounds)
+void zr_backend_show_keyboard(zr_hash zrHash, struct zr_rect zrBounds, struct zr_buffer* zrText)
 {
 }
 
 
 void zr_backend_hide_keyboard(void)
 {
+}
+
+
+int zr_touch_edit_string(struct zr_context *ctx, zr_flags flags, char *text, zr_size *len, zr_size max, zr_filter filter, zr_hash unique_id)
+{
+    return  zr_edit_string(ctx, flags, text, len, max, filter);
 }
 
 
