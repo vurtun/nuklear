@@ -260,7 +260,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
             zr_layout_row_static(ctx, 30, 80, 2);
             zr_label(ctx, "Theme:", ZR_TEXT_LEFT);
 
-            if (zr_combo_begin_text(ctx, &combo, "themes", themes[*theme], 200)) {
+            if (zr_combo_begin_text(ctx, &combo, themes[*theme], 200)) {
                 zr_layout_row_dynamic(ctx, 25, 1);
                 *theme = zr_combo_item(ctx, themes[THEME_BLACK], ZR_TEXT_CENTERED) ? THEME_BLACK : *theme;
                 *theme = zr_combo_item(ctx, themes[THEME_WHITE], ZR_TEXT_CENTERED) ? THEME_WHITE : *theme;
@@ -464,7 +464,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
 
                 /* default combobox */
                 zr_layout_row_static(ctx, 30, 200, 1);
-                if (zr_combo_begin_text(ctx, &combo, "Weapons", weapons[current_weapon], 200)) {
+                if (zr_combo_begin_text(ctx, &combo, weapons[current_weapon], 200)) {
                     size_t i = 0;
                     zr_layout_row_dynamic(ctx, 25, 1);
                     for (i = 0; i < LEN(weapons); ++i) {
@@ -475,7 +475,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 }
 
                 /* slider color combobox */
-                if (zr_combo_begin_color(ctx, &combo, "Color", combo_color, 200)) {
+                if (zr_combo_begin_color(ctx, &combo, combo_color, 200)) {
                     float ratios[] = {0.15f, 0.85f};
                     zr_layout_row(ctx, ZR_DYNAMIC, 30, 2, ratios);
                     zr_label(ctx, "R", ZR_TEXT_LEFT);
@@ -492,7 +492,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 /* progressbar combobox */
                 sum = x + y + z + w;
                 sprintf(buffer, "%lu", sum);
-                if (zr_combo_begin_text(ctx, &combo, "Progressbar", buffer, 200)) {
+                if (zr_combo_begin_text(ctx, &combo, buffer, 200)) {
                     zr_layout_row_dynamic(ctx, 30, 1);
                     zr_progress(ctx, &x, 100, ZR_MODIFIABLE);
                     zr_progress(ctx, &y, 100, ZR_MODIFIABLE);
@@ -504,7 +504,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 /* checkbox combobox */
                 sum = (size_t)(check_values[0] + check_values[1] + check_values[2] + check_values[3] + check_values[4]);
                 sprintf(buffer, "%lu", sum);
-                if (zr_combo_begin_text(ctx, &combo, "Checkbox", buffer, 200)) {
+                if (zr_combo_begin_text(ctx, &combo, buffer, 200)) {
                     zr_layout_row_dynamic(ctx, 30, 1);
                     zr_checkbox(ctx, weapons[0], &check_values[0]);
                     zr_checkbox(ctx, weapons[1], &check_values[1]);
@@ -515,7 +515,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
 
                 /* chart combobox */
                 sprintf(buffer, "%.1f", chart_selection);
-                if (zr_combo_begin_text(ctx, &combo, "Charts", buffer, 250)) {
+                if (zr_combo_begin_text(ctx, &combo, buffer, 250)) {
                     size_t i = 0;
                     static const float values[]={30.0f,15.0f,25.0f,10.0f,20.0f,40.0f};
                     zr_layout_row_dynamic(ctx, 150, 1);

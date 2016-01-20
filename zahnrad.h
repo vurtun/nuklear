@@ -1522,13 +1522,13 @@ void zr_popup_close(struct zr_context*);
 void zr_popup_end(struct zr_context*);
 
 /* abstract combo box */
-int zr_combo_begin_text(struct zr_context*, struct zr_layout*, const char *id,
+int zr_combo_begin_text(struct zr_context*, struct zr_layout*,
                         const char *selected, int max_height);
-int zr_combo_begin_color(struct zr_context*, struct zr_layout*, const char *id,
+int zr_combo_begin_color(struct zr_context*, struct zr_layout*,
                         struct zr_color color, int max_height);
-int zr_combo_begin_image(struct zr_context*, struct zr_layout*, const char *id,
+int zr_combo_begin_image(struct zr_context*, struct zr_layout*,
                         struct zr_image img,  int max_height);
-int zr_combo_begin_icon(struct zr_context*, struct zr_layout*, const char *id,
+int zr_combo_begin_icon(struct zr_context*, struct zr_layout*,
                         const char *selected, struct zr_image img, int height);
 int zr_combo_item(struct zr_context*, const char*, enum zr_text_align);
 int zr_combo_item_icon(struct zr_context*, struct zr_image, const char*,

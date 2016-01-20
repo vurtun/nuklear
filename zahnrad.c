@@ -107,6 +107,7 @@ struct zr_popup {
     zr_hash name;
     int active;
 
+    unsigned combo_count;
     unsigned con_count, con_old;
     unsigned active_con;
 };
@@ -153,11 +154,13 @@ struct zr_window {
     struct zr_command_buffer buffer;
     /* command buffer for queuing drawing calls */
 
+    /* frame window state */
+    struct zr_layout *layout;
+
     /* persistent widget state */
     struct zr_value property;
     struct zr_popup popup;
     struct zr_edit_state edit;
-    struct zr_layout *layout;
 
     struct zr_table *tables;
     unsigned short table_count;
@@ -6835,7 +6838,7 @@ zr_begin(struct zr_context *ctx, struct zr_layout *layout,
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(title);
-    ZR_ASSERT(!ctx->current);
+    ZR_ASSERT(!ctx->current && "if this triggers you missed a `zr_end` call");
     if (!ctx || ctx->current || !title)
         return 0;
 
@@ -7508,9 +7511,7 @@ zr_layout_begin(struct zr_context *ctx, const char *title)
 static void
 zr_layout_end(struct zr_context *ctx)
 {
-    struct zr_input *in;
-    const struct zr_style *config;
-    struct zr_command_buffer *out;
+    /* local read only style variables */
     float scrollbar_size;
     struct zr_vec2 item_padding;
     struct zr_vec2 item_spacing;
@@ -7518,8 +7519,12 @@ zr_layout_end(struct zr_context *ctx)
     struct zr_vec2 scaler_size;
     struct zr_rect footer = {0,0,0,0};
 
+    /* pointers to subsystems */
+    struct zr_input *in;
     struct zr_window *window;
     struct zr_layout *layout;
+    struct zr_command_buffer *out;
+    const struct zr_style *config;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -7527,7 +7532,6 @@ zr_layout_end(struct zr_context *ctx)
     if (!ctx || !ctx->current || !ctx->current->layout)
         return;
 
-    /* cache configuration data */
     window = ctx->current;
     layout = window->layout;
     config = &ctx->style;
@@ -7551,6 +7555,8 @@ zr_layout_end(struct zr_context *ctx)
         layout->height = layout->at_y - layout->bounds.y;
         layout->height = MIN(layout->height, layout->bounds.h);
         if ((layout->offset->x == 0) || (layout->flags & ZR_WINDOW_NO_SCROLLBAR)) {
+            /* special case for dynamic windows without horizontal scrollbar
+             * or hidden scrollbars */
             footer.x = window->bounds.x;
             footer.y = window->bounds.y + layout->height + item_spacing.y;
             footer.w = window->bounds.w + scrollbar_size;
@@ -7558,6 +7564,8 @@ zr_layout_end(struct zr_context *ctx)
             footer.h = 0;
 
             if ((layout->offset->x == 0) && !(layout->flags & ZR_WINDOW_NO_SCROLLBAR)) {
+                /* special case for windows like combobox, menu require draw call
+                 * to fill the empty scrollbar background */
                 struct zr_rect bounds;
                 bounds.x = layout->bounds.x + layout->width;
                 bounds.y = layout->clip.y;
@@ -7566,6 +7574,7 @@ zr_layout_end(struct zr_context *ctx)
                 zr_draw_rect(out, bounds, 0, config->colors[ZR_COLOR_WINDOW]);
             }
         } else {
+            /* dynamic window with visible scrollbars and therefore bigger footer */
             footer.x = window->bounds.x;
             footer.w = window->bounds.w + scrollbar_size;
             footer.h = layout->footer_h;
@@ -7743,6 +7752,7 @@ zr_layout_end(struct zr_context *ctx)
         window->popup.con_old = window->popup.con_count;
         window->popup.con_count = 0;
     }
+    window->popup.combo_count = 0;
     /* helper to make sure you have a 'zr_layout_push'
      * for every 'zr_layout_pop' */
     ZR_ASSERT(!layout->row.tree_depth);
@@ -10320,13 +10330,13 @@ zr_contextual_end(struct zr_context *ctx)
  * --------------------------------------------------------------*/
 static int
 zr_combo_begin(struct zr_layout *layout, struct zr_context *ctx, struct zr_window *win,
-    const char *id, int height, int is_clicked, struct zr_rect header)
+    int height, int is_clicked, struct zr_rect header)
 {
     int is_open = 0;
     int is_active = 0;
     struct zr_rect body;
     struct zr_window *popup;
-    zr_hash hash = zr_murmur_hash(id, (int)zr_strsiz(id), ZR_WINDOW_COMBO);
+    zr_hash hash;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -10334,12 +10344,13 @@ zr_combo_begin(struct zr_layout *layout, struct zr_context *ctx, struct zr_windo
     if (!ctx || !ctx->current || !ctx->current->layout)
         return 0;
 
+    popup = win->popup.win;
     body.x = header.x;
     body.w = header.w;
     body.y = header.y + header.h-1;
     body.h = (float)height;
 
-    popup = win->popup.win;
+    hash = win->popup.combo_count++;
     is_open = (popup && (popup->flags & ZR_WINDOW_COMBO));
     is_active = (popup && (win->popup.name == hash) && win->popup.type == ZR_WINDOW_COMBO);
     if ((is_clicked && is_open && !is_active) || (is_open && !is_active) ||
@@ -10354,7 +10365,7 @@ zr_combo_begin(struct zr_layout *layout, struct zr_context *ctx, struct zr_windo
 
 int
 zr_combo_begin_text(struct zr_context *ctx, struct zr_layout *layout,
-    const char *id, const char *selected, int height)
+    const char *selected, int height)
 {
     const struct zr_input *in;
     struct zr_window *win;
@@ -10411,12 +10422,12 @@ zr_combo_begin_text(struct zr_context *ctx, struct zr_layout *layout,
         sym.border_width = 1.0f;
         zr_draw_symbol(&win->buffer, &sym, bounds, &ctx->style.font);
     }
-    return zr_combo_begin(layout, ctx, win, id, height, is_active, header);
+    return zr_combo_begin(layout, ctx, win, height, is_active, header);
 }
 
 int
 zr_combo_begin_color(struct zr_context *ctx, struct zr_layout *layout,
-    const char *id, struct zr_color color, int height)
+    struct zr_color color, int height)
 {
     enum zr_widget_status state;
     enum zr_widget_state s;
@@ -10471,12 +10482,12 @@ zr_combo_begin_color(struct zr_context *ctx, struct zr_layout *layout,
         sym.border_width = 1.0f;
         zr_draw_symbol(&win->buffer, &sym, bounds, &ctx->style.font);
     }
-    return zr_combo_begin(layout, ctx, win, id, height, is_active, header);
+    return zr_combo_begin(layout, ctx, win, height, is_active, header);
 }
 
 int
 zr_combo_begin_image(struct zr_context *ctx, struct zr_layout *layout,
-    const char *id, struct zr_image img, int height)
+    struct zr_image img, int height)
 {
     struct zr_window *win;
     const struct zr_input *in;
@@ -10529,11 +10540,11 @@ zr_combo_begin_image(struct zr_context *ctx, struct zr_layout *layout,
         sym.border_width = 1.0f;
         zr_draw_symbol(&win->buffer, &sym, bounds, &ctx->style.font);
     }
-    return zr_combo_begin(layout, ctx, win, id, height, is_active, header);
+    return zr_combo_begin(layout, ctx, win, height, is_active, header);
 }
 
 int
-zr_combo_begin_icon(struct zr_context *ctx, struct zr_layout *layout, const char *id,
+zr_combo_begin_icon(struct zr_context *ctx, struct zr_layout *layout,
     const char *selected, struct zr_image img, int height)
 {
     struct zr_window *win;
@@ -10598,7 +10609,7 @@ zr_combo_begin_icon(struct zr_context *ctx, struct zr_layout *layout, const char
         sym.border_width = 1.0f;
         zr_draw_symbol(&win->buffer, &sym, bounds, &ctx->style.font);
     }
-    return zr_combo_begin(layout, ctx, win, id, height, is_active, header);
+    return zr_combo_begin(layout, ctx, win, height, is_active, header);
 }
 
 int zr_combo_item(struct zr_context *ctx, const char *title, enum zr_text_align align)

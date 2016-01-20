@@ -390,7 +390,7 @@ basic_demo(struct zr_context *ctx, struct icons *img)
      *------------------------------------------------*/
     ui_header(ctx, "Combo box");
     ui_widget(ctx, 40, 22);
-    if (zr_combo_begin_text(ctx, &combo, "items", items[selected_item], 200)) {
+    if (zr_combo_begin_text(ctx, &combo, items[selected_item], 200)) {
         zr_layout_row_dynamic(ctx, 35, 1);
         for (i = 0; i < 3; ++i)
             if (zr_combo_item(ctx, items[i], ZR_TEXT_LEFT))
@@ -399,7 +399,7 @@ basic_demo(struct zr_context *ctx, struct icons *img)
     }
 
     ui_widget(ctx, 40, 22);
-    if (zr_combo_begin_icon(ctx, &combo, "pictures", items[selected_icon], zr_image_id(img->images[selected_icon]), 200)) {
+    if (zr_combo_begin_icon(ctx, &combo, items[selected_icon], zr_image_id(img->images[selected_icon]), 200)) {
         zr_layout_row_dynamic(ctx, 35, 1);
         for (i = 0; i < 3; ++i)
             if (zr_combo_item_icon(ctx, zr_image_id(img->images[i]), items[i], ZR_TEXT_RIGHT))
@@ -477,7 +477,7 @@ grid_demo(struct zr_context *ctx)
     zr_checkbox(ctx, "Check me", &check);
     zr_label(ctx, "Combobox:", ZR_TEXT_RIGHT);
 
-    if (zr_combo_begin_text(ctx, &combo, "combo", items[selected_item], 200)) {
+    if (zr_combo_begin_text(ctx, &combo, items[selected_item], 200)) {
         zr_layout_row_dynamic(ctx, 30, 1);
         for (i = 0; i < 3; ++i)
             if (zr_combo_item(ctx, items[i], ZR_TEXT_LEFT))
