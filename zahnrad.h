@@ -68,6 +68,14 @@ extern "C" {
  If you already have font handling or do not want to use this font handler
  you can just set this define to zero and the font module will not be compiled
  and the two headers will not be needed. */
+#define ZR_DISABLE_STB_RECT_PACK_IMPLEMENTATION 0
+/* If you already provide the implementation for stb_rect_pack.h in one of your
+ files you have to define this as 1 to prevent another implementation and the
+ resulting symbol collision. */
+#define ZR_DISABLE_STB_TRUETYPE_IMPLEMENTATION 0
+/* If you already provide the implementation for stb_truetype.h in one of your
+ files you have to define this as 1 to prevent another implementation and the
+ resulting symbol collision. */
 /*
  * ===============================================================
  *

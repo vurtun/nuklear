@@ -1309,11 +1309,11 @@ static zr_size
 zr_use_font_glyph_clamp(const struct zr_user_font *font, const char *text,
     zr_size text_len, float space, zr_size *glyphs, float *text_width)
 {
-    zr_size len = 0;
-    zr_size glyph_len;
-    float width = 0;
+    zr_size glyph_len = 0;
     float last_width = 0;
-    zr_rune unicode;
+    zr_rune unicode = 0;
+    float width = 0;
+    zr_size len = 0;
     zr_size g = 0;
 
     glyph_len = zr_utf_decode(text, &unicode, text_len);
@@ -1321,6 +1321,7 @@ zr_use_font_glyph_clamp(const struct zr_user_font *font, const char *text,
         zr_size s;
         len += glyph_len;
         s = font->width(font->userdata, font->height, text, len);
+
         last_width = width;
         width = (float)s;
         glyph_len = zr_utf_decode(&text[len], &unicode, text_len - len);
@@ -2893,13 +2894,13 @@ zr__draw_next(const struct zr_draw_command *cmd,
 #pragma warning (disable: 4456)
 #endif
 
-#ifndef ZR_DISABLE_STB_RECT_PACK_IMPLEMENTATION
+#if !ZR_DISABLE_STB_RECT_PACK_IMPLEMENTATION
 #define STBRP_STATIC
 #define STB_RECT_PACK_IMPLEMENTATION
 #endif
 #include "stb_rect_pack.h"
 
-#ifndef ZR_DISABLE_STB_TRUETYPE_IMPLEMENTATION
+#if !ZR_DISABLE_STB_TRUETYPE_IMPLEMENTATION
 #define STBTT_STATIC
 #define STB_TRUETYPE_IMPLEMENTATION
 #endif
