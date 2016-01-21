@@ -5126,7 +5126,8 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
             if (text_len) {
                 while (text_len && cur_row <= row) {
                     row_off = zr_user_font_glyphs_fitting_in_space(font,
-                        &buffer[offset], text_len, total_width, &row_len, &glyphs, &text_width, 1);
+                        &buffer[offset], text_len, total_width, &row_len,
+                        &glyphs, &text_width, 1);
                     if (!row_off) break;
 
                     glyph_off += glyphs;
@@ -5217,7 +5218,8 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
 
             offset += row_off;
             row_off = zr_user_font_glyphs_fitting_in_space(font,
-                &buffer[offset], text_len, total_width, &row_len, &glyphs, &text_width, 1);
+                &buffer[offset], text_len, total_width, &row_len,
+                &glyphs, &text_width, 1);
             label.w = text_width;
             if (!row_off || !row_len) break;
 
@@ -5247,7 +5249,8 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                 }
 
                 /* draw unselected text part */
-                unselected_text_width = font->width(font->userdata, font->height, &buffer[offset],
+                unselected_text_width =
+                    font->width(font->userdata, font->height, &buffer[offset],
                     (row_len >= sel_len) ? row_len - sel_len: 0);
                 zr_draw_text(out , label, &buffer[offset],
                     (row_len >= sel_len) ? row_len - sel_len: 0,
@@ -5264,8 +5267,8 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                 /* second case with selection spanning over current row */
                 zr_draw_text(out, label, &buffer[offset],
                     row_len, font, field->text, field->background);
-            } else if (glyph_off > begin && glyph_off + glyphs >= end && box->active &&
-                        end >= glyph_off && end <= glyph_off + glyphs) {
+            } else if (glyph_off > begin && glyph_off + glyphs >= end &&
+                    box->active && end >= glyph_off && end <= glyph_off + glyphs) {
                 /* third case with selection ending in current row */
                 zr_size l = 0, sel_end, sel_len;
                 zr_size selected_text_width;
@@ -5279,7 +5282,8 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                 sel_end = sel_end - offset;
 
                 /* draw selected text part */
-                selected_text_width = font->width(font->userdata, font->height, &buffer[offset], sel_len);
+                selected_text_width = font->width(font->userdata, font->height,
+                    &buffer[offset], sel_len);
                 zr_draw_text(out , label, &buffer[offset],
                     sel_len, font, field->text, field->background);
 
@@ -5640,6 +5644,7 @@ zr_do_property(enum zr_widget_status *ws,
     if (old != ZR_PROPERTY_EDIT && active) {
         /* property has been activated so setup buffer */
         zr_memcopy(buffer, dst, *length);
+        *cursor = zr_utf_len(buffer, *length);
         *len = *length;
         length = len;
         dst = buffer;
@@ -5648,6 +5653,8 @@ zr_do_property(enum zr_widget_status *ws,
     *length = zr_widget_edit(out, edit, dst, *length,
         ZR_MAX_NUMBER_BUFFER, &active, cursor, &field, filter,
         (*state == ZR_PROPERTY_EDIT) ? in: 0, f);
+    if (active && zr_input_is_key_pressed(in, ZR_KEY_ENTER))
+        active = !active;
 
     if (old && !active) {
         /* property is now not active so convert edit text to value*/
