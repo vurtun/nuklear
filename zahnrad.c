@@ -9259,8 +9259,12 @@ zr_edit_buffer(struct zr_context *ctx, zr_flags flags,
     state = zr_edit_base(&bounds, &field, ctx);
     if (!state) return 0;
     i = (state == ZR_WIDGET_ROM || win->layout->flags & ZR_WINDOW_ROM) ? 0 : &ctx->input;
-    if (!(flags & ZR_EDIT_READ_ONLY))
+    if ((flags & ZR_EDIT_READ_ONLY)) {
+        field.modifiable = 0;
+        field.show_cursor = 0;
+    } else {
         field.modifiable = 1;
+    }
 
     /* check if edit is currently hot item */
     hash = win->edit.seq++;
@@ -9279,6 +9283,7 @@ zr_edit_buffer(struct zr_context *ctx, zr_flags flags,
     old_flags = (*active) ? ZR_EDIT_ACTIVE: ZR_EDIT_INACTIVE;
     if (!flags || flags == ZR_EDIT_CURSOR) {
         int old = *active;
+        i = (flags & ZR_EDIT_READ_ONLY) ? 0: i;
         if (!flags) {
             /* simple edit field with only appending and removing at the end of the buffer */
             buffer->allocated = zr_widget_edit(&win->buffer, bounds, buffer->memory.ptr,
@@ -9327,6 +9332,7 @@ zr_edit_buffer(struct zr_context *ctx, zr_flags flags,
             } else box.sel = *sel;
         }
 
+        i = (flags & ZR_EDIT_READ_ONLY) ? 0: i;
         if (flags & ZR_EDIT_MULTILINE)
             zr_widget_edit_box(&win->buffer, bounds, &box, &field, i, &ctx->style.font);
         else zr_widget_edit_field(&win->buffer, bounds, &box, &field, i, &ctx->style.font);
