@@ -9339,7 +9339,6 @@ zr_edit_buffer(struct zr_context *ctx, zr_flags flags,
             } else box.sel = *sel;
         }
 
-        i = (flags & ZR_EDIT_READ_ONLY) ? 0: i;
         if (flags & ZR_EDIT_MULTILINE)
             zr_widget_edit_box(&win->buffer, bounds, &box, &field, i, &ctx->style.font);
         else zr_widget_edit_field(&win->buffer, bounds, &box, &field, i, &ctx->style.font);
