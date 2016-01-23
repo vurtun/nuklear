@@ -4451,6 +4451,7 @@ zr_do_slider(enum zr_widget_status *state,
     slider.w = MAX(slider.w, 1 + slider.h + 2 * s->padding.x);
     slider.h -= 2 * s->padding.y;
     slider.w -= 2 * s->padding.y;
+
     slider_max = MAX(min, max);
     slider_min = MIN(min, max);
     slider_value = CLAMP(slider_min, val, slider_max);
@@ -9298,6 +9299,8 @@ zr_edit_buffer(struct zr_context *ctx, zr_flags flags,
                 filter, i, &ctx->style.font);
         } else {
             /* simple edit field cursor based movement, inserting and removing */
+            zr_size glyphs = zr_utf_len(buffer->memory.ptr, buffer->allocated);
+            *cursor = MIN(*cursor, glyphs);
             buffer->allocated = zr_widget_edit(&win->buffer, bounds, buffer->memory.ptr,
                 buffer->allocated, buffer->memory.size, active, cursor, &field,
                 filter, i, &ctx->style.font);
@@ -9321,17 +9324,17 @@ zr_edit_buffer(struct zr_context *ctx, zr_flags flags,
             zr_edit_box_init_buffer(&box, buffer, &ctx->clip, filter);
         else zr_edit_box_init_buffer(&box, buffer, 0, filter);
 
+        box.glyphs = zr_utf_len(buffer->memory.ptr, buffer->allocated);
         box.active = *active;
         box.filter = filter;
         box.scrollbar = *scroll;
-        box.glyphs = zr_utf_len(buffer->memory.ptr, buffer->allocated);
+        *cursor = MIN(box.glyphs, *cursor);
+        box.cursor = *cursor;
 
         if (!(flags & ZR_EDIT_CURSOR)) {
-            box.cursor = MIN(*cursor, box.glyphs);
             box.sel.begin = box.cursor;
             box.sel.end = box.cursor;
         } else {
-            box.cursor = *cursor;
             if (!(flags & ZR_EDIT_SELECTABLE)) {
                 box.sel.active = 0;
                 box.sel.begin = box.cursor;
