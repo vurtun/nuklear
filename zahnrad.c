@@ -2692,7 +2692,7 @@ zr_canvas_add_image(struct zr_canvas *list, struct zr_image texture,
 static void
 zr_canvas_add_text(struct zr_canvas *list, const struct zr_user_font *font,
     struct zr_rect rect, const char *text, zr_size len, float font_height,
-    struct zr_color color)
+    struct zr_color bg, struct zr_color fg)
 {
     float x, scale;
     zr_size text_len;
@@ -2709,6 +2709,7 @@ zr_canvas_add_text(struct zr_canvas *list, const struct zr_user_font *font,
         return;
 
     /* draw text background */
+    zr_canvas_add_rect(list, rect, bg, 0);
     zr_canvas_push_image(list, font->texture);
 
     /* draw every glyph image */
@@ -2731,7 +2732,7 @@ zr_canvas_add_text(struct zr_canvas *list, const struct zr_user_font *font,
         gw = g.width * scale; gh = g.height * scale;
         char_width = g.xadvance * scale;
         zr_canvas_push_rect_uv(list, zr_vec2(gx,gy), zr_vec2(gx + gw, gy+ gh),
-            g.uv[0], g.uv[1], color);
+            g.uv[0], g.uv[1], fg);
 
         /* offset next glyph */
         text_len += glyph_len;
@@ -2797,7 +2798,7 @@ zr_canvas_load(struct zr_canvas *list, struct zr_context *queue,
         case ZR_COMMAND_TEXT: {
             const struct zr_command_text *t = zr_command(text, cmd);
             zr_canvas_add_text(list, t->font, zr_rect(t->x, t->y, t->w, t->h),
-                t->string, t->length, t->height, t->foreground);
+                t->string, t->length, t->height, t->background, t->foreground);
         } break;
         case ZR_COMMAND_IMAGE: {
             const struct zr_command_image *i = zr_command(image, cmd);
@@ -4952,7 +4953,7 @@ zr_widget_edit_field(struct zr_command_buffer *out, struct zr_rect r,
 
                 /* draw selected text */
                 zr_draw_text(out , label, begin,
-                    MAX(l, off_end - off_begin), font, field->cursor, field->background);
+                    MAX(l, off_end - off_begin), font, field->text, field->background);
                 zr_draw_scissor(out, clip);
             }
         }
