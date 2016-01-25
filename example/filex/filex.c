@@ -819,12 +819,8 @@ main(int argc, char *argv[])
         int ret;
         SDL_Event evt;
         zr_input_begin(&ctx);
-        if (!poll) {
-            ret = SDL_WaitEvent(&evt);
-            poll = 1;
-        } else ret = SDL_PollEvent(&evt);
 
-        while (ret) {
+        while (SDL_PollEvent(&evt)) {
             if (evt.type == SDL_QUIT) goto cleanup;
             else if (evt.type == SDL_WINDOWEVENT) {
                 if (evt.window.event == SDL_WINDOWEVENT_RESIZED)
@@ -855,7 +851,6 @@ main(int argc, char *argv[])
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         draw(vg, &ctx, width, height);
         SDL_GL_SwapWindow(win);
-        poll = ((poll+1) & 4);
     }
 
 cleanup:

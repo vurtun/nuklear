@@ -765,12 +765,7 @@ main(int argc, char *argv[])
         started = SDL_GetTicks();
         zr_input_begin(&ctx);
 
-        if (!poll) {
-            ret = SDL_WaitEvent(&evt);
-            poll = 1;
-        } else ret = SDL_PollEvent(&evt);
-
-        while (ret) {
+        while (SDL_PollEvent(&evt)) {
             if (evt.type == SDL_WINDOWEVENT &&
                 evt.window.event == SDL_WINDOWEVENT_RESIZED)
                 glViewport(0, 0, evt.window.data1, evt.window.data2);
@@ -804,7 +799,6 @@ main(int argc, char *argv[])
         SDL_GetWindowSize(win, &width, &height);
         draw(vg, &ctx, width, height);
         SDL_GL_SwapWindow(win);
-        poll = ((poll+1) & 4);
     }
 
 cleanup:
