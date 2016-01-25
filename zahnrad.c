@@ -10426,7 +10426,7 @@ zr_combo_begin_text(struct zr_context *ctx, struct zr_layout *layout,
         label.w = header.w - (header.h + 2 * item_padding.x);
         label.h = header.h - 2 * item_padding.y;
         zr_draw_text(&win->buffer, label, selected, text_len, &ctx->style.font,
-                ctx->style.colors[ZR_COLOR_WINDOW], ctx->style.colors[ZR_COLOR_TEXT]);
+                ctx->style.colors[ZR_COLOR_COMBO], ctx->style.colors[ZR_COLOR_TEXT]);
 
         /* draw open/close symbol */
         bounds.y = label.y + label.h/2 - ctx->style.font.height/2;
