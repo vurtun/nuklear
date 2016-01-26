@@ -402,7 +402,7 @@ struct zr_font_glyph {
     /* unicode codepoint */
     float xadvance;
     /* xoffset to the next character  */
-    float x0, y0, x1, y1;
+    float x0, y0, x1, y1, w, h;
     /* glyph bounding points in pixel inside the glyph image with top
      * left and bottom right */
     float u0, v0, u1, v1;

@@ -25,7 +25,6 @@ If you have an idea for new features just [open an issue](https://github.com/vur
 ## Bugs
   * Seperator widget is currently bugged and does not work as intended
   * Text handling is still a little bit janky and probably needs to be further tested and polished
-  * Text pixel width is bugged at the moment if you edit text with enabled font baking and vertex buffer API.
   * `zr_edit_buffer` with multiline flag is bugged for '\n', need to differentiate between visible and non-visible characters
   * `zr_layout_space_xxx` with `ZR_DYNAMIC` currently does not work
 

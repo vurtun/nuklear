@@ -288,9 +288,15 @@ input_key(struct zr_context *ctx, ALLEGRO_EVENT *evt, int down)
         zr_input_key(ctx, ZR_KEY_DEL, down);
     else if (sym == ALLEGRO_KEY_ENTER)
         zr_input_key(ctx, ZR_KEY_ENTER, down);
-    else if (sym == ALLEGRO_KEY_TAB)
+    else if (sym == ALLEGRO_KEY_TAB) {
         zr_input_key(ctx, ZR_KEY_TAB, down);
-    else if (sym == ALLEGRO_KEY_BACKSPACE)
+        if (!down) {
+            zr_input_unicode(ctx, ' ');
+            zr_input_unicode(ctx, ' ');
+            zr_input_unicode(ctx, ' ');
+            zr_input_unicode(ctx, ' ');
+        }
+    } else if (sym == ALLEGRO_KEY_BACKSPACE)
         zr_input_key(ctx, ZR_KEY_BACKSPACE, down);
     else if (sym == ALLEGRO_KEY_LEFT)
         zr_input_key(ctx, ZR_KEY_LEFT, down);
