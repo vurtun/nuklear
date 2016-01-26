@@ -363,12 +363,6 @@ input_key(struct XWindow *xw, struct zr_context *ctx, XEvent *evt, int down)
         zr_input_key(ctx, ZR_KEY_ENTER, down);
     else if (*code == XK_Tab) {
         zr_input_key(ctx, ZR_KEY_TAB, down);
-        if (!down) {
-            zr_input_unicode(ctx, ' ');
-            zr_input_unicode(ctx, ' ');
-            zr_input_unicode(ctx, ' ');
-            zr_input_unicode(ctx, ' ');
-        }
     } else if (*code == XK_space && !down)
         zr_input_char(ctx, ' ');
     else if (*code == XK_Left)

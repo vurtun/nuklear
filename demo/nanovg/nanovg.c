@@ -173,15 +173,9 @@ input_key(struct zr_context *ctx, SDL_Event *evt, int down)
         zr_input_key(ctx, ZR_KEY_DEL, down);
     else if (sym == SDLK_RETURN)
         zr_input_key(ctx, ZR_KEY_ENTER, down);
-    else if (sym == SDLK_TAB) {
+    else if (sym == SDLK_TAB)
         zr_input_key(ctx, ZR_KEY_TAB, down);
-        if (!down) {
-            zr_input_unicode(ctx, ' ');
-            zr_input_unicode(ctx, ' ');
-            zr_input_unicode(ctx, ' ');
-            zr_input_unicode(ctx, ' ');
-        }
-    } else if (sym == SDLK_BACKSPACE)
+    else if (sym == SDLK_BACKSPACE)
         zr_input_key(ctx, ZR_KEY_BACKSPACE, down);
     else if (sym == SDLK_LEFT)
         zr_input_key(ctx, ZR_KEY_LEFT, down);

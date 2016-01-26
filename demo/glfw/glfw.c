@@ -384,16 +384,9 @@ input_key(GLFWwindow *window, int key, int scancode, int action, int mods)
     UNUSED(scancode);
     if (key == GLFW_KEY_RIGHT_SHIFT || key == GLFW_KEY_LEFT_SHIFT)
         zr_input_key(&gui.ctx, ZR_KEY_SHIFT, down);
-    else if (key == GLFW_KEY_TAB) {
+    else if (key == GLFW_KEY_TAB)
         zr_input_key(&gui.ctx, ZR_KEY_TAB, down);
-        /* because: reasons */
-        if (!down) {
-            zr_input_unicode(&gui.ctx, ' ');
-            zr_input_unicode(&gui.ctx, ' ');
-            zr_input_unicode(&gui.ctx, ' ');
-            zr_input_unicode(&gui.ctx, ' ');
-        }
-    } else if (key == GLFW_KEY_DELETE)
+    else if (key == GLFW_KEY_DELETE)
         zr_input_key(&gui.ctx, ZR_KEY_DEL, down);
     else if (key == GLFW_KEY_ENTER)
         zr_input_key(&gui.ctx, ZR_KEY_ENTER, down);
