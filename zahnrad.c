@@ -1379,37 +1379,6 @@ zr_user_font_glyphs_fitting_in_space(const struct zr_user_font *font,
         width = font->width(font->userdata, font->height, text, text_len);
     }
     return row_advance;
-
-#if 0
-    while ((width <= space) && (text_len <= len) && glyph_len) {
-        text_len -= glyph_len;
-        offset += glyph_len;
-        g++; l += glyph_len;
-
-        if (has_newline && (unicode == '\n' || unicode == '\r')) {
-            zr_rune next = 0;
-            zr_utf_decode(&text[offset], &next, text_len);
-            if (unicode == '\r') {
-                l--; g--;
-            } else if ((unicode == '\n') && (next == '\r')) {
-                l -= 2; g--;
-            } else {
-                l--; g--;
-            }
-            break;
-        }
-
-        last_width = width;
-        glyph_len = zr_utf_decode(&text[offset], &unicode, text_len);
-        s = font->width(font->userdata, font->height, &text[offset], glyph_len);
-        width += (float)s;
-    }
-
-    *glyphs = g;
-    *text_width = last_width;
-    *row_len = l;
-    return offset;
-#endif
 }
 
 /* ==============================================================
@@ -3422,18 +3391,6 @@ zr_font_text_width(zr_handle handle, float height, const char *text, zr_size len
         glyph_len = zr_utf_decode(text + text_len, &unicode, len - text_len);
         text_len += glyph_len;
     }
-
-#if 0
-    glyph_len = zr_utf_decode(text, &unicode, len);
-    while (text_len < len && glyph_len) {
-        const struct zr_font_glyph *glyph;
-        if (unicode == ZR_UTF_INVALID) return 0;
-        glyph = zr_font_find_glyph(font, unicode);
-        text_len += glyph_len;
-        text_width += (zr_size)((glyph->xadvance * scale));
-        glyph_len = zr_utf_decode(text + text_len, &unicode, len - text_len);
-    }
-#endif
     return (zr_size)text_width;
 }
 
