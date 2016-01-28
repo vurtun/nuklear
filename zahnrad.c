@@ -1913,7 +1913,7 @@ zr_canvas_init(struct zr_canvas *list)
 }
 
 static void
-zr_canvas_setup(struct zr_canvas *list, struct zr_buffer *cmds,
+zr_canvas_setup(struct zr_canvas *list, float global_alpha, struct zr_buffer *cmds,
     struct zr_buffer *vertexes, struct zr_buffer *elements,
     struct zr_draw_null_texture null,
     enum zr_anti_aliasing line_AA, enum zr_anti_aliasing shape_AA)
@@ -1925,6 +1925,7 @@ zr_canvas_setup(struct zr_canvas *list, struct zr_buffer *cmds,
     list->buffer = cmds;
     list->line_AA = line_AA;
     list->shape_AA = shape_AA;
+    list->global_alpha = global_alpha;
 }
 
 static void
@@ -2102,11 +2103,13 @@ zr_canvas_add_poly_line(struct zr_canvas *list, struct zr_vec2 *points,
 {
     zr_size count;
     int thick_line;
-    zr_draw_vertex_color col = zr_color32(color);
+    zr_draw_vertex_color col;
     ZR_ASSERT(list);
     if (!list) return;
     if (!list || points_count < 2) return;
 
+    color.a *= list->global_alpha;
+    col = zr_color32(color);
     count = points_count;
     if (!closed) count = points_count-1;
     thick_line = thickness > 1.0f;
@@ -2331,10 +2334,12 @@ zr_canvas_add_poly_convex(struct zr_canvas *list, struct zr_vec2 *points,
 {
     static const zr_size pnt_align = ZR_ALIGNOF(struct zr_vec2);
     static const zr_size pnt_size = sizeof(struct zr_vec2);
-    zr_draw_vertex_color col = zr_color32(color);
+    zr_draw_vertex_color col;
     ZR_ASSERT(list);
     if (!list || points_count < 3) return;
 
+    color.a *= list->global_alpha;
+    col = zr_color32(color);
     if (aliasing == ZR_ANTI_ALIASING_ON) {
         zr_size i = 0;
         zr_size i0 = 0, i1 = 0;
@@ -2730,6 +2735,7 @@ zr_canvas_add_text(struct zr_canvas *list, const struct zr_user_font *font,
         gy = rect.y + (rect.h/2) - (font->height/2) + g.offset.y;
         gw = g.width; gh = g.height;
         char_width = g.xadvance;
+        fg.a *= list->global_alpha;
         zr_canvas_push_rect_uv(list, zr_vec2(gx,gy), zr_vec2(gx + gw, gy+ gh),
             g.uv[0], g.uv[1], fg);
 
@@ -2814,7 +2820,7 @@ zr_convert(struct zr_context *ctx, struct zr_buffer *cmds,
     struct zr_buffer *vertexes, struct zr_buffer *elements,
     const struct zr_convert_config *config)
 {
-    zr_canvas_setup(&ctx->canvas, cmds, vertexes, elements,
+    zr_canvas_setup(&ctx->canvas, config->global_alpha, cmds, vertexes, elements,
         config->null, config->line_AA, config->shape_AA);
     zr_canvas_load(&ctx->canvas, ctx, config->line_thickness,
         config->circle_segment_count);
@@ -4243,6 +4249,7 @@ struct zr_toggle {
     struct zr_vec2 touch_pad;
     struct zr_vec2 padding;
     struct zr_color font;
+    struct zr_color font_background;
     struct zr_color background;
     struct zr_color normal;
     struct zr_color hover;
@@ -4321,7 +4328,7 @@ zr_toggle_draw(struct zr_command_buffer *out,
         /* draw text */
         text.padding.x = 0;
         text.padding.y = 0;
-        text.background = toggle->cursor;
+        text.background = toggle->font_background;
         text.text = toggle->font;
         zr_widget_text(out, inner, string, zr_strsiz(string),
                         &text, ZR_TEXT_LEFT, font);
@@ -9009,6 +9016,7 @@ zr_toggle_base(struct zr_toggle *toggle, struct zr_rect *bounds,
     toggle->padding.x = item_padding.x;
     toggle->padding.y = item_padding.y;
     toggle->font = config->colors[ZR_COLOR_TEXT];
+    toggle->font_background = config->colors[ZR_COLOR_WINDOW];
     return state;
 }
 

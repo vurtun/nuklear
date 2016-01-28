@@ -223,6 +223,7 @@ device_draw(struct device *dev, struct zr_context *ctx, enum zr_anti_aliasing AA
         /* fill converting configuration */
         struct zr_convert_config config;
         memset(&config, 0, sizeof(config));
+        config.global_alpha = 1.0f;
         config.shape_AA = AA;
         config.line_AA = AA;
         config.circle_segment_count = 22;

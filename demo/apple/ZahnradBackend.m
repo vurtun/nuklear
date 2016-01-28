@@ -455,6 +455,7 @@ static void mem_free(zr_handle unused, void* ptr)
         // fill converting configuration
         struct zr_convert_config config;
         memset(&config, 0, sizeof(config));
+        config.global_alpha = 1.0f;
         config.shape_AA = ZR_ANTI_ALIASING_ON;
         config.line_AA = ZR_ANTI_ALIASING_ON;
         config.circle_segment_count = 22;

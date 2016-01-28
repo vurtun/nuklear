@@ -1245,6 +1245,8 @@ struct zr_clipboard {
 };
 
 struct zr_canvas {
+    float global_alpha;
+    /* alpha modifier for all shapes */
     enum zr_anti_aliasing shape_AA;
     /* flag indicating if anti-aliasing should be used to render shapes */
     enum zr_anti_aliasing line_AA;
@@ -1348,6 +1350,8 @@ const struct zr_command* zr__begin(struct zr_context*);
 
 /* vertex command drawing */
 struct zr_convert_config {
+    float global_alpha;
+    /* global alpha modifier */
     float line_thickness;
     /* line thickness should generally default to 1*/
     enum zr_anti_aliasing line_AA;
