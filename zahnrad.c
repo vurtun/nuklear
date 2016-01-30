@@ -2741,7 +2741,7 @@ zr_canvas_add_image(struct zr_canvas *list, struct zr_image texture,
 static void
 zr_canvas_add_text(struct zr_canvas *list, const struct zr_user_font *font,
     struct zr_rect rect, const char *text, zr_size len, float font_height,
-    struct zr_color bg, struct zr_color fg)
+    struct zr_color fg)
 {
     float x;
     zr_size text_len;
@@ -2756,11 +2756,8 @@ zr_canvas_add_text(struct zr_canvas *list, const struct zr_user_font *font,
         rect.x < list->clip_rect.x || rect.y < list->clip_rect.y)
         return;
 
-    /* draw text background */
-    zr_canvas_add_rect(list, rect, bg, 0);
-    zr_canvas_push_image(list, font->texture);
-
     /* draw every glyph image */
+    zr_canvas_push_image(list, font->texture);
     x = rect.x;
     glyph_len = text_len = zr_utf_decode(text, &unicode, len);
     if (!glyph_len) return;
@@ -2847,7 +2844,7 @@ zr_canvas_load(struct zr_canvas *list, struct zr_context *queue,
         case ZR_COMMAND_TEXT: {
             const struct zr_command_text *t = zr_command(text, cmd);
             zr_canvas_add_text(list, t->font, zr_rect(t->x, t->y, t->w, t->h),
-                t->string, t->length, t->height, t->background, t->foreground);
+                t->string, t->length, t->height, t->foreground);
         } break;
         case ZR_COMMAND_IMAGE: {
             const struct zr_command_image *i = zr_command(image, cmd);
@@ -5036,6 +5033,7 @@ zr_widget_edit_field(struct zr_command_buffer *out, struct zr_rect r,
                 label.w = (float)s;
 
                 /* draw selected text */
+                zr_draw_rect(out, label, 0, field->text);
                 zr_draw_text(out , label, begin,
                     MAX(l, off_end - off_begin), font, field->text, field->background);
                 zr_draw_scissor(out, clip);
@@ -5066,7 +5064,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
     if (!out || !box || !field)
         return;
 
-    /* usable field space */
+    /* calculate usable field space */
     r.w = MAX(r.w, 2 * field->padding.x + 2 * field->border_size);
     r.h = MAX(r.h, font->height + (2 * field->padding.y + 2 * field->border_size));
 
@@ -5079,17 +5077,16 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
     zr_draw_rect(out, zr_shrink_rect(r, field->border_size),
         field->rounding, field->background);
 
-    /* check if edit field is big enough to show a single row */
+    /* check if edit box is big enough to show even a single row */
     visible_rows = (zr_size)(r.h - (2 * field->border_size + 2 * field->padding.y));
     visible_rows = (zr_size)((float)visible_rows / (font->height + field->padding.y));
     if (!visible_rows) return;
 
-    /* check if the editbox is activated/deactivated */
+    /* check if editbox is activated/deactivated */
     prev_state = box->active;
     if (in && in->mouse.buttons[ZR_BUTTON_LEFT].clicked &&
         in->mouse.buttons[ZR_BUTTON_LEFT].down)
         box->active = ZR_INBOX(in->mouse.pos.x,in->mouse.pos.y,r.x,r.y,r.w,r.h);
-
 
     /* input handling */
     if (box->active && in && field->modifiable)
