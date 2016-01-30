@@ -369,6 +369,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 static size_t prog_value = 40;
                 static float property_float = 2;
                 static int property_int = 10;
+                static int property_neg = 10;
 
                 static float range_float_min = 0;
                 static float range_float_max = 100;
@@ -401,6 +402,9 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 zr_property_float(ctx, "Float:", 0, &property_float, 64.0f, 0.1f, 0.2f);
                 zr_label(ctx, "Property int:", ZR_TEXT_LEFT);
                 zr_property_int(ctx, "Int:", 0, &property_int, 100.0f, 1, 1);
+                zr_label(ctx, "Property neg:", ZR_TEXT_LEFT);
+                zr_property_int(ctx, "Neg:", -10, &property_neg, 10, 1, 1);
+
 
                 zr_layout_row_dynamic(ctx, 25, 1);
                 zr_label(ctx, "Range:", ZR_TEXT_LEFT);
@@ -409,9 +413,9 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 zr_property_float(ctx, "#float:", range_float_min, &range_float_value, range_float_max, 1.0f, 0.2f);
                 zr_property_float(ctx, "#max:", range_float_min, &range_float_max, 100, 1.0f, 0.2f);
 
-                zr_property_int(ctx, "#min:", INT_MIN, &range_int_min, range_int_value, 1, 10);
-                zr_property_int(ctx, "#int:", range_int_min, &range_int_value, range_int_max, 1, 10);
-                zr_property_int(ctx, "#max:", range_int_value, &range_int_max, INT_MAX, 1, 10);
+                zr_property_int(ctx, "#min:", INT_MIN, &range_int_min, range_int_max, 1, 10);
+                zr_property_int(ctx, "#neg:", range_int_min, &range_int_value, range_int_max, 1, 10);
+                zr_property_int(ctx, "#max:", range_int_min, &range_int_max, INT_MAX, 1, 10);
 
                 zr_layout_pop(ctx);
             }
@@ -574,14 +578,13 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 zr_edit_string(ctx, ZR_EDIT_FIELD, field_buffer, &field_len, 64, zr_filter_default);
 
                 zr_label(ctx, "Box:", ZR_TEXT_LEFT);
-                zr_layout_row_static(ctx, 75, 278, 1);
+                zr_layout_row_static(ctx, 300, 278, 1);
                 zr_edit_string(ctx, ZR_EDIT_BOX, box_buffer, &box_len, 512, zr_filter_default);
 
                 zr_layout_row(ctx, ZR_STATIC, 25, 2, ratio);
-                active = zr_edit_string(ctx, ZR_EDIT_FIELD, text[7], &text_len[7], 64,  zr_filter_ascii);
-                if (zr_button_text(ctx, "Submit", ZR_BUTTON_DEFAULT)
-                    || ((active & ZR_EDIT_ACTIVE) &&
-                    zr_input_is_key_pressed(&ctx->input, ZR_KEY_ENTER)))
+                active = zr_edit_string(ctx, ZR_EDIT_FIELD|ZR_EDIT_SIGCOMIT, text[7], &text_len[7], 64,  zr_filter_ascii);
+                if (zr_button_text(ctx, "Submit", ZR_BUTTON_DEFAULT) ||
+                    (active & ZR_EDIT_COMMITED))
                 {
                     text[7][text_len[7]] = '\n';
                     text_len[7]++;

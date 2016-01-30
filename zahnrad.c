@@ -416,6 +416,9 @@ zr_vec2(float x, float y)
  *
  * ===============================================================
  */
+static int zr_str_match_here(const char *regexp, const char *text);
+static int zr_str_match_star(int c, const char *regexp, const char *text);
+
 static void*
 zr_memcopy(void *dst0, const void *src0, zr_size length)
 {
@@ -589,6 +592,48 @@ zr_strtof(float *number, const char *buffer)
     }
     *number = floatvalue;
     return 1;
+}
+
+static int
+zr_str_match_here(const char *regexp, const char *text)
+{
+    if (regexp[0] == '\0')
+        return 1;
+    if (regexp[1] == '*')
+        return zr_str_match_star(regexp[0], regexp+2, text);
+    if (regexp[0] == '$' && regexp[1] == '\0')
+        return *text == '\0';
+    if (*text!='\0' && (regexp[0]=='.' || regexp[0]==*text))
+        return zr_str_match_here(regexp+1, text+1);
+    return 0;
+}
+
+static int
+zr_str_match_star(int c, const char *regexp, const char *text)
+{
+    do {/* a '* matches zero or more instances */
+        if (zr_str_match_here(regexp, text))
+            return 1;
+    } while (*text != '\0' && (*text++ == c || c == '.'));
+    return 0;
+}
+
+static int
+zr_strfilter(const char *text, const char *regexp)
+{
+    /*
+    c    matches any literal character c
+    .    matches any single character
+    ^    matches the beginning of the input string
+    $    matches the end of the input string
+    *    matches zero or more occurrences of the previous character*/
+    if (regexp[0] == '^')
+        return zr_str_match_here(regexp+1, text);
+    do {    /* must look even if string is empty */
+        if (zr_str_match_here(regexp, text))
+            return 1;
+    } while (*text++ != '\0');
+    return 0;
 }
 
 static float
@@ -2105,7 +2150,6 @@ zr_canvas_add_poly_line(struct zr_canvas *list, struct zr_vec2 *points,
     int thick_line;
     zr_draw_vertex_color col;
     ZR_ASSERT(list);
-    if (!list) return;
     if (!list || points_count < 2) return;
 
     color.a *= list->global_alpha;
@@ -3643,7 +3687,7 @@ zr_edit_box_buffer_input(struct zr_edit_box *box, const struct zr_input *i)
     glyph_len = zr_utf_decode(i->keyboard.text, &unicode, i->keyboard.text_len);
     while (glyph_len && ((text_len+glyph_len) <= i->keyboard.text_len)) {
         /* filter to make sure the value is correct */
-        if (box->filter(unicode)) {
+        if (box->filter(box, unicode)) {
             zr_edit_box_add(box, &i->keyboard.text[text_len], glyph_len);
             text_len += glyph_len;
             glyphs++;
@@ -3706,6 +3750,30 @@ zr_edit_box_remove(struct zr_edit_box *box)
         box->cursor--;
 }
 
+int
+zr_edit_box_has_selection(const struct zr_edit_box *eb)
+{
+    ZR_ASSERT(eb);
+    if (!eb) return 0;
+    return (int)(eb->sel.end - eb->sel.begin);
+}
+
+const char*
+zr_edit_box_get_selection(zr_size *len, struct zr_edit_box *eb)
+{
+    zr_size l;
+    const char *begin;
+    zr_rune unicode;
+    ZR_ASSERT(eb);
+    ZR_ASSERT(len);
+    if (!eb || !len || !(eb->sel.end - eb->sel.begin))
+        return 0;
+
+    begin =  zr_edit_buffer_at(&eb->buffer, (int)eb->sel.begin, &unicode, &l);
+    *len = (eb->sel.end - eb->sel.begin) + 1;
+    return begin;
+}
+
 char*
 zr_edit_box_get(struct zr_edit_box *eb)
 {
@@ -3715,7 +3783,7 @@ zr_edit_box_get(struct zr_edit_box *eb)
 }
 
 const char*
-zr_edit_box_get_const(struct zr_edit_box *eb)
+zr_edit_box_get_const(const struct zr_edit_box *eb)
 {
     ZR_ASSERT(eb);
     if (!eb) return 0;
@@ -5389,35 +5457,39 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
     }
 }
 
-int zr_filter_default(zr_rune unicode)
-{(void)unicode;return zr_true;}
+int zr_filter_default(const struct zr_edit_box *box, zr_rune unicode)
+{(void)unicode;ZR_UNUSED(box);return zr_true;}
 
 int
-zr_filter_ascii(zr_rune unicode)
+zr_filter_ascii(const struct zr_edit_box *box, zr_rune unicode)
 {
+    ZR_UNUSED(box);
     if (unicode > 128) return zr_false;
     else return zr_true;
 }
 
 int
-zr_filter_float(zr_rune unicode)
+zr_filter_float(const struct zr_edit_box *box, zr_rune unicode)
 {
+    ZR_UNUSED(box);
     if ((unicode < '0' || unicode > '9') && unicode != '.' && unicode != '-')
         return zr_false;
     else return zr_true;
 }
 
 int
-zr_filter_decimal(zr_rune unicode)
+zr_filter_decimal(const struct zr_edit_box *box, zr_rune unicode)
 {
+    ZR_UNUSED(box);
     if (unicode < '0' || unicode > '9')
         return zr_false;
     else return zr_true;
 }
 
 int
-zr_filter_hex(zr_rune unicode)
+zr_filter_hex(const struct zr_edit_box *box, zr_rune unicode)
 {
+    ZR_UNUSED(box);
     if ((unicode < '0' || unicode > '9') &&
         (unicode < 'a' || unicode > 'f') &&
         (unicode < 'A' || unicode > 'F'))
@@ -5426,17 +5498,19 @@ zr_filter_hex(zr_rune unicode)
 }
 
 int
-zr_filter_oct(zr_rune unicode)
+zr_filter_oct(const struct zr_edit_box *box, zr_rune unicode)
 {
+    ZR_UNUSED(box);
     if (unicode < '0' || unicode > '7')
         return zr_false;
     else return zr_true;
 }
 
 int
-zr_filter_binary(zr_rune unicode)
+zr_filter_binary(const struct zr_edit_box *box, zr_rune unicode)
 {
-    if (unicode < '0' || unicode > '1')
+    ZR_UNUSED(box);
+    if (unicode != '0' && unicode != '1')
         return zr_false;
     else return zr_true;
 }
@@ -9378,8 +9452,14 @@ zr_edit_buffer(struct zr_context *ctx, zr_flags flags,
         }
     }
 
+    if (*active && (flags & ZR_EDIT_SIGCOMIT) &&
+        zr_input_is_key_pressed(i, ZR_KEY_ENTER)) {
+        ret_flags |= ZR_EDIT_SIGCOMIT;
+        *active = 0;
+    }
+
     /* compress edit widget state and state changes into flags */
-    ret_flags = (*active) ? ZR_EDIT_ACTIVE: ZR_EDIT_INACTIVE;
+    ret_flags |= (*active) ? ZR_EDIT_ACTIVE: ZR_EDIT_INACTIVE;
     if (old_flags == ZR_EDIT_INACTIVE && ret_flags & ZR_EDIT_ACTIVE)
         ret_flags |= ZR_EDIT_ACTIVATED;
     else if (old_flags == ZR_EDIT_ACTIVE && ret_flags & ZR_EDIT_INACTIVE)

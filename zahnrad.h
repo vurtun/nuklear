@@ -118,6 +118,9 @@ struct zr_user_font_glyph;
 /* ===============================================================
  *                          UTILITY
  * ===============================================================*/
+#define ZR_UNDEFINED (-1.0f)
+#define ZR_FLAG(x) (1 << (x))
+
 enum {zr_false, zr_true};
 struct zr_color {zr_byte r,g,b,a;};
 struct zr_vec2 {float x,y;};
@@ -939,26 +942,61 @@ struct zr_style {
 /*===============================================================
  *                          EDIT BOX
  * ===============================================================*/
-typedef int(*zr_filter)(zr_rune unicode);
+typedef int(*zr_filter)(const struct zr_edit_box*, zr_rune unicode);
 typedef void(*zr_paste_f)(zr_handle, struct zr_edit_box*);
 typedef void(*zr_copy_f)(zr_handle, const char*, zr_size size);
 
 /* filter function */
-int zr_filter_default(zr_rune unicode);
-int zr_filter_ascii(zr_rune unicode);
-int zr_filter_float(zr_rune unicode);
-int zr_filter_decimal(zr_rune unicode);
-int zr_filter_hex(zr_rune unicode);
-int zr_filter_oct(zr_rune unicode);
-int zr_filter_binary(zr_rune unicode);
+struct zr_edit_box;
+int zr_filter_default(const struct zr_edit_box*, zr_rune unicode);
+int zr_filter_ascii(const struct zr_edit_box*, zr_rune unicode);
+int zr_filter_float(const struct zr_edit_box*, zr_rune unicode);
+int zr_filter_decimal(const struct zr_edit_box*, zr_rune unicode);
+int zr_filter_hex(const struct zr_edit_box*, zr_rune unicode);
+int zr_filter_oct(const struct zr_edit_box*, zr_rune unicode);
+int zr_filter_binary(const struct zr_edit_box*, zr_rune unicode);
+
+enum zr_edit_flags {
+    ZR_EDIT_READ_ONLY   = ZR_FLAG(0),
+    /* text inside the edit widget cannot be modified */
+    ZR_EDIT_CURSOR      = ZR_FLAG(1),
+    /* edit widget will have a movable cursor */
+    ZR_EDIT_SELECTABLE  = ZR_FLAG(2),
+    /* edit widget allows text selection */
+    ZR_EDIT_CLIPBOARD   = ZR_FLAG(3),
+    /* edit widget tries to use the clipbard callback for copy & paste */
+    ZR_EDIT_SIGCOMIT    = ZR_FLAG(4),
+    /* edit widget generateds ZR_EDIT_COMMITED event on enter */
+    ZR_EDIT_MULTILINE   = ZR_FLAG(5)
+    /* edit widget with text wrapping text editing */
+};
+
+enum zr_edit_types {
+    ZR_EDIT_SIMPLE = 0,
+    ZR_EDIT_FIELD = (ZR_EDIT_CURSOR|ZR_EDIT_SELECTABLE|ZR_EDIT_CLIPBOARD),
+    ZR_EDIT_BOX = (ZR_EDIT_CURSOR|ZR_EDIT_SELECTABLE|
+                   ZR_EDIT_CLIPBOARD|ZR_EDIT_MULTILINE)
+};
+
+enum zr_edit_events {
+    ZR_EDIT_ACTIVE      = ZR_FLAG(0),
+    /* edit widget is currently being modified */
+    ZR_EDIT_INACTIVE    = ZR_FLAG(1),
+    /* edit widget is not active and is not being modified */
+    ZR_EDIT_ACTIVATED   = ZR_FLAG(2),
+    /* edit widget went from state inactive to state active */
+    ZR_EDIT_DEACTIVATED = ZR_FLAG(3),
+    /* edit widget went from state active to state inactive */
+    ZR_EDIT_COMMITED    = ZR_FLAG(4)
+    /* edit widget has received an enter and lost focus */
+};
 
 /* editbox */
-struct zr_edit_box;
 void zr_edit_box_clear(struct zr_edit_box*);
 void zr_edit_box_add(struct zr_edit_box*, const char*, zr_size);
 void zr_edit_box_remove(struct zr_edit_box*);
 char *zr_edit_box_get(struct zr_edit_box*);
-const char *zr_edit_box_get_const(struct zr_edit_box*);
+const char *zr_edit_box_get_const(const struct zr_edit_box*);
 void zr_edit_box_at(struct zr_edit_box*, zr_size pos, zr_glyph, zr_size*);
 void zr_edit_box_at_cursor(struct zr_edit_box*, zr_glyph, zr_size*);
 char zr_edit_box_at_char(struct zr_edit_box*, zr_size pos);
@@ -966,12 +1004,12 @@ void zr_edit_box_set_cursor(struct zr_edit_box*, zr_size pos);
 zr_size zr_edit_box_get_cursor(struct zr_edit_box *eb);
 zr_size zr_edit_box_len_char(struct zr_edit_box*);
 zr_size zr_edit_box_len(struct zr_edit_box*);
+int zr_edit_box_has_selection(const struct zr_edit_box*);
+const char *zr_edit_box_get_selection(zr_size *len, struct zr_edit_box*);
 
 /*==============================================================
  *                          WINDOW
  * =============================================================*/
-#define ZR_UNDEFINED (-1.0f)
-#define ZR_FLAG(x) (1 << (x))
 
 enum zr_modify {
     ZR_FIXED = zr_false,
@@ -1033,37 +1071,6 @@ enum zr_button_behavior {
     /* default push button behavior */
     ZR_BUTTON_REPEATER
     /* repeater behavior will trigger as long as button is down */
-};
-
-enum zr_edit_flags {
-    ZR_EDIT_READ_ONLY   = ZR_FLAG(0),
-    /* text inside the edit widget cannot be modified */
-    ZR_EDIT_CURSOR      = ZR_FLAG(1),
-    /* edit widget will have a movable cursor */
-    ZR_EDIT_SELECTABLE  = ZR_FLAG(2),
-    /* edit widget allows text selection */
-    ZR_EDIT_CLIPBOARD   = ZR_FLAG(3),
-    /* edit widget tries to use the clipbard callback for copy & paste */
-    ZR_EDIT_MULTILINE   = ZR_FLAG(4)
-    /* edit widget with text wrapping text editing */
-};
-
-enum zr_edit_types {
-    ZR_EDIT_SIMPLE = 0,
-    ZR_EDIT_FIELD = (ZR_EDIT_CURSOR|ZR_EDIT_SELECTABLE|ZR_EDIT_CLIPBOARD),
-    ZR_EDIT_BOX = (ZR_EDIT_CURSOR|ZR_EDIT_SELECTABLE|
-                   ZR_EDIT_CLIPBOARD|ZR_EDIT_MULTILINE)
-};
-
-enum zr_edit_return_flags {
-    ZR_EDIT_ACTIVE      = ZR_FLAG(0),
-    /* edit widget is currently being modified */
-    ZR_EDIT_INACTIVE    = ZR_FLAG(1),
-    /* edit widget is not active and is not being modified */
-    ZR_EDIT_ACTIVATED   = ZR_FLAG(2),
-    /* edit widget went from state inactive to state active */
-    ZR_EDIT_DEACTIVATED = ZR_FLAG(3)
-    /* edit widget went from state active to state inactive */
 };
 
 enum zr_chart_type {
@@ -1516,7 +1523,7 @@ int zr_propertyi(struct zr_context *layout, const char *name, int min, int val,
 
 /* text manipulation */
 zr_flags zr_edit_string(struct zr_context*, zr_flags, char *buffer, zr_size *len,
-                    zr_size max, zr_filter);
+                        zr_size max, zr_filter);
 zr_flags zr_edit_buffer(struct zr_context*, zr_flags, struct zr_buffer*, zr_filter);
 
 /* simple chart */
