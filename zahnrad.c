@@ -424,8 +424,8 @@ zr_memcopy(void *dst0, const void *src0, zr_size length)
 {
     zr_ptr t;
     typedef int word;
-    char *dst = dst0;
-    const char *src = src0;
+    char *dst = (char*)dst0;
+    const char *src = (const char*)src0;
     if (length == 0 || dst == src)
         goto done;
 
@@ -5178,16 +5178,19 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
         box->text_inserted = 0;
     }
 
-    if (in && field->show_cursor && in->mouse.buttons[ZR_BUTTON_LEFT].down && box->active) {
+    if (in && field->show_cursor && in->mouse.buttons[ZR_BUTTON_LEFT].down && box->active)
+    {
         /* text selection */
         const char *visible = buffer;
         float xoff = in->mouse.pos.x - (r.x + field->padding.x + field->border_size);
         float yoff = in->mouse.pos.y - (r.y + field->padding.y + field->border_size);
 
         int in_space = (xoff >= 0 && xoff < total_width);
-        int in_region = (box->sel.active && yoff < 0) || (yoff >= 0 && yoff < total_height);
+        int in_region = (box->sel.active && yoff < 0) ||
+            (yoff >= 0 && yoff < total_height);
 
-        if (ZR_INBOX(in->mouse.pos.x, in->mouse.pos.y, r.x, r.y, r.w, r.h) && in_space && in_region)
+        if (ZR_INBOX(in->mouse.pos.x, in->mouse.pos.y, r.x, r.y, r.w, r.h) &&
+            in_space && in_region)
         {
             zr_size row;
             zr_size glyph_index = 0, glyph_pos = 0;
@@ -5203,7 +5206,8 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                 int off = ((int)yoff + (int)box->scrollbar - (int)row_height);
                 int next_row =  off / (int)row_height;
                 row = (next_row < 0) ? 0 : (zr_size)next_row;
-            } else row = (zr_size)((yoff + box->scrollbar) / (font->height + field->padding.y));
+            } else row = (zr_size)((yoff + box->scrollbar)/
+                    (font->height + field->padding.y));
 
             /* find selected row */
             if (text_len) {
