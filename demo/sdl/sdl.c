@@ -306,7 +306,7 @@ device_draw(struct device *dev, struct zr_context *ctx, int width, int height,
     {
         /* convert from command queue into draw list and draw to screen */
         const struct zr_draw_command *cmd;
-        void *vertexes, *elements;
+        void *vertices, *elements;
         const zr_draw_index *offset = NULL;
 
         /* allocate vertex and element buffer */
@@ -317,8 +317,8 @@ device_draw(struct device *dev, struct zr_context *ctx, int width, int height,
         glBufferData(GL_ARRAY_BUFFER, MAX_VERTEX_MEMORY, NULL, GL_STREAM_DRAW);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, MAX_ELEMENT_MEMORY, NULL, GL_STREAM_DRAW);
 
-        /* load draw vertexes & elements directly into vertex + element buffer */
-        vertexes = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+        /* load draw vertices & elements directly into vertex + element buffer */
+        vertices = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
         elements = glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
         {
             struct zr_buffer vbuf, ebuf;
@@ -333,8 +333,8 @@ device_draw(struct device *dev, struct zr_context *ctx, int width, int height,
             config.line_thickness = 1.0f;
             config.null = dev->null;
 
-            /* setup buffers to load vertexes and elements */
-            zr_buffer_init_fixed(&vbuf, vertexes, MAX_VERTEX_MEMORY);
+            /* setup buffers to load vertices and elements */
+            zr_buffer_init_fixed(&vbuf, vertices, MAX_VERTEX_MEMORY);
             zr_buffer_init_fixed(&ebuf, elements, MAX_ELEMENT_MEMORY);
             zr_convert(ctx, &dev->cmds, &vbuf, &ebuf, &config);
         }

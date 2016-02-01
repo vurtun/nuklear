@@ -1264,14 +1264,14 @@ struct zr_canvas {
     /* current clipping rectangle */
     struct zr_buffer *buffer;
     /* buffer to store draw commands and temporarily store path */
-    struct zr_buffer *vertexes;
+    struct zr_buffer *vertices;
     /* buffer to store each draw vertex */
     struct zr_buffer *elements;
     /* buffer to store each draw element index */
     unsigned int element_count;
     /* total number of elements inside the elements buffer */
     unsigned int vertex_count;
-    /* total number of vertexes inside the vertex buffer */
+    /* total number of vertices inside the vertex buffer */
     zr_size cmd_offset;
     /* offset to the first command in the buffer */
     unsigned int cmd_count;
@@ -1372,7 +1372,7 @@ struct zr_convert_config {
 };
 
 void zr_convert(struct zr_context*, struct zr_buffer *cmds,
-                struct zr_buffer *vertexes, struct zr_buffer *elements,
+                struct zr_buffer *vertices, struct zr_buffer *elements,
                 const struct zr_convert_config*);
 #define zr_draw_foreach(cmd,ctx, b)\
     for((cmd)=zr__draw_begin(ctx, b); (cmd)!=0; (cmd)=zr__draw_next(cmd, b, ctx))

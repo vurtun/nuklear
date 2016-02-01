@@ -1959,13 +1959,13 @@ zr_canvas_init(struct zr_canvas *list)
 
 static void
 zr_canvas_setup(struct zr_canvas *list, float global_alpha, struct zr_buffer *cmds,
-    struct zr_buffer *vertexes, struct zr_buffer *elements,
+    struct zr_buffer *vertices, struct zr_buffer *elements,
     struct zr_draw_null_texture null,
     enum zr_anti_aliasing line_AA, enum zr_anti_aliasing shape_AA)
 {
     list->null = null;
     list->clip_rect = zr_null_rect;
-    list->vertexes = vertexes;
+    list->vertices = vertices;
     list->elements = elements;
     list->buffer = cmds;
     list->line_AA = line_AA;
@@ -1981,8 +1981,8 @@ zr_canvas_clear(struct zr_canvas *list)
     if (list->buffer)
         zr_buffer_clear(list->buffer);
     if (list->elements)
-        zr_buffer_clear(list->vertexes);
-    if (list->vertexes)
+        zr_buffer_clear(list->vertices);
+    if (list->vertices)
         zr_buffer_clear(list->elements);
 
     list->element_count = 0;
@@ -1990,7 +1990,7 @@ zr_canvas_clear(struct zr_canvas *list)
     list->cmd_offset = 0;
     list->cmd_count = 0;
     list->path_count = 0;
-    list->vertexes = 0;
+    list->vertices = 0;
     list->elements = 0;
     list->clip_rect = zr_null_rect;
 }
@@ -2097,7 +2097,7 @@ zr_canvas_push_image(struct zr_canvas *list, zr_handle texture)
 }
 
 static struct zr_draw_vertex*
-zr_canvas_alloc_vertexes(struct zr_canvas *list, zr_size count)
+zr_canvas_alloc_vertices(struct zr_canvas *list, zr_size count)
 {
     struct zr_draw_vertex *vtx;
     static const zr_size vtx_align = ZR_ALIGNOF(struct zr_draw_vertex);
@@ -2106,7 +2106,7 @@ zr_canvas_alloc_vertexes(struct zr_canvas *list, zr_size count)
     if (!list) return 0;
 
     vtx = (struct zr_draw_vertex*)
-        zr_buffer_alloc(list->vertexes, ZR_BUFFER_FRONT, vtx_size*count, vtx_align);
+        zr_buffer_alloc(list->vertices, ZR_BUFFER_FRONT, vtx_size*count, vtx_align);
     if (!vtx) return 0;
     list->vertex_count += (unsigned int)count;
     return vtx;
@@ -2165,12 +2165,12 @@ zr_canvas_add_poly_line(struct zr_canvas *list, struct zr_vec2 *points,
         static const zr_size pnt_size = sizeof(struct zr_vec2);
         const zr_draw_vertex_color col_trans = col & 0x00ffffff;
 
-        /* allocate vertexes and elements  */
+        /* allocate vertices and elements  */
         zr_size i1 = 0;
         zr_size index = list->vertex_count;
         const zr_size idx_count = (thick_line) ?  (count * 18) : (count * 12);
         const zr_size vtx_count = (thick_line) ? (points_count * 4): (points_count *3);
-        struct zr_draw_vertex *vtx = zr_canvas_alloc_vertexes(list, vtx_count);
+        struct zr_draw_vertex *vtx = zr_canvas_alloc_vertices(list, vtx_count);
         zr_draw_index *ids = zr_canvas_alloc_elements(list, idx_count);
 
         zr_size size;
@@ -2178,10 +2178,10 @@ zr_canvas_add_poly_line(struct zr_canvas *list, struct zr_vec2 *points,
         if (!vtx || !ids) return;
 
         /* temporary allocate normals + points */
-        zr_buffer_mark(list->vertexes, ZR_BUFFER_FRONT);
+        zr_buffer_mark(list->vertices, ZR_BUFFER_FRONT);
         size = pnt_size * ((thick_line) ? 5 : 3) * points_count;
         normals = (struct zr_vec2*)
-            zr_buffer_alloc(list->vertexes, ZR_BUFFER_FRONT, size, pnt_align);
+            zr_buffer_alloc(list->vertices, ZR_BUFFER_FRONT, size, pnt_align);
         if (!normals) return;
         temp = normals + points_count;
 
@@ -2247,7 +2247,7 @@ zr_canvas_add_poly_line(struct zr_canvas *list, struct zr_vec2 *points,
                 idx1 = idx2;
             }
 
-            /* fill vertexes */
+            /* fill vertices */
             for (i = 0; i < points_count; ++i) {
                 const struct zr_vec2 uv = list->null.uv;
                 vtx[0] = zr_draw_vertex(points[i], uv, col);
@@ -2313,7 +2313,7 @@ zr_canvas_add_poly_line(struct zr_canvas *list, struct zr_vec2 *points,
                 idx1 = idx2;
             }
 
-            /* add vertexes */
+            /* add vertices */
             for (i = 0; i < points_count; ++i) {
                 const struct zr_vec2 uv = list->null.uv;
                 vtx[0] = zr_draw_vertex(temp[i*4+0], uv, col_trans);
@@ -2325,14 +2325,14 @@ zr_canvas_add_poly_line(struct zr_canvas *list, struct zr_vec2 *points,
         }
 
         /* free temporary normals + points */
-        zr_buffer_reset(list->vertexes, ZR_BUFFER_FRONT);
+        zr_buffer_reset(list->vertices, ZR_BUFFER_FRONT);
     } else {
         /* NON ANTI-ALIASED STROKE */
         zr_size i1 = 0;
         zr_size idx = list->vertex_count;
         const zr_size idx_count = count * 6;
         const zr_size vtx_count = count * 4;
-        struct zr_draw_vertex *vtx = zr_canvas_alloc_vertexes(list, vtx_count);
+        struct zr_draw_vertex *vtx = zr_canvas_alloc_vertices(list, vtx_count);
         zr_draw_index *ids = zr_canvas_alloc_elements(list, idx_count);
         if (!vtx || !ids) return;
 
@@ -2352,7 +2352,7 @@ zr_canvas_add_poly_line(struct zr_canvas *list, struct zr_vec2 *points,
             else len = 1.0f;
             diff = zr_vec2_muls(diff, len);
 
-            /* add vertexes */
+            /* add vertices */
             dx = diff.x * (thickness * 0.5f);
             dy = diff.y * (thickness * 0.5f);
 
@@ -2393,7 +2393,7 @@ zr_canvas_add_poly_convex(struct zr_canvas *list, struct zr_vec2 *points,
         zr_size index = list->vertex_count;
         const zr_size idx_count = (points_count-2)*3 + points_count*6;
         const zr_size vtx_count = (points_count*2);
-        struct zr_draw_vertex *vtx = zr_canvas_alloc_vertexes(list, vtx_count);
+        struct zr_draw_vertex *vtx = zr_canvas_alloc_vertices(list, vtx_count);
         zr_draw_index *ids = zr_canvas_alloc_elements(list, idx_count);
 
         unsigned int vtx_inner_idx = (unsigned int)(index + 0);
@@ -2403,10 +2403,10 @@ zr_canvas_add_poly_convex(struct zr_canvas *list, struct zr_vec2 *points,
         if (!vtx || !ids) return;
 
         /* temporary allocate normals */
-        zr_buffer_mark(list->vertexes, ZR_BUFFER_FRONT);
+        zr_buffer_mark(list->vertices, ZR_BUFFER_FRONT);
         size = pnt_size * points_count;
         normals = (struct zr_vec2*)
-            zr_buffer_alloc(list->vertexes, ZR_BUFFER_FRONT, size, pnt_align);
+            zr_buffer_alloc(list->vertices, ZR_BUFFER_FRONT, size, pnt_align);
         if (!normals) return;
 
         /* add elements */
@@ -2434,7 +2434,7 @@ zr_canvas_add_poly_convex(struct zr_canvas *list, struct zr_vec2 *points,
             normals[i0].y = -diff.x;
         }
 
-        /* add vertexes + indexes */
+        /* add vertices + indexes */
         for (i0 = points_count-1, i1 = 0; i1 < points_count; i0 = i1++) {
             const struct zr_vec2 uv = list->null.uv;
             struct zr_vec2 n0 = normals[i0];
@@ -2449,7 +2449,7 @@ zr_canvas_add_poly_convex(struct zr_canvas *list, struct zr_vec2 *points,
             }
             dm = zr_vec2_muls(dm, AA_SIZE * 0.5f);
 
-            /* add vertexes */
+            /* add vertices */
             vtx[0] = zr_draw_vertex(zr_vec2_sub(points[i1], dm), uv, col);
             vtx[1] = zr_draw_vertex(zr_vec2_add(points[i1], dm), uv, col_trans);
             vtx += 2;
@@ -2464,13 +2464,13 @@ zr_canvas_add_poly_convex(struct zr_canvas *list, struct zr_vec2 *points,
             ids += 6;
         }
         /* free temporary normals + points */
-        zr_buffer_reset(list->vertexes, ZR_BUFFER_FRONT);
+        zr_buffer_reset(list->vertices, ZR_BUFFER_FRONT);
     } else {
         zr_size i = 0;
         zr_size index = list->vertex_count;
         const zr_size idx_count = (points_count-2)*3;
         const zr_size vtx_count = points_count;
-        struct zr_draw_vertex *vtx = zr_canvas_alloc_vertexes(list, vtx_count);
+        struct zr_draw_vertex *vtx = zr_canvas_alloc_vertices(list, vtx_count);
         zr_draw_index *ids = zr_canvas_alloc_elements(list, idx_count);
         if (!vtx || !ids) return;
         for (i = 0; i < vtx_count; ++i) {
@@ -2702,7 +2702,7 @@ zr_canvas_push_rect_uv(struct zr_canvas *list, struct zr_vec2 a,
     d = zr_vec2(a.x, c.y);
 
     index = (zr_draw_index)list->vertex_count;
-    vtx = zr_canvas_alloc_vertexes(list, 4);
+    vtx = zr_canvas_alloc_vertices(list, 4);
     idx = zr_canvas_alloc_elements(list, 6);
     if (!vtx || !idx) return;
 
@@ -2794,11 +2794,11 @@ zr_canvas_load(struct zr_canvas *list, struct zr_context *queue,
 {
     const struct zr_command *cmd;
     ZR_ASSERT(list);
-    ZR_ASSERT(list->vertexes);
+    ZR_ASSERT(list->vertices);
     ZR_ASSERT(list->elements);
     ZR_ASSERT(queue);
     line_thickness = MAX(line_thickness, 1.0f);
-    if (!list || !queue || !list->vertexes || !list->elements) return;
+    if (!list || !queue || !list->vertices || !list->elements) return;
 
     zr_foreach(cmd, queue) {
         switch (cmd->type) {
@@ -2858,10 +2858,10 @@ zr_canvas_load(struct zr_canvas *list, struct zr_context *queue,
 
 void
 zr_convert(struct zr_context *ctx, struct zr_buffer *cmds,
-    struct zr_buffer *vertexes, struct zr_buffer *elements,
+    struct zr_buffer *vertices, struct zr_buffer *elements,
     const struct zr_convert_config *config)
 {
-    zr_canvas_setup(&ctx->canvas, config->global_alpha, cmds, vertexes, elements,
+    zr_canvas_setup(&ctx->canvas, config->global_alpha, cmds, vertices, elements,
         config->null, config->line_AA, config->shape_AA);
     zr_canvas_load(&ctx->canvas, ctx, config->line_thickness,
         config->circle_segment_count);
