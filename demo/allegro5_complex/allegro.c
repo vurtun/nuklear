@@ -217,7 +217,7 @@ device_draw(struct device *dev, struct zr_context *ctx, enum zr_anti_aliasing AA
         const struct zr_draw_command *cmd;
         struct zr_buffer vbuf, ebuf;
         int offset = 0;
-        struct allegro_vertex *vertexes = 0;
+        struct allegro_vertex *vertices = 0;
         int *indicies = 0;
 
         /* fill converting configuration */
@@ -239,13 +239,13 @@ device_draw(struct device *dev, struct zr_context *ctx, enum zr_anti_aliasing AA
             /* <sign> allegro does not support 32-bit packed color */
             unsigned int i = 0;
             struct zr_draw_vertex *verts = (struct zr_draw_vertex*)dev->vertex_buffer;
-            vertexes = calloc(sizeof(struct allegro_vertex), ctx->canvas.vertex_count);
+            vertices = calloc(sizeof(struct allegro_vertex), ctx->canvas.vertex_count);
             for (i = 0; i < ctx->canvas.vertex_count; ++i) {
                 zr_byte *c;
-                vertexes[i].pos = verts[i].position;
-                vertexes[i].uv = verts[i].uv;
+                vertices[i].pos = verts[i].position;
+                vertices[i].uv = verts[i].uv;
                 c = (zr_byte*)&verts[i].col;
-                vertexes[i].col = al_map_rgba(c[0], c[1], c[2], c[3]);
+                vertices[i].col = al_map_rgba(c[0], c[1], c[2], c[3]);
             }
         }
         {
@@ -265,12 +265,12 @@ device_draw(struct device *dev, struct zr_context *ctx, enum zr_anti_aliasing AA
             if (!cmd->elem_count) continue;
             al_set_clipping_rectangle((int)cmd->clip_rect.x, (int)cmd->clip_rect.y,
                 (int)cmd->clip_rect.w, (int)cmd->clip_rect.h);
-            al_draw_indexed_prim(vertexes, dev->vertex_decl, texture, &indicies[offset],
+            al_draw_indexed_prim(vertices, dev->vertex_decl, texture, &indicies[offset],
                 (int)cmd->elem_count, ALLEGRO_PRIM_TRIANGLE_LIST);
             offset += cmd->elem_count;
         }
 
-        free(vertexes);
+        free(vertices);
         free(indicies);
         zr_clear(ctx);
     }
