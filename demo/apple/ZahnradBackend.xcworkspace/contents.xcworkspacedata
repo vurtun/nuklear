@@ -8,6 +8,9 @@
       location = "group:iOS_GL_ES.xcodeproj">
    </FileRef>
    <FileRef
+      location = "group:iOS_CoreGraphics.xcodeproj">
+   </FileRef>
+   <FileRef
       location = "group:tvOS_GL_ES.xcodeproj">
    </FileRef>
 </Workspace>
