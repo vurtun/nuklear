@@ -92,9 +92,9 @@ set_style(struct zr_context *ctx, enum theme theme)
 }
 
 static int
-demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
+demo_window(struct zr_panel *layout, struct zr_context *ctx, enum theme *theme)
 {
-    struct zr_layout menu;
+    struct zr_panel menu;
 
     /* window flags */
     static int show_menu = zr_true;
@@ -168,7 +168,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
         if (show_app_about)
         {
             /* about popup */
-            struct zr_layout popup;
+            struct zr_panel popup;
             static struct zr_rect s = {20, 100, 300, 190};
             if (zr_popup_begin(ctx, &popup, ZR_POPUP_STATIC, "About", ZR_WINDOW_CLOSABLE, s))
             {
@@ -184,7 +184,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
         if (show_close_popup)
         {
             /* close popup */
-            struct zr_layout popup;
+            struct zr_panel popup;
             static const struct zr_rect s = {20, 150, 230, 150};
             if(zr_popup_begin(ctx, &popup, ZR_POPUP_STATIC, "Quit", ZR_WINDOW_CLOSABLE, s))
             {
@@ -205,7 +205,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
         if (show_color_picker_popup)
         {
             /* color picker popup */
-            struct zr_layout popup;
+            struct zr_panel popup;
             if (zr_popup_begin(ctx, &popup, ZR_POPUP_STATIC, "Color Picker",
                 ZR_WINDOW_CLOSABLE, zr_rect(10, 100, 360, 280)))
             {
@@ -254,7 +254,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
             /* style editor */
             static const char *themes[] = {"Black", "White"};
             enum theme old = *theme;
-            struct zr_layout combo;
+            struct zr_panel combo;
 
             /* theme */
             zr_layout_row_static(ctx, 30, 80, 2);
@@ -291,7 +291,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
 
             if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Colors", ZR_MINIMIZED)){
                 size_t i = 0;
-                struct zr_layout tab;
+                struct zr_panel tab;
                 zr_layout_row_dynamic(ctx, 20, 1);
                 zr_label(ctx, "Click on the color to modify", ZR_TEXT_LEFT);
                 zr_layout_row_dynamic(ctx, 400, 1);
@@ -464,7 +464,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
 
                 char buffer[32];
                 size_t sum = 0;
-                struct zr_layout combo;
+                struct zr_panel combo;
 
                 /* default combobox */
                 zr_layout_row_static(ctx, 30, 200, 1);
@@ -830,7 +830,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 static int group_no_scrollbar = zr_false;
                 static int group_width = 320;
                 static int group_height = 200;
-                struct zr_layout tab;
+                struct zr_panel tab;
 
                 zr_flags group_flags = 0;
                 if (group_border) group_flags |= ZR_WINDOW_BORDER;
@@ -865,7 +865,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
 
             if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Simple", ZR_MINIMIZED))
             {
-                struct zr_layout tab;
+                struct zr_panel tab;
                 zr_layout_row_dynamic(ctx, 300, 2);
                 if (zr_group_begin(ctx, &tab, "Group_Without_Border", 0)) {
                     int i = 0;
@@ -893,7 +893,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
             if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Complex", ZR_MINIMIZED))
             {
                 int i;
-                struct zr_layout tab;
+                struct zr_panel tab;
                 zr_layout_space_begin(ctx, ZR_STATIC, 500, 64);
                 zr_layout_space_push(ctx, zr_rect(0,0,150,500));
                 if (zr_group_begin(ctx, &tab, "Group_left", ZR_WINDOW_BORDER)) {
@@ -969,7 +969,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 {
                     static float a = 100, b = 100, c = 100;
                     struct zr_rect bounds;
-                    struct zr_layout sub;
+                    struct zr_panel sub;
 
                     float row_layout[5];
                     row_layout[0] = a;
@@ -1058,7 +1058,7 @@ demo_window(struct zr_layout *layout, struct zr_context *ctx, enum theme *theme)
                 if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Horizontal", ZR_MINIMIZED))
                 {
                     static float a = 100, b = 100, c = 100;
-                    struct zr_layout sub;
+                    struct zr_panel sub;
                     struct zr_rect bounds;
 
                     /* header */
@@ -1151,7 +1151,7 @@ static int
 run_demo(struct demo *gui)
 {
     static enum theme theme = THEME_BLACK;
-    struct zr_layout layout;
+    struct zr_panel layout;
     struct zr_context *ctx = &gui->ctx;
 
     /* extensive demo window */

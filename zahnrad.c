@@ -155,7 +155,7 @@ struct zr_window {
     /* command buffer for queuing drawing calls */
 
     /* frame window state */
-    struct zr_layout *layout;
+    struct zr_panel *layout;
 
     /* persistent widget state */
     struct zr_value property;
@@ -6929,7 +6929,7 @@ zr_free(struct zr_context *ctx)
 }
 
 int
-zr_begin(struct zr_context *ctx, struct zr_layout *layout,
+zr_begin(struct zr_context *ctx, struct zr_panel *layout,
     const char *title, struct zr_rect bounds, zr_flags flags)
 {
     struct zr_window *win;
@@ -7297,7 +7297,7 @@ zr_header_button(struct zr_context *ctx, struct zr_window_header *header,
     struct zr_command_buffer *out;
     struct zr_vec2 item_padding;
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -7362,7 +7362,7 @@ zr_header_flag(struct zr_context *ctx, struct zr_window_header *header,
     zr_flags flag)
 {
     struct zr_window *win = ctx->current;
-    struct zr_layout *layout = win->layout;
+    struct zr_panel *layout = win->layout;
     zr_flags flags = win->flags;
     int state = (flags & flag) ? zr_true : zr_false;
     int ret = zr_header_toggle(ctx, header, inactive, active, align, state);
@@ -7388,7 +7388,7 @@ zr_layout_begin(struct zr_context *ctx, const char *title)
     struct zr_input *in;
     struct zr_window *win;
     const struct zr_style *c;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
     struct zr_command_buffer *out;
 
     ZR_ASSERT(ctx);
@@ -7623,7 +7623,7 @@ zr_layout_end(struct zr_context *ctx)
     /* pointers to subsystems */
     struct zr_input *in;
     struct zr_window *window;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
     struct zr_command_buffer *out;
     const struct zr_style *config;
 
@@ -7862,7 +7862,7 @@ zr_layout_end(struct zr_context *ctx)
 void
 zr_menubar_begin(struct zr_context *ctx)
 {
-    struct zr_layout *layout;
+    struct zr_panel *layout;
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
@@ -7884,7 +7884,7 @@ void
 zr_menubar_end(struct zr_context *ctx)
 {
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
     struct zr_command_buffer *out;
 
     ZR_ASSERT(ctx);
@@ -7921,7 +7921,7 @@ zr_panel_layout(const struct zr_context *ctx, struct zr_window *win,
     struct zr_command_buffer *out;
     struct zr_vec2 item_spacing;
     struct zr_vec2 panel_padding;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -7986,7 +7986,7 @@ zr_layout_row_begin(struct zr_context *ctx,
     enum zr_layout_format fmt, float row_height, zr_size cols)
 {
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -8013,7 +8013,7 @@ void
 zr_layout_row_push(struct zr_context *ctx, float ratio_or_width)
 {
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -8037,7 +8037,7 @@ void
 zr_layout_row_end(struct zr_context *ctx)
 {
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -8058,7 +8058,7 @@ zr_layout_row(struct zr_context *ctx, enum zr_layout_format fmt,
     zr_size i;
     zr_size n_undef = 0;
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -8096,7 +8096,7 @@ zr_layout_space_begin(struct zr_context *ctx,
     enum zr_layout_format fmt, float height, zr_size widget_count)
 {
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -8121,7 +8121,7 @@ void
 zr_layout_space_end(struct zr_context *ctx)
 {
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -8141,7 +8141,7 @@ void
 zr_layout_space_push(struct zr_context *ctx, struct zr_rect rect)
 {
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -8159,7 +8159,7 @@ zr_layout_space_bounds(struct zr_context *ctx)
 {
     struct zr_rect ret;
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -8178,7 +8178,7 @@ struct zr_vec2
 zr_layout_space_to_screen(struct zr_context *ctx, struct zr_vec2 ret)
 {
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -8195,7 +8195,7 @@ struct zr_vec2
 zr_layout_space_to_local(struct zr_context *ctx, struct zr_vec2 ret)
 {
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -8212,7 +8212,7 @@ struct zr_rect
 zr_layout_space_rect_to_screen(struct zr_context *ctx, struct zr_rect ret)
 {
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -8229,7 +8229,7 @@ struct zr_rect
 zr_layout_space_rect_to_local(struct zr_context *ctx, struct zr_rect ret)
 {
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -8245,7 +8245,7 @@ zr_layout_space_rect_to_local(struct zr_context *ctx, struct zr_rect ret)
 static void
 zr_panel_alloc_row(const struct zr_context *ctx, struct zr_window *win)
 {
-    struct zr_layout *layout = win->layout;
+    struct zr_panel *layout = win->layout;
     struct zr_vec2 spacing = zr_get_property(ctx, ZR_PROPERTY_ITEM_SPACING);
     const float row_height = layout->row.height - spacing.y;
     zr_panel_layout(ctx, win, row_height, layout->row.columns);
@@ -8259,7 +8259,7 @@ zr_layout_widget_space(struct zr_rect *bounds, const struct zr_context *ctx,
     float item_offset = 0, item_width = 0, item_spacing = 0;
     struct zr_vec2 spacing, padding;
 
-    struct zr_layout *layout;
+    struct zr_panel *layout;
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
@@ -8378,7 +8378,7 @@ static void
 zr_panel_alloc_space(struct zr_rect *bounds, const struct zr_context *ctx)
 {
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -8403,7 +8403,7 @@ zr_layout_peek(struct zr_rect *bounds, struct zr_context *ctx)
     float y;
     zr_size index;
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -8429,7 +8429,7 @@ zr_layout_push(struct zr_context *ctx, enum zr_layout_node_type type,
     const char *title, enum zr_collapse_states initial_state)
 {
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
     const struct zr_style *config;
     struct zr_command_buffer *out;
     const struct zr_input *input;
@@ -8547,7 +8547,7 @@ zr_layout_pop(struct zr_context *ctx)
 {
     struct zr_vec2 panel_padding;
     struct zr_window *win = 0;
-    struct zr_layout *layout = 0;
+    struct zr_panel *layout = 0;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -8574,7 +8574,7 @@ zr_spacing(struct zr_context *ctx, zr_size cols)
     zr_size i, index, rows;
     struct zr_rect nil;
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -8610,7 +8610,7 @@ zr_seperator(struct zr_context *ctx)
     struct zr_rect bounds;
 
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
     struct zr_command_buffer *out;
     const struct zr_style *config;
 
@@ -8641,7 +8641,7 @@ zr_widget(struct zr_rect *bounds, const struct zr_context *ctx)
 {
     struct zr_rect *c = 0;
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -8667,7 +8667,7 @@ zr_widget_fitting(struct zr_rect *bounds, struct zr_context *ctx)
     /* update the bounds to stand without padding  */
     enum zr_widget_state state;
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -8834,7 +8834,7 @@ zr_button_text(struct zr_context *ctx, const char *str,
     enum zr_widget_state state;
 
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
     const struct zr_input *i;
     const struct zr_style *config;
 
@@ -8869,7 +8869,7 @@ zr_button_color(struct zr_context *ctx,
     enum zr_widget_state state;
 
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
     const struct zr_input *i;
 
     ZR_ASSERT(ctx);
@@ -8900,7 +8900,7 @@ zr_button_symbol(struct zr_context *ctx, enum zr_symbol_type symbol,
     enum zr_widget_state state;
 
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
     const struct zr_input *i;
     const struct zr_style *config;
 
@@ -8934,7 +8934,7 @@ zr_button_image(struct zr_context *ctx, struct zr_image image,
     enum zr_widget_state state;
 
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
     const struct zr_input *i;
 
     ZR_ASSERT(ctx);
@@ -8962,7 +8962,7 @@ zr_button_text_symbol(struct zr_context *ctx, enum zr_symbol_type symbol,
     enum zr_widget_state state;
 
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
     const struct zr_input *i;
     const struct zr_style *config;
 
@@ -8997,7 +8997,7 @@ zr_button_text_image(struct zr_context *ctx, struct zr_image img,
     enum zr_widget_state state;
 
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
     const struct zr_input *i;
     const struct zr_style *config;
 
@@ -9112,7 +9112,7 @@ zr_checkbox(struct zr_context *ctx, const char *text, int *is_active)
     enum zr_widget_state state;
 
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
     const struct zr_style *config;
     const struct zr_input *i;
 
@@ -9155,7 +9155,7 @@ zr_option(struct zr_context *ctx, const char *text, int is_active)
     enum zr_widget_state state;
 
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
     const struct zr_input *i;
     const struct zr_style *config;
 
@@ -9200,7 +9200,7 @@ zr_slider_float(struct zr_context *ctx, float min_value, float *value,
     enum zr_widget_state state;
 
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
     const struct zr_input *i;
     const struct zr_style *config;
 
@@ -9250,7 +9250,7 @@ zr_progress(struct zr_context *ctx, zr_size *cur_value, zr_size max_value,
     enum zr_widget_state state;
 
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
     const struct zr_style *config;
     const struct zr_input *i;
 
@@ -9492,7 +9492,7 @@ zr_property(struct zr_context *ctx, const char *name,
     zr_size dummy_cursor = 0;
 
     struct zr_window *win;
-    struct zr_layout *layout;
+    struct zr_panel *layout;
     const struct zr_input *i;
     const struct zr_style *config;
 
@@ -9656,7 +9656,7 @@ zr_chart_push_line(struct zr_context *ctx, struct zr_window *win,
     float step, range, ratio;
     struct zr_color color;
 
-    struct zr_layout *layout = win->layout;
+    struct zr_panel *layout = win->layout;
     const struct zr_input *i = &ctx->input;
     const struct zr_style *config = &ctx->style;
     struct zr_command_buffer *out = &win->buffer;
@@ -9725,7 +9725,7 @@ zr_chart_push_column(const struct zr_context *ctx, struct zr_window *win,
     struct zr_command_buffer *out = &win->buffer;
     const struct zr_style *config = &ctx->style;
     const struct zr_input *in = &ctx->input;
-    struct zr_layout *layout = win->layout;
+    struct zr_panel *layout = win->layout;
 
     float ratio;
     zr_flags ret = 0;
@@ -9815,7 +9815,7 @@ zr_chart_end(struct zr_context *ctx)
  *
  * --------------------------------------------------------------*/
 int
-zr_group_begin(struct zr_context *ctx, struct zr_layout *layout,
+zr_group_begin(struct zr_context *ctx, struct zr_panel *layout,
     const char *title, zr_flags flags)
 {
     union {struct zr_scroll *s; zr_uint *i;} value;
@@ -9883,8 +9883,8 @@ zr_group_end(struct zr_context *ctx)
     struct zr_window pan;
 
     struct zr_window *win;
-    struct zr_layout *parent;
-    struct zr_layout *g;
+    struct zr_panel *parent;
+    struct zr_panel *g;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -9930,7 +9930,7 @@ zr_group_end(struct zr_context *ctx)
  *
  * --------------------------------------------------------------*/
 int
-zr_popup_begin(struct zr_context *ctx, struct zr_layout *layout,
+zr_popup_begin(struct zr_context *ctx, struct zr_panel *layout,
     enum zr_popup_type type, const char *title, zr_flags flags, struct zr_rect rect)
 {
     zr_hash title_hash;
@@ -10006,7 +10006,7 @@ zr_popup_begin(struct zr_context *ctx, struct zr_layout *layout,
 }
 
 static int
-zr_nonblock_begin(struct zr_layout *layout, struct zr_context *ctx,
+zr_nonblock_begin(struct zr_panel *layout, struct zr_context *ctx,
     zr_flags flags, struct zr_rect body, struct zr_rect header)
 {
     int is_active = zr_true;
@@ -10110,7 +10110,7 @@ zr_popup_end(struct zr_context *ctx)
  *
  * -------------------------------------------------------------- */
 int
-zr_tooltip_begin(struct zr_context *ctx, struct zr_layout *layout, float width)
+zr_tooltip_begin(struct zr_context *ctx, struct zr_panel *layout, float width)
 {
     int ret;
     struct zr_rect bounds;
@@ -10161,7 +10161,7 @@ zr_tooltip(struct zr_context *ctx, const char *text)
     const struct zr_style *config;
     struct zr_vec2 item_padding;
     struct zr_vec2 padding;
-    struct zr_layout layout;
+    struct zr_panel layout;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -10198,7 +10198,7 @@ zr_tooltip(struct zr_context *ctx, const char *text)
  * --------------------------------------------------------------
  */
 int
-zr_contextual_begin(struct zr_context *ctx, struct zr_layout *layout,
+zr_contextual_begin(struct zr_context *ctx, struct zr_panel *layout,
     zr_flags flags, struct zr_vec2 size, struct zr_rect trigger_bounds)
 {
     static const struct zr_rect null_rect;
@@ -10444,7 +10444,7 @@ zr_contextual_end(struct zr_context *ctx)
  *
  * --------------------------------------------------------------*/
 static int
-zr_combo_begin(struct zr_layout *layout, struct zr_context *ctx, struct zr_window *win,
+zr_combo_begin(struct zr_panel *layout, struct zr_context *ctx, struct zr_window *win,
     int height, int is_clicked, struct zr_rect header)
 {
     int is_open = 0;
@@ -10479,7 +10479,7 @@ zr_combo_begin(struct zr_layout *layout, struct zr_context *ctx, struct zr_windo
 }
 
 int
-zr_combo_begin_text(struct zr_context *ctx, struct zr_layout *layout,
+zr_combo_begin_text(struct zr_context *ctx, struct zr_panel *layout,
     const char *selected, int height)
 {
     const struct zr_input *in;
@@ -10541,7 +10541,7 @@ zr_combo_begin_text(struct zr_context *ctx, struct zr_layout *layout,
 }
 
 int
-zr_combo_begin_color(struct zr_context *ctx, struct zr_layout *layout,
+zr_combo_begin_color(struct zr_context *ctx, struct zr_panel *layout,
     struct zr_color color, int height)
 {
     enum zr_widget_status state;
@@ -10601,7 +10601,7 @@ zr_combo_begin_color(struct zr_context *ctx, struct zr_layout *layout,
 }
 
 int
-zr_combo_begin_image(struct zr_context *ctx, struct zr_layout *layout,
+zr_combo_begin_image(struct zr_context *ctx, struct zr_panel *layout,
     struct zr_image img, int height)
 {
     struct zr_window *win;
@@ -10659,7 +10659,7 @@ zr_combo_begin_image(struct zr_context *ctx, struct zr_layout *layout,
 }
 
 int
-zr_combo_begin_icon(struct zr_context *ctx, struct zr_layout *layout,
+zr_combo_begin_icon(struct zr_context *ctx, struct zr_panel *layout,
     const char *selected, struct zr_image img, int height)
 {
     struct zr_window *win;
@@ -10751,7 +10751,7 @@ void zr_combo_close(struct zr_context *ctx)
  * --------------------------------------------------------------
  */
 static int
-zr_menu_begin(struct zr_layout *layout, struct zr_context *ctx, struct zr_window *win,
+zr_menu_begin(struct zr_panel *layout, struct zr_context *ctx, struct zr_window *win,
     const char *id, int is_clicked, struct zr_rect header, float width)
 {
     /* calculate the maximum height of the combo box*/
@@ -10785,7 +10785,7 @@ zr_menu_begin(struct zr_layout *layout, struct zr_context *ctx, struct zr_window
 }
 
 int
-zr_menu_text_begin(struct zr_context *ctx, struct zr_layout *layout,
+zr_menu_text_begin(struct zr_context *ctx, struct zr_panel *layout,
     const char *title, float width)
 {
     struct zr_window *win;
@@ -10827,7 +10827,7 @@ zr_menu_text_begin(struct zr_context *ctx, struct zr_layout *layout,
 }
 
 int
-zr_menu_icon_begin(struct zr_context *ctx, struct zr_layout *layout,
+zr_menu_icon_begin(struct zr_context *ctx, struct zr_panel *layout,
     const char *id, struct zr_image img, float width)
 {
     struct zr_window *win;
@@ -10862,7 +10862,7 @@ zr_menu_icon_begin(struct zr_context *ctx, struct zr_layout *layout,
 }
 
 int
-zr_menu_symbol_begin(struct zr_context *ctx, struct zr_layout *layout,
+zr_menu_symbol_begin(struct zr_context *ctx, struct zr_panel *layout,
     const char *id, enum zr_symbol_type sym, float width)
 {
     struct zr_window *win;
