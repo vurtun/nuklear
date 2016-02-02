@@ -448,14 +448,14 @@ file_browser_free(struct file_browser *browser)
 static int
 file_browser_run(struct file_browser *browser, struct zr_context *ctx, int width, int height)
 {
-    struct zr_layout layout;
+    struct zr_panel layout;
     struct media *media = &browser->media;
     struct icons *icons = &media->icons;
     struct zr_rect total_space;
 
     if (zr_begin(ctx, &layout, "File Browser", zr_rect(0,0,width,height), 0))
     {
-        struct zr_layout sub;
+        struct zr_panel sub;
         float row_layout[3];
 
         /* output path directory selector in the menubar */

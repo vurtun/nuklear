@@ -6368,9 +6368,6 @@ zr_reset(struct zr_context *ctx)
  *                          POOL
  *
  * ===============================================================*/
-static int zr_layout_begin(struct zr_context*, const char*);
-static void zr_layout_end(struct zr_context*);
-
 static void
 zr_pool_init(struct zr_pool *pool, struct zr_allocator *alloc,
             unsigned int capacity)
@@ -6440,8 +6437,381 @@ zr_pool_alloc(struct zr_pool *pool)
  *                          CONTEXT
  *
  * ===============================================================*/
-static void zr_free_table(struct zr_context*, struct zr_table*);
-static void zr_remove_table(struct zr_window*, struct zr_table*);
+static void* zr_create_window(struct zr_context *ctx);
+static void zr_free_window(struct zr_context *ctx, struct zr_window *win);
+static void zr_free_table(struct zr_context *ctx, struct zr_table *tbl);
+static void zr_remove_table(struct zr_window *win, struct zr_table *tbl);
+
+static void
+zr_setup(struct zr_context *ctx, const struct zr_user_font *font)
+{
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(font);
+    if (!ctx || !font) return;
+    zr_zero_struct(*ctx);
+    zr_load_default_style(ctx, ZR_DEFAULT_ALL);
+    ctx->style.font = *font;
+#if ZR_COMPILE_WITH_VERTEX_BUFFER
+    zr_canvas_init(&ctx->canvas);
+#endif
+}
+
+int
+zr_init_fixed(struct zr_context *ctx, void *memory, zr_size size,
+    const struct zr_user_font *font)
+{
+    ZR_ASSERT(memory);
+    if (!memory) return 0;
+    zr_setup(ctx, font);
+    zr_buffer_init_fixed(&ctx->memory, memory, size);
+    ctx->pool = 0;
+    return 1;
+}
+
+int
+zr_init_custom(struct zr_context *ctx, struct zr_buffer *cmds,
+    struct zr_buffer *pool, const struct zr_user_font *font)
+{
+    ZR_ASSERT(cmds);
+    ZR_ASSERT(pool);
+    if (!cmds || !pool) return 0;
+    zr_setup(ctx, font);
+    ctx->memory = *cmds;
+    if (pool->type == ZR_BUFFER_FIXED) {
+        /* take memory from buffer and alloc fixed pool */
+        void *memory = pool->memory.ptr;
+        zr_size size = pool->memory.size;
+        ctx->pool = memory;
+        ZR_ASSERT(size > sizeof(struct zr_pool));
+        size -= sizeof(struct zr_pool);
+        zr_pool_init_fixed(ctx->pool, (zr_byte*)ctx->pool+sizeof(struct zr_pool), size);
+    } else {
+        /* create dynamic pool from buffer allocator */
+        struct zr_allocator *alloc = &pool->pool;
+        ctx->pool = alloc->alloc(alloc->userdata, sizeof(struct zr_pool));
+        zr_pool_init(ctx->pool, alloc, ZR_POOL_DEFAULT_CAPACITY);
+    }
+    return 1;
+}
+
+int
+zr_init(struct zr_context *ctx, struct zr_allocator *alloc,
+    const struct zr_user_font *font)
+{
+    ZR_ASSERT(alloc);
+    if (!alloc) return 0;
+    zr_setup(ctx, font);
+    zr_buffer_init(&ctx->memory, alloc, ZR_DEFAULT_COMMAND_BUFFER_SIZE);
+    ctx->pool = alloc->alloc(alloc->userdata, sizeof(struct zr_pool));
+    zr_pool_init(ctx->pool, alloc, ZR_POOL_DEFAULT_CAPACITY);
+    return 1;
+}
+
+void
+zr_free(struct zr_context *ctx)
+{
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+    zr_buffer_free(&ctx->memory);
+    if (ctx->pool) zr_pool_free(ctx->pool);
+
+    zr_zero(&ctx->input, sizeof(ctx->input));
+    zr_zero(&ctx->style, sizeof(ctx->style));
+    zr_zero(&ctx->memory, sizeof(ctx->memory));
+
+    ctx->seq = 0;
+    ctx->pool = 0;
+    ctx->build = 0;
+    ctx->begin = 0;
+    ctx->end = 0;
+    ctx->active = 0;
+    ctx->current = 0;
+    ctx->freelist = 0;
+    ctx->count = 0;
+}
+
+void
+zr_clear(struct zr_context *ctx)
+{
+    struct zr_window *iter;
+    struct zr_window *next;
+    ZR_ASSERT(ctx);
+
+    if (!ctx) return;
+    if (ctx->pool)
+        zr_buffer_clear(&ctx->memory);
+    else zr_buffer_reset(&ctx->memory, ZR_BUFFER_FRONT);
+
+    ctx->build = 0;
+    ctx->memory.calls = 0;
+#if ZR_COMPILE_WITH_VERTEX_BUFFER
+    zr_canvas_clear(&ctx->canvas);
+#endif
+
+    /* garbage collector */
+    iter = ctx->begin;
+    while (iter) {
+        /* make sure minimized windows do not get removed */
+        if (iter->flags & ZR_WINDOW_MINIMIZED) {
+            iter = iter->next;
+            continue;
+        }
+
+        /* free unused popup windows */
+        if (iter->popup.win && iter->popup.win->seq != ctx->seq) {
+            zr_free_window(ctx, iter->popup.win);
+            iter->popup.win = 0;
+        }
+
+        {struct zr_table *n, *it = iter->tables;
+        while (it) {
+            /* remove unused window state tables */
+            n = it->next;
+            if (it->seq != ctx->seq) {
+                zr_remove_table(iter, it);
+                zr_zero(it, sizeof(union zr_page_data));
+                zr_free_table(ctx, it);
+                if (it == iter->tables)
+                    iter->tables = n;
+            }
+            it = n;
+        }}
+
+        /* window itself is not used anymore so free */
+        if (iter->seq != ctx->seq) {
+            next = iter->next;
+            zr_free_window(ctx, iter);
+            ctx->count--;
+            iter = next;
+        } else iter = iter->next;
+    }
+    ctx->seq++;
+}
+
+/* ----------------------------------------------------------------
+ *
+ *                          BUFFERING
+ *
+ * ---------------------------------------------------------------*/
+static void
+zr_start(struct zr_context *ctx, struct zr_window *win)
+{
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(win);
+    if (!ctx || !win) return;
+    win->buffer.begin = ctx->memory.allocated;
+    win->buffer.end = win->buffer.begin;
+    win->buffer.last = win->buffer.begin;
+    win->buffer.clip = zr_null_rect;
+}
+
+static void
+zr_start_popup(struct zr_context *ctx, struct zr_window *win)
+{
+    struct zr_popup_buffer *buf;
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(win);
+    if (!ctx || !win) return;
+
+    buf = &win->layout->popup_buffer;
+    buf->begin = win->buffer.end;
+    buf->end = win->buffer.end;
+    buf->parent = win->buffer.last;
+    buf->last = buf->begin;
+    buf->active = zr_true;
+}
+
+static void
+zr_finish_popup(struct zr_context *ctx, struct zr_window *win)
+{
+    struct zr_popup_buffer *buf;
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(win);
+    if (!ctx || !win) return;
+
+    /* */
+    buf = &win->layout->popup_buffer;
+    buf->last = win->buffer.last;
+    buf->end = win->buffer.end;
+}
+
+static void
+zr_finish(struct zr_context *ctx, struct zr_window *win)
+{
+    struct zr_popup_buffer *buf;
+    struct zr_command *parent_last;
+    struct zr_command *sublast;
+    struct zr_command *last;
+    void *memory;
+
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(win);
+    if (!ctx || !win) return;
+    win->buffer.end = ctx->memory.allocated;
+    if (!win->layout->popup_buffer.active) return;
+
+    /* frome here this case is for popup windows */
+    buf = &win->layout->popup_buffer;
+    memory = ctx->memory.memory.ptr;
+
+    /* redirect the sub-window buffer to the end of the window command buffer */
+    parent_last = zr_ptr_add(struct zr_command, memory, buf->parent);
+    sublast = zr_ptr_add(struct zr_command, memory, buf->last);
+    last = zr_ptr_add(struct zr_command, memory, win->buffer.last);
+
+    parent_last->next = buf->end;
+    sublast->next = last->next;
+    last->next = buf->begin;
+    win->buffer.last = buf->last;
+    win->buffer.end = buf->end;
+    buf->active = zr_false;
+}
+
+static void
+zr_build(struct zr_context *ctx)
+{
+    struct zr_window *iter;
+    struct zr_window *next;
+    struct zr_command *cmd;
+    zr_byte *buffer;
+
+    iter = ctx->begin;
+    buffer = (zr_byte*)ctx->memory.memory.ptr;
+    while (iter != 0) {
+        next = iter->next;
+        if (iter->buffer.last != iter->buffer.begin) {
+            cmd = zr_ptr_add(struct zr_command, buffer, iter->buffer.last);
+            while (next && next->buffer.last == next->buffer.begin)
+                next = next->next; /* skip empty command buffers */
+
+            if (next) {
+                cmd->next = next->buffer.begin;
+            } else cmd->next = ctx->memory.allocated;
+        }
+        iter = next;
+    }
+}
+
+const struct zr_command*
+zr__begin(struct zr_context *ctx)
+{
+    struct zr_window *iter;
+    zr_byte *buffer;
+    ZR_ASSERT(ctx);
+    if (!ctx) return 0;
+    if (!ctx->count) return 0;
+
+    /* build one command list out of all windows */
+    buffer = (zr_byte*)ctx->memory.memory.ptr;
+    if (!ctx->build) {
+        zr_build(ctx);
+        ctx->build = zr_true;
+    }
+
+    iter = ctx->begin;
+    while (iter && iter->buffer.begin == iter->buffer.end)
+        iter = iter->next;
+    if (!iter) return 0;
+    return zr_ptr_add_const(struct zr_command, buffer, iter->buffer.begin);
+}
+
+const struct zr_command*
+zr__next(struct zr_context *ctx, const struct zr_command *cmd)
+{
+    zr_byte *buffer;
+    const struct zr_command *next;
+    ZR_ASSERT(ctx);
+    if (!ctx || !cmd || !ctx->count) return 0;
+    if (cmd->next >= ctx->memory.allocated) return 0;
+    buffer = (zr_byte*)ctx->memory.memory.ptr;
+    next = zr_ptr_add_const(struct zr_command, buffer, cmd->next);
+    return next;
+}
+
+/* ----------------------------------------------------------------
+ *
+ *                          TABLES
+ *
+ * ---------------------------------------------------------------*/
+static struct zr_table*
+zr_create_table(struct zr_context *ctx)
+{void *tbl = (void*)zr_create_window(ctx); return (struct zr_table*)tbl;}
+
+static void
+zr_free_table(struct zr_context *ctx, struct zr_table *tbl)
+{zr_free_window(ctx, (struct zr_window*)tbl);}
+
+static void
+zr_push_table(struct zr_window *win, struct zr_table *tbl)
+{
+    if (!win->tables) {
+        win->tables = tbl;
+        tbl->next = 0;
+        tbl->prev = 0;
+        win->table_count = 1;
+        win->table_size = 1;
+        return;
+    }
+    win->tables->prev = tbl;
+    tbl->next = win->tables;
+    tbl->prev = 0;
+    win->tables = tbl;
+    win->table_count++;
+    win->table_size = 0;
+}
+
+static void
+zr_remove_table(struct zr_window *win, struct zr_table *tbl)
+{
+    if (win->tables == tbl)
+        win->tables = tbl->next;
+    if (tbl->next)
+        tbl->next->prev = tbl->prev;
+    if (tbl->prev)
+        tbl->prev->next = tbl->next;
+    tbl->next = 0;
+    tbl->prev = 0;
+}
+
+static zr_uint*
+zr_add_value(struct zr_context *ctx, struct zr_window *win,
+            zr_hash name, zr_uint value)
+{
+    if (!win->tables || win->table_size == ZR_VALUE_PAGE_CAPACITY) {
+        struct zr_table *tbl = zr_create_table(ctx);
+        zr_push_table(win, tbl);
+    }
+    win->tables->seq = win->seq;
+    win->tables->keys[win->table_size] = name;
+    win->tables->values[win->table_size] = value;
+    return &win->tables->values[win->table_size++];
+}
+
+static zr_uint*
+zr_find_value(struct zr_window *win, zr_hash name)
+{
+    unsigned short size = win->table_size;
+    struct zr_table *iter = win->tables;
+    while (iter) {
+        unsigned short i = 0;
+        for (i = 0; i < size; ++i) {
+            if (iter->keys[i] == name) {
+                iter->seq = win->seq;
+                return &iter->values[i];
+            }
+        }
+        size = ZR_VALUE_PAGE_CAPACITY;
+        iter = iter->next;
+    }
+    return 0;
+}
+/* ----------------------------------------------------------------
+ *
+ *                          WINDOW
+ *
+ * ---------------------------------------------------------------*/
+static int zr_panel_begin(struct zr_context *ctx, const char *title);
+static void zr_panel_end(struct zr_context *ctx);
 
 static void*
 zr_create_window(struct zr_context *ctx)
@@ -6557,19 +6927,6 @@ zr_insert_window(struct zr_context *ctx, struct zr_window *win)
 }
 
 static void
-zr_start(struct zr_context *ctx, struct zr_window *win)
-{
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(win);
-    if (!ctx || !win) return;
-    win->buffer.begin = ctx->memory.allocated;
-    win->buffer.end = win->buffer.begin;
-    win->buffer.last = win->buffer.begin;
-    win->buffer.clip = zr_null_rect;
-}
-
-
-static void
 zr_remove_window(struct zr_context *ctx, struct zr_window *win)
 {
     if (win->prev)
@@ -6584,348 +6941,6 @@ zr_remove_window(struct zr_context *ctx, struct zr_window *win)
     win->next = 0;
     win->prev = 0;
     ctx->count--;
-}
-
-static struct zr_table*
-zr_create_table(struct zr_context *ctx)
-{void *tbl = (void*)zr_create_window(ctx); return (struct zr_table*)tbl;}
-
-static void
-zr_free_table(struct zr_context *ctx, struct zr_table *tbl)
-{zr_free_window(ctx, (struct zr_window*)tbl);}
-
-static void
-zr_push_table(struct zr_window *win, struct zr_table *tbl)
-{
-    if (!win->tables) {
-        win->tables = tbl;
-        tbl->next = 0;
-        tbl->prev = 0;
-        win->table_count = 1;
-        win->table_size = 1;
-        return;
-    }
-    win->tables->prev = tbl;
-    tbl->next = win->tables;
-    tbl->prev = 0;
-    win->tables = tbl;
-    win->table_count++;
-    win->table_size = 0;
-}
-
-static void
-zr_remove_table(struct zr_window *win, struct zr_table *tbl)
-{
-    if (win->tables == tbl)
-        win->tables = tbl->next;
-    if (tbl->next)
-        tbl->next->prev = tbl->prev;
-    if (tbl->prev)
-        tbl->prev->next = tbl->next;
-    tbl->next = 0;
-    tbl->prev = 0;
-}
-
-static zr_uint*
-zr_find_value(struct zr_window *win, zr_hash name)
-{
-    unsigned short size = win->table_size;
-    struct zr_table *iter = win->tables;
-    while (iter) {
-        unsigned short i = 0;
-        for (i = 0; i < size; ++i) {
-            if (iter->keys[i] == name) {
-                iter->seq = win->seq;
-                return &iter->values[i];
-            }
-        }
-        size = ZR_VALUE_PAGE_CAPACITY;
-        iter = iter->next;
-    }
-    return 0;
-}
-
-static zr_uint*
-zr_add_value(struct zr_context *ctx, struct zr_window *win,
-            zr_hash name, zr_uint value)
-{
-    if (!win->tables || win->table_size == ZR_VALUE_PAGE_CAPACITY) {
-        struct zr_table *tbl = zr_create_table(ctx);
-        zr_push_table(win, tbl);
-    }
-    win->tables->seq = win->seq;
-    win->tables->keys[win->table_size] = name;
-    win->tables->values[win->table_size] = value;
-    return &win->tables->values[win->table_size++];
-}
-
-static void
-zr_start_child(struct zr_context *ctx, struct zr_window *win)
-{
-    struct zr_popup_buffer *buf;
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(win);
-    if (!ctx || !win) return;
-
-    buf = &win->layout->popup_buffer;
-    buf->begin = win->buffer.end;
-    buf->end = win->buffer.end;
-    buf->parent = win->buffer.last;
-    buf->last = buf->begin;
-    buf->active = zr_true;
-}
-
-static void
-zr_finish_child(struct zr_context *ctx, struct zr_window *win)
-{
-    struct zr_popup_buffer *buf;
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(win);
-    if (!ctx || !win) return;
-
-    /* */
-    buf = &win->layout->popup_buffer;
-    buf->last = win->buffer.last;
-    buf->end = win->buffer.end;
-}
-
-static void
-zr_finish(struct zr_context *ctx, struct zr_window *win)
-{
-    struct zr_popup_buffer *buf;
-    struct zr_command *parent_last;
-    struct zr_command *sublast;
-    struct zr_command *last;
-    void *memory;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(win);
-    if (!ctx || !win) return;
-    win->buffer.end = ctx->memory.allocated;
-    if (!win->layout->popup_buffer.active) return;
-
-    /* frome here this case is for popup windows */
-    buf = &win->layout->popup_buffer;
-    memory = ctx->memory.memory.ptr;
-
-    /* redirect the sub-window buffer to the end of the window command buffer */
-    parent_last = zr_ptr_add(struct zr_command, memory, buf->parent);
-    sublast = zr_ptr_add(struct zr_command, memory, buf->last);
-    last = zr_ptr_add(struct zr_command, memory, win->buffer.last);
-
-    parent_last->next = buf->end;
-    sublast->next = last->next;
-    last->next = buf->begin;
-    win->buffer.last = buf->last;
-    win->buffer.end = buf->end;
-    buf->active = zr_false;
-}
-
-static void
-zr_build(struct zr_context *ctx)
-{
-    struct zr_window *iter;
-    struct zr_window *next;
-    struct zr_command *cmd;
-    zr_byte *buffer;
-
-    iter = ctx->begin;
-    buffer = (zr_byte*)ctx->memory.memory.ptr;
-    while (iter != 0) {
-        next = iter->next;
-        if (iter->buffer.last != iter->buffer.begin) {
-            cmd = zr_ptr_add(struct zr_command, buffer, iter->buffer.last);
-            while (next && next->buffer.last == next->buffer.begin)
-                next = next->next; /* skip empty command buffers */
-
-            if (next) {
-                cmd->next = next->buffer.begin;
-            } else cmd->next = ctx->memory.allocated;
-        }
-        iter = next;
-    }
-}
-
-const struct zr_command*
-zr__begin(struct zr_context *ctx)
-{
-    struct zr_window *iter;
-    zr_byte *buffer;
-    ZR_ASSERT(ctx);
-    if (!ctx) return 0;
-    if (!ctx->count) return 0;
-
-    /* build one command list out of all windows */
-    buffer = (zr_byte*)ctx->memory.memory.ptr;
-    if (!ctx->build) {
-        zr_build(ctx);
-        ctx->build = zr_true;
-    }
-
-    iter = ctx->begin;
-    while (iter && iter->buffer.begin == iter->buffer.end)
-        iter = iter->next;
-    if (!iter) return 0;
-    return zr_ptr_add_const(struct zr_command, buffer, iter->buffer.begin);
-}
-
-const struct zr_command*
-zr__next(struct zr_context *ctx, const struct zr_command *cmd)
-{
-    zr_byte *buffer;
-    const struct zr_command *next;
-    ZR_ASSERT(ctx);
-    if (!ctx || !cmd || !ctx->count) return 0;
-    if (cmd->next >= ctx->memory.allocated) return 0;
-    buffer = (zr_byte*)ctx->memory.memory.ptr;
-    next = zr_ptr_add_const(struct zr_command, buffer, cmd->next);
-    return next;
-}
-
-void
-zr_clear(struct zr_context *ctx)
-{
-    struct zr_window *iter;
-    struct zr_window *next;
-    ZR_ASSERT(ctx);
-
-    if (!ctx) return;
-    if (ctx->pool)
-        zr_buffer_clear(&ctx->memory);
-    else zr_buffer_reset(&ctx->memory, ZR_BUFFER_FRONT);
-
-    ctx->build = 0;
-    ctx->memory.calls = 0;
-#if ZR_COMPILE_WITH_VERTEX_BUFFER
-    zr_canvas_clear(&ctx->canvas);
-#endif
-
-    /* garbage collector */
-    iter = ctx->begin;
-    while (iter) {
-        /* make sure minimized windows do not get removed */
-        if (iter->flags & ZR_WINDOW_MINIMIZED) {
-            iter = iter->next;
-            continue;
-        }
-
-        /* free unused popup windows */
-        if (iter->popup.win && iter->popup.win->seq != ctx->seq) {
-            zr_free_window(ctx, iter->popup.win);
-            iter->popup.win = 0;
-        }
-
-        {struct zr_table *n, *it = iter->tables;
-        while (it) {
-            /* remove unused window state tables */
-            n = it->next;
-            if (it->seq != ctx->seq) {
-                zr_remove_table(iter, it);
-                zr_zero(it, sizeof(union zr_page_data));
-                zr_free_table(ctx, it);
-                if (it == iter->tables)
-                    iter->tables = n;
-            }
-            it = n;
-        }}
-
-        /* window itself is not used anymore so free */
-        if (iter->seq != ctx->seq) {
-            next = iter->next;
-            zr_free_window(ctx, iter);
-            ctx->count--;
-            iter = next;
-        } else iter = iter->next;
-    }
-    ctx->seq++;
-}
-
-static void
-zr_setup(struct zr_context *ctx, const struct zr_user_font *font)
-{
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(font);
-    if (!ctx || !font) return;
-    zr_zero_struct(*ctx);
-    zr_load_default_style(ctx, ZR_DEFAULT_ALL);
-    ctx->style.font = *font;
-#if ZR_COMPILE_WITH_VERTEX_BUFFER
-    zr_canvas_init(&ctx->canvas);
-#endif
-}
-
-int
-zr_init_fixed(struct zr_context *ctx, void *memory, zr_size size,
-    const struct zr_user_font *font)
-{
-    ZR_ASSERT(memory);
-    if (!memory) return 0;
-    zr_setup(ctx, font);
-    zr_buffer_init_fixed(&ctx->memory, memory, size);
-    ctx->pool = 0;
-    return 1;
-}
-
-int
-zr_init_custom(struct zr_context *ctx, struct zr_buffer *cmds,
-    struct zr_buffer *pool, const struct zr_user_font *font)
-{
-    ZR_ASSERT(cmds);
-    ZR_ASSERT(pool);
-    if (!cmds || !pool) return 0;
-    zr_setup(ctx, font);
-    ctx->memory = *cmds;
-    if (pool->type == ZR_BUFFER_FIXED) {
-        /* take memory from buffer and alloc fixed pool */
-        void *memory = pool->memory.ptr;
-        zr_size size = pool->memory.size;
-        ctx->pool = memory;
-        ZR_ASSERT(size > sizeof(struct zr_pool));
-        size -= sizeof(struct zr_pool);
-        zr_pool_init_fixed(ctx->pool, (zr_byte*)ctx->pool+sizeof(struct zr_pool), size);
-    } else {
-        /* create dynamic pool from buffer allocator */
-        struct zr_allocator *alloc = &pool->pool;
-        ctx->pool = alloc->alloc(alloc->userdata, sizeof(struct zr_pool));
-        zr_pool_init(ctx->pool, alloc, ZR_POOL_DEFAULT_CAPACITY);
-    }
-    return 1;
-}
-
-int
-zr_init(struct zr_context *ctx, struct zr_allocator *alloc,
-    const struct zr_user_font *font)
-{
-    ZR_ASSERT(alloc);
-    if (!alloc) return 0;
-    zr_setup(ctx, font);
-    zr_buffer_init(&ctx->memory, alloc, ZR_DEFAULT_COMMAND_BUFFER_SIZE);
-    ctx->pool = alloc->alloc(alloc->userdata, sizeof(struct zr_pool));
-    zr_pool_init(ctx->pool, alloc, ZR_POOL_DEFAULT_CAPACITY);
-    return 1;
-}
-
-void
-zr_free(struct zr_context *ctx)
-{
-    ZR_ASSERT(ctx);
-    if (!ctx) return;
-    zr_buffer_free(&ctx->memory);
-    if (ctx->pool) zr_pool_free(ctx->pool);
-
-    zr_zero(&ctx->input, sizeof(ctx->input));
-    zr_zero(&ctx->style, sizeof(ctx->style));
-    zr_zero(&ctx->memory, sizeof(ctx->memory));
-
-    ctx->seq = 0;
-    ctx->pool = 0;
-    ctx->build = 0;
-    ctx->begin = 0;
-    ctx->end = 0;
-    ctx->active = 0;
-    ctx->current = 0;
-    ctx->freelist = 0;
-    ctx->count = 0;
 }
 
 int
@@ -6971,12 +6986,11 @@ zr_begin(struct zr_context *ctx, struct zr_panel *layout,
     {
         int inpanel, ishovered;
         const struct zr_window *iter = win;
-
         zr_start(ctx, win);
-        inpanel = zr_input_mouse_clicked(&ctx->input, ZR_BUTTON_LEFT, win->bounds);
-        ishovered = zr_input_is_mouse_hovering_rect(&ctx->input, win->bounds);
 
         /* activate window if hovered and no other window is overlapping this window*/
+        inpanel = zr_input_mouse_clicked(&ctx->input, ZR_BUTTON_LEFT, win->bounds);
+        ishovered = zr_input_is_mouse_hovering_rect(&ctx->input, win->bounds);
         if ((win != ctx->active) && ishovered) {
             iter = win->next;
             while (iter) {
@@ -6999,7 +7013,8 @@ zr_begin(struct zr_context *ctx, struct zr_panel *layout,
             while (iter) {
                 /* try to find a panel with higher priorty in the same position */
                 if (ZR_INBOX(ctx->input.mouse.prev.x, ctx->input.mouse.prev.y, iter->bounds.x,
-                    iter->bounds.y, iter->bounds.w, iter->bounds.h) && !(iter->flags & ZR_WINDOW_HIDDEN))
+                    iter->bounds.y, iter->bounds.w, iter->bounds.h) &&
+                    !(iter->flags & ZR_WINDOW_HIDDEN))
                     break;
                 iter = iter->next;
             }
@@ -7022,11 +7037,10 @@ zr_begin(struct zr_context *ctx, struct zr_panel *layout,
         }
         if (ctx->end != win)
             win->flags |= ZR_WINDOW_ROM;
-   }
-
+    }
     win->layout = layout;
     ctx->current = win;
-    ret = zr_layout_begin(ctx, title);
+    ret = zr_panel_begin(ctx, title);
     layout->offset = &win->scrollbar;
     return ret;
 }
@@ -7038,14 +7052,10 @@ zr_end(struct zr_context *ctx)
     if (!ctx || !ctx->current) return;
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
-    zr_layout_end(ctx);
+    zr_panel_end(ctx);
     ctx->current = 0;
 }
-/*----------------------------------------------------------------
- *
- *                          WINDOW
- *
- * --------------------------------------------------------------*/
+
 struct zr_rect
 zr_window_get_bounds(const struct zr_context *ctx)
 {
@@ -7275,7 +7285,7 @@ zr_window_set_focus(struct zr_context *ctx, const char *name)
 
 /*----------------------------------------------------------------
  *
- *                          LAYOUT
+ *                          PANEL
  *
  * --------------------------------------------------------------*/
 struct zr_window_header {
@@ -7376,7 +7386,7 @@ zr_header_flag(struct zr_context *ctx, struct zr_window_header *header,
 }
 
 static int
-zr_layout_begin(struct zr_context *ctx, const char *title)
+zr_panel_begin(struct zr_context *ctx, const char *title)
 {
     int header_active = 0;
     float scrollbar_size;
@@ -7610,7 +7620,7 @@ zr_layout_begin(struct zr_context *ctx, const char *title)
 }
 
 static void
-zr_layout_end(struct zr_context *ctx)
+zr_panel_end(struct zr_context *ctx)
 {
     /* local read only style variables */
     float scrollbar_size;
@@ -9866,7 +9876,7 @@ zr_group_begin(struct zr_context *ctx, struct zr_panel *layout,
     panel.buffer = win->buffer;
     panel.layout = layout;
     ctx->current = &panel;
-    zr_layout_begin(ctx, (flags & ZR_WINDOW_TITLE) ? title: 0);
+    zr_panel_begin(ctx, (flags & ZR_WINDOW_TITLE) ? title: 0);
 
     win->buffer = panel.buffer;
     layout->offset = value.s;
@@ -9983,11 +9993,11 @@ zr_popup_begin(struct zr_context *ctx, struct zr_panel *layout,
         popup->flags |= ZR_WINDOW_DYNAMIC;
 
     popup->buffer = win->buffer;
-    zr_start_child(ctx, win);
+    zr_start_popup(ctx, win);
     allocated = ctx->memory.allocated;
     zr_draw_scissor(&popup->buffer, zr_null_rect);
 
-    if (zr_layout_begin(ctx, title)) {
+    if (zr_panel_begin(ctx, title)) {
         /* popup is running therefore invalidate parent window  */
         win->layout->flags |= ZR_WINDOW_ROM;
         win->layout->flags &= ~(zr_flags)ZR_WINDOW_REMOVE_ROM;
@@ -10053,12 +10063,12 @@ zr_nonblock_begin(struct zr_panel *layout, struct zr_context *ctx,
     popup->seq = ctx->seq;
     win->popup.active = 1;
 
-    zr_start_child(ctx, win);
+    zr_start_popup(ctx, win);
     popup->buffer = win->buffer;
     zr_draw_scissor(&popup->buffer, zr_null_rect);
     ctx->current = popup;
 
-    zr_layout_begin(ctx, 0);
+    zr_panel_begin(ctx, 0);
     win->buffer = popup->buffer;
     win->layout->flags |= ZR_WINDOW_ROM;
     layout->offset = &popup->scrollbar;
@@ -10100,7 +10110,7 @@ zr_popup_end(struct zr_context *ctx)
     zr_end(ctx);
 
     win->buffer = popup->buffer;
-    zr_finish_child(ctx, win);
+    zr_finish_popup(ctx, win);
     ctx->current = win;
     zr_draw_scissor(&win->buffer, win->layout->clip);
 }

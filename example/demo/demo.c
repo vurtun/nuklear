@@ -122,7 +122,7 @@ ui_piemenu(struct zr_context *ctx,
 {
     int ret = -1;
     struct zr_rect total_space;
-    struct zr_layout popup;
+    struct zr_panel popup;
     struct zr_rect bounds;
     int active_item = 0;
 
@@ -222,8 +222,8 @@ ui_piemenu(struct zr_context *ctx,
 static void
 button_demo(struct zr_context *ctx, struct icons *img)
 {
-    struct zr_layout layout;
-    struct zr_layout menu;
+    struct zr_panel layout;
+    struct zr_panel menu;
     static int option = 1;
     static int toggle0 = 1;
     static int toggle1 = 0;
@@ -346,8 +346,8 @@ basic_demo(struct zr_context *ctx, struct icons *img)
     static int piemenu_active = 0;
 
     int i = 0;
-    struct zr_layout layout;
-    struct zr_layout combo;
+    struct zr_panel layout;
+    struct zr_panel combo;
     ctx->style.font.height = 20;
     zr_begin(ctx, &layout, "Basic Demo", zr_rect(320, 50, 275, 610),
         ZR_WINDOW_BORDER|ZR_WINDOW_MOVABLE|ZR_WINDOW_BORDER_HEADER|ZR_WINDOW_TITLE);
@@ -372,7 +372,7 @@ basic_demo(struct zr_context *ctx, struct icons *img)
      *                  IMAGE POPUP
      *------------------------------------------------*/
     if (image_active) {
-        struct zr_layout popup;
+        struct zr_panel popup;
         if (zr_popup_begin(ctx, &popup, ZR_POPUP_STATIC, "Image Popup", 0, zr_rect(265, 0, 320, 220))) {
             zr_layout_row_static(ctx, 82, 82, 3);
             for (i = 0; i < 9; ++i) {
@@ -457,8 +457,8 @@ grid_demo(struct zr_context *ctx)
     static int check = 1;
 
     int i;
-    struct zr_layout layout;
-    struct zr_layout combo;
+    struct zr_panel layout;
+    struct zr_panel combo;
 
     ctx->style.font.height = 20;
     zr_begin(ctx, &layout, "Grid Demo", zr_rect(600, 350, 275, 250),

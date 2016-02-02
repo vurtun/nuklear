@@ -192,7 +192,7 @@ node_editor_draw(struct zr_context *ctx, struct node_editor *nodedit)
     total_space = zr_window_get_content_region(ctx);
     zr_layout_space_begin(ctx, ZR_STATIC, total_space.h, (zr_size)nodedit->node_count);
     {
-        struct zr_layout node, menu;
+        struct zr_panel node, menu;
         struct node *it = nodedit->begin;
         struct zr_rect size = zr_layout_space_bounds(ctx);
 
@@ -667,7 +667,7 @@ main(int argc, char *argv[])
 
         {
             int incursor;
-            struct zr_layout layout;
+            struct zr_panel layout;
             if (zr_begin(&ctx, &layout, "Nodedit", zr_rect(0,0,width,height),
                 ZR_WINDOW_BORDER|ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_CLOSABLE))
                 node_editor_draw(&ctx, &nodedit);
