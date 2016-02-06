@@ -549,6 +549,7 @@ static int
 zr_strtof(float *number, const char *buffer)
 {
     float m;
+    float neg = 1.0f;
     const char *p = buffer;
     float floatvalue = 0;
 
@@ -556,6 +557,13 @@ zr_strtof(float *number, const char *buffer)
     ZR_ASSERT(buffer);
     if (!number || !buffer) return 0;
     *number = 0;
+
+    /* skip whitespace */
+    while (*p && *p == ' ') p++;
+    if (*p == '-') {
+        neg = -1.0f;
+        p++;
+    }
 
     while( *p && *p != '.' && *p != 'e' ) {
         floatvalue = floatvalue * 10.0f + (float) (*p - '0');
@@ -590,7 +598,7 @@ zr_strtof(float *number, const char *buffer)
             floatvalue /= m;
         else floatvalue *= m;
     }
-    *number = floatvalue;
+    *number = floatvalue * neg;
     return 1;
 }
 
@@ -5492,7 +5500,7 @@ int
 zr_filter_decimal(const struct zr_edit_box *box, zr_rune unicode)
 {
     ZR_UNUSED(box);
-    if (unicode < '0' || unicode > '9')
+    if ((unicode < '0' || unicode > '9') && unicode != '-')
         return zr_false;
     else return zr_true;
 }
