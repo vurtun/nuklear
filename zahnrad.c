@@ -1410,11 +1410,11 @@ zr_user_font_glyphs_fitting_in_space(const struct zr_user_font *font,
             zr_rune next = 0;
             zr_utf_decode(text+text_len, &next, len - text_len);
             if (unicode == '\r') {
-                *row_len-=1; *glyphs-=1;
+                *row_len-=1;;
             } else if ((unicode == '\n') && (next == '\r')) {
-                *row_len-= 2; *glyphs-=2;
+                *row_len-= 2;
             } else {
-                *row_len-=1; *glyphs-=1;
+                *row_len-=1;
             }
             *text_width = font->width(font->userdata, font->height, text, *row_len);
             break;
@@ -3697,7 +3697,7 @@ zr_edit_box_buffer_input(struct zr_edit_box *box, const struct zr_input *i)
 }
 
 void
-zr_edit_box_remove(struct zr_edit_box *box)
+zr_edit_box_remove(struct zr_edit_box *box, enum zr_edit_remove_operation op)
 {
     zr_size len;
     char *buf;
@@ -3723,9 +3723,20 @@ zr_edit_box_remove(struct zr_edit_box *box)
         off = (zr_size)(begin - buf);
 
         /* delete text selection */
-        zr_edit_buffer_del(&box->buffer, off, len);
+        if (len > 1) {
+            zr_edit_buffer_del(&box->buffer, off, len);
+        } else {
+            if (op == ZR_DELETE) {
+                zr_edit_buffer_del(&box->buffer, off, len);
+            } else {
+                zr_edit_buffer_del(&box->buffer, off-1, len);
+                box->cursor = (box->cursor) ? box->cursor-1: 0;
+                box->sel.begin = box->cursor;
+                box->sel.end = box->cursor;
+            }
+        }
         box->glyphs = zr_utf_len(buf, box->buffer.allocated);
-    } else {
+    } else if (op == ZR_REMOVE) {
         zr_rune unicode;
         int cursor;
         char *glyph;
@@ -3740,11 +3751,12 @@ zr_edit_box_remove(struct zr_edit_box *box)
         zr_edit_buffer_del(&box->buffer, offset, len);
         box->glyphs--;
     }
-
-    if (box->cursor >= box->glyphs)
-        box->cursor = box->glyphs;
-    else if (box->cursor > 0)
-        box->cursor--;
+    if (op == ZR_DELETE) {
+        if (box->cursor >= box->glyphs)
+            box->cursor = box->glyphs;
+        else if (box->cursor > 0)
+            box->cursor--;
+    }
 }
 
 int
@@ -4827,16 +4839,17 @@ zr_edit_box_handle_input(struct zr_edit_box *box, const struct zr_input *in,
     int enter, tab;
 
     /* text manipulation */
-    if (zr_input_is_key_pressed(in,ZR_KEY_DEL) ||
-        zr_input_is_key_pressed(in,ZR_KEY_BACKSPACE))
-        zr_edit_box_remove(box);
+    if (zr_input_is_key_pressed(in,ZR_KEY_DEL))
+        zr_edit_box_remove(box, ZR_DELETE);
+    else if (zr_input_is_key_pressed(in,ZR_KEY_BACKSPACE))
+        zr_edit_box_remove(box, ZR_REMOVE);
 
     enter = has_special && zr_input_is_key_pressed(in, ZR_KEY_ENTER);
     tab = has_special && zr_input_is_key_pressed(in, ZR_KEY_TAB);
     if (in->keyboard.text_len || enter || tab) {
         if (diff && box->cursor != box->glyphs) {
             /* replace text selection */
-            zr_edit_box_remove(box);
+            zr_edit_box_remove(box, ZR_DELETE);
             box->cursor = min;
         }
         if (enter) zr_edit_box_add(box, "\n", 1);
@@ -4848,7 +4861,7 @@ zr_edit_box_handle_input(struct zr_edit_box *box, const struct zr_input *in,
 
     /* cursor key movement */
     if (zr_input_is_key_pressed(in, ZR_KEY_LEFT)) {
-        box->cursor = (zr_size)MAX(0, (int)(box->cursor - 1));
+        box->cursor = (zr_size)(MAX(0, (int)box->cursor - 1));
         box->sel.begin = box->cursor;
         box->sel.end = box->cursor;
     }
@@ -4872,7 +4885,7 @@ zr_edit_box_handle_input(struct zr_edit_box *box, const struct zr_input *in,
             end = zr_edit_buffer_at(&box->buffer, (int)maxi, &unicode, &l);
             box->clip.copy(box->clip.userdata, begin, (zr_size)(end - begin));
             if (zr_input_is_key_pressed(in, ZR_KEY_CUT))
-                zr_edit_box_remove(box);
+                zr_edit_box_remove(box, ZR_DELETE);
         } else {
             /* copy or cut complete buffer */
             box->clip.copy(box->clip.userdata, buffer, len);
@@ -5088,14 +5101,13 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
         in->mouse.buttons[ZR_BUTTON_LEFT].down)
         box->active = ZR_INBOX(in->mouse.pos.x,in->mouse.pos.y,r.x,r.y,r.w,r.h);
 
-    /* input handling */
+    /* text input handling */
     if (box->active && in && field->modifiable)
         zr_edit_box_handle_input(box, in, 1);
 
     buffer = zr_edit_box_get(box);
     len = zr_edit_box_len_char(box);
     cursor_w = font->width(font->userdata,font->height,(const char*)"X", 1);
-
     {
         /* calulate total number of needed rows */
         zr_size glyphs = 0;
@@ -5123,6 +5135,11 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
         /* make sure edit box points to the end of the buffer if not active */
         if (total_rows > visible_rows)
             box->scrollbar = (float)((total_rows - visible_rows) * row_height);
+        if (!prev_state && box->active) {
+            box->cursor = zr_utf_len(buffer, len);
+            box->sel.begin = box->cursor;
+            box->sel.end = box->cursor;
+        }
     }
 
     if ((in && in->keyboard.text_len && total_rows >= visible_rows && box->active) ||
@@ -5160,19 +5177,18 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
             }
 
             if (cur_row >= visible_rows && !box->sel.active) {
-                /* set visibile frame to include cursor while writing */
+                /* set visible frame to include cursor while writing */
                 zr_size row_offset = (cur_row + 1) - visible_rows;
                 box->scrollbar = (font->height + field->padding.x) * (float)row_offset;
             } else if (box->sel.active && scroll_offset > cur_row) {
-                /* set visibile frame to include cursor while selecting */
+                /* set visible frame to include cursor while selecting */
                 zr_size row_offset = (scroll_offset > 0) ? scroll_offset-1: scroll_offset;
                 box->scrollbar = (font->height + field->padding.x) * (float)row_offset;
             }
         }
     }
-
     if (box->text_inserted) {
-        /* zr_editbox_add handler ugly but works */
+        /* @NOTE: zr_editbox_add handler: ugly but works */
         box->sel.begin = box->cursor;
         box->sel.end = box->cursor;
         box->text_inserted = 0;
@@ -5180,7 +5196,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
 
     if (in && field->show_cursor && in->mouse.buttons[ZR_BUTTON_LEFT].down && box->active)
     {
-        /* text selection */
+        /* TEXT SELECTION */
         const char *visible = buffer;
         float xoff = in->mouse.pos.x - (r.x + field->padding.x + field->border_size);
         float yoff = in->mouse.pos.y - (r.y + field->padding.y + field->border_size);
@@ -5202,6 +5218,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
             zr_size offset = 0, glyph_off = 0;
             float text_width = 0;
 
+            /* selection beyond the current visible text rows */
             if (yoff < 0 && box->sel.active) {
                 int off = ((int)yoff + (int)box->scrollbar - (int)row_height);
                 int next_row =  off / (int)row_height;
@@ -5228,7 +5245,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
             }
 
             /* find selected glyphs in row */
-            if (text_width + r.x + field->padding.y + field->border_size > xoff) {
+            if ((text_width + r.x + field->padding.y + field->border_size) > xoff) {
                 glyph_pos = zr_user_font_glyph_index_at_pos(font, visible, row_len, xoff);
                 if (glyph_pos + glyph_off >= box->glyphs)
                     glyph_index = box->glyphs;
@@ -5250,7 +5267,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
     } else box->sel.active = zr_false;
 
     {
-        /* scrollbar */
+        /* SCROLLBAR */
         struct zr_rect bounds;
         float scroll_target, scroll_offset, scroll_step;
         struct zr_scrollbar scroll = field->scroll;
@@ -5269,7 +5286,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                             scroll_target, scroll_step, &scroll, in);
     }
     {
-        /* draw text */
+        /* DRAW TEXT */
         zr_size text_len = len;
         zr_size offset = 0;
         zr_size row_off = 0;
@@ -5283,7 +5300,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
         struct zr_rect label;
         struct zr_rect old_clip = out->clip;
 
-        /* calculate clipping rect because for scrollbar */
+        /* calculate clipping rect for scrollbar */
         clip = zr_shrink_rect(r, field->border_size);
         clip.x += field->padding.x;
         clip.y += field->padding.y;
@@ -5311,35 +5328,28 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
             if (!row_off || !row_len) break;
 
             /* draw either unselected or selected row */
-            if (glyph_off <= begin && glyph_off + glyphs >= begin &&
-                glyph_off + glyphs <= end+1 && box->active)
+            if (glyph_off <= begin && glyph_off + glyphs > begin &&
+                glyph_off + glyphs <= end && box->active)
             {
-                /* first case with selection beginning in current row */
+                /* 1.) first case with selection beginning in current row */
                 zr_size l = 0, sel_begin, sel_len;
                 zr_size unselected_text_width;
                 zr_rune unicode;
 
                 /* calculate selection beginning string position */
                 const char *from;
-                if (row_len == row_off) {
-                    from = zr_utf_at(&buffer[offset], row_len,
-                        (int)(begin - glyph_off), &unicode, &l);
-                    sel_begin = (zr_size)(from - (char*)box->buffer.memory.ptr);
-                    sel_begin = sel_begin - offset;
-                    sel_len = row_len - sel_begin;
-                } else {
-                    from = zr_utf_at(&buffer[offset], row_off,
-                        (int)(begin - glyph_off), &unicode, &l);
-                    sel_begin = (zr_size)(from - (char*)box->buffer.memory.ptr);
-                    sel_begin = sel_begin - offset;
-                    sel_len = row_off - sel_begin;
-                }
+                from = zr_utf_at(&buffer[offset], row_len,
+                    (int)(begin - glyph_off), &unicode, &l);
+                sel_begin = (zr_size)(from - (char*)box->buffer.memory.ptr);
+                sel_begin = sel_begin - offset;
+                sel_len = row_len - sel_begin;
+
 
                 /* draw unselected text part */
                 unselected_text_width =
                     font->width(font->userdata, font->height, &buffer[offset],
                                 (row_len >= sel_len) ? row_len - sel_len: 0);
-                zr_draw_text(out , label, &buffer[offset],
+                zr_draw_text(out, label, &buffer[offset],
                     (row_len >= sel_len) ? row_len - sel_len: 0,
                     font, field->background, field->text);
 
@@ -5351,12 +5361,12 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                 label.x -= (float)unselected_text_width;
                 label.w += (float)(unselected_text_width);
             } else if (glyph_off > begin && glyph_off + glyphs < end && box->active) {
-                /* second case with selection spanning over current row */
+                /*  2.) selection spanning over current row */
                 zr_draw_text(out, label, &buffer[offset],
                     row_len, font, field->text, field->background);
             } else if (glyph_off > begin && glyph_off + glyphs >= end &&
                     box->active && end >= glyph_off && end <= glyph_off + glyphs) {
-                /* third case with selection ending in current row */
+                /* 3.) selection ending in current row */
                 zr_size l = 0, sel_end, sel_len;
                 zr_size selected_text_width;
                 zr_rune unicode;
@@ -5386,7 +5396,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
             else if (glyph_off <= begin && glyph_off + glyphs >= begin &&
                     box->active && glyph_off <= end && glyph_off + glyphs > end)
             {
-                /* fourth case with selection beginning and ending in current row */
+                /* 4.) selection beginning and ending in current row */
                 zr_size l = 0;
                 zr_size cur_text_width;
                 zr_size sel_begin, sel_end, sel_len;
@@ -5435,7 +5445,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                 label.x = (float)label_x;
                 label.w = (float)label_w;
             } else {
-                /* no selection */
+                /* 5.) no selection */
                 label.w = text_width;
                 zr_draw_text(out, label, &buffer[offset],
                     row_len, font, field->background, field->text);
@@ -6001,7 +6011,6 @@ zr_input_is_key_down(const struct zr_input *i, enum zr_keys key)
     if (k->down) return zr_true;
     return zr_false;
 }
-
 
 /* ==============================================================
  *
@@ -10764,7 +10773,6 @@ static int
 zr_menu_begin(struct zr_panel *layout, struct zr_context *ctx, struct zr_window *win,
     const char *id, int is_clicked, struct zr_rect header, float width)
 {
-    /* calculate the maximum height of the combo box*/
     int is_open = 0;
     int is_active = 0;
     struct zr_rect body;

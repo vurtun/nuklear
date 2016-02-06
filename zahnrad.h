@@ -956,6 +956,11 @@ int zr_filter_hex(const struct zr_edit_box*, zr_rune unicode);
 int zr_filter_oct(const struct zr_edit_box*, zr_rune unicode);
 int zr_filter_binary(const struct zr_edit_box*, zr_rune unicode);
 
+enum zr_edit_remove_operation {
+    ZR_DELETE = 0,
+    ZR_REMOVE
+};
+
 enum zr_edit_flags {
     ZR_EDIT_READ_ONLY   = ZR_FLAG(0),
     /* text inside the edit widget cannot be modified */
@@ -994,7 +999,7 @@ enum zr_edit_events {
 /* editbox */
 void zr_edit_box_clear(struct zr_edit_box*);
 void zr_edit_box_add(struct zr_edit_box*, const char*, zr_size);
-void zr_edit_box_remove(struct zr_edit_box*);
+void zr_edit_box_remove(struct zr_edit_box*, enum zr_edit_remove_operation);
 char *zr_edit_box_get(struct zr_edit_box*);
 const char *zr_edit_box_get_const(const struct zr_edit_box*);
 void zr_edit_box_at(struct zr_edit_box*, zr_size pos, zr_glyph, zr_size*);
