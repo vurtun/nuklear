@@ -76,6 +76,8 @@ extern "C" {
 /* If you already provide the implementation for stb_truetype.h in one of your
  files you have to define this as 1 to prevent another implementation and the
  resulting symbol collision. */
+#define ZR_COMPILE_WITH_COMMAND_USERDATA 0
+/* Activating this adds a userdata pointer into each command */
 /*
  * ===============================================================
  *
@@ -548,6 +550,9 @@ struct zr_command {
     /* the type of the current command */
     zr_size next;
     /* absolute base pointer offset to the next command */
+#if ZR_COMPILE_WITH_COMMAND_USERDATA
+    zr_handle userdata;
+#endif
 };
 
 struct zr_command_scissor {
@@ -633,6 +638,8 @@ struct zr_command_buffer {
     /* current clipping rectangle */
     int use_clipping;
     /* flag if the command buffer should clip commands */
+    zr_handle userdata;
+    /* userdata provided in each command */
     zr_size begin, end, last;
 };
 
@@ -660,6 +667,9 @@ struct zr_draw_command {
     /* current screen clipping rectangle */
     zr_handle texture;
     /* current texture to set */
+#if ZR_COMPILE_WITH_COMMAND_USERDATA
+    zr_handle userdata;
+#endif
 };
 
 struct zr_draw_null_texture {
@@ -1287,6 +1297,9 @@ struct zr_canvas {
     /* offset to the first point in the buffer */
     struct zr_vec2 circle_vtx[12];
     /* small lookup table for fast circle drawing */
+#if ZR_COMPILE_WITH_COMMAND_USERDATA
+    zr_handle userdata;
+#endif
 };
 
 struct zr_context {
@@ -1299,6 +1312,9 @@ struct zr_context {
 
 #if ZR_COMPILE_WITH_VERTEX_BUFFER
     struct zr_canvas canvas;
+#endif
+#if ZR_COMPILE_WITH_COMMAND_USERDATA
+    zr_handle userdata;
 #endif
 
     int build;
@@ -1321,6 +1337,9 @@ int zr_init(struct zr_context*, struct zr_allocator*,
             const struct zr_user_font*);
 void zr_clear(struct zr_context*);
 void zr_free(struct zr_context*);
+#if ZR_COMPILE_WITH_COMMAND_USERDATA
+void zr_set_user_data(struct zr_context*, zr_handle handle);
+#endif
 
 /* window */
 int zr_begin(struct zr_context*, struct zr_panel*, const char *title,

@@ -1700,6 +1700,9 @@ zr_command_buffer_reset(struct zr_command_buffer *buffer)
     buffer->end = 0;
     buffer->last = 0;
     buffer->clip = zr_null_rect;
+#if ZR_COMPILE_WITH_COMMAND_USERDATA
+    buffer->userdata.ptr = 0;
+#endif
 }
 
 static void*
@@ -1727,6 +1730,9 @@ zr_command_buffer_push(struct zr_command_buffer* b,
 
     cmd->type = t;
     cmd->next = b->base->allocated + alignment;
+#if ZR_COMPILE_WITH_COMMAND_USERDATA
+    cmd->userdata = b->userdata;
+#endif
     b->end = cmd->next;
     return cmd;
 }
@@ -2104,6 +2110,28 @@ zr_canvas_push_image(struct zr_canvas *list, zr_handle texture)
     }
 }
 
+#if ZR_COMPILE_WITH_COMMAND_USERDATA
+static void
+zr_canvas_push_userdata(struct zr_canvas *list, zr_handle userdata)
+{
+    ZR_ASSERT(list);
+    if (!list) return;
+    if (!list->cmd_count) {
+        struct zr_draw_command *prev;
+        zr_canvas_push_command(list, zr_null_rect, list->null.texture);
+        prev = zr_canvas_command_last(list);
+        prev->userdata = userdata;
+    } else {
+        struct zr_draw_command *prev = zr_canvas_command_last(list);
+        if (prev->userdata.ptr != userdata.ptr) {
+            zr_canvas_push_command(list, prev->clip_rect, prev->texture);
+            prev = zr_canvas_command_last(list);
+            prev->userdata = userdata;
+        }
+    }
+}
+#endif
+
 static struct zr_draw_vertex*
 zr_canvas_alloc_vertices(struct zr_canvas *list, zr_size count)
 {
@@ -2165,6 +2193,10 @@ zr_canvas_add_poly_line(struct zr_canvas *list, struct zr_vec2 *points,
     count = points_count;
     if (!closed) count = points_count-1;
     thick_line = thickness > 1.0f;
+
+#if ZR_COMPILE_WITH_COMMAND_USERDATA
+    zr_canvas_push_userdata(list, list->userdata);
+#endif
 
     if (aliasing == ZR_ANTI_ALIASING_ON) {
         /* ANTI-ALIASED STROKE */
@@ -2389,6 +2421,10 @@ zr_canvas_add_poly_convex(struct zr_canvas *list, struct zr_vec2 *points,
     zr_draw_vertex_color col;
     ZR_ASSERT(list);
     if (!list || points_count < 3) return;
+
+#if ZR_COMPILE_WITH_COMMAND_USERDATA
+    zr_canvas_push_userdata(list, list->userdata);
+#endif
 
     color.a *= list->global_alpha;
     col = zr_color32(color);
@@ -2808,7 +2844,11 @@ zr_canvas_load(struct zr_canvas *list, struct zr_context *queue,
     line_thickness = MAX(line_thickness, 1.0f);
     if (!list || !queue || !list->vertices || !list->elements) return;
 
-    zr_foreach(cmd, queue) {
+    zr_foreach(cmd, queue)
+    {
+#if ZR_COMPILE_WITH_COMMAND_USERDATA
+        list->userdata = cmd->userdata;
+#endif
         switch (cmd->type) {
         case ZR_COMMAND_NOP: break;
         case ZR_COMMAND_SCISSOR: {
@@ -6524,6 +6564,17 @@ zr_init(struct zr_context *ctx, struct zr_allocator *alloc,
     return 1;
 }
 
+#if ZR_COMPILE_WITH_COMMAND_USERDATA
+void
+zr_set_user_data(struct zr_context *ctx, zr_handle handle)
+{
+    if (!ctx) return;
+    ctx->userdata = handle;
+    if (ctx->current)
+        ctx->current->buffer.userdata = handle;
+}
+#endif
+
 void
 zr_free(struct zr_context *ctx)
 {
@@ -7457,6 +7508,10 @@ zr_panel_begin(struct zr_context *ctx, const char *title)
             win->bounds.y = win->bounds.y + in->mouse.delta.y;
         }
     }
+
+#if ZR_COMPILE_WITH_COMMAND_USERDATA
+    win->buffer.userdata = ctx->userdata;
+#endif
 
     /* setup window layout */
     out = &win->buffer;
