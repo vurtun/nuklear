@@ -777,6 +777,7 @@ zr_murmur_hash(const void * key, int len, zr_hash seed)
     int i;
 
     /* body */
+    if (!key) return 0;
     conv.b = (data + nblocks*4);
     blocks = (const zr_uint*)conv.i;
     for (i = -nblocks; i; ++i) {
@@ -9713,7 +9714,7 @@ zr_chart_begin(struct zr_context *ctx, enum zr_chart_type type,
     zr_draw_rect(out, bounds, config->rounding[ZR_ROUNDING_CHART], color);
 
     /* setup basic generic chart  */
-    zr_zero(chart, sizeof(chart));
+    zr_zero(chart, sizeof(*chart));
     chart->type = type;
     chart->index = 0;
     chart->count = count;
@@ -10720,6 +10721,7 @@ zr_combo_begin_image(struct zr_context *ctx, struct zr_panel *layout,
         struct zr_rect bounds = {0,0,0,0};
         struct zr_symbol sym;
         struct zr_rect content;
+
         content.h = header.h - 4 * item_padding.y;
         content.y = header.y + 2 * item_padding.y;
         content.x = header.x + 2 * item_padding.x;
@@ -10882,8 +10884,6 @@ zr_menu_text_begin(struct zr_context *ctx, struct zr_panel *layout,
     if (!ctx || !ctx->current || !ctx->current->layout)
         return 0;
 
-    win = ctx->current;
-    in = &ctx->input;
     {
         /* execute menu text button for open/closing the popup */
         struct zr_button_text button;
@@ -10891,6 +10891,7 @@ zr_menu_text_begin(struct zr_context *ctx, struct zr_panel *layout,
         if (!zr_button(&button.base, &header, ctx, ZR_BUTTON_NORMAL))
             return 0;
 
+        win = ctx->current;
         button.base.rounding = 0;
         button.base.border_width = 0;
         button.base.border = ctx->style.colors[ZR_COLOR_WINDOW];
