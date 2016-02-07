@@ -2925,7 +2925,7 @@ zr__draw_begin(const struct zr_context *ctx,
     ZR_ASSERT(buffer);
     if (!buffer || !buffer->size || !ctx->canvas.cmd_count) return 0;
 
-    memory = buffer->memory.ptr;
+    memory = (zr_byte*)buffer->memory.ptr;
     offset = buffer->memory.size - ctx->canvas.cmd_offset;
     cmd = zr_ptr_add(const struct zr_draw_command, memory, offset);
     return cmd;
@@ -6214,7 +6214,7 @@ struct zr_vec2
 zr_get_property(const struct zr_context *ctx, enum zr_style_properties index)
 {
     const struct zr_style *style;
-    static const struct zr_vec2 zero;
+    static const struct zr_vec2 zero = {0,0};
     ZR_ASSERT(ctx);
     if (!ctx) return zero;
     style = &ctx->style;
@@ -6225,7 +6225,7 @@ struct zr_color
 zr_get_color(const struct zr_context *ctx, enum zr_style_colors index)
 {
     const struct zr_style *style;
-    static const struct zr_color zero;
+    static const struct zr_color zero = {0,0,0,0};
     ZR_ASSERT(ctx);
     if (!ctx) return zero;
     style = &ctx->style;
@@ -6459,7 +6459,7 @@ zr_pool_init_fixed(struct zr_pool *pool, void *memory, zr_size size)
     if (size < sizeof(struct zr_window_page) + ZR_POOL_DEFAULT_CAPACITY * sizeof(struct zr_window))
         pool->capacity = (unsigned)(size - sizeof(struct zr_window_page)) / sizeof(struct zr_window);
     else pool->capacity = ZR_POOL_DEFAULT_CAPACITY;
-    pool->pages = memory;
+    pool->pages = (struct zr_window_page*)memory;
     pool->type = ZR_BUFFER_FIXED;
     pool->size = size;
 }
@@ -6480,7 +6480,7 @@ zr_pool_alloc(struct zr_pool *pool)
         } else {
             zr_size size = sizeof(struct zr_window_page);
             size += ZR_POOL_DEFAULT_CAPACITY * sizeof(union zr_page_data);
-            page = pool->alloc.alloc(pool->alloc.userdata, size);
+            page = (struct zr_window_page*)pool->alloc.alloc(pool->alloc.userdata, size);
             page->size = 0;
             page->next = pool->pages;
             pool->pages = page;
@@ -6541,12 +6541,13 @@ zr_init_custom(struct zr_context *ctx, struct zr_buffer *cmds,
         ctx->pool = memory;
         ZR_ASSERT(size > sizeof(struct zr_pool));
         size -= sizeof(struct zr_pool);
-        zr_pool_init_fixed(ctx->pool, (zr_byte*)ctx->pool+sizeof(struct zr_pool), size);
+        zr_pool_init_fixed((struct zr_pool*)ctx->pool,
+            (void*)((zr_byte*)ctx->pool+sizeof(struct zr_pool)), size);
     } else {
         /* create dynamic pool from buffer allocator */
         struct zr_allocator *alloc = &pool->pool;
         ctx->pool = alloc->alloc(alloc->userdata, sizeof(struct zr_pool));
-        zr_pool_init(ctx->pool, alloc, ZR_POOL_DEFAULT_CAPACITY);
+        zr_pool_init((struct zr_pool*)ctx->pool, alloc, ZR_POOL_DEFAULT_CAPACITY);
     }
     return 1;
 }
@@ -6560,7 +6561,7 @@ zr_init(struct zr_context *ctx, struct zr_allocator *alloc,
     zr_setup(ctx, font);
     zr_buffer_init(&ctx->memory, alloc, ZR_DEFAULT_COMMAND_BUFFER_SIZE);
     ctx->pool = alloc->alloc(alloc->userdata, sizeof(struct zr_pool));
-    zr_pool_init(ctx->pool, alloc, ZR_POOL_DEFAULT_CAPACITY);
+    zr_pool_init((struct zr_pool*)ctx->pool, alloc, ZR_POOL_DEFAULT_CAPACITY);
     return 1;
 }
 
@@ -6581,7 +6582,7 @@ zr_free(struct zr_context *ctx)
     ZR_ASSERT(ctx);
     if (!ctx) return;
     zr_buffer_free(&ctx->memory);
-    if (ctx->pool) zr_pool_free(ctx->pool);
+    if (ctx->pool) zr_pool_free((struct zr_pool*)ctx->pool);
 
     zr_zero(&ctx->input, sizeof(ctx->input));
     zr_zero(&ctx->style, sizeof(ctx->style));
@@ -6891,14 +6892,14 @@ zr_create_window(struct zr_context *ctx)
         ctx->freelist = win->next;
     } else if (ctx->pool) {
         /* allocate window from memory pool */
-        win = (struct zr_window*) zr_pool_alloc(ctx->pool);
+        win = (struct zr_window*) zr_pool_alloc((struct zr_pool*)ctx->pool);
         ZR_ASSERT(win);
         if (!win) return 0;
     } else {
         /* allocate new window from the back of the fixed size memory buffer */
         static const zr_size size = sizeof(union zr_page_data);
         static const zr_size align = ZR_ALIGNOF(union zr_page_data);
-        win = zr_buffer_alloc(&ctx->memory, ZR_BUFFER_BACK, size, align);
+        win = (struct zr_window*)zr_buffer_alloc(&ctx->memory, ZR_BUFFER_BACK, size, align);
         ZR_ASSERT(win);
         if (!win) return 0;
     }
@@ -7031,7 +7032,7 @@ zr_begin(struct zr_context *ctx, struct zr_panel *layout,
     title_hash = zr_murmur_hash(title, (int)title_len, ZR_WINDOW_TITLE);
     win = zr_find_window(ctx, title_hash);
     if (!win) {
-        win = zr_create_window(ctx);
+        win = (struct zr_window*)zr_create_window(ctx);
         zr_insert_window(ctx, win);
         zr_command_buffer_init(&win->buffer, &ctx->memory, ZR_CLIPPING_ON);
         ZR_ASSERT(win);
@@ -9469,16 +9470,16 @@ zr_edit_buffer(struct zr_context *ctx, zr_flags flags,
         i = (flags & ZR_EDIT_READ_ONLY) ? 0: i;
         if (!flags) {
             /* simple edit field with only appending and removing at the end of the buffer */
-            buffer->allocated = zr_widget_edit(&win->buffer, bounds, buffer->memory.ptr,
-                buffer->allocated, buffer->memory.size, active, 0, &field,
-                filter, i, &ctx->style.font);
+            buffer->allocated = zr_widget_edit(&win->buffer, bounds,
+                (char*)buffer->memory.ptr, buffer->allocated, buffer->memory.size,
+                active, 0, &field, filter, i, &ctx->style.font);
         } else {
             /* simple edit field cursor based movement, inserting and removing */
-            zr_size glyphs = zr_utf_len(buffer->memory.ptr, buffer->allocated);
+            zr_size glyphs = zr_utf_len((const char*)buffer->memory.ptr, buffer->allocated);
             *cursor = MIN(*cursor, glyphs);
-            buffer->allocated = zr_widget_edit(&win->buffer, bounds, buffer->memory.ptr,
-                buffer->allocated, buffer->memory.size, active, cursor, &field,
-                filter, i, &ctx->style.font);
+            buffer->allocated = zr_widget_edit(&win->buffer, bounds,
+                (char*)buffer->memory.ptr, buffer->allocated , buffer->memory.size,
+                active, cursor, &field, filter, i, &ctx->style.font);
         }
 
         if (dummy_active) {
@@ -9499,7 +9500,7 @@ zr_edit_buffer(struct zr_context *ctx, zr_flags flags,
             zr_edit_box_init_buffer(&box, buffer, &ctx->clip, filter);
         else zr_edit_box_init_buffer(&box, buffer, 0, filter);
 
-        box.glyphs = zr_utf_len(buffer->memory.ptr, buffer->allocated);
+        box.glyphs = zr_utf_len((const char*)buffer->memory.ptr, buffer->allocated);
         box.active = *active;
         box.filter = filter;
         box.scrollbar = *scroll;
@@ -10035,7 +10036,7 @@ zr_popup_begin(struct zr_context *ctx, struct zr_panel *layout,
 
     popup = win->popup.win;
     if (!popup) {
-        popup = zr_create_window(ctx);
+        popup = (struct zr_window*)zr_create_window(ctx);
         win->popup.win = popup;
         win->popup.active = 0;
     }
@@ -10107,7 +10108,7 @@ zr_nonblock_begin(struct zr_panel *layout, struct zr_context *ctx,
     popup = win->popup.win;
     if (!popup) {
         /* create window for nonblocking popup */
-        popup = zr_create_window(ctx);
+        popup = (struct zr_window*)zr_create_window(ctx);
         win->popup.win = popup;
         zr_command_buffer_init(&popup->buffer, &ctx->memory, ZR_CLIPPING_ON);
     } else {
@@ -10283,7 +10284,7 @@ int
 zr_contextual_begin(struct zr_context *ctx, struct zr_panel *layout,
     zr_flags flags, struct zr_vec2 size, struct zr_rect trigger_bounds)
 {
-    static const struct zr_rect null_rect;
+    static const struct zr_rect null_rect = {0,0,0,0};
     int is_clicked = 0;
     int is_active = 0;
     int is_open = 0;
