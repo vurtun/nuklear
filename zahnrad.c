@@ -6070,9 +6070,9 @@ zr_input_is_key_down(const struct zr_input *i, enum zr_keys key)
     PROPERTY(ITEM_SPACING,      4.0f, 4.0f)\
     PROPERTY(ITEM_PADDING,      4.0f, 4.0f)\
     PROPERTY(TOUCH_PADDING,     0.0f, 0.0f)\
-    PROPERTY(PADDING,           15.0f, 10.0f)\
+    PROPERTY(PADDING,           8.0f, 10.0f)\
     PROPERTY(SCALER_SIZE,       16.0f, 16.0f)\
-    PROPERTY(SCROLLBAR_SIZE,    14.0f, 14.0f)\
+    PROPERTY(SCROLLBAR_SIZE,    10.0f, 10.0f)\
     PROPERTY(SIZE,              64.0f, 64.0f)
 
 #define ZR_STYLE_ROUNDING_MAP(ROUNDING)\
@@ -6082,7 +6082,7 @@ zr_input_is_key_down(const struct zr_input *i, enum zr_keys key)
     ROUNDING(INPUT,     0.0f)\
     ROUNDING(PROPERTY,  10.0f)\
     ROUNDING(CHART,     4.0f)\
-    ROUNDING(SCROLLBAR, 5.0f)
+    ROUNDING(SCROLLBAR, 3.0f)
 
 #define ZR_STYLE_COLOR_MAP(COLOR)\
     COLOR(TEXT,                     175, 175, 175, 255)\
@@ -8577,7 +8577,7 @@ zr_layout_push(struct zr_context *ctx, enum zr_layout_node_type type,
         /* calculate the triangle bounds */
         sym.w = sym.h = config->font.height;
         sym.y = header.y + item_padding.y;
-        sym.x = header.x + panel_padding.x;
+        sym.x = header.x + panel_padding.x + item_padding.x;
 
         /* calculate the triangle points and draw triangle */
         zr_triangle_from_direction(points, sym, 0, 0, heading);
