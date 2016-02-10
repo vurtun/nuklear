@@ -1108,7 +1108,7 @@ int
 zr_image_is_subimage(const struct zr_image* img)
 {
     ZR_ASSERT(img);
-    return (img->w == 0 && img->h == 0);
+    return !(img->w == 0 && img->h == 0);
 }
 
 static void
@@ -2818,7 +2818,8 @@ zr_canvas_add_text(struct zr_canvas *list, const struct zr_user_font *font,
 
         /* calculate and draw glyph drawing rectangle and image */
         gx = x + g.offset.x;
-        gy = rect.y + (rect.h/2) - (font->height/2) + g.offset.y;
+        /*gy = rect.y + (rect.h/2) - (font->height/2) + g.offset.y;*/
+        gy = rect.y + g.offset.y;
         gw = g.width; gh = g.height;
         char_width = g.xadvance;
         fg.a *= list->global_alpha;
@@ -3946,7 +3947,7 @@ struct zr_text {
 static void
 zr_widget_text(struct zr_command_buffer *o, struct zr_rect b,
     const char *string, zr_size len, const struct zr_text *t,
-    enum zr_text_align a, const struct zr_user_font *f)
+    zr_flags a, const struct zr_user_font *f)
 {
     struct zr_rect label;
     zr_size text_width;
@@ -3963,19 +3964,29 @@ zr_widget_text(struct zr_command_buffer *o, struct zr_rect b,
     text_width = f->width(f->userdata, f->height, (const char*)string, len);
     text_width += (zr_size)(2 * t->padding.x);
 
-    if (a == ZR_TEXT_LEFT) {
+    /* align in x-axis */
+    if (a & ZR_TEXT_LEFT) {
         label.x = b.x + t->padding.x;
         label.w = MAX(0, b.w - 2 * t->padding.x);
-    } else if (a == ZR_TEXT_CENTERED) {
+    } else if (a & ZR_TEXT_CENTERED) {
         label.w = MAX(1, 2 * t->padding.x + (float)text_width);
         label.x = (b.x + t->padding.x + ((b.w - 2 * t->padding.x) - label.w) / 2);
         label.x = MAX(b.x + t->padding.x, label.x);
         label.w = MIN(b.x + b.w, label.x + label.w);
         if (label.w >= label.x) label.w -= label.x;
-    } else if (a == ZR_TEXT_RIGHT) {
+    } else if (a & ZR_TEXT_RIGHT) {
         label.x = MAX(b.x + t->padding.x, (b.x + b.w) - (2 * t->padding.x + (float)text_width));
         label.w = (float)text_width + 2 * t->padding.x;
     } else return;
+
+    /* align in y-axis */
+    if (a & ZR_TEXT_MIDDLE) {
+        label.y = b.y + b.h/2.0f - (float)f->height/2.0f;
+        label.h = b.h - (b.h/2.0f + f->height/2.0f);
+    } else if (a & ZR_TEXT_BOTTOM) {
+        label.y = b.y + b.h - f->height;
+        label.h = f->height;
+    }
     zr_draw_text(o, label, (const char*)string,
         len, f, t->background, t->text);
 }
@@ -4038,7 +4049,7 @@ struct zr_button {
 
 struct zr_button_text {
     struct zr_button base;
-    enum zr_text_align alignment;
+    zr_flags alignment;
     struct zr_color normal;
     struct zr_color hover;
     struct zr_color active;
@@ -4288,7 +4299,7 @@ zr_do_button_image(enum zr_widget_status *state,
 static int
 zr_do_button_text_symbol(enum zr_widget_status *state,
     struct zr_command_buffer *out, struct zr_rect r,
-    enum zr_symbol_type symbol, const char *text, enum zr_text_align align,
+    enum zr_symbol_type symbol, const char *text, zr_flags align,
     enum zr_button_behavior behavior, const struct zr_button_text *b,
     const struct zr_user_font *f, const struct zr_input *i)
 {
@@ -4338,7 +4349,7 @@ zr_do_button_text_symbol(enum zr_widget_status *state,
 static int
 zr_do_button_text_image(enum zr_widget_status *state,
     struct zr_command_buffer *out, struct zr_rect r,
-    struct zr_image img, const char* text, enum zr_text_align align,
+    struct zr_image img, const char* text, zr_flags align,
     enum zr_button_behavior behavior, const struct zr_button_text *b,
     const struct zr_user_font *f, const struct zr_input *i)
 {
@@ -4457,7 +4468,7 @@ zr_toggle_draw(struct zr_command_buffer *out,
         text.background = toggle->font_background;
         text.text = toggle->font;
         zr_widget_text(out, inner, string, zr_strsiz(string),
-                        &text, ZR_TEXT_LEFT, font);
+                        &text, ZR_TEXT_LEFT|ZR_TEXT_MIDDLE, font);
     }
 }
 
@@ -4951,6 +4962,7 @@ zr_widget_edit_field(struct zr_command_buffer *out, struct zr_rect r,
 {
     char *buffer;
     zr_size len;
+    struct zr_text text;
 
     ZR_ASSERT(out);
     ZR_ASSERT(font);
@@ -5060,8 +5072,12 @@ zr_widget_edit_field(struct zr_command_buffer *out, struct zr_rect r,
         label.x = r.x + field->padding.x + field->border_size;
         label.y = r.y + field->padding.y + field->border_size;
         label.h = r.h - (2 * field->padding.y + 2 * field->border_size);
-        zr_draw_text(out, label, &buffer[offset], text_len,
-            font, field->background, field->text);
+
+        text.padding = zr_vec2(0,0);
+        text.background = field->background;
+        text.text = field->text;
+        zr_widget_text(out, label, &buffer[offset], text_len,
+            &text, ZR_TEXT_LEFT|ZR_TEXT_MIDDLE, font);
 
         /* draw selected text */
         if (box->active && field->show_cursor) {
@@ -5096,8 +5112,11 @@ zr_widget_edit_field(struct zr_command_buffer *out, struct zr_rect r,
 
                 /* draw selected text */
                 zr_draw_rect(out, label, 0, field->text);
-                zr_draw_text(out , label, begin,
-                    MAX(l, off_end - off_begin), font, field->text, field->background);
+                text.padding = zr_vec2(0,0);
+                text.background = field->text;
+                text.text = field->background;
+                zr_widget_text(out, label, begin, MAX(l, off_end - off_begin),
+                    &text, ZR_TEXT_LEFT|ZR_TEXT_MIDDLE, font);
                 zr_draw_scissor(out, clip);
             }
         }
@@ -5366,6 +5385,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
         /* draw each text row */
         while (text_len) {
             /* selection bounds */
+            struct zr_text text;
             zr_size begin = MIN(box->sel.end, box->sel.begin);
             zr_size end = MAX(box->sel.end, box->sel.begin);
 
@@ -5393,26 +5413,37 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                 sel_begin = sel_begin - offset;
                 sel_len = row_len - sel_begin;
 
-
                 /* draw unselected text part */
                 unselected_text_width =
                     font->width(font->userdata, font->height, &buffer[offset],
                                 (row_len >= sel_len) ? row_len - sel_len: 0);
-                zr_draw_text(out, label, &buffer[offset],
+
+                text.padding = zr_vec2(0,0);
+                text.background = field->background;
+                text.text = field->text;
+                zr_widget_text(out, label, &buffer[offset],
                     (row_len >= sel_len) ? row_len - sel_len: 0,
-                    font, field->background, field->text);
+                    &text, ZR_TEXT_LEFT|ZR_TEXT_MIDDLE, font);
 
                 /* draw selected text part */
                 label.x += (float)(unselected_text_width);
                 label.w -= (float)(unselected_text_width);
-                zr_draw_text(out , label, &buffer[offset + sel_begin],
-                    sel_len, font, field->text, field->background);
+                text.background = field->text;
+                text.text = field->background;
+                zr_draw_rect(out, label, 0, field->text);
+                zr_widget_text(out, label, &buffer[offset+sel_begin],
+                    sel_len, &text, ZR_TEXT_LEFT|ZR_TEXT_MIDDLE, font);
+
                 label.x -= (float)unselected_text_width;
                 label.w += (float)(unselected_text_width);
             } else if (glyph_off > begin && glyph_off + glyphs < end && box->active) {
                 /*  2.) selection spanning over current row */
-                zr_draw_text(out, label, &buffer[offset],
-                    row_len, font, field->text, field->background);
+                text.padding = zr_vec2(0,0);
+                text.background = field->text;
+                text.text = field->background;
+                zr_draw_rect(out, label, 0, field->text);
+                zr_widget_text(out, label, &buffer[offset], row_len,
+                    &text, ZR_TEXT_LEFT|ZR_TEXT_MIDDLE, font);
             } else if (glyph_off > begin && glyph_off + glyphs >= end &&
                     box->active && end >= glyph_off && end <= glyph_off + glyphs) {
                 /* 3.) selection ending in current row */
@@ -5430,15 +5461,22 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                 /* draw selected text part */
                 selected_text_width = font->width(font->userdata, font->height,
                     &buffer[offset], sel_len);
-                zr_draw_text(out , label, &buffer[offset],
-                    sel_len, font, field->text, field->background);
+                text.padding = zr_vec2(0,0);
+                text.background = field->text;
+                text.text = field->background;
+                zr_draw_rect(out, label, 0, field->text);
+                zr_widget_text(out, label, &buffer[offset], sel_len,
+                    &text, ZR_TEXT_LEFT|ZR_TEXT_MIDDLE, font);
 
                 /* draw unselected text part */
                 label.x += (float)selected_text_width;
                 label.w -= (float)(selected_text_width);
-                zr_draw_text(out, label, &buffer[offset + sel_end],
+                text.background = field->background;
+                text.text = field->text;
+                zr_widget_text(out, label, &buffer[offset+sel_end],
                     (row_len >= sel_len) ? row_len - sel_len: 0,
-                    font, field->background, field->text);
+                    &text, ZR_TEXT_LEFT|ZR_TEXT_MIDDLE, font);
+
                 label.x -= (float)selected_text_width;
                 label.w += (float)(selected_text_width);
             }
@@ -5452,6 +5490,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                 zr_rune unicode;
                 float label_x = label.x;
                 float label_w = label.w;
+                float tmp;
 
                 const char *from = zr_utf_at(&buffer[offset], row_len,
                     (int)(begin - glyph_off), &unicode, &l);
@@ -5474,30 +5513,46 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                 /* draw beginning unselected text part */
                 cur_text_width = font->width(font->userdata, font->height,
                                             &buffer[offset], sel_begin);
-                zr_draw_text(out, label, &buffer[offset],
-                    sel_begin, font, field->background, field->text);
+                text.padding = zr_vec2(0,0);
+                text.background = field->background;
+                text.text = field->text;
+                zr_widget_text(out, label, &buffer[offset], sel_begin,
+                    &text, ZR_TEXT_LEFT|ZR_TEXT_MIDDLE, font);
 
                 /* draw selected text part */
                 label.x += (float)cur_text_width;
                 label.w -= (float)(cur_text_width);
-                zr_draw_text(out, label, &buffer[offset+sel_begin],
-                    sel_len, font, field->text, field->background);
+                tmp = label.w;
+
+                text.background = field->text;
+                text.text = field->background;
+                label.w = font->width(font->userdata, font->height,
+                                            &buffer[offset+sel_begin], sel_len);
+                zr_draw_rect(out, label, 0, field->text);
+                zr_widget_text(out, label, &buffer[offset+sel_begin], sel_len,
+                    &text, ZR_TEXT_LEFT|ZR_TEXT_MIDDLE, font);
                 cur_text_width = font->width(font->userdata, font->height,
                                             &buffer[offset+sel_begin], sel_len);
+                label.w = tmp;
 
                 /* draw ending unselected text part */
                 label.x += (float)cur_text_width;
                 label.w -= (float)(cur_text_width);
-                zr_draw_text(out , label, &buffer[offset+sel_end],
-                            row_len - (sel_len + sel_begin), font,
-                            field->background, field->text);
+                text.background = field->background;
+                text.text = field->text;
+                zr_widget_text(out, label, &buffer[offset+sel_end],
+                    row_len - (sel_len + sel_begin),
+                    &text, ZR_TEXT_LEFT|ZR_TEXT_MIDDLE, font);
+
                 label.x = (float)label_x;
                 label.w = (float)label_w;
             } else {
                 /* 5.) no selection */
                 label.w = text_width;
-                zr_draw_text(out, label, &buffer[offset],
-                    row_len, font, field->background, field->text);
+                text.background = field->background;
+                text.text = field->text;
+                zr_widget_text(out, label, &buffer[offset],
+                    row_len, &text, ZR_TEXT_LEFT|ZR_TEXT_MIDDLE, font);
             }
 
             glyph_off += glyphs;
@@ -5680,6 +5735,7 @@ zr_property_draw(struct zr_command_buffer *out,
     const struct zr_user_font *f)
 {
     struct zr_symbol sym;
+    struct zr_text text;
     /* background */
     zr_draw_rect(out, property, p->rounding, p->border);
     zr_draw_rect(out, zr_shrink_rect(property, p->border_size),
@@ -5696,7 +5752,10 @@ zr_property_draw(struct zr_command_buffer *out,
     zr_draw_symbol(out, &sym, right, f);
 
     /* label */
-    zr_draw_text(out, label, name, len, f, p->normal, p->text);
+    text.padding = zr_vec2(0,0);
+    text.background = p->normal;
+    text.text = p->text;
+    zr_widget_text(out, label, name, len, &text, ZR_TEXT_LEFT|ZR_TEXT_MIDDLE, f);
 }
 
 static float
@@ -7400,6 +7459,7 @@ zr_header_button(struct zr_context *ctx, struct zr_window_header *header,
         const zr_size len = zr_utf_encode(symbol, glyph, sizeof(glyph));
         const zr_size t = c->font.width(c->font.userdata, c->font.height, X, len);
         const float text_width = (float)t;
+        struct zr_text text;
 
         /* calculate bounds of the icon */
         sym_bw = text_width;
@@ -7407,8 +7467,12 @@ zr_header_button(struct zr_context *ctx, struct zr_window_header *header,
         sym.h = c->font.height + 2 * item_padding.y;
         if (align == ZR_HEADER_RIGHT)
             sym.x = header->back - sym.w;
-        zr_draw_text(out, sym, X, len, &c->font,
-            c->colors[ZR_COLOR_HEADER],c->colors[ZR_COLOR_TEXT]);
+
+        text.padding = zr_vec2(0,0);
+        text.background = c->colors[ZR_COLOR_HEADER];
+        text.text = c->colors[ZR_COLOR_TEXT];
+        zr_widget_text(out, sym, X, len, &text,
+            ZR_TEXT_LEFT|ZR_TEXT_MIDDLE, &c->font);
     }
 
     /* check if the icon has been pressed */
@@ -7618,11 +7682,18 @@ zr_panel_begin(struct zr_context *ctx, const char *title)
             }
 
             /* calculate label bounds and draw text */
-            label.y = header.y;
-            label.h = c->font.height + 2 * item_padding.y;
-            label.w = MAX((float)t + 2 * item_padding.x, 4 * item_padding.x);
-            zr_draw_text(out, label, (const char*)title, text_len,
-                &c->font, c->colors[ZR_COLOR_HEADER], c->colors[ZR_COLOR_TEXT]);
+            {
+                struct zr_text text;
+                text.padding = zr_vec2(0,0);
+                text.background = c->colors[ZR_COLOR_HEADER];
+                text.text = c->colors[ZR_COLOR_TEXT];
+
+                label.y = header.y;
+                label.h = c->font.height + 2 * item_padding.y;
+                label.w = MAX((float)t + 2 * item_padding.x, 4 * item_padding.x);
+                zr_widget_text(out, label,(const char*)title, text_len, &text,
+                    ZR_TEXT_LEFT|ZR_TEXT_MIDDLE, &c->font);
+            }
         }
         out->clip = old_clip;
     }
@@ -8591,6 +8662,7 @@ zr_layout_push(struct zr_context *ctx, enum zr_layout_node_type type,
         /* draw node label */
         struct zr_color color;
         struct zr_rect label;
+        struct zr_text text;
 
         header.w = MAX(header.w, sym.w + item_spacing.y + panel_padding.x);
         label.x = sym.x + sym.w + item_spacing.x;
@@ -8601,8 +8673,11 @@ zr_layout_push(struct zr_context *ctx, enum zr_layout_node_type type,
         color = (type == ZR_LAYOUT_TAB) ?
             config->colors[ZR_COLOR_TAB_HEADER]:
             config->colors[ZR_COLOR_WINDOW];
-        zr_draw_text(out, label, (const char*)title, zr_strsiz(title),
-            &config->font, color, config->colors[ZR_COLOR_TEXT]);
+        text.padding = zr_vec2(0,0);
+        text.background = color;
+        text.text = config->colors[ZR_COLOR_TEXT];
+        zr_widget_text(out, label, title, zr_strsiz(title), &text,
+            ZR_TEXT_LEFT|ZR_TEXT_MIDDLE, &config->font);
     }
 
     if (type == ZR_LAYOUT_TAB) {
@@ -8774,7 +8849,7 @@ zr_widget_fitting(struct zr_rect *bounds, struct zr_context *ctx)
 
 void
 zr_text_colored(struct zr_context *ctx, const char *str, zr_size len,
-    enum zr_text_align alignment, struct zr_color color)
+    zr_flags alignment, struct zr_color color)
 {
     struct zr_rect bounds;
     struct zr_text text;
@@ -8836,16 +8911,16 @@ zr_text_wrap(struct zr_context *ctx, const char *str, zr_size len)
 
 void
 zr_text(struct zr_context *ctx, const char *str, zr_size len,
-    enum zr_text_align alignment)
+    zr_flags alignment)
 {zr_text_colored(ctx, str, len, alignment, ctx->style.colors[ZR_COLOR_TEXT]);}
 
 void
 zr_label_colored(struct zr_context *ctx, const char *text,
-    enum zr_text_align align, struct zr_color color)
+    zr_flags align, struct zr_color color)
 {zr_text_colored(ctx, text, zr_strsiz(text), align, color);}
 
 void
-zr_label(struct zr_context *ctx, const char *text, enum zr_text_align align)
+zr_label(struct zr_context *ctx, const char *text, zr_flags align)
 {zr_text(ctx, text, zr_strsiz(text), align);}
 
 void
@@ -8935,7 +9010,7 @@ zr_button_text(struct zr_context *ctx, const char *str,
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : &ctx->input;
 
     config = &ctx->style;
-    button.alignment = ZR_TEXT_CENTERED;
+    button.alignment = ZR_TEXT_CENTERED|ZR_TEXT_MIDDLE;
     button.normal = config->colors[ZR_COLOR_TEXT];
     button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
     button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
@@ -9038,7 +9113,7 @@ zr_button_image(struct zr_context *ctx, struct zr_image image,
 
 int
 zr_button_text_symbol(struct zr_context *ctx, enum zr_symbol_type symbol,
-    const char *text, enum zr_text_align align, enum zr_button_behavior behavior)
+    const char *text, zr_flags align, enum zr_button_behavior behavior)
 {
     struct zr_rect bounds;
     struct zr_button_text button;
@@ -9063,7 +9138,7 @@ zr_button_text_symbol(struct zr_context *ctx, enum zr_symbol_type symbol,
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : &ctx->input;
 
     config = &ctx->style;
-    button.alignment = ZR_TEXT_CENTERED;
+    button.alignment = ZR_TEXT_CENTERED|ZR_TEXT_MIDDLE;
     button.normal = config->colors[ZR_COLOR_TEXT];
     button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
     button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
@@ -9073,7 +9148,7 @@ zr_button_text_symbol(struct zr_context *ctx, enum zr_symbol_type symbol,
 
 int
 zr_button_text_image(struct zr_context *ctx, struct zr_image img,
-    const char *text, enum zr_text_align align, enum zr_button_behavior behavior)
+    const char *text, zr_flags align, enum zr_button_behavior behavior)
 {
     struct zr_rect bounds;
     struct zr_button_text button;
@@ -9097,7 +9172,7 @@ zr_button_text_image(struct zr_context *ctx, struct zr_image img,
     i = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : &ctx->input;
 
     config = &ctx->style;
-    button.alignment = ZR_TEXT_CENTERED;
+    button.alignment = ZR_TEXT_CENTERED|ZR_TEXT_MIDDLE;
     button.normal = config->colors[ZR_COLOR_TEXT];
     button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
     button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
@@ -9107,7 +9182,7 @@ zr_button_text_image(struct zr_context *ctx, struct zr_image img,
 
 int
 zr_select(struct zr_context *ctx, const char *str,
-    enum zr_text_align align, int value)
+    zr_flags align, int value)
 {
     struct zr_rect bounds;
     struct zr_text text;
@@ -9145,13 +9220,13 @@ zr_select(struct zr_context *ctx, const char *str,
 
     zr_draw_rect(&win->buffer, bounds, 0, background);
     zr_widget_text(&win->buffer, bounds, str, zr_strsiz(str),
-        &text, align, &config->font);
+        &text, align|ZR_TEXT_MIDDLE, &config->font);
     return value;
 }
 
 int
 zr_selectable(struct zr_context *ctx, const char *str,
-    enum zr_text_align align, int *value)
+    zr_flags align, int *value)
 {
     int old = *value;
     int ret = zr_select(ctx, str, align, old);
@@ -10338,7 +10413,7 @@ zr_contextual_begin(struct zr_context *ctx, struct zr_panel *layout,
 
 static int
 zr_contextual_button(struct zr_context *ctx, const char *text,
-    enum zr_text_align align, enum zr_button_behavior behavior)
+    zr_flags align, enum zr_button_behavior behavior)
 {
     struct zr_button_text button;
     struct zr_rect bounds;
@@ -10367,14 +10442,14 @@ zr_contextual_button(struct zr_context *ctx, const char *text,
     button.normal = config->colors[ZR_COLOR_TEXT];
     button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
     button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
-    button.alignment = align;
+    button.alignment = align|ZR_TEXT_MIDDLE;
     return zr_do_button_text(&ws, &win->buffer, bounds, text,  behavior,
             &button, i, &config->font);
 }
 
 static int
 zr_contextual_button_symbol(struct zr_context *ctx, enum zr_symbol_type symbol,
-    const char *text, enum zr_text_align align, enum zr_button_behavior behavior)
+    const char *text, zr_flags align, enum zr_button_behavior behavior)
 {
     struct zr_rect bounds;
     struct zr_button_text button;
@@ -10397,7 +10472,7 @@ zr_contextual_button_symbol(struct zr_context *ctx, enum zr_symbol_type symbol,
     i = (state == ZR_WIDGET_ROM || win->layout->flags & ZR_WINDOW_ROM) ? 0 : &ctx->input;
 
     config = &ctx->style;
-    button.alignment = ZR_TEXT_CENTERED;
+    button.alignment = ZR_TEXT_CENTERED|ZR_TEXT_MIDDLE;
     button.base.border_width = 0;
     button.base.normal = config->colors[ZR_COLOR_WINDOW];
     button.base.border = config->colors[ZR_COLOR_WINDOW];
@@ -10410,7 +10485,7 @@ zr_contextual_button_symbol(struct zr_context *ctx, enum zr_symbol_type symbol,
 
 static int
 zr_contextual_button_icon(struct zr_context *ctx, struct zr_image img,
-    const char *text, enum zr_text_align align, enum zr_button_behavior behavior)
+    const char *text, zr_flags align, enum zr_button_behavior behavior)
 {
     struct zr_rect bounds;
     struct zr_button_text button;
@@ -10433,20 +10508,19 @@ zr_contextual_button_icon(struct zr_context *ctx, struct zr_image img,
     i = (state == ZR_WIDGET_ROM || win->layout->flags & ZR_WINDOW_ROM) ? 0 : &ctx->input;
 
     config = &ctx->style;
-    button.alignment = ZR_TEXT_CENTERED;
+    button.alignment = ZR_TEXT_CENTERED|ZR_TEXT_MIDDLE;
     button.base.border_width = 0;
     button.base.normal = config->colors[ZR_COLOR_WINDOW];
     button.base.border = config->colors[ZR_COLOR_WINDOW];
     button.normal = config->colors[ZR_COLOR_TEXT];
     button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
     button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
-    button.alignment = ZR_TEXT_CENTERED;
     return zr_do_button_text_image(&ws, &win->buffer, bounds, img, text, align,
                                 behavior, &button, &config->font, i);
 }
 
 int
-zr_contextual_item(struct zr_context *ctx, const char *title, enum zr_text_align align)
+zr_contextual_item(struct zr_context *ctx, const char *title, zr_flags align)
 {
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -10463,7 +10537,7 @@ zr_contextual_item(struct zr_context *ctx, const char *title, enum zr_text_align
 
 int
 zr_contextual_item_icon(struct zr_context *ctx, struct zr_image img,
-    const char *title, enum zr_text_align align)
+    const char *title, zr_flags align)
 {
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -10480,7 +10554,7 @@ zr_contextual_item_icon(struct zr_context *ctx, struct zr_image img,
 
 int
 zr_contextual_item_symbol(struct zr_context *ctx, enum zr_symbol_type symbol,
-    const char *title, enum zr_text_align align)
+    const char *title, zr_flags align)
 {
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -10597,18 +10671,23 @@ zr_combo_begin_text(struct zr_context *ctx, struct zr_panel *layout,
         ctx->style.colors[ZR_COLOR_COMBO]);
 
     {
-        /* print currently selected string */
+        /* print currently selected text item */
         struct zr_rect label;
+        struct zr_text text;
         struct zr_symbol sym;
         struct zr_rect bounds = {0,0,0,0};
         zr_size text_len = zr_strsiz(selected);
+
+        text.padding = zr_vec2(0,0);
+        text.background = ctx->style.colors[ZR_COLOR_COMBO];
+        text.text = ctx->style.colors[ZR_COLOR_TEXT];
 
         label.x = header.x + item_padding.x;
         label.y = header.y + item_padding.y;
         label.w = header.w - (header.h + 2 * item_padding.x);
         label.h = header.h - 2 * item_padding.y;
-        zr_draw_text(&win->buffer, label, selected, text_len, &ctx->style.font,
-                ctx->style.colors[ZR_COLOR_COMBO], ctx->style.colors[ZR_COLOR_TEXT]);
+        zr_widget_text(&win->buffer, label, selected, text_len, &text,
+            ZR_TEXT_LEFT|ZR_TEXT_MIDDLE, &ctx->style.font);
 
         /* draw open/close symbol */
         bounds.y = label.y + label.h/2 - ctx->style.font.height/2;
@@ -10812,15 +10891,15 @@ zr_combo_begin_icon(struct zr_context *ctx, struct zr_panel *layout,
     return zr_combo_begin(layout, ctx, win, height, is_active, header);
 }
 
-int zr_combo_item(struct zr_context *ctx, const char *title, enum zr_text_align align)
+int zr_combo_item(struct zr_context *ctx, const char *title, zr_flags align)
 {return zr_contextual_item(ctx, title, align);}
 
 int zr_combo_item_icon(struct zr_context *ctx, struct zr_image img,
-    const char *title, enum zr_text_align align)
+    const char *title, zr_flags align)
 {return zr_contextual_item_icon(ctx, img, title, align);}
 
 int zr_combo_item_symbol(struct zr_context *ctx, enum zr_symbol_type symbol,
-    const char *title, enum zr_text_align align)
+    const char *title, zr_flags align)
 {return zr_contextual_item_symbol(ctx, symbol, title, align);}
 
 void zr_combo_end(struct zr_context *ctx)
@@ -10897,7 +10976,7 @@ zr_menu_text_begin(struct zr_context *ctx, struct zr_panel *layout,
         button.base.border = ctx->style.colors[ZR_COLOR_WINDOW];
         button.base.normal = ctx->style.colors[ZR_COLOR_WINDOW];
         button.base.active = ctx->style.colors[ZR_COLOR_WINDOW];
-        button.alignment = ZR_TEXT_CENTERED;
+        button.alignment = ZR_TEXT_CENTERED|ZR_TEXT_MIDDLE;
         button.normal = ctx->style.colors[ZR_COLOR_TEXT];
         button.active = ctx->style.colors[ZR_COLOR_TEXT];
         button.hover = ctx->style.colors[ZR_COLOR_TEXT];
@@ -10981,15 +11060,15 @@ zr_menu_symbol_begin(struct zr_context *ctx, struct zr_panel *layout,
     return zr_menu_begin(layout, ctx, win, id, is_clicked, header, width);
 }
 
-int zr_menu_item(struct zr_context *ctx, enum zr_text_align align, const char *title)
+int zr_menu_item(struct zr_context *ctx, zr_flags align, const char *title)
 {return zr_contextual_item(ctx, title, align);}
 
 int zr_menu_item_icon(struct zr_context *ctx, struct zr_image img,
-    const char *title, enum zr_text_align align)
+    const char *title, zr_flags align)
 { return zr_contextual_item_icon(ctx, img, title, align);}
 
 int zr_menu_item_symbol(struct zr_context *ctx, enum zr_symbol_type symbol,
-    const char *title, enum zr_text_align align)
+    const char *title, zr_flags align)
 {return zr_contextual_item_symbol(ctx, symbol, title, align);}
 
 void zr_menu_close(struct zr_context *ctx)

@@ -1073,12 +1073,18 @@ enum zr_widget_state {
 };
 
 enum zr_text_align {
-    ZR_TEXT_LEFT,
-    /* text is aligned on the left */
-    ZR_TEXT_CENTERED,
-    /* text is aligned in the center */
-    ZR_TEXT_RIGHT
-    /* text is aligned on the right */
+    ZR_TEXT_LEFT = 0x01,
+    /* text is aligned on the left (X-axis)*/
+    ZR_TEXT_CENTERED = 0x02,
+    /* text is aligned in the center (X-axis)*/
+    ZR_TEXT_RIGHT = 0x04,
+    /* text is aligned on the right (X-axis)*/
+    ZR_TEXT_TOP = 0x08,
+    /* text is aligned to the top (Y-axis)*/
+    ZR_TEXT_MIDDLE = 0x10,
+    /* text is aligned to the middle (Y-axis) */
+    ZR_TEXT_BOTTOM = 0x20
+    /* text is aligned to the bottom (Y-axis)*/
 };
 
 enum zr_button_behavior {
