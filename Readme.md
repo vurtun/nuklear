@@ -87,29 +87,3 @@ zr_end(ctx);
 ```
 ![example](https://cloud.githubusercontent.com/assets/8057201/10187981/584ecd68-675c-11e5-897c-822ef534a876.png)
 
-## Documentation
-Zahnrad currently relies heavily on documentation provided inside the `zahnrad.h` header file, consisting
-of descriptions and important information about modules, data types and functions.
-While being quite limited in delivering information about the general high-level libray composition it
-should still offer some understanding about the inner workings and stand as a practical usage reference. 
-
-## Examples
-A number of usage examples can be found inside the `example` and `demo` folder which should yield a
-basic overview how to embed the libray into different platforms with varying APIs and provided functionality
-and hopefully offer a basic understanding of zahnrad's UI API.
-In general it is advised to start by reading `example/demo`. It consists of a basic embedding example into
-SDL, OpenGL and [NanoVG](https://github.com/memononen/nanovg) with a very simple set of used widgets and layouting.
-
-As soon as a basic understanding of the library is accumulated it is recommended to look into the `demo/` folder with your platform
-of choice. For now a basic platform layer was implemented for Linux(X11), Windows(win32) and OpenGL with SDL and GLFW. 
-Both platform specific demos (X11, win32) use their respectable window, input, draw and font API and don't have any
-outside dependencies which should qualify them as the first platform to compile, run and test.
-For hardware supported rendering, font both the SDL and GLFW version use zahnrad's internal vertex buffer output
-and font baker.
-
-Up until now you should hopefully have a basic grip of how to use zahnrad UI API and be able to embed zahnrad into
-your plaform. From here on `demo/demo.c` should provide a basic reference on how use most widgets and layouting.
-Finally for some small actual working example apps both `example/filex` with implementation of a linux only
-file browser and `example/nodedit` with a basic node editor skeleton are provided. Especially the `nodedit` example
-should show how far you can bend the this library to your own needs.
-

@@ -43,6 +43,46 @@
 #include "../../zahnrad.h"
 #include "../demo.c"
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wsign-conversion"
+#pragma clang diagnostic ignored "-Wfloat-equal"
+#pragma clang diagnostic ignored "-Wbad-function-cast"
+#pragma clang diagnostic ignored "-Wcast-qual"
+#pragma clang diagnostic ignored "-Wshadow"
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+#pragma clang diagnostic ignored "-Wdeclaration-after-statement"
+#pragma clang diagnostic ignored "-Wunused-function"
+#pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
+#elif defined(__GNUC__) || defined(__GNUG__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wfloat-equal"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+#pragma GCC diagnostic ignored "-Wconversion"
+#pragma GCC diagnostic ignored "-Wbad-function-cast"
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#pragma GCC diagnostic ignored "-Wdeclaration-after-statement"
+#pragma GCC diagnostic ignored "-Wtype-limits"
+#pragma GCC diagnostic ignored "-Wswitch-default"
+#pragma GCC diagnostic ignored "-Wunused-function"
+#elif _MSC_VER
+#pragma warning (push)
+#pragma warning (disable: 4456)
+#endif
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "../stb_image.h"
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#elif defined(__GNUC__) || defined(__GNUG__)
+#pragma GCC diagnostic pop
+#elif _MSC_VER
+#pragma warning (pop)
+#endif
+
 /* prefered OpenGL version */
 #define OGL_MAJOR_VERSION 3
 #define OGL_MINOR_VERSION 0
@@ -68,6 +108,8 @@ typedef void (*qglDeleteVertexArrays)(GLsizei, const GLuint*);
 typedef void(*qglVertexAttribPointer)(GLuint, GLint, GLenum, GLboolean, GLsizei, const GLvoid*);
 typedef void(*qglEnableVertexAttribArray)(GLuint);
 typedef void(*qglDisableVertexAttribArray)(GLuint);
+/* GL_ARB_framebuffer_object */
+typedef void(*qglGenerateMipmap)(GLenum target);
 /* GLSL/OpenGL 2.0 core */
 typedef GLuint(*qglCreateShader)(GLenum);
 typedef void(*qglShaderSource)(GLuint, GLsizei, const GLchar**, const GLint*);
@@ -103,6 +145,7 @@ static qglDeleteVertexArrays glDeleteVertexArrays;
 static qglVertexAttribPointer glVertexAttribPointer;
 static qglEnableVertexAttribArray glEnableVertexAttribArray;
 static qglDisableVertexAttribArray glDisableVertexAttribArray;
+static qglGenerateMipmap glGenerateMipmap;
 static qglCreateShader glCreateShader;
 static qglShaderSource glShaderSource;
 static qglCompileShader glCompileShader;
@@ -152,6 +195,7 @@ struct opengl {
     int vertex_array_obj_available;
     int map_buffer_range_available;
     int fragment_program_available;
+    int frame_buffer_object_available;
 };
 
 struct device {
@@ -205,6 +249,26 @@ file_load(const char* path, size_t* siz)
     fread(buf, *siz, 1, fd);
     fclose(fd);
     return buf;
+}
+
+static struct zr_image
+icon_load(const char *filename)
+{
+    int x,y,n;
+    GLuint tex;
+    unsigned char *data = stbi_load(filename, &x, &y, &n, 0);
+    if (!data) die("[SDL]: failed to load image: %s", filename);
+
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    stbi_image_free(data);
+    return zr_image_id((int)tex);
 }
 
 static int
@@ -588,6 +652,8 @@ input_button(struct zr_context *ctx, XEvent *evt, int down)
     const int y = evt->xbutton.y;
     if (evt->xbutton.button == Button1)
         zr_input_button(ctx, ZR_BUTTON_LEFT, x, y, down);
+    else if (evt->xbutton.button == Button2)
+        zr_input_button(ctx, ZR_BUTTON_MIDDLE, x, y, down);
     else if (evt->xbutton.button == Button3)
         zr_input_button(ctx, ZR_BUTTON_RIGHT, x, y, down);
     else if (evt->xbutton.button == Button4)
@@ -603,6 +669,7 @@ static void mem_free(zr_handle unused, void *ptr)
 
 int main(int argc, char **argv)
 {
+    int i;
     int running = 1;
     const char *font_path;
     struct opengl gl;
@@ -654,7 +721,7 @@ int main(int argc, char **argv)
         fprintf(stdout, "[X11]: Found %d matching framebuffer configurations\n", fb_count);
         {
             /* pick framebuffer with most samples per pixel */
-            int i, fb_best = -1, best_num_samples = -1;
+            int fb_best = -1, best_num_samples = -1;
             for (i = 0; i < fb_count; ++i) {
                 XVisualInfo *vi = glXGetVisualFromFBConfig(win.dpy, fbc[i]);
                 if (vi) {
@@ -819,6 +886,11 @@ int main(int argc, char **argv)
             glBindVertexArray = GL_EXT(glBindVertexArray);
             glDeleteVertexArrays = GL_EXT(glDeleteVertexArrays);
         }
+        gl.frame_buffer_object_available = gl_check_extension(&gl, "GL_ARB_framebuffer_object");
+        if (gl.frame_buffer_object_available) {
+            /* GL_ARB_framebuffer_object */
+            glGenerateMipmap = GL_EXT(glGenerateMipmap);
+        }
         if (!gl.vertex_buffer_obj_available) {
             fprintf(stdout, "[GL] Error: GL_ARB_vertex_buffer_object is not available!\n");
             failed = TRUE;
@@ -829,6 +901,10 @@ int main(int argc, char **argv)
         }
         if (!gl.vertex_array_obj_available) {
             fprintf(stdout, "[GL] Error: GL_ARB_vertex_array_object is not available!\n");
+            failed = TRUE;
+        }
+        if (!gl.frame_buffer_object_available) {
+            fprintf(stdout, "[GL] Error: GL_ARB_framebuffer_object is not available!\n");
             failed = TRUE;
         }
         if (failed) goto cleanup;
@@ -855,6 +931,35 @@ int main(int argc, char **argv)
     }
 
     device_init(&device);
+    glEnable(GL_TEXTURE_2D);
+    gui.icons.unchecked = icon_load("../../icon/unchecked.png");
+    gui.icons.checked = icon_load("../../icon/checked.png");
+    gui.icons.rocket = icon_load("../../icon/rocket.png");
+    gui.icons.cloud = icon_load("../../icon/cloud.png");
+    gui.icons.pen = icon_load("../../icon/pen.png");
+    gui.icons.play = icon_load("../../icon/play.png");
+    gui.icons.pause = icon_load("../../icon/pause.png");
+    gui.icons.stop = icon_load("../../icon/stop.png");
+    gui.icons.next =  icon_load("../../icon/next.png");
+    gui.icons.prev =  icon_load("../../icon/prev.png");
+    gui.icons.tools = icon_load("../../icon/tools.png");
+    gui.icons.directory = icon_load("../../icon/directory.png");
+    gui.icons.copy = icon_load("../../icon/copy.png");
+    gui.icons.convert = icon_load("../../icon/export.png");
+    gui.icons.delete = icon_load("../../icon/delete.png");
+    gui.icons.edit = icon_load("../../icon/edit.png");
+    gui.icons.menu[0] = icon_load("../../icon/home.png");
+    gui.icons.menu[1] = icon_load("../../icon/phone.png");
+    gui.icons.menu[2] = icon_load("../../icon/plane.png");
+    gui.icons.menu[3] = icon_load("../../icon/wifi.png");
+    gui.icons.menu[4] = icon_load("../../icon/settings.png");
+    gui.icons.menu[5] = icon_load("../../icon/volume.png");
+    for (i = 0; i < 9; ++i) {
+        char buffer[256];
+        sprintf(buffer, "../../images/image%d.png", (i+1));
+        gui.icons.images[i] = icon_load(buffer);
+    }
+
     while (running) {
         /* input */
         XEvent evt;
@@ -895,6 +1000,23 @@ cleanup:
     zr_free(&gui.ctx);
     zr_buffer_free(&device.cmds);
     device_shutdown(&device);
+
+    glDeleteTextures(1,(const GLuint*)&gui.icons.unchecked.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.checked.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.rocket.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.cloud.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.pen.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.play.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.pause.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.stop.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.next.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.prev.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.tools.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.directory.handle.id);
+    for (i = 0; i < 9; ++i)
+        glDeleteTextures(1, (const GLuint*)&gui.icons.images[i].handle.id);
+    for (i = 0; i < 6; ++i)
+        glDeleteTextures(1, (const GLuint*)&gui.icons.menu[i].handle.id);
 
     glXMakeCurrent(win.dpy, 0, 0);
     glXDestroyContext(win.dpy, gl.ctx);

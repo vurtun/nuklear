@@ -33,6 +33,7 @@
 #define MAX_VERTEX_MEMORY 512 * 1024
 #define MAX_ELEMENT_MEMORY 128 * 1024
 
+#define DEMO_DO_NOT_DRAW_IMAGES
 #include "../../zahnrad.h"
 #include "../demo.c"
 

@@ -38,8 +38,46 @@
 #include "../../zahnrad.h"
 #include "../demo.c"
 
-/* sign: is there any way to pass a user pointer to glfw? */
-static GLFWwindow *win;
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wsign-conversion"
+#pragma clang diagnostic ignored "-Wfloat-equal"
+#pragma clang diagnostic ignored "-Wbad-function-cast"
+#pragma clang diagnostic ignored "-Wcast-qual"
+#pragma clang diagnostic ignored "-Wshadow"
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+#pragma clang diagnostic ignored "-Wdeclaration-after-statement"
+#pragma clang diagnostic ignored "-Wunused-function"
+#pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
+#elif defined(__GNUC__) || defined(__GNUG__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wfloat-equal"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+#pragma GCC diagnostic ignored "-Wconversion"
+#pragma GCC diagnostic ignored "-Wbad-function-cast"
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#pragma GCC diagnostic ignored "-Wdeclaration-after-statement"
+#pragma GCC diagnostic ignored "-Wtype-limits"
+#pragma GCC diagnostic ignored "-Wswitch-default"
+#pragma GCC diagnostic ignored "-Wunused-function"
+#elif _MSC_VER
+#pragma warning (push)
+#pragma warning (disable: 4456)
+#endif
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "../stb_image.h"
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#elif defined(__GNUC__) || defined(__GNUG__)
+#pragma GCC diagnostic pop
+#elif _MSC_VER
+#pragma warning (pop)
+#endif
+
 static int mouse_pos_x = 0;
 static int mouse_pos_y = 0;
 static struct demo gui;
@@ -73,6 +111,26 @@ file_load(const char* path, size_t* siz)
     fread(buf, *siz, 1, fd);
     fclose(fd);
     return buf;
+}
+
+static struct zr_image
+icon_load(const char *filename)
+{
+    int x,y,n;
+    GLuint tex;
+    unsigned char *data = stbi_load(filename, &x, &y, &n, 0);
+    if (!data) die("[SDL]: failed to load image: %s", filename);
+
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    stbi_image_free(data);
+    return zr_image_id((int)tex);
 }
 
 struct device {
@@ -427,6 +485,8 @@ input_button(GLFWwindow *window, int button, int action, int mods)
         zr_input_button(&gui.ctx, ZR_BUTTON_LEFT, x, y, action == GLFW_PRESS);
     if (button == 1)
         zr_input_button(&gui.ctx, ZR_BUTTON_RIGHT, x, y, action == GLFW_PRESS);
+    if (button == 2)
+        zr_input_button(&gui.ctx, ZR_BUTTON_MIDDLE, x, y, action == GLFW_PRESS);
 }
 
 static void
@@ -453,6 +513,8 @@ int
 main(int argc, char *argv[])
 {
     /* Platform */
+    int i;
+    static GLFWwindow *win;
     const char *font_path;
     int width = 0, height = 0;
     int running = 1;
@@ -503,8 +565,38 @@ main(int argc, char *argv[])
                         zr_font_default_glyph_ranges());
         zr_init(&gui.ctx, &alloc, &usrfnt);
     }
-
     device_init(&device);
+
+    /* icons */
+    glEnable(GL_TEXTURE_2D);
+    gui.icons.unchecked = icon_load("../../icon/unchecked.png");
+    gui.icons.checked = icon_load("../../icon/checked.png");
+    gui.icons.rocket = icon_load("../../icon/rocket.png");
+    gui.icons.cloud = icon_load("../../icon/cloud.png");
+    gui.icons.pen = icon_load("../../icon/pen.png");
+    gui.icons.play = icon_load("../../icon/play.png");
+    gui.icons.pause = icon_load("../../icon/pause.png");
+    gui.icons.stop = icon_load("../../icon/stop.png");
+    gui.icons.next =  icon_load("../../icon/next.png");
+    gui.icons.prev =  icon_load("../../icon/prev.png");
+    gui.icons.tools = icon_load("../../icon/tools.png");
+    gui.icons.directory = icon_load("../../icon/directory.png");
+    gui.icons.copy = icon_load("../../icon/copy.png");
+    gui.icons.convert = icon_load("../../icon/export.png");
+    gui.icons.delete = icon_load("../../icon/delete.png");
+    gui.icons.edit = icon_load("../../icon/edit.png");
+    gui.icons.menu[0] = icon_load("../../icon/home.png");
+    gui.icons.menu[1] = icon_load("../../icon/phone.png");
+    gui.icons.menu[2] = icon_load("../../icon/plane.png");
+    gui.icons.menu[3] = icon_load("../../icon/wifi.png");
+    gui.icons.menu[4] = icon_load("../../icon/settings.png");
+    gui.icons.menu[5] = icon_load("../../icon/volume.png");
+    for (i = 0; i < 9; ++i) {
+        char buffer[256];
+        sprintf(buffer, "../../images/image%d.png", (i+1));
+        gui.icons.images[i] = icon_load(buffer);
+    }
+
     while (!glfwWindowShouldClose(win) && running) {
         /* Input */
         zr_input_begin(&gui.ctx);
@@ -524,6 +616,23 @@ main(int argc, char *argv[])
     }
 
     /* Cleanup */
+    glDeleteTextures(1,(const GLuint*)&gui.icons.unchecked.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.checked.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.rocket.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.cloud.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.pen.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.play.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.pause.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.stop.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.next.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.prev.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.tools.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.directory.handle.id);
+    for (i = 0; i < 9; ++i)
+        glDeleteTextures(1, (const GLuint*)&gui.icons.images[i].handle.id);
+    for (i = 0; i < 6; ++i)
+        glDeleteTextures(1, (const GLuint*)&gui.icons.menu[i].handle.id);
+
     free(font.glyphs);
     zr_free(&gui.ctx);
     zr_buffer_free(&device.cmds);

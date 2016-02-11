@@ -32,6 +32,7 @@
 #include <allegro5/allegro_ttf.h>
 
 /* macros */
+#define DEMO_DO_NOT_DRAW_IMAGES
 #include "../../zahnrad.h"
 #include "../demo.c"
 

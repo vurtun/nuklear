@@ -7115,18 +7115,34 @@ zr_begin(struct zr_context *ctx, struct zr_panel *layout,
     {
         int inpanel, ishovered;
         const struct zr_window *iter = win;
-        zr_start(ctx, win);
 
-        /* activate window if hovered and no other window is overlapping this window*/
+        /* This is so terrible but neccessary for minimized windows. The difference
+         * lies in the size of the window. But it is not possible to get the size
+         * without cheating because I do not have the information at this point.
+         * Even worse this is wrong since windows could have different window heights.
+         * I leave it in for now since I otherwise loose my mind right now. */
+        struct zr_vec2 window_padding = zr_get_property(ctx, ZR_PROPERTY_PADDING);
+        struct zr_vec2 item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
+        float h = ctx->style.font.height + 2 * item_padding.y + window_padding.y;
+
+        /* activate window if hovered and no other window is overlapping this window */
+        zr_start(ctx, win);
         inpanel = zr_input_mouse_clicked(&ctx->input, ZR_BUTTON_LEFT, win->bounds);
         ishovered = zr_input_is_mouse_hovering_rect(&ctx->input, win->bounds);
         if ((win != ctx->active) && ishovered) {
             iter = win->next;
             while (iter) {
-                if (ZR_INTERSECT(win->bounds.x, win->bounds.y, win->bounds.w, win->bounds.h,
-                    iter->bounds.x, iter->bounds.y, iter->bounds.w, iter->bounds.h) &&
-                    !(iter->flags & ZR_WINDOW_HIDDEN))
-                    break;
+                if (!(iter->flags & ZR_WINDOW_MINIMIZED)) {
+                    if (ZR_INTERSECT(win->bounds.x, win->bounds.y, win->bounds.w, win->bounds.h,
+                        iter->bounds.x, iter->bounds.y, iter->bounds.w, iter->bounds.h) &&
+                        !(iter->flags & ZR_WINDOW_HIDDEN))
+                        break;
+                } else {
+                    if (ZR_INTERSECT(win->bounds.x, win->bounds.y, win->bounds.w, win->bounds.h,
+                        iter->bounds.x, iter->bounds.y, iter->bounds.w, h) &&
+                        !(iter->flags & ZR_WINDOW_HIDDEN))
+                        break;
+                }
                 if (iter->popup.win && iter->popup.active && !(iter->flags & ZR_WINDOW_HIDDEN) &&
                     ZR_INTERSECT(win->bounds.x, win->bounds.y, win->bounds.w, win->bounds.h,
                     iter->popup.win->bounds.x, iter->popup.win->bounds.y,
@@ -7141,9 +7157,21 @@ zr_begin(struct zr_context *ctx, struct zr_panel *layout,
             iter = win->next;
             while (iter) {
                 /* try to find a panel with higher priorty in the same position */
-                if (ZR_INBOX(ctx->input.mouse.prev.x, ctx->input.mouse.prev.y, iter->bounds.x,
-                    iter->bounds.y, iter->bounds.w, iter->bounds.h) &&
-                    !(iter->flags & ZR_WINDOW_HIDDEN))
+                if (!(iter->flags & ZR_WINDOW_MINIMIZED)) {
+                    if (ZR_INBOX(ctx->input.mouse.prev.x, ctx->input.mouse.prev.y, iter->bounds.x,
+                        iter->bounds.y, iter->bounds.w, iter->bounds.h) &&
+                        !(iter->flags & ZR_WINDOW_HIDDEN))
+                        break;
+                } else {
+                    if (ZR_INBOX(ctx->input.mouse.prev.x, ctx->input.mouse.prev.y, iter->bounds.x,
+                        iter->bounds.y, iter->bounds.w, h) &&
+                        !(iter->flags & ZR_WINDOW_HIDDEN))
+                        break;
+                }
+                if (iter->popup.win && iter->popup.active && !(iter->flags & ZR_WINDOW_HIDDEN) &&
+                    ZR_INTERSECT(win->bounds.x, win->bounds.y, win->bounds.w, win->bounds.h,
+                    iter->popup.win->bounds.x, iter->popup.win->bounds.y,
+                    iter->popup.win->bounds.w, iter->popup.win->bounds.h))
                     break;
                 iter = iter->next;
             }
@@ -7681,8 +7709,8 @@ zr_panel_begin(struct zr_context *ctx, const char *title)
                 header.front += 3 * item_padding.x + (float)t;
             }
 
-            /* calculate label bounds and draw text */
             {
+                /* calculate label bounds and draw text */
                 struct zr_text text;
                 text.padding = zr_vec2(0,0);
                 text.background = c->colors[ZR_COLOR_HEADER];
@@ -8459,6 +8487,7 @@ zr_layout_widget_space(struct zr_rect *bounds, const struct zr_context *ctx,
         bounds->x = layout->at_x + (layout->width * layout->row.item.x);
         bounds->x -= layout->offset->x;
         bounds->y = layout->at_y + (layout->row.height * layout->row.item.y);
+        bounds->y -= layout->offset->y;
         bounds->w = layout->width  * layout->row.item.w;
         bounds->h = layout->row.height * layout->row.item.h;
         return;
