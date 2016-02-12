@@ -177,7 +177,6 @@ node_editor_demo(struct zr_context *ctx, struct node_editor *nodedit)
                     /* ====================================================*/
                     zr_group_end(ctx);
                 }
-
                 {
                     /* node connector and linking */
                     float space;

@@ -6738,11 +6738,18 @@ static void
 zr_start_popup(struct zr_context *ctx, struct zr_window *win)
 {
     struct zr_popup_buffer *buf;
+    struct zr_panel *iter;
     ZR_ASSERT(ctx);
     ZR_ASSERT(win);
     if (!ctx || !win) return;
 
-    buf = &win->layout->popup_buffer;
+    /* make sure to use the correct popup buffer*/
+    iter = win->layout;
+    while (iter->parent)
+        iter = iter->parent;
+
+    /* save buffer fill state for popup */
+    buf = &iter->popup_buffer;
     buf->begin = win->buffer.end;
     buf->end = win->buffer.end;
     buf->parent = win->buffer.last;
@@ -6754,12 +6761,17 @@ static void
 zr_finish_popup(struct zr_context *ctx, struct zr_window *win)
 {
     struct zr_popup_buffer *buf;
+    struct zr_panel *iter;
     ZR_ASSERT(ctx);
     ZR_ASSERT(win);
     if (!ctx || !win) return;
 
-    /* */
-    buf = &win->layout->popup_buffer;
+    /* make sure to use the correct popup buffer*/
+    iter = win->layout;
+    while (iter->parent)
+        iter = iter->parent;
+
+    buf = &iter->popup_buffer;
     buf->last = win->buffer.last;
     buf->end = win->buffer.end;
 }
@@ -10707,6 +10719,7 @@ zr_combo_begin_text(struct zr_context *ctx, struct zr_panel *layout,
         struct zr_rect bounds = {0,0,0,0};
         zr_size text_len = zr_strsiz(selected);
 
+        /* draw selected label */
         text.padding = zr_vec2(0,0);
         text.background = ctx->style.colors[ZR_COLOR_COMBO];
         text.text = ctx->style.colors[ZR_COLOR_TEXT];
@@ -10771,6 +10784,7 @@ zr_combo_begin_color(struct zr_context *ctx, struct zr_panel *layout,
         struct zr_symbol sym;
         struct zr_rect bounds = {0,0,0,0};
 
+        /* draw color */
         content.h = header.h - 4 * item_padding.y;
         content.y = header.y + 2 * item_padding.y;
         content.x = header.x + 2 * item_padding.x;
@@ -10830,6 +10844,7 @@ zr_combo_begin_image(struct zr_context *ctx, struct zr_panel *layout,
         struct zr_symbol sym;
         struct zr_rect content;
 
+        /* draw image */
         content.h = header.h - 4 * item_padding.y;
         content.y = header.y + 2 * item_padding.y;
         content.x = header.x + 2 * item_padding.x;
@@ -10892,12 +10907,14 @@ zr_combo_begin_icon(struct zr_context *ctx, struct zr_panel *layout,
         content.x = header.x + 2 * item_padding.x;
         content.w = header.w - (header.h + 4 * item_padding.x);
 
+        /* draw icon */
         icon.x = content.x;
         icon.y = content.y;
         icon.h = content.h;
         icon.w = icon.h;
         zr_draw_image(&win->buffer, icon, &img);
 
+        /* draw label */
         label.x = icon.x + icon.w + 2 * item_padding.x;
         label.y = content.y;
         label.w = (content.x + content.w) - (icon.x + icon.w);
@@ -10911,6 +10928,7 @@ zr_combo_begin_icon(struct zr_context *ctx, struct zr_panel *layout,
         bounds.w = bounds.h = ctx->style.font.height;
         bounds.x = (header.x + header.w) - (bounds.w + 2 * item_padding.x);
 
+        /* draw open/close symbol */
         sym.type = ZR_SYMBOL_TRIANGLE_DOWN;
         sym.background = ctx->style.colors[ZR_COLOR_COMBO];
         sym.foreground = ctx->style.colors[ZR_COLOR_TEXT];

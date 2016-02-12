@@ -255,7 +255,7 @@ control_window(struct zr_context *ctx, struct demo *gui)
 {
     int i;
     struct zr_panel layout;
-    if (zr_begin(ctx, &layout, "Control", zr_rect(0, 0, 350, 500),
+    if (zr_begin(ctx, &layout, "Control", zr_rect(0, 0, 350, 520),
         ZR_WINDOW_CLOSABLE|ZR_WINDOW_MINIMIZABLE|ZR_WINDOW_MOVABLE|
         ZR_WINDOW_SCALABLE|ZR_WINDOW_BORDER))
     {
@@ -291,7 +291,7 @@ control_window(struct zr_context *ctx, struct demo *gui)
         }
         if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Color", ZR_MINIMIZED))
         {
-            struct zr_panel combo;
+            struct zr_panel tab, combo;
             enum theme old = gui->theme;
             static const char *themes[] = {"Black", "White", "Red", "Blue", "Dark", "Grey"};
 
@@ -307,17 +307,23 @@ control_window(struct zr_context *ctx, struct demo *gui)
                 if (old != gui->theme) set_style(ctx, gui->theme);
                 zr_combo_end(ctx);
             }
-            for (i = 0; i < ZR_COLOR_COUNT; ++i) {
-                zr_layout_row_dynamic(ctx, 25, 2);
-                zr_label(ctx, zr_get_color_name((enum zr_style_colors)i), ZR_TEXT_LEFT);
-                if (zr_combo_begin_color(ctx, &combo, ctx->style.colors[i], 200)) {
-                    zr_layout_row_dynamic(ctx, 25, 1);
-                    ctx->style.colors[i].r = (zr_byte)zr_propertyi(ctx, "#R:", 0, ctx->style.colors[i].r, 255, 1,1);
-                    ctx->style.colors[i].g = (zr_byte)zr_propertyi(ctx, "#G:", 0, ctx->style.colors[i].g, 255, 1,1);
-                    ctx->style.colors[i].b = (zr_byte)zr_propertyi(ctx, "#B:", 0, ctx->style.colors[i].b, 255, 1,1);
-                    ctx->style.colors[i].a = (zr_byte)zr_propertyi(ctx, "#A:", 0, ctx->style.colors[i].a, 255, 1,1);
-                    zr_combo_end(ctx);
+
+            zr_layout_row_dynamic(ctx, 300, 1);
+            if (zr_group_begin(ctx, &tab, "Colors", 0))
+            {
+                for (i = 0; i < ZR_COLOR_COUNT; ++i) {
+                    zr_layout_row_dynamic(ctx, 25, 2);
+                    zr_label(ctx, zr_get_color_name((enum zr_style_colors)i), ZR_TEXT_LEFT);
+                    if (zr_combo_begin_color(ctx, &combo, ctx->style.colors[i], 200)) {
+                        zr_layout_row_dynamic(ctx, 25, 1);
+                        ctx->style.colors[i].r = (zr_byte)zr_propertyi(ctx, "#R:", 0, ctx->style.colors[i].r, 255, 1,1);
+                        ctx->style.colors[i].g = (zr_byte)zr_propertyi(ctx, "#G:", 0, ctx->style.colors[i].g, 255, 1,1);
+                        ctx->style.colors[i].b = (zr_byte)zr_propertyi(ctx, "#B:", 0, ctx->style.colors[i].b, 255, 1,1);
+                        ctx->style.colors[i].a = (zr_byte)zr_propertyi(ctx, "#A:", 0, ctx->style.colors[i].a, 255, 1,1);
+                        zr_combo_end(ctx);
+                    }
                 }
+                zr_group_end(ctx);
             }
             zr_layout_pop(ctx);
         }
