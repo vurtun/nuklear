@@ -5714,11 +5714,11 @@ zr_property_behavior(enum zr_widget_status *ws, const struct zr_input *in,
         value = CLAMP(min, value + step, max);
 
     if (*state == ZR_PROPERTY_DEFAULT) {
-        if (zr_button_behavior(ws, empty, in, ZR_BUTTON_DEFAULT))
+        if (zr_button_behavior(ws, edit, in, ZR_BUTTON_DEFAULT))
             *state = ZR_PROPERTY_EDIT;
         else if (zr_input_has_mouse_click_in_rect(in, ZR_BUTTON_LEFT, label))
             *state = ZR_PROPERTY_DRAG;
-        else if (zr_input_has_mouse_click_in_rect(in, ZR_BUTTON_LEFT, edit))
+        else if (zr_input_has_mouse_click_in_rect(in, ZR_BUTTON_LEFT, empty))
             *state = ZR_PROPERTY_DRAG;
     }
     if (*state == ZR_PROPERTY_DRAG) {
@@ -5763,10 +5763,9 @@ static float
 zr_do_property(enum zr_widget_status *ws,
     struct zr_command_buffer *out, struct zr_rect property,
     const char *name, float min, float val, float max,
-    float step, float inc_per_pixel,
-    char *buffer, zr_size *len,
-    int *state, zr_size *cursor, struct zr_property *p,
-    zr_filter filter, const struct zr_input *in, const struct zr_user_font *f)
+    float step, float inc_per_pixel, char *buffer, zr_size *len,
+    int *state, zr_size *cursor, struct zr_property *p, zr_filter filter,
+    const struct zr_input *in, const struct zr_user_font *f)
 {
     zr_size size;
     char string[ZR_MAX_NUMBER_BUFFER];
