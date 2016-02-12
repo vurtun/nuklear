@@ -197,7 +197,7 @@ node_editor_demo(struct zr_context *ctx, struct node_editor *nodedit)
                         zr_draw_circle(canvas, circle, zr_rgb(100, 100, 100));
 
                         /* start linking process */
-                        if (zr_input_is_mouse_click_in_rect(in, ZR_BUTTON_LEFT, circle)) {
+                        if (zr_input_has_mouse_click_down_in_rect(in, ZR_BUTTON_LEFT, circle, zr_true)) {
                             nodedit->linking.active = zr_true;
                             nodedit->linking.node = it;
                             nodedit->linking.input_id = it->ID;
