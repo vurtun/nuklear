@@ -2586,7 +2586,7 @@ zr_canvas_path_arc_to(struct zr_canvas *list, struct zr_vec2 center,
     if (!list) return;
     if (radius == 0.0f) return;
     for (i = 0; i <= segments; ++i) {
-        const float a = a_min + ((float)i / (float)segments) * (a_max - a_min);
+        const float a = a_min + ((float)i / ((float)segments) * (a_max - a_min));
         const float x = center.x + (float)zr_cos(a) * radius;
         const float y = center.y + (float)zr_sin(a) * radius;
         zr_canvas_path_line_to(list, zr_vec2(x, y));
@@ -2882,6 +2882,7 @@ zr_canvas_load(struct zr_canvas *list, struct zr_context *queue,
         } break;
         case ZR_COMMAND_ARC: {
             const struct zr_command_arc *c = zr_command(arc, cmd);
+            zr_canvas_path_line_to(list, zr_vec2(c->cx, c->cy));
             zr_canvas_path_arc_to(list, zr_vec2(c->cx, c->cy), c->r,
                 c->a[0], c->a[1], curve_segments);
             zr_canvas_path_fill(list, c->color);

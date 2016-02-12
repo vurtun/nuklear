@@ -46,7 +46,7 @@ ui_piemenu(struct zr_context *ctx, struct zr_vec2 pos, float radius,
             float step = (2 * 3.141592654f) / (float)(MAX(1,item_count));
             float a_min = 0; float a_max = step;
 
-            struct zr_vec2 center = zr_vec2(bounds.x + bounds.w / 2.0f, center.y = bounds.y + bounds.h / 2.0f);
+            struct zr_vec2 center = zr_vec2(bounds.x + bounds.w / 2.0f, bounds.y + bounds.h / 2.0f);
             struct zr_vec2 drag = zr_vec2(in->mouse.pos.x - center.x, in->mouse.pos.y - center.y);
             float angle = (float)atan2(drag.y, drag.x);
             if (angle < -0.0f) angle += 2.0f * 3.141592654f;
@@ -56,7 +56,7 @@ ui_piemenu(struct zr_context *ctx, struct zr_vec2 pos, float radius,
                 struct zr_rect content;
                 float rx, ry, dx, dy, a;
                 zr_draw_arc(out, center.x, center.y, (bounds.w/2.0f),
-                    a_min, a_max, (active_item == i) ? zr_rgb(45,100,255) : zr_rgb(75,75,75));
+                    a_min, a_max, (active_item == i) ? zr_rgb(45,100,255): zr_rgb(60,60,60));
 
                 /* seperator line */
                 rx = bounds.w/2.0f; ry = 0;
