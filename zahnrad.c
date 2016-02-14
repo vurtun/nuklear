@@ -8109,7 +8109,7 @@ zr_menubar_end(struct zr_context *ctx)
  * --------------------------------------------------------------*/
 static void
 zr_panel_layout(const struct zr_context *ctx, struct zr_window *win,
-    float height, zr_size cols)
+    float height, int cols)
 {
     const struct zr_style *config;
     const struct zr_color *color;
@@ -8145,7 +8145,7 @@ zr_panel_layout(const struct zr_context *ctx, struct zr_window *win,
 
 static void
 zr_row_layout(struct zr_context *ctx, enum zr_layout_format fmt,
-    float height, zr_size cols, zr_size width)
+    float height, int cols, int width)
 {
     /* update the current row and set the current row layout */
     struct zr_window *win;
@@ -8168,17 +8168,17 @@ zr_row_layout(struct zr_context *ctx, enum zr_layout_format fmt,
 }
 
 void
-zr_layout_row_dynamic(struct zr_context *ctx, float height, zr_size cols)
+zr_layout_row_dynamic(struct zr_context *ctx, float height, int cols)
 {zr_row_layout(ctx, ZR_DYNAMIC, height, cols, 0);}
 
 void
 zr_layout_row_static(struct zr_context *ctx, float height,
-    zr_size item_width, zr_size cols)
+    int item_width, int cols)
 {zr_row_layout(ctx, ZR_STATIC, height, cols, item_width);}
 
 void
 zr_layout_row_begin(struct zr_context *ctx,
-    enum zr_layout_format fmt, float row_height, zr_size cols)
+    enum zr_layout_format fmt, float row_height, int cols)
 {
     struct zr_window *win;
     struct zr_panel *layout;
@@ -8248,10 +8248,10 @@ zr_layout_row_end(struct zr_context *ctx)
 
 void
 zr_layout_row(struct zr_context *ctx, enum zr_layout_format fmt,
-    float height, zr_size cols, const float *ratio)
+    float height, int cols, const float *ratio)
 {
-    zr_size i;
-    zr_size n_undef = 0;
+    int i;
+    int n_undef = 0;
     struct zr_window *win;
     struct zr_panel *layout;
 
@@ -8287,8 +8287,8 @@ zr_layout_row(struct zr_context *ctx, enum zr_layout_format fmt,
 }
 
 void
-zr_layout_space_begin(struct zr_context *ctx,
-    enum zr_layout_format fmt, float height, zr_size widget_count)
+zr_layout_space_begin(struct zr_context *ctx, enum zr_layout_format fmt,
+    float height, int widget_count)
 {
     struct zr_window *win;
     struct zr_panel *layout;
@@ -8597,7 +8597,7 @@ void
 zr_layout_peek(struct zr_rect *bounds, struct zr_context *ctx)
 {
     float y;
-    zr_size index;
+    int index;
     struct zr_window *win;
     struct zr_panel *layout;
 
@@ -8769,9 +8769,9 @@ zr_layout_pop(struct zr_context *ctx)
  *
  * --------------------------------------------------------------*/
 void
-zr_spacing(struct zr_context *ctx, zr_size cols)
+zr_spacing(struct zr_context *ctx, int cols)
 {
-    zr_size i, index, rows;
+    int i, index, rows;
     struct zr_rect nil;
     struct zr_window *win;
     struct zr_panel *layout;
@@ -9797,7 +9797,7 @@ zr_propertyi(struct zr_context *ctx, const char *name, int min, int val, int max
  * --------------------------------------------------------------*/
 void
 zr_chart_begin(struct zr_context *ctx, enum zr_chart_type type,
-    zr_size count, float min_value, float max_value)
+    int count, float min_value, float max_value)
 {
     struct zr_rect bounds = {0, 0, 0, 0};
     struct zr_vec2 item_padding;

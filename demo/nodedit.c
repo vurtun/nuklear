@@ -132,7 +132,7 @@ node_editor_demo(struct zr_context *ctx, struct node_editor *nodedit)
         /* allocate complete window space */
         canvas = zr_window_get_canvas(ctx);
         total_space = zr_window_get_content_region(ctx);
-        zr_layout_space_begin(ctx, ZR_STATIC, total_space.h, (zr_size)nodedit->node_count);
+        zr_layout_space_begin(ctx, ZR_STATIC, total_space.h, nodedit->node_count);
         {
             struct zr_panel node, menu;
             struct node *it = nodedit->begin;

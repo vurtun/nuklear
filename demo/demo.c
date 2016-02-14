@@ -13,7 +13,7 @@
 #define UNUSED(a)   ((void)(a))
 
 #define MAX_BUFFER  64
-#define MAX_MEMORY  (32 * 1024)
+#define MAX_MEMORY  (64 * 1024)
 #define MAX_COMMAND_MEMORY  (16 * 1024)
 #define WINDOW_WIDTH 1200
 #define WINDOW_HEIGHT 800
@@ -160,22 +160,22 @@ set_style(struct zr_context *ctx, enum theme theme)
         ctx->style.colors[ZR_COLOR_TEXT_HOVERING] = zr_rgba(195, 195, 195, 255);
         ctx->style.colors[ZR_COLOR_TEXT_ACTIVE] = zr_rgba(200, 200, 200, 255);
         ctx->style.colors[ZR_COLOR_WINDOW] = zr_rgba(202, 212, 214, 215);
-        ctx->style.colors[ZR_COLOR_HEADER] = zr_rgba(246, 246, 246, 220);
+        ctx->style.colors[ZR_COLOR_HEADER] = zr_rgba(137, 182, 224, 220);
         ctx->style.colors[ZR_COLOR_BORDER] = zr_rgba(140, 159, 173, 255);
         ctx->style.colors[ZR_COLOR_BUTTON] = zr_rgba(137, 182, 224, 255);
         ctx->style.colors[ZR_COLOR_BUTTON_HOVER] = zr_rgba(142, 187, 229, 255);
         ctx->style.colors[ZR_COLOR_BUTTON_ACTIVE] = zr_rgba(147, 192, 234, 255);
-        ctx->style.colors[ZR_COLOR_TOGGLE] = zr_rgba(210, 210, 210, 255);
+        ctx->style.colors[ZR_COLOR_TOGGLE] = zr_rgba(177, 210, 210, 255);
         ctx->style.colors[ZR_COLOR_TOGGLE_HOVER] = zr_rgba(245, 245, 245, 255);
         ctx->style.colors[ZR_COLOR_TOGGLE_CURSOR] = zr_rgba(142, 187, 229, 255);
         ctx->style.colors[ZR_COLOR_SELECTABLE] = zr_rgba(147, 192, 234, 255);
         ctx->style.colors[ZR_COLOR_SELECTABLE_HOVER] = zr_rgba(150, 150, 150, 255);
         ctx->style.colors[ZR_COLOR_SELECTABLE_TEXT] = zr_rgba(70, 70, 70, 255);
-        ctx->style.colors[ZR_COLOR_SLIDER] = zr_rgba(210, 210, 210, 255);
+        ctx->style.colors[ZR_COLOR_SLIDER] = zr_rgba(177, 210, 210, 255);
         ctx->style.colors[ZR_COLOR_SLIDER_CURSOR] = zr_rgba(137, 182, 224, 245);
         ctx->style.colors[ZR_COLOR_SLIDER_CURSOR_HOVER] = zr_rgba(142, 188, 229, 255);
         ctx->style.colors[ZR_COLOR_SLIDER_CURSOR_ACTIVE] = zr_rgba(147, 193, 234, 255);
-        ctx->style.colors[ZR_COLOR_PROGRESS] = zr_rgba(210, 210, 210, 255);
+        ctx->style.colors[ZR_COLOR_PROGRESS] = zr_rgba(177, 210, 210, 255);
         ctx->style.colors[ZR_COLOR_PROGRESS_CURSOR] = zr_rgba(137, 182, 224, 255);
         ctx->style.colors[ZR_COLOR_PROGRESS_CURSOR_HOVER] = zr_rgba(142, 188, 229, 255);
         ctx->style.colors[ZR_COLOR_PROGRESS_CURSOR_ACTIVE] = zr_rgba(147, 193, 234, 255);
@@ -260,7 +260,7 @@ control_window(struct zr_context *ctx, struct demo *gui)
         ZR_WINDOW_SCALABLE|ZR_WINDOW_BORDER))
     {
         /* Style */
-        if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Metrics", ZR_MINIMIZED)) {
+        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Metrics", ZR_MINIMIZED)) {
             zr_layout_row_dynamic(ctx, 20, 2);
             zr_label(ctx,"Total:", ZR_TEXT_LEFT);
             zr_labelf(ctx, ZR_TEXT_LEFT, "%lu", gui->status.size);
@@ -272,7 +272,7 @@ control_window(struct zr_context *ctx, struct demo *gui)
             zr_labelf(ctx, ZR_TEXT_LEFT, "%lu", gui->status.calls);
             zr_layout_pop(ctx);
         }
-        if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Properties", ZR_MINIMIZED)) {
+        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Properties", ZR_MINIMIZED)) {
             zr_layout_row_dynamic(ctx, 22, 3);
             for (i = 0; i <= ZR_PROPERTY_SCROLLBAR_SIZE; ++i) {
                 zr_label(ctx, zr_get_property_name((enum zr_style_properties)i), ZR_TEXT_LEFT);
@@ -281,7 +281,7 @@ control_window(struct zr_context *ctx, struct demo *gui)
             }
             zr_layout_pop(ctx);
         }
-        if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Rounding", ZR_MINIMIZED)) {
+        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Rounding", ZR_MINIMIZED)) {
             zr_layout_row_dynamic(ctx, 22, 2);
             for (i = 0; i < ZR_ROUNDING_MAX; ++i) {
                 zr_label(ctx, zr_get_rounding_name((enum zr_style_rounding)i), ZR_TEXT_LEFT);
@@ -289,7 +289,7 @@ control_window(struct zr_context *ctx, struct demo *gui)
             }
             zr_layout_pop(ctx);
         }
-        if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Color", ZR_MINIMIZED))
+        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Color", ZR_MINIMIZED))
         {
             struct zr_panel tab, combo;
             enum theme old = gui->theme;

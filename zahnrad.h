@@ -1139,9 +1139,9 @@ struct zr_chart {
     /* min and max value for correct scaling of values */
     struct zr_vec2 last;
     /* last line chart point to connect to. Only used by the line chart */
-    zr_size index;
+    int index;
     /* current chart value index*/
-    zr_size count;
+    int count;
     /* number of values inside the chart */
 };
 
@@ -1167,11 +1167,11 @@ enum zr_row_layout_type {
 struct zr_row_layout {
     enum zr_row_layout_type type;
     /* type of the row layout */
-    zr_size index;
+    int index;
     /* index of the current widget in the current window row */
     float height;
     /* height of the current row */
-    zr_size columns;
+    int columns;
     /* number of columns in the current row */
     const float *ratio;
     /* row widget width ratio */
@@ -1370,10 +1370,10 @@ int zr_window_is_active(struct zr_context*, const char *name);
 void zr_window_set_bounds(struct zr_context*, struct zr_rect);
 void zr_window_set_position(struct zr_context*, struct zr_vec2);
 void zr_window_set_size(struct zr_context*, struct zr_vec2);
-void zr_window_set_focus(struct zr_context *ctx, const char *name);
-void zr_window_collapse(struct zr_context *ctx, const char *name,
+void zr_window_set_focus(struct zr_context*, const char *name);
+void zr_window_collapse(struct zr_context*, const char *name,
                         enum zr_collapse_states);
-void zr_window_collapse_if(struct zr_context *ctx, const char *name,
+void zr_window_collapse_if(struct zr_context*, const char *name,
                             enum zr_collapse_states, int cond);
 
 /*--------------------------------------------------------------
@@ -1461,21 +1461,20 @@ void zr_reset(struct zr_context*);
 void zr_layout_peek(struct zr_rect *bounds, struct zr_context*);
 
 /* columns based layouting with generated position and width and fixed height*/
-void zr_layout_row_dynamic(struct zr_context*, float height, zr_size cols);
-void zr_layout_row_static(struct zr_context*, float height, zr_size item_width,
-                            zr_size cols);
+void zr_layout_row_dynamic(struct zr_context*, float height, int cols);
+void zr_layout_row_static(struct zr_context*, float height, int item_width, int cols);
 
 /* widget layouting with custom widget width and fixed height */
 void zr_layout_row_begin(struct zr_context*, enum zr_layout_format,
-                        float row_height, zr_size cols);
+                        float row_height, int cols);
 void zr_layout_row_push(struct zr_context*, float value);
 void zr_layout_row_end(struct zr_context*);
 void zr_layout_row(struct zr_context*, enum zr_layout_format, float height,
-                    zr_size cols, const float *ratio);
+                    int cols, const float *ratio);
 
 /* layouting with custom position and size of widgets */
 void zr_layout_space_begin(struct zr_context*, enum zr_layout_format,
-                            float height, zr_size widget_count);
+                            float height, int widget_count);
 void zr_layout_space_push(struct zr_context*, struct zr_rect);
 void zr_layout_space_end(struct zr_context*);
 
@@ -1487,7 +1486,7 @@ struct zr_rect zr_layout_space_rect_to_local(struct zr_context*, struct zr_rect)
 
 /* group layout */
 int zr_group_begin(struct zr_context*, struct zr_panel*, const char *title, zr_flags);
-void zr_group_end(struct zr_context *ctx);
+void zr_group_end(struct zr_context*);
 
 /* tree layout */
 int zr_layout_push(struct zr_context*, enum zr_layout_node_type, const char *title,
@@ -1499,7 +1498,7 @@ void zr_layout_pop(struct zr_context*);
  * -------------------------------------------------------------*/
 enum zr_widget_state zr_widget(struct zr_rect*, const struct zr_context*);
 enum zr_widget_state zr_widget_fitting(struct zr_rect*, struct zr_context*);
-void zr_spacing(struct zr_context*, zr_size cols);
+void zr_spacing(struct zr_context*, int cols);
 void zr_seperator(struct zr_context*);
 
 /* content output widgets */
@@ -1531,7 +1530,7 @@ int zr_button_image(struct zr_context*, struct zr_image img, enum zr_button_beha
 int zr_button_text_symbol(struct zr_context*, enum zr_symbol_type, const char*,
                             enum zr_text_align, enum zr_button_behavior);
 int zr_button_text_image(struct zr_context*, struct zr_image img, const char*,
-                            enum zr_text_align align, enum zr_button_behavior);
+                            enum zr_text_align, enum zr_button_behavior);
 
 /* simple value modifier by sliding */
 void zr_progress(struct zr_context*, zr_size *cur, zr_size max, int modifyable);
@@ -1557,8 +1556,7 @@ zr_flags zr_edit_string(struct zr_context*, zr_flags, char *buffer, zr_size *len
 zr_flags zr_edit_buffer(struct zr_context*, zr_flags, struct zr_buffer*, zr_filter);
 
 /* simple chart */
-void zr_chart_begin(struct zr_context*, enum zr_chart_type, zr_size num,
-                    float min, float max);
+void zr_chart_begin(struct zr_context*, enum zr_chart_type, int num, float min, float max);
 zr_flags zr_chart_push(struct zr_context*, float);
 void zr_chart_end(struct zr_context*);
 
@@ -1566,7 +1564,7 @@ void zr_chart_end(struct zr_context*);
  *                      Popups
  * -------------------------------------------------------------*/
 int zr_popup_begin(struct zr_context*, struct zr_panel*, enum zr_popup_type,
-                    const char *title, zr_flags, struct zr_rect bounds);
+                    const char*, zr_flags, struct zr_rect bounds);
 void zr_popup_close(struct zr_context*);
 void zr_popup_end(struct zr_context*);
 
@@ -1578,19 +1576,19 @@ int zr_combo_begin_color(struct zr_context*, struct zr_panel*,
 int zr_combo_begin_image(struct zr_context*, struct zr_panel*,
                         struct zr_image img,  int max_height);
 int zr_combo_begin_icon(struct zr_context*, struct zr_panel*,
-                        const char *selected, struct zr_image img, int height);
+                        const char *selected, struct zr_image, int height);
 int zr_combo_item(struct zr_context*, const char*, enum zr_text_align);
 int zr_combo_item_icon(struct zr_context*, struct zr_image, const char*,
-                        enum zr_text_align align);
-int zr_combo_item_symbol(struct zr_context*, enum zr_symbol_type symbol,
-                        const char*, enum zr_text_align align);
+                        enum zr_text_align);
+int zr_combo_item_symbol(struct zr_context*, enum zr_symbol_type,
+                        const char*, enum zr_text_align);
 void zr_combo_close(struct zr_context*);
 void zr_combo_end(struct zr_context*);
 
 /* contextual menu */
-int zr_contextual_begin(struct zr_context*, struct zr_panel*, zr_flags flags,
-                        struct zr_vec2 size, struct zr_rect trigger_bounds);
-int zr_contextual_item(struct zr_context*, const char*, enum zr_text_align align);
+int zr_contextual_begin(struct zr_context*, struct zr_panel*, zr_flags,
+                        struct zr_vec2, struct zr_rect trigger_bounds);
+int zr_contextual_item(struct zr_context*, const char*, enum zr_text_align);
 int zr_contextual_item_icon(struct zr_context*, struct zr_image,
                             const char*, enum zr_text_align);
 int zr_contextual_item_symbol(struct zr_context*, enum zr_symbol_type,
@@ -1599,7 +1597,7 @@ void zr_contextual_close(struct zr_context*);
 void zr_contextual_end(struct zr_context*);
 
 /* tooltip */
-void zr_tooltip(struct zr_context*, const char *text);
+void zr_tooltip(struct zr_context*, const char*);
 int zr_tooltip_begin(struct zr_context*, struct zr_panel*, float width);
 void zr_tooltip_end(struct zr_context*);
 
@@ -1609,16 +1607,15 @@ void zr_tooltip_end(struct zr_context*);
 void zr_menubar_begin(struct zr_context*);
 void zr_menubar_end(struct zr_context*);
 
-int zr_menu_text_begin(struct zr_context*, struct zr_panel*,
-                        const char *title, float width);
-int zr_menu_icon_begin(struct zr_context*, struct zr_panel*, const char *id,
+int zr_menu_text_begin(struct zr_context*, struct zr_panel*, const char*, float width);
+int zr_menu_icon_begin(struct zr_context*, struct zr_panel*, const char*,
                         struct zr_image, float width);
-int zr_menu_symbol_begin(struct zr_context*, struct zr_panel*, const char *id,
+int zr_menu_symbol_begin(struct zr_context*, struct zr_panel*, const char*,
                         enum zr_symbol_type, float width);
-int zr_menu_item(struct zr_context*, enum zr_text_align align, const char *id);
+int zr_menu_item(struct zr_context*, enum zr_text_align align, const char*);
 int zr_menu_item_icon(struct zr_context*, struct zr_image, const char*,
                         enum zr_text_align);
-int zr_menu_item_symbol(struct zr_context*, enum zr_symbol_type, const char *id,
+int zr_menu_item_symbol(struct zr_context*, enum zr_symbol_type, const char*,
                         enum zr_text_align);
 void zr_menu_close(struct zr_context*);
 void zr_menu_end(struct zr_context*);

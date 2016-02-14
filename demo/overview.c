@@ -649,7 +649,7 @@ demo_window(struct zr_context *ctx)
                 zr_property_int(ctx, "#Height:", 100, &group_height, 500, 10, 1);
                 zr_layout_row_end(ctx);
 
-                zr_layout_row_static(ctx, (float)group_height, (size_t)group_width, 2);
+                zr_layout_row_static(ctx, (float)group_height, group_width, 2);
                 if (zr_group_begin(ctx, &tab, "Group", group_flags)) {
                     int i = 0;
                     static int selected[16];
