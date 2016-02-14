@@ -21,6 +21,7 @@
 
 #import <UIKit/UIKit.h>
 
+#define DEMO_DO_NOT_DRAW_IMAGES
 #include "zahnrad.h"
 #include "../../demo.c"
 

@@ -40,8 +40,8 @@
 #endif
 
 
+#define DEMO_DO_NOT_DRAW_IMAGES
 #include "../demo.c"
-
 
 @implementation ZahnradBackend (Adapter)
 
