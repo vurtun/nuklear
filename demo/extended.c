@@ -277,7 +277,7 @@ button_demo(struct zr_context *ctx, struct icons *img)
         zr_layout_row_dynamic(ctx, 25, 1);
         if (zr_contextual_item_icon(ctx, img->copy, "Clone", ZR_TEXT_RIGHT))
             fprintf(stdout, "pressed clone!\n");
-        if (zr_contextual_item_icon(ctx, img->delete, "Delete", ZR_TEXT_RIGHT))
+        if (zr_contextual_item_icon(ctx, img->del, "Delete", ZR_TEXT_RIGHT))
             fprintf(stdout, "pressed delete!\n");
         if (zr_contextual_item_icon(ctx, img->convert, "Convert", ZR_TEXT_RIGHT))
             fprintf(stdout, "pressed convert!\n");

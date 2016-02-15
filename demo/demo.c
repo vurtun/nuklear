@@ -33,7 +33,7 @@ struct icons {
     struct zr_image directory;
     struct zr_image copy;
     struct zr_image convert;
-    struct zr_image delete;
+    struct zr_image del;
     struct zr_image edit;
     struct zr_image images[9];
     struct zr_image menu[6];

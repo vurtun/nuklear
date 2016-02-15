@@ -946,7 +946,7 @@ int main(int argc, char **argv)
     gui.icons.directory = icon_load("../../icon/directory.png");
     gui.icons.copy = icon_load("../../icon/copy.png");
     gui.icons.convert = icon_load("../../icon/export.png");
-    gui.icons.delete = icon_load("../../icon/delete.png");
+    gui.icons.del = icon_load("../../icon/delete.png");
     gui.icons.edit = icon_load("../../icon/edit.png");
     gui.icons.menu[0] = icon_load("../../icon/home.png");
     gui.icons.menu[1] = icon_load("../../icon/phone.png");
@@ -1013,6 +1013,7 @@ cleanup:
     glDeleteTextures(1,(const GLuint*)&gui.icons.prev.handle.id);
     glDeleteTextures(1,(const GLuint*)&gui.icons.tools.handle.id);
     glDeleteTextures(1,(const GLuint*)&gui.icons.directory.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.del.handle.id);
     for (i = 0; i < 9; ++i)
         glDeleteTextures(1, (const GLuint*)&gui.icons.images[i].handle.id);
     for (i = 0; i < 6; ++i)

@@ -2342,7 +2342,7 @@ zr_canvas_add_poly_line(struct zr_canvas *list, struct zr_vec2 *points,
     ZR_ASSERT(list);
     if (!list || points_count < 2) return;
 
-    color.a *= list->global_alpha;
+    color.a = (zr_byte)((float)color.a * list->global_alpha);
     col = zr_color_u32(color);
     count = points_count;
     if (!closed) count = points_count-1;
@@ -2580,7 +2580,7 @@ zr_canvas_add_poly_convex(struct zr_canvas *list, struct zr_vec2 *points,
     zr_canvas_push_userdata(list, list->userdata);
 #endif
 
-    color.a *= list->global_alpha;
+    color.a = (zr_byte)((float)color.a * list->global_alpha);
     col = zr_color_u32(color);
     if (aliasing == ZR_ANTI_ALIASING_ON) {
         zr_size i = 0;
@@ -2975,7 +2975,7 @@ zr_canvas_add_text(struct zr_canvas *list, const struct zr_user_font *font,
         gy = rect.y + g.offset.y;
         gw = g.width; gh = g.height;
         char_width = g.xadvance;
-        fg.a *= list->global_alpha;
+        fg.a = (zr_byte)((float)fg.a * list->global_alpha);
         zr_canvas_push_rect_uv(list, zr_vec2(gx,gy), zr_vec2(gx + gw, gy+ gh),
             g.uv[0], g.uv[1], fg);
 
@@ -5237,8 +5237,9 @@ zr_widget_edit_field(struct zr_command_buffer *out, struct zr_rect r,
         if (box->active && field->show_cursor) {
             if (box->cursor == box->glyphs) {
                 /* draw the cursor at the end of the string */
-                text_width = font->width(font->userdata, font->height,
+                zr_size s = font->width(font->userdata, font->height,
                                         buffer + offset, text_len);
+                text_width = (float)s;
                 zr_draw_rect(out, zr_rect(label.x+(float)text_width,
                         label.y, (float)cursor_w, label.h), 0, field->cursor);
             } else {
