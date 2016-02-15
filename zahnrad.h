@@ -135,32 +135,68 @@ struct zr_image {zr_handle handle;unsigned short w,h;unsigned short region[4];};
 struct zr_scroll {unsigned short x, y;};
 
 /* math */
+struct zr_vec2 zr_vec2(float x, float y);
+struct zr_vec2 zr_vec2i(int x, int y);
+struct zr_vec2 zr_vec2v(const float *xy);
+struct zr_vec2 zr_vec2iv(const int *xy);
+
 struct zr_rect zr_get_null_rect(void);
 struct zr_rect zr_rect(float x, float y, float w, float h);
-struct zr_vec2 zr_vec2(float x, float y);
+struct zr_rect zr_recti(int x, int y, int w, int h);
+struct zr_rect zr_recta(struct zr_vec2 pos, struct zr_vec2 size);
+struct zr_rect zr_rectv(const float *xywh);
+struct zr_rect zr_rectiv(const int *xywh);
 
 /* UTF-8 */
 zr_size zr_utf_decode(const char*, zr_rune*, zr_size);
 zr_size zr_utf_encode(zr_rune, char*, zr_size);
 zr_size zr_utf_len(const char*, zr_size byte_len);
 
-/* color */
-struct zr_color zr_rgba(zr_byte r, zr_byte g, zr_byte b, zr_byte a);
-struct zr_color zr_rgb(zr_byte r, zr_byte g, zr_byte b);
-struct zr_color zr_rgba_f(float r, float g, float b, float a);
+/* color (conversion user --> zahnrad) */
+struct zr_color zr_rgb(int r, int g, int b);
+struct zr_color zr_rgb_iv(const int *rgb);
+struct zr_color zr_rgb_bv(const zr_byte* rgb);
 struct zr_color zr_rgb_f(float r, float g, float b);
-struct zr_color zr_hsv(zr_byte h, zr_byte s, zr_byte v);
+struct zr_color zr_rgb_fv(const float *rgb);
+
+struct zr_color zr_rgba(int r, int g, int b, int a);
+struct zr_color zr_rgba_u32(zr_uint);
+struct zr_color zr_rgba_iv(const int *rgba);
+struct zr_color zr_rgba_bv(const zr_byte *rgba);
+struct zr_color zr_rgba_f(float r, float g, float b, float a);
+struct zr_color zr_rgba_fv(const float *rgba);
+
+struct zr_color zr_hsv(int h, int s, int v);
+struct zr_color zr_hsv_iv(const int *hsv);
+struct zr_color zr_hsv_bv(const zr_byte *hsv);
 struct zr_color zr_hsv_f(float h, float s, float v);
-struct zr_color zr_hsva(zr_byte h, zr_byte s, zr_byte v, zr_byte a);
+struct zr_color zr_hsv_fv(const float *hsv);
+
+struct zr_color zr_hsva(int h, int s, int v, int a);
+struct zr_color zr_hsva_iv(const int *hsva);
+struct zr_color zr_hsva_bv(const zr_byte *hsva);
 struct zr_color zr_hsva_f(float h, float s, float v, float a);
-struct zr_color zr_rgba32(zr_uint);
-zr_uint zr_color32(struct zr_color);
-void zr_colorf(float *r, float *g, float *b, float *a, struct zr_color);
-void zr_color_hsv(int *out_h, int *out_s, int *out_v, struct zr_color);
+struct zr_color zr_hsva_fv(const float *hsva);
+
+/* color (conversion zahnrad --> user) */
+void zr_color_f(float *r, float *g, float *b, float *a, struct zr_color);
+void zr_color_fv(float *rgba_out, struct zr_color);
+zr_uint zr_color_u32(struct zr_color);
+
+void zr_color_hsv_i(int *out_h, int *out_s, int *out_v, struct zr_color);
+void zr_color_hsv_b(zr_byte *out_h, zr_byte *out_s, zr_byte *out_v, struct zr_color);
+void zr_color_hsv_iv(int *hsv_out, struct zr_color);
+void zr_color_hsv_bv(zr_byte *hsv_out, struct zr_color);
 void zr_color_hsv_f(float *out_h, float *out_s, float *out_v, struct zr_color);
-void zr_color_hsva(int *h, int *s, int *v, int *a, struct zr_color);
+void zr_color_hsv_fv(float *hsv_out, struct zr_color);
+
+void zr_color_hsva_i(int *h, int *s, int *v, int *a, struct zr_color);
+void zr_color_hsva_b(zr_byte *h, zr_byte *s, zr_byte *v, zr_byte *a, struct zr_color);
+void zr_color_hsva_iv(int *hsva_out, struct zr_color);
+void zr_color_hsva_bv(zr_byte *hsva_out, struct zr_color);
 void zr_color_hsva_f(float *out_h, float *out_s, float *out_v,
                     float *out_a, struct zr_color);
+void zr_color_hsva_fv(float *hsva_out, struct zr_color);
 
 /* image */
 zr_handle zr_handle_ptr(void*);
@@ -387,7 +423,7 @@ struct zr_font_config {
     zr_size ttf_size;
     /* size of the loaded TTF file memory block */
     float size;
-    /* bake pixel height of the font */
+    /* baked pixel height of the font */
     zr_rune oversample_h, oversample_v;
     /* rasterize at hight quality for sub-pixel position */
     int pixel_snap;
@@ -1216,7 +1252,7 @@ enum zr_window_flags {
     ZR_WINDOW_NO_SCROLLBAR  = ZR_FLAG(7),
     /* Removes the scrollbar from the window */
     ZR_WINDOW_TITLE         = ZR_FLAG(8)
-    /* Removes the scrollbar from the window */
+    /* Forces a header at the top at the window showing the title */
 };
 
 struct zr_popup_buffer {
@@ -1309,13 +1345,17 @@ struct zr_canvas {
 };
 
 struct zr_context {
-    unsigned int seq;
+/* public:
+     * can be freely modified */
     struct zr_input input;
     struct zr_style style;
     struct zr_buffer memory;
     struct zr_clipboard clip;
-    void *pool;
 
+/* private:
+     * should only be modifed if you
+     * know what you are doing and don't expect
+     * any kind of backward compatiblity. */
 #if ZR_COMPILE_WITH_VERTEX_BUFFER
     struct zr_canvas canvas;
 #endif
@@ -1324,6 +1364,8 @@ struct zr_context {
 #endif
 
     int build;
+    unsigned int seq;
+    void *pool;
     struct zr_window *begin;
     struct zr_window *end;
     struct zr_window *active;

@@ -378,6 +378,36 @@ zr_rect(float x, float y, float w, float h)
     return r;
 }
 
+
+struct zr_rect
+zr_recti(int x, int y, int w, int h)
+{
+    struct zr_rect r;
+    r.x = (float)x;
+    r.y = (float)y;
+    r.w = (float)w;
+    r.h = (float)h;
+    return r;
+}
+
+struct zr_rect
+zr_recta(struct zr_vec2 pos, struct zr_vec2 size)
+{
+    return zr_rect(pos.x, pos.y, size.x, size.y);
+}
+
+struct zr_rect
+zr_rectv(const float *r)
+{
+    return zr_rect(r[0], r[1], r[2], r[3]);
+}
+
+struct zr_rect
+zr_rectiv(const int *r)
+{
+    return zr_recti(r[0], r[1], r[2], r[3]);
+}
+
 static struct zr_rect
 zr_shrink_rect(struct zr_rect r, float amount)
 {
@@ -409,6 +439,28 @@ zr_vec2(float x, float y)
     ret.x = x; ret.y = y;
     return ret;
 }
+
+struct zr_vec2
+zr_vec2i(int x, int y)
+{
+    struct zr_vec2 ret;
+    ret.x = (float)x;
+    ret.y = (float)y;
+    return ret;
+}
+
+struct zr_vec2
+zr_vec2v(const float *v)
+{
+    return zr_vec2(v[0], v[1]);
+}
+
+struct zr_vec2
+zr_vec2iv(const int *v)
+{
+    return zr_vec2i(v[0], v[1]);
+}
+
 /*
  * ==============================================================
  *
@@ -826,25 +878,53 @@ zr_murmur_hash(const void * key, int len, zr_hash seed)
  * ===============================================================
  */
 struct zr_color
-zr_rgba(zr_byte r, zr_byte g, zr_byte b, zr_byte a)
+zr_rgba(int r, int g, int b, int a)
 {
     struct zr_color ret;
-    ret.r = r; ret.g = g;
-    ret.b = b; ret.a = a;
+    ret.r = (zr_byte)CLAMP(0, r, 255);
+    ret.g = (zr_byte)CLAMP(0, g, 255);
+    ret.b = (zr_byte)CLAMP(0, b, 255);
+    ret.a = (zr_byte)CLAMP(0, a, 255);
     return ret;
 }
 
 struct zr_color
-zr_rgb(zr_byte r, zr_byte g, zr_byte b)
+zr_rgba_iv(const int *c)
+{
+    return zr_rgba(c[0], c[1], c[2], c[3]);
+}
+
+struct zr_color
+zr_rgba_bv(const zr_byte *c)
+{
+    return zr_rgba(c[0], c[1], c[2], c[3]);
+}
+
+struct zr_color
+zr_rgb(int r, int g, int b)
 {
     struct zr_color ret;
-    ret.r = r; ret.g = g;
-    ret.b = b; ret.a = 255;
+    ret.r =(zr_byte)CLAMP(0, r, 255);
+    ret.g =(zr_byte)CLAMP(0, g, 255);
+    ret.b =(zr_byte)CLAMP(0, b, 255);
+    ret.a =(zr_byte)255;
     return ret;
 }
 
 struct zr_color
-zr_rgba32(zr_uint in)
+zr_rgb_iv(const int *c)
+{
+    return zr_rgb(c[0], c[1], c[2]);
+}
+
+struct zr_color
+zr_rgb_bv(const zr_byte* c)
+{
+    return zr_rgb(c[0], c[1], c[2]);
+}
+
+struct zr_color
+zr_rgba_u32(zr_uint in)
 {
     struct zr_color ret;
     ret.r = (in & 0xFF);
@@ -866,6 +946,12 @@ zr_rgba_f(float r, float g, float b, float a)
 }
 
 struct zr_color
+zr_rgba_fv(const float *c)
+{
+    return zr_rgba_f(c[0], c[1], c[2], c[3]);
+}
+
+struct zr_color
 zr_rgb_f(float r, float g, float b)
 {
     struct zr_color ret;
@@ -877,9 +963,27 @@ zr_rgb_f(float r, float g, float b)
 }
 
 struct zr_color
-zr_hsv(zr_byte h, zr_byte s, zr_byte v)
+zr_rgb_fv(const float *c)
+{
+    return zr_rgb_f(c[0], c[1], c[2]);
+}
+
+struct zr_color
+zr_hsv(int h, int s, int v)
 {
     return zr_hsva(h, s, v, 255);
+}
+
+struct zr_color
+zr_hsv_iv(const int *c)
+{
+    return zr_hsv(c[0], c[1], c[2]);
+}
+
+struct zr_color
+zr_hsv_bv(const zr_byte *c)
+{
+    return zr_hsv(c[0], c[1], c[2]);
 }
 
 struct zr_color
@@ -889,74 +993,71 @@ zr_hsv_f(float h, float s, float v)
 }
 
 struct zr_color
-zr_hsva(zr_byte h, zr_byte s, zr_byte v, zr_byte a)
+zr_hsv_fv(const float *c)
 {
-    float hf = (float)h / 255.0f;
-    float sf = (float)s / 255.0f;
-    float vf = (float)v / 255.0f;
-    float af = (float)a / 255.0f;
+    return zr_hsv_f(c[0], c[1], c[2]);
+}
+
+struct zr_color
+zr_hsva(int h, int s, int v, int a)
+{
+    float hf = ((float)CLAMP(0, h, 255)) / 255.0f;
+    float sf = ((float)CLAMP(0, s, 255)) / 255.0f;
+    float vf = ((float)CLAMP(0, v, 255)) / 255.0f;
+    float af = ((float)CLAMP(0, a, 255)) / 255.0f;
     return zr_hsva_f(hf, sf, vf, af);
+}
+
+struct zr_color
+zr_hsva_iv(const int *c)
+{
+    return zr_hsva(c[0], c[1], c[2], c[3]);
+}
+
+struct zr_color
+zr_hsva_bv(const zr_byte *c)
+{
+    return zr_hsva(c[0], c[1], c[2], c[3]);
 }
 
 struct zr_color
 zr_hsva_f(float h, float s, float v, float a)
 {
     struct zr_colorf {float r,g,b;} out = {0,0,0};
-    float hh, p, q, t, ff;
-    zr_uint i;
+    float p, q, t, f;
+    int i;
 
     if (s <= 0.0f) {
         out.r = v; out.g = v; out.b = v;
         return zr_rgb_f(out.r, out.g, out.b);
     }
 
-    hh = h;
-    if (hh >= 360.0f) hh = 0;
-    hh /= 60.0f;
-    i = (zr_uint)hh;
-    ff = hh - (float)i;
+    h = h / (60.0f/360.0f);
+    i = (int)h;
+    f = h - (float)i;
     p = v * (1.0f - s);
-    q = v * (1.0f - (s * ff));
-    t = v * (1.0f - (s * (1.0f - ff)));
+    q = v * (1.0f - (s * f));
+    t = v * (1.0f - s * (1.0f - f));
 
     switch (i) {
-    case 0:
-        out.r = v;
-        out.g = t;
-        out.b = p;
-        break;
-    case 1:
-        out.r = q;
-        out.g = v;
-        out.b = p;
-        break;
-    case 2:
-        out.r = p;
-        out.g = v;
-        out.b = t;
-        break;
-    case 3:
-        out.r = p;
-        out.g = q;
-        out.b = v;
-        break;
-    case 4:
-        out.r = t;
-        out.g = p;
-        out.b = v;
-        break;
-    case 5:
-    default:
-        out.r = v;
-        out.g = p;
-        out.b = q;
-        break;
+    case 0: out.r = v; out.g = t; out.b = p; break;
+    case 1: out.r = q; out.g = v; out.b = p; break;
+    case 2: out.r = p; out.g = v; out.b = t; break;
+    case 3: out.r = p; out.g = q; out.b = v; break;
+    case 4: out.r = t; out.g = p; out.b = v; break;
+    case 5: default: out.r = v; out.g = p; out.b = q; break;
     }
     return zr_rgba_f(out.r, out.g, out.b, a);
 }
 
+struct zr_color
+zr_hsva_fv(const float *c)
+{
+    return zr_hsva_f(c[0], c[1], c[2], c[3]);
+}
+
 zr_uint
-zr_color32(struct zr_color in)
+zr_color_u32(struct zr_color in)
 {
     zr_uint out = (zr_uint)in.r;
     out |= ((zr_uint)in.g << 8);
@@ -966,13 +1067,19 @@ zr_color32(struct zr_color in)
 }
 
 void
-zr_colorf(float *r, float *g, float *b, float *a, struct zr_color in)
+zr_color_f(float *r, float *g, float *b, float *a, struct zr_color in)
 {
     static const float s = 1.0f/255.0f;
     *r = (float)in.r * s;
     *g = (float)in.g * s;
     *b = (float)in.b * s;
     *a = (float)in.a * s;
+}
+
+void
+zr_color_fv(float *c, struct zr_color in)
+{
+    zr_color_f(&c[0], &c[1], &c[2], &c[3], in);
 }
 
 void
@@ -983,6 +1090,13 @@ zr_color_hsv_f(float *out_h, float *out_s, float *out_v, struct zr_color in)
 }
 
 void
+zr_color_hsv_fv(float *out, struct zr_color in)
+{
+    float a;
+    zr_color_hsva_f(&out[0], &out[1], &out[2], &a, in);
+}
+
+void
 zr_color_hsva_f(float *out_h, float *out_s,
     float *out_v, float *out_a, struct zr_color in)
 {
@@ -990,12 +1104,12 @@ zr_color_hsva_f(float *out_h, float *out_s,
     float K = 0.0f;
     float r,g,b,a;
 
-    zr_colorf(&r,&g,&b,&a, in);
+    zr_color_f(&r,&g,&b,&a, in);
     if (g < b) {
         const float t = g; g = b; b = t;
         K = -1.f;
     }
-    if (a < g) {
+    if (r < g) {
         const float t = r; r = g; g = t;
         K = -2.f/6.0f - K;
     }
@@ -1007,7 +1121,13 @@ zr_color_hsva_f(float *out_h, float *out_s,
 }
 
 void
-zr_color_hsva(int *out_h, int *out_s, int *out_v,
+zr_color_hsva_fv(float *out, struct zr_color in)
+{
+    zr_color_hsva_f(&out[0], &out[1], &out[2], &out[3], in);
+}
+
+void
+zr_color_hsva_i(int *out_h, int *out_s, int *out_v,
                 int *out_a, struct zr_color in)
 {
     float h,s,v,a;
@@ -1019,10 +1139,43 @@ zr_color_hsva(int *out_h, int *out_s, int *out_v,
 }
 
 void
-zr_color_hsv(int *out_h, int *out_s, int *out_v, struct zr_color in)
+zr_color_hsva_iv(int *out, struct zr_color in)
+{
+    zr_color_hsva_i(&out[0], &out[1], &out[2], &out[3], in);
+}
+
+void
+zr_color_hsva_bv(zr_byte *out, struct zr_color in)
+{
+    int tmp[4];
+    zr_color_hsva_i(&tmp[0], &tmp[1], &tmp[2], &tmp[3], in);
+    out[0] = (zr_byte)tmp[0];
+    out[1] = (zr_byte)tmp[1];
+    out[2] = (zr_byte)tmp[2];
+    out[3] = (zr_byte)tmp[3];
+}
+
+void
+zr_color_hsv_i(int *out_h, int *out_s, int *out_v, struct zr_color in)
 {
     int a;
-    zr_color_hsva(out_h, out_s, out_v, &a, in);
+    zr_color_hsva_i(out_h, out_s, out_v, &a, in);
+}
+
+void
+zr_color_hsv_iv(int *out, struct zr_color in)
+{
+    zr_color_hsv_i(&out[0], &out[1], &out[2], in);
+}
+
+void
+zr_color_hsv_bv(zr_byte *out, struct zr_color in)
+{
+    int tmp[4];
+    zr_color_hsv_i(&tmp[0], &tmp[1], &tmp[2], in);
+    out[0] = (zr_byte)tmp[0];
+    out[1] = (zr_byte)tmp[1];
+    out[2] = (zr_byte)tmp[2];
 }
 /*
  * ==============================================================
@@ -2190,7 +2343,7 @@ zr_canvas_add_poly_line(struct zr_canvas *list, struct zr_vec2 *points,
     if (!list || points_count < 2) return;
 
     color.a *= list->global_alpha;
-    col = zr_color32(color);
+    col = zr_color_u32(color);
     count = points_count;
     if (!closed) count = points_count-1;
     thick_line = thickness > 1.0f;
@@ -2428,7 +2581,7 @@ zr_canvas_add_poly_convex(struct zr_canvas *list, struct zr_vec2 *points,
 #endif
 
     color.a *= list->global_alpha;
-    col = zr_color32(color);
+    col = zr_color_u32(color);
     if (aliasing == ZR_ANTI_ALIASING_ON) {
         zr_size i = 0;
         zr_size i0 = 0, i1 = 0;
@@ -2732,7 +2885,7 @@ zr_canvas_push_rect_uv(struct zr_canvas *list, struct zr_vec2 a,
     struct zr_vec2 c, struct zr_vec2 uva, struct zr_vec2 uvc,
     struct zr_color color)
 {
-    zr_draw_vertex_color col = zr_color32(color);
+    zr_draw_vertex_color col = zr_color_u32(color);
     struct zr_draw_vertex *vtx;
     struct zr_vec2 uvb, uvd;
     struct zr_vec2 b,d;

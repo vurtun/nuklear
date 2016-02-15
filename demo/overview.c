@@ -244,15 +244,18 @@ demo_window(struct zr_context *ctx)
             if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Combo", ZR_MINIMIZED))
             {
                 /* Combobox Widgets */
+                enum color_mode {COL_RGB, COL_HSV};
                 static float chart_selection = 8.0f;
                 static const char *weapons[] = {"Fist","Pistol","Shotgun","Plasma","BFG"};
                 static size_t current_weapon = 0;
                 static int check_values[5];
+                static float position[3];
+                static int col_mode = COL_RGB;
                 static struct zr_color combo_color = {130, 50, 50, 255};
                 static struct zr_color combo_color2 = {130, 180, 50, 255};
                 static size_t x =  20, y = 40, z = 10, w = 90;
 
-                char buffer[32];
+                char buffer[64];
                 size_t sum = 0;
                 struct zr_panel combo;
 
@@ -285,11 +288,24 @@ demo_window(struct zr_context *ctx)
 
                 /* property color combobox */
                 if (zr_combo_begin_color(ctx, &combo, combo_color2, 200)) {
+                    zr_layout_row_dynamic(ctx, 25, 2);
+                    col_mode = zr_option(ctx, "RGB", col_mode == COL_RGB) ? COL_RGB : col_mode;
+                    col_mode = zr_option(ctx, "HSV", col_mode == COL_HSV) ? COL_HSV : col_mode;
                     zr_layout_row_dynamic(ctx, 25, 1);
-                    combo_color2.r = (zr_byte)zr_propertyi(ctx, "#R:", 0, combo_color2.r, 255, 1,1);
-                    combo_color2.g = (zr_byte)zr_propertyi(ctx, "#G:", 0, combo_color2.g, 255, 1,1);
-                    combo_color2.b = (zr_byte)zr_propertyi(ctx, "#B:", 0, combo_color2.b, 255, 1,1);
-                    combo_color2.a = (zr_byte)zr_propertyi(ctx, "#A:", 0, combo_color2.a, 255, 1,1);
+                    if (col_mode == COL_RGB) {
+                        combo_color2.r = (zr_byte)zr_propertyi(ctx, "#R:", 0, combo_color2.r, 255, 1,1);
+                        combo_color2.g = (zr_byte)zr_propertyi(ctx, "#G:", 0, combo_color2.g, 255, 1,1);
+                        combo_color2.b = (zr_byte)zr_propertyi(ctx, "#B:", 0, combo_color2.b, 255, 1,1);
+                        combo_color2.a = (zr_byte)zr_propertyi(ctx, "#A:", 0, combo_color2.a, 255, 1,1);
+                    } else {
+                        zr_byte tmp[4];
+                        zr_color_hsva_bv(tmp, combo_color2);
+                        tmp[0] = (zr_byte)zr_propertyi(ctx, "#H:", 0, tmp[0], 255, 1,1);
+                        tmp[1] = (zr_byte)zr_propertyi(ctx, "#S:", 0, tmp[1], 255, 1,1);
+                        tmp[2] = (zr_byte)zr_propertyi(ctx, "#V:", 0, tmp[2], 255, 1,1);
+                        tmp[3] = (zr_byte)zr_propertyi(ctx, "#A:", 0, tmp[3], 255, 1,1);
+                        combo_color2 = zr_hsva_bv(tmp);
+                    }
                     zr_combo_end(ctx);
                 }
 
@@ -314,6 +330,16 @@ demo_window(struct zr_context *ctx)
                     zr_checkbox(ctx, weapons[1], &check_values[1]);
                     zr_checkbox(ctx, weapons[2], &check_values[2]);
                     zr_checkbox(ctx, weapons[3], &check_values[3]);
+                    zr_combo_end(ctx);
+                }
+
+                /* complex text combobox */
+                sprintf(buffer, "%.2f, %.2f, %.2f", position[0], position[1],position[2]);
+                if (zr_combo_begin_text(ctx, &combo, buffer, 200)) {
+                    zr_layout_row_dynamic(ctx, 30, 1);
+                    zr_property_float(ctx, "#X:", -1024.0f, &position[0], 1024.0f, 1,0.5f);
+                    zr_property_float(ctx, "#Y:", -1024.0f, &position[1], 1024.0f, 1,0.5f);
+                    zr_property_float(ctx, "#Z:", -1024.0f, &position[2], 1024.0f, 1,0.5f);
                     zr_combo_end(ctx);
                 }
 

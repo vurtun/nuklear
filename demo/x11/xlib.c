@@ -445,8 +445,8 @@ surface_blit(XSurface *dst_surf, XSurface *src_surf,
             color_to_byte(&src_col_b.r, spx);
 
             /* convert from byte to float */
-            zr_colorf(&dst_col[0], &dst_col[1], &dst_col[2], &dst_col[3], dst_col_b);
-            zr_colorf(&src_col[0], &src_col[1], &src_col[2], &src_col[3], src_col_b);
+            zr_color_f(&dst_col[0], &dst_col[1], &dst_col[2], &dst_col[3], dst_col_b);
+            zr_color_f(&src_col[0], &src_col[1], &src_col[2], &src_col[3], src_col_b);
 
             /* perform simple alpha-blending */
             res_col[0] = (1.0f - src_col[3]) * dst_col[0] + src_col[3] * src_col[0];
