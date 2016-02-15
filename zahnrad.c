@@ -7478,6 +7478,30 @@ zr_window_has_focus(const struct zr_context *ctx)
 }
 
 int
+zr_window_is_hovered(struct zr_context *ctx)
+{
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(ctx->current);
+    if (!ctx || !ctx->current) return 0;
+    return zr_input_is_mouse_hovering_rect(&ctx->input, ctx->current->bounds);
+}
+
+int
+zr_window_is_any_hovered(struct zr_context *ctx)
+{
+    struct zr_window *iter;
+    ZR_ASSERT(ctx);
+    if (!ctx) return 0;
+    iter = ctx->begin;
+    while (iter) {
+        if (zr_input_is_mouse_hovering_rect(&ctx->input, iter->bounds))
+            return 1;
+        iter = iter->next;
+    }
+    return 0;
+}
+
+int
 zr_window_is_collapsed(struct zr_context *ctx, const char *name)
 {
     int title_len;
@@ -7574,20 +7598,36 @@ void
 zr_window_collapse_if(struct zr_context *ctx, const char *name,
     enum zr_collapse_states c, int cond)
 {
+    ZR_ASSERT(ctx);
+    if (!ctx || !cond) return;
+    zr_window_collapse(ctx, name, c);
+}
+
+void
+zr_window_show(struct zr_context *ctx, const char *name, enum zr_show_states s)
+{
     int title_len;
     zr_hash title_hash;
     struct zr_window *win;
     ZR_ASSERT(ctx);
-    if (!ctx || !cond) return;
+    if (!ctx) return;
 
     title_len = (int)zr_strsiz(name);
     title_hash = zr_murmur_hash(name, (int)title_len, ZR_WINDOW_TITLE);
     win = zr_find_window(ctx, title_hash);
     if (!win) return;
-
-    if (c == ZR_MINIMIZED)
+    if (s == ZR_HIDDEN)
         win->flags |= ZR_WINDOW_HIDDEN;
     else win->flags &= ~(zr_flags)ZR_WINDOW_HIDDEN;
+}
+
+void
+zr_window_show_if(struct zr_context *ctx, const char *name,
+    enum zr_show_states s, int cond)
+{
+    ZR_ASSERT(ctx);
+    if (!ctx || !cond) return;
+    zr_window_show(ctx, name, s);
 }
 
 void
@@ -8746,7 +8786,7 @@ zr_panel_alloc_space(struct zr_rect *bounds, const struct zr_context *ctx)
     layout->row.index++;
 }
 
-void
+static void
 zr_layout_peek(struct zr_rect *bounds, struct zr_context *ctx)
 {
     float y;
@@ -8921,6 +8961,82 @@ zr_layout_pop(struct zr_context *ctx)
  *                      WIDGETS
  *
  * --------------------------------------------------------------*/
+struct zr_rect
+zr_widget_bounds(struct zr_context *ctx)
+{
+    struct zr_rect bounds;
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(ctx->current);
+    if (!ctx || !ctx->current)
+        return zr_rect(0,0,0,0);
+    zr_layout_peek(&bounds, ctx);
+    return bounds;
+}
+
+struct zr_vec2
+zr_widget_position(struct zr_context *ctx)
+{
+    struct zr_rect bounds;
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(ctx->current);
+    if (!ctx || !ctx->current) return zr_vec2(0,0);
+    zr_layout_peek(&bounds, ctx);
+    return zr_vec2(bounds.x, bounds.y);
+}
+
+struct zr_vec2
+zr_widget_size(struct zr_context *ctx)
+{
+    struct zr_rect bounds;
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(ctx->current);
+    if (!ctx || !ctx->current) return zr_vec2(0,0);
+    zr_layout_peek(&bounds, ctx);
+    return zr_vec2(bounds.w, bounds.h);
+}
+
+int
+zr_widget_is_hovered(struct zr_context *ctx)
+{
+    int ret;
+    struct zr_rect bounds;
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(ctx->current);
+    if (!ctx || !ctx->current) return 0;
+    zr_layout_peek(&bounds, ctx);
+    ret = (ctx->active == ctx->current);
+    ret = ret && zr_input_is_mouse_hovering_rect(&ctx->input, bounds);
+    return ret;
+}
+
+int
+zr_widget_is_mouse_clicked(struct zr_context *ctx, enum zr_buttons btn)
+{
+    int ret;
+    struct zr_rect bounds;
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(ctx->current);
+    if (!ctx || !ctx->current) return 0;
+    zr_layout_peek(&bounds, ctx);
+    ret = (ctx->active == ctx->current);
+    ret = ret && zr_input_mouse_clicked(&ctx->input, btn, bounds);
+    return ret;
+}
+
+int
+zr_widget_has_mouse_click_down(struct zr_context *ctx, enum zr_buttons btn, int down)
+{
+    int ret;
+    struct zr_rect bounds;
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(ctx->current);
+    if (!ctx || !ctx->current) return 0;
+    zr_layout_peek(&bounds, ctx);
+    ret = (ctx->active == ctx->current);
+    ret = ret && zr_input_has_mouse_click_down_in_rect(&ctx->input, btn, bounds, down);
+    return ret;
+}
+
 void
 zr_spacing(struct zr_context *ctx, int cols)
 {

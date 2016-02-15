@@ -439,7 +439,7 @@ demo_window(struct zr_context *ctx)
             id = 0;
             index = -1;
             zr_layout_row_dynamic(ctx, 100, 1);
-            zr_layout_peek(&bounds, ctx);
+            bounds = zr_widget_bounds(ctx);
             zr_chart_begin(ctx, ZR_CHART_LINES, 32, -1.0f, 1.0f);
             for (i = 0; i < 32; ++i) {
                 zr_flags res = zr_chart_push(ctx, (float)cos(id));
@@ -464,7 +464,7 @@ demo_window(struct zr_context *ctx)
 
             /* column chart */
             zr_layout_row_dynamic(ctx, 100, 1);
-            zr_layout_peek(&bounds, ctx);
+            bounds = zr_widget_bounds(ctx);
             zr_chart_begin(ctx, ZR_CHART_COLUMN, 32, 0.0f, 1.0f);
             for (i = 0; i < 32; ++i) {
                 zr_flags res = zr_chart_push(ctx, (float)fabs(sin(id)));
@@ -498,7 +498,7 @@ demo_window(struct zr_context *ctx)
 
             /* menu contextual */
             zr_layout_row_static(ctx, 30, 150, 1);
-            zr_layout_peek(&bounds, ctx);
+            bounds = zr_widget_bounds(ctx);
             zr_label(ctx, "Right click me for menu", ZR_TEXT_LEFT);
 
             if (zr_contextual_begin(ctx, &menu, 0, zr_vec2(100, 300), bounds)) {
@@ -523,7 +523,7 @@ demo_window(struct zr_context *ctx)
             zr_layout_row_push(ctx, 100);
             zr_label(ctx, "Right Click here:", ZR_TEXT_LEFT);
             zr_layout_row_push(ctx, 50);
-            zr_layout_peek(&bounds, ctx);
+            bounds = zr_widget_bounds(ctx);
             zr_button_color(ctx, color, ZR_BUTTON_DEFAULT);
             zr_layout_row_end(ctx);
 
@@ -567,7 +567,7 @@ demo_window(struct zr_context *ctx)
 
             /* tooltip */
             zr_layout_row_static(ctx, 30, 150, 1);
-            zr_layout_peek(&bounds, ctx);
+            bounds = zr_widget_bounds(ctx);
             zr_label(ctx, "Hover me for tooltip", ZR_TEXT_LEFT);
             if (zr_input_is_mouse_hovering_rect(in, bounds))
                 zr_tooltip(ctx, "This is a tooltip");
@@ -830,7 +830,7 @@ demo_window(struct zr_context *ctx)
                     }
 
                     /* scaler */
-                    zr_layout_peek(&bounds, ctx);
+                    bounds = zr_widget_bounds(ctx);
                     zr_spacing(ctx, 1);
                     if ((zr_input_is_mouse_hovering_rect(in, bounds) ||
                         zr_input_is_mouse_prev_hovering_rect(in, bounds)) &&
@@ -853,7 +853,7 @@ demo_window(struct zr_context *ctx)
                     }
 
                     /* scaler */
-                    zr_layout_peek(&bounds, ctx);
+                    bounds = zr_widget_bounds(ctx);
                     zr_spacing(ctx, 1);
                     if ((zr_input_is_mouse_hovering_rect(in, bounds) ||
                         zr_input_is_mouse_prev_hovering_rect(in, bounds)) &&
@@ -911,7 +911,7 @@ demo_window(struct zr_context *ctx)
 
                     /* scaler */
                     zr_layout_row_dynamic(ctx, 8, 1);
-                    zr_layout_peek(&bounds, ctx);
+                    bounds = zr_widget_bounds(ctx);
                     zr_spacing(ctx, 1);
                     if ((zr_input_is_mouse_hovering_rect(in, bounds) ||
                         zr_input_is_mouse_prev_hovering_rect(in, bounds)) &&
@@ -937,7 +937,7 @@ demo_window(struct zr_context *ctx)
                     {
                         /* scaler */
                         zr_layout_row_dynamic(ctx, 8, 1);
-                        zr_layout_peek(&bounds, ctx);
+                        bounds = zr_widget_bounds(ctx);
                         if ((zr_input_is_mouse_hovering_rect(in, bounds) ||
                             zr_input_is_mouse_prev_hovering_rect(in, bounds)) &&
                             zr_input_is_mouse_down(in, ZR_BUTTON_LEFT))

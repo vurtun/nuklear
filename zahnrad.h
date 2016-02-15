@@ -913,7 +913,7 @@ enum zr_style_components {
     /* default all properites inside the configuration struct */
     ZR_DEFAULT_ROUNDING = 0x04,
     /* default all rounding values inside the configuration struct */
-    ZR_DEFAULT_ALL = 0xFFFF
+    ZR_DEFAULT_ALL = ZR_DEFAULT_COLOR|ZR_DEFAULT_PROPERTIES|ZR_DEFAULT_ROUNDING
     /* default the complete configuration struct */
 };
 
@@ -1097,6 +1097,11 @@ enum zr_widget_status {
 enum zr_collapse_states {
     ZR_MINIMIZED = zr_false,
     ZR_MAXIMIZED = zr_true
+};
+
+enum zr_show_states {
+    ZR_HIDDEN = zr_false,
+    ZR_SHOWN = zr_true
 };
 
 enum zr_widget_state {
@@ -1308,6 +1313,21 @@ struct zr_clipboard {
     /* copy callback for the edit box  */
 };
 
+struct zr_convert_config {
+    float global_alpha;
+    /* global alpha modifier */
+    float line_thickness;
+    /* line thickness should generally default to 1*/
+    enum zr_anti_aliasing line_AA;
+    /* line anti-aliasing flag can be turned off if you are thight on memory */
+    enum zr_anti_aliasing shape_AA;
+    /* shape anti-aliasing flag can be turned off if you are thight on memory */
+    unsigned int circle_segment_count;
+    /* number of segments used for circle and curves: default to 22 */
+    struct zr_draw_null_texture null;
+    /* handle to texture with a white pixel to draw text */
+};
+
 struct zr_canvas {
     float global_alpha;
     /* alpha modifier for all shapes */
@@ -1389,9 +1409,11 @@ void zr_free(struct zr_context*);
 void zr_set_user_data(struct zr_context*, zr_handle handle);
 #endif
 
-/* window */
+/*--------------------------------------------------------------
+ *                          WINDOW
+ * -------------------------------------------------------------*/
 int zr_begin(struct zr_context*, struct zr_panel*, const char *title,
-            struct zr_rect bounds, unsigned int flags);
+            struct zr_rect bounds, zr_flags flags);
 void zr_end(struct zr_context*);
 
 struct zr_rect zr_window_get_bounds(const struct zr_context*);
@@ -1405,6 +1427,8 @@ struct zr_vec2 zr_window_get_content_region_max(struct zr_context*);
 struct zr_vec2 zr_window_get_content_region_size(struct zr_context*);
 struct zr_command_buffer* zr_window_get_canvas(struct zr_context*);
 int zr_window_has_focus(const struct zr_context*);
+int zr_window_is_hovered(struct zr_context*);
+int zr_window_is_any_hovered(struct zr_context*);
 int zr_window_is_collapsed(struct zr_context*, const char *name);
 int zr_window_is_closed(struct zr_context*, const char *name);
 int zr_window_is_active(struct zr_context*, const char *name);
@@ -1417,6 +1441,9 @@ void zr_window_collapse(struct zr_context*, const char *name,
                         enum zr_collapse_states);
 void zr_window_collapse_if(struct zr_context*, const char *name,
                             enum zr_collapse_states, int cond);
+void zr_window_show(struct zr_context*, const char *name, enum zr_show_states);
+void zr_window_show_if(struct zr_context*, const char *name,
+                        enum zr_show_states, int cond);
 
 /*--------------------------------------------------------------
  *                      DRAWING
@@ -1426,22 +1453,6 @@ void zr_window_collapse_if(struct zr_context*, const char *name,
 #define zr_foreach(c, ctx) for((c)=zr__begin(ctx); (c)!=0; (c)=zr__next(ctx, c))
 const struct zr_command* zr__next(struct zr_context*, const struct zr_command*);
 const struct zr_command* zr__begin(struct zr_context*);
-
-/* vertex command drawing */
-struct zr_convert_config {
-    float global_alpha;
-    /* global alpha modifier */
-    float line_thickness;
-    /* line thickness should generally default to 1*/
-    enum zr_anti_aliasing line_AA;
-    /* line anti-aliasing flag can be turned off if you are thight on memory */
-    enum zr_anti_aliasing shape_AA;
-    /* shape anti-aliasing flag can be turned off if you are thight on memory */
-    unsigned int circle_segment_count;
-    /* number of segments used for circle and curves: default to 22 */
-    struct zr_draw_null_texture null;
-    /* handle to texture with a white pixel to draw text */
-};
 
 void zr_convert(struct zr_context*, struct zr_buffer *cmds,
                 struct zr_buffer *vertices, struct zr_buffer *elements,
@@ -1457,6 +1468,7 @@ const struct zr_draw_command* zr__draw_next(const struct zr_draw_command*,
 /*--------------------------------------------------------------
  *                      INPUT
  * -------------------------------------------------------------*/
+/* input acquiring */
 void zr_input_begin(struct zr_context*);
 void zr_input_motion(struct zr_context*, int x, int y);
 void zr_input_key(struct zr_context*, enum zr_keys, int down);
@@ -1498,10 +1510,8 @@ void zr_reset_font_height(struct zr_context*);
 void zr_reset(struct zr_context*);
 
 /*--------------------------------------------------------------
- *                      Layout
+ *                      LAYOUT
  * -------------------------------------------------------------*/
-void zr_layout_peek(struct zr_rect *bounds, struct zr_context*);
-
 /* columns based layouting with generated position and width and fixed height*/
 void zr_layout_row_dynamic(struct zr_context*, float height, int cols);
 void zr_layout_row_static(struct zr_context*, float height, int item_width, int cols);
@@ -1536,10 +1546,19 @@ int zr_layout_push(struct zr_context*, enum zr_layout_node_type, const char *tit
 void zr_layout_pop(struct zr_context*);
 
 /*--------------------------------------------------------------
- *                      Widgets
+ *                          WIDGETS
  * -------------------------------------------------------------*/
+/* base widget calls for custom widgets (is used by all widgets internally) */
 enum zr_widget_state zr_widget(struct zr_rect*, const struct zr_context*);
 enum zr_widget_state zr_widget_fitting(struct zr_rect*, struct zr_context*);
+
+/* utilities (working on the next widget) */
+struct zr_rect zr_widget_bounds(struct zr_context*);
+struct zr_vec2 zr_widget_position(struct zr_context*);
+struct zr_vec2 zr_widget_size(struct zr_context*);
+int zr_widget_is_hovered(struct zr_context*);
+int zr_widget_is_mouse_clicked(struct zr_context*, enum zr_buttons);
+int zr_widget_has_mouse_click_down(struct zr_context*, enum zr_buttons, int down);
 void zr_spacing(struct zr_context*, int cols);
 void zr_seperator(struct zr_context*);
 
@@ -1603,8 +1622,9 @@ zr_flags zr_chart_push(struct zr_context*, float);
 void zr_chart_end(struct zr_context*);
 
 /*--------------------------------------------------------------
- *                      Popups
+ *                      POPUPS
  * -------------------------------------------------------------*/
+/* normal blocking popups */
 int zr_popup_begin(struct zr_context*, struct zr_panel*, enum zr_popup_type,
                     const char*, zr_flags, struct zr_rect bounds);
 void zr_popup_close(struct zr_context*);
