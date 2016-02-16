@@ -58,7 +58,7 @@ int op = EASY;
 float value = 0.6f;
 int i =  20;
 
-struct zr_layout layout;
+struct zr_panel layout;
 zr_begin(&ctx, &layout, "Show", zr_rect(50, 50, 220, 220),
     ZR_WINDOW_BORDER|ZR_WINDOW_MOVEABLE|ZR_WINDOW_CLOSEABLE);
 {

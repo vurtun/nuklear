@@ -8,18 +8,18 @@ If you have an idea for new features just [open an issue](https://github.com/vur
   * Find and correct spelling mistakes
   * Add (insert your favorite platform or render backend here) demo implementation (some possibilities: DirectX 9/DirectX 10/DirectX 11 and win32 with OpenGL)
   * Add clipboard user callbacks back into all demos
-  * Add additional widgets [some possible widgets](http://doc.qt.io/qt-5/widget-classes.html#the-widget-classes)
+  * Add additional widgets
+  * Find a better way to change the style or group style options
   * Add support for multiple pointers for touch input devices (probably requires to rewrite mouse handling in `struct zr_input`)
   * Extend xlib demo to support image drawing with arbitrary image width and height
   * Change cursor in `zr_widget_edit_box` and `zr_widget_edit_field` to thin standard cursor version used in editors
   * Extend piemenu to support submenus (another ring around the first ring or something like [this:](http://gdj.gdj.netdna-cdn.com/wp-content/uploads/2013/02/ui+concepts+13.gif)) and turn it into a default library widget.
   * Add label describing the currently active piemenu entry
-  * Maybe write a piemenu text only version for platforms that do not want or can use images 
+  * Add tables with scaleable column width
   * Rewrite the chart API to support a better range of charts (maybe take notes from Javascript chart frameworks) 
   * Create an API to allow scaling between groups (maybe extend and convert the demo example)
   * Add multiple Tab support (maybe use `zr_group` and add a header)  
   * Come up with a better way to provide and create widget and window styles
-  * Add tables with scaleable column width
   * Extend context to not only support overlapping windows but tiled windows as well
 
 ## Bugs
@@ -27,7 +27,7 @@ If you have an idea for new features just [open an issue](https://github.com/vur
   * Text handling is still a little bit janky and probably needs to be further tested and polished
   * `zr_edit_buffer` with multiline flag is bugged for '\n', need to differentiate between visible and non-visible characters
 
-## Coding conventions                         
+## Coding conventions
   * Only use C89 (ANSI C)
   * Do not use any compiler specific extensions
   * For indent use four spaces
