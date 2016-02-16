@@ -196,22 +196,16 @@ struct zr_pool {
 /* ==============================================================
  *                          MATH
  * =============================================================== */
-#ifndef MIN
-#define MIN(a,b) ((a) < (b) ? (a) : (b))
-#endif
-#ifndef MAX
-#define MAX(a,b) ((a) < (b) ? (b) : (a))
-#endif
-#ifndef CLAMP
-#define CLAMP(i,v,x) (MAX(MIN(v,x), i))
-#endif
+#define ZR_MIN(a,b) ((a) < (b) ? (a) : (b))
+#define ZR_MAX(a,b) ((a) < (b) ? (b) : (a))
+#define ZR_CLAMP(i,v,x) (ZR_MAX(ZR_MIN(v,x), i))
 
 #define ZR_PI 3.141592654f
 #define ZR_UTF_INVALID 0xFFFD
 #define ZR_MAX_FLOAT_PRECISION 2
 
 #define ZR_UNUSED(x) ((void)(x))
-#define ZR_SATURATE(x) (MAX(0, MIN(1.0f, x)))
+#define ZR_SATURATE(x) (ZR_MAX(0, ZR_MIN(1.0f, x)))
 #define ZR_LEN(a) (sizeof(a)/sizeof(a)[0])
 #define ZR_ABS(a) (((a) < 0) ? -(a) : (a))
 #define ZR_BETWEEN(x, a, b) ((a) <= (x) && (x) <= (b))
@@ -412,8 +406,8 @@ static struct zr_rect
 zr_shrink_rect(struct zr_rect r, float amount)
 {
     struct zr_rect res;
-    r.w = MAX(r.w, 2 * amount);
-    r.h = MAX(r.h, 2 * amount);
+    r.w = ZR_MAX(r.w, 2 * amount);
+    r.h = ZR_MAX(r.h, 2 * amount);
     res.x = r.x + amount;
     res.y = r.y + amount;
     res.w = r.w - 2 * amount;
@@ -424,8 +418,8 @@ zr_shrink_rect(struct zr_rect r, float amount)
 static struct zr_rect
 zr_pad_rect(struct zr_rect r, struct zr_vec2 pad)
 {
-    r.w = MAX(r.w, 2 * pad.x);
-    r.h = MAX(r.h, 2 * pad.y);
+    r.w = ZR_MAX(r.w, 2 * pad.x);
+    r.h = ZR_MAX(r.h, 2 * pad.y);
     r.x += pad.x; r.y += pad.y;
     r.w -= 2 * pad.x;
     r.h -= 2 * pad.y;
@@ -881,10 +875,10 @@ struct zr_color
 zr_rgba(int r, int g, int b, int a)
 {
     struct zr_color ret;
-    ret.r = (zr_byte)CLAMP(0, r, 255);
-    ret.g = (zr_byte)CLAMP(0, g, 255);
-    ret.b = (zr_byte)CLAMP(0, b, 255);
-    ret.a = (zr_byte)CLAMP(0, a, 255);
+    ret.r = (zr_byte)ZR_CLAMP(0, r, 255);
+    ret.g = (zr_byte)ZR_CLAMP(0, g, 255);
+    ret.b = (zr_byte)ZR_CLAMP(0, b, 255);
+    ret.a = (zr_byte)ZR_CLAMP(0, a, 255);
     return ret;
 }
 
@@ -904,9 +898,9 @@ struct zr_color
 zr_rgb(int r, int g, int b)
 {
     struct zr_color ret;
-    ret.r =(zr_byte)CLAMP(0, r, 255);
-    ret.g =(zr_byte)CLAMP(0, g, 255);
-    ret.b =(zr_byte)CLAMP(0, b, 255);
+    ret.r =(zr_byte)ZR_CLAMP(0, r, 255);
+    ret.g =(zr_byte)ZR_CLAMP(0, g, 255);
+    ret.b =(zr_byte)ZR_CLAMP(0, b, 255);
     ret.a =(zr_byte)255;
     return ret;
 }
@@ -1001,10 +995,10 @@ zr_hsv_fv(const float *c)
 struct zr_color
 zr_hsva(int h, int s, int v, int a)
 {
-    float hf = ((float)CLAMP(0, h, 255)) / 255.0f;
-    float sf = ((float)CLAMP(0, s, 255)) / 255.0f;
-    float vf = ((float)CLAMP(0, v, 255)) / 255.0f;
-    float af = ((float)CLAMP(0, a, 255)) / 255.0f;
+    float hf = ((float)ZR_CLAMP(0, h, 255)) / 255.0f;
+    float sf = ((float)ZR_CLAMP(0, s, 255)) / 255.0f;
+    float vf = ((float)ZR_CLAMP(0, v, 255)) / 255.0f;
+    float af = ((float)ZR_CLAMP(0, a, 255)) / 255.0f;
     return zr_hsva_f(hf, sf, vf, af);
 }
 
@@ -1270,12 +1264,12 @@ zr_unify(struct zr_rect *clip, const struct zr_rect *a, float x0, float y0,
 {
     ZR_ASSERT(a);
     ZR_ASSERT(clip);
-    clip->x = MAX(a->x, x0);
-    clip->y = MAX(a->y, y0);
-    clip->w = MIN(a->x + a->w, x1) - clip->x;
-    clip->h = MIN(a->y + a->h, y1) - clip->y;
-    clip->w = MAX(0, clip->w);
-    clip->h = MAX(0, clip->h);
+    clip->x = ZR_MAX(a->x, x0);
+    clip->y = ZR_MAX(a->y, y0);
+    clip->w = ZR_MIN(a->x + a->w, x1) - clip->x;
+    clip->h = ZR_MIN(a->y + a->h, y1) - clip->y;
+    clip->w = ZR_MAX(0, clip->w);
+    clip->h = ZR_MAX(0, clip->h);
 }
 
 static void
@@ -1285,8 +1279,8 @@ zr_triangle_from_direction(struct zr_vec2 *result, struct zr_rect r,
     float w_half, h_half;
     ZR_ASSERT(result);
 
-    r.w = MAX(2 * pad_x, r.w);
-    r.h = MAX(2 * pad_y, r.h);
+    r.w = ZR_MAX(2 * pad_x, r.w);
+    r.h = ZR_MAX(2 * pad_y, r.h);
     r.w = r.w - 2 * pad_x;
     r.h = r.h - 2 * pad_y;
 
@@ -1563,7 +1557,7 @@ zr_user_font_glyphs_fitting_in_space(const struct zr_user_font *font,
     if (!glyph_len) return 0;
     width = font->width(font->userdata, font->height, text, text_len);
     while ((width <= space) && (text_len <= len) && glyph_len) {
-        *text_width = width;
+        *text_width = (float)width;
         *glyphs+=1;
         *row_len = text_len;
         row_advance += glyph_len;
@@ -1578,7 +1572,8 @@ zr_user_font_glyphs_fitting_in_space(const struct zr_user_font *font,
             } else {
                 *row_len-=1;
             }
-            *text_width = font->width(font->userdata, font->height, text, *row_len);
+            width = font->width(font->userdata, font->height, text, *row_len);
+            *text_width = (float)width;
             break;
         }
         glyph_len = zr_utf_decode(text + text_len, &unicode, len - text_len);
@@ -1721,7 +1716,7 @@ zr_buffer_alloc(struct zr_buffer *b, enum zr_buffer_allocation_type type,
             return 0;
 
         cap = (zr_size)((float)b->memory.size * b->grow_factor);
-        cap = MAX(cap, zr_round_up_pow2((zr_uint)(b->allocated + size)));
+        cap = ZR_MAX(cap, zr_round_up_pow2((zr_uint)(b->allocated + size)));
         b->memory.ptr = zr_buffer_realloc(b, cap, &b->memory.size);
         if (!b->memory.ptr) return 0;
 
@@ -1908,8 +1903,8 @@ zr_draw_scissor(struct zr_command_buffer *b, struct zr_rect r)
     if (!cmd) return;
     cmd->x = (short)r.x;
     cmd->y = (short)r.y;
-    cmd->w = (unsigned short)MAX(0, r.w);
-    cmd->h = (unsigned short)MAX(0, r.h);
+    cmd->w = (unsigned short)ZR_MAX(0, r.w);
+    cmd->h = (unsigned short)ZR_MAX(0, r.h);
 }
 
 void
@@ -1971,8 +1966,8 @@ zr_draw_rect(struct zr_command_buffer *b, struct zr_rect rect,
     cmd->rounding = (unsigned int)rounding;
     cmd->x = (short)rect.x;
     cmd->y = (short)rect.y;
-    cmd->w = (unsigned short)MAX(0, rect.w);
-    cmd->h = (unsigned short)MAX(0, rect.h);
+    cmd->w = (unsigned short)ZR_MAX(0, rect.w);
+    cmd->h = (unsigned short)ZR_MAX(0, rect.h);
     cmd->color = c;
 }
 
@@ -1994,8 +1989,8 @@ zr_draw_circle(struct zr_command_buffer *b, struct zr_rect r,
     if (!cmd) return;
     cmd->x = (short)r.x;
     cmd->y = (short)r.y;
-    cmd->w = (unsigned short)MAX(r.w, 0);
-    cmd->h = (unsigned short)MAX(r.h, 0);
+    cmd->w = (unsigned short)ZR_MAX(r.w, 0);
+    cmd->h = (unsigned short)ZR_MAX(r.h, 0);
     cmd->color = c;
 }
 
@@ -2060,8 +2055,8 @@ zr_draw_image(struct zr_command_buffer *b, struct zr_rect r,
     if (!cmd) return;
     cmd->x = (short)r.x;
     cmd->y = (short)r.y;
-    cmd->w = (unsigned short)MAX(0, r.w);
-    cmd->h = (unsigned short)MAX(0, r.h);
+    cmd->w = (unsigned short)ZR_MAX(0, r.w);
+    cmd->h = (unsigned short)ZR_MAX(0, r.h);
     cmd->img = *img;
 }
 
@@ -2423,7 +2418,7 @@ zr_canvas_add_poly_line(struct zr_canvas *list, struct zr_vec2 *points,
                 dmr2 = dm.x * dm.x + dm.y* dm.y;
                 if (dmr2 > 0.000001f) {
                     float scale = 1.0f/dmr2;
-                    scale = MIN(100.0f, scale);
+                    scale = ZR_MIN(100.0f, scale);
                     dm = zr_vec2_muls(dm, scale);
                 }
 
@@ -2482,7 +2477,7 @@ zr_canvas_add_poly_line(struct zr_canvas *list, struct zr_vec2 *points,
                 float dmr2 = dm.x * dm.x + dm.y* dm.y;
                 if (dmr2 > 0.000001f) {
                     float scale = 1.0f/dmr2;
-                    scale = MIN(100.0f, scale);
+                    scale = ZR_MIN(100.0f, scale);
                     dm = zr_vec2_muls(dm, scale);
                 }
 
@@ -2642,7 +2637,7 @@ zr_canvas_add_poly_convex(struct zr_canvas *list, struct zr_vec2 *points,
             float dmr2 = dm.x*dm.x + dm.y*dm.y;
             if (dmr2 > 0.000001f) {
                 float scale = 1.0f / dmr2;
-                scale = MIN(scale, 100.0f);
+                scale = ZR_MIN(scale, 100.0f);
                 dm = zr_vec2_muls(dm, scale);
             }
             dm = zr_vec2_muls(dm, AA_SIZE * 0.5f);
@@ -2754,8 +2749,8 @@ zr_canvas_path_rect_to(struct zr_canvas *list, struct zr_vec2 a,
     ZR_ASSERT(list);
     if (!list) return;
     r = rounding;
-    r = MIN(r, ((b.x-a.x) < 0) ? -(b.x-a.x): (b.x-a.x));
-    r = MIN(r, ((b.y-a.y) < 0) ? -(b.y-a.y): (b.y-a.y));
+    r = ZR_MIN(r, ((b.x-a.x) < 0) ? -(b.x-a.x): (b.x-a.x));
+    r = ZR_MIN(r, ((b.y-a.y) < 0) ? -(b.y-a.y): (b.y-a.y));
 
     if (r == 0.0f) {
         zr_canvas_path_line_to(list, a);
@@ -2781,7 +2776,7 @@ zr_canvas_path_curve_to(struct zr_canvas *list, struct zr_vec2 p2,
     ZR_ASSERT(list);
     ZR_ASSERT(list->path_count);
     if (!list || !list->path_count) return;
-    num_segments = MAX(num_segments, 1);
+    num_segments = ZR_MAX(num_segments, 1);
 
     p1 = zr_canvas_path_last(list);
     t_step = 1.0f/(float)num_segments;
@@ -2996,7 +2991,7 @@ zr_canvas_load(struct zr_canvas *list, struct zr_context *queue,
     ZR_ASSERT(list->vertices);
     ZR_ASSERT(list->elements);
     ZR_ASSERT(queue);
-    line_thickness = MAX(line_thickness, 1.0f);
+    line_thickness = ZR_MAX(line_thickness, 1.0f);
     if (!list || !queue || !list->vertices || !list->elements) return;
 
     zr_foreach(cmd, queue)
@@ -3354,7 +3349,7 @@ zr_font_bake_pack(zr_size *image_memory, int *width, int *height,
 
             stbtt_PackSetOversampling(&baker->spc, 1, 1);
             stbrp_pack_rects((stbrp_context*)baker->spc.pack_info, &custom_space, 1);
-            *height = MAX(*height, (int)(custom_space.y + custom_space.h));
+            *height = ZR_MAX(*height, (int)(custom_space.y + custom_space.h));
 
             custom->x = (short)custom_space.x;
             custom->y = (short)custom_space.y;
@@ -3401,7 +3396,7 @@ zr_font_bake_pack(zr_size *image_memory, int *width, int *height,
             /* texture height */
             for (i = 0; i < n; ++i) {
                 if (tmp->rects[i].was_packed)
-                    *height = MAX(*height, tmp->rects[i].y + tmp->rects[i].h);
+                    *height = ZR_MAX(*height, tmp->rects[i].y + tmp->rects[i].h);
             }
         }
         ZR_ASSERT(rect_n == total_glyph_count);
@@ -3911,9 +3906,9 @@ zr_edit_box_remove(struct zr_edit_box *box, enum zr_edit_remove_operation op)
     if (!box->glyphs) return;
 
     buf = (char*)box->buffer.memory.ptr;
-    min = MIN(box->sel.end, box->sel.begin);
-    maxi = MAX(box->sel.end, box->sel.begin);
-    diff = MAX(1, maxi - min);
+    min = ZR_MIN(box->sel.end, box->sel.begin);
+    maxi = ZR_MAX(box->sel.end, box->sel.begin);
+    diff = ZR_MAX(1, maxi - min);
 
     if (diff && box->cursor != box->glyphs) {
         zr_size off;
@@ -3923,7 +3918,7 @@ zr_edit_box_remove(struct zr_edit_box *box, enum zr_edit_remove_operation op)
         /* calculate text selection byte position and size */
         begin = zr_edit_buffer_at(&box->buffer, (int)min, &unicode, &len);
         end = zr_edit_buffer_at(&box->buffer, (int)maxi, &unicode, &len);
-        len = MAX((zr_size)(end - begin), 1);
+        len = ZR_MAX((zr_size)(end - begin), 1);
         off = (zr_size)(begin - buf);
 
         /* delete text selection */
@@ -4110,7 +4105,7 @@ zr_widget_text(struct zr_command_buffer *o, struct zr_rect b,
     ZR_ASSERT(t);
     if (!o || !t) return;
 
-    b.h = MAX(b.h, 2 * t->padding.y);
+    b.h = ZR_MAX(b.h, 2 * t->padding.y);
     label.x = 0; label.w = 0;
     label.y = b.y + t->padding.y;
     label.h = b.h - 2 * t->padding.y;
@@ -4121,15 +4116,15 @@ zr_widget_text(struct zr_command_buffer *o, struct zr_rect b,
     /* align in x-axis */
     if (a & ZR_TEXT_LEFT) {
         label.x = b.x + t->padding.x;
-        label.w = MAX(0, b.w - 2 * t->padding.x);
+        label.w = ZR_MAX(0, b.w - 2 * t->padding.x);
     } else if (a & ZR_TEXT_CENTERED) {
-        label.w = MAX(1, 2 * t->padding.x + (float)text_width);
+        label.w = ZR_MAX(1, 2 * t->padding.x + (float)text_width);
         label.x = (b.x + t->padding.x + ((b.w - 2 * t->padding.x) - label.w) / 2);
-        label.x = MAX(b.x + t->padding.x, label.x);
-        label.w = MIN(b.x + b.w, label.x + label.w);
+        label.x = ZR_MAX(b.x + t->padding.x, label.x);
+        label.w = ZR_MIN(b.x + b.w, label.x + label.w);
         if (label.w >= label.x) label.w -= label.x;
     } else if (a & ZR_TEXT_RIGHT) {
-        label.x = MAX(b.x + t->padding.x, (b.x + b.w) - (2 * t->padding.x + (float)text_width));
+        label.x = ZR_MAX(b.x + t->padding.x, (b.x + b.w) - (2 * t->padding.x + (float)text_width));
         label.w = (float)text_width + 2 * t->padding.x;
     } else return;
 
@@ -4165,8 +4160,8 @@ zr_widget_text_wrap(struct zr_command_buffer *o, struct zr_rect b,
     text.background = t->background;
     text.text = t->text;
 
-    b.w = MAX(b.w, 2 * t->padding.x);
-    b.h = MAX(b.h, 2 * t->padding.y);
+    b.w = ZR_MAX(b.w, 2 * t->padding.x);
+    b.h = ZR_MAX(b.h, 2 * t->padding.y);
     b.h = b.h - 2 * t->padding.y;
 
     line.x = b.x + t->padding.x;
@@ -4489,7 +4484,7 @@ zr_do_button_text_symbol(enum zr_widget_status *state,
     tri.w = f->height; tri.h = f->height;
     if (align == ZR_TEXT_LEFT) {
         tri.x = (r.x + r.w) - (2 * b->base.padding.x + tri.w);
-        tri.x = MAX(tri.x, 0);
+        tri.x = ZR_MAX(tri.x, 0);
     } else tri.x = r.x + 2 * b->base.padding.x;
 
     sym.type = symbol;
@@ -4519,7 +4514,7 @@ zr_do_button_text_image(enum zr_widget_status *state,
     icon.w = icon.h = r.h - 2 * b->base.padding.y;
     if (align == ZR_TEXT_LEFT) {
         icon.x = (r.x + r.w) - (2 * b->base.padding.x + icon.w);
-        icon.x = MAX(icon.x, 0);
+        icon.x = ZR_MAX(icon.x, 0);
     } else icon.x = r.x + 2 * b->base.padding.x;
     zr_draw_image(out, icon, &img);
     return pressed;
@@ -4573,7 +4568,7 @@ zr_toggle_draw(struct zr_command_buffer *out,
     struct zr_rect select;
     struct zr_rect cursor;
 
-    select.w = MIN(r.h, font->height + toggle->padding.y);
+    select.w = ZR_MIN(r.h, font->height + toggle->padding.y);
     select.h = select.w;
     select.x = r.x + toggle->padding.x;
     select.y = (r.y + toggle->padding.y + (select.w / 2)) - (font->height / 2);
@@ -4582,7 +4577,7 @@ zr_toggle_draw(struct zr_command_buffer *out,
         (float)(int)(select.h / 6);
 
     /* calculate the bounds of the cursor inside the toggle */
-    select.h = MAX(select.w, cursor_pad * 2);
+    select.h = ZR_MAX(select.w, cursor_pad * 2);
     cursor.h = select.h - cursor_pad * 2;
     cursor.w = cursor.h;
     cursor.x = select.x + cursor_pad;
@@ -4612,7 +4607,7 @@ zr_toggle_draw(struct zr_command_buffer *out,
         /* calculate text bounds */
         inner.x = r.x + select.w + toggle->padding.x * 2;
         inner.y = select.y;
-        inner.w = MAX(r.x + r.w, inner.x + toggle->padding.x);
+        inner.w = ZR_MAX(r.x + r.w, inner.x + toggle->padding.x);
         inner.w -= (inner.x + toggle->padding.x);
         inner.h = select.w;
 
@@ -4640,8 +4635,8 @@ zr_do_toggle(enum zr_widget_status *state,
     if (!out || !toggle || !font || !active)
         return;
 
-    r.w = MAX(r.w, font->height + 2 * toggle->padding.x);
-    r.h = MAX(r.h, font->height + 2 * toggle->padding.y);
+    r.w = ZR_MAX(r.w, font->height + 2 * toggle->padding.x);
+    r.h = ZR_MAX(r.h, font->height + 2 * toggle->padding.y);
 
     bounds.x = r.x - toggle->touch_pad.x;
     bounds.y = r.y - toggle->touch_pad.y;
@@ -4690,7 +4685,7 @@ zr_slider_behavior(enum zr_widget_status *state, struct zr_rect *cursor,
             float ratio = 0;
             const float steps = (float)((int)(ZR_ABS(d) / pxstep));
             slider_value += (d > 0) ? (slider_step*steps) : -(slider_step*steps);
-            slider_value = CLAMP(slider_min, slider_value, slider_max);
+            slider_value = ZR_CLAMP(slider_min, slider_value, slider_max);
             ratio = (slider_value - slider_min)/slider_step;
             cursor->x = slider.x + (cursor->w * ratio);
         }
@@ -4753,14 +4748,14 @@ zr_do_slider(enum zr_widget_status *state,
     /* make sure the provided values are correct */
     slider.x = slider.x + s->padding.x;
     slider.y = slider.y + s->padding.y;
-    slider.h = MAX(slider.h, 2 * s->padding.y);
-    slider.w = MAX(slider.w, 1 + slider.h + 2 * s->padding.x);
+    slider.h = ZR_MAX(slider.h, 2 * s->padding.y);
+    slider.w = ZR_MAX(slider.w, 1 + slider.h + 2 * s->padding.x);
     slider.h -= 2 * s->padding.y;
     slider.w -= 2 * s->padding.y;
 
-    slider_max = MAX(min, max);
-    slider_min = MIN(min, max);
-    slider_value = CLAMP(slider_min, val, slider_max);
+    slider_max = ZR_MAX(min, max);
+    slider_min = ZR_MIN(min, max);
+    slider_value = ZR_CLAMP(slider_min, val, slider_max);
     slider_range = slider_max - slider_min;
     slider_steps = slider_range / step;
 
@@ -4805,13 +4800,13 @@ zr_progress_behavior(enum zr_widget_status *state, const struct zr_input *in,
     *state = ZR_INACTIVE;
     if (in && modifiable && zr_input_is_mouse_hovering_rect(in, r)) {
         if (zr_input_is_mouse_down(in, ZR_BUTTON_LEFT)) {
-            float ratio = MAX(0, (float)(in->mouse.pos.x - r.x)) / (float)r.w;
-            value = (zr_size)MAX(0,((float)max * ratio));
+            float ratio = ZR_MAX(0, (float)(in->mouse.pos.x - r.x)) / (float)r.w;
+            value = (zr_size)ZR_MAX(0,((float)max * ratio));
             *state = ZR_ACTIVE;
         } else *state = ZR_HOVERED;
     }
     if (!max) return value;
-    value = MIN(value, max);
+    value = ZR_MIN(value, max);
     return value;
 }
 
@@ -4848,11 +4843,11 @@ zr_do_progress(enum zr_widget_status *state,
     ZR_ASSERT(out);
     if (!out || !prog) return 0;
 
-    r.w = MAX(r.w, 2 * prog->padding.x);
-    r.h = MAX(r.h, 2 * prog->padding.y);
+    r.w = ZR_MAX(r.w, 2 * prog->padding.x);
+    r.h = ZR_MAX(r.h, 2 * prog->padding.y);
     r = zr_pad_rect(r, zr_vec2(prog->padding.x, prog->padding.y));
 
-    prog_value = MIN(value, max);
+    prog_value = ZR_MIN(value, max);
     prog_value = zr_progress_behavior(state, in, r, max, prog_value, modifiable);
     zr_progress_draw(out, prog, *state, r, max, value);
     return prog_value;
@@ -4896,7 +4891,7 @@ zr_scrollbar_behavior(enum zr_widget_status *state, struct zr_input *in,
         if (o == ZR_VERTICAL) {
             pixel = in->mouse.delta.y;
             delta = (pixel / scroll.h) * target;
-            scroll_offset = CLAMP(0, scroll_offset + delta, target - scroll.h);
+            scroll_offset = ZR_CLAMP(0, scroll_offset + delta, target - scroll.h);
             /* This is probably one of my most distgusting hacks I have ever done.
              * This basically changes the mouse clicked position with the moving
              * cursor. This allows for better scroll behavior but resulted into me
@@ -4906,7 +4901,7 @@ zr_scrollbar_behavior(enum zr_widget_status *state, struct zr_input *in,
         } else {
             pixel = in->mouse.delta.x;
             delta = (pixel / scroll.w) * target;
-            scroll_offset = CLAMP(0, scroll_offset + delta, target - scroll.w);
+            scroll_offset = ZR_CLAMP(0, scroll_offset + delta, target - scroll.w);
             in->mouse.buttons[ZR_BUTTON_LEFT].clicked_pos.x += in->mouse.delta.x;
         }
     } else if (s->has_scrolling && ((in->mouse.scroll_delta<0) ||
@@ -4914,8 +4909,8 @@ zr_scrollbar_behavior(enum zr_widget_status *state, struct zr_input *in,
         /* update cursor by mouse scrolling */
         scroll_offset = scroll_offset + scroll_step * (-in->mouse.scroll_delta);
         if (o == ZR_VERTICAL)
-            scroll_offset = CLAMP(0, scroll_offset, target - scroll.h);
-        else scroll_offset = CLAMP(0, scroll_offset, target - scroll.w);
+            scroll_offset = ZR_CLAMP(0, scroll_offset, target - scroll.h);
+        else scroll_offset = ZR_CLAMP(0, scroll_offset, target - scroll.w);
     }
     return scroll_offset;
 }
@@ -4956,13 +4951,13 @@ zr_do_scrollbarv(enum zr_widget_status *state,
     if (!out || !s) return 0;
 
     /* scrollbar background */
-    scroll.w = MAX(scroll.w, 1);
-    scroll.h = MAX(scroll.h, 2 * scroll.w);
+    scroll.w = ZR_MAX(scroll.w, 1);
+    scroll.h = ZR_MAX(scroll.h, 2 * scroll.w);
     if (target <= scroll.h) return 0;
 
     /* calculate scrollbar constants */
-    scroll_step = MIN(step, scroll.h);
-    scroll_offset = MIN(offset, target - scroll.h);
+    scroll_step = ZR_MIN(step, scroll.h);
+    scroll_offset = ZR_MIN(offset, target - scroll.h);
     scroll_ratio = scroll.h / target;
     scroll_off = scroll_offset / target;
 
@@ -4997,13 +4992,13 @@ zr_do_scrollbarh(enum zr_widget_status *state,
     if (!out || !s) return 0;
 
     /* scrollbar background */
-    scroll.h = MAX(scroll.h, 1);
-    scroll.w = MAX(scroll.w, 2 * scroll.h);
+    scroll.h = ZR_MAX(scroll.h, 1);
+    scroll.w = ZR_MAX(scroll.w, 2 * scroll.h);
     if (target <= scroll.w) return 0;
 
     /* calculate scrollbar constants */
-    scroll_step = MIN(step, scroll.w);
-    scroll_offset = MIN(offset, target - scroll.w);
+    scroll_step = ZR_MIN(step, scroll.w);
+    scroll_offset = ZR_MIN(offset, target - scroll.w);
     scroll_ratio = scroll.w / target;
     scroll_off = scroll_offset / target;
 
@@ -5047,8 +5042,8 @@ zr_edit_box_handle_input(struct zr_edit_box *box, const struct zr_input *in,
 {
     char *buffer = zr_edit_box_get(box);
     zr_size len = zr_edit_box_len_char(box);
-    zr_size min = MIN(box->sel.end, box->sel.begin);
-    zr_size maxi = MAX(box->sel.end, box->sel.begin);
+    zr_size min = ZR_MIN(box->sel.end, box->sel.begin);
+    zr_size maxi = ZR_MAX(box->sel.end, box->sel.begin);
     zr_size diff = maxi - min;
     int enter, tab;
 
@@ -5075,12 +5070,12 @@ zr_edit_box_handle_input(struct zr_edit_box *box, const struct zr_input *in,
 
     /* cursor key movement */
     if (zr_input_is_key_pressed(in, ZR_KEY_LEFT)) {
-        box->cursor = (zr_size)(MAX(0, (int)box->cursor - 1));
+        box->cursor = (zr_size)(ZR_MAX(0, (int)box->cursor - 1));
         box->sel.begin = box->cursor;
         box->sel.end = box->cursor;
     }
     if (zr_input_is_key_pressed(in, ZR_KEY_RIGHT) && box->cursor < box->glyphs) {
-        box->cursor = MIN((!box->glyphs) ? 0 : box->glyphs, box->cursor + 1);
+        box->cursor = ZR_MIN((!box->glyphs) ? 0 : box->glyphs, box->cursor + 1);
         box->sel.begin = box->cursor;
         box->sel.end = box->cursor;
     }
@@ -5124,8 +5119,8 @@ zr_widget_edit_field(struct zr_command_buffer *out, struct zr_rect r,
     if (!out || !box || !field)
         return;
 
-    r.w = MAX(r.w, 2 * field->padding.x + 2 * field->border_size);
-    r.h = MAX(r.h, font->height + (2 * field->padding.y + 2 * field->border_size));
+    r.w = ZR_MAX(r.w, 2 * field->padding.x + 2 * field->border_size);
+    r.h = ZR_MAX(r.h, font->height + (2 * field->padding.y + 2 * field->border_size));
 
     /* draw editbox background and border */
     zr_draw_rect(out, r, field->rounding, field->border);
@@ -5154,14 +5149,14 @@ zr_widget_edit_field(struct zr_command_buffer *out, struct zr_rect r,
         float text_width = 0;
 
         /* calculate text frame */
-        label.w = MAX(r.w,  - 2 * field->padding.x - 2 * field->border_size);
+        label.w = ZR_MAX(r.w,  - 2 * field->padding.x - 2 * field->border_size);
         label.w -= 2 * field->padding.x - 2 * field->border_size;
         {
             zr_size frames = 0;
             zr_size glyphs = 0;
             zr_size frame_len = 0;
             zr_size row_len = 0;
-            float space = MAX(label.w, (float)cursor_w);
+            float space = ZR_MAX(label.w, (float)cursor_w);
             space -= (float)cursor_w;
 
             while (text_len) {
@@ -5190,8 +5185,8 @@ zr_widget_edit_field(struct zr_command_buffer *out, struct zr_rect r,
                 zr_size glyph_index;
                 zr_size glyph_pos=zr_user_font_glyph_index_at_pos(font,visible,text_len,xoff);
                 if (glyph_cnt + glyph_off >= box->glyphs)
-                    glyph_index = glyph_off + MIN(glyph_pos, glyph_cnt);
-                else glyph_index = glyph_off + MIN(glyph_pos, glyph_cnt-1);
+                    glyph_index = glyph_off + ZR_MIN(glyph_pos, glyph_cnt);
+                else glyph_index = glyph_off + ZR_MIN(glyph_pos, glyph_cnt-1);
 
                 if (text_len)
                     zr_edit_box_set_cursor(box, glyph_index);
@@ -5248,8 +5243,8 @@ zr_widget_edit_field(struct zr_command_buffer *out, struct zr_rect r,
                 zr_rune unicode;
                 char *begin, *end;
                 zr_size off_begin, off_end;
-                zr_size min = MIN(box->sel.end, box->sel.begin);
-                zr_size maxi = MAX(box->sel.end, box->sel.begin);
+                zr_size min = ZR_MIN(box->sel.end, box->sel.begin);
+                zr_size maxi = ZR_MAX(box->sel.end, box->sel.begin);
                 struct zr_rect clip = out->clip;
 
                 /* calculate selection text range */
@@ -5262,7 +5257,7 @@ zr_widget_edit_field(struct zr_command_buffer *out, struct zr_rect r,
                 zr_draw_scissor(out, label);
                 s = font->width(font->userdata, font->height, buffer + offset, off_begin - offset);
                 label.x += (float)s;
-                s = font->width(font->userdata, font->height, begin, MAX(l, off_end - off_begin));
+                s = font->width(font->userdata, font->height, begin, ZR_MAX(l, off_end - off_begin));
                 label.w = (float)s;
 
                 /* draw selected text */
@@ -5270,7 +5265,7 @@ zr_widget_edit_field(struct zr_command_buffer *out, struct zr_rect r,
                 text.padding = zr_vec2(0,0);
                 text.background = field->text;
                 text.text = field->background;
-                zr_widget_text(out, label, begin, MAX(l, off_end - off_begin),
+                zr_widget_text(out, label, begin, ZR_MAX(l, off_end - off_begin),
                     &text, ZR_TEXT_LEFT|ZR_TEXT_MIDDLE, font);
                 zr_draw_scissor(out, clip);
             }
@@ -5301,8 +5296,8 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
         return;
 
     /* calculate usable field space */
-    r.w = MAX(r.w, 2 * field->padding.x + 2 * field->border_size);
-    r.h = MAX(r.h, font->height + (2 * field->padding.y + 2 * field->border_size));
+    r.w = ZR_MAX(r.w, 2 * field->padding.x + 2 * field->border_size);
+    r.h = ZR_MAX(r.h, font->height + (2 * field->padding.y + 2 * field->border_size));
 
     total_width = r.w - (2 * field->padding.x + 2 * field->border_size);
     total_width -= field->scrollbar_width;
@@ -5383,7 +5378,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
             zr_size row_len = 0;
             zr_size text_len = len;
             zr_size offset = 0, glyph_off = 0;
-            zr_size cursor = MIN(box->sel.end, box->sel.begin);
+            zr_size cursor = ZR_MIN(box->sel.end, box->sel.begin);
             zr_size scroll_offset = (zr_size)(box->scrollbar / (float)row_height);
 
             /* find cursor row */
@@ -5472,7 +5467,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                 glyph_pos = zr_user_font_glyph_index_at_pos(font, visible, row_len, xoff);
                 if (glyph_pos + glyph_off >= box->glyphs)
                     glyph_index = box->glyphs;
-                else glyph_index = glyph_off + MIN(glyph_pos, glyphs-1);
+                else glyph_index = glyph_off + ZR_MIN(glyph_pos, glyphs-1);
 
                 zr_edit_box_set_cursor(box, glyph_index);
                 if (!box->sel.active) {
@@ -5541,8 +5536,8 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
         while (text_len) {
             /* selection bounds */
             struct zr_text text;
-            zr_size begin = MIN(box->sel.end, box->sel.begin);
-            zr_size end = MAX(box->sel.end, box->sel.begin);
+            zr_size begin = ZR_MIN(box->sel.end, box->sel.begin);
+            zr_size end = ZR_MAX(box->sel.end, box->sel.begin);
 
             offset += row_off;
             row_off = zr_user_font_glyphs_fitting_in_space(font,
@@ -5800,7 +5795,7 @@ zr_widget_edit(struct zr_command_buffer *out, struct zr_rect r,
     if (!cursor) {
         box.cursor = box.glyphs;
     } else{
-        box.cursor = MIN(*cursor, box.glyphs);
+        box.cursor = ZR_MIN(*cursor, box.glyphs);
         box.sel.begin = box.cursor;
         box.sel.end = box.cursor;
     }
@@ -5850,7 +5845,7 @@ zr_drag_behavior(enum zr_widget_status *state, const struct zr_input *in,
         pixels = in->mouse.delta.x;
         delta = pixels * inc_per_pixel;
         val += delta;
-        val = CLAMP(min, val, max);
+        val = ZR_CLAMP(min, val, max);
         *state = ZR_ACTIVE;
     }
     return val;
@@ -5863,9 +5858,9 @@ zr_property_behavior(enum zr_widget_status *ws, const struct zr_input *in,
     int *state, float min, float value, float max, float step, float inc_per_pixel)
 {
     if (zr_button_behavior(ws, left, in, ZR_BUTTON_DEFAULT))
-        value = CLAMP(min, value - step, max);
+        value = ZR_CLAMP(min, value - step, max);
     if (zr_button_behavior(ws, right, in, ZR_BUTTON_DEFAULT))
-        value = CLAMP(min, value + step, max);
+        value = ZR_CLAMP(min, value + step, max);
 
     if (*state == ZR_PROPERTY_DEFAULT) {
         if (zr_button_behavior(ws, edit, in, ZR_BUTTON_DEFAULT))
@@ -5939,9 +5934,9 @@ zr_do_property(enum zr_widget_status *ws,
     struct zr_rect empty;
 
     /* make sure the provided values are correct */
-    property_max = MAX(min, max);
-    property_min = MIN(min, max);
-    property_value = CLAMP(property_min, val, property_max);
+    property_max = ZR_MAX(min, max);
+    property_min = ZR_MIN(min, max);
+    property_value = ZR_CLAMP(property_min, val, property_max);
 
     /* left decrement button */
     left.h = f->height/2;
@@ -6027,7 +6022,7 @@ zr_do_property(enum zr_widget_status *ws,
         buffer[*len] = '\0';
         zr_string_float_limit(buffer, ZR_MAX_FLOAT_PRECISION);
         zr_strtof(&property_value, buffer);
-        property_value = CLAMP(min, property_value, max);
+        property_value = ZR_CLAMP(min, property_value, max);
     }
     return property_value;
 }
@@ -7284,9 +7279,9 @@ zr_begin(struct zr_context *ctx, struct zr_panel *layout,
 
         /* This is so terrible but neccessary for minimized windows. The difference
          * lies in the size of the window. But it is not possible to get the size
-         * without cheating because I do not have the information at this point.
+         * without cheating because you do not have the information at this point.
          * Even worse this is wrong since windows could have different window heights.
-         * I leave it in for now since I otherwise loose my mind right now. */
+         * I leave it in for now since I otherwise loose my mind. */
         struct zr_vec2 window_padding = zr_get_property(ctx, ZR_PROPERTY_PADDING);
         struct zr_vec2 item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
         float h = ctx->style.font.height + 2 * item_padding.y + window_padding.y;
@@ -7660,7 +7655,6 @@ static int
 zr_header_button(struct zr_context *ctx, struct zr_window_header *header,
     zr_rune symbol, enum zr_style_header_align align)
 {
-    /* calculate the position of the close icon position and draw it */
     zr_glyph glyph;
     struct zr_rect sym = {0,0,0,0};
     float sym_bw = 0;
@@ -7868,7 +7862,7 @@ zr_panel_begin(struct zr_context *ctx, const char *title)
          * has to be stored and reset afterwards. */
         out->clip.x = header.x = layout->bounds.x + window_padding.x;
         out->clip.y = header.y = layout->bounds.y + item_padding.y;
-        out->clip.w = header.w = MAX(layout->bounds.w, 2 * window_padding.x);
+        out->clip.w = header.w = ZR_MAX(layout->bounds.w, 2 * window_padding.x);
         out->clip.h = header.w -= 2 * window_padding.x;
 
         /* update the header height and first row height */
@@ -7924,7 +7918,7 @@ zr_panel_begin(struct zr_context *ctx, const char *title)
 
                 label.y = header.y;
                 label.h = c->font.height + 2 * item_padding.y;
-                label.w = MAX((float)t + 2 * item_padding.x, 4 * item_padding.x);
+                label.w = ZR_MAX((float)t + 2 * item_padding.x, 4 * item_padding.x);
                 zr_widget_text(out, label,(const char*)title, text_len, &text,
                     ZR_TEXT_LEFT|ZR_TEXT_MIDDLE, &c->font);
             }
@@ -8043,7 +8037,7 @@ zr_panel_end(struct zr_context *ctx)
     /* draw footer and fill empty spaces inside a dynamically growing panel */
     if (layout->flags & ZR_WINDOW_DYNAMIC && !(layout->flags & ZR_WINDOW_MINIMIZED)) {
         layout->height = layout->at_y - layout->bounds.y;
-        layout->height = MIN(layout->height, layout->bounds.h);
+        layout->height = ZR_MIN(layout->height, layout->bounds.h);
         if ((layout->offset->x == 0) || (layout->flags & ZR_WINDOW_NO_SCROLLBAR)) {
             /* special case for dynamic windows without horizontal scrollbar
              * or hidden scrollbars */
@@ -8127,13 +8121,13 @@ zr_panel_end(struct zr_context *ctx)
                 bounds.y += layout->header_h + layout->menu.h + layout->height;
                 bounds.w = layout->clip.w;
             } else if (layout->flags & ZR_WINDOW_DYNAMIC) {
-                bounds.h = MIN(scrollbar_size, layout->footer_h);
+                bounds.h = ZR_MIN(scrollbar_size, layout->footer_h);
                 bounds.w = layout->bounds.w;
                 bounds.y = footer.y;
             } else {
-                bounds.h = MIN(scrollbar_size, layout->footer_h);
+                bounds.h = ZR_MIN(scrollbar_size, layout->footer_h);
                 bounds.y = layout->bounds.y + window->bounds.h;
-                bounds.y -= MAX(layout->footer_h, scrollbar_size);
+                bounds.y -= ZR_MAX(layout->footer_h, scrollbar_size);
                 bounds.w = layout->width - 2 * window_padding.x;
             }
             scroll_offset = layout->offset->x;
@@ -8150,8 +8144,8 @@ zr_panel_end(struct zr_context *ctx)
      * update panel size if user drags the scaler */
     if ((layout->flags & ZR_WINDOW_SCALABLE) && in && !(layout->flags & ZR_WINDOW_MINIMIZED)) {
         struct zr_color col = config->colors[ZR_COLOR_SCALER];
-        float scaler_w = MAX(0, scaler_size.x - item_padding.x);
-        float scaler_h = MAX(0, scaler_size.y - item_padding.y);
+        float scaler_w = ZR_MAX(0, scaler_size.x - item_padding.x);
+        float scaler_h = ZR_MAX(0, scaler_size.y - item_padding.y);
         float scaler_x = (layout->bounds.x + layout->bounds.w) - (item_padding.x + scaler_w);
 
         float scaler_y;
@@ -8168,10 +8162,10 @@ zr_panel_end(struct zr_context *ctx)
             int incursor = ZR_INBOX(prev_x,prev_y,scaler_x,scaler_y,scaler_w,scaler_h);
 
             if (zr_input_is_mouse_down(in, ZR_BUTTON_LEFT) && incursor) {
-                window->bounds.w = MAX(window_size.x, window->bounds.w + in->mouse.delta.x);
+                window->bounds.w = ZR_MAX(window_size.x, window->bounds.w + in->mouse.delta.x);
                 /* draging in y-direction is only possible if static window */
                 if (!(layout->flags & ZR_WINDOW_DYNAMIC))
-                    window->bounds.h = MAX(window_size.y, window->bounds.h + in->mouse.delta.y);
+                    window->bounds.h = ZR_MAX(window_size.y, window->bounds.h + in->mouse.delta.y);
             }
         }
     }
@@ -8899,7 +8893,7 @@ zr_layout_push(struct zr_context *ctx, enum zr_layout_node_type type,
         struct zr_rect label;
         struct zr_text text;
 
-        header.w = MAX(header.w, sym.w + item_spacing.y + panel_padding.x);
+        header.w = ZR_MAX(header.w, sym.w + item_spacing.y + panel_padding.x);
         label.x = sym.x + sym.w + item_spacing.x;
         label.y = sym.y;
         label.w = header.w - (sym.w + item_spacing.y + panel_padding.x);
@@ -8929,7 +8923,7 @@ zr_layout_push(struct zr_context *ctx, enum zr_layout_node_type type,
 
     if (*state == ZR_MAXIMIZED) {
         layout->at_x = header.x + layout->offset->x;
-        layout->width = MAX(layout->width, 2 * panel_padding.x);
+        layout->width = ZR_MAX(layout->width, 2 * panel_padding.x);
         layout->width -= 2 * panel_padding.x;
         layout->row.tree_depth++;
         return zr_true;
@@ -9098,7 +9092,7 @@ zr_seperator(struct zr_context *ctx)
     item_spacing = zr_get_property(ctx, ZR_PROPERTY_ITEM_SPACING);
 
     bounds.h = 1;
-    bounds.w = MAX(layout->width, 2 * item_spacing.x + 2 * item_padding.x);
+    bounds.w = ZR_MAX(layout->width, 2 * item_spacing.x + 2 * item_padding.x);
     bounds.y = (layout->at_y + layout->row.height + item_padding.y) - layout->offset->y;
     bounds.x = layout->at_x + item_spacing.x + item_padding.x - layout->offset->x;
     bounds.w = bounds.w - (2 * item_spacing.x + 2 * item_padding.x);
@@ -9152,6 +9146,7 @@ zr_widget_fitting(struct zr_rect *bounds, struct zr_context *ctx)
         bounds->w += ctx->style.properties[ZR_PROPERTY_PADDING].x;
         bounds->x -= ctx->style.properties[ZR_PROPERTY_PADDING].x;
     } else bounds->x -= ctx->style.properties[ZR_PROPERTY_ITEM_PADDING].x;
+
     if (layout->row.index == layout->row.columns)
         bounds->w += ctx->style.properties[ZR_PROPERTY_PADDING].x;
     else bounds->w += ctx->style.properties[ZR_PROPERTY_ITEM_PADDING].x;
@@ -9221,8 +9216,7 @@ zr_text_wrap(struct zr_context *ctx, const char *str, zr_size len)
 {zr_text_wrap_colored(ctx, str, len, ctx->style.colors[ZR_COLOR_TEXT]);}
 
 void
-zr_text(struct zr_context *ctx, const char *str, zr_size len,
-    zr_flags alignment)
+zr_text(struct zr_context *ctx, const char *str, zr_size len, zr_flags alignment)
 {zr_text_colored(ctx, str, len, alignment, ctx->style.colors[ZR_COLOR_TEXT]);}
 
 void
@@ -9785,8 +9779,8 @@ zr_edit_string(struct zr_context *ctx, zr_flags flags,
 {
     zr_flags active;
     struct zr_buffer buffer;
-    max = MAX(1, max);
-    *len = MIN(*len, max-1);
+    max = ZR_MAX(1, max);
+    *len = ZR_MIN(*len, max-1);
     zr_buffer_init_fixed(&buffer, memory, max);
     buffer.allocated = *len;
     active = zr_edit_buffer(ctx, flags, &buffer, filter);
@@ -9863,7 +9857,7 @@ zr_edit_buffer(struct zr_context *ctx, zr_flags flags,
         } else {
             /* simple edit field cursor based movement, inserting and removing */
             zr_size glyphs = zr_utf_len((const char*)buffer->memory.ptr, buffer->allocated);
-            *cursor = MIN(*cursor, glyphs);
+            *cursor = ZR_MIN(*cursor, glyphs);
             buffer->allocated = zr_widget_edit(&win->buffer, bounds,
                 (char*)buffer->memory.ptr, buffer->allocated , buffer->memory.size,
                 active, cursor, &field, filter, i, &ctx->style.font);
@@ -9891,7 +9885,7 @@ zr_edit_buffer(struct zr_context *ctx, zr_flags flags,
         box.active = *active;
         box.filter = filter;
         box.scrollbar = *scroll;
-        *cursor = MIN(box.glyphs, *cursor);
+        *cursor = ZR_MIN(box.glyphs, *cursor);
         box.cursor = *cursor;
 
         if (!(flags & ZR_EDIT_CURSOR)) {
@@ -10104,15 +10098,15 @@ zr_chart_begin(struct zr_context *ctx, enum zr_chart_type type,
     chart->type = type;
     chart->index = 0;
     chart->count = count;
-    chart->min = MIN(min_value, max_value);
-    chart->max = MAX(min_value, max_value);
+    chart->min = ZR_MIN(min_value, max_value);
+    chart->max = ZR_MAX(min_value, max_value);
     chart->range = chart->max - chart->min;
     chart->x = bounds.x + item_padding.x;
     chart->y = bounds.y + item_padding.y;
     chart->w = bounds.w - 2 * item_padding.x;
     chart->h = bounds.h - 2 * item_padding.y;
-    chart->w = MAX(chart->w, 2 * item_padding.x);
-    chart->h = MAX(chart->h, 2 * item_padding.y);
+    chart->w = ZR_MAX(chart->w, 2 * item_padding.x);
+    chart->h = ZR_MAX(chart->h, 2 * item_padding.y);
     chart->last.x = 0; chart->last.y = 0;
 }
 
@@ -10654,7 +10648,7 @@ zr_tooltip(struct zr_context *ctx, const char *text)
 
     /* execute tooltip and fill with text */
     if (zr_tooltip_begin(ctx, &layout, (float)text_width)) {
-        zr_layout_row_dynamic(ctx, (float)text_height, 1);
+        zr_layout_row_dynamic(ctx, text_height, 1);
         zr_text(ctx, text, text_len, ZR_TEXT_LEFT);
         zr_tooltip_end(ctx);
     }
@@ -10939,7 +10933,7 @@ zr_combo_begin(struct zr_panel *layout, struct zr_context *ctx, struct zr_window
     is_active = (popup && (win->popup.name == hash) && win->popup.type == ZR_WINDOW_COMBO);
     if ((is_clicked && is_open && !is_active) || (is_open && !is_active) ||
         (!is_open && !is_active && !is_clicked)) return 0;
-    if (!zr_nonblock_begin(layout, ctx, ZR_WINDOW_COMBO|ZR_WINDOW_NO_SCROLLBAR,
+    if (!zr_nonblock_begin(layout, ctx, ZR_WINDOW_COMBO,
             body, zr_rect(0,0,0,0))) return 0;
 
     win->popup.type = ZR_WINDOW_COMBO;

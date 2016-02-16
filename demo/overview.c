@@ -336,7 +336,7 @@ demo_window(struct zr_context *ctx)
                 /* complex text combobox */
                 sprintf(buffer, "%.2f, %.2f, %.2f", position[0], position[1],position[2]);
                 if (zr_combo_begin_text(ctx, &combo, buffer, 200)) {
-                    zr_layout_row_dynamic(ctx, 30, 1);
+                    zr_layout_row_dynamic(ctx, 25, 1);
                     zr_property_float(ctx, "#X:", -1024.0f, &position[0], 1024.0f, 1,0.5f);
                     zr_property_float(ctx, "#Y:", -1024.0f, &position[1], 1024.0f, 1,0.5f);
                     zr_property_float(ctx, "#Z:", -1024.0f, &position[2], 1024.0f, 1,0.5f);

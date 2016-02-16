@@ -187,11 +187,11 @@ node_editor_demo(struct zr_context *ctx, struct node_editor *nodedit)
                     it->bounds = bounds;
 
                     /* output connector */
-                    space = node.bounds.h / ((it->output_count) + 1);
+                    space = node.bounds.h / (float)((it->output_count) + 1);
                     for (n = 0; n < it->output_count; ++n) {
                         struct zr_rect circle;
                         circle.x = node.bounds.x + node.bounds.w-4;
-                        circle.y = node.bounds.y + space * (n+1);
+                        circle.y = node.bounds.y + space * (float)(n+1);
                         circle.w = 8; circle.h = 8;
                         zr_draw_circle(canvas, circle, zr_rgb(100, 100, 100));
 
@@ -214,11 +214,11 @@ node_editor_demo(struct zr_context *ctx, struct node_editor *nodedit)
                     }
 
                     /* input connector */
-                    space = node.bounds.h / ((it->input_count) + 1);
+                    space = node.bounds.h / (float)((it->input_count) + 1);
                     for (n = 0; n < it->input_count; ++n) {
                         struct zr_rect circle;
                         circle.x = node.bounds.x-4;
-                        circle.y = node.bounds.y + space * (n+1);
+                        circle.y = node.bounds.y + space * (float)(n+1);
                         circle.w = 8; circle.h = 8;
                         zr_draw_circle(canvas, circle, zr_rgb(100, 100, 100));
                         if (zr_input_is_mouse_released(in, ZR_BUTTON_LEFT) &&
@@ -245,12 +245,12 @@ node_editor_demo(struct zr_context *ctx, struct node_editor *nodedit)
                 struct node_link *link = &nodedit->links[n];
                 struct node *ni = node_editor_find(nodedit, link->input_id);
                 struct node *no = node_editor_find(nodedit, link->output_id);
-                float spacei = node.bounds.h / ((ni->output_count) + 1);
-                float spaceo = node.bounds.h / ((no->input_count) + 1);
+                float spacei = node.bounds.h / (float)((ni->output_count) + 1);
+                float spaceo = node.bounds.h / (float)((no->input_count) + 1);
                 struct zr_vec2 l0 = zr_layout_space_to_screen(ctx,
-                    zr_vec2(ni->bounds.x + ni->bounds.w, 3+ni->bounds.y + spacei * (link->input_slot+1)));
+                    zr_vec2(ni->bounds.x + ni->bounds.w, 3.0f + ni->bounds.y + spacei * (float)(link->input_slot+1)));
                 struct zr_vec2 l1 = zr_layout_space_to_screen(ctx,
-                    zr_vec2(no->bounds.x, 3 + no->bounds.y + spaceo * (link->output_slot+1)));
+                    zr_vec2(no->bounds.x, 3.0f + no->bounds.y + spaceo * (float)(link->output_slot+1)));
 
                 l0.x -= nodedit->scrolling.x;
                 l0.y -= nodedit->scrolling.y;
