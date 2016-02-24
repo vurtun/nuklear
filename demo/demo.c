@@ -314,12 +314,28 @@ control_window(struct zr_context *ctx, struct demo *gui)
                 for (i = 0; i < ZR_COLOR_COUNT; ++i) {
                     zr_layout_row_dynamic(ctx, 25, 2);
                     zr_label(ctx, zr_get_color_name((enum zr_style_colors)i), ZR_TEXT_LEFT);
+
                     if (zr_combo_begin_color(ctx, &combo, ctx->style.colors[i], 200)) {
+                        enum color_mode {COL_RGB, COL_HSV};
+                        static int col_mode = COL_RGB;
+                        zr_layout_row_dynamic(ctx, 25, 2);
+                        col_mode = zr_option(ctx, "RGB", col_mode == COL_RGB) ? COL_RGB : col_mode;
+                        col_mode = zr_option(ctx, "HSV", col_mode == COL_HSV) ? COL_HSV : col_mode;
                         zr_layout_row_dynamic(ctx, 25, 1);
-                        ctx->style.colors[i].r = (zr_byte)zr_propertyi(ctx, "#R:", 0, ctx->style.colors[i].r, 255, 1,1);
-                        ctx->style.colors[i].g = (zr_byte)zr_propertyi(ctx, "#G:", 0, ctx->style.colors[i].g, 255, 1,1);
-                        ctx->style.colors[i].b = (zr_byte)zr_propertyi(ctx, "#B:", 0, ctx->style.colors[i].b, 255, 1,1);
-                        ctx->style.colors[i].a = (zr_byte)zr_propertyi(ctx, "#A:", 0, ctx->style.colors[i].a, 255, 1,1);
+                        if (col_mode == COL_RGB) {
+                            ctx->style.colors[i].r = (zr_byte)zr_propertyi(ctx, "#R:", 0, ctx->style.colors[i].r, 255, 1,1);
+                            ctx->style.colors[i].g = (zr_byte)zr_propertyi(ctx, "#G:", 0, ctx->style.colors[i].g, 255, 1,1);
+                            ctx->style.colors[i].b = (zr_byte)zr_propertyi(ctx, "#B:", 0, ctx->style.colors[i].b, 255, 1,1);
+                            ctx->style.colors[i].a = (zr_byte)zr_propertyi(ctx, "#A:", 0, ctx->style.colors[i].a, 255, 1,1);
+                        } else {
+                            zr_byte tmp[4];
+                            zr_color_hsva_bv(tmp, ctx->style.colors[i]);
+                            tmp[0] = (zr_byte)zr_propertyi(ctx, "#H:", 0, tmp[0], 255, 1,1);
+                            tmp[1] = (zr_byte)zr_propertyi(ctx, "#S:", 0, tmp[1], 255, 1,1);
+                            tmp[2] = (zr_byte)zr_propertyi(ctx, "#V:", 0, tmp[2], 255, 1,1);
+                            tmp[3] = (zr_byte)zr_propertyi(ctx, "#A:", 0, tmp[3], 255, 1,1);
+                            ctx->style.colors[i] = zr_hsva_bv(tmp);
+                        }
                         zr_combo_end(ctx);
                     }
                 }
@@ -332,26 +348,96 @@ control_window(struct zr_context *ctx, struct demo *gui)
     return !zr_window_is_closed(ctx, "Control");
 }
 
+
+#if 0
 #include "simple.c"
 #include "overview.c"
 #include "extended.c"
 #include "nodedit.c"
+#endif
+
+static void
+compiled_window(struct zr_context *ctx)
+{
+    static int init = 0;
+    static char memory[4*1024];
+    static struct zr_buffer program;
+
+    /* widget identifier (auto generated) */
+    enum widget_ids {
+        WIDGET_BUTTON,
+        WIDGET_TAB,
+        WIDGET_BUTTON2
+    };
+
+    if (!init) {
+        /* RECORD UI */
+        struct zr_panel layout;
+        zr_buffer_init_fixed(&program, memory, sizeof(memory));
+        zr_recording_begin(ctx, &program);
+        {
+            if (zr_begin(ctx, &layout, "Compiled", zr_rect(420, 350, 200, 200),
+                ZR_WINDOW_BORDER|ZR_WINDOW_MOVABLE|ZR_WINDOW_SCALABLE|
+                ZR_WINDOW_CLOSABLE|ZR_WINDOW_MINIMIZABLE|ZR_WINDOW_TITLE))
+            {
+                zr_layout_row_static(ctx, 30, 150, 1);
+                zr_button_text(ctx, "Test", ZR_BUTTON_DEFAULT);
+                if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Tab", ZR_MINIMIZED)) {
+                    zr_button_text(ctx, "Test", ZR_BUTTON_DEFAULT);
+                    zr_layout_pop(ctx);
+                }
+            }
+            zr_end(ctx);
+        }
+        zr_recording_end(ctx);
+        init = 1;
+    }
+    {
+        /* REPLAY UI */
+        int count = 0;
+        struct zr_event evt_memory[256];
+        struct zr_buffer events, runtime;
+        char runtime_memory[4 * sizeof(struct zr_panel)];
+
+        const struct zr_event *evt;
+        zr_buffer_init_fixed(&events, evt_memory, sizeof(evt_memory));
+        zr_buffer_init_fixed(&runtime, runtime_memory, sizeof(runtime_memory));
+        zr_exec(ctx, &events, &count, &program, &runtime);
+        zr_foreach_event(evt, &events)
+        {
+            switch (evt->id) {
+            case WIDGET_BUTTON: {
+                if (evt->type == ZR_EVENT_ACTIVE)
+                    fprintf(stdout, "test button pressed\n");
+            } break;
+            case WIDGET_BUTTON2: {
+                if (evt->type == ZR_EVENT_ACTIVE)
+                    fprintf(stdout, "test button2 pressed\n");
+            } break;
+            }
+        }
+    }
+}
 
 static int
 run_demo(struct demo *gui)
 {
     int ret = 1;
-    static int init = 0;
-    static struct node_editor nodedit;
     struct zr_context *ctx = &gui->ctx;
 
+#if 0
+    static int init = 0;
+    static struct node_editor nodedit;
     if (!init) {
         memset(&nodedit, 0, sizeof(nodedit));
         node_editor_init(&nodedit);
         init = 1;
     }
+#endif
 
     /* windows */
+    compiled_window(ctx);
+#if 0
     simple_window(ctx);
     demo_window(ctx);
     node_editor_demo(ctx, &nodedit);
@@ -359,6 +445,7 @@ run_demo(struct demo *gui)
     grid_demo(ctx);
     button_demo(ctx, &gui->icons);
     basic_demo(ctx, &gui->icons);
+#endif
 #endif
 
     ret = control_window(ctx, gui);

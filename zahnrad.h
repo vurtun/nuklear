@@ -44,6 +44,7 @@ extern "C" {
 #define ZR_MAX_FONT_HEIGHT_STACK 32
 /* Number of temporary configuration font height changes that can be stored */
 #define ZR_MAX_NUMBER_BUFFER 64
+#define ZR_MAX_EVENTS 32
 /*
  * ==============================================================
  *
@@ -133,8 +134,13 @@ typedef char zr_glyph[ZR_UTF_SIZE];
 typedef union {void *ptr; int id;} zr_handle;
 struct zr_image {zr_handle handle;unsigned short w,h;unsigned short region[4];};
 struct zr_scroll {unsigned short x, y;};
+enum zr_heading {ZR_UP, ZR_RIGHT, ZR_DOWN, ZR_LEFT};
 
 /* math */
+zr_hash zr_murmur_hash(const void *key, int len, zr_hash seed);
+void zr_triangle_from_direction(struct zr_vec2 *result, struct zr_rect r,
+                                float pad_x, float pad_y, enum zr_heading);
+
 struct zr_vec2 zr_vec2(float x, float y);
 struct zr_vec2 zr_vec2i(int x, int y);
 struct zr_vec2 zr_vec2v(const float *xy);
@@ -320,6 +326,7 @@ void zr_buffer_init_fixed(struct zr_buffer*, void *memory, zr_size size);
 void zr_buffer_info(struct zr_memory_status*, struct zr_buffer*);
 void zr_buffer_free(struct zr_buffer*);
 void *zr_buffer_memory(struct zr_buffer*);
+const void *zr_buffer_memory_const(const struct zr_buffer*);
 zr_size zr_buffer_total(struct zr_buffer*);
 
 /* ===============================================================
@@ -573,6 +580,7 @@ enum zr_command_type {
     ZR_COMMAND_LINE,
     ZR_COMMAND_CURVE,
     ZR_COMMAND_RECT,
+    ZR_COMMAND_RECT_MULTI_COLOR,
     ZR_COMMAND_CIRCLE,
     ZR_COMMAND_ARC,
     ZR_COMMAND_TRIANGLE,
@@ -618,6 +626,16 @@ struct zr_command_rect {
     short x, y;
     unsigned short w, h;
     struct zr_color color;
+};
+
+struct zr_command_rect_multi_color {
+    struct zr_command header;
+    short x, y;
+    unsigned short w, h;
+    struct zr_color left;
+    struct zr_color top;
+    struct zr_color bottom;
+    struct zr_color right;
 };
 
 struct zr_command_circle {
@@ -723,6 +741,9 @@ void zr_draw_curve(struct zr_command_buffer*, float, float, float, float,
                     float, float, float, float, struct zr_color);
 void zr_draw_rect(struct zr_command_buffer*, struct zr_rect,
                     float rounding, struct zr_color);
+void zr_draw_rect_multi_color(struct zr_command_buffer*, struct zr_rect,
+                                struct zr_color left, struct zr_color top,
+                                struct zr_color right, struct zr_color bottom);
 void zr_draw_circle(struct zr_command_buffer*, struct zr_rect, struct zr_color);
 void zr_draw_arc(struct zr_command_buffer*, float cx, float cy, float radius,
                 float a_min, float a_max, struct zr_color);
@@ -748,6 +769,8 @@ enum zr_keys {
     ZR_KEY_COPY,
     ZR_KEY_CUT,
     ZR_KEY_PASTE,
+    ZR_KEY_UP,
+    ZR_KEY_DOWN,
     ZR_KEY_LEFT,
     ZR_KEY_RIGHT,
     ZR_KEY_MAX
@@ -1114,17 +1137,17 @@ enum zr_widget_state {
 };
 
 enum zr_text_align {
-    ZR_TEXT_LEFT = 0x01,
+    ZR_TEXT_LEFT        = 0x01,
     /* text is aligned on the left (X-axis)*/
-    ZR_TEXT_CENTERED = 0x02,
+    ZR_TEXT_CENTERED    = 0x02,
     /* text is aligned in the center (X-axis)*/
-    ZR_TEXT_RIGHT = 0x04,
+    ZR_TEXT_RIGHT       = 0x04,
     /* text is aligned on the right (X-axis)*/
-    ZR_TEXT_TOP = 0x08,
+    ZR_TEXT_TOP         = 0x08,
     /* text is aligned to the top (Y-axis)*/
-    ZR_TEXT_MIDDLE = 0x10,
+    ZR_TEXT_MIDDLE      = 0x10,
     /* text is aligned to the middle (Y-axis) */
-    ZR_TEXT_BOTTOM = 0x20
+    ZR_TEXT_BOTTOM      = 0x20
     /* text is aligned to the bottom (Y-axis)*/
 };
 
@@ -1144,10 +1167,17 @@ enum zr_chart_type {
 };
 
 enum zr_chart_event {
-    ZR_CHART_HOVERING = 0x01,
+    ZR_CHART_HOVERING   = 0x01,
     /* mouse hoveres over current value */
-    ZR_CHART_CLICKED = 0x02
+    ZR_CHART_CLICKED    = 0x02
     /* mouse click on current value */
+};
+
+enum zr_color_format {
+    ZR_RGB,
+    ZR_RGBA,
+    ZR_HSV,
+    ZR_HSVA
 };
 
 enum zr_popup_type {
@@ -1304,6 +1334,22 @@ struct zr_panel {
 /*==============================================================
  *                          CONTEXT
  * =============================================================*/
+enum zr_event_type {
+    ZR_EVENT_HOVERED,
+    ZR_EVENT_ACTIVE,
+    ZR_EVENT_CLOSED,
+    ZR_EVENT_MINIMIZED,
+    ZR_EVENT_MAXIMIZED,
+    ZR_EVENT_MAX
+};
+
+struct zr_event {
+    int window;
+    zr_hash id;
+    enum zr_event_type type;
+    float value;
+};
+
 struct zr_clipboard {
     zr_handle userdata;
     /* user memory for callback */
@@ -1374,8 +1420,7 @@ struct zr_context {
 
 /* private:
      * should only be modifed if you
-     * know what you are doing and don't expect
-     * any kind of backward compatiblity. */
+     * know what you are doing*/
 #if ZR_COMPILE_WITH_VERTEX_BUFFER
     struct zr_canvas canvas;
 #endif
@@ -1383,8 +1428,13 @@ struct zr_context {
     zr_handle userdata;
 #endif
 
+    /* recording */
+    unsigned int gen;
+    struct zr_buffer *op_buffer;
+    struct zr_buffer op_memory;
+
+    /* windows */
     int build;
-    unsigned int seq;
     void *pool;
     struct zr_window *begin;
     struct zr_window *end;
@@ -1392,6 +1442,7 @@ struct zr_context {
     struct zr_window *current;
     struct zr_window *freelist;
     unsigned int count;
+    unsigned int seq;
 };
 
 /*--------------------------------------------------------------
@@ -1410,6 +1461,19 @@ void zr_set_user_data(struct zr_context*, zr_handle handle);
 #endif
 
 /*--------------------------------------------------------------
+ *                          CLASSIC
+ * -------------------------------------------------------------*/
+void zr_recording_begin(struct zr_context*, struct zr_buffer*);
+void zr_recording_end(struct zr_context*);
+
+int zr_exec(struct zr_context*, struct zr_buffer *event_buffer, int *count,
+            struct zr_buffer *program, struct zr_buffer *runtime);
+const struct zr_event *zr__event_begin(struct zr_buffer*);
+const struct zr_event *zr__event_next(struct zr_buffer*, const struct zr_event*);
+#define zr_foreach_event(evt,buffer)\
+    for ((evt)=zr__event_begin(buffer); (evt)!=0; (evt)=zr__event_next(buffer, evt))
+
+/*--------------------------------------------------------------
  *                          WINDOW
  * -------------------------------------------------------------*/
 int zr_begin(struct zr_context*, struct zr_panel*, const char *title,
@@ -1426,6 +1490,7 @@ struct zr_vec2 zr_window_get_content_region_min(struct zr_context*);
 struct zr_vec2 zr_window_get_content_region_max(struct zr_context*);
 struct zr_vec2 zr_window_get_content_region_size(struct zr_context*);
 struct zr_command_buffer* zr_window_get_canvas(struct zr_context*);
+struct zr_panel* zr_window_get_panel(struct zr_context*);
 int zr_window_has_focus(const struct zr_context*);
 int zr_window_is_hovered(struct zr_context*);
 int zr_window_is_any_hovered(struct zr_context*);
@@ -1457,6 +1522,7 @@ const struct zr_command* zr__begin(struct zr_context*);
 void zr_convert(struct zr_context*, struct zr_buffer *cmds,
                 struct zr_buffer *vertices, struct zr_buffer *elements,
                 const struct zr_convert_config*);
+
 #define zr_draw_foreach(cmd,ctx, b)\
     for((cmd)=zr__draw_begin(ctx, b); (cmd)!=0; (cmd)=zr__draw_next(cmd, b, ctx))
 const struct zr_draw_command* zr__draw_begin(const struct zr_context*,
@@ -1581,8 +1647,8 @@ int zr_option(struct zr_context*, const char*, int active);
 int zr_selectable(struct zr_context*, const char*, zr_flags alignment, int *value);
 int zr_select(struct zr_context*, const char*, zr_flags alignment, int value);
 
-/* buttons (push/press) */
-int zr_button_text(struct zr_context*, const char*, enum zr_button_behavior);
+/* buttons (push/repeater) */
+int zr_button_text(struct zr_context *ctx, const char *title, enum zr_button_behavior);
 int zr_button_color(struct zr_context*, struct zr_color, enum zr_button_behavior);
 int zr_button_symbol(struct zr_context*, enum zr_symbol_type, enum zr_button_behavior);
 int zr_button_image(struct zr_context*, struct zr_image img, enum zr_button_behavior);
