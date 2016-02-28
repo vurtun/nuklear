@@ -124,6 +124,7 @@ struct zr_user_font_glyph;
 #define ZR_UNDEFINED (-1.0f)
 #define ZR_FLAG(x) (1 << (x))
 
+typedef zr_size zr_element;
 enum {zr_false, zr_true};
 struct zr_color {zr_byte r,g,b,a;};
 struct zr_vec2 {float x,y;};
@@ -431,7 +432,7 @@ struct zr_font_config {
     /* size of the loaded TTF file memory block */
     float size;
     /* baked pixel height of the font */
-    zr_rune oversample_h, oversample_v;
+    unsigned int oversample_h, oversample_v;
     /* rasterize at hight quality for sub-pixel position */
     int pixel_snap;
     /* align very character to pixel boundry (if true set oversample (1,1)) */
@@ -1082,9 +1083,229 @@ int zr_edit_box_has_selection(const struct zr_edit_box*);
 const char *zr_edit_box_get_selection(zr_size *len, struct zr_edit_box*);
 
 /*==============================================================
+ *                          EVENTS
+ * =============================================================*/
+enum zr_event_type {
+    ZR_EVENT_WINDOW,
+    ZR_EVENT_TAB,
+    ZR_EVENT_CHECKBOX,
+    ZR_EVENT_OPTION,
+    ZR_EVENT_SELECT,
+    ZR_EVENT_BUTTON,
+    ZR_EVENT_SLIDER,
+    ZR_EVENT_PROGRESS,
+    ZR_EVENT_PROPERTY,
+    ZR_EVENT_MAX
+};
+
+enum zr_window_event_type {
+    ZR_EVENT_WINDOW_NONE        = 0,
+    ZR_EVENT_WINDOW_ACTIVE      = ZR_FLAG(0),
+    ZR_EVENT_WINDOW_EXPOSED     = ZR_FLAG(1),
+    ZR_EVENT_WINDOW_HIDDEN      = ZR_FLAG(2),
+    ZR_EVENT_WINDOW_MOVED       = ZR_FLAG(3),
+    ZR_EVENT_WINDOW_RESIZED     = ZR_FLAG(4),
+    ZR_EVENT_WINDOW_MINIMIZED   = ZR_FLAG(5),
+    ZR_EVENT_WINDOW_MAXIMIZED   = ZR_FLAG(6),
+    ZR_EVENT_WINDOW_HOVERED     = ZR_FLAG(7),
+    ZR_EVENT_WINDOW_CLOSE       = ZR_FLAG(9),
+    ZR_EVENT_WINDOW_ALL         = ZR_FLAG(10)-1
+};
+
+enum zr_button_event_type {
+    ZR_EVENT_BUTTON_NONE    = 0,
+    ZR_EVENT_BUTTON_HOVERED = ZR_FLAG(0),
+    ZR_EVENT_BUTTON_CLICKED = ZR_FLAG(2),
+    ZR_EVENT_BUTTON_PRESSED = ZR_FLAG(3),
+    ZR_EVENT_BUTTON_ALL     = ZR_FLAG(4)-1
+};
+
+enum zr_option_event_type {
+    ZR_EVENT_OPTION_NONE     = 0,
+    ZR_EVENT_OPTION_HOVERED  = ZR_FLAG(0),
+    ZR_EVENT_OPTION_TOGGLED  = ZR_FLAG(2),
+    ZR_EVENT_OPTION_ALL      = ZR_FLAG(3)-1
+};
+
+enum zr_checkbox_event_type {
+    ZR_EVENT_CHECK_NONE     = 0,
+    ZR_EVENT_CHECK_HOVERED  = ZR_FLAG(0),
+    ZR_EVENT_CHECK_TOGGLED  = ZR_FLAG(2),
+    ZR_EVENT_CHECK_ALL      = ZR_FLAG(3)-1
+};
+
+enum zr_select_event_type {
+    ZR_EVENT_SELECT_NONE     = 0,
+    ZR_EVENT_SELECT_HOVERED  = ZR_FLAG(0),
+    ZR_EVENT_SELECT_TOGGLED  = ZR_FLAG(2),
+    ZR_EVENT_SELECT_ALL      = ZR_FLAG(3)-1
+};
+
+enum zr_slider_event_type {
+    ZR_EVENT_SLIDER_NONE    = 0,
+    ZR_EVENT_SLIDER_HOVERED = ZR_FLAG(0),
+    ZR_EVENT_SLIDER_CHANGED = ZR_FLAG(2),
+    ZR_EVENT_SLIDER_ALL     = ZR_FLAG(3)-1
+};
+
+enum zr_progress_event_type {
+    ZR_EVENT_PROGRESS_NONE    = 0,
+    ZR_EVENT_PROGRESS_HOVERED = ZR_FLAG(0),
+    ZR_EVENT_PROGRESS_CHANGED = ZR_FLAG(2),
+    ZR_EVENT_PROGRESS_ALL     = ZR_FLAG(3)-1
+};
+
+enum zr_property_event_type {
+    ZR_EVENT_PROPERTY_NONE          = 0,
+    ZR_EVENT_PROPERTY_HOVERED       = ZR_FLAG(0),
+    ZR_EVENT_PROPERTY_CHANGED       = ZR_FLAG(2),
+    ZR_EVENT_PROPERTY_INCREMENTED   = ZR_FLAG(3),
+    ZR_EVENT_PROPERTY_DECREMENTED   = ZR_FLAG(4),
+    ZR_EVENT_PROPERTY_DRAGGED       = ZR_FLAG(5),
+    ZR_EVENT_PROPERTY_ACTIVATED     = ZR_FLAG(6),
+    ZR_EVENT_PROPERTY_DEACTIVED     = ZR_FLAG(7),
+    ZR_EVENT_PROPERTY_ALL           = ZR_FLAG(8)-1
+};
+
+enum zr_tab_event_type {
+    ZR_EVENT_TAB_NONE       = 0,
+    ZR_EVENT_TAB_ACTIVE     = ZR_FLAG(0),
+    ZR_EVENT_TAB_MINIMIZED  = ZR_FLAG(1),
+    ZR_EVENT_TAB_MAXIMIZED  = ZR_FLAG(2),
+    ZR_EVENT_TAB_ALL        = ZR_FLAG(3)-1
+};
+
+struct zr_event_header {
+    zr_hash id;
+    int window;
+    enum zr_event_type type;
+};
+
+struct zr_event_window {
+    struct zr_event_header base;
+    enum zr_window_event_type evt;
+    int data[2];
+};
+
+struct zr_event_button {
+    struct zr_event_header base;
+    enum zr_button_event_type evt;
+};
+
+struct zr_event_tab {
+    struct zr_event_header base;
+    enum zr_tab_event_type evt;
+};
+
+struct zr_event_checkbox {
+    struct zr_event_header base;
+    enum zr_checkbox_event_type evt;
+    int value;
+};
+
+struct zr_event_option {
+    struct zr_event_header base;
+    enum zr_option_event_type evt;
+    int value;
+};
+
+struct zr_event_select {
+    struct zr_event_header base;
+    enum zr_select_event_type evt;
+    int value;
+};
+
+struct zr_event_slider {
+    struct zr_event_header base;
+    enum zr_slider_event_type evt;
+    float value;
+};
+
+struct zr_event_progress {
+    struct zr_event_header base;
+    enum zr_progress_event_type evt;
+    zr_size value;
+};
+
+struct zr_event_property {
+    struct zr_event_header base;
+    enum zr_property_event_type evt;
+    float value;
+};
+
+union zr_event {
+    struct zr_event_header base;
+    struct zr_event_window win;
+    struct zr_event_tab tab;
+    struct zr_event_button button;
+    struct zr_event_slider slider;
+    struct zr_event_progress progress;
+    struct zr_event_checkbox checkbox;
+    struct zr_event_option option;
+    struct zr_event_select select;
+    struct zr_event_property property;
+};
+
+struct zr_event_mask {unsigned short flags[ZR_EVENT_MAX];};
+void zr_event_mask_begin(struct zr_event_mask*);
+void zr_event_mask_add(struct zr_event_mask*, enum zr_event_type, zr_flags);
+void zr_event_mask_remove(struct zr_event_mask*, enum zr_event_type, zr_flags);
+void zr_event_mask_end(struct zr_event_mask*);
+int zr_event_mask_has(struct zr_event_mask*, enum zr_event_type, zr_flags);
+
+/*==============================================================
+ *                          ELEMENT
+ * =============================================================*/
+#define ZR_ELEMENT_OP 0
+#define ZR_ELEMENT_ID 1
+
+/* checkbox element properties */
+#define ZR_CHECKBOX_ACTIVE  3
+
+/* option element properties */
+#define ZR_OPTION_ACTIVE    3
+
+/* selection element properties */
+#define ZR_SELECT_ALIGN     3
+#define ZR_SELECT_ACTIVE    4
+
+/* slider element properties */
+#define ZR_SLIDER_MIN       2
+#define ZR_SLIDER_VALUE     3
+#define ZR_SLIDER_MAX       4
+#define ZR_SLIDER_STEP      5
+
+/* progress element properties */
+#define ZR_PROGRESS_VALUE   2
+#define ZR_PROGRESS_MAX     3
+#define ZR_PROGRESS_MODIFY  4
+
+/* property element properties */
+#define ZR_PROPERTY_MIN     3
+#define ZR_PROPERTY_VALUE   4
+#define ZR_PROPERTY_MAX     5
+#define ZR_PROPERTY_STEP    6
+#define ZR_PROPERTY_INC     7
+#define ZR_PROPERTY_FILTER  8
+
+zr_element zr_element_lookup(const struct zr_buffer*, zr_hash id);
+int zr_element_is_valid(const struct zr_buffer*, zr_element);
+
+int zr_element_get_int(const struct zr_buffer*, zr_element, int property);
+float zr_element_get_float(const struct zr_buffer*, zr_element, int property);
+unsigned zr_element_get_uint(const struct zr_buffer*, zr_element, int property);
+struct zr_color zr_element_get_color(const struct zr_buffer*, zr_element, int property);
+zr_flags zr_element_get_flags(const struct zr_buffer*, zr_element, int property);
+
+void zr_element_set_int(struct zr_buffer*, zr_element, int property, int);
+void zr_element_set_float(struct zr_buffer*, zr_element, int property, float);
+void zr_element_set_uint(struct zr_buffer*, zr_element, int property, unsigned int);
+void zr_element_set_color(struct zr_buffer*, zr_element, int property, struct zr_color);
+void zr_element_set_flags(struct zr_buffer*, zr_element, int property, zr_flags);
+
+/*==============================================================
  *                          WINDOW
  * =============================================================*/
-
 enum zr_modify {
     ZR_FIXED = zr_false,
     ZR_MODIFIABLE = zr_true
@@ -1334,22 +1555,6 @@ struct zr_panel {
 /*==============================================================
  *                          CONTEXT
  * =============================================================*/
-enum zr_event_type {
-    ZR_EVENT_HOVERED,
-    ZR_EVENT_ACTIVE,
-    ZR_EVENT_CLOSED,
-    ZR_EVENT_MINIMIZED,
-    ZR_EVENT_MAXIMIZED,
-    ZR_EVENT_MAX
-};
-
-struct zr_event {
-    int window;
-    zr_hash id;
-    enum zr_event_type type;
-    float value;
-};
-
 struct zr_clipboard {
     zr_handle userdata;
     /* user memory for callback */
@@ -1412,11 +1617,17 @@ struct zr_canvas {
 
 struct zr_context {
 /* public:
-     * can be freely modified */
+     * can be freely accessed + modified */
     struct zr_input input;
     struct zr_style style;
     struct zr_buffer memory;
     struct zr_clipboard clip;
+
+    zr_hash next_id;
+    /* hash value taken by the next widget.
+     * If not directly set by the user it
+     * will be incremented to ensure
+     * unique identifiers for every widget. */
 
 /* private:
      * should only be modifed if you
@@ -1429,7 +1640,6 @@ struct zr_context {
 #endif
 
     /* recording */
-    unsigned int gen;
     struct zr_buffer *op_buffer;
     struct zr_buffer op_memory;
 
@@ -1461,15 +1671,16 @@ void zr_set_user_data(struct zr_context*, zr_handle handle);
 #endif
 
 /*--------------------------------------------------------------
- *                          CLASSIC
+ *                          RECORDING
  * -------------------------------------------------------------*/
 void zr_recording_begin(struct zr_context*, struct zr_buffer*);
 void zr_recording_end(struct zr_context*);
 
-int zr_exec(struct zr_context*, struct zr_buffer *event_buffer, int *count,
+int zr_exec(struct zr_context*, struct zr_buffer *event_buffer,
+            int *event_count, const struct zr_event_mask*,
             struct zr_buffer *program, struct zr_buffer *runtime);
-const struct zr_event *zr__event_begin(struct zr_buffer*);
-const struct zr_event *zr__event_next(struct zr_buffer*, const struct zr_event*);
+const union zr_event *zr__event_begin(struct zr_buffer*);
+const union zr_event *zr__event_next(struct zr_buffer*, const union zr_event*);
 #define zr_foreach_event(evt,buffer)\
     for ((evt)=zr__event_begin(buffer); (evt)!=0; (evt)=zr__event_next(buffer, evt))
 
@@ -1511,7 +1722,7 @@ void zr_window_show_if(struct zr_context*, const char *name,
                         enum zr_show_states, int cond);
 
 /*--------------------------------------------------------------
- *                      DRAWING
+ *                          DRAWING
  * -------------------------------------------------------------*/
 /* command drawing */
 #define zr_command(t, c) ((const struct zr_command_##t*)c)
@@ -1532,7 +1743,7 @@ const struct zr_draw_command* zr__draw_next(const struct zr_draw_command*,
                                             const struct zr_context*);
 
 /*--------------------------------------------------------------
- *                      INPUT
+ *                          INPUT
  * -------------------------------------------------------------*/
 void zr_input_begin(struct zr_context*);
 void zr_input_motion(struct zr_context*, int x, int y);
@@ -1545,7 +1756,7 @@ void zr_input_unicode(struct zr_context *in, zr_rune);
 void zr_input_end(struct zr_context*);
 
 /*--------------------------------------------------------------
- *                      STYLE
+ *                          STYLE
  * -------------------------------------------------------------*/
 void zr_load_default_style(struct zr_context*, zr_flags);
 void zr_set_font(struct zr_context*, const struct zr_user_font*);
@@ -1575,7 +1786,7 @@ void zr_reset_font_height(struct zr_context*);
 void zr_reset(struct zr_context*);
 
 /*--------------------------------------------------------------
- *                      LAYOUT
+ *                          LAYOUT
  * -------------------------------------------------------------*/
 /* columns based layouting with generated position and width and fixed height*/
 void zr_layout_row_dynamic(struct zr_context*, float height, int cols);
@@ -1613,7 +1824,7 @@ void zr_layout_pop(struct zr_context*);
 /*--------------------------------------------------------------
  *                          WIDGETS
  * -------------------------------------------------------------*/
-/* base widget calls for custom widgets (is used by all widgets internally) */
+/* base widget calls for custom widgets (used by all widgets internally) */
 enum zr_widget_state zr_widget(struct zr_rect*, const struct zr_context*);
 enum zr_widget_state zr_widget_fitting(struct zr_rect*, struct zr_context*);
 
@@ -1658,11 +1869,12 @@ int zr_button_text_image(struct zr_context*, struct zr_image img, const char*,
                             zr_flags text_alignment, enum zr_button_behavior);
 
 /* simple value modifier by sliding */
-void zr_progress(struct zr_context*, zr_size *cur, zr_size max, int modifyable);
-void zr_slider_float(struct zr_context*, float min, float *val, float max, float step);
-void zr_slider_int(struct zr_context*, int min, int *val, int max, int step);
+int zr_progress(struct zr_context*, zr_size *cur, zr_size max, int modifyable);
+zr_size zr_prog(struct zr_context*, zr_size cur, zr_size max, int modifyable);
 float zr_slide_float(struct zr_context*, float min, float val, float max, float step);
 int zr_slide_int(struct zr_context*, int min, int val, int max, int step);
+int zr_slider_float(struct zr_context*, float min, float *val, float max, float step);
+int zr_slider_int(struct zr_context*, int min, int *val, int max, int step);
 
 /* extended value modifier by dragging, increment/decrement and text input */
 void zr_property_float(struct zr_context *layout, const char *name,
@@ -1686,7 +1898,7 @@ zr_flags zr_chart_push(struct zr_context*, float);
 void zr_chart_end(struct zr_context*);
 
 /*--------------------------------------------------------------
- *                      POPUPS
+ *                          POPUPS
  * -------------------------------------------------------------*/
 /* normal blocking popups */
 int zr_popup_begin(struct zr_context*, struct zr_panel*, enum zr_popup_type,
