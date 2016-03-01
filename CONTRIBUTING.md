@@ -9,6 +9,7 @@ If you have an idea for new features just [open an issue](https://github.com/vur
   * Add (insert your favorite platform or render backend here) demo implementation (some possibilities: DirectX 9/DirectX 10/DirectX 11 and win32 with OpenGL)
   * Add clipboard user callbacks back into all demos
   * Add additional widgets
+  * Add color picker widget (using the multi-color draw command)
   * Find a better way to change the style or group style options
   * Add support for multiple pointers for touch input devices (probably requires to rewrite mouse handling in `struct zr_input`)
   * Extend xlib demo to support image drawing with arbitrary image width and height
@@ -18,8 +19,8 @@ If you have an idea for new features just [open an issue](https://github.com/vur
   * Add tables with scaleable column width
   * Rewrite the chart API to support a better range of charts (maybe take notes from Javascript chart frameworks) 
   * Create an API to allow scaling between groups (maybe extend and convert the demo example)
-  * Add multiple Tab support (maybe use `zr_group` and add a header)  
   * Come up with a better way to provide and create widget and window styles
+  * Add multiple Tab support (maybe use `zr_group` and add a header)  
   * Extend context to not only support overlapping windows but tiled windows as well
 
 ## Bugs

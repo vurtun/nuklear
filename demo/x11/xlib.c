@@ -39,6 +39,8 @@
 #define DEMO_DO_NOT_DRAW_IMAGES
 #include "../demo.c"
 
+#if 0
+
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wsign-conversion"
@@ -77,6 +79,8 @@
 #pragma GCC diagnostic pop
 #elif _MSC_VER
 #pragma warning (pop)
+#endif
+
 #endif
 
 typedef struct XFont XFont;
@@ -483,6 +487,8 @@ surface_del(XSurface *surf)
     free(surf);
 }
 
+#if 0
+
 static XSurface*
 surface_load(const char *filename, Display *dpy, int screen, Window root)
 {
@@ -512,6 +518,8 @@ icon_load(const char *filename, Display *dpy, int screen, Window root)
     XSurface* surf = surface_load(filename, dpy, screen, root);
     return zr_image_ptr(surf);
 }
+
+#endif
 
 static void
 input_key(struct XWindow *xw, struct zr_context *ctx, XEvent *evt, int down)

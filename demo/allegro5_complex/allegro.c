@@ -355,6 +355,7 @@ main(int argc, char *argv[])
 
         usrfnt = device_init(&dev, font_path, 14,
             zr_font_default_glyph_ranges());
+        memset(&gui, 0, sizeof(gui));
         zr_init(&gui.ctx, &alloc, &usrfnt);
     }
 
