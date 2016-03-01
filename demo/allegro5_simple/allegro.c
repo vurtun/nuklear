@@ -61,31 +61,53 @@ draw(struct zr_context *ctx, int width, int height)
         case ZR_COMMAND_LINE: {
             const struct zr_command_line *l = zr_command(line, cmd);
             al_draw_line(l->begin.x, l->begin.y, l->end.x, l->end.y,
-                al_map_rgba(l->color.r, l->color.g, l->color.g, l->color.a), 1.0f);
+                al_map_rgba(l->color.r, l->color.g, l->color.b, l->color.a), 1.0f);
         } break;
-        case ZR_COMMAND_CURVE: break;
         case ZR_COMMAND_RECT: {
             const struct zr_command_rect *r = zr_command(rect, cmd);
             al_draw_filled_rounded_rectangle(r->x, r->y, r->x + r->w, r->y + r->h,
                 r->rounding, r->rounding,
-                al_map_rgba(r->color.r, r->color.g, r->color.g, r->color.a));
+                al_map_rgba(r->color.r, r->color.g, r->color.b, r->color.a));
         } break;
         case ZR_COMMAND_CIRCLE: {
             const struct zr_command_circle *c = zr_command(circle, cmd);
             al_draw_filled_circle(c->x + c->w/2, c->y + c->w/2, c->w/2,
-                al_map_rgba(c->color.r, c->color.g, c->color.g, c->color.a));
+                al_map_rgba(c->color.r, c->color.g, c->color.b, c->color.a));
         } break;
         case ZR_COMMAND_TRIANGLE: {
             const struct zr_command_triangle *t = zr_command(triangle, cmd);
             al_draw_filled_triangle(t->a.x, t->a.y, t->b.x, t->b.y, t->c.x, t->c.y,
-                al_map_rgba(t->color.r, t->color.g, t->color.g, t->color.a));
+                al_map_rgba(t->color.r, t->color.g, t->color.b, t->color.a));
         } break;
         case ZR_COMMAND_TEXT: {
             const struct zr_command_text *t = zr_command(text, cmd);
             ALLEGRO_FONT *font = t->font->userdata.ptr;
-            float y = (t->y + t->h/2) - t->font->height/2;
             al_draw_text(font, al_map_rgba(t->foreground.r, t->foreground.g, t->foreground.g, t->foreground.a),
-                    t->x, y, ALLEGRO_ALIGN_LEFT, t->string);
+                    t->x, t->y, ALLEGRO_ALIGN_LEFT, t->string);
+        } break;
+        case ZR_COMMAND_CURVE: {
+            unsigned int i_step;
+            float t_step;
+            const struct zr_command_curve *q = zr_command(curve, cmd);
+            struct zr_vec2i last = q->begin;
+            struct zr_vec2i p1 = q->begin;
+            struct zr_vec2i p2 = q->ctrl[0];
+            struct zr_vec2i p3 = q->ctrl[1];
+            struct zr_vec2i p4 = q->end;
+            t_step = 1.0f/(float)22.0f;
+            for (i_step = 1; i_step <= 22.0f; ++i_step) {
+                float t = t_step * (float)i_step;
+                float u = 1.0f - t;
+                float w1 = u*u*u;
+                float w2 = 3*u*u*t;
+                float w3 = 3*u*t*t;
+                float w4 = t * t *t;
+                float x = w1 * p1.x + w2 * p2.x + w3 * p3.x + w4 * p4.x;
+                float y = w1 * p1.y + w2 * p2.y + w3 * p3.y + w4 * p4.y;
+                al_draw_line(last.x, last.y, x, y,
+                    al_map_rgba(q->color.r, q->color.g, q->color.b, q->color.a), 1.0f);
+                last.x = (short)x; last.y = (short)y;
+            }
         } break;
         case ZR_COMMAND_ARC:
         case ZR_COMMAND_IMAGE:
