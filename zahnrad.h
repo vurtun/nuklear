@@ -1377,8 +1377,14 @@ enum zr_text_align {
     /* text is aligned to the top (Y-axis)*/
     ZR_TEXT_MIDDLE      = 0x10,
     /* text is aligned to the middle (Y-axis) */
-    ZR_TEXT_BOTTOM      = 0x20
+    ZR_TEXT_BOTTOM      = 0x20,
     /* text is aligned to the bottom (Y-axis)*/
+    ZR_TEXT_DEFAULT_CENTER = ZR_TEXT_CENTERED|ZR_TEXT_MIDDLE,
+    /* default center alignment with text centered both in X-and Y-axis */
+    ZR_TEXT_DEFAULT_LEFT = ZR_TEXT_LEFT|ZR_TEXT_MIDDLE,
+    /* default left alignment with text centered left in X-and and center Y-axis */
+    ZR_TEXT_DEFAULT_RIGHT = ZR_TEXT_RIGHT|ZR_TEXT_MIDDLE
+    /* default right alignment with text centered right in X-and and center Y-axis */
 };
 
 enum zr_button_behavior {
@@ -1954,7 +1960,8 @@ void zr_tooltip_end(struct zr_context*);
 void zr_menubar_begin(struct zr_context*);
 void zr_menubar_end(struct zr_context*);
 
-int zr_menu_text_begin(struct zr_context*, struct zr_panel*, const char*, float width);
+int zr_menu_text_begin(struct zr_context*, struct zr_panel*, const char*,
+                        zr_flags, float width);
 int zr_menu_icon_begin(struct zr_context*, struct zr_panel*, const char*,
                         struct zr_image, float width);
 int zr_menu_symbol_begin(struct zr_context*, struct zr_panel*, const char*,

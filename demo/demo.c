@@ -434,7 +434,7 @@ demo_window(struct zr_context *ctx)
             zr_menubar_begin(ctx);
             zr_layout_row_begin(ctx, ZR_STATIC, 25, 2);
             zr_layout_row_push(ctx, 45);
-            if (zr_menu_text_begin(ctx, &menu, "MENU", 120))
+            if (zr_menu_text_begin(ctx, &menu, "MENU", ZR_TEXT_DEFAULT_LEFT, 120))
             {
                 static size_t prog = 40;
                 static int slider = 10;

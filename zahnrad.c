@@ -12123,7 +12123,7 @@ zr_menu_begin(struct zr_panel *layout, struct zr_context *ctx, struct zr_window 
 
 int
 zr_menu_text_begin(struct zr_context *ctx, struct zr_panel *layout,
-    const char *title, float width)
+    const char *title, zr_flags align, float width)
 {
     struct zr_window *win;
     const struct zr_input *in;
@@ -12150,7 +12150,7 @@ zr_menu_text_begin(struct zr_context *ctx, struct zr_panel *layout,
         button.base.border = ctx->style.colors[ZR_COLOR_WINDOW];
         button.base.normal = ctx->style.colors[ZR_COLOR_WINDOW];
         button.base.active = ctx->style.colors[ZR_COLOR_WINDOW];
-        button.alignment = ZR_TEXT_CENTERED|ZR_TEXT_MIDDLE;
+        button.alignment = align;
         button.normal = ctx->style.colors[ZR_COLOR_TEXT];
         button.active = ctx->style.colors[ZR_COLOR_TEXT];
         button.hover = ctx->style.colors[ZR_COLOR_TEXT];
