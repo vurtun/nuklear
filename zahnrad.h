@@ -1979,4 +1979,3 @@ void zr_menu_end(struct zr_context*);
 #endif
 
 #endif /* ZR_H_ */
-

@@ -8136,6 +8136,10 @@ zr_window_set_focus(struct zr_context *ctx, const char *name)
     title_len = (int)zr_strsiz(name);
     title_hash = zr_murmur_hash(name, (int)title_len, ZR_WINDOW_TITLE);
     win = zr_find_window(ctx, title_hash);
+    if (ctx->end != win) {
+        zr_remove_window(ctx, win);
+        zr_insert_window(ctx, win);
+    }
     ctx->active = win;
 }
 
