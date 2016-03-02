@@ -1,4 +1,6 @@
-#include "limits.h"
+#include <limits.h>
+#include <string.h>
+#include <time.h>
 
 #ifndef MIN
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
@@ -69,6 +71,10 @@ static void
 set_style(struct zr_context *ctx, enum theme theme)
 {
     if (theme == THEME_WHITE) {
+        ctx->style.rounding[ZR_ROUNDING_SCROLLBAR] = 0;
+        ctx->style.rounding[ZR_ROUNDING_PROPERTY] = 0;
+        ctx->style.rounding[ZR_ROUNDING_BUTTON] = 0;
+
         ctx->style.colors[ZR_COLOR_TEXT] = zr_rgba(70, 70, 70, 255);
         ctx->style.colors[ZR_COLOR_TEXT_HOVERING] = zr_rgba(10, 10, 10, 255);
         ctx->style.colors[ZR_COLOR_TEXT_ACTIVE] = zr_rgba(20, 20, 20, 255);
@@ -114,6 +120,7 @@ set_style(struct zr_context *ctx, enum theme theme)
         ctx->style.colors[ZR_COLOR_SCALER] = zr_rgba(100, 100, 100, 255);
     } else if (theme == THEME_RED) {
         ctx->style.rounding[ZR_ROUNDING_SCROLLBAR] = 0;
+        ctx->style.rounding[ZR_ROUNDING_PROPERTY] = 0;
         ctx->style.properties[ZR_PROPERTY_SCROLLBAR_SIZE] = zr_vec2(10,10);
         ctx->style.colors[ZR_COLOR_TEXT] = zr_rgba(190, 190, 190, 255);
         ctx->style.colors[ZR_COLOR_TEXT_HOVERING] = zr_rgba(195, 195, 195, 255);
@@ -640,7 +647,7 @@ demo_window(struct zr_context *ctx)
                 static int col_mode = COL_RGB;
                 static struct zr_color combo_color = {130, 50, 50, 255};
                 static struct zr_color combo_color2 = {130, 180, 50, 255};
-                static size_t x =  20, y = 40, z = 10, w = 90;
+                static size_t prog_a =  20, prog_b = 40, prog_c = 10, prog_d = 90;
 
                 char buffer[64];
                 size_t sum = 0;
@@ -697,14 +704,14 @@ demo_window(struct zr_context *ctx)
                 }
 
                 /* progressbar combobox */
-                sum = x + y + z + w;
+                sum = prog_a + prog_b + prog_c + prog_d;
                 sprintf(buffer, "%lu", sum);
                 if (zr_combo_begin_text(ctx, &combo, buffer, 200)) {
                     zr_layout_row_dynamic(ctx, 30, 1);
-                    zr_progress(ctx, &x, 100, ZR_MODIFIABLE);
-                    zr_progress(ctx, &y, 100, ZR_MODIFIABLE);
-                    zr_progress(ctx, &z, 100, ZR_MODIFIABLE);
-                    zr_progress(ctx, &w, 100, ZR_MODIFIABLE);
+                    zr_progress(ctx, &prog_a, 100, ZR_MODIFIABLE);
+                    zr_progress(ctx, &prog_b, 100, ZR_MODIFIABLE);
+                    zr_progress(ctx, &prog_c, 100, ZR_MODIFIABLE);
+                    zr_progress(ctx, &prog_d, 100, ZR_MODIFIABLE);
                     zr_combo_end(ctx);
                 }
 
@@ -747,6 +754,96 @@ demo_window(struct zr_context *ctx)
                     zr_chart_end(ctx);
                     zr_combo_end(ctx);
                 }
+
+                {
+                    static int time_selected = 0;
+                    static int date_selected = 0;
+                    static struct tm sel_time;
+                    static struct tm sel_date;
+                    if (!time_selected || !date_selected) {
+                        /* keep time and date update if nothing is seleted */
+                        time_t cur_time = time(0);
+                        struct tm *new = localtime(&cur_time);
+                        if (!time_selected)
+                            memcpy(&sel_time, new, sizeof(struct tm));
+                        if (!date_selected)
+                            memcpy(&sel_date, new, sizeof(struct tm));
+                    }
+
+                    /* time combobox */
+                    sprintf(buffer, "%02d:%02d:%02d", sel_time.tm_hour, sel_time.tm_min, sel_time.tm_sec);
+                    if (zr_combo_begin_text(ctx, &combo, buffer, 250)) {
+                        time_selected = 1;
+                        zr_layout_row_dynamic(ctx, 20, 1);
+                        sel_time.tm_sec = zr_propertyi(ctx, "#S:", 0, sel_time.tm_sec, 60, 1, 1);
+                        sel_time.tm_min = zr_propertyi(ctx, "#M:", 0, sel_time.tm_min, 60, 1, 1);
+                        sel_time.tm_hour = zr_propertyi(ctx, "#H:", 0, sel_time.tm_hour, 23, 1, 1);
+                        zr_combo_end(ctx);
+                    }
+
+                    /* date combobox */
+                    zr_layout_row_static(ctx, 25, 350, 1);
+                    sprintf(buffer, "%02d-%02d-%02d", sel_date.tm_mday, sel_date.tm_mon+1, sel_date.tm_year+1900);
+                    if (zr_combo_begin_text(ctx, &combo, buffer, 350)) {
+                        int i = 0;
+                        const char *month[] = {"January", "February", "March", "Apil", "May", "June", "July", "August", "September", "Ocotober", "November", "December"};
+                        const char *week_days[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
+                        const int month_days[] = {31,28,31,30,31,30,31,31,30,31,30,31};
+                        int year = sel_date.tm_year+1900;
+                        int leap_year = (!(year % 4) && ((year % 100))) || !(year % 400);
+                        int days = (sel_date.tm_mon == 1) ?
+                            month_days[sel_date.tm_mon] + leap_year:
+                            month_days[sel_date.tm_mon];
+
+                        /* header with month and year */
+                        date_selected = 1;
+                        zr_layout_row_begin(ctx, ZR_DYNAMIC, 20, 3);
+                        zr_layout_row_push(ctx, 0.05f);
+                        if (zr_button_symbol(ctx, ZR_SYMBOL_TRIANGLE_LEFT, ZR_BUTTON_DEFAULT)) {
+                            if (sel_date.tm_mon == 0) {
+                                sel_date.tm_mon = 11;
+                                sel_date.tm_year = MAX(0, sel_date.tm_year-1);
+                            } else sel_date.tm_mon--;
+                        }
+                        zr_layout_row_push(ctx, 0.9f);
+                        sprintf(buffer, "%s %0000d", month[sel_date.tm_mon], year);
+                        zr_label(ctx, buffer, ZR_TEXT_DEFAULT_CENTER);
+                        zr_layout_row_push(ctx, 0.05f);
+                        if (zr_button_symbol(ctx, ZR_SYMBOL_TRIANGLE_RIGHT, ZR_BUTTON_DEFAULT)) {
+                            if (sel_date.tm_mon == 11) {
+                                sel_date.tm_mon = 0;
+                                sel_date.tm_year++;
+                            } else sel_date.tm_mon++;
+                        }
+                        zr_layout_row_end(ctx);
+
+                        /* good old week day formula */
+                        {int year_n = (sel_date.tm_mon < 2) ? year-1: year;
+                        int y = year_n % 100;
+                        int c = year_n / 100;
+                        int y4 = (int)((float)y / 4);
+                        int c4 = (int)((float)c / 4);
+                        int m = (int)(2.6 * (double)(((sel_date.tm_mon + 10) % 12) + 1) - 0.2);
+                        int week_day = (((1 + m + y + y4 + c4 - 2 * c) % 7) + 7) % 7;
+
+                        /* weekdays  */
+                        zr_layout_row_dynamic(ctx, 35, 7);
+                        for (i = 0; i < (int)LEN(week_days); ++i)
+                            zr_label(ctx, week_days[i], ZR_TEXT_DEFAULT_CENTER);
+
+                        /* days  */
+                        if (week_day > 0) zr_spacing(ctx, week_day);
+                        for (i = 1; i <= days; ++i) {
+                            sprintf(buffer, "%d", i);
+                            if (zr_button_text(ctx, buffer, ZR_BUTTON_DEFAULT)) {
+                                sel_date.tm_mday = i;
+                                zr_combo_close(ctx);
+                            }
+                        }}
+                        zr_combo_end(ctx);
+                    }
+                }
+
                 zr_layout_pop(ctx);
             }
 
