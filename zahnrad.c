@@ -8044,6 +8044,22 @@ zr_window_is_active(struct zr_context *ctx, const char *name)
 }
 
 void
+zr_window_close(struct zr_context *ctx, const char *name)
+{
+    int title_len;
+    zr_hash title_hash;
+    struct zr_window *win;
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+
+    title_len = (int)zr_strsiz(name);
+    title_hash = zr_murmur_hash(name, (int)title_len, ZR_WINDOW_TITLE);
+    win = zr_find_window(ctx, title_hash);
+    if (!win) return;
+    win->flags |= ZR_WINDOW_HIDDEN;
+}
+
+void
 zr_window_set_bounds(struct zr_context *ctx, struct zr_rect bounds)
 {
     ZR_ASSERT(ctx); ZR_ASSERT(ctx->current);
@@ -8136,7 +8152,7 @@ zr_window_set_focus(struct zr_context *ctx, const char *name)
     title_len = (int)zr_strsiz(name);
     title_hash = zr_murmur_hash(name, (int)title_len, ZR_WINDOW_TITLE);
     win = zr_find_window(ctx, title_hash);
-    if (ctx->end != win) {
+    if (win && ctx->end != win) {
         zr_remove_window(ctx, win);
         zr_insert_window(ctx, win);
     }
