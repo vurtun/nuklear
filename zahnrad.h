@@ -1911,6 +1911,11 @@ zr_flags zr_edit_buffer(struct zr_context*, zr_flags, struct zr_buffer*, zr_filt
 void zr_chart_begin(struct zr_context*, enum zr_chart_type, int num, float min, float max);
 zr_flags zr_chart_push(struct zr_context*, float);
 void zr_chart_end(struct zr_context*);
+void zr_plot(struct zr_context*, enum zr_chart_type, const float *values,
+            int count, int offset);
+void zr_plot_function(struct zr_context*, enum zr_chart_type, void *userdata,
+                        float(*value_getter)(void* user, int index),
+                        int count, int offset);
 
 /*--------------------------------------------------------------
  *                          POPUPS

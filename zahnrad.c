@@ -13395,6 +13395,62 @@ zr_chart_end(struct zr_context *ctx)
     zr_op_handle(ctx, &p, &queue);
 }
 
+void
+zr_plot(struct zr_context *ctx, enum zr_chart_type type, const float *values,
+    int count, int offset)
+{
+    int i;
+    float min_value;
+    float max_value;
+
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(values);
+    ZR_ASSERT(offset < count);
+    if (!ctx || !values || !count) return;
+
+    /* first pass: find out min and max values */
+    min_value = values[offset];
+    max_value = values[offset];
+    for (i = offset+1; i < count; ++i) {
+        min_value = (values[i] < min_value) ? values[i]: min_value;
+        max_value = (values[i] > max_value) ? values[i]: max_value;
+    }
+
+    /* second pass: draw graph out to window */
+    zr_chart_begin(ctx, type, count, min_value, max_value);
+    for (i = offset; i < count; ++i)
+        zr_chart_push(ctx, values[i]);
+    zr_chart_end(ctx);
+}
+
+void
+zr_plot_function(struct zr_context *ctx, enum zr_chart_type type, void *userdata,
+    float(*value_getter)(void* user, int index), int count, int offset)
+{
+    int i;
+    float min_value;
+    float max_value;
+
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(value_getter);
+    ZR_ASSERT(offset < count);
+    if (!ctx || !value_getter || !count) return;
+
+    /* first pass: find out min and max values */
+    min_value = max_value = value_getter(userdata, offset);
+    for (i = offset+1; i < count; ++i) {
+        float value = value_getter(userdata, i);
+        min_value = (value <= min_value) ? value: min_value;
+        max_value = (value >= max_value) ? value: max_value;
+    }
+
+    /* second pass: draw graph out to window */
+    zr_chart_begin(ctx, type, count, min_value, max_value);
+    for (i = offset; i < count; ++i)
+        zr_chart_push(ctx, value_getter(userdata, i));
+    zr_chart_end(ctx);
+}
+
 /* ==============================================================
  *
  *                          RETAIN
