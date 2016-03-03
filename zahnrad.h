@@ -165,6 +165,7 @@ struct zr_color zr_rgb_iv(const int *rgb);
 struct zr_color zr_rgb_bv(const zr_byte* rgb);
 struct zr_color zr_rgb_f(float r, float g, float b);
 struct zr_color zr_rgb_fv(const float *rgb);
+struct zr_color zr_rgb_hex(const char *rgb);
 
 struct zr_color zr_rgba(int r, int g, int b, int a);
 struct zr_color zr_rgba_u32(zr_uint);
@@ -172,6 +173,7 @@ struct zr_color zr_rgba_iv(const int *rgba);
 struct zr_color zr_rgba_bv(const zr_byte *rgba);
 struct zr_color zr_rgba_f(float r, float g, float b, float a);
 struct zr_color zr_rgba_fv(const float *rgba);
+struct zr_color zr_rgba_hex(const char *rgb);
 
 struct zr_color zr_hsv(int h, int s, int v);
 struct zr_color zr_hsv_iv(const int *hsv);
@@ -189,6 +191,8 @@ struct zr_color zr_hsva_fv(const float *hsva);
 void zr_color_f(float *r, float *g, float *b, float *a, struct zr_color);
 void zr_color_fv(float *rgba_out, struct zr_color);
 zr_uint zr_color_u32(struct zr_color);
+void zr_color_hex_rgba(char *output, struct zr_color);
+void zr_color_hex_rgb(char *output, struct zr_color);
 
 void zr_color_hsv_i(int *out_h, int *out_s, int *out_v, struct zr_color);
 void zr_color_hsv_b(zr_byte *out_h, zr_byte *out_s, zr_byte *out_v, struct zr_color);
@@ -1178,8 +1182,11 @@ enum zr_event_type {
 
 struct zr_event_header {
     zr_hash id;
+    /* generated widget ID */
     int window;
+    /* window the event was generated from */
     enum zr_event_type type;
+    /* widget type which generated the event */
 };
 
 struct zr_event_window {

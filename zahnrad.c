@@ -970,6 +970,23 @@ zr_murmur_hash(const void * key, int len, zr_hash seed)
  *
  * ===============================================================
  */
+static int
+zr_parse_hex(const char *p, int length)
+{
+    int i = 0;
+    int len = 0;
+    while (len < length) {
+        i <<= 4;
+        if (p[len] >= 'a' && p[len] <= 'f')
+            i += ((p[len] - 'a') + 10);
+        else if (p[len] >= 'A' && p[len] <= 'F') {
+            i += ((p[len] - 'A') + 10);
+        } else i += (p[len] - '0');
+        len++;
+    }
+    return i;
+}
+
 struct zr_color
 zr_rgba(int r, int g, int b, int a)
 {
@@ -979,6 +996,62 @@ zr_rgba(int r, int g, int b, int a)
     ret.b = (zr_byte)ZR_CLAMP(0, b, 255);
     ret.a = (zr_byte)ZR_CLAMP(0, a, 255);
     return ret;
+}
+
+struct zr_color
+zr_rgb_hex(const char *rgb)
+{
+    struct zr_color col;
+    const char *c = rgb;
+    if (*c == '#') c++;
+    col.r = (zr_byte)zr_parse_hex(c, 2);
+    col.g = (zr_byte)zr_parse_hex(c+2, 2);
+    col.b = (zr_byte)zr_parse_hex(c+4, 2);
+    col.a = 255;
+    return col;
+}
+
+struct zr_color
+zr_rgba_hex(const char *rgb)
+{
+    struct zr_color col;
+    const char *c = rgb;
+    if (*c == '#') c++;
+    col.r = (zr_byte)zr_parse_hex(c, 2);
+    col.g = (zr_byte)zr_parse_hex(c+2, 2);
+    col.b = (zr_byte)zr_parse_hex(c+4, 2);
+    col.a = (zr_byte)zr_parse_hex(c+6, 2);
+    return col;
+}
+
+void
+zr_color_hex_rgba(char *output, struct zr_color col)
+{
+#define ZR_TO_HEX(i) ((i) <= 9 ? '0' + (i): 'A' - 10 + (i))
+    output[0] = (char)ZR_TO_HEX((col.r & 0x0F));
+    output[1] = (char)ZR_TO_HEX((col.r & 0xF0) >> 4);
+    output[2] = (char)ZR_TO_HEX((col.g & 0x0F));
+    output[3] = (char)ZR_TO_HEX((col.g & 0xF0) >> 4);
+    output[4] = (char)ZR_TO_HEX((col.b & 0x0F));
+    output[5] = (char)ZR_TO_HEX((col.b & 0xF0) >> 4);
+    output[6] = (char)ZR_TO_HEX((col.a & 0x0F));
+    output[7] = (char)ZR_TO_HEX((col.a & 0xF0) >> 4);
+    output[8] = '\0';
+#undef ZR_TO_HEX
+}
+
+void
+zr_color_hex_rgb(char *output, struct zr_color col)
+{
+#define ZR_TO_HEX(i) ((i) <= 9 ? '0' + (i): 'A' - 10 + (i))
+    output[0] = (char)ZR_TO_HEX((col.r & 0x0F));
+    output[1] = (char)ZR_TO_HEX((col.r & 0xF0) >> 4);
+    output[2] = (char)ZR_TO_HEX((col.g & 0x0F));
+    output[3] = (char)ZR_TO_HEX((col.g & 0xF0) >> 4);
+    output[4] = (char)ZR_TO_HEX((col.b & 0x0F));
+    output[5] = (char)ZR_TO_HEX((col.b & 0xF0) >> 4);
+    output[6] = '\0';
+#undef ZR_TO_HEX
 }
 
 struct zr_color

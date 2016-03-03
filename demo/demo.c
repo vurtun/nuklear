@@ -697,7 +697,33 @@ demo_window(struct demo *gui, struct zr_context *ctx)
 
             if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Combo", ZR_MINIMIZED))
             {
-                /* Combobox Widgets */
+                /* Combobox Widgets
+                 * In this library comboboxes are not limited to being a popup
+                 * list of selected text. Instead it is a abstract concept of
+                 * having something that is *selected* or displayed, a popup window
+                 * which opens if something needs to be modified and the content
+                 * of the popup which causes the *selected* or displayed value to
+                 * change or if wanted close the combobox.
+                 *
+                 * While strange at first handling comboboxes in a abstract way
+                 * solves the problem of overloaded window content. For example
+                 * changing a color value requires 4 value modifier (slider, property,...)
+                 * for RGBA then you need a label and ways to display the current color.
+                 * If you want to go fancy you even add rgb and hsv ratio boxes.
+                 * While fine for one color if you have a lot of them it because
+                 * tedious to look at and quite wasteful in space. You could add
+                 * a popup which modifies the color but this does not solve the
+                 * fact that it still requires a lot of cluttered space to do.
+                 *
+                 * In these kind of instance abstract comboboxes are quite handy. All
+                 * value modifiers are hidden inside the combobox popup and only
+                 * the color is shown if not open. This combines the clarity of the
+                 * popup with the ease of use of just using the space for modifiers.
+                 *
+                 * Other instances are for example time and especially date picker,
+                 * which only show the currently activated time/data and hide the
+                 * selection logic inside the combobox popup.
+                 */
                 enum color_mode {COL_RGB, COL_HSV};
                 static float chart_selection = 8.0f;
                 static const char *weapons[] = {"Fist","Pistol","Shotgun","Plasma","BFG"};
@@ -741,10 +767,35 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                 }
 
                 /* property color combobox */
-                if (zr_combo_begin_color(ctx, &combo, combo_color2, 200)) {
+                if (zr_combo_begin_color(ctx, &combo, combo_color2, 300)) {
+                    zr_size i;
+                    zr_size cur_len;
+                    static char buf[10];
+                    static zr_size len;
+                    static int active;
+
+                    zr_flags flags;
                     zr_layout_row_dynamic(ctx, 25, 2);
                     col_mode = zr_option(ctx, "RGB", col_mode == COL_RGB) ? COL_RGB : col_mode;
                     col_mode = zr_option(ctx, "HSV", col_mode == COL_HSV) ? COL_HSV : col_mode;
+
+                    if (!active) zr_color_hex_rgba(buf, combo_color2);
+                    cur_len = (active) ? len : 9;
+
+                    zr_label(ctx, "HEX:", ZR_TEXT_LEFT);
+                    flags = zr_edit_string(ctx, ZR_EDIT_FIELD, buf, &cur_len, 9, zr_filter_hex);
+                    if (flags & ZR_EDIT_ACTIVATED) {
+                        len = cur_len;
+                        active = 1;
+                    } else if (flags & ZR_EDIT_DEACTIVATED) {
+                        if (len < 8) memmove(buf + 8 - len, buf, len);
+                        for (i = 0; i < 8 - len; ++i) buf[i] = '0';
+                        combo_color2 = zr_rgba_hex(buf);
+                        active = 0;
+                    } else if (active && cur_len != len) {
+                        len = cur_len;
+                    }
+
                     zr_layout_row_dynamic(ctx, 25, 1);
                     if (col_mode == COL_RGB) {
                         combo_color2.r = (zr_byte)zr_propertyi(ctx, "#R:", 0, combo_color2.r, 255, 1,1);
@@ -970,6 +1021,18 @@ demo_window(struct demo *gui, struct zr_context *ctx)
 
         if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Chart", ZR_MINIMIZED))
         {
+            /* Chart Widgets
+             * This library has two different rather simple charts. The line and the
+             * column chart. Both provide a simple way of visualizing values and
+             * have a retain mode and immedidate mode API version. For the retain
+             * mode version `zr_plot` and `zr_plot_function` you either provide
+             * an array or a callback to call to handle drawing the graph.
+             * For the immediate mode version you start by calling `zr_chart_begin`
+             * and need to provide min and max values for scaling on the Y-axis.
+             * and then call `zr_chart_push` to push values into the chart.
+             * Finally `zr_chart_end` needs to be called to end the process.
+             *
+             */
             float id = 0;
             static int col_index = -1;
             static int line_index = -1;
@@ -2194,7 +2257,7 @@ node_editor_demo(struct zr_context *ctx, struct node_editor *nodedit)
             }
 
             if (updated) {
-                /* reshuffle nodes to have last recently selected node on top */
+                /* reshuffle nodes to have least recently selected node on top */
                 node_editor_pop(nodedit, updated);
                 node_editor_push(nodedit, updated);
             }
@@ -2302,7 +2365,26 @@ replay_window(struct zr_context *ctx, struct zr_buffer *record)
     struct zr_buffer events, runtime;
     char runtime_memory[4 * sizeof(struct zr_panel)];
 
-    /* widget identifier (auto generated) */
+    /* Widget identifier
+     * Every widget needs a unique identifier since you want to distinguish
+     * between different widgets of the same type. IDs are handed out from
+     * `zr_recording_begin` to `zr_recording_end` and is a growing number by default
+     * and can be found inside `zr_context`: next_id. If you want to set the id
+     * for a widget yourself you can set the ID before calling it inside the
+     * recording process for example (does not need to be a hash just unique):
+     *
+     *  ctx->next_id = zr_murmur_hash("Compression", 11, 0);
+     *  zr_propertyi(ctx, "Compression:", 0, 20, 100, 10, 1);
+     *
+     * If a new id is not set the old id + 1 is used. Notice not all API functions
+     * generate a new id. If you compare enum widget_ids with all used functions
+     * in the recording proccess it is hopefully noticeable that for example all
+     * layout functions do not have an ID.
+     *
+     * The ID itself can be used to identify widget either for events or to get
+     * a handle `zr_element` to a widget by calling `zr_element_lookup`.
+     * You can use `zr_element` to access and modify a widget and do not have to
+     * run another recording pass just to change some values. */
     enum widget_ids {
         WIDGET_BUTTON,
         WIDGET_SLIDER,
