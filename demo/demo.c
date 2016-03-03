@@ -435,7 +435,7 @@ simple_window(struct zr_context *ctx)
  *
  * ===============================================================*/
 static void
-demo_window(struct zr_context *ctx)
+demo_window(struct demo *gui, struct zr_context *ctx)
 {
     struct zr_panel menu;
 
@@ -470,7 +470,8 @@ demo_window(struct zr_context *ctx)
         if (show_menu)
         {
             /* menubar */
-            enum menu_states {MENU_DEFAULT, MENU_TEST};
+            enum menu_states {MENU_DEFAULT, MENU_WINDOWS};
+            static enum menu_states menu_state = MENU_DEFAULT;
             static zr_size mprog = 60;
             static int mslider = 10;
             static int mcheck = zr_true;
@@ -480,21 +481,43 @@ demo_window(struct zr_context *ctx)
             zr_layout_row_push(ctx, 45);
             if (zr_menu_text_begin(ctx, &menu, "MENU", ZR_TEXT_DEFAULT_LEFT, 120))
             {
-                static size_t prog = 40;
-                static int slider = 10;
-                static int check = zr_true;
-
                 zr_layout_row_dynamic(ctx, 25, 1);
-                zr_progress(ctx, &prog, 100, ZR_MODIFIABLE);
-                zr_slider_int(ctx, 0, &slider, 16, 1);
-                zr_checkbox(ctx, "check", &check);
+                if (menu_state == MENU_DEFAULT) {
+                    static size_t prog = 40;
+                    static int slider = 10;
+                    static int check = zr_true;
 
-                if (zr_menu_item(ctx, ZR_TEXT_CENTERED, "Hide"))
-                    show_menu = zr_false;
-                if (zr_menu_item(ctx, ZR_TEXT_CENTERED, "About"))
-                    show_app_about = zr_true;
+                    if (zr_menu_item(ctx, ZR_TEXT_DEFAULT_LEFT, "Hide"))
+                        show_menu = zr_false;
+                    if (zr_menu_item(ctx, ZR_TEXT_DEFAULT_LEFT, "About"))
+                        show_app_about = zr_true;
+                    zr_progress(ctx, &prog, 100, ZR_MODIFIABLE);
+                    zr_slider_int(ctx, 0, &slider, 16, 1);
+                    zr_checkbox(ctx, "check", &check);
+                    if (zr_button_text_symbol(ctx, ZR_SYMBOL_TRIANGLE_RIGHT,
+                            "Windows", ZR_TEXT_DEFAULT_LEFT, ZR_BUTTON_DEFAULT))
+                        menu_state = MENU_WINDOWS;
+                } else {
+                    if (zr_selectable(ctx, "Show", ZR_TEXT_DEFAULT_LEFT, &gui->show_simple) && !gui->show_simple)
+                        zr_window_close(ctx, "Show");
+                    if (zr_selectable(ctx, "Recorded", ZR_TEXT_DEFAULT_LEFT, &gui->show_replay) && !gui->show_replay)
+                        zr_window_close(ctx, "Recorded");
+                    if (zr_selectable(ctx, "Node Editor", ZR_TEXT_DEFAULT_LEFT, &gui->show_node) && !gui->show_node)
+                        zr_window_close(ctx, "Node Editor");
+                    #ifndef DEMO_DO_NOT_DRAW_IMAGES
+                    if (zr_selectable(ctx, "Grid", ZR_TEXT_DEFAULT_LEFT, &gui->show_grid) && !gui->show_grid)
+                        zr_window_close(ctx, "Grid Demo");
+                    if (zr_selectable(ctx, "Basic", ZR_TEXT_DEFAULT_LEFT, &gui->show_basic) && !gui->show_basic)
+                        zr_window_close(ctx, "Basic Demo");
+                    if (zr_selectable(ctx, "Button", ZR_TEXT_DEFAULT_LEFT, &gui->show_button) && !gui->show_button)
+                        zr_window_close(ctx, "Button Demo");
+                    #endif
+                    if (zr_button_text_symbol(ctx, ZR_SYMBOL_TRIANGLE_LEFT,
+                            "Back", ZR_TEXT_DEFAULT_RIGHT, ZR_BUTTON_DEFAULT))
+                        menu_state = MENU_DEFAULT;
+                }
                 zr_menu_end(ctx);
-            }
+            } else menu_state = MENU_DEFAULT;
             zr_layout_row_push(ctx, 70);
             zr_progress(ctx, &mprog, 100, ZR_MODIFIABLE);
             zr_slider_int(ctx, 0, &mslider, 16, 1);
@@ -854,7 +877,7 @@ demo_window(struct zr_context *ctx)
                         }
                         zr_layout_row_end(ctx);
 
-                        /* good old week day formula */
+                        /* good old week day formula (have to use double because precision) */
                         {int year_n = (sel_date.tm_mon < 2) ? year-1: year;
                         int y = year_n % 100;
                         int c = year_n / 100;
@@ -2459,15 +2482,15 @@ run_demo(struct demo *gui)
         init = 1;
     }
 
+    ret = control_window(ctx, gui);
+    if (gui->show_demo)
+        demo_window(gui, ctx);
     if (gui->show_simple)
         simple_window(ctx);
     if (gui->show_replay)
         replay_window(ctx, &record);
-    if (gui->show_demo)
-        demo_window(ctx);
     if (gui->show_node)
         node_editor_demo(ctx, &nodedit);
-    ret = control_window(ctx, gui);
 
 #ifndef DEMO_DO_NOT_DRAW_IMAGES
     if (gui->show_grid)
