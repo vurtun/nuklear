@@ -255,7 +255,7 @@ enum zr_param_types {
     ZR_OP(layout_space_push,    ZR_STACK_NOP,               ZR_FMT("of"))\
     ZR_OP(layout_space_end,     ZR_STACK_NOP,               ZR_FMT("o"))\
     ZR_OP(layout_push,          ZR_STACK_INC|ZR_STACK_GEN,  ZR_FMT("ohici"))\
-    ZR_OP(layout_pop,           ZR_STACK_DEC|ZR_STACK_TXT,  ZR_FMT("oc"))\
+    ZR_OP(layout_pop,           ZR_STACK_DEC|ZR_STACK_TXT,  ZR_FMT("o"))\
     ZR_OP(text,                 ZR_STACK_NOP|ZR_STACK_TXT,  ZR_FMT("ocugl"))\
     ZR_OP(text_wrap,            ZR_STACK_NOP|ZR_STACK_TXT,  ZR_FMT("ocul"))\
     ZR_OP(image,                ZR_STACK_GEN,               ZR_FMT("ohmffffff"))\
@@ -7746,6 +7746,9 @@ zr_op_begin(struct zr_context *ctx, union zr_param *p, struct zr_event_queue *qu
              * at the highest priority in stack */
             zr_remove_window(ctx, win);
             zr_insert_window(ctx, win);
+
+            ZR_ASSERT(!ctx->begin->prev);
+            ZR_ASSERT(!ctx->end->next);
 
             /* queue focus event */
             {union zr_event evt;
