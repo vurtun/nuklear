@@ -4681,7 +4681,7 @@ zr_do_button_text_symbol(enum zr_widget_status *state,
     /* calculate symbol bounds */
     tri.y = r.y + (r.h/2) - f->height/2;
     tri.w = f->height; tri.h = f->height;
-    if (align == ZR_TEXT_LEFT) {
+    if (align & ZR_TEXT_LEFT) {
         tri.x = (r.x + r.w) - (2 * b->base.padding.x + tri.w);
         tri.x = ZR_MAX(tri.x, 0);
     } else tri.x = r.x + 2 * b->base.padding.x;
@@ -4711,7 +4711,7 @@ zr_do_button_text_image(enum zr_widget_status *state,
     pressed = zr_do_button_text(state, out, r, text, behavior, b, i, f);
     icon.y = r.y + b->base.padding.y;
     icon.w = icon.h = r.h - 2 * b->base.padding.y;
-    if (align == ZR_TEXT_LEFT) {
+    if (align & ZR_TEXT_LEFT) {
         icon.x = (r.x + r.w) - (2 * b->base.padding.x + icon.w);
         icon.x = ZR_MAX(icon.x, 0);
     } else icon.x = r.x + 2 * b->base.padding.x;
@@ -7235,15 +7235,18 @@ zr_build(struct zr_context *ctx)
     buffer = (zr_byte*)ctx->memory.memory.ptr;
     while (iter != 0) {
         next = iter->next;
-        if (iter->buffer.last != iter->buffer.begin) {
-            cmd = zr_ptr_add(struct zr_command, buffer, iter->buffer.last);
-            while (next && next->buffer.last == next->buffer.begin)
-                next = next->next; /* skip empty command buffers */
-
-            if (next) {
-                cmd->next = next->buffer.begin;
-            } else cmd->next = ctx->memory.allocated;
+        if (iter->buffer.last == iter->buffer.begin || (iter->flags & ZR_WINDOW_HIDDEN)) {
+            iter = next;
+            continue;
         }
+        cmd = zr_ptr_add(struct zr_command, buffer, iter->buffer.last);
+        while (next && ((next->buffer.last == next->buffer.begin) ||
+            (next->flags & ZR_WINDOW_HIDDEN)))
+            next = next->next; /* skip empty command buffers */
+
+        if (next) {
+            cmd->next = next->buffer.begin;
+        } else cmd->next = ctx->memory.allocated;
         iter = next;
     }
 }
@@ -7265,7 +7268,7 @@ zr__begin(struct zr_context *ctx)
     }
 
     iter = ctx->begin;
-    while (iter && iter->buffer.begin == iter->buffer.end)
+    while (iter && ((iter->buffer.begin == iter->buffer.end) || (iter->flags & ZR_WINDOW_HIDDEN)))
         iter = iter->next;
     if (!iter) return 0;
     return zr_ptr_add_const(struct zr_command, buffer, iter->buffer.begin);
