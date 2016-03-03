@@ -270,7 +270,7 @@ enum zr_param_types {
     ZR_OP(select,               ZR_STACK_GEN,               ZR_FMT("ohcfi"))\
     ZR_OP(slider,               ZR_STACK_GEN,               ZR_FMT("ohffff"))\
     ZR_OP(progress,             ZR_STACK_GEN,               ZR_FMT("ohiii"))\
-    ZR_OP(property,             ZR_STACK_GEN|ZR_STACK_TXT,  ZR_FMT("ohcfffffp"))\
+    ZR_OP(property,             ZR_STACK_GEN|ZR_STACK_TXT,  ZR_FMT("ohcfffffi"))\
     ZR_OP(group_begin,          ZR_STACK_PUSH|ZR_STACK_TXT, ZR_FMT("ohpcg"))\
     ZR_OP(group_end,            ZR_STACK_POP,               ZR_FMT("o"))\
     ZR_OP(chart_begin,          ZR_STACK_NOP,               ZR_FMT("ohiiff"))\
@@ -5839,6 +5839,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                 /* 4.) selection beginning and ending in current row */
                 zr_size l = 0;
                 zr_size cur_text_width;
+                zr_size cur_len;
                 zr_size sel_begin, sel_end, sel_len;
                 zr_rune unicode;
                 float label_x = label.x;
@@ -5879,8 +5880,9 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
 
                 text.background = field->text;
                 text.text = field->background;
-                label.w = font->width(font->userdata, font->height,
+                cur_len = font->width(font->userdata, font->height,
                                             &buffer[offset+sel_begin], sel_len);
+                label.w = (float)cur_len;
                 zr_draw_rect(out, label, 0, field->text);
                 zr_widget_text(out, label, &buffer[offset+sel_begin], sel_len,
                     &text, ZR_TEXT_LEFT|ZR_TEXT_MIDDLE, font);
@@ -6014,6 +6016,11 @@ zr_widget_edit(struct zr_command_buffer *out, struct zr_rect r,
  *                          PROPERTY
  *
  * ===============================================================*/
+enum zr_property_filter {
+    ZR_FILTER_INT,
+    ZR_FILTER_FLOAT
+};
+
 struct zr_property {
     float border_size;
     struct zr_vec2 padding;
@@ -6110,9 +6117,14 @@ zr_do_property(enum zr_widget_status *ws,
     struct zr_command_buffer *out, struct zr_rect property,
     const char *name, float min, float val, float max,
     float step, float inc_per_pixel, char *buffer, zr_size *len,
-    int *state, zr_size *cursor, struct zr_property *p, zr_filter filter,
-    const struct zr_input *in, const struct zr_user_font *f)
+    int *state, zr_size *cursor, struct zr_property *p,
+    enum zr_property_filter filter, const struct zr_input *in,
+    const struct zr_user_font *f)
 {
+    const zr_filter filters[] = {
+        zr_filter_decimal,
+        zr_filter_float
+    };
     int active, old;
     zr_size num_len, name_len;
     char string[ZR_MAX_NUMBER_BUFFER];
@@ -6210,7 +6222,7 @@ zr_do_property(enum zr_widget_status *ws,
     }
 
     *length = zr_widget_edit(out, edit, dst, *length,
-        ZR_MAX_NUMBER_BUFFER, &active, cursor, &field, filter,
+        ZR_MAX_NUMBER_BUFFER, &active, cursor, &field, filters[filter],
         (*state == ZR_PROPERTY_EDIT) ? in: 0, f);
     if (active && zr_input_is_key_pressed(in, ZR_KEY_ENTER))
         active = !active;
@@ -7368,20 +7380,25 @@ zr_event_mask_begin(struct zr_event_mask *mask)
 
 void
 zr_event_mask_add(struct zr_event_mask *mask,
-    enum zr_event_type type, zr_flags flags)
+    enum zr_event_type type, zr_flags f)
 {
+    unsigned short flags;
     ZR_ASSERT(mask);
     if (!mask) return;
-    mask->flags[type] |= flags;
+    flags = (unsigned short)f;
+    mask->flags[type] |= (unsigned short)flags;
 }
 
 void
 zr_event_mask_remove(struct zr_event_mask *mask,
-    enum zr_event_type type, zr_flags flags)
+    enum zr_event_type type, zr_flags f)
 {
+    unsigned short flags;
     ZR_ASSERT(mask);
     if (!mask) return;
-    mask->flags[type] &= (zr_flags)~flags;
+    flags = (unsigned short)f;
+    flags = (unsigned short)~flags;
+    mask->flags[type] &= flags;
 }
 
 int
@@ -10768,7 +10785,7 @@ zr_op_property(struct zr_context *ctx, union zr_param *p,
     const float max = p[4].f;
     const float step = p[5].f;
     const float inc_per_pixel = p[6].f;
-    const zr_filter filter = (zr_filter)p[7].ptr;
+    const enum zr_property_filter filter = (enum zr_property_filter)p[7].i;
 
     int ret = 0;
     float new_val;
@@ -10866,7 +10883,7 @@ zr_op_property(struct zr_context *ctx, union zr_param *p,
         ret += zr_event_queue_push(queue, id, ZR_EVENT_PROPERTY, &evt);
         p[3].f = new_val;
     }
-    if (*state != old_state) {
+    if (*state != (int)old_state) {
         union zr_event evt;
         evt.property.evt = ZR_EVENT_PROPERTY_STATE_CHANGED;
         evt.property.value = new_val;
@@ -13272,7 +13289,7 @@ zr_progress(struct zr_context *ctx, zr_size *cur, zr_size max, int modifyable)
 static float
 zr_property(struct zr_context *ctx, const char *name,
     float min, float val, float max, float step,
-    float inc_per_pixel, zr_filter filter)
+    float inc_per_pixel, enum zr_property_filter filter)
 {
     int evt_count;
     union zr_event evt;
@@ -13292,7 +13309,7 @@ zr_property(struct zr_context *ctx, const char *name,
     p[ZR_PROPERTY_MAX].f = max;
     p[ZR_PROPERTY_STEP].f = step;
     p[ZR_PROPERTY_INC].f = inc_per_pixel;
-    p[ZR_PROPERTY_FILTER].ptr = (void*)filter;
+    p[ZR_PROPERTY_FILTER].i = (int)filter;
 
     zr_event_mask_begin(&mask);
     zr_event_mask_add(&mask, ZR_EVENT_PROPERTY, ZR_EVENT_PROPERTY_CHANGED);
@@ -13308,7 +13325,7 @@ void
 zr_property_float(struct zr_context *ctx, const char *name,
     float min, float *val, float max, float step, float inc_per_pixel)
 {
-    *val = zr_property(ctx, name, min, *val, max, step, inc_per_pixel, zr_filter_float);
+    *val = zr_property(ctx, name, min, *val, max, step, inc_per_pixel, ZR_FILTER_FLOAT);
 }
 
 void
@@ -13317,7 +13334,7 @@ zr_property_int(struct zr_context *ctx, const char *name,
 {
     float value = (float)*val;
     value = zr_property(ctx, name, (float)min, value, (float)max, (float)step,
-        (float)inc_per_pixel, zr_filter_decimal);
+        (float)inc_per_pixel, ZR_FILTER_INT);
     *val = (int)value;
 }
 
@@ -13538,7 +13555,7 @@ zr_store_op(struct zr_buffer *buffer, union zr_param *p, int count)
         ZR_ASSERT(mem);
         if (!mem) return;
 
-        p[0].h.next += (unsigned short)dyn_count;
+        p[0].h.next = (unsigned short)(p[0].h.next + dyn_count);
         zr_memcopy(mem, p, fixed_size);
         zr_memcopy(mem+count, p[i].cheat, text_len+1);
         p[i].cheat = (const char*)(mem+count);
