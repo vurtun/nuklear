@@ -6967,6 +6967,7 @@ zr_pool_alloc(struct zr_pool *pool)
  *                          CONTEXT
  *
  * ===============================================================*/
+static void zr_remove_window(struct zr_context*, struct zr_window*);
 static void* zr_create_window(struct zr_context *ctx);
 static void zr_free_window(struct zr_context *ctx, struct zr_window *win);
 static void zr_free_table(struct zr_context *ctx, struct zr_table *tbl);
@@ -7120,10 +7121,10 @@ zr_clear(struct zr_context *ctx)
         }}
 
         /* window itself is not used anymore so free */
-        if (iter->seq != ctx->seq) {
+        if (iter->seq != ctx->seq || iter->flags & ZR_WINDOW_HIDDEN) {
             next = iter->next;
+            zr_remove_window(ctx, iter);
             zr_free_window(ctx, iter);
-            ctx->count--;
             iter = next;
         } else iter = iter->next;
     }
@@ -7290,7 +7291,11 @@ zr__next(struct zr_context *ctx, const struct zr_command *cmd)
  * ---------------------------------------------------------------*/
 static struct zr_table*
 zr_create_table(struct zr_context *ctx)
-{void *tbl = (void*)zr_create_window(ctx); return (struct zr_table*)tbl;}
+{
+    void *tbl = (void*)zr_create_window(ctx);
+    zr_zero(tbl, sizeof(struct zr_table));
+    return (struct zr_table*)tbl;
+}
 
 static void
 zr_free_table(struct zr_context *ctx, struct zr_table *tbl)
@@ -7504,7 +7509,9 @@ zr_create_window(struct zr_context *ctx)
         ZR_ASSERT(win);
         if (!win) return 0;
     }
-    zr_zero(win, sizeof(union zr_page_data));
+    zr_zero(win, sizeof(*win));
+    win->next = 0;
+    win->prev = 0;
     win->seq = ctx->seq;
     return win;
 }
@@ -7514,21 +7521,6 @@ zr_free_window(struct zr_context *ctx, struct zr_window *win)
 {
     /* unlink windows from list */
     struct zr_table *n, *it = win->tables;
-
-    if (win == ctx->begin) {
-        ctx->begin = win->next;
-        if (win->next)
-            ctx->begin->prev = 0;
-    } else if (win == ctx->end) {
-        ctx->end = win->prev;
-        if (win->prev)
-            ctx->end->next = 0;
-    } else {
-        if (win->next)
-            win->next->prev = win->next;
-        if (win->prev)
-            win->prev->next = win->prev;
-    }
     if (win->popup.win) {
         zr_free_window(ctx, win->popup.win);
         win->popup.win = 0;
@@ -7564,6 +7556,7 @@ zr_find_window(struct zr_context *ctx, zr_hash hash)
     struct zr_window *iter;
     iter = ctx->begin;
     while (iter) {
+        ZR_ASSERT(iter != iter->next);
         if (iter->name == hash)
             return iter;
         iter = iter->next;
@@ -7582,6 +7575,8 @@ zr_insert_window(struct zr_context *ctx, struct zr_window *win)
 
     iter = ctx->begin;
     while (iter) {
+        ZR_ASSERT(iter != iter->next);
+        ZR_ASSERT(iter != win);
         if (iter == win) return;
         iter = iter->next;
     }
@@ -7606,14 +7601,28 @@ zr_insert_window(struct zr_context *ctx, struct zr_window *win)
 static void
 zr_remove_window(struct zr_context *ctx, struct zr_window *win)
 {
-    if (win->prev)
-        win->prev->next = win->next;
-    if (win->next)
-        win->next->prev = win->prev;
-    if (ctx->begin == win)
-        ctx->begin = win->next;
-    if (ctx->end == win)
-        ctx->end = win->prev;
+    if (win == ctx->begin || win == ctx->end) {
+        if (win == ctx->begin) {
+            ctx->begin = win->next;
+            if (win->next)
+                win->next->prev = 0;
+        }
+        if (win == ctx->end) {
+            ctx->end = win->prev;
+            if (win->prev)
+                win->prev->next = 0;
+        }
+    } else {
+        if (win->next)
+            win->next->prev = win->prev;
+        if (win->prev)
+            win->prev->next = win->next;
+    }
+    if (win == ctx->active) {
+        ctx->active = ctx->end;
+        if (ctx->end)
+            ctx->end->flags &= ~(zr_flags)ZR_WINDOW_ROM;
+    }
 
     win->next = 0;
     win->prev = 0;
@@ -8038,13 +8047,13 @@ zr_window_is_closed(struct zr_context *ctx, const char *name)
     zr_hash title_hash;
     struct zr_window *win;
     ZR_ASSERT(ctx);
-    if (!ctx) return 0;
+    if (!ctx) return 1;
 
     title_len = (int)zr_strsiz(name);
     title_hash = zr_murmur_hash(name, (int)title_len, ZR_WINDOW_TITLE);
     win = zr_find_window(ctx, title_hash);
-    if (!win) return 0;
-    return win->flags & ZR_WINDOW_HIDDEN;
+    if (!win) return 1;
+    return (win->flags & ZR_WINDOW_HIDDEN);
 }
 
 int
@@ -8076,6 +8085,8 @@ zr_window_close(struct zr_context *ctx, const char *name)
     title_hash = zr_murmur_hash(name, (int)title_len, ZR_WINDOW_TITLE);
     win = zr_find_window(ctx, title_hash);
     if (!win) return;
+    ZR_ASSERT(ctx->current != win && "You cannot close a current window");
+    if (ctx->current == win) return;
     win->flags |= ZR_WINDOW_HIDDEN;
 }
 
@@ -13508,6 +13519,7 @@ zr_recording_end(struct zr_context *ctx)
     union zr_param p[2];
     union zr_event evt;
     struct zr_event_queue queue;
+    zr_size size;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->op_buffer);
@@ -13518,8 +13530,10 @@ zr_recording_end(struct zr_context *ctx)
     zr_event_queue_init_fixed(&queue, 0, &evt, 1);
     zr_op_handle(ctx, p, &queue);
 
+    size = ctx->memory.size;
     ctx->op_buffer = 0;
     ctx->memory = ctx->op_memory;
+    ctx->memory.size = size;
     ctx->next_id = 0;
 }
 

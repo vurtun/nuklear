@@ -48,6 +48,14 @@ struct demo {
     struct icons icons;
     enum theme theme;
     struct zr_memory_status status;
+
+    int show_simple;
+    int show_replay;
+    int show_demo;
+    int show_node;
+    int show_grid;
+    int show_button;
+    int show_basic;
 };
 
 static void
@@ -271,7 +279,36 @@ control_window(struct zr_context *ctx, struct demo *gui)
         ZR_WINDOW_CLOSABLE|ZR_WINDOW_MINIMIZABLE|ZR_WINDOW_MOVABLE|
         ZR_WINDOW_SCALABLE|ZR_WINDOW_BORDER))
     {
-        /* Style */
+        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Windows", ZR_MINIMIZED)) {
+            zr_layout_row_dynamic(ctx, 25, 2);
+            gui->show_simple = !zr_window_is_closed(ctx, "Show");
+            gui->show_replay = !zr_window_is_closed(ctx, "Recorded");
+            gui->show_node = !zr_window_is_closed(ctx, "Node Editor");
+            gui->show_demo = !zr_window_is_closed(ctx, "Demo");
+#ifndef DEMO_DO_NOT_DRAW_IMAGES
+            gui->show_grid = !zr_window_is_closed(ctx, "Grid Demo");
+            gui->show_basic = !zr_window_is_closed(ctx, "Basic Demo");
+            gui->show_button = !zr_window_is_closed(ctx, "Button Demo");
+#endif
+
+            if (zr_checkbox(ctx, "Show", &gui->show_simple) && !gui->show_simple)
+                zr_window_close(ctx, "Show");
+            if (zr_checkbox(ctx, "Recorded", &gui->show_replay) && !gui->show_replay)
+                zr_window_close(ctx, "Recorded");
+            if (zr_checkbox(ctx, "Demo", &gui->show_demo) && !gui->show_demo)
+                zr_window_close(ctx, "Demo");
+            if (zr_checkbox(ctx, "Node Editor", &gui->show_node) && !gui->show_node)
+                zr_window_close(ctx, "Node Editor");
+#ifndef DEMO_DO_NOT_DRAW_IMAGES
+            if (zr_checkbox(ctx, "Grid", &gui->show_grid) && !gui->show_grid)
+                zr_window_close(ctx, "Grid Demo");
+            if (zr_checkbox(ctx, "Basic", &gui->show_basic) && !gui->show_basic)
+                zr_window_close(ctx, "Basic Demo");
+            if (zr_checkbox(ctx, "Button", &gui->show_button) && !gui->show_button)
+                zr_window_close(ctx, "Button Demo");
+#endif
+            zr_layout_pop(ctx);
+        }
         if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Metrics", ZR_MINIMIZED)) {
             zr_layout_row_dynamic(ctx, 20, 2);
             zr_label(ctx,"Total:", ZR_TEXT_LEFT);
@@ -774,7 +811,7 @@ demo_window(struct zr_context *ctx)
                     sprintf(buffer, "%02d:%02d:%02d", sel_time.tm_hour, sel_time.tm_min, sel_time.tm_sec);
                     if (zr_combo_begin_text(ctx, &combo, buffer, 250)) {
                         time_selected = 1;
-                        zr_layout_row_dynamic(ctx, 20, 1);
+                        zr_layout_row_dynamic(ctx, 25, 1);
                         sel_time.tm_sec = zr_propertyi(ctx, "#S:", 0, sel_time.tm_sec, 60, 1, 1);
                         sel_time.tm_min = zr_propertyi(ctx, "#M:", 0, sel_time.tm_min, 60, 1, 1);
                         sel_time.tm_hour = zr_propertyi(ctx, "#H:", 0, sel_time.tm_hour, 23, 1, 1);
@@ -784,7 +821,7 @@ demo_window(struct zr_context *ctx)
                     /* date combobox */
                     zr_layout_row_static(ctx, 25, 350, 1);
                     sprintf(buffer, "%02d-%02d-%02d", sel_date.tm_mday, sel_date.tm_mon+1, sel_date.tm_year+1900);
-                    if (zr_combo_begin_text(ctx, &combo, buffer, 350)) {
+                    if (zr_combo_begin_text(ctx, &combo, buffer, 400)) {
                         int i = 0;
                         const char *month[] = {"January", "February", "March", "Apil", "May", "June", "July", "August", "September", "Ocotober", "November", "December"};
                         const char *week_days[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
@@ -806,7 +843,7 @@ demo_window(struct zr_context *ctx)
                             } else sel_date.tm_mon--;
                         }
                         zr_layout_row_push(ctx, 0.9f);
-                        sprintf(buffer, "%s %0000d", month[sel_date.tm_mon], year);
+                        sprintf(buffer, "%s %d", month[sel_date.tm_mon], year);
                         zr_label(ctx, buffer, ZR_TEXT_DEFAULT_CENTER);
                         zr_layout_row_push(ctx, 0.05f);
                         if (zr_button_symbol(ctx, ZR_SYMBOL_TRIANGLE_RIGHT, ZR_BUTTON_DEFAULT)) {
@@ -2404,6 +2441,17 @@ run_demo(struct demo *gui)
     struct zr_context *ctx = &gui->ctx;
 
     if (!init) {
+        gui->show_demo = 0;
+        gui->show_node = 0;
+        gui->show_replay = 0;
+        gui->show_simple = 0;
+
+        #ifndef DEMO_DO_NOT_DRAW_IMAGES
+        gui->show_grid = 0;
+        gui->show_basic = 0;
+        gui->show_button = 0;
+        #endif
+
         memset(&nodedit, 0, sizeof(nodedit));
         zr_buffer_init_fixed(&record, record_memory, sizeof(record_memory));
         record_window(ctx, &record);
@@ -2411,17 +2459,24 @@ run_demo(struct demo *gui)
         init = 1;
     }
 
-    simple_window(ctx);
-    replay_window(ctx, &record);
-    demo_window(ctx);
-    node_editor_demo(ctx, &nodedit);
-#ifndef DEMO_DO_NOT_DRAW_IMAGES
-    grid_demo(ctx);
-    button_demo(ctx, &gui->icons);
-    basic_demo(ctx, &gui->icons);
-#endif
-
+    if (gui->show_simple)
+        simple_window(ctx);
+    if (gui->show_replay)
+        replay_window(ctx, &record);
+    if (gui->show_demo)
+        demo_window(ctx);
+    if (gui->show_node)
+        node_editor_demo(ctx, &nodedit);
     ret = control_window(ctx, gui);
+
+#ifndef DEMO_DO_NOT_DRAW_IMAGES
+    if (gui->show_grid)
+        grid_demo(ctx);
+    if (gui->show_button)
+        button_demo(ctx, &gui->icons);
+    if (gui->show_basic)
+        basic_demo(ctx, &gui->icons);
+#endif
     zr_buffer_info(&gui->status, &gui->ctx.memory);
     return ret;
 }
