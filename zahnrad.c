@@ -7594,11 +7594,15 @@ zr_insert_window(struct zr_context *ctx, struct zr_window *win)
     }
 
     end = ctx->end;
+    end->flags |= ZR_WINDOW_ROM;
     end->next = win;
     win->prev = ctx->end;
     win->next = 0;
     ctx->end = win;
     ctx->count++;
+
+    ctx->active = ctx->end;
+    ctx->end->flags &= ~(zr_flags)ZR_WINDOW_ROM;
 }
 
 static void
@@ -7621,12 +7625,11 @@ zr_remove_window(struct zr_context *ctx, struct zr_window *win)
         if (win->prev)
             win->prev->next = win->next;
     }
-    if (win == ctx->active) {
+    if (win == ctx->active || !ctx->active) {
         ctx->active = ctx->end;
         if (ctx->end)
             ctx->end->flags &= ~(zr_flags)ZR_WINDOW_ROM;
     }
-
     win->next = 0;
     win->prev = 0;
     ctx->count--;
@@ -7759,9 +7762,6 @@ zr_op_begin(struct zr_context *ctx, union zr_param *p, struct zr_event_queue *qu
             zr_remove_window(ctx, win);
             zr_insert_window(ctx, win);
 
-            ZR_ASSERT(!ctx->begin->prev);
-            ZR_ASSERT(!ctx->end->next);
-
             /* queue focus event */
             {union zr_event evt;
             evt.win.evt = ZR_EVENT_WINDOW_FOCUS;
@@ -7769,13 +7769,7 @@ zr_op_begin(struct zr_context *ctx, union zr_param *p, struct zr_event_queue *qu
             evt.win.data[1] = (int)win->bounds.y;
             ret += zr_event_queue_push(queue, win->name, ZR_EVENT_WINDOW, &evt);}
 
-            /* NOTE: I am not really sure if activating a window should directly
-             * happen on that frame or the following frame. Directly would simplify
-             * clicking window closing/minimizing but could cause wrong behavior.
-             * For now I activate the window on the next frame to prevent wrong
-             * behavior. If not wanted just replace line with:
-             * win->flags &= ~(zr_flags)ZR_WINDOW_ROM; */
-            win->flags |= ZR_WINDOW_REMOVE_ROM;
+            win->flags &= ~(zr_flags)ZR_WINDOW_ROM;
             ctx->active = win;
         }
         if (ctx->end != win)
