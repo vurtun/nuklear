@@ -800,11 +800,11 @@ demo_window(struct zr_context *ctx)
                     if (!time_selected || !date_selected) {
                         /* keep time and date update if nothing is seleted */
                         time_t cur_time = time(0);
-                        struct tm *new = localtime(&cur_time);
+                        struct tm *n = localtime(&cur_time);
                         if (!time_selected)
-                            memcpy(&sel_time, new, sizeof(struct tm));
+                            memcpy(&sel_time, n, sizeof(struct tm));
                         if (!date_selected)
-                            memcpy(&sel_date, new, sizeof(struct tm));
+                            memcpy(&sel_date, n, sizeof(struct tm));
                     }
 
                     /* time combobox */
