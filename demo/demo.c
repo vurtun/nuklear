@@ -225,8 +225,8 @@ set_style(struct zr_context *ctx, enum theme theme)
         ctx->style.colors[ZR_COLOR_TEXT] = zr_rgba(210, 210, 210, 255);
         ctx->style.colors[ZR_COLOR_TEXT_HOVERING] = zr_rgba(195, 195, 195, 255);
         ctx->style.colors[ZR_COLOR_TEXT_ACTIVE] = zr_rgba(200, 200, 200, 255);
-        ctx->style.colors[ZR_COLOR_WINDOW] = zr_rgba(45, 53, 56, 215);
-        ctx->style.colors[ZR_COLOR_HEADER] = zr_rgba(46, 46, 46, 220);
+        ctx->style.colors[ZR_COLOR_WINDOW] = zr_rgba(57, 67, 71, 215);
+        ctx->style.colors[ZR_COLOR_HEADER] = zr_rgba(51, 51, 56, 220);
         ctx->style.colors[ZR_COLOR_BORDER] = zr_rgba(46, 46, 46, 255);
         ctx->style.colors[ZR_COLOR_BUTTON] = zr_rgba(48, 83, 111, 255);
         ctx->style.colors[ZR_COLOR_BUTTON_HOVER] = zr_rgba(53, 88, 116, 255);
@@ -364,9 +364,14 @@ control_window(struct zr_context *ctx, struct demo *gui)
                     zr_layout_row_dynamic(ctx, 25, 2);
                     zr_label(ctx, zr_get_color_name((enum zr_style_colors)i), ZR_TEXT_LEFT);
 
-                    if (zr_combo_begin_color(ctx, &combo, ctx->style.colors[i], 200)) {
+                    if (zr_combo_begin_color(ctx, &combo, ctx->style.colors[i], 400)) {
                         enum color_mode {COL_RGB, COL_HSV};
                         static int col_mode = COL_RGB;
+                        #ifndef DEMO_DO_NOT_USE_COLOR_PICKER
+                        zr_layout_row_dynamic(ctx, 120, 1);
+                        ctx->style.colors[i] = zr_color_picker(ctx, ctx->style.colors[i], ZR_RGBA);
+                        #endif
+
                         zr_layout_row_dynamic(ctx, 25, 2);
                         col_mode = zr_option(ctx, "RGB", col_mode == COL_RGB) ? COL_RGB : col_mode;
                         col_mode = zr_option(ctx, "HSV", col_mode == COL_HSV) ? COL_HSV : col_mode;
@@ -766,35 +771,16 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                     zr_combo_end(ctx);
                 }
 
-                /* property color combobox */
-                if (zr_combo_begin_color(ctx, &combo, combo_color2, 300)) {
-                    zr_size i;
-                    zr_size cur_len;
-                    static char buf[10];
-                    static zr_size len;
-                    static int active;
+                /* complex color combobox */
+                if (zr_combo_begin_color(ctx, &combo, combo_color2, 400)) {
+                    #ifndef DEMO_DO_NOT_USE_COLOR_PICKER
+                    zr_layout_row_dynamic(ctx, 120, 1);
+                    combo_color2 = zr_color_picker(ctx, combo_color2, ZR_RGBA);
+                    #endif
 
-                    zr_flags flags;
                     zr_layout_row_dynamic(ctx, 25, 2);
                     col_mode = zr_option(ctx, "RGB", col_mode == COL_RGB) ? COL_RGB : col_mode;
                     col_mode = zr_option(ctx, "HSV", col_mode == COL_HSV) ? COL_HSV : col_mode;
-
-                    if (!active) zr_color_hex_rgba(buf, combo_color2);
-                    cur_len = (active) ? len : 9;
-
-                    zr_label(ctx, "HEX:", ZR_TEXT_LEFT);
-                    flags = zr_edit_string(ctx, ZR_EDIT_FIELD, buf, &cur_len, 9, zr_filter_hex);
-                    if (flags & ZR_EDIT_ACTIVATED) {
-                        len = cur_len;
-                        active = 1;
-                    } else if (flags & ZR_EDIT_DEACTIVATED) {
-                        if (len < 8) memmove(buf + 8 - len, buf, len);
-                        for (i = 0; i < 8 - len; ++i) buf[i] = '0';
-                        combo_color2 = zr_rgba_hex(buf);
-                        active = 0;
-                    } else if (active && cur_len != len) {
-                        len = cur_len;
-                    }
 
                     zr_layout_row_dynamic(ctx, 25, 1);
                     if (col_mode == COL_RGB) {
@@ -872,7 +858,7 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                     static struct tm sel_time;
                     static struct tm sel_date;
                     if (!time_selected || !date_selected) {
-                        /* keep time and date update if nothing is seleted */
+                        /* keep time and date updated if nothing is selected */
                         time_t cur_time = time(0);
                         struct tm *n = localtime(&cur_time);
                         if (!time_selected)
@@ -1030,9 +1016,7 @@ demo_window(struct demo *gui, struct zr_context *ctx)
              * For the immediate mode version you start by calling `zr_chart_begin`
              * and need to provide min and max values for scaling on the Y-axis.
              * and then call `zr_chart_push` to push values into the chart.
-             * Finally `zr_chart_end` needs to be called to end the process.
-             *
-             */
+             * Finally `zr_chart_end` needs to be called to end the process. */
             float id = 0;
             static int col_index = -1;
             static int line_index = -1;

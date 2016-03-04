@@ -1106,6 +1106,7 @@ enum zr_event_type {
     ZR_EVENT_PROGRESS,
     ZR_EVENT_PROPERTY,
     ZR_EVENT_CHART,
+    ZR_EVENT_COLOR_PICKER,
     ZR_EVENT_MAX
 };
 
@@ -1180,6 +1181,12 @@ enum zr_event_type {
 #define ZR_EVENT_CHART_SELECTED     ZR_FLAG(2)
 #define ZR_EVENT_CHART_ALL          (ZR_FLAG(3)-1)
 
+/* color picker events */
+#define ZR_EVENT_COLOR_PICKER_NONE      0
+#define ZR_EVENT_COLOR_PICKER_HOVERED   ZR_FLAG(1)
+#define ZR_EVENT_COLOR_PICKER_CHANGED   ZR_FLAG(2)
+#define ZR_EVENT_COLOR_PICKER_ALL       (ZR_FLAG(3)-1)
+
 struct zr_event_header {
     zr_hash id;
     /* generated widget ID */
@@ -1249,6 +1256,12 @@ struct zr_event_chart {
     float value;
 };
 
+struct zr_event_color_picker {
+    struct zr_event_header base;
+    zr_flags evt;
+    struct zr_color color;
+};
+
 union zr_event {
     struct zr_event_header base;
     struct zr_event_window win;
@@ -1261,6 +1274,7 @@ union zr_event {
     struct zr_event_select select;
     struct zr_event_property property;
     struct zr_event_chart chart;
+    struct zr_event_color_picker color_picker;
 };
 
 struct zr_event_mask {unsigned short flags[ZR_EVENT_MAX];};
@@ -1301,6 +1315,9 @@ int zr_event_mask_has(struct zr_event_mask*, enum zr_event_type, zr_flags);
 #define ZR_PROPERTY_STEP    6
 #define ZR_PROPERTY_INC     7
 #define ZR_PROPERTY_FILTER  8
+
+/* color picker element properties */
+#define ZR_COLOR_PICKER_COLOR  2
 
 zr_element zr_element_lookup(const struct zr_buffer*, zr_hash id);
 int zr_element_is_valid(const struct zr_buffer*, zr_element);
@@ -1416,11 +1433,9 @@ enum zr_chart_event {
     /* mouse click on current value */
 };
 
-enum zr_color_format {
+enum zr_color_picker_format {
     ZR_RGB,
-    ZR_RGBA,
-    ZR_HSV,
-    ZR_HSVA
+    ZR_RGBA
 };
 
 enum zr_popup_type {
@@ -1898,6 +1913,12 @@ float zr_slide_float(struct zr_context*, float min, float val, float max, float 
 int zr_slide_int(struct zr_context*, int min, int val, int max, int step);
 int zr_slider_float(struct zr_context*, float min, float *val, float max, float step);
 int zr_slider_int(struct zr_context*, int min, int *val, int max, int step);
+
+/* color picker */
+struct zr_color zr_color_picker(struct zr_context*, struct zr_color,
+                                enum zr_color_picker_format);
+void zr_color_pick(struct zr_context*, struct zr_color*,
+                    enum zr_color_picker_format);
 
 /* extended value modifier by dragging, increment/decrement and text input */
 void zr_property_float(struct zr_context *layout, const char *name,

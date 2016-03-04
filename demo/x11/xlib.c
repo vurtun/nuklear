@@ -37,6 +37,7 @@
 #include "../../zahnrad.h"
 
 #define DEMO_DO_NOT_DRAW_IMAGES
+#define DEMO_DO_NOT_USE_COLOR_PICKER
 #include "../demo.c"
 
 #if 0

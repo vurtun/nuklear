@@ -9,7 +9,6 @@ If you have an idea for new features just [open an issue](https://github.com/vur
   * Add (insert your favorite platform or render backend here) demo implementation (some possibilities: DirectX 9/DirectX 10/DirectX 11 and win32 with OpenGL)
   * Add clipboard user callbacks back into all demos
   * Add additional widgets
-  * Add color picker widget (using the multi-color draw command)
   * Find a better way to change the style or group style options
   * Add support for multiple pointers for touch input devices (probably requires to rewrite mouse handling in `struct zr_input`)
   * Extend xlib demo to support image drawing with arbitrary image width and height
@@ -27,6 +26,7 @@ If you have an idea for new features just [open an issue](https://github.com/vur
   * Seperator widget is currently bugged and does not work as intended
   * Text handling is still a little bit janky and probably needs to be further tested and polished
   * `zr_edit_buffer` with multiline flag is bugged for '\n', need to differentiate between visible and non-visible characters
+  * combobox popup does not draw correctly for dynamic windows
 
 ## Coding conventions
   * Only use C89 (ANSI C)
