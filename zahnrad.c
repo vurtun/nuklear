@@ -8831,6 +8831,7 @@ zr_panel_end(struct zr_context *ctx)
     if (layout->flags & ZR_WINDOW_DYNAMIC && !(layout->flags & ZR_WINDOW_MINIMIZED)) {
         layout->height = layout->at_y - layout->bounds.y;
         layout->height = ZR_MIN(layout->height, layout->bounds.h);
+
         if ((layout->offset->x == 0) || (layout->flags & ZR_WINDOW_NO_SCROLLBAR)) {
             /* special case for dynamic windows without horizontal scrollbar
              * or hidden scrollbars */
@@ -8844,10 +8845,10 @@ zr_panel_end(struct zr_context *ctx)
                 /* special case for windows like combobox, menu require draw call
                  * to fill the empty scrollbar background */
                 struct zr_rect bounds;
-                bounds.x = layout->bounds.x + layout->width;
+                bounds.x = layout->bounds.x + layout->width - item_padding.x;
                 bounds.y = layout->clip.y;
-                bounds.w = scrollbar_size;
-                bounds.h = layout->height;
+                bounds.w = scrollbar_size + item_padding.x;
+                bounds.h = layout->height + item_padding.y;
                 zr_draw_rect(out, bounds, 0, config->colors[ZR_COLOR_WINDOW]);
             }
         } else {

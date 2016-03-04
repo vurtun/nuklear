@@ -26,7 +26,6 @@ If you have an idea for new features just [open an issue](https://github.com/vur
   * Seperator widget is currently bugged and does not work as intended
   * Text handling is still a little bit janky and probably needs to be further tested and polished
   * `zr_edit_buffer` with multiline flag is bugged for '\n', need to differentiate between visible and non-visible characters
-  * combobox popup does not draw correctly for dynamic windows
 
 ## Coding conventions
   * Only use C89 (ANSI C)
