@@ -839,6 +839,8 @@ int zr_input_has_mouse_click_down_in_rect(const struct zr_input*, enum zr_button
                                         struct zr_rect, int down);
 int zr_input_is_mouse_click_in_rect(const struct zr_input*,
                                     enum zr_buttons, struct zr_rect);
+int zr_input_is_mouse_click_down_in_rect(const struct zr_input *i, enum zr_buttons id,
+                                        struct zr_rect b, int down);
 int zr_input_any_mouse_click_in_rect(const struct zr_input*, struct zr_rect);
 int zr_input_is_mouse_prev_hovering_rect(const struct zr_input*, struct zr_rect);
 int zr_input_is_mouse_hovering_rect(const struct zr_input*, struct zr_rect);

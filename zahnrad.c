@@ -6140,12 +6140,12 @@ zr_property_behavior(enum zr_widget_status *ws, const struct zr_input *in,
     if (in && zr_button_behavior(ws, right, in, ZR_BUTTON_DEFAULT))
         value = ZR_CLAMP(min, value + step, max);
 
-    if (*state == ZR_PROPERTY_DEFAULT) {
+    if (in && *state == ZR_PROPERTY_DEFAULT) {
         if (zr_button_behavior(ws, edit, in, ZR_BUTTON_DEFAULT))
             *state = ZR_PROPERTY_EDIT;
-        else if (zr_input_has_mouse_click_in_rect(in, ZR_BUTTON_LEFT, label))
+        else if (zr_input_is_mouse_click_down_in_rect(in, ZR_BUTTON_LEFT, label, zr_true))
             *state = ZR_PROPERTY_DRAG;
-        else if (zr_input_has_mouse_click_in_rect(in, ZR_BUTTON_LEFT, empty))
+        else if (zr_input_is_mouse_click_down_in_rect(in, ZR_BUTTON_LEFT, empty, zr_true))
             *state = ZR_PROPERTY_DRAG;
     }
     if (*state == ZR_PROPERTY_DRAG) {
@@ -6620,6 +6620,17 @@ zr_input_is_mouse_click_in_rect(const struct zr_input *i, enum zr_buttons id,
     if (!i) return zr_false;
     btn = &i->mouse.buttons[id];
     return (zr_input_has_mouse_click_down_in_rect(i, id, b, zr_false) &&
+            btn->clicked) ? zr_true : zr_false;
+}
+
+int
+zr_input_is_mouse_click_down_in_rect(const struct zr_input *i, enum zr_buttons id,
+    struct zr_rect b, int down)
+{
+    const struct zr_mouse_button *btn;
+    if (!i) return zr_false;
+    btn = &i->mouse.buttons[id];
+    return (zr_input_has_mouse_click_down_in_rect(i, id, b, down) &&
             btn->clicked) ? zr_true : zr_false;
 }
 
@@ -11019,7 +11030,7 @@ zr_op_property(struct zr_context *ctx, union zr_param *p,
 {
     struct zr_window *win;
     struct zr_panel *layout;
-    const struct zr_input *i;
+    const struct zr_input *in;
     const struct zr_style *config;
 
     const zr_hash id = p[0].hash;
@@ -11062,7 +11073,7 @@ zr_op_property(struct zr_context *ctx, union zr_param *p,
     config = &ctx->style;
     s = zr_widget(&bounds, ctx);
     if (!s) return 0;
-    i = (s == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : &ctx->input;
+    in = (s == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : &ctx->input;
 
     /* calculate hash from name */
     if (name[0] == '#') {
@@ -11095,9 +11106,9 @@ zr_op_property(struct zr_context *ctx, union zr_param *p,
     prop.text = config->colors[ZR_COLOR_TEXT];
     old_state = (enum zr_property_state)*state;
     new_val = zr_do_property(&ws, &win->buffer, bounds, name, min, val, max, step,
-        inc_per_pixel, buffer, len, state, cursor, &prop, filter, i, &config->font);
+        inc_per_pixel, buffer, len, state, cursor, &prop, filter, in, &config->font);
 
-    if (*state != ZR_PROPERTY_DEFAULT && !win->property.active) {
+    if (in && *state != ZR_PROPERTY_DEFAULT && !win->property.active) {
         /* current property is now hot */
         win->property.active = 1;
         zr_memcopy(win->property.buffer, buffer, *len);
