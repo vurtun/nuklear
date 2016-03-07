@@ -1710,11 +1710,29 @@ void zr_set_user_data(struct zr_context*, zr_handle handle);
 #endif
 
 /*--------------------------------------------------------------
- *                          RECORDING
+ *                          INTERPRETER
  * -------------------------------------------------------------*/
+/* generate UI bytecode from source code */
 void zr_recording_begin(struct zr_context*, struct zr_buffer*);
 void zr_recording_end(struct zr_context*);
 
+/* generate UI bytecode from script */
+enum zr_compiler_status {
+    ZR_COMPILER_OK,
+    ZR_COMPILER_INVALID_VALUE,
+    ZR_COMPILER_INVALID_ARG,
+    ZR_COMPILER_OP_NOT_FOUND,
+    ZR_COMPILER_MISSING_COMMA,
+    ZR_COMPILER_WRONG_ARG_TYPE,
+    ZR_COMPILER_NO_MEMORY,
+    ZR_COMPILER_WRONG_ARG_COUNT,
+    ZR_COMPILER_INVALID_SCRIPT
+};
+typedef void(*zr_compile_log_f)(void *userdata, zr_size line, const char *error, ...);
+enum zr_compiler_status zr_compile(struct zr_buffer *program, const char *script,
+                                    zr_size len, zr_compile_log_f, void *log_usr);
+
+/* run recorded or compiled UI bytecode */
 int zr_exec(struct zr_context*, struct zr_buffer *event_buffer,
             int *event_count, const struct zr_event_mask*,
             struct zr_buffer *program, struct zr_buffer *runtime);
@@ -1864,7 +1882,7 @@ void zr_layout_pop(struct zr_context*);
 /*--------------------------------------------------------------
  *                          WIDGETS
  * -------------------------------------------------------------*/
-/* base widget calls for custom widgets (used by all widgets internally) */
+/* base widget calls for custom widgets */
 enum zr_widget_state zr_widget(struct zr_rect*, const struct zr_context*);
 enum zr_widget_state zr_widget_fitting(struct zr_rect*, struct zr_context*);
 
@@ -1898,7 +1916,7 @@ int zr_option(struct zr_context*, const char*, int active);
 int zr_selectable(struct zr_context*, const char*, zr_flags alignment, int *value);
 int zr_select(struct zr_context*, const char*, zr_flags alignment, int value);
 
-/* buttons (push/repeater) */
+/* buttons */
 int zr_button_text(struct zr_context *ctx, const char *title, enum zr_button_behavior);
 int zr_button_color(struct zr_context*, struct zr_color, enum zr_button_behavior);
 int zr_button_symbol(struct zr_context*, enum zr_symbol_type, enum zr_button_behavior);
@@ -1922,7 +1940,7 @@ struct zr_color zr_color_picker(struct zr_context*, struct zr_color,
 void zr_color_pick(struct zr_context*, struct zr_color*,
                     enum zr_color_picker_format);
 
-/* extended value modifier by dragging, increment/decrement and text input */
+/* extended value (dragging, increment/decrement and text input) */
 void zr_property_float(struct zr_context *layout, const char *name,
                         float min, float *val, float max, float step,
                         float inc_per_pixel);
@@ -1973,6 +1991,23 @@ int zr_combo_item_symbol(struct zr_context*, enum zr_symbol_type,
                         const char*, zr_flags alignment);
 void zr_combo_close(struct zr_context*);
 void zr_combo_end(struct zr_context*);
+
+/* combobox */
+int zr_combo(struct zr_context*, const char **items, int count, int selected,
+            int item_height);
+int zr_combo_string(struct zr_context*, const char *items_seperated_by_zeros,
+                    int selected, int count, int item_height);
+int zr_combo_callback(struct zr_context*,
+                        void(item_getter)(void* data, int id, const char **out_text),
+                        void *userdata, int selected, int count, int item_height);
+
+void zr_combobox(struct zr_context*, const char **items, int count, int *selected,
+                int item_height);
+void zr_combobox_string(struct zr_context*, const char *items_seperated_by_zeros,
+                        int *selected, int count, int item_height);
+void zr_combobox_callback(struct zr_context*,
+                        void(item_getter)(void* data, int id, const char **out_text),
+                        void *userdata, int *selected, int count, int item_height);
 
 /* contextual menu */
 int zr_contextual_begin(struct zr_context*, struct zr_panel*, zr_flags,

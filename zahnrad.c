@@ -223,10 +223,9 @@ enum zr_param_types {
     ZR_TYPE_UINT = 'u',
     ZR_TYPE_FLOAT = 'f',
     ZR_TYPE_HASH = 'h',
-    ZR_TYPE_OFFSET = 's',
     ZR_TYPE_FLAGS = 'g',
-    ZR_TYPE_IMAGE = 'm',
     ZR_TYPE_CHEAT = 'c',
+    ZR_TYPE_IMAGE = 'm',
     ZR_TYPE_COLOR = 'l',
     ZR_TYPE_PTR = 'p'
 };
@@ -254,7 +253,7 @@ enum zr_param_types {
     ZR_OP(layout_space_begin,   ZR_STACK_NOP,               ZR_FMT("oifi"))\
     ZR_OP(layout_space_push,    ZR_STACK_NOP,               ZR_FMT("of"))\
     ZR_OP(layout_space_end,     ZR_STACK_NOP,               ZR_FMT("o"))\
-    ZR_OP(layout_push,          ZR_STACK_INC|ZR_STACK_GEN,  ZR_FMT("ohici"))\
+    ZR_OP(layout_push,          ZR_STACK_INC|ZR_STACK_GEN|ZR_STACK_TXT,  ZR_FMT("ohici"))\
     ZR_OP(layout_pop,           ZR_STACK_DEC|ZR_STACK_TXT,  ZR_FMT("o"))\
     ZR_OP(text,                 ZR_STACK_NOP|ZR_STACK_TXT,  ZR_FMT("ocugl"))\
     ZR_OP(text_wrap,            ZR_STACK_NOP|ZR_STACK_TXT,  ZR_FMT("ocul"))\
@@ -265,9 +264,9 @@ enum zr_param_types {
     ZR_OP(button_image,         ZR_STACK_GEN,               ZR_FMT("ohmffffffi"))\
     ZR_OP(button_text_symbol,   ZR_STACK_GEN|ZR_STACK_TXT,  ZR_FMT("ohici"))\
     ZR_OP(button_text_image,    ZR_STACK_GEN|ZR_STACK_TXT,  ZR_FMT("ohmffffffcgi"))\
-    ZR_OP(check,                ZR_STACK_GEN,               ZR_FMT("ohci"))\
-    ZR_OP(option,               ZR_STACK_GEN,               ZR_FMT("ohci"))\
-    ZR_OP(select,               ZR_STACK_GEN,               ZR_FMT("ohcfi"))\
+    ZR_OP(check,                ZR_STACK_GEN|ZR_STACK_TXT,  ZR_FMT("ohci"))\
+    ZR_OP(option,               ZR_STACK_GEN|ZR_STACK_TXT,  ZR_FMT("ohci"))\
+    ZR_OP(select,               ZR_STACK_GEN|ZR_STACK_TXT,  ZR_FMT("ohcgi"))\
     ZR_OP(slider,               ZR_STACK_GEN,               ZR_FMT("ohffff"))\
     ZR_OP(progress,             ZR_STACK_GEN,               ZR_FMT("ohiii"))\
     ZR_OP(property,             ZR_STACK_GEN|ZR_STACK_TXT,  ZR_FMT("ohcfffffi"))\
@@ -323,6 +322,7 @@ struct zr_event_queue {
 
 #define zr_ptr_add(t, p, i) ((t*)((void*)((zr_byte*)(p) + (i))))
 #define zr_ptr_add_const(t, p, i) ((const t*)((const void*)((const zr_byte*)(p) + (i))))
+#define zr_zero_struct(s) zr_zero(&s, sizeof(s))
 
 /* ==============================================================
  *                          ALIGNMENT
@@ -673,8 +673,6 @@ zr_memset(void *ptr, int c0, zr_size size)
     #undef wmask
 }
 
-#define zr_zero_struct(s) zr_zero(&s, sizeof(s))
-
 static void
 zr_zero(void *ptr, zr_size size)
 {
@@ -689,6 +687,16 @@ zr_strsiz(const char *str)
     ZR_ASSERT(str);
     while (str && *str++ != '\0') siz++;
     return siz;
+}
+
+static int
+zr_stricmpn(const char *a, const char *b, int len)
+{
+    int i = 0;
+    for (i = 0; i < len && a[i] && b[i]; ++i)
+        if (a[i] != b[i]) return 1;
+    if (i != len) return 1;
+    return 0;
 }
 
 static int
@@ -12426,6 +12434,148 @@ void zr_combo_end(struct zr_context *ctx)
 
 void zr_combo_close(struct zr_context *ctx)
 {zr_contextual_close(ctx);}
+
+int
+zr_combo(struct zr_context *ctx, const char **items, int count,
+    int selected, int item_height)
+{
+    int i = 0;
+    int max_height;
+    struct zr_panel combo;
+    struct zr_vec2 item_padding;
+    struct zr_vec2 window_padding;
+
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(items);
+    if (!ctx || !items ||!count)
+        return selected;
+
+    item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
+    window_padding = zr_get_property(ctx, ZR_PROPERTY_PADDING);
+    max_height = (count+1) * item_height + (int)item_padding.y * 3 + (int)window_padding.y * 2;
+    if (zr_combo_begin_text(ctx, &combo, items[selected], max_height)) {
+        zr_layout_row_dynamic(ctx, (float)item_height, 1);
+        for (i = 0; i < count; ++i) {
+            if (zr_combo_item(ctx, items[i], ZR_TEXT_LEFT))
+                selected = i;
+        }
+        zr_combo_end(ctx);
+    }
+    return selected;
+}
+
+int
+zr_combo_string(struct zr_context *ctx, const char *items_seperated_by_zeros,
+    int selected, int count, int item_height)
+{
+    int i;
+    int max_height;
+    struct zr_panel combo;
+    struct zr_vec2 item_padding;
+    struct zr_vec2 window_padding;
+    const char *current_item;
+    zr_size length;
+
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(items_seperated_by_zeros);
+    if (!ctx || !items_seperated_by_zeros)
+        return selected;
+
+    /* calculate popup window */
+    item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
+    window_padding = zr_get_property(ctx, ZR_PROPERTY_PADDING);
+    max_height = (count+1) * item_height + (int)item_padding.y * 3 + (int)window_padding.y * 2;
+
+    /* find selected item */
+    current_item = items_seperated_by_zeros;
+    length = zr_strsiz(current_item);
+    for (i = 0; i < selected; ++i) {
+        current_item = current_item + length + 1;
+        length = zr_strsiz(current_item);
+    }
+
+    current_item = items_seperated_by_zeros;
+    if (zr_combo_begin_text(ctx, &combo, current_item, max_height)) {
+        zr_layout_row_dynamic(ctx, (float)item_height, 1);
+        for (i = 0; i < count; ++i) {
+            if (zr_combo_item(ctx, current_item, ZR_TEXT_LEFT))
+                selected = i;
+
+            length = zr_strsiz(current_item);
+            current_item = current_item + length + 1;
+        }
+        zr_combo_end(ctx);
+    }
+    return selected;
+}
+
+int
+zr_combo_callback(struct zr_context *ctx, void(item_getter)(void*, int, const char**),
+    void *userdata, int selected, int count, int item_height)
+{
+    int i;
+    int max_height;
+    struct zr_panel combo;
+    struct zr_vec2 item_padding;
+    struct zr_vec2 window_padding;
+    const char *item;
+
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(item_getter);
+    if (!ctx || !item_getter)
+        return selected;
+
+    item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
+    window_padding = zr_get_property(ctx, ZR_PROPERTY_PADDING);
+    max_height = (count+1) * item_height + (int)item_padding.y * 3 + (int)window_padding.y * 2;
+
+    item_getter(userdata, selected, &item);
+    if (zr_combo_begin_text(ctx, &combo, item, max_height)) {
+        zr_layout_row_dynamic(ctx, (float)item_height, 1);
+        for (i = 0; i < count; ++i) {
+            item_getter(userdata, i, &item);
+            if (zr_combo_item(ctx, item, ZR_TEXT_LEFT))
+                selected = i;
+        }
+        zr_combo_end(ctx);
+    }
+    return selected;
+}
+
+void
+zr_combobox(struct zr_context *ctx, const char **items, int count, int *selected,
+            int item_height)
+{
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(items);
+    ZR_ASSERT(selected);
+    if (!ctx || !items || !selected) return;
+    *selected = zr_combo(ctx, items, count, *selected, item_height);
+}
+
+void
+zr_combobox_string(struct zr_context *ctx, const char *items_seperated_by_zeros,
+    int *selected, int count, int item_height)
+{
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(items_seperated_by_zeros);
+    ZR_ASSERT(selected);
+    if (!ctx || !items_seperated_by_zeros || !selected) return;
+    *selected = zr_combo_string(ctx, items_seperated_by_zeros, *selected, count, item_height);
+}
+
+void
+zr_combobox_callback(struct zr_context *ctx,
+    void(item_getter)(void* data, int id, const char **out_text),
+    void *userdata, int *selected, int count, int item_height)
+{
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(item_getter);
+    ZR_ASSERT(selected);
+    if (!ctx || !item_getter || !selected) return;
+    *selected = zr_combo_callback(ctx, item_getter, userdata,  *selected, count, item_height);
+}
+
 /*
  * -------------------------------------------------------------
  *
@@ -12604,16 +12754,17 @@ zr_menu_end(struct zr_context *ctx)
  * =============================================================== */
 static int zr_op_handle(struct zr_context*, union zr_param*, struct zr_event_queue*);
 static const struct zr_instruction {
+    const char *keyword;
     const char *name;
     zr_flags flags;
     int(*func)(struct zr_context*, union zr_param *in, struct zr_event_queue*);
     const char *fmt;
     unsigned short argc;
 } zr_op_table[ZR_OP_MAX] = {
-#define ZR_OPCODE(a, b, c) {"zr_op_"#a, b, zr_op_##a, c},
+#define ZR_OPCODE(a, b, c) {#a, "zr_op_"#a, b, zr_op_##a, c},
     ZR_OPCODES(ZR_OPCODE)
 #undef ZR_OPCODE
-    {0,0,0,"o",1}
+    {0,0,0,0,"o",1}
 };
 
 void
@@ -13833,7 +13984,7 @@ zr_color_pick(struct zr_context *ctx, struct zr_color *color,
 
 /* ==============================================================
  *
- *                          RETAIN
+ *                          RECORDING
  *
  * =============================================================== */
 void
@@ -13912,6 +14063,622 @@ zr_store_op(struct zr_buffer *buffer, union zr_param *p, int count)
     }
 }
 
+/* ==============================================================
+ *
+ *                          COMPILER
+ *
+ * =============================================================== */
+#define ZR_LEXER_DEFAULT_PUNCTION_MAP(PUNCTUATION)\
+    PUNCTUATION(">>=",  ZR_PUNCT_RSHIFT_ASSIGN)\
+    PUNCTUATION("<<=",  ZR_PUNCT_LSHIFT_ASSIGN)\
+    PUNCTUATION("...",  ZR_PUNCT_PARAMS)\
+    PUNCTUATION("&&",   ZR_PUNCT_LOGIC_AND)\
+    PUNCTUATION("||",   ZR_PUNCT_LOGIC_OR)\
+    PUNCTUATION(">=",   ZR_PUNCT_LOGIC_GEQ)\
+    PUNCTUATION("<=",   ZR_PUNCT_LOGIC_LEQ)\
+    PUNCTUATION("==",   ZR_PUNCT_LOGIC_EQ)\
+    PUNCTUATION("!=",   ZR_PUNCT_LOGIC_UNEQ)\
+    PUNCTUATION("*=",   ZR_PUNCT_MUL_ASSIGN)\
+    PUNCTUATION("/=",   ZR_PUNCT_DIV_ASSIGN)\
+    PUNCTUATION("%=",   ZR_PUNCT_MOD_ASSIGN)\
+    PUNCTUATION("+=",   ZR_PUNCT_ADD_ASSIGN)\
+    PUNCTUATION("-=",   ZR_PUNCT_SUB_ASSIGN)\
+    PUNCTUATION("++",   ZR_PUNCT_INC)\
+    PUNCTUATION("--",   ZR_PUNCT_DEC)\
+    PUNCTUATION("&=",   ZR_PUNCT_BIN_AND_ASSIGN)\
+    PUNCTUATION("|=",   ZR_PUNCT_BIN_OR_ASSIGN)\
+    PUNCTUATION("^=",   ZR_PUNCT_BIN_XOR_ASSIGN)\
+    PUNCTUATION(">>",   ZR_PUNCT_RSHIFT)\
+    PUNCTUATION("<<",   ZR_PUNCT_LSHIFT)\
+    PUNCTUATION("->",   ZR_PUNCT_POINTER)\
+    PUNCTUATION("::",   ZR_PUNCT_CPP1)\
+    PUNCTUATION(".*",   ZR_PUNCT_CPP2)\
+    PUNCTUATION("*",    ZR_PUNCT_MUL)\
+    PUNCTUATION("/",    ZR_PUNCT_DIV)\
+    PUNCTUATION("%",    ZR_PUNCT_MOD)\
+    PUNCTUATION("+",    ZR_PUNCT_ADD)\
+    PUNCTUATION("-",    ZR_PUNCT_SUB)\
+    PUNCTUATION("=",    ZR_PUNCT_ASSIGN)\
+    PUNCTUATION("&",    ZR_PUNCT_BIN_AND)\
+    PUNCTUATION("|",    ZR_PUNCT_BIN_OR)\
+    PUNCTUATION("^",    ZR_PUNCT_BIN_XOR)\
+    PUNCTUATION("~",    ZR_PUNCT_BIN_NOT)\
+    PUNCTUATION("!",    ZR_PUNCT_LOGIC_NOT)\
+    PUNCTUATION(">",    ZR_PUNCT_LOGIC_GREATER)\
+    PUNCTUATION("<",    ZR_PUNCT_LOGIC_LESS)\
+    PUNCTUATION(".",    ZR_PUNCT_REF)\
+    PUNCTUATION(",",    ZR_PUNCT_COMMA)\
+    PUNCTUATION(";",    ZR_PUNCT_SEMICOLON)\
+    PUNCTUATION(":",    ZR_PUNCT_COLON)\
+    PUNCTUATION("?",    ZR_PUNCT_QUESTIONMARK)\
+    PUNCTUATION("(",    ZR_PUNCT_PARENTHESE_OPEN)\
+    PUNCTUATION(")",    ZR_PUNCT_PARENTHESE_CLOSE)\
+    PUNCTUATION("{",    ZR_PUNCT_BRACE_OPEN)\
+    PUNCTUATION("}",    ZR_PUNCT_BRACE_CLOSE)\
+    PUNCTUATION("[",    ZR_PUNCT_BRACKET_OPEN)\
+    PUNCTUATION("]",    ZR_PUNCT_BRACKET_CLOSE)\
+    PUNCTUATION("\\",   ZR_PUNCT_BACKSLASH)\
+    PUNCTUATION("#",    ZR_PUNCT_PRECOMPILER)\
+    PUNCTUATION("$",    ZR_PUNCT_DOLLAR)
+
+enum zr_lexer_default_punctuation_ids {
+#define PUNCTUATION(chars, id) id,
+    ZR_LEXER_DEFAULT_PUNCTION_MAP(PUNCTUATION)
+#undef PUNCTUATION
+    ZR_PUNCT_MAX
+};
+
+static const struct zr_punctuation {
+    const char *string; int id;
+} zr_lexer_default_punctuations[] = {
+#define PUNCTUATION(chars, id) {chars, id},
+    ZR_LEXER_DEFAULT_PUNCTION_MAP(PUNCTUATION)
+#undef PUNCTUATION
+    {0, 0}
+};
+
+enum zr_token_type {
+    ZR_TOKEN_STRING,
+    ZR_TOKEN_LITERAL,
+    ZR_TOKEN_NUMBER,
+    ZR_TOKEN_NAME,
+    ZR_TOKEN_PUNCT
+};
+
+struct zr_token {
+    enum zr_token_type type;
+    zr_size line;
+    int line_crossed;
+    struct {unsigned long i; double f;} value;
+    const char *str;
+    zr_size len;
+    int punct;
+};
+
+struct zr_lexer {
+    const char *last;
+    const char *current;
+    const char *end;
+    zr_size length;
+    zr_size line;
+    zr_size last_line;
+    zr_compile_log_f log;
+    void *userdata;
+    int error;
+};
+
+static int
+zr_skip_white_space(struct zr_lexer *lexer, int current_line)
+{
+    while (1) {
+        /* skip white spaces */
+        while (*lexer->current <= ' ' && lexer->current < lexer->end) {
+            if (!*lexer->current || lexer->current == lexer->end)
+                return 0;
+            if (*lexer->current == '\n') {
+                lexer->line++;
+                if (current_line) {
+                    lexer->current++;
+                    return 1;
+                }
+            }
+            lexer->current++;
+        }
+
+        /* skip comments */
+        if (*lexer->current == '/' && lexer->current < lexer->end) {
+            if (lexer->current+1 >= lexer->end)
+                return 0;
+
+            if (*(lexer->current + 1) == '/') {
+                /* C++ style comments */
+                lexer->current++;
+                do {
+                    lexer->current++;
+                    if ((lexer->current >= lexer->end) || !*lexer->current)
+                        return 0;
+                } while (*lexer->current != '\n');
+                lexer->line++;
+                lexer->current++;
+                if (current_line)
+                    return 1;
+                if (lexer->current >= lexer->end || !*lexer->current)
+                    return 0;
+                continue;
+            } else if ((*lexer->current + 1) == '*') {
+                /* C style comments */
+                lexer->current++;
+                while (1) {
+                    lexer->current++;
+                    if (lexer->current >= lexer->end || !*lexer->current)
+                        return 0;
+                    if (*lexer->current == '\n') {
+                        lexer->line++;
+                    } else if (*lexer->current == '/' && lexer->current+1 < lexer->end) {
+                        if (*(lexer->current-1) == '*') break;
+                        if (*(lexer->current+1) == '*' && lexer->log) {
+                            lexer->log(lexer->userdata, lexer->line, "nested comment");
+                        }
+                    }
+                }
+                lexer->current++;
+                if (lexer->current >= lexer->end || !*lexer->current)
+                    return 0;
+                lexer->current++;
+                if (lexer->current >= lexer->end || !*lexer->current)
+                    return 0;
+                continue;
+            }
+        }
+        break;
+    }
+    return 1;
+}
+
+static int
+zr_read_string(struct zr_lexer *lexer, struct zr_token *token, int quote)
+{
+    zr_size tmpline;
+    const char *tmp;
+
+    if (quote == '\"')
+        token->type = ZR_TOKEN_STRING;
+    else token->type = ZR_TOKEN_LITERAL;
+    lexer->current++;
+    if (lexer->current >= lexer->end)
+        return 0;
+
+    token->len = 0;
+    token->str = lexer->current;
+    while (lexer->current < lexer->end) {
+        if (*lexer->current == quote) {
+            lexer->current++;
+            if (lexer->current >= lexer->end)
+                return 0;
+
+            tmp = lexer->current;
+            tmpline = lexer->line;
+            if (!zr_skip_white_space(lexer, 0)) {
+                lexer->current = tmp;
+                lexer->line = tmpline;
+                break;
+            }
+            if (*lexer->current == '\0') {
+                if (lexer->log)
+                    lexer->log(lexer->userdata, lexer->line,
+                        "expecting string after '\' terminated line");
+                lexer->error = 1;
+                return 0;
+            }
+            break;
+        } else {
+            if (*lexer->current == '\0') {
+                if (lexer->log)
+                    lexer->log(lexer->userdata, lexer->line, "missing trailing quote");
+                lexer->error = 1;
+                return 0;
+            }
+            if (*lexer->current == '\n') {
+                if (lexer->log)
+                    lexer->log(lexer->userdata, lexer->line, "newline inside string");
+                lexer->error = 1;
+                return 0;
+            }
+            lexer->current++;
+        }
+    }
+    if (token->str)
+        token->len = (zr_size)(lexer->current - token->str) - 1;
+    return 1;
+}
+
+static int
+zr_read_name(struct zr_lexer *lexer, struct zr_token *token)
+{
+    char c;
+    token->type = ZR_TOKEN_NAME;
+    token->str = lexer->current;
+    token->len = 0;
+    do {
+        token->len++;
+        lexer->current++;
+        if (lexer->current >= lexer->end)
+            break;
+        c = *lexer->current;
+    } while ((c >= 'a' && c <= 'z') ||
+        (c >= 'A' && c <= 'Z') ||
+        (c >= '0' && c <= '9') ||
+        c == '_');
+    return 1;
+}
+
+static int
+zr_read_number(struct zr_lexer *lexer, struct zr_token *token)
+{
+    int dot;
+    char c, c2;
+
+    token->type = ZR_TOKEN_NUMBER;
+    token->value.f = 0;
+    token->value.i = 0;
+    token->str = 0;
+    token->len = 0;
+
+    c = *lexer->current;
+    if ((lexer->current + 1) < lexer->end)
+        c2 = *(lexer->current + 1);
+    else c2 = 0;
+
+    /* decimal or floating point number */
+    dot = 0;
+    token->str = lexer->current;
+    while (1) {
+        if (c >= '0' && c <= '9') {
+        } else if (c == '.') dot++;
+        else break;
+        token->len++;
+        if (lexer->current+1 >= lexer->end) break;
+        c = *(++lexer->current);
+    }
+    if (c == 'e' && dot == 0)
+        dot++; /* scientific notation */
+    if (dot) {
+        if (c == 'e') {
+            if (lexer->current+1 >= lexer->end)
+                return 0;
+
+            token->len++;
+            c = *(++lexer->current);
+            if (c == '-' || c == '+') {
+                token->len++;
+                if (lexer->current+1 >= lexer->end)
+                    return 0;
+                c = *(++lexer->current);
+            }
+            while (c >= '0' && c <= '9') {
+                if (lexer->current+1 >= lexer->end) break;
+                c = *(++lexer->current);
+                token->len++;
+            }
+        }
+    }
+    return 1;
+}
+
+static int
+zr_read_punctuation(struct zr_lexer *lexer, struct zr_token *token)
+{
+    int l, i;
+    const char *p;
+    const struct zr_punctuation *punc;
+
+    token->len = 0;
+    token->str = lexer->current;
+    for (i = 0; zr_lexer_default_punctuations[i].string; ++i) {
+        punc = &zr_lexer_default_punctuations[i];
+        p = punc->string;
+        for (l = 0; p[l] && lexer->current < lexer->end && lexer->current[l]; ++l) {
+            if (lexer->current[l] != p[l])
+                break;
+        }
+        if (!p[l]) {
+            token->len += (zr_size)l;
+            lexer->current += l;
+            token->type = ZR_TOKEN_PUNCT;
+            token->punct = punc->id;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int
+zr_parse(struct zr_lexer *lexer, struct zr_token *token)
+{
+    int c;
+    if (!lexer->current) return 0;
+    if (lexer->current >= lexer->end) return 0;
+    if (lexer->error == 1) return 0;
+
+    zr_zero_struct(*token);
+    lexer->last = lexer->current;
+    lexer->last_line = lexer->line;
+    lexer->error = 0;
+    if (!zr_skip_white_space(lexer, 0))
+        return 0;
+
+    token->line = lexer->line;
+    token->line_crossed = (lexer->line - lexer->last_line) ? 1 : 0;
+
+    c = *lexer->current;
+    if ((c >= '0' && c <= '9') ||
+        (c == '.' && (*(lexer->current + 1)) >= '0' &&
+        (c == '.' && (*(lexer->current + 1)) <= '9'))) {
+        if (!zr_read_number(lexer, token)) return 0;
+    } else if (c == '\"' || c == '\'') {
+        if (!zr_read_string(lexer, token, c)) return 0;
+    } else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') {
+        if (!zr_read_name(lexer, token)) return 0;
+    } else if (!zr_read_punctuation(lexer, token)) {
+        if (lexer->log)
+            lexer->log(lexer->userdata, lexer->line, "unkown punctuation");
+        lexer->error = 1;
+        return 0;
+    }
+    return 1;
+}
+
+static int
+zr_check_type(struct zr_lexer *lexer, enum zr_token_type type,
+    int subtype, struct zr_token *token)
+{
+    struct zr_token tok;
+    if (!zr_parse(lexer, &tok))
+        return 0;
+    if (tok.type == type && (tok.punct == subtype)) {
+        *token = tok;
+        return 1;
+    }
+    /* unread token */
+    lexer->current = lexer->last;
+    lexer->line = lexer->last_line;
+    return 0;
+}
+
+static double
+zr_token_parse_number(const char *p, zr_size length)
+{
+    int i, div, pow;
+    double m;
+    zr_size len = 0;
+    double f = 0;
+    while (len < length && p[len] != '.' && p[len] != 'e') {
+        f = f * 10.0 + (double)(p[len] - '0');
+        len++;
+    }
+
+    if (len < length && p[len] == '.') {
+        len++;
+        for (m = 0.1; len < length; len++) {
+            f = f + (double)(p[len] - '0') * m;
+            m *= 0.1;
+        }
+    }
+    if (len < length && p[len] == 'e' ) {
+        len++;
+        if (p[len] == '-') {
+            div = 1;
+            len++;
+        } else if (p[len] == '+') {
+            div = 0;
+            len++;
+        } else div = 0;
+        pow = 0;
+        for (pow = 0; len < length; len++)
+            pow = pow * 10 + (int)(p[len] - '0');
+        for (m = 1.0, i = 0; i < pow; ++i)
+            m *= 100.0;
+        if (div) f /= m;
+        else f *= m;
+    }
+    return f;
+}
+
+enum zr_compiler_status
+zr_compile(struct zr_buffer *program, const char *script,
+    zr_size len, zr_compile_log_f log, void *userdata)
+{
+    unsigned short opcode;
+    zr_size i = 0;
+    struct zr_lexer lexer;
+
+    ZR_ASSERT(program);
+    ZR_ASSERT(script);
+    if (!program || !script)
+        return ZR_COMPILER_INVALID_VALUE;
+
+    /* setup lexer */
+    zr_zero_struct(lexer);
+    lexer.error = 0;
+    lexer.current = script;
+    lexer.end = script + len;
+    lexer.length = len;
+    lexer.line = 0;
+    lexer.log = log;
+    lexer.userdata = userdata;
+
+    while (!lexer.error && *lexer.current && lexer.current < lexer.end) {
+        struct zr_token tok;
+        struct zr_token name;
+        char buffer[1024];
+
+        /* parse function name */
+        if (!zr_parse(&lexer, &name) || name.type != ZR_TOKEN_NAME) {
+            if (!lexer.current || !(lexer.current < lexer.end))
+                break;
+            ZR_ASSERT(!ZR_COMPILER_INVALID_SCRIPT);
+            return ZR_COMPILER_INVALID_SCRIPT;
+        }
+        if (!zr_check_type(&lexer, ZR_TOKEN_PUNCT, ZR_PUNCT_PARENTHESE_OPEN, &tok)) {
+            ZR_ASSERT(!ZR_COMPILER_INVALID_SCRIPT);
+            return ZR_COMPILER_INVALID_SCRIPT;
+        }
+
+        /* try to find instruction */
+        for (opcode = 0; opcode < ZR_OP_MAX; ++opcode) {
+            if (!zr_stricmpn(zr_op_table[opcode].keyword, name.str, (int)name.len))
+                break;
+        }
+        if (opcode == ZR_OP_MAX) {
+            ZR_ASSERT(!ZR_COMPILER_OP_NOT_FOUND);
+            return ZR_COMPILER_OP_NOT_FOUND;
+        }
+
+        /* parse widget arguments */
+        {union zr_param p[32];
+        const struct zr_instruction *op = &zr_op_table[opcode];
+        ZR_ASSERT(op->argc < ZR_LEN(p));
+        if (op->argc >= ZR_LEN(p)) {
+            ZR_ASSERT(!ZR_COMPILER_WRONG_ARG_COUNT);
+            return ZR_COMPILER_WRONG_ARG_COUNT;
+        }
+
+        for (i = 0; i < op->argc; ++i)
+        {
+            double value;
+            int has_comma = 1;
+            if (op->fmt[i] != ZR_TYPE_PTR && op->fmt[i] != ZR_TYPE_IMAGE && op->fmt[i] != ZR_TYPE_OP) {
+                if (!zr_parse(&lexer, &tok)) {
+                    if (log) log(userdata, lexer.line, "missing argument in %.*s at index %d", name.len, name.str, i+1);
+                    ZR_ASSERT(!ZR_COMPILER_INVALID_SCRIPT);
+                    return ZR_COMPILER_INVALID_SCRIPT;
+                }
+            }
+
+            switch (op->fmt[i]) {
+            case ZR_TYPE_OP: {
+                p[i].h.op = opcode;
+                p[i].h.next = zr_op_table[opcode].argc;
+                has_comma = 0;
+                } break;
+
+            case ZR_TYPE_INT: {
+                if (tok.type != ZR_TOKEN_NUMBER) {
+                    if (log) log(userdata, lexer.line, "argument in %.*s at index %d is not a number", name.len, name.str, i+1);
+                    ZR_ASSERT(!ZR_COMPILER_WRONG_ARG_TYPE);
+                    return ZR_COMPILER_WRONG_ARG_TYPE;
+                }
+                value = zr_token_parse_number(tok.str, tok.len);
+                p[i].i = (int)value;
+                } break;
+
+            case ZR_TYPE_UINT: {
+                if (tok.type != ZR_TOKEN_NUMBER) {
+                    if (log) log(userdata, lexer.line, "argument in %.*s at index %d is not a number", name.len, name.str, i+1);
+                    ZR_ASSERT(!ZR_COMPILER_WRONG_ARG_TYPE);
+                    return ZR_COMPILER_WRONG_ARG_TYPE;
+                }
+                value = zr_token_parse_number(tok.str, tok.len);
+                if (value < 0) value = 0;
+                p[i].ui = (unsigned int)value;
+                } break;
+
+            case ZR_TYPE_FLOAT: {
+                if (tok.type != ZR_TOKEN_NUMBER) {
+                    if (log) log(userdata, lexer.line, "argument in %.*s at index %d is not a number", name.len, name.str, i+1);
+                    ZR_ASSERT(!ZR_COMPILER_WRONG_ARG_TYPE);
+                    return ZR_COMPILER_WRONG_ARG_TYPE;
+                }
+                value = zr_token_parse_number(tok.str, tok.len);
+                p[i].f = (float)value;
+                } break;
+
+            case ZR_TYPE_HASH: {
+                if (tok.type == ZR_TOKEN_NUMBER) {
+                    value = zr_token_parse_number(tok.str, tok.len);
+                    if (value < 0) value = 0;
+                    p[i].hash = (zr_hash)value;
+                } else if (tok.type == ZR_TOKEN_STRING || tok.type == ZR_TOKEN_LITERAL) {
+                    p[i].hash = zr_murmur_hash(tok.str, (int)tok.len, 0);
+                } else {
+                    if (log) log(userdata, lexer.line, "argument in %.*s at index %d is not a number or string", name.len, name.str, i+1);
+                    ZR_ASSERT(!ZR_COMPILER_WRONG_ARG_TYPE);
+                    return ZR_COMPILER_WRONG_ARG_TYPE;
+                }
+                } break;
+
+            case ZR_TYPE_FLAGS: {
+                if (tok.type != ZR_TOKEN_NUMBER) {
+                    if (log) log(userdata, lexer.line, "argument in %.*s at index %d is not a number", name.len, name.str, i+1);
+                    ZR_ASSERT(!ZR_COMPILER_WRONG_ARG_TYPE);
+                    return ZR_COMPILER_WRONG_ARG_TYPE;
+                }
+                value = zr_token_parse_number(tok.str, tok.len);
+                if (value < 0) value = 0;
+                p[i].flags = (zr_flags)value;
+                } break;
+
+            case ZR_TYPE_CHEAT: {
+                zr_size length = ZR_MIN(tok.len, ZR_LEN(buffer)-1);
+                if (tok.type != ZR_TOKEN_STRING && tok.type != ZR_TOKEN_LITERAL) {
+                    if (log) log(userdata, lexer.line, "argument in %.*s at index %d is not a string", name.len, name.str, i+1);
+                    ZR_ASSERT(!ZR_COMPILER_WRONG_ARG_TYPE);
+                    return ZR_COMPILER_WRONG_ARG_TYPE;
+                }
+
+                zr_memcopy(buffer, tok.str, length);
+                buffer[length] = '\0';
+                p[i].cheat = buffer;
+                } break;
+
+            case ZR_TYPE_COLOR: {
+                char hex_color[16];
+                zr_size length = ZR_MIN(tok.len, ZR_LEN(hex_color)-1);
+                if (tok.type != ZR_TOKEN_STRING && tok.type != ZR_TOKEN_LITERAL) {
+                    if (log) log(userdata, lexer.line, "argument in %.*s at index %d is not a hex color string", name.len, name.str, i+1);
+                    ZR_ASSERT(!ZR_COMPILER_WRONG_ARG_TYPE);
+                    return ZR_COMPILER_WRONG_ARG_TYPE;
+                }
+
+                zr_memcopy(hex_color, tok.str, length);
+                hex_color[length] = '\0';
+                p[i].color = zr_rgba_hex(hex_color);
+                } break;
+            case ZR_TYPE_IMAGE: p[i].img.ptr = 0; has_comma = 0; break;
+            case ZR_TYPE_PTR: p[i].ptr = 0; has_comma = 0; break;
+            default:
+                ZR_ASSERT(!ZR_COMPILER_INVALID_ARG);
+                return ZR_COMPILER_INVALID_ARG;
+            }
+            if (has_comma && (int)i < op->argc-1 && !zr_check_type(&lexer, ZR_TOKEN_PUNCT, ZR_PUNCT_COMMA, &tok)) {
+                if (log) log(userdata, lexer.line, "missing argument or ',' in %.*s after argument %d", name.len, name.str, i+1);
+                ZR_ASSERT(!ZR_COMPILER_MISSING_COMMA);
+                return ZR_COMPILER_MISSING_COMMA;
+            }
+
+        }
+        /* parse ')' at end of line */
+        if (!zr_check_type(&lexer, ZR_TOKEN_PUNCT, ZR_PUNCT_PARENTHESE_CLOSE, &tok)) {
+            if (log) log(userdata, lexer.line, "expected ')' at the end of widget: %.*s", name.len, name.str);
+            ZR_ASSERT(!ZR_COMPILER_INVALID_ARG);
+            return ZR_COMPILER_INVALID_ARG;
+        }
+        zr_check_type(&lexer, ZR_TOKEN_PUNCT, ZR_PUNCT_SEMICOLON, &tok);
+        zr_store_op(program, p, op->argc);}
+    }
+
+    {union zr_param p;
+    p.h.op = ZR_OP_list_end;
+    p.h.next = zr_op_table[p.h.op].argc;
+    zr_store_op(program, &p, 1);}
+    return ZR_COMPILER_OK;
+}
+
+/* ==============================================================
+ *
+ *                          INTERPRETER
+ *
+ * =============================================================== */
 static int
 zr_op_handle(struct zr_context *ctx, union zr_param *p,
     struct zr_event_queue *queue)

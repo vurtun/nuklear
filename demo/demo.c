@@ -1,6 +1,9 @@
 #include <limits.h>
 #include <string.h>
+#include <stdlib.h>
 #include <time.h>
+#include <assert.h>
+#include <stdarg.h>
 
 #ifndef MIN
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
@@ -32,13 +35,26 @@ struct icons {
     struct zr_image prev;
     struct zr_image next;
     struct zr_image tools;
-    struct zr_image directory;
+    struct zr_image dir;
     struct zr_image copy;
     struct zr_image convert;
     struct zr_image del;
     struct zr_image edit;
     struct zr_image images[9];
     struct zr_image menu[6];
+
+    struct zr_image desktop;
+    struct zr_image home;
+    struct zr_image computer;
+    struct zr_image directory;
+
+    struct zr_image default_file;
+    struct zr_image text_file;
+    struct zr_image music_file;
+    struct zr_image font_file;
+    struct zr_image img_file;
+    struct zr_image movie_file;
+
 };
 
 enum theme {THEME_BLACK, THEME_WHITE, THEME_RED, THEME_BLUE, THEME_DARK};
@@ -49,6 +65,7 @@ struct demo {
     enum theme theme;
     struct zr_memory_status status;
 
+    int show_filex;
     int show_simple;
     int show_replay;
     int show_demo;
@@ -186,8 +203,8 @@ set_style(struct zr_context *ctx, enum theme theme)
         ctx->style.colors[ZR_COLOR_BUTTON_HOVER] = zr_rgba(142, 187, 229, 255);
         ctx->style.colors[ZR_COLOR_BUTTON_ACTIVE] = zr_rgba(147, 192, 234, 255);
         ctx->style.colors[ZR_COLOR_TOGGLE] = zr_rgba(177, 210, 210, 255);
-        ctx->style.colors[ZR_COLOR_TOGGLE_HOVER] = zr_rgba(245, 245, 245, 255);
-        ctx->style.colors[ZR_COLOR_TOGGLE_CURSOR] = zr_rgba(142, 187, 229, 255);
+        ctx->style.colors[ZR_COLOR_TOGGLE_HOVER] = zr_rgba(182, 215, 215, 255);
+        ctx->style.colors[ZR_COLOR_TOGGLE_CURSOR] = zr_rgba(137, 182, 224, 255);
         ctx->style.colors[ZR_COLOR_SELECTABLE] = zr_rgba(147, 192, 234, 255);
         ctx->style.colors[ZR_COLOR_SELECTABLE_HOVER] = zr_rgba(150, 150, 150, 255);
         ctx->style.colors[ZR_COLOR_SELECTABLE_TEXT] = zr_rgba(70, 70, 70, 255);
@@ -229,8 +246,8 @@ set_style(struct zr_context *ctx, enum theme theme)
         ctx->style.colors[ZR_COLOR_HEADER] = zr_rgba(51, 51, 56, 220);
         ctx->style.colors[ZR_COLOR_BORDER] = zr_rgba(46, 46, 46, 255);
         ctx->style.colors[ZR_COLOR_BUTTON] = zr_rgba(48, 83, 111, 255);
-        ctx->style.colors[ZR_COLOR_BUTTON_HOVER] = zr_rgba(53, 88, 116, 255);
-        ctx->style.colors[ZR_COLOR_BUTTON_ACTIVE] = zr_rgba(58, 93, 121, 255);
+        ctx->style.colors[ZR_COLOR_BUTTON_HOVER] = zr_rgba(58, 93, 121, 255);
+        ctx->style.colors[ZR_COLOR_BUTTON_ACTIVE] = zr_rgba(63, 98, 126, 255);
         ctx->style.colors[ZR_COLOR_TOGGLE] = zr_rgba(50, 58, 61, 255);
         ctx->style.colors[ZR_COLOR_TOGGLE_HOVER] = zr_rgba(55, 63, 66, 255);
         ctx->style.colors[ZR_COLOR_TOGGLE_CURSOR] = zr_rgba(48, 83, 111, 255);
@@ -286,6 +303,7 @@ control_window(struct zr_context *ctx, struct demo *gui)
             gui->show_node = !zr_window_is_closed(ctx, "Node Editor");
             gui->show_demo = !zr_window_is_closed(ctx, "Demo");
 #ifndef DEMO_DO_NOT_DRAW_IMAGES
+            gui->show_filex = !zr_window_is_closed(ctx, "File Browser");
             gui->show_grid = !zr_window_is_closed(ctx, "Grid Demo");
             gui->show_basic = !zr_window_is_closed(ctx, "Basic Demo");
             gui->show_button = !zr_window_is_closed(ctx, "Button Demo");
@@ -306,6 +324,8 @@ control_window(struct zr_context *ctx, struct demo *gui)
                 zr_window_close(ctx, "Basic Demo");
             if (zr_checkbox(ctx, "Button", &gui->show_button) && !gui->show_button)
                 zr_window_close(ctx, "Button Demo");
+            if (zr_checkbox(ctx, "Filex", &gui->show_filex) && !gui->show_filex)
+                zr_window_close(ctx, "File Browser");
 #endif
             zr_layout_pop(ctx);
         }
@@ -704,7 +724,7 @@ demo_window(struct demo *gui, struct zr_context *ctx)
             {
                 /* Combobox Widgets
                  * In this library comboboxes are not limited to being a popup
-                 * list of selected text. Instead it is a abstract concept of
+                 * list of selectable text. Instead it is a abstract concept of
                  * having something that is *selected* or displayed, a popup window
                  * which opens if something needs to be modified and the content
                  * of the popup which causes the *selected* or displayed value to
@@ -729,16 +749,14 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                  * which only show the currently activated time/data and hide the
                  * selection logic inside the combobox popup.
                  */
-                enum color_mode {COL_RGB, COL_HSV};
                 static float chart_selection = 8.0f;
-                static const char *weapons[] = {"Fist","Pistol","Shotgun","Plasma","BFG"};
-                static size_t current_weapon = 0;
+                static int current_weapon = 0;
                 static int check_values[5];
                 static float position[3];
-                static int col_mode = COL_RGB;
                 static struct zr_color combo_color = {130, 50, 50, 255};
                 static struct zr_color combo_color2 = {130, 180, 50, 255};
                 static size_t prog_a =  20, prog_b = 40, prog_c = 10, prog_d = 90;
+                static const char *weapons[] = {"Fist","Pistol","Shotgun","Plasma","BFG"};
 
                 char buffer[64];
                 size_t sum = 0;
@@ -746,15 +764,7 @@ demo_window(struct demo *gui, struct zr_context *ctx)
 
                 /* default combobox */
                 zr_layout_row_static(ctx, 25, 200, 1);
-                if (zr_combo_begin_text(ctx, &combo, weapons[current_weapon], 200)) {
-                    size_t i = 0;
-                    zr_layout_row_dynamic(ctx, 25, 1);
-                    for (i = 0; i < LEN(weapons); ++i) {
-                        if (zr_combo_item(ctx, weapons[i], ZR_TEXT_LEFT))
-                            current_weapon = i;
-                    }
-                    zr_combo_end(ctx);
-                }
+                current_weapon = zr_combo(ctx, weapons, LEN(weapons), current_weapon, 25);
 
                 /* slider color combobox */
                 if (zr_combo_begin_color(ctx, &combo, combo_color, 200)) {
@@ -773,6 +783,8 @@ demo_window(struct demo *gui, struct zr_context *ctx)
 
                 /* complex color combobox */
                 if (zr_combo_begin_color(ctx, &combo, combo_color2, 400)) {
+                    enum color_mode {COL_RGB, COL_HSV};
+                    static int col_mode = COL_RGB;
                     #ifndef DEMO_DO_NOT_USE_COLOR_PICKER
                     zr_layout_row_dynamic(ctx, 120, 1);
                     combo_color2 = zr_color_picker(ctx, combo_color2, ZR_RGBA);
@@ -838,7 +850,7 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                 sprintf(buffer, "%.1f", chart_selection);
                 if (zr_combo_begin_text(ctx, &combo, buffer, 250)) {
                     size_t i = 0;
-                    static const float values[]={30.0f,15.0f,25.0f,10.0f,20.0f,40.0f};
+                    static const float values[]={26.0f,13.0f,30.0f,15.0f,25.0f,10.0f,20.0f,40.0f, 12.0f, 8.0f, 22.0f, 28.0f, 5.0f};
                     zr_layout_row_dynamic(ctx, 150, 1);
                     zr_chart_begin(ctx, ZR_CHART_COLUMN, LEN(values), 0, 50);
                     for (i = 0; i < LEN(values); ++i) {
@@ -1406,7 +1418,6 @@ demo_window(struct demo *gui, struct zr_context *ctx)
 
                     /* tiles */
                     zr_layout_row(ctx, ZR_STATIC, 200, 5, row_layout);
-                    zr_push_property(ctx, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 4));
 
                     /* left space */
                     if (zr_group_begin(ctx, &sub, "left", ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER|ZR_WINDOW_NO_SCROLLBAR)) {
@@ -1466,7 +1477,6 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                         zr_group_end(ctx);
                     }
 
-                    zr_pop_property(ctx);
                     zr_layout_pop(ctx);
                 }
 
@@ -1882,7 +1892,7 @@ basic_demo(struct zr_context *ctx, struct icons *img)
      *------------------------------------------------*/
     ui_header(ctx, "Popup & Scrollbar & Images");
     ui_widget(ctx, 35, 22);
-    if (zr_button_text_image(ctx, img->directory,
+    if (zr_button_text_image(ctx, img->dir,
         "Images", ZR_TEXT_CENTERED, ZR_BUTTON_DEFAULT))
         image_active = !image_active;
 
@@ -1972,6 +1982,435 @@ basic_demo(struct zr_context *ctx, struct icons *img)
     ctx->style.font.height = 14;
     zr_end(ctx);
 }
+/* ===============================================================
+ *
+ *                          FILE BROWSER
+ *
+ * ===============================================================*/
+/* sorry only works for posix systems right now because of the directory function */
+enum file_groups {
+    FILE_GROUP_DEFAULT,
+    FILE_GROUP_TEXT,
+    FILE_GROUP_MUSIC,
+    FILE_GROUP_FONT,
+    FILE_GROUP_IMAGE,
+    FILE_GROUP_MOVIE,
+    FILE_GROUP_MAX
+};
+
+enum file_types {
+    FILE_DEFAULT,
+    FILE_TEXT,
+    FILE_C_SOURCE,
+    FILE_CPP_SOURCE,
+    FILE_HEADER,
+    FILE_CPP_HEADER,
+    FILE_MP3,
+    FILE_WAV,
+    FILE_OGG,
+    FILE_TTF,
+    FILE_BMP,
+    FILE_PNG,
+    FILE_JPEG,
+    FILE_PCX,
+    FILE_TGA,
+    FILE_GIF,
+    FILE_MAX
+};
+
+struct file_group {
+    enum file_groups group;
+    const char *name;
+    struct zr_image *icon;
+};
+
+struct file {
+    enum file_types type;
+    const char *suffix;
+    enum file_groups group;
+};
+
+struct media {
+    int font;
+    int icon_sheet;
+    struct icons *icons;
+    struct file_group group[FILE_GROUP_MAX];
+    struct file files[FILE_MAX];
+};
+
+#define MAX_PATH_LEN 512
+struct file_browser {
+    /* path */
+    char file[MAX_PATH_LEN];
+    char home[MAX_PATH_LEN];
+    char desktop[MAX_PATH_LEN];
+    char directory[MAX_PATH_LEN];
+
+    /* directory content */
+    char **files;
+    char **directories;
+    size_t file_count;
+    size_t dir_count;
+    struct media media;
+};
+
+#ifndef DEMO_DO_NOT_DRAW_IMAGES
+#ifdef __unix__
+
+#include <dirent.h>
+#include <unistd.h>
+
+#ifndef _WIN32
+# include <pwd.h>
+#endif
+
+static char*
+str_duplicate(const char *src)
+{
+    char *ret;
+    size_t len = strlen(src);
+    if (!len) return 0;
+    ret = malloc(len+1);
+    if (!ret) return 0;
+    memcpy(ret, src, len);
+    ret[len] = '\0';
+    return ret;
+}
+
+static void
+dir_free_list(char **list, size_t size)
+{
+    size_t i;
+    for (i = 0; i < size; ++i)
+        free(list[i]);
+    free(list);
+}
+
+static char**
+dir_list(const char *dir, int return_subdirs, size_t *count)
+{
+    size_t n = 0;
+    char buffer[MAX_PATH_LEN];
+    char **results = NULL;
+    const DIR *none = NULL;
+    size_t capacity = 32;
+    size_t size;
+    DIR *z;
+
+    assert(dir);
+    assert(count);
+    strncpy(buffer, dir, MAX_PATH_LEN);
+    n = strlen(buffer);
+
+    if (n > 0 && (buffer[n-1] != '/'))
+        buffer[n++] = '/';
+
+    size = 0;
+
+    z = opendir(dir);
+    if (z != none) {
+        int nonempty = 1;
+        struct dirent *data = readdir(z);
+        nonempty = (data != NULL);
+        if (!nonempty) return NULL;
+
+        do {
+            DIR *y;
+            char *p;
+            int is_subdir;
+            if (data->d_name[0] == '.')
+                continue;
+
+            strncpy(buffer + n, data->d_name, MAX_PATH_LEN-n);
+            y = opendir(buffer);
+            is_subdir = (y != NULL);
+            if (y != NULL) closedir(y);
+
+            if ((return_subdirs && is_subdir) || (!is_subdir && !return_subdirs)){
+                if (!size) {
+                    results = calloc(sizeof(char*), capacity);
+                } else if (size >= capacity) {
+                    capacity = capacity * 2;
+                    results = realloc(results, capacity * sizeof(char*));
+                }
+                p = str_duplicate(data->d_name);
+                results[size++] = p;
+            }
+        } while ((data = readdir(z)) != NULL);
+    }
+
+    if (z) closedir(z);
+    *count = size;
+    return results;
+}
+
+static struct file_group
+FILE_GROUP(enum file_groups group, const char *name, struct zr_image *icon)
+{
+    struct file_group fg;
+    fg.group = group;
+    fg.name = name;
+    fg.icon = icon;
+    return fg;
+}
+
+static struct file
+FILE_DEF(enum file_types type, const char *suffix, enum file_groups group)
+{
+    struct file fd;
+    fd.type = type;
+    fd.suffix = suffix;
+    fd.group = group;
+    return fd;
+}
+
+static struct zr_image*
+media_icon_for_file(struct media *media, const char *file)
+{
+    int i = 0;
+    const char *s = file;
+    char suffix[4];
+    int found = 0;
+    memset(suffix, 0, sizeof(suffix));
+
+    /* extract suffix .xxx from file */
+    while (*s++ != '\0') {
+        if (found && i < 3)
+            suffix[i++] = *s;
+
+        if (*s == '.') {
+            if (found){
+                found = 0;
+                break;
+            }
+            found = 1;
+        }
+    }
+
+    /* check for all file definition of all groups for fitting suffix*/
+    for (i = 0; i < FILE_MAX && found; ++i) {
+        struct file *d = &media->files[i];
+        {
+            const char *f = d->suffix;
+            s = suffix;
+            while (f && *f && *s && *s == *f) {
+                s++; f++;
+            }
+
+            /* found correct file definition so */
+            if (f && *s == '\0' && *f == '\0')
+                return media->group[d->group].icon;
+        }
+    }
+    return &media->icons->default_file;
+}
+
+static void
+media_init(struct media *media, struct icons *icons)
+{
+    /* file groups */
+    media->icons = icons;
+    media->group[FILE_GROUP_DEFAULT] = FILE_GROUP(FILE_GROUP_DEFAULT,"default",&icons->default_file);
+    media->group[FILE_GROUP_TEXT] = FILE_GROUP(FILE_GROUP_TEXT, "textual", &icons->text_file);
+    media->group[FILE_GROUP_MUSIC] = FILE_GROUP(FILE_GROUP_MUSIC, "music", &icons->music_file);
+    media->group[FILE_GROUP_FONT] = FILE_GROUP(FILE_GROUP_FONT, "font", &icons->font_file);
+    media->group[FILE_GROUP_IMAGE] = FILE_GROUP(FILE_GROUP_IMAGE, "image", &icons->img_file);
+    media->group[FILE_GROUP_MOVIE] = FILE_GROUP(FILE_GROUP_MOVIE, "movie", &icons->movie_file);
+
+    /* files */
+    media->files[FILE_DEFAULT] = FILE_DEF(FILE_DEFAULT, NULL, FILE_GROUP_DEFAULT);
+    media->files[FILE_TEXT] = FILE_DEF(FILE_TEXT, "txt", FILE_GROUP_TEXT);
+    media->files[FILE_C_SOURCE] = FILE_DEF(FILE_C_SOURCE, "c", FILE_GROUP_TEXT);
+    media->files[FILE_CPP_SOURCE] = FILE_DEF(FILE_CPP_SOURCE, "cpp", FILE_GROUP_TEXT);
+    media->files[FILE_HEADER] = FILE_DEF(FILE_HEADER, "h", FILE_GROUP_TEXT);
+    media->files[FILE_CPP_HEADER] = FILE_DEF(FILE_HEADER, "hpp", FILE_GROUP_TEXT);
+    media->files[FILE_MP3] = FILE_DEF(FILE_MP3, "mp3", FILE_GROUP_MUSIC);
+    media->files[FILE_WAV] = FILE_DEF(FILE_WAV, "wav", FILE_GROUP_MUSIC);
+    media->files[FILE_OGG] = FILE_DEF(FILE_OGG, "ogg", FILE_GROUP_MUSIC);
+    media->files[FILE_TTF] = FILE_DEF(FILE_TTF, "ttf", FILE_GROUP_FONT);
+    media->files[FILE_BMP] = FILE_DEF(FILE_BMP, "bmp", FILE_GROUP_IMAGE);
+    media->files[FILE_PNG] = FILE_DEF(FILE_PNG, "png", FILE_GROUP_IMAGE);
+    media->files[FILE_JPEG] = FILE_DEF(FILE_JPEG, "jpg", FILE_GROUP_IMAGE);
+    media->files[FILE_PCX] = FILE_DEF(FILE_PCX, "pcx", FILE_GROUP_IMAGE);
+    media->files[FILE_TGA] = FILE_DEF(FILE_TGA, "tga", FILE_GROUP_IMAGE);
+    media->files[FILE_GIF] = FILE_DEF(FILE_GIF, "gif", FILE_GROUP_IMAGE);
+}
+
+static void
+file_browser_reload_directory_content(struct file_browser *browser, const char *path)
+{
+    strncpy(browser->directory, path, MAX_PATH_LEN);
+    dir_free_list(browser->files, browser->file_count);
+    dir_free_list(browser->directories, browser->dir_count);
+    browser->files = dir_list(path, 0, &browser->file_count);
+    browser->directories = dir_list(path, 1, &browser->dir_count);
+}
+
+static void
+file_browser_init(struct file_browser *browser, struct icons *icons)
+{
+    memset(browser, 0, sizeof(*browser));
+    media_init(&browser->media, icons);
+    {
+        /* load files and sub-directory list */
+        const char *home = getenv("HOME");
+#ifdef _WIN32
+        if (!home) home = getenv("USERPROFILE");
+#else
+        if (!home) home = getpwuid(getuid())->pw_dir;
+        {
+            size_t l;
+            strncpy(browser->home, home, MAX_PATH_LEN);
+            l = strlen(browser->home);
+            strcpy(browser->home + l, "/");
+            strcpy(browser->directory, browser->home);
+        }
+#endif
+        {
+            size_t l;
+            strcpy(browser->desktop, browser->home);
+            l = strlen(browser->desktop);
+            strcpy(browser->desktop + l, "desktop/");
+        }
+        browser->files = dir_list(browser->directory, 0, &browser->file_count);
+        browser->directories = dir_list(browser->directory, 1, &browser->dir_count);
+    }
+}
+
+static void
+file_browser_free(struct file_browser *browser)
+{
+    if (browser->files)
+        dir_free_list(browser->files, browser->file_count);
+    if (browser->directories)
+        dir_free_list(browser->directories, browser->dir_count);
+    browser->files = NULL;
+    browser->directories = NULL;
+    memset(browser, 0, sizeof(*browser));
+}
+
+static int
+file_browser_run(struct file_browser *browser, struct zr_context *ctx)
+{
+    int ret = 0;
+    struct zr_panel layout;
+    struct media *media = &browser->media;
+    struct icons *icons = media->icons;
+    struct zr_rect total_space;
+
+    if (zr_begin(ctx, &layout, "File Browser", zr_rect(50, 50, 800, 600),
+        ZR_WINDOW_BORDER|ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_CLOSABLE|ZR_WINDOW_MOVABLE))
+    {
+        struct zr_panel sub;
+        static float ratio[] = {0.25f, ZR_UNDEFINED};
+
+        /* output path directory selector in the menubar */
+        zr_menubar_begin(ctx);
+        {
+            char *d = browser->directory;
+            char *begin = d + 1;
+            zr_layout_row_dynamic(ctx, 25, 6);
+            zr_push_property(ctx, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 0));
+            while (*d++) {
+                if (*d == '/') {
+                    *d = '\0';
+                    if (zr_button_text(ctx, begin, ZR_BUTTON_DEFAULT)) {
+                        *d++ = '/'; *d = '\0';
+                        file_browser_reload_directory_content(browser, browser->directory);
+                        break;
+                    }
+                    *d = '/';
+                    begin = d + 1;
+                }
+            }
+            zr_pop_property(ctx);
+        }
+        zr_menubar_end(ctx);
+
+        /* window layout */
+        total_space = zr_window_get_content_region(ctx);
+        zr_layout_row(ctx, ZR_DYNAMIC, total_space.h, 2, ratio);
+        zr_group_begin(ctx, &sub, "Special", ZR_WINDOW_NO_SCROLLBAR);
+        {
+            struct zr_image home = icons->home;
+            struct zr_image desktop = icons->desktop;
+            struct zr_image computer = icons->computer;
+
+            zr_layout_row_dynamic(ctx, 40, 1);
+            zr_push_property(ctx, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 0));
+            if (zr_button_text_image(ctx, home, "home", ZR_TEXT_CENTERED, ZR_BUTTON_DEFAULT))
+                file_browser_reload_directory_content(browser, browser->home);
+            if (zr_button_text_image(ctx,desktop,"desktop",ZR_TEXT_CENTERED, ZR_BUTTON_DEFAULT))
+                file_browser_reload_directory_content(browser, browser->desktop);
+            if (zr_button_text_image(ctx,computer,"computer",ZR_TEXT_CENTERED,ZR_BUTTON_DEFAULT))
+                file_browser_reload_directory_content(browser, "/");
+            zr_pop_property(ctx);
+            zr_group_end(ctx);
+        }
+
+        /* output directory content window */
+        zr_group_begin(ctx, &sub, "Content", 0);
+        {
+            int index = -1;
+            size_t i = 0, j = 0, k = 0;
+            size_t rows = 0, cols = 0;
+            size_t count = browser->dir_count + browser->file_count;
+
+            cols = 4;
+            rows = count / cols;
+            for (i = 0; i <= rows; i += 1) {
+                {size_t n = j + cols;
+                zr_layout_row_dynamic(ctx, 135, (int)cols);
+                for (; j < count && j < n; ++j) {
+                    /* draw one row of icons */
+                    if (j < browser->dir_count) {
+                        /* draw and execute directory buttons */
+                        if (zr_button_image(ctx,icons->directory,ZR_BUTTON_DEFAULT))
+                            index = (int)j;
+                    } else {
+                        /* draw and execute files buttons */
+                        struct zr_image *icon;
+                        size_t fileIndex = ((size_t)j - browser->dir_count);
+                        icon = media_icon_for_file(media,browser->files[fileIndex]);
+                        if (zr_button_image(ctx, *icon, ZR_BUTTON_DEFAULT)) {
+                            strncpy(browser->file, browser->directory, MAX_PATH_LEN);
+                            n = strlen(browser->file);
+                            strncpy(browser->file + n, browser->files[fileIndex], MAX_PATH_LEN - n);
+                            ret = 1;
+                        }
+                    }
+                }}
+                {size_t n = k + cols;
+                zr_layout_row_dynamic(ctx, 20, (int)cols);
+                for (; k < count && k < n; k++) {
+                    /* draw one row of labels */
+                    if (k < browser->dir_count) {
+                        zr_label(ctx, browser->directories[k], ZR_TEXT_CENTERED);
+                    } else {
+                        size_t t = k-browser->dir_count;
+                        zr_label(ctx,browser->files[t],ZR_TEXT_CENTERED);
+                    }
+                }}
+            }
+
+            if (index != -1) {
+                size_t n = strlen(browser->directory);
+                strncpy(browser->directory + n, browser->directories[index], MAX_PATH_LEN - n);
+                n = strlen(browser->directory);
+                if (n < MAX_PATH_LEN - 1) {
+                    browser->directory[n] = '/';
+                    browser->directory[n+1] = '\0';
+                }
+                file_browser_reload_directory_content(browser, browser->directory);
+            }
+            zr_group_end(ctx);
+        }
+    }
+    zr_end(ctx);
+    return ret;
+}
+#endif
+#endif
 
 /* ===============================================================
  *
@@ -2078,8 +2517,8 @@ node_editor_add(struct node_editor *editor, const char *name, struct zr_rect bou
     node->input_count = in_count;
     node->output_count = out_count;
     node->color = col;
-    strcpy(node->name, name);
     node->bounds = bounds;
+    strcpy(node->name, name);
     node_editor_push(editor, node);
 }
 
@@ -2105,6 +2544,18 @@ node_editor_demo(struct zr_context *ctx, struct node_editor *nodedit)
     struct zr_command_buffer *canvas;
     struct node *updated = 0;
     struct zr_panel layout;
+
+    /* This is a simple node editor just to show a simple implementation and that
+     * it is possible to achieve with this library. While all nodes inside this
+     * example use a simple color modifier as content you could change them
+     * to have your custom content depending on the node time.
+     * Biggest difference to most usual implementation is that this example does
+     * not has connectors on the right position of the proprety that it links.
+     * This is mainly done out of lazyness and could be implemented as well but
+     * requires calculating the position of all rows and add connectors.
+     * In addition adding and removing nodes is quite limited at the
+     * moment since it is based on a simple array. If this is to be converted
+     * into something more serious it is probably best to extend it.*/
 
     if (zr_begin(ctx, &layout, "Node Editor", zr_rect(50, 50, 650, 650),
         ZR_WINDOW_BORDER|ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_CLOSABLE|ZR_WINDOW_MOVABLE))
@@ -2307,6 +2758,7 @@ node_editor_init(struct node_editor *editor)
 static void
 record_window(struct zr_context *ctx, struct zr_buffer *buffer)
 {
+    /* **EXPERIMENTAL** */
     /* Recording a UI begins by calling `zr_recording_begin` and ends with
      * `zr_recording_end`. All supported API call between these two calls
      * are saved inside the buffer and can later be replayed with `zr_exec`.
@@ -2341,6 +2793,73 @@ record_window(struct zr_context *ctx, struct zr_buffer *buffer)
     zr_recording_end(ctx);
 }
 
+/* ===============================================================
+ *
+ *                          COMPILED WINDOW
+ *
+ * ===============================================================*/
+static void
+compile_log(void *userdata, zr_size line, const char *fmt, ...)
+{
+    int l = (int)line;
+    char buffer[1024];
+    va_list args;
+
+    va_start(args, fmt);
+    vsnprintf(buffer, sizeof(buffer), fmt, args);
+    buffer[1023] = 0;
+    fprintf(stderr, "[COMPILER] error (%d): %s\n", l, buffer);
+    va_end(args);
+}
+
+static void
+compile_window(struct zr_context *ctx, struct zr_buffer *buffer)
+{
+    /* **EXPERIMENTAL** */
+    const char script[] =
+        "begin('Recorded', 420, 350, 200, 350, 317)"
+        "layout_row_static(30, 150, 1)"
+        "button_text(0, 'Test', 0)"
+        "slider(1, 0, 5, 10, 1)"
+        "progress(2, 20, 100, 1)"
+        "property(3, 'Compression:', 0, 20, 100, 10, 1, 0);"
+        "select(4, 'select me', 18, 0)"
+        "check(5, 'check me', 1)"
+        "layout_row_static(30, 50, 3)"
+        "option(6, 'RGB', 1)"
+        "option(8, 'HSV', 0)"
+        "option(9, 'HEX', 0)"
+        "layout_push(10, 1, 'Tab', 0)"
+        "layout_row_static(30, 150, 1)"
+        "button_text(11, 'Test', 0)"
+        "layout_pop()"
+        "end()";
+
+    enum zr_compiler_status ret;
+    UNUSED(ctx);
+    ret = zr_compile(buffer, script, sizeof(script), compile_log, 0);
+    if (ret == ZR_COMPILER_OK) return;
+    else if (ret == ZR_COMPILER_INVALID_VALUE)
+        fprintf(stdout, "[Zahnrad]: compiling error: invalid valid\n");
+    else if (ret == ZR_COMPILER_INVALID_ARG)
+        fprintf(stdout, "[Zahnrad]: compiling error: invalid operation argument\n");
+    else if (ret == ZR_COMPILER_OP_NOT_FOUND)
+        fprintf(stdout, "[Zahnrad]: compiling error: invalid operation\n");
+    else if (ret == ZR_COMPILER_MISSING_COMMA)
+        fprintf(stdout, "[Zahnrad]: compiling error: missing comma between arguments\n");
+    else if (ret == ZR_COMPILER_WRONG_ARG_TYPE)
+        fprintf(stdout, "[Zahnrad]: compiling error: argument has wrong type\n");
+    else if (ret == ZR_COMPILER_NO_MEMORY)
+        fprintf(stdout, "[Zahnrad]: out of memory\n");
+    else if (ret == ZR_COMPILER_INVALID_SCRIPT)
+        fprintf(stdout, "[Zahnrad]: script is not correct\n");
+}
+
+/* ===============================================================
+ *
+ *                          REPLAY WINDOW
+ *
+ * ===============================================================*/
 static void
 replay_window(struct zr_context *ctx, struct zr_buffer *record)
 {
@@ -2385,8 +2904,8 @@ replay_window(struct zr_context *ctx, struct zr_buffer *record)
     ctx->next_id = 0;
 
     {const union zr_event *evt;
-    /* To execute a previously recorded UI you need to provide two buffer. The
-     * first one is to store events into and the other is for runtime memory.
+    /* To execute a previously recorded or compile UI you need to provide two buffer.
+     * The first one is to store events into and the other is for runtime memory.
      * For event memory I would recommend using a fixed size `zr_event` array
      * since the number of events generated is small most of the time. Runtime
      * memory is only used for `zr_panel`s so only the max number of panels
@@ -2399,7 +2918,7 @@ replay_window(struct zr_context *ctx, struct zr_buffer *record)
      * bring a huge performance boost. (NOTICE: some functions like zr_begin generate
      * heartbeat events which do not have any impact and are only used while using
      * the API in immediate mode and can easily be ignored). You can also use
-     * an event mask to only specify which events should be generated and ignore
+     * an event mask to specify which events should be generated and ignore
      * all other. This example here uses a default event mask by passing `0` to
      * zr_exec which allows all events, but you could also create your own:
      *
@@ -2527,6 +3046,7 @@ run_demo(struct demo *gui)
     static char record_memory[4*1024];
     static struct zr_buffer record;
     static struct node_editor nodedit;
+    static struct file_browser filex;
     struct zr_context *ctx = &gui->ctx;
 
     if (!init) {
@@ -2535,16 +3055,18 @@ run_demo(struct demo *gui)
         gui->show_replay = 0;
         gui->show_simple = 0;
 
-        #ifndef DEMO_DO_NOT_DRAW_IMAGES
         gui->show_grid = 0;
         gui->show_basic = 0;
         gui->show_button = 0;
-        #endif
 
         memset(&nodedit, 0, sizeof(nodedit));
         zr_buffer_init_fixed(&record, record_memory, sizeof(record_memory));
-        record_window(ctx, &record);
+        compile_window(ctx, &record);
+        /*record_window(ctx, &record);*/
         node_editor_init(&nodedit);
+#ifndef DEMO_DO_NOT_DRAW_IMAGES
+        file_browser_init(&filex, &gui->icons);
+#endif
         init = 1;
     }
 
@@ -2559,12 +3081,15 @@ run_demo(struct demo *gui)
         node_editor_demo(ctx, &nodedit);
 
 #ifndef DEMO_DO_NOT_DRAW_IMAGES
+    if (gui->show_filex)
+        file_browser_run(&filex, ctx);
     if (gui->show_grid)
         grid_demo(ctx);
     if (gui->show_button)
         button_demo(ctx, &gui->icons);
     if (gui->show_basic)
         basic_demo(ctx, &gui->icons);
+    if (!ret) file_browser_free(&filex);
 #endif
     zr_buffer_info(&gui->status, &gui->ctx.memory);
     return ret;

@@ -943,7 +943,7 @@ int main(int argc, char **argv)
     gui.icons.next =  icon_load("../../icon/next.png");
     gui.icons.prev =  icon_load("../../icon/prev.png");
     gui.icons.tools = icon_load("../../icon/tools.png");
-    gui.icons.directory = icon_load("../../icon/directory.png");
+    gui.icons.dir = icon_load("../../icon/directory.png");
     gui.icons.copy = icon_load("../../icon/copy.png");
     gui.icons.convert = icon_load("../../icon/export.png");
     gui.icons.del = icon_load("../../icon/delete.png");
@@ -954,6 +954,18 @@ int main(int argc, char **argv)
     gui.icons.menu[3] = icon_load("../../icon/wifi.png");
     gui.icons.menu[4] = icon_load("../../icon/settings.png");
     gui.icons.menu[5] = icon_load("../../icon/volume.png");
+
+    gui.icons.home = icon_load("../../icon/home.png");
+    gui.icons.directory = icon_load("../../icon/directory.png");
+    gui.icons.computer = icon_load("../../icon/computer.png");
+    gui.icons.desktop = icon_load("../../icon/desktop.png");
+    gui.icons.default_file = icon_load("../../icon/default.png");
+    gui.icons.text_file = icon_load("../../icon/text.png");
+    gui.icons.music_file = icon_load("../../icon/music.png");
+    gui.icons.font_file =  icon_load("../../icon/font.png");
+    gui.icons.img_file = icon_load("../../icon/img.png");
+    gui.icons.movie_file = icon_load("../../icon/movie.png");
+
     for (i = 0; i < 9; ++i) {
         char buffer[256];
         sprintf(buffer, "../../images/image%d.png", (i+1));
@@ -1012,8 +1024,20 @@ cleanup:
     glDeleteTextures(1,(const GLuint*)&gui.icons.next.handle.id);
     glDeleteTextures(1,(const GLuint*)&gui.icons.prev.handle.id);
     glDeleteTextures(1,(const GLuint*)&gui.icons.tools.handle.id);
-    glDeleteTextures(1,(const GLuint*)&gui.icons.directory.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.dir.handle.id);
     glDeleteTextures(1,(const GLuint*)&gui.icons.del.handle.id);
+
+    glDeleteTextures(1,(const GLuint*)&gui.icons.home.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.directory.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.computer.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.desktop.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.default_file.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.text_file.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.music_file.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.font_file.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.img_file.handle.id);
+    glDeleteTextures(1,(const GLuint*)&gui.icons.movie_file.handle.id);
+
     for (i = 0; i < 9; ++i)
         glDeleteTextures(1, (const GLuint*)&gui.icons.images[i].handle.id);
     for (i = 0; i < 6; ++i)
