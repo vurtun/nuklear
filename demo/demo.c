@@ -2070,7 +2070,7 @@ str_duplicate(const char *src)
     char *ret;
     size_t len = strlen(src);
     if (!len) return 0;
-    ret = malloc(len+1);
+    ret = (char*)malloc(len+1);
     if (!ret) return 0;
     memcpy(ret, src, len);
     ret[len] = '\0';
@@ -2128,10 +2128,10 @@ dir_list(const char *dir, int return_subdirs, size_t *count)
 
             if ((return_subdirs && is_subdir) || (!is_subdir && !return_subdirs)){
                 if (!size) {
-                    results = calloc(sizeof(char*), capacity);
+                    results = (char**)calloc(sizeof(char*), capacity);
                 } else if (size >= capacity) {
                     capacity = capacity * 2;
-                    results = realloc(results, capacity * sizeof(char*));
+                    results = (char**)realloc(results, capacity * sizeof(char*));
                 }
                 p = str_duplicate(data->d_name);
                 results[size++] = p;

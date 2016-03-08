@@ -28,6 +28,13 @@
 #define ZR_VALUE_PAGE_CAPACITY 32
 #define ZR_DEFAULT_COMMAND_BUFFER_SIZE (4*1024)
 
+/* internal widget state */
+#define ZR_INACTIVE ZR_FLAG(0)
+#define ZR_ENTER    ZR_FLAG(1)
+#define ZR_HOVERED  ZR_FLAG(2)
+#define ZR_LEAVE    ZR_FLAG(3)
+#define ZR_ACTIVE   ZR_FLAG(4)
+
 enum zr_draw_list_stroke {
     ZR_STROKE_OPEN = zr_false,
     /* build up path has no connection back to the beginning */
@@ -4558,7 +4565,7 @@ zr_draw_symbol(struct zr_command_buffer *out, const struct zr_symbol *sym,
 }
 
 static int
-zr_button_behavior(enum zr_widget_status *state, struct zr_rect r,
+zr_button_behavior(zr_flags *state, struct zr_rect r,
     const struct zr_input *i, enum zr_button_behavior behavior)
 {
     int ret = 0;
@@ -4583,7 +4590,7 @@ zr_button_behavior(enum zr_widget_status *state, struct zr_rect r,
 
 static void
 zr_button_draw(struct zr_command_buffer *o, struct zr_rect r,
-    const struct zr_button *b, enum zr_widget_status state)
+    const struct zr_button *b, zr_flags state)
 {
     struct zr_color background;
     if (state & ZR_HOVERED)
@@ -4598,7 +4605,7 @@ zr_button_draw(struct zr_command_buffer *o, struct zr_rect r,
 }
 
 static int
-zr_do_button(enum zr_widget_status *state,
+zr_do_button(zr_flags *state,
     struct zr_command_buffer *o, struct zr_rect r,
     const struct zr_button *b, const struct zr_input *i,
     enum zr_button_behavior behavior, struct zr_rect *content)
@@ -4626,7 +4633,7 @@ zr_do_button(enum zr_widget_status *state,
 }
 
 static int
-zr_do_button_text(enum zr_widget_status *state,
+zr_do_button_text(zr_flags *state,
     struct zr_command_buffer *o, struct zr_rect r,
     const char *string, enum zr_button_behavior behavior,
     const struct zr_button_text *b, const struct zr_input *i,
@@ -4661,7 +4668,7 @@ zr_do_button_text(enum zr_widget_status *state,
 }
 
 static int
-zr_do_button_symbol(enum zr_widget_status *state,
+zr_do_button_symbol(zr_flags *state,
     struct zr_command_buffer *out, struct zr_rect r,
     enum zr_symbol_type symbol, enum zr_button_behavior bh,
     const struct zr_button_symbol *b, const struct zr_input *in,
@@ -4699,7 +4706,7 @@ zr_do_button_symbol(enum zr_widget_status *state,
 }
 
 static int
-zr_do_button_image(enum zr_widget_status *state,
+zr_do_button_image(zr_flags *state,
     struct zr_command_buffer *out, struct zr_rect r,
     struct zr_image img, enum zr_button_behavior b,
     const struct zr_button_icon *button, const struct zr_input *in)
@@ -4718,7 +4725,7 @@ zr_do_button_image(enum zr_widget_status *state,
 }
 
 static int
-zr_do_button_text_symbol(enum zr_widget_status *state,
+zr_do_button_text_symbol(zr_flags *state,
     struct zr_command_buffer *out, struct zr_rect r,
     enum zr_symbol_type symbol, const char *text, zr_flags align,
     enum zr_button_behavior behavior, const struct zr_button_text *b,
@@ -4764,7 +4771,7 @@ zr_do_button_text_symbol(enum zr_widget_status *state,
 }
 
 static int
-zr_do_button_text_image(enum zr_widget_status *state,
+zr_do_button_text_image(zr_flags *state,
     struct zr_command_buffer *out, struct zr_rect r,
     struct zr_image img, const char* text, zr_flags align,
     enum zr_button_behavior behavior, const struct zr_button_text *b,
@@ -4812,7 +4819,7 @@ struct zr_toggle {
 
 static int
 zr_toggle_behavior(const struct zr_input *in, struct zr_rect select,
-    enum zr_widget_status *state, int active)
+    zr_flags *state, int active)
 {
     *state = ZR_INACTIVE;
     if (in && zr_input_is_mouse_hovering_rect(in, select))
@@ -4830,7 +4837,7 @@ zr_toggle_behavior(const struct zr_input *in, struct zr_rect select,
 
 static void
 zr_toggle_draw(struct zr_command_buffer *out,
-    enum zr_widget_status state,
+    zr_flags state,
     const struct zr_toggle *toggle, int active,
     enum zr_toggle_type type, struct zr_rect r,
     const char *string, const struct zr_user_font *font)
@@ -4894,7 +4901,7 @@ zr_toggle_draw(struct zr_command_buffer *out,
 }
 
 static void
-zr_do_toggle(enum zr_widget_status *state,
+zr_do_toggle(zr_flags *state,
     struct zr_command_buffer *out, struct zr_rect r,
     int *active, const char *string, enum zr_toggle_type type,
     const struct zr_toggle *toggle, const struct zr_input *in,
@@ -4935,7 +4942,7 @@ struct zr_slider {
 };
 
 static float
-zr_slider_behavior(enum zr_widget_status *state, struct zr_rect *cursor,
+zr_slider_behavior(zr_flags *state, struct zr_rect *cursor,
     const struct zr_input *in, const struct zr_slider *s, struct zr_rect slider,
     float slider_min, float slider_max, float slider_value,
     float slider_step, float slider_steps)
@@ -4969,7 +4976,7 @@ zr_slider_behavior(enum zr_widget_status *state, struct zr_rect *cursor,
 
 static void
 zr_slider_draw(struct zr_command_buffer *out,
-    enum zr_widget_status state, const struct zr_slider *s,
+    zr_flags state, const struct zr_slider *s,
     struct zr_rect bar, struct zr_rect cursor,
     float slider_min, float slider_max, float slider_value)
 {
@@ -4997,7 +5004,7 @@ zr_slider_draw(struct zr_command_buffer *out,
 }
 
 static float
-zr_do_slider(enum zr_widget_status *state,
+zr_do_slider(zr_flags *state,
     struct zr_command_buffer *out, struct zr_rect slider,
     float min, float val, float max, float step,
     const struct zr_slider *s, const struct zr_input *in)
@@ -5065,7 +5072,7 @@ struct zr_progress {
 };
 
 static zr_size
-zr_progress_behavior(enum zr_widget_status *state, const struct zr_input *in,
+zr_progress_behavior(zr_flags *state, const struct zr_input *in,
     struct zr_rect r, zr_size max, zr_size value, int modifiable)
 {
     *state = ZR_INACTIVE;
@@ -5088,7 +5095,7 @@ zr_progress_behavior(enum zr_widget_status *state, const struct zr_input *in,
 
 static void
 zr_progress_draw(struct zr_command_buffer *out, const struct zr_progress *p,
-    enum zr_widget_status state, struct zr_rect r, zr_size max, zr_size value)
+    zr_flags state, struct zr_rect r, zr_size max, zr_size value)
 {
     float prog_scale;
     struct zr_color col;
@@ -5105,7 +5112,7 @@ zr_progress_draw(struct zr_command_buffer *out, const struct zr_progress *p,
 }
 
 static zr_size
-zr_do_progress(enum zr_widget_status *state,
+zr_do_progress(zr_flags *state,
     struct zr_command_buffer *out, struct zr_rect r,
     zr_size value, zr_size max, int modifiable,
     const struct zr_progress *prog, const struct zr_input *in)
@@ -5141,7 +5148,7 @@ struct zr_scrollbar {
 };
 
 static float
-zr_scrollbar_behavior(enum zr_widget_status *state, struct zr_input *in,
+zr_scrollbar_behavior(zr_flags *state, struct zr_input *in,
     const struct zr_scrollbar *s, struct zr_rect scroll,
     struct zr_rect cursor, float scroll_offset,
     float target, float scroll_step, enum zr_orientation o)
@@ -5194,7 +5201,7 @@ zr_scrollbar_behavior(enum zr_widget_status *state, struct zr_input *in,
 
 static void
 zr_scrollbar_draw(struct zr_command_buffer *out, const struct zr_scrollbar *s,
-    enum zr_widget_status state, struct zr_rect scroll, struct zr_rect cursor)
+    zr_flags state, struct zr_rect scroll, struct zr_rect cursor)
 {
     struct zr_color col;
     if (state & ZR_HOVERED)
@@ -5209,7 +5216,7 @@ zr_scrollbar_draw(struct zr_command_buffer *out, const struct zr_scrollbar *s,
 }
 
 static float
-zr_do_scrollbarv(enum zr_widget_status *state,
+zr_do_scrollbarv(zr_flags *state,
     struct zr_command_buffer *out, struct zr_rect scroll,
     float offset, float target, float step, const struct zr_scrollbar *s,
     struct zr_input *i)
@@ -5252,7 +5259,7 @@ zr_do_scrollbarv(enum zr_widget_status *state,
 }
 
 static float
-zr_do_scrollbarh(enum zr_widget_status *state,
+zr_do_scrollbarh(zr_flags *state,
     struct zr_command_buffer *out, struct zr_rect scroll,
     float offset, float target, float step, const struct zr_scrollbar *s,
     struct zr_input *i)
@@ -5766,7 +5773,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
         struct zr_rect bounds;
         float scroll_target, scroll_offset, scroll_step;
         struct zr_scrollbar scroll = field->scroll;
-        enum zr_widget_status state;
+        zr_flags state;
 
         bounds.x = (r.x + r.w) - (field->scrollbar_width + field->border_size);
         bounds.y = r.y + field->border_size + field->padding.y;
@@ -6107,7 +6114,7 @@ struct zr_property {
 };
 
 static float
-zr_drag_behavior(enum zr_widget_status *state, const struct zr_input *in,
+zr_drag_behavior(zr_flags *state, const struct zr_input *in,
     struct zr_rect drag, float min, float val, float max, float inc_per_pixel)
 {
     int left_mouse_down = in && in->mouse.buttons[ZR_BUTTON_LEFT].down;
@@ -6134,7 +6141,7 @@ zr_drag_behavior(enum zr_widget_status *state, const struct zr_input *in,
 }
 
 static float
-zr_property_behavior(enum zr_widget_status *ws, const struct zr_input *in,
+zr_property_behavior(zr_flags *ws, const struct zr_input *in,
     struct zr_rect property, struct zr_rect left, struct zr_rect right,
     struct zr_rect label, struct zr_rect edit, struct zr_rect empty,
     int *state, float min, float value, float max, float step, float inc_per_pixel)
@@ -6191,7 +6198,7 @@ zr_property_draw(struct zr_command_buffer *out,
 }
 
 static float
-zr_do_property(enum zr_widget_status *ws,
+zr_do_property(zr_flags *ws,
     struct zr_command_buffer *out, struct zr_rect property,
     const char *name, float min, float val, float max,
     float step, float inc_per_pixel, char *buffer, zr_size *len,
@@ -6322,7 +6329,7 @@ zr_do_property(enum zr_widget_status *ws,
  *
  * ===============================================================*/
 static int
-zr_color_picker_behavior(enum zr_widget_status *state,
+zr_color_picker_behavior(zr_flags *state,
     const struct zr_rect *bounds, const struct zr_rect *matrix,
     const struct zr_rect *hue_bar, const struct zr_rect *alpha_bar,
     struct zr_color *color, const struct zr_input *in)
@@ -6437,7 +6444,7 @@ zr_draw_color_picker(struct zr_command_buffer *o, const struct zr_rect *matrix,
 }
 
 static int
-zr_do_color_picker(enum zr_widget_status *state,
+zr_do_color_picker(zr_flags *state,
     struct zr_command_buffer *out, struct zr_color *color,
     enum zr_color_picker_format fmt, struct zr_rect bounds,
     struct zr_vec2 padding, const struct zr_input *in,
@@ -8510,7 +8517,7 @@ zr_header_button(struct zr_context *ctx, struct zr_window_header *header,
     /* check if the icon has been pressed */
     if (!(layout->flags & ZR_WINDOW_ROM)) {
         struct zr_rect bounds;
-        enum zr_widget_status status;
+        zr_flags status;
         bounds.x = sym.x; bounds.y = sym.y;
         bounds.w = sym_bw; bounds.h = sym.h;
         ret = zr_button_behavior(&status, bounds, &ctx->input, ZR_BUTTON_DEFAULT);
@@ -8902,7 +8909,7 @@ zr_panel_end(struct zr_context *ctx)
         scroll.border = config->colors[ZR_COLOR_BORDER];
         {
             /* vertical scollbar */
-            enum zr_widget_status state;
+            zr_flags state;
             bounds.x = layout->bounds.x + layout->width;
             bounds.y = layout->clip.y;
             bounds.w = scrollbar_size;
@@ -8919,7 +8926,7 @@ zr_panel_end(struct zr_context *ctx)
         }
         {
             /* horizontal scrollbar */
-            enum zr_widget_status state;
+            zr_flags state;
             bounds.x = layout->bounds.x + window_padding.x;
             if (layout->flags & ZR_WINDOW_SUB) {
                 bounds.h = scrollbar_size;
@@ -9687,7 +9694,7 @@ zr_op_layout_push(struct zr_context *ctx, union zr_param *p,
     struct zr_rect sym = {0,0,0,0};
     int ret = 0;
 
-    enum zr_widget_status ws;
+    zr_flags ws;
     enum zr_widget_state widget_state;
 
     int title_len;
@@ -10187,7 +10194,7 @@ zr_op_button_text(struct zr_context *ctx, union zr_param *p,
     int ret = 0, clicked = 0;
     struct zr_rect bounds;
     struct zr_button_text button;
-    enum zr_widget_status ws;
+    zr_flags ws;
     enum zr_widget_state state;
 
     ZR_ASSERT(ctx);
@@ -10251,7 +10258,7 @@ zr_op_button_color(struct zr_context *ctx, union zr_param *p,
     int ret = 0, clicked = 0;
     struct zr_rect bounds;
     struct zr_button button;
-    enum zr_widget_status ws;
+    zr_flags ws;
     enum zr_widget_state state;
 
     ZR_ASSERT(ctx);
@@ -10314,7 +10321,7 @@ zr_op_button_symbol(struct zr_context *ctx, union zr_param *p,
     int ret = 0, clicked = 0;
     struct zr_rect bounds;
     struct zr_button_symbol button;
-    enum zr_widget_status ws;
+    zr_flags ws;
     enum zr_widget_state state;
 
     ZR_ASSERT(ctx);
@@ -10380,7 +10387,7 @@ zr_op_button_image(struct zr_context *ctx, union zr_param *p,
 
     int ret = 0, clicked = 0;
     struct zr_rect bounds;
-    enum zr_widget_status ws;
+    zr_flags ws;
     enum zr_widget_state state;
     struct zr_button_icon button;
 
@@ -10443,7 +10450,7 @@ zr_op_button_text_symbol(struct zr_context *ctx, union zr_param *p,
     int ret = 0, clicked = 0;
     struct zr_rect bounds;
     struct zr_button_text button;
-    enum zr_widget_status ws;
+    zr_flags ws;
     enum zr_widget_state state;
 
     ZR_ASSERT(ctx);
@@ -10513,7 +10520,7 @@ zr_op_button_text_image(struct zr_context *ctx, union zr_param *p,
 
     int ret = 0, clicked = 0;
     struct zr_rect bounds;
-    enum zr_widget_status ws;
+    zr_flags ws;
     enum zr_widget_state state;
     struct zr_button_text button;
 
@@ -10676,7 +10683,7 @@ zr_op_check(struct zr_context *ctx, union zr_param *p,
     int ret = 0;
     struct zr_rect bounds;
     struct zr_toggle toggle;
-    enum zr_widget_status ws;
+    zr_flags ws;
     enum zr_widget_state state;
 
     ZR_ASSERT(ctx);
@@ -10743,7 +10750,7 @@ zr_op_option(struct zr_context *ctx, union zr_param *p,
     int ret = 0;
     struct zr_rect bounds;
     struct zr_toggle toggle;
-    enum zr_widget_status ws;
+    zr_flags ws;
     enum zr_widget_state state;
 
     ZR_ASSERT(ctx);
@@ -10812,7 +10819,7 @@ zr_op_slider(struct zr_context *ctx, union zr_param *p,
     struct zr_rect bounds;
     struct zr_slider slider;
     struct zr_vec2 item_padding;
-    enum zr_widget_status ws;
+    zr_flags ws;
     enum zr_widget_state state;
 
     ZR_ASSERT(ctx);
@@ -10884,7 +10891,7 @@ zr_op_progress(struct zr_context *ctx, union zr_param *p,
     struct zr_rect bounds;
     struct zr_progress prog;
     struct zr_vec2 item_padding;
-    enum zr_widget_status ws;
+    zr_flags ws;
     enum zr_widget_state state;
 
     ZR_ASSERT(ctx);
@@ -11151,7 +11158,7 @@ zr_op_property(struct zr_context *ctx, union zr_param *p,
     float new_val;
     struct zr_rect bounds;
     enum zr_widget_state s;
-    enum zr_widget_status ws;
+    zr_flags ws;
     struct zr_property prop;
     struct zr_vec2 item_padding;
 
@@ -11279,7 +11286,7 @@ zr_op_color_picker(struct zr_context *ctx, union zr_param *p,
     struct zr_color color = p[1].color;
     enum zr_color_picker_format fmt = (enum zr_color_picker_format)p[2].i;
 
-    enum zr_widget_status ws;
+    zr_flags ws;
     enum zr_widget_state state;
     struct zr_vec2 item_padding;
 
@@ -12058,7 +12065,7 @@ zr_contextual_button(struct zr_context *ctx, const char *text,
     const struct zr_style *config;
 
     struct zr_rect bounds;
-    enum zr_widget_status ws;
+    zr_flags ws;
     enum zr_widget_state state;
     struct zr_button_text button;
 
@@ -12095,7 +12102,7 @@ zr_contextual_button_symbol(struct zr_context *ctx, enum zr_symbol_type symbol,
 
     struct zr_rect bounds;
     struct zr_button_text button;
-    enum zr_widget_status ws;
+    zr_flags ws;
     enum zr_widget_state state;
 
     ZR_ASSERT(ctx);
@@ -12131,7 +12138,7 @@ zr_contextual_button_icon(struct zr_context *ctx, struct zr_image img,
 
     struct zr_rect bounds;
     struct zr_button_text button;
-    enum zr_widget_status ws;
+    zr_flags ws;
     enum zr_widget_state state;
 
     ZR_ASSERT(ctx);
@@ -12281,7 +12288,7 @@ zr_combo_begin_text(struct zr_context *ctx, struct zr_panel *layout,
     const struct zr_input *in;
     struct zr_window *win;
 
-    enum zr_widget_status state;
+    zr_flags state;
     enum zr_widget_state s;
     struct zr_vec2 item_padding;
     int is_active = zr_false;
@@ -12350,7 +12357,7 @@ zr_combo_begin_color(struct zr_context *ctx, struct zr_panel *layout,
     struct zr_window *win;
     const struct zr_input *in;
 
-    enum zr_widget_status state;
+    zr_flags state;
     enum zr_widget_state s;
     struct zr_vec2 item_padding;
     struct zr_rect header;
@@ -12413,7 +12420,7 @@ zr_combo_begin_image(struct zr_context *ctx, struct zr_panel *layout,
     const struct zr_input *in;
 
     enum zr_widget_state s;
-    enum zr_widget_status state;
+    zr_flags state;
     struct zr_vec2 item_padding;
     struct zr_rect header;
     int is_active = zr_false;
@@ -12471,7 +12478,7 @@ zr_combo_begin_icon(struct zr_context *ctx, struct zr_panel *layout,
     const char *selected, struct zr_image img, int height)
 {
     struct zr_window *win;
-    enum zr_widget_status state;
+    zr_flags state;
     struct zr_vec2 item_padding;
     struct zr_rect header;
     int is_active = zr_false;
@@ -12744,7 +12751,7 @@ zr_menu_text_begin(struct zr_context *ctx, struct zr_panel *layout,
     const struct zr_input *in;
     struct zr_rect header;
     int is_clicked = zr_false;
-    enum zr_widget_status state;
+    zr_flags state;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -12784,7 +12791,7 @@ zr_menu_icon_begin(struct zr_context *ctx, struct zr_panel *layout,
     struct zr_window *win;
     struct zr_rect header;
     int is_clicked = zr_false;
-    enum zr_widget_status state;
+    zr_flags state;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -12819,7 +12826,7 @@ zr_menu_symbol_begin(struct zr_context *ctx, struct zr_panel *layout,
     struct zr_window *win;
     struct zr_rect header;
     int is_clicked = zr_false;
-    enum zr_widget_status state;
+    zr_flags state;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);

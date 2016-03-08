@@ -1384,14 +1384,6 @@ enum zr_orientation {
     ZR_HORIZONTAL
 };
 
-enum zr_widget_status {
-    ZR_INACTIVE = ZR_FLAG(0),
-    ZR_ENTER    = ZR_FLAG(1),
-    ZR_HOVERED  = ZR_FLAG(2),
-    ZR_LEAVE    = ZR_FLAG(3),
-    ZR_ACTIVE   = ZR_FLAG(4)
-};
-
 enum zr_collapse_states {
     ZR_MINIMIZED = zr_false,
     ZR_MAXIMIZED = zr_true
