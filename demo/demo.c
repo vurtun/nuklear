@@ -2904,8 +2904,8 @@ replay_window(struct zr_context *ctx, struct zr_buffer *record)
     ctx->next_id = 0;
 
     {const union zr_event *evt;
-    /* To execute a previously recorded or compile UI you need to provide two buffer.
-     * The first one is to store events into and the other is for runtime memory.
+    /* To execute a previously recorded or compiled UI bytecode you need to provide
+     * two buffer. The first one is to store events into and the other is for runtime memory.
      * For event memory I would recommend using a fixed size `zr_event` array
      * since the number of events generated is small most of the time. Runtime
      * memory is only used for `zr_panel`s so only the max number of panels
@@ -3065,7 +3065,9 @@ run_demo(struct demo *gui)
         /*record_window(ctx, &record);*/
         node_editor_init(&nodedit);
 #ifndef DEMO_DO_NOT_DRAW_IMAGES
+#ifdef __unix__
         file_browser_init(&filex, &gui->icons);
+#endif
 #endif
         init = 1;
     }
@@ -3081,15 +3083,17 @@ run_demo(struct demo *gui)
         node_editor_demo(ctx, &nodedit);
 
 #ifndef DEMO_DO_NOT_DRAW_IMAGES
+#ifdef __unix__
     if (gui->show_filex)
         file_browser_run(&filex, ctx);
+    if (!ret) file_browser_free(&filex);
+#endif
     if (gui->show_grid)
         grid_demo(ctx);
     if (gui->show_button)
         button_demo(ctx, &gui->icons);
     if (gui->show_basic)
         basic_demo(ctx, &gui->icons);
-    if (!ret) file_browser_free(&filex);
 #endif
     zr_buffer_info(&gui->status, &gui->ctx.memory);
     return ret;
