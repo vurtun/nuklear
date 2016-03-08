@@ -1122,53 +1122,67 @@ enum zr_event_type {
 #define ZR_EVENT_WINDOW_MINIMIZED   ZR_FLAG(5)
 #define ZR_EVENT_WINDOW_MAXIMIZED   ZR_FLAG(6)
 #define ZR_EVENT_WINDOW_HOVERED     ZR_FLAG(7)
-#define ZR_EVENT_WINDOW_CLOSED      ZR_FLAG(9)
-#define ZR_EVENT_WINDOW_FOCUS       ZR_FLAG(10)
-#define ZR_EVENT_WINDOW_ALL         (ZR_FLAG(11)-1)
+#define ZR_EVENT_WINDOW_ENTER       ZR_FLAG(8)
+#define ZR_EVENT_WINDOW_LEAVE       ZR_FLAG(9)
+#define ZR_EVENT_WINDOW_CLOSED      ZR_FLAG(10)
+#define ZR_EVENT_WINDOW_FOCUS       ZR_FLAG(11)
+#define ZR_EVENT_WINDOW_ALL         (ZR_FLAG(12)-1)
 
 /* button events */
 #define ZR_EVENT_BUTTON_NONE        0
-#define ZR_EVENT_BUTTON_HOVERED     ZR_FLAG(0)
-#define ZR_EVENT_BUTTON_CLICKED     ZR_FLAG(2)
-#define ZR_EVENT_BUTTON_PRESSED     ZR_FLAG(3)
-#define ZR_EVENT_BUTTON_ALL         (ZR_FLAG(4)-1)
+#define ZR_EVENT_BUTTON_ENTER       ZR_FLAG(0)
+#define ZR_EVENT_BUTTON_HOVERED     ZR_FLAG(1)
+#define ZR_EVENT_BUTTON_LEAVE       ZR_FLAG(2)
+#define ZR_EVENT_BUTTON_CLICKED     ZR_FLAG(3)
+#define ZR_EVENT_BUTTON_PRESSED     ZR_FLAG(4)
+#define ZR_EVENT_BUTTON_ALL         (ZR_FLAG(5)-1)
 
 /* option events */
 #define ZR_EVENT_OPTION_NONE        0
-#define ZR_EVENT_OPTION_HOVERED     ZR_FLAG(0)
-#define ZR_EVENT_OPTION_TOGGLED     ZR_FLAG(2)
-#define ZR_EVENT_OPTION_ALL         (ZR_FLAG(3)-1)
+#define ZR_EVENT_OPTION_ENTER       ZR_FLAG(0)
+#define ZR_EVENT_OPTION_HOVERED     ZR_FLAG(1)
+#define ZR_EVENT_OPTION_LEAVE       ZR_FLAG(2)
+#define ZR_EVENT_OPTION_TOGGLED     ZR_FLAG(3)
+#define ZR_EVENT_OPTION_ALL         (ZR_FLAG(4)-1)
 
 /* checkbox events */
 #define ZR_EVENT_CHECK_NONE         0
-#define ZR_EVENT_CHECK_HOVERED      ZR_FLAG(0)
-#define ZR_EVENT_CHECK_TOGGLED      ZR_FLAG(2)
-#define ZR_EVENT_CHECK_ALL          (ZR_FLAG(3)-1)
+#define ZR_EVENT_CHECK_ENTER        ZR_FLAG(0)
+#define ZR_EVENT_CHECK_HOVERED      ZR_FLAG(1)
+#define ZR_EVENT_CHECK_LEAVE        ZR_FLAG(2)
+#define ZR_EVENT_CHECK_TOGGLED      ZR_FLAG(3)
+#define ZR_EVENT_CHECK_ALL          (ZR_FLAG(4)-1)
 
 /* select events */
 #define ZR_EVENT_SELECT_NONE        0
-#define ZR_EVENT_SELECT_HOVERED     ZR_FLAG(0)
-#define ZR_EVENT_SELECT_TOGGLED     ZR_FLAG(2)
-#define ZR_EVENT_SELECT_ALL         (ZR_FLAG(3)-1)
+#define ZR_EVENT_SELECT_HOVERED     ZR_FLAG(1)
+#define ZR_EVENT_SELECT_TOGGLED     ZR_FLAG(3)
+#define ZR_EVENT_SELECT_ALL         (ZR_FLAG(4)-1)
 
 /* slider events */
 #define ZR_EVENT_SLIDER_NONE        0
-#define ZR_EVENT_SLIDER_HOVERED     ZR_FLAG(0)
-#define ZR_EVENT_SLIDER_CHANGED     ZR_FLAG(2)
-#define ZR_EVENT_SLIDER_ALL         (ZR_FLAG(3)-1)
+#define ZR_EVENT_SLIDER_ENTER       ZR_FLAG(0)
+#define ZR_EVENT_SLIDER_HOVERED     ZR_FLAG(1)
+#define ZR_EVENT_SLIDER_LEAVE       ZR_FLAG(2)
+#define ZR_EVENT_SLIDER_CHANGED     ZR_FLAG(3)
+#define ZR_EVENT_SLIDER_ALL         (ZR_FLAG(4)-1)
 
 /* progressbar events */
 #define ZR_EVENT_PROGRESS_NONE      0
-#define ZR_EVENT_PROGRESS_HOVERED   ZR_FLAG(0)
-#define ZR_EVENT_PROGRESS_CHANGED   ZR_FLAG(2)
-#define ZR_EVENT_PROGRESS_ALL       (ZR_FLAG(3)-1)
+#define ZR_EVENT_PROGRESS_ENTER     ZR_FLAG(0)
+#define ZR_EVENT_PROGRESS_HOVERED   ZR_FLAG(1)
+#define ZR_EVENT_PROGRESS_LEAVE     ZR_FLAG(2)
+#define ZR_EVENT_PROGRESS_CHANGED   ZR_FLAG(3)
+#define ZR_EVENT_PROGRESS_ALL       (ZR_FLAG(4)-1)
 
 /* property events */
 #define ZR_EVENT_PROPERTY_NONE          0
-#define ZR_EVENT_PROPERTY_HOVERED       ZR_FLAG(0)
-#define ZR_EVENT_PROPERTY_CHANGED       ZR_FLAG(2)
-#define ZR_EVENT_PROPERTY_STATE_CHANGED ZR_FLAG(3)
-#define ZR_EVENT_PROPERTY_ALL           (ZR_FLAG(8)-1)
+#define ZR_EVENT_PROPERTY_ENTER         ZR_FLAG(0)
+#define ZR_EVENT_PROPERTY_HOVERED       ZR_FLAG(1)
+#define ZR_EVENT_PROPERTY_LEAVE         ZR_FLAG(2)
+#define ZR_EVENT_PROPERTY_CHANGED       ZR_FLAG(3)
+#define ZR_EVENT_PROPERTY_STATE_CHANGED ZR_FLAG(4)
+#define ZR_EVENT_PROPERTY_ALL           (ZR_FLAG(5)-1)
 
 /* tab events */
 #define ZR_EVENT_TAB_NONE           0
@@ -1185,9 +1199,11 @@ enum zr_event_type {
 
 /* color picker events */
 #define ZR_EVENT_COLOR_PICKER_NONE      0
-#define ZR_EVENT_COLOR_PICKER_HOVERED   ZR_FLAG(1)
-#define ZR_EVENT_COLOR_PICKER_CHANGED   ZR_FLAG(2)
-#define ZR_EVENT_COLOR_PICKER_ALL       (ZR_FLAG(3)-1)
+#define ZR_EVENT_COLOR_PICKER_ENTER     ZR_FLAG(1)
+#define ZR_EVENT_COLOR_PICKER_HOVERED   ZR_FLAG(2)
+#define ZR_EVENT_COLOR_PICKER_LEAVE     ZR_FLAG(3)
+#define ZR_EVENT_COLOR_PICKER_CHANGED   ZR_FLAG(4)
+#define ZR_EVENT_COLOR_PICKER_ALL       (ZR_FLAG(5)-1)
 
 struct zr_event_header {
     zr_hash id;
@@ -1322,6 +1338,7 @@ int zr_event_mask_has(struct zr_event_mask*, enum zr_event_type, zr_flags);
 #define ZR_COLOR_PICKER_COLOR  2
 
 zr_element zr_element_lookup(const struct zr_buffer*, zr_hash id);
+zr_element zr_element_lookup_string(const struct zr_buffer*, const char *id);
 int zr_element_is_valid(const struct zr_buffer*, zr_element);
 
 int zr_element_get_int(const struct zr_buffer*, zr_element, int property);
@@ -1368,9 +1385,11 @@ enum zr_orientation {
 };
 
 enum zr_widget_status {
-    ZR_INACTIVE,
-    ZR_HOVERED,
-    ZR_ACTIVE
+    ZR_INACTIVE = ZR_FLAG(0),
+    ZR_ENTER    = ZR_FLAG(1),
+    ZR_HOVERED  = ZR_FLAG(2),
+    ZR_LEAVE    = ZR_FLAG(3),
+    ZR_ACTIVE   = ZR_FLAG(4)
 };
 
 enum zr_collapse_states {

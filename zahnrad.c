@@ -4574,6 +4574,10 @@ zr_button_behavior(enum zr_widget_status *state, struct zr_rect r,
                 zr_input_is_mouse_released(i, ZR_BUTTON_LEFT);
         }
     }
+    if (*state == ZR_HOVERED && !zr_input_is_mouse_prev_hovering_rect(i, r))
+        *state |= ZR_ENTER;
+    else if (zr_input_is_mouse_prev_hovering_rect(i, r))
+        *state |= ZR_LEAVE;
     return ret;
 }
 
@@ -4582,15 +4586,12 @@ zr_button_draw(struct zr_command_buffer *o, struct zr_rect r,
     const struct zr_button *b, enum zr_widget_status state)
 {
     struct zr_color background;
-    switch (state) {
-    default:
-    case ZR_INACTIVE:
-        background = b->normal; break;
-    case ZR_HOVERED:
-        background = b->hover; break;
-    case ZR_ACTIVE:
-        background = b->active; break;
-    }
+    if (state & ZR_HOVERED)
+        background = b->hover;
+    else if (state & ZR_ACTIVE)
+        background = b->active;
+    else background = b->normal;
+
     zr_draw_rect(o, r, b->rounding, b->border);
     zr_draw_rect(o, zr_shrink_rect(r, b->border_width),
                                     b->rounding, background);
@@ -4643,21 +4644,17 @@ zr_do_button_text(enum zr_widget_status *state,
         return zr_false;
 
     ret = zr_do_button(state, o, r, &b->base, i, behavior, &content);
-    switch (*state) {
-    default:
-    case ZR_INACTIVE:
-        t.background = b->base.normal;
-        t.text = b->normal;
-        break;
-    case ZR_HOVERED:
+    if (*state & ZR_HOVERED)  {
         t.background = b->base.hover;
         t.text = b->hover;
-        break;
-    case ZR_ACTIVE:
+    } else if (*state & ZR_ACTIVE) {
         t.background = b->base.active;
         t.text = b->active;
-        break;
+    } else {
+        t.background = b->base.normal;
+        t.text = b->normal;
     }
+
     t.padding = zr_vec2(0,0);
     zr_widget_text(o, content, string, zr_strsiz(string), &t, b->alignment, f);
     return ret;
@@ -4670,11 +4667,11 @@ zr_do_button_symbol(enum zr_widget_status *state,
     const struct zr_button_symbol *b, const struct zr_input *in,
     const struct zr_user_font *font)
 {
+    int ret;
     struct zr_symbol sym;
     struct zr_color background;
     struct zr_color color;
     struct zr_rect content;
-    int ret;
 
     ZR_ASSERT(b);
     ZR_ASSERT(out);
@@ -4682,20 +4679,15 @@ zr_do_button_symbol(enum zr_widget_status *state,
         return zr_false;
 
     ret = zr_do_button(state, out, r, &b->base, in, bh, &content);
-    switch (*state) {
-    default:
-    case ZR_INACTIVE:
-        background = b->base.normal;
-        color = b->normal;
-        break;
-    case ZR_HOVERED:
+    if (*state & ZR_HOVERED) {
         background = b->base.hover;
         color = b->hover;
-        break;
-    case ZR_ACTIVE:
+    } else if (*state & ZR_ACTIVE) {
         background = b->base.active;
         color = b->active;
-        break;
+    } else {
+        background = b->base.normal;
+        color = b->normal;
     }
 
     sym.type = symbol;
@@ -4744,20 +4736,15 @@ zr_do_button_text_symbol(enum zr_widget_status *state,
         return zr_false;
 
     ret = zr_do_button_text(state, out, r, text, behavior, b, i, f);
-    switch (*state) {
-    default:
-    case ZR_INACTIVE:
-        background = b->base.normal;
-        color = b->normal;
-        break;
-    case ZR_HOVERED:
+    if (*state & ZR_HOVERED) {
         background = b->base.hover;
         color = b->hover;
-        break;
-    case ZR_ACTIVE:
+    } else if (*state & ZR_ACTIVE) {
         background = b->base.active;
         color = b->active;
-        break;
+    } else {
+        background = b->base.normal;
+        color = b->normal;
     }
 
     /* calculate symbol bounds */
@@ -4834,6 +4821,10 @@ zr_toggle_behavior(const struct zr_input *in, struct zr_rect select,
         *state = ZR_ACTIVE;
         active = !active;
     }
+    if (*state == ZR_HOVERED && !zr_input_is_mouse_prev_hovering_rect(in, select))
+        *state |= ZR_ENTER;
+    else if (zr_input_is_mouse_prev_hovering_rect(in, select))
+        *state |= ZR_LEAVE;
     return active;
 }
 
@@ -4864,7 +4855,7 @@ zr_toggle_draw(struct zr_command_buffer *out,
     cursor.x = select.x + cursor_pad;
     cursor.y = select.y + cursor_pad;
 
-    if (state == ZR_HOVERED || state == ZR_ACTIVE)
+    if (state & ZR_HOVERED || state & ZR_ACTIVE)
         col = toggle->hover;
     else col = toggle->normal;
 
@@ -4969,6 +4960,10 @@ zr_slider_behavior(enum zr_widget_status *state, struct zr_rect *cursor,
             cursor->x = slider.x + (cursor->w * ratio);
         }
     }
+    if (*state == ZR_HOVERED && !zr_input_is_mouse_prev_hovering_rect(in, slider))
+        *state |= ZR_ENTER;
+    else if (zr_input_is_mouse_prev_hovering_rect(in, slider))
+        *state |= ZR_LEAVE;
     return slider_value;
 }
 
@@ -4978,18 +4973,13 @@ zr_slider_draw(struct zr_command_buffer *out,
     struct zr_rect bar, struct zr_rect cursor,
     float slider_min, float slider_max, float slider_value)
 {
-    struct zr_color col;
     struct zr_rect fill;
-
-    switch (state) {
-    default:
-    case ZR_INACTIVE:
-        col = s->normal; break;
-    case ZR_HOVERED:
-        col = s->hover; break;
-    case ZR_ACTIVE:
-        col = s->active; break;
-    }
+    struct zr_color col;
+    if (state & ZR_HOVERED)
+        col = s->hover;
+    else if (state & ZR_ACTIVE)
+        col = s->active;
+    else col = s->normal;
 
     cursor.w = cursor.h;
     cursor.x = (slider_value <= slider_min) ? cursor.x:
@@ -5054,7 +5044,7 @@ zr_do_slider(enum zr_widget_status *state,
     bar.h = slider.h/4;
 
     slider_value = zr_slider_behavior(state, &cursor, in, s, slider,
-        slider_min, slider_max, slider_value, step, slider_steps);
+                        slider_min, slider_max, slider_value, step, slider_steps);
     zr_slider_draw(out, *state, s, bar, cursor, slider_min,
                     slider_max, slider_value);
     return slider_value;
@@ -5086,6 +5076,11 @@ zr_progress_behavior(enum zr_widget_status *state, const struct zr_input *in,
             *state = ZR_ACTIVE;
         } else *state = ZR_HOVERED;
     }
+    if (*state == ZR_HOVERED && !zr_input_is_mouse_prev_hovering_rect(in, r))
+        *state |= ZR_ENTER;
+    else if (zr_input_is_mouse_prev_hovering_rect(in, r))
+        *state |= ZR_LEAVE;
+
     if (!max) return value;
     value = ZR_MIN(value, max);
     return value;
@@ -5095,17 +5090,13 @@ static void
 zr_progress_draw(struct zr_command_buffer *out, const struct zr_progress *p,
     enum zr_widget_status state, struct zr_rect r, zr_size max, zr_size value)
 {
-    struct zr_color col;
     float prog_scale;
-    switch (state) {
-    default:
-    case ZR_INACTIVE:
-        col = p->normal; break;
-    case ZR_HOVERED:
-        col = p->hover; break;
-    case ZR_ACTIVE:
-        col = p->active; break;
-    }
+    struct zr_color col;
+    if (state & ZR_HOVERED)
+        col = p->hover;
+    else if (state & ZR_ACTIVE)
+        col = p->active;
+    else col = p->normal;
 
     prog_scale = (float)value / (float)max;
     zr_draw_rect(out, r, 0, p->background);
@@ -5194,6 +5185,10 @@ zr_scrollbar_behavior(enum zr_widget_status *state, struct zr_input *in,
             scroll_offset = ZR_CLAMP(0, scroll_offset, target - scroll.h);
         else scroll_offset = ZR_CLAMP(0, scroll_offset, target - scroll.w);
     }
+    if (*state == ZR_HOVERED && !zr_input_is_mouse_prev_hovering_rect(in, scroll))
+        *state |= ZR_ENTER;
+    else if (zr_input_is_mouse_prev_hovering_rect(in, scroll))
+        *state |= ZR_LEAVE;
     return scroll_offset;
 }
 
@@ -5202,15 +5197,12 @@ zr_scrollbar_draw(struct zr_command_buffer *out, const struct zr_scrollbar *s,
     enum zr_widget_status state, struct zr_rect scroll, struct zr_rect cursor)
 {
     struct zr_color col;
-    switch (state) {
-    default:
-    case ZR_INACTIVE:
-        col = s->normal; break;
-    case ZR_HOVERED:
-        col = s->hover; break;
-    case ZR_ACTIVE:
-        col = s->active; break;
-    }
+    if (state & ZR_HOVERED)
+        col = s->hover;
+    else if (state & ZR_ACTIVE)
+        col = s->active;
+    else col = s->normal;
+
     zr_draw_rect(out, zr_shrink_rect(scroll,1), s->rounding, s->border);
     zr_draw_rect(out, scroll, s->rounding, s->background);
     zr_draw_rect(out, cursor, s->rounding, col);
@@ -6134,6 +6126,10 @@ zr_drag_behavior(enum zr_widget_status *state, const struct zr_input *in,
         val = ZR_CLAMP(min, val, max);
         *state = ZR_ACTIVE;
     }
+    if (*state == ZR_HOVERED && !zr_input_is_mouse_prev_hovering_rect(in, drag))
+        *state |= ZR_ENTER;
+    else if (zr_input_is_mouse_prev_hovering_rect(in, drag))
+        *state |= ZR_LEAVE;
     return val;
 }
 
@@ -6327,9 +6323,9 @@ zr_do_property(enum zr_widget_status *ws,
  * ===============================================================*/
 static int
 zr_color_picker_behavior(enum zr_widget_status *state,
-    const struct zr_rect *matrix, const struct zr_rect *hue_bar,
-    const struct zr_rect *alpha_bar, struct zr_color *color,
-    const struct zr_input *in)
+    const struct zr_rect *bounds, const struct zr_rect *matrix,
+    const struct zr_rect *hue_bar, const struct zr_rect *alpha_bar,
+    struct zr_color *color, const struct zr_input *in)
 {
     float hsva[4];
     int value_changed = 0;
@@ -6362,10 +6358,21 @@ zr_color_picker_behavior(enum zr_widget_status *state,
         }
     }
 
-    if (hsv_changed)
+    *state = ZR_INACTIVE;
+    if (zr_input_is_mouse_hovering_rect(in, *bounds))
+        *state = ZR_HOVERED;
+    if (hsv_changed) {
         *color = zr_hsva_fv(hsva);
-    if (value_changed)
+        *state = ZR_ACTIVE;
+    }
+    if (value_changed) {
         color->a = (zr_byte)(hsva[3] * 255.0f);
+        *state = ZR_ACTIVE;
+    }
+    if (*state == ZR_HOVERED && !zr_input_is_mouse_prev_hovering_rect(in, *bounds))
+        *state |= ZR_ENTER;
+    else if (zr_input_is_mouse_prev_hovering_rect(in, *bounds))
+        *state |= ZR_LEAVE;
     return value_changed;
 }
 
@@ -6459,7 +6466,6 @@ zr_do_color_picker(enum zr_widget_status *state,
     matrix.y = bounds.y;
     matrix.h = bounds.h;
     matrix.w = bounds.w - (3 * padding.x + 2 * bar_w);
-    /*matrix.w = matrix.h = ZR_MIN(matrix.w, matrix.h);*/
 
     hue_bar.w = bar_w;
     hue_bar.y = bounds.y;
@@ -6471,12 +6477,11 @@ zr_do_color_picker(enum zr_widget_status *state,
     alpha_bar.w = bar_w;
     alpha_bar.h = matrix.h;
 
-    ret = zr_color_picker_behavior(state, &matrix, &hue_bar,
+    ret = zr_color_picker_behavior(state, &bounds, &matrix, &hue_bar,
         (fmt == ZR_RGBA) ? &alpha_bar:0, color, in);
     zr_draw_color_picker(out, &matrix, &hue_bar, (fmt == ZR_RGBA) ? &alpha_bar:0, *color);
     return ret;
 }
-
 
 /* ==============================================================
  *
@@ -10210,11 +10215,20 @@ zr_op_button_text(struct zr_context *ctx, union zr_param *p,
         evt.button.evt = ZR_EVENT_BUTTON_CLICKED;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
     }
-    if (ws == ZR_HOVERED) {
+    if (ws & ZR_ENTER) {
+        union zr_event evt;
+        evt.button.evt = ZR_EVENT_BUTTON_ENTER;
+        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
+    } else if (ws & ZR_LEAVE) {
+        union zr_event evt;
+        evt.button.evt = ZR_EVENT_BUTTON_LEAVE;
+        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
+    }
+    if (ws & ZR_HOVERED) {
         union zr_event evt;
         evt.button.evt = ZR_EVENT_BUTTON_HOVERED;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    } else if (ws == ZR_ACTIVE) {
+    } else if (ws & ZR_ACTIVE) {
         union zr_event evt;
         evt.button.evt = ZR_EVENT_BUTTON_PRESSED;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
@@ -10263,11 +10277,20 @@ zr_op_button_color(struct zr_context *ctx, union zr_param *p,
         evt.button.evt = ZR_EVENT_BUTTON_CLICKED;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
     }
-    if (ws == ZR_HOVERED) {
+    if (ws & ZR_ENTER) {
+        union zr_event evt;
+        evt.button.evt = ZR_EVENT_BUTTON_ENTER;
+        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
+    } else if (ws & ZR_LEAVE) {
+        union zr_event evt;
+        evt.button.evt = ZR_EVENT_BUTTON_LEAVE;
+        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
+    }
+    if (ws & ZR_HOVERED) {
         union zr_event evt;
         evt.button.evt = ZR_EVENT_BUTTON_HOVERED;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    } else if (ws == ZR_ACTIVE) {
+    } else if (ws & ZR_ACTIVE) {
         union zr_event evt;
         evt.button.evt = ZR_EVENT_BUTTON_PRESSED;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
@@ -10319,11 +10342,20 @@ zr_op_button_symbol(struct zr_context *ctx, union zr_param *p,
         evt.button.evt = ZR_EVENT_BUTTON_CLICKED;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
     }
-    if (ws == ZR_HOVERED) {
+    if (ws & ZR_ENTER) {
+        union zr_event evt;
+        evt.button.evt = ZR_EVENT_BUTTON_ENTER;
+        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
+    } else if (ws & ZR_LEAVE) {
+        union zr_event evt;
+        evt.button.evt = ZR_EVENT_BUTTON_LEAVE;
+        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
+    }
+    if (ws & ZR_HOVERED) {
         union zr_event evt;
         evt.button.evt = ZR_EVENT_BUTTON_HOVERED;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    } else if (ws == ZR_ACTIVE) {
+    } else if (ws & ZR_ACTIVE) {
         union zr_event evt;
         evt.button.evt = ZR_EVENT_BUTTON_PRESSED;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
@@ -10372,11 +10404,20 @@ zr_op_button_image(struct zr_context *ctx, union zr_param *p,
         evt.button.evt = ZR_EVENT_BUTTON_CLICKED;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
     }
-    if (ws == ZR_HOVERED) {
+    if (ws & ZR_ENTER) {
+        union zr_event evt;
+        evt.button.evt = ZR_EVENT_BUTTON_ENTER;
+        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
+    } else if (ws & ZR_LEAVE) {
+        union zr_event evt;
+        evt.button.evt = ZR_EVENT_BUTTON_LEAVE;
+        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
+    }
+    if (ws & ZR_HOVERED) {
         union zr_event evt;
         evt.button.evt = ZR_EVENT_BUTTON_HOVERED;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    } else if (ws == ZR_ACTIVE) {
+    } else if (ws & ZR_ACTIVE) {
         union zr_event evt;
         evt.button.evt = ZR_EVENT_BUTTON_PRESSED;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
@@ -10431,11 +10472,20 @@ zr_op_button_text_symbol(struct zr_context *ctx, union zr_param *p,
         evt.button.evt = ZR_EVENT_BUTTON_CLICKED;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
     }
-    if (ws == ZR_HOVERED) {
+    if (ws & ZR_ENTER) {
+        union zr_event evt;
+        evt.button.evt = ZR_EVENT_BUTTON_ENTER;
+        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
+    } else if (ws & ZR_LEAVE) {
+        union zr_event evt;
+        evt.button.evt = ZR_EVENT_BUTTON_LEAVE;
+        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
+    }
+    if (ws & ZR_HOVERED) {
         union zr_event evt;
         evt.button.evt = ZR_EVENT_BUTTON_HOVERED;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    } else if (ws == ZR_ACTIVE) {
+    } else if (ws & ZR_ACTIVE) {
         union zr_event evt;
         evt.button.evt = ZR_EVENT_BUTTON_PRESSED;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
@@ -10492,11 +10542,20 @@ zr_op_button_text_image(struct zr_context *ctx, union zr_param *p,
         evt.button.evt = ZR_EVENT_BUTTON_CLICKED;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
     }
-    if (ws == ZR_HOVERED) {
+    if (ws & ZR_ENTER) {
+        union zr_event evt;
+        evt.button.evt = ZR_EVENT_BUTTON_ENTER;
+        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
+    } else if (ws & ZR_LEAVE) {
+        union zr_event evt;
+        evt.button.evt = ZR_EVENT_BUTTON_LEAVE;
+        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
+    }
+    if (ws & ZR_HOVERED) {
         union zr_event evt;
         evt.button.evt = ZR_EVENT_BUTTON_HOVERED;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    } else if (ws == ZR_ACTIVE) {
+    } else if (ws & ZR_ACTIVE) {
         union zr_event evt;
         evt.button.evt = ZR_EVENT_BUTTON_PRESSED;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
@@ -10640,7 +10699,7 @@ zr_op_check(struct zr_context *ctx, union zr_param *p,
     toggle.normal = config->colors[ZR_COLOR_TOGGLE];
     toggle.hover = config->colors[ZR_COLOR_TOGGLE_HOVER];
     zr_do_toggle(&ws, &win->buffer, bounds, &active, text, ZR_TOGGLE_CHECK,
-                        &toggle, in, &config->font);
+                &toggle, in, &config->font);
 
     if (old != active) {
         union zr_event evt;
@@ -10649,10 +10708,19 @@ zr_op_check(struct zr_context *ctx, union zr_param *p,
         ret += zr_event_queue_push(queue, id, ZR_EVENT_CHECKBOX, &evt);
         p[2].i = active;
     }
-    if (ws == ZR_HOVERED) {
+    if (ws & ZR_HOVERED) {
         union zr_event evt;
         evt.checkbox.evt = ZR_EVENT_CHECK_HOVERED;
         evt.checkbox.value = active;
+        ret += zr_event_queue_push(queue, id, ZR_EVENT_CHECKBOX, &evt);
+    }
+    if (ws & ZR_ENTER) {
+        union zr_event evt;
+        evt.checkbox.evt = ZR_EVENT_CHECK_ENTER;
+        ret += zr_event_queue_push(queue, id, ZR_EVENT_CHECKBOX, &evt);
+    } else if (ws & ZR_LEAVE) {
+        union zr_event evt;
+        evt.checkbox.evt = ZR_EVENT_CHECK_LEAVE;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_CHECKBOX, &evt);
     }
     return ret;
@@ -10706,11 +10774,19 @@ zr_op_option(struct zr_context *ctx, union zr_param *p,
         ret += zr_event_queue_push(queue, id, ZR_EVENT_OPTION, &evt);
         p[2].i = is_active;
     }
-
-    if (ws == ZR_HOVERED) {
+    if (ws & ZR_HOVERED) {
         union zr_event evt;
         evt.option.evt = ZR_EVENT_OPTION_HOVERED;
         evt.option.value = is_active;
+        ret += zr_event_queue_push(queue, id, ZR_EVENT_OPTION, &evt);
+    }
+    if (ws & ZR_ENTER) {
+        union zr_event evt;
+        evt.option.evt = ZR_EVENT_OPTION_ENTER;
+        ret += zr_event_queue_push(queue, id, ZR_EVENT_OPTION, &evt);
+    } else if (ws & ZR_LEAVE) {
+        union zr_event evt;
+        evt.option.evt = ZR_EVENT_OPTION_LEAVE;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_OPTION, &evt);
     }
     return ret;
@@ -10771,10 +10847,19 @@ zr_op_slider(struct zr_context *ctx, union zr_param *p,
         ret += zr_event_queue_push(queue, id, ZR_EVENT_SLIDER, &evt);
         p[2].f = new_value;
     }
-    if (ws == ZR_HOVERED) {
+    if (ws & ZR_HOVERED) {
         union zr_event evt;
         evt.slider.evt = ZR_EVENT_SLIDER_HOVERED;
         evt.slider.value = new_value;
+        ret += zr_event_queue_push(queue, id, ZR_EVENT_SLIDER, &evt);
+    }
+    if (ws & ZR_ENTER) {
+        union zr_event evt;
+        evt.slider.evt = ZR_EVENT_SLIDER_ENTER;
+        ret += zr_event_queue_push(queue, id, ZR_EVENT_SLIDER, &evt);
+    } else if (ws & ZR_LEAVE) {
+        union zr_event evt;
+        evt.slider.evt = ZR_EVENT_SLIDER_LEAVE;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_SLIDER, &evt);
     }
     return ret;
@@ -10833,9 +10918,20 @@ zr_op_progress(struct zr_context *ctx, union zr_param *p,
         ret += zr_event_queue_push(queue, id, ZR_EVENT_PROGRESS, &evt);
         p[1].ui = (unsigned int)cur_value;
     }
-    if (ws == ZR_HOVERED) {
+    if (ws & ZR_HOVERED) {
         union zr_event evt;
         evt.progress.evt = ZR_EVENT_PROGRESS_HOVERED;
+        evt.progress.value = cur_value;
+        ret += zr_event_queue_push(queue, id, ZR_EVENT_PROGRESS, &evt);
+    }
+    if (ws & ZR_ENTER) {
+        union zr_event evt;
+        evt.progress.evt = ZR_EVENT_PROGRESS_ENTER;
+        evt.progress.value = cur_value;
+        ret += zr_event_queue_push(queue, id, ZR_EVENT_PROGRESS, &evt);
+    } else if (ws & ZR_LEAVE) {
+        union zr_event evt;
+        evt.progress.evt = ZR_EVENT_PROGRESS_LEAVE;
         evt.progress.value = cur_value;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_PROGRESS, &evt);
     }
@@ -11132,9 +11228,22 @@ zr_op_property(struct zr_context *ctx, union zr_param *p,
         win->property.active = 0;
 
     /* queue events */
-    if (ws == ZR_HOVERED) {
+    if (ws & ZR_HOVERED) {
         union zr_event evt;
         evt.property.evt = ZR_EVENT_PROPERTY_HOVERED;
+        evt.property.value = new_val;
+        evt.property.state = (enum zr_property_state)*state;
+        ret += zr_event_queue_push(queue, id, ZR_EVENT_PROPERTY, &evt);
+    }
+    if (ws & ZR_ENTER) {
+        union zr_event evt;
+        evt.property.evt = ZR_EVENT_PROPERTY_ENTER;
+        evt.property.value = new_val;
+        evt.property.state = (enum zr_property_state)*state;
+        ret += zr_event_queue_push(queue, id, ZR_EVENT_PROPERTY, &evt);
+    } else if (ws & ZR_LEAVE) {
+        union zr_event evt;
+        evt.property.evt = ZR_EVENT_PROPERTY_ENTER;
         evt.property.value = new_val;
         evt.property.state = (enum zr_property_state)*state;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_PROPERTY, &evt);
@@ -11200,9 +11309,20 @@ zr_op_color_picker(struct zr_context *ctx, union zr_param *p,
         evt.color_picker.color = color;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_COLOR_PICKER, &evt);
     }
-    if (ws == ZR_HOVERED) {
+    if (ws & ZR_HOVERED) {
         union zr_event evt;
         evt.color_picker.evt = ZR_EVENT_COLOR_PICKER_HOVERED;
+        evt.color_picker.color = color;
+        ret += zr_event_queue_push(queue, id, ZR_EVENT_COLOR_PICKER, &evt);
+    }
+    if (ws & ZR_ENTER) {
+        union zr_event evt;
+        evt.color_picker.evt = ZR_EVENT_COLOR_PICKER_ENTER;
+        evt.color_picker.color = color;
+        ret += zr_event_queue_push(queue, id, ZR_EVENT_COLOR_PICKER, &evt);
+    } else if (ws & ZR_LEAVE) {
+        union zr_event evt;
+        evt.color_picker.evt = ZR_EVENT_COLOR_PICKER_LEAVE;
         evt.color_picker.color = color;
         ret += zr_event_queue_push(queue, id, ZR_EVENT_COLOR_PICKER, &evt);
     }
@@ -12795,8 +12915,8 @@ zr_push_property(struct zr_context *ctx, enum zr_style_properties id,
     p[0].h.op = ZR_OP_push_property;
     p[0].h.next = zr_op_table[p[0].h.op].argc;
     p[1].i = (int)id;
-    p[3].f = value.x;
-    p[4].f = value.y;
+    p[2].f = value.x;
+    p[3].f = value.y;
 
     zr_event_queue_init_fixed(&queue, 0, &evt, 1);
     zr_op_handle(ctx, p, &queue);
@@ -12940,9 +13060,9 @@ zr_begin(struct zr_context *ctx, struct zr_panel *layout, const char *title,
 {
     int evt_count;
     union zr_event evt;
+    union zr_param p[8];
     struct zr_event_queue queue;
     struct zr_event_mask mask;
-    union zr_param p[8];
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(title);
@@ -14813,6 +14933,9 @@ zr_element_lookup(const struct zr_buffer *program, zr_hash id)
     zr_element elem = 0;
     const union zr_param *p;
     const union zr_param *begin;
+    ZR_ASSERT(program);
+    if (!program) return 0;
+
     p = begin = (const union zr_param*)zr_buffer_memory_const(program);
     while (1) {
         const struct zr_instruction *op = &zr_op_table[p[0].h.op];
@@ -14830,6 +14953,17 @@ zr_element_lookup(const struct zr_buffer *program, zr_hash id)
             break;
     }
     return elem;
+}
+
+zr_element
+zr_element_lookup_string(const struct zr_buffer *program, const char *name)
+{
+    zr_hash id;
+    ZR_ASSERT(program);
+    ZR_ASSERT(name);
+    if (!program || !name) return 0;
+    id = zr_murmur_hash(name, (int)zr_strsiz(name), 0);
+    return zr_element_lookup(program, id);
 }
 
 int
