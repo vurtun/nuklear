@@ -6344,7 +6344,7 @@ zr_color_picker_behavior(zr_flags *state,
     ZR_ASSERT(color);
 
     /* color matrix */
-    zr_color_hsv_fv(hsva, *color);
+    zr_color_hsva_fv(hsva, *color);
     if (zr_button_behavior(state, *matrix, in, ZR_BUTTON_REPEATER)) {
         hsva[1] = ZR_SATURATE((in->mouse.pos.x - matrix->x) / (matrix->w-1));
         hsva[2] = 1.0f - ZR_SATURATE((in->mouse.pos.y - matrix->y) / (matrix->h-1));
@@ -6365,9 +6365,6 @@ zr_color_picker_behavior(zr_flags *state,
         }
     }
 
-    *state = ZR_INACTIVE;
-    if (zr_input_is_mouse_hovering_rect(in, *bounds))
-        *state = ZR_HOVERED;
     if (hsv_changed) {
         *color = zr_hsva_fv(hsva);
         *state = ZR_ACTIVE;
@@ -6376,6 +6373,10 @@ zr_color_picker_behavior(zr_flags *state,
         color->a = (zr_byte)(hsva[3] * 255.0f);
         *state = ZR_ACTIVE;
     }
+
+    *state = ZR_INACTIVE;
+    if (zr_input_is_mouse_hovering_rect(in, *bounds))
+        *state = ZR_HOVERED;
     if (*state == ZR_HOVERED && !zr_input_is_mouse_prev_hovering_rect(in, *bounds))
         *state |= ZR_ENTER;
     else if (zr_input_is_mouse_prev_hovering_rect(in, *bounds))
