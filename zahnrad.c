@@ -697,16 +697,6 @@ zr_strsiz(const char *str)
 }
 
 static int
-zr_stricmpn(const char *a, const char *b, int len)
-{
-    int i = 0;
-    for (i = 0; i < len && a[i] && b[i]; ++i)
-        if (a[i] != b[i]) return 1;
-    if (i != len) return 1;
-    return 0;
-}
-
-static int
 zr_strtof(float *number, const char *buffer)
 {
     float m;
@@ -6161,7 +6151,7 @@ zr_property_behavior(zr_flags *ws, const struct zr_input *in,
     }
     if (*state == ZR_PROPERTY_DRAG) {
         value = zr_drag_behavior(ws, in, property, min, value, max, inc_per_pixel);
-        if (*ws != ZR_ACTIVE) *state = ZR_PROPERTY_DEFAULT;
+        if (!(*ws & ZR_ACTIVE)) *state = ZR_PROPERTY_DEFAULT;
     }
     return value;
 }
@@ -6356,7 +6346,6 @@ zr_color_picker_behavior(zr_flags *state,
         hsva[0] = ZR_SATURATE((in->mouse.pos.y - hue_bar->y) / (hue_bar->h-1));
         value_changed = hsv_changed = 1;
     }
-
     /* alpha bar */
     if (alpha_bar) {
         if (zr_button_behavior(state, *alpha_bar, in, ZR_BUTTON_REPEATER)) {
