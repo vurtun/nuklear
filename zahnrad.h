@@ -1727,22 +1727,6 @@ void zr_set_user_data(struct zr_context*, zr_handle handle);
 void zr_recording_begin(struct zr_context*, struct zr_buffer*);
 void zr_recording_end(struct zr_context*);
 
-/* generate UI bytecode from script */
-enum zr_compiler_status {
-    ZR_COMPILER_OK,
-    ZR_COMPILER_INVALID_VALUE,
-    ZR_COMPILER_INVALID_ARG,
-    ZR_COMPILER_OP_NOT_FOUND,
-    ZR_COMPILER_MISSING_COMMA,
-    ZR_COMPILER_WRONG_ARG_TYPE,
-    ZR_COMPILER_NO_MEMORY,
-    ZR_COMPILER_WRONG_ARG_COUNT,
-    ZR_COMPILER_INVALID_SCRIPT
-};
-typedef void(*zr_compile_log_f)(void *userdata, zr_size line, const char *error, ...);
-enum zr_compiler_status zr_compile(struct zr_buffer *program, const char *script,
-                                    zr_size len, zr_compile_log_f, void *log_usr);
-
 /* run recorded or compiled UI bytecode */
 int zr_exec(struct zr_context*, struct zr_buffer *event_buffer,
             int *event_count, const struct zr_event_mask*,

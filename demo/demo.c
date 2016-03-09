@@ -2795,68 +2795,6 @@ record_window(struct zr_context *ctx, struct zr_buffer *buffer)
 
 /* ===============================================================
  *
- *                          COMPILED WINDOW
- *
- * ===============================================================*/
-static void
-compile_log(void *userdata, zr_size line, const char *fmt, ...)
-{
-    int l = (int)line;
-    char buffer[1024];
-    va_list args;
-
-    va_start(args, fmt);
-    vsnprintf(buffer, sizeof(buffer), fmt, args);
-    buffer[1023] = 0;
-    fprintf(stderr, "[COMPILER] error (%d): %s\n", l, buffer);
-    va_end(args);
-}
-
-static void
-compile_window(struct zr_context *ctx, struct zr_buffer *buffer)
-{
-    /* **EXPERIMENTAL** */
-    const char script[] =
-        "begin('Recorded', 420, 350, 200, 350, 317)"
-        "layout_row_static(30, 150, 1)"
-        "button_text(0, 'Test', 0)"
-        "slider(1, 0, 5, 10, 1)"
-        "progress(2, 20, 100, 1)"
-        "property(3, 'Compression:', 0, 20, 100, 10, 1, 0);"
-        "select(4, 'select me', 18, 0)"
-        "check(5, 'check me', 1)"
-        "layout_row_static(30, 50, 3)"
-        "option(6, 'RGB', 1)"
-        "option(8, 'HSV', 0)"
-        "option(9, 'HEX', 0)"
-        "layout_push(10, 1, 'Tab', 0)"
-        "layout_row_static(30, 150, 1)"
-        "button_text(11, 'Test', 0)"
-        "layout_pop()"
-        "end()";
-
-    enum zr_compiler_status ret;
-    UNUSED(ctx);
-    ret = zr_compile(buffer, script, sizeof(script), compile_log, 0);
-    if (ret == ZR_COMPILER_OK) return;
-    else if (ret == ZR_COMPILER_INVALID_VALUE)
-        fprintf(stdout, "[Zahnrad]: compiling error: invalid valid\n");
-    else if (ret == ZR_COMPILER_INVALID_ARG)
-        fprintf(stdout, "[Zahnrad]: compiling error: invalid operation argument\n");
-    else if (ret == ZR_COMPILER_OP_NOT_FOUND)
-        fprintf(stdout, "[Zahnrad]: compiling error: invalid operation\n");
-    else if (ret == ZR_COMPILER_MISSING_COMMA)
-        fprintf(stdout, "[Zahnrad]: compiling error: missing comma between arguments\n");
-    else if (ret == ZR_COMPILER_WRONG_ARG_TYPE)
-        fprintf(stdout, "[Zahnrad]: compiling error: argument has wrong type\n");
-    else if (ret == ZR_COMPILER_NO_MEMORY)
-        fprintf(stdout, "[Zahnrad]: out of memory\n");
-    else if (ret == ZR_COMPILER_INVALID_SCRIPT)
-        fprintf(stdout, "[Zahnrad]: script is not correct\n");
-}
-
-/* ===============================================================
- *
  *                          REPLAY WINDOW
  *
  * ===============================================================*/
@@ -3061,8 +2999,7 @@ run_demo(struct demo *gui)
 
         memset(&nodedit, 0, sizeof(nodedit));
         zr_buffer_init_fixed(&record, record_memory, sizeof(record_memory));
-        compile_window(ctx, &record);
-        /*record_window(ctx, &record);*/
+        record_window(ctx, &record);
         node_editor_init(&nodedit);
 #ifndef DEMO_DO_NOT_DRAW_IMAGES
 #ifdef __unix__
