@@ -195,109 +195,6 @@ struct zr_pool {
     zr_size cap;
 };
 
-enum zr_stack_operation {
-    ZR_STACK_NOP    = 0,
-    ZR_STACK_PUSH   = ZR_FLAG(0),
-    ZR_STACK_POP    = ZR_FLAG(1),
-    ZR_STACK_INC    = ZR_FLAG(2),
-    ZR_STACK_DEC    = ZR_FLAG(3),
-    ZR_STACK_GEN    = ZR_FLAG(4),
-    ZR_STACK_TXT    = ZR_FLAG(5)
-};
-
-struct zr_param_header {
-    unsigned short op;
-    unsigned short next;
-};
-
-union zr_param {
-    struct zr_param_header h;
-    void *ptr;
-    const char *cheat;
-    struct zr_color color;
-    unsigned int ui;
-    zr_uint hash;
-    zr_uint off;
-    zr_flags flags;
-    zr_handle img;
-    float f;
-    int i;
-};
-
-enum zr_param_types {
-    ZR_TYPE_OP = 'o',
-    ZR_TYPE_INT = 'i',
-    ZR_TYPE_UINT = 'u',
-    ZR_TYPE_FLOAT = 'f',
-    ZR_TYPE_HASH = 'h',
-    ZR_TYPE_FLAGS = 'g',
-    ZR_TYPE_CHEAT = 'c',
-    ZR_TYPE_IMAGE = 'm',
-    ZR_TYPE_COLOR = 'l',
-    ZR_TYPE_PTR = 'p'
-};
-
-#define ZR_FMT(fmt) (fmt), (sizeof(fmt)-1)
-#define ZR_OPCODES(ZR_OP)\
-    ZR_OP(load_default_style,   ZR_STACK_NOP,               ZR_FMT("og"))\
-    ZR_OP(push_property,        ZR_STACK_NOP,               ZR_FMT("oiff"))\
-    ZR_OP(push_color,           ZR_STACK_NOP,               ZR_FMT("oil"))\
-    ZR_OP(push_font_height,     ZR_STACK_NOP,               ZR_FMT("oi"))\
-    ZR_OP(pop_color,            ZR_STACK_NOP,               ZR_FMT("o"))\
-    ZR_OP(pop_property,         ZR_STACK_NOP,               ZR_FMT("o"))\
-    ZR_OP(pop_font_height,      ZR_STACK_NOP,               ZR_FMT("o"))\
-    ZR_OP(reset_colors,         ZR_STACK_NOP,               ZR_FMT("o"))\
-    ZR_OP(reset_properties,     ZR_STACK_NOP,               ZR_FMT("o"))\
-    ZR_OP(reset_font_height,    ZR_STACK_NOP,               ZR_FMT("o"))\
-    ZR_OP(reset,                ZR_STACK_NOP,               ZR_FMT("o"))\
-    ZR_OP(begin,                ZR_STACK_PUSH|ZR_STACK_INC|ZR_STACK_TXT, ZR_FMT("opcffffg"))\
-    ZR_OP(end,                  ZR_STACK_POP|ZR_STACK_DEC,  ZR_FMT("o"))\
-    ZR_OP(layout_row_dynamic,   ZR_STACK_NOP,               ZR_FMT("ofi"))\
-    ZR_OP(layout_row_static,    ZR_STACK_NOP,               ZR_FMT("ofii"))\
-    ZR_OP(layout_row_begin,     ZR_STACK_NOP,               ZR_FMT("oifi"))\
-    ZR_OP(layout_row_push,      ZR_STACK_NOP,               ZR_FMT("of"))\
-    ZR_OP(layout_row_end,       ZR_STACK_NOP,               ZR_FMT("o"))\
-    ZR_OP(layout_space_begin,   ZR_STACK_NOP,               ZR_FMT("oifi"))\
-    ZR_OP(layout_space_push,    ZR_STACK_NOP,               ZR_FMT("of"))\
-    ZR_OP(layout_space_end,     ZR_STACK_NOP,               ZR_FMT("o"))\
-    ZR_OP(layout_push,          ZR_STACK_INC|ZR_STACK_GEN|ZR_STACK_TXT,  ZR_FMT("ohici"))\
-    ZR_OP(layout_pop,           ZR_STACK_DEC|ZR_STACK_TXT,  ZR_FMT("o"))\
-    ZR_OP(text,                 ZR_STACK_NOP|ZR_STACK_TXT,  ZR_FMT("ocugl"))\
-    ZR_OP(text_wrap,            ZR_STACK_NOP|ZR_STACK_TXT,  ZR_FMT("ocul"))\
-    ZR_OP(image,                ZR_STACK_GEN,               ZR_FMT("ohmffffff"))\
-    ZR_OP(button_text,          ZR_STACK_GEN|ZR_STACK_TXT,  ZR_FMT("ohci"))\
-    ZR_OP(button_color,         ZR_STACK_GEN,               ZR_FMT("ohli"))\
-    ZR_OP(button_symbol,        ZR_STACK_GEN,               ZR_FMT("ohii"))\
-    ZR_OP(button_image,         ZR_STACK_GEN,               ZR_FMT("ohmffffffi"))\
-    ZR_OP(button_text_symbol,   ZR_STACK_GEN|ZR_STACK_TXT,  ZR_FMT("ohici"))\
-    ZR_OP(button_text_image,    ZR_STACK_GEN|ZR_STACK_TXT,  ZR_FMT("ohmffffffcgi"))\
-    ZR_OP(check,                ZR_STACK_GEN|ZR_STACK_TXT,  ZR_FMT("ohci"))\
-    ZR_OP(option,               ZR_STACK_GEN|ZR_STACK_TXT,  ZR_FMT("ohci"))\
-    ZR_OP(select,               ZR_STACK_GEN|ZR_STACK_TXT,  ZR_FMT("ohcgi"))\
-    ZR_OP(slider,               ZR_STACK_GEN,               ZR_FMT("ohffff"))\
-    ZR_OP(progress,             ZR_STACK_GEN,               ZR_FMT("ohiii"))\
-    ZR_OP(property,             ZR_STACK_GEN|ZR_STACK_TXT,  ZR_FMT("ohcfffffi"))\
-    ZR_OP(color_picker,         ZR_STACK_GEN,               ZR_FMT("ohli"))\
-    ZR_OP(group_begin,          ZR_STACK_PUSH|ZR_STACK_TXT, ZR_FMT("ohpcg"))\
-    ZR_OP(group_end,            ZR_STACK_POP,               ZR_FMT("o"))\
-    ZR_OP(chart_begin,          ZR_STACK_NOP,               ZR_FMT("ohiiff"))\
-    ZR_OP(chart_push,           ZR_STACK_NOP,               ZR_FMT("ohf"))\
-    ZR_OP(chart_end,            ZR_STACK_NOP,               ZR_FMT("o"))\
-
-enum zr_opcodes {
-#define ZR_OPCODE(a, b, c) ZR_OP_##a,
-    ZR_OPCODES(ZR_OPCODE)
-#undef ZR_OPCODE
-    ZR_OP_list_end,
-    ZR_OP_MAX
-};
-
-struct zr_event_queue {
-    struct zr_buffer memory;
-    struct zr_event_mask mask;
-    int window, skip;
-};
-
 /* ==============================================================
  *                          MATH
  * =============================================================== */
@@ -375,7 +272,6 @@ typedef int zr__check_byte[(sizeof(zr_byte) == 1) ? 1 : -1];
 
 static const struct zr_rect zr_null_rect = {-8192.0f, -8192.0f, 16384, 16384};
 static const float FLOAT_PRECISION = 0.00000000000001f;
-static const zr_size zr_event_align = ZR_ALIGNOF(union zr_event);
 /*
  * ==============================================================
  *
@@ -1033,7 +929,7 @@ zr_rgba_hex(const char *rgb)
 void
 zr_color_hex_rgba(char *output, struct zr_color col)
 {
-#define ZR_TO_HEX(i) ((i) <= 9 ? '0' + (i): 'A' - 10 + (i))
+    #define ZR_TO_HEX(i) ((i) <= 9 ? '0' + (i): 'A' - 10 + (i))
     output[0] = (char)ZR_TO_HEX((col.r & 0x0F));
     output[1] = (char)ZR_TO_HEX((col.r & 0xF0) >> 4);
     output[2] = (char)ZR_TO_HEX((col.g & 0x0F));
@@ -1043,13 +939,13 @@ zr_color_hex_rgba(char *output, struct zr_color col)
     output[6] = (char)ZR_TO_HEX((col.a & 0x0F));
     output[7] = (char)ZR_TO_HEX((col.a & 0xF0) >> 4);
     output[8] = '\0';
-#undef ZR_TO_HEX
+    #undef ZR_TO_HEX
 }
 
 void
 zr_color_hex_rgb(char *output, struct zr_color col)
 {
-#define ZR_TO_HEX(i) ((i) <= 9 ? '0' + (i): 'A' - 10 + (i))
+    #define ZR_TO_HEX(i) ((i) <= 9 ? '0' + (i): 'A' - 10 + (i))
     output[0] = (char)ZR_TO_HEX((col.r & 0x0F));
     output[1] = (char)ZR_TO_HEX((col.r & 0xF0) >> 4);
     output[2] = (char)ZR_TO_HEX((col.g & 0x0F));
@@ -1057,7 +953,7 @@ zr_color_hex_rgb(char *output, struct zr_color col)
     output[4] = (char)ZR_TO_HEX((col.b & 0x0F));
     output[5] = (char)ZR_TO_HEX((col.b & 0xF0) >> 4);
     output[6] = '\0';
-#undef ZR_TO_HEX
+    #undef ZR_TO_HEX
 }
 
 struct zr_color
@@ -5162,7 +5058,7 @@ zr_scrollbar_behavior(zr_flags *state, struct zr_input *in,
             pixel = in->mouse.delta.y;
             delta = (pixel / scroll.h) * target;
             scroll_offset = ZR_CLAMP(0, scroll_offset + delta, target - scroll.h);
-            /* This is probably one of my most distgusting hacks I have ever done.
+            /* This is probably one of my most disgusting hacks I have ever done.
              * This basically changes the mouse clicked position with the moving
              * cursor. This allows for better scroll behavior but resulted into me
              * having to remove const correctness for input. But in the end I believe
@@ -6087,6 +5983,12 @@ zr_widget_edit(struct zr_command_buffer *out, struct zr_rect r,
  *                          PROPERTY
  *
  * ===============================================================*/
+enum zr_property_state {
+    ZR_PROPERTY_DEFAULT,
+    ZR_PROPERTY_EDIT,
+    ZR_PROPERTY_DRAG
+};
+
 enum zr_property_filter {
     ZR_FILTER_INT,
     ZR_FILTER_FLOAT
@@ -6852,15 +6754,12 @@ zr_style_default_color(struct zr_style *style)
     #undef COLOR
 }
 
-static int
-zr_op_load_default_style(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_load_default_style(struct zr_context *ctx, zr_flags flags)
 {
     struct zr_style *style;
-    zr_flags flags = p[0].flags;
-    ZR_UNUSED(queue);
     ZR_ASSERT(ctx);
-    if (!ctx) return 0;
+    if (!ctx) return;
 
     style = &ctx->style;
     if (flags & ZR_DEFAULT_COLOR)
@@ -6874,7 +6773,6 @@ zr_op_load_default_style(struct zr_context *ctx, union zr_param *p,
     style->header.close_symbol = 'x';
     style->header.minimize_symbol = '-';
     style->header.maximize_symbol = '+';
-    return 0;
 }
 
 void
@@ -6909,48 +6807,40 @@ zr_get_color(const struct zr_context *ctx, enum zr_style_colors index)
     return style->colors[index];
 }
 
-static int
-zr_op_push_color(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_push_color(struct zr_context *ctx, enum zr_style_colors index,
+    struct zr_color col)
 {
     struct zr_style *style;
     struct zr_saved_color *c;
-    enum zr_style_colors index = (enum zr_style_colors)p[0].i;
-    struct zr_color col = p[1].color;
 
-    ZR_UNUSED(queue);
     ZR_ASSERT(ctx);
-    if (!ctx) return 0;
+    if (!ctx) return;
     style = &ctx->style;
-    if (style->stack.color >= ZR_MAX_COLOR_STACK) return 0;
+    if (style->stack.color >= ZR_MAX_COLOR_STACK) return;
 
     c = &style->stack.colors[style->stack.color++];
     c->value = style->colors[index];
     c->type = index;
     style->colors[index] = col;
-    return 0;
 }
 
-static int
-zr_op_push_property(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_push_property(struct zr_context *ctx, enum zr_style_properties index,
+    struct zr_vec2 v)
 {
     struct zr_style *style;
     struct zr_saved_property *property;
-    enum zr_style_properties index = (enum zr_style_properties)p[0].i;
-    struct zr_vec2 v = zr_vec2(p[1].f, p[2].f);
 
-    ZR_UNUSED(queue);
     ZR_ASSERT(ctx);
-    if (!ctx) return 0;
+    if (!ctx) return;
     style = &ctx->style;
-    if (style->stack.property >= ZR_MAX_ATTRIB_STACK) return 0;
+    if (style->stack.property >= ZR_MAX_ATTRIB_STACK) return;
 
     property = &style->stack.properties[style->stack.property++];
     property->value = style->properties[index];
     property->type = index;
     style->properties[index] = v;
-    return 0;
 }
 
 void
@@ -6970,64 +6860,49 @@ zr_push_font(struct zr_context *ctx, struct zr_user_font font)
     style->font = font;
 }
 
-static int
-zr_op_push_font_height(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_push_font_height(struct zr_context *ctx, float font_height)
 {
     struct zr_style *style;
-    float font_height = p[0].f;
-
-    ZR_UNUSED(queue);
     ZR_ASSERT(ctx);
-    if (!ctx) return 0;
+    if (!ctx) return;
     style = &ctx->style;
-    if (style->stack.font >= ZR_MAX_FONT_HEIGHT_STACK) return 0;
+    if (style->stack.font >= ZR_MAX_FONT_HEIGHT_STACK) return;
 
     style->stack.font_heights[style->stack.font_height++] = style->font.height;
     if (style->stack.font)
         style->stack.fonts[style->stack.font-1].font_height_end++;
     style->font.height = font_height;
-    return 0;
 }
 
-static int
-zr_op_pop_color(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_pop_color(struct zr_context *ctx)
 {
     struct zr_style *style;
     struct zr_saved_color *c;
 
-    ZR_UNUSED(p);
-    ZR_UNUSED(queue);
     ZR_ASSERT(ctx);
-
-    if (!ctx) return 0;
+    if (!ctx) return;
     style = &ctx->style;
-    if (!style->stack.color) return 0;
+    if (!style->stack.color) return;
 
     c = &style->stack.colors[--style->stack.color];
     style->colors[c->type] = c->value;
-    return 0;
 }
 
-static int
-zr_op_pop_property(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_pop_property(struct zr_context *ctx)
 {
     struct zr_style *style;
     struct zr_saved_property *property;
 
-    ZR_UNUSED(p);
-    ZR_UNUSED(queue);
     ZR_ASSERT(ctx);
-
-    if (!ctx) return 0;
+    if (!ctx) return;
     style = &ctx->style;
-    if (!style->stack.property) return 0;
+    if (!style->stack.property) return;
 
     property = &style->stack.properties[--style->stack.property];
     style->properties[property->type] = property->value;
-    return 0;
 }
 
 void
@@ -7048,20 +6923,15 @@ zr_pop_font(struct zr_context *ctx)
         style->font.height = style->stack.font_heights[style->stack.font_height-1];
 }
 
-static int
-zr_op_pop_font_height(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_pop_font_height(struct zr_context *ctx)
 {
     struct zr_style *style;
     float font_height;
-
-    ZR_UNUSED(p);
-    ZR_UNUSED(queue);
     ZR_ASSERT(ctx);
-
-    if (!ctx) return 0;
+    if (!ctx) return;
     style = &ctx->style;
-    if (!style->stack.font_height) return 0;
+    if (!style->stack.font_height) return;
 
     font_height = style->stack.font_heights[--style->stack.font_height];
     style->font.height = font_height;
@@ -7069,39 +6939,28 @@ zr_op_pop_font_height(struct zr_context *ctx, union zr_param *p,
         ZR_ASSERT(style->stack.fonts[style->stack.font-1].font_height_end);
         style->stack.fonts[style->stack.font-1].font_height_end--;
     }
-    return 0;
 }
 
-static int
-zr_op_reset_colors(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_reset_colors(struct zr_context *ctx)
 {
     struct zr_style *style;
-    ZR_UNUSED(p);
-    ZR_UNUSED(queue);
     ZR_ASSERT(ctx);
-
-    if (!ctx) return  0;
+    if (!ctx) return;
     style = &ctx->style;
     while (style->stack.color)
         zr_pop_color(ctx);
-    return 0;
 }
 
-static int
-zr_op_reset_properties(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_reset_properties(struct zr_context *ctx)
 {
     struct zr_style *style;
-    ZR_UNUSED(p);
-    ZR_UNUSED(queue);
     ZR_ASSERT(ctx);
-
-    if (!ctx) return 0;
+    if (!ctx) return;
     style = &ctx->style;
     while (style->stack.property)
         zr_pop_property(ctx);
-    return 0;
 }
 
 void
@@ -7115,36 +6974,26 @@ zr_reset_font(struct zr_context *ctx)
         zr_pop_font(ctx);
 }
 
-static int
-zr_op_reset_font_height(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_reset_font_height(struct zr_context *ctx)
 {
     struct zr_style *style;
-    ZR_UNUSED(p);
-    ZR_UNUSED(queue);
     ZR_ASSERT(ctx);
-
-    if (!ctx) return 0;
+    if (!ctx) return;
     style = &ctx->style;
     while (style->stack.font_height)
         zr_pop_font_height(ctx);
-    return 0;
 }
 
-static int
-zr_op_reset(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_reset(struct zr_context *ctx)
 {
-    ZR_UNUSED(p);
-    ZR_UNUSED(queue);
     ZR_ASSERT(ctx);
-
-    if (!ctx) return 0;
+    if (!ctx) return;
     zr_reset_colors(ctx);
     zr_reset_properties(ctx);
     zr_reset_font(ctx);
     zr_reset_font_height(ctx);
-    return 0;
 }
 
 /* ===============================================================
@@ -7625,120 +7474,6 @@ zr_find_value(struct zr_window *win, zr_hash name)
 
 /* ----------------------------------------------------------------
  *
- *                          EVENTS
- *
- * ---------------------------------------------------------------*/
-void zr_event_mask_end(struct zr_event_mask *mask)
-{
-    ZR_UNUSED(mask);
-    return;
-}
-
-void
-zr_event_mask_begin(struct zr_event_mask *mask)
-{
-    zr_zero_struct(*mask);
-}
-
-void
-zr_event_mask_add(struct zr_event_mask *mask,
-    enum zr_event_type type, zr_flags f)
-{
-    unsigned short flags;
-    ZR_ASSERT(mask);
-    if (!mask) return;
-    flags = (unsigned short)f;
-    mask->flags[type] |= (unsigned short)flags;
-}
-
-void
-zr_event_mask_remove(struct zr_event_mask *mask,
-    enum zr_event_type type, zr_flags f)
-{
-    unsigned short flags;
-    ZR_ASSERT(mask);
-    if (!mask) return;
-    flags = (unsigned short)f;
-    flags = (unsigned short)~flags;
-    mask->flags[type] &= flags;
-}
-
-int
-zr_event_mask_has(struct zr_event_mask *mask,
-    enum zr_event_type type, zr_flags flags)
-{
-    ZR_ASSERT(mask);
-    if (!mask) return 0;
-    return (mask->flags[type] & flags) ? zr_true: zr_false;
-}
-
-static void
-zr_event_queue_setup(struct zr_event_queue *q, const struct zr_event_mask *mask)
-{
-    ZR_ASSERT(q);
-    if (!q) return;
-    if (!mask) {
-        q->mask.flags[ZR_EVENT_WINDOW] = ZR_EVENT_WINDOW_ALL;
-        q->mask.flags[ZR_EVENT_TAB] = ZR_EVENT_TAB_ALL;
-        q->mask.flags[ZR_EVENT_CHECKBOX] = ZR_EVENT_CHECK_ALL;
-        q->mask.flags[ZR_EVENT_OPTION] = ZR_EVENT_OPTION_ALL;
-        q->mask.flags[ZR_EVENT_SELECT] = ZR_EVENT_SELECT_ALL;
-        q->mask.flags[ZR_EVENT_BUTTON] = ZR_EVENT_BUTTON_ALL;
-        q->mask.flags[ZR_EVENT_SLIDER] = ZR_EVENT_SLIDER_ALL;
-        q->mask.flags[ZR_EVENT_PROGRESS] = ZR_EVENT_PROGRESS_ALL;
-        q->mask.flags[ZR_EVENT_PROPERTY] = ZR_EVENT_PROPERTY_ALL;
-        q->mask.flags[ZR_EVENT_CHART] = ZR_EVENT_CHART_ALL;
-    } else q->mask = *mask;
-    q->skip = 0;
-    q->window = -1;
-}
-
-static void
-zr_event_queue_init_fixed(struct zr_event_queue *q,
-    const struct zr_event_mask *mask, void *memory, zr_size count)
-{
-    ZR_ASSERT(q);
-    zr_buffer_init_fixed(&q->memory, memory, (count) * sizeof(union zr_event));
-    zr_event_queue_setup(q, mask);
-}
-
-static void
-zr_event_queue_init(struct zr_event_queue *q, const struct zr_event_mask *mask,
-    const struct zr_buffer *buffer)
-{
-    ZR_ASSERT(q);
-    q->memory = *buffer;
-    zr_event_queue_setup(q, mask);
-}
-
-static int
-zr_event_queue_allows(struct zr_event_queue *q,
-    enum zr_event_type type, zr_flags flags)
-{
-    ZR_ASSERT(q);
-    if (!q) return 0;
-    return zr_event_mask_has(&q->mask, type, flags);
-}
-
-static int
-zr_event_queue_push(struct zr_event_queue *q, zr_hash id, enum zr_event_type type,
-    union zr_event *evt)
-{
-    ZR_ASSERT(q);
-    ZR_ASSERT(evt);
-    if (!q || !evt) return 0;
-    if (zr_event_queue_allows(q, type, evt->button.evt)) {
-        evt->base.id = id;
-        evt->base.type = type;
-        evt->base.window = q->window;
-        zr_buffer_push(&q->memory, ZR_BUFFER_FRONT, evt, sizeof(*evt), zr_event_align);
-        return 1;
-    }
-    return 0;
-}
-
-/* ----------------------------------------------------------------
- *
  *                          WINDOW
  *
  * ---------------------------------------------------------------*/
@@ -7889,20 +7624,14 @@ zr_remove_window(struct zr_context *ctx, struct zr_window *win)
     ctx->count--;
 }
 
-static int
-zr_op_begin(struct zr_context *ctx, union zr_param *p, struct zr_event_queue *queue)
+int
+zr_begin(struct zr_context *ctx, struct zr_panel *layout, const char *title,
+    struct zr_rect bounds, zr_flags flags)
 {
     struct zr_window *win;
-    struct zr_rect old_bounds;
     zr_hash title_hash;
     int title_len;
     int ret = 0;
-    int res = 0;
-
-    struct zr_panel *layout = (struct zr_panel*)p[0].ptr;
-    const char *title = p[1].cheat;
-    struct zr_rect bounds = zr_rect(p[2].f, p[3].f, p[4].f, p[5].f);
-    const zr_flags flags = p[6].flags;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(!ctx->current && "if this triggers you missed a `zr_end` call");
@@ -7925,12 +7654,6 @@ zr_op_begin(struct zr_context *ctx, union zr_param *p, struct zr_event_queue *qu
         win->name = title_hash;
         win->popup.win = 0;
 
-        /* initial expose event */
-        {union zr_event evt;
-        evt.win.evt = ZR_EVENT_WINDOW_EXPOSED;
-        evt.win.data[0] = (int)win->bounds.x;
-        evt.win.data[1] = (int)win->bounds.y;
-        ret += zr_event_queue_push(queue, win->name, ZR_EVENT_WINDOW, &evt);}
     } else {
         /* update public window flags */
         win->flags &= ~(zr_flags)(ZR_WINDOW_PRIVATE-1);
@@ -7938,7 +7661,6 @@ zr_op_begin(struct zr_context *ctx, union zr_param *p, struct zr_event_queue *qu
         win->seq++;
     }
     if (win->flags & ZR_WINDOW_HIDDEN) {
-        queue->skip = zr_true;
         ctx->current = win;
         return 0;
     }
@@ -8016,13 +7738,6 @@ zr_op_begin(struct zr_context *ctx, union zr_param *p, struct zr_event_queue *qu
             zr_remove_window(ctx, win);
             zr_insert_window(ctx, win);
 
-            /* queue focus event */
-            {union zr_event evt;
-            evt.win.evt = ZR_EVENT_WINDOW_FOCUS;
-            evt.win.data[0] = (int)win->bounds.x;
-            evt.win.data[1] = (int)win->bounds.y;
-            ret += zr_event_queue_push(queue, win->name, ZR_EVENT_WINDOW, &evt);}
-
             win->flags &= ~(zr_flags)ZR_WINDOW_ROM;
             ctx->active = win;
         }
@@ -8032,115 +7747,24 @@ zr_op_begin(struct zr_context *ctx, union zr_param *p, struct zr_event_queue *qu
 
     win->layout = layout;
     ctx->current = win;
-    old_bounds = win->bounds;
-    res = zr_panel_begin(ctx, title);
+    ret = zr_panel_begin(ctx, title);
     layout->offset = &win->scrollbar;
-
-    /* event queueing */
-    if (res) {
-        /* heartbeat event used for the immediate mode API */
-        union zr_event evt;
-        evt.win.evt = ZR_EVENT_WINDOW_ACTIVE;
-        evt.win.data[0] = (int)win->bounds.x;
-        evt.win.data[1] = (int)win->bounds.y;
-        ret += zr_event_queue_push(queue, win->name, ZR_EVENT_WINDOW, &evt);
-    } else queue->skip = 1;
-
-    if (win->flags & ZR_WINDOW_MINIMIZABLE) {
-        if (win->old_flags & ZR_WINDOW_MINIMIZED && !(layout->flags & ZR_WINDOW_MINIMIZED)) {
-            /* maximized window event */
-            union zr_event evt;
-            evt.win.evt = ZR_EVENT_WINDOW_MAXIMIZED;
-            evt.win.data[0] = (int)win->bounds.x;
-            evt.win.data[1] = (int)win->bounds.y;
-            ret += zr_event_queue_push(queue, win->name, ZR_EVENT_WINDOW, &evt);
-        } else if (!(win->old_flags & ZR_WINDOW_MINIMIZED) && (layout->flags & ZR_WINDOW_MINIMIZED)) {
-            /* minimized window event */
-            union zr_event evt;
-            evt.win.evt = ZR_EVENT_WINDOW_MINIMIZED;
-            evt.win.data[0] = (int)win->bounds.x;
-            evt.win.data[1] = (int)win->bounds.y;
-            ret += zr_event_queue_push(queue, win->name, ZR_EVENT_WINDOW, &evt);
-        }
-    }
-    if (win->flags & ZR_WINDOW_CLOSABLE) {
-        if (win->old_flags & ZR_WINDOW_HIDDEN && !(layout->flags & ZR_WINDOW_HIDDEN)) {
-            /* exposed window event */
-            union zr_event evt;
-            evt.win.evt = ZR_EVENT_WINDOW_EXPOSED;
-            evt.win.data[0] = (int)win->bounds.x;
-            evt.win.data[1] = (int)win->bounds.y;
-            ret += zr_event_queue_push(queue, win->name, ZR_EVENT_WINDOW, &evt);
-        } else if (!(win->old_flags & ZR_WINDOW_HIDDEN) && (layout->flags & ZR_WINDOW_HIDDEN)) {
-            /* closed window event */
-            union zr_event evt;
-            evt.win.evt = ZR_EVENT_WINDOW_CLOSED;
-            evt.win.data[0] = (int)win->bounds.x;
-            evt.win.data[1] = (int)win->bounds.y;
-            ret += zr_event_queue_push(queue, win->name, ZR_EVENT_WINDOW, &evt);
-        }
-    }
-    if (!(win->flags & ZR_WINDOW_HIDDEN) && !(win->flags & ZR_WINDOW_MINIMIZED) &&
-        zr_input_is_mouse_hovering_rect(&ctx->input, win->bounds))
-    {
-        /* hovered window event */
-        union zr_event evt;
-        evt.win.evt = ZR_EVENT_WINDOW_HOVERED;
-        evt.win.data[0] = (int)win->bounds.x;
-        evt.win.data[1] = (int)win->bounds.y;
-        ret += zr_event_queue_push(queue, win->name, ZR_EVENT_WINDOW, &evt);
-    }
-    if (win->flags & ZR_WINDOW_MOVABLE) {
-        if (old_bounds.x > win->bounds.x || old_bounds.x < win->bounds.x ||
-            old_bounds.y > win->bounds.y || old_bounds.y < win->bounds.y)
-        {
-            /* moved window event */
-            union zr_event evt;
-            evt.win.evt = ZR_EVENT_WINDOW_MOVED;
-            evt.win.data[0] = (int)win->bounds.x;
-            evt.win.data[1] = (int)win->bounds.y;
-            ret += zr_event_queue_push(queue, win->name, ZR_EVENT_WINDOW, &evt);
-        }
-    }
     return ret;
 }
 
-static int
-zr_op_end(struct zr_context *ctx, union zr_param *p, struct zr_event_queue *queue)
+void
+zr_end(struct zr_context *ctx)
 {
-    int ret = 0;
-    struct zr_window *win;
-    struct zr_rect old_bounds;
-
-    ZR_UNUSED(p);
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
-    if (!ctx || !ctx->current) return 0;
+    if (!ctx || !ctx->current) return;
     if (ctx->current->flags & ZR_WINDOW_HIDDEN) {
         ctx->current = 0;
-        return 0;
+        return;
     }
-
-    win = ctx->current;
-    old_bounds = win->bounds;
     zr_panel_end(ctx);
-
-    if (win->flags & ZR_WINDOW_SCALABLE) {
-        if (old_bounds.w > win->bounds.w || old_bounds.w < win->bounds.w ||
-            old_bounds.h > win->bounds.h || old_bounds.h < win->bounds.h)
-        {
-            /* scaled window event */
-            union zr_event evt;
-            evt.win.evt = ZR_EVENT_WINDOW_RESIZED;
-            evt.win.data[0] = (int)win->bounds.w;
-            evt.win.data[1] = (int)win->bounds.h;
-            ret += zr_event_queue_push(queue, win->name, ZR_EVENT_WINDOW, &evt);
-        }
-    }
-    ctx->current->old_flags = ctx->current->flags;
     ctx->current = 0;
-    return ret;
 }
 
 struct zr_rect
@@ -9160,46 +8784,30 @@ zr_row_layout(struct zr_context *ctx, enum zr_layout_format fmt,
     win->layout->row.filled = 0;
 }
 
-static int
-zr_op_layout_row_dynamic(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_layout_row_dynamic(struct zr_context *ctx, float height, int cols)
 {
-    float height = p[0].f;
-    int cols = p[1].i;
-    ZR_UNUSED(queue);
     zr_row_layout(ctx, ZR_DYNAMIC, height, cols, 0);
-    return 0;
 }
 
-static int
-zr_op_layout_row_static(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_layout_row_static(struct zr_context *ctx, float height, int item_width, int cols)
 {
-    float height = p[0].f;
-    int width = p[1].i;
-    int cols = p[2].i;
-    ZR_UNUSED(queue);
-    zr_row_layout(ctx, ZR_STATIC, height, cols, width);
-    return 0;
+    zr_row_layout(ctx, ZR_STATIC, height, cols, item_width);
 }
 
-static int
-zr_op_layout_row_begin(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_layout_row_begin(struct zr_context *ctx, enum zr_layout_format fmt,
+    float row_height, int cols)
 {
     struct zr_window *win;
     struct zr_panel *layout;
 
-    enum zr_layout_format fmt = (enum zr_layout_format)p[0].i;
-    float row_height = p[1].f;
-    int cols = p[2].i;
-
-    ZR_UNUSED(queue);
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
     if (!ctx || !ctx->current || !ctx->current->layout)
-        return 0;
+        return;
 
     win = ctx->current;
     layout = win->layout;
@@ -9214,57 +8822,48 @@ zr_op_layout_row_begin(struct zr_context *ctx, union zr_param *p,
     layout->row.item_offset = 0;
     layout->row.filled = 0;
     layout->row.columns = cols;
-    return 0;
 }
 
-static int
-zr_op_layout_row_push(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_layout_row_push(struct zr_context *ctx, float ratio_or_width)
 {
     struct zr_window *win;
     struct zr_panel *layout;
-    float ratio_or_width = p[0].f;
 
     ZR_ASSERT(ctx);
-    ZR_ASSERT(queue);
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
     if (!ctx || !ctx->current || !ctx->current->layout)
-        return 0;
+        return;
 
     win = ctx->current;
     layout = win->layout;
 
     if (layout->row.type == ZR_LAYOUT_DYNAMIC_ROW) {
         float ratio = ratio_or_width;
-        if ((ratio + layout->row.filled) > 1.0f) return 0;
+        if ((ratio + layout->row.filled) > 1.0f) return;
         if (ratio > 0.0f)
             layout->row.item_width = ZR_SATURATE(ratio);
         else layout->row.item_width = 1.0f - layout->row.filled;
     } else layout->row.item_width = ratio_or_width;
-    return 0;
 }
 
-static int
-zr_op_layout_row_end(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_layout_row_end(struct zr_context *ctx)
 {
     struct zr_window *win;
     struct zr_panel *layout;
 
-    ZR_UNUSED(p);
-    ZR_UNUSED(queue);
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
     if (!ctx || !ctx->current || !ctx->current->layout)
-        return 0;
+        return;
 
     win = ctx->current;
     layout = win->layout;
     layout->row.item_width = 0;
     layout->row.item_offset = 0;
-    return 0;
 }
 
 void
@@ -9307,23 +8906,18 @@ zr_layout_row(struct zr_context *ctx, enum zr_layout_format fmt,
     layout->row.filled = 0;
 }
 
-static int
-zr_op_layout_space_begin(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_layout_space_begin(struct zr_context *ctx, enum zr_layout_format fmt,
+    float height, int widget_count)
 {
     struct zr_window *win;
     struct zr_panel *layout;
 
-    enum zr_layout_format fmt = (enum zr_layout_format)p[0].i;
-    float height = p[1].f;
-    int widget_count = p[2].i;
-
-    ZR_UNUSED(queue);
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
     if (!ctx || !ctx->current || !ctx->current->layout)
-        return 0;
+        return;
 
     win = ctx->current;
     layout = win->layout;
@@ -9336,23 +8930,19 @@ zr_op_layout_space_begin(struct zr_context *ctx, union zr_param *p,
     layout->row.item_width = 0;
     layout->row.item_offset = 0;
     layout->row.filled = 0;
-    return 0;
 }
 
-static int
-zr_op_layout_space_end(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_layout_space_end(struct zr_context *ctx)
 {
     struct zr_window *win;
     struct zr_panel *layout;
 
-    ZR_UNUSED(p);
-    ZR_UNUSED(queue);
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
     if (!ctx || !ctx->current || !ctx->current->layout)
-        return 0;
+        return;
 
     win = ctx->current;
     layout = win->layout;
@@ -9360,28 +8950,23 @@ zr_op_layout_space_end(struct zr_context *ctx, union zr_param *p,
     layout->row.item_height = 0;
     layout->row.item_offset = 0;
     zr_zero(&layout->row.item, sizeof(layout->row.item));
-    return 0;
 }
 
-static int
-zr_op_layout_space_push(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_layout_space_push(struct zr_context *ctx, struct zr_rect rect)
 {
     struct zr_window *win;
     struct zr_panel *layout;
-    const struct zr_rect rect = zr_rect(p[0].f, p[1].f, p[2].f, p[3].f);
 
-    ZR_UNUSED(queue);
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
     if (!ctx || !ctx->current || !ctx->current->layout)
-        return 0;
+        return;
 
     win = ctx->current;
     layout = win->layout;
     layout->row.item = rect;
-    return 0;
 }
 
 struct zr_rect
@@ -9662,9 +9247,9 @@ zr_layout_peek(struct zr_rect *bounds, struct zr_context *ctx)
     layout->row.index = index;
 }
 
-static int
-zr_op_layout_push(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+int
+zr_layout_push(struct zr_context *ctx, enum zr_layout_node_type type,
+    const char *title, enum zr_collapse_states initial_state)
 {
     struct zr_window *win;
     struct zr_panel *layout;
@@ -9672,24 +9257,16 @@ zr_op_layout_push(struct zr_context *ctx, union zr_param *p,
     struct zr_command_buffer *out;
     const struct zr_input *in;
 
-    const zr_hash id = p[0].hash;
-    const enum zr_layout_node_type type = (enum zr_layout_node_type)p[1].i;
-    const char *title = p[2].cheat;
-    const enum zr_collapse_states initial_state = (enum zr_collapse_states)p[3].i;
-
     struct zr_vec2 item_spacing;
     struct zr_vec2 item_padding;
     struct zr_vec2 panel_padding;
     struct zr_rect header = {0,0,0,0};
     struct zr_rect sym = {0,0,0,0};
-    int ret = 0;
 
     zr_flags ws;
     enum zr_widget_state widget_state;
-
     int title_len;
     zr_hash title_hash;
-    int toggled = 0;
     zr_uint *state = 0;
 
     ZR_ASSERT(ctx);
@@ -9726,14 +9303,8 @@ zr_op_layout_push(struct zr_context *ctx, union zr_param *p,
     /* update node state */
     in = (!(layout->flags & ZR_WINDOW_ROM)) ? &ctx->input: 0;
     in = (in && widget_state == ZR_WIDGET_VALID) ? &ctx->input : 0;
-    if (zr_button_behavior(&ws, header, in, ZR_BUTTON_DEFAULT)) {
-        union zr_event evt;
+    if (zr_button_behavior(&ws, header, in, ZR_BUTTON_DEFAULT))
         *state = (*state == ZR_MAXIMIZED) ? ZR_MINIMIZED : ZR_MAXIMIZED;
-        toggled = zr_true;
-        evt.tab.evt = (*state == ZR_MAXIMIZED) ?
-            ZR_EVENT_TAB_MAXIMIZED: ZR_EVENT_TAB_MINIMIZED;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_TAB, &evt);
-    }
 
     {
         /* and draw closing/open icon */
@@ -9787,36 +9358,26 @@ zr_op_layout_push(struct zr_context *ctx, union zr_param *p,
         zr_draw_line(out, header.x, header.y + header.h,
             header.x + header.w-1, header.y + header.h, config->colors[ZR_COLOR_BORDER]);
     }
-
     if (*state == ZR_MAXIMIZED) {
-        union zr_event evt;
         layout->at_x = header.x + layout->offset->x;
         layout->width = ZR_MAX(layout->width, 2 * panel_padding.x);
         layout->width -= 2 * panel_padding.x;
         layout->row.tree_depth++;
-
-        evt.tab.evt = ZR_EVENT_TAB_ACTIVE;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_TAB, &evt);
-    } else queue->skip = 1;
-    return ret;
+        return zr_true;
+    } else return zr_false;
 }
 
-static int
-zr_op_layout_pop(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void zr_layout_pop(struct zr_context *ctx)
 {
+    struct zr_vec2 panel_padding;
     struct zr_window *win = 0;
     struct zr_panel *layout = 0;
-    struct zr_vec2 panel_padding;
-
-    ZR_UNUSED(p);
-    ZR_UNUSED(queue);
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
     if (!ctx || !ctx->current || !ctx->current->layout)
-        return 0;
+        return;
 
     win = ctx->current;
     layout = win->layout;
@@ -9825,7 +9386,6 @@ zr_op_layout_pop(struct zr_context *ctx, union zr_param *p,
     layout->width += 2 * panel_padding.x;
     ZR_ASSERT(layout->row.tree_depth);
     layout->row.tree_depth--;
-    return 0;
 }
 /*----------------------------------------------------------------
  *
@@ -10035,28 +9595,21 @@ zr_widget_fitting(struct zr_rect *bounds, struct zr_context *ctx)
     return state;
 }
 
-static int
-zr_op_text(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_text_colored(struct zr_context *ctx, const char *str, zr_size len, zr_flags alignment,
+    struct zr_color color)
 {
     struct zr_window *win;
     const struct zr_style *config;
-
-    const char *str = p[0].cheat;
-    const zr_size len = p[1].ui;
-    const zr_flags alignment = p[2].flags;
-    const struct zr_color color = p[3].color;
 
     struct zr_vec2 item_padding;
     struct zr_rect bounds;
     struct zr_text text;
 
-    ZR_UNUSED(queue);
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
-    if (!ctx || !ctx->current || !ctx->current->layout)
-        return 0;
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
 
     win = ctx->current;
     config = &ctx->style;
@@ -10068,30 +9621,24 @@ zr_op_text(struct zr_context *ctx, union zr_param *p,
     text.background = config->colors[ZR_COLOR_WINDOW];
     text.text = color;
     zr_widget_text(&win->buffer, bounds, str, len, &text, alignment, &config->font);
-    return 0;
 }
 
-static int
-zr_op_text_wrap(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+
+void
+zr_text_wrap_colored(struct zr_context *ctx, const char *str,
+    zr_size len, struct zr_color color)
 {
     struct zr_window *win;
     const struct zr_style *config;
-
-    const char *str = p[0].cheat;
-    const zr_size len = (zr_size)p[1].ui;
-    const struct zr_color color = p[2].color;
 
     struct zr_vec2 item_padding;
     struct zr_rect bounds;
     struct zr_text text;
 
-    ZR_UNUSED(queue);
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
-    if (!ctx || !ctx->current || !ctx->current->layout)
-        return 0;
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
 
     win = ctx->current;
     config = &ctx->style;
@@ -10103,41 +9650,61 @@ zr_op_text_wrap(struct zr_context *ctx, union zr_param *p,
     text.background = config->colors[ZR_COLOR_WINDOW];
     text.text = color;
     zr_widget_text_wrap(&win->buffer, bounds, str, len, &text, &config->font);
-    return 0;
 }
 
-static int
-zr_op_image(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_text(struct zr_context *ctx, const char *str, zr_size len, zr_flags alignment)
+{
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+    zr_text_colored(ctx, str, len, alignment, ctx->style.colors[ZR_COLOR_TEXT]);
+}
 
+void
+zr_text_wrap(struct zr_context *ctx, const char *str, zr_size len)
+{
+    ZR_ASSERT(ctx);
+    if (!ctx) return;
+    zr_text_wrap_colored(ctx, str, len, ctx->style.colors[ZR_COLOR_TEXT]);
+}
+
+void
+zr_label(struct zr_context *ctx, const char *str, zr_flags alignment)
+{zr_text(ctx, str, zr_strsiz(str), alignment);}
+
+void
+zr_label_colored(struct zr_context *ctx, const char *str, zr_flags align,
+    struct zr_color color)
+{zr_text_colored(ctx, str, zr_strsiz(str), align, color);}
+
+void
+zr_label_wrap(struct zr_context *ctx, const char *str)
+{zr_text_wrap(ctx, str, zr_strsiz(str));}
+
+void
+zr_label_colored_wrap(struct zr_context *ctx, const char *str, struct zr_color color)
+{zr_text_wrap_colored(ctx, str, zr_strsiz(str), color);}
+
+void
+zr_image(struct zr_context *ctx, struct zr_image img)
 {
     struct zr_window *win;
     struct zr_vec2 item_padding;
     struct zr_rect bounds;
 
-    const zr_handle handle = p[1].img;
-    struct zr_rect region = zr_rect(p[2].f, p[3].f, p[4].f, p[5].f);
-    struct zr_image img = zr_subimage_ptr(handle.ptr,
-            (unsigned short)p[6].ui, (unsigned short)p[7].ui, region);
-
-    ZR_UNUSED(queue);
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
-    if (!ctx || !ctx->current || !ctx->current->layout)
-        return 0;
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
 
     win = ctx->current;
-    if (!zr_widget(&bounds, ctx))
-        return 0;
-
+    if (!zr_widget(&bounds, ctx)) return;
     item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
     bounds.x += item_padding.x;
     bounds.y += item_padding.y;
     bounds.w -= 2 * item_padding.x;
     bounds.h -= 2 * item_padding.y;
     zr_draw_image(&win->buffer, bounds, &img);
-    return 0;
 }
 
 enum zr_button_alloc {ZR_BUTTON_NORMAL, ZR_BUTTON_FITTING};
@@ -10168,24 +9735,19 @@ zr_button(struct zr_button *button, struct zr_rect *bounds,
     return state;
 }
 
-static int
-zr_op_button_text(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+int
+zr_button_text(struct zr_context *ctx, const char *title,
+    enum zr_button_behavior behavior)
 {
     struct zr_window *win;
     struct zr_panel *layout;
     const struct zr_input *i;
     const struct zr_style *config;
 
-    const zr_hash id = p[0].hash;
-    const char *title = p[1].cheat;
-    const enum zr_button_behavior behavior = (enum zr_button_behavior)p[2].i;
-
-    int ret = 0, clicked = 0;
     struct zr_rect bounds;
     struct zr_button_text button;
-    zr_flags ws;
     enum zr_widget_state state;
+    zr_flags ws;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -10203,53 +9765,22 @@ zr_op_button_text(struct zr_context *ctx, union zr_param *p,
     button.normal = config->colors[ZR_COLOR_TEXT];
     button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
     button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
-    clicked = zr_do_button_text(&ws, &win->buffer, bounds, title, behavior,
+    return zr_do_button_text(&ws, &win->buffer, bounds, title, behavior,
                                 &button, i, &config->font);
-
-    /* queue events */
-    if (clicked) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_CLICKED;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    }
-    if (ws & ZR_ENTER) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_ENTER;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    } else if (ws & ZR_LEAVE) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_LEAVE;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    }
-    if (ws & ZR_HOVERED) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_HOVERED;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    } else if (ws & ZR_ACTIVE) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_PRESSED;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    }
-    return ret;
 }
 
-static int
-zr_op_button_color(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+int
+zr_button_color(struct zr_context *ctx, struct zr_color color,
+    enum zr_button_behavior behavior)
 {
     struct zr_window *win;
     struct zr_panel *layout;
     const struct zr_input *in;
 
-    const zr_hash id = p[0].hash;
-    const struct zr_color color = p[1].color;
-    const enum zr_button_behavior behavior = (enum zr_button_behavior)p[2].i;
-
-    int ret = 0, clicked = 0;
     struct zr_rect bounds;
     struct zr_button button;
-    zr_flags ws;
     enum zr_widget_state state;
+    zr_flags ws;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -10266,53 +9797,22 @@ zr_op_button_color(struct zr_context *ctx, union zr_param *p,
     button.normal = color;
     button.hover = color;
     button.active = color;
-    clicked = zr_do_button(&ws, &win->buffer, bounds, &button, in, behavior, &bounds);
-
-    /* queue events */
-    if (clicked) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_CLICKED;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    }
-    if (ws & ZR_ENTER) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_ENTER;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    } else if (ws & ZR_LEAVE) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_LEAVE;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    }
-    if (ws & ZR_HOVERED) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_HOVERED;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    } else if (ws & ZR_ACTIVE) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_PRESSED;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    }
-    return ret;
+    return zr_do_button(&ws, &win->buffer, bounds, &button, in, behavior, &bounds);
 }
 
-static int
-zr_op_button_symbol(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+int
+zr_button_symbol(struct zr_context *ctx, enum zr_symbol_type symbol,
+    enum zr_button_behavior behavior)
 {
     struct zr_window *win;
     struct zr_panel *layout;
     const struct zr_input *in;
     const struct zr_style *config;
 
-    const zr_hash id = p[0].hash;
-    const enum zr_symbol_type symbol = (enum zr_symbol_type)p[1].i;
-    const enum zr_button_behavior behavior = (enum zr_button_behavior)p[2].i;
-
-    int ret = 0, clicked = 0;
     struct zr_rect bounds;
     struct zr_button_symbol button;
-    zr_flags ws;
     enum zr_widget_state state;
+    zr_flags ws;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -10330,56 +9830,22 @@ zr_op_button_symbol(struct zr_context *ctx, union zr_param *p,
     button.normal = config->colors[ZR_COLOR_TEXT];
     button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
     button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
-    clicked = zr_do_button_symbol(&ws, &win->buffer, bounds, symbol,
+    return zr_do_button_symbol(&ws, &win->buffer, bounds, symbol,
                 behavior, &button, in, &config->font);
-
-    /* queue events */
-    if (clicked) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_CLICKED;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    }
-    if (ws & ZR_ENTER) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_ENTER;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    } else if (ws & ZR_LEAVE) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_LEAVE;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    }
-    if (ws & ZR_HOVERED) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_HOVERED;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    } else if (ws & ZR_ACTIVE) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_PRESSED;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    }
-    return ret;
 }
 
-static int
-zr_op_button_image(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+int
+zr_button_image(struct zr_context *ctx, struct zr_image img,
+    enum zr_button_behavior behavior)
 {
     struct zr_window *win;
     struct zr_panel *layout;
     const struct zr_input *in;
 
-    const zr_hash id = p[0].hash;
-    const zr_handle handle = p[1].img;
-    struct zr_rect region = zr_rect(p[2].f, p[3].f, p[4].f, p[5].f);
-    const enum zr_button_behavior behavior = (enum zr_button_behavior)p[8].i;
-    const struct zr_image img = zr_subimage_ptr(handle.ptr,
-            (unsigned short)p[6].ui, (unsigned short)p[7].ui, region);
-
-    int ret = 0, clicked = 0;
     struct zr_rect bounds;
-    zr_flags ws;
-    enum zr_widget_state state;
     struct zr_button_icon button;
+    enum zr_widget_state state;
+    zr_flags ws;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -10393,55 +9859,22 @@ zr_op_button_image(struct zr_context *ctx, union zr_param *p,
     if (!state) return zr_false;
     in = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : &ctx->input;
     button.padding = zr_vec2(0,0);
-    clicked = zr_do_button_image(&ws, &win->buffer, bounds, img, behavior, &button, in);
-
-    /* queue events */
-    if (clicked) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_CLICKED;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    }
-    if (ws & ZR_ENTER) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_ENTER;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    } else if (ws & ZR_LEAVE) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_LEAVE;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    }
-    if (ws & ZR_HOVERED) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_HOVERED;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    } else if (ws & ZR_ACTIVE) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_PRESSED;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    }
-    return ret;
+    return zr_do_button_image(&ws, &win->buffer, bounds, img, behavior, &button, in);
 }
 
-static int
-zr_op_button_text_symbol(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+int
+zr_button_text_symbol(struct zr_context *ctx, enum zr_symbol_type symbol,
+    const char* text, zr_flags align, enum zr_button_behavior behavior)
 {
     struct zr_window *win;
     struct zr_panel *layout;
     const struct zr_input *in;
     const struct zr_style *config;
 
-    const zr_hash id = p[0].hash;
-    const enum zr_symbol_type symbol = (enum zr_symbol_type)p[1].i;
-    const char *text = p[2].cheat;
-    const zr_flags align = p[3].flags;
-    const enum zr_button_behavior behavior = (enum zr_button_behavior)p[4].i;
-
-    int ret = 0, clicked = 0;
     struct zr_rect bounds;
     struct zr_button_text button;
-    zr_flags ws;
     enum zr_widget_state state;
+    zr_flags ws;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -10460,55 +9893,18 @@ zr_op_button_text_symbol(struct zr_context *ctx, union zr_param *p,
     button.normal = config->colors[ZR_COLOR_TEXT];
     button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
     button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
-    clicked = zr_do_button_text_symbol(&ws, &win->buffer, bounds, symbol, text, align,
+    return zr_do_button_text_symbol(&ws, &win->buffer, bounds, symbol, text, align,
             behavior, &button, &config->font, in);
-
-    /* queue events */
-    if (clicked) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_CLICKED;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    }
-    if (ws & ZR_ENTER) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_ENTER;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    } else if (ws & ZR_LEAVE) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_LEAVE;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    }
-    if (ws & ZR_HOVERED) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_HOVERED;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    } else if (ws & ZR_ACTIVE) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_PRESSED;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    }
-    return ret;
 }
 
-static int
-zr_op_button_text_image(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+int zr_button_text_image(struct zr_context *ctx, struct zr_image img,
+    const char *text, zr_flags align, enum zr_button_behavior behavior)
 {
     struct zr_window *win;
     struct zr_panel *layout;
     const struct zr_input *in;
     const struct zr_style *config;
 
-    const zr_hash id = p[0].hash;
-    const zr_handle handle = p[1].img;
-    const struct zr_rect region = zr_rect(p[2].f, p[3].f, p[4].f, p[5].f);
-    const char *text = p[8].cheat;
-    const zr_flags align = p[9].flags;
-    const enum zr_button_behavior behavior = (enum zr_button_behavior)p[10].i;
-    const struct zr_image img = zr_subimage_ptr(handle.ptr,
-            (unsigned short)p[6].ui, (unsigned short)p[7].ui, region);
-
-    int ret = 0, clicked = 0;
     struct zr_rect bounds;
     zr_flags ws;
     enum zr_widget_state state;
@@ -10530,38 +9926,12 @@ zr_op_button_text_image(struct zr_context *ctx, union zr_param *p,
     button.normal = config->colors[ZR_COLOR_TEXT];
     button.hover = config->colors[ZR_COLOR_TEXT_HOVERING];
     button.active = config->colors[ZR_COLOR_TEXT_ACTIVE];
-    clicked = zr_do_button_text_image(&ws, &win->buffer, bounds, img, text, align,
+    return zr_do_button_text_image(&ws, &win->buffer, bounds, img, text, align,
                 behavior, &button, &config->font, in);
-
-    /* queue events */
-    if (clicked) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_CLICKED;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    }
-    if (ws & ZR_ENTER) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_ENTER;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    } else if (ws & ZR_LEAVE) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_LEAVE;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    }
-    if (ws & ZR_HOVERED) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_HOVERED;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    } else if (ws & ZR_ACTIVE) {
-        union zr_event evt;
-        evt.button.evt = ZR_EVENT_BUTTON_PRESSED;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_BUTTON, &evt);
-    }
-    return ret;
 }
 
-static int
-zr_op_select(struct zr_context *ctx, union zr_param *p, struct zr_event_queue *queue)
+int
+zr_selectable(struct zr_context *ctx, const char *str, zr_flags align, int *value)
 {
     struct zr_window *win;
     struct zr_panel *layout;
@@ -10569,12 +9939,6 @@ zr_op_select(struct zr_context *ctx, union zr_param *p, struct zr_event_queue *q
     const struct zr_input *in;
     enum zr_widget_state state;
 
-    zr_hash id = p[0].hash;
-    const char *str = p[1].cheat;
-    zr_flags align = p[2].flags;
-    int value = p[3].i;
-
-    int ret = 0;
     int old_value;
     struct zr_rect bounds;
     struct zr_text text;
@@ -10582,10 +9946,11 @@ zr_op_select(struct zr_context *ctx, union zr_param *p, struct zr_event_queue *q
     struct zr_vec2 item_padding;
 
     ZR_ASSERT(ctx);
+    ZR_ASSERT(value);
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
-    if (!ctx || !ctx->current || !ctx->current->layout)
-        return value;
+    if (!ctx || !ctx->current || !ctx->current->layout || !value)
+        return 0;
 
     win = ctx->current;
     layout = win->layout;
@@ -10594,17 +9959,17 @@ zr_op_select(struct zr_context *ctx, union zr_param *p, struct zr_event_queue *q
     if (!state) return 0;
     in = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : &ctx->input;
 
-    old_value = value;
     item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
-    background = (!value) ? config->colors[ZR_COLOR_WINDOW]:
+    background = (!*value) ? config->colors[ZR_COLOR_WINDOW]:
         config->colors[ZR_COLOR_SELECTABLE];
 
     /* update selectable */
+    old_value = *value;
     if (in && zr_input_is_mouse_click_in_rect(&ctx->input, ZR_BUTTON_LEFT, bounds)) {
         background = config->colors[ZR_COLOR_SELECTABLE_HOVER];
         if (zr_input_has_mouse_click_in_rect(&ctx->input, ZR_BUTTON_LEFT, bounds)) {
             if (!zr_input_is_mouse_down(&ctx->input, ZR_BUTTON_LEFT))
-                value = !value;
+                *value = !*value;
         }
     }
 
@@ -10612,28 +9977,20 @@ zr_op_select(struct zr_context *ctx, union zr_param *p, struct zr_event_queue *q
     text.padding.x = item_padding.x;
     text.padding.y = item_padding.y;
     text.background = background;
-    text.text = (!value) ? config->colors[ZR_COLOR_TEXT] :
+    text.text = (!*value) ? config->colors[ZR_COLOR_TEXT] :
         config->colors[ZR_COLOR_SELECTABLE_TEXT];
 
     zr_draw_rect(&win->buffer, bounds, 0, background);
     zr_widget_text(&win->buffer, bounds, str, zr_strsiz(str),
         &text, align|ZR_TEXT_MIDDLE, &config->font);
+    return *value != old_value;
+}
 
-    /* queue events */
-    if (in && zr_input_is_mouse_hovering_rect(in, bounds)) {
-        union zr_event evt;
-        evt.select.evt = ZR_EVENT_SELECT_HOVERED;
-        evt.select.value = value;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_SELECT, &evt);
-    }
-    if (old_value != value) {
-        union zr_event evt;
-        evt.select.evt = ZR_EVENT_SELECT_TOGGLED;
-        evt.select.value = value;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_SELECT, &evt);
-        p[3].i = value;
-    }
-    return ret;
+int
+zr_select(struct zr_context *ctx, const char *str, zr_flags align, int value)
+{
+    zr_selectable(ctx, str, align, &value);
+    return value;
 }
 
 static enum zr_widget_state
@@ -10656,21 +10013,14 @@ zr_toggle_base(struct zr_toggle *toggle, struct zr_rect *bounds,
     return state;
 }
 
-static int
-zr_op_check(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+int
+zr_check(struct zr_context *ctx, const char *text, int active)
 {
     struct zr_window *win;
     struct zr_panel *layout;
     const struct zr_input *in;
     const struct zr_style *config;
 
-    zr_hash id = p[0].hash;
-    const char *text = p[1].cheat;
-    int active = p[2].i;
-
-    int old;
-    int ret = 0;
     struct zr_rect bounds;
     struct zr_toggle toggle;
     zr_flags ws;
@@ -10686,10 +10036,9 @@ zr_op_check(struct zr_context *ctx, union zr_param *p,
     config = &ctx->style;
     layout = win->layout;
     state = zr_toggle_base(&toggle, &bounds, ctx);
-    if (!state) return 0;
+    if (!state) return active;
     in = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : &ctx->input;
 
-    old = active;
     toggle.touch_pad = zr_get_property(ctx, ZR_PROPERTY_TOUCH_PADDING);
     toggle.rounding = config->rounding[ZR_ROUNDING_CHECK];
     toggle.cursor = config->colors[ZR_COLOR_TOGGLE_CURSOR];
@@ -10697,47 +10046,30 @@ zr_op_check(struct zr_context *ctx, union zr_param *p,
     toggle.hover = config->colors[ZR_COLOR_TOGGLE_HOVER];
     zr_do_toggle(&ws, &win->buffer, bounds, &active, text, ZR_TOGGLE_CHECK,
                 &toggle, in, &config->font);
-
-    if (old != active) {
-        union zr_event evt;
-        evt.checkbox.evt = ZR_EVENT_CHECK_TOGGLED;
-        evt.checkbox.value = active;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_CHECKBOX, &evt);
-        p[2].i = active;
-    }
-    if (ws & ZR_HOVERED) {
-        union zr_event evt;
-        evt.checkbox.evt = ZR_EVENT_CHECK_HOVERED;
-        evt.checkbox.value = active;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_CHECKBOX, &evt);
-    }
-    if (ws & ZR_ENTER) {
-        union zr_event evt;
-        evt.checkbox.evt = ZR_EVENT_CHECK_ENTER;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_CHECKBOX, &evt);
-    } else if (ws & ZR_LEAVE) {
-        union zr_event evt;
-        evt.checkbox.evt = ZR_EVENT_CHECK_LEAVE;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_CHECKBOX, &evt);
-    }
-    return ret;
+    return active;
 }
 
-static int
-zr_op_option(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+int
+zr_checkbox(struct zr_context *ctx, const char *text, int *active)
+{
+    int old_val;
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(text);
+    ZR_ASSERT(active);
+    if (!ctx || !text || !active) return 0;
+    old_val = *active;
+    *active = zr_check(ctx, text, *active);
+    return old_val != *active;
+}
+
+int
+zr_option(struct zr_context *ctx, const char *text, int is_active)
 {
     struct zr_window *win;
     struct zr_panel *layout;
     const struct zr_input *in;
     const struct zr_style *config;
 
-    zr_hash id = p[0].hash;
-    const char *text = p[1].cheat;
-    int is_active = p[2].i;
-
-    int old;
-    int ret = 0;
     struct zr_rect bounds;
     struct zr_toggle toggle;
     zr_flags ws;
@@ -10756,66 +10088,47 @@ zr_op_option(struct zr_context *ctx, union zr_param *p,
     if (!state) return is_active;
     in = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : &ctx->input;
 
-    old = is_active;
     toggle.touch_pad = zr_get_property(ctx, ZR_PROPERTY_TOUCH_PADDING);
     toggle.cursor = config->colors[ZR_COLOR_TOGGLE_CURSOR];
     toggle.normal = config->colors[ZR_COLOR_TOGGLE];
     toggle.hover = config->colors[ZR_COLOR_TOGGLE_HOVER];
     zr_do_toggle(&ws, &win->buffer, bounds, &is_active, text, ZR_TOGGLE_OPTION,
                 &toggle, in, &config->font);
-
-    if (old != is_active) {
-        union zr_event evt;
-        evt.option.evt = ZR_EVENT_OPTION_TOGGLED;
-        evt.option.value = is_active;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_OPTION, &evt);
-        p[2].i = is_active;
-    }
-    if (ws & ZR_HOVERED) {
-        union zr_event evt;
-        evt.option.evt = ZR_EVENT_OPTION_HOVERED;
-        evt.option.value = is_active;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_OPTION, &evt);
-    }
-    if (ws & ZR_ENTER) {
-        union zr_event evt;
-        evt.option.evt = ZR_EVENT_OPTION_ENTER;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_OPTION, &evt);
-    } else if (ws & ZR_LEAVE) {
-        union zr_event evt;
-        evt.option.evt = ZR_EVENT_OPTION_LEAVE;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_OPTION, &evt);
-    }
-    return ret;
+    return is_active;
 }
 
-static int
-zr_op_slider(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_radio(struct zr_context *ctx, const char *text, int *active)
+{
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(text);
+    ZR_ASSERT(active);
+    if (!ctx || !text || !active) return;
+    *active = zr_option(ctx, text, *active);
+}
+
+int
+zr_slider_float(struct zr_context *ctx, float min_value, float *value, float max_value,
+    float value_step)
 {
     struct zr_window *win;
     struct zr_panel *layout;
     const struct zr_input *in;
     const struct zr_style *config;
 
-    const zr_hash id = p[0].hash;
-    const float min_value = p[1].f;
-    float value = p[2].f;
-    const float max_value = p[3].f;
-    const float value_step = p[4].f;
-
     int ret = 0;
-    float new_value;
+    float old_value;
     struct zr_rect bounds;
     struct zr_slider slider;
     struct zr_vec2 item_padding;
-    zr_flags ws;
     enum zr_widget_state state;
+    zr_flags ws;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
-    if (!ctx || !ctx->current || !ctx->current->layout)
+    ZR_ASSERT(value);
+    if (!ctx || !ctx->current || !ctx->current->layout || !value)
         return ret;
 
     win = ctx->current;
@@ -10825,6 +10138,7 @@ zr_op_slider(struct zr_context *ctx, union zr_param *p,
     if (!state) return ret;
     in = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : &ctx->input;
 
+    old_value = *value;
     item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
     slider.padding.x = item_padding.x;
     slider.padding.y = item_padding.y;
@@ -10834,60 +10148,56 @@ zr_op_slider(struct zr_context *ctx, union zr_param *p,
     slider.active = config->colors[ZR_COLOR_SLIDER_CURSOR_ACTIVE];
     slider.border = config->colors[ZR_COLOR_BORDER];
     slider.rounding = config->rounding[ZR_ROUNDING_SLIDER];
-    new_value = zr_do_slider(&ws, &win->buffer, bounds, min_value, value, max_value,
-                                value_step, &slider, in);
+    *value = zr_do_slider(&ws, &win->buffer, bounds, min_value, old_value,
+                                max_value, value_step, &slider, in);
+    return (old_value > *value || old_value < *value);
+}
 
-    if (new_value > value || new_value < value) {
-        union zr_event evt;
-        evt.slider.evt = ZR_EVENT_SLIDER_CHANGED;
-        evt.slider.value = new_value;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_SLIDER, &evt);
-        p[2].f = new_value;
-    }
-    if (ws & ZR_HOVERED) {
-        union zr_event evt;
-        evt.slider.evt = ZR_EVENT_SLIDER_HOVERED;
-        evt.slider.value = new_value;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_SLIDER, &evt);
-    }
-    if (ws & ZR_ENTER) {
-        union zr_event evt;
-        evt.slider.evt = ZR_EVENT_SLIDER_ENTER;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_SLIDER, &evt);
-    } else if (ws & ZR_LEAVE) {
-        union zr_event evt;
-        evt.slider.evt = ZR_EVENT_SLIDER_LEAVE;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_SLIDER, &evt);
-    }
+float
+zr_slide_float(struct zr_context *ctx, float min, float val, float max, float step)
+{
+    zr_slider_float(ctx, min, &val, max, step); return val;
+}
+
+int
+zr_slide_int(struct zr_context *ctx, int min, int val, int max, int step)
+{
+    float value = (float)val;
+    zr_slider_float(ctx, (float)min, &value, (float)max, (float)step);
+    return (int)value;
+}
+
+int
+zr_slider_int(struct zr_context *ctx, int min, int *val, int max, int step)
+{
+    int ret;
+    float value = (float)*val;
+    ret = zr_slider_float(ctx, (float)min, &value, (float)max, (float)step);
+    *val =  (int)value;
     return ret;
 }
 
-static int
-zr_op_progress(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+int
+zr_progress(struct zr_context *ctx, zr_size *cur, zr_size max, int is_modifyable)
 {
     struct zr_window *win;
     struct zr_panel *layout;
     const struct zr_style *config;
     const struct zr_input *in;
 
-    const zr_hash id = p[0].hash;
-    zr_size cur_value = (zr_size)p[1].ui;
-    const zr_size max_value = (zr_size)p[2].ui;
-    const int is_modifiable = p[3].i;
-
     int ret = 0;
-    zr_size old = cur_value;
+    zr_flags ws;
     struct zr_rect bounds;
     struct zr_progress prog;
     struct zr_vec2 item_padding;
-    zr_flags ws;
     enum zr_widget_state state;
+    zr_size old_value;
 
     ZR_ASSERT(ctx);
+    ZR_ASSERT(cur);
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
-    if (!ctx || !ctx->current || !ctx->current->layout)
+    if (!ctx || !ctx->current || !ctx->current->layout || !cur)
         return ret;
 
     win = ctx->current;
@@ -10898,6 +10208,7 @@ zr_op_progress(struct zr_context *ctx, union zr_param *p,
     in = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : &ctx->input;
 
     item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
+    old_value = *cur;
     prog.padding.x = item_padding.x;
     prog.padding.y = item_padding.y;
     prog.border = config->colors[ZR_COLOR_BORDER];
@@ -10905,34 +10216,16 @@ zr_op_progress(struct zr_context *ctx, union zr_param *p,
     prog.normal = config->colors[ZR_COLOR_PROGRESS_CURSOR];
     prog.hover = config->colors[ZR_COLOR_PROGRESS_CURSOR_HOVER];
     prog.active = config->colors[ZR_COLOR_PROGRESS_CURSOR_ACTIVE];
-    cur_value = zr_do_progress(&ws, &win->buffer, bounds, cur_value, max_value,
-                        is_modifiable, &prog, in);
+    *cur = zr_do_progress(&ws, &win->buffer, bounds, old_value, max,
+                        is_modifyable, &prog, in);
+    return (*cur != old_value);
+}
 
-    if (old != cur_value) {
-        union zr_event evt;
-        evt.progress.evt = ZR_EVENT_PROGRESS_CHANGED;
-        evt.progress.value = cur_value;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_PROGRESS, &evt);
-        p[1].ui = (unsigned int)cur_value;
-    }
-    if (ws & ZR_HOVERED) {
-        union zr_event evt;
-        evt.progress.evt = ZR_EVENT_PROGRESS_HOVERED;
-        evt.progress.value = cur_value;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_PROGRESS, &evt);
-    }
-    if (ws & ZR_ENTER) {
-        union zr_event evt;
-        evt.progress.evt = ZR_EVENT_PROGRESS_ENTER;
-        evt.progress.value = cur_value;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_PROGRESS, &evt);
-    } else if (ws & ZR_LEAVE) {
-        union zr_event evt;
-        evt.progress.evt = ZR_EVENT_PROGRESS_LEAVE;
-        evt.progress.value = cur_value;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_PROGRESS, &evt);
-    }
-    return ret;
+zr_size
+zr_prog(struct zr_context *ctx, zr_size cur, zr_size max, int modifyable)
+{
+    zr_progress(ctx, &cur, max, modifyable);
+    return cur;
 }
 
 static enum zr_widget_state
@@ -11126,26 +10419,15 @@ zr_edit_buffer(struct zr_context *ctx, zr_flags flags,
     return ret_flags;
 }
 
-static int
-zr_op_property(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+static float
+zr_property(struct zr_context *ctx, const char *name, float min, float val,
+    float max, float step, float inc_per_pixel, const enum zr_property_filter filter)
 {
     struct zr_window *win;
     struct zr_panel *layout;
     const struct zr_input *in;
     const struct zr_style *config;
 
-    const zr_hash id = p[0].hash;
-    const char *name = p[1].cheat;
-    const float min = p[2].f;
-    float val = p[3].f;
-    const float max = p[4].f;
-    const float step = p[5].f;
-    const float inc_per_pixel = p[6].f;
-    const enum zr_property_filter filter = (enum zr_property_filter)p[7].i;
-
-    int ret = 0;
-    float new_val;
     struct zr_rect bounds;
     enum zr_widget_state s;
     zr_flags ws;
@@ -11168,13 +10450,13 @@ zr_op_property(struct zr_context *ctx, union zr_param *p,
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
     if (!ctx || !ctx->current || !ctx->current->layout)
-        return 0;
+        return val;
 
     win = ctx->current;
     layout = win->layout;
     config = &ctx->style;
     s = zr_widget(&bounds, ctx);
-    if (!s) return 0;
+    if (!s) return val;
     in = (s == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : &ctx->input;
 
     /* calculate hash from name */
@@ -11207,7 +10489,7 @@ zr_op_property(struct zr_context *ctx, union zr_param *p,
     prop.active = config->colors[ZR_COLOR_PROPERTY_ACTIVE];
     prop.text = config->colors[ZR_COLOR_TEXT];
     old_state = (enum zr_property_state)*state;
-    new_val = zr_do_property(&ws, &win->buffer, bounds, name, min, val, max, step,
+    val = zr_do_property(&ws, &win->buffer, bounds, name, min, val, max, step,
         inc_per_pixel, buffer, len, state, cursor, &prop, filter, in, &config->font);
 
     if (in && *state != ZR_PROPERTY_DEFAULT && !win->property.active) {
@@ -11223,107 +10505,95 @@ zr_op_property(struct zr_context *ctx, union zr_param *p,
     /* check if previously active property is now unactive */
     if (*state == ZR_PROPERTY_DEFAULT && old_state != ZR_PROPERTY_DEFAULT)
         win->property.active = 0;
-
-    /* queue events */
-    if (ws & ZR_HOVERED) {
-        union zr_event evt;
-        evt.property.evt = ZR_EVENT_PROPERTY_HOVERED;
-        evt.property.value = new_val;
-        evt.property.state = (enum zr_property_state)*state;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_PROPERTY, &evt);
-    }
-    if (ws & ZR_ENTER) {
-        union zr_event evt;
-        evt.property.evt = ZR_EVENT_PROPERTY_ENTER;
-        evt.property.value = new_val;
-        evt.property.state = (enum zr_property_state)*state;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_PROPERTY, &evt);
-    } else if (ws & ZR_LEAVE) {
-        union zr_event evt;
-        evt.property.evt = ZR_EVENT_PROPERTY_ENTER;
-        evt.property.value = new_val;
-        evt.property.state = (enum zr_property_state)*state;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_PROPERTY, &evt);
-    }
-    if (new_val > val || new_val < val) {
-        union zr_event evt;
-        evt.property.evt = ZR_EVENT_PROPERTY_CHANGED;
-        evt.property.value = new_val;
-        evt.property.state = (enum zr_property_state)*state;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_PROPERTY, &evt);
-        p[3].f = new_val;
-    }
-    if (*state != (int)old_state) {
-        union zr_event evt;
-        evt.property.evt = ZR_EVENT_PROPERTY_STATE_CHANGED;
-        evt.property.value = new_val;
-        evt.property.state = (enum zr_property_state)*state;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_PROPERTY, &evt);
-    }
-    return ret;
+    return val;
 }
 
-static int
-zr_op_color_picker(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_property_float(struct zr_context *ctx, const char *name,
+    float min, float *val, float max, float step, float inc_per_pixel)
+{
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(name);
+    ZR_ASSERT(val);
+    if (!ctx || !ctx->current || !name || !val) return;
+    *val = zr_property(ctx, name, min, *val, max, step, inc_per_pixel, ZR_FILTER_FLOAT);
+}
+
+void
+zr_property_int(struct zr_context *ctx, const char *name,
+    int min, int *val, int max, int step, int inc_per_pixel)
+{
+    float value;
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(name);
+    ZR_ASSERT(val);
+    if (!ctx || !ctx->current || !name || !val) return;
+    value = zr_property(ctx, name, (float)min, (float)*val, (float)max, (float)step,
+        (float)inc_per_pixel, ZR_FILTER_FLOAT);
+    *val = (int)value;
+}
+
+float
+zr_propertyf(struct zr_context *ctx, const char *name, float min,
+    float val, float max, float step, float inc_per_pixel)
+{
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(name);
+    if (!ctx || !ctx->current || !name) return val;
+    return zr_property(ctx, name, min, val, max, step, inc_per_pixel, ZR_FILTER_FLOAT);
+}
+
+int
+zr_propertyi(struct zr_context *ctx, const char *name, int min, int val,
+    int max, int step, int inc_per_pixel)
+{
+    float value;
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(name);
+    if (!ctx || !ctx->current || !name) return val;
+    value = zr_property(ctx, name, (float)min, (float)val, (float)max, (float)step,
+        (float)inc_per_pixel, ZR_FILTER_FLOAT);
+    return (int)value;
+}
+
+int
+zr_color_pick(struct zr_context * ctx, struct zr_color *color,
+    enum zr_color_picker_format fmt)
 {
     struct zr_window *win;
     struct zr_panel *layout;
     const struct zr_style *config;
     const struct zr_input *in;
 
-    const zr_hash id = p[0].hash;
-    struct zr_color color = p[1].color;
-    enum zr_color_picker_format fmt = (enum zr_color_picker_format)p[2].i;
-
     zr_flags ws;
     enum zr_widget_state state;
     struct zr_vec2 item_padding;
-
     struct zr_rect bounds;
-    int ret = 0;
-    int res;
 
     ZR_ASSERT(ctx);
+    ZR_ASSERT(color);
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
-    if (!ctx || !ctx->current || !ctx->current->layout)
-        return ret;
+    if (!ctx || !ctx->current || !ctx->current->layout || !color)
+        return 0;
 
     win = ctx->current;
     config = &ctx->style;
     layout = win->layout;
     state = zr_widget(&bounds, ctx);
-    if (!state) return ret;
+    if (!state) return 0;
     in = (state == ZR_WIDGET_ROM || layout->flags & ZR_WINDOW_ROM) ? 0 : &ctx->input;
     item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
-    res = zr_do_color_picker(&ws, &win->buffer, &color, fmt, bounds,
+    return zr_do_color_picker(&ws, &win->buffer, color, fmt, bounds,
                                 item_padding, in, &config->font);
+}
 
-    if (res) {
-        union zr_event evt;
-        evt.color_picker.evt = ZR_EVENT_COLOR_PICKER_CHANGED;
-        evt.color_picker.color = color;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_COLOR_PICKER, &evt);
-    }
-    if (ws & ZR_HOVERED) {
-        union zr_event evt;
-        evt.color_picker.evt = ZR_EVENT_COLOR_PICKER_HOVERED;
-        evt.color_picker.color = color;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_COLOR_PICKER, &evt);
-    }
-    if (ws & ZR_ENTER) {
-        union zr_event evt;
-        evt.color_picker.evt = ZR_EVENT_COLOR_PICKER_ENTER;
-        evt.color_picker.color = color;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_COLOR_PICKER, &evt);
-    } else if (ws & ZR_LEAVE) {
-        union zr_event evt;
-        evt.color_picker.evt = ZR_EVENT_COLOR_PICKER_LEAVE;
-        evt.color_picker.color = color;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_COLOR_PICKER, &evt);
-    }
-    return ret;
+struct zr_color
+zr_color_picker(struct zr_context *ctx, struct zr_color color,
+    enum zr_color_picker_format fmt)
+{
+    zr_color_pick(ctx, &color, fmt);
+    return color;
 }
 
 /* -------------------------------------------------------------
@@ -11331,33 +10601,27 @@ zr_op_color_picker(struct zr_context *ctx, union zr_param *p,
  *                          CHART
  *
  * --------------------------------------------------------------*/
-static int
-zr_op_chart_begin(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_chart_begin(struct zr_context *ctx, const enum zr_chart_type type,
+    int count, float min_value, float max_value)
 {
     struct zr_window *win;
     struct zr_command_buffer *out;
     struct zr_chart *chart;
     const struct zr_style *config;
 
-    const enum zr_chart_type type = (const enum zr_chart_type)p[1].i;
-    const int count = p[2].i;
-    const float min_value = p[3].f;
-    const float max_value = p[4].f;
-
     struct zr_rect bounds = {0, 0, 0, 0};
     struct zr_vec2 item_padding;
     struct zr_color color;
 
     ZR_ASSERT(ctx);
-    ZR_ASSERT(queue);
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
-    if (!ctx || !ctx->current || !ctx->current->layout) return 0;
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
     if (!zr_widget(&bounds, ctx)) {
         chart = &ctx->current->layout->chart;
         zr_zero(chart, sizeof(*chart));
-        return 0;
+        return;
     }
 
     win = ctx->current;
@@ -11386,7 +10650,7 @@ zr_op_chart_begin(struct zr_context *ctx, union zr_param *p,
     chart->w = ZR_MAX(chart->w, 2 * item_padding.x);
     chart->h = ZR_MAX(chart->h, 2 * item_padding.y);
     chart->last.x = 0; chart->last.y = 0;
-    return 0;
+    return;
 }
 
 static zr_flags
@@ -11510,16 +10774,11 @@ zr_chart_push_column(const struct zr_context *ctx, struct zr_window *win,
     return ret;
 }
 
-static int
-zr_op_chart_push(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+zr_flags
+zr_chart_push(struct zr_context *ctx, float value)
 {
-    int ret = 0;
-    struct zr_window *win;
     zr_flags flags;
-
-    const zr_hash id = p[0].hash;
-    const float value = p[1].f;
+    struct zr_window *win;
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -11536,38 +10795,19 @@ zr_op_chart_push(struct zr_context *ctx, union zr_param *p,
     case ZR_CHART_MAX:
         flags = 0;
     }
-
-    /* queue events */
-    if (flags & ZR_CHART_HOVERING) {
-        union zr_event evt;
-        evt.chart.evt = ZR_EVENT_CHART_HOVERED;
-        evt.chart.value_index = win->layout->chart.index-1;
-        evt.chart.value = value;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_CHART, &evt);
-    }
-    if (flags & ZR_CHART_CLICKED) {
-        union zr_event evt;
-        evt.chart.evt = ZR_EVENT_CHART_SELECTED;
-        evt.chart.value_index = win->layout->chart.index-1;
-        evt.chart.value = value;
-        ret += zr_event_queue_push(queue, id, ZR_EVENT_CHART, &evt);
-    }
-    return ret;
+    return flags;
 }
 
-static int
-zr_op_chart_end(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_chart_end(struct zr_context *ctx)
 {
     struct zr_window *win;
     struct zr_chart *chart;
 
-    ZR_UNUSED(p);
-    ZR_UNUSED(queue);
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
     if (!ctx || !ctx->current)
-        return 0;
+        return;
 
     win = ctx->current;
     chart = &win->layout->chart;
@@ -11580,7 +10820,7 @@ zr_op_chart_end(struct zr_context *ctx, union zr_param *p,
     chart->y = 0;
     chart->w = 0;
     chart->h = 0;
-    return 0;
+    return;
 }
 
 /* -------------------------------------------------------------
@@ -11588,9 +10828,9 @@ zr_op_chart_end(struct zr_context *ctx, union zr_param *p,
  *                          GROUP
  *
  * --------------------------------------------------------------*/
-static int
-zr_op_group_begin(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+int
+zr_group_begin(struct zr_context *ctx, struct zr_panel *layout, const char *title,
+    zr_flags flags)
 {
     struct zr_window *win;
     const struct zr_rect *c;
@@ -11600,19 +10840,12 @@ zr_op_group_begin(struct zr_context *ctx, union zr_param *p,
     zr_hash title_hash;
     int title_len;
 
-    const zr_flags id = p[0].hash;
-    struct zr_panel *layout = (struct zr_panel*)p[1].ptr;
-    const char *title = p[2].cheat;
-    zr_flags flags = p[3].flags;
-
     ZR_ASSERT(ctx);
     ZR_ASSERT(title);
     ZR_ASSERT(ctx->current);
     ZR_ASSERT(ctx->current->layout);
-    if (!ctx || !ctx->current || !ctx->current->layout || !title) {
-        queue->skip = 1;
+    if (!ctx || !ctx->current || !ctx->current->layout || !title)
         return 0;
-    }
 
     /* allocate space for the group panel inside the panel */
     win = ctx->current;
@@ -11628,10 +10861,8 @@ zr_op_group_begin(struct zr_context *ctx, union zr_param *p,
         value.i = zr_add_value(ctx, win, title_hash, 0);
         *value.i = 0;
     }
-
     if (!ZR_INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h) &&
         !(flags & ZR_WINDOW_MOVABLE)) {
-        queue->skip = 1;
         return 0;
     }
 
@@ -11655,18 +10886,11 @@ zr_op_group_begin(struct zr_context *ctx, union zr_param *p,
     layout->parent = win->layout;
     win->layout = layout;
     ctx->current = win;
-
-    {union zr_event evt;
-    evt.win.evt = ZR_EVENT_WINDOW_ACTIVE;
-    evt.win.data[0] = (int)panel.bounds.x;
-    evt.win.data[1] = (int)panel.bounds.y;
-    zr_event_queue_push(queue, id, ZR_EVENT_WINDOW, &evt);}
     return 1;
 }
 
-static int
-zr_op_group_end(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
+void
+zr_group_end(struct zr_context *ctx)
 {
     struct zr_window *win;
     struct zr_panel *parent;
@@ -11675,12 +10899,10 @@ zr_op_group_end(struct zr_context *ctx, union zr_param *p,
     struct zr_rect clip;
     struct zr_window pan;
 
-    ZR_UNUSED(p);
-    ZR_UNUSED(queue);
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
     if (!ctx || !ctx->current)
-        return 0;
+        return;
 
     /* make sure zr_group_begin was called correctly */
     ZR_ASSERT(ctx->current);
@@ -11713,7 +10935,7 @@ zr_op_group_end(struct zr_context *ctx, union zr_param *p,
     ctx->current = win;
     win->layout = parent;
     win->bounds = parent->bounds;
-    return 0;
+    return;
 }
 
 /* --------------------------------------------------------------
@@ -12863,1691 +12085,4 @@ void zr_menu_close(struct zr_context *ctx)
 void
 zr_menu_end(struct zr_context *ctx)
 {zr_contextual_end(ctx);}
-
-/* ==============================================================
- *
- *                              API
- *
- * =============================================================== */
-static int zr_op_handle(struct zr_context*, union zr_param*, struct zr_event_queue*);
-static const struct zr_instruction {
-    const char *keyword;
-    const char *name;
-    zr_flags flags;
-    int(*func)(struct zr_context*, union zr_param *in, struct zr_event_queue*);
-    const char *fmt;
-    unsigned short argc;
-} zr_op_table[ZR_OP_MAX] = {
-#define ZR_OPCODE(a, b, c) {#a, "zr_op_"#a, b, zr_op_##a, c},
-    ZR_OPCODES(ZR_OPCODE)
-#undef ZR_OPCODE
-    {0,0,0,0,"o",1}
-};
-
-void
-zr_load_default_style(struct zr_context *ctx, zr_flags flags)
-{
-    union zr_event evt;
-    union zr_param p[2];
-    struct zr_event_queue queue;
-    ZR_ASSERT(ctx);
-
-    p[0].h.op = ZR_OP_load_default_style;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].flags = flags;
-
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, p, &queue);
-}
-
-void
-zr_push_property(struct zr_context *ctx, enum zr_style_properties id,
-    struct zr_vec2 value)
-{
-    union zr_event evt;
-    union zr_param p[4];
-    struct zr_event_queue queue;
-    ZR_ASSERT(ctx);
-
-    p[0].h.op = ZR_OP_push_property;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].i = (int)id;
-    p[2].f = value.x;
-    p[3].f = value.y;
-
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, p, &queue);
-}
-
-void
-zr_push_color(struct zr_context *ctx, enum zr_style_colors id,
-    struct zr_color color)
-{
-    union zr_event evt;
-    union zr_param p[3];
-    struct zr_event_queue queue;
-    ZR_ASSERT(ctx);
-
-    p[0].h.op = ZR_OP_push_color;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].i = (int)id;
-    p[2].color = color;
-
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, p, &queue);
-}
-
-void
-zr_push_font_height(struct zr_context *ctx, float font_height)
-{
-    union zr_event evt;
-    union zr_param p[2];
-    struct zr_event_queue queue;
-    ZR_ASSERT(ctx);
-
-    p[0].h.op = ZR_OP_push_font_height;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].f = font_height;
-
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, p, &queue);
-}
-
-void
-zr_pop_color(struct zr_context *ctx)
-{
-    union zr_event evt;
-    union zr_param p;
-    struct zr_event_queue queue;
-
-    ZR_ASSERT(ctx);
-    p.h.op = ZR_OP_pop_color;
-    p.h.next = zr_op_table[p.h.op].argc;
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, &p, &queue);
-}
-
-void
-zr_pop_property(struct zr_context *ctx)
-{
-    union zr_event evt;
-    union zr_param p;
-    struct zr_event_queue queue;
-
-    ZR_ASSERT(ctx);
-    p.h.op = ZR_OP_pop_property;
-    p.h.next = zr_op_table[p.h.op].argc;
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, &p, &queue);
-}
-
-void
-zr_pop_font_height(struct zr_context *ctx)
-{
-    union zr_event evt;
-    union zr_param p;
-    struct zr_event_queue queue;
-
-    ZR_ASSERT(ctx);
-    p.h.op = ZR_OP_pop_font_height;
-    p.h.next = zr_op_table[p.h.op].argc;
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, &p, &queue);
-}
-
-void
-zr_reset_colors(struct zr_context *ctx)
-{
-    union zr_event evt;
-    union zr_param p;
-    struct zr_event_queue queue;
-
-    ZR_ASSERT(ctx);
-    p.h.op = ZR_OP_reset_colors;
-    p.h.next = zr_op_table[p.h.op].argc;
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, &p, &queue);
-}
-
-void
-zr_reset_properties(struct zr_context *ctx)
-{
-    union zr_event evt;
-    union zr_param p;
-    struct zr_event_queue queue;
-
-    ZR_ASSERT(ctx);
-    p.h.op = ZR_OP_reset_properties;
-    p.h.next = zr_op_table[p.h.op].argc;
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, &p, &queue);
-}
-
-void
-zr_reset_font_height(struct zr_context *ctx)
-{
-    union zr_event evt;
-    union zr_param p;
-    struct zr_event_queue queue;
-
-    ZR_ASSERT(ctx);
-    p.h.op = ZR_OP_reset_font_height;
-    p.h.next = zr_op_table[p.h.op].argc;
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, &p, &queue);
-}
-
-void
-zr_reset(struct zr_context *ctx)
-{
-    union zr_event evt;
-    union zr_param p;
-    struct zr_event_queue queue;
-
-    ZR_ASSERT(ctx);
-    p.h.op = ZR_OP_reset;
-    p.h.next = zr_op_table[p.h.op].argc;
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, &p, &queue);
-}
-
-int
-zr_begin(struct zr_context *ctx, struct zr_panel *layout, const char *title,
-    struct zr_rect bounds, zr_flags flags)
-{
-    int evt_count;
-    union zr_event evt;
-    union zr_param p[8];
-    struct zr_event_queue queue;
-    struct zr_event_mask mask;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(title);
-    ZR_ASSERT(layout);
-
-    p[0].h.op = ZR_OP_begin;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].ptr = layout;
-    p[2].cheat = title;
-    p[3].f = bounds.x;
-    p[4].f = bounds.y;
-    p[5].f = bounds.w;
-    p[6].f = bounds.h;
-    p[7].flags = flags;
-
-    zr_event_mask_begin(&mask);
-    zr_event_mask_add(&mask, ZR_EVENT_WINDOW, ZR_EVENT_WINDOW_ACTIVE);
-    zr_event_mask_end(&mask);
-    zr_event_queue_init_fixed(&queue, &mask, &evt, 1);
-
-    evt_count = zr_op_handle(ctx, p, &queue);
-    if (ctx->op_buffer) return 1;
-    return evt_count;
-}
-
-void
-zr_end(struct zr_context *ctx)
-{
-    union zr_event evt;
-    union zr_param p;
-    struct zr_event_queue queue;
-    struct zr_event_mask mask;
-
-    ZR_ASSERT(ctx);
-    p.h.op = ZR_OP_end;
-    p.h.next = zr_op_table[p.h.op].argc;
-
-    zr_event_mask_begin(&mask);
-    zr_event_mask_add(&mask, ZR_EVENT_WINDOW, ZR_EVENT_WINDOW_RESIZED);
-    zr_event_mask_end(&mask);
-    zr_event_queue_init_fixed(&queue, &mask, &evt, 1);
-    zr_op_handle(ctx, &p, &queue);
-}
-
-void
-zr_layout_row_dynamic(struct zr_context *ctx, float height, int cols)
-{
-    union zr_event evt;
-    union zr_param p[3];
-    struct zr_event_queue queue;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-
-    p[0].h.op = ZR_OP_layout_row_dynamic;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].f = height;
-    p[2].i = cols;
-
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, p, &queue);
-}
-
-void
-zr_layout_row_static(struct zr_context *ctx, float height,
-    int item_width, int cols)
-{
-    union zr_event evt;
-    union zr_param p[4];
-    struct zr_event_queue queue;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-
-    p[0].h.op = ZR_OP_layout_row_static;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].f = height;
-    p[2].i = item_width;
-    p[3].i = cols;
-
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, p, &queue);
-}
-
-void
-zr_layout_row_begin(struct zr_context *ctx, enum zr_layout_format fmt,
-    float row_height, int cols)
-{
-    union zr_event evt;
-    union zr_param p[4];
-    struct zr_event_queue queue;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-
-    p[0].h.op = ZR_OP_layout_row_begin;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].i = (int)fmt;
-    p[2].f = row_height;
-    p[3].i = cols;
-
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, p, &queue);
-}
-
-void
-zr_layout_row_push(struct zr_context *ctx, float value)
-{
-    union zr_event evt;
-    union zr_param p[2];
-    struct zr_event_queue queue;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-
-    p[0].h.op = ZR_OP_layout_row_push;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].f = value;
-
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, p, &queue);
-}
-
-void
-zr_layout_row_end(struct zr_context *ctx)
-{
-    union zr_event evt;
-    union zr_param p;
-    struct zr_event_queue queue;
-
-    ZR_ASSERT(ctx);
-    p.h.op = ZR_OP_layout_row_end;
-    p.h.next = zr_op_table[p.h.op].argc;
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, &p, &queue);
-}
-
-void
-zr_layout_space_begin(struct zr_context *ctx, enum zr_layout_format fmt,
-    float height, int widget_count)
-{
-    union zr_event evt;
-    union zr_param p[4];
-    struct zr_event_queue queue;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-
-    p[0].h.op = ZR_OP_layout_space_begin;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].i = (int)fmt;
-    p[2].f = height;
-    p[3].i = widget_count;
-
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, p, &queue);
-}
-
-void
-zr_layout_space_push(struct zr_context *ctx, struct zr_rect bounds)
-{
-    union zr_event evt;
-    union zr_param p[5];
-    struct zr_event_queue queue;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-
-    p[0].h.op = ZR_OP_layout_space_push;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].f = bounds.x;
-    p[2].f = bounds.y;
-    p[3].f = bounds.w;
-    p[4].f = bounds.h;
-
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, p, &queue);
-}
-
-void
-zr_layout_space_end(struct zr_context *ctx)
-{
-    union zr_event evt;
-    union zr_param p;
-    struct zr_event_queue queue;
-
-    ZR_ASSERT(ctx);
-    p.h.op = ZR_OP_layout_space_end;
-    p.h.next = zr_op_table[p.h.op].argc;
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, &p, &queue);
-}
-
-int
-zr_layout_push(struct zr_context *ctx, enum zr_layout_node_type type,
-    const char *title, enum zr_collapse_states initial_state)
-{
-    int evt_count;
-    union zr_event evt;
-    union zr_param p[5];
-    struct zr_event_queue queue;
-    struct zr_event_mask mask;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-
-    p[0].h.op = ZR_OP_layout_push;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].hash = ctx->next_id++;
-    p[2].i = (int)type;
-    p[3].cheat = title;
-    p[4].i = (int)initial_state;
-
-    zr_event_mask_begin(&mask);
-    zr_event_mask_add(&mask, ZR_EVENT_TAB, ZR_EVENT_TAB_ACTIVE);
-    zr_event_mask_end(&mask);
-    zr_event_queue_init_fixed(&queue, &mask, &evt, 1);
-
-    evt_count = zr_op_handle(ctx, p, &queue);
-    if (ctx->op_buffer) {
-        ctx->current->layout->row.tree_depth++;
-        return 1;
-    } else return evt_count;
-}
-
-void
-zr_layout_pop(struct zr_context *ctx)
-{
-    union zr_event evt;
-    union zr_param p;
-    struct zr_event_queue queue;
-
-    ZR_ASSERT(ctx);
-    p.h.op = ZR_OP_layout_pop;
-    p.h.next = zr_op_table[p.h.op].argc;
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, &p, &queue);
-}
-
-void
-zr_text_colored(struct zr_context *ctx, const char *str, zr_size len,
-    zr_flags alignment, struct zr_color color)
-{
-    union zr_event evt;
-    union zr_param p[5];
-    struct zr_event_queue queue;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-    ZR_ASSERT(str);
-
-    p[0].h.op = ZR_OP_text;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].cheat = str;
-    p[2].ui = (unsigned int)len;
-    p[3].flags = alignment;
-    p[4].color = color;
-
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, p, &queue);
-}
-
-int
-zr_group_begin(struct zr_context *ctx, struct zr_panel *layout,
-    const char *title, zr_flags flags)
-{
-    int evt_count;
-    union zr_event evt;
-    struct zr_event_queue queue;
-    struct zr_event_mask mask;
-    union zr_param p[5];
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(title);
-    ZR_ASSERT(layout);
-
-    p[0].h.op = ZR_OP_group_begin;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].hash = ctx->next_id++;
-    p[2].ptr = layout;
-    p[3].cheat = title;
-    p[4].flags = flags;
-
-    zr_event_mask_begin(&mask);
-    zr_event_mask_add(&mask, ZR_EVENT_WINDOW, ZR_EVENT_WINDOW_ACTIVE);
-    zr_event_mask_end(&mask);
-    zr_event_queue_init_fixed(&queue, &mask, &evt, 1);
-
-    evt_count = zr_op_handle(ctx, p, &queue);
-    if (ctx->op_buffer) return 1;
-    return evt_count;
-}
-
-void
-zr_group_end(struct zr_context *ctx)
-{
-    union zr_event evt;
-    union zr_param p;
-    struct zr_event_queue queue;
-
-    ZR_ASSERT(ctx);
-    p.h.op = ZR_OP_group_end;
-    p.h.next = zr_op_table[p.h.op].argc;
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, &p, &queue);
-}
-
-void
-zr_text_wrap_colored(struct zr_context *ctx, const char *str, zr_size len,
-    struct zr_color color)
-{
-    union zr_event evt;
-    union zr_param p[5];
-    struct zr_event_queue queue;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-    ZR_ASSERT(str);
-
-    p[0].h.op = ZR_OP_text_wrap;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].cheat = str;
-    p[2].ui = (unsigned int)len;
-    p[3].color = color;
-
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, p, &queue);
-}
-
-void
-zr_text_wrap(struct zr_context *ctx, const char *str, zr_size len)
-{zr_text_wrap_colored(ctx, str, len, ctx->style.colors[ZR_COLOR_TEXT]);}
-
-void
-zr_text(struct zr_context *ctx, const char *str, zr_size len, zr_flags alignment)
-{zr_text_colored(ctx, str, len, alignment, ctx->style.colors[ZR_COLOR_TEXT]);}
-
-void
-zr_label_colored(struct zr_context *ctx, const char *text,
-    zr_flags align, struct zr_color color)
-{zr_text_colored(ctx, text, zr_strsiz(text), align, color);}
-
-void
-zr_label(struct zr_context *ctx, const char *text, zr_flags align)
-{zr_text(ctx, text, zr_strsiz(text), align);}
-
-void
-zr_label_wrap(struct zr_context *ctx, const char *str)
-{zr_text_wrap(ctx, str, zr_strsiz(str));}
-
-void
-zr_label_colored_wrap(struct zr_context *ctx, const char *str, struct zr_color color)
-{zr_text_wrap_colored(ctx, str, zr_strsiz(str), color);}
-
-void
-zr_image(struct zr_context *ctx, struct zr_image img)
-{
-    union zr_event evt;
-    union zr_param p[9];
-    struct zr_event_queue queue;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-
-    p[0].h.op = ZR_OP_image;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].hash = ctx->next_id++;
-    p[2].img = img.handle;
-    p[3].f = img.region[0];
-    p[4].f = img.region[1];
-    p[5].f = img.region[2];
-    p[6].f = img.region[3];
-    p[7].f = img.w;
-    p[8].f = img.h;
-
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, p, &queue);
-}
-
-int
-zr_button_text(struct zr_context *ctx, const char *title,
-    enum zr_button_behavior behavior)
-{
-    int evt_count;
-    union zr_event evt;
-    union zr_param p[4];
-    struct zr_event_queue queue;
-    struct zr_event_mask mask;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-    ZR_ASSERT(title);
-
-    p[0].h.op = ZR_OP_button_text;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].hash = ctx->next_id++;
-    p[2].cheat = title;
-    p[3].i = (int)behavior;
-
-    zr_event_mask_begin(&mask);
-    zr_event_mask_add(&mask, ZR_EVENT_BUTTON, ZR_EVENT_BUTTON_CLICKED);
-    zr_event_mask_end(&mask);
-    zr_event_queue_init_fixed(&queue, &mask, &evt, 1);
-
-    evt_count = zr_op_handle(ctx, p, &queue);
-    return evt_count;
-}
-
-int
-zr_button_color(struct zr_context *ctx, struct zr_color color,
-    enum zr_button_behavior behavior)
-{
-    int evt_count;
-    union zr_event evt;
-    union zr_param p[4];
-    struct zr_event_queue queue;
-    struct zr_event_mask mask;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-
-    p[0].h.op = ZR_OP_button_color;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].hash = ctx->next_id++;
-    p[2].color = color;
-    p[3].i = (int)behavior;
-
-    zr_event_mask_begin(&mask);
-    zr_event_mask_add(&mask, ZR_EVENT_BUTTON, ZR_EVENT_BUTTON_CLICKED);
-    zr_event_mask_end(&mask);
-    zr_event_queue_init_fixed(&queue, &mask, &evt, 1);
-
-    evt_count = zr_op_handle(ctx, p, &queue);
-    return evt_count;
-}
-
-int
-zr_button_symbol(struct zr_context *ctx, enum zr_symbol_type symbol,
-    enum zr_button_behavior behavior)
-{
-    int evt_count;
-    union zr_event evt;
-    union zr_param p[4];
-    struct zr_event_queue queue;
-    struct zr_event_mask mask;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-
-    p[0].h.op = ZR_OP_button_symbol;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].hash = ctx->next_id++;
-    p[2].i = (int)symbol;
-    p[3].i = (int)behavior;
-
-    zr_event_mask_begin(&mask);
-    zr_event_mask_add(&mask, ZR_EVENT_BUTTON, ZR_EVENT_BUTTON_CLICKED);
-    zr_event_mask_end(&mask);
-    zr_event_queue_init_fixed(&queue, &mask, &evt, 1);
-
-    evt_count = zr_op_handle(ctx, p, &queue);
-    return evt_count;
-}
-
-int
-zr_button_image(struct zr_context *ctx, struct zr_image img,
-    enum zr_button_behavior behavior)
-{
-    int evt_count;
-    union zr_event evt;
-    union zr_param p[10];
-    struct zr_event_queue queue;
-    struct zr_event_mask mask;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-
-    p[0].h.op = ZR_OP_button_image;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].hash = ctx->next_id++;
-    p[2].img = img.handle;
-    p[3].f = img.region[0];
-    p[4].f = img.region[1];
-    p[5].f = img.region[2];
-    p[6].f = img.region[3];
-    p[7].f = img.w;
-    p[8].f = img.h;
-    p[9].i = (int)behavior;
-
-    zr_event_mask_begin(&mask);
-    zr_event_mask_add(&mask, ZR_EVENT_BUTTON, ZR_EVENT_BUTTON_CLICKED);
-    zr_event_mask_end(&mask);
-    zr_event_queue_init_fixed(&queue, &mask, &evt, 1);
-
-    evt_count = zr_op_handle(ctx, p, &queue);
-    return evt_count;
-}
-
-int
-zr_button_text_symbol(struct zr_context *ctx, enum zr_symbol_type symbol,
-    const char *text, zr_flags text_alignment, enum zr_button_behavior behavior)
-{
-    int evt_count;
-    union zr_event evt;
-    union zr_param p[6];
-    struct zr_event_queue queue;
-    struct zr_event_mask mask;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-
-    p[0].h.op = ZR_OP_button_text_symbol;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].hash = ctx->next_id++;
-    p[2].i = (int)symbol;
-    p[3].cheat = text;
-    p[4].flags =  text_alignment;
-    p[5].i = (int)behavior;
-
-    zr_event_mask_begin(&mask);
-    zr_event_mask_add(&mask, ZR_EVENT_BUTTON, ZR_EVENT_BUTTON_CLICKED);
-    zr_event_mask_end(&mask);
-    zr_event_queue_init_fixed(&queue, &mask, &evt, 1);
-
-    evt_count = zr_op_handle(ctx, p, &queue);
-    return evt_count;
-}
-
-int
-zr_button_text_image(struct zr_context *ctx, struct zr_image img, const char *text,
-    zr_flags text_alignment, enum zr_button_behavior behavior)
-{
-    int evt_count;
-    union zr_event evt;
-    union zr_param p[12];
-    struct zr_event_queue queue;
-    struct zr_event_mask mask;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-
-    p[0].h.op = ZR_OP_button_text_image;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].hash = ctx->next_id++;
-    p[2].img = img.handle;
-    p[3].f = img.region[0];
-    p[4].f = img.region[1];
-    p[5].f = img.region[2];
-    p[6].f = img.region[3];
-    p[7].ui = img.w;
-    p[8].ui = img.h;
-    p[9].cheat = text;
-    p[10].flags = text_alignment;
-    p[11].i = (int)behavior;
-
-    zr_event_mask_begin(&mask);
-    zr_event_mask_add(&mask, ZR_EVENT_BUTTON, ZR_EVENT_BUTTON_CLICKED);
-    zr_event_mask_end(&mask);
-    zr_event_queue_init_fixed(&queue, &mask, &evt, 1);
-
-    evt_count = zr_op_handle(ctx, p, &queue);
-    return evt_count;
-}
-
-int
-zr_check(struct zr_context *ctx, const char *title, int active)
-{
-    int evt_count;
-    union zr_event evt;
-    union zr_param p[4];
-    struct zr_event_queue queue;
-    struct zr_event_mask mask;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-
-    p[0].h.op = ZR_OP_check;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].hash = ctx->next_id++;
-    p[2].cheat = title;
-    p[ZR_CHECKBOX_ACTIVE].i = active;
-
-    zr_event_mask_begin(&mask);
-    zr_event_mask_add(&mask, ZR_EVENT_CHECKBOX, ZR_EVENT_CHECK_TOGGLED);
-    zr_event_mask_end(&mask);
-    zr_event_queue_init_fixed(&queue, &mask, &evt, 1);
-
-    evt_count = zr_op_handle(ctx, p, &queue);
-    if (evt_count) return evt.checkbox.value;
-    else return active;
-}
-
-int
-zr_checkbox(struct zr_context *ctx, const char *title, int *active)
-{
-    int old;
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-    ZR_ASSERT(active);
-    ZR_ASSERT(title);
-    old = *active;
-    *active = zr_check(ctx, title, *active);
-    return (old != *active);
-}
-
-int
-zr_option(struct zr_context *ctx, const char *title, int active)
-{
-    int evt_count;
-    union zr_event evt;
-    union zr_param p[4];
-    struct zr_event_queue queue;
-    struct zr_event_mask mask;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-
-    p[0].h.op = ZR_OP_option;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].hash = ctx->next_id++;
-    p[2].cheat = title;
-    p[ZR_OPTION_ACTIVE].i = active;
-
-    zr_event_mask_begin(&mask);
-    zr_event_mask_add(&mask, ZR_EVENT_OPTION, ZR_EVENT_CHECK_TOGGLED);
-    zr_event_mask_end(&mask);
-    zr_event_queue_init_fixed(&queue, &mask, &evt, 1);
-
-    evt_count = zr_op_handle(ctx, p, &queue);
-    if (evt_count) return evt.checkbox.value;
-    else return active;
-}
-
-void
-zr_radio(struct zr_context *ctx, const char *title, int *active)
-{
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-    ZR_ASSERT(active);
-    ZR_ASSERT(title);
-    *active = zr_option(ctx, title, *active);
-}
-
-int
-zr_select(struct zr_context *ctx, const char *title, zr_flags alignment, int value)
-{
-    int evt_count;
-    union zr_event evt;
-    union zr_param p[5];
-    struct zr_event_queue queue;
-    struct zr_event_mask mask;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-
-    p[0].h.op = ZR_OP_select;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].hash = ctx->next_id++;
-    p[2].cheat = title;
-    p[ZR_SELECT_ALIGN].flags = alignment;
-    p[ZR_SELECT_ACTIVE].i = value;
-
-    zr_event_mask_begin(&mask);
-    zr_event_mask_add(&mask, ZR_EVENT_SELECT, ZR_EVENT_SELECT_TOGGLED);
-    zr_event_mask_end(&mask);
-    zr_event_queue_init_fixed(&queue, &mask, &evt, 1);
-
-    evt_count = zr_op_handle(ctx, p, &queue);
-    if (evt_count) return evt.select.value;
-    else return value;
-}
-
-int
-zr_selectable(struct zr_context *ctx, const char *title,
-    zr_flags alignment, int *value)
-{
-    int new_value, ret;
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-    ZR_ASSERT(value);
-    new_value = zr_select(ctx, title, alignment, *value);
-    ret = new_value != *value;
-    *value = new_value;
-    return ret;
-}
-
-float
-zr_slide_float(struct zr_context *ctx, float min, float val, float max, float step)
-{
-    int evt_count;
-    union zr_event evt;
-    union zr_param p[6];
-    struct zr_event_queue queue;
-    struct zr_event_mask mask;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-
-    p[0].h.op = ZR_OP_slider;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].hash = ctx->next_id++;
-    p[ZR_SLIDER_MIN].f = min;
-    p[ZR_SLIDER_VALUE].f = val;
-    p[ZR_SLIDER_MAX].f = max;
-    p[ZR_SLIDER_STEP].f = step;
-
-    zr_event_mask_begin(&mask);
-    zr_event_mask_add(&mask, ZR_EVENT_SLIDER, ZR_EVENT_SLIDER_CHANGED);
-    zr_event_mask_end(&mask);
-    zr_event_queue_init_fixed(&queue, &mask, &evt, 1);
-
-    evt_count = zr_op_handle(ctx, p, &queue);
-    if (evt_count) return evt.slider.value;
-    else return val;
-}
-
-int
-zr_slide_int(struct zr_context *ctx, int min, int val, int max, int step)
-{
-    float v = zr_slide_float(ctx, (float)min, (float)val, (float)max, (float)step);
-    return (int)v;
-}
-
-int
-zr_slider_float(struct zr_context *ctx, float min, float *val, float max, float step)
-{
-    int ret = 0;
-    float new_value;
-    ZR_ASSERT(val);
-    if (!ctx || !val)
-        return 0;
-
-    new_value = zr_slide_float(ctx, min, *val, max, step);
-    ret = (new_value > *val || new_value < *val);
-    *val = new_value;
-    return ret;
-}
-
-int
-zr_slider_int(struct zr_context *ctx, int min, int *val, int max, int step)
-{
-    int ret = 0;
-    float float_value;
-    int new_value;
-
-    ZR_ASSERT(val);
-    ZR_ASSERT(ctx);
-    if (!val || !ctx)
-        return 0;
-
-    float_value = (float)*val;
-    float_value = zr_slide_float(ctx, (float)min, float_value, (float)max, (float)step);
-    new_value = (int)float_value;
-    ret = (new_value != *val);
-    *val = new_value;
-    return ret;
-}
-
-zr_size
-zr_prog(struct zr_context *ctx, zr_size cur, zr_size max, int modifyable)
-{
-    int evt_count;
-    union zr_event evt;
-    union zr_param p[6];
-    struct zr_event_queue queue;
-    struct zr_event_mask mask;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-
-    p[0].h.op = ZR_OP_progress;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].hash = ctx->next_id++;
-    p[ZR_PROGRESS_VALUE].ui = (unsigned int)cur;
-    p[ZR_PROGRESS_MAX].ui = (unsigned int)max;
-    p[ZR_PROGRESS_MODIFY].i = modifyable;
-
-    zr_event_mask_begin(&mask);
-    zr_event_mask_add(&mask, ZR_EVENT_PROGRESS, ZR_EVENT_PROGRESS_CHANGED);
-    zr_event_mask_end(&mask);
-    zr_event_queue_init_fixed(&queue, &mask, &evt, 1);
-
-    evt_count = zr_op_handle(ctx, p, &queue);
-    if (evt_count) return evt.progress.value;
-    else return cur;
-}
-
-int
-zr_progress(struct zr_context *ctx, zr_size *cur, zr_size max, int modifyable)
-{
-    int ret;
-    zr_size new_value;
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(cur);
-    if (!ctx || !cur) return 0;
-    new_value = zr_prog(ctx, *cur, max, modifyable);
-    ret = (new_value != *cur);
-    *cur = new_value;
-    return ret;
-}
-
-static float
-zr_property(struct zr_context *ctx, const char *name,
-    float min, float val, float max, float step,
-    float inc_per_pixel, enum zr_property_filter filter)
-{
-    int evt_count;
-    union zr_event evt;
-    union zr_param p[10];
-    struct zr_event_queue queue;
-    struct zr_event_mask mask;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-
-    p[0].h.op = ZR_OP_property;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].hash = ctx->next_id++;
-    p[2].cheat = name;
-    p[ZR_PROPERTY_MIN].f = min;
-    p[ZR_PROPERTY_VALUE].f = val;
-    p[ZR_PROPERTY_MAX].f = max;
-    p[ZR_PROPERTY_STEP].f = step;
-    p[ZR_PROPERTY_INC].f = inc_per_pixel;
-    p[ZR_PROPERTY_FILTER].i = (int)filter;
-
-    zr_event_mask_begin(&mask);
-    zr_event_mask_add(&mask, ZR_EVENT_PROPERTY, ZR_EVENT_PROPERTY_CHANGED);
-    zr_event_mask_end(&mask);
-    zr_event_queue_init_fixed(&queue, &mask, &evt, 1);
-
-    evt_count = zr_op_handle(ctx, p, &queue);
-    if (evt_count) return evt.property.value;
-    else return val;
-}
-
-void
-zr_property_float(struct zr_context *ctx, const char *name,
-    float min, float *val, float max, float step, float inc_per_pixel)
-{
-    *val = zr_property(ctx, name, min, *val, max, step, inc_per_pixel, ZR_FILTER_FLOAT);
-}
-
-void
-zr_property_int(struct zr_context *ctx, const char *name,
-    int min, int *val, int max, int step, int inc_per_pixel)
-{
-    float value = (float)*val;
-    value = zr_property(ctx, name, (float)min, value, (float)max, (float)step,
-        (float)inc_per_pixel, ZR_FILTER_INT);
-    *val = (int)value;
-}
-
-float
-zr_propertyf(struct zr_context *ctx, const char *name, float min, float val,
-    float max, float step, float inc_per_pixel)
-{
-    zr_property_float(ctx, name, (float)min, &val, (float)max,
-        (float)step, (float)inc_per_pixel);
-    return val;
-}
-
-int
-zr_propertyi(struct zr_context *ctx, const char *name, int min, int val, int max,
-    int step, int inc_per_pixel)
-{
-    zr_property_int(ctx, name, min, &val, max, step, inc_per_pixel);
-    return val;
-}
-
-void
-zr_chart_begin(struct zr_context *ctx, enum zr_chart_type type,
-    int num, float min, float max)
-{
-    union zr_event evt;
-    union zr_param p[6];
-    struct zr_event_queue queue;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-
-    p[0].h.op = ZR_OP_chart_begin;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].hash = ctx->next_id;
-    p[2].i = (int)type;
-    p[3].i = num;
-    p[4].f = min;
-    p[5].f = max;
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, p, &queue);
-}
-
-zr_flags
-zr_chart_push(struct zr_context *ctx, float value)
-{
-    int i;
-    int evt_count;
-    zr_flags flags = 0;
-    union zr_event evt[2];
-    union zr_param p[10];
-    struct zr_event_queue queue;
-    struct zr_event_mask mask;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-
-    p[0].h.op = ZR_OP_chart_push;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].hash = ctx->next_id;
-    p[2].f = value;
-
-    zr_event_mask_begin(&mask);
-    zr_event_mask_add(&mask, ZR_EVENT_CHART, ZR_EVENT_CHART_HOVERED);
-    zr_event_mask_add(&mask, ZR_EVENT_CHART, ZR_EVENT_CHART_SELECTED);
-    zr_event_mask_end(&mask);
-    zr_event_queue_init_fixed(&queue, &mask, &evt, 2);
-
-    evt_count = zr_op_handle(ctx, p, &queue);
-    if (!evt_count) return 0;
-    for (i = 0; i < evt_count; ++i) {
-        if (evt[i].chart.evt == ZR_EVENT_CHART_HOVERED)
-            flags |= ZR_CHART_HOVERING;
-        else if (evt[i].chart.evt == ZR_EVENT_CHART_SELECTED)
-            flags |= ZR_CHART_CLICKED;
-    }
-    return flags;
-}
-
-void
-zr_chart_end(struct zr_context *ctx)
-{
-    union zr_event evt;
-    union zr_param p;
-    struct zr_event_queue queue;
-
-    ZR_ASSERT(ctx);
-    ctx->next_id++;
-    p.h.op = ZR_OP_chart_end;
-    p.h.next = zr_op_table[p.h.op].argc;
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, &p, &queue);
-}
-
-void
-zr_plot(struct zr_context *ctx, enum zr_chart_type type, const float *values,
-    int count, int offset)
-{
-    int i;
-    float min_value;
-    float max_value;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(values);
-    ZR_ASSERT(offset < count);
-    if (!ctx || !values || !count) return;
-
-    /* first pass: find out min and max values */
-    min_value = values[offset];
-    max_value = values[offset];
-    for (i = offset+1; i < count; ++i) {
-        min_value = (values[i] < min_value) ? values[i]: min_value;
-        max_value = (values[i] > max_value) ? values[i]: max_value;
-    }
-
-    /* second pass: draw graph out to window */
-    zr_chart_begin(ctx, type, count, min_value, max_value);
-    for (i = offset; i < count; ++i)
-        zr_chart_push(ctx, values[i]);
-    zr_chart_end(ctx);
-}
-
-void
-zr_plot_function(struct zr_context *ctx, enum zr_chart_type type, void *userdata,
-    float(*value_getter)(void* user, int index), int count, int offset)
-{
-    int i;
-    float min_value;
-    float max_value;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(value_getter);
-    ZR_ASSERT(offset < count);
-    if (!ctx || !value_getter || !count) return;
-
-    /* first pass: find out min and max values */
-    min_value = max_value = value_getter(userdata, offset);
-    for (i = offset+1; i < count; ++i) {
-        float value = value_getter(userdata, i);
-        min_value = (value <= min_value) ? value: min_value;
-        max_value = (value >= max_value) ? value: max_value;
-    }
-
-    /* second pass: draw graph out to window */
-    zr_chart_begin(ctx, type, count, min_value, max_value);
-    for (i = offset; i < count; ++i)
-        zr_chart_push(ctx, value_getter(userdata, i));
-    zr_chart_end(ctx);
-}
-
-struct zr_color
-zr_color_picker(struct zr_context *ctx, struct zr_color color,
-    enum zr_color_picker_format fmt)
-{
-    int evt_count;
-    union zr_event evt;
-    union zr_param p[4];
-    struct zr_event_queue queue;
-    struct zr_event_mask mask;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-    if (!ctx) return color;
-
-    p[0].h.op = ZR_OP_color_picker;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    p[1].hash = ctx->next_id;
-    p[2].color = color;
-    p[3].i = (int)fmt;
-
-    zr_event_mask_begin(&mask);
-    zr_event_mask_add(&mask, ZR_EVENT_COLOR_PICKER, ZR_EVENT_COLOR_PICKER_CHANGED);
-    zr_event_mask_end(&mask);
-    zr_event_queue_init_fixed(&queue, &mask, &evt, 1);
-
-    evt_count = zr_op_handle(ctx, p, &queue);
-    if (evt_count) return evt.color_picker.color;
-    return color;
-}
-
-void
-zr_color_pick(struct zr_context *ctx, struct zr_color *color,
-    enum zr_color_picker_format fmt)
-{
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->current);
-    if (!ctx || !color) return;
-    *color = zr_color_picker(ctx, *color, fmt);
-}
-
-/* ==============================================================
- *
- *                          RECORDING
- *
- * =============================================================== */
-void
-zr_recording_begin(struct zr_context *ctx, struct zr_buffer *buffer)
-{
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(buffer);
-    if (!ctx || !buffer) return;
-    ctx->op_buffer = buffer;
-    ctx->op_memory = ctx->memory;
-}
-
-void
-zr_recording_end(struct zr_context *ctx)
-{
-    union zr_param p[2];
-    union zr_event evt;
-    struct zr_event_queue queue;
-    zr_size size;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(ctx->op_buffer);
-    if (!ctx || !ctx->op_buffer) return;
-
-    p[0].h.op = ZR_OP_list_end;
-    p[0].h.next = zr_op_table[p[0].h.op].argc;
-    zr_event_queue_init_fixed(&queue, 0, &evt, 1);
-    zr_op_handle(ctx, p, &queue);
-
-    size = ctx->memory.size;
-    ctx->op_buffer = 0;
-    ctx->memory = ctx->op_memory;
-    ctx->memory.size = size;
-    ctx->next_id = 0;
-}
-
-static void
-zr_store_op(struct zr_buffer *buffer, union zr_param *p, int count)
-{
-    int i = 0;
-    const zr_size align = ZR_ALIGNOF(union zr_param);
-    const zr_size fixed_size = sizeof(union zr_param) * (zr_size)count;
-    const struct zr_instruction *op = &zr_op_table[p[0].h.op];
-    union zr_param *mem;
-    for (i = 0; i < op->argc; ++i) {
-        if (op->fmt[i] == 'c')
-            break;
-    }
-
-    if (i == op->argc) {
-        /* default fixed size operation */
-        mem = (union zr_param*)zr_buffer_alloc(buffer, ZR_BUFFER_FRONT, fixed_size, align);
-        ZR_ASSERT(mem);
-        if (!mem) return;
-        zr_memcopy(mem, p, fixed_size);
-    } else {
-        /* While the approach of using zr_param for arguments is quite
-         * nice for the normal uses cases like using the API without replay
-         * it gets complicated otherwise. The problem here are strings. The way
-         * I decided to handle them is to just save them inside the operation
-         * and introduce operations with dynamic size. The other way of string 
-         * handling would have been to force the user the set string pointers 
-         * but that would limit and require a lot of work from the user. */
-        zr_size text_len = zr_strsiz(p[i].cheat);
-        zr_size dyn_count = (text_len/sizeof(union zr_param)) + 1;
-        zr_size dyn_size = fixed_size + sizeof(union zr_param) * dyn_count;
-
-        mem = (union zr_param*)zr_buffer_alloc(buffer, ZR_BUFFER_FRONT, dyn_size, align);
-        ZR_ASSERT(mem);
-        if (!mem) return;
-
-        p[0].h.next = (unsigned short)(p[0].h.next + dyn_count);
-        zr_memcopy(mem, p, fixed_size);
-        zr_memcopy(mem+count, p[i].cheat, text_len+1);
-        p[i].cheat = (const char*)(mem+count);
-    }
-}
-
-/* ==============================================================
- *
- *                          INTERPRETER
- *
- * =============================================================== */
-static int
-zr_op_handle(struct zr_context *ctx, union zr_param *p,
-    struct zr_event_queue *queue)
-{
-    int count = 0;
-    const struct zr_instruction *op;
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(p);
-    ZR_ASSERT(p[0].h.op <= ZR_OP_list_end);
-
-    op = &zr_op_table[p[0].h.op];
-    if (ctx->op_buffer)
-        zr_store_op(ctx->op_buffer, p, op->argc);
-    if (op->func)
-        count = op->func(ctx, p+1, queue);
-    return count;
-}
-
-int
-zr_exec(struct zr_context *ctx, struct zr_buffer *events,
-    int *event_count, const struct zr_event_mask *event_mask,
-    struct zr_buffer *program, struct zr_buffer *runtime)
-{
-    int i = 0;
-    int depth = 0;
-    int skip = 0;
-    int until = 0;
-    int count = 0;
-    union zr_param *p;
-    struct zr_event_queue queue;
-
-    ZR_ASSERT(ctx);
-    ZR_ASSERT(program);
-    ZR_ASSERT(runtime);
-    ZR_ASSERT(events);
-    if (!ctx || !program || !runtime || !events)
-        return 0;
-
-    zr_event_queue_init(&queue, event_mask, events);
-    p = (union zr_param*)zr_buffer_memory(program);
-    while (1) {
-        const struct zr_instruction *op = &zr_op_table[p[0].h.op];
-        if (p[0].h.op == ZR_OP_list_end) break;
-        if (p[0].h.op == ZR_OP_begin)
-            queue.window++;
-
-        /* push/pop runtime stack for panels */
-        if (op->flags & ZR_STACK_POP && !skip) {
-            if (runtime->allocated >= sizeof(struct zr_panel))
-                runtime->allocated -= sizeof(struct zr_panel);
-        }
-        if (op->flags & ZR_STACK_PUSH && !skip) {
-            static const zr_size panel_align = ZR_ALIGNOF(struct zr_panel);
-            p[1].ptr = zr_buffer_alloc(runtime, ZR_BUFFER_FRONT,
-                                        sizeof(struct zr_panel), panel_align);
-            ZR_ASSERT(p[1].ptr && "if this hits you need more runtime memory");
-            if (!p[1].ptr) return 0;
-        }
-
-        /* Fix string parameter to point to correct memory
-         * @optimize: add another index to instruction for O(1) access */
-        for (i = 0; (op->flags & ZR_STACK_TXT) && i < op->argc; ++i) {
-            if (op->fmt[i] == 'c') {
-                p[i].cheat = (const char*)(p + op->argc);
-                break;
-            }
-        }
-
-        /* execute operation */
-        ZR_ASSERT(op->func);
-        if (op->flags & ZR_STACK_GEN)
-            p[1].hash = ctx->next_id++;
-        if (!skip || (skip && p[0].h.op == ZR_OP_end))
-            count += op->func(ctx, p+1, &queue);
-
-        /* conditional jumps */
-        if (op->flags & ZR_STACK_INC) depth++;
-        if (op->flags & ZR_STACK_DEC) depth--;
-        if (queue.skip && !skip) {
-            skip = zr_true;
-            until = depth - 1;
-        }
-        if (skip && until == depth) skip = zr_false;
-        queue.skip = zr_false;
-
-        /* next operation */
-        p += p->h.next;
-        ZR_ASSERT(p->h.op <= ZR_OP_list_end);
-        ZR_ASSERT((char*)p < ((char*)program->memory.ptr + program->allocated));
-        if ((char*)p >= ((char*)program->memory.ptr + program->allocated)) break;
-    }
-    if (event_count) *event_count = count;
-    *events = queue.memory;
-    return 1;
-}
-
-const union zr_event*
-zr__event_begin(struct zr_buffer *buffer)
-{
-    ZR_ASSERT(buffer);
-    if (!buffer || !buffer->memory.ptr || !buffer->allocated) return 0;
-    return (const union zr_event*)ZR_ALIGN_PTR(buffer->memory.ptr, zr_event_align);
-}
-
-const union zr_event*
-zr__event_next(struct zr_buffer *buffer, const union zr_event *evt)
-{
-    const zr_byte *end;
-    const zr_byte *allocated;
-
-    ZR_ASSERT(buffer);
-    if (!buffer || !buffer->memory.ptr || !buffer->allocated) return 0;
-    if (!evt || (buffer->memory.ptr > (const void*)evt)) return 0;
-
-    end = (zr_byte*)buffer->memory.ptr + buffer->memory.size;
-    allocated = (zr_byte*)buffer->memory.ptr + buffer->allocated;
-
-    if (end <= (const zr_byte*)evt) return 0;
-    if (end <= (const zr_byte*)(evt+1)) return 0;
-    if (allocated <= (const zr_byte*)(evt+1)) return 0;
-    return (evt + 1);
-}
-
-/* ----------------------------------------------------------------
- *
- *                          ELEMENTS
- *
- * ---------------------------------------------------------------*/
-zr_element
-zr_element_lookup(const struct zr_buffer *program, zr_hash id)
-{
-    zr_element elem = 0;
-    const union zr_param *p;
-    const union zr_param *begin;
-    ZR_ASSERT(program);
-    if (!program) return 0;
-
-    p = begin = (const union zr_param*)zr_buffer_memory_const(program);
-    while (1) {
-        const struct zr_instruction *op = &zr_op_table[p[0].h.op];
-        if (p[0].h.op == ZR_OP_list_end) break;
-        if (op->argc >= 2 && op->fmt[1] == 'h') {
-            if (p[1].hash == id)
-                return (zr_element)(p - begin);
-        }
-
-        /* next operation */
-        ZR_ASSERT(p->h.op < ZR_OP_list_end);
-        p += p[0].h.next;
-        ZR_ASSERT((const zr_byte*)p < ((const zr_byte*)program->memory.ptr + program->allocated));
-        if ((const zr_byte*)p >= ((const zr_byte*)program->memory.ptr + program->allocated))
-            break;
-    }
-    return elem;
-}
-
-zr_element
-zr_element_lookup_string(const struct zr_buffer *program, const char *name)
-{
-    zr_hash id;
-    ZR_ASSERT(program);
-    ZR_ASSERT(name);
-    if (!program || !name) return 0;
-    id = zr_murmur_hash(name, (int)zr_strsiz(name), 0);
-    return zr_element_lookup(program, id);
-}
-
-int
-zr_element_is_valid(const struct zr_buffer *program, zr_element elem)
-{
-    const zr_byte *end;
-    const union zr_param *p;
-
-    /* make sure element is inside buffer bounds */
-    p = (const union zr_param*)zr_buffer_memory_const(program);
-    end = (const zr_byte*)program->memory.ptr + program->allocated;
-    ZR_ASSERT((const zr_byte*)(p + elem) < end);
-    if ((const zr_byte*)(p + elem) >= end)
-        return 0;
-
-    p += elem;
-    if (p->h.op >= ZR_OP_list_end) return 0;
-    else return 1;
-}
-
-static int
-zr_element_is_property_valid(const struct zr_buffer *program,
-    const union zr_param *p, int property, char fmt)
-{
-    const zr_byte *end;
-    const struct zr_instruction *op;
-
-    /* make sure property is inside element */
-    op = &zr_op_table[p[0].h.op];
-    ZR_ASSERT(op->argc > property);
-    if (op->argc <= property) return 0;
-
-    /* make sure property has correct type */
-    ZR_ASSERT(op->fmt[property] == 'i');
-    if (op->fmt[property] != fmt) return 0;
-
-    /* make sure property is inside buffer */
-    end = (zr_byte*)program->memory.ptr + program->allocated;
-    ZR_ASSERT((const zr_byte*)(p + property) < end);
-    if ((const zr_byte*)(p + property) >= end) return 0;
-    return 1;
-}
-
-static const union zr_param*
-zr_element_get_property_const(const struct zr_buffer *program,
-    zr_element elem, int property, char fmt)
-{
-    const union zr_param *p;
-    ZR_ASSERT(program);
-    ZR_ASSERT(program->allocated);
-    ZR_ASSERT(property >= 0);
-
-    if (!program || !program->allocated || property < 0) return 0;
-    if (!zr_element_is_valid(program, elem)) return 0;
-    p = (const union zr_param*)zr_buffer_memory_const(program);
-    if (!zr_element_is_property_valid(program, p, property, fmt)) return 0;
-    return p + property;
-}
-
-static union zr_param*
-zr_element_get_property(struct zr_buffer *program,
-    zr_element elem, int property, char fmt)
-{
-    union zr_param *p;
-    ZR_ASSERT(program);
-    ZR_ASSERT(program->allocated);
-    ZR_ASSERT(property >= 0);
-
-    if (!program || !program->allocated || property < 0) return 0;
-    if (!zr_element_is_valid(program, elem)) return 0;
-    p = (union zr_param*)zr_buffer_memory(program) + elem;
-    if (!zr_element_is_property_valid(program, p, property, fmt)) return 0;
-    return p + property;
-}
-
-int
-zr_element_get_int(const struct zr_buffer *program, zr_element elem, int property)
-{
-    const union zr_param *p;
-    p = zr_element_get_property_const(program, elem, property, 'i');
-    ZR_ASSERT(p);
-    if (!p) return 0;
-    return p->i;
-}
-
-float
-zr_element_get_float(const struct zr_buffer *program, zr_element elem, int property)
-{
-    const union zr_param *p;
-    p = zr_element_get_property_const(program, elem, property, 'f');
-    ZR_ASSERT(p);
-    if (!p) return 0;
-    return p->f;
-}
-
-unsigned int
-zr_element_get_uint(const struct zr_buffer *program, zr_element elem, int property)
-{
-    const union zr_param *p;
-    p = zr_element_get_property_const(program, elem, property, 'u');
-    ZR_ASSERT(p);
-    if (!p) return 0;
-    return p->ui;
-}
-
-struct zr_color
-zr_element_get_color(const struct zr_buffer *program, zr_element elem, int property)
-{
-    const union zr_param *p;
-    p = zr_element_get_property_const(program, elem, property, 'l');
-    ZR_ASSERT(p);
-    if (!p) return zr_rgb(0,0,0);
-    return p->color;
-}
-
-zr_flags
-zr_element_get_flags(const struct zr_buffer *program, zr_element elem, int property)
-{
-    const union zr_param *p;
-    p = zr_element_get_property_const(program, elem, property, 'g');
-    ZR_ASSERT(p);
-    if (!p) return 0;
-    return p->flags;
-}
-
-const void*
-zr_element_get_ptr(const struct zr_buffer *program, zr_element elem, int property)
-{
-    const union zr_param *p;
-    p = zr_element_get_property_const(program, elem, property, 'p');
-    ZR_ASSERT(p);
-    if (!p) return 0;
-    return p->ptr;
-}
-
-void
-zr_element_set_int(struct zr_buffer *program, zr_element elem,
-    int property, int value)
-{
-    union zr_param *p;
-    p = zr_element_get_property(program, elem, property, 'i');
-    ZR_ASSERT(p);
-    if (!p) return;
-    p->i = value;
-}
-
-void
-zr_element_set_float(struct zr_buffer *program, zr_element elem,
-    int property, float value)
-{
-    union zr_param *p;
-    p = zr_element_get_property(program, elem, property, 'f');
-    ZR_ASSERT(p);
-    if (!p) return;
-    p->f = value;
-}
-
-void
-zr_element_set_uint(struct zr_buffer *program, zr_element elem,
-    int property, unsigned int value)
-{
-    union zr_param *p;
-    p = zr_element_get_property(program, elem, property, 'u');
-    ZR_ASSERT(p);
-    if (!p) return;
-    p->ui = value;
-}
-
-void
-zr_element_set_color(struct zr_buffer *program, zr_element elem,
-    int property, struct zr_color value)
-{
-    union zr_param *p;
-    p = zr_element_get_property(program, elem, property, 'l');
-    ZR_ASSERT(p);
-    if (!p) return;
-    p->color = value;
-}
-
-void
-zr_element_set_flags(struct zr_buffer *program, zr_element elem,
-    int property, zr_flags value)
-{
-    union zr_param *p;
-    p = zr_element_get_property(program, elem, property, 'g');
-    ZR_ASSERT(p);
-    if (!p) return;
-    p->flags = value;
-}
-
-void
-zr_element_set_ptr(struct zr_buffer *program, zr_element elem,
-    int property, void *value)
-{
-    union zr_param *p;
-    p = zr_element_get_property(program, elem, property, 'p');
-    ZR_ASSERT(p);
-    if (!p) return;
-    p->ptr = value;
-}
 

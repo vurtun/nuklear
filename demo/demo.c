@@ -67,7 +67,6 @@ struct demo {
 
     int show_filex;
     int show_simple;
-    int show_replay;
     int show_demo;
     int show_node;
     int show_grid;
@@ -299,7 +298,6 @@ control_window(struct zr_context *ctx, struct demo *gui)
         if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Windows", ZR_MINIMIZED)) {
             zr_layout_row_dynamic(ctx, 25, 2);
             gui->show_simple = !zr_window_is_closed(ctx, "Show");
-            gui->show_replay = !zr_window_is_closed(ctx, "Recorded");
             gui->show_node = !zr_window_is_closed(ctx, "Node Editor");
             gui->show_demo = !zr_window_is_closed(ctx, "Demo");
 #ifndef DEMO_DO_NOT_DRAW_IMAGES
@@ -311,8 +309,6 @@ control_window(struct zr_context *ctx, struct demo *gui)
 
             if (zr_checkbox(ctx, "Show", &gui->show_simple) && !gui->show_simple)
                 zr_window_close(ctx, "Show");
-            if (zr_checkbox(ctx, "Recorded", &gui->show_replay) && !gui->show_replay)
-                zr_window_close(ctx, "Recorded");
             if (zr_checkbox(ctx, "Demo", &gui->show_demo) && !gui->show_demo)
                 zr_window_close(ctx, "Demo");
             if (zr_checkbox(ctx, "Node Editor", &gui->show_node) && !gui->show_node)
@@ -525,8 +521,6 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                 } else {
                     if (zr_selectable(ctx, "Show", ZR_TEXT_DEFAULT_LEFT, &gui->show_simple) && !gui->show_simple)
                         zr_window_close(ctx, "Show");
-                    if (zr_selectable(ctx, "Recorded", ZR_TEXT_DEFAULT_LEFT, &gui->show_replay) && !gui->show_replay)
-                        zr_window_close(ctx, "Recorded");
                     if (zr_selectable(ctx, "Node Editor", ZR_TEXT_DEFAULT_LEFT, &gui->show_node) && !gui->show_node)
                         zr_window_close(ctx, "Node Editor");
                     #ifndef DEMO_DO_NOT_DRAW_IMAGES
@@ -2752,227 +2746,6 @@ node_editor_init(struct node_editor *editor)
 
 /* ===============================================================
  *
- *                          RECORDED WINDOW
- *
- * ===============================================================*/
-static void
-record_window(struct zr_context *ctx, struct zr_buffer *buffer)
-{
-    /* **EXPERIMENTAL** */
-    /* Recording a UI begins by calling `zr_recording_begin` and ends with
-     * `zr_recording_end`. All supported API call between these two calls
-     * are saved inside the buffer and can later be replayed with `zr_exec`.
-     * IMPORTANT: all functions which control the UI like `zr_begin`,
-     * `zr_group_begin` or `zr_layout_push` and many more will return true
-     * so to make sure that the complete UI is being recored. Please make sure
-     * that no side effect can occur because of it while recording.*/
-    struct zr_panel layout;
-    zr_recording_begin(ctx, buffer);
-    if (zr_begin(ctx, &layout, "Recorded", zr_rect(420, 350, 200, 350),
-        ZR_WINDOW_BORDER|ZR_WINDOW_MOVABLE|ZR_WINDOW_SCALABLE|
-        ZR_WINDOW_CLOSABLE|ZR_WINDOW_MINIMIZABLE|ZR_WINDOW_TITLE))
-    {
-        zr_layout_row_static(ctx, 30, 150, 1);
-        zr_button_text(ctx, "Test", ZR_BUTTON_DEFAULT);
-        zr_slide_float(ctx, 0, 5, 10, 1);
-        zr_prog(ctx, 20, 100, ZR_MODIFIABLE);
-        zr_propertyi(ctx, "Compression:", 0, 20, 100, 10, 1);
-        zr_select(ctx, "Select me", ZR_TEXT_CENTERED|ZR_TEXT_MIDDLE, 0);
-        zr_check(ctx, "Check me", zr_true);
-        zr_layout_row_static(ctx, 30, 50, 3);
-        zr_option(ctx, "RGB", 1);
-        zr_option(ctx, "HSV", 0);
-        zr_option(ctx, "HEX", 0);
-        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Tab", ZR_MINIMIZED)) {
-            zr_layout_row_static(ctx, 30, 150, 1);
-            zr_button_text(ctx, "Test", ZR_BUTTON_DEFAULT);
-            zr_layout_pop(ctx);
-        }
-    }
-    zr_end(ctx);
-    zr_recording_end(ctx);
-}
-
-/* ===============================================================
- *
- *                          REPLAY WINDOW
- *
- * ===============================================================*/
-static void
-replay_window(struct zr_context *ctx, struct zr_buffer *record)
-{
-    int count = 0;
-    union zr_event evt_memory[32];
-    struct zr_buffer events, runtime;
-    char runtime_memory[4 * sizeof(struct zr_panel)];
-
-    /* Widget identifier
-     * Every widget needs a unique identifier since you want to distinguish
-     * between different widgets of the same type. IDs are handed out from
-     * `zr_recording_begin` to `zr_recording_end` and is a growing number by default
-     * and can be found inside `zr_context`: next_id. If you want to set the id
-     * for a widget yourself you can set the ID before calling it inside the
-     * recording process for example (does not need to be a hash just unique):
-     *
-     *  ctx->next_id = zr_murmur_hash("Compression", 11, 0);
-     *  zr_propertyi(ctx, "Compression:", 0, 20, 100, 10, 1);
-     *
-     * If a new id is not set the old id + 1 is used. Notice not all API functions
-     * generate a new id. If you compare enum widget_ids with all used functions
-     * in the recording proccess it is hopefully noticeable that for example all
-     * layout functions do not have an ID.
-     *
-     * The ID itself can be used to identify widget either for events or to get
-     * a handle `zr_element` to a widget by calling `zr_element_lookup`.
-     * You can use `zr_element` to access and modify a widget and do not have to
-     * run another recording pass just to change some values. */
-    enum widget_ids {
-        WIDGET_BUTTON,
-        WIDGET_SLIDER,
-        WIDGET_PROGRESS,
-        WIDGET_PROPERTY,
-        WIDGET_SELECT,
-        WIDGET_CHECK,
-        WIDGET_OPTION_RGB,
-        WIDGET_OPTION_HSV,
-        WIDGET_OPTION_HEX,
-        WIDGET_TAB,
-        WIDGET_BUTTON2
-    };
-    ctx->next_id = 0;
-
-    {const union zr_event *evt;
-    /* To execute a previously recorded or compiled UI bytecode you need to provide
-     * two buffer. The first one is to store events into and the other is for runtime memory.
-     * For event memory I would recommend using a fixed size `zr_event` array
-     * since the number of events generated is small most of the time. Runtime
-     * memory is only used for `zr_panel`s so only the max number of panels
-     * to run the UI is needed.*/
-    zr_buffer_init_fixed(&events, evt_memory, sizeof(evt_memory));
-    zr_buffer_init_fixed(&runtime, runtime_memory, sizeof(runtime_memory));
-
-    /* If you use zr_exec for executing a fixed UI by handling events you can use
-     * the event count to query if the frame needs to be drawn or not. Which can
-     * bring a huge performance boost. (NOTICE: some functions like zr_begin generate
-     * heartbeat events which do not have any impact and are only used while using
-     * the API in immediate mode and can easily be ignored). You can also use
-     * an event mask to specify which events should be generated and ignore
-     * all other. This example here uses a default event mask by passing `0` to
-     * zr_exec which allows all events, but you could also create your own:
-     *
-     *  struct zr_event_mask mask;
-     *  zr_event_mask_begin(&mask);
-     *  zr_event_mask_add(&mask, ZR_EVENT_WINDOW, ZR_EVENT_WINDOW_MOVED);
-     *  zr_event_mask_add(&mask, ZR_EVENT_WINDOW, ZR_EVENT_WINDOW_CLOSED|ZR_EVENT_WINDOW_RESIZED);
-     *  zr_event_mask_add(&mask, ZR_EVENT_BUTTON, ZR_EVENT_BUTTON_CLICKED);
-     *  zr_event_mask_add(&mask, ZR_EVENT_PROGRESS, ZR_EVENT_PROGRESS_CHANGED);
-     *  zr_event_mask_add(&mask, ZR_EVENT_PROPERTY, ZR_EVENT_PROPERTY_CHANGED);
-     *  zr_event_mask_end(&mask);
-     *  zr_exec(ctx, &events, &count, &mask, record, &runtime);
-     */
-    zr_exec(ctx, &events, &count, 0, record, &runtime);
-
-    /* This foreach loop is guaranteed to work with an `zr_event` array or a memory
-     * buffer. You could also use the event count generated by `zr_exec` and
-     * run over `events` by a typical for loop if you use an array but you are
-     * forced to use `zr_foreach_event` if you use a growing buffer. */
-    zr_foreach_event(evt, &events)
-    {
-        switch (evt->base.type) {
-        case ZR_EVENT_WINDOW: {
-            if (evt->win.evt == ZR_EVENT_WINDOW_HIDDEN)
-                fprintf(stdout, "window hidden\n");
-            else if (evt->win.evt == ZR_EVENT_WINDOW_EXPOSED)
-                fprintf(stdout, "window exposed\n");
-            else if (evt->win.evt == ZR_EVENT_WINDOW_MOVED)
-                fprintf(stdout, "window moved: (%d, %d)\n", evt->win.data[0], evt->win.data[1]);
-            else if (evt->win.evt == ZR_EVENT_WINDOW_RESIZED)
-                fprintf(stdout, "window resized: (%d, %d)\n", evt->win.data[0], evt->win.data[1]);
-            else if (evt->win.evt == ZR_EVENT_WINDOW_MINIMIZED)
-                fprintf(stdout, "window minimized\n");
-            else if (evt->win.evt == ZR_EVENT_WINDOW_MAXIMIZED)
-                fprintf(stdout, "window maximized\n");
-            else if (evt->win.evt == ZR_EVENT_WINDOW_FOCUS)
-                fprintf(stdout, "window focused\n");
-            else if (evt->win.evt == ZR_EVENT_WINDOW_HOVERED)
-                fprintf(stdout, "window hovered\n");
-        } break;
-
-        case ZR_EVENT_BUTTON: {
-            if (evt->base.id == WIDGET_BUTTON) {
-                if (evt->button.evt == ZR_EVENT_BUTTON_CLICKED)
-                    fprintf(stdout, "button pressed\n");
-                else if (evt->button.evt == ZR_EVENT_BUTTON_HOVERED)
-                    fprintf(stdout, "button hovered\n");
-            } else if (evt->base.id == WIDGET_BUTTON2) {
-                if (evt->button.evt == ZR_EVENT_BUTTON_CLICKED)
-                    fprintf(stdout, "button2 pressed\n");
-                else if (evt->button.evt == ZR_EVENT_BUTTON_HOVERED)
-                    fprintf(stdout, "button2 hovered\n");
-            }
-        } break;
-
-        case ZR_EVENT_SELECT: {
-            if (evt->select.evt == ZR_EVENT_SELECT_TOGGLED)
-                fprintf(stdout, "select toggled\n");
-            else if (evt->select.evt == ZR_EVENT_SELECT_HOVERED)
-                fprintf(stdout, "selected hovered\n");
-        } break;
-
-        case ZR_EVENT_SLIDER: {
-            if (evt->base.id == WIDGET_SLIDER) {
-                if (evt->slider.evt == ZR_EVENT_SLIDER_CHANGED)
-                    fprintf(stdout, "slider changed value to: %.2f\n", evt->slider.value);
-                else if (evt->slider.evt == ZR_EVENT_SLIDER_HOVERED)
-                    fprintf(stdout, "slider hovered\n");
-            }
-        } break;
-
-        case ZR_EVENT_PROPERTY: {
-            const char *property_states[] = {"Default", "Edit", "Drag"};
-            if (evt->base.id == WIDGET_PROPERTY) {
-                if (evt->property.evt == ZR_EVENT_PROPERTY_CHANGED)
-                    fprintf(stdout, "property changed value to: %.2f\n", evt->property.value);
-                else if (evt->property.evt == ZR_EVENT_PROPERTY_HOVERED)
-                    fprintf(stdout, "property hovered\n");
-                else if (evt->property.evt == ZR_EVENT_PROPERTY_STATE_CHANGED)
-                    fprintf(stdout, "property state changed to: %s\n", property_states[evt->property.state]);
-            }
-        } break;
-
-        case ZR_EVENT_CHECKBOX: {
-            if (evt->property.evt == ZR_EVENT_CHECK_TOGGLED)
-                fprintf(stdout, "checkbox toggled to value: %d\n", evt->checkbox.value);
-            else if (evt->property.evt == ZR_EVENT_CHECK_HOVERED)
-                fprintf(stdout, "checkbox hovered\n");
-        } break;
-
-        case ZR_EVENT_OPTION: {
-            if (evt->option.evt == ZR_EVENT_OPTION_TOGGLED) {
-                /* look up option elements */
-                zr_element rgb = zr_element_lookup(record, WIDGET_OPTION_RGB);
-                zr_element hsv = zr_element_lookup(record, WIDGET_OPTION_HSV);
-                zr_element hex = zr_element_lookup(record, WIDGET_OPTION_HEX);
-
-                /* make sure only *one* option is selected */
-                if (evt->base.id == WIDGET_OPTION_RGB) {
-                    zr_element_set_int(record, hsv, ZR_OPTION_ACTIVE, 0);
-                    zr_element_set_int(record, hex, ZR_OPTION_ACTIVE, 0);
-                } else if (evt->base.id == WIDGET_OPTION_HSV) {
-                    zr_element_set_int(record, rgb, ZR_OPTION_ACTIVE, 0);
-                    zr_element_set_int(record, hex, ZR_OPTION_ACTIVE, 0);
-                } else {
-                    zr_element_set_int(record, rgb, ZR_OPTION_ACTIVE, 0);
-                    zr_element_set_int(record, hsv, ZR_OPTION_ACTIVE, 0);
-                }
-            }
-        } break;
-        }
-    }}
-}
-
-/* ===============================================================
- *
  *                          DEMO ENTRY
  *
  * ===============================================================*/
@@ -2981,8 +2754,6 @@ run_demo(struct demo *gui)
 {
     int ret = 1;
     static int init = 0;
-    static char record_memory[4*1024];
-    static struct zr_buffer record;
     static struct node_editor nodedit;
     static struct file_browser filex;
     struct zr_context *ctx = &gui->ctx;
@@ -2990,7 +2761,6 @@ run_demo(struct demo *gui)
     if (!init) {
         gui->show_demo = 0;
         gui->show_node = 0;
-        gui->show_replay = 0;
         gui->show_simple = 0;
 
         gui->show_grid = 0;
@@ -2998,8 +2768,6 @@ run_demo(struct demo *gui)
         gui->show_button = 0;
 
         memset(&nodedit, 0, sizeof(nodedit));
-        zr_buffer_init_fixed(&record, record_memory, sizeof(record_memory));
-        record_window(ctx, &record);
         node_editor_init(&nodedit);
 #ifndef DEMO_DO_NOT_DRAW_IMAGES
 #ifdef __unix__
@@ -3014,8 +2782,6 @@ run_demo(struct demo *gui)
         demo_window(gui, ctx);
     if (gui->show_simple)
         simple_window(ctx);
-    if (gui->show_replay)
-        replay_window(ctx, &record);
     if (gui->show_node)
         node_editor_demo(ctx, &nodedit);
 
