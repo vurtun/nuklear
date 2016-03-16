@@ -744,6 +744,7 @@ struct zr_draw_vertex {
     struct zr_vec2 uv;
     zr_draw_vertex_color col;
 };
+#endif
 
 struct zr_draw_command {
     unsigned int elem_count;
@@ -790,7 +791,6 @@ void zr_draw_polygon(struct zr_command_buffer*, enum zr_command_drawing_mode,
 void zr_draw_polyline(struct zr_command_buffer*, float *points, int point_count,
                         struct zr_color col);
 
-#endif
 /* ===============================================================
  *
  *                          GUI
@@ -1378,6 +1378,7 @@ struct zr_clipboard {
     /* copy callback for the edit box  */
 };
 
+#if ZR_COMPILE_WITH_VERTEX_BUFFER
 struct zr_convert_config {
     float global_alpha;
     /* global alpha modifier */
@@ -1428,6 +1429,7 @@ struct zr_canvas {
     zr_handle userdata;
 #endif
 };
+#endif
 
 struct zr_context {
 /* public:
@@ -1525,6 +1527,7 @@ void zr_window_show_if(struct zr_context*, const char *name,
 const struct zr_command* zr__next(struct zr_context*, const struct zr_command*);
 const struct zr_command* zr__begin(struct zr_context*);
 
+#if ZR_COMPILE_WITH_VERTEX_BUFFER
 void zr_convert(struct zr_context*, struct zr_buffer *cmds,
                 struct zr_buffer *vertices, struct zr_buffer *elements,
                 const struct zr_convert_config*);
@@ -1536,7 +1539,7 @@ const struct zr_draw_command* zr__draw_begin(const struct zr_context*,
 const struct zr_draw_command* zr__draw_next(const struct zr_draw_command*,
                                             const struct zr_buffer*,
                                             const struct zr_context*);
-
+#endif
 /*--------------------------------------------------------------
  *                          INPUT
  * -------------------------------------------------------------*/
