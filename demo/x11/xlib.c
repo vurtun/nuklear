@@ -355,6 +355,41 @@ surface_draw_triangle(XSurface *surf, int16_t x0, int16_t y0, int16_t x1,
 }
 
 static void
+surface_draw_polygon(XSurface *surf, enum zr_command_drawing_mode type,
+    const struct zr_vec2i *pnts, int count, struct zr_color col)
+{
+    int i = 0;
+    unsigned long c = color_from_byte(&col.r);
+    XSetForeground(surf->dpy, surf->gc, c);
+    if (type == ZR_FILLED) {
+        #define MAX_POINTS 64
+        XPoint xpnts[MAX_POINTS];
+
+        for (i = 0; i < count && i < MAX_POINTS; ++i) {
+            xpnts[i].x = pnts[i].x;
+            xpnts[i].y = pnts[i].y;
+        }
+        XFillPolygon(surf->dpy, surf->drawable, surf->gc, xpnts, count, Convex, CoordModeOrigin);
+        #undef MAX_POINTS
+    } else {
+        for (i = 1; i < count; ++i)
+            XDrawLine(surf->dpy, surf->drawable, surf->gc, pnts[i-1].x, pnts[i-1].y, pnts[i].x, pnts[i].y);
+        XDrawLine(surf->dpy, surf->drawable, surf->gc, pnts[count-1].x, pnts[count-1].y, pnts[0].x, pnts[0].y);
+    }
+}
+
+static void
+surface_draw_polyline(XSurface *surf,
+    const struct zr_vec2i *pnts, int count, struct zr_color col)
+{
+    int i = 0;
+    unsigned long c = color_from_byte(&col.r);
+    XSetForeground(surf->dpy, surf->gc, c);
+    for (i = 0; i < count-1; ++i)
+        XDrawLine(surf->dpy, surf->drawable, surf->gc, pnts[i].x, pnts[i].y, pnts[i+1].x, pnts[i+1].y);
+}
+
+static void
 surface_draw_circle(XSurface *surf, int16_t x, int16_t y, uint16_t w,
     uint16_t h, struct zr_color col)
 {
@@ -489,7 +524,6 @@ surface_del(XSurface *surf)
 }
 
 #if 0
-
 static XSurface*
 surface_load(const char *filename, Display *dpy, int screen, Window root)
 {
@@ -699,6 +733,14 @@ main(int argc, char *argv[])
                     surface_draw_triangle(xw.surf, t->a.x, t->a.y, t->b.x, t->b.y,
                         t->c.x, t->c.y, t->color);
                 } break;
+                case ZR_COMMAND_POLYGON: {
+                    const struct zr_command_polygon *p = zr_command(polygon, cmd);
+                    surface_draw_polygon(xw.surf, p->mode, p->points, p->point_count, p->color);
+                } break;
+                case ZR_COMMAND_POLYLINE: {
+                    const struct zr_command_polyline *p = zr_command(polyline, cmd);
+                    surface_draw_polyline(xw.surf, p->points, p->point_count, p->color);
+                } break;
                 case ZR_COMMAND_TEXT: {
                     const struct zr_command_text *t = zr_command(text, cmd);
                     surface_draw_text(xw.surf, t->x, t->y, t->w, t->h,
@@ -717,6 +759,7 @@ main(int argc, char *argv[])
                     surface_draw_curve(xw.surf, q->begin, q->ctrl[0], q->ctrl[1],
                         q->end, 22, q->color);
                 } break;
+                case ZR_COMMAND_RECT_MULTI_COLOR:
                 case ZR_COMMAND_ARC:
                 default: break;
                 }

@@ -589,6 +589,8 @@ enum zr_command_type {
     ZR_COMMAND_CIRCLE,
     ZR_COMMAND_ARC,
     ZR_COMMAND_TRIANGLE,
+    ZR_COMMAND_POLYGON,
+    ZR_COMMAND_POLYLINE,
     ZR_COMMAND_TEXT,
     ZR_COMMAND_IMAGE
 };
@@ -602,6 +604,11 @@ struct zr_command {
 #if ZR_COMPILE_WITH_COMMAND_USERDATA
     zr_handle userdata;
 #endif
+};
+
+enum zr_command_drawing_mode {
+    ZR_STROKE,
+    ZR_FILLED
 };
 
 struct zr_command_scissor {
@@ -627,6 +634,7 @@ struct zr_command_curve {
 
 struct zr_command_rect {
     struct zr_command header;
+    enum zr_command_drawing_mode mode;
     unsigned int rounding;
     short x, y;
     unsigned short w, h;
@@ -645,13 +653,30 @@ struct zr_command_rect_multi_color {
 
 struct zr_command_circle {
     struct zr_command header;
+    enum zr_command_drawing_mode mode;
     short x, y;
     unsigned short w, h;
     struct zr_color color;
 };
 
+struct zr_command_polygon {
+    struct zr_command header;
+    enum zr_command_drawing_mode mode;
+    struct zr_color color;
+    unsigned short point_count;
+    struct zr_vec2i points[1];
+};
+
+struct zr_command_polyline {
+    struct zr_command header;
+    struct zr_color color;
+    unsigned short point_count;
+    struct zr_vec2i points[1];
+};
+
 struct zr_command_arc {
     struct zr_command header;
+    enum zr_command_drawing_mode mode;
     short cx, cy;
     unsigned short r;
     float a[2];
@@ -660,6 +685,7 @@ struct zr_command_arc {
 
 struct zr_command_triangle {
     struct zr_command header;
+    enum zr_command_drawing_mode mode;
     struct zr_vec2i a;
     struct zr_vec2i b;
     struct zr_vec2i c;
@@ -744,20 +770,25 @@ void zr_draw_line(struct zr_command_buffer*, float, float, float,
                     float, struct zr_color);
 void zr_draw_curve(struct zr_command_buffer*, float, float, float, float,
                     float, float, float, float, struct zr_color);
-void zr_draw_rect(struct zr_command_buffer*, struct zr_rect,
-                    float rounding, struct zr_color);
+void zr_draw_rect(struct zr_command_buffer*, enum zr_command_drawing_mode,
+                    struct zr_rect, float rounding, struct zr_color);
 void zr_draw_rect_multi_color(struct zr_command_buffer*, struct zr_rect,
                                 struct zr_color left, struct zr_color top,
                                 struct zr_color right, struct zr_color bottom);
-void zr_draw_circle(struct zr_command_buffer*, struct zr_rect, struct zr_color);
-void zr_draw_arc(struct zr_command_buffer*, float cx, float cy, float radius,
-                float a_min, float a_max, struct zr_color);
-void zr_draw_triangle(struct zr_command_buffer*, float, float, float, float,
-                    float, float, struct zr_color);
+void zr_draw_circle(struct zr_command_buffer*, enum zr_command_drawing_mode,
+                    struct zr_rect, struct zr_color);
+void zr_draw_arc(struct zr_command_buffer*, enum zr_command_drawing_mode,
+                float cx, float cy, float radius, float a_min, float a_max, struct zr_color);
+void zr_draw_triangle(struct zr_command_buffer*, enum zr_command_drawing_mode,
+                        float, float, float, float, float, float, struct zr_color);
 void zr_draw_image(struct zr_command_buffer*, struct zr_rect, struct zr_image*);
 void zr_draw_text(struct zr_command_buffer*, struct zr_rect,
                     const char *text, zr_size len, const struct zr_user_font*,
                     struct zr_color, struct zr_color);
+void zr_draw_polygon(struct zr_command_buffer*, enum zr_command_drawing_mode,
+                    float*, int point_count, struct zr_color);
+void zr_draw_polyline(struct zr_command_buffer*, float *points, int point_count,
+                        struct zr_color col);
 
 #endif
 /* ===============================================================
@@ -1405,12 +1436,6 @@ struct zr_context {
     struct zr_style style;
     struct zr_buffer memory;
     struct zr_clipboard clip;
-
-    zr_hash next_id;
-    /* hash value taken by the next widget.
-     * If not directly set by the user it
-     * will be incremented to ensure
-     * unique identifiers for every widget. */
 
 /* private:
      * should only be modifed if you

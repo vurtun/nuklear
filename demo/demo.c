@@ -667,7 +667,6 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                 zr_label(ctx, "Property neg:", ZR_TEXT_LEFT);
                 zr_property_int(ctx, "Neg:", -10, &property_neg, 10, 1, 1);
 
-
                 zr_layout_row_dynamic(ctx, 25, 1);
                 zr_label(ctx, "Range:", ZR_TEXT_LEFT);
                 zr_layout_row_dynamic(ctx, 25, 3);
@@ -1606,7 +1605,7 @@ ui_piemenu(struct zr_context *ctx, struct zr_vec2 pos, float radius,
         }
 
         /* outer circle */
-        zr_draw_circle(out, bounds, zr_rgb(50,50,50));
+        zr_draw_circle(out, ZR_FILLED, bounds, zr_rgb(50,50,50));
         {
             /* circle buttons */
             float step = (2 * 3.141592654f) / (float)(MAX(1,item_count));
@@ -1621,7 +1620,7 @@ ui_piemenu(struct zr_context *ctx, struct zr_vec2 pos, float radius,
             for (i = 0; i < item_count; ++i) {
                 struct zr_rect content;
                 float rx, ry, dx, dy, a;
-                zr_draw_arc(out, center.x, center.y, (bounds.w/2.0f),
+                zr_draw_arc(out, ZR_FILLED, center.x, center.y, (bounds.w/2.0f),
                     a_min, a_max, (active_item == i) ? zr_rgb(45,100,255): zr_rgb(60,60,60));
 
                 /* seperator line */
@@ -1647,7 +1646,7 @@ ui_piemenu(struct zr_context *ctx, struct zr_vec2 pos, float radius,
             inner.x = bounds.x + bounds.w/2 - bounds.w/4;
             inner.y = bounds.y + bounds.h/2 - bounds.h/4;
             inner.w = bounds.w/2; inner.h = bounds.h/2;
-            zr_draw_circle(out, inner, zr_rgb(45,45,45));
+            zr_draw_circle(out, ZR_FILLED, inner, zr_rgb(45,45,45));
 
             /* active icon content */
             bounds.w = inner.w / 2.0f;
@@ -2618,7 +2617,7 @@ node_editor_demo(struct zr_context *ctx, struct node_editor *nodedit)
                         circle.x = node.bounds.x + node.bounds.w-4;
                         circle.y = node.bounds.y + space * (float)(n+1);
                         circle.w = 8; circle.h = 8;
-                        zr_draw_circle(canvas, circle, zr_rgb(100, 100, 100));
+                        zr_draw_circle(canvas, ZR_FILLED, circle, zr_rgb(100, 100, 100));
 
                         /* start linking process */
                         if (zr_input_has_mouse_click_down_in_rect(in, ZR_BUTTON_LEFT, circle, zr_true)) {
@@ -2645,7 +2644,7 @@ node_editor_demo(struct zr_context *ctx, struct node_editor *nodedit)
                         circle.x = node.bounds.x-4;
                         circle.y = node.bounds.y + space * (float)(n+1);
                         circle.w = 8; circle.h = 8;
-                        zr_draw_circle(canvas, circle, zr_rgb(100, 100, 100));
+                        zr_draw_circle(canvas, ZR_FILLED, circle, zr_rgb(100, 100, 100));
                         if (zr_input_is_mouse_released(in, ZR_BUTTON_LEFT) &&
                             zr_input_is_mouse_hovering_rect(in, circle) &&
                             nodedit->linking.active && nodedit->linking.node != it) {

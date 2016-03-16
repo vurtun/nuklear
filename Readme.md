@@ -13,7 +13,7 @@ render backends it only focuses on the actual UI.
 ## Features
 - Immediate mode graphical user interface toolkit
 - Written in C89 (ANSI C)
-- Small codebase (~13kLOC)
+- Small codebase (~11kLOC)
 - Focus on portability, efficiency and simplicity
 - No dependencies (not even the standard library)
 - No global or hidden state

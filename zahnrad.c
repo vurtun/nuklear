@@ -2044,8 +2044,8 @@ zr_draw_curve(struct zr_command_buffer *b, float ax, float ay,
 }
 
 void
-zr_draw_rect(struct zr_command_buffer *b, struct zr_rect rect,
-    float rounding, struct zr_color c)
+zr_draw_rect(struct zr_command_buffer *b, enum zr_command_drawing_mode mode,
+    struct zr_rect rect, float rounding, struct zr_color c)
 {
     struct zr_command_rect *cmd;
     ZR_ASSERT(b);
@@ -2059,6 +2059,7 @@ zr_draw_rect(struct zr_command_buffer *b, struct zr_rect rect,
     cmd = (struct zr_command_rect*)
         zr_command_buffer_push(b, ZR_COMMAND_RECT, sizeof(*cmd));
     if (!cmd) return;
+    cmd->mode = mode;
     cmd->rounding = (unsigned int)rounding;
     cmd->x = (short)rect.x;
     cmd->y = (short)rect.y;
@@ -2094,8 +2095,8 @@ zr_draw_rect_multi_color(struct zr_command_buffer *b, struct zr_rect rect,
 }
 
 void
-zr_draw_circle(struct zr_command_buffer *b, struct zr_rect r,
-    struct zr_color c)
+zr_draw_circle(struct zr_command_buffer *b, enum zr_command_drawing_mode mode,
+    struct zr_rect r, struct zr_color c)
 {
     struct zr_command_circle *cmd;
     ZR_ASSERT(b);
@@ -2109,6 +2110,7 @@ zr_draw_circle(struct zr_command_buffer *b, struct zr_rect r,
     cmd = (struct zr_command_circle*)
         zr_command_buffer_push(b, ZR_COMMAND_CIRCLE, sizeof(*cmd));
     if (!cmd) return;
+    cmd->mode = mode;
     cmd->x = (short)r.x;
     cmd->y = (short)r.y;
     cmd->w = (unsigned short)ZR_MAX(r.w, 0);
@@ -2117,13 +2119,14 @@ zr_draw_circle(struct zr_command_buffer *b, struct zr_rect r,
 }
 
 void
-zr_draw_arc(struct zr_command_buffer *b, float cx,
-    float cy, float radius, float a_min, float a_max, struct zr_color c)
+zr_draw_arc(struct zr_command_buffer *b, enum zr_command_drawing_mode mode,
+    float cx, float cy, float radius, float a_min, float a_max, struct zr_color c)
 {
     struct zr_command_arc *cmd;
     cmd = (struct zr_command_arc*)
         zr_command_buffer_push(b, ZR_COMMAND_ARC, sizeof(*cmd));
     if (!cmd) return;
+    cmd->mode = mode;
     cmd->cx = (short)cx;
     cmd->cy = (short)cy;
     cmd->r = (unsigned short)radius;
@@ -2133,8 +2136,8 @@ zr_draw_arc(struct zr_command_buffer *b, float cx,
 }
 
 void
-zr_draw_triangle(struct zr_command_buffer *b,float x0,float y0,
-    float x1, float y1, float x2, float y2, struct zr_color c)
+zr_draw_triangle(struct zr_command_buffer *b,enum zr_command_drawing_mode mode,
+    float x0, float y0, float x1, float y1, float x2, float y2, struct zr_color c)
 {
     struct zr_command_triangle *cmd;
     ZR_ASSERT(b);
@@ -2150,6 +2153,7 @@ zr_draw_triangle(struct zr_command_buffer *b,float x0,float y0,
     cmd = (struct zr_command_triangle*)
         zr_command_buffer_push(b, ZR_COMMAND_TRIANGLE, sizeof(*cmd));
     if (!cmd) return;
+    cmd->mode = mode;
     cmd->a.x = (short)x0;
     cmd->a.y = (short)y0;
     cmd->b.x = (short)x1;
@@ -2180,6 +2184,49 @@ zr_draw_image(struct zr_command_buffer *b, struct zr_rect r,
     cmd->w = (unsigned short)ZR_MAX(0, r.w);
     cmd->h = (unsigned short)ZR_MAX(0, r.h);
     cmd->img = *img;
+}
+
+void
+zr_draw_polygon(struct zr_command_buffer *b, enum zr_command_drawing_mode mode,
+    float *points, int point_count, struct zr_color col)
+{
+    int i;
+    zr_size size = 0;
+    struct zr_command_polygon *cmd;
+
+    ZR_ASSERT(b);
+    if (!b) return;
+    size = sizeof(*cmd) + sizeof(short) * 2 * (zr_size)point_count;
+    cmd = (struct zr_command_polygon*) zr_command_buffer_push(b, ZR_COMMAND_POLYGON, size);
+    if (!cmd) return;
+    cmd->color = col;
+    cmd->mode = mode;
+    cmd->point_count = (unsigned short)point_count;
+    for (i = 0; i < point_count; ++i) {
+        cmd->points[i].x = (short)points[i*2];
+        cmd->points[i].y = (short)points[i*2+1];
+    }
+}
+
+void
+zr_draw_polyline(struct zr_command_buffer *b,
+    float *points, int point_count, struct zr_color col)
+{
+    int i;
+    zr_size size = 0;
+    struct zr_command_polyline *cmd;
+
+    ZR_ASSERT(b);
+    if (!b) return;
+    size = sizeof(*cmd) + sizeof(short) * 2 * (zr_size)point_count;
+    cmd = (struct zr_command_polyline*) zr_command_buffer_push(b, ZR_COMMAND_POLYLINE, size);
+    if (!cmd) return;
+    cmd->color = col;
+    cmd->point_count = (unsigned short)point_count;
+    for (i = 0; i < point_count; ++i) {
+        cmd->points[i].x = (short)points[i*2];
+        cmd->points[i].y = (short)points[i*2+1];
+    }
 }
 
 void
@@ -2926,7 +2973,7 @@ zr_canvas_path_stroke(struct zr_canvas *list, struct zr_color color,
 }
 
 static void
-zr_canvas_add_line(struct zr_canvas *list, struct zr_vec2 a,
+zr_canvas_stroke_line(struct zr_canvas *list, struct zr_vec2 a,
     struct zr_vec2 b, struct zr_color col, float thickness)
 {
     ZR_ASSERT(list);
@@ -2937,7 +2984,7 @@ zr_canvas_add_line(struct zr_canvas *list, struct zr_vec2 a,
 }
 
 static void
-zr_canvas_add_rect(struct zr_canvas *list, struct zr_rect rect,
+zr_canvas_fill_rect(struct zr_canvas *list, struct zr_rect rect,
     struct zr_color col, float rounding)
 {
     ZR_ASSERT(list);
@@ -2945,6 +2992,17 @@ zr_canvas_add_rect(struct zr_canvas *list, struct zr_rect rect,
     zr_canvas_path_rect_to(list, zr_vec2(rect.x + 0.5f, rect.y + 0.5f),
         zr_vec2(rect.x + rect.w + 0.5f, rect.y + rect.h + 0.5f), rounding);
     zr_canvas_path_fill(list,  col);
+}
+
+static void
+zr_canvas_stroke_rect(struct zr_canvas *list, struct zr_rect rect,
+    struct zr_color col, float rounding, float thickness)
+{
+    ZR_ASSERT(list);
+    if (!list || !col.a) return;
+    zr_canvas_path_rect_to(list, zr_vec2(rect.x + 0.5f, rect.y + 0.5f),
+        zr_vec2(rect.x + rect.w + 0.5f, rect.y + rect.h + 0.5f), rounding);
+    zr_canvas_path_stroke(list,  col, ZR_STROKE_CLOSED, thickness);
 }
 
 static void
@@ -2980,7 +3038,7 @@ zr_canvas_add_rect_multi_color(struct zr_canvas *list, struct zr_rect rect,
 }
 
 static void
-zr_canvas_add_triangle(struct zr_canvas *list, struct zr_vec2 a,
+zr_canvas_fill_triangle(struct zr_canvas *list, struct zr_vec2 a,
     struct zr_vec2 b, struct zr_vec2 c, struct zr_color col)
 {
     ZR_ASSERT(list);
@@ -2992,7 +3050,19 @@ zr_canvas_add_triangle(struct zr_canvas *list, struct zr_vec2 a,
 }
 
 static void
-zr_canvas_add_circle(struct zr_canvas *list, struct zr_vec2 center,
+zr_canvas_stroke_triangle(struct zr_canvas *list, struct zr_vec2 a,
+    struct zr_vec2 b, struct zr_vec2 c, struct zr_color col, float thickness)
+{
+    ZR_ASSERT(list);
+    if (!list || !col.a) return;
+    zr_canvas_path_line_to(list, a);
+    zr_canvas_path_line_to(list, b);
+    zr_canvas_path_line_to(list, c);
+    zr_canvas_path_stroke(list, col, ZR_STROKE_CLOSED, thickness);
+}
+
+static void
+zr_canvas_fill_circle(struct zr_canvas *list, struct zr_vec2 center,
     float radius, struct zr_color col, unsigned int segs)
 {
     float a_max;
@@ -3001,6 +3071,18 @@ zr_canvas_add_circle(struct zr_canvas *list, struct zr_vec2 center,
     a_max = ZR_PI * 2.0f * ((float)segs - 1.0f) / (float)segs;
     zr_canvas_path_arc_to(list, center, radius, 0.0f, a_max, segs);
     zr_canvas_path_fill(list, col);
+}
+
+static void
+zr_canvas_stroke_circle(struct zr_canvas *list, struct zr_vec2 center,
+    float radius, struct zr_color col, unsigned int segs, float thickness)
+{
+    float a_max;
+    ZR_ASSERT(list);
+    if (!list || !col.a) return;
+    a_max = ZR_PI * 2.0f * ((float)segs - 1.0f) / (float)segs;
+    zr_canvas_path_arc_to(list, center, radius, 0.0f, a_max, segs);
+    zr_canvas_path_stroke(list, col, ZR_STROKE_CLOSED, thickness);
 }
 
 static void
@@ -3165,7 +3247,7 @@ zr_convert(struct zr_context *ctx, struct zr_buffer *cmds,
         } break;
         case ZR_COMMAND_LINE: {
             const struct zr_command_line *l = zr_command(line, cmd);
-            zr_canvas_add_line(&ctx->canvas, zr_vec2(l->begin.x, l->begin.y),
+            zr_canvas_stroke_line(&ctx->canvas, zr_vec2(l->begin.x, l->begin.y),
                 zr_vec2(l->end.x, l->end.y), l->color, line_thickness);
         } break;
         case ZR_COMMAND_CURVE: {
@@ -3177,8 +3259,13 @@ zr_convert(struct zr_context *ctx, struct zr_buffer *cmds,
         } break;
         case ZR_COMMAND_RECT: {
             const struct zr_command_rect *r = zr_command(rect, cmd);
-            zr_canvas_add_rect(&ctx->canvas, zr_rect(r->x, r->y, r->w, r->h),
-                r->color, (float)r->rounding);
+            if (r->mode == ZR_FILLED) {
+                zr_canvas_fill_rect(&ctx->canvas, zr_rect(r->x, r->y, r->w, r->h),
+                    r->color, (float)r->rounding);
+            } else {
+                zr_canvas_stroke_rect(&ctx->canvas, zr_rect(r->x, r->y, r->w, r->h),
+                    r->color, (float)r->rounding, line_thickness);
+            }
         } break;
         case ZR_COMMAND_RECT_MULTI_COLOR: {
             const struct zr_command_rect_multi_color *r = zr_command(rect_multi_color, cmd);
@@ -3187,21 +3274,56 @@ zr_convert(struct zr_context *ctx, struct zr_buffer *cmds,
         } break;
         case ZR_COMMAND_CIRCLE: {
             const struct zr_command_circle *c = zr_command(circle, cmd);
-            zr_canvas_add_circle(&ctx->canvas, zr_vec2((float)c->x + (float)c->w/2,
-                (float)c->y + (float)c->h/2), (float)c->w/2, c->color,
-                config->circle_segment_count);
+            if (c->mode == ZR_FILLED) {
+                zr_canvas_fill_circle(&ctx->canvas, zr_vec2((float)c->x + (float)c->w/2,
+                    (float)c->y + (float)c->h/2), (float)c->w/2, c->color,
+                    config->circle_segment_count);
+            } else {
+                zr_canvas_stroke_circle(&ctx->canvas, zr_vec2((float)c->x + (float)c->w/2,
+                    (float)c->y + (float)c->h/2), (float)c->w/2, c->color,
+                    config->circle_segment_count, line_thickness);
+            }
         } break;
         case ZR_COMMAND_ARC: {
             const struct zr_command_arc *c = zr_command(arc, cmd);
             zr_canvas_path_line_to(&ctx->canvas, zr_vec2(c->cx, c->cy));
             zr_canvas_path_arc_to(&ctx->canvas, zr_vec2(c->cx, c->cy), c->r,
                 c->a[0], c->a[1], config->circle_segment_count);
-            zr_canvas_path_fill(&ctx->canvas, c->color);
+            if (c->mode == ZR_FILLED)
+                zr_canvas_path_fill(&ctx->canvas, c->color);
+            if (c->mode == ZR_STROKE)
+                zr_canvas_path_stroke(&ctx->canvas, c->color, ZR_STROKE_CLOSED, line_thickness);
         } break;
         case ZR_COMMAND_TRIANGLE: {
             const struct zr_command_triangle *t = zr_command(triangle, cmd);
-            zr_canvas_add_triangle(&ctx->canvas, zr_vec2(t->a.x, t->a.y),
-                zr_vec2(t->b.x, t->b.y), zr_vec2(t->c.x, t->c.y), t->color);
+            if (t->mode == ZR_FILLED) {
+                zr_canvas_fill_triangle(&ctx->canvas, zr_vec2(t->a.x, t->a.y),
+                    zr_vec2(t->b.x, t->b.y), zr_vec2(t->c.x, t->c.y), t->color);
+            } else {
+                zr_canvas_stroke_triangle(&ctx->canvas, zr_vec2(t->a.x, t->a.y),
+                    zr_vec2(t->b.x, t->b.y), zr_vec2(t->c.x, t->c.y), t->color,
+                    line_thickness);
+            }
+        } break;
+        case ZR_COMMAND_POLYGON: {
+            int i;
+            const struct zr_command_polygon *p = zr_command(polygon, cmd);
+            for (i = 0; i < p->point_count; ++i) {
+                struct zr_vec2 pnt = zr_vec2((float)p->points[i].x, (float)p->points[i].y);
+                zr_canvas_path_line_to(&ctx->canvas, pnt);
+            }
+            if (p->mode == ZR_STROKE)
+                zr_canvas_path_stroke(&ctx->canvas, p->color, ZR_STROKE_CLOSED, line_thickness);
+            else zr_canvas_path_fill(&ctx->canvas, p->color);
+        } break;
+        case ZR_COMMAND_POLYLINE: {
+            int i;
+            const struct zr_command_polyline *p = zr_command(polyline, cmd);
+            for (i = 0; i < p->point_count; ++i) {
+                struct zr_vec2 pnt = zr_vec2((float)p->points[i].x, (float)p->points[i].y);
+                zr_canvas_path_line_to(&ctx->canvas, pnt);
+            }
+            zr_canvas_path_stroke(&ctx->canvas, p->color, ZR_STROKE_OPEN, line_thickness);
         } break;
         case ZR_COMMAND_TEXT: {
             const struct zr_command_text *t = zr_command(text, cmd);
@@ -4421,14 +4543,14 @@ zr_draw_symbol(struct zr_command_buffer *out, const struct zr_symbol *sym,
     case ZR_SYMBOL_RECT_FILLED: {
         /* simple empty/filled shapes */
         if (sym->type == ZR_SYMBOL_RECT || sym->type == ZR_SYMBOL_RECT_FILLED) {
-            zr_draw_rect(out, content,  0, sym->foreground);
+            zr_draw_rect(out, ZR_FILLED, content,  0, sym->foreground);
             if (sym->type == ZR_SYMBOL_RECT_FILLED)
-                zr_draw_rect(out, zr_shrink_rect(content,
+                zr_draw_rect(out, ZR_FILLED, zr_shrink_rect(content,
                     sym->border_width), 0, sym->background);
         } else {
-            zr_draw_circle(out, content, sym->foreground);
+            zr_draw_circle(out, ZR_FILLED, content, sym->foreground);
             if (sym->type == ZR_SYMBOL_CIRCLE_FILLED)
-                zr_draw_circle(out, zr_shrink_rect(content, 1),
+                zr_draw_circle(out, ZR_FILLED, zr_shrink_rect(content, 1),
                     sym->background);
         }
     } break;
@@ -4442,7 +4564,7 @@ zr_draw_symbol(struct zr_command_buffer *out, const struct zr_symbol *sym,
             (sym->type == ZR_SYMBOL_TRIANGLE_LEFT) ? ZR_LEFT:
             (sym->type == ZR_SYMBOL_TRIANGLE_UP) ? ZR_UP: ZR_DOWN;
         zr_triangle_from_direction(points, content, 0, 0, heading);
-        zr_draw_triangle(out,  points[0].x, points[0].y,
+        zr_draw_triangle(out, ZR_FILLED, points[0].x, points[0].y,
             points[1].x, points[1].y, points[2].x, points[2].y, sym->foreground);
     } break;
     default:
@@ -4485,8 +4607,8 @@ zr_button_draw(struct zr_command_buffer *o, struct zr_rect r,
         background = b->active;
     else background = b->normal;
 
-    zr_draw_rect(o, r, b->rounding, b->border);
-    zr_draw_rect(o, zr_shrink_rect(r, b->border_width),
+    zr_draw_rect(o, ZR_FILLED, r, b->rounding, b->border);
+    zr_draw_rect(o, ZR_FILLED, zr_shrink_rect(r, b->border_width),
                                     b->rounding, background);
 }
 
@@ -4754,14 +4876,14 @@ zr_toggle_draw(struct zr_command_buffer *out,
 
     /* draw radiobutton/checkbox background */
     if (type == ZR_TOGGLE_CHECK)
-        zr_draw_rect(out, select , toggle->rounding, col);
-    else zr_draw_circle(out, select, col);
+        zr_draw_rect(out, ZR_FILLED, select , toggle->rounding, col);
+    else zr_draw_circle(out, ZR_FILLED, select, col);
 
     /* draw radiobutton/checkbox cursor if active */
     if (active) {
         if (type == ZR_TOGGLE_CHECK)
-            zr_draw_rect(out, cursor, toggle->rounding, toggle->cursor);
-        else zr_draw_circle(out, cursor, toggle->cursor);
+            zr_draw_rect(out, ZR_FILLED, cursor, toggle->rounding, toggle->cursor);
+        else zr_draw_circle(out, ZR_FILLED,  cursor, toggle->cursor);
     }
 
     /* draw toggle text */
@@ -4884,9 +5006,9 @@ zr_slider_draw(struct zr_command_buffer *out,
     fill.w = (cursor.x + (cursor.w/2.0f)) - bar.x;
     fill.h = bar.h;
 
-    zr_draw_rect(out, bar, 0, s->bg);
-    zr_draw_rect(out, fill, 0, col);
-    zr_draw_circle(out, cursor, col);
+    zr_draw_rect(out, ZR_FILLED, bar, 0, s->bg);
+    zr_draw_rect(out, ZR_FILLED, fill, 0, col);
+    zr_draw_circle(out, ZR_FILLED, cursor, col);
 }
 
 static float
@@ -4992,9 +5114,9 @@ zr_progress_draw(struct zr_command_buffer *out, const struct zr_progress *p,
     else col = p->normal;
 
     prog_scale = (float)value / (float)max;
-    zr_draw_rect(out, r, 0, p->background);
+    zr_draw_rect(out, ZR_FILLED, r, 0, p->background);
     r.w = (r.w - 2) * prog_scale;
-    zr_draw_rect(out, r, 0, col);
+    zr_draw_rect(out, ZR_FILLED, r, 0, col);
 }
 
 static zr_size
@@ -5096,9 +5218,9 @@ zr_scrollbar_draw(struct zr_command_buffer *out, const struct zr_scrollbar *s,
         col = s->active;
     else col = s->normal;
 
-    zr_draw_rect(out, zr_shrink_rect(scroll,1), s->rounding, s->border);
-    zr_draw_rect(out, scroll, s->rounding, s->background);
-    zr_draw_rect(out, cursor, s->rounding, col);
+    zr_draw_rect(out, ZR_FILLED, zr_shrink_rect(scroll,1), s->rounding, s->border);
+    zr_draw_rect(out, ZR_FILLED, scroll, s->rounding, s->background);
+    zr_draw_rect(out, ZR_FILLED, cursor, s->rounding, col);
 }
 
 static float
@@ -5293,8 +5415,8 @@ zr_widget_edit_field(struct zr_command_buffer *out, struct zr_rect r,
     r.h = ZR_MAX(r.h, font->height + (2 * field->padding.y + 2 * field->border_size));
 
     /* draw editbox background and border */
-    zr_draw_rect(out, r, field->rounding, field->border);
-    zr_draw_rect(out, zr_shrink_rect(r, field->border_size),
+    zr_draw_rect(out, ZR_FILLED, r, field->rounding, field->border);
+    zr_draw_rect(out, ZR_FILLED, zr_shrink_rect(r, field->border_size),
         field->rounding, field->background);
 
     /* check if the editbox is activated/deactivated */
@@ -5405,7 +5527,7 @@ zr_widget_edit_field(struct zr_command_buffer *out, struct zr_rect r,
                 zr_size s = font->width(font->userdata, font->height,
                                         buffer + offset, text_len);
                 text_width = (float)s;
-                zr_draw_rect(out, zr_rect(label.x+(float)text_width,
+                zr_draw_rect(out, ZR_FILLED, zr_rect(label.x+(float)text_width,
                         label.y, (float)cursor_w, label.h), 0, field->cursor);
             } else {
                 /* draw text selection */
@@ -5431,7 +5553,7 @@ zr_widget_edit_field(struct zr_command_buffer *out, struct zr_rect r,
                 label.w = (float)s;
 
                 /* draw selected text */
-                zr_draw_rect(out, label, 0, field->text);
+                zr_draw_rect(out, ZR_FILLED, label, 0, field->text);
                 text.padding = zr_vec2(0,0);
                 text.background = field->text;
                 text.text = field->background;
@@ -5474,8 +5596,8 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
     row_height = (zr_size)(font->height + field->padding.y);
 
     /* draw edit field background and border */
-    zr_draw_rect(out, r, field->rounding, field->border);
-    zr_draw_rect(out, zr_shrink_rect(r, field->border_size),
+    zr_draw_rect(out, ZR_FILLED, r, field->rounding, field->border);
+    zr_draw_rect(out, ZR_FILLED, zr_shrink_rect(r, field->border_size),
         field->rounding, field->background);
 
     /* check if edit box is big enough to show even a single row */
@@ -5750,7 +5872,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                 label.w -= (float)(unselected_text_width);
                 text.background = field->text;
                 text.text = field->background;
-                zr_draw_rect(out, label, 0, field->text);
+                zr_draw_rect(out, ZR_FILLED, label, 0, field->text);
                 zr_widget_text(out, label, &buffer[offset+sel_begin],
                     sel_len, &text, ZR_TEXT_LEFT|ZR_TEXT_MIDDLE, font);
 
@@ -5761,7 +5883,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                 text.padding = zr_vec2(0,0);
                 text.background = field->text;
                 text.text = field->background;
-                zr_draw_rect(out, label, 0, field->text);
+                zr_draw_rect(out, ZR_FILLED, label, 0, field->text);
                 zr_widget_text(out, label, &buffer[offset], row_len,
                     &text, ZR_TEXT_LEFT|ZR_TEXT_MIDDLE, font);
             } else if (glyph_off > begin && glyph_off + glyphs >= end &&
@@ -5784,7 +5906,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                 text.padding = zr_vec2(0,0);
                 text.background = field->text;
                 text.text = field->background;
-                zr_draw_rect(out, label, 0, field->text);
+                zr_draw_rect(out, ZR_FILLED, label, 0, field->text);
                 zr_widget_text(out, label, &buffer[offset], sel_len,
                     &text, ZR_TEXT_LEFT|ZR_TEXT_MIDDLE, font);
 
@@ -5850,7 +5972,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
                 cur_len = font->width(font->userdata, font->height,
                                             &buffer[offset+sel_begin], sel_len);
                 label.w = (float)cur_len;
-                zr_draw_rect(out, label, 0, field->text);
+                zr_draw_rect(out, ZR_FILLED, label, 0, field->text);
                 zr_widget_text(out, label, &buffer[offset+sel_begin], sel_len,
                     &text, ZR_TEXT_LEFT|ZR_TEXT_MIDDLE, font);
                 cur_text_width = font->width(font->userdata, font->height,
@@ -5886,7 +6008,7 @@ zr_widget_edit_box(struct zr_command_buffer *out, struct zr_rect r,
         if (box->active && field->show_cursor) {
             if (box->cursor == box->glyphs) {
                 if (len) label.y -= (font->height + field->padding.y);
-                zr_draw_rect(out, zr_rect(label.x+(float)text_width,
+                zr_draw_rect(out, ZR_FILLED, zr_rect(label.x+(float)text_width,
                     label.y, (float)cursor_w, label.h), 0, field->cursor);
             }
         }
@@ -6069,8 +6191,9 @@ zr_property_draw(struct zr_command_buffer *out,
     struct zr_text text;
 
     /* background */
-    zr_draw_rect(out, property, p->rounding, p->border);
-    zr_draw_rect(out, zr_shrink_rect(property, p->border_size), p->rounding, p->normal);
+    zr_draw_rect(out, ZR_FILLED, property, p->rounding, p->border);
+    zr_draw_rect(out, ZR_FILLED, zr_shrink_rect(property, p->border_size),
+                p->rounding, p->normal);
 
     /* buttons */
     sym.type = ZR_SYMBOL_TRIANGLE_LEFT;
@@ -7232,7 +7355,6 @@ zr_clear(struct zr_context *ctx)
         } else iter = iter->next;
     }
     ctx->seq++;
-    ctx->next_id = 0;
 }
 
 /* ----------------------------------------------------------------
@@ -8308,10 +8430,10 @@ zr_panel_begin(struct zr_context *ctx, const char *title)
 
         /* draw header background */
         if (!(layout->flags & ZR_WINDOW_BORDER)) {
-            zr_draw_rect(out, zr_rect(layout->bounds.x, layout->bounds.y,
+            zr_draw_rect(out, ZR_FILLED, zr_rect(layout->bounds.x, layout->bounds.y,
                 layout->bounds.w, layout->header_h), 0, config->colors[ZR_COLOR_HEADER]);
         } else {
-            zr_draw_rect(out, zr_rect(layout->bounds.x, layout->bounds.y+1,
+            zr_draw_rect(out, ZR_FILLED, zr_rect(layout->bounds.x, layout->bounds.y+1,
                 layout->bounds.w, layout->header_h), 0, config->colors[ZR_COLOR_HEADER]);
         }
 
@@ -8362,7 +8484,7 @@ zr_panel_begin(struct zr_context *ctx, const char *title)
     if (layout->flags & ZR_WINDOW_MINIMIZED) {
         /* draw window background if minimized */
         layout->row.height = 0;
-        zr_draw_rect(out, zr_rect(layout->bounds.x, layout->bounds.y,
+        zr_draw_rect(out, ZR_FILLED, zr_rect(layout->bounds.x, layout->bounds.y,
             layout->bounds.w, layout->row.height), 0, config->colors[ZR_COLOR_WINDOW]);
     } else if (!(layout->flags & ZR_WINDOW_DYNAMIC)) {
         /* draw static window body */
@@ -8371,10 +8493,10 @@ zr_panel_begin(struct zr_context *ctx, const char *title)
             body.y += layout->header_h;
             body.h -= layout->header_h;
         }
-        zr_draw_rect(out, body, 0, config->colors[ZR_COLOR_WINDOW]);
+        zr_draw_rect(out, ZR_FILLED, body, 0, config->colors[ZR_COLOR_WINDOW]);
     } else {
         /* draw dynamic window body */
-        zr_draw_rect(out, zr_rect(layout->bounds.x, layout->bounds.y,
+        zr_draw_rect(out, ZR_FILLED, zr_rect(layout->bounds.x, layout->bounds.y,
             layout->bounds.w, layout->row.height + window_padding.y), 0,
             config->colors[ZR_COLOR_WINDOW]);
     }
@@ -8483,7 +8605,7 @@ zr_panel_end(struct zr_context *ctx)
                 bounds.y = layout->clip.y;
                 bounds.w = scrollbar_size + item_padding.x;
                 bounds.h = layout->height + item_padding.y;
-                zr_draw_rect(out, bounds, 0, config->colors[ZR_COLOR_WINDOW]);
+                zr_draw_rect(out, ZR_FILLED, bounds, 0, config->colors[ZR_COLOR_WINDOW]);
             }
         } else {
             /* dynamic window with visible scrollbars and therefore bigger footer */
@@ -8494,7 +8616,7 @@ zr_panel_end(struct zr_context *ctx)
                 (layout->flags & ZR_WINDOW_CONTEXTUAL))
                 footer.y = window->bounds.y + layout->height;
             else footer.y = window->bounds.y + layout->height + layout->footer_h;
-            zr_draw_rect(out, footer, 0, config->colors[ZR_COLOR_WINDOW]);
+            zr_draw_rect(out, ZR_FILLED, footer, 0, config->colors[ZR_COLOR_WINDOW]);
 
             if (!(layout->flags & ZR_WINDOW_COMBO) && !(layout->flags & ZR_WINDOW_MENU)) {
                 /* fill empty scrollbar space */
@@ -8503,7 +8625,7 @@ zr_panel_end(struct zr_context *ctx)
                 bounds.y = window->bounds.y + layout->height;
                 bounds.w = layout->bounds.w;
                 bounds.h = layout->row.height;
-                zr_draw_rect(out, bounds, 0, config->colors[ZR_COLOR_WINDOW]);
+                zr_draw_rect(out, ZR_FILLED, bounds, 0, config->colors[ZR_COLOR_WINDOW]);
             }
         }
     }
@@ -8580,7 +8702,7 @@ zr_panel_end(struct zr_context *ctx)
         if (layout->flags & ZR_WINDOW_DYNAMIC)
             scaler_y = footer.y + layout->footer_h - scaler_size.y;
         else scaler_y = layout->bounds.y + layout->bounds.h - scaler_size.y;
-        zr_draw_triangle(out, scaler_x + scaler_w, scaler_y,
+        zr_draw_triangle(out, ZR_FILLED, scaler_x + scaler_w, scaler_y,
             scaler_x + scaler_w, scaler_y + scaler_h, scaler_x, scaler_y + scaler_h, col);
 
         if (!(window->flags & ZR_WINDOW_ROM)) {
@@ -8756,7 +8878,7 @@ zr_panel_layout(const struct zr_context *ctx, struct zr_window *win,
     layout->row.height = height + item_spacing.y;
     layout->row.item_offset = 0;
     if (layout->flags & ZR_WINDOW_DYNAMIC)
-        zr_draw_rect(out,  zr_rect(layout->bounds.x, layout->at_y,
+        zr_draw_rect(out, ZR_FILLED,  zr_rect(layout->bounds.x, layout->at_y,
             layout->bounds.w, height + panel_padding.y), 0, *color);
 }
 
@@ -9289,7 +9411,7 @@ zr_layout_push(struct zr_context *ctx, enum zr_layout_node_type type,
     zr_layout_row_dynamic(ctx, config->font.height + 2 * item_padding.y, 1);
     widget_state = zr_widget(&header, ctx);
     if (type == ZR_LAYOUT_TAB)
-        zr_draw_rect(out, header, 0, config->colors[ZR_COLOR_TAB_HEADER]);
+        zr_draw_rect(out, ZR_FILLED, header, 0, config->colors[ZR_COLOR_TAB_HEADER]);
 
     /* find or create tab persistent state (open/closed) */
     title_len = (int)zr_strsiz(title);
@@ -9319,7 +9441,7 @@ zr_layout_push(struct zr_context *ctx, enum zr_layout_node_type type,
 
         /* calculate the triangle points and draw triangle */
         zr_triangle_from_direction(points, sym, 0, 0, heading);
-        zr_draw_triangle(&win->buffer,  points[0].x, points[0].y,
+        zr_draw_triangle(&win->buffer, ZR_FILLED,  points[0].x, points[0].y,
             points[1].x, points[1].y, points[2].x, points[2].y, config->colors[ZR_COLOR_TEXT]);
 
         /* calculate the space the icon occupied */
@@ -9980,7 +10102,7 @@ zr_selectable(struct zr_context *ctx, const char *str, zr_flags align, int *valu
     text.text = (!*value) ? config->colors[ZR_COLOR_TEXT] :
         config->colors[ZR_COLOR_SELECTABLE_TEXT];
 
-    zr_draw_rect(&win->buffer, bounds, 0, background);
+    zr_draw_rect(&win->buffer, ZR_FILLED, bounds, 0, background);
     zr_widget_text(&win->buffer, bounds, str, zr_strsiz(str),
         &text, align|ZR_TEXT_MIDDLE, &config->font);
     return *value != old_value;
@@ -10633,7 +10755,7 @@ zr_chart_begin(struct zr_context *ctx, const enum zr_chart_type type,
     item_padding = zr_get_property(ctx, ZR_PROPERTY_ITEM_PADDING);
     color = (type == ZR_CHART_LINES) ?
         config->colors[ZR_COLOR_PLOT]: config->colors[ZR_COLOR_HISTO];
-    zr_draw_rect(out, bounds, config->rounding[ZR_ROUNDING_CHART], color);
+    zr_draw_rect(out, ZR_FILLED, bounds, config->rounding[ZR_ROUNDING_CHART], color);
 
     /* setup basic generic chart  */
     zr_zero(chart, sizeof(*chart));
@@ -10692,7 +10814,7 @@ zr_chart_push_line(struct zr_context *ctx, struct zr_window *win,
                 i->mouse.buttons[ZR_BUTTON_LEFT].clicked) ? ZR_CHART_CLICKED: 0;
             color = config->colors[ZR_COLOR_PLOT_HIGHLIGHT];
         }
-        zr_draw_rect(out, bounds, 0, color);
+        zr_draw_rect(out, ZR_FILLED, bounds, 0, color);
         g->index++;
         return ret;
     }
@@ -10718,7 +10840,7 @@ zr_chart_push_line(struct zr_context *ctx, struct zr_window *win,
             color = config->colors[ZR_COLOR_PLOT_HIGHLIGHT];
         }
     }
-    zr_draw_rect(out, zr_rect(cur.x - 2, cur.y - 2, 4, 4), 0, color);
+    zr_draw_rect(out, ZR_FILLED, zr_rect(cur.x - 2, cur.y - 2, 4, 4), 0, color);
 
     /* save current data point position */
     g->last.x = cur.x;
@@ -10769,7 +10891,7 @@ zr_chart_push_column(const struct zr_context *ctx, struct zr_window *win,
                 in->mouse.buttons[ZR_BUTTON_LEFT].clicked) ? ZR_CHART_CLICKED: 0;
         color = config->colors[ZR_COLOR_HISTO_HIGHLIGHT];
     }
-    zr_draw_rect(out, item, 0, color);
+    zr_draw_rect(out, ZR_FILLED, item, 0, color);
     chart->index++;
     return ret;
 }
@@ -11524,8 +11646,8 @@ zr_combo_begin_text(struct zr_context *ctx, struct zr_panel *layout,
         is_active = zr_true;
 
     /* draw combo box header background and border */
-    zr_draw_rect(&win->buffer, header, 0, ctx->style.colors[ZR_COLOR_BORDER]);
-    zr_draw_rect(&win->buffer, zr_shrink_rect(header, 1), 0,
+    zr_draw_rect(&win->buffer, ZR_FILLED, header, 0, ctx->style.colors[ZR_COLOR_BORDER]);
+    zr_draw_rect(&win->buffer, ZR_FILLED, zr_shrink_rect(header, 1), 0,
         ctx->style.colors[ZR_COLOR_COMBO]);
 
     {
@@ -11592,8 +11714,8 @@ zr_combo_begin_color(struct zr_context *ctx, struct zr_panel *layout,
         is_active = !is_active;
 
     /* draw combo box header background and border */
-    zr_draw_rect(&win->buffer, header, 0, ctx->style.colors[ZR_COLOR_BORDER]);
-    zr_draw_rect(&win->buffer, zr_shrink_rect(header, 1), 0,
+    zr_draw_rect(&win->buffer, ZR_FILLED, header, 0, ctx->style.colors[ZR_COLOR_BORDER]);
+    zr_draw_rect(&win->buffer, ZR_FILLED, zr_shrink_rect(header, 1), 0,
         ctx->style.colors[ZR_COLOR_COMBO]);
 
     {
@@ -11607,7 +11729,7 @@ zr_combo_begin_color(struct zr_context *ctx, struct zr_panel *layout,
         content.y = header.y + 2 * item_padding.y;
         content.x = header.x + 2 * item_padding.x;
         content.w = header.w - (header.h + 4 * item_padding.x);
-        zr_draw_rect(&win->buffer, content, 0, color);
+        zr_draw_rect(&win->buffer, ZR_FILLED, content, 0, color);
 
         /* draw open/close symbol */
         bounds.y = (header.y + item_padding.y) + (header.h-2.0f*item_padding.y)/2.0f
@@ -11654,8 +11776,8 @@ zr_combo_begin_image(struct zr_context *ctx, struct zr_panel *layout,
         is_active = !is_active;
 
     /* draw combo box header background and border */
-    zr_draw_rect(&win->buffer, header, 0, ctx->style.colors[ZR_COLOR_BORDER]);
-    zr_draw_rect(&win->buffer, zr_shrink_rect(header, 1), 0,
+    zr_draw_rect(&win->buffer, ZR_FILLED, header, 0, ctx->style.colors[ZR_COLOR_BORDER]);
+    zr_draw_rect(&win->buffer, ZR_FILLED, zr_shrink_rect(header, 1), 0,
         ctx->style.colors[ZR_COLOR_COMBO]);
 
     {
@@ -11710,8 +11832,8 @@ zr_combo_begin_icon(struct zr_context *ctx, struct zr_panel *layout,
         is_active = !is_active;
 
     /* draw combo box header background and border */
-    zr_draw_rect(&win->buffer, header, 0, ctx->style.colors[ZR_COLOR_BORDER]);
-    zr_draw_rect(&win->buffer, zr_shrink_rect(header, 1), 0,
+    zr_draw_rect(&win->buffer, ZR_FILLED, header, 0, ctx->style.colors[ZR_COLOR_BORDER]);
+    zr_draw_rect(&win->buffer, ZR_FILLED, zr_shrink_rect(header, 1), 0,
         ctx->style.colors[ZR_COLOR_COMBO]);
 
     {
