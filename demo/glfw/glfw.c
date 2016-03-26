@@ -396,7 +396,8 @@ device_draw(struct device *dev, struct zr_context *ctx, int width, int height,
             config.shape_AA = AA;
             config.line_AA = AA;
             config.circle_segment_count = 22;
-            config.line_thickness = 1.0f;
+            config.curve_segment_count = 22;
+            config.arc_segment_count = 22;
             config.null = dev->null;
 
             /* setup buffers to load vertices and elements */

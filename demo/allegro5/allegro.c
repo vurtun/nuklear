@@ -228,7 +228,8 @@ device_draw(struct device *dev, struct zr_context *ctx, enum zr_anti_aliasing AA
         config.shape_AA = AA;
         config.line_AA = AA;
         config.circle_segment_count = 22;
-        config.line_thickness = 1.0f;
+        config.arc_segment_count = 22;
+        config.curve_segment_count = 22;
         config.null = dev->null;
 
         /* convert from command into hardware format */

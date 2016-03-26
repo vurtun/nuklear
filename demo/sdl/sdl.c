@@ -122,8 +122,6 @@ icon_load(const char *filename)
     glBindTexture(GL_TEXTURE_2D, tex);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
     stbi_image_free(data);
@@ -363,7 +361,6 @@ device_draw(struct device *dev, struct zr_context *ctx, int width, int height,
     glUseProgram(dev->prog);
     glUniform1i(dev->uniform_tex, 0);
     glUniformMatrix4fv(dev->uniform_proj, 1, GL_FALSE, &ortho[0][0]);
-
     {
         /* convert from command queue into draw list and draw to screen */
         const struct zr_draw_command *cmd;
@@ -387,12 +384,13 @@ device_draw(struct device *dev, struct zr_context *ctx, int width, int height,
             /* fill converting configuration */
             struct zr_convert_config config;
             memset(&config, 0, sizeof(config));
+            config.circle_segment_count = 22;
+            config.arc_segment_count = 22;
+            config.curve_segment_count = 22;
             config.global_alpha = 1.0f;
+            config.null = dev->null;
             config.shape_AA = AA;
             config.line_AA = AA;
-            config.circle_segment_count = 22;
-            config.line_thickness = 1.0f;
-            config.null = dev->null;
 
             /* setup buffers to load vertices and elements */
             zr_buffer_init_fixed(&vbuf, vertices, MAX_VERTEX_MEMORY);
@@ -414,7 +412,6 @@ device_draw(struct device *dev, struct zr_context *ctx, int width, int height,
         }
         zr_clear(ctx);
     }
-
     /* restore old state */
     glUseProgram((GLuint)last_prog);
     glBindTexture(GL_TEXTURE_2D, (GLuint)last_tex);
@@ -422,6 +419,7 @@ device_draw(struct device *dev, struct zr_context *ctx, int width, int height,
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, (GLuint)last_ebo);
     glBindVertexArray((GLuint)last_vao);
     glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_BLEND);
 }
 
 static void

@@ -40,50 +40,6 @@
 #define DEMO_DO_NOT_USE_COLOR_PICKER
 #include "../demo.c"
 
-#if 0
-
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wsign-conversion"
-#pragma clang diagnostic ignored "-Wfloat-equal"
-#pragma clang diagnostic ignored "-Wbad-function-cast"
-#pragma clang diagnostic ignored "-Wcast-qual"
-#pragma clang diagnostic ignored "-Wshadow"
-#pragma clang diagnostic ignored "-Wmissing-field-initializers"
-#pragma clang diagnostic ignored "-Wdeclaration-after-statement"
-#pragma clang diagnostic ignored "-Wunused-function"
-#pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
-#elif defined(__GNUC__) || defined(__GNUG__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wfloat-equal"
-#pragma GCC diagnostic ignored "-Wsign-conversion"
-#pragma GCC diagnostic ignored "-Wconversion"
-#pragma GCC diagnostic ignored "-Wbad-function-cast"
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#pragma GCC diagnostic ignored "-Wshadow"
-#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-#pragma GCC diagnostic ignored "-Wdeclaration-after-statement"
-#pragma GCC diagnostic ignored "-Wtype-limits"
-#pragma GCC diagnostic ignored "-Wswitch-default"
-#pragma GCC diagnostic ignored "-Wunused-function"
-#elif _MSC_VER
-#pragma warning (push)
-#pragma warning (disable: 4456)
-#endif
-
-#define STB_IMAGE_IMPLEMENTATION
-#include "../stb_image.h"
-
-#ifdef __clang__
-#pragma clang diagnostic pop
-#elif defined(__GNUC__) || defined(__GNUG__)
-#pragma GCC diagnostic pop
-#elif _MSC_VER
-#pragma warning (pop)
-#endif
-
-#endif
-
 typedef struct XFont XFont;
 typedef struct XSurface XSurface;
 typedef struct XWindow XWindow;
@@ -275,17 +231,51 @@ surface_scissor(XSurface *surf, float x, float y, float w, float h)
 }
 
 static void
-surface_draw_line(XSurface *surf, int16_t x0, int16_t y0, int16_t x1,
-    int16_t y1, struct zr_color col)
+surface_stroke_line(XSurface *surf, short x0, short y0, short x1,
+    short y1, unsigned int line_thickness, struct zr_color col)
 {
     unsigned long c = color_from_byte(&col.r);
     XSetForeground(surf->dpy, surf->gc, c);
+    XSetLineAttributes(surf->dpy, surf->gc, line_thickness, LineSolid, CapButt, JoinMiter);
     XDrawLine(surf->dpy, surf->drawable, surf->gc, (int)x0, (int)y0, (int)x1, (int)y1);
+    XSetLineAttributes(surf->dpy, surf->gc, 1, LineSolid, CapButt, JoinMiter);
 }
 
 static void
-surface_draw_rect(XSurface* surf, int16_t x, int16_t y, uint16_t w,
-    uint16_t h, uint16_t r, struct zr_color col)
+surface_stroke_rect(XSurface* surf, short x, short y, unsigned short w,
+    unsigned short h, unsigned short r, unsigned short line_thickness, struct zr_color col)
+{
+    unsigned long c = color_from_byte(&col.r);
+    XSetForeground(surf->dpy, surf->gc, c);
+    XSetLineAttributes(surf->dpy, surf->gc, line_thickness, LineSolid, CapButt, JoinMiter);
+    if (r == 0) {
+        XFillRectangle(surf->dpy, surf->drawable, surf->gc, x, y, w, h);
+    } else {
+        short xc = x + r;
+        short yc = y + r;
+        short wc = (short)(w - 2 * r);
+        short hc = (short)(h - 2 * r);
+
+        XDrawLine(surf->dpy, surf->drawable, surf->gc, xc, y, xc+wc, y);
+        XDrawLine(surf->dpy, surf->drawable, surf->gc, x+w, yc, x+w, yc+wc);
+        XDrawLine(surf->dpy, surf->drawable, surf->gc, xc, y+h, xc+wc, y+h);
+        XDrawLine(surf->dpy, surf->drawable, surf->gc, x, yc, yc+hc, x);
+
+        XFillArc(surf->dpy, surf->drawable, surf->gc, xc + wc - r, y,
+            (unsigned)r*2, (unsigned)r*2, 0 * 64, 90 * 64);
+        XFillArc(surf->dpy, surf->drawable, surf->gc, x, y,
+            (unsigned)r*2, (unsigned)r*2, 90 * 64, 90 * 64);
+        XFillArc(surf->dpy, surf->drawable, surf->gc, x, yc + hc - r,
+            (unsigned)r*2, (unsigned)2*r, 180 * 64, 90 * 64);
+        XFillArc(surf->dpy, surf->drawable, surf->gc, xc + wc - r, yc + hc - r,
+            (unsigned)r*2, (unsigned)2*r, -90 * 64, 90 * 64);
+    }
+    XSetLineAttributes(surf->dpy, surf->gc, 1, LineSolid, CapButt, JoinMiter);
+}
+
+static void
+surface_fill_rect(XSurface* surf, short x, short y, unsigned short w,
+    unsigned short h, unsigned short r, struct zr_color col)
 {
     unsigned long c = color_from_byte(&col.r);
     XSetForeground(surf->dpy, surf->gc, c);
@@ -339,8 +329,8 @@ surface_draw_rect(XSurface* surf, int16_t x, int16_t y, uint16_t w,
 }
 
 static void
-surface_draw_triangle(XSurface *surf, int16_t x0, int16_t y0, int16_t x1,
-    int16_t y1, int16_t x2, int16_t y2, struct zr_color col)
+surface_fill_triangle(XSurface *surf, short x0, short y0, short x1,
+    short y1, short x2, short y2, struct zr_color col)
 {
     XPoint pnts[3];
     unsigned long c = color_from_byte(&col.r);
@@ -355,43 +345,65 @@ surface_draw_triangle(XSurface *surf, int16_t x0, int16_t y0, int16_t x1,
 }
 
 static void
-surface_draw_polygon(XSurface *surf, enum zr_command_drawing_mode type,
-    const struct zr_vec2i *pnts, int count, struct zr_color col)
+surface_stroke_triangle(XSurface *surf, short x0, short y0, short x1,
+    short y1, short x2, short y2, unsigned short line_thickness, struct zr_color col)
+{
+    XPoint pnts[3];
+    unsigned long c = color_from_byte(&col.r);
+    XSetLineAttributes(surf->dpy, surf->gc, line_thickness, LineSolid, CapButt, JoinMiter);
+    XDrawLine(surf->dpy, surf->drawable, surf->gc, x0, y0, x1, y1);
+    XDrawLine(surf->dpy, surf->drawable, surf->gc, x1, y1, x2, y2);
+    XDrawLine(surf->dpy, surf->drawable, surf->gc, x2, y2, x0, y0);
+    XSetLineAttributes(surf->dpy, surf->gc, 1, LineSolid, CapButt, JoinMiter);
+}
+
+static void
+surface_fill_polygon(XSurface *surf,  const struct zr_vec2i *pnts, int count,
+    struct zr_color col)
+{
+    int i = 0;
+    #define MAX_POINTS 64
+    XPoint xpnts[MAX_POINTS];
+    unsigned long c = color_from_byte(&col.r);
+    XSetForeground(surf->dpy, surf->gc, c);
+    for (i = 0; i < count && i < MAX_POINTS; ++i) {
+        xpnts[i].x = pnts[i].x;
+        xpnts[i].y = pnts[i].y;
+    }
+    XFillPolygon(surf->dpy, surf->drawable, surf->gc, xpnts, count, Convex, CoordModeOrigin);
+    #undef MAX_POINTS
+}
+
+static void
+surface_stroke_polygon(XSurface *surf, const struct zr_vec2i *pnts, int count,
+    unsigned short line_thickness, struct zr_color col)
 {
     int i = 0;
     unsigned long c = color_from_byte(&col.r);
     XSetForeground(surf->dpy, surf->gc, c);
-    if (type == ZR_FILLED) {
-        #define MAX_POINTS 64
-        XPoint xpnts[MAX_POINTS];
-
-        for (i = 0; i < count && i < MAX_POINTS; ++i) {
-            xpnts[i].x = pnts[i].x;
-            xpnts[i].y = pnts[i].y;
-        }
-        XFillPolygon(surf->dpy, surf->drawable, surf->gc, xpnts, count, Convex, CoordModeOrigin);
-        #undef MAX_POINTS
-    } else {
-        for (i = 1; i < count; ++i)
-            XDrawLine(surf->dpy, surf->drawable, surf->gc, pnts[i-1].x, pnts[i-1].y, pnts[i].x, pnts[i].y);
-        XDrawLine(surf->dpy, surf->drawable, surf->gc, pnts[count-1].x, pnts[count-1].y, pnts[0].x, pnts[0].y);
-    }
+    XSetLineAttributes(surf->dpy, surf->gc, line_thickness, LineSolid, CapButt, JoinMiter);
+    for (i = 1; i < count; ++i)
+        XDrawLine(surf->dpy, surf->drawable, surf->gc, pnts[i-1].x, pnts[i-1].y, pnts[i].x, pnts[i].y);
+    XDrawLine(surf->dpy, surf->drawable, surf->gc, pnts[count-1].x, pnts[count-1].y, pnts[0].x, pnts[0].y);
+    XSetLineAttributes(surf->dpy, surf->gc, 1, LineSolid, CapButt, JoinMiter);
 }
 
 static void
-surface_draw_polyline(XSurface *surf,
-    const struct zr_vec2i *pnts, int count, struct zr_color col)
+surface_stroke_polyline(XSurface *surf, const struct zr_vec2i *pnts,
+    int count, unsigned short line_thickness, struct zr_color col)
 {
     int i = 0;
     unsigned long c = color_from_byte(&col.r);
+    XSetLineAttributes(surf->dpy, surf->gc, line_thickness, LineSolid, CapButt, JoinMiter);
     XSetForeground(surf->dpy, surf->gc, c);
     for (i = 0; i < count-1; ++i)
         XDrawLine(surf->dpy, surf->drawable, surf->gc, pnts[i].x, pnts[i].y, pnts[i+1].x, pnts[i+1].y);
+    XSetLineAttributes(surf->dpy, surf->gc, 1, LineSolid, CapButt, JoinMiter);
 }
 
 static void
-surface_draw_circle(XSurface *surf, int16_t x, int16_t y, uint16_t w,
-    uint16_t h, struct zr_color col)
+surface_fill_circle(XSurface *surf, short x, short y, unsigned short w,
+    unsigned short h, struct zr_color col)
 {
     unsigned long c = color_from_byte(&col.r);
     XSetForeground(surf->dpy, surf->gc, c);
@@ -400,14 +412,27 @@ surface_draw_circle(XSurface *surf, int16_t x, int16_t y, uint16_t w,
 }
 
 static void
-surface_draw_curve(XSurface *surf, struct zr_vec2i p1,
+surface_stroke_circle(XSurface *surf, short x, short y, unsigned short w,
+    unsigned short h, unsigned short line_thickness, struct zr_color col)
+{
+    unsigned long c = color_from_byte(&col.r);
+    XSetLineAttributes(surf->dpy, surf->gc, line_thickness, LineSolid, CapButt, JoinMiter);
+    XSetForeground(surf->dpy, surf->gc, c);
+    XDrawArc(surf->dpy, surf->drawable, surf->gc, (int)x, (int)y,
+        (unsigned)w, (unsigned)h, 0, 360 * 64);
+    XSetLineAttributes(surf->dpy, surf->gc, 1, LineSolid, CapButt, JoinMiter);
+}
+
+static void
+surface_stroke_curve(XSurface *surf, struct zr_vec2i p1,
     struct zr_vec2i p2, struct zr_vec2i p3, struct zr_vec2i p4,
-    unsigned int num_segments, struct zr_color col)
+    unsigned int num_segments, unsigned short line_thickness, struct zr_color col)
 {
     unsigned int i_step;
     float t_step;
     struct zr_vec2i last = p1;
 
+    XSetLineAttributes(surf->dpy, surf->gc, line_thickness, LineSolid, CapButt, JoinMiter);
     num_segments = MAX(num_segments, 1);
     t_step = 1.0f/(float)num_segments;
     for (i_step = 1; i_step <= num_segments; ++i_step) {
@@ -419,13 +444,14 @@ surface_draw_curve(XSurface *surf, struct zr_vec2i p1,
         float w4 = t * t *t;
         float x = w1 * p1.x + w2 * p2.x + w3 * p3.x + w4 * p4.x;
         float y = w1 * p1.y + w2 * p2.y + w3 * p3.y + w4 * p4.y;
-        surface_draw_line(surf, last.x, last.y, (short)x, (short)y, col);
+        surface_stroke_line(surf, last.x, last.y, (short)x, (short)y, line_thickness,col);
         last.x = (short)x; last.y = (short)y;
     }
+    XSetLineAttributes(surf->dpy, surf->gc, 1, LineSolid, CapButt, JoinMiter);
 }
 
 static void
-surface_draw_text(XSurface *surf, int16_t x, int16_t y, uint16_t w, uint16_t h,
+surface_draw_text(XSurface *surf, short x, short y, unsigned short w, unsigned short h,
     const char *text, size_t len, XFont *font, struct zr_color cbg, struct zr_color cfg)
 {
     int tx, ty, th;
@@ -522,39 +548,6 @@ surface_del(XSurface *surf)
     XFreeGC(surf->dpy, surf->gc);
     free(surf);
 }
-
-#if 0
-static XSurface*
-surface_load(const char *filename, Display *dpy, int screen, Window root)
-{
-    GC gc;
-    int x,y,n;
-    XSurface *surf;
-    XImage *xim;
-    XGCValues gcvalues;
-
-    unsigned char *data = stbi_load(filename, &x, &y, &n, 0);
-    if (!data) die("[XLIB]: failed to load image: %s", filename);
-    surf = surface_create(dpy, screen, root, (unsigned int)x, (unsigned int)y);
-    xim = XCreateImage(dpy, CopyFromParent, 32, ZPixmap, 0, (char*)data,
-        (unsigned int)x, (unsigned int)y, 32, 0);
-    if (!xim) die("[XLIB]: failed to create image from file: %s", filename);
-
-    gc = XCreateGC(dpy, surf->drawable, 0, &gcvalues);
-    XPutImage(dpy, surf->drawable, gc, xim, 0, 0, 0, 0,
-        (unsigned int)x, (unsigned int)y);
-    XDestroyImage(xim);
-    return surf;
-}
-
-static struct zr_image
-icon_load(const char *filename, Display *dpy, int screen, Window root)
-{
-    XSurface* surf = surface_load(filename, dpy, screen, root);
-    return zr_image_ptr(surf);
-}
-
-#endif
 
 static void
 input_key(struct XWindow *xw, struct zr_context *ctx, XEvent *evt, int down)
@@ -717,29 +710,48 @@ main(int argc, char *argv[])
                 } break;
                 case ZR_COMMAND_LINE: {
                     const struct zr_command_line *l = zr_command(line, cmd);
-                    surface_draw_line(xw.surf, l->begin.x, l->begin.y, l->end.x,
-                        l->end.y, l->color);
+                    surface_stroke_line(xw.surf, l->begin.x, l->begin.y, l->end.x,
+                        l->end.y, l->line_thickness, l->color);
                 } break;
                 case ZR_COMMAND_RECT: {
                     const struct zr_command_rect *r = zr_command(rect, cmd);
-                    surface_draw_rect(xw.surf, r->x, r->y, r->w, r->h, (uint16_t)r->rounding, r->color);
+                    surface_stroke_rect(xw.surf, r->x, r->y, r->w, r->h,
+                        (uint16_t)r->rounding, r->line_thickness, r->color);
+                } break;
+                case ZR_COMMAND_RECT_FILLED: {
+                    const struct zr_command_rect_filled *r = zr_command(rect_filled, cmd);
+                    surface_fill_rect(xw.surf, r->x, r->y, r->w, r->h,
+                        (uint16_t)r->rounding, r->color);
                 } break;
                 case ZR_COMMAND_CIRCLE: {
                     const struct zr_command_circle *c = zr_command(circle, cmd);
-                    surface_draw_circle(xw.surf, c->x, c->y, c->w, c->h, c->color);
+                    surface_stroke_circle(xw.surf, c->x, c->y, c->w, c->h, c->line_thickness, c->color);
+                } break;
+                case ZR_COMMAND_CIRCLE_FILLED: {
+                    const struct zr_command_circle_filled *c = zr_command(circle_filled, cmd);
+                    surface_fill_circle(xw.surf, c->x, c->y, c->w, c->h, c->color);
                 } break;
                 case ZR_COMMAND_TRIANGLE: {
-                    const struct zr_command_triangle *t = zr_command(triangle, cmd);
-                    surface_draw_triangle(xw.surf, t->a.x, t->a.y, t->b.x, t->b.y,
+                    const struct zr_command_triangle*t = zr_command(triangle, cmd);
+                    surface_stroke_triangle(xw.surf, t->a.x, t->a.y, t->b.x, t->b.y,
+                        t->c.x, t->c.y, t->line_thickness, t->color);
+                } break;
+                case ZR_COMMAND_TRIANGLE_FILLED: {
+                    const struct zr_command_triangle_filled *t = zr_command(triangle_filled, cmd);
+                    surface_fill_triangle(xw.surf, t->a.x, t->a.y, t->b.x, t->b.y,
                         t->c.x, t->c.y, t->color);
                 } break;
                 case ZR_COMMAND_POLYGON: {
                     const struct zr_command_polygon *p = zr_command(polygon, cmd);
-                    surface_draw_polygon(xw.surf, p->mode, p->points, p->point_count, p->color);
+                    surface_stroke_polygon(xw.surf, p->points, p->point_count, p->line_thickness,p->color);
+                } break;
+                case ZR_COMMAND_POLYGON_FILLED: {
+                    const struct zr_command_polygon_filled *p = zr_command(polygon_filled, cmd);
+                    surface_fill_polygon(xw.surf, p->points, p->point_count, p->color);
                 } break;
                 case ZR_COMMAND_POLYLINE: {
                     const struct zr_command_polyline *p = zr_command(polyline, cmd);
-                    surface_draw_polyline(xw.surf, p->points, p->point_count, p->color);
+                    surface_stroke_polyline(xw.surf, p->points, p->point_count, p->line_thickness, p->color);
                 } break;
                 case ZR_COMMAND_TEXT: {
                     const struct zr_command_text *t = zr_command(text, cmd);
@@ -748,19 +760,15 @@ main(int argc, char *argv[])
                         (XFont*)t->font->userdata.ptr,
                         t->background, t->foreground);
                 } break;
-                case ZR_COMMAND_IMAGE: {
-                    const struct zr_command_image *img = zr_command(image, cmd);
-                    XSurface *surf = (XSurface*)img->img.handle.ptr;
-                    surface_blit(xw.surf, surf, img->x, img->y, img->w, img->h,
-                        0, 0, (int)surf->w, (int)surf->h);
-                } break;
                 case ZR_COMMAND_CURVE: {
                     const struct zr_command_curve *q = zr_command(curve, cmd);
-                    surface_draw_curve(xw.surf, q->begin, q->ctrl[0], q->ctrl[1],
-                        q->end, 22, q->color);
+                    surface_stroke_curve(xw.surf, q->begin, q->ctrl[0], q->ctrl[1],
+                        q->end, 22, q->line_thickness, q->color);
                 } break;
                 case ZR_COMMAND_RECT_MULTI_COLOR:
+                case ZR_COMMAND_IMAGE:
                 case ZR_COMMAND_ARC:
+                case ZR_COMMAND_ARC_FILLED:
                 default: break;
                 }
             }

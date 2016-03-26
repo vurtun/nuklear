@@ -459,7 +459,8 @@ static void mem_free(zr_handle unused, void* ptr)
         config.shape_AA = ZR_ANTI_ALIASING_ON;
         config.line_AA = ZR_ANTI_ALIASING_ON;
         config.circle_segment_count = 22;
-        config.line_thickness = 1.0f;
+        config.curve_segment_count = 22;
+        config.arc_segment_count = 22;
         config.null = nullTexture;
         
         // setup buffers to load vertices and elements

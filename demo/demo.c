@@ -55,6 +55,19 @@ struct icons {
     struct zr_image img_file;
     struct zr_image movie_file;
 
+    /* theme */
+    struct zr_image bar;
+    struct zr_image check;
+    struct zr_image checkbox;
+    struct zr_image cursor;
+    struct zr_image dot;
+    struct zr_image header;
+    struct zr_image left;
+    struct zr_image option;
+    struct zr_image progress;
+    struct zr_image right;
+    struct zr_image slider;
+    struct zr_image window;
 };
 
 enum theme {THEME_BLACK, THEME_WHITE, THEME_RED, THEME_BLUE, THEME_DARK};
@@ -75,7 +88,7 @@ struct demo {
 };
 
 static void
-zr_labelf(struct zr_context *ctx, enum zr_text_align align, const char *fmt, ...)
+zr_labelf(struct zr_context *ctx, zr_flags align, const char *fmt, ...)
 {
     char buffer[1024];
     va_list args;
@@ -84,338 +97,6 @@ zr_labelf(struct zr_context *ctx, enum zr_text_align align, const char *fmt, ...
     buffer[1023] = 0;
     zr_label(ctx, buffer, align);
     va_end(args);
-}
-
-/* ===============================================================
- *
- *                          CONTROL WINDOW
- *
- * ===============================================================*/
-static void
-set_style(struct zr_context *ctx, enum theme theme)
-{
-    if (theme == THEME_WHITE) {
-        ctx->style.rounding[ZR_ROUNDING_SCROLLBAR] = 0;
-        ctx->style.rounding[ZR_ROUNDING_PROPERTY] = 0;
-        ctx->style.rounding[ZR_ROUNDING_BUTTON] = 0;
-
-        ctx->style.colors[ZR_COLOR_TEXT] = zr_rgba(70, 70, 70, 255);
-        ctx->style.colors[ZR_COLOR_TEXT_HOVERING] = zr_rgba(10, 10, 10, 255);
-        ctx->style.colors[ZR_COLOR_TEXT_ACTIVE] = zr_rgba(20, 20, 20, 255);
-        ctx->style.colors[ZR_COLOR_WINDOW] = zr_rgba(175, 175, 175, 255);
-        ctx->style.colors[ZR_COLOR_HEADER] = zr_rgba(175, 175, 175, 255);
-        ctx->style.colors[ZR_COLOR_BORDER] = zr_rgba(0, 0, 0, 255);
-        ctx->style.colors[ZR_COLOR_BUTTON] = zr_rgba(185, 185, 185, 255);
-        ctx->style.colors[ZR_COLOR_BUTTON_HOVER] = zr_rgba(170, 170, 170, 255);
-        ctx->style.colors[ZR_COLOR_BUTTON_ACTIVE] = zr_rgba(160, 160, 160, 255);
-        ctx->style.colors[ZR_COLOR_TOGGLE] = zr_rgba(150, 150, 150, 255);
-        ctx->style.colors[ZR_COLOR_TOGGLE_HOVER] = zr_rgba(120, 120, 120, 255);
-        ctx->style.colors[ZR_COLOR_TOGGLE_CURSOR] = zr_rgba(175, 175, 175, 255);
-        ctx->style.colors[ZR_COLOR_SELECTABLE] = zr_rgba(190, 190, 190, 255);
-        ctx->style.colors[ZR_COLOR_SELECTABLE_HOVER] = zr_rgba(150, 150, 150, 255);
-        ctx->style.colors[ZR_COLOR_SELECTABLE_TEXT] = zr_rgba(70, 70, 70, 255);
-        ctx->style.colors[ZR_COLOR_SLIDER] = zr_rgba(190, 190, 190, 255);
-        ctx->style.colors[ZR_COLOR_SLIDER_CURSOR] = zr_rgba(80, 80, 80, 255);
-        ctx->style.colors[ZR_COLOR_SLIDER_CURSOR_HOVER] = zr_rgba(70, 70, 70, 255);
-        ctx->style.colors[ZR_COLOR_SLIDER_CURSOR_ACTIVE] = zr_rgba(60, 60, 60, 255);
-        ctx->style.colors[ZR_COLOR_PROGRESS] = zr_rgba(190, 190, 190, 255);
-        ctx->style.colors[ZR_COLOR_PROGRESS_CURSOR] = zr_rgba(80, 80, 80, 255);
-        ctx->style.colors[ZR_COLOR_PROGRESS_CURSOR_HOVER] = zr_rgba(70, 70, 70, 255);
-        ctx->style.colors[ZR_COLOR_PROGRESS_CURSOR_ACTIVE] = zr_rgba(60, 60, 60, 255);
-        ctx->style.colors[ZR_COLOR_PROPERTY] = zr_rgba(175, 175, 175, 255);
-        ctx->style.colors[ZR_COLOR_PROPERTY_HOVER] = zr_rgba(160, 160, 160, 255);
-        ctx->style.colors[ZR_COLOR_PROPERTY_ACTIVE] = zr_rgba(165, 165, 165, 255);
-        ctx->style.colors[ZR_COLOR_INPUT] = zr_rgba(150, 150, 150, 255);
-        ctx->style.colors[ZR_COLOR_INPUT_CURSOR] = zr_rgba(0, 0, 0, 255);
-        ctx->style.colors[ZR_COLOR_INPUT_TEXT] = zr_rgba(0, 0, 0, 255);
-        ctx->style.colors[ZR_COLOR_COMBO] = zr_rgba(175, 175, 175, 255);
-        ctx->style.colors[ZR_COLOR_HISTO] = zr_rgba(160, 160, 160, 255);
-        ctx->style.colors[ZR_COLOR_HISTO_BARS] = zr_rgba(45, 45, 45, 255);
-        ctx->style.colors[ZR_COLOR_HISTO_HIGHLIGHT] = zr_rgba( 255, 0, 0, 255);
-        ctx->style.colors[ZR_COLOR_PLOT] = zr_rgba(160, 160, 160, 255);
-        ctx->style.colors[ZR_COLOR_PLOT_LINES] = zr_rgba(45, 45, 45, 255);
-        ctx->style.colors[ZR_COLOR_PLOT_HIGHLIGHT] = zr_rgba(255, 0, 0, 255);
-        ctx->style.colors[ZR_COLOR_SCROLLBAR] = zr_rgba(180, 180, 180, 255);
-        ctx->style.colors[ZR_COLOR_SCROLLBAR_CURSOR] = zr_rgba(140, 140, 140, 255);
-        ctx->style.colors[ZR_COLOR_SCROLLBAR_CURSOR_HOVER] = zr_rgba(150, 150, 150, 255);
-        ctx->style.colors[ZR_COLOR_SCROLLBAR_CURSOR_ACTIVE] = zr_rgba(160, 160, 160, 255);
-        ctx->style.colors[ZR_COLOR_TABLE_LINES] = zr_rgba(100, 100, 100, 255);
-        ctx->style.colors[ZR_COLOR_TAB_HEADER] = zr_rgba(180, 180, 180, 255);
-        ctx->style.colors[ZR_COLOR_SCALER] = zr_rgba(100, 100, 100, 255);
-    } else if (theme == THEME_RED) {
-        ctx->style.rounding[ZR_ROUNDING_SCROLLBAR] = 0;
-        ctx->style.rounding[ZR_ROUNDING_PROPERTY] = 0;
-        ctx->style.properties[ZR_PROPERTY_SCROLLBAR_SIZE] = zr_vec2(10,10);
-        ctx->style.colors[ZR_COLOR_TEXT] = zr_rgba(190, 190, 190, 255);
-        ctx->style.colors[ZR_COLOR_TEXT_HOVERING] = zr_rgba(195, 195, 195, 255);
-        ctx->style.colors[ZR_COLOR_TEXT_ACTIVE] = zr_rgba(200, 200, 200, 255);
-        ctx->style.colors[ZR_COLOR_WINDOW] = zr_rgba(30, 33, 40, 215);
-        ctx->style.colors[ZR_COLOR_HEADER] = zr_rgba(181, 45, 69, 220);
-        ctx->style.colors[ZR_COLOR_BORDER] = zr_rgba(51, 55, 67, 255);
-        ctx->style.colors[ZR_COLOR_BUTTON] = zr_rgba(181, 45, 69, 255);
-        ctx->style.colors[ZR_COLOR_BUTTON_HOVER] = zr_rgba(190, 50, 70, 255);
-        ctx->style.colors[ZR_COLOR_BUTTON_ACTIVE] = zr_rgba(195, 55, 75, 255);
-        ctx->style.colors[ZR_COLOR_TOGGLE] = zr_rgba(51, 55, 67, 255);
-        ctx->style.colors[ZR_COLOR_TOGGLE_HOVER] = zr_rgba(45, 60, 60, 255);
-        ctx->style.colors[ZR_COLOR_TOGGLE_CURSOR] = zr_rgba(181, 45, 69, 255);
-        ctx->style.colors[ZR_COLOR_SELECTABLE] = zr_rgba(181, 45, 69, 255);
-        ctx->style.colors[ZR_COLOR_SELECTABLE_HOVER] = zr_rgba(181, 45, 69, 255);
-        ctx->style.colors[ZR_COLOR_SELECTABLE_TEXT] = zr_rgba(190, 190, 190, 255);
-        ctx->style.colors[ZR_COLOR_SLIDER] = zr_rgba(51, 55, 67, 255);
-        ctx->style.colors[ZR_COLOR_SLIDER_CURSOR] = zr_rgba(181, 45, 69, 255);
-        ctx->style.colors[ZR_COLOR_SLIDER_CURSOR_HOVER] = zr_rgba(186, 50, 74, 255);
-        ctx->style.colors[ZR_COLOR_SLIDER_CURSOR_ACTIVE] = zr_rgba(191, 55, 79, 255);
-        ctx->style.colors[ZR_COLOR_PROGRESS] = zr_rgba(51, 55, 67, 255);
-        ctx->style.colors[ZR_COLOR_PROGRESS_CURSOR] = zr_rgba(181, 45, 69, 255);
-        ctx->style.colors[ZR_COLOR_PROGRESS_CURSOR_HOVER] = zr_rgba(186, 50, 74, 255);
-        ctx->style.colors[ZR_COLOR_PROGRESS_CURSOR_ACTIVE] = zr_rgba(191, 55, 79, 255);
-        ctx->style.colors[ZR_COLOR_PROPERTY] = zr_rgba(51, 55, 67, 255);
-        ctx->style.colors[ZR_COLOR_PROPERTY_HOVER] = zr_rgba(55, 60, 72, 255);
-        ctx->style.colors[ZR_COLOR_PROPERTY_ACTIVE] = zr_rgba(60, 65, 77, 255);
-        ctx->style.colors[ZR_COLOR_INPUT] = zr_rgba(51, 55, 67, 225);
-        ctx->style.colors[ZR_COLOR_INPUT_CURSOR] = zr_rgba(190, 190, 190, 255);
-        ctx->style.colors[ZR_COLOR_INPUT_TEXT] = zr_rgba(190, 190, 190, 255);
-        ctx->style.colors[ZR_COLOR_COMBO] = zr_rgba(51, 55, 67, 255);
-        ctx->style.colors[ZR_COLOR_HISTO] = zr_rgba(51, 55, 67, 255);
-        ctx->style.colors[ZR_COLOR_HISTO_BARS] = zr_rgba(170, 40, 60, 255);
-        ctx->style.colors[ZR_COLOR_HISTO_HIGHLIGHT] = zr_rgba( 255, 0, 0, 255);
-        ctx->style.colors[ZR_COLOR_PLOT] = zr_rgba(51, 55, 67, 255);
-        ctx->style.colors[ZR_COLOR_PLOT_LINES] = zr_rgba(170, 40, 60, 255);
-        ctx->style.colors[ZR_COLOR_PLOT_HIGHLIGHT] = zr_rgba(255, 0, 0, 255);
-        ctx->style.colors[ZR_COLOR_SCROLLBAR] = zr_rgba(30, 33, 40, 255);
-        ctx->style.colors[ZR_COLOR_SCROLLBAR_CURSOR] = zr_rgba(64, 84, 95, 255);
-        ctx->style.colors[ZR_COLOR_SCROLLBAR_CURSOR_HOVER] = zr_rgba(70, 90, 100, 255);
-        ctx->style.colors[ZR_COLOR_SCROLLBAR_CURSOR_ACTIVE] = zr_rgba(75, 95, 105, 255);
-        ctx->style.colors[ZR_COLOR_TABLE_LINES] = zr_rgba(100, 100, 100, 255);
-        ctx->style.colors[ZR_COLOR_TAB_HEADER] = zr_rgba(181, 45, 69, 220);
-        ctx->style.colors[ZR_COLOR_SCALER] = zr_rgba(100, 100, 100, 255);
-    } else if (theme == THEME_BLUE) {
-        ctx->style.rounding[ZR_ROUNDING_SCROLLBAR] = 0;
-        ctx->style.properties[ZR_PROPERTY_SCROLLBAR_SIZE] = zr_vec2(10,10);
-        ctx->style.colors[ZR_COLOR_TEXT] = zr_rgba(20, 20, 20, 255);
-        ctx->style.colors[ZR_COLOR_TEXT_HOVERING] = zr_rgba(195, 195, 195, 255);
-        ctx->style.colors[ZR_COLOR_TEXT_ACTIVE] = zr_rgba(200, 200, 200, 255);
-        ctx->style.colors[ZR_COLOR_WINDOW] = zr_rgba(202, 212, 214, 215);
-        ctx->style.colors[ZR_COLOR_HEADER] = zr_rgba(137, 182, 224, 220);
-        ctx->style.colors[ZR_COLOR_BORDER] = zr_rgba(140, 159, 173, 255);
-        ctx->style.colors[ZR_COLOR_BUTTON] = zr_rgba(137, 182, 224, 255);
-        ctx->style.colors[ZR_COLOR_BUTTON_HOVER] = zr_rgba(142, 187, 229, 255);
-        ctx->style.colors[ZR_COLOR_BUTTON_ACTIVE] = zr_rgba(147, 192, 234, 255);
-        ctx->style.colors[ZR_COLOR_TOGGLE] = zr_rgba(177, 210, 210, 255);
-        ctx->style.colors[ZR_COLOR_TOGGLE_HOVER] = zr_rgba(182, 215, 215, 255);
-        ctx->style.colors[ZR_COLOR_TOGGLE_CURSOR] = zr_rgba(137, 182, 224, 255);
-        ctx->style.colors[ZR_COLOR_SELECTABLE] = zr_rgba(147, 192, 234, 255);
-        ctx->style.colors[ZR_COLOR_SELECTABLE_HOVER] = zr_rgba(150, 150, 150, 255);
-        ctx->style.colors[ZR_COLOR_SELECTABLE_TEXT] = zr_rgba(70, 70, 70, 255);
-        ctx->style.colors[ZR_COLOR_SLIDER] = zr_rgba(177, 210, 210, 255);
-        ctx->style.colors[ZR_COLOR_SLIDER_CURSOR] = zr_rgba(137, 182, 224, 245);
-        ctx->style.colors[ZR_COLOR_SLIDER_CURSOR_HOVER] = zr_rgba(142, 188, 229, 255);
-        ctx->style.colors[ZR_COLOR_SLIDER_CURSOR_ACTIVE] = zr_rgba(147, 193, 234, 255);
-        ctx->style.colors[ZR_COLOR_PROGRESS] = zr_rgba(177, 210, 210, 255);
-        ctx->style.colors[ZR_COLOR_PROGRESS_CURSOR] = zr_rgba(137, 182, 224, 255);
-        ctx->style.colors[ZR_COLOR_PROGRESS_CURSOR_HOVER] = zr_rgba(142, 188, 229, 255);
-        ctx->style.colors[ZR_COLOR_PROGRESS_CURSOR_ACTIVE] = zr_rgba(147, 193, 234, 255);
-        ctx->style.colors[ZR_COLOR_PROPERTY] = zr_rgba(210, 210, 210, 255);
-        ctx->style.colors[ZR_COLOR_PROPERTY_HOVER] = zr_rgba(235, 235, 235, 255);
-        ctx->style.colors[ZR_COLOR_PROPERTY_ACTIVE] = zr_rgba(230, 230, 230, 255);
-        ctx->style.colors[ZR_COLOR_INPUT] = zr_rgba(210, 210, 210, 225);
-        ctx->style.colors[ZR_COLOR_INPUT_CURSOR] = zr_rgba(20, 20, 20, 255);
-        ctx->style.colors[ZR_COLOR_INPUT_TEXT] = zr_rgba(20, 20, 20, 255);
-        ctx->style.colors[ZR_COLOR_COMBO] = zr_rgba(210, 210, 210, 255);
-        ctx->style.colors[ZR_COLOR_HISTO] = zr_rgba(210, 210, 210, 255);
-        ctx->style.colors[ZR_COLOR_HISTO_BARS] = zr_rgba(137, 182, 224, 255);
-        ctx->style.colors[ZR_COLOR_HISTO_HIGHLIGHT] = zr_rgba( 255, 0, 0, 255);
-        ctx->style.colors[ZR_COLOR_PLOT] = zr_rgba(210, 210, 210, 255);
-        ctx->style.colors[ZR_COLOR_PLOT_LINES] = zr_rgba(137, 182, 224, 255);
-        ctx->style.colors[ZR_COLOR_PLOT_HIGHLIGHT] = zr_rgba(255, 0, 0, 255);
-        ctx->style.colors[ZR_COLOR_SCROLLBAR] = zr_rgba(190, 200, 200, 255);
-        ctx->style.colors[ZR_COLOR_SCROLLBAR_CURSOR] = zr_rgba(64, 84, 95, 255);
-        ctx->style.colors[ZR_COLOR_SCROLLBAR_CURSOR_HOVER] = zr_rgba(70, 90, 100, 255);
-        ctx->style.colors[ZR_COLOR_SCROLLBAR_CURSOR_ACTIVE] = zr_rgba(75, 95, 105, 255);
-        ctx->style.colors[ZR_COLOR_TABLE_LINES] = zr_rgba(100, 100, 100, 255);
-        ctx->style.colors[ZR_COLOR_TAB_HEADER] = zr_rgba(156, 193, 220, 255);
-        ctx->style.colors[ZR_COLOR_SCALER] = zr_rgba(100, 100, 100, 255);
-    } else if (theme == THEME_DARK) {
-        ctx->style.rounding[ZR_ROUNDING_SCROLLBAR] = 0;
-        ctx->style.properties[ZR_PROPERTY_SCROLLBAR_SIZE] = zr_vec2(10,10);
-        ctx->style.colors[ZR_COLOR_TEXT] = zr_rgba(210, 210, 210, 255);
-        ctx->style.colors[ZR_COLOR_TEXT_HOVERING] = zr_rgba(195, 195, 195, 255);
-        ctx->style.colors[ZR_COLOR_TEXT_ACTIVE] = zr_rgba(200, 200, 200, 255);
-        ctx->style.colors[ZR_COLOR_WINDOW] = zr_rgba(57, 67, 71, 215);
-        ctx->style.colors[ZR_COLOR_HEADER] = zr_rgba(51, 51, 56, 220);
-        ctx->style.colors[ZR_COLOR_BORDER] = zr_rgba(46, 46, 46, 255);
-        ctx->style.colors[ZR_COLOR_BUTTON] = zr_rgba(48, 83, 111, 255);
-        ctx->style.colors[ZR_COLOR_BUTTON_HOVER] = zr_rgba(58, 93, 121, 255);
-        ctx->style.colors[ZR_COLOR_BUTTON_ACTIVE] = zr_rgba(63, 98, 126, 255);
-        ctx->style.colors[ZR_COLOR_TOGGLE] = zr_rgba(50, 58, 61, 255);
-        ctx->style.colors[ZR_COLOR_TOGGLE_HOVER] = zr_rgba(45, 53, 56, 255);
-        ctx->style.colors[ZR_COLOR_TOGGLE_CURSOR] = zr_rgba(48, 83, 111, 255);
-        ctx->style.colors[ZR_COLOR_SELECTABLE] = zr_rgba(48, 83, 111, 255);
-        ctx->style.colors[ZR_COLOR_SELECTABLE_HOVER] = zr_rgba(48, 83, 111, 255);
-        ctx->style.colors[ZR_COLOR_SELECTABLE_TEXT] = zr_rgba(210, 210, 210, 255);
-        ctx->style.colors[ZR_COLOR_SLIDER] = zr_rgba(50, 58, 61, 255);
-        ctx->style.colors[ZR_COLOR_SLIDER_CURSOR] = zr_rgba(48, 83, 111, 245);
-        ctx->style.colors[ZR_COLOR_SLIDER_CURSOR_HOVER] = zr_rgba(53, 88, 116, 255);
-        ctx->style.colors[ZR_COLOR_SLIDER_CURSOR_ACTIVE] = zr_rgba(58, 93, 121, 255);
-        ctx->style.colors[ZR_COLOR_PROGRESS] = zr_rgba(50, 58, 61, 255);
-        ctx->style.colors[ZR_COLOR_PROGRESS_CURSOR] = zr_rgba(48, 83, 111, 255);
-        ctx->style.colors[ZR_COLOR_PROGRESS_CURSOR_HOVER] = zr_rgba(53, 88, 116, 255);
-        ctx->style.colors[ZR_COLOR_PROGRESS_CURSOR_ACTIVE] = zr_rgba(58, 93, 121, 255);
-        ctx->style.colors[ZR_COLOR_PROPERTY] = zr_rgba(50, 58, 61, 255);
-        ctx->style.colors[ZR_COLOR_PROPERTY_HOVER] = zr_rgba(55, 63, 66, 255);
-        ctx->style.colors[ZR_COLOR_PROPERTY_ACTIVE] = zr_rgba(60, 68, 71, 255);
-        ctx->style.colors[ZR_COLOR_INPUT] = zr_rgba(50, 58, 61, 225);
-        ctx->style.colors[ZR_COLOR_INPUT_CURSOR] = zr_rgba(210, 210, 210, 255);
-        ctx->style.colors[ZR_COLOR_INPUT_TEXT] = zr_rgba(210, 210, 210, 255);
-        ctx->style.colors[ZR_COLOR_COMBO] = zr_rgba(50, 58, 61, 255);
-        ctx->style.colors[ZR_COLOR_HISTO] = zr_rgba(50, 58, 61, 255);
-        ctx->style.colors[ZR_COLOR_HISTO_BARS] = zr_rgba(48, 83, 111, 255);
-        ctx->style.colors[ZR_COLOR_HISTO_HIGHLIGHT] = zr_rgba(255, 0, 0, 255);
-        ctx->style.colors[ZR_COLOR_PLOT] = zr_rgba(50, 58, 61, 255);
-        ctx->style.colors[ZR_COLOR_PLOT_LINES] = zr_rgba(48, 83, 111, 255);
-        ctx->style.colors[ZR_COLOR_PLOT_HIGHLIGHT] = zr_rgba(255, 0, 0, 255);
-        ctx->style.colors[ZR_COLOR_SCROLLBAR] = zr_rgba(50, 58, 61, 255);
-        ctx->style.colors[ZR_COLOR_SCROLLBAR_CURSOR] = zr_rgba(48, 83, 111, 255);
-        ctx->style.colors[ZR_COLOR_SCROLLBAR_CURSOR_HOVER] = zr_rgba(53, 88, 116, 255);
-        ctx->style.colors[ZR_COLOR_SCROLLBAR_CURSOR_ACTIVE] = zr_rgba(58, 93, 121, 255);
-        ctx->style.colors[ZR_COLOR_TABLE_LINES] = zr_rgba(100, 100, 100, 255);
-        ctx->style.colors[ZR_COLOR_TAB_HEADER] = zr_rgba(48, 83, 111, 255);
-        ctx->style.colors[ZR_COLOR_SCALER] = zr_rgba(100, 100, 100, 255);
-    } else {
-        zr_load_default_style(ctx, ZR_DEFAULT_ALL);
-    }
-}
-
-static int
-control_window(struct zr_context *ctx, struct demo *gui)
-{
-    int i;
-    struct zr_panel layout;
-    if (zr_begin(ctx, &layout, "Control", zr_rect(0, 0, 350, 520),
-        ZR_WINDOW_CLOSABLE|ZR_WINDOW_MINIMIZABLE|ZR_WINDOW_MOVABLE|
-        ZR_WINDOW_SCALABLE|ZR_WINDOW_BORDER))
-    {
-        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Windows", ZR_MINIMIZED)) {
-            zr_layout_row_dynamic(ctx, 25, 2);
-            gui->show_simple = !zr_window_is_closed(ctx, "Show");
-            gui->show_node = !zr_window_is_closed(ctx, "Node Editor");
-            gui->show_demo = !zr_window_is_closed(ctx, "Demo");
-#ifndef DEMO_DO_NOT_DRAW_IMAGES
-            gui->show_filex = !zr_window_is_closed(ctx, "File Browser");
-            gui->show_grid = !zr_window_is_closed(ctx, "Grid Demo");
-            gui->show_basic = !zr_window_is_closed(ctx, "Basic Demo");
-            gui->show_button = !zr_window_is_closed(ctx, "Button Demo");
-#endif
-
-            if (zr_checkbox(ctx, "Show", &gui->show_simple) && !gui->show_simple)
-                zr_window_close(ctx, "Show");
-            if (zr_checkbox(ctx, "Demo", &gui->show_demo) && !gui->show_demo)
-                zr_window_close(ctx, "Demo");
-            if (zr_checkbox(ctx, "Node Editor", &gui->show_node) && !gui->show_node)
-                zr_window_close(ctx, "Node Editor");
-#ifndef DEMO_DO_NOT_DRAW_IMAGES
-            if (zr_checkbox(ctx, "Grid", &gui->show_grid) && !gui->show_grid)
-                zr_window_close(ctx, "Grid Demo");
-            if (zr_checkbox(ctx, "Basic", &gui->show_basic) && !gui->show_basic)
-                zr_window_close(ctx, "Basic Demo");
-            if (zr_checkbox(ctx, "Button", &gui->show_button) && !gui->show_button)
-                zr_window_close(ctx, "Button Demo");
-            if (zr_checkbox(ctx, "Filex", &gui->show_filex) && !gui->show_filex)
-                zr_window_close(ctx, "File Browser");
-#endif
-            zr_layout_pop(ctx);
-        }
-        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Metrics", ZR_MINIMIZED)) {
-            zr_layout_row_dynamic(ctx, 20, 2);
-            zr_label(ctx,"Total:", ZR_TEXT_LEFT);
-            zr_labelf(ctx, ZR_TEXT_LEFT, "%lu", gui->status.size);
-            zr_label(ctx,"Used:", ZR_TEXT_LEFT);
-            zr_labelf(ctx, ZR_TEXT_LEFT, "%lu", gui->status.allocated);
-            zr_label(ctx,"Required:", ZR_TEXT_LEFT);
-            zr_labelf(ctx, ZR_TEXT_LEFT, "%lu", gui->status.needed);
-            zr_label(ctx,"Calls:", ZR_TEXT_LEFT);
-            zr_labelf(ctx, ZR_TEXT_LEFT, "%lu", gui->status.calls);
-            zr_layout_pop(ctx);
-        }
-        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Properties", ZR_MINIMIZED)) {
-            zr_layout_row_dynamic(ctx, 22, 3);
-            for (i = 0; i <= ZR_PROPERTY_SCROLLBAR_SIZE; ++i) {
-                zr_label(ctx, zr_get_property_name((enum zr_style_properties)i), ZR_TEXT_LEFT);
-                zr_property_float(ctx, "#X:", 0, &ctx->style.properties[i].x, 20, 1, 1);
-                zr_property_float(ctx, "#Y:", 0, &ctx->style.properties[i].y, 20, 1, 1);
-            }
-            zr_layout_pop(ctx);
-        }
-        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Rounding", ZR_MINIMIZED)) {
-            zr_layout_row_dynamic(ctx, 22, 2);
-            for (i = 0; i < ZR_ROUNDING_MAX; ++i) {
-                zr_label(ctx, zr_get_rounding_name((enum zr_style_rounding)i), ZR_TEXT_LEFT);
-                zr_property_float(ctx, "#R:", 0, &ctx->style.rounding[i], 20, 1, 1);
-            }
-            zr_layout_pop(ctx);
-        }
-        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Color", ZR_MINIMIZED))
-        {
-            struct zr_panel tab, combo;
-            enum theme old = gui->theme;
-            static const char *themes[] = {"Black", "White", "Red", "Blue", "Dark", "Grey"};
-
-            zr_layout_row_dynamic(ctx,  25, 2);
-            zr_label(ctx, "THEME:", ZR_TEXT_LEFT);
-            if (zr_combo_begin_text(ctx, &combo, themes[gui->theme], 300)) {
-                zr_layout_row_dynamic(ctx, 25, 1);
-                gui->theme = zr_combo_item(ctx, themes[THEME_BLACK], ZR_TEXT_CENTERED) ? THEME_BLACK : gui->theme;
-                gui->theme = zr_combo_item(ctx, themes[THEME_WHITE], ZR_TEXT_CENTERED) ? THEME_WHITE : gui->theme;
-                gui->theme = zr_combo_item(ctx, themes[THEME_RED], ZR_TEXT_CENTERED) ? THEME_RED : gui->theme;
-                gui->theme = zr_combo_item(ctx, themes[THEME_BLUE], ZR_TEXT_CENTERED) ? THEME_BLUE : gui->theme;
-                gui->theme = zr_combo_item(ctx, themes[THEME_DARK], ZR_TEXT_CENTERED) ? THEME_DARK : gui->theme;
-                if (old != gui->theme) set_style(ctx, gui->theme);
-                zr_combo_end(ctx);
-            }
-
-            zr_layout_row_dynamic(ctx, 300, 1);
-            if (zr_group_begin(ctx, &tab, "Colors", 0))
-            {
-                for (i = 0; i < ZR_COLOR_COUNT; ++i) {
-                    zr_layout_row_dynamic(ctx, 25, 2);
-                    zr_label(ctx, zr_get_color_name((enum zr_style_colors)i), ZR_TEXT_LEFT);
-
-                    if (zr_combo_begin_color(ctx, &combo, ctx->style.colors[i], 400)) {
-                        enum color_mode {COL_RGB, COL_HSV};
-                        static int col_mode = COL_RGB;
-                        #ifndef DEMO_DO_NOT_USE_COLOR_PICKER
-                        zr_layout_row_dynamic(ctx, 120, 1);
-                        ctx->style.colors[i] = zr_color_picker(ctx, ctx->style.colors[i], ZR_RGBA);
-                        #endif
-
-                        zr_layout_row_dynamic(ctx, 25, 2);
-                        col_mode = zr_option(ctx, "RGB", col_mode == COL_RGB) ? COL_RGB : col_mode;
-                        col_mode = zr_option(ctx, "HSV", col_mode == COL_HSV) ? COL_HSV : col_mode;
-                        zr_layout_row_dynamic(ctx, 25, 1);
-                        if (col_mode == COL_RGB) {
-                            ctx->style.colors[i].r = (zr_byte)zr_propertyi(ctx, "#R:", 0, ctx->style.colors[i].r, 255, 1,1);
-                            ctx->style.colors[i].g = (zr_byte)zr_propertyi(ctx, "#G:", 0, ctx->style.colors[i].g, 255, 1,1);
-                            ctx->style.colors[i].b = (zr_byte)zr_propertyi(ctx, "#B:", 0, ctx->style.colors[i].b, 255, 1,1);
-                            ctx->style.colors[i].a = (zr_byte)zr_propertyi(ctx, "#A:", 0, ctx->style.colors[i].a, 255, 1,1);
-                        } else {
-                            zr_byte tmp[4];
-                            zr_color_hsva_bv(tmp, ctx->style.colors[i]);
-                            tmp[0] = (zr_byte)zr_propertyi(ctx, "#H:", 0, tmp[0], 255, 1,1);
-                            tmp[1] = (zr_byte)zr_propertyi(ctx, "#S:", 0, tmp[1], 255, 1,1);
-                            tmp[2] = (zr_byte)zr_propertyi(ctx, "#V:", 0, tmp[2], 255, 1,1);
-                            tmp[3] = (zr_byte)zr_propertyi(ctx, "#A:", 0, tmp[3], 255, 1,1);
-                            ctx->style.colors[i] = zr_hsva_bv(tmp);
-                        }
-                        zr_combo_end(ctx);
-                    }
-                }
-                zr_group_end(ctx);
-            }
-            zr_layout_pop(ctx);
-        }
-    }
-    zr_end(ctx);
-    return !zr_window_is_closed(ctx, "Control");
 }
 
 /* ===============================================================
@@ -437,12 +118,12 @@ simple_window(struct zr_context *ctx)
         static int property = 20;
 
         zr_layout_row_static(ctx, 30, 80, 1);
-        if (zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT)) {
+        if (zr_button_label(ctx, "button", ZR_BUTTON_DEFAULT)) {
             /* event handling */
         }
         zr_layout_row_dynamic(ctx, 30, 2);
-        if (zr_option(ctx, "easy", op == EASY)) op = EASY;
-        if (zr_option(ctx, "hard", op == HARD)) op = HARD;
+        if (zr_option_label(ctx, "easy", op == EASY)) op = EASY;
+        if (zr_option_label(ctx, "hard", op == HARD)) op = HARD;
 
         zr_layout_row_dynamic(ctx, 22, 1);
         zr_property_int(ctx, "Compression:", 0, &property, 100, 10, 1);
@@ -478,7 +159,7 @@ demo_window(struct demo *gui, struct zr_context *ctx)
 
     /* window flags */
     window_flags = 0;
-    ctx->style.header.align = header_align;
+    ctx->style.window.header.align = header_align;
     if (border) window_flags |= ZR_WINDOW_BORDER;
     if (resize) window_flags |= ZR_WINDOW_SCALABLE;
     if (moveable) window_flags |= ZR_WINDOW_MOVABLE;
@@ -500,7 +181,7 @@ demo_window(struct demo *gui, struct zr_context *ctx)
             zr_menubar_begin(ctx);
             zr_layout_row_begin(ctx, ZR_STATIC, 25, 2);
             zr_layout_row_push(ctx, 45);
-            if (zr_menu_text_begin(ctx, &menu, "MENU", ZR_TEXT_DEFAULT_LEFT, 120))
+            if (zr_menu_begin_label(ctx, &menu, "MENU", ZR_TEXT_LEFT, 120))
             {
                 zr_layout_row_dynamic(ctx, 25, 1);
                 if (menu_state == MENU_DEFAULT) {
@@ -508,31 +189,31 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                     static int slider = 10;
                     static int check = zr_true;
 
-                    if (zr_menu_item(ctx, ZR_TEXT_DEFAULT_LEFT, "Hide"))
+                    if (zr_menu_item_label(ctx, "Hide", ZR_TEXT_LEFT))
                         show_menu = zr_false;
-                    if (zr_menu_item(ctx, ZR_TEXT_DEFAULT_LEFT, "About"))
+                    if (zr_menu_item_label(ctx, "About", ZR_TEXT_LEFT))
                         show_app_about = zr_true;
                     zr_progress(ctx, &prog, 100, ZR_MODIFIABLE);
                     zr_slider_int(ctx, 0, &slider, 16, 1);
-                    zr_checkbox(ctx, "check", &check);
-                    if (zr_button_text_symbol(ctx, ZR_SYMBOL_TRIANGLE_RIGHT,
-                            "Windows", ZR_TEXT_DEFAULT_LEFT, ZR_BUTTON_DEFAULT))
+                    zr_checkbox_label(ctx, "check", &check);
+                    if (zr_button_symbol_label(ctx, ZR_SYMBOL_TRIANGLE_RIGHT,
+                            "Windows", ZR_TEXT_LEFT, ZR_BUTTON_DEFAULT))
                         menu_state = MENU_WINDOWS;
                 } else {
-                    if (zr_selectable(ctx, "Show", ZR_TEXT_DEFAULT_LEFT, &gui->show_simple) && !gui->show_simple)
+                    if (zr_selectable_label(ctx, "Show", ZR_TEXT_LEFT, &gui->show_simple) && !gui->show_simple)
                         zr_window_close(ctx, "Show");
-                    if (zr_selectable(ctx, "Node Editor", ZR_TEXT_DEFAULT_LEFT, &gui->show_node) && !gui->show_node)
+                    if (zr_selectable_label(ctx, "Node Editor", ZR_TEXT_LEFT, &gui->show_node) && !gui->show_node)
                         zr_window_close(ctx, "Node Editor");
                     #ifndef DEMO_DO_NOT_DRAW_IMAGES
-                    if (zr_selectable(ctx, "Grid", ZR_TEXT_DEFAULT_LEFT, &gui->show_grid) && !gui->show_grid)
+                    if (zr_selectable_label(ctx, "Grid", ZR_TEXT_LEFT, &gui->show_grid) && !gui->show_grid)
                         zr_window_close(ctx, "Grid Demo");
-                    if (zr_selectable(ctx, "Basic", ZR_TEXT_DEFAULT_LEFT, &gui->show_basic) && !gui->show_basic)
+                    if (zr_selectable_label(ctx, "Basic", ZR_TEXT_LEFT, &gui->show_basic) && !gui->show_basic)
                         zr_window_close(ctx, "Basic Demo");
-                    if (zr_selectable(ctx, "Button", ZR_TEXT_DEFAULT_LEFT, &gui->show_button) && !gui->show_button)
+                    if (zr_selectable_label(ctx, "Button", ZR_TEXT_LEFT, &gui->show_button) && !gui->show_button)
                         zr_window_close(ctx, "Button Demo");
                     #endif
-                    if (zr_button_text_symbol(ctx, ZR_SYMBOL_TRIANGLE_LEFT,
-                            "Back", ZR_TEXT_DEFAULT_RIGHT, ZR_BUTTON_DEFAULT))
+                    if (zr_button_symbol_label(ctx, ZR_SYMBOL_TRIANGLE_LEFT,
+                            "Back", ZR_TEXT_RIGHT, ZR_BUTTON_DEFAULT))
                         menu_state = MENU_DEFAULT;
                 }
                 zr_menu_end(ctx);
@@ -540,7 +221,7 @@ demo_window(struct demo *gui, struct zr_context *ctx)
             zr_layout_row_push(ctx, 70);
             zr_progress(ctx, &mprog, 100, ZR_MODIFIABLE);
             zr_slider_int(ctx, 0, &mslider, 16, 1);
-            zr_checkbox(ctx, "check", &mcheck);
+            zr_checkbox_label(ctx, "check", &mcheck);
             zr_menubar_end(ctx);
         }
 
@@ -563,14 +244,14 @@ demo_window(struct demo *gui, struct zr_context *ctx)
         /* window flags */
         if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Window", ZR_MINIMIZED)) {
             zr_layout_row_dynamic(ctx, 30, 2);
-            zr_checkbox(ctx, "Titlebar", &titlebar);
-            zr_checkbox(ctx, "Menu", &show_menu);
-            zr_checkbox(ctx, "Border", &border);
-            zr_checkbox(ctx, "Resizable", &resize);
-            zr_checkbox(ctx, "Moveable", &moveable);
-            zr_checkbox(ctx, "No Scrollbar", &no_scrollbar);
-            zr_checkbox(ctx, "Minimizable", &minimizable);
-            zr_checkbox(ctx, "Closeable", &close);
+            zr_checkbox_label(ctx, "Titlebar", &titlebar);
+            zr_checkbox_label(ctx, "Menu", &show_menu);
+            zr_checkbox_label(ctx, "Border", &border);
+            zr_checkbox_label(ctx, "Resizable", &resize);
+            zr_checkbox_label(ctx, "Moveable", &moveable);
+            zr_checkbox_label(ctx, "No Scrollbar", &no_scrollbar);
+            zr_checkbox_label(ctx, "Minimizable", &minimizable);
+            zr_checkbox_label(ctx, "Closeable", &close);
             zr_layout_pop(ctx);
         }
 
@@ -601,9 +282,9 @@ demo_window(struct demo *gui, struct zr_context *ctx)
             {
                 /* Buttons Widgets */
                 zr_layout_row_static(ctx, 30, 100, 3);
-                if (zr_button_text(ctx, "Button", ZR_BUTTON_DEFAULT))
+                if (zr_button_label(ctx, "Button", ZR_BUTTON_DEFAULT))
                     fprintf(stdout, "Button pressed!\n");
-                if (zr_button_text(ctx, "Repeater", ZR_BUTTON_REPEATER))
+                if (zr_button_label(ctx, "Repeater", ZR_BUTTON_REPEATER))
                     fprintf(stdout, "Repeater is being pressed!\n");
                 zr_button_color(ctx, zr_rgb(0,0,255), ZR_BUTTON_DEFAULT);
 
@@ -618,8 +299,8 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                 zr_button_symbol(ctx, ZR_SYMBOL_TRIANGLE_RIGHT, ZR_BUTTON_DEFAULT);
 
                 zr_layout_row_static(ctx, 30, 100, 2);
-                zr_button_text_symbol(ctx, ZR_SYMBOL_TRIANGLE_LEFT, "prev", ZR_TEXT_RIGHT, ZR_BUTTON_DEFAULT);
-                zr_button_text_symbol(ctx, ZR_SYMBOL_TRIANGLE_RIGHT, "next", ZR_TEXT_LEFT, ZR_BUTTON_DEFAULT);
+                zr_button_symbol_label(ctx, ZR_SYMBOL_TRIANGLE_LEFT, "prev", ZR_TEXT_RIGHT, ZR_BUTTON_DEFAULT);
+                zr_button_symbol_label(ctx, ZR_SYMBOL_TRIANGLE_RIGHT, "next", ZR_TEXT_LEFT, ZR_BUTTON_DEFAULT);
                 zr_layout_pop(ctx);
             }
 
@@ -642,12 +323,12 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                 static const float ratio[] = {120, 150};
 
                 zr_layout_row_static(ctx, 30, 100, 1);
-                zr_checkbox(ctx, "Checkbox", &checkbox);
+                zr_checkbox_label(ctx, "Checkbox", &checkbox);
 
                 zr_layout_row_static(ctx, 30, 80, 3);
-                option = zr_option(ctx, "optionA", option == A) ? A : option;
-                option = zr_option(ctx, "optionB", option == B) ? B : option;
-                option = zr_option(ctx, "optionC", option == C) ? C : option;
+                option = zr_option_label(ctx, "optionA", option == A) ? A : option;
+                option = zr_option_label(ctx, "optionB", option == B) ? B : option;
+                option = zr_option_label(ctx, "optionC", option == C) ? C : option;
 
 
                 zr_layout_row(ctx, ZR_STATIC, 30, 2, ratio);
@@ -687,11 +368,11 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                 {
                     static int selected[4] = {zr_false, zr_false, zr_true, zr_false};
                     zr_layout_row_static(ctx, 18, 100, 1);
-                    zr_selectable(ctx, "Selectable", ZR_TEXT_LEFT, &selected[0]);
-                    zr_selectable(ctx, "Selectable", ZR_TEXT_LEFT, &selected[1]);
+                    zr_selectable_label(ctx, "Selectable", ZR_TEXT_LEFT, &selected[0]);
+                    zr_selectable_label(ctx, "Selectable", ZR_TEXT_LEFT, &selected[1]);
                     zr_label(ctx, "Not Selectable", ZR_TEXT_LEFT);
-                    zr_selectable(ctx, "Selectable", ZR_TEXT_LEFT, &selected[2]);
-                    zr_selectable(ctx, "Selectable", ZR_TEXT_LEFT, &selected[3]);
+                    zr_selectable_label(ctx, "Selectable", ZR_TEXT_LEFT, &selected[2]);
+                    zr_selectable_label(ctx, "Selectable", ZR_TEXT_LEFT, &selected[3]);
                     zr_layout_pop(ctx);
                 }
                 if (zr_layout_push(ctx, ZR_LAYOUT_NODE, "Grid", ZR_MINIMIZED))
@@ -700,7 +381,7 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                     static int selected[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
                     zr_layout_row_static(ctx, 50, 50, 4);
                     for (i = 0; i < 16; ++i) {
-                        if (zr_selectable(ctx, "Z", ZR_TEXT_CENTERED, &selected[i])) {
+                        if (zr_selectable_label(ctx, "Z", ZR_TEXT_CENTERED, &selected[i])) {
                             int x = (i % 4), y = i / 4;
                             if (x > 0) selected[i - 1] ^= 1;
                             if (x < 3) selected[i + 1] ^= 1;
@@ -784,8 +465,8 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                     #endif
 
                     zr_layout_row_dynamic(ctx, 25, 2);
-                    col_mode = zr_option(ctx, "RGB", col_mode == COL_RGB) ? COL_RGB : col_mode;
-                    col_mode = zr_option(ctx, "HSV", col_mode == COL_HSV) ? COL_HSV : col_mode;
+                    col_mode = zr_option_label(ctx, "RGB", col_mode == COL_RGB) ? COL_RGB : col_mode;
+                    col_mode = zr_option_label(ctx, "HSV", col_mode == COL_HSV) ? COL_HSV : col_mode;
 
                     zr_layout_row_dynamic(ctx, 25, 1);
                     if (col_mode == COL_RGB) {
@@ -808,7 +489,7 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                 /* progressbar combobox */
                 sum = prog_a + prog_b + prog_c + prog_d;
                 sprintf(buffer, "%lu", sum);
-                if (zr_combo_begin_text(ctx, &combo, buffer, 200)) {
+                if (zr_combo_begin_label(ctx, &combo, buffer, 200)) {
                     zr_layout_row_dynamic(ctx, 30, 1);
                     zr_progress(ctx, &prog_a, 100, ZR_MODIFIABLE);
                     zr_progress(ctx, &prog_b, 100, ZR_MODIFIABLE);
@@ -820,18 +501,18 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                 /* checkbox combobox */
                 sum = (size_t)(check_values[0] + check_values[1] + check_values[2] + check_values[3] + check_values[4]);
                 sprintf(buffer, "%lu", sum);
-                if (zr_combo_begin_text(ctx, &combo, buffer, 200)) {
+                if (zr_combo_begin_label(ctx, &combo, buffer, 200)) {
                     zr_layout_row_dynamic(ctx, 30, 1);
-                    zr_checkbox(ctx, weapons[0], &check_values[0]);
-                    zr_checkbox(ctx, weapons[1], &check_values[1]);
-                    zr_checkbox(ctx, weapons[2], &check_values[2]);
-                    zr_checkbox(ctx, weapons[3], &check_values[3]);
+                    zr_checkbox_label(ctx, weapons[0], &check_values[0]);
+                    zr_checkbox_label(ctx, weapons[1], &check_values[1]);
+                    zr_checkbox_label(ctx, weapons[2], &check_values[2]);
+                    zr_checkbox_label(ctx, weapons[3], &check_values[3]);
                     zr_combo_end(ctx);
                 }
 
                 /* complex text combobox */
                 sprintf(buffer, "%.2f, %.2f, %.2f", position[0], position[1],position[2]);
-                if (zr_combo_begin_text(ctx, &combo, buffer, 200)) {
+                if (zr_combo_begin_label(ctx, &combo, buffer, 200)) {
                     zr_layout_row_dynamic(ctx, 25, 1);
                     zr_property_float(ctx, "#X:", -1024.0f, &position[0], 1024.0f, 1,0.5f);
                     zr_property_float(ctx, "#Y:", -1024.0f, &position[1], 1024.0f, 1,0.5f);
@@ -841,7 +522,7 @@ demo_window(struct demo *gui, struct zr_context *ctx)
 
                 /* chart combobox */
                 sprintf(buffer, "%.1f", chart_selection);
-                if (zr_combo_begin_text(ctx, &combo, buffer, 250)) {
+                if (zr_combo_begin_label(ctx, &combo, buffer, 250)) {
                     size_t i = 0;
                     static const float values[]={26.0f,13.0f,30.0f,15.0f,25.0f,10.0f,20.0f,40.0f, 12.0f, 8.0f, 22.0f, 28.0f, 5.0f};
                     zr_layout_row_dynamic(ctx, 150, 1);
@@ -874,7 +555,7 @@ demo_window(struct demo *gui, struct zr_context *ctx)
 
                     /* time combobox */
                     sprintf(buffer, "%02d:%02d:%02d", sel_time.tm_hour, sel_time.tm_min, sel_time.tm_sec);
-                    if (zr_combo_begin_text(ctx, &combo, buffer, 250)) {
+                    if (zr_combo_begin_label(ctx, &combo, buffer, 250)) {
                         time_selected = 1;
                         zr_layout_row_dynamic(ctx, 25, 1);
                         sel_time.tm_sec = zr_propertyi(ctx, "#S:", 0, sel_time.tm_sec, 60, 1, 1);
@@ -886,7 +567,7 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                     /* date combobox */
                     zr_layout_row_static(ctx, 25, 350, 1);
                     sprintf(buffer, "%02d-%02d-%02d", sel_date.tm_mday, sel_date.tm_mon+1, sel_date.tm_year+1900);
-                    if (zr_combo_begin_text(ctx, &combo, buffer, 400)) {
+                    if (zr_combo_begin_label(ctx, &combo, buffer, 400)) {
                         int i = 0;
                         const char *month[] = {"January", "February", "March", "Apil", "May", "June", "July", "August", "September", "Ocotober", "November", "December"};
                         const char *week_days[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
@@ -909,7 +590,7 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                         }
                         zr_layout_row_push(ctx, 0.9f);
                         sprintf(buffer, "%s %d", month[sel_date.tm_mon], year);
-                        zr_label(ctx, buffer, ZR_TEXT_DEFAULT_CENTER);
+                        zr_label(ctx, buffer, ZR_TEXT_CENTERED);
                         zr_layout_row_push(ctx, 0.05f);
                         if (zr_button_symbol(ctx, ZR_SYMBOL_TRIANGLE_RIGHT, ZR_BUTTON_DEFAULT)) {
                             if (sel_date.tm_mon == 11) {
@@ -931,13 +612,13 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                         /* weekdays  */
                         zr_layout_row_dynamic(ctx, 35, 7);
                         for (i = 0; i < (int)LEN(week_days); ++i)
-                            zr_label(ctx, week_days[i], ZR_TEXT_DEFAULT_CENTER);
+                            zr_label(ctx, week_days[i], ZR_TEXT_CENTERED);
 
                         /* days  */
                         if (week_day > 0) zr_spacing(ctx, week_day);
                         for (i = 1; i <= days; ++i) {
                             sprintf(buffer, "%d", i);
-                            if (zr_button_text(ctx, buffer, ZR_BUTTON_DEFAULT)) {
+                            if (zr_button_label(ctx, buffer, ZR_BUTTON_DEFAULT)) {
                                 sel_date.tm_mday = i;
                                 zr_combo_close(ctx);
                             }
@@ -953,11 +634,9 @@ demo_window(struct demo *gui, struct zr_context *ctx)
             {
                 static const float ratio[] = {120, 150};
                 static char field_buffer[64];
-                static char box_buffer[512];
                 static char text[9][64];
                 static size_t text_len[9];
                 static size_t field_len;
-                static size_t box_len;
                 zr_flags active;
 
                 zr_layout_row(ctx, ZR_STATIC, 25, 2, ratio);
@@ -989,21 +668,9 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                 zr_label(ctx, "Field:", ZR_TEXT_LEFT);
                 zr_edit_string(ctx, ZR_EDIT_FIELD, field_buffer, &field_len, 64, zr_filter_default);
 
-                zr_label(ctx, "Box:", ZR_TEXT_LEFT);
-                zr_layout_row_static(ctx, 180, 278, 1);
-                zr_edit_string(ctx, ZR_EDIT_BOX, box_buffer, &box_len, 512, zr_filter_default);
-
                 zr_layout_row(ctx, ZR_STATIC, 25, 2, ratio);
                 active = zr_edit_string(ctx, ZR_EDIT_FIELD|ZR_EDIT_SIGCOMIT, text[7], &text_len[7], 64,  zr_filter_ascii);
-                if (zr_button_text(ctx, "Submit", ZR_BUTTON_DEFAULT) ||
-                    (active & ZR_EDIT_COMMITED))
-                {
-                    text[7][text_len[7]] = '\n';
-                    text_len[7]++;
-                    memcpy(&box_buffer[box_len], &text[7], text_len[7]);
-                    box_len += text_len[7];
-                    text_len[7] = 0;
-                }
+                zr_button_label(ctx, "Submit", ZR_BUTTON_DEFAULT);
                 zr_layout_row_end(ctx);
                 zr_layout_pop(ctx);
             }
@@ -1036,16 +703,17 @@ demo_window(struct demo *gui, struct zr_context *ctx)
             index = -1;
             zr_layout_row_dynamic(ctx, 100, 1);
             bounds = zr_widget_bounds(ctx);
-            zr_chart_begin(ctx, ZR_CHART_LINES, 32, -1.0f, 1.0f);
-            for (i = 0; i < 32; ++i) {
-                zr_flags res = zr_chart_push(ctx, (float)cos(id));
-                if (res & ZR_CHART_HOVERING)
-                    index = (int)i;
-                if (res & ZR_CHART_CLICKED)
-                    line_index = (int)i;
-                id += step;
+            if (zr_chart_begin(ctx, ZR_CHART_LINES, 32, -1.0f, 1.0f)) {
+                for (i = 0; i < 32; ++i) {
+                    zr_flags res = zr_chart_push(ctx, (float)cos(id));
+                    if (res & ZR_CHART_HOVERING)
+                        index = (int)i;
+                    if (res & ZR_CHART_CLICKED)
+                        line_index = (int)i;
+                    id += step;
+                }
+                zr_chart_end(ctx);
             }
-            zr_chart_end(ctx);
 
             if (index != -1) {
                 char buffer[ZR_MAX_NUMBER_BUFFER];
@@ -1061,17 +729,17 @@ demo_window(struct demo *gui, struct zr_context *ctx)
             /* column chart */
             zr_layout_row_dynamic(ctx, 100, 1);
             bounds = zr_widget_bounds(ctx);
-            zr_chart_begin(ctx, ZR_CHART_COLUMN, 32, 0.0f, 1.0f);
-            for (i = 0; i < 32; ++i) {
-                zr_flags res = zr_chart_push(ctx, (float)fabs(sin(id)));
-                if (res & ZR_CHART_HOVERING)
-                    index = (int)i;
-                if (res & ZR_CHART_CLICKED)
-                    col_index = (int)i;
-                id += step;
+            if (zr_chart_begin(ctx, ZR_CHART_COLUMN, 32, 0.0f, 1.0f)) {
+                for (i = 0; i < 32; ++i) {
+                    zr_flags res = zr_chart_push(ctx, (float)fabs(sin(id)));
+                    if (res & ZR_CHART_HOVERING)
+                        index = (int)i;
+                    if (res & ZR_CHART_CLICKED)
+                        col_index = (int)i;
+                    id += step;
+                }
+                zr_chart_end(ctx);
             }
-            zr_chart_end(ctx);
-
             if (index != -1) {
                 char buffer[ZR_MAX_NUMBER_BUFFER];
                 sprintf(buffer, "Value: %.2f", (float)fabs(sin(step * (float)index)));
@@ -1102,15 +770,15 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                 static int slider = 10;
 
                 zr_layout_row_dynamic(ctx, 25, 1);
-                zr_checkbox(ctx, "Menu", &show_menu);
+                zr_checkbox_label(ctx, "Menu", &show_menu);
                 zr_progress(ctx, &prog, 100, ZR_MODIFIABLE);
                 zr_slider_int(ctx, 0, &slider, 16, 1);
-                if (zr_contextual_item(ctx, "About", ZR_TEXT_CENTERED))
+                if (zr_contextual_item_label(ctx, "About", ZR_TEXT_CENTERED))
                     show_app_about = zr_true;
-                zr_selectable(ctx, select[0]?"Unselect":"Select", ZR_TEXT_LEFT, &select[0]);
-                zr_selectable(ctx, select[1]?"Unselect":"Select", ZR_TEXT_LEFT, &select[1]);
-                zr_selectable(ctx, select[2]?"Unselect":"Select", ZR_TEXT_LEFT, &select[2]);
-                zr_selectable(ctx, select[3]?"Unselect":"Select", ZR_TEXT_LEFT, &select[3]);
+                zr_selectable_label(ctx, select[0]?"Unselect":"Select", ZR_TEXT_LEFT, &select[0]);
+                zr_selectable_label(ctx, select[1]?"Unselect":"Select", ZR_TEXT_LEFT, &select[1]);
+                zr_selectable_label(ctx, select[2]?"Unselect":"Select", ZR_TEXT_LEFT, &select[2]);
+                zr_selectable_label(ctx, select[3]?"Unselect":"Select", ZR_TEXT_LEFT, &select[3]);
                 zr_contextual_end(ctx);
             }
 
@@ -1137,7 +805,7 @@ demo_window(struct demo *gui, struct zr_context *ctx)
             zr_layout_row_push(ctx, 100);
             zr_label(ctx, "Popup:", ZR_TEXT_LEFT);
             zr_layout_row_push(ctx, 50);
-            if (zr_button_text(ctx, "Popup", ZR_BUTTON_DEFAULT))
+            if (zr_button_label(ctx, "Popup", ZR_BUTTON_DEFAULT))
                 popup_active = 1;
             zr_layout_row_end(ctx);
 
@@ -1149,11 +817,11 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                     zr_layout_row_dynamic(ctx, 25, 1);
                     zr_label(ctx, "A terrible error as occured", ZR_TEXT_LEFT);
                     zr_layout_row_dynamic(ctx, 25, 2);
-                    if (zr_button_text(ctx, "OK", ZR_BUTTON_DEFAULT)) {
+                    if (zr_button_label(ctx, "OK", ZR_BUTTON_DEFAULT)) {
                         popup_active = 0;
                         zr_popup_close(ctx);
                     }
-                    if (zr_button_text(ctx, "Cancel", ZR_BUTTON_DEFAULT)) {
+                    if (zr_button_label(ctx, "Cancel", ZR_BUTTON_DEFAULT)) {
                         popup_active = 0;
                         zr_popup_close(ctx);
                     }
@@ -1181,64 +849,64 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                 zr_layout_row_dynamic(ctx, 30, 1);
                 zr_label(ctx, "Dynamic fixed column layout with generated position and size:", ZR_TEXT_LEFT);
                 zr_layout_row_dynamic(ctx, 30, 3);
-                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
-                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
-                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_label(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_label(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_label(ctx, "button", ZR_BUTTON_DEFAULT);
 
                 zr_layout_row_dynamic(ctx, 30, 1);
                 zr_label(ctx, "static fixed column layout with generated position and size:", ZR_TEXT_LEFT);
                 zr_layout_row_static(ctx, 30, 100, 3);
-                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
-                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
-                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_label(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_label(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_label(ctx, "button", ZR_BUTTON_DEFAULT);
 
                 zr_layout_row_dynamic(ctx, 30, 1);
                 zr_label(ctx, "Dynamic array-based custom column layout with generated position and custom size:",ZR_TEXT_LEFT);
                 zr_layout_row(ctx, ZR_DYNAMIC, 30, 3, ratio_two);
-                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
-                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
-                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_label(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_label(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_label(ctx, "button", ZR_BUTTON_DEFAULT);
 
                 zr_layout_row_dynamic(ctx, 30, 1);
                 zr_label(ctx, "Static array-based custom column layout with generated position and custom size:",ZR_TEXT_LEFT );
                 zr_layout_row(ctx, ZR_STATIC, 30, 3, width_two);
-                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
-                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
-                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_label(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_label(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_label(ctx, "button", ZR_BUTTON_DEFAULT);
 
                 zr_layout_row_dynamic(ctx, 30, 1);
                 zr_label(ctx, "Dynamic immediate mode custom column layout with generated position and custom size:",ZR_TEXT_LEFT);
                 zr_layout_row_begin(ctx, ZR_DYNAMIC, 30, 3);
                 zr_layout_row_push(ctx, 0.2f);
-                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_label(ctx, "button", ZR_BUTTON_DEFAULT);
                 zr_layout_row_push(ctx, 0.6f);
-                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_label(ctx, "button", ZR_BUTTON_DEFAULT);
                 zr_layout_row_push(ctx, 0.2f);
-                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_label(ctx, "button", ZR_BUTTON_DEFAULT);
                 zr_layout_row_end(ctx);
 
                 zr_layout_row_dynamic(ctx, 30, 1);
                 zr_label(ctx, "Static immmediate mode custom column layout with generated position and custom size:", ZR_TEXT_LEFT);
                 zr_layout_row_begin(ctx, ZR_STATIC, 30, 3);
                 zr_layout_row_push(ctx, 100);
-                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_label(ctx, "button", ZR_BUTTON_DEFAULT);
                 zr_layout_row_push(ctx, 200);
-                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_label(ctx, "button", ZR_BUTTON_DEFAULT);
                 zr_layout_row_push(ctx, 50);
-                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_label(ctx, "button", ZR_BUTTON_DEFAULT);
                 zr_layout_row_end(ctx);
 
                 zr_layout_row_dynamic(ctx, 30, 1);
                 zr_label(ctx, "Static free space with custom position and custom size:", ZR_TEXT_LEFT);
                 zr_layout_space_begin(ctx, ZR_STATIC, 120, 4);
                 zr_layout_space_push(ctx, zr_rect(100, 0, 100, 30));
-                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_label(ctx, "button", ZR_BUTTON_DEFAULT);
                 zr_layout_space_push(ctx, zr_rect(0, 15, 100, 30));
-                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_label(ctx, "button", ZR_BUTTON_DEFAULT);
                 zr_layout_space_push(ctx, zr_rect(200, 15, 100, 30));
-                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_label(ctx, "button", ZR_BUTTON_DEFAULT);
                 zr_layout_space_push(ctx, zr_rect(100, 30, 100, 30));
-                zr_button_text(ctx, "button", ZR_BUTTON_DEFAULT);
+                zr_button_label(ctx, "button", ZR_BUTTON_DEFAULT);
                 zr_layout_space_end(ctx);
                 zr_layout_pop(ctx);
             }
@@ -1258,9 +926,9 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                 if (group_titlebar) group_flags |= ZR_WINDOW_TITLE;
 
                 zr_layout_row_dynamic(ctx, 30, 3);
-                zr_checkbox(ctx, "Titlebar", &group_titlebar);
-                zr_checkbox(ctx, "Border", &group_border);
-                zr_checkbox(ctx, "No Scrollbar", &group_no_scrollbar);
+                zr_checkbox_label(ctx, "Titlebar", &group_titlebar);
+                zr_checkbox_label(ctx, "Border", &group_border);
+                zr_checkbox_label(ctx, "No Scrollbar", &group_no_scrollbar);
 
                 zr_layout_row_begin(ctx, ZR_STATIC, 22, 2);
                 zr_layout_row_push(ctx, 50);
@@ -1277,7 +945,7 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                     static int selected[16];
                     zr_layout_row_static(ctx, 18, 100, 1);
                     for (i = 0; i < 16; ++i)
-                        zr_selectable(ctx, (selected[i]) ? "Selected": "Unselected", ZR_TEXT_CENTERED, &selected[i]);
+                        zr_selectable_label(ctx, (selected[i]) ? "Selected": "Unselected", ZR_TEXT_CENTERED, &selected[i]);
                     zr_group_end(ctx);
                 }
                 zr_layout_pop(ctx);
@@ -1303,7 +971,7 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                     zr_layout_row_dynamic(ctx, 25, 2);
                     for (i = 0; i < 64; ++i) {
                         sprintf(buffer, "%08d", ((((i%7)*10)^32))+(64+(i%2)*2));
-                        zr_button_text(ctx, buffer, ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, buffer, ZR_BUTTON_DEFAULT);
                     }
                     zr_group_end(ctx);
                 }
@@ -1320,31 +988,31 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                     static int selected[32];
                     zr_layout_row_static(ctx, 18, 100, 1);
                     for (i = 0; i < 32; ++i)
-                        zr_selectable(ctx, (selected[i]) ? "Selected": "Unselected", ZR_TEXT_CENTERED, &selected[i]);
+                        zr_selectable_label(ctx, (selected[i]) ? "Selected": "Unselected", ZR_TEXT_CENTERED, &selected[i]);
                     zr_group_end(ctx);
                 }
 
                 zr_layout_space_push(ctx, zr_rect(160,0,150,240));
                 if (zr_group_begin(ctx, &tab, "Group_top", ZR_WINDOW_BORDER)) {
                     zr_layout_row_dynamic(ctx, 25, 1);
-                    zr_button_text(ctx, "#FFAA", ZR_BUTTON_DEFAULT);
-                    zr_button_text(ctx, "#FFBB", ZR_BUTTON_DEFAULT);
-                    zr_button_text(ctx, "#FFCC", ZR_BUTTON_DEFAULT);
-                    zr_button_text(ctx, "#FFDD", ZR_BUTTON_DEFAULT);
-                    zr_button_text(ctx, "#FFEE", ZR_BUTTON_DEFAULT);
-                    zr_button_text(ctx, "#FFFF", ZR_BUTTON_DEFAULT);
+                    zr_button_label(ctx, "#FFAA", ZR_BUTTON_DEFAULT);
+                    zr_button_label(ctx, "#FFBB", ZR_BUTTON_DEFAULT);
+                    zr_button_label(ctx, "#FFCC", ZR_BUTTON_DEFAULT);
+                    zr_button_label(ctx, "#FFDD", ZR_BUTTON_DEFAULT);
+                    zr_button_label(ctx, "#FFEE", ZR_BUTTON_DEFAULT);
+                    zr_button_label(ctx, "#FFFF", ZR_BUTTON_DEFAULT);
                     zr_group_end(ctx);
                 }
 
                 zr_layout_space_push(ctx, zr_rect(160,250,150,250));
                 if (zr_group_begin(ctx, &tab, "Group_buttom", ZR_WINDOW_BORDER)) {
                     zr_layout_row_dynamic(ctx, 25, 1);
-                    zr_button_text(ctx, "#FFAA", ZR_BUTTON_DEFAULT);
-                    zr_button_text(ctx, "#FFBB", ZR_BUTTON_DEFAULT);
-                    zr_button_text(ctx, "#FFCC", ZR_BUTTON_DEFAULT);
-                    zr_button_text(ctx, "#FFDD", ZR_BUTTON_DEFAULT);
-                    zr_button_text(ctx, "#FFEE", ZR_BUTTON_DEFAULT);
-                    zr_button_text(ctx, "#FFFF", ZR_BUTTON_DEFAULT);
+                    zr_button_label(ctx, "#FFAA", ZR_BUTTON_DEFAULT);
+                    zr_button_label(ctx, "#FFBB", ZR_BUTTON_DEFAULT);
+                    zr_button_label(ctx, "#FFCC", ZR_BUTTON_DEFAULT);
+                    zr_button_label(ctx, "#FFDD", ZR_BUTTON_DEFAULT);
+                    zr_button_label(ctx, "#FFEE", ZR_BUTTON_DEFAULT);
+                    zr_button_label(ctx, "#FFFF", ZR_BUTTON_DEFAULT);
                     zr_group_end(ctx);
                 }
 
@@ -1353,7 +1021,7 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                     static int selected[4];
                     zr_layout_row_static(ctx, 18, 100, 1);
                     for (i = 0; i < 4; ++i)
-                        zr_selectable(ctx, (selected[i]) ? "Selected": "Unselected", ZR_TEXT_CENTERED, &selected[i]);
+                        zr_selectable_label(ctx, (selected[i]) ? "Selected": "Unselected", ZR_TEXT_CENTERED, &selected[i]);
                     zr_group_end(ctx);
                 }
 
@@ -1362,7 +1030,7 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                     static int selected[4];
                     zr_layout_row_static(ctx, 18, 100, 1);
                     for (i = 0; i < 4; ++i)
-                        zr_selectable(ctx, (selected[i]) ? "Selected": "Unselected", ZR_TEXT_CENTERED, &selected[i]);
+                        zr_selectable_label(ctx, (selected[i]) ? "Selected": "Unselected", ZR_TEXT_CENTERED, &selected[i]);
                     zr_group_end(ctx);
                 }
 
@@ -1371,7 +1039,7 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                     static int selected[4];
                     zr_layout_row_static(ctx, 18, 100, 1);
                     for (i = 0; i < 4; ++i)
-                        zr_selectable(ctx, (selected[i]) ? "Selected": "Unselected", ZR_TEXT_CENTERED, &selected[i]);
+                        zr_selectable_label(ctx, (selected[i]) ? "Selected": "Unselected", ZR_TEXT_CENTERED, &selected[i]);
                     zr_group_end(ctx);
                 }
                 zr_layout_space_end(ctx);
@@ -1415,12 +1083,12 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                     /* left space */
                     if (zr_group_begin(ctx, &sub, "left", ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER|ZR_WINDOW_NO_SCROLLBAR)) {
                         zr_layout_row_dynamic(ctx, 25, 1);
-                        zr_button_text(ctx, "#FFAA", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFBB", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFCC", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFDD", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFEE", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFFF", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFAA", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFBB", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFCC", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFDD", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFEE", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFFF", ZR_BUTTON_DEFAULT);
                         zr_group_end(ctx);
                     }
 
@@ -1438,12 +1106,12 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                     /* middle space */
                     if (zr_group_begin(ctx, &sub, "center", ZR_WINDOW_BORDER|ZR_WINDOW_NO_SCROLLBAR)) {
                         zr_layout_row_dynamic(ctx, 25, 1);
-                        zr_button_text(ctx, "#FFAA", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFBB", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFCC", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFDD", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFEE", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFFF", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFAA", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFBB", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFCC", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFDD", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFEE", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFFF", ZR_BUTTON_DEFAULT);
                         zr_group_end(ctx);
                     }
 
@@ -1461,12 +1129,12 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                     /* right space */
                     if (zr_group_begin(ctx, &sub, "right", ZR_WINDOW_BORDER|ZR_WINDOW_NO_SCROLLBAR)) {
                         zr_layout_row_dynamic(ctx, 25, 1);
-                        zr_button_text(ctx, "#FFAA", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFBB", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFCC", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFDD", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFEE", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFFF", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFAA", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFBB", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFCC", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFDD", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFEE", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFFF", ZR_BUTTON_DEFAULT);
                         zr_group_end(ctx);
                     }
 
@@ -1494,12 +1162,12 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                     zr_layout_row_dynamic(ctx, a, 1);
                     if (zr_group_begin(ctx, &sub, "top", ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER)) {
                         zr_layout_row_dynamic(ctx, 25, 3);
-                        zr_button_text(ctx, "#FFAA", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFBB", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFCC", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFDD", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFEE", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFFF", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFAA", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFBB", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFCC", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFDD", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFEE", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFFF", ZR_BUTTON_DEFAULT);
                         zr_group_end(ctx);
                     }
 
@@ -1519,12 +1187,12 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                     zr_layout_row_dynamic(ctx, b, 1);
                     if (zr_group_begin(ctx, &sub, "middle", ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER)) {
                         zr_layout_row_dynamic(ctx, 25, 3);
-                        zr_button_text(ctx, "#FFAA", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFBB", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFCC", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFDD", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFEE", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFFF", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFAA", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFBB", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFCC", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFDD", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFEE", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFFF", ZR_BUTTON_DEFAULT);
                         zr_group_end(ctx);
                     }
 
@@ -1545,12 +1213,12 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                     zr_layout_row_dynamic(ctx, c, 1);
                     if (zr_group_begin(ctx, &sub, "bottom", ZR_WINDOW_NO_SCROLLBAR|ZR_WINDOW_BORDER)) {
                         zr_layout_row_dynamic(ctx, 25, 3);
-                        zr_button_text(ctx, "#FFAA", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFBB", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFCC", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFDD", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFEE", ZR_BUTTON_DEFAULT);
-                        zr_button_text(ctx, "#FFFF", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFAA", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFBB", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFCC", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFDD", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFEE", ZR_BUTTON_DEFAULT);
+                        zr_button_label(ctx, "#FFFF", ZR_BUTTON_DEFAULT);
                         zr_group_end(ctx);
                     }
                     zr_layout_pop(ctx);
@@ -1578,12 +1246,6 @@ ui_piemenu(struct zr_context *ctx, struct zr_vec2 pos, float radius,
     struct zr_rect bounds;
     int active_item = 0;
 
-    /* hide popup background */
-    struct zr_color border;
-    zr_push_color(ctx, ZR_COLOR_WINDOW, zr_rgba(0,0,0,0));
-    border = ctx->style.colors[ZR_COLOR_BORDER];
-    zr_push_color(ctx, ZR_COLOR_BORDER, zr_rgba(0,0,0,0));
-
     /* pie menu popup */
     total_space  = zr_window_get_content_region(ctx);
     zr_popup_begin(ctx, &popup,  ZR_POPUP_STATIC, "piemenu", ZR_WINDOW_NO_SCROLLBAR,
@@ -1598,14 +1260,14 @@ ui_piemenu(struct zr_context *ctx, struct zr_vec2 pos, float radius,
         const struct zr_input *in = &ctx->input;
         {
             /* allocate complete popup space for the menu */
-            enum zr_widget_state state;
+            enum zr_widget_layout_states state;
             total_space = zr_window_get_content_region(ctx);
             total_space.x = total_space.y = 0;
             state = zr_widget(&bounds, ctx);
         }
 
         /* outer circle */
-        zr_draw_circle(out, ZR_FILLED, bounds, zr_rgb(50,50,50));
+        zr_fill_circle(out, bounds, zr_rgb(50,50,50));
         {
             /* circle buttons */
             float step = (2 * 3.141592654f) / (float)(MAX(1,item_count));
@@ -1620,15 +1282,15 @@ ui_piemenu(struct zr_context *ctx, struct zr_vec2 pos, float radius,
             for (i = 0; i < item_count; ++i) {
                 struct zr_rect content;
                 float rx, ry, dx, dy, a;
-                zr_draw_arc(out, ZR_FILLED, center.x, center.y, (bounds.w/2.0f),
+                zr_fill_arc(out, center.x, center.y, (bounds.w/2.0f),
                     a_min, a_max, (active_item == i) ? zr_rgb(45,100,255): zr_rgb(60,60,60));
 
                 /* seperator line */
                 rx = bounds.w/2.0f; ry = 0;
                 dx = rx * (float)cos(a_min) - ry * (float)sin(a_min);
                 dy = rx * (float)sin(a_min) + ry * (float)cos(a_min);
-                zr_draw_line(out, center.x, center.y,
-                    center.x + dx, center.y + dy, zr_rgb(50,50,50));
+                zr_stroke_line(out, center.x, center.y,
+                    center.x + dx, center.y + dy, 1.0f, zr_rgb(50,50,50));
 
                 /* button content */
                 a = a_min + (a_max - a_min)/2.0f;
@@ -1646,7 +1308,7 @@ ui_piemenu(struct zr_context *ctx, struct zr_vec2 pos, float radius,
             inner.x = bounds.x + bounds.w/2 - bounds.w/4;
             inner.y = bounds.y + bounds.h/2 - bounds.h/4;
             inner.w = bounds.w/2; inner.h = bounds.h/2;
-            zr_draw_circle(out, ZR_FILLED, inner, zr_rgb(45,45,45));
+            zr_fill_circle(out, inner, zr_rgb(45,45,45));
 
             /* active icon content */
             bounds.w = inner.w / 2.0f;
@@ -1658,9 +1320,6 @@ ui_piemenu(struct zr_context *ctx, struct zr_vec2 pos, float radius,
     }
     zr_layout_space_end(ctx);
     zr_popup_end(ctx);
-
-    zr_reset_colors(ctx);
-    zr_reset_properties(ctx);
 
     if (!zr_input_is_mouse_down(&ctx->input, ZR_BUTTON_RIGHT))
         return active_item;
@@ -1698,13 +1357,13 @@ grid_demo(struct zr_context *ctx)
         zr_label(ctx, "Binary:", ZR_TEXT_RIGHT);
         zr_edit_string(ctx, ZR_EDIT_FIELD, text[2], &text_len[2], 64, zr_filter_binary);
         zr_label(ctx, "Checkbox:", ZR_TEXT_RIGHT);
-        zr_checkbox(ctx, "Check me", &check);
+        zr_checkbox_label(ctx, "Check me", &check);
         zr_label(ctx, "Combobox:", ZR_TEXT_RIGHT);
 
-        if (zr_combo_begin_text(ctx, &combo, items[selected_item], 200)) {
+        if (zr_combo_begin_label(ctx, &combo, items[selected_item], 200)) {
             zr_layout_row_dynamic(ctx, 30, 1);
             for (i = 0; i < 3; ++i)
-                if (zr_combo_item(ctx, items[i], ZR_TEXT_LEFT))
+                if (zr_combo_item_label(ctx, items[i], ZR_TEXT_LEFT))
                     selected_item = i;
             zr_combo_end(ctx);
         }
@@ -1721,8 +1380,7 @@ grid_demo(struct zr_context *ctx)
 static void
 ui_header(struct zr_context *ctx, const char *title)
 {
-    zr_reset_font_height(ctx);
-    zr_push_font_height(ctx, 18);
+    ctx->style.font.height = 18;
     zr_layout_row_dynamic(ctx, 20, 1);
     zr_label(ctx, title, ZR_TEXT_LEFT);
 }
@@ -1731,8 +1389,7 @@ static void
 ui_widget(struct zr_context *ctx, float height, float font_height)
 {
     static const float ratio[] = {0.15f, 0.85f};
-    zr_reset_font_height(ctx);
-    zr_push_font_height(ctx, font_height);
+    ctx->style.font.height = font_height;
     zr_layout_row(ctx, ZR_DYNAMIC, height, 2, ratio);
     zr_spacing(ctx, 1);
 }
@@ -1741,8 +1398,7 @@ static void
 ui_widget_centered(struct zr_context *ctx, float height, float font_height)
 {
     static const float ratio[] = {0.15f, 0.50f, 0.35f};
-    zr_reset_font_height(ctx);
-    zr_push_font_height(ctx, font_height);
+    ctx->style.font.height = font_height;
     zr_layout_row(ctx, ZR_DYNAMIC, height, 3, ratio);
     zr_spacing(ctx, 1);
 }
@@ -1768,15 +1424,15 @@ button_demo(struct zr_context *ctx, struct icons *img)
     {
         /* toolbar */
         zr_layout_row_static(ctx, 40, 40, 4);
-        if (zr_menu_icon_begin(ctx, &menu, "Music", img->play, 120))
+        if (zr_menu_begin_image(ctx, &menu, "Music", img->play, 120))
         {
             /* settings */
             zr_layout_row_dynamic(ctx, 25, 1);
-            zr_menu_item_icon(ctx, img->play, "Play", ZR_TEXT_RIGHT);
-            zr_menu_item_icon(ctx, img->stop, "Stop", ZR_TEXT_RIGHT);
-            zr_menu_item_icon(ctx, img->pause, "Pause", ZR_TEXT_RIGHT);
-            zr_menu_item_icon(ctx, img->next, "Next", ZR_TEXT_RIGHT);
-            zr_menu_item_icon(ctx, img->prev, "Prev", ZR_TEXT_RIGHT);
+            zr_menu_item_image_label(ctx, img->play, "Play", ZR_TEXT_RIGHT);
+            zr_menu_item_image_label(ctx, img->stop, "Stop", ZR_TEXT_RIGHT);
+            zr_menu_item_image_label(ctx, img->pause, "Pause", ZR_TEXT_RIGHT);
+            zr_menu_item_image_label(ctx, img->next, "Next", ZR_TEXT_RIGHT);
+            zr_menu_item_image_label(ctx, img->prev, "Prev", ZR_TEXT_RIGHT);
             zr_menu_end(ctx);
         }
         zr_button_image(ctx, img->tools, ZR_BUTTON_DEFAULT);
@@ -1790,10 +1446,10 @@ button_demo(struct zr_context *ctx, struct icons *img)
      *------------------------------------------------*/
     ui_header(ctx, "Push buttons");
     ui_widget(ctx, 35, 22);
-    if (zr_button_text(ctx, "Push me", ZR_BUTTON_DEFAULT))
+    if (zr_button_label(ctx, "Push me", ZR_BUTTON_DEFAULT))
         fprintf(stdout, "pushed!\n");
     ui_widget(ctx, 35, 22);
-    if (zr_button_text_image(ctx, img->rocket, "Styled", ZR_TEXT_CENTERED, ZR_BUTTON_DEFAULT))
+    if (zr_button_image_label(ctx, img->rocket, "Styled", ZR_TEXT_CENTERED, ZR_BUTTON_DEFAULT))
         fprintf(stdout, "rocket!\n");
 
     /*------------------------------------------------
@@ -1801,7 +1457,7 @@ button_demo(struct zr_context *ctx, struct icons *img)
      *------------------------------------------------*/
     ui_header(ctx, "Repeater");
     ui_widget(ctx, 35, 22);
-    if (zr_button_text(ctx, "Press me", ZR_BUTTON_REPEATER))
+    if (zr_button_label(ctx, "Press me", ZR_BUTTON_REPEATER))
         fprintf(stdout, "pressed!\n");
 
     /*------------------------------------------------
@@ -1809,15 +1465,15 @@ button_demo(struct zr_context *ctx, struct icons *img)
      *------------------------------------------------*/
     ui_header(ctx, "Toggle buttons");
     ui_widget(ctx, 35, 22);
-    if (zr_button_text_image(ctx, (toggle0) ? img->checked: img->unchecked,
+    if (zr_button_image_label(ctx, (toggle0) ? img->checked: img->unchecked,
         "Toggle", ZR_TEXT_LEFT, ZR_BUTTON_DEFAULT)) toggle0 = !toggle0;
 
     ui_widget(ctx, 35, 22);
-    if (zr_button_text_image(ctx, (toggle1) ? img->checked: img->unchecked,
+    if (zr_button_image_label(ctx, (toggle1) ? img->checked: img->unchecked,
         "Toggle", ZR_TEXT_LEFT, ZR_BUTTON_DEFAULT)) toggle1 = !toggle1;
 
     ui_widget(ctx, 35, 22);
-    if (zr_button_text_image(ctx, (toggle2) ? img->checked: img->unchecked,
+    if (zr_button_image_label(ctx, (toggle2) ? img->checked: img->unchecked,
         "Toggle", ZR_TEXT_LEFT, ZR_BUTTON_DEFAULT)) toggle2 = !toggle2;
 
     /*------------------------------------------------
@@ -1825,13 +1481,13 @@ button_demo(struct zr_context *ctx, struct icons *img)
      *------------------------------------------------*/
     ui_header(ctx, "Radio buttons");
     ui_widget(ctx, 35, 22);
-    if (zr_button_text_symbol(ctx, (option == 0)?ZR_SYMBOL_CIRCLE_FILLED:ZR_SYMBOL_CIRCLE,
+    if (zr_button_symbol_label(ctx, (option == 0)?ZR_SYMBOL_CIRCLE_FILLED:ZR_SYMBOL_CIRCLE,
             "Select", ZR_TEXT_LEFT, ZR_BUTTON_DEFAULT)) option = 0;
     ui_widget(ctx, 35, 22);
-    if (zr_button_text_symbol(ctx, (option == 1)?ZR_SYMBOL_CIRCLE_FILLED:ZR_SYMBOL_CIRCLE,
+    if (zr_button_symbol_label(ctx, (option == 1)?ZR_SYMBOL_CIRCLE_FILLED:ZR_SYMBOL_CIRCLE,
             "Select", ZR_TEXT_LEFT, ZR_BUTTON_DEFAULT)) option = 1;
     ui_widget(ctx, 35, 22);
-    if (zr_button_text_symbol(ctx, (option == 2)?ZR_SYMBOL_CIRCLE_FILLED:ZR_SYMBOL_CIRCLE,
+    if (zr_button_symbol_label(ctx, (option == 2)?ZR_SYMBOL_CIRCLE_FILLED:ZR_SYMBOL_CIRCLE,
             "Select", ZR_TEXT_LEFT, ZR_BUTTON_DEFAULT)) option = 2;
 
     /*------------------------------------------------
@@ -1840,13 +1496,13 @@ button_demo(struct zr_context *ctx, struct icons *img)
     if (zr_contextual_begin(ctx, &menu, ZR_WINDOW_NO_SCROLLBAR, zr_vec2(120, 200), zr_window_get_bounds(ctx))) {
         ctx->style.font.height = 18;
         zr_layout_row_dynamic(ctx, 25, 1);
-        if (zr_contextual_item_icon(ctx, img->copy, "Clone", ZR_TEXT_RIGHT))
+        if (zr_contextual_item_image_label(ctx, img->copy, "Clone", ZR_TEXT_RIGHT))
             fprintf(stdout, "pressed clone!\n");
-        if (zr_contextual_item_icon(ctx, img->del, "Delete", ZR_TEXT_RIGHT))
+        if (zr_contextual_item_image_label(ctx, img->del, "Delete", ZR_TEXT_RIGHT))
             fprintf(stdout, "pressed delete!\n");
-        if (zr_contextual_item_icon(ctx, img->convert, "Convert", ZR_TEXT_RIGHT))
+        if (zr_contextual_item_image_label(ctx, img->convert, "Convert", ZR_TEXT_RIGHT))
             fprintf(stdout, "pressed convert!\n");
-        if (zr_contextual_item_icon(ctx, img->edit, "Edit", ZR_TEXT_RIGHT))
+        if (zr_contextual_item_image_label(ctx, img->edit, "Edit", ZR_TEXT_RIGHT))
             fprintf(stdout, "pressed edit!\n");
         zr_contextual_end(ctx);
     }
@@ -1872,6 +1528,7 @@ basic_demo(struct zr_context *ctx, struct icons *img)
     static int selected_icon = 0;
     static const char *items[] = {"Item 0","item 1","item 2"};
     static int piemenu_active = 0;
+    static struct zr_vec2 piemenu_pos;
 
     int i = 0;
     struct zr_panel layout;
@@ -1885,7 +1542,7 @@ basic_demo(struct zr_context *ctx, struct icons *img)
      *------------------------------------------------*/
     ui_header(ctx, "Popup & Scrollbar & Images");
     ui_widget(ctx, 35, 22);
-    if (zr_button_text_image(ctx, img->dir,
+    if (zr_button_image_label(ctx, img->dir,
         "Images", ZR_TEXT_CENTERED, ZR_BUTTON_DEFAULT))
         image_active = !image_active;
 
@@ -1918,19 +1575,19 @@ basic_demo(struct zr_context *ctx, struct icons *img)
      *------------------------------------------------*/
     ui_header(ctx, "Combo box");
     ui_widget(ctx, 40, 22);
-    if (zr_combo_begin_text(ctx, &combo, items[selected_item], 200)) {
+    if (zr_combo_begin_label(ctx, &combo, items[selected_item], 200)) {
         zr_layout_row_dynamic(ctx, 35, 1);
         for (i = 0; i < 3; ++i)
-            if (zr_combo_item(ctx, items[i], ZR_TEXT_LEFT))
+            if (zr_combo_item_label(ctx, items[i], ZR_TEXT_LEFT))
                 selected_item = i;
         zr_combo_end(ctx);
     }
 
     ui_widget(ctx, 40, 22);
-    if (zr_combo_begin_icon(ctx, &combo, items[selected_icon], img->images[selected_icon], 200)) {
+    if (zr_combo_begin_image_label(ctx, &combo, items[selected_icon], img->images[selected_icon], 200)) {
         zr_layout_row_dynamic(ctx, 35, 1);
         for (i = 0; i < 3; ++i)
-            if (zr_combo_item_icon(ctx, img->images[i], items[i], ZR_TEXT_RIGHT))
+            if (zr_combo_item_image_label(ctx, img->images[i], items[i], ZR_TEXT_RIGHT))
                 selected_icon = i;
         zr_combo_end(ctx);
     }
@@ -1940,9 +1597,9 @@ basic_demo(struct zr_context *ctx, struct icons *img)
      *------------------------------------------------*/
     ui_header(ctx, "Checkbox");
     ui_widget(ctx, 30, 22);
-    zr_checkbox(ctx, "Flag 1", &check0);
+    zr_checkbox_label(ctx, "Flag 1", &check0);
     ui_widget(ctx, 30, 22);
-    zr_checkbox(ctx, "Flag 2", &check1);
+    zr_checkbox_label(ctx, "Flag 2", &check1);
 
     /*------------------------------------------------
      *                  PROGRESSBAR
@@ -1961,12 +1618,14 @@ basic_demo(struct zr_context *ctx, struct icons *img)
     /*------------------------------------------------
      *                  PIEMENU
      *------------------------------------------------*/
-    if (zr_input_is_mouse_down(&ctx->input, ZR_BUTTON_RIGHT) &&
-        zr_input_is_mouse_hovering_rect(&ctx->input, layout.bounds))
+    if (zr_input_is_mouse_click_down_in_rect(&ctx->input, ZR_BUTTON_RIGHT,
+        layout.bounds,zr_true)){
+        piemenu_pos = ctx->input.mouse.pos;
         piemenu_active = 1;
+    }
 
     if (piemenu_active) {
-        int ret = ui_piemenu(ctx, zr_vec2(WINDOW_WIDTH/2-140, WINDOW_HEIGHT/2-140), 140, &img->menu[0], 6);
+        int ret = ui_piemenu(ctx, piemenu_pos, 140, &img->menu[0], 6);
         if (ret != -1) {
             fprintf(stdout, "piemenu selected: %d\n", ret);
             piemenu_active = 0;
@@ -2303,11 +1962,10 @@ file_browser_run(struct file_browser *browser, struct zr_context *ctx)
             char *d = browser->directory;
             char *begin = d + 1;
             zr_layout_row_dynamic(ctx, 25, 6);
-            zr_push_property(ctx, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 0));
             while (*d++) {
                 if (*d == '/') {
                     *d = '\0';
-                    if (zr_button_text(ctx, begin, ZR_BUTTON_DEFAULT)) {
+                    if (zr_button_label(ctx, begin, ZR_BUTTON_DEFAULT)) {
                         *d++ = '/'; *d = '\0';
                         file_browser_reload_directory_content(browser, browser->directory);
                         break;
@@ -2316,7 +1974,6 @@ file_browser_run(struct file_browser *browser, struct zr_context *ctx)
                     begin = d + 1;
                 }
             }
-            zr_pop_property(ctx);
         }
         zr_menubar_end(ctx);
 
@@ -2330,14 +1987,12 @@ file_browser_run(struct file_browser *browser, struct zr_context *ctx)
             struct zr_image computer = icons->computer;
 
             zr_layout_row_dynamic(ctx, 40, 1);
-            zr_push_property(ctx, ZR_PROPERTY_ITEM_SPACING, zr_vec2(0, 0));
-            if (zr_button_text_image(ctx, home, "home", ZR_TEXT_CENTERED, ZR_BUTTON_DEFAULT))
+            if (zr_button_image_label(ctx, home, "home", ZR_TEXT_CENTERED, ZR_BUTTON_DEFAULT))
                 file_browser_reload_directory_content(browser, browser->home);
-            if (zr_button_text_image(ctx,desktop,"desktop",ZR_TEXT_CENTERED, ZR_BUTTON_DEFAULT))
+            if (zr_button_image_label(ctx,desktop,"desktop",ZR_TEXT_CENTERED, ZR_BUTTON_DEFAULT))
                 file_browser_reload_directory_content(browser, browser->desktop);
-            if (zr_button_text_image(ctx,computer,"computer",ZR_TEXT_CENTERED,ZR_BUTTON_DEFAULT))
+            if (zr_button_image_label(ctx,computer,"computer",ZR_TEXT_CENTERED,ZR_BUTTON_DEFAULT))
                 file_browser_reload_directory_content(browser, "/");
-            zr_pop_property(ctx);
             zr_group_end(ctx);
         }
 
@@ -2568,9 +2223,9 @@ node_editor_demo(struct zr_context *ctx, struct node_editor *nodedit)
                 const float grid_size = 32.0f;
                 const struct zr_color grid_color = zr_rgb(50, 50, 50);
                 for (x = (float)fmod(size.x - nodedit->scrolling.x, grid_size); x < size.w; x += grid_size)
-                    zr_draw_line(canvas, x+size.x, size.y, x+size.x, size.y+size.h, grid_color);
+                    zr_stroke_line(canvas, x+size.x, size.y, x+size.x, size.y+size.h, 1.0f, grid_color);
                 for (y = (float)fmod(size.y - nodedit->scrolling.y, grid_size); y < size.h; y += grid_size)
-                    zr_draw_line(canvas, size.x, y+size.y, size.x+size.w, y+size.y, grid_color);
+                    zr_stroke_line(canvas, size.x, y+size.y, size.x+size.w, y+size.y, 1.0f, grid_color);
             }
 
             /* execute each node as a moveable group */
@@ -2617,7 +2272,7 @@ node_editor_demo(struct zr_context *ctx, struct node_editor *nodedit)
                         circle.x = node.bounds.x + node.bounds.w-4;
                         circle.y = node.bounds.y + space * (float)(n+1);
                         circle.w = 8; circle.h = 8;
-                        zr_draw_circle(canvas, ZR_FILLED, circle, zr_rgb(100, 100, 100));
+                        zr_fill_circle(canvas, circle, zr_rgb(100, 100, 100));
 
                         /* start linking process */
                         if (zr_input_has_mouse_click_down_in_rect(in, ZR_BUTTON_LEFT, circle, zr_true)) {
@@ -2632,8 +2287,8 @@ node_editor_demo(struct zr_context *ctx, struct node_editor *nodedit)
                             nodedit->linking.input_slot == n) {
                             struct zr_vec2 l0 = zr_vec2(circle.x + 3, circle.y + 3);
                             struct zr_vec2 l1 = in->mouse.pos;
-                            zr_draw_curve(canvas, l0.x, l0.y, l0.x + 50.0f, l0.y,
-                                l1.x - 50.0f, l1.y, l1.x, l1.y, zr_rgb(100, 100, 100));
+                            zr_stroke_curve(canvas, l0.x, l0.y, l0.x + 50.0f, l0.y,
+                                l1.x - 50.0f, l1.y, l1.x, l1.y, 1.0f, zr_rgb(100, 100, 100));
                         }
                     }
 
@@ -2644,7 +2299,7 @@ node_editor_demo(struct zr_context *ctx, struct node_editor *nodedit)
                         circle.x = node.bounds.x-4;
                         circle.y = node.bounds.y + space * (float)(n+1);
                         circle.w = 8; circle.h = 8;
-                        zr_draw_circle(canvas, ZR_FILLED, circle, zr_rgb(100, 100, 100));
+                        zr_fill_circle(canvas, circle, zr_rgb(100, 100, 100));
                         if (zr_input_is_mouse_released(in, ZR_BUTTON_LEFT) &&
                             zr_input_is_mouse_hovering_rect(in, circle) &&
                             nodedit->linking.active && nodedit->linking.node != it) {
@@ -2680,8 +2335,8 @@ node_editor_demo(struct zr_context *ctx, struct node_editor *nodedit)
                 l0.y -= nodedit->scrolling.y;
                 l1.x -= nodedit->scrolling.x;
                 l1.y -= nodedit->scrolling.y;
-                zr_draw_curve(canvas, l0.x, l0.y, l0.x + 50.0f, l0.y,
-                    l1.x - 50.0f, l1.y, l1.x, l1.y, zr_rgb(100, 100, 100));
+                zr_stroke_curve(canvas, l0.x, l0.y, l0.x + 50.0f, l0.y,
+                    l1.x - 50.0f, l1.y, l1.x, l1.y, 1.0f, zr_rgb(100, 100, 100));
             }
 
             if (updated) {
@@ -2709,10 +2364,10 @@ node_editor_demo(struct zr_context *ctx, struct node_editor *nodedit)
             if (zr_contextual_begin(ctx, &menu, 0, zr_vec2(100, 220), zr_window_get_bounds(ctx))) {
                 const char *grid_option[] = {"Show Grid", "Hide Grid"};
                 zr_layout_row_dynamic(ctx, 25, 1);
-                if (zr_contextual_item(ctx, "New", ZR_TEXT_CENTERED))
+                if (zr_contextual_item_label(ctx, "New", ZR_TEXT_CENTERED))
                     node_editor_add(nodedit, "New", zr_rect(400, 260, 180, 220),
                             zr_rgb(255, 255, 255), 1, 2);
-                if (zr_contextual_item(ctx, grid_option[nodedit->show_grid],ZR_TEXT_CENTERED))
+                if (zr_contextual_item_label(ctx, grid_option[nodedit->show_grid],ZR_TEXT_CENTERED))
                     nodedit->show_grid = !nodedit->show_grid;
                 zr_contextual_end(ctx);
             }
@@ -2745,6 +2400,67 @@ node_editor_init(struct node_editor *editor)
 
 /* ===============================================================
  *
+ *                          CONTROL WINDOW
+ *
+ * ===============================================================*/
+static int
+control_window(struct zr_context *ctx, struct demo *gui)
+{
+    struct zr_panel layout;
+    if (zr_begin(ctx, &layout, "Control", zr_rect(0, 0, 350, 520),
+        ZR_WINDOW_CLOSABLE|ZR_WINDOW_MINIMIZABLE|ZR_WINDOW_MOVABLE|
+        ZR_WINDOW_SCALABLE|ZR_WINDOW_BORDER))
+    {
+        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Windows", ZR_MINIMIZED)) {
+            zr_layout_row_dynamic(ctx, 25, 2);
+            gui->show_simple = !zr_window_is_closed(ctx, "Show");
+            gui->show_node = !zr_window_is_closed(ctx, "Node Editor");
+            gui->show_demo = !zr_window_is_closed(ctx, "Demo");
+#ifndef DEMO_DO_NOT_DRAW_IMAGES
+            gui->show_filex = !zr_window_is_closed(ctx, "File Browser");
+            gui->show_grid = !zr_window_is_closed(ctx, "Grid Demo");
+            gui->show_basic = !zr_window_is_closed(ctx, "Basic Demo");
+            gui->show_button = !zr_window_is_closed(ctx, "Button Demo");
+#endif
+
+            if (zr_checkbox_label(ctx, "Show", &gui->show_simple) && !gui->show_simple)
+                zr_window_close(ctx, "Show");
+            if (zr_checkbox_label(ctx, "Demo", &gui->show_demo) && !gui->show_demo)
+                zr_window_close(ctx, "Demo");
+            if (zr_checkbox_label(ctx, "Node Editor", &gui->show_node) && !gui->show_node)
+                zr_window_close(ctx, "Node Editor");
+#ifndef DEMO_DO_NOT_DRAW_IMAGES
+            if (zr_checkbox_label(ctx, "Grid", &gui->show_grid) && !gui->show_grid)
+                zr_window_close(ctx, "Grid Demo");
+            if (zr_checkbox_label(ctx, "Basic", &gui->show_basic) && !gui->show_basic)
+                zr_window_close(ctx, "Basic Demo");
+            if (zr_checkbox_label(ctx, "Button", &gui->show_button) && !gui->show_button)
+                zr_window_close(ctx, "Button Demo");
+            if (zr_checkbox_label(ctx, "Filex", &gui->show_filex) && !gui->show_filex)
+                zr_window_close(ctx, "File Browser");
+#endif
+            zr_layout_pop(ctx);
+        }
+        if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Metrics", ZR_MINIMIZED)) {
+            zr_layout_row_dynamic(ctx, 20, 2);
+            zr_label(ctx,"Total:", ZR_TEXT_LEFT);
+            zr_labelf(ctx, ZR_TEXT_LEFT, "%lu", gui->status.size);
+            zr_label(ctx,"Used:", ZR_TEXT_LEFT);
+            zr_labelf(ctx, ZR_TEXT_LEFT, "%lu", gui->status.allocated);
+            zr_label(ctx,"Required:", ZR_TEXT_LEFT);
+            zr_labelf(ctx, ZR_TEXT_LEFT, "%lu", gui->status.needed);
+            zr_label(ctx,"Calls:", ZR_TEXT_LEFT);
+            zr_labelf(ctx, ZR_TEXT_LEFT, "%lu", gui->status.calls);
+            zr_layout_pop(ctx);
+        }
+    }
+    zr_end(ctx);
+    return !zr_window_is_closed(ctx, "Control");
+}
+
+
+/* ===============================================================
+ *
  *                          DEMO ENTRY
  *
  * ===============================================================*/
@@ -2756,8 +2472,10 @@ run_demo(struct demo *gui)
     static struct node_editor nodedit;
     static struct file_browser filex;
     struct zr_context *ctx = &gui->ctx;
+    struct zr_style *style = &ctx->style;
 
     if (!init) {
+        init = 1;
         gui->show_demo = 0;
         gui->show_node = 0;
         gui->show_simple = 0;
@@ -2773,9 +2491,86 @@ run_demo(struct demo *gui)
         file_browser_init(&filex, &gui->icons);
 #endif
 #endif
-        init = 1;
+
+#if 0
+        style->text.color = zr_rgb(255,255,255);
+        style->text.padding = zr_vec2(0,0);
+
+        style->option.normal = zr_style_item_image(gui->icons.option);
+        style->option.hover = zr_style_item_image(gui->icons.option);
+        style->option.active = zr_style_item_image(gui->icons.option);
+        style->option.cursor_normal = zr_style_item_image(gui->icons.dot);
+        style->option.cursor_hover = zr_style_item_image(gui->icons.dot);
+        style->option.text_background = zr_rgba(0,0,0,0);
+        style->option.text_normal     = zr_rgb(18,34,39);
+        style->option.text_hover      = zr_rgb(18,34,39);
+        style->option.text_active     = zr_rgb(18,34,39);
+
+        style->checkbox.normal = zr_style_item_image(gui->icons.checkbox);
+        style->checkbox.hover = zr_style_item_image(gui->icons.checkbox);
+        style->checkbox.active = zr_style_item_image(gui->icons.checkbox);
+        style->checkbox.cursor_normal = zr_style_item_image(gui->icons.check);
+        style->checkbox.cursor_hover = zr_style_item_image(gui->icons.check);
+        style->checkbox.text_background = zr_rgba(0,0,0,0);
+        style->checkbox.text_normal     = zr_rgb(255,255,255);
+        style->checkbox.text_hover      = zr_rgb(255,255,255);
+        style->checkbox.text_active     = zr_rgb(255,255,255);
+
+        style->progress.normal  = zr_style_item_image(gui->icons.progress);
+        style->progress.hover   = zr_style_item_image(gui->icons.progress);
+        style->progress.active  = zr_style_item_image(gui->icons.progress);
+        style->progress.cursor_normal = zr_style_item_image(gui->icons.bar);
+        style->progress.cursor_hover  = zr_style_item_image(gui->icons.bar);
+        style->progress.cursor_active = zr_style_item_image(gui->icons.bar);
+        style->progress.padding = zr_vec2(10,10);
+
+        /* slider */
+        style->slider.normal          = zr_style_item_image(gui->icons.slider);
+        style->slider.hover           = zr_style_item_image(gui->icons.slider);
+        style->slider.active          = zr_style_item_image(gui->icons.slider);
+        style->slider.bar_normal      = zr_rgba(0,0,0,0);
+        style->slider.bar_hover       = zr_rgba(0,0,0,0);
+        style->slider.bar_active      = zr_rgba(0,0,0,0);
+        style->slider.bar_filled      = zr_rgba(0,0,0,0);
+        style->slider.cursor_normal   = zr_style_item_image(gui->icons.cursor);
+        style->slider.cursor_hover    = zr_style_item_image(gui->icons.cursor);
+        style->slider.cursor_active   = zr_style_item_image(gui->icons.cursor);;
+        style->slider.inc_symbol      = ZR_SYMBOL_NONE;
+        style->slider.dec_symbol      = ZR_SYMBOL_NONE;
+        style->slider.cursor_size     = zr_vec2(30,30);
+        style->slider.spacing        = zr_vec2(16, 0);
+        style->slider.show_buttons    = zr_true;
+        style->slider.bar_height      = 0;
+
+        /* slider buttons */
+        style->slider.inc_button.normal = zr_style_item_image(gui->icons.right);
+        style->slider.inc_button.hover  = zr_style_item_image(gui->icons.right);
+        style->slider.inc_button.active = zr_style_item_image(gui->icons.right);
+        style->slider.inc_button.padding = zr_vec2(0.0f,0.0f);
+
+        style->slider.dec_button.normal = zr_style_item_image(gui->icons.left);
+        style->slider.dec_button.hover  = zr_style_item_image(gui->icons.left);
+        style->slider.dec_button.active = zr_style_item_image(gui->icons.left);
+        style->slider.dec_button.padding = zr_vec2(0.0f,0.0f);
+
+        /* window */
+        style->window.header.normal = zr_style_item_image(gui->icons.header);
+        style->window.header.hover = zr_style_item_image(gui->icons.header);
+        style->window.header.active = zr_style_item_image(gui->icons.header);
+        style->window.header.label_normal = zr_rgb(73,40,17);
+        style->window.header.label_hover = zr_rgb(73,40,17);
+        style->window.header.label_active = zr_rgb(73,40,17);
+        style->window.header.label_padding = zr_vec2(4,8);
+        style->window.header.padding = zr_vec2(60,10);
+
+        style->window.background = zr_rgb(18,39,34);
+        style->window.fixed_background = zr_style_item_image(gui->icons.window);
+        style->window.border_color = zr_rgba(104,120,115,255);
+        style->window.padding = zr_vec2(16,8);
+#endif
     }
 
+    ctx->style.font.height = 14;
     ret = control_window(ctx, gui);
     if (gui->show_demo)
         demo_window(gui, ctx);
