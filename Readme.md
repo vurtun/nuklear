@@ -46,6 +46,7 @@ draw the GUI.
 ![screen](https://cloud.githubusercontent.com/assets/8057201/13538240/acd96876-e249-11e5-9547-5ac0b19667a0.png)
 ![screen2](https://cloud.githubusercontent.com/assets/8057201/13538243/b04acd4c-e249-11e5-8fd2-ad7744a5b446.png)
 ![node](https://cloud.githubusercontent.com/assets/8057201/9976995/e81ac04a-5ef7-11e5-872b-acd54fbeee03.gif)
+![skinning](https://cloud.githubusercontent.com/assets/8057201/14061224/40de34c4-f37b-11e5-9cc6-dd00edbf60c9.png)
 
 ## Example
 ```c
