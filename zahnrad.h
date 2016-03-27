@@ -1680,16 +1680,6 @@ struct zr_edit_state {
     int active, prev;
 };
 
-struct zr_combo_filter_state {
-    zr_hash name;
-    char filter[ZR_MAX_COMBO_EDIT_BUFFER];
-    zr_size length;
-    zr_size cursor;
-    unsigned int seq;
-    unsigned int old;
-    int active, prev;
-};
-
 struct zr_property_state {
     int active, prev;
     char buffer[ZR_MAX_NUMBER_BUFFER];
@@ -1979,8 +1969,16 @@ int zr_button_image_text(struct zr_context*, struct zr_image img, const char*,
 /* checkbox */
 int zr_check_label(struct zr_context*, const char*, int active);
 int zr_check_text(struct zr_context*, const char*, zr_size,int active);
+unsigned int zr_check_flag_label(struct zr_context*, const char*,
+                            unsigned int flags, unsigned int value);
+unsigned int zr_check_flag_text(struct zr_context*, const char*, zr_size,
+                            unsigned int flags, unsigned int value);
 int zr_checkbox_label(struct zr_context*, const char*, int *active);
 int zr_checkbox_text(struct zr_context*, const char*, zr_size, int *active);
+int zr_checkbox_flag_label(struct zr_context*, const char*,
+                            unsigned int *flags, unsigned int value);
+int zr_checkbox_flag_text(struct zr_context*, const char*, zr_size,
+                            unsigned int *flags, unsigned int value);
 
 /* radio button */
 int zr_radio_label(struct zr_context*, const char*, int *active);

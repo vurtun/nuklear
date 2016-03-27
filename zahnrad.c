@@ -4929,7 +4929,7 @@ zr_do_button(zr_flags *state, struct zr_command_buffer *out, struct zr_rect r,
     content->w = r.w - 2 * style->padding.x;
     content->h = r.h - 2 * style->padding.y;
 
-    /* execute and draw button */
+    /* execute button behavior */
     bounds.x = r.x - style->touch_padding.x;
     bounds.y = r.y - style->touch_padding.y;
     bounds.w = r.w + 2 * style->touch_padding.x;
@@ -10224,6 +10224,21 @@ zr_check_text(struct zr_context *ctx, const char *text, zr_size len, int active)
     return active;
 }
 
+unsigned int
+zr_check_flag_text(struct zr_context *ctx, const char *text, zr_size len,
+    unsigned int flags, unsigned int value)
+{
+    int old_active, active;
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(text);
+    if (!ctx || !text) return flags;
+    old_active = active = (int)(flags & value);
+    if (zr_check_text(ctx, text, len, old_active))
+        flags |= value;
+    else flags &= ~value;
+    return flags;
+}
+
 int
 zr_checkbox_text(struct zr_context *ctx, const char *text, zr_size len, int *active)
 {
@@ -10237,11 +10252,37 @@ zr_checkbox_text(struct zr_context *ctx, const char *text, zr_size len, int *act
     return old_val != *active;
 }
 
+int
+zr_checkbox_flag_text(struct zr_context *ctx, const char *text, zr_size len,
+    unsigned int *flags, unsigned int value)
+{
+    int active;
+    ZR_ASSERT(ctx);
+    ZR_ASSERT(text);
+    ZR_ASSERT(flags);
+    if (!ctx || !text || !flags) return 0;
+    active = (int)(*flags & value);
+    if (zr_checkbox_text(ctx, text, len, &active)) {
+        if (active) *flags |= value;
+        else *flags &= ~value;
+        return 1;
+    }
+    return 0;
+}
+
 int zr_check_label(struct zr_context *ctx, const char *label, int active)
 {return zr_check_text(ctx, label, zr_strsiz(label), active);}
 
+unsigned int zr_check_flag_label(struct zr_context *ctx, const char *label,
+    unsigned int flags, unsigned int value)
+{return zr_check_flag_text(ctx, label, zr_strsiz(label), flags, value);}
+
 int zr_checkbox_label(struct zr_context *ctx, const char *label, int *active)
 {return zr_checkbox_text(ctx, label, zr_strsiz(label), active);}
+
+int zr_checkbox_flag_label(struct zr_context *ctx, const char *label,
+    unsigned int *flags, unsigned int value)
+{return zr_checkbox_flag_text(ctx, label, zr_strsiz(label), flags, value);}
 
 /*----------------------------------------------------------------
  *                          OPTION
