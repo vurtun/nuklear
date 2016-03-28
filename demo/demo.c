@@ -54,20 +54,6 @@ struct icons {
     struct zr_image font_file;
     struct zr_image img_file;
     struct zr_image movie_file;
-
-    /* theme */
-    struct zr_image bar;
-    struct zr_image check;
-    struct zr_image checkbox;
-    struct zr_image cursor;
-    struct zr_image dot;
-    struct zr_image header;
-    struct zr_image left;
-    struct zr_image option;
-    struct zr_image progress;
-    struct zr_image right;
-    struct zr_image slider;
-    struct zr_image window;
 };
 
 enum theme {THEME_BLACK, THEME_WHITE, THEME_RED, THEME_BLUE, THEME_DARK};
@@ -200,7 +186,7 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                             "Windows", ZR_TEXT_LEFT, ZR_BUTTON_DEFAULT))
                         menu_state = MENU_WINDOWS;
                 } else {
-                    if (zr_selectable_label(ctx, "Show", ZR_TEXT_LEFT, &gui->show_simple) && !gui->show_simple)
+                    if (zr_selectable_label(ctx, "Simple", ZR_TEXT_LEFT, &gui->show_simple) && !gui->show_simple)
                         zr_window_close(ctx, "Show");
                     if (zr_selectable_label(ctx, "Node Editor", ZR_TEXT_LEFT, &gui->show_node) && !gui->show_node)
                         zr_window_close(ctx, "Node Editor");
@@ -567,7 +553,8 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                     /* date combobox */
                     zr_layout_row_static(ctx, 25, 350, 1);
                     sprintf(buffer, "%02d-%02d-%02d", sel_date.tm_mday, sel_date.tm_mon+1, sel_date.tm_year+1900);
-                    if (zr_combo_begin_label(ctx, &combo, buffer, 400)) {
+                    if (zr_combo_begin_label(ctx, &combo, buffer, 400))
+                    {
                         int i = 0;
                         const char *month[] = {"January", "February", "March", "Apil", "May", "June", "July", "August", "September", "Ocotober", "November", "December"};
                         const char *week_days[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
@@ -600,7 +587,7 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                         }
                         zr_layout_row_end(ctx);
 
-                        /* good old week day formula (have to use double because precision) */
+                        /* good old week day formula (double because precision) */
                         {int year_n = (sel_date.tm_mon < 2) ? year-1: year;
                         int y = year_n % 100;
                         int c = year_n / 100;
@@ -1247,6 +1234,11 @@ ui_piemenu(struct zr_context *ctx, struct zr_vec2 pos, float radius,
     int active_item = 0;
 
     /* pie menu popup */
+    struct zr_color border = ctx->style.window.border_color;
+    struct zr_style_item background = ctx->style.window.fixed_background;
+    ctx->style.window.fixed_background = zr_style_item_hide();
+    ctx->style.window.border_color = zr_rgba(0,0,0,0);
+
     total_space  = zr_window_get_content_region(ctx);
     zr_popup_begin(ctx, &popup,  ZR_POPUP_STATIC, "piemenu", ZR_WINDOW_NO_SCROLLBAR,
         zr_rect(pos.x - total_space.x - radius, pos.y - radius - total_space.y,
@@ -1320,6 +1312,9 @@ ui_piemenu(struct zr_context *ctx, struct zr_vec2 pos, float radius,
     }
     zr_layout_space_end(ctx);
     zr_popup_end(ctx);
+
+    ctx->style.window.fixed_background = background;
+    ctx->style.window.border_color = border;
 
     if (!zr_input_is_mouse_down(&ctx->input, ZR_BUTTON_RIGHT))
         return active_item;
@@ -1521,7 +1516,6 @@ basic_demo(struct zr_context *ctx, struct icons *img)
     static int image_active;
     static int check0 = 1;
     static int check1 = 0;
-    static int slider = 30;
     static size_t prog = 80;
     static int selected_item = 0;
     static int selected_image = 3;
@@ -1607,13 +1601,6 @@ basic_demo(struct zr_context *ctx, struct icons *img)
     ui_header(ctx, "Progressbar");
     ui_widget(ctx, 35, 22);
     zr_progress(ctx, &prog, 100, zr_true);
-
-    /*------------------------------------------------
-     *                  SLIDER
-     *------------------------------------------------*/
-    ui_header(ctx, "Slider");
-    ui_widget(ctx, 35, 22);
-    zr_slider_int(ctx, 0, &slider, 100, 10);
 
     /*------------------------------------------------
      *                  PIEMENU
@@ -1955,8 +1942,10 @@ file_browser_run(struct file_browser *browser, struct zr_context *ctx)
     {
         struct zr_panel sub;
         static float ratio[] = {0.25f, ZR_UNDEFINED};
+        float spacing_x = ctx->style.window.spacing.x;
 
         /* output path directory selector in the menubar */
+        ctx->style.window.spacing.x = 0;
         zr_menubar_begin(ctx);
         {
             char *d = browser->directory;
@@ -1976,6 +1965,7 @@ file_browser_run(struct file_browser *browser, struct zr_context *ctx)
             }
         }
         zr_menubar_end(ctx);
+        ctx->style.window.spacing.x = spacing_x;
 
         /* window layout */
         total_space = zr_window_get_content_region(ctx);
@@ -2198,11 +2188,11 @@ node_editor_demo(struct zr_context *ctx, struct node_editor *nodedit)
      * example use a simple color modifier as content you could change them
      * to have your custom content depending on the node time.
      * Biggest difference to most usual implementation is that this example does
-     * not has connectors on the right position of the proprety that it links.
+     * not has connectors on the right position of the property that it links.
      * This is mainly done out of lazyness and could be implemented as well but
      * requires calculating the position of all rows and add connectors.
      * In addition adding and removing nodes is quite limited at the
-     * moment since it is based on a simple array. If this is to be converted
+     * moment since it is based on a simple fixed array. If this is to be converted
      * into something more serious it is probably best to extend it.*/
 
     if (zr_begin(ctx, &layout, "Node Editor", zr_rect(50, 50, 650, 650),
