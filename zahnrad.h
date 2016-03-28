@@ -1705,7 +1705,6 @@ struct zr_window {
     struct zr_property_state property;
     struct zr_popup_state popup;
     struct zr_edit_state edit;
-    struct zr_combo_filter_state combo;
 
     struct zr_table *tables;
     unsigned short table_count;
