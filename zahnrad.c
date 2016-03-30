@@ -2532,6 +2532,8 @@ zr_canvas_add_clip(struct zr_canvas *list, struct zr_rect rect)
         zr_canvas_push_command(list, rect, list->null.texture);
     } else {
         struct zr_draw_command *prev = zr_canvas_command_last(list);
+        if (prev->elem_count == 0)
+            prev->clip_rect = rect;
         zr_canvas_push_command(list, rect, prev->texture);
     }
 }
@@ -2545,7 +2547,9 @@ zr_canvas_push_image(struct zr_canvas *list, zr_handle texture)
         zr_canvas_push_command(list, zr_null_rect, list->null.texture);
     } else {
         struct zr_draw_command *prev = zr_canvas_command_last(list);
-        if (prev->texture.id != texture.id)
+        if (prev->elem_count == 0)
+            prev->texture = texture;
+        else if (prev->texture.id != texture.id)
             zr_canvas_push_command(list, prev->clip_rect, texture);
     }
 }
@@ -2563,7 +2567,9 @@ zr_canvas_push_userdata(struct zr_canvas *list, zr_handle userdata)
         prev->userdata = userdata;
     } else {
         struct zr_draw_command *prev = zr_canvas_command_last(list);
-        if (prev->userdata.ptr != userdata.ptr) {
+        if (prev->elem_count == 0) {
+            prev->userdata = userdata;
+        } else if (prev->userdata.ptr != userdata.ptr) {
             zr_canvas_push_command(list, prev->clip_rect, prev->texture);
             prev = zr_canvas_command_last(list);
             prev->userdata = userdata;
@@ -9415,19 +9421,19 @@ zr_panel_begin(struct zr_context *ctx, const char *title)
         header.y = layout->bounds.y;
         header.w = layout->bounds.w;
 
-        /* set correct header/first row height */
+        /* calculate correct header height */
         layout->header_h = font->height + 2.0f * style->window.header.padding.y;
         layout->header_h += 2.0f * style->window.header.label_padding.y;
-        layout->row.height += layout->header_h;
+        layout->row.height += layout->header_h + style->window.padding.y;
         header.h = layout->header_h + 0.5f;
 
         /* update window height */
         layout->height = layout->bounds.h - (header.h + 2 * item_spacing.y);
         layout->height -= layout->footer_h;
 
-        /* draw header background */
-        if (ctx->active == win) {
-            background = &style->window.header.normal;
+        /* select correct header background and text color */
+        if (ctx->active == win) {;
+            background = &style->window.header.active;
             text.text = style->window.header.label_active;
         } else if (zr_input_is_mouse_hovering_rect(&ctx->input, header)) {
             background = &style->window.header.hover;
@@ -9436,6 +9442,8 @@ zr_panel_begin(struct zr_context *ctx, const char *title)
             background = &style->window.header.normal;
             text.text = style->window.header.label_normal;
         }
+
+        /* draw header background */
         if (background->type == ZR_STYLE_ITEM_IMAGE) {
             text.background = zr_rgba(0,0,0,0);
             zr_draw_image(&win->buffer, header, &background->data.image);
