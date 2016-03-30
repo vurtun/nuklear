@@ -44,21 +44,32 @@ extern "C" {
 #define ZR_MAX_FONT_HEIGHT_STACK 32
 /* Number of temporary configuration font height changes that can be stored */
 #define ZR_MAX_NUMBER_BUFFER 64
-#define ZR_MAX_COMBO_EDIT_BUFFER 128
-#define ZR_MAX_EVENTS 32
+/* Buffer size for the conversion buffer between float and string */
+#define ZR_BUFFER_DEFAULT_INITIAL_SIZE (4*1024)
+/* Initial buffer size for buffer with default allocator */
 /*
  * ==============================================================
  *
- *                          DEFINES
+ *                          COMPILING FLAGS
  *
  * ===============================================================
  */
 #define ZR_COMPILE_WITH_FIXED_TYPES 1
 /* setting this define to 1 adds header <stdint.h> for fixed sized types
- * if 0 each type has to be set to the correct size*/
+ * if 0 each type has to be set to the correct size */
 #define ZR_COMPILE_WITH_ASSERT 1
 /* setting this define to 1 adds header <assert.h> for the assert macro
-  IMPORTANT: it also adds the standard library assert so only use it if wanted*/
+  IMPORTANT: it also adds the standard library assert so only use it if wanted */
+#define ZR_COMPILE_WITH_DEFAULT_ALLOCATOR 1
+/* setting this to 1 create a default allocator to be used for memory management
+ * everywhere inside this library. if 0 you either have to provide a fixed size
+ * memory block or a custom allocator.
+ * IMPORTANT: this adds <stdlib.h> with malloc and free so set 0 if you don't want
+ *              to link to the standard library!*/
+#define ZR_COMPILE_WITH_STANDARD_FILE_IO 1
+/* setting this to 1 create a default allocator to be used for memory management
+ * IMPORTANT: this adds <stdio.h> with fopen,fclose,... so set 0 if you don't want
+ *              to link to the standard library!*/
 #define ZR_COMPILE_WITH_VERTEX_BUFFER 1
 /* setting this to 1 adds a vertex draw command list backend to this
  library, which allows you to convert queue commands into vertex draw commands.
@@ -78,8 +89,14 @@ extern "C" {
 /* If you already provide the implementation for stb_truetype.h in one of your
  files you have to define this as 1 to prevent another implementation and the
  resulting symbol collision. */
+#define ZR_COMPILE_WITH_DEFAULT_FONT 1
+/* setting this to 1 adds a default font into this library which can be loaded
+ * into a font atlas and allows using this library without having a truetype font
+ * IMPORTANT: enableing this requires ~12kb global stack memory. */
 #define ZR_COMPILE_WITH_COMMAND_USERDATA 0
-/* Activating this adds a userdata pointer into each command */
+/* Activating this adds a userdata pointer into each command. Can be usefull if
+ * you want to provide custom shader depending on the used widget. Can be combined
+ * with the style structures. */
 /*
  * ===============================================================
  *
@@ -317,6 +334,9 @@ struct zr_buffer {
     /* current size of the buffer */
 };
 
+#if ZR_COMPILE_WITH_DEFAULT_ALLOCATOR
+void zr_buffer_init_default(struct zr_buffer*);
+#endif
 void zr_buffer_init(struct zr_buffer*, const struct zr_allocator*, zr_size size);
 void zr_buffer_init_fixed(struct zr_buffer*, void *memory, zr_size size);
 void zr_buffer_info(struct zr_memory_status*, struct zr_buffer*);
@@ -422,9 +442,13 @@ struct zr_baked_font {
 
 struct zr_font_config {
     void *ttf_blob;
-    /* pointer to loaded TTF file memory block */
+    /* pointer to loaded TTF file memory block.
+     * NOTE: not needed for zr_font_atlas_add_from_memory and zr_font_atlas_add_from_file. */
     zr_size ttf_size;
-    /* size of the loaded TTF file memory block */
+    /* size of the loaded TTF file memory block
+     * NOTE: not needed for zr_font_atlas_add_from_memory and zr_font_atlas_add_from_file. */
+    int ttf_data_owned_by_atlas;
+    /* used inside font atlas: default to: 0*/
     float size;
     /* baked pixel height of the font */
     unsigned int oversample_h, oversample_v;
@@ -438,7 +462,9 @@ struct zr_font_config {
     const zr_rune *range;
     /* list of unicode ranges (2 values per range, zero terminated) */
     struct zr_baked_font *font;
-    /* font to setup in the baking process  */
+    /* font to setup in the baking process: NOTE: not needed for font atlas */
+    zr_rune fallback_glyph;
+    /* fallback glyph to use if a given rune is not found */
 };
 
 struct zr_font_glyph {
@@ -449,6 +475,7 @@ struct zr_font_glyph {
 };
 
 struct zr_font {
+    struct zr_user_font handle;
     float size;
     float scale;
     float ascent, descent;
@@ -457,7 +484,34 @@ struct zr_font {
     zr_rune fallback_codepoint;
     zr_rune glyph_count;
     const zr_rune *ranges;
-    zr_handle atlas;
+    zr_handle texture;
+    int config;
+};
+
+enum zr_font_atlas_format {
+    ZR_FONT_ATLAS_ALPHA8,
+    ZR_FONT_ATLAS_RGBA32
+};
+
+struct zr_draw_null_texture {
+    zr_handle texture;
+    /* texture handle to a texture with a white pixel */
+    struct zr_vec2 uv;
+    /* coordinates to a white pixel in the texture  */
+};
+
+struct zr_font_atlas {
+    void *pixel;
+    int tex_width;
+    int tex_height;
+    struct zr_allocator alloc;
+    struct zr_recti custom;
+
+    int glyph_count;
+    struct zr_font_glyph *glyphes;
+    struct zr_font **fonts;
+    struct zr_font_config *config;
+    int font_num, font_cap;
 };
 
 /* some language glyph codepoint ranges */
@@ -466,7 +520,11 @@ const zr_rune *zr_font_chinese_glyph_ranges(void);
 const zr_rune *zr_font_cyrillic_glyph_ranges(void);
 const zr_rune *zr_font_korean_glyph_ranges(void);
 
-/* font baking functions (need to be called sequentially top to bottom) */
+/* Font baking (needs to be called sequentially top to bottom)
+ * --------------------------------------------------------------------
+ * This is a low level API to bake font glyphs into an image and is more
+ * complex than the atlas API but provides more control over the baking
+ * process with custom bake data and memory management. */
 void zr_font_bake_memory(zr_size *temporary_memory, int *glyph_count,
                             struct zr_font_config*, int count);
 int zr_font_bake_pack(zr_size *img_memory, int *img_width, int *img_height,
@@ -482,30 +540,66 @@ void zr_font_bake_custom_data(void *img_memory, int img_width, int img_height,
                             int tex_width, int tex_height,char white,char black);
 void zr_font_bake_convert(void *out_memory, int image_width, int image_height,
                             const void *in_memory);
+
+/* Font
+ * -----------------------------------------------------------------
+ * The font structure is just a simple container to hold the output of a baking
+ * process in the low level API and as output in the atlas font API.
+ * The actual font handle used inside the library only references the font
+ * which allows using custom user font handlers and can be generated by calling
+ * `zr_font_ref`. */
 void zr_font_init(struct zr_font*, float pixel_height, zr_rune fallback_codepoint,
                     struct zr_font_glyph*, const struct zr_baked_font*,
                     zr_handle atlas);
-struct zr_user_font zr_font_ref(struct zr_font*);
 const struct zr_font_glyph* zr_font_find_glyph(struct zr_font*, zr_rune unicode);
 
+/* Font Atlas
+ * ---------------------------------------------------------------
+ * This is the high level font baking and handling API to generate an image
+ * out of font glyphes used to draw text onto the screen. This API takes away
+ * some control over the baking process like fine grained memory control and
+ * custom baking data but provides additional functionality and easier to
+ * use and manage datastructures and functions. */
+#if ZR_COMPILE_WITH_DEFAULT_ALLOCATOR
+void zr_font_atlas_init_default(struct zr_font_atlas*);
+#endif
+void zr_font_atlas_init(struct zr_font_atlas*, struct zr_allocator*);
+void zr_font_atlas_begin(struct zr_font_atlas*);
+
+struct zr_font_config zr_font_config(float pixel_height);
+struct zr_font *zr_font_atlas_add(struct zr_font_atlas*, const struct zr_font_config*);
+#if ZR_COMPILE_WITH_DEFAULT_FONT
+struct zr_font* zr_font_atlas_add_default(struct zr_font_atlas*, float height,
+                                            const struct zr_font_config*);
+#endif
+struct zr_font* zr_font_atlas_add_from_memory(struct zr_font_atlas *atlas, void *memory,
+                                            zr_size size, float height,
+                                            const struct zr_font_config *config);
+#if ZR_COMPILE_WITH_STANDARD_FILE_IO
+struct zr_font* zr_font_atlas_add_from_file(struct zr_font_atlas *atlas,
+                                            const char *file_path, float height,
+                                            const struct zr_font_config*);
+#endif
+struct zr_font *zr_font_atlas_add_compressed(struct zr_font_atlas*,
+                                            void *memory, zr_size size, float height,
+                                            const struct zr_font_config*);
+struct zr_font* zr_font_atlas_add_compressed_base85(struct zr_font_atlas *atlas,
+                                            const char *data, float height,
+                                            const struct zr_font_config *config);
+const void* zr_font_atlas_bake(struct zr_font_atlas*, int *width, int *height,
+                                enum zr_font_atlas_format);
+void zr_font_atlas_end(struct zr_font_atlas*, zr_handle tex, struct zr_draw_null_texture*);
+void zr_font_atlas_clear(struct zr_font_atlas*);
 #endif
 
 /*===============================================================
+ *
  *                          EDIT BOX
+ *
  * ===============================================================*/
 typedef int(*zr_filter)(const struct zr_edit_box*, zr_rune unicode);
 typedef void(*zr_paste_f)(zr_handle, struct zr_edit_box*);
 typedef void(*zr_copy_f)(zr_handle, const char*, zr_size size);
-
-/* filter function */
-struct zr_edit_box;
-int zr_filter_default(const struct zr_edit_box*, zr_rune unicode);
-int zr_filter_ascii(const struct zr_edit_box*, zr_rune unicode);
-int zr_filter_float(const struct zr_edit_box*, zr_rune unicode);
-int zr_filter_decimal(const struct zr_edit_box*, zr_rune unicode);
-int zr_filter_hex(const struct zr_edit_box*, zr_rune unicode);
-int zr_filter_oct(const struct zr_edit_box*, zr_rune unicode);
-int zr_filter_binary(const struct zr_edit_box*, zr_rune unicode);
 
 enum zr_edit_remove_operation {
     ZR_DELETE = 0,
@@ -568,6 +662,16 @@ struct zr_edit_box {
     int text_inserted;
 };
 
+/* filter function */
+struct zr_edit_box;
+int zr_filter_default(const struct zr_edit_box*, zr_rune unicode);
+int zr_filter_ascii(const struct zr_edit_box*, zr_rune unicode);
+int zr_filter_float(const struct zr_edit_box*, zr_rune unicode);
+int zr_filter_decimal(const struct zr_edit_box*, zr_rune unicode);
+int zr_filter_hex(const struct zr_edit_box*, zr_rune unicode);
+int zr_filter_oct(const struct zr_edit_box*, zr_rune unicode);
+int zr_filter_binary(const struct zr_edit_box*, zr_rune unicode);
+
 /* editbox */
 void zr_edit_box_clear(struct zr_edit_box*);
 void zr_edit_box_add(struct zr_edit_box*, const char*, zr_size);
@@ -586,11 +690,11 @@ const char *zr_edit_box_get_selection(zr_size *len, struct zr_edit_box*);
 
 /* ===============================================================
  *
- *                          RENDERING
+ *                          DRAWING
  *
  * ===============================================================*/
 /*  This library was designed to be render backend agnostic so it does
-    not draw anything to the screen. Instead all drawn primitives, widgets
+    not draw anything to the screen. Instead all drawn shapes, widgets
     are made of, are buffered into memory and make up a command queue.
     Each frame therefore fills the command buffer with draw commands
     that then need to be executed by the user and his own render backend.
@@ -815,14 +919,7 @@ struct zr_draw_command {
 #endif
 };
 
-struct zr_draw_null_texture {
-    zr_handle texture;
-    /* texture handle to a texture with a white pixel */
-    struct zr_vec2 uv;
-    /* coordinates to a white pixel in the texture  */
-};
-
-/* stroking routines */
+/* shape outlines */
 void zr_push_scissor(struct zr_command_buffer*, struct zr_rect);
 void zr_stroke_line(struct zr_command_buffer *b, float x0, float y0,
                     float x1, float y1, float line_thickness, struct zr_color);
@@ -841,7 +938,7 @@ void zr_stroke_polyline(struct zr_command_buffer*, float *points, int point_coun
 void zr_stroke_polygon(struct zr_command_buffer*, float*, int point_count,
                     float line_thickness, struct zr_color);
 
-/* filling routines */
+/* filled shades */
 void zr_fill_rect(struct zr_command_buffer*, struct zr_rect, float rounding,
                         struct zr_color);
 void zr_fill_rect_multi_color(struct zr_command_buffer*, struct zr_rect,
@@ -1359,15 +1456,18 @@ struct zr_style_combo {
 };
 
 struct zr_style_tab {
+    /* background */
     struct zr_style_item background;
     struct zr_color border_color;
     struct zr_color text;
 
+    /* button */
     struct zr_style_button tab_button;
     struct zr_style_button node_button;
     enum zr_symbol_type sym_minimize;
     enum zr_symbol_type sym_maximize;
 
+    /* properties */
     float border;
     float rounding;
     struct zr_vec2 padding;
@@ -1792,6 +1892,9 @@ struct zr_context {
 /*--------------------------------------------------------------
  *                          CONTEXT
  * -------------------------------------------------------------*/
+#if ZR_COMPILE_WITH_DEFAULT_ALLOCATOR
+int zr_init_default(struct zr_context*, const struct zr_user_font*);
+#endif
 int zr_init_fixed(struct zr_context*, void *memory, zr_size size,
                     const struct zr_user_font*);
 int zr_init_custom(struct zr_context*, struct zr_buffer *cmds,
@@ -1968,15 +2071,15 @@ int zr_button_image_text(struct zr_context*, struct zr_image img, const char*,
 /* checkbox */
 int zr_check_label(struct zr_context*, const char*, int active);
 int zr_check_text(struct zr_context*, const char*, zr_size,int active);
-unsigned int zr_check_flag_label(struct zr_context*, const char*,
+unsigned int zr_check_flags_label(struct zr_context*, const char*,
                             unsigned int flags, unsigned int value);
-unsigned int zr_check_flag_text(struct zr_context*, const char*, zr_size,
+unsigned int zr_check_flags_text(struct zr_context*, const char*, zr_size,
                             unsigned int flags, unsigned int value);
 int zr_checkbox_label(struct zr_context*, const char*, int *active);
 int zr_checkbox_text(struct zr_context*, const char*, zr_size, int *active);
-int zr_checkbox_flag_label(struct zr_context*, const char*,
+int zr_checkbox_flags_label(struct zr_context*, const char*,
                             unsigned int *flags, unsigned int value);
-int zr_checkbox_flag_text(struct zr_context*, const char*, zr_size,
+int zr_checkbox_flags_text(struct zr_context*, const char*, zr_size,
                             unsigned int *flags, unsigned int value);
 
 /* radio button */

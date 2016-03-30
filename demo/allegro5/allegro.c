@@ -44,7 +44,6 @@ struct device {
     ALLEGRO_VERTEX_DECL *vertex_decl;
     struct zr_draw_null_texture null;
     struct zr_buffer cmds;
-    struct zr_font font;
     void *vertex_buffer;
     void *element_buffer;
 };
@@ -81,17 +80,9 @@ file_load(const char* path, size_t* siz)
     return buf;
 }
 
-static struct zr_user_font
-device_init(struct device *dev,
-    const char *path, unsigned int font_height, const zr_rune *range)
+static void
+device_init(struct device *dev)
 {
-    int glyph_count;
-    int img_width, img_height;
-    struct zr_font_glyph *glyphes;
-    struct zr_baked_font baked_font;
-    struct zr_user_font user_font;
-    struct zr_recti custom;
-
     ALLEGRO_VERTEX_ELEMENT elems[] = {
         {ALLEGRO_PRIM_POSITION, ALLEGRO_PRIM_FLOAT_2, offsetof(struct allegro_vertex, pos)},
         {ALLEGRO_PRIM_TEX_COORD, ALLEGRO_PRIM_FLOAT_2, offsetof(struct allegro_vertex, uv)},
@@ -100,111 +91,46 @@ device_init(struct device *dev,
     };
     dev->vertex_decl = al_create_vertex_decl(elems, sizeof(struct allegro_vertex));
 
-    memset(&baked_font, 0, sizeof(baked_font));
-    memset(&user_font, 0, sizeof(user_font));
-    memset(&custom, 0, sizeof(custom));
-    {
-        /* bake and upload font texture */
-        void *img, *tmp;
-        size_t ttf_size;
-        size_t tmp_size, img_size;
-        const char *custom_data = "....";
-        struct zr_font_config config;
-        char *ttf_blob = file_load(path, &ttf_size);
-        if (!ttf_blob)
-            die("[Font]: %s is not a file or cannot be found!\n", path);
-
-        /* setup font configuration */
-        memset(&config, 0, sizeof(config));
-        config.ttf_blob = ttf_blob;
-        config.ttf_size = ttf_size;
-        config.font = &baked_font;
-        config.coord_type = ZR_COORD_UV;
-        config.range = range;
-        config.pixel_snap = zr_false;
-        config.size = (float)font_height;
-        config.spacing = zr_vec2(0,0);
-        config.oversample_h = 1;
-        config.oversample_v = 1;
-
-        /* query needed amount of memory for the font baking process */
-        zr_font_bake_memory(&tmp_size, &glyph_count, &config, 1);
-        glyphes = (struct zr_font_glyph*)calloc(sizeof(struct zr_font_glyph), (size_t)glyph_count);
-        tmp = calloc(1, tmp_size);
-
-        /* pack all glyphes and return needed image width, height and memory size*/
-        custom.w = 2; custom.h = 2;
-        if (!zr_font_bake_pack(&img_size, &img_width,&img_height,&custom,tmp,tmp_size,&config, 1))
-            die("[Font]: failed to load font!\n");
-
-        /* bake all glyphes and custom white pixel into image */
-        img = calloc(1, img_size);
-        zr_font_bake(img, img_width, img_height, tmp, tmp_size, glyphes, glyph_count, &config, 1);
-        zr_font_bake_custom_data(img, img_width, img_height, custom, custom_data, 2, 2, '.', 'X');
-        {
-            /* convert alpha8 image into rgba8 image */
-            void *img_rgba = calloc(4, (size_t)(img_height * img_width));
-            zr_font_bake_convert(img_rgba, img_width, img_height, img);
-            free(img);
-            img = img_rgba;
-        }
-
-        {
-            /* create allegro font bitmap */
-            ALLEGRO_BITMAP *bitmap = 0;
-            int flags = al_get_new_bitmap_flags();
-            int fmt = al_get_new_bitmap_format();
-            al_set_new_bitmap_flags(ALLEGRO_MEMORY_BITMAP|ALLEGRO_MIN_LINEAR|ALLEGRO_MAG_LINEAR);
-            al_set_new_bitmap_format(ALLEGRO_PIXEL_FORMAT_ABGR_8888_LE);
-            bitmap = al_create_bitmap(img_width, img_height);
-            al_set_new_bitmap_flags(flags);
-            al_set_new_bitmap_format(fmt);
-            assert(bitmap);
-
-            {
-                /* copy font texture into bitmap */
-                ALLEGRO_LOCKED_REGION * locked_img;
-                locked_img = al_lock_bitmap(bitmap, al_get_bitmap_format(bitmap), ALLEGRO_LOCK_WRITEONLY);
-                assert(locked_img);
-                memcpy(locked_img->data, img, sizeof(uint32_t)*(size_t)(img_width*img_height));
-                al_unlock_bitmap(bitmap);
-            }
-
-            /* convert software texture into hardware texture */
-            dev->texture = al_clone_bitmap(bitmap);
-            al_destroy_bitmap(bitmap);
-            assert(dev->texture);
-        }
-        free(ttf_blob);
-        free(tmp);
-        free(img);
-    }
-
-    /* default white pixel in a texture which is needed to draw primitives */
-    dev->null.texture.ptr = dev->texture;
-    dev->null.uv = zr_vec2((custom.x + 0.5f)/(float)img_width,
-                            (custom.y + 0.5f)/(float)img_height);
-
-    /* setup font with glyphes. IMPORTANT: the font only references the glyphes
-      this was done to have the possibility to have multible fonts with one
-      total glyph array. Not quite sure if it is a good thing since the
-      glyphes have to be freed as well. */
-    zr_font_init(&dev->font, (float)font_height, '?', glyphes, &baked_font, dev->null.texture);
-    user_font = zr_font_ref(&dev->font);
-
     /* allocate memory for drawing process */
     dev->vertex_buffer = calloc(MAX_VERTEX_MEMORY, 1);
     dev->element_buffer = calloc(MAX_ELEMENT_MEMORY, 1);
-    return user_font;
 }
 
 static void
 device_shutdown(struct device *dev)
 {
-    free(dev->font.glyphs);
     free(dev->vertex_buffer);
     free(dev->element_buffer);
     zr_buffer_free(&dev->cmds);
+}
+
+static void
+device_upload_atlas(struct device *dev, const void *image, int width, int height)
+{
+    /* create allegro font bitmap */
+    ALLEGRO_BITMAP *bitmap = 0;
+    int flags = al_get_new_bitmap_flags();
+    int fmt = al_get_new_bitmap_format();
+    al_set_new_bitmap_flags(ALLEGRO_MEMORY_BITMAP|ALLEGRO_MIN_LINEAR|ALLEGRO_MAG_LINEAR);
+    al_set_new_bitmap_format(ALLEGRO_PIXEL_FORMAT_ABGR_8888_LE);
+    bitmap = al_create_bitmap(width, height);
+    al_set_new_bitmap_flags(flags);
+    al_set_new_bitmap_format(fmt);
+    assert(bitmap);
+
+    {
+        /* copy font texture into bitmap */
+        ALLEGRO_LOCKED_REGION * locked_img;
+        locked_img = al_lock_bitmap(bitmap, al_get_bitmap_format(bitmap), ALLEGRO_LOCK_WRITEONLY);
+        assert(locked_img);
+        memcpy(locked_img->data, image, sizeof(uint32_t)*(size_t)(width*height));
+        al_unlock_bitmap(bitmap);
+    }
+
+    /* convert software texture into hardware texture */
+    dev->texture = al_clone_bitmap(bitmap);
+    al_destroy_bitmap(bitmap);
+    assert(dev->texture);
 }
 
 static void
@@ -318,20 +244,16 @@ input_button(struct zr_context *ctx, ALLEGRO_EVENT *evt, int down)
         zr_input_button(ctx, ZR_BUTTON_RIGHT, x, y, down);
 }
 
-static void* mem_alloc(zr_handle unused, size_t size)
-{UNUSED(unused); return calloc(1, size);}
-static void mem_free(zr_handle unused, void *ptr)
-{UNUSED(unused); free(ptr);}
-
 int
 main(int argc, char *argv[])
 {
     struct device dev;
-    struct demo gui;
     int running = 1;
-    const char *font_path = argv[1];
-    if (argc < 2)
-        die("Missing TTF Font file argument!");
+
+    struct demo gui;
+    struct zr_font *font;
+    struct zr_font_atlas atlas;
+    const char *font_path = (argc > 1) ? argv[1]: 0;
 
     /* Allegro */
     al_init();
@@ -345,20 +267,26 @@ main(int argc, char *argv[])
     al_register_event_source(dev.queue, al_get_keyboard_event_source());
     al_register_event_source(dev.queue, al_get_mouse_event_source());
 
+    device_init(&dev);
     {
-        /* GUI */
-        struct zr_user_font usrfnt;
-        struct zr_allocator alloc;
-        alloc.userdata.ptr = NULL;
-        alloc.alloc = mem_alloc;
-        alloc.free = mem_free;
-        zr_buffer_init(&dev.cmds, &alloc, 1024);
+        /* Font */
+        const void *image;
+        int width, height;
 
-        usrfnt = device_init(&dev, font_path, 14,
-            zr_font_default_glyph_ranges());
+        zr_font_atlas_init_default(&atlas);
+        zr_font_atlas_begin(&atlas);
+        if (font_path) font = zr_font_atlas_add_from_file(&atlas, font_path, 14.0f, NULL);
+        else font = zr_font_atlas_add_default(&atlas, 14.0f, NULL);
+        image = zr_font_atlas_bake(&atlas, &width, &height, ZR_FONT_ATLAS_RGBA32);
+        device_upload_atlas(&dev, image, width, height);
+        zr_font_atlas_end(&atlas, zr_handle_ptr(dev.texture), &dev.null);
+
+        /* GUI */
         memset(&gui, 0, sizeof(gui));
-        zr_init(&gui.ctx, &alloc, &usrfnt);
+        zr_buffer_init_default(&dev.cmds);
+        zr_init_default(&gui.ctx, &font->handle);
     }
+
 
     while (running) {
         /* Input */
@@ -401,6 +329,7 @@ cleanup:
         al_destroy_event_queue(dev.queue);
     if (dev.display)
         al_destroy_display(dev.display);
+    zr_font_atlas_clear(&atlas);
     device_shutdown(&dev);
     zr_free(&gui.ctx);
     return 0;

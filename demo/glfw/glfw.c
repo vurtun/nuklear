@@ -232,92 +232,15 @@ device_init(struct device *dev)
     glBindVertexArray(0);
 }
 
-static struct zr_user_font
-font_bake_and_upload(struct device *dev, struct zr_font *font,
-    const char *path, unsigned int font_height, const zr_rune *range)
+static void
+device_upload_atlas(struct device *dev, const void *image, int width, int height)
 {
-    int glyph_count;
-    int img_width, img_height;
-    struct zr_font_glyph *glyphes;
-    struct zr_baked_font baked_font;
-    struct zr_user_font user_font;
-    struct zr_recti custom;
-
-    memset(&baked_font, 0, sizeof(baked_font));
-    memset(&user_font, 0, sizeof(user_font));
-    memset(&custom, 0, sizeof(custom));
-
-    {
-        /* bake and upload font texture */
-        void *img, *tmp;
-        size_t ttf_size;
-        size_t tmp_size, img_size;
-        const char *custom_data = "....";
-        struct zr_font_config config;
-        char *ttf_blob = file_load(path, &ttf_size);
-        if (!ttf_blob)
-            die("[Font]: %s is not a file or cannot be found!\n", path);
-
-        /* setup font configuration */
-        memset(&config, 0, sizeof(config));
-        config.ttf_blob = ttf_blob;
-        config.ttf_size = ttf_size;
-        config.font = &baked_font;
-        config.coord_type = ZR_COORD_UV;
-        config.range = range;
-        config.pixel_snap = zr_false;
-        config.size = (float)font_height;
-        config.spacing = zr_vec2(0,0);
-        config.oversample_h = 1;
-        config.oversample_v = 1;
-
-        /* query needed amount of memory for the font baking process */
-        zr_font_bake_memory(&tmp_size, &glyph_count, &config, 1);
-        glyphes = (struct zr_font_glyph*)calloc(sizeof(struct zr_font_glyph), (size_t)glyph_count);
-        tmp = calloc(1, tmp_size);
-
-        /* pack all glyphes and return needed image width, height and memory size*/
-        custom.w = 2; custom.h = 2;
-        if (!zr_font_bake_pack(&img_size, &img_width,&img_height,&custom,tmp,tmp_size,&config, 1))
-            die("[Font]: failed to load font!\n");
-
-        /* bake all glyphes and custom white pixel into image */
-        img = calloc(1, img_size);
-        zr_font_bake(img, img_width, img_height, tmp, tmp_size, glyphes, glyph_count, &config, 1);
-        zr_font_bake_custom_data(img, img_width, img_height, custom, custom_data, 2, 2, '.', 'X');
-        {
-            /* convert alpha8 image into rgba8 image */
-            void *img_rgba = calloc(4, (size_t)(img_height * img_width));
-            zr_font_bake_convert(img_rgba, img_width, img_height, img);
-            free(img);
-            img = img_rgba;
-        }
-        {
-            /* upload baked font image */
-            glGenTextures(1, &dev->font_tex);
-            glBindTexture(GL_TEXTURE_2D, dev->font_tex);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)img_width, (GLsizei)img_height, 0,
-                        GL_RGBA, GL_UNSIGNED_BYTE, img);
-        }
-        free(ttf_blob);
-        free(tmp);
-        free(img);
-    }
-
-    /* default white pixel in a texture which is needed to draw primitives */
-    dev->null.texture.id = (int)dev->font_tex;
-    dev->null.uv = zr_vec2((custom.x + 0.5f)/(float)img_width,
-                            (custom.y + 0.5f)/(float)img_height);
-
-    /* setup font with glyphes. IMPORTANT: the font only references the glyphes
-      this was done to have the possibility to have multible fonts with one
-      total glyph array. Not quite sure if it is a good thing since the
-      glyphes have to be freed as well. */
-    zr_font_init(font, (float)font_height, '?', glyphes, &baked_font, dev->null.texture);
-    user_font = zr_font_ref(font);
-    return user_font;
+    glGenTextures(1, &dev->font_tex);
+    glBindTexture(GL_TEXTURE_2D, dev->font_tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)width, (GLsizei)height, 0,
+                GL_RGBA, GL_UNSIGNED_BYTE, image);
 }
 
 static void
@@ -505,11 +428,6 @@ input_scroll(GLFWwindow *window, double xoffset, double yoffset)
     zr_input_scroll(&gui.ctx, (float)yoffset);
 }
 
-static void* mem_alloc(zr_handle unused, size_t size)
-{UNUSED(unused); return calloc(1, size);}
-static void mem_free(zr_handle unused, void *ptr)
-{UNUSED(unused); free(ptr);}
-
 int
 main(int argc, char *argv[])
 {
@@ -522,11 +440,9 @@ main(int argc, char *argv[])
 
     /* GUI */
     struct device device;
-    struct zr_font font;
-
-    font_path = argv[1];
-    if (argc < 2)
-        die("Missing TTF Font file argument!");
+    struct zr_font *font;
+    struct zr_font_atlas atlas;
+    font_path = (argc > 1) ? argv[1]: 0;
 
     glfwSetErrorCallback(error_callback);
     if (!glfwInit()) {
@@ -554,19 +470,25 @@ main(int argc, char *argv[])
     if (glewInit() != GLEW_OK)
         die("Failed to setup GLEW\n");
 
-    {
-        /* GUI */
-        struct zr_user_font usrfnt;
-        struct zr_allocator alloc;
-        alloc.userdata.ptr = NULL;
-        alloc.alloc = mem_alloc;
-        alloc.free = mem_free;
-        zr_buffer_init(&device.cmds, &alloc, 1024);
-        usrfnt = font_bake_and_upload(&device, &font, font_path, 14,
-                        zr_font_default_glyph_ranges());
-        zr_init(&gui.ctx, &alloc, &usrfnt);
-    }
     device_init(&device);
+    {
+        /* Font */
+        const void *image;
+        int w, h;
+
+        zr_font_atlas_init_default(&atlas);
+        zr_font_atlas_begin(&atlas);
+        if (font_path) font = zr_font_atlas_add_from_file(&atlas, font_path, 14.0f, NULL);
+        else font = zr_font_atlas_add_default(&atlas, 14.0f, NULL);
+        image = zr_font_atlas_bake(&atlas, &w, &h, ZR_FONT_ATLAS_RGBA32);
+        device_upload_atlas(&device, image, w, h);
+        zr_font_atlas_end(&atlas, zr_handle_id((int)device.font_tex), &device.null);
+
+        /* GUI */
+        memset(&gui, 0, sizeof(gui));
+        zr_buffer_init_default(&device.cmds);
+        zr_init_default(&gui.ctx, &font->handle);
+    }
 
     /* icons */
     glEnable(GL_TEXTURE_2D);
@@ -659,7 +581,7 @@ main(int argc, char *argv[])
     for (i = 0; i < 6; ++i)
         glDeleteTextures(1, (const GLuint*)&gui.icons.menu[i].handle.id);
 
-    free(font.glyphs);
+    zr_font_atlas_clear(&atlas);
     zr_free(&gui.ctx);
     zr_buffer_free(&device.cmds);
     device_shutdown(&device);

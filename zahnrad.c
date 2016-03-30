@@ -28,6 +28,12 @@
 #define ZR_VALUE_PAGE_CAPACITY 32
 #define ZR_DEFAULT_COMMAND_BUFFER_SIZE (4*1024)
 
+#if ZR_COMPILE_WITH_DEFAULT_ALLOCATOR
+#include <stdlib.h> /* malloc, free */
+#endif
+#if ZR_COMPILE_WITH_STANDARD_FILE_IO
+#include <stdio.h> /* fopen, fclose,... */
+#endif
 /* ==============================================================
  *                          MATH
  * =============================================================== */
@@ -293,12 +299,16 @@ zr_vec2iv(const int *v)
 /*
  * ==============================================================
  *
- *                          STANDARD
+ *                          UTIL
  *
  * ===============================================================
  */
 static int zr_str_match_here(const char *regexp, const char *text);
 static int zr_str_match_star(int c, const char *regexp, const char *text);
+static int zr_is_lower(int c) {return (c >= 'a' && c <= 'z') || (c >= 0xE0 && c <= 0xFF);}
+static int zr_is_upper(int c){return (c >= 'A' && c <= 'Z') || (c >= 0xC0 && c <= 0xDF);}
+static int zr_to_upper(int c) {return (c >= 'a' && c <= 'z') ? (c - ('a' - 'A')) : c;}
+static int zr_to_lower(int c) {return (c >= 'A' && c <= 'Z') ? (c - ('a' + 'A')) : c;}
 
 static void*
 zr_memcopy(void *dst0, const void *src0, zr_size length)
@@ -416,7 +426,7 @@ zr_zero(void *ptr, zr_size size)
 }
 
 static zr_size
-zr_strsiz(const char *str)
+zr_strlen(const char *str)
 {
     zr_size siz = 0;
     ZR_ASSERT(str);
@@ -506,7 +516,7 @@ zr_str_match_star(int c, const char *regexp, const char *text)
 }
 
 static int
-zr_strfilter(const char *text, const char *regexp)
+zr_str_filter(const char *text, const char *regexp)
 {
     /*
     c    matches any literal character c
@@ -521,6 +531,130 @@ zr_strfilter(const char *text, const char *regexp)
             return 1;
     } while (*text++ != '\0');
     return 0;
+}
+
+static int
+zr_str_fuzzy_match(char const *pattern, char const *str, int *out_score)
+{
+    /* Returns true if each character in pattern is found sequentially within str
+     * if found then outScore is also set. Score value has no intrinsic meaning.
+     * Range varies with pattern. Can only compare scores with same search pattern. */
+
+    /* ------- scores --------- */
+    /* bonus for adjacent matches */
+    #define ZR_ADJACENCY_BONUS 5
+    /* bonus if match occurs after a separator */
+    #define ZR_SEPARATOR_BONUS 10
+    /* bonus if match is uppercase and prev is lower */
+    #define ZR_CAMEL_BONUS 10
+    /* penalty applied for every letter in str before the first match */
+    #define ZR_LEADING_LETTER_PENALTY (-3)
+    /* maximum penalty for leading letters */
+    #define ZR_MAX_LEADING_LETTER_PENALTY (-9)
+    /* penalty for every letter that doesn't matter */
+    #define ZR_UNMATCHED_LETTER_PENALTY (-1)
+
+    /* loop variables */
+    int score = 0;
+    char const * pattern_iter = pattern;
+    char const * str_iter = str;
+    int prev_matched = zr_false;
+    int prev_lower = zr_false;
+    /* true so if first letter match gets separator bonus*/
+    int prev_separator = zr_true;
+
+    /* use "best" matched letter if multiple string letters match the pattern */
+    char const * best_letter = 0;
+    int best_letter_score = 0;
+
+    /* loop over strings */
+    while (*str_iter != '\0') 
+    {
+        const char pattern_letter = *pattern_iter;
+        const char str_letter = *str_iter;
+
+        int next_match = *pattern_iter != '\0' &&
+            zr_to_lower(pattern_letter) == zr_to_lower(str_letter);
+        int rematch = best_letter && zr_to_lower(*best_letter) == zr_to_lower(str_letter);
+
+        int advanced = next_match && best_letter;
+        int pattern_repeat = best_letter && pattern_iter != '\0';
+        pattern_repeat = pattern_repeat &&
+            zr_to_lower(*best_letter) == zr_to_lower(pattern_letter);
+
+        if (advanced || pattern_repeat) {
+            score += best_letter_score;
+            best_letter = 0;
+            best_letter_score = 0;
+        }
+
+        if (next_match || rematch)
+        {
+            int new_score = 0;
+            /* Apply penalty for each letter before the first pattern match */
+            if (pattern_iter == pattern)
+            {
+                int count = (int)(str_iter - str);
+                int penalty = ZR_LEADING_LETTER_PENALTY * count;
+                if (penalty < ZR_MAX_LEADING_LETTER_PENALTY)
+                    penalty = ZR_MAX_LEADING_LETTER_PENALTY;
+
+                score += penalty;
+            }
+
+            /* apply bonus for consecutive bonuses */
+            if (prev_matched)
+                new_score += ZR_ADJACENCY_BONUS;
+
+            /* apply bonus for matches after a separator */
+            if (prev_separator)
+                new_score += ZR_SEPARATOR_BONUS;
+
+            /* apply bonus across camel case boundaries */
+            if (prev_lower && zr_is_upper(str_letter))
+                new_score += ZR_CAMEL_BONUS;
+
+            /* update pattern iter IFF the next pattern letter was matched */
+            if (next_match)
+                ++pattern_iter;
+
+            /* update best letter in str which may be for a "next" letter or a rematch */
+            if (new_score >= best_letter_score)
+            {
+                /* apply penalty for now skipped letter */
+                if (best_letter != 0)
+                    score += ZR_UNMATCHED_LETTER_PENALTY;
+
+                best_letter = str_iter;
+                best_letter_score = new_score;
+            }
+
+            prev_matched = zr_true;
+        }
+        else
+        {
+            score += ZR_UNMATCHED_LETTER_PENALTY;
+            prev_matched = zr_false;
+        }
+
+        /* separators should be more easily defined */
+        prev_lower = zr_is_lower(str_letter) != 0;
+        prev_separator = str_letter == '_' || str_letter == ' ';
+
+        ++str_iter;
+    }
+
+    /* apply score for last match */
+    if (best_letter)
+        score += best_letter_score;
+
+    /* did not match full pattern */
+    if (*pattern_iter != '\0')
+        return zr_false;
+
+    if (out_score)
+        *out_score = score;
+    return zr_true;
 }
 
 static float
@@ -696,6 +830,36 @@ zr_murmur_hash(const void * key, int len, zr_hash seed)
     #undef ZR_ROTL
     return h1;
 }
+
+#if ZR_COMPILE_WITH_STANDARD_FILE_IO
+static char*
+zr_file_load(const char* path, zr_size* siz, struct zr_allocator *alloc)
+{
+    char *buf;
+    FILE *fd;
+
+    ZR_ASSERT(path);
+    ZR_ASSERT(siz);
+    ZR_ASSERT(alloc);
+    if (!path || !siz || !alloc)
+        return 0;
+
+    fd = fopen(path, "rb");
+    if (!fd) return 0;
+    fseek(fd, 0, SEEK_END);
+    *siz = (size_t)ftell(fd);
+    fseek(fd, 0, SEEK_SET);
+    buf = (char*)alloc->alloc(alloc->userdata, *siz);
+    ZR_ASSERT(buf);
+    if (!buf) {
+        fclose(fd);
+        return 0;
+    }
+    fread(buf, *siz, 1, fd);
+    fclose(fd);
+    return buf;
+}
+#endif
 
 /*
  * ==============================================================
@@ -1494,6 +1658,24 @@ zr_user_font_glyphs_fitting_in_space(const struct zr_user_font *font,
  *                          BUFFER
  *
  * ===============================================================*/
+#if ZR_COMPILE_WITH_DEFAULT_ALLOCATOR
+
+static void* zr_malloc(zr_handle unused, zr_size size)
+{ZR_UNUSED(unused); return malloc(size);}
+static void zr_mfree(zr_handle unused, void *ptr)
+{ZR_UNUSED(unused); free(ptr);}
+
+void
+zr_buffer_init_default(struct zr_buffer *buffer)
+{
+    struct zr_allocator alloc;
+    alloc.userdata.ptr = 0;
+    alloc.alloc = zr_malloc;
+    alloc.free = zr_mfree;
+    zr_buffer_init(buffer, &alloc, ZR_BUFFER_DEFAULT_INITIAL_SIZE);
+}
+#endif
+
 void
 zr_buffer_init(struct zr_buffer *b, const struct zr_allocator *a,
     zr_size initial_size)
@@ -3353,8 +3535,7 @@ zr__draw_next(const struct zr_draw_command *cmd,
  *
  * ===============================================================
  */
-#ifdef ZR_COMPILE_WITH_FONT
-
+#if ZR_COMPILE_WITH_FONT
 /* this is a bloody mess but 'fixing' both stb libraries would be a pain */
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -3404,6 +3585,11 @@ zr__draw_next(const struct zr_draw_command *cmd,
 #pragma warning (pop)
 #endif
 
+/* -------------------------------------------------------------
+ *
+ *                          FONT BAKING
+ *
+ * --------------------------------------------------------------*/
 struct zr_font_bake_data {
     stbtt_fontinfo info;
     stbrp_rect *rects;
@@ -3808,58 +3994,12 @@ zr_font_bake_convert(void *out_memory, int img_width, int img_height,
     for (n = (int)(img_width * img_height); n > 0; n--)
         *dst++ = ((zr_rune)(*src++) << 24) | 0x00FFFFFF;
 }
+
 /* -------------------------------------------------------------
  *
  *                          FONT
  *
  * --------------------------------------------------------------*/
-void
-zr_font_init(struct zr_font *font, float pixel_height,
-    zr_rune fallback_codepoint, struct zr_font_glyph *glyphs,
-    const struct zr_baked_font *baked_font, zr_handle atlas)
-{
-    ZR_ASSERT(font);
-    ZR_ASSERT(glyphs);
-    ZR_ASSERT(baked_font);
-    if (!font || !glyphs || !baked_font)
-        return;
-
-    zr_zero(font, sizeof(*font));
-    font->ascent = baked_font->ascent;
-    font->descent = baked_font->descent;
-    font->size = baked_font->height;
-    font->scale = (float)pixel_height / (float)font->size;
-    font->glyphs = &glyphs[baked_font->glyph_offset];
-    font->glyph_count = baked_font->glyph_count;
-    font->ranges = baked_font->ranges;
-    font->atlas = atlas;
-    font->fallback_codepoint = fallback_codepoint;
-    font->fallback = zr_font_find_glyph(font, fallback_codepoint);
-}
-
-const struct zr_font_glyph*
-zr_font_find_glyph(struct zr_font *font, zr_rune unicode)
-{
-    int i = 0;
-    int count;
-    int total_glyphs = 0;
-    const struct zr_font_glyph *glyph = 0;
-    ZR_ASSERT(font);
-
-    glyph = font->fallback;
-    count = zr_range_count(font->ranges);
-    for (i = 0; i < count; ++i) {
-        int diff;
-        zr_rune f = font->ranges[(i*2)+0];
-        zr_rune t = font->ranges[(i*2)+1];
-        diff = (int)((t - f) + 1);
-        if (unicode >= f && unicode <= t)
-            return &font->glyphs[((zr_rune)total_glyphs + (unicode - f))];
-        total_glyphs += diff;
-    }
-    return glyph;
-}
-
 static zr_size
 zr_font_text_width(zr_handle handle, float height, const char *text, zr_size len)
 {
@@ -3871,6 +4011,7 @@ zr_font_text_width(zr_handle handle, float height, const char *text, zr_size len
 
     struct zr_font *font = (struct zr_font*)handle.ptr;
     ZR_ASSERT(font);
+    ZR_ASSERT(font->glyphs);
     if (!font || !text || !len)
         return 0;
 
@@ -3900,10 +4041,13 @@ zr_font_query_font_glyph(zr_handle handle, float height,
     float scale;
     const struct zr_font_glyph *g;
     struct zr_font *font;
+
     ZR_ASSERT(glyph);
     ZR_UNUSED(next_codepoint);
+
     font = (struct zr_font*)handle.ptr;
     ZR_ASSERT(font);
+    ZR_ASSERT(font->glyphs);
     if (!font || !glyph)
         return;
 
@@ -3918,19 +4062,748 @@ zr_font_query_font_glyph(zr_handle handle, float height,
 }
 #endif
 
-struct zr_user_font
-zr_font_ref(struct zr_font *font)
+const struct zr_font_glyph*
+zr_font_find_glyph(struct zr_font *font, zr_rune unicode)
 {
-    struct zr_user_font user_font;
-    zr_zero(&user_font, sizeof(user_font));
-    user_font.height = font->size * font->scale;
-    user_font.width = zr_font_text_width;
-    user_font.userdata.ptr = font;
+    int i = 0;
+    int count;
+    int total_glyphs = 0;
+    const struct zr_font_glyph *glyph = 0;
+    ZR_ASSERT(font);
+    ZR_ASSERT(font->glyphs);
+
+    glyph = font->fallback;
+    count = zr_range_count(font->ranges);
+    for (i = 0; i < count; ++i) {
+        int diff;
+        zr_rune f = font->ranges[(i*2)+0];
+        zr_rune t = font->ranges[(i*2)+1];
+        diff = (int)((t - f) + 1);
+        if (unicode >= f && unicode <= t)
+            return &font->glyphs[((zr_rune)total_glyphs + (unicode - f))];
+        total_glyphs += diff;
+    }
+    return glyph;
+}
+
+void
+zr_font_init(struct zr_font *font, float pixel_height,
+    zr_rune fallback_codepoint, struct zr_font_glyph *glyphs,
+    const struct zr_baked_font *baked_font, zr_handle atlas)
+{
+    ZR_ASSERT(font);
+    ZR_ASSERT(glyphs);
+    ZR_ASSERT(baked_font);
+    if (!font || !glyphs || !baked_font)
+        return;
+
+    zr_zero(font, sizeof(*font));
+    font->ascent = baked_font->ascent;
+    font->descent = baked_font->descent;
+    font->size = baked_font->height;
+    font->scale = (float)pixel_height / (float)font->size;
+    font->glyphs = &glyphs[baked_font->glyph_offset];
+    font->glyph_count = baked_font->glyph_count;
+    font->ranges = baked_font->ranges;
+    font->texture = atlas;
+    font->fallback_codepoint = fallback_codepoint;
+    font->fallback = zr_font_find_glyph(font, fallback_codepoint);
+
+    font->handle.height = font->size * font->scale;
+    font->handle.width = zr_font_text_width;
+    font->handle.userdata.ptr = font;
 #if ZR_COMPILE_WITH_VERTEX_BUFFER
-    user_font.query = zr_font_query_font_glyph;
-    user_font.texture = font->atlas;
+    font->handle.query = zr_font_query_font_glyph;
+    font->handle.texture = font->texture;
 #endif
-    return user_font;
+}
+
+/* ---------------------------------------------------------------------------
+ *
+ *                          DEFAULT FONT
+ *
+ * ProggyClean.ttf
+ * Copyright (c) 2004, 2005 Tristan Grimmer
+ * MIT license (see License.txt in http://www.upperbounds.net/download/ProggyClean.ttf.zip)
+ * Download and more information at http://upperbounds.net
+ *-----------------------------------------------------------------------------*/
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wsign-conversion"
+#pragma clang diagnostic ignored "-Wfloat-equal"
+#pragma clang diagnostic ignored "-Wbad-function-cast"
+#pragma clang diagnostic ignored "-Wcast-qual"
+#pragma clang diagnostic ignored "-Wshadow"
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+#pragma clang diagnostic ignored "-Wdeclaration-after-statement"
+#pragma clang diagnostic ignored "-Wunused-function"
+#pragma clang diagnostic ignored "-Woverlength-strings"
+#elif defined(__GNUC__) || defined(__GNUG__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wfloat-equal"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+#pragma GCC diagnostic ignored "-Wconversion"
+#pragma GCC diagnostic ignored "-Wbad-function-cast"
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#pragma GCC diagnostic ignored "-Wdeclaration-after-statement"
+#pragma GCC diagnostic ignored "-Wtype-limits"
+#pragma GCC diagnostic ignored "-Wswitch-default"
+#pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Woverlength-strings"
+#elif _MSC_VER
+#pragma warning (push)
+#pragma warning (disable: 4456)
+#endif
+
+#if ZR_COMPILE_WITH_DEFAULT_FONT
+static const char zr_proggy_clean_ttf_compressed_data_base85[11980+1] =
+    "7])#######hV0qs'/###[),##/l:$#Q6>##5[n42>c-TH`->>#/e>11NNV=Bv(*:.F?uu#(gRU.o0XGH`$vhLG1hxt9?W`#,5LsCp#-i>.r$<$6pD>Lb';9Crc6tgXmKVeU2cD4Eo3R/"
+    "2*>]b(MC;$jPfY.;h^`IWM9<Lh2TlS+f-s$o6Q<BWH`YiU.xfLq$N;$0iR/GX:U(jcW2p/W*q?-qmnUCI;jHSAiFWM.R*kU@C=GH?a9wp8f$e.-4^Qg1)Q-GL(lf(r/7GrRgwV%MS=C#"
+    "`8ND>Qo#t'X#(v#Y9w0#1D$CIf;W'#pWUPXOuxXuU(H9M(1<q-UE31#^-V'8IRUo7Qf./L>=Ke$$'5F%)]0^#0X@U.a<r:QLtFsLcL6##lOj)#.Y5<-R&KgLwqJfLgN&;Q?gI^#DY2uL"
+    "i@^rMl9t=cWq6##weg>$FBjVQTSDgEKnIS7EM9>ZY9w0#L;>>#Mx&4Mvt//L[MkA#W@lK.N'[0#7RL_&#w+F%HtG9M#XL`N&.,GM4Pg;-<nLENhvx>-VsM.M0rJfLH2eTM`*oJMHRC`N"
+    "kfimM2J,W-jXS:)r0wK#@Fge$U>`w'N7G#$#fB#$E^$#:9:hk+eOe--6x)F7*E%?76%^GMHePW-Z5l'&GiF#$956:rS?dA#fiK:)Yr+`&#0j@'DbG&#^$PG.Ll+DNa<XCMKEV*N)LN/N"
+    "*b=%Q6pia-Xg8I$<MR&,VdJe$<(7G;Ckl'&hF;;$<_=X(b.RS%%)###MPBuuE1V:v&cX&#2m#(&cV]`k9OhLMbn%s$G2,B$BfD3X*sp5#l,$R#]x_X1xKX%b5U*[r5iMfUo9U`N99hG)"
+    "tm+/Us9pG)XPu`<0s-)WTt(gCRxIg(%6sfh=ktMKn3j)<6<b5Sk_/0(^]AaN#(p/L>&VZ>1i%h1S9u5o@YaaW$e+b<TWFn/Z:Oh(Cx2$lNEoN^e)#CFY@@I;BOQ*sRwZtZxRcU7uW6CX"
+    "ow0i(?$Q[cjOd[P4d)]>ROPOpxTO7Stwi1::iB1q)C_=dV26J;2,]7op$]uQr@_V7$q^%lQwtuHY]=DX,n3L#0PHDO4f9>dC@O>HBuKPpP*E,N+b3L#lpR/MrTEH.IAQk.a>D[.e;mc."
+    "x]Ip.PH^'/aqUO/$1WxLoW0[iLA<QT;5HKD+@qQ'NQ(3_PLhE48R.qAPSwQ0/WK?Z,[x?-J;jQTWA0X@KJ(_Y8N-:/M74:/-ZpKrUss?d#dZq]DAbkU*JqkL+nwX@@47`5>w=4h(9.`G"
+    "CRUxHPeR`5Mjol(dUWxZa(>STrPkrJiWx`5U7F#.g*jrohGg`cg:lSTvEY/EV_7H4Q9[Z%cnv;JQYZ5q.l7Zeas:HOIZOB?G<Nald$qs]@]L<J7bR*>gv:[7MI2k).'2($5FNP&EQ(,)"
+    "U]W]+fh18.vsai00);D3@4ku5P?DP8aJt+;qUM]=+b'8@;mViBKx0DE[-auGl8:PJ&Dj+M6OC]O^((##]`0i)drT;-7X`=-H3[igUnPG-NZlo.#k@h#=Ork$m>a>$-?Tm$UV(?#P6YY#"
+    "'/###xe7q.73rI3*pP/$1>s9)W,JrM7SN]'/4C#v$U`0#V.[0>xQsH$fEmPMgY2u7Kh(G%siIfLSoS+MK2eTM$=5,M8p`A.;_R%#u[K#$x4AG8.kK/HSB==-'Ie/QTtG?-.*^N-4B/ZM"
+    "_3YlQC7(p7q)&](`6_c)$/*JL(L-^(]$wIM`dPtOdGA,U3:w2M-0<q-]L_?^)1vw'.,MRsqVr.L;aN&#/EgJ)PBc[-f>+WomX2u7lqM2iEumMTcsF?-aT=Z-97UEnXglEn1K-bnEO`gu"
+    "Ft(c%=;Am_Qs@jLooI&NX;]0#j4#F14;gl8-GQpgwhrq8'=l_f-b49'UOqkLu7-##oDY2L(te+Mch&gLYtJ,MEtJfLh'x'M=$CS-ZZ%P]8bZ>#S?YY#%Q&q'3^Fw&?D)UDNrocM3A76/"
+    "/oL?#h7gl85[qW/NDOk%16ij;+:1a'iNIdb-ou8.P*w,v5#EI$TWS>Pot-R*H'-SEpA:g)f+O$%%`kA#G=8RMmG1&O`>to8bC]T&$,n.LoO>29sp3dt-52U%VM#q7'DHpg+#Z9%H[K<L"
+    "%a2E-grWVM3@2=-k22tL]4$##6We'8UJCKE[d_=%wI;'6X-GsLX4j^SgJ$##R*w,vP3wK#iiW&#*h^D&R?jp7+/u&#(AP##XU8c$fSYW-J95_-Dp[g9wcO&#M-h1OcJlc-*vpw0xUX&#"
+    "OQFKNX@QI'IoPp7nb,QU//MQ&ZDkKP)X<WSVL(68uVl&#c'[0#(s1X&xm$Y%B7*K:eDA323j998GXbA#pwMs-jgD$9QISB-A_(aN4xoFM^@C58D0+Q+q3n0#3U1InDjF682-SjMXJK)("
+    "h$hxua_K]ul92%'BOU&#BRRh-slg8KDlr:%L71Ka:.A;%YULjDPmL<LYs8i#XwJOYaKPKc1h:'9Ke,g)b),78=I39B;xiY$bgGw-&.Zi9InXDuYa%G*f2Bq7mn9^#p1vv%#(Wi-;/Z5h"
+    "o;#2:;%d&#x9v68C5g?ntX0X)pT`;%pB3q7mgGN)3%(P8nTd5L7GeA-GL@+%J3u2:(Yf>et`e;)f#Km8&+DC$I46>#Kr]]u-[=99tts1.qb#q72g1WJO81q+eN'03'eM>&1XxY-caEnO"
+    "j%2n8)),?ILR5^.Ibn<-X-Mq7[a82Lq:F&#ce+S9wsCK*x`569E8ew'He]h:sI[2LM$[guka3ZRd6:t%IG:;$%YiJ:Nq=?eAw;/:nnDq0(CYcMpG)qLN4$##&J<j$UpK<Q4a1]MupW^-"
+    "sj_$%[HK%'F####QRZJ::Y3EGl4'@%FkiAOg#p[##O`gukTfBHagL<LHw%q&OV0##F=6/:chIm0@eCP8X]:kFI%hl8hgO@RcBhS-@Qb$%+m=hPDLg*%K8ln(wcf3/'DW-$.lR?n[nCH-"
+    "eXOONTJlh:.RYF%3'p6sq:UIMA945&^HFS87@$EP2iG<-lCO$%c`uKGD3rC$x0BL8aFn--`ke%#HMP'vh1/R&O_J9'um,.<tx[@%wsJk&bUT2`0uMv7gg#qp/ij.L56'hl;.s5CUrxjO"
+    "M7-##.l+Au'A&O:-T72L]P`&=;ctp'XScX*rU.>-XTt,%OVU4)S1+R-#dg0/Nn?Ku1^0f$B*P:Rowwm-`0PKjYDDM'3]d39VZHEl4,.j']Pk-M.h^&:0FACm$maq-&sgw0t7/6(^xtk%"
+    "LuH88Fj-ekm>GA#_>568x6(OFRl-IZp`&b,_P'$M<Jnq79VsJW/mWS*PUiq76;]/NM_>hLbxfc$mj`,O;&%W2m`Zh:/)Uetw:aJ%]K9h:TcF]u_-Sj9,VK3M.*'&0D[Ca]J9gp8,kAW]"
+    "%(?A%R$f<->Zts'^kn=-^@c4%-pY6qI%J%1IGxfLU9CP8cbPlXv);C=b),<2mOvP8up,UVf3839acAWAW-W?#ao/^#%KYo8fRULNd2.>%m]UK:n%r$'sw]J;5pAoO_#2mO3n,'=H5(et"
+    "Hg*`+RLgv>=4U8guD$I%D:W>-r5V*%j*W:Kvej.Lp$<M-SGZ':+Q_k+uvOSLiEo(<aD/K<CCc`'Lx>'?;++O'>()jLR-^u68PHm8ZFWe+ej8h:9r6L*0//c&iH&R8pRbA#Kjm%upV1g:"
+    "a_#Ur7FuA#(tRh#.Y5K+@?3<-8m0$PEn;J:rh6?I6uG<-`wMU'ircp0LaE_OtlMb&1#6T.#FDKu#1Lw%u%+GM+X'e?YLfjM[VO0MbuFp7;>Q&#WIo)0@F%q7c#4XAXN-U&VB<HFF*qL("
+    "$/V,;(kXZejWO`<[5??ewY(*9=%wDc;,u<'9t3W-(H1th3+G]ucQ]kLs7df($/*JL]@*t7Bu_G3_7mp7<iaQjO@.kLg;x3B0lqp7Hf,^Ze7-##@/c58Mo(3;knp0%)A7?-W+eI'o8)b<"
+    "nKnw'Ho8C=Y>pqB>0ie&jhZ[?iLR@@_AvA-iQC(=ksRZRVp7`.=+NpBC%rh&3]R:8XDmE5^V8O(x<<aG/1N$#FX$0V5Y6x'aErI3I$7x%E`v<-BY,)%-?Psf*l?%C3.mM(=/M0:JxG'?"
+    "7WhH%o'a<-80g0NBxoO(GH<dM]n.+%q@jH?f.UsJ2Ggs&4<-e47&Kl+f//9@`b+?.TeN_&B8Ss?v;^Trk;f#YvJkl&w$]>-+k?'(<S:68tq*WoDfZu';mM?8X[ma8W%*`-=;D.(nc7/;"
+    ")g:T1=^J$&BRV(-lTmNB6xqB[@0*o.erM*<SWF]u2=st-*(6v>^](H.aREZSi,#1:[IXaZFOm<-ui#qUq2$##Ri;u75OK#(RtaW-K-F`S+cF]uN`-KMQ%rP/Xri.LRcB##=YL3BgM/3M"
+    "D?@f&1'BW-)Ju<L25gl8uhVm1hL$##*8###'A3/LkKW+(^rWX?5W_8g)a(m&K8P>#bmmWCMkk&#TR`C,5d>g)F;t,4:@_l8G/5h4vUd%&%950:VXD'QdWoY-F$BtUwmfe$YqL'8(PWX("
+    "P?^@Po3$##`MSs?DWBZ/S>+4%>fX,VWv/w'KD`LP5IbH;rTV>n3cEK8U#bX]l-/V+^lj3;vlMb&[5YQ8#pekX9JP3XUC72L,,?+Ni&co7ApnO*5NK,((W-i:$,kp'UDAO(G0Sq7MVjJs"
+    "bIu)'Z,*[>br5fX^:FPAWr-m2KgL<LUN098kTF&#lvo58=/vjDo;.;)Ka*hLR#/k=rKbxuV`>Q_nN6'8uTG&#1T5g)uLv:873UpTLgH+#FgpH'_o1780Ph8KmxQJ8#H72L4@768@Tm&Q"
+    "h4CB/5OvmA&,Q&QbUoi$a_%3M01H)4x7I^&KQVgtFnV+;[Pc>[m4k//,]1?#`VY[Jr*3&&slRfLiVZJ:]?=K3Sw=[$=uRB?3xk48@aeg<Z'<$#4H)6,>e0jT6'N#(q%.O=?2S]u*(m<-"
+    "V8J'(1)G][68hW$5'q[GC&5j`TE?m'esFGNRM)j,ffZ?-qx8;->g4t*:CIP/[Qap7/9'#(1sao7w-.qNUdkJ)tCF&#B^;xGvn2r9FEPFFFcL@.iFNkTve$m%#QvQS8U@)2Z+3K:AKM5i"
+    "sZ88+dKQ)W6>J%CL<KE>`.d*(B`-n8D9oK<Up]c$X$(,)M8Zt7/[rdkqTgl-0cuGMv'?>-XV1q['-5k'cAZ69e;D_?$ZPP&s^+7])$*$#@QYi9,5P&#9r+$%CE=68>K8r0=dSC%%(@p7"
+    ".m7jilQ02'0-VWAg<a/''3u.=4L$Y)6k/K:_[3=&jvL<L0C/2'v:^;-DIBW,B4E68:kZ;%?8(Q8BH=kO65BW?xSG&#@uU,DS*,?.+(o(#1vCS8#CHF>TlGW'b)Tq7VT9q^*^$$.:&N@@"
+    "$&)WHtPm*5_rO0&e%K&#-30j(E4#'Zb.o/(Tpm$>K'f@[PvFl,hfINTNU6u'0pao7%XUp9]5.>%h`8_=VYbxuel.NTSsJfLacFu3B'lQSu/m6-Oqem8T+oE--$0a/k]uj9EwsG>%veR*"
+    "hv^BFpQj:K'#SJ,sB-'#](j.Lg92rTw-*n%@/;39rrJF,l#qV%OrtBeC6/,;qB3ebNW[?,Hqj2L.1NP&GjUR=1D8QaS3Up&@*9wP?+lo7b?@%'k4`p0Z$22%K3+iCZj?XJN4Nm&+YF]u"
+    "@-W$U%VEQ/,,>>#)D<h#`)h0:<Q6909ua+&VU%n2:cG3FJ-%@Bj-DgLr`Hw&HAKjKjseK</xKT*)B,N9X3]krc12t'pgTV(Lv-tL[xg_%=M_q7a^x?7Ubd>#%8cY#YZ?=,`Wdxu/ae&#"
+    "w6)R89tI#6@s'(6Bf7a&?S=^ZI_kS&ai`&=tE72L_D,;^R)7[$s<Eh#c&)q.MXI%#v9ROa5FZO%sF7q7Nwb&#ptUJ:aqJe$Sl68%.D###EC><?-aF&#RNQv>o8lKN%5/$(vdfq7+ebA#"
+    "u1p]ovUKW&Y%q]'>$1@-[xfn$7ZTp7mM,G,Ko7a&Gu%G[RMxJs[0MM%wci.LFDK)(<c`Q8N)jEIF*+?P2a8g%)$q]o2aH8C&<SibC/q,(e:v;-b#6[$NtDZ84Je2KNvB#$P5?tQ3nt(0"
+    "d=j.LQf./Ll33+(;q3L-w=8dX$#WF&uIJ@-bfI>%:_i2B5CsR8&9Z&#=mPEnm0f`<&c)QL5uJ#%u%lJj+D-r;BoF&#4DoS97h5g)E#o:&S4weDF,9^Hoe`h*L+_a*NrLW-1pG_&2UdB8"
+    "6e%B/:=>)N4xeW.*wft-;$'58-ESqr<b?UI(_%@[P46>#U`'6AQ]m&6/`Z>#S?YY#Vc;r7U2&326d=w&H####?TZ`*4?&.MK?LP8Vxg>$[QXc%QJv92.(Db*B)gb*BM9dM*hJMAo*c&#"
+    "b0v=Pjer]$gG&JXDf->'StvU7505l9$AFvgYRI^&<^b68?j#q9QX4SM'RO#&sL1IM.rJfLUAj221]d##DW=m83u5;'bYx,*Sl0hL(W;;$doB&O/TQ:(Z^xBdLjL<Lni;''X.`$#8+1GD"
+    ":k$YUWsbn8ogh6rxZ2Z9]%nd+>V#*8U_72Lh+2Q8Cj0i:6hp&$C/:p(HK>T8Y[gHQ4`4)'$Ab(Nof%V'8hL&#<NEdtg(n'=S1A(Q1/I&4([%dM`,Iu'1:_hL>SfD07&6D<fp8dHM7/g+"
+    "tlPN9J*rKaPct&?'uBCem^jn%9_K)<,C5K3s=5g&GmJb*[SYq7K;TRLGCsM-$$;S%:Y@r7AK0pprpL<Lrh,q7e/%KWK:50I^+m'vi`3?%Zp+<-d+$L-Sv:@.o19n$s0&39;kn;S%BSq*"
+    "$3WoJSCLweV[aZ'MQIjO<7;X-X;&+dMLvu#^UsGEC9WEc[X(wI7#2.(F0jV*eZf<-Qv3J-c+J5AlrB#$p(H68LvEA'q3n0#m,[`*8Ft)FcYgEud]CWfm68,(aLA$@EFTgLXoBq/UPlp7"
+    ":d[/;r_ix=:TF`S5H-b<LI&HY(K=h#)]Lk$K14lVfm:x$H<3^Ql<M`$OhapBnkup'D#L$Pb_`N*g]2e;X/Dtg,bsj&K#2[-:iYr'_wgH)NUIR8a1n#S?Yej'h8^58UbZd+^FKD*T@;6A"
+    "7aQC[K8d-(v6GI$x:T<&'Gp5Uf>@M.*J:;$-rv29'M]8qMv-tLp,'886iaC=Hb*YJoKJ,(j%K=H`K.v9HggqBIiZu'QvBT.#=)0ukruV&.)3=(^1`o*Pj4<-<aN((^7('#Z0wK#5GX@7"
+    "u][`*S^43933A4rl][`*O4CgLEl]v$1Q3AeF37dbXk,.)vj#x'd`;qgbQR%FW,2(?LO=s%Sc68%NP'##Aotl8x=BE#j1UD([3$M(]UI2LX3RpKN@;/#f'f/&_mt&F)XdF<9t4)Qa.*kT"
+    "LwQ'(TTB9.xH'>#MJ+gLq9-##@HuZPN0]u:h7.T..G:;$/Usj(T7`Q8tT72LnYl<-qx8;-HV7Q-&Xdx%1a,hC=0u+HlsV>nuIQL-5<N?)NBS)QN*_I,?&)2'IM%L3I)X((e/dl2&8'<M"
+    ":^#M*Q+[T.Xri.LYS3v%fF`68h;b-X[/En'CR.q7E)p'/kle2HM,u;^%OKC-N+Ll%F9CF<Nf'^#t2L,;27W:0O@6##U6W7:$rJfLWHj$#)woqBefIZ.PK<b*t7ed;p*_m;4ExK#h@&]>"
+    "_>@kXQtMacfD.m-VAb8;IReM3$wf0''hra*so568'Ip&vRs849'MRYSp%:t:h5qSgwpEr$B>Q,;s(C#$)`svQuF$##-D,##,g68@2[T;.XSdN9Qe)rpt._K-#5wF)sP'##p#C0c%-Gb%"
+    "hd+<-j'Ai*x&&HMkT]C'OSl##5RG[JXaHN;d'uA#x._U;.`PU@(Z3dt4r152@:v,'R.Sj'w#0<-;kPI)FfJ&#AYJ&#//)>-k=m=*XnK$>=)72L]0I%>.G690a:$##<,);?;72#?x9+d;"
+    "^V'9;jY@;)br#q^YQpx:X#Te$Z^'=-=bGhLf:D6&bNwZ9-ZD#n^9HhLMr5G;']d&6'wYmTFmL<LD)F^%[tC'8;+9E#C$g%#5Y>q9wI>P(9mI[>kC-ekLC/R&CH+s'B;K-M6$EB%is00:"
+    "+A4[7xks.LrNk0&E)wILYF@2L'0Nb$+pv<(2.768/FrY&h$^3i&@+G%JT'<-,v`3;_)I9M^AE]CN?Cl2AZg+%4iTpT3<n-&%H%b<FDj2M<hH=&Eh<2Len$b*aTX=-8QxN)k11IM1c^j%"
+    "9s<L<NFSo)B?+<-(GxsF,^-Eh@$4dXhN$+#rxK8'je'D7k`e;)2pYwPA'_p9&@^18ml1^[@g4t*[JOa*[=Qp7(qJ_oOL^('7fB&Hq-:sf,sNj8xq^>$U4O]GKx'm9)b@p7YsvK3w^YR-"
+    "CdQ*:Ir<($u&)#(&?L9Rg3H)4fiEp^iI9O8KnTj,]H?D*r7'M;PwZ9K0E^k&-cpI;.p/6_vwoFMV<->#%Xi.LxVnrU(4&8/P+:hLSKj$#U%]49t'I:rgMi'FL@a:0Y-uA[39',(vbma*"
+    "hU%<-SRF`Tt:542R_VV$p@[p8DV[A,?1839FWdF<TddF<9Ah-6&9tWoDlh]&1SpGMq>Ti1O*H&#(AL8[_P%.M>v^-))qOT*F5Cq0`Ye%+$B6i:7@0IX<N+T+0MlMBPQ*Vj>SsD<U4JHY"
+    "8kD2)2fU/M#$e.)T4,_=8hLim[&);?UkK'-x?'(:siIfL<$pFM`i<?%W(mGDHM%>iWP,##P`%/L<eXi:@Z9C.7o=@(pXdAO/NLQ8lPl+HPOQa8wD8=^GlPa8TKI1CjhsCTSLJM'/Wl>-"
+    "S(qw%sf/@%#B6;/U7K]uZbi^Oc^2n<bhPmUkMw>%t<)'mEVE''n`WnJra$^TKvX5B>;_aSEK',(hwa0:i4G?.Bci.(X[?b*($,=-n<.Q%`(X=?+@Am*Js0&=3bh8K]mL<LoNs'6,'85`"
+    "0?t/'_U59@]ddF<#LdF<eWdF<OuN/45rY<-L@&#+fm>69=Lb,OcZV/);TTm8VI;?%OtJ<(b4mq7M6:u?KRdF<gR@2L=FNU-<b[(9c/ML3m;Z[$oF3g)GAWqpARc=<ROu7cL5l;-[A]%/"
+    "+fsd;l#SafT/f*W]0=O'$(Tb<[)*@e775R-:Yob%g*>l*:xP?Yb.5)%w_I?7uk5JC+FS(m#i'k.'a0i)9<7b'fs'59hq$*5Uhv##pi^8+hIEBF`nvo`;'l0.^S1<-wUK2/Coh58KKhLj"
+    "M=SO*rfO`+qC`W-On.=AJ56>>i2@2LH6A:&5q`?9I3@@'04&p2/LVa*T-4<-i3;M9UvZd+N7>b*eIwg:CC)c<>nO&#<IGe;__.thjZl<%w(Wk2xmp4Q@I#I9,DF]u7-P=.-_:YJ]aS@V"
+    "?6*C()dOp7:WL,b&3Rg/.cmM9&r^>$(>.Z-I&J(Q0Hd5Q%7Co-b`-c<N(6r@ip+AurK<m86QIth*#v;-OBqi+L7wDE-Ir8K['m+DDSLwK&/.?-V%U_%3:qKNu$_b*B-kp7NaD'QdWQPK"
+    "Yq[@>P)hI;*_F]u`Rb[.j8_Q/<&>uu+VsH$sM9TA%?)(vmJ80),P7E>)tjD%2L=-t#fK[%`v=Q8<FfNkgg^oIbah*#8/Qt$F&:K*-(N/'+1vMB,u()-a.VUU*#[e%gAAO(S>WlA2);Sa"
+    ">gXm8YB`1d@K#n]76-a$U,mF<fX]idqd)<3,]J7JmW4`6]uks=4-72L(jEk+:bJ0M^q-8Dm_Z?0olP1C9Sa&H[d&c$ooQUj]Exd*3ZM@-WGW2%s',B-_M%>%Ul:#/'xoFM9QX-$.QN'>"
+    "[%$Z$uF6pA6Ki2O5:8w*vP1<-1`[G,)-m#>0`P&#eb#.3i)rtB61(o'$?X3B</R90;eZ]%Ncq;-Tl]#F>2Qft^ae_5tKL9MUe9b*sLEQ95C&`=G?@Mj=wh*'3E>=-<)Gt*Iw)'QG:`@I"
+    "wOf7&]1i'S01B+Ev/Nac#9S;=;YQpg_6U`*kVY39xK,[/6Aj7:'1Bm-_1EYfa1+o&o4hp7KN_Q(OlIo@S%;jVdn0'1<Vc52=u`3^o-n1'g4v58Hj&6_t7$##?M)c<$bgQ_'SY((-xkA#"
+    "Y(,p'H9rIVY-b,'%bCPF7.J<Up^,(dU1VY*5#WkTU>h19w,WQhLI)3S#f$2(eb,jr*b;3Vw]*7NH%$c4Vs,eD9>XW8?N]o+(*pgC%/72LV-u<Hp,3@e^9UB1J+ak9-TN/mhKPg+AJYd$"
+    "MlvAF_jCK*.O-^(63adMT->W%iewS8W6m2rtCpo'RS1R84=@paTKt)>=%&1[)*vp'u+x,VrwN;&]kuO9JDbg=pO$J*.jVe;u'm0dr9l,<*wMK*Oe=g8lV_KEBFkO'oU]^=[-792#ok,)"
+    "i]lR8qQ2oA8wcRCZ^7w/Njh;?.stX?Q1>S1q4Bn$)K1<-rGdO'$Wr.Lc.CG)$/*JL4tNR/,SVO3,aUw'DJN:)Ss;wGn9A32ijw%FL+Z0Fn.U9;reSq)bmI32U==5ALuG&#Vf1398/pVo"
+    "1*c-(aY168o<`JsSbk-,1N;$>0:OUas(3:8Z972LSfF8eb=c-;>SPw7.6hn3m`9^Xkn(r.qS[0;T%&Qc=+STRxX'q1BNk3&*eu2;&8q$&x>Q#Q7^Tf+6<(d%ZVmj2bDi%.3L2n+4W'$P"
+    "iDDG)g,r%+?,$@?uou5tSe2aN_AQU*<h`e-GI7)?OK2A.d7_c)?wQ5AS@DL3r#7fSkgl6-++D:'A,uq7SvlB$pcpH'q3n0#_%dY#xCpr-l<F0NR@-##FEV6NTF6##$l84N1w?AO>'IAO"
+    "URQ##V^Fv-XFbGM7Fl(N<3DhLGF%q.1rC$#:T__&Pi68%0xi_&[qFJ(77j_&JWoF.V735&T,[R*:xFR*K5>>#`bW-?4Ne_&6Ne_&6Ne_&n`kr-#GJcM6X;uM6X;uM(.a..^2TkL%oR(#"
+    ";u.T%fAr%4tJ8&><1=GHZ_+m9/#H1F^R#SC#*N=BA9(D?v[UiFY>>^8p,KKF.W]L29uLkLlu/+4T<XoIB&hx=T1PcDaB&;HH+-AFr?(m9HZV)FKS8JCw;SD=6[^/DZUL`EUDf]GGlG&>"
+    "w$)F./^n3+rlo+DB;5sIYGNk+i1t-69Jg--0pao7Sm#K)pdHW&;LuDNH@H>#/X-TI(;P>#,Gc>#0Su>#4`1?#8lC?#<xU?#@.i?#D:%@#HF7@#LRI@#P_[@#Tkn@#Xw*A#]-=A#a9OA#"
+    "d<F&#*;G##.GY##2Sl##6`($#:l:$#>xL$#B.`$#F:r$#JF.%#NR@%#R_R%#Vke%#Zww%#_-4&#3^Rh%Sflr-k'MS.o?.5/sWel/wpEM0%3'/1)K^f1-d>G21&v(35>V`39V7A4=onx4"
+    "A1OY5EI0;6Ibgr6M$HS7Q<)58C5w,;WoA*#[%T*#`1g*#d=#+#hI5+#lUG+#pbY+#tnl+#x$),#&1;,#*=M,#.I`,#2Ur,#6b.-#;w[H#iQtA#m^0B#qjBB#uvTB##-hB#'9$C#+E6C#"
+    "/QHC#3^ZC#7jmC#;v)D#?,<D#C8ND#GDaD#KPsD#O]/E#g1A5#KA*1#gC17#MGd;#8(02#L-d3#rWM4#Hga1#,<w0#T.j<#O#'2#CYN1#qa^:#_4m3#o@/=#eG8=#t8J5#`+78#4uI-#"
+    "m3B2#SB[8#Q0@8#i[*9#iOn8#1Nm;#^sN9#qh<9#:=x-#P;K2#$%X9#bC+.#Rg;<#mN=.#MTF.#RZO.#2?)4#Y#(/#[)1/#b;L/#dAU/#0Sv;#lY$0#n`-0#sf60#(F24#wrH0#%/e0#"
+    "TmD<#%JSMFove:CTBEXI:<eh2g)B,3h2^G3i;#d3jD>)4kMYD4lVu`4m`:&5niUA5@(A5BA1]PBB:xlBCC=2CDLXMCEUtiCf&0g2'tN?PGT4CPGT4CPGT4CPGT4CPGT4CPGT4CPGT4CP"
+    "GT4CPGT4CPGT4CPGT4CPGT4CPGT4CP-qekC`.9kEg^+F$kwViFJTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5o,^<-28ZI'O?;xp"
+    "O?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xp;7q-#lLYI:xvD=#";
+#endif
+
+static unsigned int
+stb_decompress_length(unsigned char *input)
+{
+    return (input[8] << 24) + (input[9] << 16) + (input[10] << 8) + input[11];
+}
+
+static unsigned char *stb__barrier;
+static unsigned char *stb__barrier2;
+static unsigned char *stb__barrier3;
+static unsigned char *stb__barrier4;
+static unsigned char *stb__dout;
+
+static void
+stb__match(unsigned char *data, unsigned int length)
+{
+    /* INVERSE of memmove... write each byte before copying the next...*/
+    ZR_ASSERT (stb__dout + length <= stb__barrier);
+    if (stb__dout + length > stb__barrier) { stb__dout += length; return; }
+    if (data < stb__barrier4) { stb__dout = stb__barrier+1; return; }
+    while (length--) *stb__dout++ = *data++;
+}
+
+static void
+stb__lit(unsigned char *data, unsigned int length)
+{
+    ZR_ASSERT (stb__dout + length <= stb__barrier);
+    if (stb__dout + length > stb__barrier) { stb__dout += length; return; }
+    if (data < stb__barrier2) { stb__dout = stb__barrier+1; return; }
+    zr_memcopy(stb__dout, data, length);
+    stb__dout += length;
+}
+
+#define stb__in2(x)   ((i[x] << 8) + i[(x)+1])
+#define stb__in3(x)   ((i[x] << 16) + stb__in2((x)+1))
+#define stb__in4(x)   ((i[x] << 24) + stb__in3((x)+1))
+
+static unsigned char*
+stb_decompress_token(unsigned char *i)
+{
+    if (*i >= 0x20) { /* use fewer if's for cases that expand small */
+        if (*i >= 0x80)       stb__match(stb__dout-i[1]-1, i[0] - 0x80 + 1), i += 2;
+        else if (*i >= 0x40)  stb__match(stb__dout-(stb__in2(0) - 0x4000 + 1), i[2]+1), i += 3;
+        else /* *i >= 0x20 */ stb__lit(i+1, i[0] - 0x20 + 1), i += 1 + (i[0] - 0x20 + 1);
+    } else { /* more ifs for cases that expand large, since overhead is amortized */
+        if (*i >= 0x18)       stb__match(stb__dout-(stb__in3(0) - 0x180000 + 1), i[3]+1), i += 4;
+        else if (*i >= 0x10)  stb__match(stb__dout-(stb__in3(0) - 0x100000 + 1), stb__in2(3)+1), i += 5;
+        else if (*i >= 0x08)  stb__lit(i+2, stb__in2(0) - 0x0800 + 1), i += 2 + (stb__in2(0) - 0x0800 + 1);
+        else if (*i == 0x07)  stb__lit(i+3, stb__in2(1) + 1), i += 3 + (stb__in2(1) + 1);
+        else if (*i == 0x06)  stb__match(stb__dout-(stb__in3(1)+1), i[4]+1), i += 5;
+        else if (*i == 0x04)  stb__match(stb__dout-(stb__in3(1)+1), stb__in2(4)+1), i += 6;
+    }
+    return i;
+}
+
+static unsigned int
+stb_adler32(unsigned int adler32, unsigned char *buffer, unsigned int buflen)
+{
+    const unsigned long ADLER_MOD = 65521;
+    unsigned long s1 = adler32 & 0xffff, s2 = adler32 >> 16;
+    unsigned long blocklen, i;
+
+    blocklen = buflen % 5552;
+    while (buflen) {
+        for (i=0; i + 7 < blocklen; i += 8) {
+            s1 += buffer[0], s2 += s1;
+            s1 += buffer[1], s2 += s1;
+            s1 += buffer[2], s2 += s1;
+            s1 += buffer[3], s2 += s1;
+            s1 += buffer[4], s2 += s1;
+            s1 += buffer[5], s2 += s1;
+            s1 += buffer[6], s2 += s1;
+            s1 += buffer[7], s2 += s1;
+
+            buffer += 8;
+        }
+
+        for (; i < blocklen; ++i)
+            s1 += *buffer++, s2 += s1;
+
+        s1 %= ADLER_MOD, s2 %= ADLER_MOD;
+        buflen -= blocklen;
+        blocklen = 5552;
+    }
+    return (unsigned int)(s2 << 16) + (unsigned int)s1;
+}
+
+static unsigned int
+stb_decompress(unsigned char *output, unsigned char *i, unsigned int length)
+{
+    unsigned int olen;
+    if (stb__in4(0) != 0x57bC0000) return 0;
+    if (stb__in4(4) != 0)          return 0; /* error! stream is > 4GB */
+    olen = stb_decompress_length(i);
+    stb__barrier2 = i;
+    stb__barrier3 = i+length;
+    stb__barrier = output + olen;
+    stb__barrier4 = output;
+    i += 16;
+
+    stb__dout = output;
+    for (;;) {
+        unsigned char *old_i = i;
+        i = stb_decompress_token(i);
+        if (i == old_i) {
+            if (*i == 0x05 && i[1] == 0xfa) {
+                ZR_ASSERT(stb__dout == output + olen);
+                if (stb__dout != output + olen) return 0;
+                if (stb_adler32(1, output, olen) != (unsigned int) stb__in4(2))
+                    return 0;
+                return olen;
+            } else {
+                ZR_ASSERT(0); /* NOTREACHED */
+                return 0;
+            }
+        }
+        ZR_ASSERT(stb__dout <= output + olen);
+        if (stb__dout > output + olen)
+            return 0;
+    }
+}
+
+static unsigned int
+zr_decode_85_byte(char c)
+{ return (c >= '\\') ? c-36 : c-35; }
+
+static void
+zr_decode_85(unsigned char* dst, const unsigned char* src)
+{
+    while (*src)
+    {
+        unsigned int tmp = zr_decode_85_byte(src[0]) +
+            85*(zr_decode_85_byte(src[1]) +
+            85*(zr_decode_85_byte(src[2]) +
+            85*(zr_decode_85_byte(src[3]) +
+            85*zr_decode_85_byte(src[4]))));
+
+        /* we can't assume little-endianess. */
+        dst[0] = ((tmp >> 0) & 0xFF);
+        dst[1] = ((tmp >> 8) & 0xFF);
+        dst[2] = ((tmp >> 16) & 0xFF);
+        dst[3] = ((tmp >> 24) & 0xFF);
+
+        src += 5;
+        dst += 4;
+    }
+}
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#elif defined(__GNUC__) || defined(__GNUG__)
+#pragma GCC diagnostic pop
+#elif _MSC_VER
+#pragma warning (pop)
+#endif
+
+/* -------------------------------------------------------------
+ *
+ *                          FONT ATLAS
+ *
+ * --------------------------------------------------------------*/
+struct zr_font_config
+zr_font_config(float pixel_height)
+{
+    struct zr_font_config cfg;
+    zr_zero_struct(cfg);
+    cfg.ttf_blob = 0;
+    cfg.ttf_size = 0;
+    cfg.ttf_data_owned_by_atlas = 0;
+    cfg.size = pixel_height;
+    cfg.oversample_h = 1;
+    cfg.oversample_v = 1;
+    cfg.pixel_snap = 0;
+    cfg.coord_type = ZR_COORD_UV;
+    cfg.spacing = zr_vec2(0,0);
+    cfg.range = zr_font_default_glyph_ranges();
+    cfg.fallback_glyph = '?';
+    cfg.font = 0;
+    return cfg;
+}
+
+#if ZR_COMPILE_WITH_DEFAULT_ALLOCATOR
+void
+zr_font_atlas_init_default(struct zr_font_atlas *atlas)
+{
+    ZR_ASSERT(atlas);
+    if (!atlas) return;
+    zr_zero_struct(*atlas);
+    atlas->alloc.userdata.ptr = 0;
+    atlas->alloc.alloc = zr_malloc;
+    atlas->alloc.free = zr_mfree;
+}
+#endif
+
+void
+zr_font_atlas_init(struct zr_font_atlas *atlas, struct zr_allocator *alloc)
+{
+    ZR_ASSERT(atlas);
+    ZR_ASSERT(alloc);
+    if (!atlas || !alloc) return;
+    zr_zero_struct(*atlas);
+    atlas->alloc = *alloc;
+}
+
+void
+zr_font_atlas_begin(struct zr_font_atlas *atlas)
+{
+    ZR_ASSERT(atlas);
+    ZR_ASSERT(atlas->alloc.alloc && atlas->alloc.free);
+    if (!atlas || !atlas->alloc.alloc || !atlas->alloc.free) return;
+    if (atlas->glyphes) {
+        atlas->alloc.free(atlas->alloc.userdata, atlas->glyphes);
+        atlas->glyphes = 0;
+    }
+    if (atlas->pixel) {
+        atlas->alloc.free(atlas->alloc.userdata, atlas->pixel);
+        atlas->pixel = 0;
+    }
+}
+
+struct zr_font*
+zr_font_atlas_add(struct zr_font_atlas *atlas, const struct zr_font_config *config)
+{
+    struct zr_font *font = 0;
+    ZR_ASSERT(atlas);
+    ZR_ASSERT(config);
+    ZR_ASSERT(atlas->alloc.alloc);
+    ZR_ASSERT(atlas->alloc.free);
+    ZR_ASSERT(config->ttf_blob);
+    ZR_ASSERT(config->ttf_size);
+    ZR_ASSERT(config->size > 0.0f);
+    if (!atlas || !config || !config->ttf_blob || !config->ttf_size || config->size <= 0.0f||
+        !atlas->alloc.alloc || !atlas->alloc.free)
+        return 0;
+
+    /* allocate new font */
+    font = (struct zr_font*)atlas->alloc.alloc(atlas->alloc.userdata, sizeof(struct zr_font));
+    ZR_ASSERT(font);
+    if (!font) return 0;
+
+    /* make sure enough memory */
+    if (!atlas->config || atlas->font_num >= atlas->font_cap) {
+        void *tmp_font, *tmp_config;
+        atlas->font_cap = (!atlas->config) ? 32: (int)((float)atlas->font_cap * 2.7f);
+        tmp_font = atlas->alloc.alloc(atlas->alloc.userdata, ((zr_size)atlas->font_cap * sizeof(struct zr_font*)));
+        tmp_config = atlas->alloc.alloc(atlas->alloc.userdata, ((zr_size)atlas->font_cap * sizeof(struct zr_font_config)));
+        if (!atlas->config) {
+            atlas->fonts = (struct zr_font**)tmp_font;
+            atlas->config = (struct zr_font_config*)tmp_config;
+        } else {
+            /* realloc */
+            zr_memcopy(tmp_font, atlas->fonts, sizeof(struct zr_font*) * (zr_size)atlas->font_num);
+            zr_memcopy(tmp_config, atlas->config, sizeof(struct zr_font_config) * (zr_size)atlas->font_num);
+
+            atlas->alloc.free(atlas->alloc.userdata, atlas->fonts);
+            atlas->alloc.free(atlas->alloc.userdata, atlas->config);
+
+            atlas->fonts = (struct zr_font**)tmp_font;
+            atlas->config = (struct zr_font_config*)tmp_config;
+        }
+    }
+
+    /* create own copy of .TTF font blob */
+    atlas->fonts[atlas->font_num] = font;
+    atlas->config[atlas->font_num] = *config;
+    if (!config->ttf_data_owned_by_atlas) {
+        struct zr_font_config *c = &atlas->config[atlas->font_num];
+        c->ttf_blob = atlas->alloc.alloc(atlas->alloc.userdata, c->ttf_size);
+        ZR_ASSERT(c->ttf_blob);
+        if (!c->ttf_blob) {
+            atlas->font_num++;
+            return 0;
+        }
+        zr_memcopy(c->ttf_blob, config->ttf_blob, c->ttf_size);
+        c->ttf_data_owned_by_atlas = 1;
+    }
+    atlas->font_num++;
+    return font;
+}
+
+struct zr_font*
+zr_font_atlas_add_from_memory(struct zr_font_atlas *atlas, void *memory,
+    zr_size size, float height, const struct zr_font_config *config)
+{
+    struct zr_font_config cfg;
+    ZR_ASSERT(memory);
+    ZR_ASSERT(size);
+    ZR_ASSERT(atlas);
+    ZR_ASSERT(atlas->alloc.alloc);
+    ZR_ASSERT(atlas->alloc.free);
+    if (!atlas || !atlas->alloc.alloc || !atlas->alloc.free || !memory || !size)
+        return 0;
+
+    cfg = (config) ? *config: zr_font_config(height);
+    cfg.ttf_blob = memory;
+    cfg.ttf_size = size;
+    cfg.size = height;
+    cfg.ttf_data_owned_by_atlas = 0;
+    return zr_font_atlas_add(atlas, &cfg);
+}
+
+#if ZR_COMPILE_WITH_STANDARD_FILE_IO
+struct zr_font*
+zr_font_atlas_add_from_file(struct zr_font_atlas *atlas, const char *file_path,
+    float height, const struct zr_font_config *config)
+{
+    zr_size size;
+    char *memory;
+    struct zr_font_config cfg;
+
+    ZR_ASSERT(atlas);
+    ZR_ASSERT(atlas->alloc.alloc);
+    ZR_ASSERT(atlas->alloc.free);
+    if (!atlas || !file_path) return 0;
+    memory = zr_file_load(file_path, &size, &atlas->alloc);
+    if (!memory) return 0;
+
+    cfg = (config) ? *config: zr_font_config(height);
+    cfg.ttf_blob = memory;
+    cfg.ttf_size = size;
+    cfg.size = height;
+    cfg.ttf_data_owned_by_atlas = 1;
+    return zr_font_atlas_add(atlas, &cfg);
+}
+#endif
+
+struct zr_font*
+zr_font_atlas_add_compressed(struct zr_font_atlas *atlas,
+    void *compressed_data, zr_size compressed_size, float height,
+    const struct zr_font_config *config)
+{
+    unsigned int decompressed_size;
+    void *decompressed_data;
+    struct zr_font_config cfg;
+
+    ZR_ASSERT(compressed_data);
+    ZR_ASSERT(compressed_size);
+    ZR_ASSERT(atlas);
+    ZR_ASSERT(atlas->alloc.alloc);
+    ZR_ASSERT(atlas->alloc.free);
+    if (!atlas || !compressed_data || !atlas->alloc.alloc || !atlas->alloc.free)
+        return 0;
+
+    decompressed_size = stb_decompress_length((unsigned char*)compressed_data);
+    decompressed_data = atlas->alloc.alloc(atlas->alloc.userdata,decompressed_size);
+    ZR_ASSERT(decompressed_data);
+    if (!decompressed_data) return 0;
+    stb_decompress((unsigned char*)decompressed_data, (unsigned char*)compressed_data,
+        (unsigned int)compressed_size);
+
+    cfg = (config) ? *config: zr_font_config(height);
+    cfg.ttf_blob = decompressed_data;
+    cfg.ttf_size = decompressed_size;
+    cfg.size = height;
+    cfg.ttf_data_owned_by_atlas = 1;
+    return zr_font_atlas_add(atlas, &cfg);
+}
+
+struct zr_font*
+zr_font_atlas_add_compressed_base85(struct zr_font_atlas *atlas,
+    const char *data_base85, float height, const struct zr_font_config *config)
+{
+    int compressed_size;
+    void *compressed_data;
+    struct zr_font *font;
+
+    ZR_ASSERT(data_base85);
+    ZR_ASSERT(atlas);
+    ZR_ASSERT(atlas->alloc.alloc);
+    ZR_ASSERT(atlas->alloc.free);
+    if (!atlas || !data_base85 || !atlas->alloc.alloc || !atlas->alloc.free)
+        return 0;
+
+    compressed_size = (((int)zr_strlen(data_base85) + 4) / 5) * 4;
+    compressed_data = atlas->alloc.alloc(atlas->alloc.userdata, (zr_size)compressed_size);
+    ZR_ASSERT(compressed_data);
+    if (!compressed_data) return 0;
+    zr_decode_85((unsigned char*)compressed_data, (const unsigned char*)data_base85);
+    font = zr_font_atlas_add_compressed(atlas, compressed_data,
+                    (zr_size)compressed_size, height, config);
+    atlas->alloc.free(atlas->alloc.userdata, compressed_data);
+    return font;
+}
+
+#if ZR_COMPILE_WITH_DEFAULT_FONT
+struct zr_font*
+zr_font_atlas_add_default(struct zr_font_atlas *atlas,
+    float pixel_height, const struct zr_font_config *config)
+{
+    ZR_ASSERT(atlas);
+    ZR_ASSERT(atlas->alloc.alloc);
+    ZR_ASSERT(atlas->alloc.free);
+    return zr_font_atlas_add_compressed_base85(atlas,
+        zr_proggy_clean_ttf_compressed_data_base85, pixel_height, config);
+}
+#endif
+
+const void*
+zr_font_atlas_bake(struct zr_font_atlas *atlas, int *width, int *height,
+    enum zr_font_atlas_format fmt)
+{
+    int i = 0;
+    void *tmp = 0;
+    const char *custom_data = "....";
+    zr_size tmp_size, img_size;
+    struct zr_baked_font *baked_fonts = 0;
+
+    ZR_ASSERT(width);
+    ZR_ASSERT(height);
+    ZR_ASSERT(atlas);
+    ZR_ASSERT(atlas->alloc.alloc);
+    ZR_ASSERT(atlas->alloc.free);
+    if (!atlas || !width || !height || !atlas->alloc.alloc || !atlas->alloc.free)
+        return 0;
+
+#if ZR_COMPILE_WITH_DEFAULT_FONT
+    /* no font added so just use default font */
+    if (!atlas->font_num)
+        zr_font_atlas_add_default(atlas, 14.0f, 0);
+#endif
+    if (!atlas->font_num) return 0;
+
+    /* allocate temporary memory required for the baking process */
+    zr_font_bake_memory(&tmp_size, &atlas->glyph_count, atlas->config, atlas->font_num);
+    tmp = atlas->alloc.alloc(atlas->alloc.userdata, tmp_size);
+    ZR_ASSERT(tmp);
+    if (!tmp) goto failed;
+
+    /* allocate temporary baked font container */
+    baked_fonts = (struct zr_baked_font*)
+        atlas->alloc.alloc(atlas->alloc.userdata, sizeof(struct zr_baked_font) * (size_t)atlas->font_num);
+    ZR_ASSERT(baked_fonts);
+    if (!baked_fonts)
+        goto failed;
+
+    /* allocate memory glyphes for all fonts */
+    atlas->glyphes = (struct zr_font_glyph*)
+        atlas->alloc.alloc(atlas->alloc.userdata, sizeof(struct zr_font_glyph) * (size_t)atlas->glyph_count);
+    ZR_ASSERT(atlas->glyphes);
+    if (!atlas->glyphes)
+        goto failed;
+
+    for (i = 0; i < atlas->font_num; ++i)
+        atlas->config[i].font = &baked_fonts[i];
+
+    /* pack all glyphes into a tight fit space */
+    atlas->custom.w = 2; atlas->custom.h = 2;
+    if (!zr_font_bake_pack(&img_size, width, height, &atlas->custom, tmp, tmp_size,
+        atlas->config, atlas->font_num))
+        goto failed;
+
+    /* allocate memory for the baked image font atlas */
+    atlas->pixel = atlas->alloc.alloc(atlas->alloc.userdata, img_size);
+    ZR_ASSERT(atlas->pixel);
+    if (!atlas->pixel)
+        goto failed;
+
+    /* bake glyphes and custom white pixel into image */
+    zr_font_bake(atlas->pixel, *width, *height, tmp, tmp_size, atlas->glyphes,
+        atlas->glyph_count, atlas->config, atlas->font_num);
+    zr_font_bake_custom_data(atlas->pixel, *width, *height, atlas->custom,
+            custom_data, 2, 2, '.', 'X');
+
+    /* convert alpha8 image into rgba32 image */
+    if (fmt == ZR_FONT_ATLAS_RGBA32) {
+        void *img_rgba = atlas->alloc.alloc(atlas->alloc.userdata, (zr_size)(*width * *height * 4));
+        ZR_ASSERT(img_rgba);
+        if (!img_rgba) goto failed;
+        zr_font_bake_convert(img_rgba, *width, *height, atlas->pixel);
+        atlas->alloc.free(atlas->alloc.userdata, atlas->pixel);
+        atlas->pixel = img_rgba;
+    }
+    atlas->tex_width = *width;
+    atlas->tex_height = *height;
+
+    /* initialize each font */
+    for (i = 0; i < atlas->font_num; ++i) {
+        zr_font_init(atlas->fonts[i], atlas->config[i].size,
+            atlas->config[i].fallback_glyph, atlas->glyphes,
+            atlas->config[i].font, zr_handle_ptr(0));
+    }
+
+    /* free temporary memory */
+    atlas->alloc.free(atlas->alloc.userdata, tmp);
+    atlas->alloc.free(atlas->alloc.userdata, baked_fonts);
+    return atlas->pixel;
+
+failed:
+    /* error so cleanup all memory */
+    if (baked_fonts) atlas->alloc.free(atlas->alloc.userdata, baked_fonts);
+    if (tmp) atlas->alloc.free(atlas->alloc.userdata, tmp);
+    if (atlas->glyphes) {
+        atlas->alloc.free(atlas->alloc.userdata, atlas->glyphes);
+        atlas->glyphes = 0;
+    }
+    if (atlas->pixel) {
+        atlas->alloc.free(atlas->alloc.userdata, atlas->pixel);
+        atlas->pixel = 0;
+    }
+    return 0;
+}
+
+void
+zr_font_atlas_end(struct zr_font_atlas *atlas, zr_handle texture,
+    struct zr_draw_null_texture *null)
+{
+    int i = 0;
+    ZR_ASSERT(atlas);
+    if (!atlas) {
+        if (!null) return;
+        null->texture = texture;
+        null->uv = zr_vec2(0.5f,0.5f);
+    }
+    if (null) {
+        null->texture = texture;
+        null->uv = zr_vec2((atlas->custom.x + 0.5f)/(float)atlas->tex_width,
+            (atlas->custom.y + 0.5f)/(float)atlas->tex_height);
+    }
+    for (i = 0; i < atlas->font_num; ++i) {
+        atlas->fonts[i]->texture = texture;
+        atlas->fonts[i]->handle.texture = texture;
+    }
+
+    atlas->alloc.free(atlas->alloc.userdata, atlas->pixel);
+    atlas->pixel = 0;
+    atlas->tex_width = 0;
+    atlas->tex_height = 0;
+    atlas->custom.x = 0;
+    atlas->custom.y = 0;
+    atlas->custom.w = 0;
+    atlas->custom.h = 0;
+}
+
+void
+zr_font_atlas_clear(struct zr_font_atlas *atlas)
+{
+    int i = 0;
+    ZR_ASSERT(atlas);
+    ZR_ASSERT(atlas->alloc.alloc);
+    ZR_ASSERT(atlas->alloc.free);
+    if (!atlas || !atlas->alloc.alloc || !atlas->alloc.free)
+        return;
+
+    if (atlas->fonts) {
+        for (i = 0; i < atlas->font_num; ++i)
+            atlas->alloc.free(atlas->alloc.userdata, atlas->fonts[i]);
+        atlas->alloc.free(atlas->alloc.userdata, atlas->fonts);
+    }
+    if (atlas->config) {
+        for (i = 0; i < atlas->font_num; ++i)
+            atlas->alloc.free(atlas->alloc.userdata, atlas->config[i].ttf_blob);
+        atlas->alloc.free(atlas->alloc.userdata, atlas->config);
+    }
+    if (atlas->glyphes)
+        atlas->alloc.free(atlas->alloc.userdata, atlas->glyphes);
+    if (atlas->pixel)
+        atlas->alloc.free(atlas->alloc.userdata, atlas->pixel);
+    zr_zero_struct(*atlas);
 }
 #endif
 /*
@@ -5574,6 +6447,7 @@ zr_progress_behavior(zr_flags *state, const struct zr_input *in,
             *state = ZR_WIDGET_STATE_ACTIVE;
         } else *state = ZR_WIDGET_STATE_HOVERED;
     }
+
     if (*state == ZR_WIDGET_STATE_HOVERED && !zr_input_is_mouse_prev_hovering_rect(in, r))
         *state |= ZR_WIDGET_STATE_ENTERED;
     else if (zr_input_is_mouse_prev_hovering_rect(in, r))
@@ -6451,7 +7325,7 @@ zr_do_property(zr_flags *ws,
     left.y = property.y + style->border + property.h/2.0f - left.h/2;
 
     /* text label */
-    name_len = zr_strsiz(name);
+    name_len = zr_strlen(name);
     size = font->width(font->userdata, font->height, name, name_len);
     label.x = left.x + left.w + style->padding.x;
     label.w = (float)size + 2 * style->padding.x;
@@ -7429,6 +8303,18 @@ zr_setup(struct zr_context *ctx, const struct zr_user_font *font)
 #endif
 }
 
+#if ZR_COMPILE_WITH_DEFAULT_ALLOCATOR
+int
+zr_init_default(struct zr_context *ctx, const struct zr_user_font *font)
+{
+    struct zr_allocator alloc;
+    alloc.userdata.ptr = 0;
+    alloc.alloc = zr_malloc;
+    alloc.free = zr_mfree;
+    return zr_init(ctx, &alloc, font);
+}
+#endif
+
 int
 zr_init_fixed(struct zr_context *ctx, void *memory, zr_size size,
     const struct zr_user_font *font)
@@ -7979,7 +8865,7 @@ zr_begin(struct zr_context *ctx, struct zr_panel *layout, const char *title,
 
     /* find or create window */
     style = &ctx->style;
-    title_len = (int)zr_strsiz(title);
+    title_len = (int)zr_strlen(title);
     title_hash = zr_murmur_hash(title, (int)title_len, ZR_WINDOW_TITLE);
     win = zr_find_window(ctx, title_hash);
     if (!win) {
@@ -8247,7 +9133,7 @@ zr_window_is_collapsed(struct zr_context *ctx, const char *name)
     ZR_ASSERT(ctx);
     if (!ctx) return 0;
 
-    title_len = (int)zr_strsiz(name);
+    title_len = (int)zr_strlen(name);
     title_hash = zr_murmur_hash(name, (int)title_len, ZR_WINDOW_TITLE);
     win = zr_find_window(ctx, title_hash);
     if (!win) return 0;
@@ -8263,7 +9149,7 @@ zr_window_is_closed(struct zr_context *ctx, const char *name)
     ZR_ASSERT(ctx);
     if (!ctx) return 1;
 
-    title_len = (int)zr_strsiz(name);
+    title_len = (int)zr_strlen(name);
     title_hash = zr_murmur_hash(name, (int)title_len, ZR_WINDOW_TITLE);
     win = zr_find_window(ctx, title_hash);
     if (!win) return 1;
@@ -8279,7 +9165,7 @@ zr_window_is_active(struct zr_context *ctx, const char *name)
     ZR_ASSERT(ctx);
     if (!ctx) return 0;
 
-    title_len = (int)zr_strsiz(name);
+    title_len = (int)zr_strlen(name);
     title_hash = zr_murmur_hash(name, (int)title_len, ZR_WINDOW_TITLE);
     win = zr_find_window(ctx, title_hash);
     if (!win) return 0;
@@ -8291,7 +9177,7 @@ zr_window_find(struct zr_context *ctx, const char *name)
 {
     int title_len;
     zr_hash title_hash;
-    title_len = (int)zr_strsiz(name);
+    title_len = (int)zr_strlen(name);
     title_hash = zr_murmur_hash(name, (int)title_len, ZR_WINDOW_TITLE);
     return zr_find_window(ctx, title_hash);
 }
@@ -8345,7 +9231,7 @@ zr_window_collapse(struct zr_context *ctx, const char *name,
     ZR_ASSERT(ctx);
     if (!ctx) return;
 
-    title_len = (int)zr_strsiz(name);
+    title_len = (int)zr_strlen(name);
     title_hash = zr_murmur_hash(name, (int)title_len, ZR_WINDOW_TITLE);
     win = zr_find_window(ctx, title_hash);
     if (!win) return;
@@ -8372,7 +9258,7 @@ zr_window_show(struct zr_context *ctx, const char *name, enum zr_show_states s)
     ZR_ASSERT(ctx);
     if (!ctx) return;
 
-    title_len = (int)zr_strsiz(name);
+    title_len = (int)zr_strlen(name);
     title_hash = zr_murmur_hash(name, (int)title_len, ZR_WINDOW_TITLE);
     win = zr_find_window(ctx, title_hash);
     if (!win) return;
@@ -8399,7 +9285,7 @@ zr_window_set_focus(struct zr_context *ctx, const char *name)
     ZR_ASSERT(ctx);
     if (!ctx) return;
 
-    title_len = (int)zr_strsiz(name);
+    title_len = (int)zr_strlen(name);
     title_hash = zr_murmur_hash(name, (int)title_len, ZR_WINDOW_TITLE);
     win = zr_find_window(ctx, title_hash);
     if (win && ctx->end != win) {
@@ -8603,7 +9489,7 @@ zr_panel_begin(struct zr_context *ctx, const char *title)
         }
         {
             /* window header title */
-            zr_size text_len = zr_strsiz(title);
+            zr_size text_len = zr_strlen(title);
             struct zr_rect label = {0,0,0,0};
             zr_size t = font->width(font->userdata, font->height, title, text_len);
 
@@ -9583,9 +10469,9 @@ zr__layout_push(struct zr_context *ctx, enum zr_layout_node_type type,
     } else text.background = style->window.background;
 
     /* find or create tab persistent state (open/closed) */
-    title_len = (int)zr_strsiz(title);
+    title_len = (int)zr_strlen(title);
     title_hash = zr_murmur_hash(title, (int)title_len, (zr_hash)line);
-    if (file) title_hash += zr_murmur_hash(file, (int)zr_strsiz(file), (zr_hash)line);
+    if (file) title_hash += zr_murmur_hash(file, (int)zr_strlen(file), (zr_hash)line);
     state = zr_find_value(win, title_hash);
     if (!state) {
         state = zr_add_value(ctx, win, title_hash, 0);
@@ -9629,7 +10515,7 @@ zr__layout_push(struct zr_context *ctx, enum zr_layout_node_type type,
 
         text.text = style->tab.text;
         text.padding = zr_vec2(0,0);
-        zr_widget_text(out, label, title, zr_strsiz(title), &text,
+        zr_widget_text(out, label, title, zr_strlen(title), &text,
             ZR_TEXT_LEFT, &style->font);
     }
 
@@ -9806,7 +10692,9 @@ zr_widget_fitting(struct zr_rect *bounds, struct zr_context *ctx,
 }
 
 /*----------------------------------------------------------------
+ *
  *                          MISC
+ *
  * --------------------------------------------------------------*/
 void
 zr_spacing(struct zr_context *ctx, int cols)
@@ -9843,7 +10731,9 @@ zr_spacing(struct zr_context *ctx, int cols)
 }
 
 /*----------------------------------------------------------------
+ *
  *                          TEXT
+ *
  * --------------------------------------------------------------*/
 void
 zr_text_colored(struct zr_context *ctx, const char *str, zr_size len, zr_flags alignment,
@@ -9920,20 +10810,20 @@ zr_text_wrap(struct zr_context *ctx, const char *str, zr_size len)
 
 void
 zr_label(struct zr_context *ctx, const char *str, zr_flags alignment)
-{zr_text(ctx, str, zr_strsiz(str), alignment);}
+{zr_text(ctx, str, zr_strlen(str), alignment);}
 
 void
 zr_label_colored(struct zr_context *ctx, const char *str, zr_flags align,
     struct zr_color color)
-{zr_text_colored(ctx, str, zr_strsiz(str), align, color);}
+{zr_text_colored(ctx, str, zr_strlen(str), align, color);}
 
 void
 zr_label_wrap(struct zr_context *ctx, const char *str)
-{zr_text_wrap(ctx, str, zr_strsiz(str));}
+{zr_text_wrap(ctx, str, zr_strlen(str));}
 
 void
 zr_label_colored_wrap(struct zr_context *ctx, const char *str, struct zr_color color)
-{zr_text_wrap_colored(ctx, str, zr_strsiz(str), color);}
+{zr_text_wrap_colored(ctx, str, zr_strlen(str), color);}
 
 void
 zr_image(struct zr_context *ctx, struct zr_image img)
@@ -9953,7 +10843,9 @@ zr_image(struct zr_context *ctx, struct zr_image img)
 }
 
 /*----------------------------------------------------------------
+ *
  *                          BUTTON
+ *
  * --------------------------------------------------------------*/
 int
 zr_button_text(struct zr_context *ctx, const char *title, zr_size len,
@@ -9986,7 +10878,7 @@ zr_button_text(struct zr_context *ctx, const char *title, zr_size len,
 
 int zr_button_label(struct zr_context *ctx, const char *title,
     enum zr_button_behavior behavior)
-{return zr_button_text(ctx, title, zr_strsiz(title), behavior);}
+{return zr_button_text(ctx, title, zr_strlen(title), behavior);}
 
 int
 zr_button_color(struct zr_context *ctx, struct zr_color color,
@@ -10116,7 +11008,7 @@ zr_button_symbol_text(struct zr_context *ctx, enum zr_symbol_type symbol,
 
 int zr_button_symbol_label(struct zr_context *ctx, enum zr_symbol_type symbol,
     const char *label, zr_flags align, enum zr_button_behavior behavior)
-{return zr_button_symbol_text(ctx, symbol, label, zr_strsiz(label), align, behavior);}
+{return zr_button_symbol_text(ctx, symbol, label, zr_strlen(label), align, behavior);}
 
 int
 zr_button_image_text(struct zr_context *ctx, struct zr_image img,
@@ -10149,10 +11041,12 @@ zr_button_image_text(struct zr_context *ctx, struct zr_image img,
 
 int zr_button_image_label(struct zr_context *ctx, struct zr_image img,
     const char *label, zr_flags align, enum zr_button_behavior behavior)
-{return zr_button_image_text(ctx, img, label, zr_strsiz(label), align, behavior);}
+{return zr_button_image_text(ctx, img, label, zr_strlen(label), align, behavior);}
 
 /*----------------------------------------------------------------
+ *
  *                          SELECTABLE
+ *
  * --------------------------------------------------------------*/
 int
 zr_selectable_text(struct zr_context *ctx, const char *str, zr_size len,
@@ -10188,13 +11082,15 @@ int zr_select_text(struct zr_context *ctx, const char *str, zr_size len,
 {zr_selectable_text(ctx, str, len, align, &value);return value;}
 
 int zr_selectable_label(struct zr_context *ctx, const char *str, zr_flags align, int *value)
-{return zr_selectable_text(ctx, str, zr_strsiz(str), align, value);}
+{return zr_selectable_text(ctx, str, zr_strlen(str), align, value);}
 
 int zr_select_label(struct zr_context *ctx, const char *str, zr_flags align, int value)
-{zr_selectable_text(ctx, str, zr_strsiz(str), align, &value);return value;}
+{zr_selectable_text(ctx, str, zr_strlen(str), align, &value);return value;}
 
 /*----------------------------------------------------------------
+ *
  *                          CHECKBOX
+ *
  * --------------------------------------------------------------*/
 int
 zr_check_text(struct zr_context *ctx, const char *text, zr_size len, int active)
@@ -10225,14 +11121,14 @@ zr_check_text(struct zr_context *ctx, const char *text, zr_size len, int active)
 }
 
 unsigned int
-zr_check_flag_text(struct zr_context *ctx, const char *text, zr_size len,
+zr_check_flags_text(struct zr_context *ctx, const char *text, zr_size len,
     unsigned int flags, unsigned int value)
 {
     int old_active, active;
     ZR_ASSERT(ctx);
     ZR_ASSERT(text);
     if (!ctx || !text) return flags;
-    old_active = active = (int)(flags & value);
+    old_active = active = (int)((flags & value) & value);
     if (zr_check_text(ctx, text, len, old_active))
         flags |= value;
     else flags &= ~value;
@@ -10253,7 +11149,7 @@ zr_checkbox_text(struct zr_context *ctx, const char *text, zr_size len, int *act
 }
 
 int
-zr_checkbox_flag_text(struct zr_context *ctx, const char *text, zr_size len,
+zr_checkbox_flags_text(struct zr_context *ctx, const char *text, zr_size len,
     unsigned int *flags, unsigned int value)
 {
     int active;
@@ -10261,7 +11157,7 @@ zr_checkbox_flag_text(struct zr_context *ctx, const char *text, zr_size len,
     ZR_ASSERT(text);
     ZR_ASSERT(flags);
     if (!ctx || !text || !flags) return 0;
-    active = (int)(*flags & value);
+    active = (int)((*flags & value) & value);
     if (zr_checkbox_text(ctx, text, len, &active)) {
         if (active) *flags |= value;
         else *flags &= ~value;
@@ -10271,21 +11167,23 @@ zr_checkbox_flag_text(struct zr_context *ctx, const char *text, zr_size len,
 }
 
 int zr_check_label(struct zr_context *ctx, const char *label, int active)
-{return zr_check_text(ctx, label, zr_strsiz(label), active);}
+{return zr_check_text(ctx, label, zr_strlen(label), active);}
 
-unsigned int zr_check_flag_label(struct zr_context *ctx, const char *label,
+unsigned int zr_check_flags_label(struct zr_context *ctx, const char *label,
     unsigned int flags, unsigned int value)
-{return zr_check_flag_text(ctx, label, zr_strsiz(label), flags, value);}
+{return zr_check_flags_text(ctx, label, zr_strlen(label), flags, value);}
 
 int zr_checkbox_label(struct zr_context *ctx, const char *label, int *active)
-{return zr_checkbox_text(ctx, label, zr_strsiz(label), active);}
+{return zr_checkbox_text(ctx, label, zr_strlen(label), active);}
 
-int zr_checkbox_flag_label(struct zr_context *ctx, const char *label,
+int zr_checkbox_flags_label(struct zr_context *ctx, const char *label,
     unsigned int *flags, unsigned int value)
-{return zr_checkbox_flag_text(ctx, label, zr_strsiz(label), flags, value);}
+{return zr_checkbox_flags_text(ctx, label, zr_strlen(label), flags, value);}
 
 /*----------------------------------------------------------------
+ *
  *                          OPTION
+ *
  * --------------------------------------------------------------*/
 int
 zr_option_text(struct zr_context *ctx, const char *text, zr_size len, int is_active)
@@ -10330,14 +11228,16 @@ zr_radio_text(struct zr_context *ctx, const char *text, zr_size len, int *active
 
 int
 zr_option_label(struct zr_context *ctx, const char *label, int active)
-{return zr_option_text(ctx, label, zr_strsiz(label), active);}
+{return zr_option_text(ctx, label, zr_strlen(label), active);}
 
 int
 zr_radio_label(struct zr_context *ctx, const char *label, int *active)
-{return zr_radio_text(ctx, label, zr_strsiz(label), active);}
+{return zr_radio_text(ctx, label, zr_strlen(label), active);}
 
 /*----------------------------------------------------------------
+ *
  *                          SLIDER
+ *
  * --------------------------------------------------------------*/
 int
 zr_slider_float(struct zr_context *ctx, float min_value, float *value, float max_value,
@@ -10398,7 +11298,9 @@ zr_slider_int(struct zr_context *ctx, int min, int *val, int max, int step)
 }
 
 /*----------------------------------------------------------------
+ *
  *                          PROGRESSBAR
+ *
  * --------------------------------------------------------------*/
 int
 zr_progress(struct zr_context *ctx, zr_size *cur, zr_size max, int is_modifyable)
@@ -10435,7 +11337,9 @@ zr_size zr_prog(struct zr_context *ctx, zr_size cur, zr_size max, int modifyable
 {zr_progress(ctx, &cur, max, modifyable);return cur;}
 
 /*----------------------------------------------------------------
+ *
  *                          EDIT
+ *
  * --------------------------------------------------------------*/
 zr_flags
 zr_edit_string(struct zr_context *ctx, zr_flags flags,
@@ -10604,6 +11508,11 @@ zr_edit_buffer(struct zr_context *ctx, zr_flags flags,
     return ret_flags;
 }
 
+/*----------------------------------------------------------------
+ *
+ *                          PROPERTY
+ *
+ * --------------------------------------------------------------*/
 static float
 zr_property(struct zr_context *ctx, const char *name, float min, float val,
     float max, float step, float inc_per_pixel, const enum zr_property_filter filter)
@@ -10643,9 +11552,9 @@ zr_property(struct zr_context *ctx, const char *name, float min, float val,
 
     /* calculate hash from name */
     if (name[0] == '#') {
-        hash = zr_murmur_hash(name, (int)zr_strsiz(name), win->property.seq++);
+        hash = zr_murmur_hash(name, (int)zr_strlen(name), win->property.seq++);
         name++; /* special number hash */
-    } else hash = zr_murmur_hash(name, (int)zr_strsiz(name), 42);
+    } else hash = zr_murmur_hash(name, (int)zr_strlen(name), 42);
 
     /* check if property is currently hot item */
     if (win->property.active && hash == win->property.name) {
@@ -10730,6 +11639,11 @@ zr_propertyi(struct zr_context *ctx, const char *name, int min, int val,
     return (int)value;
 }
 
+/*----------------------------------------------------------------
+ *
+ *                          COLOR PICKER
+ *
+ * --------------------------------------------------------------*/
 int
 zr_color_pick(struct zr_context * ctx, struct zr_color *color,
     enum zr_color_picker_format fmt)
@@ -11028,7 +11942,7 @@ zr_group_begin(struct zr_context *ctx, struct zr_panel *layout, const char *titl
     zr_zero(layout, sizeof(*layout));
 
     /* find group persistent scrollbar value */
-    title_len = (int)zr_strsiz(title);
+    title_len = (int)zr_strlen(title);
     title_hash = zr_murmur_hash(title, (int)title_len, ZR_WINDOW_SUB);
     value.i = zr_find_value(win, title_hash);
     if (!value.i) {
@@ -11137,7 +12051,7 @@ zr_popup_begin(struct zr_context *ctx, struct zr_panel *layout,
 
     win = ctx->current;
     ZR_ASSERT(!(win->flags & ZR_WINDOW_POPUP));
-    title_len = (int)zr_strsiz(title);
+    title_len = (int)zr_strlen(title);
     title_hash = zr_murmur_hash(title, (int)title_len, ZR_WINDOW_POPUP);
 
     popup = win->popup.win;
@@ -11364,7 +12278,7 @@ zr_tooltip(struct zr_context *ctx, const char *text)
     padding = style->window.padding;
 
     /* calculate size of the text and tooltip */
-    text_len = zr_strsiz(text);
+    text_len = zr_strlen(text);
     text_width = style->font.width(style->font.userdata,
                         style->font.height, text, text_len);
     text_width += (zr_size)(4 * padding.x);
@@ -11471,7 +12385,7 @@ zr_contextual_item_text(struct zr_context *ctx, const char *text, zr_size len,
 }
 
 int zr_contextual_item_label(struct zr_context *ctx, const char *label, zr_flags align)
-{return zr_contextual_item_text(ctx, label, zr_strsiz(label), align);}
+{return zr_contextual_item_text(ctx, label, zr_strlen(label), align);}
 
 int
 zr_contextual_item_image_text(struct zr_context *ctx, struct zr_image img,
@@ -11507,7 +12421,7 @@ zr_contextual_item_image_text(struct zr_context *ctx, struct zr_image img,
 
 int zr_contextual_item_image_label(struct zr_context *ctx, struct zr_image img,
     const char *label, zr_flags align)
-{return zr_contextual_item_image_text(ctx, img, label, zr_strsiz(label), align);}
+{return zr_contextual_item_image_text(ctx, img, label, zr_strlen(label), align);}
 
 int
 zr_contextual_item_symbol_text(struct zr_context *ctx, enum zr_symbol_type symbol,
@@ -11543,7 +12457,7 @@ zr_contextual_item_symbol_text(struct zr_context *ctx, enum zr_symbol_type symbo
 
 int zr_contextual_item_symbol_label(struct zr_context *ctx, enum zr_symbol_type symbol,
     const char *text, zr_flags align)
-{return zr_contextual_item_symbol_text(ctx, symbol, text, zr_strsiz(text), align);}
+{return zr_contextual_item_symbol_text(ctx, symbol, text, zr_strlen(text), align);}
 
 void
 zr_contextual_close(struct zr_context *ctx)
@@ -11706,7 +12620,7 @@ zr_combo_begin_text(struct zr_context *ctx, struct zr_panel *layout,
 
 int zr_combo_begin_label(struct zr_context *ctx, struct zr_panel *layout,
     const char *selected, int max_height)
-{return zr_combo_begin_text(ctx, layout, selected, zr_strsiz(selected), max_height);}
+{return zr_combo_begin_text(ctx, layout, selected, zr_strlen(selected), max_height);}
 
 int
 zr_combo_begin_color(struct zr_context *ctx, struct zr_panel *layout,
@@ -12153,11 +13067,11 @@ zr_combo_begin_image_text(struct zr_context *ctx, struct zr_panel *layout,
 
 int zr_combo_begin_symbol_label(struct zr_context *ctx, struct zr_panel *layout,
     const char *selected, enum zr_symbol_type type, int height)
-{return zr_combo_begin_symbol_text(ctx, layout, selected, zr_strsiz(selected), type, height);}
+{return zr_combo_begin_symbol_text(ctx, layout, selected, zr_strlen(selected), type, height);}
 
 int zr_combo_begin_image_label(struct zr_context *ctx, struct zr_panel *layout,
     const char *selected, struct zr_image img, int height)
-{return zr_combo_begin_image_text(ctx, layout, selected, zr_strsiz(selected), img, height);}
+{return zr_combo_begin_image_text(ctx, layout, selected, zr_strlen(selected), img, height);}
 
 int zr_combo_item_text(struct zr_context *ctx, const char *text, zr_size len,zr_flags align)
 {return zr_contextual_item_text(ctx, text, len, align);}
@@ -12336,7 +13250,7 @@ zr_menu_begin(struct zr_panel *layout, struct zr_context *ctx, struct zr_window 
     int is_active = 0;
     struct zr_rect body;
     struct zr_window *popup;
-    zr_hash hash = zr_murmur_hash(id, (int)zr_strsiz(id), ZR_WINDOW_MENU);
+    zr_hash hash = zr_murmur_hash(id, (int)zr_strlen(id), ZR_WINDOW_MENU);
 
     ZR_ASSERT(ctx);
     ZR_ASSERT(ctx->current);
@@ -12389,7 +13303,7 @@ zr_menu_begin_text(struct zr_context *ctx, struct zr_panel *layout,
 
 int zr_menu_begin_label(struct zr_context *ctx, struct zr_panel *layout,
     const char *text, zr_flags align, float width)
-{return zr_menu_begin_text(ctx, layout, text, zr_strsiz(text), align, width);}
+{return zr_menu_begin_text(ctx, layout, text, zr_strlen(text), align, width);}
 
 int
 zr_menu_begin_image(struct zr_context *ctx, struct zr_panel *layout,
@@ -12472,7 +13386,7 @@ zr_menu_begin_image_text(struct zr_context *ctx, struct zr_panel *layout,
 
 int zr_menu_begin_image_label(struct zr_context *ctx, struct zr_panel *layout,
     const char *title, zr_flags align, struct zr_image img, float width)
-{return zr_menu_begin_image_text(ctx, layout, title, zr_strsiz(title), align, img, width);}
+{return zr_menu_begin_image_text(ctx, layout, title, zr_strlen(title), align, img, width);}
 
 int
 zr_menu_begin_symbol_text(struct zr_context *ctx, struct zr_panel *layout,
@@ -12503,7 +13417,7 @@ zr_menu_begin_symbol_text(struct zr_context *ctx, struct zr_panel *layout,
 
 int zr_menu_begin_symbol_label(struct zr_context *ctx, struct zr_panel *layout,
     const char *title, zr_flags align, enum zr_symbol_type sym, float width)
-{return zr_menu_begin_symbol_text(ctx, layout, title, zr_strsiz(title), align,sym, width);}
+{return zr_menu_begin_symbol_text(ctx, layout, title, zr_strlen(title), align,sym, width);}
 
 int zr_menu_item_text(struct zr_context *ctx, const char *title, zr_size len, zr_flags align)
 {return zr_contextual_item_text(ctx, title, len, align);}
