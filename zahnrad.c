@@ -9463,7 +9463,7 @@ zr_panel_begin(struct zr_context *ctx, const char *title)
                 button.x = (header.w + header.x) - (button.w + style->window.header.padding.x);
                 header.w -= button.w + style->window.header.spacing.x + style->window.header.padding.x;
             } else {
-                button.x = header.x;
+                button.x = header.x + style->window.header.padding.x;
                 header.x += button.w + style->window.header.spacing.x + style->window.header.padding.x;
             }
             if (zr_do_button_symbol(&ws, &win->buffer, button,
