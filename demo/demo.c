@@ -2635,6 +2635,7 @@ run_demo(struct demo *gui)
     struct zr_context *ctx = &gui->ctx;
     struct zr_style *style = &ctx->style;
 
+    ctx->style.font.height = 14;
     if (!init) {
         init = 1;
         gui->show_demo = 0;
