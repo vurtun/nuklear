@@ -176,6 +176,9 @@ struct zr_rect zr_rectiv(const int *xywh);
 zr_size zr_utf_decode(const char*, zr_rune*, zr_size);
 zr_size zr_utf_encode(zr_rune, char*, zr_size);
 zr_size zr_utf_len(const char*, zr_size byte_len);
+const char* zr_utf_at(const char *buffer, zr_size length, int index,
+                        zr_rune *unicode, zr_size *len);
+
 
 /* color (conversion user --> zahnrad) */
 struct zr_color zr_rgb(int r, int g, int b);
@@ -246,48 +249,38 @@ struct zr_image zr_subimage_id(int, unsigned short w, unsigned short h,
 /*  A basic (double)-buffer with linear allocation and resetting as only
     freeing policy. The buffers main purpose is to control all memory management
     inside the GUI toolkit and still leave memory control as much as possible in
-    the hand of the user. The memory is provided in three different ways.
-    The first way is to use a fixed size block of memory to be filled up.
-    Biggest advantage is a simple memory model. Downside is that if the buffer
-    is full there is no way to accesses more memory, which fits target
-    application with a GUI with roughly known memory consumptions.
-    The second way to manage memory is by extending the fixed size block by
-    querying information from the buffer about the used size and needed size and
-    allocate new memory if the buffer is full. While this approach is still
-    better than just using a fixed size memory block the reallocation still has
-    one invalid frame as consquence since the used memory information is only
-    available at the end of the frame which leads to the last way of handling
-    memory.
-    The last and most complicated way of handling memory is by allocator
-    callbacks. The user hereby registers callbacks to be called to allocate and
-    free memory if needed. While this solves most allocation problems it causes
-    some loss of flow control on the user side.
+    the hand of the user while also making sure the library is easy to use if
+    not as much control is needed.
+    In general all memory inside this library can be provided from the user in
+    three different ways.
 
-    USAGE
-    ----------------------------
-    To instantiate the buffer you either have to call the fixed size or
-    allocator initialization function and provide a memory block in the first
-    case and an allocator in the second case.
-    To allocate memory from the buffer you would call zr_buffer_alloc with a
-    request memory block size as well as an alignment for the block.
-    Finally to reset the memory at the end of the frame and when the memory
-    buffer inside the buffer is no longer needed you would call zr_buffer_reset.
-    To free all memory that has been allocated by an allocator if the buffer is
-    no longer being used you have to call zr_buffer_clear.
+    The first way and the one providing most control is by just passing a fixed
+    size memory block. In this case all control lies in the hand of the user
+    since he can exactly control where the memory comes from and how much memory
+    the library should consume. Of course using the fixed size API removes the
+    ability to automatically resize a buffer if not enough memory is provided so
+    you have to take over the resizing. While being a fixed sized buffer sounds
+    quite limiting, it is very effective in this library since the actual memory
+    consumption is quite stable and has a fixed upper bound for a lot of cases.
+
+    If you don't want to think about how much memory the library should allocate
+    at all time or have a very dynamic UI with unpredictable memory consumoption
+    habits but still want control over memory allocation you can use the dynamic
+    allocator based API. The allocator consists of two callbacks for allocating
+    and freeing memory and optional userdata so you can plugin your own allocator.
+
+    The final and easiest way can be used by defining
+    ZR_COMPILE_WITH_DEFAULT_ALLOCATOR as 1 which uses the standard library memory
+    allocation functions malloc and free and takes over complete control over
+    memory in this library.
 */
 struct zr_memory_status {
     void *memory;
-    /* pointer to the currently used memory block inside the referenced buffer*/
     unsigned int type;
-    /* type of the buffer which is either fixed size or dynamic */
     zr_size size;
-    /* total size of the memory block */
     zr_size allocated;
-    /* allocated amount of memory */
     zr_size needed;
-    /* memory size that would have been allocated if enough memory was present*/
     zr_size calls;
-    /* number of allocation calls referencing this buffer */
 };
 
 struct zr_allocator {
@@ -340,6 +333,11 @@ void zr_buffer_init_default(struct zr_buffer*);
 void zr_buffer_init(struct zr_buffer*, const struct zr_allocator*, zr_size size);
 void zr_buffer_init_fixed(struct zr_buffer*, void *memory, zr_size size);
 void zr_buffer_info(struct zr_memory_status*, struct zr_buffer*);
+void zr_buffer_push(struct zr_buffer*, enum zr_buffer_allocation_type type,
+                    void *memory, zr_size size, zr_size align);
+void zr_buffer_mark(struct zr_buffer*, enum zr_buffer_allocation_type type);
+void zr_buffer_reset(struct zr_buffer*, enum zr_buffer_allocation_type type);
+void zr_buffer_clear(struct zr_buffer*);
 void zr_buffer_free(struct zr_buffer*);
 void *zr_buffer_memory(struct zr_buffer*);
 const void *zr_buffer_memory_const(const struct zr_buffer*);
@@ -350,41 +348,42 @@ zr_size zr_buffer_total(struct zr_buffer*);
  *                          FONT
  *
  * ===============================================================*/
-/*  Font handling in this library can be achived in three different ways.
-    The first and simplest ways is by just using your font handling mechanism
-    and provide a simple callback for text string width calculation with
-    `zr_user_font`. This requires the default drawing output
-    and is not possible for the optional vertex buffer output.
+/*  Font handling in this library was designed to be quite customizeable and lets
+    you decide what you want to use and what you want to provide. In this sense
+    there are four different degrees between control and ease of use and two
+    different drawing APIs to provide for.
 
-    The second way of font handling is by using the same `zr_user_font` struct
-    to referencing a font as before but providing a second callback for
-    `zr_user_font_glyph` querying which is used for text drawing in the optional
-    vertex buffer output. In addition to the callback it is also required to
-    provide a texture atlas from the font to draw.
+    So first of the easiest way to do font handling is by just providing a
+    `zr_user_font` struct which only requires the height in pixel of the used
+    font and a callback to calculate the width of a string. This way of handling
+    fonts is best fitted for using the normal draw shape command API were you
+    do all the text drawing yourself and the library does not require any kind
+    of deeper knowledge about which font handling mechanism you use.
 
-    The final and most complex way is to use the optional font baker
-    and font handling function, which requires two additional headers for
-    TTF font baking. While the previous two methods did no need any functions
-    outside callbacks and are therefore rather simple to handle, the final
-    font handling method is quite complex and you need to handle the complex
-    font baking API. The reason why it is complex is because there are multible
-    ways of using the API. For example it must be possible to use the font
-    for default command output as well as vertex buffer output. So for example
-    texture coordinates can either be UV for vertex buffer output or absolute
-    pixel for drawing function based on pixels. Furthermore it is possible to
-    incoperate custom user data into the resulting baked image (for example a
-    white pixel for the vertex buffer output).
-    In addition and probably the most complex aspect of the baking API was to
-    incoperate baking of multible fonts into one image.
+    While the first approach works fine if you don't want to use the optional
+    vertex buffer output it is not enough if you do. To get font handling working
+    for these cases you have to provide to additional parameter inside the
+    `zr_user_font`. First a texture atlas handle used to draw text as subimages
+    of a bigger font atlas texture and a callback to query a characters glyph
+    information (offset, size, ...). So it is still possible to provide your own
+    font and use the vertex buffer output.
 
-    In general the font baking API can be understood as having a number of
-    loaded in memory TTF-fonts, font baking configuration and optional custom
-    render data as input, while the output is made of font specific data, a big
-    glyph array of all baked glyphs and the baked image. The API
-    was designed that way to have a typical file format and not
-    a perfectly ready in memory library instance of a font. The reason is more
-    control and seperates the font baking code from the in library used font
-    format.
+    The final approach if you do not have a font handling functionality or don't
+    want to use it in this library is by using the optional font baker. This API
+    is divided into a high- and low-level API with different priorites between
+    ease of use and control. Both API's can be used to create a font and 
+    font atlas texture and can even be used with or without the vertex buffer
+    output. So it still uses the `zr_user_font` struct and the two different
+    approaches previously stated still work.
+    Now to the difference between the low level API and the high level API. The low
+    level API provides a lot of control over the baking process of the font and
+    provides total control over memory. It consists of a number of functions that
+    need to be called from begin to end and each step requires some additional
+    configuration, so it is a lot more complex than the high-level API.
+    If you don't want to do all the work required for using the low-level API
+    you can use the font atlas API. It provides the same functionality as the
+    low-level API but takes away some configuration and all of memory control and
+    in term provides a easier to use API.
 */
 typedef zr_size(*zr_text_width_f)(zr_handle, float h, const char*, zr_size len);
 typedef void(*zr_query_font_glyph_f)(zr_handle handle, float font_height,
@@ -544,10 +543,7 @@ void zr_font_bake_convert(void *out_memory, int image_width, int image_height,
 /* Font
  * -----------------------------------------------------------------
  * The font structure is just a simple container to hold the output of a baking
- * process in the low level API and as output in the atlas font API.
- * The actual font handle used inside the library only references the font
- * which allows using custom user font handlers and can be generated by calling
- * `zr_font_ref`. */
+ * process in the low level API. */
 void zr_font_init(struct zr_font*, float pixel_height, zr_rune fallback_codepoint,
                     struct zr_font_glyph*, const struct zr_baked_font*,
                     zr_handle atlas);
@@ -699,13 +695,15 @@ const char *zr_edit_box_get_selection(zr_size *len, struct zr_edit_box*);
     Each frame therefore fills the command buffer with draw commands
     that then need to be executed by the user and his own render backend.
     After that the command buffer needs to be cleared and a new frame can be
-    started.
+    started. It is probably important to note that the command buffer is the main
+    drawing API and the optional vertex buffer API only takes this format and
+    converts it into a hardware accessable format.
 
-    The reason for buffering simple primitives as draw commands instead of
-    directly buffering a hardware accessible format with vertex and element
-    buffer was to support native render backends like X11 and Win32.
-    That being said it is possible to convert the command buffer into a
-    hardware accessible format to support hardware based rendering as well.
+    Draw commands are divided into filled shapes and shape outlines but only
+    the filled shapes as well as line, curves and scissor are required to be provided.
+    All other shape drawing commands can be used but are not required. This was
+    done to allow the maximum number of render backends to be able to use this
+    library without you having to do additional work.
 */
 enum zr_command_type {
     ZR_COMMAND_NOP,
@@ -891,34 +889,6 @@ struct zr_command_buffer {
     zr_size begin, end, last;
 };
 
-#if ZR_COMPILE_WITH_VERTEX_BUFFER
-typedef unsigned short zr_draw_index;
-typedef zr_uint zr_draw_vertex_color;
-
-enum zr_anti_aliasing {
-    ZR_ANTI_ALIASING_OFF = zr_false,
-    ZR_ANTI_ALIASING_ON
-};
-
-struct zr_draw_vertex {
-    struct zr_vec2 position;
-    struct zr_vec2 uv;
-    zr_draw_vertex_color col;
-};
-#endif
-
-struct zr_draw_command {
-    unsigned int elem_count;
-    /* number of elements in the current draw batch */
-    struct zr_rect clip_rect;
-    /* current screen clipping rectangle */
-    zr_handle texture;
-    /* current texture to set */
-#if ZR_COMPILE_WITH_COMMAND_USERDATA
-    zr_handle userdata;
-#endif
-};
-
 /* shape outlines */
 void zr_push_scissor(struct zr_command_buffer*, struct zr_rect);
 void zr_stroke_line(struct zr_command_buffer *b, float x0, float y0,
@@ -954,6 +924,150 @@ void zr_draw_image(struct zr_command_buffer*, struct zr_rect, const struct zr_im
 void zr_draw_text(struct zr_command_buffer*, struct zr_rect,
                     const char *text, zr_size len, const struct zr_user_font*,
                     struct zr_color, struct zr_color);
+
+/* ===============================================================
+ *
+ *                          DRAW LIST
+ *
+ * ===============================================================*/
+/*  The optional vertex buffer draw list provides a 2D drawing context
+    with antialiasing functionality which takes basic filled or outlined shapes
+    or a path and outputs vertexes, elements and draw commands.
+    The actual draw list API is not required to be used dirctly while using this
+    library since converting the default library draw command output is done by
+    just calling `zr_convert` but I decided to still makes this library accessable
+    since it can be useful.
+
+    The draw list is based on a path buffering and polygon and polyline
+    rendering API which allows a lot of ways to draw 2D content to screen.
+    In fact it is probably more powerful than needed but allows even more crazy
+    things than this library provides by default.
+*/
+#if ZR_COMPILE_WITH_VERTEX_BUFFER
+typedef unsigned short zr_draw_index;
+typedef zr_uint zr_draw_vertex_color;
+
+enum zr_draw_list_stroke {
+    ZR_STROKE_OPEN = zr_false,
+    /* build up path has no connection back to the beginning */
+    ZR_STROKE_CLOSED = zr_true
+    /* build up path has a connection back to the beginning */
+};
+
+enum zr_anti_aliasing {
+    ZR_ANTI_ALIASING_OFF = zr_false,
+    ZR_ANTI_ALIASING_ON
+};
+
+struct zr_draw_vertex {
+    struct zr_vec2 position;
+    struct zr_vec2 uv;
+    zr_draw_vertex_color col;
+};
+
+struct zr_draw_command {
+    unsigned int elem_count;
+    /* number of elements in the current draw batch */
+    struct zr_rect clip_rect;
+    /* current screen clipping rectangle */
+    zr_handle texture;
+    /* current texture to set */
+#if ZR_COMPILE_WITH_COMMAND_USERDATA
+    zr_handle userdata;
+#endif
+};
+
+struct zr_draw_list {
+    float global_alpha;
+    enum zr_anti_aliasing shape_AA;
+    enum zr_anti_aliasing line_AA;
+    struct zr_draw_null_texture null;
+    struct zr_rect clip_rect;
+    struct zr_buffer *buffer;
+    struct zr_buffer *vertices;
+    struct zr_buffer *elements;
+    unsigned int element_count;
+    unsigned int vertex_count;
+    zr_size cmd_offset;
+    unsigned int cmd_count;
+    unsigned int path_count;
+    unsigned int path_offset;
+    struct zr_vec2 circle_vtx[12];
+#if ZR_COMPILE_WITH_COMMAND_USERDATA
+    zr_handle userdata;
+#endif
+};
+#endif
+
+/* draw list */
+void zr_draw_list_init(struct zr_draw_list*);
+void zr_draw_list_setup(struct zr_draw_list*, float global_alpha,
+                    enum zr_anti_aliasing line_AA, enum zr_anti_aliasing shape_AA,
+                    struct zr_draw_null_texture, struct zr_buffer *cmds,
+                    struct zr_buffer *vertices, struct zr_buffer *elements);
+void zr_draw_list_clear(struct zr_draw_list*);
+
+/* command drawing */
+#define zr_draw_list_foreach(cmd, can, b)\
+    for((cmd)=zr__draw_list_begin(can, b); (cmd)!=0; (cmd)=zr__draw_list_next(cmd, b, can))
+const struct zr_draw_command* zr__draw_list_begin(const struct zr_draw_list*, const struct zr_buffer*);
+const struct zr_draw_command* zr__draw_list_next(const struct zr_draw_command*,
+                                                const struct zr_buffer*,
+                                                const struct zr_draw_list*);
+/* path */
+void zr_draw_list_path_clear(struct zr_draw_list*);
+void zr_draw_list_path_line_to(struct zr_draw_list *list, struct zr_vec2 pos);
+void zr_draw_list_path_arc_to_fast(struct zr_draw_list*, struct zr_vec2 center,
+                                float radius, int a_min, int a_max);
+void zr_draw_list_path_arc_to(struct zr_draw_list*, struct zr_vec2 center,
+                            float radius, float a_min, float a_max,
+                            unsigned int segments);
+void zr_draw_list_path_rect_to(struct zr_draw_list*, struct zr_vec2 a,
+                                struct zr_vec2 b, float rounding);
+void zr_draw_list_path_curve_to(struct zr_draw_list*, struct zr_vec2 p2,
+                            struct zr_vec2 p3, struct zr_vec2 p4,
+                            unsigned int num_segments);
+void zr_draw_list_path_fill(struct zr_draw_list*, struct zr_color);
+void zr_draw_list_path_stroke(struct zr_draw_list*, struct zr_color,
+                            enum zr_draw_list_stroke closed, float thickness);
+/* stroke */
+void zr_draw_list_stroke_line(struct zr_draw_list*, struct zr_vec2 a, struct zr_vec2 b,
+                            struct zr_color, float thickness);
+void zr_draw_list_stroke_rect(struct zr_draw_list*, struct zr_rect rect, struct zr_color,
+                            float rounding, float thickness);
+void zr_draw_list_stroke_triangle(struct zr_draw_list*, struct zr_vec2 a, struct zr_vec2 b,
+                                struct zr_vec2 c, struct zr_color, float thickness);
+void zr_draw_list_stroke_circle(struct zr_draw_list*, struct zr_vec2 center, float radius,
+                            struct zr_color, unsigned int segs, float thickness);
+void zr_draw_list_stroke_curve(struct zr_draw_list*, struct zr_vec2 p0, struct zr_vec2 cp0,
+                            struct zr_vec2 cp1, struct zr_vec2 p1, struct zr_color,
+                            unsigned int segments, float thickness);
+void zr_draw_list_stroke_poly_line(struct zr_draw_list*, const struct zr_vec2 *points,
+                                const unsigned int count, struct zr_color,
+                                enum zr_draw_list_stroke closed, float thickness,
+                                enum zr_anti_aliasing aliasing);
+/* fill */
+void zr_draw_list_fill_rect(struct zr_draw_list*, struct zr_rect rect,
+                        struct zr_color, float rounding);
+void zr_draw_list_fill_rect_multi_color(struct zr_draw_list *list, struct zr_rect rect,
+                                    struct zr_color left, struct zr_color top,
+                                    struct zr_color right, struct zr_color bottom);
+void zr_draw_list_fill_triangle(struct zr_draw_list*, struct zr_vec2 a, struct zr_vec2 b,
+                            struct zr_vec2 c, struct zr_color);
+void zr_draw_list_fill_circle(struct zr_draw_list*, struct zr_vec2 center,
+                                float radius, struct zr_color col, unsigned int segs);
+void zr_draw_list_fill_poly_convex(struct zr_draw_list*, const struct zr_vec2 *points,
+                                    const unsigned int count, struct zr_color,
+                                    enum zr_anti_aliasing aliasing);
+/* misc */
+void zr_draw_list_add_image(struct zr_draw_list*, struct zr_image texture,
+                            struct zr_rect rect, struct zr_color);
+void zr_draw_list_add_text(struct zr_draw_list*, const struct zr_user_font*,
+                            struct zr_rect, const char *text, zr_size len,
+                            float font_height, struct zr_color);
+#if ZR_COMPILE_WITH_COMMAND_USERDATA
+void zr_draw_list_push_userdata(struct zr_draw_list*, zr_handle userdata);
+#endif
 
 /* ===============================================================
  *
@@ -1547,6 +1661,41 @@ struct zr_style {
     struct zr_style_window window;
 };
 
+enum zr_style_colors {
+    ZR_COLOR_TEXT,
+    ZR_COLOR_WINDOW,
+    ZR_COLOR_HEADER,
+    ZR_COLOR_BORDER,
+    ZR_COLOR_BUTTON,
+    ZR_COLOR_BUTTON_HOVER,
+    ZR_COLOR_BUTTON_ACTIVE,
+    ZR_COLOR_TOGGLE,
+    ZR_COLOR_TOGGLE_HOVER,
+    ZR_COLOR_TOGGLE_CURSOR,
+    ZR_COLOR_SELECTABLE,
+    ZR_COLOR_SELECTABLE_HOVER,
+    ZR_COLOR_SELECTABLE_TEXT,
+    ZR_COLOR_SLIDER,
+    ZR_COLOR_SLIDER_CURSOR,
+    ZR_COLOR_SLIDER_CURSOR_HOVER,
+    ZR_COLOR_SLIDER_CURSOR_ACTIVE,
+    ZR_COLOR_PROPERTY,
+    ZR_COLOR_PROPERTY_HOVER,
+    ZR_COLOR_PROPERTY_ACTIVE,
+    ZR_COLOR_EDIT,
+    ZR_COLOR_EDIT_CURSOR,
+    ZR_COLOR_COMBO,
+    ZR_COLOR_CHART,
+    ZR_COLOR_CHART_COLOR,
+    ZR_COLOR_CHART_COLOR_HIGHLIGHT,
+    ZR_COLOR_SCROLLBAR,
+    ZR_COLOR_SCROLLBAR_CURSOR,
+    ZR_COLOR_SCROLLBAR_CURSOR_HOVER,
+    ZR_COLOR_SCROLLBAR_CURSOR_ACTIVE,
+    ZR_COLOR_TAB_HEADER,
+    ZR_COLOR_COUNT
+};
+
 struct zr_style_item zr_style_item_image(struct zr_image img);
 struct zr_style_item zr_style_item_color(struct zr_color);
 struct zr_style_item zr_style_item_hide(void);
@@ -1819,46 +1968,6 @@ struct zr_window {
 /*==============================================================
  *                          CONTEXT
  * =============================================================*/
-#if ZR_COMPILE_WITH_VERTEX_BUFFER
-struct zr_convert_config {
-    float global_alpha;
-    /* line thickness mininum: 1*/
-    enum zr_anti_aliasing line_AA;
-    /* line anti-aliasing flag can be turned off if you are thight on memory */
-    enum zr_anti_aliasing shape_AA;
-    /* shape anti-aliasing flag can be turned off if you are thight on memory */
-    unsigned int circle_segment_count;
-    /* number of segments used for circles: default to 22 */
-    unsigned int arc_segment_count;
-    /* number of segments used for arcs: default to 22 */
-    unsigned int curve_segment_count;
-    /* number of segments used for curves: default to 22 */
-    struct zr_draw_null_texture null;
-    /* handle to texture with a white pixel to draw shapes */
-};
-
-struct zr_canvas {
-    float global_alpha;
-    enum zr_anti_aliasing shape_AA;
-    enum zr_anti_aliasing line_AA;
-    struct zr_draw_null_texture null;
-    struct zr_rect clip_rect;
-    struct zr_buffer *buffer;
-    struct zr_buffer *vertices;
-    struct zr_buffer *elements;
-    unsigned int element_count;
-    unsigned int vertex_count;
-    zr_size cmd_offset;
-    unsigned int cmd_count;
-    unsigned int path_count;
-    unsigned int path_offset;
-    struct zr_vec2 circle_vtx[12];
-#if ZR_COMPILE_WITH_COMMAND_USERDATA
-    zr_handle userdata;
-#endif
-};
-#endif
-
 struct zr_context {
 /* public: can be accessed freely */
     struct zr_input input;
@@ -1871,7 +1980,7 @@ struct zr_context {
     should only be accessed if you
     know what you are doing */
 #if ZR_COMPILE_WITH_VERTEX_BUFFER
-    struct zr_canvas canvas;
+    struct zr_draw_list draw_list;
 #endif
 #if ZR_COMPILE_WITH_COMMAND_USERDATA
     zr_handle userdata;
@@ -1955,6 +2064,22 @@ const struct zr_command* zr__next(struct zr_context*, const struct zr_command*);
 const struct zr_command* zr__begin(struct zr_context*);
 
 #if ZR_COMPILE_WITH_VERTEX_BUFFER
+struct zr_convert_config {
+    float global_alpha;
+    /* global alpha value */
+    enum zr_anti_aliasing line_AA;
+    /* line anti-aliasing flag can be turned off if you are thight on memory */
+    enum zr_anti_aliasing shape_AA;
+    /* shape anti-aliasing flag can be turned off if you are thight on memory */
+    unsigned int circle_segment_count;
+    /* number of segments used for circles: default to 22 */
+    unsigned int arc_segment_count;
+    /* number of segments used for arcs: default to 22 */
+    unsigned int curve_segment_count;
+    /* number of segments used for curves: default to 22 */
+    struct zr_draw_null_texture null;
+    /* handle to texture with a white pixel for shape drawing */
+};
 void zr_convert(struct zr_context*, struct zr_buffer *cmds,
                 struct zr_buffer *vertices, struct zr_buffer *elements,
                 const struct zr_convert_config*);
@@ -1984,6 +2109,8 @@ void zr_input_end(struct zr_context*);
  *                          STYLE
  * -------------------------------------------------------------*/
 void zr_style_default(struct zr_context*);
+void zr_style_from_table(struct zr_context*, const struct zr_color*);
+const char *zr_style_color_name(enum zr_style_colors);
 void zr_style_set_font(struct zr_context*, const struct zr_user_font*);
 
 /*--------------------------------------------------------------

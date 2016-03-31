@@ -435,8 +435,8 @@ main(int argc, char *argv[])
 
         zr_font_atlas_init_default(&atlas);
         zr_font_atlas_begin(&atlas);
-        if (font_path) font = zr_font_atlas_add_from_file(&atlas, font_path, 14.0f, NULL);
-        else font = zr_font_atlas_add_default(&atlas, 14.0f, NULL);
+        if (font_path) font = zr_font_atlas_add_from_file(&atlas, font_path, 30.0f, NULL);
+        else font = zr_font_atlas_add_default(&atlas, 30.0f, NULL);
         image = zr_font_atlas_bake(&atlas, &width, &height, ZR_FONT_ATLAS_RGBA32);
         device_upload_atlas(&device, image, width, height);
         zr_font_atlas_end(&atlas, zr_handle_id((int)device.font_tex), &device.null);
@@ -519,7 +519,7 @@ main(int argc, char *argv[])
 
         /* Draw */
         glClear(GL_COLOR_BUFFER_BIT);
-        glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
+        glClearColor(1.0f, 0.647f, 0.0f, 1.0f);
         device_draw(&device, &gui.ctx, win_width, win_height, ZR_ANTI_ALIASING_ON);
         SDL_GL_SwapWindow(win);
     }

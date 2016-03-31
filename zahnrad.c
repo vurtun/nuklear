@@ -1508,7 +1508,7 @@ zr_utf_len(const char *str, zr_size len)
     return glyphs;
 }
 
-static const char*
+const char*
 zr_utf_at(const char *buffer, zr_size length, int index,
     zr_rune *unicode, zr_size *len)
 {
@@ -1828,7 +1828,7 @@ zr_buffer_alloc(struct zr_buffer *b, enum zr_buffer_allocation_type type,
     return memory;
 }
 
-static void
+void
 zr_buffer_push(struct zr_buffer *b, enum zr_buffer_allocation_type type,
     void *memory, zr_size size, zr_size align)
 {
@@ -1837,7 +1837,7 @@ zr_buffer_push(struct zr_buffer *b, enum zr_buffer_allocation_type type,
     zr_memcopy(mem, memory, size);
 }
 
-static void
+void
 zr_buffer_mark(struct zr_buffer *buffer, enum zr_buffer_allocation_type type)
 {
     ZR_ASSERT(buffer);
@@ -1848,7 +1848,7 @@ zr_buffer_mark(struct zr_buffer *buffer, enum zr_buffer_allocation_type type)
     else buffer->marker[type].offset = buffer->allocated;
 }
 
-static void
+void
 zr_buffer_reset(struct zr_buffer *buffer, enum zr_buffer_allocation_type type)
 {
     ZR_ASSERT(buffer);
@@ -1870,7 +1870,7 @@ zr_buffer_reset(struct zr_buffer *buffer, enum zr_buffer_allocation_type type)
     }
 }
 
-static void
+void
 zr_buffer_clear(struct zr_buffer *b)
 {
     ZR_ASSERT(b);
@@ -2408,15 +2408,8 @@ zr_draw_text(struct zr_command_buffer *b, struct zr_rect r,
  *
  * ===============================================================*/
 #if ZR_COMPILE_WITH_VERTEX_BUFFER
-enum zr_draw_list_stroke {
-    ZR_STROKE_OPEN = zr_false,
-    /* build up path has no connection back to the beginning */
-    ZR_STROKE_CLOSED = zr_true
-    /* build up path has a connection back to the beginning */
-};
-
-static void
-zr_canvas_init(struct zr_canvas *list)
+void
+zr_draw_list_init(struct zr_draw_list *list)
 {
     zr_size i = 0;
     zr_zero(list, sizeof(*list));
@@ -2427,8 +2420,65 @@ zr_canvas_init(struct zr_canvas *list)
     }
 }
 
-static void
-zr_canvas_clear(struct zr_canvas *list)
+void
+zr_draw_list_setup(struct zr_draw_list *canvas, float global_alpha,
+    enum zr_anti_aliasing line_AA, enum zr_anti_aliasing shape_AA,
+    struct zr_draw_null_texture null, struct zr_buffer *cmds,
+    struct zr_buffer *vertices, struct zr_buffer *elements)
+{
+    canvas->null = null;
+    canvas->clip_rect = zr_null_rect;
+    canvas->vertices = vertices;
+    canvas->elements = elements;
+    canvas->buffer = cmds;
+    canvas->line_AA = line_AA;
+    canvas->shape_AA = shape_AA;
+    canvas->global_alpha = global_alpha;
+}
+
+const struct zr_draw_command*
+zr__draw_list_begin(const struct zr_draw_list *canvas, const struct zr_buffer *buffer)
+{
+    zr_byte *memory;
+    zr_size offset;
+    const struct zr_draw_command *cmd;
+
+    ZR_ASSERT(buffer);
+    if (!buffer || !buffer->size || !canvas->cmd_count)
+        return 0;
+
+    memory = (zr_byte*)buffer->memory.ptr;
+    offset = buffer->memory.size - canvas->cmd_offset;
+    cmd = zr_ptr_add(const struct zr_draw_command, memory, offset);
+    return cmd;
+}
+
+const struct zr_draw_command*
+zr__draw_list_next(const struct zr_draw_command *cmd,
+    const struct zr_buffer *buffer, const struct zr_draw_list *canvas)
+{
+    zr_byte *memory;
+    zr_size size;
+    zr_size offset;
+    const struct zr_draw_command *end;
+
+    ZR_ASSERT(buffer);
+    ZR_ASSERT(canvas);
+    if (!cmd || !buffer || !canvas)
+        return 0;
+
+    memory = (zr_byte*)buffer->memory.ptr;
+    size = buffer->memory.size;
+    offset = size - canvas->cmd_offset;
+    end = zr_ptr_add(const struct zr_draw_command, memory, offset);
+    end -= (canvas->cmd_count-1);
+
+    if (cmd <= end) return 0;
+    return (cmd-1);
+}
+
+void
+zr_draw_list_clear(struct zr_draw_list *list)
 {
     ZR_ASSERT(list);
     if (!list) return;
@@ -2450,7 +2500,7 @@ zr_canvas_clear(struct zr_canvas *list)
 }
 
 static struct zr_vec2*
-zr_canvas_alloc_path(struct zr_canvas *list, zr_size count)
+zr_draw_list_alloc_path(struct zr_draw_list *list, zr_size count)
 {
     struct zr_vec2 *points;
     static const zr_size point_align = ZR_ALIGNOF(struct zr_vec2);
@@ -2469,7 +2519,7 @@ zr_canvas_alloc_path(struct zr_canvas *list, zr_size count)
 }
 
 static struct zr_vec2
-zr_canvas_path_last(struct zr_canvas *list)
+zr_draw_list_path_last(struct zr_draw_list *list)
 {
     void *memory;
     struct zr_vec2 *point;
@@ -2481,7 +2531,7 @@ zr_canvas_path_last(struct zr_canvas *list)
 }
 
 static struct zr_draw_command*
-zr_canvas_push_command(struct zr_canvas *list, struct zr_rect clip,
+zr_draw_list_push_command(struct zr_draw_list *list, struct zr_rect clip,
     zr_handle texture)
 {
     static const zr_size cmd_align = ZR_ALIGNOF(struct zr_draw_command);
@@ -2510,7 +2560,7 @@ zr_canvas_push_command(struct zr_canvas *list, struct zr_rect clip,
 }
 
 static struct zr_draw_command*
-zr_canvas_command_last(struct zr_canvas *list)
+zr_draw_list_command_last(struct zr_draw_list *list)
 {
     void *memory;
     zr_size size;
@@ -2524,54 +2574,54 @@ zr_canvas_command_last(struct zr_canvas *list)
 }
 
 static void
-zr_canvas_add_clip(struct zr_canvas *list, struct zr_rect rect)
+zr_draw_list_add_clip(struct zr_draw_list *list, struct zr_rect rect)
 {
     ZR_ASSERT(list);
     if (!list) return;
     if (!list->cmd_count) {
-        zr_canvas_push_command(list, rect, list->null.texture);
+        zr_draw_list_push_command(list, rect, list->null.texture);
     } else {
-        struct zr_draw_command *prev = zr_canvas_command_last(list);
+        struct zr_draw_command *prev = zr_draw_list_command_last(list);
         if (prev->elem_count == 0)
             prev->clip_rect = rect;
-        zr_canvas_push_command(list, rect, prev->texture);
+        zr_draw_list_push_command(list, rect, prev->texture);
     }
 }
 
 static void
-zr_canvas_push_image(struct zr_canvas *list, zr_handle texture)
+zr_draw_list_push_image(struct zr_draw_list *list, zr_handle texture)
 {
     ZR_ASSERT(list);
     if (!list) return;
     if (!list->cmd_count) {
-        zr_canvas_push_command(list, zr_null_rect, list->null.texture);
+        zr_draw_list_push_command(list, zr_null_rect, list->null.texture);
     } else {
-        struct zr_draw_command *prev = zr_canvas_command_last(list);
+        struct zr_draw_command *prev = zr_draw_list_command_last(list);
         if (prev->elem_count == 0)
             prev->texture = texture;
         else if (prev->texture.id != texture.id)
-            zr_canvas_push_command(list, prev->clip_rect, texture);
+            zr_draw_list_push_command(list, prev->clip_rect, texture);
     }
 }
 
 #if ZR_COMPILE_WITH_COMMAND_USERDATA
-static void
-zr_canvas_push_userdata(struct zr_canvas *list, zr_handle userdata)
+void
+zr_draw_list_push_userdata(struct zr_draw_list *list, zr_handle userdata)
 {
     ZR_ASSERT(list);
     if (!list) return;
     if (!list->cmd_count) {
         struct zr_draw_command *prev;
-        zr_canvas_push_command(list, zr_null_rect, list->null.texture);
-        prev = zr_canvas_command_last(list);
+        zr_draw_list_push_command(list, zr_null_rect, list->null.texture);
+        prev = zr_draw_list_command_last(list);
         prev->userdata = userdata;
     } else {
-        struct zr_draw_command *prev = zr_canvas_command_last(list);
+        struct zr_draw_command *prev = zr_draw_list_command_last(list);
         if (prev->elem_count == 0) {
             prev->userdata = userdata;
         } else if (prev->userdata.ptr != userdata.ptr) {
-            zr_canvas_push_command(list, prev->clip_rect, prev->texture);
-            prev = zr_canvas_command_last(list);
+            zr_draw_list_push_command(list, prev->clip_rect, prev->texture);
+            prev = zr_draw_list_command_last(list);
             prev->userdata = userdata;
         }
     }
@@ -2579,7 +2629,7 @@ zr_canvas_push_userdata(struct zr_canvas *list, zr_handle userdata)
 #endif
 
 static struct zr_draw_vertex*
-zr_canvas_alloc_vertices(struct zr_canvas *list, zr_size count)
+zr_draw_list_alloc_vertices(struct zr_draw_list *list, zr_size count)
 {
     struct zr_draw_vertex *vtx;
     static const zr_size vtx_align = ZR_ALIGNOF(struct zr_draw_vertex);
@@ -2595,7 +2645,7 @@ zr_canvas_alloc_vertices(struct zr_canvas *list, zr_size count)
 }
 
 static zr_draw_index*
-zr_canvas_alloc_elements(struct zr_canvas *list, zr_size count)
+zr_draw_list_alloc_elements(struct zr_draw_list *list, zr_size count)
 {
     zr_draw_index *ids;
     struct zr_draw_command *cmd;
@@ -2607,7 +2657,7 @@ zr_canvas_alloc_elements(struct zr_canvas *list, zr_size count)
     ids = (zr_draw_index*)
         zr_buffer_alloc(list->elements, ZR_BUFFER_FRONT, elem_size*count, elem_align);
     if (!ids) return 0;
-    cmd = zr_canvas_command_last(list);
+    cmd = zr_draw_list_command_last(list);
     list->element_count += (unsigned int)count;
     cmd->elem_count += (unsigned int)count;
     return ids;
@@ -2623,9 +2673,9 @@ zr_draw_vertex(struct zr_vec2 pos, struct zr_vec2 uv, zr_draw_vertex_color col)
     return out;
 }
 
-static void
-zr_canvas_add_poly_line(struct zr_canvas *list, struct zr_vec2 *points,
-    const unsigned int points_count, struct zr_color color, int closed,
+void
+zr_draw_list_stroke_poly_line(struct zr_draw_list *list, const struct zr_vec2 *points,
+    const unsigned int points_count, struct zr_color color, enum zr_draw_list_stroke closed,
     float thickness, enum zr_anti_aliasing aliasing)
 {
     zr_size count;
@@ -2641,7 +2691,7 @@ zr_canvas_add_poly_line(struct zr_canvas *list, struct zr_vec2 *points,
     thick_line = thickness > 1.0f;
 
 #if ZR_COMPILE_WITH_COMMAND_USERDATA
-    zr_canvas_push_userdata(list, list->userdata);
+    zr_draw_list_push_userdata(list, list->userdata);
 #endif
 
     if (aliasing == ZR_ANTI_ALIASING_ON) {
@@ -2656,8 +2706,8 @@ zr_canvas_add_poly_line(struct zr_canvas *list, struct zr_vec2 *points,
         zr_size index = list->vertex_count;
         const zr_size idx_count = (thick_line) ?  (count * 18) : (count * 12);
         const zr_size vtx_count = (thick_line) ? (points_count * 4): (points_count *3);
-        struct zr_draw_vertex *vtx = zr_canvas_alloc_vertices(list, vtx_count);
-        zr_draw_index *ids = zr_canvas_alloc_elements(list, idx_count);
+        struct zr_draw_vertex *vtx = zr_draw_list_alloc_vertices(list, vtx_count);
+        zr_draw_index *ids = zr_draw_list_alloc_elements(list, idx_count);
 
         zr_size size;
         struct zr_vec2 *normals, *temp;
@@ -2818,8 +2868,8 @@ zr_canvas_add_poly_line(struct zr_canvas *list, struct zr_vec2 *points,
         zr_size idx = list->vertex_count;
         const zr_size idx_count = count * 6;
         const zr_size vtx_count = count * 4;
-        struct zr_draw_vertex *vtx = zr_canvas_alloc_vertices(list, vtx_count);
-        zr_draw_index *ids = zr_canvas_alloc_elements(list, idx_count);
+        struct zr_draw_vertex *vtx = zr_draw_list_alloc_vertices(list, vtx_count);
+        zr_draw_index *ids = zr_draw_list_alloc_elements(list, idx_count);
         if (!vtx || !ids) return;
 
         for (i1 = 0; i1 < count; ++i1) {
@@ -2857,10 +2907,10 @@ zr_canvas_add_poly_line(struct zr_canvas *list, struct zr_vec2 *points,
     }
 }
 
-static void
-zr_canvas_add_poly_convex(struct zr_canvas *list, struct zr_vec2 *points,
-    const unsigned int points_count, struct zr_color color,
-    enum zr_anti_aliasing aliasing)
+void
+zr_draw_list_fill_poly_convex(struct zr_draw_list *list,
+    const struct zr_vec2 *points, const unsigned int points_count,
+    struct zr_color color, enum zr_anti_aliasing aliasing)
 {
     static const zr_size pnt_align = ZR_ALIGNOF(struct zr_vec2);
     static const zr_size pnt_size = sizeof(struct zr_vec2);
@@ -2869,7 +2919,7 @@ zr_canvas_add_poly_convex(struct zr_canvas *list, struct zr_vec2 *points,
     if (!list || points_count < 3) return;
 
 #if ZR_COMPILE_WITH_COMMAND_USERDATA
-    zr_canvas_push_userdata(list, list->userdata);
+    zr_draw_list_push_userdata(list, list->userdata);
 #endif
 
     color.a = (zr_byte)((float)color.a * list->global_alpha);
@@ -2884,8 +2934,8 @@ zr_canvas_add_poly_convex(struct zr_canvas *list, struct zr_vec2 *points,
         zr_size index = list->vertex_count;
         const zr_size idx_count = (points_count-2)*3 + points_count*6;
         const zr_size vtx_count = (points_count*2);
-        struct zr_draw_vertex *vtx = zr_canvas_alloc_vertices(list, vtx_count);
-        zr_draw_index *ids = zr_canvas_alloc_elements(list, idx_count);
+        struct zr_draw_vertex *vtx = zr_draw_list_alloc_vertices(list, vtx_count);
+        zr_draw_index *ids = zr_draw_list_alloc_elements(list, idx_count);
 
         unsigned int vtx_inner_idx = (unsigned int)(index + 0);
         unsigned int vtx_outer_idx = (unsigned int)(index + 1);
@@ -2961,8 +3011,8 @@ zr_canvas_add_poly_convex(struct zr_canvas *list, struct zr_vec2 *points,
         zr_size index = list->vertex_count;
         const zr_size idx_count = (points_count-2)*3;
         const zr_size vtx_count = points_count;
-        struct zr_draw_vertex *vtx = zr_canvas_alloc_vertices(list, vtx_count);
-        zr_draw_index *ids = zr_canvas_alloc_elements(list, idx_count);
+        struct zr_draw_vertex *vtx = zr_draw_list_alloc_vertices(list, vtx_count);
+        zr_draw_index *ids = zr_draw_list_alloc_elements(list, idx_count);
         if (!vtx || !ids) return;
         for (i = 0; i < vtx_count; ++i) {
             vtx[0] = zr_draw_vertex(points[i], list->null.uv, col);
@@ -2977,8 +3027,8 @@ zr_canvas_add_poly_convex(struct zr_canvas *list, struct zr_vec2 *points,
     }
 }
 
-static void
-zr_canvas_path_clear(struct zr_canvas *list)
+void
+zr_draw_list_path_clear(struct zr_draw_list *list)
 {
     ZR_ASSERT(list);
     if (!list) return;
@@ -2987,27 +3037,27 @@ zr_canvas_path_clear(struct zr_canvas *list)
     list->path_offset = 0;
 }
 
-static void
-zr_canvas_path_line_to(struct zr_canvas *list, struct zr_vec2 pos)
+void
+zr_draw_list_path_line_to(struct zr_draw_list *list, struct zr_vec2 pos)
 {
     struct zr_vec2 *points = 0;
     struct zr_draw_command *cmd = 0;
     ZR_ASSERT(list);
     if (!list) return;
     if (!list->cmd_count)
-        zr_canvas_add_clip(list, zr_null_rect);
+        zr_draw_list_add_clip(list, zr_null_rect);
 
-    cmd = zr_canvas_command_last(list);
+    cmd = zr_draw_list_command_last(list);
     if (cmd && cmd->texture.ptr != list->null.texture.ptr)
-        zr_canvas_push_image(list, list->null.texture);
+        zr_draw_list_push_image(list, list->null.texture);
 
-    points = zr_canvas_alloc_path(list, 1);
+    points = zr_draw_list_alloc_path(list, 1);
     if (!points) return;
     points[0] = pos;
 }
 
-static void
-zr_canvas_path_arc_to_fast(struct zr_canvas *list, struct zr_vec2 center,
+void
+zr_draw_list_path_arc_to_fast(struct zr_draw_list *list, struct zr_vec2 center,
     float radius, int a_min, int a_max)
 {
     ZR_ASSERT(list);
@@ -3018,13 +3068,13 @@ zr_canvas_path_arc_to_fast(struct zr_canvas *list, struct zr_vec2 center,
             const struct zr_vec2 c = list->circle_vtx[(zr_size)a % ZR_LEN(list->circle_vtx)];
             const float x = center.x + c.x * radius;
             const float y = center.y + c.y * radius;
-            zr_canvas_path_line_to(list, zr_vec2(x, y));
+            zr_draw_list_path_line_to(list, zr_vec2(x, y));
         }
     }
 }
 
-static void
-zr_canvas_path_arc_to(struct zr_canvas *list, struct zr_vec2 center,
+void
+zr_draw_list_path_arc_to(struct zr_draw_list *list, struct zr_vec2 center,
     float radius, float a_min, float a_max, unsigned int segments)
 {
     unsigned int i = 0;
@@ -3035,12 +3085,12 @@ zr_canvas_path_arc_to(struct zr_canvas *list, struct zr_vec2 center,
         const float a = a_min + ((float)i / ((float)segments) * (a_max - a_min));
         const float x = center.x + (float)zr_cos(a) * radius;
         const float y = center.y + (float)zr_sin(a) * radius;
-        zr_canvas_path_line_to(list, zr_vec2(x, y));
+        zr_draw_list_path_line_to(list, zr_vec2(x, y));
     }
 }
 
-static void
-zr_canvas_path_rect_to(struct zr_canvas *list, struct zr_vec2 a,
+void
+zr_draw_list_path_rect_to(struct zr_draw_list *list, struct zr_vec2 a,
     struct zr_vec2 b, float rounding)
 {
     float r;
@@ -3051,20 +3101,20 @@ zr_canvas_path_rect_to(struct zr_canvas *list, struct zr_vec2 a,
     r = ZR_MIN(r, ((b.y-a.y) < 0) ? -(b.y-a.y): (b.y-a.y));
 
     if (r == 0.0f) {
-        zr_canvas_path_line_to(list, a);
-        zr_canvas_path_line_to(list, zr_vec2(b.x,a.y));
-        zr_canvas_path_line_to(list, b);
-        zr_canvas_path_line_to(list, zr_vec2(a.x,b.y));
+        zr_draw_list_path_line_to(list, a);
+        zr_draw_list_path_line_to(list, zr_vec2(b.x,a.y));
+        zr_draw_list_path_line_to(list, b);
+        zr_draw_list_path_line_to(list, zr_vec2(a.x,b.y));
     } else {
-        zr_canvas_path_arc_to_fast(list, zr_vec2(a.x + r, a.y + r), r, 6, 9);
-        zr_canvas_path_arc_to_fast(list, zr_vec2(b.x - r, a.y + r), r, 9, 12);
-        zr_canvas_path_arc_to_fast(list, zr_vec2(b.x - r, b.y - r), r, 0, 3);
-        zr_canvas_path_arc_to_fast(list, zr_vec2(a.x + r, b.y - r), r, 3, 6);
+        zr_draw_list_path_arc_to_fast(list, zr_vec2(a.x + r, a.y + r), r, 6, 9);
+        zr_draw_list_path_arc_to_fast(list, zr_vec2(b.x - r, a.y + r), r, 9, 12);
+        zr_draw_list_path_arc_to_fast(list, zr_vec2(b.x - r, b.y - r), r, 0, 3);
+        zr_draw_list_path_arc_to_fast(list, zr_vec2(a.x + r, b.y - r), r, 3, 6);
     }
 }
 
-static void
-zr_canvas_path_curve_to(struct zr_canvas *list, struct zr_vec2 p2,
+void
+zr_draw_list_path_curve_to(struct zr_draw_list *list, struct zr_vec2 p2,
     struct zr_vec2 p3, struct zr_vec2 p4, unsigned int num_segments)
 {
     unsigned int i_step;
@@ -3076,7 +3126,7 @@ zr_canvas_path_curve_to(struct zr_canvas *list, struct zr_vec2 p2,
     if (!list || !list->path_count) return;
     num_segments = ZR_MAX(num_segments, 1);
 
-    p1 = zr_canvas_path_last(list);
+    p1 = zr_draw_list_path_last(list);
     t_step = 1.0f/(float)num_segments;
     for (i_step = 1; i_step <= num_segments; ++i_step) {
         float t = t_step * (float)i_step;
@@ -3087,69 +3137,69 @@ zr_canvas_path_curve_to(struct zr_canvas *list, struct zr_vec2 p2,
         float w4 = t * t *t;
         float x = w1 * p1.x + w2 * p2.x + w3 * p3.x + w4 * p4.x;
         float y = w1 * p1.y + w2 * p2.y + w3 * p3.y + w4 * p4.y;
-        zr_canvas_path_line_to(list, zr_vec2(x,y));
+        zr_draw_list_path_line_to(list, zr_vec2(x,y));
     }
 }
 
-static void
-zr_canvas_path_fill(struct zr_canvas *list, struct zr_color color)
+void
+zr_draw_list_path_fill(struct zr_draw_list *list, struct zr_color color)
 {
     struct zr_vec2 *points;
     ZR_ASSERT(list);
     if (!list) return;
     points = (struct zr_vec2*)zr_buffer_memory(list->buffer);
-    zr_canvas_add_poly_convex(list, points, list->path_count, color, list->shape_AA);
-    zr_canvas_path_clear(list);
+    zr_draw_list_fill_poly_convex(list, points, list->path_count, color, list->shape_AA);
+    zr_draw_list_path_clear(list);
 }
 
-static void
-zr_canvas_path_stroke(struct zr_canvas *list, struct zr_color color,
-    int closed, float thickness)
+void
+zr_draw_list_path_stroke(struct zr_draw_list *list, struct zr_color color,
+    enum zr_draw_list_stroke closed, float thickness)
 {
     struct zr_vec2 *points;
     ZR_ASSERT(list);
     if (!list) return;
     points = (struct zr_vec2*)zr_buffer_memory(list->buffer);
-    zr_canvas_add_poly_line(list, points, list->path_count, color,
+    zr_draw_list_stroke_poly_line(list, points, list->path_count, color,
         closed, thickness, list->line_AA);
-    zr_canvas_path_clear(list);
+    zr_draw_list_path_clear(list);
 }
 
-static void
-zr_canvas_stroke_line(struct zr_canvas *list, struct zr_vec2 a,
+void
+zr_draw_list_stroke_line(struct zr_draw_list *list, struct zr_vec2 a,
     struct zr_vec2 b, struct zr_color col, float thickness)
 {
     ZR_ASSERT(list);
     if (!list || !col.a) return;
-    zr_canvas_path_line_to(list, zr_vec2_add(a, zr_vec2(0.5f, 0.5f)));
-    zr_canvas_path_line_to(list, zr_vec2_add(b, zr_vec2(0.5f, 0.5f)));
-    zr_canvas_path_stroke(list,  col, ZR_STROKE_OPEN, thickness);
+    zr_draw_list_path_line_to(list, zr_vec2_add(a, zr_vec2(0.5f, 0.5f)));
+    zr_draw_list_path_line_to(list, zr_vec2_add(b, zr_vec2(0.5f, 0.5f)));
+    zr_draw_list_path_stroke(list,  col, ZR_STROKE_OPEN, thickness);
 }
 
-static void
-zr_canvas_fill_rect(struct zr_canvas *list, struct zr_rect rect,
+void
+zr_draw_list_fill_rect(struct zr_draw_list *list, struct zr_rect rect,
     struct zr_color col, float rounding)
 {
     ZR_ASSERT(list);
     if (!list || !col.a) return;
-    zr_canvas_path_rect_to(list, zr_vec2(rect.x + 0.5f, rect.y + 0.5f),
+    zr_draw_list_path_rect_to(list, zr_vec2(rect.x + 0.5f, rect.y + 0.5f),
         zr_vec2(rect.x + rect.w + 0.5f, rect.y + rect.h + 0.5f), rounding);
-    zr_canvas_path_fill(list,  col);
+    zr_draw_list_path_fill(list,  col);
 }
 
-static void
-zr_canvas_stroke_rect(struct zr_canvas *list, struct zr_rect rect,
+void
+zr_draw_list_stroke_rect(struct zr_draw_list *list, struct zr_rect rect,
     struct zr_color col, float rounding, float thickness)
 {
     ZR_ASSERT(list);
     if (!list || !col.a) return;
-    zr_canvas_path_rect_to(list, zr_vec2(rect.x + 0.5f, rect.y + 0.5f),
+    zr_draw_list_path_rect_to(list, zr_vec2(rect.x + 0.5f, rect.y + 0.5f),
         zr_vec2(rect.x + rect.w + 0.5f, rect.y + rect.h + 0.5f), rounding);
-    zr_canvas_path_stroke(list,  col, ZR_STROKE_CLOSED, thickness);
+    zr_draw_list_path_stroke(list,  col, ZR_STROKE_CLOSED, thickness);
 }
 
-static void
-zr_canvas_add_rect_multi_color(struct zr_canvas *list, struct zr_rect rect,
+void
+zr_draw_list_fill_rect_multi_color(struct zr_draw_list *list, struct zr_rect rect,
     struct zr_color left, struct zr_color top, struct zr_color right,
     struct zr_color bottom)
 {
@@ -3164,10 +3214,10 @@ zr_canvas_add_rect_multi_color(struct zr_canvas *list, struct zr_rect rect,
     ZR_ASSERT(list);
     if (!list) return;
 
-    zr_canvas_push_image(list, list->null.texture);
+    zr_draw_list_push_image(list, list->null.texture);
     index = (zr_draw_index)list->vertex_count;
-    vtx = zr_canvas_alloc_vertices(list, 4);
-    idx = zr_canvas_alloc_elements(list, 6);
+    vtx = zr_draw_list_alloc_vertices(list, 4);
+    idx = zr_draw_list_alloc_elements(list, 6);
     if (!vtx || !idx) return;
 
     idx[0] = (zr_draw_index)(index+0); idx[1] = (zr_draw_index)(index+1);
@@ -3180,68 +3230,68 @@ zr_canvas_add_rect_multi_color(struct zr_canvas *list, struct zr_rect rect,
     vtx[3] = zr_draw_vertex(zr_vec2(rect.x, rect.y + rect.h), list->null.uv, col_bottom);
 }
 
-static void
-zr_canvas_fill_triangle(struct zr_canvas *list, struct zr_vec2 a,
+void
+zr_draw_list_fill_triangle(struct zr_draw_list *list, struct zr_vec2 a,
     struct zr_vec2 b, struct zr_vec2 c, struct zr_color col)
 {
     ZR_ASSERT(list);
     if (!list || !col.a) return;
-    zr_canvas_path_line_to(list, a);
-    zr_canvas_path_line_to(list, b);
-    zr_canvas_path_line_to(list, c);
-    zr_canvas_path_fill(list, col);
+    zr_draw_list_path_line_to(list, a);
+    zr_draw_list_path_line_to(list, b);
+    zr_draw_list_path_line_to(list, c);
+    zr_draw_list_path_fill(list, col);
 }
 
-static void
-zr_canvas_stroke_triangle(struct zr_canvas *list, struct zr_vec2 a,
+void
+zr_draw_list_stroke_triangle(struct zr_draw_list *list, struct zr_vec2 a,
     struct zr_vec2 b, struct zr_vec2 c, struct zr_color col, float thickness)
 {
     ZR_ASSERT(list);
     if (!list || !col.a) return;
-    zr_canvas_path_line_to(list, a);
-    zr_canvas_path_line_to(list, b);
-    zr_canvas_path_line_to(list, c);
-    zr_canvas_path_stroke(list, col, ZR_STROKE_CLOSED, thickness);
+    zr_draw_list_path_line_to(list, a);
+    zr_draw_list_path_line_to(list, b);
+    zr_draw_list_path_line_to(list, c);
+    zr_draw_list_path_stroke(list, col, ZR_STROKE_CLOSED, thickness);
 }
 
-static void
-zr_canvas_fill_circle(struct zr_canvas *list, struct zr_vec2 center,
+void
+zr_draw_list_fill_circle(struct zr_draw_list *list, struct zr_vec2 center,
     float radius, struct zr_color col, unsigned int segs)
 {
     float a_max;
     ZR_ASSERT(list);
     if (!list || !col.a) return;
     a_max = ZR_PI * 2.0f * ((float)segs - 1.0f) / (float)segs;
-    zr_canvas_path_arc_to(list, center, radius, 0.0f, a_max, segs);
-    zr_canvas_path_fill(list, col);
+    zr_draw_list_path_arc_to(list, center, radius, 0.0f, a_max, segs);
+    zr_draw_list_path_fill(list, col);
 }
 
-static void
-zr_canvas_stroke_circle(struct zr_canvas *list, struct zr_vec2 center,
+void
+zr_draw_list_stroke_circle(struct zr_draw_list *list, struct zr_vec2 center,
     float radius, struct zr_color col, unsigned int segs, float thickness)
 {
     float a_max;
     ZR_ASSERT(list);
     if (!list || !col.a) return;
     a_max = ZR_PI * 2.0f * ((float)segs - 1.0f) / (float)segs;
-    zr_canvas_path_arc_to(list, center, radius, 0.0f, a_max, segs);
-    zr_canvas_path_stroke(list, col, ZR_STROKE_CLOSED, thickness);
+    zr_draw_list_path_arc_to(list, center, radius, 0.0f, a_max, segs);
+    zr_draw_list_path_stroke(list, col, ZR_STROKE_CLOSED, thickness);
 }
 
-static void
-zr_canvas_add_curve(struct zr_canvas *list, struct zr_vec2 p0,
+void
+zr_draw_list_stroke_curve(struct zr_draw_list *list, struct zr_vec2 p0,
     struct zr_vec2 cp0, struct zr_vec2 cp1, struct zr_vec2 p1,
     struct zr_color col, unsigned int segments, float thickness)
 {
     ZR_ASSERT(list);
     if (!list || !col.a) return;
-    zr_canvas_path_line_to(list, p0);
-    zr_canvas_path_curve_to(list, cp0, cp1, p1, segments);
-    zr_canvas_path_stroke(list, col, ZR_STROKE_OPEN, thickness);
+    zr_draw_list_path_line_to(list, p0);
+    zr_draw_list_path_curve_to(list, cp0, cp1, p1, segments);
+    zr_draw_list_path_stroke(list, col, ZR_STROKE_OPEN, thickness);
 }
 
 static void
-zr_canvas_push_rect_uv(struct zr_canvas *list, struct zr_vec2 a,
+zr_draw_list_push_rect_uv(struct zr_draw_list *list, struct zr_vec2 a,
     struct zr_vec2 c, struct zr_vec2 uva, struct zr_vec2 uvc,
     struct zr_color color)
 {
@@ -3262,8 +3312,8 @@ zr_canvas_push_rect_uv(struct zr_canvas *list, struct zr_vec2 a,
     d = zr_vec2(a.x, c.y);
 
     index = (zr_draw_index)list->vertex_count;
-    vtx = zr_canvas_alloc_vertices(list, 4);
-    idx = zr_canvas_alloc_elements(list, 6);
+    vtx = zr_draw_list_alloc_vertices(list, 4);
+    idx = zr_draw_list_alloc_elements(list, 6);
     if (!vtx || !idx) return;
 
     idx[0] = (zr_draw_index)(index+0); idx[1] = (zr_draw_index)(index+1);
@@ -3276,14 +3326,14 @@ zr_canvas_push_rect_uv(struct zr_canvas *list, struct zr_vec2 a,
     vtx[3] = zr_draw_vertex(d, uvd, col);
 }
 
-static void
-zr_canvas_add_image(struct zr_canvas *list, struct zr_image texture,
+void
+zr_draw_list_add_image(struct zr_draw_list *list, struct zr_image texture,
     struct zr_rect rect, struct zr_color color)
 {
     ZR_ASSERT(list);
     if (!list) return;
     /* push new command with given texture */
-    zr_canvas_push_image(list, texture.handle);
+    zr_draw_list_push_image(list, texture.handle);
     if (zr_image_is_subimage(&texture)) {
         /* add region inside of the texture  */
         struct zr_vec2 uv[2];
@@ -3291,15 +3341,15 @@ zr_canvas_add_image(struct zr_canvas *list, struct zr_image texture,
         uv[0].y = (float)texture.region[1]/(float)texture.h;
         uv[1].x = (float)(texture.region[0] + texture.region[2])/(float)texture.w;
         uv[1].y = (float)(texture.region[1] + texture.region[3])/(float)texture.h;
-        zr_canvas_push_rect_uv(list, zr_vec2(rect.x, rect.y),
+        zr_draw_list_push_rect_uv(list, zr_vec2(rect.x, rect.y),
             zr_vec2(rect.x + rect.w, rect.y + rect.h),  uv[0], uv[1], color);
-    } else zr_canvas_push_rect_uv(list, zr_vec2(rect.x, rect.y),
+    } else zr_draw_list_push_rect_uv(list, zr_vec2(rect.x, rect.y),
             zr_vec2(rect.x + rect.w, rect.y + rect.h),
             zr_vec2(0.0f, 0.0f), zr_vec2(1.0f, 1.0f),color);
 }
 
-static void
-zr_canvas_add_text(struct zr_canvas *list, const struct zr_user_font *font,
+void
+zr_draw_list_add_text(struct zr_draw_list *list, const struct zr_user_font *font,
     struct zr_rect rect, const char *text, zr_size len, float font_height,
     struct zr_color fg)
 {
@@ -3318,7 +3368,7 @@ zr_canvas_add_text(struct zr_canvas *list, const struct zr_user_font *font,
         rect.x < list->clip_rect.x || rect.y < list->clip_rect.y)
         return;
 
-    zr_canvas_push_image(list, font->texture);
+    zr_draw_list_push_image(list, font->texture);
     x = rect.x;
     glyph_len = text_len = zr_utf_decode(text, &unicode, len);
     if (!glyph_len) return;
@@ -3341,7 +3391,7 @@ zr_canvas_add_text(struct zr_canvas *list, const struct zr_user_font *font,
         gw = g.width; gh = g.height;
         char_width = g.xadvance;
         fg.a = (zr_byte)((float)fg.a * list->global_alpha);
-        zr_canvas_push_rect_uv(list, zr_vec2(gx,gy), zr_vec2(gx + gw, gy+ gh),
+        zr_draw_list_push_rect_uv(list, zr_vec2(gx,gy), zr_vec2(gx + gw, gy+ gh),
             g.uv[0], g.uv[1], fg);
 
         /* offset next glyph */
@@ -3365,15 +3415,8 @@ zr_convert(struct zr_context *ctx, struct zr_buffer *cmds,
     if (!ctx || !cmds || !vertices || !elements)
         return;
 
-    ctx->canvas.null = config->null;
-    ctx->canvas.clip_rect = zr_null_rect;
-    ctx->canvas.vertices = vertices;
-    ctx->canvas.elements = elements;
-    ctx->canvas.buffer = cmds;
-    ctx->canvas.line_AA = config->line_AA;
-    ctx->canvas.shape_AA = config->shape_AA;
-    ctx->canvas.global_alpha = config->global_alpha;
-
+    zr_draw_list_setup(&ctx->draw_list, config->global_alpha, config->line_AA,
+        config->shape_AA, config->null, cmds, vertices, elements);
     zr_foreach(cmd, ctx)
     {
 #if ZR_COMPILE_WITH_COMMAND_USERDATA
@@ -3383,70 +3426,70 @@ zr_convert(struct zr_context *ctx, struct zr_buffer *cmds,
         case ZR_COMMAND_NOP: break;
         case ZR_COMMAND_SCISSOR: {
             const struct zr_command_scissor *s = zr_command(scissor, cmd);
-            zr_canvas_add_clip(&ctx->canvas, zr_rect(s->x, s->y, s->w, s->h));
+            zr_draw_list_add_clip(&ctx->draw_list, zr_rect(s->x, s->y, s->w, s->h));
         } break;
         case ZR_COMMAND_LINE: {
             const struct zr_command_line *l = zr_command(line, cmd);
-            zr_canvas_stroke_line(&ctx->canvas, zr_vec2(l->begin.x, l->begin.y),
+            zr_draw_list_stroke_line(&ctx->draw_list, zr_vec2(l->begin.x, l->begin.y),
                 zr_vec2(l->end.x, l->end.y), l->color, l->line_thickness);
         } break;
         case ZR_COMMAND_CURVE: {
             const struct zr_command_curve *q = zr_command(curve, cmd);
-            zr_canvas_add_curve(&ctx->canvas, zr_vec2(q->begin.x, q->begin.y),
+            zr_draw_list_stroke_curve(&ctx->draw_list, zr_vec2(q->begin.x, q->begin.y),
                 zr_vec2(q->ctrl[0].x, q->ctrl[0].y), zr_vec2(q->ctrl[1].x,
                 q->ctrl[1].y), zr_vec2(q->end.x, q->end.y), q->color,
                 config->curve_segment_count, q->line_thickness);
         } break;
         case ZR_COMMAND_RECT: {
             const struct zr_command_rect *r = zr_command(rect, cmd);
-            zr_canvas_stroke_rect(&ctx->canvas, zr_rect(r->x, r->y, r->w, r->h),
+            zr_draw_list_stroke_rect(&ctx->draw_list, zr_rect(r->x, r->y, r->w, r->h),
                 r->color, (float)r->rounding, r->line_thickness);
         } break;
         case ZR_COMMAND_RECT_FILLED: {
             const struct zr_command_rect_filled *r = zr_command(rect_filled, cmd);
-            zr_canvas_fill_rect(&ctx->canvas, zr_rect(r->x, r->y, r->w, r->h),
+            zr_draw_list_fill_rect(&ctx->draw_list, zr_rect(r->x, r->y, r->w, r->h),
                 r->color, (float)r->rounding);
         } break;
         case ZR_COMMAND_RECT_MULTI_COLOR: {
             const struct zr_command_rect_multi_color *r = zr_command(rect_multi_color, cmd);
-            zr_canvas_add_rect_multi_color(&ctx->canvas, zr_rect(r->x, r->y, r->w, r->h),
+            zr_draw_list_fill_rect_multi_color(&ctx->draw_list, zr_rect(r->x, r->y, r->w, r->h),
                 r->left, r->top, r->right, r->bottom);
         } break;
         case ZR_COMMAND_CIRCLE: {
             const struct zr_command_circle *c = zr_command(circle, cmd);
-            zr_canvas_stroke_circle(&ctx->canvas, zr_vec2((float)c->x + (float)c->w/2,
+            zr_draw_list_stroke_circle(&ctx->draw_list, zr_vec2((float)c->x + (float)c->w/2,
                 (float)c->y + (float)c->h/2), (float)c->w/2, c->color,
                 config->circle_segment_count, c->line_thickness);
         } break;
         case ZR_COMMAND_CIRCLE_FILLED: {
             const struct zr_command_circle_filled *c = zr_command(circle_filled, cmd);
-            zr_canvas_fill_circle(&ctx->canvas, zr_vec2((float)c->x + (float)c->w/2,
+            zr_draw_list_fill_circle(&ctx->draw_list, zr_vec2((float)c->x + (float)c->w/2,
                 (float)c->y + (float)c->h/2), (float)c->w/2, c->color,
                 config->circle_segment_count);
         } break;
         case ZR_COMMAND_ARC: {
             const struct zr_command_arc *c = zr_command(arc, cmd);
-            zr_canvas_path_line_to(&ctx->canvas, zr_vec2(c->cx, c->cy));
-            zr_canvas_path_arc_to(&ctx->canvas, zr_vec2(c->cx, c->cy), c->r,
+            zr_draw_list_path_line_to(&ctx->draw_list, zr_vec2(c->cx, c->cy));
+            zr_draw_list_path_arc_to(&ctx->draw_list, zr_vec2(c->cx, c->cy), c->r,
                 c->a[0], c->a[1], config->arc_segment_count);
-            zr_canvas_path_stroke(&ctx->canvas, c->color, ZR_STROKE_CLOSED, c->line_thickness);
+            zr_draw_list_path_stroke(&ctx->draw_list, c->color, ZR_STROKE_CLOSED, c->line_thickness);
         } break;
         case ZR_COMMAND_ARC_FILLED: {
             const struct zr_command_arc_filled *c = zr_command(arc_filled, cmd);
-            zr_canvas_path_line_to(&ctx->canvas, zr_vec2(c->cx, c->cy));
-            zr_canvas_path_arc_to(&ctx->canvas, zr_vec2(c->cx, c->cy), c->r,
+            zr_draw_list_path_line_to(&ctx->draw_list, zr_vec2(c->cx, c->cy));
+            zr_draw_list_path_arc_to(&ctx->draw_list, zr_vec2(c->cx, c->cy), c->r,
                 c->a[0], c->a[1], config->arc_segment_count);
-            zr_canvas_path_fill(&ctx->canvas, c->color);
+            zr_draw_list_path_fill(&ctx->draw_list, c->color);
         } break;
         case ZR_COMMAND_TRIANGLE: {
             const struct zr_command_triangle *t = zr_command(triangle, cmd);
-            zr_canvas_stroke_triangle(&ctx->canvas, zr_vec2(t->a.x, t->a.y),
+            zr_draw_list_stroke_triangle(&ctx->draw_list, zr_vec2(t->a.x, t->a.y),
                 zr_vec2(t->b.x, t->b.y), zr_vec2(t->c.x, t->c.y), t->color,
                 t->line_thickness);
         } break;
         case ZR_COMMAND_TRIANGLE_FILLED: {
             const struct zr_command_triangle_filled *t = zr_command(triangle_filled, cmd);
-            zr_canvas_fill_triangle(&ctx->canvas, zr_vec2(t->a.x, t->a.y),
+            zr_draw_list_fill_triangle(&ctx->draw_list, zr_vec2(t->a.x, t->a.y),
                 zr_vec2(t->b.x, t->b.y), zr_vec2(t->c.x, t->c.y), t->color);
         } break;
         case ZR_COMMAND_POLYGON: {
@@ -3454,36 +3497,36 @@ zr_convert(struct zr_context *ctx, struct zr_buffer *cmds,
             const struct zr_command_polygon*p = zr_command(polygon, cmd);
             for (i = 0; i < p->point_count; ++i) {
                 struct zr_vec2 pnt = zr_vec2((float)p->points[i].x, (float)p->points[i].y);
-                zr_canvas_path_line_to(&ctx->canvas, pnt);
+                zr_draw_list_path_line_to(&ctx->draw_list, pnt);
             }
-            zr_canvas_path_stroke(&ctx->canvas, p->color, ZR_STROKE_CLOSED, p->line_thickness);
+            zr_draw_list_path_stroke(&ctx->draw_list, p->color, ZR_STROKE_CLOSED, p->line_thickness);
         } break;
         case ZR_COMMAND_POLYGON_FILLED: {
             int i;
             const struct zr_command_polygon_filled *p = zr_command(polygon_filled, cmd);
             for (i = 0; i < p->point_count; ++i) {
                 struct zr_vec2 pnt = zr_vec2((float)p->points[i].x, (float)p->points[i].y);
-                zr_canvas_path_line_to(&ctx->canvas, pnt);
+                zr_draw_list_path_line_to(&ctx->draw_list, pnt);
             }
-            zr_canvas_path_fill(&ctx->canvas, p->color);
+            zr_draw_list_path_fill(&ctx->draw_list, p->color);
         } break;
         case ZR_COMMAND_POLYLINE: {
             int i;
             const struct zr_command_polyline *p = zr_command(polyline, cmd);
             for (i = 0; i < p->point_count; ++i) {
                 struct zr_vec2 pnt = zr_vec2((float)p->points[i].x, (float)p->points[i].y);
-                zr_canvas_path_line_to(&ctx->canvas, pnt);
+                zr_draw_list_path_line_to(&ctx->draw_list, pnt);
             }
-            zr_canvas_path_stroke(&ctx->canvas, p->color, ZR_STROKE_OPEN, p->line_thickness);
+            zr_draw_list_path_stroke(&ctx->draw_list, p->color, ZR_STROKE_OPEN, p->line_thickness);
         } break;
         case ZR_COMMAND_TEXT: {
             const struct zr_command_text *t = zr_command(text, cmd);
-            zr_canvas_add_text(&ctx->canvas, t->font, zr_rect(t->x, t->y, t->w, t->h),
+            zr_draw_list_add_text(&ctx->draw_list, t->font, zr_rect(t->x, t->y, t->w, t->h),
                 t->string, t->length, t->height, t->foreground);
         } break;
         case ZR_COMMAND_IMAGE: {
             const struct zr_command_image *i = zr_command(image, cmd);
-            zr_canvas_add_image(&ctx->canvas, i->img, zr_rect(i->x, i->y, i->w, i->h),
+            zr_draw_list_add_image(&ctx->draw_list, i->img, zr_rect(i->x, i->y, i->w, i->h),
                 zr_rgb(255, 255, 255));
         } break;
         default: break;
@@ -3494,44 +3537,12 @@ zr_convert(struct zr_context *ctx, struct zr_buffer *cmds,
 const struct zr_draw_command*
 zr__draw_begin(const struct zr_context *ctx,
     const struct zr_buffer *buffer)
-{
-    zr_byte *memory;
-    zr_size offset;
-    const struct zr_draw_command *cmd;
-
-    ZR_ASSERT(buffer);
-    if (!buffer || !buffer->size || !ctx->canvas.cmd_count)
-        return 0;
-
-    memory = (zr_byte*)buffer->memory.ptr;
-    offset = buffer->memory.size - ctx->canvas.cmd_offset;
-    cmd = zr_ptr_add(const struct zr_draw_command, memory, offset);
-    return cmd;
-}
+{return zr__draw_list_begin(&ctx->draw_list, buffer);}
 
 const struct zr_draw_command*
 zr__draw_next(const struct zr_draw_command *cmd,
     const struct zr_buffer *buffer, const struct zr_context *ctx)
-{
-    zr_byte *memory;
-    zr_size size;
-    zr_size offset;
-    const struct zr_draw_command *end;
-
-    ZR_ASSERT(buffer);
-    ZR_ASSERT(ctx);
-    if (!cmd || !buffer || !ctx)
-        return 0;
-
-    memory = (zr_byte*)buffer->memory.ptr;
-    size = buffer->memory.size;
-    offset = size - ctx->canvas.cmd_offset;
-    end = zr_ptr_add(const struct zr_draw_command, memory, offset);
-    end -= (ctx->canvas.cmd_count-1);
-
-    if (cmd <= end) return 0;
-    return (cmd-1);
-}
+{return zr__draw_list_next(cmd, buffer, &ctx->draw_list);}
 
 #endif
 /*
@@ -5926,7 +5937,7 @@ zr_do_button_text_symbol(zr_flags *state,
     ret = zr_do_button(state, out, bounds, style, in, behavior, &content);
     tri.y = content.y + (content.h/2) - font->height/2;
     tri.w = font->height; tri.h = font->height;
-    if (align & ZR_TEXT_LEFT) {
+    if (align & ZR_TEXT_ALIGN_LEFT) {
         tri.x = (content.x + content.w) - (2 * style->padding.x + tri.w);
         tri.x = ZR_MAX(tri.x, 0);
     } else tri.x = content.x + 2 * style->padding.x;
@@ -7000,13 +7011,13 @@ zr_draw_edit(struct zr_command_buffer *out, zr_flags state,
         cursor = &style->cursor_hover;
         text = style->text_hover;
         selected = style->selected_hover;
-        sel_text = style->selected_hover;
+        sel_text = style->selected_text_hover;
     } else {
         background = &style->normal;
         cursor = &style->cursor_normal;
         text = style->text_normal;
         selected = style->selected_normal;
-        sel_text = style->selected_normal;
+        sel_text = style->selected_text_normal;
     }
 
     /* draw background color/image */
@@ -7030,15 +7041,14 @@ zr_draw_edit(struct zr_command_buffer *out, zr_flags state,
         if (box->cursor == box->glyphs) {
             /* draw cursor at the end of the string */
             float text_width;
-            zr_size cursor_w = (zr_size)style->cursor_size;
             zr_size s = font->width(font->userdata, font->height,
                                     unselected_text, unselected_len);
             text_width = (float)s;
             if (cursor->type == ZR_STYLE_ITEM_IMAGE)
                 zr_draw_image(out, zr_rect(label->x+(float)text_width,
-                        label->y, (float)cursor_w, label->h), &cursor->data.image);
+                        label->y, style->cursor_size, label->h), &cursor->data.image);
             else zr_fill_rect(out, zr_rect(label->x+(float)text_width,
-                        label->y, (float)cursor_w, label->h), 0, cursor->data.color);
+                label->y, style->cursor_size, label->h), 0, cursor->data.color);
         } else {
             /* draw text selection */
             struct zr_rect clip = out->clip;
@@ -7587,6 +7597,56 @@ zr_do_color_picker(zr_flags *state,
  *                          STYLE
  *
  * ===============================================================*/
+void zr_style_default(struct zr_context *ctx){zr_style_from_table(ctx, 0);}
+#define ZR_COLOR_MAP(ZR_COLOR)\
+    ZR_COLOR(ZR_COLOR_TEXT,                 175,175,175,255) \
+    ZR_COLOR(ZR_COLOR_WINDOW,               45, 45, 45,255) \
+    ZR_COLOR(ZR_COLOR_HEADER,               40, 40, 40,255) \
+    ZR_COLOR(ZR_COLOR_BORDER,               65, 65, 65,255) \
+    ZR_COLOR(ZR_COLOR_BUTTON,               50, 50, 50,255) \
+    ZR_COLOR(ZR_COLOR_BUTTON_HOVER,         40, 40, 40,255) \
+    ZR_COLOR(ZR_COLOR_BUTTON_ACTIVE,        35, 35, 35,255) \
+    ZR_COLOR(ZR_COLOR_TOGGLE,               100,100,100,255) \
+    ZR_COLOR(ZR_COLOR_TOGGLE_HOVER,         120,120,120,255) \
+    ZR_COLOR(ZR_COLOR_TOGGLE_CURSOR,        45, 45, 45,255) \
+    ZR_COLOR(ZR_COLOR_SELECTABLE,           45, 45, 45,255) \
+    ZR_COLOR(ZR_COLOR_SELECTABLE_HOVER,     45, 45, 45,255) \
+    ZR_COLOR(ZR_COLOR_SELECTABLE_TEXT,      175,175,175,255) \
+    ZR_COLOR(ZR_COLOR_SLIDER,               38, 38, 38,255) \
+    ZR_COLOR(ZR_COLOR_SLIDER_CURSOR,        100,100,100,255) \
+    ZR_COLOR(ZR_COLOR_SLIDER_CURSOR_HOVER,  120,120,120,255) \
+    ZR_COLOR(ZR_COLOR_SLIDER_CURSOR_ACTIVE, 150,150,150,255) \
+    ZR_COLOR(ZR_COLOR_PROPERTY,             38, 38, 38,255) \
+    ZR_COLOR(ZR_COLOR_PROPERTY_HOVER,       40, 40, 40,255) \
+    ZR_COLOR(ZR_COLOR_PROPERTY_ACTIVE,      42, 42, 42,255) \
+    ZR_COLOR(ZR_COLOR_EDIT,                 38, 38, 38,255)  \
+    ZR_COLOR(ZR_COLOR_EDIT_CURSOR,          175,175,175,255) \
+    ZR_COLOR(ZR_COLOR_COMBO,                45, 45, 45,255) \
+    ZR_COLOR(ZR_COLOR_CHART,                120,120,120,255) \
+    ZR_COLOR(ZR_COLOR_CHART_COLOR,          45,45,45,255) \
+    ZR_COLOR(ZR_COLOR_CHART_COLOR_HIGHLIGHT,255,0,0,255) \
+    ZR_COLOR(ZR_COLOR_SCROLLBAR,            40,40,40,255) \
+    ZR_COLOR(ZR_COLOR_SCROLLBAR_CURSOR,     100,100,100,255) \
+    ZR_COLOR(ZR_COLOR_SCROLLBAR_CURSOR_HOVER,120,120,120,255) \
+    ZR_COLOR(ZR_COLOR_SCROLLBAR_CURSOR_ACTIVE, 150,150,150,255) \
+    ZR_COLOR(ZR_COLOR_TAB_HEADER,           40, 40, 40,255)
+
+static const struct zr_color
+zr_default_color_style[ZR_COLOR_COUNT] = {
+#define ZR_COLOR(a,b,c,d,e) {b,c,d,e},
+ZR_COLOR_MAP(ZR_COLOR)
+#undef ZR_COLOR
+};
+
+const char *zr_color_names[ZR_COLOR_COUNT] = {
+#define ZR_COLOR(a,b,c,d,e) #a,
+ZR_COLOR_MAP(ZR_COLOR)
+#undef ZR_COLOR
+};
+
+const char *zr_style_color_name(enum zr_style_colors c)
+{return zr_color_names[c];}
+
 struct zr_style_item zr_style_item_image(struct zr_image img)
 {struct zr_style_item i; i.type = ZR_STYLE_ITEM_IMAGE; i.data.image = img; return i;}
 
@@ -7597,7 +7657,7 @@ struct zr_style_item zr_style_item_hide(void)
 {struct zr_style_item i; i.type = ZR_STYLE_ITEM_COLOR; i.data.color = zr_rgba(0,0,0,0); return i;}
 
 void
-zr_style_default(struct zr_context *ctx)
+zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
 {
     struct zr_style *style;
     struct zr_style_text *text;
@@ -7617,23 +7677,24 @@ zr_style_default(struct zr_context *ctx)
     ZR_ASSERT(ctx);
     if (!ctx) return;
     style = &ctx->style;
+    table = (!table) ? zr_default_color_style: table;
 
     /* default text */
     text = &style->text;
-    text->color = zr_rgb(175,175,175);
+    text->color = table[ZR_COLOR_TEXT];
     text->padding = zr_vec2(4,4);
 
     /* default button */
     button = &style->button;
     zr_zero_struct(*button);
-    button->normal          = zr_style_item_color(zr_rgb(50,50,50));
-    button->hover           = zr_style_item_color(zr_rgb(40,40,40));
-    button->active          = zr_style_item_color(zr_rgb(35,35,35));
-    button->border_color    = zr_rgb(65,65,65);
-    button->text_background = zr_rgb(50,50,50);
-    button->text_normal     = zr_rgb(175, 175, 175);
-    button->text_hover      = zr_rgb(165,165,165);
-    button->text_active     = zr_rgb(155,155,155);
+    button->normal          = zr_style_item_color(table[ZR_COLOR_BUTTON]);
+    button->hover           = zr_style_item_color(table[ZR_COLOR_BUTTON_HOVER]);
+    button->active          = zr_style_item_color(table[ZR_COLOR_BUTTON_ACTIVE]);
+    button->border_color    = table[ZR_COLOR_BORDER];
+    button->text_background = table[ZR_COLOR_BUTTON];
+    button->text_normal     = table[ZR_COLOR_TEXT];
+    button->text_hover      = table[ZR_COLOR_TEXT];
+    button->text_active     = table[ZR_COLOR_TEXT];
     button->padding         = zr_vec2(4.0f,4.0f);
     button->image_padding   = zr_vec2(0.0f,0.0f);
     button->touch_padding   = zr_vec2(0.0f, 0.0f);
@@ -7650,14 +7711,14 @@ zr_style_default(struct zr_context *ctx)
     /* contextual button */
     button = &style->contextual_button;
     zr_zero_struct(*button);
-    button->normal          = zr_style_item_color(zr_rgb(45,45,45));
-    button->hover           = zr_style_item_color(zr_rgb(40,40,40));
-    button->active          = zr_style_item_color(zr_rgb(35,35,35));
-    button->border_color    = zr_rgb(45,45,45);
-    button->text_background = zr_rgb(45,45,45);
-    button->text_normal     = zr_rgb(175,175,175);
-    button->text_hover      = zr_rgb(165,165,165);
-    button->text_active     = zr_rgb(155,155,155);
+    button->normal          = zr_style_item_color(table[ZR_COLOR_WINDOW]);
+    button->hover           = zr_style_item_color(table[ZR_COLOR_BUTTON_HOVER]);
+    button->active          = zr_style_item_color(table[ZR_COLOR_BUTTON_ACTIVE]);
+    button->border_color    = table[ZR_COLOR_WINDOW];
+    button->text_background = table[ZR_COLOR_WINDOW];
+    button->text_normal     = table[ZR_COLOR_TEXT];
+    button->text_hover      = table[ZR_COLOR_TEXT];
+    button->text_active     = table[ZR_COLOR_TEXT];
     button->padding         = zr_vec2(4.0f,4.0f);
     button->touch_padding   = zr_vec2(0.0f,0.0f);
     button->userdata        = zr_handle_ptr(0);
@@ -7673,14 +7734,14 @@ zr_style_default(struct zr_context *ctx)
     /* menu button */
     button = &style->menu_button;
     zr_zero_struct(*button);
-    button->normal          = zr_style_item_color(zr_rgb(45,45,45));
-    button->hover           = zr_style_item_color(zr_rgb(40,40,40));
-    button->active          = zr_style_item_color(zr_rgb(35,35,35));
-    button->border_color    = zr_rgb(65,65,65);
-    button->text_background = zr_rgb(40,40,40);
-    button->text_normal     = zr_rgb(175,175,175);
-    button->text_hover      = zr_rgb(175,175,175);
-    button->text_active     = zr_rgb(175,175,175);
+    button->normal          = zr_style_item_color(table[ZR_COLOR_WINDOW]);
+    button->hover           = zr_style_item_color(table[ZR_COLOR_WINDOW]);
+    button->active          = zr_style_item_color(table[ZR_COLOR_WINDOW]);
+    button->border_color    = table[ZR_COLOR_WINDOW];
+    button->text_background = table[ZR_COLOR_WINDOW];
+    button->text_normal     = table[ZR_COLOR_TEXT];
+    button->text_hover      = table[ZR_COLOR_TEXT];
+    button->text_active     = table[ZR_COLOR_TEXT];
     button->padding         = zr_vec2(4.0f,4.0f);
     button->touch_padding   = zr_vec2(0.0f,0.0f);
     button->userdata        = zr_handle_ptr(0);
@@ -7696,16 +7757,16 @@ zr_style_default(struct zr_context *ctx)
     /* checkbox toggle */
     toggle = &style->checkbox;
     zr_zero_struct(*toggle);
-    toggle->normal          = zr_style_item_color(zr_rgb(100,100,100));
-    toggle->hover           = zr_style_item_color(zr_rgb(120,120,120));
-    toggle->active          = zr_style_item_color(zr_rgb(100,100,100));
-    toggle->cursor_normal   = zr_style_item_color(zr_rgb(45,45,45));
-    toggle->cursor_hover    = zr_style_item_color(zr_rgb(45,45,45));
+    toggle->normal          = zr_style_item_color(table[ZR_COLOR_TOGGLE]);
+    toggle->hover           = zr_style_item_color(table[ZR_COLOR_TOGGLE_HOVER]);
+    toggle->active          = zr_style_item_color(table[ZR_COLOR_TOGGLE_HOVER]);
+    toggle->cursor_normal   = zr_style_item_color(table[ZR_COLOR_TOGGLE_CURSOR]);
+    toggle->cursor_hover    = zr_style_item_color(table[ZR_COLOR_TOGGLE_CURSOR]);
     toggle->userdata        = zr_handle_ptr(0);
-    toggle->text_background = zr_rgb(45,45,45);
-    toggle->text_normal     = zr_rgb(175,175,175);
-    toggle->text_hover      = zr_rgb(175,175,175);
-    toggle->text_active     = zr_rgb(175,175,175);
+    toggle->text_background = table[ZR_COLOR_WINDOW];
+    toggle->text_normal     = table[ZR_COLOR_TEXT];
+    toggle->text_hover      = table[ZR_COLOR_TEXT];
+    toggle->text_active     = table[ZR_COLOR_TEXT];
     toggle->padding         = zr_vec2(4.0f, 4.0f);
     toggle->touch_padding   = zr_vec2(0,0);
     toggle->fixed_width     = 0;
@@ -7715,16 +7776,16 @@ zr_style_default(struct zr_context *ctx)
     /* option toggle */
     toggle = &style->option;
     zr_zero_struct(*toggle);
-    toggle->normal          = zr_style_item_color(zr_rgb(100,100,100));
-    toggle->hover           = zr_style_item_color(zr_rgb(120,120,120));
-    toggle->active          = zr_style_item_color(zr_rgb(100,100,100));
-    toggle->cursor_normal   = zr_style_item_color(zr_rgb(45,45,45));
-    toggle->cursor_hover    = zr_style_item_color(zr_rgb(45,45,45));
+    toggle->normal          = zr_style_item_color(table[ZR_COLOR_TOGGLE]);
+    toggle->hover           = zr_style_item_color(table[ZR_COLOR_TOGGLE_HOVER]);
+    toggle->active          = zr_style_item_color(table[ZR_COLOR_TOGGLE_HOVER]);
+    toggle->cursor_normal   = zr_style_item_color(table[ZR_COLOR_TOGGLE_CURSOR]);
+    toggle->cursor_hover    = zr_style_item_color(table[ZR_COLOR_TOGGLE_CURSOR]);
     toggle->userdata        = zr_handle_ptr(0);
-    toggle->text_background = zr_rgb(45,45,45);
-    toggle->text_normal     = zr_rgb(175,175,175);
-    toggle->text_hover      = zr_rgb(175,175,175);
-    toggle->text_active     = zr_rgb(175,175,175);
+    toggle->text_background = table[ZR_COLOR_WINDOW];
+    toggle->text_normal     = table[ZR_COLOR_TEXT];
+    toggle->text_hover      = table[ZR_COLOR_TEXT];
+    toggle->text_active     = table[ZR_COLOR_TEXT];
     toggle->padding         = zr_vec2(4.0f, 4.0f);
     toggle->touch_padding   = zr_vec2(0,0);
     toggle->fixed_width     = 0;
@@ -7734,25 +7795,25 @@ zr_style_default(struct zr_context *ctx)
     /* selectable */
     select = &style->selectable;
     zr_zero_struct(*select);
-    select->normal          = zr_style_item_color(zr_rgb(45,45,45));
-    select->hover           = zr_style_item_color(zr_rgb(45,45,45));
-    select->pressed         = zr_style_item_color(zr_rgb(45,45,45));
-    select->normal_active   = zr_style_item_color(zr_rgb(100,100,100));
-    select->hover_active    = zr_style_item_color(zr_rgb(100,100,100));
-    select->pressed_active  = zr_style_item_color(zr_rgb(100,100,100));
-    select->text_normal     = zr_rgb(175,175,175);
-    select->text_hover      = zr_rgb(175,175,175);
-    select->text_pressed    = zr_rgb(175,175,175);
-    select->text_normal_active  = zr_rgb(45,45,45);
-    select->text_hover_active   = zr_rgb(45,45,45);
-    select->text_pressed_active = zr_rgb(45,45,45);
+    select->normal          = zr_style_item_color(table[ZR_COLOR_SELECTABLE]);
+    select->hover           = zr_style_item_color(table[ZR_COLOR_SELECTABLE_HOVER]);
+    select->pressed         = zr_style_item_color(table[ZR_COLOR_SELECTABLE_HOVER]);
+    select->normal_active   = zr_style_item_color(table[ZR_COLOR_TEXT]);
+    select->hover_active    = zr_style_item_color(table[ZR_COLOR_TEXT]);
+    select->pressed_active  = zr_style_item_color(table[ZR_COLOR_TEXT]);
+    select->text_normal     = table[ZR_COLOR_TEXT];
+    select->text_hover      = table[ZR_COLOR_TEXT];
+    select->text_pressed    = table[ZR_COLOR_TEXT];
+    select->text_normal_active  = table[ZR_COLOR_SELECTABLE];
+    select->text_hover_active   = table[ZR_COLOR_SELECTABLE];
+    select->text_pressed_active = table[ZR_COLOR_SELECTABLE];
+    select->padding         = zr_vec2(4.0f,4.0f);
+    select->touch_padding   = zr_vec2(0,0);
+    select->userdata        = zr_handle_ptr(0);
     select->fixed_width     = 0;
     select->fixed_height    = 0;
     select->rounding        = 0.0f;
     select->has_fixed_size  = 0;
-    select->padding         = zr_vec2(4.0f,4.0f);
-    select->touch_padding   = zr_vec2(0,0);
-    select->userdata        = zr_handle_ptr(0);
     select->draw_begin      = 0;
     select->draw            = 0;
     select->draw_end        = 0;
@@ -7763,13 +7824,13 @@ zr_style_default(struct zr_context *ctx)
     slider->normal          = zr_style_item_hide();
     slider->hover           = zr_style_item_hide();
     slider->active          = zr_style_item_hide();
-    slider->bar_normal      = zr_rgb(38,38,38);
-    slider->bar_hover       = zr_rgb(38,38,38);
-    slider->bar_active      = zr_rgb(38,38,38);
-    slider->bar_filled      = zr_rgb(100,100,100);
-    slider->cursor_normal   = zr_style_item_color(zr_rgb(100,100,100));
-    slider->cursor_hover    = zr_style_item_color(zr_rgb(120,120,120));
-    slider->cursor_active   = zr_style_item_color(zr_rgb(150,150,150));;
+    slider->bar_normal      = table[ZR_COLOR_SLIDER];
+    slider->bar_hover       = table[ZR_COLOR_SLIDER];
+    slider->bar_active      = table[ZR_COLOR_SLIDER];
+    slider->bar_filled      = table[ZR_COLOR_SLIDER_CURSOR];
+    slider->cursor_normal   = zr_style_item_color(table[ZR_COLOR_SLIDER_CURSOR]);
+    slider->cursor_hover    = zr_style_item_color(table[ZR_COLOR_SLIDER_CURSOR_HOVER]);
+    slider->cursor_active   = zr_style_item_color(table[ZR_COLOR_SLIDER_CURSOR_ACTIVE]);
     slider->inc_symbol      = ZR_SYMBOL_TRIANGLE_RIGHT;
     slider->dec_symbol      = ZR_SYMBOL_TRIANGLE_LEFT;
     slider->cursor_size     = zr_vec2(16,16);
@@ -7812,12 +7873,12 @@ zr_style_default(struct zr_context *ctx)
     /* progressbar */
     prog = &style->progress;
     zr_zero_struct(*prog);
-    prog->normal            = zr_style_item_color(zr_rgb(38,38,38));
-    prog->hover             = zr_style_item_color(zr_rgb(40,40,40));
-    prog->active            = zr_style_item_color(zr_rgb(42,42,42));
-    prog->cursor_normal     = zr_style_item_color(zr_rgb(100,100,100));
-    prog->cursor_hover      = zr_style_item_color(zr_rgb(120,120,120));
-    prog->cursor_active     = zr_style_item_color(zr_rgb(150,150,150));
+    prog->normal            = zr_style_item_color(table[ZR_COLOR_SLIDER]);
+    prog->hover             = zr_style_item_color(table[ZR_COLOR_SLIDER]);
+    prog->active            = zr_style_item_color(table[ZR_COLOR_SLIDER]);
+    prog->cursor_normal     = zr_style_item_color(table[ZR_COLOR_SLIDER_CURSOR]);
+    prog->cursor_hover      = zr_style_item_color(table[ZR_COLOR_SLIDER_CURSOR_HOVER]);
+    prog->cursor_active     = zr_style_item_color(table[ZR_COLOR_SLIDER_CURSOR_ACTIVE]);
     prog->userdata          = zr_handle_ptr(0);
     prog->padding           = zr_vec2(4,4);
     prog->rounding          = 0;
@@ -7831,12 +7892,12 @@ zr_style_default(struct zr_context *ctx)
     /* scrollbars */
     scroll = &style->scrollh;
     zr_zero_struct(*scroll);
-    scroll->normal          = zr_style_item_color(zr_rgb(40,40,40));
-    scroll->hover           = zr_style_item_color(zr_rgb(40,40,40));
-    scroll->active          = zr_style_item_color(zr_rgb(40,40,40));
-    scroll->cursor_normal   = zr_style_item_color(zr_rgb(100,100,100));
-    scroll->cursor_hover    = zr_style_item_color(zr_rgb(120,120,120));
-    scroll->cursor_active   = zr_style_item_color(zr_rgb(150,150,150));
+    scroll->normal          = zr_style_item_color(table[ZR_COLOR_SCROLLBAR]);
+    scroll->hover           = zr_style_item_color(table[ZR_COLOR_SCROLLBAR]);
+    scroll->active          = zr_style_item_color(table[ZR_COLOR_SCROLLBAR]);
+    scroll->cursor_normal   = zr_style_item_color(table[ZR_COLOR_SCROLLBAR_CURSOR]);
+    scroll->cursor_hover    = zr_style_item_color(table[ZR_COLOR_SCROLLBAR_CURSOR_HOVER]);
+    scroll->cursor_active   = zr_style_item_color(table[ZR_COLOR_SCROLLBAR_CURSOR_ACTIVE]);
     scroll->dec_symbol      = ZR_SYMBOL_CIRCLE_FILLED;
     scroll->inc_symbol      = ZR_SYMBOL_CIRCLE_FILLED;
     scroll->userdata        = zr_handle_ptr(0);
@@ -7878,23 +7939,23 @@ zr_style_default(struct zr_context *ctx)
     /* edit */
     edit = &style->edit;
     zr_zero_struct(*edit);
-    edit->normal            = zr_style_item_color(zr_rgb(45,45,45));
-    edit->hover             = zr_style_item_color(zr_rgb(47,47,47));
-    edit->active            = zr_style_item_color(zr_rgb(49,49,49));
-    edit->cursor_normal     = zr_style_item_color(zr_rgb(100,100,100));
-    edit->cursor_hover      = zr_style_item_color(zr_rgb(102,102,102));
-    edit->cursor_active     = zr_style_item_color(zr_rgb(104,104,104));
-    edit->border_color      = zr_rgb(65,65,65);;
-    edit->text_normal       = zr_rgb(135,135,135);
-    edit->text_hover        = zr_rgb(135,135,135);
-    edit->text_active       = zr_rgb(135,135,135);
-    edit->selected_normal   = zr_rgb(135,135,135);
-    edit->selected_hover    = zr_rgb(135,135,135);
-    edit->selected_text_normal  = zr_rgb(45,45,45);
-    edit->selected_text_hover   = zr_rgb(45,45,45);
+    edit->normal            = zr_style_item_color(table[ZR_COLOR_EDIT]);
+    edit->hover             = zr_style_item_color(table[ZR_COLOR_EDIT]);
+    edit->active            = zr_style_item_color(table[ZR_COLOR_EDIT]);
+    edit->cursor_normal     = zr_style_item_color(table[ZR_COLOR_EDIT_CURSOR]);
+    edit->cursor_hover      = zr_style_item_color(table[ZR_COLOR_EDIT_CURSOR]);
+    edit->cursor_active     = zr_style_item_color(table[ZR_COLOR_EDIT_CURSOR]);
+    edit->border_color      = table[ZR_COLOR_BORDER];
+    edit->text_normal       = table[ZR_COLOR_TEXT];
+    edit->text_hover        = table[ZR_COLOR_TEXT];
+    edit->text_active       = table[ZR_COLOR_TEXT];
+    edit->selected_normal   = table[ZR_COLOR_TEXT];
+    edit->selected_hover    = table[ZR_COLOR_TEXT];
+    edit->selected_text_normal  = table[ZR_COLOR_EDIT];
+    edit->selected_text_hover   = table[ZR_COLOR_EDIT];
     edit->userdata          = zr_handle_ptr(0);
     edit->padding           = zr_vec2(4,4);
-    edit->cursor_size       = 8;
+    edit->cursor_size       = 4;
     edit->border            = 1;
     edit->rounding          = 0;
     edit->fixed_width       = 0;
@@ -7907,13 +7968,13 @@ zr_style_default(struct zr_context *ctx)
     /* property */
     property = &style->property;
     zr_zero_struct(*property);
-    property->normal        = zr_style_item_color(zr_rgb(38,38,38));
-    property->hover         = zr_style_item_color(zr_rgb(40,40,40));
-    property->active        = zr_style_item_color(zr_rgb(42,42,42));
-    property->border_color  = zr_rgb(65,65,65);
-    property->label_normal  = zr_rgb(175,175,175);
-    property->label_hover   = zr_rgb(175,175,175);
-    property->label_active  = zr_rgb(175,175,175);
+    property->normal        = zr_style_item_color(table[ZR_COLOR_PROPERTY]);
+    property->hover         = zr_style_item_color(table[ZR_COLOR_PROPERTY_HOVER]);
+    property->active        = zr_style_item_color(table[ZR_COLOR_PROPERTY_ACTIVE]);
+    property->border_color  = table[ZR_COLOR_BORDER];
+    property->label_normal  = table[ZR_COLOR_TEXT];
+    property->label_hover   = table[ZR_COLOR_TEXT];
+    property->label_active  = table[ZR_COLOR_TEXT];
     property->sym_left      = ZR_SYMBOL_TRIANGLE_LEFT;
     property->sym_right     = ZR_SYMBOL_TRIANGLE_RIGHT;
     property->userdata      = zr_handle_ptr(0);
@@ -7930,14 +7991,14 @@ zr_style_default(struct zr_context *ctx)
     /* property buttons */
     button = &style->property.dec_button;
     zr_zero_struct(*button);
-    button->normal          = zr_style_item_color(zr_rgb(38,38,38));
-    button->hover           = zr_style_item_color(zr_rgb(40,40,40));
-    button->active          = zr_style_item_color(zr_rgb(42,42,42));
+    button->normal          = zr_style_item_color(table[ZR_COLOR_PROPERTY]);
+    button->hover           = zr_style_item_color(table[ZR_COLOR_PROPERTY_HOVER]);
+    button->active          = zr_style_item_color(table[ZR_COLOR_PROPERTY_ACTIVE]);
     button->border_color    = zr_rgba(0,0,0,0);
-    button->text_background = zr_rgb(38,38,38);
-    button->text_normal     = zr_rgb(175,175,175);
-    button->text_hover      = zr_rgb(175,175,175);
-    button->text_active     = zr_rgb(175,175,175);
+    button->text_background = table[ZR_COLOR_PROPERTY];
+    button->text_normal     = table[ZR_COLOR_TEXT];
+    button->text_hover      = table[ZR_COLOR_TEXT];
+    button->text_active     = table[ZR_COLOR_TEXT];
     button->padding         = zr_vec2(0.0f,0.0f);
     button->touch_padding   = zr_vec2(0.0f,0.0f);
     button->userdata        = zr_handle_ptr(0);
@@ -7954,20 +8015,21 @@ zr_style_default(struct zr_context *ctx)
     /* property edit */
     edit = &style->property.edit;
     zr_zero_struct(*edit);
-    edit->normal            = zr_style_item_color(zr_rgb(38,38,38));
-    edit->hover             = zr_style_item_color(zr_rgb(40,40,40));
-    edit->active            = zr_style_item_color(zr_rgb(42,42,42));
-    edit->cursor_normal     = zr_style_item_color(zr_rgb(175,175,175));
-    edit->cursor_hover      = zr_style_item_color(zr_rgb(175,175,175));
-    edit->cursor_active     = zr_style_item_color(zr_rgb(175,175,175));
+    edit->normal            = zr_style_item_color(table[ZR_COLOR_PROPERTY]);
+    edit->hover             = zr_style_item_color(table[ZR_COLOR_PROPERTY_HOVER]);
+    edit->active            = zr_style_item_color(table[ZR_COLOR_PROPERTY_ACTIVE]);
+    edit->cursor_normal     = zr_style_item_color(table[ZR_COLOR_EDIT_CURSOR]);
+    edit->cursor_hover      = zr_style_item_color(table[ZR_COLOR_EDIT_CURSOR]);
+    edit->cursor_active     = zr_style_item_color(table[ZR_COLOR_EDIT_CURSOR]);
     edit->border_color      = zr_rgba(0,0,0,0);
-    edit->text_normal       = zr_rgb(175,175,175);
-    edit->text_hover        = zr_rgb(175,175,175);
-    edit->text_active       = zr_rgb(175,175,175);
-    edit->selected_normal   = zr_rgb(175,175,175);
-    edit->selected_hover    = zr_rgb(175,175,175);
-    edit->selected_text_normal  = zr_rgb(38,38,38);
-    edit->selected_text_hover   = zr_rgb(50,50,50);
+    edit->text_normal       = table[ZR_COLOR_TEXT];
+    edit->text_hover        = table[ZR_COLOR_TEXT];
+    edit->text_active       = table[ZR_COLOR_TEXT];
+    edit->selected_normal   = table[ZR_COLOR_TEXT];
+    edit->selected_hover    = table[ZR_COLOR_TEXT];
+    edit->selected_text_normal  = table[ZR_COLOR_EDIT];
+    edit->selected_text_hover   = table[ZR_COLOR_EDIT];
+    edit->userdata          = zr_handle_ptr(0);
     edit->userdata          = zr_handle_ptr(0);
     edit->padding           = zr_vec2(0,0);
     edit->cursor_size       = 8;
@@ -7983,10 +8045,10 @@ zr_style_default(struct zr_context *ctx)
     /* chart */
     chart = &style->line_chart;
     zr_zero_struct(*chart);
-    chart->background = zr_style_item_color(zr_rgb(120,120,120));
-    chart->border_color = zr_rgb(65,65,65);
-    chart->selected_color = zr_rgb(256,0,0);
-    chart->color = zr_rgb(45,45,45);
+    chart->background = zr_style_item_color(table[ZR_COLOR_CHART]);
+    chart->border_color = table[ZR_COLOR_BORDER];
+    chart->selected_color = table[ZR_COLOR_CHART_COLOR_HIGHLIGHT];
+    chart->color = table[ZR_COLOR_CHART_COLOR];
     chart->border = 0;
     chart->rounding = 0;
     chart->has_fixed_size = 0;
@@ -7997,13 +8059,13 @@ zr_style_default(struct zr_context *ctx)
 
     /* combo */
     combo = &style->combo;
-    combo->normal = zr_style_item_color(zr_rgb(45,45,45));
-    combo->hover = zr_style_item_color(zr_rgb(45,45,45));
-    combo->active = zr_style_item_color(zr_rgb(45,45,45));
-    combo->border_color = zr_rgb(65,65,65);
-    combo->label_normal = zr_rgb(175,175,175);
-    combo->label_hover = zr_rgb(175,175,175);
-    combo->label_active = zr_rgb(175,175,175);
+    combo->normal = zr_style_item_color(table[ZR_COLOR_COMBO]);
+    combo->hover = zr_style_item_color(table[ZR_COLOR_COMBO]);
+    combo->active = zr_style_item_color(table[ZR_COLOR_COMBO]);
+    combo->border_color = table[ZR_COLOR_BORDER];
+    combo->label_normal = table[ZR_COLOR_TEXT];
+    combo->label_hover = table[ZR_COLOR_TEXT];
+    combo->label_active = table[ZR_COLOR_TEXT];
     combo->sym_normal = ZR_SYMBOL_TRIANGLE_DOWN;
     combo->sym_hover = ZR_SYMBOL_TRIANGLE_DOWN;
     combo->sym_active =ZR_SYMBOL_TRIANGLE_DOWN;
@@ -8019,14 +8081,14 @@ zr_style_default(struct zr_context *ctx)
     /* combo button */
     button = &style->combo.button;
     zr_zero_struct(*button);
-    button->normal          = zr_style_item_color(zr_rgb(45,45,45));
-    button->hover           = zr_style_item_color(zr_rgb(45,45,45));
-    button->active          = zr_style_item_color(zr_rgb(45,45,45));
+    button->normal          = zr_style_item_color(table[ZR_COLOR_COMBO]);
+    button->hover           = zr_style_item_color(table[ZR_COLOR_COMBO]);
+    button->active          = zr_style_item_color(table[ZR_COLOR_COMBO]);
     button->border_color    = zr_rgba(0,0,0,0);
-    button->text_background = zr_rgb(45,45,38);
-    button->text_normal     = zr_rgb(175,175,175);
-    button->text_hover      = zr_rgb(175,175,175);
-    button->text_active     = zr_rgb(175,175,175);
+    button->text_background = table[ZR_COLOR_COMBO];
+    button->text_normal     = table[ZR_COLOR_TEXT];
+    button->text_hover      = table[ZR_COLOR_TEXT];
+    button->text_active     = table[ZR_COLOR_TEXT];
     button->padding         = zr_vec2(2.0f,2.0f);
     button->touch_padding   = zr_vec2(0.0f,0.0f);
     button->userdata        = zr_handle_ptr(0);
@@ -8041,9 +8103,9 @@ zr_style_default(struct zr_context *ctx)
 
     /* tab */
     tab = &style->tab;
-    tab->background = zr_style_item_color(zr_rgb(40,40,40));
-    tab->border_color = zr_rgb(65,65,65);
-    tab->text = zr_rgb(175,175,175);
+    tab->background = zr_style_item_color(table[ZR_COLOR_TAB_HEADER]);
+    tab->border_color = table[ZR_COLOR_BORDER];
+    tab->text = table[ZR_COLOR_TEXT];
     tab->sym_minimize = ZR_SYMBOL_TRIANGLE_DOWN;
     tab->sym_maximize = ZR_SYMBOL_TRIANGLE_RIGHT;
     tab->border = 1;
@@ -8054,14 +8116,14 @@ zr_style_default(struct zr_context *ctx)
     /* tab button */
     button = &style->tab.tab_button;
     zr_zero_struct(*button);
-    button->normal          = zr_style_item_color(zr_rgb(40,40,40));
-    button->hover           = zr_style_item_color(zr_rgb(40,40,40));
-    button->active          = zr_style_item_color(zr_rgb(40,40,40));
+    button->normal          = zr_style_item_color(table[ZR_COLOR_TAB_HEADER]);
+    button->hover           = zr_style_item_color(table[ZR_COLOR_TAB_HEADER]);
+    button->active          = zr_style_item_color(table[ZR_COLOR_TAB_HEADER]);
     button->border_color    = zr_rgba(0,0,0,0);
-    button->text_background = zr_rgb(40,40,40);
-    button->text_normal     = zr_rgb(175,175,175);
-    button->text_hover      = zr_rgb(175,175,175);
-    button->text_active     = zr_rgb(175,175,175);
+    button->text_background = table[ZR_COLOR_TAB_HEADER];
+    button->text_normal     = table[ZR_COLOR_TEXT];
+    button->text_hover      = table[ZR_COLOR_TEXT];
+    button->text_active     = table[ZR_COLOR_TEXT];
     button->padding         = zr_vec2(2.0f,2.0f);
     button->touch_padding   = zr_vec2(0.0f,0.0f);
     button->userdata        = zr_handle_ptr(0);
@@ -8077,14 +8139,14 @@ zr_style_default(struct zr_context *ctx)
     /* node button */
     button = &style->tab.node_button;
     zr_zero_struct(*button);
-    button->normal          = zr_style_item_color(zr_rgb(45,45,45));
-    button->hover           = zr_style_item_color(zr_rgb(45,45,45));
-    button->active          = zr_style_item_color(zr_rgb(45,45,45));
+    button->normal          = zr_style_item_color(table[ZR_COLOR_WINDOW]);
+    button->hover           = zr_style_item_color(table[ZR_COLOR_WINDOW]);
+    button->active          = zr_style_item_color(table[ZR_COLOR_WINDOW]);
     button->border_color    = zr_rgba(0,0,0,0);
-    button->text_background = zr_rgb(40,40,40);
-    button->text_normal     = zr_rgb(175,175,175);
-    button->text_hover      = zr_rgb(175,175,175);
-    button->text_active     = zr_rgb(175,175,175);
+    button->text_background = table[ZR_COLOR_TAB_HEADER];
+    button->text_normal     = table[ZR_COLOR_TEXT];
+    button->text_hover      = table[ZR_COLOR_TEXT];
+    button->text_active     = table[ZR_COLOR_TEXT];
     button->padding         = zr_vec2(2.0f,2.0f);
     button->touch_padding   = zr_vec2(0.0f,0.0f);
     button->userdata        = zr_handle_ptr(0);
@@ -8103,12 +8165,12 @@ zr_style_default(struct zr_context *ctx)
     win->header.close_symbol = ZR_SYMBOL_X;
     win->header.minimize_symbol = ZR_SYMBOL_MINUS;
     win->header.maximize_symbol = ZR_SYMBOL_PLUS;
-    win->header.normal = zr_style_item_color(zr_rgb(40,40,40));
-    win->header.hover = zr_style_item_color(zr_rgb(40,40,40));
-    win->header.active = zr_style_item_color(zr_rgb(40,40,40));
-    win->header.label_normal = zr_rgb(175,175,175);
-    win->header.label_hover = zr_rgb(175,175,175);
-    win->header.label_active = zr_rgb(175,175,175);
+    win->header.normal = zr_style_item_color(table[ZR_COLOR_HEADER]);
+    win->header.hover = zr_style_item_color(table[ZR_COLOR_HEADER]);
+    win->header.active = zr_style_item_color(table[ZR_COLOR_HEADER]);
+    win->header.label_normal = table[ZR_COLOR_TEXT];
+    win->header.label_hover = table[ZR_COLOR_TEXT];
+    win->header.label_active = table[ZR_COLOR_TEXT];
     win->header.label_padding = zr_vec2(4,4);
     win->header.padding = zr_vec2(4,4);
     win->header.spacing = zr_vec2(0,0);
@@ -8116,14 +8178,14 @@ zr_style_default(struct zr_context *ctx)
     /* window header close button */
     button = &style->window.header.close_button;
     zr_zero_struct(*button);
-    button->normal          = zr_style_item_color(zr_rgb(40,40,40));
-    button->hover           = zr_style_item_color(zr_rgb(40,40,40));
-    button->active          = zr_style_item_color(zr_rgb(40,40,40));
+    button->normal          = zr_style_item_color(table[ZR_COLOR_HEADER]);
+    button->hover           = zr_style_item_color(table[ZR_COLOR_HEADER]);
+    button->active          = zr_style_item_color(table[ZR_COLOR_HEADER]);
     button->border_color    = zr_rgba(0,0,0,0);
-    button->text_background = zr_rgb(40,40,40);
-    button->text_normal     = zr_rgb(175,175,175);
-    button->text_hover      = zr_rgb(175,175,175);
-    button->text_active     = zr_rgb(175,175,175);
+    button->text_background = table[ZR_COLOR_HEADER];
+    button->text_normal     = table[ZR_COLOR_TEXT];
+    button->text_hover      = table[ZR_COLOR_TEXT];
+    button->text_active     = table[ZR_COLOR_TEXT];
     button->padding         = zr_vec2(0.0f,0.0f);
     button->touch_padding   = zr_vec2(0.0f,0.0f);
     button->userdata        = zr_handle_ptr(0);
@@ -8139,14 +8201,14 @@ zr_style_default(struct zr_context *ctx)
     /* window header minimize button */
     button = &style->window.header.minimize_button;
     zr_zero_struct(*button);
-    button->normal          = zr_style_item_color(zr_rgb(40,40,40));
-    button->hover           = zr_style_item_color(zr_rgb(40,40,40));
-    button->active          = zr_style_item_color(zr_rgb(40,40,40));
+    button->normal          = zr_style_item_color(table[ZR_COLOR_HEADER]);
+    button->hover           = zr_style_item_color(table[ZR_COLOR_HEADER]);
+    button->active          = zr_style_item_color(table[ZR_COLOR_HEADER]);
     button->border_color    = zr_rgba(0,0,0,0);
-    button->text_background = zr_rgb(40,40,40);
-    button->text_normal     = zr_rgb(175,175,175);
-    button->text_hover      = zr_rgb(175,175,175);
-    button->text_active     = zr_rgb(175,175,175);
+    button->text_background = table[ZR_COLOR_HEADER];
+    button->text_normal     = table[ZR_COLOR_TEXT];
+    button->text_hover      = table[ZR_COLOR_TEXT];
+    button->text_active     = table[ZR_COLOR_TEXT];
     button->padding         = zr_vec2(0.0f,0.0f);
     button->touch_padding   = zr_vec2(0.0f,0.0f);
     button->userdata        = zr_handle_ptr(0);
@@ -8160,10 +8222,10 @@ zr_style_default(struct zr_context *ctx)
     button->draw_end        = 0;
 
     /* window */
-    win->background = zr_rgb(45,45,45);
-    win->fixed_background = zr_style_item_color(zr_rgb(45,45,45));
-    win->border_color = zr_rgb(65,65,65);
-    win->scaler = zr_style_item_color(zr_rgb(175,175,175));
+    win->background = table[ZR_COLOR_WINDOW];
+    win->fixed_background = zr_style_item_color(table[ZR_COLOR_WINDOW]);
+    win->border_color = table[ZR_COLOR_BORDER];
+    win->scaler = zr_style_item_color(table[ZR_COLOR_TEXT]);
     win->footer_padding = zr_vec2(4,4);
     win->border = 1.0f;
     win->rounding = 0.0f;
@@ -8176,6 +8238,7 @@ zr_style_default(struct zr_context *ctx)
     win->scrollbar_size = zr_vec2(10,10);
     win->min_size = zr_vec2(64,64);
 }
+
 
 void
 zr_style_set_font(struct zr_context *ctx, const struct zr_user_font *font)
@@ -8305,7 +8368,7 @@ zr_setup(struct zr_context *ctx, const struct zr_user_font *font)
     zr_style_default(ctx);
     ctx->style.font = *font;
 #if ZR_COMPILE_WITH_VERTEX_BUFFER
-    zr_canvas_init(&ctx->canvas);
+    zr_draw_list_init(&ctx->draw_list);
 #endif
 }
 
@@ -8422,7 +8485,7 @@ zr_clear(struct zr_context *ctx)
     ctx->build = 0;
     ctx->memory.calls = 0;
 #if ZR_COMPILE_WITH_VERTEX_BUFFER
-    zr_canvas_clear(&ctx->canvas);
+    zr_draw_list_clear(&ctx->draw_list);
 #endif
 
     /* garbage collector */
@@ -11410,6 +11473,7 @@ zr_edit_buffer(struct zr_context *ctx, zr_flags flags,
         show_cursor = 0;
     } else {
         modifiable = 1;
+        show_cursor = 1;
     }
 
     /* check if edit is currently hot item */
