@@ -66,10 +66,10 @@ extern "C" {
  * memory block or a custom allocator.
  * IMPORTANT: this adds <stdlib.h> with malloc and free so set 0 if you don't want
  *              to link to the standard library!*/
-#define ZR_COMPILE_WITH_STANDARD_FILE_IO 1
+#define ZR_COMPILE_WITH_STANDARD_IO 1
 /* setting this to 1 create a default allocator to be used for memory management
- * IMPORTANT: this adds <stdio.h> with fopen,fclose,... so set 0 if you don't want
- *              to link to the standard library!*/
+ * IMPORTANT: this adds <stdio.h> with fopen,fclose,... and <stdarg> so set 0
+ *              if you don't want to link to the standard library!*/
 #define ZR_COMPILE_WITH_VERTEX_BUFFER 1
 /* setting this to 1 adds a vertex draw command list backend to this
  library, which allows you to convert queue commands into vertex draw commands.
@@ -106,6 +106,7 @@ extern "C" {
  */
 #if ZR_COMPILE_WITH_FIXED_TYPES
 #include <stdint.h>
+typedef int32_t zr_int;
 typedef uint32_t zr_uint;
 typedef uint32_t zr_hash;
 typedef uintptr_t zr_size;
@@ -114,6 +115,7 @@ typedef uint32_t zr_flags;
 typedef uint32_t zr_rune;
 typedef uint8_t zr_byte;
 #else
+typedef int zr_int;
 typedef unsigned int zr_uint;
 typedef unsigned int zr_hash;
 typedef unsigned long zr_size;
@@ -172,13 +174,23 @@ struct zr_rect zr_recta(struct zr_vec2 pos, struct zr_vec2 size);
 struct zr_rect zr_rectv(const float *xywh);
 struct zr_rect zr_rectiv(const int *xywh);
 
+/* string*/
+zr_size zr_strlen(const char *str);
+int zr_stricmp(const char *s1, const char *s2);
+int zr_stricmpn(const char *s1, const char *s2, int n);
+int zr_strtof(float *number, const char *buffer);
+int zr_strfilter(const char *text, const char *regexp);
+int zr_strmatch_fuzzy(char const *pattern, char const *str, int *out_score);
+#if ZR_COMPILE_WITH_STANDARD_IO
+int zr_strfmt(char *buf, zr_size len, const char *fmt,...);
+#endif
+
 /* UTF-8 */
 zr_size zr_utf_decode(const char*, zr_rune*, zr_size);
 zr_size zr_utf_encode(zr_rune, char*, zr_size);
 zr_size zr_utf_len(const char*, zr_size byte_len);
 const char* zr_utf_at(const char *buffer, zr_size length, int index,
                         zr_rune *unicode, zr_size *len);
-
 
 /* color (conversion user --> zahnrad) */
 struct zr_color zr_rgb(int r, int g, int b);
@@ -571,7 +583,7 @@ struct zr_font* zr_font_atlas_add_default(struct zr_font_atlas*, float height,
 struct zr_font* zr_font_atlas_add_from_memory(struct zr_font_atlas *atlas, void *memory,
                                             zr_size size, float height,
                                             const struct zr_font_config *config);
-#if ZR_COMPILE_WITH_STANDARD_FILE_IO
+#if ZR_COMPILE_WITH_STANDARD_IO
 struct zr_font* zr_font_atlas_add_from_file(struct zr_font_atlas *atlas,
                                             const char *file_path, float height,
                                             const struct zr_font_config*);
@@ -2179,6 +2191,20 @@ void zr_label_colored(struct zr_context*, const char*, zr_flags align, struct zr
 void zr_label_wrap(struct zr_context*, const char*);
 void zr_label_colored_wrap(struct zr_context*, const char*, struct zr_color);
 void zr_image(struct zr_context*, struct zr_image);
+#if ZR_COMPILE_WITH_STANDARD_IO
+void zr_labelf(struct zr_context*, zr_flags, const char*, ...);
+void zr_labelf_colored(struct zr_context*, zr_flags align, struct zr_color, const char*,...);
+void zr_labelf_wrap(struct zr_context*, const char*,...);
+void zr_labelf_colored_wrap(struct zr_context*, struct zr_color, const char*,...);
+
+void zr_value_bool(struct zr_context*, const char *prefix, int);
+void zr_value_int(struct zr_context*, const char *prefix, int);
+void zr_value_uint(struct zr_context*, const char *prefix, unsigned int);
+void zr_value_float(struct zr_context*, const char *prefix, float);
+void zr_value_color_byte(struct zr_context*, const char *prefix, struct zr_color);
+void zr_value_color_float(struct zr_context*, const char *prefix, struct zr_color);
+void zr_value_color_hex(struct zr_context*, const char *prefix, struct zr_color);
+#endif
 
 /* buttons */
 int zr_button_text(struct zr_context *ctx, const char *title, zr_size len, enum zr_button_behavior);

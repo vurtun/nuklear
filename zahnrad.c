@@ -31,8 +31,9 @@
 #if ZR_COMPILE_WITH_DEFAULT_ALLOCATOR
 #include <stdlib.h> /* malloc, free */
 #endif
-#if ZR_COMPILE_WITH_STANDARD_FILE_IO
+#if ZR_COMPILE_WITH_STANDARD_IO
 #include <stdio.h> /* fopen, fclose,... */
+#include <stdarg.h>
 #endif
 /* ==============================================================
  *                          MATH
@@ -425,7 +426,7 @@ zr_zero(void *ptr, zr_size size)
     zr_memset(ptr, 0, size);
 }
 
-static zr_size
+zr_size
 zr_strlen(const char *str)
 {
     zr_size siz = 0;
@@ -434,7 +435,7 @@ zr_strlen(const char *str)
     return siz;
 }
 
-static int
+int
 zr_strtof(float *number, const char *buffer)
 {
     float m;
@@ -491,6 +492,55 @@ zr_strtof(float *number, const char *buffer)
     return 1;
 }
 
+int
+zr_stricmp(const char *s1, const char *s2)
+{
+    zr_int c1,c2,d;
+    do {
+        c1 = *s1++;
+        c2 = *s2++;
+        d = c1 - c2;
+        while (d) {
+            if (c1 <= 'Z' && c1 >= 'A') {
+                d += ('a' - 'A');
+                if (!d) break;
+            }
+            if (c2 <= 'Z' && c2 >= 'A') {
+                d -= ('a' - 'A');
+                if (!d) break;
+            }
+            return ((d >= 0) << 1) - 1;
+        }
+    } while (c1);
+    return 0;
+}
+
+int
+zr_stricmpn(const char *s1, const char *s2, int n)
+{
+    int c1,c2,d;
+    assert(n >= 0);
+    do {
+        c1 = *s1++;
+        c2 = *s2++;
+        if (!n--) return 0;
+
+        d = c1 - c2;
+        while (d) {
+            if (c1 <= 'Z' && c1 >= 'A') {
+                d += ('a' - 'A');
+                if (!d) break;
+            }
+            if (c2 <= 'Z' && c2 >= 'A') {
+                d -= ('a' - 'A');
+                if (!d) break;
+            }
+            return ((d >= 0) << 1) - 1;
+        }
+    } while (c1);
+    return 0;
+}
+
 static int
 zr_str_match_here(const char *regexp, const char *text)
 {
@@ -515,8 +565,8 @@ zr_str_match_star(int c, const char *regexp, const char *text)
     return 0;
 }
 
-static int
-zr_str_filter(const char *text, const char *regexp)
+int
+zr_strfilter(const char *text, const char *regexp)
 {
     /*
     c    matches any literal character c
@@ -533,8 +583,8 @@ zr_str_filter(const char *text, const char *regexp)
     return 0;
 }
 
-static int
-zr_str_fuzzy_match(char const *pattern, char const *str, int *out_score)
+int
+zr_strmatch_fuzzy(char const *pattern, char const *str, int *out_score)
 {
     /* Returns true if each character in pattern is found sequentially within str
      * if found then outScore is also set. Score value has no intrinsic meaning.
@@ -656,6 +706,28 @@ zr_str_fuzzy_match(char const *pattern, char const *str, int *out_score)
         *out_score = score;
     return zr_true;
 }
+
+#if ZR_COMPILE_WITH_STANDARD_IO
+int
+zr_strfmt(char *buf, zr_size buf_size, const char *fmt,...)
+{
+    int w;
+    va_list args;
+    va_start(args, fmt);
+    w = vsnprintf(buf, buf_size, fmt, args);
+    va_end(args);
+    buf[buf_size-1] = 0;
+    return (w == -1) ?(int)buf_size:w;
+}
+
+static int
+zr_strfmtv(char *buf, zr_size buf_size, const char *fmt, va_list args)
+{
+    int w = vsnprintf(buf, buf_size, fmt, args);
+    buf[buf_size-1] = 0;
+    return (w == -1) ? (int)buf_size:w;
+}
+#endif
 
 static float
 zr_pow(float x, int n)
@@ -831,7 +903,7 @@ zr_murmur_hash(const void * key, int len, zr_hash seed)
     return h1;
 }
 
-#if ZR_COMPILE_WITH_STANDARD_FILE_IO
+#if ZR_COMPILE_WITH_STANDARD_IO
 static char*
 zr_file_load(const char* path, zr_size* siz, struct zr_allocator *alloc)
 {
@@ -4564,7 +4636,7 @@ zr_font_atlas_add_from_memory(struct zr_font_atlas *atlas, void *memory,
     return zr_font_atlas_add(atlas, &cfg);
 }
 
-#if ZR_COMPILE_WITH_STANDARD_FILE_IO
+#if ZR_COMPILE_WITH_STANDARD_IO
 struct zr_font*
 zr_font_atlas_add_from_file(struct zr_font_atlas *atlas, const char *file_path,
     float height, const struct zr_font_config *config)
@@ -10862,6 +10934,89 @@ zr_text_wrap_colored(struct zr_context *ctx, const char *str,
     zr_widget_text_wrap(&win->buffer, bounds, str, len, &text, &style->font);
     ctx->last_widget_state = 0;
 }
+
+#if ZR_COMPILE_WITH_STANDARD_IO
+void zr_labelf_colored(struct zr_context *ctx, zr_flags flags,
+    struct zr_color color, const char *fmt, ...)
+{
+    char buf[256];
+    va_list args;
+    va_start(args, fmt);
+    zr_strfmtv(buf, ZR_LEN(buf), fmt, args);
+    zr_label_colored(ctx, buf, flags, color);
+    va_end(args);
+}
+
+void
+zr_labelf_colored_wrap(struct zr_context *ctx, struct zr_color color,
+    const char *fmt, ...)
+{
+    char buf[256];
+    va_list args;
+    va_start(args, fmt);
+    zr_strfmtv(buf, ZR_LEN(buf), fmt, args);
+    zr_label_colored_wrap(ctx, buf, color);
+    va_end(args);
+}
+
+void
+zr_labelf(struct zr_context *ctx, zr_flags flags, const char *fmt, ...)
+{
+    char buf[256];
+    va_list args;
+    va_start(args, fmt);
+    zr_strfmtv(buf, ZR_LEN(buf), fmt, args);
+    zr_label(ctx, buf, flags);
+    va_end(args);
+}
+
+void
+zr_labelf_wrap(struct zr_context *ctx, const char *fmt,...)
+{
+    char buf[256];
+    va_list args;
+    va_start(args, fmt);
+    zr_strfmtv(buf, ZR_LEN(buf), fmt, args);
+    zr_label_wrap(ctx, buf);
+    va_end(args);
+}
+
+void
+zr_value_bool(struct zr_context *ctx, const char *prefix, int value)
+{zr_labelf(ctx, ZR_TEXT_LEFT, "%s: %s", prefix, ((value) ? "true": "false"));}
+
+void
+zr_value_int(struct zr_context *ctx, const char *prefix, int value)
+{zr_labelf(ctx, ZR_TEXT_LEFT, "%s: %d", prefix, value);}
+
+void
+zr_value_uint(struct zr_context *ctx, const char *prefix, unsigned int value)
+{zr_labelf(ctx, ZR_TEXT_LEFT, "%s: %u", prefix, value);}
+
+void
+zr_value_float(struct zr_context *ctx, const char *prefix, float value)
+{zr_labelf(ctx, ZR_TEXT_LEFT, "%s: %.3f", prefix, value);}
+
+void
+zr_value_color_byte(struct zr_context *ctx, const char *p, struct zr_color c)
+{zr_labelf(ctx, ZR_TEXT_LEFT, "%s: (%c, %c, %c, %c)", p, c.r, c.g, c.b, c.a);}
+
+void
+zr_value_color_float(struct zr_context *ctx, const char *p, struct zr_color color)
+{
+    float c[4]; zr_color_fv(c, color);
+    zr_labelf(ctx, ZR_TEXT_LEFT, "%s: (%.2f, %.2f, %.2f, %.2f)",
+        p, c[0], c[1], c[2], c[3]);
+}
+
+void
+zr_value_color_hex(struct zr_context *ctx, const char *prefix, struct zr_color color)
+{
+    char hex[16];
+    zr_color_hex_rgba(hex, color);
+    zr_labelf(ctx, ZR_TEXT_LEFT, "%s: %s", prefix, hex);
+}
+#endif
 
 void
 zr_text(struct zr_context *ctx, const char *str, zr_size len, zr_flags alignment)

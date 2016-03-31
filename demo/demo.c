@@ -83,18 +83,6 @@ struct demo {
     int show_basic;
 };
 
-static void
-zr_labelf(struct zr_context *ctx, zr_flags align, const char *fmt, ...)
-{
-    char buffer[1024];
-    va_list args;
-    va_start(args, fmt);
-    vsnprintf(buffer, sizeof(buffer), fmt, args);
-    buffer[1023] = 0;
-    zr_label(ctx, buffer, align);
-    va_end(args);
-}
-
 /* ===============================================================
  *
  *                          SIMPLE WINDOW
