@@ -1605,13 +1605,24 @@ struct zr_style_window {
     struct zr_style_window_header header;
     struct zr_style_item fixed_background;
     struct zr_color background;
+
     struct zr_color border_color;
+    struct zr_color combo_border_color;
+    struct zr_color contextual_border_color;
+    struct zr_color menu_border_color;
+    struct zr_color group_border_color;
+    struct zr_color tooltip_border_color;
 
     struct zr_style_item scaler;
     struct zr_vec2 footer_padding;
 
     float border;
-    float fixed_border;
+    float combo_border;
+    float contextual_border;
+    float menu_border;
+    float group_border;
+    float tooltip_border;
+
     float rounding;
     struct zr_vec2 scaler_size;
     struct zr_vec2 padding;
@@ -1661,8 +1672,6 @@ enum zr_style_colors {
     ZR_COLOR_SLIDER_CURSOR_HOVER,
     ZR_COLOR_SLIDER_CURSOR_ACTIVE,
     ZR_COLOR_PROPERTY,
-    ZR_COLOR_PROPERTY_HOVER,
-    ZR_COLOR_PROPERTY_ACTIVE,
     ZR_COLOR_EDIT,
     ZR_COLOR_EDIT_CURSOR,
     ZR_COLOR_COMBO,
@@ -1848,6 +1857,7 @@ struct zr_panel {
     float width, height;
     float footer_h;
     float header_h;
+    float border;
     struct zr_rect clip;
     struct zr_menu_state menu;
     struct zr_row_layout row;

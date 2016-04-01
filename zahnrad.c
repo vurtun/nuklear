@@ -7689,8 +7689,6 @@ void zr_style_default(struct zr_context *ctx){zr_style_from_table(ctx, 0);}
     ZR_COLOR(ZR_COLOR_SLIDER_CURSOR_HOVER,  120,120,120,255) \
     ZR_COLOR(ZR_COLOR_SLIDER_CURSOR_ACTIVE, 150,150,150,255) \
     ZR_COLOR(ZR_COLOR_PROPERTY,             38, 38, 38,255) \
-    ZR_COLOR(ZR_COLOR_PROPERTY_HOVER,       40, 40, 40,255) \
-    ZR_COLOR(ZR_COLOR_PROPERTY_ACTIVE,      42, 42, 42,255) \
     ZR_COLOR(ZR_COLOR_EDIT,                 38, 38, 38,255)  \
     ZR_COLOR(ZR_COLOR_EDIT_CURSOR,          175,175,175,255) \
     ZR_COLOR(ZR_COLOR_COMBO,                45, 45, 45,255) \
@@ -8008,8 +8006,8 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     property = &style->property;
     zr_zero_struct(*property);
     property->normal        = zr_style_item_color(table[ZR_COLOR_PROPERTY]);
-    property->hover         = zr_style_item_color(table[ZR_COLOR_PROPERTY_HOVER]);
-    property->active        = zr_style_item_color(table[ZR_COLOR_PROPERTY_ACTIVE]);
+    property->hover         = zr_style_item_color(table[ZR_COLOR_PROPERTY]);
+    property->active        = zr_style_item_color(table[ZR_COLOR_PROPERTY]);
     property->border_color  = table[ZR_COLOR_BORDER];
     property->label_normal  = table[ZR_COLOR_TEXT];
     property->label_hover   = table[ZR_COLOR_TEXT];
@@ -8028,8 +8026,8 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     button = &style->property.dec_button;
     zr_zero_struct(*button);
     button->normal          = zr_style_item_color(table[ZR_COLOR_PROPERTY]);
-    button->hover           = zr_style_item_color(table[ZR_COLOR_PROPERTY_HOVER]);
-    button->active          = zr_style_item_color(table[ZR_COLOR_PROPERTY_ACTIVE]);
+    button->hover           = zr_style_item_color(table[ZR_COLOR_PROPERTY]);
+    button->active          = zr_style_item_color(table[ZR_COLOR_PROPERTY]);
     button->border_color    = zr_rgba(0,0,0,0);
     button->text_background = table[ZR_COLOR_PROPERTY];
     button->text_normal     = table[ZR_COLOR_TEXT];
@@ -8049,8 +8047,8 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     edit = &style->property.edit;
     zr_zero_struct(*edit);
     edit->normal            = zr_style_item_color(table[ZR_COLOR_PROPERTY]);
-    edit->hover             = zr_style_item_color(table[ZR_COLOR_PROPERTY_HOVER]);
-    edit->active            = zr_style_item_color(table[ZR_COLOR_PROPERTY_ACTIVE]);
+    edit->hover             = zr_style_item_color(table[ZR_COLOR_PROPERTY]);
+    edit->active            = zr_style_item_color(table[ZR_COLOR_PROPERTY]);
     edit->cursor_normal     = zr_style_item_color(table[ZR_COLOR_EDIT_CURSOR]);
     edit->cursor_hover      = zr_style_item_color(table[ZR_COLOR_EDIT_CURSOR]);
     edit->cursor_active     = zr_style_item_color(table[ZR_COLOR_EDIT_CURSOR]);
@@ -8234,17 +8232,26 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     win->background = table[ZR_COLOR_WINDOW];
     win->fixed_background = zr_style_item_color(table[ZR_COLOR_WINDOW]);
     win->border_color = table[ZR_COLOR_BORDER];
+    win->combo_border_color = table[ZR_COLOR_BORDER];
+    win->contextual_border_color = table[ZR_COLOR_BORDER];
+    win->menu_border_color = table[ZR_COLOR_BORDER];
+    win->group_border_color = table[ZR_COLOR_BORDER];
+    win->tooltip_border_color = table[ZR_COLOR_BORDER];
     win->scaler = zr_style_item_color(table[ZR_COLOR_TEXT]);
     win->footer_padding = zr_vec2(4,4);
-    win->border = 1.0f;
     win->rounding = 0.0f;
     win->scaler_size = zr_vec2(16,16);
     win->padding = zr_vec2(8,8);
     win->spacing = zr_vec2(4,4);
     win->scrollbar_size = zr_vec2(10,10);
     win->min_size = zr_vec2(64,64);
+    win->combo_border = 1.0f;
+    win->contextual_border = 1.0f;
+    win->menu_border = 1.0f;
+    win->group_border = 1.0f;
+    win->tooltip_border = 1.0f;
+    win->border = 2.0f;
 }
-
 
 void
 zr_style_set_font(struct zr_context *ctx, const struct zr_user_font *font)
@@ -9435,12 +9442,29 @@ zr_panel_begin(struct zr_context *ctx, const char *title)
     win->buffer.userdata = ctx->userdata;
 #endif
 
-    /* setup window layout */
-    layout->bounds = win->bounds;
-    layout->at_x = win->bounds.x;
-    layout->at_y = win->bounds.y;
-    layout->width = win->bounds.w;
-    layout->height = win->bounds.h;
+    /* panel space without border */
+    if (win->flags & ZR_WINDOW_BORDER) {
+        if (!(win->flags & ZR_WINDOW_SUB))
+            layout->bounds = zr_shrink_rect(win->bounds, style->window.border);
+        else if (win->flags & ZR_WINDOW_COMBO)
+            layout->bounds = zr_shrink_rect(win->bounds, style->window.combo_border);
+        else if (win->flags & ZR_WINDOW_CONTEXTUAL)
+            layout->bounds = zr_shrink_rect(win->bounds, style->window.contextual_border);
+        else if (win->flags & ZR_WINDOW_MENU)
+            layout->bounds = zr_shrink_rect(win->bounds, style->window.menu_border);
+        else if (win->flags & ZR_WINDOW_GROUP)
+            layout->bounds = zr_shrink_rect(win->bounds, style->window.group_border);
+        else if (win->flags & ZR_WINDOW_TOOLTIP)
+            layout->bounds = zr_shrink_rect(win->bounds, style->window.tooltip_border);
+        else layout->bounds = zr_shrink_rect(win->bounds, style->window.border);
+    } else layout->bounds = win->bounds;
+
+    /* setup panel */
+    layout->border = layout->bounds.x - win->bounds.x;
+    layout->at_x = layout->bounds.x;
+    layout->at_y = layout->bounds.y;
+    layout->width = layout->bounds.w;
+    layout->height = layout->bounds.h;
     layout->max_x = 0;
     layout->row.index = 0;
     layout->row.columns = 0;
@@ -9468,8 +9492,8 @@ zr_panel_begin(struct zr_context *ctx, const char *title)
 
     /* calculate the window size */
     if (!(win->flags & ZR_WINDOW_NO_SCROLLBAR))
-        layout->width = win->bounds.w - scrollbar_size.x;
-    layout->height = win->bounds.h - (layout->header_h + 2 * item_spacing.y);
+        layout->width = layout->bounds.w - scrollbar_size.x;
+    layout->height = layout->bounds.h - (layout->header_h + 2 * item_spacing.y);
     layout->height -= layout->footer_h;
 
     /* window header state */
@@ -9609,28 +9633,41 @@ zr_panel_begin(struct zr_context *ctx, const char *title)
 
     /* draw top window border line */
     if (layout->flags & ZR_WINDOW_BORDER) {
-        zr_stroke_line(out, layout->bounds.x, layout->bounds.y,
-            layout->bounds.x + layout->bounds.w, layout->bounds.y, style->window.border,
-            style->window.border_color);
+        struct zr_color border;
+        if (!(win->flags & ZR_WINDOW_SUB))
+            border = style->window.border_color;
+        else if (win->flags & ZR_WINDOW_COMBO)
+            border = style->window.combo_border_color;
+        else if (win->flags & ZR_WINDOW_CONTEXTUAL)
+            border = style->window.contextual_border_color;
+        else if (win->flags & ZR_WINDOW_MENU)
+            border = style->window.menu_border_color;
+        else if (win->flags & ZR_WINDOW_GROUP)
+            border = style->window.group_border_color;
+        else if (win->flags & ZR_WINDOW_TOOLTIP)
+            border = style->window.tooltip_border_color;
+        else border = style->window.border_color;
+        zr_stroke_line(out,
+            win->bounds.x + layout->border/2.0f,
+            win->bounds.y + layout->border/2.0f,
+            win->bounds.x + win->bounds.w - layout->border,
+            win->bounds.y + layout->border/2.0f,
+            style->window.border, border);
     }
     {
         /* calculate and set the window clipping rectangle*/
         struct zr_rect clip;
         if (!(win->flags & ZR_WINDOW_DYNAMIC)) {
-            layout->clip.x = win->bounds.x + window_padding.x;
+            layout->clip.x = layout->bounds.x + window_padding.x;
             layout->clip.w = layout->width - 2 * window_padding.x;
         } else {
-            layout->clip.x = win->bounds.x;
+            layout->clip.x = layout->bounds.x;
             layout->clip.w = layout->width;
         }
 
-        layout->clip.h = win->bounds.h - (layout->footer_h + layout->header_h);
+        layout->clip.h = layout->bounds.h - (layout->footer_h + layout->header_h);
         layout->clip.h -= (2.0f * window_padding.y);
-        layout->clip.y = win->bounds.y;
-        if (win->flags & ZR_WINDOW_BORDER) {
-            layout->clip.y += style->window.border;
-            layout->clip.h -= 2.0f * style->window.border;
-        }
+        layout->clip.y = layout->bounds.y;
 
         /* combo box and menu do not have header space */
         if (!(win->flags & ZR_WINDOW_COMBO) && !(win->flags & ZR_WINDOW_MENU))
@@ -9833,26 +9870,47 @@ zr_panel_end(struct zr_context *ctx)
     }
 
     /* window border */
-    if (layout->flags & ZR_WINDOW_BORDER) {
-        const float width = (layout->flags & ZR_WINDOW_NO_SCROLLBAR) ?
-            layout->width: layout->width + scrollbar_size.x;
+    if (layout->flags & ZR_WINDOW_BORDER)
+    {
         const float padding_y = (layout->flags & ZR_WINDOW_MINIMIZED) ?
             window->bounds.y + layout->header_h:
             (layout->flags & ZR_WINDOW_DYNAMIC)?
             layout->footer_h + footer.y:
             layout->bounds.y + layout->bounds.h;
 
+        struct zr_color border;
+        if (!(layout->flags & ZR_WINDOW_SUB))
+            border = style->window.border_color;
+        else if (layout->flags & ZR_WINDOW_COMBO)
+            border = style->window.combo_border_color;
+        else if (layout->flags & ZR_WINDOW_CONTEXTUAL)
+            border = style->window.contextual_border_color;
+        else if (layout->flags & ZR_WINDOW_MENU)
+            border = style->window.menu_border_color;
+        else if (layout->flags & ZR_WINDOW_GROUP)
+            border = style->window.group_border_color;
+        else if (layout->flags & ZR_WINDOW_TOOLTIP)
+            border = style->window.tooltip_border_color;
+        else border = style->window.border_color;
+
         if (window->flags & ZR_WINDOW_BORDER_HEADER)
-            zr_stroke_line(out, window->bounds.x, window->bounds.y + layout->header_h,
-                window->bounds.x + window->bounds.w, window->bounds.y + layout->header_h,
-                style->window.border, style->window.border_color);
-        zr_stroke_line(out, window->bounds.x, padding_y, window->bounds.x + width,
-                padding_y, style->window.border, style->window.border_color);
-        zr_stroke_line(out, window->bounds.x, window->bounds.y, window->bounds.x,
-                padding_y, style->window.border, style->window.border_color);
-        zr_stroke_line(out, window->bounds.x + width, window->bounds.y,
-                window->bounds.x + width, padding_y, style->window.border,
-                style->window.border_color);
+            zr_stroke_line(out, window->bounds.x + layout->border/2.0f,
+                window->bounds.y + layout->header_h - layout->border,
+                window->bounds.x + window->bounds.w - layout->border,
+                window->bounds.y + layout->header_h - layout->border,
+                layout->border, border);
+        zr_stroke_line(out, window->bounds.x + layout->border/2.0f,
+            padding_y - layout->border,
+            window->bounds.x + window->bounds.w - layout->border,
+            padding_y - layout->border,
+            layout->border, border);
+        zr_stroke_line(out, window->bounds.x + layout->border/2.0f,
+            window->bounds.y + layout->border/2.0f, window->bounds.x + layout->border/2.0f,
+            padding_y - layout->border, layout->border, border);
+        zr_stroke_line(out, window->bounds.x + window->bounds.w - layout->border,
+            window->bounds.y + layout->border/2.0f,
+            window->bounds.x + window->bounds.w - layout->border,
+            padding_y - layout->border, layout->border, border);
     }
 
     if (!(window->flags & ZR_WINDOW_SUB)) {
@@ -12184,6 +12242,8 @@ zr_group_end(struct zr_context *ctx)
     ctx->current = win;
     win->layout = parent;
     win->bounds = parent->bounds;
+    if (win->flags  & ZR_WINDOW_BORDER)
+        win->bounds = zr_shrink_rect(win->bounds, -win->layout->border);
     return;
 }
 

@@ -2414,8 +2414,6 @@ set_style(struct zr_context *ctx, enum theme theme)
         table[ZR_COLOR_SLIDER_CURSOR_HOVER] = zr_rgba(70, 70, 70, 255);
         table[ZR_COLOR_SLIDER_CURSOR_ACTIVE] = zr_rgba(60, 60, 60, 255);
         table[ZR_COLOR_PROPERTY] = zr_rgba(175, 175, 175, 255);
-        table[ZR_COLOR_PROPERTY_HOVER] = zr_rgba(160, 160, 160, 255);
-        table[ZR_COLOR_PROPERTY_ACTIVE] = zr_rgba(165, 165, 165, 255);
         table[ZR_COLOR_EDIT] = zr_rgba(150, 150, 150, 255);
         table[ZR_COLOR_EDIT_CURSOR] = zr_rgba(0, 0, 0, 255);
         table[ZR_COLOR_COMBO] = zr_rgba(175, 175, 175, 255);
@@ -2447,8 +2445,6 @@ set_style(struct zr_context *ctx, enum theme theme)
         table[ZR_COLOR_SLIDER_CURSOR_HOVER] = zr_rgba(186, 50, 74, 255);
         table[ZR_COLOR_SLIDER_CURSOR_ACTIVE] = zr_rgba(191, 55, 79, 255);
         table[ZR_COLOR_PROPERTY] = zr_rgba(51, 55, 67, 255);
-        table[ZR_COLOR_PROPERTY_HOVER] = zr_rgba(55, 60, 72, 255);
-        table[ZR_COLOR_PROPERTY_ACTIVE] = zr_rgba(60, 65, 77, 255);
         table[ZR_COLOR_EDIT] = zr_rgba(51, 55, 67, 225);
         table[ZR_COLOR_EDIT_CURSOR] = zr_rgba(190, 190, 190, 255);
         table[ZR_COLOR_COMBO] = zr_rgba(51, 55, 67, 255);
@@ -2480,8 +2476,6 @@ set_style(struct zr_context *ctx, enum theme theme)
         table[ZR_COLOR_SLIDER_CURSOR_HOVER] = zr_rgba(142, 188, 229, 255);
         table[ZR_COLOR_SLIDER_CURSOR_ACTIVE] = zr_rgba(147, 193, 234, 255);
         table[ZR_COLOR_PROPERTY] = zr_rgba(210, 210, 210, 255);
-        table[ZR_COLOR_PROPERTY_HOVER] = zr_rgba(235, 235, 235, 255);
-        table[ZR_COLOR_PROPERTY_ACTIVE] = zr_rgba(230, 230, 230, 255);
         table[ZR_COLOR_EDIT] = zr_rgba(210, 210, 210, 225);
         table[ZR_COLOR_EDIT_CURSOR] = zr_rgba(20, 20, 20, 255);
         table[ZR_COLOR_COMBO] = zr_rgba(210, 210, 210, 255);
@@ -2513,8 +2507,6 @@ set_style(struct zr_context *ctx, enum theme theme)
         table[ZR_COLOR_SLIDER_CURSOR_HOVER] = zr_rgba(53, 88, 116, 255);
         table[ZR_COLOR_SLIDER_CURSOR_ACTIVE] = zr_rgba(58, 93, 121, 255);
         table[ZR_COLOR_PROPERTY] = zr_rgba(50, 58, 61, 255);
-        table[ZR_COLOR_PROPERTY_HOVER] = zr_rgba(55, 63, 66, 255);
-        table[ZR_COLOR_PROPERTY_ACTIVE] = zr_rgba(60, 68, 71, 255);
         table[ZR_COLOR_EDIT] = zr_rgba(50, 58, 61, 225);
         table[ZR_COLOR_EDIT_CURSOR] = zr_rgba(210, 210, 210, 255);
         table[ZR_COLOR_COMBO] = zr_rgba(50, 58, 61, 255);
