@@ -7774,9 +7774,6 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     button->text_alignment  = ZR_TEXT_CENTERED;
     button->border          = 1.0f;
     button->rounding        = 4.0f;
-    button->fixed_width     = 0;
-    button->fixed_height    = 0;
-    button->has_fixed_size  = 0;
     button->draw_begin      = 0;
     button->draw_end        = 0;
 
@@ -7797,9 +7794,6 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     button->text_alignment  = ZR_TEXT_CENTERED;
     button->border          = 0.0f;
     button->rounding        = 0.0f;
-    button->fixed_width     = 0;
-    button->fixed_height    = 0;
-    button->has_fixed_size  = 0;
     button->draw_begin      = 0;
     button->draw_end        = 0;
 
@@ -7820,9 +7814,6 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     button->text_alignment  = ZR_TEXT_CENTERED;
     button->border          = 0.0f;
     button->rounding        = 1.0f;
-    button->fixed_width     = 0;
-    button->fixed_height    = 0;
-    button->has_fixed_size  = 0;
     button->draw_begin      = 0;
     button->draw_end        = 0;
 
@@ -7841,9 +7832,6 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     toggle->text_active     = table[ZR_COLOR_TEXT];
     toggle->padding         = zr_vec2(4.0f, 4.0f);
     toggle->touch_padding   = zr_vec2(0,0);
-    toggle->fixed_width     = 0;
-    toggle->fixed_height    = 0;
-    toggle->has_fixed_size  = 0;
 
     /* option toggle */
     toggle = &style->option;
@@ -7860,9 +7848,6 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     toggle->text_active     = table[ZR_COLOR_TEXT];
     toggle->padding         = zr_vec2(4.0f, 4.0f);
     toggle->touch_padding   = zr_vec2(0,0);
-    toggle->fixed_width     = 0;
-    toggle->fixed_height    = 0;
-    toggle->has_fixed_size  = 0;
 
     /* selectable */
     select = &style->selectable;
@@ -7882,10 +7867,7 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     select->padding         = zr_vec2(4.0f,4.0f);
     select->touch_padding   = zr_vec2(0,0);
     select->userdata        = zr_handle_ptr(0);
-    select->fixed_width     = 0;
-    select->fixed_height    = 0;
     select->rounding        = 0.0f;
-    select->has_fixed_size  = 0;
     select->draw_begin      = 0;
     select->draw            = 0;
     select->draw_end        = 0;
@@ -7912,9 +7894,6 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     slider->show_buttons    = zr_false;
     slider->bar_height      = 8;
     slider->rounding        = 0;
-    slider->fixed_width     = 0;
-    slider->fixed_height    = 0;
-    slider->has_fixed_size  = 0;
     slider->draw_begin      = 0;
     slider->draw            = 0;
     slider->draw_end        = 0;
@@ -7935,9 +7914,6 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     button->text_alignment  = ZR_TEXT_CENTERED;
     button->border          = 1.0f;
     button->rounding        = 0.0f;
-    button->fixed_width     = 0;
-    button->fixed_height    = 0;
-    button->has_fixed_size  = 0;
     button->draw_begin      = 0;
     button->draw_end        = 0;
     style->slider.dec_button = style->slider.inc_button;
@@ -7954,9 +7930,6 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     prog->userdata          = zr_handle_ptr(0);
     prog->padding           = zr_vec2(4,4);
     prog->rounding          = 0;
-    prog->fixed_width       = 0;
-    prog->fixed_height      = 0;
-    prog->has_fixed_size    = 0;
     prog->draw_begin        = 0;
     prog->draw              = 0;
     prog->draw_end          = 0;
@@ -7999,9 +7972,6 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     button->text_alignment  = ZR_TEXT_CENTERED;
     button->border          = 1.0f;
     button->rounding        = 0.0f;
-    button->fixed_width     = 0;
-    button->fixed_height    = 0;
-    button->has_fixed_size  = 0;
     button->draw_begin      = 0;
     button->draw_end        = 0;
     style->scrollh.dec_button = style->scrollh.inc_button;
@@ -8030,9 +8000,6 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     edit->cursor_size       = 4;
     edit->border            = 1;
     edit->rounding          = 0;
-    edit->fixed_width       = 0;
-    edit->fixed_height      = 0;
-    edit->has_fixed_size    = 0;
     edit->draw_begin        = 0;
     edit->draw              = 0;
     edit->draw_end          = 0;
@@ -8053,9 +8020,6 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     property->padding       = zr_vec2(4,4);
     property->border        = 1;
     property->rounding      = 10;
-    property->has_fixed_size = 0;
-    property->fixed_width   = 0;
-    property->fixed_height  = 0;
     property->draw_begin    = 0;
     property->draw          = 0;
     property->draw_end      = 0;
@@ -8077,9 +8041,6 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     button->text_alignment  = ZR_TEXT_CENTERED;
     button->border          = 0.0f;
     button->rounding        = 0.0f;
-    button->fixed_width     = 0;
-    button->fixed_height    = 0;
-    button->has_fixed_size  = 0;
     button->draw_begin      = 0;
     button->draw_end        = 0;
     style->property.inc_button = style->property.dec_button;
@@ -8107,9 +8068,6 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     edit->cursor_size       = 8;
     edit->border            = 0;
     edit->rounding          = 0;
-    edit->fixed_width       = 0;
-    edit->fixed_height      = 0;
-    edit->has_fixed_size    = 0;
     edit->draw_begin        = 0;
     edit->draw              = 0;
     edit->draw_end          = 0;
@@ -8123,9 +8081,6 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     chart->color = table[ZR_COLOR_CHART_COLOR];
     chart->border = 0;
     chart->rounding = 0;
-    chart->has_fixed_size = 0;
-    chart->fixed_width = 0;
-    chart->fixed_height = 0;
     chart->padding = zr_vec2(4,4);
     style->column_chart = *chart;
 
@@ -8146,9 +8101,6 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     combo->spacing = zr_vec2(4,0);
     combo->border = 1;
     combo->rounding = 0;
-    combo->has_fixed_size = 0;
-    combo->fixed_width = 0;
-    combo->fixed_height = 0;
 
     /* combo button */
     button = &style->combo.button;
@@ -8167,9 +8119,6 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     button->text_alignment  = ZR_TEXT_CENTERED;
     button->border          = 0.0f;
     button->rounding        = 0.0f;
-    button->fixed_width     = 0;
-    button->fixed_height    = 0;
-    button->has_fixed_size  = 0;
     button->draw_begin      = 0;
     button->draw_end        = 0;
 
@@ -8202,9 +8151,6 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     button->text_alignment  = ZR_TEXT_CENTERED;
     button->border          = 0.0f;
     button->rounding        = 0.0f;
-    button->fixed_width     = 0;
-    button->fixed_height    = 0;
-    button->has_fixed_size  = 0;
     button->draw_begin      = 0;
     button->draw_end        = 0;
 
@@ -8225,9 +8171,6 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     button->text_alignment  = ZR_TEXT_CENTERED;
     button->border          = 0.0f;
     button->rounding        = 0.0f;
-    button->fixed_width     = 0;
-    button->fixed_height    = 0;
-    button->has_fixed_size  = 0;
     button->draw_begin      = 0;
     button->draw_end        = 0;
 
@@ -8264,9 +8207,6 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     button->text_alignment  = ZR_TEXT_CENTERED;
     button->border          = 0.0f;
     button->rounding        = 0.0f;
-    button->fixed_width     = 0;
-    button->fixed_height    = 0;
-    button->has_fixed_size  = 0;
     button->draw_begin      = 0;
     button->draw_end        = 0;
 
@@ -8287,9 +8227,6 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     button->text_alignment  = ZR_TEXT_CENTERED;
     button->border          = 0.0f;
     button->rounding        = 0.0f;
-    button->fixed_width     = 0;
-    button->fixed_height    = 0;
-    button->has_fixed_size  = 0;
     button->draw_begin      = 0;
     button->draw_end        = 0;
 
@@ -8301,9 +8238,6 @@ zr_style_from_table(struct zr_context *ctx, const struct zr_color *table)
     win->footer_padding = zr_vec2(4,4);
     win->border = 1.0f;
     win->rounding = 0.0f;
-    win->has_fixed_size = 0;
-    win->fixed_width = 0;
-    win->fixed_height = 0;
     win->scaler_size = zr_vec2(16,16);
     win->padding = zr_vec2(8,8);
     win->spacing = zr_vec2(4,4);
@@ -9502,7 +9436,6 @@ zr_panel_begin(struct zr_context *ctx, const char *title)
 #endif
 
     /* setup window layout */
-    out = &win->buffer;
     layout->bounds = win->bounds;
     layout->at_x = win->bounds.x;
     layout->at_y = win->bounds.y;
@@ -9516,6 +9449,7 @@ zr_panel_begin(struct zr_context *ctx, const char *title)
     layout->row.item_width = 0;
     layout->row.tree_depth = 0;
     layout->flags = win->flags;
+    out = &win->buffer;
 
     /* calculate window header */
     if (win->flags & ZR_WINDOW_MINIMIZED) {
@@ -9567,7 +9501,7 @@ zr_panel_begin(struct zr_context *ctx, const char *title)
         layout->height -= layout->footer_h;
 
         /* select correct header background and text color */
-        if (ctx->active == win) {;
+        if (ctx->active == win) {
             background = &style->window.header.active;
             text.text = style->window.header.label_active;
         } else if (zr_input_is_mouse_hovering_rect(&ctx->input, header)) {

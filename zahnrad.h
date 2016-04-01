@@ -61,13 +61,12 @@ extern "C" {
 /* setting this define to 1 adds header <assert.h> for the assert macro
   IMPORTANT: it also adds the standard library assert so only use it if wanted */
 #define ZR_COMPILE_WITH_DEFAULT_ALLOCATOR 1
-/* setting this to 1 create a default allocator to be used for memory management
- * everywhere inside this library. if 0 you either have to provide a fixed size
- * memory block or a custom allocator.
+/* setting this to 1 adds default allocator functions to ease memory management
+ * if 0 you either have to provide a fixed size memory block or a custom allocator.
  * IMPORTANT: this adds <stdlib.h> with malloc and free so set 0 if you don't want
  *              to link to the standard library!*/
 #define ZR_COMPILE_WITH_STANDARD_IO 1
-/* setting this to 1 create a default allocator to be used for memory management
+/* setting this to 1 includes standard file IO and variable arguments
  * IMPORTANT: this adds <stdio.h> with fopen,fclose,... and <stdarg> so set 0
  *              if you don't want to link to the standard library!*/
 #define ZR_COMPILE_WITH_VERTEX_BUFFER 1
@@ -1244,9 +1243,6 @@ struct zr_style_button {
     /* properties */
     float border;
     float rounding;
-    float fixed_width;
-    float fixed_height;
-    int has_fixed_size;
     struct zr_vec2 padding;
     struct zr_vec2 image_padding;
     struct zr_vec2 touch_padding;
@@ -1290,9 +1286,6 @@ struct zr_style_toggle {
     zr_flags text_alignment;
 
     /* properties */
-    float fixed_width;
-    float fixed_height;
-    int has_fixed_size;
     struct zr_vec2 padding;
     struct zr_vec2 touch_padding;
 
@@ -1327,10 +1320,7 @@ struct zr_style_selectable {
     zr_flags text_alignment;
 
     /* properties */
-    float fixed_width;
-    float fixed_height;
     float rounding;
-    int has_fixed_size;
     struct zr_vec2 padding;
     struct zr_vec2 touch_padding;
 
@@ -1370,10 +1360,6 @@ struct zr_style_slider {
     struct zr_vec2 spacing;
     struct zr_vec2 cursor_size;
 
-    int has_fixed_size;
-    float fixed_width;
-    float fixed_height;
-
     /* optional buttons */
     int show_buttons;
     struct zr_style_button inc_button;
@@ -1403,9 +1389,6 @@ struct zr_style_progress {
 
     /* properties */
     float rounding;
-    float fixed_width;
-    float fixed_height;
-    int has_fixed_size;
     struct zr_vec2 padding;
 
     /* optional user callbacks */
@@ -1477,9 +1460,6 @@ struct zr_style_edit {
     float border;
     float rounding;
     float cursor_size;
-    float fixed_width;
-    float fixed_height;
-    int has_fixed_size;
     struct zr_vec2 padding;
 
     /* optional user callbacks */
@@ -1513,9 +1493,6 @@ struct zr_style_property {
     /* properties */
     float border;
     float rounding;
-    int has_fixed_size;
-    float fixed_width;
-    float fixed_height;
     struct zr_vec2 padding;
 
     struct zr_style_edit edit;
@@ -1541,9 +1518,6 @@ struct zr_style_chart {
     /* properties */
     float border;
     float rounding;
-    int has_fixed_size;
-    float fixed_width;
-    float fixed_height;
     struct zr_vec2 padding;
 };
 
@@ -1573,9 +1547,6 @@ struct zr_style_combo {
     /* properties */
     float border;
     float rounding;
-    int has_fixed_size;
-    float fixed_width;
-    float fixed_height;
     struct zr_vec2 content_padding;
     struct zr_vec2 button_padding;
     struct zr_vec2 spacing;
@@ -1640,10 +1611,8 @@ struct zr_style_window {
     struct zr_vec2 footer_padding;
 
     float border;
+    float fixed_border;
     float rounding;
-    int has_fixed_size;
-    float fixed_width;
-    float fixed_height;
     struct zr_vec2 scaler_size;
     struct zr_vec2 padding;
     struct zr_vec2 spacing;
@@ -1790,8 +1759,8 @@ enum zr_chart_event {
 };
 
 enum zr_color_picker_format {
-    ZR_RGB  = 0,
-    ZR_RGBA = 1
+    ZR_RGB,
+    ZR_RGBA
 };
 
 enum zr_popup_type {
@@ -1955,9 +1924,9 @@ struct zr_property_state {
 struct zr_table;
 struct zr_window {
     zr_hash name;
+    zr_flags flags;
     unsigned int seq;
     struct zr_rect bounds;
-    zr_flags flags;
     struct zr_scroll scrollbar;
     struct zr_command_buffer buffer;
     struct zr_panel *layout;
