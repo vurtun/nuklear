@@ -330,6 +330,7 @@ static void mem_free(zr_handle unused, void* ptr)
     config.spacing = zr_vec2(0, 0);
     config.oversample_h = 1;
     config.oversample_v = 1;
+    config.merge_mode = 0;
 
     // query needed amount of memory for the font baking process
     int glyph_count;

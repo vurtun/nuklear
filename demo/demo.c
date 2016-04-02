@@ -621,7 +621,9 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                 static char field_buffer[64];
                 static char text[9][64];
                 static size_t text_len[9];
+                static char box_buffer[512];
                 static size_t field_len;
+                static size_t box_len;
                 zr_flags active;
 
                 zr_layout_row(ctx, ZR_STATIC, 25, 2, ratio);
@@ -653,9 +655,21 @@ demo_window(struct demo *gui, struct zr_context *ctx)
                 zr_label(ctx, "Field:", ZR_TEXT_LEFT);
                 zr_edit_string(ctx, ZR_EDIT_FIELD, field_buffer, &field_len, 64, zr_filter_default);
 
+                zr_label(ctx, "Box:", ZR_TEXT_LEFT);
+                zr_layout_row_static(ctx, 180, 278, 1);
+                zr_edit_string(ctx, ZR_EDIT_BOX, box_buffer, &box_len, 512, zr_filter_default);
+
                 zr_layout_row(ctx, ZR_STATIC, 25, 2, ratio);
                 active = zr_edit_string(ctx, ZR_EDIT_FIELD|ZR_EDIT_SIGCOMIT, text[7], &text_len[7], 64,  zr_filter_ascii);
-                zr_button_label(ctx, "Submit", ZR_BUTTON_DEFAULT);
+                if (zr_button_label(ctx, "Submit", ZR_BUTTON_DEFAULT) ||
+                    (active & ZR_EDIT_COMMITED))
+                {
+                    text[7][text_len[7]] = '\n';
+                    text_len[7]++;
+                    memcpy(&box_buffer[box_len], &text[7], text_len[7]);
+                    box_len += text_len[7];
+                    text_len[7] = 0;
+                }
                 zr_layout_row_end(ctx);
                 zr_layout_pop(ctx);
             }
@@ -2576,7 +2590,7 @@ control_window(struct zr_context *ctx, struct demo *gui)
         }
         if (zr_layout_push(ctx, ZR_LAYOUT_TAB, "Color", ZR_MINIMIZED))
         {
-            struct zr_panel tab, combo;
+            struct zr_panel combo;
             enum theme old = gui->theme;
             static const char *themes[] = {"Black", "White", "Red", "Blue", "Dark", "Grey"};
 

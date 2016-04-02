@@ -179,7 +179,9 @@ int zr_stricmp(const char *s1, const char *s2);
 int zr_stricmpn(const char *s1, const char *s2, int n);
 int zr_strtof(float *number, const char *buffer);
 int zr_strfilter(const char *text, const char *regexp);
-int zr_strmatch_fuzzy(char const *pattern, char const *str, int *out_score);
+int zr_strmatch_fuzzy_string(char const *str, char const *pattern, int *out_score);
+int zr_strmatch_fuzzy_text(const char *txt, int txt_len, const char *pattern,
+                            int *out_score);
 #if ZR_COMPILE_WITH_STANDARD_IO
 int zr_strfmt(char *buf, zr_size len, const char *fmt,...);
 #endif
@@ -475,6 +477,8 @@ struct zr_font_config {
     /* font to setup in the baking process: NOTE: not needed for font atlas */
     zr_rune fallback_glyph;
     /* fallback glyph to use if a given rune is not found */
+    int merge_mode;
+    /* merges this font into the last font */
 };
 
 struct zr_font_glyph {
@@ -486,14 +490,11 @@ struct zr_font_glyph {
 
 struct zr_font {
     struct zr_user_font handle;
-    float size;
+    struct zr_baked_font info;
     float scale;
-    float ascent, descent;
     struct zr_font_glyph *glyphs;
     const struct zr_font_glyph *fallback;
     zr_rune fallback_codepoint;
-    zr_rune glyph_count;
-    const zr_rune *ranges;
     zr_handle texture;
     int config;
 };
@@ -622,14 +623,15 @@ enum zr_edit_flags {
     /* edit widget allows text selection */
     ZR_EDIT_CLIPBOARD   = ZR_FLAG(3),
     /* edit widget tries to use the clipbard callback for copy & paste */
-    ZR_EDIT_SIGCOMIT    = ZR_FLAG(4)
+    ZR_EDIT_SIGCOMIT    = ZR_FLAG(4),
     /* edit widget generateds ZR_EDIT_COMMITED event on enter */
+    ZR_EDIT_MULTILINE   = ZR_FLAG(5)
 };
 
 enum zr_edit_types {
     ZR_EDIT_SIMPLE = 0,
     ZR_EDIT_FIELD = (ZR_EDIT_CURSOR|ZR_EDIT_SELECTABLE|ZR_EDIT_CLIPBOARD),
-    ZR_EDIT_BOX = (ZR_EDIT_CURSOR|ZR_EDIT_SELECTABLE| ZR_EDIT_CLIPBOARD)
+    ZR_EDIT_BOX = (ZR_EDIT_CURSOR|ZR_EDIT_SELECTABLE| ZR_EDIT_CLIPBOARD|ZR_EDIT_MULTILINE)
 };
 
 enum zr_edit_events {
@@ -915,7 +917,7 @@ void zr_stroke_arc(struct zr_command_buffer*, float cx, float cy, float radius,
 void zr_stroke_triangle(struct zr_command_buffer*, float, float, float, float,
                         float, float, float line_thichness, struct zr_color);
 void zr_stroke_polyline(struct zr_command_buffer*, float *points, int point_count,
-                        struct zr_color col);
+                        float line_thickness, struct zr_color col);
 void zr_stroke_polygon(struct zr_command_buffer*, float*, int point_count,
                     float line_thickness, struct zr_color);
 
@@ -1439,6 +1441,7 @@ struct zr_style_edit {
     struct zr_style_item hover;
     struct zr_style_item active;
     struct zr_color border_color;
+    struct zr_style_scrollbar scrollbar;
 
     /* cursor */
     struct zr_style_item cursor_normal;
@@ -1456,10 +1459,12 @@ struct zr_style_edit {
     struct zr_color selected_text_normal;
     struct zr_color selected_text_hover;
 
+
     /* properties */
     float border;
     float rounding;
     float cursor_size;
+    float scrollbar_size;
     struct zr_vec2 padding;
 
     /* optional user callbacks */
