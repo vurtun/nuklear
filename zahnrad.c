@@ -519,7 +519,7 @@ int
 zr_stricmpn(const char *s1, const char *s2, int n)
 {
     int c1,c2,d;
-    assert(n >= 0);
+    ZR_ASSERT(n >= 0);
     do {
         c1 = *s1++;
         c2 = *s2++;
