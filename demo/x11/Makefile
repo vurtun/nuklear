@@ -8,7 +8,7 @@ DCC = gcc
 # Flags
 CFLAGS = -std=c89 -pedantic -O2
 
-SRC = xlib.c ../../zahnrad.c
+SRC = main.c
 OBJ = $(SRC:.c=.o)
 
 # Modes

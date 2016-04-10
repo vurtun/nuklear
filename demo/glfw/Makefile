@@ -8,7 +8,7 @@ DCC = gcc
 # Flags
 CFLAGS = -std=c99 -pedantic -O2
 
-SRC = ../../zahnrad.c glfw.c
+SRC = main.c
 OBJ = $(SRC:.c=.o)
 
 ifeq ($(OS),Windows_NT)
