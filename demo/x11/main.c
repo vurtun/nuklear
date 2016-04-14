@@ -140,7 +140,6 @@ main(void)
             if (nk_option_label(ctx, "hard", op == HARD)) op = HARD;
             nk_layout_row_dynamic(ctx, 22, 1);
             nk_property_int(ctx, "Compression:", 0, &property, 100, 10, 1);
-            nk_layout_row_dynamic(ctx, 100, 1);
         }
         nk_end(ctx);}
         if (nk_window_is_closed(ctx, "Demo")) break;

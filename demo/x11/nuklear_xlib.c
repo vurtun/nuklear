@@ -479,11 +479,9 @@ nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt)
                 nk_input_key(ctx, NK_KEY_TEXT_LINE_END, down);
             else if (!down) {
                 char buf[32];
-                if ((*code >= 'a' && *code <= 'z') || (*code >= 'A' && *code <= 'Z')) {
-                    KeySym keysym = 0;
-                    if (XLookupString((XKeyEvent*)evt, buf, 32, &keysym, NULL) != NoSymbol)
-                        nk_input_glyph(ctx, buf);
-                }
+                KeySym keysym = 0;
+                if (XLookupString((XKeyEvent*)evt, buf, 32, &keysym, NULL) != NoSymbol)
+                    nk_input_glyph(ctx, buf);
             }
         }
         XFree(code);
