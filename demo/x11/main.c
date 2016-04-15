@@ -124,7 +124,7 @@ main(void)
 
         /* GUI */
         {struct nk_panel layout;
-        if (nk_begin(ctx, &layout, "Demo", nk_rect(50, 50, 200, 300),
+        if (nk_begin(ctx, &layout, "Demo", nk_rect(50, 50, 200, 200),
             NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
             NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
         {

@@ -32,3 +32,8 @@ extended:
 	rm -f bin/extended $(OBJS)
 	$(CC) $(CFLAGS) -o bin/extended extended.c $(LIBS)
 
+calculator:
+	@mkdir -p bin
+	rm -f bin/calculator $(OBJS)
+	$(CC) $(CFLAGS) -o bin/calculator calculator.c $(LIBS)
+

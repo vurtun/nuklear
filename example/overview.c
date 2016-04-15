@@ -116,10 +116,9 @@ overview_window(struct nk_context *ctx)
             if (nk_popup_begin(ctx, &popup, NK_POPUP_STATIC, "About", NK_WINDOW_CLOSABLE, s))
             {
                 nk_layout_row_dynamic(ctx, 20, 1);
-                nk_label(ctx, "nuklear", NK_TEXT_LEFT);
+                nk_label(ctx, "Nuklear", NK_TEXT_LEFT);
                 nk_label(ctx, "By Micha Mettke", NK_TEXT_LEFT);
-                nk_label(ctx, "nuklear is licensed under the zlib License.",  NK_TEXT_LEFT);
-                nk_label(ctx, "See LICENSE for more information", NK_TEXT_LEFT);
+                nk_label(ctx, "nuklear is licensed under the public domain License.",  NK_TEXT_LEFT);
                 nk_popup_end(ctx);
             } else show_app_about = nk_false;
         }

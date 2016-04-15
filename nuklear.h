@@ -657,7 +657,7 @@ NK_API void                     nk_plot_function(struct nk_context*, enum nk_cha
 /* Popups */
 NK_API int                      nk_popup_begin(struct nk_context*, struct nk_panel*, enum nk_popup_type, const char*, nk_flags, struct nk_rect bounds);
 NK_API void                     nk_popup_close(struct nk_context*);
-NK_API                          void nk_popup_end(struct nk_context*);
+NK_API void                     nk_popup_end(struct nk_context*);
 
 /* Combobox */
 NK_API int                      nk_combo(struct nk_context*, const char **items, int count, int selected, int item_height);
@@ -15273,6 +15273,17 @@ nk_window_set_focus(struct nk_context *ctx, const char *name)
  *                          PANEL
  *
  * --------------------------------------------------------------*/
+static int
+nk_window_has_header(struct nk_window *win, const char *title)
+{
+    /* window header state */
+    int active = 0;
+    active = (win->flags & (NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE));
+    active = active || (win->flags & NK_WINDOW_TITLE);
+    active = active && !(win->flags & NK_WINDOW_HIDDEN) && title;
+    return active;
+}
+
 NK_INTERN int
 nk_panel_begin(struct nk_context *ctx, const char *title)
 {
@@ -15312,26 +15323,30 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
     if (win->flags & NK_WINDOW_HIDDEN)
         return 0;
 
-    /* move panel position if requested */
-    layout->header_h = font->height + 2 * style->window.header.padding.y;
-    layout->header_h += 2 * style->window.header.label_padding.y;
+#ifdef NK_INCLUDE_COMMAND_USERDATA
+    win->buffer.userdata = ctx->userdata;
+#endif
+
+    /* window dragging */
     if ((win->flags & NK_WINDOW_MOVABLE) && !(win->flags & NK_WINDOW_ROM)) {
         int incursor;
         struct nk_rect move;
         move.x = win->bounds.x;
         move.y = win->bounds.y;
         move.w = win->bounds.w;
+
         move.h = layout->header_h;
+        if (nk_window_has_header(win, title)) {
+            move.h = font->height + 2.0f * style->window.header.padding.y;
+            move.h = 2.0f * style->window.header.label_padding.y;
+        } else move.h = window_padding.y + item_spacing.y;
+
         incursor = nk_input_is_mouse_prev_hovering_rect(in, move);
         if (nk_input_is_mouse_down(in, NK_BUTTON_LEFT) && incursor) {
             win->bounds.x = win->bounds.x + in->mouse.delta.x;
             win->bounds.y = win->bounds.y + in->mouse.delta.y;
         }
     }
-
-#ifdef NK_INCLUDE_COMMAND_USERDATA
-    win->buffer.userdata = ctx->userdata;
-#endif
 
     /* panel space with border */
     if (win->flags & NK_WINDOW_BORDER) {
@@ -15372,7 +15387,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
         layout->row.height = 0;
     } else {
         layout->header_h = 0;
-        layout->row.height = item_spacing.y;
+        layout->row.height = item_spacing.y + window_padding.y;
     }
 
     /* calculate window footer height */
@@ -15384,15 +15399,11 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
     /* calculate the window size */
     if (!(win->flags & NK_WINDOW_NO_SCROLLBAR))
         layout->width = layout->bounds.w - scrollbar_size.x;
-    layout->height = layout->bounds.h - (layout->header_h + 2 * item_spacing.y);
+    layout->height = layout->bounds.h - (layout->header_h + item_spacing.y + window_padding.y);
     layout->height -= layout->footer_h;
 
-    /* window header state */
-    header_active = (win->flags & (NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE));
-    header_active = header_active || (win->flags & NK_WINDOW_TITLE);
-    header_active = header_active && !(win->flags & NK_WINDOW_HIDDEN) && title;
-
     /* window header */
+    header_active = nk_window_has_header(win, title);
     if (header_active)
     {
         struct nk_rect header;
@@ -15408,7 +15419,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
         /* calculate correct header height */
         layout->header_h = font->height + 2.0f * style->window.header.padding.y;
         layout->header_h += 2.0f * style->window.header.label_padding.y;
-        layout->row.height += layout->header_h + style->window.padding.y;
+        layout->row.height += layout->header_h;
         header.h = layout->header_h + 0.5f;
 
         /* update window height */
@@ -15520,34 +15531,6 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
         nk_fill_rect(out, nk_rect(layout->bounds.x, layout->bounds.y,
             layout->bounds.w, layout->row.height + window_padding.y), 0,
             style->window.background);
-    }
-
-    /* draw top window border line */
-    if (layout->flags & NK_WINDOW_BORDER) {
-        struct nk_color border;
-
-        /* select correct border color */
-        if (!(win->flags & NK_WINDOW_SUB))
-            border = style->window.border_color;
-        else if (win->flags & NK_WINDOW_COMBO)
-            border = style->window.combo_border_color;
-        else if (win->flags & NK_WINDOW_CONTEXTUAL)
-            border = style->window.contextual_border_color;
-        else if (win->flags & NK_WINDOW_MENU)
-            border = style->window.menu_border_color;
-        else if (win->flags & NK_WINDOW_GROUP)
-            border = style->window.group_border_color;
-        else if (win->flags & NK_WINDOW_TOOLTIP)
-            border = style->window.tooltip_border_color;
-        else border = style->window.border_color;
-
-        /* draw border */
-        nk_stroke_line(out,
-            win->bounds.x + layout->border/2.0f,
-            win->bounds.y + layout->border/2.0f,
-            win->bounds.x + win->bounds.w - layout->border,
-            win->bounds.y + layout->border/2.0f,
-            style->window.border, border);
     }
     {
         /* calculate and set the window clipping rectangle*/
@@ -15798,6 +15781,13 @@ nk_panel_end(struct nk_context *ctx)
                 window->bounds.x + window->bounds.w - layout->border,
                 window->bounds.y + layout->header_h - layout->border,
                 layout->border, border);
+
+        /* draw border top */
+        nk_stroke_line(out, window->bounds.x + layout->border/2.0f,
+            window->bounds.y + layout->border/2.0f,
+            window->bounds.x + window->bounds.w - layout->border,
+            window->bounds.y + layout->border/2.0f,
+            style->window.border, border);
 
         /* draw bottom border */
         nk_stroke_line(out, window->bounds.x + layout->border/2.0f,
@@ -16346,13 +16336,10 @@ nk_layout_widget_space(struct nk_rect *bounds, const struct nk_context *ctx,
             layout->row.item_width : layout->row.ratio[layout->row.index];
 
         item_spacing = (float)layout->row.index * spacing.x;
-        if (layout->row.index < layout->row.columns-1)
-            item_width = (ratio * panel_space) - spacing.x;
-        else item_width = (ratio * panel_space);
-
+        item_width = (ratio * panel_space);
         item_offset = layout->row.item_offset;
         if (modify) {
-            layout->row.item_offset += item_width + spacing.x;
+            layout->row.item_offset += item_width;
             layout->row.filled += ratio;
         }
     } break;
@@ -16368,7 +16355,7 @@ nk_layout_widget_space(struct nk_rect *bounds, const struct nk_context *ctx,
         item_offset = layout->row.item_offset;
         item_spacing = (float)layout->row.index * spacing.x;
         if (modify) {
-            layout->row.item_offset += item_width + spacing.x;
+            layout->row.item_offset += item_width;
             layout->row.index = 0;
         }
     } break;
@@ -16389,8 +16376,8 @@ nk_layout_widget_space(struct nk_rect *bounds, const struct nk_context *ctx,
         item_spacing = (float)layout->row.index * spacing.x;
         item_width = layout->row.ratio[layout->row.index];
         item_offset = layout->row.item_offset;
-        if (modify) layout->row.item_offset += item_width + spacing.x;
-        } break;
+        if (modify) layout->row.item_offset += item_width;
+    } break;
     default: NK_ASSERT(0); break;
     };
 
