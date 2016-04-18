@@ -11373,6 +11373,7 @@ nk_do_button(nk_flags *state, struct nk_command_buffer *out, struct nk_rect r,
     enum nk_button_behavior behavior, struct nk_rect *content)
 {
     struct nk_rect bounds;
+    struct nk_vec2 pad;
 
     NK_ASSERT(style);
     NK_ASSERT(state);
@@ -15335,7 +15336,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
         move.h = layout->header_h;
         if (nk_window_has_header(win, title)) {
             move.h = font->height + 2.0f * style->window.header.padding.y;
-            move.h = 2.0f * style->window.header.label_padding.y;
+            move.h += 2.0f * style->window.header.label_padding.y;
         } else move.h = window_padding.y + item_spacing.y;
 
         incursor = nk_input_is_mouse_prev_hovering_rect(in, move);
