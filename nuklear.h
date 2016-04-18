@@ -3113,7 +3113,7 @@ nk_strmatch_fuzzy_text(const char *str, int str_len,
         int rematch = best_letter && nk_to_lower(*best_letter) == nk_to_lower(str_letter);
 
         int advanced = next_match && best_letter;
-        int pattern_repeat = best_letter && pattern_iter != '\0';
+        int pattern_repeat = best_letter && *pattern_iter != '\0';
         pattern_repeat = pattern_repeat &&
             nk_to_lower(*best_letter) == nk_to_lower(pattern_letter);
 
@@ -7991,7 +7991,7 @@ nk_tt__rasterize_sorted_edges(struct nk_tt__bitmap *result, struct nk_tt__edge *
                 k = scanline[i] + sum;
                 k = (float) NK_ABS(k) * 255.0f + 0.5f;
                 m = (int) k;
-                if (m > 255.0f) m = 255.0f;
+                if (m > 255) m = 255;
                 result->pixels[j*result->stride + i] = (unsigned char) m;
             }
         }
@@ -9313,8 +9313,6 @@ NK_GLOBAL const char nk_proggy_clean_ttf_compressed_data_base85[11980+1] =
 #pragma clang diagnostic pop
 #elif defined(__GNUC__) || defined(__GNUG__)
 #pragma GCC diagnostic pop
-#elif _MSC_VER
-#pragma warning (pop)
 #endif
 
 #endif /* NK_INCLUDE_DEFAULT_FONT */
@@ -11374,7 +11372,6 @@ nk_do_button(nk_flags *state, struct nk_command_buffer *out, struct nk_rect r,
     const struct nk_style_button *style, const struct nk_input *in,
     enum nk_button_behavior behavior, struct nk_rect *content)
 {
-    struct nk_vec2 pad;
     struct nk_rect bounds;
 
     NK_ASSERT(style);
