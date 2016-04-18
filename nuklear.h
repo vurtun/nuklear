@@ -2999,7 +2999,7 @@ NK_API int
 nk_stricmpn(const char *s1, const char *s2, int n)
 {
     int c1,c2,d;
-    assert(n >= 0);
+    NK_ASSERT(n >= 0);
     do {
         c1 = *s1++;
         c2 = *s2++;
@@ -4643,7 +4643,7 @@ nk_str_insert_at_char(struct nk_str *s, int pos, const char *str, int len)
     for (i = 0; i < copylen; ++i) *dst-- = *src--;
     mem = nk_ptr_add(void, s->buffer.memory.ptr, pos);
     NK_MEMCPY(mem, str, (nk_size)len * sizeof(char));
-    s->len = nk_utf_len(s->buffer.memory.ptr, (int)s->buffer.allocated);
+    s->len = nk_utf_len((char *)s->buffer.memory.ptr, (int)s->buffer.allocated);
     return 1;
 }
 
@@ -4748,7 +4748,7 @@ nk_str_remove_chars(struct nk_str *s, int len)
     if (!s || len < 0 || (nk_size)len > s->buffer.allocated) return;
     NK_ASSERT(((int)s->buffer.allocated - (int)len) >= 0);
     s->buffer.allocated -= (nk_size)len;
-    s->len = nk_utf_len(s->buffer.memory.ptr, (int)s->buffer.allocated);
+    s->len = nk_utf_len((char *)s->buffer.memory.ptr, (int)s->buffer.allocated);
 }
 
 NK_API void
@@ -4788,7 +4788,7 @@ nk_str_delete_chars(struct nk_str *s, int pos, int len)
         NK_ASSERT(((int)s->buffer.allocated - (int)len) >= 0);
         s->buffer.allocated -= (nk_size)len;
     } else nk_str_remove_chars(s, len);
-    s->len = nk_utf_len(s->buffer.memory.ptr, (int)s->buffer.allocated);
+    s->len = nk_utf_len((char *)s->buffer.memory.ptr, (int)s->buffer.allocated);
 }
 
 NK_API void
@@ -4806,7 +4806,7 @@ nk_str_delete_runes(struct nk_str *s, int pos, int len)
         len = NK_CLAMP(0, (s->len - pos), s->len);
     if (!len) return;
 
-    temp = s->buffer.memory.ptr;
+    temp = (char *)s->buffer.memory.ptr;
     begin = nk_str_at_rune(s, pos, &unicode, &unused);
     if (!begin) return;
     s->buffer.memory.ptr = begin;
