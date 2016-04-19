@@ -93,7 +93,7 @@ Embeds ProggyClean.ttf font by Tristan Grimmer (MIT license).
 Big thank you to Omar Cornut (ocornut@github) for his imgui library and
 giving me the inspiration for this library, Casey Muratori for handmade hero
 and his original immediate mode graphical user interface idea and Sean
-Barret for his amazing single header libraries which restored by faith
+Barret for his amazing single header libraries which restored my faith
 in libraries and brought me to create some of my own.
 
 ##LICENSE:
