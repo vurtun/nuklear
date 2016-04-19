@@ -11373,8 +11373,6 @@ nk_do_button(nk_flags *state, struct nk_command_buffer *out, struct nk_rect r,
     enum nk_button_behavior behavior, struct nk_rect *content)
 {
     struct nk_rect bounds;
-    struct nk_vec2 pad;
-
     NK_ASSERT(style);
     NK_ASSERT(state);
     NK_ASSERT(out);
@@ -11382,13 +11380,10 @@ nk_do_button(nk_flags *state, struct nk_command_buffer *out, struct nk_rect r,
         return nk_false;
 
     /* calculate button content space */
-    pad.x = style->padding.x + style->border;
-    pad.y = style->padding.y + style->border;
-
-    content->x = r.x + style->padding.x;
-    content->y = r.y + style->padding.y;
-    content->w = r.w - 2 * style->padding.x;
-    content->h = r.h - 2 * style->padding.y;
+    content->x = r.x + style->padding.x + style->border;
+    content->y = r.y + style->padding.y + style->border;
+    content->w = r.w - 2 * style->padding.x + style->border;
+    content->h = r.h - 2 * style->padding.y + style->border;
 
     /* execute button behavior */
     bounds.x = r.x - style->touch_padding.x;
