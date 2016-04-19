@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -58,7 +59,8 @@ nk_xsurf_create(Display *dpy,  int screen, Window root, unsigned int w, unsigned
     surface->root = root;
     surface->gc = XCreateGC(dpy, root, 0, NULL);
     XSetLineAttributes(dpy, surface->gc, 1, LineSolid, CapButt, JoinMiter);
-    surface->drawable = XCreatePixmap(dpy, root, w, h, 32);
+    surface->drawable = XCreatePixmap(dpy, root, w, h,
+        (unsigned int)DefaultDepth(dpy, screen));
     return surface;
 }
 
