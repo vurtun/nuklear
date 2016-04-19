@@ -11,8 +11,6 @@
 #include <limits.h>
 
 #include <GL/glew.h>
-#include <GL/gl.h>
-#include <GL/glu.h>
 #include <GLFW/glfw3.h>
 
 #define NK_INCLUDE_FIXED_TYPES
@@ -35,6 +33,12 @@
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #define MAX(a,b) ((a) < (b) ? (b) : (a))
 #define LEN(a) (sizeof(a)/sizeof(a)[0])
+
+#ifdef __APPLE__
+  #define NK_SHADER_VERSION "#version 150\n"
+#else
+  #define NK_SHADER_VERSION "#version 300 es\n"
+#endif
 
 /* ===============================================================
  *
@@ -1154,7 +1158,7 @@ device_init(struct device *dev)
 {
     GLint status;
     static const GLchar *vertex_shader =
-        "#version 300 es\n"
+        NK_SHADER_VERSION
         "uniform mat4 ProjMtx;\n"
         "in vec2 Position;\n"
         "in vec2 TexCoord;\n"
@@ -1167,7 +1171,7 @@ device_init(struct device *dev)
         "   gl_Position = ProjMtx * vec4(Position.xy, 0, 1);\n"
         "}\n";
     static const GLchar *fragment_shader =
-        "#version 300 es\n"
+        NK_SHADER_VERSION
         "precision mediump float;\n"
         "uniform sampler2D Texture;\n"
         "in vec2 Frag_UV;\n"
