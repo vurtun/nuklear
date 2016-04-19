@@ -119,7 +119,7 @@ ui_piemenu(struct nk_context *ctx, struct nk_vec2 pos, float radius,
                 nk_fill_arc(out, center.x, center.y, (bounds.w/2.0f),
                     a_min, a_max, (active_item == i) ? nk_rgb(45,100,255): nk_rgb(60,60,60));
 
-                /* seperator line */
+                /* separator line */
                 rx = bounds.w/2.0f; ry = 0;
                 dx = rx * (float)cos(a_min) - ry * (float)sin(a_min);
                 dy = rx * (float)sin(a_min) + ry * (float)cos(a_min);

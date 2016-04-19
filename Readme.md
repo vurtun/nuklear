@@ -19,7 +19,7 @@ render backends it only focuses on the actual UI.
 - Low memory footprint with total memory control if needed or wanted
 - UTF-8 support
 - No global or hidden state
-- Customizeable library modules (you can compile and use only what you need)
+- Customizable library modules (you can compile and use only what you need)
 - Optional font baker and vertex buffer output
 
 ## Building
@@ -55,7 +55,7 @@ int i =  20;
 
 struct nk_panel layout;
 nk_begin(&ctx, &layout, "Show", nk_rect(50, 50, 220, 220),
-    NK_WINDOW_BORDER|NK_WINDOW_MOVEABLE|NK_WINDOW_CLOSEABLE);
+    NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_CLOSABLE);
 {
     /* fixed widget pixel width */
     nk_layout_row_static(&ctx, 30, 80, 1);

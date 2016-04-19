@@ -4,8 +4,8 @@
  * example use a simple color modifier as content you could change them
  * to have your custom content depending on the node time.
  * Biggest difference to most usual implementation is that this example does
- * not has connectors on the right position of the property that it links.
- * This is mainly done out of lazyness and could be implemented as well but
+ * not have connectors on the right position of the property that it links.
+ * This is mainly done out of laziness and could be implemented as well but
  * requires calculating the position of all rows and add connectors.
  * In addition adding and removing nodes is quite limited at the
  * moment since it is based on a simple fixed array. If this is to be converted
@@ -217,7 +217,7 @@ node_editor_run(struct node_editor *nodedit, struct nk_context *ctx)
                     nk_stroke_line(canvas, size.x, y+size.y, size.x+size.w, y+size.y, 1.0f, grid_color);
             }
 
-            /* execute each node as a moveable group */
+            /* execute each node as a movable group */
             while (it) {
                 /* calculate scrolled node window position and size */
                 nk_layout_space_push(ctx, nk_rect(it->bounds.x - nodedit->scrolling.x,
