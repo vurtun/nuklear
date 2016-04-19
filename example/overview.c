@@ -51,7 +51,7 @@ overview_window(struct nk_context *ctx)
     static int titlebar = nk_true;
     static int border = nk_true;
     static int resize = nk_true;
-    static int moveable = nk_true;
+    static int movable = nk_true;
     static int no_scrollbar = nk_false;
     static nk_flags window_flags = 0;
     static int minimizable = nk_true;
@@ -67,7 +67,7 @@ overview_window(struct nk_context *ctx)
     ctx->style.window.header.align = header_align;
     if (border) window_flags |= NK_WINDOW_BORDER;
     if (resize) window_flags |= NK_WINDOW_SCALABLE;
-    if (moveable) window_flags |= NK_WINDOW_MOVABLE;
+    if (movable) window_flags |= NK_WINDOW_MOVABLE;
     if (no_scrollbar) window_flags |= NK_WINDOW_NO_SCROLLBAR;
     if (minimizable) window_flags |= NK_WINDOW_MINIMIZABLE;
     if (close) window_flags |= NK_WINDOW_CLOSABLE;
@@ -130,10 +130,10 @@ overview_window(struct nk_context *ctx)
             nk_checkbox_label(ctx, "Menu", &show_menu);
             nk_checkbox_label(ctx, "Border", &border);
             nk_checkbox_label(ctx, "Resizable", &resize);
-            nk_checkbox_label(ctx, "Moveable", &moveable);
+            nk_checkbox_label(ctx, "Movable", &movable);
             nk_checkbox_label(ctx, "No Scrollbar", &no_scrollbar);
             nk_checkbox_label(ctx, "Minimizable", &minimizable);
-            nk_checkbox_label(ctx, "Closeable", &close);
+            nk_checkbox_label(ctx, "Closable", &close);
             nk_tree_pop(ctx);
         }
 
@@ -579,7 +579,7 @@ overview_window(struct nk_context *ctx)
             /* Chart Widgets
              * This library has two different rather simple charts. The line and the
              * column chart. Both provide a simple way of visualizing values and
-             * have a retain mode and immedidate mode API version. For the retain
+             * have a retained mode and immediate mode API version. For the retain
              * mode version `nk_plot` and `nk_plot_function` you either provide
              * an array or a callback to call to handle drawing the graph.
              * For the immediate mode version you start by calling `nk_chart_begin`
@@ -783,7 +783,7 @@ overview_window(struct nk_context *ctx)
                 nk_layout_row_end(ctx);
 
                 nk_layout_row_dynamic(ctx, 30, 1);
-                nk_label(ctx, "Static immmediate mode custom column layout with generated position and custom size:", NK_TEXT_LEFT);
+                nk_label(ctx, "Static immediate mode custom column layout with generated position and custom size:", NK_TEXT_LEFT);
                 nk_layout_row_begin(ctx, NK_STATIC, 30, 3);
                 nk_layout_row_push(ctx, 100);
                 nk_button_label(ctx, "button", NK_BUTTON_DEFAULT);
