@@ -15,7 +15,12 @@ ifeq ($(OS),Windows_NT)
 BIN := $(BIN).exe
 LIBS = -lmingw32 -lallegro -lallegro_primitives -lm
 else
-LIBS = -lallegro -lallegro_primitives -lGL -lm -lGLU -lGLEW
+	UNAME_S := $(shell uname -s)
+	ifeq ($(UNAME_S),Darwin)
+		LIBS = -lallegro -lallegro_primitives -lallegro_main -framework OpenGL -lm -lGLEW
+	else
+		LIBS = -lallegro -lallegro_primitives -lallegro_main -lGL -lm -lGLU -lGLEW
+	endif
 endif
 
 # Modes
