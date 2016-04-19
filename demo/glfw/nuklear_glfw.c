@@ -31,7 +31,7 @@ static struct nk_glfw {
 } glfw;
 
 #ifdef __APPLE__
-  #define NK_SHADER_VERSION "#version 400\n"
+  #define NK_SHADER_VERSION "#version 150\n"
 #else
   #define NK_SHADER_VERSION "#version 300 es\n"
 #endif
