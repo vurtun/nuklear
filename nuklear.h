@@ -245,12 +245,12 @@ typedef NK_UINT32 nk_uint;
 #ifndef NK_SIZE_TYPE
 typedef unsigned long nk_size;
 #else
-typedef NK_SIZE_TYPE nk_byte;
+typedef NK_SIZE_TYPE nk_size;
 #endif
 #ifndef NK_POINTER_TYPE
-typedef unsigned long nk_size;
+typedef unsigned long nk_ptr;
 #else
-typedef NK_POINTER_TYPE nk_byte;
+typedef NK_POINTER_TYPE nk_ptr;
 #endif
 typedef unsigned int nk_hash;
 typedef unsigned int nk_flags;
