@@ -9,9 +9,8 @@
 #include <math.h>
 
 #include <GL/glew.h>
-#include <GL/gl.h>
-#include <GL/glu.h>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_opengl.h>
 
 /* these defines are both needed for the header
  * and source file. So if you split them remember
