@@ -89,7 +89,7 @@ nk_allegro_render(enum nk_anti_aliasing AA)
         struct nk_buffer vbuf, ebuf;
         int offset = 0;
         struct nk_allegro_vertex *vertices = 0;
-        int *indicies = 0;
+        int *indices = 0;
 
         /* fill converting configuration */
         struct nk_convert_config config;
@@ -121,13 +121,13 @@ nk_allegro_render(enum nk_anti_aliasing AA)
             }
         }
         {
-            /* <massive sign> allegro does not support 16-bit indicies:
+            /* <massive sign> allegro does not support 16-bit indices:
              * @OPT: define nk_draw_index as int to fix this issue. */
             unsigned int i = 0;
             nk_draw_index *elements = (nk_draw_index*)dev->element_buffer;
-            indicies = calloc(sizeof(int), ctx->draw_list.element_count);
+            indices = calloc(sizeof(int), ctx->draw_list.element_count);
             for (i = 0; i < ctx->draw_list.element_count; ++i)
-                indicies[i] = elements[i];
+                indices[i] = elements[i];
         }
 
         /* iterate over and execute each draw command */
@@ -137,13 +137,13 @@ nk_allegro_render(enum nk_anti_aliasing AA)
             if (!cmd->elem_count) continue;
             al_set_clipping_rectangle((int)cmd->clip_rect.x, (int)cmd->clip_rect.y,
                 (int)cmd->clip_rect.w, (int)cmd->clip_rect.h);
-            al_draw_indexed_prim(vertices, dev->vertex_decl, texture, &indicies[offset],
+            al_draw_indexed_prim(vertices, dev->vertex_decl, texture, &indices[offset],
                 (int)cmd->elem_count, ALLEGRO_PRIM_TRIANGLE_LIST);
             offset += cmd->elem_count;
         }
 
         free(vertices);
-        free(indicies);
+        free(indices);
         nk_clear(ctx);
     }
     al_set_blender(op, src, dst);
