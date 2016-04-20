@@ -6945,7 +6945,7 @@ nk_rp_pack_rects(struct nk_rp_context *context, struct nk_rp_rect *rects, int nu
     }
 
     /* sort according to heuristic */
-    qsort(rects, (unsigned)num_rects, sizeof(rects[0]), nk_rect_height_compare);
+    nk_rp_qsort(rects, (unsigned)num_rects, nk_rect_height_compare);
 
     for (i=0; i < num_rects; ++i) {
         struct nk_rp__findresult fr = nk_rp__skyline_pack_rectangle(context, rects[i].w, rects[i].h);
@@ -6958,8 +6958,7 @@ nk_rp_pack_rects(struct nk_rp_context *context, struct nk_rp_rect *rects, int nu
     }
 
     /* unsort */
-    /*nk_rp_qsort(rects, (unsigned)num_rects, nk_rect_original_order);*/
-    qsort(rects, (unsigned)num_rects, sizeof(rects[0]), nk_rect_original_order);
+    nk_rp_qsort(rects, (unsigned)num_rects, nk_rect_original_order);
 
     /* set was_packed flags */
     for (i=0; i < num_rects; ++i)
