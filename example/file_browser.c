@@ -402,7 +402,7 @@ file_browser_run(struct file_browser *browser, struct nk_context *ctx)
     struct nk_rect total_space;
 
     if (nk_begin(ctx, &layout, "File Browser", nk_rect(50, 50, 800, 600),
-        NK_WINDOW_BORDER|NK_WINDOW_NO_SCROLLBAR|NK_WINDOW_CLOSABLE|NK_WINDOW_MOVABLE))
+        NK_WINDOW_BORDER|NK_WINDOW_NO_SCROLLBAR|NK_WINDOW_MOVABLE))
     {
         struct nk_panel sub;
         static float ratio[] = {0.25f, NK_UNDEFINED};
@@ -808,8 +808,8 @@ int main(int argc, char *argv[])
     const char *font_path = (argc > 1) ? argv[1]: 0;
     nk_font_atlas_init_default(&atlas);
     nk_font_atlas_begin(&atlas);
-    if (font_path) font = nk_font_atlas_add_from_file(&atlas, font_path, 14.0f, NULL);
-    else font = nk_font_atlas_add_default(&atlas, 14.0f, NULL);
+    if (font_path) font = nk_font_atlas_add_from_file(&atlas, font_path, 13.0f, NULL);
+    else font = nk_font_atlas_add_default(&atlas, 13.0f, NULL);
     image = nk_font_atlas_bake(&atlas, &w, &h, NK_FONT_ATLAS_RGBA32);
     device_upload_atlas(&device, image, w, h);
     nk_font_atlas_end(&atlas, nk_handle_id((int)device.font_tex), &device.null);}
