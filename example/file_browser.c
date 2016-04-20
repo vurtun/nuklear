@@ -231,8 +231,11 @@ dir_list(const char *dir, int return_subdirs, size_t *count)
                 if (!size) {
                     results = (char**)calloc(sizeof(char*), capacity);
                 } else if (size >= capacity) {
+                    void *old = results;
                     capacity = capacity * 2;
                     results = (char**)realloc(results, capacity * sizeof(char*));
+                    assert(results);
+                    if (!results) free(old);
                 }
                 p = str_duplicate(data->d_name);
                 results[size++] = p;

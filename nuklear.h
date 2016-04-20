@@ -7771,7 +7771,7 @@ nk_tt__fill_active_edges_new(float *scanline, float *scanline_fill, int len,
         /* brute force every pixel */
         /* compute intersection points with top & bottom */
         NK_ASSERT(e->ey >= y_top);
-        if (!(e->fdx > 0) && (e->fdx < 0)) {
+        if (!(e->fdx > 0) && !(e->fdx < 0)) {
             float x0 = e->fx;
             if (x0 < len) {
                 if (x0 >= 0) {
@@ -9728,7 +9728,6 @@ nk_font_atlas_bake(struct nk_font_atlas *atlas, int *width, int *height,
 {
     int i = 0;
     void *tmp = 0;
-    const char *custom_data = "....";
     nk_size tmp_size, img_size;
 
     NK_ASSERT(width);
@@ -9744,6 +9743,7 @@ nk_font_atlas_bake(struct nk_font_atlas *atlas, int *width, int *height,
     if (!atlas->font_num)
         atlas->default_font = nk_font_atlas_add_default(atlas, 14.0f, 0);
 #endif
+    NK_ASSERT(atlas->font_num);
     if (!atlas->font_num) return 0;
 
     /* allocate temporary memory required for the baking process */
@@ -9752,7 +9752,7 @@ nk_font_atlas_bake(struct nk_font_atlas *atlas, int *width, int *height,
     NK_ASSERT(tmp);
     if (!tmp) goto failed;
 
-    /* allocate memory glyphs for all fonts */
+    /* allocate glyph memory for all fonts */
     atlas->glyphs = (struct nk_font_glyph*)
         atlas->alloc.alloc(atlas->alloc.userdata,0,
                 sizeof(struct nk_font_glyph) * (nk_size)atlas->glyph_count);
@@ -9773,10 +9773,11 @@ nk_font_atlas_bake(struct nk_font_atlas *atlas, int *width, int *height,
         goto failed;
 
     /* bake glyphs and custom white pixel into image */
+    {const char *custom_data = "....";
     nk_font_bake(atlas->pixel, *width, *height, tmp, tmp_size, atlas->glyphs,
         atlas->glyph_count, atlas->config, atlas->font_num);
     nk_font_bake_custom_data(atlas->pixel, *width, *height, atlas->custom,
-            custom_data, 2, 2, '.', 'X');
+            custom_data, 2, 2, '.', 'X');}
 
     /* convert alpha8 image into rgba32 image */
     if (fmt == NK_FONT_ATLAS_RGBA32) {
@@ -17223,11 +17224,11 @@ NK_API unsigned int
 nk_check_flags_text(struct nk_context *ctx, const char *text, int len,
     unsigned int flags, unsigned int value)
 {
-    int old_active, active;
+    int old_active;
     NK_ASSERT(ctx);
     NK_ASSERT(text);
     if (!ctx || !text) return flags;
-    old_active = active = (int)((flags & value) & value);
+    old_active = (int)((flags & value) & value);
     if (nk_check_text(ctx, text, len, old_active))
         flags |= value;
     else flags &= ~value;
