@@ -1,6 +1,3 @@
-# Compiler
-CC = clang
-
 # Flags
 CFLAGS = -std=c99 -pedantic -O2
 

@@ -1,10 +1,6 @@
 # Install
 BIN = demo
 
-# Compiler
-CC = clang
-DCC = gcc
-
 # Flags
 CFLAGS = -std=c99 -pedantic -O2
 
@@ -22,15 +18,6 @@ else
 		LIBS = -lSDL2 -lGL -lm -lGLU -lGLEW
 	endif
 endif
-
-# Modes
-.PHONY: clang
-clang: CC = clang
-clang: $(BIN)
-
-.PHONY: gcc
-gcc: CC = gcc
-gcc: $(BIN)
 
 $(BIN):
 	@mkdir -p bin
