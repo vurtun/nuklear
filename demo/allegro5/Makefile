@@ -1,10 +1,6 @@
 # Install
 BIN = demo
 
-# Compiler
-CC = clang
-DCC = gcc
-
 # Flags
 CFLAGS = -std=c89 -pedantic
 
@@ -22,15 +18,6 @@ else
 		LIBS = -lallegro -lallegro_primitives -lallegro_main -lGL -lm -lGLU -lGLEW
 	endif
 endif
-
-# Modes
-.PHONY: gcc
-gcc: CC = gcc
-gcc: $(BIN)
-
-.PHONY: clang
-clang: CC = clang
-clang: $(BIN)
 
 $(BIN):
 	@mkdir -p bin
