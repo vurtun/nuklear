@@ -2,8 +2,9 @@
 CFLAGS = -std=c99 -pedantic -O2
 
 ifeq ($(OS),Windows_NT)
-BIN := $(BIN).exe
-LIBS = -lglfw3 -lopengl32 -lm -lGLU32 -lGLEW32
+	BIN := $(BIN).exe
+	CFLAGS = -std=gnu99 -pedantic -O2
+	LIBS = -mwindows -lglfw3 -lopengl32 -lm -lGLU32 -lGLEW32
 else
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Darwin)

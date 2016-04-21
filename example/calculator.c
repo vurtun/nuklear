@@ -30,7 +30,7 @@
 #define MAX_ELEMENT_MEMORY 128 * 1024
 #define UNUSED(a) (void)a
 
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__MINGW32__)
   #define NK_SHADER_VERSION "#version 150\n"
 #else
   #define NK_SHADER_VERSION "#version 300 es\n"
