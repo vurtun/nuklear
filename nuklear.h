@@ -954,12 +954,12 @@ NK_API nk_size nk_buffer_total(struct nk_buffer*);
  *                          STRING
  *
  * ===============================================================*/
-/*  Basic string buffer which is only used in context of the text editor
+/*  Basic string buffer which is only used in context with the text editor
  *  to manage and manipulate dynamic or fixed size string content. This is _NOT_
  *  the default string handling method.*/
 struct nk_str {
     struct nk_buffer buffer;
-    int len; /* in glyphs */
+    int len; /* in codepoints/runes/glyphs */
 };
 
 #ifdef NK_INCLUDE_DEFAULT_ALLOCATOR
@@ -1008,11 +1008,38 @@ NK_API int nk_str_len_char(struct nk_str*);
  *                      TEXT EDITOR
  *
  * ===============================================================*/
+/* Editing text in this library is handled by either `nk_edit_string` or
+ * `nk_edit_buffer`. But like almost everything in this library there are multiple
+ * ways of doing it and a balance between control and ease of use with memory
+ * as well as functionality controlled by flags.
+ *
+ * This library generally allows three different levels of memory control:
+ * First of is the most basic way of just providing a simple char array with
+ * string length. This method is probably the easiest way of handling simple
+ * user text input. Main upside is complete control over memory while the biggest
+ * downside in comparsion with the other two approaches is missing undo/redo.
+ *
+ * For UIs that require undo/redo the second way was created. It is based on
+ * a fixed size nk_text_edit struct, which has an internal undo/redo stack.
+ * This is mainly useful if you want something more like a text editor but don't want
+ * to have a dynamically growing buffer.
+ *
+ * The final ways is using a dynamically growing nk_text_edit struct, which
+ * has both a default version if you don't care were memory comes from and a
+ * allocator version if you do. While the text editor is quite powerful for its
+ * complexity I would not recommend editing gigabytes of data with it.
+ * It is rather designed for uses cases which make sense for a GUI library not for
+ * an full blown text editor.
+ */
+#ifndef NK_TEXTEDIT_UNDOSTATECOUNT
 #define NK_TEXTEDIT_UNDOSTATECOUNT     99
+#endif
+
+#ifndef NK_TEXTEDIT_UNDOCHARCOUNT
 #define NK_TEXTEDIT_UNDOCHARCOUNT      999
+#endif
 
 struct nk_text_edit;
-
 struct nk_clipboard {
     nk_handle userdata;
     nk_paste_f paste;
@@ -13098,7 +13125,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
                 cursor.y -= edit->scrollbar.y;
                 nk_fill_rect(out, cursor, 0, cursor_color);
             } else {
-                /* draw cursor at inside text */
+                /* draw cursor inside text */
                 int glyph_len;
                 struct nk_rect label;
                 struct nk_text txt;
@@ -13296,8 +13323,8 @@ nk_do_property(nk_flags *ws,
     size = font->width(font->userdata, font->height, name, name_len);
     label.x = left.x + left.w + style->padding.x;
     label.w = (float)size + 2 * style->padding.x;
-    label.y = property.y + style->border;
-    label.h = property.h - 2 * style->border;
+    label.y = property.y + style->border + style->padding.y;
+    label.h = property.h - (2 * style->border + 2 * style->padding.y);
 
     /* right increment button */
     right.y = left.y;
@@ -13319,8 +13346,8 @@ nk_do_property(nk_flags *ws,
     }
     edit.w =  (float)size + 2 * style->padding.x;
     edit.x = right.x - (edit.w + style->padding.x);
-    edit.y = property.y + style->border + 1;
-    edit.h = property.h - (2 * style->border + 2);
+    edit.y = property.y + style->border;
+    edit.h = property.h - (2 * style->border);
 
     /* empty left space activator */
     empty.w = edit.x - (label.x + label.w);
