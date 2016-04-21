@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/vurtun/nuklear.png)](https://travis-ci.org/vurtun/nuklear)
 # Nuklear
 This is a minimal state immediate mode graphical user interface toolkit
 written in ANSI C and licensed under public domain. It was designed as a simple
