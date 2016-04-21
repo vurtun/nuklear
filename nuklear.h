@@ -2573,15 +2573,15 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #endif
 
 /* make sure correct type size */
-#define nk__check_size sizeof(nk_size) >= sizeof(void*) ? 1 : -1
-#define nk__check_ptr sizeof(nk_ptr) == sizeof(void*) ? 1 : -1
-#define nk__check_flags sizeof(nk_flags) >= 4 ? 1 : -1
-#define nk__check_rune sizeof(nk_rune) >= 4 ? 1 : -1
-#define nk__check_ushort sizeof(nk_ushort) == 2 ? 1 : -1
-#define nk__check_short sizeof(nk_short) == 2 ? 1 : -1
-#define nk__check_uint sizeof(nk_uint) == 4 ? 1 : -1
-#define nk__check_int sizeof(nk_int) == 4 ? 1 : -1
-#define nk__check_byte sizeof(nk_byte) == 1 ? 1 : -1
+#define nk__check_size (int)(sizeof(nk_size) >= sizeof(void*) ? 1 : -1)
+#define nk__check_ptr (int)(sizeof(nk_ptr) == sizeof(void*) ? 1 : -1)
+#define nk__check_flags (int)(sizeof(nk_flags) >= 4 ? 1 : -1)
+#define nk__check_rune (int)(sizeof(nk_rune) >= 4 ? 1 : -1)
+#define nk__check_ushort (int)(sizeof(nk_ushort) == 2 ? 1 : -1)
+#define nk__check_short (int)(sizeof(nk_short) == 2 ? 1 : -1)
+#define nk__check_uint (int)(sizeof(nk_uint) == 4 ? 1 : -1)
+#define nk__check_int (int)(sizeof(nk_int) == 4 ? 1 : -1)
+#define nk__check_byte (int)(sizeof(nk_byte) == 1 ? 1 : -1)
 
 NK_GLOBAL const struct nk_rect nk_null_rect = {-8192.0f, -8192.0f, 16384, 16384};
 NK_GLOBAL const float NK_FLOAT_PRECISION = 0.00000000000001f;
