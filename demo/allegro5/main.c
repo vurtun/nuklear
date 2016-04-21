@@ -93,7 +93,7 @@ main(void)
             if (nk_option_label(ctx, "easy", op == EASY)) op = EASY;
             if (nk_option_label(ctx, "hard", op == HARD)) op = HARD;
 
-            nk_layout_row_dynamic(ctx, 22, 1);
+            nk_layout_row_dynamic(ctx, 25, 1);
             nk_property_int(ctx, "Compression:", 0, &property, 100, 10, 1);
 
             {struct nk_panel combo;
