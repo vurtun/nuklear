@@ -2581,7 +2581,7 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #define nk__check_short sizeof(nk_short) == 2 ? 1 : -1
 #define nk__check_uint sizeof(nk_uint) == 4 ? 1 : -1
 #define nk__check_int sizeof(nk_int) == 4 ? 1 : -1
-#define nk__check_bytee sizeof(nk_byte) == 1 ? 1 : -1
+#define nk__check_byte sizeof(nk_byte) == 1 ? 1 : -1
 
 NK_GLOBAL const struct nk_rect nk_null_rect = {-8192.0f, -8192.0f, 16384, 16384};
 NK_GLOBAL const float NK_FLOAT_PRECISION = 0.00000000000001f;
