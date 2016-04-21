@@ -30,7 +30,7 @@ static struct nk_glfw {
     float scroll;
 } glfw;
 
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__MINGW32__)
   #define NK_SHADER_VERSION "#version 150\n"
 #else
   #define NK_SHADER_VERSION "#version 300 es\n"
