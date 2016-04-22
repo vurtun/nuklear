@@ -382,8 +382,8 @@ nk_gdi_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
                             nk_textedit_paste(edit, utf8, utf8size);
                             free(utf8);
                         }
-                        GlobalUnlock(mem); 
                     }
+                    GlobalUnlock(mem); 
                 }
             }
         }

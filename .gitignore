@@ -1,2 +1,2 @@
-demo/gdi/*.exe
-demo/gdi/*.obj
+demo/*/*.exe
+demo/*/*.obj
