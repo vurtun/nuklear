@@ -87,6 +87,8 @@ main(void)
     /* X11 */
     memset(&xw, 0, sizeof xw);
     xw.dpy = XOpenDisplay(NULL);
+    if (!xw.dpy) die("Could not open a display; perhaps $DISPLAY is not set?");
+
     xw.root = DefaultRootWindow(xw.dpy);
     xw.screen = XDefaultScreen(xw.dpy);
     xw.vis = XDefaultVisual(xw.dpy, xw.screen);
