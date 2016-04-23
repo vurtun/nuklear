@@ -193,7 +193,7 @@ grid_demo(struct nk_context *ctx)
         nk_layout_row_dynamic(ctx, 30, 2);
         nk_label(ctx, "Floating point:", NK_TEXT_RIGHT);
         nk_edit_string(ctx, NK_EDIT_FIELD, text[0], &text_len[0], 64, nk_filter_float);
-        nk_label(ctx, "Hexadeximal:", NK_TEXT_RIGHT);
+        nk_label(ctx, "Hexadecimal:", NK_TEXT_RIGHT);
         nk_edit_string(ctx, NK_EDIT_FIELD, text[1], &text_len[1], 64, nk_filter_hex);
         nk_label(ctx, "Binary:", NK_TEXT_RIGHT);
         nk_edit_string(ctx, NK_EDIT_FIELD, text[2], &text_len[2], 64, nk_filter_binary);
