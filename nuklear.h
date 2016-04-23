@@ -5658,7 +5658,7 @@ nk_draw_list_push_image(struct nk_draw_list *list, nk_handle texture)
     NK_ASSERT(list);
     if (!list) return;
     if (!list->cmd_count) {
-        nk_draw_list_push_command(list, nk_null_rect, list->null.texture);
+        nk_draw_list_push_command(list, nk_null_rect, texture);
     } else {
         struct nk_draw_command *prev = nk_draw_list_command_last(list);
         if (prev->elem_count == 0)
