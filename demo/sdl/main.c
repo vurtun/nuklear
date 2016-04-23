@@ -31,7 +31,7 @@
 #define MAX_ELEMENT_MEMORY 128 * 1024
 
 int
-main(void)
+main(int argc, char* argv[])
 {
     /* Platform */
     SDL_Window *win;
