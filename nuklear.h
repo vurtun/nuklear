@@ -14884,6 +14884,7 @@ nk_begin(struct nk_context *ctx, struct nk_panel *layout, const char *title,
         /* update public window flags */
         win->flags &= ~(nk_flags)(NK_WINDOW_PRIVATE-1);
         win->flags |= flags;
+        win->bounds = bounds;
         win->seq++;
         if (!ctx->active)
             ctx->active = win;
