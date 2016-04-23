@@ -561,8 +561,9 @@ NK_API int                      nk_group_begin(struct nk_context*, struct nk_pan
 NK_API void                     nk_group_end(struct nk_context*);
 
 /* Layout: Tree */
-NK_API int                      nk__tree_push(struct nk_context*, enum nk_tree_type, const char *title, enum nk_collapse_states initial_state, const char *hash2, int seed);
-#define                         nk_tree_push(ctx, type, title, state) nk__tree_push(ctx, type, title, state, __FILE__,__LINE__)
+#define                         nk_tree_push(ctx, type, title, state) nk_tree_push_hashed(ctx, type, title, state, __FILE__,nk_strlen(__FILE__),__LINE__)
+#define                         nk_tree_push_id(ctx, type, tile, state, id) nk_tree_push_hashed(ctx, type, title, state, __FILE__,nk_strlen(__FILE__),id)
+NK_API int                      nk_tree_push_hashed(struct nk_context*, enum nk_tree_type, const char *title, enum nk_collapse_states initial_state, const char *hash, int len,int seed);
 NK_API void                     nk_tree_pop(struct nk_context*);
 
 /* Widgets */
@@ -16469,9 +16470,9 @@ nk_layout_peek(struct nk_rect *bounds, struct nk_context *ctx)
 }
 
 NK_API int
-nk__tree_push(struct nk_context *ctx, enum nk_tree_type type,
+nk_tree_push_hashed(struct nk_context *ctx, enum nk_tree_type type,
     const char *title, enum nk_collapse_states initial_state,
-    const char *file, int line)
+    const char *hash, int len, int line)
 {
     struct nk_window *win;
     struct nk_panel *layout;
@@ -16525,7 +16526,7 @@ nk__tree_push(struct nk_context *ctx, enum nk_tree_type type,
     /* find or create tab persistent state (open/closed) */
     title_len = (int)nk_strlen(title);
     title_hash = nk_murmur_hash(title, (int)title_len, (nk_hash)line);
-    if (file) title_hash += nk_murmur_hash(file, (int)nk_strlen(file), (nk_hash)line);
+    if (hash) title_hash += nk_murmur_hash(hash, len, (nk_hash)line);
     state = nk_find_value(win, title_hash);
     if (!state) {
         state = nk_add_value(ctx, win, title_hash, 0);
