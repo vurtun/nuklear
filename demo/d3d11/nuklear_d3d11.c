@@ -422,7 +422,7 @@ nk_d3d11_init(ID3D11Device *device, int width, int height, unsigned int max_vert
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
         desc.MiscFlags = 0;
 
-        D3D11_SUBRESOURCE_DATA data;
+        {D3D11_SUBRESOURCE_DATA data;
         data.pSysMem = matrix;
         data.SysMemPitch = 0;
         data.SysMemSlicePitch = 0;
@@ -430,7 +430,7 @@ nk_d3d11_init(ID3D11Device *device, int width, int height, unsigned int max_vert
         nk_d3d11_get_projection_matrix(width, height, matrix);
 
         hr = ID3D11Device_CreateBuffer(device, &desc, &data, &d3d11.const_buffer);
-        assert(SUCCEEDED(hr));
+        assert(SUCCEEDED(hr));}
     }
 
     /* pixel shader */
@@ -542,21 +542,21 @@ nk_d3d11_font_stash_end(void)
         desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
         desc.CPUAccessFlags = 0;
 
-        D3D11_SUBRESOURCE_DATA data;
+        {D3D11_SUBRESOURCE_DATA data;
         data.pSysMem = image;
         data.SysMemPitch = (UINT)(w * 4);
         data.SysMemSlicePitch = 0;
         hr = ID3D11Device_CreateTexture2D(d3d11.device, &desc, &data, &font_texture);
-        assert(SUCCEEDED(hr));
+        assert(SUCCEEDED(hr));}
 
-        D3D11_SHADER_RESOURCE_VIEW_DESC srv;
+        {D3D11_SHADER_RESOURCE_VIEW_DESC srv;
         memset(&srv, 0, sizeof(srv));
         srv.Format = desc.Format;
         srv.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
         srv.Texture2D.MipLevels = 1;
         srv.Texture2D.MostDetailedMip = 0;
         hr = ID3D11Device_CreateShaderResourceView(d3d11.device, (ID3D11Resource *)font_texture, &srv, &d3d11.font_texture_view);
-        assert(SUCCEEDED(hr));
+        assert(SUCCEEDED(hr));}
 
         ID3D11Texture2D_Release(font_texture);
     }
