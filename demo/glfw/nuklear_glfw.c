@@ -22,6 +22,8 @@ struct nk_glfw_device {
 
 static struct nk_glfw {
     GLFWwindow *win;
+    int width, height;
+    int display_width, display_height;
     struct nk_glfw_device ogl;
     struct nk_context ctx;
     struct nk_font_atlas atlas;
@@ -323,6 +325,10 @@ nk_glfw3_new_frame(void)
     double x, y;
     struct nk_context *ctx = &glfw.ctx;
     struct GLFWwindow *win = glfw.win;
+
+    glfwGetWindowSize(win, &glfw.width, &glfw.height);
+    glfwGetFramebufferSize(win, &glfw.display_width, &glfw.display_height);
+
     nk_input_begin(ctx);
     for (i = 0; i < glfw.text_len; ++i)
         nk_input_unicode(ctx, glfw.text[i]);
@@ -359,7 +365,10 @@ nk_glfw3_new_frame(void)
     }
 
     glfwGetCursorPos(win, &x, &y);
+    x *= (double)(int)((float)glfw.width/(float)glfw.display_width);
+    y *= (double)(int)((float)glfw.height/(float)glfw.display_height);
     nk_input_motion(ctx, (int)x, (int)y);
+
     nk_input_button(ctx, NK_BUTTON_LEFT, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
     nk_input_button(ctx, NK_BUTTON_MIDDLE, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS);
     nk_input_button(ctx, NK_BUTTON_RIGHT, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS);

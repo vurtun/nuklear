@@ -180,8 +180,8 @@ node_editor_init(struct node_editor *editor)
     memset(editor, 0, sizeof(*editor));
     editor->begin = NULL;
     editor->end = NULL;
-    node_editor_add(editor, "Source", nk_rect(-40, 10, 180, 220), nk_rgb(255, 0, 0), 0, 1);
-    node_editor_add(editor, "Source", nk_rect(-40, 260, 180, 220), nk_rgb(0, 255, 0), 0, 1);
+    node_editor_add(editor, "Source", nk_rect(40, 10, 180, 220), nk_rgb(255, 0, 0), 0, 1);
+    node_editor_add(editor, "Source", nk_rect(40, 260, 180, 220), nk_rgb(0, 255, 0), 0, 1);
     node_editor_add(editor, "Combine", nk_rect(400, 100, 180, 220), nk_rgb(0,0,255), 2, 2);
     node_editor_link(editor, 0, 0, 2, 0);
     node_editor_link(editor, 1, 0, 2, 1);
@@ -189,7 +189,7 @@ node_editor_init(struct node_editor *editor)
 }
 
 static int
-node_editor_run(struct node_editor *nodedit, struct nk_context *ctx)
+node_editor_run(struct node_editor *nodedit, struct nk_context *ctx, int width, int height)
 {
     int n = 0;
     struct nk_rect total_space;
@@ -198,10 +198,11 @@ node_editor_run(struct node_editor *nodedit, struct nk_context *ctx)
     struct node *updated = 0;
     struct nk_panel layout;
 
-    if (nk_begin(ctx, &layout, "Node Editor", nk_rect(50, 50, WINDOW_WIDTH, WINDOW_HEIGHT),
+    if (nk_begin(ctx, &layout, "Node Editor", nk_rect(0, 0, width, height),
         NK_WINDOW_BORDER|NK_WINDOW_NO_SCROLLBAR|NK_WINDOW_MOVABLE))
     {
         /* allocate complete window space */
+        nk_window_set_size(ctx, nk_vec2(width, height));
         canvas = nk_window_get_canvas(ctx);
         total_space = nk_window_get_content_region(ctx);
         nk_layout_space_begin(ctx, NK_STATIC, total_space.h, nodedit->node_count);
@@ -616,6 +617,7 @@ int main(int argc, char *argv[])
     /* Platform */
     static GLFWwindow *win;
     int width = 0, height = 0;
+    int display_width, display_height;
 
     /* GUI */
     struct device device;
@@ -653,11 +655,11 @@ int main(int argc, char *argv[])
     {/* GUI */
     device_init(&device);
     {const void *image; int w, h;
-    const char *font_path = (argc > 1) ? argv[1]: 0;
+    struct nk_font_config cfg = nk_font_config(0);
+    cfg.oversample_h = 3; cfg.oversample_v = 2;
     nk_font_atlas_init_default(&atlas);
     nk_font_atlas_begin(&atlas);
-    if (font_path) font = nk_font_atlas_add_from_file(&atlas, font_path, 13.0f, NULL);
-    else font = nk_font_atlas_add_default(&atlas, 13.0f, NULL);
+    font = nk_font_atlas_add_from_file(&atlas, "../../extra_font/Roboto-Regular.ttf", 14.0f, &cfg);
     image = nk_font_atlas_bake(&atlas, &w, &h, NK_FONT_ATLAS_RGBA32);
     device_upload_atlas(&device, image, w, h);
     nk_font_atlas_end(&atlas, nk_handle_id((int)device.font_tex), &device.null);}
@@ -670,6 +672,9 @@ int main(int argc, char *argv[])
         {double x, y;
         nk_input_begin(&ctx);
         glfwPollEvents();
+        glfwGetWindowSize(win, &width, &height);
+        glfwGetFramebufferSize(win, &display_width, &display_height);
+
         nk_input_key(&ctx, NK_KEY_DEL, glfwGetKey(win, GLFW_KEY_DELETE) == GLFW_PRESS);
         nk_input_key(&ctx, NK_KEY_ENTER, glfwGetKey(win, GLFW_KEY_ENTER) == GLFW_PRESS);
         nk_input_key(&ctx, NK_KEY_TAB, glfwGetKey(win, GLFW_KEY_TAB) == GLFW_PRESS);
@@ -692,6 +697,9 @@ int main(int argc, char *argv[])
             nk_input_key(&ctx, NK_KEY_SHIFT, 0);
         }
         glfwGetCursorPos(win, &x, &y);
+        x *= (double)(int)((float)width/(float)display_width);
+        y *= (double)(int)((float)height/(float)display_height);
+
         nk_input_motion(&ctx, (int)x, (int)y);
         nk_input_button(&ctx, NK_BUTTON_LEFT, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
         nk_input_button(&ctx, NK_BUTTON_MIDDLE, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS);
@@ -699,10 +707,9 @@ int main(int argc, char *argv[])
         nk_input_end(&ctx);}
 
         /* GUI */
-        if (!node_editor_run(&node, &ctx)) break;
+        if (!node_editor_run(&node, &ctx, width, height)) break;
 
         /* Draw */
-        glfwGetWindowSize(win, &width, &height);
         glViewport(0, 0, width, height);
         glClear(GL_COLOR_BUFFER_BIT);
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);

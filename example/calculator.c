@@ -272,6 +272,7 @@ int main(int argc, char *argv[])
     /* Platform */
     static GLFWwindow *win;
     int width = 0, height = 0;
+    int display_width, display_height;
 
     /* GUI */
     struct device device;
@@ -308,11 +309,11 @@ int main(int argc, char *argv[])
     {/* GUI */
     device_init(&device);
     {const void *image; int w, h;
-    const char *font_path = (argc > 1) ? argv[1]: 0;
+    struct nk_font_config cfg = nk_font_config(0);
+    cfg.oversample_h = 3; cfg.oversample_v = 2;
     nk_font_atlas_init_default(&atlas);
     nk_font_atlas_begin(&atlas);
-    if (font_path) font = nk_font_atlas_add_from_file(&atlas, font_path, 13.0f, NULL);
-    else font = nk_font_atlas_add_default(&atlas, 13.0f, NULL);
+    font = nk_font_atlas_add_from_file(&atlas, "../../extra_font/Roboto-Regular.ttf", 14.0f, &cfg);
     image = nk_font_atlas_bake(&atlas, &w, &h, NK_FONT_ATLAS_RGBA32);
     device_upload_atlas(&device, image, w, h);
     nk_font_atlas_end(&atlas, nk_handle_id((int)device.font_tex), &device.null);}
@@ -324,6 +325,9 @@ int main(int argc, char *argv[])
         {double x, y;
         nk_input_begin(&ctx);
         glfwPollEvents();
+        glfwGetWindowSize(win, &width, &height);
+        glfwGetFramebufferSize(win, &display_width, &display_height);
+
         nk_input_key(&ctx, NK_KEY_DEL, glfwGetKey(win, GLFW_KEY_DELETE) == GLFW_PRESS);
         nk_input_key(&ctx, NK_KEY_ENTER, glfwGetKey(win, GLFW_KEY_ENTER) == GLFW_PRESS);
         nk_input_key(&ctx, NK_KEY_TAB, glfwGetKey(win, GLFW_KEY_TAB) == GLFW_PRESS);
@@ -346,6 +350,9 @@ int main(int argc, char *argv[])
             nk_input_key(&ctx, NK_KEY_SHIFT, 0);
         }
         glfwGetCursorPos(win, &x, &y);
+        x *= (double)(int)((float)width/(float)display_width);
+        y *= (double)(int)((float)height/(float)display_height);
+
         nk_input_motion(&ctx, (int)x, (int)y);
         nk_input_button(&ctx, NK_BUTTON_LEFT, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
         nk_input_button(&ctx, NK_BUTTON_MIDDLE, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS);
@@ -415,7 +422,6 @@ int main(int argc, char *argv[])
         nk_end(&ctx);}
 
         /* Draw */
-        glfwGetWindowSize(win, &width, &height);
         glViewport(0, 0, width, height);
         glClear(GL_COLOR_BUFFER_BIT);
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);

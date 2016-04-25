@@ -43,7 +43,12 @@
   #define NK_SHADER_VERSION "#version 300 es\n"
 #endif
 
-struct icons {
+struct media {
+    struct nk_font *font_14;
+    struct nk_font *font_18;
+    struct nk_font *font_20;
+    struct nk_font *font_22;
+
     struct nk_image unchecked;
     struct nk_image checked;
     struct nk_image rocket;
@@ -219,33 +224,33 @@ grid_demo(struct nk_context *ctx)
  *
  * ===============================================================*/
 static void
-ui_header(struct nk_context *ctx, const char *title)
+ui_header(struct nk_context *ctx, struct media *media, const char *title)
 {
-    ctx->style.font.height = 18;
+    nk_style_set_font(ctx, &media->font_18->handle);
     nk_layout_row_dynamic(ctx, 20, 1);
     nk_label(ctx, title, NK_TEXT_LEFT);
 }
 
 static void
-ui_widget(struct nk_context *ctx, float height, float font_height)
+ui_widget(struct nk_context *ctx, struct media *media, float height)
 {
     static const float ratio[] = {0.15f, 0.85f};
-    ctx->style.font.height = font_height;
+    nk_style_set_font(ctx, &media->font_22->handle);
     nk_layout_row(ctx, NK_DYNAMIC, height, 2, ratio);
     nk_spacing(ctx, 1);
 }
 
 static void
-ui_widget_centered(struct nk_context *ctx, float height, float font_height)
+ui_widget_centered(struct nk_context *ctx, struct media *media, float height)
 {
     static const float ratio[] = {0.15f, 0.50f, 0.35f};
-    ctx->style.font.height = font_height;
+    nk_style_set_font(ctx, &media->font_22->handle);
     nk_layout_row(ctx, NK_DYNAMIC, height, 3, ratio);
     nk_spacing(ctx, 1);
 }
 
 static void
-button_demo(struct nk_context *ctx, struct icons *img)
+button_demo(struct nk_context *ctx, struct media *media)
 {
     struct nk_panel layout;
     struct nk_panel menu;
@@ -254,7 +259,7 @@ button_demo(struct nk_context *ctx, struct icons *img)
     static int toggle1 = 0;
     static int toggle2 = 1;
 
-    ctx->style.font.height = 20;
+    nk_style_set_font(ctx, &media->font_20->handle);
     nk_begin(ctx, &layout, "Button Demo", nk_rect(50,50,255,610),
         NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_BORDER_HEADER|NK_WINDOW_TITLE);
 
@@ -265,69 +270,69 @@ button_demo(struct nk_context *ctx, struct icons *img)
     {
         /* toolbar */
         nk_layout_row_static(ctx, 40, 40, 4);
-        if (nk_menu_begin_image(ctx, &menu, "Music", img->play, 120))
+        if (nk_menu_begin_image(ctx, &menu, "Music", media->play, 120))
         {
             /* settings */
             nk_layout_row_dynamic(ctx, 25, 1);
-            nk_menu_item_image_label(ctx, img->play, "Play", NK_TEXT_RIGHT);
-            nk_menu_item_image_label(ctx, img->stop, "Stop", NK_TEXT_RIGHT);
-            nk_menu_item_image_label(ctx, img->pause, "Pause", NK_TEXT_RIGHT);
-            nk_menu_item_image_label(ctx, img->next, "Next", NK_TEXT_RIGHT);
-            nk_menu_item_image_label(ctx, img->prev, "Prev", NK_TEXT_RIGHT);
+            nk_menu_item_image_label(ctx, media->play, "Play", NK_TEXT_RIGHT);
+            nk_menu_item_image_label(ctx, media->stop, "Stop", NK_TEXT_RIGHT);
+            nk_menu_item_image_label(ctx, media->pause, "Pause", NK_TEXT_RIGHT);
+            nk_menu_item_image_label(ctx, media->next, "Next", NK_TEXT_RIGHT);
+            nk_menu_item_image_label(ctx, media->prev, "Prev", NK_TEXT_RIGHT);
             nk_menu_end(ctx);
         }
-        nk_button_image(ctx, img->tools, NK_BUTTON_DEFAULT);
-        nk_button_image(ctx, img->cloud, NK_BUTTON_DEFAULT);
-        nk_button_image(ctx, img->pen, NK_BUTTON_DEFAULT);
+        nk_button_image(ctx, media->tools, NK_BUTTON_DEFAULT);
+        nk_button_image(ctx, media->cloud, NK_BUTTON_DEFAULT);
+        nk_button_image(ctx, media->pen, NK_BUTTON_DEFAULT);
     }
     nk_menubar_end(ctx);
 
     /*------------------------------------------------
      *                  BUTTON
      *------------------------------------------------*/
-    ui_header(ctx, "Push buttons");
-    ui_widget(ctx, 35, 22);
+    ui_header(ctx, media, "Push buttons");
+    ui_widget(ctx, media, 35);
     if (nk_button_label(ctx, "Push me", NK_BUTTON_DEFAULT))
         fprintf(stdout, "pushed!\n");
-    ui_widget(ctx, 35, 22);
-    if (nk_button_image_label(ctx, img->rocket, "Styled", NK_TEXT_CENTERED, NK_BUTTON_DEFAULT))
+    ui_widget(ctx, media, 35);
+    if (nk_button_image_label(ctx, media->rocket, "Styled", NK_TEXT_CENTERED, NK_BUTTON_DEFAULT))
         fprintf(stdout, "rocket!\n");
 
     /*------------------------------------------------
      *                  REPEATER
      *------------------------------------------------*/
-    ui_header(ctx, "Repeater");
-    ui_widget(ctx, 35, 22);
+    ui_header(ctx, media, "Repeater");
+    ui_widget(ctx, media, 35);
     if (nk_button_label(ctx, "Press me", NK_BUTTON_REPEATER))
         fprintf(stdout, "pressed!\n");
 
     /*------------------------------------------------
      *                  TOGGLE
      *------------------------------------------------*/
-    ui_header(ctx, "Toggle buttons");
-    ui_widget(ctx, 35, 22);
-    if (nk_button_image_label(ctx, (toggle0) ? img->checked: img->unchecked,
+    ui_header(ctx, media, "Toggle buttons");
+    ui_widget(ctx, media, 35);
+    if (nk_button_image_label(ctx, (toggle0) ? media->checked: media->unchecked,
         "Toggle", NK_TEXT_LEFT, NK_BUTTON_DEFAULT)) toggle0 = !toggle0;
 
-    ui_widget(ctx, 35, 22);
-    if (nk_button_image_label(ctx, (toggle1) ? img->checked: img->unchecked,
+    ui_widget(ctx, media, 35);
+    if (nk_button_image_label(ctx, (toggle1) ? media->checked: media->unchecked,
         "Toggle", NK_TEXT_LEFT, NK_BUTTON_DEFAULT)) toggle1 = !toggle1;
 
-    ui_widget(ctx, 35, 22);
-    if (nk_button_image_label(ctx, (toggle2) ? img->checked: img->unchecked,
+    ui_widget(ctx, media, 35);
+    if (nk_button_image_label(ctx, (toggle2) ? media->checked: media->unchecked,
         "Toggle", NK_TEXT_LEFT, NK_BUTTON_DEFAULT)) toggle2 = !toggle2;
 
     /*------------------------------------------------
      *                  RADIO
      *------------------------------------------------*/
-    ui_header(ctx, "Radio buttons");
-    ui_widget(ctx, 35, 22);
+    ui_header(ctx, media, "Radio buttons");
+    ui_widget(ctx, media, 35);
     if (nk_button_symbol_label(ctx, (option == 0)?NK_SYMBOL_CIRCLE_FILLED:NK_SYMBOL_CIRCLE,
             "Select", NK_TEXT_LEFT, NK_BUTTON_DEFAULT)) option = 0;
-    ui_widget(ctx, 35, 22);
+    ui_widget(ctx, media, 22);
     if (nk_button_symbol_label(ctx, (option == 1)?NK_SYMBOL_CIRCLE_FILLED:NK_SYMBOL_CIRCLE,
             "Select", NK_TEXT_LEFT, NK_BUTTON_DEFAULT)) option = 1;
-    ui_widget(ctx, 35, 22);
+    ui_widget(ctx, media, 35);
     if (nk_button_symbol_label(ctx, (option == 2)?NK_SYMBOL_CIRCLE_FILLED:NK_SYMBOL_CIRCLE,
             "Select", NK_TEXT_LEFT, NK_BUTTON_DEFAULT)) option = 2;
 
@@ -337,17 +342,17 @@ button_demo(struct nk_context *ctx, struct icons *img)
     if (nk_contextual_begin(ctx, &menu, NK_WINDOW_NO_SCROLLBAR, nk_vec2(120, 200), nk_window_get_bounds(ctx))) {
         ctx->style.font.height = 18;
         nk_layout_row_dynamic(ctx, 25, 1);
-        if (nk_contextual_item_image_label(ctx, img->copy, "Clone", NK_TEXT_RIGHT))
+        if (nk_contextual_item_image_label(ctx, media->copy, "Clone", NK_TEXT_RIGHT))
             fprintf(stdout, "pressed clone!\n");
-        if (nk_contextual_item_image_label(ctx, img->del, "Delete", NK_TEXT_RIGHT))
+        if (nk_contextual_item_image_label(ctx, media->del, "Delete", NK_TEXT_RIGHT))
             fprintf(stdout, "pressed delete!\n");
-        if (nk_contextual_item_image_label(ctx, img->convert, "Convert", NK_TEXT_RIGHT))
+        if (nk_contextual_item_image_label(ctx, media->convert, "Convert", NK_TEXT_RIGHT))
             fprintf(stdout, "pressed convert!\n");
-        if (nk_contextual_item_image_label(ctx, img->edit, "Edit", NK_TEXT_RIGHT))
+        if (nk_contextual_item_image_label(ctx, media->edit, "Edit", NK_TEXT_RIGHT))
             fprintf(stdout, "pressed edit!\n");
         nk_contextual_end(ctx);
     }
-    ctx->style.font.height = 14;
+    nk_style_set_font(ctx, &media->font_14->handle);
     nk_end(ctx);
 }
 
@@ -357,7 +362,7 @@ button_demo(struct nk_context *ctx, struct icons *img)
  *
  * ===============================================================*/
 static void
-basic_demo(struct nk_context *ctx, struct icons *img)
+basic_demo(struct nk_context *ctx, struct media *media)
 {
     static int image_active;
     static int check0 = 1;
@@ -373,25 +378,25 @@ basic_demo(struct nk_context *ctx, struct icons *img)
     int i = 0;
     struct nk_panel layout;
     struct nk_panel combo;
-    ctx->style.font.height = 20;
+    nk_style_set_font(ctx, &media->font_20->handle);
     nk_begin(ctx, &layout, "Basic Demo", nk_rect(320, 50, 275, 610),
         NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_BORDER_HEADER|NK_WINDOW_TITLE);
 
     /*------------------------------------------------
      *                  POPUP BUTTON
      *------------------------------------------------*/
-    ui_header(ctx, "Popup & Scrollbar & Images");
-    ui_widget(ctx, 35, 22);
-    if (nk_button_image_label(ctx, img->dir,
+    ui_header(ctx, media, "Popup & Scrollbar & Images");
+    ui_widget(ctx, media, 35);
+    if (nk_button_image_label(ctx, media->dir,
         "Images", NK_TEXT_CENTERED, NK_BUTTON_DEFAULT))
         image_active = !image_active;
 
     /*------------------------------------------------
      *                  SELECTED IMAGE
      *------------------------------------------------*/
-    ui_header(ctx, "Selected Image");
-    ui_widget_centered(ctx, 100, 22);
-    nk_image(ctx, img->images[selected_image]);
+    ui_header(ctx, media, "Selected Image");
+    ui_widget_centered(ctx, media, 100);
+    nk_image(ctx, media->images[selected_image]);
 
     /*------------------------------------------------
      *                  IMAGE POPUP
@@ -401,7 +406,7 @@ basic_demo(struct nk_context *ctx, struct icons *img)
         if (nk_popup_begin(ctx, &popup, NK_POPUP_STATIC, "Image Popup", 0, nk_rect(265, 0, 320, 220))) {
             nk_layout_row_static(ctx, 82, 82, 3);
             for (i = 0; i < 9; ++i) {
-                if (nk_button_image(ctx, img->images[i], NK_BUTTON_DEFAULT)) {
+                if (nk_button_image(ctx, media->images[i], NK_BUTTON_DEFAULT)) {
                     selected_image = i;
                     image_active = 0;
                     nk_popup_close(ctx);
@@ -413,8 +418,8 @@ basic_demo(struct nk_context *ctx, struct icons *img)
     /*------------------------------------------------
      *                  COMBOBOX
      *------------------------------------------------*/
-    ui_header(ctx, "Combo box");
-    ui_widget(ctx, 40, 22);
+    ui_header(ctx, media, "Combo box");
+    ui_widget(ctx, media, 40);
     if (nk_combo_begin_label(ctx, &combo, items[selected_item], 200)) {
         nk_layout_row_dynamic(ctx, 35, 1);
         for (i = 0; i < 3; ++i)
@@ -423,11 +428,11 @@ basic_demo(struct nk_context *ctx, struct icons *img)
         nk_combo_end(ctx);
     }
 
-    ui_widget(ctx, 40, 22);
-    if (nk_combo_begin_image_label(ctx, &combo, items[selected_icon], img->images[selected_icon], 200)) {
+    ui_widget(ctx, media, 40);
+    if (nk_combo_begin_image_label(ctx, &combo, items[selected_icon], media->images[selected_icon], 200)) {
         nk_layout_row_dynamic(ctx, 35, 1);
         for (i = 0; i < 3; ++i)
-            if (nk_combo_item_image_label(ctx, img->images[i], items[i], NK_TEXT_RIGHT))
+            if (nk_combo_item_image_label(ctx, media->images[i], items[i], NK_TEXT_RIGHT))
                 selected_icon = i;
         nk_combo_end(ctx);
     }
@@ -435,17 +440,17 @@ basic_demo(struct nk_context *ctx, struct icons *img)
     /*------------------------------------------------
      *                  CHECKBOX
      *------------------------------------------------*/
-    ui_header(ctx, "Checkbox");
-    ui_widget(ctx, 30, 22);
+    ui_header(ctx, media, "Checkbox");
+    ui_widget(ctx, media, 30);
     nk_checkbox_label(ctx, "Flag 1", &check0);
-    ui_widget(ctx, 30, 22);
+    ui_widget(ctx, media, 30);
     nk_checkbox_label(ctx, "Flag 2", &check1);
 
     /*------------------------------------------------
      *                  PROGRESSBAR
      *------------------------------------------------*/
-    ui_header(ctx, "Progressbar");
-    ui_widget(ctx, 35, 22);
+    ui_header(ctx, media, "Progressbar");
+    ui_widget(ctx, media, 35);
     nk_progress(ctx, &prog, 100, nk_true);
 
     /*------------------------------------------------
@@ -458,13 +463,13 @@ basic_demo(struct nk_context *ctx, struct icons *img)
     }
 
     if (piemenu_active) {
-        int ret = ui_piemenu(ctx, piemenu_pos, 140, &img->menu[0], 6);
+        int ret = ui_piemenu(ctx, piemenu_pos, 140, &media->menu[0], 6);
         if (ret != -1) {
             fprintf(stdout, "piemenu selected: %d\n", ret);
             piemenu_active = 0;
         }
     }
-    ctx->style.font.height = 14;
+    nk_style_set_font(ctx, &media->font_14->handle);
     nk_end(ctx);
 }
 
@@ -518,7 +523,6 @@ icon_load(const char *filename)
     stbi_image_free(data);
     return nk_image_id((int)tex);
 }
-
 
 static void
 device_init(struct device *dev)
@@ -735,12 +739,12 @@ int main(int argc, char *argv[])
     /* Platform */
     static GLFWwindow *win;
     int width = 0, height = 0;
+    int display_width=0, display_height=0;
 
     /* GUI */
     struct device device;
-    struct nk_font *font;
     struct nk_font_atlas atlas;
-    struct icons icons;
+    struct media media;
     struct nk_context ctx;
 
     /* GLFW */
@@ -760,6 +764,8 @@ int main(int argc, char *argv[])
     glfwSetWindowUserPointer(win, &ctx);
     glfwSetCharCallback(win, text_input);
     glfwSetScrollCallback(win, scroll_input);
+    glfwGetWindowSize(win, &width, &height);
+    glfwGetFramebufferSize(win, &display_width, &display_height);
 
     /* OpenGL */
     glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -772,46 +778,52 @@ int main(int argc, char *argv[])
     {/* GUI */
     device_init(&device);
     {const void *image; int w, h;
-    const char *font_path = (argc > 1) ? argv[1]: 0;
+    struct nk_font_config cfg = nk_font_config(0);
+    cfg.oversample_h = 3; cfg.oversample_v = 2;
+    /* Loading one font with different heights is only required if you want higher
+     * quality text otherwise you can just set the font height directly
+     * e.g.: ctx->style.font.height = 20. */
     nk_font_atlas_init_default(&atlas);
     nk_font_atlas_begin(&atlas);
-    if (font_path) font = nk_font_atlas_add_from_file(&atlas, font_path, 14.0f, NULL);
-    else font = nk_font_atlas_add_default(&atlas, 14.0f, NULL);
+    media.font_14 = nk_font_atlas_add_from_file(&atlas, "../../extra_font/Roboto-Regular.ttf", 14.0f, &cfg);
+    media.font_18 = nk_font_atlas_add_from_file(&atlas, "../../extra_font/Roboto-Regular.ttf", 18.0f, &cfg);
+    media.font_20 = nk_font_atlas_add_from_file(&atlas, "../../extra_font/Roboto-Regular.ttf", 20.0f, &cfg);
+    media.font_22 = nk_font_atlas_add_from_file(&atlas, "../../extra_font/Roboto-Regular.ttf", 22.0f, &cfg);
     image = nk_font_atlas_bake(&atlas, &w, &h, NK_FONT_ATLAS_RGBA32);
     device_upload_atlas(&device, image, w, h);
     nk_font_atlas_end(&atlas, nk_handle_id((int)device.font_tex), &device.null);}
-    nk_init_default(&ctx, &font->handle);}
+    nk_init_default(&ctx, &media.font_14->handle);}
 
     /* icons */
     glEnable(GL_TEXTURE_2D);
-    icons.unchecked = icon_load("../icon/unchecked.png");
-    icons.checked = icon_load("../icon/checked.png");
-    icons.rocket = icon_load("../icon/rocket.png");
-    icons.cloud = icon_load("../icon/cloud.png");
-    icons.pen = icon_load("../icon/pen.png");
-    icons.play = icon_load("../icon/play.png");
-    icons.pause = icon_load("../icon/pause.png");
-    icons.stop = icon_load("../icon/stop.png");
-    icons.next =  icon_load("../icon/next.png");
-    icons.prev =  icon_load("../icon/prev.png");
-    icons.tools = icon_load("../icon/tools.png");
-    icons.dir = icon_load("../icon/directory.png");
-    icons.copy = icon_load("../icon/copy.png");
-    icons.convert = icon_load("../icon/export.png");
-    icons.del = icon_load("../icon/delete.png");
-    icons.edit = icon_load("../icon/edit.png");
-    icons.menu[0] = icon_load("../icon/home.png");
-    icons.menu[1] = icon_load("../icon/phone.png");
-    icons.menu[2] = icon_load("../icon/plane.png");
-    icons.menu[3] = icon_load("../icon/wifi.png");
-    icons.menu[4] = icon_load("../icon/settings.png");
-    icons.menu[5] = icon_load("../icon/volume.png");
+    media.unchecked = icon_load("../icon/unchecked.png");
+    media.checked = icon_load("../icon/checked.png");
+    media.rocket = icon_load("../icon/rocket.png");
+    media.cloud = icon_load("../icon/cloud.png");
+    media.pen = icon_load("../icon/pen.png");
+    media.play = icon_load("../icon/play.png");
+    media.pause = icon_load("../icon/pause.png");
+    media.stop = icon_load("../icon/stop.png");
+    media.next =  icon_load("../icon/next.png");
+    media.prev =  icon_load("../icon/prev.png");
+    media.tools = icon_load("../icon/tools.png");
+    media.dir = icon_load("../icon/directory.png");
+    media.copy = icon_load("../icon/copy.png");
+    media.convert = icon_load("../icon/export.png");
+    media.del = icon_load("../icon/delete.png");
+    media.edit = icon_load("../icon/edit.png");
+    media.menu[0] = icon_load("../icon/home.png");
+    media.menu[1] = icon_load("../icon/phone.png");
+    media.menu[2] = icon_load("../icon/plane.png");
+    media.menu[3] = icon_load("../icon/wifi.png");
+    media.menu[4] = icon_load("../icon/settings.png");
+    media.menu[5] = icon_load("../icon/volume.png");
 
     {int i;
     for (i = 0; i < 9; ++i) {
         char buffer[256];
         sprintf(buffer, "../images/image%d.png", (i+1));
-        icons.images[i] = icon_load(buffer);
+        media.images[i] = icon_load(buffer);
     }}
 
     while (!glfwWindowShouldClose(win))
@@ -820,6 +832,9 @@ int main(int argc, char *argv[])
         {double x, y;
         nk_input_begin(&ctx);
         glfwPollEvents();
+        glfwGetWindowSize(win, &width, &height);
+        glfwGetFramebufferSize(win, &display_width, &display_height);
+
         nk_input_key(&ctx, NK_KEY_DEL, glfwGetKey(win, GLFW_KEY_DELETE) == GLFW_PRESS);
         nk_input_key(&ctx, NK_KEY_ENTER, glfwGetKey(win, GLFW_KEY_ENTER) == GLFW_PRESS);
         nk_input_key(&ctx, NK_KEY_TAB, glfwGetKey(win, GLFW_KEY_TAB) == GLFW_PRESS);
@@ -842,6 +857,9 @@ int main(int argc, char *argv[])
             nk_input_key(&ctx, NK_KEY_SHIFT, 0);
         }
         glfwGetCursorPos(win, &x, &y);
+        x *= (double)(int)((float)width/(float)display_width);
+        y *= (double)(int)((float)height/(float)display_height);
+
         nk_input_motion(&ctx, (int)x, (int)y);
         nk_input_button(&ctx, NK_BUTTON_LEFT, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
         nk_input_button(&ctx, NK_BUTTON_MIDDLE, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS);
@@ -849,12 +867,11 @@ int main(int argc, char *argv[])
         nk_input_end(&ctx);}
 
         /* GUI */
-        basic_demo(&ctx, &icons);
-        button_demo(&ctx, &icons);
+        basic_demo(&ctx, &media);
+        button_demo(&ctx, &media);
         grid_demo(&ctx);
 
         /* Draw */
-        glfwGetWindowSize(win, &width, &height);
         glViewport(0, 0, width, height);
         glClear(GL_COLOR_BUFFER_BIT);
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
@@ -862,25 +879,25 @@ int main(int argc, char *argv[])
         glfwSwapBuffers(win);
     }
 
-    glDeleteTextures(1,(const GLuint*)&icons.unchecked.handle.id);
-    glDeleteTextures(1,(const GLuint*)&icons.checked.handle.id);
-    glDeleteTextures(1,(const GLuint*)&icons.rocket.handle.id);
-    glDeleteTextures(1,(const GLuint*)&icons.cloud.handle.id);
-    glDeleteTextures(1,(const GLuint*)&icons.pen.handle.id);
-    glDeleteTextures(1,(const GLuint*)&icons.play.handle.id);
-    glDeleteTextures(1,(const GLuint*)&icons.pause.handle.id);
-    glDeleteTextures(1,(const GLuint*)&icons.stop.handle.id);
-    glDeleteTextures(1,(const GLuint*)&icons.next.handle.id);
-    glDeleteTextures(1,(const GLuint*)&icons.prev.handle.id);
-    glDeleteTextures(1,(const GLuint*)&icons.tools.handle.id);
-    glDeleteTextures(1,(const GLuint*)&icons.dir.handle.id);
-    glDeleteTextures(1,(const GLuint*)&icons.del.handle.id);
+    glDeleteTextures(1,(const GLuint*)&media.unchecked.handle.id);
+    glDeleteTextures(1,(const GLuint*)&media.checked.handle.id);
+    glDeleteTextures(1,(const GLuint*)&media.rocket.handle.id);
+    glDeleteTextures(1,(const GLuint*)&media.cloud.handle.id);
+    glDeleteTextures(1,(const GLuint*)&media.pen.handle.id);
+    glDeleteTextures(1,(const GLuint*)&media.play.handle.id);
+    glDeleteTextures(1,(const GLuint*)&media.pause.handle.id);
+    glDeleteTextures(1,(const GLuint*)&media.stop.handle.id);
+    glDeleteTextures(1,(const GLuint*)&media.next.handle.id);
+    glDeleteTextures(1,(const GLuint*)&media.prev.handle.id);
+    glDeleteTextures(1,(const GLuint*)&media.tools.handle.id);
+    glDeleteTextures(1,(const GLuint*)&media.dir.handle.id);
+    glDeleteTextures(1,(const GLuint*)&media.del.handle.id);
 
     nk_font_atlas_clear(&atlas);
     nk_free(&ctx);
+
     device_shutdown(&device);
     glfwTerminate();
     return 0;
 }
-
 
