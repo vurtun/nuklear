@@ -13,7 +13,7 @@
 #define NK_SDL_MAX_POINTS 128
 
 struct nk_sdl_Font {
-	int width;
+    int width;
     int height;
     int handle;
 };
@@ -25,16 +25,13 @@ static struct nk_sdl {
 
 static nk_sdl_Font *sdl_font;
 static SDL_Rect sdl_clip_rect;
-/* Point buffer for the polygon rendering */
-static Sint16 points_x[NK_SDL_MAX_POINTS];
-static Sint16 points_y[NK_SDL_MAX_POINTS];
 
 static void
 nk_sdl_scissor(SDL_Surface *surface, float x, float y, float w, float h)
 {
     sdl_clip_rect.x = x;
     sdl_clip_rect.y = y;
-    sdl_clip_rect.w = w  + 1; /* Why do we need adding 1 ? */
+    sdl_clip_rect.w = w  + 1; 
     sdl_clip_rect.h = h;
     SDL_SetClipRect(surface, &sdl_clip_rect);
 }
@@ -43,95 +40,95 @@ static void
 nk_sdl_stroke_line(SDL_Surface *surface, short x0, short y0, short x1,
     short y1, unsigned int line_thickness, struct nk_color col)
 {
-	thickLineRGBA(surface, x0, y0, x1, y1, line_thickness, col.r, col.g, col.b, col.a);
+    thickLineRGBA(surface, x0, y0, x1, y1, line_thickness, col.r, col.g, col.b, col.a);
 }
 
 static void
 nk_sdl_stroke_rect(SDL_Surface *surface, short x, short y, unsigned short w,
     unsigned short h, unsigned short r, unsigned short line_thickness, struct nk_color col)
 {
-	/* TODO Add line thickness support */
-	if (r == 0) {
-		rectangleRGBA(surface, x, y, x + w, y + h, col.r, col.g, col.b, col.a); 
-	} else {
-		roundedRectangleRGBA(surface, x, y, x + w, y + h, r, col.r, col.g, col.b, col.a);
-	}
+    /* TODO Add line thickness support */
+    if (r == 0) {
+        rectangleRGBA(surface, x, y, x + w, y + h, col.r, col.g, col.b, col.a); 
+    } else {
+        roundedRectangleRGBA(surface, x, y, x + w, y + h, r, col.r, col.g, col.b, col.a);
+    }
 }
 
 static void
 nk_sdl_fill_rect(SDL_Surface *surface, short x, short y, unsigned short w,
     unsigned short h, unsigned short r, struct nk_color col)
 {
-	if (r == 0) {
-		boxRGBA(surface, x, y, x + w, y + h, col.r, col.g, col.b, col.a); 
-	} else {
-		roundedBoxRGBA(surface, x, y, x + w, y + h, r, col.r, col.g, col.b, col.a);
-	}
+    if (r == 0) {
+        boxRGBA(surface, x, y, x + w, y + h, col.r, col.g, col.b, col.a); 
+    } else {
+        roundedBoxRGBA(surface, x, y, x + w, y + h, r, col.r, col.g, col.b, col.a);
+    }
 }
 
 static void 
 nk_sdl_fill_triangle(SDL_Surface *surface, short x0, short y0, short x1, short y1, short x2, short y2, struct nk_color col)
 {
-	filledTrigonRGBA(surface, x0, y0, x1, y1, x2, y2, col.r, col.g, col.b, col.a);
+    filledTrigonRGBA(surface, x0, y0, x1, y1, x2, y2, col.r, col.g, col.b, col.a);
 }
 
 static void
 nk_sdl_stroke_triangle(SDL_Surface *surface, short x0, short y0, short x1,
     short y1, short x2, short y2, unsigned short line_thickness, struct nk_color col)
 {
-	/* TODO Add line_thickness support */
-	aatrigonRGBA(surface, x0, y0, x1, y1, x2, y2, col.r, col.g, col.b, col.a); 
+    /* TODO Add line_thickness support */
+    aatrigonRGBA(surface, x0, y0, x1, y1, x2, y2, col.r, col.g, col.b, col.a); 
 }
 
 static void
 nk_sdl_fill_polygon(SDL_Surface *surface, const struct nk_vec2i *pnts, int count, struct nk_color col)
 {
-	int i;
-	Sint16 *p_x = (Sint16 *)&points_x;
-	Sint16 *p_y = (Sint16 *)&points_y;
-	for (i = 0; (i < count) && (i < NK_SDL_MAX_POINTS); ++i) {
-		p_x[i] = pnts[i].x;
-		p_y[i] = pnts[i].y;
-	}
-	filledPolygonRGBA (surface, p_x, p_y, count, col.r, col.g, col.b, col.a);
+    Sint16 p_x[NK_SDL_MAX_POINTS];
+    Sint16 p_y[NK_SDL_MAX_POINTS];
+    int i;
+    for (i = 0; (i < count) && (i < NK_SDL_MAX_POINTS); ++i) {
+        p_x[i] = pnts[i].x;
+        p_y[i] = pnts[i].y;
+    }
+    filledPolygonRGBA (surface, (Sint16 *)p_x, (Sint16 *)p_y, count, col.r, col.g, col.b, col.a);
 }
 
 static void
 nk_sdl_stroke_polygon(SDL_Surface *surface, const struct nk_vec2i *pnts, int count,
     unsigned short line_thickness, struct nk_color col)
 {
-	/*  TODO Add line thickness support */
-	int i;
-	Sint16 *p_x = (Sint16 *)&points_x;
-	Sint16 *p_y = (Sint16 *)&points_y;
-	for (i = 0; (i < count) && (i < NK_SDL_MAX_POINTS); ++i) {
-		p_x[i] = pnts[i].x;
-		p_y[i] = pnts[i].y;
-	}
-	aapolygonRGBA(surface, p_x, p_y, count, col.r, col.g, col.b, col.a); 
+    /*  TODO Add line thickness support */
+    Sint16 p_x[NK_SDL_MAX_POINTS];
+    Sint16 p_y[NK_SDL_MAX_POINTS];
+    int i;
+    for (i = 0; (i < count) && (i < NK_SDL_MAX_POINTS); ++i) {
+        p_x[i] = pnts[i].x;
+        p_y[i] = pnts[i].y;
+    }
+    aapolygonRGBA(surface, (Sint16 *)p_x, (Sint16 *)p_y, count, col.r, col.g, col.b, col.a); 
 }
 
 static void
 nk_sdl_stroke_polyline(SDL_Surface *surface, const struct nk_vec2i *pnts,
     int count, unsigned short line_thickness, struct nk_color col)
 {
-	int x0, y0, x1, y1;
-	if (count == 1) {
-		x0 = pnts[0].x;
-		y0 = pnts[0].y;
-		x1 = x0;
-		y1 = y0;
-		thickLineRGBA(surface, x0, y0, x1, y1, line_thickness, col.r, col.g, col.b, col.a);
-	} else if (count >= 2) {
-		int i;
-		for (i = 0; i < (count - 1); i++) {
-			x0 = pnts[i].x;
-			y0 = pnts[i].y;
-			x1 = pnts[i + 1].x;
-			y1 = pnts[i + 1].y;
-			thickLineRGBA(surface, x0, y0, x1, y1, line_thickness, col.r, col.g, col.b, col.a);
-		}
-	}
+    int x0, y0, x1, y1;
+    if (count == 1) {
+        x0 = pnts[0].x;
+        y0 = pnts[0].y;
+        x1 = x0;
+        y1 = y0;
+        thickLineRGBA(surface, x0, y0, x1, y1, line_thickness, col.r, col.g, col.b, col.a);
+    } else if (count >= 2) {
+        int i;
+        for (i = 0; i < (count - 1); i++) {
+            x0 = pnts[i].x;
+            y0 = pnts[i].y;
+            x1 = pnts[i + 1].x;
+            y1 = pnts[i + 1].y;
+            thickLineRGBA(surface, x0, y0, x1, y1, line_thickness, col.r, col.g, col.b, col.a);
+        }
+    }
 }
 
 static void
@@ -179,13 +176,45 @@ nk_sdl_draw_text(SDL_Surface *surface, short x, short y, unsigned short w, unsig
     const char *text, int len, nk_sdl_Font *font, struct nk_color cbg, struct nk_color cfg)
 {
     int i; 
-    
+   
     nk_sdl_fill_rect(surface, x, y, len * font->width, font->height, 0, cbg);
     for (i = 0; i < len; i++) {
         characterRGBA(surface, x, y, text[i], cfg.r, cfg.g, cfg.b, cfg.a); 
         x += font->width;
     }
 }
+
+static void interpolate_color(struct nk_color c1, struct nk_color c2, struct nk_color *result, float fraction) {
+    float r = c1.r + (c2.r - c1.r) * fraction;
+    float g = c1.g + (c2.g - c1.g) * fraction;
+    float b = c1.b + (c2.b - c1.b) * fraction;
+    float a = c1.a + (c2.a - c1.a) * fraction;
+    result->r = (nk_byte)NK_CLAMP(0, r, 255);
+    result->g = (nk_byte)NK_CLAMP(0, g, 255);
+    result->b = (nk_byte)NK_CLAMP(0, b, 255);
+    result->a = (nk_byte)NK_CLAMP(0, a, 255);
+}
+
+static void
+nk_sdl_fill_rect_multi_color(SDL_Surface *surface, short x, short y, unsigned short w, unsigned short h, 
+    struct nk_color left, struct nk_color top,  struct nk_color right, struct nk_color bottom)
+{
+    struct nk_color X1, X2, Y;
+    float fraction_x, fraction_y;
+    int i,j;
+    
+    for (j = 0; j < h; j++) {
+        fraction_y = ((float)j) / h;
+        for (i = 0; i < w; i++) {
+            fraction_x = ((float)i) / w;
+            interpolate_color(left, top, &X1, fraction_x);
+            interpolate_color(right, bottom, &X2, fraction_x);
+            interpolate_color(X1, X2, &Y, fraction_y);
+            pixelRGBA(surface, x + i, y + j, Y.r, Y.g, Y.b, Y.a); 
+        }
+    }
+}
+
 
 static void
 nk_sdl_clear(SDL_Surface *surface, struct nk_color col)
@@ -204,7 +233,7 @@ nk_sdl_render(struct nk_color clear)
 {
     const struct nk_command *cmd;
 
-	SDL_Surface *screen_surface = sdl.screen_surface;
+    SDL_Surface *screen_surface = sdl.screen_surface;
     nk_sdl_clear(screen_surface, clear);
 
     nk_foreach(cmd, &sdl.ctx)
@@ -271,14 +300,17 @@ nk_sdl_render(struct nk_color clear)
             nk_sdl_stroke_curve(screen_surface, q->begin, q->ctrl[0], q->ctrl[1],
                 q->end, 22, q->line_thickness, q->color);
         } break;
-        case NK_COMMAND_RECT_MULTI_COLOR:
+        case NK_COMMAND_RECT_MULTI_COLOR: {
+            const struct nk_command_rect_multi_color *r = (const struct nk_command_rect_multi_color *)cmd;
+            nk_sdl_fill_rect_multi_color(screen_surface, r->x, r->y, r->w, r->h, r->left, r->top, r->right, r->bottom);
+        } break;
         case NK_COMMAND_IMAGE:
         case NK_COMMAND_ARC:
         case NK_COMMAND_ARC_FILLED:
         default: break;
         }
     }
-	
+    
     nk_sdl_blit(sdl.screen_surface);
     nk_clear(&sdl.ctx);
 
@@ -312,7 +344,7 @@ nk_sdl_init(SDL_Surface *screen_surface)
     sdl_font->height = 8; /* Default in  the SDL_gfx library */
     if (!sdl_font)
         return NULL;
-	
+    
     font.userdata = nk_handle_ptr(sdl_font);
     font.height = (float)sdl_font->height;
     font.width = nk_sdl_get_text_width;
@@ -384,10 +416,10 @@ nk_sdl_handle_event(SDL_Event *evt)
             nk_input_button(ctx, NK_BUTTON_MIDDLE, x, y, down);
         if (evt->button.button == SDL_BUTTON_RIGHT)
             nk_input_button(ctx, NK_BUTTON_RIGHT, x, y, down);
-		if (evt->button.button == SDL_BUTTON_WHEELUP)
-			nk_input_scroll(ctx, 1.0f);
-		if (evt->button.button == SDL_BUTTON_WHEELDOWN)
-			nk_input_scroll(ctx, -1.0f);
+        if (evt->button.button == SDL_BUTTON_WHEELUP)
+            nk_input_scroll(ctx, 1.0f);
+        if (evt->button.button == SDL_BUTTON_WHEELDOWN)
+            nk_input_scroll(ctx, -1.0f);
     } else if (evt->type == SDL_MOUSEMOTION) {
         nk_input_motion(ctx, evt->motion.x, evt->motion.y);
     }
@@ -396,7 +428,7 @@ nk_sdl_handle_event(SDL_Event *evt)
 NK_API void 
 nk_sdl_shutdown(void)
 {
-	free(sdl_font);
-	nk_free(&sdl.ctx);
+    free(sdl_font);
+    nk_free(&sdl.ctx);
 }
 

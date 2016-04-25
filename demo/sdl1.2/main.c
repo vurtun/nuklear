@@ -21,9 +21,6 @@
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 
-#define MAX_VERTEX_MEMORY 512 * 1024
-#define MAX_ELEMENT_MEMORY 128 * 1024
-
 int
 main(void)
 {
@@ -36,8 +33,8 @@ main(void)
 
     /* SDL setup */
     if( SDL_Init(SDL_INIT_VIDEO) == -1) {
-	printf( "Can't init SDL:  %s\n", SDL_GetError( ) );
-	return 1;
+        printf( "Can't init SDL:  %s\n", SDL_GetError( ) );
+        return 1;
     }
     screen_surface = SDL_SetVideoMode(WINDOW_WIDTH, WINDOW_HEIGHT, 32, SDL_SWSURFACE);
     if(screen_surface == NULL) {
