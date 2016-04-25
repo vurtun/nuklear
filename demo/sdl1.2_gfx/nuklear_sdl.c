@@ -47,7 +47,7 @@ static void
 nk_sdl_stroke_rect(SDL_Surface *surface, short x, short y, unsigned short w,
     unsigned short h, unsigned short r, unsigned short line_thickness, struct nk_color col)
 {
-    /* TODO Add line thickness support */
+    /* Note: thickness is not used by default */
     if (r == 0) {
         rectangleRGBA(surface, x, y, x + w, y + h, col.r, col.g, col.b, col.a); 
     } else {
@@ -76,7 +76,7 @@ static void
 nk_sdl_stroke_triangle(SDL_Surface *surface, short x0, short y0, short x1,
     short y1, short x2, short y2, unsigned short line_thickness, struct nk_color col)
 {
-    /* TODO Add line_thickness support */
+    /* Note: thickness is not used by default */
     aatrigonRGBA(surface, x0, y0, x1, y1, x2, y2, col.r, col.g, col.b, col.a); 
 }
 
@@ -97,7 +97,7 @@ static void
 nk_sdl_stroke_polygon(SDL_Surface *surface, const struct nk_vec2i *pnts, int count,
     unsigned short line_thickness, struct nk_color col)
 {
-    /*  TODO Add line thickness support */
+    /* Note: thickness is not used by default */
     Sint16 p_x[NK_SDL_MAX_POINTS];
     Sint16 p_y[NK_SDL_MAX_POINTS];
     int i;
@@ -142,7 +142,7 @@ static void
 nk_sdl_stroke_circle(SDL_Surface *surface, short x, short y, unsigned short w,
     unsigned short h, unsigned short line_thickness, struct nk_color col)
 {
-    /* TODO  Add line_thickness support */
+    /* Note: thickness is not used by default */
     aaellipseRGBA (surface,  x + w /2, y + h /2, w / 2, h / 2, col.r, col.g, col.b, col.a); 
 }
 
