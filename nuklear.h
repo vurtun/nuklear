@@ -8799,6 +8799,7 @@ nk_font_bake_memory(nk_size *temp, int *glyph_count,
 {
     int i;
     int range_count = 0;
+    int total_range_count = 0;
     NK_ASSERT(config);
     NK_ASSERT(glyph_count);
     if (!config) {
@@ -8811,12 +8812,13 @@ nk_font_bake_memory(nk_size *temp, int *glyph_count,
     if (!config->range)
         config->range = nk_font_default_glyph_ranges();
     for (i = 0; i < count; ++i) {
-        range_count += nk_range_count(config[i].range);
+        range_count = nk_range_count(config[i].range);
+        total_range_count += range_count;
         *glyph_count += nk_range_glyph_count(config[i].range, range_count);
     }
 
     *temp = (nk_size)*glyph_count * sizeof(struct nk_rp_rect);
-    *temp += (nk_size)range_count * sizeof(struct nk_tt_pack_range);
+    *temp += (nk_size)total_range_count * sizeof(struct nk_tt_pack_range);
     *temp += (nk_size)*glyph_count * sizeof(struct nk_tt_packedchar);
     *temp += (nk_size)count * sizeof(struct nk_font_bake_data);
     *temp += sizeof(struct nk_font_baker);
@@ -8849,6 +8851,7 @@ nk_font_bake_pack(nk_size *image_memory, int *width, int *height,
     struct nk_font_baker* baker;
     int total_glyph_count = 0;
     int total_range_count = 0;
+    int range_count = 0;
     int i = 0;
 
     NK_ASSERT(image_memory);
@@ -8863,8 +8866,9 @@ nk_font_bake_pack(nk_size *image_memory, int *width, int *height,
         !temp_size || !count) return nk_false;
 
     for (i = 0; i < count; ++i) {
-        total_range_count += nk_range_count(config[i].range);
-        total_glyph_count += nk_range_glyph_count(config[i].range, total_range_count);
+        range_count = nk_range_count(config[i].range);
+        total_range_count += range_count;
+        total_glyph_count += nk_range_glyph_count(config[i].range, range_count);
     }
 
     /* setup font baker from temporary memory */
@@ -8910,7 +8914,6 @@ nk_font_bake_pack(nk_size *image_memory, int *width, int *height,
             const struct nk_font_config *cfg = &config[input_i];
             struct nk_font_bake_data *tmp = &baker->build[input_i];
             int glyph_count;
-            int range_count;
 
             /* count glyphs + ranges in current font */
             glyph_count = 0; range_count = 0;
