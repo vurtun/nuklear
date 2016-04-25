@@ -18110,9 +18110,6 @@ nk_group_end(struct nk_context *ctx)
     nk_push_scissor(&win->buffer, parent->clip);
     ctx->current = win;
     win->layout = parent;
-    win->bounds = parent->bounds;
-    if (win->flags  & NK_WINDOW_BORDER)
-        win->bounds = nk_shrink_rect(win->bounds, -win->layout->border);
     return;
 }
 
