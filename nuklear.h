@@ -8914,7 +8914,6 @@ nk_font_bake_pack(nk_size *image_memory, int *width, int *height,
             const struct nk_font_config *cfg = &config[input_i];
             struct nk_font_bake_data *tmp = &baker->build[input_i];
             int glyph_count;
-            int range_count;
 
             /* count glyphs + ranges in current font */
             glyph_count = 0; range_count = 0;
