@@ -175,20 +175,22 @@ static void
 nk_sdl_draw_text(SDL_Surface *surface, short x, short y, unsigned short w, unsigned short h,
     const char *text, int len, nk_sdl_Font *font, struct nk_color cbg, struct nk_color cfg)
 {
-    int i; 
-   
+    int i;
     nk_sdl_fill_rect(surface, x, y, len * font->width, font->height, 0, cbg);
     for (i = 0; i < len; i++) {
-        characterRGBA(surface, x, y, text[i], cfg.r, cfg.g, cfg.b, cfg.a); 
+        characterRGBA(surface, x, y, text[i], cfg.r, cfg.g, cfg.b, cfg.a);
         x += font->width;
     }
 }
 
-static void interpolate_color(struct nk_color c1, struct nk_color c2, struct nk_color *result, float fraction) {
+static void
+interpolate_color(struct nk_color c1, struct nk_color c2, struct nk_color *result, float fraction)
+{
     float r = c1.r + (c2.r - c1.r) * fraction;
     float g = c1.g + (c2.g - c1.g) * fraction;
     float b = c1.b + (c2.b - c1.b) * fraction;
     float a = c1.a + (c2.a - c1.a) * fraction;
+
     result->r = (nk_byte)NK_CLAMP(0, r, 255);
     result->g = (nk_byte)NK_CLAMP(0, g, 255);
     result->b = (nk_byte)NK_CLAMP(0, b, 255);
@@ -196,13 +198,13 @@ static void interpolate_color(struct nk_color c1, struct nk_color c2, struct nk_
 }
 
 static void
-nk_sdl_fill_rect_multi_color(SDL_Surface *surface, short x, short y, unsigned short w, unsigned short h, 
+nk_sdl_fill_rect_multi_color(SDL_Surface *surface, short x, short y, unsigned short w, unsigned short h,
     struct nk_color left, struct nk_color top,  struct nk_color right, struct nk_color bottom)
 {
     struct nk_color X1, X2, Y;
     float fraction_x, fraction_y;
     int i,j;
-    
+
     for (j = 0; j < h; j++) {
         fraction_y = ((float)j) / h;
         for (i = 0; i < w; i++) {
@@ -214,7 +216,6 @@ nk_sdl_fill_rect_multi_color(SDL_Surface *surface, short x, short y, unsigned sh
         }
     }
 }
-
 
 static void
 nk_sdl_clear(SDL_Surface *surface, struct nk_color col)
@@ -310,7 +311,6 @@ nk_sdl_render(struct nk_color clear)
         default: break;
         }
     }
-    
     nk_sdl_blit(sdl.screen_surface);
     nk_clear(&sdl.ctx);
 
@@ -338,13 +338,12 @@ NK_API struct nk_context*
 nk_sdl_init(SDL_Surface *screen_surface)
 {
     struct nk_user_font font;
-    
     sdl_font = (nk_sdl_Font*)calloc(1, sizeof(nk_sdl_Font));
     sdl_font->width = 8; /* Default in  the SDL_gfx library */
     sdl_font->height = 8; /* Default in  the SDL_gfx library */
     if (!sdl_font)
         return NULL;
-    
+
     font.userdata = nk_handle_ptr(sdl_font);
     font.height = (float)sdl_font->height;
     font.width = nk_sdl_get_text_width;
@@ -369,42 +368,50 @@ nk_sdl_handle_event(SDL_Event *evt)
         int down = evt->type == SDL_KEYDOWN;
         SDLMod state = SDL_GetModState();
         SDLKey sym = evt->key.keysym.sym;
-        if (sym == SDLK_RSHIFT || sym == SDLK_LSHIFT)
-            nk_input_key(ctx, NK_KEY_SHIFT, down);
-        else if (sym == SDLK_DELETE)
-            nk_input_key(ctx, NK_KEY_DEL, down);
-        else if (sym == SDLK_RETURN)
-            nk_input_key(ctx, NK_KEY_ENTER, down);
-        else if (sym == SDLK_TAB)
-            nk_input_key(ctx, NK_KEY_TAB, down);
-        else if (sym == SDLK_BACKSPACE)
-            nk_input_key(ctx, NK_KEY_BACKSPACE, down);
-        else if (sym == SDLK_HOME)
-            nk_input_key(ctx, NK_KEY_TEXT_START, down);
-        else if (sym == SDLK_END)
-            nk_input_key(ctx, NK_KEY_TEXT_END, down);
-        else if (sym == SDLK_z)
-            nk_input_key(ctx, NK_KEY_TEXT_UNDO, down && (state == KMOD_LCTRL));
-        else if (sym == SDLK_r)
-            nk_input_key(ctx, NK_KEY_TEXT_REDO, down && (state == KMOD_LCTRL));
-        else if (sym == SDLK_c)
-            nk_input_key(ctx, NK_KEY_COPY, down && (state == KMOD_LCTRL));
-        else if (sym == SDLK_v)
-            nk_input_key(ctx, NK_KEY_PASTE, down && (state == KMOD_LCTRL));
-        else if (sym == SDLK_x)
-            nk_input_key(ctx, NK_KEY_CUT, down && (state == KMOD_LCTRL));
-        else if (sym == SDLK_b)
-            nk_input_key(ctx, NK_KEY_TEXT_LINE_START, down && (state == KMOD_LCTRL));
-        else if (sym == SDLK_e)
-            nk_input_key(ctx, NK_KEY_TEXT_LINE_END, down && (state == KMOD_LCTRL));
-        else if (sym == SDLK_LEFT) {
-            if (state == KMOD_LCTRL)
+
+        if (sym == SDLK_RSHIFT || sym == SDLK_LSHIFT) nk_input_key(ctx, NK_KEY_SHIFT, down);
+        else if (sym == SDLK_DELETE)    nk_input_key(ctx, NK_KEY_DEL, down);
+        else if (sym == SDLK_RETURN)    nk_input_key(ctx, NK_KEY_ENTER, down);
+        else if (sym == SDLK_TAB)       nk_input_key(ctx, NK_KEY_TAB, down);
+        else if (sym == SDLK_LEFT)      nk_input_key(ctx, NK_KEY_LEFT, down);
+        else if (sym == SDLK_RIGHT)     nk_input_key(ctx, NK_KEY_RIGHT, down);
+        else if (sym == SDLK_BACKSPACE) nk_input_key(ctx, NK_KEY_BACKSPACE, down);
+        else if (sym == SDLK_HOME)      nk_input_key(ctx, NK_KEY_TEXT_START, down);
+        else if (sym == SDLK_END)       nk_input_key(ctx, NK_KEY_TEXT_END, down);
+        else if (sym == SDLK_SPACE && !down) nk_input_char(ctx, ' ');
+        else {
+            if (sym == SDLK_c && state == SDLK_LCTRL)
+                nk_input_key(ctx, NK_KEY_COPY, down);
+            else if (sym == SDLK_v && state == SDLK_LCTRL)
+                nk_input_key(ctx, NK_KEY_PASTE, down);
+            else if (sym == SDLK_x && state == SDLK_LCTRL)
+                nk_input_key(ctx, NK_KEY_CUT, down);
+            else if (sym == SDLK_z && state == SDLK_LCTRL)
+                nk_input_key(ctx, NK_KEY_TEXT_UNDO, down);
+            else if (sym == SDLK_r && state == SDLK_LCTRL)
+                nk_input_key(ctx, NK_KEY_TEXT_REDO, down);
+            else if (sym == SDLK_LEFT && state == SDLK_LCTRL)
                 nk_input_key(ctx, NK_KEY_TEXT_WORD_LEFT, down);
-            else nk_input_key(ctx, NK_KEY_LEFT, down);
-        } else if (sym == SDLK_RIGHT) {
-            if (state == KMOD_LCTRL)
+            else if (sym == SDLK_RIGHT && state == SDLK_LCTRL)
                 nk_input_key(ctx, NK_KEY_TEXT_WORD_RIGHT, down);
-            else nk_input_key(ctx, NK_KEY_RIGHT, down);
+            else if (sym == SDLK_b && state == SDLK_LCTRL)
+                nk_input_key(ctx, NK_KEY_TEXT_LINE_START, down);
+            else if (sym == SDLK_e && state == SDLK_LCTRL)
+                nk_input_key(ctx, NK_KEY_TEXT_LINE_END, down);
+            else if (!down) {
+                /* This demo does not provide full unicode support since the default
+                 * sdl1.2 font only allows runes in range 0-255. But this demo
+                 * already is quite limited and not really meant for full blown Apps
+                 * anyway. So I think ASCII support for Debugging Tools should be enough */
+                if (sym >= SDLK_0 && sym <= SDLK_9) {
+                    nk_rune rune = '0' + sym - SDLK_0;
+                    nk_input_unicode(ctx, rune);
+                } else if (sym >= SDLK_a && sym <= SDLK_z) {
+                    nk_rune rune = 'a' + sym - SDLK_a;
+                    rune = ((state == KMOD_LSHIFT) ? (nk_rune)nk_to_upper((int)rune):rune);
+                    nk_input_unicode(ctx, rune);
+                }
+            }
         }
     } else if (evt->type == SDL_MOUSEBUTTONDOWN || evt->type == SDL_MOUSEBUTTONUP) {
         /* mouse button */
@@ -425,7 +432,7 @@ nk_sdl_handle_event(SDL_Event *evt)
     }
 }
 
-NK_API void 
+NK_API void
 nk_sdl_shutdown(void)
 {
     free(sdl_font);

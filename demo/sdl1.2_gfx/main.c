@@ -26,7 +26,6 @@ main(void)
 {
     static SDL_Surface *screen_surface;
     struct nk_color background;
-    int win_width, win_height;
     int running = 1;
     struct nk_context *ctx;
     float bg[4];
@@ -43,7 +42,6 @@ main(void)
     }
 
     ctx = nk_sdl_init(screen_surface);
-   
     background = nk_rgb(28,48,62);
     while (running)
     {
@@ -65,6 +63,8 @@ main(void)
             enum {EASY, HARD};
             static int op = EASY;
             static int property = 20;
+            static char buffer[64];
+            static int len;
 
             nk_layout_row_static(ctx, 30, 80, 1);
             if (nk_button_label(ctx, "button", NK_BUTTON_DEFAULT))
@@ -74,9 +74,10 @@ main(void)
             if (nk_option_label(ctx, "hard", op == HARD)) op = HARD;
             nk_layout_row_dynamic(ctx, 25, 1);
             nk_property_int(ctx, "Compression:", 0, &property, 100, 10, 1);
+            nk_edit_string(ctx, NK_EDIT_SIMPLE, buffer, &len, 64, 0);
 
             {struct nk_panel combo;
-            nk_layout_row_dynamic(ctx, 20, 1);
+            nk_layout_row_dynamic(ctx, 30, 1);
             nk_label(ctx, "background:", NK_TEXT_LEFT);
             nk_layout_row_dynamic(ctx, 25, 1);
             if (nk_combo_begin_color(ctx, &combo, background, 400)) {
