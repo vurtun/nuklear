@@ -13339,6 +13339,7 @@ nk_do_property(nk_flags *ws,
     /* edit */
     if (*state == NK_PROPERTY_EDIT) {
         size = font->width(font->userdata, font->height, buffer, *len);
+        size += style->edit.cursor_size;
         length = len;
         dst = buffer;
     } else {
@@ -13348,7 +13349,8 @@ nk_do_property(nk_flags *ws,
         dst = string;
         length = &num_len;
     }
-    edit.w =  (float)size + 2 * style->padding.x + style->edit.cursor_size;
+    edit.w =  (float)size + 2 * style->padding.x;
+    edit.w = NK_MIN(edit.w, right.x - (label.x + label.w));
     edit.x = right.x - (edit.w + style->padding.x);
     edit.y = property.y + style->border;
     edit.h = property.h - (2 * style->border);
