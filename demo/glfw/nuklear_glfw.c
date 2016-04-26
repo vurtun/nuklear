@@ -153,8 +153,6 @@ nk_glfw3_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element
 {
     struct nk_glfw_device *dev = &glfw.ogl;
     int width, height;
-    GLint last_prog, last_tex;
-    GLint last_ebo, last_vbo, last_vao;
     GLfloat ortho[4][4] = {
         {2.0f, 0.0f, 0.0f, 0.0f},
         {0.0f,-2.0f, 0.0f, 0.0f},
@@ -164,13 +162,6 @@ nk_glfw3_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element
     glfwGetWindowSize(glfw.win, &width, &height);
     ortho[0][0] /= (GLfloat)width;
     ortho[1][1] /= (GLfloat)height;
-
-    /* save previous opengl state */
-    glGetIntegerv(GL_CURRENT_PROGRAM, &last_prog);
-    glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_tex);
-    glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_vao);
-    glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &last_ebo);
-    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vbo);
 
     /* setup global state */
     glEnable(GL_BLEND);
@@ -236,12 +227,12 @@ nk_glfw3_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element
         nk_clear(&glfw.ctx);
     }
 
-    /* restore old state */
-    glUseProgram((GLuint)last_prog);
-    glBindTexture(GL_TEXTURE_2D, (GLuint)last_tex);
-    glBindBuffer(GL_ARRAY_BUFFER, (GLuint)last_vbo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, (GLuint)last_ebo);
-    glBindVertexArray((GLuint)last_vao);
+    /* default OpenGL state */
+    glUseProgram(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+    glDisable(GL_BLEND);
     glDisable(GL_SCISSOR_TEST);
 }
 

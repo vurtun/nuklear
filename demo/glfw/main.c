@@ -128,6 +128,10 @@ int main(void)
         glViewport(0, 0, width, height);
         glClear(GL_COLOR_BUFFER_BIT);
         glClearColor(bg[0], bg[1], bg[2], bg[3]);
+        /* IMPORTANT: `nk_sdl_render` modifies some global OpenGL state
+         * with blending, scissor, face culling and depth test and defaults everything
+         * back into a default state. Make sure to either save and restore or
+         * reset your own state after drawing rendering the UI. */
         nk_glfw3_render(NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
         glfwSwapBuffers(win);}
     }
