@@ -233,12 +233,12 @@ typedef unsigned short nk_ushort;
 typedef NK_UINT16 nk_ushort;
 #endif
 #ifndef NK_INT32
-typedef short nk_int;
+typedef int nk_int;
 #else
 typedef NK_INT32 nk_int;
 #endif
 #ifndef NK_UINT32
-typedef unsigned short nk_uint;
+typedef unsigned int nk_uint;
 #else
 typedef NK_UINT32 nk_uint;
 #endif
@@ -14419,6 +14419,7 @@ nk_clear(struct nk_context *ctx)
 
     ctx->build = 0;
     ctx->memory.calls = 0;
+    ctx->last_widget_state = 0;
 #ifdef NK_INCLUDE_VERTEX_BUFFER_OUTPUT
     nk_draw_list_clear(&ctx->draw_list);
 #endif
