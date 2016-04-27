@@ -356,8 +356,8 @@ nk_glfw3_new_frame(void)
     }
 
     glfwGetCursorPos(win, &x, &y);
-    x *= (double)(int)((float)glfw.width/(float)glfw.display_width);
-    y *= (double)(int)((float)glfw.height/(float)glfw.display_height);
+    x *= (double)(int)((float)glfw.display_width/(float)glfw.width);
+    y *= (double)(int)((float)glfw.display_height/(float)glfw.height);
     nk_input_motion(ctx, (int)x, (int)y);
 
     nk_input_button(ctx, NK_BUTTON_LEFT, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);

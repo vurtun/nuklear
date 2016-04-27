@@ -857,8 +857,8 @@ int main(int argc, char *argv[])
             nk_input_key(&ctx, NK_KEY_SHIFT, 0);
         }
         glfwGetCursorPos(win, &x, &y);
-        x *= (double)(int)((float)width/(float)display_width);
-        y *= (double)(int)((float)height/(float)display_height);
+        x *= (double)(int)((float)display_width/(float)width);
+        y *= (double)(int)((float)display_height/(float)height);
 
         nk_input_motion(&ctx, (int)x, (int)y);
         nk_input_button(&ctx, NK_BUTTON_LEFT, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
