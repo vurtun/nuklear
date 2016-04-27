@@ -639,6 +639,7 @@ NK_API nk_size                  nk_prog(struct nk_context*, nk_size cur, nk_size
 NK_API struct nk_color          nk_color_picker(struct nk_context*, struct nk_color, enum nk_color_format);
 NK_API int                      nk_color_pick(struct nk_context*, struct nk_color*, enum nk_color_format);
 
+/* Widgets: Property */
 NK_API void                     nk_property_float(struct nk_context *layout, const char *name, float min, float *val, float max, float step, float inc_per_pixel);
 NK_API void                     nk_property_int(struct nk_context *layout, const char *name, int min, int *val, int max, int step, int inc_per_pixel);
 NK_API float                    nk_propertyf(struct nk_context *layout, const char *name, float min, float val, float max, float step, float inc_per_pixel);
@@ -1374,7 +1375,7 @@ NK_API void nk_font_bake_convert(void *out_memory, int image_width, int image_he
     converts it into a hardware accessible format.
 
     Draw commands are divided into filled shapes and shape outlines but only
-    the filled shapes as well as line, curves and scissor are required to be provided.
+    filled shapes as well as line, curves and scissor are required to be provided.
     All other shape drawing commands can be used but are not required. This was
     done to allow the maximum number of render backends to be able to use this
     library without you having to do additional work.
@@ -2721,7 +2722,6 @@ nk_rect(float x, float y, float w, float h)
     r.w = w, r.h = h;
     return r;
 }
-
 
 NK_API struct nk_rect
 nk_recti(int x, int y, int w, int h)
