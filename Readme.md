@@ -42,6 +42,7 @@ The implementation mode requires to define  the preprocessor macro
 ![screen2](https://cloud.githubusercontent.com/assets/8057201/13538243/b04acd4c-e249-11e5-8fd2-ad7744a5b446.png)
 ![node](https://cloud.githubusercontent.com/assets/8057201/9976995/e81ac04a-5ef7-11e5-872b-acd54fbeee03.gif)
 ![skinning](https://cloud.githubusercontent.com/assets/8057201/14152357/25df939e-f6b3-11e5-8587-b19e863e0d1b.png)
+![gamepad](https://cloud.githubusercontent.com/assets/8057201/14902576/339926a8-0d9c-11e6-9fee-a8b73af04473.png)
 
 ## Example
 ```c
@@ -91,10 +92,10 @@ Embeds stb_texedit, stb_truetype and stb_rectpack by Sean Barret (public domain)
 Embeds ProggyClean.ttf font by Tristan Grimmer (MIT license).
 
 
-Big thank you to Omar Cornut (ocornut@github) for his imgui library and
+Big thank you to Omar Cornut (ocornut@github) for his [imgui](https://github.com/ocornut/imgui) library and
 giving me the inspiration for this library, Casey Muratori for handmade hero
 and his original immediate mode graphical user interface idea and Sean
-Barret for his amazing single header libraries which restored my faith
+Barret for his amazing single header [libraries](https://github.com/nothings/stb) which restored my faith
 in libraries and brought me to create some of my own.
 
 ##LICENSE:
