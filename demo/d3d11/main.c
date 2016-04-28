@@ -24,6 +24,24 @@
 #include "nuklear_d3d11.h"
 #include "nuklear_d3d11.c"
 
+/* ===============================================================
+ *
+ *                          EXAMPLE
+ *
+ * ===============================================================*/
+/* This are some code examples to provide a small overview of what can be
+ * done with this library. To try out an example uncomment the include
+ * and the corresponding function. */
+/*#include "../style.c"*/
+/*#include "../calculator.c"*/
+/*#include "../overview.c"*/
+/*#include "../node_editor.c"*/
+
+/* ===============================================================
+ *
+ *                          DEMO
+ *
+ * ===============================================================*/
 static IDXGISwapChain *swap_chain;
 static ID3D11Device *device;
 static ID3D11DeviceContext *context;
@@ -160,12 +178,17 @@ int main(void)
     nk_d3d11_font_stash_end();
     /*nk_style_set_font(ctx, &droid->handle)*/;}
 
+    /* style.c */
+    /*set_style(ctx, THEME_WHITE);*/
+    /*set_style(ctx, THEME_RED);*/
+    /*set_style(ctx, THEME_BLUE);*/
+    /*set_style(ctx, THEME_DARK);*/
+
     background = nk_rgb(28,48,62);
     while (running)
     {
-        MSG msg;
-
         /* Input */
+        MSG msg;
         nk_input_begin(ctx);
         while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
         {
@@ -213,28 +236,28 @@ int main(void)
         nk_end(ctx);}
         if (nk_window_is_closed(ctx, "Demo")) break;
 
-        /* Draw */
-        {
-            float bg[4];
-            nk_color_fv(bg, background);
-            ID3D11DeviceContext_ClearRenderTargetView(context, rt_view, bg);
-            ID3D11DeviceContext_OMSetRenderTargets(context, 1, &rt_view, NULL);
-            nk_d3d11_render(context, NK_ANTI_ALIASING_ON);
+        /* -------------- EXAMPLES ---------------- */
+        /*calculator(ctx);*/
+        /*overview(ctx);*/
+        /*node_editor(ctx);*/
+        /* ----------------------------------------- */
 
-            hr = IDXGISwapChain_Present(swap_chain, 1, 0);
-            if (hr == DXGI_ERROR_DEVICE_RESET || hr == DXGI_ERROR_DEVICE_REMOVED)
-            {
-                /* to recover from this, you'll need to recreate device and all the resources */
-                MessageBoxW(NULL, L"D3D11 device is lost or removed!", L"Error", 0);
-                break;
-            }
-            else if (hr == DXGI_STATUS_OCCLUDED)
-            {
-                /* window is not visible, so vsync won't work. Let's sleep a bit to reduce CPU usage */
-                Sleep(10);
-            }
-            assert(SUCCEEDED(hr));
+        {/* Draw */
+        float bg[4];
+        nk_color_fv(bg, background);
+        ID3D11DeviceContext_ClearRenderTargetView(context, rt_view, bg);
+        ID3D11DeviceContext_OMSetRenderTargets(context, 1, &rt_view, NULL);
+        nk_d3d11_render(context, NK_ANTI_ALIASING_ON);
+        hr = IDXGISwapChain_Present(swap_chain, 1, 0);
+        if (hr == DXGI_ERROR_DEVICE_RESET || hr == DXGI_ERROR_DEVICE_REMOVED) {
+            /* to recover from this, you'll need to recreate device and all the resources */
+            MessageBoxW(NULL, L"D3D11 device is lost or removed!", L"Error", 0);
+            break;
+        } else if (hr == DXGI_STATUS_OCCLUDED) {
+            /* window is not visible, so vsync won't work. Let's sleep a bit to reduce CPU usage */
+            Sleep(10);
         }
+        assert(SUCCEEDED(hr));}
     }
 
     ID3D11DeviceContext_ClearState(context);

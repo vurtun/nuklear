@@ -12,6 +12,24 @@
 #include "nuklear_gdi.h"
 #include "nuklear_gdi.c"
 
+/* ===============================================================
+ *
+ *                          EXAMPLE
+ *
+ * ===============================================================*/
+/* This are some code examples to provide a small overview of what can be
+ * done with this library. To try out an example uncomment the include
+ * and the corresponding function. */
+/*#include "../style.c"*/
+/*#include "../calculator.c"*/
+/*#include "../overview.c"*/
+/*#include "../node_editor.c"*/
+
+/* ===============================================================
+ *
+ *                          DEMO
+ *
+ * ===============================================================*/
 static LRESULT CALLBACK
 WindowProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
@@ -63,31 +81,29 @@ int main(void)
     /* GUI */
     font = nk_gdifont_create("Arial", 14);
     ctx = nk_gdi_init(font, dc, WINDOW_WIDTH, WINDOW_HEIGHT);
+
+    /* style.c */
+    /*set_style(ctx, THEME_WHITE);*/
+    /*set_style(ctx, THEME_RED);*/
+    /*set_style(ctx, THEME_BLUE);*/
+    /*set_style(ctx, THEME_DARK);*/
+
     while (running)
     {
-        MSG msg;
-
         /* Input */
+        MSG msg;
         nk_input_begin(ctx);
-        if (needs_refresh == 0)
-        {
+        if (needs_refresh == 0) {
             if (GetMessageW(&msg, NULL, 0, 0) <= 0)
-            {
                 running = 0;
-            }
-            else
-            {
+            else {
                 TranslateMessage(&msg);
                 DispatchMessageW(&msg);
             }
             needs_refresh = 1;
-        }
-        else
-        {
-            needs_refresh = 0;
-        }
-        while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
-        {
+        } else needs_refresh = 0;
+
+        while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
             if (msg.message == WM_QUIT)
                 running = 0;
             TranslateMessage(&msg);
@@ -117,6 +133,12 @@ int main(void)
         }
         nk_end(ctx);}
         if (nk_window_is_closed(ctx, "Demo")) break;
+
+        /* -------------- EXAMPLES ---------------- */
+        /*calculator(ctx);*/
+        /*overview(ctx);*/
+        /*node_editor(ctx);*/
+        /* ----------------------------------------- */
 
         /* Draw */
         nk_gdi_render(nk_rgb(30,30,30));

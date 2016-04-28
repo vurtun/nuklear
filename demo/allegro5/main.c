@@ -30,6 +30,24 @@
 #include "nuklear_allegro.h"
 #include "nuklear_allegro.c"
 
+/* ===============================================================
+ *
+ *                          EXAMPLE
+ *
+ * ===============================================================*/
+/* This are some code examples to provide a small overview of what can be
+ * done with this library. To try out an example uncomment the include
+ * and the corresponding function. */
+/*#include "../style.c"*/
+/*#include "../calculator.c"*/
+/*#include "../overview.c"*/
+/*#include "../node_editor.c"*/
+
+/* ===============================================================
+ *
+ *                          DEMO
+ *
+ * ===============================================================*/
 int
 main(void)
 {
@@ -64,6 +82,12 @@ main(void)
     /*struct nk_font *cousine = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Cousine-Regular.ttf", 13, 0);*/
     nk_allegro_font_stash_end();
     /*nk_style_set_font(ctx, &droid->handle);*/}
+
+    /* style.c */
+    /*set_style(ctx, THEME_WHITE);*/
+    /*set_style(ctx, THEME_RED);*/
+    /*set_style(ctx, THEME_BLUE);*/
+    /*set_style(ctx, THEME_DARK);*/
 
     background = nk_rgb(28,48,62);
     while (running)
@@ -112,6 +136,12 @@ main(void)
             }}
         }
         nk_end(ctx);}
+
+        /* -------------- EXAMPLES ---------------- */
+        /*calculator(ctx);*/
+        /*overview(ctx);*/
+        /*node_editor(ctx);*/
+        /* ----------------------------------------- */
 
         /* Draw */
         {float bg[4];

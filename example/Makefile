@@ -13,29 +13,14 @@ else
 	endif
 endif
 
-all: node_editor file_browser overview extended
-node_editor:
-	@mkdir -p bin
-	rm -f bin/node_editor $(OBJS)
-	$(CC) $(CFLAGS) -o bin/node_editor node_editor.c $(LIBS)
-
+all: file_browser extended
 file_browser:
 	@mkdir -p bin
 	rm -f bin/file_browser $(OBJS)
 	$(CC) $(CFLAGS) -o bin/file_browser file_browser.c $(LIBS)
 
-overview:
-	@mkdir -p bin
-	rm -f bin/overview $(OBJS)
-	$(CC) $(CFLAGS) -o bin/overview overview.c $(LIBS)
-
 extended:
 	@mkdir -p bin
 	rm -f bin/extended $(OBJS)
 	$(CC) $(CFLAGS) -o bin/extended extended.c $(LIBS)
-
-calculator:
-	@mkdir -p bin
-	rm -f bin/calculator $(OBJS)
-	$(CC) $(CFLAGS) -o bin/calculator calculator.c $(LIBS)
 

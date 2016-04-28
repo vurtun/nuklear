@@ -661,10 +661,8 @@ device_shutdown(struct device *dev)
 
 static void
 device_draw(struct device *dev, struct nk_context *ctx, int width, int height,
-    enum nk_anti_aliasing AA)
+    struct nk_vec2 scale, enum nk_anti_aliasing AA)
 {
-    GLint last_prog, last_tex;
-    GLint last_ebo, last_vbo, last_vao;
     GLfloat ortho[4][4] = {
         {2.0f, 0.0f, 0.0f, 0.0f},
         {0.0f,-2.0f, 0.0f, 0.0f},
@@ -673,13 +671,6 @@ device_draw(struct device *dev, struct nk_context *ctx, int width, int height,
     };
     ortho[0][0] /= (GLfloat)width;
     ortho[1][1] /= (GLfloat)height;
-
-    /* save previous opengl state */
-    glGetIntegerv(GL_CURRENT_PROGRAM, &last_prog);
-    glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_tex);
-    glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_vao);
-    glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &last_ebo);
-    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vbo);
 
     /* setup global state */
     glEnable(GL_BLEND);
@@ -736,21 +727,23 @@ device_draw(struct device *dev, struct nk_context *ctx, int width, int height,
         nk_draw_foreach(cmd, ctx, &dev->cmds) {
             if (!cmd->elem_count) continue;
             glBindTexture(GL_TEXTURE_2D, (GLuint)cmd->texture.id);
-            glScissor((GLint)cmd->clip_rect.x,
-                height - (GLint)(cmd->clip_rect.y + cmd->clip_rect.h),
-                (GLint)cmd->clip_rect.w, (GLint)cmd->clip_rect.h);
+            glScissor(
+                (GLint)(cmd->clip_rect.x * scale.x),
+                (GLint)((height - (GLint)(cmd->clip_rect.y + cmd->clip_rect.h)) * scale.y),
+                (GLint)(cmd->clip_rect.w * scale.x),
+                (GLint)(cmd->clip_rect.h * scale.y));
             glDrawElements(GL_TRIANGLES, (GLsizei)cmd->elem_count, GL_UNSIGNED_SHORT, offset);
             offset += cmd->elem_count;
         }
         nk_clear(ctx);
     }
 
-    /* restore old state */
-    glUseProgram((GLuint)last_prog);
-    glBindTexture(GL_TEXTURE_2D, (GLuint)last_tex);
-    glBindBuffer(GL_ARRAY_BUFFER, (GLuint)last_vbo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, (GLuint)last_ebo);
-    glBindVertexArray((GLuint)last_vao);
+    /* default OpenGL state */
+    glUseProgram(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+    glDisable(GL_BLEND);
     glDisable(GL_SCISSOR_TEST);
 }
 
@@ -767,6 +760,7 @@ int main(int argc, char *argv[])
     /* Platform */
     static GLFWwindow *win;
     int width = 0, height = 0;
+    int display_width = 0, display_height = 0;
 
     /* GUI */
     struct device device;
@@ -832,6 +826,13 @@ int main(int argc, char *argv[])
     file_browser_init(&browser, &media);
     while (!glfwWindowShouldClose(win))
     {
+        /* High DPI displays */
+        struct nk_vec2 scale;
+        glfwGetWindowSize(win, &width, &height);
+        glfwGetFramebufferSize(win, &display_width, &display_height);
+        scale.x = (float)display_width/(float)width;
+        scale.y = (float)display_height/(float)height;
+
         /* Input */
         {double x, y;
         nk_input_begin(&ctx);
@@ -868,11 +869,10 @@ int main(int argc, char *argv[])
         file_browser_run(&browser, &ctx);
 
         /* Draw */
-        glfwGetWindowSize(win, &width, &height);
-        glViewport(0, 0, width, height);
+        glViewport(0, 0, display_width, display_height);
         glClear(GL_COLOR_BUFFER_BIT);
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
-        device_draw(&device, &ctx, width, height, NK_ANTI_ALIASING_ON);
+        device_draw(&device, &ctx, width, height, scale, NK_ANTI_ALIASING_ON);
         glfwSwapBuffers(win);
     }
 

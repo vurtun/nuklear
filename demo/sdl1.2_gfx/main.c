@@ -21,6 +21,24 @@
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 
+/* ===============================================================
+ *
+ *                          EXAMPLE
+ *
+ * ===============================================================*/
+/* This are some code examples to provide a small overview of what can be
+ * done with this library. To try out an example uncomment the include
+ * and the corresponding function. */
+/*#include "../style.c"*/
+/*#include "../calculator.c"*/
+/*#include "../overview.c"*/
+/*#include "../node_editor.c"*/
+
+/* ===============================================================
+ *
+ *                          DEMO
+ *
+ * ===============================================================*/
 int
 main(void)
 {
@@ -43,6 +61,13 @@ main(void)
 
     ctx = nk_sdl_init(screen_surface);
     background = nk_rgb(28,48,62);
+
+    /* style.c */
+    /*set_style(ctx, THEME_WHITE);*/
+    /*set_style(ctx, THEME_RED);*/
+    /*set_style(ctx, THEME_BLUE);*/
+    /*set_style(ctx, THEME_DARK);*/
+
     while (running)
     {
         /* Input */
@@ -92,6 +117,12 @@ main(void)
             }}
         }
         nk_end(ctx);}
+
+        /* -------------- EXAMPLES ---------------- */
+        /*calculator(ctx);*/
+        /*overview(ctx);*/
+        /*node_editor(ctx);*/
+        /* ----------------------------------------- */
 
         /* Draw */
         nk_color_fv(bg, background);

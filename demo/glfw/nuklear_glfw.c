@@ -1,4 +1,13 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdarg.h>
 #include <string.h>
+#include <math.h>
+#include <assert.h>
+#include <math.h>
+#include <time.h>
+#include <limits.h>
 
 #define NK_IMPLEMENTATION
 #include "nuklear_glfw.h"
@@ -27,6 +36,7 @@ static struct nk_glfw {
     struct nk_glfw_device ogl;
     struct nk_context ctx;
     struct nk_font_atlas atlas;
+    struct nk_vec2 fb_scale;
     unsigned int text[NK_GLFW_TEXT_MAX];
     int text_len;
     float scroll;
@@ -152,16 +162,14 @@ NK_API void
 nk_glfw3_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_buffer)
 {
     struct nk_glfw_device *dev = &glfw.ogl;
-    int width, height;
     GLfloat ortho[4][4] = {
         {2.0f, 0.0f, 0.0f, 0.0f},
         {0.0f,-2.0f, 0.0f, 0.0f},
         {0.0f, 0.0f,-1.0f, 0.0f},
         {-1.0f,1.0f, 0.0f, 1.0f},
     };
-    glfwGetWindowSize(glfw.win, &width, &height);
-    ortho[0][0] /= (GLfloat)width;
-    ortho[1][1] /= (GLfloat)height;
+    ortho[0][0] /= (GLfloat)glfw.width;
+    ortho[1][1] /= (GLfloat)glfw.height;
 
     /* setup global state */
     glEnable(GL_BLEND);
@@ -176,6 +184,7 @@ nk_glfw3_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element
     glUseProgram(dev->prog);
     glUniform1i(dev->uniform_tex, 0);
     glUniformMatrix4fv(dev->uniform_proj, 1, GL_FALSE, &ortho[0][0]);
+    glViewport(0,0,(GLsizei)glfw.display_width,(GLsizei)glfw.display_height);
     {
         /* convert from command queue into draw list and draw to screen */
         const struct nk_draw_command *cmd;
@@ -215,12 +224,15 @@ nk_glfw3_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element
         glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
 
         /* iterate over and execute each draw command */
-        nk_draw_foreach(cmd, &glfw.ctx, &dev->cmds) {
+        nk_draw_foreach(cmd, &glfw.ctx, &dev->cmds)
+        {
             if (!cmd->elem_count) continue;
             glBindTexture(GL_TEXTURE_2D, (GLuint)cmd->texture.id);
-            glScissor((GLint)cmd->clip_rect.x,
-                height - (GLint)(cmd->clip_rect.y + cmd->clip_rect.h),
-                (GLint)cmd->clip_rect.w, (GLint)cmd->clip_rect.h);
+            glScissor(
+                (GLint)(cmd->clip_rect.x * glfw.fb_scale.x),
+                (GLint)((glfw.height - (GLint)(cmd->clip_rect.y + cmd->clip_rect.h)) * glfw.fb_scale.y),
+                (GLint)(cmd->clip_rect.w * glfw.fb_scale.x),
+                (GLint)(cmd->clip_rect.h * glfw.fb_scale.y));
             glDrawElements(GL_TRIANGLES, (GLsizei)cmd->elem_count, GL_UNSIGNED_SHORT, offset);
             offset += cmd->elem_count;
         }
@@ -319,6 +331,8 @@ nk_glfw3_new_frame(void)
 
     glfwGetWindowSize(win, &glfw.width, &glfw.height);
     glfwGetFramebufferSize(win, &glfw.display_width, &glfw.display_height);
+    glfw.fb_scale.x = (float)glfw.display_width/(float)glfw.width;
+    glfw.fb_scale.y = (float)glfw.display_height/(float)glfw.height;
 
     nk_input_begin(ctx);
     for (i = 0; i < glfw.text_len; ++i)
@@ -356,16 +370,12 @@ nk_glfw3_new_frame(void)
     }
 
     glfwGetCursorPos(win, &x, &y);
-    x *= (double)(int)((float)glfw.display_width/(float)glfw.width);
-    y *= (double)(int)((float)glfw.display_height/(float)glfw.height);
     nk_input_motion(ctx, (int)x, (int)y);
-
     nk_input_button(ctx, NK_BUTTON_LEFT, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
     nk_input_button(ctx, NK_BUTTON_MIDDLE, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS);
     nk_input_button(ctx, NK_BUTTON_RIGHT, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS);
     nk_input_scroll(ctx, glfw.scroll);
     nk_input_end(&glfw.ctx);
-
     glfw.text_len = 0;
     glfw.scroll = 0;
 }
