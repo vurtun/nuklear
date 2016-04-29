@@ -145,9 +145,10 @@ nk_sdl_device_destroy(void)
 NK_API void
 nk_sdl_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_buffer)
 {
-
     struct nk_sdl_device *dev = &sdl.ogl;
     int width, height;
+    int display_width, display_height;
+    struct nk_vec2 scale;
     GLfloat ortho[4][4] = {
         {2.0f, 0.0f, 0.0f, 0.0f},
         {0.0f,-2.0f, 0.0f, 0.0f},
@@ -155,10 +156,15 @@ nk_sdl_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_b
         {-1.0f,1.0f, 0.0f, 1.0f},
     };
     SDL_GetWindowSize(sdl.win, &width, &height);
+    SDL_GL_GetDrawableSize(sdl.win, &display_width, &display_height);
     ortho[0][0] /= (GLfloat)width;
     ortho[1][1] /= (GLfloat)height;
 
+    scale.x = (float)display_width/(float)width;
+    scale.y = (float)display_height/(float)height;
+
     /* setup global state */
+    glViewport(0,0,display_width,display_height);
     glEnable(GL_BLEND);
     glBlendEquation(GL_FUNC_ADD);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -213,9 +219,12 @@ nk_sdl_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_b
         nk_draw_foreach(cmd, &sdl.ctx, &dev->cmds) {
             if (!cmd->elem_count) continue;
             glBindTexture(GL_TEXTURE_2D, (GLuint)cmd->texture.id);
-            glScissor((GLint)cmd->clip_rect.x,
-                height - (GLint)(cmd->clip_rect.y + cmd->clip_rect.h),
-                (GLint)cmd->clip_rect.w, (GLint)cmd->clip_rect.h);
+            glScissor(
+                (GLint)(cmd->clip_rect.x * scale.x),
+                (GLint)((height - (GLint)(cmd->clip_rect.y + cmd->clip_rect.h)) * scale.y),
+                (GLint)(cmd->clip_rect.w * scale.x),
+                (GLint)(cmd->clip_rect.h * scale.y));
+
             glDrawElements(GL_TRIANGLES, (GLsizei)cmd->elem_count, GL_UNSIGNED_SHORT, offset);
             offset += cmd->elem_count;
         }
@@ -288,11 +297,7 @@ NK_API void
 nk_sdl_handle_event(SDL_Event *evt)
 {
     struct nk_context *ctx = &sdl.ctx;
-    if (evt->type == SDL_WINDOWEVENT) {
-        /* handle window resizing */
-        if (evt->window.event != SDL_WINDOWEVENT_RESIZED) return;
-        glViewport(0, 0, evt->window.data1, evt->window.data2);
-    } else if (evt->type == SDL_KEYUP || evt->type == SDL_KEYDOWN) {
+    if (evt->type == SDL_KEYUP || evt->type == SDL_KEYDOWN) {
         /* key events */
         int down = evt->type == SDL_KEYDOWN;
         const Uint8* state = SDL_GetKeyboardState(0);

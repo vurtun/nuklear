@@ -163,9 +163,10 @@ main(int argc, char* argv[])
         glClear(GL_COLOR_BUFFER_BIT);
         glClearColor(bg[0], bg[1], bg[2], bg[3]);
         /* IMPORTANT: `nk_sdl_render` modifies some global OpenGL state
-         * with blending, scissor, face culling and depth test and defaults everything
-         * back into a default state. Make sure to either save and restore or
-         * reset your own state after drawing rendering the UI. */
+         * with blending, scissor, face culling, depth test and viewport and
+         * defaults everything back into a default state.
+         * Make sure to either a.) save and restore or b.) reset your own state after
+         * rendering the UI. */
         nk_sdl_render(NK_ANTI_ALIASING_ON, MAX_VERTEX_MEMORY, MAX_ELEMENT_MEMORY);
         SDL_GL_SwapWindow(win);}
     }
