@@ -11741,9 +11741,7 @@ nk_toggle_behavior(const struct nk_input *in, struct nk_rect select,
     nk_flags *state, int active)
 {
     *state = NK_WIDGET_STATE_INACTIVE;
-    if (in && nk_input_is_mouse_hovering_rect(in, select))
-        *state = NK_WIDGET_STATE_HOVERED;
-    if (nk_input_mouse_clicked(in, NK_BUTTON_LEFT, select)) {
+    if (nk_button_behavior(state, select, in, NK_BUTTON_DEFAULT)) {
         *state = NK_WIDGET_STATE_ACTIVE;
         active = !active;
     }
@@ -12229,7 +12227,11 @@ nk_progress_behavior(nk_flags *state, const struct nk_input *in,
 {
     *state = NK_WIDGET_STATE_INACTIVE;
     if (in && modifiable && nk_input_is_mouse_hovering_rect(in, r)) {
-        if (nk_input_is_mouse_down(in, NK_BUTTON_LEFT)) {
+        int left_mouse_down = in->mouse.buttons[NK_BUTTON_LEFT].down;
+        int left_mouse_click_in_cursor = nk_input_has_mouse_click_down_in_rect(in,
+            NK_BUTTON_LEFT, r, nk_true);
+
+        if (left_mouse_down && left_mouse_click_in_cursor) {
             float ratio = NK_MAX(0, (float)(in->mouse.pos.x - r.x)) / (float)r.w;
             value = (nk_size)NK_MAX(0,((float)max * ratio));
             *state = NK_WIDGET_STATE_ACTIVE;
@@ -14776,7 +14778,6 @@ nk_free_window(struct nk_context *ctx, struct nk_window *win)
         nk_free_window(ctx, win->popup.win);
         win->popup.win = 0;
     }
-
     win->next = 0;
     win->prev = 0;
 
@@ -14904,6 +14905,7 @@ nk_begin(struct nk_context *ctx, struct nk_panel *layout, const char *title,
     title_hash = nk_murmur_hash(title, (int)title_len, NK_WINDOW_TITLE);
     win = nk_find_window(ctx, title_hash);
     if (!win) {
+        /* create new window */
         win = (struct nk_window*)nk_create_window(ctx);
         nk_insert_window(ctx, win);
         nk_command_buffer_init(&win->buffer, &ctx->memory, NK_CLIPPING_ON);
@@ -14929,17 +14931,11 @@ nk_begin(struct nk_context *ctx, struct nk_panel *layout, const char *title,
         return 0;
     }
 
-    /* overlapping window */
+    /* window overlapping */
     if (!(win->flags & NK_WINDOW_SUB) && !(win->flags & NK_WINDOW_HIDDEN))
     {
         int inpanel, ishovered;
         const struct nk_window *iter = win;
-
-        /* This is so terrible but necessary for minimized windows. The difference
-         * lies in the size of the window. But it is not possible to get the size
-         * without cheating because you do not have the information at this point.
-         * Even worse this is wrong since windows could have different window heights.
-         * I leave it in for now since I otherwise loose my mind. */
         float h = ctx->style.font.height + 2 * style->window.header.padding.y;
 
         /* activate window if hovered and no other window is overlapping this window */
@@ -15395,7 +15391,8 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
 
     /* window dragging */
     if ((win->flags & NK_WINDOW_MOVABLE) && !(win->flags & NK_WINDOW_ROM)) {
-        int incursor;
+        int left_mouse_down;
+        int left_mouse_click_in_cursor;
         struct nk_rect move;
         move.x = win->bounds.x;
         move.y = win->bounds.y;
@@ -15407,10 +15404,16 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
             move.h += 2.0f * style->window.header.label_padding.y;
         } else move.h = window_padding.y + item_spacing.y;
 
-        incursor = nk_input_is_mouse_prev_hovering_rect(in, move);
-        if (nk_input_is_mouse_down(in, NK_BUTTON_LEFT) && incursor) {
+        /*incursor = nk_input_is_mouse_prev_hovering_rect(in, move);*/
+        left_mouse_down = in->mouse.buttons[NK_BUTTON_LEFT].down;
+        left_mouse_click_in_cursor = nk_input_has_mouse_click_down_in_rect(in,
+            NK_BUTTON_LEFT, move, nk_true);
+
+        if (left_mouse_down && left_mouse_click_in_cursor) {
             win->bounds.x = win->bounds.x + in->mouse.delta.x;
             win->bounds.y = win->bounds.y + in->mouse.delta.y;
+            in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.x += in->mouse.delta.x;
+            in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.y += in->mouse.delta.y;
         }
     }
 
