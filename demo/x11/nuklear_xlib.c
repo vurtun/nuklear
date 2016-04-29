@@ -523,6 +523,7 @@ nk_xlib_shutdown(void)
 {
     nk_xsurf_del(xlib.surf);
     nk_free(&xlib.ctx);
+    memset(&xlib, 0, sizeof(xlib));
 }
 
 NK_API void
