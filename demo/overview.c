@@ -1,3 +1,4 @@
+
 static int
 overview(struct nk_context *ctx)
 {
@@ -35,7 +36,6 @@ overview(struct nk_context *ctx)
         {
             /* menubar */
             enum menu_states {MENU_DEFAULT, MENU_WINDOWS};
-            static enum menu_states menu_state = MENU_DEFAULT;
             static nk_size mprog = 60;
             static int mslider = 10;
             static int mcheck = nk_true;
