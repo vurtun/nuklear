@@ -7,6 +7,8 @@
 #include <math.h>
 #include <assert.h>
 #include <math.h>
+#include <limits.h>
+#include <time.h>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>

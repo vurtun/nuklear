@@ -7,6 +7,8 @@
 #include <math.h>
 #include <assert.h>
 #include <math.h>
+#include <limits.h>
+#include <time.h>
 
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_primitives.h>
@@ -29,6 +31,11 @@
 #define NK_INCLUDE_DEFAULT_FONT
 #include "nuklear_allegro.h"
 #include "nuklear_allegro.c"
+
+#define UNUSED(a) (void)a
+#define MIN(a,b) ((a) < (b) ? (a) : (b))
+#define MAX(a,b) ((a) < (b) ? (b) : (a))
+#define LEN(a) (sizeof(a)/sizeof(a)[0])
 
 /* ===============================================================
  *

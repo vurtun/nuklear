@@ -7,6 +7,8 @@
 #include <math.h>
 #include <assert.h>
 #include <math.h>
+#include <limits.h>
+#include <time.h>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
@@ -28,6 +30,11 @@
 
 #define MAX_VERTEX_MEMORY 512 * 1024
 #define MAX_ELEMENT_MEMORY 128 * 1024
+
+#define UNUSED(a) (void)a
+#define MIN(a,b) ((a) < (b) ? (a) : (b))
+#define MAX(a,b) ((a) < (b) ? (b) : (a))
+#define LEN(a) (sizeof(a)/sizeof(a)[0])
 
 /* ===============================================================
  *
