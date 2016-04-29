@@ -111,7 +111,7 @@ nk_allegro_render(enum nk_anti_aliasing AA)
             /* <sign> allegro does not support 32-bit packed color */
             unsigned int i = 0;
             struct nk_draw_vertex *verts = (struct nk_draw_vertex*)dev->vertex_buffer;
-            vertices = calloc(sizeof(struct nk_allegro_vertex), ctx->draw_list.vertex_count);
+            vertices = (struct nk_allegro_vertex*)calloc(sizeof(struct nk_allegro_vertex), ctx->draw_list.vertex_count);
             for (i = 0; i < ctx->draw_list.vertex_count; ++i) {
                 nk_byte *c;
                 vertices[i].pos = verts[i].position;
@@ -125,7 +125,7 @@ nk_allegro_render(enum nk_anti_aliasing AA)
              * @OPT: define nk_draw_index as int to fix this issue. */
             unsigned int i = 0;
             nk_draw_index *elements = (nk_draw_index*)dev->element_buffer;
-            indices = calloc(sizeof(int), ctx->draw_list.element_count);
+            indices = (int*)calloc(sizeof(int), ctx->draw_list.element_count);
             for (i = 0; i < ctx->draw_list.element_count; ++i)
                 indices[i] = elements[i];
         }
@@ -133,7 +133,7 @@ nk_allegro_render(enum nk_anti_aliasing AA)
         /* iterate over and execute each draw command */
         nk_draw_foreach(cmd, ctx, &dev->cmds)
         {
-            ALLEGRO_BITMAP *texture = cmd->texture.ptr;
+            ALLEGRO_BITMAP *texture = (ALLEGRO_BITMAP*)cmd->texture.ptr;
             if (!cmd->elem_count) continue;
             al_set_clipping_rectangle((int)cmd->clip_rect.x, (int)cmd->clip_rect.y,
                 (int)cmd->clip_rect.w, (int)cmd->clip_rect.h);
