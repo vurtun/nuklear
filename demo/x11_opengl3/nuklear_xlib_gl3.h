@@ -1,3 +1,37 @@
+/*
+ * Nuklear - v1.00 - public domain
+ * no warrenty implied; use at your own risk.
+ * authored from 2015-2016 by Micha Mettke
+ */
+/*
+ * ==============================================================
+ *
+ *                              API
+ *
+ * ===============================================================
+ */
+#ifndef NK_XLIB_GL3_H_
+#define NK_XLIB_GL3_H_
+
+#include <X11/Xlib.h>
+NK_API struct nk_context*   nk_x11_init(Display *dpy, Window win);
+NK_API void                 nk_x11_font_stash_begin(struct nk_font_atlas **atlas);
+NK_API void                 nk_x11_font_stash_end(void);
+NK_API void                 nk_x11_handle_event(XEvent *evt);
+NK_API void                 nk_x11_render(enum nk_anti_aliasing, int max_vertex_buffer, int max_element_buffer);
+NK_API void                 nk_x11_shutdown(void);
+NK_API int                  nk_x11_device_create(void);
+NK_API void                 nk_x11_device_destroy(void);
+
+#endif
+/*
+ * ==============================================================
+ *
+ *                          IMPLEMENTATION
+ *
+ * ===============================================================
+ */
+#ifdef NK_XLIB_GL3_IMPLEMENTATION
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,13 +42,7 @@
 #include <X11/Xlocale.h>
 
 #include <GL/gl.h>
-#include <GL/glx.h>
 #include <GL/glext.h>
-#include <GL/glxext.h>
-
-#define NK_IMPLEMENTATION
-#include "nuklear_x11.h"
-#include "../../nuklear.h"
 
 #ifndef FALSE
 #define FALSE 0
@@ -23,81 +51,81 @@
 #define TRUE 1
 #endif
 
-#if NK_X11_LOAD_OPENGL_EXTENSIONS
+#ifdef NK_XLIB_LOAD_OPENGL_EXTENSIONS
 /* GL_ARB_vertex_buffer_object */
-typedef void(*qglGenBuffers)(GLsizei, GLuint*);
-typedef void(*qglBindBuffer)(GLenum, GLuint);
-typedef void(*qglBufferData)(GLenum, GLsizeiptr, const GLvoid*, GLenum);
-typedef void(*qglBufferSubData)(GLenum, GLintptr, GLsizeiptr, const GLvoid*);
-typedef void*(*qglMapBuffer)(GLenum, GLenum);
-typedef GLboolean(*qglUnmapBuffer)(GLenum);
-typedef void(*qglDeleteBuffers)(GLsizei, GLuint*);
+typedef void(*nkglGenBuffers)(GLsizei, GLuint*);
+typedef void(*nkglBindBuffer)(GLenum, GLuint);
+typedef void(*nkglBufferData)(GLenum, GLsizeiptr, const GLvoid*, GLenum);
+typedef void(*nkglBufferSubData)(GLenum, GLintptr, GLsizeiptr, const GLvoid*);
+typedef void*(*nkglMapBuffer)(GLenum, GLenum);
+typedef GLboolean(*nkglUnmapBuffer)(GLenum);
+typedef void(*nkglDeleteBuffers)(GLsizei, GLuint*);
 /* GL_ARB_vertex_array_object */
-typedef void (*qglGenVertexArrays)(GLsizei, GLuint*);
-typedef void (*qglBindVertexArray)(GLuint);
-typedef void (*qglDeleteVertexArrays)(GLsizei, const GLuint*);
+typedef void (*nkglGenVertexArrays)(GLsizei, GLuint*);
+typedef void (*nkglBindVertexArray)(GLuint);
+typedef void (*nkglDeleteVertexArrays)(GLsizei, const GLuint*);
 /* GL_ARB_vertex_program / GL_ARB_fragment_program */
-typedef void(*qglVertexAttribPointer)(GLuint, GLint, GLenum, GLboolean, GLsizei, const GLvoid*);
-typedef void(*qglEnableVertexAttribArray)(GLuint);
-typedef void(*qglDisableVertexAttribArray)(GLuint);
+typedef void(*nkglVertexAttribPointer)(GLuint, GLint, GLenum, GLboolean, GLsizei, const GLvoid*);
+typedef void(*nkglEnableVertexAttribArray)(GLuint);
+typedef void(*nkglDisableVertexAttribArray)(GLuint);
 /* GL_ARB_framebuffer_object */
-typedef void(*qglGenerateMipmap)(GLenum target);
+typedef void(*nkglGenerateMipmap)(GLenum target);
 /* GLSL/OpenGL 2.0 core */
-typedef GLuint(*qglCreateShader)(GLenum);
-typedef void(*qglShaderSource)(GLuint, GLsizei, const GLchar**, const GLint*);
-typedef void(*qglCompileShader)(GLuint);
-typedef void(*qglGetShaderiv)(GLuint, GLenum, GLint*);
-typedef void(*qglGetShaderInfoLog)(GLuint, GLsizei, GLsizei*, GLchar*);
-typedef void(*qglDeleteShader)(GLuint);
-typedef GLuint(*qglCreateProgram)(void);
-typedef void(*qglAttachShader)(GLuint, GLuint);
-typedef void(*qglDetachShader)(GLuint, GLuint);
-typedef void(*qglLinkProgram)(GLuint);
-typedef void(*qglUseProgram)(GLuint);
-typedef void(*qglGetProgramiv)(GLuint, GLenum, GLint*);
-typedef void(*qglGetProgramInfoLog)(GLuint, GLsizei, GLsizei*, GLchar*);
-typedef void(*qglDeleteProgram)(GLuint);
-typedef GLint(*qglGetUniformLocation)(GLuint, const GLchar*);
-typedef GLint(*qglGetAttribLocation)(GLuint, const GLchar*);
-typedef void(*qglUniform1i)(GLint, GLint);
-typedef void(*qglUniform1f)(GLint, GLfloat);
-typedef void(*qglUniformMatrix3fv)(GLint, GLsizei, GLboolean, const GLfloat*);
-typedef void(*qglUniformMatrix4fv)(GLint, GLsizei, GLboolean, const GLfloat*);
+typedef GLuint(*nkglCreateShader)(GLenum);
+typedef void(*nkglShaderSource)(GLuint, GLsizei, const GLchar**, const GLint*);
+typedef void(*nkglCompileShader)(GLuint);
+typedef void(*nkglGetShaderiv)(GLuint, GLenum, GLint*);
+typedef void(*nkglGetShaderInfoLog)(GLuint, GLsizei, GLsizei*, GLchar*);
+typedef void(*nkglDeleteShader)(GLuint);
+typedef GLuint(*nkglCreateProgram)(void);
+typedef void(*nkglAttachShader)(GLuint, GLuint);
+typedef void(*nkglDetachShader)(GLuint, GLuint);
+typedef void(*nkglLinkProgram)(GLuint);
+typedef void(*nkglUseProgram)(GLuint);
+typedef void(*nkglGetProgramiv)(GLuint, GLenum, GLint*);
+typedef void(*nkglGetProgramInfoLog)(GLuint, GLsizei, GLsizei*, GLchar*);
+typedef void(*nkglDeleteProgram)(GLuint);
+typedef GLint(*nkglGetUniformLocation)(GLuint, const GLchar*);
+typedef GLint(*nkglGetAttribLocation)(GLuint, const GLchar*);
+typedef void(*nkglUniform1i)(GLint, GLint);
+typedef void(*nkglUniform1f)(GLint, GLfloat);
+typedef void(*nkglUniformMatrix3fv)(GLint, GLsizei, GLboolean, const GLfloat*);
+typedef void(*nkglUniformMatrix4fv)(GLint, GLsizei, GLboolean, const GLfloat*);
 
-static qglGenBuffers glGenBuffers;
-static qglBindBuffer glBindBuffer;
-static qglBufferData glBufferData;
-static qglBufferSubData glBufferSubData;
-static qglMapBuffer glMapBuffer;
-static qglUnmapBuffer glUnmapBuffer;
-static qglDeleteBuffers glDeleteBuffers;
-static qglGenVertexArrays glGenVertexArrays;
-static qglBindVertexArray glBindVertexArray;
-static qglDeleteVertexArrays glDeleteVertexArrays;
-static qglVertexAttribPointer glVertexAttribPointer;
-static qglEnableVertexAttribArray glEnableVertexAttribArray;
-static qglDisableVertexAttribArray glDisableVertexAttribArray;
-static qglGenerateMipmap glGenerateMipmap;
-static qglCreateShader glCreateShader;
-static qglShaderSource glShaderSource;
-static qglCompileShader glCompileShader;
-static qglGetShaderiv glGetShaderiv;
-static qglGetShaderInfoLog glGetShaderInfoLog;
-static qglDeleteShader glDeleteShader;
-static qglCreateProgram glCreateProgram;
-static qglAttachShader glAttachShader;
-static qglDetachShader glDetachShader;
-static qglLinkProgram glLinkProgram;
-static qglUseProgram glUseProgram;
-static qglGetProgramiv glGetProgramiv;
-static qglGetProgramInfoLog glGetProgramInfoLog;
-static qglDeleteProgram glDeleteProgram;
-static qglGetUniformLocation glGetUniformLocation;
-static qglGetAttribLocation glGetAttribLocation;
-static qglUniform1i glUniform1i;
-static qglUniform1f glUniform1f;
-static qglUniformMatrix3fv glUniformMatrix3fv;
-static qglUniformMatrix4fv glUniformMatrix4fv;
+static nkglGenBuffers glGenBuffers;
+static nkglBindBuffer glBindBuffer;
+static nkglBufferData glBufferData;
+static nkglBufferSubData glBufferSubData;
+static nkglMapBuffer glMapBuffer;
+static nkglUnmapBuffer glUnmapBuffer;
+static nkglDeleteBuffers glDeleteBuffers;
+static nkglGenVertexArrays glGenVertexArrays;
+static nkglBindVertexArray glBindVertexArray;
+static nkglDeleteVertexArrays glDeleteVertexArrays;
+static nkglVertexAttribPointer glVertexAttribPointer;
+static nkglEnableVertexAttribArray glEnableVertexAttribArray;
+static nkglDisableVertexAttribArray glDisableVertexAttribArray;
+static nkglGenerateMipmap glGenerateMipmap;
+static nkglCreateShader glCreateShader;
+static nkglShaderSource glShaderSource;
+static nkglCompileShader glCompileShader;
+static nkglGetShaderiv glGetShaderiv;
+static nkglGetShaderInfoLog glGetShaderInfoLog;
+static nkglDeleteShader glDeleteShader;
+static nkglCreateProgram glCreateProgram;
+static nkglAttachShader glAttachShader;
+static nkglDetachShader glDetachShader;
+static nkglLinkProgram glLinkProgram;
+static nkglUseProgram glUseProgram;
+static nkglGetProgramiv glGetProgramiv;
+static nkglGetProgramInfoLog glGetProgramInfoLog;
+static nkglDeleteProgram glDeleteProgram;
+static nkglGetUniformLocation glGetUniformLocation;
+static nkglGetAttribLocation glGetAttribLocation;
+static nkglUniform1i glUniform1i;
+static nkglUniform1f glUniform1f;
+static nkglUniformMatrix3fv glUniformMatrix3fv;
+static nkglUniformMatrix4fv glUniformMatrix4fv;
 
 enum graphics_card_vendors {
     VENDOR_UNKNOWN,
@@ -129,7 +157,7 @@ struct opengl_info {
 #endif
 
 struct nk_x11_device {
-#if NK_X11_LOAD_OPENGL_EXTENSIONS
+#ifdef NK_XLIB_LOAD_OPENGL_EXTENSIONS
     struct opengl_info info;
 #endif
     struct nk_buffer cmds;
@@ -160,7 +188,10 @@ static struct nk_x11 {
   #define NK_SHADER_VERSION "#version 300 es\n"
 #endif
 
-#if NK_X11_LOAD_OPENGL_EXTENSIONS
+#ifdef NK_XLIB_LOAD_OPENGL_EXTENSIONS
+#include <GL/glx.h>
+#include <GL/glxext.h>
+
 NK_INTERN int
 nk_x11_stricmpn(const char *a, const char *b, int len)
 {
@@ -192,7 +223,7 @@ nk_x11_check_extension(struct opengl_info *GL, const char *ext)
     return FALSE;
 }
 
-#define GL_EXT(name) (q##name)nk_gl_ext(#name)
+#define GL_EXT(name) (nk##name)nk_gl_ext(#name)
 NK_INTERN __GLXextFuncPtr
 nk_gl_ext(const char *name)
 {
@@ -335,7 +366,7 @@ nk_x11_device_create(void)
         "}\n";
 
     struct nk_x11_device *dev = &x11.ogl;
-#if NK_X11_LOAD_OPENGL_EXTENSIONS
+#ifdef NK_XLIB_LOAD_OPENGL_EXTENSIONS
     if (!nk_load_opengl(&dev->info)) return 0;
 #endif
     nk_buffer_init_default(&dev->cmds);
@@ -627,3 +658,4 @@ nk_x11_shutdown(void)
     memset(&x11, 0, sizeof(x11));
 }
 
+#endif

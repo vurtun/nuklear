@@ -13,17 +13,16 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 
-/* these defines are both needed for the header
- * and source file. So if you split them remember
- * to copy them as well. */
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
 #define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
 #define NK_INCLUDE_FONT_BAKING
 #define NK_INCLUDE_DEFAULT_FONT
-#include "nuklear_sdl.h"
-#include "nuklear_sdl.c"
+#define NK_IMPLEMENTATION
+#define NK_SDL_GL2_IMPLEMENTATION
+#include "../../nuklear.h"
+#include "nuklear_sdl_gl2.h"
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600

@@ -1,31 +1,53 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdarg.h>
-#include <string.h>
-#include <math.h>
-#include <assert.h>
-#include <math.h>
-#include <time.h>
-#include <limits.h>
+/*
+ * Nuklear - v1.00 - public domain
+ * no warrenty implied; use at your own risk.
+ * authored from 2015-2016 by Micha Mettke
+ */
+/*
+ * ==============================================================
+ *
+ *                              API
+ *
+ * ===============================================================
+ */
+#ifndef NK_GLFW_GL2_H_
+#define NK_GLFW_GL2_H_
 
-#define NK_IMPLEMENTATION
-#include "nuklear_glfw.h"
-#include "../../nuklear.h"
+#include <GLFW/glfw3.h>
 
+enum nk_glfw_init_state{
+    NK_GLFW3_DEFAULT = 0,
+    NK_GLFW3_INSTALL_CALLBACKS
+};
+NK_API struct nk_context*   nk_glfw3_init(GLFWwindow *win, enum nk_glfw_init_state);
+NK_API void                 nk_glfw3_font_stash_begin(struct nk_font_atlas **atlas);
+NK_API void                 nk_glfw3_font_stash_end(void);
+
+NK_API void                 nk_glfw3_new_frame(void);
+NK_API void                 nk_glfw3_render(enum nk_anti_aliasing , int max_vertex_buffer, int max_element_buffer);
+NK_API void                 nk_glfw3_shutdown(void);
+
+NK_API void                 nk_glfw3_char_callback(GLFWwindow *win, unsigned int codepoint);
+NK_API void                 nk_gflw3_scroll_callback(GLFWwindow *win, double xoff, double yoff);
+
+#endif
+
+/*
+ * ==============================================================
+ *
+ *                          IMPLEMENTATION
+ *
+ * ===============================================================
+ */
+#ifdef NK_GLFW_GL2_IMPLEMENTATION
+
+#ifndef NK_GLFW_TEXT_MAX
 #define NK_GLFW_TEXT_MAX 256
+#endif
+
 struct nk_glfw_device {
     struct nk_buffer cmds;
     struct nk_draw_null_texture null;
-    GLuint vbo, vao, ebo;
-    GLuint prog;
-    GLuint vert_shdr;
-    GLuint frag_shdr;
-    GLint attrib_pos;
-    GLint attrib_uv;
-    GLint attrib_col;
-    GLint uniform_tex;
-    GLint uniform_proj;
     GLuint font_tex;
 };
 
@@ -42,95 +64,6 @@ static struct nk_glfw {
     float scroll;
 } glfw;
 
-#ifdef __APPLE__
-  #define NK_SHADER_VERSION "#version 150\n"
-#else
-  #define NK_SHADER_VERSION "#version 300 es\n"
-#endif
-
-NK_API void
-nk_glfw3_device_create(void)
-{
-    GLint status;
-    static const GLchar *vertex_shader =
-        NK_SHADER_VERSION
-        "uniform mat4 ProjMtx;\n"
-        "in vec2 Position;\n"
-        "in vec2 TexCoord;\n"
-        "in vec4 Color;\n"
-        "out vec2 Frag_UV;\n"
-        "out vec4 Frag_Color;\n"
-        "void main() {\n"
-        "   Frag_UV = TexCoord;\n"
-        "   Frag_Color = Color;\n"
-        "   gl_Position = ProjMtx * vec4(Position.xy, 0, 1);\n"
-        "}\n";
-    static const GLchar *fragment_shader =
-        NK_SHADER_VERSION
-        "precision mediump float;\n"
-        "uniform sampler2D Texture;\n"
-        "in vec2 Frag_UV;\n"
-        "in vec4 Frag_Color;\n"
-        "out vec4 Out_Color;\n"
-        "void main(){\n"
-        "   Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
-        "}\n";
-
-    struct nk_glfw_device *dev = &glfw.ogl;
-    nk_buffer_init_default(&dev->cmds);
-    dev->prog = glCreateProgram();
-    dev->vert_shdr = glCreateShader(GL_VERTEX_SHADER);
-    dev->frag_shdr = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(dev->vert_shdr, 1, &vertex_shader, 0);
-    glShaderSource(dev->frag_shdr, 1, &fragment_shader, 0);
-    glCompileShader(dev->vert_shdr);
-    glCompileShader(dev->frag_shdr);
-    glGetShaderiv(dev->vert_shdr, GL_COMPILE_STATUS, &status);
-    assert(status == GL_TRUE);
-    glGetShaderiv(dev->frag_shdr, GL_COMPILE_STATUS, &status);
-    assert(status == GL_TRUE);
-    glAttachShader(dev->prog, dev->vert_shdr);
-    glAttachShader(dev->prog, dev->frag_shdr);
-    glLinkProgram(dev->prog);
-    glGetProgramiv(dev->prog, GL_LINK_STATUS, &status);
-    assert(status == GL_TRUE);
-
-    dev->uniform_tex = glGetUniformLocation(dev->prog, "Texture");
-    dev->uniform_proj = glGetUniformLocation(dev->prog, "ProjMtx");
-    dev->attrib_pos = glGetAttribLocation(dev->prog, "Position");
-    dev->attrib_uv = glGetAttribLocation(dev->prog, "TexCoord");
-    dev->attrib_col = glGetAttribLocation(dev->prog, "Color");
-
-    {
-        /* buffer setup */
-        GLsizei vs = sizeof(struct nk_draw_vertex);
-        size_t vp = offsetof(struct nk_draw_vertex, position);
-        size_t vt = offsetof(struct nk_draw_vertex, uv);
-        size_t vc = offsetof(struct nk_draw_vertex, col);
-
-        glGenBuffers(1, &dev->vbo);
-        glGenBuffers(1, &dev->ebo);
-        glGenVertexArrays(1, &dev->vao);
-
-        glBindVertexArray(dev->vao);
-        glBindBuffer(GL_ARRAY_BUFFER, dev->vbo);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, dev->ebo);
-
-        glEnableVertexAttribArray((GLuint)dev->attrib_pos);
-        glEnableVertexAttribArray((GLuint)dev->attrib_uv);
-        glEnableVertexAttribArray((GLuint)dev->attrib_col);
-
-        glVertexAttribPointer((GLuint)dev->attrib_pos, 2, GL_FLOAT, GL_FALSE, vs, (void*)vp);
-        glVertexAttribPointer((GLuint)dev->attrib_uv, 2, GL_FLOAT, GL_FALSE, vs, (void*)vt);
-        glVertexAttribPointer((GLuint)dev->attrib_col, 4, GL_UNSIGNED_BYTE, GL_TRUE, vs, (void*)vc);
-    }
-
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-}
-
 NK_INTERN void
 nk_glfw3_device_upload_atlas(const void *image, int width, int height)
 {
@@ -144,86 +77,66 @@ nk_glfw3_device_upload_atlas(const void *image, int width, int height)
 }
 
 NK_API void
-nk_glfw3_device_destroy(void)
-{
-    struct nk_glfw_device *dev = &glfw.ogl;
-    glDetachShader(dev->prog, dev->vert_shdr);
-    glDetachShader(dev->prog, dev->frag_shdr);
-    glDeleteShader(dev->vert_shdr);
-    glDeleteShader(dev->frag_shdr);
-    glDeleteProgram(dev->prog);
-    glDeleteTextures(1, &dev->font_tex);
-    glDeleteBuffers(1, &dev->vbo);
-    glDeleteBuffers(1, &dev->ebo);
-    nk_buffer_free(&dev->cmds);
-}
-
-NK_API void
 nk_glfw3_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_buffer)
 {
-    struct nk_glfw_device *dev = &glfw.ogl;
-    GLfloat ortho[4][4] = {
-        {2.0f, 0.0f, 0.0f, 0.0f},
-        {0.0f,-2.0f, 0.0f, 0.0f},
-        {0.0f, 0.0f,-1.0f, 0.0f},
-        {-1.0f,1.0f, 0.0f, 1.0f},
-    };
-    ortho[0][0] /= (GLfloat)glfw.width;
-    ortho[1][1] /= (GLfloat)glfw.height;
-
     /* setup global state */
-    glEnable(GL_BLEND);
-    glBlendEquation(GL_FUNC_ADD);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    struct nk_glfw_device *dev = &glfw.ogl;
+    glPushAttrib(GL_ENABLE_BIT|GL_COLOR_BUFFER_BIT|GL_TRANSFORM_BIT);
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_SCISSOR_TEST);
-    glActiveTexture(GL_TEXTURE0);
+    glEnable(GL_BLEND);
+    glEnable(GL_TEXTURE_2D);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    /* setup program */
-    glUseProgram(dev->prog);
-    glUniform1i(dev->uniform_tex, 0);
-    glUniformMatrix4fv(dev->uniform_proj, 1, GL_FALSE, &ortho[0][0]);
+    /* setup viewport/project */
     glViewport(0,0,(GLsizei)glfw.display_width,(GLsizei)glfw.display_height);
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    glOrtho(0.0f, glfw.width, glfw.height, 0.0f, -1.0f, 1.0f);
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glEnableClientState(GL_COLOR_ARRAY);
     {
+        GLsizei vs = sizeof(struct nk_draw_vertex);
+        size_t vp = offsetof(struct nk_draw_vertex, position);
+        size_t vt = offsetof(struct nk_draw_vertex, uv);
+        size_t vc = offsetof(struct nk_draw_vertex, col);
+
         /* convert from command queue into draw list and draw to screen */
         const struct nk_draw_command *cmd;
-        void *vertices, *elements;
         const nk_draw_index *offset = NULL;
+        struct nk_buffer vbuf, ebuf;
 
-        /* allocate vertex and element buffer */
-        glBindVertexArray(dev->vao);
-        glBindBuffer(GL_ARRAY_BUFFER, dev->vbo);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, dev->ebo);
+        /* fill converting configuration */
+        struct nk_convert_config config;
+        memset(&config, 0, sizeof(config));
+        config.global_alpha = 1.0f;
+        config.shape_AA = AA;
+        config.line_AA = AA;
+        config.circle_segment_count = 22;
+        config.curve_segment_count = 22;
+        config.arc_segment_count = 22;
+        config.null = dev->null;
 
-        glBufferData(GL_ARRAY_BUFFER, max_vertex_buffer, NULL, GL_STREAM_DRAW);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, max_element_buffer, NULL, GL_STREAM_DRAW);
+        /* convert shapes into vertexes */
+        nk_buffer_init_default(&vbuf);
+        nk_buffer_init_default(&ebuf);
+        nk_convert(&glfw.ctx, &dev->cmds, &vbuf, &ebuf, &config);
 
-        /* load draw vertices & elements directly into vertex + element buffer */
-        vertices = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-        elements = glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
-        {
-            /* fill converting configuration */
-            struct nk_convert_config config;
-            memset(&config, 0, sizeof(config));
-            config.global_alpha = 1.0f;
-            config.shape_AA = AA;
-            config.line_AA = AA;
-            config.circle_segment_count = 22;
-            config.curve_segment_count = 22;
-            config.arc_segment_count = 22;
-            config.null = dev->null;
-
-            /* setup buffers to load vertices and elements */
-            {struct nk_buffer vbuf, ebuf;
-            nk_buffer_init_fixed(&vbuf, vertices, (size_t)max_vertex_buffer);
-            nk_buffer_init_fixed(&ebuf, elements, (size_t)max_element_buffer);
-            nk_convert(&glfw.ctx, &dev->cmds, &vbuf, &ebuf, &config);}
-        }
-        glUnmapBuffer(GL_ARRAY_BUFFER);
-        glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
+        /* setup vertex buffer pointer */
+        {const void *vertices = nk_buffer_memory_const(&vbuf);
+        glVertexPointer(2, GL_FLOAT, vs, (const void*)((const nk_byte*)vertices + vp));
+        glTexCoordPointer(2, GL_FLOAT, vs, (const void*)((const nk_byte*)vertices + vt));
+        glColorPointer(4, GL_UNSIGNED_BYTE, vs, (const void*)((const nk_byte*)vertices + vc));}
 
         /* iterate over and execute each draw command */
+        offset = (const nk_draw_index*)nk_buffer_memory_const(&ebuf);
         nk_draw_foreach(cmd, &glfw.ctx, &dev->cmds)
         {
             if (!cmd->elem_count) continue;
@@ -237,15 +150,27 @@ nk_glfw3_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element
             offset += cmd->elem_count;
         }
         nk_clear(&glfw.ctx);
+        nk_buffer_free(&vbuf);
+        nk_buffer_free(&ebuf);
     }
 
     /* default OpenGL state */
-    glUseProgram(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-    glDisable(GL_BLEND);
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
+
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_DEPTH_TEST);
     glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_BLEND);
+    glDisable(GL_TEXTURE_2D);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glPopAttrib();
 }
 
 NK_API void
@@ -298,7 +223,7 @@ nk_glfw3_init(GLFWwindow *win, enum nk_glfw_init_state init_state)
     glfw.ctx.clip.copy = nk_glfw3_clipbard_copy;
     glfw.ctx.clip.paste = nk_glfw3_clipbard_paste;
     glfw.ctx.clip.userdata = nk_handle_ptr(0);
-    nk_glfw3_device_create();
+    nk_buffer_init_default(&glfw.ogl.cmds);
     return &glfw.ctx;
 }
 
@@ -383,9 +308,13 @@ nk_glfw3_new_frame(void)
 NK_API
 void nk_glfw3_shutdown(void)
 {
+    struct nk_glfw_device *dev = &glfw.ogl;
     nk_font_atlas_clear(&glfw.atlas);
     nk_free(&glfw.ctx);
-    nk_glfw3_device_destroy();
+    glDeleteTextures(1, &dev->font_tex);
+    nk_buffer_free(&dev->cmds);
     memset(&glfw, 0, sizeof(glfw));
 }
+
+#endif
 

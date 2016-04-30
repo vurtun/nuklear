@@ -5,24 +5,22 @@
 #include <stdarg.h>
 #include <string.h>
 #include <limits.h>
-#include <time.h>
+#include <math.h>
 #include <sys/time.h>
 #include <unistd.h>
-#include <math.h>
-
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-#include <X11/Xresource.h>
-
-#define DTIME       20
-#define WINDOW_WIDTH 800
-#define WINDOW_HEIGHT 600
+#include <time.h>
 
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
+#define NK_IMPLEMENTATION
+#define NK_XLIB_IMPLEMENTATION
+#include "../../nuklear.h"
 #include "nuklear_xlib.h"
-#include "nuklear_xlib.c"
+
+#define DTIME           20
+#define WINDOW_WIDTH    800
+#define WINDOW_HEIGHT   600
 
 #define UNUSED(a) (void)a
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
@@ -90,6 +88,7 @@ sleep_for(long t)
 /* This are some code examples to provide a small overview of what can be
  * done with this library. To try out an example uncomment the include
  * and the corresponding function. */
+
 /*#include "../style.c"*/
 /*#include "../calculator.c"*/
 /*#include "../overview.c"*/

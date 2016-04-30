@@ -10,17 +10,17 @@
 #include <time.h>
 #include <limits.h>
 
-/* these defines are both needed for the header
- * and source file. So if you split them remember
- * to copy them as well. */
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
 #define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
 #define NK_INCLUDE_FONT_BAKING
 #define NK_INCLUDE_DEFAULT_FONT
-#include "nuklear_x11.h"
-#include "nuklear_x11.c"
+#define NK_IMPLEMENTATION
+#define NK_XLIB_GL3_IMPLEMENTATION
+#define NK_XLIB_LOAD_OPENGL_EXTENSIONS
+#include "../../nuklear.h"
+#include "nuklear_xlib_gl3.h"
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600

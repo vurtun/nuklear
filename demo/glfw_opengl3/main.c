@@ -13,17 +13,16 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
-/* these defines are both needed for the header
- * and source file. So if you split them remember
- * to copy them as well. */
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
 #define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
 #define NK_INCLUDE_FONT_BAKING
 #define NK_INCLUDE_DEFAULT_FONT
-#include "nuklear_glfw.h"
-#include "nuklear_glfw.c"
+#define NK_IMPLEMENTATION
+#define NK_GLFW_GL3_IMPLEMENTATION
+#include "../../nuklear.h"
+#include "nuklear_glfw_gl3.h"
 
 #define WINDOW_WIDTH 1200
 #define WINDOW_HEIGHT 800
