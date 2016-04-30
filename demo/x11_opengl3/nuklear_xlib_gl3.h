@@ -42,7 +42,7 @@ NK_API void                 nk_x11_device_destroy(void);
 #include <X11/Xlocale.h>
 
 #include <GL/gl.h>
-#include <GL/glext.h>
+#include <GL/glx.h>
 
 #ifndef FALSE
 #define FALSE 0
@@ -52,6 +52,8 @@ NK_API void                 nk_x11_device_destroy(void);
 #endif
 
 #ifdef NK_XLIB_LOAD_OPENGL_EXTENSIONS
+#include <GL/glxext.h>
+
 /* GL_ARB_vertex_buffer_object */
 typedef void(*nkglGenBuffers)(GLsizei, GLuint*);
 typedef void(*nkglBindBuffer)(GLenum, GLuint);
@@ -190,7 +192,6 @@ static struct nk_x11 {
 
 #ifdef NK_XLIB_LOAD_OPENGL_EXTENSIONS
 #include <GL/glx.h>
-#include <GL/glxext.h>
 
 NK_INTERN int
 nk_x11_stricmpn(const char *a, const char *b, int len)
