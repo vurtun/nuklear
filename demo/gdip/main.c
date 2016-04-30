@@ -3,11 +3,14 @@
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
+#include <limits.h>
+#include <time.h>
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 
 #define NK_INCLUDE_FIXED_TYPES
+#define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
 #include "nuklear_gdip.h"
 #include "nuklear_gdip.c"
@@ -20,6 +23,11 @@
 /* This are some code examples to provide a small overview of what can be
  * done with this library. To try out an example uncomment the include
  * and the corresponding function. */
+ #define UNUSED(a) (void)a
+ #define MIN(a,b) ((a) < (b) ? (a) : (b))
+ #define MAX(a,b) ((a) < (b) ? (b) : (a))
+ #define LEN(a) (sizeof(a)/sizeof(a)[0])
+
 /*#include "../style.c"*/
 /*#include "../calculator.c"*/
 /*#include "../overview.c"*/
