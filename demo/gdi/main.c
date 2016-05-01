@@ -12,8 +12,10 @@
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
+#define NK_IMPLEMENTATION
+#define NK_GDI_IMPLEMENTATION
+#include "../../nuklear.h"
 #include "nuklear_gdi.h"
-#include "nuklear_gdi.c"
 
 /* ===============================================================
  *
@@ -79,7 +81,6 @@ int main(void)
     atom = RegisterClassW(&wc);
 
     AdjustWindowRectEx(&rect, style, FALSE, exstyle);
-
     wnd = CreateWindowExW(exstyle, wc.lpszClassName, L"Nuklear Demo",
         style | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT,
         rect.right - rect.left, rect.bottom - rect.top,

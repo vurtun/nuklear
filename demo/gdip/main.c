@@ -12,15 +12,17 @@
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
+#define NK_IMPLEMENTATION
+#define NK_GDIP_IMPLEMENTATION
+#include "../../nuklear.h"
 #include "nuklear_gdip.h"
-#include "nuklear_gdip.c"
 
 /* ===============================================================
  *
  *                          EXAMPLE
  *
  * ===============================================================*/
-/* This are some code examples to provide a small overview of what can be
+/* These are some code examples to provide a small overview of what can be
  * done with this library. To try out an example uncomment the include
  * and the corresponding function. */
  #define UNUSED(a) (void)a
