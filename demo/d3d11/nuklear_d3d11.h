@@ -27,6 +27,7 @@ NK_API void nk_d3d11_render(ID3D11DeviceContext *context, enum nk_anti_aliasing)
 NK_API void nk_d3d11_resize(ID3D11DeviceContext *context, int width, int height);
 NK_API void nk_d3d11_shutdown(void);
 
+#endif
 /*
  * ==============================================================
  *
