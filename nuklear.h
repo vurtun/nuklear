@@ -17553,6 +17553,7 @@ nk_edit_string(struct nk_context *ctx, nk_flags flags,
     edit = &ctx->text_edit;
     nk_textedit_clear_state(&ctx->text_edit, (flags & NK_EDIT_MULTILINE)?
         NK_TEXT_EDIT_MULTI_LINE: NK_TEXT_EDIT_SINGLE_LINE, filter);
+
     if (win->edit.active && hash == win->edit.name) {
         if (flags & NK_EDIT_NO_CURSOR)
             edit->cursor = nk_utf_len(memory, *len);
@@ -18079,7 +18080,7 @@ nk_group_begin(struct nk_context *ctx, struct nk_panel *layout, const char *titl
     nk_panel_alloc_space(&bounds, ctx);
     nk_zero(layout, sizeof(*layout));
 
-    /* find group persistent scrollbar value */
+    /* find persistent group scrollbar value */
     title_len = (int)nk_strlen(title);
     title_hash = nk_murmur_hash(title, (int)title_len, NK_WINDOW_SUB);
     value.i = nk_find_value(win, title_hash);
@@ -19393,7 +19394,7 @@ nk_menu_begin(struct nk_panel *layout, struct nk_context *ctx, struct nk_window 
     body.x = header.x;
     body.w = width;
     body.y = header.y + header.h;
-    body.h = (win->layout->bounds.y + win->layout->bounds.h) - body.y;
+    body.h = nk_null_rect.h;
 
     popup = win->popup.win;
     is_open = (popup && (popup->flags & NK_WINDOW_MENU));
