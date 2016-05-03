@@ -15876,7 +15876,7 @@ nk_panel_end(struct nk_context *ctx)
             window->bounds.y + layout->border/2.0f,
             window->bounds.x + window->bounds.w - layout->border,
             window->bounds.y + layout->border/2.0f,
-            style->window.border, border);
+            layout->border, border);
 
         /* draw bottom border */
         nk_stroke_line(out, window->bounds.x + layout->border/2.0f,
