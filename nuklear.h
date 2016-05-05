@@ -665,7 +665,7 @@ NK_API nk_flags                 nk_edit_buffer(struct nk_context*, nk_flags, str
 /* Chart */
 NK_API int                      nk_chart_begin(struct nk_context*, enum nk_chart_type, int num, float min, float max);
 NK_API nk_flags                 nk_chart_push(struct nk_context*, float);
-NK_API nk_flags                 nk_chart_push2(struct nk_context*, float, int);
+NK_API nk_flags                 nk_chart_push_multi(struct nk_context*, float, int);
 NK_API void                     nk_chart_end(struct nk_context*);
 NK_API void                     nk_plot(struct nk_context*, enum nk_chart_type, const float *values, int count, int offset);
 NK_API void                     nk_plot_function(struct nk_context*, enum nk_chart_type, void *userdata, float(*value_getter)(void* user, int index), int count, int offset);
@@ -2304,9 +2304,8 @@ NK_API struct nk_style_item nk_style_item_hide(void);
 /*==============================================================
  *                          PANEL
  * =============================================================*/
-
 #ifndef NK_CHART_MAX_DEPTH
-#define NK_CHART_MAX_DEPTH 1
+#define NK_CHART_MAX_DEPTH 4
 #endif
 
 struct nk_chart {
@@ -17878,12 +17877,8 @@ nk_chart_begin(struct nk_context *ctx, const enum nk_chart_type type,
     chart->h = bounds.h - 2 * chart->style->padding.y;
     chart->w = NK_MAX(chart->w, 2 * chart->style->padding.x);
     chart->h = NK_MAX(chart->h, 2 * chart->style->padding.y);
-
-    for (i = 0; i < NK_CHART_MAX_DEPTH; ++i) {
-	chart->last[i].x = 0;
-	chart->last[i].y = 0;
-        chart->index[i] = 0;
-    }
+    nk_zero(&chart->last[0], sizeof(chart->last[0]) * NK_CHART_MAX_DEPTH);
+    nk_zero(&chart->index[0], sizeof(chart->index[0]) * NK_CHART_MAX_DEPTH);
 
     /* draw chart background */
     background = &chart->style->background;
@@ -18018,7 +18013,7 @@ nk_chart_push_column(const struct nk_context *ctx, struct nk_window *win,
 }
 
 NK_API nk_flags
-nk_chart_push2(struct nk_context *ctx, float value, int depth)
+nk_chart_push_multi(struct nk_context *ctx, float value, int depth)
 {
     nk_flags flags;
     struct nk_window *win;
@@ -18079,6 +18074,8 @@ nk_chart_end(struct nk_context *ctx)
 
     win = ctx->current;
     chart = &win->layout->chart;
+    nk_zero(&chart->last[0], sizeof(chart->last[0]) * NK_CHART_MAX_DEPTH);
+    nk_zero(&chart->index[0], sizeof(chart->index[0]) * NK_CHART_MAX_DEPTH);
     chart->type = NK_CHART_MAX;
     chart->count = 0;
     chart->min = 0;
@@ -18087,13 +18084,6 @@ nk_chart_end(struct nk_context *ctx)
     chart->y = 0;
     chart->w = 0;
     chart->h = 0;
-
-    for (i = 0; i < NK_CHART_MAX_DEPTH; ++i) {
-        chart->index[i] = 0;
-        chart->last[i].x = 0;
-        chart->last[i].y = 0;
-    }
-
     return;
 }
 
