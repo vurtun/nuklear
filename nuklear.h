@@ -665,7 +665,7 @@ NK_API nk_flags                 nk_edit_buffer(struct nk_context*, nk_flags, str
 /* Chart */
 NK_API int                      nk_chart_begin(struct nk_context*, enum nk_chart_type, int num, float min, float max);
 NK_API nk_flags                 nk_chart_push(struct nk_context*, float);
-NK_API nk_flags                 nk_chart_push_multi(struct nk_context*, float, int);
+NK_API nk_flags                 nk_chart_push_slot(struct nk_context*, float, int);
 NK_API void                     nk_chart_end(struct nk_context*);
 NK_API void                     nk_plot(struct nk_context*, enum nk_chart_type, const float *values, int count, int offset);
 NK_API void                     nk_plot_function(struct nk_context*, enum nk_chart_type, void *userdata, float(*value_getter)(void* user, int index), int count, int offset);
@@ -2288,8 +2288,7 @@ struct nk_style {
     struct nk_style_progress progress;
     struct nk_style_property property;
     struct nk_style_edit edit;
-    struct nk_style_chart line_chart;
-    struct nk_style_chart column_chart;
+    struct nk_style_chart chart;
     struct nk_style_scrollbar scrollh;
     struct nk_style_scrollbar scrollv;
     struct nk_style_tab tab;
@@ -2304,18 +2303,23 @@ NK_API struct nk_style_item nk_style_item_hide(void);
 /*==============================================================
  *                          PANEL
  * =============================================================*/
-#ifndef NK_CHART_MAX_DEPTH
-#define NK_CHART_MAX_DEPTH 4
+#ifndef NK_CHART_MAX_SLOT
+#define NK_CHART_MAX_SLOT 4
 #endif
 
-struct nk_chart {
-    const struct nk_style_chart *style;
+struct nk_chart_slot {
     enum nk_chart_type type;
-    float x, y, w, h;
     float min, max, range;
-    struct nk_vec2 last[NK_CHART_MAX_DEPTH];
-    int index[NK_CHART_MAX_DEPTH];
     int count;
+    struct nk_vec2 last;
+    int index;
+
+};
+
+struct nk_chart {
+    struct nk_chart_slot slots[NK_CHART_MAX_SLOT];
+    int slot;
+    float x, y, w, h;
 };
 
 struct nk_row_layout {
@@ -14043,7 +14047,7 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     edit->rounding          = 0;
 
     /* chart */
-    chart = &style->line_chart;
+    chart = &style->chart;
     nk_zero_struct(*chart);
     chart->background = nk_style_item_color(table[NK_COLOR_CHART]);
     chart->border_color = table[NK_COLOR_BORDER];
@@ -14052,7 +14056,6 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     chart->border = 0;
     chart->rounding = 0;
     chart->padding = nk_vec2(4,4);
-    style->column_chart = *chart;
 
     /* combo */
     combo = &style->combo;
@@ -17839,10 +17842,12 @@ nk_color_picker(struct nk_context *ctx, struct nk_color color,
 NK_API int
 nk_chart_begin(struct nk_context *ctx, const enum nk_chart_type type,
     int count, float min_value, float max_value)
+
 {
     struct nk_window *win;
     struct nk_chart *chart;
     const struct nk_style *config;
+    const struct nk_style_chart *style;
 
     const struct nk_style_item *background;
     struct nk_rect bounds = {0, 0, 0, 0};
@@ -17854,7 +17859,6 @@ nk_chart_begin(struct nk_context *ctx, const enum nk_chart_type type,
     if (!ctx || !ctx->current || !ctx->current->layout) return 0;
     if (!nk_widget(&bounds, ctx)) {
         chart = &ctx->current->layout->chart;
-        chart->style = 0;
         nk_zero(chart, sizeof(*chart));
         return 0;
     }
@@ -17862,43 +17866,70 @@ nk_chart_begin(struct nk_context *ctx, const enum nk_chart_type type,
     win = ctx->current;
     config = &ctx->style;
     chart = &win->layout->chart;
+    style = &config->chart;
 
     /* setup basic generic chart  */
     nk_zero(chart, sizeof(*chart));
-    chart->type = type;
-    chart->style = (type == NK_CHART_LINES) ? &config->line_chart: &config->column_chart;
-    chart->count = count;
-    chart->min = NK_MIN(min_value, max_value);
-    chart->max = NK_MAX(min_value, max_value);
-    chart->range = chart->max - chart->min;
-    chart->x = bounds.x + chart->style->padding.x;
-    chart->y = bounds.y + chart->style->padding.y;
-    chart->w = bounds.w - 2 * chart->style->padding.x;
-    chart->h = bounds.h - 2 * chart->style->padding.y;
-    chart->w = NK_MAX(chart->w, 2 * chart->style->padding.x);
-    chart->h = NK_MAX(chart->h, 2 * chart->style->padding.y);
-    nk_zero(&chart->last[0], sizeof(chart->last[0]) * NK_CHART_MAX_DEPTH);
-    nk_zero(&chart->index[0], sizeof(chart->index[0]) * NK_CHART_MAX_DEPTH);
+    chart->x = bounds.x + style->padding.x;
+    chart->y = bounds.y + style->padding.y;
+    chart->w = bounds.w - 2 * style->padding.x;
+    chart->h = bounds.h - 2 * style->padding.y;
+    chart->w = NK_MAX(chart->w, 2 * style->padding.x);
+    chart->h = NK_MAX(chart->h, 2 * style->padding.y);
+    nk_zero(&chart->slots[0], sizeof(chart->slots[0]) * NK_CHART_MAX_SLOT);
+    chart->slot = 0;
+
+    /* add first slot into chart */
+    {struct nk_chart_slot *slot = &chart->slots[chart->slot];
+    slot->type = type;
+    slot->count = count;
+    slot->min = NK_MIN(min_value, max_value);
+    slot->max = NK_MAX(min_value, max_value);
+    slot->range = slot->max - slot->min;
+    chart->slot++;}
 
     /* draw chart background */
-    background = &chart->style->background;
+    background = &style->background;
     if (background->type == NK_STYLE_ITEM_IMAGE) {
         nk_draw_image(&win->buffer, bounds, &background->data.image);
     } else {
-        nk_fill_rect(&win->buffer, bounds, chart->style->rounding, chart->style->border_color);
-        nk_fill_rect(&win->buffer, nk_shrink_rect(bounds, chart->style->border),
-            chart->style->rounding, chart->style->border_color);
+        nk_fill_rect(&win->buffer, bounds, style->rounding, style->border_color);
+        nk_fill_rect(&win->buffer, nk_shrink_rect(bounds, style->border),
+            style->rounding, style->border_color);
     }
     return 1;
 }
 
+NK_INTERN void
+nk_chart_add_slot(struct nk_context *ctx, const enum nk_chart_type type,
+    int count, float min_value, float max_value)
+{
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx->current->layout);
+    NK_ASSERT(ctx->current->layout->chart.slot < NK_CHART_MAX_SLOT);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
+    if (ctx->current->layout->chart.slot >= NK_CHART_MAX_SLOT) return;
+
+    /* add another slot into the graph */
+    {struct nk_chart *chart = &ctx->current->layout->chart;
+    struct nk_chart_slot *slot = &chart->slots[chart->slot];
+    slot->type = type;
+    slot->count = count;
+    slot->min = NK_MIN(min_value, max_value);
+    slot->max = NK_MAX(min_value, max_value);
+    slot->range = slot->max - slot->min;
+    chart->slot++;}
+}
+
 NK_INTERN nk_flags
 nk_chart_push_line(struct nk_context *ctx, struct nk_window *win,
-    struct nk_chart *g, float value, int depth)
+    struct nk_chart *g, float value, int slot)
 {
     struct nk_panel *layout = win->layout;
     const struct nk_input *i = &ctx->input;
     struct nk_command_buffer *out = &win->buffer;
+    struct nk_style_chart *style;
 
     nk_flags ret = 0;
     struct nk_vec2 cur;
@@ -17908,39 +17939,39 @@ nk_chart_push_line(struct nk_context *ctx, struct nk_window *win,
     float range;
     float ratio;
 
-    NK_ASSERT(depth >= 0 && depth < NK_CHART_MAX_DEPTH);
+    NK_ASSERT(slot >= 0 && slot < NK_CHART_MAX_SLOT);
+    step = g->w / (float)g->slots[slot].count;
+    range = g->slots[slot].max - g->slots[slot].min;
+    ratio = (value - g->slots[slot].min) / range;
+    style = &ctx->style.chart;
 
-    step = g->w / (float)g->count;
-    range = g->max - g->min;
-    ratio = (value - g->min) / range;
-
-    if (g->index[depth] == 0) {
+    if (g->slots[slot].index == 0) {
         /* first data point does not have a connection */
-        g->last[depth].x = g->x;
-        g->last[depth].y = (g->y + g->h) - ratio * (float)g->h;
+        g->slots[slot].last.x = g->x;
+        g->slots[slot].last.y = (g->y + g->h) - ratio * (float)g->h;
 
-        bounds.x = g->last[depth].x - 2;
-        bounds.y = g->last[depth].y - 2;
+        bounds.x = g->slots[slot].last.x - 2;
+        bounds.y = g->slots[slot].last.y - 2;
         bounds.w = 4;
         bounds.h = 4;
 
-        color = g->style->color;
+        color = style->color;
         if (!(layout->flags & NK_WINDOW_ROM) &&
-            NK_INBOX(i->mouse.pos.x,i->mouse.pos.y, g->last[depth].x-3, g->last[depth].y-3, 6, 6)){
+            NK_INBOX(i->mouse.pos.x,i->mouse.pos.y, g->slots[slot].last.x-3, g->slots[slot].last.y-3, 6, 6)){
             ret = nk_input_is_mouse_hovering_rect(i, bounds) ? NK_CHART_HOVERING : 0;
             ret |= (i->mouse.buttons[NK_BUTTON_LEFT].down &&
                 i->mouse.buttons[NK_BUTTON_LEFT].clicked) ? NK_CHART_CLICKED: 0;
-            color = g->style->selected_color;
+            color = style->selected_color;
         }
         nk_fill_rect(out, bounds, 0, color);
-        g->index[depth] += 1;
+        g->slots[slot].index += 1;
         return ret;
     }
 
     /* draw a line between the last data point and the new one */
-    cur.x = g->x + (float)(step * (float)g->index[depth]);
+    cur.x = g->x + (float)(step * (float)g->slots[slot].index);
     cur.y = (g->y + g->h) - (ratio * (float)g->h);
-    nk_stroke_line(out, g->last[depth].x, g->last[depth].y, cur.x, cur.y, 1.0f, g->style->color);
+    nk_stroke_line(out, g->slots[slot].last.x, g->slots[slot].last.y, cur.x, cur.y, 1.0f, style->color);
 
     bounds.x = cur.x - 3;
     bounds.y = cur.y - 3;
@@ -17948,56 +17979,59 @@ nk_chart_push_line(struct nk_context *ctx, struct nk_window *win,
     bounds.h = 6;
 
     /* user selection of current data point */
-    color = g->style->color;
+    color = style->color;
     if (!(layout->flags & NK_WINDOW_ROM)) {
         if (nk_input_is_mouse_hovering_rect(i, bounds)) {
             ret = NK_CHART_HOVERING;
             ret |= (!i->mouse.buttons[NK_BUTTON_LEFT].down &&
                 i->mouse.buttons[NK_BUTTON_LEFT].clicked) ? NK_CHART_CLICKED: 0;
-            color = g->style->selected_color;
+            color = style->selected_color;
         }
     }
     nk_fill_rect(out, nk_rect(cur.x - 2, cur.y - 2, 4, 4), 0, color);
 
     /* save current data point position */
-    g->last[depth].x = cur.x;
-    g->last[depth].y = cur.y;
-    g->index[depth] += 1;
+    g->slots[slot].last.x = cur.x;
+    g->slots[slot].last.y = cur.y;
+    g->slots[slot].index  += 1;
     return ret;
 }
 
 NK_INTERN nk_flags
 nk_chart_push_column(const struct nk_context *ctx, struct nk_window *win,
-    struct nk_chart *chart, float value, int depth)
+    struct nk_chart *chart, float value, int slot)
 {
     struct nk_command_buffer *out = &win->buffer;
     const struct nk_input *in = &ctx->input;
     struct nk_panel *layout = win->layout;
+    const struct nk_style_chart *style;
 
     float ratio;
     nk_flags ret = 0;
     struct nk_color color;
     struct nk_rect item = {0,0,0,0};
 
-    if (chart->index[depth] >= chart->count)
+    NK_ASSERT(slot >= 0 && slot < NK_CHART_MAX_SLOT);
+    if (chart->slots[slot].index  >= chart->slots[slot].count)
         return nk_false;
-    if (chart->count) {
-        float padding = (float)(chart->count-1);
-        item.w = (chart->w - padding) / (float)(chart->count);
+    if (chart->slots[slot].count) {
+        float padding = (float)(chart->slots[slot].count-1);
+        item.w = (chart->w - padding) / (float)(chart->slots[slot].count);
     }
 
     /* calculate bounds of the current bar chart entry */
-    color = chart->style->color;
-    item.h = chart->h * NK_ABS((value/chart->range));
+    style = &ctx->style.chart;
+    color = style->color;
+    item.h = chart->h * NK_ABS((value/chart->slots[slot].range));
     if (value >= 0) {
-        ratio = (value + NK_ABS(chart->min)) / NK_ABS(chart->range);
+        ratio = (value + NK_ABS(chart->slots[slot].min)) / NK_ABS(chart->slots[slot].range);
         item.y = (chart->y + chart->h) - chart->h * ratio;
     } else {
-        ratio = (value - chart->max) / chart->range;
+        ratio = (value - chart->slots[slot].max) / chart->slots[slot].range;
         item.y = chart->y + (chart->h * NK_ABS(ratio)) - item.h;
     }
-    item.x = chart->x + ((float)chart->index[depth] * item.w);
-    item.x = item.x + ((float)chart->index[depth]);
+    item.x = chart->x + ((float)chart->slots[slot].index * item.w);
+    item.x = item.x + ((float)chart->slots[slot].index);
 
     /* user chart bar selection */
     if (!(layout->flags & NK_WINDOW_ROM) &&
@@ -18005,30 +18039,33 @@ nk_chart_push_column(const struct nk_context *ctx, struct nk_window *win,
         ret = NK_CHART_HOVERING;
         ret |= (!in->mouse.buttons[NK_BUTTON_LEFT].down &&
                 in->mouse.buttons[NK_BUTTON_LEFT].clicked) ? NK_CHART_CLICKED: 0;
-        color = chart->style->selected_color;
+        color = style->selected_color;
     }
     nk_fill_rect(out, item, 0, color);
-    chart->index[depth] += 1;
+    chart->slots[slot].index += 1;
     return ret;
 }
 
 NK_API nk_flags
-nk_chart_push_multi(struct nk_context *ctx, float value, int depth)
+nk_chart_push_slot(struct nk_context *ctx, float value, int slot)
 {
     nk_flags flags;
     struct nk_window *win;
 
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
-    if (!ctx || !ctx->current || !ctx->current->layout->chart.style)
+    NK_ASSERT(slot >= 0 && slot < NK_CHART_MAX_SLOT);
+    NK_ASSERT (ctx->current->layout->chart.slot > slot);
+    if (!ctx || !ctx->current || slot >= NK_CHART_MAX_SLOT)
         return nk_false;
 
     win = ctx->current;
-    switch (win->layout->chart.type) {
+    if (win->layout->chart.slot < slot) return nk_false;
+    switch (win->layout->chart.slots[slot].type) {
     case NK_CHART_LINES:
-        flags = nk_chart_push_line(ctx, win, &win->layout->chart, value, depth); break;
+        flags = nk_chart_push_line(ctx, win, &win->layout->chart, value, slot); break;
     case NK_CHART_COLUMN:
-        flags = nk_chart_push_column(ctx, win, &win->layout->chart, value, depth); break;
+        flags = nk_chart_push_column(ctx, win, &win->layout->chart, value, slot); break;
     default:
     case NK_CHART_MAX:
         flags = 0;
@@ -18038,27 +18075,7 @@ nk_chart_push_multi(struct nk_context *ctx, float value, int depth)
 
 NK_API nk_flags
 nk_chart_push(struct nk_context *ctx, float value)
-{
-    nk_flags flags;
-    struct nk_window *win;
-
-    NK_ASSERT(ctx);
-    NK_ASSERT(ctx->current);
-    if (!ctx || !ctx->current || !ctx->current->layout->chart.style)
-        return nk_false;
-
-    win = ctx->current;
-    switch (win->layout->chart.type) {
-    case NK_CHART_LINES:
-        flags = nk_chart_push_line(ctx, win, &win->layout->chart, value, 0); break;
-    case NK_CHART_COLUMN:
-        flags = nk_chart_push_column(ctx, win, &win->layout->chart, value, 0); break;
-    default:
-    case NK_CHART_MAX:
-        flags = 0;
-    }
-    return flags;
-}
+{return nk_chart_push_slot(ctx, value, 0);}
 
 NK_API void
 nk_chart_end(struct nk_context *ctx)
@@ -18074,17 +18091,59 @@ nk_chart_end(struct nk_context *ctx)
 
     win = ctx->current;
     chart = &win->layout->chart;
-    nk_zero(&chart->last[0], sizeof(chart->last[0]) * NK_CHART_MAX_DEPTH);
-    nk_zero(&chart->index[0], sizeof(chart->index[0]) * NK_CHART_MAX_DEPTH);
-    chart->type = NK_CHART_MAX;
-    chart->count = 0;
-    chart->min = 0;
-    chart->max = 0;
+    nk_zero(&chart->slots[0], sizeof(chart->slots[0]) * NK_CHART_MAX_SLOT);
     chart->x = 0;
     chart->y = 0;
     chart->w = 0;
     chart->h = 0;
     return;
+}
+
+NK_API void
+nk_plot(struct nk_context *ctx, enum nk_chart_type type, const float *values,
+    int count, int offset)
+{
+    int i = 0;
+    float min_value;
+    float max_value;
+
+    NK_ASSERT(ctx);
+    NK_ASSERT(values);
+    if (!ctx || !values || !count) return;
+
+    min_value = values[offset];
+    max_value = values[offset];
+    for (i = 0; i < count; ++i) {
+        min_value = NK_MIN(values[i + offset], min_value);
+        max_value = NK_MAX(values[i + offset], max_value);
+    }
+    nk_chart_begin(ctx, type, count, min_value, max_value);
+    for (i = 0; i < count; ++i)
+        nk_chart_push(ctx, values[i + offset]);
+    nk_chart_end(ctx);
+}
+
+NK_API void
+nk_plot_function(struct nk_context *ctx, enum nk_chart_type type, void *userdata,
+    float(*value_getter)(void* user, int index), int count, int offset)
+{
+    int i = 0;
+    float min_value;
+    float max_value;
+
+    NK_ASSERT(ctx);
+    NK_ASSERT(value_getter);
+    if (!ctx || !value_getter || !count) return;
+
+    max_value = min_value = value_getter(userdata, offset);
+    for (i = 0; i < count; ++i) {
+        min_value = NK_MIN(value_getter(userdata, i + offset), min_value);
+        max_value = NK_MAX(value_getter(userdata, i + offset), max_value);
+    }
+    nk_chart_begin(ctx, type, count, min_value, max_value);
+    for (i = 0; i < count; ++i)
+        nk_chart_push(ctx, value_getter(userdata, i + offset));
+    nk_chart_end(ctx);
 }
 
 /* -------------------------------------------------------------
