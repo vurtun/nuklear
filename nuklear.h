@@ -1335,7 +1335,7 @@ NK_API struct nk_font* nk_font_atlas_add_compressed_base85(struct nk_font_atlas*
                                                 const char *data, float height,
                                                 const struct nk_font_config *config);
 NK_API const void* nk_font_atlas_bake(struct nk_font_atlas*, int *width, int *height,
-                                enum nk_font_atlas_format);
+                                        enum nk_font_atlas_format);
 NK_API void nk_font_atlas_end(struct nk_font_atlas*, nk_handle tex,
                                 struct nk_draw_null_texture*);
 NK_API void nk_font_atlas_clear(struct nk_font_atlas*);
@@ -14805,12 +14805,10 @@ nk_free_window(struct nk_context *ctx, struct nk_window *win)
     while (it) {
         /*free window state tables */
         n = it->next;
-        if (it->seq != ctx->seq) {
-            nk_remove_table(win, it);
-            nk_free_table(ctx, it);
-            if (it == win->tables)
-                win->tables = n;
-        }
+        nk_remove_table(win, it);
+        nk_free_table(ctx, it);
+        if (it == win->tables)
+            win->tables = n;
         it = n;
     }
 
@@ -17842,7 +17840,6 @@ nk_color_picker(struct nk_context *ctx, struct nk_color color,
 NK_API int
 nk_chart_begin(struct nk_context *ctx, const enum nk_chart_type type,
     int count, float min_value, float max_value)
-
 {
     struct nk_window *win;
     struct nk_chart *chart;
@@ -17876,17 +17873,14 @@ nk_chart_begin(struct nk_context *ctx, const enum nk_chart_type type,
     chart->h = bounds.h - 2 * style->padding.y;
     chart->w = NK_MAX(chart->w, 2 * style->padding.x);
     chart->h = NK_MAX(chart->h, 2 * style->padding.y);
-    nk_zero(&chart->slots[0], sizeof(chart->slots[0]) * NK_CHART_MAX_SLOT);
-    chart->slot = 0;
 
     /* add first slot into chart */
-    {struct nk_chart_slot *slot = &chart->slots[chart->slot];
+    {struct nk_chart_slot *slot = &chart->slots[chart->slot++];
     slot->type = type;
     slot->count = count;
     slot->min = NK_MIN(min_value, max_value);
     slot->max = NK_MAX(min_value, max_value);
-    slot->range = slot->max - slot->min;
-    chart->slot++;}
+    slot->range = slot->max - slot->min;}
 
     /* draw chart background */
     background = &style->background;
@@ -17913,13 +17907,12 @@ nk_chart_add_slot(struct nk_context *ctx, const enum nk_chart_type type,
 
     /* add another slot into the graph */
     {struct nk_chart *chart = &ctx->current->layout->chart;
-    struct nk_chart_slot *slot = &chart->slots[chart->slot];
+    struct nk_chart_slot *slot = &chart->slots[chart->slot++];
     slot->type = type;
     slot->count = count;
     slot->min = NK_MIN(min_value, max_value);
     slot->max = NK_MAX(min_value, max_value);
-    slot->range = slot->max - slot->min;
-    chart->slot++;}
+    slot->range = slot->max - slot->min;}
 }
 
 NK_INTERN nk_flags
@@ -18019,7 +18012,7 @@ nk_chart_push_column(const struct nk_context *ctx, struct nk_window *win,
         item.w = (chart->w - padding) / (float)(chart->slots[slot].count);
     }
 
-    /* calculate bounds of the current bar chart entry */
+    /* calculate bounds of current bar chart entry */
     style = &ctx->style.chart;
     color = style->color;
     item.h = chart->h * NK_ABS((value/chart->slots[slot].range));
@@ -18055,9 +18048,9 @@ nk_chart_push_slot(struct nk_context *ctx, float value, int slot)
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
     NK_ASSERT(slot >= 0 && slot < NK_CHART_MAX_SLOT);
-    NK_ASSERT (ctx->current->layout->chart.slot > slot);
-    if (!ctx || !ctx->current || slot >= NK_CHART_MAX_SLOT)
-        return nk_false;
+    NK_ASSERT(slot < ctx->current->layout->chart.slot);
+    if (!ctx || !ctx->current || slot >= NK_CHART_MAX_SLOT) return nk_false;
+    if (slot >= ctx->current->layout->chart.slot) return nk_false;
 
     win = ctx->current;
     if (win->layout->chart.slot < slot) return nk_false;
@@ -18091,11 +18084,7 @@ nk_chart_end(struct nk_context *ctx)
 
     win = ctx->current;
     chart = &win->layout->chart;
-    nk_zero(&chart->slots[0], sizeof(chart->slots[0]) * NK_CHART_MAX_SLOT);
-    chart->x = 0;
-    chart->y = 0;
-    chart->w = 0;
-    chart->h = 0;
+    memset(chart, 0, sizeof(*chart));
     return;
 }
 
@@ -18137,8 +18126,9 @@ nk_plot_function(struct nk_context *ctx, enum nk_chart_type type, void *userdata
 
     max_value = min_value = value_getter(userdata, offset);
     for (i = 0; i < count; ++i) {
-        min_value = NK_MIN(value_getter(userdata, i + offset), min_value);
-        max_value = NK_MAX(value_getter(userdata, i + offset), max_value);
+        float value = value_getter(userdata, i + offset);
+        min_value = NK_MIN(value, min_value);
+        max_value = NK_MAX(value, max_value);
     }
     nk_chart_begin(ctx, type, count, min_value, max_value);
     for (i = 0; i < count; ++i)
@@ -18474,7 +18464,7 @@ nk_tooltip_begin(struct nk_context *ctx, struct nk_panel *layout, float width)
     bounds.y = (in->mouse.pos.y + 1) - win->layout->clip.y;
 
     ret = nk_popup_begin(ctx, layout, NK_POPUP_DYNAMIC,
-        "__##Tooltip##__", NK_WINDOW_NO_SCROLLBAR|NK_WINDOW_TOOLTIP, bounds);
+        "__##Tooltip##__", NK_WINDOW_NO_SCROLLBAR|NK_WINDOW_TOOLTIP|NK_WINDOW_BORDER, bounds);
     if (ret) win->layout->flags &= ~(nk_flags)NK_WINDOW_ROM;
     return ret;
 }
