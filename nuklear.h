@@ -2610,6 +2610,10 @@ struct nk_context {
 #define NK_ALIGN_PTR_BACK(x, mask)\
     (NK_UINT_TO_PTR((NK_PTR_TO_UINT((nk_byte*)(x)) & ~(mask-1))))
 
+#define NK_OFFSETOF(st,m) ((nk_ptr)&(((st*)0)->m))
+#define NK_CONTAINER_OF(ptr,type,member)\
+    (type*)((void*)((char*)(1 ? (ptr): &((type*)0)->member) - NK_OFFSETOF(type, member)))
+
 #ifdef __cplusplus
 template<typename T> struct nk_alignof;
 template<typename T, int size_diff> struct nk_helper{enum {value = size_diff};};
@@ -2620,9 +2624,6 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #else
 #define NK_ALIGNOF(t) ((char*)(&((struct {char c; t _h;}*)0)->_h) - (char*)0)
 #endif
-#define NK_OFFSETOF(st,m) ((nk_ptr)&(((st*)0)->m))
-#define NK_CONTAINER_OF(ptr,type,member)\
-    (type*)((void*)((char*)(1 ? (ptr): &((type*)0)->member) - NK_OFFSETOF(type, member)))
 
 /* make sure correct type size */
 typedef int nk__check_size[(sizeof(nk_size) >= sizeof(void*)) ? 1 : -1];
@@ -12055,7 +12056,6 @@ nk_slider_behavior(nk_flags *state, struct nk_rect *cursor,
         ((bounds.x + bounds.w) - cursor->w):
         cursor->x - (cursor->w/2);
 
-
     /* check if visual cursor is being dragged */
     nk_widget_state_reset(state);
     left_mouse_down = in && in->mouse.buttons[NK_BUTTON_LEFT].down;
@@ -14050,31 +14050,31 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     /* chart */
     chart = &style->chart;
     nk_zero_struct(*chart);
-    chart->background = nk_style_item_color(table[NK_COLOR_CHART]);
-    chart->border_color = table[NK_COLOR_BORDER];
-    chart->selected_color = table[NK_COLOR_CHART_COLOR_HIGHLIGHT];
-    chart->color = table[NK_COLOR_CHART_COLOR];
-    chart->border = 0;
-    chart->rounding = 0;
-    chart->padding = nk_vec2(4,4);
+    chart->background       = nk_style_item_color(table[NK_COLOR_CHART]);
+    chart->border_color     = table[NK_COLOR_BORDER];
+    chart->selected_color   = table[NK_COLOR_CHART_COLOR_HIGHLIGHT];
+    chart->color            = table[NK_COLOR_CHART_COLOR];
+    chart->padding          = nk_vec2(4,4);
+    chart->border           = 0;
+    chart->rounding         = 0;
 
     /* combo */
     combo = &style->combo;
-    combo->normal = nk_style_item_color(table[NK_COLOR_COMBO]);
-    combo->hover = nk_style_item_color(table[NK_COLOR_COMBO]);
-    combo->active = nk_style_item_color(table[NK_COLOR_COMBO]);
-    combo->border_color = table[NK_COLOR_BORDER];
-    combo->label_normal = table[NK_COLOR_TEXT];
-    combo->label_hover = table[NK_COLOR_TEXT];
-    combo->label_active = table[NK_COLOR_TEXT];
-    combo->sym_normal = NK_SYMBOL_TRIANGLE_DOWN;
-    combo->sym_hover = NK_SYMBOL_TRIANGLE_DOWN;
-    combo->sym_active =NK_SYMBOL_TRIANGLE_DOWN;
-    combo->content_padding = nk_vec2(4,4);
-    combo->button_padding = nk_vec2(0,4);
-    combo->spacing = nk_vec2(4,0);
-    combo->border = 1;
-    combo->rounding = 0;
+    combo->normal           = nk_style_item_color(table[NK_COLOR_COMBO]);
+    combo->hover            = nk_style_item_color(table[NK_COLOR_COMBO]);
+    combo->active           = nk_style_item_color(table[NK_COLOR_COMBO]);
+    combo->border_color     = table[NK_COLOR_BORDER];
+    combo->label_normal     = table[NK_COLOR_TEXT];
+    combo->label_hover      = table[NK_COLOR_TEXT];
+    combo->label_active     = table[NK_COLOR_TEXT];
+    combo->sym_normal       = NK_SYMBOL_TRIANGLE_DOWN;
+    combo->sym_hover        = NK_SYMBOL_TRIANGLE_DOWN;
+    combo->sym_active       = NK_SYMBOL_TRIANGLE_DOWN;
+    combo->content_padding  = nk_vec2(4,4);
+    combo->button_padding   = nk_vec2(0,4);
+    combo->spacing          = nk_vec2(4,0);
+    combo->border           = 1;
+    combo->rounding         = 0;
 
     /* combo button */
     button = &style->combo.button;
@@ -14098,15 +14098,15 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
 
     /* tab */
     tab = &style->tab;
-    tab->background = nk_style_item_color(table[NK_COLOR_TAB_HEADER]);
-    tab->border_color = table[NK_COLOR_BORDER];
-    tab->text = table[NK_COLOR_TEXT];
-    tab->sym_minimize = NK_SYMBOL_TRIANGLE_DOWN;
-    tab->sym_maximize = NK_SYMBOL_TRIANGLE_RIGHT;
-    tab->border = 1;
-    tab->rounding = 0;
-    tab->padding = nk_vec2(4,4);
-    tab->spacing = nk_vec2(4,4);
+    tab->background         = nk_style_item_color(table[NK_COLOR_TAB_HEADER]);
+    tab->border_color       = table[NK_COLOR_BORDER];
+    tab->text               = table[NK_COLOR_TEXT];
+    tab->sym_minimize       = NK_SYMBOL_TRIANGLE_DOWN;
+    tab->sym_maximize       = NK_SYMBOL_TRIANGLE_RIGHT;
+    tab->padding            = nk_vec2(4,4);
+    tab->spacing            = nk_vec2(4,4);
+    tab->border             = 1;
+    tab->rounding           = 0;
 
     /* tab button */
     button = &style->tab.tab_button;
@@ -14347,8 +14347,8 @@ nk_pool_alloc(struct nk_pool *pool)
  *                          CONTEXT
  *
  * ===============================================================*/
-NK_INTERN void nk_remove_window(struct nk_context*, struct nk_window*);
 NK_INTERN void* nk_create_window(struct nk_context *ctx);
+NK_INTERN void nk_remove_window(struct nk_context*, struct nk_window*);
 NK_INTERN void nk_free_window(struct nk_context *ctx, struct nk_window *win);
 NK_INTERN void nk_free_table(struct nk_context *ctx, struct nk_table *tbl);
 NK_INTERN void nk_remove_table(struct nk_window *win, struct nk_table *tbl);
@@ -14704,7 +14704,7 @@ nk_create_page_element(struct nk_context *ctx)
         /* allocate new page element from the back of the fixed size memory buffer */
         NK_STORAGE const nk_size size = sizeof(struct nk_page_element);
         NK_STORAGE const nk_size align = NK_ALIGNOF(struct nk_page_element);
-        elem = nk_buffer_alloc(&ctx->memory, NK_BUFFER_BACK, size, align);
+        elem = (struct nk_page_element*)nk_buffer_alloc(&ctx->memory, NK_BUFFER_BACK, size, align);
         NK_ASSERT(elem);
         if (!elem) return 0;
     }
@@ -14960,10 +14960,10 @@ nk_begin(struct nk_context *ctx, struct nk_panel *layout, const char *title,
     if (!win) {
         /* create new window */
         win = (struct nk_window*)nk_create_window(ctx);
+        if (!win) return 0;
+        NK_ASSERT(win);
         nk_insert_window(ctx, win);
         nk_command_buffer_init(&win->buffer, &ctx->memory, NK_CLIPPING_ON);
-        NK_ASSERT(win);
-        if (!win) return 0;
 
         win->flags = flags;
         win->bounds = bounds;
