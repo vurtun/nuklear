@@ -607,14 +607,15 @@ overview(struct nk_context *ctx)
             /* mixed chart */
             nk_layout_row_dynamic(ctx, 100, 1);
             bounds = nk_widget_bounds(ctx);
-            nk_chart_begin(ctx, NK_CHART_COLUMN, 32, 0.0f, 1.0f);
-            nk_chart_add_slot(ctx, NK_CHART_LINES, 32, -1.0f, 1.0f);
-            nk_chart_add_slot(ctx, NK_CHART_LINES, 32, -1.0f, 1.0f);
-            for (id = 0, i = 0; i < 32; ++i) {
-                nk_chart_push_slot(ctx, (float)fabs(sin(id)), 0);
-                nk_chart_push_slot(ctx, (float)cos(id), 1);
-                nk_chart_push_slot(ctx, (float)sin(id), 2);
-                id += step;
+            if (nk_chart_begin(ctx, NK_CHART_COLUMN, 32, 0.0f, 1.0f)) {
+                nk_chart_add_slot(ctx, NK_CHART_LINES, 32, -1.0f, 1.0f);
+                nk_chart_add_slot(ctx, NK_CHART_LINES, 32, -1.0f, 1.0f);
+                for (id = 0, i = 0; i < 32; ++i) {
+                    nk_chart_push_slot(ctx, (float)fabs(sin(id)), 0);
+                    nk_chart_push_slot(ctx, (float)cos(id), 1);
+                    nk_chart_push_slot(ctx, (float)sin(id), 2);
+                    id += step;
+                }
             }
             nk_chart_end(ctx);
             nk_tree_pop(ctx);
