@@ -258,7 +258,7 @@ typedef unsigned long nk_ptr;
 #else
 typedef NK_POINTER_TYPE nk_ptr;
 #endif
-typedef unsigned int nk_hash;
+typedef NK_UINT32 nk_hash;
 typedef unsigned int nk_flags;
 typedef nk_uint nk_rune;
 typedef unsigned char nk_byte;
@@ -664,6 +664,7 @@ NK_API nk_flags                 nk_edit_buffer(struct nk_context*, nk_flags, str
 
 /* Chart */
 NK_API int                      nk_chart_begin(struct nk_context*, enum nk_chart_type, int num, float min, float max);
+NK_API void                     nk_chart_add_slot(struct nk_context *ctx, const enum nk_chart_type type, int count, float min_value, float max_value);
 NK_API nk_flags                 nk_chart_push(struct nk_context*, float);
 NK_API nk_flags                 nk_chart_push_slot(struct nk_context*, float, int);
 NK_API void                     nk_chart_end(struct nk_context*);
@@ -2436,9 +2437,9 @@ struct nk_property_state {
 };
 
 struct nk_window {
+    unsigned int seq;
     nk_hash name;
     nk_flags flags;
-    unsigned int seq;
     struct nk_rect bounds;
     struct nk_scroll scrollbar;
     struct nk_command_buffer buffer;
@@ -2462,6 +2463,7 @@ struct nk_window {
 /*==============================================================
  *                          CONTEXT
  * =============================================================*/
+struct nk_page_element;
 struct nk_context {
 /* public: can be accessed freely */
     struct nk_input input;
@@ -2493,7 +2495,7 @@ struct nk_context {
     struct nk_window *end;
     struct nk_window *active;
     struct nk_window *current;
-    struct nk_window *freelist;
+    struct nk_page_element *freelist;
     unsigned int count;
     unsigned int seq;
 };
@@ -2514,10 +2516,6 @@ struct nk_context {
 
 #ifndef NK_POOL_DEFAULT_CAPACITY
 #define NK_POOL_DEFAULT_CAPACITY 16
-#endif
-
-#ifndef NK_VALUE_PAGE_CAPACITY
-#define NK_VALUE_PAGE_CAPACITY 32
 #endif
 
 #ifndef NK_DEFAULT_COMMAND_BUFFER_SIZE
@@ -2622,6 +2620,9 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #else
 #define NK_ALIGNOF(t) ((char*)(&((struct {char c; t _h;}*)0)->_h) - (char*)0)
 #endif
+#define NK_OFFSETOF(st,m) ((nk_ptr)&(((st*)0)->m))
+#define NK_CONTAINER_OF(ptr,type,member)\
+    (type*)((void*)((char*)(1 ? (ptr): &((type*)0)->member) - NK_OFFSETOF(type, member)))
 
 /* make sure correct type size */
 typedef int nk__check_size[(sizeof(nk_size) >= sizeof(void*)) ? 1 : -1];
@@ -14243,6 +14244,7 @@ nk_style_set_font(struct nk_context *ctx, const struct nk_user_font *font)
  *                          POOL
  *
  * ===============================================================*/
+#define NK_VALUE_PAGE_CAPACITY ((sizeof(struct nk_window) / sizeof(nk_uint)) / 2)
 struct nk_table {
     unsigned int seq;
     nk_hash keys[NK_VALUE_PAGE_CAPACITY];
@@ -14255,17 +14257,24 @@ union nk_page_data {
     struct nk_window win;
 };
 
-struct nk_window_page {
+struct nk_page_element {
+    union nk_page_data data;
+    struct nk_page_element *next;
+    struct nk_page_element *prev;
+};
+
+struct nk_page {
     unsigned size;
-    struct nk_window_page *next;
-    union nk_page_data win[1];
+    struct nk_page *next;
+    struct nk_page_element win[1];
 };
 
 struct nk_pool {
     struct nk_allocator alloc;
     enum nk_allocation_type type;
     unsigned int page_count;
-    struct nk_window_page *pages;
+    struct nk_page *pages;
+    struct nk_page_element *freelist;
     unsigned capacity;
     nk_size size;
     nk_size cap;
@@ -14285,8 +14294,8 @@ nk_pool_init(struct nk_pool *pool, struct nk_allocator *alloc,
 NK_INTERN void
 nk_pool_free(struct nk_pool *pool)
 {
-    struct nk_window_page *next;
-    struct nk_window_page *iter = pool->pages;
+    struct nk_page *next;
+    struct nk_page *iter = pool->pages;
     if (!pool) return;
     if (pool->type == NK_BUFFER_FIXED) return;
     while (iter) {
@@ -14294,28 +14303,26 @@ nk_pool_free(struct nk_pool *pool)
         pool->alloc.free(pool->alloc.userdata, iter);
         iter = next;
     }
-    pool->alloc.free(pool->alloc.userdata, pool);
 }
 
 NK_INTERN void
 nk_pool_init_fixed(struct nk_pool *pool, void *memory, nk_size size)
 {
     nk_zero(pool, sizeof(*pool));
-    /* make sure pages have correct granularity to at least fit one page into memory */
-    if (size < sizeof(struct nk_window_page) + NK_POOL_DEFAULT_CAPACITY * sizeof(struct nk_window))
-        pool->capacity = (unsigned)(size - sizeof(struct nk_window_page)) / sizeof(struct nk_window);
-    else pool->capacity = NK_POOL_DEFAULT_CAPACITY;
-    pool->pages = (struct nk_window_page*)memory;
+    NK_ASSERT(size >= sizeof(struct nk_page));
+    if (size < sizeof(struct nk_page)) return;
+    pool->capacity = (unsigned)(size - sizeof(struct nk_page)) / sizeof(struct nk_page_element);
+    pool->pages = (struct nk_page*)memory;
     pool->type = NK_BUFFER_FIXED;
     pool->size = size;
 }
 
-NK_INTERN void*
+NK_INTERN struct nk_page_element*
 nk_pool_alloc(struct nk_pool *pool)
 {
     if (!pool->pages || pool->pages->size >= pool->capacity) {
         /* allocate new page */
-        struct nk_window_page *page;
+        struct nk_page *page;
         if (pool->type == NK_BUFFER_FIXED) {
             if (!pool->pages) {
                 NK_ASSERT(pool->pages);
@@ -14324,9 +14331,9 @@ nk_pool_alloc(struct nk_pool *pool)
             NK_ASSERT(pool->pages->size < pool->capacity);
             return 0;
         } else {
-            nk_size size = sizeof(struct nk_window_page);
+            nk_size size = sizeof(struct nk_page);
             size += NK_POOL_DEFAULT_CAPACITY * sizeof(union nk_page_data);
-            page = (struct nk_window_page*)pool->alloc.alloc(pool->alloc.userdata,0, size);
+            page = (struct nk_page*)pool->alloc.alloc(pool->alloc.userdata,0, size);
             page->size = 0;
             page->next = pool->pages;
             pool->pages = page;
@@ -14441,7 +14448,11 @@ nk_free(struct nk_context *ctx)
     NK_ASSERT(ctx);
     if (!ctx) return;
     nk_buffer_free(&ctx->memory);
-    if (ctx->pool) nk_pool_free((struct nk_pool*)ctx->pool);
+    if (ctx->pool) {
+        struct nk_pool *pool = (struct nk_pool*)ctx->pool;
+        nk_pool_free(pool);
+        pool->alloc.free(pool->alloc.userdata, pool);
+    }
 
     nk_zero(&ctx->input, sizeof(ctx->input));
     nk_zero(&ctx->style, sizeof(ctx->style));
@@ -14671,6 +14682,49 @@ nk__next(struct nk_context *ctx, const struct nk_command *cmd)
     next = nk_ptr_add_const(struct nk_command, buffer, cmd->next);
     return next;
 }
+/* ----------------------------------------------------------------
+ *
+ *                          PAGE ELEMENT
+ *
+ * ---------------------------------------------------------------*/
+NK_INTERN struct nk_page_element*
+nk_create_page_element(struct nk_context *ctx)
+{
+    struct nk_page_element *elem;
+    if (ctx->freelist) {
+        /* unlink page element from free list */
+        elem = ctx->freelist;
+        ctx->freelist = elem->next;
+    } else if (ctx->pool) {
+        /* allocate page element from memory pool */
+        elem = nk_pool_alloc((struct nk_pool*)ctx->pool);
+        NK_ASSERT(elem);
+        if (!elem) return 0;
+    } else {
+        /* allocate new page element from the back of the fixed size memory buffer */
+        NK_STORAGE const nk_size size = sizeof(struct nk_page_element);
+        NK_STORAGE const nk_size align = NK_ALIGNOF(struct nk_page_element);
+        elem = nk_buffer_alloc(&ctx->memory, NK_BUFFER_BACK, size, align);
+        NK_ASSERT(elem);
+        if (!elem) return 0;
+    }
+    nk_zero_struct(*elem);
+    elem->next = 0;
+    elem->prev = 0;
+    return elem;
+}
+
+NK_INTERN void
+nk_free_page_element(struct nk_context *ctx, struct nk_page_element *elem)
+{
+    /* link table into freelist */
+    if (!ctx->freelist) {
+        ctx->freelist = elem;
+    } else {
+        elem->next = ctx->freelist;
+        ctx->freelist = elem;
+    }
+}
 
 /* ----------------------------------------------------------------
  *
@@ -14680,14 +14734,17 @@ nk__next(struct nk_context *ctx, const struct nk_command *cmd)
 NK_INTERN struct nk_table*
 nk_create_table(struct nk_context *ctx)
 {
-    void *tbl = (void*)nk_create_window(ctx);
-    nk_zero(tbl, sizeof(struct nk_table));
-    return (struct nk_table*)tbl;
+    struct nk_page_element *elem = nk_create_page_element(ctx);
+    return &elem->data.tbl;
 }
 
 NK_INTERN void
 nk_free_table(struct nk_context *ctx, struct nk_table *tbl)
-{nk_free_window(ctx, (struct nk_window*)tbl);}
+{
+    union nk_page_data *pd = NK_CONTAINER_OF(tbl, union nk_page_data, tbl);
+    struct nk_page_element *pe = NK_CONTAINER_OF(pd, struct nk_page_element, data);
+    nk_free_page_element(ctx, pe);
+}
 
 NK_INTERN void
 nk_push_table(struct nk_window *win, struct nk_table *tbl)
@@ -14765,29 +14822,9 @@ NK_INTERN void nk_panel_end(struct nk_context *ctx);
 NK_INTERN void*
 nk_create_window(struct nk_context *ctx)
 {
-    struct nk_window *win = 0;
-    if (ctx->freelist) {
-        /* unlink window from free list */
-        win = ctx->freelist;
-        ctx->freelist = win->next;
-    } else if (ctx->pool) {
-        /* allocate window from memory pool */
-        win = (struct nk_window*) nk_pool_alloc((struct nk_pool*)ctx->pool);
-        NK_ASSERT(win);
-        if (!win) return 0;
-    } else {
-        /* allocate new window from the back of the fixed size memory buffer */
-        NK_STORAGE const nk_size size = sizeof(union nk_page_data);
-        NK_STORAGE const nk_size align = NK_ALIGNOF(union nk_page_data);
-        win = (struct nk_window*)nk_buffer_alloc(&ctx->memory, NK_BUFFER_BACK, size, align);
-        NK_ASSERT(win);
-        if (!win) return 0;
-    }
-    nk_zero(win, sizeof(*win));
-    win->next = 0;
-    win->prev = 0;
-    win->seq = ctx->seq;
-    return win;
+    struct nk_page_element *elem = nk_create_page_element(ctx);
+    elem->data.win.seq = ctx->seq;
+    return &elem->data.win;
 }
 
 NK_INTERN void
@@ -14813,12 +14850,9 @@ nk_free_window(struct nk_context *ctx, struct nk_window *win)
     }
 
     /* link windows into freelist */
-    if (!ctx->freelist) {
-        ctx->freelist = win;
-    } else {
-        win->next = ctx->freelist;
-        ctx->freelist = win;
-    }
+    {union nk_page_data *pd = NK_CONTAINER_OF(win, union nk_page_data, win);
+    struct nk_page_element *pe = NK_CONTAINER_OF(pd, struct nk_page_element, data);
+    nk_free_page_element(ctx, pe);}
 }
 
 NK_INTERN struct nk_window*
@@ -17848,7 +17882,6 @@ nk_chart_begin(struct nk_context *ctx, const enum nk_chart_type type,
 
     const struct nk_style_item *background;
     struct nk_rect bounds = {0, 0, 0, 0};
-    int i;
 
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
@@ -17894,7 +17927,7 @@ nk_chart_begin(struct nk_context *ctx, const enum nk_chart_type type,
     return 1;
 }
 
-NK_INTERN void
+NK_API void
 nk_chart_add_slot(struct nk_context *ctx, const enum nk_chart_type type,
     int count, float min_value, float max_value)
 {
@@ -18075,7 +18108,6 @@ nk_chart_end(struct nk_context *ctx)
 {
     struct nk_window *win;
     struct nk_chart *chart;
-    int i;
 
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
