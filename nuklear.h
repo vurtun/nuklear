@@ -2436,6 +2436,11 @@ struct nk_property_state {
     int state;
 };
 
+struct nk_scaling_state {
+    struct nk_vec2 start_size;
+    int active;
+};
+
 struct nk_window {
     unsigned int seq;
     nk_hash name;
@@ -2449,6 +2454,7 @@ struct nk_window {
     struct nk_property_state property;
     struct nk_popup_state popup;
     struct nk_edit_state edit;
+    struct nk_scaling_state scaling;
 
     struct nk_table *tables;
     unsigned short table_count;
@@ -2776,6 +2782,22 @@ nk_rectiv(const int *r)
     return nk_recti(r[0], r[1], r[2], r[3]);
 }
 
+NK_API struct nk_vec2
+nk_rect_pos(struct nk_rect r)
+{
+    struct nk_vec2 ret;
+    ret.x = r.x; ret.y = r.y;
+    return ret;
+}
+
+NK_API struct nk_vec2
+nk_rect_size(struct nk_rect r)
+{
+    struct nk_vec2 ret;
+    ret.x = r.w; ret.y = r.h;
+    return ret;
+}
+
 NK_INTERN struct nk_rect
 nk_shrink_rect(struct nk_rect r, float amount)
 {
@@ -2828,6 +2850,7 @@ nk_vec2iv(const int *v)
 {
     return nk_vec2i(v[0], v[1]);
 }
+
 /*
  * ==============================================================
  *
@@ -10156,6 +10179,13 @@ nk_input_is_mouse_released(const struct nk_input *i, enum nk_buttons id)
     return (!i->mouse.buttons[id].down && i->mouse.buttons[id].clicked);
 }
 
+NK_API struct nk_vec2
+nk_input_mouse_accumulated_drag_delta(const struct nk_input *i, enum nk_buttons id)
+{
+    if (!i || !i->mouse.buttons[id].down) return nk_vec2(0.0f, 0.0f);
+    return nk_vec2_sub(i->mouse.pos, i->mouse.buttons[id].clicked_pos);
+}
+
 NK_API int
 nk_input_is_key_pressed(const struct nk_input *i, enum nk_keys key)
 {
@@ -15869,12 +15899,20 @@ nk_panel_end(struct nk_context *ctx)
             struct nk_vec2 window_size = style->window.min_size;
             int incursor = NK_INBOX(prev_x,prev_y,scaler_x,scaler_y,scaler_w,scaler_h);
 
-            if (nk_input_is_mouse_down(in, NK_BUTTON_LEFT) && incursor) {
-                window->bounds.w = NK_MAX(window_size.x, window->bounds.w + in->mouse.delta.x);
+            if (nk_input_is_mouse_down(in, NK_BUTTON_LEFT) &&
+                    (incursor || window->scaling.active == nk_true)) {
+                if(window->scaling.active == nk_false)
+                    window->scaling.start_size = nk_rect_size(window->bounds);
+                window->scaling.active = nk_true;
+
+                struct nk_vec2 delta = nk_input_mouse_accumulated_drag_delta(in, NK_BUTTON_LEFT);
+                window->bounds.w = NK_MAX(window_size.x,
+                                          window->scaling.start_size.x + delta.x);
                 /* dragging in y-direction is only possible if static window */
                 if (!(layout->flags & NK_WINDOW_DYNAMIC))
-                    window->bounds.h = NK_MAX(window_size.y, window->bounds.h + in->mouse.delta.y);
-            }
+                    window->bounds.h = NK_MAX(window_size.y,
+                                              window->scaling.start_size.y + delta.y);
+            } else window->scaling.active = nk_false;
         }
     }
 
