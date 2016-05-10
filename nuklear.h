@@ -1656,6 +1656,8 @@ struct nk_input {
     struct nk_mouse mouse;
 };
 
+NK_API int nk_input_has_mouse_click(const struct nk_input*,
+                                    enum nk_buttons);
 NK_API int nk_input_has_mouse_click_in_rect(const struct nk_input*,
                                     enum nk_buttons, struct nk_rect);
 NK_API int nk_input_has_mouse_click_down_in_rect(const struct nk_input*, enum nk_buttons,
@@ -10057,6 +10059,15 @@ nk_input_end(struct nk_context *ctx)
 }
 
 NK_API int
+nk_input_has_mouse_click(const struct nk_input *i, enum nk_buttons id)
+{
+    const struct nk_mouse_button *btn;
+    if (!i) return nk_false;
+    btn = &i->mouse.buttons[id];
+    return (btn->clicked && btn->down == nk_false) ? nk_true : nk_false;
+}
+
+NK_API int
 nk_input_has_mouse_click_in_rect(const struct nk_input *i, enum nk_buttons id,
     struct nk_rect b)
 {
@@ -18390,11 +18401,12 @@ nk_nonblock_begin(struct nk_panel *layout, struct nk_context *ctx,
         nk_command_buffer_init(&popup->buffer, &ctx->memory, NK_CLIPPING_ON);
     } else {
         /* check if user clicked outside the popup and close if so */
-        int in_panel, in_body, in_header;
-        in_panel = nk_input_is_mouse_click_in_rect(&ctx->input, NK_BUTTON_LEFT, win->layout->bounds);
+        int clicked, in_body, in_header;
+        clicked = nk_input_has_mouse_click(&ctx->input, NK_BUTTON_LEFT);
         in_body = nk_input_is_mouse_click_in_rect(&ctx->input, NK_BUTTON_LEFT, body);
         in_header = nk_input_is_mouse_click_in_rect(&ctx->input, NK_BUTTON_LEFT, header);
-        if (!in_body && in_panel && !in_header)
+
+        if (clicked && !in_body && !in_header)
             is_active = nk_false;
     }
 
