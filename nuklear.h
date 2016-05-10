@@ -851,6 +851,8 @@ NK_API struct nk_rect           nk_recti(int x, int y, int w, int h);
 NK_API struct nk_rect           nk_recta(struct nk_vec2 pos, struct nk_vec2 size);
 NK_API struct nk_rect           nk_rectv(const float *xywh);
 NK_API struct nk_rect           nk_rectiv(const int *xywh);
+NK_API struct nk_vec2           nk_rect_pos(struct nk_rect);
+NK_API struct nk_vec2           nk_rect_size(struct nk_rect);
 
 /* string*/
 NK_API int                      nk_strlen(const char *str);
@@ -2438,6 +2440,11 @@ struct nk_property_state {
     int state;
 };
 
+struct nk_scaling_state {
+    struct nk_vec2 start_size;
+    int active;
+};
+
 struct nk_window {
     unsigned int seq;
     nk_hash name;
@@ -2451,6 +2458,7 @@ struct nk_window {
     struct nk_property_state property;
     struct nk_popup_state popup;
     struct nk_edit_state edit;
+    struct nk_scaling_state scaling;
 
     struct nk_table *tables;
     unsigned short table_count;
@@ -2778,6 +2786,22 @@ nk_rectiv(const int *r)
     return nk_recti(r[0], r[1], r[2], r[3]);
 }
 
+NK_API struct nk_vec2
+nk_rect_pos(struct nk_rect r)
+{
+    struct nk_vec2 ret;
+    ret.x = r.x; ret.y = r.y;
+    return ret;
+}
+
+NK_API struct nk_vec2
+nk_rect_size(struct nk_rect r)
+{
+    struct nk_vec2 ret;
+    ret.x = r.w; ret.y = r.h;
+    return ret;
+}
+
 NK_INTERN struct nk_rect
 nk_shrink_rect(struct nk_rect r, float amount)
 {
@@ -2830,6 +2854,7 @@ nk_vec2iv(const int *v)
 {
     return nk_vec2i(v[0], v[1]);
 }
+
 /*
  * ==============================================================
  *
@@ -15869,23 +15894,33 @@ nk_panel_end(struct nk_context *ctx)
                 &scaler->data.image);
         } else {
             nk_fill_triangle(out, scaler_x + scaler_w, scaler_y, scaler_x + scaler_w,
-                scaler_y + scaler_h, scaler_x, scaler_y + scaler_h,
-                scaler->data.color);
+                scaler_y + scaler_h, scaler_x, scaler_y + scaler_h, scaler->data.color);
         }
 
-        /* do window scaling logic */
+        /* do window scaling */
         if (!(window->flags & NK_WINDOW_ROM)) {
+            struct nk_vec2 delta;
             float prev_x = in->mouse.prev.x;
             float prev_y = in->mouse.prev.y;
             struct nk_vec2 window_size = style->window.min_size;
             int incursor = NK_INBOX(prev_x,prev_y,scaler_x,scaler_y,scaler_w,scaler_h);
 
-            if (nk_input_is_mouse_down(in, NK_BUTTON_LEFT) && incursor) {
-                window->bounds.w = NK_MAX(window_size.x, window->bounds.w + in->mouse.delta.x);
+            if (nk_input_is_mouse_down(in, NK_BUTTON_LEFT) &&
+                (incursor || window->scaling.active == nk_true))
+            {
+                if(window->scaling.active == nk_false)
+                    window->scaling.start_size = nk_rect_size(window->bounds);
+                window->scaling.active = nk_true;
+
+                if (!in || !in->mouse.buttons[NK_BUTTON_LEFT].down)
+                    delta = nk_vec2(0,0);
+                else delta = nk_vec2_sub(in->mouse.pos, in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos);
+                window->bounds.w = NK_MAX(window_size.x, window->scaling.start_size.x + delta.x);
+
                 /* dragging in y-direction is only possible if static window */
                 if (!(layout->flags & NK_WINDOW_DYNAMIC))
-                    window->bounds.h = NK_MAX(window_size.y, window->bounds.h + in->mouse.delta.y);
-            }
+                    window->bounds.h = NK_MAX(window->scaling.start_size.y + delta.y, window_size.y);
+            } else window->scaling.active = nk_false;
         }
     }
 
