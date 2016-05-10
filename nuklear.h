@@ -138,7 +138,7 @@ OPTIONAL DEFINES:
         replacement. If not nuklear will use its own version.
 
     NK_MEMCOPY
-        You can define this to 'memcpy' or your own memset implementation
+        You can define this to 'memcpy' or your own memcpy implementation
         replacement. If not nuklear will use its own version.
 
     NK_SQRT
