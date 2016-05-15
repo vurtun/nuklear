@@ -2685,6 +2685,7 @@ NK_GLOBAL const float NK_FLOAT_PRECISION = 0.00000000000001f;
 NK_INTERN float
 nk_inv_sqrt(float number)
 {
+    NK_ASSERT(number > 0.);
     float x2;
     const float threehalfs = 1.5f;
     union {nk_uint i; float f;} conv = {0};
@@ -2872,10 +2873,12 @@ NK_INTERN int nk_to_lower(int c) {return (c >= 'A' && c <= 'Z') ? (c - ('a' + 'A
 NK_INTERN void*
 nk_memcopy(void *dst0, const void *src0, nk_size length)
 {
+    NK_ASSERT(dst0);
+    NK_ASSERT(src0);
     nk_ptr t;
     char *dst = (char*)dst0;
     const char *src = (const char*)src0;
-    if (length == 0 || dst == src)
+    if (length == 0 || dst == src || dst == 0 || src == 0)
         goto done;
 
     #define nk_word int
@@ -2929,6 +2932,13 @@ done:
 NK_INTERN void
 nk_memset(void *ptr, int c0, nk_size size)
 {
+    NK_ASSERT(ptr);
+    
+    if (!ptr)
+    {
+        return;
+    }
+    
     #define nk_word unsigned
     #define nk_wsize sizeof(nk_word)
     #define nk_wmask (nk_wsize - 1)
@@ -3054,6 +3064,8 @@ nk_strtof(float *number, const char *buffer)
 NK_API int
 nk_stricmp(const char *s1, const char *s2)
 {
+    NK_ASSERT(s1);
+    NK_ASSERT(s2);
     nk_int c1,c2,d;
     do {
         c1 = *s1++;
@@ -3077,6 +3089,8 @@ nk_stricmp(const char *s1, const char *s2)
 NK_API int
 nk_stricmpn(const char *s1, const char *s2, int n)
 {
+    NK_ASSERT(s1);
+    NK_ASSERT(s2);
     int c1,c2,d;
     NK_ASSERT(n >= 0);
     do {
@@ -3103,6 +3117,8 @@ nk_stricmpn(const char *s1, const char *s2, int n)
 NK_INTERN int
 nk_str_match_here(const char *regexp, const char *text)
 {
+    NK_ASSERT(regexp);
+    NK_ASSERT(text);
     if (regexp[0] == '\0')
         return 1;
     if (regexp[1] == '*')
@@ -3127,6 +3143,8 @@ nk_str_match_star(int c, const char *regexp, const char *text)
 NK_API int
 nk_strfilter(const char *text, const char *regexp)
 {
+    NK_ASSERT(text);
+    NK_ASSERT(regexp);
     /*
     c    matches any literal character c
     .    matches any single character
@@ -3275,6 +3293,14 @@ nk_strmatch_fuzzy_text(const char *str, int str_len,
 NK_API int
 nk_strfmt(char *buf, int buf_size, const char *fmt,...)
 {
+    NK_ASSERT(buf);
+    NK_ASSERT(fmt);
+    
+    if (!buf || !fmt)
+    {
+        return -1;
+    }
+    
     int w;
     va_list args;
     va_start(args, fmt);
@@ -3287,6 +3313,14 @@ nk_strfmt(char *buf, int buf_size, const char *fmt,...)
 NK_INTERN int
 nk_strfmtv(char *buf, int buf_size, const char *fmt, va_list args)
 {
+    NK_ASSERT(buf);
+    NK_ASSERT(fmt);
+    
+    if (!buf || !fmt)
+    {
+        return -1;
+    }
+    
     int w = vsnprintf(buf, (nk_size)buf_size, fmt, args);
     buf[buf_size-1] = 0;
     return (w == -1) ? (int)buf_size:w;
@@ -3296,6 +3330,7 @@ nk_strfmtv(char *buf, int buf_size, const char *fmt, va_list args)
 NK_INTERN int
 nk_string_float_limit(char *string, int prec)
 {
+    NK_ASSERT(string);
     int dot = 0;
     char *c = string;
     while (*c) {
