@@ -2685,7 +2685,7 @@ NK_GLOBAL const float NK_FLOAT_PRECISION = 0.00000000000001f;
 NK_INTERN float
 nk_inv_sqrt(float number)
 {
-    NK_ASSERT(number > 0.);
+    NK_ASSERT(number >= 0.);
     float x2;
     const float threehalfs = 1.5f;
     union {nk_uint i; float f;} conv = {0};
