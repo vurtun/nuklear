@@ -11427,8 +11427,8 @@ nk_button_behavior(nk_flags *state, struct nk_rect r,
     const struct nk_input *i, enum nk_button_behavior behavior)
 {
     int ret = 0;
-    if (!i) return 0;
     nk_widget_state_reset(state);
+    if (!i) return 0;
     if (nk_input_is_mouse_hovering_rect(i, r)) {
         *state = NK_WIDGET_STATE_HOVERED;
         if (nk_input_is_mouse_down(i, NK_BUTTON_LEFT))
@@ -12390,9 +12390,10 @@ nk_scrollbar_behavior(nk_flags *state, struct nk_input *in,
 {
     int left_mouse_down;
     int left_mouse_click_in_cursor;
-    if (!in) return scroll_offset;
 
     nk_widget_state_reset(state);
+    if (!in) return scroll_offset;
+
     left_mouse_down = in->mouse.buttons[NK_BUTTON_LEFT].down;
     left_mouse_click_in_cursor = nk_input_has_mouse_click_down_in_rect(in,
         NK_BUTTON_LEFT, cursor, nk_true);
