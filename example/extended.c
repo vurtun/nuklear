@@ -91,23 +91,25 @@ ui_piemenu(struct nk_context *ctx, struct nk_vec2 pos, float radius,
     ctx->style.window.border_color = nk_rgba(0,0,0,0);
 
     total_space  = nk_window_get_content_region(ctx);
+
+    ctx->style.window.spacing = nk_vec2(0,0);
+    ctx->style.window.padding = nk_vec2(0,0);
+
     nk_popup_begin(ctx, &popup,  NK_POPUP_STATIC, "piemenu", NK_WINDOW_NO_SCROLLBAR,
         nk_rect(pos.x - total_space.x - radius, pos.y - radius - total_space.y,
         2*radius,2*radius));
 
     total_space = nk_window_get_content_region(ctx);
+
+    ctx->style.window.spacing = nk_vec2(4,4);
+    ctx->style.window.padding = nk_vec2(8,8);
+
     nk_layout_row_dynamic(ctx, total_space.h, 1);
     {
         int i = 0;
         struct nk_command_buffer* out = nk_window_get_canvas(ctx);
         const struct nk_input *in = &ctx->input;
-        {
-            /* allocate complete popup space for the menu */
-            enum nk_widget_layout_states state;
-            total_space = nk_window_get_content_region(ctx);
-            total_space.x = total_space.y = 0;
-            state = nk_widget(&bounds, ctx);
-        }
+        nk_widget(&bounds, ctx);
 
         /* outer circle */
         nk_fill_circle(out, bounds, nk_rgb(50,50,50));
@@ -329,7 +331,7 @@ button_demo(struct nk_context *ctx, struct media *media)
     ui_widget(ctx, media, 35);
     if (nk_button_symbol_label(ctx, (option == 0)?NK_SYMBOL_CIRCLE_FILLED:NK_SYMBOL_CIRCLE,
             "Select", NK_TEXT_LEFT, NK_BUTTON_DEFAULT)) option = 0;
-    ui_widget(ctx, media, 22);
+    ui_widget(ctx, media, 35);
     if (nk_button_symbol_label(ctx, (option == 1)?NK_SYMBOL_CIRCLE_FILLED:NK_SYMBOL_CIRCLE,
             "Select", NK_TEXT_LEFT, NK_BUTTON_DEFAULT)) option = 1;
     ui_widget(ctx, media, 35);
@@ -339,9 +341,9 @@ button_demo(struct nk_context *ctx, struct media *media)
     /*------------------------------------------------
      *                  CONTEXTUAL
      *------------------------------------------------*/
-    if (nk_contextual_begin(ctx, &menu, NK_WINDOW_NO_SCROLLBAR, nk_vec2(120, 200), nk_window_get_bounds(ctx))) {
+    if (nk_contextual_begin(ctx, &menu, NK_WINDOW_NO_SCROLLBAR, nk_vec2(150, 300), nk_window_get_bounds(ctx))) {
         ctx->style.font.height = 18;
-        nk_layout_row_dynamic(ctx, 25, 1);
+        nk_layout_row_dynamic(ctx, 30, 1);
         if (nk_contextual_item_image_label(ctx, media->copy, "Clone", NK_TEXT_RIGHT))
             fprintf(stdout, "pressed clone!\n");
         if (nk_contextual_item_image_label(ctx, media->del, "Delete", NK_TEXT_RIGHT))
