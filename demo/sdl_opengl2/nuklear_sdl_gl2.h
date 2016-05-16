@@ -132,7 +132,7 @@ nk_sdl_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_b
             glBindTexture(GL_TEXTURE_2D, (GLuint)cmd->texture.id);
             glScissor(
                 (GLint)(cmd->clip_rect.x * scale.x),
-                (GLint)((display_height - (GLint)(cmd->clip_rect.y + cmd->clip_rect.h)) * scale.y),
+                (GLint)((height - (GLint)(cmd->clip_rect.y + cmd->clip_rect.h)) * scale.y),
                 (GLint)(cmd->clip_rect.w * scale.x),
                 (GLint)(cmd->clip_rect.h * scale.y));
             glDrawElements(GL_TRIANGLES, (GLsizei)cmd->elem_count, GL_UNSIGNED_SHORT, offset);
