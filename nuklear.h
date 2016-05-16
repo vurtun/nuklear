@@ -15030,7 +15030,7 @@ nk_begin(struct nk_context *ctx, struct nk_panel *layout, const char *title,
 
         /* activate window if hovered and no other window is overlapping this window */
         nk_start(ctx, win);
-        inpanel = nk_input_mouse_clicked(&ctx->input, NK_BUTTON_LEFT, win->bounds);
+        inpanel = nk_input_has_mouse_click_down_in_rect(&ctx->input, NK_BUTTON_LEFT, win->bounds, nk_true);
         ishovered = nk_input_is_mouse_hovering_rect(&ctx->input, win->bounds);
         if ((win != ctx->active) && ishovered) {
             iter = win->next;
@@ -15061,12 +15061,12 @@ nk_begin(struct nk_context *ctx, struct nk_panel *layout, const char *title,
             while (iter) {
                 /* try to find a panel with higher priority in the same position */
                 if (!(iter->flags & NK_WINDOW_MINIMIZED)) {
-                    if (NK_INBOX(ctx->input.mouse.prev.x, ctx->input.mouse.prev.y, iter->bounds.x,
+                    if (NK_INBOX(ctx->input.mouse.pos.x, ctx->input.mouse.pos.y, iter->bounds.x,
                         iter->bounds.y, iter->bounds.w, iter->bounds.h) &&
                         !(iter->flags & NK_WINDOW_HIDDEN))
                         break;
                 } else {
-                    if (NK_INBOX(ctx->input.mouse.prev.x, ctx->input.mouse.prev.y, iter->bounds.x,
+                    if (NK_INBOX(ctx->input.mouse.pos.x, ctx->input.mouse.pos.y, iter->bounds.x,
                         iter->bounds.y, iter->bounds.w, h) &&
                         !(iter->flags & NK_WINDOW_HIDDEN))
                         break;
