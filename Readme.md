@@ -85,7 +85,10 @@ nk_end(ctx);
 ```
 ![example](https://cloud.githubusercontent.com/assets/8057201/10187981/584ecd68-675c-11e5-897c-822ef534a876.png)
 
-## CREDITS:
+## Bindings:
+Java: https://github.com/glegris/nuklear4j
+
+## Credits:
 Developed by Micha Mettke and every direct or indirect contributor to the GitHub.
 
 
@@ -99,7 +102,7 @@ and his original immediate mode graphical user interface idea and Sean
 Barret for his amazing single header [libraries](https://github.com/nothings/stb) which restored my faith
 in libraries and brought me to create some of my own.
 
-## LICENSE:
+## License:
 This software is dual-licensed to the public domain and under the following
 license: you are granted a perpetual, irrevocable license to copy, modify,
 publish and distribute this file as you see fit.
