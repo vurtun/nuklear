@@ -3936,6 +3936,7 @@ NK_API nk_handle
 nk_handle_id(int id)
 {
     nk_handle handle;
+    nk_zero_struct(handle);
     handle.id = id;
     return handle;
 }
@@ -6468,12 +6469,12 @@ nk_draw_list_add_text(struct nk_draw_list *list, const struct nk_user_font *font
     struct nk_rect rect, const char *text, int len, float font_height,
     struct nk_color fg)
 {
-    float x;
-    int text_len;
-    nk_rune unicode;
-    nk_rune next;
-    int glyph_len;
-    int next_glyph_len;
+    float x = 0;
+    int text_len = 0;
+    nk_rune unicode = 0;
+    nk_rune next = 0;
+    int glyph_len = 0;
+    int next_glyph_len = 0;
     struct nk_user_font_glyph g;
 
     NK_ASSERT(list);
@@ -7796,7 +7797,7 @@ nk_tt__new_active(struct nk_tt__hheap *hh, struct nk_tt__edge *e,
     /*STBTT_assert(e->y0 <= start_point); */
     if (!z) return z;
     z->fdx = dxdy;
-    z->fdy = (1/dxdy);
+    z->fdy = (dxdy != 0) ? (1/dxdy): 0;
     z->fx = e->x0 + dxdy * (start_point - e->y0);
     z->fx -= (float)off_x;
     z->direction = e->invert ? 1.0f : -1.0f;
@@ -15575,7 +15576,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
         struct nk_rect header;
         struct nk_rect button;
         struct nk_text text;
-        const struct nk_style_item *background;
+        const struct nk_style_item *background = 0;
 
         /* calculate header bounds */
         header.x = layout->bounds.x;
@@ -15619,7 +15620,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
         button.h = layout->header_h - 2 * style->window.header.padding.y;
         button.w = button.h;
         if (win->flags & NK_WINDOW_CLOSABLE) {
-            nk_flags ws;
+            nk_flags ws = 0;
             if (style->window.header.align == NK_HEADER_RIGHT) {
                 button.x = (header.w + header.x) - (button.w + style->window.header.padding.x);
                 header.w -= button.w + style->window.header.spacing.x + style->window.header.padding.x;
@@ -15635,7 +15636,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
 
         /* window minimize button */
         if (win->flags & NK_WINDOW_MINIMIZABLE) {
-            nk_flags ws;
+            nk_flags ws = 0;
             if (style->window.header.align == NK_HEADER_RIGHT) {
                 button.x = (header.w + header.x) - button.w;
                 if (!(win->flags & NK_WINDOW_CLOSABLE)) {
@@ -15826,7 +15827,7 @@ nk_panel_end(struct nk_context *ctx)
         float scroll_inc;
         {
             /* vertical scrollbar */
-            nk_flags state;
+            nk_flags state = 0;
             bounds.x = layout->bounds.x + layout->width;
             bounds.y = layout->clip.y;
             bounds.w = scrollbar_size.y;
@@ -15845,7 +15846,7 @@ nk_panel_end(struct nk_context *ctx)
         }
         {
             /* horizontal scrollbar */
-            nk_flags state;
+            nk_flags state = 0;
             bounds.x = layout->bounds.x + window_padding.x;
             if (layout->flags & NK_WINDOW_SUB) {
                 bounds.h = scrollbar_size.x;
@@ -16634,9 +16635,9 @@ nk_tree_push_hashed(struct nk_context *ctx, enum nk_tree_type type,
     struct nk_rect sym = {0,0,0,0};
     struct nk_text text;
 
-    nk_flags ws;
-    int title_len;
-    nk_hash title_hash;
+    nk_flags ws = 0;
+    int title_len = 0;
+    nk_hash title_hash = 0;
     nk_uint *state = 0;
     enum nk_widget_layout_states widget_state;
 
@@ -17884,7 +17885,6 @@ nk_color_pick(struct nk_context * ctx, struct nk_color *color,
     const struct nk_style *config;
     const struct nk_input *in;
 
-    nk_flags ws;
     enum nk_widget_layout_states state;
     struct nk_rect bounds;
 
@@ -17901,7 +17901,7 @@ nk_color_pick(struct nk_context * ctx, struct nk_color *color,
     state = nk_widget(&bounds, ctx);
     if (!state) return 0;
     in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
-    return nk_do_color_picker(&ws, &win->buffer, color, fmt, bounds,
+    return nk_do_color_picker(&ctx->last_widget_state, &win->buffer, color, fmt, bounds,
                 nk_vec2(0,0), in, &config->font);
 }
 
@@ -18306,7 +18306,7 @@ nk_group_end(struct nk_context *ctx)
     parent = g->parent;
 
     /* dummy window */
-    nk_zero(&pan, sizeof(pan));
+    nk_zero_struct(pan);
     pan.bounds = g->bounds;
     pan.scrollbar.x = (unsigned short)g->offset->x;
     pan.scrollbar.y = (unsigned short)g->offset->y;
