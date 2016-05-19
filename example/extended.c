@@ -91,24 +91,21 @@ ui_piemenu(struct nk_context *ctx, struct nk_vec2 pos, float radius,
     ctx->style.window.border_color = nk_rgba(0,0,0,0);
 
     total_space  = nk_window_get_content_region(ctx);
-
     ctx->style.window.spacing = nk_vec2(0,0);
     ctx->style.window.padding = nk_vec2(0,0);
 
-    nk_popup_begin(ctx, &popup,  NK_POPUP_STATIC, "piemenu", NK_WINDOW_NO_SCROLLBAR,
+    if (nk_popup_begin(ctx, &popup,  NK_POPUP_STATIC, "piemenu", NK_WINDOW_NO_SCROLLBAR,
         nk_rect(pos.x - total_space.x - radius, pos.y - radius - total_space.y,
-        2*radius,2*radius));
-
-    total_space = nk_window_get_content_region(ctx);
-
-    ctx->style.window.spacing = nk_vec2(4,4);
-    ctx->style.window.padding = nk_vec2(8,8);
-
-    nk_layout_row_dynamic(ctx, total_space.h, 1);
+        2*radius,2*radius)))
     {
         int i = 0;
         struct nk_command_buffer* out = nk_window_get_canvas(ctx);
         const struct nk_input *in = &ctx->input;
+
+        total_space = nk_window_get_content_region(ctx);
+        ctx->style.window.spacing = nk_vec2(4,4);
+        ctx->style.window.padding = nk_vec2(8,8);
+        nk_layout_row_dynamic(ctx, total_space.h, 1);
         nk_widget(&bounds, ctx);
 
         /* outer circle */
@@ -162,16 +159,19 @@ ui_piemenu(struct nk_context *ctx, struct nk_vec2 pos, float radius,
             bounds.y = inner.y + inner.h/2 - bounds.h/2;
             nk_draw_image(out, bounds, &icons[active_item]);
         }
-    }
-    nk_layout_space_end(ctx);
+        nk_layout_space_end(ctx);
+        if (!nk_input_is_mouse_down(&ctx->input, NK_BUTTON_RIGHT)) {
+            nk_popup_close(ctx);
+            ret = active_item;
+        }
+    } else ret = -2;
+    ctx->style.window.spacing = nk_vec2(4,4);
+    ctx->style.window.padding = nk_vec2(8,8);
     nk_popup_end(ctx);
 
     ctx->style.window.fixed_background = background;
     ctx->style.window.border_color = border;
-
-    if (!nk_input_is_mouse_down(&ctx->input, NK_BUTTON_RIGHT))
-        return active_item;
-    else return ret;
+    return ret;
 }
 
 /* ===============================================================
@@ -466,6 +466,7 @@ basic_demo(struct nk_context *ctx, struct media *media)
 
     if (piemenu_active) {
         int ret = ui_piemenu(ctx, piemenu_pos, 140, &media->menu[0], 6);
+        if (ret == -2) piemenu_active = 0;
         if (ret != -1) {
             fprintf(stdout, "piemenu selected: %d\n", ret);
             piemenu_active = 0;
