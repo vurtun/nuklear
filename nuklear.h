@@ -3386,7 +3386,7 @@ nk_ftos(char *s, float n)
     char *c = s;
     int neg = 0;
 
-    if (n == 0.0) {
+    if (n == 0.0f) {
         s[0] = '0'; s[1] = '\0';
         return 1;
     }
