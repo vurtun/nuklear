@@ -5819,6 +5819,7 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
 
         /* allocate vertices and elements  */
         nk_size i1 = 0;
+        nk_size vertex_offset;
         nk_size index = list->vertex_count;
         const nk_size idx_count = (thick_line) ?  (count * 18) : (count * 12);
         const nk_size vtx_count = (thick_line) ? (points_count * 4): (points_count *3);
@@ -5827,14 +5828,18 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
 
         nk_size size;
         struct nk_vec2 *normals, *temp;
+        NK_ASSERT(vtx && ids);
         if (!vtx || !ids) return;
 
         /* temporary allocate normals + points */
+        vertex_offset = (nk_size)((nk_byte*)vtx - (nk_byte*)list->vertices->memory.ptr);
         nk_buffer_mark(list->vertices, NK_BUFFER_FRONT);
         size = pnt_size * ((thick_line) ? 5 : 3) * points_count;
         normals = (struct nk_vec2*)
             nk_buffer_alloc(list->vertices, NK_BUFFER_FRONT, size, pnt_align);
+        NK_ASSERT(normals);
         if (!normals) return;
+        vtx = (struct nk_draw_vertex*)(void*)((nk_byte*)list->vertices->memory.ptr + vertex_offset);
         temp = normals + points_count;
 
         /* calculate normals */
@@ -6046,6 +6051,7 @@ nk_draw_list_fill_poly_convex(struct nk_draw_list *list,
         nk_size i1 = 0;
 
         const float AA_SIZE = 1.0f;
+        nk_size vertex_offset = 0;
         const nk_draw_vertex_color col_trans = col & 0x00ffffff;
         nk_size index = list->vertex_count;
         const nk_size idx_count = (points_count-2)*3 + points_count*6;
@@ -6060,11 +6066,14 @@ nk_draw_list_fill_poly_convex(struct nk_draw_list *list,
         if (!vtx || !ids) return;
 
         /* temporary allocate normals */
+        vertex_offset = (nk_size)((nk_byte*)vtx - (nk_byte*)list->vertices->memory.ptr);
         nk_buffer_mark(list->vertices, NK_BUFFER_FRONT);
         size = pnt_size * points_count;
         normals = (struct nk_vec2*)
             nk_buffer_alloc(list->vertices, NK_BUFFER_FRONT, size, pnt_align);
+        NK_ASSERT(normals);
         if (!normals) return;
+        vtx = (struct nk_draw_vertex*)(void*)((nk_byte*)list->vertices->memory.ptr + vertex_offset);
 
         /* add elements */
         for (i = 2; i < points_count; i++) {
@@ -14773,6 +14782,7 @@ NK_INTERN struct nk_table*
 nk_create_table(struct nk_context *ctx)
 {
     struct nk_page_element *elem = nk_create_page_element(ctx);
+    if (!elem) return 0;
     return &elem->data.tbl;
 }
 
@@ -14861,6 +14871,7 @@ NK_INTERN void*
 nk_create_window(struct nk_context *ctx)
 {
     struct nk_page_element *elem = nk_create_page_element(ctx);
+    if (!elem) return 0;
     elem->data.win.seq = ctx->seq;
     return &elem->data.win;
 }
@@ -14998,8 +15009,8 @@ nk_begin(struct nk_context *ctx, struct nk_panel *layout, const char *title,
     if (!win) {
         /* create new window */
         win = (struct nk_window*)nk_create_window(ctx);
-        if (!win) return 0;
         NK_ASSERT(win);
+        if (!win) return 0;
         nk_insert_window(ctx, win);
         nk_command_buffer_init(&win->buffer, &ctx->memory, NK_CLIPPING_ON);
 
