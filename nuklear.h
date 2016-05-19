@@ -5368,8 +5368,8 @@ nk_fill_triangle(struct nk_command_buffer *b, float x0, float y0, float x1,
     if (!b) return;
     if (b->use_clipping) {
         const struct nk_rect *clip = &b->clip;
-        if (!NK_INBOX(x0, y0, clip->x, clip->y, clip->w, clip->h) ||
-            !NK_INBOX(x1, y1, clip->x, clip->y, clip->w, clip->h) ||
+        if (!NK_INBOX(x0, y0, clip->x, clip->y, clip->w, clip->h) &&
+            !NK_INBOX(x1, y1, clip->x, clip->y, clip->w, clip->h) &&
             !NK_INBOX(x2, y2, clip->x, clip->y, clip->w, clip->h))
             return;
     }
