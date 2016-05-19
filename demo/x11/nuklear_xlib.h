@@ -485,10 +485,12 @@ nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt)
         else if (*code == XK_Tab)       nk_input_key(ctx, NK_KEY_TAB, down);
         else if (*code == XK_Left)      nk_input_key(ctx, NK_KEY_LEFT, down);
         else if (*code == XK_Right)     nk_input_key(ctx, NK_KEY_RIGHT, down);
+        else if (*code == XK_Up)        nk_input_key(ctx, NK_KEY_UP, down);
+        else if (*code == XK_Down)      nk_input_key(ctx, NK_KEY_DOWN, down);
         else if (*code == XK_BackSpace) nk_input_key(ctx, NK_KEY_BACKSPACE, down);
         else if (*code == XK_Home)  nk_input_key(ctx, NK_KEY_TEXT_START, down);
         else if (*code == XK_End)  nk_input_key(ctx, NK_KEY_TEXT_END, down);
-        else if (*code == XK_space && !down) nk_input_char(ctx, ' ');
+        else if (*code == XK_Escape) nk_input_key(ctx, NK_KEY_TEXT_RESET_MODE, down);
         else {
             if (*code == 'c' && (evt->xkey.state & ControlMask))
                 nk_input_key(ctx, NK_KEY_COPY, down);
@@ -508,11 +510,17 @@ nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt)
                 nk_input_key(ctx, NK_KEY_TEXT_LINE_START, down);
             else if (*code == 'e' && (evt->xkey.state & ControlMask))
                 nk_input_key(ctx, NK_KEY_TEXT_LINE_END, down);
-            else if (!down) {
-                char buf[32];
-                KeySym keysym = 0;
-                if (XLookupString((XKeyEvent*)evt, buf, 32, &keysym, NULL) != NoSymbol)
-                    nk_input_glyph(ctx, buf);
+            else {
+                if (*code == 'i')
+                    nk_input_key(ctx, NK_KEY_TEXT_INSERT_MODE, down);
+                else if (*code == 'r')
+                    nk_input_key(ctx, NK_KEY_TEXT_REPLACE_MODE, down);
+                if (down) {
+                    char buf[32];
+                    KeySym keysym = 0;
+                    if (XLookupString((XKeyEvent*)evt, buf, 32, &keysym, NULL) != NoSymbol)
+                        nk_input_glyph(ctx, buf);
+                }
             }
         }
         XFree(code);

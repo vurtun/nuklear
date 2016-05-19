@@ -378,6 +378,8 @@ enum nk_keys {
     NK_KEY_LEFT,
     NK_KEY_RIGHT,
     NK_KEY_TEXT_INSERT_MODE,
+    NK_KEY_TEXT_REPLACE_MODE,
+    NK_KEY_TEXT_RESET_MODE,
     NK_KEY_TEXT_LINE_START,
     NK_KEY_TEXT_LINE_END,
     NK_KEY_TEXT_START,
@@ -479,7 +481,10 @@ enum nk_edit_types {
     NK_EDIT_SIMPLE  = NK_EDIT_ALWAYS_INSERT_MODE,
     NK_EDIT_FIELD   = NK_EDIT_SIMPLE|NK_EDIT_SELECTABLE,
     NK_EDIT_BOX     = NK_EDIT_ALWAYS_INSERT_MODE| NK_EDIT_SELECTABLE|
-                        NK_EDIT_MULTILINE|NK_EDIT_ALLOW_TAB
+                        NK_EDIT_MULTILINE|NK_EDIT_ALLOW_TAB,
+    NK_EDIT_EDITOR  = NK_EDIT_SELECTABLE|NK_EDIT_MULTILINE|NK_EDIT_ALLOW_TAB|
+                        NK_EDIT_CLIPBOARD
+
 };
 enum nk_edit_events {
     NK_EDIT_ACTIVE      = NK_FLAG(0), /* edit widget is currently being modified */
@@ -1086,6 +1091,12 @@ enum nk_text_edit_type {
     NK_TEXT_EDIT_MULTI_LINE
 };
 
+enum nk_text_edit_mode {
+    NK_TEXT_EDIT_MODE_VIEW,
+    NK_TEXT_EDIT_MODE_INSERT,
+    NK_TEXT_EDIT_MODE_REPLACE
+};
+
 struct nk_text_edit {
     struct nk_clipboard clip;
     struct nk_str string;
@@ -1095,7 +1106,7 @@ struct nk_text_edit {
     int cursor;
     int select_start;
     int select_end;
-    unsigned char insert_mode;
+    unsigned char mode;
     unsigned char cursor_at_end_of_line;
     unsigned char initialized;
     unsigned char has_preferred_x;
@@ -2425,7 +2436,7 @@ struct nk_edit_state {
     int sel_start;
     int sel_end;
     struct nk_scroll scrollbar;
-    unsigned char insert_mode;
+    unsigned char mode;
     unsigned char single_line;
 };
 
@@ -10614,7 +10625,7 @@ nk_textedit_text(struct nk_text_edit *state, const char *text, int total_len)
 
     NK_ASSERT(state);
     NK_ASSERT(text);
-    if (!text || !total_len || !state->insert_mode) return;
+    if (!text || !total_len || state->mode == NK_TEXT_EDIT_MODE_VIEW) return;
 
     glyph_len = nk_utf_decode(text, &unicode, total_len);
     if (!glyph_len) return;
@@ -10631,11 +10642,13 @@ nk_textedit_text(struct nk_text_edit *state, const char *text, int total_len)
             continue;
         }
 
-        if (state->insert_mode && !NK_TEXT_HAS_SELECTION(state) &&
+        if (!NK_TEXT_HAS_SELECTION(state) &&
             state->cursor < state->string.len)
         {
-            nk_textedit_makeundo_replace(state, state->cursor, 1, 1);
-            nk_str_delete_runes(&state->string, state->cursor, 1);
+            if (state->mode == NK_TEXT_EDIT_MODE_REPLACE) {
+                nk_textedit_makeundo_replace(state, state->cursor, 1, 1);
+                nk_str_delete_runes(&state->string, state->cursor, 1);
+            }
             if (nk_str_insert_text_char(&state->string, state->cursor,
                                         text+text_len, glyph_len))
             {
@@ -10685,8 +10698,18 @@ retry:
         break;
 
     case NK_KEY_TEXT_INSERT_MODE:
-         state->insert_mode = !state->insert_mode;
-         break;
+        if (state->mode == NK_TEXT_EDIT_MODE_VIEW)
+            state->mode = NK_TEXT_EDIT_MODE_INSERT;
+        break;
+    case NK_KEY_TEXT_REPLACE_MODE:
+        if (state->mode == NK_TEXT_EDIT_MODE_VIEW)
+            state->mode = NK_TEXT_EDIT_MODE_REPLACE;
+        break;
+    case NK_KEY_TEXT_RESET_MODE:
+        if (state->mode == NK_TEXT_EDIT_MODE_INSERT ||
+            state->mode == NK_TEXT_EDIT_MODE_REPLACE)
+            state->mode = NK_TEXT_EDIT_MODE_VIEW;
+        break;
 
     case NK_KEY_LEFT:
         if (shift_mod) {
@@ -11219,7 +11242,7 @@ nk_textedit_clear_state(struct nk_text_edit *state, enum nk_text_edit_type type,
    state->cursor_at_end_of_line = 0;
    state->initialized = 1;
    state->single_line = (unsigned char)(type == NK_TEXT_EDIT_SINGLE_LINE);
-   state->insert_mode = 0;
+   state->mode = NK_TEXT_EDIT_MODE_VIEW;
    state->filter = filter;
 }
 
@@ -12830,10 +12853,10 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
             NK_TEXT_EDIT_MULTI_LINE: NK_TEXT_EDIT_SINGLE_LINE;
         nk_textedit_clear_state(edit, type, filter);
         if (flags & NK_EDIT_ALWAYS_INSERT_MODE)
-            edit->insert_mode = nk_true;
+            edit->mode = NK_TEXT_EDIT_MODE_INSERT;
         if (flags & NK_EDIT_AUTO_SELECT)
             select_all = nk_true;
-    } else if (!edit->active) edit->insert_mode = 0;
+    } else if (!edit->active) edit->mode = NK_TEXT_EDIT_MODE_VIEW;
 
     ret = (edit->active) ? NK_EDIT_ACTIVE: NK_EDIT_INACTIVE;
     if (prev_state != edit->active)
@@ -12866,12 +12889,16 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
         }
 
         {int i; /* keyboard input */
+        int old_mode = edit->mode;
         for (i = 0; i < NK_KEY_MAX; ++i) {
             if (nk_input_is_key_pressed(in, (enum nk_keys)i)) {
                 if (i == NK_KEY_ENTER) continue; /* special case */
                 nk_textedit_key(edit, (enum nk_keys)i, shift_mod, font, row_height);
                 cursor_follow = nk_true;
             }
+        }
+        if (old_mode != edit->mode) {
+            in->keyboard.text_len = 0;
         }}
 
         /* text input */
@@ -12879,6 +12906,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
         if (in->keyboard.text_len) {
             nk_textedit_text(edit, in->keyboard.text, in->keyboard.text_len);
             cursor_follow = nk_true;
+            in->keyboard.text_len = 0;
         }
 
         /* enter key handler */
@@ -13035,8 +13063,6 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
                                 &out_offset, &glyph_offset, NK_STOP_ON_NEW_LINE);
                     selection_offset_start.x = row_size.x;
                     select_begin_ptr = text + text_len;
-                    if (*select_begin_ptr == '\n')
-                        select_begin_ptr++;
                 }
 
                 /* set end selection 2D position and line */
@@ -13055,9 +13081,6 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
                                 &out_offset, &glyph_offset, NK_STOP_ON_NEW_LINE);
                     selection_offset_end.x = row_size.x;
                     select_end_ptr = text + text_len;
-                    if (*select_end_ptr == '\n')
-                        select_end_ptr++;
-
                 }
                 if (unicode == '\n') {
                     text_size.x = NK_MAX(text_size.x, line_width);
@@ -13505,7 +13528,7 @@ nk_do_property(nk_flags *ws,
         text_edit->string.buffer.memory.size = NK_MAX_NUMBER_BUFFER;
         text_edit->string.buffer.memory.ptr = dst;
         text_edit->string.buffer.size = NK_MAX_NUMBER_BUFFER;
-        text_edit->insert_mode = 1;
+        text_edit->mode = NK_TEXT_EDIT_MODE_INSERT;
         nk_do_edit(ws, out, edit, NK_EDIT_ALWAYS_INSERT_MODE, filters[filter],
             text_edit, &style->edit, (*state == NK_PROPERTY_EDIT) ? in: 0, font);
 
@@ -17667,7 +17690,7 @@ nk_edit_string(struct nk_context *ctx, nk_flags flags,
             edit->select_start = win->edit.sel_start;
             edit->select_end = win->edit.sel_end;
         }
-        edit->insert_mode = win->edit.insert_mode;
+        edit->mode = win->edit.mode;
         edit->scrollbar.x = (float)win->edit.scrollbar.x;
         edit->scrollbar.y = (float)win->edit.scrollbar.y;
         edit->active = nk_true;
@@ -17685,7 +17708,7 @@ nk_edit_string(struct nk_context *ctx, nk_flags flags,
         win->edit.cursor = edit->cursor;
         win->edit.sel_start = edit->select_start;
         win->edit.sel_end = edit->select_end;
-        win->edit.insert_mode = edit->insert_mode;
+        win->edit.mode = edit->mode;
         win->edit.scrollbar.x = (unsigned short)edit->scrollbar.x;
         win->edit.scrollbar.y = (unsigned short)edit->scrollbar.y;
     }
@@ -17719,7 +17742,7 @@ nk_edit_buffer(struct nk_context *ctx, nk_flags flags,
     style = &ctx->style;
     state = nk_widget(&bounds, ctx);
     if (!state) return state;
-    in = (state == NK_WIDGET_ROM || win->layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
+    in = (win->layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
 
     /* check if edit is currently hot item */
     hash = win->edit.seq++;
