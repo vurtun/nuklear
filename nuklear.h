@@ -12442,20 +12442,19 @@ nk_scrollbar_behavior(nk_flags *state, struct nk_input *in,
         float pixel, delta;
         *state = NK_WIDGET_STATE_ACTIVE;
         if (o == NK_VERTICAL) {
+            float cursor_y;
             pixel = in->mouse.delta.y;
             delta = (pixel / scroll.h) * target;
             scroll_offset = NK_CLAMP(0, scroll_offset + delta, target - scroll.h);
-            /* This is probably one of my most disgusting hacks I have ever done.
-             * This basically changes the mouse clicked position with the moving
-             * cursor. This allows for better scroll behavior but resulted into me
-             * having to remove const correctness for input. But in the end I believe
-             * it is worth it. */
-            in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.y += in->mouse.delta.y;
+            cursor_y = scroll.y + ((scroll_offset/target) * scroll.h);
+            in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.y = cursor_y + cursor.h/2.0f;
         } else {
+            float cursor_x;
             pixel = in->mouse.delta.x;
             delta = (pixel / scroll.w) * target;
             scroll_offset = NK_CLAMP(0, scroll_offset + delta, target - scroll.w);
-            in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.x += in->mouse.delta.x;
+            cursor_x = scroll.x + ((scroll_offset/target) * scroll.w);
+            in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.x = cursor_x + cursor.w/2.0f;
         }
     } else if (has_scrolling && ((in->mouse.scroll_delta<0) ||
             (in->mouse.scroll_delta>0))) {
@@ -15288,7 +15287,7 @@ nk_window_is_any_hovered(struct nk_context *ctx)
         } else if (nk_input_is_mouse_hovering_rect(&ctx->input, iter->bounds)) {
             return 1;
         }
-        /* check if window popup is being hovered */
+        /* check if window is being hovered */
         if (iter->popup.active && nk_input_is_mouse_hovering_rect(&ctx->input, iter->popup.win->bounds))
             return 1;
         iter = iter->next;
