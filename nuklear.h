@@ -12895,8 +12895,9 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
         {int i; /* keyboard input */
         int old_mode = edit->mode;
         for (i = 0; i < NK_KEY_MAX; ++i) {
+            /* special case */
+            if (i == NK_KEY_ENTER || i == NK_KEY_TAB) continue; /* special case */
             if (nk_input_is_key_pressed(in, (enum nk_keys)i)) {
-                if (i == NK_KEY_ENTER) continue; /* special case */
                 nk_textedit_key(edit, (enum nk_keys)i, shift_mod, font, row_height);
                 cursor_follow = nk_true;
             }
@@ -12958,11 +12959,8 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
         /* tab handler */
         {int tab = nk_input_is_key_pressed(in, NK_KEY_TAB);
         if (tab && (flags & NK_EDIT_ALLOW_TAB)) {
-            const char c = '\t';
-            if (filter && filter(edit, (nk_rune)c)) {
-                nk_textedit_text(edit, &c, 1);
-                cursor_follow = nk_true;
-            }
+            nk_textedit_text(edit, "    ", 4);
+            cursor_follow = nk_true;
         }}
     }
 
