@@ -15279,7 +15279,17 @@ nk_window_is_any_hovered(struct nk_context *ctx)
     if (!ctx) return 0;
     iter = ctx->begin;
     while (iter) {
-        if (nk_input_is_mouse_hovering_rect(&ctx->input, iter->bounds))
+        /* check if window is being hovered */
+        if (iter->flags & NK_WINDOW_MINIMIZED) {
+            struct nk_rect header = iter->bounds;
+            header.h = ctx->style.font.height + 2 * ctx->style.window.header.padding.y;
+            if (nk_input_is_mouse_hovering_rect(&ctx->input, header))
+                return 1;
+        } else if (nk_input_is_mouse_hovering_rect(&ctx->input, iter->bounds)) {
+            return 1;
+        }
+        /* check if window popup is being hovered */
+        if (iter->popup.active && nk_input_is_mouse_hovering_rect(&ctx->input, iter->popup.win->bounds))
             return 1;
         iter = iter->next;
     }
