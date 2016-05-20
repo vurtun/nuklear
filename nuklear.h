@@ -10924,14 +10924,18 @@ retry:
     case NK_KEY_TEXT_LINE_START: {
         if (shift_mod) {
             struct nk_text_find find;
-            nk_textedit_clamp(state);
+           nk_textedit_clamp(state);
             nk_textedit_prep_selection_at_cursor(state);
+            if (state->string.len && state->cursor == state->string.len)
+                --state->cursor;
             nk_textedit_find_charpos(&find, state,state->cursor, state->single_line,
                 font, row_height);
             state->cursor = state->select_end = find.first_char;
             state->has_preferred_x = 0;
         } else {
             struct nk_text_find find;
+            if (state->string.len && state->cursor == state->string.len)
+                --state->cursor;
             nk_textedit_clamp(state);
             nk_textedit_move_to_first(state);
             nk_textedit_find_charpos(&find, state, state->cursor, state->single_line,
@@ -12911,6 +12915,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
 
         /* enter key handler */
         if (nk_input_is_key_pressed(in, NK_KEY_ENTER)) {
+            cursor_follow = nk_true;
             if (flags & NK_EDIT_CTRL_ENTER_NEWLINE && shift_mod) {
                 nk_textedit_text(edit, "\n", 1);
             } else if (flags & NK_EDIT_SIG_ENTER) {
