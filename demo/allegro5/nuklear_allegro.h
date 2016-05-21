@@ -289,7 +289,7 @@ nk_allegro_handle_event(ALLEGRO_EVENT *evt)
     } else if (evt->type == ALLEGRO_EVENT_KEY_CHAR) {
         /* text input */
         if (evt->keyboard.display == allegro.win)
-            if (evt->keyboard.unichar > 0 && evt->keyboard.unichar < 0x10000)
+            if (evt->keyboard.unichar > 32 && evt->keyboard.unichar < 0x10000)
                 nk_input_unicode(ctx, (nk_rune)evt->keyboard.unichar);
     }
 }
