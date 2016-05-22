@@ -3282,6 +3282,10 @@ nk_strmatch_fuzzy_text(const char *str, int str_len,
     return nk_true;
 }
 
+NK_API int
+nk_strmatch_fuzzy_string(char const *str, char const *pattern, int *out_score)
+{return nk_strmatch_fuzzy_text(str, nk_strlen(str), pattern, out_score);}
+
 #ifdef NK_INCLUDE_STANDARD_IO
 NK_API int
 nk_strfmt(char *buf, int buf_size, const char *fmt,...)
@@ -3907,10 +3911,31 @@ nk_color_hsva_bv(nk_byte *out, struct nk_color in)
 }
 
 NK_API void
+nk_color_hsva_b(nk_byte *h, nk_byte *s, nk_byte *v, nk_byte *a, struct nk_color in)
+{
+    int tmp[4];
+    nk_color_hsva_i(&tmp[0], &tmp[1], &tmp[2], &tmp[3], in);
+    *h = (nk_byte)tmp[0];
+    *s = (nk_byte)tmp[1];
+    *v = (nk_byte)tmp[2];
+    *a = (nk_byte)tmp[3];
+}
+
+NK_API void
 nk_color_hsv_i(int *out_h, int *out_s, int *out_v, struct nk_color in)
 {
     int a;
     nk_color_hsva_i(out_h, out_s, out_v, &a, in);
+}
+
+NK_API void
+nk_color_hsv_b(nk_byte *out_h, nk_byte *out_s, nk_byte *out_v, struct nk_color in)
+{
+    int tmp[4];
+    nk_color_hsva_i(&tmp[0], &tmp[1], &tmp[2], &tmp[3], in);
+    *out_h = (nk_byte)tmp[0];
+    *out_s = (nk_byte)tmp[1];
+    *out_v = (nk_byte)tmp[2];
 }
 
 NK_API void
@@ -5350,8 +5375,8 @@ nk_stroke_triangle(struct nk_command_buffer *b, float x0, float y0, float x1,
     if (!b || c.a == 0) return;
     if (b->use_clipping) {
         const struct nk_rect *clip = &b->clip;
-        if (!NK_INBOX(x0, y0, clip->x, clip->y, clip->w, clip->h) ||
-            !NK_INBOX(x1, y1, clip->x, clip->y, clip->w, clip->h) ||
+        if (!NK_INBOX(x0, y0, clip->x, clip->y, clip->w, clip->h) &&
+            !NK_INBOX(x1, y1, clip->x, clip->y, clip->w, clip->h) &&
             !NK_INBOX(x2, y2, clip->x, clip->y, clip->w, clip->h))
             return;
     }
