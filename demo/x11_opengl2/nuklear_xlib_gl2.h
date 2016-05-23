@@ -58,6 +58,7 @@ static struct nk_x11 {
     struct nk_x11_device ogl;
     struct nk_context ctx;
     struct nk_font_atlas atlas;
+    Cursor cursor;
     Display *dpy;
     Window win;
 } x11;
@@ -202,6 +203,18 @@ NK_API void
 nk_x11_handle_event(XEvent *evt)
 {
     struct nk_context *ctx = &x11.ctx;
+
+    /* optional grabbing behavior */
+    if (ctx->input.mouse.grab) {
+        XDefineCursor(x11.dpy, x11.win, x11.cursor);
+        ctx->input.mouse.grab = 0;
+    } else if (ctx->input.mouse.ungrab) {
+        XWarpPointer(x11.dpy, None, x11.win, 0, 0, 0, 0,
+            (int)ctx->input.mouse.prev.x, (int)ctx->input.mouse.prev.y);
+        XUndefineCursor(x11.dpy, x11.win);
+        ctx->input.mouse.ungrab = 0;
+    }
+
     if (evt->type == KeyPress || evt->type == KeyRelease)
     {
         /* Key handler */
@@ -263,6 +276,8 @@ nk_x11_handle_event(XEvent *evt)
         /* Mouse motion handler */
         const int x = evt->xmotion.x, y = evt->xmotion.y;
         nk_input_motion(ctx, x, y);
+        if (ctx->input.mouse.grabbed)
+            XWarpPointer(x11.dpy, None, x11.win, 0, 0, 0, 0, (int)ctx->input.mouse.prev.x, (int)ctx->input.mouse.prev.y);
     } else if (evt->type == KeymapNotify)
         XRefreshKeyboardMapping(&evt->xmapping);
 }
@@ -275,6 +290,14 @@ nk_x11_init(Display *dpy, Window win)
     if (!XSetLocaleModifiers("@im=none")) return 0;
     x11.dpy = dpy;
     x11.win = win;
+
+    /* create invisible cursor */
+    {XColor dummy; char data[1] = {0};
+    Pixmap blank = XCreateBitmapFromData(dpy, win, data, 1, 1);
+    if (blank == None) return 0;
+    x11.cursor = XCreatePixmapCursor(dpy, blank, blank, &dummy, &dummy, 0, 0);
+    XFreePixmap(dpy, blank);}
+
     nk_buffer_init_default(&x11.ogl.cmds);
     nk_init_default(&x11.ctx, 0);
     return &x11.ctx;
@@ -288,6 +311,7 @@ nk_x11_shutdown(void)
     nk_free(&x11.ctx);
     glDeleteTextures(1, &dev->font_tex);
     nk_buffer_free(&dev->cmds);
+    XFreeCursor(x11.dpy, x11.cursor);
     memset(&x11, 0, sizeof(x11));
 }
 

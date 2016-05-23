@@ -330,6 +330,18 @@ NK_API void
 nk_sdl_handle_event(SDL_Event *evt)
 {
     struct nk_context *ctx = &sdl.ctx;
+
+    /* optional grabbing behavior */
+    if (ctx->input.mouse.grab) {
+        SDL_SetRelativeMouseMode(SDL_TRUE);
+        ctx->input.mouse.grab = 0;
+    } else if (ctx->input.mouse.ungrab) {
+        int x = (int)ctx->input.mouse.prev.x, y = (int)ctx->input.mouse.prev.y;
+        SDL_SetRelativeMouseMode(SDL_FALSE);
+        SDL_WarpMouseInWindow(sdl.win, x, y);
+        ctx->input.mouse.ungrab = 0;
+    }
+
     if (evt->type == SDL_KEYUP || evt->type == SDL_KEYDOWN) {
         /* key events */
         int down = evt->type == SDL_KEYDOWN;
@@ -383,7 +395,10 @@ nk_sdl_handle_event(SDL_Event *evt)
         if (evt->button.button == SDL_BUTTON_RIGHT)
             nk_input_button(ctx, NK_BUTTON_RIGHT, x, y, down);
     } else if (evt->type == SDL_MOUSEMOTION) {
-        nk_input_motion(ctx, evt->motion.x, evt->motion.y);
+        if (ctx->input.mouse.grabbed) {
+            int x = (int)ctx->input.mouse.prev.x, y = (int)ctx->input.mouse.prev.y;
+            nk_input_motion(ctx, x + evt->motion.xrel, y + evt->motion.yrel);
+        } else nk_input_motion(ctx, evt->motion.x, evt->motion.y);
     } else if (evt->type == SDL_TEXTINPUT) {
         nk_glyph glyph;
         memcpy(glyph, evt->text.text, NK_UTF_SIZE);

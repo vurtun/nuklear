@@ -963,8 +963,7 @@ NK_API void nk_buffer_init_default(struct nk_buffer*);
 NK_API void nk_buffer_init(struct nk_buffer*, const struct nk_allocator*, nk_size size);
 NK_API void nk_buffer_init_fixed(struct nk_buffer*, void *memory, nk_size size);
 NK_API void nk_buffer_info(struct nk_memory_status*, struct nk_buffer*);
-NK_API void nk_buffer_push(struct nk_buffer*, enum nk_buffer_allocation_type type,
-                            void *memory, nk_size size, nk_size align);
+NK_API void nk_buffer_push(struct nk_buffer*, enum nk_buffer_allocation_type type, void *memory, nk_size size, nk_size align);
 NK_API void nk_buffer_mark(struct nk_buffer*, enum nk_buffer_allocation_type type);
 NK_API void nk_buffer_reset(struct nk_buffer*, enum nk_buffer_allocation_type type);
 NK_API void nk_buffer_clear(struct nk_buffer*);
@@ -1326,41 +1325,27 @@ NK_API const nk_rune *nk_font_korean_glyph_ranges(void);
 NK_API void nk_font_atlas_init_default(struct nk_font_atlas*);
 #endif
 NK_API void nk_font_atlas_init(struct nk_font_atlas*, struct nk_allocator*);
-
 NK_API void nk_font_atlas_begin(struct nk_font_atlas*);
 NK_API struct nk_font_config nk_font_config(float pixel_height);
 NK_API struct nk_font *nk_font_atlas_add(struct nk_font_atlas*, const struct nk_font_config*);
 #ifdef NK_INCLUDE_DEFAULT_FONT
-NK_API struct nk_font* nk_font_atlas_add_default(struct nk_font_atlas*, float height,
-                                                const struct nk_font_config*);
+NK_API struct nk_font* nk_font_atlas_add_default(struct nk_font_atlas*, float height, const struct nk_font_config*);
 #endif
-NK_API struct nk_font* nk_font_atlas_add_from_memory(struct nk_font_atlas *atlas,
-                                                    void *memory, nk_size size, float height,
-                                                    const struct nk_font_config *config);
+NK_API struct nk_font* nk_font_atlas_add_from_memory(struct nk_font_atlas *atlas, void *memory, nk_size size, float height, const struct nk_font_config *config);
 #ifdef NK_INCLUDE_STANDARD_IO
-NK_API struct nk_font* nk_font_atlas_add_from_file(struct nk_font_atlas *atlas,
-                                                const char *file_path, float height,
-                                                const struct nk_font_config*);
+NK_API struct nk_font* nk_font_atlas_add_from_file(struct nk_font_atlas *atlas, const char *file_path, float height, const struct nk_font_config*);
 #endif
-NK_API struct nk_font *nk_font_atlas_add_compressed(struct nk_font_atlas*,
-                                                void *memory, nk_size size, float height,
-                                                const struct nk_font_config*);
-NK_API struct nk_font* nk_font_atlas_add_compressed_base85(struct nk_font_atlas*,
-                                                const char *data, float height,
-                                                const struct nk_font_config *config);
-NK_API const void* nk_font_atlas_bake(struct nk_font_atlas*, int *width, int *height,
-                                        enum nk_font_atlas_format);
-NK_API void nk_font_atlas_end(struct nk_font_atlas*, nk_handle tex,
-                                struct nk_draw_null_texture*);
+NK_API struct nk_font *nk_font_atlas_add_compressed(struct nk_font_atlas*, void *memory, nk_size size, float height, const struct nk_font_config*);
+NK_API struct nk_font* nk_font_atlas_add_compressed_base85(struct nk_font_atlas*, const char *data, float height, const struct nk_font_config *config);
+NK_API const void* nk_font_atlas_bake(struct nk_font_atlas*, int *width, int *height, enum nk_font_atlas_format);
+NK_API void nk_font_atlas_end(struct nk_font_atlas*, nk_handle tex, struct nk_draw_null_texture*);
 NK_API void nk_font_atlas_clear(struct nk_font_atlas*);
 
 /* Font
  * -----------------------------------------------------------------
  * The font structure is just a simple container to hold the output of a baking
  * process in the low level API. */
-NK_API void nk_font_init(struct nk_font*, float pixel_height, nk_rune fallback_codepoint,
-                    struct nk_font_glyph*, const struct nk_baked_font*,
-                    nk_handle atlas);
+NK_API void nk_font_init(struct nk_font*, float pixel_height, nk_rune fallback_codepoint, struct nk_font_glyph*, const struct nk_baked_font*, nk_handle atlas);
 NK_API const struct nk_font_glyph* nk_font_find_glyph(struct nk_font*, nk_rune unicode);
 
 /* Font baking (needs to be called sequentially top to bottom)
@@ -1368,22 +1353,11 @@ NK_API const struct nk_font_glyph* nk_font_find_glyph(struct nk_font*, nk_rune u
  * This is a low level API to bake font glyphs into an image and is more
  * complex than the atlas API but provides more control over the baking
  * process with custom bake data and memory management. */
-NK_API void nk_font_bake_memory(nk_size *temporary_memory, int *glyph_count,
-                            struct nk_font_config*, int count);
-NK_API int nk_font_bake_pack(nk_size *img_memory, int *img_width, int *img_height,
-                            struct nk_recti *custom_space,
-                            void *temporary_memory, nk_size temporary_size,
-                            const struct nk_font_config*, int font_count,
-                            struct nk_allocator *alloc);
-NK_API void nk_font_bake(void *image_memory, int image_width, int image_height,
-                        void *temporary_memory, nk_size temporary_memory_size,
-                        struct nk_font_glyph*, int glyphs_count,
-                        const struct nk_font_config*, int font_count);
-NK_API void nk_font_bake_custom_data(void *img_memory, int img_width, int img_height,
-                                struct nk_recti img_dst, const char *image_data_mask,
-                                int tex_width, int tex_height,char white,char black);
-NK_API void nk_font_bake_convert(void *out_memory, int image_width, int image_height,
-                                const void *in_memory);
+NK_API void nk_font_bake_memory(nk_size *temporary_memory, int *glyph_count, struct nk_font_config*, int count);
+NK_API int nk_font_bake_pack(nk_size *img_memory, int *img_width, int *img_height, struct nk_recti *custom_space, void *temporary_memory, nk_size temporary_size, const struct nk_font_config*, int font_count, struct nk_allocator *alloc);
+NK_API void nk_font_bake(void *image_memory, int image_width, int image_height, void *temporary_memory, nk_size temporary_memory_size, struct nk_font_glyph*, int glyphs_count, const struct nk_font_config*, int font_count);
+NK_API void nk_font_bake_custom_data(void *img_memory, int img_width, int img_height, struct nk_recti img_dst, const char *image_data_mask, int tex_width, int tex_height,char white,char black);
+NK_API void nk_font_bake_convert(void *out_memory, int image_width, int image_height, const void *in_memory);
 
 #endif
 
@@ -1593,44 +1567,27 @@ struct nk_command_buffer {
 };
 
 /* shape outlines */
-NK_API void nk_stroke_line(struct nk_command_buffer *b, float x0, float y0,
-                        float x1, float y1, float line_thickness, struct nk_color);
-NK_API void nk_stroke_curve(struct nk_command_buffer*, float, float, float, float,
-                        float, float, float, float, float line_thickness, struct nk_color);
-NK_API void nk_stroke_rect(struct nk_command_buffer*, struct nk_rect, float rounding,
-                        float line_thickness, struct nk_color);
-NK_API void nk_stroke_circle(struct nk_command_buffer*, struct nk_rect,
-                            float line_thickness, struct nk_color);
-NK_API void nk_stroke_arc(struct nk_command_buffer*, float cx, float cy, float radius,
-                        float a_min, float a_max, float line_thickness, struct nk_color);
-NK_API void nk_stroke_triangle(struct nk_command_buffer*, float, float,
-                                float, float, float, float, float line_thichness,
-                                struct nk_color);
-NK_API void nk_stroke_polyline(struct nk_command_buffer*, float *points, int point_count,
-                                float line_thickness, struct nk_color col);
-NK_API void nk_stroke_polygon(struct nk_command_buffer*, float*, int point_count,
-                                float line_thickness, struct nk_color);
+NK_API void nk_stroke_line(struct nk_command_buffer *b, float x0, float y0, float x1, float y1, float line_thickness, struct nk_color);
+NK_API void nk_stroke_curve(struct nk_command_buffer*, float, float, float, float, float, float, float, float, float line_thickness, struct nk_color);
+NK_API void nk_stroke_rect(struct nk_command_buffer*, struct nk_rect, float rounding, float line_thickness, struct nk_color);
+NK_API void nk_stroke_circle(struct nk_command_buffer*, struct nk_rect, float line_thickness, struct nk_color);
+NK_API void nk_stroke_arc(struct nk_command_buffer*, float cx, float cy, float radius, float a_min, float a_max, float line_thickness, struct nk_color);
+NK_API void nk_stroke_triangle(struct nk_command_buffer*, float, float, float, float, float, float, float line_thichness, struct nk_color);
+NK_API void nk_stroke_polyline(struct nk_command_buffer*, float *points, int point_count, float line_thickness, struct nk_color col);
+NK_API void nk_stroke_polygon(struct nk_command_buffer*, float*, int point_count, float line_thickness, struct nk_color);
 
 /* filled shades */
-NK_API void nk_fill_rect(struct nk_command_buffer*, struct nk_rect, float rounding,
-                        struct nk_color);
-NK_API void nk_fill_rect_multi_color(struct nk_command_buffer*, struct nk_rect,
-                                struct nk_color left, struct nk_color top,
-                                struct nk_color right, struct nk_color bottom);
+NK_API void nk_fill_rect(struct nk_command_buffer*, struct nk_rect, float rounding, struct nk_color);
+NK_API void nk_fill_rect_multi_color(struct nk_command_buffer*, struct nk_rect, struct nk_color left, struct nk_color top, struct nk_color right, struct nk_color bottom);
 NK_API void nk_fill_circle(struct nk_command_buffer*, struct nk_rect, struct nk_color);
-NK_API void nk_fill_arc(struct nk_command_buffer*, float cx, float cy, float radius,
-                        float a_min, float a_max, struct nk_color);
-NK_API void nk_fill_triangle(struct nk_command_buffer*, float x0, float y0,
-                            float x1, float y1, float x2, float y2, struct nk_color);
-NK_API void nk_fill_polygon(struct nk_command_buffer*, float*, int point_count,
-                            struct nk_color);
+NK_API void nk_fill_arc(struct nk_command_buffer*, float cx, float cy, float radius, float a_min, float a_max, struct nk_color);
+NK_API void nk_fill_triangle(struct nk_command_buffer*, float x0, float y0, float x1, float y1, float x2, float y2, struct nk_color);
+NK_API void nk_fill_polygon(struct nk_command_buffer*, float*, int point_count, struct nk_color);
+
 /* misc */
 NK_API void nk_push_scissor(struct nk_command_buffer*, struct nk_rect);
 NK_API void nk_draw_image(struct nk_command_buffer*, struct nk_rect, const struct nk_image*);
-NK_API void nk_draw_text(struct nk_command_buffer*, struct nk_rect,
-                    const char *text, int len, const struct nk_user_font*,
-                    struct nk_color, struct nk_color);
-
+NK_API void nk_draw_text(struct nk_command_buffer*, struct nk_rect, const char *text, int len, const struct nk_user_font*, struct nk_color, struct nk_color);
 NK_API const struct nk_command* nk__next(struct nk_context*, const struct nk_command*);
 NK_API const struct nk_command* nk__begin(struct nk_context*);
 
@@ -1651,6 +1608,9 @@ struct nk_mouse {
     struct nk_vec2 prev;
     struct nk_vec2 delta;
     float scroll_delta;
+    unsigned char grab;
+    unsigned char grabbed;
+    unsigned char ungrab;
 };
 
 struct nk_key {
@@ -1669,16 +1629,11 @@ struct nk_input {
     struct nk_mouse mouse;
 };
 
-NK_API int nk_input_has_mouse_click(const struct nk_input*,
-                                    enum nk_buttons);
-NK_API int nk_input_has_mouse_click_in_rect(const struct nk_input*,
-                                    enum nk_buttons, struct nk_rect);
-NK_API int nk_input_has_mouse_click_down_in_rect(const struct nk_input*, enum nk_buttons,
-                                        struct nk_rect, int down);
-NK_API int nk_input_is_mouse_click_in_rect(const struct nk_input*,
-                                    enum nk_buttons, struct nk_rect);
-NK_API int nk_input_is_mouse_click_down_in_rect(const struct nk_input *i, enum nk_buttons id,
-                                        struct nk_rect b, int down);
+NK_API int nk_input_has_mouse_click(const struct nk_input*, enum nk_buttons);
+NK_API int nk_input_has_mouse_click_in_rect(const struct nk_input*, enum nk_buttons, struct nk_rect);
+NK_API int nk_input_has_mouse_click_down_in_rect(const struct nk_input*, enum nk_buttons, struct nk_rect, int down);
+NK_API int nk_input_is_mouse_click_in_rect(const struct nk_input*, enum nk_buttons, struct nk_rect);
+NK_API int nk_input_is_mouse_click_down_in_rect(const struct nk_input *i, enum nk_buttons id, struct nk_rect b, int down);
 NK_API int nk_input_any_mouse_click_in_rect(const struct nk_input*, struct nk_rect);
 NK_API int nk_input_is_mouse_prev_hovering_rect(const struct nk_input*, struct nk_rect);
 NK_API int nk_input_is_mouse_hovering_rect(const struct nk_input*, struct nk_rect);
@@ -1761,78 +1716,43 @@ struct nk_draw_list {
 
 /* draw list */
 NK_API void nk_draw_list_init(struct nk_draw_list*);
-NK_API void nk_draw_list_setup(struct nk_draw_list*, float global_alpha,
-                    enum nk_anti_aliasing line_AA, enum nk_anti_aliasing shape_AA,
-                    struct nk_draw_null_texture, struct nk_buffer *cmds,
-                    struct nk_buffer *vertices, struct nk_buffer *elements);
+NK_API void nk_draw_list_setup(struct nk_draw_list*, float global_alpha, enum nk_anti_aliasing, enum nk_anti_aliasing, struct nk_draw_null_texture, struct nk_buffer *cmds, struct nk_buffer *vert, struct nk_buffer *elem);
 NK_API void nk_draw_list_clear(struct nk_draw_list*);
 
 /* drawing */
-#define nk_draw_list_foreach(cmd, can, b)\
-    for((cmd)=nk__draw_list_begin(can, b); (cmd)!=0; (cmd)=nk__draw_list_next(cmd, b, can))
-NK_API const struct nk_draw_command* nk__draw_list_begin(const struct nk_draw_list*,
-                                                        const struct nk_buffer*);
-NK_API const struct nk_draw_command* nk__draw_list_next(const struct nk_draw_command*,
-                                                const struct nk_buffer*,
-                                                const struct nk_draw_list*);
-NK_API const struct nk_draw_command* nk__draw_begin(const struct nk_context*,
-                                                    const struct nk_buffer*);
-NK_API const struct nk_draw_command* nk__draw_next(const struct nk_draw_command*,
-                                                    const struct nk_buffer*,
-                                                    const struct nk_context*);
+#define nk_draw_list_foreach(cmd, can, b) for((cmd)=nk__draw_list_begin(can, b); (cmd)!=0; (cmd)=nk__draw_list_next(cmd, b, can))
+NK_API const struct nk_draw_command* nk__draw_list_begin(const struct nk_draw_list*, const struct nk_buffer*);
+NK_API const struct nk_draw_command* nk__draw_list_next(const struct nk_draw_command*, const struct nk_buffer*, const struct nk_draw_list*);
+NK_API const struct nk_draw_command* nk__draw_begin(const struct nk_context*, const struct nk_buffer*);
+NK_API const struct nk_draw_command* nk__draw_next(const struct nk_draw_command*, const struct nk_buffer*, const struct nk_context*);
 
 /* path */
 NK_API void nk_draw_list_path_clear(struct nk_draw_list*);
 NK_API void nk_draw_list_path_line_to(struct nk_draw_list *list, struct nk_vec2 pos);
-NK_API void nk_draw_list_path_arc_to_fast(struct nk_draw_list*, struct nk_vec2 center,
-                                float radius, int a_min, int a_max);
-NK_API void nk_draw_list_path_arc_to(struct nk_draw_list*, struct nk_vec2 center,
-                            float radius, float a_min, float a_max,
-                            unsigned int segments);
-NK_API void nk_draw_list_path_rect_to(struct nk_draw_list*, struct nk_vec2 a,
-                                struct nk_vec2 b, float rounding);
-NK_API void nk_draw_list_path_curve_to(struct nk_draw_list*, struct nk_vec2 p2,
-                            struct nk_vec2 p3, struct nk_vec2 p4,
-                            unsigned int num_segments);
+NK_API void nk_draw_list_path_arc_to_fast(struct nk_draw_list*, struct nk_vec2 center, float radius, int a_min, int a_max);
+NK_API void nk_draw_list_path_arc_to(struct nk_draw_list*, struct nk_vec2 center, float radius, float a_min, float a_max, unsigned int segments);
+NK_API void nk_draw_list_path_rect_to(struct nk_draw_list*, struct nk_vec2 a, struct nk_vec2 b, float rounding);
+NK_API void nk_draw_list_path_curve_to(struct nk_draw_list*, struct nk_vec2 p2, struct nk_vec2 p3, struct nk_vec2 p4, unsigned int num_segments);
 NK_API void nk_draw_list_path_fill(struct nk_draw_list*, struct nk_color);
-NK_API void nk_draw_list_path_stroke(struct nk_draw_list*, struct nk_color,
-                            enum nk_draw_list_stroke closed, float thickness);
+NK_API void nk_draw_list_path_stroke(struct nk_draw_list*, struct nk_color, enum nk_draw_list_stroke closed, float thickness);
+
 /* stroke */
-NK_API void nk_draw_list_stroke_line(struct nk_draw_list*, struct nk_vec2 a, struct nk_vec2 b,
-                            struct nk_color, float thickness);
-NK_API void nk_draw_list_stroke_rect(struct nk_draw_list*, struct nk_rect rect, struct nk_color,
-                            float rounding, float thickness);
-NK_API void nk_draw_list_stroke_triangle(struct nk_draw_list*, struct nk_vec2 a, struct nk_vec2 b,
-                                struct nk_vec2 c, struct nk_color, float thickness);
-NK_API void nk_draw_list_stroke_circle(struct nk_draw_list*, struct nk_vec2 center, float radius,
-                            struct nk_color, unsigned int segs, float thickness);
-NK_API void nk_draw_list_stroke_curve(struct nk_draw_list*, struct nk_vec2 p0, struct nk_vec2 cp0,
-                            struct nk_vec2 cp1, struct nk_vec2 p1, struct nk_color,
-                            unsigned int segments, float thickness);
-NK_API void nk_draw_list_stroke_poly_line(struct nk_draw_list*, const struct nk_vec2 *points,
-                                const unsigned int count, struct nk_color,
-                                enum nk_draw_list_stroke closed, float thickness,
-                                enum nk_anti_aliasing aliasing);
+NK_API void nk_draw_list_stroke_line(struct nk_draw_list*, struct nk_vec2 a, struct nk_vec2 b, struct nk_color, float thickness);
+NK_API void nk_draw_list_stroke_rect(struct nk_draw_list*, struct nk_rect rect, struct nk_color, float rounding, float thickness);
+NK_API void nk_draw_list_stroke_triangle(struct nk_draw_list*, struct nk_vec2 a, struct nk_vec2 b, struct nk_vec2 c, struct nk_color, float thickness);
+NK_API void nk_draw_list_stroke_circle(struct nk_draw_list*, struct nk_vec2 center, float radius, struct nk_color, unsigned int segs, float thickness);
+NK_API void nk_draw_list_stroke_curve(struct nk_draw_list*, struct nk_vec2 p0, struct nk_vec2 cp0, struct nk_vec2 cp1, struct nk_vec2 p1, struct nk_color, unsigned int segments, float thickness);
+NK_API void nk_draw_list_stroke_poly_line(struct nk_draw_list*, const struct nk_vec2 *pnts, const unsigned int cnt, struct nk_color, enum nk_draw_list_stroke, float thickness, enum nk_anti_aliasing);
 /* fill */
-NK_API void nk_draw_list_fill_rect(struct nk_draw_list*, struct nk_rect rect,
-                                    struct nk_color, float rounding);
-NK_API void nk_draw_list_fill_rect_multi_color(struct nk_draw_list *list,
-                                            struct nk_rect rect, struct nk_color left,
-                                            struct nk_color top, struct nk_color right,
-                                            struct nk_color bottom);
-NK_API void nk_draw_list_fill_triangle(struct nk_draw_list*, struct nk_vec2 a,
-                                    struct nk_vec2 b, struct nk_vec2 c, struct nk_color);
-NK_API void nk_draw_list_fill_circle(struct nk_draw_list*, struct nk_vec2 center,
-                                float radius, struct nk_color col, unsigned int segs);
-NK_API void nk_draw_list_fill_poly_convex(struct nk_draw_list*, const struct nk_vec2 *points,
-                                        const unsigned int count, struct nk_color,
-                                        enum nk_anti_aliasing aliasing);
+NK_API void nk_draw_list_fill_rect(struct nk_draw_list*, struct nk_rect rect, struct nk_color, float rounding);
+NK_API void nk_draw_list_fill_rect_multi_color(struct nk_draw_list *list, struct nk_rect rect, struct nk_color left, struct nk_color top, struct nk_color right, struct nk_color bottom);
+NK_API void nk_draw_list_fill_triangle(struct nk_draw_list*, struct nk_vec2 a, struct nk_vec2 b, struct nk_vec2 c, struct nk_color);
+NK_API void nk_draw_list_fill_circle(struct nk_draw_list*, struct nk_vec2 center, float radius, struct nk_color col, unsigned int segs);
+NK_API void nk_draw_list_fill_poly_convex(struct nk_draw_list*, const struct nk_vec2 *points, const unsigned int count, struct nk_color, enum nk_anti_aliasing);
+
 /* misc */
-NK_API void nk_draw_list_add_image(struct nk_draw_list*, struct nk_image texture,
-                            struct nk_rect rect, struct nk_color);
-NK_API void nk_draw_list_add_text(struct nk_draw_list*, const struct nk_user_font*,
-                                struct nk_rect, const char *text, int len,
-                                float font_height, struct nk_color);
+NK_API void nk_draw_list_add_image(struct nk_draw_list*, struct nk_image texture, struct nk_rect rect, struct nk_color);
+NK_API void nk_draw_list_add_text(struct nk_draw_list*, const struct nk_user_font*, struct nk_rect, const char *text, int len, float font_height, struct nk_color);
 #ifdef NK_INCLUDE_COMMAND_USERDATA
 NK_API void nk_draw_list_push_userdata(struct nk_draw_list*, nk_handle userdata);
 #endif
@@ -10027,8 +9947,30 @@ nk_input_begin(struct nk_context *ctx)
     in->mouse.scroll_delta = 0;
     in->mouse.prev.x = in->mouse.pos.x;
     in->mouse.prev.y = in->mouse.pos.y;
+    in->mouse.delta.x = 0;
+    in->mouse.delta.y = 0;
     for (i = 0; i < NK_KEY_MAX; i++)
         in->keyboard.keys[i].clicked = 0;
+}
+
+NK_API void
+nk_input_end(struct nk_context *ctx)
+{
+    struct nk_input *in;
+    NK_ASSERT(ctx);
+    if (!ctx) return;
+    in = &ctx->input;
+    if (in->mouse.grab)
+        in->mouse.grab = 0;
+    if (in->mouse.ungrab) {
+        in->mouse.grabbed = 0;
+        in->mouse.ungrab = 0;
+        in->mouse.grab = 0;
+    }
+    if (in->mouse.grabbed) {
+        in->mouse.pos.x = in->mouse.prev.x;
+        in->mouse.pos.y = in->mouse.prev.y;
+    }
 }
 
 NK_API void
@@ -10117,16 +10059,6 @@ nk_input_unicode(struct nk_context *ctx, nk_rune unicode)
     if (!ctx) return;
     nk_utf_encode(unicode, rune, NK_UTF_SIZE);
     nk_input_glyph(ctx, rune);
-}
-
-NK_API void
-nk_input_end(struct nk_context *ctx)
-{
-    struct nk_input *in;
-    NK_ASSERT(ctx);
-    if (!ctx) return;
-    in = &ctx->input;
-    in->mouse.delta = nk_vec2_sub(in->mouse.pos, in->mouse.prev);
 }
 
 NK_API int
@@ -12151,8 +12083,7 @@ nk_slider_behavior(nk_flags *state, struct nk_rect *cursor,
     visual_cursor.w = style->cursor_size.x;
     visual_cursor.y = (bar_y + bar_h/2.0f) - visual_cursor.h/2.0f;
     visual_cursor.x = (slider_value <= slider_min) ? cursor->x: (slider_value >= slider_max) ?
-        ((bounds.x + bounds.w) - cursor->w):
-        cursor->x - (cursor->w/2);
+        ((bounds.x + bounds.w) - cursor->w): cursor->x - (cursor->w/2);
 
     /* check if visual cursor is being dragged */
     nk_widget_state_reset(state);
@@ -17886,11 +17817,21 @@ nk_property(struct nk_context *ctx, const char *name, float min, float val,
         win->property.cursor = *cursor;
         win->property.state = *state;
         win->property.name = hash;
+        if (*state == NK_PROPERTY_DRAG) {
+            ctx->input.mouse.grab = nk_true;
+            ctx->input.mouse.grabbed = nk_true;
+        }
     }
 
     /* check if previously active property is now inactive */
-    if (*state == NK_PROPERTY_DEFAULT && old_state != NK_PROPERTY_DEFAULT)
+    if (*state == NK_PROPERTY_DEFAULT && old_state != NK_PROPERTY_DEFAULT) {
+        if (old_state == NK_PROPERTY_DRAG) {
+            ctx->input.mouse.grab = nk_false;
+            ctx->input.mouse.grabbed = nk_false;
+            ctx->input.mouse.ungrab = nk_true;
+        }
         win->property.active = 0;
+    }
     return val;
 }
 

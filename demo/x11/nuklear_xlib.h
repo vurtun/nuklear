@@ -58,6 +58,9 @@ struct XSurface {
 static struct  {
     struct nk_context ctx;
     struct XSurface *surf;
+    Cursor cursor;
+    Display *dpy;
+    Window root;
 } xlib;
 
 #ifndef MIN
@@ -78,18 +81,18 @@ nk_color_from_byte(const nk_byte *c)
 }
 
 static XSurface*
-nk_xsurf_create(Display *dpy,  int screen, Window root, unsigned int w, unsigned int h)
+nk_xsurf_create(int screen, unsigned int w, unsigned int h)
 {
     XSurface *surface = (XSurface*)calloc(1, sizeof(XSurface));
     surface->w = w;
     surface->h = h;
-    surface->dpy = dpy;
+    surface->dpy = xlib.dpy;
     surface->screen = screen;
-    surface->root = root;
-    surface->gc = XCreateGC(dpy, root, 0, NULL);
-    XSetLineAttributes(dpy, surface->gc, 1, LineSolid, CapButt, JoinMiter);
-    surface->drawable = XCreatePixmap(dpy, root, w, h,
-        (unsigned int)DefaultDepth(dpy, screen));
+    surface->root = xlib.root;
+    surface->gc = XCreateGC(xlib.dpy, xlib.root, 0, NULL);
+    XSetLineAttributes(xlib.dpy, surface->gc, 1, LineSolid, CapButt, JoinMiter);
+    surface->drawable = XCreatePixmap(xlib.dpy, xlib.root, w, h,
+        (unsigned int)DefaultDepth(xlib.dpy, screen));
     return surface;
 }
 
@@ -450,12 +453,21 @@ nk_xlib_init(XFont *xfont, Display *dpy, int screen, Window root,
     font.userdata = nk_handle_ptr(xfont);
     font.height = (float)xfont->height;
     font.width = nk_xfont_get_text_width;
+    xlib.dpy = dpy;
+    xlib.root = root;
 
     if (!setlocale(LC_ALL,"")) return 0;
     if (!XSupportsLocale()) return 0;
     if (!XSetLocaleModifiers("@im=none")) return 0;
 
-    xlib.surf = nk_xsurf_create(dpy, screen, root, w, h);
+    /* create invisible cursor */
+    {XColor dummy; char data[1] = {0};
+    Pixmap blank = XCreateBitmapFromData(dpy, root, data, 1, 1);
+    if (blank == None) return 0;
+    xlib.cursor = XCreatePixmapCursor(dpy, blank, blank, &dummy, &dummy, 0, 0);
+    XFreePixmap(dpy, blank);}
+
+    xlib.surf = nk_xsurf_create(screen, w, h);
     nk_init_default(&xlib.ctx, &font);
     return &xlib.ctx;
 }
@@ -474,6 +486,18 @@ NK_API void
 nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt)
 {
     struct nk_context *ctx = &xlib.ctx;
+
+    /* optional grabbing behavior */
+    if (ctx->input.mouse.grab) {
+        XDefineCursor(xlib.dpy, xlib.root, xlib.cursor);
+        ctx->input.mouse.grab = 0;
+    } else if (ctx->input.mouse.ungrab) {
+        XWarpPointer(xlib.dpy, None, xlib.surf->root, 0, 0, 0, 0,
+            (int)ctx->input.mouse.prev.x, (int)ctx->input.mouse.prev.y);
+        XUndefineCursor(xlib.dpy, xlib.root);
+        ctx->input.mouse.ungrab = 0;
+    }
+
     if (evt->type == KeyPress || evt->type == KeyRelease)
     {
         /* Key handler */
@@ -543,6 +567,8 @@ nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt)
         /* Mouse motion handler */
         const int x = evt->xmotion.x, y = evt->xmotion.y;
         nk_input_motion(ctx, x, y);
+        if (ctx->input.mouse.grabbed)
+            XWarpPointer(xlib.dpy, None, xlib.surf->root, 0, 0, 0, 0, (int)ctx->input.mouse.prev.x, (int)ctx->input.mouse.prev.y);
     } else if (evt->type == Expose || evt->type == ConfigureNotify) {
         /* Window resize handler */
         unsigned int width, height;
@@ -560,6 +586,7 @@ nk_xlib_shutdown(void)
 {
     nk_xsurf_del(xlib.surf);
     nk_free(&xlib.ctx);
+    XFreeCursor(xlib.dpy, xlib.cursor);
     nk_memset(&xlib, 0, sizeof(xlib));
 }
 
