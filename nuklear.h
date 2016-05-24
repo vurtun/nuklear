@@ -640,8 +640,13 @@ NK_API int                      nk_option_text(struct nk_context*, const char*, 
 /* Widgets: Selectable */
 NK_API int                      nk_selectable_label(struct nk_context*, const char*, nk_flags align, int *value);
 NK_API int                      nk_selectable_text(struct nk_context*, const char*, int, nk_flags align, int *value);
+NK_API int                      nk_selectable_image_label(struct nk_context*,struct nk_image,  const char*, nk_flags align, int *value);
+NK_API int                      nk_selectable_image_text(struct nk_context*,struct nk_image, const char*, int, nk_flags align, int *value);
+
 NK_API int                      nk_select_label(struct nk_context*, const char*, nk_flags align, int value);
 NK_API int                      nk_select_text(struct nk_context*, const char*, int, nk_flags align, int value);
+NK_API int                      nk_select_image_label(struct nk_context*, struct nk_image,const char*, nk_flags align, int value);
+NK_API int                      nk_select_image_text(struct nk_context*, struct nk_image,const char*, int, nk_flags align, int value);
 
 /* Widgets: Slider */
 NK_API float                    nk_slide_float(struct nk_context*, float min, float val, float max, float step);
@@ -1784,35 +1789,6 @@ struct nk_style_text {
     struct nk_vec2 padding;
 };
 
-struct nk_style_button;
-struct nk_style_custom_button_drawing {
-    void(*button_text)(struct nk_command_buffer*,
-        const struct nk_rect *background, const struct nk_rect*,
-        nk_flags state, const struct nk_style_button*,
-        const char*, int len, nk_flags text_alignment,
-        const struct nk_user_font*);
-    void(*button_symbol)(struct nk_command_buffer*,
-        const struct nk_rect *background, const struct nk_rect*,
-        nk_flags state, const struct nk_style_button*,
-        enum nk_symbol_type, const struct nk_user_font*);
-    void(*button_image)(struct nk_command_buffer*,
-        const struct nk_rect *background, const struct nk_rect*,
-        nk_flags state, const struct nk_style_button*,
-        const struct nk_image *img);
-    void(*button_text_symbol)(struct nk_command_buffer*,
-        const struct nk_rect *background, const struct nk_rect*,
-        const struct nk_rect *symbol, nk_flags state,
-        const struct nk_style_button*,
-        const char *text, int len, enum nk_symbol_type,
-        const struct nk_user_font*);
-    void(*button_text_image)(struct nk_command_buffer*,
-        const struct nk_rect *background, const struct nk_rect*,
-        const struct nk_rect *image, nk_flags state,
-        const struct nk_style_button*,
-        const char *text, int len, const struct nk_user_font*,
-        const struct nk_image *img);
-};
-
 struct nk_style_button {
     /* background */
     struct nk_style_item normal;
@@ -1837,22 +1813,7 @@ struct nk_style_button {
     /* optional user callbacks */
     nk_handle userdata;
     void(*draw_begin)(struct nk_command_buffer*, nk_handle userdata);
-    struct nk_style_custom_button_drawing draw;
     void(*draw_end)(struct nk_command_buffer*, nk_handle userdata);
-};
-
-struct nk_style_toggle;
-union nk_style_custom_toggle_drawing {
-    void(*radio)(struct nk_command_buffer*, nk_flags state,
-        const struct nk_style_toggle *toggle, int active,
-        const struct nk_rect *label, const struct nk_rect *selector,
-        const struct nk_rect *cursor, const char *string, int len,
-        const struct nk_user_font *font);
-    void(*checkbox)(struct nk_command_buffer*, nk_flags state,
-        const struct nk_style_toggle *toggle, int active,
-        const struct nk_rect *label, const struct nk_rect *selector,
-        const struct nk_rect *cursor, const char *string, int len,
-        const struct nk_user_font *font);
 };
 
 struct nk_style_toggle {
@@ -1879,7 +1840,6 @@ struct nk_style_toggle {
     /* optional user callbacks */
     nk_handle userdata;
     void(*draw_begin)(struct nk_command_buffer*, nk_handle);
-    union nk_style_custom_toggle_drawing draw;
     void(*draw_end)(struct nk_command_buffer*, nk_handle);
 };
 
@@ -1910,14 +1870,11 @@ struct nk_style_selectable {
     float rounding;
     struct nk_vec2 padding;
     struct nk_vec2 touch_padding;
+    struct nk_vec2 image_padding;
 
     /* optional user callbacks */
     nk_handle userdata;
     void(*draw_begin)(struct nk_command_buffer*, nk_handle);
-    void(*draw)(struct nk_command_buffer*,
-        nk_flags state, const struct nk_style_selectable*, int active,
-        const struct nk_rect*, const char *string, int len,
-        nk_flags align, const struct nk_user_font*);
     void(*draw_end)(struct nk_command_buffer*, nk_handle);
 };
 
@@ -1957,9 +1914,6 @@ struct nk_style_slider {
     /* optional user callbacks */
     nk_handle userdata;
     void(*draw_begin)(struct nk_command_buffer*, nk_handle);
-    void(*draw)(struct nk_command_buffer*, nk_flags state,
-        const struct nk_style_slider*, const struct nk_rect *bar,
-        const struct nk_rect *cursor, float min, float value, float max);
     void(*draw_end)(struct nk_command_buffer*, nk_handle);
 };
 
@@ -1981,9 +1935,6 @@ struct nk_style_progress {
     /* optional user callbacks */
     nk_handle userdata;
     void(*draw_begin)(struct nk_command_buffer*, nk_handle);
-    void(*draw)(struct nk_command_buffer*, nk_flags state,
-        const struct nk_style_progress*, const struct nk_rect *bounds,
-        const struct nk_rect *cursor, nk_size value, nk_size max);
     void(*draw_end)(struct nk_command_buffer*, nk_handle);
 };
 
@@ -2014,9 +1965,6 @@ struct nk_style_scrollbar {
     /* optional user callbacks */
     nk_handle userdata;
     void(*draw_begin)(struct nk_command_buffer*, nk_handle);
-    void(*draw)(struct nk_command_buffer*, nk_flags state,
-        const struct nk_style_scrollbar*, const struct nk_rect *scroll,
-        const struct nk_rect *cursor);
     void(*draw_end)(struct nk_command_buffer*, nk_handle);
 };
 
@@ -2082,9 +2030,6 @@ struct nk_style_property {
     /* optional user callbacks */
     nk_handle userdata;
     void(*draw_begin)(struct nk_command_buffer*, nk_handle);
-    void(*draw)(struct nk_command_buffer*, const struct nk_style_property*,
-        const struct nk_rect*, const struct nk_rect *label, nk_flags state,
-        const char *name, int len, const struct nk_user_font*);
     void(*draw_end)(struct nk_command_buffer*, nk_handle);
 };
 
@@ -11535,15 +11480,9 @@ nk_do_button_text(nk_flags *state,
         return nk_false;
 
     ret = nk_do_button(state, out, bounds, style, in, behavior, &content);
-    if (style->draw_begin)
-        style->draw_begin(out, style->userdata);
-    if (style->draw.button_text)
-        style->draw.button_text(out, &bounds, &content, *state, style,
-                                string, len, align, font);
-    else nk_draw_button_text(out, &bounds, &content, *state, style,
-                            string, len, align, font);
-    if (style->draw_end)
-        style->draw_end(out, style->userdata);
+    if (style->draw_begin) style->draw_begin(out, style->userdata);
+    nk_draw_button_text(out, &bounds, &content, *state, style, string, len, align, font);
+    if (style->draw_end) style->draw_end(out, style->userdata);
     return ret;
 }
 
@@ -11588,13 +11527,9 @@ nk_do_button_symbol(nk_flags *state,
         return nk_false;
 
     ret = nk_do_button(state, out, bounds, style, in, behavior, &content);
-    if (style->draw_begin)
-        style->draw_begin(out, style->userdata);
-    if (style->draw.button_symbol)
-        style->draw.button_symbol(out, &bounds, &content, *state, style, symbol, font);
-    else nk_draw_button_symbol(out, &bounds, &content, *state, style, symbol, font);
-    if (style->draw_end)
-        style->draw_end(out, style->userdata);
+    if (style->draw_begin) style->draw_begin(out, style->userdata);
+    nk_draw_button_symbol(out, &bounds, &content, *state, style, symbol, font);
+    if (style->draw_end) style->draw_end(out, style->userdata);
     return ret;
 }
 
@@ -11628,13 +11563,9 @@ nk_do_button_image(nk_flags *state,
     content.w -= 2 * style->image_padding.x;
     content.h -= 2 * style->image_padding.y;
 
-    if (style->draw_begin)
-        style->draw_begin(out, style->userdata);
-    if (style->draw.button_image)
-        style->draw.button_image(out, &bounds, &content, *state, style, &img);
-    else nk_draw_button_image(out, &bounds, &content, *state, style, &img);
-    if (style->draw_end)
-        style->draw_end(out, style->userdata);
+    if (style->draw_begin) style->draw_begin(out, style->userdata);
+    nk_draw_button_image(out, &bounds, &content, *state, style, &img);
+    if (style->draw_end) style->draw_end(out, style->userdata);
     return ret;
 }
 
@@ -11698,15 +11629,10 @@ nk_do_button_text_symbol(nk_flags *state,
     } else tri.x = content.x + 2 * style->padding.x;
 
     /* draw button */
-    if (style->draw_begin)
-        style->draw_begin(out, style->userdata);
-    if (style->draw.button_text_symbol)
-        style->draw.button_text_symbol(out, &bounds, &content, &tri,
-                                    *state, style, str, len, symbol, font);
-    else nk_draw_button_text_symbol(out, &bounds, &content, &tri,
-                                    *state, style, str, len, symbol, font);
-    if (style->draw_end)
-        style->draw_end(out, style->userdata);
+    if (style->draw_begin) style->draw_begin(out, style->userdata);
+    nk_draw_button_text_symbol(out, &bounds, &content, &tri,
+        *state, style, str, len, symbol, font);
+    if (style->draw_end) style->draw_end(out, style->userdata);
     return ret;
 }
 
@@ -11767,15 +11693,9 @@ nk_do_button_text_image(nk_flags *state,
     icon.w -= 2 * style->image_padding.x;
     icon.h -= 2 * style->image_padding.y;
 
-    if (style->draw_begin)
-        style->draw_begin(out, style->userdata);
-    if (style->draw.button_text_image)
-        style->draw.button_text_image(out, &bounds, &content, &icon,
-                                    *state, style, str, len, font, &img);
-    else nk_draw_button_text_image(out, &bounds, &content, &icon,
-                                    *state, style, str, len, font, &img);
-    if (style->draw_end)
-        style->draw_end(out, style->userdata);
+    if (style->draw_begin) style->draw_begin(out, style->userdata);
+    nk_draw_button_text_image(out, &bounds, &content, &icon, *state, style, str, len, font, &img);
+    if (style->draw_end) style->draw_end(out, style->userdata);
     return ret;
 }
 
@@ -11949,17 +11869,9 @@ nk_do_toggle(nk_flags *state,
     if (style->draw_begin)
         style->draw_begin(out, style->userdata);
     if (type == NK_TOGGLE_CHECK) {
-        if (style->draw.checkbox)
-            style->draw.checkbox(out, *state,
-                style, *active, &label, &select, &cursor, str, len, font);
-        else nk_draw_checkbox(out, *state, style, *active, &label,
-                &select, &cursor, str, len, font);
+        nk_draw_checkbox(out, *state, style, *active, &label, &select, &cursor, str, len, font);
     } else {
-        if (style->draw.radio)
-            style->draw.radio(out, *state, style,
-                *active, &label, &select, &cursor, str, len, font);
-        else nk_draw_option(out, *state, style, *active, &label,
-            &select, &cursor, str, len, font);
+        nk_draw_option(out, *state, style, *active, &label, &select, &cursor, str, len, font);
     }
     if (style->draw_end)
         style->draw_end(out, style->userdata);
@@ -11974,8 +11886,8 @@ nk_do_toggle(nk_flags *state,
 NK_INTERN void
 nk_draw_selectable(struct nk_command_buffer *out,
     nk_flags state, const struct nk_style_selectable *style, int active,
-    const struct nk_rect *bounds, const char *string, int len,
-    nk_flags align, const struct nk_user_font *font)
+    const struct nk_rect *bounds, const struct nk_rect *icon, const struct nk_image *img,
+    const char *string, int len, nk_flags align, const struct nk_user_font *font)
 {
     const struct nk_style_item *background;
     struct nk_text text;
@@ -12006,6 +11918,7 @@ nk_draw_selectable(struct nk_command_buffer *out,
         }
     }
 
+
     /* draw selectable background and text */
     if (background->type == NK_STYLE_ITEM_IMAGE) {
         nk_draw_image(out, *bounds, &background->data.image);
@@ -12014,6 +11927,7 @@ nk_draw_selectable(struct nk_command_buffer *out,
         nk_fill_rect(out, *bounds, style->rounding, background->data.color);
         text.background = background->data.color;
     }
+    if (img && icon) nk_draw_image(out, *icon, img);
     nk_widget_text(out, *bounds, string, len, &text, align, font);
 }
 
@@ -12048,17 +11962,60 @@ nk_do_selectable(nk_flags *state, struct nk_command_buffer *out,
         *value = !(*value);
 
     /* draw selectable */
-    if (style->draw_begin)
-        style->draw_begin(out, style->userdata);
-    if (style->draw)
-        style->draw(out, *state, style, *value, &bounds,
-            str, len, align, font);
-    else nk_draw_selectable(out, *state, style, *value, &bounds,
-            str, len, align, font);
-    if (style->draw_end)
-        style->draw_end(out, style->userdata);
+    if (style->draw_begin) style->draw_begin(out, style->userdata);
+    nk_draw_selectable(out, *state, style, *value, &bounds, 0,0, str, len, align, font);
+    if (style->draw_end) style->draw_end(out, style->userdata);
     return old_value != *value;
 }
+
+NK_INTERN int
+nk_do_selectable_image(nk_flags *state, struct nk_command_buffer *out,
+    struct nk_rect bounds, const char *str, int len, nk_flags align, int *value,
+    const struct nk_image *img, const struct nk_style_selectable *style,
+    const struct nk_input *in, const struct nk_user_font *font)
+{
+    int old_value;
+    struct nk_rect touch;
+    struct nk_rect icon;
+
+    NK_ASSERT(state);
+    NK_ASSERT(out);
+    NK_ASSERT(str);
+    NK_ASSERT(len);
+    NK_ASSERT(value);
+    NK_ASSERT(style);
+    NK_ASSERT(font);
+
+    if (!state || !out || !str || !len || !value || !style || !font) return 0;
+    old_value = *value;
+
+    /* toggle behavior */
+    touch.x = bounds.x - style->touch_padding.x;
+    touch.y = bounds.y - style->touch_padding.y;
+    touch.w = bounds.w + style->touch_padding.x * 2;
+    touch.h = bounds.h + style->touch_padding.y * 2;
+    if (nk_button_behavior(state, touch, in, NK_BUTTON_DEFAULT))
+        *value = !(*value);
+
+    icon.y = bounds.y + style->padding.y;
+    icon.w = icon.h = bounds.h - 2 * style->padding.y;
+    if (align & NK_TEXT_ALIGN_LEFT) {
+        icon.x = (bounds.x + bounds.w) - (2 * style->padding.x + icon.w);
+        icon.x = NK_MAX(icon.x, 0);
+    } else icon.x = bounds.x + 2 * style->padding.x;
+
+    icon.x += style->image_padding.x;
+    icon.y += style->image_padding.y;
+    icon.w -= 2 * style->image_padding.x;
+    icon.h -= 2 * style->image_padding.y;
+
+    /* draw selectable */
+    if (style->draw_begin) style->draw_begin(out, style->userdata);
+    nk_draw_selectable(out, *state, style, *value, &bounds, &icon, img, str, len, align, font);
+    if (style->draw_end) style->draw_end(out, style->userdata);
+    return old_value != *value;
+}
+
 
 /* ===============================================================
  *
@@ -12255,15 +12212,9 @@ nk_do_slider(nk_flags *state,
                         slider_min, slider_max, slider_value, step, slider_steps);
 
     /* draw slider */
-    if (style->draw_begin)
-        style->draw_begin(out, style->userdata);
-    if (style->draw)
-        style->draw(out, *state, style, &bounds, &cursor,
-            slider_min, slider_value, slider_max);
-    else nk_draw_slider(out, *state, style, &bounds, &cursor,
-        slider_min, slider_value, slider_max);
-    if (style->draw_end)
-        style->draw_end(out, style->userdata);
+    if (style->draw_begin) style->draw_begin(out, style->userdata);
+    nk_draw_slider(out, *state, style, &bounds, &cursor, slider_min, slider_value, slider_max);
+    if (style->draw_end) style->draw_end(out, style->userdata);
     return slider_value;
 }
 
@@ -12360,13 +12311,9 @@ nk_do_progress(nk_flags *state,
     prog_value = nk_progress_behavior(state, in, bounds, max, prog_value, modifiable);
 
     /* draw progressbar */
-    if (style->draw_begin)
-        style->draw_begin(out, style->userdata);
-    if (style->draw)
-        style->draw(out, *state, style, &bounds, &cursor, value, max);
-    else nk_draw_progress(out, *state, style, &bounds, &cursor, value, max);
-    if (style->draw_end)
-        style->draw_end(out, style->userdata);
+    if (style->draw_begin) style->draw_begin(out, style->userdata);
+    nk_draw_progress(out, *state, style, &bounds, &cursor, value, max);
+    if (style->draw_end) style->draw_end(out, style->userdata);
     return prog_value;
 }
 
@@ -12531,13 +12478,9 @@ nk_do_scrollbarv(nk_flags *state,
     cursor.y = scroll.y + (scroll_off * scroll.h);
 
     /* draw scrollbar */
-    if (style->draw_begin)
-        style->draw_begin(out, style->userdata);
-    if (style->draw)
-        style->draw(out, *state, style, &scroll, &cursor);
-    else nk_draw_scrollbar(out, *state, style, &scroll, &cursor);
-    if (style->draw_end)
-        style->draw_end(out, style->userdata);
+    if (style->draw_begin) style->draw_begin(out, style->userdata);
+    nk_draw_scrollbar(out, *state, style, &scroll, &cursor);
+    if (style->draw_end) style->draw_end(out, style->userdata);
     return scroll_offset;
 }
 
@@ -12610,13 +12553,9 @@ nk_do_scrollbarh(nk_flags *state,
     cursor.x = scroll.x + (scroll_off * scroll.w);
 
     /* draw scrollbar */
-    if (style->draw_begin)
-        style->draw_begin(out, style->userdata);
-    if (style->draw)
-        style->draw(out, *state, style, &scroll, &cursor);
-    else nk_draw_scrollbar(out, *state, style, &scroll, &cursor);
-    if (style->draw_end)
-        style->draw_end(out, style->userdata);
+    if (style->draw_begin) style->draw_begin(out, style->userdata);
+    nk_draw_scrollbar(out, *state, style, &scroll, &cursor);
+    if (style->draw_end) style->draw_end(out, style->userdata);
     return scroll_offset;
 }
 
@@ -13451,13 +13390,9 @@ nk_do_property(nk_flags *ws,
                         step, inc_per_pixel);
 
     /* draw property */
-    if (style->draw_begin)
-        style->draw_begin(out, style->userdata);
-    if (style->draw)
-        style->draw(out, style, &property, &label, *ws, name, name_len, font);
-    else nk_draw_property(out, style, &property, &label, *ws, name, name_len, font);
-    if (style->draw_end)
-        style->draw_end(out, style->userdata);
+    if (style->draw_begin) style->draw_begin(out, style->userdata);
+    nk_draw_property(out, style, &property, &label, *ws, name, name_len, font);
+    if (style->draw_end) style->draw_end(out, style->userdata);
 
     /* execute right and left button  */
     if (nk_do_button_symbol(ws, out, left, style->sym_left, NK_BUTTON_DEFAULT,
@@ -13878,7 +13813,6 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     select->userdata        = nk_handle_ptr(0);
     select->rounding        = 0.0f;
     select->draw_begin      = 0;
-    select->draw            = 0;
     select->draw_end        = 0;
 
     /* slider */
@@ -13904,7 +13838,6 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     slider->bar_height      = 8;
     slider->rounding        = 0;
     slider->draw_begin      = 0;
-    slider->draw            = 0;
     slider->draw_end        = 0;
 
     /* slider buttons */
@@ -13940,7 +13873,6 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     prog->padding           = nk_vec2(4,4);
     prog->rounding          = 0;
     prog->draw_begin        = 0;
-    prog->draw              = 0;
     prog->draw_end          = 0;
 
     /* scrollbars */
@@ -13961,7 +13893,6 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     scroll->border          = 0;
     scroll->rounding        = 0;
     scroll->draw_begin      = 0;
-    scroll->draw            = 0;
     scroll->draw_end        = 0;
     style->scrollv = style->scrollh;
 
@@ -14028,7 +13959,6 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     property->border        = 1;
     property->rounding      = 10;
     property->draw_begin    = 0;
-    property->draw          = 0;
     property->draw_end      = 0;
 
     /* property buttons */
@@ -17360,6 +17290,35 @@ nk_selectable_text(struct nk_context *ctx, const char *str, int len,
                 str, len, align, value, &style->selectable, in, &style->font);
 }
 
+NK_API int
+nk_selectable_image_text(struct nk_context *ctx, struct nk_image img,
+    const char *str, int len, nk_flags align, int *value)
+{
+    struct nk_window *win;
+    struct nk_panel *layout;
+    const struct nk_input *in;
+    const struct nk_style *style;
+
+    enum nk_widget_layout_states state;
+    struct nk_rect bounds;
+
+    NK_ASSERT(ctx);
+    NK_ASSERT(value);
+    NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout || !value)
+        return 0;
+
+    win = ctx->current;
+    layout = win->layout;
+    style = &ctx->style;
+    state = nk_widget(&bounds, ctx);
+    if (!state) return 0;
+    in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
+    return nk_do_selectable_image(&ctx->last_widget_state, &win->buffer, bounds,
+                str, len, align, value, &img, &style->selectable, in, &style->font);
+}
+
 NK_API int nk_select_text(struct nk_context *ctx, const char *str, int len,
     nk_flags align, int value)
 {nk_selectable_text(ctx, str, len, align, &value);return value;}
@@ -17367,8 +17326,20 @@ NK_API int nk_select_text(struct nk_context *ctx, const char *str, int len,
 NK_API int nk_selectable_label(struct nk_context *ctx, const char *str, nk_flags align, int *value)
 {return nk_selectable_text(ctx, str, nk_strlen(str), align, value);}
 
+NK_API int nk_selectable_image_label(struct nk_context *ctx,struct nk_image img,
+    const char *str, nk_flags align, int *value)
+{return nk_selectable_image_text(ctx, img, str, nk_strlen(str), align, value);}
+
 NK_API int nk_select_label(struct nk_context *ctx, const char *str, nk_flags align, int value)
 {nk_selectable_text(ctx, str, nk_strlen(str), align, &value);return value;}
+
+NK_API int nk_select_image_label(struct nk_context *ctx, struct nk_image img,
+    const char *str, nk_flags align, int value)
+{nk_selectable_image_text(ctx, img, str, nk_strlen(str), align, &value);return value;}
+
+NK_API int nk_select_image_text(struct nk_context *ctx, struct nk_image img,
+    const char *str, int len, nk_flags align, int value)
+{nk_selectable_image_text(ctx, img, str, len, align, &value);return value;}
 
 /*----------------------------------------------------------------
  *
