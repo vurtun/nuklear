@@ -618,6 +618,21 @@ overview(struct nk_context *ctx)
                 }
             }
             nk_chart_end(ctx);
+
+            /* mixed colored chart */
+            nk_layout_row_dynamic(ctx, 100, 1);
+            bounds = nk_widget_bounds(ctx);
+            if (nk_chart_begin_colored(ctx, NK_CHART_LINES, nk_rgb(255,0,0), nk_rgb(150,0,0), 32, 0.0f, 1.0f)) {
+                nk_chart_add_slot_colored(ctx, NK_CHART_LINES, nk_rgb(0,0,255), nk_rgb(0,0,150),32, -1.0f, 1.0f);
+                nk_chart_add_slot_colored(ctx, NK_CHART_LINES, nk_rgb(0,255,0), nk_rgb(0,150,0), 32, -1.0f, 1.0f);
+                for (id = 0, i = 0; i < 32; ++i) {
+                    nk_chart_push_slot(ctx, (float)fabs(sin(id)), 0);
+                    nk_chart_push_slot(ctx, (float)cos(id), 1);
+                    nk_chart_push_slot(ctx, (float)sin(id), 2);
+                    id += step;
+                }
+            }
+            nk_chart_end(ctx);
             nk_tree_pop(ctx);
         }
 
