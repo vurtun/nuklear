@@ -312,18 +312,18 @@ typedef int(*nk_filter)(const struct nk_text_edit*, nk_rune unicode);
 typedef void(*nk_paste_f)(nk_handle, struct nk_text_edit*);
 typedef void(*nk_copy_f)(nk_handle, const char*, int len);
 
-enum nk_button_behavior {NK_BUTTON_DEFAULT,NK_BUTTON_REPEATER};
-enum nk_modify          {NK_FIXED=nk_false,NK_MODIFIABLE=nk_true};
-enum nk_orientation     {NK_VERTICAL,NK_HORIZONTAL};
-enum nk_collapse_states {NK_MINIMIZED=nk_false,NK_MAXIMIZED = nk_true};
-enum nk_show_states     {NK_HIDDEN=nk_false,NK_SHOWN=nk_true};
-enum nk_chart_type      {NK_CHART_LINES,NK_CHART_COLUMN,NK_CHART_MAX};
-enum nk_chart_event     {NK_CHART_HOVERING=0x01, NK_CHART_CLICKED=0x02};
+enum nk_button_behavior {NK_BUTTON_DEFAULT, NK_BUTTON_REPEATER};
+enum nk_modify          {NK_FIXED=nk_false, NK_MODIFIABLE=nk_true};
+enum nk_orientation     {NK_VERTICAL, NK_HORIZONTAL};
+enum nk_collapse_states {NK_MINIMIZED=nk_false, NK_MAXIMIZED = nk_true};
+enum nk_show_states     {NK_HIDDEN=nk_false, NK_SHOWN=nk_true};
+enum nk_chart_type      {NK_CHART_LINES, NK_CHART_COLUMN, NK_CHART_MAX};
+enum nk_chart_event     {NK_CHART_HOVERING = 0x01, NK_CHART_CLICKED = 0x02};
 enum nk_color_format    {NK_RGB, NK_RGBA};
-enum nk_popup_type      {NK_POPUP_STATIC,NK_POPUP_DYNAMIC};
-enum nk_layout_format   {NK_DYNAMIC,NK_STATIC};
-enum nk_tree_type       {NK_TREE_NODE,NK_TREE_TAB};
-enum nk_anti_aliasing   {NK_ANTI_ALIASING_OFF,NK_ANTI_ALIASING_ON};
+enum nk_popup_type      {NK_POPUP_STATIC, NK_POPUP_DYNAMIC};
+enum nk_layout_format   {NK_DYNAMIC, NK_STATIC};
+enum nk_tree_type       {NK_TREE_NODE, NK_TREE_TAB};
+enum nk_anti_aliasing   {NK_ANTI_ALIASING_OFF, NK_ANTI_ALIASING_ON};
 
 struct nk_allocator {
     nk_handle userdata;
@@ -582,6 +582,9 @@ NK_API void                     nk_group_end(struct nk_context*);
 #define                         nk_tree_push(ctx, type, title, state) nk_tree_push_hashed(ctx, type, title, state, __FILE__,nk_strlen(__FILE__),__LINE__)
 #define                         nk_tree_push_id(ctx, type, title, state, id) nk_tree_push_hashed(ctx, type, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),id)
 NK_API int                      nk_tree_push_hashed(struct nk_context*, enum nk_tree_type, const char *title, enum nk_collapse_states initial_state, const char *hash, int len,int seed);
+#define                         nk_tree_image_push(ctx, type, img, title, state) nk_tree_image_push_hashed(ctx, type, img, title, state, __FILE__,nk_strlen(__FILE__),__LINE__)
+#define                         nk_tree_image_push_id(ctx, type, img, title, state, id) nk_tree_image_push_hashed(ctx, img, type, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),id)
+NK_API int                      nk_tree_image_push_hashed(struct nk_context*, enum nk_tree_type, struct nk_image, const char *title, enum nk_collapse_states initial_state, const char *hash, int len,int seed);
 NK_API void                     nk_tree_pop(struct nk_context*);
 
 /* Widgets */
@@ -590,7 +593,7 @@ NK_API void                     nk_text_colored(struct nk_context*, const char*,
 NK_API void                     nk_text_wrap(struct nk_context*, const char*, int);
 NK_API void                     nk_text_wrap_colored(struct nk_context*, const char*, int, struct nk_color);
 
-NK_API void                     nk_label(struct nk_context*, const char*, nk_flags);
+NK_API void                     nk_label(struct nk_context*, const char*, nk_flags align);
 NK_API void                     nk_label_colored(struct nk_context*, const char*, nk_flags align, struct nk_color);
 NK_API void                     nk_label_wrap(struct nk_context*, const char*);
 NK_API void                     nk_label_colored_wrap(struct nk_context*, const char*, struct nk_color);
@@ -16553,9 +16556,9 @@ nk_layout_peek(struct nk_rect *bounds, struct nk_context *ctx)
     layout->row.index = index;
 }
 
-NK_API int
-nk_tree_push_hashed(struct nk_context *ctx, enum nk_tree_type type,
-    const char *title, enum nk_collapse_states initial_state,
+NK_INTERN int
+nk_tree_base(struct nk_context *ctx, enum nk_tree_type type,
+    struct nk_image *img, const char *title, enum nk_collapse_states initial_state,
     const char *hash, int len, int line)
 {
     struct nk_window *win;
@@ -16607,7 +16610,7 @@ nk_tree_push_hashed(struct nk_context *ctx, enum nk_tree_type type,
         }
     } else text.background = style->window.background;
 
-    /* find or create tab persistent state (open/closed) */
+    /* find, create or set tab persistent state (open/closed) */
     title_len = (int)nk_strlen(title);
     title_hash = nk_murmur_hash(title, (int)title_len, (nk_hash)type);
     if (hash) title_hash += nk_murmur_hash(hash, len, (nk_hash)line);
@@ -16623,36 +16626,33 @@ nk_tree_push_hashed(struct nk_context *ctx, enum nk_tree_type type,
     if (nk_button_behavior(&ws, header, in, NK_BUTTON_DEFAULT))
         *state = (*state == NK_MAXIMIZED) ? NK_MINIMIZED : NK_MAXIMIZED;
 
-    {
-        /* calculate the triangle bounds */
-        sym.w = sym.h = style->font.height;
-        sym.y = header.y + style->tab.padding.y;
-        sym.x = header.x + panel_padding.x + style->tab.padding.x;
+    {/* draw triangle button */
+    sym.w = sym.h = style->font.height;
+    sym.y = header.y + style->tab.padding.y;
+    sym.x = header.x + panel_padding.x + style->tab.padding.x;
+    nk_do_button_symbol(&ws, &win->buffer, sym,
+        (*state == NK_MAXIMIZED)? style->tab.sym_minimize: style->tab.sym_maximize,
+        NK_BUTTON_DEFAULT, (type == NK_TREE_TAB)?
+        &style->tab.tab_button: &style->tab.node_button, 0, &style->font);
 
-        /* calculate the triangle points and draw triangle */
-        nk_do_button_symbol(&ws, &win->buffer, sym,
-            (*state == NK_MAXIMIZED)? style->tab.sym_minimize: style->tab.sym_maximize,
-            NK_BUTTON_DEFAULT, (type == NK_TREE_TAB)?
-            &style->tab.tab_button: &style->tab.node_button,
-            in, &style->font);
-
-        /* calculate the space the icon occupied */
-        sym.w = style->font.height + 2 * style->tab.spacing.x;
+    if (img) {
+        /* draw optional image icon */
+        sym.x = sym.x + sym.w + 4 * item_spacing.x;
+        nk_draw_image(&win->buffer, sym, img);
+        sym.w = style->font.height + style->tab.spacing.x;}
     }
-    {
-        /* draw node label */
-        struct nk_rect label;
-        header.w = NK_MAX(header.w, sym.w + item_spacing.y + panel_padding.x);
-        label.x = sym.x + sym.w + item_spacing.x;
-        label.y = sym.y;
-        label.w = header.w - (sym.w + item_spacing.y + panel_padding.x);
-        label.h = style->font.height;
 
-        text.text = style->tab.text;
-        text.padding = nk_vec2(0,0);
-        nk_widget_text(out, label, title, nk_strlen(title), &text,
-            NK_TEXT_LEFT, &style->font);
-    }
+    {/* draw label */
+    struct nk_rect label;
+    header.w = NK_MAX(header.w, sym.w + item_spacing.x + panel_padding.x);
+    label.x = sym.x + sym.w + item_spacing.x;
+    label.y = sym.y;
+    label.w = header.w - (sym.w + item_spacing.y + panel_padding.x);
+    label.h = style->font.height;
+    text.text = style->tab.text;
+    text.padding = nk_vec2(0,0);
+    nk_widget_text(out, label, title, nk_strlen(title), &text,
+        NK_TEXT_LEFT, &style->font);}
 
     /* increase x-axis cursor widget position pointer */
     if (*state == NK_MAXIMIZED) {
@@ -16663,6 +16663,18 @@ nk_tree_push_hashed(struct nk_context *ctx, enum nk_tree_type type,
         return nk_true;
     } else return nk_false;
 }
+
+NK_API int
+nk_tree_push_hashed(struct nk_context *ctx, enum nk_tree_type type,
+    const char *title, enum nk_collapse_states initial_state,
+    const char *hash, int len, int line)
+{return nk_tree_base(ctx, type, 0, title, initial_state, hash, len, line);}
+
+NK_API int
+nk_tree_image_push_hashed(struct nk_context *ctx, enum nk_tree_type type,
+    struct nk_image img, const char *title, enum nk_collapse_states initial_state,
+    const char *hash, int len,int seed)
+{return nk_tree_base(ctx, type, &img, title, initial_state, hash, len, seed);}
 
 NK_API void
 nk_tree_pop(struct nk_context *ctx)
