@@ -5368,7 +5368,7 @@ nk_draw_image(struct nk_command_buffer *b, struct nk_rect r,
     if (!b) return;
     if (b->use_clipping) {
         const struct nk_rect *c = &b->clip;
-        if (!NK_INTERSECT(r.x, r.y, r.w, r.h, c->x, c->y, c->w, c->h))
+        if (!c->w || !c->h || !NK_INTERSECT(r.x, r.y, r.w, r.h, c->x, c->y, c->w, c->h))
             return;
     }
 
@@ -5395,17 +5395,16 @@ nk_draw_text(struct nk_command_buffer *b, struct nk_rect r,
     if (!b || !string || !length || (bg.a == 0 && fg.a == 0)) return;
     if (b->use_clipping) {
         const struct nk_rect *c = &b->clip;
-        if (!NK_INTERSECT(r.x, r.y, r.w, r.h, c->x, c->y, c->w, c->h))
+        if (!c->w || !c->h || !NK_INTERSECT(r.x, r.y, r.w, r.h, c->x, c->y, c->w, c->h))
             return;
     }
 
     /* make sure text fits inside bounds */
     text_width = font->width(font->userdata, font->height, string, length);
     if (text_width > r.w){
-        float txt_width = (float)text_width;
         int glyphs = 0;
-        length = nk_text_clamp(font, string, length,
-                    r.w, &glyphs, &txt_width);
+        float txt_width = (float)text_width;
+        length = nk_text_clamp(font, string, length, r.w, &glyphs, &txt_width);
     }
 
     if (!length) return;
@@ -9838,7 +9837,9 @@ nk_font_atlas_end(struct nk_font_atlas *atlas, nk_handle texture,
     }
     for (i = 0; i < atlas->font_num; ++i) {
         atlas->fonts[i]->texture = texture;
+#ifdef NK_INCLUDE_VERTEX_BUFFER_OUTPUT
         atlas->fonts[i]->handle.texture = texture;
+#endif
     }
 
     atlas->alloc.free(atlas->alloc.userdata, atlas->pixel);
@@ -11259,7 +11260,7 @@ nk_widget_text(struct nk_command_buffer *o, struct nk_rect b,
     /* align in y-axis */
     if (a & NK_TEXT_ALIGN_MIDDLE) {
         label.y = b.y + b.h/2.0f - (float)f->height/2.0f;
-        label.h = b.h - (b.h/2.0f + f->height/2.0f);
+        label.h = NK_MAX(b.h/2.0f, b.h - (b.h/2.0f + f->height/2.0f));
     } else if (a & NK_TEXT_ALIGN_BOTTOM) {
         label.y = b.y + b.h - f->height;
         label.h = f->height;
