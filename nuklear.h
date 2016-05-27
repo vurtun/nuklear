@@ -9838,7 +9838,9 @@ nk_font_atlas_end(struct nk_font_atlas *atlas, nk_handle texture,
     }
     for (i = 0; i < atlas->font_num; ++i) {
         atlas->fonts[i]->texture = texture;
+#ifdef NK_INCLUDE_VERTEX_BUFFER_OUTPUT
         atlas->fonts[i]->handle.texture = texture;
+#endif
     }
 
     atlas->alloc.free(atlas->alloc.userdata, atlas->pixel);
