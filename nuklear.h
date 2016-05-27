@@ -11259,7 +11259,7 @@ nk_widget_text(struct nk_command_buffer *o, struct nk_rect b,
     /* align in y-axis */
     if (a & NK_TEXT_ALIGN_MIDDLE) {
         label.y = b.y + b.h/2.0f - (float)f->height/2.0f;
-        label.h = b.h - (b.h/2.0f + f->height/2.0f);
+        label.h = NK_MAX(b.h/2.0f, b.h - (b.h/2.0f + f->height/2.0f));
     } else if (a & NK_TEXT_ALIGN_BOTTOM) {
         label.y = b.y + b.h - f->height;
         label.h = f->height;
