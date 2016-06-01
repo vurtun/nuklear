@@ -484,7 +484,6 @@ enum nk_edit_types {
                         NK_EDIT_MULTILINE|NK_EDIT_ALLOW_TAB,
     NK_EDIT_EDITOR  = NK_EDIT_SELECTABLE|NK_EDIT_MULTILINE|NK_EDIT_ALLOW_TAB|
                         NK_EDIT_CLIPBOARD
-
 };
 enum nk_edit_events {
     NK_EDIT_ACTIVE      = NK_FLAG(0), /* edit widget is currently being modified */
@@ -1753,6 +1752,7 @@ NK_API void nk_draw_list_stroke_triangle(struct nk_draw_list*, struct nk_vec2 a,
 NK_API void nk_draw_list_stroke_circle(struct nk_draw_list*, struct nk_vec2 center, float radius, struct nk_color, unsigned int segs, float thickness);
 NK_API void nk_draw_list_stroke_curve(struct nk_draw_list*, struct nk_vec2 p0, struct nk_vec2 cp0, struct nk_vec2 cp1, struct nk_vec2 p1, struct nk_color, unsigned int segments, float thickness);
 NK_API void nk_draw_list_stroke_poly_line(struct nk_draw_list*, const struct nk_vec2 *pnts, const unsigned int cnt, struct nk_color, enum nk_draw_list_stroke, float thickness, enum nk_anti_aliasing);
+
 /* fill */
 NK_API void nk_draw_list_fill_rect(struct nk_draw_list*, struct nk_rect rect, struct nk_color, float rounding);
 NK_API void nk_draw_list_fill_rect_multi_color(struct nk_draw_list *list, struct nk_rect rect, struct nk_color left, struct nk_color top, struct nk_color right, struct nk_color bottom);
@@ -2373,9 +2373,8 @@ struct nk_context {
 #ifdef NK_INCLUDE_COMMAND_USERDATA
     nk_handle userdata;
 #endif
-
-    /* text editor objects are quite big because they have a internal
-     * undo/redo stack. It therefore does not make sense to have one for
+    /* text editor objects are quite big because of an internal
+     * undo/redo stack. Therefore does not make sense to have one for
      * each window for temporary use cases, so I only provide *one* instance
      * for all windows. This works because the content is cleared anyway */
     struct nk_text_edit text_edit;
@@ -5332,7 +5331,7 @@ nk_fill_polygon(struct nk_command_buffer *b, float *points, int point_count,
     cmd->color = col;
     cmd->point_count = (unsigned short)point_count;
     for (i = 0; i < point_count; ++i) {
-        cmd->points[i].x = (short)points[i*2];
+        cmd->points[i].x = (short)points[i*2+0];
         cmd->points[i].y = (short)points[i*2+1];
     }
 }
@@ -14915,6 +14914,7 @@ nk_begin(struct nk_context *ctx, struct nk_panel *layout, const char *title,
     int ret = 0;
 
     NK_ASSERT(ctx);
+    NK_ASSERT(ctx->style.font.width && "if this triggers you forgot to add a font");
     NK_ASSERT(!ctx->current && "if this triggers you missed a `nk_end` call");
     if (!ctx || ctx->current || !title)
         return 0;
@@ -15034,7 +15034,7 @@ NK_API void
 nk_end(struct nk_context *ctx)
 {
     NK_ASSERT(ctx);
-    NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx->current && "if this triggers you forgot to call `nk_begin`");
     NK_ASSERT(ctx->current->layout);
     if (!ctx || !ctx->current) return;
     if (ctx->current->flags & NK_WINDOW_HIDDEN) {
@@ -15048,7 +15048,8 @@ nk_end(struct nk_context *ctx)
 NK_API struct nk_rect
 nk_window_get_bounds(const struct nk_context *ctx)
 {
-    NK_ASSERT(ctx); NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
     if (!ctx || !ctx->current) return nk_rect(0,0,0,0);
     return ctx->current->bounds;
 }
@@ -15056,7 +15057,8 @@ nk_window_get_bounds(const struct nk_context *ctx)
 NK_API struct nk_vec2
 nk_window_get_position(const struct nk_context *ctx)
 {
-    NK_ASSERT(ctx); NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
     if (!ctx || !ctx->current) return nk_vec2(0,0);
     return nk_vec2(ctx->current->bounds.x, ctx->current->bounds.y);
 }
@@ -15064,7 +15066,8 @@ nk_window_get_position(const struct nk_context *ctx)
 NK_API struct nk_vec2
 nk_window_get_size(const struct nk_context *ctx)
 {
-    NK_ASSERT(ctx); NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
     if (!ctx || !ctx->current) return nk_vec2(0,0);
     return nk_vec2(ctx->current->bounds.w, ctx->current->bounds.h);
 }
@@ -15072,7 +15075,8 @@ nk_window_get_size(const struct nk_context *ctx)
 NK_API float
 nk_window_get_width(const struct nk_context *ctx)
 {
-    NK_ASSERT(ctx); NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
     if (!ctx || !ctx->current) return 0;
     return ctx->current->bounds.w;
 }
@@ -15080,7 +15084,8 @@ nk_window_get_width(const struct nk_context *ctx)
 NK_API float
 nk_window_get_height(const struct nk_context *ctx)
 {
-    NK_ASSERT(ctx); NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
     if (!ctx || !ctx->current) return 0;
     return ctx->current->bounds.h;
 }
@@ -15180,7 +15185,7 @@ nk_window_is_any_hovered(struct nk_context *ctx)
         } else if (nk_input_is_mouse_hovering_rect(&ctx->input, iter->bounds)) {
             return 1;
         }
-        /* check if window is being hovered */
+        /* check if window popup is being hovered */
         if (iter->popup.active && nk_input_is_mouse_hovering_rect(&ctx->input, iter->popup.win->bounds))
             return 1;
         iter = iter->next;
