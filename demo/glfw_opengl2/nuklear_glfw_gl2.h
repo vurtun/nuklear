@@ -188,7 +188,7 @@ nk_gflw3_scroll_callback(GLFWwindow *win, double xoff, double yoff)
     glfw.scroll += (float)yoff;
 }
 
-static void
+NK_INTERN void
 nk_glfw3_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
 {
     const char *text = glfwGetClipboardString(glfw.win);
@@ -196,7 +196,7 @@ nk_glfw3_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
     (void)usr;
 }
 
-static void
+NK_INTERN void
 nk_glfw3_clipbard_copy(nk_handle usr, const char *text, int len)
 {
     char *str = 0;
@@ -281,7 +281,7 @@ nk_glfw3_new_frame(void)
                                     glfwGetKey(win, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
 
     if (glfwGetKey(win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
-        glfwGetKey(win, GLFW_KEY_RIGHT_CONTROL)) {
+        glfwGetKey(win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS) {
         nk_input_key(ctx, NK_KEY_COPY, glfwGetKey(win, GLFW_KEY_C) == GLFW_PRESS);
         nk_input_key(ctx, NK_KEY_PASTE, glfwGetKey(win, GLFW_KEY_P) == GLFW_PRESS);
         nk_input_key(ctx, NK_KEY_CUT, glfwGetKey(win, GLFW_KEY_X) == GLFW_PRESS);
