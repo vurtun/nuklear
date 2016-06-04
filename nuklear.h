@@ -40,7 +40,7 @@ USAGE:
         #include "nuklear.h"
 
     Also optionally define the symbols listed in the section "OPTIONAL DEFINES"
-    below in implementation mode if you want to use additional functionality
+    below in header and implementation mode if you want to use additional functionality
     or need more control over the library.
 
 FEATURES:
@@ -182,8 +182,8 @@ LICENSE:
     license: you are granted a perpetual, irrevocable license to copy, modify,
     publish and distribute this file as you see fit.
 */
-#ifndef NK_H_
-#define NK_H_
+#ifndef NK_NUKLEAR_H_
+#define NK_NUKLEAR_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -10926,7 +10926,7 @@ nk_textedit_discard_redo(struct nk_text_undo_state *state)
             int n = state->undo_rec[k].insert_length, i;
             /* delete n characters from all other records */
             state->redo_char_point = (short)(state->redo_char_point + n);
-            num = (nk_size)(NK_TEXTEDIT_UNDOSTATECOUNT - state->redo_char_point);
+            num = (nk_size)(NK_TEXTEDIT_UNDOCHARCOUNT - state->redo_char_point);
             NK_MEMCPY(state->undo_char + state->redo_char_point,
                 state->undo_char + state->redo_char_point-n, num * sizeof(char));
             for (i = state->redo_point; i < k; ++i) {
