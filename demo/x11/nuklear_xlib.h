@@ -461,7 +461,7 @@ nk_xlib_init(XFont *xfont, Display *dpy, int screen, Window root,
     if (!XSetLocaleModifiers("@im=none")) return 0;
 
     /* create invisible cursor */
-    {XColor dummy; char data[1] = {0};
+    {static XColor dummy; char data[1] = {0};
     Pixmap blank = XCreateBitmapFromData(dpy, root, data, 1, 1);
     if (blank == None) return 0;
     xlib.cursor = XCreatePixmapCursor(dpy, blank, blank, &dummy, &dummy, 0, 0);
@@ -492,7 +492,7 @@ nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt)
         XDefineCursor(xlib.dpy, xlib.root, xlib.cursor);
         ctx->input.mouse.grab = 0;
     } else if (ctx->input.mouse.ungrab) {
-        XWarpPointer(xlib.dpy, None, xlib.surf->root, 0, 0, 0, 0,
+        XWarpPointer(xlib.dpy, None, xlib.root, 0, 0, 0, 0,
             (int)ctx->input.mouse.prev.x, (int)ctx->input.mouse.prev.y);
         XUndefineCursor(xlib.dpy, xlib.root);
         ctx->input.mouse.ungrab = 0;
@@ -512,9 +512,9 @@ nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt)
         else if (*code == XK_Up)        nk_input_key(ctx, NK_KEY_UP, down);
         else if (*code == XK_Down)      nk_input_key(ctx, NK_KEY_DOWN, down);
         else if (*code == XK_BackSpace) nk_input_key(ctx, NK_KEY_BACKSPACE, down);
-        else if (*code == XK_Home)  nk_input_key(ctx, NK_KEY_TEXT_START, down);
-        else if (*code == XK_End)  nk_input_key(ctx, NK_KEY_TEXT_END, down);
-        else if (*code == XK_Escape) nk_input_key(ctx, NK_KEY_TEXT_RESET_MODE, down);
+        else if (*code == XK_Home)      nk_input_key(ctx, NK_KEY_TEXT_START, down);
+        else if (*code == XK_End)       nk_input_key(ctx, NK_KEY_TEXT_END, down);
+        else if (*code == XK_Escape)    nk_input_key(ctx, NK_KEY_TEXT_RESET_MODE, down);
         else {
             if (*code == 'c' && (evt->xkey.state & ControlMask))
                 nk_input_key(ctx, NK_KEY_COPY, down);
@@ -567,8 +567,11 @@ nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt)
         /* Mouse motion handler */
         const int x = evt->xmotion.x, y = evt->xmotion.y;
         nk_input_motion(ctx, x, y);
-        if (ctx->input.mouse.grabbed)
-            XWarpPointer(xlib.dpy, None, xlib.surf->root, 0, 0, 0, 0, (int)ctx->input.mouse.prev.x, (int)ctx->input.mouse.prev.y);
+        if (ctx->input.mouse.grabbed) {
+            ctx->input.mouse.pos.x = ctx->input.mouse.prev.x;
+            ctx->input.mouse.pos.y = ctx->input.mouse.prev.y;
+            XWarpPointer(xlib.dpy, None, xlib.surf->root, 0, 0, 0, 0, (int)ctx->input.mouse.pos.x, (int)ctx->input.mouse.pos.y);
+        }
     } else if (evt->type == Expose || evt->type == ConfigureNotify) {
         /* Window resize handler */
         unsigned int width, height;

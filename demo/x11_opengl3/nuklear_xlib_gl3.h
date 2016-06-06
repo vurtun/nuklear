@@ -619,11 +619,17 @@ nk_x11_handle_event(XEvent *evt)
                 nk_input_key(ctx, NK_KEY_TEXT_LINE_START, down);
             else if (*code == 'e' && (evt->xkey.state & ControlMask))
                 nk_input_key(ctx, NK_KEY_TEXT_LINE_END, down);
-            else if (!down) {
-                char buf[32];
-                KeySym keysym = 0;
-                if (XLookupString((XKeyEvent*)evt, buf, 32, &keysym, NULL) != NoSymbol)
-                    nk_input_glyph(ctx, buf);
+            else {
+                if (*code == 'i')
+                    nk_input_key(ctx, NK_KEY_TEXT_INSERT_MODE, down);
+                else if (*code == 'r')
+                    nk_input_key(ctx, NK_KEY_TEXT_REPLACE_MODE, down);
+                if (down) {
+                    char buf[32];
+                    KeySym keysym = 0;
+                    if (XLookupString((XKeyEvent*)evt, buf, 32, &keysym, NULL) != NoSymbol)
+                        nk_input_glyph(ctx, buf);
+                }
             }
         }
         XFree(code);
@@ -646,8 +652,11 @@ nk_x11_handle_event(XEvent *evt)
         /* Mouse motion handler */
         const int x = evt->xmotion.x, y = evt->xmotion.y;
         nk_input_motion(ctx, x, y);
-        if (ctx->input.mouse.grabbed)
-            XWarpPointer(x11.dpy, None, x11.win, 0, 0, 0, 0, (int)ctx->input.mouse.prev.x, (int)ctx->input.mouse.prev.y);
+        if (ctx->input.mouse.grabbed) {
+            ctx->input.mouse.pos.x = ctx->input.mouse.prev.x;
+            ctx->input.mouse.pos.y = ctx->input.mouse.prev.y;
+            XWarpPointer(x11.dpy, None, x11.win, 0, 0, 0, 0, (int)ctx->input.mouse.pos.x, (int)ctx->input.mouse.pos.y);
+        }
     } else if (evt->type == KeymapNotify)
         XRefreshKeyboardMapping(&evt->xmapping);
 }
@@ -664,7 +673,7 @@ nk_x11_init(Display *dpy, Window win)
     x11.win = win;
 
     /* create invisible cursor */
-    {XColor dummy; char data[1] = {0};
+    {static XColor dummy; char data[1] = {0};
     Pixmap blank = XCreateBitmapFromData(dpy, win, data, 1, 1);
     if (blank == None) return 0;
     x11.cursor = XCreatePixmapCursor(dpy, blank, blank, &dummy, &dummy, 0, 0);

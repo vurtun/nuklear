@@ -341,7 +341,6 @@ nk_sdl_handle_event(SDL_Event *evt)
         SDL_WarpMouseInWindow(sdl.win, x, y);
         ctx->input.mouse.ungrab = 0;
     }
-
     if (evt->type == SDL_KEYUP || evt->type == SDL_KEYDOWN) {
         /* key events */
         int down = evt->type == SDL_KEYDOWN;

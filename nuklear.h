@@ -9961,10 +9961,6 @@ nk_input_end(struct nk_context *ctx)
         in->mouse.ungrab = 0;
         in->mouse.grab = 0;
     }
-    if (in->mouse.grabbed) {
-        in->mouse.pos.x = in->mouse.prev.x;
-        in->mouse.pos.y = in->mouse.prev.y;
-    }
 }
 
 NK_API void
@@ -9976,7 +9972,8 @@ nk_input_motion(struct nk_context *ctx, int x, int y)
     in = &ctx->input;
     in->mouse.pos.x = (float)x;
     in->mouse.pos.y = (float)y;
-    in->mouse.delta = nk_vec2_sub(in->mouse.pos, in->mouse.prev);
+    in->mouse.delta.x = in->mouse.pos.x - in->mouse.prev.x;
+    in->mouse.delta.y = in->mouse.pos.y - in->mouse.prev.y;
 }
 
 NK_API void
