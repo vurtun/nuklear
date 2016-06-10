@@ -15001,6 +15001,7 @@ nk_begin(struct nk_context *ctx, struct nk_panel *layout, const char *title,
         /* activate window if hovered and no other window is overlapping this window */
         nk_start(ctx, win);
         inpanel = nk_input_has_mouse_click_down_in_rect(&ctx->input, NK_BUTTON_LEFT, win->bounds, nk_true);
+        inpanel = inpanel && ctx->input.mouse.buttons[NK_BUTTON_LEFT].clicked;
         ishovered = nk_input_is_mouse_hovering_rect(&ctx->input, win->bounds);
         if ((win != ctx->active) && ishovered) {
             iter = win->next;
@@ -15472,14 +15473,14 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
 #endif
 
     /* window dragging */
-    if ((win->flags & NK_WINDOW_MOVABLE) && !(win->flags & NK_WINDOW_ROM)) {
+    if ((win->flags & NK_WINDOW_MOVABLE) && ctx->active == win) {
         int left_mouse_down;
         int left_mouse_click_in_cursor;
+
         struct nk_rect move;
         move.x = win->bounds.x;
         move.y = win->bounds.y;
         move.w = win->bounds.w;
-
         move.h = layout->header_h;
         if (nk_window_has_header(win, title)) {
             move.h = font->height + 2.0f * style->window.header.padding.y;
@@ -15860,56 +15861,6 @@ nk_panel_end(struct nk_context *ctx)
         }
     }
 
-    /* scaler */
-    if ((layout->flags & NK_WINDOW_SCALABLE) && in && !(layout->flags & NK_WINDOW_MINIMIZED)) {
-        /* calculate scaler bounds */
-        const struct nk_style_item *scaler;
-        float scaler_w = NK_MAX(0, scaler_size.x - window_padding.x);
-        float scaler_h = NK_MAX(0, scaler_size.y - window_padding.y);
-        float scaler_x = (layout->bounds.x + layout->bounds.w) - (window_padding.x + scaler_w);
-        float scaler_y;
-
-        if (layout->flags & NK_WINDOW_DYNAMIC)
-            scaler_y = footer.y + layout->footer_h - scaler_size.y;
-        else scaler_y = layout->bounds.y + layout->bounds.h - scaler_size.y;
-
-        /* draw scaler */
-        scaler = &style->window.scaler;
-        if (scaler->type == NK_STYLE_ITEM_IMAGE) {
-            nk_draw_image(out, nk_rect(scaler_x, scaler_y, scaler_w, scaler_h),
-                &scaler->data.image);
-        } else {
-            nk_fill_triangle(out, scaler_x + scaler_w, scaler_y, scaler_x + scaler_w,
-                scaler_y + scaler_h, scaler_x, scaler_y + scaler_h, scaler->data.color);
-        }
-
-        /* do window scaling */
-        if (!(window->flags & NK_WINDOW_ROM)) {
-            struct nk_vec2 delta;
-            float prev_x = in->mouse.prev.x;
-            float prev_y = in->mouse.prev.y;
-            struct nk_vec2 window_size = style->window.min_size;
-            int incursor = NK_INBOX(prev_x,prev_y,scaler_x,scaler_y,scaler_w,scaler_h);
-
-            if (nk_input_is_mouse_down(in, NK_BUTTON_LEFT) &&
-                (incursor || window->scaling.active == nk_true))
-            {
-                if(window->scaling.active == nk_false)
-                    window->scaling.start_size = nk_rect_size(window->bounds);
-                window->scaling.active = nk_true;
-
-                if (!in || !in->mouse.buttons[NK_BUTTON_LEFT].down)
-                    delta = nk_vec2(0,0);
-                else delta = nk_vec2_sub(in->mouse.pos, in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos);
-                window->bounds.w = NK_MAX(window_size.x, window->scaling.start_size.x + delta.x);
-
-                /* dragging in y-direction is only possible if static window */
-                if (!(layout->flags & NK_WINDOW_DYNAMIC))
-                    window->bounds.h = NK_MAX(window->scaling.start_size.y + delta.y, window_size.y);
-            } else window->scaling.active = nk_false;
-        }
-    }
-
     /* window border */
     if (layout->flags & NK_WINDOW_BORDER)
     {
@@ -15967,6 +15918,57 @@ nk_panel_end(struct nk_context *ctx)
             window->bounds.y + layout->border/2.0f,
             window->bounds.x + window->bounds.w - layout->border,
             padding_y - layout->border, layout->border, border);
+    }
+
+
+    /* scaler */
+    if ((layout->flags & NK_WINDOW_SCALABLE) && in && !(layout->flags & NK_WINDOW_MINIMIZED)) {
+        /* calculate scaler bounds */
+        const struct nk_style_item *scaler;
+        float scaler_w = NK_MAX(0, scaler_size.x - window_padding.x);
+        float scaler_h = NK_MAX(0, scaler_size.y - window_padding.y);
+        float scaler_x = (layout->bounds.x + layout->bounds.w) - (window_padding.x + scaler_w);
+        float scaler_y;
+
+        if (layout->flags & NK_WINDOW_DYNAMIC)
+            scaler_y = footer.y + layout->footer_h - scaler_size.y;
+        else scaler_y = layout->bounds.y + layout->bounds.h - scaler_size.y;
+
+        /* draw scaler */
+        scaler = &style->window.scaler;
+        if (scaler->type == NK_STYLE_ITEM_IMAGE) {
+            nk_draw_image(out, nk_rect(scaler_x, scaler_y, scaler_w, scaler_h),
+                &scaler->data.image);
+        } else {
+            nk_fill_triangle(out, scaler_x + scaler_w, scaler_y, scaler_x + scaler_w,
+                scaler_y + scaler_h, scaler_x, scaler_y + scaler_h, scaler->data.color);
+        }
+
+        /* do window scaling */
+        if (!(window->flags & NK_WINDOW_ROM)) {
+            struct nk_vec2 delta;
+            float prev_x = in->mouse.prev.x;
+            float prev_y = in->mouse.prev.y;
+            struct nk_vec2 window_size = style->window.min_size;
+            int incursor = NK_INBOX(prev_x,prev_y,scaler_x,scaler_y,scaler_w,scaler_h);
+
+            if (nk_input_is_mouse_down(in, NK_BUTTON_LEFT) &&
+                (incursor || window->scaling.active == nk_true))
+            {
+                if(window->scaling.active == nk_false)
+                    window->scaling.start_size = nk_rect_size(window->bounds);
+                window->scaling.active = nk_true;
+
+                if (!in || !in->mouse.buttons[NK_BUTTON_LEFT].down)
+                    delta = nk_vec2(0,0);
+                else delta = nk_vec2_sub(in->mouse.pos, in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos);
+                window->bounds.w = NK_MAX(window_size.x, window->scaling.start_size.x + delta.x);
+
+                /* dragging in y-direction is only possible if static window */
+                if (!(layout->flags & NK_WINDOW_DYNAMIC))
+                    window->bounds.h = NK_MAX(window->scaling.start_size.y + delta.y, window_size.y);
+            } else window->scaling.active = nk_false;
+        }
     }
 
     if (!(window->flags & NK_WINDOW_SUB)) {
