@@ -16621,7 +16621,7 @@ nk_tree_base(struct nk_context *ctx, enum nk_tree_type type,
 
     nk_flags ws = 0;
     int title_len = 0;
-    nk_hash title_hash = 0;
+    nk_hash tree_hash = 0;
     nk_uint *state = 0;
     enum nk_widget_layout_states widget_state;
 
@@ -16657,12 +16657,15 @@ nk_tree_base(struct nk_context *ctx, enum nk_tree_type type,
     } else text.background = style->window.background;
 
     /* find, create or set tab persistent state (open/closed) */
-    title_len = (int)nk_strlen(title);
-    title_hash = nk_murmur_hash(title, (int)title_len, (nk_hash)type);
-    if (hash) title_hash += nk_murmur_hash(hash, len, (nk_hash)line);
-    state = nk_find_value(win, title_hash);
+    if (hash) {
+        tree_hash = nk_murmur_hash(hash, len, (nk_hash)line);
+    } else {
+        title_len = (int)nk_strlen(title);
+        tree_hash = nk_murmur_hash(title, (int)title_len, (nk_hash)line);
+    }
+    state = nk_find_value(win, tree_hash);
     if (!state) {
-        state = nk_add_value(ctx, win, title_hash, 0);
+        state = nk_add_value(ctx, win, tree_hash, 0);
         *state = initial_state;
     }
 
