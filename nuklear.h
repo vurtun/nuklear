@@ -2091,8 +2091,10 @@ struct nk_style_tab {
     struct nk_color text;
 
     /* button */
-    struct nk_style_button tab_button;
-    struct nk_style_button node_button;
+    struct nk_style_button tab_maximize_button;
+    struct nk_style_button tab_minimize_button;
+    struct nk_style_button node_maximize_button;
+    struct nk_style_button node_minimize_button;
     enum nk_symbol_type sym_minimize;
     enum nk_symbol_type sym_maximize;
 
@@ -14113,7 +14115,7 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     tab->rounding           = 0;
 
     /* tab button */
-    button = &style->tab.tab_button;
+    button = &style->tab.tab_minimize_button;
     nk_zero_struct(*button);
     button->normal          = nk_style_item_color(table[NK_COLOR_TAB_HEADER]);
     button->hover           = nk_style_item_color(table[NK_COLOR_TAB_HEADER]);
@@ -14131,9 +14133,10 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     button->rounding        = 0.0f;
     button->draw_begin      = 0;
     button->draw_end        = 0;
+    style->tab.tab_maximize_button =*button;
 
     /* node button */
-    button = &style->tab.node_button;
+    button = &style->tab.node_minimize_button;
     nk_zero_struct(*button);
     button->normal          = nk_style_item_color(table[NK_COLOR_WINDOW]);
     button->hover           = nk_style_item_color(table[NK_COLOR_WINDOW]);
@@ -14151,6 +14154,7 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     button->rounding        = 0.0f;
     button->draw_begin      = 0;
     button->draw_end        = 0;
+    style->tab.node_maximize_button =*button;
 
     /* window header */
     win = &style->window;
@@ -15815,8 +15819,12 @@ nk_panel_end(struct nk_context *ctx)
             bounds.x = layout->bounds.x + layout->width;
             bounds.y = layout->clip.y;
             bounds.w = scrollbar_size.y;
-            bounds.h = layout->clip.h;
-            if (layout->flags & NK_WINDOW_BORDER) bounds.h -= 1;
+            bounds.h = layout->bounds.h - (layout->footer_h + layout->header_h);
+            bounds.h -= (2.0f * window_padding.y);
+            if (layout->menu.h)
+                bounds.h -= layout->menu.h + layout->row.height;
+            if (layout->flags & NK_WINDOW_BORDER)
+                bounds.x -= layout->border;
 
             scroll_offset = layout->offset->y;
             scroll_step = layout->clip.h * 0.10f;
@@ -16613,6 +16621,8 @@ nk_tree_base(struct nk_context *ctx, enum nk_tree_type type,
     const struct nk_style *style;
     struct nk_command_buffer *out;
     const struct nk_input *in;
+    const struct nk_style_button *button;
+    enum nk_symbol_type symbol;
 
     struct nk_vec2 item_spacing;
     struct nk_vec2 panel_padding;
@@ -16676,14 +16686,25 @@ nk_tree_base(struct nk_context *ctx, enum nk_tree_type type,
     if (nk_button_behavior(&ws, header, in, NK_BUTTON_DEFAULT))
         *state = (*state == NK_MAXIMIZED) ? NK_MINIMIZED : NK_MAXIMIZED;
 
+    /* select correct button style */
+    if (*state == NK_MAXIMIZED) {
+        symbol = style->tab.sym_maximize;
+        if (type == NK_TREE_TAB)
+            button = &style->tab.tab_maximize_button;
+        else button = &style->tab.node_maximize_button;
+    } else {
+        symbol = style->tab.sym_minimize;
+        if (type == NK_TREE_TAB)
+            button = &style->tab.tab_minimize_button;
+        else button = &style->tab.node_minimize_button;
+    }
+
     {/* draw triangle button */
     sym.w = sym.h = style->font.height;
     sym.y = header.y + style->tab.padding.y;
     sym.x = header.x + panel_padding.x + style->tab.padding.x;
-    nk_do_button_symbol(&ws, &win->buffer, sym,
-        (*state == NK_MAXIMIZED)? style->tab.sym_minimize: style->tab.sym_maximize,
-        NK_BUTTON_DEFAULT, (type == NK_TREE_TAB)?
-        &style->tab.tab_button: &style->tab.node_button, 0, &style->font);
+    nk_do_button_symbol(&ws, &win->buffer, sym, symbol, NK_BUTTON_DEFAULT,
+        button, 0, &style->font);
 
     if (img) {
         /* draw optional image icon */
