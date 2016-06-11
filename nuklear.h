@@ -15817,19 +15817,21 @@ nk_panel_end(struct nk_context *ctx)
             /* vertical scrollbar */
             nk_flags state = 0;
             bounds.x = layout->bounds.x + layout->width;
-            bounds.y = layout->clip.y;
+            bounds.y = layout->bounds.y + layout->header_h;
             bounds.w = scrollbar_size.y;
             bounds.h = layout->bounds.h - (layout->footer_h + layout->header_h);
             bounds.h -= (2.0f * window_padding.y);
-            if (layout->menu.h)
-                bounds.h -= layout->menu.h + layout->row.height;
             if (layout->flags & NK_WINDOW_BORDER)
                 bounds.x -= layout->border;
+            if (layout->menu.h) {
+                bounds.y += layout->menu.h;
+                bounds.h -= layout->menu.h + layout->row.height;
+            }
 
             scroll_offset = layout->offset->y;
-            scroll_step = layout->clip.h * 0.10f;
-            scroll_inc = layout->clip.h * 0.01f;
-            scroll_target = (float)(int)(layout->at_y - layout->clip.y);
+            scroll_step = bounds.h * 0.10f;
+            scroll_inc = bounds.h * 0.01f;
+            scroll_target = (float)(int)(layout->at_y - bounds.y);
             scroll_has_scrolling = (window == ctx->active);
             scroll_offset = nk_do_scrollbarv(&state, out, bounds, scroll_has_scrolling,
                     scroll_offset, scroll_target, scroll_step, scroll_inc,
