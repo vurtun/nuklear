@@ -15487,7 +15487,6 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
             move.h += 2.0f * style->window.header.label_padding.y;
         } else move.h = window_padding.y + item_spacing.y;
 
-        /*incursor = nk_input_is_mouse_prev_hovering_rect(in, move);*/
         left_mouse_down = in->mouse.buttons[NK_BUTTON_LEFT].down;
         left_mouse_click_in_cursor = nk_input_has_mouse_click_down_in_rect(in,
             NK_BUTTON_LEFT, move, nk_true);
