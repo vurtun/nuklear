@@ -493,6 +493,9 @@ int main(int argc, char *argv[])
         ctx.style.button.text_hover = nk_rgb(95,95,95);
         ctx.style.button.text_active = nk_rgb(95,95,95);
 
+        /* default text */
+        ctx.style.text.color = nk_rgb(95,95,95);
+
         /* contextual button */
         ctx.style.contextual_button.normal = nk_style_item_color(nk_rgb(206,206,206));
         ctx.style.contextual_button.hover = nk_style_item_color(nk_rgb(229,229,229));
@@ -735,6 +738,8 @@ int main(int argc, char *argv[])
             if (nk_button_label(&ctx, "button", NK_BUTTON_DEFAULT))
                 fprintf(stdout, "button pressed\n");
 
+            nk_layout_row_dynamic(&ctx, 20, 1);
+            nk_label(&ctx, "Label", NK_TEXT_LEFT);
             nk_layout_row_dynamic(&ctx, 30, 2);
             nk_check_label(&ctx, "inactive", 0);
             nk_check_label(&ctx, "active", 1);
