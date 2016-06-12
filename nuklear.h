@@ -1929,14 +1929,19 @@ struct nk_style_progress {
     struct nk_style_item normal;
     struct nk_style_item hover;
     struct nk_style_item active;
+    struct nk_color border_color;
 
     /* cursor */
     struct nk_style_item cursor_normal;
     struct nk_style_item cursor_hover;
     struct nk_style_item cursor_active;
+    struct nk_color cursor_border_color;
 
     /* properties */
     float rounding;
+    float border;
+    float cursor_border;
+    float cursor_rounding;
     struct nk_vec2 padding;
 
     /* optional user callbacks */
@@ -1956,10 +1961,13 @@ struct nk_style_scrollbar {
     struct nk_style_item cursor_normal;
     struct nk_style_item cursor_hover;
     struct nk_style_item cursor_active;
+    struct nk_color cursor_border_color;
 
     /* properties */
     float border;
     float rounding;
+    float border_cursor;
+    float rounding_cursor;
     struct nk_vec2 padding;
 
     /* optional buttons */
@@ -2101,6 +2109,7 @@ struct nk_style_tab {
     /* properties */
     float border;
     float rounding;
+    float indent;
     struct nk_vec2 padding;
     struct nk_vec2 spacing;
 };
@@ -12323,14 +12332,16 @@ nk_draw_progress(struct nk_command_buffer *out, nk_flags state,
     }
 
     /* draw background */
-    if (background->type == NK_STYLE_ITEM_IMAGE)
-        nk_draw_image(out, *bounds, &background->data.image);
-    else nk_fill_rect(out, *bounds, style->rounding, background->data.color);
+    if (background->type == NK_STYLE_ITEM_COLOR) {
+        nk_fill_rect(out, *bounds, style->rounding, style->border_color);
+        nk_fill_rect(out, nk_shrink_rect(*bounds, style->border), style->rounding, background->data.color);
+    } else nk_draw_image(out, *bounds, &background->data.image);
 
     /* draw cursor */
-    if (cursor->type == NK_STYLE_ITEM_IMAGE)
-        nk_draw_image(out, *scursor, &cursor->data.image);
-    else nk_fill_rect(out, *scursor, style->rounding, cursor->data.color);
+    if (background->type == NK_STYLE_ITEM_COLOR) {
+        nk_fill_rect(out, *scursor, style->rounding, style->cursor_border_color);
+        nk_fill_rect(out, nk_shrink_rect(*scursor, style->cursor_border), style->rounding, cursor->data.color);
+    } else nk_draw_image(out, *scursor, &cursor->data.image);
 }
 
 NK_INTERN nk_size
@@ -12348,9 +12359,9 @@ nk_do_progress(nk_flags *state,
     if (!out || !style) return 0;
 
     /* calculate progressbar cursor */
-    cursor.w = NK_MAX(bounds.w, 2 * style->padding.x);
-    cursor.h = NK_MAX(bounds.h, 2 * style->padding.y);
-    cursor = nk_pad_rect(bounds, nk_vec2(style->padding.x, style->padding.y));
+    cursor.w = NK_MAX(bounds.w, 2 * style->padding.x + 2 * style->border);
+    cursor.h = NK_MAX(bounds.h, 2 * style->padding.y + 2 * style->border);
+    cursor = nk_pad_rect(bounds, nk_vec2(style->padding.x + style->border, style->padding.y + style->border));
     prog_scale = (float)value / (float)max;
     cursor.w = (bounds.w - 2) * prog_scale;
 
@@ -12452,9 +12463,12 @@ nk_draw_scrollbar(struct nk_command_buffer *out, nk_flags state,
     }
 
     /* draw cursor */
-    if (cursor->type == NK_STYLE_ITEM_IMAGE)
-        nk_draw_image(out, *scroll, &cursor->data.image);
-    else nk_fill_rect(out, *scroll, style->rounding, cursor->data.color);
+    if (background->type == NK_STYLE_ITEM_COLOR) {
+        nk_fill_rect(out, *scroll, style->rounding_cursor, style->cursor_border_color);
+        nk_fill_rect(out, nk_shrink_rect(*scroll, style->border_cursor),
+            style->rounding_cursor, cursor->data.color);
+    }
+    else nk_draw_image(out, *scroll, &cursor->data.image);
 }
 
 NK_INTERN float
@@ -12514,16 +12528,16 @@ nk_do_scrollbarv(nk_flags *state,
     scroll_off = scroll_offset / target;
 
     /* calculate scrollbar cursor bounds */
-    cursor.h = (scroll_ratio * scroll.h - 2);
-    cursor.y = scroll.y + (scroll_off * scroll.h) + 1;
-    cursor.w = scroll.w - 2;
-    cursor.x = scroll.x + 1;
+    cursor.h = (scroll_ratio * scroll.h) - (2*style->border + 2*style->padding.y);
+    cursor.y = scroll.y + (scroll_off * scroll.h) + style->border + style->padding.y;
+    cursor.w = scroll.w - (2 * style->border + 2 * style->padding.x);
+    cursor.x = scroll.x + style->border + style->padding.x;
 
     /* update scrollbar */
     scroll_offset = nk_scrollbar_behavior(state, in, has_scrolling, scroll, cursor,
         scroll_offset, target, scroll_step, NK_VERTICAL);
     scroll_off = scroll_offset / target;
-    cursor.y = scroll.y + (scroll_off * scroll.h);
+    cursor.y = scroll.y + (scroll_off * scroll.h) + style->border_cursor + style->padding.y;
 
     /* draw scrollbar */
     if (style->draw_begin) style->draw_begin(out, style->userdata);
@@ -12589,10 +12603,10 @@ nk_do_scrollbarh(nk_flags *state,
     scroll_off = scroll_offset / target;
 
     /* calculate cursor bounds */
-    cursor.w = scroll_ratio * scroll.w - 2;
-    cursor.x = scroll.x + (scroll_off * scroll.w) + 1;
-    cursor.h = scroll.h - 2;
-    cursor.y = scroll.y + 1;
+    cursor.w = (scroll_ratio * scroll.w) - (2*style->border + 2*style->padding.x);
+    cursor.x = scroll.x + (scroll_off * scroll.w) + style->border + style->padding.x;
+    cursor.h = scroll.h - (2 * style->border + 2 * style->padding.y);
+    cursor.y = scroll.y + style->border + style->padding.y;
 
     /* update scrollbar */
     scroll_offset = nk_scrollbar_behavior(state, in, has_scrolling, scroll, cursor,
@@ -13917,9 +13931,14 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     prog->cursor_normal     = nk_style_item_color(table[NK_COLOR_SLIDER_CURSOR]);
     prog->cursor_hover      = nk_style_item_color(table[NK_COLOR_SLIDER_CURSOR_HOVER]);
     prog->cursor_active     = nk_style_item_color(table[NK_COLOR_SLIDER_CURSOR_ACTIVE]);
+    prog->border_color      = nk_rgba(0,0,0,0);
+    prog->cursor_border_color = nk_rgba(0,0,0,0);
     prog->userdata          = nk_handle_ptr(0);
     prog->padding           = nk_vec2(4,4);
     prog->rounding          = 0;
+    prog->border            = 0;
+    prog->cursor_rounding   = 0;
+    prog->cursor_border     = 0;
     prog->draw_begin        = 0;
     prog->draw_end          = 0;
 
@@ -13935,11 +13954,14 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     scroll->dec_symbol      = NK_SYMBOL_CIRCLE_FILLED;
     scroll->inc_symbol      = NK_SYMBOL_CIRCLE_FILLED;
     scroll->userdata        = nk_handle_ptr(0);
-    scroll->border_color    = nk_rgb(65,65,65);
-    scroll->padding         = nk_vec2(4,4);
+    scroll->border_color    = table[NK_COLOR_BORDER];
+    scroll->cursor_border_color = table[NK_COLOR_BORDER];
+    scroll->padding         = nk_vec2(0,0);
     scroll->show_buttons    = nk_false;
     scroll->border          = 0;
     scroll->rounding        = 0;
+    scroll->border_cursor   = 0;
+    scroll->rounding_cursor = 0;
     scroll->draw_begin      = 0;
     scroll->draw_end        = 0;
     style->scrollv = style->scrollh;
@@ -14107,10 +14129,11 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     tab->background         = nk_style_item_color(table[NK_COLOR_TAB_HEADER]);
     tab->border_color       = table[NK_COLOR_BORDER];
     tab->text               = table[NK_COLOR_TEXT];
-    tab->sym_minimize       = NK_SYMBOL_TRIANGLE_DOWN;
-    tab->sym_maximize       = NK_SYMBOL_TRIANGLE_RIGHT;
+    tab->sym_minimize       = NK_SYMBOL_TRIANGLE_RIGHT;
+    tab->sym_maximize       = NK_SYMBOL_TRIANGLE_DOWN;
     tab->padding            = nk_vec2(4,4);
     tab->spacing            = nk_vec2(4,4);
+    tab->indent             = 10.0f;
     tab->border             = 1;
     tab->rounding           = 0;
 
@@ -15699,12 +15722,13 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
         }
 
         layout->clip.h = layout->bounds.h - (layout->footer_h + layout->header_h);
-        layout->clip.h -= (2.0f * window_padding.y);
+        layout->clip.h -= 2 * style->window.padding.y;
         layout->clip.y = layout->bounds.y;
 
         /* combo box and menu do not have header space */
-        if (!(win->flags & NK_WINDOW_COMBO) && !(win->flags & NK_WINDOW_MENU))
-            layout->clip.y += layout->header_h;
+        if (!(win->flags & NK_WINDOW_COMBO) && !(win->flags & NK_WINDOW_MENU)) {
+            layout->clip.y += layout->header_h + style->window.padding.y;
+        }
 
         nk_unify(&clip, &win->buffer.clip, layout->clip.x, layout->clip.y,
             layout->clip.x + layout->clip.w, layout->clip.y + layout->clip.h);
@@ -15817,9 +15841,9 @@ nk_panel_end(struct nk_context *ctx)
             /* vertical scrollbar */
             nk_flags state = 0;
             bounds.x = layout->bounds.x + layout->width;
-            bounds.y = layout->bounds.y + layout->header_h;
+            bounds.y = layout->bounds.y + layout->header_h + style->window.padding.y + layout->menu.h;
             bounds.w = scrollbar_size.y;
-            bounds.h = layout->bounds.h - (layout->footer_h + layout->header_h);
+            bounds.h = layout->bounds.h - (layout->footer_h + layout->header_h + layout->menu.h);
             bounds.h -= (2.0f * window_padding.y);
             if (layout->flags & NK_WINDOW_BORDER)
                 bounds.x -= layout->border;
@@ -15847,7 +15871,7 @@ nk_panel_end(struct nk_context *ctx)
                 bounds.y = (layout->flags & NK_WINDOW_BORDER) ?
                             layout->bounds.y + 1 : layout->bounds.y;
                 bounds.y += layout->header_h + layout->menu.h + layout->height;
-                bounds.w = layout->clip.w;
+                bounds.w = layout->width;
             } else if (layout->flags & NK_WINDOW_DYNAMIC) {
                 bounds.h = NK_MIN(scrollbar_size.x, layout->footer_h);
                 bounds.w = layout->bounds.w;
@@ -16627,7 +16651,6 @@ nk_tree_base(struct nk_context *ctx, enum nk_tree_type type,
     enum nk_symbol_type symbol;
 
     struct nk_vec2 item_spacing;
-    struct nk_vec2 panel_padding;
     struct nk_rect header = {0,0,0,0};
     struct nk_rect sym = {0,0,0,0};
     struct nk_text text;
@@ -16651,7 +16674,6 @@ nk_tree_base(struct nk_context *ctx, enum nk_tree_type type,
     style = &ctx->style;
 
     item_spacing = style->window.spacing;
-    panel_padding = style->window.padding;
 
     /* calculate header bounds and draw background */
     nk_layout_row_dynamic(ctx, style->font.height + 2 * style->tab.padding.y, 1);
@@ -16704,7 +16726,7 @@ nk_tree_base(struct nk_context *ctx, enum nk_tree_type type,
     {/* draw triangle button */
     sym.w = sym.h = style->font.height;
     sym.y = header.y + style->tab.padding.y;
-    sym.x = header.x + panel_padding.x + style->tab.padding.x;
+    sym.x = header.x + style->tab.padding.x;
     nk_do_button_symbol(&ws, &win->buffer, sym, symbol, NK_BUTTON_DEFAULT,
         button, 0, &style->font);
 
@@ -16717,10 +16739,10 @@ nk_tree_base(struct nk_context *ctx, enum nk_tree_type type,
 
     {/* draw label */
     struct nk_rect label;
-    header.w = NK_MAX(header.w, sym.w + item_spacing.x + panel_padding.x);
+    header.w = NK_MAX(header.w, sym.w + item_spacing.x);
     label.x = sym.x + sym.w + item_spacing.x;
     label.y = sym.y;
-    label.w = header.w - (sym.w + item_spacing.y + panel_padding.x);
+    label.w = header.w - (sym.w + item_spacing.y + style->tab.indent);
     label.h = style->font.height;
     text.text = style->tab.text;
     text.padding = nk_vec2(0,0);
@@ -16729,9 +16751,9 @@ nk_tree_base(struct nk_context *ctx, enum nk_tree_type type,
 
     /* increase x-axis cursor widget position pointer */
     if (*state == NK_MAXIMIZED) {
-        layout->at_x = header.x + layout->offset->x;
-        layout->width = NK_MAX(layout->width, 2 * panel_padding.x);
-        layout->width -= 2 * panel_padding.x;
+        layout->at_x = header.x + layout->offset->x + style->tab.indent;
+        layout->width = NK_MAX(layout->width, style->tab.indent);
+        layout->width -= (style->tab.indent + style->window.padding.x);
         layout->row.tree_depth++;
         return nk_true;
     } else return nk_false;
@@ -16752,7 +16774,6 @@ nk_tree_image_push_hashed(struct nk_context *ctx, enum nk_tree_type type,
 NK_API void
 nk_tree_pop(struct nk_context *ctx)
 {
-    struct nk_vec2 panel_padding;
     struct nk_window *win = 0;
     struct nk_panel *layout = 0;
 
@@ -16764,9 +16785,8 @@ nk_tree_pop(struct nk_context *ctx)
 
     win = ctx->current;
     layout = win->layout;
-    panel_padding = ctx->style.window.padding;
-    layout->at_x -= panel_padding.x;
-    layout->width += 2 * panel_padding.x;
+    layout->at_x -= ctx->style.tab.indent + ctx->style.window.padding.x;
+    layout->width += ctx->style.tab.indent + ctx->style.window.padding.x;
     NK_ASSERT(layout->row.tree_depth);
     layout->row.tree_depth--;
 }
@@ -18043,7 +18063,7 @@ nk_chart_begin_colored(struct nk_context *ctx, enum nk_chart_type type,
     } else {
         nk_fill_rect(&win->buffer, bounds, style->rounding, style->border_color);
         nk_fill_rect(&win->buffer, nk_shrink_rect(bounds, style->border),
-            style->rounding, style->border_color);
+            style->rounding, style->background.data.color);
     }
     return 1;
 }
@@ -18404,9 +18424,9 @@ nk_group_end(struct nk_context *ctx)
 
     /* make sure group has correct clipping rectangle */
     nk_unify(&clip, &parent->clip,
-        g->bounds.x, g->clip.y - g->header_h,
-        g->bounds.x + g->bounds.w+1,
-        g->bounds.y + g->bounds.h + 1);
+        g->bounds.x, g->clip.y - (g->header_h + ctx->style.window.padding.y),
+        g->bounds.x + g->bounds.w,
+        g->bounds.y + g->bounds.h);
     nk_push_scissor(&pan.buffer, clip);
     nk_end(ctx);
 
