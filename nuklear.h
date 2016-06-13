@@ -2334,11 +2334,6 @@ struct nk_property_state {
     int state;
 };
 
-struct nk_scaling_state {
-    struct nk_vec2 start_size;
-    int active;
-};
-
 struct nk_window {
     unsigned int seq;
     nk_hash name;
@@ -2352,7 +2347,6 @@ struct nk_window {
     struct nk_property_state property;
     struct nk_popup_state popup;
     struct nk_edit_state edit;
-    struct nk_scaling_state scaling;
 
     struct nk_table *tables;
     unsigned short table_count;
@@ -15500,7 +15494,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
 #endif
 
     /* window dragging */
-    if ((win->flags & NK_WINDOW_MOVABLE) && ctx->active == win) {
+    if ((win->flags & NK_WINDOW_MOVABLE) && !(win->flags & NK_WINDOW_ROM)) {
         int left_mouse_down;
         int left_mouse_click_in_cursor;
 
@@ -15979,28 +15973,19 @@ nk_panel_end(struct nk_context *ctx)
 
         /* do window scaling */
         if (!(window->flags & NK_WINDOW_ROM)) {
-            struct nk_vec2 delta;
             float prev_x = in->mouse.prev.x;
             float prev_y = in->mouse.prev.y;
             struct nk_vec2 window_size = style->window.min_size;
             int incursor = NK_INBOX(prev_x,prev_y,scaler_x,scaler_y,scaler_w,scaler_h);
 
-            if (nk_input_is_mouse_down(in, NK_BUTTON_LEFT) &&
-                (incursor || window->scaling.active == nk_true))
-            {
-                if(window->scaling.active == nk_false)
-                    window->scaling.start_size = nk_rect_size(window->bounds);
-                window->scaling.active = nk_true;
-
-                if (!in || !in->mouse.buttons[NK_BUTTON_LEFT].down)
-                    delta = nk_vec2(0,0);
-                else delta = nk_vec2_sub(in->mouse.pos, in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos);
-                window->bounds.w = NK_MAX(window_size.x, window->scaling.start_size.x + delta.x);
-
+            if (nk_input_is_mouse_down(in, NK_BUTTON_LEFT) && incursor) {
+                window->bounds.w = NK_MAX(window_size.x, window->bounds.w + in->mouse.delta.x);
                 /* dragging in y-direction is only possible if static window */
                 if (!(layout->flags & NK_WINDOW_DYNAMIC))
-                    window->bounds.h = NK_MAX(window->scaling.start_size.y + delta.y, window_size.y);
-            } else window->scaling.active = nk_false;
+                    window->bounds.h = NK_MAX(window_size.y, window->bounds.h + in->mouse.delta.y);
+                /* this save the update bounds for scalable groups */
+                window->layout->bounds = window->bounds;
+            }
         }
     }
 
@@ -18109,7 +18094,6 @@ nk_chart_push_line(struct nk_context *ctx, struct nk_window *win,
     struct nk_panel *layout = win->layout;
     const struct nk_input *i = &ctx->input;
     struct nk_command_buffer *out = &win->buffer;
-    struct nk_style_chart *style;
 
     nk_flags ret = 0;
     struct nk_vec2 cur;
@@ -18123,7 +18107,6 @@ nk_chart_push_line(struct nk_context *ctx, struct nk_window *win,
     step = g->w / (float)g->slots[slot].count;
     range = g->slots[slot].max - g->slots[slot].min;
     ratio = (value - g->slots[slot].min) / range;
-    style = &ctx->style.chart;
 
     if (g->slots[slot].index == 0) {
         /* first data point does not have a connection */
@@ -18184,7 +18167,6 @@ nk_chart_push_column(const struct nk_context *ctx, struct nk_window *win,
     struct nk_command_buffer *out = &win->buffer;
     const struct nk_input *in = &ctx->input;
     struct nk_panel *layout = win->layout;
-    const struct nk_style_chart *style;
 
     float ratio;
     nk_flags ret = 0;
@@ -18200,7 +18182,6 @@ nk_chart_push_column(const struct nk_context *ctx, struct nk_window *win,
     }
 
     /* calculate bounds of current bar chart entry */
-    style = &ctx->style.chart;
     color = chart->slots[slot].color;;
     item.h = chart->h * NK_ABS((value/chart->slots[slot].range));
     if (value >= 0) {
