@@ -15990,7 +15990,6 @@ nk_panel_end(struct nk_context *ctx)
                 if (!(layout->flags & NK_WINDOW_DYNAMIC))
                     window->bounds.h = NK_MAX(window_size.y, window->bounds.h + in->mouse.delta.y);
                 /* this save the update bounds for scalable groups */
-                window->layout->bounds = window->bounds;
             }
         }
     }
@@ -16040,6 +16039,11 @@ nk_panel_end(struct nk_context *ctx)
         window->popup.con_count = 0;
     }
     window->popup.combo_count = 0;
+
+    /* this allows reading out the update group bounds for movable/scalable groups */
+    if (window->flags & NK_WINDOW_GROUP)
+        window->layout->bounds = nk_shrink_rect(window->bounds, -style->window.group_border);
+
     /* helper to make sure you have a 'nk_tree_push'
      * for every 'nk_tree_pop' */
     NK_ASSERT(!layout->row.tree_depth);

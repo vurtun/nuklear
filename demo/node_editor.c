@@ -216,11 +216,8 @@ node_editor(struct nk_context *ctx)
                     float space;
                     struct nk_rect bounds;
                     bounds = nk_layout_space_rect_to_local(ctx, node.bounds);
-                    bounds.x += nodedit->scrolling.x - ctx->style.window.border;
-                    bounds.y += nodedit->scrolling.y - ctx->style.window.border;
-                    bounds.w += 2*ctx->style.window.border;
-                    bounds.h += 2*ctx->style.window.border;
-
+                    bounds.x += nodedit->scrolling.x;
+                    bounds.y += nodedit->scrolling.y;
                     it->bounds = bounds;
 
                     /* output connector */
