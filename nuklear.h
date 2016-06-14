@@ -18347,6 +18347,7 @@ nk_group_begin(struct nk_context *ctx, struct nk_panel *layout, const char *titl
     }
 
     flags |= NK_WINDOW_SUB;
+    flags |= NK_WINDOW_GROUP;
     if (win->flags & NK_WINDOW_ROM)
         flags |= NK_WINDOW_ROM;
 
