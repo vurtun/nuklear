@@ -21,7 +21,7 @@
 #define NK_INCLUDE_DEFAULT_FONT
 #define NK_IMPLEMENTATION
 #define NK_GLFW_GL3_IMPLEMENTATION
-#include "nuklear.h"
+#include "../../nuklear.h"
 #include "nuklear_glfw_gl3.h"
 
 #define MAX_VERTEX_BUFFER 512 * 1024
