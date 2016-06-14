@@ -1828,6 +1828,7 @@ struct nk_style_toggle {
     struct nk_style_item normal;
     struct nk_style_item hover;
     struct nk_style_item active;
+    struct nk_color border_color;
 
     /* cursor */
     struct nk_style_item cursor_normal;
@@ -1843,6 +1844,8 @@ struct nk_style_toggle {
     /* properties */
     struct nk_vec2 padding;
     struct nk_vec2 touch_padding;
+    float spacing;
+    float border;
 
     /* optional user callbacks */
     nk_handle userdata;
@@ -11803,9 +11806,10 @@ nk_draw_checkbox(struct nk_command_buffer *out,
     }
 
     /* draw background and cursor */
-    if (background->type == NK_STYLE_ITEM_IMAGE)
-        nk_draw_image(out, *selector, &background->data.image);
-    else nk_fill_rect(out, *selector, 0, background->data.color);
+    if (background->type == NK_STYLE_ITEM_COLOR) {
+        nk_fill_rect(out, *selector, 0, style->border_color);
+        nk_fill_rect(out, nk_shrink_rect(*selector, style->border), 0, background->data.color);
+    } else nk_draw_image(out, *selector, &background->data.image);
     if (active) {
         if (cursor->type == NK_STYLE_ITEM_IMAGE)
             nk_draw_image(out, *cursors, &cursor->data.image);
@@ -11845,9 +11849,10 @@ nk_draw_option(struct nk_command_buffer *out,
     }
 
     /* draw background and cursor */
-    if (background->type == NK_STYLE_ITEM_IMAGE)
-        nk_draw_image(out, *selector, &background->data.image);
-    else nk_fill_circle(out, *selector, background->data.color);
+    if (background->type == NK_STYLE_ITEM_COLOR) {
+        nk_fill_circle(out, *selector, style->border_color);
+        nk_fill_circle(out, nk_shrink_rect(*selector, style->border), background->data.color);
+    } else nk_draw_image(out, *selector, &background->data.image);
     if (active) {
         if (cursor->type == NK_STYLE_ITEM_IMAGE)
             nk_draw_image(out, *cursors, &cursor->data.image);
@@ -11890,26 +11895,21 @@ nk_do_toggle(nk_flags *state,
     bounds.h = r.h + 2 * style->touch_padding.y;
 
     /* calculate the selector space */
-    select.w = NK_MIN(r.h, font->height + style->padding.y);
+    select.w = font->height;
     select.h = select.w;
-    select.x = r.x + style->padding.x;
-    select.y = (r.y + style->padding.y + (select.w / 2)) - (font->height / 2);
-    cursor_pad = (type == NK_TOGGLE_OPTION) ?
-        (float)(int)(select.w / 4):
-        (float)(int)(select.h / 6);
+    select.y = r.y + r.h/2.0f - select.h/2.0f;
+    select.x = r.x;
 
     /* calculate the bounds of the cursor inside the selector */
-    select.h = NK_MAX(select.w, cursor_pad * 2);
-    cursor.h = select.h - cursor_pad * 2;
-    cursor.w = cursor.h;
-    cursor.x = select.x + cursor_pad;
-    cursor.y = select.y + cursor_pad;
+    cursor.x = select.x + style->padding.x + style->border;
+    cursor.y = select.y + style->padding.y + style->border;
+    cursor.w = select.w - (2 * style->padding.x + 2 * style->border);
+    cursor.h = select.h - (2 * style->padding.y + 2 * style->border);
 
     /* label behind the selector */
-    label.x = r.x + select.w + style->padding.x * 2;
+    label.x = select.x + select.w + style->spacing;
     label.y = select.y;
-    label.w = NK_MAX(r.x + r.w, label.x + style->padding.x);
-    label.w -= (label.x + style->padding.x);
+    label.w = NK_MAX(r.x + r.w, label.x) - label.x;
     label.h = select.w;
 
     /* update selector */
@@ -13830,8 +13830,11 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     toggle->text_normal     = table[NK_COLOR_TEXT];
     toggle->text_hover      = table[NK_COLOR_TEXT];
     toggle->text_active     = table[NK_COLOR_TEXT];
-    toggle->padding         = nk_vec2(4.0f, 4.0f);
+    toggle->padding         = nk_vec2(2.0f, 2.0f);
     toggle->touch_padding   = nk_vec2(0,0);
+    toggle->border_color    = nk_rgba(0,0,0,0);
+    toggle->border          = 0.0f;
+    toggle->spacing         = 4;
 
     /* option toggle */
     toggle = &style->option;
@@ -13846,8 +13849,11 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     toggle->text_normal     = table[NK_COLOR_TEXT];
     toggle->text_hover      = table[NK_COLOR_TEXT];
     toggle->text_active     = table[NK_COLOR_TEXT];
-    toggle->padding         = nk_vec2(4.0f, 4.0f);
+    toggle->padding         = nk_vec2(3.0f, 3.0f);
     toggle->touch_padding   = nk_vec2(0,0);
+    toggle->border_color    = nk_rgba(0,0,0,0);
+    toggle->border          = 0.0f;
+    toggle->spacing         = 4;
 
     /* selectable */
     select = &style->selectable;
