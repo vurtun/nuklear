@@ -283,7 +283,7 @@ typedef unsigned char nk_byte;
 #define NK_FLAG(x) (1 << (x))
 #define NK_STRINGIFY(x) #x
 #define NK_LINE_STR(x) NK_STRINGIFY(x)
-#define NK_FILE_LINE __FILE__":"NK_LINE_STR(__LINE__)
+#define NK_FILE_LINE __FILE__ ":" NK_LINE_STR(__LINE__)
 
 struct nk_buffer;
 struct nk_allocator;
@@ -578,10 +578,10 @@ NK_API int                      nk_group_begin(struct nk_context*, struct nk_pan
 NK_API void                     nk_group_end(struct nk_context*);
 
 /* Layout: Tree */
-#define                         nk_tree_push(ctx, type, title, state) nk_tree_push_hashed(ctx, type, title, state, __FILE__,nk_strlen(__FILE__),__LINE__)
+#define                         nk_tree_push(ctx, type, title, state) nk_tree_push_hashed(ctx, type, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),__LINE__)
 #define                         nk_tree_push_id(ctx, type, title, state, id) nk_tree_push_hashed(ctx, type, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),id)
 NK_API int                      nk_tree_push_hashed(struct nk_context*, enum nk_tree_type, const char *title, enum nk_collapse_states initial_state, const char *hash, int len,int seed);
-#define                         nk_tree_image_push(ctx, type, img, title, state) nk_tree_image_push_hashed(ctx, type, img, title, state, __FILE__,nk_strlen(__FILE__),__LINE__)
+#define                         nk_tree_image_push(ctx, type, img, title, state) nk_tree_image_push_hashed(ctx, type, img, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),__LINE__)
 #define                         nk_tree_image_push_id(ctx, type, img, title, state, id) nk_tree_image_push_hashed(ctx, img, type, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),id)
 NK_API int                      nk_tree_image_push_hashed(struct nk_context*, enum nk_tree_type, struct nk_image, const char *title, enum nk_collapse_states initial_state, const char *hash, int len,int seed);
 NK_API void                     nk_tree_pop(struct nk_context*);
@@ -11877,7 +11877,6 @@ nk_do_toggle(nk_flags *state,
     struct nk_rect select;
     struct nk_rect cursor;
     struct nk_rect label;
-    float cursor_pad;
 
     NK_ASSERT(style);
     NK_ASSERT(out);
