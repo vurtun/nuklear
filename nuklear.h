@@ -6402,10 +6402,8 @@ nk_draw_list_add_text(struct nk_draw_list *list, const struct nk_user_font *font
 
     NK_ASSERT(list);
     if (!list || !len || !text) return;
-    if (rect.x > (list->clip_rect.x + list->clip_rect.w) ||
-        rect.y > (list->clip_rect.y + list->clip_rect.h) ||
-        rect.x < list->clip_rect.x || rect.y < list->clip_rect.y)
-        return;
+    if (!NK_INTERSECT(rect.x, rect.y, rect.w, rect.h,
+        list->clip_rect.x, list->clip_rect.y, list->clip_rect.w, list->clip_rect.h)) return;
 
     nk_draw_list_push_image(list, font->texture);
     x = rect.x;
