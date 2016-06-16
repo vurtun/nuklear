@@ -12563,7 +12563,7 @@ nk_do_scrollbarv(nk_flags *state,
     empty_north.x = scroll.x;
     empty_north.y = scroll.y;
     empty_north.w = scroll.w;
-    empty_north.h = cursor.x - scroll.w;
+    empty_north.h = cursor.y - scroll.y;
 
     empty_south.x = scroll.x;
     empty_south.y = cursor.y + cursor.h;
@@ -12651,7 +12651,7 @@ nk_do_scrollbarh(nk_flags *state,
     /* calculate empty space around cursor */
     empty_west.x = scroll.x;
     empty_west.y = scroll.y;
-    empty_west.w = cursor.y - scroll.y;
+    empty_west.w = cursor.x - scroll.x;
     empty_west.h = scroll.h;
 
     empty_east.x = cursor.x + cursor.w;
