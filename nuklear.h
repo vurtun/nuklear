@@ -15938,7 +15938,6 @@ nk_panel_end(struct nk_context *ctx)
                             root->clip.x, root->clip.y, root->clip.w, root->clip.h))
                     {
                         /* deactivate all parent scrolling */
-                        struct nk_panel *root;
                         root = window->layout;
                         while (root->parent) {
                             root->has_scrolling = nk_false;
@@ -15956,6 +15955,7 @@ nk_panel_end(struct nk_context *ctx)
                 else window->scrolled = nk_false;
             } else scroll_has_scrolling = nk_false;
 
+            /* execute scrollbar */
             scroll_offset = nk_do_scrollbarv(&state, out, bounds, scroll_has_scrolling,
                     scroll_offset, scroll_target, scroll_step, scroll_inc,
                     &ctx->style.scrollv, in, &style->font);
