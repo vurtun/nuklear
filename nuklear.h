@@ -15944,7 +15944,7 @@ nk_panel_end(struct nk_context *ctx)
             } else if (!(window->flags & NK_WINDOW_SUB)) {
                 /* window scrollbar wheel scrolling */
                 scroll_has_scrolling = (window == ctx->active) && layout->has_scrolling;
-                if (in->mouse.scroll_delta && scroll_has_scrolling)
+                if (in && in->mouse.scroll_delta && scroll_has_scrolling)
                     window->scrolled = nk_true;
                 else window->scrolled = nk_false;
             } else scroll_has_scrolling = nk_false;
@@ -15953,7 +15953,7 @@ nk_panel_end(struct nk_context *ctx)
                     scroll_offset, scroll_target, scroll_step, scroll_inc,
                     &ctx->style.scrollv, in, &style->font);
             layout->offset->y = (unsigned short)scroll_offset;
-            if (scroll_has_scrolling)
+            if (in && scroll_has_scrolling)
                 in->mouse.scroll_delta = 0;
         }
         {
