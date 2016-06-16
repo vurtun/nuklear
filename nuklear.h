@@ -15931,14 +15931,21 @@ nk_panel_end(struct nk_context *ctx)
 
                 /* only allow scrolling if parent window is active */
                 scroll_has_scrolling = 0;
-                if (!(root->flags & NK_WINDOW_ROM)) {
-                    /* and groups is being hovered and inside clip rect*/
+                if (!(root->flags & NK_WINDOW_ROM) && layout->has_scrolling) {
+                    /* and group is being hovered and inside clip rect*/
                     if (nk_input_is_mouse_hovering_rect(in, layout->bounds) &&
                         NK_INTERSECT(layout->bounds.x, layout->bounds.y, layout->bounds.w, layout->bounds.h,
                             root->clip.x, root->clip.y, root->clip.w, root->clip.h))
                     {
-                        scroll_has_scrolling = nk_true;
+                        /* deactivate all parent scrolling */
+                        struct nk_panel *root;
+                        root = window->layout;
+                        while (root->parent) {
+                            root->has_scrolling = nk_false;
+                            root = root->parent;
+                        }
                         root->has_scrolling = nk_false;
+                        scroll_has_scrolling = nk_true;
                     }
                 }
             } else if (!(window->flags & NK_WINDOW_SUB)) {
@@ -15963,7 +15970,7 @@ nk_panel_end(struct nk_context *ctx)
             if (layout->flags & NK_WINDOW_SUB) {
                 bounds.h = scrollbar_size.x;
                 bounds.y = (layout->flags & NK_WINDOW_BORDER) ?
-                            layout->bounds.y + 1 : layout->bounds.y;
+                            layout->bounds.y + layout->border : layout->bounds.y;
                 bounds.y += layout->header_h + layout->menu.h + layout->height;
                 bounds.w = layout->width;
             } else if (layout->flags & NK_WINDOW_DYNAMIC) {
