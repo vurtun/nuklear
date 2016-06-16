@@ -2269,6 +2269,7 @@ struct nk_panel {
     float footer_h;
     float header_h;
     float border;
+	unsigned int has_scrolling;
     struct nk_rect clip;
     struct nk_menu_state menu;
     struct nk_row_layout row;
@@ -2359,6 +2360,7 @@ struct nk_window {
     struct nk_property_state property;
     struct nk_popup_state popup;
     struct nk_edit_state edit;
+	unsigned int scrolled;
 
     struct nk_table *tables;
     unsigned short table_count;
@@ -12420,33 +12422,33 @@ nk_scrollbar_behavior(nk_flags *state, struct nk_input *in,
             cursor_x = scroll->x + ((scroll_offset/target) * scroll->w);
             in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.x = cursor_x + cursor->w/2.0f;
         }
-    } else if (has_scrolling && ((in->mouse.scroll_delta<0) ||
-            (in->mouse.scroll_delta>0))) {
-        /* update cursor by mouse scrolling */
-        scroll_offset = scroll_offset + scroll_step * (-in->mouse.scroll_delta);
-        if (o == NK_VERTICAL)
-            scroll_offset = NK_CLAMP(0, scroll_offset, target - scroll->h);
-        else scroll_offset = NK_CLAMP(0, scroll_offset, target - scroll->w);
-    } else if ((nk_input_is_key_pressed(in, NK_KEY_SCROLL_UP) && o == NK_VERTICAL)||
+    } else if ((nk_input_is_key_pressed(in, NK_KEY_SCROLL_UP) && o == NK_VERTICAL && has_scrolling)||
             nk_button_behavior(&ws, *empty0, in, NK_BUTTON_DEFAULT)) {
         /* scroll page up by click on empty space or shortcut */
         if (o == NK_VERTICAL)
             scroll_offset = NK_MAX(0, scroll_offset - scroll->h);
         else scroll_offset = NK_MAX(0, scroll_offset - scroll->w);
-    } else if ((nk_input_is_key_pressed(in, NK_KEY_SCROLL_DOWN) && o == NK_VERTICAL)||
-            nk_button_behavior(&ws, *empty1, in, NK_BUTTON_DEFAULT)){
+    } else if ((nk_input_is_key_pressed(in, NK_KEY_SCROLL_DOWN) && o == NK_VERTICAL && has_scrolling) ||
+        nk_button_behavior(&ws, *empty1, in, NK_BUTTON_DEFAULT)) {
         /* scroll page down by click on empty space or shortcut */
         if (o == NK_VERTICAL)
             scroll_offset = NK_MIN(scroll_offset + scroll->h, target - scroll->h);
         else scroll_offset = NK_MIN(scroll_offset + scroll->w, target - scroll->w);
-    } else if (nk_input_is_key_pressed(in, NK_KEY_SCROLL_START)) {
-        /* update cursor to the beginning  */
-        if (o == NK_VERTICAL) scroll_offset = 0;
-    } else if (nk_input_is_key_pressed(in, NK_KEY_SCROLL_END)) {
-        /* update cursor to the end */
-        if (o == NK_VERTICAL) scroll_offset = target - scroll->h;
+    } else if (has_scrolling) {
+        if ((in->mouse.scroll_delta<0 || (in->mouse.scroll_delta>0))) {
+            /* update cursor by mouse scrolling */
+            scroll_offset = scroll_offset + scroll_step * (-in->mouse.scroll_delta);
+            if (o == NK_VERTICAL)
+                scroll_offset = NK_CLAMP(0, scroll_offset, target - scroll->h);
+            else scroll_offset = NK_CLAMP(0, scroll_offset, target - scroll->w);
+        } else if (nk_input_is_key_pressed(in, NK_KEY_SCROLL_START)) {
+            /* update cursor to the beginning  */
+            if (o == NK_VERTICAL) scroll_offset = 0;
+        } else if (nk_input_is_key_pressed(in, NK_KEY_SCROLL_END)) {
+            /* update cursor to the end */
+            if (o == NK_VERTICAL) scroll_offset = target - scroll->h;
+        }
     }
-
     if (*state & NK_WIDGET_STATE_HOVER && !nk_input_is_mouse_prev_hovering_rect(in, *scroll))
         *state |= NK_WIDGET_STATE_ENTERED;
     else if (nk_input_is_mouse_prev_hovering_rect(in, *scroll))
@@ -14822,6 +14824,7 @@ nk_create_table(struct nk_context *ctx)
 {
     struct nk_page_element *elem = nk_create_page_element(ctx);
     if (!elem) return 0;
+    nk_zero_struct(*elem);
     return &elem->data.tbl;
 }
 
@@ -14841,7 +14844,7 @@ nk_push_table(struct nk_window *win, struct nk_table *tbl)
         tbl->next = 0;
         tbl->prev = 0;
         win->table_count = 1;
-        win->table_size = 1;
+        win->table_size = 0;
         return;
     }
     win->tables->prev = tbl;
@@ -14869,8 +14872,13 @@ NK_INTERN nk_uint*
 nk_add_value(struct nk_context *ctx, struct nk_window *win,
             nk_hash name, nk_uint value)
 {
-    if (!win->tables || win->table_size == NK_VALUE_PAGE_CAPACITY) {
+    NK_ASSERT(ctx);
+    NK_ASSERT(win);
+    if (!win || !ctx) return 0;
+    if (!win->tables || win->table_size >= NK_VALUE_PAGE_CAPACITY) {
         struct nk_table *tbl = nk_create_table(ctx);
+        NK_ASSERT(tbl);
+        if (!tbl) return 0;
         nk_push_table(win, tbl);
     }
     win->tables->seq = win->seq;
@@ -15612,6 +15620,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
     layout->row.item_width = 0;
     layout->row.tree_depth = 0;
     layout->flags = win->flags;
+    layout->has_scrolling = nk_true;
     out = &win->buffer;
 
     /* calculate window header */
@@ -15911,13 +15920,41 @@ nk_panel_end(struct nk_context *ctx)
             scroll_step = bounds.h * 0.10f;
             scroll_inc = bounds.h * 0.01f;
             scroll_target = (float)(int)(layout->at_y - bounds.y);
-            if (!(window->flags & NK_WINDOW_SUB)) {
-                scroll_has_scrolling = (window == ctx->active);
-            } else scroll_has_scrolling = 0;
+
+            /* scrolling by mouse wheel */
+            if ((window->flags & NK_WINDOW_SUB) && (window->flags &NK_WINDOW_GROUP)) {
+                /* group scrollbar wheel scrolling */
+                struct nk_panel *root;
+                root = window->layout;
+                while (root->parent)
+                    root = root->parent;
+
+                /* only allow scrolling if parent window is active */
+                scroll_has_scrolling = 0;
+                if (!(root->flags & NK_WINDOW_ROM)) {
+                    /* and groups is being hovered and inside clip rect*/
+                    if (nk_input_is_mouse_hovering_rect(in, layout->bounds) &&
+                        NK_INTERSECT(layout->bounds.x, layout->bounds.y, layout->bounds.w, layout->bounds.h,
+                            root->clip.x, root->clip.y, root->clip.w, root->clip.h))
+                    {
+                        scroll_has_scrolling = nk_true;
+                        root->has_scrolling = nk_false;
+                    }
+                }
+            } else if (!(window->flags & NK_WINDOW_SUB)) {
+                /* window scrollbar wheel scrolling */
+                scroll_has_scrolling = (window == ctx->active) && layout->has_scrolling;
+                if (in->mouse.scroll_delta && scroll_has_scrolling)
+                    window->scrolled = nk_true;
+                else window->scrolled = nk_false;
+            } else scroll_has_scrolling = nk_false;
+
             scroll_offset = nk_do_scrollbarv(&state, out, bounds, scroll_has_scrolling,
                     scroll_offset, scroll_target, scroll_step, scroll_inc,
                     &ctx->style.scrollv, in, &style->font);
             layout->offset->y = (unsigned short)scroll_offset;
+            if (scroll_has_scrolling)
+                in->mouse.scroll_delta = 0;
         }
         {
             /* horizontal scrollbar */
@@ -18807,7 +18844,8 @@ nk_contextual_begin(struct nk_context *ctx, struct nk_panel *layout,
     if (ret) win->popup.type = NK_WINDOW_CONTEXTUAL;
     else {
         win->popup.active_con = 0;
-        win->popup.win->flags = 0;
+		if (win->popup.win)
+			win->popup.win->flags = 0;
     }
     return ret;
 }
