@@ -236,10 +236,20 @@ nk_d3d11_handle_event(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
         case VK_HOME:
             nk_input_key(&d3d11.ctx, NK_KEY_TEXT_START, down);
+            nk_input_key(&d3d11.ctx, NK_KEY_SCROLL_START, down);
             return 1;
 
         case VK_END:
             nk_input_key(&d3d11.ctx, NK_KEY_TEXT_END, down);
+            nk_input_key(&d3d11.ctx, NK_KEY_SCROLL_END, down);
+            return 1;
+
+        case VK_NEXT:
+            nk_input_key(&d3d11.ctx, NK_KEY_SCROLL_DOWN, down);
+            return 1;
+
+        case VK_PRIOR:
+            nk_input_key(&d3d11.ctx, NK_KEY_SCROLL_UP, down);
             return 1;
 
         case 'C':
@@ -558,7 +568,7 @@ nk_d3d11_font_stash_end(void)
 {
     const void *image; int w, h;
     image = nk_font_atlas_bake(&d3d11.atlas, &w, &h, NK_FONT_ATLAS_RGBA32);
-    
+
     /* upload font to texture and create texture view */
     {
         ID3D11Texture2D *font_texture;

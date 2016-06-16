@@ -253,12 +253,18 @@ nk_allegro_handle_event(ALLEGRO_EVENT *evt)
             if (evt->keyboard.modifiers & ALLEGRO_KEYMOD_CTRL)
                 nk_input_key(ctx, NK_KEY_TEXT_WORD_RIGHT, down);
             else nk_input_key(ctx, NK_KEY_RIGHT, down);
-        } else if (sym == ALLEGRO_KEY_HOME)
+        } else if (sym == ALLEGRO_KEY_HOME) {
             nk_input_key(ctx, NK_KEY_TEXT_START, down);
-        else if (sym == ALLEGRO_KEY_END)
+            nk_input_key(ctx, NK_KEY_SCROLL_START, down);
+        } else if (sym == ALLEGRO_KEY_END) {
             nk_input_key(ctx, NK_KEY_TEXT_END, down);
-        else if (sym == ALLEGRO_KEY_C)
+            nk_input_key(ctx, NK_KEY_SCROLL_END, down);
+        } else if (sym == ALLEGRO_KEY_C)
             nk_input_key(ctx, NK_KEY_COPY, down && evt->keyboard.modifiers & ALLEGRO_KEYMOD_CTRL);
+        else if (sym == ALLEGRO_KEY_PGUP)
+            nk_input_key(ctx, NK_KEY_SCROLL_UP, down);
+        else if (sym == ALLEGRO_KEY_PGDN)
+            nk_input_key(ctx, NK_KEY_SCROLL_DOWN, down);
         else if (sym == ALLEGRO_KEY_V)
             nk_input_key(ctx, NK_KEY_PASTE, down && evt->keyboard.modifiers & ALLEGRO_KEYMOD_CTRL);
         else if (sym == ALLEGRO_KEY_X)

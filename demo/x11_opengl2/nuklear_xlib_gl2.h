@@ -227,10 +227,16 @@ nk_x11_handle_event(XEvent *evt)
         else if (*code == XK_Left)      nk_input_key(ctx, NK_KEY_LEFT, down);
         else if (*code == XK_Right)     nk_input_key(ctx, NK_KEY_RIGHT, down);
         else if (*code == XK_BackSpace) nk_input_key(ctx, NK_KEY_BACKSPACE, down);
-        else if (*code == XK_Home)  nk_input_key(ctx, NK_KEY_TEXT_START, down);
-        else if (*code == XK_End)  nk_input_key(ctx, NK_KEY_TEXT_END, down);
         else if (*code == XK_space && !down) nk_input_char(ctx, ' ');
-        else {
+        else if (*code == XK_Page_Up)   nk_input_key(ctx, NK_KEY_SCROLL_UP, down);
+        else if (*code == XK_Page_Down) nk_input_key(ctx, NK_KEY_SCROLL_DOWN, down);
+        else if (*code == XK_Home) {
+            nk_input_key(ctx, NK_KEY_TEXT_START, down);
+            nk_input_key(ctx, NK_KEY_SCROLL_START, down);
+        } else if (*code == XK_End) {
+            nk_input_key(ctx, NK_KEY_TEXT_END, down);
+            nk_input_key(ctx, NK_KEY_SCROLL_END, down);
+        } else {
             if (*code == 'c' && (evt->xkey.state & ControlMask))
                 nk_input_key(ctx, NK_KEY_COPY, down);
             else if (*code == 'v' && (evt->xkey.state & ControlMask))

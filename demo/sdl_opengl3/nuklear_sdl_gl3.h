@@ -356,11 +356,17 @@ nk_sdl_handle_event(SDL_Event *evt)
             nk_input_key(ctx, NK_KEY_TAB, down);
         else if (sym == SDLK_BACKSPACE)
             nk_input_key(ctx, NK_KEY_BACKSPACE, down);
-        else if (sym == SDLK_HOME)
+        else if (sym == SDLK_HOME) {
             nk_input_key(ctx, NK_KEY_TEXT_START, down);
-        else if (sym == SDLK_END)
+            nk_input_key(ctx, NK_KEY_SCROLL_START, down);
+        } else if (sym == SDLK_END) {
             nk_input_key(ctx, NK_KEY_TEXT_END, down);
-        else if (sym == SDLK_z)
+            nk_input_key(ctx, NK_KEY_SCROLL_END, down);
+        } else if (sym == SDLK_PAGEDOWN) {
+            nk_input_key(ctx, NK_KEY_SCROLL_DOWN, down);
+        } else if (sym == SDLK_PAGEUP) {
+            nk_input_key(ctx, NK_KEY_SCROLL_UP, down);
+        } else if (sym == SDLK_z)
             nk_input_key(ctx, NK_KEY_TEXT_UNDO, down && state[SDL_SCANCODE_LCTRL]);
         else if (sym == SDLK_r)
             nk_input_key(ctx, NK_KEY_TEXT_REDO, down && state[SDL_SCANCODE_LCTRL]);
