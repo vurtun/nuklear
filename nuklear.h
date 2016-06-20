@@ -4384,7 +4384,7 @@ nk_buffer_alloc(struct nk_buffer *b, enum nk_buffer_allocation_type type,
         /* align newly allocated pointer */
         if (type == NK_BUFFER_FRONT)
             unaligned = nk_ptr_add(void, b->memory.ptr, b->allocated);
-        else unaligned = nk_ptr_add(void, b->memory.ptr, b->size);
+        else unaligned = nk_ptr_add(void, b->memory.ptr, b->size - size);
         memory = nk_buffer_align(unaligned, align, &alignment, type);
     }
 
