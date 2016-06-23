@@ -591,7 +591,7 @@ NK_API void                     nk_group_end(struct nk_context*);
 #define                         nk_tree_push_id(ctx, type, title, state, id) nk_tree_push_hashed(ctx, type, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),id)
 NK_API int                      nk_tree_push_hashed(struct nk_context*, enum nk_tree_type, const char *title, enum nk_collapse_states initial_state, const char *hash, int len,int seed);
 #define                         nk_tree_image_push(ctx, type, img, title, state) nk_tree_image_push_hashed(ctx, type, img, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),__LINE__)
-#define                         nk_tree_image_push_id(ctx, type, img, title, state, id) nk_tree_image_push_hashed(ctx, img, type, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),id)
+#define                         nk_tree_image_push_id(ctx, type, img, title, state, id) nk_tree_image_push_hashed(ctx, type, img, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),id)
 NK_API int                      nk_tree_image_push_hashed(struct nk_context*, enum nk_tree_type, struct nk_image, const char *title, enum nk_collapse_states initial_state, const char *hash, int len,int seed);
 NK_API void                     nk_tree_pop(struct nk_context*);
 
