@@ -15634,14 +15634,11 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
 
     /* calculate window footer height */
     layout->footer_h = 0;
-
     if (!(win->flags & NK_WINDOW_NONBLOCK)) {
-      if (!(win->flags & NK_WINDOW_NO_SCROLLBAR)) {
-        layout->footer_h = scrollbar_size.y + style->window.footer_padding.y;
-      }
-      if (win->flags & NK_WINDOW_SCALABLE) {
-        layout->footer_h = NK_MAX(layout->footer_h, scaler_size.y + style->window.footer_padding.y);
-      }
+        if (!(win->flags & NK_WINDOW_NO_SCROLLBAR))
+            layout->footer_h = scrollbar_size.y + style->window.footer_padding.y;
+        if (win->flags & NK_WINDOW_SCALABLE)
+            layout->footer_h = NK_MAX(layout->footer_h, scaler_size.y + style->window.footer_padding.y);
     }
 
     /* calculate the window size */
@@ -15743,13 +15740,13 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
             int text_len = nk_strlen(title);
             struct nk_rect label = {0,0,0,0};
             float t = font->width(font->userdata, font->height, title, text_len);
+            text.padding = nk_vec2(0,0);
 
             label.x = header.x + style->window.header.padding.x;
             label.x += style->window.header.label_padding.x;
             label.y = header.y + style->window.header.label_padding.y;
             label.h = font->height + 2 * style->window.header.label_padding.y;
             label.w = t + 2 * style->window.header.spacing.x;
-            text.padding = nk_vec2(0,0);
             nk_widget_text(out, label,(const char*)title, text_len, &text,
                 NK_TEXT_LEFT, font);
         }
