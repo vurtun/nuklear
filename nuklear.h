@@ -15633,10 +15633,16 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
     }
 
     /* calculate window footer height */
-    if (!(win->flags & NK_WINDOW_NONBLOCK) &&
-        (!(win->flags & NK_WINDOW_NO_SCROLLBAR) || (win->flags & NK_WINDOW_SCALABLE)))
-        layout->footer_h = scaler_size.y + style->window.footer_padding.y;
-    else layout->footer_h = 0;
+    layout->footer_h = 0;
+
+    if (!(win->flags & NK_WINDOW_NONBLOCK)) {
+      if (!(win->flags & NK_WINDOW_NO_SCROLLBAR)) {
+        layout->footer_h = scrollbar_size.y + style->window.footer_padding.y;
+      }
+      if (win->flags & NK_WINDOW_SCALABLE) {
+        layout->footer_h = NK_MAX(layout->footer_h, scaler_size.y + style->window.footer_padding.y);
+      }
+    }
 
     /* calculate the window size */
     if (!(win->flags & NK_WINDOW_NO_SCROLLBAR))
@@ -15968,19 +15974,19 @@ nk_panel_end(struct nk_context *ctx)
             nk_flags state = 0;
             bounds.x = layout->bounds.x + window_padding.x;
             if (layout->flags & NK_WINDOW_SUB) {
-                bounds.h = scrollbar_size.x;
+                bounds.h = scrollbar_size.y;
                 bounds.y = (layout->flags & NK_WINDOW_BORDER) ?
                             layout->bounds.y + layout->border : layout->bounds.y;
                 bounds.y += layout->header_h + layout->menu.h + layout->height;
                 bounds.w = layout->width;
             } else if (layout->flags & NK_WINDOW_DYNAMIC) {
-                bounds.h = NK_MIN(scrollbar_size.x, layout->footer_h);
+                bounds.h = NK_MIN(scrollbar_size.y, layout->footer_h);
                 bounds.w = layout->bounds.w;
                 bounds.y = footer.y;
             } else {
-                bounds.h = NK_MIN(scrollbar_size.x, layout->footer_h);
+                bounds.h = NK_MIN(scrollbar_size.y, layout->footer_h);
                 bounds.y = layout->bounds.y + window->bounds.h;
-                bounds.y -= NK_MAX(layout->footer_h, scrollbar_size.x);
+                bounds.y -= NK_MAX(layout->footer_h, scrollbar_size.y);
                 bounds.w = layout->width - 2 * window_padding.x;
             }
             scroll_offset = layout->offset->x;
