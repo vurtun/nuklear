@@ -5525,9 +5525,9 @@ nk_draw_list_clear(struct nk_draw_list *list)
     if (!list) return;
     if (list->buffer)
         nk_buffer_clear(list->buffer);
-    if (list->elements)
-        nk_buffer_clear(list->vertices);
     if (list->vertices)
+        nk_buffer_clear(list->vertices);
+    if (list->elements)
         nk_buffer_clear(list->elements);
 
     list->element_count = 0;
