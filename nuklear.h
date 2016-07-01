@@ -591,7 +591,7 @@ NK_API void                     nk_group_end(struct nk_context*);
 #define                         nk_tree_push_id(ctx, type, title, state, id) nk_tree_push_hashed(ctx, type, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),id)
 NK_API int                      nk_tree_push_hashed(struct nk_context*, enum nk_tree_type, const char *title, enum nk_collapse_states initial_state, const char *hash, int len,int seed);
 #define                         nk_tree_image_push(ctx, type, img, title, state) nk_tree_image_push_hashed(ctx, type, img, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),__LINE__)
-#define                         nk_tree_image_push_id(ctx, type, img, title, state, id) nk_tree_image_push_hashed(ctx, img, type, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),id)
+#define                         nk_tree_image_push_id(ctx, type, img, title, state, id) nk_tree_image_push_hashed(ctx, type, img, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),id)
 NK_API int                      nk_tree_image_push_hashed(struct nk_context*, enum nk_tree_type, struct nk_image, const char *title, enum nk_collapse_states initial_state, const char *hash, int len,int seed);
 NK_API void                     nk_tree_pop(struct nk_context*);
 
@@ -4384,7 +4384,7 @@ nk_buffer_alloc(struct nk_buffer *b, enum nk_buffer_allocation_type type,
         /* align newly allocated pointer */
         if (type == NK_BUFFER_FRONT)
             unaligned = nk_ptr_add(void, b->memory.ptr, b->allocated);
-        else unaligned = nk_ptr_add(void, b->memory.ptr, b->size);
+        else unaligned = nk_ptr_add(void, b->memory.ptr, b->size - size);
         memory = nk_buffer_align(unaligned, align, &alignment, type);
     }
 
@@ -5525,9 +5525,9 @@ nk_draw_list_clear(struct nk_draw_list *list)
     if (!list) return;
     if (list->buffer)
         nk_buffer_clear(list->buffer);
-    if (list->elements)
-        nk_buffer_clear(list->vertices);
     if (list->vertices)
+        nk_buffer_clear(list->vertices);
+    if (list->elements)
         nk_buffer_clear(list->elements);
 
     list->element_count = 0;
@@ -15633,10 +15633,13 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
     }
 
     /* calculate window footer height */
-    if (!(win->flags & NK_WINDOW_NONBLOCK) &&
-        (!(win->flags & NK_WINDOW_NO_SCROLLBAR) || (win->flags & NK_WINDOW_SCALABLE)))
-        layout->footer_h = scaler_size.y + style->window.footer_padding.y;
-    else layout->footer_h = 0;
+    layout->footer_h = 0;
+    if (!(win->flags & NK_WINDOW_NONBLOCK)) {
+        if (!(win->flags & NK_WINDOW_NO_SCROLLBAR))
+            layout->footer_h = scrollbar_size.y + style->window.footer_padding.y;
+        if (win->flags & NK_WINDOW_SCALABLE)
+            layout->footer_h = NK_MAX(layout->footer_h, scaler_size.y + style->window.footer_padding.y);
+    }
 
     /* calculate the window size */
     if (!(win->flags & NK_WINDOW_NO_SCROLLBAR))
@@ -15737,13 +15740,13 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
             int text_len = nk_strlen(title);
             struct nk_rect label = {0,0,0,0};
             float t = font->width(font->userdata, font->height, title, text_len);
+            text.padding = nk_vec2(0,0);
 
             label.x = header.x + style->window.header.padding.x;
             label.x += style->window.header.label_padding.x;
             label.y = header.y + style->window.header.label_padding.y;
             label.h = font->height + 2 * style->window.header.label_padding.y;
             label.w = t + 2 * style->window.header.spacing.x;
-            text.padding = nk_vec2(0,0);
             nk_widget_text(out, label,(const char*)title, text_len, &text,
                 NK_TEXT_LEFT, font);
         }
@@ -15968,19 +15971,19 @@ nk_panel_end(struct nk_context *ctx)
             nk_flags state = 0;
             bounds.x = layout->bounds.x + window_padding.x;
             if (layout->flags & NK_WINDOW_SUB) {
-                bounds.h = scrollbar_size.x;
+                bounds.h = scrollbar_size.y;
                 bounds.y = (layout->flags & NK_WINDOW_BORDER) ?
                             layout->bounds.y + layout->border : layout->bounds.y;
                 bounds.y += layout->header_h + layout->menu.h + layout->height;
                 bounds.w = layout->width;
             } else if (layout->flags & NK_WINDOW_DYNAMIC) {
-                bounds.h = NK_MIN(scrollbar_size.x, layout->footer_h);
+                bounds.h = NK_MIN(scrollbar_size.y, layout->footer_h);
                 bounds.w = layout->bounds.w;
                 bounds.y = footer.y;
             } else {
-                bounds.h = NK_MIN(scrollbar_size.x, layout->footer_h);
+                bounds.h = NK_MIN(scrollbar_size.y, layout->footer_h);
                 bounds.y = layout->bounds.y + window->bounds.h;
-                bounds.y -= NK_MAX(layout->footer_h, scrollbar_size.x);
+                bounds.y -= NK_MAX(layout->footer_h, scrollbar_size.y);
                 bounds.w = layout->width - 2 * window_padding.x;
             }
             scroll_offset = layout->offset->x;
