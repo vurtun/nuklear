@@ -15,7 +15,7 @@ else
 	ifeq ($(UNAME_S),Darwin)
 		LIBS = -lglfw3 -framework OpenGL -lm -lGLEW
 	else
-    LIBS = -lglfw -lGL -lm -lGLU -lGLEW
+		LIBS = -lglfw -lGL -lm -lGLU -lGLEW
 	endif
 endif
 
