@@ -6422,6 +6422,7 @@ nk_draw_list_add_text(struct nk_draw_list *list, const struct nk_user_font *font
     if (!glyph_len) return;
 
     /* draw every glyph image */
+    fg.a = (nk_byte)((float)fg.a * list->global_alpha);
     while (text_len <= len && glyph_len) {
         float gx, gy, gh, gw;
         float char_width = 0;
@@ -6438,7 +6439,6 @@ nk_draw_list_add_text(struct nk_draw_list *list, const struct nk_user_font *font
         gy = rect.y + g.offset.y;
         gw = g.width; gh = g.height;
         char_width = g.xadvance;
-        fg.a = (nk_byte)((float)fg.a * list->global_alpha);
         nk_draw_list_push_rect_uv(list, nk_vec2(gx,gy), nk_vec2(gx + gw, gy+ gh),
             g.uv[0], g.uv[1], fg);
 
