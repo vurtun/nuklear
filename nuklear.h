@@ -18639,13 +18639,13 @@ nk_nonblock_begin(struct nk_panel *layout, struct nk_context *ctx,
         win->popup.win = popup;
         nk_command_buffer_init(&popup->buffer, &ctx->memory, NK_CLIPPING_ON);
     } else {
-        /* check if user clicked outside the popup and close if so */
-        int clicked, in_body, in_header;
-        clicked = nk_input_has_mouse_click(&ctx->input, NK_BUTTON_LEFT);
-        in_body = nk_input_is_mouse_click_in_rect(&ctx->input, NK_BUTTON_LEFT, body);
-        in_header = nk_input_is_mouse_click_in_rect(&ctx->input, NK_BUTTON_LEFT, header);
+        /* close the popup if user pressed outside or in the header */
+        int pressed, in_body, in_header;
+        pressed = nk_input_is_mouse_pressed(&ctx->input, NK_BUTTON_LEFT);
+        in_body = nk_input_is_mouse_hovering_rect(&ctx->input, body);
+        in_header = nk_input_is_mouse_hovering_rect(&ctx->input, header);
 
-        if (clicked && !in_body && !in_header)
+        if (pressed && (!in_body || in_header))
             is_active = nk_false;
     }
 
