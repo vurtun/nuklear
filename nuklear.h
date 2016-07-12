@@ -555,6 +555,7 @@ NK_API int                      nk_item_is_any_active(struct nk_context*);
 NK_API void                     nk_window_set_bounds(struct nk_context*, struct nk_rect);
 NK_API void                     nk_window_set_position(struct nk_context*, struct nk_vec2);
 NK_API void                     nk_window_set_size(struct nk_context*, struct nk_vec2);
+NK_API void                     nk_window_set_title(struct nk_context*, const char *title_to_set);
 NK_API void                     nk_window_set_focus(struct nk_context*, const char *name);
 
 NK_API void                     nk_window_close(struct nk_context *ctx, const char *name);
@@ -2360,7 +2361,7 @@ struct nk_window {
     struct nk_property_state property;
     struct nk_popup_state popup;
     struct nk_edit_state edit;
-	unsigned int scrolled;
+    unsigned int scrolled;
 
     struct nk_table *tables;
     unsigned short table_count;
@@ -15427,6 +15428,18 @@ nk_window_set_size(struct nk_context *ctx, struct nk_vec2 size)
     if (!ctx || !ctx->current) return;
     ctx->current->bounds.w = size.x;
     ctx->current->bounds.h = size.y;
+}
+
+NK_API void
+nk_window_set_title(struct nk_context *ctx, const char *title)
+{
+    int title_len;
+    nk_hash title_hash;
+    NK_ASSERT(ctx); NK_ASSERT(ctx->current);
+    if (!ctx || !ctx->current) return;
+    title_len = (int)nk_strlen(title);
+    title_hash = nk_murmur_hash(title, (int)title_len, NK_WINDOW_TITLE);
+    ctx->current->name = title_hash;
 }
 
 NK_API void
