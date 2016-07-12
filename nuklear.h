@@ -2417,56 +2417,6 @@ struct nk_context {
 #endif
 #endif /* NK_H_ */
 
-/*
- * ==============================================================
- *
- *                          IMPLEMENTATION
- *
- * ===============================================================
- */
-#ifdef NK_IMPLEMENTATION
-
-#ifndef NK_POOL_DEFAULT_CAPACITY
-#define NK_POOL_DEFAULT_CAPACITY 16
-#endif
-
-#ifndef NK_DEFAULT_COMMAND_BUFFER_SIZE
-#define NK_DEFAULT_COMMAND_BUFFER_SIZE (4*1024)
-#endif
-
-#ifndef NK_BUFFER_DEFAULT_INITIAL_SIZE
-#define NK_BUFFER_DEFAULT_INITIAL_SIZE (4*1024)
-#endif
-
-#ifdef NK_INCLUDE_DEFAULT_ALLOCATOR
-#include <stdlib.h> /* malloc, free */
-#endif
-#ifdef NK_INCLUDE_STANDARD_IO
-#include <stdio.h> /* fopen, fclose,... */
-#include <stdarg.h>
-#endif
-
-#ifndef NK_ASSERT
-#include <assert.h>
-#define NK_ASSERT(expr) assert(expr)
-#endif
-
-#ifndef NK_MEMSET
-#define NK_MEMSET nk_memset
-#endif
-#ifndef NK_MEMCPY
-#define NK_MEMCPY nk_memcopy
-#endif
-#ifndef NK_SQRT
-#define NK_SQRT nk_sqrt
-#endif
-#ifndef NK_SIN
-#define NK_SIN nk_sin
-#endif
-#ifndef NK_COS
-#define NK_COS nk_cos
-#endif
-
 /* ==============================================================
  *                          MATH
  * =============================================================== */
@@ -2535,6 +2485,56 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #define NK_ALIGNOF(t) (nk_alignof<t>::value);
 #else
 #define NK_ALIGNOF(t) ((char*)(&((struct {char c; t _h;}*)0)->_h) - (char*)0)
+#endif
+
+/*
+ * ==============================================================
+ *
+ *                          IMPLEMENTATION
+ *
+ * ===============================================================
+ */
+#ifdef NK_IMPLEMENTATION
+
+#ifndef NK_POOL_DEFAULT_CAPACITY
+#define NK_POOL_DEFAULT_CAPACITY 16
+#endif
+
+#ifndef NK_DEFAULT_COMMAND_BUFFER_SIZE
+#define NK_DEFAULT_COMMAND_BUFFER_SIZE (4*1024)
+#endif
+
+#ifndef NK_BUFFER_DEFAULT_INITIAL_SIZE
+#define NK_BUFFER_DEFAULT_INITIAL_SIZE (4*1024)
+#endif
+
+#ifdef NK_INCLUDE_DEFAULT_ALLOCATOR
+#include <stdlib.h> /* malloc, free */
+#endif
+#ifdef NK_INCLUDE_STANDARD_IO
+#include <stdio.h> /* fopen, fclose,... */
+#include <stdarg.h>
+#endif
+
+#ifndef NK_ASSERT
+#include <assert.h>
+#define NK_ASSERT(expr) assert(expr)
+#endif
+
+#ifndef NK_MEMSET
+#define NK_MEMSET nk_memset
+#endif
+#ifndef NK_MEMCPY
+#define NK_MEMCPY nk_memcopy
+#endif
+#ifndef NK_SQRT
+#define NK_SQRT nk_sqrt
+#endif
+#ifndef NK_SIN
+#define NK_SIN nk_sin
+#endif
+#ifndef NK_COS
+#define NK_COS nk_cos
 #endif
 
 /* make sure correct type size */
