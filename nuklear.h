@@ -555,7 +555,6 @@ NK_API int                      nk_item_is_any_active(struct nk_context*);
 NK_API void                     nk_window_set_bounds(struct nk_context*, struct nk_rect);
 NK_API void                     nk_window_set_position(struct nk_context*, struct nk_vec2);
 NK_API void                     nk_window_set_size(struct nk_context*, struct nk_vec2);
-NK_API void                     nk_window_set_title(struct nk_context*, const char *title_to_set);
 NK_API void                     nk_window_set_focus(struct nk_context*, const char *name);
 
 NK_API void                     nk_window_close(struct nk_context *ctx, const char *name);
@@ -10551,6 +10550,8 @@ NK_API int
 nk_textedit_cut(struct nk_text_edit *state)
 {
     /* API cut: delete selection */
+    if (state->mode == NK_TEXT_EDIT_MODE_VIEW)
+        return 0;
     if (NK_TEXT_HAS_SELECTION(state)) {
         nk_textedit_delete_selection(state); /* implicitly clamps */
         state->has_preferred_x = 0;
@@ -10565,6 +10566,7 @@ nk_textedit_paste(struct nk_text_edit *state, char const *ctext, int len)
     /* API paste: replace existing selection with passed-in text */
     int glyphs;
     const char *text = (const char *) ctext;
+    if (state->mode == NK_TEXT_EDIT_MODE_VIEW) return 0;
     /* if there's a selection, the paste should delete it */
     nk_textedit_clamp(state);
     nk_textedit_delete_selection(state);
@@ -10841,9 +10843,11 @@ retry:
       } break;
 
     case NK_KEY_DEL:
-         if (NK_TEXT_HAS_SELECTION(state))
+        if (state->mode == NK_TEXT_EDIT_MODE_VIEW)
+            break;
+        if (NK_TEXT_HAS_SELECTION(state))
             nk_textedit_delete_selection(state);
-         else {
+        else {
             int n = state->string.len;
             if (state->cursor < n)
                 nk_textedit_delete(state, state->cursor, 1);
@@ -10852,9 +10856,11 @@ retry:
          break;
 
     case NK_KEY_BACKSPACE:
-         if (NK_TEXT_HAS_SELECTION(state))
+        if (state->mode == NK_TEXT_EDIT_MODE_VIEW)
+            break;
+        if (NK_TEXT_HAS_SELECTION(state))
             nk_textedit_delete_selection(state);
-         else {
+        else {
             nk_textedit_clamp(state);
             if (state->cursor > 0) {
                 nk_textedit_delete(state, state->cursor-1, 1);
@@ -12835,6 +12841,8 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
     char is_hovered = 0;
     char select_all = 0;
     char cursor_follow = 0;
+    struct nk_rect old_clip;
+    struct nk_rect clip;
 
     NK_ASSERT(state);
     NK_ASSERT(out);
@@ -12848,8 +12856,12 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
     area.w = bounds.w - (2.0f * style->padding.x + 2 * style->border);
     area.h = bounds.h - (2.0f * style->padding.y + 2 * style->border);
     if (flags & NK_EDIT_MULTILINE)
-        area.h = area.h - style->scrollbar_size.y;
+        area.w = area.h - style->scrollbar_size.y;
     row_height = (flags & NK_EDIT_MULTILINE)? font->height + style->row_padding: area.h;
+
+    /* calculate clipping rectangle */
+    old_clip = out->clip;
+    nk_unify(&clip, &old_clip, area.x, area.y, area.x + area.w, area.y + area.h);
 
     /* update edit state */
     prev_state = (char)edit->active;
@@ -12869,13 +12881,15 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
         if (flags & NK_EDIT_AUTO_SELECT)
             select_all = nk_true;
     } else if (!edit->active) edit->mode = NK_TEXT_EDIT_MODE_VIEW;
+    if (flags & NK_EDIT_READ_ONLY)
+        edit->mode = NK_TEXT_EDIT_MODE_VIEW;
 
     ret = (edit->active) ? NK_EDIT_ACTIVE: NK_EDIT_INACTIVE;
     if (prev_state != edit->active)
         ret |= (edit->active) ? NK_EDIT_ACTIVATED: NK_EDIT_DEACTIVATED;
 
     /* handle user input */
-    if (edit->active && in && !(flags & NK_EDIT_READ_ONLY))
+    if (edit->active && in)
     {
         int shift_mod = in->keyboard.keys[NK_KEY_SHIFT].down;
         const float mouse_x = (in->mouse.pos.x - area.x) + edit->scrollbar.x;
@@ -12884,6 +12898,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
             (in->mouse.pos.y - area.y) + edit->scrollbar.y;
 
         /* mouse click handler */
+        is_hovered = (char)nk_input_is_mouse_hovering_rect(in, area);
         if (select_all) {
             nk_textedit_select_all(edit);
         } else if (is_hovered && in->mouse.buttons[NK_BUTTON_LEFT].down &&
@@ -12951,7 +12966,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
             text = nk_str_at_const(&edit->string, begin, &unicode, &glyph_len);
             if (edit->clip.copy)
                 edit->clip.copy(edit->clip.userdata, text, end - begin);
-            if (cut){
+            if (cut && !(flags & NK_EDIT_READ_ONLY)){
                 nk_textedit_cut(edit);
                 cursor_follow = nk_true;
             }
@@ -12981,9 +12996,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
         *state |= NK_WIDGET_STATE_HOVERED;
 
     /* DRAW EDIT */
-    {struct nk_rect clip;
-    struct nk_rect old_clip = out->clip;
-    const char *text = nk_str_get_const(&edit->string);
+    {const char *text = nk_str_get_const(&edit->string);
     int len = nk_str_len_char(&edit->string);
 
     {/* select background colors/images  */
@@ -13001,9 +13014,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
             style->rounding, background->data.color);
     } else nk_draw_image(out, bounds, &background->data.image);}
 
-    area.w -= style->cursor_size;
-    nk_unify(&clip, &old_clip, area.x, area.y, area.x + area.w, area.y + area.h);
-    nk_push_scissor(out, clip);
+    area.w -= style->cursor_size + style->scrollbar_size.x;
     if (edit->active)
     {
         int total_lines = 1;
@@ -13145,25 +13156,27 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
             }
 
             /* scrollbar widget */
-            {nk_flags ws;
-            struct nk_rect scroll;
-            float scroll_target;
-            float scroll_offset;
-            float scroll_step;
-            float scroll_inc;
+            if (flags & NK_EDIT_MULTILINE)
+            {
+                nk_flags ws;
+                struct nk_rect scroll;
+                float scroll_target;
+                float scroll_offset;
+                float scroll_step;
+                float scroll_inc;
 
-            scroll.x = (bounds.x + bounds.w) - style->scrollbar_size.x;
-            scroll.y = bounds.y;
-            scroll.w = style->scrollbar_size.x;
-            scroll.h = bounds.h;
+                scroll = area;
+                scroll.x = (bounds.x + bounds.w - style->border) - style->scrollbar_size.x;
+                scroll.w = style->scrollbar_size.x;
 
-            scroll_offset = edit->scrollbar.y;
-            scroll_step = scroll.h * 0.10f;
-            scroll_inc = scroll.h * 0.01f;
-            scroll_target = text_size.y;
-            edit->scrollbar.y = nk_do_scrollbarv(&ws, out, bounds, 0,
-                    scroll_offset, scroll_target, scroll_step, scroll_inc,
-                    &style->scrollbar, in, font);}
+                scroll_offset = edit->scrollbar.y;
+                scroll_step = scroll.h * 0.10f;
+                scroll_inc = scroll.h * 0.01f;
+                scroll_target = text_size.y;
+                edit->scrollbar.y = nk_do_scrollbarv(&ws, out, scroll, 0,
+                        scroll_offset, scroll_target, scroll_step, scroll_inc,
+                        &style->scrollbar, in, font);
+            }
         }
 
         /* draw text */
@@ -13174,6 +13187,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
         struct nk_color cursor_color;
         struct nk_color cursor_text_color;
         const struct nk_style_item *background;
+        nk_push_scissor(out, clip);
 
         /* select correct colors to draw */
         if (*state & NK_WIDGET_STATE_ACTIVED) {
@@ -14064,8 +14078,10 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     edit->selected_hover    = table[NK_COLOR_TEXT];
     edit->selected_text_normal  = table[NK_COLOR_EDIT];
     edit->selected_text_hover   = table[NK_COLOR_EDIT];
-    edit->row_padding       = 2;
+    edit->scrollbar_size    = nk_vec2(10,10);
+    edit->scrollbar         = style->scrollv;
     edit->padding           = nk_vec2(4,4);
+    edit->row_padding       = 2;
     edit->cursor_size       = 4;
     edit->border            = 1;
     edit->rounding          = 0;
@@ -15428,18 +15444,6 @@ nk_window_set_size(struct nk_context *ctx, struct nk_vec2 size)
     if (!ctx || !ctx->current) return;
     ctx->current->bounds.w = size.x;
     ctx->current->bounds.h = size.y;
-}
-
-NK_API void
-nk_window_set_title(struct nk_context *ctx, const char *title)
-{
-    int title_len;
-    nk_hash title_hash;
-    NK_ASSERT(ctx); NK_ASSERT(ctx->current);
-    if (!ctx || !ctx->current) return;
-    title_len = (int)nk_strlen(title);
-    title_hash = nk_murmur_hash(title, (int)title_len, NK_WINDOW_TITLE);
-    ctx->current->name = title_hash;
 }
 
 NK_API void
