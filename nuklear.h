@@ -981,7 +981,8 @@ NK_API void nk_buffer_init_default(struct nk_buffer*);
 NK_API void nk_buffer_init(struct nk_buffer*, const struct nk_allocator*, nk_size size);
 NK_API void nk_buffer_init_fixed(struct nk_buffer*, void *memory, nk_size size);
 NK_API void nk_buffer_info(struct nk_memory_status*, struct nk_buffer*);
-NK_API void nk_buffer_push(struct nk_buffer*, enum nk_buffer_allocation_type type, void *memory, nk_size size, nk_size align);
+NK_API void *nk_buffer_push(struct nk_buffer*, enum nk_buffer_allocation_type type,
+    const void *memory, nk_size size, nk_size align);
 NK_API void nk_buffer_mark(struct nk_buffer*, enum nk_buffer_allocation_type type);
 NK_API void nk_buffer_reset(struct nk_buffer*, enum nk_buffer_allocation_type type);
 NK_API void nk_buffer_clear(struct nk_buffer*);
@@ -4398,13 +4399,14 @@ nk_buffer_alloc(struct nk_buffer *b, enum nk_buffer_allocation_type type,
     return memory;
 }
 
-NK_API void
+NK_API void*
 nk_buffer_push(struct nk_buffer *b, enum nk_buffer_allocation_type type,
-    void *memory, nk_size size, nk_size align)
+    const void *memory, nk_size size, nk_size align)
 {
     void *mem = nk_buffer_alloc(b, type, size, align);
-    if (!mem) return;
+    if (!mem) return 0;
     NK_MEMCPY(mem, memory, size);
+    return mem;
 }
 
 NK_API void
