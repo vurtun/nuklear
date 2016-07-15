@@ -25,20 +25,20 @@ calculator(struct nk_context *ctx)
         for (i = 0; i < 16; ++i) {
             if (i >= 12 && i < 15) {
                 if (i > 12) continue;
-                if (nk_button_label(ctx, "C", NK_BUTTON_DEFAULT)) {
+                if (nk_button_label(ctx, "C")) {
                     a = b = op = 0; current = &a; set = 0;
-                } if (nk_button_label(ctx, "0", NK_BUTTON_DEFAULT)) {
+                } if (nk_button_label(ctx, "0")) {
                     *current = *current*10.0f; set = 0;
                 }
-                if (nk_button_label(ctx, "=", NK_BUTTON_DEFAULT)) {
+                if (nk_button_label(ctx, "=")) {
                     solve = 1; prev = op; op = 0;
                 }
             } else if (((i+1) % 4)) {
-                if (nk_button_text(ctx, &numbers[(i/4)*3+i%4], 1, NK_BUTTON_DEFAULT)) {
+                if (nk_button_text(ctx, &numbers[(i/4)*3+i%4], 1)) {
                     *current = *current * 10.0f + numbers[(i/4)*3+i%4] - '0';
                     set = 0;
                 }
-            } else if (nk_button_text(ctx, &ops[i/4], 1, NK_BUTTON_DEFAULT)) {
+            } else if (nk_button_text(ctx, &ops[i/4], 1)) {
                 if (!set) {
                     if (current != &b) {
                         current = &b;

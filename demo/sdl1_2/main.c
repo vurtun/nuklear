@@ -91,7 +91,7 @@ int main(int argc, char **argv)
             static int len;
 
             nk_layout_row_static(ctx, 30, 80, 1);
-            if (nk_button_label(ctx, "button", NK_BUTTON_DEFAULT))
+            if (nk_button_label(ctx, "button"))
                 fprintf(stdout, "button pressed\n");
             nk_layout_row_dynamic(ctx, 30, 2);
             if (nk_option_label(ctx, "easy", op == EASY)) op = EASY;

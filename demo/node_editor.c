@@ -203,7 +203,7 @@ node_editor(struct nk_context *ctx)
 
                     /* ================= NODE CONTENT =====================*/
                     nk_layout_row_dynamic(ctx, 25, 1);
-                    nk_button_color(ctx, it->color, NK_BUTTON_DEFAULT);
+                    nk_button_color(ctx, it->color);
                     it->color.r = (nk_byte)nk_propertyi(ctx, "#R:", 0, it->color.r, 255, 1,1);
                     it->color.g = (nk_byte)nk_propertyi(ctx, "#G:", 0, it->color.g, 255, 1,1);
                     it->color.b = (nk_byte)nk_propertyi(ctx, "#B:", 0, it->color.b, 255, 1,1);

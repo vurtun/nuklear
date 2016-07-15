@@ -121,25 +121,27 @@ overview(struct nk_context *ctx)
             {
                 /* Buttons Widgets */
                 nk_layout_row_static(ctx, 30, 100, 3);
-                if (nk_button_label(ctx, "Button", NK_BUTTON_DEFAULT))
+                if (nk_button_label(ctx, "Button"))
                     fprintf(stdout, "Button pressed!\n");
-                if (nk_button_label(ctx, "Repeater", NK_BUTTON_REPEATER))
+                nk_button_set_behavior(ctx, NK_BUTTON_REPEATER);
+                if (nk_button_label(ctx, "Repeater"))
                     fprintf(stdout, "Repeater is being pressed!\n");
-                nk_button_color(ctx, nk_rgb(0,0,255), NK_BUTTON_DEFAULT);
+                nk_button_set_behavior(ctx, NK_BUTTON_DEFAULT);
+                nk_button_color(ctx, nk_rgb(0,0,255));
 
                 nk_layout_row_static(ctx, 20, 20, 8);
-                nk_button_symbol(ctx, NK_SYMBOL_CIRCLE, NK_BUTTON_DEFAULT);
-                nk_button_symbol(ctx, NK_SYMBOL_CIRCLE_FILLED, NK_BUTTON_DEFAULT);
-                nk_button_symbol(ctx, NK_SYMBOL_RECT, NK_BUTTON_DEFAULT);
-                nk_button_symbol(ctx, NK_SYMBOL_RECT_FILLED, NK_BUTTON_DEFAULT);
-                nk_button_symbol(ctx, NK_SYMBOL_TRIANGLE_UP, NK_BUTTON_DEFAULT);
-                nk_button_symbol(ctx, NK_SYMBOL_TRIANGLE_DOWN, NK_BUTTON_DEFAULT);
-                nk_button_symbol(ctx, NK_SYMBOL_TRIANGLE_LEFT, NK_BUTTON_DEFAULT);
-                nk_button_symbol(ctx, NK_SYMBOL_TRIANGLE_RIGHT, NK_BUTTON_DEFAULT);
+                nk_button_symbol(ctx, NK_SYMBOL_CIRCLE);
+                nk_button_symbol(ctx, NK_SYMBOL_CIRCLE_FILLED);
+                nk_button_symbol(ctx, NK_SYMBOL_RECT);
+                nk_button_symbol(ctx, NK_SYMBOL_RECT_FILLED);
+                nk_button_symbol(ctx, NK_SYMBOL_TRIANGLE_UP);
+                nk_button_symbol(ctx, NK_SYMBOL_TRIANGLE_DOWN);
+                nk_button_symbol(ctx, NK_SYMBOL_TRIANGLE_LEFT);
+                nk_button_symbol(ctx, NK_SYMBOL_TRIANGLE_RIGHT);
 
                 nk_layout_row_static(ctx, 30, 100, 2);
-                nk_button_symbol_label(ctx, NK_SYMBOL_TRIANGLE_LEFT, "prev", NK_TEXT_RIGHT, NK_BUTTON_DEFAULT);
-                nk_button_symbol_label(ctx, NK_SYMBOL_TRIANGLE_RIGHT, "next", NK_TEXT_LEFT, NK_BUTTON_DEFAULT);
+                nk_button_symbol_label(ctx, NK_SYMBOL_TRIANGLE_LEFT, "prev", NK_TEXT_RIGHT);
+                nk_button_symbol_label(ctx, NK_SYMBOL_TRIANGLE_RIGHT, "next", NK_TEXT_LEFT);
                 nk_tree_pop(ctx);
             }
 
@@ -422,7 +424,7 @@ overview(struct nk_context *ctx)
                         date_selected = 1;
                         nk_layout_row_begin(ctx, NK_DYNAMIC, 20, 3);
                         nk_layout_row_push(ctx, 0.05f);
-                        if (nk_button_symbol(ctx, NK_SYMBOL_TRIANGLE_LEFT, NK_BUTTON_DEFAULT)) {
+                        if (nk_button_symbol(ctx, NK_SYMBOL_TRIANGLE_LEFT)) {
                             if (sel_date.tm_mon == 0) {
                                 sel_date.tm_mon = 11;
                                 sel_date.tm_year = MAX(0, sel_date.tm_year-1);
@@ -432,7 +434,7 @@ overview(struct nk_context *ctx)
                         sprintf(buffer, "%s %d", month[sel_date.tm_mon], year);
                         nk_label(ctx, buffer, NK_TEXT_CENTERED);
                         nk_layout_row_push(ctx, 0.05f);
-                        if (nk_button_symbol(ctx, NK_SYMBOL_TRIANGLE_RIGHT, NK_BUTTON_DEFAULT)) {
+                        if (nk_button_symbol(ctx, NK_SYMBOL_TRIANGLE_RIGHT)) {
                             if (sel_date.tm_mon == 11) {
                                 sel_date.tm_mon = 0;
                                 sel_date.tm_year++;
@@ -458,7 +460,7 @@ overview(struct nk_context *ctx)
                         if (week_day > 0) nk_spacing(ctx, week_day);
                         for (i = 1; i <= days; ++i) {
                             sprintf(buffer, "%d", i);
-                            if (nk_button_label(ctx, buffer, NK_BUTTON_DEFAULT)) {
+                            if (nk_button_label(ctx, buffer)) {
                                 sel_date.tm_mday = i;
                                 nk_combo_close(ctx);
                             }
@@ -516,7 +518,7 @@ overview(struct nk_context *ctx)
 
                 nk_layout_row(ctx, NK_STATIC, 25, 2, ratio);
                 active = nk_edit_string(ctx, NK_EDIT_FIELD|NK_EDIT_SIG_ENTER, text[7], &text_len[7], 64,  nk_filter_ascii);
-                if (nk_button_label(ctx, "Submit", NK_BUTTON_DEFAULT) ||
+                if (nk_button_label(ctx, "Submit") ||
                     (active & NK_EDIT_COMMITED))
                 {
                     text[7][text_len[7]] = '\n';
@@ -672,7 +674,7 @@ overview(struct nk_context *ctx)
             nk_label(ctx, "Right Click here:", NK_TEXT_LEFT);
             nk_layout_row_push(ctx, 50);
             bounds = nk_widget_bounds(ctx);
-            nk_button_color(ctx, color, NK_BUTTON_DEFAULT);
+            nk_button_color(ctx, color);
             nk_layout_row_end(ctx);
 
             if (nk_contextual_begin(ctx, &menu, 0, nk_vec2(350, 60), bounds)) {
@@ -689,7 +691,7 @@ overview(struct nk_context *ctx)
             nk_layout_row_push(ctx, 100);
             nk_label(ctx, "Popup:", NK_TEXT_LEFT);
             nk_layout_row_push(ctx, 50);
-            if (nk_button_label(ctx, "Popup", NK_BUTTON_DEFAULT))
+            if (nk_button_label(ctx, "Popup"))
                 popup_active = 1;
             nk_layout_row_end(ctx);
 
@@ -701,11 +703,11 @@ overview(struct nk_context *ctx)
                     nk_layout_row_dynamic(ctx, 25, 1);
                     nk_label(ctx, "A terrible error as occured", NK_TEXT_LEFT);
                     nk_layout_row_dynamic(ctx, 25, 2);
-                    if (nk_button_label(ctx, "OK", NK_BUTTON_DEFAULT)) {
+                    if (nk_button_label(ctx, "OK")) {
                         popup_active = 0;
                         nk_popup_close(ctx);
                     }
-                    if (nk_button_label(ctx, "Cancel", NK_BUTTON_DEFAULT)) {
+                    if (nk_button_label(ctx, "Cancel")) {
                         popup_active = 0;
                         nk_popup_close(ctx);
                     }
@@ -733,64 +735,64 @@ overview(struct nk_context *ctx)
                 nk_layout_row_dynamic(ctx, 30, 1);
                 nk_label(ctx, "Dynamic fixed column layout with generated position and size:", NK_TEXT_LEFT);
                 nk_layout_row_dynamic(ctx, 30, 3);
-                nk_button_label(ctx, "button", NK_BUTTON_DEFAULT);
-                nk_button_label(ctx, "button", NK_BUTTON_DEFAULT);
-                nk_button_label(ctx, "button", NK_BUTTON_DEFAULT);
+                nk_button_label(ctx, "button");
+                nk_button_label(ctx, "button");
+                nk_button_label(ctx, "button");
 
                 nk_layout_row_dynamic(ctx, 30, 1);
                 nk_label(ctx, "static fixed column layout with generated position and size:", NK_TEXT_LEFT);
                 nk_layout_row_static(ctx, 30, 100, 3);
-                nk_button_label(ctx, "button", NK_BUTTON_DEFAULT);
-                nk_button_label(ctx, "button", NK_BUTTON_DEFAULT);
-                nk_button_label(ctx, "button", NK_BUTTON_DEFAULT);
+                nk_button_label(ctx, "button");
+                nk_button_label(ctx, "button");
+                nk_button_label(ctx, "button");
 
                 nk_layout_row_dynamic(ctx, 30, 1);
                 nk_label(ctx, "Dynamic array-based custom column layout with generated position and custom size:",NK_TEXT_LEFT);
                 nk_layout_row(ctx, NK_DYNAMIC, 30, 3, ratio_two);
-                nk_button_label(ctx, "button", NK_BUTTON_DEFAULT);
-                nk_button_label(ctx, "button", NK_BUTTON_DEFAULT);
-                nk_button_label(ctx, "button", NK_BUTTON_DEFAULT);
+                nk_button_label(ctx, "button");
+                nk_button_label(ctx, "button");
+                nk_button_label(ctx, "button");
 
                 nk_layout_row_dynamic(ctx, 30, 1);
                 nk_label(ctx, "Static array-based custom column layout with generated position and custom size:",NK_TEXT_LEFT );
                 nk_layout_row(ctx, NK_STATIC, 30, 3, width_two);
-                nk_button_label(ctx, "button", NK_BUTTON_DEFAULT);
-                nk_button_label(ctx, "button", NK_BUTTON_DEFAULT);
-                nk_button_label(ctx, "button", NK_BUTTON_DEFAULT);
+                nk_button_label(ctx, "button");
+                nk_button_label(ctx, "button");
+                nk_button_label(ctx, "button");
 
                 nk_layout_row_dynamic(ctx, 30, 1);
                 nk_label(ctx, "Dynamic immediate mode custom column layout with generated position and custom size:",NK_TEXT_LEFT);
                 nk_layout_row_begin(ctx, NK_DYNAMIC, 30, 3);
                 nk_layout_row_push(ctx, 0.2f);
-                nk_button_label(ctx, "button", NK_BUTTON_DEFAULT);
+                nk_button_label(ctx, "button");
                 nk_layout_row_push(ctx, 0.6f);
-                nk_button_label(ctx, "button", NK_BUTTON_DEFAULT);
+                nk_button_label(ctx, "button");
                 nk_layout_row_push(ctx, 0.2f);
-                nk_button_label(ctx, "button", NK_BUTTON_DEFAULT);
+                nk_button_label(ctx, "button");
                 nk_layout_row_end(ctx);
 
                 nk_layout_row_dynamic(ctx, 30, 1);
                 nk_label(ctx, "Static immediate mode custom column layout with generated position and custom size:", NK_TEXT_LEFT);
                 nk_layout_row_begin(ctx, NK_STATIC, 30, 3);
                 nk_layout_row_push(ctx, 100);
-                nk_button_label(ctx, "button", NK_BUTTON_DEFAULT);
+                nk_button_label(ctx, "button");
                 nk_layout_row_push(ctx, 200);
-                nk_button_label(ctx, "button", NK_BUTTON_DEFAULT);
+                nk_button_label(ctx, "button");
                 nk_layout_row_push(ctx, 50);
-                nk_button_label(ctx, "button", NK_BUTTON_DEFAULT);
+                nk_button_label(ctx, "button");
                 nk_layout_row_end(ctx);
 
                 nk_layout_row_dynamic(ctx, 30, 1);
                 nk_label(ctx, "Static free space with custom position and custom size:", NK_TEXT_LEFT);
                 nk_layout_space_begin(ctx, NK_STATIC, 120, 4);
                 nk_layout_space_push(ctx, nk_rect(100, 0, 100, 30));
-                nk_button_label(ctx, "button", NK_BUTTON_DEFAULT);
+                nk_button_label(ctx, "button");
                 nk_layout_space_push(ctx, nk_rect(0, 15, 100, 30));
-                nk_button_label(ctx, "button", NK_BUTTON_DEFAULT);
+                nk_button_label(ctx, "button");
                 nk_layout_space_push(ctx, nk_rect(200, 15, 100, 30));
-                nk_button_label(ctx, "button", NK_BUTTON_DEFAULT);
+                nk_button_label(ctx, "button");
                 nk_layout_space_push(ctx, nk_rect(100, 30, 100, 30));
-                nk_button_label(ctx, "button", NK_BUTTON_DEFAULT);
+                nk_button_label(ctx, "button");
                 nk_layout_space_end(ctx);
                 nk_tree_pop(ctx);
             }
@@ -855,7 +857,7 @@ overview(struct nk_context *ctx)
                     nk_layout_row_dynamic(ctx, 25, 2);
                     for (i = 0; i < 64; ++i) {
                         sprintf(buffer, "%08d", ((((i%7)*10)^32))+(64+(i%2)*2));
-                        nk_button_label(ctx, buffer, NK_BUTTON_DEFAULT);
+                        nk_button_label(ctx, buffer);
                     }
                     nk_group_end(ctx);
                 }
@@ -879,24 +881,24 @@ overview(struct nk_context *ctx)
                 nk_layout_space_push(ctx, nk_rect(160,0,150,240));
                 if (nk_group_begin(ctx, &tab, "Group_top", NK_WINDOW_BORDER)) {
                     nk_layout_row_dynamic(ctx, 25, 1);
-                    nk_button_label(ctx, "#FFAA", NK_BUTTON_DEFAULT);
-                    nk_button_label(ctx, "#FFBB", NK_BUTTON_DEFAULT);
-                    nk_button_label(ctx, "#FFCC", NK_BUTTON_DEFAULT);
-                    nk_button_label(ctx, "#FFDD", NK_BUTTON_DEFAULT);
-                    nk_button_label(ctx, "#FFEE", NK_BUTTON_DEFAULT);
-                    nk_button_label(ctx, "#FFFF", NK_BUTTON_DEFAULT);
+                    nk_button_label(ctx, "#FFAA");
+                    nk_button_label(ctx, "#FFBB");
+                    nk_button_label(ctx, "#FFCC");
+                    nk_button_label(ctx, "#FFDD");
+                    nk_button_label(ctx, "#FFEE");
+                    nk_button_label(ctx, "#FFFF");
                     nk_group_end(ctx);
                 }
 
                 nk_layout_space_push(ctx, nk_rect(160,250,150,250));
                 if (nk_group_begin(ctx, &tab, "Group_buttom", NK_WINDOW_BORDER)) {
                     nk_layout_row_dynamic(ctx, 25, 1);
-                    nk_button_label(ctx, "#FFAA", NK_BUTTON_DEFAULT);
-                    nk_button_label(ctx, "#FFBB", NK_BUTTON_DEFAULT);
-                    nk_button_label(ctx, "#FFCC", NK_BUTTON_DEFAULT);
-                    nk_button_label(ctx, "#FFDD", NK_BUTTON_DEFAULT);
-                    nk_button_label(ctx, "#FFEE", NK_BUTTON_DEFAULT);
-                    nk_button_label(ctx, "#FFFF", NK_BUTTON_DEFAULT);
+                    nk_button_label(ctx, "#FFAA");
+                    nk_button_label(ctx, "#FFBB");
+                    nk_button_label(ctx, "#FFCC");
+                    nk_button_label(ctx, "#FFDD");
+                    nk_button_label(ctx, "#FFEE");
+                    nk_button_label(ctx, "#FFFF");
                     nk_group_end(ctx);
                 }
 
@@ -967,12 +969,12 @@ overview(struct nk_context *ctx)
                     /* left space */
                     if (nk_group_begin(ctx, &sub, "left", NK_WINDOW_NO_SCROLLBAR|NK_WINDOW_BORDER|NK_WINDOW_NO_SCROLLBAR)) {
                         nk_layout_row_dynamic(ctx, 25, 1);
-                        nk_button_label(ctx, "#FFAA", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFBB", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFCC", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFDD", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFEE", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFFF", NK_BUTTON_DEFAULT);
+                        nk_button_label(ctx, "#FFAA");
+                        nk_button_label(ctx, "#FFBB");
+                        nk_button_label(ctx, "#FFCC");
+                        nk_button_label(ctx, "#FFDD");
+                        nk_button_label(ctx, "#FFEE");
+                        nk_button_label(ctx, "#FFFF");
                         nk_group_end(ctx);
                     }
 
@@ -990,12 +992,12 @@ overview(struct nk_context *ctx)
                     /* middle space */
                     if (nk_group_begin(ctx, &sub, "center", NK_WINDOW_BORDER|NK_WINDOW_NO_SCROLLBAR)) {
                         nk_layout_row_dynamic(ctx, 25, 1);
-                        nk_button_label(ctx, "#FFAA", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFBB", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFCC", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFDD", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFEE", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFFF", NK_BUTTON_DEFAULT);
+                        nk_button_label(ctx, "#FFAA");
+                        nk_button_label(ctx, "#FFBB");
+                        nk_button_label(ctx, "#FFCC");
+                        nk_button_label(ctx, "#FFDD");
+                        nk_button_label(ctx, "#FFEE");
+                        nk_button_label(ctx, "#FFFF");
                         nk_group_end(ctx);
                     }
 
@@ -1013,12 +1015,12 @@ overview(struct nk_context *ctx)
                     /* right space */
                     if (nk_group_begin(ctx, &sub, "right", NK_WINDOW_BORDER|NK_WINDOW_NO_SCROLLBAR)) {
                         nk_layout_row_dynamic(ctx, 25, 1);
-                        nk_button_label(ctx, "#FFAA", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFBB", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFCC", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFDD", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFEE", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFFF", NK_BUTTON_DEFAULT);
+                        nk_button_label(ctx, "#FFAA");
+                        nk_button_label(ctx, "#FFBB");
+                        nk_button_label(ctx, "#FFCC");
+                        nk_button_label(ctx, "#FFDD");
+                        nk_button_label(ctx, "#FFEE");
+                        nk_button_label(ctx, "#FFFF");
                         nk_group_end(ctx);
                     }
 
@@ -1046,12 +1048,12 @@ overview(struct nk_context *ctx)
                     nk_layout_row_dynamic(ctx, a, 1);
                     if (nk_group_begin(ctx, &sub, "top", NK_WINDOW_NO_SCROLLBAR|NK_WINDOW_BORDER)) {
                         nk_layout_row_dynamic(ctx, 25, 3);
-                        nk_button_label(ctx, "#FFAA", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFBB", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFCC", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFDD", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFEE", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFFF", NK_BUTTON_DEFAULT);
+                        nk_button_label(ctx, "#FFAA");
+                        nk_button_label(ctx, "#FFBB");
+                        nk_button_label(ctx, "#FFCC");
+                        nk_button_label(ctx, "#FFDD");
+                        nk_button_label(ctx, "#FFEE");
+                        nk_button_label(ctx, "#FFFF");
                         nk_group_end(ctx);
                     }
 
@@ -1071,12 +1073,12 @@ overview(struct nk_context *ctx)
                     nk_layout_row_dynamic(ctx, b, 1);
                     if (nk_group_begin(ctx, &sub, "middle", NK_WINDOW_NO_SCROLLBAR|NK_WINDOW_BORDER)) {
                         nk_layout_row_dynamic(ctx, 25, 3);
-                        nk_button_label(ctx, "#FFAA", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFBB", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFCC", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFDD", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFEE", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFFF", NK_BUTTON_DEFAULT);
+                        nk_button_label(ctx, "#FFAA");
+                        nk_button_label(ctx, "#FFBB");
+                        nk_button_label(ctx, "#FFCC");
+                        nk_button_label(ctx, "#FFDD");
+                        nk_button_label(ctx, "#FFEE");
+                        nk_button_label(ctx, "#FFFF");
                         nk_group_end(ctx);
                     }
 
@@ -1097,12 +1099,12 @@ overview(struct nk_context *ctx)
                     nk_layout_row_dynamic(ctx, c, 1);
                     if (nk_group_begin(ctx, &sub, "bottom", NK_WINDOW_NO_SCROLLBAR|NK_WINDOW_BORDER)) {
                         nk_layout_row_dynamic(ctx, 25, 3);
-                        nk_button_label(ctx, "#FFAA", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFBB", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFCC", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFDD", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFEE", NK_BUTTON_DEFAULT);
-                        nk_button_label(ctx, "#FFFF", NK_BUTTON_DEFAULT);
+                        nk_button_label(ctx, "#FFAA");
+                        nk_button_label(ctx, "#FFBB");
+                        nk_button_label(ctx, "#FFCC");
+                        nk_button_label(ctx, "#FFDD");
+                        nk_button_label(ctx, "#FFEE");
+                        nk_button_label(ctx, "#FFFF");
                         nk_group_end(ctx);
                     }
                     nk_tree_pop(ctx);

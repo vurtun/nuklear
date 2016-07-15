@@ -75,6 +75,7 @@ main(void)
 
     ctx = nk_allegro_init(display, MAX_VERTEX_MEMORY, MAX_ELEMENT_MEMORY);
     /* Load Fonts: if none of these are loaded a default font will be used  */
+    /* Load Cursor: if you uncomment cursor loading please hide the cursor */
     {struct nk_font_atlas *atlas;
     nk_allegro_font_stash_begin(&atlas);
     /*struct nk_font *droid = nk_font_atlas_add_from_file(atlas, "../../../extra_font/DroidSans.ttf", 14, 0);*/
@@ -84,6 +85,7 @@ main(void)
     /*struct nk_font *tiny = nk_font_atlas_add_from_file(atlas, "../../../extra_font/ProggyTiny.ttf", 10, 0);*/
     /*struct nk_font *cousine = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Cousine-Regular.ttf", 13, 0);*/
     nk_allegro_font_stash_end();
+    /*nk_style_load_all_cursors(ctx, atlas->cursors);*/
     /*nk_style_set_font(ctx, &droid->handle);*/}
 
     /* style.c */
@@ -114,7 +116,7 @@ main(void)
             static int op = EASY;
             static int property = 20;
             nk_layout_row_static(ctx, 30, 80, 1);
-            if (nk_button_label(ctx, "button", NK_BUTTON_DEFAULT))
+            if (nk_button_label(ctx, "button"))
                 fprintf(stdout, "button pressed\n");
             nk_layout_row_dynamic(ctx, 30, 2);
             if (nk_option_label(ctx, "easy", op == EASY)) op = EASY;
