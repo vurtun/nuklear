@@ -6468,7 +6468,7 @@ nk_convert(struct nk_context *ctx, struct nk_buffer *cmds,
     nk_foreach(cmd, ctx)
     {
 #ifdef NK_INCLUDE_COMMAND_USERDATA
-        list->userdata = cmd->userdata;
+        (&ctx->draw_list)->userdata = cmd->userdata;
 #endif
         switch (cmd->type) {
         case NK_COMMAND_NOP: break;
