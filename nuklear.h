@@ -10001,7 +10001,6 @@ nk_input_key(struct nk_context *ctx, enum nk_keys key, int down)
     NK_ASSERT(ctx);
     if (!ctx) return;
     in = &ctx->input;
-    if (in->keyboard.keys[key].down == down) return;
     in->keyboard.keys[key].down = down;
     in->keyboard.keys[key].clicked++;
 }
