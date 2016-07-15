@@ -2269,7 +2269,7 @@ struct nk_panel {
     float footer_h;
     float header_h;
     float border;
-	unsigned int has_scrolling;
+    unsigned int has_scrolling;
     struct nk_rect clip;
     struct nk_menu_state menu;
     struct nk_row_layout row;
@@ -2536,7 +2536,9 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #define NK_COS nk_cos
 #endif
 
-/* make sure correct type size */
+/* make sure correct type size:
+ * This will fire with a negative subscript error if the type sizes
+ * are set incorrectly by the compiler, and compile out if not */
 typedef int nk__check_size[(sizeof(nk_size) >= sizeof(void*)) ? 1 : -1];
 typedef int nk__check_ptr[(sizeof(nk_ptr) == sizeof(void*)) ? 1 : -1];
 typedef int nk__check_flags[(sizeof(nk_flags) >= 4) ? 1 : -1];
@@ -6435,7 +6437,6 @@ nk_draw_list_add_text(struct nk_draw_list *list, const struct nk_user_font *font
 
         /* calculate and draw glyph drawing rectangle and image */
         gx = x + g.offset.x;
-        /*gy = rect.y + (rect.h/2) - (font->height/2) + g.offset.y;*/
         gy = rect.y + g.offset.y;
         gw = g.width; gh = g.height;
         char_width = g.xadvance;
@@ -6468,7 +6469,7 @@ nk_convert(struct nk_context *ctx, struct nk_buffer *cmds,
     nk_foreach(cmd, ctx)
     {
 #ifdef NK_INCLUDE_COMMAND_USERDATA
-        list->userdata = cmd->userdata;
+        ctx->draw_list.userdata = cmd->userdata;
 #endif
         switch (cmd->type) {
         case NK_COMMAND_NOP: break;
