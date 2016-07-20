@@ -927,7 +927,7 @@ NK_API const char*              nk_utf_at(const char *buffer, int length, int in
  *
  * ===============================================================*/
 /*  A basic (double)-buffer with linear allocation and resetting as only
-    freeing policy. The buffers main purpose is to control all memory management
+    freeing policy. The buffer's main purpose is to control all memory management
     inside the GUI toolkit and still leave memory control as much as possible in
     the hand of the user while also making sure the library is easy to use if
     not as much control is needed.
@@ -1091,8 +1091,8 @@ NK_API int nk_str_len_char(struct nk_str*);
  * This is mainly useful if you want something more like a text editor but don't want
  * to have a dynamically growing buffer.
  *
- * The final ways is using a dynamically growing nk_text_edit struct, which
- * has both a default version if you don't care were memory comes from and a
+ * The final way is using a dynamically growing nk_text_edit struct, which
+ * has both a default version if you don't care where memory comes from and an
  * allocator version if you do. While the text editor is quite powerful for its
  * complexity I would not recommend editing gigabytes of data with it.
  * It is rather designed for uses cases which make sense for a GUI library not for
@@ -1204,9 +1204,9 @@ NK_API void nk_textedit_redo(struct nk_text_edit*);
 
     While the first approach works fine if you don't want to use the optional
     vertex buffer output it is not enough if you do. To get font handling working
-    for these cases you have to provide two additional parameter inside the
+    for these cases you have to provide two additional parameters inside the
     `nk_user_font`. First a texture atlas handle used to draw text as subimages
-    of a bigger font atlas texture and a callback to query a characters glyph
+    of a bigger font atlas texture and a callback to query a character's glyph
     information (offset, size, ...). So it is still possible to provide your own
     font and use the vertex buffer output.
 
