@@ -14394,7 +14394,7 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     win->spacing = nk_vec2(4,4);
     win->scrollbar_size = nk_vec2(10,10);
     win->min_size = nk_vec2(64,64);
-    win->combo_border = 1.0f;
+    win->combo_border = 2.0f;
     win->contextual_border = 1.0f;
     win->menu_border = 1.0f;
     win->group_border = 1.0f;
@@ -15819,15 +15819,15 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
         const struct nk_style_item *background = 0;
 
         /* calculate header bounds */
-        header.x = layout->bounds.x;
-        header.y = layout->bounds.y;
-        header.w = layout->bounds.w;
+        header.x = layout->bounds.x - layout->border/2.0f;
+        header.y = layout->bounds.y - layout->border/2.0f;
+        header.w = layout->bounds.w + layout->border;
 
         /* calculate correct header height */
         layout->header_h = font->height + 2.0f * style->window.header.padding.y;
         layout->header_h += 2.0f * style->window.header.label_padding.y;
         layout->row.height += layout->header_h;
-        header.h = layout->header_h + 0.5f;
+        header.h = layout->header_h + layout->border;
 
         /* update window height */
         layout->height = layout->bounds.h - (header.h + 2 * item_spacing.y);
@@ -15851,8 +15851,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
             nk_draw_image(&win->buffer, header, &background->data.image);
         } else {
             text.background = background->data.color;
-            nk_fill_rect(out, nk_rect(layout->bounds.x, layout->bounds.y,
-                layout->bounds.w, layout->header_h), 0, background->data.color);
+            nk_fill_rect(out, header, 0, background->data.color);
         }
 
         /* window close button */
@@ -15926,6 +15925,8 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
     } else if (!(layout->flags & NK_WINDOW_DYNAMIC)) {
         /* draw fixed window body */
         struct nk_rect body = layout->bounds;
+        body.x -= layout->border / 2.0f;
+        body.w += layout->border;
         if (header_active) {
             body.y += layout->header_h - 0.5f;
             body.h -= layout->header_h;
@@ -16019,9 +16020,9 @@ nk_panel_end(struct nk_context *ctx)
         if ((layout->offset->x == 0) || (layout->flags & NK_WINDOW_NO_SCROLLBAR)) {
             /* special case for dynamic windows without horizontal scrollbar
              * or hidden scrollbars */
-            footer.x = window->bounds.x;
+            footer.x = layout->bounds.x;
             footer.y = layout->at_y;
-            footer.w = window->bounds.w;
+            footer.w = layout->bounds.w + layout->border/2.0f;
             footer.h = style->window.padding.y;
             layout->footer_h = 0;
             nk_fill_rect(out, footer, 0, style->window.background);
@@ -16031,9 +16032,9 @@ nk_panel_end(struct nk_context *ctx)
                 /* special case for windows like combobox, menu require draw call
                  * to fill the empty scrollbar background */
                 struct nk_rect bounds;
-                bounds.x = layout->bounds.x + layout->width;
+                bounds.x = layout->bounds.x + layout->width - layout->border/2.0f;
                 bounds.y = layout->clip.y;
-                bounds.w = scrollbar_size.x;
+                bounds.w = scrollbar_size.x + layout->border;
                 bounds.h = layout->height;
                 nk_fill_rect(out, bounds, 0, style->window.background);
             }
@@ -16197,7 +16198,7 @@ nk_panel_end(struct nk_context *ctx)
                 layout->border, border);
 
         /* draw border top */
-        nk_stroke_line(out, window->bounds.x - layout->border/2.0f,
+        nk_stroke_line(out, window->bounds.x + layout->border/2.0f,
             window->bounds.y + layout->border/2.0f,
             window->bounds.x + window->bounds.w - layout->border,
             window->bounds.y + layout->border/2.0f,
@@ -16415,9 +16416,14 @@ nk_panel_layout(const struct nk_context *ctx, struct nk_window *win,
     layout->row.columns = cols;
     layout->row.height = height + item_spacing.y;
     layout->row.item_offset = 0;
-    if (layout->flags & NK_WINDOW_DYNAMIC)
-        nk_fill_rect(out,  nk_rect(layout->bounds.x, layout->at_y,
-            layout->bounds.w, height + panel_padding.y), 0, color);
+    if (layout->flags & NK_WINDOW_DYNAMIC) {
+        struct nk_rect background;
+        background.x = layout->bounds.x - layout->border;
+        background.y = layout->at_y;
+        background.w = layout->bounds.w + 2 * layout->border;
+        background.h = height + panel_padding.y;
+        nk_fill_rect(out, background, 0, color);
+    }
 }
 
 NK_INTERN void
@@ -19188,7 +19194,7 @@ nk_combo_begin(struct nk_panel *layout, struct nk_context *ctx, struct nk_window
     popup = win->popup.win;
     body.x = header.x;
     body.w = header.w;
-    body.y = header.y + header.h-1;
+    body.y = header.y + header.h-ctx->style.window.combo_border;
     body.h = (float)height;
 
     hash = win->popup.combo_count++;
