@@ -45,7 +45,7 @@
  * and the corresponding function. */
 /*#include "../style.c"*/
 /*#include "../calculator.c"*/
-#include "../overview.c"
+/*#include "../overview.c"*/
 /*#include "../node_editor.c"*/
 
 /* ===============================================================

@@ -1,5 +1,5 @@
 /*
- Nuklear - v1.01 - public domain
+ Nuklear - v1.02 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -183,6 +183,7 @@ LICENSE:
     publish and distribute this file as you see fit.
 
 CHANGELOG:
+    - 2016/07/25 (1.02) - Fixed small panel and panel border drawing bugs
     - 2016/07/15 (1.01) - Added software cursor to `nk_style` and `nk_context`
     - 2016/07/15 (1.01) - Added const correctness to `nk_buffer_push' data argument
     - 2016/07/15 (1.01) - Removed internal font baking API and simplified
@@ -16019,9 +16020,11 @@ nk_panel_end(struct nk_context *ctx)
             /* special case for dynamic windows without horizontal scrollbar
              * or hidden scrollbars */
             footer.x = window->bounds.x;
-            footer.y = window->bounds.y + layout->height + item_spacing.y;
-            footer.w = window->bounds.w + scrollbar_size.x;
+            footer.y = layout->at_y;
+            footer.w = window->bounds.w;
+            footer.h = style->window.padding.y;
             layout->footer_h = 0;
+            nk_fill_rect(out, footer, 0, style->window.background);
             footer.h = 0;
 
             if ((layout->offset->x == 0) && !(layout->flags & NK_WINDOW_NO_SCROLLBAR)) {
@@ -16164,9 +16167,9 @@ nk_panel_end(struct nk_context *ctx)
     if (layout->flags & NK_WINDOW_BORDER)
     {
         const float padding_y = (layout->flags & NK_WINDOW_MINIMIZED) ?
-            2.0f*style->window.border + window->bounds.y + layout->header_h:
+            style->window.border + window->bounds.y + layout->header_h:
             (layout->flags & NK_WINDOW_DYNAMIC)?
-            layout->footer_h + footer.y:
+            layout->at_y + style->window.padding.y:
             layout->bounds.y + layout->bounds.h;
 
         /* select correct border color */
@@ -16187,14 +16190,14 @@ nk_panel_end(struct nk_context *ctx)
 
         /* draw border between header and window body */
         if (window->flags & NK_WINDOW_BORDER_HEADER)
-            nk_stroke_line(out, window->bounds.x + layout->border/2.0f,
-                window->bounds.y + layout->header_h - layout->border,
-                window->bounds.x + window->bounds.w - layout->border,
-                window->bounds.y + layout->header_h - layout->border,
+            nk_stroke_line(out, window->bounds.x,
+                window->bounds.y + layout->header_h,
+                window->bounds.x + window->bounds.w,
+                window->bounds.y + layout->header_h,
                 layout->border, border);
 
         /* draw border top */
-        nk_stroke_line(out, window->bounds.x + layout->border/2.0f,
+        nk_stroke_line(out, window->bounds.x - layout->border/2.0f,
             window->bounds.y + layout->border/2.0f,
             window->bounds.x + window->bounds.w - layout->border,
             window->bounds.y + layout->border/2.0f,
@@ -16202,21 +16205,23 @@ nk_panel_end(struct nk_context *ctx)
 
         /* draw bottom border */
         nk_stroke_line(out, window->bounds.x + layout->border/2.0f,
-            padding_y - layout->border,
+            padding_y - layout->border/2.0f,
             window->bounds.x + window->bounds.w - layout->border,
-            padding_y - layout->border,
+            padding_y - layout->border/2.0f,
             layout->border, border);
 
         /* draw left border */
         nk_stroke_line(out, window->bounds.x + layout->border/2.0f,
-            window->bounds.y + layout->border/2.0f, window->bounds.x + layout->border/2.0f,
-            padding_y - layout->border, layout->border, border);
+            window->bounds.y + layout->border/2.0f,
+            window->bounds.x + layout->border/2.0f,
+            padding_y - layout->border/2.0f, layout->border, border);
 
         /* draw right border */
-        nk_stroke_line(out, window->bounds.x + window->bounds.w - layout->border,
+        nk_stroke_line(out,
+            window->bounds.x + window->bounds.w - layout->border,
             window->bounds.y + layout->border/2.0f,
             window->bounds.x + window->bounds.w - layout->border,
-            padding_y - layout->border, layout->border, border);
+            padding_y - layout->border/2.0f, layout->border, border);
     }
 
 
