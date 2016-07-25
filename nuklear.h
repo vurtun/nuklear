@@ -323,10 +323,10 @@ typedef void(*nk_paste_f)(nk_handle, struct nk_text_edit*);
 typedef void(*nk_copy_f)(nk_handle, const char*, int len);
 
 enum nk_button_behavior {NK_BUTTON_DEFAULT, NK_BUTTON_REPEATER};
-enum nk_modify          {NK_FIXED=nk_false, NK_MODIFIABLE=nk_true};
+enum nk_modify          {NK_FIXED = nk_false, NK_MODIFIABLE = nk_true};
 enum nk_orientation     {NK_VERTICAL, NK_HORIZONTAL};
-enum nk_collapse_states {NK_MINIMIZED=nk_false, NK_MAXIMIZED = nk_true};
-enum nk_show_states     {NK_HIDDEN=nk_false, NK_SHOWN=nk_true};
+enum nk_collapse_states {NK_MINIMIZED = nk_false, NK_MAXIMIZED = nk_true};
+enum nk_show_states     {NK_HIDDEN = nk_false, NK_SHOWN = nk_true};
 enum nk_chart_type      {NK_CHART_LINES, NK_CHART_COLUMN, NK_CHART_MAX};
 enum nk_chart_event     {NK_CHART_HOVERING = 0x01, NK_CHART_CLICKED = 0x02};
 enum nk_color_format    {NK_RGB, NK_RGBA};
@@ -3471,9 +3471,9 @@ nk_parse_hex(const char *p, int length)
         i <<= 4;
         if (p[len] >= 'a' && p[len] <= 'f')
             i += ((p[len] - 'a') + 10);
-        else if (p[len] >= 'A' && p[len] <= 'F') {
+        else if (p[len] >= 'A' && p[len] <= 'F')
             i += ((p[len] - 'A') + 10);
-        } else i += (p[len] - '0');
+        else i += (p[len] - '0');
         len++;
     }
     return i;
@@ -3562,10 +3562,10 @@ NK_API struct nk_color
 nk_rgb(int r, int g, int b)
 {
     struct nk_color ret;
-    ret.r =(nk_byte)NK_CLAMP(0, r, 255);
-    ret.g =(nk_byte)NK_CLAMP(0, g, 255);
-    ret.b =(nk_byte)NK_CLAMP(0, b, 255);
-    ret.a =(nk_byte)255;
+    ret.r = (nk_byte)NK_CLAMP(0, r, 255);
+    ret.g = (nk_byte)NK_CLAMP(0, g, 255);
+    ret.b = (nk_byte)NK_CLAMP(0, b, 255);
+    ret.a = (nk_byte)255;
     return ret;
 }
 
@@ -5338,8 +5338,8 @@ nk_stroke_polygon(struct nk_command_buffer *b,  float *points, int point_count,
     size = sizeof(*cmd) + sizeof(short) * 2 * (nk_size)point_count;
     cmd = (struct nk_command_polygon*) nk_command_buffer_push(b, NK_COMMAND_POLYGON, size);
     if (!cmd) return;
-    cmd->line_thickness = (unsigned short)line_thickness;
     cmd->color = col;
+    cmd->line_thickness = (unsigned short)line_thickness;
     cmd->point_count = (unsigned short)point_count;
     for (i = 0; i < point_count; ++i) {
         cmd->points[i].x = (short)points[i*2];
@@ -6123,10 +6123,10 @@ NK_API void
 nk_draw_list_path_arc_to_fast(struct nk_draw_list *list, struct nk_vec2 center,
     float radius, int a_min, int a_max)
 {
+    int a = 0;
     NK_ASSERT(list);
     if (!list) return;
     if (a_min <= a_max) {
-        int a = 0;
         for (a = a_min; a <= a_max; a++) {
             const struct nk_vec2 c = list->circle_vtx[(nk_size)a % NK_LEN(list->circle_vtx)];
             const float x = center.x + c.x * radius;
@@ -8856,6 +8856,7 @@ nk_font_bake_pack(struct nk_font_baker *baker,
     NK_ASSERT(config_list);
     NK_ASSERT(count);
     NK_ASSERT(alloc);
+
     if (!image_memory || !width || !height || !config_list || !count) return nk_false;
     for (config_iter = config_list; config_iter; config_iter = config_iter->next) {
         range_count = nk_range_count(config_iter->range);
@@ -8901,10 +8902,10 @@ nk_font_bake_pack(struct nk_font_baker *baker,
             input_i++, config_iter = config_iter->next)
         {
             int n = 0;
+            int glyph_count;
             const nk_rune *in_range;
             const struct nk_font_config *cfg = config_iter;
             struct nk_font_bake_data *tmp = &baker->build[input_i];
-            int glyph_count;
 
             /* count glyphs + ranges in current font */
             glyph_count = 0; range_count = 0;
@@ -9546,9 +9547,9 @@ nk_font_config(float pixel_height)
     cfg.coord_type = NK_COORD_UV;
     cfg.spacing = nk_vec2(0,0);
     cfg.range = nk_font_default_glyph_ranges();
+    cfg.merge_mode = 0;
     cfg.fallback_glyph = '?';
     cfg.font = 0;
-    cfg.merge_mode = 0;
     return cfg;
 }
 
@@ -9608,7 +9609,6 @@ nk_font_atlas_begin(struct nk_font_atlas *atlas)
         atlas->permanent.free(atlas->permanent.userdata, atlas->pixel);
         atlas->pixel = 0;
     }
-
 }
 
 NK_API struct nk_font*
@@ -9655,6 +9655,7 @@ nk_font_atlas_add(struct nk_font_atlas *atlas, const struct nk_font_config *conf
         font = atlas->fonts;
         font->config = cfg;
     }
+
     /* insert font into list */
     if (!config->merge_mode) {
         if (!atlas->fonts) {
@@ -12565,8 +12566,7 @@ nk_draw_scrollbar(struct nk_command_buffer *out, nk_flags state,
         nk_fill_rect(out, *scroll, style->rounding_cursor, style->cursor_border_color);
         nk_fill_rect(out, nk_shrink_rect(*scroll, style->border_cursor),
             style->rounding_cursor, cursor->data.color);
-    }
-    else nk_draw_image(out, *scroll, &cursor->data.image);
+    } else nk_draw_image(out, *scroll, &cursor->data.image);
 }
 
 NK_INTERN float
@@ -12576,9 +12576,9 @@ nk_do_scrollbarv(nk_flags *state,
     const struct nk_style_scrollbar *style, struct nk_input *in,
     const struct nk_user_font *font)
 {
-    struct nk_rect cursor;
     struct nk_rect empty_north;
     struct nk_rect empty_south;
+    struct nk_rect cursor;
 
     float scroll_step;
     float scroll_offset;
@@ -13679,7 +13679,6 @@ nk_color_picker_behavior(nk_flags *state,
             value_changed = 1;
         }
     }
-
     nk_widget_state_reset(state);
     if (hsv_changed) {
         *color = nk_hsva_fv(hsva);
@@ -13752,12 +13751,12 @@ nk_draw_color_picker(struct nk_command_buffer *o, const struct nk_rect *matrix,
 
     /* draw cross-hair */
     {struct nk_vec2 p; float S = hsva[1]; float V = hsva[2];
-    p.x = (float)(int)(matrix->x + S * matrix->w + 0.5f);
-    p.y = (float)(int)(matrix->y + (1.0f - V) * matrix->h + 0.5f);
+    p.x = (float)(int)(matrix->x + S * matrix->w);
+    p.y = (float)(int)(matrix->y + (1.0f - V) * matrix->h);
     nk_stroke_line(o, p.x - crosshair_size, p.y, p.x-2, p.y, 1.0f, white);
-    nk_stroke_line(o, p.x + crosshair_size, p.y, p.x+2, p.y, 1.0f, white);
-    nk_stroke_line(o, p.x, p.y + crosshair_size, p.x, p.y+2, 1.0f, nk_rgb(255,255,255));
-    nk_stroke_line(o, p.x, p.y - crosshair_size, p.x, p.y-2, 1.0f, nk_rgb(255,255,255));}
+    nk_stroke_line(o, p.x + crosshair_size + 1, p.y, p.x+3, p.y, 1.0f, white);
+    nk_stroke_line(o, p.x, p.y + crosshair_size + 1, p.x, p.y+3, 1.0f, white);
+    nk_stroke_line(o, p.x, p.y - crosshair_size, p.x, p.y-2, 1.0f, white);}
 }
 
 NK_INTERN int
@@ -13846,13 +13845,13 @@ NK_API void nk_style_default(struct nk_context *ctx){nk_style_from_table(ctx, 0)
 NK_GLOBAL const struct nk_color
 nk_default_color_style[NK_COLOR_COUNT] = {
 #define NK_COLOR(a,b,c,d,e) {b,c,d,e},
-NK_COLOR_MAP(NK_COLOR)
+    NK_COLOR_MAP(NK_COLOR)
 #undef NK_COLOR
 };
 
 NK_GLOBAL const char *nk_color_names[NK_COLOR_COUNT] = {
 #define NK_COLOR(a,b,c,d,e) #a,
-NK_COLOR_MAP(NK_COLOR)
+    NK_COLOR_MAP(NK_COLOR)
 #undef NK_COLOR
 };
 
@@ -15723,7 +15722,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
     win->buffer.userdata = ctx->userdata;
 #endif
 
-    /* window dragging */
+    /* panel movement */
     if ((win->flags & NK_WINDOW_MOVABLE) && !(win->flags & NK_WINDOW_ROM)) {
         int left_mouse_down;
         int left_mouse_click_in_cursor;
@@ -16011,7 +16010,8 @@ nk_panel_end(struct nk_context *ctx)
     layout->at_y += layout->row.height;
 
     /* draw footer and fill empty spaces inside a dynamically growing panel */
-    if (layout->flags & NK_WINDOW_DYNAMIC && !(layout->flags & NK_WINDOW_MINIMIZED)) {
+    if (layout->flags & NK_WINDOW_DYNAMIC && !(layout->flags & NK_WINDOW_MINIMIZED))
+    {
         layout->height = layout->at_y - layout->bounds.y;
         layout->height = NK_MIN(layout->height, layout->bounds.h);
 
@@ -16087,7 +16087,7 @@ nk_panel_end(struct nk_context *ctx)
             scroll_target = (float)(int)(layout->at_y - bounds.y);
 
             /* scrolling by mouse wheel */
-            if ((window->flags & NK_WINDOW_SUB) && (window->flags &NK_WINDOW_GROUP)) {
+            if ((window->flags & NK_WINDOW_SUB) && (window->flags & NK_WINDOW_GROUP)) {
                 /* group scrollbar wheel scrolling */
                 struct nk_panel *root;
                 root = window->layout;
@@ -16221,7 +16221,8 @@ nk_panel_end(struct nk_context *ctx)
 
 
     /* scaler */
-    if ((layout->flags & NK_WINDOW_SCALABLE) && in && !(layout->flags & NK_WINDOW_MINIMIZED)) {
+    if ((layout->flags & NK_WINDOW_SCALABLE) && in && !(layout->flags & NK_WINDOW_MINIMIZED))
+    {
         /* calculate scaler bounds */
         const struct nk_style_item *scaler;
         float scaler_w = NK_MAX(0, scaler_size.x - window_padding.x);
