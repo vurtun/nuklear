@@ -1,5 +1,5 @@
 /*
- Nuklear - v1.02 - public domain
+ Nuklear - v1.03 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -183,6 +183,13 @@ LICENSE:
     publish and distribute this file as you see fit.
 
 CHANGELOG:
+    - 2016/07/29 (1.03) - Moved the window/table pool into the header part to
+                            simplify memory management by removing the need to
+                            allocate the pool.
+    - 2016/07/29 (1.03) - Added auto scrollbar hiding window flag which if enabled
+                            will hide the window scrollbar after NK_SCROLLBAR_HIDING_TIMEOUT
+                            seconds without window interaction. To make it work
+                            you have to also set a delta time inside the `nk_context`.
     - 2016/07/25 (1.02) - Fixed small panel and panel border drawing bugs
     - 2016/07/15 (1.01) - Added software cursor to `nk_style` and `nk_context`
     - 2016/07/15 (1.01) - Added const correctness to `nk_buffer_push' data argument
@@ -212,6 +219,9 @@ extern "C" {
 #endif
 #ifndef NK_MAX_NUMBER_BUFFER
 #define NK_MAX_NUMBER_BUFFER 64
+#endif
+#ifndef NK_SCROLLBAR_HIDING_TIMEOUT
+#define NK_SCROLLBAR_HIDING_TIMEOUT 4.0f
 #endif
 /*
  * ===============================================================
@@ -511,10 +521,8 @@ enum nk_edit_flags {
 enum nk_edit_types {
     NK_EDIT_SIMPLE  = NK_EDIT_ALWAYS_INSERT_MODE,
     NK_EDIT_FIELD   = NK_EDIT_SIMPLE|NK_EDIT_SELECTABLE,
-    NK_EDIT_BOX     = NK_EDIT_ALWAYS_INSERT_MODE| NK_EDIT_SELECTABLE|
-                        NK_EDIT_MULTILINE|NK_EDIT_ALLOW_TAB,
-    NK_EDIT_EDITOR  = NK_EDIT_SELECTABLE|NK_EDIT_MULTILINE|NK_EDIT_ALLOW_TAB|
-                        NK_EDIT_CLIPBOARD
+    NK_EDIT_BOX     = NK_EDIT_ALWAYS_INSERT_MODE| NK_EDIT_SELECTABLE| NK_EDIT_MULTILINE|NK_EDIT_ALLOW_TAB,
+    NK_EDIT_EDITOR  = NK_EDIT_SELECTABLE|NK_EDIT_MULTILINE|NK_EDIT_ALLOW_TAB| NK_EDIT_CLIPBOARD
 };
 enum nk_edit_events {
     NK_EDIT_ACTIVE      = NK_FLAG(0), /* edit widget is currently being modified */
@@ -525,15 +533,16 @@ enum nk_edit_events {
 };
 
 enum nk_panel_flags {
-    NK_WINDOW_BORDER        = NK_FLAG(0), /* Draws a border around the window to visually separate the window * from the background */
-    NK_WINDOW_BORDER_HEADER = NK_FLAG(1), /* Draws a border between window header and body */
-    NK_WINDOW_MOVABLE       = NK_FLAG(2), /* The movable flag indicates that a window can be moved by user input or * by dragging the window header */
-    NK_WINDOW_SCALABLE      = NK_FLAG(3), /* The scalable flag indicates that a window can be scaled by user input * by dragging a scaler icon at the button of the window */
-    NK_WINDOW_CLOSABLE      = NK_FLAG(4), /* adds a closable icon into the header */
-    NK_WINDOW_MINIMIZABLE   = NK_FLAG(5), /* adds a minimize icon into the header */
-    NK_WINDOW_DYNAMIC       = NK_FLAG(6), /* special window type growing up in height while being filled to a * certain maximum height */
-    NK_WINDOW_NO_SCROLLBAR  = NK_FLAG(7), /* Removes the scrollbar from the window */
-    NK_WINDOW_TITLE         = NK_FLAG(8) /* Forces a header at the top at the window showing the title */
+    NK_WINDOW_BORDER            = NK_FLAG(0), /* Draws a border around the window to visually separate the window * from the background */
+    NK_WINDOW_BORDER_HEADER     = NK_FLAG(1), /* Draws a border between window header and body */
+    NK_WINDOW_MOVABLE           = NK_FLAG(2), /* The movable flag indicates that a window can be moved by user input or * by dragging the window header */
+    NK_WINDOW_SCALABLE          = NK_FLAG(3), /* The scalable flag indicates that a window can be scaled by user input * by dragging a scaler icon at the button of the window */
+    NK_WINDOW_CLOSABLE          = NK_FLAG(4), /* adds a closable icon into the header */
+    NK_WINDOW_MINIMIZABLE       = NK_FLAG(5), /* adds a minimize icon into the header */
+    NK_WINDOW_DYNAMIC           = NK_FLAG(6), /* special window type growing up in height while being filled to a * certain maximum height */
+    NK_WINDOW_NO_SCROLLBAR      = NK_FLAG(7), /* Removes the scrollbar from the window */
+    NK_WINDOW_TITLE             = NK_FLAG(8), /* Forces a header at the top at the window showing the title */
+    NK_WINDOW_SCROLL_AUTO_HIDE  = NK_FLAG(9)  /* Automatically hides the window scrollbar if no user interaction */
 };
 
 /* context */
@@ -788,7 +797,7 @@ NK_API void                     nk_menu_close(struct nk_context*);
 NK_API void                     nk_menu_end(struct nk_context*);
 
 /* Drawing*/
-#define                         nk_foreach(c, ctx)for((c)=nk__begin(ctx); (c)!=0; (c)=nk__next(ctx, c))
+#define                         nk_foreach(c, ctx) for((c)=nk__begin(ctx); (c)!=0; (c)=nk__next(ctx, c))
 #ifdef NK_INCLUDE_VERTEX_BUFFER_OUTPUT
 NK_API void                     nk_convert(struct nk_context*, struct nk_buffer *cmds, struct nk_buffer *vertices, struct nk_buffer *elements, const struct nk_convert_config*);
 #define                         nk_draw_foreach(cmd,ctx, b) for((cmd)=nk__draw_begin(ctx, b); (cmd)!=0; (cmd)=nk__draw_next(cmd, b, ctx))
@@ -2294,32 +2303,32 @@ struct nk_panel {
  * =============================================================*/
 struct nk_table;
 enum nk_window_flags {
-    NK_WINDOW_PRIVATE       = NK_FLAG(9),
-    /* dummy flag which mark the beginning of the private window flag part */
-    NK_WINDOW_ROM           = NK_FLAG(10),
+    NK_WINDOW_PRIVATE       = NK_FLAG(10),
+    /* dummy flag marks the beginning of the private window flag part */
+    NK_WINDOW_ROM           = NK_FLAG(11),
     /* sets the window into a read only mode and does not allow input changes */
-    NK_WINDOW_HIDDEN        = NK_FLAG(11),
+    NK_WINDOW_HIDDEN        = NK_FLAG(12),
     /* Hides the window and stops any window interaction and drawing can be set
      * by user input or by closing the window */
-    NK_WINDOW_MINIMIZED     = NK_FLAG(12),
+    NK_WINDOW_MINIMIZED     = NK_FLAG(13),
     /* marks the window as minimized */
-    NK_WINDOW_SUB           = NK_FLAG(13),
+    NK_WINDOW_SUB           = NK_FLAG(14),
     /* Marks the window as subwindow of another window*/
-    NK_WINDOW_GROUP         = NK_FLAG(14),
+    NK_WINDOW_GROUP         = NK_FLAG(15),
     /* Marks the window as window widget group */
-    NK_WINDOW_POPUP         = NK_FLAG(15),
+    NK_WINDOW_POPUP         = NK_FLAG(16),
     /* Marks the window as a popup window */
-    NK_WINDOW_NONBLOCK      = NK_FLAG(16),
+    NK_WINDOW_NONBLOCK      = NK_FLAG(17),
     /* Marks the window as a nonblock popup window */
-    NK_WINDOW_CONTEXTUAL    = NK_FLAG(17),
+    NK_WINDOW_CONTEXTUAL    = NK_FLAG(18),
     /* Marks the window as a combo box or menu */
-    NK_WINDOW_COMBO         = NK_FLAG(18),
+    NK_WINDOW_COMBO         = NK_FLAG(19),
     /* Marks the window as a combo box */
-    NK_WINDOW_MENU          = NK_FLAG(19),
+    NK_WINDOW_MENU          = NK_FLAG(29),
     /* Marks the window as a menu */
-    NK_WINDOW_TOOLTIP       = NK_FLAG(20),
+    NK_WINDOW_TOOLTIP       = NK_FLAG(21),
     /* Marks the window as a menu */
-    NK_WINDOW_REMOVE_ROM    = NK_FLAG(21)
+    NK_WINDOW_REMOVE_ROM    = NK_FLAG(22)
     /* Removes the read only mode at the end of the window */
 };
 
@@ -2365,6 +2374,7 @@ struct nk_window {
     struct nk_scroll scrollbar;
     struct nk_command_buffer buffer;
     struct nk_panel *layout;
+    float scrollbar_hiding_timer;
 
     /* persistent widget state */
     struct nk_property_state property;
@@ -2385,7 +2395,42 @@ struct nk_window {
 /*==============================================================
  *                          CONTEXT
  * =============================================================*/
-struct nk_page_element;
+#define NK_VALUE_PAGE_CAPACITY ((sizeof(struct nk_window) / sizeof(nk_uint)) / 2)
+struct nk_table {
+    unsigned int seq;
+    nk_hash keys[NK_VALUE_PAGE_CAPACITY];
+    nk_uint values[NK_VALUE_PAGE_CAPACITY];
+    struct nk_table *next, *prev;
+};
+
+union nk_page_data {
+    struct nk_table tbl;
+    struct nk_window win;
+};
+
+struct nk_page_element {
+    union nk_page_data data;
+    struct nk_page_element *next;
+    struct nk_page_element *prev;
+};
+
+struct nk_page {
+    unsigned size;
+    struct nk_page *next;
+    struct nk_page_element win[1];
+};
+
+struct nk_pool {
+    struct nk_allocator alloc;
+    enum nk_allocation_type type;
+    unsigned int page_count;
+    struct nk_page *pages;
+    struct nk_page_element *freelist;
+    unsigned capacity;
+    nk_size size;
+    nk_size cap;
+};
+
 struct nk_context {
 /* public: can be accessed freely */
     struct nk_input input;
@@ -2394,6 +2439,7 @@ struct nk_context {
     struct nk_clipboard clip;
     nk_flags last_widget_state;
     enum nk_button_behavior button_behavior;
+    float delta_time_seconds;
 
 /* private:
     should only be accessed if you
@@ -2414,7 +2460,8 @@ struct nk_context {
 
     /* windows */
     int build;
-    void *pool;
+    int use_pool;
+    struct nk_pool pool;
     struct nk_window *begin;
     struct nk_window *end;
     struct nk_window *active;
@@ -14454,42 +14501,6 @@ nk_style_load_all_cursors(struct nk_context *ctx, struct nk_cursor *cursors)
  *                          POOL
  *
  * ===============================================================*/
-#define NK_VALUE_PAGE_CAPACITY ((sizeof(struct nk_window) / sizeof(nk_uint)) / 2)
-struct nk_table {
-    unsigned int seq;
-    nk_hash keys[NK_VALUE_PAGE_CAPACITY];
-    nk_uint values[NK_VALUE_PAGE_CAPACITY];
-    struct nk_table *next, *prev;
-};
-
-union nk_page_data {
-    struct nk_table tbl;
-    struct nk_window win;
-};
-
-struct nk_page_element {
-    union nk_page_data data;
-    struct nk_page_element *next;
-    struct nk_page_element *prev;
-};
-
-struct nk_page {
-    unsigned size;
-    struct nk_page *next;
-    struct nk_page_element win[1];
-};
-
-struct nk_pool {
-    struct nk_allocator alloc;
-    enum nk_allocation_type type;
-    unsigned int page_count;
-    struct nk_page *pages;
-    struct nk_page_element *freelist;
-    unsigned capacity;
-    nk_size size;
-    nk_size cap;
-};
-
 NK_INTERN void
 nk_pool_init(struct nk_pool *pool, struct nk_allocator *alloc,
             unsigned int capacity)
@@ -14597,7 +14608,7 @@ nk_init_fixed(struct nk_context *ctx, void *memory, nk_size size,
     if (!memory) return 0;
     nk_setup(ctx, font);
     nk_buffer_init_fixed(&ctx->memory, memory, size);
-    ctx->pool = 0;
+    ctx->use_pool = nk_false;
     return 1;
 }
 
@@ -14612,19 +14623,13 @@ nk_init_custom(struct nk_context *ctx, struct nk_buffer *cmds,
     ctx->memory = *cmds;
     if (pool->type == NK_BUFFER_FIXED) {
         /* take memory from buffer and alloc fixed pool */
-        void *memory = pool->memory.ptr;
-        nk_size size = pool->memory.size;
-        ctx->pool = memory;
-        NK_ASSERT(size > sizeof(struct nk_pool));
-        size -= sizeof(struct nk_pool);
-        nk_pool_init_fixed((struct nk_pool*)ctx->pool,
-            (void*)((nk_byte*)ctx->pool+sizeof(struct nk_pool)), size);
+        nk_pool_init_fixed(&ctx->pool, pool->memory.ptr, pool->memory.size);
     } else {
         /* create dynamic pool from buffer allocator */
         struct nk_allocator *alloc = &pool->pool;
-        ctx->pool = alloc->alloc(alloc->userdata,0, sizeof(struct nk_pool));
-        nk_pool_init((struct nk_pool*)ctx->pool, alloc, NK_POOL_DEFAULT_CAPACITY);
+        nk_pool_init(&ctx->pool, alloc, NK_POOL_DEFAULT_CAPACITY);
     }
+    ctx->use_pool = nk_true;
     return 1;
 }
 
@@ -14636,8 +14641,8 @@ nk_init(struct nk_context *ctx, struct nk_allocator *alloc,
     if (!alloc) return 0;
     nk_setup(ctx, font);
     nk_buffer_init(&ctx->memory, alloc, NK_DEFAULT_COMMAND_BUFFER_SIZE);
-    ctx->pool = alloc->alloc(alloc->userdata,0, sizeof(struct nk_pool));
-    nk_pool_init((struct nk_pool*)ctx->pool, alloc, NK_POOL_DEFAULT_CAPACITY);
+    nk_pool_init(&ctx->pool, alloc, NK_POOL_DEFAULT_CAPACITY);
+    ctx->use_pool = nk_true;
     return 1;
 }
 
@@ -14658,10 +14663,8 @@ nk_free(struct nk_context *ctx)
     NK_ASSERT(ctx);
     if (!ctx) return;
     nk_buffer_free(&ctx->memory);
-    if (ctx->pool) {
-        struct nk_pool *pool = (struct nk_pool*)ctx->pool;
-        nk_pool_free(pool);
-        pool->alloc.free(pool->alloc.userdata, pool);
+    if (ctx->use_pool) {
+        nk_pool_free(&ctx->pool);
     }
 
     nk_zero(&ctx->input, sizeof(ctx->input));
@@ -14669,7 +14672,6 @@ nk_free(struct nk_context *ctx)
     nk_zero(&ctx->memory, sizeof(ctx->memory));
 
     ctx->seq = 0;
-    ctx->pool = 0;
     ctx->build = 0;
     ctx->begin = 0;
     ctx->end = 0;
@@ -14687,7 +14689,7 @@ nk_clear(struct nk_context *ctx)
     NK_ASSERT(ctx);
 
     if (!ctx) return;
-    if (ctx->pool)
+    if (ctx->use_pool)
         nk_buffer_clear(&ctx->memory);
     else nk_buffer_reset(&ctx->memory, NK_BUFFER_FRONT);
 
@@ -14944,9 +14946,9 @@ nk_create_page_element(struct nk_context *ctx)
         /* unlink page element from free list */
         elem = ctx->freelist;
         ctx->freelist = elem->next;
-    } else if (ctx->pool) {
+    } else if (ctx->use_pool) {
         /* allocate page element from memory pool */
-        elem = nk_pool_alloc((struct nk_pool*)ctx->pool);
+        elem = nk_pool_alloc(&ctx->pool);
         NK_ASSERT(elem);
         if (!elem) return 0;
     } else {
@@ -16062,7 +16064,9 @@ nk_panel_end(struct nk_context *ctx)
     }
 
     /* scrollbars */
-    if (!(layout->flags & NK_WINDOW_NO_SCROLLBAR) && !(layout->flags & NK_WINDOW_MINIMIZED))
+    if (!(layout->flags & NK_WINDOW_NO_SCROLLBAR) &&
+        !(layout->flags & NK_WINDOW_MINIMIZED) &&
+        window->scrollbar_hiding_timer < NK_SCROLLBAR_HIDING_TIMEOUT)
     {
         struct nk_rect bounds;
         int scroll_has_scrolling;
@@ -16163,6 +16167,16 @@ nk_panel_end(struct nk_context *ctx)
             layout->offset->x = (unsigned short)scroll_offset;
         }
     }
+
+    /* hide scroll if no user input */
+    {int has_input = ctx->input.mouse.delta.x || ctx->input.mouse.delta.y || ctx->input.mouse.scroll_delta;
+    int is_window_hovered = nk_window_is_hovered(ctx);
+    int any_item_active = (ctx->last_widget_state & NK_WIDGET_STATE_MODIFIED);
+    if (window->flags & NK_WINDOW_SCROLL_AUTO_HIDE) {
+        if ((!has_input && is_window_hovered) || (is_window_hovered && !any_item_active))
+            window->scrollbar_hiding_timer += ctx->delta_time_seconds;
+        else window->scrollbar_hiding_timer = 0;
+    } else window->scrollbar_hiding_timer = 0;}
 
     /* window border */
     if (layout->flags & NK_WINDOW_BORDER)
