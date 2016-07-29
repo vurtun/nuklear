@@ -418,7 +418,7 @@ file_browser_run(struct file_browser *browser, struct nk_context *ctx)
             while (*d++) {
                 if (*d == '/') {
                     *d = '\0';
-                    if (nk_button_label(ctx, begin, NK_BUTTON_DEFAULT)) {
+                    if (nk_button_label(ctx, begin)) {
                         *d++ = '/'; *d = '\0';
                         file_browser_reload_directory_content(browser, browser->directory);
                         break;
@@ -441,11 +441,11 @@ file_browser_run(struct file_browser *browser, struct nk_context *ctx)
             struct nk_image computer = media->icons.computer;
 
             nk_layout_row_dynamic(ctx, 40, 1);
-            if (nk_button_image_label(ctx, home, "home", NK_TEXT_CENTERED, NK_BUTTON_DEFAULT))
+            if (nk_button_image_label(ctx, home, "home", NK_TEXT_CENTERED))
                 file_browser_reload_directory_content(browser, browser->home);
-            if (nk_button_image_label(ctx,desktop,"desktop",NK_TEXT_CENTERED, NK_BUTTON_DEFAULT))
+            if (nk_button_image_label(ctx,desktop,"desktop",NK_TEXT_CENTERED))
                 file_browser_reload_directory_content(browser, browser->desktop);
-            if (nk_button_image_label(ctx,computer,"computer",NK_TEXT_CENTERED,NK_BUTTON_DEFAULT))
+            if (nk_button_image_label(ctx,computer,"computer",NK_TEXT_CENTERED))
                 file_browser_reload_directory_content(browser, "/");
             nk_group_end(ctx);
         }
@@ -467,14 +467,14 @@ file_browser_run(struct file_browser *browser, struct nk_context *ctx)
                     /* draw one row of icons */
                     if (j < browser->dir_count) {
                         /* draw and execute directory buttons */
-                        if (nk_button_image(ctx,media->icons.directory,NK_BUTTON_DEFAULT))
+                        if (nk_button_image(ctx,media->icons.directory))
                             index = (int)j;
                     } else {
                         /* draw and execute files buttons */
                         struct nk_image *icon;
                         size_t fileIndex = ((size_t)j - browser->dir_count);
                         icon = media_icon_for_file(media,browser->files[fileIndex]);
-                        if (nk_button_image(ctx, *icon, NK_BUTTON_DEFAULT)) {
+                        if (nk_button_image(ctx, *icon)) {
                             strncpy(browser->file, browser->directory, MAX_PATH_LEN);
                             n = strlen(browser->file);
                             strncpy(browser->file + n, browser->files[fileIndex], MAX_PATH_LEN - n);

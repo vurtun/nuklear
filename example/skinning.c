@@ -735,7 +735,7 @@ int main(int argc, char *argv[])
             const float step = (2*3.141592654f) / 32;
 
             nk_layout_row_static(&ctx, 30, 120, 1);
-            if (nk_button_label(&ctx, "button", NK_BUTTON_DEFAULT))
+            if (nk_button_label(&ctx, "button"))
                 fprintf(stdout, "button pressed\n");
 
             nk_layout_row_dynamic(&ctx, 20, 1);
