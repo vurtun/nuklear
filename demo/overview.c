@@ -837,6 +837,94 @@ overview(struct nk_context *ctx)
                 nk_tree_pop(ctx);
             }
 
+            if (nk_tree_push(ctx, NK_TREE_NODE, "Notebook", NK_MINIMIZED))
+            {
+                static int current_tab = 0;
+                struct nk_panel group;
+                struct nk_vec2 item_padding;
+                struct nk_rect bounds;
+                float step = (2*3.141592654f) / 32;
+                enum chart_type {CHART_LINE, CHART_HISTO, CHART_MIXED};
+                const char *names[] = {"Lines", "Columns", "Mixed"};
+                float rounding;
+                float id = 0;
+                int i;
+
+                /* Header */
+                item_padding = ctx->style.window.spacing;
+                rounding = ctx->style.button.rounding;
+                ctx->style.window.spacing = nk_vec2(0,0);
+                ctx->style.button.rounding = 0;
+                nk_layout_row_begin(ctx, NK_STATIC, 20, 3);
+                for (i = 0; i < 3; ++i) {
+                    /* make sure button perfectly fits text */
+                    struct nk_user_font *f = &ctx->style.font;
+                    float text_width = f->width(f->userdata, f->height, names[i], nk_strlen(names[i]));
+                    float widget_width = text_width + 3 * ctx->style.button.padding.x;
+                    nk_layout_row_push(ctx, widget_width);
+                    if (current_tab == i) {
+                        /* active tab gets highlighted */
+                        struct nk_style_item button_color = ctx->style.button.normal;
+                        ctx->style.button.normal = ctx->style.button.active;
+                        current_tab = nk_button_label(ctx, names[i]) ? i: current_tab;
+                        ctx->style.button.normal = button_color;
+                    } else current_tab = nk_button_label(ctx, names[i]) ? i: current_tab;
+                }
+                ctx->style.button.rounding = rounding;
+
+                /* Body */
+                nk_layout_row_dynamic(ctx, 140, 1);
+                if (nk_group_begin(ctx, &group, "Group", NK_WINDOW_BORDER))
+                {
+                    ctx->style.window.spacing = item_padding;
+                    switch (current_tab) {
+                    case CHART_LINE:
+                        nk_layout_row_dynamic(ctx, 100, 1);
+                        bounds = nk_widget_bounds(ctx);
+                        if (nk_chart_begin_colored(ctx, NK_CHART_LINES, nk_rgb(255,0,0), nk_rgb(150,0,0), 32, 0.0f, 1.0f)) {
+                            nk_chart_add_slot_colored(ctx, NK_CHART_LINES, nk_rgb(0,0,255), nk_rgb(0,0,150),32, -1.0f, 1.0f);
+                            for (i = 0, id = 0; i < 32; ++i) {
+                                nk_chart_push_slot(ctx, (float)fabs(sin(id)), 0);
+                                nk_chart_push_slot(ctx, (float)cos(id), 1);
+                                id += step;
+                            }
+                        }
+                        nk_chart_end(ctx);
+                        break;
+
+                    case CHART_HISTO:
+                        nk_layout_row_dynamic(ctx, 100, 1);
+                        bounds = nk_widget_bounds(ctx);
+                        if (nk_chart_begin_colored(ctx, NK_CHART_COLUMN, nk_rgb(255,0,0), nk_rgb(150,0,0), 32, 0.0f, 1.0f)) {
+                            for (i = 0, id = 0; i < 32; ++i) {
+                                nk_chart_push_slot(ctx, (float)fabs(sin(id)), 0);
+                                id += step;
+                            }
+                        }
+                        nk_chart_end(ctx);
+                        break;
+
+                    case CHART_MIXED:
+                        nk_layout_row_dynamic(ctx, 100, 1);
+                        bounds = nk_widget_bounds(ctx);
+                        if (nk_chart_begin_colored(ctx, NK_CHART_LINES, nk_rgb(255,0,0), nk_rgb(150,0,0), 32, 0.0f, 1.0f)) {
+                            nk_chart_add_slot_colored(ctx, NK_CHART_LINES, nk_rgb(0,0,255), nk_rgb(0,0,150),32, -1.0f, 1.0f);
+                            nk_chart_add_slot_colored(ctx, NK_CHART_COLUMN, nk_rgb(0,255,0), nk_rgb(0,150,0), 32, 0.0f, 1.0f);
+                            for (i = 0, id = 0; i < 32; ++i) {
+                                nk_chart_push_slot(ctx, (float)fabs(sin(id)), 0);
+                                nk_chart_push_slot(ctx, (float)fabs(cos(id)), 1);
+                                nk_chart_push_slot(ctx, (float)fabs(sin(id)), 2);
+                                id += step;
+                            }
+                        }
+                        nk_chart_end(ctx);
+                        break;
+                    }
+                    nk_group_end(ctx);
+                } else ctx->style.window.spacing = item_padding;
+                nk_tree_pop(ctx);
+            }
+
             if (nk_tree_push(ctx, NK_TREE_NODE, "Simple", NK_MINIMIZED))
             {
                 struct nk_panel tab;
