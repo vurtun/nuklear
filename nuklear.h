@@ -520,8 +520,8 @@ enum nk_edit_flags {
 };
 enum nk_edit_types {
     NK_EDIT_SIMPLE  = NK_EDIT_ALWAYS_INSERT_MODE,
-    NK_EDIT_FIELD   = NK_EDIT_SIMPLE|NK_EDIT_SELECTABLE,
-    NK_EDIT_BOX     = NK_EDIT_ALWAYS_INSERT_MODE| NK_EDIT_SELECTABLE| NK_EDIT_MULTILINE|NK_EDIT_ALLOW_TAB,
+    NK_EDIT_FIELD   = NK_EDIT_SIMPLE|NK_EDIT_SELECTABLE|NK_EDIT_CLIPBOARD,
+    NK_EDIT_BOX     = NK_EDIT_ALWAYS_INSERT_MODE| NK_EDIT_SELECTABLE| NK_EDIT_MULTILINE|NK_EDIT_ALLOW_TAB|NK_EDIT_CLIPBOARD,
     NK_EDIT_EDITOR  = NK_EDIT_SELECTABLE|NK_EDIT_MULTILINE|NK_EDIT_ALLOW_TAB| NK_EDIT_CLIPBOARD
 };
 enum nk_edit_events {
@@ -13771,8 +13771,14 @@ nk_draw_color_picker(struct nk_command_buffer *o, const struct nk_rect *matrix,
     nk_color_hsv_fv(hsva, color);
     for (i = 0; i < 6; ++i) {
         NK_GLOBAL const struct nk_color hue_colors[] = {
-            {255, 0, 0, 255}, {255,255,0,255}, {0,255,0,255}, {0, 255,255,255},
-            {0,0,255,255}, {255, 0, 255, 255}, {255, 0, 0, 255}};
+            {255, 0, 0, 255},
+            {255,255,0,255},
+            {0,255,0,255},
+            {0, 255,255,255},
+            {0,0,255,255},
+            {255, 0, 255, 255},
+            {255, 0, 0, 255}
+        };
         nk_fill_rect_multi_color(o,
             nk_rect(hue_bar->x, hue_bar->y + (float)i * (hue_bar->h/6.0f) + 0.5f,
                 hue_bar->w, (hue_bar->h/6.0f) + 0.5f), hue_colors[i], hue_colors[i],
@@ -15232,7 +15238,7 @@ nk_begin(struct nk_context *ctx, struct nk_panel *layout, const char *title,
         if (!ctx->active)
             ctx->active = win;
     } else {
-        /* update public window flags */
+        /* update window */
         win->flags &= ~(nk_flags)(NK_WINDOW_PRIVATE-1);
         win->flags |= flags;
         win->seq++;
@@ -16959,7 +16965,6 @@ nk_tree_base(struct nk_context *ctx, enum nk_tree_type type,
     layout = win->layout;
     out = &win->buffer;
     style = &ctx->style;
-
     item_spacing = style->window.spacing;
 
     /* calculate header bounds and draw background */
@@ -18837,7 +18842,6 @@ nk_nonblock_begin(struct nk_panel *layout, struct nk_context *ctx,
         pressed = nk_input_is_mouse_pressed(&ctx->input, NK_BUTTON_LEFT);
         in_body = nk_input_is_mouse_hovering_rect(&ctx->input, body);
         in_header = nk_input_is_mouse_hovering_rect(&ctx->input, header);
-
         if (pressed && (!in_body || in_header))
             is_active = nk_false;
     }
@@ -19047,8 +19051,8 @@ nk_contextual_begin(struct nk_context *ctx, struct nk_panel *layout,
     if (ret) win->popup.type = NK_WINDOW_CONTEXTUAL;
     else {
         win->popup.active_con = 0;
-		if (win->popup.win)
-			win->popup.win->flags = 0;
+        if (win->popup.win)
+            win->popup.win->flags = 0;
     }
     return ret;
 }
@@ -19235,7 +19239,6 @@ nk_combo_begin_text(struct nk_context *ctx, struct nk_panel *layout,
     enum nk_widget_layout_states s;
     int is_clicked = nk_false;
     struct nk_rect header;
-
     const struct nk_style_item *background;
     struct nk_text text;
 
