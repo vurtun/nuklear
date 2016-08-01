@@ -874,7 +874,7 @@ overview(struct nk_context *ctx)
 
                 /* Body */
                 nk_layout_row_dynamic(ctx, 140, 1);
-                if (nk_group_begin(ctx, &group, "Group", NK_WINDOW_BORDER))
+                if (nk_group_begin(ctx, &group, "Notebook", NK_WINDOW_BORDER))
                 {
                     ctx->style.window.spacing = item_padding;
                     switch (current_tab) {
@@ -891,7 +891,6 @@ overview(struct nk_context *ctx)
                         }
                         nk_chart_end(ctx);
                         break;
-
                     case CHART_HISTO:
                         nk_layout_row_dynamic(ctx, 100, 1);
                         bounds = nk_widget_bounds(ctx);
@@ -903,7 +902,6 @@ overview(struct nk_context *ctx)
                         }
                         nk_chart_end(ctx);
                         break;
-
                     case CHART_MIXED:
                         nk_layout_row_dynamic(ctx, 100, 1);
                         bounds = nk_widget_bounds(ctx);
