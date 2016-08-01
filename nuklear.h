@@ -2471,11 +2471,6 @@ struct nk_context {
     unsigned int seq;
 };
 
-#ifdef __cplusplus
-}
-#endif
-#endif /* NK_H_ */
-
 /* ==============================================================
  *                          MATH
  * =============================================================== */
@@ -2545,6 +2540,11 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #else
 #define NK_ALIGNOF(t) ((char*)(&((struct {char c; t _h;}*)0)->_h) - (char*)0)
 #endif
+
+#ifdef __cplusplus
+}
+#endif
+#endif /* NK_H_ */
 
 /*
  * ==============================================================
