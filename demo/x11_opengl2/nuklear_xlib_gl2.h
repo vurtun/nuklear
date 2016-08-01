@@ -17,7 +17,7 @@
 NK_API struct nk_context*   nk_x11_init(Display *dpy, Window win);
 NK_API void                 nk_x11_font_stash_begin(struct nk_font_atlas **atlas);
 NK_API void                 nk_x11_font_stash_end(void);
-NK_API void                 nk_x11_handle_event(XEvent *evt);
+NK_API int                  nk_x11_handle_event(XEvent *evt);
 NK_API void                 nk_x11_render(enum nk_anti_aliasing, int max_vertex_buffer, int max_element_buffer);
 NK_API void                 nk_x11_shutdown(void);
 
@@ -199,7 +199,7 @@ nk_x11_font_stash_end(void)
         nk_style_set_font(&x11.ctx, &x11.atlas.default_font->handle);
 }
 
-NK_API void
+NK_API int
 nk_x11_handle_event(XEvent *evt)
 {
     struct nk_context *ctx = &x11.ctx;
@@ -269,6 +269,7 @@ nk_x11_handle_event(XEvent *evt)
             }
         }
         XFree(code);
+        return 1;
     } else if (evt->type == ButtonPress || evt->type == ButtonRelease) {
         /* Button handler */
         int down = (evt->type == ButtonPress);
@@ -283,7 +284,8 @@ nk_x11_handle_event(XEvent *evt)
             nk_input_scroll(ctx, 1.0f);
         else if (evt->xbutton.button == Button5)
             nk_input_scroll(ctx, -1.0f);
-
+        else return 0;
+        return 1;
     } else if (evt->type == MotionNotify) {
         /* Mouse motion handler */
         const int x = evt->xmotion.x, y = evt->xmotion.y;
@@ -293,8 +295,12 @@ nk_x11_handle_event(XEvent *evt)
             ctx->input.mouse.pos.y = ctx->input.mouse.prev.y;
             XWarpPointer(x11.dpy, None, x11.win, 0, 0, 0, 0, (int)ctx->input.mouse.pos.x, (int)ctx->input.mouse.pos.y);
         }
-    } else if (evt->type == KeymapNotify)
+        return 1;
+    } else if (evt->type == KeymapNotify) {
         XRefreshKeyboardMapping(&evt->xmapping);
+        return 1;
+    }
+    return 0;
 }
 
 NK_API struct nk_context*
