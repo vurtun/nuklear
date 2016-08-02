@@ -1,5 +1,5 @@
 /*
- Nuklear - v1.03 - public domain
+ Nuklear - v1.031 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -183,6 +183,7 @@ LICENSE:
     publish and distribute this file as you see fit.
 
 CHANGELOG:
+    - 2016/07/29 (1.031)- Added helper macros into header include guard
     - 2016/07/29 (1.03) - Moved the window/table pool into the header part to
                             simplify memory management by removing the need to
                             allocate the pool.
@@ -560,6 +561,7 @@ NK_API void                     nk_set_user_data(struct nk_context*, nk_handle h
 
 /* window */
 NK_API int                      nk_begin(struct nk_context*, struct nk_panel*, const char *title, struct nk_rect bounds, nk_flags flags);
+NK_API int                      nk_begin_titled(struct nk_context*, struct nk_panel*, const char *name, const char *id, struct nk_rect bounds, nk_flags flags);
 NK_API void                     nk_end(struct nk_context*);
 
 NK_API struct nk_window*        nk_window_find(struct nk_context *ctx, const char *name);
@@ -15206,6 +15208,13 @@ NK_API int
 nk_begin(struct nk_context *ctx, struct nk_panel *layout, const char *title,
     struct nk_rect bounds, nk_flags flags)
 {
+    return nk_begin_titled(ctx, layout, title, title, bounds, flags);
+}
+
+NK_API int
+nk_begin_titled(struct nk_context *ctx, struct nk_panel *layout,
+    const char *name, const char *title, struct nk_rect bounds, nk_flags flags)
+{
     struct nk_window *win;
     struct nk_style *style;
     nk_hash title_hash;
@@ -15220,8 +15229,8 @@ nk_begin(struct nk_context *ctx, struct nk_panel *layout, const char *title,
 
     /* find or create window */
     style = &ctx->style;
-    title_len = (int)nk_strlen(title);
-    title_hash = nk_murmur_hash(title, (int)title_len, NK_WINDOW_TITLE);
+    title_len = (int)nk_strlen(name);
+    title_hash = nk_murmur_hash(name, (int)title_len, NK_WINDOW_TITLE);
     win = nk_find_window(ctx, title_hash);
     if (!win) {
         /* create new window */
