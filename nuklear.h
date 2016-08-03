@@ -1,5 +1,5 @@
 /*
- Nuklear - v1.04 - public domain
+ Nuklear - v1.041 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -183,6 +183,7 @@ LICENSE:
     publish and distribute this file as you see fit.
 
 CHANGELOG:
+    - 2016/08/03 (1.041)- Fixed `NK_WINDOW_BACKGROUND` behavior
     - 2016/08/03 (1.04) - Added color parameter to `nk_draw_image`
     - 2016/08/03 (1.04) - Added additional window padding style attributes for
                             sub windows (combo, menu, ...)
@@ -15238,11 +15239,12 @@ nk_insert_window(struct nk_context *ctx, struct nk_window *win,
         ctx->active = ctx->end;
         ctx->end->flags &= ~(nk_flags)NK_WINDOW_ROM;
     } else {
+        ctx->end->flags |= NK_WINDOW_ROM;
         ctx->begin->prev = win;
-        win->flags |= NK_WINDOW_ROM;
         win->next = ctx->begin;
         win->prev = 0;
         ctx->begin = win;
+        ctx->begin->flags &= ~(nk_flags)NK_WINDOW_ROM;
     }
     ctx->count++;
 }
@@ -15335,7 +15337,7 @@ nk_begin_titled(struct nk_context *ctx, struct nk_panel *layout,
     }
 
     /* window overlapping */
-    if (!(win->flags & NK_WINDOW_SUB) && !(win->flags & NK_WINDOW_HIDDEN) && !(win->flags & NK_WINDOW_BACKGROUND))
+    if (!(win->flags & NK_WINDOW_SUB) && !(win->flags & NK_WINDOW_HIDDEN))
     {
         int inpanel, ishovered;
         const struct nk_window *iter = win;
@@ -15395,15 +15397,16 @@ nk_begin_titled(struct nk_context *ctx, struct nk_panel *layout,
         }
 
         if (!iter && ctx->end != win) {
-            /* current window is active in that position so transfer to top
-             * at the highest priority in stack */
-            nk_remove_window(ctx, win);
-            nk_insert_window(ctx, win, NK_INSERT_BACK);
-
+            if (!(win->flags & NK_WINDOW_BACKGROUND)) {
+                /* current window is active in that position so transfer to top
+                 * at the highest priority in stack */
+                nk_remove_window(ctx, win);
+                nk_insert_window(ctx, win, NK_INSERT_BACK);
+            }
             win->flags &= ~(nk_flags)NK_WINDOW_ROM;
             ctx->active = win;
         }
-        if (ctx->end != win)
+        if (ctx->end != win && (!(win->flags & NK_WINDOW_BACKGROUND)))
             win->flags |= NK_WINDOW_ROM;
     }
 
