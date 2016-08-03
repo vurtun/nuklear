@@ -8917,7 +8917,7 @@ nk_font_bake_pack(struct nk_font_baker *baker,
     /* setup font baker from temporary memory */
     for (config_iter = config_list; config_iter; config_iter = config_iter->next) {
         const struct nk_font_config *cfg = config_iter;
-        if (!nk_tt_InitFont(&baker->build[i].info, (const unsigned char*)cfg->ttf_blob, 0))
+        if (!nk_tt_InitFont(&baker->build[i++].info, (const unsigned char*)cfg->ttf_blob, 0))
             return nk_false;
     }
 
@@ -9263,7 +9263,6 @@ nk_font_init(struct nk_font *font, float pixel_height,
         return;
 
     baked = *baked_font;
-    nk_zero(font, sizeof(*font));
     font->info = baked;
     font->scale = (float)pixel_height / (float)font->info.height;
     font->glyphs = &glyphs[baked_font->glyph_offset];
