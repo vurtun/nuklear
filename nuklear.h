@@ -1224,7 +1224,7 @@ NK_API void nk_textedit_redo(struct nk_text_edit*);
     The final approach if you do not have a font handling functionality or don't
     want to use it in this library is by using the optional font baker. This API
     is divided into a high- and low-level API with different priorities between
-    ease of use and control. Both API's can be used to create a font and 
+    ease of use and control. Both API's can be used to create a font and
     font atlas texture and can even be used with or without the vertex buffer
     output. So it still uses the `nk_user_font` struct and the two different
     approaches previously stated still work.
@@ -2533,6 +2533,8 @@ struct nk_context {
     (type*)((void*)((char*)(1 ? (ptr): &((type*)0)->member) - NK_OFFSETOF(type, member)))
 
 #ifdef __cplusplus
+}
+
 template<typename T> struct nk_alignof;
 template<typename T, int size_diff> struct nk_helper{enum {value = size_diff};};
 template<typename T> struct nk_helper<T,0>{enum {value = nk_alignof<T>::value};};
@@ -2541,10 +2543,7 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #define NK_ALIGNOF(t) (nk_alignof<t>::value);
 #else
 #define NK_ALIGNOF(t) ((char*)(&((struct {char c; t _h;}*)0)->_h) - (char*)0)
-#endif
 
-#ifdef __cplusplus
-}
 #endif
 #endif /* NK_H_ */
 
@@ -13339,7 +13338,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
             const char *begin = nk_str_get_const(&edit->string);
             int l = nk_str_len_char(&edit->string);
             nk_edit_draw_text(out, style, area.x - edit->scrollbar.x,
-                area.y - edit->scrollbar.y, 0, begin, l, row_height, font, 
+                area.y - edit->scrollbar.y, 0, begin, l, row_height, font,
                 background_color, text_color, nk_false);
         } else {
             /* edit has selection so draw 1-3 text chunks */
