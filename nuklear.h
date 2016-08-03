@@ -1,5 +1,5 @@
 /*
- Nuklear - v1.031 - public domain
+ Nuklear - v1.032 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -182,7 +182,8 @@ LICENSE:
     license: you are granted a perpetual, irrevocable license to copy, modify,
     publish and distribute this file as you see fit.
 
-CHANGELOG:
+CHANGELOG:-
+    - 2016/07/29 (1.032)- Removed invalid assert macro for NK_RGB color picker
     - 2016/07/29 (1.031)- Added helper macros into header include guard
     - 2016/07/29 (1.03) - Moved the window/table pool into the header part to
                             simplify memory management by removing the need to
@@ -13767,7 +13768,6 @@ nk_draw_color_picker(struct nk_command_buffer *o, const struct nk_rect *matrix,
     NK_ASSERT(o);
     NK_ASSERT(matrix);
     NK_ASSERT(hue_bar);
-    NK_ASSERT(alpha_bar);
 
     /* draw hue bar */
     nk_color_hsv_fv(hsva, color);
