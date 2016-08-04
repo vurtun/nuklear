@@ -140,7 +140,7 @@ ui_piemenu(struct nk_context *ctx, struct nk_vec2 pos, float radius,
                 content.w = 30; content.h = 30;
                 content.x = center.x + ((rx * (float)cos(a) - ry * (float)sin(a)) - content.w/2.0f);
                 content.y = center.y + (rx * (float)sin(a) + ry * (float)cos(a) - content.h/2.0f);
-                nk_draw_image(out, content, &icons[i]);
+                nk_draw_image(out, content, &icons[i], nk_rgb(255,255,255));
                 a_min = a_max; a_max += step;
             }
         }
@@ -157,7 +157,7 @@ ui_piemenu(struct nk_context *ctx, struct nk_vec2 pos, float radius,
             bounds.h = inner.h / 2.0f;
             bounds.x = inner.x + inner.w/2 - bounds.w/2;
             bounds.y = inner.y + inner.h/2 - bounds.h/2;
-            nk_draw_image(out, bounds, &icons[active_item]);
+            nk_draw_image(out, bounds, &icons[active_item], nk_rgb(255,255,255));
         }
         nk_layout_space_end(ctx);
         if (!nk_input_is_mouse_down(&ctx->input, NK_BUTTON_RIGHT)) {
