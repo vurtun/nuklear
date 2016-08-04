@@ -180,7 +180,7 @@ ui_piemenu(struct nk_context *ctx, struct nk_vec2 pos, float radius,
  *
  * ===============================================================*/
 static void
-grid_demo(struct nk_context *ctx)
+grid_demo(struct nk_context *ctx, struct media *media)
 {
     static char text[3][64];
     static int text_len[3];
@@ -191,12 +191,12 @@ grid_demo(struct nk_context *ctx)
 
     int i;
     struct nk_panel combo;
-    ctx->style.font.height = 20;
+    nk_style_set_font(ctx, &media->font_20->handle);
     if (nk_begin(ctx, &layout, "Grid Demo", nk_rect(600, 350, 275, 250),
         NK_WINDOW_TITLE|NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|
         NK_WINDOW_BORDER_HEADER|NK_WINDOW_NO_SCROLLBAR))
     {
-        ctx->style.font.height = 18;
+        nk_style_set_font(ctx, &media->font_18->handle);
         nk_layout_row_dynamic(ctx, 30, 2);
         nk_label(ctx, "Floating point:", NK_TEXT_RIGHT);
         nk_edit_string(ctx, NK_EDIT_FIELD, text[0], &text_len[0], 64, nk_filter_float);
@@ -217,7 +217,7 @@ grid_demo(struct nk_context *ctx)
         }
     }
     nk_end(ctx);
-    ctx->style.font.height = 14;
+    nk_style_set_font(ctx, &media->font_14->handle);
 }
 
 /* ===============================================================
@@ -341,8 +341,8 @@ button_demo(struct nk_context *ctx, struct media *media)
     /*------------------------------------------------
      *                  CONTEXTUAL
      *------------------------------------------------*/
+    nk_style_set_font(ctx, &media->font_18->handle);
     if (nk_contextual_begin(ctx, &menu, NK_WINDOW_NO_SCROLLBAR, nk_vec2(150, 300), nk_window_get_bounds(ctx))) {
-        ctx->style.font.height = 18;
         nk_layout_row_dynamic(ctx, 30, 1);
         if (nk_contextual_item_image_label(ctx, media->copy, "Clone", NK_TEXT_RIGHT))
             fprintf(stdout, "pressed clone!\n");
@@ -865,7 +865,7 @@ int main(int argc, char *argv[])
         /* GUI */
         basic_demo(&ctx, &media);
         button_demo(&ctx, &media);
-        grid_demo(&ctx);
+        grid_demo(&ctx, &media);
 
         /* Draw */
         glViewport(0, 0, display_width, display_height);

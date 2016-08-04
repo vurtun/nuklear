@@ -183,6 +183,7 @@ LICENSE:
     publish and distribute this file as you see fit.
 
 CHANGELOG:
+    - 2016/08/03 (1.042)- Fixed changing fonts
     - 2016/08/03 (1.041)- Fixed `NK_WINDOW_BACKGROUND` behavior
     - 2016/08/03 (1.04) - Added color parameter to `nk_draw_image`
     - 2016/08/03 (1.04) - Added additional window padding style attributes for
@@ -2224,7 +2225,7 @@ struct nk_style_window {
 };
 
 struct nk_style {
-    struct nk_user_font font;
+    const struct nk_user_font *font;
     const struct nk_cursor *cursors[NK_CURSOR_COUNT];
     const struct nk_cursor *cursor_active;
     struct nk_cursor *cursor_last;
@@ -14513,7 +14514,7 @@ nk_style_set_font(struct nk_context *ctx, const struct nk_user_font *font)
     NK_ASSERT(ctx);
     if (!ctx) return;
     style = &ctx->style;
-    style->font = *font;
+    style->font = font;
 }
 
 NK_API int
@@ -14653,7 +14654,7 @@ nk_setup(struct nk_context *ctx, const struct nk_user_font *font)
 
     nk_zero_struct(*ctx);
     nk_style_default(ctx);
-    if (font) ctx->style.font = *font;
+    if (font) ctx->style.font = font;
 #ifdef NK_INCLUDE_VERTEX_BUFFER_OUTPUT
     nk_draw_list_init(&ctx->draw_list);
 #endif
@@ -15297,7 +15298,7 @@ nk_begin_titled(struct nk_context *ctx, struct nk_panel *layout,
     int ret = 0;
 
     NK_ASSERT(ctx);
-    NK_ASSERT(ctx->style.font.width && "if this triggers you forgot to add a font");
+    NK_ASSERT(ctx->style.font && ctx->style.font->width && "if this triggers you forgot to add a font");
     NK_ASSERT(!ctx->current && "if this triggers you missed a `nk_end` call");
     if (!ctx || ctx->current || !title)
         return 0;
@@ -15341,7 +15342,7 @@ nk_begin_titled(struct nk_context *ctx, struct nk_panel *layout,
     {
         int inpanel, ishovered;
         const struct nk_window *iter = win;
-        float h = ctx->style.font.height + 2 * style->window.header.padding.y;
+        float h = ctx->style.font->height + 2 * style->window.header.padding.y;
 
         /* activate window if hovered and no other window is overlapping this window */
         nk_start(ctx, win);
@@ -15566,7 +15567,7 @@ nk_window_is_any_hovered(struct nk_context *ctx)
         /* check if window is being hovered */
         if (iter->flags & NK_WINDOW_MINIMIZED) {
             struct nk_rect header = iter->bounds;
-            header.h = ctx->style.font.height + 2 * ctx->style.window.header.padding.y;
+            header.h = ctx->style.font->height + 2 * ctx->style.window.header.padding.y;
             if (nk_input_is_mouse_hovering_rect(&ctx->input, header))
                 return 1;
         } else if (nk_input_is_mouse_hovering_rect(&ctx->input, iter->bounds)) {
@@ -15798,7 +15799,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
         return 0;
 
     style = &ctx->style;
-    font = &style->font;
+    font = style->font;
     in = &ctx->input;
     win = ctx->current;
     layout = win->layout;
@@ -15977,7 +15978,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
             }
             if (nk_do_button_symbol(&ws, &win->buffer, button,
                 style->window.header.close_symbol, NK_BUTTON_DEFAULT,
-                &style->window.header.close_button, in, &style->font))
+                &style->window.header.close_button, in, style->font))
                 layout->flags |= NK_WINDOW_HIDDEN;
         }
 
@@ -15999,7 +16000,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
                 (layout->flags & NK_WINDOW_MINIMIZED)?
                 style->window.header.maximize_symbol:
                 style->window.header.minimize_symbol,
-                NK_BUTTON_DEFAULT, &style->window.header.minimize_button, in, &style->font))
+                NK_BUTTON_DEFAULT, &style->window.header.minimize_button, in, style->font))
                 layout->flags = (layout->flags & NK_WINDOW_MINIMIZED) ?
                     layout->flags & (nk_flags)~NK_WINDOW_MINIMIZED:
                     layout->flags | NK_WINDOW_MINIMIZED;
@@ -16237,7 +16238,7 @@ nk_panel_end(struct nk_context *ctx)
             /* execute scrollbar */
             scroll_offset = nk_do_scrollbarv(&state, out, bounds, scroll_has_scrolling,
                     scroll_offset, scroll_target, scroll_step, scroll_inc,
-                    &ctx->style.scrollv, in, &style->font);
+                    &ctx->style.scrollv, in, style->font);
             layout->offset->y = (unsigned short)scroll_offset;
             if (in && scroll_has_scrolling)
                 in->mouse.scroll_delta = 0;
@@ -16269,7 +16270,7 @@ nk_panel_end(struct nk_context *ctx)
             scroll_has_scrolling = nk_false;
             scroll_offset = nk_do_scrollbarh(&state, out, bounds, scroll_has_scrolling,
                     scroll_offset, scroll_target, scroll_step, scroll_inc,
-                    &ctx->style.scrollh, in, &style->font);
+                    &ctx->style.scrollh, in, style->font);
             layout->offset->x = (unsigned short)scroll_offset;
         }
     }
@@ -17096,7 +17097,7 @@ nk_tree_base(struct nk_context *ctx, enum nk_tree_type type,
     item_spacing = style->window.spacing;
 
     /* calculate header bounds and draw background */
-    nk_layout_row_dynamic(ctx, style->font.height + 2 * style->tab.padding.y, 1);
+    nk_layout_row_dynamic(ctx, style->font->height + 2 * style->tab.padding.y, 1);
     widget_state = nk_widget(&header, ctx);
     if (type == NK_TREE_TAB) {
         const struct nk_style_item *background = &style->tab.background;
@@ -17144,17 +17145,17 @@ nk_tree_base(struct nk_context *ctx, enum nk_tree_type type,
     }
 
     {/* draw triangle button */
-    sym.w = sym.h = style->font.height;
+    sym.w = sym.h = style->font->height;
     sym.y = header.y + style->tab.padding.y;
     sym.x = header.x + style->tab.padding.x;
     nk_do_button_symbol(&ws, &win->buffer, sym, symbol, NK_BUTTON_DEFAULT,
-        button, 0, &style->font);
+        button, 0, style->font);
 
     if (img) {
         /* draw optional image icon */
         sym.x = sym.x + sym.w + 4 * item_spacing.x;
         nk_draw_image(&win->buffer, sym, img, nk_white);
-        sym.w = style->font.height + style->tab.spacing.x;}
+        sym.w = style->font->height + style->tab.spacing.x;}
     }
 
     {/* draw label */
@@ -17163,11 +17164,11 @@ nk_tree_base(struct nk_context *ctx, enum nk_tree_type type,
     label.x = sym.x + sym.w + item_spacing.x;
     label.y = sym.y;
     label.w = header.w - (sym.w + item_spacing.y + style->tab.indent);
-    label.h = style->font.height;
+    label.h = style->font->height;
     text.text = style->tab.text;
     text.padding = nk_vec2(0,0);
     nk_widget_text(out, label, title, nk_strlen(title), &text,
-        NK_TEXT_LEFT, &style->font);}
+        NK_TEXT_LEFT, style->font);}
 
     /* increase x-axis cursor widget position pointer */
     if (*state == NK_MAXIMIZED) {
@@ -17421,7 +17422,7 @@ nk_text_colored(struct nk_context *ctx, const char *str, int len,
     text.padding.y = item_padding.y;
     text.background = style->window.background;
     text.text = color;
-    nk_widget_text(&win->buffer, bounds, str, len, &text, alignment, &style->font);
+    nk_widget_text(&win->buffer, bounds, str, len, &text, alignment, style->font);
 }
 
 NK_API void
@@ -17449,7 +17450,7 @@ nk_text_wrap_colored(struct nk_context *ctx, const char *str,
     text.padding.y = item_padding.y;
     text.background = style->window.background;
     text.text = color;
-    nk_widget_text_wrap(&win->buffer, bounds, str, len, &text, &style->font);
+    nk_widget_text_wrap(&win->buffer, bounds, str, len, &text, style->font);
 }
 
 #ifdef NK_INCLUDE_STANDARD_IO
@@ -17621,7 +17622,7 @@ nk_button_text(struct nk_context *ctx, const char *title, int len)
     in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
     return nk_do_button_text(&ctx->last_widget_state, &win->buffer, bounds,
                     title, len, style->button.text_alignment, ctx->button_behavior,
-                    &style->button, in, &style->font);
+                    &style->button, in, style->font);
 }
 
 NK_API int nk_button_label(struct nk_context *ctx, const char *title)
@@ -17688,7 +17689,7 @@ nk_button_symbol(struct nk_context *ctx, enum nk_symbol_type symbol)
     if (!state) return 0;
     in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
     return nk_do_button_symbol(&ctx->last_widget_state, &win->buffer, bounds,
-            symbol, ctx->button_behavior, &style->button, in, &style->font);
+            symbol, ctx->button_behavior, &style->button, in, style->font);
 }
 
 NK_API int
@@ -17746,7 +17747,7 @@ nk_button_symbol_text(struct nk_context *ctx, enum nk_symbol_type symbol,
     in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
     return nk_do_button_text_symbol(&ctx->last_widget_state, &win->buffer, bounds,
                 symbol, text, len, align, ctx->button_behavior,
-                &style->button, &style->font, in);
+                &style->button, style->font, in);
 }
 
 NK_API int nk_button_symbol_label(struct nk_context *ctx, enum nk_symbol_type symbol,
@@ -17780,7 +17781,7 @@ nk_button_image_text(struct nk_context *ctx, struct nk_image img,
     in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
     return nk_do_button_text_image(&ctx->last_widget_state, &win->buffer,
             bounds, img, text, len, align, ctx->button_behavior,
-            &style->button, &style->font, in);
+            &style->button, style->font, in);
 }
 
 NK_API int nk_button_image_label(struct nk_context *ctx, struct nk_image img,
@@ -17818,7 +17819,7 @@ nk_selectable_text(struct nk_context *ctx, const char *str, int len,
     if (!state) return 0;
     in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
     return nk_do_selectable(&ctx->last_widget_state, &win->buffer, bounds,
-                str, len, align, value, &style->selectable, in, &style->font);
+                str, len, align, value, &style->selectable, in, style->font);
 }
 
 NK_API int
@@ -17847,7 +17848,7 @@ nk_selectable_image_text(struct nk_context *ctx, struct nk_image img,
     if (!state) return 0;
     in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
     return nk_do_selectable_image(&ctx->last_widget_state, &win->buffer, bounds,
-                str, len, align, value, &img, &style->selectable, in, &style->font);
+                str, len, align, value, &img, &style->selectable, in, style->font);
 }
 
 NK_API int nk_select_text(struct nk_context *ctx, const char *str, int len,
@@ -17901,7 +17902,7 @@ nk_check_text(struct nk_context *ctx, const char *text, int len, int active)
     if (!state) return active;
     in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
     nk_do_toggle(&ctx->last_widget_state, &win->buffer, bounds, &active,
-        text, len, NK_TOGGLE_CHECK, &style->checkbox, in, &style->font);
+        text, len, NK_TOGGLE_CHECK, &style->checkbox, in, style->font);
     return active;
 }
 
@@ -17994,7 +17995,7 @@ nk_option_text(struct nk_context *ctx, const char *text, int len, int is_active)
     if (!state) return state;
     in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
     nk_do_toggle(&ctx->last_widget_state, &win->buffer, bounds, &is_active,
-        text, len, NK_TOGGLE_OPTION, &style->option, in, &style->font);
+        text, len, NK_TOGGLE_OPTION, &style->option, in, style->font);
     return is_active;
 }
 
@@ -18054,7 +18055,7 @@ nk_slider_float(struct nk_context *ctx, float min_value, float *value, float max
 
     old_value = *value;
     *value = nk_do_slider(&ctx->last_widget_state, &win->buffer, bounds, min_value,
-                old_value, max_value, value_step, &style->slider, in, &style->font);
+                old_value, max_value, value_step, &style->slider, in, style->font);
     return (old_value > *value || old_value < *value);
 }
 
@@ -18231,7 +18232,7 @@ nk_edit_buffer(struct nk_context *ctx, nk_flags flags,
     prev_state = (unsigned char)edit->active;
     in = (flags & NK_EDIT_READ_ONLY) ? 0: in;
     ret_flags = nk_do_edit(&ctx->last_widget_state, &win->buffer, bounds, flags,
-                    filter, edit, &style->edit, in, &style->font);
+                    filter, edit, &style->edit, in, style->font);
 
     if (ctx->last_widget_state & NK_WIDGET_STATE_HOVER)
         ctx->style.cursor_active = ctx->style.cursors[NK_CURSOR_TEXT];
@@ -18311,7 +18312,7 @@ nk_property(struct nk_context *ctx, const char *name, float min, float val,
     old_state = *state;
     val = nk_do_property(&ctx->last_widget_state, &win->buffer, bounds, name,
         min, val, max, step, inc_per_pixel, buffer, len, state, cursor,
-        &style->property, filter, in, &style->font, &ctx->text_edit);
+        &style->property, filter, in, style->font, &ctx->text_edit);
 
     if (in && *state != NK_PROPERTY_DEFAULT && !win->property.active) {
         /* current property is now hot */
@@ -18418,7 +18419,7 @@ nk_color_pick(struct nk_context * ctx, struct nk_color *color,
     if (!state) return 0;
     in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
     return nk_do_color_picker(&ctx->last_widget_state, &win->buffer, color, fmt, bounds,
-                nk_vec2(0,0), in, &config->font);
+                nk_vec2(0,0), in, config->font);
 }
 
 NK_API struct nk_color
@@ -19112,10 +19113,10 @@ nk_tooltip(struct nk_context *ctx, const char *text)
 
     /* calculate size of the text and tooltip */
     text_len = nk_strlen(text);
-    text_width = style->font.width(style->font.userdata,
-                    style->font.height, text, text_len);
+    text_width = style->font->width(style->font->userdata,
+                    style->font->height, text, text_len);
     text_width += (4 * padding.x);
-    text_height = (style->font.height + 2 * padding.y);
+    text_height = (style->font->height + 2 * padding.y);
 
     /* execute tooltip and fill with text */
     if (nk_tooltip_begin(ctx, &layout, (float)text_width)) {
@@ -19209,7 +19210,7 @@ nk_contextual_item_text(struct nk_context *ctx, const char *text, int len,
 
     in = (state == NK_WIDGET_ROM || win->layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
     if (nk_do_button_text(&ctx->last_widget_state, &win->buffer, bounds,
-        text, len, alignment, NK_BUTTON_DEFAULT, &style->contextual_button, in, &style->font)) {
+        text, len, alignment, NK_BUTTON_DEFAULT, &style->contextual_button, in, style->font)) {
         nk_contextual_close(ctx);
         return nk_true;
     }
@@ -19243,7 +19244,7 @@ nk_contextual_item_image_text(struct nk_context *ctx, struct nk_image img,
 
     in = (state == NK_WIDGET_ROM || win->layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
     if (nk_do_button_text_image(&ctx->last_widget_state, &win->buffer, bounds,
-        img, text, len, align, NK_BUTTON_DEFAULT, &style->contextual_button, &style->font, in)){
+        img, text, len, align, NK_BUTTON_DEFAULT, &style->contextual_button, style->font, in)){
         nk_contextual_close(ctx);
         return nk_true;
     }
@@ -19278,7 +19279,7 @@ nk_contextual_item_symbol_text(struct nk_context *ctx, enum nk_symbol_type symbo
 
     in = (state == NK_WIDGET_ROM || win->layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
     if (nk_do_button_text_symbol(&ctx->last_widget_state, &win->buffer, bounds,
-        symbol, text, len, align, NK_BUTTON_DEFAULT, &style->contextual_button, &style->font, in)) {
+        symbol, text, len, align, NK_BUTTON_DEFAULT, &style->contextual_button, style->font, in)) {
         nk_contextual_close(ctx);
         return nk_true;
     }
@@ -19438,11 +19439,11 @@ nk_combo_begin_text(struct nk_context *ctx, struct nk_panel *layout,
         label.w = button.x - (style->combo.content_padding.x + style->combo.spacing.x) - label.x;;
         label.h = header.h - 2 * style->combo.content_padding.y;
         nk_widget_text(&win->buffer, label, selected, len, &text,
-            NK_TEXT_LEFT, &ctx->style.font);
+            NK_TEXT_LEFT, ctx->style.font);
 
         /* draw open/close button */
         nk_draw_button_symbol(&win->buffer, &button, &content, ctx->last_widget_state,
-            &ctx->style.combo.button, sym, &style->font);
+            &ctx->style.combo.button, sym, style->font);
     }
     return nk_combo_begin(layout, ctx, win, height, is_clicked, header);
 }
@@ -19526,7 +19527,7 @@ nk_combo_begin_color(struct nk_context *ctx, struct nk_panel *layout,
 
         /* draw open/close button */
         nk_draw_button_symbol(&win->buffer, &button, &content, ctx->last_widget_state,
-            &ctx->style.combo.button, sym, &style->font);
+            &ctx->style.combo.button, sym, style->font);
     }
     return nk_combo_begin(layout, ctx, win, height, is_clicked, header);
 }
@@ -19612,11 +19613,11 @@ nk_combo_begin_symbol(struct nk_context *ctx, struct nk_panel *layout,
         bounds.x = header.x + style->combo.content_padding.x;
         bounds.w = (button.x - style->combo.content_padding.y) - bounds.x;
         nk_draw_symbol(&win->buffer, symbol, bounds, sym_background, symbol_color,
-            1.0f, &style->font);
+            1.0f, style->font);
 
         /* draw open/close button */
         nk_draw_button_symbol(&win->buffer, &bounds, &content, ctx->last_widget_state,
-            &ctx->style.combo.button, sym, &style->font);
+            &ctx->style.combo.button, sym, style->font);
     }
     return nk_combo_begin(layout, ctx, win, height, is_clicked, header);
 }
@@ -19698,7 +19699,7 @@ nk_combo_begin_symbol_text(struct nk_context *ctx, struct nk_panel *layout,
         content.w = button.w - 2 * style->combo.button.padding.x;
         content.h = button.h - 2 * style->combo.button.padding.y;
         nk_draw_button_symbol(&win->buffer, &button, &content, ctx->last_widget_state,
-            &ctx->style.combo.button, sym, &style->font);
+            &ctx->style.combo.button, sym, style->font);
 
         /* draw symbol */
         image.x = header.x + style->combo.content_padding.x;
@@ -19706,7 +19707,7 @@ nk_combo_begin_symbol_text(struct nk_context *ctx, struct nk_panel *layout,
         image.h = header.h - 2 * style->combo.content_padding.y;
         image.w = image.h;
         nk_draw_symbol(&win->buffer, symbol, image, text.background, symbol_color,
-            1.0f, &style->font);
+            1.0f, style->font);
 
         /* draw label */
         text.padding = nk_vec2(0,0);
@@ -19714,7 +19715,7 @@ nk_combo_begin_symbol_text(struct nk_context *ctx, struct nk_panel *layout,
         label.y = header.y + style->combo.content_padding.y;
         label.w = (button.x - style->combo.content_padding.x) - label.x;
         label.h = header.h - 2 * style->combo.content_padding.y;
-        nk_widget_text(&win->buffer, label, selected, len, &text, NK_TEXT_LEFT, &style->font);
+        nk_widget_text(&win->buffer, label, selected, len, &text, NK_TEXT_LEFT, style->font);
     }
     return nk_combo_begin(layout, ctx, win, height, is_clicked, header);
 }
@@ -19794,7 +19795,7 @@ nk_combo_begin_image(struct nk_context *ctx, struct nk_panel *layout,
 
         /* draw open/close button */
         nk_draw_button_symbol(&win->buffer, &bounds, &content, ctx->last_widget_state,
-            &ctx->style.combo.button, sym, &style->font);
+            &ctx->style.combo.button, sym, style->font);
     }
     return nk_combo_begin(layout, ctx, win, height, is_clicked, header);
 }
@@ -19872,7 +19873,7 @@ nk_combo_begin_image_text(struct nk_context *ctx, struct nk_panel *layout,
         content.w = button.w - 2 * style->combo.button.padding.x;
         content.h = button.h - 2 * style->combo.button.padding.y;
         nk_draw_button_symbol(&win->buffer, &button, &content, ctx->last_widget_state,
-            &ctx->style.combo.button, sym, &style->font);
+            &ctx->style.combo.button, sym, style->font);
 
         /* draw image */
         image.x = header.x + style->combo.content_padding.x;
@@ -19887,7 +19888,7 @@ nk_combo_begin_image_text(struct nk_context *ctx, struct nk_panel *layout,
         label.y = header.y + style->combo.content_padding.y;
         label.w = (button.x - style->combo.content_padding.x) - label.x;
         label.h = header.h - 2 * style->combo.content_padding.y;
-        nk_widget_text(&win->buffer, label, selected, len, &text, NK_TEXT_LEFT, &style->font);
+        nk_widget_text(&win->buffer, label, selected, len, &text, NK_TEXT_LEFT, style->font);
     }
     return nk_combo_begin(layout, ctx, win, height, is_clicked, header);
 }
@@ -20123,7 +20124,7 @@ nk_menu_begin_text(struct nk_context *ctx, struct nk_panel *layout,
     if (!state) return 0;
     in = (state == NK_WIDGET_ROM || win->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
     if (nk_do_button_text(&ctx->last_widget_state, &win->buffer, header,
-        title, len, align, NK_BUTTON_DEFAULT, &ctx->style.menu_button, in, &ctx->style.font))
+        title, len, align, NK_BUTTON_DEFAULT, &ctx->style.menu_button, in, ctx->style.font))
         is_clicked = nk_true;
     return nk_menu_begin(layout, ctx, win, title, is_clicked, header, width);
 }
@@ -20179,7 +20180,7 @@ nk_menu_begin_symbol(struct nk_context *ctx, struct nk_panel *layout,
     if (!state) return 0;
     in = (state == NK_WIDGET_ROM || win->layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
     if (nk_do_button_symbol(&ctx->last_widget_state,  &win->buffer, header,
-        sym, NK_BUTTON_DEFAULT, &ctx->style.menu_button, in, &ctx->style.font))
+        sym, NK_BUTTON_DEFAULT, &ctx->style.menu_button, in, ctx->style.font))
         is_clicked = nk_true;
     return nk_menu_begin(layout, ctx, win, id, is_clicked, header, width);
 }
@@ -20206,7 +20207,7 @@ nk_menu_begin_image_text(struct nk_context *ctx, struct nk_panel *layout,
     in = (state == NK_WIDGET_ROM || win->layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
     if (nk_do_button_text_image(&ctx->last_widget_state, &win->buffer,
         header, img, title, len, align, NK_BUTTON_DEFAULT, &ctx->style.menu_button,
-        &ctx->style.font, in))
+        ctx->style.font, in))
         is_clicked = nk_true;
     return nk_menu_begin(layout, ctx, win, title, is_clicked, header, width);
 }
@@ -20238,7 +20239,7 @@ nk_menu_begin_symbol_text(struct nk_context *ctx, struct nk_panel *layout,
     in = (state == NK_WIDGET_ROM || win->layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
     if (nk_do_button_text_symbol(&ctx->last_widget_state, &win->buffer,
         header, sym, title, size, align, NK_BUTTON_DEFAULT, &ctx->style.menu_button,
-        &ctx->style.font, in)) is_clicked = nk_true;
+        ctx->style.font, in)) is_clicked = nk_true;
     return nk_menu_begin(layout, ctx, win, title, is_clicked, header, width);
 }
 

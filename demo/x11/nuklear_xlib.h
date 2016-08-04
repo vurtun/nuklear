@@ -46,6 +46,7 @@ struct XFont {
     int height;
     XFontSet set;
     XFontStruct *xfont;
+    struct nk_user_font handle;
 };
 struct XSurface {
     GC gc;
@@ -449,10 +450,10 @@ NK_API struct nk_context*
 nk_xlib_init(XFont *xfont, Display *dpy, int screen, Window root,
     unsigned int w, unsigned int h)
 {
-    struct nk_user_font font;
-    font.userdata = nk_handle_ptr(xfont);
-    font.height = (float)xfont->height;
-    font.width = nk_xfont_get_text_width;
+    struct nk_user_font *font = &xfont->handle;
+    font->userdata = nk_handle_ptr(xfont);
+    font->height = (float)xfont->height;
+    font->width = nk_xfont_get_text_width;
     xlib.dpy = dpy;
     xlib.root = root;
 
@@ -468,18 +469,18 @@ nk_xlib_init(XFont *xfont, Display *dpy, int screen, Window root,
     XFreePixmap(dpy, blank);}
 
     xlib.surf = nk_xsurf_create(screen, w, h);
-    nk_init_default(&xlib.ctx, &font);
+    nk_init_default(&xlib.ctx, font);
     return &xlib.ctx;
 }
 
 NK_API void
 nk_xlib_set_font(XFont *xfont)
 {
-    struct nk_user_font font;
-    font.userdata = nk_handle_ptr(xfont);
-    font.height = (float)xfont->height;
-    font.width = nk_xfont_get_text_width;
-    nk_style_set_font(&xlib.ctx, &font);
+    struct nk_user_font *font = &xfont->handle;
+    font->userdata = nk_handle_ptr(xfont);
+    font->height = (float)xfont->height;
+    font->width = nk_xfont_get_text_width;
+    nk_style_set_font(&xlib.ctx, font);
 }
 
 NK_API int

@@ -42,6 +42,7 @@ NK_API void nk_gdi_set_font(GdiFont *font);
 #include <malloc.h>
 
 struct GdiFont {
+    struct nk_user_font nk;
     int height;
     HFONT handle;
     HDC dc;
@@ -454,10 +455,10 @@ nk_gdi_clipbard_copy(nk_handle usr, const char *text, int len)
 NK_API struct nk_context*
 nk_gdi_init(GdiFont *gdifont, HDC window_dc, unsigned int width, unsigned int height)
 {
-    struct nk_user_font font;
-    font.userdata = nk_handle_ptr(gdifont);
-    font.height = (float)gdifont->height;
-    font.width = nk_gdifont_get_text_width;
+    struct nk_user_font *font = &gdifont->nk;
+    font->userdata = nk_handle_ptr(gdifont);
+    font->height = (float)gdifont->height;
+    font->width = nk_gdifont_get_text_width;
 
     gdi.bitmap = CreateCompatibleBitmap(window_dc, width, height);
     gdi.window_dc = window_dc;
@@ -466,7 +467,7 @@ nk_gdi_init(GdiFont *gdifont, HDC window_dc, unsigned int width, unsigned int he
     gdi.height = height;
     SelectObject(gdi.memory_dc, gdi.bitmap);
 
-    nk_init_default(&gdi.ctx, &font);
+    nk_init_default(&gdi.ctx, font);
     gdi.ctx.clip.copy = nk_gdi_clipbard_copy;
     gdi.ctx.clip.paste = nk_gdi_clipbard_paste;
     return &gdi.ctx;
@@ -475,11 +476,11 @@ nk_gdi_init(GdiFont *gdifont, HDC window_dc, unsigned int width, unsigned int he
 NK_API void
 nk_gdi_set_font(GdiFont *gdifont)
 {
-    struct nk_user_font font;
-    font.userdata = nk_handle_ptr(gdifont);
-    font.height = (float)gdifont->height;
-    font.width = nk_gdifont_get_text_width;
-    nk_style_set_font(&gdi.ctx, &font);
+    struct nk_user_font *font = &gdifont->nk;
+    font->userdata = nk_handle_ptr(gdifont);
+    font->height = (float)gdifont->height;
+    font->width = nk_gdifont_get_text_width;
+    nk_style_set_font(&gdi.ctx, font);
 }
 
 NK_API int

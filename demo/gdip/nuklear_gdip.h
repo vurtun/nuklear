@@ -225,6 +225,7 @@ GdipCreateFont(
     INT                  style,
     Unit                 unit,
     GpFont             **font
+    struct nk_user_font handle;
 );
 
 GpStatus WINGDIPAPI
@@ -707,11 +708,11 @@ nk_gdip_init(HWND hwnd, unsigned int width, unsigned int height)
 NK_API void
 nk_gdip_set_font(GdipFont *gdipfont)
 {
-    struct nk_user_font font;
-    font.userdata = nk_handle_ptr(gdipfont);
-    GdipGetFontSize((GpFont *)gdipfont, &font.height);
-    font.width = nk_gdipfont_get_text_width;
-    nk_style_set_font(&gdip.ctx, &font);
+    struct nk_user_font *font = &gdipfont->handle;
+    font->userdata = nk_handle_ptr(gdipfont);
+    GdipGetFontSize((GpFont *)gdipfont, &font->height);
+    font->width = nk_gdipfont_get_text_width;
+    nk_style_set_font(&gdip.ctx, font);
 }
 
 NK_API int
