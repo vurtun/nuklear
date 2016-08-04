@@ -183,7 +183,12 @@ LICENSE:
     publish and distribute this file as you see fit.
 
 CHANGELOG:
-    - 2016/08/03 (1.042)- Fixed changing fonts
+    - 2016/08/04 (1.043)- Fixed window scaling, movement bug which appears if you
+                            move/scale a window and another window is behind it.
+                            If you are fast enough then the window behind gets activated
+                            and the operation is blocked. I now require activating
+                            by hovering only if mouse is not pressed.
+    - 2016/08/04 (1.042)- Fixed changing fonts
     - 2016/08/03 (1.041)- Fixed `NK_WINDOW_BACKGROUND` behavior
     - 2016/08/03 (1.04) - Added color parameter to `nk_draw_image`
     - 2016/08/03 (1.04) - Added additional window padding style attributes for
@@ -15349,20 +15354,16 @@ nk_begin_titled(struct nk_context *ctx, struct nk_panel *layout,
         inpanel = nk_input_has_mouse_click_down_in_rect(&ctx->input, NK_BUTTON_LEFT, win->bounds, nk_true);
         inpanel = inpanel && ctx->input.mouse.buttons[NK_BUTTON_LEFT].clicked;
         ishovered = nk_input_is_mouse_hovering_rect(&ctx->input, win->bounds);
-        if ((win != ctx->active) && ishovered) {
+        if ((win != ctx->active) && ishovered && !ctx->input.mouse.buttons[NK_BUTTON_LEFT].down) {
             iter = win->next;
             while (iter) {
-                if (!(iter->flags & NK_WINDOW_MINIMIZED)) {
-                    if (NK_INTERSECT(win->bounds.x, win->bounds.y, win->bounds.w, win->bounds.h,
-                        iter->bounds.x, iter->bounds.y, iter->bounds.w, iter->bounds.h) &&
-                        !(iter->flags & NK_WINDOW_HIDDEN))
-                        break;
-                } else {
-                    if (NK_INTERSECT(win->bounds.x, win->bounds.y, win->bounds.w, win->bounds.h,
-                        iter->bounds.x, iter->bounds.y, iter->bounds.w, h) &&
-                        !(iter->flags & NK_WINDOW_HIDDEN))
-                        break;
-                }
+                struct nk_rect iter_bounds = (!(iter->flags & NK_WINDOW_MINIMIZED))?
+                    iter->bounds: nk_rect(iter->bounds.x, iter->bounds.y, iter->bounds.w, h);
+                if (NK_INTERSECT(win->bounds.x, win->bounds.y, win->bounds.w, win->bounds.h,
+                    iter_bounds.x, iter_bounds.y, iter_bounds.w, iter_bounds.h) &&
+                    !(iter->flags & NK_WINDOW_HIDDEN))
+                    break;
+
                 if (iter->popup.win && iter->popup.active && !(iter->flags & NK_WINDOW_HIDDEN) &&
                     NK_INTERSECT(win->bounds.x, win->bounds.y, win->bounds.w, win->bounds.h,
                     iter->popup.win->bounds.x, iter->popup.win->bounds.y,
@@ -15377,14 +15378,11 @@ nk_begin_titled(struct nk_context *ctx, struct nk_panel *layout,
             iter = win->next;
             while (iter) {
                 /* try to find a panel with higher priority in the same position */
+                struct nk_rect iter_bounds = (!(iter->flags & NK_WINDOW_MINIMIZED))?
+                    iter->bounds: nk_rect(iter->bounds.x, iter->bounds.y, iter->bounds.w, h);
                 if (!(iter->flags & NK_WINDOW_MINIMIZED)) {
-                    if (NK_INBOX(ctx->input.mouse.pos.x, ctx->input.mouse.pos.y, iter->bounds.x,
-                        iter->bounds.y, iter->bounds.w, iter->bounds.h) &&
-                        !(iter->flags & NK_WINDOW_HIDDEN))
-                        break;
-                } else {
-                    if (NK_INBOX(ctx->input.mouse.pos.x, ctx->input.mouse.pos.y, iter->bounds.x,
-                        iter->bounds.y, iter->bounds.w, h) &&
+                    if (NK_INBOX(ctx->input.mouse.pos.x, ctx->input.mouse.pos.y,
+                        iter_bounds.x, iter_bounds.y, iter_bounds.w, iter_bounds.h) &&
                         !(iter->flags & NK_WINDOW_HIDDEN))
                         break;
                 }
