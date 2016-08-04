@@ -2584,6 +2584,9 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
  * ===============================================================
  */
 #ifdef NK_IMPLEMENTATION
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #ifndef NK_POOL_DEFAULT_CAPACITY
 #define NK_POOL_DEFAULT_CAPACITY 16
@@ -20276,4 +20279,7 @@ NK_API void
 nk_menu_end(struct nk_context *ctx)
 {nk_contextual_end(ctx);}
 
+#ifdef __cplusplus
+}
+#endif
 #endif
