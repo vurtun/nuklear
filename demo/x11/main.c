@@ -1,4 +1,4 @@
-/* nuklear - v1.00 - public domain */
+/* nuklear - v1.05 - public domain */
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,6 +12,7 @@
 
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
+#define NK_INCLUDE_STANDARD_VARARGS
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
 #define NK_IMPLEMENTATION
 #define NK_XLIB_IMPLEMENTATION
@@ -88,11 +89,10 @@ sleep_for(long t)
 /* This are some code examples to provide a small overview of what can be
  * done with this library. To try out an example uncomment the include
  * and the corresponding function. */
-
-#include "../style.c"
-#include "../calculator.c"
-#include "../overview.c"
-#include "../node_editor.c"
+/*#include "../style.c"*/
+/*#include "../calculator.c"*/
+/*#include "../overview.c"*/
+/*#include "../node_editor.c"*/
 
 /* ===============================================================
  *
@@ -177,9 +177,9 @@ main(void)
         if (nk_window_is_closed(ctx, "Demo")) break;
 
         /* -------------- EXAMPLES ---------------- */
-        calculator(ctx);
-        overview(ctx);
-        node_editor(ctx);
+        /*calculator(ctx);*/
+        /*overview(ctx);*/
+        /*node_editor(ctx);*/
         /* ----------------------------------------- */
 
         /* Draw */

@@ -1,5 +1,5 @@
 /*
- Nuklear - v1.041 - public domain
+ Nuklear - v1.05 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -81,11 +81,16 @@ OPTIONAL DEFINES:
                     if you don't want to link to the standard library!
 
     NK_INCLUDE_STANDARD_IO
-        if defined it will include header <stdio.h> and <stdarg.h> and provide
-        additional functions depending on file loading and variable arguments
+        if defined it will include header <stdio.h> and provide
+        additional functions depending on file loading.
         IMPORTANT:  this adds the standard library with fopen, fclose,...
-                    as well as va_list,... so don't define this
-                    if you don't want to link to the standard library!
+                    so don't define this if you don't want to link to the standard library!
+
+    NK_INCLUDE_STANDARD_VARARGS
+        if defined it will include header <stdarg.h> and provide
+        additional functions depending on and variable arguments
+        IMPORTANT:  this adds the standard library with va_list,...
+                        so don't define this if you don't want to link to the standard library!
 
     NK_INCLUDE_VERTEX_BUFFER_OUTPUT
         Defining this adds a vertex draw command list backend to this
@@ -183,6 +188,9 @@ LICENSE:
     publish and distribute this file as you see fit.
 
 CHANGELOG:
+    - 2016/08/06 (1.05) - Split varargs away from NK_INCLUDE_STANDARD_IO into own
+                            define NK_INCLUDE_STANDARD_VARARGS to allow more fine
+                            grained controlled over library includes.
     - 2016/08/06 (1.045)- Changed memset calls to NK_MEMSET
     - 2016/08/04 (1.044)- Fixed fast window scaling behavior
     - 2016/08/04 (1.043)- Fixed window scaling, movement bug which appears if you
@@ -656,7 +664,7 @@ NK_API void                     nk_label_colored(struct nk_context*, const char*
 NK_API void                     nk_label_wrap(struct nk_context*, const char*);
 NK_API void                     nk_label_colored_wrap(struct nk_context*, const char*, struct nk_color);
 NK_API void                     nk_image(struct nk_context*, struct nk_image);
-#ifdef NK_INCLUDE_STANDARD_IO
+#ifdef NK_INCLUDE_STANDARD_VARARGS
 NK_API void                     nk_labelf(struct nk_context*, nk_flags, const char*, ...);
 NK_API void                     nk_labelf_colored(struct nk_context*, nk_flags align, struct nk_color, const char*,...);
 NK_API void                     nk_labelf_wrap(struct nk_context*, const char*,...);
@@ -942,7 +950,7 @@ NK_API int                      nk_strtof(float *number, const char *buffer);
 NK_API int                      nk_strfilter(const char *text, const char *regexp);
 NK_API int                      nk_strmatch_fuzzy_string(char const *str, char const *pattern, int *out_score);
 NK_API int                      nk_strmatch_fuzzy_text(const char *txt, int txt_len, const char *pattern, int *out_score);
-#ifdef NK_INCLUDE_STANDARD_IO
+#ifdef NK_INCLUDE_STANDARD_VARARGS
 NK_API int                      nk_strfmt(char *buf, int len, const char *fmt,...);
 #endif
 
@@ -2598,14 +2606,16 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #define NK_BUFFER_DEFAULT_INITIAL_SIZE (4*1024)
 #endif
 
+/* standard library headers */
 #ifdef NK_INCLUDE_DEFAULT_ALLOCATOR
 #include <stdlib.h> /* malloc, free */
 #endif
 #ifdef NK_INCLUDE_STANDARD_IO
 #include <stdio.h> /* fopen, fclose,... */
-#include <stdarg.h>
 #endif
-
+#ifdef NK_INCLUDE_STANDARD_VARARGS
+#include <stdarg.h> /* valist, va_start, va_end, ... */
+#endif
 #ifndef NK_ASSERT
 #include <assert.h>
 #define NK_ASSERT(expr) assert(expr)
@@ -3276,7 +3286,7 @@ NK_API int
 nk_strmatch_fuzzy_string(char const *str, char const *pattern, int *out_score)
 {return nk_strmatch_fuzzy_text(str, nk_strlen(str), pattern, out_score);}
 
-#ifdef NK_INCLUDE_STANDARD_IO
+#ifdef NK_INCLUDE_STANDARD_VARARGS
 NK_API int
 nk_strfmt(char *buf, int buf_size, const char *fmt,...)
 {
@@ -17454,7 +17464,7 @@ nk_text_wrap_colored(struct nk_context *ctx, const char *str,
     nk_widget_text_wrap(&win->buffer, bounds, str, len, &text, style->font);
 }
 
-#ifdef NK_INCLUDE_STANDARD_IO
+#ifdef NK_INCLUDE_STANDARD_VARARGS
 NK_API void
 nk_labelf_colored(struct nk_context *ctx, nk_flags flags,
     struct nk_color color, const char *fmt, ...)

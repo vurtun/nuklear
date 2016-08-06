@@ -858,7 +858,7 @@ overview(struct nk_context *ctx)
                 nk_layout_row_begin(ctx, NK_STATIC, 20, 3);
                 for (i = 0; i < 3; ++i) {
                     /* make sure button perfectly fits text */
-                    struct nk_user_font *f = ctx->style.font;
+                    const struct nk_user_font *f = ctx->style.font;
                     float text_width = f->width(f->userdata, f->height, names[i], nk_strlen(names[i]));
                     float widget_width = text_width + 3 * ctx->style.button.padding.x;
                     nk_layout_row_push(ctx, widget_width);
