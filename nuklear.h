@@ -183,6 +183,7 @@ LICENSE:
     publish and distribute this file as you see fit.
 
 CHANGELOG:
+    - 2016/08/06 (1.045)- Changed memset calls to NK_MEMSET
     - 2016/08/04 (1.044)- Fixed fast window scaling behavior
     - 2016/08/04 (1.043)- Fixed window scaling, movement bug which appears if you
                             move/scale a window and another window is behind it.
@@ -14775,7 +14776,7 @@ nk_clear(struct nk_context *ctx)
     ctx->memory.calls = 0;
     ctx->last_widget_state = 0;
     ctx->style.cursor_active = ctx->style.cursors[NK_CURSOR_ARROW];
-    memset(&ctx->overlay, 0, sizeof(ctx->overlay));
+    NK_MEMSET(&ctx->overlay, 0, sizeof(ctx->overlay));
 #ifdef NK_INCLUDE_VERTEX_BUFFER_OUTPUT
     nk_draw_list_clear(&ctx->draw_list);
 #endif
@@ -18692,7 +18693,7 @@ nk_chart_end(struct nk_context *ctx)
 
     win = ctx->current;
     chart = &win->layout->chart;
-    memset(chart, 0, sizeof(*chart));
+    NK_MEMSET(chart, 0, sizeof(*chart));
     return;
 }
 
