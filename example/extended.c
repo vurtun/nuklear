@@ -1,4 +1,4 @@
-/* nuklear - v1.00 - public domain */
+/* nuklear - v1.05 - public domain */
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -209,7 +209,7 @@ grid_demo(struct nk_context *ctx, struct media *media)
         nk_label(ctx, "Combobox:", NK_TEXT_RIGHT);
 
         if (nk_combo_begin_label(ctx, &combo, items[selected_item], 200)) {
-            nk_layout_row_dynamic(ctx, 30, 1);
+            nk_layout_row_dynamic(ctx, 25, 1);
             for (i = 0; i < 3; ++i)
                 if (nk_combo_item_label(ctx, items[i], NK_TEXT_LEFT))
                     selected_item = i;
@@ -870,7 +870,7 @@ int main(int argc, char *argv[])
         /* Draw */
         glViewport(0, 0, display_width, display_height);
         glClear(GL_COLOR_BUFFER_BIT);
-        glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         device_draw(&device, &ctx, width, height, scale, NK_ANTI_ALIASING_ON);
         glfwSwapBuffers(win);
     }
