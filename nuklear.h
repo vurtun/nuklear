@@ -1,5 +1,5 @@
 /*
- Nuklear - v1.051 - public domain
+ Nuklear - v1.052 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -188,6 +188,8 @@ LICENSE:
     publish and distribute this file as you see fit.
 
 CHANGELOG:
+    - 2016/08/06 (1.052)- Fixed old bug in dynamic immediate mode layout API, calculating
+                            wrong item spacing and panel width.
     - 2016/08/06 (1.051)- Hopefully finally fixed combobox popup drawing bug
     - 2016/08/06 (1.05) - Split varargs away from NK_INCLUDE_STANDARD_IO into own
                             define NK_INCLUDE_STANDARD_VARARGS to allow more fine
@@ -16076,9 +16078,8 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
         layout->clip.y = layout->bounds.y;
 
         /* combo box and menu do not have header space */
-        if (!(win->flags & NK_WINDOW_COMBO) && !(win->flags & NK_WINDOW_MENU)) {
+        if (!(win->flags & NK_WINDOW_COMBO) && !(win->flags & NK_WINDOW_MENU))
             layout->clip.y += layout->header_h + style->window.padding.y;
-        }
 
         nk_unify(&clip, &win->buffer.clip, layout->clip.x, layout->clip.y,
             layout->clip.x + layout->clip.w, layout->clip.y + layout->clip.h);
@@ -16940,7 +16941,7 @@ nk_layout_widget_space(struct nk_rect *bounds, const struct nk_context *ctx,
         /* scaling single ratio widget width */
         item_width = layout->row.item_width * panel_space;
         item_offset = layout->row.item_offset;
-        item_spacing = (float)layout->row.index * spacing.x;
+        item_spacing = 0;
 
         if (modify) {
             layout->row.item_offset += item_width + spacing.x;
