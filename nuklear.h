@@ -1,5 +1,5 @@
 /*
- Nuklear - v1.05 - public domain
+ Nuklear - v1.051 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -188,6 +188,7 @@ LICENSE:
     publish and distribute this file as you see fit.
 
 CHANGELOG:
+    - 2016/08/06 (1.051)- Hopefully finally fixed combobox popup drawing bug
     - 2016/08/06 (1.05) - Split varargs away from NK_INCLUDE_STANDARD_IO into own
                             define NK_INCLUDE_STANDARD_VARARGS to allow more fine
                             grained controlled over library includes.
@@ -16151,10 +16152,10 @@ nk_panel_end(struct nk_context *ctx)
                 /* special case for windows like combobox, menu require draw call
                  * to fill the empty scrollbar background */
                 struct nk_rect bounds;
-                bounds.x = layout->bounds.x + layout->width - layout->border/2.0f;
+                bounds.x = layout->bounds.x + layout->width - layout->border*2;
                 bounds.y = layout->clip.y;
-                bounds.w = scrollbar_size.x + layout->border;
-                bounds.h = layout->height;
+                bounds.w = scrollbar_size.x + layout->border*2;
+                bounds.h = layout->height + layout->border;
                 nk_fill_rect(out, bounds, 0, style->window.background);
             }
         } else {
@@ -16171,10 +16172,10 @@ nk_panel_end(struct nk_context *ctx)
             if (!(layout->flags & NK_WINDOW_COMBO) && !(layout->flags & NK_WINDOW_MENU)) {
                 /* fill empty scrollbar space */
                 struct nk_rect bounds;
-                bounds.x = layout->bounds.x;
+                bounds.x = layout->bounds.x - layout->border/2.0f;
                 bounds.y = window->bounds.y + layout->height;
-                bounds.w = layout->bounds.w;
-                bounds.h = layout->row.height;
+                bounds.w = layout->bounds.w + layout->border;
+                bounds.h = layout->row.height + layout->border;
                 nk_fill_rect(out, bounds, 0, style->window.background);
             }
         }
