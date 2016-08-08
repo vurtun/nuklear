@@ -1,5 +1,5 @@
 /*
- Nuklear - v1.052 - public domain
+ Nuklear - v1.054 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -100,7 +100,7 @@ OPTIONAL DEFINES:
 
     NK_INCLUDE_FONT_BAKING
         Defining this adds the `stb_truetype` and `stb_rect_pack` implementation
-        to this library and provides a default font for font loading and rendering.
+        to this library and provides font loading and rendering.
         If you already have font handling or do not want to use this font handler
         you don't have to define it.
 
@@ -188,6 +188,8 @@ LICENSE:
     publish and distribute this file as you see fit.
 
 CHANGELOG:
+    - 2016/08/06 (1.054)- Fixed scrollbar auto hiding behavior
+    - 2016/08/06 (1.053)- Fixed wrong panel padding selection in `nk_laout_widget_space`
     - 2016/08/06 (1.052)- Fixed old bug in dynamic immediate mode layout API, calculating
                             wrong item spacing and panel width.
     - 2016/08/06 (1.051)- Hopefully finally fixed combobox popup drawing bug
@@ -16288,14 +16290,14 @@ nk_panel_end(struct nk_context *ctx)
     }
 
     /* hide scroll if no user input */
-    {int has_input = ctx->input.mouse.delta.x || ctx->input.mouse.delta.y || ctx->input.mouse.scroll_delta;
-    int is_window_hovered = nk_window_is_hovered(ctx);
-    int any_item_active = (ctx->last_widget_state & NK_WIDGET_STATE_MODIFIED);
     if (window->flags & NK_WINDOW_SCROLL_AUTO_HIDE) {
-        if ((!has_input && is_window_hovered) || (is_window_hovered && !any_item_active))
+        int has_input = ctx->input.mouse.delta.x || ctx->input.mouse.delta.y || ctx->input.mouse.scroll_delta;
+        int is_window_hovered = nk_window_is_hovered(ctx);
+        int any_item_active = (ctx->last_widget_state & NK_WIDGET_STATE_MODIFIED);
+        if ((!has_input && is_window_hovered) || (!is_window_hovered && !any_item_active))
             window->scrollbar_hiding_timer += ctx->delta_time_seconds;
         else window->scrollbar_hiding_timer = 0;
-    } else window->scrollbar_hiding_timer = 0;}
+    } else window->scrollbar_hiding_timer = 0;
 
     /* window border */
     if (layout->flags & NK_WINDOW_BORDER)
@@ -16910,17 +16912,17 @@ nk_layout_widget_space(struct nk_rect *bounds, const struct nk_context *ctx,
 
     /* cache some configuration data */
     spacing = ctx->style.window.spacing;
-    if (!(win->flags & NK_WINDOW_SUB))
+    if (!(layout->flags & NK_WINDOW_SUB))
         padding = style->window.padding;
-    else if (win->flags & NK_WINDOW_COMBO)
+    else if (layout->flags & NK_WINDOW_COMBO)
         padding = style->window.combo_padding;
-    else if (win->flags & NK_WINDOW_CONTEXTUAL)
+    else if (layout->flags & NK_WINDOW_CONTEXTUAL)
         padding = style->window.contextual_padding;
-    else if (win->flags & NK_WINDOW_MENU)
+    else if (layout->flags & NK_WINDOW_MENU)
         padding = style->window.menu_padding;
-    else if (win->flags & NK_WINDOW_GROUP)
+    else if (layout->flags & NK_WINDOW_GROUP)
         padding = style->window.group_padding;
-    else if (win->flags & NK_WINDOW_TOOLTIP)
+    else if (layout->flags & NK_WINDOW_TOOLTIP)
         padding = style->window.tooltip_padding;
     else padding = style->window.popup_padding;
 
