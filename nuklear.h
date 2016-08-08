@@ -1,5 +1,5 @@
 /*
- Nuklear - v1.054 - public domain
+ Nuklear - v1.06 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -179,7 +179,7 @@ CREDITS:
     Big thank you to Omar Cornut (ocornut@github) for his imgui library and
     giving me the inspiration for this library, Casey Muratori for handmade hero
     and his original immediate mode graphical user interface idea and Sean
-    Barret for his amazing single header libraries which restored by faith
+    Barret for his amazing single header libraries which restored my faith
     in libraries and brought me to create some of my own.
 
 LICENSE:
@@ -188,12 +188,14 @@ LICENSE:
     publish and distribute this file as you see fit.
 
 CHANGELOG:
-    - 2016/08/06 (1.054)- Fixed scrollbar auto hiding behavior
-    - 2016/08/06 (1.053)- Fixed wrong panel padding selection in `nk_laout_widget_space`
-    - 2016/08/06 (1.052)- Fixed old bug in dynamic immediate mode layout API, calculating
+    - 2016/08/08 (1.06) - Added `nk_edit_string_zero_terminated` as a second option to
+                            `nk_edit_string` which takes, edits and outputs a '\0' terminated string.
+    - 2016/08/08 (1.053)- Fixed scrollbar auto hiding behavior
+    - 2016/08/08 (1.053)- Fixed wrong panel padding selection in `nk_layout_widget_space`
+    - 2016/08/07 (1.052)- Fixed old bug in dynamic immediate mode layout API, calculating
                             wrong item spacing and panel width.
-    - 2016/08/06 (1.051)- Hopefully finally fixed combobox popup drawing bug
-    - 2016/08/06 (1.05) - Split varargs away from NK_INCLUDE_STANDARD_IO into own
+    - 2016/08/07 (1.051)- Hopefully finally fixed combobox popup drawing bug
+    - 2016/08/07 (1.05) - Split varargs away from NK_INCLUDE_STANDARD_IO into own
                             define NK_INCLUDE_STANDARD_VARARGS to allow more fine
                             grained controlled over library includes.
     - 2016/08/06 (1.045)- Changed memset calls to NK_MEMSET
@@ -746,6 +748,7 @@ NK_API int                      nk_propertyi(struct nk_context *layout, const ch
 /* Widgets: TextEdit */
 NK_API nk_flags                 nk_edit_string(struct nk_context*, nk_flags, char *buffer, int *len, int max, nk_filter);
 NK_API nk_flags                 nk_edit_buffer(struct nk_context*, nk_flags, struct nk_text_edit*, nk_filter);
+NK_API nk_flags                 nk_edit_string_zero_terminated(struct nk_context*, nk_flags, char *buffer, int max, nk_filter);
 
 /* Chart */
 NK_API int                      nk_chart_begin(struct nk_context*, enum nk_chart_type, int num, float min, float max);
@@ -18260,6 +18263,16 @@ nk_edit_buffer(struct nk_context *ctx, nk_flags flags,
         win->edit.active = nk_false;
     }
     return ret_flags;
+}
+
+NK_API nk_flags
+nk_edit_string_zero_terminated(struct nk_context *ctx, nk_flags flags,
+    char *buffer, int max, nk_filter)
+{
+    nk_flags result;
+    int len = nk_strlen(buffer);
+    result = nk_edit_string(ctx, flags, buffer, &len, max, filter);
+    buffer[NK_MIN(NK_MAX(max-1,0), len)] = '\0';
 }
 
 /*----------------------------------------------------------------
