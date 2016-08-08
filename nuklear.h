@@ -188,6 +188,12 @@ LICENSE:
     publish and distribute this file as you see fit.
 
 CHANGELOG:
+    - 2016/08/08 (1.07) - Nuklear now differentiates between hiding a window (NK_WINDOW_HIDDEN) and
+                            closing a window (NK_WINDOW_CLOSED). A window can be hidden
+                            by using `nk_window_show` and closed by either clicking the close
+                            icon in a window or by calling `nk_window_close`. Only closed
+                            windows get removed at the end of the frame while hidden windows
+                            remain.
     - 2016/08/08 (1.06) - Added `nk_edit_string_zero_terminated` as a second option to
                             `nk_edit_string` which takes, edits and outputs a '\0' terminated string.
     - 2016/08/08 (1.053)- Fixed scrollbar auto hiding behavior
@@ -2355,27 +2361,28 @@ enum nk_window_flags {
     NK_WINDOW_ROM           = NK_FLAG(12),
     /* sets the window into a read only mode and does not allow input changes */
     NK_WINDOW_HIDDEN        = NK_FLAG(13),
-    /* Hides the window and stops any window interaction and drawing can be set
-     * by user input or by closing the window */
-    NK_WINDOW_MINIMIZED     = NK_FLAG(14),
+    /* Hides the window and stops any window interaction and drawing */
+    NK_WINDOW_CLOSED        = NK_FLAG(14),
+    /* Directly closes and frees the window at the end of the frame */
+    NK_WINDOW_MINIMIZED     = NK_FLAG(15),
     /* marks the window as minimized */
-    NK_WINDOW_SUB           = NK_FLAG(15),
+    NK_WINDOW_SUB           = NK_FLAG(16),
     /* Marks the window as subwindow of another window*/
-    NK_WINDOW_GROUP         = NK_FLAG(16),
+    NK_WINDOW_GROUP         = NK_FLAG(17),
     /* Marks the window as window widget group */
-    NK_WINDOW_POPUP         = NK_FLAG(17),
+    NK_WINDOW_POPUP         = NK_FLAG(18),
     /* Marks the window as a popup window */
-    NK_WINDOW_NONBLOCK      = NK_FLAG(18),
+    NK_WINDOW_NONBLOCK      = NK_FLAG(19),
     /* Marks the window as a nonblock popup window */
-    NK_WINDOW_CONTEXTUAL    = NK_FLAG(19),
+    NK_WINDOW_CONTEXTUAL    = NK_FLAG(20),
     /* Marks the window as a combo box or menu */
-    NK_WINDOW_COMBO         = NK_FLAG(20),
+    NK_WINDOW_COMBO         = NK_FLAG(21),
     /* Marks the window as a combo box */
-    NK_WINDOW_MENU          = NK_FLAG(21),
+    NK_WINDOW_MENU          = NK_FLAG(22),
     /* Marks the window as a menu */
-    NK_WINDOW_TOOLTIP       = NK_FLAG(22),
+    NK_WINDOW_TOOLTIP       = NK_FLAG(23),
     /* Marks the window as a menu */
-    NK_WINDOW_REMOVE_ROM    = NK_FLAG(23)
+    NK_WINDOW_REMOVE_ROM    = NK_FLAG(24)
     /* Removes the read only mode at the end of the window */
 };
 
@@ -14829,7 +14836,7 @@ nk_clear(struct nk_context *ctx)
         }}
 
         /* window itself is not used anymore so free */
-        if (iter->seq != ctx->seq || iter->flags & NK_WINDOW_HIDDEN) {
+        if (iter->seq != ctx->seq || iter->flags & NK_WINDOW_CLOSED) {
             next = iter->next;
             nk_remove_window(ctx, iter);
             nk_free_window(ctx, iter);
@@ -15676,6 +15683,7 @@ nk_window_close(struct nk_context *ctx, const char *name)
     NK_ASSERT(ctx->current != win && "You cannot close a currently active window");
     if (ctx->current == win) return;
     win->flags |= NK_WINDOW_HIDDEN;
+    win->flags |= NK_WINDOW_CLOSED;
 }
 
 NK_API void
@@ -15997,7 +16005,10 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
             if (nk_do_button_symbol(&ws, &win->buffer, button,
                 style->window.header.close_symbol, NK_BUTTON_DEFAULT,
                 &style->window.header.close_button, in, style->font))
+            {
                 layout->flags |= NK_WINDOW_HIDDEN;
+                layout->flags |= NK_WINDOW_CLOSED;
+            }
         }
 
         /* window minimize button */
@@ -18267,12 +18278,13 @@ nk_edit_buffer(struct nk_context *ctx, nk_flags flags,
 
 NK_API nk_flags
 nk_edit_string_zero_terminated(struct nk_context *ctx, nk_flags flags,
-    char *buffer, int max, nk_filter)
+    char *buffer, int max, nk_filter filter)
 {
     nk_flags result;
     int len = nk_strlen(buffer);
     result = nk_edit_string(ctx, flags, buffer, &len, max, filter);
     buffer[NK_MIN(NK_MAX(max-1,0), len)] = '\0';
+    return result;
 }
 
 /*----------------------------------------------------------------
