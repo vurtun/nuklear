@@ -1,5 +1,5 @@
 /*
- Nuklear - v1.06 - public domain
+ Nuklear - v1.071 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -188,15 +188,18 @@ LICENSE:
     publish and distribute this file as you see fit.
 
 CHANGELOG:
+    - 2016/08/08 (1.071)- Fixed possible floating point error inside `nk_widget` leading
+                            to wrong wiget width calculation which results in widgets falsly
+                            becomming tagged as not inside window and cannot be accessed.
     - 2016/08/08 (1.07) - Nuklear now differentiates between hiding a window (NK_WINDOW_HIDDEN) and
-                            closing a window (NK_WINDOW_CLOSED). A window can be hidden
+                            closing a window (NK_WINDOW_CLOSED). A window can be hidden/shown
                             by using `nk_window_show` and closed by either clicking the close
                             icon in a window or by calling `nk_window_close`. Only closed
                             windows get removed at the end of the frame while hidden windows
                             remain.
     - 2016/08/08 (1.06) - Added `nk_edit_string_zero_terminated` as a second option to
                             `nk_edit_string` which takes, edits and outputs a '\0' terminated string.
-    - 2016/08/08 (1.053)- Fixed scrollbar auto hiding behavior
+    - 2016/08/08 (1.054)- Fixed scrollbar auto hiding behavior
     - 2016/08/08 (1.053)- Fixed wrong panel padding selection in `nk_layout_widget_space`
     - 2016/08/07 (1.052)- Fixed old bug in dynamic immediate mode layout API, calculating
                             wrong item spacing and panel width.
@@ -16985,6 +16988,7 @@ nk_layout_widget_space(struct nk_rect *bounds, const struct nk_context *ctx,
         item_spacing = (float)layout->row.index * spacing.x;
         item_width = (ratio * panel_space);
         item_offset = layout->row.item_offset;
+
         if (modify) {
             layout->row.item_offset += item_width;
             layout->row.filled += ratio;
@@ -17344,6 +17348,13 @@ nk_widget(struct nk_rect *bounds, const struct nk_context *ctx)
     /* allocate space  and check if the widget needs to be updated and drawn */
     nk_panel_alloc_space(bounds, ctx);
     c = &ctx->current->layout->clip;
+
+    /* need to convert to int here to remove floating point error */
+    bounds->x = (float)((int)bounds->x);
+    bounds->y = (float)((int)bounds->y);
+    bounds->w = (float)((int)bounds->w);
+    bounds->h = (float)((int)bounds->h);
+
     if (!NK_INTERSECT(c->x, c->y, c->w, c->h, bounds->x, bounds->y, bounds->w, bounds->h))
         return NK_WIDGET_INVALID;
     if (!NK_CONTAINS(bounds->x, bounds->y, bounds->w, bounds->h, c->x, c->y, c->w, c->h))
