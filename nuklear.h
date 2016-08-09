@@ -1,5 +1,5 @@
 /*
- Nuklear - v1.071 - public domain
+ Nuklear - v1.072 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -188,6 +188,7 @@ LICENSE:
     publish and distribute this file as you see fit.
 
 CHANGELOG:
+    - 2016/08/08 (1.072)- Fixed compiling error without define NK_INCLUDE_FIXED_TYPE
     - 2016/08/08 (1.071)- Fixed possible floating point error inside `nk_widget` leading
                             to wrong wiget width calculation which results in widgets falsly
                             becomming tagged as not inside window and cannot be accessed.
@@ -319,10 +320,9 @@ typedef unsigned long nk_ptr;
 #else
 typedef NK_POINTER_TYPE nk_ptr;
 #endif
-typedef NK_UINT32 nk_hash;
+typedef nk_uint nk_hash;
 typedef unsigned int nk_flags;
 typedef nk_uint nk_rune;
-typedef unsigned char nk_byte;
 #endif
 
 #ifdef NK_PRIVATE
