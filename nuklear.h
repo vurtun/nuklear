@@ -164,6 +164,11 @@ OPTIONAL DEFINES:
         implementation replacement. If not defined nuklear will use its own
         imprecise and possibly unsafe version.
 
+    NK_DTOA
+        You can define this to `dtoa` or your own double to string conversion
+        implementation replacement. If not defined nuklear will use its own
+        imprecise and possibly unsafe version.
+
     NK_BYTE
     NK_INT16
     NK_UINT16
@@ -193,6 +198,9 @@ LICENSE:
     publish and distribute this file as you see fit.
 
 CHANGELOG:
+    - 2016/08/09 (1.08) - Added additional define to overwrite library intern
+                            floating pointer number to string conversion for additional
+                            precision.
     - 2016/08/09 (1.08) - Added additional define to overwrite library intern
                             string to floating point number conversion for additional
                             precision.
@@ -2666,6 +2674,9 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #ifndef NK_STRTOD
 #define NK_STRTOD nk_strtod
 #endif
+#ifndef NK_DTOA
+#define NK_DTOA nk_dtoa
+#endif
 
 /* Make sure correct type size:
  * This will fire with a negative subscript error if the type sizes
@@ -3387,27 +3398,27 @@ nk_pow(float x, int n)
 }
 
 NK_INTERN int
-nk_ifloor(float x)
+nk_ifloor(double x)
 {
-    x = (float)((int)x - ((x < 0.0f) ? 1 : 0));
+    x = (double)((int)x - ((x < 0.0f) ? 1 : 0));
     return (int)x;
 }
 
 NK_INTERN int
-nk_iceil(float x)
+nk_iceil(double x)
 {
     if (x >= 0) {
         int i = (int)x;
         return i;
     } else {
         int t = (int)x;
-        float r = x - (float)t;
+        double r = x - (double)t;
         return (r > 0.0f) ? t+1: t;
     }
 }
 
 NK_INTERN int
-nk_log10(float n)
+nk_log10(double n)
 {
     int neg;
     int ret;
@@ -3423,17 +3434,20 @@ nk_log10(float n)
     return exp;
 }
 
-NK_INTERN int
-nk_ftos(char *s, float n)
+NK_INTERN char*
+nk_dtoa(char *s, double n)
 {
     int useExp = 0;
     int digit = 0, m = 0, m1 = 0;
     char *c = s;
     int neg = 0;
 
+    NK_ASSERT(s);
+    if (!s) return 0;
+
     if (n == 0.0f) {
         s[0] = '0'; s[1] = '\0';
-        return 1;
+        return s;
     }
 
     neg = (n < 0);
@@ -3458,11 +3472,11 @@ nk_ftos(char *s, float n)
 
     /* convert the number */
     while (n > NK_FLOAT_PRECISION || m >= 0) {
-        float weight = nk_pow(10.0, m);
+        double weight = nk_pow(10.0, m);
         if (weight > 0) {
-            float t = (float)n / weight;
+            double t = (double)n / weight;
             digit = nk_ifloor(t);
-            n -= ((float)digit * weight);
+            n -= ((double)digit * weight);
             *(c++) = (char)('0' + (char)digit);
         }
         if (m == 0 && n > 0)
@@ -3496,7 +3510,7 @@ nk_ftos(char *s, float n)
         c += m;
     }
     *(c) = '\0';
-    return (int)(c - s);
+    return s;
 }
 
 NK_API nk_hash
@@ -13713,7 +13727,7 @@ nk_do_property(nk_flags *ws,
         length = len;
         dst = buffer;
     } else {
-        nk_ftos(string, property_value);
+        nk_dtoa(string, property_value);
         num_len = nk_string_float_limit(string, NK_MAX_FLOAT_PRECISION);
         size = font->width(font->userdata, font->height, string, num_len);
         dst = string;
