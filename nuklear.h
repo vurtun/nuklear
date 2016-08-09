@@ -49,7 +49,7 @@ FEATURES:
         - Ease of use by allocating everything from the standard library
         - Control every byte of memory inside the library
     - Font handling control ranging from/to
-        - Use your own font implementation to draw shapes/vertexes
+        - Use your own font implementation for everything
         - Use this libraries internal font baking and handling API
     - Drawing output control ranging from/to
         - Simple shapes for more high level APIs which already having drawing capabilities
@@ -62,7 +62,7 @@ FEATURES:
         - Advanced widget like abstract comboboxes, contextual menus,...
     - Compile time configuration to only compile what you need
         - Subset which can be used if you do not want to link or use the standard library
-    - Can be easily modified only update on user input instead of frame updates
+    - Can be easily modified to only update on user input instead of frame updates
 
 OPTIONAL DEFINES:
     NK_PRIVATE
@@ -88,7 +88,7 @@ OPTIONAL DEFINES:
 
     NK_INCLUDE_STANDARD_VARARGS
         if defined it will include header <stdarg.h> and provide
-        additional functions depending on and variable arguments
+        additional functions depending on variable arguments
         IMPORTANT:  this adds the standard library with va_list,...
                         so don't define this if you don't want to link to the standard library!
 
@@ -159,6 +159,11 @@ OPTIONAL DEFINES:
         You can define this to 'cosf' or your own cosine implementation
         replacement. If not nuklear will use its own approximation implementation.
 
+    NK_STRTOD
+        You can define this to `strtod` or your own string to double conversion
+        implementation replacement. If not defined nuklear will use its own
+        imprecise and possibly unsafe version.
+
     NK_BYTE
     NK_INT16
     NK_UINT16
@@ -188,6 +193,9 @@ LICENSE:
     publish and distribute this file as you see fit.
 
 CHANGELOG:
+    - 2016/08/09 (1.08) - Added additional define to overwrite library intern
+                            string to floating point number conversion for additional
+                            precision.
     - 2016/08/08 (1.072)- Fixed compiling error without define NK_INCLUDE_FIXED_TYPE
     - 2016/08/08 (1.071)- Fixed possible floating point error inside `nk_widget` leading
                             to wrong wiget width calculation which results in widgets falsly
@@ -963,7 +971,8 @@ NK_API struct nk_vec2           nk_rect_size(struct nk_rect);
 NK_API int                      nk_strlen(const char *str);
 NK_API int                      nk_stricmp(const char *s1, const char *s2);
 NK_API int                      nk_stricmpn(const char *s1, const char *s2, int n);
-NK_API int                      nk_strtof(float *number, const char *buffer);
+NK_API double                   nk_strtod(const char *str, char **endptr);
+NK_API float                    nk_strtof(const char *str, char **endptr);
 NK_API int                      nk_strfilter(const char *text, const char *regexp);
 NK_API int                      nk_strmatch_fuzzy_string(char const *str, char const *pattern, int *out_score);
 NK_API int                      nk_strmatch_fuzzy_text(const char *txt, int txt_len, const char *pattern, int *out_score);
@@ -2654,6 +2663,9 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #ifndef NK_COS
 #define NK_COS nk_cos
 #endif
+#ifndef NK_STRTOD
+#define NK_STRTOD nk_strtod
+#endif
 
 /* Make sure correct type size:
  * This will fire with a negative subscript error if the type sizes
@@ -3024,61 +3036,72 @@ nk_strlen(const char *str)
     return siz;
 }
 
-NK_API int
-nk_strtof(float *number, const char *buffer)
+NK_API double
+nk_strtod(const char *str, char **endptr)
 {
-    float m;
-    float neg = 1.0f;
-    const char *p = buffer;
-    float floatvalue = 0;
+    double m;
+    double neg = 1.0;
+    const char *p = str;
+    double value = 0;
+    double number = 0;
 
-    NK_ASSERT(number);
-    NK_ASSERT(buffer);
-    if (!number || !buffer) return 0;
-    *number = 0;
+    NK_ASSERT(str);
+    if (!str) return 0;
 
     /* skip whitespace */
     while (*p && *p == ' ') p++;
     if (*p == '-') {
-        neg = -1.0f;
+        neg = -1.0;
         p++;
     }
 
-    while( *p && *p != '.' && *p != 'e' ) {
-        floatvalue = floatvalue * 10.0f + (float) (*p - '0');
+    while (*p && *p != '.' && *p != 'e') {
+        value = value * 10.0 + (double) (*p - '0');
         p++;
     }
 
-    if ( *p == '.' ) {
+    if (*p == '.') {
         p++;
-        for(m = 0.1f; *p && *p != 'e'; p++ ) {
-            floatvalue = floatvalue + (float) (*p - '0') * m;
-            m *= 0.1f;
+        for(m = 0.1; *p && *p != 'e'; p++ ) {
+            value = value + (double) (*p - '0') * m;
+            m *= 0.1;
         }
     }
-    if ( *p == 'e' ) {
+    if (*p == 'e') {
         int i, pow, div;
         p++;
-        if ( *p == '-' ) {
+        if (*p == '-') {
             div = nk_true;
             p++;
-        } else if ( *p == '+' ) {
+        } else if (*p == '+') {
             div = nk_false;
             p++;
         } else div = nk_false;
 
-        for ( pow = 0; *p; p++ )
+        for (pow = 0; *p; p++)
             pow = pow * 10 + (int) (*p - '0');
 
-        for ( m = 1.0, i = 0; i < pow; i++ )
-            m *= 10.0f;
+        for (m = 1.0, i = 0; i < pow; i++)
+            m *= 10.0;
 
-        if ( div )
-            floatvalue /= m;
-        else floatvalue *= m;
+        if (div)
+            value /= m;
+        else value *= m;
     }
-    *number = floatvalue * neg;
-    return 1;
+    number = value * neg;
+    if (endptr)
+        *endptr = (char*)p;
+    return number;
+}
+
+NK_API float
+nk_strtof(const char *str, char **endptr)
+{
+    float float_value;
+    double double_value;
+    double_value = NK_STRTOD(str, endptr);
+    float_value = (float)double_value;
+    return float_value;
 }
 
 NK_API int
@@ -13759,10 +13782,12 @@ nk_do_property(nk_flags *ws,
 
     if (old && !active) {
         /* property is now not active so convert edit text to value*/
+        double value;
         *state = NK_PROPERTY_DEFAULT;
         buffer[*len] = '\0';
         nk_string_float_limit(buffer, NK_MAX_FLOAT_PRECISION);
-        nk_strtof(&property_value, buffer);
+        value = NK_STRTOD(buffer, 0);
+        property_value = (float)value;
         property_value = NK_CLAMP(min, property_value, max);
     }
     return property_value;
