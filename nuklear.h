@@ -3062,7 +3062,6 @@ nk_strlen(const char *str)
 NK_API int
 nk_strtoi(const char *str, char **endptr)
 {
-    int m;
     int neg = 1.0;
     const char *p = str;
     int value = 0;
@@ -13921,7 +13920,6 @@ nk_do_property(nk_flags *ws,
 
     if (old && !active) {
         /* property is now not active so convert edit text to value*/
-        double value;
         *state = NK_PROPERTY_DEFAULT;
         buffer[*len] = '\0';
         switch (variant->kind) {
@@ -18623,7 +18621,6 @@ NK_API void
 nk_property_int(struct nk_context *ctx, const char *name,
     int min, int *val, int max, int step, float inc_per_pixel)
 {
-    float value;
     struct nk_property_variant variant;
     NK_ASSERT(ctx);
     NK_ASSERT(name);
@@ -18652,7 +18649,6 @@ NK_API void
 nk_property_double(struct nk_context *ctx, const char *name,
     double min, double *val, double max, double step, float inc_per_pixel)
 {
-    float value;
     struct nk_property_variant variant;
     NK_ASSERT(ctx);
     NK_ASSERT(name);
