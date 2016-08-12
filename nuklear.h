@@ -1,5 +1,5 @@
 /*
- Nuklear - v1.072 - public domain
+ Nuklear - v1.09 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -44,7 +44,7 @@ USAGE:
     or need more control over the library.
 
 FEATURES:
-    - Absolutely no platform dependent code
+    - Absolutely no platform dependend code
     - Memory management control ranging from/to
         - Ease of use by allocating everything from the standard library
         - Control every byte of memory inside the library
@@ -71,7 +71,8 @@ OPTIONAL DEFINES:
 
     NK_INCLUDE_FIXED_TYPES
         If defined it will include header <stdint.h> for fixed sized types
-        otherwise you have to select the correct types.
+        otherwise nuklear tries to select the correct type. If that fails it will
+        throw a compiler error and you have to select the correct types yourself.
 
     NK_INCLUDE_DEFAULT_ALLOCATOR
         if defined it will include header <stdlib.h> and provide additional functions
@@ -198,10 +199,13 @@ LICENSE:
     publish and distribute this file as you see fit.
 
 CHANGELOG:
-    - 2016/08/09 (1.08) - Added additional define to overwrite library intern
+    - 2016/08/09 (1.09) - Added additional double version to nk_property and changed
+                            the underlying implementation to not cast to float and instead
+                            work directly on the given values.
+    - 2016/08/09 (1.08) - Added additional define to overwrite library internal
                             floating pointer number to string conversion for additional
                             precision.
-    - 2016/08/09 (1.08) - Added additional define to overwrite library intern
+    - 2016/08/09 (1.08) - Added additional define to overwrite library internal
                             string to floating point number conversion for additional
                             precision.
     - 2016/08/08 (1.072)- Fixed compiling error without define NK_INCLUDE_FIXED_TYPE
@@ -765,10 +769,12 @@ NK_API struct nk_color          nk_color_picker(struct nk_context*, struct nk_co
 NK_API int                      nk_color_pick(struct nk_context*, struct nk_color*, enum nk_color_format);
 
 /* Widgets: Property */
+NK_API void                     nk_property_int(struct nk_context *layout, const char *name, int min, int *val, int max, int step, float inc_per_pixel);
 NK_API void                     nk_property_float(struct nk_context *layout, const char *name, float min, float *val, float max, float step, float inc_per_pixel);
-NK_API void                     nk_property_int(struct nk_context *layout, const char *name, int min, int *val, int max, int step, int inc_per_pixel);
+NK_API void                     nk_property_double(struct nk_context *layout, const char *name, double min, double *val, double max, double step, float inc_per_pixel);
+NK_API int                      nk_propertyi(struct nk_context *layout, const char *name, int min, int val, int max, int step, float inc_per_pixel);
 NK_API float                    nk_propertyf(struct nk_context *layout, const char *name, float min, float val, float max, float step, float inc_per_pixel);
-NK_API int                      nk_propertyi(struct nk_context *layout, const char *name, int min, int val, int max, int step, int inc_per_pixel);
+NK_API double                   nk_propertyd(struct nk_context *layout, const char *name, double min, double val, double max, double step, float inc_per_pixel);
 
 /* Widgets: TextEdit */
 NK_API nk_flags                 nk_edit_string(struct nk_context*, nk_flags, char *buffer, int *len, int max, nk_filter);
@@ -979,8 +985,9 @@ NK_API struct nk_vec2           nk_rect_size(struct nk_rect);
 NK_API int                      nk_strlen(const char *str);
 NK_API int                      nk_stricmp(const char *s1, const char *s2);
 NK_API int                      nk_stricmpn(const char *s1, const char *s2, int n);
-NK_API double                   nk_strtod(const char *str, char **endptr);
+NK_API int                      nk_strtoi(const char *str, char **endptr);
 NK_API float                    nk_strtof(const char *str, char **endptr);
+NK_API double                   nk_strtod(const char *str, char **endptr);
 NK_API int                      nk_strfilter(const char *text, const char *regexp);
 NK_API int                      nk_strmatch_fuzzy_string(char const *str, char const *pattern, int *out_score);
 NK_API int                      nk_strmatch_fuzzy_text(const char *txt, int txt_len, const char *pattern, int *out_score);
@@ -3047,6 +3054,32 @@ nk_strlen(const char *str)
     return siz;
 }
 
+NK_API int
+nk_strtoi(const char *str, char **endptr)
+{
+    int m;
+    int neg = 1.0;
+    const char *p = str;
+    int value = 0;
+
+    NK_ASSERT(str);
+    if (!str) return 0;
+
+    /* skip whitespace */
+    while (*p && *p == ' ') p++;
+    if (*p == '-') {
+        neg = -1;
+        p++;
+    }
+    while (*p && *p != '.' && *p != 'e') {
+        value = value * 10 + (int) (*p - '0');
+        p++;
+    }
+    if (endptr)
+        *endptr = (char*)p;
+    return value;
+}
+
 NK_API double
 nk_strtod(const char *str, char **endptr)
 {
@@ -3432,6 +3465,45 @@ nk_log10(double n)
     }
     if (neg) exp = -exp;
     return exp;
+}
+
+NK_INTERN void
+nk_strrev_ascii(char *s)
+{
+    int len = nk_strlen(s);
+    int end = len / 2;
+    int i = 0;
+    char t;
+    for (; i < end; ++i) {
+        t = s[i];
+        s[i] = s[len - 1 - i];
+        s[len -1 - i] = t;
+    }
+}
+
+NK_INTERN char*
+nk_itoa(char *s, int n)
+{
+    int i = 0;
+    if (n == 0) {
+        s[i++] = '0';
+        s[i] = 0;
+        return s;
+    }
+    if (n < 0) {
+        s[i++] = '-';
+        n = -n;
+    }
+    while (n > 0) {
+        s[i++] = (char)('0' + (n % 10));
+        n /= 10;
+    }
+    s[i] = 0;
+    if (s[0] == '-')
+        ++s;
+
+    nk_strrev_ascii(s);
+    return s;
 }
 
 NK_INTERN char*
@@ -13573,15 +13645,32 @@ enum nk_property_status {
     NK_PROPERTY_EDIT,
     NK_PROPERTY_DRAG
 };
-
 enum nk_property_filter {
     NK_FILTER_INT,
     NK_FILTER_FLOAT
 };
+enum nk_property_kind {
+    NK_PROPERTY_INT,
+    NK_PROPERTY_FLOAT,
+    NK_PROPERTY_DOUBLE
+};
+union nk_property {
+    int i;
+    float f;
+    double d;
+};
+struct nk_property_variant {
+    enum nk_property_kind kind;
+    union nk_property value;
+    union nk_property min_value;
+    union nk_property max_value;
+    union nk_property step;
+};
 
-NK_INTERN float
+NK_INTERN void
 nk_drag_behavior(nk_flags *state, const struct nk_input *in,
-    struct nk_rect drag, float min, float val, float max, float inc_per_pixel)
+    struct nk_rect drag, struct nk_property_variant *variant,
+    float inc_per_pixel)
 {
     int left_mouse_down = in && in->mouse.buttons[NK_BUTTON_LEFT].down;
     int left_mouse_click_in_cursor = in &&
@@ -13595,24 +13684,35 @@ nk_drag_behavior(nk_flags *state, const struct nk_input *in,
         float delta, pixels;
         pixels = in->mouse.delta.x;
         delta = pixels * inc_per_pixel;
-        val += delta;
-        val = NK_CLAMP(min, val, max);
+        switch (variant->kind) {
+        default: break;
+        case NK_PROPERTY_INT:
+            variant->value.i = variant->value.i + (int)delta;
+            variant->value.i = NK_CLAMP(variant->min_value.i, variant->value.i, variant->max_value.i);
+            break;
+        case NK_PROPERTY_FLOAT:
+            variant->value.f = variant->value.f + (float)delta;
+            variant->value.f = NK_CLAMP(variant->min_value.f, variant->value.f, variant->max_value.f);
+            break;
+        case NK_PROPERTY_DOUBLE:
+            variant->value.d = variant->value.d + (double)delta;
+            variant->value.d = NK_CLAMP(variant->min_value.d, variant->value.d, variant->max_value.d);
+            break;
+        }
         *state = NK_WIDGET_STATE_ACTIVE;
     }
     if (*state & NK_WIDGET_STATE_HOVER && !nk_input_is_mouse_prev_hovering_rect(in, drag))
         *state |= NK_WIDGET_STATE_ENTERED;
     else if (nk_input_is_mouse_prev_hovering_rect(in, drag))
         *state |= NK_WIDGET_STATE_LEFT;
-    return val;
 }
 
-NK_INTERN float
+NK_INTERN void
 nk_property_behavior(nk_flags *ws, const struct nk_input *in,
     struct nk_rect property,  struct nk_rect label, struct nk_rect edit,
-    struct nk_rect empty, int *state, float min, float value, float max,
-    float step, float inc_per_pixel)
+    struct nk_rect empty, int *state, struct nk_property_variant *variant,
+    float inc_per_pixel)
 {
-    NK_UNUSED(step);
     if (in && *state == NK_PROPERTY_DEFAULT) {
         if (nk_button_behavior(ws, edit, in, NK_BUTTON_DEFAULT))
             *state = NK_PROPERTY_EDIT;
@@ -13622,10 +13722,9 @@ nk_property_behavior(nk_flags *ws, const struct nk_input *in,
             *state = NK_PROPERTY_DRAG;
     }
     if (*state == NK_PROPERTY_DRAG) {
-        value = nk_drag_behavior(ws, in, property, min, value, max, inc_per_pixel);
+        nk_drag_behavior(ws, in, property, variant, inc_per_pixel);
         if (!(*ws & NK_WIDGET_STATE_ACTIVED)) *state = NK_PROPERTY_DEFAULT;
     }
-    return value;
 }
 
 NK_INTERN void
@@ -13664,11 +13763,11 @@ nk_draw_property(struct nk_command_buffer *out, const struct nk_style_property *
     nk_widget_text(out, *label, name, len, &text, NK_TEXT_CENTERED, font);
 }
 
-NK_INTERN float
+NK_INTERN void
 nk_do_property(nk_flags *ws,
     struct nk_command_buffer *out, struct nk_rect property,
-    const char *name, float min, float val, float max,
-    float step, float inc_per_pixel, char *buffer, int *len,
+    const char *name, struct nk_property_variant *variant,
+    float inc_per_pixel, char *buffer, int *len,
     int *state, int *cursor, const struct nk_style_property *style,
     enum nk_property_filter filter, struct nk_input *in,
     const struct nk_user_font *font, struct nk_text_edit *text_edit)
@@ -13682,10 +13781,6 @@ nk_do_property(nk_flags *ws,
     char string[NK_MAX_NUMBER_BUFFER];
     float size;
 
-    float property_min;
-    float property_max;
-    float property_value;
-
     char *dst = 0;
     int *length;
 
@@ -13694,11 +13789,6 @@ nk_do_property(nk_flags *ws,
     struct nk_rect label;
     struct nk_rect edit;
     struct nk_rect empty;
-
-    /* make sure the provided values are correct */
-    property_max = NK_MAX(min, max);
-    property_min = NK_MIN(min, max);
-    property_value = NK_CLAMP(property_min, val, property_max);
 
     /* left decrement button */
     left.h = font->height/2;
@@ -13727,12 +13817,26 @@ nk_do_property(nk_flags *ws,
         length = len;
         dst = buffer;
     } else {
-        nk_dtoa(string, property_value);
-        num_len = nk_string_float_limit(string, NK_MAX_FLOAT_PRECISION);
+        switch (variant->kind) {
+        default: break;
+        case NK_PROPERTY_INT:
+            nk_itoa(string, variant->value.i);
+            num_len = nk_strlen(string);
+            break;
+        case NK_PROPERTY_FLOAT:
+            nk_dtoa(string, (double)variant->value.f);
+            num_len = nk_string_float_limit(string, NK_MAX_FLOAT_PRECISION);
+            break;
+        case NK_PROPERTY_DOUBLE:
+            nk_dtoa(string, variant->value.d);
+            num_len = nk_string_float_limit(string, NK_MAX_FLOAT_PRECISION);
+            break;
+        }
         size = font->width(font->userdata, font->height, string, num_len);
         dst = string;
         length = &num_len;
     }
+
     edit.w =  (float)size + 2 * style->padding.x;
     edit.w = NK_MIN(edit.w, right.x - (label.x + label.w));
     edit.x = right.x - (edit.w + style->padding.x);
@@ -13747,22 +13851,38 @@ nk_do_property(nk_flags *ws,
 
     /* update property */
     old = (*state == NK_PROPERTY_EDIT);
-    property_value = nk_property_behavior(ws, in, property, label, edit, empty,
-                        state, property_min, property_value, property_max,
-                        step, inc_per_pixel);
+    nk_property_behavior(ws, in, property, label, edit, empty, state, variant, inc_per_pixel);
 
     /* draw property */
     if (style->draw_begin) style->draw_begin(out, style->userdata);
     nk_draw_property(out, style, &property, &label, *ws, name, name_len, font);
     if (style->draw_end) style->draw_end(out, style->userdata);
 
-    /* execute right and left button  */
-    if (nk_do_button_symbol(ws, out, left, style->sym_left, NK_BUTTON_DEFAULT,
-        &style->dec_button, in, font))
-        property_value = NK_CLAMP(min, property_value - step, max);
-    if (nk_do_button_symbol(ws, out, right, style->sym_right, NK_BUTTON_DEFAULT,
-        &style->inc_button, in, font))
-        property_value = NK_CLAMP(min, property_value + step, max);
+    /* execute right button  */
+    if (nk_do_button_symbol(ws, out, left, style->sym_left, NK_BUTTON_DEFAULT, &style->dec_button, in, font)) {
+        switch (variant->kind) {
+        default: break;
+        case NK_PROPERTY_INT:
+            variant->value.i = NK_CLAMP(variant->min_value.i, variant->value.i - variant->step.i, variant->max_value.i); break;
+        case NK_PROPERTY_FLOAT:
+            variant->value.f = NK_CLAMP(variant->min_value.f, variant->value.f - variant->step.f, variant->max_value.f); break;
+        case NK_PROPERTY_DOUBLE:
+            variant->value.d = NK_CLAMP(variant->min_value.d, variant->value.d - variant->step.d, variant->max_value.d); break;
+        }
+    }
+
+    /* execute left button  */
+    if (nk_do_button_symbol(ws, out, right, style->sym_right, NK_BUTTON_DEFAULT, &style->inc_button, in, font)) {
+        switch (variant->kind) {
+        default: break;
+        case NK_PROPERTY_INT:
+            variant->value.i = NK_CLAMP(variant->min_value.i, variant->value.i + variant->step.i, variant->max_value.i); break;
+        case NK_PROPERTY_FLOAT:
+            variant->value.f = NK_CLAMP(variant->min_value.f, variant->value.f + variant->step.f, variant->max_value.f); break;
+        case NK_PROPERTY_DOUBLE:
+            variant->value.d = NK_CLAMP(variant->min_value.d, variant->value.d + variant->step.d, variant->max_value.d); break;
+        }
+    }
 
     active = (*state == NK_PROPERTY_EDIT);
     if (old != NK_PROPERTY_EDIT && active) {
@@ -13773,24 +13893,24 @@ nk_do_property(nk_flags *ws,
         length = len;
         dst = buffer;
     }
-    {
-        /* execute and run text edit field */
-        nk_textedit_clear_state(text_edit, NK_TEXT_EDIT_SINGLE_LINE, filters[filter]);
-        text_edit->active = (unsigned char)active;
-        text_edit->string.len = *length;
-        text_edit->cursor = NK_CLAMP(0, *cursor, *length);
-        text_edit->string.buffer.allocated = (nk_size)*length;
-        text_edit->string.buffer.memory.size = NK_MAX_NUMBER_BUFFER;
-        text_edit->string.buffer.memory.ptr = dst;
-        text_edit->string.buffer.size = NK_MAX_NUMBER_BUFFER;
-        text_edit->mode = NK_TEXT_EDIT_MODE_INSERT;
-        nk_do_edit(ws, out, edit, NK_EDIT_ALWAYS_INSERT_MODE, filters[filter],
-            text_edit, &style->edit, (*state == NK_PROPERTY_EDIT) ? in: 0, font);
 
-        *length = text_edit->string.len;
-        active = text_edit->active;
-        *cursor = text_edit->cursor;
-    }
+    /* execute and run text edit field */
+    nk_textedit_clear_state(text_edit, NK_TEXT_EDIT_SINGLE_LINE, filters[filter]);
+    text_edit->active = (unsigned char)active;
+    text_edit->string.len = *length;
+    text_edit->cursor = NK_CLAMP(0, *cursor, *length);
+    text_edit->string.buffer.allocated = (nk_size)*length;
+    text_edit->string.buffer.memory.size = NK_MAX_NUMBER_BUFFER;
+    text_edit->string.buffer.memory.ptr = dst;
+    text_edit->string.buffer.size = NK_MAX_NUMBER_BUFFER;
+    text_edit->mode = NK_TEXT_EDIT_MODE_INSERT;
+    nk_do_edit(ws, out, edit, NK_EDIT_ALWAYS_INSERT_MODE, filters[filter],
+        text_edit, &style->edit, (*state == NK_PROPERTY_EDIT) ? in: 0, font);
+
+    *length = text_edit->string.len;
+    active = text_edit->active;
+    *cursor = text_edit->cursor;
+
     if (active && nk_input_is_key_pressed(in, NK_KEY_ENTER))
         active = !active;
 
@@ -13799,12 +13919,24 @@ nk_do_property(nk_flags *ws,
         double value;
         *state = NK_PROPERTY_DEFAULT;
         buffer[*len] = '\0';
-        nk_string_float_limit(buffer, NK_MAX_FLOAT_PRECISION);
-        value = NK_STRTOD(buffer, 0);
-        property_value = (float)value;
-        property_value = NK_CLAMP(min, property_value, max);
+        switch (variant->kind) {
+        default: break;
+        case NK_PROPERTY_INT:
+            variant->value.i = nk_strtoi(buffer, 0);
+            variant->value.i = NK_CLAMP(variant->min_value.i, variant->value.i, variant->max_value.i);
+            break;
+        case NK_PROPERTY_FLOAT:
+            nk_string_float_limit(buffer, NK_MAX_FLOAT_PRECISION);
+            variant->value.f = nk_strtof(buffer, 0);
+            variant->value.f = NK_CLAMP(variant->min_value.f, variant->value.f, variant->max_value.f);
+            break;
+        case NK_PROPERTY_DOUBLE:
+            nk_string_float_limit(buffer, NK_MAX_FLOAT_PRECISION);
+            variant->value.d = nk_strtod(buffer, 0);
+            variant->value.d = NK_CLAMP(variant->min_value.d, variant->value.d, variant->max_value.d);
+            break;
+        }
     }
-    return property_value;
 }
 /* ===============================================================
  *
@@ -18342,9 +18474,46 @@ nk_edit_string_zero_terminated(struct nk_context *ctx, nk_flags flags,
  *                          PROPERTY
  *
  * --------------------------------------------------------------*/
-NK_INTERN float
-nk_property(struct nk_context *ctx, const char *name, float min, float val,
-    float max, float step, float inc_per_pixel, const enum nk_property_filter filter)
+NK_INTERN struct nk_property_variant
+nk_property_variant_int(int value, int min_value, int max_value, int step)
+{
+    struct nk_property_variant result;
+    result.kind = NK_PROPERTY_INT;
+    result.value.i = value;
+    result.min_value.i = min_value;
+    result.max_value.i = max_value;
+    result.step.i = step;
+    return result;
+}
+
+NK_INTERN struct nk_property_variant
+nk_property_variant_float(float value, float min_value, float max_value, float step)
+{
+    struct nk_property_variant result;
+    result.kind = NK_PROPERTY_FLOAT;
+    result.value.f = value;
+    result.min_value.f = min_value;
+    result.max_value.f = max_value;
+    result.step.f = step;
+    return result;
+}
+
+NK_INTERN struct nk_property_variant
+nk_property_variant_double(double value, double min_value, double max_value,
+    double step)
+{
+    struct nk_property_variant result;
+    result.kind = NK_PROPERTY_DOUBLE;
+    result.value.d = value;
+    result.min_value.d = min_value;
+    result.max_value.d = max_value;
+    result.step.d = step;
+    return result;
+}
+
+NK_INTERN void
+nk_property(struct nk_context *ctx, const char *name, struct nk_property_variant *variant,
+    float inc_per_pixel, const enum nk_property_filter filter)
 {
     struct nk_window *win;
     struct nk_panel *layout;
@@ -18370,13 +18539,13 @@ nk_property(struct nk_context *ctx, const char *name, float min, float val,
     NK_ASSERT(ctx->current);
     NK_ASSERT(ctx->current->layout);
     if (!ctx || !ctx->current || !ctx->current->layout)
-        return val;
+        return;
 
     win = ctx->current;
     layout = win->layout;
     style = &ctx->style;
     s = nk_widget(&bounds, ctx);
-    if (!s) return val;
+    if (!s) return;
     in = (s == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
 
     /* calculate hash from name */
@@ -18400,8 +18569,8 @@ nk_property(struct nk_context *ctx, const char *name, float min, float val,
 
     /* execute property widget */
     old_state = *state;
-    val = nk_do_property(&ctx->last_widget_state, &win->buffer, bounds, name,
-        min, val, max, step, inc_per_pixel, buffer, len, state, cursor,
+    nk_do_property(&ctx->last_widget_state, &win->buffer, bounds, name,
+        variant, inc_per_pixel, buffer, len, state, cursor,
         &style->property, filter, in, style->font, &ctx->text_edit);
 
     if (in && *state != NK_PROPERTY_DEFAULT && !win->property.active) {
@@ -18427,55 +18596,94 @@ nk_property(struct nk_context *ctx, const char *name, float min, float val,
         }
         win->property.active = 0;
     }
-    return val;
+}
+
+NK_API void
+nk_property_int(struct nk_context *ctx, const char *name,
+    int min, int *val, int max, int step, float inc_per_pixel)
+{
+    float value;
+    struct nk_property_variant variant;
+    NK_ASSERT(ctx);
+    NK_ASSERT(name);
+    NK_ASSERT(val);
+    if (!ctx || !ctx->current || !name || !val) return;
+    variant = nk_property_variant_int(*val, min, max, step);
+    nk_property(ctx, name, &variant, inc_per_pixel, NK_FILTER_INT);
+    *val = variant.value.i;
 }
 
 NK_API void
 nk_property_float(struct nk_context *ctx, const char *name,
     float min, float *val, float max, float step, float inc_per_pixel)
 {
+    struct nk_property_variant variant;
     NK_ASSERT(ctx);
     NK_ASSERT(name);
     NK_ASSERT(val);
     if (!ctx || !ctx->current || !name || !val) return;
-    *val = nk_property(ctx, name, min, *val, max, step, inc_per_pixel, NK_FILTER_FLOAT);
+    variant = nk_property_variant_float(*val, min, max, step);
+    nk_property(ctx, name, &variant, inc_per_pixel, NK_FILTER_FLOAT);
+    *val = variant.value.f;
 }
 
 NK_API void
-nk_property_int(struct nk_context *ctx, const char *name,
-    int min, int *val, int max, int step, int inc_per_pixel)
+nk_property_double(struct nk_context *ctx, const char *name,
+    double min, double *val, double max, double step, float inc_per_pixel)
 {
     float value;
+    struct nk_property_variant variant;
     NK_ASSERT(ctx);
     NK_ASSERT(name);
     NK_ASSERT(val);
     if (!ctx || !ctx->current || !name || !val) return;
-    value = nk_property(ctx, name, (float)min, (float)*val, (float)max, (float)step,
-        (float)inc_per_pixel, NK_FILTER_FLOAT);
-    *val = (int)value;
+    variant = nk_property_variant_double(*val, min, max, step);
+    nk_property(ctx, name, &variant, inc_per_pixel, NK_FILTER_FLOAT);
+    *val = variant.value.d;
+}
+
+NK_API int
+nk_propertyi(struct nk_context *ctx, const char *name, int min, int val,
+    int max, int step, float inc_per_pixel)
+{
+    struct nk_property_variant variant;
+    NK_ASSERT(ctx);
+    NK_ASSERT(name);
+    if (!ctx || !ctx->current || !name) return val;
+    variant = nk_property_variant_int(val, min, max, step);
+    nk_property(ctx, name, &variant, inc_per_pixel, NK_FILTER_INT);
+    val = variant.value.i;
+    return val;
 }
 
 NK_API float
 nk_propertyf(struct nk_context *ctx, const char *name, float min,
     float val, float max, float step, float inc_per_pixel)
 {
+    struct nk_property_variant variant;
     NK_ASSERT(ctx);
     NK_ASSERT(name);
-    if (!ctx || !ctx->current || !name) return val;
-    return nk_property(ctx, name, min, val, max, step, inc_per_pixel, NK_FILTER_FLOAT);
+    NK_ASSERT(val);
+    if (!ctx || !ctx->current || !name || !val) return val;
+    variant = nk_property_variant_float(val, min, max, step);
+    nk_property(ctx, name, &variant, inc_per_pixel, NK_FILTER_FLOAT);
+    val = variant.value.f;
+    return val;
 }
 
-NK_API int
-nk_propertyi(struct nk_context *ctx, const char *name, int min, int val,
-    int max, int step, int inc_per_pixel)
+NK_API double
+nk_propertyd(struct nk_context *ctx, const char *name, double min,
+    double val, double max, double step, float inc_per_pixel)
 {
-    float value;
+    struct nk_property_variant variant;
     NK_ASSERT(ctx);
     NK_ASSERT(name);
-    if (!ctx || !ctx->current || !name) return val;
-    value = nk_property(ctx, name, (float)min, (float)val, (float)max, (float)step,
-        (float)inc_per_pixel, NK_FILTER_FLOAT);
-    return (int)value;
+    NK_ASSERT(val);
+    if (!ctx || !ctx->current || !name || !val) return val;
+    variant = nk_property_variant_double(val, min, max, step);
+    nk_property(ctx, name, &variant, inc_per_pixel, NK_FILTER_FLOAT);
+    val = variant.value.d;
+    return val;
 }
 
 /*----------------------------------------------------------------
