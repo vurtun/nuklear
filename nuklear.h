@@ -1,5 +1,5 @@
 /*
- Nuklear - v1.09 - public domain
+ Nuklear - v1.091 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -199,6 +199,10 @@ LICENSE:
     publish and distribute this file as you see fit.
 
 CHANGELOG:
+    - 2016/08/12 (1.091)- Added additional function to check if window is currently
+                            hidden and therefore not visible.
+    - 2016/08/12 (1.091)- nk_window_is_closed now queries the correct flag `NK_WINDOW_CLOSED`
+                            instead of the old flag `NK_WINDOW_HIDDEN`
     - 2016/08/09 (1.09) - Added additional double version to nk_property and changed
                             the underlying implementation to not cast to float and instead
                             work directly on the given values.
@@ -641,6 +645,7 @@ NK_API struct nk_command_buffer* nk_window_get_canvas(struct nk_context*);
 NK_API int                      nk_window_has_focus(const struct nk_context*);
 NK_API int                      nk_window_is_collapsed(struct nk_context*, const char*);
 NK_API int                      nk_window_is_closed(struct nk_context*, const char*);
+NK_API int                      nk_window_is_hidden(struct nk_context*, const char*);
 NK_API int                      nk_window_is_active(struct nk_context*, const char*);
 NK_API int                      nk_window_is_hovered(struct nk_context*);
 NK_API int                      nk_window_is_any_hovered(struct nk_context*);
@@ -15806,6 +15811,22 @@ nk_window_is_collapsed(struct nk_context *ctx, const char *name)
 
 NK_API int
 nk_window_is_closed(struct nk_context *ctx, const char *name)
+{
+    int title_len;
+    nk_hash title_hash;
+    struct nk_window *win;
+    NK_ASSERT(ctx);
+    if (!ctx) return 1;
+
+    title_len = (int)nk_strlen(name);
+    title_hash = nk_murmur_hash(name, (int)title_len, NK_WINDOW_TITLE);
+    win = nk_find_window(ctx, title_hash);
+    if (!win) return 1;
+    return (win->flags & NK_WINDOW_CLOSED);
+}
+
+NK_API int
+nk_window_is_hidden(struct nk_context *ctx, const char *name)
 {
     int title_len;
     nk_hash title_hash;
