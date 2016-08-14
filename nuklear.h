@@ -1,5 +1,5 @@
 /*
- Nuklear - v1.091 - public domain
+ Nuklear - v1.092 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -199,6 +199,8 @@ LICENSE:
     publish and distribute this file as you see fit.
 
 CHANGELOG:
+    - 2016/08/12 (1.092)- Fixed a bug in font atlas which caused wrong loading
+                            of glyphes for font with multiple ranges.
     - 2016/08/12 (1.091)- Added additional function to check if window is currently
                             hidden and therefore not visible.
     - 2016/08/12 (1.091)- nk_window_is_closed now queries the correct flag `NK_WINDOW_CLOSED`
@@ -680,6 +682,7 @@ NK_API struct nk_vec2           nk_layout_space_to_screen(struct nk_context*, st
 NK_API struct nk_vec2           nk_layout_space_to_local(struct nk_context*, struct nk_vec2);
 NK_API struct nk_rect           nk_layout_space_rect_to_screen(struct nk_context*, struct nk_rect);
 NK_API struct nk_rect           nk_layout_space_rect_to_local(struct nk_context*, struct nk_rect);
+NK_API float                    nk_layout_ratio_from_pixel(struct nk_context*, float pixel_width);
 
 /* Layout: Group */
 NK_API int                      nk_group_begin(struct nk_context*, struct nk_panel*, const char *title, nk_flags);
@@ -961,6 +964,7 @@ NK_API void                     nk_color_hsva_fv(float *hsva_out, struct nk_colo
 /* image */
 NK_API nk_handle                nk_handle_ptr(void*);
 NK_API nk_handle                nk_handle_id(int);
+NK_API struct nk_image          nk_image_handle(nk_handle);
 NK_API struct nk_image          nk_image_ptr(void*);
 NK_API struct nk_image          nk_image_id(int);
 NK_API int                      nk_image_is_subimage(const struct nk_image* img);
@@ -4148,6 +4152,20 @@ nk_subimage_handle(nk_handle handle, unsigned short w, unsigned short h,
     s.region[1] = (unsigned short)r.y;
     s.region[2] = (unsigned short)r.w;
     s.region[3] = (unsigned short)r.h;
+    return s;
+}
+
+NK_API struct nk_image
+nk_image_handle(nk_handle handle)
+{
+    struct nk_image s;
+    nk_zero(&s, sizeof(s));
+    s.handle = handle;
+    s.w = 0; s.h = 0;
+    s.region[0] = 0;
+    s.region[1] = 0;
+    s.region[2] = 0;
+    s.region[3] = 0;
     return s;
 }
 
@@ -9266,14 +9284,13 @@ nk_font_bake(struct nk_font_baker *baker, void *image_memory, int width, int hei
 
                 /* query glyph bounds from stb_truetype */
                 const struct nk_tt_packedchar *pc = &range->chardata_for_range[char_idx];
-                glyph_count++;
                 if (!pc->x0 && !pc->x1 && !pc->y0 && !pc->y1) continue;
                 codepoint = (nk_rune)(range->first_unicode_codepoint_in_range + char_idx);
                 nk_tt_GetPackedQuad(range->chardata_for_range, (int)width,
                     (int)height, char_idx, &dummy_x, &dummy_y, &q, 0);
 
                 /* fill own glyph type with data */
-                glyph = &glyphs[dst_font->glyph_offset + (unsigned int)char_idx];
+                glyph = &glyphs[dst_font->glyph_offset + (unsigned int)glyph_count];
                 glyph->codepoint = codepoint;
                 glyph->x0 = q.x0; glyph->y0 = q.y0;
                 glyph->x1 = q.x1; glyph->y1 = q.y1;
@@ -9296,6 +9313,7 @@ nk_font_bake(struct nk_font_baker *baker, void *image_memory, int width, int hei
                 glyph->xadvance = (pc->xadvance + cfg->spacing.x);
                 if (cfg->pixel_snap)
                     glyph->xadvance = (float)(int)(glyph->xadvance + 0.5f);
+                glyph_count++;
             }
         }
         dst_font->glyph_count = glyph_count;
@@ -16804,6 +16822,17 @@ nk_row_layout(struct nk_context *ctx, enum nk_layout_format fmt,
     win->layout->row.ratio = 0;
     win->layout->row.item_offset = 0;
     win->layout->row.filled = 0;
+}
+
+NK_API float
+nk_layout_ratio_from_pixel(struct nk_context *ctx, float pixel_width)
+{
+    struct nk_window *win;
+    NK_ASSERT(ctx);
+    NK_ASSERT(pixel_width);
+    if (!ctx || !ctx->current || !ctx->current->layout) return 0;
+    win = ctx->current;
+    return NK_CLAMP(0.0f, pixel_width/win->bounds.x, 1.0f);
 }
 
 NK_API void
