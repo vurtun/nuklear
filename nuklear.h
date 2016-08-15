@@ -199,6 +199,7 @@ LICENSE:
     publish and distribute this file as you see fit.
 
 CHANGELOG:
+    - 2016/08/15 (1.094)- Removed redundant code
     - 2016/08/15 (1.094)- Fixed negative numbers in `nk_strtoi` and remove unused variable
     - 2016/08/15 (1.093)- Fixed `NK_WINDOW_BACKGROUND` flag behavior to select a background
                             window only as selected by hovering and not by clicking.
@@ -3077,7 +3078,7 @@ nk_strtoi(const char *str, char **endptr)
     if (!str) return 0;
 
     /* skip whitespace */
-    while (*p && *p == ' ') p++;
+    while (*p == ' ') p++;
     if (*p == '-') {
         neg = -1;
         p++;
@@ -3104,7 +3105,7 @@ nk_strtod(const char *str, char **endptr)
     if (!str) return 0;
 
     /* skip whitespace */
-    while (*p && *p == ' ') p++;
+    while (*p == ' ') p++;
     if (*p == '-') {
         neg = -1.0;
         p++;
