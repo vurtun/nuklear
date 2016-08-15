@@ -1,5 +1,5 @@
 /*
- Nuklear - v1.092 - public domain
+ Nuklear - v1.093 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -199,6 +199,8 @@ LICENSE:
     publish and distribute this file as you see fit.
 
 CHANGELOG:
+    - 2016/08/12 (1.093)- Fixed `NK_WINDOW_BACKGROUND` flag behavior to select a background
+                            window only as selected by hovering and not by clicking.
     - 2016/08/12 (1.092)- Fixed a bug in font atlas which caused wrong loading
                             of glyphes for font with multiple ranges.
     - 2016/08/12 (1.091)- Added additional function to check if window is currently
@@ -15583,7 +15585,7 @@ nk_begin_titled(struct nk_context *ctx, struct nk_panel *layout,
                     iter->bounds: nk_rect(iter->bounds.x, iter->bounds.y, iter->bounds.w, h);
                 if (NK_INTERSECT(win->bounds.x, win->bounds.y, win->bounds.w, win->bounds.h,
                     iter_bounds.x, iter_bounds.y, iter_bounds.w, iter_bounds.h) &&
-                    !(iter->flags & NK_WINDOW_HIDDEN))
+                    (!(iter->flags & NK_WINDOW_HIDDEN) || !(iter->flags & NK_WINDOW_BACKGROUND)))
                     break;
 
                 if (iter->popup.win && iter->popup.active && !(iter->flags & NK_WINDOW_HIDDEN) &&
@@ -15596,7 +15598,7 @@ nk_begin_titled(struct nk_context *ctx, struct nk_panel *layout,
         }
 
         /* activate window if clicked */
-        if (iter && inpanel && (win != ctx->end)) {
+        if (iter && inpanel && (win != ctx->end) && !(iter->flags & NK_WINDOW_BACKGROUND)) {
             iter = win->next;
             while (iter) {
                 /* try to find a panel with higher priority in the same position */
@@ -15627,7 +15629,7 @@ nk_begin_titled(struct nk_context *ctx, struct nk_panel *layout,
             win->flags &= ~(nk_flags)NK_WINDOW_ROM;
             ctx->active = win;
         }
-        if (ctx->end != win && (!(win->flags & NK_WINDOW_BACKGROUND)))
+        if (ctx->end != win && !(win->flags & NK_WINDOW_BACKGROUND))
             win->flags |= NK_WINDOW_ROM;
     }
 
