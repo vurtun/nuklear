@@ -1,5 +1,5 @@
 /*
- Nuklear - v1.093 - public domain
+ Nuklear - v1.094 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -199,6 +199,9 @@ LICENSE:
     publish and distribute this file as you see fit.
 
 CHANGELOG:
+    - 2016/08/15 (1.094)- Editbox are now still active if enter was pressed with flag
+                            `NK_EDIT_SIG_ENTER`. Main reasoning is to be able to keep
+                            typing after commiting.
     - 2016/08/15 (1.094)- Removed redundant code
     - 2016/08/15 (1.094)- Fixed negative numbers in `nk_strtoi` and remove unused variable
     - 2016/08/15 (1.093)- Fixed `NK_WINDOW_BACKGROUND` flag behavior to select a background
@@ -13272,14 +13275,11 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
         /* enter key handler */
         if (nk_input_is_key_pressed(in, NK_KEY_ENTER)) {
             cursor_follow = nk_true;
-            if (flags & NK_EDIT_CTRL_ENTER_NEWLINE && shift_mod) {
+            if (flags & NK_EDIT_CTRL_ENTER_NEWLINE && shift_mod)
                 nk_textedit_text(edit, "\n", 1);
-            } else if (flags & NK_EDIT_SIG_ENTER) {
-                ret = NK_EDIT_INACTIVE;
-                ret |= NK_EDIT_DEACTIVATED;
+            else if (flags & NK_EDIT_SIG_ENTER)
                 ret |= NK_EDIT_COMMITED;
-                edit->active = 0;
-            } else nk_textedit_text(edit, "\n", 1);
+            else nk_textedit_text(edit, "\n", 1);
         }
 
         /* cut & copy handler */
