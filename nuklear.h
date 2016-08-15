@@ -199,9 +199,10 @@ LICENSE:
     publish and distribute this file as you see fit.
 
 CHANGELOG:
-    - 2016/08/12 (1.093)- Fixed `NK_WINDOW_BACKGROUND` flag behavior to select a background
+    - 2016/08/15 (1.094)- Fixed negative numbers in `nk_strtoi` and remove unused variable
+    - 2016/08/15 (1.093)- Fixed `NK_WINDOW_BACKGROUND` flag behavior to select a background
                             window only as selected by hovering and not by clicking.
-    - 2016/08/12 (1.092)- Fixed a bug in font atlas which caused wrong loading
+    - 2016/08/14 (1.092)- Fixed a bug in font atlas which caused wrong loading
                             of glyphes for font with multiple ranges.
     - 2016/08/12 (1.091)- Added additional function to check if window is currently
                             hidden and therefore not visible.
@@ -3068,7 +3069,7 @@ nk_strlen(const char *str)
 NK_API int
 nk_strtoi(const char *str, char **endptr)
 {
-    int neg = 1.0;
+    int neg = 1;
     const char *p = str;
     int value = 0;
 
@@ -3087,7 +3088,7 @@ nk_strtoi(const char *str, char **endptr)
     }
     if (endptr)
         *endptr = (char*)p;
-    return value;
+    return neg*value;
 }
 
 NK_API double
@@ -16334,7 +16335,6 @@ nk_panel_end(struct nk_context *ctx)
 
     struct nk_vec2 scrollbar_size;
     struct nk_vec2 scaler_size;
-    struct nk_vec2 item_spacing;
     struct nk_vec2 window_padding;
     struct nk_rect footer = {0,0,0,0};
 
@@ -16353,7 +16353,6 @@ nk_panel_end(struct nk_context *ctx)
         nk_push_scissor(out, nk_null_rect);
 
     /* cache configuration data */
-    item_spacing = style->window.spacing;
     window_padding = style->window.padding;
     scrollbar_size = style->window.scrollbar_size;
     scaler_size = style->window.scaler_size;
