@@ -19196,15 +19196,26 @@ nk_popup_begin(struct nk_context *ctx, struct nk_panel *layout,
     nk_push_scissor(&popup->buffer, nk_null_rect);
 
     if (nk_panel_begin(ctx, title)) {
-        /* popup is running therefore invalidate parent window  */
-        win->layout->flags |= NK_WINDOW_ROM;
-        win->layout->flags &= ~(nk_flags)NK_WINDOW_REMOVE_ROM;
+        /* popup is running therefore invalidate parent panels */
+        struct nk_panel *root;
+        root = win->layout;
+        while (root) {
+            root->flags |= NK_WINDOW_ROM;
+            root->flags &= ~NK_WINDOW_REMOVE_ROM;
+            root = root->parent;
+        }
         win->popup.active = 1;
         layout->offset = &popup->scrollbar;
+        layout->parent = win->layout;
         return 1;
     } else {
         /* popup was closed/is invalid so cleanup */
-        win->layout->flags |= NK_WINDOW_REMOVE_ROM;
+        struct nk_panel *root;
+        root = win->layout;
+        while (root) {
+            root->flags |= NK_WINDOW_REMOVE_ROM;
+            root = root->parent;
+        }
         win->layout->popup_buffer.active = 0;
         win->popup.active = 0;
         ctx->memory.allocated = allocated;
@@ -19247,7 +19258,13 @@ nk_nonblock_begin(struct nk_panel *layout, struct nk_context *ctx,
     }
 
     if (!is_active) {
-        win->layout->flags |= NK_WINDOW_REMOVE_ROM;
+        /* remove read only mode from all parent panels */
+        struct nk_panel *root;
+        root = win->layout;
+        while (root) {
+            root->flags |= NK_WINDOW_REMOVE_ROM;
+            root = root->parent;
+        }
         return is_active;
     }
 
@@ -19268,8 +19285,16 @@ nk_nonblock_begin(struct nk_panel *layout, struct nk_context *ctx,
 
     nk_panel_begin(ctx, 0);
     win->buffer = popup->buffer;
-    win->layout->flags |= NK_WINDOW_ROM;
+    layout->parent = win->layout;
     layout->offset = &popup->scrollbar;
+
+    /* set read only mode to all parent panels */
+    {struct nk_panel *root;
+    root = win->layout;
+    while (root) {
+        root->flags |= NK_WINDOW_ROM;
+        root = root->parent;
+    }}
     return is_active;
 }
 
