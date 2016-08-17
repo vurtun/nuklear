@@ -299,8 +299,7 @@ nk_gdi_stroke_curve(HDC dc, struct nk_vec2i p1,
     HPEN pen = NULL;
     if (line_thickness == 1) {
         SetDCPenColor(dc, color);
-    }
-    else {
+    } else {
         pen = CreatePen(PS_SOLID, line_thickness, color);
         SelectObject(dc, pen);
     }
@@ -324,7 +323,7 @@ nk_gdi_draw_text(HDC dc, short x, short y, unsigned short w, unsigned short h,
     if(!text || !font || !len) return;
 
     wsize = MultiByteToWideChar(CP_UTF8, 0, text, len, NULL, 0);
-    wstr = _alloca(wsize * sizeof(wchar_t));
+    wstr = (WCHAR*)_alloca(wsize * sizeof(wchar_t));
     MultiByteToWideChar(CP_UTF8, 0, text, len, wstr, wsize);
 
     SetBkColor(dc, convert_color(cbg));
@@ -376,7 +375,7 @@ nk_gdifont_get_text_width(nk_handle handle, float height, const char *text, int 
         return 0;
 
     wsize = MultiByteToWideChar(CP_UTF8, 0, text, len, NULL, 0);
-    wstr = _alloca(wsize * sizeof(wchar_t));
+    wstr = (WCHAR*)_alloca(wsize * sizeof(wchar_t));
     MultiByteToWideChar(CP_UTF8, 0, text, len, wstr, wsize);
     if (GetTextExtentPoint32W(font->dc, wstr, wsize, &size))
         return (float)size.cx;
@@ -404,13 +403,13 @@ nk_gdi_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
             SIZE_T size = GlobalSize(mem) - 1;
             if (size)
             {
-                LPCWSTR wstr = (LPCWSTR)GlobalLock(mem); 
+                LPCWSTR wstr = (LPCWSTR)GlobalLock(mem);
                 if (wstr) 
                 {
                     int utf8size = WideCharToMultiByte(CP_UTF8, 0, wstr, (int)(size / sizeof(wchar_t)), NULL, 0, NULL, NULL);
                     if (utf8size)
                     {
-                        char* utf8 = malloc(utf8size);
+                        char* utf8 = (char*)malloc(utf8size);
                         if (utf8)
                         {
                             WideCharToMultiByte(CP_UTF8, 0, wstr, (int)(size / sizeof(wchar_t)), utf8, utf8size, NULL, NULL);
@@ -434,10 +433,10 @@ nk_gdi_clipbard_copy(nk_handle usr, const char *text, int len)
         int wsize = MultiByteToWideChar(CP_UTF8, 0, text, len, NULL, 0);
         if (wsize)
         {
-            HGLOBAL mem = GlobalAlloc(GMEM_MOVEABLE, (wsize + 1) * sizeof(wchar_t));
+            HGLOBAL mem = (HGLOBAL)GlobalAlloc(GMEM_MOVEABLE, (wsize + 1) * sizeof(wchar_t));
             if (mem)
             {
-                wchar_t* wstr = GlobalLock(mem);
+                wchar_t* wstr = (wchar_t*)GlobalLock(mem);
                 if (wstr)
                 {
                     MultiByteToWideChar(CP_UTF8, 0, text, len, wstr, wsize);

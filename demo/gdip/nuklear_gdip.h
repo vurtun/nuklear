@@ -525,7 +525,7 @@ nk_gdip_draw_text(short x, short y, unsigned short w, unsigned short h,
     if(!text || !font || !len) return;
 
     wsize = MultiByteToWideChar(CP_UTF8, 0, text, len, NULL, 0);
-    wstr = _alloca(wsize * sizeof(wchar_t));
+    wstr = (WCHAR*)_alloca(wsize * sizeof(wchar_t));
     MultiByteToWideChar(CP_UTF8, 0, text, len, wstr, wsize);
 
     GdipSetSolidFillColor(gdip.brush, convert_color(cbg));
@@ -553,10 +553,10 @@ nk_gdipfont_create(const char *name, int size)
     GpFontFamily *family;
 
     int wsize = MultiByteToWideChar(CP_UTF8, 0, name, -1, NULL, 0);
-    WCHAR* wname = _alloca((wsize + 1) * sizeof(wchar_t));
+    WCHAR* wname = (WCHAR*)_alloca((wsize + 1) * sizeof(wchar_t));
     MultiByteToWideChar(CP_UTF8, 0, name, -1, wname, wsize);
     wname[wsize] = 0;
- 
+
     GdipCreateFontFamilyFromName(wname, NULL, &family);
     GdipCreateFont(family, (REAL)size, FontStyleRegular, UnitPixel, &font);
     GdipDeleteFontFamily(family);
@@ -577,7 +577,7 @@ nk_gdipfont_get_text_width(nk_handle handle, float height, const char *text, int
 
     (void)height;
     wsize = MultiByteToWideChar(CP_UTF8, 0, text, len, NULL, 0);
-    wstr = _alloca(wsize * sizeof(wchar_t));
+    wstr = (WCHAR*)_alloca(wsize * sizeof(wchar_t));
     MultiByteToWideChar(CP_UTF8, 0, text, len, wstr, wsize);
 
     GdipMeasureString(gdip.memory, wstr, wsize, font, &layout, gdip.format, &bbox, NULL, NULL);
@@ -604,7 +604,7 @@ nk_gdip_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
     if (!IsClipboardFormatAvailable(CF_UNICODETEXT) && OpenClipboard(NULL))
         return;
 
-    mem = GetClipboardData(CF_UNICODETEXT);
+    mem = (HGLOBAL)GetClipboardData(CF_UNICODETEXT);
     if (!mem) {
         CloseClipboard();
         return;
@@ -629,7 +629,7 @@ nk_gdip_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
         return;
     }
 
-    utf8 = malloc(utf8size);
+    utf8 = (char*)malloc(utf8size);
     if (!utf8) {
         GlobalUnlock(mem);
         CloseClipboard();
@@ -660,13 +660,13 @@ nk_gdip_clipbard_copy(nk_handle usr, const char *text, int len)
         return;
     }
 
-    mem = GlobalAlloc(GMEM_MOVEABLE, (wsize + 1) * sizeof(wchar_t));
+    mem = (HGLOBAL)GlobalAlloc(GMEM_MOVEABLE, (wsize + 1) * sizeof(wchar_t));
     if (!mem) {
         CloseClipboard();
         return;
     }
 
-    wstr = GlobalLock(mem);
+    wstr = (wchar_t*)GlobalLock(mem);
     if (!wstr) {
         GlobalFree(mem);
         CloseClipboard();
@@ -676,10 +676,8 @@ nk_gdip_clipbard_copy(nk_handle usr, const char *text, int len)
     MultiByteToWideChar(CP_UTF8, 0, text, len, wstr, wsize);
     wstr[wsize] = 0;
     GlobalUnlock(mem);
-
     if (!SetClipboardData(CF_UNICODETEXT, mem))
         GlobalFree(mem);
-
     CloseClipboard();
 }
 
