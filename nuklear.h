@@ -91,7 +91,7 @@ OPTIONAL DEFINES:
         if defined it will include header <stdarg.h> and provide
         additional functions depending on variable arguments
         IMPORTANT:  this adds the standard library with va_list,...
-                        so don't define this if you don't want to link to the standard library!
+                    so don't define this if you don't want to link to the standard library!
 
     NK_INCLUDE_VERTEX_BUFFER_OUTPUT
         Defining this adds a vertex draw command list backend to this
@@ -101,19 +101,19 @@ OPTIONAL DEFINES:
 
     NK_INCLUDE_FONT_BAKING
         Defining this adds the `stb_truetype` and `stb_rect_pack` implementation
-        to this library and provides font loading and rendering.
+        to this library and provides font baking and rendering.
         If you already have font handling or do not want to use this font handler
         you don't have to define it.
 
     NK_INCLUDE_DEFAULT_FONT
-        Defining this adds the default font: ProggyClean.ttf font into this library
+        Defining this adds the default font: ProggyClean.ttf into this library
         which can be loaded into a font atlas and allows using this library without
         having a truetype font
         IMPORTANT: enabling this adds ~12kb to global stack memory
 
     NK_INCLUDE_COMMAND_USERDATA
         Defining this adds a userdata pointer into each command. Can be useful for
-        example if you want to provide custom shader depending on the used widget.
+        example if you want to provide custom shaders depending on the used widget.
         Can be combined with the style structures.
 
     NK_BUTTON_TRIGGER_ON_RELEASE
@@ -541,7 +541,7 @@ enum nk_panel_flags {
     NK_WINDOW_NO_SCROLLBAR      = NK_FLAG(7), /* Removes the scrollbar from the window */
     NK_WINDOW_TITLE             = NK_FLAG(8), /* Forces a header at the top at the window showing the title */
     NK_WINDOW_SCROLL_AUTO_HIDE  = NK_FLAG(9), /* Automatically hides the window scrollbar if no user interaction */
-    NK_WINDOW_BACKGROUND        = NK_FLAG(10) /* Keep window always in the background */
+    NK_WINDOW_BACKGROUND        = NK_FLAG(10) /* Always keep window in the background */
 };
 
 /* context */
@@ -10212,10 +10212,10 @@ nk_input_begin(struct nk_context *ctx)
     struct nk_input *in;
     NK_ASSERT(ctx);
     if (!ctx) return;
-
     in = &ctx->input;
     for (i = 0; i < NK_BUTTON_MAX; ++i)
         in->mouse.buttons[i].clicked = 0;
+
     in->keyboard.text_len = 0;
     in->mouse.scroll_delta = 0;
     in->mouse.prev.x = in->mouse.pos.x;
@@ -10296,8 +10296,8 @@ nk_input_glyph(struct nk_context *ctx, const nk_glyph glyph)
 {
     int len = 0;
     nk_rune unicode;
-
     struct nk_input *in;
+
     NK_ASSERT(ctx);
     if (!ctx) return;
     in = &ctx->input;
@@ -14708,7 +14708,6 @@ nk_style_load_cursor(struct nk_context *ctx, enum nk_style_cursor cursor,
     if (!ctx) return;
     style = &ctx->style;
     style->cursors[cursor] = c;
-    style->cursor_visible = nk_true;
 }
 
 NK_API void
@@ -18636,8 +18635,7 @@ nk_propertyf(struct nk_context *ctx, const char *name, float min,
     struct nk_property_variant variant;
     NK_ASSERT(ctx);
     NK_ASSERT(name);
-    NK_ASSERT(val);
-    if (!ctx || !ctx->current || !name || !val) return val;
+    if (!ctx || !ctx->current || !name) return val;
     variant = nk_property_variant_float(val, min, max, step);
     nk_property(ctx, name, &variant, inc_per_pixel, NK_FILTER_FLOAT);
     val = variant.value.f;
@@ -18651,8 +18649,7 @@ nk_propertyd(struct nk_context *ctx, const char *name, double min,
     struct nk_property_variant variant;
     NK_ASSERT(ctx);
     NK_ASSERT(name);
-    NK_ASSERT(val);
-    if (!ctx || !ctx->current || !name || !val) return val;
+    if (!ctx || !ctx->current || !name) return val;
     variant = nk_property_variant_double(val, min, max, step);
     nk_property(ctx, name, &variant, inc_per_pixel, NK_FILTER_FLOAT);
     val = variant.value.d;

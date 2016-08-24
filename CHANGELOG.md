@@ -1,5 +1,6 @@
 # Changelog
 
+- 2016/08/15 (1.096)- Removed invalid check for value zero in nk_propertyx
 - 2016/08/15 (1.095)- Fixed ROM mode for deeper levels of popup windows parents.
 - 2016/08/15 (1.094)- Editbox are now still active if enter was pressed with flag
                         `NK_EDIT_SIG_ENTER`. Main reasoning is to be able to keep
