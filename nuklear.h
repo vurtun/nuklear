@@ -10446,7 +10446,7 @@ nk_input_is_key_pressed(const struct nk_input *i, enum nk_keys key)
     const struct nk_key *k;
     if (!i) return nk_false;
     k = &i->keyboard.keys[key];
-    if (k->down && k->clicked)
+    if ((k->down && k->clicked) || (!k->down && k->clicked >= 2))
         return nk_true;
     return nk_false;
 }
@@ -10457,7 +10457,7 @@ nk_input_is_key_released(const struct nk_input *i, enum nk_keys key)
     const struct nk_key *k;
     if (!i) return nk_false;
     k = &i->keyboard.keys[key];
-    if (!k->down && k->clicked)
+    if ((!k->down && k->clicked) || (k->down && k->clicked >= 2))
         return nk_true;
     return nk_false;
 }
