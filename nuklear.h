@@ -1,5 +1,5 @@
 /*
- Nuklear - v1.094 - public domain
+ Nuklear - v1.10 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -514,7 +514,8 @@ enum nk_edit_flags {
     NK_EDIT_CTRL_ENTER_NEWLINE      = NK_FLAG(7),
     NK_EDIT_NO_HORIZONTAL_SCROLL    = NK_FLAG(8),
     NK_EDIT_ALWAYS_INSERT_MODE      = NK_FLAG(9),
-    NK_EDIT_MULTILINE               = NK_FLAG(11)
+    NK_EDIT_MULTILINE               = NK_FLAG(11),
+    NK_EDIT_GOTO_END_ON_ACTIVATE    = NK_FLAG(12)
 };
 enum nk_edit_types {
     NK_EDIT_SIMPLE  = NK_EDIT_ALWAYS_INSERT_MODE,
@@ -13140,6 +13141,10 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
             edit->mode = NK_TEXT_EDIT_MODE_INSERT;
         if (flags & NK_EDIT_AUTO_SELECT)
             select_all = nk_true;
+        if (flags & NK_EDIT_GOTO_END_ON_ACTIVATE) {
+            edit->cursor = edit->string.len;
+            in = 0;
+        }
     } else if (!edit->active) edit->mode = NK_TEXT_EDIT_MODE_VIEW;
     if (flags & NK_EDIT_READ_ONLY)
         edit->mode = NK_TEXT_EDIT_MODE_VIEW;
