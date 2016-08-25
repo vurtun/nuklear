@@ -14,7 +14,8 @@ else
 	endif
 endif
 
-all: file_browser extended
+all: file_browser extended canvas skinning
+
 file_browser:
 	@mkdir -p bin
 	rm -f bin/file_browser $(OBJS)
@@ -24,4 +25,14 @@ extended:
 	@mkdir -p bin
 	rm -f bin/extended $(OBJS)
 	$(CC) $(CFLAGS) -o bin/extended extended.c $(LIBS)
+
+canvas:
+	@mkdir -p bin
+	rm -f bin/canvas $(OBJS)
+	$(CC) $(CFLAGS) -o bin/canvas canvas.c $(LIBS)
+
+skinning:
+	@mkdir -p bin
+	rm -f bin/skinning $(OBJS)
+	$(CC) $(CFLAGS) -o bin/skinning skinning.c $(LIBS)
 
