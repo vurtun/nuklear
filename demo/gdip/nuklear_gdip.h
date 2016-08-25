@@ -225,7 +225,6 @@ GdipCreateFont(
     INT                  style,
     Unit                 unit,
     GpFont             **font
-    struct nk_user_font handle;
 );
 
 GpStatus WINGDIPAPI
@@ -343,6 +342,11 @@ GdipMeasureString(
 GpStatus WINGDIPAPI
 GdipSetTextRenderingHint(GpGraphics *graphics, TextRenderingHint mode);
 
+struct GdipFont
+{
+    struct nk_user_font nk;
+    GpFont* handle;
+};
 
 static struct {
     ULONG_PTR token;
@@ -531,7 +535,7 @@ nk_gdip_draw_text(short x, short y, unsigned short w, unsigned short h,
     GdipSetSolidFillColor(gdip.brush, convert_color(cbg));
     GdipFillRectangleI(gdip.memory, gdip.brush, x, y, w, h);
     GdipSetSolidFillColor(gdip.brush, convert_color(cfg));
-    GdipDrawString(gdip.memory, wstr, wsize, (GpFont *)font, &layout, gdip.format, gdip.brush);
+    GdipDrawString(gdip.memory, wstr, wsize, font->handle, &layout, gdip.format, gdip.brush);
 }
 
 static void
@@ -549,7 +553,7 @@ nk_gdip_blit(GpGraphics *graphics)
 GdipFont*
 nk_gdipfont_create(const char *name, int size)
 {
-    GpFont* font;
+    GdipFont *font = (GdipFont*)calloc(1, sizeof(GdipFont));
     GpFontFamily *family;
 
     int wsize = MultiByteToWideChar(CP_UTF8, 0, name, -1, NULL, 0);
@@ -558,16 +562,16 @@ nk_gdipfont_create(const char *name, int size)
     wname[wsize] = 0;
 
     GdipCreateFontFamilyFromName(wname, NULL, &family);
-    GdipCreateFont(family, (REAL)size, FontStyleRegular, UnitPixel, &font);
+    GdipCreateFont(family, (REAL)size, FontStyleRegular, UnitPixel, &font->handle);
     GdipDeleteFontFamily(family);
 
-    return (GdipFont *)font;
+    return font;
 }
 
 static float
 nk_gdipfont_get_text_width(nk_handle handle, float height, const char *text, int len)
 {
-    GpFont *font = (GpFont *)handle.ptr;
+    GdipFont *font = (GdipFont *)handle.ptr;
     RectF layout = { 0.0f, 0.0f, 65536.0f, 65536.0f };
     RectF bbox;
     int wsize;
@@ -580,7 +584,7 @@ nk_gdipfont_get_text_width(nk_handle handle, float height, const char *text, int
     wstr = (WCHAR*)_alloca(wsize * sizeof(wchar_t));
     MultiByteToWideChar(CP_UTF8, 0, text, len, wstr, wsize);
 
-    GdipMeasureString(gdip.memory, wstr, wsize, font, &layout, gdip.format, &bbox, NULL, NULL);
+    GdipMeasureString(gdip.memory, wstr, wsize, font->handle, &layout, gdip.format, &bbox, NULL, NULL);
     return bbox.Width;
 }
 
@@ -588,7 +592,8 @@ void
 nk_gdipfont_del(GdipFont *font)
 {
     if(!font) return;
-    GdipDeleteFont((GpFont *)font);
+    GdipDeleteFont(font->handle);
+    free(font);
 }
 
 static void
@@ -706,9 +711,9 @@ nk_gdip_init(HWND hwnd, unsigned int width, unsigned int height)
 NK_API void
 nk_gdip_set_font(GdipFont *gdipfont)
 {
-    struct nk_user_font *font = &gdipfont->handle;
+    struct nk_user_font *font = &gdipfont->nk;
     font->userdata = nk_handle_ptr(gdipfont);
-    GdipGetFontSize((GpFont *)gdipfont, &font->height);
+    GdipGetFontSize(gdipfont->handle, &font->height);
     font->width = nk_gdipfont_get_text_width;
     nk_style_set_font(&gdip.ctx, font);
 }
@@ -796,7 +801,7 @@ nk_gdip_handle_event(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
             return 1;
 
         case VK_END:
-            nk_input_key(&gdi.ctx, NK_KEY_TEXT_END, down);
+            nk_input_key(&gdip.ctx, NK_KEY_TEXT_END, down);
             nk_input_key(&gdip.ctx, NK_KEY_SCROLL_END, down);
             return 1;
 
