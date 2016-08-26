@@ -308,6 +308,7 @@ struct nk_allocator;
 struct nk_command_buffer;
 struct nk_draw_command;
 struct nk_convert_config;
+struct nk_style_item;
 struct nk_text_edit;
 struct nk_draw_list;
 struct nk_user_font;
@@ -327,10 +328,6 @@ struct nk_cursor {struct nk_image img; struct nk_vec2 size, offset;};
 struct nk_scroll {unsigned short x, y;};
 enum nk_heading {NK_UP, NK_RIGHT, NK_DOWN, NK_LEFT};
 
-typedef int(*nk_filter)(const struct nk_text_edit*, nk_rune unicode);
-typedef void(*nk_paste_f)(nk_handle, struct nk_text_edit*);
-typedef void(*nk_copy_f)(nk_handle, const char*, int len);
-
 enum nk_button_behavior {NK_BUTTON_DEFAULT, NK_BUTTON_REPEATER};
 enum nk_modify          {NK_FIXED = nk_false, NK_MODIFIABLE = nk_true};
 enum nk_orientation     {NK_VERTICAL, NK_HORIZONTAL};
@@ -344,10 +341,16 @@ enum nk_layout_format   {NK_DYNAMIC, NK_STATIC};
 enum nk_tree_type       {NK_TREE_NODE, NK_TREE_TAB};
 enum nk_anti_aliasing   {NK_ANTI_ALIASING_OFF, NK_ANTI_ALIASING_ON};
 
+typedef void*(*nk_plugin_alloc)(nk_handle, void *old, nk_size);
+typedef void (*nk_plugin_free)(nk_handle, void *old);
+typedef int(*nk_plugin_filter)(const struct nk_text_edit*, nk_rune unicode);
+typedef void(*nk_plugin_paste)(nk_handle, struct nk_text_edit*);
+typedef void(*nk_plugin_copy)(nk_handle, const char*, int len);
+
 struct nk_allocator {
     nk_handle userdata;
-    void*(*alloc)(nk_handle, void *old, nk_size);
-    void(*free)(nk_handle, void*);
+    nk_plugin_alloc alloc;
+    nk_plugin_free free;
 };
 
 struct nk_draw_null_texture {
@@ -656,7 +659,6 @@ NK_API void                     nk_value_color_hex(struct nk_context*, const cha
 #endif
 
 /* Widgets: Buttons */
-NK_API void                     nk_button_set_behavior(struct nk_context*, enum nk_button_behavior);
 NK_API int                      nk_button_text(struct nk_context*, const char *title, int len);
 NK_API int                      nk_button_label(struct nk_context*, const char *title);
 NK_API int                      nk_button_color(struct nk_context*, struct nk_color);
@@ -666,6 +668,10 @@ NK_API int                      nk_button_symbol_label(struct nk_context*, enum 
 NK_API int                      nk_button_symbol_text(struct nk_context*, enum nk_symbol_type, const char*, int, nk_flags alignment);
 NK_API int                      nk_button_image_label(struct nk_context*, struct nk_image img, const char*, nk_flags text_alignment);
 NK_API int                      nk_button_image_text(struct nk_context*, struct nk_image img, const char*, int, nk_flags alignment);
+
+NK_API void                     nk_button_set_behavior(struct nk_context*, enum nk_button_behavior);
+NK_API int                      nk_button_push_behavior(struct nk_context*, enum nk_button_behavior);
+NK_API int                      nk_button_pop_behavior(struct nk_context*);
 
 /* Widgets: Checkbox */
 NK_API int                      nk_check_label(struct nk_context*, const char*, int active);
@@ -717,9 +723,9 @@ NK_API float                    nk_propertyf(struct nk_context *layout, const ch
 NK_API double                   nk_propertyd(struct nk_context *layout, const char *name, double min, double val, double max, double step, float inc_per_pixel);
 
 /* Widgets: TextEdit */
-NK_API nk_flags                 nk_edit_string(struct nk_context*, nk_flags, char *buffer, int *len, int max, nk_filter);
-NK_API nk_flags                 nk_edit_buffer(struct nk_context*, nk_flags, struct nk_text_edit*, nk_filter);
-NK_API nk_flags                 nk_edit_string_zero_terminated(struct nk_context*, nk_flags, char *buffer, int max, nk_filter);
+NK_API nk_flags                 nk_edit_string(struct nk_context*, nk_flags, char *buffer, int *len, int max, nk_plugin_filter);
+NK_API nk_flags                 nk_edit_buffer(struct nk_context*, nk_flags, struct nk_text_edit*, nk_plugin_filter);
+NK_API nk_flags                 nk_edit_string_zero_terminated(struct nk_context*, nk_flags, char *buffer, int max, nk_plugin_filter);
 
 /* Chart */
 NK_API int                      nk_chart_begin(struct nk_context*, enum nk_chart_type, int num, float min, float max);
@@ -825,11 +831,25 @@ NK_API void                     nk_style_default(struct nk_context*);
 NK_API void                     nk_style_from_table(struct nk_context*, const struct nk_color*);
 NK_API void                     nk_style_load_cursor(struct nk_context*, enum nk_style_cursor, const struct nk_cursor*);
 NK_API void                     nk_style_load_all_cursors(struct nk_context*, struct nk_cursor*);
-NK_API const char*              nk_style_color_name(enum nk_style_colors);
+NK_API const char*              nk_style_get_color_by_name(enum nk_style_colors);
 NK_API void                     nk_style_set_font(struct nk_context*, const struct nk_user_font*);
 NK_API int                      nk_style_set_cursor(struct nk_context*, enum nk_style_cursor);
 NK_API void                     nk_style_show_cursor(struct nk_context*);
 NK_API void                     nk_style_hide_cursor(struct nk_context*);
+
+NK_API int                      nk_style_push_font(struct nk_context*, struct nk_user_font*);
+NK_API int                      nk_style_push_float(struct nk_context*, float*, float);
+NK_API int                      nk_style_push_vec2(struct nk_context*, struct nk_vec2*, struct nk_vec2);
+NK_API int                      nk_style_push_style_item(struct nk_context*, struct nk_style_item*, struct nk_style_item);
+NK_API int                      nk_style_push_flags(struct nk_context*, nk_flags*, nk_flags);
+NK_API int                      nk_style_push_color(struct nk_context*, struct nk_color*, struct nk_color);
+
+NK_API int                      nk_style_pop_font(struct nk_context*);
+NK_API int                      nk_style_pop_float(struct nk_context*);
+NK_API int                      nk_style_pop_vec2(struct nk_context*);
+NK_API int                      nk_style_pop_style_item(struct nk_context*);
+NK_API int                      nk_style_pop_flags(struct nk_context*);
+NK_API int                      nk_style_pop_color(struct nk_context*);
 
 /* Utilities */
 NK_API struct nk_rect           nk_widget_bounds(struct nk_context*);
@@ -1130,8 +1150,8 @@ NK_API int nk_str_len_char(struct nk_str*);
 struct nk_text_edit;
 struct nk_clipboard {
     nk_handle userdata;
-    nk_paste_f paste;
-    nk_copy_f copy;
+    nk_plugin_paste paste;
+    nk_plugin_copy copy;
 };
 
 struct nk_text_undo_record {
@@ -1164,7 +1184,7 @@ enum nk_text_edit_mode {
 struct nk_text_edit {
     struct nk_clipboard clip;
     struct nk_str string;
-    nk_filter filter;
+    nk_plugin_filter filter;
     struct nk_vec2 scrollbar;
 
     int cursor;
@@ -2415,9 +2435,71 @@ struct nk_window {
 };
 
 /*==============================================================
+ *                          STACK
+ * =============================================================*/
+#ifndef NK_BUTTON_BEHAVIOR_STACK_SIZE
+#define NK_BUTTON_BEHAVIOR_STACK_SIZE 8
+#endif
+
+#ifndef NK_FONT_STACK_SIZE
+#define NK_FONT_STACK_SIZE 8
+#endif
+
+#ifndef NK_STYLE_ITEM_STACK_SIZE
+#define NK_STYLE_ITEM_STACK_SIZE 16
+#endif
+
+#ifndef NK_FLOAT_STACK_SIZE
+#define NK_FLOAT_STACK_SIZE 32
+#endif
+
+#ifndef NK_VECTOR_STACK_SIZE
+#define NK_VECTOR_STACK_SIZE 16
+#endif
+
+#ifndef NK_FLAGS_STACK_SIZE
+#define NK_FLAGS_STACK_SIZE 32
+#endif
+
+#ifndef NK_COLOR_STACK_SIZE
+#define NK_COLOR_STACK_SIZE 32
+#endif
+
+#define NK_CONFIGURATION_STACK_TYPE(prefix, name, type)\
+    struct nk_config_stack_##name##_element {\
+        prefix##_##type *address;\
+        prefix##_##type old_value;\
+    }
+#define NK_CONFIG_STACK(type,size)\
+    struct nk_config_stack_##type {\
+        int head;\
+        struct nk_config_stack_##type##_element elements[size];\
+    }
+
+#define nk_float float
+NK_CONFIGURATION_STACK_TYPE(struct nk, style_item, style_item);
+NK_CONFIGURATION_STACK_TYPE(nk ,float, float);
+NK_CONFIGURATION_STACK_TYPE(struct nk, vec2, vec2);
+NK_CONFIGURATION_STACK_TYPE(nk ,flags, flags);
+NK_CONFIGURATION_STACK_TYPE(struct nk, color, color);
+NK_CONFIGURATION_STACK_TYPE(const struct nk, user_font, user_font*);
+NK_CONFIGURATION_STACK_TYPE(enum nk, button_behavior, button_behavior);
+
+struct nk_configuration_stacks {
+    NK_CONFIG_STACK(style_item, NK_STYLE_ITEM_STACK_SIZE) style_items;
+    NK_CONFIG_STACK(float, NK_FLOAT_STACK_SIZE) floats;
+    NK_CONFIG_STACK(vec2, NK_VECTOR_STACK_SIZE) vectors;
+    NK_CONFIG_STACK(flags, NK_FLAGS_STACK_SIZE) flags;
+    NK_CONFIG_STACK(color, NK_COLOR_STACK_SIZE) colors;
+    NK_CONFIG_STACK(user_font, NK_FONT_STACK_SIZE) fonts;
+    NK_CONFIG_STACK(button_behavior, NK_BUTTON_BEHAVIOR_STACK_SIZE) button_behaviors;
+};
+
+/*==============================================================
  *                          CONTEXT
  * =============================================================*/
 #define NK_VALUE_PAGE_CAPACITY ((sizeof(struct nk_window) / sizeof(nk_uint)) / 2)
+
 struct nk_table {
     unsigned int seq;
     nk_hash keys[NK_VALUE_PAGE_CAPACITY];
@@ -2460,8 +2542,9 @@ struct nk_context {
     struct nk_buffer memory;
     struct nk_clipboard clip;
     nk_flags last_widget_state;
-    enum nk_button_behavior button_behavior;
     float delta_time_seconds;
+    enum nk_button_behavior button_behavior;
+    struct nk_configuration_stacks stacks;
 
 /* private:
     should only be accessed if you
@@ -11466,7 +11549,7 @@ nk_textedit_makeundo_replace(struct nk_text_edit *state, int where,
 
 NK_INTERN void
 nk_textedit_clear_state(struct nk_text_edit *state, enum nk_text_edit_type type,
-    nk_filter filter)
+    nk_plugin_filter filter)
 {
     /* reset the state to default */
    state->undo.undo_point = 0;
@@ -11756,10 +11839,10 @@ nk_do_button(nk_flags *state, struct nk_command_buffer *out, struct nk_rect r,
         return nk_false;
 
     /* calculate button content space */
-    content->x = r.x + style->padding.x + style->border;
-    content->y = r.y + style->padding.y + style->border;
-    content->w = r.w - 2 * style->padding.x + style->border;
-    content->h = r.h - 2 * style->padding.y + style->border;
+    content->x = r.x + style->padding.x + style->border + style->rounding;
+    content->y = r.y + style->padding.y + style->border + style->rounding;
+    content->w = r.w - (2 * style->padding.x + style->border + style->rounding*2);
+    content->h = r.h - (2 * style->padding.y + style->border + style->rounding*2);
 
     /* execute button behavior */
     bounds.x = r.x - style->touch_padding.x;
@@ -13091,7 +13174,7 @@ nk_edit_draw_text(struct nk_command_buffer *out,
 
 NK_INTERN nk_flags
 nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
-    struct nk_rect bounds, nk_flags flags, nk_filter filter,
+    struct nk_rect bounds, nk_flags flags, nk_plugin_filter filter,
     struct nk_text_edit *edit, const struct nk_style_edit *style,
     struct nk_input *in, const struct nk_user_font *font)
 {
@@ -13728,7 +13811,7 @@ nk_do_property(nk_flags *ws,
     enum nk_property_filter filter, struct nk_input *in,
     const struct nk_user_font *font, struct nk_text_edit *text_edit)
 {
-    const nk_filter filters[] = {
+    const nk_plugin_filter filters[] = {
         nk_filter_decimal,
         nk_filter_float
     };
@@ -14115,7 +14198,7 @@ NK_GLOBAL const char *nk_color_names[NK_COLOR_COUNT] = {
 #undef NK_COLOR
 };
 
-NK_API const char *nk_style_color_name(enum nk_style_colors c)
+NK_API const char *nk_style_get_color_by_name(enum nk_style_colors c)
 {return nk_color_names[c];}
 
 NK_API struct nk_style_item nk_style_item_image(struct nk_image img)
@@ -14676,7 +14759,99 @@ nk_style_set_font(struct nk_context *ctx, const struct nk_user_font *font)
     if (!ctx) return;
     style = &ctx->style;
     style->font = font;
+    ctx->stacks.fonts.head = 0;
 }
+
+NK_API int
+nk_style_push_font(struct nk_context *ctx, struct nk_user_font *font)
+{
+    struct nk_style *style;
+    struct nk_config_stack_user_font *font_stack;
+    struct nk_config_stack_user_font_element *element;
+
+    NK_ASSERT(ctx);
+    if (!ctx) return 0;
+
+    style = &ctx->style;
+    font_stack = &ctx->stacks.fonts;
+    NK_ASSERT(font_stack->head < (int)NK_LEN(font_stack->elements));
+    if (font_stack->head >= (int)NK_LEN(font_stack->elements))
+        return 0;
+
+    element = &font_stack->elements[font_stack->head++];
+    element->address = &ctx->style.font;
+    element->old_value = ctx->style.font;
+    ctx->style.font = font;
+    return 1;
+}
+
+NK_API int
+nk_style_pop_font(struct nk_context *ctx)
+{
+    struct nk_style *style;
+    struct nk_config_stack_user_font *font_stack;
+    struct nk_config_stack_user_font_element *element;
+
+    NK_ASSERT(ctx);
+    if (!ctx) return 0;
+
+    style = &ctx->style;
+    font_stack = &ctx->stacks.fonts;
+    NK_ASSERT(font_stack->head > 0);
+    if (font_stack->head < 1)
+        return 0;
+
+    element = &font_stack->elements[--font_stack->head];
+    *element->address = element->old_value;
+    return 1;
+}
+
+#define NK_STYLE_PUSH_IMPLEMENATION(prefix, type, stack) \
+nk_style_push_##type(struct nk_context *ctx, prefix##_##type *address, prefix##_##type value)\
+{\
+    struct nk_config_stack_##type * type_stack;\
+    struct nk_config_stack_##type##_element *element;\
+    NK_ASSERT(ctx);\
+    if (!ctx) return 0;\
+    type_stack = &ctx->stacks.stack;\
+    NK_ASSERT(type_stack->head < (int)NK_LEN(type_stack->elements));\
+    if (type_stack->head >= (int)NK_LEN(type_stack->elements))\
+        return 0;\
+    element = &type_stack->elements[type_stack->head++];\
+    element->address = address;\
+    element->old_value = *address;\
+    *address = value;\
+    return 1;\
+}
+
+#define NK_STYLE_POP_IMPLEMENATION(type, stack) \
+nk_style_pop_##type(struct nk_context *ctx)\
+{\
+    struct nk_style *style;\
+    struct nk_config_stack_##type *type_stack;\
+    struct nk_config_stack_##type##_element *element;\
+    NK_ASSERT(ctx);\
+    if (!ctx) return 0;\
+    type_stack = &ctx->stacks.stack;\
+    NK_ASSERT(type_stack->head > 0);\
+    if (type_stack->head < 1)\
+        return 0;\
+    element = &type_stack->elements[--type_stack->head];\
+    *element->address = element->old_value;\
+    return 1;\
+}
+
+NK_API int NK_STYLE_PUSH_IMPLEMENATION(struct nk, style_item, style_items)
+NK_API int NK_STYLE_PUSH_IMPLEMENATION(nk,float, floats)
+NK_API int NK_STYLE_PUSH_IMPLEMENATION(struct nk, vec2, vectors)
+NK_API int NK_STYLE_PUSH_IMPLEMENATION(nk,flags, flags)
+NK_API int NK_STYLE_PUSH_IMPLEMENATION(struct nk,color, colors)
+
+NK_API int NK_STYLE_POP_IMPLEMENATION(style_item, style_items)
+NK_API int NK_STYLE_POP_IMPLEMENATION(float,floats)
+NK_API int NK_STYLE_POP_IMPLEMENATION(vec2, vectors)
+NK_API int NK_STYLE_POP_IMPLEMENATION(flags,flags)
+NK_API int NK_STYLE_POP_IMPLEMENATION(color,colors)
 
 NK_API int
 nk_style_set_cursor(struct nk_context *ctx, enum nk_style_cursor c)
@@ -17784,9 +17959,54 @@ nk_image(struct nk_context *ctx, struct nk_image img)
 NK_API void
 nk_button_set_behavior(struct nk_context *ctx, enum nk_button_behavior behavior)
 {
+    NK_ASSERT(ctx);
+    if (!ctx) return;
     ctx->button_behavior = behavior;
 }
 
+NK_API int
+nk_button_push_behavior(struct nk_context *ctx, enum nk_button_behavior behavior)
+{
+    struct nk_style *style;
+    struct nk_config_stack_button_behavior *button_stack;
+    struct nk_config_stack_button_behavior_element *element;
+
+    NK_ASSERT(ctx);
+    if (!ctx) return 0;
+
+    style = &ctx->style;
+    button_stack = &ctx->stacks.button_behaviors;
+    NK_ASSERT(button_stack->head < (int)NK_LEN(button_stack->elements));
+    if (button_stack->head >= (int)NK_LEN(button_stack->elements))
+        return 0;
+
+    element = &button_stack->elements[button_stack->head++];
+    element->address = &ctx->button_behavior;
+    element->old_value = ctx->button_behavior;
+    ctx->button_behavior = behavior;
+    return 1;
+}
+
+NK_API int
+nk_button_pop_behavior(struct nk_context *ctx)
+{
+    struct nk_style *style;
+    struct nk_config_stack_button_behavior *button_stack;
+    struct nk_config_stack_button_behavior_element *element;
+
+    NK_ASSERT(ctx);
+    if (!ctx) return 0;
+
+    style = &ctx->style;
+    button_stack = &ctx->stacks.button_behaviors;
+    NK_ASSERT(button_stack->head > 0);
+    if (button_stack->head < 1)
+        return 0;
+
+    element = &button_stack->elements[--button_stack->head];
+    *element->address = element->old_value;
+    return 1;
+}
 NK_API int
 nk_button_text(struct nk_context *ctx, const char *title, int len)
 {
@@ -18320,7 +18540,7 @@ NK_API nk_size nk_prog(struct nk_context *ctx, nk_size cur, nk_size max, int mod
  * --------------------------------------------------------------*/
 NK_API nk_flags
 nk_edit_string(struct nk_context *ctx, nk_flags flags,
-    char *memory, int *len, int max, nk_filter filter)
+    char *memory, int *len, int max, nk_plugin_filter filter)
 {
     nk_hash hash;
     nk_flags state;
@@ -18378,7 +18598,7 @@ nk_edit_string(struct nk_context *ctx, nk_flags flags,
 
 NK_API nk_flags
 nk_edit_buffer(struct nk_context *ctx, nk_flags flags,
-    struct nk_text_edit *edit, nk_filter filter)
+    struct nk_text_edit *edit, nk_plugin_filter filter)
 {
     struct nk_window *win;
     struct nk_style *style;
@@ -18439,7 +18659,7 @@ nk_edit_buffer(struct nk_context *ctx, nk_flags flags,
 
 NK_API nk_flags
 nk_edit_string_zero_terminated(struct nk_context *ctx, nk_flags flags,
-    char *buffer, int max, nk_filter filter)
+    char *buffer, int max, nk_plugin_filter filter)
 {
     nk_flags result;
     int len = nk_strlen(buffer);
@@ -19203,7 +19423,7 @@ nk_popup_begin(struct nk_context *ctx, struct nk_panel *layout,
         root = win->layout;
         while (root) {
             root->flags |= NK_WINDOW_ROM;
-            root->flags &= ~NK_WINDOW_REMOVE_ROM;
+            root->flags &= ~(nk_flags)NK_WINDOW_REMOVE_ROM;
             root = root->parent;
         }
         win->popup.active = 1;

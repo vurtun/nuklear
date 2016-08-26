@@ -1,10 +1,11 @@
 # Changelog
 
-- 2016/08/15 (1.10) - Changed `nk_input_is_key_pressed` and 'nk_input_is_key_released'
+- 2016/08/26 (1.10) - Added stacks for temporary style/UI changes in code
+- 2016/08/25 (1.10) - Changed `nk_input_is_key_pressed` and 'nk_input_is_key_released'
                         to account for key press and release happening in one frame.
-- 2016/08/15 (1.10) - Added additional nk_edit flag to directly jump to the end on activate
-- 2016/08/15 (1.096)- Removed invalid check for value zero in nk_propertyx
-- 2016/08/15 (1.095)- Fixed ROM mode for deeper levels of popup windows parents.
+- 2016/08/25 (1.10) - Added additional nk_edit flag to directly jump to the end on activate
+- 2016/08/17 (1.096)- Removed invalid check for value zero in nk_propertyx
+- 2016/08/16 (1.095)- Fixed ROM mode for deeper levels of popup windows parents.
 - 2016/08/15 (1.094)- Editbox are now still active if enter was pressed with flag
                         `NK_EDIT_SIG_ENTER`. Main reasoning is to be able to keep
                         typing after commiting.
