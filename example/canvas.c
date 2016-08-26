@@ -337,19 +337,29 @@ struct nk_canvas {
     struct nk_command_buffer *painter;
     struct nk_vec2 item_spacing;
     struct nk_vec2 panel_padding;
+    struct nk_style_item window_background;
 };
 
 static void
-canvas_begin(struct nk_context *ctx, struct nk_canvas *canvas, int x, int y, int width, int height)
+canvas_begin(struct nk_context *ctx, struct nk_canvas *canvas, nk_flags flags,
+    int x, int y, int width, int height, struct nk_color background_color)
 {
+    /* save style properties which will be overwritten */
     canvas->panel_padding = ctx->style.window.padding;
     canvas->item_spacing = ctx->style.window.spacing;
+    canvas->window_background = ctx->style.window.fixed_background;
+
+    /* use the complete window space and set background */
     ctx->style.window.spacing = nk_vec2(0,0);
     ctx->style.window.padding = nk_vec2(0,0);
+    ctx->style.window.fixed_background = nk_style_item_color(background_color);
 
-    nk_begin(ctx, &canvas->layout, "Window", nk_rect(x, y, width, height), NK_WINDOW_NO_SCROLLBAR);
+    /* create/update window and set position + size */
+    flags = flags & ~NK_WINDOW_DYNAMIC;
+    nk_begin(ctx, &canvas->layout, "Window", nk_rect(x, y, width, height), NK_WINDOW_NO_SCROLLBAR|flags);
     nk_window_set_bounds(ctx, nk_rect(x, y, width, height));
 
+    /* allocate the complete window space for drawing */
     {struct nk_rect total_space;
     total_space = nk_window_get_content_region(ctx);
     nk_layout_row_dynamic(ctx, total_space.h, 1);
@@ -363,6 +373,7 @@ canvas_end(struct nk_context *ctx, struct nk_canvas *canvas)
     nk_end(ctx);
     ctx->style.window.spacing = canvas->panel_padding;
     ctx->style.window.padding = canvas->item_spacing;
+    ctx->style.window.fixed_background = canvas->window_background;
 }
 
 int main(int argc, char *argv[])
@@ -420,9 +431,8 @@ int main(int argc, char *argv[])
 
         /* draw */
         {struct nk_canvas canvas;
-        canvas_begin(&ctx, &canvas, 0, 0, width, height);
+        canvas_begin(&ctx, &canvas, 0, 0, 0, width, height, nk_rgb(250,250,250));
         {
-            nk_fill_rect(canvas.painter, nk_rect(0,0,width,height), 0, nk_rgb(150,150,150));
             nk_fill_rect(canvas.painter, nk_rect(15,15,210,210), 5, nk_rgb(247, 230, 154));
             nk_fill_rect(canvas.painter, nk_rect(20,20,200,200), 5, nk_rgb(188, 174, 118));
             nk_draw_text(canvas.painter, nk_rect(30, 30, 150, 20), "Text to draw", 12, &font->handle, nk_rgb(188,174,118), nk_rgb(0,0,0));
@@ -438,7 +448,7 @@ int main(int argc, char *argv[])
             points[6] = 200; points[7] = 300;
             points[8] = 175; points[9] = 350;
             points[10] = 150; points[11] = 350;
-            nk_fill_polygon(canvas.painter, points, 6, nk_rgb(255,255,255));}
+            nk_fill_polygon(canvas.painter, points, 6, nk_rgb(0,0,0));}
 
             nk_stroke_line(canvas.painter, 15, 10, 200, 10, 2.0f, nk_rgb(189,45,75));
             nk_stroke_rect(canvas.painter, nk_rect(370, 20, 100, 100), 10, 3, nk_rgb(0,0,255));
