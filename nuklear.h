@@ -10861,6 +10861,10 @@ nk_textedit_text(struct nk_text_edit *state, const char *text, int total_len)
     if (!glyph_len) return;
     while ((text_len < total_len) && glyph_len)
     {
+        /* don't insert a backward delete, just process the event */
+        if (unicode == 127)
+            break;
+
         /* can't add newline in single-line mode */
         if (unicode == '\n' && state->single_line)
             break;
