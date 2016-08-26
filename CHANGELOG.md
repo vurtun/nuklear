@@ -1,5 +1,8 @@
 # Changelog
 
+- 2016/08/26 (1.10) - Added window name string prepresentation to account for
+                        hash collisions. Currently limited to NK_WINDOW_MAX_NAME
+                        which in term can be redefined if not big enough.
 - 2016/08/26 (1.10) - Added stacks for temporary style/UI changes in code
 - 2016/08/25 (1.10) - Changed `nk_input_is_key_pressed` and 'nk_input_is_key_released'
                         to account for key press and release happening in one frame.

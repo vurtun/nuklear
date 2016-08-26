@@ -2342,6 +2342,10 @@ struct nk_panel {
 /*==============================================================
  *                          WINDOW
  * =============================================================*/
+#ifndef NK_WINDOW_MAX_NAME
+#define NK_WINDOW_MAX_NAME 64
+#endif
+
 struct nk_table;
 enum nk_window_flags {
     NK_WINDOW_PRIVATE       = NK_FLAG(11),
@@ -2411,6 +2415,7 @@ struct nk_property_state {
 struct nk_window {
     unsigned int seq;
     nk_hash name;
+    char name_string[NK_WINDOW_MAX_NAME];
     nk_flags flags;
     struct nk_rect bounds;
     struct nk_scroll scrollbar;
@@ -14993,6 +14998,7 @@ nk_setup(struct nk_context *ctx, const struct nk_user_font *font)
 
     nk_zero_struct(*ctx);
     nk_style_default(ctx);
+    ctx->seq = 1;
     if (font) ctx->style.font = font;
 #ifdef NK_INCLUDE_VERTEX_BUFFER_OUTPUT
     nk_draw_list_init(&ctx->draw_list);
@@ -15526,14 +15532,17 @@ nk_free_window(struct nk_context *ctx, struct nk_window *win)
 }
 
 NK_INTERN struct nk_window*
-nk_find_window(struct nk_context *ctx, nk_hash hash)
+nk_find_window(struct nk_context *ctx, nk_hash hash, const char *name)
 {
     struct nk_window *iter;
     iter = ctx->begin;
     while (iter) {
         NK_ASSERT(iter != iter->next);
-        if (iter->name == hash)
-            return iter;
+        if (iter->name == hash) {
+            int max_len = nk_strlen(iter->name_string);
+            if (!nk_stricmpn(iter->name_string, name, max_len))
+                return iter;
+        }
         iter = iter->next;
     }
     return 0;
@@ -15646,9 +15655,10 @@ nk_begin_titled(struct nk_context *ctx, struct nk_panel *layout,
     style = &ctx->style;
     title_len = (int)nk_strlen(name);
     title_hash = nk_murmur_hash(name, (int)title_len, NK_WINDOW_TITLE);
-    win = nk_find_window(ctx, title_hash);
+    win = nk_find_window(ctx, title_hash, name);
     if (!win) {
         /* create new window */
+        nk_size name_length = (nk_size)nk_strlen(name);
         win = (struct nk_window*)nk_create_window(ctx);
         NK_ASSERT(win);
         if (!win) return 0;
@@ -15660,6 +15670,9 @@ nk_begin_titled(struct nk_context *ctx, struct nk_panel *layout,
         win->flags = flags;
         win->bounds = bounds;
         win->name = title_hash;
+        name_length = NK_MIN(name_length, NK_WINDOW_MAX_NAME-1);
+        NK_MEMCPY(win->name_string, name, name_length);
+        win->name_string[name_length] = 0;
         win->popup.win = 0;
         if (!ctx->active)
             ctx->active = win;
@@ -15667,7 +15680,8 @@ nk_begin_titled(struct nk_context *ctx, struct nk_panel *layout,
         /* update window */
         win->flags &= ~(nk_flags)(NK_WINDOW_PRIVATE-1);
         win->flags |= flags;
-        win->seq++;
+        NK_ASSERT(win->seq != ctx->seq && "if this triggers you probably have two windows with same name!");
+        win->seq = ctx->seq;
         if (!ctx->active)
             ctx->active = win;
     }
@@ -15932,7 +15946,7 @@ nk_window_is_collapsed(struct nk_context *ctx, const char *name)
 
     title_len = (int)nk_strlen(name);
     title_hash = nk_murmur_hash(name, (int)title_len, NK_WINDOW_TITLE);
-    win = nk_find_window(ctx, title_hash);
+    win = nk_find_window(ctx, title_hash, name);
     if (!win) return 0;
     return win->flags & NK_WINDOW_MINIMIZED;
 }
@@ -15948,7 +15962,7 @@ nk_window_is_closed(struct nk_context *ctx, const char *name)
 
     title_len = (int)nk_strlen(name);
     title_hash = nk_murmur_hash(name, (int)title_len, NK_WINDOW_TITLE);
-    win = nk_find_window(ctx, title_hash);
+    win = nk_find_window(ctx, title_hash, name);
     if (!win) return 1;
     return (win->flags & NK_WINDOW_CLOSED);
 }
@@ -15964,7 +15978,7 @@ nk_window_is_hidden(struct nk_context *ctx, const char *name)
 
     title_len = (int)nk_strlen(name);
     title_hash = nk_murmur_hash(name, (int)title_len, NK_WINDOW_TITLE);
-    win = nk_find_window(ctx, title_hash);
+    win = nk_find_window(ctx, title_hash, name);
     if (!win) return 1;
     return (win->flags & NK_WINDOW_HIDDEN);
 }
@@ -15980,7 +15994,7 @@ nk_window_is_active(struct nk_context *ctx, const char *name)
 
     title_len = (int)nk_strlen(name);
     title_hash = nk_murmur_hash(name, (int)title_len, NK_WINDOW_TITLE);
-    win = nk_find_window(ctx, title_hash);
+    win = nk_find_window(ctx, title_hash, name);
     if (!win) return 0;
     return win == ctx->active;
 }
@@ -15992,7 +16006,7 @@ nk_window_find(struct nk_context *ctx, const char *name)
     nk_hash title_hash;
     title_len = (int)nk_strlen(name);
     title_hash = nk_murmur_hash(name, (int)title_len, NK_WINDOW_TITLE);
-    return nk_find_window(ctx, title_hash);
+    return nk_find_window(ctx, title_hash, name);
 }
 
 NK_API void
@@ -16047,7 +16061,7 @@ nk_window_collapse(struct nk_context *ctx, const char *name,
 
     title_len = (int)nk_strlen(name);
     title_hash = nk_murmur_hash(name, (int)title_len, NK_WINDOW_TITLE);
-    win = nk_find_window(ctx, title_hash);
+    win = nk_find_window(ctx, title_hash, name);
     if (!win) return;
     if (c == NK_MINIMIZED)
         win->flags |= NK_WINDOW_MINIMIZED;
@@ -16074,7 +16088,7 @@ nk_window_show(struct nk_context *ctx, const char *name, enum nk_show_states s)
 
     title_len = (int)nk_strlen(name);
     title_hash = nk_murmur_hash(name, (int)title_len, NK_WINDOW_TITLE);
-    win = nk_find_window(ctx, title_hash);
+    win = nk_find_window(ctx, title_hash, name);
     if (!win) return;
     if (s == NK_HIDDEN)
         win->flags |= NK_WINDOW_HIDDEN;
@@ -16101,7 +16115,7 @@ nk_window_set_focus(struct nk_context *ctx, const char *name)
 
     title_len = (int)nk_strlen(name);
     title_hash = nk_murmur_hash(name, (int)title_len, NK_WINDOW_TITLE);
-    win = nk_find_window(ctx, title_hash);
+    win = nk_find_window(ctx, title_hash, name);
     if (win && ctx->end != win) {
         nk_remove_window(ctx, win);
         nk_insert_window(ctx, win, NK_INSERT_BACK);
