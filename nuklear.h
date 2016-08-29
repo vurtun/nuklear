@@ -744,14 +744,14 @@ NK_API void                     nk_popup_close(struct nk_context*);
 NK_API void                     nk_popup_end(struct nk_context*);
 
 /* Combobox */
-NK_API int                      nk_combo(struct nk_context*, const char **items, int count, int selected, int item_height);
-NK_API int                      nk_combo_separator(struct nk_context*, const char *items_separated_by_separator, int separator, int selected, int count, int item_height);
-NK_API int                      nk_combo_string(struct nk_context*, const char *items_separated_by_zeros, int selected, int count, int item_height);
-NK_API int                      nk_combo_callback(struct nk_context*, void(*item_getter)(void*, int, const char**), void *userdata, int selected, int count, int item_height);
-NK_API void                     nk_combobox(struct nk_context*, const char **items, int count, int *selected, int item_height);
-NK_API void                     nk_combobox_string(struct nk_context*, const char *items_separated_by_zeros, int *selected, int count, int item_height);
-NK_API void                     nk_combobox_separator(struct nk_context*, const char *items_separated_by_separator, int separator,int *selected, int count, int item_height);
-NK_API void                     nk_combobox_callback(struct nk_context*, void(*item_getter)(void*, int, const char**), void*, int *selected, int count, int item_height);
+NK_API int                      nk_combo(struct nk_context*, const char **items, int count, int selected, int item_height, int max_height);
+NK_API int                      nk_combo_separator(struct nk_context*, const char *items_separated_by_separator, int separator, int selected, int count, int item_height, int max_height);
+NK_API int                      nk_combo_string(struct nk_context*, const char *items_separated_by_zeros, int selected, int count, int item_height, int max_height);
+NK_API int                      nk_combo_callback(struct nk_context*, void(*item_getter)(void*, int, const char**), void *userdata, int selected, int count, int item_height, int max_height);
+NK_API void                     nk_combobox(struct nk_context*, const char **items, int count, int *selected, int item_height, int max_height);
+NK_API void                     nk_combobox_string(struct nk_context*, const char *items_separated_by_zeros, int *selected, int count, int item_height, int max_height);
+NK_API void                     nk_combobox_separator(struct nk_context*, const char *items_separated_by_separator, int separator,int *selected, int count, int item_height, int max_height);
+NK_API void                     nk_combobox_callback(struct nk_context*, void(*item_getter)(void*, int, const char**), void*, int *selected, int count, int item_height, int max_height);
 
 /* Combobox: abstract */
 NK_API int                      nk_combo_begin_text(struct nk_context*, struct nk_panel*, const char *selected, int, int max_height);
@@ -20470,7 +20470,7 @@ NK_API void nk_combo_close(struct nk_context *ctx)
 
 NK_API int
 nk_combo(struct nk_context *ctx, const char **items, int count,
-    int selected, int item_height)
+    int selected, int item_height, int maximum_height)
 {
     int i = 0;
     int max_height;
@@ -20486,6 +20486,7 @@ nk_combo(struct nk_context *ctx, const char **items, int count,
     item_padding = ctx->style.combo.button_padding.y;
     window_padding = ctx->style.window.padding.y;
     max_height = (count+1) * item_height + (int)item_padding * 3 + (int)window_padding * 2;
+    max_height = NK_MIN(maximum_height, max_height);
     if (nk_combo_begin_label(ctx, &combo, items[selected], max_height)) {
         nk_layout_row_dynamic(ctx, (float)item_height, 1);
         for (i = 0; i < count; ++i) {
@@ -20499,7 +20500,7 @@ nk_combo(struct nk_context *ctx, const char **items, int count,
 
 NK_API int
 nk_combo_separator(struct nk_context *ctx, const char *items_separated_by_separator,
-    int separator, int selected, int count, int item_height)
+    int separator, int selected, int count, int item_height, int maximum_height)
 {
     int i;
     int max_height;
@@ -20519,6 +20520,7 @@ nk_combo_separator(struct nk_context *ctx, const char *items_separated_by_separa
     item_padding = ctx->style.combo.content_padding.y;
     window_padding = ctx->style.window.padding.y;
     max_height = (count+1) * item_height + (int)item_padding * 3 + (int)window_padding * 2;
+    max_height = NK_MIN(maximum_height, max_height);
 
     /* find selected item */
     current_item = items_separated_by_separator;
@@ -20547,12 +20549,12 @@ nk_combo_separator(struct nk_context *ctx, const char *items_separated_by_separa
 
 NK_API int
 nk_combo_string(struct nk_context *ctx, const char *items_separated_by_zeros,
-    int selected, int count, int item_height)
-{return nk_combo_separator(ctx, items_separated_by_zeros, '\0', selected, count, item_height);}
+    int selected, int count, int item_height, int max_height)
+{return nk_combo_separator(ctx, items_separated_by_zeros, '\0', selected, count, item_height, max_height);}
 
 NK_API int
 nk_combo_callback(struct nk_context *ctx, void(*item_getter)(void*, int, const char**),
-    void *userdata, int selected, int count, int item_height)
+    void *userdata, int selected, int count, int item_height, int maximum_height)
 {
     int i;
     int max_height;
@@ -20570,6 +20572,7 @@ nk_combo_callback(struct nk_context *ctx, void(*item_getter)(void*, int, const c
     item_padding = ctx->style.combo.content_padding.y;
     window_padding = ctx->style.window.padding.y;
     max_height = (count+1) * item_height + (int)item_padding * 3 + (int)window_padding * 2;
+    max_height = NK_MIN(maximum_height, max_height);
 
     item_getter(userdata, selected, &item);
     if (nk_combo_begin_label(ctx, &combo, item, max_height)) {
@@ -20585,22 +20588,22 @@ nk_combo_callback(struct nk_context *ctx, void(*item_getter)(void*, int, const c
 }
 
 NK_API void nk_combobox(struct nk_context *ctx, const char **items, int count,
-    int *selected, int item_height)
-{*selected = nk_combo(ctx, items, count, *selected, item_height);}
+    int *selected, int item_height, int max_height)
+{*selected = nk_combo(ctx, items, count, *selected, item_height, max_height);}
 
 NK_API void nk_combobox_string(struct nk_context *ctx, const char *items_separated_by_zeros,
-    int *selected, int count, int item_height)
-{*selected = nk_combo_string(ctx, items_separated_by_zeros, *selected, count, item_height);}
+    int *selected, int count, int item_height, int max_height)
+{*selected = nk_combo_string(ctx, items_separated_by_zeros, *selected, count, item_height, max_height);}
 
 NK_API void nk_combobox_separator(struct nk_context *ctx, const char *items_separated_by_separator,
-    int separator,int *selected, int count, int item_height)
+    int separator,int *selected, int count, int item_height, int max_height)
 {*selected = nk_combo_separator(ctx, items_separated_by_separator, separator,
-    *selected, count, item_height);}
+    *selected, count, item_height, max_height);}
 
 NK_API void nk_combobox_callback(struct nk_context *ctx,
     void(*item_getter)(void* data, int id, const char **out_text),
-    void *userdata, int *selected, int count, int item_height)
-{*selected = nk_combo_callback(ctx, item_getter, userdata,  *selected, count, item_height);}
+    void *userdata, int *selected, int count, int item_height, int max_height)
+{*selected = nk_combo_callback(ctx, item_getter, userdata,  *selected, count, item_height, max_height);}
 
 /*
  * -------------------------------------------------------------

@@ -279,7 +279,7 @@ overview(struct nk_context *ctx)
 
                 /* default combobox */
                 nk_layout_row_static(ctx, 25, 200, 1);
-                current_weapon = nk_combo(ctx, weapons, LEN(weapons), current_weapon, 25);
+                current_weapon = nk_combo(ctx, weapons, LEN(weapons), current_weapon, 25, 200);
 
                 /* slider color combobox */
                 if (nk_combo_begin_color(ctx, &combo, combo_color, 200)) {
