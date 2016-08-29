@@ -1,5 +1,7 @@
 # Changelog
 
+- 2016/08/29 (1.10) - Fixed drawing bug in dynamic popups
+- 2016/08/29 (1.10) - Added experimental mouse scrolling to popups, menus and comboboxes
 - 2016/08/26 (1.10) - Added window name string prepresentation to account for
                         hash collisions. Currently limited to NK_WINDOW_MAX_NAME
                         which in term can be redefined if not big enough.

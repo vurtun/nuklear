@@ -14744,7 +14744,7 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     win->spacing = nk_vec2(4,4);
     win->scrollbar_size = nk_vec2(10,10);
     win->min_size = nk_vec2(64,64);
-    win->combo_border = 2.0f;
+    win->combo_border = 1.0f;
     win->contextual_border = 1.0f;
     win->menu_border = 1.0f;
     win->group_border = 1.0f;
@@ -16476,60 +16476,61 @@ nk_panel_end(struct nk_context *ctx)
         nk_push_scissor(out, nk_null_rect);
 
     /* cache configuration data */
-    window_padding = style->window.padding;
     scrollbar_size = style->window.scrollbar_size;
     scaler_size = style->window.scaler_size;
+    if (!(window->flags & NK_WINDOW_SUB))
+        window_padding = style->window.padding;
+    else if (window->flags & NK_WINDOW_COMBO)
+        window_padding = style->window.combo_padding;
+    else if (window->flags & NK_WINDOW_CONTEXTUAL)
+        window_padding = style->window.contextual_padding;
+    else if (window->flags & NK_WINDOW_MENU)
+        window_padding = style->window.menu_padding;
+    else if (window->flags & NK_WINDOW_GROUP)
+        window_padding = style->window.group_padding;
+    else if (window->flags & NK_WINDOW_TOOLTIP)
+        window_padding = style->window.tooltip_padding;
+    else window_padding = style->window.popup_padding;
 
     /* update the current cursor Y-position to point over the last added widget */
     layout->at_y += layout->row.height;
 
-    /* draw footer and fill empty spaces inside a dynamically growing panel */
+    /* handle dynamic panels */
     if (layout->flags & NK_WINDOW_DYNAMIC && !(layout->flags & NK_WINDOW_MINIMIZED))
     {
-        layout->height = layout->at_y - layout->bounds.y;
+        /* calculate panel height */
+        layout->height = layout->at_y + window_padding.y - layout->bounds.y;
         layout->height = NK_MIN(layout->height, layout->bounds.h);
 
         if ((layout->offset->x == 0) || (layout->flags & NK_WINDOW_NO_SCROLLBAR)) {
-            /* special case for dynamic windows without horizontal scrollbar
-             * or hidden scrollbars */
+            /* no horizontal scrollbar so fill empty space */
             footer.x = layout->bounds.x;
-            footer.y = layout->at_y;
+            footer.h = scrollbar_size.y + style->window.padding.y;
+            footer.y = (layout->bounds.y + layout->height) - footer.h;
+            footer.w = layout->bounds.w + layout->border/2.0f;
+            nk_fill_rect(out, footer, 0, style->window.background);
+            layout->footer_h = 0;
+            footer.h = 0;
+        } else {
+            /* panel footer */
+            footer.x = layout->bounds.x;
+            footer.y = layout->bounds.y + layout->height;
             footer.w = layout->bounds.w + layout->border/2.0f;
             footer.h = style->window.padding.y;
+            nk_fill_rect(out, footer, 0, style->window.background);
             layout->footer_h = 0;
-            nk_fill_rect(out, footer, 0, style->window.background);
             footer.h = 0;
-
-            if ((layout->offset->x == 0) && !(layout->flags & NK_WINDOW_NO_SCROLLBAR)) {
-                /* special case for windows like combobox, menu require draw call
-                 * to fill the empty scrollbar background */
-                struct nk_rect bounds;
-                bounds.x = layout->bounds.x + layout->width - layout->border*2;
-                bounds.y = layout->clip.y;
-                bounds.w = scrollbar_size.x + layout->border*2;
-                bounds.h = layout->height + layout->border;
-                nk_fill_rect(out, bounds, 0, style->window.background);
-            }
-        } else {
-            /* dynamic window with visible scrollbars and therefore bigger footer */
-            footer.x = window->bounds.x;
-            footer.w = window->bounds.w + scrollbar_size.x;
-            footer.h = layout->footer_h;
-            if ((layout->flags & NK_WINDOW_COMBO) || (layout->flags & NK_WINDOW_MENU) ||
-                (layout->flags & NK_WINDOW_CONTEXTUAL))
-                footer.y = window->bounds.y + layout->height;
-            else footer.y = window->bounds.y + layout->height + layout->footer_h;
-            nk_fill_rect(out, footer, 0, style->window.background);
-
-            if (!(layout->flags & NK_WINDOW_COMBO) && !(layout->flags & NK_WINDOW_MENU)) {
-                /* fill empty scrollbar space */
-                struct nk_rect bounds;
-                bounds.x = layout->bounds.x - layout->border/2.0f;
-                bounds.y = window->bounds.y + layout->height;
-                bounds.w = layout->bounds.w + layout->border;
-                bounds.h = layout->row.height + layout->border;
-                nk_fill_rect(out, bounds, 0, style->window.background);
-            }
+        }
+        if ((layout->offset->y == 0) || (layout->flags & NK_WINDOW_NO_SCROLLBAR)) {
+            /* No vertical scrollbar so fill empty space */
+            struct nk_rect bounds;
+            bounds.x = layout->bounds.x + layout->width - layout->border*2;
+            bounds.y = layout->bounds.y + layout->header_h + layout->menu.h;
+            bounds.w = scrollbar_size.x + layout->border*2;
+            bounds.h = layout->height - (layout->footer_h + layout->header_h + layout->menu.h);
+            bounds.h -= (2.0f * window_padding.y);
+            nk_fill_rect(out, bounds, 0, style->window.background);
+            layout->footer_h = 0;
         }
     }
 
@@ -16548,15 +16549,13 @@ nk_panel_end(struct nk_context *ctx)
             /* vertical scrollbar */
             nk_flags state = 0;
             bounds.x = layout->bounds.x + layout->width;
-            bounds.y = layout->bounds.y + layout->header_h + style->window.padding.y + layout->menu.h;
+            bounds.y = layout->bounds.y + layout->header_h + style->window.padding.y;
             bounds.w = scrollbar_size.y;
-            bounds.h = layout->bounds.h - (layout->footer_h + layout->header_h + layout->menu.h);
+            bounds.h = layout->bounds.h - (layout->footer_h + layout->header_h);
             bounds.h -= (2.0f * window_padding.y);
-            if (layout->flags & NK_WINDOW_BORDER)
-                bounds.x -= layout->border;
             if (layout->menu.h) {
                 bounds.y += layout->menu.h;
-                bounds.h -= layout->menu.h + layout->row.height;
+                bounds.h -= layout->menu.h;
             }
 
             scroll_offset = layout->offset->y;
@@ -16565,28 +16564,30 @@ nk_panel_end(struct nk_context *ctx)
             scroll_target = (float)(int)(layout->at_y - bounds.y);
 
             /* scrolling by mouse wheel */
-            if ((window->flags & NK_WINDOW_SUB) && (window->flags & NK_WINDOW_GROUP)) {
-                /* group scrollbar wheel scrolling */
-                struct nk_panel *root;
-                root = window->layout;
-                while (root->parent)
-                    root = root->parent;
+            if ((window->flags & NK_WINDOW_SUB)) {
+                /* sub-window scrollbar wheel scrolling */
+                struct nk_window *root_window = window;
+                struct nk_panel *root_panel = window->layout;
+                while (root_panel->parent)
+                    root_panel = root_panel->parent;
+                while (root_window->parent)
+                    root_window = root_window->parent;
 
                 /* only allow scrolling if parent window is active */
                 scroll_has_scrolling = 0;
-                if (!(root->flags & NK_WINDOW_ROM) && layout->has_scrolling) {
-                    /* and group is being hovered and inside clip rect*/
+                if ((root_window == ctx->active) && layout->has_scrolling) {
+                    /* and panel is being hovered and inside clip rect*/
                     if (nk_input_is_mouse_hovering_rect(in, layout->bounds) &&
                         NK_INTERSECT(layout->bounds.x, layout->bounds.y, layout->bounds.w, layout->bounds.h,
-                            root->clip.x, root->clip.y, root->clip.w, root->clip.h))
+                            root_panel->clip.x, root_panel->clip.y, root_panel->clip.w, root_panel->clip.h))
                     {
                         /* deactivate all parent scrolling */
-                        root = window->layout;
-                        while (root->parent) {
-                            root->has_scrolling = nk_false;
-                            root = root->parent;
+                        root_panel = window->layout;
+                        while (root_panel->parent) {
+                            root_panel->has_scrolling = nk_false;
+                            root_panel = root_panel->parent;
                         }
-                        root->has_scrolling = nk_false;
+                        root_panel->has_scrolling = nk_false;
                         scroll_has_scrolling = nk_true;
                     }
                 }
@@ -16654,7 +16655,7 @@ nk_panel_end(struct nk_context *ctx)
         const float padding_y = (layout->flags & NK_WINDOW_MINIMIZED) ?
             style->window.border + window->bounds.y + layout->header_h:
             (layout->flags & NK_WINDOW_DYNAMIC)?
-            layout->at_y + style->window.padding.y:
+            layout->bounds.y + layout->height:
             layout->bounds.y + layout->bounds.h;
 
         /* select correct border color */
@@ -19402,6 +19403,7 @@ nk_popup_begin(struct nk_context *ctx, struct nk_panel *layout,
     popup = win->popup.win;
     if (!popup) {
         popup = (struct nk_window*)nk_create_window(ctx);
+        popup->parent = win;
         win->popup.win = popup;
         win->popup.active = 0;
     }
@@ -19485,6 +19487,7 @@ nk_nonblock_begin(struct nk_panel *layout, struct nk_context *ctx,
     if (!popup) {
         /* create window for nonblocking popup */
         popup = (struct nk_window*)nk_create_window(ctx);
+        popup->parent = win;
         win->popup.win = popup;
         nk_command_buffer_init(&popup->buffer, &ctx->memory, NK_CLIPPING_ON);
     } else {
