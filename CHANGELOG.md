@@ -1,5 +1,7 @@
 # Changelog
 
+- 2016/08/29 (1.11) - Removed some internal complexity and overly complex code
+                        handling panel padding and panel border.
 - 2016/08/29 (1.10) - Added additional height parameter to `nk_combobox_xxx`
 - 2016/08/29 (1.10) - Fixed drawing bug in dynamic popups
 - 2016/08/29 (1.10) - Added experimental mouse scrolling to popups, menus and comboboxes
