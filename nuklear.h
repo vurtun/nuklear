@@ -2486,14 +2486,22 @@ NK_CONFIGURATION_STACK_TYPE(struct nk, color, color);
 NK_CONFIGURATION_STACK_TYPE(const struct nk, user_font, user_font*);
 NK_CONFIGURATION_STACK_TYPE(enum nk, button_behavior, button_behavior);
 
+NK_CONFIG_STACK(style_item, NK_STYLE_ITEM_STACK_SIZE);
+NK_CONFIG_STACK(float, NK_FLOAT_STACK_SIZE);
+NK_CONFIG_STACK(vec2, NK_VECTOR_STACK_SIZE);
+NK_CONFIG_STACK(flags, NK_FLAGS_STACK_SIZE);
+NK_CONFIG_STACK(color, NK_COLOR_STACK_SIZE);
+NK_CONFIG_STACK(user_font, NK_FONT_STACK_SIZE);
+NK_CONFIG_STACK(button_behavior, NK_BUTTON_BEHAVIOR_STACK_SIZE);
+
 struct nk_configuration_stacks {
-    NK_CONFIG_STACK(style_item, NK_STYLE_ITEM_STACK_SIZE) style_items;
-    NK_CONFIG_STACK(float, NK_FLOAT_STACK_SIZE) floats;
-    NK_CONFIG_STACK(vec2, NK_VECTOR_STACK_SIZE) vectors;
-    NK_CONFIG_STACK(flags, NK_FLAGS_STACK_SIZE) flags;
-    NK_CONFIG_STACK(color, NK_COLOR_STACK_SIZE) colors;
-    NK_CONFIG_STACK(user_font, NK_FONT_STACK_SIZE) fonts;
-    NK_CONFIG_STACK(button_behavior, NK_BUTTON_BEHAVIOR_STACK_SIZE) button_behaviors;
+    struct nk_config_stack_style_item style_items;
+    struct nk_config_stack_float floats;
+    struct nk_config_stack_vec2 vectors;
+    struct nk_config_stack_flags flags;
+    struct nk_config_stack_color colors;
+    struct nk_config_stack_user_font fonts;
+    struct nk_config_stack_button_behavior button_behaviors;
 };
 
 /*==============================================================
