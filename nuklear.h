@@ -561,7 +561,7 @@ NK_API void                     nk_set_user_data(struct nk_context*, nk_handle h
 
 /* window */
 NK_API int                      nk_begin(struct nk_context*, struct nk_panel*, const char *title, struct nk_rect bounds, nk_flags flags);
-NK_API int                      nk_begin_titled(struct nk_context*, struct nk_panel*, const char *name, const char *id, struct nk_rect bounds, nk_flags flags);
+NK_API int                      nk_begin_titled(struct nk_context*, struct nk_panel*, const char *name, const char *title, struct nk_rect bounds, nk_flags flags);
 NK_API void                     nk_end(struct nk_context*);
 
 NK_API struct nk_window*        nk_window_find(struct nk_context *ctx, const char *name);
