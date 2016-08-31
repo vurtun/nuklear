@@ -835,6 +835,7 @@ NK_API int                      nk_style_set_cursor(struct nk_context*, enum nk_
 NK_API void                     nk_style_show_cursor(struct nk_context*);
 NK_API void                     nk_style_hide_cursor(struct nk_context*);
 
+/* Style: stack */
 NK_API int                      nk_style_push_font(struct nk_context*, struct nk_user_font*);
 NK_API int                      nk_style_push_float(struct nk_context*, float*, float);
 NK_API int                      nk_style_push_vec2(struct nk_context*, struct nk_vec2*, struct nk_vec2);
@@ -14778,14 +14779,12 @@ nk_style_set_font(struct nk_context *ctx, const struct nk_user_font *font)
 NK_API int
 nk_style_push_font(struct nk_context *ctx, struct nk_user_font *font)
 {
-    struct nk_style *style;
     struct nk_config_stack_user_font *font_stack;
     struct nk_config_stack_user_font_element *element;
 
     NK_ASSERT(ctx);
     if (!ctx) return 0;
 
-    style = &ctx->style;
     font_stack = &ctx->stacks.fonts;
     NK_ASSERT(font_stack->head < (int)NK_LEN(font_stack->elements));
     if (font_stack->head >= (int)NK_LEN(font_stack->elements))
@@ -14801,14 +14800,12 @@ nk_style_push_font(struct nk_context *ctx, struct nk_user_font *font)
 NK_API int
 nk_style_pop_font(struct nk_context *ctx)
 {
-    struct nk_style *style;
     struct nk_config_stack_user_font *font_stack;
     struct nk_config_stack_user_font_element *element;
 
     NK_ASSERT(ctx);
     if (!ctx) return 0;
 
-    style = &ctx->style;
     font_stack = &ctx->stacks.fonts;
     NK_ASSERT(font_stack->head > 0);
     if (font_stack->head < 1)
@@ -16198,7 +16195,8 @@ nk_panel_get_window_border_color(const struct nk_style *style, nk_flags flags)
         border_color = style->window.group_border_color;
     else if (flags & NK_WINDOW_TOOLTIP)
         border_color = style->window.tooltip_border_color;
-    return border_color = style->window.border_color;
+    else border_color = style->window.border_color;
+    return border_color;
 }
 
 NK_INTERN int
@@ -16212,7 +16210,6 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
     const struct nk_user_font *font;
 
     struct nk_vec2 scrollbar_size;
-    struct nk_vec2 item_spacing;
     struct nk_vec2 panel_padding;
 
     NK_ASSERT(ctx);
@@ -16236,7 +16233,6 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
 
     /* pull style configuration into local stack */
     scrollbar_size = style->window.scrollbar_size;
-    item_spacing = style->window.spacing;
     panel_padding = nk_panel_get_window_padding(style, win->flags);
 
     /* window movement */
@@ -16431,8 +16427,6 @@ nk_panel_end(struct nk_context *ctx)
 
     struct nk_vec2 scrollbar_size;
     struct nk_vec2 panel_padding;
-    struct nk_vec2 item_spacing;
-    float border;
 
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
@@ -16450,9 +16444,7 @@ nk_panel_end(struct nk_context *ctx)
 
     /* cache configuration data */
     scrollbar_size = style->window.scrollbar_size;
-    item_spacing = style->window.spacing;
     panel_padding = nk_panel_get_window_padding(style, window->flags);
-    border = nk_panel_get_window_border(style, window->flags);
 
     /* update the current cursor Y-position to point over the last added widget */
     layout->at_y += layout->row.height;
@@ -16790,7 +16782,6 @@ nk_panel_layout(const struct nk_context *ctx, struct nk_window *win,
     struct nk_command_buffer *out;
 
     struct nk_vec2 item_spacing;
-    struct nk_vec2 panel_padding;
     struct nk_color color;
 
     NK_ASSERT(ctx);
@@ -16805,7 +16796,6 @@ nk_panel_layout(const struct nk_context *ctx, struct nk_window *win,
     out = &win->buffer;
     color = style->window.background;
     item_spacing = style->window.spacing;
-    panel_padding = nk_panel_get_window_padding(style, win->flags);
 
     /* update the current row and set the current row layout */
     layout->row.index = 0;
@@ -17876,14 +17866,12 @@ nk_button_set_behavior(struct nk_context *ctx, enum nk_button_behavior behavior)
 NK_API int
 nk_button_push_behavior(struct nk_context *ctx, enum nk_button_behavior behavior)
 {
-    struct nk_style *style;
     struct nk_config_stack_button_behavior *button_stack;
     struct nk_config_stack_button_behavior_element *element;
 
     NK_ASSERT(ctx);
     if (!ctx) return 0;
 
-    style = &ctx->style;
     button_stack = &ctx->stacks.button_behaviors;
     NK_ASSERT(button_stack->head < (int)NK_LEN(button_stack->elements));
     if (button_stack->head >= (int)NK_LEN(button_stack->elements))
@@ -17899,14 +17887,12 @@ nk_button_push_behavior(struct nk_context *ctx, enum nk_button_behavior behavior
 NK_API int
 nk_button_pop_behavior(struct nk_context *ctx)
 {
-    struct nk_style *style;
     struct nk_config_stack_button_behavior *button_stack;
     struct nk_config_stack_button_behavior_element *element;
 
     NK_ASSERT(ctx);
     if (!ctx) return 0;
 
-    style = &ctx->style;
     button_stack = &ctx->stacks.button_behaviors;
     NK_ASSERT(button_stack->head > 0);
     if (button_stack->head < 1)

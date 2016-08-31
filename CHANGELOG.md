@@ -1,5 +1,6 @@
 # Changelog
 
+- 2016/08/30 (1.12) - Removed unused variables
 - 2016/08/30 (1.12) - Fixed C++ build errors
 - 2016/08/30 (1.12) - Removed mouse dragging from SDL demo since it does not work correctly
 - 2016/08/30 (1.12) - Tweaked some default styling variables
