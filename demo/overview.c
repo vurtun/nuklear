@@ -13,7 +13,6 @@ overview(struct nk_context *ctx)
     static int no_scrollbar = nk_false;
     static nk_flags window_flags = 0;
     static int minimizable = nk_true;
-    static int close = nk_true;
 
     /* popups */
     static enum nk_style_header_align header_align = NK_HEADER_RIGHT;
@@ -28,9 +27,8 @@ overview(struct nk_context *ctx)
     if (movable) window_flags |= NK_WINDOW_MOVABLE;
     if (no_scrollbar) window_flags |= NK_WINDOW_NO_SCROLLBAR;
     if (minimizable) window_flags |= NK_WINDOW_MINIMIZABLE;
-    if (close) window_flags |= NK_WINDOW_CLOSABLE;
 
-    if (nk_begin(ctx, &layout, "Overview", nk_rect(10, 10, 400, 750), window_flags))
+    if (nk_begin(ctx, &layout, "Overview", nk_rect(10, 10, 400, 600), window_flags))
     {
         if (show_menu)
         {
@@ -90,7 +88,6 @@ overview(struct nk_context *ctx)
             nk_checkbox_label(ctx, "Movable", &movable);
             nk_checkbox_label(ctx, "No Scrollbar", &no_scrollbar);
             nk_checkbox_label(ctx, "Minimizable", &minimizable);
-            nk_checkbox_label(ctx, "Closable", &close);
             nk_tree_pop(ctx);
         }
 
@@ -129,7 +126,7 @@ overview(struct nk_context *ctx)
                 nk_button_set_behavior(ctx, NK_BUTTON_DEFAULT);
                 nk_button_color(ctx, nk_rgb(0,0,255));
 
-                nk_layout_row_static(ctx, 20, 20, 8);
+                nk_layout_row_static(ctx, 25, 25, 8);
                 nk_button_symbol(ctx, NK_SYMBOL_CIRCLE);
                 nk_button_symbol(ctx, NK_SYMBOL_CIRCLE_FILLED);
                 nk_button_symbol(ctx, NK_SYMBOL_RECT);
@@ -697,8 +694,8 @@ overview(struct nk_context *ctx)
 
             if (popup_active)
             {
-                static struct nk_rect s = {20, 100, 220, 150};
-                if (nk_popup_begin(ctx, &menu, NK_POPUP_STATIC, "Error", NK_WINDOW_DYNAMIC, s))
+                static struct nk_rect s = {20, 100, 220, 90};
+                if (nk_popup_begin(ctx, &menu, NK_POPUP_STATIC, "Error", 0, s))
                 {
                     nk_layout_row_dynamic(ctx, 25, 1);
                     nk_label(ctx, "A terrible error as occured", NK_TEXT_LEFT);
@@ -851,10 +848,8 @@ overview(struct nk_context *ctx)
                 int i;
 
                 /* Header */
-                item_padding = ctx->style.window.spacing;
-                rounding = ctx->style.button.rounding;
-                ctx->style.window.spacing = nk_vec2(0,0);
-                ctx->style.button.rounding = 0;
+                nk_style_push_vec2(ctx, &ctx->style.window.spacing, nk_vec2(0,0));
+                nk_style_push_float(ctx, &ctx->style.button.rounding, 0);
                 nk_layout_row_begin(ctx, NK_STATIC, 20, 3);
                 for (i = 0; i < 3; ++i) {
                     /* make sure button perfectly fits text */
@@ -870,13 +865,13 @@ overview(struct nk_context *ctx)
                         ctx->style.button.normal = button_color;
                     } else current_tab = nk_button_label(ctx, names[i]) ? i: current_tab;
                 }
-                ctx->style.button.rounding = rounding;
+                nk_style_pop_float(ctx);
 
                 /* Body */
                 nk_layout_row_dynamic(ctx, 140, 1);
                 if (nk_group_begin(ctx, &group, "Notebook", NK_WINDOW_BORDER))
                 {
-                    ctx->style.window.spacing = item_padding;
+                    nk_style_pop_vec2(ctx);
                     switch (current_tab) {
                     case CHART_LINE:
                         nk_layout_row_dynamic(ctx, 100, 1);
@@ -919,7 +914,7 @@ overview(struct nk_context *ctx)
                         break;
                     }
                     nk_group_end(ctx);
-                } else ctx->style.window.spacing = item_padding;
+                } else nk_style_pop_vec2(ctx);
                 nk_tree_pop(ctx);
             }
 

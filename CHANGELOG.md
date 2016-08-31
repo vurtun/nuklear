@@ -1,6 +1,20 @@
 # Changelog
 
-- 2016/08/29 (1.11) - Removed some internal complexity and overly complex code
+- 2016/08/30 (1.12) - Removed mouse dragging from SDL demo since it does not work correctly
+- 2016/08/30 (1.12) - Tweaked some default styling variables
+- 2016/08/30 (1.12) - Hopefully fixed drawing bug in slider, in general I would
+                        refrain from using slider with a big number of steps.
+- 2016/08/30 (1.12) - Fixed close and minimize button which would fire even if the
+                        window was in Read Only Mode.
+- 2016/08/30 (1.12) - Fixed popup panel padding handling which was previously just
+                        a hack for combo box and menu.
+- 2016/08/30 (1.12) - Removed `NK_WINDOW_DYNAMIC` flag from public API since
+                        it is bugged and causes issues in window selection.
+- 2016/08/30 (1.12) - Removed scaler size. The size of the scaler is now
+                        determined by the scrollbar size
+- 2016/08/30 (1.12) - Fixed some drawing bugs caused by changes from 1.11
+- 2016/08/30 (1.12) - Fixed overlapping minimized window selection
+- 2016/08/30 (1.11) - Removed some internal complexity and overly complex code
                         handling panel padding and panel border.
 - 2016/08/29 (1.10) - Added additional height parameter to `nk_combobox_xxx`
 - 2016/08/29 (1.10) - Fixed drawing bug in dynamic popups

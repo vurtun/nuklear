@@ -1,5 +1,5 @@
 /*
- Nuklear - v1.10 - public domain
+ Nuklear - v1.12 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -540,11 +540,10 @@ enum nk_panel_flags {
     NK_WINDOW_SCALABLE          = NK_FLAG(2), /* The scalable flag indicates that a window can be scaled by user input * by dragging a scaler icon at the button of the window */
     NK_WINDOW_CLOSABLE          = NK_FLAG(3), /* adds a closable icon into the header */
     NK_WINDOW_MINIMIZABLE       = NK_FLAG(4), /* adds a minimize icon into the header */
-    NK_WINDOW_DYNAMIC           = NK_FLAG(5), /* special window type growing up in height while being filled to a * certain maximum height */
-    NK_WINDOW_NO_SCROLLBAR      = NK_FLAG(6), /* Removes the scrollbar from the window */
-    NK_WINDOW_TITLE             = NK_FLAG(7), /* Forces a header at the top at the window showing the title */
-    NK_WINDOW_SCROLL_AUTO_HIDE  = NK_FLAG(8), /* Automatically hides the window scrollbar if no user interaction */
-    NK_WINDOW_BACKGROUND        = NK_FLAG(9) /* Always keep window in the background */
+    NK_WINDOW_NO_SCROLLBAR      = NK_FLAG(5), /* Removes the scrollbar from the window */
+    NK_WINDOW_TITLE             = NK_FLAG(6), /* Forces a header at the top at the window showing the title */
+    NK_WINDOW_SCROLL_AUTO_HIDE  = NK_FLAG(7), /* Automatically hides the window scrollbar if no user interaction */
+    NK_WINDOW_BACKGROUND        = NK_FLAG(8) /* Always keep window in the background */
 };
 
 /* context */
@@ -2214,9 +2213,7 @@ struct nk_style_window {
     struct nk_color menu_border_color;
     struct nk_color group_border_color;
     struct nk_color tooltip_border_color;
-
     struct nk_style_item scaler;
-    struct nk_vec2 footer_padding;
 
     float border;
     float combo_border;
@@ -2345,8 +2342,10 @@ struct nk_panel {
 
 struct nk_table;
 enum nk_window_flags {
-    NK_WINDOW_PRIVATE       = NK_FLAG(10),
+    NK_WINDOW_PRIVATE       = NK_FLAG(9),
     /* dummy flag marks the beginning of the private window flag part */
+    NK_WINDOW_DYNAMIC       = NK_FLAG(10),
+    /* special window type growing up in height while being filled to a certain maximum height */
     NK_WINDOW_ROM           = NK_FLAG(11),
     /* sets the window into a read only mode and does not allow input changes */
     NK_WINDOW_HIDDEN        = NK_FLAG(12),
@@ -3458,7 +3457,7 @@ nk_pow(float x, int n)
 NK_INTERN int
 nk_ifloor(double x)
 {
-    x = (double)((int)x - ((x < 0.0f) ? 1 : 0));
+    x = (double)((int)x - ((x < 0.0) ? 1 : 0));
     return (int)x;
 }
 
@@ -3471,7 +3470,7 @@ nk_iceil(double x)
     } else {
         int t = (int)x;
         double r = x - (double)t;
-        return (r > 0.0f) ? t+1: t;
+        return (r > 0.0) ? t+1: t;
     }
 }
 
@@ -3559,7 +3558,7 @@ nk_dtoa(char *s, double n)
     if (useExp) {
         if (m < 0)
            m -= 1;
-        n = n / nk_pow(10.0, m);
+        n = n / (double)nk_pow(10.0, m);
         m1 = m;
         m = 0;
     }
@@ -5396,7 +5395,7 @@ nk_stroke_rect(struct nk_command_buffer *b, struct nk_rect rect,
 {
     struct nk_command_rect *cmd;
     NK_ASSERT(b);
-    if (!b || c.a == 0) return;
+    if (!b || c.a == 0 || !rect.w || !rect.h) return;
     if (b->use_clipping) {
         const struct nk_rect *clip = &b->clip;
         if (!NK_INTERSECT(rect.x, rect.y, rect.w, rect.h,
@@ -5421,7 +5420,7 @@ nk_fill_rect(struct nk_command_buffer *b, struct nk_rect rect,
 {
     struct nk_command_rect_filled *cmd;
     NK_ASSERT(b);
-    if (!b || c.a == 0) return;
+    if (!b || c.a == 0 || !rect.w || !rect.h) return;
     if (b->use_clipping) {
         const struct nk_rect *clip = &b->clip;
         if (!NK_INTERSECT(rect.x, rect.y, rect.w, rect.h,
@@ -5446,7 +5445,7 @@ nk_fill_rect_multi_color(struct nk_command_buffer *b, struct nk_rect rect,
 {
     struct nk_command_rect_multi_color *cmd;
     NK_ASSERT(b);
-    if (!b) return;
+    if (!b || !rect.w || !rect.h) return;
     if (b->use_clipping) {
         const struct nk_rect *clip = &b->clip;
         if (!NK_INTERSECT(rect.x, rect.y, rect.w, rect.h,
@@ -5471,7 +5470,7 @@ nk_stroke_circle(struct nk_command_buffer *b, struct nk_rect r,
     float line_thickness, struct nk_color c)
 {
     struct nk_command_circle *cmd;
-    if (!b || c.a == 0) return;
+    if (!b || !r.w || !r.h) return;
     if (b->use_clipping) {
         const struct nk_rect *clip = &b->clip;
         if (!NK_INTERSECT(r.x, r.y, r.w, r.h, clip->x, clip->y, clip->w, clip->h))
@@ -5494,7 +5493,7 @@ nk_fill_circle(struct nk_command_buffer *b, struct nk_rect r, struct nk_color c)
 {
     struct nk_command_circle_filled *cmd;
     NK_ASSERT(b);
-    if (!b || c.a == 0) return;
+    if (!b || c.a == 0 || !r.w || !r.h) return;
     if (b->use_clipping) {
         const struct nk_rect *clip = &b->clip;
         if (!NK_INTERSECT(r.x, r.y, r.w, r.h, clip->x, clip->y, clip->w, clip->h))
@@ -12532,8 +12531,8 @@ nk_draw_slider(struct nk_command_buffer *out, nk_flags state,
     scursor.w = style->cursor_size.x;
     scursor.y = (bar.y + bar.h/2.0f) - scursor.h/2.0f;
     scursor.x = (value <= min) ? virtual_cursor->x: (value >= max) ?
-        ((bar.x + bar.w) - virtual_cursor->w):
-        virtual_cursor->x - (virtual_cursor->w/2);
+        ((bar.x + bar.w) - scursor.w):
+        virtual_cursor->x - (scursor.w/2);
 
     /* filled background bar style */
     fill.w = (scursor.x + (scursor.w/2.0f)) - bar.x;
@@ -14255,7 +14254,7 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     button->text_normal     = table[NK_COLOR_TEXT];
     button->text_hover      = table[NK_COLOR_TEXT];
     button->text_active     = table[NK_COLOR_TEXT];
-    button->padding         = nk_vec2(4.0f,4.0f);
+    button->padding         = nk_vec2(2.0f,2.0f);
     button->image_padding   = nk_vec2(0.0f,0.0f);
     button->touch_padding   = nk_vec2(0.0f, 0.0f);
     button->userdata        = nk_handle_ptr(0);
@@ -14276,7 +14275,7 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     button->text_normal     = table[NK_COLOR_TEXT];
     button->text_hover      = table[NK_COLOR_TEXT];
     button->text_active     = table[NK_COLOR_TEXT];
-    button->padding         = nk_vec2(4.0f,4.0f);
+    button->padding         = nk_vec2(2.0f,2.0f);
     button->touch_padding   = nk_vec2(0.0f,0.0f);
     button->userdata        = nk_handle_ptr(0);
     button->text_alignment  = NK_TEXT_CENTERED;
@@ -14296,7 +14295,7 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     button->text_normal     = table[NK_COLOR_TEXT];
     button->text_hover      = table[NK_COLOR_TEXT];
     button->text_active     = table[NK_COLOR_TEXT];
-    button->padding         = nk_vec2(4.0f,4.0f);
+    button->padding         = nk_vec2(2.0f,2.0f);
     button->touch_padding   = nk_vec2(0.0f,0.0f);
     button->userdata        = nk_handle_ptr(0);
     button->text_alignment  = NK_TEXT_CENTERED;
@@ -14358,7 +14357,7 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     select->text_normal_active  = table[NK_COLOR_TEXT];
     select->text_hover_active   = table[NK_COLOR_TEXT];
     select->text_pressed_active = table[NK_COLOR_TEXT];
-    select->padding         = nk_vec2(4.0f,4.0f);
+    select->padding         = nk_vec2(2.0f,2.0f);
     select->touch_padding   = nk_vec2(0,0);
     select->userdata        = nk_handle_ptr(0);
     select->rounding        = 0.0f;
@@ -14381,8 +14380,8 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     slider->inc_symbol      = NK_SYMBOL_TRIANGLE_RIGHT;
     slider->dec_symbol      = NK_SYMBOL_TRIANGLE_LEFT;
     slider->cursor_size     = nk_vec2(16,16);
-    slider->padding         = nk_vec2(4,4);
-    slider->spacing         = nk_vec2(4,4);
+    slider->padding         = nk_vec2(2,2);
+    slider->spacing         = nk_vec2(2,2);
     slider->userdata        = nk_handle_ptr(0);
     slider->show_buttons    = nk_false;
     slider->bar_height      = 8;
@@ -14422,7 +14421,7 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     prog->border_color      = nk_rgba(0,0,0,0);
     prog->cursor_border_color = nk_rgba(0,0,0,0);
     prog->userdata          = nk_handle_ptr(0);
-    prog->padding           = nk_vec2(4,4);
+    prog->padding           = nk_vec2(2,2);
     prog->rounding          = 0;
     prog->border            = 0;
     prog->cursor_rounding   = 0;
@@ -14735,11 +14734,12 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     win->group_border_color = table[NK_COLOR_BORDER];
     win->tooltip_border_color = table[NK_COLOR_BORDER];
     win->scaler = nk_style_item_color(table[NK_COLOR_TEXT]);
-    win->footer_padding = nk_vec2(2,2);
+
     win->rounding = 0.0f;
     win->spacing = nk_vec2(4,4);
     win->scrollbar_size = nk_vec2(10,10);
     win->min_size = nk_vec2(64,64);
+
     win->combo_border = 1.0f;
     win->contextual_border = 1.0f;
     win->menu_border = 1.0f;
@@ -14747,13 +14747,13 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     win->tooltip_border = 1.0f;
     win->border = 2.0f;
 
-    win->padding = nk_vec2(8,8);
-    win->group_padding = nk_vec2(8,8);
-    win->popup_padding = nk_vec2(8,8);
-    win->combo_padding = nk_vec2(8,8);
-    win->contextual_padding = nk_vec2(8,8);
-    win->menu_padding = nk_vec2(8,8);
-    win->tooltip_padding = nk_vec2(8,8);
+    win->padding = nk_vec2(4,4);
+    win->group_padding = nk_vec2(4,4);
+    win->popup_padding = nk_vec2(4,4);
+    win->combo_padding = nk_vec2(4,4);
+    win->contextual_padding = nk_vec2(4,4);
+    win->menu_padding = nk_vec2(4,4);
+    win->tooltip_padding = nk_vec2(4,4);
 }
 
 NK_API void
@@ -14832,7 +14832,6 @@ nk_style_push_##type(struct nk_context *ctx, prefix##_##type *address, prefix##_
 #define NK_STYLE_POP_IMPLEMENATION(type, stack) \
 nk_style_pop_##type(struct nk_context *ctx)\
 {\
-    struct nk_style *style;\
     struct nk_config_stack_##type *type_stack;\
     struct nk_config_stack_##type##_element *element;\
     NK_ASSERT(ctx);\
@@ -15691,25 +15690,28 @@ nk_begin_titled(struct nk_context *ctx, struct nk_panel *layout,
     {
         int inpanel, ishovered;
         const struct nk_window *iter = win;
-        float h = ctx->style.font->height + 2 * style->window.header.padding.y;
+        float h = ctx->style.font->height + 2.0f * style->window.header.padding.y +
+            (2.0f * style->window.header.label_padding.y);
+        struct nk_rect win_bounds = (!(win->flags & NK_WINDOW_MINIMIZED))?
+            win->bounds: nk_rect(win->bounds.x, win->bounds.y, win->bounds.w, h);
 
         /* activate window if hovered and no other window is overlapping this window */
         nk_start(ctx, win);
-        inpanel = nk_input_has_mouse_click_down_in_rect(&ctx->input, NK_BUTTON_LEFT, win->bounds, nk_true);
+        inpanel = nk_input_has_mouse_click_down_in_rect(&ctx->input, NK_BUTTON_LEFT, win_bounds, nk_true);
         inpanel = inpanel && ctx->input.mouse.buttons[NK_BUTTON_LEFT].clicked;
-        ishovered = nk_input_is_mouse_hovering_rect(&ctx->input, win->bounds);
+        ishovered = nk_input_is_mouse_hovering_rect(&ctx->input, win_bounds);
         if ((win != ctx->active) && ishovered && !ctx->input.mouse.buttons[NK_BUTTON_LEFT].down) {
             iter = win->next;
             while (iter) {
                 struct nk_rect iter_bounds = (!(iter->flags & NK_WINDOW_MINIMIZED))?
                     iter->bounds: nk_rect(iter->bounds.x, iter->bounds.y, iter->bounds.w, h);
-                if (NK_INTERSECT(win->bounds.x, win->bounds.y, win->bounds.w, win->bounds.h,
+                if (NK_INTERSECT(win_bounds.x, win_bounds.y, win_bounds.w, win_bounds.h,
                     iter_bounds.x, iter_bounds.y, iter_bounds.w, iter_bounds.h) &&
                     (!(iter->flags & NK_WINDOW_HIDDEN) || !(iter->flags & NK_WINDOW_BACKGROUND)))
                     break;
 
                 if (iter->popup.win && iter->popup.active && !(iter->flags & NK_WINDOW_HIDDEN) &&
-                    NK_INTERSECT(win->bounds.x, win->bounds.y, win->bounds.w, win->bounds.h,
+                    NK_INTERSECT(win->bounds.x, win_bounds.y, win_bounds.w, win_bounds.h,
                     iter->popup.win->bounds.x, iter->popup.win->bounds.y,
                     iter->popup.win->bounds.w, iter->popup.win->bounds.h))
                     break;
@@ -15723,15 +15725,13 @@ nk_begin_titled(struct nk_context *ctx, struct nk_panel *layout,
             while (iter) {
                 /* try to find a panel with higher priority in the same position */
                 struct nk_rect iter_bounds = (!(iter->flags & NK_WINDOW_MINIMIZED))?
-                    iter->bounds: nk_rect(iter->bounds.x, iter->bounds.y, iter->bounds.w, h);
-                if (!(iter->flags & NK_WINDOW_MINIMIZED)) {
-                    if (NK_INBOX(ctx->input.mouse.pos.x, ctx->input.mouse.pos.y,
-                        iter_bounds.x, iter_bounds.y, iter_bounds.w, iter_bounds.h) &&
-                        !(iter->flags & NK_WINDOW_HIDDEN))
-                        break;
-                }
+                iter->bounds: nk_rect(iter->bounds.x, iter->bounds.y, iter->bounds.w, h);
+                if (NK_INBOX(ctx->input.mouse.pos.x, ctx->input.mouse.pos.y,
+                    iter_bounds.x, iter_bounds.y, iter_bounds.w, iter_bounds.h) &&
+                    !(iter->flags & NK_WINDOW_HIDDEN))
+                    break;
                 if (iter->popup.win && iter->popup.active && !(iter->flags & NK_WINDOW_HIDDEN) &&
-                    NK_INTERSECT(win->bounds.x, win->bounds.y, win->bounds.w, win->bounds.h,
+                    NK_INTERSECT(win_bounds.x, win_bounds.y, win_bounds.w, win_bounds.h,
                     iter->popup.win->bounds.x, iter->popup.win->bounds.y,
                     iter->popup.win->bounds.w, iter->popup.win->bounds.h))
                     break;
@@ -16136,42 +16136,61 @@ nk_window_has_header(struct nk_window *win, const char *title)
 }
 
 NK_INTERN struct nk_vec2
-nk_panel_get_window_padding(const struct nk_style *style, const struct nk_window *win)
+nk_panel_get_window_padding(const struct nk_style *style, nk_flags flags)
 {
     /* shrink panel space by panel padding */
-    if (!(win->flags & NK_WINDOW_SUB))
+    if (!(flags & NK_WINDOW_SUB))
         return style->window.padding;
-    else if (win->flags & NK_WINDOW_COMBO)
+    else if (flags & NK_WINDOW_COMBO)
         return style->window.combo_padding;
-    else if (win->flags & NK_WINDOW_CONTEXTUAL)
+    else if (flags & NK_WINDOW_CONTEXTUAL)
         return style->window.contextual_padding;
-    else if (win->flags & NK_WINDOW_MENU)
+    else if (flags & NK_WINDOW_MENU)
         return style->window.menu_padding;
-    else if (win->flags & NK_WINDOW_GROUP)
+    else if (flags & NK_WINDOW_GROUP)
         return style->window.group_padding;
-    else if (win->flags & NK_WINDOW_TOOLTIP)
+    else if (flags & NK_WINDOW_TOOLTIP)
         return style->window.tooltip_padding;
     else return style->window.popup_padding;
 }
 
 NK_INTERN float
-nk_panel_get_window_border(const struct nk_style *style, const struct nk_window *win)
+nk_panel_get_window_border(const struct nk_style *style, nk_flags flags)
 {
-    if (win->flags & NK_WINDOW_BORDER) {
-        if (!(win->flags & NK_WINDOW_SUB))
+    if (flags & NK_WINDOW_BORDER) {
+        if (!(flags & NK_WINDOW_SUB))
             return style->window.border;
-        else if (win->flags & NK_WINDOW_COMBO)
+        else if (flags & NK_WINDOW_COMBO)
             return style->window.combo_border;
-        else if (win->flags & NK_WINDOW_CONTEXTUAL)
+        else if (flags & NK_WINDOW_CONTEXTUAL)
             return style->window.contextual_border;
-        else if (win->flags & NK_WINDOW_MENU)
+        else if (flags & NK_WINDOW_MENU)
             return style->window.menu_border;
-        else if (win->flags & NK_WINDOW_GROUP)
+        else if (flags & NK_WINDOW_GROUP)
             return style->window.group_border;
-        else if (win->flags & NK_WINDOW_TOOLTIP)
+        else if (flags & NK_WINDOW_TOOLTIP)
             return style->window.tooltip_border;
         else return style->window.border;
     } else return 0;
+}
+
+NK_INTERN struct nk_color
+nk_panel_get_window_border_color(const struct nk_style *style, nk_flags flags)
+{
+    struct nk_color border_color;
+    if (!(flags & NK_WINDOW_SUB))
+        border_color = style->window.border_color;
+    else if (flags & NK_WINDOW_COMBO)
+        border_color = style->window.combo_border_color;
+    else if (flags & NK_WINDOW_CONTEXTUAL)
+        border_color = style->window.contextual_border_color;
+    else if (flags & NK_WINDOW_MENU)
+        border_color = style->window.menu_border_color;
+    else if (flags & NK_WINDOW_GROUP)
+        border_color = style->window.group_border_color;
+    else if (flags & NK_WINDOW_TOOLTIP)
+        border_color = style->window.tooltip_border_color;
+    return border_color = style->window.border_color;
 }
 
 NK_INTERN int
@@ -16186,6 +16205,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
 
     struct nk_vec2 scrollbar_size;
     struct nk_vec2 item_spacing;
+    struct nk_vec2 panel_padding;
 
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
@@ -16209,6 +16229,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
     /* pull style configuration into local stack */
     scrollbar_size = style->window.scrollbar_size;
     item_spacing = style->window.spacing;
+    panel_padding = nk_panel_get_window_padding(style, win->flags);
 
     /* window movement */
     if ((win->flags & NK_WINDOW_MOVABLE) && !(win->flags & NK_WINDOW_ROM)) {
@@ -16223,11 +16244,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
         if (nk_window_has_header(win, title)) {
             header.h = font->height + 2.0f * style->window.header.padding.y;
             header.h += 2.0f * style->window.header.label_padding.y;
-        } else {
-            struct nk_vec2 panel_padding;
-            panel_padding = nk_panel_get_window_padding(style, win);
-            header.h = panel_padding.y;
-        }
+        } else header.h = panel_padding.y;
 
         /* window movement by dragging */
         left_mouse_down = in->mouse.buttons[NK_BUTTON_LEFT].down;
@@ -16243,12 +16260,13 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
     }
 
     /* setup panel */
-    {struct nk_vec2 panel_padding;
-    panel_padding = nk_panel_get_window_padding(style, win);
-    layout->border = nk_panel_get_window_border(style, win);
     layout->bounds = win->bounds;
-    layout->bounds = nk_pad_rect(layout->bounds, panel_padding);
-    layout->bounds = nk_shrink_rect(win->bounds, layout->border);
+    layout->bounds.x += panel_padding.x;
+    layout->bounds.w -= 2*panel_padding.x;
+    if (win->flags & NK_WINDOW_BORDER) {
+        layout->border = nk_panel_get_window_border(style, win->flags);
+        layout->bounds = nk_shrink_rect(layout->bounds, layout->border);
+    } else layout->border = 0;
     layout->at_y = layout->bounds.y;
     layout->at_x = layout->bounds.x;
     layout->max_x = 0;
@@ -16259,7 +16277,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
     layout->row.ratio = 0;
     layout->row.item_width = 0;
     layout->row.tree_depth = 0;
-    layout->row.height = item_spacing.y;
+    layout->row.height = panel_padding.y;
     layout->flags = win->flags;
     layout->has_scrolling = nk_true;
     if (!(win->flags & NK_WINDOW_NO_SCROLLBAR))
@@ -16267,24 +16285,23 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
     if (!(win->flags & NK_WINDOW_NONBLOCK)) {
         layout->footer_height = 0;
         if (!(win->flags & NK_WINDOW_NO_SCROLLBAR) || win->flags & NK_WINDOW_SCALABLE)
-            layout->footer_height = scrollbar_size.y + style->window.footer_padding.y;
+            layout->footer_height = scrollbar_size.y;
         layout->bounds.h -= layout->footer_height;
-    }}
+    }
 
     /* panel header */
     if (nk_window_has_header(win, title))
     {
-        struct nk_rect header;
         struct nk_text text;
-        float header_height;
+        struct nk_rect header;
         const struct nk_style_item *background = 0;
 
         /* calculate header bounds */
-        header.x = win->bounds.x + layout->border;
-        header.y = win->bounds.y + layout->border;
-        header.w = win->bounds.w - 2 * layout->border;
+        header.x = win->bounds.x;
+        header.y = win->bounds.y;
+        header.w = win->bounds.w;
         header.h = font->height + 2.0f * style->window.header.padding.y;
-        header.h += 2.0f * style->window.header.label_padding.y;
+        header.h += (2.0f * style->window.header.label_padding.y);
 
         /* shrink panel by header */
         layout->header_height = header.h;
@@ -16327,9 +16344,10 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
                 button.x = header.x + style->window.header.padding.x;
                 header.x += button.w + style->window.header.spacing.x + style->window.header.padding.x;
             }
+
             if (nk_do_button_symbol(&ws, &win->buffer, button,
                 style->window.header.close_symbol, NK_BUTTON_DEFAULT,
-                &style->window.header.close_button, in, style->font))
+                &style->window.header.close_button, in, style->font) && !(win->flags & NK_WINDOW_ROM))
             {
                 layout->flags |= NK_WINDOW_HIDDEN;
                 layout->flags |= NK_WINDOW_CLOSED;
@@ -16352,7 +16370,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
             }
             if (nk_do_button_symbol(&ws, &win->buffer, button, (layout->flags & NK_WINDOW_MINIMIZED)?
                 style->window.header.maximize_symbol: style->window.header.minimize_symbol,
-                NK_BUTTON_DEFAULT, &style->window.header.minimize_button, in, style->font))
+                NK_BUTTON_DEFAULT, &style->window.header.minimize_button, in, style->font) && !(win->flags & NK_WINDOW_ROM))
                 layout->flags = (layout->flags & NK_WINDOW_MINIMIZED) ?
                     layout->flags & (nk_flags)~NK_WINDOW_MINIMIZED:
                     layout->flags | NK_WINDOW_MINIMIZED;
@@ -16372,13 +16390,13 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
         nk_widget_text(out, label,(const char*)title, text_len, &text, NK_TEXT_LEFT, font);}
     }
 
-    /* draw panel background */
-    if (!(layout->flags & NK_WINDOW_DYNAMIC) && !(layout->flags & NK_WINDOW_MINIMIZED)) {
+    /* draw window background */
+    if (!(layout->flags & NK_WINDOW_MINIMIZED) && !(layout->flags & NK_WINDOW_DYNAMIC)) {
         struct nk_rect body;
         body.x = win->bounds.x;
-        body.y = win->bounds.y + layout->header_height;
         body.w = win->bounds.w;
-        body.h = win->bounds.h - layout->header_height;
+        body.y = (win->bounds.y + layout->header_height);
+        body.h = (win->bounds.h - layout->header_height);
         if (style->window.fixed_background.type == NK_STYLE_ITEM_IMAGE)
             nk_draw_image(out, body, &style->window.fixed_background.data.image, nk_white);
         else nk_fill_rect(out, body, 0, style->window.fixed_background.data.color);
@@ -16405,6 +16423,7 @@ nk_panel_end(struct nk_context *ctx)
 
     struct nk_vec2 scrollbar_size;
     struct nk_vec2 panel_padding;
+    struct nk_vec2 item_spacing;
     float border;
 
     NK_ASSERT(ctx);
@@ -16423,8 +16442,9 @@ nk_panel_end(struct nk_context *ctx)
 
     /* cache configuration data */
     scrollbar_size = style->window.scrollbar_size;
-    panel_padding = nk_panel_get_window_padding(style, window);
-    border = nk_panel_get_window_border(style, window);
+    item_spacing = style->window.spacing;
+    panel_padding = nk_panel_get_window_padding(style, window->flags);
+    border = nk_panel_get_window_border(style, window->flags);
 
     /* update the current cursor Y-position to point over the last added widget */
     layout->at_y += layout->row.height;
@@ -16433,27 +16453,40 @@ nk_panel_end(struct nk_context *ctx)
     if (layout->flags & NK_WINDOW_DYNAMIC && !(layout->flags & NK_WINDOW_MINIMIZED))
     {
         /* update panel height to fit dynamic growth */
+        struct nk_rect empty_space;
         if (layout->at_y < (layout->bounds.y + layout->bounds.h))
             layout->bounds.h = layout->at_y - layout->bounds.y;
 
-        if (layout->offset->y == 0 && !(layout->flags & NK_WINDOW_NO_SCROLLBAR)) {
-            /* fill empty horizontal scrollbar space */
-            struct nk_rect footer;
-            footer.x = layout->bounds.x + layout->bounds.w;
-            footer.y = layout->bounds.y;
-            footer.w = scrollbar_size.x;
-            footer.h = layout->bounds.h;
-            nk_fill_rect(out, footer, 0, style->window.background);
-        }
+        /* fill top empty space */
+        empty_space.x = window->bounds.x + layout->border;
+        empty_space.y = layout->bounds.y;
+        empty_space.h = panel_padding.y;
+        empty_space.w = window->bounds.w;
+        nk_fill_rect(out, empty_space, 0, style->window.background);
+
+        /* fill left empty space */
+        empty_space.x = window->bounds.x + layout->border;
+        empty_space.y = layout->bounds.y;
+        empty_space.h = layout->bounds.h;
+        empty_space.w = panel_padding.x;
+        nk_fill_rect(out, empty_space, 0, style->window.background);
+
+        /* fill right empty space */
+        empty_space.x = layout->bounds.x + layout->bounds.w;
+        empty_space.y = layout->bounds.y;
+        empty_space.h = layout->bounds.h;
+        empty_space.w = panel_padding.x;
+        if (layout->offset->y == 0 && !(layout->flags & NK_WINDOW_NO_SCROLLBAR))
+            empty_space.w += scrollbar_size.x;
+        nk_fill_rect(out, empty_space, 0, style->window.background);
+
+        /* fill bottom empty space */
         if (layout->offset->x != 0 && !(layout->flags & NK_WINDOW_NO_SCROLLBAR)) {
-            /* draw panel footer background */
-            struct nk_rect footer;
-            layout->footer_height = 0;
-            footer.x = window->bounds.x;
-            footer.y = layout->bounds.y + layout->bounds.h;
-            footer.w = window->bounds.w;
-            footer.h = scrollbar_size.y;
-            nk_fill_rect(out, footer, 0, style->window.background);
+            empty_space.x = window->bounds.x;
+            empty_space.y = layout->bounds.y + layout->bounds.h;
+            empty_space.w = window->bounds.w;
+            empty_space.h = scrollbar_size.y;
+            nk_fill_rect(out, empty_space, 0, style->window.background);
         }
     }
 
@@ -16471,9 +16504,9 @@ nk_panel_end(struct nk_context *ctx)
         {
             /* vertical scrollbar */
             nk_flags state = 0;
-            scroll.x = layout->bounds.x + layout->bounds.w;
+            scroll.x = layout->bounds.x + layout->bounds.w + panel_padding.x;
             scroll.y = layout->bounds.y;
-            scroll.w = scrollbar_size.y;
+            scroll.w = scrollbar_size.x;
             scroll.h = layout->bounds.h;
 
             scroll_offset = layout->offset->y;
@@ -16520,8 +16553,8 @@ nk_panel_end(struct nk_context *ctx)
 
             /* execute scrollbar */
             scroll_offset = nk_do_scrollbarv(&state, out, scroll, scroll_has_scrolling,
-                    scroll_offset, scroll_target, scroll_step, scroll_inc,
-                    &ctx->style.scrollv, in, style->font);
+                                scroll_offset, scroll_target, scroll_step, scroll_inc,
+                                &ctx->style.scrollv, in, style->font);
             layout->offset->y = (unsigned short)scroll_offset;
             if (in && scroll_has_scrolling)
                 in->mouse.scroll_delta = 0;
@@ -16559,51 +16592,31 @@ nk_panel_end(struct nk_context *ctx)
     /* window border */
     if (layout->flags & NK_WINDOW_BORDER)
     {
+        struct nk_color border_color = nk_panel_get_window_border_color(style, layout->flags);
         const float padding_y = (layout->flags & NK_WINDOW_MINIMIZED) ?
-            style->window.border + window->bounds.y + layout->header_height:
-            layout->bounds.y + layout->bounds.h + layout->footer_height;
-
-        /* select correct border color */
-        struct nk_color border_color;
-        if (!(layout->flags & NK_WINDOW_SUB))
-            border_color = style->window.border_color;
-        else if (layout->flags & NK_WINDOW_COMBO)
-            border_color = style->window.combo_border_color;
-        else if (layout->flags & NK_WINDOW_CONTEXTUAL)
-            border_color = style->window.contextual_border_color;
-        else if (layout->flags & NK_WINDOW_MENU)
-            border_color = style->window.menu_border_color;
-        else if (layout->flags & NK_WINDOW_GROUP)
-            border_color = style->window.group_border_color;
-        else if (layout->flags & NK_WINDOW_TOOLTIP)
-            border_color = style->window.tooltip_border_color;
-        else border_color = style->window.border_color;
+            style->window.border + window->bounds.y + layout->header_height - panel_padding.y:
+            (layout->flags & NK_WINDOW_DYNAMIC)?
+            layout->bounds.y + layout->bounds.h + layout->footer_height:
+            window->bounds.y + window->bounds.h;
 
         /* draw border top */
-        nk_stroke_line(out, window->bounds.x + layout->border/2.0f,
-            window->bounds.y + layout->border/2.0f,
+        nk_stroke_line(out, window->bounds.x, window->bounds.y,
             window->bounds.x + window->bounds.w - layout->border,
-            window->bounds.y + layout->border/2.0f,
-            layout->border, border_color);
+            window->bounds.y, layout->border, border_color);
 
         /* draw bottom border */
-        nk_stroke_line(out, window->bounds.x + layout->border/2.0f,
-            padding_y - layout->border/2.0f,
+        nk_stroke_line(out, window->bounds.x, padding_y,
             window->bounds.x + window->bounds.w - layout->border,
-            padding_y - layout->border/2.0f,
-            layout->border, border_color);
+            padding_y, layout->border, border_color);
 
         /* draw left border */
-        nk_stroke_line(out, window->bounds.x + layout->border/2.0f,
-            window->bounds.y + layout->border/2.0f,
-            window->bounds.x + layout->border/2.0f,
-            padding_y - layout->border/2.0f, layout->border, border_color);
+        nk_stroke_line(out, window->bounds.x, window->bounds.y, window->bounds.x,
+            padding_y, layout->border, border_color);
 
         /* draw right border */
         nk_stroke_line(out, window->bounds.x + window->bounds.w - layout->border,
-            window->bounds.y + layout->border/2.0f,
-            window->bounds.x + window->bounds.w - layout->border,
-            padding_y - layout->border/2.0f, layout->border, border_color);
+            window->bounds.y, window->bounds.x + window->bounds.w - layout->border,
+            padding_y, layout->border, border_color);
     }
 
     /* scaler */
@@ -16613,8 +16626,10 @@ nk_panel_end(struct nk_context *ctx)
         struct nk_rect scaler;
         scaler.w = scrollbar_size.x;
         scaler.h = scrollbar_size.y;
-        scaler.x = (layout->bounds.x + layout->bounds.w);
         scaler.y = layout->bounds.y + layout->bounds.h;
+        scaler.x = layout->bounds.x + layout->bounds.w + panel_padding.x;
+        if (layout->flags & NK_WINDOW_NO_SCROLLBAR)
+            scaler.x -= scaler.w;
 
         /* draw scaler */
         {const struct nk_style_item *item = &style->window.scaler;
@@ -16689,10 +16704,6 @@ nk_panel_end(struct nk_context *ctx)
     }
     window->popup.combo_count = 0;
 
-    /* this allows reading out the update group bounds for movable/scalable groups */
-    if (window->flags & NK_WINDOW_GROUP)
-        window->layout->bounds = nk_shrink_rect(window->bounds, -style->window.group_border);
-
     /* helper to make sure you have a 'nk_tree_push' * for every 'nk_tree_pop' */
     NK_ASSERT(!layout->row.tree_depth);
 }
@@ -16732,18 +16743,20 @@ nk_menubar_end(struct nk_context *ctx)
         return;
 
     win = ctx->current;
+    out = &win->buffer;
     layout = win->layout;
-    if (!ctx || layout->flags & NK_WINDOW_HIDDEN || layout->flags & NK_WINDOW_MINIMIZED)
+    if (layout->flags & NK_WINDOW_HIDDEN || layout->flags & NK_WINDOW_MINIMIZED)
         return;
 
-    out = &win->buffer;
     layout->menu.h = layout->at_y - layout->menu.y;
     layout->bounds.y += layout->menu.h + ctx->style.window.spacing.y + layout->row.height;
     layout->bounds.h -= layout->menu.h + ctx->style.window.spacing.y + layout->row.height;
-    layout->clip.y = layout->bounds.y;
-    layout->clip.h = layout->bounds.h;
+
     *layout->offset = layout->menu.offset;
     layout->at_y = layout->bounds.y - layout->row.height;
+
+    layout->clip.y = layout->bounds.y;
+    layout->clip.h = layout->bounds.h;
     nk_push_scissor(out, layout->clip);
 }
 /* -------------------------------------------------------------
@@ -16784,7 +16797,7 @@ nk_panel_layout(const struct nk_context *ctx, struct nk_window *win,
     out = &win->buffer;
     color = style->window.background;
     item_spacing = style->window.spacing;
-    panel_padding = nk_panel_get_window_padding(style, win);
+    panel_padding = nk_panel_get_window_padding(style, win->flags);
 
     /* update the current row and set the current row layout */
     layout->row.index = 0;
@@ -16793,14 +16806,10 @@ nk_panel_layout(const struct nk_context *ctx, struct nk_window *win,
     layout->row.height = height + item_spacing.y;
     layout->row.item_offset = 0;
     if (layout->flags & NK_WINDOW_DYNAMIC) {
+        /* draw background for dynamic panels */
         struct nk_rect background;
-        if (layout->flags & NK_WINDOW_NO_SCROLLBAR) {
-            background.x = layout->bounds.x;
-            background.w = layout->bounds.w;
-        } else {
-            background.x = win->bounds.x;
-            background.w = win->bounds.w;
-        }
+        background.x = layout->bounds.x;
+        background.w = layout->bounds.w;
         background.y = layout->at_y;
         background.h = layout->row.height;
         nk_fill_rect(out, background, 0, color);
@@ -16825,10 +16834,10 @@ nk_row_layout(struct nk_context *ctx, enum nk_layout_format fmt,
         win->layout->row.type = NK_LAYOUT_DYNAMIC_FIXED;
     else win->layout->row.type = NK_LAYOUT_STATIC_FIXED;
 
-    win->layout->row.item_width = (float)width;
     win->layout->row.ratio = 0;
-    win->layout->row.item_offset = 0;
     win->layout->row.filled = 0;
+    win->layout->row.item_offset = 0;
+    win->layout->row.item_width = (float)width;
 }
 
 NK_API float
@@ -16876,9 +16885,9 @@ nk_layout_row_begin(struct nk_context *ctx, enum nk_layout_format fmt,
     else layout->row.type = NK_LAYOUT_STATIC_ROW;
 
     layout->row.ratio = 0;
+    layout->row.filled = 0;
     layout->row.item_width = 0;
     layout->row.item_offset = 0;
-    layout->row.filled = 0;
     layout->row.columns = cols;
 }
 
@@ -16985,9 +16994,9 @@ nk_layout_space_begin(struct nk_context *ctx, enum nk_layout_format fmt,
     else layout->row.type = NK_LAYOUT_DYNAMIC_FREE;
 
     layout->row.ratio = 0;
+    layout->row.filled = 0;
     layout->row.item_width = 0;
     layout->row.item_offset = 0;
-    layout->row.filled = 0;
 }
 
 NK_API void
@@ -17155,19 +17164,7 @@ nk_layout_widget_space(struct nk_rect *bounds, const struct nk_context *ctx,
 
     /* cache some configuration data */
     spacing = ctx->style.window.spacing;
-    if (!(layout->flags & NK_WINDOW_SUB))
-        padding = style->window.padding;
-    else if (layout->flags & NK_WINDOW_COMBO)
-        padding = style->window.combo_padding;
-    else if (layout->flags & NK_WINDOW_CONTEXTUAL)
-        padding = style->window.contextual_padding;
-    else if (layout->flags & NK_WINDOW_MENU)
-        padding = style->window.menu_padding;
-    else if (layout->flags & NK_WINDOW_GROUP)
-        padding = style->window.group_padding;
-    else if (layout->flags & NK_WINDOW_TOOLTIP)
-        padding = style->window.tooltip_padding;
-    else padding = style->window.popup_padding;
+    padding = nk_panel_get_window_padding(style, win->flags);
 
     /* calculate the usable panel space */
     panel_padding = 2 * padding.x;
@@ -17610,7 +17607,7 @@ nk_widget_fitting(struct nk_rect *bounds, struct nk_context *ctx,
     layout = win->layout;
     state = nk_widget(bounds, ctx);
 
-    panel_padding = nk_panel_get_window_padding(style, win);
+    panel_padding = nk_panel_get_window_padding(style, win->flags);
     if (layout->row.index == 1) {
         bounds->w += panel_padding.x;
         bounds->x -= panel_padding.x;
@@ -19218,6 +19215,7 @@ nk_group_end(struct nk_context *ctx)
 
     struct nk_rect clip;
     struct nk_window pan;
+    struct nk_vec2 panel_padding;
 
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
@@ -19234,19 +19232,32 @@ nk_group_end(struct nk_context *ctx)
 
     /* dummy window */
     nk_zero_struct(pan);
-    pan.bounds = g->bounds;
+    panel_padding = nk_panel_get_window_padding(&ctx->style, NK_WINDOW_GROUP|NK_WINDOW_SUB);
+    pan.bounds.y = g->bounds.y - (g->header_height + g->menu.h);
+    pan.bounds.x = g->bounds.x - panel_padding.x;
+    pan.bounds.w = g->bounds.w + 2 * panel_padding.x;
+    pan.bounds.h = g->bounds.h + g->header_height + g->menu.h;
+    if (g->flags & NK_WINDOW_BORDER) {
+        pan.bounds.x -= g->border;
+        pan.bounds.y -= g->border;
+        pan.bounds.w += 2*g->border;
+        pan.bounds.h += 2*g->border;
+    }
+    if (!(g->flags & NK_WINDOW_NO_SCROLLBAR)) {
+        pan.bounds.w += ctx->style.window.scrollbar_size.x;
+        pan.bounds.h += ctx->style.window.scrollbar_size.y;
+    }
     pan.scrollbar.x = (unsigned short)g->offset->x;
     pan.scrollbar.y = (unsigned short)g->offset->y;
     pan.flags = g->flags|NK_WINDOW_SUB;
     pan.buffer = win->buffer;
     pan.layout = g;
+    pan.parent = win;
     ctx->current = &pan;
 
     /* make sure group has correct clipping rectangle */
-    nk_unify(&clip, &parent->clip,
-        g->bounds.x, g->clip.y - (g->header_height + ctx->style.window.padding.y),
-        g->bounds.x + g->bounds.w,
-        g->bounds.y + g->bounds.h);
+    nk_unify(&clip, &parent->clip, pan.bounds.x, pan.bounds.y,
+        pan.bounds.x + pan.bounds.w, pan.bounds.y + pan.bounds.h + panel_padding.x);
     nk_push_scissor(&pan.buffer, clip);
     nk_end(ctx);
 
@@ -19254,6 +19265,7 @@ nk_group_end(struct nk_context *ctx)
     nk_push_scissor(&win->buffer, parent->clip);
     ctx->current = win;
     win->layout = parent;
+    g->bounds = pan.bounds;
     return;
 }
 

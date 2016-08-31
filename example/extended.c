@@ -194,7 +194,7 @@ grid_demo(struct nk_context *ctx, struct media *media)
     nk_style_set_font(ctx, &media->font_20->handle);
     if (nk_begin(ctx, &layout, "Grid Demo", nk_rect(600, 350, 275, 250),
         NK_WINDOW_TITLE|NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|
-        NK_WINDOW_BORDER_HEADER|NK_WINDOW_NO_SCROLLBAR))
+        NK_WINDOW_NO_SCROLLBAR))
     {
         nk_style_set_font(ctx, &media->font_18->handle);
         nk_layout_row_dynamic(ctx, 30, 2);
@@ -263,7 +263,7 @@ button_demo(struct nk_context *ctx, struct media *media)
 
     nk_style_set_font(ctx, &media->font_20->handle);
     nk_begin(ctx, &layout, "Button Demo", nk_rect(50,50,255,610),
-        NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_BORDER_HEADER|NK_WINDOW_TITLE);
+        NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_TITLE);
 
     /*------------------------------------------------
      *                  MENU
@@ -382,7 +382,7 @@ basic_demo(struct nk_context *ctx, struct media *media)
     struct nk_panel combo;
     nk_style_set_font(ctx, &media->font_20->handle);
     nk_begin(ctx, &layout, "Basic Demo", nk_rect(320, 50, 275, 610),
-        NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_BORDER_HEADER|NK_WINDOW_TITLE);
+        NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_TITLE);
 
     /*------------------------------------------------
      *                  POPUP BUTTON
@@ -870,7 +870,7 @@ int main(int argc, char *argv[])
         /* Draw */
         glViewport(0, 0, display_width, display_height);
         glClear(GL_COLOR_BUFFER_BIT);
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
         device_draw(&device, &ctx, width, height, scale, NK_ANTI_ALIASING_ON);
         glfwSwapBuffers(win);
     }
