@@ -1,5 +1,8 @@
 # Changelog
-
+- 2016/09/02 (1.13) - Changed nuklear to not have any default vertex layout and
+                        instead made it user provided. The range of types to convert
+                        to is quite limited at the moment, but I would be more than
+                        happy to accept PRs to add additional.
 - 2016/08/30 (1.12) - Removed unused variables
 - 2016/08/30 (1.12) - Fixed C++ build errors
 - 2016/08/30 (1.12) - Removed mouse dragging from SDL demo since it does not work correctly

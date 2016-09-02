@@ -49,6 +49,12 @@ NK_API void nk_d3d11_shutdown(void);
 #include "nuklear_d3d11_vertex_shader.h"
 #include "nuklear_d3d11_pixel_shader.h"
 
+struct nk_d3d11_vertex {
+    float position[2];
+    float uv[2];
+    nk_byte col[4];
+};
+
 static struct
 {
     struct nk_context ctx;
@@ -77,7 +83,7 @@ NK_API void
 nk_d3d11_render(ID3D11DeviceContext *context, enum nk_anti_aliasing AA)
 {
     const float blend_factor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-    const UINT stride = sizeof(struct nk_draw_vertex);
+    const UINT stride = sizeof(struct nk_d3d11_vertex);
     const UINT offset = 0;
 
     ID3D11DeviceContext_IASetInputLayout(context, d3d11.input_layout);
@@ -435,9 +441,9 @@ nk_d3d11_init(ID3D11Device *device, int width, int height, unsigned int max_vert
 
     /* input layout */
     {const D3D11_INPUT_ELEMENT_DESC layout[] = {
-        { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(struct nk_draw_vertex, position), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,       0, offsetof(struct nk_draw_vertex, uv),       D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        { "COLOR",    0, DXGI_FORMAT_R8G8B8A8_UNORM,     0, offsetof(struct nk_draw_vertex, col),      D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(struct nk_d3d11_vertex, position), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,       0, offsetof(struct nk_d3d11_vertex, uv),       D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "COLOR",    0, DXGI_FORMAT_R8G8B8A8_UNORM,     0, offsetof(struct nk_d3d11_vertex, col),      D3D11_INPUT_PER_VERTEX_DATA, 0 },
     };
     hr = ID3D11Device_CreateInputLayout(device,layout, ARRAYSIZE(layout), nk_d3d11_vertex_shader, sizeof(nk_d3d11_vertex_shader), &d3d11.input_layout);
     NK_ASSERT(SUCCEEDED(hr));}
