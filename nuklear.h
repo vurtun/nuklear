@@ -1779,11 +1779,11 @@ NK_FORMAT_COLOR_END = NK_FORMAT_RGBA32,
     NK_FORMAT_COUNT
 };
 
-#define NK_VERTEX_LAYOUT_END NK_VERTEX_ATTRIBUTE_COUNT,NK_FORMAT_COUNT,-1
+#define NK_VERTEX_LAYOUT_END NK_VERTEX_ATTRIBUTE_COUNT,NK_FORMAT_COUNT,0
 struct nk_draw_vertex_layout_element {
     enum nk_draw_vertex_layout_attribute attribute;
     enum nk_draw_vertex_layout_format format;
-    int offset;
+    nk_size offset;
 };
 
 struct nk_draw_command {
@@ -2754,15 +2754,15 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #define NK_DTOA nk_dtoa
 #endif
 
-#define NK_SCHAR_MIN -127
+#define NK_SCHAR_MIN (-127)
 #define NK_SCHAR_MAX 127
 #define NK_UCHAR_MIN 0
 #define NK_UCHAR_MAX 256
-#define NK_SSHORT_MIN -32767
+#define NK_SSHORT_MIN (-32767)
 #define NK_SSHORT_MAX 32767
 #define NK_USHORT_MIN 0
 #define NK_USHORT_MAX 65535
-#define NK_SINT_MIN -2147483647
+#define NK_SINT_MIN (-2147483647)
 #define NK_SINT_MAX 2147483647
 #define NK_UINT_MIN 0
 #define NK_UINT_MAX 4294967295
@@ -6049,8 +6049,7 @@ nk_draw_vertex_layout_element_is_end_of_layout(
     const struct nk_draw_vertex_layout_element *element)
 {
     return (element->attribute == NK_VERTEX_ATTRIBUTE_COUNT ||
-            element->format == NK_FORMAT_COUNT ||
-            element->offset < 0);
+            element->format == NK_FORMAT_COUNT);
 }
 
 static void
@@ -13074,6 +13073,7 @@ nk_do_scrollbarv(nk_flags *state,
         nk_flags ws;
         float scroll_h;
         struct nk_rect button;
+
         button.x = scroll.x;
         button.w = scroll.w;
         button.h = scroll.w;
@@ -13465,7 +13465,6 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
         {int i; /* keyboard input */
         int old_mode = edit->mode;
         for (i = 0; i < NK_KEY_MAX; ++i) {
-            /* special case */
             if (i == NK_KEY_ENTER || i == NK_KEY_TAB) continue; /* special case */
             if (nk_input_is_key_pressed(in, (enum nk_keys)i)) {
                 nk_textedit_key(edit, (enum nk_keys)i, shift_mod, font, row_height);
