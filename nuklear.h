@@ -16511,6 +16511,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title)
         }
 
         /* draw header background */
+        header.h += 1.0f;
         if (background->type == NK_STYLE_ITEM_IMAGE) {
             text.background = nk_rgba(0,0,0,0);
             nk_draw_image(&win->buffer, header, &background->data.image, nk_white);
@@ -16643,24 +16644,24 @@ nk_panel_end(struct nk_context *ctx)
             layout->bounds.h = layout->at_y - layout->bounds.y;
 
         /* fill top empty space */
-        empty_space.x = window->bounds.x + layout->border;
+        empty_space.x = window->bounds.x;
         empty_space.y = layout->bounds.y;
         empty_space.h = panel_padding.y;
         empty_space.w = window->bounds.w;
         nk_fill_rect(out, empty_space, 0, style->window.background);
 
         /* fill left empty space */
-        empty_space.x = window->bounds.x + layout->border;
+        empty_space.x = window->bounds.x;
         empty_space.y = layout->bounds.y;
+        empty_space.w = panel_padding.x + layout->border;
         empty_space.h = layout->bounds.h;
-        empty_space.w = panel_padding.x;
         nk_fill_rect(out, empty_space, 0, style->window.background);
 
         /* fill right empty space */
-        empty_space.x = layout->bounds.x + layout->bounds.w;
+        empty_space.x = layout->bounds.x + layout->bounds.w - layout->border;
         empty_space.y = layout->bounds.y;
+        empty_space.w = panel_padding.x + layout->border;
         empty_space.h = layout->bounds.h;
-        empty_space.w = panel_padding.x;
         if (layout->offset->y == 0 && !(layout->flags & NK_WINDOW_NO_SCROLLBAR))
             empty_space.w += scrollbar_size.x;
         nk_fill_rect(out, empty_space, 0, style->window.background);
@@ -16991,10 +16992,10 @@ nk_panel_layout(const struct nk_context *ctx, struct nk_window *win,
     if (layout->flags & NK_WINDOW_DYNAMIC) {
         /* draw background for dynamic panels */
         struct nk_rect background;
-        background.x = layout->bounds.x;
-        background.w = layout->bounds.w;
-        background.y = layout->at_y;
-        background.h = layout->row.height;
+        background.x = win->bounds.x;
+        background.w = win->bounds.w;
+        background.y = layout->at_y - 1.0f;
+        background.h = layout->row.height + 1.0f;
         nk_fill_rect(out, background, 0, color);
     }
 }
