@@ -1,4 +1,6 @@
 # Changelog
+
+- 2016/09/03 (1.131)- Fixed gaps inside combo boxes in OpenGL
 - 2016/09/02 (1.13) - Changed nuklear to not have any default vertex layout and
                         instead made it user provided. The range of types to convert
                         to is quite limited at the moment, but I would be more than
