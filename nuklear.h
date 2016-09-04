@@ -6734,14 +6734,14 @@ nk_draw_list_fill_rect_multi_color(struct nk_draw_list *list, struct nk_rect rec
     void *vtx;
     struct nk_colorf col_left, col_top;
     struct nk_colorf col_right, col_bottom;
+    nk_draw_index *idx;
+    nk_draw_index index;
 
     nk_color_fv(&col_left.r, left);
     nk_color_fv(&col_right.r, right);
     nk_color_fv(&col_top.r, top);
     nk_color_fv(&col_bottom.r, bottom);
 
-    nk_draw_index *idx;
-    nk_draw_index index;
     NK_ASSERT(list);
     if (!list) return;
 
@@ -20562,8 +20562,8 @@ nk_combo(struct nk_context *ctx, const char **items, int count,
 
     item_spacing = ctx->style.window.spacing;
     window_padding = nk_panel_get_window_padding(&ctx->style, ctx->current->flags);
-    max_height = count * item_height + count * item_spacing.y;
-    max_height += item_spacing.y * 2 + (int)window_padding.y * 2;
+    max_height = count * item_height + count * (int)item_spacing.y;
+    max_height += (int)item_spacing.y * 2 + (int)window_padding.y * 2;
     max_height = NK_MIN(maximum_height, max_height);
     if (nk_combo_begin_label(ctx, &combo, items[selected], max_height)) {
         nk_layout_row_dynamic(ctx, (float)item_height, 1);
@@ -20597,8 +20597,8 @@ nk_combo_separator(struct nk_context *ctx, const char *items_separated_by_separa
     /* calculate popup window */
     item_spacing = ctx->style.window.spacing;
     window_padding = nk_panel_get_window_padding(&ctx->style, ctx->current->flags);
-    max_height = count * item_height + count * item_spacing.y;
-    max_height += item_spacing.y * 2 + (int)window_padding.y * 2;
+    max_height = count * item_height + count * (int)item_spacing.y;
+    max_height += (int)item_spacing.y * 2 + (int)window_padding.y * 2;
     max_height = NK_MIN(maximum_height, max_height);
 
     /* find selected item */
@@ -20650,8 +20650,8 @@ nk_combo_callback(struct nk_context *ctx, void(*item_getter)(void*, int, const c
     /* calculate popup window */
     item_spacing = ctx->style.window.spacing;
     window_padding = nk_panel_get_window_padding(&ctx->style, ctx->current->flags);
-    max_height = count * item_height + count * item_spacing.y;
-    max_height += item_spacing.y * 2 + (int)window_padding.y * 2;
+    max_height = count * item_height + count * (int)item_spacing.y;
+    max_height += (int)item_spacing.y * 2 + (int)window_padding.y * 2;
     max_height = NK_MIN(maximum_height, max_height);
 
     item_getter(userdata, selected, &item);
