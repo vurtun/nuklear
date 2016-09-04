@@ -42,6 +42,9 @@ USAGE:
     Also optionally define the symbols listed in the section "OPTIONAL DEFINES"
     below in header and implementation mode if you want to use additional functionality
     or need more control over the library.
+    IMPORTANT:  Every time you include "nuklear.h" you have to define the same flags.
+                This is very important not doing it either leads to compiler errors
+                or even worse stack corruptions.
 
 FEATURES:
     - Absolutely no platform dependend code
