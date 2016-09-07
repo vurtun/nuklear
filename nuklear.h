@@ -6001,7 +6001,7 @@ nk_draw_list_push_userdata(struct nk_draw_list *list, nk_handle userdata)
     if (!list) return;
     if (!list->cmd_count) {
         struct nk_draw_command *prev;
-        nk_draw_list_push_command(list, nk_null_rect, list->null.texture);
+        nk_draw_list_push_command(list, nk_null_rect, list->config.null.texture);
         prev = nk_draw_list_command_last(list);
         prev->userdata = userdata;
     } else {
