@@ -329,13 +329,13 @@ button_demo(struct nk_context *ctx, struct media *media)
      *------------------------------------------------*/
     ui_header(ctx, media, "Radio buttons");
     ui_widget(ctx, media, 35);
-    if (nk_button_symbol_label(ctx, (option == 0)?NK_SYMBOL_CIRCLE_FILLED:NK_SYMBOL_CIRCLE, "Select", NK_TEXT_LEFT))
+    if (nk_button_symbol_label(ctx, (option == 0)?NK_SYMBOL_CIRCLE_OUTLINE:NK_SYMBOL_CIRCLE_SOLID, "Select", NK_TEXT_LEFT))
         option = 0;
     ui_widget(ctx, media, 35);
-    if (nk_button_symbol_label(ctx, (option == 1)?NK_SYMBOL_CIRCLE_FILLED:NK_SYMBOL_CIRCLE, "Select", NK_TEXT_LEFT))
+    if (nk_button_symbol_label(ctx, (option == 1)?NK_SYMBOL_CIRCLE_OUTLINE:NK_SYMBOL_CIRCLE_SOLID, "Select", NK_TEXT_LEFT))
         option = 1;
     ui_widget(ctx, media, 35);
-    if (nk_button_symbol_label(ctx, (option == 2)?NK_SYMBOL_CIRCLE_FILLED:NK_SYMBOL_CIRCLE, "Select", NK_TEXT_LEFT))
+    if (nk_button_symbol_label(ctx, (option == 2)?NK_SYMBOL_CIRCLE_OUTLINE:NK_SYMBOL_CIRCLE_SOLID, "Select", NK_TEXT_LEFT))
         option = 2;
 
     /*------------------------------------------------

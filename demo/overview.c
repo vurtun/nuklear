@@ -127,10 +127,10 @@ overview(struct nk_context *ctx)
                 nk_button_color(ctx, nk_rgb(0,0,255));
 
                 nk_layout_row_static(ctx, 25, 25, 8);
-                nk_button_symbol(ctx, NK_SYMBOL_CIRCLE);
-                nk_button_symbol(ctx, NK_SYMBOL_CIRCLE_FILLED);
-                nk_button_symbol(ctx, NK_SYMBOL_RECT);
-                nk_button_symbol(ctx, NK_SYMBOL_RECT_FILLED);
+                nk_button_symbol(ctx, NK_SYMBOL_CIRCLE_SOLID);
+                nk_button_symbol(ctx, NK_SYMBOL_CIRCLE_OUTLINE);
+                nk_button_symbol(ctx, NK_SYMBOL_RECT_SOLID);
+                nk_button_symbol(ctx, NK_SYMBOL_RECT_OUTLINE);
                 nk_button_symbol(ctx, NK_SYMBOL_TRIANGLE_UP);
                 nk_button_symbol(ctx, NK_SYMBOL_TRIANGLE_DOWN);
                 nk_button_symbol(ctx, NK_SYMBOL_TRIANGLE_LEFT);

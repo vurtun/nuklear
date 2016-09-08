@@ -1,5 +1,5 @@
 /*
- Nuklear - v1.13 - public domain
+ Nuklear - v1.14 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -233,57 +233,81 @@ extern "C" {
  * ===============================================================
  */
 #ifdef NK_INCLUDE_FIXED_TYPES
-#include <stdint.h>
-typedef int16_t nk_short;
-typedef uint16_t nk_ushort;
-typedef int32_t nk_int;
-typedef uint32_t nk_uint;
-typedef uint32_t nk_hash;
-typedef uintptr_t nk_size;
-typedef uintptr_t nk_ptr;
-typedef uint32_t nk_flags;
-typedef uint32_t nk_rune;
-typedef uint8_t nk_byte;
+    #include <stdint.h>
+    typedef uint8_t nk_byte;
+    typedef int16_t nk_short;
+    typedef uint16_t nk_ushort;
+    typedef int32_t nk_int;
+    typedef uint32_t nk_uint;
+    typedef uintptr_t nk_size;
+    typedef uintptr_t nk_ptr;
 #else
-#ifndef NK_BYTE
-typedef unsigned char nk_byte;
-#else
-typedef NK_BYTE nk_byte;
+    #ifndef NK_BYTE
+        typedef unsigned char nk_byte;
+    #else
+        typedef NK_BYTE nk_byte;
+    #endif
+    #ifndef NK_INT16
+        typedef short nk_short;
+    #else
+        typedef NK_INT16 nk_short;
+    #endif
+    #ifndef NK_UINT16
+        typedef unsigned short nk_ushort;
+    #else
+        typedef NK_UINT16 nk_ushort;
+    #endif
+    #ifndef NK_INT32
+        typedef int nk_int;
+    #else
+        typedef NK_INT32 nk_int;
+    #endif
+    #ifndef NK_UINT32
+        typedef unsigned int nk_uint;
+    #else
+        typedef NK_UINT32 nk_uint;
+    #endif
+    #ifndef NK_SIZE_TYPE
+        #define NK_SIZE_TYPE nk_size
+        #if __WIN32
+            typedef unsigned __int32 nk_size;
+        #elif __WIN64
+            typedef unsigned __int64 nk_size;
+        #elif __GNUC__ || __clang__
+            #if __x86_64__ || __ppc64__
+                typedef unsigned long nk_size;
+            #else
+                typedef unsigned int nk_size;
+            #endif
+        #else
+            typedef unsigned long nk_size;
+        #endif
+    #else
+        typedef NK_SIZE_TYPE nk_size;
+    #endif
+    #ifndef NK_POINTER_TYPE
+        #define NK_POINTER_TYPE nk_ptr
+        #if __WIN32
+            typedef unsigned __int32 nk_ptr;
+        #elif __WIN64
+            typedef unsigned __int64 nk_ptr;
+        #elif __GNUC__ || __clang__
+            #if __x86_64__ || __ppc64__
+                typedef unsigned long nk_ptr;
+            #else
+                typedef unsigned int nk_ptr;
+            #endif
+        #else
+            typedef unsigned long nk_ptr;
+        #endif
+    #else
+        typedef NK_POINTER_TYPE nk_ptr;
+    #endif
 #endif
-#ifndef NK_INT16
-typedef short nk_short;
-#else
-typedef NK_INT16 nk_short;
-#endif
-#ifndef NK_UINT16
-typedef unsigned short nk_ushort;
-#else
-typedef NK_UINT16 nk_ushort;
-#endif
-#ifndef NK_INT32
-typedef int nk_int;
-#else
-typedef NK_INT32 nk_int;
-#endif
-#ifndef NK_UINT32
-typedef unsigned int nk_uint;
-#else
-typedef NK_UINT32 nk_uint;
-#endif
-#ifndef NK_SIZE_TYPE
-typedef unsigned long nk_size;
-#else
-typedef NK_SIZE_TYPE nk_size;
-#endif
-#ifndef NK_POINTER_TYPE
-typedef unsigned long nk_ptr;
-#else
-typedef NK_POINTER_TYPE nk_ptr;
-#endif
+
 typedef nk_uint nk_hash;
-typedef unsigned int nk_flags;
+typedef nk_uint nk_flags;
 typedef nk_uint nk_rune;
-#endif
 
 #ifdef NK_PRIVATE
 #define NK_API static
@@ -379,10 +403,10 @@ enum nk_symbol_type {
     NK_SYMBOL_NONE,
     NK_SYMBOL_X,
     NK_SYMBOL_UNDERSCORE,
-    NK_SYMBOL_CIRCLE,
-    NK_SYMBOL_CIRCLE_FILLED,
-    NK_SYMBOL_RECT,
-    NK_SYMBOL_RECT_FILLED,
+    NK_SYMBOL_CIRCLE_SOLID,
+    NK_SYMBOL_CIRCLE_OUTLINE,
+    NK_SYMBOL_RECT_SOLID,
+    NK_SYMBOL_RECT_OUTLINE,
     NK_SYMBOL_TRIANGLE_UP,
     NK_SYMBOL_TRIANGLE_DOWN,
     NK_SYMBOL_TRIANGLE_LEFT,
@@ -815,10 +839,14 @@ NK_API void                     nk_menu_close(struct nk_context*);
 NK_API void                     nk_menu_end(struct nk_context*);
 
 /* Drawing*/
-#define                         nk_foreach(c, ctx) for((c)=nk__begin(ctx); (c)!=0; (c)=nk__next(ctx, c))
+#define                                 nk_foreach(c, ctx) for((c)=nk__begin(ctx); (c)!=0; (c)=nk__next(ctx, c))
 #ifdef NK_INCLUDE_VERTEX_BUFFER_OUTPUT
-NK_API void                     nk_convert(struct nk_context*, struct nk_buffer *cmds, struct nk_buffer *vertices, struct nk_buffer *elements, const struct nk_convert_config*);
-#define                         nk_draw_foreach(cmd,ctx, b) for((cmd)=nk__draw_begin(ctx, b); (cmd)!=0; (cmd)=nk__draw_next(cmd, b, ctx))
+NK_API void                             nk_convert(struct nk_context*, struct nk_buffer *cmds, struct nk_buffer *vertices, struct nk_buffer *elements, const struct nk_convert_config*);
+#define                                 nk_draw_foreach(cmd,ctx, b) for((cmd)=nk__draw_begin(ctx, b); (cmd)!=0; (cmd)=nk__draw_next(cmd, b, ctx))
+#define                                 nk_draw_foreach_bounded(cmd,from,to) for((cmd)=(from); (cmd) && (to) && (cmd)>=to; --(cmd))
+NK_API const struct nk_draw_command*    nk__draw_begin(const struct nk_context*, const struct nk_buffer*);
+NK_API const struct nk_draw_command*    nk__draw_end(const struct nk_context*, const struct nk_buffer*);
+NK_API const struct nk_draw_command*    nk__draw_next(const struct nk_draw_command*, const struct nk_buffer*, const struct nk_context*);
 #endif
 
 /* User Input */
@@ -1740,7 +1768,7 @@ NK_API int nk_input_is_key_down(const struct nk_input*, enum nk_keys);
     In fact it is probably more powerful than needed but allows even more crazy
     things than this library provides by default.
 */
-typedef unsigned short nk_draw_index;
+typedef nk_ushort nk_draw_index;
 enum nk_draw_list_stroke {
     NK_STROKE_OPEN = nk_false,
     /* build up path has no connection back to the beginning */
@@ -1828,8 +1856,8 @@ NK_API void nk_draw_list_clear(struct nk_draw_list*);
 #define nk_draw_list_foreach(cmd, can, b) for((cmd)=nk__draw_list_begin(can, b); (cmd)!=0; (cmd)=nk__draw_list_next(cmd, b, can))
 NK_API const struct nk_draw_command* nk__draw_list_begin(const struct nk_draw_list*, const struct nk_buffer*);
 NK_API const struct nk_draw_command* nk__draw_list_next(const struct nk_draw_command*, const struct nk_buffer*, const struct nk_draw_list*);
-NK_API const struct nk_draw_command* nk__draw_begin(const struct nk_context*, const struct nk_buffer*);
-NK_API const struct nk_draw_command* nk__draw_next(const struct nk_draw_command*, const struct nk_buffer*, const struct nk_context*);
+NK_API const struct nk_draw_command* nk__draw_list_end(const struct nk_draw_list*, const struct nk_buffer*);
+NK_API void nk_draw_list_clear(struct nk_draw_list *list);
 
 /* path */
 NK_API void nk_draw_list_path_clear(struct nk_draw_list*);
@@ -5843,17 +5871,16 @@ nk__draw_list_begin(const struct nk_draw_list *canvas, const struct nk_buffer *b
 }
 
 NK_API const struct nk_draw_command*
-nk__draw_list_next(const struct nk_draw_command *cmd,
-    const struct nk_buffer *buffer, const struct nk_draw_list *canvas)
+nk__draw_list_end(const struct nk_draw_list *canvas, const struct nk_buffer *buffer)
 {
-    nk_byte *memory;
     nk_size size;
     nk_size offset;
+    nk_byte *memory;
     const struct nk_draw_command *end;
 
     NK_ASSERT(buffer);
     NK_ASSERT(canvas);
-    if (!cmd || !buffer || !canvas)
+    if (!buffer || !canvas)
         return 0;
 
     memory = (nk_byte*)buffer->memory.ptr;
@@ -5861,7 +5888,20 @@ nk__draw_list_next(const struct nk_draw_command *cmd,
     offset = size - canvas->cmd_offset;
     end = nk_ptr_add(const struct nk_draw_command, memory, offset);
     end -= (canvas->cmd_count-1);
+    return end;
+}
 
+NK_API const struct nk_draw_command*
+nk__draw_list_next(const struct nk_draw_command *cmd,
+    const struct nk_buffer *buffer, const struct nk_draw_list *canvas)
+{
+    const struct nk_draw_command *end;
+    NK_ASSERT(buffer);
+    NK_ASSERT(canvas);
+    if (!cmd || !buffer || !canvas)
+        return 0;
+
+    end = nk__draw_list_end(canvas, buffer);
     if (cmd <= end) return 0;
     return (cmd-1);
 }
@@ -6231,8 +6271,10 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
         nk_size i1 = 0;
         nk_size vertex_offset;
         nk_size index = list->vertex_count;
+
         const nk_size idx_count = (thick_line) ?  (count * 18) : (count * 12);
         const nk_size vtx_count = (thick_line) ? (points_count * 4): (points_count *3);
+
         void *vtx = nk_draw_list_alloc_vertices(list, vtx_count);
         nk_draw_index *ids = nk_draw_list_alloc_elements(list, idx_count);
 
@@ -6245,12 +6287,13 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
         vertex_offset = (nk_size)((nk_byte*)vtx - (nk_byte*)list->vertices->memory.ptr);
         nk_buffer_mark(list->vertices, NK_BUFFER_FRONT);
         size = pnt_size * ((thick_line) ? 5 : 3) * points_count;
-        normals = (struct nk_vec2*)
-            nk_buffer_alloc(list->vertices, NK_BUFFER_FRONT, size, pnt_align);
+        normals = (struct nk_vec2*) nk_buffer_alloc(list->vertices, NK_BUFFER_FRONT, size, pnt_align);
         NK_ASSERT(normals);
         if (!normals) return;
-        vtx = (void*)((nk_byte*)list->vertices->memory.ptr + vertex_offset);
         temp = normals + points_count;
+
+        /* make sure vertex pointer is still correct */
+        vtx = (void*)((nk_byte*)list->vertices->memory.ptr + vertex_offset);
 
         /* calculate normals */
         for (i1 = 0; i1 < count; ++i1) {
@@ -6428,6 +6471,7 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
             ids[0] = (nk_draw_index)(idx+0); ids[1] = (nk_draw_index)(idx+1);
             ids[2] = (nk_draw_index)(idx+2); ids[3] = (nk_draw_index)(idx+0);
             ids[4] = (nk_draw_index)(idx+2); ids[5] = (nk_draw_index)(idx+3);
+
             ids += 6;
             idx += 4;
         }
@@ -6464,24 +6508,24 @@ nk_draw_list_fill_poly_convex(struct nk_draw_list *list,
         const float AA_SIZE = 1.0f;
         nk_size vertex_offset = 0;
         nk_size index = list->vertex_count;
+
         const nk_size idx_count = (points_count-2)*3 + points_count*6;
         const nk_size vtx_count = (points_count*2);
+
         void *vtx = nk_draw_list_alloc_vertices(list, vtx_count);
         nk_draw_index *ids = nk_draw_list_alloc_elements(list, idx_count);
 
+        nk_size size = 0;
+        struct nk_vec2 *normals = 0;
         unsigned int vtx_inner_idx = (unsigned int)(index + 0);
         unsigned int vtx_outer_idx = (unsigned int)(index + 1);
-        struct nk_vec2 *normals = 0;
-        nk_size size = 0;
         if (!vtx || !ids) return;
-
 
         /* temporary allocate normals */
         vertex_offset = (nk_size)((nk_byte*)vtx - (nk_byte*)list->vertices->memory.ptr);
         nk_buffer_mark(list->vertices, NK_BUFFER_FRONT);
         size = pnt_size * points_count;
-        normals = (struct nk_vec2*)
-            nk_buffer_alloc(list->vertices, NK_BUFFER_FRONT, size, pnt_align);
+        normals = (struct nk_vec2*) nk_buffer_alloc(list->vertices, NK_BUFFER_FRONT, size, pnt_align);
         NK_ASSERT(normals);
         if (!normals) return;
         vtx = (void*)((nk_byte*)list->vertices->memory.ptr + vertex_offset);
@@ -7074,6 +7118,10 @@ NK_API const struct nk_draw_command*
 nk__draw_begin(const struct nk_context *ctx,
     const struct nk_buffer *buffer)
 {return nk__draw_list_begin(&ctx->draw_list, buffer);}
+
+NK_API const struct nk_draw_command*
+nk__draw_end(const struct nk_context *ctx, const struct nk_buffer *buffer)
+{return nk__draw_list_end(&ctx->draw_list, buffer);}
 
 NK_API const struct nk_draw_command*
 nk__draw_next(const struct nk_draw_command *cmd,
@@ -11945,18 +11993,18 @@ nk_draw_symbol(struct nk_command_buffer *out, enum nk_symbol_type type,
         text.text = foreground;
         nk_widget_text(out, content, X, 1, &text, NK_TEXT_CENTERED, font);
     } break;
-    case NK_SYMBOL_CIRCLE:
-    case NK_SYMBOL_CIRCLE_FILLED:
-    case NK_SYMBOL_RECT:
-    case NK_SYMBOL_RECT_FILLED: {
+    case NK_SYMBOL_CIRCLE_SOLID:
+    case NK_SYMBOL_CIRCLE_OUTLINE:
+    case NK_SYMBOL_RECT_SOLID:
+    case NK_SYMBOL_RECT_OUTLINE: {
         /* simple empty/filled shapes */
-        if (type == NK_SYMBOL_RECT || type == NK_SYMBOL_RECT_FILLED) {
+        if (type == NK_SYMBOL_RECT_SOLID || type == NK_SYMBOL_RECT_OUTLINE) {
             nk_fill_rect(out, content,  0, foreground);
-            if (type == NK_SYMBOL_RECT_FILLED)
+            if (type == NK_SYMBOL_RECT_OUTLINE)
                 nk_fill_rect(out, nk_shrink_rect(content, border_width), 0, background);
         } else {
             nk_fill_circle(out, content, foreground);
-            if (type == NK_SYMBOL_CIRCLE_FILLED)
+            if (type == NK_SYMBOL_CIRCLE_OUTLINE)
                 nk_fill_circle(out, nk_shrink_rect(content, 1), background);
         }
     } break;
@@ -14636,8 +14684,8 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     scroll->cursor_normal   = nk_style_item_color(table[NK_COLOR_SCROLLBAR_CURSOR]);
     scroll->cursor_hover    = nk_style_item_color(table[NK_COLOR_SCROLLBAR_CURSOR_HOVER]);
     scroll->cursor_active   = nk_style_item_color(table[NK_COLOR_SCROLLBAR_CURSOR_ACTIVE]);
-    scroll->dec_symbol      = NK_SYMBOL_CIRCLE_FILLED;
-    scroll->inc_symbol      = NK_SYMBOL_CIRCLE_FILLED;
+    scroll->dec_symbol      = NK_SYMBOL_CIRCLE_SOLID;
+    scroll->inc_symbol      = NK_SYMBOL_CIRCLE_SOLID;
     scroll->userdata        = nk_handle_ptr(0);
     scroll->border_color    = table[NK_COLOR_BORDER];
     scroll->cursor_border_color = table[NK_COLOR_BORDER];
@@ -16664,7 +16712,7 @@ nk_panel_end(struct nk_context *ctx)
         /* fill right empty space */
         empty_space.x = layout->bounds.x + layout->bounds.w - layout->border;
         empty_space.y = layout->bounds.y;
-        empty_space.w = panel_padding.x + 2*layout->border;
+        empty_space.w = panel_padding.x + layout->border;
         empty_space.h = layout->bounds.h;
         if (layout->offset->y == 0 && !(layout->flags & NK_WINDOW_NO_SCROLLBAR))
             empty_space.w += scrollbar_size.x;
@@ -16790,22 +16838,22 @@ nk_panel_end(struct nk_context *ctx)
             window->bounds.y + window->bounds.h;
 
         /* draw border top */
-        nk_stroke_line(out, window->bounds.x, window->bounds.y,
-            window->bounds.x + window->bounds.w,
-            window->bounds.y, layout->border, border_color);
+        nk_stroke_line(out,window->bounds.x,window->bounds.y,
+            window->bounds.x + window->bounds.w, window->bounds.y,
+            layout->border, border_color);
 
         /* draw bottom border */
         nk_stroke_line(out, window->bounds.x, padding_y,
-            window->bounds.x + window->bounds.w,
-            padding_y, layout->border, border_color);
+            window->bounds.x + window->bounds.w, padding_y, layout->border, border_color);
 
         /* draw left border */
-        nk_stroke_line(out, window->bounds.x, window->bounds.y, window->bounds.x,
+        nk_stroke_line(out, window->bounds.x + layout->border/2.0f,
+            window->bounds.y, window->bounds.x + layout->border/2.0f,
             padding_y, layout->border, border_color);
 
         /* draw right border */
-        nk_stroke_line(out, window->bounds.x + window->bounds.w,
-            window->bounds.y, window->bounds.x + window->bounds.w,
+        nk_stroke_line(out, window->bounds.x + window->bounds.w - layout->border/2.0f,
+            window->bounds.y, window->bounds.x + window->bounds.w - layout->border/2.0f,
             padding_y, layout->border, border_color);
     }
 
@@ -16986,6 +17034,15 @@ nk_panel_layout(const struct nk_context *ctx, struct nk_window *win,
     out = &win->buffer;
     color = style->window.background;
     item_spacing = style->window.spacing;
+
+    /*  if one of these triggers you forgot to add an `if` condition around either
+        a window, group, popup, combobox or contextual menu `begin` and `end` block.
+        Example:
+            if (nk_begin(...) {...} nk_end(...); or
+            if (nk_group_begin(...) { nk_group_end(...);} */
+    NK_ASSERT(!(layout->flags & NK_WINDOW_MINIMIZED));
+    NK_ASSERT(!(layout->flags & NK_WINDOW_HIDDEN));
+    NK_ASSERT(!(layout->flags & NK_WINDOW_CLOSED));
 
     /* update the current row and set the current row layout */
     layout->row.index = 0;
@@ -17750,6 +17807,9 @@ NK_API enum nk_widget_layout_states
 nk_widget(struct nk_rect *bounds, const struct nk_context *ctx)
 {
     struct nk_rect *c = 0;
+    struct nk_window *win;
+    struct nk_panel *layout;
+
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
     NK_ASSERT(ctx->current->layout);
@@ -17758,7 +17818,18 @@ nk_widget(struct nk_rect *bounds, const struct nk_context *ctx)
 
     /* allocate space  and check if the widget needs to be updated and drawn */
     nk_panel_alloc_space(bounds, ctx);
-    c = &ctx->current->layout->clip;
+    win = ctx->current;
+    layout = win->layout;
+    c = &layout->clip;
+
+    /*  if one of these triggers you forgot to add an `if` condition around either
+        a window, group, popup, combobox or contextual menu `begin` and `end` block.
+        Example:
+            if (nk_begin(...) {...} nk_end(...); or
+            if (nk_group_begin(...) { nk_group_end(...);} */
+    NK_ASSERT(!(layout->flags & NK_WINDOW_MINIMIZED));
+    NK_ASSERT(!(layout->flags & NK_WINDOW_HIDDEN));
+    NK_ASSERT(!(layout->flags & NK_WINDOW_CLOSED));
 
     /* need to convert to int here to remove floating point error */
     bounds->x = (float)((int)bounds->x);
@@ -19477,7 +19548,7 @@ nk_popup_begin(struct nk_context *ctx, struct nk_panel *layout,
         return 0;
 
     win = ctx->current;
-    NK_ASSERT(!(win->flags & NK_WINDOW_POPUP));
+    NK_ASSERT(!(win->flags & NK_WINDOW_POPUP) && "popups are not allowed to have popus");
     title_len = (int)nk_strlen(title);
     title_hash = nk_murmur_hash(title, (int)title_len, NK_WINDOW_POPUP);
 

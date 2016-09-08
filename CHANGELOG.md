@@ -1,6 +1,23 @@
 # Changelog
 
-- 2016/09/04 (1.133)- Fixed `NK_INCLUDE_COMMAND_USERDATA` define to not cause an error
+- 2016/09/08 (1.14)- Added additional helper function to make it easier to just
+                        take the produced buffers from `nk_convert` and unplug the
+                        iteration process from `nk_context`. So now you can
+                        just use the vertex,element and command buffer + two pointer
+                        inside the command buffer retrieved by calls `nk__draw_begin`
+                        and `nk__draw_end` and macro `nk_draw_foreach_bounded`.
+- 2016/09/08 (1.14)- Added additional asserts to make sure every `nk_xxx_begin` call
+                    for windows, popups, combobox, menu and contextual is guarded by
+                    `if` condition and does not produce false drawing output.
+- 2016/09/08 (1.14)- Changed confusing name for `NK_SYMBOL_RECT_FILLED`, `NK_SYMBOL_RECT`
+                        to hopefully easier to understand `NK_SYMBOL_RECT_FILLED` and
+                        `NK_SYMBOL_RECT_OUTLINE`.
+- 2016/09/08 (1.14)- Changed confusing name for `NK_SYMBOL_CIRLCE_FILLED`, `NK_SYMBOL_CIRCLE`
+                        to hopefully easier to understand `NK_SYMBOL_CIRCLE_FILLED` and
+                        `NK_SYMBOL_CIRCLE_OUTLINE`.
+- 2016/09/08 (1.14)- Added additional checks to select correct types if `NK_INCLUDE_FIXED_TYPES`
+                        is not defined by supporting the biggest compiler GCC, clang and MSVC.
+- 2016/09/07 (1.133)- Fixed `NK_INCLUDE_COMMAND_USERDATA` define to not cause an error
 - 2016/09/04 (1.132)- Fixed wrong combobox height calculation
 - 2016/09/03 (1.131)- Fixed gaps inside combo boxes in OpenGL
 - 2016/09/02 (1.13) - Changed nuklear to not have any default vertex layout and
