@@ -116,7 +116,16 @@ nk_d3d11_render(ID3D11DeviceContext *context, enum nk_anti_aliasing AA)
 
     {/* fill converting configuration */
         struct nk_convert_config config;
+        NK_STORAGE const struct nk_draw_vertex_layout_element vertex_layout[] = {
+            {NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct nk_d3d11_vertex, position)},
+            {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct nk_d3d11_vertex, uv)},
+            {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct nk_d3d11_vertex, col)},
+            {NK_VERTEX_LAYOUT_END}
+        };
         memset(&config, 0, sizeof(config));
+        config.vertex_layout = vertex_layout;
+        config.vertex_size = sizeof(struct nk_d3d11_vertex);
+        config.vertex_alignment = NK_ALIGNOF(struct nk_d3d11_vertex);
         config.global_alpha = 1.0f;
         config.shape_AA = AA;
         config.line_AA = AA;
