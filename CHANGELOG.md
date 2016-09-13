@@ -1,5 +1,10 @@
 # Changelog
 
+- 2016/09/13 (1.141)- Fixed slider behavior hopefully for the last time. This time
+                        all calculation are correct so no more hackery.
+- 2016/09/13 (1.141)- Internal change to divide window/panel flags into panel flags and types.
+                        Suprisinly spend years in C and still happened to confuse types
+                        with flags. Probably something to take note.
 - 2016/09/08 (1.14)- Added additional helper function to make it easier to just
                         take the produced buffers from `nk_convert` and unplug the
                         iteration process from `nk_context`. So now you can

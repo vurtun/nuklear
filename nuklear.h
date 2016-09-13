@@ -16,8 +16,8 @@ ABOUT:
 VALUES:
     - Immediate mode graphical user interface toolkit
     - Single header library
-    - Written in C89 (ANSI C)
-    - Small codebase (~15kLOC)
+    - Written in C89 (A.K.A. ANSI C or ISO C90)
+    - Small codebase (~16kLOC)
     - Focus on portability, efficiency and simplicity
     - No dependencies (not even the standard library if not wanted)
     - Fully skinnable and customizable
@@ -1339,10 +1339,8 @@ struct nk_user_font {
 
 #ifdef NK_INCLUDE_FONT_BAKING
 enum nk_font_coord_type {
-    NK_COORD_UV,
-    /* texture coordinates inside font glyphs are clamped between 0-1 */
-    NK_COORD_PIXEL
-    /* texture coordinates inside font glyphs are in absolute pixel */
+    NK_COORD_UV, /* texture coordinates inside font glyphs are clamped between 0-1 */
+    NK_COORD_PIXEL /* texture coordinates inside font glyphs are in absolute pixel */
 };
 
 struct nk_baked_font {
@@ -1373,7 +1371,7 @@ struct nk_font_config {
     unsigned char merge_mode;
     /* merges this font into the last font */
     unsigned char pixel_snap;
-    /* align very character to pixel boundary (if true set oversample (1,1)) */
+    /* align every character to pixel boundary (if true set oversample (1,1)) */
     unsigned char oversample_v, oversample_h;
     /* rasterize at hight quality for sub-pixel position */
     unsigned char padding[3];
@@ -2275,6 +2273,7 @@ struct nk_style_window {
     struct nk_color background;
 
     struct nk_color border_color;
+    struct nk_color popup_border_color;
     struct nk_color combo_border_color;
     struct nk_color contextual_border_color;
     struct nk_color menu_border_color;
@@ -2288,6 +2287,7 @@ struct nk_style_window {
     float menu_border;
     float group_border;
     float tooltip_border;
+    float popup_border;
 
     float rounding;
     struct nk_vec2 spacing;
@@ -2340,6 +2340,21 @@ NK_API struct nk_style_item nk_style_item_hide(void);
 #define NK_CHART_MAX_SLOT 4
 #endif
 
+enum nk_panel_type {
+    NK_PANEL_WINDOW     = NK_FLAG(0),
+    NK_PANEL_GROUP      = NK_FLAG(1),
+    NK_PANEL_POPUP      = NK_FLAG(2),
+    NK_PANEL_CONTEXTUAL = NK_FLAG(4),
+    NK_PANEL_COMBO      = NK_FLAG(5),
+    NK_PANEL_MENU       = NK_FLAG(6),
+    NK_PANEL_TOOLTIP    = NK_FLAG(7)
+};
+enum nk_panel_set {
+    NK_PANEL_SET_NONBLOCK = NK_PANEL_CONTEXTUAL|NK_PANEL_COMBO|NK_PANEL_MENU|NK_PANEL_TOOLTIP,
+    NK_PANEL_SET_POPUP = NK_PANEL_SET_NONBLOCK|NK_PANEL_POPUP,
+    NK_PANEL_SET_SUB = NK_PANEL_SET_POPUP|NK_PANEL_GROUP
+};
+
 struct nk_chart_slot {
     enum nk_chart_type type;
     struct nk_color color;
@@ -2383,6 +2398,7 @@ struct nk_menu_state {
 };
 
 struct nk_panel {
+    enum nk_panel_type type;
     nk_flags flags;
     struct nk_rect bounds;
     struct nk_scroll *offset;
@@ -2409,9 +2425,8 @@ struct nk_panel {
 
 struct nk_table;
 enum nk_window_flags {
-    NK_WINDOW_PRIVATE       = NK_FLAG(9),
-    /* dummy flag marks the beginning of the private window flag part */
-    NK_WINDOW_DYNAMIC       = NK_FLAG(10),
+    NK_WINDOW_PRIVATE       = NK_FLAG(10),
+    NK_WINDOW_DYNAMIC       = NK_WINDOW_PRIVATE,
     /* special window type growing up in height while being filled to a certain maximum height */
     NK_WINDOW_ROM           = NK_FLAG(11),
     /* sets the window into a read only mode and does not allow input changes */
@@ -2421,29 +2436,13 @@ enum nk_window_flags {
     /* Directly closes and frees the window at the end of the frame */
     NK_WINDOW_MINIMIZED     = NK_FLAG(14),
     /* marks the window as minimized */
-    NK_WINDOW_SUB           = NK_FLAG(15),
-    /* Marks the window as subwindow of another window*/
-    NK_WINDOW_GROUP         = NK_FLAG(16),
-    /* Marks the window as window widget group */
-    NK_WINDOW_POPUP         = NK_FLAG(17),
-    /* Marks the window as a popup window */
-    NK_WINDOW_NONBLOCK      = NK_FLAG(18),
-    /* Marks the window as a nonblock popup window */
-    NK_WINDOW_CONTEXTUAL    = NK_FLAG(19),
-    /* Marks the window as a combo box or menu */
-    NK_WINDOW_COMBO         = NK_FLAG(20),
-    /* Marks the window as a combo box */
-    NK_WINDOW_MENU          = NK_FLAG(21),
-    /* Marks the window as a menu */
-    NK_WINDOW_TOOLTIP       = NK_FLAG(22),
-    /* Marks the window as a menu */
-    NK_WINDOW_REMOVE_ROM    = NK_FLAG(23)
+    NK_WINDOW_REMOVE_ROM    = NK_FLAG(15)
     /* Removes the read only mode at the end of the window */
 };
 
 struct nk_popup_state {
     struct nk_window *win;
-    enum nk_window_flags type;
+    enum nk_panel_type type;
     nk_hash name;
     int active;
     unsigned combo_count;
@@ -4039,7 +4038,6 @@ nk_hsva_f(float h, float s, float v, float a)
     case 0: out.r = v; out.g = t; out.b = p; break;
     case 1: out.r = q; out.g = v; out.b = p; break;
     case 2: out.r = p; out.g = v; out.b = t; break;
-    case 3: out.r = p; out.g = q; out.b = v; break;
     case 4: out.r = t; out.g = p; out.b = v; break;
     case 5: default: out.r = v; out.g = p; out.b = q; break;
     }
@@ -12685,46 +12683,36 @@ nk_do_selectable_image(nk_flags *state, struct nk_command_buffer *out,
  *
  * ===============================================================*/
 NK_INTERN float
-nk_slider_behavior(nk_flags *state, struct nk_rect *cursor,
-    struct nk_input *in, const struct nk_style_slider *style,
-    struct nk_rect bounds, float slider_min, float slider_max, float slider_value,
+nk_slider_behavior(nk_flags *state, struct nk_rect *logical_cursor,
+    struct nk_rect *visual_cursor, struct nk_input *in,
+    const struct nk_style_slider *style, struct nk_rect bounds,
+    float slider_min, float slider_max, float slider_value,
     float slider_step, float slider_steps)
 {
     int left_mouse_down;
     int left_mouse_click_in_cursor;
-    struct nk_rect visual_cursor;
-
-    float bar_y = (bounds.y + cursor->h/2) - cursor->h/8;
-    float bar_h = bounds.h/6;
-
-    /* calculate visual cursor */
-    visual_cursor.h = style->cursor_size.y;
-    visual_cursor.w = style->cursor_size.x;
-    visual_cursor.y = (bar_y + bar_h/2.0f) - visual_cursor.h/2.0f;
-    visual_cursor.x = (slider_value <= slider_min) ? cursor->x: (slider_value >= slider_max) ?
-        ((bounds.x + bounds.w) - cursor->w): cursor->x - (cursor->w/2);
 
     /* check if visual cursor is being dragged */
     nk_widget_state_reset(state);
     left_mouse_down = in && in->mouse.buttons[NK_BUTTON_LEFT].down;
     left_mouse_click_in_cursor = in && nk_input_has_mouse_click_down_in_rect(in,
-            NK_BUTTON_LEFT, visual_cursor, nk_true);
+            NK_BUTTON_LEFT, *visual_cursor, nk_true);
 
     if (left_mouse_down && left_mouse_click_in_cursor)
     {
-        const float d = in->mouse.pos.x - (cursor->x + cursor->w / 2.0f);
+        float ratio = 0;
+        const float d = in->mouse.pos.x - (visual_cursor->x + visual_cursor->w / 2.0f);
         const float pxstep = (bounds.w - (2 * style->padding.x)) / slider_steps;
 
         /* only update value if the next slider step is reached */
         *state = NK_WIDGET_STATE_ACTIVE;
         if (NK_ABS(d) >= pxstep) {
-            float ratio = 0;
             const float steps = (float)((int)(NK_ABS(d) / pxstep));
             slider_value += (d > 0) ? (slider_step*steps) : -(slider_step*steps);
             slider_value = NK_CLAMP(slider_min, slider_value, slider_max);
             ratio = (slider_value - slider_min)/slider_step;
-            cursor->x = bounds.x + (cursor->w * ratio);
-            in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.x = cursor->x + cursor->w/2.0f;
+            logical_cursor->x = bounds.x + (logical_cursor->w * ratio);
+            in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.x = logical_cursor->x + logical_cursor->w/2.0f;
         }
     }
 
@@ -12742,11 +12730,10 @@ nk_slider_behavior(nk_flags *state, struct nk_rect *cursor,
 NK_INTERN void
 nk_draw_slider(struct nk_command_buffer *out, nk_flags state,
     const struct nk_style_slider *style, const struct nk_rect *bounds,
-    const struct nk_rect *virtual_cursor, float min, float value, float max)
+    const struct nk_rect *visual_cursor, float min, float value, float max)
 {
     struct nk_rect fill;
     struct nk_rect bar;
-    struct nk_rect scursor;
     const struct nk_style_item *background;
 
     /* select correct slider images/colors */
@@ -12768,20 +12755,12 @@ nk_draw_slider(struct nk_command_buffer *out, nk_flags state,
 
     /* calculate slider background bar */
     bar.x = bounds->x;
-    bar.y = (bounds->y + virtual_cursor->h/2) - virtual_cursor->h/8;
+    bar.y = (visual_cursor->y + visual_cursor->h/2) - bounds->h/12;
     bar.w = bounds->w;
     bar.h = bounds->h/6;
 
-    /* resize virtual cursor to given size */
-    scursor.h = style->cursor_size.y;
-    scursor.w = style->cursor_size.x;
-    scursor.y = (bar.y + bar.h/2.0f) - scursor.h/2.0f;
-    scursor.x = (value <= min) ? virtual_cursor->x: (value >= max) ?
-        ((bar.x + bar.w) - scursor.w):
-        virtual_cursor->x - (scursor.w/2);
-
     /* filled background bar style */
-    fill.w = (scursor.x + (scursor.w/2.0f)) - bar.x;
+    fill.w = (visual_cursor->x + (visual_cursor->w/2.0f)) - bar.x;
     fill.x = bar.x;
     fill.y = bar.y;
     fill.h = bar.h;
@@ -12801,8 +12780,8 @@ nk_draw_slider(struct nk_command_buffer *out, nk_flags state,
 
     /* draw cursor */
     if (cursor->type == NK_STYLE_ITEM_IMAGE)
-        nk_draw_image(out, scursor, &cursor->data.image, nk_white);
-    else nk_fill_circle(out, scursor, cursor->data.color);
+        nk_draw_image(out, *visual_cursor, &cursor->data.image, nk_white);
+    else nk_fill_circle(out, *visual_cursor, cursor->data.color);
 }
 
 NK_INTERN float
@@ -12818,7 +12797,9 @@ nk_do_slider(nk_flags *state,
     float slider_value;
     float slider_steps;
     float cursor_offset;
-    struct nk_rect cursor;
+
+    struct nk_rect visual_cursor;
+    struct nk_rect logical_cursor;
 
     NK_ASSERT(style);
     NK_ASSERT(out);
@@ -12828,10 +12809,10 @@ nk_do_slider(nk_flags *state,
     /* remove padding from slider bounds */
     bounds.x = bounds.x + style->padding.x;
     bounds.y = bounds.y + style->padding.y;
-    bounds.h = NK_MAX(bounds.h, 2 * style->padding.y);
-    bounds.w = NK_MAX(bounds.w, 1 + bounds.h + 2 * style->padding.x);
+    bounds.h = NK_MAX(bounds.h, 2*style->padding.y);
+    bounds.w = NK_MAX(bounds.w, 2*style->padding.x + style->cursor_size.x);
+    bounds.w -= 2 * style->padding.x;
     bounds.h -= 2 * style->padding.y;
-    bounds.w -= 2 * style->padding.y;
 
     /* optional buttons */
     if (style->show_buttons) {
@@ -12854,7 +12835,7 @@ nk_do_slider(nk_flags *state,
             val += step;
 
         bounds.x = bounds.x + button.w + style->spacing.x;
-        bounds.w = bounds.w - (2 * button.w + 2 * style->spacing.x);
+        bounds.w = bounds.w - (2*button.w + 2*style->spacing.x);
     }
 
     /* make sure the provided values are correct */
@@ -12863,19 +12844,32 @@ nk_do_slider(nk_flags *state,
     slider_value = NK_CLAMP(slider_min, val, slider_max);
     slider_range = slider_max - slider_min;
     slider_steps = slider_range / step;
-
-    /* calculate slider virtual cursor bounds */
     cursor_offset = (slider_value - slider_min) / step;
-    cursor.h = bounds.h;
-    cursor.w = bounds.w / (slider_steps + 1);
-    cursor.x = bounds.x + (cursor.w * cursor_offset);
-    cursor.y = bounds.y;
-    slider_value = nk_slider_behavior(state, &cursor, in, style, bounds,
-                        slider_min, slider_max, slider_value, step, slider_steps);
+
+    /* remove one cursor size to support visual cursor */
+    bounds.x += style->cursor_size.x*0.5f;
+    bounds.w -= style->cursor_size.x;
+
+    /* calculate cursor
+    Basically you have to cursors. One for visual representation and interaction
+    and one for updating the actual cursor value. */
+    logical_cursor.h = bounds.h;
+    logical_cursor.w = bounds.w / slider_steps;
+    logical_cursor.x = bounds.x + (logical_cursor.w * cursor_offset);
+    logical_cursor.y = bounds.y;
+
+    visual_cursor.h = style->cursor_size.y;
+    visual_cursor.w = style->cursor_size.x;
+    visual_cursor.y = (bounds.y + bounds.h*0.5f) - visual_cursor.h*0.5f;
+    visual_cursor.x = (logical_cursor.x + logical_cursor.w*0.5f) - visual_cursor.w*0.5f;
+
+    slider_value = nk_slider_behavior(state, &logical_cursor, &visual_cursor,
+        in, style, bounds, slider_min, slider_max, slider_value, step, slider_steps);
+    visual_cursor.x = logical_cursor.x - visual_cursor.w*0.5f;
 
     /* draw slider */
     if (style->draw_begin) style->draw_begin(out, style->userdata);
-    nk_draw_slider(out, *state, style, &bounds, &cursor, slider_min, slider_value, slider_max);
+    nk_draw_slider(out, *state, style, &bounds, &visual_cursor, slider_min, slider_value, slider_max);
     if (style->draw_end) style->draw_end(out, style->userdata);
     return slider_value;
 }
@@ -14667,7 +14661,7 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     prog->border_color      = nk_rgba(0,0,0,0);
     prog->cursor_border_color = nk_rgba(0,0,0,0);
     prog->userdata          = nk_handle_ptr(0);
-    prog->padding           = nk_vec2(2,2);
+    prog->padding           = nk_vec2(4,4);
     prog->rounding          = 0;
     prog->border            = 0;
     prog->cursor_rounding   = 0;
@@ -15520,10 +15514,12 @@ nk_build(struct nk_context *ctx)
         const struct nk_cursor *cursor = ctx->style.cursor_active;
         nk_command_buffer_init(&ctx->overlay, &ctx->memory, NK_CLIPPING_OFF);
         nk_start_buffer(ctx, &ctx->overlay);
+
         mouse_bounds.x = ctx->input.mouse.pos.x - cursor->offset.x;
         mouse_bounds.y = ctx->input.mouse.pos.y - cursor->offset.y;
         mouse_bounds.w = cursor->size.x;
         mouse_bounds.h = cursor->size.y;
+
         nk_draw_image(&ctx->overlay, mouse_bounds, &cursor->img, nk_white);
         nk_finish_buffer(ctx, &ctx->overlay);
     }
@@ -15587,6 +15583,594 @@ nk__next(struct nk_context *ctx, const struct nk_command *cmd)
     next = nk_ptr_add_const(struct nk_command, buffer, cmd->next);
     return next;
 }
+
+/* ----------------------------------------------------------------
+ *
+ *                          PANEL
+ *
+ * ---------------------------------------------------------------*/
+static int
+nk_panel_has_header(nk_flags flags, const char *title)
+{
+    /* window header state */
+    int active = 0;
+    active = (flags & (NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE));
+    active = active || (flags & NK_WINDOW_TITLE);
+    active = active && !(flags & NK_WINDOW_HIDDEN) && title;
+    return active;
+}
+
+NK_INTERN struct nk_vec2
+nk_panel_get_padding(const struct nk_style *style, enum nk_panel_type type)
+{
+    switch (type) {
+    default:
+    case NK_PANEL_WINDOW: return style->window.padding;
+    case NK_PANEL_GROUP: return style->window.group_padding;
+    case NK_PANEL_POPUP: return style->window.popup_padding;
+    case NK_PANEL_CONTEXTUAL: return style->window.contextual_padding;
+    case NK_PANEL_COMBO: return style->window.combo_padding;
+    case NK_PANEL_MENU: return style->window.menu_padding;
+    case NK_PANEL_TOOLTIP: return style->window.menu_padding;
+    }
+}
+
+NK_INTERN float
+nk_panel_get_border(const struct nk_style *style, nk_flags flags,
+    enum nk_panel_type type)
+{
+    if (flags & NK_WINDOW_BORDER) {
+        switch (type) {
+        default:
+        case NK_PANEL_WINDOW: return style->window.border;
+        case NK_PANEL_GROUP: return style->window.group_border;
+        case NK_PANEL_POPUP: return style->window.popup_border;
+        case NK_PANEL_CONTEXTUAL: return style->window.contextual_border;
+        case NK_PANEL_COMBO: return style->window.combo_border;
+        case NK_PANEL_MENU: return style->window.menu_border;
+        case NK_PANEL_TOOLTIP: return style->window.menu_border;
+    }} else return 0;
+}
+
+NK_INTERN struct nk_color
+nk_panel_get_border_color(const struct nk_style *style, enum nk_panel_type type)
+{
+    switch (type) {
+    default:
+    case NK_PANEL_WINDOW: return style->window.border_color;
+    case NK_PANEL_GROUP: return style->window.group_border_color;
+    case NK_PANEL_POPUP: return style->window.popup_border_color;
+    case NK_PANEL_CONTEXTUAL: return style->window.contextual_border_color;
+    case NK_PANEL_COMBO: return style->window.combo_border_color;
+    case NK_PANEL_MENU: return style->window.menu_border_color;
+    case NK_PANEL_TOOLTIP: return style->window.menu_border_color;
+    }
+}
+
+NK_INTERN int
+nk_panel_is_sub(enum nk_panel_type type)
+{
+    return (type & NK_PANEL_SET_SUB)?1:0;
+}
+
+NK_INTERN int
+nk_panel_is_nonblock(enum nk_panel_type type)
+{
+    return (type & NK_PANEL_SET_NONBLOCK)?1:0;
+}
+
+NK_INTERN int
+nk_panel_begin(struct nk_context *ctx, const char *title, enum nk_panel_type panel_type)
+{
+    struct nk_input *in;
+    struct nk_window *win;
+    struct nk_panel *layout;
+    struct nk_command_buffer *out;
+    const struct nk_style *style;
+    const struct nk_user_font *font;
+
+    struct nk_vec2 scrollbar_size;
+    struct nk_vec2 panel_padding;
+
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return 0;
+    nk_zero(ctx->current->layout, sizeof(*ctx->current->layout));
+    if (ctx->current->flags & NK_WINDOW_HIDDEN)
+        return 0;
+
+    /* pull state into local stack */
+    style = &ctx->style;
+    font = style->font;
+    in = &ctx->input;
+    win = ctx->current;
+    layout = win->layout;
+    out = &win->buffer;
+#ifdef NK_INCLUDE_COMMAND_USERDATA
+    win->buffer.userdata = ctx->userdata;
+#endif
+
+    /* pull style configuration into local stack */
+    scrollbar_size = style->window.scrollbar_size;
+    panel_padding = nk_panel_get_padding(style, panel_type);
+
+    /* window movement */
+    if ((win->flags & NK_WINDOW_MOVABLE) && !(win->flags & NK_WINDOW_ROM)) {
+        int left_mouse_down;
+        int left_mouse_click_in_cursor;
+
+        /* calculate draggable window space */
+        struct nk_rect header;
+        header.x = win->bounds.x;
+        header.y = win->bounds.y;
+        header.w = win->bounds.w;
+        if (nk_panel_has_header(win->flags, title)) {
+            header.h = font->height + 2.0f * style->window.header.padding.y;
+            header.h += 2.0f * style->window.header.label_padding.y;
+        } else header.h = panel_padding.y;
+
+        /* window movement by dragging */
+        left_mouse_down = in->mouse.buttons[NK_BUTTON_LEFT].down;
+        left_mouse_click_in_cursor = nk_input_has_mouse_click_down_in_rect(in,
+            NK_BUTTON_LEFT, header, nk_true);
+        if (left_mouse_down && left_mouse_click_in_cursor) {
+            win->bounds.x = win->bounds.x + in->mouse.delta.x;
+            win->bounds.y = win->bounds.y + in->mouse.delta.y;
+            in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.x += in->mouse.delta.x;
+            in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.y += in->mouse.delta.y;
+            ctx->style.cursor_active = ctx->style.cursors[NK_CURSOR_MOVE];
+        }
+    }
+
+    /* setup panel */
+    layout->type = panel_type;
+    layout->flags = win->flags;
+    layout->bounds = win->bounds;
+    layout->bounds.x += panel_padding.x;
+    layout->bounds.w -= 2*panel_padding.x;
+    if (win->flags & NK_WINDOW_BORDER) {
+        layout->border = nk_panel_get_border(style, win->flags, panel_type);
+        layout->bounds = nk_shrink_rect(layout->bounds, layout->border);
+    } else layout->border = 0;
+    layout->at_y = layout->bounds.y;
+    layout->at_x = layout->bounds.x;
+    layout->max_x = 0;
+    layout->header_height = 0;
+    layout->footer_height = 0;
+    layout->row.index = 0;
+    layout->row.columns = 0;
+    layout->row.ratio = 0;
+    layout->row.item_width = 0;
+    layout->row.tree_depth = 0;
+    layout->row.height = panel_padding.y;
+    layout->has_scrolling = nk_true;
+    if (!(win->flags & NK_WINDOW_NO_SCROLLBAR))
+        layout->bounds.w -= scrollbar_size.x;
+    if (!nk_panel_is_nonblock(panel_type)) {
+        layout->footer_height = 0;
+        if (!(win->flags & NK_WINDOW_NO_SCROLLBAR) || win->flags & NK_WINDOW_SCALABLE)
+            layout->footer_height = scrollbar_size.y;
+        layout->bounds.h -= layout->footer_height;
+    }
+
+    /* panel header */
+    if (nk_panel_has_header(win->flags, title))
+    {
+        struct nk_text text;
+        struct nk_rect header;
+        const struct nk_style_item *background = 0;
+
+        /* calculate header bounds */
+        header.x = win->bounds.x;
+        header.y = win->bounds.y;
+        header.w = win->bounds.w;
+        header.h = font->height + 2.0f * style->window.header.padding.y;
+        header.h += (2.0f * style->window.header.label_padding.y);
+
+        /* shrink panel by header */
+        layout->header_height = header.h;
+        layout->bounds.y += header.h;
+        layout->bounds.h -= header.h;
+        layout->at_y += header.h;
+
+        /* select correct header background and text color */
+        if (ctx->active == win) {
+            background = &style->window.header.active;
+            text.text = style->window.header.label_active;
+        } else if (nk_input_is_mouse_hovering_rect(&ctx->input, header)) {
+            background = &style->window.header.hover;
+            text.text = style->window.header.label_hover;
+        } else {
+            background = &style->window.header.normal;
+            text.text = style->window.header.label_normal;
+        }
+
+        /* draw header background */
+        header.h += 1.0f;
+        if (background->type == NK_STYLE_ITEM_IMAGE) {
+            text.background = nk_rgba(0,0,0,0);
+            nk_draw_image(&win->buffer, header, &background->data.image, nk_white);
+        } else {
+            text.background = background->data.color;
+            nk_fill_rect(out, header, 0, background->data.color);
+        }
+
+        /* window close button */
+        {struct nk_rect button;
+        button.y = header.y + style->window.header.padding.y;
+        button.h = header.h - 2 * style->window.header.padding.y;
+        button.w = button.h;
+        if (win->flags & NK_WINDOW_CLOSABLE) {
+            nk_flags ws = 0;
+            if (style->window.header.align == NK_HEADER_RIGHT) {
+                button.x = (header.w + header.x) - (button.w + style->window.header.padding.x);
+                header.w -= button.w + style->window.header.spacing.x + style->window.header.padding.x;
+            } else {
+                button.x = header.x + style->window.header.padding.x;
+                header.x += button.w + style->window.header.spacing.x + style->window.header.padding.x;
+            }
+
+            if (nk_do_button_symbol(&ws, &win->buffer, button,
+                style->window.header.close_symbol, NK_BUTTON_DEFAULT,
+                &style->window.header.close_button, in, style->font) && !(win->flags & NK_WINDOW_ROM))
+            {
+                layout->flags |= NK_WINDOW_HIDDEN;
+                layout->flags |= NK_WINDOW_CLOSED;
+            }
+        }
+
+        /* window minimize button */
+        if (win->flags & NK_WINDOW_MINIMIZABLE) {
+            nk_flags ws = 0;
+            if (style->window.header.align == NK_HEADER_RIGHT) {
+                button.x = (header.w + header.x) - button.w;
+                if (!(win->flags & NK_WINDOW_CLOSABLE)) {
+                    button.x -= style->window.header.padding.x;
+                    header.w -= style->window.header.padding.x;
+                }
+                header.w -= button.w + style->window.header.spacing.x;
+            } else {
+                button.x = header.x;
+                header.x += button.w + style->window.header.spacing.x + style->window.header.padding.x;
+            }
+            if (nk_do_button_symbol(&ws, &win->buffer, button, (layout->flags & NK_WINDOW_MINIMIZED)?
+                style->window.header.maximize_symbol: style->window.header.minimize_symbol,
+                NK_BUTTON_DEFAULT, &style->window.header.minimize_button, in, style->font) && !(win->flags & NK_WINDOW_ROM))
+                layout->flags = (layout->flags & NK_WINDOW_MINIMIZED) ?
+                    layout->flags & (nk_flags)~NK_WINDOW_MINIMIZED:
+                    layout->flags | NK_WINDOW_MINIMIZED;
+        }}
+
+        {/* window header title */
+        int text_len = nk_strlen(title);
+        struct nk_rect label = {0,0,0,0};
+        float t = font->width(font->userdata, font->height, title, text_len);
+        text.padding = nk_vec2(0,0);
+
+        label.x = header.x + style->window.header.padding.x;
+        label.x += style->window.header.label_padding.x;
+        label.y = header.y + style->window.header.label_padding.y;
+        label.h = font->height + 2 * style->window.header.label_padding.y;
+        label.w = t + 2 * style->window.header.spacing.x;
+        nk_widget_text(out, label,(const char*)title, text_len, &text, NK_TEXT_LEFT, font);}
+    }
+
+    /* draw window background */
+    if (!(layout->flags & NK_WINDOW_MINIMIZED) && !(layout->flags & NK_WINDOW_DYNAMIC)) {
+        struct nk_rect body;
+        body.x = win->bounds.x;
+        body.w = win->bounds.w;
+        body.y = (win->bounds.y + layout->header_height);
+        body.h = (win->bounds.h - layout->header_height);
+        if (style->window.fixed_background.type == NK_STYLE_ITEM_IMAGE)
+            nk_draw_image(out, body, &style->window.fixed_background.data.image, nk_white);
+        else nk_fill_rect(out, body, 0, style->window.fixed_background.data.color);
+    }
+
+    /* set clipping rectangle */
+    {struct nk_rect clip;
+    layout->clip = layout->bounds;
+    nk_unify(&clip, &win->buffer.clip, layout->clip.x, layout->clip.y,
+        layout->clip.x + layout->clip.w, layout->clip.y + layout->clip.h);
+    nk_push_scissor(out, clip);
+    layout->clip = clip;}
+    return !(layout->flags & NK_WINDOW_HIDDEN) && !(layout->flags & NK_WINDOW_MINIMIZED);
+}
+
+NK_INTERN void
+nk_panel_end(struct nk_context *ctx)
+{
+    struct nk_input *in;
+    struct nk_window *window;
+    struct nk_panel *layout;
+    const struct nk_style *style;
+    struct nk_command_buffer *out;
+
+    struct nk_vec2 scrollbar_size;
+    struct nk_vec2 panel_padding;
+
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout)
+        return;
+
+    window = ctx->current;
+    layout = window->layout;
+    style = &ctx->style;
+    out = &window->buffer;
+    in = (layout->flags & NK_WINDOW_ROM) ? 0 :&ctx->input;
+    if (!nk_panel_is_sub(layout->type))
+        nk_push_scissor(out, nk_null_rect);
+
+    /* cache configuration data */
+    scrollbar_size = style->window.scrollbar_size;
+    panel_padding = nk_panel_get_padding(style, window->flags);
+
+    /* update the current cursor Y-position to point over the last added widget */
+    layout->at_y += layout->row.height;
+
+    /* dynamic panels */
+    if (layout->flags & NK_WINDOW_DYNAMIC && !(layout->flags & NK_WINDOW_MINIMIZED))
+    {
+        /* update panel height to fit dynamic growth */
+        struct nk_rect empty_space;
+        if (layout->at_y < (layout->bounds.y + layout->bounds.h))
+            layout->bounds.h = layout->at_y - layout->bounds.y;
+
+        /* fill top empty space */
+        empty_space.x = window->bounds.x;
+        empty_space.y = layout->bounds.y;
+        empty_space.h = panel_padding.y;
+        empty_space.w = window->bounds.w;
+        nk_fill_rect(out, empty_space, 0, style->window.background);
+
+        /* fill left empty space */
+        empty_space.x = window->bounds.x;
+        empty_space.y = layout->bounds.y;
+        empty_space.w = panel_padding.x + layout->border;
+        empty_space.h = layout->bounds.h;
+        nk_fill_rect(out, empty_space, 0, style->window.background);
+
+        /* fill right empty space */
+        empty_space.x = layout->bounds.x + layout->bounds.w - layout->border;
+        empty_space.y = layout->bounds.y;
+        empty_space.w = panel_padding.x + layout->border;
+        empty_space.h = layout->bounds.h;
+        if (layout->offset->y == 0 && !(layout->flags & NK_WINDOW_NO_SCROLLBAR))
+            empty_space.w += scrollbar_size.x;
+        nk_fill_rect(out, empty_space, 0, style->window.background);
+
+        /* fill bottom empty space */
+        if (layout->offset->x != 0 && !(layout->flags & NK_WINDOW_NO_SCROLLBAR)) {
+            empty_space.x = window->bounds.x;
+            empty_space.y = layout->bounds.y + layout->bounds.h;
+            empty_space.w = window->bounds.w;
+            empty_space.h = scrollbar_size.y;
+            nk_fill_rect(out, empty_space, 0, style->window.background);
+        }
+    }
+
+    /* scrollbars */
+    if (!(layout->flags & NK_WINDOW_NO_SCROLLBAR) &&
+        !(layout->flags & NK_WINDOW_MINIMIZED) &&
+        window->scrollbar_hiding_timer < NK_SCROLLBAR_HIDING_TIMEOUT)
+    {
+        struct nk_rect scroll;
+        int scroll_has_scrolling;
+        float scroll_target;
+        float scroll_offset;
+        float scroll_step;
+        float scroll_inc;
+        {
+            /* vertical scrollbar */
+            nk_flags state = 0;
+            scroll.x = layout->bounds.x + layout->bounds.w + panel_padding.x;
+            scroll.y = layout->bounds.y;
+            scroll.w = scrollbar_size.x;
+            scroll.h = layout->bounds.h;
+
+            scroll_offset = layout->offset->y;
+            scroll_step = scroll.h * 0.10f;
+            scroll_inc = scroll.h * 0.01f;
+            scroll_target = (float)(int)(layout->at_y - scroll.y);
+
+            /* scrolling by mouse wheel */
+            if (nk_panel_is_sub(layout->type))
+            {
+                /* sub-window scrollbar wheel scrolling */
+                struct nk_window *root_window = window;
+                struct nk_panel *root_panel = window->layout;
+                while (root_panel->parent)
+                    root_panel = root_panel->parent;
+                while (root_window->parent)
+                    root_window = root_window->parent;
+
+                /* only allow scrolling if parent window is active */
+                scroll_has_scrolling = 0;
+                if ((root_window == ctx->active) && layout->has_scrolling) {
+                    /* and panel is being hovered and inside clip rect*/
+                    if (nk_input_is_mouse_hovering_rect(in, layout->bounds) &&
+                        NK_INTERSECT(layout->bounds.x, layout->bounds.y, layout->bounds.w, layout->bounds.h,
+                            root_panel->clip.x, root_panel->clip.y, root_panel->clip.w, root_panel->clip.h))
+                    {
+                        /* deactivate all parent scrolling */
+                        root_panel = window->layout;
+                        while (root_panel->parent) {
+                            root_panel->has_scrolling = nk_false;
+                            root_panel = root_panel->parent;
+                        }
+                        root_panel->has_scrolling = nk_false;
+                        scroll_has_scrolling = nk_true;
+                    }
+                }
+            } else if (!nk_panel_is_sub(layout->type)) {
+                /* window scrollbar wheel scrolling */
+                scroll_has_scrolling = (window == ctx->active) && layout->has_scrolling;
+                if (in && in->mouse.scroll_delta && scroll_has_scrolling)
+                    window->scrolled = nk_true;
+                else window->scrolled = nk_false;
+            } else scroll_has_scrolling = nk_false;
+
+            /* execute scrollbar */
+            scroll_offset = nk_do_scrollbarv(&state, out, scroll, scroll_has_scrolling,
+                                scroll_offset, scroll_target, scroll_step, scroll_inc,
+                                &ctx->style.scrollv, in, style->font);
+            layout->offset->y = (unsigned short)scroll_offset;
+            if (in && scroll_has_scrolling)
+                in->mouse.scroll_delta = 0;
+        }
+        {
+            /* horizontal scrollbar */
+            nk_flags state = 0;
+            scroll.x = layout->bounds.x;
+            scroll.y = layout->bounds.y + layout->bounds.h;
+            scroll.w = layout->bounds.w;
+            scroll.h = scrollbar_size.y;
+
+            scroll_offset = layout->offset->x;
+            scroll_target = (float)(int)(layout->max_x - scroll.x);
+            scroll_step = layout->max_x * 0.05f;
+            scroll_inc = layout->max_x * 0.005f;
+            scroll_has_scrolling = nk_false;
+            scroll_offset = nk_do_scrollbarh(&state, out, scroll, scroll_has_scrolling,
+                                scroll_offset, scroll_target, scroll_step, scroll_inc,
+                                &ctx->style.scrollh, in, style->font);
+            layout->offset->x = (unsigned short)scroll_offset;
+        }
+    }
+
+    /* hide scroll if no user input */
+    if (window->flags & NK_WINDOW_SCROLL_AUTO_HIDE) {
+        int has_input = ctx->input.mouse.delta.x || ctx->input.mouse.delta.y || ctx->input.mouse.scroll_delta;
+        int is_window_hovered = nk_window_is_hovered(ctx);
+        int any_item_active = (ctx->last_widget_state & NK_WIDGET_STATE_MODIFIED);
+        if ((!has_input && is_window_hovered) || (!is_window_hovered && !any_item_active))
+            window->scrollbar_hiding_timer += ctx->delta_time_seconds;
+        else window->scrollbar_hiding_timer = 0;
+    } else window->scrollbar_hiding_timer = 0;
+
+    /* window border */
+    if (layout->flags & NK_WINDOW_BORDER)
+    {
+        struct nk_color border_color = nk_panel_get_border_color(style, layout->flags);
+        const float padding_y = (layout->flags & NK_WINDOW_MINIMIZED) ?
+            style->window.border + window->bounds.y + layout->header_height:
+            (layout->flags & NK_WINDOW_DYNAMIC)?
+            layout->bounds.y + layout->bounds.h + layout->footer_height:
+            window->bounds.y + window->bounds.h;
+
+        /* draw border top */
+        nk_stroke_line(out,window->bounds.x,window->bounds.y,
+            window->bounds.x + window->bounds.w, window->bounds.y,
+            layout->border, border_color);
+
+        /* draw bottom border */
+        nk_stroke_line(out, window->bounds.x, padding_y,
+            window->bounds.x + window->bounds.w, padding_y, layout->border, border_color);
+
+        /* draw left border */
+        nk_stroke_line(out, window->bounds.x + layout->border/2.0f,
+            window->bounds.y, window->bounds.x + layout->border/2.0f,
+            padding_y, layout->border, border_color);
+
+        /* draw right border */
+        nk_stroke_line(out, window->bounds.x + window->bounds.w - layout->border/2.0f,
+            window->bounds.y, window->bounds.x + window->bounds.w - layout->border/2.0f,
+            padding_y, layout->border, border_color);
+    }
+
+    /* scaler */
+    if ((layout->flags & NK_WINDOW_SCALABLE) && in && !(layout->flags & NK_WINDOW_MINIMIZED))
+    {
+        /* calculate scaler bounds */
+        struct nk_rect scaler;
+        scaler.w = scrollbar_size.x;
+        scaler.h = scrollbar_size.y;
+        scaler.y = layout->bounds.y + layout->bounds.h;
+        scaler.x = layout->bounds.x + layout->bounds.w + panel_padding.x;
+        if (layout->flags & NK_WINDOW_NO_SCROLLBAR)
+            scaler.x -= scaler.w;
+
+        /* draw scaler */
+        {const struct nk_style_item *item = &style->window.scaler;
+        if (item->type == NK_STYLE_ITEM_IMAGE)
+            nk_draw_image(out, scaler, &item->data.image, nk_white);
+        else nk_fill_triangle(out, scaler.x + scaler.w, scaler.y, scaler.x + scaler.w,
+            scaler.y + scaler.h, scaler.x, scaler.y + scaler.h, item->data.color);
+        }
+
+        /* do window scaling */
+        if (!(window->flags & NK_WINDOW_ROM)) {
+            struct nk_vec2 window_size = style->window.min_size;
+            int left_mouse_down = in->mouse.buttons[NK_BUTTON_LEFT].down;
+            int left_mouse_click_in_scaler = nk_input_has_mouse_click_down_in_rect(in,
+                    NK_BUTTON_LEFT, scaler, nk_true);
+
+            if (nk_input_is_mouse_down(in, NK_BUTTON_LEFT) && left_mouse_down && left_mouse_click_in_scaler) {
+                window->bounds.w = NK_MAX(window_size.x, window->bounds.w + in->mouse.delta.x);
+                /* dragging in y-direction is only possible if static window */
+                if (!(layout->flags & NK_WINDOW_DYNAMIC))
+                    window->bounds.h = NK_MAX(window_size.y, window->bounds.h + in->mouse.delta.y);
+                ctx->style.cursor_active = ctx->style.cursors[NK_CURSOR_RESIZE_TOP_RIGHT_DOWN_LEFT];
+                in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.x = scaler.x + in->mouse.delta.x + scaler.w/2.0f;
+                in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.y = scaler.y + in->mouse.delta.y + scaler.h/2.0f;
+            }
+        }
+    }
+
+    if (!nk_panel_is_sub(layout->type)) {
+        /* window is hidden so clear command buffer  */
+        if (layout->flags & NK_WINDOW_HIDDEN)
+            nk_command_buffer_reset(&window->buffer);
+        /* window is visible and not tab */
+        else nk_finish(ctx, window);
+    }
+
+    /* NK_WINDOW_REMOVE_ROM flag was set so remove NK_WINDOW_ROM */
+    if (layout->flags & NK_WINDOW_REMOVE_ROM) {
+        layout->flags &= ~(nk_flags)NK_WINDOW_ROM;
+        layout->flags &= ~(nk_flags)NK_WINDOW_REMOVE_ROM;
+    }
+    window->flags = layout->flags;
+
+    /* property garbage collector */
+    if (window->property.active && window->property.old != window->property.seq &&
+        window->property.active == window->property.prev) {
+        nk_zero(&window->property, sizeof(window->property));
+    } else {
+        window->property.old = window->property.seq;
+        window->property.prev = window->property.active;
+        window->property.seq = 0;
+    }
+
+    /* edit garbage collector */
+    if (window->edit.active && window->edit.old != window->edit.seq &&
+        window->edit.active == window->edit.prev) {
+        nk_zero(&window->edit, sizeof(window->edit));
+    } else {
+        window->edit.old = window->edit.seq;
+        window->edit.prev = window->edit.active;
+        window->edit.seq = 0;
+    }
+
+    /* contextual garbage collector */
+    if (window->popup.active_con && window->popup.con_old != window->popup.con_count) {
+        window->popup.con_count = 0;
+        window->popup.con_old = 0;
+        window->popup.active_con = 0;
+    } else {
+        window->popup.con_old = window->popup.con_count;
+        window->popup.con_count = 0;
+    }
+    window->popup.combo_count = 0;
+
+    /* helper to make sure you have a 'nk_tree_push' * for every 'nk_tree_pop' */
+    NK_ASSERT(!layout->row.tree_depth);
+}
+
+
 /* ----------------------------------------------------------------
  *
  *                          PAGE ELEMENT
@@ -15728,9 +16312,6 @@ nk_find_value(struct nk_window *win, nk_hash name)
  *                          WINDOW
  *
  * ---------------------------------------------------------------*/
-NK_INTERN int nk_panel_begin(struct nk_context *ctx, const char *title);
-NK_INTERN void nk_panel_end(struct nk_context *ctx);
-
 NK_INTERN void*
 nk_create_window(struct nk_context *ctx)
 {
@@ -15928,7 +16509,7 @@ nk_begin_titled(struct nk_context *ctx, struct nk_panel *layout,
     }
 
     /* window overlapping */
-    if (!(win->flags & NK_WINDOW_SUB) && !(win->flags & NK_WINDOW_HIDDEN))
+    if (!(win->flags & NK_WINDOW_HIDDEN))
     {
         int inpanel, ishovered;
         const struct nk_window *iter = win;
@@ -15997,7 +16578,7 @@ nk_begin_titled(struct nk_context *ctx, struct nk_panel *layout,
 
     win->layout = layout;
     ctx->current = win;
-    ret = nk_panel_begin(ctx, title);
+    ret = nk_panel_begin(ctx, title, NK_PANEL_WINDOW);
     layout->offset = &win->scrollbar;
     return ret;
 }
@@ -16366,586 +16947,6 @@ nk_window_set_focus(struct nk_context *ctx, const char *name)
  *                          PANEL
  *
  * --------------------------------------------------------------*/
-static int
-nk_window_has_header(struct nk_window *win, const char *title)
-{
-    /* window header state */
-    int active = 0;
-    active = (win->flags & (NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE));
-    active = active || (win->flags & NK_WINDOW_TITLE);
-    active = active && !(win->flags & NK_WINDOW_HIDDEN) && title;
-    return active;
-}
-
-NK_INTERN struct nk_vec2
-nk_panel_get_window_padding(const struct nk_style *style, nk_flags flags)
-{
-    /* shrink panel space by panel padding */
-    if (!(flags & NK_WINDOW_SUB))
-        return style->window.padding;
-    else if (flags & NK_WINDOW_COMBO)
-        return style->window.combo_padding;
-    else if (flags & NK_WINDOW_CONTEXTUAL)
-        return style->window.contextual_padding;
-    else if (flags & NK_WINDOW_MENU)
-        return style->window.menu_padding;
-    else if (flags & NK_WINDOW_GROUP)
-        return style->window.group_padding;
-    else if (flags & NK_WINDOW_TOOLTIP)
-        return style->window.tooltip_padding;
-    else return style->window.popup_padding;
-}
-
-NK_INTERN float
-nk_panel_get_window_border(const struct nk_style *style, nk_flags flags)
-{
-    if (flags & NK_WINDOW_BORDER) {
-        if (!(flags & NK_WINDOW_SUB))
-            return style->window.border;
-        else if (flags & NK_WINDOW_COMBO)
-            return style->window.combo_border;
-        else if (flags & NK_WINDOW_CONTEXTUAL)
-            return style->window.contextual_border;
-        else if (flags & NK_WINDOW_MENU)
-            return style->window.menu_border;
-        else if (flags & NK_WINDOW_GROUP)
-            return style->window.group_border;
-        else if (flags & NK_WINDOW_TOOLTIP)
-            return style->window.tooltip_border;
-        else return style->window.border;
-    } else return 0;
-}
-
-NK_INTERN struct nk_color
-nk_panel_get_window_border_color(const struct nk_style *style, nk_flags flags)
-{
-    struct nk_color border_color;
-    if (!(flags & NK_WINDOW_SUB))
-        border_color = style->window.border_color;
-    else if (flags & NK_WINDOW_COMBO)
-        border_color = style->window.combo_border_color;
-    else if (flags & NK_WINDOW_CONTEXTUAL)
-        border_color = style->window.contextual_border_color;
-    else if (flags & NK_WINDOW_MENU)
-        border_color = style->window.menu_border_color;
-    else if (flags & NK_WINDOW_GROUP)
-        border_color = style->window.group_border_color;
-    else if (flags & NK_WINDOW_TOOLTIP)
-        border_color = style->window.tooltip_border_color;
-    else border_color = style->window.border_color;
-    return border_color;
-}
-
-NK_INTERN int
-nk_panel_begin(struct nk_context *ctx, const char *title)
-{
-    struct nk_input *in;
-    struct nk_window *win;
-    struct nk_panel *layout;
-    struct nk_command_buffer *out;
-    const struct nk_style *style;
-    const struct nk_user_font *font;
-
-    struct nk_vec2 scrollbar_size;
-    struct nk_vec2 panel_padding;
-
-    NK_ASSERT(ctx);
-    NK_ASSERT(ctx->current);
-    NK_ASSERT(ctx->current->layout);
-    if (!ctx || !ctx->current || !ctx->current->layout) return 0;
-    nk_zero(ctx->current->layout, sizeof(*ctx->current->layout));
-    if (ctx->current->flags & NK_WINDOW_HIDDEN)
-        return 0;
-
-    /* pull state into local stack */
-    style = &ctx->style;
-    font = style->font;
-    in = &ctx->input;
-    win = ctx->current;
-    layout = win->layout;
-    out = &win->buffer;
-#ifdef NK_INCLUDE_COMMAND_USERDATA
-    win->buffer.userdata = ctx->userdata;
-#endif
-
-    /* pull style configuration into local stack */
-    scrollbar_size = style->window.scrollbar_size;
-    panel_padding = nk_panel_get_window_padding(style, win->flags);
-
-    /* window movement */
-    if ((win->flags & NK_WINDOW_MOVABLE) && !(win->flags & NK_WINDOW_ROM)) {
-        int left_mouse_down;
-        int left_mouse_click_in_cursor;
-
-        /* calculate draggable window space */
-        struct nk_rect header;
-        header.x = win->bounds.x;
-        header.y = win->bounds.y;
-        header.w = win->bounds.w;
-        if (nk_window_has_header(win, title)) {
-            header.h = font->height + 2.0f * style->window.header.padding.y;
-            header.h += 2.0f * style->window.header.label_padding.y;
-        } else header.h = panel_padding.y;
-
-        /* window movement by dragging */
-        left_mouse_down = in->mouse.buttons[NK_BUTTON_LEFT].down;
-        left_mouse_click_in_cursor = nk_input_has_mouse_click_down_in_rect(in,
-            NK_BUTTON_LEFT, header, nk_true);
-        if (left_mouse_down && left_mouse_click_in_cursor) {
-            win->bounds.x = win->bounds.x + in->mouse.delta.x;
-            win->bounds.y = win->bounds.y + in->mouse.delta.y;
-            in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.x += in->mouse.delta.x;
-            in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.y += in->mouse.delta.y;
-            ctx->style.cursor_active = ctx->style.cursors[NK_CURSOR_MOVE];
-        }
-    }
-
-    /* setup panel */
-    layout->bounds = win->bounds;
-    layout->bounds.x += panel_padding.x;
-    layout->bounds.w -= 2*panel_padding.x;
-    if (win->flags & NK_WINDOW_BORDER) {
-        layout->border = nk_panel_get_window_border(style, win->flags);
-        layout->bounds = nk_shrink_rect(layout->bounds, layout->border);
-    } else layout->border = 0;
-    layout->at_y = layout->bounds.y;
-    layout->at_x = layout->bounds.x;
-    layout->max_x = 0;
-    layout->header_height = 0;
-    layout->footer_height = 0;
-    layout->row.index = 0;
-    layout->row.columns = 0;
-    layout->row.ratio = 0;
-    layout->row.item_width = 0;
-    layout->row.tree_depth = 0;
-    layout->row.height = panel_padding.y;
-    layout->flags = win->flags;
-    layout->has_scrolling = nk_true;
-    if (!(win->flags & NK_WINDOW_NO_SCROLLBAR))
-        layout->bounds.w -= scrollbar_size.x;
-    if (!(win->flags & NK_WINDOW_NONBLOCK)) {
-        layout->footer_height = 0;
-        if (!(win->flags & NK_WINDOW_NO_SCROLLBAR) || win->flags & NK_WINDOW_SCALABLE)
-            layout->footer_height = scrollbar_size.y;
-        layout->bounds.h -= layout->footer_height;
-    }
-
-    /* panel header */
-    if (nk_window_has_header(win, title))
-    {
-        struct nk_text text;
-        struct nk_rect header;
-        const struct nk_style_item *background = 0;
-
-        /* calculate header bounds */
-        header.x = win->bounds.x;
-        header.y = win->bounds.y;
-        header.w = win->bounds.w;
-        header.h = font->height + 2.0f * style->window.header.padding.y;
-        header.h += (2.0f * style->window.header.label_padding.y);
-
-        /* shrink panel by header */
-        layout->header_height = header.h;
-        layout->bounds.y += header.h;
-        layout->bounds.h -= header.h;
-        layout->at_y += header.h;
-
-        /* select correct header background and text color */
-        if (ctx->active == win) {
-            background = &style->window.header.active;
-            text.text = style->window.header.label_active;
-        } else if (nk_input_is_mouse_hovering_rect(&ctx->input, header)) {
-            background = &style->window.header.hover;
-            text.text = style->window.header.label_hover;
-        } else {
-            background = &style->window.header.normal;
-            text.text = style->window.header.label_normal;
-        }
-
-        /* draw header background */
-        header.h += 1.0f;
-        if (background->type == NK_STYLE_ITEM_IMAGE) {
-            text.background = nk_rgba(0,0,0,0);
-            nk_draw_image(&win->buffer, header, &background->data.image, nk_white);
-        } else {
-            text.background = background->data.color;
-            nk_fill_rect(out, header, 0, background->data.color);
-        }
-
-        /* window close button */
-        {struct nk_rect button;
-        button.y = header.y + style->window.header.padding.y;
-        button.h = header.h - 2 * style->window.header.padding.y;
-        button.w = button.h;
-        if (win->flags & NK_WINDOW_CLOSABLE) {
-            nk_flags ws = 0;
-            if (style->window.header.align == NK_HEADER_RIGHT) {
-                button.x = (header.w + header.x) - (button.w + style->window.header.padding.x);
-                header.w -= button.w + style->window.header.spacing.x + style->window.header.padding.x;
-            } else {
-                button.x = header.x + style->window.header.padding.x;
-                header.x += button.w + style->window.header.spacing.x + style->window.header.padding.x;
-            }
-
-            if (nk_do_button_symbol(&ws, &win->buffer, button,
-                style->window.header.close_symbol, NK_BUTTON_DEFAULT,
-                &style->window.header.close_button, in, style->font) && !(win->flags & NK_WINDOW_ROM))
-            {
-                layout->flags |= NK_WINDOW_HIDDEN;
-                layout->flags |= NK_WINDOW_CLOSED;
-            }
-        }
-
-        /* window minimize button */
-        if (win->flags & NK_WINDOW_MINIMIZABLE) {
-            nk_flags ws = 0;
-            if (style->window.header.align == NK_HEADER_RIGHT) {
-                button.x = (header.w + header.x) - button.w;
-                if (!(win->flags & NK_WINDOW_CLOSABLE)) {
-                    button.x -= style->window.header.padding.x;
-                    header.w -= style->window.header.padding.x;
-                }
-                header.w -= button.w + style->window.header.spacing.x;
-            } else {
-                button.x = header.x;
-                header.x += button.w + style->window.header.spacing.x + style->window.header.padding.x;
-            }
-            if (nk_do_button_symbol(&ws, &win->buffer, button, (layout->flags & NK_WINDOW_MINIMIZED)?
-                style->window.header.maximize_symbol: style->window.header.minimize_symbol,
-                NK_BUTTON_DEFAULT, &style->window.header.minimize_button, in, style->font) && !(win->flags & NK_WINDOW_ROM))
-                layout->flags = (layout->flags & NK_WINDOW_MINIMIZED) ?
-                    layout->flags & (nk_flags)~NK_WINDOW_MINIMIZED:
-                    layout->flags | NK_WINDOW_MINIMIZED;
-        }}
-
-        {/* window header title */
-        int text_len = nk_strlen(title);
-        struct nk_rect label = {0,0,0,0};
-        float t = font->width(font->userdata, font->height, title, text_len);
-        text.padding = nk_vec2(0,0);
-
-        label.x = header.x + style->window.header.padding.x;
-        label.x += style->window.header.label_padding.x;
-        label.y = header.y + style->window.header.label_padding.y;
-        label.h = font->height + 2 * style->window.header.label_padding.y;
-        label.w = t + 2 * style->window.header.spacing.x;
-        nk_widget_text(out, label,(const char*)title, text_len, &text, NK_TEXT_LEFT, font);}
-    }
-
-    /* draw window background */
-    if (!(layout->flags & NK_WINDOW_MINIMIZED) && !(layout->flags & NK_WINDOW_DYNAMIC)) {
-        struct nk_rect body;
-        body.x = win->bounds.x;
-        body.w = win->bounds.w;
-        body.y = (win->bounds.y + layout->header_height);
-        body.h = (win->bounds.h - layout->header_height);
-        if (style->window.fixed_background.type == NK_STYLE_ITEM_IMAGE)
-            nk_draw_image(out, body, &style->window.fixed_background.data.image, nk_white);
-        else nk_fill_rect(out, body, 0, style->window.fixed_background.data.color);
-    }
-
-    /* set clipping rectangle */
-    {struct nk_rect clip;
-    layout->clip = layout->bounds;
-    nk_unify(&clip, &win->buffer.clip, layout->clip.x, layout->clip.y,
-        layout->clip.x + layout->clip.w, layout->clip.y + layout->clip.h);
-    nk_push_scissor(out, clip);
-    layout->clip = clip;}
-    return !(layout->flags & NK_WINDOW_HIDDEN) && !(layout->flags & NK_WINDOW_MINIMIZED);
-}
-
-NK_INTERN void
-nk_panel_end(struct nk_context *ctx)
-{
-    struct nk_input *in;
-    struct nk_window *window;
-    struct nk_panel *layout;
-    const struct nk_style *style;
-    struct nk_command_buffer *out;
-
-    struct nk_vec2 scrollbar_size;
-    struct nk_vec2 panel_padding;
-
-    NK_ASSERT(ctx);
-    NK_ASSERT(ctx->current);
-    NK_ASSERT(ctx->current->layout);
-    if (!ctx || !ctx->current || !ctx->current->layout)
-        return;
-
-    window = ctx->current;
-    layout = window->layout;
-    style = &ctx->style;
-    out = &window->buffer;
-    in = (layout->flags & NK_WINDOW_ROM) ? 0 :&ctx->input;
-    if (!(layout->flags & NK_WINDOW_SUB))
-        nk_push_scissor(out, nk_null_rect);
-
-    /* cache configuration data */
-    scrollbar_size = style->window.scrollbar_size;
-    panel_padding = nk_panel_get_window_padding(style, window->flags);
-
-    /* update the current cursor Y-position to point over the last added widget */
-    layout->at_y += layout->row.height;
-
-    /* dynamic panels */
-    if (layout->flags & NK_WINDOW_DYNAMIC && !(layout->flags & NK_WINDOW_MINIMIZED))
-    {
-        /* update panel height to fit dynamic growth */
-        struct nk_rect empty_space;
-        if (layout->at_y < (layout->bounds.y + layout->bounds.h))
-            layout->bounds.h = layout->at_y - layout->bounds.y;
-
-        /* fill top empty space */
-        empty_space.x = window->bounds.x;
-        empty_space.y = layout->bounds.y;
-        empty_space.h = panel_padding.y;
-        empty_space.w = window->bounds.w;
-        nk_fill_rect(out, empty_space, 0, style->window.background);
-
-        /* fill left empty space */
-        empty_space.x = window->bounds.x;
-        empty_space.y = layout->bounds.y;
-        empty_space.w = panel_padding.x + layout->border;
-        empty_space.h = layout->bounds.h;
-        nk_fill_rect(out, empty_space, 0, style->window.background);
-
-        /* fill right empty space */
-        empty_space.x = layout->bounds.x + layout->bounds.w - layout->border;
-        empty_space.y = layout->bounds.y;
-        empty_space.w = panel_padding.x + layout->border;
-        empty_space.h = layout->bounds.h;
-        if (layout->offset->y == 0 && !(layout->flags & NK_WINDOW_NO_SCROLLBAR))
-            empty_space.w += scrollbar_size.x;
-        nk_fill_rect(out, empty_space, 0, style->window.background);
-
-        /* fill bottom empty space */
-        if (layout->offset->x != 0 && !(layout->flags & NK_WINDOW_NO_SCROLLBAR)) {
-            empty_space.x = window->bounds.x;
-            empty_space.y = layout->bounds.y + layout->bounds.h;
-            empty_space.w = window->bounds.w;
-            empty_space.h = scrollbar_size.y;
-            nk_fill_rect(out, empty_space, 0, style->window.background);
-        }
-    }
-
-    /* scrollbars */
-    if (!(layout->flags & NK_WINDOW_NO_SCROLLBAR) &&
-        !(layout->flags & NK_WINDOW_MINIMIZED) &&
-        window->scrollbar_hiding_timer < NK_SCROLLBAR_HIDING_TIMEOUT)
-    {
-        struct nk_rect scroll;
-        int scroll_has_scrolling;
-        float scroll_target;
-        float scroll_offset;
-        float scroll_step;
-        float scroll_inc;
-        {
-            /* vertical scrollbar */
-            nk_flags state = 0;
-            scroll.x = layout->bounds.x + layout->bounds.w + panel_padding.x;
-            scroll.y = layout->bounds.y;
-            scroll.w = scrollbar_size.x;
-            scroll.h = layout->bounds.h;
-
-            scroll_offset = layout->offset->y;
-            scroll_step = scroll.h * 0.10f;
-            scroll_inc = scroll.h * 0.01f;
-            scroll_target = (float)(int)(layout->at_y - scroll.y);
-
-            /* scrolling by mouse wheel */
-            if ((window->flags & NK_WINDOW_SUB))
-            {
-                /* sub-window scrollbar wheel scrolling */
-                struct nk_window *root_window = window;
-                struct nk_panel *root_panel = window->layout;
-                while (root_panel->parent)
-                    root_panel = root_panel->parent;
-                while (root_window->parent)
-                    root_window = root_window->parent;
-
-                /* only allow scrolling if parent window is active */
-                scroll_has_scrolling = 0;
-                if ((root_window == ctx->active) && layout->has_scrolling) {
-                    /* and panel is being hovered and inside clip rect*/
-                    if (nk_input_is_mouse_hovering_rect(in, layout->bounds) &&
-                        NK_INTERSECT(layout->bounds.x, layout->bounds.y, layout->bounds.w, layout->bounds.h,
-                            root_panel->clip.x, root_panel->clip.y, root_panel->clip.w, root_panel->clip.h))
-                    {
-                        /* deactivate all parent scrolling */
-                        root_panel = window->layout;
-                        while (root_panel->parent) {
-                            root_panel->has_scrolling = nk_false;
-                            root_panel = root_panel->parent;
-                        }
-                        root_panel->has_scrolling = nk_false;
-                        scroll_has_scrolling = nk_true;
-                    }
-                }
-            } else if (!(window->flags & NK_WINDOW_SUB)) {
-                /* window scrollbar wheel scrolling */
-                scroll_has_scrolling = (window == ctx->active) && layout->has_scrolling;
-                if (in && in->mouse.scroll_delta && scroll_has_scrolling)
-                    window->scrolled = nk_true;
-                else window->scrolled = nk_false;
-            } else scroll_has_scrolling = nk_false;
-
-            /* execute scrollbar */
-            scroll_offset = nk_do_scrollbarv(&state, out, scroll, scroll_has_scrolling,
-                                scroll_offset, scroll_target, scroll_step, scroll_inc,
-                                &ctx->style.scrollv, in, style->font);
-            layout->offset->y = (unsigned short)scroll_offset;
-            if (in && scroll_has_scrolling)
-                in->mouse.scroll_delta = 0;
-        }
-        {
-            /* horizontal scrollbar */
-            nk_flags state = 0;
-            scroll.x = layout->bounds.x;
-            scroll.y = layout->bounds.y + layout->bounds.h;
-            scroll.w = layout->bounds.w;
-            scroll.h = scrollbar_size.y;
-
-            scroll_offset = layout->offset->x;
-            scroll_target = (float)(int)(layout->max_x - scroll.x);
-            scroll_step = layout->max_x * 0.05f;
-            scroll_inc = layout->max_x * 0.005f;
-            scroll_has_scrolling = nk_false;
-            scroll_offset = nk_do_scrollbarh(&state, out, scroll, scroll_has_scrolling,
-                                scroll_offset, scroll_target, scroll_step, scroll_inc,
-                                &ctx->style.scrollh, in, style->font);
-            layout->offset->x = (unsigned short)scroll_offset;
-        }
-    }
-
-    /* hide scroll if no user input */
-    if (window->flags & NK_WINDOW_SCROLL_AUTO_HIDE) {
-        int has_input = ctx->input.mouse.delta.x || ctx->input.mouse.delta.y || ctx->input.mouse.scroll_delta;
-        int is_window_hovered = nk_window_is_hovered(ctx);
-        int any_item_active = (ctx->last_widget_state & NK_WIDGET_STATE_MODIFIED);
-        if ((!has_input && is_window_hovered) || (!is_window_hovered && !any_item_active))
-            window->scrollbar_hiding_timer += ctx->delta_time_seconds;
-        else window->scrollbar_hiding_timer = 0;
-    } else window->scrollbar_hiding_timer = 0;
-
-    /* window border */
-    if (layout->flags & NK_WINDOW_BORDER)
-    {
-        struct nk_color border_color = nk_panel_get_window_border_color(style, layout->flags);
-        const float padding_y = (layout->flags & NK_WINDOW_MINIMIZED) ?
-            style->window.border + window->bounds.y + layout->header_height - panel_padding.y:
-            (layout->flags & NK_WINDOW_DYNAMIC)?
-            layout->bounds.y + layout->bounds.h + layout->footer_height:
-            window->bounds.y + window->bounds.h;
-
-        /* draw border top */
-        nk_stroke_line(out,window->bounds.x,window->bounds.y,
-            window->bounds.x + window->bounds.w, window->bounds.y,
-            layout->border, border_color);
-
-        /* draw bottom border */
-        nk_stroke_line(out, window->bounds.x, padding_y,
-            window->bounds.x + window->bounds.w, padding_y, layout->border, border_color);
-
-        /* draw left border */
-        nk_stroke_line(out, window->bounds.x + layout->border/2.0f,
-            window->bounds.y, window->bounds.x + layout->border/2.0f,
-            padding_y, layout->border, border_color);
-
-        /* draw right border */
-        nk_stroke_line(out, window->bounds.x + window->bounds.w - layout->border/2.0f,
-            window->bounds.y, window->bounds.x + window->bounds.w - layout->border/2.0f,
-            padding_y, layout->border, border_color);
-    }
-
-    /* scaler */
-    if ((layout->flags & NK_WINDOW_SCALABLE) && in && !(layout->flags & NK_WINDOW_MINIMIZED))
-    {
-        /* calculate scaler bounds */
-        struct nk_rect scaler;
-        scaler.w = scrollbar_size.x;
-        scaler.h = scrollbar_size.y;
-        scaler.y = layout->bounds.y + layout->bounds.h;
-        scaler.x = layout->bounds.x + layout->bounds.w + panel_padding.x;
-        if (layout->flags & NK_WINDOW_NO_SCROLLBAR)
-            scaler.x -= scaler.w;
-
-        /* draw scaler */
-        {const struct nk_style_item *item = &style->window.scaler;
-        if (item->type == NK_STYLE_ITEM_IMAGE)
-            nk_draw_image(out, scaler, &item->data.image, nk_white);
-        else nk_fill_triangle(out, scaler.x + scaler.w, scaler.y, scaler.x + scaler.w,
-            scaler.y + scaler.h, scaler.x, scaler.y + scaler.h, item->data.color);
-        }
-
-        /* do window scaling */
-        if (!(window->flags & NK_WINDOW_ROM)) {
-            struct nk_vec2 window_size = style->window.min_size;
-            int left_mouse_down = in->mouse.buttons[NK_BUTTON_LEFT].down;
-            int left_mouse_click_in_scaler = nk_input_has_mouse_click_down_in_rect(in,
-                    NK_BUTTON_LEFT, scaler, nk_true);
-
-            if (nk_input_is_mouse_down(in, NK_BUTTON_LEFT) && left_mouse_down && left_mouse_click_in_scaler) {
-                window->bounds.w = NK_MAX(window_size.x, window->bounds.w + in->mouse.delta.x);
-                /* dragging in y-direction is only possible if static window */
-                if (!(layout->flags & NK_WINDOW_DYNAMIC))
-                    window->bounds.h = NK_MAX(window_size.y, window->bounds.h + in->mouse.delta.y);
-                ctx->style.cursor_active = ctx->style.cursors[NK_CURSOR_RESIZE_TOP_RIGHT_DOWN_LEFT];
-                in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.x = scaler.x + in->mouse.delta.x + scaler.w/2.0f;
-                in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.y = scaler.y + in->mouse.delta.y + scaler.h/2.0f;
-            }
-        }
-    }
-
-    if (!(window->flags & NK_WINDOW_SUB)) {
-        /* window is hidden so clear command buffer  */
-        if (layout->flags & NK_WINDOW_HIDDEN)
-            nk_command_buffer_reset(&window->buffer);
-        /* window is visible and not tab */
-        else nk_finish(ctx, window);
-    }
-
-    /* NK_WINDOW_REMOVE_ROM flag was set so remove NK_WINDOW_ROM */
-    if (layout->flags & NK_WINDOW_REMOVE_ROM) {
-        layout->flags &= ~(nk_flags)NK_WINDOW_ROM;
-        layout->flags &= ~(nk_flags)NK_WINDOW_REMOVE_ROM;
-    }
-    window->flags = layout->flags;
-
-    /* property garbage collector */
-    if (window->property.active && window->property.old != window->property.seq &&
-        window->property.active == window->property.prev) {
-        nk_zero(&window->property, sizeof(window->property));
-    } else {
-        window->property.old = window->property.seq;
-        window->property.prev = window->property.active;
-        window->property.seq = 0;
-    }
-
-    /* edit garbage collector */
-    if (window->edit.active && window->edit.old != window->edit.seq &&
-        window->edit.active == window->edit.prev) {
-        nk_zero(&window->edit, sizeof(window->edit));
-    } else {
-        window->edit.old = window->edit.seq;
-        window->edit.prev = window->edit.active;
-        window->edit.seq = 0;
-    }
-
-    /* contextual garbage collector */
-    if (window->popup.active_con && window->popup.con_old != window->popup.con_count) {
-        window->popup.con_count = 0;
-        window->popup.con_old = 0;
-        window->popup.active_con = 0;
-    } else {
-        window->popup.con_old = window->popup.con_count;
-        window->popup.con_count = 0;
-    }
-    window->popup.combo_count = 0;
-
-    /* helper to make sure you have a 'nk_tree_push' * for every 'nk_tree_pop' */
-    NK_ASSERT(!layout->row.tree_depth);
-}
-
 NK_API void
 nk_menubar_begin(struct nk_context *ctx)
 {
@@ -17409,7 +17410,7 @@ nk_layout_widget_space(struct nk_rect *bounds, const struct nk_context *ctx,
 
     /* cache some configuration data */
     spacing = ctx->style.window.spacing;
-    padding = nk_panel_get_window_padding(style, win->flags);
+    padding = nk_panel_get_padding(style, layout->type);
 
     /* calculate the usable panel space */
     panel_padding = 2 * padding.x;
@@ -17866,7 +17867,7 @@ nk_widget_fitting(struct nk_rect *bounds, struct nk_context *ctx,
     layout = win->layout;
     state = nk_widget(bounds, ctx);
 
-    panel_padding = nk_panel_get_window_padding(style, win->flags);
+    panel_padding = nk_panel_get_padding(style, win->flags);
     if (layout->row.index == 1) {
         bounds->w += panel_padding.x;
         bounds->x -= panel_padding.x;
@@ -19425,7 +19426,7 @@ nk_group_begin(struct nk_context *ctx, struct nk_panel *layout, const char *titl
 
     /* find persistent group scrollbar value */
     title_len = (int)nk_strlen(title);
-    title_hash = nk_murmur_hash(title, (int)title_len, NK_WINDOW_SUB);
+    title_hash = nk_murmur_hash(title, (int)title_len, NK_PANEL_GROUP);
     value.i = nk_find_value(win, title_hash);
     if (!value.i) {
         value.i = nk_add_value(ctx, win, title_hash, 0);
@@ -19435,9 +19436,6 @@ nk_group_begin(struct nk_context *ctx, struct nk_panel *layout, const char *titl
         !(flags & NK_WINDOW_MOVABLE)) {
         return 0;
     }
-
-    flags |= NK_WINDOW_SUB;
-    flags |= NK_WINDOW_GROUP;
     if (win->flags & NK_WINDOW_ROM)
         flags |= NK_WINDOW_ROM;
 
@@ -19450,7 +19448,7 @@ nk_group_begin(struct nk_context *ctx, struct nk_panel *layout, const char *titl
     panel.buffer = win->buffer;
     panel.layout = layout;
     ctx->current = &panel;
-    nk_panel_begin(ctx, (flags & NK_WINDOW_TITLE) ? title: 0);
+    nk_panel_begin(ctx, (flags & NK_WINDOW_TITLE) ? title: 0, NK_PANEL_GROUP);
 
     win->buffer = panel.buffer;
     win->buffer.clip = layout->clip;
@@ -19487,7 +19485,7 @@ nk_group_end(struct nk_context *ctx)
 
     /* dummy window */
     nk_zero_struct(pan);
-    panel_padding = nk_panel_get_window_padding(&ctx->style, NK_WINDOW_GROUP|NK_WINDOW_SUB);
+    panel_padding = nk_panel_get_padding(&ctx->style, NK_PANEL_GROUP);
     pan.bounds.y = g->bounds.y - (g->header_height + g->menu.h);
     pan.bounds.x = g->bounds.x - panel_padding.x;
     pan.bounds.w = g->bounds.w + 2 * panel_padding.x;
@@ -19504,7 +19502,7 @@ nk_group_end(struct nk_context *ctx)
     }
     pan.scrollbar.x = (unsigned short)g->offset->x;
     pan.scrollbar.y = (unsigned short)g->offset->y;
-    pan.flags = g->flags|NK_WINDOW_SUB;
+    pan.flags = g->flags;
     pan.buffer = win->buffer;
     pan.layout = g;
     pan.parent = win;
@@ -19535,6 +19533,7 @@ nk_popup_begin(struct nk_context *ctx, struct nk_panel *layout,
 {
     struct nk_window *popup;
     struct nk_window *win;
+    struct nk_panel *panel;
 
     int title_len;
     nk_hash title_hash;
@@ -19548,9 +19547,10 @@ nk_popup_begin(struct nk_context *ctx, struct nk_panel *layout,
         return 0;
 
     win = ctx->current;
-    NK_ASSERT(!(win->flags & NK_WINDOW_POPUP) && "popups are not allowed to have popus");
+    panel = win->layout;
+    NK_ASSERT(!(panel->type & NK_PANEL_SET_POPUP) && "popups are not allowed to have popups");
     title_len = (int)nk_strlen(title);
-    title_hash = nk_murmur_hash(title, (int)title_len, NK_WINDOW_POPUP);
+    title_hash = nk_murmur_hash(title, (int)title_len, NK_PANEL_POPUP);
 
     popup = win->popup.win;
     if (!popup) {
@@ -19558,6 +19558,7 @@ nk_popup_begin(struct nk_context *ctx, struct nk_panel *layout,
         popup->parent = win;
         win->popup.win = popup;
         win->popup.active = 0;
+        win->popup.type = NK_PANEL_POPUP;
     }
 
     /* make sure we have to correct popup */
@@ -19566,6 +19567,7 @@ nk_popup_begin(struct nk_context *ctx, struct nk_panel *layout,
             nk_zero(popup, sizeof(*popup));
             win->popup.name = title_hash;
             win->popup.active = 1;
+            win->popup.type = NK_PANEL_POPUP;
         } else return 0;
     }
 
@@ -19580,7 +19582,7 @@ nk_popup_begin(struct nk_context *ctx, struct nk_panel *layout,
     popup->seq = ctx->seq;
     popup->layout = layout;
     popup->flags = flags;
-    popup->flags |= NK_WINDOW_BORDER|NK_WINDOW_SUB|NK_WINDOW_POPUP;
+    popup->flags |= NK_WINDOW_BORDER;
     if (type == NK_POPUP_DYNAMIC)
         popup->flags |= NK_WINDOW_DYNAMIC;
 
@@ -19589,7 +19591,7 @@ nk_popup_begin(struct nk_context *ctx, struct nk_panel *layout,
     allocated = ctx->memory.allocated;
     nk_push_scissor(&popup->buffer, nk_null_rect);
 
-    if (nk_panel_begin(ctx, title)) {
+    if (nk_panel_begin(ctx, title, NK_PANEL_POPUP)) {
         /* popup is running therefore invalidate parent panels */
         struct nk_panel *root;
         root = win->layout;
@@ -19620,10 +19622,12 @@ nk_popup_begin(struct nk_context *ctx, struct nk_panel *layout,
 
 NK_INTERN int
 nk_nonblock_begin(struct nk_panel *layout, struct nk_context *ctx,
-    nk_flags flags, struct nk_rect body, struct nk_rect header)
+    nk_flags flags, struct nk_rect body, struct nk_rect header,
+    enum nk_panel_type panel_type)
 {
     struct nk_window *popup;
     struct nk_window *win;
+    struct nk_panel *panel;
     int is_active = nk_true;
 
     NK_ASSERT(ctx);
@@ -19634,13 +19638,15 @@ nk_nonblock_begin(struct nk_panel *layout, struct nk_context *ctx,
 
     /* popups cannot have popups */
     win = ctx->current;
-    NK_ASSERT(!(win->flags & NK_WINDOW_POPUP));
+    panel = win->layout;
+    NK_ASSERT(!(panel->type & NK_PANEL_SET_POPUP));
     popup = win->popup.win;
     if (!popup) {
         /* create window for nonblocking popup */
         popup = (struct nk_window*)nk_create_window(ctx);
         popup->parent = win;
         win->popup.win = popup;
+        win->popup.type = panel_type;
         nk_command_buffer_init(&popup->buffer, &ctx->memory, NK_CLIPPING_ON);
     } else {
         /* close the popup if user pressed outside or in the header */
@@ -19667,9 +19673,8 @@ nk_nonblock_begin(struct nk_panel *layout, struct nk_context *ctx,
     popup->parent = win;
     popup->layout = layout;
     popup->flags = flags;
-    popup->flags |= NK_WINDOW_BORDER|NK_WINDOW_POPUP;
-    popup->flags |= NK_WINDOW_DYNAMIC|NK_WINDOW_SUB;
-    popup->flags |= NK_WINDOW_NONBLOCK;
+    popup->flags |= NK_WINDOW_BORDER;
+    popup->flags |= NK_WINDOW_DYNAMIC;
     popup->seq = ctx->seq;
     win->popup.active = 1;
 
@@ -19678,7 +19683,7 @@ nk_nonblock_begin(struct nk_panel *layout, struct nk_context *ctx,
     nk_push_scissor(&popup->buffer, nk_null_rect);
     ctx->current = popup;
 
-    nk_panel_begin(ctx, 0);
+    nk_panel_begin(ctx, 0, panel_type);
     win->buffer = popup->buffer;
     layout->parent = win->layout;
     layout->offset = &popup->scrollbar;
@@ -19702,7 +19707,7 @@ nk_popup_close(struct nk_context *ctx)
 
     popup = ctx->current;
     NK_ASSERT(popup->parent);
-    NK_ASSERT(popup->flags & NK_WINDOW_POPUP);
+    NK_ASSERT(popup->layout->type & NK_PANEL_SET_POPUP);
     popup->flags |= NK_WINDOW_HIDDEN;
 }
 
@@ -19755,7 +19760,7 @@ nk_tooltip_begin(struct nk_context *ctx, struct nk_panel *layout, float width)
     /* make sure that no nonblocking popup is currently active */
     win = ctx->current;
     in = &ctx->input;
-    if (win->popup.win && (win->popup.win->flags & NK_WINDOW_NONBLOCK))
+    if (win->popup.win && (win->popup.type & NK_PANEL_SET_NONBLOCK))
         return 0;
 
     bounds.w = width;
@@ -19764,8 +19769,10 @@ nk_tooltip_begin(struct nk_context *ctx, struct nk_panel *layout, float width)
     bounds.y = (in->mouse.pos.y + 1) - win->layout->clip.y;
 
     ret = nk_popup_begin(ctx, layout, NK_POPUP_DYNAMIC,
-        "__##Tooltip##__", NK_WINDOW_NO_SCROLLBAR|NK_WINDOW_TOOLTIP|NK_WINDOW_BORDER, bounds);
+        "__##Tooltip##__", NK_WINDOW_NO_SCROLLBAR|NK_WINDOW_BORDER, bounds);
     if (ret) win->layout->flags &= ~(nk_flags)NK_WINDOW_ROM;
+    win->popup.type = NK_PANEL_TOOLTIP;
+    layout->type = NK_PANEL_TOOLTIP;
     return ret;
 }
 
@@ -19846,7 +19853,7 @@ nk_contextual_begin(struct nk_context *ctx, struct nk_panel *layout,
 
     /* check if currently active contextual is active */
     popup = win->popup.win;
-    is_open = (popup && (popup->flags & NK_WINDOW_CONTEXTUAL) && win->popup.type == NK_WINDOW_CONTEXTUAL);
+    is_open = (popup && win->popup.type == NK_PANEL_CONTEXTUAL);
     is_clicked = nk_input_mouse_clicked(&ctx->input, NK_BUTTON_RIGHT, trigger_bounds);
     if (win->popup.active_con && win->popup.con_count != win->popup.active_con)
         return 0;
@@ -19866,9 +19873,9 @@ nk_contextual_begin(struct nk_context *ctx, struct nk_panel *layout,
     body.h = size.y;
 
     /* start nonblocking contextual popup */
-    ret = nk_nonblock_begin(layout, ctx,
-            flags|NK_WINDOW_CONTEXTUAL|NK_WINDOW_NO_SCROLLBAR, body, null_rect);
-    if (ret) win->popup.type = NK_WINDOW_CONTEXTUAL;
+    ret = nk_nonblock_begin(layout, ctx, flags|NK_WINDOW_NO_SCROLLBAR, body,
+            null_rect, NK_PANEL_CONTEXTUAL);
+    if (ret) win->popup.type = NK_PANEL_CONTEXTUAL;
     else {
         win->popup.active_con = 0;
         if (win->popup.win)
@@ -20036,14 +20043,14 @@ nk_combo_begin(struct nk_panel *layout, struct nk_context *ctx, struct nk_window
     body.h = (float)height;
 
     hash = win->popup.combo_count++;
-    is_open = (popup && (popup->flags & NK_WINDOW_COMBO));
-    is_active = (popup && (win->popup.name == hash) && win->popup.type == NK_WINDOW_COMBO);
+    is_open = (popup) ? nk_true:nk_false;
+    is_active = (popup && (win->popup.name == hash) && win->popup.type == NK_PANEL_COMBO);
     if ((is_clicked && is_open && !is_active) || (is_open && !is_active) ||
         (!is_open && !is_active && !is_clicked)) return 0;
-    if (!nk_nonblock_begin(layout, ctx, NK_WINDOW_COMBO,
-            body, (is_clicked && is_open)?nk_rect(0,0,0,0):header)) return 0;
+    if (!nk_nonblock_begin(layout, ctx, 0, body,
+        (is_clicked && is_open)?nk_rect(0,0,0,0):header, NK_PANEL_COMBO)) return 0;
 
-    win->popup.type = NK_WINDOW_COMBO;
+    win->popup.type = NK_PANEL_COMBO;
     win->popup.name = hash;
     return 1;
 }
@@ -20637,7 +20644,7 @@ nk_combo(struct nk_context *ctx, const char **items, int count,
         return selected;
 
     item_spacing = ctx->style.window.spacing;
-    window_padding = nk_panel_get_window_padding(&ctx->style, ctx->current->flags);
+    window_padding = nk_panel_get_padding(&ctx->style, ctx->current->flags);
     max_height = count * item_height + count * (int)item_spacing.y;
     max_height += (int)item_spacing.y * 2 + (int)window_padding.y * 2;
     max_height = NK_MIN(maximum_height, max_height);
@@ -20672,7 +20679,7 @@ nk_combo_separator(struct nk_context *ctx, const char *items_separated_by_separa
 
     /* calculate popup window */
     item_spacing = ctx->style.window.spacing;
-    window_padding = nk_panel_get_window_padding(&ctx->style, ctx->current->flags);
+    window_padding = nk_panel_get_padding(&ctx->style, ctx->current->flags);
     max_height = count * item_height + count * (int)item_spacing.y;
     max_height += (int)item_spacing.y * 2 + (int)window_padding.y * 2;
     max_height = NK_MIN(maximum_height, max_height);
@@ -20725,7 +20732,7 @@ nk_combo_callback(struct nk_context *ctx, void(*item_getter)(void*, int, const c
 
     /* calculate popup window */
     item_spacing = ctx->style.window.spacing;
-    window_padding = nk_panel_get_window_padding(&ctx->style, ctx->current->flags);
+    window_padding = nk_panel_get_padding(&ctx->style, ctx->current->flags);
     max_height = count * item_height + count * (int)item_spacing.y;
     max_height += (int)item_spacing.y * 2 + (int)window_padding.y * 2;
     max_height = NK_MIN(maximum_height, max_height);
@@ -20776,7 +20783,7 @@ nk_menu_begin(struct nk_panel *layout, struct nk_context *ctx, struct nk_window 
     int is_active = 0;
     struct nk_rect body;
     struct nk_window *popup;
-    nk_hash hash = nk_murmur_hash(id, (int)nk_strlen(id), NK_WINDOW_MENU);
+    nk_hash hash = nk_murmur_hash(id, (int)nk_strlen(id), NK_PANEL_MENU);
 
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
@@ -20790,13 +20797,13 @@ nk_menu_begin(struct nk_panel *layout, struct nk_context *ctx, struct nk_window 
     body.h = nk_null_rect.h;
 
     popup = win->popup.win;
-    is_open = (popup && (popup->flags & NK_WINDOW_MENU));
-    is_active = (popup && (win->popup.name == hash) && win->popup.type == NK_WINDOW_MENU);
+    is_open = popup ? nk_true : nk_false;
+    is_active = (popup && (win->popup.name == hash) && win->popup.type == NK_PANEL_MENU);
     if ((is_clicked && is_open && !is_active) || (is_open && !is_active) ||
         (!is_open && !is_active && !is_clicked)) return 0;
-    if (!nk_nonblock_begin(layout, ctx, NK_WINDOW_MENU|NK_WINDOW_NO_SCROLLBAR, body, header))
+    if (!nk_nonblock_begin(layout, ctx, NK_WINDOW_NO_SCROLLBAR, body, header, NK_PANEL_MENU))
         return 0;
-    win->popup.type = NK_WINDOW_MENU;
+    win->popup.type = NK_PANEL_MENU;
     win->popup.name = hash;
     return 1;
 }
