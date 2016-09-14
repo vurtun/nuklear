@@ -214,6 +214,7 @@ extern "C" {
  *
  * ===============================================================
  */
+#define NK_UNDEFINED (-1.0f)
 #define NK_UTF_INVALID 0xFFFD /* internal invalid utf8 rune */
 #define NK_UTF_SIZE 4 /* describes the number of bytes a glyph consists of*/
 #ifndef NK_INPUT_MAX
@@ -225,90 +226,14 @@ extern "C" {
 #ifndef NK_SCROLLBAR_HIDING_TIMEOUT
 #define NK_SCROLLBAR_HIDING_TIMEOUT 4.0f
 #endif
+
 /*
- * ===============================================================
+ * ==============================================================
  *
- *                          BASIC
+ *                          HELPER
  *
  * ===============================================================
  */
-#ifdef NK_INCLUDE_FIXED_TYPES
-    #include <stdint.h>
-    typedef uint8_t nk_byte;
-    typedef int16_t nk_short;
-    typedef uint16_t nk_ushort;
-    typedef int32_t nk_int;
-    typedef uint32_t nk_uint;
-    typedef uintptr_t nk_size;
-    typedef uintptr_t nk_ptr;
-#else
-    #ifndef NK_BYTE
-        typedef unsigned char nk_byte;
-    #else
-        typedef NK_BYTE nk_byte;
-    #endif
-    #ifndef NK_INT16
-        typedef short nk_short;
-    #else
-        typedef NK_INT16 nk_short;
-    #endif
-    #ifndef NK_UINT16
-        typedef unsigned short nk_ushort;
-    #else
-        typedef NK_UINT16 nk_ushort;
-    #endif
-    #ifndef NK_INT32
-        typedef int nk_int;
-    #else
-        typedef NK_INT32 nk_int;
-    #endif
-    #ifndef NK_UINT32
-        typedef unsigned int nk_uint;
-    #else
-        typedef NK_UINT32 nk_uint;
-    #endif
-    #ifndef NK_SIZE_TYPE
-        #define NK_SIZE_TYPE nk_size
-        #if __WIN32
-            typedef unsigned __int32 nk_size;
-        #elif __WIN64
-            typedef unsigned __int64 nk_size;
-        #elif __GNUC__ || __clang__
-            #if __x86_64__ || __ppc64__
-                typedef unsigned long nk_size;
-            #else
-                typedef unsigned int nk_size;
-            #endif
-        #else
-            typedef unsigned long nk_size;
-        #endif
-    #else
-        typedef NK_SIZE_TYPE nk_size;
-    #endif
-    #ifndef NK_POINTER_TYPE
-        #define NK_POINTER_TYPE nk_ptr
-        #if __WIN32
-            typedef unsigned __int32 nk_ptr;
-        #elif __WIN64
-            typedef unsigned __int64 nk_ptr;
-        #elif __GNUC__ || __clang__
-            #if __x86_64__ || __ppc64__
-                typedef unsigned long nk_ptr;
-            #else
-                typedef unsigned int nk_ptr;
-            #endif
-        #else
-            typedef unsigned long nk_ptr;
-        #endif
-    #else
-        typedef NK_POINTER_TYPE nk_ptr;
-    #endif
-#endif
-
-typedef nk_uint nk_hash;
-typedef nk_uint nk_flags;
-typedef nk_uint nk_rune;
-
 #ifdef NK_PRIVATE
 #define NK_API static
 #else
@@ -319,17 +244,131 @@ typedef nk_uint nk_rune;
 #define NK_STORAGE static
 #define NK_GLOBAL static
 
+#define NK_FLAG(x) (1 << (x))
+#define NK_STRINGIFY(x) #x
+#define NK_MACRO_STRINGIFY(x) NK_STRINGIFY(x)
+#define NK_STRING_JOIN_IMMEDIATE(arg1, arg2) arg1 ## arg2
+#define NK_STRING_JOIN_DELAY(arg1, arg2) NK_STRING_JOIN_IMMEDIATE(arg1, arg2)
+#define NK_STRING_JOIN(arg1, arg2) NK_STRING_JOIN_DELAY(arg1, arg2)
+
+#ifdef _MSC_VER
+#define NK_UNIQUE_NAME(name) NK_STRING_JOIN(name,__COUNTER__)
+#else
+#define NK_UNIQUE_NAME(name) NK_STRING_JOIN(name,__LINE__)
+#endif
+
+#ifndef NK_STATIC_ASSERT
+#define NK_STATIC_ASSERT(exp) typedef char NK_UNIQUE_NAME(_dummy_array)[(exp)?1:-1]
+#endif
+
+#ifndef NK_FILE_LINE
+#ifdef _MSC_VER
+#define NK_FILE_LINE __FILE__ ":" NK_MACRO_STRINGIFY(__COUNTER__)
+#else
+#define NK_FILE_LINE __FILE__ ":" NK_MACRO_STRINGIFY(__LINE__)
+#endif
+#endif
+
+/*
+ * ===============================================================
+ *
+ *                          BASIC
+ *
+ * ===============================================================
+ */
+#ifdef NK_INCLUDE_FIXED_TYPES
+ #include <stdint.h>
+ #define NK_INT8 int8_t
+ #define NK_UINT8 uint8_t
+ #define NK_INT16 int16_t
+ #define NK_UINT16 uint16_t
+ #define NK_INT32 int32_t
+ #define NK_UINT32 uint32_t
+ #define NK_SIZE_TYPE uintptr_t
+ #define NK_POINTER_TYPE uintptr_t
+#else
+ #ifndef NK_INT8
+   #define NK_INT8 char
+ #endif
+ #ifndef NK_UINT8
+   #define NK_BYTE unsigned char
+ #endif
+ #ifndef NK_INT16
+   #define NK_INT16 signed char
+ #endif
+ #ifndef NK_UINT16
+   #define NK_UINT16 unsigned short
+ #endif
+ #ifndef NK_INT32
+   #define NK_INT32 signed int
+ #endif
+ #ifndef NK_UINT32
+   #define NK_UINT32 unsigned int
+ #endif
+ #ifndef NK_SIZE_TYPE
+   #if __WIN32
+     #define NK_SIZE_TYPE __int32
+   #elif __WIN64
+     #define NK_SIZE_TYPE __int64
+   #elif __GNUC__ || __clang__
+     #if __x86_64__ || __ppc64__
+       #define NK_SIZE_TYPE unsigned long
+     #else
+       #define NK_SIZE_TYPE unsigned int
+     #endif
+   #else
+     #define NK_SIZE_TYPE unsigned long
+   #endif
+ #endif
+ #ifndef NK_POINTER_TYPE
+   #if __WIN32
+     #define NK_POINTER_TYPE unsigned __int32
+   #elif __WIN64
+     #define NK_POINTER_TYPE unsigned __int64
+   #elif __GNUC__ || __clang__
+     #if __x86_64__ || __ppc64__
+       #define NK_POINTER_TYPE unsigned long
+     #else
+       #define NK_POINTER_TYPE unsigned int
+     #endif
+    #else
+     #define NK_POINTER_TYPE unsigned long
+    #endif
+  #endif
+#endif
+
+typedef NK_INT8 nk_char;
+typedef NK_UINT8 nk_uchar;
+typedef NK_UINT8 nk_byte;
+typedef NK_INT16 nk_short;
+typedef NK_UINT16 nk_ushort;
+typedef NK_INT32 nk_int;
+typedef NK_UINT32 nk_uint;
+typedef NK_SIZE_TYPE nk_size;
+typedef NK_POINTER_TYPE nk_ptr;
+
+typedef nk_uint nk_hash;
+typedef nk_uint nk_flags;
+typedef nk_uint nk_rune;
+
+/* Make sure correct type size:
+ * This will fire with a negative subscript error if the type sizes
+ * are set incorrectly by the compiler, and compile out if not */
+NK_STATIC_ASSERT(sizeof(nk_size) >= sizeof(void*));
+NK_STATIC_ASSERT(sizeof(nk_ptr) >= sizeof(void*));
+NK_STATIC_ASSERT(sizeof(nk_short) == 2);
+NK_STATIC_ASSERT(sizeof(nk_ushort) == 2);
+NK_STATIC_ASSERT(sizeof(nk_uint) == 4);
+NK_STATIC_ASSERT(sizeof(nk_int) == 4);
+NK_STATIC_ASSERT(sizeof(nk_byte) == 1);
+NK_STATIC_ASSERT(sizeof(nk_flags) >= 4);
+NK_STATIC_ASSERT(sizeof(nk_rune) >= 4);
+
 /* ============================================================================
  *
  *                                  API
  *
  * =========================================================================== */
-#define NK_UNDEFINED (-1.0f)
-#define NK_FLAG(x) (1 << (x))
-#define NK_STRINGIFY(x) #x
-#define NK_LINE_STR(x) NK_STRINGIFY(x)
-#define NK_FILE_LINE __FILE__ ":" NK_LINE_STR(__LINE__)
-
 struct nk_buffer;
 struct nk_allocator;
 struct nk_command_buffer;
@@ -745,12 +784,12 @@ NK_API struct nk_color          nk_color_picker(struct nk_context*, struct nk_co
 NK_API int                      nk_color_pick(struct nk_context*, struct nk_color*, enum nk_color_format);
 
 /* Widgets: Property */
-NK_API void                     nk_property_int(struct nk_context *layout, const char *name, int min, int *val, int max, int step, float inc_per_pixel);
-NK_API void                     nk_property_float(struct nk_context *layout, const char *name, float min, float *val, float max, float step, float inc_per_pixel);
-NK_API void                     nk_property_double(struct nk_context *layout, const char *name, double min, double *val, double max, double step, float inc_per_pixel);
-NK_API int                      nk_propertyi(struct nk_context *layout, const char *name, int min, int val, int max, int step, float inc_per_pixel);
-NK_API float                    nk_propertyf(struct nk_context *layout, const char *name, float min, float val, float max, float step, float inc_per_pixel);
-NK_API double                   nk_propertyd(struct nk_context *layout, const char *name, double min, double val, double max, double step, float inc_per_pixel);
+NK_API void                     nk_property_int(struct nk_context*, const char *name, int min, int *val, int max, int step, float inc_per_pixel);
+NK_API void                     nk_property_float(struct nk_context*, const char *name, float min, float *val, float max, float step, float inc_per_pixel);
+NK_API void                     nk_property_double(struct nk_context*, const char *name, double min, double *val, double max, double step, float inc_per_pixel);
+NK_API int                      nk_propertyi(struct nk_context*, const char *name, int min, int val, int max, int step, float inc_per_pixel);
+NK_API float                    nk_propertyf(struct nk_context*, const char *name, float min, float val, float max, float step, float inc_per_pixel);
+NK_API double                   nk_propertyd(struct nk_context*, const char *name, double min, double val, double max, double step, float inc_per_pixel);
 
 /* Widgets: TextEdit */
 NK_API nk_flags                 nk_edit_string(struct nk_context*, nk_flags, char *buffer, int *len, int max, nk_plugin_filter);
@@ -2802,15 +2841,15 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 /* Make sure correct type size:
  * This will fire with a negative subscript error if the type sizes
  * are set incorrectly by the compiler, and compile out if not */
-typedef int nk__check_size[(sizeof(nk_size) >= sizeof(void*)) ? 1 : -1];
-typedef int nk__check_ptr[(sizeof(nk_ptr) == sizeof(void*)) ? 1 : -1];
-typedef int nk__check_flags[(sizeof(nk_flags) >= 4) ? 1 : -1];
-typedef int nk__check_rune[(sizeof(nk_rune) >= 4) ? 1 : -1];
-typedef int nk__check_ushort[(sizeof(nk_ushort) == 2) ? 1 : -1];
-typedef int nk__check_short[(sizeof(nk_short) == 2) ? 1 : -1];
-typedef int nk__check_uint[(sizeof(nk_uint) == 4) ? 1 : -1];
-typedef int nk__check_int[(sizeof(nk_int) == 4) ? 1 : -1];
-typedef int nk__check_byte[(sizeof(nk_byte) == 1) ? 1 : -1];
+NK_STATIC_ASSERT(sizeof(nk_size) >= sizeof(void*));
+NK_STATIC_ASSERT(sizeof(nk_ptr) == sizeof(void*));
+NK_STATIC_ASSERT(sizeof(nk_flags) >= 4);
+NK_STATIC_ASSERT(sizeof(nk_rune) >= 4);
+NK_STATIC_ASSERT(sizeof(nk_ushort) == 2);
+NK_STATIC_ASSERT(sizeof(nk_short) == 2);
+NK_STATIC_ASSERT(sizeof(nk_uint) == 4);
+NK_STATIC_ASSERT(sizeof(nk_int) == 4);
+NK_STATIC_ASSERT(sizeof(nk_byte) == 1);
 
 NK_GLOBAL const struct nk_rect nk_null_rect = {-8192.0f, -8192.0f, 16384, 16384};
 NK_GLOBAL const float NK_FLOAT_PRECISION = 0.00000000000001f;
@@ -15202,9 +15241,9 @@ nk_pool_alloc(struct nk_pool *pool)
             nk_size size = sizeof(struct nk_page);
             size += NK_POOL_DEFAULT_CAPACITY * sizeof(union nk_page_data);
             page = (struct nk_page*)pool->alloc.alloc(pool->alloc.userdata,0, size);
-            page->size = 0;
             page->next = pool->pages;
             pool->pages = page;
+            page->size = 0;
         }
     }
     return &pool->pages->win[pool->pages->size++];
@@ -15365,9 +15404,9 @@ nk_clear(struct nk_context *ctx)
             iter->popup.win = 0;
         }
 
+        /* remove unused window state tables */
         {struct nk_table *n, *it = iter->tables;
         while (it) {
-            /* remove unused window state tables */
             n = it->next;
             if (it->seq != ctx->seq) {
                 nk_remove_table(iter, it);
@@ -15481,7 +15520,7 @@ nk_finish(struct nk_context *ctx, struct nk_window *win)
     nk_finish_buffer(ctx, &win->buffer);
     if (!win->layout->popup_buffer.active) return;
 
-    /* from here this case is for popup windows */
+    /* from here on is for popup window buffer handling */
     buf = &win->layout->popup_buffer;
     memory = ctx->memory.memory.ptr;
 
