@@ -1,4 +1,4 @@
-/* nuklear - v1.00 - public domain */
+/* nuklear - v1.09 - public domain */
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -12,6 +12,7 @@
 
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
+#define NK_INCLUDE_STANDARD_VARARGS
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
 #define NK_IMPLEMENTATION
 #define NK_SDL_IMPLEMENTATION
@@ -91,7 +92,7 @@ int main(int argc, char **argv)
             static int len;
 
             nk_layout_row_static(ctx, 30, 80, 1);
-            if (nk_button_label(ctx, "button", NK_BUTTON_DEFAULT))
+            if (nk_button_label(ctx, "button"))
                 fprintf(stdout, "button pressed\n");
             nk_layout_row_dynamic(ctx, 30, 2);
             if (nk_option_label(ctx, "easy", op == EASY)) op = EASY;

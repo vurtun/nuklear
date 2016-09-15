@@ -36,6 +36,8 @@ The implementation mode requires to define  the preprocessor macro
 #define NK_IMPLEMENTATION
 #include "nuklear.h"
 ```
+IMPORTANT: Every time you include "nuklear.h" you have to define the same optional flags.
+This is very important not doing it either leads to compiler errors or even worse stack corruptions.
 
 ## Gallery
 ![screenshot](https://cloud.githubusercontent.com/assets/8057201/11761525/ae06f0ca-a0c6-11e5-819d-5610b25f6ef4.gif)

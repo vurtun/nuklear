@@ -1,4 +1,4 @@
-/* nuklear - v1.00 - public domain */
+/* nuklear - v1.05 - public domain */
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -140,7 +140,7 @@ ui_piemenu(struct nk_context *ctx, struct nk_vec2 pos, float radius,
                 content.w = 30; content.h = 30;
                 content.x = center.x + ((rx * (float)cos(a) - ry * (float)sin(a)) - content.w/2.0f);
                 content.y = center.y + (rx * (float)sin(a) + ry * (float)cos(a) - content.h/2.0f);
-                nk_draw_image(out, content, &icons[i]);
+                nk_draw_image(out, content, &icons[i], nk_rgb(255,255,255));
                 a_min = a_max; a_max += step;
             }
         }
@@ -157,7 +157,7 @@ ui_piemenu(struct nk_context *ctx, struct nk_vec2 pos, float radius,
             bounds.h = inner.h / 2.0f;
             bounds.x = inner.x + inner.w/2 - bounds.w/2;
             bounds.y = inner.y + inner.h/2 - bounds.h/2;
-            nk_draw_image(out, bounds, &icons[active_item]);
+            nk_draw_image(out, bounds, &icons[active_item], nk_rgb(255,255,255));
         }
         nk_layout_space_end(ctx);
         if (!nk_input_is_mouse_down(&ctx->input, NK_BUTTON_RIGHT)) {
@@ -180,7 +180,7 @@ ui_piemenu(struct nk_context *ctx, struct nk_vec2 pos, float radius,
  *
  * ===============================================================*/
 static void
-grid_demo(struct nk_context *ctx)
+grid_demo(struct nk_context *ctx, struct media *media)
 {
     static char text[3][64];
     static int text_len[3];
@@ -191,12 +191,12 @@ grid_demo(struct nk_context *ctx)
 
     int i;
     struct nk_panel combo;
-    ctx->style.font.height = 20;
+    nk_style_set_font(ctx, &media->font_20->handle);
     if (nk_begin(ctx, &layout, "Grid Demo", nk_rect(600, 350, 275, 250),
         NK_WINDOW_TITLE|NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|
-        NK_WINDOW_BORDER_HEADER|NK_WINDOW_NO_SCROLLBAR))
+        NK_WINDOW_NO_SCROLLBAR))
     {
-        ctx->style.font.height = 18;
+        nk_style_set_font(ctx, &media->font_18->handle);
         nk_layout_row_dynamic(ctx, 30, 2);
         nk_label(ctx, "Floating point:", NK_TEXT_RIGHT);
         nk_edit_string(ctx, NK_EDIT_FIELD, text[0], &text_len[0], 64, nk_filter_float);
@@ -209,7 +209,7 @@ grid_demo(struct nk_context *ctx)
         nk_label(ctx, "Combobox:", NK_TEXT_RIGHT);
 
         if (nk_combo_begin_label(ctx, &combo, items[selected_item], 200)) {
-            nk_layout_row_dynamic(ctx, 30, 1);
+            nk_layout_row_dynamic(ctx, 25, 1);
             for (i = 0; i < 3; ++i)
                 if (nk_combo_item_label(ctx, items[i], NK_TEXT_LEFT))
                     selected_item = i;
@@ -217,7 +217,7 @@ grid_demo(struct nk_context *ctx)
         }
     }
     nk_end(ctx);
-    ctx->style.font.height = 14;
+    nk_style_set_font(ctx, &media->font_14->handle);
 }
 
 /* ===============================================================
@@ -263,7 +263,7 @@ button_demo(struct nk_context *ctx, struct media *media)
 
     nk_style_set_font(ctx, &media->font_20->handle);
     nk_begin(ctx, &layout, "Button Demo", nk_rect(50,50,255,610),
-        NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_BORDER_HEADER|NK_WINDOW_TITLE);
+        NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_TITLE);
 
     /*------------------------------------------------
      *                  MENU
@@ -283,9 +283,9 @@ button_demo(struct nk_context *ctx, struct media *media)
             nk_menu_item_image_label(ctx, media->prev, "Prev", NK_TEXT_RIGHT);
             nk_menu_end(ctx);
         }
-        nk_button_image(ctx, media->tools, NK_BUTTON_DEFAULT);
-        nk_button_image(ctx, media->cloud, NK_BUTTON_DEFAULT);
-        nk_button_image(ctx, media->pen, NK_BUTTON_DEFAULT);
+        nk_button_image(ctx, media->tools);
+        nk_button_image(ctx, media->cloud);
+        nk_button_image(ctx, media->pen);
     }
     nk_menubar_end(ctx);
 
@@ -294,10 +294,10 @@ button_demo(struct nk_context *ctx, struct media *media)
      *------------------------------------------------*/
     ui_header(ctx, media, "Push buttons");
     ui_widget(ctx, media, 35);
-    if (nk_button_label(ctx, "Push me", NK_BUTTON_DEFAULT))
+    if (nk_button_label(ctx, "Push me"))
         fprintf(stdout, "pushed!\n");
     ui_widget(ctx, media, 35);
-    if (nk_button_image_label(ctx, media->rocket, "Styled", NK_TEXT_CENTERED, NK_BUTTON_DEFAULT))
+    if (nk_button_image_label(ctx, media->rocket, "Styled", NK_TEXT_CENTERED))
         fprintf(stdout, "rocket!\n");
 
     /*------------------------------------------------
@@ -305,7 +305,7 @@ button_demo(struct nk_context *ctx, struct media *media)
      *------------------------------------------------*/
     ui_header(ctx, media, "Repeater");
     ui_widget(ctx, media, 35);
-    if (nk_button_label(ctx, "Press me", NK_BUTTON_REPEATER))
+    if (nk_button_label(ctx, "Press me"))
         fprintf(stdout, "pressed!\n");
 
     /*------------------------------------------------
@@ -313,36 +313,36 @@ button_demo(struct nk_context *ctx, struct media *media)
      *------------------------------------------------*/
     ui_header(ctx, media, "Toggle buttons");
     ui_widget(ctx, media, 35);
-    if (nk_button_image_label(ctx, (toggle0) ? media->checked: media->unchecked,
-        "Toggle", NK_TEXT_LEFT, NK_BUTTON_DEFAULT)) toggle0 = !toggle0;
+    if (nk_button_image_label(ctx, (toggle0) ? media->checked: media->unchecked, "Toggle", NK_TEXT_LEFT))
+        toggle0 = !toggle0;
 
     ui_widget(ctx, media, 35);
-    if (nk_button_image_label(ctx, (toggle1) ? media->checked: media->unchecked,
-        "Toggle", NK_TEXT_LEFT, NK_BUTTON_DEFAULT)) toggle1 = !toggle1;
+    if (nk_button_image_label(ctx, (toggle1) ? media->checked: media->unchecked, "Toggle", NK_TEXT_LEFT))
+        toggle1 = !toggle1;
 
     ui_widget(ctx, media, 35);
-    if (nk_button_image_label(ctx, (toggle2) ? media->checked: media->unchecked,
-        "Toggle", NK_TEXT_LEFT, NK_BUTTON_DEFAULT)) toggle2 = !toggle2;
+    if (nk_button_image_label(ctx, (toggle2) ? media->checked: media->unchecked, "Toggle", NK_TEXT_LEFT))
+        toggle2 = !toggle2;
 
     /*------------------------------------------------
      *                  RADIO
      *------------------------------------------------*/
     ui_header(ctx, media, "Radio buttons");
     ui_widget(ctx, media, 35);
-    if (nk_button_symbol_label(ctx, (option == 0)?NK_SYMBOL_CIRCLE_FILLED:NK_SYMBOL_CIRCLE,
-            "Select", NK_TEXT_LEFT, NK_BUTTON_DEFAULT)) option = 0;
+    if (nk_button_symbol_label(ctx, (option == 0)?NK_SYMBOL_CIRCLE_OUTLINE:NK_SYMBOL_CIRCLE_SOLID, "Select", NK_TEXT_LEFT))
+        option = 0;
     ui_widget(ctx, media, 35);
-    if (nk_button_symbol_label(ctx, (option == 1)?NK_SYMBOL_CIRCLE_FILLED:NK_SYMBOL_CIRCLE,
-            "Select", NK_TEXT_LEFT, NK_BUTTON_DEFAULT)) option = 1;
+    if (nk_button_symbol_label(ctx, (option == 1)?NK_SYMBOL_CIRCLE_OUTLINE:NK_SYMBOL_CIRCLE_SOLID, "Select", NK_TEXT_LEFT))
+        option = 1;
     ui_widget(ctx, media, 35);
-    if (nk_button_symbol_label(ctx, (option == 2)?NK_SYMBOL_CIRCLE_FILLED:NK_SYMBOL_CIRCLE,
-            "Select", NK_TEXT_LEFT, NK_BUTTON_DEFAULT)) option = 2;
+    if (nk_button_symbol_label(ctx, (option == 2)?NK_SYMBOL_CIRCLE_OUTLINE:NK_SYMBOL_CIRCLE_SOLID, "Select", NK_TEXT_LEFT))
+        option = 2;
 
     /*------------------------------------------------
      *                  CONTEXTUAL
      *------------------------------------------------*/
+    nk_style_set_font(ctx, &media->font_18->handle);
     if (nk_contextual_begin(ctx, &menu, NK_WINDOW_NO_SCROLLBAR, nk_vec2(150, 300), nk_window_get_bounds(ctx))) {
-        ctx->style.font.height = 18;
         nk_layout_row_dynamic(ctx, 30, 1);
         if (nk_contextual_item_image_label(ctx, media->copy, "Clone", NK_TEXT_RIGHT))
             fprintf(stdout, "pressed clone!\n");
@@ -382,15 +382,14 @@ basic_demo(struct nk_context *ctx, struct media *media)
     struct nk_panel combo;
     nk_style_set_font(ctx, &media->font_20->handle);
     nk_begin(ctx, &layout, "Basic Demo", nk_rect(320, 50, 275, 610),
-        NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_BORDER_HEADER|NK_WINDOW_TITLE);
+        NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_TITLE);
 
     /*------------------------------------------------
      *                  POPUP BUTTON
      *------------------------------------------------*/
     ui_header(ctx, media, "Popup & Scrollbar & Images");
     ui_widget(ctx, media, 35);
-    if (nk_button_image_label(ctx, media->dir,
-        "Images", NK_TEXT_CENTERED, NK_BUTTON_DEFAULT))
+    if (nk_button_image_label(ctx, media->dir, "Images", NK_TEXT_CENTERED))
         image_active = !image_active;
 
     /*------------------------------------------------
@@ -408,7 +407,7 @@ basic_demo(struct nk_context *ctx, struct media *media)
         if (nk_popup_begin(ctx, &popup, NK_POPUP_STATIC, "Image Popup", 0, nk_rect(265, 0, 320, 220))) {
             nk_layout_row_static(ctx, 82, 82, 3);
             for (i = 0; i < 9; ++i) {
-                if (nk_button_image(ctx, media->images[i], NK_BUTTON_DEFAULT)) {
+                if (nk_button_image(ctx, media->images[i])) {
                     selected_image = i;
                     image_active = 0;
                     nk_popup_close(ctx);
@@ -481,6 +480,12 @@ basic_demo(struct nk_context *ctx, struct media *media)
  *                          DEVICE
  *
  * ===============================================================*/
+struct nk_glfw_vertex {
+    float position[2];
+    float uv[2];
+    nk_byte col[4];
+};
+
 struct device {
     struct nk_buffer cmds;
     struct nk_draw_null_texture null;
@@ -581,10 +586,10 @@ device_init(struct device *dev)
 
     {
         /* buffer setup */
-        GLsizei vs = sizeof(struct nk_draw_vertex);
-        size_t vp = offsetof(struct nk_draw_vertex, position);
-        size_t vt = offsetof(struct nk_draw_vertex, uv);
-        size_t vc = offsetof(struct nk_draw_vertex, col);
+        GLsizei vs = sizeof(struct nk_glfw_vertex);
+        size_t vp = offsetof(struct nk_glfw_vertex, position);
+        size_t vt = offsetof(struct nk_glfw_vertex, uv);
+        size_t vc = offsetof(struct nk_glfw_vertex, col);
 
         glGenBuffers(1, &dev->vbo);
         glGenBuffers(1, &dev->ebo);
@@ -678,16 +683,25 @@ device_draw(struct device *dev, struct nk_context *ctx, int width, int height,
         vertices = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
         elements = glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
         {
-            /* fill converting configuration */
+            /* fill convert configuration */
             struct nk_convert_config config;
-            memset(&config, 0, sizeof(config));
-            config.global_alpha = 1.0f;
-            config.shape_AA = AA;
-            config.line_AA = AA;
+            static const struct nk_draw_vertex_layout_element vertex_layout[] = {
+                {NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct nk_glfw_vertex, position)},
+                {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct nk_glfw_vertex, uv)},
+                {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct nk_glfw_vertex, col)},
+                {NK_VERTEX_LAYOUT_END}
+            };
+            NK_MEMSET(&config, 0, sizeof(config));
+            config.vertex_layout = vertex_layout;
+            config.vertex_size = sizeof(struct nk_glfw_vertex);
+            config.vertex_alignment = NK_ALIGNOF(struct nk_glfw_vertex);
+            config.null = dev->null;
             config.circle_segment_count = 22;
             config.curve_segment_count = 22;
             config.arc_segment_count = 22;
-            config.null = dev->null;
+            config.global_alpha = 1.0f;
+            config.shape_AA = AA;
+            config.line_AA = AA;
 
             /* setup buffers to load vertices and elements */
             {struct nk_buffer vbuf, ebuf;
@@ -844,7 +858,7 @@ int main(int argc, char *argv[])
         nk_input_key(&ctx, NK_KEY_UP, glfwGetKey(win, GLFW_KEY_UP) == GLFW_PRESS);
         nk_input_key(&ctx, NK_KEY_DOWN, glfwGetKey(win, GLFW_KEY_DOWN) == GLFW_PRESS);
         if (glfwGetKey(win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
-            glfwGetKey(win, GLFW_KEY_RIGHT_CONTROL)) {
+            glfwGetKey(win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS) {
             nk_input_key(&ctx, NK_KEY_COPY, glfwGetKey(win, GLFW_KEY_C) == GLFW_PRESS);
             nk_input_key(&ctx, NK_KEY_PASTE, glfwGetKey(win, GLFW_KEY_P) == GLFW_PRESS);
             nk_input_key(&ctx, NK_KEY_CUT, glfwGetKey(win, GLFW_KEY_X) == GLFW_PRESS);
@@ -866,12 +880,12 @@ int main(int argc, char *argv[])
         /* GUI */
         basic_demo(&ctx, &media);
         button_demo(&ctx, &media);
-        grid_demo(&ctx);
+        grid_demo(&ctx, &media);
 
         /* Draw */
         glViewport(0, 0, display_width, display_height);
         glClear(GL_COLOR_BUFFER_BIT);
-        glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+        glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
         device_draw(&device, &ctx, width, height, scale, NK_ANTI_ALIASING_ON);
         glfwSwapBuffers(win);
     }

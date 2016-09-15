@@ -1,4 +1,4 @@
-/* nuklear - v1.00 - public domain */
+/* nuklear - v1.05 - public domain */
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -418,7 +418,7 @@ file_browser_run(struct file_browser *browser, struct nk_context *ctx)
             while (*d++) {
                 if (*d == '/') {
                     *d = '\0';
-                    if (nk_button_label(ctx, begin, NK_BUTTON_DEFAULT)) {
+                    if (nk_button_label(ctx, begin)) {
                         *d++ = '/'; *d = '\0';
                         file_browser_reload_directory_content(browser, browser->directory);
                         break;
@@ -441,11 +441,11 @@ file_browser_run(struct file_browser *browser, struct nk_context *ctx)
             struct nk_image computer = media->icons.computer;
 
             nk_layout_row_dynamic(ctx, 40, 1);
-            if (nk_button_image_label(ctx, home, "home", NK_TEXT_CENTERED, NK_BUTTON_DEFAULT))
+            if (nk_button_image_label(ctx, home, "home", NK_TEXT_CENTERED))
                 file_browser_reload_directory_content(browser, browser->home);
-            if (nk_button_image_label(ctx,desktop,"desktop",NK_TEXT_CENTERED, NK_BUTTON_DEFAULT))
+            if (nk_button_image_label(ctx,desktop,"desktop",NK_TEXT_CENTERED))
                 file_browser_reload_directory_content(browser, browser->desktop);
-            if (nk_button_image_label(ctx,computer,"computer",NK_TEXT_CENTERED,NK_BUTTON_DEFAULT))
+            if (nk_button_image_label(ctx,computer,"computer",NK_TEXT_CENTERED))
                 file_browser_reload_directory_content(browser, "/");
             nk_group_end(ctx);
         }
@@ -467,14 +467,14 @@ file_browser_run(struct file_browser *browser, struct nk_context *ctx)
                     /* draw one row of icons */
                     if (j < browser->dir_count) {
                         /* draw and execute directory buttons */
-                        if (nk_button_image(ctx,media->icons.directory,NK_BUTTON_DEFAULT))
+                        if (nk_button_image(ctx,media->icons.directory))
                             index = (int)j;
                     } else {
                         /* draw and execute files buttons */
                         struct nk_image *icon;
                         size_t fileIndex = ((size_t)j - browser->dir_count);
                         icon = media_icon_for_file(media,browser->files[fileIndex]);
-                        if (nk_button_image(ctx, *icon, NK_BUTTON_DEFAULT)) {
+                        if (nk_button_image(ctx, *icon)) {
                             strncpy(browser->file, browser->directory, MAX_PATH_LEN);
                             n = strlen(browser->file);
                             strncpy(browser->file + n, browser->files[fileIndex], MAX_PATH_LEN - n);
@@ -518,6 +518,12 @@ file_browser_run(struct file_browser *browser, struct nk_context *ctx)
  *                          DEVICE
  *
  * ===============================================================*/
+struct nk_glfw_vertex {
+    float position[2];
+    float uv[2];
+    nk_byte col[4];
+};
+
 struct device {
     struct nk_buffer cmds;
     struct nk_draw_null_texture null;
@@ -606,10 +612,10 @@ device_init(struct device *dev)
 
     {
         /* buffer setup */
-        GLsizei vs = sizeof(struct nk_draw_vertex);
-        size_t vp = offsetof(struct nk_draw_vertex, position);
-        size_t vt = offsetof(struct nk_draw_vertex, uv);
-        size_t vc = offsetof(struct nk_draw_vertex, col);
+        GLsizei vs = sizeof(struct nk_glfw_vertex);
+        size_t vp = offsetof(struct nk_glfw_vertex, position);
+        size_t vt = offsetof(struct nk_glfw_vertex, uv);
+        size_t vc = offsetof(struct nk_glfw_vertex, col);
 
         glGenBuffers(1, &dev->vbo);
         glGenBuffers(1, &dev->ebo);
@@ -703,16 +709,25 @@ device_draw(struct device *dev, struct nk_context *ctx, int width, int height,
         vertices = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
         elements = glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
         {
-            /* fill converting configuration */
+            /* fill convert configuration */
             struct nk_convert_config config;
-            memset(&config, 0, sizeof(config));
-            config.global_alpha = 1.0f;
-            config.shape_AA = AA;
-            config.line_AA = AA;
+            static const struct nk_draw_vertex_layout_element vertex_layout[] = {
+                {NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct nk_glfw_vertex, position)},
+                {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct nk_glfw_vertex, uv)},
+                {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct nk_glfw_vertex, col)},
+                {NK_VERTEX_LAYOUT_END}
+            };
+            NK_MEMSET(&config, 0, sizeof(config));
+            config.vertex_layout = vertex_layout;
+            config.vertex_size = sizeof(struct nk_glfw_vertex);
+            config.vertex_alignment = NK_ALIGNOF(struct nk_glfw_vertex);
+            config.null = dev->null;
             config.circle_segment_count = 22;
             config.curve_segment_count = 22;
             config.arc_segment_count = 22;
-            config.null = dev->null;
+            config.global_alpha = 1.0f;
+            config.shape_AA = AA;
+            config.line_AA = AA;
 
             /* setup buffers to load vertices and elements */
             {struct nk_buffer vbuf, ebuf;
@@ -846,7 +861,7 @@ int main(int argc, char *argv[])
         nk_input_key(&ctx, NK_KEY_UP, glfwGetKey(win, GLFW_KEY_UP) == GLFW_PRESS);
         nk_input_key(&ctx, NK_KEY_DOWN, glfwGetKey(win, GLFW_KEY_DOWN) == GLFW_PRESS);
         if (glfwGetKey(win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
-            glfwGetKey(win, GLFW_KEY_RIGHT_CONTROL)) {
+            glfwGetKey(win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS) {
             nk_input_key(&ctx, NK_KEY_COPY, glfwGetKey(win, GLFW_KEY_C) == GLFW_PRESS);
             nk_input_key(&ctx, NK_KEY_PASTE, glfwGetKey(win, GLFW_KEY_P) == GLFW_PRESS);
             nk_input_key(&ctx, NK_KEY_CUT, glfwGetKey(win, GLFW_KEY_X) == GLFW_PRESS);

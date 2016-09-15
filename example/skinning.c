@@ -1,4 +1,4 @@
-/* nuklear - v1.00 - public domain */
+/* nuklear - v1.05 - public domain */
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -72,6 +72,12 @@ struct media {
  *                          DEVICE
  *
  * ===============================================================*/
+struct nk_glfw_vertex {
+    float position[2];
+    float uv[2];
+    nk_byte col[4];
+};
+
 struct device {
     struct nk_buffer cmds;
     struct nk_draw_null_texture null;
@@ -172,10 +178,10 @@ device_init(struct device *dev)
 
     {
         /* buffer setup */
-        GLsizei vs = sizeof(struct nk_draw_vertex);
-        size_t vp = offsetof(struct nk_draw_vertex, position);
-        size_t vt = offsetof(struct nk_draw_vertex, uv);
-        size_t vc = offsetof(struct nk_draw_vertex, col);
+        GLsizei vs = sizeof(struct nk_glfw_vertex);
+        size_t vp = offsetof(struct nk_glfw_vertex, position);
+        size_t vt = offsetof(struct nk_glfw_vertex, uv);
+        size_t vc = offsetof(struct nk_glfw_vertex, col);
 
         glGenBuffers(1, &dev->vbo);
         glGenBuffers(1, &dev->ebo);
@@ -269,16 +275,25 @@ device_draw(struct device *dev, struct nk_context *ctx, int width, int height,
         vertices = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
         elements = glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
         {
-            /* fill converting configuration */
+            /* fill convert configuration */
             struct nk_convert_config config;
-            memset(&config, 0, sizeof(config));
-            config.global_alpha = 1.0f;
-            config.shape_AA = AA;
-            config.line_AA = AA;
+            static const struct nk_draw_vertex_layout_element vertex_layout[] = {
+                {NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct nk_glfw_vertex, position)},
+                {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct nk_glfw_vertex, uv)},
+                {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct nk_glfw_vertex, col)},
+                {NK_VERTEX_LAYOUT_END}
+            };
+            NK_MEMSET(&config, 0, sizeof(config));
+            config.vertex_layout = vertex_layout;
+            config.vertex_size = sizeof(struct nk_glfw_vertex);
+            config.vertex_alignment = NK_ALIGNOF(struct nk_glfw_vertex);
+            config.null = dev->null;
             config.circle_segment_count = 22;
             config.curve_segment_count = 22;
             config.arc_segment_count = 22;
-            config.null = dev->null;
+            config.global_alpha = 1.0f;
+            config.shape_AA = AA;
+            config.line_AA = AA;
 
             /* setup buffers to load vertices and elements */
             {struct nk_buffer vbuf, ebuf;
@@ -699,7 +714,7 @@ int main(int argc, char *argv[])
         nk_input_key(&ctx, NK_KEY_UP, glfwGetKey(win, GLFW_KEY_UP) == GLFW_PRESS);
         nk_input_key(&ctx, NK_KEY_DOWN, glfwGetKey(win, GLFW_KEY_DOWN) == GLFW_PRESS);
         if (glfwGetKey(win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
-            glfwGetKey(win, GLFW_KEY_RIGHT_CONTROL)) {
+            glfwGetKey(win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS) {
             nk_input_key(&ctx, NK_KEY_COPY, glfwGetKey(win, GLFW_KEY_C) == GLFW_PRESS);
             nk_input_key(&ctx, NK_KEY_PASTE, glfwGetKey(win, GLFW_KEY_P) == GLFW_PRESS);
             nk_input_key(&ctx, NK_KEY_CUT, glfwGetKey(win, GLFW_KEY_X) == GLFW_PRESS);
@@ -735,7 +750,7 @@ int main(int argc, char *argv[])
             const float step = (2*3.141592654f) / 32;
 
             nk_layout_row_static(&ctx, 30, 120, 1);
-            if (nk_button_label(&ctx, "button", NK_BUTTON_DEFAULT))
+            if (nk_button_label(&ctx, "button"))
                 fprintf(stdout, "button pressed\n");
 
             nk_layout_row_dynamic(&ctx, 20, 1);
@@ -754,7 +769,7 @@ int main(int argc, char *argv[])
             nk_layout_row_dynamic(&ctx, 25, 1);
             nk_edit_string(&ctx, NK_EDIT_FIELD, field_buffer, &field_len, 64, nk_filter_default);
             nk_property_float(&ctx, "#X:", -1024.0f, &pos, 1024.0f, 1, 1);
-            current_weapon = nk_combo(&ctx, weapons, LEN(weapons), current_weapon, 25);
+            current_weapon = nk_combo(&ctx, weapons, LEN(weapons), current_weapon, 25, 200);
 
             nk_layout_row_dynamic(&ctx, 100, 1);
             if (nk_chart_begin_colored(&ctx, NK_CHART_LINES, nk_rgb(255,0,0), nk_rgb(150,0,0), 32, 0.0f, 1.0f)) {

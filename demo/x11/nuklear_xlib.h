@@ -20,7 +20,7 @@ NK_API XFont*               nk_xfont_create(Display *dpy, const char *name);
 NK_API void                 nk_xfont_del(Display *dpy, XFont *font);
 
 NK_API struct nk_context*   nk_xlib_init(XFont *font, Display *dpy, int screen, Window root, unsigned int w, unsigned int h);
-NK_API void                 nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt);
+NK_API int                  nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt);
 NK_API void                 nk_xlib_render(Drawable screen, struct nk_color clear);
 NK_API void                 nk_xlib_shutdown(void);
 NK_API void                 nk_xlib_set_font(XFont *font);
@@ -46,6 +46,7 @@ struct XFont {
     int height;
     XFontSet set;
     XFontStruct *xfont;
+    struct nk_user_font handle;
 };
 struct XSurface {
     GC gc;
@@ -449,10 +450,10 @@ NK_API struct nk_context*
 nk_xlib_init(XFont *xfont, Display *dpy, int screen, Window root,
     unsigned int w, unsigned int h)
 {
-    struct nk_user_font font;
-    font.userdata = nk_handle_ptr(xfont);
-    font.height = (float)xfont->height;
-    font.width = nk_xfont_get_text_width;
+    struct nk_user_font *font = &xfont->handle;
+    font->userdata = nk_handle_ptr(xfont);
+    font->height = (float)xfont->height;
+    font->width = nk_xfont_get_text_width;
     xlib.dpy = dpy;
     xlib.root = root;
 
@@ -468,21 +469,21 @@ nk_xlib_init(XFont *xfont, Display *dpy, int screen, Window root,
     XFreePixmap(dpy, blank);}
 
     xlib.surf = nk_xsurf_create(screen, w, h);
-    nk_init_default(&xlib.ctx, &font);
+    nk_init_default(&xlib.ctx, font);
     return &xlib.ctx;
 }
 
 NK_API void
 nk_xlib_set_font(XFont *xfont)
 {
-    struct nk_user_font font;
-    font.userdata = nk_handle_ptr(xfont);
-    font.height = (float)xfont->height;
-    font.width = nk_xfont_get_text_width;
-    nk_style_set_font(&xlib.ctx, &font);
+    struct nk_user_font *font = &xfont->handle;
+    font->userdata = nk_handle_ptr(xfont);
+    font->height = (float)xfont->height;
+    font->width = nk_xfont_get_text_width;
+    nk_style_set_font(&xlib.ctx, font);
 }
 
-NK_API void
+NK_API int
 nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt)
 {
     struct nk_context *ctx = &xlib.ctx;
@@ -554,6 +555,7 @@ nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt)
             }
         }
         XFree(code);
+        return 1;
     } else if (evt->type == ButtonPress || evt->type == ButtonRelease) {
         /* Button handler */
         int down = (evt->type == ButtonPress);
@@ -568,7 +570,8 @@ nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt)
             nk_input_scroll(ctx, 1.0f);
         else if (evt->xbutton.button == Button5)
             nk_input_scroll(ctx, -1.0f);
-
+        else return 0;
+        return 1;
     } else if (evt->type == MotionNotify) {
         /* Mouse motion handler */
         const int x = evt->xmotion.x, y = evt->xmotion.y;
@@ -578,6 +581,7 @@ nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt)
             ctx->input.mouse.pos.y = ctx->input.mouse.prev.y;
             XWarpPointer(xlib.dpy, None, xlib.surf->root, 0, 0, 0, 0, (int)ctx->input.mouse.pos.x, (int)ctx->input.mouse.pos.y);
         }
+        return 1;
     } else if (evt->type == Expose || evt->type == ConfigureNotify) {
         /* Window resize handler */
         unsigned int width, height;
@@ -586,8 +590,12 @@ nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt)
         width = (unsigned int)attr.width;
         height = (unsigned int)attr.height;
         nk_xsurf_resize(xlib.surf, width, height);
-    } else if (evt->type == KeymapNotify)
+        return 1;
+    } else if (evt->type == KeymapNotify) {
         XRefreshKeyboardMapping(&evt->xmapping);
+        return 1;
+    }
+    return 0;
 }
 
 NK_API void

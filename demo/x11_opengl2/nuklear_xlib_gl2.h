@@ -17,7 +17,7 @@
 NK_API struct nk_context*   nk_x11_init(Display *dpy, Window win);
 NK_API void                 nk_x11_font_stash_begin(struct nk_font_atlas **atlas);
 NK_API void                 nk_x11_font_stash_end(void);
-NK_API void                 nk_x11_handle_event(XEvent *evt);
+NK_API int                  nk_x11_handle_event(XEvent *evt);
 NK_API void                 nk_x11_render(enum nk_anti_aliasing, int max_vertex_buffer, int max_element_buffer);
 NK_API void                 nk_x11_shutdown(void);
 
@@ -47,6 +47,12 @@ NK_API void                 nk_x11_shutdown(void);
 #ifndef TRUE
 #define TRUE 1
 #endif
+
+struct nk_x11_vertex {
+    float position[2];
+    float uv[2];
+    nk_byte col[4];
+};
 
 struct nk_x11_device {
     struct nk_buffer cmds;
@@ -109,26 +115,35 @@ nk_x11_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_b
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
     glEnableClientState(GL_COLOR_ARRAY);
     {
-        GLsizei vs = sizeof(struct nk_draw_vertex);
-        size_t vp = offsetof(struct nk_draw_vertex, position);
-        size_t vt = offsetof(struct nk_draw_vertex, uv);
-        size_t vc = offsetof(struct nk_draw_vertex, col);
+        GLsizei vs = sizeof(struct nk_x11_vertex);
+        size_t vp = offsetof(struct nk_x11_vertex, position);
+        size_t vt = offsetof(struct nk_x11_vertex, uv);
+        size_t vc = offsetof(struct nk_x11_vertex, col);
 
         /* convert from command queue into draw list and draw to screen */
         const struct nk_draw_command *cmd;
         const nk_draw_index *offset = NULL;
         struct nk_buffer vbuf, ebuf;
 
-        /* fill converting configuration */
+        /* fill convert configuration */
         struct nk_convert_config config;
-        memset(&config, 0, sizeof(config));
-        config.global_alpha = 1.0f;
-        config.shape_AA = AA;
-        config.line_AA = AA;
+        static const struct nk_draw_vertex_layout_element vertex_layout[] = {
+            {NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct nk_x11_vertex, position)},
+            {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct nk_x11_vertex, uv)},
+            {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct nk_x11_vertex, col)},
+            {NK_VERTEX_LAYOUT_END}
+        };
+        NK_MEMSET(&config, 0, sizeof(config));
+        config.vertex_layout = vertex_layout;
+        config.vertex_size = sizeof(struct nk_x11_vertex);
+        config.vertex_alignment = NK_ALIGNOF(struct nk_x11_vertex);
+        config.null = dev->null;
         config.circle_segment_count = 22;
         config.curve_segment_count = 22;
         config.arc_segment_count = 22;
-        config.null = dev->null;
+        config.global_alpha = 1.0f;
+        config.shape_AA = AA;
+        config.line_AA = AA;
 
         /* convert shapes into vertexes */
         nk_buffer_init_default(&vbuf);
@@ -199,7 +214,7 @@ nk_x11_font_stash_end(void)
         nk_style_set_font(&x11.ctx, &x11.atlas.default_font->handle);
 }
 
-NK_API void
+NK_API int
 nk_x11_handle_event(XEvent *evt)
 {
     struct nk_context *ctx = &x11.ctx;
@@ -269,6 +284,7 @@ nk_x11_handle_event(XEvent *evt)
             }
         }
         XFree(code);
+        return 1;
     } else if (evt->type == ButtonPress || evt->type == ButtonRelease) {
         /* Button handler */
         int down = (evt->type == ButtonPress);
@@ -283,7 +299,8 @@ nk_x11_handle_event(XEvent *evt)
             nk_input_scroll(ctx, 1.0f);
         else if (evt->xbutton.button == Button5)
             nk_input_scroll(ctx, -1.0f);
-
+        else return 0;
+        return 1;
     } else if (evt->type == MotionNotify) {
         /* Mouse motion handler */
         const int x = evt->xmotion.x, y = evt->xmotion.y;
@@ -293,8 +310,12 @@ nk_x11_handle_event(XEvent *evt)
             ctx->input.mouse.pos.y = ctx->input.mouse.prev.y;
             XWarpPointer(x11.dpy, None, x11.win, 0, 0, 0, 0, (int)ctx->input.mouse.pos.x, (int)ctx->input.mouse.pos.y);
         }
-    } else if (evt->type == KeymapNotify)
+        return 1;
+    } else if (evt->type == KeymapNotify) {
         XRefreshKeyboardMapping(&evt->xmapping);
+        return 1;
+    }
+    return 0;
 }
 
 NK_API struct nk_context*

@@ -1,4 +1,4 @@
-/* nuklear - v1.00 - public domain */
+/* nuklear - v1.05 - public domain */
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -45,6 +45,12 @@
  *                          DEVICE
  *
  * ===============================================================*/
+struct nk_glfw_vertex {
+    float position[2];
+    float uv[2];
+    nk_byte col[4];
+};
+
 struct device {
     struct nk_buffer cmds;
     struct nk_draw_null_texture null;
@@ -145,10 +151,10 @@ device_init(struct device *dev)
 
     {
         /* buffer setup */
-        GLsizei vs = sizeof(struct nk_draw_vertex);
-        size_t vp = offsetof(struct nk_draw_vertex, position);
-        size_t vt = offsetof(struct nk_draw_vertex, uv);
-        size_t vc = offsetof(struct nk_draw_vertex, col);
+        GLsizei vs = sizeof(struct nk_glfw_vertex);
+        size_t vp = offsetof(struct nk_glfw_vertex, position);
+        size_t vt = offsetof(struct nk_glfw_vertex, uv);
+        size_t vc = offsetof(struct nk_glfw_vertex, col);
 
         glGenBuffers(1, &dev->vbo);
         glGenBuffers(1, &dev->ebo);
@@ -242,16 +248,25 @@ device_draw(struct device *dev, struct nk_context *ctx, int width, int height,
         vertices = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
         elements = glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
         {
-            /* fill converting configuration */
+            /* fill convert configuration */
             struct nk_convert_config config;
-            memset(&config, 0, sizeof(config));
-            config.global_alpha = 1.0f;
-            config.shape_AA = AA;
-            config.line_AA = AA;
+            static const struct nk_draw_vertex_layout_element vertex_layout[] = {
+                {NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct nk_glfw_vertex, position)},
+                {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct nk_glfw_vertex, uv)},
+                {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct nk_glfw_vertex, col)},
+                {NK_VERTEX_LAYOUT_END}
+            };
+            NK_MEMSET(&config, 0, sizeof(config));
+            config.vertex_layout = vertex_layout;
+            config.vertex_size = sizeof(struct nk_glfw_vertex);
+            config.vertex_alignment = NK_ALIGNOF(struct nk_glfw_vertex);
+            config.null = dev->null;
             config.circle_segment_count = 22;
             config.curve_segment_count = 22;
             config.arc_segment_count = 22;
-            config.null = dev->null;
+            config.global_alpha = 1.0f;
+            config.shape_AA = AA;
+            config.line_AA = AA;
 
             /* setup buffers to load vertices and elements */
             {struct nk_buffer vbuf, ebuf;
@@ -311,7 +326,7 @@ pump_input(struct nk_context *ctx, GLFWwindow *win)
     nk_input_key(ctx, NK_KEY_DOWN, glfwGetKey(win, GLFW_KEY_DOWN) == GLFW_PRESS);
 
     if (glfwGetKey(win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
-        glfwGetKey(win, GLFW_KEY_RIGHT_CONTROL)) {
+        glfwGetKey(win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS) {
         nk_input_key(ctx, NK_KEY_COPY, glfwGetKey(win, GLFW_KEY_C) == GLFW_PRESS);
         nk_input_key(ctx, NK_KEY_PASTE, glfwGetKey(win, GLFW_KEY_P) == GLFW_PRESS);
         nk_input_key(ctx, NK_KEY_CUT, glfwGetKey(win, GLFW_KEY_X) == GLFW_PRESS);
@@ -332,27 +347,48 @@ pump_input(struct nk_context *ctx, GLFWwindow *win)
     nk_input_end(ctx);
 }
 
+struct nk_canvas {
+    struct nk_panel layout;
+    struct nk_command_buffer *painter;
+    struct nk_vec2 item_spacing;
+    struct nk_vec2 panel_padding;
+    struct nk_style_item window_background;
+};
+
 static void
-canvas_begin(struct nk_context *ctx, int x, int y, int width, int height, struct nk_command_buffer **out)
+canvas_begin(struct nk_context *ctx, struct nk_canvas *canvas, nk_flags flags,
+    int x, int y, int width, int height, struct nk_color background_color)
 {
-    static struct nk_panel layout;
-    struct nk_rect total_space;
+    /* save style properties which will be overwritten */
+    canvas->panel_padding = ctx->style.window.padding;
+    canvas->item_spacing = ctx->style.window.spacing;
+    canvas->window_background = ctx->style.window.fixed_background;
+
+    /* use the complete window space and set background */
     ctx->style.window.spacing = nk_vec2(0,0);
     ctx->style.window.padding = nk_vec2(0,0);
-    nk_begin(ctx, &layout, "Window", nk_rect(x, y, width, height), NK_WINDOW_NO_SCROLLBAR);
+    ctx->style.window.fixed_background = nk_style_item_color(background_color);
+
+    /* create/update window and set position + size */
+    flags = flags & ~NK_WINDOW_DYNAMIC;
+    nk_begin(ctx, &canvas->layout, "Window", nk_rect(x, y, width, height), NK_WINDOW_NO_SCROLLBAR|flags);
     nk_window_set_bounds(ctx, nk_rect(x, y, width, height));
+
+    /* allocate the complete window space for drawing */
+    {struct nk_rect total_space;
     total_space = nk_window_get_content_region(ctx);
     nk_layout_row_dynamic(ctx, total_space.h, 1);
     nk_widget(&total_space, ctx);
-    *out = nk_window_get_canvas(ctx);
+    canvas->painter = nk_window_get_canvas(ctx);}
 }
 
 static void
-canvas_end(struct nk_context *ctx)
+canvas_end(struct nk_context *ctx, struct nk_canvas *canvas)
 {
     nk_end(ctx);
-    ctx->style.window.spacing = nk_vec2(4,4);
-    ctx->style.window.padding = nk_vec2(8,8);
+    ctx->style.window.spacing = canvas->panel_padding;
+    ctx->style.window.padding = canvas->item_spacing;
+    ctx->style.window.fixed_background = canvas->window_background;
 }
 
 int main(int argc, char *argv[])
@@ -409,17 +445,16 @@ int main(int argc, char *argv[])
         pump_input(&ctx, win);
 
         /* draw */
-        {struct nk_command_buffer *canvas;
-        canvas_begin(&ctx, 0, 0, width, height, &canvas);
+        {struct nk_canvas canvas;
+        canvas_begin(&ctx, &canvas, 0, 0, 0, width, height, nk_rgb(250,250,250));
         {
-            nk_fill_rect(canvas, nk_rect(0,0,width,height), 0, nk_rgb(150,150,150));
-            nk_fill_rect(canvas, nk_rect(15,15,210,210), 5, nk_rgb(247, 230, 154));
-            nk_fill_rect(canvas, nk_rect(20,20,200,200), 5, nk_rgb(188, 174, 118));
-            nk_draw_text(canvas, nk_rect(30, 30, 150, 20), "Text to draw", 12, &font->handle, nk_rgb(188,174,118), nk_rgb(0,0,0));
-            nk_fill_rect(canvas, nk_rect(250,20,100,100), 0, nk_rgb(0,0,255));
-            nk_fill_circle(canvas, nk_rect(20,250,100,100), nk_rgb(255,0,0));
-            nk_fill_triangle(canvas, 250, 250, 350, 250, 300, 350, nk_rgb(0,255,0));
-            nk_fill_arc(canvas, 300, 180, 50, 0, 3.141592654f * 3.0f / 4.0f, nk_rgb(255,255,0));
+            nk_fill_rect(canvas.painter, nk_rect(15,15,210,210), 5, nk_rgb(247, 230, 154));
+            nk_fill_rect(canvas.painter, nk_rect(20,20,200,200), 5, nk_rgb(188, 174, 118));
+            nk_draw_text(canvas.painter, nk_rect(30, 30, 150, 20), "Text to draw", 12, &font->handle, nk_rgb(188,174,118), nk_rgb(0,0,0));
+            nk_fill_rect(canvas.painter, nk_rect(250,20,100,100), 0, nk_rgb(0,0,255));
+            nk_fill_circle(canvas.painter, nk_rect(20,250,100,100), nk_rgb(255,0,0));
+            nk_fill_triangle(canvas.painter, 250, 250, 350, 250, 300, 350, nk_rgb(0,255,0));
+            nk_fill_arc(canvas.painter, 300, 180, 50, 0, 3.141592654f * 3.0f / 4.0f, nk_rgb(255,255,0));
 
             {float points[12];
             points[0] = 200; points[1] = 250;
@@ -428,15 +463,15 @@ int main(int argc, char *argv[])
             points[6] = 200; points[7] = 300;
             points[8] = 175; points[9] = 350;
             points[10] = 150; points[11] = 350;
-            nk_fill_polygon(canvas, points, 6, nk_rgb(255,255,255));}
+            nk_fill_polygon(canvas.painter, points, 6, nk_rgb(0,0,0));}
 
-            nk_stroke_line(canvas, 15, 10, 200, 10, 2.0f, nk_rgb(189,45,75));
-            nk_stroke_rect(canvas, nk_rect(370, 20, 100, 100), 10, 3, nk_rgb(0,0,255));
-            nk_stroke_curve(canvas, 380, 200, 405, 270, 455, 120, 480, 200, 2, nk_rgb(0,150,220));
-            nk_stroke_circle(canvas, nk_rect(20, 370, 100, 100), 5, nk_rgb(0,255,120));
-            nk_stroke_triangle(canvas, 370, 250, 470, 250, 420, 350, 6, nk_rgb(255,0,143));
+            nk_stroke_line(canvas.painter, 15, 10, 200, 10, 2.0f, nk_rgb(189,45,75));
+            nk_stroke_rect(canvas.painter, nk_rect(370, 20, 100, 100), 10, 3, nk_rgb(0,0,255));
+            nk_stroke_curve(canvas.painter, 380, 200, 405, 270, 455, 120, 480, 200, 2, nk_rgb(0,150,220));
+            nk_stroke_circle(canvas.painter, nk_rect(20, 370, 100, 100), 5, nk_rgb(0,255,120));
+            nk_stroke_triangle(canvas.painter, 370, 250, 470, 250, 420, 350, 6, nk_rgb(255,0,143));
         }
-        canvas_end(&ctx);}
+        canvas_end(&ctx, &canvas);}
 
         /* Draw */
         glfwGetWindowSize(win, &width, &height);

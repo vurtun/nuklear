@@ -1,4 +1,4 @@
-/* nuklear - v1.00 - public domain */
+/* nuklear - v1.09 - public domain */
 #define COBJMACROS
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -16,6 +16,7 @@
 
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
+#define NK_INCLUDE_STANDARD_VARARGS
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
 #define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
 #define NK_INCLUDE_FONT_BAKING
@@ -173,6 +174,7 @@ int main(void)
     /* GUI */
     ctx = nk_d3d11_init(device, WINDOW_WIDTH, WINDOW_HEIGHT, MAX_VERTEX_BUFFER, MAX_INDEX_BUFFER);
     /* Load Fonts: if none of these are loaded a default font will be used  */
+    /* Load Cursor: if you uncomment cursor loading please hide the cursor */
     {struct nk_font_atlas *atlas;
     nk_d3d11_font_stash_begin(&atlas);
     /*struct nk_font *droid = nk_font_atlas_add_from_file(atlas, "../../../extra_font/DroidSans.ttf", 14, 0);*/
@@ -182,6 +184,7 @@ int main(void)
     /*struct nk_font *tiny = nk_font_atlas_add_from_file(atlas, "../../../extra_font/ProggyTiny.ttf", 10, 0);*/
     /*struct nk_font *cousine = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Cousine-Regular.ttf", 13, 0);*/
     nk_d3d11_font_stash_end();
+    /*nk_style_load_all_cursors(ctx, atlas->cursors);*/
     /*nk_style_set_font(ctx, &droid->handle)*/;}
 
     /* style.c */
@@ -216,7 +219,7 @@ int main(void)
             static int property = 20;
 
             nk_layout_row_static(ctx, 30, 80, 1);
-            if (nk_button_label(ctx, "button", NK_BUTTON_DEFAULT))
+            if (nk_button_label(ctx, "button"))
                 fprintf(stdout, "button pressed\n");
             nk_layout_row_dynamic(ctx, 30, 2);
             if (nk_option_label(ctx, "easy", op == EASY)) op = EASY;

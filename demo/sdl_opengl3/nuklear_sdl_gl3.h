@@ -19,7 +19,7 @@
 NK_API struct nk_context*   nk_sdl_init(SDL_Window *win);
 NK_API void                 nk_sdl_font_stash_begin(struct nk_font_atlas **atlas);
 NK_API void                 nk_sdl_font_stash_end(void);
-NK_API void                 nk_sdl_handle_event(SDL_Event *evt);
+NK_API int                  nk_sdl_handle_event(SDL_Event *evt);
 NK_API void                 nk_sdl_render(enum nk_anti_aliasing , int max_vertex_buffer, int max_element_buffer);
 NK_API void                 nk_sdl_shutdown(void);
 NK_API void                 nk_sdl_device_destroy(void);
@@ -51,6 +51,12 @@ struct nk_sdl_device {
     GLint uniform_tex;
     GLint uniform_proj;
     GLuint font_tex;
+};
+
+struct nk_sdl_vertex {
+    float position[2];
+    float uv[2];
+    nk_byte col[4];
 };
 
 static struct nk_sdl {
@@ -120,10 +126,10 @@ nk_sdl_device_create(void)
 
     {
         /* buffer setup */
-        GLsizei vs = sizeof(struct nk_draw_vertex);
-        size_t vp = offsetof(struct nk_draw_vertex, position);
-        size_t vt = offsetof(struct nk_draw_vertex, uv);
-        size_t vc = offsetof(struct nk_draw_vertex, col);
+        GLsizei vs = sizeof(struct nk_sdl_vertex);
+        size_t vp = offsetof(struct nk_sdl_vertex, position);
+        size_t vt = offsetof(struct nk_sdl_vertex, uv);
+        size_t vc = offsetof(struct nk_sdl_vertex, col);
 
         glGenBuffers(1, &dev->vbo);
         glGenBuffers(1, &dev->ebo);
@@ -228,16 +234,25 @@ nk_sdl_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_b
         vertices = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
         elements = glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
         {
-            /* fill converting configuration */
+            /* fill convert configuration */
             struct nk_convert_config config;
-            memset(&config, 0, sizeof(config));
-            config.global_alpha = 1.0f;
-            config.shape_AA = AA;
-            config.line_AA = AA;
+            static const struct nk_draw_vertex_layout_element vertex_layout[] = {
+                {NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct nk_sdl_vertex, position)},
+                {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct nk_sdl_vertex, uv)},
+                {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct nk_sdl_vertex, col)},
+                {NK_VERTEX_LAYOUT_END}
+            };
+            NK_MEMSET(&config, 0, sizeof(config));
+            config.vertex_layout = vertex_layout;
+            config.vertex_size = sizeof(struct nk_sdl_vertex);
+            config.vertex_alignment = NK_ALIGNOF(struct nk_sdl_vertex);
+            config.null = dev->null;
             config.circle_segment_count = 22;
             config.curve_segment_count = 22;
             config.arc_segment_count = 22;
-            config.null = dev->null;
+            config.global_alpha = 1.0f;
+            config.shape_AA = AA;
+            config.line_AA = AA;
 
             /* setup buffers to load vertices and elements */
             {struct nk_buffer vbuf, ebuf;
@@ -326,21 +341,10 @@ nk_sdl_font_stash_end(void)
 
 }
 
-NK_API void
+NK_API int
 nk_sdl_handle_event(SDL_Event *evt)
 {
     struct nk_context *ctx = &sdl.ctx;
-
-    /* optional grabbing behavior */
-    if (ctx->input.mouse.grab) {
-        SDL_SetRelativeMouseMode(SDL_TRUE);
-        ctx->input.mouse.grab = 0;
-    } else if (ctx->input.mouse.ungrab) {
-        int x = (int)ctx->input.mouse.prev.x, y = (int)ctx->input.mouse.prev.y;
-        SDL_SetRelativeMouseMode(SDL_FALSE);
-        SDL_WarpMouseInWindow(sdl.win, x, y);
-        ctx->input.mouse.ungrab = 0;
-    }
     if (evt->type == SDL_KEYUP || evt->type == SDL_KEYDOWN) {
         /* key events */
         int down = evt->type == SDL_KEYDOWN;
@@ -388,7 +392,8 @@ nk_sdl_handle_event(SDL_Event *evt)
             if (state[SDL_SCANCODE_LCTRL])
                 nk_input_key(ctx, NK_KEY_TEXT_WORD_RIGHT, down);
             else nk_input_key(ctx, NK_KEY_RIGHT, down);
-        }
+        } else return 0;
+        return 1;
     } else if (evt->type == SDL_MOUSEBUTTONDOWN || evt->type == SDL_MOUSEBUTTONUP) {
         /* mouse button */
         int down = evt->type == SDL_MOUSEBUTTONDOWN;
@@ -399,18 +404,23 @@ nk_sdl_handle_event(SDL_Event *evt)
             nk_input_button(ctx, NK_BUTTON_MIDDLE, x, y, down);
         if (evt->button.button == SDL_BUTTON_RIGHT)
             nk_input_button(ctx, NK_BUTTON_RIGHT, x, y, down);
+        return 1;
     } else if (evt->type == SDL_MOUSEMOTION) {
         if (ctx->input.mouse.grabbed) {
             int x = (int)ctx->input.mouse.prev.x, y = (int)ctx->input.mouse.prev.y;
             nk_input_motion(ctx, x + evt->motion.xrel, y + evt->motion.yrel);
         } else nk_input_motion(ctx, evt->motion.x, evt->motion.y);
+        return 1;
     } else if (evt->type == SDL_TEXTINPUT) {
         nk_glyph glyph;
         memcpy(glyph, evt->text.text, NK_UTF_SIZE);
         nk_input_glyph(ctx, glyph);
+        return 1;
     } else if (evt->type == SDL_MOUSEWHEEL) {
         nk_input_scroll(ctx,(float)evt->wheel.y);
+        return 1;
     }
+    return 0;
 }
 
 NK_API
