@@ -94,7 +94,7 @@ Java: https://github.com/glegris/nuklear4j
 Developed by Micha Mettke and every direct or indirect contributor to the GitHub.
 
 
-Embeds `stb_texedit`, `stb_truetype` and `stb_rectpack` by Sean Barret (public domain)
+Embeds `stb_texedit`, `stb_truetype` and `stb_rectpack` by Sean Barret (public domain)  
 Embeds `ProggyClean.ttf` font by Tristan Grimmer (MIT license).
 
 

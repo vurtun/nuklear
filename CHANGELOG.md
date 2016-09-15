@@ -1,5 +1,11 @@
 # Changelog
 
+- 2016/09/13 (1.15) - !BREAKING! Fixed nonblocking popup behavior in menu, combo,
+                        and contextual which prevented closing in y-direction if
+                        popup did not reach max height.
+                        In addition the height parameter was changed into vec2
+                        for width and height to have more control over the popup size.
+- 2016/09/13 (1.15) - Cleaned up and extended type selection
 - 2016/09/13 (1.141)- Fixed slider behavior hopefully for the last time. This time
                         all calculation are correct so no more hackery.
 - 2016/09/13 (1.141)- Internal change to divide window/panel flags into panel flags and types.
