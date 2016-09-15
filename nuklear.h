@@ -16997,6 +16997,22 @@ nk_menubar_begin(struct nk_context *ctx)
         return;
 
     layout = ctx->current->layout;
+    NK_ASSERT(layout->at_y == layout->bounds.y);
+    /* if this assert triggers you allocated space between nk_begin and nk_menubar_begin.
+    If you want a menubar the first nuklear function after `nk_begin` has to be a
+    `nk_menubar_begin` call. Inside the menubar you then have to allocate space for
+    widgets (also supports multiple rows).
+    Example:
+        if (nk_begin(...)) {
+            nk_menubar_begin(...);
+                nk_layout_xxxx(...);
+                nk_button(...);
+                nk_layout_xxxx(...);
+                nk_button(...);
+            nk_menubar_end(...);
+        }
+        nk_end(...);
+    */
     if (layout->flags & NK_WINDOW_HIDDEN || layout->flags & NK_WINDOW_MINIMIZED)
         return;
 
