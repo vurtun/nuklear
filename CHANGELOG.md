@@ -1,5 +1,4 @@
 # Changelog
-
 - 2016/09/13 (1.15) - !BREAKING! Fixed nonblocking popup behavior in menu, combo,
                         and contextual which prevented closing in y-direction if
                         popup did not reach max height.
