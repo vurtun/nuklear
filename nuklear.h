@@ -19819,7 +19819,12 @@ nk_popup_end(struct nk_context *ctx)
     if (!popup->parent) return;
     win = popup->parent;
     if (popup->flags & NK_WINDOW_HIDDEN) {
-        win->layout->flags |= NK_WINDOW_REMOVE_ROM;
+        struct nk_panel *root;
+        root = win->layout;
+        while (root) {
+            root->flags |= NK_WINDOW_REMOVE_ROM;
+            root = root->parent;
+        }
         win->popup.active = 0;
     }
     nk_push_scissor(&popup->buffer, nk_null_rect);
