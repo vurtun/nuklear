@@ -12783,6 +12783,11 @@ nk_draw_slider(struct nk_command_buffer *out, nk_flags state,
     /* select correct slider images/colors */
     struct nk_color bar_color;
     const struct nk_style_item *cursor;
+
+    NK_UNUSED(min);
+    NK_UNUSED(max);
+    NK_UNUSED(value);
+
     if (state & NK_WIDGET_STATE_ACTIVED) {
         background = &style->active;
         bar_color = style->bar_active;
@@ -15950,7 +15955,7 @@ nk_panel_end(struct nk_context *ctx)
 
     /* cache configuration data */
     scrollbar_size = style->window.scrollbar_size;
-    panel_padding = nk_panel_get_padding(style, window->flags);
+    panel_padding = nk_panel_get_padding(style, layout->type);
 
     /* update the current cursor Y-position to point over the last added widget */
     layout->at_y += layout->row.height;
@@ -16098,7 +16103,7 @@ nk_panel_end(struct nk_context *ctx)
     /* window border */
     if (layout->flags & NK_WINDOW_BORDER)
     {
-        struct nk_color border_color = nk_panel_get_border_color(style, layout->flags);
+        struct nk_color border_color = nk_panel_get_border_color(style, layout->type);
         const float padding_y = (layout->flags & NK_WINDOW_MINIMIZED) ?
             style->window.border + window->bounds.y + layout->header_height:
             (layout->flags & NK_WINDOW_DYNAMIC)?
@@ -17953,7 +17958,7 @@ nk_widget_fitting(struct nk_rect *bounds, struct nk_context *ctx,
     layout = win->layout;
     state = nk_widget(bounds, ctx);
 
-    panel_padding = nk_panel_get_padding(style, win->flags);
+    panel_padding = nk_panel_get_padding(style, layout->type);
     if (layout->row.index == 1) {
         bounds->w += panel_padding.x;
         bounds->x -= panel_padding.x;
@@ -20092,7 +20097,6 @@ nk_contextual_close(struct nk_context *ctx)
 NK_API void
 nk_contextual_end(struct nk_context *ctx)
 {
-    nk_flags flags;
     struct nk_window *popup;
     struct nk_panel *panel;
     NK_ASSERT(ctx);
@@ -20757,7 +20761,7 @@ nk_combo(struct nk_context *ctx, const char **items, int count,
         return selected;
 
     item_spacing = ctx->style.window.spacing;
-    window_padding = nk_panel_get_padding(&ctx->style, ctx->current->flags);
+    window_padding = nk_panel_get_padding(&ctx->style, ctx->current->layout->type);
     max_height = count * item_height + count * (int)item_spacing.y;
     max_height += (int)item_spacing.y * 2 + (int)window_padding.y * 2;
     size.y = NK_MIN(size.y, (float)max_height);
@@ -20792,7 +20796,7 @@ nk_combo_separator(struct nk_context *ctx, const char *items_separated_by_separa
 
     /* calculate popup window */
     item_spacing = ctx->style.window.spacing;
-    window_padding = nk_panel_get_padding(&ctx->style, ctx->current->flags);
+    window_padding = nk_panel_get_padding(&ctx->style, ctx->current->layout->type);
     max_height = count * item_height + count * (int)item_spacing.y;
     max_height += (int)item_spacing.y * 2 + (int)window_padding.y * 2;
     size.y = NK_MIN(size.y, (float)max_height);
@@ -20845,7 +20849,7 @@ nk_combo_callback(struct nk_context *ctx, void(*item_getter)(void*, int, const c
 
     /* calculate popup window */
     item_spacing = ctx->style.window.spacing;
-    window_padding = nk_panel_get_padding(&ctx->style, ctx->current->flags);
+    window_padding = nk_panel_get_padding(&ctx->style, ctx->current->layout->type);
     max_height = count * item_height + count * (int)item_spacing.y;
     max_height += (int)item_spacing.y * 2 + (int)window_padding.y * 2;
     size.y = NK_MIN(size.y, (float)max_height);
