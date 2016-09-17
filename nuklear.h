@@ -6201,6 +6201,7 @@ nk_draw_vertex_color(void *attribute, const float *values,
         nk_uint color = nk_color_u32(col);
         NK_MEMCPY(attribute, &color, sizeof(color));
     } break;
+    default: NK_ASSERT(0);
     }
 }
 
@@ -6254,6 +6255,7 @@ nk_draw_vertex_element(void *dst, const float *values, int value_count,
             NK_MEMCPY(attribute, &value, sizeof(value));
             attribute = (void*)((char*)attribute + sizeof(double));
             } break;
+        default: NK_ASSERT(0);
         }
     }
 }
