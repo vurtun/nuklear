@@ -3535,8 +3535,9 @@ nk_strfmt(char *buf, int buf_size, const char *fmt,...)
     int w;
     va_list args;
     va_start(args, fmt);
-    w = vsnprintf(buf, (nk_size)buf_size, fmt, args);
+    w = vsprintf(buf, fmt, args);
     va_end(args);
+    NK_ASSERT(w < buf_size);
     buf[buf_size-1] = 0;
     return (w == -1) ?(int)buf_size:w;
 }
@@ -3544,7 +3545,8 @@ nk_strfmt(char *buf, int buf_size, const char *fmt,...)
 NK_INTERN int
 nk_strfmtv(char *buf, int buf_size, const char *fmt, va_list args)
 {
-    int w = vsnprintf(buf, (nk_size)buf_size, fmt, args);
+    int w = vsprintf(buf, fmt, args);
+    NK_ASSERT(w < buf_size);
     buf[buf_size-1] = 0;
     return (w == -1) ? (int)buf_size:w;
 }
