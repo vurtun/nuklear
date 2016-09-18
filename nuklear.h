@@ -76,102 +76,132 @@ OPTIONAL DEFINES:
         If defined it will include header <stdint.h> for fixed sized types
         otherwise nuklear tries to select the correct type. If that fails it will
         throw a compiler error and you have to select the correct types yourself.
+        <!> If used needs to be defined for implementation and header <!>
 
     NK_INCLUDE_DEFAULT_ALLOCATOR
         if defined it will include header <stdlib.h> and provide additional functions
         to use this library without caring for memory allocation control and therefore
         ease memory management.
-        IMPORTANT:  this adds the standard library with malloc and free so don't define
-                    if you don't want to link to the standard library!
+        <!> Adds the standard library with malloc and free so don't define if you
+            don't want to link to the standard library <!>
+        <!> If used needs to be defined for implementation and header <!>
 
     NK_INCLUDE_STANDARD_IO
         if defined it will include header <stdio.h> and provide
         additional functions depending on file loading.
-        IMPORTANT:  this adds the standard library with fopen, fclose,...
-                    so don't define this if you don't want to link to the standard library!
+        <!> Adds the standard library with fopen, fclose,... so don't define this
+            if you don't want to link to the standard library <!>
+        <!> If used needs to be defined for implementation and header <!>
 
     NK_INCLUDE_STANDARD_VARARGS
-        if defined it will include header <stdarg.h> and provide
+        if defined it will include header <stdarg.h> as well as <stdio.h> and provide
         additional functions depending on variable arguments
-        IMPORTANT:  this adds the standard library with va_list,...
-                    so don't define this if you don't want to link to the standard library!
+        <!> Adds the standard library with va_list and vsprintf/vsnprintf
+            so don't define this if you don't want to link to the standard library<!>
+        <!> If used needs to be defined for implementation and header <!>
 
     NK_INCLUDE_VERTEX_BUFFER_OUTPUT
         Defining this adds a vertex draw command list backend to this
         library, which allows you to convert queue commands into vertex draw commands.
         This is mainly if you need a hardware accessible format for OpenGL, DirectX,
         Vulkan, Metal,...
+        <!> If used needs to be defined for implementation and header <!>
 
     NK_INCLUDE_FONT_BAKING
         Defining this adds the `stb_truetype` and `stb_rect_pack` implementation
         to this library and provides font baking and rendering.
         If you already have font handling or do not want to use this font handler
         you don't have to define it.
+        <!> If used needs to be defined for implementation and header <!>
 
     NK_INCLUDE_DEFAULT_FONT
         Defining this adds the default font: ProggyClean.ttf into this library
         which can be loaded into a font atlas and allows using this library without
         having a truetype font
-        IMPORTANT: enabling this adds ~12kb to global stack memory
+        <!> Enabling this adds ~12kb to global stack memory <!>
+        <!> If used needs to be defined for implementation and header <!>
 
     NK_INCLUDE_COMMAND_USERDATA
         Defining this adds a userdata pointer into each command. Can be useful for
         example if you want to provide custom shaders depending on the used widget.
         Can be combined with the style structures.
+        <!> If used needs to be defined for implementation and header <!>
 
     NK_BUTTON_TRIGGER_ON_RELEASE
         Different platforms require button clicks occuring either on buttons being
         pressed (up to down) or released (down to up).
         By default this library will react on buttons being pressed, but if you
         define this it will only trigger if a button is released.
+        <!> If used it is only required to be defined for the implementation part <!>
 
     NK_ASSERT
         If you don't define this, nuklear will use <assert.h> with assert().
-        IMPORTANT:  it also adds the standard library so define to nothing of not wanted!
+        <!> Adds the standard library so define to nothing of not wanted <!>
+        <!> If used needs to be defined for implementation and header <!>
 
     NK_BUFFER_DEFAULT_INITIAL_SIZE
         Initial buffer size allocated by all buffers while using the default allocator
         functions included by defining NK_INCLUDE_DEFAULT_ALLOCATOR. If you don't
         want to allocate the default 4k memory then redefine it.
+        <!> If used needs to be defined for implementation and header <!>
 
     NK_MAX_NUMBER_BUFFER
         Maximum buffer size for the conversion buffer between float and string
         Under normal circumstances this should be more than sufficient.
+        <!> If used needs to be defined for implementation and header <!>
 
     NK_INPUT_MAX
         Defines the max number of bytes which can be added as text input in one frame.
         Under normal circumstances this should be more than sufficient.
+        <!> If used it is only required to be defined for the implementation part <!>
 
     NK_MEMSET
         You can define this to 'memset' or your own memset implementation
         replacement. If not nuklear will use its own version.
+        <!> If used it is only required to be defined for the implementation part <!>
 
     NK_MEMCOPY
         You can define this to 'memcpy' or your own memcpy implementation
         replacement. If not nuklear will use its own version.
+        <!> If used it is only required to be defined for the implementation part <!>
 
     NK_SQRT
         You can define this to 'sqrt' or your own sqrt implementation
         replacement. If not nuklear will use its own slow and not highly
         accurate version.
+        <!> If used it is only required to be defined for the implementation part <!>
 
     NK_SIN
         You can define this to 'sinf' or your own sine implementation
         replacement. If not nuklear will use its own approximation implementation.
+        <!> If used it is only required to be defined for the implementation part <!>
 
     NK_COS
         You can define this to 'cosf' or your own cosine implementation
         replacement. If not nuklear will use its own approximation implementation.
+        <!> If used it only needs to be define for the implementation not header  <!>
+        <!> If used it is only required to be defined for the implementation part <!>
 
     NK_STRTOD
         You can define this to `strtod` or your own string to double conversion
         implementation replacement. If not defined nuklear will use its own
-        imprecise and possibly unsafe version.
+        imprecise and possibly unsafe version (does not handle nan or infinity!).
+        <!> If used it is only required to be defined for the implementation part <!>
 
     NK_DTOA
         You can define this to `dtoa` or your own double to string conversion
         implementation replacement. If not defined nuklear will use its own
-        imprecise and possibly unsafe version.
+        imprecise and possibly unsafe version (does not handle nan or infinity!).
+        <!> If used it is only required to be defined for the implementation part <!>
+
+    NK_VSNPRINTF
+        If you define `NK_INCLUDE_STANDARD_VARARGS` as well as `NK_INCLUDE_STANDARD_IO`
+        and want to be safe define this to `vsnprintf` on compilers supporting
+        later versions of C or C++. By default nuklear will check for your stdlib version
+        in C as well as compiler version in C++. if `vsnprintf` is available
+        it will define it to `vsnprintf` directly. If not defined and if you have
+        older versions of C or C++ it will be defined to `vsprintf` which is unsafe.
+        <!> If used it is only required to be defined for the implementation part <!>
 
     NK_BYTE
     NK_INT16
@@ -182,7 +212,7 @@ OPTIONAL DEFINES:
     NK_POINTER_TYPE
         If you compile without NK_USE_FIXED_TYPE then a number of standard types
         will be selected and compile time validated. If they are incorrect you can
-        define the correct types.
+        define the correct types by overloading these type defines.
 
 CREDITS:
     Developed by Micha Mettke and every direct or indirect contributor to the GitHub.
@@ -354,8 +384,6 @@ typedef nk_uint nk_rune;
 /* Make sure correct type size:
  * This will fire with a negative subscript error if the type sizes
  * are set incorrectly by the compiler, and compile out if not */
-NK_STATIC_ASSERT(sizeof(nk_size) >= sizeof(void*));
-NK_STATIC_ASSERT(sizeof(nk_ptr) >= sizeof(void*));
 NK_STATIC_ASSERT(sizeof(nk_short) == 2);
 NK_STATIC_ASSERT(sizeof(nk_ushort) == 2);
 NK_STATIC_ASSERT(sizeof(nk_uint) == 4);
@@ -363,6 +391,8 @@ NK_STATIC_ASSERT(sizeof(nk_int) == 4);
 NK_STATIC_ASSERT(sizeof(nk_byte) == 1);
 NK_STATIC_ASSERT(sizeof(nk_flags) >= 4);
 NK_STATIC_ASSERT(sizeof(nk_rune) >= 4);
+NK_STATIC_ASSERT(sizeof(nk_size) >= sizeof(void*));
+NK_STATIC_ASSERT(sizeof(nk_ptr) >= sizeof(void*));
 
 /* ============================================================================
  *
@@ -576,6 +606,7 @@ enum nk_text_alignment {
     NK_TEXT_RIGHT       = NK_TEXT_ALIGN_MIDDLE|NK_TEXT_ALIGN_RIGHT
 };
 
+/* edit flags */
 enum nk_edit_flags {
     NK_EDIT_DEFAULT                 = 0,
     NK_EDIT_READ_ONLY               = NK_FLAG(0),
@@ -687,7 +718,6 @@ NK_API struct nk_vec2           nk_layout_space_to_local(struct nk_context*, str
 NK_API struct nk_rect           nk_layout_space_rect_to_screen(struct nk_context*, struct nk_rect);
 NK_API struct nk_rect           nk_layout_space_rect_to_local(struct nk_context*, struct nk_rect);
 NK_API float                    nk_layout_ratio_from_pixel(struct nk_context*, float pixel_width);
-NK_API float                    nk_layout_pixel_from_ratio(struct nk_context*, float ratio);
 
 /* Layout: Group */
 NK_API int                      nk_group_begin(struct nk_context*, struct nk_panel*, const char *title, nk_flags);
@@ -973,6 +1003,9 @@ NK_API struct nk_color          nk_hsva_fv(const float *hsva);
 /* color (conversion nuklear --> user) */
 NK_API void                     nk_color_f(float *r, float *g, float *b, float *a, struct nk_color);
 NK_API void                     nk_color_fv(float *rgba_out, struct nk_color);
+NK_API void                     nk_color_d(double *r, double *g, double *b, double *a, struct nk_color);
+NK_API void                     nk_color_dv(double *rgba_out, struct nk_color);
+
 NK_API nk_uint                  nk_color_u32(struct nk_color);
 NK_API void                     nk_color_hex_rgba(char *output, struct nk_color);
 NK_API void                     nk_color_hex_rgb(char *output, struct nk_color);
@@ -1030,9 +1063,6 @@ NK_API double                   nk_strtod(const char *str, char **endptr);
 NK_API int                      nk_strfilter(const char *text, const char *regexp);
 NK_API int                      nk_strmatch_fuzzy_string(char const *str, char const *pattern, int *out_score);
 NK_API int                      nk_strmatch_fuzzy_text(const char *txt, int txt_len, const char *pattern, int *out_score);
-#ifdef NK_INCLUDE_STANDARD_VARARGS
-NK_API int                      nk_strfmt(char *buf, int len, const char *fmt,...);
-#endif
 
 /* UTF-8 */
 NK_API int                      nk_utf_decode(const char*, nk_rune*, int);
@@ -1461,6 +1491,7 @@ struct nk_font_atlas {
     void *pixel;
     int tex_width;
     int tex_height;
+
     struct nk_allocator permanent;
     struct nk_allocator temporary;
     struct nk_recti custom;
@@ -2802,6 +2833,7 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #endif
 #ifdef NK_INCLUDE_STANDARD_VARARGS
 #include <stdarg.h> /* valist, va_start, va_end, ... */
+#include <stdio.h> /* vsnprintf */
 #endif
 #ifndef NK_ASSERT
 #include <assert.h>
@@ -2828,6 +2860,17 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #endif
 #ifndef NK_DTOA
 #define NK_DTOA nk_dtoa
+#endif
+#ifndef NK_VSNPRINTF
+/* If your compiler does support vsnprintf I would highly recommend
+ * defining this to vsnprintf instead since `vsprintf` is basically
+ * unbelievable unsafe and should *NEVER* be used. But I have to support
+ * it since C89 only provides this unsafe version. */
+#if __STDC_VERISON__ >= 199901L || __cplusplus >= 201103L
+    #define NK_VSNPRINTF(s,n,f,a) vsnprintf(s,f,a)
+#else
+    #define NK_VSNPRINTF(s,n,f,a) vsprintf(s,f,a)
+#endif
 #endif
 
 #define NK_SCHAR_MIN (-127)
@@ -2857,7 +2900,7 @@ NK_STATIC_ASSERT(sizeof(nk_int) == 4);
 NK_STATIC_ASSERT(sizeof(nk_byte) == 1);
 
 NK_GLOBAL const struct nk_rect nk_null_rect = {-8192.0f, -8192.0f, 16384, 16384};
-NK_GLOBAL const float NK_FLOAT_PRECISION = 0.00000000000001f;
+#define NK_FLOAT_PRECISION 0.00000000000001
 
 NK_GLOBAL const struct nk_color nk_red = {255,0,0,255};
 NK_GLOBAL const struct nk_color nk_green = {0,255,0,255};
@@ -3228,7 +3271,7 @@ nk_strtoi(const char *str, char **endptr)
         neg = -1;
         p++;
     }
-    while (*p && *p != '.' && *p != 'e') {
+    while (*p && *p >= '0' && *p <= '9') {
         value = value * 10 + (int) (*p - '0');
         p++;
     }
@@ -3528,28 +3571,6 @@ NK_API int
 nk_strmatch_fuzzy_string(char const *str, char const *pattern, int *out_score)
 {return nk_strmatch_fuzzy_text(str, nk_strlen(str), pattern, out_score);}
 
-#ifdef NK_INCLUDE_STANDARD_VARARGS
-NK_API int
-nk_strfmt(char *buf, int buf_size, const char *fmt,...)
-{
-    int w;
-    va_list args;
-    va_start(args, fmt);
-    w = vsnprintf(buf, (nk_size)buf_size, fmt, args);
-    va_end(args);
-    buf[buf_size-1] = 0;
-    return (w == -1) ?(int)buf_size:w;
-}
-
-NK_INTERN int
-nk_strfmtv(char *buf, int buf_size, const char *fmt, va_list args)
-{
-    int w = vsnprintf(buf, (nk_size)buf_size, fmt, args);
-    buf[buf_size-1] = 0;
-    return (w == -1) ? (int)buf_size:w;
-}
-#endif
-
 NK_INTERN int
 nk_string_float_limit(char *string, int prec)
 {
@@ -3571,11 +3592,11 @@ nk_string_float_limit(char *string, int prec)
     return (int)(c - string);
 }
 
-NK_INTERN float
-nk_pow(float x, int n)
+NK_INTERN double
+nk_pow(double x, int n)
 {
     /*  check the sign of n */
-    float r = 1;
+    double r = 1;
     int plus = n >= 0;
     n = (plus) ? n : -n;
     while (n > 0) {
@@ -3584,26 +3605,33 @@ nk_pow(float x, int n)
         n /= 2;
         x *= x;
     }
-    return plus ? r : 1.0f / r;
+    return plus ? r : 1.0 / r;
 }
 
 NK_INTERN int
-nk_ifloor(double x)
+nk_ifloord(double x)
 {
     x = (double)((int)x - ((x < 0.0) ? 1 : 0));
     return (int)x;
 }
 
 NK_INTERN int
-nk_iceil(double x)
+nk_ifloorf(float x)
+{
+    x = (float)((int)x - ((x < 0.0f) ? 1 : 0));
+    return (int)x;
+}
+
+NK_INTERN int
+nk_iceilf(float x)
 {
     if (x >= 0) {
         int i = (int)x;
         return i;
     } else {
         int t = (int)x;
-        double r = x - (double)t;
-        return (r > 0.0) ? t+1: t;
+        float r = x - (float)t;
+        return (r > 0.0f) ? t+1: t;
     }
 }
 
@@ -3639,9 +3667,9 @@ nk_strrev_ascii(char *s)
 }
 
 NK_INTERN char*
-nk_itoa(char *s, int n)
+nk_itoa(char *s, long n)
 {
-    int i = 0;
+    long i = 0;
     if (n == 0) {
         s[i++] = '0';
         s[i] = 0;
@@ -3674,7 +3702,7 @@ nk_dtoa(char *s, double n)
     NK_ASSERT(s);
     if (!s) return 0;
 
-    if (n == 0.0f) {
+    if (n == 0.0) {
         s[0] = '0'; s[1] = '\0';
         return s;
     }
@@ -3704,7 +3732,7 @@ nk_dtoa(char *s, double n)
         double weight = nk_pow(10.0, m);
         if (weight > 0) {
             double t = (double)n / weight;
-            digit = nk_ifloor(t);
+            digit = nk_ifloord(t);
             n -= ((double)digit * weight);
             *(c++) = (char)('0' + (char)digit);
         }
@@ -3741,6 +3769,179 @@ nk_dtoa(char *s, double n)
     *(c) = '\0';
     return s;
 }
+
+#ifdef NK_INCLUDE_STANDARD_VARARGS
+NK_INTERN int
+nk_strfmt(char *buf, int buf_size, const char *fmt, va_list args)
+{
+    int result = -1;
+#if NK_INCLUDE_STANDARD_IO
+    if (!buf || !buf_size || !fmt) return result;
+    result = NK_VSNPRINTF(buf, (nk_size)buf_size, fmt, args);
+    result = (result >= buf_size) ? -1: result;
+    buf[buf_size-1] = 0;
+#else
+    enum nk_arg_type {NK_ARG_TYPE_CHAR, NK_ARG_TYPE_SHORT, NK_ARG_TYPE_INT, NK_ARG_TYPE_LONG};
+    {char number_buffer[NK_MAX_NUMBER_BUFFER];
+    enum nk_arg_type arg_type = NK_ARG_TYPE_INT;
+
+    int len = 0;
+    int precision = -1;
+    const char *iter = fmt;
+    if (!buf || !buf_size || !fmt) return result;
+    for (iter = fmt; *iter && len < buf_size; iter++) {
+        /* copy all non-format variables */
+        while (*iter && *iter != '%' && len < buf_size)
+            buf[len++] = *iter++;
+        if (!(*iter) || len >= buf_size) break;
+        iter++;
+
+        /* precision argument */
+        if (*iter == '.') {
+            char *end;
+            iter++;
+            precision = nk_strtoi(iter, &end);
+            if (end == iter)
+                precision = -1;
+            else iter = end;
+        }
+
+        /* type argument */
+        if (*iter == 'h') {
+            if (*(iter+1) == 'h') {
+                arg_type = NK_ARG_TYPE_CHAR;
+                iter++;
+            } else arg_type = NK_ARG_TYPE_SHORT;
+            iter++;
+        } else if (*iter == 'l') {
+            arg_type = NK_ARG_TYPE_CHAR;
+            iter++;
+        } else arg_type = NK_ARG_TYPE_INT;
+
+
+        /* value arguments */
+        if (*iter == '%') {
+            if (len < buf_size)
+                buf[len++] = '%';
+        } else if (*iter == 's') {
+            /* string values */
+            const char *str = va_arg(args, const char*);
+            while (str && *str && len < buf_size)
+                buf[len++] = *str++;
+        } else if (*iter == 'c' || *iter == 'i' || *iter == 'd' || *iter == 'n') {
+            /* signed integer values */
+            long value = 0;
+            const char *num_iter;
+            int num_len, num_print;
+            int cur_precision = NK_MAX(precision, 1);
+
+            /* retrieve correct value type */
+            if (arg_type == NK_ARG_TYPE_CHAR)
+                value = (signed char)va_arg(args, int);
+            else if (arg_type == NK_ARG_TYPE_SHORT)
+                value = (signed short)va_arg(args, int);
+            else if (arg_type == NK_ARG_TYPE_LONG)
+                value = va_arg(args, signed long);
+            else if (*iter == 'c')
+                value = (unsigned char)va_arg(args, int);
+            else value = va_arg(args, signed int);
+
+            /* convert number to string */
+            nk_itoa(number_buffer, value);
+            num_len = nk_strlen(number_buffer);
+
+            /* fill up to precision number of digits */
+            num_print = NK_MAX(cur_precision, num_len);
+            while (precision && num_print > num_len && len < buf_size) {
+                buf[len++] = ' ';
+                num_print--;
+            }
+            /* copy string value representation into buffer */
+            num_iter = number_buffer;
+            while (precision && *num_iter && len < buf_size)
+                buf[len++] = *num_iter++;
+
+        } else if (*iter == 'o' || *iter == 'x' || *iter == 'X' || *iter == 'u') {
+            /* unsigned integer values */
+            unsigned long value = 0;
+            int num_len = 0, num_print;
+            int cur_precision = NK_MAX(precision, 1);
+
+            /* retrieve correct value type */
+            if (arg_type == NK_ARG_TYPE_CHAR)
+                value = (unsigned long)va_arg(args, int);
+            else if (arg_type == NK_ARG_TYPE_SHORT)
+                value = (unsigned long)va_arg(args, int);
+            else if (arg_type == NK_ARG_TYPE_LONG)
+                value = va_arg(args, unsigned long);
+            else value = va_arg(args, unsigned int);
+
+            /* print oct/hex/dec value */
+            {const char *upper_output_format = "0123456789ABCDEF";
+            const char *lower_output_format = "0123456789abcdef";
+            const char *output_format = (*iter == 'x') ?
+                lower_output_format: upper_output_format;
+
+            do {
+                /* convert decimal number into hex/oct number */
+                unsigned int base = (*iter == 'o') ? 8: (*iter == 'u')? 10: 16;
+                int digit = output_format[value % base];
+                if (num_len < NK_MAX_NUMBER_BUFFER)
+                    number_buffer[num_len++] = (char)digit;
+                value /= base;
+            } while (value > 0);}
+
+            /* fill up to precision number of digits */
+            num_print = NK_MAX(cur_precision, num_len);
+            while (precision && num_print > num_len && len < buf_size) {
+                buf[len++] = ' ';
+                num_print--;
+            }
+
+            /* revert number direction */
+            while (num_len > 0) {
+                if (precision && len < buf_size)
+                    buf[len++] = number_buffer[num_len-1];
+                num_len--;
+            }
+        } else if (*iter == 'f') {
+            /* floating point values */
+            int cur_precision = (precision < 0) ? 6: precision;
+            double value = va_arg(args, double);
+            int frac_len = 0, dot = 0;
+            const char *num_iter;
+            NK_DTOA(number_buffer, value);
+
+            /* copy string value representation into buffer */
+            num_iter = number_buffer;
+            while (*num_iter) {
+                if (dot) frac_len++;
+                if (len < buf_size)
+                    buf[len++] = *num_iter;
+                if (*num_iter == '.') dot = 1;
+                if (frac_len >= cur_precision) break;
+                num_iter++;
+            }
+
+            /* fill number up to precision */
+            while (frac_len < cur_precision) {
+                if (!dot && len < buf_size) {
+                    buf[len++] = '.';
+                    dot = 1;
+                }
+                if (len < buf_size) {
+                    buf[len++] = '0';
+                }
+                frac_len++;
+            }
+        } else NK_ASSERT(0 && "format is not supported!");
+    }
+    buf[(len >= buf_size)?(buf_size-1):len] = 0;
+    result = (len >= buf_size)?-1:len;}
+#endif
+    return result;
+}
+#endif
 
 NK_API nk_hash
 nk_murmur_hash(const void * key, int len, nk_hash seed)
@@ -4118,6 +4319,22 @@ NK_API void
 nk_color_fv(float *c, struct nk_color in)
 {
     nk_color_f(&c[0], &c[1], &c[2], &c[3], in);
+}
+
+NK_API void
+nk_color_d(double *r, double *g, double *b, double *a, struct nk_color in)
+{
+    NK_STORAGE const double s = 1.0/255.0;
+    *r = (double)in.r * s;
+    *g = (double)in.g * s;
+    *b = (double)in.b * s;
+    *a = (double)in.a * s;
+}
+
+NK_API void
+nk_color_dv(double *c, struct nk_color in)
+{
+    nk_color_d(&c[0], &c[1], &c[2], &c[3], in);
 }
 
 NK_API void
@@ -5527,7 +5744,7 @@ nk_stroke_rect(struct nk_command_buffer *b, struct nk_rect rect,
 {
     struct nk_command_rect *cmd;
     NK_ASSERT(b);
-    if (!b || c.a == 0 || !rect.w || !rect.h) return;
+    if (!b || c.a == 0 || rect.w == 0 || rect.h == 0) return;
     if (b->use_clipping) {
         const struct nk_rect *clip = &b->clip;
         if (!NK_INTERSECT(rect.x, rect.y, rect.w, rect.h,
@@ -5552,7 +5769,7 @@ nk_fill_rect(struct nk_command_buffer *b, struct nk_rect rect,
 {
     struct nk_command_rect_filled *cmd;
     NK_ASSERT(b);
-    if (!b || c.a == 0 || !rect.w || !rect.h) return;
+    if (!b || c.a == 0 || rect.w == 0 || rect.h == 0) return;
     if (b->use_clipping) {
         const struct nk_rect *clip = &b->clip;
         if (!NK_INTERSECT(rect.x, rect.y, rect.w, rect.h,
@@ -5577,7 +5794,7 @@ nk_fill_rect_multi_color(struct nk_command_buffer *b, struct nk_rect rect,
 {
     struct nk_command_rect_multi_color *cmd;
     NK_ASSERT(b);
-    if (!b || !rect.w || !rect.h) return;
+    if (!b || rect.w == 0 || rect.h == 0) return;
     if (b->use_clipping) {
         const struct nk_rect *clip = &b->clip;
         if (!NK_INTERSECT(rect.x, rect.y, rect.w, rect.h,
@@ -5602,7 +5819,7 @@ nk_stroke_circle(struct nk_command_buffer *b, struct nk_rect r,
     float line_thickness, struct nk_color c)
 {
     struct nk_command_circle *cmd;
-    if (!b || !r.w || !r.h) return;
+    if (!b || r.w == 0 || r.h == 0) return;
     if (b->use_clipping) {
         const struct nk_rect *clip = &b->clip;
         if (!NK_INTERSECT(r.x, r.y, r.w, r.h, clip->x, clip->y, clip->w, clip->h))
@@ -5625,7 +5842,7 @@ nk_fill_circle(struct nk_command_buffer *b, struct nk_rect r, struct nk_color c)
 {
     struct nk_command_circle_filled *cmd;
     NK_ASSERT(b);
-    if (!b || c.a == 0 || !r.w || !r.h) return;
+    if (!b || c.a == 0 || r.w == 0 || r.h == 0) return;
     if (b->use_clipping) {
         const struct nk_rect *clip = &b->clip;
         if (!NK_INTERSECT(r.x, r.y, r.w, r.h, clip->x, clip->y, clip->w, clip->h))
@@ -5809,7 +6026,7 @@ nk_draw_image(struct nk_command_buffer *b, struct nk_rect r,
     if (!b) return;
     if (b->use_clipping) {
         const struct nk_rect *c = &b->clip;
-        if (!c->w || !c->h || !NK_INTERSECT(r.x, r.y, r.w, r.h, c->x, c->y, c->w, c->h))
+        if (c->w == 0 || c->h == 0 || !NK_INTERSECT(r.x, r.y, r.w, r.h, c->x, c->y, c->w, c->h))
             return;
     }
 
@@ -5837,7 +6054,7 @@ nk_draw_text(struct nk_command_buffer *b, struct nk_rect r,
     if (!b || !string || !length || (bg.a == 0 && fg.a == 0)) return;
     if (b->use_clipping) {
         const struct nk_rect *c = &b->clip;
-        if (!c->w || !c->h || !NK_INTERSECT(r.x, r.y, r.w, r.h, c->x, c->y, c->w, c->h))
+        if (c->w == 0 || c->h == 0 || !NK_INTERSECT(r.x, r.y, r.w, r.h, c->x, c->y, c->w, c->h))
             return;
     }
 
@@ -6146,9 +6363,10 @@ nk_draw_vertex_color(void *attribute, const float *values,
     /* if this triggers you tried to provide a value format for a color */
     NK_ASSERT(format >= NK_FORMAT_COLOR_BEGIN);
     NK_ASSERT(format <= NK_FORMAT_COLOR_END);
-    if (format < NK_FORMAT_COLOR_BEGIN && format > NK_FORMAT_COLOR_END) return;
+    if (format < NK_FORMAT_COLOR_BEGIN || format > NK_FORMAT_COLOR_END) return;
 
     switch (format) {
+    default: NK_ASSERT(0 && "Invalid vertex layout color format"); break;
     case NK_FORMAT_R8G8B8A8:
     case NK_FORMAT_R8G8B8: {
         struct nk_color col = nk_rgba_fv(values);
@@ -6215,6 +6433,7 @@ nk_draw_vertex_element(void *dst, const float *values, int value_count,
     if (format >= NK_FORMAT_COLOR_BEGIN && format <= NK_FORMAT_COLOR_END) return;
     for (value_index = 0; value_index < value_count; ++value_index) {
         switch (format) {
+        default: NK_ASSERT(0 && "invalid vertex layout format"); break;
         case NK_FORMAT_SCHAR: {
             char value = (char)NK_CLAMP(NK_SCHAR_MIN, values[value_index], NK_SCHAR_MAX);
             NK_MEMCPY(attribute, &value, sizeof(value));
@@ -6267,10 +6486,11 @@ nk_draw_vertex(void *dst, const struct nk_convert_config *config,
     while (!nk_draw_vertex_layout_element_is_end_of_layout(elem_iter)) {
         void *address = (void*)((char*)dst + elem_iter->offset);
         switch (elem_iter->attribute) {
+        case NK_VERTEX_ATTRIBUTE_COUNT:
+        default: NK_ASSERT(0 && "wrong element attribute");
         case NK_VERTEX_POSITION: nk_draw_vertex_element(address, &pos.x, 2, elem_iter->format); break;
         case NK_VERTEX_TEXCOORD: nk_draw_vertex_element(address, &uv.x, 2, elem_iter->format); break;
         case NK_VERTEX_COLOR: nk_draw_vertex_color(address, &color.r, elem_iter->format); break;
-        default: break;
         }
         elem_iter++;
     }
@@ -8239,10 +8459,10 @@ nk_tt_GetGlyphBitmapBoxSubpixel(const struct nk_tt_fontinfo *font,
         if (iy1) *iy1 = 0;
     } else {
         /* move to integral bboxes (treating pixels as little squares, what pixels get touched)? */
-        if (ix0) *ix0 = nk_ifloor((float)x0 * scale_x + shift_x);
-        if (iy0) *iy0 = nk_ifloor((float)-y1 * scale_y + shift_y);
-        if (ix1) *ix1 = nk_iceil ((float)x1 * scale_x + shift_x);
-        if (iy1) *iy1 = nk_iceil ((float)-y0 * scale_y + shift_y);
+        if (ix0) *ix0 = nk_ifloorf((float)x0 * scale_x + shift_x);
+        if (iy0) *iy0 = nk_ifloorf((float)-y1 * scale_y + shift_y);
+        if (ix1) *ix1 = nk_iceilf ((float)x1 * scale_x + shift_x);
+        if (iy1) *iy1 = nk_iceilf ((float)-y0 * scale_y + shift_y);
     }
 }
 
@@ -9233,8 +9453,8 @@ nk_tt_GetPackedQuad(struct nk_tt_packedchar *chardata, int pw, int ph,
     float ipw = 1.0f / (float)pw, iph = 1.0f / (float)ph;
     struct nk_tt_packedchar *b = (struct nk_tt_packedchar*)(chardata + char_index);
     if (align_to_integer) {
-        int tx = nk_ifloor((*xpos + b->xoff) + 0.5f);
-        int ty = nk_ifloor((*ypos + b->yoff) + 0.5f);
+        int tx = nk_ifloorf((*xpos + b->xoff) + 0.5f);
+        int ty = nk_ifloorf((*ypos + b->yoff) + 0.5f);
 
         float x = (float)tx;
         float y = (float)ty;
@@ -16057,7 +16277,7 @@ nk_panel_end(struct nk_context *ctx)
             } else if (!nk_panel_is_sub(layout->type)) {
                 /* window scrollbar wheel scrolling */
                 scroll_has_scrolling = (window == ctx->active) && layout->has_scrolling;
-                if (in && in->mouse.scroll_delta && scroll_has_scrolling)
+                if (in && in->mouse.scroll_delta > 0 && scroll_has_scrolling)
                     window->scrolled = nk_true;
                 else window->scrolled = nk_false;
             } else scroll_has_scrolling = nk_false;
@@ -16092,7 +16312,7 @@ nk_panel_end(struct nk_context *ctx)
 
     /* hide scroll if no user input */
     if (window->flags & NK_WINDOW_SCROLL_AUTO_HIDE) {
-        int has_input = ctx->input.mouse.delta.x || ctx->input.mouse.delta.y || ctx->input.mouse.scroll_delta;
+        int has_input = ctx->input.mouse.delta.x != 0 || ctx->input.mouse.delta.y != 0 || ctx->input.mouse.scroll_delta != 0;
         int is_window_hovered = nk_window_is_hovered(ctx);
         int any_item_active = (ctx->last_widget_state & NK_WIDGET_STATE_MODIFIED);
         if ((!has_input && is_window_hovered) || (!is_window_hovered && !any_item_active))
@@ -16529,6 +16749,7 @@ nk_begin_titled(struct nk_context *ctx, struct nk_panel *layout,
         win = (struct nk_window*)nk_create_window(ctx);
         NK_ASSERT(win);
         if (!win) return 0;
+
         if (flags & NK_WINDOW_BACKGROUND)
             nk_insert_window(ctx, win, NK_INSERT_FRONT);
         else nk_insert_window(ctx, win, NK_INSERT_BACK);
@@ -18078,7 +18299,7 @@ nk_labelf_colored(struct nk_context *ctx, nk_flags flags,
     char buf[256];
     va_list args;
     va_start(args, fmt);
-    nk_strfmtv(buf, NK_LEN(buf), fmt, args);
+    nk_strfmt(buf, NK_LEN(buf), fmt, args);
     nk_label_colored(ctx, buf, flags, color);
     va_end(args);
 }
@@ -18090,7 +18311,7 @@ nk_labelf_colored_wrap(struct nk_context *ctx, struct nk_color color,
     char buf[256];
     va_list args;
     va_start(args, fmt);
-    nk_strfmtv(buf, NK_LEN(buf), fmt, args);
+    nk_strfmt(buf, NK_LEN(buf), fmt, args);
     nk_label_colored_wrap(ctx, buf, color);
     va_end(args);
 }
@@ -18101,7 +18322,7 @@ nk_labelf(struct nk_context *ctx, nk_flags flags, const char *fmt, ...)
     char buf[256];
     va_list args;
     va_start(args, fmt);
-    nk_strfmtv(buf, NK_LEN(buf), fmt, args);
+    nk_strfmt(buf, NK_LEN(buf), fmt, args);
     nk_label(ctx, buf, flags);
     va_end(args);
 }
@@ -18112,7 +18333,7 @@ nk_labelf_wrap(struct nk_context *ctx, const char *fmt,...)
     char buf[256];
     va_list args;
     va_start(args, fmt);
-    nk_strfmtv(buf, NK_LEN(buf), fmt, args);
+    nk_strfmt(buf, NK_LEN(buf), fmt, args);
     nk_label_wrap(ctx, buf);
     va_end(args);
 }
@@ -18131,16 +18352,19 @@ nk_value_uint(struct nk_context *ctx, const char *prefix, unsigned int value)
 
 NK_API void
 nk_value_float(struct nk_context *ctx, const char *prefix, float value)
-{nk_labelf(ctx, NK_TEXT_LEFT, "%s: %.3f", prefix, value);}
+{
+    double double_value = (double)value;
+    nk_labelf(ctx, NK_TEXT_LEFT, "%s: %.3f", prefix, double_value);
+}
 
 NK_API void
 nk_value_color_byte(struct nk_context *ctx, const char *p, struct nk_color c)
-{nk_labelf(ctx, NK_TEXT_LEFT, "%s: (%u, %u, %u, %u)", p, c.r, c.g, c.b, c.a);}
+{nk_labelf(ctx, NK_TEXT_LEFT, "%s: (%c, %c, %c, %c)", p, c.r, c.g, c.b, c.a);}
 
 NK_API void
 nk_value_color_float(struct nk_context *ctx, const char *p, struct nk_color color)
 {
-    float c[4]; nk_color_fv(c, color);
+    double c[4]; nk_color_dv(c, color);
     nk_labelf(ctx, NK_TEXT_LEFT, "%s: (%.2f, %.2f, %.2f, %.2f)",
         p, c[0], c[1], c[2], c[3]);
 }
