@@ -3775,7 +3775,7 @@ NK_INTERN int
 nk_strfmt(char *buf, int buf_size, const char *fmt, va_list args)
 {
     int result = -1;
-#if NK_INCLUDE_STANDARD_IO
+#ifdef NK_INCLUDE_STANDARD_IO
     if (!buf || !buf_size || !fmt) return result;
     result = NK_VSNPRINTF(buf, (nk_size)buf_size, fmt, args);
     result = (result >= buf_size) ? -1: result;
