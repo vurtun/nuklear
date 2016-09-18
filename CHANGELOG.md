@@ -1,7 +1,13 @@
 # Changelog
-
-- 2016/09/13 (1.151)- Fixed panel `close` behavior for deeper panel levels
-- 2016/09/13 (1.151)- Fixed C++ errors and wrong argument to `nk_panel_get_xxxx`
+- 2016/09/18 (1.152)- C89 does not support vsnprintf only C99 and newer as well
+                        as C++11 and newer. In addition to use vsnprintf you have
+                        to include <stdio.h>. So just defining `NK_INCLUDE_STD_VAR_ARGS`
+                        is not enough. That behavior is now fixed. By default if
+                        both varargs as well as stdio is selected I try to use
+                        vsnprintf if not possible I will revert to vsprintf. If
+                        varargs but not stdio was defined I will use my own function.
+- 2016/09/15 (1.151)- Fixed panel `close` behavior for deeper panel levels
+- 2016/09/15 (1.151)- Fixed C++ errors and wrong argument to `nk_panel_get_xxxx`
 - 2016/09/13 (1.15) - !BREAKING! Fixed nonblocking popup behavior in menu, combo,
                         and contextual which prevented closing in y-direction if
                         popup did not reach max height.
