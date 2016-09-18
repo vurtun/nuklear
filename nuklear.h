@@ -713,7 +713,7 @@ NK_API void                     nk_label_colored(struct nk_context*, const char*
 NK_API void                     nk_label_wrap(struct nk_context*, const char*);
 NK_API void                     nk_label_colored_wrap(struct nk_context*, const char*, struct nk_color);
 NK_API void                     nk_image(struct nk_context*, struct nk_image);
-#ifdef NK_INCLUDE_STANDARD_VARARGS
+#if defined (NK_INCLUDE_STANDARD_IO) && defined (NK_INCLUDE_STANDARD_VARARGS)
 NK_API void                     nk_labelf(struct nk_context*, nk_flags, const char*, ...);
 NK_API void                     nk_labelf_colored(struct nk_context*, nk_flags align, struct nk_color, const char*,...);
 NK_API void                     nk_labelf_wrap(struct nk_context*, const char*,...);
@@ -1030,7 +1030,7 @@ NK_API double                   nk_strtod(const char *str, char **endptr);
 NK_API int                      nk_strfilter(const char *text, const char *regexp);
 NK_API int                      nk_strmatch_fuzzy_string(char const *str, char const *pattern, int *out_score);
 NK_API int                      nk_strmatch_fuzzy_text(const char *txt, int txt_len, const char *pattern, int *out_score);
-#ifdef NK_INCLUDE_STANDARD_VARARGS
+#if defined (NK_INCLUDE_STANDARD_IO) && defined (NK_INCLUDE_STANDARD_VARARGS)
 NK_API int                      nk_strfmt(char *buf, int len, const char *fmt,...);
 #endif
 
@@ -3528,15 +3528,16 @@ NK_API int
 nk_strmatch_fuzzy_string(char const *str, char const *pattern, int *out_score)
 {return nk_strmatch_fuzzy_text(str, nk_strlen(str), pattern, out_score);}
 
-#ifdef NK_INCLUDE_STANDARD_VARARGS
+#if defined (NK_INCLUDE_STANDARD_IO) && defined (NK_INCLUDE_STANDARD_VARARGS)
 NK_API int
 nk_strfmt(char *buf, int buf_size, const char *fmt,...)
 {
     int w;
     va_list args;
     va_start(args, fmt);
-    w = vsnprintf(buf, (nk_size)buf_size, fmt, args);
+    w = vsprintf(buf, fmt, args);
     va_end(args);
+    NK_ASSERT(w < buf_size);
     buf[buf_size-1] = 0;
     return (w == -1) ?(int)buf_size:w;
 }
@@ -3544,7 +3545,8 @@ nk_strfmt(char *buf, int buf_size, const char *fmt,...)
 NK_INTERN int
 nk_strfmtv(char *buf, int buf_size, const char *fmt, va_list args)
 {
-    int w = vsnprintf(buf, (nk_size)buf_size, fmt, args);
+    int w = vsprintf(buf, fmt, args);
+    NK_ASSERT(w < buf_size);
     buf[buf_size-1] = 0;
     return (w == -1) ? (int)buf_size:w;
 }
@@ -18070,7 +18072,7 @@ nk_text_wrap_colored(struct nk_context *ctx, const char *str,
     nk_widget_text_wrap(&win->buffer, bounds, str, len, &text, style->font);
 }
 
-#ifdef NK_INCLUDE_STANDARD_VARARGS
+#if defined (NK_INCLUDE_STANDARD_IO) && defined (NK_INCLUDE_STANDARD_VARARGS)
 NK_API void
 nk_labelf_colored(struct nk_context *ctx, nk_flags flags,
     struct nk_color color, const char *fmt, ...)
