@@ -15649,20 +15649,6 @@ NK_INTERN void nk_free_window(struct nk_context *ctx, struct nk_window *win);
 NK_INTERN void nk_free_table(struct nk_context *ctx, struct nk_table *tbl);
 NK_INTERN void nk_remove_table(struct nk_window *win, struct nk_table *tbl);
 
-#if defined(NK_INCLUDE_STANDARD_IO) && defined(NK_INCLUDE_STANDARD_VARARGS)
-NK_INTERN void
-nk_default_log_printf(nk_handle handle, int verbose_level, const char *file,
-    int line, const char *fmt, ...)
-{
-    va_list args;
-    NK_UNUSED(handle);
-    va_start(args, fmt);
-    fprintf(stdout, "Nuklear: %s:%d> ", file, line);
-    vfprintf(stdout, fmt, args);
-    va_end(args);
-}
-#endif
-
 NK_INTERN void
 nk_setup(struct nk_context *ctx, const struct nk_user_font *font)
 {
@@ -15675,9 +15661,6 @@ nk_setup(struct nk_context *ctx, const struct nk_user_font *font)
 
 #ifdef NK_INCLUDE_VERTEX_BUFFER_OUTPUT
     nk_draw_list_init(&ctx->draw_list);
-#endif
-#if defined(NK_INCLUDE_STANDARD_IO) && defined(NK_INCLUDE_STANDARD_VARARGS)
-    ctx->log = nk_default_log_printf;
 #endif
 }
 
@@ -15747,19 +15730,6 @@ nk_set_user_data(struct nk_context *ctx, nk_handle handle)
     ctx->userdata = handle;
     if (ctx->current)
         ctx->current->buffer.userdata = handle;
-}
-#endif
-
-#if defined(NK_INCLUDE_STANDARD_IO) && defined(NK_INCLUDE_STANDARD_VARARGS)
-NK_API nk_plugin_printf
-nk_set_printf(struct nk_context *ctx, nk_plugin_printf log)
-{
-    nk_plugin_printf old;
-    NK_ASSERT(ctx);
-    if (!ctx) return 0;
-    old = ctx->log;
-    ctx->log = log;
-    return log;
 }
 #endif
 
