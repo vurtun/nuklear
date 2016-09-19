@@ -2871,12 +2871,12 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
  * defining this to vsnprintf instead since `vsprintf` is basically
  * unbelievable unsafe and should *NEVER* be used. But I have to support
  * it since C89 only provides this unsafe version. */
-  #if defined(__STDC_VERSION__) || defined(__cplusplus)
-    #if __STDC_VERSION__ >= 199901L || __cplusplus >= 201103L
-      #define NK_VSNPRINTF(s,n,f,a) vsnprintf(s,f,a)
-    #else
-      #define NK_VSNPRINTF(s,n,f,a) vsprintf(s,f,a)
-    #endif
+  #if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)) ||\
+      (defined(__cplusplus) && (__cplusplus >= 201103L)) || \
+      (defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L)) ||\
+      (defined(_XOPEN_SOURCE) && (_XOPEN_SOURCE >= 500)) ||\
+       defined(_ISOC99_SOURCE) || defined(_BSD_SOURCE)
+      #define NK_VSNPRINTF(s,n,f,a) vsnprintf(s,n,f,a)
   #else
     #define NK_VSNPRINTF(s,n,f,a) vsprintf(s,f,a)
   #endif
@@ -3823,7 +3823,7 @@ nk_strfmt(char *buf, int buf_size, const char *fmt, va_list args)
             } else arg_type = NK_ARG_TYPE_SHORT;
             iter++;
         } else if (*iter == 'l') {
-            arg_type = NK_ARG_TYPE_CHAR;
+            arg_type = NK_ARG_TYPE_LONG;
             iter++;
         } else arg_type = NK_ARG_TYPE_INT;
 
