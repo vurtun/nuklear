@@ -17,7 +17,7 @@ VALUES:
     - Immediate mode graphical user interface toolkit
     - Single header library
     - Written in C89 (A.K.A. ANSI C or ISO C90)
-    - Small codebase (~16kLOC)
+    - Small codebase (~17kLOC)
     - Focus on portability, efficiency and simplicity
     - No dependencies (not even the standard library if not wanted)
     - Fully skinnable and customizable
@@ -444,6 +444,8 @@ typedef void (*nk_plugin_free)(nk_handle, void *old);
 typedef int(*nk_plugin_filter)(const struct nk_text_edit*, nk_rune unicode);
 typedef void(*nk_plugin_paste)(nk_handle, struct nk_text_edit*);
 typedef void(*nk_plugin_copy)(nk_handle, const char*, int len);
+typedef void(*nk_plugin_printf)(nk_handle, int verbose_level, const char *file,
+                                int line, const char *fmt, ...);
 
 struct nk_allocator {
     nk_handle userdata;
@@ -657,6 +659,7 @@ NK_API int                      nk_init_custom(struct nk_context*, struct nk_buf
 NK_API int                      nk_init(struct nk_context*, struct nk_allocator*, const struct nk_user_font*);
 NK_API void                     nk_clear(struct nk_context*);
 NK_API void                     nk_free(struct nk_context*);
+NK_API nk_plugin_printf         nk_set_printf(struct nk_context*, nk_plugin_printf);
 #ifdef NK_INCLUDE_COMMAND_USERDATA
 NK_API void                     nk_set_user_data(struct nk_context*, nk_handle handle);
 #endif
@@ -2695,6 +2698,7 @@ struct nk_context {
     float delta_time_seconds;
     enum nk_button_behavior button_behavior;
     struct nk_configuration_stacks stacks;
+    nk_plugin_printf log;
 
 /* private:
     should only be accessed if you
@@ -2861,16 +2865,21 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #ifndef NK_DTOA
 #define NK_DTOA nk_dtoa
 #endif
+
 #ifndef NK_VSNPRINTF
 /* If your compiler does support vsnprintf I would highly recommend
  * defining this to vsnprintf instead since `vsprintf` is basically
  * unbelievable unsafe and should *NEVER* be used. But I have to support
  * it since C89 only provides this unsafe version. */
-#if __STDC_VERISON__ >= 199901L || __cplusplus >= 201103L
-    #define NK_VSNPRINTF(s,n,f,a) vsnprintf(s,f,a)
-#else
+  #if defined(__STDC_VERSION__) || defined(__cplusplus)
+    #if __STDC_VERSION__ >= 199901L || __cplusplus >= 201103L
+      #define NK_VSNPRINTF(s,n,f,a) vsnprintf(s,f,a)
+    #else
+      #define NK_VSNPRINTF(s,n,f,a) vsprintf(s,f,a)
+    #endif
+  #else
     #define NK_VSNPRINTF(s,n,f,a) vsprintf(s,f,a)
-#endif
+  #endif
 #endif
 
 #define NK_SCHAR_MIN (-127)
@@ -3790,7 +3799,7 @@ nk_strfmt(char *buf, int buf_size, const char *fmt, va_list args)
     const char *iter = fmt;
     if (!buf || !buf_size || !fmt) return result;
     for (iter = fmt; *iter && len < buf_size; iter++) {
-        /* copy all non-format variables */
+        /* copy all non-format characters */
         while (*iter && *iter != '%' && len < buf_size)
             buf[len++] = *iter++;
         if (!(*iter) || len >= buf_size) break;
@@ -15490,18 +15499,36 @@ NK_INTERN void nk_free_window(struct nk_context *ctx, struct nk_window *win);
 NK_INTERN void nk_free_table(struct nk_context *ctx, struct nk_table *tbl);
 NK_INTERN void nk_remove_table(struct nk_window *win, struct nk_table *tbl);
 
+#if defined(NK_INCLUDE_STANDARD_IO) && defined(NK_INCLUDE_STANDARD_VARARGS)
+NK_INTERN void
+nk_default_log_printf(nk_handle handle, int verbose_level, const char *file,
+    int line, const char *fmt, ...)
+{
+    int min_level = handle.id;
+    if (min_level < verbose_level) {
+        va_list args;
+        va_start(args, fmt);
+        fprintf(stdout, "Nuklear: %s:%d> ", file, line);
+        vfprintf(stdout, fmt, args);
+        va_end(args);
+    }
+}
+#endif
+
 NK_INTERN void
 nk_setup(struct nk_context *ctx, const struct nk_user_font *font)
 {
     NK_ASSERT(ctx);
     if (!ctx) return;
-
     nk_zero_struct(*ctx);
     nk_style_default(ctx);
     ctx->seq = 1;
     if (font) ctx->style.font = font;
 #ifdef NK_INCLUDE_VERTEX_BUFFER_OUTPUT
     nk_draw_list_init(&ctx->draw_list);
+#endif
+#if defined(NK_INCLUDE_STANDARD_IO) && defined(NK_INCLUDE_STANDARD_VARARGS)
+    ctx->log = nk_default_log_printf;
 #endif
 }
 
@@ -15571,6 +15598,19 @@ nk_set_user_data(struct nk_context *ctx, nk_handle handle)
     ctx->userdata = handle;
     if (ctx->current)
         ctx->current->buffer.userdata = handle;
+}
+#endif
+
+#if defined(NK_INCLUDE_STANDARD_IO) && defined(NK_INCLUDE_STANDARD_VARARGS)
+NK_API nk_plugin_printf
+nk_set_printf(struct nk_context *ctx, nk_plugin_printf log)
+{
+    nk_plugin_printf old;
+    NK_ASSERT(ctx);
+    if (!ctx) return 0;
+    old = ctx->log;
+    ctx->log = log;
+    return log;
 }
 #endif
 
@@ -16340,13 +16380,13 @@ nk_panel_end(struct nk_context *ctx)
             window->bounds.x + window->bounds.w, padding_y, layout->border, border_color);
 
         /* draw left border */
-        nk_stroke_line(out, window->bounds.x + layout->border/2.0f,
-            window->bounds.y, window->bounds.x + layout->border/2.0f,
+        nk_stroke_line(out, window->bounds.x + layout->border*0.5f,
+            window->bounds.y, window->bounds.x + layout->border*0.5f,
             padding_y, layout->border, border_color);
 
         /* draw right border */
-        nk_stroke_line(out, window->bounds.x + window->bounds.w - layout->border/2.0f,
-            window->bounds.y, window->bounds.x + window->bounds.w - layout->border/2.0f,
+        nk_stroke_line(out, window->bounds.x + window->bounds.w,
+            window->bounds.y, window->bounds.x + window->bounds.w,
             padding_y, layout->border, border_color);
     }
 
