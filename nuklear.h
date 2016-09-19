@@ -444,8 +444,6 @@ typedef void (*nk_plugin_free)(nk_handle, void *old);
 typedef int(*nk_plugin_filter)(const struct nk_text_edit*, nk_rune unicode);
 typedef void(*nk_plugin_paste)(nk_handle, struct nk_text_edit*);
 typedef void(*nk_plugin_copy)(nk_handle, const char*, int len);
-typedef void(*nk_plugin_printf)(nk_handle, int verbose_level, const char *file,
-                                int line, const char *fmt, ...);
 
 struct nk_allocator {
     nk_handle userdata;
@@ -659,7 +657,6 @@ NK_API int                      nk_init_custom(struct nk_context*, struct nk_buf
 NK_API int                      nk_init(struct nk_context*, struct nk_allocator*, const struct nk_user_font*);
 NK_API void                     nk_clear(struct nk_context*);
 NK_API void                     nk_free(struct nk_context*);
-NK_API nk_plugin_printf         nk_set_printf(struct nk_context*, nk_plugin_printf);
 #ifdef NK_INCLUDE_COMMAND_USERDATA
 NK_API void                     nk_set_user_data(struct nk_context*, nk_handle handle);
 #endif
@@ -2698,7 +2695,6 @@ struct nk_context {
     float delta_time_seconds;
     enum nk_button_behavior button_behavior;
     struct nk_configuration_stacks stacks;
-    nk_plugin_printf log;
 
 /* private:
     should only be accessed if you
@@ -2866,8 +2862,10 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #define NK_DTOA nk_dtoa
 #endif
 
+#define NK_DEFAULT (-1)
+
 #ifndef NK_VSNPRINTF
-/* If your compiler does support vsnprintf I would highly recommend
+/* If your compiler does support `vsnprintf` I would highly recommend
  * defining this to vsnprintf instead since `vsprintf` is basically
  * unbelievable unsafe and should *NEVER* be used. But I have to support
  * it since C89 only provides this unsafe version. */
@@ -3780,42 +3778,84 @@ nk_dtoa(char *s, double n)
 }
 
 #ifdef NK_INCLUDE_STANDARD_VARARGS
-NK_INTERN int
-nk_strfmt(char *buf, int buf_size, const char *fmt, va_list args)
+static int
+nk_vsnprintf(char *buf, int buf_size, const char *fmt, va_list args)
 {
-    int result = -1;
-#ifdef NK_INCLUDE_STANDARD_IO
-    if (!buf || !buf_size || !fmt) return result;
-    result = NK_VSNPRINTF(buf, (nk_size)buf_size, fmt, args);
-    result = (result >= buf_size) ? -1: result;
-    buf[buf_size-1] = 0;
-#else
-    enum nk_arg_type {NK_ARG_TYPE_CHAR, NK_ARG_TYPE_SHORT, NK_ARG_TYPE_INT, NK_ARG_TYPE_LONG};
-    {char number_buffer[NK_MAX_NUMBER_BUFFER];
+    enum nk_arg_type {
+        NK_ARG_TYPE_CHAR,
+        NK_ARG_TYPE_SHORT,
+        NK_ARG_TYPE_INT,
+        NK_ARG_TYPE_LONG
+    };
+    enum nk_arg_flags {
+        NK_ARG_FLAG_LEFT = 0x01,
+        NK_ARG_FLAG_PLUS = 0x02,
+        NK_ARG_FLAG_SPACE = 0x04,
+        NK_ARG_FLAG_NUM = 0x10,
+        NK_ARG_FLAG_ZERO = 0x20
+    };
+    char number_buffer[NK_MAX_NUMBER_BUFFER];
     enum nk_arg_type arg_type = NK_ARG_TYPE_INT;
+    int precision = NK_DEFAULT;
+    int width = NK_DEFAULT;
+    nk_flags flag = 0;
 
     int len = 0;
-    int precision = -1;
     const char *iter = fmt;
-    if (!buf || !buf_size || !fmt) return result;
+    int result = -1;
+
+    NK_ASSERT(buf);
+    NK_ASSERT(buf_size);
+    if (!buf || !buf_size || !fmt) return 0;
+
     for (iter = fmt; *iter && len < buf_size; iter++) {
         /* copy all non-format characters */
-        while (*iter && *iter != '%' && len < buf_size)
+        while (*iter && (*iter != '%') && (len < buf_size))
             buf[len++] = *iter++;
         if (!(*iter) || len >= buf_size) break;
         iter++;
 
-        /* precision argument */
-        if (*iter == '.') {
-            char *end;
+        /* flag arguments */
+        while (*iter) {
+            if (*iter == '-') flag |= NK_ARG_FLAG_LEFT;
+            else if (*iter == '+') flag |= NK_ARG_FLAG_PLUS;
+            else if (*iter == ' ') flag |= NK_ARG_FLAG_SPACE;
+            else if (*iter == '#') flag |= NK_ARG_FLAG_NUM;
+            else if (*iter == '0') flag |= NK_ARG_FLAG_ZERO;
+            else break;
             iter++;
-            precision = nk_strtoi(iter, &end);
-            if (end == iter)
-                precision = -1;
-            else iter = end;
         }
 
-        /* type argument */
+        /* width argument */
+        width = NK_DEFAULT;
+        if (*iter >= '1' && *iter <= '9') {
+            char *end;
+            width = nk_strtoi(iter, &end);
+            if (end == iter)
+                width = -1;
+            else iter = end;
+        } else if (*iter == '*') {
+            width = va_arg(args, int);
+            iter++;
+        }
+
+        /* precision argument */
+        precision = NK_DEFAULT;
+        if (*iter == '.') {
+            iter++;
+            if (*iter == '*') {
+                precision = va_arg(args, int);
+                iter++;
+            } else {
+                char *end;
+                precision = nk_strtoi(iter, &end);
+                if (end == iter)
+                    precision = -1;
+                else iter = end;
+            }
+        }
+
+        /* length modifier */
         if (*iter == 'h') {
             if (*(iter+1) == 'h') {
                 arg_type = NK_ARG_TYPE_CHAR;
@@ -3827,22 +3867,37 @@ nk_strfmt(char *buf, int buf_size, const char *fmt, va_list args)
             iter++;
         } else arg_type = NK_ARG_TYPE_INT;
 
-
-        /* value arguments */
+        /* specifier */
         if (*iter == '%') {
+            NK_ASSERT(arg_type == NK_ARG_TYPE_INT);
+            NK_ASSERT(precision == NK_DEFAULT);
+            NK_ASSERT(width == NK_DEFAULT);
             if (len < buf_size)
                 buf[len++] = '%';
         } else if (*iter == 's') {
-            /* string values */
+            /* string  */
             const char *str = va_arg(args, const char*);
+            NK_ASSERT(str != buf && "buffer and argument are not allowed to overlap!");
+            NK_ASSERT(arg_type == NK_ARG_TYPE_INT);
+            NK_ASSERT(precision == NK_DEFAULT);
+            NK_ASSERT(width == NK_DEFAULT);
+            if (str == buf) return -1;
             while (str && *str && len < buf_size)
                 buf[len++] = *str++;
-        } else if (*iter == 'c' || *iter == 'i' || *iter == 'd' || *iter == 'n') {
-            /* signed integer values */
+        } else if (*iter == 'n') {
+            /* current length callback */
+            signed int *n = va_arg(args, int*);
+            NK_ASSERT(arg_type == NK_ARG_TYPE_INT);
+            NK_ASSERT(precision == NK_DEFAULT);
+            NK_ASSERT(width == NK_DEFAULT);
+            if (n) *n = len;
+        } else if (*iter == 'c' || *iter == 'i' || *iter == 'd') {
+            /* signed integer */
             long value = 0;
             const char *num_iter;
-            int num_len, num_print;
+            int num_len, num_print, padding;
             int cur_precision = NK_MAX(precision, 1);
+            int cur_width = NK_MAX(width, 0);
 
             /* retrieve correct value type */
             if (arg_type == NK_ARG_TYPE_CHAR)
@@ -3858,71 +3913,141 @@ nk_strfmt(char *buf, int buf_size, const char *fmt, va_list args)
             /* convert number to string */
             nk_itoa(number_buffer, value);
             num_len = nk_strlen(number_buffer);
+            padding = NK_MAX(cur_width - NK_MAX(cur_precision, num_len), 0);
 
-            /* fill up to precision number of digits */
+            /* fill left padding up to a total of `width` characters */
+            if (!(flag & NK_ARG_FLAG_LEFT)) {
+                while (padding-- > 0 && (len < buf_size)) {
+                    if ((flag & NK_ARG_FLAG_ZERO) && (precision == NK_DEFAULT))
+                        buf[len++] = '0';
+                    else buf[len++] = ' ';
+                }
+            }
+
+            /* fill up to precision number of digits with '0' */
             num_print = NK_MAX(cur_precision, num_len);
-            while (precision && num_print > num_len && len < buf_size) {
-                buf[len++] = ' ';
+            while (precision && (num_print > num_len) && (len < buf_size)) {
+                buf[len++] = '0';
                 num_print--;
             }
+
             /* copy string value representation into buffer */
             num_iter = number_buffer;
+            if ((flag & NK_ARG_FLAG_PLUS) && value >= 0 && len < buf_size)
+                buf[len++] = '+';
+            else if ((flag & NK_ARG_FLAG_SPACE) && value >= 0 && len < buf_size)
+                buf[len++] = ' ';
             while (precision && *num_iter && len < buf_size)
                 buf[len++] = *num_iter++;
 
+            /* fill right padding up to width characters */
+            if (flag & NK_ARG_FLAG_LEFT) {
+                while ((padding-- > 0) && (len < buf_size))
+                    buf[len++] = ' ';
+            }
         } else if (*iter == 'o' || *iter == 'x' || *iter == 'X' || *iter == 'u') {
-            /* unsigned integer values */
+            /* unsigned integer */
             unsigned long value = 0;
-            int num_len = 0, num_print;
+            int num_len = 0, num_print, padding = 0;
             int cur_precision = NK_MAX(precision, 1);
-
-            /* retrieve correct value type */
-            if (arg_type == NK_ARG_TYPE_CHAR)
-                value = (unsigned long)va_arg(args, int);
-            else if (arg_type == NK_ARG_TYPE_SHORT)
-                value = (unsigned long)va_arg(args, int);
-            else if (arg_type == NK_ARG_TYPE_LONG)
-                value = va_arg(args, unsigned long);
-            else value = va_arg(args, unsigned int);
+            int cur_width = NK_MAX(width, 0);
+            unsigned int base = (*iter == 'o') ? 8: (*iter == 'u')? 10: 16;
 
             /* print oct/hex/dec value */
-            {const char *upper_output_format = "0123456789ABCDEF";
+            const char *upper_output_format = "0123456789ABCDEF";
             const char *lower_output_format = "0123456789abcdef";
             const char *output_format = (*iter == 'x') ?
                 lower_output_format: upper_output_format;
 
+            /* retrieve correct value type */
+            if (arg_type == NK_ARG_TYPE_CHAR)
+                value = (unsigned char)va_arg(args, int);
+            else if (arg_type == NK_ARG_TYPE_SHORT)
+                value = (unsigned short)va_arg(args, int);
+            else if (arg_type == NK_ARG_TYPE_LONG)
+                value = va_arg(args, unsigned long);
+            else value = va_arg(args, unsigned int);
+
             do {
                 /* convert decimal number into hex/oct number */
-                unsigned int base = (*iter == 'o') ? 8: (*iter == 'u')? 10: 16;
                 int digit = output_format[value % base];
                 if (num_len < NK_MAX_NUMBER_BUFFER)
                     number_buffer[num_len++] = (char)digit;
                 value /= base;
-            } while (value > 0);}
+            } while (value > 0);
+            num_print = NK_MAX(cur_precision, num_len);
+            padding = NK_MAX(cur_width - NK_MAX(cur_precision, num_len), 0);
+
+            /* fill left padding up to a total of `width` characters */
+            if (num_print && (flag & NK_ARG_FLAG_NUM)) {
+                if ((*iter == 'o') && (len < buf_size)) {
+                    buf[len++] = '0';
+                    padding--;
+                } else if ((*iter == 'x') && ((len+1) < buf_size)) {
+                    buf[len++] = '0';
+                    buf[len++] = 'x';
+                    padding -= 2;
+                } else if ((*iter == 'X') && ((len+1) < buf_size)) {
+                    buf[len++] = '0';
+                    buf[len++] = 'X';
+                    padding -= 2;
+                }
+            }
+            if (!(flag & NK_ARG_FLAG_LEFT)) {
+                while ((padding-- > 0) && (len < buf_size)) {
+                    if ((flag & NK_ARG_FLAG_ZERO) && (precision == NK_DEFAULT))
+                        buf[len++] = '0';
+                    else buf[len++] = ' ';
+                }
+            }
 
             /* fill up to precision number of digits */
-            num_print = NK_MAX(cur_precision, num_len);
-            while (precision && num_print > num_len && len < buf_size) {
-                buf[len++] = ' ';
+            while (precision && (num_print > num_len) && (len < buf_size)) {
+                buf[len++] = '0';
                 num_print--;
             }
 
-            /* revert number direction */
+            /* reverse number direction */
             while (num_len > 0) {
-                if (precision && len < buf_size)
+                if (precision && (len < buf_size))
                     buf[len++] = number_buffer[num_len-1];
                 num_len--;
             }
+
+            /* fill right padding up to width characters */
+            if (flag & NK_ARG_FLAG_LEFT) {
+                while ((padding-- > 0) && (len < buf_size))
+                    buf[len++] = ' ';
+            }
         } else if (*iter == 'f') {
-            /* floating point values */
+            /* floating point */
             int cur_precision = (precision < 0) ? 6: precision;
+            int cur_width = NK_MAX(width, 0);
             double value = va_arg(args, double);
-            int frac_len = 0, dot = 0;
+            int num_len = 0, frac_len = 0, dot = 0;
+            int padding = 0;
             const char *num_iter;
+            NK_ASSERT(arg_type == NK_ARG_TYPE_INT);
+
             NK_DTOA(number_buffer, value);
+            num_len = nk_strlen(number_buffer);
+            padding = NK_MAX(cur_width - NK_MAX(cur_precision, num_len), 0);
+
+            /* fill left padding up to a total of `width` characters */
+            if (!(flag & NK_ARG_FLAG_LEFT)) {
+                while (padding-- > 0 && (len < buf_size)) {
+                    if (flag & NK_ARG_FLAG_ZERO)
+                        buf[len++] = '0';
+                    else buf[len++] = ' ';
+                }
+            }
 
             /* copy string value representation into buffer */
             num_iter = number_buffer;
+            if ((flag & NK_ARG_FLAG_PLUS) && (value >= 0) && (len < buf_size))
+                buf[len++] = '+';
+            else if ((flag & NK_ARG_FLAG_SPACE) && (value >= 0) && (len < buf_size))
+                buf[len++] = ' ';
             while (*num_iter) {
                 if (dot) frac_len++;
                 if (len < buf_size)
@@ -3938,15 +4063,40 @@ nk_strfmt(char *buf, int buf_size, const char *fmt, va_list args)
                     buf[len++] = '.';
                     dot = 1;
                 }
-                if (len < buf_size) {
+                if (len < buf_size)
                     buf[len++] = '0';
-                }
                 frac_len++;
             }
-        } else NK_ASSERT(0 && "format is not supported!");
+
+            /* fill right padding up to width characters */
+            if (flag & NK_ARG_FLAG_LEFT) {
+                while ((padding-- > 0) && (len < buf_size))
+                    buf[len++] = ' ';
+            }
+        } else {
+            /* Specifier not supported: g,G,e,E,p,z */
+            NK_ASSERT(0 && "specifier is not supported!");
+            return result;
+        }
     }
     buf[(len >= buf_size)?(buf_size-1):len] = 0;
-    result = (len >= buf_size)?-1:len;}
+    result = (len >= buf_size)?-1:len;
+    return result;
+}
+
+NK_INTERN int
+nk_strfmt(char *buf, int buf_size, const char *fmt, va_list args)
+{
+    int result = -1;
+    NK_ASSERT(buf);
+    NK_ASSERT(buf_size);
+    if (!buf || !buf_size || !fmt) return 0;
+#ifdef NK_INCLUDE_STANDARD_IO
+    result = NK_VSNPRINTF(buf, (nk_size)buf_size, fmt, args);
+    result = (result >= buf_size) ? -1: result;
+    buf[buf_size-1] = 0;
+#else
+    result = nk_vsnprintf(buf, buf_size, fmt, args);
 #endif
     return result;
 }
@@ -15504,14 +15654,12 @@ NK_INTERN void
 nk_default_log_printf(nk_handle handle, int verbose_level, const char *file,
     int line, const char *fmt, ...)
 {
-    int min_level = handle.id;
-    if (min_level < verbose_level) {
-        va_list args;
-        va_start(args, fmt);
-        fprintf(stdout, "Nuklear: %s:%d> ", file, line);
-        vfprintf(stdout, fmt, args);
-        va_end(args);
-    }
+    va_list args;
+    NK_UNUSED(handle);
+    va_start(args, fmt);
+    fprintf(stdout, "Nuklear: %s:%d> ", file, line);
+    vfprintf(stdout, fmt, args);
+    va_end(args);
 }
 #endif
 
@@ -15524,6 +15672,7 @@ nk_setup(struct nk_context *ctx, const struct nk_user_font *font)
     nk_style_default(ctx);
     ctx->seq = 1;
     if (font) ctx->style.font = font;
+
 #ifdef NK_INCLUDE_VERTEX_BUFFER_OUTPUT
     nk_draw_list_init(&ctx->draw_list);
 #endif
