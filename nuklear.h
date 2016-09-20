@@ -3508,8 +3508,7 @@ nk_strmatch_fuzzy_text(const char *str, int str_len,
         {
             int new_score = 0;
             /* Apply penalty for each letter before the first pattern match */
-            if (pattern_iter == pattern)
-            {
+            if (pattern_iter == pattern) {
                 int count = (int)(&str[str_iter] - str);
                 int penalty = NK_LEADING_LETTER_PENALTY * count;
                 if (penalty < NK_MAX_LEADING_LETTER_PENALTY)
@@ -3535,8 +3534,7 @@ nk_strmatch_fuzzy_text(const char *str, int str_len,
                 ++pattern_iter;
 
             /* update best letter in str which may be for a "next" letter or a rematch */
-            if (new_score >= best_letter_score)
-            {
+            if (new_score >= best_letter_score) {
                 /* apply penalty for now skipped letter */
                 if (best_letter != 0)
                     score += NK_UNMATCHED_LETTER_PENALTY;
@@ -3544,11 +3542,8 @@ nk_strmatch_fuzzy_text(const char *str, int str_len,
                 best_letter = &str[str_iter];
                 best_letter_score = new_score;
             }
-
             prev_matched = nk_true;
-        }
-        else
-        {
+        } else {
             score += NK_UNMATCHED_LETTER_PENALTY;
             prev_matched = nk_false;
         }
@@ -3783,7 +3778,7 @@ nk_vsnprintf(char *buf, int buf_size, const char *fmt, va_list args)
     enum nk_arg_type {
         NK_ARG_TYPE_CHAR,
         NK_ARG_TYPE_SHORT,
-        NK_ARG_TYPE_INT,
+        NK_ARG_TYPE_DEFAULT,
         NK_ARG_TYPE_LONG
     };
     enum nk_arg_flags {
@@ -3794,7 +3789,7 @@ nk_vsnprintf(char *buf, int buf_size, const char *fmt, va_list args)
         NK_ARG_FLAG_ZERO = 0x20
     };
     char number_buffer[NK_MAX_NUMBER_BUFFER];
-    enum nk_arg_type arg_type = NK_ARG_TYPE_INT;
+    enum nk_arg_type arg_type = NK_ARG_TYPE_DEFAULT;
     int precision = NK_DEFAULT;
     int width = NK_DEFAULT;
     nk_flags flag = 0;
@@ -3864,11 +3859,11 @@ nk_vsnprintf(char *buf, int buf_size, const char *fmt, va_list args)
         } else if (*iter == 'l') {
             arg_type = NK_ARG_TYPE_LONG;
             iter++;
-        } else arg_type = NK_ARG_TYPE_INT;
+        } else arg_type = NK_ARG_TYPE_DEFAULT;
 
         /* specifier */
         if (*iter == '%') {
-            NK_ASSERT(arg_type == NK_ARG_TYPE_INT);
+            NK_ASSERT(arg_type == NK_ARG_TYPE_DEFAULT);
             NK_ASSERT(precision == NK_DEFAULT);
             NK_ASSERT(width == NK_DEFAULT);
             if (len < buf_size)
@@ -3877,7 +3872,7 @@ nk_vsnprintf(char *buf, int buf_size, const char *fmt, va_list args)
             /* string  */
             const char *str = va_arg(args, const char*);
             NK_ASSERT(str != buf && "buffer and argument are not allowed to overlap!");
-            NK_ASSERT(arg_type == NK_ARG_TYPE_INT);
+            NK_ASSERT(arg_type == NK_ARG_TYPE_DEFAULT);
             NK_ASSERT(precision == NK_DEFAULT);
             NK_ASSERT(width == NK_DEFAULT);
             if (str == buf) return -1;
@@ -3886,7 +3881,7 @@ nk_vsnprintf(char *buf, int buf_size, const char *fmt, va_list args)
         } else if (*iter == 'n') {
             /* current length callback */
             signed int *n = va_arg(args, int*);
-            NK_ASSERT(arg_type == NK_ARG_TYPE_INT);
+            NK_ASSERT(arg_type == NK_ARG_TYPE_DEFAULT);
             NK_ASSERT(precision == NK_DEFAULT);
             NK_ASSERT(width == NK_DEFAULT);
             if (n) *n = len;
@@ -4031,7 +4026,7 @@ nk_vsnprintf(char *buf, int buf_size, const char *fmt, va_list args)
             int num_len = 0, frac_len = 0, dot = 0;
             int padding = 0;
 
-            NK_ASSERT(arg_type == NK_ARG_TYPE_INT);
+            NK_ASSERT(arg_type == NK_ARG_TYPE_DEFAULT);
             NK_DTOA(number_buffer, value);
             num_len = nk_strlen(number_buffer);
 
@@ -18692,6 +18687,7 @@ nk_button_color(struct nk_context *ctx, struct nk_color color)
 
     int ret = 0;
     struct nk_rect bounds;
+    struct nk_rect content;
     enum nk_widget_layout_states state;
 
     NK_ASSERT(ctx);
@@ -18711,9 +18707,8 @@ nk_button_color(struct nk_context *ctx, struct nk_color color)
     button.normal = nk_style_item_color(color);
     button.hover = nk_style_item_color(color);
     button.active = nk_style_item_color(color);
-    button.padding = nk_vec2(0,0);
     ret = nk_do_button(&ctx->last_widget_state, &win->buffer, bounds,
-                &button, in, ctx->button_behavior, &bounds);
+                &button, in, ctx->button_behavior, &content);
     nk_draw_button(&win->buffer, &bounds, ctx->last_widget_state, &button);
     return ret;
 }
@@ -19915,6 +19910,9 @@ nk_group_begin(struct nk_context *ctx, struct nk_panel *layout, const char *titl
     c = &win->layout->clip;
     nk_panel_alloc_space(&bounds, ctx);
     nk_zero(layout, sizeof(*layout));
+    /* This triggers either if you pass the same panel to parent window or parent and child group
+     * or forgot to add a `nk_group_end` to a `nk_group_begin`. */
+    NK_ASSERT(win->layout != layout && "Parent and group are not allowed to use the same panel");
 
     /* find persistent group scrollbar value */
     title_len = (int)nk_strlen(title);
