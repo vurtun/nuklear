@@ -1,5 +1,5 @@
 /*
- Nuklear - v1.15 - public domain
+ Nuklear - v1.152 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -94,10 +94,10 @@ OPTIONAL DEFINES:
         <!> If used needs to be defined for implementation and header <!>
 
     NK_INCLUDE_STANDARD_VARARGS
-        if defined it will include header <stdarg.h> as well as <stdio.h> and provide
+        if defined it will include header <stdarg.h> and provide
         additional functions depending on variable arguments
-        <!> Adds the standard library with va_list and vsprintf/vsnprintf
-            so don't define this if you don't want to link to the standard library<!>
+        <!> Adds the standard library with va_list and  so don't define this if
+            you don't want to link to the standard library<!>
         <!> If used needs to be defined for implementation and header <!>
 
     NK_INCLUDE_VERTEX_BUFFER_OUTPUT
@@ -2833,7 +2833,6 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #endif
 #ifdef NK_INCLUDE_STANDARD_VARARGS
 #include <stdarg.h> /* valist, va_start, va_end, ... */
-#include <stdio.h> /* vsnprintf */
 #endif
 #ifndef NK_ASSERT
 #include <assert.h>
@@ -3979,11 +3978,13 @@ nk_vsnprintf(char *buf, int buf_size, const char *fmt, va_list args)
                     number_buffer[num_len++] = (char)digit;
                 value /= base;
             } while (value > 0);
+
             num_print = NK_MAX(cur_precision, num_len);
             padding = NK_MAX(cur_width - NK_MAX(cur_precision, num_len), 0);
             if (flag & NK_ARG_FLAG_NUM)
                 padding = NK_MAX(padding-1, 0);
 
+            /* fill left padding up to a total of `width` characters */
             if (!(flag & NK_ARG_FLAG_LEFT)) {
                 while ((padding-- > 0) && (len < buf_size)) {
                     if ((flag & NK_ARG_FLAG_ZERO) && (precision == NK_DEFAULT))
@@ -3992,7 +3993,7 @@ nk_vsnprintf(char *buf, int buf_size, const char *fmt, va_list args)
                 }
             }
 
-            /* fill left padding up to a total of `width` characters */
+            /* fill up to precision number of digits */
             if (num_print && (flag & NK_ARG_FLAG_NUM)) {
                 if ((*iter == 'o') && (len < buf_size)) {
                     buf[len++] = '0';
@@ -4004,8 +4005,6 @@ nk_vsnprintf(char *buf, int buf_size, const char *fmt, va_list args)
                     buf[len++] = 'X';
                 }
             }
-
-            /* fill up to precision number of digits */
             while (precision && (num_print > num_len) && (len < buf_size)) {
                 buf[len++] = '0';
                 num_print--;
@@ -13292,7 +13291,7 @@ nk_do_slider(nk_flags *state,
     bounds.w -= style->cursor_size.x;
 
     /* calculate cursor
-    Basically you have to cursors. One for visual representation and interaction
+    Basically you have two cursors. One for visual representation and interaction
     and one for updating the actual cursor value. */
     logical_cursor.h = bounds.h;
     logical_cursor.w = bounds.w / slider_steps;
@@ -15596,8 +15595,8 @@ nk_pool_init(struct nk_pool *pool, struct nk_allocator *alloc,
     nk_zero(pool, sizeof(*pool));
     pool->alloc = *alloc;
     pool->capacity = capacity;
-    pool->pages = 0;
     pool->type = NK_BUFFER_DYNAMIC;
+    pool->pages = 0;
 }
 
 NK_INTERN void
@@ -16904,9 +16903,11 @@ nk_begin_titled(struct nk_context *ctx, struct nk_panel *layout,
     int ret = 0;
 
     NK_ASSERT(ctx);
+    NK_ASSERT(name);
+    NK_ASSERT(title);
     NK_ASSERT(ctx->style.font && ctx->style.font->width && "if this triggers you forgot to add a font");
     NK_ASSERT(!ctx->current && "if this triggers you missed a `nk_end` call");
-    if (!ctx || ctx->current || !title)
+    if (!ctx || ctx->current || !title || !name)
         return 0;
 
     /* find or create window */
@@ -18868,6 +18869,7 @@ nk_selectable_text(struct nk_context *ctx, const char *str, int len,
     win = ctx->current;
     layout = win->layout;
     style = &ctx->style;
+
     state = nk_widget(&bounds, ctx);
     if (!state) return 0;
     in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
@@ -18897,6 +18899,7 @@ nk_selectable_image_text(struct nk_context *ctx, struct nk_image img,
     win = ctx->current;
     layout = win->layout;
     style = &ctx->style;
+
     state = nk_widget(&bounds, ctx);
     if (!state) return 0;
     in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
@@ -18951,6 +18954,7 @@ nk_check_text(struct nk_context *ctx, const char *text, int len, int active)
     win = ctx->current;
     style = &ctx->style;
     layout = win->layout;
+
     state = nk_widget(&bounds, ctx);
     if (!state) return active;
     in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
@@ -19044,6 +19048,7 @@ nk_option_text(struct nk_context *ctx, const char *text, int len, int is_active)
     win = ctx->current;
     style = &ctx->style;
     layout = win->layout;
+
     state = nk_widget(&bounds, ctx);
     if (!state) return state;
     in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
@@ -19102,6 +19107,7 @@ nk_slider_float(struct nk_context *ctx, float min_value, float *value, float max
     win = ctx->current;
     style = &ctx->style;
     layout = win->layout;
+
     state = nk_widget(&bounds, ctx);
     if (!state) return ret;
     in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;

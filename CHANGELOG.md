@@ -1,4 +1,7 @@
 # Changelog
+
+- 2016/09/20 (1.153)- Fixed some `nk_vsnprintf` behavior bugs and removed
+                        `<stdio.h>` again from `NK_INCLUDE_STANDARD_VARARGS`.
 - 2016/09/18 (1.152)- C89 does not support vsnprintf only C99 and newer as well
                         as C++11 and newer. In addition to use vsnprintf you have
                         to include <stdio.h>. So just defining `NK_INCLUDE_STD_VAR_ARGS`
