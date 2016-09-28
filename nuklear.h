@@ -14325,7 +14325,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
         }}
     } else {
         /* not active so just draw text */
-        int l = nk_str_len(&edit->string);
+        int l = nk_str_len_char(&edit->string);
         const char *begin = nk_str_get_const(&edit->string);
 
         const struct nk_style_item *background;
