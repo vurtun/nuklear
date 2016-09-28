@@ -1,5 +1,11 @@
 # Changelog
 
+- 2016/09/20 (1.156)- Fixed edit widget UTF-8 text appending/inserting/removing
+- 2016/09/20 (1.156)- Fixed drawing bug inside edit widgets which offset all text
+                        text in every edit widget if one of them is scrolled.
+- 2016/09/20 (1.155)- Fixed small bug in edit widgets if not active. The wrong
+                        text length is passed. It should have been in bytes but
+                        was passed as glyphes.
 - 2016/09/20 (1.154)- Fixed color button size calculation
 - 2016/09/20 (1.153)- Fixed some `nk_vsnprintf` behavior bugs and removed
                         `<stdio.h>` again from `NK_INCLUDE_STANDARD_VARARGS`.
