@@ -88,7 +88,8 @@ nk_end(&ctx);
 
 ## Bindings:
 Java: https://github.com/glegris/nuklear4j  
-Golang: https://github.com/golang-ui/nuklear
+Golang: https://github.com/golang-ui/nuklear  
+Rust: https://github.com/snuk182/nuklear-rust
 
 ## Credits:
 Developed by Micha Mettke and every direct or indirect contributor to the GitHub.
