@@ -1,5 +1,5 @@
 /*
- Nuklear - v1.152 - public domain
+ Nuklear - v1.156 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -317,52 +317,60 @@ extern "C" {
  #define NK_SIZE_TYPE uintptr_t
  #define NK_POINTER_TYPE uintptr_t
 #else
- #ifndef NK_INT8
-   #define NK_INT8 char
- #endif
- #ifndef NK_UINT8
-   #define NK_BYTE unsigned char
- #endif
- #ifndef NK_INT16
-   #define NK_INT16 signed char
- #endif
- #ifndef NK_UINT16
-   #define NK_UINT16 unsigned short
- #endif
- #ifndef NK_INT32
-   #define NK_INT32 signed int
- #endif
- #ifndef NK_UINT32
-   #define NK_UINT32 unsigned int
- #endif
- #ifndef NK_SIZE_TYPE
-   #if __WIN32
-     #define NK_SIZE_TYPE __int32
-   #elif __WIN64
-     #define NK_SIZE_TYPE __int64
-   #elif __GNUC__ || __clang__
-     #if __x86_64__ || __ppc64__
-       #define NK_SIZE_TYPE unsigned long
-     #else
-       #define NK_SIZE_TYPE unsigned int
-     #endif
-   #else
-     #define NK_SIZE_TYPE unsigned long
-   #endif
- #endif
- #ifndef NK_POINTER_TYPE
-   #if __WIN32
-     #define NK_POINTER_TYPE unsigned __int32
-   #elif __WIN64
-     #define NK_POINTER_TYPE unsigned __int64
-   #elif __GNUC__ || __clang__
-     #if __x86_64__ || __ppc64__
-       #define NK_POINTER_TYPE unsigned long
-     #else
-       #define NK_POINTER_TYPE unsigned int
-     #endif
+  #ifndef NK_INT8
+    #define NK_INT8 char
+  #endif
+  #ifndef NK_UINT8
+    #define NK_UINT8 unsigned char
+  #endif
+  #ifndef NK_INT16
+    #define NK_INT16 signed short
+  #endif
+  #ifndef NK_UINT16
+    #define NK_UINT16 unsigned short
+  #endif
+  #ifndef NK_INT32
+    #if defined(_MSC_VER)
+      #define NK_INT32 __int32
     #else
-     #define NK_POINTER_TYPE unsigned long
+      #define NK_INT32 signed int
+    #endif
+  #endif
+  #ifndef NK_UINT32
+    #if defined(_MSC_VER)
+      #define NK_UINT32 unsigned __int32
+    #else
+      #define NK_UINT32 unsigned int
+    #endif
+  #endif
+  #ifndef NK_SIZE_TYPE
+    #if (defined(__WIN32) || defined(WIN32)) && defined(_MSC_VER)
+      #define NK_SIZE_TYPE __int32
+    #elif defined(__WIN64) && defined(_MSC_VER)
+      #define NK_SIZE_TYPE __int64
+    #elif defined(__GNUC__) || defined(__clang__)
+      #if defined(__x86_64__) || defined(__ppc64__)
+        #define NK_SIZE_TYPE unsigned long
+      #else
+        #define NK_SIZE_TYPE unsigned int
+      #endif
+    #else
+      #define NK_SIZE_TYPE unsigned long
+    #endif
+  #endif
+  #ifndef NK_POINTER_TYPE
+    #if (defined(__WIN32) || defined(WIN32)) && defined(_MSC_VER)
+      #define NK_POINTER_TYPE unsigned __int32
+    #elif defined(__WIN64) && defined(_MSC_VER)
+      #define NK_POINTER_TYPE unsigned __int64
+    #elif defined(__GNUC__) || defined(__clang__)
+      #if defined(__x86_64__) || defined(__ppc64__)
+        #define NK_POINTER_TYPE unsigned long
+      #else
+        #define NK_POINTER_TYPE unsigned int
+      #endif
+    #else
+      #define NK_POINTER_TYPE unsigned long
     #endif
   #endif
 #endif
@@ -4860,8 +4868,8 @@ nk_text_calculate_text_bounds(const struct nk_user_font *font,
         *glyphs = *glyphs + 1;
         text_len += glyph_len;
         line_width += (float)glyph_width;
-        glyph_width = font->width(font->userdata, font->height, begin+text_len, glyph_len);
         glyph_len = nk_utf_decode(begin + text_len, &unicode, byte_len-text_len);
+        glyph_width = font->width(font->userdata, font->height, begin+text_len, glyph_len);
         continue;
     }
 
@@ -5470,6 +5478,8 @@ nk_str_insert_at_rune(struct nk_str *str, int pos, const char *cstr, int len)
     NK_ASSERT(len);
     if (!str || !cstr || !len) return 0;
     begin = nk_str_at_rune(str, pos, &unicode, &glyph_len);
+    if (!str->len)
+        return nk_str_append_text_char(str, cstr, len);
     buffer = nk_str_get_const(str);
     if (!begin) return 0;
     return nk_str_insert_at_char(str, (int)(begin - buffer), cstr, len);
@@ -6412,6 +6422,9 @@ nk_draw_list_push_command(struct nk_draw_list *list, struct nk_rect clip,
     cmd->elem_count = 0;
     cmd->clip_rect = clip;
     cmd->texture = texture;
+#ifdef NK_INCLUDE_COMMAND_USERDATA
+    cmd->userdata = list->userdata;
+#endif
 
     list->cmd_count++;
     list->clip_rect = clip;
@@ -6441,9 +6454,9 @@ nk_draw_list_add_clip(struct nk_draw_list *list, struct nk_rect rect)
         nk_draw_list_push_command(list, rect, list->config.null.texture);
     } else {
         struct nk_draw_command *prev = nk_draw_list_command_last(list);
-        if (prev->elem_count == 0)
+        if (prev->elem_count == 0) {
             prev->clip_rect = rect;
-        nk_draw_list_push_command(list, rect, prev->texture);
+        } else nk_draw_list_push_command(list, rect, prev->texture);
     }
 }
 
@@ -6467,23 +6480,7 @@ nk_draw_list_push_image(struct nk_draw_list *list, nk_handle texture)
 NK_API void
 nk_draw_list_push_userdata(struct nk_draw_list *list, nk_handle userdata)
 {
-    NK_ASSERT(list);
-    if (!list) return;
-    if (!list->cmd_count) {
-        struct nk_draw_command *prev;
-        nk_draw_list_push_command(list, nk_null_rect, list->config.null.texture);
-        prev = nk_draw_list_command_last(list);
-        prev->userdata = userdata;
-    } else {
-        struct nk_draw_command *prev = nk_draw_list_command_last(list);
-        if (prev->elem_count == 0) {
-            prev->userdata = userdata;
-        } else if (prev->userdata.ptr != userdata.ptr) {
-            nk_draw_list_push_command(list, prev->clip_rect, prev->texture);
-            prev = nk_draw_list_command_last(list);
-            prev->userdata = userdata;
-        }
-    }
+    list->userdata = userdata;
 }
 #endif
 
@@ -7383,18 +7380,18 @@ nk_draw_list_add_text(struct nk_draw_list *list, const struct nk_user_font *font
 
     nk_draw_list_push_image(list, font->texture);
     x = rect.x;
-    glyph_len = text_len = nk_utf_decode(text, &unicode, len);
+    glyph_len = nk_utf_decode(text, &unicode, len);
     if (!glyph_len) return;
 
     /* draw every glyph image */
     fg.a = (nk_byte)((float)fg.a * list->config.global_alpha);
-    while (text_len <= len && glyph_len) {
+    while (text_len < len && glyph_len) {
         float gx, gy, gh, gw;
         float char_width = 0;
         if (unicode == NK_UTF_INVALID) break;
 
         /* query currently drawn glyph information */
-        next_glyph_len = nk_utf_decode(text + text_len, &next, (int)len - text_len);
+        next_glyph_len = nk_utf_decode(text + text_len + glyph_len, &next, (int)len - text_len);
         font->query(font->userdata, font_height, &g, unicode,
                     (next == NK_UTF_INVALID) ? '\0' : next);
 
@@ -13927,9 +13924,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
     {
         int shift_mod = in->keyboard.keys[NK_KEY_SHIFT].down;
         const float mouse_x = (in->mouse.pos.x - area.x) + edit->scrollbar.x;
-        const float mouse_y = (!(flags & NK_EDIT_MULTILINE)) ?
-            (in->mouse.pos.y - (area.y + area.h * 0.5f)) + edit->scrollbar.y:
-            (in->mouse.pos.y - area.y) + edit->scrollbar.y;
+        const float mouse_y = (in->mouse.pos.y - area.y) + edit->scrollbar.y;
 
         /* mouse click handler */
         is_hovered = (char)nk_input_is_mouse_hovering_rect(in, area);
@@ -14149,14 +14144,14 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
                 text_len += glyph_len;
                 line_width += (float)glyph_width;
 
+                glyph_len = nk_utf_decode(text + text_len, &unicode, len-text_len);
                 glyph_width = font->width(font->userdata, font->height,
                     text+text_len, glyph_len);
-                glyph_len = nk_utf_decode(text + text_len, &unicode, len-text_len);
                 continue;
             }
             text_size.y = (float)total_lines * row_height;
 
-            /* handle case if cursor is at end of text buffer */
+            /* handle case when cursor is at end of text buffer */
             if (!cursor_ptr && edit->cursor == edit->string.len) {
                 cursor_pos.x = line_width;
                 cursor_pos.y = text_size.y - row_height;
@@ -16516,8 +16511,8 @@ nk_panel_end(struct nk_context *ctx)
             padding_y, layout->border, border_color);
 
         /* draw right border */
-        nk_stroke_line(out, window->bounds.x + window->bounds.w,
-            window->bounds.y, window->bounds.x + window->bounds.w,
+        nk_stroke_line(out, window->bounds.x + window->bounds.w - layout->border*0.5f,
+            window->bounds.y, window->bounds.x + window->bounds.w - layout->border*0.5f,
             padding_y, layout->border, border_color);
     }
 
