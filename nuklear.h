@@ -1,5 +1,5 @@
 /*
- Nuklear - v1.14 - public domain
+ Nuklear - v1.156 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -17,7 +17,7 @@ VALUES:
     - Immediate mode graphical user interface toolkit
     - Single header library
     - Written in C89 (A.K.A. ANSI C or ISO C90)
-    - Small codebase (~16kLOC)
+    - Small codebase (~17kLOC)
     - Focus on portability, efficiency and simplicity
     - No dependencies (not even the standard library if not wanted)
     - Fully skinnable and customizable
@@ -76,102 +76,132 @@ OPTIONAL DEFINES:
         If defined it will include header <stdint.h> for fixed sized types
         otherwise nuklear tries to select the correct type. If that fails it will
         throw a compiler error and you have to select the correct types yourself.
+        <!> If used needs to be defined for implementation and header <!>
 
     NK_INCLUDE_DEFAULT_ALLOCATOR
         if defined it will include header <stdlib.h> and provide additional functions
         to use this library without caring for memory allocation control and therefore
         ease memory management.
-        IMPORTANT:  this adds the standard library with malloc and free so don't define
-                    if you don't want to link to the standard library!
+        <!> Adds the standard library with malloc and free so don't define if you
+            don't want to link to the standard library <!>
+        <!> If used needs to be defined for implementation and header <!>
 
     NK_INCLUDE_STANDARD_IO
         if defined it will include header <stdio.h> and provide
         additional functions depending on file loading.
-        IMPORTANT:  this adds the standard library with fopen, fclose,...
-                    so don't define this if you don't want to link to the standard library!
+        <!> Adds the standard library with fopen, fclose,... so don't define this
+            if you don't want to link to the standard library <!>
+        <!> If used needs to be defined for implementation and header <!>
 
     NK_INCLUDE_STANDARD_VARARGS
         if defined it will include header <stdarg.h> and provide
         additional functions depending on variable arguments
-        IMPORTANT:  this adds the standard library with va_list,...
-                    so don't define this if you don't want to link to the standard library!
+        <!> Adds the standard library with va_list and  so don't define this if
+            you don't want to link to the standard library<!>
+        <!> If used needs to be defined for implementation and header <!>
 
     NK_INCLUDE_VERTEX_BUFFER_OUTPUT
         Defining this adds a vertex draw command list backend to this
         library, which allows you to convert queue commands into vertex draw commands.
         This is mainly if you need a hardware accessible format for OpenGL, DirectX,
         Vulkan, Metal,...
+        <!> If used needs to be defined for implementation and header <!>
 
     NK_INCLUDE_FONT_BAKING
         Defining this adds the `stb_truetype` and `stb_rect_pack` implementation
         to this library and provides font baking and rendering.
         If you already have font handling or do not want to use this font handler
         you don't have to define it.
+        <!> If used needs to be defined for implementation and header <!>
 
     NK_INCLUDE_DEFAULT_FONT
         Defining this adds the default font: ProggyClean.ttf into this library
         which can be loaded into a font atlas and allows using this library without
         having a truetype font
-        IMPORTANT: enabling this adds ~12kb to global stack memory
+        <!> Enabling this adds ~12kb to global stack memory <!>
+        <!> If used needs to be defined for implementation and header <!>
 
     NK_INCLUDE_COMMAND_USERDATA
         Defining this adds a userdata pointer into each command. Can be useful for
         example if you want to provide custom shaders depending on the used widget.
         Can be combined with the style structures.
+        <!> If used needs to be defined for implementation and header <!>
 
     NK_BUTTON_TRIGGER_ON_RELEASE
         Different platforms require button clicks occuring either on buttons being
         pressed (up to down) or released (down to up).
         By default this library will react on buttons being pressed, but if you
         define this it will only trigger if a button is released.
+        <!> If used it is only required to be defined for the implementation part <!>
 
     NK_ASSERT
         If you don't define this, nuklear will use <assert.h> with assert().
-        IMPORTANT:  it also adds the standard library so define to nothing of not wanted!
+        <!> Adds the standard library so define to nothing of not wanted <!>
+        <!> If used needs to be defined for implementation and header <!>
 
     NK_BUFFER_DEFAULT_INITIAL_SIZE
         Initial buffer size allocated by all buffers while using the default allocator
         functions included by defining NK_INCLUDE_DEFAULT_ALLOCATOR. If you don't
         want to allocate the default 4k memory then redefine it.
+        <!> If used needs to be defined for implementation and header <!>
 
     NK_MAX_NUMBER_BUFFER
         Maximum buffer size for the conversion buffer between float and string
         Under normal circumstances this should be more than sufficient.
+        <!> If used needs to be defined for implementation and header <!>
 
     NK_INPUT_MAX
         Defines the max number of bytes which can be added as text input in one frame.
         Under normal circumstances this should be more than sufficient.
+        <!> If used it is only required to be defined for the implementation part <!>
 
     NK_MEMSET
         You can define this to 'memset' or your own memset implementation
         replacement. If not nuklear will use its own version.
+        <!> If used it is only required to be defined for the implementation part <!>
 
     NK_MEMCOPY
         You can define this to 'memcpy' or your own memcpy implementation
         replacement. If not nuklear will use its own version.
+        <!> If used it is only required to be defined for the implementation part <!>
 
     NK_SQRT
         You can define this to 'sqrt' or your own sqrt implementation
         replacement. If not nuklear will use its own slow and not highly
         accurate version.
+        <!> If used it is only required to be defined for the implementation part <!>
 
     NK_SIN
         You can define this to 'sinf' or your own sine implementation
         replacement. If not nuklear will use its own approximation implementation.
+        <!> If used it is only required to be defined for the implementation part <!>
 
     NK_COS
         You can define this to 'cosf' or your own cosine implementation
         replacement. If not nuklear will use its own approximation implementation.
+        <!> If used it only needs to be define for the implementation not header  <!>
+        <!> If used it is only required to be defined for the implementation part <!>
 
     NK_STRTOD
         You can define this to `strtod` or your own string to double conversion
         implementation replacement. If not defined nuklear will use its own
-        imprecise and possibly unsafe version.
+        imprecise and possibly unsafe version (does not handle nan or infinity!).
+        <!> If used it is only required to be defined for the implementation part <!>
 
     NK_DTOA
         You can define this to `dtoa` or your own double to string conversion
         implementation replacement. If not defined nuklear will use its own
-        imprecise and possibly unsafe version.
+        imprecise and possibly unsafe version (does not handle nan or infinity!).
+        <!> If used it is only required to be defined for the implementation part <!>
+
+    NK_VSNPRINTF
+        If you define `NK_INCLUDE_STANDARD_VARARGS` as well as `NK_INCLUDE_STANDARD_IO`
+        and want to be safe define this to `vsnprintf` on compilers supporting
+        later versions of C or C++. By default nuklear will check for your stdlib version
+        in C as well as compiler version in C++. if `vsnprintf` is available
+        it will define it to `vsnprintf` directly. If not defined and if you have
+        older versions of C or C++ it will be defined to `vsprintf` which is unsafe.
+        <!> If used it is only required to be defined for the implementation part <!>
 
     NK_BYTE
     NK_INT16
@@ -182,7 +212,7 @@ OPTIONAL DEFINES:
     NK_POINTER_TYPE
         If you compile without NK_USE_FIXED_TYPE then a number of standard types
         will be selected and compile time validated. If they are incorrect you can
-        define the correct types.
+        define the correct types by overloading these type defines.
 
 CREDITS:
     Developed by Micha Mettke and every direct or indirect contributor to the GitHub.
@@ -214,6 +244,7 @@ extern "C" {
  *
  * ===============================================================
  */
+#define NK_UNDEFINED (-1.0f)
 #define NK_UTF_INVALID 0xFFFD /* internal invalid utf8 rune */
 #define NK_UTF_SIZE 4 /* describes the number of bytes a glyph consists of*/
 #ifndef NK_INPUT_MAX
@@ -225,90 +256,14 @@ extern "C" {
 #ifndef NK_SCROLLBAR_HIDING_TIMEOUT
 #define NK_SCROLLBAR_HIDING_TIMEOUT 4.0f
 #endif
+
 /*
- * ===============================================================
+ * ==============================================================
  *
- *                          BASIC
+ *                          HELPER
  *
  * ===============================================================
  */
-#ifdef NK_INCLUDE_FIXED_TYPES
-    #include <stdint.h>
-    typedef uint8_t nk_byte;
-    typedef int16_t nk_short;
-    typedef uint16_t nk_ushort;
-    typedef int32_t nk_int;
-    typedef uint32_t nk_uint;
-    typedef uintptr_t nk_size;
-    typedef uintptr_t nk_ptr;
-#else
-    #ifndef NK_BYTE
-        typedef unsigned char nk_byte;
-    #else
-        typedef NK_BYTE nk_byte;
-    #endif
-    #ifndef NK_INT16
-        typedef short nk_short;
-    #else
-        typedef NK_INT16 nk_short;
-    #endif
-    #ifndef NK_UINT16
-        typedef unsigned short nk_ushort;
-    #else
-        typedef NK_UINT16 nk_ushort;
-    #endif
-    #ifndef NK_INT32
-        typedef int nk_int;
-    #else
-        typedef NK_INT32 nk_int;
-    #endif
-    #ifndef NK_UINT32
-        typedef unsigned int nk_uint;
-    #else
-        typedef NK_UINT32 nk_uint;
-    #endif
-    #ifndef NK_SIZE_TYPE
-        #define NK_SIZE_TYPE nk_size
-        #if __WIN32
-            typedef unsigned __int32 nk_size;
-        #elif __WIN64
-            typedef unsigned __int64 nk_size;
-        #elif __GNUC__ || __clang__
-            #if __x86_64__ || __ppc64__
-                typedef unsigned long nk_size;
-            #else
-                typedef unsigned int nk_size;
-            #endif
-        #else
-            typedef unsigned long nk_size;
-        #endif
-    #else
-        typedef NK_SIZE_TYPE nk_size;
-    #endif
-    #ifndef NK_POINTER_TYPE
-        #define NK_POINTER_TYPE nk_ptr
-        #if __WIN32
-            typedef unsigned __int32 nk_ptr;
-        #elif __WIN64
-            typedef unsigned __int64 nk_ptr;
-        #elif __GNUC__ || __clang__
-            #if __x86_64__ || __ppc64__
-                typedef unsigned long nk_ptr;
-            #else
-                typedef unsigned int nk_ptr;
-            #endif
-        #else
-            typedef unsigned long nk_ptr;
-        #endif
-    #else
-        typedef NK_POINTER_TYPE nk_ptr;
-    #endif
-#endif
-
-typedef nk_uint nk_hash;
-typedef nk_uint nk_flags;
-typedef nk_uint nk_rune;
-
 #ifdef NK_PRIVATE
 #define NK_API static
 #else
@@ -319,17 +274,139 @@ typedef nk_uint nk_rune;
 #define NK_STORAGE static
 #define NK_GLOBAL static
 
+#define NK_FLAG(x) (1 << (x))
+#define NK_STRINGIFY(x) #x
+#define NK_MACRO_STRINGIFY(x) NK_STRINGIFY(x)
+#define NK_STRING_JOIN_IMMEDIATE(arg1, arg2) arg1 ## arg2
+#define NK_STRING_JOIN_DELAY(arg1, arg2) NK_STRING_JOIN_IMMEDIATE(arg1, arg2)
+#define NK_STRING_JOIN(arg1, arg2) NK_STRING_JOIN_DELAY(arg1, arg2)
+
+#ifdef _MSC_VER
+#define NK_UNIQUE_NAME(name) NK_STRING_JOIN(name,__COUNTER__)
+#else
+#define NK_UNIQUE_NAME(name) NK_STRING_JOIN(name,__LINE__)
+#endif
+
+#ifndef NK_STATIC_ASSERT
+#define NK_STATIC_ASSERT(exp) typedef char NK_UNIQUE_NAME(_dummy_array)[(exp)?1:-1]
+#endif
+
+#ifndef NK_FILE_LINE
+#ifdef _MSC_VER
+#define NK_FILE_LINE __FILE__ ":" NK_MACRO_STRINGIFY(__COUNTER__)
+#else
+#define NK_FILE_LINE __FILE__ ":" NK_MACRO_STRINGIFY(__LINE__)
+#endif
+#endif
+
+/*
+ * ===============================================================
+ *
+ *                          BASIC
+ *
+ * ===============================================================
+ */
+#ifdef NK_INCLUDE_FIXED_TYPES
+ #include <stdint.h>
+ #define NK_INT8 int8_t
+ #define NK_UINT8 uint8_t
+ #define NK_INT16 int16_t
+ #define NK_UINT16 uint16_t
+ #define NK_INT32 int32_t
+ #define NK_UINT32 uint32_t
+ #define NK_SIZE_TYPE uintptr_t
+ #define NK_POINTER_TYPE uintptr_t
+#else
+  #ifndef NK_INT8
+    #define NK_INT8 char
+  #endif
+  #ifndef NK_UINT8
+    #define NK_UINT8 unsigned char
+  #endif
+  #ifndef NK_INT16
+    #define NK_INT16 signed short
+  #endif
+  #ifndef NK_UINT16
+    #define NK_UINT16 unsigned short
+  #endif
+  #ifndef NK_INT32
+    #if defined(_MSC_VER)
+      #define NK_INT32 __int32
+    #else
+      #define NK_INT32 signed int
+    #endif
+  #endif
+  #ifndef NK_UINT32
+    #if defined(_MSC_VER)
+      #define NK_UINT32 unsigned __int32
+    #else
+      #define NK_UINT32 unsigned int
+    #endif
+  #endif
+  #ifndef NK_SIZE_TYPE
+    #if (defined(__WIN32) || defined(WIN32)) && defined(_MSC_VER)
+      #define NK_SIZE_TYPE __int32
+    #elif defined(__WIN64) && defined(_MSC_VER)
+      #define NK_SIZE_TYPE __int64
+    #elif defined(__GNUC__) || defined(__clang__)
+      #if defined(__x86_64__) || defined(__ppc64__)
+        #define NK_SIZE_TYPE unsigned long
+      #else
+        #define NK_SIZE_TYPE unsigned int
+      #endif
+    #else
+      #define NK_SIZE_TYPE unsigned long
+    #endif
+  #endif
+  #ifndef NK_POINTER_TYPE
+    #if (defined(__WIN32) || defined(WIN32)) && defined(_MSC_VER)
+      #define NK_POINTER_TYPE unsigned __int32
+    #elif defined(__WIN64) && defined(_MSC_VER)
+      #define NK_POINTER_TYPE unsigned __int64
+    #elif defined(__GNUC__) || defined(__clang__)
+      #if defined(__x86_64__) || defined(__ppc64__)
+        #define NK_POINTER_TYPE unsigned long
+      #else
+        #define NK_POINTER_TYPE unsigned int
+      #endif
+    #else
+      #define NK_POINTER_TYPE unsigned long
+    #endif
+  #endif
+#endif
+
+typedef NK_INT8 nk_char;
+typedef NK_UINT8 nk_uchar;
+typedef NK_UINT8 nk_byte;
+typedef NK_INT16 nk_short;
+typedef NK_UINT16 nk_ushort;
+typedef NK_INT32 nk_int;
+typedef NK_UINT32 nk_uint;
+typedef NK_SIZE_TYPE nk_size;
+typedef NK_POINTER_TYPE nk_ptr;
+
+typedef nk_uint nk_hash;
+typedef nk_uint nk_flags;
+typedef nk_uint nk_rune;
+
+/* Make sure correct type size:
+ * This will fire with a negative subscript error if the type sizes
+ * are set incorrectly by the compiler, and compile out if not */
+NK_STATIC_ASSERT(sizeof(nk_short) == 2);
+NK_STATIC_ASSERT(sizeof(nk_ushort) == 2);
+NK_STATIC_ASSERT(sizeof(nk_uint) == 4);
+NK_STATIC_ASSERT(sizeof(nk_int) == 4);
+NK_STATIC_ASSERT(sizeof(nk_byte) == 1);
+NK_STATIC_ASSERT(sizeof(nk_flags) >= 4);
+NK_STATIC_ASSERT(sizeof(nk_rune) >= 4);
+NK_STATIC_ASSERT(sizeof(nk_size) >= sizeof(void*));
+NK_STATIC_ASSERT(sizeof(nk_ptr) >= sizeof(void*));
+
 /* ============================================================================
  *
  *                                  API
  *
  * =========================================================================== */
-#define NK_UNDEFINED (-1.0f)
-#define NK_FLAG(x) (1 << (x))
-#define NK_STRINGIFY(x) #x
-#define NK_LINE_STR(x) NK_STRINGIFY(x)
-#define NK_FILE_LINE __FILE__ ":" NK_LINE_STR(__LINE__)
-
 struct nk_buffer;
 struct nk_allocator;
 struct nk_command_buffer;
@@ -537,6 +614,7 @@ enum nk_text_alignment {
     NK_TEXT_RIGHT       = NK_TEXT_ALIGN_MIDDLE|NK_TEXT_ALIGN_RIGHT
 };
 
+/* edit flags */
 enum nk_edit_flags {
     NK_EDIT_DEFAULT                 = 0,
     NK_EDIT_READ_ONLY               = NK_FLAG(0),
@@ -745,12 +823,12 @@ NK_API struct nk_color          nk_color_picker(struct nk_context*, struct nk_co
 NK_API int                      nk_color_pick(struct nk_context*, struct nk_color*, enum nk_color_format);
 
 /* Widgets: Property */
-NK_API void                     nk_property_int(struct nk_context *layout, const char *name, int min, int *val, int max, int step, float inc_per_pixel);
-NK_API void                     nk_property_float(struct nk_context *layout, const char *name, float min, float *val, float max, float step, float inc_per_pixel);
-NK_API void                     nk_property_double(struct nk_context *layout, const char *name, double min, double *val, double max, double step, float inc_per_pixel);
-NK_API int                      nk_propertyi(struct nk_context *layout, const char *name, int min, int val, int max, int step, float inc_per_pixel);
-NK_API float                    nk_propertyf(struct nk_context *layout, const char *name, float min, float val, float max, float step, float inc_per_pixel);
-NK_API double                   nk_propertyd(struct nk_context *layout, const char *name, double min, double val, double max, double step, float inc_per_pixel);
+NK_API void                     nk_property_int(struct nk_context*, const char *name, int min, int *val, int max, int step, float inc_per_pixel);
+NK_API void                     nk_property_float(struct nk_context*, const char *name, float min, float *val, float max, float step, float inc_per_pixel);
+NK_API void                     nk_property_double(struct nk_context*, const char *name, double min, double *val, double max, double step, float inc_per_pixel);
+NK_API int                      nk_propertyi(struct nk_context*, const char *name, int min, int val, int max, int step, float inc_per_pixel);
+NK_API float                    nk_propertyf(struct nk_context*, const char *name, float min, float val, float max, float step, float inc_per_pixel);
+NK_API double                   nk_propertyd(struct nk_context*, const char *name, double min, double val, double max, double step, float inc_per_pixel);
 
 /* Widgets: TextEdit */
 NK_API nk_flags                 nk_edit_string(struct nk_context*, nk_flags, char *buffer, int *len, int max, nk_plugin_filter);
@@ -774,25 +852,25 @@ NK_API void                     nk_popup_close(struct nk_context*);
 NK_API void                     nk_popup_end(struct nk_context*);
 
 /* Combobox */
-NK_API int                      nk_combo(struct nk_context*, const char **items, int count, int selected, int item_height, int max_height);
-NK_API int                      nk_combo_separator(struct nk_context*, const char *items_separated_by_separator, int separator, int selected, int count, int item_height, int max_height);
-NK_API int                      nk_combo_string(struct nk_context*, const char *items_separated_by_zeros, int selected, int count, int item_height, int max_height);
-NK_API int                      nk_combo_callback(struct nk_context*, void(*item_getter)(void*, int, const char**), void *userdata, int selected, int count, int item_height, int max_height);
-NK_API void                     nk_combobox(struct nk_context*, const char **items, int count, int *selected, int item_height, int max_height);
-NK_API void                     nk_combobox_string(struct nk_context*, const char *items_separated_by_zeros, int *selected, int count, int item_height, int max_height);
-NK_API void                     nk_combobox_separator(struct nk_context*, const char *items_separated_by_separator, int separator,int *selected, int count, int item_height, int max_height);
-NK_API void                     nk_combobox_callback(struct nk_context*, void(*item_getter)(void*, int, const char**), void*, int *selected, int count, int item_height, int max_height);
+NK_API int                      nk_combo(struct nk_context*, const char **items, int count, int selected, int item_height, struct nk_vec2 size);
+NK_API int                      nk_combo_separator(struct nk_context*, const char *items_separated_by_separator, int separator, int selected, int count, int item_height, struct nk_vec2 size);
+NK_API int                      nk_combo_string(struct nk_context*, const char *items_separated_by_zeros, int selected, int count, int item_height, struct nk_vec2 size);
+NK_API int                      nk_combo_callback(struct nk_context*, void(*item_getter)(void*, int, const char**), void *userdata, int selected, int count, int item_height, struct nk_vec2 size);
+NK_API void                     nk_combobox(struct nk_context*, const char **items, int count, int *selected, int item_height, struct nk_vec2 size);
+NK_API void                     nk_combobox_string(struct nk_context*, const char *items_separated_by_zeros, int *selected, int count, int item_height, struct nk_vec2 size);
+NK_API void                     nk_combobox_separator(struct nk_context*, const char *items_separated_by_separator, int separator,int *selected, int count, int item_height, struct nk_vec2 size);
+NK_API void                     nk_combobox_callback(struct nk_context*, void(*item_getter)(void*, int, const char**), void*, int *selected, int count, int item_height, struct nk_vec2 size);
 
 /* Combobox: abstract */
-NK_API int                      nk_combo_begin_text(struct nk_context*, struct nk_panel*, const char *selected, int, int max_height);
-NK_API int                      nk_combo_begin_label(struct nk_context*, struct nk_panel*, const char *selected, int max_height);
-NK_API int                      nk_combo_begin_color(struct nk_context*, struct nk_panel*, struct nk_color color, int max_height);
-NK_API int                      nk_combo_begin_symbol(struct nk_context*, struct nk_panel*, enum nk_symbol_type,  int max_height);
-NK_API int                      nk_combo_begin_symbol_label(struct nk_context*, struct nk_panel*, const char *selected, enum nk_symbol_type, int height);
-NK_API int                      nk_combo_begin_symbol_text(struct nk_context*, struct nk_panel*, const char *selected, int, enum nk_symbol_type, int height);
-NK_API int                      nk_combo_begin_image(struct nk_context*, struct nk_panel*, struct nk_image img,  int max_height);
-NK_API int                      nk_combo_begin_image_label(struct nk_context*, struct nk_panel*, const char *selected, struct nk_image, int height);
-NK_API int                      nk_combo_begin_image_text(struct nk_context*, struct nk_panel*, const char *selected, int, struct nk_image, int height);
+NK_API int                      nk_combo_begin_text(struct nk_context*, struct nk_panel*, const char *selected, int, struct nk_vec2 size);
+NK_API int                      nk_combo_begin_label(struct nk_context*, struct nk_panel*, const char *selected, struct nk_vec2 size);
+NK_API int                      nk_combo_begin_color(struct nk_context*, struct nk_panel*, struct nk_color color, struct nk_vec2 size);
+NK_API int                      nk_combo_begin_symbol(struct nk_context*, struct nk_panel*, enum nk_symbol_type,  struct nk_vec2 size);
+NK_API int                      nk_combo_begin_symbol_label(struct nk_context*, struct nk_panel*, const char *selected, enum nk_symbol_type, struct nk_vec2 size);
+NK_API int                      nk_combo_begin_symbol_text(struct nk_context*, struct nk_panel*, const char *selected, int, enum nk_symbol_type, struct nk_vec2 size);
+NK_API int                      nk_combo_begin_image(struct nk_context*, struct nk_panel*, struct nk_image img,  struct nk_vec2 size);
+NK_API int                      nk_combo_begin_image_label(struct nk_context*, struct nk_panel*, const char *selected, struct nk_image, struct nk_vec2 size);
+NK_API int                      nk_combo_begin_image_text(struct nk_context*, struct nk_panel*, const char *selected, int, struct nk_image, struct nk_vec2 size);
 NK_API int                      nk_combo_item_label(struct nk_context*, const char*, nk_flags alignment);
 NK_API int                      nk_combo_item_text(struct nk_context*, const char*,int, nk_flags alignment);
 NK_API int                      nk_combo_item_image_label(struct nk_context*, struct nk_image, const char*, nk_flags alignment);
@@ -821,14 +899,15 @@ NK_API void                     nk_tooltip_end(struct nk_context*);
 /* Menu */
 NK_API void                     nk_menubar_begin(struct nk_context*);
 NK_API void                     nk_menubar_end(struct nk_context*);
-NK_API int                      nk_menu_begin_text(struct nk_context*, struct nk_panel*, const char*, int, nk_flags align, float width);
-NK_API int                      nk_menu_begin_label(struct nk_context*, struct nk_panel*, const char*, nk_flags align, float width);
-NK_API int                      nk_menu_begin_image(struct nk_context*, struct nk_panel*, const char*, struct nk_image, float width);
-NK_API int                      nk_menu_begin_image_text(struct nk_context*, struct nk_panel*, const char*, int,nk_flags align,struct nk_image, float width);
-NK_API int                      nk_menu_begin_image_label(struct nk_context*, struct nk_panel*, const char*, nk_flags align,struct nk_image, float width);
-NK_API int                      nk_menu_begin_symbol(struct nk_context*, struct nk_panel*, const char*, enum nk_symbol_type, float width);
-NK_API int                      nk_menu_begin_symbol_text(struct nk_context*, struct nk_panel*, const char*, int,nk_flags align,enum nk_symbol_type, float width);
-NK_API int                      nk_menu_begin_symbol_label(struct nk_context*, struct nk_panel*, const char*, nk_flags align,enum nk_symbol_type, float width);
+
+NK_API int                      nk_menu_begin_text(struct nk_context*, struct nk_panel*, const char* title, int title_len, nk_flags align, struct nk_vec2 size);
+NK_API int                      nk_menu_begin_label(struct nk_context*, struct nk_panel*, const char*, nk_flags align, struct nk_vec2 size);
+NK_API int                      nk_menu_begin_image(struct nk_context*, struct nk_panel*, const char*, struct nk_image, struct nk_vec2 size);
+NK_API int                      nk_menu_begin_image_text(struct nk_context*, struct nk_panel*, const char*, int,nk_flags align,struct nk_image, struct nk_vec2 size);
+NK_API int                      nk_menu_begin_image_label(struct nk_context*, struct nk_panel*, const char*, nk_flags align,struct nk_image, struct nk_vec2 size);
+NK_API int                      nk_menu_begin_symbol(struct nk_context*, struct nk_panel*, const char*, enum nk_symbol_type, struct nk_vec2 size);
+NK_API int                      nk_menu_begin_symbol_text(struct nk_context*, struct nk_panel*, const char*, int,nk_flags align,enum nk_symbol_type, struct nk_vec2 size);
+NK_API int                      nk_menu_begin_symbol_label(struct nk_context*, struct nk_panel*, const char*, nk_flags align,enum nk_symbol_type, struct nk_vec2 size);
 NK_API int                      nk_menu_item_text(struct nk_context*, const char*, int,nk_flags align);
 NK_API int                      nk_menu_item_label(struct nk_context*, const char*, nk_flags alignment);
 NK_API int                      nk_menu_item_image_label(struct nk_context*, struct nk_image, const char*, nk_flags alignment);
@@ -890,6 +969,8 @@ NK_API int                      nk_style_pop_color(struct nk_context*);
 NK_API struct nk_rect           nk_widget_bounds(struct nk_context*);
 NK_API struct nk_vec2           nk_widget_position(struct nk_context*);
 NK_API struct nk_vec2           nk_widget_size(struct nk_context*);
+NK_API float                    nk_widget_width(struct nk_context*);
+NK_API float                    nk_widget_height(struct nk_context*);
 NK_API int                      nk_widget_is_hovered(struct nk_context*);
 NK_API int                      nk_widget_is_mouse_clicked(struct nk_context*, enum nk_buttons);
 NK_API int                      nk_widget_has_mouse_click_down(struct nk_context*, enum nk_buttons, int down);
@@ -930,6 +1011,9 @@ NK_API struct nk_color          nk_hsva_fv(const float *hsva);
 /* color (conversion nuklear --> user) */
 NK_API void                     nk_color_f(float *r, float *g, float *b, float *a, struct nk_color);
 NK_API void                     nk_color_fv(float *rgba_out, struct nk_color);
+NK_API void                     nk_color_d(double *r, double *g, double *b, double *a, struct nk_color);
+NK_API void                     nk_color_dv(double *rgba_out, struct nk_color);
+
 NK_API nk_uint                  nk_color_u32(struct nk_color);
 NK_API void                     nk_color_hex_rgba(char *output, struct nk_color);
 NK_API void                     nk_color_hex_rgb(char *output, struct nk_color);
@@ -987,9 +1071,6 @@ NK_API double                   nk_strtod(const char *str, char **endptr);
 NK_API int                      nk_strfilter(const char *text, const char *regexp);
 NK_API int                      nk_strmatch_fuzzy_string(char const *str, char const *pattern, int *out_score);
 NK_API int                      nk_strmatch_fuzzy_text(const char *txt, int txt_len, const char *pattern, int *out_score);
-#ifdef NK_INCLUDE_STANDARD_VARARGS
-NK_API int                      nk_strfmt(char *buf, int len, const char *fmt,...);
-#endif
 
 /* UTF-8 */
 NK_API int                      nk_utf_decode(const char*, nk_rune*, int);
@@ -1418,6 +1499,7 @@ struct nk_font_atlas {
     void *pixel;
     int tex_width;
     int tex_height;
+
     struct nk_allocator permanent;
     struct nk_allocator temporary;
     struct nk_recti custom;
@@ -2448,6 +2530,7 @@ struct nk_popup_state {
     unsigned combo_count;
     unsigned con_count, con_old;
     unsigned active_con;
+    struct nk_rect header;
 };
 
 struct nk_edit_state {
@@ -2786,6 +2869,24 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #define NK_DTOA nk_dtoa
 #endif
 
+#define NK_DEFAULT (-1)
+
+#ifndef NK_VSNPRINTF
+/* If your compiler does support `vsnprintf` I would highly recommend
+ * defining this to vsnprintf instead since `vsprintf` is basically
+ * unbelievable unsafe and should *NEVER* be used. But I have to support
+ * it since C89 only provides this unsafe version. */
+  #if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)) ||\
+      (defined(__cplusplus) && (__cplusplus >= 201103L)) || \
+      (defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L)) ||\
+      (defined(_XOPEN_SOURCE) && (_XOPEN_SOURCE >= 500)) ||\
+       defined(_ISOC99_SOURCE) || defined(_BSD_SOURCE)
+      #define NK_VSNPRINTF(s,n,f,a) vsnprintf(s,n,f,a)
+  #else
+    #define NK_VSNPRINTF(s,n,f,a) vsprintf(s,f,a)
+  #endif
+#endif
+
 #define NK_SCHAR_MIN (-127)
 #define NK_SCHAR_MAX 127
 #define NK_UCHAR_MIN 0
@@ -2802,18 +2903,18 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 /* Make sure correct type size:
  * This will fire with a negative subscript error if the type sizes
  * are set incorrectly by the compiler, and compile out if not */
-typedef int nk__check_size[(sizeof(nk_size) >= sizeof(void*)) ? 1 : -1];
-typedef int nk__check_ptr[(sizeof(nk_ptr) == sizeof(void*)) ? 1 : -1];
-typedef int nk__check_flags[(sizeof(nk_flags) >= 4) ? 1 : -1];
-typedef int nk__check_rune[(sizeof(nk_rune) >= 4) ? 1 : -1];
-typedef int nk__check_ushort[(sizeof(nk_ushort) == 2) ? 1 : -1];
-typedef int nk__check_short[(sizeof(nk_short) == 2) ? 1 : -1];
-typedef int nk__check_uint[(sizeof(nk_uint) == 4) ? 1 : -1];
-typedef int nk__check_int[(sizeof(nk_int) == 4) ? 1 : -1];
-typedef int nk__check_byte[(sizeof(nk_byte) == 1) ? 1 : -1];
+NK_STATIC_ASSERT(sizeof(nk_size) >= sizeof(void*));
+NK_STATIC_ASSERT(sizeof(nk_ptr) == sizeof(void*));
+NK_STATIC_ASSERT(sizeof(nk_flags) >= 4);
+NK_STATIC_ASSERT(sizeof(nk_rune) >= 4);
+NK_STATIC_ASSERT(sizeof(nk_ushort) == 2);
+NK_STATIC_ASSERT(sizeof(nk_short) == 2);
+NK_STATIC_ASSERT(sizeof(nk_uint) == 4);
+NK_STATIC_ASSERT(sizeof(nk_int) == 4);
+NK_STATIC_ASSERT(sizeof(nk_byte) == 1);
 
 NK_GLOBAL const struct nk_rect nk_null_rect = {-8192.0f, -8192.0f, 16384, 16384};
-NK_GLOBAL const float NK_FLOAT_PRECISION = 0.00000000000001f;
+#define NK_FLOAT_PRECISION 0.00000000000001
 
 NK_GLOBAL const struct nk_color nk_red = {255,0,0,255};
 NK_GLOBAL const struct nk_color nk_green = {0,255,0,255};
@@ -3184,7 +3285,7 @@ nk_strtoi(const char *str, char **endptr)
         neg = -1;
         p++;
     }
-    while (*p && *p != '.' && *p != 'e') {
+    while (*p && *p >= '0' && *p <= '9') {
         value = value * 10 + (int) (*p - '0');
         p++;
     }
@@ -3415,8 +3516,7 @@ nk_strmatch_fuzzy_text(const char *str, int str_len,
         {
             int new_score = 0;
             /* Apply penalty for each letter before the first pattern match */
-            if (pattern_iter == pattern)
-            {
+            if (pattern_iter == pattern) {
                 int count = (int)(&str[str_iter] - str);
                 int penalty = NK_LEADING_LETTER_PENALTY * count;
                 if (penalty < NK_MAX_LEADING_LETTER_PENALTY)
@@ -3442,8 +3542,7 @@ nk_strmatch_fuzzy_text(const char *str, int str_len,
                 ++pattern_iter;
 
             /* update best letter in str which may be for a "next" letter or a rematch */
-            if (new_score >= best_letter_score)
-            {
+            if (new_score >= best_letter_score) {
                 /* apply penalty for now skipped letter */
                 if (best_letter != 0)
                     score += NK_UNMATCHED_LETTER_PENALTY;
@@ -3451,11 +3550,8 @@ nk_strmatch_fuzzy_text(const char *str, int str_len,
                 best_letter = &str[str_iter];
                 best_letter_score = new_score;
             }
-
             prev_matched = nk_true;
-        }
-        else
-        {
+        } else {
             score += NK_UNMATCHED_LETTER_PENALTY;
             prev_matched = nk_false;
         }
@@ -3484,28 +3580,6 @@ NK_API int
 nk_strmatch_fuzzy_string(char const *str, char const *pattern, int *out_score)
 {return nk_strmatch_fuzzy_text(str, nk_strlen(str), pattern, out_score);}
 
-#ifdef NK_INCLUDE_STANDARD_VARARGS
-NK_API int
-nk_strfmt(char *buf, int buf_size, const char *fmt,...)
-{
-    int w;
-    va_list args;
-    va_start(args, fmt);
-    w = vsnprintf(buf, (nk_size)buf_size, fmt, args);
-    va_end(args);
-    buf[buf_size-1] = 0;
-    return (w == -1) ?(int)buf_size:w;
-}
-
-NK_INTERN int
-nk_strfmtv(char *buf, int buf_size, const char *fmt, va_list args)
-{
-    int w = vsnprintf(buf, (nk_size)buf_size, fmt, args);
-    buf[buf_size-1] = 0;
-    return (w == -1) ? (int)buf_size:w;
-}
-#endif
-
 NK_INTERN int
 nk_string_float_limit(char *string, int prec)
 {
@@ -3527,11 +3601,11 @@ nk_string_float_limit(char *string, int prec)
     return (int)(c - string);
 }
 
-NK_INTERN float
-nk_pow(float x, int n)
+NK_INTERN double
+nk_pow(double x, int n)
 {
     /*  check the sign of n */
-    float r = 1;
+    double r = 1;
     int plus = n >= 0;
     n = (plus) ? n : -n;
     while (n > 0) {
@@ -3540,26 +3614,33 @@ nk_pow(float x, int n)
         n /= 2;
         x *= x;
     }
-    return plus ? r : 1.0f / r;
+    return plus ? r : 1.0 / r;
 }
 
 NK_INTERN int
-nk_ifloor(double x)
+nk_ifloord(double x)
 {
     x = (double)((int)x - ((x < 0.0) ? 1 : 0));
     return (int)x;
 }
 
 NK_INTERN int
-nk_iceil(double x)
+nk_ifloorf(float x)
+{
+    x = (float)((int)x - ((x < 0.0f) ? 1 : 0));
+    return (int)x;
+}
+
+NK_INTERN int
+nk_iceilf(float x)
 {
     if (x >= 0) {
         int i = (int)x;
         return i;
     } else {
         int t = (int)x;
-        double r = x - (double)t;
-        return (r > 0.0) ? t+1: t;
+        float r = x - (float)t;
+        return (r > 0.0f) ? t+1: t;
     }
 }
 
@@ -3595,9 +3676,9 @@ nk_strrev_ascii(char *s)
 }
 
 NK_INTERN char*
-nk_itoa(char *s, int n)
+nk_itoa(char *s, long n)
 {
-    int i = 0;
+    long i = 0;
     if (n == 0) {
         s[i++] = '0';
         s[i] = 0;
@@ -3630,7 +3711,7 @@ nk_dtoa(char *s, double n)
     NK_ASSERT(s);
     if (!s) return 0;
 
-    if (n == 0.0f) {
+    if (n == 0.0) {
         s[0] = '0'; s[1] = '\0';
         return s;
     }
@@ -3660,7 +3741,7 @@ nk_dtoa(char *s, double n)
         double weight = nk_pow(10.0, m);
         if (weight > 0) {
             double t = (double)n / weight;
-            digit = nk_ifloor(t);
+            digit = nk_ifloord(t);
             n -= ((double)digit * weight);
             *(c++) = (char)('0' + (char)digit);
         }
@@ -3697,6 +3778,343 @@ nk_dtoa(char *s, double n)
     *(c) = '\0';
     return s;
 }
+
+#ifdef NK_INCLUDE_STANDARD_VARARGS
+static int
+nk_vsnprintf(char *buf, int buf_size, const char *fmt, va_list args)
+{
+    enum nk_arg_type {
+        NK_ARG_TYPE_CHAR,
+        NK_ARG_TYPE_SHORT,
+        NK_ARG_TYPE_DEFAULT,
+        NK_ARG_TYPE_LONG
+    };
+    enum nk_arg_flags {
+        NK_ARG_FLAG_LEFT = 0x01,
+        NK_ARG_FLAG_PLUS = 0x02,
+        NK_ARG_FLAG_SPACE = 0x04,
+        NK_ARG_FLAG_NUM = 0x10,
+        NK_ARG_FLAG_ZERO = 0x20
+    };
+    char number_buffer[NK_MAX_NUMBER_BUFFER];
+    enum nk_arg_type arg_type = NK_ARG_TYPE_DEFAULT;
+    int precision = NK_DEFAULT;
+    int width = NK_DEFAULT;
+    nk_flags flag = 0;
+
+    int len = 0;
+    const char *iter = fmt;
+    int result = -1;
+
+    NK_ASSERT(buf);
+    NK_ASSERT(buf_size);
+    if (!buf || !buf_size || !fmt) return 0;
+    for (iter = fmt; *iter && len < buf_size; iter++) {
+        /* copy all non-format characters */
+        while (*iter && (*iter != '%') && (len < buf_size))
+            buf[len++] = *iter++;
+        if (!(*iter) || len >= buf_size) break;
+        iter++;
+
+        /* flag arguments */
+        while (*iter) {
+            if (*iter == '-') flag |= NK_ARG_FLAG_LEFT;
+            else if (*iter == '+') flag |= NK_ARG_FLAG_PLUS;
+            else if (*iter == ' ') flag |= NK_ARG_FLAG_SPACE;
+            else if (*iter == '#') flag |= NK_ARG_FLAG_NUM;
+            else if (*iter == '0') flag |= NK_ARG_FLAG_ZERO;
+            else break;
+            iter++;
+        }
+
+        /* width argument */
+        width = NK_DEFAULT;
+        if (*iter >= '1' && *iter <= '9') {
+            char *end;
+            width = nk_strtoi(iter, &end);
+            if (end == iter)
+                width = -1;
+            else iter = end;
+        } else if (*iter == '*') {
+            width = va_arg(args, int);
+            iter++;
+        }
+
+        /* precision argument */
+        precision = NK_DEFAULT;
+        if (*iter == '.') {
+            iter++;
+            if (*iter == '*') {
+                precision = va_arg(args, int);
+                iter++;
+            } else {
+                char *end;
+                precision = nk_strtoi(iter, &end);
+                if (end == iter)
+                    precision = -1;
+                else iter = end;
+            }
+        }
+
+        /* length modifier */
+        if (*iter == 'h') {
+            if (*(iter+1) == 'h') {
+                arg_type = NK_ARG_TYPE_CHAR;
+                iter++;
+            } else arg_type = NK_ARG_TYPE_SHORT;
+            iter++;
+        } else if (*iter == 'l') {
+            arg_type = NK_ARG_TYPE_LONG;
+            iter++;
+        } else arg_type = NK_ARG_TYPE_DEFAULT;
+
+        /* specifier */
+        if (*iter == '%') {
+            NK_ASSERT(arg_type == NK_ARG_TYPE_DEFAULT);
+            NK_ASSERT(precision == NK_DEFAULT);
+            NK_ASSERT(width == NK_DEFAULT);
+            if (len < buf_size)
+                buf[len++] = '%';
+        } else if (*iter == 's') {
+            /* string  */
+            const char *str = va_arg(args, const char*);
+            NK_ASSERT(str != buf && "buffer and argument are not allowed to overlap!");
+            NK_ASSERT(arg_type == NK_ARG_TYPE_DEFAULT);
+            NK_ASSERT(precision == NK_DEFAULT);
+            NK_ASSERT(width == NK_DEFAULT);
+            if (str == buf) return -1;
+            while (str && *str && len < buf_size)
+                buf[len++] = *str++;
+        } else if (*iter == 'n') {
+            /* current length callback */
+            signed int *n = va_arg(args, int*);
+            NK_ASSERT(arg_type == NK_ARG_TYPE_DEFAULT);
+            NK_ASSERT(precision == NK_DEFAULT);
+            NK_ASSERT(width == NK_DEFAULT);
+            if (n) *n = len;
+        } else if (*iter == 'c' || *iter == 'i' || *iter == 'd') {
+            /* signed integer */
+            long value = 0;
+            const char *num_iter;
+            int num_len, num_print, padding;
+            int cur_precision = NK_MAX(precision, 1);
+            int cur_width = NK_MAX(width, 0);
+
+            /* retrieve correct value type */
+            if (arg_type == NK_ARG_TYPE_CHAR)
+                value = (signed char)va_arg(args, int);
+            else if (arg_type == NK_ARG_TYPE_SHORT)
+                value = (signed short)va_arg(args, int);
+            else if (arg_type == NK_ARG_TYPE_LONG)
+                value = va_arg(args, signed long);
+            else if (*iter == 'c')
+                value = (unsigned char)va_arg(args, int);
+            else value = va_arg(args, signed int);
+
+            /* convert number to string */
+            nk_itoa(number_buffer, value);
+            num_len = nk_strlen(number_buffer);
+            padding = NK_MAX(cur_width - NK_MAX(cur_precision, num_len), 0);
+            if ((flag & NK_ARG_FLAG_PLUS) || (flag & NK_ARG_FLAG_SPACE))
+                padding = NK_MAX(padding-1, 0);
+
+            /* fill left padding up to a total of `width` characters */
+            if (!(flag & NK_ARG_FLAG_LEFT)) {
+                while (padding-- > 0 && (len < buf_size)) {
+                    if ((flag & NK_ARG_FLAG_ZERO) && (precision == NK_DEFAULT))
+                        buf[len++] = '0';
+                    else buf[len++] = ' ';
+                }
+            }
+
+            /* copy string value representation into buffer */
+            if ((flag & NK_ARG_FLAG_PLUS) && value >= 0 && len < buf_size)
+                buf[len++] = '+';
+            else if ((flag & NK_ARG_FLAG_SPACE) && value >= 0 && len < buf_size)
+                buf[len++] = ' ';
+
+            /* fill up to precision number of digits with '0' */
+            num_print = NK_MAX(cur_precision, num_len);
+            while (precision && (num_print > num_len) && (len < buf_size)) {
+                buf[len++] = '0';
+                num_print--;
+            }
+
+            /* copy string value representation into buffer */
+            num_iter = number_buffer;
+            while (precision && *num_iter && len < buf_size)
+                buf[len++] = *num_iter++;
+
+            /* fill right padding up to width characters */
+            if (flag & NK_ARG_FLAG_LEFT) {
+                while ((padding-- > 0) && (len < buf_size))
+                    buf[len++] = ' ';
+            }
+        } else if (*iter == 'o' || *iter == 'x' || *iter == 'X' || *iter == 'u') {
+            /* unsigned integer */
+            unsigned long value = 0;
+            int num_len = 0, num_print, padding = 0;
+            int cur_precision = NK_MAX(precision, 1);
+            int cur_width = NK_MAX(width, 0);
+            unsigned int base = (*iter == 'o') ? 8: (*iter == 'u')? 10: 16;
+
+            /* print oct/hex/dec value */
+            const char *upper_output_format = "0123456789ABCDEF";
+            const char *lower_output_format = "0123456789abcdef";
+            const char *output_format = (*iter == 'x') ?
+                lower_output_format: upper_output_format;
+
+            /* retrieve correct value type */
+            if (arg_type == NK_ARG_TYPE_CHAR)
+                value = (unsigned char)va_arg(args, int);
+            else if (arg_type == NK_ARG_TYPE_SHORT)
+                value = (unsigned short)va_arg(args, int);
+            else if (arg_type == NK_ARG_TYPE_LONG)
+                value = va_arg(args, unsigned long);
+            else value = va_arg(args, unsigned int);
+
+            do {
+                /* convert decimal number into hex/oct number */
+                int digit = output_format[value % base];
+                if (num_len < NK_MAX_NUMBER_BUFFER)
+                    number_buffer[num_len++] = (char)digit;
+                value /= base;
+            } while (value > 0);
+
+            num_print = NK_MAX(cur_precision, num_len);
+            padding = NK_MAX(cur_width - NK_MAX(cur_precision, num_len), 0);
+            if (flag & NK_ARG_FLAG_NUM)
+                padding = NK_MAX(padding-1, 0);
+
+            /* fill left padding up to a total of `width` characters */
+            if (!(flag & NK_ARG_FLAG_LEFT)) {
+                while ((padding-- > 0) && (len < buf_size)) {
+                    if ((flag & NK_ARG_FLAG_ZERO) && (precision == NK_DEFAULT))
+                        buf[len++] = '0';
+                    else buf[len++] = ' ';
+                }
+            }
+
+            /* fill up to precision number of digits */
+            if (num_print && (flag & NK_ARG_FLAG_NUM)) {
+                if ((*iter == 'o') && (len < buf_size)) {
+                    buf[len++] = '0';
+                } else if ((*iter == 'x') && ((len+1) < buf_size)) {
+                    buf[len++] = '0';
+                    buf[len++] = 'x';
+                } else if ((*iter == 'X') && ((len+1) < buf_size)) {
+                    buf[len++] = '0';
+                    buf[len++] = 'X';
+                }
+            }
+            while (precision && (num_print > num_len) && (len < buf_size)) {
+                buf[len++] = '0';
+                num_print--;
+            }
+
+            /* reverse number direction */
+            while (num_len > 0) {
+                if (precision && (len < buf_size))
+                    buf[len++] = number_buffer[num_len-1];
+                num_len--;
+            }
+
+            /* fill right padding up to width characters */
+            if (flag & NK_ARG_FLAG_LEFT) {
+                while ((padding-- > 0) && (len < buf_size))
+                    buf[len++] = ' ';
+            }
+        } else if (*iter == 'f') {
+            /* floating point */
+            const char *num_iter;
+            int cur_precision = (precision < 0) ? 6: precision;
+            int prefix, cur_width = NK_MAX(width, 0);
+            double value = va_arg(args, double);
+            int num_len = 0, frac_len = 0, dot = 0;
+            int padding = 0;
+
+            NK_ASSERT(arg_type == NK_ARG_TYPE_DEFAULT);
+            NK_DTOA(number_buffer, value);
+            num_len = nk_strlen(number_buffer);
+
+            /* calculate padding */
+            num_iter = number_buffer;
+            while (*num_iter && *num_iter != '.')
+                num_iter++;
+
+            prefix = (*num_iter == '.')?(int)(num_iter - number_buffer)+1:0;
+            padding = NK_MAX(cur_width - (prefix + NK_MIN(cur_precision, num_len - prefix)) , 0);
+            if ((flag & NK_ARG_FLAG_PLUS) || (flag & NK_ARG_FLAG_SPACE))
+                padding = NK_MAX(padding-1, 0);
+
+            /* fill left padding up to a total of `width` characters */
+            if (!(flag & NK_ARG_FLAG_LEFT)) {
+                while (padding-- > 0 && (len < buf_size)) {
+                    if (flag & NK_ARG_FLAG_ZERO)
+                        buf[len++] = '0';
+                    else buf[len++] = ' ';
+                }
+            }
+
+            /* copy string value representation into buffer */
+            num_iter = number_buffer;
+            if ((flag & NK_ARG_FLAG_PLUS) && (value >= 0) && (len < buf_size))
+                buf[len++] = '+';
+            else if ((flag & NK_ARG_FLAG_SPACE) && (value >= 0) && (len < buf_size))
+                buf[len++] = ' ';
+            while (*num_iter) {
+                if (dot) frac_len++;
+                if (len < buf_size)
+                    buf[len++] = *num_iter;
+                if (*num_iter == '.') dot = 1;
+                if (frac_len >= cur_precision) break;
+                num_iter++;
+            }
+
+            /* fill number up to precision */
+            while (frac_len < cur_precision) {
+                if (!dot && len < buf_size) {
+                    buf[len++] = '.';
+                    dot = 1;
+                }
+                if (len < buf_size)
+                    buf[len++] = '0';
+                frac_len++;
+            }
+
+            /* fill right padding up to width characters */
+            if (flag & NK_ARG_FLAG_LEFT) {
+                while ((padding-- > 0) && (len < buf_size))
+                    buf[len++] = ' ';
+            }
+        } else {
+            /* Specifier not supported: g,G,e,E,p,z */
+            NK_ASSERT(0 && "specifier is not supported!");
+            return result;
+        }
+    }
+    buf[(len >= buf_size)?(buf_size-1):len] = 0;
+    result = (len >= buf_size)?-1:len;
+    return result;
+}
+
+NK_INTERN int
+nk_strfmt(char *buf, int buf_size, const char *fmt, va_list args)
+{
+    int result = -1;
+    NK_ASSERT(buf);
+    NK_ASSERT(buf_size);
+    if (!buf || !buf_size || !fmt) return 0;
+#ifdef NK_INCLUDE_STANDARD_IO
+    result = NK_VSNPRINTF(buf, (nk_size)buf_size, fmt, args);
+    result = (result >= buf_size) ? -1: result;
+    buf[buf_size-1] = 0;
+#else
+    result = nk_vsnprintf(buf, buf_size, fmt, args);
+#endif
+    return result;
+}
+#endif
 
 NK_API nk_hash
 nk_murmur_hash(const void * key, int len, nk_hash seed)
@@ -4077,6 +4495,22 @@ nk_color_fv(float *c, struct nk_color in)
 }
 
 NK_API void
+nk_color_d(double *r, double *g, double *b, double *a, struct nk_color in)
+{
+    NK_STORAGE const double s = 1.0/255.0;
+    *r = (double)in.r * s;
+    *g = (double)in.g * s;
+    *b = (double)in.b * s;
+    *a = (double)in.a * s;
+}
+
+NK_API void
+nk_color_dv(double *c, struct nk_color in)
+{
+    nk_color_d(&c[0], &c[1], &c[2], &c[3], in);
+}
+
+NK_API void
 nk_color_hsv_f(float *out_h, float *out_s, float *out_v, struct nk_color in)
 {
     float a;
@@ -4434,8 +4868,8 @@ nk_text_calculate_text_bounds(const struct nk_user_font *font,
         *glyphs = *glyphs + 1;
         text_len += glyph_len;
         line_width += (float)glyph_width;
-        glyph_width = font->width(font->userdata, font->height, begin+text_len, glyph_len);
         glyph_len = nk_utf_decode(begin + text_len, &unicode, byte_len-text_len);
+        glyph_width = font->width(font->userdata, font->height, begin+text_len, glyph_len);
         continue;
     }
 
@@ -5044,16 +5478,24 @@ nk_str_insert_at_rune(struct nk_str *str, int pos, const char *cstr, int len)
     NK_ASSERT(len);
     if (!str || !cstr || !len) return 0;
     begin = nk_str_at_rune(str, pos, &unicode, &glyph_len);
+    if (!str->len)
+        return nk_str_append_text_char(str, cstr, len);
     buffer = nk_str_get_const(str);
     if (!begin) return 0;
-    return nk_str_insert_text_char(str, (int)(begin - buffer), cstr, len);
+    return nk_str_insert_at_char(str, (int)(begin - buffer), cstr, len);
 }
 
-NK_API int nk_str_insert_text_char(struct nk_str *str, int pos, const char *text, int len)
-{return nk_str_insert_at_char(str, pos, text, len);}
+NK_API int
+nk_str_insert_text_char(struct nk_str *str, int pos, const char *text, int len)
+{
+    return nk_str_insert_text_utf8(str, pos, text, len);
+}
 
-NK_API int nk_str_insert_str_char(struct nk_str *str, int pos, const char *text)
-{return nk_str_insert_at_char(str, pos, text, nk_strlen(text));}
+NK_API int
+nk_str_insert_str_char(struct nk_str *str, int pos, const char *text)
+{
+    return nk_str_insert_text_utf8(str, pos, text, nk_strlen(text));
+}
 
 NK_API int
 nk_str_insert_text_utf8(struct nk_str *str, int pos, const char *text, int len)
@@ -5237,7 +5679,7 @@ nk_str_at_rune(struct nk_str *str, int pos, nk_rune *unicode, int *len)
             break;
         }
 
-        i+= glyph_len;
+        i++;
         src_len = src_len + glyph_len;
         glyph_len = nk_utf_decode(text + src_len, unicode, text_len - src_len);
     }
@@ -5483,7 +5925,7 @@ nk_stroke_rect(struct nk_command_buffer *b, struct nk_rect rect,
 {
     struct nk_command_rect *cmd;
     NK_ASSERT(b);
-    if (!b || c.a == 0 || !rect.w || !rect.h) return;
+    if (!b || c.a == 0 || rect.w == 0 || rect.h == 0) return;
     if (b->use_clipping) {
         const struct nk_rect *clip = &b->clip;
         if (!NK_INTERSECT(rect.x, rect.y, rect.w, rect.h,
@@ -5508,7 +5950,7 @@ nk_fill_rect(struct nk_command_buffer *b, struct nk_rect rect,
 {
     struct nk_command_rect_filled *cmd;
     NK_ASSERT(b);
-    if (!b || c.a == 0 || !rect.w || !rect.h) return;
+    if (!b || c.a == 0 || rect.w == 0 || rect.h == 0) return;
     if (b->use_clipping) {
         const struct nk_rect *clip = &b->clip;
         if (!NK_INTERSECT(rect.x, rect.y, rect.w, rect.h,
@@ -5533,7 +5975,7 @@ nk_fill_rect_multi_color(struct nk_command_buffer *b, struct nk_rect rect,
 {
     struct nk_command_rect_multi_color *cmd;
     NK_ASSERT(b);
-    if (!b || !rect.w || !rect.h) return;
+    if (!b || rect.w == 0 || rect.h == 0) return;
     if (b->use_clipping) {
         const struct nk_rect *clip = &b->clip;
         if (!NK_INTERSECT(rect.x, rect.y, rect.w, rect.h,
@@ -5558,7 +6000,7 @@ nk_stroke_circle(struct nk_command_buffer *b, struct nk_rect r,
     float line_thickness, struct nk_color c)
 {
     struct nk_command_circle *cmd;
-    if (!b || !r.w || !r.h) return;
+    if (!b || r.w == 0 || r.h == 0) return;
     if (b->use_clipping) {
         const struct nk_rect *clip = &b->clip;
         if (!NK_INTERSECT(r.x, r.y, r.w, r.h, clip->x, clip->y, clip->w, clip->h))
@@ -5581,7 +6023,7 @@ nk_fill_circle(struct nk_command_buffer *b, struct nk_rect r, struct nk_color c)
 {
     struct nk_command_circle_filled *cmd;
     NK_ASSERT(b);
-    if (!b || c.a == 0 || !r.w || !r.h) return;
+    if (!b || c.a == 0 || r.w == 0 || r.h == 0) return;
     if (b->use_clipping) {
         const struct nk_rect *clip = &b->clip;
         if (!NK_INTERSECT(r.x, r.y, r.w, r.h, clip->x, clip->y, clip->w, clip->h))
@@ -5765,7 +6207,7 @@ nk_draw_image(struct nk_command_buffer *b, struct nk_rect r,
     if (!b) return;
     if (b->use_clipping) {
         const struct nk_rect *c = &b->clip;
-        if (!c->w || !c->h || !NK_INTERSECT(r.x, r.y, r.w, r.h, c->x, c->y, c->w, c->h))
+        if (c->w == 0 || c->h == 0 || !NK_INTERSECT(r.x, r.y, r.w, r.h, c->x, c->y, c->w, c->h))
             return;
     }
 
@@ -5793,7 +6235,7 @@ nk_draw_text(struct nk_command_buffer *b, struct nk_rect r,
     if (!b || !string || !length || (bg.a == 0 && fg.a == 0)) return;
     if (b->use_clipping) {
         const struct nk_rect *c = &b->clip;
-        if (!c->w || !c->h || !NK_INTERSECT(r.x, r.y, r.w, r.h, c->x, c->y, c->w, c->h))
+        if (c->w == 0 || c->h == 0 || !NK_INTERSECT(r.x, r.y, r.w, r.h, c->x, c->y, c->w, c->h))
             return;
     }
 
@@ -5980,6 +6422,9 @@ nk_draw_list_push_command(struct nk_draw_list *list, struct nk_rect clip,
     cmd->elem_count = 0;
     cmd->clip_rect = clip;
     cmd->texture = texture;
+#ifdef NK_INCLUDE_COMMAND_USERDATA
+    cmd->userdata = list->userdata;
+#endif
 
     list->cmd_count++;
     list->clip_rect = clip;
@@ -6009,9 +6454,9 @@ nk_draw_list_add_clip(struct nk_draw_list *list, struct nk_rect rect)
         nk_draw_list_push_command(list, rect, list->config.null.texture);
     } else {
         struct nk_draw_command *prev = nk_draw_list_command_last(list);
-        if (prev->elem_count == 0)
+        if (prev->elem_count == 0) {
             prev->clip_rect = rect;
-        nk_draw_list_push_command(list, rect, prev->texture);
+        } else nk_draw_list_push_command(list, rect, prev->texture);
     }
 }
 
@@ -6035,23 +6480,7 @@ nk_draw_list_push_image(struct nk_draw_list *list, nk_handle texture)
 NK_API void
 nk_draw_list_push_userdata(struct nk_draw_list *list, nk_handle userdata)
 {
-    NK_ASSERT(list);
-    if (!list) return;
-    if (!list->cmd_count) {
-        struct nk_draw_command *prev;
-        nk_draw_list_push_command(list, nk_null_rect, list->config.null.texture);
-        prev = nk_draw_list_command_last(list);
-        prev->userdata = userdata;
-    } else {
-        struct nk_draw_command *prev = nk_draw_list_command_last(list);
-        if (prev->elem_count == 0) {
-            prev->userdata = userdata;
-        } else if (prev->userdata.ptr != userdata.ptr) {
-            nk_draw_list_push_command(list, prev->clip_rect, prev->texture);
-            prev = nk_draw_list_command_last(list);
-            prev->userdata = userdata;
-        }
-    }
+    list->userdata = userdata;
 }
 #endif
 
@@ -6102,9 +6531,10 @@ nk_draw_vertex_color(void *attribute, const float *values,
     /* if this triggers you tried to provide a value format for a color */
     NK_ASSERT(format >= NK_FORMAT_COLOR_BEGIN);
     NK_ASSERT(format <= NK_FORMAT_COLOR_END);
-    if (format < NK_FORMAT_COLOR_BEGIN && format > NK_FORMAT_COLOR_END) return;
+    if (format < NK_FORMAT_COLOR_BEGIN || format > NK_FORMAT_COLOR_END) return;
 
     switch (format) {
+    default: NK_ASSERT(0 && "Invalid vertex layout color format"); break;
     case NK_FORMAT_R8G8B8A8:
     case NK_FORMAT_R8G8B8: {
         struct nk_color col = nk_rgba_fv(values);
@@ -6171,6 +6601,7 @@ nk_draw_vertex_element(void *dst, const float *values, int value_count,
     if (format >= NK_FORMAT_COLOR_BEGIN && format <= NK_FORMAT_COLOR_END) return;
     for (value_index = 0; value_index < value_count; ++value_index) {
         switch (format) {
+        default: NK_ASSERT(0 && "invalid vertex layout format"); break;
         case NK_FORMAT_SCHAR: {
             char value = (char)NK_CLAMP(NK_SCHAR_MIN, values[value_index], NK_SCHAR_MAX);
             NK_MEMCPY(attribute, &value, sizeof(value));
@@ -6223,10 +6654,11 @@ nk_draw_vertex(void *dst, const struct nk_convert_config *config,
     while (!nk_draw_vertex_layout_element_is_end_of_layout(elem_iter)) {
         void *address = (void*)((char*)dst + elem_iter->offset);
         switch (elem_iter->attribute) {
+        case NK_VERTEX_ATTRIBUTE_COUNT:
+        default: NK_ASSERT(0 && "wrong element attribute");
         case NK_VERTEX_POSITION: nk_draw_vertex_element(address, &pos.x, 2, elem_iter->format); break;
         case NK_VERTEX_TEXCOORD: nk_draw_vertex_element(address, &uv.x, 2, elem_iter->format); break;
         case NK_VERTEX_COLOR: nk_draw_vertex_color(address, &color.r, elem_iter->format); break;
-        default: break;
         }
         elem_iter++;
     }
@@ -6948,18 +7380,18 @@ nk_draw_list_add_text(struct nk_draw_list *list, const struct nk_user_font *font
 
     nk_draw_list_push_image(list, font->texture);
     x = rect.x;
-    glyph_len = text_len = nk_utf_decode(text, &unicode, len);
+    glyph_len = nk_utf_decode(text, &unicode, len);
     if (!glyph_len) return;
 
     /* draw every glyph image */
     fg.a = (nk_byte)((float)fg.a * list->config.global_alpha);
-    while (text_len <= len && glyph_len) {
+    while (text_len < len && glyph_len) {
         float gx, gy, gh, gw;
         float char_width = 0;
         if (unicode == NK_UTF_INVALID) break;
 
         /* query currently drawn glyph information */
-        next_glyph_len = nk_utf_decode(text + text_len, &next, (int)len - text_len);
+        next_glyph_len = nk_utf_decode(text + text_len + glyph_len, &next, (int)len - text_len);
         font->query(font->userdata, font_height, &g, unicode,
                     (next == NK_UTF_INVALID) ? '\0' : next);
 
@@ -8195,10 +8627,10 @@ nk_tt_GetGlyphBitmapBoxSubpixel(const struct nk_tt_fontinfo *font,
         if (iy1) *iy1 = 0;
     } else {
         /* move to integral bboxes (treating pixels as little squares, what pixels get touched)? */
-        if (ix0) *ix0 = nk_ifloor((float)x0 * scale_x + shift_x);
-        if (iy0) *iy0 = nk_ifloor((float)-y1 * scale_y + shift_y);
-        if (ix1) *ix1 = nk_iceil ((float)x1 * scale_x + shift_x);
-        if (iy1) *iy1 = nk_iceil ((float)-y0 * scale_y + shift_y);
+        if (ix0) *ix0 = nk_ifloorf((float)x0 * scale_x + shift_x);
+        if (iy0) *iy0 = nk_ifloorf((float)-y1 * scale_y + shift_y);
+        if (ix1) *ix1 = nk_iceilf ((float)x1 * scale_x + shift_x);
+        if (iy1) *iy1 = nk_iceilf ((float)-y0 * scale_y + shift_y);
     }
 }
 
@@ -9189,8 +9621,8 @@ nk_tt_GetPackedQuad(struct nk_tt_packedchar *chardata, int pw, int ph,
     float ipw = 1.0f / (float)pw, iph = 1.0f / (float)ph;
     struct nk_tt_packedchar *b = (struct nk_tt_packedchar*)(chardata + char_index);
     if (align_to_integer) {
-        int tx = nk_ifloor((*xpos + b->xoff) + 0.5f);
-        int ty = nk_ifloor((*ypos + b->yoff) + 0.5f);
+        int tx = nk_ifloorf((*xpos + b->xoff) + 0.5f);
+        int ty = nk_ifloorf((*ypos + b->yoff) + 0.5f);
 
         float x = (float)tx;
         float y = (float)ty;
@@ -9799,7 +10231,7 @@ NK_GLOBAL const char nk_proggy_clean_ttf_compressed_data_base85[11980+1] =
     "%(?A%R$f<->Zts'^kn=-^@c4%-pY6qI%J%1IGxfLU9CP8cbPlXv);C=b),<2mOvP8up,UVf3839acAWAW-W?#ao/^#%KYo8fRULNd2.>%m]UK:n%r$'sw]J;5pAoO_#2mO3n,'=H5(et"
     "Hg*`+RLgv>=4U8guD$I%D:W>-r5V*%j*W:Kvej.Lp$<M-SGZ':+Q_k+uvOSLiEo(<aD/K<CCc`'Lx>'?;++O'>()jLR-^u68PHm8ZFWe+ej8h:9r6L*0//c&iH&R8pRbA#Kjm%upV1g:"
     "a_#Ur7FuA#(tRh#.Y5K+@?3<-8m0$PEn;J:rh6?I6uG<-`wMU'ircp0LaE_OtlMb&1#6T.#FDKu#1Lw%u%+GM+X'e?YLfjM[VO0MbuFp7;>Q&#WIo)0@F%q7c#4XAXN-U&VB<HFF*qL("
-    "$/V,;(kXZejWO`<[5??ewY(*9=%wDc;,u<'9t3W-(H1th3+G]ucQ]kLs7df($/*JL]@*t7Bu_G3_7mp7<iaQjO@.kLg;x3B0lqp7Hf,^Ze7-##@/c58Mo(3;knp0%)A7?-W+eI'o8)b<"
+    "$/V,;(kXZejWO`<[5?\?ewY(*9=%wDc;,u<'9t3W-(H1th3+G]ucQ]kLs7df($/*JL]@*t7Bu_G3_7mp7<iaQjO@.kLg;x3B0lqp7Hf,^Ze7-##@/c58Mo(3;knp0%)A7?-W+eI'o8)b<"
     "nKnw'Ho8C=Y>pqB>0ie&jhZ[?iLR@@_AvA-iQC(=ksRZRVp7`.=+NpBC%rh&3]R:8XDmE5^V8O(x<<aG/1N$#FX$0V5Y6x'aErI3I$7x%E`v<-BY,)%-?Psf*l?%C3.mM(=/M0:JxG'?"
     "7WhH%o'a<-80g0NBxoO(GH<dM]n.+%q@jH?f.UsJ2Ggs&4<-e47&Kl+f//9@`b+?.TeN_&B8Ss?v;^Trk;f#YvJkl&w$]>-+k?'(<S:68tq*WoDfZu';mM?8X[ma8W%*`-=;D.(nc7/;"
     ")g:T1=^J$&BRV(-lTmNB6xqB[@0*o.erM*<SWF]u2=st-*(6v>^](H.aREZSi,#1:[IXaZFOm<-ui#qUq2$##Ri;u75OK#(RtaW-K-F`S+cF]uN`-KMQ%rP/Xri.LRcB##=YL3BgM/3M"
@@ -9862,8 +10294,7 @@ NK_GLOBAL const char nk_proggy_clean_ttf_compressed_data_base85[11980+1] =
 
 #define NK_CURSOR_DATA_W 90
 #define NK_CURSOR_DATA_H 27
-NK_GLOBAL const char
-nk_custom_cursor_data[NK_CURSOR_DATA_W * NK_CURSOR_DATA_H + 1] =
+NK_GLOBAL const char nk_custom_cursor_data[NK_CURSOR_DATA_W * NK_CURSOR_DATA_H + 1] =
 {
     "..-         -XXXXXXX-    X    -           X           -XXXXXXX          -          XXXXXXX"
     "..-         -X.....X-   X.X   -          X.X          -X.....X          -          X.....X"
@@ -11211,16 +11642,16 @@ nk_textedit_text(struct nk_text_edit *state, const char *text, int total_len)
                 nk_textedit_makeundo_replace(state, state->cursor, 1, 1);
                 nk_str_delete_runes(&state->string, state->cursor, 1);
             }
-            if (nk_str_insert_text_char(&state->string, state->cursor,
-                                        text+text_len, glyph_len))
+            if (nk_str_insert_text_utf8(&state->string, state->cursor,
+                                        text+text_len, 1))
             {
                 ++state->cursor;
                 state->has_preferred_x = 0;
             }
         } else {
             nk_textedit_delete_selection(state); /* implicitly clamps */
-            if (nk_str_insert_text_char(&state->string, state->cursor,
-                                        text+text_len, glyph_len))
+            if (nk_str_insert_text_utf8(&state->string, state->cursor,
+                                        text+text_len, 1))
             {
                 nk_textedit_makeundo_insert(state, state->cursor, 1);
                 ++state->cursor;
@@ -11814,6 +12245,7 @@ nk_textedit_clear_state(struct nk_text_edit *state, enum nk_text_edit_type type,
    state->single_line = (unsigned char)(type == NK_TEXT_EDIT_SINGLE_LINE);
    state->mode = NK_TEXT_EDIT_MODE_VIEW;
    state->filter = filter;
+   state->scrollbar = nk_vec2(0,0);
 }
 
 NK_API void
@@ -12739,6 +13171,11 @@ nk_draw_slider(struct nk_command_buffer *out, nk_flags state,
     /* select correct slider images/colors */
     struct nk_color bar_color;
     const struct nk_style_item *cursor;
+
+    NK_UNUSED(min);
+    NK_UNUSED(max);
+    NK_UNUSED(value);
+
     if (state & NK_WIDGET_STATE_ACTIVED) {
         background = &style->active;
         bar_color = style->bar_active;
@@ -12851,7 +13288,7 @@ nk_do_slider(nk_flags *state,
     bounds.w -= style->cursor_size.x;
 
     /* calculate cursor
-    Basically you have to cursors. One for visual representation and interaction
+    Basically you have two cursors. One for visual representation and interaction
     and one for updating the actual cursor value. */
     logical_cursor.h = bounds.h;
     logical_cursor.w = bounds.w / slider_steps;
@@ -13487,9 +13924,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
     {
         int shift_mod = in->keyboard.keys[NK_KEY_SHIFT].down;
         const float mouse_x = (in->mouse.pos.x - area.x) + edit->scrollbar.x;
-        const float mouse_y = (!(flags & NK_EDIT_MULTILINE)) ?
-            (in->mouse.pos.y - (area.y + area.h * 0.5f)) + edit->scrollbar.y:
-            (in->mouse.pos.y - area.y) + edit->scrollbar.y;
+        const float mouse_y = (in->mouse.pos.y - area.y) + edit->scrollbar.y;
 
         /* mouse click handler */
         is_hovered = (char)nk_input_is_mouse_hovering_rect(in, area);
@@ -13709,14 +14144,14 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
                 text_len += glyph_len;
                 line_width += (float)glyph_width;
 
+                glyph_len = nk_utf_decode(text + text_len, &unicode, len-text_len);
                 glyph_width = font->width(font->userdata, font->height,
                     text+text_len, glyph_len);
-                glyph_len = nk_utf_decode(text + text_len, &unicode, len-text_len);
                 continue;
             }
             text_size.y = (float)total_lines * row_height;
 
-            /* handle case if cursor is at end of text buffer */
+            /* handle case when cursor is at end of text buffer */
             if (!cursor_ptr && edit->cursor == edit->string.len) {
                 cursor_pos.x = line_width;
                 cursor_pos.y = text_size.y - row_height;
@@ -13884,7 +14319,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
                 label.h = row_height;
 
                 txt.padding = nk_vec2(0,0);
-                txt.background = cursor_color;
+                txt.background = cursor_color;;
                 txt.text = cursor_text_color;
                 nk_fill_rect(out, label, 0, cursor_color);
                 nk_widget_text(out, label, cursor_ptr, glyph_len, &txt, NK_TEXT_LEFT, font);
@@ -13892,7 +14327,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
         }}
     } else {
         /* not active so just draw text */
-        int l = nk_str_len(&edit->string);
+        int l = nk_str_len_char(&edit->string);
         const char *begin = nk_str_get_const(&edit->string);
 
         const struct nk_style_item *background;
@@ -15155,8 +15590,8 @@ nk_pool_init(struct nk_pool *pool, struct nk_allocator *alloc,
     nk_zero(pool, sizeof(*pool));
     pool->alloc = *alloc;
     pool->capacity = capacity;
-    pool->pages = 0;
     pool->type = NK_BUFFER_DYNAMIC;
+    pool->pages = 0;
 }
 
 NK_INTERN void
@@ -15202,9 +15637,9 @@ nk_pool_alloc(struct nk_pool *pool)
             nk_size size = sizeof(struct nk_page);
             size += NK_POOL_DEFAULT_CAPACITY * sizeof(union nk_page_data);
             page = (struct nk_page*)pool->alloc.alloc(pool->alloc.userdata,0, size);
-            page->size = 0;
             page->next = pool->pages;
             pool->pages = page;
+            page->size = 0;
         }
     }
     return &pool->pages->win[pool->pages->size++];
@@ -15226,7 +15661,6 @@ nk_setup(struct nk_context *ctx, const struct nk_user_font *font)
 {
     NK_ASSERT(ctx);
     if (!ctx) return;
-
     nk_zero_struct(*ctx);
     nk_style_default(ctx);
     ctx->seq = 1;
@@ -15365,9 +15799,9 @@ nk_clear(struct nk_context *ctx)
             iter->popup.win = 0;
         }
 
+        /* remove unused window state tables */
         {struct nk_table *n, *it = iter->tables;
         while (it) {
-            /* remove unused window state tables */
             n = it->next;
             if (it->seq != ctx->seq) {
                 nk_remove_table(iter, it);
@@ -15481,7 +15915,8 @@ nk_finish(struct nk_context *ctx, struct nk_window *win)
     nk_finish_buffer(ctx, &win->buffer);
     if (!win->layout->popup_buffer.active) return;
 
-    /* from here this case is for popup windows */
+    /* from here on is for popup window buffer handling */
+    /*--------------------------------------------------*/
     buf = &win->layout->popup_buffer;
     memory = ctx->memory.memory.ptr;
 
@@ -15906,7 +16341,7 @@ nk_panel_end(struct nk_context *ctx)
 
     /* cache configuration data */
     scrollbar_size = style->window.scrollbar_size;
-    panel_padding = nk_panel_get_padding(style, window->flags);
+    panel_padding = nk_panel_get_padding(style, layout->type);
 
     /* update the current cursor Y-position to point over the last added widget */
     layout->at_y += layout->row.height;
@@ -16008,7 +16443,7 @@ nk_panel_end(struct nk_context *ctx)
             } else if (!nk_panel_is_sub(layout->type)) {
                 /* window scrollbar wheel scrolling */
                 scroll_has_scrolling = (window == ctx->active) && layout->has_scrolling;
-                if (in && in->mouse.scroll_delta && scroll_has_scrolling)
+                if (in && in->mouse.scroll_delta > 0 && scroll_has_scrolling)
                     window->scrolled = nk_true;
                 else window->scrolled = nk_false;
             } else scroll_has_scrolling = nk_false;
@@ -16043,7 +16478,7 @@ nk_panel_end(struct nk_context *ctx)
 
     /* hide scroll if no user input */
     if (window->flags & NK_WINDOW_SCROLL_AUTO_HIDE) {
-        int has_input = ctx->input.mouse.delta.x || ctx->input.mouse.delta.y || ctx->input.mouse.scroll_delta;
+        int has_input = ctx->input.mouse.delta.x != 0 || ctx->input.mouse.delta.y != 0 || ctx->input.mouse.scroll_delta != 0;
         int is_window_hovered = nk_window_is_hovered(ctx);
         int any_item_active = (ctx->last_widget_state & NK_WIDGET_STATE_MODIFIED);
         if ((!has_input && is_window_hovered) || (!is_window_hovered && !any_item_active))
@@ -16054,7 +16489,7 @@ nk_panel_end(struct nk_context *ctx)
     /* window border */
     if (layout->flags & NK_WINDOW_BORDER)
     {
-        struct nk_color border_color = nk_panel_get_border_color(style, layout->flags);
+        struct nk_color border_color = nk_panel_get_border_color(style, layout->type);
         const float padding_y = (layout->flags & NK_WINDOW_MINIMIZED) ?
             style->window.border + window->bounds.y + layout->header_height:
             (layout->flags & NK_WINDOW_DYNAMIC)?
@@ -16071,13 +16506,13 @@ nk_panel_end(struct nk_context *ctx)
             window->bounds.x + window->bounds.w, padding_y, layout->border, border_color);
 
         /* draw left border */
-        nk_stroke_line(out, window->bounds.x + layout->border/2.0f,
-            window->bounds.y, window->bounds.x + layout->border/2.0f,
+        nk_stroke_line(out, window->bounds.x + layout->border*0.5f,
+            window->bounds.y, window->bounds.x + layout->border*0.5f,
             padding_y, layout->border, border_color);
 
         /* draw right border */
-        nk_stroke_line(out, window->bounds.x + window->bounds.w - layout->border/2.0f,
-            window->bounds.y, window->bounds.x + window->bounds.w - layout->border/2.0f,
+        nk_stroke_line(out, window->bounds.x + window->bounds.w - layout->border*0.5f,
+            window->bounds.y, window->bounds.x + window->bounds.w - layout->border*0.5f,
             padding_y, layout->border, border_color);
     }
 
@@ -16464,9 +16899,11 @@ nk_begin_titled(struct nk_context *ctx, struct nk_panel *layout,
     int ret = 0;
 
     NK_ASSERT(ctx);
+    NK_ASSERT(name);
+    NK_ASSERT(title);
     NK_ASSERT(ctx->style.font && ctx->style.font->width && "if this triggers you forgot to add a font");
     NK_ASSERT(!ctx->current && "if this triggers you missed a `nk_end` call");
-    if (!ctx || ctx->current || !title)
+    if (!ctx || ctx->current || !title || !name)
         return 0;
 
     /* find or create window */
@@ -16480,6 +16917,7 @@ nk_begin_titled(struct nk_context *ctx, struct nk_panel *layout,
         win = (struct nk_window*)nk_create_window(ctx);
         NK_ASSERT(win);
         if (!win) return 0;
+
         if (flags & NK_WINDOW_BACKGROUND)
             nk_insert_window(ctx, win, NK_INSERT_FRONT);
         else nk_insert_window(ctx, win, NK_INSERT_BACK);
@@ -16958,6 +17396,22 @@ nk_menubar_begin(struct nk_context *ctx)
         return;
 
     layout = ctx->current->layout;
+    NK_ASSERT(layout->at_y == layout->bounds.y);
+    /* if this assert triggers you allocated space between nk_begin and nk_menubar_begin.
+    If you want a menubar the first nuklear function after `nk_begin` has to be a
+    `nk_menubar_begin` call. Inside the menubar you then have to allocate space for
+    widgets (also supports multiple rows).
+    Example:
+        if (nk_begin(...)) {
+            nk_menubar_begin(...);
+                nk_layout_xxxx(...);
+                nk_button(...);
+                nk_layout_xxxx(...);
+                nk_button(...);
+            nk_menubar_end(...);
+        }
+        nk_end(...);
+    */
     if (layout->flags & NK_WINDOW_HIDDEN || layout->flags & NK_WINDOW_MINIMIZED)
         return;
 
@@ -17756,6 +18210,32 @@ nk_widget_size(struct nk_context *ctx)
     return nk_vec2(bounds.w, bounds.h);
 }
 
+NK_API float
+nk_widget_width(struct nk_context *ctx)
+{
+    struct nk_rect bounds;
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
+    if (!ctx || !ctx->current)
+        return 0;
+
+    nk_layout_peek(&bounds, ctx);
+    return bounds.w;
+}
+
+NK_API float
+nk_widget_height(struct nk_context *ctx)
+{
+    struct nk_rect bounds;
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
+    if (!ctx || !ctx->current)
+        return 0;
+
+    nk_layout_peek(&bounds, ctx);
+    return bounds.h;
+}
+
 NK_API int
 nk_widget_is_hovered(struct nk_context *ctx)
 {
@@ -17867,7 +18347,7 @@ nk_widget_fitting(struct nk_rect *bounds, struct nk_context *ctx,
     layout = win->layout;
     state = nk_widget(bounds, ctx);
 
-    panel_padding = nk_panel_get_padding(style, win->flags);
+    panel_padding = nk_panel_get_padding(style, layout->type);
     if (layout->row.index == 1) {
         bounds->w += panel_padding.x;
         bounds->x -= panel_padding.x;
@@ -17987,7 +18467,7 @@ nk_labelf_colored(struct nk_context *ctx, nk_flags flags,
     char buf[256];
     va_list args;
     va_start(args, fmt);
-    nk_strfmtv(buf, NK_LEN(buf), fmt, args);
+    nk_strfmt(buf, NK_LEN(buf), fmt, args);
     nk_label_colored(ctx, buf, flags, color);
     va_end(args);
 }
@@ -17999,7 +18479,7 @@ nk_labelf_colored_wrap(struct nk_context *ctx, struct nk_color color,
     char buf[256];
     va_list args;
     va_start(args, fmt);
-    nk_strfmtv(buf, NK_LEN(buf), fmt, args);
+    nk_strfmt(buf, NK_LEN(buf), fmt, args);
     nk_label_colored_wrap(ctx, buf, color);
     va_end(args);
 }
@@ -18010,7 +18490,7 @@ nk_labelf(struct nk_context *ctx, nk_flags flags, const char *fmt, ...)
     char buf[256];
     va_list args;
     va_start(args, fmt);
-    nk_strfmtv(buf, NK_LEN(buf), fmt, args);
+    nk_strfmt(buf, NK_LEN(buf), fmt, args);
     nk_label(ctx, buf, flags);
     va_end(args);
 }
@@ -18021,7 +18501,7 @@ nk_labelf_wrap(struct nk_context *ctx, const char *fmt,...)
     char buf[256];
     va_list args;
     va_start(args, fmt);
-    nk_strfmtv(buf, NK_LEN(buf), fmt, args);
+    nk_strfmt(buf, NK_LEN(buf), fmt, args);
     nk_label_wrap(ctx, buf);
     va_end(args);
 }
@@ -18040,16 +18520,19 @@ nk_value_uint(struct nk_context *ctx, const char *prefix, unsigned int value)
 
 NK_API void
 nk_value_float(struct nk_context *ctx, const char *prefix, float value)
-{nk_labelf(ctx, NK_TEXT_LEFT, "%s: %.3f", prefix, value);}
+{
+    double double_value = (double)value;
+    nk_labelf(ctx, NK_TEXT_LEFT, "%s: %.3f", prefix, double_value);
+}
 
 NK_API void
 nk_value_color_byte(struct nk_context *ctx, const char *p, struct nk_color c)
-{nk_labelf(ctx, NK_TEXT_LEFT, "%s: (%u, %u, %u, %u)", p, c.r, c.g, c.b, c.a);}
+{nk_labelf(ctx, NK_TEXT_LEFT, "%s: (%c, %c, %c, %c)", p, c.r, c.g, c.b, c.a);}
 
 NK_API void
 nk_value_color_float(struct nk_context *ctx, const char *p, struct nk_color color)
 {
-    float c[4]; nk_color_fv(c, color);
+    double c[4]; nk_color_dv(c, color);
     nk_labelf(ctx, NK_TEXT_LEFT, "%s: (%.2f, %.2f, %.2f, %.2f)",
         p, c[0], c[1], c[2], c[3]);
 }
@@ -18205,6 +18688,7 @@ nk_button_color(struct nk_context *ctx, struct nk_color color)
 
     int ret = 0;
     struct nk_rect bounds;
+    struct nk_rect content;
     enum nk_widget_layout_states state;
 
     NK_ASSERT(ctx);
@@ -18224,9 +18708,8 @@ nk_button_color(struct nk_context *ctx, struct nk_color color)
     button.normal = nk_style_item_color(color);
     button.hover = nk_style_item_color(color);
     button.active = nk_style_item_color(color);
-    button.padding = nk_vec2(0,0);
     ret = nk_do_button(&ctx->last_widget_state, &win->buffer, bounds,
-                &button, in, ctx->button_behavior, &bounds);
+                &button, in, ctx->button_behavior, &content);
     nk_draw_button(&win->buffer, &bounds, ctx->last_widget_state, &button);
     return ret;
 }
@@ -18382,6 +18865,7 @@ nk_selectable_text(struct nk_context *ctx, const char *str, int len,
     win = ctx->current;
     layout = win->layout;
     style = &ctx->style;
+
     state = nk_widget(&bounds, ctx);
     if (!state) return 0;
     in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
@@ -18411,6 +18895,7 @@ nk_selectable_image_text(struct nk_context *ctx, struct nk_image img,
     win = ctx->current;
     layout = win->layout;
     style = &ctx->style;
+
     state = nk_widget(&bounds, ctx);
     if (!state) return 0;
     in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
@@ -18465,6 +18950,7 @@ nk_check_text(struct nk_context *ctx, const char *text, int len, int active)
     win = ctx->current;
     style = &ctx->style;
     layout = win->layout;
+
     state = nk_widget(&bounds, ctx);
     if (!state) return active;
     in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
@@ -18558,6 +19044,7 @@ nk_option_text(struct nk_context *ctx, const char *text, int len, int is_active)
     win = ctx->current;
     style = &ctx->style;
     layout = win->layout;
+
     state = nk_widget(&bounds, ctx);
     if (!state) return state;
     in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
@@ -18616,6 +19103,7 @@ nk_slider_float(struct nk_context *ctx, float min_value, float *value, float max
     win = ctx->current;
     style = &ctx->style;
     layout = win->layout;
+
     state = nk_widget(&bounds, ctx);
     if (!state) return ret;
     in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
@@ -19423,6 +19911,19 @@ nk_group_begin(struct nk_context *ctx, struct nk_panel *layout, const char *titl
     c = &win->layout->clip;
     nk_panel_alloc_space(&bounds, ctx);
     nk_zero(layout, sizeof(*layout));
+    NK_ASSERT(win->layout != layout && "Parent and group are not allowed to use the same panel");
+    /* This assert triggers either if you pass the same panel to a parent parent and child group
+     * or forgot to add a `nk_group_end` to a `nk_group_begin`.
+     * Correct example:
+     *  struct nk_panel panel;
+     *  if (nk_begin(...,&panel,...)) {
+     *      struct nk_panel tab;
+     *      if (nk_group_begin(...,&tab,...)) {
+     *          ....
+     *          nk_group_end(...);
+     *      }
+     *  }
+     */
 
     /* find persistent group scrollbar value */
     title_len = (int)nk_strlen(title);
@@ -19657,6 +20158,7 @@ nk_nonblock_begin(struct nk_panel *layout, struct nk_context *ctx,
         if (pressed && (!in_body || in_header))
             is_active = nk_false;
     }
+    win->popup.header = header;
 
     if (!is_active) {
         /* remove read only mode from all parent panels */
@@ -19727,7 +20229,12 @@ nk_popup_end(struct nk_context *ctx)
     if (!popup->parent) return;
     win = popup->parent;
     if (popup->flags & NK_WINDOW_HIDDEN) {
-        win->layout->flags |= NK_WINDOW_REMOVE_ROM;
+        struct nk_panel *root;
+        root = win->layout;
+        while (root) {
+            root->flags |= NK_WINDOW_REMOVE_ROM;
+            root = root->parent;
+        }
         win->popup.active = 0;
     }
     nk_push_scissor(&popup->buffer, nk_null_rect);
@@ -20006,10 +20513,35 @@ NK_API void
 nk_contextual_end(struct nk_context *ctx)
 {
     struct nk_window *popup;
+    struct nk_panel *panel;
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
+    if (!ctx || !ctx->current) return;
+
     popup = ctx->current;
+    panel = popup->layout;
     NK_ASSERT(popup->parent);
+    NK_ASSERT(panel->type & NK_PANEL_SET_POPUP);
+    if (panel->flags & NK_WINDOW_DYNAMIC) {
+        /* Close behavior
+        This is a bit hack solution since we do not now before we end our popup
+        how big it will be. We therefore do not directly now when a
+        click outside the non-blocking popup must close it at that direct frame.
+        Instead it will be closed in the next frame.*/
+        struct nk_rect body = {0,0,0,0};
+        if (panel->at_y < (panel->bounds.y + panel->bounds.h)) {
+            struct nk_vec2 padding = nk_panel_get_padding(&ctx->style, panel->type);
+            body = panel->bounds;
+            body.y = (panel->at_y + panel->footer_height + panel->border + padding.y);
+            body.h = (panel->bounds.y + panel->bounds.h) - body.y;
+        }
+
+        {int pressed = nk_input_is_mouse_pressed(&ctx->input, NK_BUTTON_LEFT);
+        int in_body = nk_input_is_mouse_hovering_rect(&ctx->input, body);
+        if (pressed && in_body)
+            popup->flags |= NK_WINDOW_HIDDEN;
+        }
+    }
     if (popup->flags & NK_WINDOW_HIDDEN)
         popup->seq = 0;
     nk_popup_end(ctx);
@@ -20022,7 +20554,7 @@ nk_contextual_end(struct nk_context *ctx)
  * --------------------------------------------------------------*/
 NK_INTERN int
 nk_combo_begin(struct nk_panel *layout, struct nk_context *ctx, struct nk_window *win,
-    int height, int is_clicked, struct nk_rect header)
+    struct nk_vec2 size, int is_clicked, struct nk_rect header)
 {
     struct nk_window *popup;
     int is_open = 0;
@@ -20038,9 +20570,9 @@ nk_combo_begin(struct nk_panel *layout, struct nk_context *ctx, struct nk_window
 
     popup = win->popup.win;
     body.x = header.x;
-    body.w = header.w;
+    body.w = size.x;
     body.y = header.y + header.h-ctx->style.window.combo_border;
-    body.h = (float)height;
+    body.h = size.y;
 
     hash = win->popup.combo_count++;
     is_open = (popup) ? nk_true:nk_false;
@@ -20057,7 +20589,7 @@ nk_combo_begin(struct nk_panel *layout, struct nk_context *ctx, struct nk_window
 
 NK_API int
 nk_combo_begin_text(struct nk_context *ctx, struct nk_panel *layout,
-    const char *selected, int len, int height)
+    const char *selected, int len, struct nk_vec2 size)
 {
     const struct nk_input *in;
     struct nk_window *win;
@@ -20143,16 +20675,16 @@ nk_combo_begin_text(struct nk_context *ctx, struct nk_panel *layout,
         nk_draw_button_symbol(&win->buffer, &button, &content, ctx->last_widget_state,
             &ctx->style.combo.button, sym, style->font);
     }
-    return nk_combo_begin(layout, ctx, win, height, is_clicked, header);
+    return nk_combo_begin(layout, ctx, win, size, is_clicked, header);
 }
 
 NK_API int nk_combo_begin_label(struct nk_context *ctx, struct nk_panel *layout,
-    const char *selected, int max_height)
-{return nk_combo_begin_text(ctx, layout, selected, nk_strlen(selected), max_height);}
+    const char *selected, struct nk_vec2 size)
+{return nk_combo_begin_text(ctx, layout, selected, nk_strlen(selected), size);}
 
 NK_API int
 nk_combo_begin_color(struct nk_context *ctx, struct nk_panel *layout,
-    struct nk_color color, int height)
+    struct nk_color color, struct nk_vec2 size)
 {
     struct nk_window *win;
     struct nk_style *style;
@@ -20227,12 +20759,12 @@ nk_combo_begin_color(struct nk_context *ctx, struct nk_panel *layout,
         nk_draw_button_symbol(&win->buffer, &button, &content, ctx->last_widget_state,
             &ctx->style.combo.button, sym, style->font);
     }
-    return nk_combo_begin(layout, ctx, win, height, is_clicked, header);
+    return nk_combo_begin(layout, ctx, win, size, is_clicked, header);
 }
 
 NK_API int
 nk_combo_begin_symbol(struct nk_context *ctx, struct nk_panel *layout,
-    enum nk_symbol_type symbol, int height)
+    enum nk_symbol_type symbol, struct nk_vec2 size)
 {
     struct nk_window *win;
     struct nk_style *style;
@@ -20317,12 +20849,12 @@ nk_combo_begin_symbol(struct nk_context *ctx, struct nk_panel *layout,
         nk_draw_button_symbol(&win->buffer, &bounds, &content, ctx->last_widget_state,
             &ctx->style.combo.button, sym, style->font);
     }
-    return nk_combo_begin(layout, ctx, win, height, is_clicked, header);
+    return nk_combo_begin(layout, ctx, win, size, is_clicked, header);
 }
 
 NK_API int
 nk_combo_begin_symbol_text(struct nk_context *ctx, struct nk_panel *layout,
-    const char *selected, int len, enum nk_symbol_type symbol, int height)
+    const char *selected, int len, enum nk_symbol_type symbol, struct nk_vec2 size)
 {
     struct nk_window *win;
     struct nk_style *style;
@@ -20415,12 +20947,12 @@ nk_combo_begin_symbol_text(struct nk_context *ctx, struct nk_panel *layout,
         label.h = header.h - 2 * style->combo.content_padding.y;
         nk_widget_text(&win->buffer, label, selected, len, &text, NK_TEXT_LEFT, style->font);
     }
-    return nk_combo_begin(layout, ctx, win, height, is_clicked, header);
+    return nk_combo_begin(layout, ctx, win, size, is_clicked, header);
 }
 
 NK_API int
 nk_combo_begin_image(struct nk_context *ctx, struct nk_panel *layout,
-    struct nk_image img, int height)
+    struct nk_image img, struct nk_vec2 size)
 {
     struct nk_window *win;
     struct nk_style *style;
@@ -20495,12 +21027,12 @@ nk_combo_begin_image(struct nk_context *ctx, struct nk_panel *layout,
         nk_draw_button_symbol(&win->buffer, &bounds, &content, ctx->last_widget_state,
             &ctx->style.combo.button, sym, style->font);
     }
-    return nk_combo_begin(layout, ctx, win, height, is_clicked, header);
+    return nk_combo_begin(layout, ctx, win, size, is_clicked, header);
 }
 
 NK_API int
 nk_combo_begin_image_text(struct nk_context *ctx, struct nk_panel *layout,
-    const char *selected, int len, struct nk_image img, int height)
+    const char *selected, int len, struct nk_image img, struct nk_vec2 size)
 {
     struct nk_window *win;
     struct nk_style *style;
@@ -20588,16 +21120,16 @@ nk_combo_begin_image_text(struct nk_context *ctx, struct nk_panel *layout,
         label.h = header.h - 2 * style->combo.content_padding.y;
         nk_widget_text(&win->buffer, label, selected, len, &text, NK_TEXT_LEFT, style->font);
     }
-    return nk_combo_begin(layout, ctx, win, height, is_clicked, header);
+    return nk_combo_begin(layout, ctx, win, size, is_clicked, header);
 }
 
 NK_API int nk_combo_begin_symbol_label(struct nk_context *ctx, struct nk_panel *layout,
-    const char *selected, enum nk_symbol_type type, int height)
-{return nk_combo_begin_symbol_text(ctx, layout, selected, nk_strlen(selected), type, height);}
+    const char *selected, enum nk_symbol_type type, struct nk_vec2 size)
+{return nk_combo_begin_symbol_text(ctx, layout, selected, nk_strlen(selected), type, size);}
 
 NK_API int nk_combo_begin_image_label(struct nk_context *ctx, struct nk_panel *layout,
-    const char *selected, struct nk_image img, int height)
-{return nk_combo_begin_image_text(ctx, layout, selected, nk_strlen(selected), img, height);}
+    const char *selected, struct nk_image img, struct nk_vec2 size)
+{return nk_combo_begin_image_text(ctx, layout, selected, nk_strlen(selected), img, size);}
 
 NK_API int nk_combo_item_text(struct nk_context *ctx, const char *text, int len,nk_flags align)
 {return nk_contextual_item_text(ctx, text, len, align);}
@@ -20629,7 +21161,7 @@ NK_API void nk_combo_close(struct nk_context *ctx)
 
 NK_API int
 nk_combo(struct nk_context *ctx, const char **items, int count,
-    int selected, int item_height, int maximum_height)
+    int selected, int item_height, struct nk_vec2 size)
 {
     int i = 0;
     int max_height;
@@ -20644,11 +21176,11 @@ nk_combo(struct nk_context *ctx, const char **items, int count,
         return selected;
 
     item_spacing = ctx->style.window.spacing;
-    window_padding = nk_panel_get_padding(&ctx->style, ctx->current->flags);
+    window_padding = nk_panel_get_padding(&ctx->style, ctx->current->layout->type);
     max_height = count * item_height + count * (int)item_spacing.y;
     max_height += (int)item_spacing.y * 2 + (int)window_padding.y * 2;
-    max_height = NK_MIN(maximum_height, max_height);
-    if (nk_combo_begin_label(ctx, &combo, items[selected], max_height)) {
+    size.y = NK_MIN(size.y, (float)max_height);
+    if (nk_combo_begin_label(ctx, &combo, items[selected], size)) {
         nk_layout_row_dynamic(ctx, (float)item_height, 1);
         for (i = 0; i < count; ++i) {
             if (nk_combo_item_label(ctx, items[i], NK_TEXT_LEFT))
@@ -20661,7 +21193,7 @@ nk_combo(struct nk_context *ctx, const char **items, int count,
 
 NK_API int
 nk_combo_separator(struct nk_context *ctx, const char *items_separated_by_separator,
-    int separator, int selected, int count, int item_height, int maximum_height)
+    int separator, int selected, int count, int item_height, struct nk_vec2 size)
 {
     int i;
     int max_height;
@@ -20679,10 +21211,10 @@ nk_combo_separator(struct nk_context *ctx, const char *items_separated_by_separa
 
     /* calculate popup window */
     item_spacing = ctx->style.window.spacing;
-    window_padding = nk_panel_get_padding(&ctx->style, ctx->current->flags);
+    window_padding = nk_panel_get_padding(&ctx->style, ctx->current->layout->type);
     max_height = count * item_height + count * (int)item_spacing.y;
     max_height += (int)item_spacing.y * 2 + (int)window_padding.y * 2;
-    max_height = NK_MIN(maximum_height, max_height);
+    size.y = NK_MIN(size.y, (float)max_height);
 
     /* find selected item */
     current_item = items_separated_by_separator;
@@ -20693,7 +21225,7 @@ nk_combo_separator(struct nk_context *ctx, const char *items_separated_by_separa
         current_item = iter + 1;
     }
 
-    if (nk_combo_begin_text(ctx, &combo, current_item, length, max_height)) {
+    if (nk_combo_begin_text(ctx, &combo, current_item, length, size)) {
         current_item = items_separated_by_separator;
         nk_layout_row_dynamic(ctx, (float)item_height, 1);
         for (i = 0; i < count; ++i) {
@@ -20711,12 +21243,12 @@ nk_combo_separator(struct nk_context *ctx, const char *items_separated_by_separa
 
 NK_API int
 nk_combo_string(struct nk_context *ctx, const char *items_separated_by_zeros,
-    int selected, int count, int item_height, int max_height)
-{return nk_combo_separator(ctx, items_separated_by_zeros, '\0', selected, count, item_height, max_height);}
+    int selected, int count, int item_height, struct nk_vec2 size)
+{return nk_combo_separator(ctx, items_separated_by_zeros, '\0', selected, count, item_height, size);}
 
 NK_API int
 nk_combo_callback(struct nk_context *ctx, void(*item_getter)(void*, int, const char**),
-    void *userdata, int selected, int count, int item_height, int maximum_height)
+    void *userdata, int selected, int count, int item_height, struct nk_vec2 size)
 {
     int i;
     int max_height;
@@ -20732,13 +21264,13 @@ nk_combo_callback(struct nk_context *ctx, void(*item_getter)(void*, int, const c
 
     /* calculate popup window */
     item_spacing = ctx->style.window.spacing;
-    window_padding = nk_panel_get_padding(&ctx->style, ctx->current->flags);
+    window_padding = nk_panel_get_padding(&ctx->style, ctx->current->layout->type);
     max_height = count * item_height + count * (int)item_spacing.y;
     max_height += (int)item_spacing.y * 2 + (int)window_padding.y * 2;
-    max_height = NK_MIN(maximum_height, max_height);
+    size.y = NK_MIN(size.y, (float)max_height);
 
     item_getter(userdata, selected, &item);
-    if (nk_combo_begin_label(ctx, &combo, item, max_height)) {
+    if (nk_combo_begin_label(ctx, &combo, item, size)) {
         nk_layout_row_dynamic(ctx, (float)item_height, 1);
         for (i = 0; i < count; ++i) {
             item_getter(userdata, i, &item);
@@ -20751,22 +21283,22 @@ nk_combo_callback(struct nk_context *ctx, void(*item_getter)(void*, int, const c
 }
 
 NK_API void nk_combobox(struct nk_context *ctx, const char **items, int count,
-    int *selected, int item_height, int max_height)
-{*selected = nk_combo(ctx, items, count, *selected, item_height, max_height);}
+    int *selected, int item_height, struct nk_vec2 size)
+{*selected = nk_combo(ctx, items, count, *selected, item_height, size);}
 
 NK_API void nk_combobox_string(struct nk_context *ctx, const char *items_separated_by_zeros,
-    int *selected, int count, int item_height, int max_height)
-{*selected = nk_combo_string(ctx, items_separated_by_zeros, *selected, count, item_height, max_height);}
+    int *selected, int count, int item_height, struct nk_vec2 size)
+{*selected = nk_combo_string(ctx, items_separated_by_zeros, *selected, count, item_height, size);}
 
 NK_API void nk_combobox_separator(struct nk_context *ctx, const char *items_separated_by_separator,
-    int separator,int *selected, int count, int item_height, int max_height)
+    int separator,int *selected, int count, int item_height, struct nk_vec2 size)
 {*selected = nk_combo_separator(ctx, items_separated_by_separator, separator,
-    *selected, count, item_height, max_height);}
+    *selected, count, item_height, size);}
 
 NK_API void nk_combobox_callback(struct nk_context *ctx,
     void(*item_getter)(void* data, int id, const char **out_text),
-    void *userdata, int *selected, int count, int item_height, int max_height)
-{*selected = nk_combo_callback(ctx, item_getter, userdata,  *selected, count, item_height, max_height);}
+    void *userdata, int *selected, int count, int item_height, struct nk_vec2 size)
+{*selected = nk_combo_callback(ctx, item_getter, userdata,  *selected, count, item_height, size);}
 
 /*
  * -------------------------------------------------------------
@@ -20777,7 +21309,7 @@ NK_API void nk_combobox_callback(struct nk_context *ctx,
  */
 NK_INTERN int
 nk_menu_begin(struct nk_panel *layout, struct nk_context *ctx, struct nk_window *win,
-    const char *id, int is_clicked, struct nk_rect header, float width)
+    const char *id, int is_clicked, struct nk_rect header, struct nk_vec2 size)
 {
     int is_open = 0;
     int is_active = 0;
@@ -20792,9 +21324,9 @@ nk_menu_begin(struct nk_panel *layout, struct nk_context *ctx, struct nk_window 
         return 0;
 
     body.x = header.x;
-    body.w = width;
+    body.w = size.x;
     body.y = header.y + header.h;
-    body.h = nk_null_rect.h;
+    body.h = size.y;
 
     popup = win->popup.win;
     is_open = popup ? nk_true : nk_false;
@@ -20803,6 +21335,7 @@ nk_menu_begin(struct nk_panel *layout, struct nk_context *ctx, struct nk_window 
         (!is_open && !is_active && !is_clicked)) return 0;
     if (!nk_nonblock_begin(layout, ctx, NK_WINDOW_NO_SCROLLBAR, body, header, NK_PANEL_MENU))
         return 0;
+
     win->popup.type = NK_PANEL_MENU;
     win->popup.name = hash;
     return 1;
@@ -20810,7 +21343,7 @@ nk_menu_begin(struct nk_panel *layout, struct nk_context *ctx, struct nk_window 
 
 NK_API int
 nk_menu_begin_text(struct nk_context *ctx, struct nk_panel *layout,
-    const char *title, int len, nk_flags align, float width)
+    const char *title, int len, nk_flags align, struct nk_vec2 size)
 {
     struct nk_window *win;
     const struct nk_input *in;
@@ -20831,16 +21364,16 @@ nk_menu_begin_text(struct nk_context *ctx, struct nk_panel *layout,
     if (nk_do_button_text(&ctx->last_widget_state, &win->buffer, header,
         title, len, align, NK_BUTTON_DEFAULT, &ctx->style.menu_button, in, ctx->style.font))
         is_clicked = nk_true;
-    return nk_menu_begin(layout, ctx, win, title, is_clicked, header, width);
+    return nk_menu_begin(layout, ctx, win, title, is_clicked, header, size);
 }
 
 NK_API int nk_menu_begin_label(struct nk_context *ctx, struct nk_panel *layout,
-    const char *text, nk_flags align, float width)
-{return nk_menu_begin_text(ctx, layout, text, nk_strlen(text), align, width);}
+    const char *text, nk_flags align, struct nk_vec2 size)
+{return nk_menu_begin_text(ctx, layout, text, nk_strlen(text), align, size);}
 
 NK_API int
 nk_menu_begin_image(struct nk_context *ctx, struct nk_panel *layout,
-    const char *id, struct nk_image img, float width)
+    const char *id, struct nk_image img, struct nk_vec2 size)
 {
     struct nk_window *win;
     struct nk_rect header;
@@ -20861,12 +21394,12 @@ nk_menu_begin_image(struct nk_context *ctx, struct nk_panel *layout,
     if (nk_do_button_image(&ctx->last_widget_state, &win->buffer, header,
         img, NK_BUTTON_DEFAULT, &ctx->style.menu_button, in))
         is_clicked = nk_true;
-    return nk_menu_begin(layout, ctx, win, id, is_clicked, header, width);
+    return nk_menu_begin(layout, ctx, win, id, is_clicked, header, size);
 }
 
 NK_API int
 nk_menu_begin_symbol(struct nk_context *ctx, struct nk_panel *layout,
-    const char *id, enum nk_symbol_type sym, float width)
+    const char *id, enum nk_symbol_type sym, struct nk_vec2 size)
 {
     struct nk_window *win;
     const struct nk_input *in;
@@ -20887,12 +21420,12 @@ nk_menu_begin_symbol(struct nk_context *ctx, struct nk_panel *layout,
     if (nk_do_button_symbol(&ctx->last_widget_state,  &win->buffer, header,
         sym, NK_BUTTON_DEFAULT, &ctx->style.menu_button, in, ctx->style.font))
         is_clicked = nk_true;
-    return nk_menu_begin(layout, ctx, win, id, is_clicked, header, width);
+    return nk_menu_begin(layout, ctx, win, id, is_clicked, header, size);
 }
 
 NK_API int
 nk_menu_begin_image_text(struct nk_context *ctx, struct nk_panel *layout,
-    const char *title, int len, nk_flags align, struct nk_image img, float width)
+    const char *title, int len, nk_flags align, struct nk_image img, struct nk_vec2 size)
 {
     struct nk_window *win;
     struct nk_rect header;
@@ -20914,16 +21447,16 @@ nk_menu_begin_image_text(struct nk_context *ctx, struct nk_panel *layout,
         header, img, title, len, align, NK_BUTTON_DEFAULT, &ctx->style.menu_button,
         ctx->style.font, in))
         is_clicked = nk_true;
-    return nk_menu_begin(layout, ctx, win, title, is_clicked, header, width);
+    return nk_menu_begin(layout, ctx, win, title, is_clicked, header, size);
 }
 
 NK_API int nk_menu_begin_image_label(struct nk_context *ctx, struct nk_panel *layout,
-    const char *title, nk_flags align, struct nk_image img, float width)
-{return nk_menu_begin_image_text(ctx, layout, title, nk_strlen(title), align, img, width);}
+    const char *title, nk_flags align, struct nk_image img, struct nk_vec2 size)
+{return nk_menu_begin_image_text(ctx, layout, title, nk_strlen(title), align, img, size);}
 
 NK_API int
 nk_menu_begin_symbol_text(struct nk_context *ctx, struct nk_panel *layout,
-    const char *title, int size, nk_flags align, enum nk_symbol_type sym, float width)
+    const char *title, int len, nk_flags align, enum nk_symbol_type sym, struct nk_vec2 size)
 {
     struct nk_window *win;
     struct nk_rect header;
@@ -20943,14 +21476,14 @@ nk_menu_begin_symbol_text(struct nk_context *ctx, struct nk_panel *layout,
 
     in = (state == NK_WIDGET_ROM || win->layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
     if (nk_do_button_text_symbol(&ctx->last_widget_state, &win->buffer,
-        header, sym, title, size, align, NK_BUTTON_DEFAULT, &ctx->style.menu_button,
+        header, sym, title, len, align, NK_BUTTON_DEFAULT, &ctx->style.menu_button,
         ctx->style.font, in)) is_clicked = nk_true;
-    return nk_menu_begin(layout, ctx, win, title, is_clicked, header, width);
+    return nk_menu_begin(layout, ctx, win, title, is_clicked, header, size);
 }
 
 NK_API int nk_menu_begin_symbol_label(struct nk_context *ctx, struct nk_panel *layout,
-    const char *title, nk_flags align, enum nk_symbol_type sym, float width)
-{return nk_menu_begin_symbol_text(ctx, layout, title, nk_strlen(title), align,sym, width);}
+    const char *title, nk_flags align, enum nk_symbol_type sym, struct nk_vec2 size )
+{return nk_menu_begin_symbol_text(ctx, layout, title, nk_strlen(title), align,sym,size);}
 
 NK_API int nk_menu_item_text(struct nk_context *ctx, const char *title, int len, nk_flags align)
 {return nk_contextual_item_text(ctx, title, len, align);}

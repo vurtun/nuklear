@@ -207,8 +207,7 @@ grid_demo(struct nk_context *ctx, struct media *media)
         nk_label(ctx, "Checkbox:", NK_TEXT_RIGHT);
         nk_checkbox_label(ctx, "Check me", &check);
         nk_label(ctx, "Combobox:", NK_TEXT_RIGHT);
-
-        if (nk_combo_begin_label(ctx, &combo, items[selected_item], 200)) {
+        if (nk_combo_begin_label(ctx, &combo, items[selected_item], nk_vec2(nk_widget_width(ctx), 200))) {
             nk_layout_row_dynamic(ctx, 25, 1);
             for (i = 0; i < 3; ++i)
                 if (nk_combo_item_label(ctx, items[i], NK_TEXT_LEFT))
@@ -272,7 +271,7 @@ button_demo(struct nk_context *ctx, struct media *media)
     {
         /* toolbar */
         nk_layout_row_static(ctx, 40, 40, 4);
-        if (nk_menu_begin_image(ctx, &menu, "Music", media->play, 120))
+        if (nk_menu_begin_image(ctx, &menu, "Music", media->play, nk_vec2(110,120)))
         {
             /* settings */
             nk_layout_row_dynamic(ctx, 25, 1);
@@ -421,7 +420,7 @@ basic_demo(struct nk_context *ctx, struct media *media)
      *------------------------------------------------*/
     ui_header(ctx, media, "Combo box");
     ui_widget(ctx, media, 40);
-    if (nk_combo_begin_label(ctx, &combo, items[selected_item], 200)) {
+    if (nk_combo_begin_label(ctx, &combo, items[selected_item], nk_vec2(nk_widget_width(ctx), 200))) {
         nk_layout_row_dynamic(ctx, 35, 1);
         for (i = 0; i < 3; ++i)
             if (nk_combo_item_label(ctx, items[i], NK_TEXT_LEFT))
@@ -430,7 +429,7 @@ basic_demo(struct nk_context *ctx, struct media *media)
     }
 
     ui_widget(ctx, media, 40);
-    if (nk_combo_begin_image_label(ctx, &combo, items[selected_icon], media->images[selected_icon], 200)) {
+    if (nk_combo_begin_image_label(ctx, &combo, items[selected_icon], media->images[selected_icon], nk_vec2(nk_widget_width(ctx), 200))) {
         nk_layout_row_dynamic(ctx, 35, 1);
         for (i = 0; i < 3; ++i)
             if (nk_combo_item_image_label(ctx, media->images[i], items[i], NK_TEXT_RIGHT))

@@ -1,5 +1,30 @@
 # Changelog
-
+- 2016/09/29 (1.157)- Fixed deduction of basic type in non `<stdint.h>` compilation
+- 2016/09/29 (1.156)- Fixed edit widget UTF-8 text cursor drawing bug
+- 2016/09/28 (1.156)- Fixed edit widget UTF-8 text appending/inserting/removing
+- 2016/09/28 (1.156)- Fixed drawing bug inside edit widgets which offset all text
+                        text in every edit widget if one of them is scrolled.
+- 2016/09/28 (1.155)- Fixed small bug in edit widgets if not active. The wrong
+                        text length is passed. It should have been in bytes but
+                        was passed as glyphes.
+- 2016/09/20 (1.154)- Fixed color button size calculation
+- 2016/09/20 (1.153)- Fixed some `nk_vsnprintf` behavior bugs and removed
+                        `<stdio.h>` again from `NK_INCLUDE_STANDARD_VARARGS`.
+- 2016/09/18 (1.152)- C89 does not support vsnprintf only C99 and newer as well
+                        as C++11 and newer. In addition to use vsnprintf you have
+                        to include <stdio.h>. So just defining `NK_INCLUDE_STD_VAR_ARGS`
+                        is not enough. That behavior is now fixed. By default if
+                        both varargs as well as stdio is selected I try to use
+                        vsnprintf if not possible I will revert to vsprintf. If
+                        varargs but not stdio was defined I will use my own function.
+- 2016/09/15 (1.151)- Fixed panel `close` behavior for deeper panel levels
+- 2016/09/15 (1.151)- Fixed C++ errors and wrong argument to `nk_panel_get_xxxx`
+- 2016/09/13 (1.15) - !BREAKING! Fixed nonblocking popup behavior in menu, combo,
+                        and contextual which prevented closing in y-direction if
+                        popup did not reach max height.
+                        In addition the height parameter was changed into vec2
+                        for width and height to have more control over the popup size.
+- 2016/09/13 (1.15) - Cleaned up and extended type selection
 - 2016/09/13 (1.141)- Fixed slider behavior hopefully for the last time. This time
                         all calculation are correct so no more hackery.
 - 2016/09/13 (1.141)- Internal change to divide window/panel flags into panel flags and types.

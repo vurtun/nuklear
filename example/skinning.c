@@ -769,7 +769,7 @@ int main(int argc, char *argv[])
             nk_layout_row_dynamic(&ctx, 25, 1);
             nk_edit_string(&ctx, NK_EDIT_FIELD, field_buffer, &field_len, 64, nk_filter_default);
             nk_property_float(&ctx, "#X:", -1024.0f, &pos, 1024.0f, 1, 1);
-            current_weapon = nk_combo(&ctx, weapons, LEN(weapons), current_weapon, 25, 200);
+            current_weapon = nk_combo(&ctx, weapons, LEN(weapons), current_weapon, 25, nk_vec2(nk_widget_width(&ctx),200));
 
             nk_layout_row_dynamic(&ctx, 100, 1);
             if (nk_chart_begin_colored(&ctx, NK_CHART_LINES, nk_rgb(255,0,0), nk_rgb(150,0,0), 32, 0.0f, 1.0f)) {
