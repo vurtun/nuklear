@@ -214,6 +214,13 @@ OPTIONAL DEFINES:
         will be selected and compile time validated. If they are incorrect you can
         define the correct types by overloading these type defines.
 
+    NK_ZERO_COMMAND_MEMORY
+        Defining this will zero out memory for each drawing command added to a
+        drawing queue (inside nk_command_buffer_push). This can be used to
+        implement fast check (using memcmp) that command buffers are equal and
+        avoid drawing frames when nothing on screen has changed since previous
+        frame.
+
 CREDITS:
     Developed by Micha Mettke and every direct or indirect contributor to the GitHub.
 
@@ -5846,6 +5853,10 @@ nk_command_buffer_push(struct nk_command_buffer* b,
     unaligned = (nk_byte*)cmd + size;
     memory = NK_ALIGN_PTR(unaligned, align);
     alignment = (nk_size)((nk_byte*)memory - (nk_byte*)unaligned);
+
+#ifdef NK_ZERO_COMMAND_MEMORY
+    NK_MEMSET(cmd, 0, size + alignment);
+#endif
 
     cmd->type = t;
     cmd->next = b->base->allocated + alignment;
