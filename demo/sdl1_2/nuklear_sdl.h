@@ -367,7 +367,7 @@ nk_sdl_get_text_width(nk_handle handle, float height, const char *text, int len)
 NK_API struct nk_context*
 nk_sdl_init(SDL_Surface *screen_surface)
 {
-    struct nk_user_font font;
+    static struct nk_user_font font;
     sdl_font = (nk_sdl_Font*)calloc(1, sizeof(nk_sdl_Font));
     sdl_font->width = 8; /* Default in  the SDL_gfx library */
     sdl_font->height = 8; /* Default in  the SDL_gfx library */
