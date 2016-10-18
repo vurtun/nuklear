@@ -49,7 +49,7 @@ USAGE:
 FEATURES:
     - Absolutely no platform dependend code
     - Memory management control ranging from/to
-        - Ease of use by allocating everything from the standard library
+        - Ease of use by allocating everything from standard library
         - Control every byte of memory inside the library
     - Font handling control ranging from/to
         - Use your own font implementation for everything
@@ -134,6 +134,13 @@ OPTIONAL DEFINES:
         define this it will only trigger if a button is released.
         <!> If used it is only required to be defined for the implementation part <!>
 
+    NK_ZERO_COMMAND_MEMORY
+        Defining this will zero out memory for each drawing command added to a
+        drawing queue (inside nk_command_buffer_push). Zeroing command memory
+        is very useful for fast checking (using memcmp) if command buffers are
+        equal and avoid drawing frames when nothing on screen has changed since
+        previous frame.
+
     NK_ASSERT
         If you don't define this, nuklear will use <assert.h> with assert().
         <!> Adds the standard library so define to nothing of not wanted <!>
@@ -214,15 +221,8 @@ OPTIONAL DEFINES:
         will be selected and compile time validated. If they are incorrect you can
         define the correct types by overloading these type defines.
 
-    NK_ZERO_COMMAND_MEMORY
-        Defining this will zero out memory for each drawing command added to a
-        drawing queue (inside nk_command_buffer_push). This can be used to
-        implement fast check (using memcmp) that command buffers are equal and
-        avoid drawing frames when nothing on screen has changed since previous
-        frame.
-
 CREDITS:
-    Developed by Micha Mettke and every direct or indirect contributor to the GitHub.
+    Developed by Micha Mettke and every direct or indirect contributor.
 
     Embeds stb_texedit, stb_truetype and stb_rectpack by Sean Barret (public domain)
     Embeds ProggyClean.ttf font by Tristan Grimmer (MIT license).
@@ -838,6 +838,7 @@ NK_API float                    nk_propertyf(struct nk_context*, const char *nam
 NK_API double                   nk_propertyd(struct nk_context*, const char *name, double min, double val, double max, double step, float inc_per_pixel);
 
 /* Widgets: TextEdit */
+NK_API void                     nk_edit_focus(struct nk_context *ctx, nk_flags flags);
 NK_API nk_flags                 nk_edit_string(struct nk_context*, nk_flags, char *buffer, int *len, int max, nk_plugin_filter);
 NK_API nk_flags                 nk_edit_buffer(struct nk_context*, nk_flags, struct nk_text_edit*, nk_plugin_filter);
 NK_API nk_flags                 nk_edit_string_zero_terminated(struct nk_context*, nk_flags, char *buffer, int max, nk_plugin_filter);
@@ -3810,8 +3811,8 @@ nk_vsnprintf(char *buf, int buf_size, const char *fmt, va_list args)
     nk_flags flag = 0;
 
     int len = 0;
-    const char *iter = fmt;
     int result = -1;
+    const char *iter = fmt;
 
     NK_ASSERT(buf);
     NK_ASSERT(buf_size);
@@ -10059,8 +10060,8 @@ nk_font_bake_convert(void *out_memory, int img_width, int img_height,
     const void *in_memory)
 {
     int n = 0;
-    const nk_byte *src;
     nk_rune *dst;
+    const nk_byte *src;
 
     NK_ASSERT(out_memory);
     NK_ASSERT(in_memory);
@@ -10814,9 +10815,8 @@ nk_font_atlas_bake(struct nk_font_atlas *atlas, int *width, int *height,
 
     /* allocate glyph memory for all fonts */
     baker = nk_font_baker(tmp, atlas->glyph_count, atlas->font_num, &atlas->temporary);
-    atlas->glyphs = (struct nk_font_glyph*)
-        atlas->permanent.alloc(atlas->permanent.userdata,0,
-                sizeof(struct nk_font_glyph) * (nk_size)atlas->glyph_count);
+    atlas->glyphs = (struct nk_font_glyph*)atlas->permanent.alloc(
+        atlas->permanent.userdata,0, sizeof(struct nk_font_glyph)*(nk_size)atlas->glyph_count);
     NK_ASSERT(atlas->glyphs);
     if (!atlas->glyphs)
         goto failed;
@@ -15712,6 +15712,7 @@ nk_init_custom(struct nk_context *ctx, struct nk_buffer *cmds,
     NK_ASSERT(cmds);
     NK_ASSERT(pool);
     if (!cmds || !pool) return 0;
+
     nk_setup(ctx, font);
     ctx->memory = *cmds;
     if (pool->type == NK_BUFFER_FIXED) {
@@ -15756,9 +15757,8 @@ nk_free(struct nk_context *ctx)
     NK_ASSERT(ctx);
     if (!ctx) return;
     nk_buffer_free(&ctx->memory);
-    if (ctx->use_pool) {
+    if (ctx->use_pool)
         nk_pool_free(&ctx->pool);
-    }
 
     nk_zero(&ctx->input, sizeof(ctx->input));
     nk_zero(&ctx->style, sizeof(ctx->style));
@@ -16593,7 +16593,7 @@ nk_panel_end(struct nk_context *ctx)
 
     /* edit garbage collector */
     if (window->edit.active && window->edit.old != window->edit.seq &&
-        window->edit.active == window->edit.prev) {
+       window->edit.active == window->edit.prev) {
         nk_zero(&window->edit, sizeof(window->edit));
     } else {
         window->edit.old = window->edit.seq;
@@ -18658,6 +18658,7 @@ nk_button_pop_behavior(struct nk_context *ctx)
     *element->address = element->old_value;
     return 1;
 }
+
 NK_API int
 nk_button_text(struct nk_context *ctx, const char *title, int len)
 {
@@ -19194,6 +19195,24 @@ NK_API nk_size nk_prog(struct nk_context *ctx, nk_size cur, nk_size max, int mod
  *                          EDIT
  *
  * --------------------------------------------------------------*/
+NK_API void
+nk_edit_focus(struct nk_context *ctx, nk_flags flags)
+{
+    nk_hash hash;
+    struct nk_window *win;
+
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
+    if (!ctx || !ctx->current) return;
+
+    win = ctx->current;
+    hash = win->edit.seq;
+    win->edit.active = nk_true;
+    win->edit.name = hash;
+    if (flags & NK_EDIT_ALWAYS_INSERT_MODE)
+        win->edit.mode = NK_TEXT_EDIT_MODE_INSERT;
+}
+
 NK_API nk_flags
 nk_edit_string(struct nk_context *ctx, nk_flags flags,
     char *memory, int *len, int max, nk_plugin_filter filter)
@@ -19600,6 +19619,7 @@ nk_chart_begin_colored(struct nk_context *ctx, enum nk_chart_type type,
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
     NK_ASSERT(ctx->current->layout);
+
     if (!ctx || !ctx->current || !ctx->current->layout) return 0;
     if (!nk_widget(&bounds, ctx)) {
         chart = &ctx->current->layout->chart;
