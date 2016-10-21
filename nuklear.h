@@ -16,7 +16,7 @@ ABOUT:
 VALUES:
     - Immediate mode graphical user interface toolkit
     - Single header library
-    - Written in C89 (A.K.A. ANSI C or ISO C90)
+    - Written in C89 (a.k.a. ANSI C or ISO C90)
     - Small codebase (~17kLOC)
     - Focus on portability, efficiency and simplicity
     - No dependencies (not even the standard library if not wanted)
@@ -12511,9 +12511,8 @@ nk_draw_button(struct nk_command_buffer *out,
     if (background->type == NK_STYLE_ITEM_IMAGE) {
         nk_draw_image(out, *bounds, &background->data.image, nk_white);
     } else {
-        nk_fill_rect(out, *bounds, style->rounding, style->border_color);
-        nk_fill_rect(out, nk_shrink_rect(*bounds, style->border), style->rounding,
-                    background->data.color);
+        nk_fill_rect(out, *bounds, style->rounding, background->data.color);
+        nk_stroke_rect(out, *bounds, style->rounding, style->border, style->border_color);
     }
     return background;
 }
@@ -13217,9 +13216,8 @@ nk_draw_slider(struct nk_command_buffer *out, nk_flags state,
     if (background->type == NK_STYLE_ITEM_IMAGE) {
         nk_draw_image(out, *bounds, &background->data.image, nk_white);
     } else {
-        nk_fill_rect(out, *bounds, style->rounding, style->border_color);
-        nk_fill_rect(out, nk_shrink_rect(*bounds, style->border), style->rounding,
-            background->data.color);
+        nk_fill_rect(out, *bounds, style->rounding, background->data.color);
+        nk_stroke_rect(out, *bounds, style->rounding, style->border, style->border_color);
     }
 
     /* draw slider bar */
@@ -13380,14 +13378,14 @@ nk_draw_progress(struct nk_command_buffer *out, nk_flags state,
 
     /* draw background */
     if (background->type == NK_STYLE_ITEM_COLOR) {
-        nk_fill_rect(out, *bounds, style->rounding, style->border_color);
-        nk_fill_rect(out, nk_shrink_rect(*bounds, style->border), style->rounding, background->data.color);
+        nk_fill_rect(out, *bounds, style->rounding, background->data.color);
+        nk_stroke_rect(out, *bounds, style->rounding, style->border, style->border_color);
     } else nk_draw_image(out, *bounds, &background->data.image, nk_white);
 
     /* draw cursor */
     if (background->type == NK_STYLE_ITEM_COLOR) {
-        nk_fill_rect(out, *scursor, style->rounding, style->cursor_border_color);
-        nk_fill_rect(out, nk_shrink_rect(*scursor, style->cursor_border), style->rounding, cursor->data.color);
+        nk_fill_rect(out, *scursor, style->rounding, cursor->data.color);
+        nk_stroke_rect(out, *scursor, style->rounding, style->border, style->border_color);
     } else nk_draw_image(out, *scursor, &cursor->data.image, nk_white);
 }
 
@@ -13523,18 +13521,16 @@ nk_draw_scrollbar(struct nk_command_buffer *out, nk_flags state,
 
     /* draw background */
     if (background->type == NK_STYLE_ITEM_COLOR) {
-        nk_fill_rect(out, *bounds, style->rounding, style->border_color);
-        nk_fill_rect(out, nk_shrink_rect(*bounds,style->border),
-            style->rounding, background->data.color);
+        nk_fill_rect(out, *bounds, style->rounding, background->data.color);
+        nk_stroke_rect(out, *bounds, style->rounding, style->border, style->border_color);
     } else {
         nk_draw_image(out, *bounds, &background->data.image, nk_white);
     }
 
     /* draw cursor */
     if (background->type == NK_STYLE_ITEM_COLOR) {
-        nk_fill_rect(out, *scroll, style->rounding_cursor, style->cursor_border_color);
-        nk_fill_rect(out, nk_shrink_rect(*scroll, style->border_cursor),
-            style->rounding_cursor, cursor->data.color);
+        nk_fill_rect(out, *scroll, style->rounding_cursor, cursor->data.color);
+        nk_stroke_rect(out, *scroll, style->rounding_cursor, style->border_cursor, style->cursor_border_color);
     } else nk_draw_image(out, *scroll, &cursor->data.image, nk_white);
 }
 
@@ -14045,9 +14041,8 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
 
     /* draw background frame */
     if (background->type == NK_STYLE_ITEM_COLOR) {
-        nk_fill_rect(out, bounds, style->rounding, style->border_color);
-        nk_fill_rect(out, nk_shrink_rect(bounds,style->border),
-            style->rounding, background->data.color);
+        nk_stroke_rect(out, bounds, style->rounding, style->border, style->border_color);
+        nk_fill_rect(out, bounds, style->rounding, background->data.color);
     } else nk_draw_image(out, bounds, &background->data.image, nk_white);}
 
     area.w -= style->cursor_size + style->scrollbar_size.x;
@@ -14483,9 +14478,8 @@ nk_draw_property(struct nk_command_buffer *out, const struct nk_style_property *
         text.background = nk_rgba(0,0,0,0);
     } else {
         text.background = background->data.color;
-        nk_fill_rect(out, *bounds, style->rounding, style->border_color);
-        nk_fill_rect(out, nk_shrink_rect(*bounds,style->border),
-            style->rounding, background->data.color);
+        nk_fill_rect(out, *bounds, style->rounding, background->data.color);
+        nk_stroke_rect(out, *bounds, style->rounding, style->border, background->data.color);
     }
 
     /* draw label */
@@ -20665,9 +20659,8 @@ nk_combo_begin_text(struct nk_context *ctx, struct nk_panel *layout,
         nk_draw_image(&win->buffer, header, &background->data.image, nk_white);
     } else {
         text.background = background->data.color;
-        nk_fill_rect(&win->buffer, header, style->combo.rounding, style->combo.border_color);
-        nk_fill_rect(&win->buffer, nk_shrink_rect(header, 1), style->combo.rounding,
-            background->data.color);
+        nk_fill_rect(&win->buffer, header, style->combo.rounding, background->data.color);
+        nk_stroke_rect(&win->buffer, header, style->combo.rounding, style->combo.border, style->combo.border_color);
     }
     {
         /* print currently selected text item */
@@ -20752,9 +20745,8 @@ nk_combo_begin_color(struct nk_context *ctx, struct nk_panel *layout,
     if (background->type == NK_STYLE_ITEM_IMAGE) {
         nk_draw_image(&win->buffer, header, &background->data.image,nk_white);
     } else {
-        nk_fill_rect(&win->buffer, header, 0, style->combo.border_color);
-        nk_fill_rect(&win->buffer, nk_shrink_rect(header, 1), 0,
-            background->data.color);
+        nk_fill_rect(&win->buffer, header, style->combo.rounding, background->data.color);
+        nk_stroke_rect(&win->buffer, header, style->combo.rounding, style->combo.border, style->combo.border_color);
     }
     {
         struct nk_rect content;
@@ -20841,9 +20833,8 @@ nk_combo_begin_symbol(struct nk_context *ctx, struct nk_panel *layout,
         nk_draw_image(&win->buffer, header, &background->data.image, nk_white);
     } else {
         sym_background = background->data.color;
-        nk_fill_rect(&win->buffer, header, 0, style->combo.border_color);
-        nk_fill_rect(&win->buffer, nk_shrink_rect(header, 1), 0,
-            background->data.color);
+        nk_fill_rect(&win->buffer, header, style->combo.rounding, background->data.color);
+        nk_stroke_rect(&win->buffer, header, style->combo.rounding, style->combo.border, style->combo.border_color);
     }
     {
         struct nk_rect bounds = {0,0,0,0};
@@ -20932,9 +20923,8 @@ nk_combo_begin_symbol_text(struct nk_context *ctx, struct nk_panel *layout,
         nk_draw_image(&win->buffer, header, &background->data.image, nk_white);
     } else {
         text.background = background->data.color;
-        nk_fill_rect(&win->buffer, header, 0, style->combo.border_color);
-        nk_fill_rect(&win->buffer, nk_shrink_rect(header, 1), 0,
-            background->data.color);
+        nk_fill_rect(&win->buffer, header, style->combo.rounding, background->data.color);
+        nk_stroke_rect(&win->buffer, header, style->combo.rounding, style->combo.border, style->combo.border_color);
     }
     {
         struct nk_rect content;
@@ -21020,9 +21010,8 @@ nk_combo_begin_image(struct nk_context *ctx, struct nk_panel *layout,
     if (background->type == NK_STYLE_ITEM_IMAGE) {
         nk_draw_image(&win->buffer, header, &background->data.image, nk_white);
     } else {
-        nk_fill_rect(&win->buffer, header, 0, style->combo.border_color);
-        nk_fill_rect(&win->buffer, nk_shrink_rect(header, 1), 0,
-            background->data.color);
+        nk_fill_rect(&win->buffer, header, style->combo.rounding, background->data.color);
+        nk_stroke_rect(&win->buffer, header, style->combo.rounding, style->combo.border, style->combo.border_color);
     }
     {
         struct nk_rect bounds = {0,0,0,0};
@@ -21106,9 +21095,8 @@ nk_combo_begin_image_text(struct nk_context *ctx, struct nk_panel *layout,
         nk_draw_image(&win->buffer, header, &background->data.image, nk_white);
     } else {
         text.background = background->data.color;
-        nk_fill_rect(&win->buffer, header, 0, style->combo.border_color);
-        nk_fill_rect(&win->buffer, nk_shrink_rect(header, 1), 0,
-            background->data.color);
+        nk_fill_rect(&win->buffer, header, style->combo.rounding, background->data.color);
+        nk_stroke_rect(&win->buffer, header, style->combo.rounding, style->combo.border, style->combo.border_color);
     }
     {
         struct nk_rect content;

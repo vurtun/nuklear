@@ -1,4 +1,6 @@
 # Changelog
+- 2016/10/21 (1.160)- Changed widget border drawing to stroked rectangle from filled
+                        rectangle for less overdraw and widget background transparency.
 - 2016/10/18 (1.160)- Added `nk_edit_focus` for manually edit widget focus control
 - 2016/09/29 (1.157)- Fixed deduction of basic type in non `<stdint.h>` compilation
 - 2016/09/29 (1.156)- Fixed edit widget UTF-8 text cursor drawing bug
