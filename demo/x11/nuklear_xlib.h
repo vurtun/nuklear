@@ -138,7 +138,7 @@ nk_xsurf_stroke_rect(XSurface* surf, short x, short y, unsigned short w,
     XSetForeground(surf->dpy, surf->gc, c);
     XSetLineAttributes(surf->dpy, surf->gc, line_thickness, LineSolid, CapButt, JoinMiter);
     if (r == 0) {
-        XFillRectangle(surf->dpy, surf->drawable, surf->gc, x, y, w, h);
+        XDrawRectangle(surf->dpy, surf->drawable, surf->gc, x, y, w, h);
     } else {
         short xc = x + r;
         short yc = y + r;
@@ -146,17 +146,17 @@ nk_xsurf_stroke_rect(XSurface* surf, short x, short y, unsigned short w,
         short hc = (short)(h - 2 * r);
 
         XDrawLine(surf->dpy, surf->drawable, surf->gc, xc, y, xc+wc, y);
-        XDrawLine(surf->dpy, surf->drawable, surf->gc, x+w, yc, x+w, yc+wc);
+        XDrawLine(surf->dpy, surf->drawable, surf->gc, x+w, yc, x+w, yc+hc);
         XDrawLine(surf->dpy, surf->drawable, surf->gc, xc, y+h, xc+wc, y+h);
-        XDrawLine(surf->dpy, surf->drawable, surf->gc, x, yc, yc+hc, x);
+        XDrawLine(surf->dpy, surf->drawable, surf->gc, x, yc, x, yc+hc);
 
-        XFillArc(surf->dpy, surf->drawable, surf->gc, xc + wc - r, y,
+        XDrawArc(surf->dpy, surf->drawable, surf->gc, xc + wc - r, y,
             (unsigned)r*2, (unsigned)r*2, 0 * 64, 90 * 64);
-        XFillArc(surf->dpy, surf->drawable, surf->gc, x, y,
+        XDrawArc(surf->dpy, surf->drawable, surf->gc, x, y,
             (unsigned)r*2, (unsigned)r*2, 90 * 64, 90 * 64);
-        XFillArc(surf->dpy, surf->drawable, surf->gc, x, yc + hc - r,
+        XDrawArc(surf->dpy, surf->drawable, surf->gc, x, yc + hc - r,
             (unsigned)r*2, (unsigned)2*r, 180 * 64, 90 * 64);
-        XFillArc(surf->dpy, surf->drawable, surf->gc, xc + wc - r, yc + hc - r,
+        XDrawArc(surf->dpy, surf->drawable, surf->gc, xc + wc - r, yc + hc - r,
             (unsigned)r*2, (unsigned)2*r, -90 * 64, 90 * 64);
     }
     XSetLineAttributes(surf->dpy, surf->gc, 1, LineSolid, CapButt, JoinMiter);
