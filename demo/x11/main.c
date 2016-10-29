@@ -1,4 +1,4 @@
-/* nuklear - v1.09 - public domain */
+/* nuklear - v1.17 - public domain */
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -91,8 +91,8 @@ sleep_for(long t)
  * and the corresponding function. */
 /*#include "../style.c"*/
 /*#include "../calculator.c"*/
-/*#include "../overview.c"*/
-/*#include "../node_editor.c"*/
+#include "../overview.c"
+#include "../node_editor.c"
 
 /* ===============================================================
  *
@@ -155,8 +155,7 @@ main(void)
         nk_input_end(ctx);
 
         /* GUI */
-        {struct nk_panel layout;
-        if (nk_begin(ctx, &layout, "Demo", nk_rect(50, 50, 200, 200),
+        if (nk_begin(ctx, "Demo", nk_rect(50, 50, 200, 200),
             NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
             NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
         {
@@ -173,13 +172,13 @@ main(void)
             nk_layout_row_dynamic(ctx, 25, 1);
             nk_property_int(ctx, "Compression:", 0, &property, 100, 10, 1);
         }
-        nk_end(ctx);}
+        nk_end(ctx);
         if (nk_window_is_closed(ctx, "Demo")) break;
 
         /* -------------- EXAMPLES ---------------- */
         /*calculator(ctx);*/
-        /*overview(ctx);*/
-        /*node_editor(ctx);*/
+        overview(ctx);
+        node_editor(ctx);
         /* ----------------------------------------- */
 
         /* Draw */

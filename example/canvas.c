@@ -348,7 +348,6 @@ pump_input(struct nk_context *ctx, GLFWwindow *win)
 }
 
 struct nk_canvas {
-    struct nk_panel layout;
     struct nk_command_buffer *painter;
     struct nk_vec2 item_spacing;
     struct nk_vec2 panel_padding;
@@ -371,7 +370,7 @@ canvas_begin(struct nk_context *ctx, struct nk_canvas *canvas, nk_flags flags,
 
     /* create/update window and set position + size */
     flags = flags & ~NK_WINDOW_DYNAMIC;
-    nk_begin(ctx, &canvas->layout, "Window", nk_rect(x, y, width, height), NK_WINDOW_NO_SCROLLBAR|flags);
+    nk_begin(ctx, "Window", nk_rect(x, y, width, height), NK_WINDOW_NO_SCROLLBAR|flags);
     nk_window_set_bounds(ctx, nk_rect(x, y, width, height));
 
     /* allocate the complete window space for drawing */

@@ -80,7 +80,6 @@ ui_piemenu(struct nk_context *ctx, struct nk_vec2 pos, float radius,
 {
     int ret = -1;
     struct nk_rect total_space;
-    struct nk_panel popup;
     struct nk_rect bounds;
     int active_item = 0;
 
@@ -94,7 +93,7 @@ ui_piemenu(struct nk_context *ctx, struct nk_vec2 pos, float radius,
     ctx->style.window.spacing = nk_vec2(0,0);
     ctx->style.window.padding = nk_vec2(0,0);
 
-    if (nk_popup_begin(ctx, &popup,  NK_POPUP_STATIC, "piemenu", NK_WINDOW_NO_SCROLLBAR,
+    if (nk_popup_begin(ctx, NK_POPUP_STATIC, "piemenu", NK_WINDOW_NO_SCROLLBAR,
         nk_rect(pos.x - total_space.x - radius, pos.y - radius - total_space.y,
         2*radius,2*radius)))
     {
@@ -187,12 +186,10 @@ grid_demo(struct nk_context *ctx, struct media *media)
     static const char *items[] = {"Item 0","item 1","item 2"};
     static int selected_item = 0;
     static int check = 1;
-    struct nk_panel layout;
 
     int i;
-    struct nk_panel combo;
     nk_style_set_font(ctx, &media->font_20->handle);
-    if (nk_begin(ctx, &layout, "Grid Demo", nk_rect(600, 350, 275, 250),
+    if (nk_begin(ctx, "Grid Demo", nk_rect(600, 350, 275, 250),
         NK_WINDOW_TITLE|NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|
         NK_WINDOW_NO_SCROLLBAR))
     {
@@ -207,7 +204,7 @@ grid_demo(struct nk_context *ctx, struct media *media)
         nk_label(ctx, "Checkbox:", NK_TEXT_RIGHT);
         nk_checkbox_label(ctx, "Check me", &check);
         nk_label(ctx, "Combobox:", NK_TEXT_RIGHT);
-        if (nk_combo_begin_label(ctx, &combo, items[selected_item], nk_vec2(nk_widget_width(ctx), 200))) {
+        if (nk_combo_begin_label(ctx, items[selected_item], nk_vec2(nk_widget_width(ctx), 200))) {
             nk_layout_row_dynamic(ctx, 25, 1);
             for (i = 0; i < 3; ++i)
                 if (nk_combo_item_label(ctx, items[i], NK_TEXT_LEFT))
@@ -253,15 +250,13 @@ ui_widget_centered(struct nk_context *ctx, struct media *media, float height)
 static void
 button_demo(struct nk_context *ctx, struct media *media)
 {
-    struct nk_panel layout;
-    struct nk_panel menu;
     static int option = 1;
     static int toggle0 = 1;
     static int toggle1 = 0;
     static int toggle2 = 1;
 
     nk_style_set_font(ctx, &media->font_20->handle);
-    nk_begin(ctx, &layout, "Button Demo", nk_rect(50,50,255,610),
+    nk_begin(ctx, "Button Demo", nk_rect(50,50,255,610),
         NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_TITLE);
 
     /*------------------------------------------------
@@ -271,7 +266,7 @@ button_demo(struct nk_context *ctx, struct media *media)
     {
         /* toolbar */
         nk_layout_row_static(ctx, 40, 40, 4);
-        if (nk_menu_begin_image(ctx, &menu, "Music", media->play, nk_vec2(110,120)))
+        if (nk_menu_begin_image(ctx, "Music", media->play, nk_vec2(110,120)))
         {
             /* settings */
             nk_layout_row_dynamic(ctx, 25, 1);
@@ -341,7 +336,7 @@ button_demo(struct nk_context *ctx, struct media *media)
      *                  CONTEXTUAL
      *------------------------------------------------*/
     nk_style_set_font(ctx, &media->font_18->handle);
-    if (nk_contextual_begin(ctx, &menu, NK_WINDOW_NO_SCROLLBAR, nk_vec2(150, 300), nk_window_get_bounds(ctx))) {
+    if (nk_contextual_begin(ctx, NK_WINDOW_NO_SCROLLBAR, nk_vec2(150, 300), nk_window_get_bounds(ctx))) {
         nk_layout_row_dynamic(ctx, 30, 1);
         if (nk_contextual_item_image_label(ctx, media->copy, "Clone", NK_TEXT_RIGHT))
             fprintf(stdout, "pressed clone!\n");
@@ -377,10 +372,8 @@ basic_demo(struct nk_context *ctx, struct media *media)
     static struct nk_vec2 piemenu_pos;
 
     int i = 0;
-    struct nk_panel layout;
-    struct nk_panel combo;
     nk_style_set_font(ctx, &media->font_20->handle);
-    nk_begin(ctx, &layout, "Basic Demo", nk_rect(320, 50, 275, 610),
+    nk_begin(ctx, "Basic Demo", nk_rect(320, 50, 275, 610),
         NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_TITLE);
 
     /*------------------------------------------------
@@ -403,7 +396,7 @@ basic_demo(struct nk_context *ctx, struct media *media)
      *------------------------------------------------*/
     if (image_active) {
         struct nk_panel popup;
-        if (nk_popup_begin(ctx, &popup, NK_POPUP_STATIC, "Image Popup", 0, nk_rect(265, 0, 320, 220))) {
+        if (nk_popup_begin(ctx, NK_POPUP_STATIC, "Image Popup", 0, nk_rect(265, 0, 320, 220))) {
             nk_layout_row_static(ctx, 82, 82, 3);
             for (i = 0; i < 9; ++i) {
                 if (nk_button_image(ctx, media->images[i])) {
@@ -420,7 +413,7 @@ basic_demo(struct nk_context *ctx, struct media *media)
      *------------------------------------------------*/
     ui_header(ctx, media, "Combo box");
     ui_widget(ctx, media, 40);
-    if (nk_combo_begin_label(ctx, &combo, items[selected_item], nk_vec2(nk_widget_width(ctx), 200))) {
+    if (nk_combo_begin_label(ctx, items[selected_item], nk_vec2(nk_widget_width(ctx), 200))) {
         nk_layout_row_dynamic(ctx, 35, 1);
         for (i = 0; i < 3; ++i)
             if (nk_combo_item_label(ctx, items[i], NK_TEXT_LEFT))
@@ -429,7 +422,7 @@ basic_demo(struct nk_context *ctx, struct media *media)
     }
 
     ui_widget(ctx, media, 40);
-    if (nk_combo_begin_image_label(ctx, &combo, items[selected_icon], media->images[selected_icon], nk_vec2(nk_widget_width(ctx), 200))) {
+    if (nk_combo_begin_image_label(ctx, items[selected_icon], media->images[selected_icon], nk_vec2(nk_widget_width(ctx), 200))) {
         nk_layout_row_dynamic(ctx, 35, 1);
         for (i = 0; i < 3; ++i)
             if (nk_combo_item_image_label(ctx, media->images[i], items[i], NK_TEXT_RIGHT))
@@ -457,7 +450,7 @@ basic_demo(struct nk_context *ctx, struct media *media)
      *                  PIEMENU
      *------------------------------------------------*/
     if (nk_input_is_mouse_click_down_in_rect(&ctx->input, NK_BUTTON_RIGHT,
-        layout.bounds,nk_true)){
+        nk_window_get_bounds(ctx),nk_true)){
         piemenu_pos = ctx->input.mouse.pos;
         piemenu_active = 1;
     }

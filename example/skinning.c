@@ -735,7 +735,7 @@ int main(int argc, char *argv[])
 
         /* GUI */
         {struct nk_panel layout, tab;
-        if (nk_begin(&ctx, &layout, "Demo", nk_rect(50, 50, 300, 400),
+        if (nk_begin(&ctx, "Demo", nk_rect(50, 50, 300, 400),
             NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_TITLE))
         {
             int i;
@@ -785,7 +785,7 @@ int main(int argc, char *argv[])
             nk_chart_end(&ctx);
 
             nk_layout_row_dynamic(&ctx, 250, 1);
-            if (nk_group_begin(&ctx, &tab, "Standard", NK_WINDOW_BORDER|NK_WINDOW_BORDER))
+            if (nk_group_begin(&ctx, "Standard", NK_WINDOW_BORDER|NK_WINDOW_BORDER))
             {
                 if (nk_tree_push(&ctx, NK_TREE_NODE, "Window", NK_MAXIMIZED)) {
                     static int selected[8];

@@ -1,5 +1,5 @@
 /*
- * Nuklear - v1.00 - public domain
+ * Nuklear - v1.17 - public domain
  * no warrenty implied; use at your own risk.
  * authored from 2015-2016 by Micha Mettke
  */
@@ -230,7 +230,7 @@ nk_sdl_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_b
         glBufferData(GL_ARRAY_BUFFER, max_vertex_buffer, NULL, GL_STREAM_DRAW);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, max_element_buffer, NULL, GL_STREAM_DRAW);
 
-        /* load draw vertices & elements directly into vertex + element buffer */
+        /* load vertices/elements directly into vertex/element buffer */
         vertices = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
         elements = glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
         {
@@ -256,8 +256,8 @@ nk_sdl_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_b
 
             /* setup buffers to load vertices and elements */
             {struct nk_buffer vbuf, ebuf;
-            nk_buffer_init_fixed(&vbuf, vertices, (size_t)max_vertex_buffer);
-            nk_buffer_init_fixed(&ebuf, elements, (size_t)max_element_buffer);
+            nk_buffer_init_fixed(&vbuf, vertices, (nk_size)max_vertex_buffer);
+            nk_buffer_init_fixed(&ebuf, elements, (nk_size)max_element_buffer);
             nk_convert(&sdl.ctx, &dev->cmds, &vbuf, &ebuf, &config);}
         }
         glUnmapBuffer(GL_ARRAY_BUFFER);
@@ -267,12 +267,10 @@ nk_sdl_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_b
         nk_draw_foreach(cmd, &sdl.ctx, &dev->cmds) {
             if (!cmd->elem_count) continue;
             glBindTexture(GL_TEXTURE_2D, (GLuint)cmd->texture.id);
-            glScissor(
-                (GLint)(cmd->clip_rect.x * scale.x),
+            glScissor((GLint)(cmd->clip_rect.x * scale.x),
                 (GLint)((height - (GLint)(cmd->clip_rect.y + cmd->clip_rect.h)) * scale.y),
                 (GLint)(cmd->clip_rect.w * scale.x),
                 (GLint)(cmd->clip_rect.h * scale.y));
-
             glDrawElements(GL_TRIANGLES, (GLsizei)cmd->elem_count, GL_UNSIGNED_SHORT, offset);
             offset += cmd->elem_count;
         }

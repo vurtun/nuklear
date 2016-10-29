@@ -152,7 +152,6 @@ node_editor(struct nk_context *ctx)
     const struct nk_input *in = &ctx->input;
     struct nk_command_buffer *canvas;
     struct node *updated = 0;
-    struct nk_panel layout;
     struct node_editor *nodedit = &nodeEditor;
 
     if (!nodeEditor.initialized) {
@@ -160,7 +159,7 @@ node_editor(struct nk_context *ctx)
         nodeEditor.initialized = 1;
     }
 
-    if (nk_begin(ctx, &layout, "NodeEdit", nk_rect(0, 0, 800, 600),
+    if (nk_begin(ctx, "NodeEdit", nk_rect(0, 0, 800, 600),
         NK_WINDOW_BORDER|NK_WINDOW_NO_SCROLLBAR|NK_WINDOW_MOVABLE|NK_WINDOW_CLOSABLE))
     {
         /* allocate complete window space */
@@ -168,7 +167,6 @@ node_editor(struct nk_context *ctx)
         total_space = nk_window_get_content_region(ctx);
         nk_layout_space_begin(ctx, NK_STATIC, total_space.h, nodedit->node_count);
         {
-            struct nk_panel node, menu;
             struct node *it = nodedit->begin;
             struct nk_rect size = nk_layout_space_bounds(ctx);
 
@@ -190,12 +188,13 @@ node_editor(struct nk_context *ctx)
                     it->bounds.y - nodedit->scrolling.y, it->bounds.w, it->bounds.h));
 
                 /* execute node window */
-                if (nk_group_begin(ctx, &node, it->name, NK_WINDOW_MOVABLE|NK_WINDOW_NO_SCROLLBAR|NK_WINDOW_BORDER|NK_WINDOW_TITLE))
+                if (nk_group_begin(ctx, it->name, NK_WINDOW_MOVABLE|NK_WINDOW_NO_SCROLLBAR|NK_WINDOW_BORDER|NK_WINDOW_TITLE))
                 {
                     /* always have last selected node on top */
-                    if (nk_input_mouse_clicked(in, NK_BUTTON_LEFT, node.bounds) &&
+                    struct nk_panel *node = nk_window_get_panel(ctx);
+                    if (nk_input_mouse_clicked(in, NK_BUTTON_LEFT, node->bounds) &&
                         (!(it->prev && nk_input_mouse_clicked(in, NK_BUTTON_LEFT,
-                        nk_layout_space_rect_to_screen(ctx, node.bounds)))) &&
+                        nk_layout_space_rect_to_screen(ctx, node->bounds)))) &&
                         nodedit->end != it)
                     {
                         updated = it;
@@ -215,17 +214,18 @@ node_editor(struct nk_context *ctx)
                     /* node connector and linking */
                     float space;
                     struct nk_rect bounds;
-                    bounds = nk_layout_space_rect_to_local(ctx, node.bounds);
+                    struct nk_panel *node = nk_window_get_panel(ctx);
+                    bounds = nk_layout_space_rect_to_local(ctx, node->bounds);
                     bounds.x += nodedit->scrolling.x;
                     bounds.y += nodedit->scrolling.y;
                     it->bounds = bounds;
 
                     /* output connector */
-                    space = node.bounds.h / (float)((it->output_count) + 1);
+                    space = node->bounds.h / (float)((it->output_count) + 1);
                     for (n = 0; n < it->output_count; ++n) {
                         struct nk_rect circle;
-                        circle.x = node.bounds.x + node.bounds.w-4;
-                        circle.y = node.bounds.y + space * (float)(n+1);
+                        circle.x = node->bounds.x + node->bounds.w-4;
+                        circle.y = node->bounds.y + space * (float)(n+1);
                         circle.w = 8; circle.h = 8;
                         nk_fill_circle(canvas, circle, nk_rgb(100, 100, 100));
 
@@ -248,11 +248,11 @@ node_editor(struct nk_context *ctx)
                     }
 
                     /* input connector */
-                    space = node.bounds.h / (float)((it->input_count) + 1);
+                    space = node->bounds.h / (float)((it->input_count) + 1);
                     for (n = 0; n < it->input_count; ++n) {
                         struct nk_rect circle;
-                        circle.x = node.bounds.x-4;
-                        circle.y = node.bounds.y + space * (float)(n+1);
+                        circle.x = node->bounds.x-4;
+                        circle.y = node->bounds.y + space * (float)(n+1);
                         circle.w = 8; circle.h = 8;
                         nk_fill_circle(canvas, circle, nk_rgb(100, 100, 100));
                         if (nk_input_is_mouse_released(in, NK_BUTTON_LEFT) &&
@@ -276,11 +276,12 @@ node_editor(struct nk_context *ctx)
 
             /* draw each link */
             for (n = 0; n < nodedit->link_count; ++n) {
+                struct nk_panel *node = nk_window_get_panel(ctx);
                 struct node_link *link = &nodedit->links[n];
                 struct node *ni = node_editor_find(nodedit, link->input_id);
                 struct node *no = node_editor_find(nodedit, link->output_id);
-                float spacei = node.bounds.h / (float)((ni->output_count) + 1);
-                float spaceo = node.bounds.h / (float)((no->input_count) + 1);
+                float spacei = node->bounds.h / (float)((ni->output_count) + 1);
+                float spaceo = node->bounds.h / (float)((no->input_count) + 1);
                 struct nk_vec2 l0 = nk_layout_space_to_screen(ctx,
                     nk_vec2(ni->bounds.x + ni->bounds.w, 3.0f + ni->bounds.y + spacei * (float)(link->input_slot+1)));
                 struct nk_vec2 l1 = nk_layout_space_to_screen(ctx,
@@ -316,7 +317,7 @@ node_editor(struct nk_context *ctx)
             }
 
             /* contextual menu */
-            if (nk_contextual_begin(ctx, &menu, 0, nk_vec2(100, 220), nk_window_get_bounds(ctx))) {
+            if (nk_contextual_begin(ctx, 0, nk_vec2(100, 220), nk_window_get_bounds(ctx))) {
                 const char *grid_option[] = {"Show Grid", "Hide Grid"};
                 nk_layout_row_dynamic(ctx, 25, 1);
                 if (nk_contextual_item_label(ctx, "New", NK_TEXT_CENTERED))

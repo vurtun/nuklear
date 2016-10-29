@@ -1,4 +1,4 @@
-/* nuklear - v1.09 - public domain */
+/* nuklear - v1.17 - public domain */
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -249,8 +249,7 @@ int main(int argc, char **argv)
         nk_input_end(ctx);
 
         /* GUI */
-        {struct nk_panel layout;
-        if (nk_begin(ctx, &layout, "Demo", nk_rect(50, 50, 200, 200),
+        if (nk_begin(ctx, "Demo", nk_rect(50, 50, 200, 200),
             NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
             NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
         {
@@ -267,11 +266,10 @@ int main(int argc, char **argv)
             nk_layout_row_dynamic(ctx, 25, 1);
             nk_property_int(ctx, "Compression:", 0, &property, 100, 10, 1);
 
-            {struct nk_panel combo;
             nk_layout_row_dynamic(ctx, 20, 1);
             nk_label(ctx, "background:", NK_TEXT_LEFT);
             nk_layout_row_dynamic(ctx, 25, 1);
-            if (nk_combo_begin_color(ctx, &combo, background, nk_vec2(nk_widget_width(ctx),400))) {
+            if (nk_combo_begin_color(ctx, background, nk_vec2(nk_widget_width(ctx),400))) {
                 nk_layout_row_dynamic(ctx, 120, 1);
                 background = nk_color_picker(ctx, background, NK_RGBA);
                 nk_layout_row_dynamic(ctx, 25, 1);
@@ -280,9 +278,9 @@ int main(int argc, char **argv)
                 background.b = (nk_byte)nk_propertyi(ctx, "#B:", 0, background.b, 255, 1,1);
                 background.a = (nk_byte)nk_propertyi(ctx, "#A:", 0, background.a, 255, 1,1);
                 nk_combo_end(ctx);
-            }}
+            }
         }
-        nk_end(ctx);}
+        nk_end(ctx);
         if (nk_window_is_closed(ctx, "Demo")) break;
 
         /* -------------- EXAMPLES ---------------- */

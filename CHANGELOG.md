@@ -1,4 +1,8 @@
 # Changelog
+- 2016/10/29 (1.170)- Pulled `nk_panel` memory management into nuklear and out of
+                        the hands of the user. From now on users don't have to care
+                        about panels unless they care about some information. If you
+                        still need the panel just call `nk_window_get_panel`.
 - 2016/10/21 (1.160)- Changed widget border drawing to stroked rectangle from filled
                         rectangle for less overdraw and widget background transparency.
 - 2016/10/18 (1.160)- Added `nk_edit_focus` for manually edit widget focus control

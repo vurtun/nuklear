@@ -397,11 +397,10 @@ static int
 file_browser_run(struct file_browser *browser, struct nk_context *ctx)
 {
     int ret = 0;
-    struct nk_panel layout;
     struct media *media = browser->media;
     struct nk_rect total_space;
 
-    if (nk_begin(ctx, &layout, "File Browser", nk_rect(50, 50, 800, 600),
+    if (nk_begin(ctx, "File Browser", nk_rect(50, 50, 800, 600),
         NK_WINDOW_BORDER|NK_WINDOW_NO_SCROLLBAR|NK_WINDOW_MOVABLE))
     {
         struct nk_panel sub;
@@ -434,7 +433,7 @@ file_browser_run(struct file_browser *browser, struct nk_context *ctx)
         /* window layout */
         total_space = nk_window_get_content_region(ctx);
         nk_layout_row(ctx, NK_DYNAMIC, total_space.h, 2, ratio);
-        nk_group_begin(ctx, &sub, "Special", NK_WINDOW_NO_SCROLLBAR);
+        nk_group_begin(ctx, "Special", NK_WINDOW_NO_SCROLLBAR);
         {
             struct nk_image home = media->icons.home;
             struct nk_image desktop = media->icons.desktop;
@@ -451,7 +450,7 @@ file_browser_run(struct file_browser *browser, struct nk_context *ctx)
         }
 
         /* output directory content window */
-        nk_group_begin(ctx, &sub, "Content", 0);
+        nk_group_begin(ctx, "Content", 0);
         {
             int index = -1;
             size_t i = 0, j = 0, k = 0;
