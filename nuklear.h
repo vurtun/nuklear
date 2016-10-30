@@ -167,7 +167,7 @@ OPTIONAL DEFINES:
         replacement. If not nuklear will use its own version.
         <!> If used it is only required to be defined for the implementation part <!>
 
-    NK_MEMCOPY
+    NK_MEMCPY
         You can define this to 'memcpy' or your own memcpy implementation
         replacement. If not nuklear will use its own version.
         <!> If used it is only required to be defined for the implementation part <!>
