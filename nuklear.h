@@ -17247,7 +17247,7 @@ nk_begin_titled(struct nk_context *ctx, const char *name, const char *title,
             win->flags |= NK_WINDOW_ROM;
     }
 
-    win->layout = nk_create_panel(ctx);
+    win->layout = (struct nk_panel*)nk_create_panel(ctx);
     ctx->current = win;
     ret = nk_panel_begin(ctx, title, NK_PANEL_WINDOW);
     win->layout->offset = &win->scrollbar;
@@ -20186,7 +20186,7 @@ nk_group_begin(struct nk_context *ctx, const char *title, nk_flags flags)
     panel.scrollbar.x = (unsigned short)value.s->x;
     panel.scrollbar.y = (unsigned short)value.s->y;
     panel.buffer = win->buffer;
-    panel.layout = nk_create_panel(ctx);
+    panel.layout = (struct nk_panel*)nk_create_panel(ctx);
     ctx->current = &panel;
     nk_panel_begin(ctx, (flags & NK_WINDOW_TITLE) ? title: 0, NK_PANEL_GROUP);
 
@@ -20320,7 +20320,7 @@ nk_popup_begin(struct nk_context *ctx, enum nk_popup_type type,
     popup->parent = win;
     popup->bounds = rect;
     popup->seq = ctx->seq;
-    popup->layout = nk_create_panel(ctx);
+    popup->layout = (struct nk_panel*)nk_create_panel(ctx);
     popup->flags = flags;
     popup->flags |= NK_WINDOW_BORDER;
     if (type == NK_POPUP_DYNAMIC)
@@ -20412,7 +20412,7 @@ nk_nonblock_begin(struct nk_context *ctx,
 
     popup->bounds = body;
     popup->parent = win;
-    popup->layout = nk_create_panel(ctx);
+    popup->layout = (struct nk_panel*)nk_create_panel(ctx);
     popup->flags = flags;
     popup->flags |= NK_WINDOW_BORDER;
     popup->flags |= NK_WINDOW_DYNAMIC;
