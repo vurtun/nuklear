@@ -1,4 +1,5 @@
 # Changelog
+- 2016/10/30 (1.171)- Fixed clipping rectangle bug inside `nk_draw_list`
 - 2016/10/29 (1.170)- Pulled `nk_panel` memory management into nuklear and out of
                         the hands of the user. From now on users don't have to care
                         about panels unless they care about some information. If you

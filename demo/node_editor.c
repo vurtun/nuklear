@@ -182,6 +182,7 @@ node_editor(struct nk_context *ctx)
             }
 
             /* execute each node as a movable group */
+            struct nk_panel *node;
             while (it) {
                 /* calculate scrolled node window position and size */
                 nk_layout_space_push(ctx, nk_rect(it->bounds.x - nodedit->scrolling.x,
@@ -191,7 +192,8 @@ node_editor(struct nk_context *ctx)
                 if (nk_group_begin(ctx, it->name, NK_WINDOW_MOVABLE|NK_WINDOW_NO_SCROLLBAR|NK_WINDOW_BORDER|NK_WINDOW_TITLE))
                 {
                     /* always have last selected node on top */
-                    struct nk_panel *node = nk_window_get_panel(ctx);
+
+                    node = nk_window_get_panel(ctx);
                     if (nk_input_mouse_clicked(in, NK_BUTTON_LEFT, node->bounds) &&
                         (!(it->prev && nk_input_mouse_clicked(in, NK_BUTTON_LEFT,
                         nk_layout_space_rect_to_screen(ctx, node->bounds)))) &&
@@ -214,7 +216,6 @@ node_editor(struct nk_context *ctx)
                     /* node connector and linking */
                     float space;
                     struct nk_rect bounds;
-                    struct nk_panel *node = nk_window_get_panel(ctx);
                     bounds = nk_layout_space_rect_to_local(ctx, node->bounds);
                     bounds.x += nodedit->scrolling.x;
                     bounds.y += nodedit->scrolling.y;
@@ -276,7 +277,6 @@ node_editor(struct nk_context *ctx)
 
             /* draw each link */
             for (n = 0; n < nodedit->link_count; ++n) {
-                struct nk_panel *node = nk_window_get_panel(ctx);
                 struct node_link *link = &nodedit->links[n];
                 struct node *ni = node_editor_find(nodedit, link->input_id);
                 struct node *no = node_editor_find(nodedit, link->output_id);
