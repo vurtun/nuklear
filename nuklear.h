@@ -312,7 +312,7 @@ extern "C" {
  *
  * ===============================================================
  */
-#ifdef FIFO_INCLUDE_FIXED_TYPES
+#ifdef NK_INCLUDE_FIXED_TYPES
  #include <stdint.h>
  #define NK_INT8 int8_t
  #define NK_UINT8 uint8_t
@@ -1192,7 +1192,7 @@ NK_API const char*              nk_utf_at(const char *buffer, int length, int in
 
     As soon as you added all fonts you wanted you can now start the baking process
     for every selected glyphes to image by calling `nk_font_atlas_bake`.
-    The baking process returns image memory, width and height which can used to
+    The baking process returns image memory, width and height which can be used to
     either create your own image object or upload it to any graphics library.
     No matter which case you finally have to call `nk_font_atlas_end` which
     will free all temporary memory including the font atlas image so make sure
@@ -2708,6 +2708,7 @@ struct nk_window {
     nk_hash name;
     char name_string[NK_WINDOW_MAX_NAME];
     nk_flags flags;
+
     struct nk_rect bounds;
     struct nk_scroll scrollbar;
     struct nk_command_buffer buffer;
@@ -9934,6 +9935,7 @@ nk_font_baker_memory(nk_size *temp, int *glyph_count,
     int range_count = 0;
     int total_range_count = 0;
     struct nk_font_config *iter;
+
     NK_ASSERT(config_list);
     NK_ASSERT(glyph_count);
     if (!config_list) {
@@ -10754,14 +10756,16 @@ nk_font_atlas_add(struct nk_font_atlas *atlas, const struct nk_font_config *conf
     struct nk_font_config *cfg;
 
     NK_ASSERT(atlas);
-    NK_ASSERT(config);
     NK_ASSERT(atlas->permanent.alloc);
     NK_ASSERT(atlas->permanent.free);
     NK_ASSERT(atlas->temporary.alloc);
     NK_ASSERT(atlas->temporary.free);
+
+    NK_ASSERT(config);
     NK_ASSERT(config->ttf_blob);
     NK_ASSERT(config->ttf_size);
     NK_ASSERT(config->size > 0.0f);
+
     if (!atlas || !config || !config->ttf_blob || !config->ttf_size || config->size <= 0.0f||
         !atlas->permanent.alloc || !atlas->permanent.free ||
         !atlas->temporary.alloc || !atlas->temporary.free)
@@ -10826,6 +10830,7 @@ nk_font_atlas_add_from_memory(struct nk_font_atlas *atlas, void *memory,
     struct nk_font_config cfg;
     NK_ASSERT(memory);
     NK_ASSERT(size);
+
     NK_ASSERT(atlas);
     NK_ASSERT(atlas->temporary.alloc);
     NK_ASSERT(atlas->temporary.free);
@@ -10857,6 +10862,7 @@ nk_font_atlas_add_from_file(struct nk_font_atlas *atlas, const char *file_path,
     NK_ASSERT(atlas->temporary.free);
     NK_ASSERT(atlas->permanent.alloc);
     NK_ASSERT(atlas->permanent.free);
+
     if (!atlas || !file_path) return 0;
     memory = nk_file_load(file_path, &size, &atlas->permanent);
     if (!memory) return 0;
@@ -10879,13 +10885,14 @@ nk_font_atlas_add_compressed(struct nk_font_atlas *atlas,
     void *decompressed_data;
     struct nk_font_config cfg;
 
-    NK_ASSERT(compressed_data);
-    NK_ASSERT(compressed_size);
     NK_ASSERT(atlas);
     NK_ASSERT(atlas->temporary.alloc);
     NK_ASSERT(atlas->temporary.free);
     NK_ASSERT(atlas->permanent.alloc);
     NK_ASSERT(atlas->permanent.free);
+
+    NK_ASSERT(compressed_data);
+    NK_ASSERT(compressed_size);
     if (!atlas || !compressed_data || !atlas->temporary.alloc || !atlas->temporary.free ||
         !atlas->permanent.alloc || !atlas->permanent.free)
         return 0;
@@ -10913,12 +10920,13 @@ nk_font_atlas_add_compressed_base85(struct nk_font_atlas *atlas,
     void *compressed_data;
     struct nk_font *font;
 
-    NK_ASSERT(data_base85);
     NK_ASSERT(atlas);
     NK_ASSERT(atlas->temporary.alloc);
     NK_ASSERT(atlas->temporary.free);
     NK_ASSERT(atlas->permanent.alloc);
     NK_ASSERT(atlas->permanent.free);
+
+    NK_ASSERT(data_base85);
     if (!atlas || !data_base85 || !atlas->temporary.alloc || !atlas->temporary.free ||
         !atlas->permanent.alloc || !atlas->permanent.free)
         return 0;
@@ -10959,13 +10967,14 @@ nk_font_atlas_bake(struct nk_font_atlas *atlas, int *width, int *height,
     struct nk_font *font_iter;
     struct nk_font_baker *baker;
 
-    NK_ASSERT(width);
-    NK_ASSERT(height);
     NK_ASSERT(atlas);
     NK_ASSERT(atlas->temporary.alloc);
     NK_ASSERT(atlas->temporary.free);
     NK_ASSERT(atlas->permanent.alloc);
     NK_ASSERT(atlas->permanent.free);
+
+    NK_ASSERT(width);
+    NK_ASSERT(height);
     if (!atlas || !width || !height ||
         !atlas->temporary.alloc || !atlas->temporary.free ||
         !atlas->permanent.alloc || !atlas->permanent.free)
@@ -11055,7 +11064,6 @@ nk_font_atlas_bake(struct nk_font_atlas *atlas, int *width, int *height,
         cursor->size = nk_cursor_data[i][1];
         cursor->offset = nk_cursor_data[i][2];
     }}
-
     /* free temporary memory */
     atlas->temporary.free(atlas->temporary.userdata, tmp);
     return atlas->pixel;
@@ -11088,8 +11096,8 @@ nk_font_atlas_end(struct nk_font_atlas *atlas, nk_handle texture,
     }
     if (null) {
         null->texture = texture;
-        null->uv = nk_vec2((atlas->custom.x + 0.5f)/(float)atlas->tex_width,
-            (atlas->custom.y + 0.5f)/(float)atlas->tex_height);
+        null->uv.x = (atlas->custom.x + 0.5f)/(float)atlas->tex_width,
+        null->uv.y = (atlas->custom.y + 0.5f)/(float)atlas->tex_height;
     }
     for (font_iter = atlas->fonts; font_iter; font_iter = font_iter->next) {
         font_iter->texture = texture;
@@ -11118,6 +11126,7 @@ nk_font_atlas_cleanup(struct nk_font_atlas *atlas)
     NK_ASSERT(atlas->temporary.free);
     NK_ASSERT(atlas->permanent.alloc);
     NK_ASSERT(atlas->permanent.free);
+
     if (!atlas || !atlas->permanent.alloc || !atlas->permanent.free) return;
     if (atlas->config) {
         struct nk_font_config *iter, *next;
@@ -17616,7 +17625,7 @@ nk_window_set_focus(struct nk_context *ctx, const char *name)
 
 /*----------------------------------------------------------------
  *
- *                          PANEL
+ *                          MENUBAR
  *
  * --------------------------------------------------------------*/
 NK_API void
@@ -19703,6 +19712,7 @@ nk_property_int(struct nk_context *ctx, const char *name,
     NK_ASSERT(ctx);
     NK_ASSERT(name);
     NK_ASSERT(val);
+
     if (!ctx || !ctx->current || !name || !val) return;
     variant = nk_property_variant_int(*val, min, max, step);
     nk_property(ctx, name, &variant, inc_per_pixel, NK_FILTER_INT);
@@ -19717,6 +19727,7 @@ nk_property_float(struct nk_context *ctx, const char *name,
     NK_ASSERT(ctx);
     NK_ASSERT(name);
     NK_ASSERT(val);
+
     if (!ctx || !ctx->current || !name || !val) return;
     variant = nk_property_variant_float(*val, min, max, step);
     nk_property(ctx, name, &variant, inc_per_pixel, NK_FILTER_FLOAT);
@@ -19731,6 +19742,7 @@ nk_property_double(struct nk_context *ctx, const char *name,
     NK_ASSERT(ctx);
     NK_ASSERT(name);
     NK_ASSERT(val);
+
     if (!ctx || !ctx->current || !name || !val) return;
     variant = nk_property_variant_double(*val, min, max, step);
     nk_property(ctx, name, &variant, inc_per_pixel, NK_FILTER_FLOAT);
@@ -19744,6 +19756,7 @@ nk_propertyi(struct nk_context *ctx, const char *name, int min, int val,
     struct nk_property_variant variant;
     NK_ASSERT(ctx);
     NK_ASSERT(name);
+
     if (!ctx || !ctx->current || !name) return val;
     variant = nk_property_variant_int(val, min, max, step);
     nk_property(ctx, name, &variant, inc_per_pixel, NK_FILTER_INT);
@@ -19758,6 +19771,7 @@ nk_propertyf(struct nk_context *ctx, const char *name, float min,
     struct nk_property_variant variant;
     NK_ASSERT(ctx);
     NK_ASSERT(name);
+
     if (!ctx || !ctx->current || !name) return val;
     variant = nk_property_variant_float(val, min, max, step);
     nk_property(ctx, name, &variant, inc_per_pixel, NK_FILTER_FLOAT);
@@ -19772,6 +19786,7 @@ nk_propertyd(struct nk_context *ctx, const char *name, double min,
     struct nk_property_variant variant;
     NK_ASSERT(ctx);
     NK_ASSERT(name);
+
     if (!ctx || !ctx->current || !name) return val;
     variant = nk_property_variant_double(val, min, max, step);
     nk_property(ctx, name, &variant, inc_per_pixel, NK_FILTER_FLOAT);
