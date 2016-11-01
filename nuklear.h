@@ -21460,10 +21460,11 @@ nk_combo_separator(struct nk_context *ctx, const char *items_separated_by_separa
 
     /* find selected item */
     current_item = items_separated_by_separator;
-    for (i = 0; i < selected; ++i) {
+    for (i = 0; i < count; ++i) {
         iter = current_item;
-        while (*iter != separator) iter++;
+        while (*iter && *iter != separator) iter++;
         length = (int)(iter - current_item);
+        if (i == selected) break;
         current_item = iter + 1;
     }
 
@@ -21472,7 +21473,7 @@ nk_combo_separator(struct nk_context *ctx, const char *items_separated_by_separa
         nk_layout_row_dynamic(ctx, (float)item_height, 1);
         for (i = 0; i < count; ++i) {
             iter = current_item;
-            while (*iter != separator) iter++;
+            while (*iter && *iter != separator) iter++;
             length = (int)(iter - current_item);
             if (nk_combo_item_text(ctx, current_item, length, NK_TEXT_LEFT))
                 selected = i;
