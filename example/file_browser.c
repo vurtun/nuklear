@@ -403,7 +403,6 @@ file_browser_run(struct file_browser *browser, struct nk_context *ctx)
     if (nk_begin(ctx, "File Browser", nk_rect(50, 50, 800, 600),
         NK_WINDOW_BORDER|NK_WINDOW_NO_SCROLLBAR|NK_WINDOW_MOVABLE))
     {
-        struct nk_panel sub;
         static float ratio[] = {0.25f, NK_UNDEFINED};
         float spacing_x = ctx->style.window.spacing.x;
 
@@ -503,7 +502,6 @@ file_browser_run(struct file_browser *browser, struct nk_context *ctx)
                     browser->directory[n+1] = '\0';
                 }
                 file_browser_reload_directory_content(browser, browser->directory);
-                sub.offset->y = 0;
             }
             nk_group_end(ctx);
         }
