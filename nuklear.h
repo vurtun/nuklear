@@ -18770,7 +18770,7 @@ nk_value_float(struct nk_context *ctx, const char *prefix, float value)
 
 NK_API void
 nk_value_color_byte(struct nk_context *ctx, const char *p, struct nk_color c)
-{nk_labelf(ctx, NK_TEXT_LEFT, "%s: (%c, %c, %c, %c)", p, c.r, c.g, c.b, c.a);}
+{nk_labelf(ctx, NK_TEXT_LEFT, "%s: (%d, %d, %d, %d)", p, c.r, c.g, c.b, c.a);}
 
 NK_API void
 nk_value_color_float(struct nk_context *ctx, const char *p, struct nk_color color)
