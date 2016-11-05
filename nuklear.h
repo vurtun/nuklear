@@ -4446,14 +4446,14 @@ NK_API void
 nk_color_hex_rgba(char *output, struct nk_color col)
 {
     #define NK_TO_HEX(i) ((i) <= 9 ? '0' + (i): 'A' - 10 + (i))
-    output[0] = (char)NK_TO_HEX((col.r & 0x0F));
-    output[1] = (char)NK_TO_HEX((col.r & 0xF0) >> 4);
-    output[2] = (char)NK_TO_HEX((col.g & 0x0F));
-    output[3] = (char)NK_TO_HEX((col.g & 0xF0) >> 4);
-    output[4] = (char)NK_TO_HEX((col.b & 0x0F));
-    output[5] = (char)NK_TO_HEX((col.b & 0xF0) >> 4);
-    output[6] = (char)NK_TO_HEX((col.a & 0x0F));
-    output[7] = (char)NK_TO_HEX((col.a & 0xF0) >> 4);
+    output[0] = (char)NK_TO_HEX((col.r & 0xF0) >> 4);
+    output[1] = (char)NK_TO_HEX((col.r & 0x0F));
+    output[2] = (char)NK_TO_HEX((col.g & 0xF0) >> 4);
+    output[3] = (char)NK_TO_HEX((col.g & 0x0F));
+    output[4] = (char)NK_TO_HEX((col.b & 0xF0) >> 4);
+    output[5] = (char)NK_TO_HEX((col.b & 0x0F));
+    output[6] = (char)NK_TO_HEX((col.a & 0xF0) >> 4);
+    output[7] = (char)NK_TO_HEX((col.a & 0x0F));
     output[8] = '\0';
     #undef NK_TO_HEX
 }
@@ -4462,12 +4462,12 @@ NK_API void
 nk_color_hex_rgb(char *output, struct nk_color col)
 {
     #define NK_TO_HEX(i) ((i) <= 9 ? '0' + (i): 'A' - 10 + (i))
-    output[0] = (char)NK_TO_HEX((col.r & 0x0F));
-    output[1] = (char)NK_TO_HEX((col.r & 0xF0) >> 4);
-    output[2] = (char)NK_TO_HEX((col.g & 0x0F));
-    output[3] = (char)NK_TO_HEX((col.g & 0xF0) >> 4);
-    output[4] = (char)NK_TO_HEX((col.b & 0x0F));
-    output[5] = (char)NK_TO_HEX((col.b & 0xF0) >> 4);
+    output[0] = (char)NK_TO_HEX((col.r & 0xF0) >> 4);
+    output[1] = (char)NK_TO_HEX((col.r & 0x0F));
+    output[2] = (char)NK_TO_HEX((col.g & 0xF0) >> 4);
+    output[3] = (char)NK_TO_HEX((col.g & 0x0F));
+    output[4] = (char)NK_TO_HEX((col.b & 0xF0) >> 4);
+    output[5] = (char)NK_TO_HEX((col.b & 0x0F));
     output[6] = '\0';
     #undef NK_TO_HEX
 }
