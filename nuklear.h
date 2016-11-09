@@ -305,6 +305,10 @@ extern "C" {
 #endif
 #endif
 
+#define NK_MIN(a,b) ((a) < (b) ? (a) : (b))
+#define NK_MAX(a,b) ((a) < (b) ? (b) : (a))
+#define NK_CLAMP(i,v,x) (NK_MAX(NK_MIN(v,x), i))
+
 /*
  * ===============================================================
  *
@@ -438,8 +442,8 @@ typedef union {void *ptr; int id;} nk_handle;
 struct nk_image {nk_handle handle;unsigned short w,h;unsigned short region[4];};
 struct nk_cursor {struct nk_image img; struct nk_vec2 size, offset;};
 struct nk_scroll {unsigned short x, y;};
-enum nk_heading {NK_UP, NK_RIGHT, NK_DOWN, NK_LEFT};
 
+enum nk_heading {NK_UP, NK_RIGHT, NK_DOWN, NK_LEFT};
 enum nk_button_behavior {NK_BUTTON_DEFAULT, NK_BUTTON_REPEATER};
 enum nk_modify          {NK_FIXED = nk_false, NK_MODIFIABLE = nk_true};
 enum nk_orientation     {NK_VERTICAL, NK_HORIZONTAL};
@@ -480,6 +484,16 @@ struct nk_convert_config {
     const struct nk_draw_vertex_layout_element *vertex_layout; /* describes the vertex output format and packing */
     nk_size vertex_size; /* sizeof one vertex for vertex packing */
     nk_size vertex_alignment; /* vertex alignment: Can be optained by NK_ALIGNOF */
+};
+
+struct nk_list_view {
+/* public: */
+    int begin, end, count;
+/* private: */
+    int total_height;
+    struct nk_context *ctx;
+    nk_ushort *scroll_pointer;
+    nk_ushort scroll_value;
 };
 
 enum nk_symbol_type {
@@ -736,6 +750,12 @@ NK_API float                    nk_layout_ratio_from_pixel(struct nk_context*, f
 /* Layout: Group */
 NK_API int                      nk_group_begin(struct nk_context*, const char *title, nk_flags);
 NK_API void                     nk_group_end(struct nk_context*);
+
+NK_API int                      nk_group_scrolled_begin(struct nk_context*, struct nk_scroll*, const char *title, nk_flags);
+NK_API void                     nk_group_scrolled_end(struct nk_context*);
+
+NK_API int                      nk_list_view_begin(struct nk_context*, struct nk_list_view *out, const char *id, nk_flags, int row_height, int row_count);
+NK_API void                     nk_list_view_end(struct nk_list_view*);
 
 /* Layout: Tree */
 #define                         nk_tree_push(ctx, type, title, state) nk_tree_push_hashed(ctx, type, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),__LINE__)
@@ -2754,7 +2774,7 @@ struct nk_window {
  *
  * Nuklear has a stack for style_items, float properties, vector properties, 
  * flags, colors, fonts and for button_behavior. Each has it's own fixed size stack
- * which can be changed in compile time.
+ * which can be changed at compile time.
  */
 #ifndef NK_BUTTON_BEHAVIOR_STACK_SIZE
 #define NK_BUTTON_BEHAVIOR_STACK_SIZE 8
@@ -2825,7 +2845,8 @@ struct nk_configuration_stacks {
 /*==============================================================
  *                          CONTEXT
  * =============================================================*/
-#define NK_VALUE_PAGE_CAPACITY ((sizeof(struct nk_window) / sizeof(nk_uint)) / 2)
+#define NK_VALUE_PAGE_CAPACITY \
+    ((NK_MAX(sizeof(struct nk_window),sizeof(struct nk_panel)) / sizeof(nk_uint)) / 2)
 
 struct nk_table {
     unsigned int seq;
@@ -2847,7 +2868,7 @@ struct nk_page_element {
 };
 
 struct nk_page {
-    unsigned size;
+    unsigned int size;
     struct nk_page *next;
     struct nk_page_element win[1];
 };
@@ -2884,7 +2905,7 @@ struct nk_context {
     nk_handle userdata;
 #endif
     /* text editor objects are quite big because of an internal
-     * undo/redo stack. Therefore does not make sense to have one for
+     * undo/redo stack. Therefore it does not make sense to have one for
      * each window for temporary use cases, so I only provide *one* instance
      * for all windows. This works because the content is cleared anyway */
     struct nk_text_edit text_edit;
@@ -2907,10 +2928,6 @@ struct nk_context {
 /* ==============================================================
  *                          MATH
  * =============================================================== */
-#define NK_MIN(a,b) ((a) < (b) ? (a) : (b))
-#define NK_MAX(a,b) ((a) < (b) ? (b) : (a))
-#define NK_CLAMP(i,v,x) (NK_MAX(NK_MIN(v,x), i))
-
 #define NK_PI 3.141592654f
 #define NK_UTF_INVALID 0xFFFD
 #define NK_MAX_FLOAT_PRECISION 2
@@ -16968,10 +16985,10 @@ nk_add_value(struct nk_context *ctx, struct nk_window *win,
 NK_INTERN nk_uint*
 nk_find_value(struct nk_window *win, nk_hash name)
 {
-    unsigned short size = win->table_size;
+    nk_ushort size = win->table_size;
     struct nk_table *iter = win->tables;
     while (iter) {
-        unsigned short i = 0;
+        nk_ushort i = 0;
         for (i = 0; i < size; ++i) {
             if (iter->keys[i] == name) {
                 iter->seq = win->seq;
@@ -19241,6 +19258,7 @@ nk_checkbox_flags_text(struct nk_context *ctx, const char *text, int len,
     NK_ASSERT(text);
     NK_ASSERT(flags);
     if (!ctx || !text || !flags) return 0;
+
     active = (int)((*flags & value) & value);
     if (nk_checkbox_text(ctx, text, len, &active)) {
         if (active) *flags |= value;
@@ -19498,8 +19516,8 @@ nk_edit_string(struct nk_context *ctx, nk_flags flags,
         win->edit.sel_start = edit->select_start;
         win->edit.sel_end = edit->select_end;
         win->edit.mode = edit->mode;
-        win->edit.scrollbar.x = (unsigned short)edit->scrollbar.x;
-        win->edit.scrollbar.y = (unsigned short)edit->scrollbar.y;
+        win->edit.scrollbar.x = (nk_ushort)edit->scrollbar.x;
+        win->edit.scrollbar.y = (nk_ushort)edit->scrollbar.y;
     }
     return state;
 }
@@ -19964,8 +19982,7 @@ nk_chart_push_line(struct nk_context *ctx, struct nk_window *win,
 
         bounds.x = g->slots[slot].last.x - 2;
         bounds.y = g->slots[slot].last.y - 2;
-        bounds.w = 4;
-        bounds.h = 4;
+        bounds.w = bounds.h = 4;
 
         color = g->slots[slot].color;
         if (!(layout->flags & NK_WINDOW_ROM) &&
@@ -19988,8 +20005,7 @@ nk_chart_push_line(struct nk_context *ctx, struct nk_window *win,
 
     bounds.x = cur.x - 3;
     bounds.y = cur.y - 3;
-    bounds.w = 6;
-    bounds.h = 6;
+    bounds.w = bounds.h = 6;
 
     /* user selection of current data point */
     if (!(layout->flags & NK_WINDOW_ROM)) {
@@ -20158,40 +20174,21 @@ nk_plot_function(struct nk_context *ctx, enum nk_chart_type type, void *userdata
  *
  * --------------------------------------------------------------*/
 NK_API int
-nk_group_begin(struct nk_context *ctx, const char *title, nk_flags flags)
+nk_group_scrolled_begin(struct nk_context *ctx,
+    struct nk_scroll *scroll, const char *title, nk_flags flags)
 {
-    struct nk_window *win;
-    const struct nk_rect *c;
-    union {struct nk_scroll *s; nk_uint *i;} value;
-    struct nk_window panel;
     struct nk_rect bounds;
-    nk_hash title_hash;
-    int title_len;
+    struct nk_window panel;
+    struct nk_window *win;
 
-    NK_ASSERT(ctx);
-    NK_ASSERT(title);
-    NK_ASSERT(ctx->current);
-    NK_ASSERT(ctx->current->layout);
-    if (!ctx || !ctx->current || !ctx->current->layout || !title)
-        return 0;
-
-    /* allocate space for the group panel inside the panel */
     win = ctx->current;
-    c = &win->layout->clip;
     nk_panel_alloc_space(&bounds, ctx);
 
-    /* find persistent group scrollbar value */
-    title_len = (int)nk_strlen(title);
-    title_hash = nk_murmur_hash(title, (int)title_len, NK_PANEL_GROUP);
-    value.i = nk_find_value(win, title_hash);
-    if (!value.i) {
-        value.i = nk_add_value(ctx, win, title_hash, 0);
-        *value.i = 0;
-    }
+    {const struct nk_rect *c = &win->layout->clip;
     if (!NK_INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h) &&
         !(flags & NK_WINDOW_MOVABLE)) {
         return 0;
-    }
+    }}
     if (win->flags & NK_WINDOW_ROM)
         flags |= NK_WINDOW_ROM;
 
@@ -20199,8 +20196,8 @@ nk_group_begin(struct nk_context *ctx, const char *title, nk_flags flags)
     nk_zero(&panel, sizeof(panel));
     panel.bounds = bounds;
     panel.flags = flags;
-    panel.scrollbar.x = (unsigned short)value.s->x;
-    panel.scrollbar.y = (unsigned short)value.s->y;
+    panel.scrollbar.x = scroll->x;
+    panel.scrollbar.y = scroll->y;
     panel.buffer = win->buffer;
     panel.layout = (struct nk_panel*)nk_create_panel(ctx);
     ctx->current = &panel;
@@ -20208,15 +20205,16 @@ nk_group_begin(struct nk_context *ctx, const char *title, nk_flags flags)
 
     win->buffer = panel.buffer;
     win->buffer.clip = panel.layout->clip;
-    panel.layout->offset = value.s;
+    panel.layout->offset = scroll;
     panel.layout->parent = win->layout;
     win->layout = panel.layout;
     ctx->current = win;
     return 1;
+
 }
 
 NK_API void
-nk_group_end(struct nk_context *ctx)
+nk_group_scrolled_end(struct nk_context *ctx)
 {
     struct nk_window *win;
     struct nk_panel *parent;
@@ -20276,6 +20274,112 @@ nk_group_end(struct nk_context *ctx)
     win->layout = parent;
     g->bounds = pan.bounds;
     return;
+}
+
+NK_API int
+nk_group_begin(struct nk_context *ctx, const char *title, nk_flags flags)
+{
+    int title_len;
+    nk_hash title_hash;
+    union {struct nk_scroll *s; nk_uint *i;} value;
+    struct nk_window *win;
+
+    NK_ASSERT(ctx);
+    NK_ASSERT(title);
+    NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout || !title)
+        return 0;
+
+    /* find persistent group scrollbar value */
+    win = ctx->current;
+    title_len = (int)nk_strlen(title);
+    title_hash = nk_murmur_hash(title, (int)title_len, NK_PANEL_GROUP);
+    value.i = nk_find_value(win, title_hash);
+    if (!value.i) {
+        value.i = nk_add_value(ctx, win, title_hash, 0);
+        NK_ASSERT(value.i);
+        if (!value.i) return 0;
+        *value.i = 0;
+    }
+    return nk_group_scrolled_begin(ctx, value.s, title, flags);
+}
+
+NK_API void
+nk_group_end(struct nk_context *ctx)
+{
+    nk_group_scrolled_end(ctx);
+}
+
+NK_API int
+nk_list_view_begin(struct nk_context *ctx, struct nk_list_view *view,
+    const char *title, nk_flags flags, int row_height, int row_count)
+{
+    int title_len;
+    nk_hash title_hash;
+    union {struct nk_scroll *s; nk_uint *i;} value;
+
+    int result;
+    struct nk_window *win;
+    struct nk_panel *layout;
+    const struct nk_style *style;
+    struct nk_vec2 item_spacing;
+
+    NK_ASSERT(ctx);
+    NK_ASSERT(view);
+    NK_ASSERT(title);
+    if (!ctx || !view || !title) return 0;
+
+    win = ctx->current;
+    layout = win->layout;
+    style = &ctx->style;
+    item_spacing = style->window.spacing;
+    row_height += NK_MAX(0, (int)item_spacing.y);
+
+    /* find persistent group scrollbar offset */
+    title_len = (int)nk_strlen(title);
+    title_hash = nk_murmur_hash(title, (int)title_len, NK_PANEL_GROUP);
+    value.i = nk_find_value(win, title_hash);
+    if (!value.i) {
+        value.i = nk_add_value(ctx, win, title_hash, 0);
+        NK_ASSERT(value.i);
+        if (!value.i) return 0;
+        *value.i = 0;
+    }
+    view->scroll_value = value.s->y;
+    view->scroll_pointer = &value.s->y;
+
+    value.s->y = 0;
+    result = nk_group_scrolled_begin(ctx, value.s, title, flags);
+    win = ctx->current;
+    layout = win->layout;
+ 
+    view->total_height = row_height * NK_MAX(row_count,1);
+    view->begin = (int)NK_MAX((view->scroll_value / (float)row_height), 0.0f);
+    view->count = (int)NK_MAX(nk_iceilf((layout->clip.h)/(float)row_height), 0);
+    view->end = view->begin + view->count;
+    view->ctx = ctx;
+    return result;
+}
+
+NK_API void
+nk_list_view_end(struct nk_list_view *view)
+{
+    struct nk_context *ctx;
+    struct nk_window *win;
+    struct nk_panel *layout;
+
+    NK_ASSERT(view);
+    NK_ASSERT(view->ctx);
+    NK_ASSERT(view->scroll_pointer);
+    if (!view || !view->ctx) return;
+
+    ctx = view->ctx;
+    win = ctx->current;
+    layout = win->layout;
+    layout->at_y = layout->bounds.y + view->total_height;
+    *view->scroll_pointer += view->scroll_value;
+    nk_group_end(view->ctx);
 }
 
 /* --------------------------------------------------------------
