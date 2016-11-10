@@ -1,4 +1,10 @@
 # Changelog
+- 2016/11/10 (1.180)- Added additional `nk_button` versions which allows to directly
+                        pass in a style struct to change buttons visual.
+- 2016/11/10 (1.180)- Added additional 'nk_tree' versions to support external state
+                        storage. Just like last the `nk_group` commit the main
+                        advantage is that you optionally can minimize nuklears runtime
+                        memory consumption or handle hash collisions.
 - 2016/11/09 (1.180)- Added additional `nk_group` version to support external scrollbar
                         offset storage. Main advantage is that you can externalize
                         the memory management for the offset. It could also be helpful
