@@ -11637,31 +11637,28 @@ nk_textedit_find_charpos(struct nk_text_find *find, struct nk_text_edit *state,
     int z = state->string.len;
     int i=0, first;
 
+    nk_zero_struct(r);
     if (n == z) {
         /* if it's at the end, then find the last line -- simpler than trying to
         explicitly handle this case in the regular code */
+        nk_textedit_layout_row(&r, state, 0, row_height, font);
         if (single_line) {
-            nk_textedit_layout_row(&r, state, 0, row_height, font);
-            find->y = 0;
             find->first_char = 0;
             find->length = z;
-            find->height = r.ymax - r.ymin;
-            find->x = r.x1;
         } else {
-            find->y = 0;
-            find->x = 0;
-            find->height = 1;
-
             while (i < z) {
-                nk_textedit_layout_row(&r, state, i, row_height, font);
                 prev_start = i;
                 i += r.num_chars;
+                nk_textedit_layout_row(&r, state, i, row_height, font);
             }
 
             find->first_char = i;
-            find->length = 0;
-            find->prev_first = prev_start;
+            find->length = r.num_chars;
         }
+        find->x = r.x1;
+        find->y = r.ymin;
+        find->height = r.ymax - r.ymin;
+        find->prev_first = prev_start;
         return;
     }
 
@@ -12054,7 +12051,7 @@ retry:
             nk_textedit_layout_row(&row, state, state->cursor, row_height, font);
             x = row.x0;
 
-            for (i=0; i < row.num_chars; ++i) {
+            for (i=0; i < row.num_chars && x < row.x1; ++i) {
                 float dx = nk_textedit_get_width(state, start, i, font);
                 x += dx;
                 if (x > goal_x)
@@ -12101,7 +12098,7 @@ retry:
             nk_textedit_layout_row(&row, state, state->cursor, row_height, font);
             x = row.x0;
 
-            for (i=0; i < row.num_chars; ++i) {
+            for (i=0; i < row.num_chars && x < row.x1; ++i) {
                 float dx = nk_textedit_get_width(state, find.prev_first, i, font);
                 x += dx;
                 if (x > goal_x)
@@ -14381,6 +14378,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
                     glyphs++;
                     row_begin = text_len;
                     glyph_len = nk_utf_decode(text + text_len, &unicode, len-text_len);
+                    glyph_width = font->width(font->userdata, font->height, text+text_len, glyph_len);
                     continue;
                 }
 
@@ -14577,6 +14575,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
         const struct nk_style_item *background;
         struct nk_color background_color;
         struct nk_color text_color;
+        nk_push_scissor(out, clip);
         if (*state & NK_WIDGET_STATE_ACTIVED) {
             background = &style->active;
             text_color = style->text_active;
