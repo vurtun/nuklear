@@ -779,12 +779,9 @@ NK_API int                      nk_tree_push_hashed(struct nk_context*, enum nk_
 NK_API int                      nk_tree_image_push_hashed(struct nk_context*, enum nk_tree_type, struct nk_image, const char *title, enum nk_collapse_states initial_state, const char *hash, int len,int seed);
 NK_API void                     nk_tree_pop(struct nk_context*);
 
-#define                         nk_tree_state_push(ctx, type, title, state) nk_tree_state_push_hashed(ctx, type, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),__LINE__)
-#define                         nk_tree_state_push_id(ctx, type, title, state, id) nk_tree_state_push_hashed(ctx, type, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),id)
-NK_API int                      nk_tree_state_push_hashed(struct nk_context*, enum nk_tree_type, const char *title, enum nk_collapse_states *state, const char *hash, int len,int seed);
-NK_API int                      nk_tree_state_image_push_hashed(struct nk_context*, enum nk_tree_type, struct nk_image, const char *title, enum nk_collapse_states *state, const char *hash, int len,int seed);
+NK_API int                      nk_tree_state_push(struct nk_context*, enum nk_tree_type, const char *title, enum nk_collapse_states *state);
+NK_API int                      nk_tree_state_image_push(struct nk_context*, enum nk_tree_type, struct nk_image, const char *title, enum nk_collapse_states *state);
 NK_API void                     nk_tree_state_pop(struct nk_context*);
-
 
 /* Widgets */
 NK_API void                     nk_text(struct nk_context*, const char*, int, nk_flags);
@@ -18307,8 +18304,7 @@ nk_layout_peek(struct nk_rect *bounds, struct nk_context *ctx)
 
 NK_INTERN int
 nk_tree_state_base(struct nk_context *ctx, enum nk_tree_type type,
-    struct nk_image *img, const char *title, enum nk_collapse_states *state,
-    const char *hash, int len, int line)
+    struct nk_image *img, const char *title, enum nk_collapse_states *state)
 {
     struct nk_window *win;
     struct nk_panel *layout;
@@ -18430,20 +18426,18 @@ nk_tree_base(struct nk_context *ctx, enum nk_tree_type type,
         state = nk_add_value(ctx, win, tree_hash, 0);
         *state = initial_state;
     }
-    return nk_tree_state_base(ctx, type, img, title, state, hash, len, line);
+    return nk_tree_state_base(ctx, type, img, title, (enum nk_collapse_states*)state);
 }
 
 NK_API int
-nk_tree_state_push_hashed(struct nk_context *ctx, enum nk_tree_type type,
-    const char *title, enum nk_collapse_states *state, const char *hash,
-    int len, int seed)
-{return nk_tree_state_base(ctx, type, 0, title, state, hash, len, seed);}
+nk_tree_state_push(struct nk_context *ctx, enum nk_tree_type type,
+    const char *title, enum nk_collapse_states *state)
+{return nk_tree_state_base(ctx, type, 0, title, state);}
 
 NK_API int
-nk_tree_state_image_push_hashed(struct nk_context *ctx, enum nk_tree_type type,
-    struct nk_image img, const char *title, enum nk_collapse_states *state,
-    const char *hash, int len, int seed)
-{return nk_tree_state_base(ctx, type, &img, title, state, hash, len, seed);}
+nk_tree_state_image_push(struct nk_context *ctx, enum nk_tree_type type,
+    struct nk_image img, const char *title, enum nk_collapse_states *state)
+{return nk_tree_state_base(ctx, type, &img, title, state);}
 
 NK_API void
 nk_tree_state_pop(struct nk_context *ctx)
@@ -20478,8 +20472,8 @@ nk_list_view_end(struct nk_list_view *view)
     ctx = view->ctx;
     win = ctx->current;
     layout = win->layout;
-    layout->at_y = layout->bounds.y + view->total_height;
-    *view->scroll_pointer += view->scroll_value;
+    layout->at_y = layout->bounds.y + (float)view->total_height;
+    *view->scroll_pointer = (nk_ushort)(*view->scroll_pointer + view->scroll_value);
     nk_group_end(view->ctx);
 }
 

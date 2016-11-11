@@ -1,4 +1,5 @@
 # Changelog
+- 2016/11/10 (1.181)- Fixed some warnings and C++ error
 - 2016/11/10 (1.180)- Added additional `nk_button` versions which allows to directly
                         pass in a style struct to change buttons visual.
 - 2016/11/10 (1.180)- Added additional 'nk_tree' versions to support external state
