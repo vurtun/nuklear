@@ -18215,10 +18215,7 @@ nk_layout_widget_space(struct nk_rect *bounds, const struct nk_context *ctx,
         item_width = layout->row.item_width;
         item_offset = layout->row.item_offset;
         item_spacing = (float)layout->row.index * spacing.x;
-        if (modify) {
-            layout->row.item_offset += item_width;
-            layout->row.index = 0;
-        }
+        if (modify) layout->row.item_offset += item_width;
     } break;
     case NK_LAYOUT_STATIC_FREE: {
         /* free widget placing */
