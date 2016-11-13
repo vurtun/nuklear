@@ -270,10 +270,12 @@ extern "C" {
  *
  * ===============================================================
  */
+#ifndef NK_API
 #ifdef NK_PRIVATE
 #define NK_API static
 #else
 #define NK_API extern
+#endif
 #endif
 
 #define NK_INTERN static
@@ -2122,7 +2124,7 @@ struct nk_draw_list {
 
 /* draw list */
 NK_API void nk_draw_list_init(struct nk_draw_list*);
-NK_API void nk_draw_list_setup(struct nk_draw_list *canvas, const struct nk_convert_config *config, struct nk_buffer *cmds, struct nk_buffer *vertices, struct nk_buffer *elements);
+NK_API void nk_draw_list_setup(struct nk_draw_list*, const struct nk_convert_config*, struct nk_buffer *cmds, struct nk_buffer *vertices, struct nk_buffer *elements);
 NK_API void nk_draw_list_clear(struct nk_draw_list*);
 
 /* drawing */
@@ -2134,7 +2136,7 @@ NK_API void nk_draw_list_clear(struct nk_draw_list *list);
 
 /* path */
 NK_API void nk_draw_list_path_clear(struct nk_draw_list*);
-NK_API void nk_draw_list_path_line_to(struct nk_draw_list *list, struct nk_vec2 pos);
+NK_API void nk_draw_list_path_line_to(struct nk_draw_list*, struct nk_vec2 pos);
 NK_API void nk_draw_list_path_arc_to_fast(struct nk_draw_list*, struct nk_vec2 center, float radius, int a_min, int a_max);
 NK_API void nk_draw_list_path_arc_to(struct nk_draw_list*, struct nk_vec2 center, float radius, float a_min, float a_max, unsigned int segments);
 NK_API void nk_draw_list_path_rect_to(struct nk_draw_list*, struct nk_vec2 a, struct nk_vec2 b, float rounding);
@@ -2152,7 +2154,7 @@ NK_API void nk_draw_list_stroke_poly_line(struct nk_draw_list*, const struct nk_
 
 /* fill */
 NK_API void nk_draw_list_fill_rect(struct nk_draw_list*, struct nk_rect rect, struct nk_color, float rounding);
-NK_API void nk_draw_list_fill_rect_multi_color(struct nk_draw_list *list, struct nk_rect rect, struct nk_color left, struct nk_color top, struct nk_color right, struct nk_color bottom);
+NK_API void nk_draw_list_fill_rect_multi_color(struct nk_draw_list*, struct nk_rect rect, struct nk_color left, struct nk_color top, struct nk_color right, struct nk_color bottom);
 NK_API void nk_draw_list_fill_triangle(struct nk_draw_list*, struct nk_vec2 a, struct nk_vec2 b, struct nk_vec2 c, struct nk_color);
 NK_API void nk_draw_list_fill_circle(struct nk_draw_list*, struct nk_vec2 center, float radius, struct nk_color col, unsigned int segs);
 NK_API void nk_draw_list_fill_poly_convex(struct nk_draw_list*, const struct nk_vec2 *points, const unsigned int count, struct nk_color, enum nk_anti_aliasing);
@@ -6052,7 +6054,6 @@ nk_command_buffer_push(struct nk_command_buffer* b,
     NK_ASSERT(b);
     NK_ASSERT(b->base);
     if (!b) return 0;
-
     cmd = (struct nk_command*)nk_buffer_alloc(b->base,NK_BUFFER_FRONT,size,align);
     if (!cmd) return 0;
 
@@ -6061,7 +6062,6 @@ nk_command_buffer_push(struct nk_command_buffer* b,
     unaligned = (nk_byte*)cmd + size;
     memory = NK_ALIGN_PTR(unaligned, align);
     alignment = (nk_size)((nk_byte*)memory - (nk_byte*)unaligned);
-
 #ifdef NK_ZERO_COMMAND_MEMORY
     NK_MEMSET(cmd, 0, size + alignment);
 #endif
@@ -10367,8 +10367,11 @@ nk_font_find_glyph(struct nk_font *font, nk_rune unicode)
     int count;
     int total_glyphs = 0;
     const struct nk_font_glyph *glyph = 0;
+
     NK_ASSERT(font);
     NK_ASSERT(font->glyphs);
+    NK_ASSERT(font->info.ranges);
+    if (!font || !font->glyphs) return 0;
 
     glyph = font->fallback;
     count = nk_range_count(font->info.ranges);
@@ -10633,10 +10636,8 @@ nk_adler32(unsigned int adler32, unsigned char *buffer, unsigned int buflen)
             s1 += buffer[5], s2 += s1;
             s1 += buffer[6], s2 += s1;
             s1 += buffer[7], s2 += s1;
-
             buffer += 8;
         }
-
         for (; i < blocklen; ++i)
             s1 += *buffer++, s2 += s1;
 
@@ -11065,8 +11066,8 @@ nk_font_atlas_bake(struct nk_font_atlas *atlas, int *width, int *height,
     nk_font_bake_custom_data(atlas->pixel, *width, *height, atlas->custom,
             nk_custom_cursor_data, NK_CURSOR_DATA_W, NK_CURSOR_DATA_H, '.', 'X');
 
-    /* convert alpha8 image into rgba32 image */
     if (fmt == NK_FONT_ATLAS_RGBA32) {
+        /* convert alpha8 image into rgba32 image */
         void *img_rgba = atlas->temporary.alloc(atlas->temporary.userdata,0,
                             (nk_size)(*width * *height * 4));
         NK_ASSERT(img_rgba);
