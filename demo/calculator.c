@@ -2,8 +2,7 @@
 static void
 calculator(struct nk_context *ctx)
 {
-    struct nk_panel layout;
-    if (nk_begin(ctx, &layout, "Calculator", nk_rect(10, 10, 180, 250),
+    if (nk_begin(ctx, "Calculator", nk_rect(10, 10, 180, 250),
         NK_WINDOW_BORDER|NK_WINDOW_NO_SCROLLBAR|NK_WINDOW_MOVABLE))
     {
         static int set = 0, prev = 0, op = 0;
@@ -29,8 +28,7 @@ calculator(struct nk_context *ctx)
                     a = b = op = 0; current = &a; set = 0;
                 } if (nk_button_label(ctx, "0")) {
                     *current = *current*10.0f; set = 0;
-                }
-                if (nk_button_label(ctx, "=")) {
+                } if (nk_button_label(ctx, "=")) {
                     solve = 1; prev = op; op = 0;
                 }
             } else if (((i+1) % 4)) {

@@ -36,7 +36,7 @@ overview(struct nk_context *ctx)
             static int mcheck = nk_true;
 
             nk_menubar_begin(ctx);
-            nk_layout_row_begin(ctx, NK_STATIC, 25, 2);
+            nk_layout_row_begin(ctx, NK_STATIC, 25, 4);
             nk_layout_row_push(ctx, 45);
             if (nk_menu_begin_label(ctx, "MENU", NK_TEXT_LEFT, nk_vec2(120, 200)))
             {
