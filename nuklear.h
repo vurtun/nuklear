@@ -70,7 +70,7 @@ FEATURES:
 OPTIONAL DEFINES:
     NK_PRIVATE
         If defined declares all functions as static, so they can only be accessed
-        for the file that creates the implementation
+        inside the file that contains the implementation
 
     NK_INCLUDE_FIXED_TYPES
         If defined it will include header <stdint.h> for fixed sized types
@@ -458,7 +458,7 @@ struct nk_image {nk_handle handle;unsigned short w,h;unsigned short region[4];};
 struct nk_cursor {struct nk_image img; struct nk_vec2 size, offset;};
 struct nk_scroll {unsigned short x, y;};
 
-enum nk_heading {NK_UP, NK_RIGHT, NK_DOWN, NK_LEFT};
+enum nk_heading         {NK_UP, NK_RIGHT, NK_DOWN, NK_LEFT};
 enum nk_button_behavior {NK_BUTTON_DEFAULT, NK_BUTTON_REPEATER};
 enum nk_modify          {NK_FIXED = nk_false, NK_MODIFIABLE = nk_true};
 enum nk_orientation     {NK_VERTICAL, NK_HORIZONTAL};
@@ -1147,7 +1147,7 @@ NK_API const char*              nk_utf_at(const char *buffer, int length, int in
 
     1.) Using your own implementation without vertex buffer output
     --------------------------------------------------------------
-    So first of the easiest way to do font handling is by just providing a
+    So first up the easiest way to do font handling is by just providing a
     `nk_user_font` struct which only requires the height in pixel of the used
     font and a callback to calculate the width of a string. This way of handling
     fonts is best fitted for using the normal draw shape command API where you
@@ -1233,8 +1233,8 @@ NK_API const char*              nk_utf_at(const char *buffer, int length, int in
 
     After successfull intializing the font baker you can add Truetype(.ttf) fonts from
     different sources like memory or from file by calling one of the `nk_font_atlas_add_xxx`.
-    functions. Adding font will permanently store each font and font config inside
-    the font atlas and allows to reuse the font atlas. If you don't want to reuse
+    functions. Adding font will permanently store each font, font config and ttf memory block(!)
+    inside the font atlas and allows to reuse the font atlas. If you don't want to reuse
     the font baker by for example adding additional fonts you can call
     `nk_font_atlas_cleanup` after the baking process is over (after calling nk_font_atlas_end).
 
@@ -1755,7 +1755,7 @@ NK_API void nk_textedit_redo(struct nk_text_edit*);
     but also returns the state of the widget space. If your widget is not seen and does
     not have to be updated it is '0' and you can just return. If it only has
     to be drawn the state will be `NK_WIDGET_ROM` otherwise you can do both
-    update and draw your widget. The reason for seperating is to onl draw and
+    update and draw your widget. The reason for seperating is to only draw and
     update what is actually neccessary which is crucial for performance.
 */
 enum nk_command_type {
@@ -2653,7 +2653,8 @@ struct nk_row_layout {
     float height;
     int columns;
     const float *ratio;
-    float item_width, item_height;
+    float item_width;
+    float item_height;
     float item_offset;
     float filled;
     struct nk_rect item;
@@ -2919,9 +2920,9 @@ struct nk_context {
     struct nk_buffer memory;
     struct nk_clipboard clip;
     nk_flags last_widget_state;
-    float delta_time_seconds;
     enum nk_button_behavior button_behavior;
     struct nk_configuration_stacks stacks;
+    float delta_time_seconds;
 
 /* private:
     should only be accessed if you
@@ -17310,11 +17311,14 @@ nk_begin_titled(struct nk_context *ctx, const char *name, const char *title,
 NK_API void
 nk_end(struct nk_context *ctx)
 {
+    struct nk_panel *layout;
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current && "if this triggers you forgot to call `nk_begin`");
     NK_ASSERT(ctx->current->layout);
+
+    layout = ctx->current->layout;
     if (!ctx || !ctx->current) return;
-    if (ctx->current->flags & NK_WINDOW_HIDDEN) {
+    if (layout->type == NK_PANEL_WINDOW && (ctx->current->flags & NK_WINDOW_HIDDEN)) {
         ctx->current = 0;
         return;
     }
@@ -20952,11 +20956,7 @@ nk_contextual_close(struct nk_context *ctx)
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
     NK_ASSERT(ctx->current->layout);
-    if (!ctx || !ctx->current || !ctx->current->layout)
-        return;
-
-    if (!ctx->current)
-        return;
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
     nk_popup_close(ctx);
 }
 

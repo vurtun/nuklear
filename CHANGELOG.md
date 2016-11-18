@@ -1,4 +1,5 @@
 # Changelog
+- 2016/11/10 (1.182)- Fixed memory leak caused by popup panel allocation
 - 2016/11/10 (1.181)- Fixed some warnings and C++ error
 - 2016/11/10 (1.180)- Added additional `nk_button` versions which allows to directly
                         pass in a style struct to change buttons visual.
