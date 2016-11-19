@@ -20746,8 +20746,8 @@ nk_tooltip_end(struct nk_context *ctx)
 {
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
-    if (!ctx || !ctx->current)
-        return;
+    if (!ctx || !ctx->current) return;
+    ctx->current->seq--;
     nk_popup_close(ctx);
     nk_popup_end(ctx);
 }

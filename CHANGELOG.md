@@ -1,4 +1,5 @@
 # Changelog
+- 2016/11/10 (1.184)- Fixed tooltip flickering
 - 2016/11/10 (1.183)- Fixed memory leak caused by popup repeated closing
 - 2016/11/10 (1.182)- Fixed memory leak caused by popup panel allocation
 - 2016/11/10 (1.181)- Fixed some warnings and C++ error
