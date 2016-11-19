@@ -20572,6 +20572,8 @@ nk_popup_begin(struct nk_context *ctx, enum nk_popup_type type,
         win->popup.active = 0;
         ctx->memory.allocated = allocated;
         ctx->current = win;
+        nk_free_panel(ctx, popup->layout);
+        popup->layout = 0;
         return 0;
     }
 }
