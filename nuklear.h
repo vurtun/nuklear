@@ -20978,14 +20978,14 @@ nk_contextual_end(struct nk_context *ctx)
     if (panel->flags & NK_WINDOW_DYNAMIC) {
         /* Close behavior
         This is a bit hack solution since we do not now before we end our popup
-        how big it will be. We therefore do not directly now when a
+        how big it will be. We therefore do not directly know when a
         click outside the non-blocking popup must close it at that direct frame.
         Instead it will be closed in the next frame.*/
         struct nk_rect body = {0,0,0,0};
         if (panel->at_y < (panel->bounds.y + panel->bounds.h)) {
             struct nk_vec2 padding = nk_panel_get_padding(&ctx->style, panel->type);
             body = panel->bounds;
-            body.y = (panel->at_y + panel->footer_height + panel->border + padding.y);
+            body.y = (panel->at_y + panel->footer_height + panel->border + padding.y + panel->row.height);
             body.h = (panel->bounds.y + panel->bounds.h) - body.y;
         }
 
