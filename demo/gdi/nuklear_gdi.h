@@ -516,7 +516,7 @@ nk_gdi_handle_event(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
     case WM_SYSKEYDOWN:
     case WM_SYSKEYUP:
     {
-        int down = (lparam >> 31) & 1;
+        int down = !((lparam >> 31) & 1);
         int ctrl = GetKeyState(VK_CONTROL) & (1 << 15);
 
         switch (wparam)
