@@ -1,8 +1,9 @@
 # Changelog
-- 2016/11/10 (1.184)- Fixed abstract combo box closing behavior
-- 2016/11/10 (1.184)- Fixed tooltip flickering
-- 2016/11/10 (1.183)- Fixed memory leak caused by popup repeated closing
-- 2016/11/10 (1.182)- Fixed memory leak caused by popup panel allocation
+- 2016/11/22 (1.184)- Fixed window minimized closing bug
+- 2016/11/19 (1.184)- Fixed abstract combo box closing behavior
+- 2016/11/19 (1.184)- Fixed tooltip flickering
+- 2016/11/19 (1.183)- Fixed memory leak caused by popup repeated closing
+- 2016/11/18 (1.182)- Fixed memory leak caused by popup panel allocation
 - 2016/11/10 (1.181)- Fixed some warnings and C++ error
 - 2016/11/10 (1.180)- Added additional `nk_button` versions which allows to directly
                         pass in a style struct to change buttons visual.

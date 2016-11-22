@@ -16499,6 +16499,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title, enum nk_panel_type pan
             {
                 layout->flags |= NK_WINDOW_HIDDEN;
                 layout->flags |= NK_WINDOW_CLOSED;
+                layout->flags &= ~NK_WINDOW_MINIMIZED;
             }
         }
 
@@ -16900,7 +16901,7 @@ nk_link_page_element_into_freelist(struct nk_context *ctx,
 NK_INTERN void
 nk_free_page_element(struct nk_context *ctx, struct nk_page_element *elem)
 {
-    /* fixed size pool so just add to free list */
+    /* we have a pool so just add to free list */
     if (ctx->use_pool) {
         nk_link_page_element_into_freelist(ctx, elem);
         return;
@@ -20429,7 +20430,6 @@ nk_list_view_begin(struct nk_context *ctx, struct nk_list_view *view,
     if (!ctx || !view || !title) return 0;
 
     win = ctx->current;
-    layout = win->layout;
     style = &ctx->style;
     item_spacing = style->window.spacing;
     row_height += NK_MAX(0, (int)item_spacing.y);
