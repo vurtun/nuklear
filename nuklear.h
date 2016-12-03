@@ -5056,7 +5056,7 @@ nk_text_clamp(const struct nk_user_font *font, const char *text,
     } else {
         *glyphs = sep_g;
         *text_width = sep_width;
-        return sep_len;
+        return (!sep_len) ? len: sep_len;
     }
 }
 
@@ -12637,6 +12637,7 @@ nk_widget_text_wrap(struct nk_command_buffer *o, struct nk_rect b,
     int done = 0;
     struct nk_rect line;
     struct nk_text text;
+    NK_INTERN nk_rune seperator[] = {' '};
 
     NK_ASSERT(o);
     NK_ASSERT(t);
@@ -12655,14 +12656,13 @@ nk_widget_text_wrap(struct nk_command_buffer *o, struct nk_rect b,
     line.w = b.w - 2 * t->padding.x;
     line.h = 2 * t->padding.y + f->height;
 
-    nk_rune seperator[] = {' '};
-    fitting = nk_text_clamp(f, string, len, line.w, &glyphs, &width, seperator,1);
+    fitting = nk_text_clamp(f, string, len, line.w, &glyphs, &width, seperator,NK_LEN(seperator));
     while (done < len) {
         if (!fitting || line.y + line.h >= (b.y + b.h)) break;
         nk_widget_text(o, line, &string[done], fitting, &text, NK_TEXT_LEFT, f);
         done += fitting;
         line.y += f->height + 2 * t->padding.y;
-        fitting = nk_text_clamp(f, &string[done], len - done, line.w, &glyphs, &width, seperator,1);
+        fitting = nk_text_clamp(f, &string[done], len - done, line.w, &glyphs, &width, seperator,NK_LEN(seperator));
     }
 }
 
