@@ -1,4 +1,5 @@
 # Changelog
+- 2016/12/03 (1.19) - Changed text wrapping to process words not characters
 - 2016/11/22 (1.184)- Fixed window minimized closing bug
 - 2016/11/19 (1.184)- Fixed abstract combo box closing behavior
 - 2016/11/19 (1.184)- Fixed tooltip flickering
