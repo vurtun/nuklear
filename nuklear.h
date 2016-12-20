@@ -4,8 +4,8 @@
  authored from 2015-2016 by Micha Mettke
 
 ABOUT:
-    This is a minimal state immediate mode graphical user interface single header
-    toolkit written in ANSI C and licensed under public domain.
+    This is a minimal state graphical user interface single header toolkit
+    written in ANSI C and licensed under public domain.
     It was designed as a simple embeddable user interface for application and does
     not have any dependencies, a default renderbackend or OS window and input handling
     but instead provides a very modular library approach by using simple input state
@@ -14,7 +14,7 @@ ABOUT:
     of platform and render backends it only focuses on the actual UI.
 
 VALUES:
-    - Immediate mode graphical user interface toolkit
+    - Graphical user interface toolkit
     - Single header library
     - Written in C89 (a.k.a. ANSI C or ISO C90)
     - Small codebase (~17kLOC)
@@ -17247,7 +17247,14 @@ nk_begin_titled(struct nk_context *ctx, const char *name, const char *title,
         /* update window */
         win->flags &= ~(nk_flags)(NK_WINDOW_PRIVATE-1);
         win->flags |= flags;
-        NK_ASSERT(win->seq != ctx->seq && "if this triggers you probably have two windows with same name!");
+        /* If this assert triggers you either:
+         *
+         * I.) Have more than one window with the same name or
+         * II.) You forgot to actually draw the window.
+         *      More specific you did not call `nk_clear` (nk_clear will be
+         *      automatically called for you if you are using one of the
+         *      provided demo backends). */
+        NK_ASSERT(win->seq != ctx->seq);
         win->seq = ctx->seq;
         if (!ctx->active)
             ctx->active = win;
