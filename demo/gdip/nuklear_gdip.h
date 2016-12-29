@@ -392,13 +392,13 @@ nk_gdip_stroke_rect(short x, short y, unsigned short w,
     } else {
         INT d = 2 * r;
         GdipDrawArcI(gdip.memory, gdip.pen, x, y, d, d, 180, 90);
-        GdipDrawLineI(gdip.memory, gdip.pen, x + d, y, x + w - d, y);
+        GdipDrawLineI(gdip.memory, gdip.pen, x + r, y, x + w - r, y);
         GdipDrawArcI(gdip.memory, gdip.pen, x + w - d, y, d, d, 270, 90);
-        GdipDrawLineI(gdip.memory, gdip.pen, x + w, y + d, x + w, y + h - d);
+        GdipDrawLineI(gdip.memory, gdip.pen, x + w, y + r, x + w, y + h - r);
         GdipDrawArcI(gdip.memory, gdip.pen, x + w - d, y + h - d, d, d, 0, 90);
-        GdipDrawLineI(gdip.memory, gdip.pen, x, y + d, x + w, y + h - d);
+        GdipDrawLineI(gdip.memory, gdip.pen, x, y + r, x, y + h - r);
         GdipDrawArcI(gdip.memory, gdip.pen, x, y + h - d, d, d, 90, 90);
-        GdipDrawLineI(gdip.memory, gdip.pen, x + d, y + h, x + w - d, y + h);
+        GdipDrawLineI(gdip.memory, gdip.pen, x + r, y + h, x + w - r, y + h);
     }
 }
 
