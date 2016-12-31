@@ -16056,7 +16056,8 @@ nk_clear(struct nk_context *ctx)
     iter = ctx->begin;
     while (iter) {
         /* make sure minimized windows do not get removed */
-        if (iter->flags & NK_WINDOW_MINIMIZED) {
+        if ((iter->flags & NK_WINDOW_MINIMIZED) &&
+            !(iter)->flags & NK_WINDOW_CLOSED) {
             iter = iter->next;
             continue;
         }
