@@ -63,6 +63,7 @@ int main(void)
     }
 
     al_install_mouse();
+    al_set_mouse_wheel_precision(150);
     al_install_keyboard();
 
     al_set_new_display_flags(ALLEGRO_WINDOWED|ALLEGRO_RESIZABLE|ALLEGRO_OPENGL);
@@ -86,9 +87,8 @@ int main(void)
     al_register_event_source(event_queue, al_get_keyboard_event_source());
 
     NkAllegro5Font *font;
-    font = nk_allegro5_font_create_from_file("../../extra_font/DroidSans.ttf", 12, 0);
+    font = nk_allegro5_font_create_from_file("../../extra_font/Roboto-Regular.ttf", 12, 0);
     struct nk_context *ctx;
-    struct nk_color background;
 
     ctx = nk_allegro5_init(font, display, WINDOW_WIDTH, WINDOW_HEIGHT);
     /* Load Fonts: if none of these are loaded a default font will be used  */
@@ -100,17 +100,12 @@ int main(void)
     /*struct nk_font *clean = nk_font_atlas_add_from_file(atlas, "../../../extra_font/ProggyClean.ttf", 12, 0);*/
     /*struct nk_font *tiny = nk_font_atlas_add_from_file(atlas, "../../../extra_font/ProggyTiny.ttf", 10, 0);*/
     /*struct nk_font *cousine = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Cousine-Regular.ttf", 13, 0);*/
-    
-    /*nk_style_load_all_cursors(ctx, atlas->cursors);*/
-    /*nk_style_set_font(ctx, &droid->handle);*/
 
     /* style.c */
     /*set_style(ctx, THEME_WHITE);*/
     /*set_style(ctx, THEME_RED);*/
     /*set_style(ctx, THEME_BLUE);*/
     /*set_style(ctx, THEME_DARK);*/
-
-    background = nk_rgb(28,48,62);
 
     while(1)
     {
@@ -124,14 +119,16 @@ int main(void)
             break;
         }
 
+        /* Very Important: Always do nk_input_begin / nk_input_end even if
+           there are no events, otherwise internal nuklear state gets messed up */
+        nk_input_begin(ctx);
         if (get_event) {
-            nk_input_begin(ctx);
             while (get_event) {
                 nk_allegro5_handle_event(&ev);
                 get_event = al_get_next_event(event_queue, &ev);
             }
-            nk_input_end(ctx);
         }
+        nk_input_end(ctx);
 
         /* GUI */
         if (nk_begin(ctx, "Demo", nk_rect(50, 50, 200, 200),
@@ -160,7 +157,6 @@ int main(void)
         /* ----------------------------------------- */
 
         /* Draw */
-        //al_reset_clipping_rectangle();
         al_clear_to_color(al_map_rgb(19, 43, 81));
         /* IMPORTANT: `nk_allegro5_render` changes the target backbuffer
         to the display set at initialization and does not restore it.

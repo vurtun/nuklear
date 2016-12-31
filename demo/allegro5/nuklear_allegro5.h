@@ -13,6 +13,7 @@
 #ifndef NK_ALLEGRO5_H_
 #define NK_ALLEGRO5_H_
 
+#include <string.h>
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_image.h>
 #include <allegro5/allegro_primitives.h>
@@ -25,13 +26,10 @@ NK_API void                 nk_allegro5_handle_event(ALLEGRO_EVENT *ev);
 NK_API void                 nk_allegro5_shutdown(void);
 NK_API void                 nk_allegro5_render(void);
 
-// Fonts. We wrap normal allegro fonts in some nuklear book keeping
+/* Fonts. We wrap normal allegro fonts in some nuklear book keeping */
 NK_API NkAllegro5Font*      nk_allegro5_font_create_from_file(const char *file_name, int font_size, int flags);
 NK_API void                 nk_allegro5_font_del(NkAllegro5Font *font);
 NK_API void                 nk_allegro5_font_set_font(NkAllegro5Font *font);
-
-//NK_API void                 nk_glfw3_char_callback(GLFWwindow *win, unsigned int codepoint);
-//NK_API void                 nk_gflw3_scroll_callback(GLFWwindow *win, double xoff, double yoff);
 
 #endif
 /*
@@ -63,7 +61,7 @@ static struct nk_allegro5 {
 } allegro5;
 
 
-// Flags are identical to al_load_font() flags argument
+/* Flags are identical to al_load_font() flags argument */
 NK_API NkAllegro5Font*
 nk_allegro5_font_create_from_file(const char *file_name, int font_size, int flags)
 {
@@ -99,7 +97,15 @@ nk_allegro5_font_get_text_width(nk_handle handle, float height, const char *text
         return 0;
     }
 
-    return (float)al_get_text_width(font->font, text);
+    /* We must copy into a new buffer with exact length null-terminated
+       as nuklear uses variable size buffers and al_get_text_width doesn't
+       accept a length, it infers length from null-termination
+       (which is unsafe API design by allegro devs!) */
+    char strcpy[len+1];
+    strncpy((char*)&strcpy, text, len);
+    strcpy[len] = '\0';
+
+    return al_get_text_width(font->font, strcpy);
 }
 
 NK_API void
@@ -271,10 +277,23 @@ NK_API void
 nk_allegro5_handle_event(ALLEGRO_EVENT *ev)
 {
     struct nk_context *ctx = &allegro5.ctx;
-    //printf("nk_allegro5_handle_event: %d\n", ev->type);
     switch (ev->type) {
+        case ALLEGRO_EVENT_DISPLAY_RESIZE: {
+            if (ev->display.source != allegro5.dsp) {
+                return;
+            }
+            allegro5.width = (unsigned int)ev->display.width;
+            allegro5.height = (unsigned int)ev->display.height;
+            al_acknowledge_resize(ev->display.source);
+        } break;
         case ALLEGRO_EVENT_MOUSE_AXES: {
+            if (ev->mouse.display != allegro5.dsp) {
+                return;
+            }
             nk_input_motion(ctx, ev->mouse.x, ev->mouse.y);
+            if (ev->mouse.dz != 0) {
+                nk_input_scroll(ctx, (float)ev->mouse.dz / al_get_mouse_wheel_precision());
+            }
         } break;
         case ALLEGRO_EVENT_MOUSE_BUTTON_DOWN:
         case ALLEGRO_EVENT_MOUSE_BUTTON_UP: {
@@ -318,7 +337,9 @@ nk_allegro5_handle_event(ALLEGRO_EVENT *ev)
             }
         } break;
         case ALLEGRO_EVENT_KEY_CHAR: {
-            
+            if (ev->keyboard.display != allegro5.dsp) {
+                return;
+            }
             int kc = ev->keyboard.keycode;
             int control_mask = (ev->keyboard.modifiers & ALLEGRO_KEYMOD_CTRL) ||
                                (ev->keyboard.modifiers & ALLEGRO_KEYMOD_COMMAND);
@@ -333,11 +354,23 @@ nk_allegro5_handle_event(ALLEGRO_EVENT *ev)
                 nk_input_key(ctx, NK_KEY_TEXT_UNDO, 1);
             } else if (kc == ALLEGRO_KEY_R && control_mask) {
                 nk_input_key(ctx, NK_KEY_TEXT_REDO, 1);
+            } else if (kc == ALLEGRO_KEY_A && control_mask) {
+                nk_input_key(ctx, NK_KEY_TEXT_SELECT_ALL, 1);
             }
             else {
                 
-                if (ev->keyboard.keycode != ALLEGRO_KEY_BACKSPACE) {
-                    printf("unicode: %c\n", ev->keyboard.unichar);
+                if (kc != ALLEGRO_KEY_BACKSPACE &&
+                    kc != ALLEGRO_KEY_LEFT &&
+                    kc != ALLEGRO_KEY_RIGHT &&
+                    kc != ALLEGRO_KEY_UP &&
+                    kc != ALLEGRO_KEY_DOWN &&
+                    kc != ALLEGRO_KEY_HOME &&
+                    kc != ALLEGRO_KEY_DELETE &&
+                    kc != ALLEGRO_KEY_ENTER &&
+                    kc != ALLEGRO_KEY_END &&
+                    kc != ALLEGRO_KEY_ESCAPE &&
+                    kc != ALLEGRO_KEY_PGDN &&
+                    kc != ALLEGRO_KEY_PGUP) {
                     nk_input_unicode(ctx, ev->keyboard.unichar);
                 }
             }
@@ -346,21 +379,6 @@ nk_allegro5_handle_event(ALLEGRO_EVENT *ev)
         default: break;
     }
 }
-
-// NK_API void
-// nk_glfw3_char_callback(GLFWwindow *win, unsigned int codepoint)
-// {
-//     (void)win;
-//     if (glfw.text_len < NK_GLFW_TEXT_MAX)
-//         glfw.text[glfw.text_len++] = codepoint;
-// }
-
-// NK_API void
-// nk_gflw3_scroll_callback(GLFWwindow *win, double xoff, double yoff)
-// {
-//     /*(void)win; (void)xoff;
-//     glfw.scroll += (float)yoff;*/
-// }
 
 NK_INTERN void
 nk_allegro5_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
@@ -416,4 +434,4 @@ void nk_allegro5_shutdown(void)
     memset(&allegro5, 0, sizeof(allegro5));
 }
 
-#endif // NK_ALLEGRO5_IMPLEMENTATION
+#endif /* NK_ALLEGRO5_IMPLEMENTATION */

@@ -554,6 +554,7 @@ enum nk_keys {
     NK_KEY_TEXT_END,
     NK_KEY_TEXT_UNDO,
     NK_KEY_TEXT_REDO,
+    NK_KEY_TEXT_SELECT_ALL,
     NK_KEY_TEXT_WORD_LEFT,
     NK_KEY_TEXT_WORD_RIGHT,
 
@@ -11955,6 +11956,11 @@ retry:
 
     case NK_KEY_TEXT_REDO:
         nk_textedit_redo(state);
+        state->has_preferred_x = 0;
+        break;
+
+    case NK_KEY_TEXT_SELECT_ALL:
+        nk_textedit_select_all(state);
         state->has_preferred_x = 0;
         break;
 
