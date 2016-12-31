@@ -1,4 +1,5 @@
 # Changelog
+- 2016/12/31 (1.192)- Fixed closing window bug of minimized windows
 - 2016/12/03 (1.191)- Fixed wrapped text with no seperator and C89 error
 - 2016/12/03 (1.19) - Changed text wrapping to process words not characters
 - 2016/11/22 (1.184)- Fixed window minimized closing bug
