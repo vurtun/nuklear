@@ -806,7 +806,7 @@ overview(struct nk_context *ctx)
                 nk_checkbox_label(ctx, "Border", &group_border);
                 nk_checkbox_label(ctx, "No Scrollbar", &group_no_scrollbar);
 
-                nk_layout_row_begin(ctx, NK_STATIC, 22, 2);
+                nk_layout_row_begin(ctx, NK_STATIC, 22, 3);
                 nk_layout_row_push(ctx, 50);
                 nk_label(ctx, "size:", NK_TEXT_LEFT);
                 nk_layout_row_push(ctx, 130);
