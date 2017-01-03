@@ -309,6 +309,19 @@ nk_allegro5_handle_event(ALLEGRO_EVENT *ev)
             }
             nk_input_button(ctx, button, ev->mouse.x, ev->mouse.y, ev->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN);
         } break;
+        case ALLEGRO_EVENT_TOUCH_BEGIN:
+        case ALLEGRO_EVENT_TOUCH_END: {
+            if (ev->touch.display != allegro5.dsp) {
+                return;
+            }
+            nk_input_button(ctx, NK_BUTTON_LEFT, ev->touch.x, ev->touch.y, ev->type == ALLEGRO_EVENT_TOUCH_BEGIN);
+        } break;
+        case ALLEGRO_EVENT_TOUCH_MOVE: {
+            if (ev->touch.display != allegro5.dsp) {
+                return;
+            }
+            nk_input_motion(ctx, ev->touch.x, ev->touch.y);
+        } break;
         case ALLEGRO_EVENT_KEY_DOWN:
         case ALLEGRO_EVENT_KEY_UP: {
             if (ev->keyboard.display != allegro5.dsp) {
