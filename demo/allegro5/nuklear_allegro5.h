@@ -314,13 +314,23 @@ nk_allegro5_handle_event(ALLEGRO_EVENT *ev)
             if (ev->touch.display != allegro5.dsp) {
                 return;
             }
-            nk_input_button(ctx, NK_BUTTON_LEFT, ev->touch.x, ev->touch.y, ev->type == ALLEGRO_EVENT_TOUCH_BEGIN);
+            if (ev->type == ALLEGRO_EVENT_TOUCH_BEGIN) {
+                // FIXME: This is a hack to properly simulate
+                // touches as a mouse with nuklear. If you instantly jump
+                // from one place to another without an nk_input_end(), it
+                // confuses the nuklear state. nuklear expects smooth mouse
+                // movements, which is unlike a touch screen
+                nk_input_motion(ctx, (int)ev->touch.x, (int)ev->touch.y);
+                nk_input_end(ctx);
+                nk_input_begin(ctx);
+            }
+            nk_input_button(ctx, NK_BUTTON_LEFT, (int)ev->touch.x, (int)ev->touch.y, ev->type == ALLEGRO_EVENT_TOUCH_BEGIN);
         } break;
         case ALLEGRO_EVENT_TOUCH_MOVE: {
             if (ev->touch.display != allegro5.dsp) {
                 return;
             }
-            nk_input_motion(ctx, ev->touch.x, ev->touch.y);
+            nk_input_motion(ctx, (int)ev->touch.x, (int)ev->touch.y);
         } break;
         case ALLEGRO_EVENT_KEY_DOWN:
         case ALLEGRO_EVENT_KEY_UP: {
