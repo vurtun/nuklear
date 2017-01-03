@@ -127,6 +127,14 @@ OPTIONAL DEFINES:
         Can be combined with the style structures.
         <!> If used needs to be defined for implementation and header <!>
 
+    NK_INCLUDE_DYNAMIC_SOFT_KEYBOARD
+        Defining this means that when a textedit field is begun editing,
+        nuklear will look for ctx->open_keyboard() and ctx->close_keyboard()
+        functions to call. Set these functions during nk_context initialization
+        in your backend. This is "DYNAMIC" because a PC soft keyboard is always open,
+        but a mobile device will show and hide the soft keyboard dynamically
+        as needed.
+
     NK_BUTTON_TRIGGER_ON_RELEASE
         Different platforms require button clicks occuring either on buttons being
         pressed (up to down) or released (down to up).
@@ -477,6 +485,8 @@ typedef void (*nk_plugin_free)(nk_handle, void *old);
 typedef int(*nk_plugin_filter)(const struct nk_text_edit*, nk_rune unicode);
 typedef void(*nk_plugin_paste)(nk_handle, struct nk_text_edit*);
 typedef void(*nk_plugin_copy)(nk_handle, const char*, int len);
+typedef void(*nk_plugin_open_keyboard)(void);
+typedef void(*nk_plugin_close_keyboard)(void);
 
 struct nk_allocator {
     nk_handle userdata;
@@ -2932,6 +2942,10 @@ struct nk_context {
 #endif
 #ifdef NK_INCLUDE_COMMAND_USERDATA
     nk_handle userdata;
+#endif
+#ifdef NK_INCLUDE_DYNAMIC_SOFT_KEYBOARD
+    nk_plugin_open_keyboard open_keyboard;
+    nk_plugin_close_keyboard close_keyboard;
 #endif
     /* text editor objects are quite big because of an internal
      * undo/redo stack. Therefore it does not make sense to have one for
@@ -14126,7 +14140,8 @@ nk_edit_draw_text(struct nk_command_buffer *out,
 }
 
 NK_INTERN nk_flags
-nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
+nk_do_edit(struct nk_context *ctx,
+    nk_flags *state, struct nk_command_buffer *out,
     struct nk_rect bounds, nk_flags flags, nk_plugin_filter filter,
     struct nk_text_edit *edit, const struct nk_style_edit *style,
     struct nk_input *in, const struct nk_user_font *font)
@@ -14181,13 +14196,23 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
             edit->cursor = edit->string.len;
             in = 0;
         }
+#ifdef NK_INCLUDE_DYNAMIC_SOFT_KEYBOARD
+        if (ctx->open_keyboard)
+            ctx->open_keyboard();
+#endif
     } else if (!edit->active) edit->mode = NK_TEXT_EDIT_MODE_VIEW;
     if (flags & NK_EDIT_READ_ONLY)
         edit->mode = NK_TEXT_EDIT_MODE_VIEW;
 
     ret = (edit->active) ? NK_EDIT_ACTIVE: NK_EDIT_INACTIVE;
     if (prev_state != edit->active)
+    {
         ret |= (edit->active) ? NK_EDIT_ACTIVATED: NK_EDIT_DEACTIVATED;
+#ifdef NK_INCLUDE_DYNAMIC_SOFT_KEYBOARD
+        if (!edit->active)
+            ctx->close_keyboard();
+#endif
+    }
 
     /* handle user input */
     if (edit->active && in)
@@ -14753,7 +14778,7 @@ nk_draw_property(struct nk_command_buffer *out, const struct nk_style_property *
 }
 
 NK_INTERN void
-nk_do_property(nk_flags *ws,
+nk_do_property(struct nk_context *ctx, nk_flags *ws,
     struct nk_command_buffer *out, struct nk_rect property,
     const char *name, struct nk_property_variant *variant,
     float inc_per_pixel, char *buffer, int *len,
@@ -14893,7 +14918,7 @@ nk_do_property(nk_flags *ws,
     text_edit->string.buffer.memory.ptr = dst;
     text_edit->string.buffer.size = NK_MAX_NUMBER_BUFFER;
     text_edit->mode = NK_TEXT_EDIT_MODE_INSERT;
-    nk_do_edit(ws, out, edit, NK_EDIT_ALWAYS_INSERT_MODE, filters[filter],
+    nk_do_edit(ctx, ws, out, edit, NK_EDIT_ALWAYS_INSERT_MODE, filters[filter],
         text_edit, &style->edit, (*state == NK_PROPERTY_EDIT) ? in: 0, font);
 
     *length = text_edit->string.len;
@@ -19701,7 +19726,7 @@ nk_edit_buffer(struct nk_context *ctx, nk_flags flags,
     filter = (!filter) ? nk_filter_default: filter;
     prev_state = (unsigned char)edit->active;
     in = (flags & NK_EDIT_READ_ONLY) ? 0: in;
-    ret_flags = nk_do_edit(&ctx->last_widget_state, &win->buffer, bounds, flags,
+    ret_flags = nk_do_edit(ctx, &ctx->last_widget_state, &win->buffer, bounds, flags,
                     filter, edit, &style->edit, in, style->font);
 
     if (ctx->last_widget_state & NK_WIDGET_STATE_HOVER)
@@ -19828,7 +19853,7 @@ nk_property(struct nk_context *ctx, const char *name, struct nk_property_variant
 
     /* execute property widget */
     old_state = *state;
-    nk_do_property(&ctx->last_widget_state, &win->buffer, bounds, name,
+    nk_do_property(ctx, &ctx->last_widget_state, &win->buffer, bounds, name,
         variant, inc_per_pixel, buffer, len, state, cursor,
         &style->property, filter, in, style->font, &ctx->text_edit);
 

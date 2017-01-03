@@ -90,7 +90,7 @@ int main(void)
     font = nk_allegro5_font_create_from_file("../../extra_font/Roboto-Regular.ttf", 12, 0);
     struct nk_context *ctx;
 
-    ctx = nk_allegro5_init(font, display, WINDOW_WIDTH, WINDOW_HEIGHT);
+    ctx = nk_allegro5_init(font, display, WINDOW_WIDTH, WINDOW_HEIGHT, NULL, NULL);
     /* Load Fonts: if none of these are loaded a default font will be used  */
     /* Load Cursor: if you uncomment cursor loading please hide the cursor */
     
