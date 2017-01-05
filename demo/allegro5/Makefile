@@ -3,8 +3,6 @@ BIN = demo
 
 # Flags
 CFLAGS = -std=c99 -pedantic -O2
-# DEBUG
-#CFLAGS = -std=c99 -pedantic -O0 -g
 
 SRC = main.c
 OBJ = $(SRC:.c=.o)

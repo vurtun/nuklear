@@ -19,6 +19,9 @@
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_STANDARD_VARARGS
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
+/* Uncomment this for iOS / Android keyboard support
+#define NK_INCLUDE_DYNAMIC_SOFT_KEYBOARD
+*/
 #define NK_IMPLEMENTATION
 #define NK_ALLEGRO5_IMPLEMENTATION
 #include "../../nuklear.h"
@@ -50,6 +53,20 @@
  * ===============================================================*/
 static void error_callback(int e, const char *d)
 {printf("Error %d: %s\n", e, d);}
+
+/* If NK_INCLUDE_DYNAMIC_SOFT_KEYBOARD is enabled, implement these
+   two methods and pass them as the last 2 arguments to nk_allegro5_init()
+   to have nuklear call them when appropriate.
+
+void open_soft_keyboard()
+{
+    [implement opening keyboard code]
+}
+void close_soft_keyboard()
+{
+    [implement close keyboard code]
+}
+*/
 
 int main(void)
 {
@@ -87,19 +104,13 @@ int main(void)
     al_register_event_source(event_queue, al_get_keyboard_event_source());
 
     NkAllegro5Font *font;
-    font = nk_allegro5_font_create_from_file("../../extra_font/Roboto-Regular.ttf", 12, 0);
+    font = nk_allegro5_font_create_from_file("../../../extra_font/Roboto-Regular.ttf", 12, 0);
     struct nk_context *ctx;
 
+    /* If NK_INCLUDE_DYNAMIC_SOFT_KEYBOARD is enabled, pass open_soft_keyboard and
+       close_soft_keyboard as the last 2 arguments to nk_allegro5_init() instead
+       of NULL, NULL */
     ctx = nk_allegro5_init(font, display, WINDOW_WIDTH, WINDOW_HEIGHT, NULL, NULL);
-    /* Load Fonts: if none of these are loaded a default font will be used  */
-    /* Load Cursor: if you uncomment cursor loading please hide the cursor */
-    
-    /*struct nk_font *droid = nk_font_atlas_add_from_file(atlas, "../../../extra_font/DroidSans.ttf", 14, 0);*/
-    /*struct nk_font *roboto = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Roboto-Regular.ttf", 14, 0);*/
-    /*struct nk_font *future = nk_font_atlas_add_from_file(atlas, "../../../extra_font/kenvector_future_thin.ttf", 13, 0);*/
-    /*struct nk_font *clean = nk_font_atlas_add_from_file(atlas, "../../../extra_font/ProggyClean.ttf", 12, 0);*/
-    /*struct nk_font *tiny = nk_font_atlas_add_from_file(atlas, "../../../extra_font/ProggyTiny.ttf", 10, 0);*/
-    /*struct nk_font *cousine = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Cousine-Regular.ttf", 13, 0);*/
 
     /* style.c */
     /*set_style(ctx, THEME_WHITE);*/
