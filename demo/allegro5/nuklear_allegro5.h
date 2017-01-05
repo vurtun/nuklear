@@ -284,17 +284,11 @@ nk_allegro5_handle_event(ALLEGRO_EVENT *ev)
     struct nk_context *ctx = &allegro5.ctx;
     switch (ev->type) {
         case ALLEGRO_EVENT_DISPLAY_RESIZE: {
-            if (ev->display.source != allegro5.dsp) {
-                return;
-            }
             allegro5.width = (unsigned int)ev->display.width;
             allegro5.height = (unsigned int)ev->display.height;
             al_acknowledge_resize(ev->display.source);
         } break;
         case ALLEGRO_EVENT_MOUSE_AXES: {
-            if (ev->mouse.display != allegro5.dsp) {
-                return;
-            }
             nk_input_motion(ctx, ev->mouse.x, ev->mouse.y);
             if (ev->mouse.dz != 0) {
                 nk_input_scroll(ctx, (float)ev->mouse.dz / al_get_mouse_wheel_precision());
@@ -302,9 +296,6 @@ nk_allegro5_handle_event(ALLEGRO_EVENT *ev)
         } break;
         case ALLEGRO_EVENT_MOUSE_BUTTON_DOWN:
         case ALLEGRO_EVENT_MOUSE_BUTTON_UP: {
-            if (ev->mouse.display != allegro5.dsp) {
-                return;
-            }
             int button = NK_BUTTON_LEFT;
             if (ev->mouse.button == 2) {
                 button = NK_BUTTON_RIGHT;
@@ -317,9 +308,6 @@ nk_allegro5_handle_event(ALLEGRO_EVENT *ev)
         /* This essentially converts touch events to mouse events */
         case ALLEGRO_EVENT_TOUCH_BEGIN:
         case ALLEGRO_EVENT_TOUCH_END: {
-            if (ev->touch.display != allegro5.dsp) {
-                return;
-            }
             /* We only acknowledge one touch at a time. Otherwise, each touch
                would be manipulating multiple nuklear elements, as if there
                were multiple mouse cursors */
@@ -345,9 +333,6 @@ nk_allegro5_handle_event(ALLEGRO_EVENT *ev)
             nk_input_button(ctx, NK_BUTTON_LEFT, (int)ev->touch.x, (int)ev->touch.y, ev->type == ALLEGRO_EVENT_TOUCH_BEGIN);
         } break;
         case ALLEGRO_EVENT_TOUCH_MOVE: {
-            if (ev->touch.display != allegro5.dsp) {
-                return;
-            }
             /* Only acknowledge movements of a single touch, we are
                simulating a mouse cursor */
             if (!allegro5.is_touch_down || allegro5.touch_down_id != ev->touch.id) {
@@ -357,14 +342,12 @@ nk_allegro5_handle_event(ALLEGRO_EVENT *ev)
         } break;
         case ALLEGRO_EVENT_KEY_DOWN:
         case ALLEGRO_EVENT_KEY_UP: {
-            if (ev->keyboard.display != allegro5.dsp) {
-                return;
-            }
             int kc = ev->keyboard.keycode;
             int down = ev->type == ALLEGRO_EVENT_KEY_DOWN;
+            
             if (kc == ALLEGRO_KEY_LSHIFT || kc == ALLEGRO_KEY_RSHIFT) nk_input_key(ctx, NK_KEY_SHIFT, down);
             else if (kc == ALLEGRO_KEY_DELETE)    nk_input_key(ctx, NK_KEY_DEL, down);
-            else if (kc == ALLEGRO_KEY_ENTER)    nk_input_key(ctx, NK_KEY_ENTER, down);
+            else if (kc == ALLEGRO_KEY_ENTER)     nk_input_key(ctx, NK_KEY_ENTER, down);
             else if (kc == ALLEGRO_KEY_TAB)       nk_input_key(ctx, NK_KEY_TAB, down);
             else if (kc == ALLEGRO_KEY_LEFT)      nk_input_key(ctx, NK_KEY_LEFT, down);
             else if (kc == ALLEGRO_KEY_RIGHT)     nk_input_key(ctx, NK_KEY_RIGHT, down);
@@ -372,8 +355,8 @@ nk_allegro5_handle_event(ALLEGRO_EVENT *ev)
             else if (kc == ALLEGRO_KEY_DOWN)      nk_input_key(ctx, NK_KEY_DOWN, down);
             else if (kc == ALLEGRO_KEY_BACKSPACE) nk_input_key(ctx, NK_KEY_BACKSPACE, down);
             else if (kc == ALLEGRO_KEY_ESCAPE)    nk_input_key(ctx, NK_KEY_TEXT_RESET_MODE, down);
-            else if (kc == ALLEGRO_KEY_PGUP)   nk_input_key(ctx, NK_KEY_SCROLL_UP, down);
-            else if (kc == ALLEGRO_KEY_PGDN) nk_input_key(ctx, NK_KEY_SCROLL_DOWN, down);
+            else if (kc == ALLEGRO_KEY_PGUP)      nk_input_key(ctx, NK_KEY_SCROLL_UP, down);
+            else if (kc == ALLEGRO_KEY_PGDN)      nk_input_key(ctx, NK_KEY_SCROLL_DOWN, down);
             else if (kc == ALLEGRO_KEY_HOME) {
                 nk_input_key(ctx, NK_KEY_TEXT_START, down);
                 nk_input_key(ctx, NK_KEY_SCROLL_START, down);
@@ -383,9 +366,6 @@ nk_allegro5_handle_event(ALLEGRO_EVENT *ev)
             }
         } break;
         case ALLEGRO_EVENT_KEY_CHAR: {
-            if (ev->keyboard.display != allegro5.dsp) {
-                return;
-            }
             int kc = ev->keyboard.keycode;
             int control_mask = (ev->keyboard.modifiers & ALLEGRO_KEYMOD_CTRL) ||
                                (ev->keyboard.modifiers & ALLEGRO_KEYMOD_COMMAND);
