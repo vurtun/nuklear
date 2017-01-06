@@ -12,11 +12,20 @@ You must link with image, font, ttf, and primitives Allegro addons. See the `Mak
 Like every nuklear backend, handling many different resolutions and resolution densities can be tricky. 14px font on a desktop may be perfect, but extremely small on a retina iPad. I recommend writing a middleware that will detect what kind of screen is being used, and modify the sizes of widgets accordingly.
 
 ## Soft Keyboard for Touch Screen Devices
-For keyboard support on devices without hardware keyboards (iOS, Android, etc.) you should define `NK_INCLUDE_DYNAMIC_SOFT_KEYBOARD` and pass open and close keyboard functions to `nk_allegro5_init()`. See the `main.c` demo for more information.
 
 Information on how to implement soft keyboard callbacks for Android can be on the Allegro community wiki: https://wiki.allegro.cc/index.php?title=Running_Allegro_applications_on_Android#Displaying_the_Android_keyboard
 
 To display a soft keyboard on iOS, you must create a `UIView` subclass that implements the `UIKeyInput` interface. See `KeyboardHandleriOS.h` and `KeyboardHandleriOS.m` Objective-C source code files for an example on how to do this. As the Allegro keyboard driver does not currently listen for iOS events, we use a custom event emitter to emit keyboard events, which is passed in after initialization with `(void)setCustomKeyboardEventSource:(ALLEGRO_EVENT_SOURCE *)ev_src`. This causes normal keyboard events to be emitted and properly caught by the nuklear backend. The provided `main.c` demo file does not implement this, but with the provided source code files it is not difficult to do. See this Allegro community forum thread for more information: https://www.allegro.cc/forums/thread/616672
+
+To know when nuklear wants to open and close the keyboard, you can check edit widget flags:
+
+```
+nk_flags ed_flags = nk_edit_string(ctx, NK_EDIT_FIELD, field_buffer, &field_len, 64, nk_filter_default);
+if (ed_flags & NK_EDIT_ACTIVATED)
+    open_ios_soft_keyboard();
+if (ed_flags &  NK_EDIT_DEACTIVATED)
+    close_ios_soft_keyboard();
+```
 
 ### Manual Soft Keyboard Dismissal
 As the user can dismiss a keyboard manually, nuklear will not be aware when this occurs, and the text edit cursor will think the entry field is still active. I recommend catching the dismiss event, then emitting `ALLEGRO_EVENT_TOUCH_BEGIN` and `ALLEGRO_EVENT_TOUCH_END` events in an unused portion of the screen (like the bottom-right corner). This will simulate the user touching outside of the text entry widget, which will make the edit field inactive.

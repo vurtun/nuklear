@@ -22,9 +22,7 @@
 
 typedef struct NkAllegro5Font NkAllegro5Font;
 NK_API struct nk_context*     nk_allegro5_init(NkAllegro5Font *font, ALLEGRO_DISPLAY *dsp,
-                                  unsigned int width, unsigned int height,
-                                  void (*open_keyboard_func)(void),
-                                  void (*close_keyboard_func)(void));
+                                  unsigned int width, unsigned int height);
 NK_API void                   nk_allegro5_handle_event(ALLEGRO_EVENT *ev);
 NK_API void                   nk_allegro5_shutdown(void);
 NK_API void                   nk_allegro5_render(void);
@@ -431,8 +429,7 @@ nk_allegro5_clipboard_copy(nk_handle usr, const char *text, int len)
 
 NK_API struct nk_context*
 nk_allegro5_init(NkAllegro5Font *allegro5font, ALLEGRO_DISPLAY *dsp,
-    unsigned int width, unsigned int height,
-    void (*open_keyboard_func)(void), void (*close_keyboard_func)(void))
+    unsigned int width, unsigned int height)
 {
     if (!al_init_primitives_addon()) {
         fprintf(stdout, "Unable to initialize required allegro5 primitives addon\n");
@@ -454,10 +451,6 @@ nk_allegro5_init(NkAllegro5Font *allegro5font, ALLEGRO_DISPLAY *dsp,
     allegro5.ctx.clip.copy = nk_allegro5_clipboard_copy;
     allegro5.ctx.clip.paste = nk_allegro5_clipboard_paste;
     allegro5.ctx.clip.userdata = nk_handle_ptr(0);
-#ifdef NK_INCLUDE_DYNAMIC_SOFT_KEYBOARD
-    allegro5.ctx.open_keyboard = open_keyboard_func;
-    allegro5.ctx.close_keyboard = close_keyboard_func;
-#endif
     return &allegro5.ctx;
 }
 

@@ -19,9 +19,6 @@
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_STANDARD_VARARGS
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
-/* Uncomment this for iOS / Android keyboard support
-#define NK_INCLUDE_DYNAMIC_SOFT_KEYBOARD
-*/
 #define NK_IMPLEMENTATION
 #define NK_ALLEGRO5_IMPLEMENTATION
 #include "../../nuklear.h"
@@ -53,20 +50,6 @@
  * ===============================================================*/
 static void error_callback(int e, const char *d)
 {printf("Error %d: %s\n", e, d);}
-
-/* If NK_INCLUDE_DYNAMIC_SOFT_KEYBOARD is enabled, implement these
-   two methods and pass them as the last 2 arguments to nk_allegro5_init()
-   to have nuklear call them when appropriate.
-
-void open_soft_keyboard()
-{
-    [implement opening keyboard code]
-}
-void close_soft_keyboard()
-{
-    [implement close keyboard code]
-}
-*/
 
 int main(void)
 {
@@ -107,10 +90,7 @@ int main(void)
     font = nk_allegro5_font_create_from_file("../../../extra_font/Roboto-Regular.ttf", 12, 0);
     struct nk_context *ctx;
 
-    /* If NK_INCLUDE_DYNAMIC_SOFT_KEYBOARD is enabled, pass open_soft_keyboard and
-       close_soft_keyboard as the last 2 arguments to nk_allegro5_init() instead
-       of NULL, NULL */
-    ctx = nk_allegro5_init(font, display, WINDOW_WIDTH, WINDOW_HEIGHT, NULL, NULL);
+    ctx = nk_allegro5_init(font, display, WINDOW_WIDTH, WINDOW_HEIGHT);
 
     /* style.c */
     /*set_style(ctx, THEME_WHITE);*/
