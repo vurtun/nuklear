@@ -19,6 +19,7 @@
 /* font */
 typedef struct GdipFont GdipFont;
 NK_API GdipFont* nk_gdipfont_create(const char *name, int size);
+NK_API GdipFont* nk_gdipfont_create_mem(unsigned char *membuf, int membufSize, int size);
 NK_API void nk_gdipfont_del(GdipFont *font);
 
 NK_API struct nk_context* nk_gdip_init(HWND hwnd, unsigned int width, unsigned int height);
@@ -266,6 +267,21 @@ GdipSetStringFormatFlags(GpStringFormat *format, INT flags);
 GpStatus WINGDIPAPI
 GdipDeleteStringFormat(GpStringFormat *format);
 
+GpStatus WINGDIPAPI 
+GdipPrivateAddMemoryFont(GpFontCollection* fontCollection, 
+                         GDIPCONST void* memory, INT length);
+
+GpStatus WINGDIPAPI 
+GdipNewPrivateFontCollection(GpFontCollection** fontCollection);
+
+GpStatus WINGDIPAPI 
+GdipDeletePrivateFontCollection(GpFontCollection** fontCollection);
+
+GpStatus WINGDIPAPI 
+GdipGetFontCollectionFamilyList(GpFontCollection* fontCollection, 
+                                INT numSought, GpFontFamily* gpfamilies[], INT* numFound);
+
+
 /* graphics */
 
 
@@ -377,6 +393,7 @@ static struct {
     GpPen *pen;
     GpSolidFill *brush;
     GpStringFormat *format;
+    GpFontCollection *fontCollection;
 
     struct nk_context ctx;
 } gdip;
@@ -633,6 +650,20 @@ nk_gdipfont_create(const char *name, int size)
     return font;
 }
 
+GdipFont*
+nk_gdipfont_create_mem(unsigned char *membuf, int membufSize, int size)
+{
+    GdipFont *font = (GdipFont*)calloc(1, sizeof(GdipFont));
+    GpFontFamily *families[1];
+    INT numFound;
+ 
+    if( GdipNewPrivateFontCollection(&gdip.fontCollection) ) return NULL;
+    if( GdipPrivateAddMemoryFont(gdip.fontCollection, membuf, membufSize) ) return NULL;
+    if( GdipGetFontCollectionFamilyList(gdip.fontCollection, 1, families, &numFound) ) return NULL;
+    if( GdipCreateFont(families[0], (REAL)size, FontStyleRegular, UnitPixel, &font->handle) ) return NULL;
+    return font;
+}
+
 static float
 nk_gdipfont_get_text_width(nk_handle handle, float height, const char *text, int len)
 {
@@ -767,6 +798,7 @@ nk_gdip_init(HWND hwnd, unsigned int width, unsigned int height)
         StringFormatFlagsMeasureTrailingSpaces | StringFormatFlagsNoWrap |
         StringFormatFlagsNoClip);
 
+    gdip.fontCollection = NULL;
     nk_init_default(&gdip.ctx, NULL);
     gdip.ctx.clip.copy = nk_gdip_clipbard_copy;
     gdip.ctx.clip.paste = nk_gdip_clipbard_paste;
@@ -969,6 +1001,7 @@ nk_gdip_handle_event(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
 NK_API void
 nk_gdip_shutdown(void)
 {
+    GdipDeletePrivateFontCollection( &gdip.fontCollection );
     GdipDeleteGraphics(gdip.window);
     GdipDeleteGraphics(gdip.memory);
     GdipDisposeImage(gdip.bitmap);
