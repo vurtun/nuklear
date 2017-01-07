@@ -554,6 +554,7 @@ enum nk_keys {
     NK_KEY_TEXT_END,
     NK_KEY_TEXT_UNDO,
     NK_KEY_TEXT_REDO,
+    NK_KEY_TEXT_SELECT_ALL,
     NK_KEY_TEXT_WORD_LEFT,
     NK_KEY_TEXT_WORD_RIGHT,
 
@@ -11959,6 +11960,11 @@ retry:
         state->has_preferred_x = 0;
         break;
 
+    case NK_KEY_TEXT_SELECT_ALL:
+        nk_textedit_select_all(state);
+        state->has_preferred_x = 0;
+        break;
+
     case NK_KEY_TEXT_INSERT_MODE:
         if (state->mode == NK_TEXT_EDIT_MODE_VIEW)
             state->mode = NK_TEXT_EDIT_MODE_INSERT;
@@ -18714,7 +18720,7 @@ nk_spacing(struct nk_context *ctx, int cols)
 {
     struct nk_window *win;
     struct nk_panel *layout;
-    struct nk_rect nil;
+    struct nk_rect none;
     int i, index, rows;
 
     NK_ASSERT(ctx);
@@ -18738,7 +18744,7 @@ nk_spacing(struct nk_context *ctx, int cols)
     if (layout->row.type != NK_LAYOUT_DYNAMIC_FIXED &&
         layout->row.type != NK_LAYOUT_STATIC_FIXED) {
         for (i = 0; i < cols; ++i)
-            nk_panel_alloc_space(&nil, ctx);
+            nk_panel_alloc_space(&none, ctx);
     }
     layout->row.index = index;
 }
