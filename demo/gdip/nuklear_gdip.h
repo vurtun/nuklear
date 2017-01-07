@@ -431,8 +431,8 @@ nk_gdip_fill_rect(short x, short y, unsigned short w,
         GdipFillRectangleI(gdip.memory, gdip.brush, x, y, w, h);
     } else {
         INT d = 2 * r;
-        GdipFillRectangleI(gdip.memory, gdip.brush, x + r, y, w - d, h);
-        GdipFillRectangleI(gdip.memory, gdip.brush, x, y + r, w, h - d);
+        GdipFillRectangleI(gdip.memory, gdip.brush, x + r - 1, y, w - d + 2, h);
+        GdipFillRectangleI(gdip.memory, gdip.brush, x, y + r - 1, w, h - d + 2);
         GdipFillPieI(gdip.memory, gdip.brush, x, y, d, d, 180, 90);
         GdipFillPieI(gdip.memory, gdip.brush, x + w - d, y, d, d, 270, 90);
         GdipFillPieI(gdip.memory, gdip.brush, x + w - d, y + h - d, d, d, 0, 90);
