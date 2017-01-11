@@ -1,4 +1,6 @@
 # Changelog
+- 2016/01/11 (1.21) - Added additional row layouting method to combine both
+                        dynamic and static widgets.
 - 2016/12/31 (1.20) - Extended scrollbar offset from 16-bit to 32-bit
 - 2016/12/31 (1.192)- Fixed closing window bug of minimized windows
 - 2016/12/03 (1.191)- Fixed wrapped text with no seperator and C89 error
