@@ -518,7 +518,6 @@ overview(struct nk_context *ctx)
                     box_len += text_len[7];
                     text_len[7] = 0;
                 }
-                nk_layout_row_end(ctx);
                 nk_tree_pop(ctx);
             }
             nk_tree_pop(ctx);
@@ -775,7 +774,7 @@ overview(struct nk_context *ctx)
 
                 nk_layout_row_dynamic(ctx, 30, 1);
                 nk_label(ctx, "Static free space with custom position and custom size:", NK_TEXT_LEFT);
-                nk_layout_space_begin(ctx, NK_STATIC, 120, 4);
+                nk_layout_space_begin(ctx, NK_STATIC, 60, 4);
                 nk_layout_space_push(ctx, nk_rect(100, 0, 100, 30));
                 nk_button_label(ctx, "button");
                 nk_layout_space_push(ctx, nk_rect(0, 15, 100, 30));
@@ -785,6 +784,18 @@ overview(struct nk_context *ctx)
                 nk_layout_space_push(ctx, nk_rect(100, 30, 100, 30));
                 nk_button_label(ctx, "button");
                 nk_layout_space_end(ctx);
+
+                nk_layout_row_dynamic(ctx, 30, 1);
+                nk_label(ctx, "Row template:", NK_TEXT_LEFT);
+                nk_layout_row_template_begin(ctx, 30);
+                nk_layout_row_template_push_dynamic(ctx);
+                nk_layout_row_template_push_variable(ctx, 80);
+                nk_layout_row_template_push_static(ctx, 80);
+                nk_layout_row_template_end(ctx);
+                nk_button_label(ctx, "button");
+                nk_button_label(ctx, "button");
+                nk_button_label(ctx, "button");
+
                 nk_tree_pop(ctx);
             }
 
