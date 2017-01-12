@@ -18358,6 +18358,9 @@ nk_layout_widget_space(struct nk_rect *bounds, const struct nk_context *ctx,
     struct nk_panel *layout;
     const struct nk_style *style;
 
+    struct nk_vec2 spacing;
+    struct nk_vec2 padding;
+
     float item_offset = 0;
     float item_width = 0;
     float item_spacing = 0;
@@ -18374,8 +18377,6 @@ nk_layout_widget_space(struct nk_rect *bounds, const struct nk_context *ctx,
     style = &ctx->style;
     NK_ASSERT(bounds);
 
-    struct nk_vec2 spacing;
-    struct nk_vec2 padding;
     spacing = style->window.spacing;
     padding = nk_panel_get_padding(style, layout->type);
     panel_space = nk_layout_row_calculate_usable_space(&ctx->style, layout->type,
