@@ -13,7 +13,7 @@ LIBS = -lglfw3 -lopengl32 -lm -lGLU32
 else
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Darwin)
-		LIBS = -lglfw3 -framework OpenGL -lm
+		LIBS := -lglfw3 -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo -lm -lGLEW -L/usr/local/lib
 	else
 		LIBS = -lglfw -lGL -lm -lGLU
 	endif
