@@ -91,8 +91,8 @@ sleep_for(long t)
  * and the corresponding function. */
 /*#include "../style.c"*/
 /*#include "../calculator.c"*/
-#include "../overview.c"
-#include "../node_editor.c"
+/*#include "../overview.c"*/
+/*#include "../node_editor.c"*/
 
 /* ===============================================================
  *
@@ -157,7 +157,8 @@ main(void)
         /* GUI */
         if (nk_begin(ctx, "Demo", nk_rect(50, 50, 200, 200),
             NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
-            NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
+            NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE|
+            NK_WINDOW_SCALE_LEFT))
         {
             enum {EASY, HARD};
             static int op = EASY;
@@ -177,8 +178,8 @@ main(void)
 
         /* -------------- EXAMPLES ---------------- */
         /*calculator(ctx);*/
-        overview(ctx);
-        node_editor(ctx);
+        /*overview(ctx);*/
+        /*node_editor(ctx);*/
         /* ----------------------------------------- */
 
         /* Draw */

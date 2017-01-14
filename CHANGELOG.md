@@ -1,5 +1,6 @@
 # Changelog
-- 2016/01/11 (1.21) - Added additional row layouting method to combine both
+- 2017/01/11 (1.22) - Added flag to put scaler into the bottom left corner
+- 2017/01/11 (1.21) - Added additional row layouting method to combine both
                         dynamic and static widgets.
 - 2016/12/31 (1.20) - Extended scrollbar offset from 16-bit to 32-bit
 - 2016/12/31 (1.192)- Fixed closing window bug of minimized windows
