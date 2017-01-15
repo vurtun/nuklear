@@ -1,5 +1,5 @@
 /*
- Nuklear - v1.21 - public domain
+ Nuklear - 1.32.0 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
