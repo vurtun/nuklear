@@ -1,5 +1,5 @@
 /*
- * Nuklear - v1.20 - public domain
+ * Nuklear - 1.32.0 - public domain
  * no warrenty implied; use at your own risk.
  * authored from 2015-2017 by Micha Mettke
  */
@@ -58,6 +58,7 @@ typedef struct GpStringFormat GpStringFormat;
 typedef struct GpFont GpFont;
 typedef struct GpFontFamily GpFontFamily;
 typedef struct GpFontCollection GpFontCollection;
+typedef struct IStream IStream;
 
 typedef GpImage GpBitmap;
 typedef GpBrush GpSolidFill;
