@@ -58,6 +58,7 @@ typedef struct GpStringFormat GpStringFormat;
 typedef struct GpFont GpFont;
 typedef struct GpFontFamily GpFontFamily;
 typedef struct GpFontCollection GpFontCollection;
+typedef struct IStream IStream;
 
 typedef GpImage GpBitmap;
 typedef GpBrush GpSolidFill;
