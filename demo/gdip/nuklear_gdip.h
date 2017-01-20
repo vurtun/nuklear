@@ -19,7 +19,8 @@
 /* font */
 typedef struct GdipFont GdipFont;
 NK_API GdipFont* nk_gdipfont_create(const char *name, int size);
-NK_API GdipFont* nk_gdipfont_create_mem(unsigned char *membuf, int membufSize, int size);
+NK_API GdipFont* nk_gdipfont_create_from_file(const WCHAR* filename, int size);
+NK_API GdipFont* nk_gdipfont_create_from_memory(const void* membuf, int membufSize, int size);
 NK_API void nk_gdipfont_del(GdipFont *font);
 
 NK_API struct nk_context* nk_gdip_init(HWND hwnd, unsigned int width, unsigned int height);
@@ -273,6 +274,10 @@ GdipPrivateAddMemoryFont(GpFontCollection* fontCollection,
                          GDIPCONST void* memory, INT length);
 
 GpStatus WINGDIPAPI 
+GdipPrivateAddFontFile(GpFontCollection* fontCollection, 
+                       GDIPCONST WCHAR* filename);
+
+GpStatus WINGDIPAPI 
 GdipNewPrivateFontCollection(GpFontCollection** fontCollection);
 
 GpStatus WINGDIPAPI 
@@ -280,7 +285,10 @@ GdipDeletePrivateFontCollection(GpFontCollection** fontCollection);
 
 GpStatus WINGDIPAPI 
 GdipGetFontCollectionFamilyList(GpFontCollection* fontCollection, 
-                                INT numSought, GpFontFamily* gpfamilies[], INT* numFound);
+                        INT numSought, GpFontFamily* gpfamilies[], INT* numFound);
+
+GpStatus WINGDIPAPI 
+GdipGetFontCollectionFamilyCount(GpFontCollection* fontCollection, INT* numFound);
 
 
 /* graphics */
@@ -652,17 +660,36 @@ nk_gdipfont_create(const char *name, int size)
 }
 
 GdipFont*
-nk_gdipfont_create_mem(unsigned char *membuf, int membufSize, int size)
-{
+nk_gdipfont_create_from_collection(int size){
+    GpFontFamily **families;
+    INT count;
     GdipFont *font = (GdipFont*)calloc(1, sizeof(GdipFont));
-    GpFontFamily *families[1];
-    INT numFound;
- 
-    if( GdipNewPrivateFontCollection(&gdip.fontCollection) ) return NULL;
-    if( GdipPrivateAddMemoryFont(gdip.fontCollection, membuf, membufSize) ) return NULL;
-    if( GdipGetFontCollectionFamilyList(gdip.fontCollection, 1, families, &numFound) ) return NULL;
-    if( GdipCreateFont(families[0], (REAL)size, FontStyleRegular, UnitPixel, &font->handle) ) return NULL;
+    if( GdipGetFontCollectionFamilyCount(gdip.fontCollection, &count) ) return NULL;
+    families = (GpFontFamily**)calloc(1, sizeof(GpFontFamily*));
+    if( !families ) return NULL;
+    if( GdipGetFontCollectionFamilyList(gdip.fontCollection, count, families, &count) ) return NULL;
+    if( count < 1 ) return NULL;
+    if( GdipCreateFont(families[count-1], (REAL)size, FontStyleRegular, UnitPixel, &font->handle) ) return NULL;
+    free(families);
     return font;
+}
+
+GdipFont*
+nk_gdipfont_create_from_memory(const void* membuf, int membufSize, int size)
+{
+    if( !gdip.fontCollection )
+        if( GdipNewPrivateFontCollection(&gdip.fontCollection) ) return NULL;
+    if( GdipPrivateAddMemoryFont(gdip.fontCollection, membuf, membufSize) ) return NULL;
+    return nk_gdipfont_create_from_collection(size);
+}
+
+GdipFont*
+nk_gdipfont_create_from_file(const WCHAR* filename, int size)
+{
+    if( !gdip.fontCollection )
+        if( GdipNewPrivateFontCollection(&gdip.fontCollection) ) return NULL;
+    if( GdipPrivateAddFontFile(gdip.fontCollection, filename) ) return NULL;    
+    return nk_gdipfont_create_from_collection(size);
 }
 
 static float
