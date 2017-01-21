@@ -11,9 +11,10 @@
 
 Changes:
 --------
-- 2017/14/11 (1.32.1) - Fixed slider behavior and drawing
-- 2017/14/11 (1.32.0) - Added flag to put scaler into the bottom left corner
-- 2017/13/11 (1.31.0) - Added additional row layouting method to combine both
+- 2017/01/21 (1.32.2) - Fixed input capture from hidden or closed windows
+- 2017/01/21 (1.32.1) - Fixed slider behavior and drawing
+- 2017/01/13 (1.32.0) - Added flag to put scaler into the bottom left corner
+- 2017/01/13 (1.31.0) - Added additional row layouting method to combine both
                         dynamic and static widgets.
 - 2016/12/31 (1.30.0) - Extended scrollbar offset from 16-bit to 32-bit
 - 2016/12/31 (1.29.2)- Fixed closing window bug of minimized windows

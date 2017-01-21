@@ -16093,6 +16093,12 @@ nk_clear(struct nk_context *ctx)
             continue;
         }
 
+        /* remove hotness from hidden or closed windows*/
+        if (((iter->flags & NK_WINDOW_HIDDEN) ||
+            (iter->flags & NK_WINDOW_CLOSED)) &&
+            iter == ctx->active)
+            ctx->active = iter->next;
+
         /* free unused popup windows */
         if (iter->popup.win && iter->popup.win->seq != ctx->seq) {
             nk_free_window(ctx, iter->popup.win);
@@ -17305,7 +17311,7 @@ nk_begin_titled(struct nk_context *ctx, const char *name, const char *title,
          *      provided demo backends). */
         NK_ASSERT(win->seq != ctx->seq);
         win->seq = ctx->seq;
-        if (!ctx->active)
+        if (!ctx->active && !(win->flags & NK_WINDOW_HIDDEN))
             ctx->active = win;
     }
     if (win->flags & NK_WINDOW_HIDDEN) {
@@ -17719,9 +17725,9 @@ nk_window_show(struct nk_context *ctx, const char *name, enum nk_show_states s)
     title_hash = nk_murmur_hash(name, (int)title_len, NK_WINDOW_TITLE);
     win = nk_find_window(ctx, title_hash, name);
     if (!win) return;
-    if (s == NK_HIDDEN)
+    if (s == NK_HIDDEN) {
         win->flags |= NK_WINDOW_HIDDEN;
-    else win->flags &= ~(nk_flags)NK_WINDOW_HIDDEN;
+    } else win->flags &= ~(nk_flags)NK_WINDOW_HIDDEN;
 }
 
 NK_API void
