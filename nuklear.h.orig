@@ -1,5 +1,5 @@
 /*
- Nuklear - 1.32.0 - public domain
+ Nuklear - v1.21 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -687,9 +687,14 @@ enum nk_panel_flags {
     NK_WINDOW_MINIMIZABLE       = NK_FLAG(4), /* adds a minimize icon into the header */
     NK_WINDOW_NO_SCROLLBAR      = NK_FLAG(5), /* Removes the scrollbar from the window */
     NK_WINDOW_TITLE             = NK_FLAG(6), /* Forces a header at the top at the window showing the title */
+<<<<<<< HEAD
     NK_WINDOW_SCROLL_AUTO_HIDE  = NK_FLAG(7), /* Automatically hides the window scrollbar if no user interaction: also requires delta time in `nk_context` to be set each frame */
+    NK_WINDOW_BACKGROUND        = NK_FLAG(8) /* Always keep window in the background */
+=======
+    NK_WINDOW_SCROLL_AUTO_HIDE  = NK_FLAG(7), /* Automatically hides the window scrollbar if no user interaction */
     NK_WINDOW_BACKGROUND        = NK_FLAG(8), /* Always keep window in the background */
-    NK_WINDOW_SCALE_LEFT        = NK_FLAG(9) /* Puts window scaler in the left-ottom corner instead right-bottom*/
+    NK_WINDOW_SCALE_LEFT        = NK_FLAG(9)  /* Puts window scaler on the left-bottom corner instead of right-bottom one and resizes window to the left */
+>>>>>>> e8c1ba49a464f125db9176687c4b4757befa8fe0
 };
 
 /* context */
@@ -13431,8 +13436,8 @@ nk_slider_behavior(nk_flags *state, struct nk_rect *logical_cursor,
     if (left_mouse_down && left_mouse_click_in_cursor)
     {
         float ratio = 0;
-        const float d = in->mouse.pos.x - (visual_cursor->x+visual_cursor->w*0.5f);
-        const float pxstep = bounds.w / slider_steps;
+        const float d = in->mouse.pos.x - (visual_cursor->x + visual_cursor->w / 2.0f);
+        const float pxstep = (bounds.w - (2 * style->padding.x)) / slider_steps;
 
         /* only update value if the next slider step is reached */
         *state = NK_WIDGET_STATE_ACTIVE;
@@ -13442,7 +13447,7 @@ nk_slider_behavior(nk_flags *state, struct nk_rect *logical_cursor,
             slider_value = NK_CLAMP(slider_min, slider_value, slider_max);
             ratio = (slider_value - slider_min)/slider_step;
             logical_cursor->x = bounds.x + (logical_cursor->w * ratio);
-            in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.x = logical_cursor->x;
+            in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.x = logical_cursor->x + logical_cursor->w/2.0f;
         }
     }
 
@@ -13572,10 +13577,6 @@ nk_do_slider(nk_flags *state,
         bounds.w = bounds.w - (2*button.w + 2*style->spacing.x);
     }
 
-    /* remove one cursor size to support visual cursor */
-    bounds.x += style->cursor_size.x*0.5f;
-    bounds.w -= style->cursor_size.x;
-
     /* make sure the provided values are correct */
     slider_max = NK_MAX(min, max);
     slider_min = NK_MIN(min, max);
@@ -13583,6 +13584,10 @@ nk_do_slider(nk_flags *state,
     slider_range = slider_max - slider_min;
     slider_steps = slider_range / step;
     cursor_offset = (slider_value - slider_min) / step;
+
+    /* remove one cursor size to support visual cursor */
+    bounds.x += style->cursor_size.x*0.5f;
+    bounds.w -= style->cursor_size.x;
 
     /* calculate cursor
     Basically you have two cursors. One for visual representation and interaction
@@ -13595,7 +13600,7 @@ nk_do_slider(nk_flags *state,
     visual_cursor.h = style->cursor_size.y;
     visual_cursor.w = style->cursor_size.x;
     visual_cursor.y = (bounds.y + bounds.h*0.5f) - visual_cursor.h*0.5f;
-    visual_cursor.x = logical_cursor.x - visual_cursor.w*0.5f;
+    visual_cursor.x = (logical_cursor.x + logical_cursor.w*0.5f) - visual_cursor.w*0.5f;
 
     slider_value = nk_slider_behavior(state, &logical_cursor, &visual_cursor,
         in, style, bounds, slider_min, slider_max, slider_value, step, slider_steps);
@@ -16825,9 +16830,7 @@ nk_panel_end(struct nk_context *ctx)
         scaler.w = scrollbar_size.x;
         scaler.h = scrollbar_size.y;
         scaler.y = layout->bounds.y + layout->bounds.h;
-        if (layout->flags & NK_WINDOW_SCALE_LEFT)
-            scaler.x = layout->bounds.x - panel_padding.x * 0.5f;
-        else scaler.x = layout->bounds.x + layout->bounds.w + panel_padding.x;
+        scaler.x = layout->bounds.x + layout->bounds.w + panel_padding.x;
         if (layout->flags & NK_WINDOW_NO_SCROLLBAR)
             scaler.x -= scaler.w;
 
@@ -16835,16 +16838,9 @@ nk_panel_end(struct nk_context *ctx)
         {const struct nk_style_item *item = &style->window.scaler;
         if (item->type == NK_STYLE_ITEM_IMAGE)
             nk_draw_image(out, scaler, &item->data.image, nk_white);
-        else {
-            if (layout->flags & NK_WINDOW_SCALE_LEFT) {
-                nk_fill_triangle(out, scaler.x, scaler.y, scaler.x,
-                    scaler.y + scaler.h, scaler.x + scaler.w,
-                    scaler.y + scaler.h, item->data.color);
-            } else {
-                nk_fill_triangle(out, scaler.x + scaler.w, scaler.y, scaler.x + scaler.w,
-                    scaler.y + scaler.h, scaler.x, scaler.y + scaler.h, item->data.color);
-            }
-        }}
+        else nk_fill_triangle(out, scaler.x + scaler.w, scaler.y, scaler.x + scaler.w,
+            scaler.y + scaler.h, scaler.x, scaler.y + scaler.h, item->data.color);
+        }
 
         /* do window scaling */
         if (!(window->flags & NK_WINDOW_ROM)) {
@@ -16854,13 +16850,7 @@ nk_panel_end(struct nk_context *ctx)
                     NK_BUTTON_LEFT, scaler, nk_true);
 
             if (nk_input_is_mouse_down(in, NK_BUTTON_LEFT) && left_mouse_down && left_mouse_click_in_scaler) {
-                float delta_x = in->mouse.delta.x;
-                if (layout->flags & NK_WINDOW_SCALE_LEFT) {
-                    delta_x =- delta_x;
-                    window->bounds.x += in->mouse.delta.x;
-                }
-                window->bounds.w = NK_MAX(window_size.x, window->bounds.w + delta_x);
-
+                window->bounds.w = NK_MAX(window_size.x, window->bounds.w + in->mouse.delta.x);
                 /* dragging in y-direction is only possible if static window */
                 if (!(layout->flags & NK_WINDOW_DYNAMIC))
                     window->bounds.h = NK_MAX(window_size.y, window->bounds.h + in->mouse.delta.y);
@@ -17652,6 +17642,7 @@ nk_window_close(struct nk_context *ctx, const char *name)
     win->flags |= NK_WINDOW_CLOSED;
 }
 
+<<<<<<< HEAD
 NK_API void
 nk_window_set_bounds(struct nk_context *ctx, struct nk_rect bounds)
 {
@@ -17668,6 +17659,40 @@ nk_window_set_position(struct nk_context *ctx, struct nk_vec2 pos)
     ctx->current->bounds.x = pos.x;
     ctx->current->bounds.y = pos.y;
 }
+=======
+    /* scaler */
+    if ((layout->flags & NK_WINDOW_SCALABLE) && in && !(layout->flags & NK_WINDOW_MINIMIZED))
+    {
+        /* calculate scaler bounds */
+        struct nk_rect scaler;
+        scaler.w = scrollbar_size.x;
+        scaler.h = scrollbar_size.y;
+        scaler.y = layout->bounds.y + layout->bounds.h;
+
+        if (layout->flags & NK_WINDOW_SCALE_LEFT) {
+            scaler.x = layout->bounds.x - panel_padding.x / 2;
+        } else {
+            scaler.x = layout->bounds.x + layout->bounds.w + panel_padding.x;
+        }
+        
+        if (layout->flags & NK_WINDOW_NO_SCROLLBAR)
+            scaler.x -= scaler.w;
+
+        /* draw scaler */
+        {const struct nk_style_item *item = &style->window.scaler;
+        if (item->type == NK_STYLE_ITEM_IMAGE) {
+            nk_draw_image(out, scaler, &item->data.image, nk_white);
+        } else {
+            if (layout->flags & NK_WINDOW_SCALE_LEFT) {
+                nk_fill_triangle(out, scaler.x, scaler.y, scaler.x,
+                    scaler.y + scaler.h, scaler.x + scaler.w,
+                    scaler.y + scaler.h, item->data.color);
+            } else {
+                nk_fill_triangle(out, scaler.x + scaler.w, scaler.y, scaler.x + scaler.w,
+                  scaler.y + scaler.h, scaler.x, scaler.y + scaler.h, item->data.color);
+            }
+        }}
+>>>>>>> e8c1ba49a464f125db9176687c4b4757befa8fe0
 
 NK_API void
 nk_window_set_size(struct nk_context *ctx, struct nk_vec2 size)
@@ -17678,6 +17703,7 @@ nk_window_set_size(struct nk_context *ctx, struct nk_vec2 size)
     ctx->current->bounds.h = size.y;
 }
 
+<<<<<<< HEAD
 NK_API void
 nk_window_collapse(struct nk_context *ctx, const char *name,
                     enum nk_collapse_states c)
@@ -17696,6 +17722,24 @@ nk_window_collapse(struct nk_context *ctx, const char *name,
         win->flags |= NK_WINDOW_MINIMIZED;
     else win->flags &= ~(nk_flags)NK_WINDOW_MINIMIZED;
 }
+=======
+            if (nk_input_is_mouse_down(in, NK_BUTTON_LEFT) && left_mouse_down && left_mouse_click_in_scaler) {
+                float delta_x = in->mouse.delta.x;
+                if (layout->flags & NK_WINDOW_SCALE_LEFT) {
+                    delta_x = -delta_x;
+                    window->bounds.x += in->mouse.delta.x;
+                }
+                window->bounds.w = NK_MAX(window_size.x, window->bounds.w + delta_x);
+                /* dragging in y-direction is only possible if static window */
+                if (!(layout->flags & NK_WINDOW_DYNAMIC))
+                    window->bounds.h = NK_MAX(window_size.y, window->bounds.h + in->mouse.delta.y);
+                ctx->style.cursor_active = ctx->style.cursors[NK_CURSOR_RESIZE_TOP_RIGHT_DOWN_LEFT];
+                in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.x = scaler.x + in->mouse.delta.x + scaler.w/2.0f;
+                in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.y = scaler.y + in->mouse.delta.y + scaler.h/2.0f;
+            }
+        }
+    }
+>>>>>>> e8c1ba49a464f125db9176687c4b4757befa8fe0
 
 NK_API void
 nk_window_collapse_if(struct nk_context *ctx, const char *name,
@@ -18161,13 +18205,6 @@ nk_layout_row_template_end(struct nk_context *ctx)
     struct nk_window *win;
     struct nk_panel *layout;
 
-    int i = 0;
-    int variable_count = 0;
-    int min_variable_count = 0;
-    float min_fixed_width = 0.0f;
-    float total_fixed_width = 0.0f;
-    float max_variable_width = 0.0f;
-
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
     NK_ASSERT(ctx->current->layout);
@@ -18178,6 +18215,13 @@ nk_layout_row_template_end(struct nk_context *ctx)
     layout = win->layout;
     NK_ASSERT(layout->row.type == NK_LAYOUT_TEMPLATE);
     if (layout->row.type != NK_LAYOUT_TEMPLATE) return;
+
+    {int i = 0;
+    int variable_count = 0;
+    int min_variable_count = 0;
+    float min_fixed_width = 0.0f;
+    float total_fixed_width = 0.0f;
+    float max_variable_width = 0.0f;
     for (i = 0; i < layout->row.columns; ++i) {
         float width = layout->row.templates[i];
         if (width >= 0.0f) {
@@ -18204,7 +18248,7 @@ nk_layout_row_template_end(struct nk_context *ctx)
             float *width = &layout->row.templates[i];
             *width = (*width >= 0.0f)? *width: (*width < -1.0f && !enough_space)? -(*width): var_width;
         }
-    }
+    }}
 }
 
 NK_API void
@@ -20552,6 +20596,7 @@ nk_group_scrolled_offset_begin(struct nk_context *ctx,
     win->layout = panel.layout;
     ctx->current = win;
     return 1;
+
 }
 
 NK_API void

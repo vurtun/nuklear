@@ -1,16 +1,17 @@
 # Changelog
-[date](x.yy.zz)-[description]
+[date][x.yy.zz]-[description]
 
 - [date]: current date on which the change has been pushed
-- (x.yy.zz): Numerical version string representation. Each version number on the right
+- [x.yy.zz]: Numerical version string representation. Each version number on the right
              resets back to zero if version on the left is incremented.
-    - [x]: Major version with major API and library changes (extremly rare, maybe never)
-    - [yy]: Minor version with minor API and library changes (breaking changes will be extra noted)
+    - [x]: Major version with API and library breaking (extremly rare, maybe never)
+    - [yy]: Minor version with non-breaking API and library changes
     - [zz]: Bug fix version with no direct changes to API
 - [description]: small descriptions listing changes
 
 Changes:
 --------
+- 2017/14/11 (1.32.1) - Fixed slider behavior and drawing
 - 2017/14/11 (1.32.0) - Added flag to put scaler into the bottom left corner
 - 2017/13/11 (1.31.0) - Added additional row layouting method to combine both
                         dynamic and static widgets.
