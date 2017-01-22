@@ -9,6 +9,7 @@ overview(struct nk_context *ctx)
     static int resize = nk_true;
     static int movable = nk_true;
     static int no_scrollbar = nk_false;
+    static int scale_left = nk_false;
     static nk_flags window_flags = 0;
     static int minimizable = nk_true;
 
@@ -23,6 +24,7 @@ overview(struct nk_context *ctx)
     if (resize) window_flags |= NK_WINDOW_SCALABLE;
     if (movable) window_flags |= NK_WINDOW_MOVABLE;
     if (no_scrollbar) window_flags |= NK_WINDOW_NO_SCROLLBAR;
+    if (scale_left) window_flags |= NK_WINDOW_SCALE_LEFT;
     if (minimizable) window_flags |= NK_WINDOW_MINIMIZABLE;
 
     if (nk_begin(ctx, "Overview", nk_rect(10, 10, 400, 600), window_flags))
@@ -84,6 +86,7 @@ overview(struct nk_context *ctx)
             nk_checkbox_label(ctx, "Movable", &movable);
             nk_checkbox_label(ctx, "No Scrollbar", &no_scrollbar);
             nk_checkbox_label(ctx, "Minimizable", &minimizable);
+            nk_checkbox_label(ctx, "Scale Left", &scale_left);
             nk_tree_pop(ctx);
         }
 
@@ -518,7 +521,6 @@ overview(struct nk_context *ctx)
                     box_len += text_len[7];
                     text_len[7] = 0;
                 }
-                nk_layout_row_end(ctx);
                 nk_tree_pop(ctx);
             }
             nk_tree_pop(ctx);
@@ -775,7 +777,7 @@ overview(struct nk_context *ctx)
 
                 nk_layout_row_dynamic(ctx, 30, 1);
                 nk_label(ctx, "Static free space with custom position and custom size:", NK_TEXT_LEFT);
-                nk_layout_space_begin(ctx, NK_STATIC, 120, 4);
+                nk_layout_space_begin(ctx, NK_STATIC, 60, 4);
                 nk_layout_space_push(ctx, nk_rect(100, 0, 100, 30));
                 nk_button_label(ctx, "button");
                 nk_layout_space_push(ctx, nk_rect(0, 15, 100, 30));
@@ -785,6 +787,18 @@ overview(struct nk_context *ctx)
                 nk_layout_space_push(ctx, nk_rect(100, 30, 100, 30));
                 nk_button_label(ctx, "button");
                 nk_layout_space_end(ctx);
+
+                nk_layout_row_dynamic(ctx, 30, 1);
+                nk_label(ctx, "Row template:", NK_TEXT_LEFT);
+                nk_layout_row_template_begin(ctx, 30);
+                nk_layout_row_template_push_dynamic(ctx);
+                nk_layout_row_template_push_variable(ctx, 80);
+                nk_layout_row_template_push_static(ctx, 80);
+                nk_layout_row_template_end(ctx);
+                nk_button_label(ctx, "button");
+                nk_button_label(ctx, "button");
+                nk_button_label(ctx, "button");
+
                 nk_tree_pop(ctx);
             }
 
@@ -806,7 +820,7 @@ overview(struct nk_context *ctx)
                 nk_checkbox_label(ctx, "Border", &group_border);
                 nk_checkbox_label(ctx, "No Scrollbar", &group_no_scrollbar);
 
-                nk_layout_row_begin(ctx, NK_STATIC, 22, 2);
+                nk_layout_row_begin(ctx, NK_STATIC, 22, 3);
                 nk_layout_row_push(ctx, 50);
                 nk_label(ctx, "size:", NK_TEXT_LEFT);
                 nk_layout_row_push(ctx, 130);
