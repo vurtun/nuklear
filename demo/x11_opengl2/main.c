@@ -1,4 +1,4 @@
-/* nuklear - 1.32.0 - public domain */
+/* nuklear - v1.32.0 - public domain */
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -62,6 +62,7 @@ struct XWindow {
     XSetWindowAttributes swa;
     XWindowAttributes attr;
     GLXFBConfig fbc;
+    Atom wm_delete_window;
     int width, height;
 };
 static int gl_err = FALSE;
@@ -177,6 +178,8 @@ int main(int argc, char **argv)
         XFree(win.vis);
         XStoreName(win.dpy, win.win, "Demo");
         XMapWindow(win.dpy, win.win);
+        win.wm_delete_window = XInternAtom(win.dpy, "WM_DELETE_WINDOW", False);
+        XSetWMProtocols(win.dpy, win.win, &win.wm_delete_window, 1);
     }
     {
         /* create opengl context */
@@ -245,7 +248,9 @@ int main(int argc, char **argv)
         /* Input */
         XEvent evt;
         nk_input_begin(ctx);
-        while (XCheckWindowEvent(win.dpy, win.win, win.swa.event_mask, &evt)){
+        while (XPending(win.dpy)) {
+            XNextEvent(win.dpy, &evt);
+            if (evt.type == ClientMessage) goto cleanup;
             if (XFilterEvent(&evt, win.win)) continue;
             nk_x11_handle_event(&evt);
         }
@@ -308,6 +313,7 @@ int main(int argc, char **argv)
         glXSwapBuffers(win.dpy, win.win);}
     }
 
+cleanup:
     nk_x11_shutdown();
     glXMakeCurrent(win.dpy, 0, 0);
     glXDestroyContext(win.dpy, glContext);

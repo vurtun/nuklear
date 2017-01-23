@@ -41,6 +41,7 @@ struct XWindow {
     XFont *font;
     unsigned int width;
     unsigned int height;
+    Atom wm_delete_window;
 };
 
 static void
@@ -128,6 +129,9 @@ main(void)
         xw.vis, CWEventMask | CWColormap, &xw.swa);
     XStoreName(xw.dpy, xw.win, "X11");
     XMapWindow(xw.dpy, xw.win);
+    xw.wm_delete_window = XInternAtom(xw.dpy, "WM_DELETE_WINDOW", False);
+    XSetWMProtocols(xw.dpy, xw.win, &xw.wm_delete_window, 1);
+
     XGetWindowAttributes(xw.dpy, xw.win, &xw.attr);
     xw.width = (unsigned int)xw.attr.width;
     xw.height = (unsigned int)xw.attr.height;
@@ -141,14 +145,15 @@ main(void)
     /*set_style(ctx, THEME_RED);*/
     /*set_style(ctx, THEME_BLUE);*/
     /*set_style(ctx, THEME_DARK);*/
-
     while (running)
     {
         /* Input */
         XEvent evt;
         started = timestamp();
         nk_input_begin(ctx);
-        while (XCheckWindowEvent(xw.dpy, xw.win, xw.swa.event_mask, &evt)){
+        while (XPending(xw.dpy)) {
+            XNextEvent(xw.dpy, &evt);
+            if (evt.type == ClientMessage) goto cleanup;
             if (XFilterEvent(&evt, xw.win)) continue;
             nk_xlib_handle_event(xw.dpy, xw.screen, xw.win, &evt);
         }
@@ -157,8 +162,7 @@ main(void)
         /* GUI */
         if (nk_begin(ctx, "Demo", nk_rect(50, 50, 200, 200),
             NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
-            NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE|
-            NK_WINDOW_SCALE_LEFT))
+            NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
         {
             enum {EASY, HARD};
             static int op = EASY;
@@ -193,6 +197,7 @@ main(void)
             sleep_for(DTIME - dt);
     }
 
+cleanup:
     nk_xfont_del(xw.dpy, xw.font);
     nk_xlib_shutdown();
     XUnmapWindow(xw.dpy, xw.win);
