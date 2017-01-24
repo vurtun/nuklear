@@ -10,8 +10,8 @@
  *
  * ===============================================================
  */
-#ifndef NK_XLIB_GL3_H_
-#define NK_XLIB_GL3_H_
+#ifndef NK_XLIB_GL2_H_
+#define NK_XLIB_GL2_H_
 
 #include <X11/Xlib.h>
 NK_API struct nk_context*   nk_x11_init(Display *dpy, Window win);

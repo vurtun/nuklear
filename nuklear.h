@@ -3740,7 +3740,7 @@ nk_strmatch_fuzzy_text(const char *str, int str_len,
 
         int next_match = *pattern_iter != '\0' &&
             nk_to_lower(pattern_letter) == nk_to_lower(str_letter);
-        int rematch = best_letter && nk_to_lower(*best_letter) == nk_to_lower(str_letter);
+        int rematch = best_letter && nk_to_upper(*best_letter) == nk_to_upper(str_letter);
 
         int advanced = next_match && best_letter;
         int pattern_repeat = best_letter && *pattern_iter != '\0';
