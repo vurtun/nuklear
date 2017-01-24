@@ -11,6 +11,7 @@
 
 Changes:
 --------
+- 2017/01/24 (1.32.3) - Fixed wrong define for basic type definitions for windows
 - 2017/01/21 (1.32.2) - Fixed input capture from hidden or closed windows
 - 2017/01/21 (1.32.1) - Fixed slider behavior and drawing
 - 2017/01/13 (1.32.0) - Added flag to put scaler into the bottom left corner
