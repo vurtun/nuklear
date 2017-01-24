@@ -1,5 +1,5 @@
 /*
- Nuklear - 1.32.0 - public domain
+ Nuklear - 1.33.0 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2016 by Micha Mettke
 
@@ -893,7 +893,8 @@ NK_API float                    nk_propertyf(struct nk_context*, const char *nam
 NK_API double                   nk_propertyd(struct nk_context*, const char *name, double min, double val, double max, double step, float inc_per_pixel);
 
 /* Widgets: TextEdit */
-NK_API void                     nk_edit_focus(struct nk_context *ctx, nk_flags flags);
+NK_API void                     nk_edit_focus(struct nk_context*, nk_flags flags);
+NK_API void                     nk_edit_unfocus(struct nk_context*);
 NK_API nk_flags                 nk_edit_string(struct nk_context*, nk_flags, char *buffer, int *len, int max, nk_plugin_filter);
 NK_API nk_flags                 nk_edit_buffer(struct nk_context*, nk_flags, struct nk_text_edit*, nk_plugin_filter);
 NK_API nk_flags                 nk_edit_string_zero_terminated(struct nk_context*, nk_flags, char *buffer, int max, nk_plugin_filter);
@@ -19809,6 +19810,19 @@ nk_edit_focus(struct nk_context *ctx, nk_flags flags)
     win->edit.name = hash;
     if (flags & NK_EDIT_ALWAYS_INSERT_MODE)
         win->edit.mode = NK_TEXT_EDIT_MODE_INSERT;
+}
+
+NK_API void
+nk_edit_unfocus(struct nk_context *ctx)
+{
+    struct nk_window *win;
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
+    if (!ctx || !ctx->current) return;
+
+    win = ctx->current;
+    win->edit.active = nk_false;
+    win->edit.name = 0;
 }
 
 NK_API nk_flags
