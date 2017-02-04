@@ -578,7 +578,6 @@ nk_gdip_draw_text(short x, short y, unsigned short w, unsigned short h,
     wstr = (WCHAR*)_alloca(wsize * sizeof(wchar_t));
     MultiByteToWideChar(CP_UTF8, 0, text, len, wstr, wsize);
 
-    GdipSetSolidFillColor(gdip.brush, convert_color(cbg));
     GdipSetSolidFillColor(gdip.brush, convert_color(cfg));
     GdipDrawString(gdip.memory, wstr, wsize, font->handle, &layout, gdip.format, gdip.brush);
 }
