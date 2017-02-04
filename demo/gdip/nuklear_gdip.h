@@ -1040,7 +1040,7 @@ nk_gdip_shutdown(void)
 }
 
 NK_API void
-nk_gdip_render(enum nk_anti_aliasing AA, struct nk_color clear)
+nk_gdip_render_gui(enum nk_anti_aliasing AA)
 {
     const struct nk_command *cmd;
 
@@ -1048,7 +1048,6 @@ nk_gdip_render(enum nk_anti_aliasing AA, struct nk_color clear)
         TextRenderingHintClearTypeGridFit : TextRenderingHintSingleBitPerPixelGridFit);
     GdipSetSmoothingMode(gdip.memory, AA != NK_ANTI_ALIASING_OFF ?
         SmoothingModeHighQuality : SmoothingModeNone);
-    nk_gdip_clear(clear);
 
     nk_foreach(cmd, &gdip.ctx)
     {
@@ -1127,6 +1126,13 @@ nk_gdip_render(enum nk_anti_aliasing AA, struct nk_color clear)
     }
     nk_gdip_blit(gdip.window);
     nk_clear(&gdip.ctx);
+}
+
+NK_API void
+nk_gdip_render(enum nk_anti_aliasing AA, struct nk_color clear)
+{
+    nk_gdip_clear(clear);
+    nk_gdip_render_gui(AA);
 }
 
 #endif
