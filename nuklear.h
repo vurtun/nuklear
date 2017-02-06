@@ -272,7 +272,7 @@ extern "C" {
  */
 #ifndef NK_API
 #ifdef NK_PRIVATE
-#define NK_API static
+#define NK_API static inline
 #else
 #define NK_API extern
 #endif
