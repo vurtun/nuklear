@@ -15,6 +15,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <shlwapi.h>
 
 /* font */
 typedef struct GdipFont GdipFont;
@@ -31,7 +32,8 @@ NK_API void nk_gdip_shutdown(void);
 
 /* image */
 NK_API struct nk_image nk_gdip_load_image_from_file(const WCHAR* filename);
-NK_API struct nk_image nk_gdip_load_image_from_memory(const void* membuf, int membufSize);
+NK_API struct nk_image nk_gdip_load_image_from_memory(const void* membuf, nk_uint membufSize);
+NK_API void nk_gdip_image_free(struct nk_image image);
 
 #endif
 /*
@@ -59,7 +61,6 @@ typedef struct GpStringFormat GpStringFormat;
 typedef struct GpFont GpFont;
 typedef struct GpFontFamily GpFontFamily;
 typedef struct GpFontCollection GpFontCollection;
-typedef struct IStream IStream;
 
 typedef GpImage GpBitmap;
 typedef GpBrush GpSolidFill;
@@ -602,8 +603,8 @@ nk_gdip_blit(GpGraphics *graphics)
     GdipDrawImageI(graphics, gdip.bitmap, 0, 0);
 }
 
-struct nk_image
-nk_gdip_image_to_nk(GpImage *image){
+static struct nk_image
+nk_gdip_image_to_nk(GpImage *image) {
     struct nk_image img;
     UINT uwidth, uheight;
     img = nk_image_ptr( (void*)image );
@@ -615,28 +616,38 @@ nk_gdip_image_to_nk(GpImage *image){
 }
 
 struct nk_image
-nk_gdip_load_image_from_file(GDIPCONST WCHAR *filename)
+nk_gdip_load_image_from_file(const WCHAR *filename)
 {
     GpImage *image;
-    GdipLoadImageFromFile(filename, &image);
+    if (GdipLoadImageFromFile(filename, &image))
+        return nk_image_id(0);
     return nk_gdip_image_to_nk(image);
 }
 
 struct nk_image
-nk_gdip_load_image_from_memory(const void *membuf, int membufSize)
+nk_gdip_load_image_from_memory(const void *membuf, nk_uint membufSize)
 {
-    GpImage *image = NULL;
-    IStream *pStream = NULL;
-    HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, membufSize);
-    LPVOID pImage = GlobalLock(hMem);
-    nk_memcopy(pImage, membuf, membufSize);
-    GlobalUnlock(hMem);
+    GpImage* image;
+    GpStatus status;
+    IStream *stream = SHCreateMemStream((const BYTE*)membuf, membufSize);
+    if (!stream)
+        return nk_image_id(0);
     
-    /* CreateStreamOnHGlobal needs OLE32 in linked libraries list */
-    CreateStreamOnHGlobal(hMem, FALSE, &pStream);
-    GdipLoadImageFromStream(pStream, &image);
-    GlobalFree(hMem);
+    status = GdipLoadImageFromStream(stream, &image);
+    stream->lpVtbl->Release(stream);
+
+    if (status)
+        return nk_image_id(0);
+
     return nk_gdip_image_to_nk(image);
+}
+
+void
+nk_gdip_image_free(struct nk_image image)
+{
+    if (!image.handle.ptr)
+        return;
+    GdipDisposeImage(image.handle.ptr);
 }
 
 GdipFont*
