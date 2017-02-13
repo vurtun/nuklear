@@ -25,8 +25,8 @@
 #include "../../nuklear.h"
 #include "nuklear_sfml_gl2.h"
 
-#define WINDOW_WIDTH 1200
-#define WINDOW_HEIGHT 800
+#define WINDOW_WIDTH 800
+#define WINDOW_HEIGHT 600
 
 #define MAX_VERTEX_BUFFER 512 * 1024
 #define MAX_ELEMENT_BUFFER 128 * 1024
@@ -46,7 +46,7 @@
  * and the corresponding function. */
 //#include "../style.c"
 //#include "../calculator.c"
-//#include "../overview.c"
+#include "../overview.c"
 //#include "../node_editor.c"
 
 /* ===============================================================
@@ -54,14 +54,12 @@
  *                          DEMO
  *
  * ===============================================================*/
-static void error_callback(int e, const char *d)
-{printf("Error %d: %s\n", e, d);}
-
 int main(void)
 {
     /* Platform */
     sf::ContextSettings settings(24, 8, 4, 2, 2);
     sf::Window window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Demo", sf::Style::Default, settings);
+
     window.setVerticalSyncEnabled(true);
     window.setActive(true);
 
@@ -152,7 +150,7 @@ int main(void)
 
         /* -------------- EXAMPLES ---------------- */
         //calculator(ctx);
-        //overview(ctx);
+        overview(ctx);
         //node_editor(ctx);
         /* ----------------------------------------- */
 
@@ -164,7 +162,7 @@ int main(void)
             nk_color_fv(bg, background);
             glClear(GL_COLOR_BUFFER_BIT);
             glClearColor(bg[0], bg[1], bg[2], bg[3]);
-            /* IMPORTANT: `nk_glfw_render` modifies some global OpenGL state
+            /* IMPORTANT: `nk_sfml_render` modifies some global OpenGL state
             * with blending, scissor, face culling and depth test and defaults everything
             * back into a default state. Make sure to either save and restore or
             * reset your own state after drawing rendering the UI. */

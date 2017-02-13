@@ -71,13 +71,9 @@ nk_sfml_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_
 {
 	/* setup global state */
 	struct nk_sfml_device* dev = &sfml.ogl;
-	struct nk_vec2 scale;
 
-	sf::Vector2u window_size = sfml.window->getSize();
-	sf::Vector2u view_size = sfml.window->getSize();
-
-	scale.x = (float)view_size.x / (float)window_size.x;
-	scale.y = (float)view_size.y / (float)window_size.y;
+	int window_width = sfml.window->getSize().x;
+	int window_height = sfml.window->getSize().y;
 
 	glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_TRANSFORM_BIT);
 	glDisable(GL_CULL_FACE);
@@ -87,11 +83,11 @@ nk_sfml_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_
 	glEnable(GL_TEXTURE_2D);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	glViewport(0, 0, (GLsizei)view_size.x, (GLsizei)view_size.y);
+	glViewport(0, 0, (GLsizei)window_width, (GLsizei)window_height);
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
-	glOrtho(0.0f, window_size.x, window_size.y, 0.0f, -1.0f, 1.0f);
+	glOrtho(0.0f, window_width, window_height, 0.0f, -1.0f, 1.0f);
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	glLoadIdentity();
@@ -152,10 +148,10 @@ nk_sfml_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_
 
 			glBindTexture(GL_TEXTURE_2D, (GLuint)cmd->texture.id);
 			glScissor(
-				(GLint)(cmd->clip_rect.x * scale.x),
-				(GLint)((window_size.y - (GLint)(cmd->clip_rect.y + cmd->clip_rect.h)) * scale.y),
-				(GLint)(cmd->clip_rect.w * scale.x),
-				(GLint)(cmd->clip_rect.h * scale.y));
+				(GLint)(cmd->clip_rect.x),
+				(GLint)((window_height - (GLint)(cmd->clip_rect.y + cmd->clip_rect.h))),
+				(GLint)(cmd->clip_rect.w),
+				(GLint)(cmd->clip_rect.h));
 			glDrawElements(GL_TRIANGLES, (GLsizei)cmd->elem_count, GL_UNSIGNED_SHORT, offset);
 			offset += cmd->elem_count;
 		}
@@ -392,9 +388,7 @@ nk_sfml_handle_event(sf::Event* event)
 	}
 	else if(event->type == sf::Event::TextEntered)
 	{
-		nk_glyph glyph;
-		memcpy(glyph, (const void*)event->text.unicode, NK_UTF_SIZE);
-		nk_input_glyph(ctx, glyph);
+		nk_input_unicode(ctx, event->text.unicode);
 
 		return 1;
 	}
