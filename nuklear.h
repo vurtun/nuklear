@@ -271,11 +271,17 @@ extern "C" {
  * ===============================================================
  */
 #ifndef NK_API
-#ifdef NK_PRIVATE
-#define NK_API static
-#else
-#define NK_API extern
-#endif
+  #ifdef NK_PRIVATE
+    #if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199409L))
+      #define NK_API static inline
+    #elif defined(__cplusplus)
+      #define NK_API static inline
+    #else
+      #define NK_API static
+    #endif
+  #else
+    #define NK_API extern
+  #endif
 #endif
 
 #define NK_INTERN static
