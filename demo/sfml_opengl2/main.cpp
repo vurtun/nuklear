@@ -11,7 +11,6 @@
 #include <time.h>
 
 #include <SFML/Window.hpp>
-#include <SFML/OpenGL.hpp>
 
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
@@ -25,8 +24,8 @@
 #include "../../nuklear.h"
 #include "nuklear_sfml_gl2.h"
 
-#define WINDOW_WIDTH 800
-#define WINDOW_HEIGHT 600
+#define WINDOW_WIDTH 1200
+#define WINDOW_HEIGHT 800
 
 #define MAX_VERTEX_BUFFER 512 * 1024
 #define MAX_ELEMENT_BUFFER 128 * 1024
@@ -44,10 +43,10 @@
 /* This are some code examples to provide a small overview of what can be
  * done with this library. To try out an example uncomment the include
  * and the corresponding function. */
-//#include "../style.c"
-//#include "../calculator.c"
-#include "../overview.c"
-//#include "../node_editor.c"
+/*#include "../style.c"*/
+/*#include "../calculator.c"*/
+/*#include "../overview.c"*/
+/*#include "../node_editor.c"*/
 
 /* ===============================================================
  *
@@ -104,10 +103,7 @@ int main(void)
             if(event.type == sf::Event::Closed)
                 window.close();
             else if(event.type == sf::Event::Resized)
-            {
-                // adjust the viewport when the window is resized
                 glViewport(0, 0, event.size.width, event.size.height);
-            }
 
             nk_sfml_handle_event(&event);
         }
@@ -149,9 +145,9 @@ int main(void)
         nk_end(ctx);
 
         /* -------------- EXAMPLES ---------------- */
-        //calculator(ctx);
-        overview(ctx);
-        //node_editor(ctx);
+        /*calculator(ctx);*/
+        /*overview(ctx);*/
+        /*node_editor(ctx);*/
         /* ----------------------------------------- */
 
         /* Draw */
@@ -162,6 +158,7 @@ int main(void)
             nk_color_fv(bg, background);
             glClear(GL_COLOR_BUFFER_BIT);
             glClearColor(bg[0], bg[1], bg[2], bg[3]);
+
             /* IMPORTANT: `nk_sfml_render` modifies some global OpenGL state
             * with blending, scissor, face culling and depth test and defaults everything
             * back into a default state. Make sure to either save and restore or
