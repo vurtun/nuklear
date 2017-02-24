@@ -20550,16 +20550,17 @@ nk_group_scrolled_offset_begin(struct nk_context *ctx,
 
     win = ctx->current;
     nk_panel_alloc_space(&bounds, ctx);
-
     {const struct nk_rect *c = &win->layout->clip;
     if (!NK_INTERSECT(c->x, c->y, c->w, c->h, bounds.x, bounds.y, bounds.w, bounds.h) &&
         !(flags & NK_WINDOW_MOVABLE)) {
         return 0;
     }}
+    /* closable groups are not supported */
+    NK_ASSERT(!(flags & NK_WINDOW_CLOSABLE));
     if (win->flags & NK_WINDOW_ROM)
         flags |= NK_WINDOW_ROM;
 
-    /* initialize a fake window to create the layout from */
+    /* initialize a fake window to create the panel from */
     nk_zero(&panel, sizeof(panel));
     panel.bounds = bounds;
     panel.flags = flags;
