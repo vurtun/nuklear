@@ -1791,7 +1791,8 @@ enum nk_command_type {
     NK_COMMAND_POLYGON_FILLED,
     NK_COMMAND_POLYLINE,
     NK_COMMAND_TEXT,
-    NK_COMMAND_IMAGE
+    NK_COMMAND_IMAGE,
+    NK_COMMAND_CUSTOM
 };
 
 /* command base and header of every command inside the buffer */
@@ -1933,6 +1934,16 @@ struct nk_command_image {
     struct nk_color col;
 };
 
+typedef void (*nk_command_custom_callback)(void *canvas, short x,short y,
+    unsigned short w, unsigned short h, nk_handle callback_data);
+struct nk_command_custom {
+    struct nk_command header;
+    short x, y;
+    unsigned short w, h;
+    nk_handle callback_data;
+    nk_command_custom_callback callback;
+};
+
 struct nk_command_text {
     struct nk_command header;
     const struct nk_user_font *font;
@@ -1977,9 +1988,10 @@ NK_API void nk_fill_triangle(struct nk_command_buffer*, float x0, float y0, floa
 NK_API void nk_fill_polygon(struct nk_command_buffer*, float*, int point_count, struct nk_color);
 
 /* misc */
-NK_API void nk_push_scissor(struct nk_command_buffer*, struct nk_rect);
 NK_API void nk_draw_image(struct nk_command_buffer*, struct nk_rect, const struct nk_image*, struct nk_color);
 NK_API void nk_draw_text(struct nk_command_buffer*, struct nk_rect, const char *text, int len, const struct nk_user_font*, struct nk_color, struct nk_color);
+NK_API void nk_push_scissor(struct nk_command_buffer*, struct nk_rect);
+NK_API void nk_push_custom(struct nk_command_buffer*, struct nk_rect, nk_command_custom_callback, nk_handle usr);
 NK_API const struct nk_command* nk__next(struct nk_context*, const struct nk_command*);
 NK_API const struct nk_command* nk__begin(struct nk_context*);
 
@@ -6496,6 +6508,30 @@ nk_draw_image(struct nk_command_buffer *b, struct nk_rect r,
 }
 
 NK_API void
+nk_push_custom(struct nk_command_buffer *b, struct nk_rect r,
+    nk_command_custom_callback cb, nk_handle usr)
+{
+    struct nk_command_custom *cmd;
+    NK_ASSERT(b);
+    if (!b) return;
+    if (b->use_clipping) {
+        const struct nk_rect *c = &b->clip;
+        if (c->w == 0 || c->h == 0 || !NK_INTERSECT(r.x, r.y, r.w, r.h, c->x, c->y, c->w, c->h))
+            return;
+    }
+
+    cmd = (struct nk_command_custom*)
+        nk_command_buffer_push(b, NK_COMMAND_CUSTOM, sizeof(*cmd));
+    if (!cmd) return;
+    cmd->x = (short)r.x;
+    cmd->y = (short)r.y;
+    cmd->w = (unsigned short)NK_MAX(0, r.w);
+    cmd->h = (unsigned short)NK_MAX(0, r.h);
+    cmd->callback_data = usr;
+    cmd->callback = cb;
+}
+
+NK_API void
 nk_draw_text(struct nk_command_buffer *b, struct nk_rect r,
     const char *string, int length, const struct nk_user_font *font,
     struct nk_color bg, struct nk_color fg)
@@ -7821,6 +7857,10 @@ nk_convert(struct nk_context *ctx, struct nk_buffer *cmds,
         case NK_COMMAND_IMAGE: {
             const struct nk_command_image *i = (const struct nk_command_image*)cmd;
             nk_draw_list_add_image(&ctx->draw_list, i->img, nk_rect(i->x, i->y, i->w, i->h), i->col);
+        } break;
+        case NK_COMMAND_CUSTOM: {
+            const struct nk_command_custom *c = (const struct nk_command_custom*)cmd;
+            c->callback(&ctx->draw_list, c->x, c->y, c->w, c->h, c->callback_data);
         } break;
         default: break;
         }
