@@ -381,19 +381,16 @@ nk_sfml_handle_event(sf::Event* event)
 
     /* optional grabbing behavior */
     if(ctx->input.mouse.grab)
-    {
-        sfml.window->setMouseCursorGrabbed(true);
         ctx->input.mouse.grab = 0;
-    }
     else if(ctx->input.mouse.ungrab)
     {
         int x = (int)ctx->input.mouse.prev.x;
         int y = (int)ctx->input.mouse.prev.y;
         
-        sfml.window->setMouseCursorGrabbed(false);
-        sf::Mouse::setPosition(sf::Vector2i(x, y));
+        sf::Mouse::setPosition(sf::Vector2i(x, y), *sfml.window);
         ctx->input.mouse.ungrab = 0;
     }
+
 
     if(event->type == sf::Event::KeyReleased || event->type == sf::Event::KeyPressed)
     {
@@ -483,7 +480,6 @@ nk_sfml_handle_event(sf::Event* event)
 
         return 1;
     }
-    /* For Android*/
     else if(event->type == sf::Event::TouchBegan || event->type == sf::Event::TouchEnded)
     {
         int down = event->type == sf::Event::TouchBegan;
