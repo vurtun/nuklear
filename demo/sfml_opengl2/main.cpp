@@ -10,6 +10,7 @@
 #include <limits.h>
 #include <time.h>
 
+#include <SFML/OpenGL.hpp>
 #include <SFML/Window.hpp>
 
 #define NK_INCLUDE_FIXED_TYPES

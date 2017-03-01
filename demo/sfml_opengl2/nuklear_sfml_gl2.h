@@ -195,6 +195,7 @@ nk_sfml_clipboard_paste(nk_handle usr, struct nk_text_edit* edit)
 static void
 nk_sfml_clipboard_copy(nk_handle usr, const char* text, int len)
 {
+    /*
     char* str = 0;
     (void)usr;
     if(!len)
@@ -205,12 +206,12 @@ nk_sfml_clipboard_copy(nk_handle usr, const char* text, int len)
     memcpy(str, text, (size_t)len);
     str[len] = '\0';
 
-    /* Not Implemented in SFML
+     Not Implemented in SFML
     sf::Clipboard clipboard(sfml.window);
     clipboard.setText(str);
-    */
-
+    
     free(str);
+    */
 }
 
 NK_API struct nk_context*
@@ -260,6 +261,7 @@ nk_sfml_handle_event(sf::Event* event)
     {
         int x = (int)ctx->input.mouse.prev.x;
         int y = (int)ctx->input.mouse.prev.y;
+        
         sfml.window->setMouseCursorGrabbed(false);
         sf::Mouse::setPosition(sf::Vector2i(x, y));
         ctx->input.mouse.ungrab = 0;
@@ -349,15 +351,7 @@ nk_sfml_handle_event(sf::Event* event)
     }
     else if(event->type == sf::Event::MouseMoved)
     {
-        if(ctx->input.mouse.grabbed)
-        {
-            int x = (int)ctx->input.mouse.prev.x + event->mouseMove.x;
-            int y = (int)ctx->input.mouse.prev.y + event->mouseMove.y;
-
-            nk_input_motion(ctx, x, y);
-        }
-        else
-            nk_input_motion(ctx, event->mouseMove.x, event->mouseMove.y);
+        nk_input_motion(ctx, event->mouseMove.x, event->mouseMove.y);
 
         return 1;
     }
