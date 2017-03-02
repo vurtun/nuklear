@@ -1,6 +1,6 @@
 # SFML 2.4 nuklear backend
 
-This backend provides support for [SFML 2.4](http://liballeg.org/). It will work on all platforms supported by SFML.
+This backend provides support for [SFML 2.4](http://www.sfml-dev.org). It will work on all platforms supported by SFML.
 
 ## Compiling
 
