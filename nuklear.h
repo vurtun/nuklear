@@ -20595,8 +20595,6 @@ nk_group_scrolled_offset_begin(struct nk_context *ctx,
         !(flags & NK_WINDOW_MOVABLE)) {
         return 0;
     }}
-    /* closable groups are not supported */
-    NK_ASSERT(!(flags & NK_WINDOW_CLOSABLE));
     if (win->flags & NK_WINDOW_ROM)
         flags |= NK_WINDOW_ROM;
 
@@ -20617,7 +20615,18 @@ nk_group_scrolled_offset_begin(struct nk_context *ctx,
     panel.layout->offset_y = y_offset;
     panel.layout->parent = win->layout;
     win->layout = panel.layout;
+
     ctx->current = win;
+    if ((panel.layout->flags & NK_WINDOW_CLOSED) ||
+        (panel.layout->flags & NK_WINDOW_MINIMIZED))
+    {
+        nk_flags f = panel.layout->flags;
+        nk_group_scrolled_end(ctx);
+        if (f & NK_WINDOW_CLOSED)
+            return NK_WINDOW_CLOSED;
+        if (f & NK_WINDOW_MINIMIZED)
+            return NK_WINDOW_MINIMIZED;
+    }
     return 1;
 }
 
@@ -20771,7 +20780,7 @@ nk_list_view_begin(struct nk_context *ctx, struct nk_list_view *view,
     result = nk_group_scrolled_offset_begin(ctx, x_offset, y_offset, title, flags);
     win = ctx->current;
     layout = win->layout;
- 
+
     view->total_height = row_height * NK_MAX(row_count,1);
     view->begin = (int)NK_MAX(((float)view->scroll_value / (float)row_height), 0.0f);
     view->count = (int)NK_MAX(nk_iceilf((layout->clip.h)/(float)row_height), 0);

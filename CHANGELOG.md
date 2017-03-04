@@ -11,6 +11,8 @@
 
 Changes:
 --------
+- 2017/03/04 (1.34.1) - Fixed group closable flag
+- 2017/02/25 (1.34.0) - Added custom draw command for better language binding support
 - 2017/01/24 (1.33.0) - Added programatic way of remove edit focus
 - 2017/01/24 (1.32.3) - Fixed wrong define for basic type definitions for windows
 - 2017/01/21 (1.32.2) - Fixed input capture from hidden or closed windows
