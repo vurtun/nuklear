@@ -11958,23 +11958,14 @@ nk_textedit_text(struct nk_text_edit *state, const char *text, int total_len)
     if (!text || !total_len || state->mode == NK_TEXT_EDIT_MODE_VIEW) return;
 
     glyph_len = nk_utf_decode(text, &unicode, total_len);
-    if (!glyph_len) return;
     while ((text_len < total_len) && glyph_len)
     {
         /* don't insert a backward delete, just process the event */
-        if (unicode == 127)
-            break;
-
+        if (unicode == 127) goto next;
         /* can't add newline in single-line mode */
-        if (unicode == '\n' && state->single_line)
-            break;
-
+        if (unicode == '\n' && state->single_line) goto next;
         /* filter incoming text */
-        if (state->filter && !state->filter(state, unicode)) {
-            glyph_len = nk_utf_decode(text + text_len, &unicode, total_len-text_len);
-            text_len += glyph_len;
-            continue;
-        }
+        if (state->filter && !state->filter(state, unicode)) goto next;
 
         if (!NK_TEXT_HAS_SELECTION(state) &&
             state->cursor < state->string.len)
@@ -11999,8 +11990,9 @@ nk_textedit_text(struct nk_text_edit *state, const char *text, int total_len)
                 state->has_preferred_x = 0;
             }
         }
-        glyph_len = nk_utf_decode(text + text_len, &unicode, total_len-text_len);
+        next:
         text_len += glyph_len;
+        glyph_len = nk_utf_decode(text + text_len, &unicode, total_len-text_len);
     }
 }
 

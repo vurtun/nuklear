@@ -11,6 +11,7 @@
 
 Changes:
 --------
+- 2017/03/04 (1.34.2) - Fixed text edit filtering
 - 2017/03/04 (1.34.1) - Fixed group closable flag
 - 2017/02/25 (1.34.0) - Added custom draw command for better language binding support
 - 2017/01/24 (1.33.0) - Added programatic way of remove edit focus
