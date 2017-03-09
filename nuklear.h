@@ -1274,7 +1274,7 @@ NK_API const char*              nk_utf_at(const char *buffer, int length, int in
         nk_font_atlas_begin(&atlas);
         nk_font *font = nk_font_atlas_add_from_file(&atlas, "Path/To/Your/TTF_Font.ttf", 13, 0);
         nk_font *font2 = nk_font_atlas_add_from_file(&atlas, "Path/To/Your/TTF_Font2.ttf", 16, 0);
-        void* img = nk_font_atlas_bake(&atlas, &img_width, &img_height, NK_FONT_ATLAS_RGBA32, 0);
+        const void* img = nk_font_atlas_bake(&atlas, &img_width, &img_height, NK_FONT_ATLAS_RGBA32);
         nk_font_atlas_end(&atlas, nk_handle_id(texture), 0);
 
         struct nk_context ctx;
