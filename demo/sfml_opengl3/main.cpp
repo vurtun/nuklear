@@ -57,39 +57,31 @@ int main(void)
 {
     /* Platform */
     sf::ContextSettings settings(24, 8, 4, 3, 3);
-    sf::Window window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Demo", sf::Style::Default, settings);
-
-    window.setVerticalSyncEnabled(true);
-    window.setActive(true);
-
-    /* Load OpenGL extensions */
-    if(!gladLoadGL())
-    {
+    sf::Window win(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Demo", sf::Style::Default, settings);
+    win.setVerticalSyncEnabled(true);
+    win.setActive(true);
+    if(!gladLoadGL()) { /* Load OpenGL extensions */
         printf("Failed to load OpenGL extensions!\n");
         return -1;
     }
-
-    glViewport(0, 0, window.getSize().x, window.getSize().y);
-    struct nk_context *ctx;
-    struct nk_color background;
+    glViewport(0, 0, win.getSize().x, win.getSize().y);
 
     /* GUI */
-    ctx = nk_sfml_init(&window);
+    struct nk_context *ctx;
+    ctx = nk_sfml_init(&win);
     /* Load Fonts: if none of these are loaded a default font will be used  */
     /* Load Cursor: if you uncomment cursor loading please hide the cursor */
-    {
-        struct nk_font_atlas *atlas;
-        nk_sfml_font_stash_begin(&atlas);
-        /*struct nk_font *droid = nk_font_atlas_add_from_file(atlas, "../../../extra_font/DroidSans.ttf", 14, 0);*/
-        /*struct nk_font *roboto = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Roboto-Regular.ttf", 14, 0);*/
-        /*struct nk_font *future = nk_font_atlas_add_from_file(atlas, "../../../extra_font/kenvector_future_thin.ttf", 13, 0);*/
-        /*struct nk_font *clean = nk_font_atlas_add_from_file(atlas, "../../../extra_font/ProggyClean.ttf", 12, 0);*/
-        /*struct nk_font *tiny = nk_font_atlas_add_from_file(atlas, "../../../extra_font/ProggyTiny.ttf", 10, 0);*/
-        /*struct nk_font *cousine = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Cousine-Regular.ttf", 13, 0);*/
-        nk_sfml_font_stash_end();
-        /*nk_style_load_all_cursors(ctx, atlas->cursors);*/
-        /*nk_style_set_font(ctx, &droid->handle);*/
-    }
+    struct nk_font_atlas *atlas;
+    nk_sfml_font_stash_begin(&atlas);
+    /*struct nk_font *droid = nk_font_atlas_add_from_file(atlas, "../../../extra_font/DroidSans.ttf", 14, 0);*/
+    /*struct nk_font *roboto = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Roboto-Regular.ttf", 14, 0);*/
+    /*struct nk_font *future = nk_font_atlas_add_from_file(atlas, "../../../extra_font/kenvector_future_thin.ttf", 13, 0);*/
+    /*struct nk_font *clean = nk_font_atlas_add_from_file(atlas, "../../../extra_font/ProggyClean.ttf", 12, 0);*/
+    /*struct nk_font *tiny = nk_font_atlas_add_from_file(atlas, "../../../extra_font/ProggyTiny.ttf", 10, 0);*/
+    /*struct nk_font *cousine = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Cousine-Regular.ttf", 13, 0);*/
+    nk_sfml_font_stash_end();
+    /*nk_style_load_all_cursors(ctx, atlas->cursors);*/
+    /*nk_style_set_font(ctx, &droid->handle);*/
 
     /* style.c */
     /*set_style(ctx, THEME_WHITE);*/
@@ -97,22 +89,20 @@ int main(void)
     /*set_style(ctx, THEME_BLUE);*/
     /*set_style(ctx, THEME_DARK);*/
 
+    struct nk_color background;
     background = nk_rgb(28,48,62);
-
-    while (window.isOpen())
+    while (win.isOpen())
     {
         /* Input */
-        sf::Event event;
-
+        sf::Event evt;
         nk_input_begin(ctx);
-        while(window.pollEvent(event))
-        {
-            if(event.type == sf::Event::Closed)
-                window.close();
-            else if(event.type == sf::Event::Resized)
-                glViewport(0, 0, event.size.width, event.size.height);
+        while(win.pollEvent(evt)) {
+            if(evt.type == sf::Event::Closed)
+                win.close();
+            else if(evt.type == sf::Event::Resized)
+                glViewport(0, 0, evt.size.width, evt.size.height);
 
-            nk_sfml_handle_event(&event);
+            nk_sfml_handle_event(&evt);
         }
         nk_input_end(ctx);
 
@@ -158,24 +148,18 @@ int main(void)
         /* ----------------------------------------- */
 
         /* Draw */
-        {
-            window.setActive(true);
-
-            float bg[4];
-            nk_color_fv(bg, background);
-            glClear(GL_COLOR_BUFFER_BIT);
-            glClearColor(bg[0], bg[1], bg[2], bg[3]);
-            
-            /* IMPORTANT: `nk_sfml_render` modifies some global OpenGL state
-            * with blending, scissor, face culling and depth test and defaults everything
-            * back into a default state. Make sure to either save and restore or
-            * reset your own state after drawing rendering the UI. */
-            nk_sfml_render(NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
-            
-            window.display();
-        }
+        float bg[4];
+        win.setActive(true);
+        nk_color_fv(bg, background);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glClearColor(bg[0], bg[1], bg[2], bg[3]);
+        /* IMPORTANT: `nk_sfml_render` modifies some global OpenGL state
+        * with blending, scissor, face culling and depth test and defaults everything
+        * back into a default state. Make sure to either save and restore or
+        * reset your own state after drawing rendering the UI. */
+        nk_sfml_render(NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
+        win.display();
     }
-
     nk_sfml_shutdown();
     return 0;
 }

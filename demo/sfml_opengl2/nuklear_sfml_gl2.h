@@ -32,22 +32,19 @@ NK_API void                 nk_sfml_shutdown(void);
  */
  #ifdef NK_SFML_GL2_IMPLEMENTATION
 
-struct nk_sfml_device
-{
+struct nk_sfml_device {
     struct nk_buffer cmds;
     struct nk_draw_null_texture null;
     GLuint font_tex;
 };
 
-struct nk_sfml_vertex
-{
+struct nk_sfml_vertex {
     float position[2];
     float uv[2];
     nk_byte col[4];
 };
 
-static struct nk_sfml
-{
+static struct nk_sfml {
     sf::Window* window;
     struct nk_sfml_device ogl;
     struct nk_context ctx;
@@ -108,8 +105,7 @@ nk_sfml_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_
 
         /* fill converting configuration */
         struct nk_convert_config config;
-        static const struct nk_draw_vertex_layout_element vertex_layout[] = 
-        {
+        static const struct nk_draw_vertex_layout_element vertex_layout[] = {
             {NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct nk_sfml_vertex, position)},
             {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct nk_sfml_vertex, uv)},
             {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct nk_sfml_vertex, col)},
@@ -133,19 +129,16 @@ nk_sfml_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_
         nk_convert(&sfml.ctx, &dev->cmds, &vbuf, &ebuf, &config);
 
         /* setup vertex buffer pointer */
-        {
-            const void* vertices = nk_buffer_memory_const(&vbuf);
-            glVertexPointer(2, GL_FLOAT, vs, (const void*)((const nk_byte*)vertices + vp));
-            glTexCoordPointer(2, GL_FLOAT, vs, (const void*)((const nk_byte*)vertices + vt));
-            glColorPointer(4, GL_UNSIGNED_BYTE, vs, (const void*)((const nk_byte*)vertices + vc));
-        }
+        const void* vertices = nk_buffer_memory_const(&vbuf);
+        glVertexPointer(2, GL_FLOAT, vs, (const void*)((const nk_byte*)vertices + vp));
+        glTexCoordPointer(2, GL_FLOAT, vs, (const void*)((const nk_byte*)vertices + vt));
+        glColorPointer(4, GL_UNSIGNED_BYTE, vs, (const void*)((const nk_byte*)vertices + vc));
 
         /* iterate over and execute each draw command */
         offset = (const nk_draw_index*)nk_buffer_memory_const(&ebuf);
         nk_draw_foreach(cmd, &sfml.ctx, &dev->cmds)
         {
             if(!cmd->elem_count) continue;
-
             glBindTexture(GL_TEXTURE_2D, (GLuint)cmd->texture.id);
             glScissor(
                 (GLint)(cmd->clip_rect.x),
@@ -182,36 +175,34 @@ nk_sfml_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_
 static void
 nk_sfml_clipboard_paste(nk_handle usr, struct nk_text_edit* edit)
 {
-    /* Not Implemented in SFML 
+#if 0
+    /* Not Implemented in SFML */
     sf::Clipboard clipboard(sfml.window);
     const char* text = clipboard.getText();
 
     if(text)
         nk_textedit_paste(edit, text, nk_strlen(text));
         (void)usr;
-    */
+#endif
 }
 
 static void
 nk_sfml_clipboard_copy(nk_handle usr, const char* text, int len)
 {
-    /*
+#if 0
     char* str = 0;
     (void)usr;
-    if(!len)
-        return;
+    if(!len) return;
     str = (char*)malloc((size_t)len+1);
-    if(!str)
-        return;
+    if(!str) return;
     memcpy(str, text, (size_t)len);
     str[len] = '\0';
 
-     Not Implemented in SFML
+    /* Not Implemented in SFML */
     sf::Clipboard clipboard(sfml.window);
     clipboard.setText(str);
-    
     free(str);
-    */
+#endif
 }
 
 NK_API struct nk_context*
@@ -235,40 +226,34 @@ nk_sfml_font_stash_begin(struct nk_font_atlas** atlas)
 }
 
 NK_API void
-nk_sfml_font_stash_end(void)
+nk_sfml_font_stash_end()
 {
-    const void* image;
     int w, h;
-    image = nk_font_atlas_bake(&sfml.atlas, &w, &h, NK_FONT_ATLAS_RGBA32);
-    nk_sfml_device_upload_atlas(image, w, h);
+    const void* img;
+    img = nk_font_atlas_bake(&sfml.atlas, &w, &h, NK_FONT_ATLAS_RGBA32);
+    nk_sfml_device_upload_atlas(img, w, h);
     nk_font_atlas_end(&sfml.atlas, nk_handle_id((int)sfml.ogl.font_tex), &sfml.ogl.null);
     if(sfml.atlas.default_font)
         nk_style_set_font(&sfml.ctx, &sfml.atlas.default_font->handle);
 }
 
 NK_API int
-nk_sfml_handle_event(sf::Event* event)
+nk_sfml_handle_event(sf::Event* evt)
 {
     struct nk_context* ctx = &sfml.ctx;
-
     /* optional grabbing behavior */
     if(ctx->input.mouse.grab)
         ctx->input.mouse.grab = 0;
-    else if(ctx->input.mouse.ungrab)
-    {
+    else if(ctx->input.mouse.ungrab) {
         int x = (int)ctx->input.mouse.prev.x;
         int y = (int)ctx->input.mouse.prev.y;
-
         sf::Mouse::setPosition(sf::Vector2i(x, y), *sfml.window);
         ctx->input.mouse.ungrab = 0;
     }
-
-
-    if(event->type == sf::Event::KeyReleased || event->type == sf::Event::KeyPressed)
+    if(evt->type == sf::Event::KeyReleased || evt->type == sf::Event::KeyPressed)
     {
-        int down = event->type == sf::Event::KeyPressed;
-        sf::Keyboard::Key key = event->key.code;
-
+        int down = evt->type == sf::Event::KeyPressed;
+        sf::Keyboard::Key key = evt->key.code;
         if(key == sf::Keyboard::RShift || key == sf::Keyboard::LShift)
             nk_input_key(ctx, NK_KEY_SHIFT, down);
         else if(key == sf::Keyboard::Delete)
@@ -279,17 +264,13 @@ nk_sfml_handle_event(sf::Event* event)
             nk_input_key(ctx, NK_KEY_TAB, down);
         else if(key == sf::Keyboard::BackSpace)
             nk_input_key(ctx, NK_KEY_BACKSPACE, down);
-        else if(key == sf::Keyboard::Home)
-        {
+        else if(key == sf::Keyboard::Home) {
             nk_input_key(ctx, NK_KEY_TEXT_START, down);
             nk_input_key(ctx, NK_KEY_SCROLL_START, down);
-        }
-        else if(key == sf::Keyboard::End)
-        {
+        } else if(key == sf::Keyboard::End) {
             nk_input_key(ctx, NK_KEY_TEXT_END, down);
             nk_input_key(ctx, NK_KEY_SCROLL_END, down);
-        }
-        else if(key == sf::Keyboard::PageDown)
+        } else if(key == sf::Keyboard::PageDown)
             nk_input_key(ctx, NK_KEY_SCROLL_DOWN, down);
         else if(key == sf::Keyboard::PageUp)
             nk_input_key(ctx, NK_KEY_SCROLL_DOWN, down);
@@ -311,84 +292,49 @@ nk_sfml_handle_event(sf::Event* event)
             nk_input_key(ctx, NK_KEY_UP, down);
         else if(key == sf::Keyboard::Down)
             nk_input_key(ctx, NK_KEY_DOWN, down);
-        else if(key == sf::Keyboard::Left)
-        {
+        else if(key == sf::Keyboard::Left) {
             if(sf::Keyboard::isKeyPressed(sf::Keyboard::LControl))
                 nk_input_key(ctx, NK_KEY_TEXT_WORD_LEFT, down);
-            else
-                nk_input_key(ctx, NK_KEY_LEFT, down);
-        }
-        else if(key == sf::Keyboard::Right)
-        {
+            else nk_input_key(ctx, NK_KEY_LEFT, down);
+        } else if(key == sf::Keyboard::Right) {
             if(sf::Keyboard::isKeyPressed(sf::Keyboard::LControl))
                 nk_input_key(ctx, NK_KEY_TEXT_WORD_RIGHT, down);
-            else
-                nk_input_key(ctx, NK_KEY_RIGHT, down);
-        }
-        else return 0;
-
+            else nk_input_key(ctx, NK_KEY_RIGHT, down);
+        } else return 0;
         return 1;
-    }
-    else if(event->type == sf::Event::MouseButtonPressed || event->type == sf::Event::MouseButtonReleased)
-    {
-        int down = event->type == sf::Event::MouseButtonPressed;
-        const int x = event->mouseButton.x;
-        const int y = event->mouseButton.y;
-
-        if(event->mouseButton.button == sf::Mouse::Left)
+    } else if(evt->type == sf::Event::MouseButtonPressed || evt->type == sf::Event::MouseButtonReleased) {
+        int down = evt->type == sf::Event::MouseButtonPressed;
+        const int x = evt->mouseButton.x, y = evt->mouseButton.y;
+        if(evt->mouseButton.button == sf::Mouse::Left)
             nk_input_button(ctx, NK_BUTTON_LEFT, x, y, down);
-        if(event->mouseButton.button == sf::Mouse::Middle)
+        if(evt->mouseButton.button == sf::Mouse::Middle)
             nk_input_button(ctx, NK_BUTTON_MIDDLE, x, y, down);
-        if(event->mouseButton.button == sf::Mouse::Right)
+        if(evt->mouseButton.button == sf::Mouse::Right)
             nk_input_button(ctx, NK_BUTTON_RIGHT, x, y, down);
-        else
-            return 0;
-
+        else return 0;
         return 1;
-    }
-    else if(event->type == sf::Event::MouseMoved)
-    {
-        nk_input_motion(ctx, event->mouseMove.x, event->mouseMove.y);
-
+    } else if(evt->type == sf::Event::MouseMoved) {
+        nk_input_motion(ctx, evt->mouseMove.x, evt->mouseMove.y);
         return 1;
-    }
-    else if(event->type == sf::Event::TouchBegan || event->type == sf::Event::TouchEnded)
-    {
-        int down = event->type == sf::Event::TouchBegan;
-        const int x = event->touch.x;
-        const int y = event->touch.y;
-
+    } else if(evt->type == sf::Event::TouchBegan || evt->type == sf::Event::TouchEnded) {
+        int down = evt->type == sf::Event::TouchBegan;
+        const int x = evt->touch.x, y = evt->touch.y;
         nk_input_button(ctx, NK_BUTTON_LEFT, x, y, down);
-
         return 1;
-    }
-    else if(event->type == sf::Event::TouchMoved)
-    {
-        if(ctx->input.mouse.grabbed)
-        {
+    } else if(evt->type == sf::Event::TouchMoved) {
+        if(ctx->input.mouse.grabbed) {
             int x = (int)ctx->input.mouse.prev.x;
             int y = (int)ctx->input.mouse.prev.y;
-
-            nk_input_motion(ctx, x + event->touch.x, y + event->touch.y);
-        }
-        else
-            nk_input_motion(ctx, event->touch.x, event->touch.y);
-
+            nk_input_motion(ctx, x + evt->touch.x, y + evt->touch.y);
+        } else nk_input_motion(ctx, evt->touch.x, evt->touch.y);
+        return 1;
+    } else if(evt->type == sf::Event::TextEntered) {
+        nk_input_unicode(ctx, evt->text.unicode);
+        return 1;
+    } else if(evt->type == sf::Event::MouseWheelScrolled) {
+        nk_input_scroll(ctx, evt->mouseWheelScroll.delta);
         return 1;
     }
-    else if(event->type == sf::Event::TextEntered)
-    {
-        nk_input_unicode(ctx, event->text.unicode);
-
-        return 1;
-    }
-    else if(event->type == sf::Event::MouseWheelScrolled)
-    {
-        nk_input_scroll(ctx, event->mouseWheelScroll.delta);
-
-        return 1;
-    }
-
     return 0;
 }
 
