@@ -19,7 +19,7 @@ NK_API struct nk_context*   nk_sfml_init(sf::Window* window);
 NK_API void                 nk_sfml_font_stash_begin(struct nk_font_atlas** atlas);
 NK_API void                 nk_sfml_font_stash_end(void);
 NK_API int                  nk_sfml_handle_event(sf::Event* event);
-NK_API void                 nk_sfml_render(enum nk_anti_aliasing, int max_vertex_buffer, int max_element_buffer);
+NK_API void                 nk_sfml_render(enum nk_anti_aliasing);
 NK_API void                 nk_sfml_shutdown(void);
 
 #endif
@@ -64,7 +64,7 @@ nk_sfml_device_upload_atlas(const void* image, int width, int height)
 }
 
 NK_API void
-nk_sfml_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_buffer)
+nk_sfml_render(enum nk_anti_aliasing AA)
 {
     /* setup global state */
     struct nk_sfml_device* dev = &sfml.ogl;

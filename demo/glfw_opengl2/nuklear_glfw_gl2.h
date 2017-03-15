@@ -1,7 +1,7 @@
 /*
  * Nuklear - v1.32.0 - public domain
  * no warrenty implied; use at your own risk.
- * authored from 2015-2016 by Micha Mettke
+ * authored from 2015-2017 by Micha Mettke
  */
 /*
  * ==============================================================
@@ -24,7 +24,7 @@ NK_API void                 nk_glfw3_font_stash_begin(struct nk_font_atlas **atl
 NK_API void                 nk_glfw3_font_stash_end(void);
 
 NK_API void                 nk_glfw3_new_frame(void);
-NK_API void                 nk_glfw3_render(enum nk_anti_aliasing , int max_vertex_buffer, int max_element_buffer);
+NK_API void                 nk_glfw3_render(enum nk_anti_aliasing);
 NK_API void                 nk_glfw3_shutdown(void);
 
 NK_API void                 nk_glfw3_char_callback(GLFWwindow *win, unsigned int codepoint);
@@ -83,7 +83,7 @@ nk_glfw3_device_upload_atlas(const void *image, int width, int height)
 }
 
 NK_API void
-nk_glfw3_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_buffer)
+nk_glfw3_render(enum nk_anti_aliasing AA)
 {
     /* setup global state */
     struct nk_glfw_device *dev = &glfw.ogl;

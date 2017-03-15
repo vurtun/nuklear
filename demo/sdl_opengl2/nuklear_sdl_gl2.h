@@ -1,7 +1,7 @@
 /*
  * Nuklear - 1.32.0 - public domain
  * no warrenty implied; use at your own risk.
- * authored from 2015-2016 by Micha Mettke
+ * authored from 2015-2017 by Micha Mettke
  */
 /*
  * ==============================================================
@@ -18,7 +18,7 @@ NK_API struct nk_context*   nk_sdl_init(SDL_Window *win);
 NK_API void                 nk_sdl_font_stash_begin(struct nk_font_atlas **atlas);
 NK_API void                 nk_sdl_font_stash_end(void);
 NK_API int                  nk_sdl_handle_event(SDL_Event *evt);
-NK_API void                 nk_sdl_render(enum nk_anti_aliasing , int max_vertex_buffer, int max_element_buffer);
+NK_API void                 nk_sdl_render(enum nk_anti_aliasing);
 NK_API void                 nk_sdl_shutdown(void);
 
 #endif
@@ -63,7 +63,7 @@ nk_sdl_device_upload_atlas(const void *image, int width, int height)
 }
 
 NK_API void
-nk_sdl_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_buffer)
+nk_sdl_render(enum nk_anti_aliasing AA)
 {
     /* setup global state */
     struct nk_sdl_device *dev = &sdl.ogl;
