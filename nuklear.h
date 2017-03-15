@@ -1,7 +1,7 @@
 /*
  Nuklear - 1.33.0 - public domain
  no warrenty implied; use at your own risk.
- authored from 2015-2016 by Micha Mettke
+ authored from 2015-2017 by Micha Mettke
 
 ABOUT:
     This is a minimal state graphical user interface single header toolkit
@@ -1137,6 +1137,7 @@ NK_API int                      nk_stricmp(const char *s1, const char *s2);
 NK_API int                      nk_stricmpn(const char *s1, const char *s2, int n);
 NK_API int                      nk_strtoi(const char *str, const char **endptr);
 NK_API float                    nk_strtof(const char *str, const char **endptr);
+NK_API double                   nk_strtod(const char *str, const char **endptr);
 NK_API int                      nk_strfilter(const char *text, const char *regexp);
 NK_API int                      nk_strmatch_fuzzy_string(char const *str, char const *pattern, int *out_score);
 NK_API int                      nk_strmatch_fuzzy_text(const char *txt, int txt_len, const char *pattern, int *out_score);
@@ -4090,7 +4091,7 @@ nk_vsnprintf(char *buf, int buf_size, const char *fmt, va_list args)
         /* width argument */
         width = NK_DEFAULT;
         if (*iter >= '1' && *iter <= '9') {
-            char *end;
+            const char *end;
             width = nk_strtoi(iter, &end);
             if (end == iter)
                 width = -1;
@@ -4108,7 +4109,7 @@ nk_vsnprintf(char *buf, int buf_size, const char *fmt, va_list args)
                 precision = va_arg(args, int);
                 iter++;
             } else {
-                char *end;
+                const char *end;
                 precision = nk_strtoi(iter, &end);
                 if (end == iter)
                     precision = -1;
@@ -13453,8 +13454,7 @@ nk_do_selectable_image(nk_flags *state, struct nk_command_buffer *out,
 NK_INTERN float
 nk_slider_behavior(nk_flags *state, struct nk_rect *logical_cursor,
     struct nk_rect *visual_cursor, struct nk_input *in,
-    const struct nk_style_slider *style, struct nk_rect bounds,
-    float slider_min, float slider_max, float slider_value,
+    struct nk_rect bounds, float slider_min, float slider_max, float slider_value,
     float slider_step, float slider_steps)
 {
     int left_mouse_down;
@@ -13636,7 +13636,7 @@ nk_do_slider(nk_flags *state,
     visual_cursor.x = logical_cursor.x - visual_cursor.w*0.5f;
 
     slider_value = nk_slider_behavior(state, &logical_cursor, &visual_cursor,
-        in, style, bounds, slider_min, slider_max, slider_value, step, slider_steps);
+        in, bounds, slider_min, slider_max, slider_value, step, slider_steps);
     visual_cursor.x = logical_cursor.x - visual_cursor.w*0.5f;
 
     /* draw slider */
