@@ -24,7 +24,9 @@ NK_API int                  nk_xlib_handle_event(Display *dpy, int screen, Windo
 NK_API void                 nk_xlib_render(Drawable screen, struct nk_color clear);
 NK_API void                 nk_xlib_shutdown(void);
 NK_API void                 nk_xlib_set_font(XFont *font);
-
+NK_API void                 nk_xlib_push_font(XFont *xfont);
+NK_API void                 nk_xlib_paste(nk_handle handle, struct nk_text_edit* edit);
+NK_API void                 nk_xlib_copy(nk_handle handle, const char* str, int len);
 #endif
 /*
  * ==============================================================
@@ -38,6 +40,7 @@ NK_API void                 nk_xlib_set_font(XFont *font);
 #include <X11/Xutil.h>
 #include <X11/Xresource.h>
 #include <X11/Xlocale.h>
+#include <X11/Xatom.h>
 
 typedef struct XSurface XSurface;
 struct XFont {
@@ -70,6 +73,15 @@ static struct  {
 #ifndef MAX
 #define MAX(a,b) ((a) < (b) ? (b) : (a))
 #endif
+
+static char* clipboard_data = NULL;
+static int   clipboard_len = 0;
+static struct nk_text_edit* clipboard_target = NULL;
+
+static Atom xa_clipboard;
+static Atom xa_targets;
+static Atom xa_text;
+static Atom xa_utf8_string;
 
 static unsigned long
 nk_color_from_byte(const nk_byte *c)
@@ -461,6 +473,11 @@ nk_xlib_init(XFont *xfont, Display *dpy, int screen, Window root,
     if (!XSupportsLocale()) return 0;
     if (!XSetLocaleModifiers("@im=none")) return 0;
 
+    xa_clipboard = XInternAtom(dpy, "CLIPBOARD", False);
+    xa_targets = XInternAtom(dpy, "TARGETS", False);
+    xa_text = XInternAtom(dpy, "TEXT", False);
+    xa_utf8_string = XInternAtom(dpy, "UTF8_STRING", False);
+
     /* create invisible cursor */
     {static XColor dummy; char data[1] = {0};
     Pixmap blank = XCreateBitmapFromData(dpy, root, data, 1, 1);
@@ -482,6 +499,44 @@ nk_xlib_set_font(XFont *xfont)
     font->width = nk_xfont_get_text_width;
     nk_style_set_font(&xlib.ctx, font);
 }
+
+NK_API void
+nk_xlib_push_font(XFont *xfont)
+{
+    struct nk_user_font *font = &xfont->handle;
+    font->userdata = nk_handle_ptr(xfont);
+    font->height = (float)xfont->height;
+    font->width = nk_xfont_get_text_width;
+    nk_style_push_font(&xlib.ctx, font);
+}
+
+NK_API void
+nk_xlib_paste(nk_handle handle, struct nk_text_edit* edit)
+{
+  (void)handle; /*Unused*/
+  /* Paste in X is asynchronous, so can not use a temporary text edit */
+  NK_ASSERT(edit != &xlib.ctx.text_edit && "Paste not supported for temporary editors");
+  clipboard_target = edit;
+  /* Request the contents of the primary buffer */
+  XConvertSelection(xlib.dpy, XA_PRIMARY, XA_STRING, XA_PRIMARY, xlib.root, CurrentTime);
+}
+
+NK_API void
+nk_xlib_copy(nk_handle handle, const char* str, int len)
+{
+  (void)handle; /*Unused*/
+  free(clipboard_data);
+  clipboard_len = 0;
+  clipboard_data = malloc(len);
+  if (clipboard_data)
+  {
+    memcpy(clipboard_data, str, len);
+    clipboard_len = len;
+    XSetSelectionOwner(xlib.dpy, XA_PRIMARY, xlib.root, CurrentTime);
+    XSetSelectionOwner(xlib.dpy, xa_clipboard, xlib.root, CurrentTime);
+  }
+}
+
 
 NK_API int
 nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt)
@@ -594,7 +649,83 @@ nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt)
     } else if (evt->type == KeymapNotify) {
         XRefreshKeyboardMapping(&evt->xmapping);
         return 1;
+    } else if (evt->type == SelectionClear) {
+      free(clipboard_data);
+      clipboard_data = NULL;
+      clipboard_len = 0;
+      return 1;
+    } else if (evt->type == SelectionRequest) {
+      XEvent reply;
+      reply.xselection.type = SelectionNotify;
+      reply.xselection.requestor = evt->xselectionrequest.requestor;
+      reply.xselection.selection = evt->xselectionrequest.selection;
+      reply.xselection.target = evt->xselectionrequest.target;
+      reply.xselection.property = None; /* Default refuse */
+      reply.xselection.time = evt->xselectionrequest.time;
+
+      if (reply.xselection.target == xa_targets)
+      {
+        Atom target_list[4];
+        target_list[0] = xa_targets;
+        target_list[1] = xa_text;
+        target_list[2] = xa_utf8_string;
+        target_list[3] = XA_STRING;
+
+        reply.xselection.property = evt->xselectionrequest.property;
+        XChangeProperty(
+            evt->xselection.display,
+            evt->xselectionrequest.requestor,
+            reply.xselection.property,
+            XA_ATOM, 32, PropModeReplace,
+            (unsigned char*)&target_list, 4);
+      }
+      else if (clipboard_data && (
+          reply.xselection.target == xa_text ||
+          reply.xselection.target == xa_utf8_string ||
+          reply.xselection.target == XA_STRING
+          ))
+      {
+        reply.xselection.property = evt->xselectionrequest.property;
+        XChangeProperty(
+            evt->xselection.display,
+            evt->xselectionrequest.requestor,
+            reply.xselection.property,
+            reply.xselection.target, 8, PropModeReplace,
+            (unsigned char*)clipboard_data, clipboard_len);
+      }
+
+      XSendEvent(evt->xselection.display, evt->xselectionrequest.requestor, True, 0, &reply);
+      XFlush(evt->xselection.display);
+      return 1;
+    } else if (evt->type == SelectionNotify && clipboard_target)
+    {
+      if ((evt->xselection.target == XA_STRING) ||
+          (evt->xselection.target == xa_utf8_string) ||
+          (evt->xselection.target == xa_text))
+      {
+        Atom actual_type;
+        int actual_format;
+        unsigned long pos = 0, length, remaining;
+        unsigned char* data = NULL;
+
+        do
+        {
+          XGetWindowProperty(dpy, win, XA_PRIMARY, pos, 1024, False,
+              AnyPropertyType, &actual_type, &actual_format, &length, &remaining, &data);
+
+          if (length && data)
+          {
+            nk_textedit_text(clipboard_target, (char*)data, length);
+          }
+          if (data != NULL)
+            XFree(data);
+          pos += (length * actual_format) / 32;
+        }
+        while (remaining != 0);
+      }
+      return 1;
     }
+
     return 0;
 }
 
