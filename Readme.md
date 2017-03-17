@@ -59,9 +59,9 @@ struct nk_context ctx;
 nk_init_fixed(&ctx, calloc(1, MAX_MEMORY), MAX_MEMORY, &font);
 
 enum {EASY, HARD};
-int op = EASY;
-float value = 0.6f;
-int i =  20;
+static int op = EASY;
+static float value = 0.6f;
+static int i =  20;
 
 if (nk_begin(&ctx, "Show", nk_rect(50, 50, 220, 220),
     NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_CLOSABLE)) {
