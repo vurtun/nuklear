@@ -1,5 +1,5 @@
 /*
- Nuklear - 1.33.0 - public domain
+ Nuklear - 1.34.3 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2017 by Micha Mettke
 
@@ -16633,6 +16633,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title, enum nk_panel_type pan
         label.y = header.y + style->window.header.label_padding.y;
         label.h = font->height + 2 * style->window.header.label_padding.y;
         label.w = t + 2 * style->window.header.spacing.x;
+        label.w = NK_MIN(label.w, header.x + header.w - label.x);
         nk_widget_text(out, label,(const char*)title, text_len, &text, NK_TEXT_LEFT, font);}
     }
 
