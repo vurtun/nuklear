@@ -1,7 +1,7 @@
 /*
  * Nuklear - v1.32.0 - public domain
  * no warrenty implied; use at your own risk.
- * authored from 2015-2016 by Micha Mettke
+ * authored from 2015-2017 by Micha Mettke
  */
 /*
  * ==============================================================
@@ -14,16 +14,20 @@
 #define NK_XLIB_H_
 
 #include <X11/Xlib.h>
-/* Font */
-typedef struct XFont XFont;
-NK_API XFont*               nk_xfont_create(Display *dpy, const char *name);
-NK_API void                 nk_xfont_del(Display *dpy, XFont *font);
 
-NK_API struct nk_context*   nk_xlib_init(XFont *font, Display *dpy, int screen, Window root, unsigned int w, unsigned int h);
-NK_API int                  nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt);
+typedef struct XFont XFont;
+NK_API struct nk_context*   nk_xlib_init(XFont*, Display*, int scrn, Window root, unsigned w, unsigned h);
+NK_API int                  nk_xlib_handle_event(Display*, int scrn, Window, XEvent*);
 NK_API void                 nk_xlib_render(Drawable screen, struct nk_color clear);
 NK_API void                 nk_xlib_shutdown(void);
-NK_API void                 nk_xlib_set_font(XFont *font);
+NK_API void                 nk_xlib_set_font(XFont*);
+NK_API void                 nk_xlib_push_font(XFont*);
+NK_API void                 nk_xlib_paste(nk_handle, struct nk_text_edit*);
+NK_API void                 nk_xlib_copy(nk_handle, const char*, int len);
+
+/* Font */
+NK_API XFont*               nk_xfont_create(Display *dpy, const char *name);
+NK_API void                 nk_xfont_del(Display *dpy, XFont *font);
 
 #endif
 /*
@@ -38,6 +42,7 @@ NK_API void                 nk_xlib_set_font(XFont *font);
 #include <X11/Xutil.h>
 #include <X11/Xresource.h>
 #include <X11/Xlocale.h>
+#include <X11/Xatom.h>
 
 typedef struct XSurface XSurface;
 struct XFont {
@@ -57,6 +62,15 @@ struct XSurface {
     unsigned int w, h;
 };
 static struct  {
+    char *clipboard_data;
+    int clipboard_len;
+    struct nk_text_edit* clipboard_target;
+
+    Atom xa_clipboard;
+    Atom xa_targets;
+    Atom xa_text;
+    Atom xa_utf8_string;
+
     struct nk_context ctx;
     struct XSurface *surf;
     Cursor cursor;
@@ -137,28 +151,26 @@ nk_xsurf_stroke_rect(XSurface* surf, short x, short y, unsigned short w,
     unsigned long c = nk_color_from_byte(&col.r);
     XSetForeground(surf->dpy, surf->gc, c);
     XSetLineAttributes(surf->dpy, surf->gc, line_thickness, LineSolid, CapButt, JoinMiter);
-    if (r == 0) {
-        XDrawRectangle(surf->dpy, surf->drawable, surf->gc, x, y, w, h);
-    } else {
-        short xc = x + r;
-        short yc = y + r;
-        short wc = (short)(w - 2 * r);
-        short hc = (short)(h - 2 * r);
+    if (r == 0) {XDrawRectangle(surf->dpy, surf->drawable, surf->gc, x, y, w, h);return;}
 
-        XDrawLine(surf->dpy, surf->drawable, surf->gc, xc, y, xc+wc, y);
-        XDrawLine(surf->dpy, surf->drawable, surf->gc, x+w, yc, x+w, yc+hc);
-        XDrawLine(surf->dpy, surf->drawable, surf->gc, xc, y+h, xc+wc, y+h);
-        XDrawLine(surf->dpy, surf->drawable, surf->gc, x, yc, x, yc+hc);
+    {short xc = x + r;
+    short yc = y + r;
+    short wc = (short)(w - 2 * r);
+    short hc = (short)(h - 2 * r);
 
-        XDrawArc(surf->dpy, surf->drawable, surf->gc, xc + wc - r, y,
-            (unsigned)r*2, (unsigned)r*2, 0 * 64, 90 * 64);
-        XDrawArc(surf->dpy, surf->drawable, surf->gc, x, y,
-            (unsigned)r*2, (unsigned)r*2, 90 * 64, 90 * 64);
-        XDrawArc(surf->dpy, surf->drawable, surf->gc, x, yc + hc - r,
-            (unsigned)r*2, (unsigned)2*r, 180 * 64, 90 * 64);
-        XDrawArc(surf->dpy, surf->drawable, surf->gc, xc + wc - r, yc + hc - r,
-            (unsigned)r*2, (unsigned)2*r, -90 * 64, 90 * 64);
-    }
+    XDrawLine(surf->dpy, surf->drawable, surf->gc, xc, y, xc+wc, y);
+    XDrawLine(surf->dpy, surf->drawable, surf->gc, x+w, yc, x+w, yc+hc);
+    XDrawLine(surf->dpy, surf->drawable, surf->gc, xc, y+h, xc+wc, y+h);
+    XDrawLine(surf->dpy, surf->drawable, surf->gc, x, yc, x, yc+hc);
+
+    XDrawArc(surf->dpy, surf->drawable, surf->gc, xc + wc - r, y,
+        (unsigned)r*2, (unsigned)r*2, 0 * 64, 90 * 64);
+    XDrawArc(surf->dpy, surf->drawable, surf->gc, x, y,
+        (unsigned)r*2, (unsigned)r*2, 90 * 64, 90 * 64);
+    XDrawArc(surf->dpy, surf->drawable, surf->gc, x, yc + hc - r,
+        (unsigned)r*2, (unsigned)2*r, 180 * 64, 90 * 64);
+    XDrawArc(surf->dpy, surf->drawable, surf->gc, xc + wc - r, yc + hc - r,
+        (unsigned)r*2, (unsigned)2*r, -90 * 64, 90 * 64);}
     XSetLineAttributes(surf->dpy, surf->gc, 1, LineSolid, CapButt, JoinMiter);
 }
 
@@ -168,53 +180,51 @@ nk_xsurf_fill_rect(XSurface* surf, short x, short y, unsigned short w,
 {
     unsigned long c = nk_color_from_byte(&col.r);
     XSetForeground(surf->dpy, surf->gc, c);
-    if (r == 0) {
-        XFillRectangle(surf->dpy, surf->drawable, surf->gc, x, y, w, h);
-    } else {
-        short xc = x + r;
-        short yc = y + r;
-        short wc = (short)(w - 2 * r);
-        short hc = (short)(h - 2 * r);
+    if (r == 0) {XFillRectangle(surf->dpy, surf->drawable, surf->gc, x, y, w, h); return;}
 
-        XPoint pnts[12];
-        pnts[0].x = x;
-        pnts[0].y = yc;
-        pnts[1].x = xc;
-        pnts[1].y = yc;
-        pnts[2].x = xc;
-        pnts[2].y = y;
+    {short xc = x + r;
+    short yc = y + r;
+    short wc = (short)(w - 2 * r);
+    short hc = (short)(h - 2 * r);
 
-        pnts[3].x = xc + wc;
-        pnts[3].y = y;
-        pnts[4].x = xc + wc;
-        pnts[4].y = yc;
-        pnts[5].x = x + w;
-        pnts[5].y = yc;
+    XPoint pnts[12];
+    pnts[0].x = x;
+    pnts[0].y = yc;
+    pnts[1].x = xc;
+    pnts[1].y = yc;
+    pnts[2].x = xc;
+    pnts[2].y = y;
 
-        pnts[6].x = x + w;
-        pnts[6].y = yc + hc;
-        pnts[7].x = xc + wc;
-        pnts[7].y = yc + hc;
-        pnts[8].x = xc + wc;
-        pnts[8].y = y + h;
+    pnts[3].x = xc + wc;
+    pnts[3].y = y;
+    pnts[4].x = xc + wc;
+    pnts[4].y = yc;
+    pnts[5].x = x + w;
+    pnts[5].y = yc;
 
-        pnts[9].x = xc;
-        pnts[9].y = y + h;
-        pnts[10].x = xc;
-        pnts[10].y = yc + hc;
-        pnts[11].x = x;
-        pnts[11].y = yc + hc;
+    pnts[6].x = x + w;
+    pnts[6].y = yc + hc;
+    pnts[7].x = xc + wc;
+    pnts[7].y = yc + hc;
+    pnts[8].x = xc + wc;
+    pnts[8].y = y + h;
 
-        XFillPolygon(surf->dpy, surf->drawable, surf->gc, pnts, 12, Convex, CoordModeOrigin);
-        XFillArc(surf->dpy, surf->drawable, surf->gc, xc + wc - r, y,
-            (unsigned)r*2, (unsigned)r*2, 0 * 64, 90 * 64);
-        XFillArc(surf->dpy, surf->drawable, surf->gc, x, y,
-            (unsigned)r*2, (unsigned)r*2, 90 * 64, 90 * 64);
-        XFillArc(surf->dpy, surf->drawable, surf->gc, x, yc + hc - r,
-            (unsigned)r*2, (unsigned)2*r, 180 * 64, 90 * 64);
-        XFillArc(surf->dpy, surf->drawable, surf->gc, xc + wc - r, yc + hc - r,
-            (unsigned)r*2, (unsigned)2*r, -90 * 64, 90 * 64);
-    }
+    pnts[9].x = xc;
+    pnts[9].y = y + h;
+    pnts[10].x = xc;
+    pnts[10].y = yc + hc;
+    pnts[11].x = x;
+    pnts[11].y = yc + hc;
+
+    XFillPolygon(surf->dpy, surf->drawable, surf->gc, pnts, 12, Convex, CoordModeOrigin);
+    XFillArc(surf->dpy, surf->drawable, surf->gc, xc + wc - r, y,
+        (unsigned)r*2, (unsigned)r*2, 0 * 64, 90 * 64);
+    XFillArc(surf->dpy, surf->drawable, surf->gc, x, y,
+        (unsigned)r*2, (unsigned)r*2, 90 * 64, 90 * 64);
+    XFillArc(surf->dpy, surf->drawable, surf->gc, x, yc + hc - r,
+        (unsigned)r*2, (unsigned)2*r, 180 * 64, 90 * 64);
+    XFillArc(surf->dpy, surf->drawable, surf->gc, xc + wc - r, yc + hc - r,
+        (unsigned)r*2, (unsigned)2*r, -90 * 64, 90 * 64);}
 }
 
 static void
@@ -252,7 +262,7 @@ nk_xsurf_fill_polygon(XSurface *surf,  const struct nk_vec2i *pnts, int count,
     struct nk_color col)
 {
     int i = 0;
-    #define MAX_POINTS 64
+    #define MAX_POINTS 128
     XPoint xpnts[MAX_POINTS];
     unsigned long c = nk_color_from_byte(&col.r);
     XSetForeground(surf->dpy, surf->gc, c);
@@ -357,8 +367,7 @@ nk_xsurf_draw_text(XSurface *surf, short x, short y, unsigned short w, unsigned 
     XSetForeground(surf->dpy, surf->gc, fg);
     if(font->set)
         XmbDrawString(surf->dpy,surf->drawable,font->set,surf->gc,tx,ty,(const char*)text,(int)len);
-    else
-        XDrawString(surf->dpy, surf->drawable, surf->gc, tx, ty, (const char*)text, (int)len);
+    else XDrawString(surf->dpy, surf->drawable, surf->gc, tx, ty, (const char*)text, (int)len);
 }
 
 static void
@@ -394,7 +403,6 @@ nk_xfont_create(Display *dpy, const char *name)
             fprintf(stderr, "missing fontset: %s\n", missing[n]);
         XFreeStringList(missing);
     }
-
     if(font->set) {
         XFontStruct **xfonts;
         char **font_names;
@@ -461,6 +469,11 @@ nk_xlib_init(XFont *xfont, Display *dpy, int screen, Window root,
     if (!XSupportsLocale()) return 0;
     if (!XSetLocaleModifiers("@im=none")) return 0;
 
+    xlib.xa_clipboard = XInternAtom(dpy, "CLIPBOARD", False);
+    xlib.xa_targets = XInternAtom(dpy, "TARGETS", False);
+    xlib.xa_text = XInternAtom(dpy, "TEXT", False);
+    xlib.xa_utf8_string = XInternAtom(dpy, "UTF8_STRING", False);
+
     /* create invisible cursor */
     {static XColor dummy; char data[1] = {0};
     Pixmap blank = XCreateBitmapFromData(dpy, root, data, 1, 1);
@@ -481,6 +494,42 @@ nk_xlib_set_font(XFont *xfont)
     font->height = (float)xfont->height;
     font->width = nk_xfont_get_text_width;
     nk_style_set_font(&xlib.ctx, font);
+}
+
+NK_API void
+nk_xlib_push_font(XFont *xfont)
+{
+    struct nk_user_font *font = &xfont->handle;
+    font->userdata = nk_handle_ptr(xfont);
+    font->height = (float)xfont->height;
+    font->width = nk_xfont_get_text_width;
+    nk_style_push_font(&xlib.ctx, font);
+}
+
+NK_API void
+nk_xlib_paste(nk_handle handle, struct nk_text_edit* edit)
+{
+    NK_UNUSED(handle);
+    /* Paste in X is asynchronous, so can not use a temporary text edit */
+    NK_ASSERT(edit != &xlib.ctx.text_edit && "Paste not supported for temporary editors");
+    xlib.clipboard_target = edit;
+    /* Request the contents of the primary buffer */
+    XConvertSelection(xlib.dpy, XA_PRIMARY, XA_STRING, XA_PRIMARY, xlib.root, CurrentTime);
+}
+
+NK_API void
+nk_xlib_copy(nk_handle handle, const char* str, int len)
+{
+    NK_UNUSED(handle);
+    free(xlib.clipboard_data);
+    xlib.clipboard_len = 0;
+    xlib.clipboard_data = malloc((size_t)len);
+    if (xlib.clipboard_data) {
+        memcpy(xlib.clipboard_data, str, (size_t)len);
+        xlib.clipboard_len = len;
+        XSetSelectionOwner(xlib.dpy, XA_PRIMARY, xlib.root, CurrentTime);
+        XSetSelectionOwner(xlib.dpy, xlib.xa_clipboard, xlib.root, CurrentTime);
+    }
 }
 
 NK_API int
@@ -594,6 +643,60 @@ nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt)
     } else if (evt->type == KeymapNotify) {
         XRefreshKeyboardMapping(&evt->xmapping);
         return 1;
+    } else if (evt->type == SelectionClear) {
+        free(xlib.clipboard_data);
+        xlib.clipboard_data = NULL;
+        xlib.clipboard_len = 0;
+        return 1;
+    } else if (evt->type == SelectionRequest) {
+        XEvent reply;
+        reply.xselection.type = SelectionNotify;
+        reply.xselection.requestor = evt->xselectionrequest.requestor;
+        reply.xselection.selection = evt->xselectionrequest.selection;
+        reply.xselection.target = evt->xselectionrequest.target;
+        reply.xselection.property = None; /* Default refuse */
+        reply.xselection.time = evt->xselectionrequest.time;
+
+        if (reply.xselection.target == xlib.xa_targets) {
+            Atom target_list[4];
+            target_list[0] = xlib.xa_targets;
+            target_list[1] = xlib.xa_text;
+            target_list[2] = xlib.xa_utf8_string;
+            target_list[3] = XA_STRING;
+
+            reply.xselection.property = evt->xselectionrequest.property;
+            XChangeProperty(evt->xselection.display,evt->xselectionrequest.requestor,
+                reply.xselection.property, XA_ATOM, 32, PropModeReplace,
+                (unsigned char*)&target_list, 4);
+        } else if (xlib.clipboard_data && (reply.xselection.target == xlib.xa_text ||
+            reply.xselection.target == xlib.xa_utf8_string || reply.xselection.target == XA_STRING)) {
+            reply.xselection.property = evt->xselectionrequest.property;
+            XChangeProperty(evt->xselection.display,evt->xselectionrequest.requestor,
+                reply.xselection.property, reply.xselection.target, 8, PropModeReplace,
+                (unsigned char*)xlib.clipboard_data, xlib.clipboard_len);
+        }
+        XSendEvent(evt->xselection.display, evt->xselectionrequest.requestor, True, 0, &reply);
+        XFlush(evt->xselection.display);
+        return 1;
+    } else if (evt->type == SelectionNotify && xlib.clipboard_target) {
+        if ((evt->xselection.target != XA_STRING) &&
+            (evt->xselection.target != xlib.xa_utf8_string) &&
+            (evt->xselection.target != xlib.xa_text))
+            return 1;
+
+        {Atom actual_type;
+        int actual_format;
+        unsigned long pos = 0, len, remain;
+        unsigned char* data = 0;
+        do {
+            XGetWindowProperty(dpy, win, XA_PRIMARY, (int)pos, 1024, False,
+                AnyPropertyType, &actual_type, &actual_format, &len, &remain, &data);
+            if (len && data)
+                nk_textedit_text(xlib.clipboard_target, (char*)data, (int)len);
+            if (data != 0) XFree(data);
+            pos += (len * (unsigned long)actual_format) / 32;
+        } while (remain != 0);}
+        return 1;
     }
     return 0;
 }
@@ -684,6 +787,7 @@ nk_xlib_render(Drawable screen, struct nk_color clear)
         case NK_COMMAND_IMAGE:
         case NK_COMMAND_ARC:
         case NK_COMMAND_ARC_FILLED:
+        case NK_COMMAND_CUSTOM:
         default: break;
         }
     }
@@ -691,3 +795,4 @@ nk_xlib_render(Drawable screen, struct nk_color clear)
     nk_xsurf_blit(screen, surf, surf->w, surf->h);
 }
 #endif
+
