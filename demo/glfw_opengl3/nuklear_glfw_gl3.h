@@ -78,7 +78,7 @@ static struct nk_glfw {
     struct nk_vec2 fb_scale;
     unsigned int text[NK_GLFW_TEXT_MAX];
     int text_len;
-    float scroll;
+    struct nk_vec2 scroll;
 } glfw;
 
 #ifdef __APPLE__
@@ -308,7 +308,8 @@ NK_API void
 nk_gflw3_scroll_callback(GLFWwindow *win, double xoff, double yoff)
 {
     (void)win; (void)xoff;
-    glfw.scroll += (float)yoff;
+    glfw.scroll.x += (float)xoff;
+    glfw.scroll.y += (float)yoff;
 }
 
 NK_INTERN void
@@ -441,7 +442,7 @@ nk_glfw3_new_frame(void)
     nk_input_scroll(ctx, glfw.scroll);
     nk_input_end(&glfw.ctx);
     glfw.text_len = 0;
-    glfw.scroll = 0;
+    glfw.scroll = nk_vec2(0,0);
 }
 
 NK_API

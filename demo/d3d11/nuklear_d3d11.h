@@ -341,7 +341,7 @@ nk_d3d11_handle_event(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
         return 1;
 
     case WM_MOUSEWHEEL:
-        nk_input_scroll(&d3d11.ctx, (float)(short)HIWORD(wparam) / WHEEL_DELTA);
+        nk_input_scroll(&d3d11.ctx, nk_vec2(0,(float)(short)HIWORD(wparam) / WHEEL_DELTA));
         return 1;
 
     case WM_MOUSEMOVE:

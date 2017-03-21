@@ -332,7 +332,7 @@ nk_sfml_handle_event(sf::Event* evt)
         nk_input_unicode(ctx, evt->text.unicode);
         return 1;
     } else if(evt->type == sf::Event::MouseWheelScrolled) {
-        nk_input_scroll(ctx, evt->mouseWheelScroll.delta);
+        nk_input_scroll(ctx, nk_vec2(0,evt->mouseWheelScroll.delta));
         return 1;
     }
     return 0;
