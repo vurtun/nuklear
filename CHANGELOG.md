@@ -11,6 +11,7 @@
 
 Changes:
 --------
+- 2017/03/18 (1.35.0) - Added horizontal scroll requested in #377
 - 2017/03/18 (1.34.3) - Fixed long window header titles
 - 2017/03/04 (1.34.2) - Fixed text edit filtering
 - 2017/03/04 (1.34.1) - Fixed group closable flag
