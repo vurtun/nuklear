@@ -2845,7 +2845,7 @@ struct nk_window {
  *      nk_style_pop_style_item(ctx);
  *      nk_style_pop_vec2(ctx);
  *
- * Nuklear has a stack for style_items, float properties, vector properties, 
+ * Nuklear has a stack for style_items, float properties, vector properties,
  * flags, colors, fonts and for button_behavior. Each has it's own fixed size stack
  * which can be changed at compile time.
  */
@@ -10158,8 +10158,8 @@ nk_font_bake_pack(struct nk_font_baker *baker,
         int rect_n = 0;
         int char_n = 0;
 
-        /* pack custom user data first so it will be in the upper left corner*/
         if (custom) {
+            /* pack custom user data first so it will be in the upper left corner*/
             struct nk_rp_rect custom_space;
             nk_zero(&custom_space, sizeof(custom_space));
             custom_space.w = (nk_rp_coord)((custom->w * 2) + 1);
@@ -14583,7 +14583,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
             const char *begin = nk_str_get_const(&edit->string);
             int l = nk_str_len_char(&edit->string);
             nk_edit_draw_text(out, style, area.x - edit->scrollbar.x,
-                area.y - edit->scrollbar.y, 0, begin, l, row_height, font, 
+                area.y - edit->scrollbar.y, 0, begin, l, row_height, font,
                 background_color, text_color, nk_false);
         } else {
             /* edit has selection so draw 1-3 text chunks */
@@ -15923,7 +15923,7 @@ nk_style_load_all_cursors(struct nk_context *ctx, struct nk_cursor *cursors)
  * ===============================================================*/
 NK_INTERN void
 nk_pool_init(struct nk_pool *pool, struct nk_allocator *alloc,
-            unsigned int capacity)
+    unsigned int capacity)
 {
     nk_zero(pool, sizeof(*pool));
     pool->alloc = *alloc;
@@ -15935,12 +15935,11 @@ nk_pool_init(struct nk_pool *pool, struct nk_allocator *alloc,
 NK_INTERN void
 nk_pool_free(struct nk_pool *pool)
 {
-    struct nk_page *next;
     struct nk_page *iter = pool->pages;
     if (!pool) return;
     if (pool->type == NK_BUFFER_FIXED) return;
     while (iter) {
-        next = iter->next;
+        struct nk_page *next = iter->next;
         pool->alloc.free(pool->alloc.userdata, iter);
         iter = next;
     }
@@ -16284,7 +16283,6 @@ NK_INTERN void
 nk_build(struct nk_context *ctx)
 {
     struct nk_window *iter;
-    struct nk_window *next;
     struct nk_command *cmd;
     nk_byte *buffer;
 
@@ -16310,7 +16308,7 @@ nk_build(struct nk_context *ctx)
     iter = ctx->begin;
     buffer = (nk_byte*)ctx->memory.memory.ptr;
     while (iter != 0) {
-        next = iter->next;
+        struct nk_window *next = iter->next;
         if (iter->buffer.last == iter->buffer.begin || (iter->flags & NK_WINDOW_HIDDEN)) {
             iter = next;
             continue;
@@ -16374,7 +16372,6 @@ nk__next(struct nk_context *ctx, const struct nk_command *cmd)
 static int
 nk_panel_has_header(nk_flags flags, const char *title)
 {
-    /* window header state */
     int active = 0;
     active = (flags & (NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE));
     active = active || (flags & NK_WINDOW_TITLE);
@@ -16459,7 +16456,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title, enum nk_panel_type pan
     NK_ASSERT(ctx->current->layout);
     if (!ctx || !ctx->current || !ctx->current->layout) return 0;
     nk_zero(ctx->current->layout, sizeof(*ctx->current->layout));
-    if (ctx->current->flags & NK_WINDOW_HIDDEN)
+    if (ctx->current->flags & NK_WINDOW_HIDDEN || ctx->current->flags & NK_WINDOW_CLOSED)
         return 0;
 
     /* pull state into local stack */
@@ -16598,7 +16595,6 @@ nk_panel_begin(struct nk_context *ctx, const char *title, enum nk_panel_type pan
                 &style->window.header.close_button, in, style->font) && !(win->flags & NK_WINDOW_ROM))
             {
                 layout->flags |= NK_WINDOW_HIDDEN;
-                layout->flags |= NK_WINDOW_CLOSED;
                 layout->flags &= (nk_flags)~NK_WINDOW_MINIMIZED;
             }
         }
@@ -16636,7 +16632,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title, enum nk_panel_type pan
         label.y = header.y + style->window.header.label_padding.y;
         label.h = font->height + 2 * style->window.header.label_padding.y;
         label.w = t + 2 * style->window.header.spacing.x;
-        label.w = NK_MIN(label.w, header.x + header.w - label.x);
+        label.w = NK_CLAMP(0, label.w, header.x + header.w - label.x);
         nk_widget_text(out, label,(const char*)title, text_len, &text, NK_TEXT_LEFT, font);}
     }
 
@@ -20921,7 +20917,7 @@ nk_nonblock_begin(struct nk_context *ctx,
     win = ctx->current;
     panel = win->layout;
     NK_ASSERT(!(panel->type & NK_PANEL_SET_POPUP));
-    (void)panel; 
+    (void)panel;
     popup = win->popup.win;
     if (!popup) {
         /* create window for nonblocking popup */
@@ -20943,8 +20939,7 @@ nk_nonblock_begin(struct nk_context *ctx,
 
     if (!is_active) {
         /* remove read only mode from all parent panels */
-        struct nk_panel *root;
-        root = win->layout;
+        struct nk_panel *root = win->layout;
         while (root) {
             root->flags |= NK_WINDOW_REMOVE_ROM;
             root = root->parent;
