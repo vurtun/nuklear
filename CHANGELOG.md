@@ -11,7 +11,8 @@
 
 Changes:
 --------
-- 2017/03/18 (1.35.1) - Fixed windows closing behavior
+- 2017/03/25 (1.35.2) - Fixed popup overlapping for `NK_WINDOW_BACKGROUND` windows
+- 2017/03/25 (1.35.1) - Fixed windows closing behavior
 - 2017/03/18 (1.35.0) - Added horizontal scroll requested in #377
 - 2017/03/18 (1.34.3) - Fixed long window header titles
 - 2017/03/04 (1.34.2) - Fixed text edit filtering

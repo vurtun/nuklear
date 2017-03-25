@@ -2732,7 +2732,6 @@ struct nk_panel {
     struct nk_menu_state menu;
     struct nk_row_layout row;
     struct nk_chart chart;
-    struct nk_popup_buffer popup_buffer;
     struct nk_command_buffer *buffer;
     struct nk_panel *parent;
 };
@@ -2764,6 +2763,7 @@ enum nk_window_flags {
 struct nk_popup_state {
     struct nk_window *win;
     enum nk_panel_type type;
+    struct nk_popup_buffer buf;
     nk_hash name;
     int active;
     unsigned combo_count;
@@ -16199,18 +16199,12 @@ NK_INTERN void
 nk_start_popup(struct nk_context *ctx, struct nk_window *win)
 {
     struct nk_popup_buffer *buf;
-    struct nk_panel *iter;
     NK_ASSERT(ctx);
     NK_ASSERT(win);
     if (!ctx || !win) return;
 
-    /* make sure to use the correct popup buffer*/
-    iter = win->layout;
-    while (iter->parent)
-        iter = iter->parent;
-
     /* save buffer fill state for popup */
-    buf = &iter->popup_buffer;
+    buf = &win->popup.buf;
     buf->begin = win->buffer.end;
     buf->end = win->buffer.end;
     buf->parent = win->buffer.last;
@@ -16222,17 +16216,11 @@ NK_INTERN void
 nk_finish_popup(struct nk_context *ctx, struct nk_window *win)
 {
     struct nk_popup_buffer *buf;
-    struct nk_panel *iter;
     NK_ASSERT(ctx);
     NK_ASSERT(win);
     if (!ctx || !win) return;
 
-    /* make sure to use the correct popup buffer*/
-    iter = win->layout;
-    while (iter->parent)
-        iter = iter->parent;
-
-    buf = &iter->popup_buffer;
+    buf = &win->popup.buf;
     buf->last = win->buffer.last;
     buf->end = win->buffer.end;
 }
@@ -16259,32 +16247,20 @@ nk_finish(struct nk_context *ctx, struct nk_window *win)
     NK_ASSERT(win);
     if (!ctx || !win) return;
     nk_finish_buffer(ctx, &win->buffer);
-    if (!win->layout->popup_buffer.active) return;
+    if (!win->popup.buf.active) return;
 
-    /* from here on is for popup window buffer handling */
-    /*--------------------------------------------------*/
-    buf = &win->layout->popup_buffer;
+    buf = &win->popup.buf;
     memory = ctx->memory.memory.ptr;
-
-    /* redirect the sub-window buffer to the end of the window command buffer */
     parent_last = nk_ptr_add(struct nk_command, memory, buf->parent);
-    sublast = nk_ptr_add(struct nk_command, memory, buf->last);
-    last = nk_ptr_add(struct nk_command, memory, win->buffer.last);
-
     parent_last->next = buf->end;
-    sublast->next = last->next;
-    last->next = buf->begin;
-    win->buffer.last = buf->last;
-    win->buffer.end = buf->end;
-    buf->active = nk_false;
 }
 
 NK_INTERN void
 nk_build(struct nk_context *ctx)
 {
-    struct nk_window *iter;
-    struct nk_command *cmd;
-    nk_byte *buffer;
+    struct nk_window *iter = 0;
+    struct nk_command *cmd = 0;
+    nk_byte *buffer = 0;
 
     /* draw cursor overlay */
     if (!ctx->style.cursor_active)
@@ -16303,29 +16279,41 @@ nk_build(struct nk_context *ctx)
         nk_draw_image(&ctx->overlay, mouse_bounds, &cursor->img, nk_white);
         nk_finish_buffer(ctx, &ctx->overlay);
     }
-
-    /* build one big draw command list out of all buffers */
+    /* build one big draw command list out of all window buffers */
     iter = ctx->begin;
     buffer = (nk_byte*)ctx->memory.memory.ptr;
     while (iter != 0) {
         struct nk_window *next = iter->next;
-        if (iter->buffer.last == iter->buffer.begin || (iter->flags & NK_WINDOW_HIDDEN)) {
-            iter = next;
-            continue;
-        }
+        if (iter->buffer.last == iter->buffer.begin || (iter->flags & NK_WINDOW_HIDDEN))
+            goto cont;
+
         cmd = nk_ptr_add(struct nk_command, buffer, iter->buffer.last);
         while (next && ((next->buffer.last == next->buffer.begin) ||
             (next->flags & NK_WINDOW_HIDDEN)))
             next = next->next; /* skip empty command buffers */
 
-        if (next) {
-            cmd->next = next->buffer.begin;
-        } else {
-            if (ctx->overlay.end != ctx->overlay.begin)
-                cmd->next = ctx->overlay.begin;
-            else cmd->next = ctx->memory.allocated;
-        }
-        iter = next;
+        if (next) cmd->next = next->buffer.begin;
+        cont: iter = next;
+    }
+    /* append all popup draw commands into lists */
+    iter = ctx->begin;
+    while (iter != 0) {
+        struct nk_window *next = iter->next;
+        struct nk_popup_buffer *buf;
+        if (!iter->popup.buf.active)
+            goto skip;
+
+        buf = &iter->popup.buf;
+        cmd->next = buf->begin;
+        cmd = nk_ptr_add(struct nk_command, buffer, buf->last);
+        buf->active = nk_false;
+        skip: iter = next;
+    }
+    /* append overlay commands */
+    if (cmd) {
+        if (ctx->overlay.end != ctx->overlay.begin)
+            cmd->next = ctx->overlay.begin;
+        else cmd->next = ctx->memory.allocated;
     }
 }
 
@@ -20887,7 +20875,7 @@ nk_popup_begin(struct nk_context *ctx, enum nk_popup_type type,
             root->flags |= NK_WINDOW_REMOVE_ROM;
             root = root->parent;
         }
-        win->layout->popup_buffer.active = 0;
+        win->popup.buf.active = 0;
         win->popup.active = 0;
         ctx->memory.allocated = allocated;
         ctx->current = win;
