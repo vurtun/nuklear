@@ -292,7 +292,7 @@ static void
 nk_sfml_clipboard_paste(nk_handle usr, struct nk_text_edit* edit)
 {
 #if 0
-    /* Not Implemented in SFML
+    /* Not Implemented in SFML */
     (void)usr;
     sf::Clipboard clipboard(sfml.window);
     const char* text = clipboard.getText();
