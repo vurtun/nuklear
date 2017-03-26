@@ -16239,8 +16239,6 @@ nk_finish(struct nk_context *ctx, struct nk_window *win)
 {
     struct nk_popup_buffer *buf;
     struct nk_command *parent_last;
-    struct nk_command *sublast;
-    struct nk_command *last;
     void *memory;
 
     NK_ASSERT(ctx);
