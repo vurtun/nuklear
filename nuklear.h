@@ -13760,7 +13760,7 @@ nk_scrollbar_behavior(nk_flags *state, struct nk_input *in,
     const struct nk_rect *empty1, float scroll_offset,
     float target, float scroll_step, enum nk_orientation o)
 {
-    nk_flags ws;
+    nk_flags ws = 0;
     int left_mouse_down;
     int left_mouse_click_in_cursor;
     float scroll_delta;
