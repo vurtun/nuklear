@@ -16798,7 +16798,6 @@ nk_panel_end(struct nk_context *ctx)
             scroll_target = (float)(int)(layout->max_x - scroll.x);
             scroll_step = layout->max_x * 0.05f;
             scroll_inc = layout->max_x * 0.005f;
-            scroll_has_scrolling = scroll_has_scrolling;
             scroll_offset = nk_do_scrollbarh(&state, out, scroll, scroll_has_scrolling,
                 scroll_offset, scroll_target, scroll_step, scroll_inc,
                 &ctx->style.scrollh, in, style->font);
