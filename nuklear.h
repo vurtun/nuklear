@@ -16444,8 +16444,11 @@ nk_panel_begin(struct nk_context *ctx, const char *title, enum nk_panel_type pan
     NK_ASSERT(ctx->current->layout);
     if (!ctx || !ctx->current || !ctx->current->layout) return 0;
     nk_zero(ctx->current->layout, sizeof(*ctx->current->layout));
-    if (ctx->current->flags & NK_WINDOW_HIDDEN || ctx->current->flags & NK_WINDOW_CLOSED)
+    if ((ctx->current->flags & NK_WINDOW_HIDDEN) || (ctx->current->flags & NK_WINDOW_CLOSED)) {
+        nk_zero(ctx->current->layout, sizeof(struct nk_panel));
+        ctx->current->layout->type = panel_type;
         return 0;
+    }
 
     /* pull state into local stack */
     style = &ctx->style;
@@ -17337,6 +17340,7 @@ nk_begin_titled(struct nk_context *ctx, const char *name, const char *title,
     }
     if (win->flags & NK_WINDOW_HIDDEN) {
         ctx->current = win;
+        win->layout = 0;
         return 0;
     }
 
@@ -17422,11 +17426,11 @@ nk_end(struct nk_context *ctx)
     struct nk_panel *layout;
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current && "if this triggers you forgot to call `nk_begin`");
-    NK_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current)
+        return;
 
     layout = ctx->current->layout;
-    if (!ctx || !ctx->current) return;
-    if (layout->type == NK_PANEL_WINDOW && (ctx->current->flags & NK_WINDOW_HIDDEN)) {
+    if (!layout || layout->type == NK_PANEL_WINDOW && (ctx->current->flags & NK_WINDOW_HIDDEN)) {
         ctx->current = 0;
         return;
     }
