@@ -734,7 +734,7 @@ static void error_callback(int e, const char *d){printf("Error %d: %s\n", e, d);
 static void text_input(GLFWwindow *win, unsigned int codepoint)
 {nk_input_unicode((struct nk_context*)glfwGetWindowUserPointer(win), codepoint);}
 static void scroll_input(GLFWwindow *win, double _, double yoff)
-{UNUSED(_);nk_input_scroll((struct nk_context*)glfwGetWindowUserPointer(win), (float)yoff);}
+{UNUSED(_);nk_input_scroll((struct nk_context*)glfwGetWindowUserPointer(win), nk_vec2(0, (float)yoff));}
 
 int main(int argc, char *argv[])
 {

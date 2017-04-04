@@ -13760,7 +13760,7 @@ nk_scrollbar_behavior(nk_flags *state, struct nk_input *in,
     const struct nk_rect *empty1, float scroll_offset,
     float target, float scroll_step, enum nk_orientation o)
 {
-    nk_flags ws;
+    nk_flags ws = 0;
     int left_mouse_down;
     int left_mouse_click_in_cursor;
     float scroll_delta;
@@ -16239,8 +16239,6 @@ nk_finish(struct nk_context *ctx, struct nk_window *win)
 {
     struct nk_popup_buffer *buf;
     struct nk_command *parent_last;
-    struct nk_command *sublast;
-    struct nk_command *last;
     void *memory;
 
     NK_ASSERT(ctx);
@@ -16803,7 +16801,6 @@ nk_panel_end(struct nk_context *ctx)
             scroll_target = (float)(int)(layout->max_x - scroll.x);
             scroll_step = layout->max_x * 0.05f;
             scroll_inc = layout->max_x * 0.005f;
-            scroll_has_scrolling = scroll_has_scrolling;
             scroll_offset = nk_do_scrollbarh(&state, out, scroll, scroll_has_scrolling,
                 scroll_offset, scroll_target, scroll_step, scroll_inc,
                 &ctx->style.scrollh, in, style->font);
