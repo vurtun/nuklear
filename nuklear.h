@@ -17427,7 +17427,7 @@ nk_end(struct nk_context *ctx)
         return;
 
     layout = ctx->current->layout;
-    if (!layout || layout->type == NK_PANEL_WINDOW && (ctx->current->flags & NK_WINDOW_HIDDEN)) {
+    if (!layout || (layout->type == NK_PANEL_WINDOW && (ctx->current->flags & NK_WINDOW_HIDDEN))) {
         ctx->current = 0;
         return;
     }
