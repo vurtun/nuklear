@@ -179,7 +179,7 @@ main(void)
             nk_property_int(ctx, "Compression:", 0, &property, 100, 10, 1);
         }
         nk_end(ctx);
-        if (nk_window_is_closed(ctx, "Demo")) break;
+        if (nk_window_is_hidden(ctx, "Demo")) break;
 
         /* -------------- EXAMPLES ---------------- */
         /*calculator(ctx);*/

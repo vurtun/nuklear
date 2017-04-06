@@ -241,7 +241,6 @@ int main(void)
             }
         }
         nk_end(ctx);
-        if (nk_window_is_closed(ctx, "Demo")) break;
 
         /* -------------- EXAMPLES ---------------- */
         /*calculator(ctx);*/
