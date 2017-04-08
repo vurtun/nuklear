@@ -490,6 +490,13 @@ struct nk_allocator {
     nk_plugin_free free;
 };
 
+enum nk_convert_result {
+    NK_CONVERT_SUCCESS = 0,
+    NK_CONVERT_INVALID_PARAM = 0,
+    NK_CONVERT_COMMAND_BUFFER_FULL = NK_FLAG(0),
+    NK_CONVERT_VERTEX_BUFFER_FULL = NK_FLAG(1),
+    NK_CONVERT_ELEMENT_BUFFER_FULL = NK_FLAG(2)
+};
 struct nk_draw_null_texture {
     nk_handle texture;/* texture handle to a texture with a white pixel */
     struct nk_vec2 uv; /* coordinates to a white pixel in the texture  */
@@ -990,7 +997,7 @@ NK_API void                     nk_menu_end(struct nk_context*);
 /* Drawing*/
 #define                                 nk_foreach(c, ctx) for((c)=nk__begin(ctx); (c)!=0; (c)=nk__next(ctx, c))
 #ifdef NK_INCLUDE_VERTEX_BUFFER_OUTPUT
-NK_API void                             nk_convert(struct nk_context*, struct nk_buffer *cmds, struct nk_buffer *vertices, struct nk_buffer *elements, const struct nk_convert_config*);
+NK_API nk_flags                         nk_convert(struct nk_context*, struct nk_buffer *cmds, struct nk_buffer *vertices, struct nk_buffer *elements, const struct nk_convert_config*);
 #define                                 nk_draw_foreach(cmd,ctx, b) for((cmd)=nk__draw_begin(ctx, b); (cmd)!=0; (cmd)=nk__draw_next(cmd, b, ctx))
 #define                                 nk_draw_foreach_bounded(cmd,from,to) for((cmd)=(from); (cmd) && (to) && (cmd)>=to; --(cmd))
 NK_API const struct nk_draw_command*    nk__draw_begin(const struct nk_context*, const struct nk_buffer*);
@@ -7730,11 +7737,12 @@ nk_draw_list_add_text(struct nk_draw_list *list, const struct nk_user_font *font
     }
 }
 
-NK_API void
+NK_API nk_flags
 nk_convert(struct nk_context *ctx, struct nk_buffer *cmds,
     struct nk_buffer *vertices, struct nk_buffer *elements,
     const struct nk_convert_config *config)
 {
+    nk_flags res = NK_CONVERT_SUCCESS;
     const struct nk_command *cmd;
     NK_ASSERT(ctx);
     NK_ASSERT(cmds);
@@ -7744,7 +7752,7 @@ nk_convert(struct nk_context *ctx, struct nk_buffer *cmds,
     NK_ASSERT(config->vertex_layout);
     NK_ASSERT(config->vertex_size);
     if (!ctx || !cmds || !vertices || !elements || !config || !config->vertex_layout)
-        return;
+        return NK_CONVERT_INVALID_PARAM;
 
     nk_draw_list_setup(&ctx->draw_list, config, cmds, vertices, elements);
     nk_foreach(cmd, ctx)
@@ -7865,8 +7873,11 @@ nk_convert(struct nk_context *ctx, struct nk_buffer *cmds,
         default: break;
         }
     }
+    res |= (cmds->needed > cmds->allocated) ? NK_CONVERT_COMMAND_BUFFER_FULL: 0;
+    res |= (vertices->needed > vertices->allocated) ? NK_CONVERT_VERTEX_BUFFER_FULL: 0;
+    res |= (elements->needed > elements->allocated) ? NK_CONVERT_ELEMENT_BUFFER_FULL: 0;
+    return res;
 }
-
 NK_API const struct nk_draw_command*
 nk__draw_begin(const struct nk_context *ctx,
     const struct nk_buffer *buffer)
