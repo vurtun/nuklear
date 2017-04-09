@@ -11,6 +11,7 @@
 
 Changes:
 --------
+- 2017/04/09 (1.35.3) - Fixed buffer heap corruption
 - 2017/03/25 (1.35.2) - Fixed popup overlapping for `NK_WINDOW_BACKGROUND` windows
 - 2017/03/25 (1.35.1) - Fixed windows closing behavior
 - 2017/03/18 (1.35.0) - Added horizontal scroll requested in #377

@@ -5468,7 +5468,7 @@ nk_buffer_alloc(struct nk_buffer *b, enum nk_buffer_allocation_type type,
     /* check if buffer has enough memory*/
     if (type == NK_BUFFER_FRONT)
         full = ((b->allocated + size + alignment) > b->size);
-    else full = ((b->size - (size + alignment)) <= b->allocated);
+    else full = ((b->size - NK_MIN(b->size,(size + alignment))) <= b->allocated);
 
     if (full) {
         nk_size capacity;
