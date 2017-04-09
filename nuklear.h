@@ -702,7 +702,8 @@ enum nk_panel_flags {
     NK_WINDOW_TITLE             = NK_FLAG(6), /* Forces a header at the top at the window showing the title */
     NK_WINDOW_SCROLL_AUTO_HIDE  = NK_FLAG(7), /* Automatically hides the window scrollbar if no user interaction: also requires delta time in `nk_context` to be set each frame */
     NK_WINDOW_BACKGROUND        = NK_FLAG(8), /* Always keep window in the background */
-    NK_WINDOW_SCALE_LEFT        = NK_FLAG(9) /* Puts window scaler in the left-ottom corner instead right-bottom*/
+    NK_WINDOW_SCALE_LEFT        = NK_FLAG(9), /* Puts window scaler in the left-ottom corner instead right-bottom*/
+    NK_WINDOW_NO_INPUT          = NK_FLAG(10) /* Prevents window of scaling, moving or getting focus */
 };
 
 /* context */
@@ -2752,19 +2753,21 @@ struct nk_panel {
 
 struct nk_table;
 enum nk_window_flags {
-    NK_WINDOW_PRIVATE       = NK_FLAG(10),
+    NK_WINDOW_PRIVATE       = NK_FLAG(11),
     NK_WINDOW_DYNAMIC       = NK_WINDOW_PRIVATE,
     /* special window type growing up in height while being filled to a certain maximum height */
-    NK_WINDOW_ROM           = NK_FLAG(11),
-    /* sets the window into a read only mode and does not allow input changes */
-    NK_WINDOW_HIDDEN        = NK_FLAG(12),
-    /* Hides the window and stops any window interaction and drawing */
-    NK_WINDOW_CLOSED        = NK_FLAG(13),
+    NK_WINDOW_ROM           = NK_FLAG(12),
+    /* sets window widgets into a read only mode and does not allow input changes */
+    NK_WINDOW_NOT_INTERACTIVE = NK_WINDOW_ROM|NK_WINDOW_NO_INPUT,
+    /* prevents all interaction caused by input to either window or widgets inside */
+    NK_WINDOW_HIDDEN        = NK_FLAG(13),
+    /* Hides window and stops any window interaction and drawing */
+    NK_WINDOW_CLOSED        = NK_FLAG(14),
     /* Directly closes and frees the window at the end of the frame */
-    NK_WINDOW_MINIMIZED     = NK_FLAG(14),
+    NK_WINDOW_MINIMIZED     = NK_FLAG(15),
     /* marks the window as minimized */
-    NK_WINDOW_REMOVE_ROM    = NK_FLAG(15)
-    /* Removes the read only mode at the end of the window */
+    NK_WINDOW_REMOVE_ROM    = NK_FLAG(16)
+    /* Removes read only mode at the end of the window */
 };
 
 struct nk_popup_state {
@@ -16458,18 +16461,16 @@ nk_panel_begin(struct nk_context *ctx, const char *title, enum nk_panel_type pan
         ctx->current->layout->type = panel_type;
         return 0;
     }
-
     /* pull state into local stack */
     style = &ctx->style;
     font = style->font;
-    in = &ctx->input;
     win = ctx->current;
     layout = win->layout;
     out = &win->buffer;
+    in = (win->flags & NK_WINDOW_NO_INPUT) ? 0: &ctx->input;
 #ifdef NK_INCLUDE_COMMAND_USERDATA
     win->buffer.userdata = ctx->userdata;
 #endif
-
     /* pull style configuration into local stack */
     scrollbar_size = style->window.scrollbar_size;
     panel_padding = nk_panel_get_padding(style, panel_type);
@@ -16680,7 +16681,7 @@ nk_panel_end(struct nk_context *ctx)
     layout = window->layout;
     style = &ctx->style;
     out = &window->buffer;
-    in = (layout->flags & NK_WINDOW_ROM) ? 0 :&ctx->input;
+    in = (layout->flags & NK_WINDOW_ROM || layout->flags & NK_WINDOW_NO_INPUT) ? 0 :&ctx->input;
     if (!nk_panel_is_sub(layout->type))
         nk_push_scissor(out, nk_null_rect);
 
@@ -17353,7 +17354,7 @@ nk_begin_titled(struct nk_context *ctx, const char *name, const char *title,
     }
 
     /* window overlapping */
-    if (!(win->flags & NK_WINDOW_HIDDEN))
+    if (!(win->flags & NK_WINDOW_HIDDEN) && !(win->flags & NK_WINDOW_NO_INPUT))
     {
         int inpanel, ishovered;
         const struct nk_window *iter = win;

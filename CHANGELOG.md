@@ -11,6 +11,7 @@
 
 Changes:
 --------
+- 2017/04/09 (1.36.0) - Added window `NK_WINDOW_NO_INPUT` and `NK_WINDOW_NOT_INTERACTIVE` flags
 - 2017/04/09 (1.35.3) - Fixed buffer heap corruption
 - 2017/03/25 (1.35.2) - Fixed popup overlapping for `NK_WINDOW_BACKGROUND` windows
 - 2017/03/25 (1.35.1) - Fixed windows closing behavior
