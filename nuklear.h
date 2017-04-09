@@ -5472,7 +5472,8 @@ nk_buffer_alloc(struct nk_buffer *b, enum nk_buffer_allocation_type type,
 
     if (full) {
         nk_size capacity;
-        NK_ASSERT(b->type == NK_BUFFER_DYNAMIC);
+        if (b->type != NK_BUFFER_DYNAMIC)
+            return 0;
         NK_ASSERT(b->pool.alloc && b->pool.free);
         if (b->type != NK_BUFFER_DYNAMIC || !b->pool.alloc || !b->pool.free)
             return 0;
@@ -7036,7 +7037,6 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
 
         nk_size size;
         struct nk_vec2 *normals, *temp;
-        NK_ASSERT(vtx && ids);
         if (!vtx || !ids) return;
 
         /* temporary allocate normals + points */
