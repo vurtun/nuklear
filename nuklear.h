@@ -1,5 +1,5 @@
 /*
- Nuklear - 1.34.3 - public domain
+ Nuklear - 1.36.1 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2017 by Micha Mettke
 
@@ -262,7 +262,6 @@ extern "C" {
 #ifndef NK_SCROLLBAR_HIDING_TIMEOUT
 #define NK_SCROLLBAR_HIDING_TIMEOUT 4.0f
 #endif
-
 /*
  * ==============================================================
  *
@@ -316,7 +315,6 @@ extern "C" {
 #define NK_MIN(a,b) ((a) < (b) ? (a) : (b))
 #define NK_MAX(a,b) ((a) < (b) ? (b) : (a))
 #define NK_CLAMP(i,v,x) (NK_MAX(NK_MIN(v,x), i))
-
 /*
  * ===============================================================
  *
@@ -488,17 +486,6 @@ struct nk_allocator {
     nk_plugin_alloc alloc;
     nk_plugin_free free;
 };
-
-struct nk_list_view {
-/* public: */
-    int begin, end, count;
-/* private: */
-    int total_height;
-    struct nk_context *ctx;
-    nk_uint *scroll_pointer;
-    nk_uint scroll_value;
-};
-
 enum nk_symbol_type {
     NK_SYMBOL_NONE,
     NK_SYMBOL_X,
@@ -514,110 +501,6 @@ enum nk_symbol_type {
     NK_SYMBOL_PLUS,
     NK_SYMBOL_MINUS,
     NK_SYMBOL_MAX
-};
-enum nk_style_colors {
-    NK_COLOR_TEXT,
-    NK_COLOR_WINDOW,
-    NK_COLOR_HEADER,
-    NK_COLOR_BORDER,
-    NK_COLOR_BUTTON,
-    NK_COLOR_BUTTON_HOVER,
-    NK_COLOR_BUTTON_ACTIVE,
-    NK_COLOR_TOGGLE,
-    NK_COLOR_TOGGLE_HOVER,
-    NK_COLOR_TOGGLE_CURSOR,
-    NK_COLOR_SELECT,
-    NK_COLOR_SELECT_ACTIVE,
-    NK_COLOR_SLIDER,
-    NK_COLOR_SLIDER_CURSOR,
-    NK_COLOR_SLIDER_CURSOR_HOVER,
-    NK_COLOR_SLIDER_CURSOR_ACTIVE,
-    NK_COLOR_PROPERTY,
-    NK_COLOR_EDIT,
-    NK_COLOR_EDIT_CURSOR,
-    NK_COLOR_COMBO,
-    NK_COLOR_CHART,
-    NK_COLOR_CHART_COLOR,
-    NK_COLOR_CHART_COLOR_HIGHLIGHT,
-    NK_COLOR_SCROLLBAR,
-    NK_COLOR_SCROLLBAR_CURSOR,
-    NK_COLOR_SCROLLBAR_CURSOR_HOVER,
-    NK_COLOR_SCROLLBAR_CURSOR_ACTIVE,
-    NK_COLOR_TAB_HEADER,
-    NK_COLOR_COUNT
-};
-enum nk_style_cursor {
-    NK_CURSOR_ARROW,
-    NK_CURSOR_TEXT,
-    NK_CURSOR_MOVE,
-    NK_CURSOR_RESIZE_VERTICAL,
-    NK_CURSOR_RESIZE_HORIZONTAL,
-    NK_CURSOR_RESIZE_TOP_LEFT_DOWN_RIGHT,
-    NK_CURSOR_RESIZE_TOP_RIGHT_DOWN_LEFT,
-    NK_CURSOR_COUNT
-};
-
-enum nk_widget_layout_states {
-    NK_WIDGET_INVALID, /* The widget cannot be seen and is completely out of view */
-    NK_WIDGET_VALID, /* The widget is completely inside the window and can be updated and drawn */
-    NK_WIDGET_ROM /* The widget is partially visible and cannot be updated */
-};
-
-/* widget states */
-enum nk_widget_states {
-    NK_WIDGET_STATE_MODIFIED    = NK_FLAG(1),
-    NK_WIDGET_STATE_INACTIVE    = NK_FLAG(2), /* widget is neither active nor hovered */
-    NK_WIDGET_STATE_ENTERED     = NK_FLAG(3), /* widget has been hovered on the current frame */
-    NK_WIDGET_STATE_HOVER       = NK_FLAG(4), /* widget is being hovered */
-    NK_WIDGET_STATE_ACTIVED     = NK_FLAG(5),/* widget is currently activated */
-    NK_WIDGET_STATE_LEFT        = NK_FLAG(6), /* widget is from this frame on not hovered anymore */
-    NK_WIDGET_STATE_HOVERED     = NK_WIDGET_STATE_HOVER|NK_WIDGET_STATE_MODIFIED, /* widget is being hovered */
-    NK_WIDGET_STATE_ACTIVE      = NK_WIDGET_STATE_ACTIVED|NK_WIDGET_STATE_MODIFIED /* widget is currently activated */
-};
-
-/* text alignment */
-enum nk_text_align {
-    NK_TEXT_ALIGN_LEFT        = 0x01,
-    NK_TEXT_ALIGN_CENTERED    = 0x02,
-    NK_TEXT_ALIGN_RIGHT       = 0x04,
-    NK_TEXT_ALIGN_TOP         = 0x08,
-    NK_TEXT_ALIGN_MIDDLE      = 0x10,
-    NK_TEXT_ALIGN_BOTTOM      = 0x20
-};
-enum nk_text_alignment {
-    NK_TEXT_LEFT        = NK_TEXT_ALIGN_MIDDLE|NK_TEXT_ALIGN_LEFT,
-    NK_TEXT_CENTERED    = NK_TEXT_ALIGN_MIDDLE|NK_TEXT_ALIGN_CENTERED,
-    NK_TEXT_RIGHT       = NK_TEXT_ALIGN_MIDDLE|NK_TEXT_ALIGN_RIGHT
-};
-
-/* edit flags */
-enum nk_edit_flags {
-    NK_EDIT_DEFAULT                 = 0,
-    NK_EDIT_READ_ONLY               = NK_FLAG(0),
-    NK_EDIT_AUTO_SELECT             = NK_FLAG(1),
-    NK_EDIT_SIG_ENTER               = NK_FLAG(2),
-    NK_EDIT_ALLOW_TAB               = NK_FLAG(3),
-    NK_EDIT_NO_CURSOR               = NK_FLAG(4),
-    NK_EDIT_SELECTABLE              = NK_FLAG(5),
-    NK_EDIT_CLIPBOARD               = NK_FLAG(6),
-    NK_EDIT_CTRL_ENTER_NEWLINE      = NK_FLAG(7),
-    NK_EDIT_NO_HORIZONTAL_SCROLL    = NK_FLAG(8),
-    NK_EDIT_ALWAYS_INSERT_MODE      = NK_FLAG(9),
-    NK_EDIT_MULTILINE               = NK_FLAG(11),
-    NK_EDIT_GOTO_END_ON_ACTIVATE    = NK_FLAG(12)
-};
-enum nk_edit_types {
-    NK_EDIT_SIMPLE  = NK_EDIT_ALWAYS_INSERT_MODE,
-    NK_EDIT_FIELD   = NK_EDIT_SIMPLE|NK_EDIT_SELECTABLE|NK_EDIT_CLIPBOARD,
-    NK_EDIT_BOX     = NK_EDIT_ALWAYS_INSERT_MODE| NK_EDIT_SELECTABLE| NK_EDIT_MULTILINE|NK_EDIT_ALLOW_TAB|NK_EDIT_CLIPBOARD,
-    NK_EDIT_EDITOR  = NK_EDIT_SELECTABLE|NK_EDIT_MULTILINE|NK_EDIT_ALLOW_TAB| NK_EDIT_CLIPBOARD
-};
-enum nk_edit_events {
-    NK_EDIT_ACTIVE      = NK_FLAG(0), /* edit widget is currently being modified */
-    NK_EDIT_INACTIVE    = NK_FLAG(1), /* edit widget is not active and is not being modified */
-    NK_EDIT_ACTIVATED   = NK_FLAG(2), /* edit widget went from state inactive to state active */
-    NK_EDIT_DEACTIVATED = NK_FLAG(3), /* edit widget went from state active to state inactive */
-    NK_EDIT_COMMITED    = NK_FLAG(4) /* edit widget has received an enter and lost focus */
 };
 /* =============================================================================
  *
@@ -1000,10 +883,10 @@ NK_API void nk_input_end(struct nk_context*);
 enum nk_anti_aliasing {NK_ANTI_ALIASING_OFF, NK_ANTI_ALIASING_ON};
 enum nk_convert_result {
     NK_CONVERT_SUCCESS = 0,
-    NK_CONVERT_INVALID_PARAM = 0,
-    NK_CONVERT_COMMAND_BUFFER_FULL = NK_FLAG(0),
-    NK_CONVERT_VERTEX_BUFFER_FULL = NK_FLAG(1),
-    NK_CONVERT_ELEMENT_BUFFER_FULL = NK_FLAG(2)
+    NK_CONVERT_INVALID_PARAM = 1,
+    NK_CONVERT_COMMAND_BUFFER_FULL = NK_FLAG(1),
+    NK_CONVERT_VERTEX_BUFFER_FULL = NK_FLAG(2),
+    NK_CONVERT_ELEMENT_BUFFER_FULL = NK_FLAG(3)
 };
 struct nk_draw_null_texture {
     nk_handle texture;/* texture handle to a texture with a white pixel */
@@ -1051,8 +934,8 @@ NK_API const struct nk_command* nk__next(struct nk_context*, const struct nk_com
  *      @vertices must point to a previously initialized buffer to hold all produced verticies
  *      @elements must point to a previously initialized buffer to hold all procudes vertex indicies
  *      @config must point to a filled out `nk_config` struct to configure the conversion process
- *  Returns: */
-
+ *  Returns:
+ *      returns NK_CONVERT_SUCCESS on success and a enum nk_convert_result error values if not */
 NK_API nk_flags nk_convert(struct nk_context*, struct nk_buffer *cmds, struct nk_buffer *vertices, struct nk_buffer *elements, const struct nk_convert_config*);
 /*  nk__draw_begin - Returns a draw vertex command buffer iterator to iterate each the vertex draw command buffer
  *  Parameters:
@@ -1475,6 +1358,15 @@ NK_API void nk_group_end(struct nk_context*);
  *                                  LIST VIEW
  *
  * ============================================================================= */
+struct nk_list_view {
+/* public: */
+    int begin, end, count;
+/* private: */
+    int total_height;
+    struct nk_context *ctx;
+    nk_uint *scroll_pointer;
+    nk_uint scroll_value;
+};
 NK_API int nk_list_view_begin(struct nk_context*, struct nk_list_view *out, const char *id, nk_flags, int row_height, int row_count);
 NK_API void nk_list_view_end(struct nk_list_view*);
 /* =============================================================================
@@ -1497,6 +1389,21 @@ NK_API void nk_tree_state_pop(struct nk_context*);
  *                                  WIDGET
  *
  * ============================================================================= */
+enum nk_widget_layout_states {
+    NK_WIDGET_INVALID, /* The widget cannot be seen and is completely out of view */
+    NK_WIDGET_VALID, /* The widget is completely inside the window and can be updated and drawn */
+    NK_WIDGET_ROM /* The widget is partially visible and cannot be updated */
+};
+enum nk_widget_states {
+    NK_WIDGET_STATE_MODIFIED    = NK_FLAG(1),
+    NK_WIDGET_STATE_INACTIVE    = NK_FLAG(2), /* widget is neither active nor hovered */
+    NK_WIDGET_STATE_ENTERED     = NK_FLAG(3), /* widget has been hovered on the current frame */
+    NK_WIDGET_STATE_HOVER       = NK_FLAG(4), /* widget is being hovered */
+    NK_WIDGET_STATE_ACTIVED     = NK_FLAG(5),/* widget is currently activated */
+    NK_WIDGET_STATE_LEFT        = NK_FLAG(6), /* widget is from this frame on not hovered anymore */
+    NK_WIDGET_STATE_HOVERED     = NK_WIDGET_STATE_HOVER|NK_WIDGET_STATE_MODIFIED, /* widget is being hovered */
+    NK_WIDGET_STATE_ACTIVE      = NK_WIDGET_STATE_ACTIVED|NK_WIDGET_STATE_MODIFIED /* widget is currently activated */
+};
 NK_API enum nk_widget_layout_states nk_widget(struct nk_rect*, const struct nk_context*);
 NK_API enum nk_widget_layout_states nk_widget_fitting(struct nk_rect*, struct nk_context*, struct nk_vec2);
 NK_API struct nk_rect nk_widget_bounds(struct nk_context*);
@@ -1508,12 +1415,24 @@ NK_API int nk_widget_is_hovered(struct nk_context*);
 NK_API int nk_widget_is_mouse_clicked(struct nk_context*, enum nk_buttons);
 NK_API int nk_widget_has_mouse_click_down(struct nk_context*, enum nk_buttons, int down);
 NK_API void nk_spacing(struct nk_context*, int cols);
-
 /* =============================================================================
  *
  *                                  TEXT
  *
  * ============================================================================= */
+enum nk_text_align {
+    NK_TEXT_ALIGN_LEFT        = 0x01,
+    NK_TEXT_ALIGN_CENTERED    = 0x02,
+    NK_TEXT_ALIGN_RIGHT       = 0x04,
+    NK_TEXT_ALIGN_TOP         = 0x08,
+    NK_TEXT_ALIGN_MIDDLE      = 0x10,
+    NK_TEXT_ALIGN_BOTTOM      = 0x20
+};
+enum nk_text_alignment {
+    NK_TEXT_LEFT        = NK_TEXT_ALIGN_MIDDLE|NK_TEXT_ALIGN_LEFT,
+    NK_TEXT_CENTERED    = NK_TEXT_ALIGN_MIDDLE|NK_TEXT_ALIGN_CENTERED,
+    NK_TEXT_RIGHT       = NK_TEXT_ALIGN_MIDDLE|NK_TEXT_ALIGN_RIGHT
+};
 NK_API void nk_text(struct nk_context*, const char*, int, nk_flags);
 NK_API void nk_text_colored(struct nk_context*, const char*, int, nk_flags, struct nk_color);
 NK_API void nk_text_wrap(struct nk_context*, const char*, int);
@@ -1545,7 +1464,7 @@ NK_API int nk_button_text(struct nk_context*, const char *title, int len);
 NK_API int nk_button_label(struct nk_context*, const char *title);
 NK_API int nk_button_color(struct nk_context*, struct nk_color);
 NK_API int nk_button_symbol(struct nk_context*, enum nk_symbol_type);
-NK_API int k_button_image(struct nk_context*, struct nk_image img);
+NK_API int nk_button_image(struct nk_context*, struct nk_image img);
 NK_API int nk_button_symbol_label(struct nk_context*, enum nk_symbol_type, const char*, nk_flags text_alignment);
 NK_API int nk_button_symbol_text(struct nk_context*, enum nk_symbol_type, const char*, int, nk_flags alignment);
 NK_API int nk_button_image_label(struct nk_context*, struct nk_image img, const char*, nk_flags text_alignment);
@@ -1556,6 +1475,7 @@ NK_API int nk_button_symbol_styled(struct nk_context*, const struct nk_style_but
 NK_API int nk_button_image_styled(struct nk_context*, const struct nk_style_button*, struct nk_image img);
 NK_API int k_button_symbol_label_styled(struct nk_context*,const struct nk_style_button*, enum nk_symbol_type, const char*, nk_flags text_alignment);
 NK_API int nk_button_symbol_text_styled(struct nk_context*,const struct nk_style_button*, enum nk_symbol_type, const char*, int, nk_flags alignment);
+NK_API int nk_button_symbol_label_styled(struct nk_context *ctx, const struct nk_style_button *style, enum nk_symbol_type symbol, const char *title, nk_flags align);
 NK_API int nk_button_image_label_styled(struct nk_context*,const struct nk_style_button*, struct nk_image img, const char*, nk_flags text_alignment);
 NK_API int nk_button_image_text_styled(struct nk_context*,const struct nk_style_button*, struct nk_image img, const char*, int, nk_flags alignment);
 NK_API void nk_button_set_behavior(struct nk_context*, enum nk_button_behavior);
@@ -1636,6 +1556,34 @@ NK_API double nk_propertyd(struct nk_context*, const char *name, double min, dou
  *                                  TEXT EDIT
  *
  * ============================================================================= */
+enum nk_edit_flags {
+    NK_EDIT_DEFAULT                 = 0,
+    NK_EDIT_READ_ONLY               = NK_FLAG(0),
+    NK_EDIT_AUTO_SELECT             = NK_FLAG(1),
+    NK_EDIT_SIG_ENTER               = NK_FLAG(2),
+    NK_EDIT_ALLOW_TAB               = NK_FLAG(3),
+    NK_EDIT_NO_CURSOR               = NK_FLAG(4),
+    NK_EDIT_SELECTABLE              = NK_FLAG(5),
+    NK_EDIT_CLIPBOARD               = NK_FLAG(6),
+    NK_EDIT_CTRL_ENTER_NEWLINE      = NK_FLAG(7),
+    NK_EDIT_NO_HORIZONTAL_SCROLL    = NK_FLAG(8),
+    NK_EDIT_ALWAYS_INSERT_MODE      = NK_FLAG(9),
+    NK_EDIT_MULTILINE               = NK_FLAG(11),
+    NK_EDIT_GOTO_END_ON_ACTIVATE    = NK_FLAG(12)
+};
+enum nk_edit_types {
+    NK_EDIT_SIMPLE  = NK_EDIT_ALWAYS_INSERT_MODE,
+    NK_EDIT_FIELD   = NK_EDIT_SIMPLE|NK_EDIT_SELECTABLE|NK_EDIT_CLIPBOARD,
+    NK_EDIT_BOX     = NK_EDIT_ALWAYS_INSERT_MODE| NK_EDIT_SELECTABLE| NK_EDIT_MULTILINE|NK_EDIT_ALLOW_TAB|NK_EDIT_CLIPBOARD,
+    NK_EDIT_EDITOR  = NK_EDIT_SELECTABLE|NK_EDIT_MULTILINE|NK_EDIT_ALLOW_TAB| NK_EDIT_CLIPBOARD
+};
+enum nk_edit_events {
+    NK_EDIT_ACTIVE      = NK_FLAG(0), /* edit widget is currently being modified */
+    NK_EDIT_INACTIVE    = NK_FLAG(1), /* edit widget is not active and is not being modified */
+    NK_EDIT_ACTIVATED   = NK_FLAG(2), /* edit widget went from state inactive to state active */
+    NK_EDIT_DEACTIVATED = NK_FLAG(3), /* edit widget went from state active to state inactive */
+    NK_EDIT_COMMITED    = NK_FLAG(4) /* edit widget has received an enter and lost focus */
+};
 NK_API void nk_edit_focus(struct nk_context*, nk_flags flags);
 NK_API void nk_edit_unfocus(struct nk_context*);
 NK_API nk_flags nk_edit_string(struct nk_context*, nk_flags, char *buffer, int *len, int max, nk_plugin_filter);
@@ -1748,6 +1696,47 @@ NK_API void nk_menu_end(struct nk_context*);
  *                                  STYLE
  *
  * ============================================================================= */
+enum nk_style_colors {
+    NK_COLOR_TEXT,
+    NK_COLOR_WINDOW,
+    NK_COLOR_HEADER,
+    NK_COLOR_BORDER,
+    NK_COLOR_BUTTON,
+    NK_COLOR_BUTTON_HOVER,
+    NK_COLOR_BUTTON_ACTIVE,
+    NK_COLOR_TOGGLE,
+    NK_COLOR_TOGGLE_HOVER,
+    NK_COLOR_TOGGLE_CURSOR,
+    NK_COLOR_SELECT,
+    NK_COLOR_SELECT_ACTIVE,
+    NK_COLOR_SLIDER,
+    NK_COLOR_SLIDER_CURSOR,
+    NK_COLOR_SLIDER_CURSOR_HOVER,
+    NK_COLOR_SLIDER_CURSOR_ACTIVE,
+    NK_COLOR_PROPERTY,
+    NK_COLOR_EDIT,
+    NK_COLOR_EDIT_CURSOR,
+    NK_COLOR_COMBO,
+    NK_COLOR_CHART,
+    NK_COLOR_CHART_COLOR,
+    NK_COLOR_CHART_COLOR_HIGHLIGHT,
+    NK_COLOR_SCROLLBAR,
+    NK_COLOR_SCROLLBAR_CURSOR,
+    NK_COLOR_SCROLLBAR_CURSOR_HOVER,
+    NK_COLOR_SCROLLBAR_CURSOR_ACTIVE,
+    NK_COLOR_TAB_HEADER,
+    NK_COLOR_COUNT
+};
+enum nk_style_cursor {
+    NK_CURSOR_ARROW,
+    NK_CURSOR_TEXT,
+    NK_CURSOR_MOVE,
+    NK_CURSOR_RESIZE_VERTICAL,
+    NK_CURSOR_RESIZE_HORIZONTAL,
+    NK_CURSOR_RESIZE_TOP_LEFT_DOWN_RIGHT,
+    NK_CURSOR_RESIZE_TOP_RIGHT_DOWN_LEFT,
+    NK_CURSOR_COUNT
+};
 NK_API void nk_style_default(struct nk_context*);
 NK_API void nk_style_from_table(struct nk_context*, const struct nk_color*);
 NK_API void nk_style_load_cursor(struct nk_context*, enum nk_style_cursor, const struct nk_cursor*);
@@ -19607,7 +19596,7 @@ nk_widget_has_mouse_click_down(struct nk_context *ctx, enum nk_buttons btn, int 
 NK_API enum nk_widget_layout_states
 nk_widget(struct nk_rect *bounds, const struct nk_context *ctx)
 {
-    struct nk_rect *c = 0;
+    struct nk_rect c;
     struct nk_window *win;
     struct nk_panel *layout;
 
@@ -19617,11 +19606,11 @@ nk_widget(struct nk_rect *bounds, const struct nk_context *ctx)
     if (!ctx || !ctx->current || !ctx->current->layout)
         return NK_WIDGET_INVALID;
 
-    /* allocate space  and check if the widget needs to be updated and drawn */
+    /* allocate space and check if the widget needs to be updated and drawn */
     nk_panel_alloc_space(bounds, ctx);
     win = ctx->current;
     layout = win->layout;
-    c = &layout->clip;
+    c = layout->clip;
 
     /*  if one of these triggers you forgot to add an `if` condition around either
         a window, group, popup, combobox or contextual menu `begin` and `end` block.
@@ -19632,15 +19621,20 @@ nk_widget(struct nk_rect *bounds, const struct nk_context *ctx)
     NK_ASSERT(!(layout->flags & NK_WINDOW_HIDDEN));
     NK_ASSERT(!(layout->flags & NK_WINDOW_CLOSED));
 
-    /* need to convert to int here to remove floating point error */
+    /* need to convert to int here to remove floating point errors */
     bounds->x = (float)((int)bounds->x);
     bounds->y = (float)((int)bounds->y);
     bounds->w = (float)((int)bounds->w);
     bounds->h = (float)((int)bounds->h);
 
-    if (!NK_INTERSECT(c->x, c->y, c->w, c->h, bounds->x, bounds->y, bounds->w, bounds->h))
+    c.x = (float)((int)c.x);
+    c.y = (float)((int)c.y);
+    c.w = (float)((int)c.w);
+    c.h = (float)((int)c.h);
+
+    if (!NK_INTERSECT(c.x, c.y, c.w, c.h, bounds->x, bounds->y, bounds->w, bounds->h))
         return NK_WIDGET_INVALID;
-    if (!NK_CONTAINS(bounds->x, bounds->y, bounds->w, bounds->h, c->x, c->y, c->w, c->h))
+    if (!NK_CONTAINS(bounds->x, bounds->y, bounds->w, bounds->h, c.x, c.y, c.w, c.h))
         return NK_WIDGET_ROM;
     return NK_WIDGET_VALID;
 }
