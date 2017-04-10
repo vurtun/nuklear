@@ -980,11 +980,11 @@ NK_API const struct nk_draw_command* nk__draw_next(const struct nk_draw_command*
  * Each window holds frame persistent state like position, size, flags, state tables,
  * and some garbage collected internal persistent widget state. Each window
  * is linked into a window stack list which determines the drawing and overlapping
- * order. The topmost the window thereby is the currently active window.
+ * order. The topmost window thereby is the currently active window.
  *
  * To change window position inside the stack occurs either automatically by
  * user input by being clicked on or programatically by calling `nk_window_focus`.
- * Window by default are visible unless explicitly being defined with flag
+ * Windows by default are visible unless explicitly being defined with flag
  * `NK_WINDOW_HIDDEN`, the user clicked the close button on windows with flag
  * `NK_WINDOW_CLOSABLE` or if a window was explicitly hidden by calling
  * `nk_window_show`. To explicitly close and destroy a window call `nk_window_close`.
@@ -1004,7 +1004,7 @@ NK_API const struct nk_draw_command* nk__draw_next(const struct nk_draw_command*
  *      }
  *      nk_end(ctx);
  *
- * In the grand concept window and widget declarations needs to occur after input
+ * In the grand concept window and widget declarations need to occur after input
  * handling and before drawing to screen. Not doing so can results in higher
  * latency or at worst invalid behavior. Furthermore make sure that `nk_clear`
  * is called at the end of the frame. While nuklears default platform backends
@@ -1568,8 +1568,8 @@ enum nk_edit_flags {
     NK_EDIT_CTRL_ENTER_NEWLINE      = NK_FLAG(7),
     NK_EDIT_NO_HORIZONTAL_SCROLL    = NK_FLAG(8),
     NK_EDIT_ALWAYS_INSERT_MODE      = NK_FLAG(9),
-    NK_EDIT_MULTILINE               = NK_FLAG(11),
-    NK_EDIT_GOTO_END_ON_ACTIVATE    = NK_FLAG(12)
+    NK_EDIT_MULTILINE               = NK_FLAG(10),
+    NK_EDIT_GOTO_END_ON_ACTIVATE    = NK_FLAG(11)
 };
 enum nk_edit_types {
     NK_EDIT_SIMPLE  = NK_EDIT_ALWAYS_INSERT_MODE,
