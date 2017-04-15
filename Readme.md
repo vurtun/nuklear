@@ -1,6 +1,7 @@
+# Nuklear
+
 [![Build Status](https://travis-ci.org/vurtun/nuklear.svg)](https://travis-ci.org/vurtun/nuklear)
 
-# Nuklear
 This is a minimal state immediate mode graphical user interface toolkit
 written in ANSI C and licensed under public domain. It was designed as a simple
 embeddable user interface for application and does not have any dependencies,
@@ -11,6 +12,7 @@ layered library that tries to abstract over a number of platform and
 render backends it only focuses on the actual UI.
 
 ## Features
+
 - Immediate mode graphical user interface toolkit
 - Single header library
 - Written in C89 (ANSI C)
@@ -25,6 +27,7 @@ render backends it only focuses on the actual UI.
 - Optional font baker and vertex buffer output
 
 ## Building
+
 This library is self contained in one single header file and can be used either
 in header only mode or in implementation mode. The header only mode is used
 by default when included and allows including this header in other headers
@@ -40,6 +43,7 @@ IMPORTANT: Every time you include "nuklear.h" you have to define the same option
 This is very important not doing it either leads to compiler errors or even worse stack corruptions.
 
 ## Gallery
+
 ![screenshot](https://cloud.githubusercontent.com/assets/8057201/11761525/ae06f0ca-a0c6-11e5-819d-5610b25f6ef4.gif)
 ![screen](https://cloud.githubusercontent.com/assets/8057201/13538240/acd96876-e249-11e5-9547-5ac0b19667a0.png)
 ![screen2](https://cloud.githubusercontent.com/assets/8057201/13538243/b04acd4c-e249-11e5-8fd2-ad7744a5b446.png)
@@ -48,15 +52,16 @@ This is very important not doing it either leads to compiler errors or even wors
 ![gamepad](https://cloud.githubusercontent.com/assets/8057201/14902576/339926a8-0d9c-11e6-9fee-a8b73af04473.png)
 
 ## Example
+
 ```c
 /* init gui state */
 struct nk_context ctx;
 nk_init_fixed(&ctx, calloc(1, MAX_MEMORY), MAX_MEMORY, &font);
 
 enum {EASY, HARD};
-int op = EASY;
-float value = 0.6f;
-int i =  20;
+static int op = EASY;
+static float value = 0.6f;
+static int i =  20;
 
 if (nk_begin(&ctx, "Show", nk_rect(50, 50, 220, 220),
     NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_CLOSABLE)) {
@@ -85,13 +90,18 @@ nk_end(&ctx);
 ```
 ![example](https://cloud.githubusercontent.com/assets/8057201/10187981/584ecd68-675c-11e5-897c-822ef534a876.png)
 
-## Bindings:
-Java: https://github.com/glegris/nuklear4j  
-Golang: https://github.com/golang-ui/nuklear  
-Rust: https://github.com/snuk182/nuklear-rust  
-Chicken: https://github.com/wasamasa/nuklear
+## Bindings
+There are a number of nuklear bindings for different languges created by other authors.
+I cannot atest for their quality since I am not necessarily proficient in either of these
+languages. Furthermore there are no guarantee that all bindings will always be kept up to date:
 
-## Credits:
+- [Java](https://github.com/glegris/nuklear4j) by Guillaume Legris
+- [Golang](https://github.com/golang-ui/nuklear) by golang-ui@github.com
+- [Rust](https://github.com/snuk182/nuklear-rust) by snuk182@github.com
+- [Chicken](https://github.com/wasamasa/nuklear) by wasamasa@github.comx
+- [Nim](https://github.com/zacharycarter/nuklear-nim) by zacharycarter@github.com
+
+## Credits
 Developed by Micha Mettke and every direct or indirect contributor to the GitHub.
 
 
@@ -105,7 +115,8 @@ and his original immediate mode graphical user interface idea and Sean
 Barret for his amazing single header [libraries](https://github.com/nothings/stb) which restored my faith
 in libraries and brought me to create some of my own.
 
-## License:
+## License
+
 This software is dual-licensed to the public domain and under the following
 license: you are granted a perpetual, irrevocable license to copy, modify,
 publish and distribute this file as you see fit.

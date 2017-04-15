@@ -289,7 +289,6 @@ int main(int argc, char **argv)
             }
         }
         nk_end(ctx);
-        if (nk_window_is_closed(ctx, "Demo")) break;
 
         /* -------------- EXAMPLES ---------------- */
         /*calculator(ctx);*/

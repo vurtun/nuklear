@@ -419,7 +419,7 @@ nk_sdl_handle_event(SDL_Event *evt)
         nk_input_glyph(ctx, glyph);
         return 1;
     } else if (evt->type == SDL_MOUSEWHEEL) {
-        nk_input_scroll(ctx,(float)evt->wheel.y);
+        nk_input_scroll(ctx,nk_vec2((float)evt->wheel.x,(float)evt->wheel.y));
         return 1;
     }
     return 0;

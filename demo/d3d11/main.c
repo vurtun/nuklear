@@ -7,6 +7,7 @@
 #include <string.h>
 #include <limits.h>
 #include <time.h>
+#include <math.h>
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
@@ -19,6 +20,7 @@
 #define NK_INCLUDE_STANDARD_VARARGS
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
 #define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
+#define NK_INCLUDE_UNICODE_SUPPORT
 #define NK_INCLUDE_FONT_BAKING
 #define NK_INCLUDE_DEFAULT_FONT
 #define NK_IMPLEMENTATION
@@ -41,7 +43,7 @@
 
 /*#include "../style.c"*/
 /*#include "../calculator.c"*/
-/*#include "../overview.c"*/
+#include "overview.c"
 /*#include "../node_editor.c"*/
 
 /* ===============================================================
@@ -209,7 +211,7 @@ int main(void)
         nk_input_end(ctx);
 
         /* GUI */
-        if (nk_begin(ctx, "Demo", nk_rect(50, 50, 230, 250),
+        if (nk_begin(ctx, NK_T("Demo"), nk_rect(50, 50, 230, 250),
             NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
             NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
         {
@@ -218,34 +220,33 @@ int main(void)
             static int property = 20;
 
             nk_layout_row_static(ctx, 30, 80, 1);
-            if (nk_button_label(ctx, "button"))
+            if (nk_button_label(ctx, NK_T("button")))
                 fprintf(stdout, "button pressed\n");
             nk_layout_row_dynamic(ctx, 30, 2);
-            if (nk_option_label(ctx, "easy", op == EASY)) op = EASY;
-            if (nk_option_label(ctx, "hard", op == HARD)) op = HARD;
+            if (nk_option_label(ctx, NK_T("easy"), op == EASY)) op = EASY;
+            if (nk_option_label(ctx, NK_T("hard"), op == HARD)) op = HARD;
             nk_layout_row_dynamic(ctx, 22, 1);
-            nk_property_int(ctx, "Compression:", 0, &property, 100, 10, 1);
+            nk_property_int(ctx, NK_T("Compression:"), 0, &property, 100, 10, 1);
 
             nk_layout_row_dynamic(ctx, 20, 1);
-            nk_label(ctx, "background:", NK_TEXT_LEFT);
+            nk_label(ctx, NK_T("background:"), NK_TEXT_LEFT);
             nk_layout_row_dynamic(ctx, 25, 1);
             if (nk_combo_begin_color(ctx, background, nk_vec2(nk_widget_width(ctx),400))) {
                 nk_layout_row_dynamic(ctx, 120, 1);
                 background = nk_color_picker(ctx, background, NK_RGBA);
                 nk_layout_row_dynamic(ctx, 25, 1);
-                background.r = (nk_byte)nk_propertyi(ctx, "#R:", 0, background.r, 255, 1,1);
-                background.g = (nk_byte)nk_propertyi(ctx, "#G:", 0, background.g, 255, 1,1);
-                background.b = (nk_byte)nk_propertyi(ctx, "#B:", 0, background.b, 255, 1,1);
-                background.a = (nk_byte)nk_propertyi(ctx, "#A:", 0, background.a, 255, 1,1);
+                background.r = (nk_byte)nk_propertyi(ctx, NK_T("#R:"), 0, background.r, 255, 1,1);
+                background.g = (nk_byte)nk_propertyi(ctx, NK_T("#G:"), 0, background.g, 255, 1,1);
+                background.b = (nk_byte)nk_propertyi(ctx, NK_T("#B:"), 0, background.b, 255, 1,1);
+                background.a = (nk_byte)nk_propertyi(ctx, NK_T("#A:"), 0, background.a, 255, 1,1);
                 nk_combo_end(ctx);
             }
         }
         nk_end(ctx);
-        if (nk_window_is_closed(ctx, "Demo")) break;
 
         /* -------------- EXAMPLES ---------------- */
         /*calculator(ctx);*/
-        /*overview(ctx);*/
+        overview(ctx);
         /*node_editor(ctx);*/
         /* ----------------------------------------- */
 
