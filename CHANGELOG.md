@@ -11,6 +11,7 @@
 
 Changes:
 --------
+- 2017/04/20 (1.37.1) - Fixed key repeat found inside glfw demo backends
 - 2017/04/20 (1.37.0) - Extended properties with selection and clipbard support
 - 2017/04/20 (1.36.2) - Fixed #405 overlapping rows with zero padding and spacing
 - 2017/04/09 (1.36.1) - Fixed #403 with another widget float error
