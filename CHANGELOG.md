@@ -11,6 +11,8 @@
 
 Changes:
 --------
+- 2017/04/20 (1.37.0) - Extended properties with selection and clipbard support
+- 2017/04/20 (1.36.2) - Fixed #405 overlapping rows with zero padding and spacing
 - 2017/04/09 (1.36.1) - Fixed #403 with another widget float error
 - 2017/04/09 (1.36.0) - Added window `NK_WINDOW_NO_INPUT` and `NK_WINDOW_NOT_INTERACTIVE` flags
 - 2017/04/09 (1.35.3) - Fixed buffer heap corruption

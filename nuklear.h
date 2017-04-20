@@ -1,5 +1,5 @@
 /*
- Nuklear - 1.36.1 - public domain
+ Nuklear - 1.37.0 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2017 by Micha Mettke
 
@@ -1319,6 +1319,87 @@ NK_API void nk_window_show_if(struct nk_context*, const char *name, enum nk_show
  *                                  LAYOUT
  *
  * ============================================================================= */
+/*  Layouting in general describes placing widget inside a window with position and size.
+ *  While in this particular implementation there are four different API for layouting
+ *  each with different trade offs between control and ease of use.
+ *
+ *  All layouting methodes in this library are based around the concept of a row.
+ *  A row has a height the window grows by and a number of columns and each
+ *  layouting method specifies how each widget is placed inside the row.
+ *  After a row has been allcocated by calling a layouting functions and then
+ *  filled with widgets will advance an internal pointer to over the allocated row.
+ *
+ *  To acually define a layout you just call the approriate layouting functions
+ *  and each subsequnetial widget call will place the widget as specified. Important
+ *  here is that if you define more widgets then columns defined inside the layout
+ *  functions it will allocate the next row without you having to make another layouting
+ *  call.
+ *
+ *  Biggest limitation with using all these APIs outside the `nk_layout_space_xxx` API
+ *  is that you have to define the row height for each. However the row height
+ *  often depends on the height of the font. So I would recommend writing
+ *  a higher level layouting functions that just calls each function with default font height
+ *  plus some spacing between rows. The reason why this library does't support this
+ *  behavior by default is to grant more control.
+ *
+ *  For actually more advanced UI I would even recommend using the `nk_layout_space_xxx`
+ *  layouting method in combination with a cassowary constraint solver (there are
+ *  some versions on github with permissive license model) to take over all control over widget
+ *  layouting yourself. However for quick and dirty layouting using all the other layouting
+ *  functions, especially if you don't change the font height, should be fine.
+ *
+ *  Usage
+ *  -------------------
+ *  1.) nk_layout_row_dynamic
+ *  The easiest layouting function is `nk_layout_row_dynamic`. It provides each
+ *  widgets with the same horizontal space inside the row and dynamically grows
+ *  if the owning window grows in width each widget will grow as well. So the
+ *  number of columns calculates the size of each widget dynamically by formula:
+ *
+ *      widget_width = (window_width - padding - spacing) * (1/colum_count)
+ *
+ *  Just like all other layouting APIs if you define more widget than columns this
+ *  library will allocate a new row and keep all layouting parameters previously
+ *  defined.
+ *
+ *      if (nk_begin_xxx(...) {
+ *          // first row with height: 30 composed of two widgets
+ *          nk_layout_row_dynamic(&ctx, 30, 2);
+ *          nk_widget(...);
+ *          nk_widget(...);
+ *
+ *          // second row with same parameter as defined above
+ *          nk_widget(...);
+ *          nk_widget(...);
+ *      }
+ *      nk_end(...);
+ *
+ *  Reference
+ *  -------------------
+ *  nk_layout_row_dynamic
+ *  nk_layout_row_static
+ *  nk_layout_row_begin
+ *  nk_layout_row_push
+ *  nk_layout_row_end
+ *  nk_layout_row
+ *
+ *  nk_layout_row_template_begin
+ *  nk_layout_row_template_push_dynamic
+ *  nk_layout_row_template_push_variable
+ *  nk_layout_row_template_push_static
+ *  nk_layout_row_template_end
+ *
+ *  nk_layout_space_begin
+ *  nk_layout_space_push
+ *  nk_layout_space_end
+ *
+ *  nk_layout_space_bounds
+ *  nk_layout_space_to_screen
+ *  nk_layout_space_to_local
+ *  nk_layout_space_rect_to_screen
+ *  nk_layout_space_rect_to_local
+ *  nk_layout_ratio_from_pixel
+ */
 NK_API void nk_layout_row_dynamic(struct nk_context*, float height, int cols);
 NK_API void nk_layout_row_static(struct nk_context*, float height, int item_width, int cols);
 
@@ -1584,11 +1665,11 @@ enum nk_edit_events {
     NK_EDIT_DEACTIVATED = NK_FLAG(3), /* edit widget went from state active to state inactive */
     NK_EDIT_COMMITED    = NK_FLAG(4) /* edit widget has received an enter and lost focus */
 };
-NK_API void nk_edit_focus(struct nk_context*, nk_flags flags);
-NK_API void nk_edit_unfocus(struct nk_context*);
 NK_API nk_flags nk_edit_string(struct nk_context*, nk_flags, char *buffer, int *len, int max, nk_plugin_filter);
 NK_API nk_flags nk_edit_buffer(struct nk_context*, nk_flags, struct nk_text_edit*, nk_plugin_filter);
 NK_API nk_flags nk_edit_string_zero_terminated(struct nk_context*, nk_flags, char *buffer, int max, nk_plugin_filter);
+NK_API void nk_edit_focus(struct nk_context*, nk_flags flags);
+NK_API void nk_edit_unfocus(struct nk_context*);
 /* =============================================================================
  *
  *                                  CHART
@@ -3515,6 +3596,8 @@ struct nk_property_state {
     char buffer[NK_MAX_NUMBER_BUFFER];
     int length;
     int cursor;
+    int select_start;
+    int select_end;
     nk_hash name;
     unsigned int seq;
     unsigned int old;
@@ -3734,7 +3817,7 @@ struct nk_context {
 #define NK_SATURATE(x) (NK_MAX(0, NK_MIN(1.0f, x)))
 #define NK_LEN(a) (sizeof(a)/sizeof(a)[0])
 #define NK_ABS(a) (((a) < 0) ? -(a) : (a))
-#define NK_BETWEEN(x, a, b) ((a) <= (x) && (x) <= (b))
+#define NK_BETWEEN(x, a, b) ((a) <= (x) && (x) < (b))
 #define NK_INBOX(px, py, x, y, w, h)\
     (NK_BETWEEN(px,x,x+w) && NK_BETWEEN(py,y,y+h))
 #define NK_INTERSECT(x0, y0, w0, h0, x1, y1, w1, h1) \
@@ -15552,9 +15635,11 @@ nk_do_property(nk_flags *ws,
     struct nk_command_buffer *out, struct nk_rect property,
     const char *name, struct nk_property_variant *variant,
     float inc_per_pixel, char *buffer, int *len,
-    int *state, int *cursor, const struct nk_style_property *style,
+    int *state, int *cursor, int *select_begin, int *select_end,
+    const struct nk_style_property *style,
     enum nk_property_filter filter, struct nk_input *in,
-    const struct nk_user_font *font, struct nk_text_edit *text_edit)
+    const struct nk_user_font *font, struct nk_text_edit *text_edit,
+    enum nk_button_behavior behavior)
 {
     const nk_plugin_filter filters[] = {
         nk_filter_decimal,
@@ -15643,7 +15728,7 @@ nk_do_property(nk_flags *ws,
     if (style->draw_end) style->draw_end(out, style->userdata);
 
     /* execute right button  */
-    if (nk_do_button_symbol(ws, out, left, style->sym_left, NK_BUTTON_DEFAULT, &style->dec_button, in, font)) {
+    if (nk_do_button_symbol(ws, out, left, style->sym_left, behavior, &style->dec_button, in, font)) {
         switch (variant->kind) {
         default: break;
         case NK_PROPERTY_INT:
@@ -15656,7 +15741,7 @@ nk_do_property(nk_flags *ws,
     }
 
     /* execute left button  */
-    if (nk_do_button_symbol(ws, out, right, style->sym_right, NK_BUTTON_DEFAULT, &style->inc_button, in, font)) {
+    if (nk_do_button_symbol(ws, out, right, style->sym_right, behavior, &style->inc_button, in, font)) {
         switch (variant->kind) {
         default: break;
         case NK_PROPERTY_INT:
@@ -15668,32 +15753,36 @@ nk_do_property(nk_flags *ws,
         }
     }
 
-    active = (*state == NK_PROPERTY_EDIT);
-    if (old != NK_PROPERTY_EDIT && active) {
+    if (old != NK_PROPERTY_EDIT && (*state == NK_PROPERTY_EDIT)) {
         /* property has been activated so setup buffer */
         NK_MEMCPY(buffer, dst, (nk_size)*length);
         *cursor = nk_utf_len(buffer, *length);
         *len = *length;
         length = len;
         dst = buffer;
-    }
+        active = 0;
+    } else active = (*state == NK_PROPERTY_EDIT);
 
     /* execute and run text edit field */
     nk_textedit_clear_state(text_edit, NK_TEXT_EDIT_SINGLE_LINE, filters[filter]);
     text_edit->active = (unsigned char)active;
     text_edit->string.len = *length;
     text_edit->cursor = NK_CLAMP(0, *cursor, *length);
+    text_edit->select_start = NK_CLAMP(0,*select_begin, *length);
+    text_edit->select_end = NK_CLAMP(0,*select_end, *length);
     text_edit->string.buffer.allocated = (nk_size)*length;
     text_edit->string.buffer.memory.size = NK_MAX_NUMBER_BUFFER;
     text_edit->string.buffer.memory.ptr = dst;
     text_edit->string.buffer.size = NK_MAX_NUMBER_BUFFER;
     text_edit->mode = NK_TEXT_EDIT_MODE_INSERT;
-    nk_do_edit(ws, out, edit, NK_EDIT_ALWAYS_INSERT_MODE, filters[filter],
-        text_edit, &style->edit, (*state == NK_PROPERTY_EDIT) ? in: 0, font);
+    nk_do_edit(ws, out, edit, NK_EDIT_FIELD|NK_EDIT_AUTO_SELECT,
+        filters[filter], text_edit, &style->edit, (*state == NK_PROPERTY_EDIT) ? in: 0, font);
 
     *length = text_edit->string.len;
     active = text_edit->active;
     *cursor = text_edit->cursor;
+    *select_begin = text_edit->select_start;
+    *select_end = text_edit->select_end;
 
     if (active && nk_input_is_key_pressed(in, NK_KEY_ENTER))
         active = !active;
@@ -19157,7 +19246,7 @@ nk_layout_widget_space(struct nk_rect *bounds, const struct nk_context *ctx,
     switch (layout->row.type) {
     case NK_LAYOUT_DYNAMIC_FIXED: {
         /* scaling fixed size widgets item width */
-        item_width = panel_space / (float)layout->row.columns;
+        item_width = NK_MAX(1.0f,panel_space-1.0f) / (float)layout->row.columns;
         item_offset = (float)layout->row.index * item_width;
         item_spacing = (float)layout->row.index * spacing.x;
     } break;
@@ -20767,12 +20856,16 @@ nk_property(struct nk_context *ctx, const char *name, struct nk_property_variant
     char *buffer = 0;
     int *len = 0;
     int *cursor = 0;
+    int *select_begin = 0;
+    int *select_end = 0;
     int old_state;
 
     char dummy_buffer[NK_MAX_NUMBER_BUFFER];
     int dummy_state = NK_PROPERTY_DEFAULT;
     int dummy_length = 0;
     int dummy_cursor = 0;
+    int dummy_select_begin = 0;
+    int dummy_select_end = 0;
 
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
@@ -20799,18 +20892,24 @@ nk_property(struct nk_context *ctx, const char *name, struct nk_property_variant
         len = &win->property.length;
         cursor = &win->property.cursor;
         state = &win->property.state;
+        select_begin = &win->property.select_start;
+        select_end = &win->property.select_end;
     } else {
         buffer = dummy_buffer;
         len = &dummy_length;
         cursor = &dummy_cursor;
         state = &dummy_state;
+        select_begin =  &dummy_select_begin;
+        select_end = &dummy_select_end;
     }
 
     /* execute property widget */
     old_state = *state;
+    ctx->text_edit.clip = ctx->clip;
     nk_do_property(&ctx->last_widget_state, &win->buffer, bounds, name,
-        variant, inc_per_pixel, buffer, len, state, cursor,
-        &style->property, filter, in, style->font, &ctx->text_edit);
+        variant, inc_per_pixel, buffer, len, state, cursor, select_begin,
+        select_end, &style->property, filter, in, style->font, &ctx->text_edit,
+        ctx->button_behavior);
 
     if (in && *state != NK_PROPERTY_DEFAULT && !win->property.active) {
         /* current property is now hot */
@@ -20820,6 +20919,8 @@ nk_property(struct nk_context *ctx, const char *name, struct nk_property_variant
         win->property.cursor = *cursor;
         win->property.state = *state;
         win->property.name = hash;
+        win->property.select_start = *select_begin;
+        win->property.select_end = *select_end;
         if (*state == NK_PROPERTY_DRAG) {
             ctx->input.mouse.grab = nk_true;
             ctx->input.mouse.grabbed = nk_true;
