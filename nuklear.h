@@ -620,7 +620,7 @@ NK_API void nk_set_user_data(struct nk_context*, nk_handle handle);
  *  Usage
  *  -------------------
  *  Input state needs to be provided to nuklear by first calling `nk_input_begin`
- *  which reset internal state like delta mouse position and button transistions.
+ *  which resets internal state like delta mouse position and button transistions.
  *  After `nk_input_begin` all current input state needs to be provided. This includes
  *  mouse motion, button and key pressed and released, text input and scrolling.
  *  Both event- or state-based input handling are supported by this API
@@ -785,6 +785,7 @@ NK_API void nk_input_end(struct nk_context*);
  *
  *      const struct nk_command *cmd = 0;
  *      nk_foreach(cmd, &ctx) {
+ *      switch (cmd->type) {
  *      case NK_COMMAND_LINE:
  *          your_draw_line_function(...)
  *          break;
@@ -818,6 +819,7 @@ NK_API void nk_input_end(struct nk_context*);
  *
  *          const struct nk_command *cmd = 0;
  *          nk_foreach(cmd, &ctx) {
+ *          switch (cmd->type) {
  *          case NK_COMMAND_LINE:
  *              your_draw_line_function(...)
  *              break;
@@ -831,7 +833,87 @@ NK_API void nk_input_end(struct nk_context*);
  *      }
  *      nk_free(&ctx);
  *
- *  While using draw commands makes sense for higher abstracted platforms like
+ *  You probably noticed that you have to draw all of the UI each frame which is
+ *  quite wasteful. While the actual UI updating loop is quite fast rendering
+ *  without actually needing it is not. So there are multiple things you could do.
+ *
+ *  First is only update on input. This ofcourse is only an option if your
+ *  application only depends on the UI and does not require any outside calculations.
+ *  If you actually only update on input make sure to update the UI to times each
+ *  frame and call `nk_clear` directly after the first pass and only draw in
+ *  the second pass.
+ *
+ *      struct nk_context ctx;
+ *      nk_init_xxx(&ctx, ...);
+ *      while (1) {
+ *          [...wait for input ]
+ *
+ *          [...do two UI passes ...]
+ *          do_ui(...)
+ *          nk_clear(&ctx);
+ *          do_ui(...)
+ *
+ *          const struct nk_command *cmd = 0;
+ *          nk_foreach(cmd, &ctx) {
+ *          switch (cmd->type) {
+ *          case NK_COMMAND_LINE:
+ *              your_draw_line_function(...)
+ *              break;
+ *          case NK_COMMAND_RECT
+ *              your_draw_rect_function(...)
+ *              break;
+ *          case ...:
+ *              [...]
+ *          }
+ *          nk_clear(&ctx);
+ *      }
+ *      nk_free(&ctx);
+ *
+ *  The second probably more applicable trick is to only draw if anything changed.
+ *  It is not really useful for applications with continous draw loop but
+ *  quite useful for desktop applications. To actually get nuklear to only
+ *  draw on changes you first have to define `NK_ZERO_COMMAND_MEMORY` and
+ *  allocate a memory buffer that will store each unique drawing output.
+ *  After each frame you compare the draw command memory inside the library
+ *  with your allocated buffer by memcmp. If memcmp detects differences
+ *  you have to copy the nuklears command buffer into the allocated buffer
+ *  and then draw like usual (this example uses fixed memory but you could
+ *  use dynamically allocated memory).
+ *
+ *      [... other defines ...]
+ *      #define NK_ZERO_COMMAND_MEMORY
+ *      #include "nuklear.h"
+ *
+ *      struct nk_context ctx;
+ *      void *last = calloc(1,64*1024);
+ *      void *buf = calloc(1,64*1024);
+ *      nk_init_fixed(&ctx, buf, 64*1024);
+ *      while (1) {
+ *          [...input...]
+ *          [...ui...]
+ *
+ *          void *cmds = nk_buffer_memory(&ctx.memory);
+ *          if (memcmp(cmds, last, ctx.memory.allocated)) {
+ *              memcpy(last,cmds,ctx.memory.allocated);
+ *              const struct nk_command *cmd = 0;
+ *              nk_foreach(cmd, &ctx) {
+ *                  switch (cmd->type) {
+ *                  case NK_COMMAND_LINE:
+ *                      your_draw_line_function(...)
+ *                      break;
+ *                  case NK_COMMAND_RECT
+ *                      your_draw_rect_function(...)
+ *                      break;
+ *                  case ...:
+ *                      [...]
+ *                  }
+ *              }
+ *          }
+ *          nk_clear(&ctx);
+ *      }
+ *      nk_free(&ctx);
+ *
+ *  Finally while using draw commands makes sense for higher abstracted platforms like
  *  X11 and Win32 or drawing libraries it is often desirable to use graphics
  *  hardware directly. Therefore it is possible to just define
  *  `NK_INCLUDE_VERTEX_BUFFER_OUTPUT` which includes optional vertex output.
@@ -867,6 +949,9 @@ NK_API void nk_input_end(struct nk_context*);
  *          if (!cmd->elem_count) continue;
  *          [...]
  *      }
+ *      nk_buffer_free(&cms);
+ *      nk_buffer_free(&verts);
+ *      nk_buffer_free(&idx);
  *
  *  Reference
  *  -------------------
@@ -889,16 +974,16 @@ enum nk_convert_result {
     NK_CONVERT_ELEMENT_BUFFER_FULL = NK_FLAG(3)
 };
 struct nk_draw_null_texture {
-    nk_handle texture;/* texture handle to a texture with a white pixel */
+    nk_handle texture; /* texture handle to a texture with a white pixel */
     struct nk_vec2 uv; /* coordinates to a white pixel in the texture  */
 };
 struct nk_convert_config {
     float global_alpha; /* global alpha value */
     enum nk_anti_aliasing line_AA; /* line anti-aliasing flag can be turned off if you are tight on memory */
     enum nk_anti_aliasing shape_AA; /* shape anti-aliasing flag can be turned off if you are tight on memory */
-    unsigned int circle_segment_count; /* number of segments used for circles: default to 22 */
-    unsigned int arc_segment_count; /* number of segments used for arcs: default to 22 */
-    unsigned int curve_segment_count; /* number of segments used for curves: default to 22 */
+    unsigned circle_segment_count; /* number of segments used for circles: default to 22 */
+    unsigned arc_segment_count; /* number of segments used for arcs: default to 22 */
+    unsigned curve_segment_count; /* number of segments used for curves: default to 22 */
     struct nk_draw_null_texture null; /* handle to texture with a white pixel for shape drawing */
     const struct nk_draw_vertex_layout_element *vertex_layout; /* describes the vertex output format and packing */
     nk_size vertex_size; /* sizeof one vertex for vertex packing */
@@ -996,7 +1081,7 @@ NK_API const struct nk_draw_command* nk__draw_next(const struct nk_draw_command*
  * is recommended to check the return value of `nk_begin_xxx` and only process
  * widgets inside the window if the value is not 0. Either way you have to call
  * `nk_end` at the end of window declarations. Furthmore do not attempt to
- * nest `nk_begin_xxx` call which will hopefully result in an assert or if not
+ * nest `nk_begin_xxx` calls which will hopefully result in an assert or if not
  * in a segmation fault.
  *
  *      if (nk_begin_xxx(...) {
@@ -1005,7 +1090,7 @@ NK_API const struct nk_draw_command* nk__draw_next(const struct nk_draw_command*
  *      nk_end(ctx);
  *
  * In the grand concept window and widget declarations need to occur after input
- * handling and before drawing to screen. Not doing so can results in higher
+ * handling and before drawing to screen. Not doing so can result in higher
  * latency or at worst invalid behavior. Furthermore make sure that `nk_clear`
  * is called at the end of the frame. While nuklears default platform backends
  * already call `nk_clear` for you if you write your own backend not calling
@@ -1320,16 +1405,16 @@ NK_API void nk_window_show_if(struct nk_context*, const char *name, enum nk_show
  *
  * ============================================================================= */
 /*  Layouting in general describes placing widget inside a window with position and size.
- *  While in this particular implementation there are four different API for layouting
+ *  While in this particular implementation there are five different APIs for layouting
  *  each with different trade offs between control and ease of use.
  *
  *  All layouting methodes in this library are based around the concept of a row.
- *  A row has a height the window grows by and a number of columns and each
+ *  A row has a height the window content grows by and a number of columns and each
  *  layouting method specifies how each widget is placed inside the row.
- *  After a row has been allcocated by calling a layouting functions and then
- *  filled with widgets will advance an internal pointer to over the allocated row.
+ *  After a row has been allocated by calling a layouting functions and then
+ *  filled with widgets will advance an internal pointer over the allocated row.
  *
- *  To acually define a layout you just call the approriate layouting functions
+ *  To acually define a layout you just call the appropriate layouting function
  *  and each subsequnetial widget call will place the widget as specified. Important
  *  here is that if you define more widgets then columns defined inside the layout
  *  functions it will allocate the next row without you having to make another layouting
@@ -1352,9 +1437,9 @@ NK_API void nk_window_show_if(struct nk_context*, const char *name, enum nk_show
  *  -------------------
  *  1.) nk_layout_row_dynamic
  *  The easiest layouting function is `nk_layout_row_dynamic`. It provides each
- *  widgets with the same horizontal space inside the row and dynamically grows
- *  if the owning window grows in width each widget will grow as well. So the
- *  number of columns calculates the size of each widget dynamically by formula:
+ *  widgets with same horizontal space inside the row and dynamically grows
+ *  if the owning window grows in width. So the number of columns dictates
+ *  the size of each widget dynamically by formula:
  *
  *      widget_width = (window_width - padding - spacing) * (1/colum_count)
  *
@@ -1370,6 +1455,132 @@ NK_API void nk_window_show_if(struct nk_context*, const char *name, enum nk_show
  *
  *          // second row with same parameter as defined above
  *          nk_widget(...);
+ *          nk_widget(...);
+ *      }
+ *      nk_end(...);
+ *
+ *  2.) nk_layout_row_static
+ *  Another easy layouting function is `nk_layout_row_static`. It provides each
+ *  widget with same horizontal pixel width inside the row and does not grow
+ *  if the owning window scales smaller or bigger.
+ *
+ *      if (nk_begin_xxx(...) {
+ *          // first row with height: 30 composed of two widgets with width: 80
+ *          nk_layout_row_static(&ctx, 30, 80, 2);
+ *          nk_widget(...);
+ *          nk_widget(...);
+ *
+ *          // second row with same parameter as defined above
+ *          nk_widget(...);
+ *          nk_widget(...);
+ *      }
+ *      nk_end(...);
+ *
+ *  3.) nk_layout_row_xxx
+ *  A little bit more advanced layouting API are functions `nk_layout_row_begin`,
+ *  `nk_layout_row_push` and `nk_layout_row_end`. They allow to directly
+ *  specify each column pixel or window ratio in a row. It support either
+ *  directly setting per column pixel width or widget window ratio but not
+ *  both. Furthermore it is a immediate mode API so each value is directly
+ *  pushed before calling a widget. Therefore the layout is not automatically
+ *  repeating like the last two layouting functions.
+ *
+ *      if (nk_begin_xxx(...) {
+ *          // first row with height: 25 composed of two widgets with width 60 and 40
+ *          nk_layout_row_begin(ctx, NK_STATIC, 25, 2);
+ *          nk_layout_row_push(ctx, 60);
+ *          nk_widget(...);
+ *          nk_layout_row_push(ctx, 40);
+ *          nk_widget(...);
+ *          nk_layout_row_end(ctx);
+ *
+ *          // second row with height: 25 composed of two widgets with window ratio 0.25 and 0.75
+ *          nk_layout_row_begin(ctx, NK_DYNAMIC, 25, 2);
+ *          nk_layout_row_push(ctx, 0.25f);
+ *          nk_widget(...);
+ *          nk_layout_row_push(ctx, 0.75f);
+ *          nk_widget(...);
+ *          nk_layout_row_end(ctx);
+ *      }
+ *      nk_end(...);
+ *
+ *  4.) nk_layout_row
+ *  The retain mode counterpart to API nk_layout_row_xxx is the single nk_layout_row
+ *  functions. Instead of pushing either pixel or window ratio for every widget
+ *  it allows to define it by array. The trade of for less control is that
+ *  `nk_layout_row` is automatically repeating. Otherwise the behavior is the
+ *  same.
+ *
+ *      if (nk_begin_xxx(...) {
+ *          // two rows with height: 30 composed of two widgets with width 60 and 40
+ *          const float size[] = {60,40};
+ *          nk_layout_row(ctx, NK_STATIC, 30, 2, ratio);
+ *          nk_widget(...);
+ *          nk_widget(...);
+ *          nk_widget(...);
+ *          nk_widget(...);
+ *
+ *          // two rows with height: 30 composed of two widgets with window ratio 0.25 and 0.75
+ *          const float ratio[] = {0.25, 0.75};
+ *          nk_layout_row(ctx, NK_DYNAMIC, 30, 2, ratio);
+ *          nk_widget(...);
+ *          nk_widget(...);
+ *          nk_widget(...);
+ *          nk_widget(...);
+ *      }
+ *      nk_end(...);
+ *
+ *  5.) nk_layout_row_template_xxx
+ *  The most complex and second most flexible API is a simplified flexbox version without
+ *  line wrapping and weights for dynamic widgets. It is an immediate mode API but
+ *  unlike `nk_layout_row_xxx` it has auto repeat behavior and needs to be called
+ *  before calling the templated widgets.
+ *  The row template layout has three different per widget size specifier. The first
+ *  one is the static widget size specifier with fixed widget pixel width. They do
+ *  not grow if the row grows and will always stay the same. The second size
+ *  specifier is nk_layout_row_template_push_variable which defines a
+ *  minumum widget size but it also can grow if more space is available not taken
+ *  by other widgets. Finally there are dynamic widgets which are completly flexible
+ *  and unlike variable widgets can even shrink to zero if not enough space
+ *  is provided.
+ *
+ *      if (nk_begin_xxx(...) {
+ *          // two rows with height: 30 composed of two widgets with width 60 and 40
+ *          nk_layout_row_template_begin(ctx, 30);
+ *          nk_layout_row_template_push_dynamic(ctx);
+ *          nk_layout_row_template_push_variable(ctx, 80);
+ *          nk_layout_row_template_push_static(ctx, 80);
+ *          nk_layout_row_template_end(ctx);
+ *
+ *          nk_widget(...); // dynamic widget completly can go to zero
+ *          nk_widget(...); // variable widget with min 80 pixel but can grow bigger if enough space
+ *          nk_widget(...); // static widget with fixed 80 pixel width
+ *      }
+ *      nk_end(...);
+ *
+ *  6.) nk_layout_space_xxx
+ *  Finally the most flexible API directly allows you to place widgets inside the
+ *  window. The space layout API is an immediate mode API which does not support
+ *  row auto repeat and directly sets position and size of a widget. Position
+ *  and size hereby can be either specified as ratio of alloated space or
+ *  allocated space local position and pixel size. Since this API is quite
+ *  powerfull there are a number of utility functions to get the available space
+ *  and convert between local allocated space and screen space.
+ *
+ *      if (nk_begin_xxx(...) {
+ *          // static row with height: 500 (you can set column count to INT_MAX if you don't want to be bothered)
+ *          nk_layout_space_begin(ctx, NK_STATIC, 500, INT_MAX);
+ *          nk_layout_space_push(ctx, nk_rect(0,0,150,200));
+ *          nk_widget(...);
+ *          nk_layout_space_push(ctx, nk_rect(200,200,100,200));
+ *          nk_widget(...);
+ *          nk_layout_space_end(ctx);
+ *
+ *          // dynamic row with height: 500 (you can set column count to INT_MAX if you don't want to be bothered)
+ *          nk_layout_space_begin(ctx, NK_DYNAMIC, 500, INT_MAX);
+ *          nk_layout_space_push(ctx, nk_rect(0.5,0.5,0.1,0.1));
+ *          nk_widget(...);
+ *          nk_layout_space_push(ctx, nk_rect(0.7,0.6,0.1,0.1));
  *          nk_widget(...);
  *      }
  *      nk_end(...);
@@ -1666,8 +1877,8 @@ enum nk_edit_events {
     NK_EDIT_COMMITED    = NK_FLAG(4) /* edit widget has received an enter and lost focus */
 };
 NK_API nk_flags nk_edit_string(struct nk_context*, nk_flags, char *buffer, int *len, int max, nk_plugin_filter);
-NK_API nk_flags nk_edit_buffer(struct nk_context*, nk_flags, struct nk_text_edit*, nk_plugin_filter);
 NK_API nk_flags nk_edit_string_zero_terminated(struct nk_context*, nk_flags, char *buffer, int max, nk_plugin_filter);
+NK_API nk_flags nk_edit_buffer(struct nk_context*, nk_flags, struct nk_text_edit*, nk_plugin_filter);
 NK_API void nk_edit_focus(struct nk_context*, nk_flags flags);
 NK_API void nk_edit_unfocus(struct nk_context*);
 /* =============================================================================
@@ -7644,7 +7855,7 @@ nk_draw_list_alloc_elements(struct nk_draw_list *list, nk_size count)
     return ids;
 }
 
-static int
+NK_INTERN int
 nk_draw_vertex_layout_element_is_end_of_layout(
     const struct nk_draw_vertex_layout_element *element)
 {
@@ -7652,7 +7863,7 @@ nk_draw_vertex_layout_element_is_end_of_layout(
             element->format == NK_FORMAT_COUNT);
 }
 
-static void
+NK_INTERN void
 nk_draw_vertex_color(void *attribute, const float *values,
     enum nk_draw_vertex_layout_format format)
 {
@@ -7718,7 +7929,7 @@ nk_draw_vertex_color(void *attribute, const float *values,
     }
 }
 
-static void
+NK_INTERN void
 nk_draw_vertex_element(void *dst, const float *values, int value_count,
     enum nk_draw_vertex_layout_format format)
 {
@@ -9018,7 +9229,7 @@ nk_rect_original_order(const void *a, const void *b)
     return (p->was_packed < q->was_packed) ? -1 : (p->was_packed > q->was_packed);
 }
 
-static void
+NK_INTERN void
 nk_rp_qsort(struct nk_rp_rect *array, unsigned int len, int(*cmp)(const void*,const void*))
 {
     /* iterative quick sort */
