@@ -44,6 +44,12 @@ NK_API void                 nk_gflw3_scroll_callback(GLFWwindow *win, double xof
 #ifndef NK_GLFW_TEXT_MAX
 #define NK_GLFW_TEXT_MAX 256
 #endif
+#ifndef NK_GLFW_DOUBLE_CLICK_LO
+#define NK_GLFW_DOUBLE_CLICK_LO 0.02
+#endif
+#ifndef NK_GLFW_DOUBLE_CLICK_HI
+#define NK_GLFW_DOUBLE_CLICK_HI 0.2
+#endif
 
 struct nk_glfw_device {
     struct nk_buffer cmds;
@@ -68,6 +74,7 @@ static struct nk_glfw {
     unsigned int text[NK_GLFW_TEXT_MAX];
     int text_len;
     struct nk_vec2 scroll;
+    double last_button_click;
 } glfw;
 
 NK_INTERN void
@@ -204,6 +211,20 @@ nk_gflw3_scroll_callback(GLFWwindow *win, double xoff, double yoff)
     glfw.scroll.y += (float)yoff;
 }
 
+NK_API void
+nk_glfw3_mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+    double x, y;
+    if (button != GLFW_MOUSE_BUTTON_LEFT) return;
+    glfwGetCursorPos(window, &x, &y);
+    if (action == GLFW_PRESS)  {
+        double dt = glfwGetTime() - glfw.last_button_click;
+        if (dt > NK_GLFW_DOUBLE_CLICK_LO && dt < NK_GLFW_DOUBLE_CLICK_HI)
+            nk_input_button(&glfw.ctx, NK_BUTTON_DOUBLE, (int)x, (int)y, nk_true);
+        glfw.last_button_click = glfwGetTime();
+    } else nk_input_button(&glfw.ctx, NK_BUTTON_DOUBLE, (int)x, (int)y, nk_false);
+}
+
 NK_INTERN void
 nk_glfw3_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
 {
@@ -233,8 +254,8 @@ nk_glfw3_init(GLFWwindow *win, enum nk_glfw_init_state init_state)
     if (init_state == NK_GLFW3_INSTALL_CALLBACKS) {
         glfwSetScrollCallback(win, nk_gflw3_scroll_callback);
         glfwSetCharCallback(win, nk_glfw3_char_callback);
+        glfwSetMouseButtonCallback(win, nk_glfw3_mouse_button_callback);
     }
-
     nk_init_default(&glfw.ctx, 0);
     glfw.ctx.clip.copy = nk_glfw3_clipbard_copy;
     glfw.ctx.clip.paste = nk_glfw3_clipbard_paste;

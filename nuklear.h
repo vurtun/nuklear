@@ -696,6 +696,7 @@ enum nk_buttons {
     NK_BUTTON_LEFT,
     NK_BUTTON_MIDDLE,
     NK_BUTTON_RIGHT,
+    NK_BUTTON_DOUBLE,
     NK_BUTTON_MAX
 };
 /*  nk_input_begin - Begins the input mirroring process by resetting text, scroll
@@ -837,9 +838,9 @@ NK_API void nk_input_end(struct nk_context*);
  *  quite wasteful. While the actual UI updating loop is quite fast rendering
  *  without actually needing it is not. So there are multiple things you could do.
  *
- *  First is only update on input. This ofcourse is only an option if your
+ *  First is only update on input. This of course is only an option if your
  *  application only depends on the UI and does not require any outside calculations.
- *  If you actually only update on input make sure to update the UI to times each
+ *  If you actually only update on input make sure to update the UI two times each
  *  frame and call `nk_clear` directly after the first pass and only draw in
  *  the second pass.
  *
@@ -1170,7 +1171,7 @@ NK_API const struct nk_draw_command* nk__draw_next(const struct nk_draw_command*
  *  nk_window_show_if                   - hides/shows a window depending on condition
  */
 enum nk_panel_flags {
-    NK_WINDOW_BORDER            = NK_FLAG(0), /* Draws a border around the window to visually separate the window from the background */
+    NK_WINDOW_BORDER            = NK_FLAG(0), /* Draws a border around the window to visually separate window from the background */
     NK_WINDOW_MOVABLE           = NK_FLAG(1), /* The movable flag indicates that a window can be moved by user input or by dragging the window header */
     NK_WINDOW_SCALABLE          = NK_FLAG(2), /* The scalable flag indicates that a window can be scaled by user input by dragging a scaler icon at the button of the window */
     NK_WINDOW_CLOSABLE          = NK_FLAG(3), /* adds a closable icon into the header */
@@ -1545,7 +1546,7 @@ NK_API void nk_window_show_if(struct nk_context*, const char *name, enum nk_show
  *  is provided.
  *
  *      if (nk_begin_xxx(...) {
- *          // two rows with height: 30 composed of two widgets with width 60 and 40
+ *          // two rows with height: 30 composed of three widgets
  *          nk_layout_row_template_begin(ctx, 30);
  *          nk_layout_row_template_push_dynamic(ctx);
  *          nk_layout_row_template_push_variable(ctx, 80);
@@ -1587,12 +1588,12 @@ NK_API void nk_window_show_if(struct nk_context*, const char *name, enum nk_show
  *
  *  Reference
  *  -------------------
- *  nk_layout_row_dynamic
- *  nk_layout_row_static
- *  nk_layout_row_begin
- *  nk_layout_row_push
- *  nk_layout_row_end
- *  nk_layout_row
+ *  nk_layout_row_dynamic           - current layout is divided into n same sized gowing columns
+ *  nk_layout_row_static            - current layout is divided into n same fixed sized columns
+ *  nk_layout_row_begin             - starts a new row with given height and number of columns
+ *  nk_layout_row_push              - pushes another column with given size or window ratio
+ *  nk_layout_row_end               - finished previously started row
+ *  nk_layout_row                   - specifies row columns in array as either window ratio or size
  *
  *  nk_layout_row_template_begin
  *  nk_layout_row_template_push_dynamic
@@ -1611,10 +1612,34 @@ NK_API void nk_window_show_if(struct nk_context*, const char *name, enum nk_show
  *  nk_layout_space_rect_to_local
  *  nk_layout_ratio_from_pixel
  */
-NK_API void nk_layout_row_dynamic(struct nk_context*, float height, int cols);
-NK_API void nk_layout_row_static(struct nk_context*, float height, int item_width, int cols);
-
-NK_API void nk_layout_row_begin(struct nk_context*, enum nk_layout_format, float row_height, int cols);
+/*  nk_layout_row_dynamic - Sets current row layout to share horizontal space
+ *  between @cols number of widgets evenly. Once called all subsequent widget
+ *  calls greater than @cols will allocate a new row with same layout.
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context` struct after call `nk_begin_xxx`
+ *      @height holds row height to allocate from panel for widget height
+ *      @cols number of widget inside row */
+NK_API void nk_layout_row_dynamic(struct nk_context *ctx, float height, int cols);
+/*  nk_layout_row_static - Sets current row layout to fill @cols number of widgets
+ *  in row with same @item_width horizontal size. Once called all subsequent widget
+ *  calls greater than @cols will allocate a new row with same layout.
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context` struct after call `nk_begin_xxx`
+ *      @height holds row height to allocate from panel for widget height
+ *      @item_width holds width of each widget in row
+ *      @cols number of widget inside row */
+NK_API void nk_layout_row_static(struct nk_context *ctx, float height, int item_width, int cols);
+/*  nk_layout_row_begin - Starts a new dynamic or fixed row with given height and columns.
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context` struct after call `nk_begin_xxx`
+ *      @fmt either `NK_DYNAMIC` for window ratio or `NK_STATIC` for fixed size columns
+ *      @row_height holds width of each widget in row
+ *      @cols number of widget inside row */
+NK_API void nk_layout_row_begin(struct nk_context *ctx, enum nk_layout_format fmt, float row_height, int cols);
+/*  nk_layout_row_push - Specifies either window ratio or width of a single column
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context` struct after call `nk_layout_row_begin`
+ *      @value either a window ratio or fixed width depending on @fmt in previous `nk_layout_row_begin` call */
 NK_API void nk_layout_row_push(struct nk_context*, float value);
 NK_API void nk_layout_row_end(struct nk_context*);
 NK_API void nk_layout_row(struct nk_context*, enum nk_layout_format, float height, int cols, const float *ratio);
