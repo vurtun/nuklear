@@ -14936,7 +14936,7 @@ nk_do_scrollbarv(nk_flags *state,
     if (!out || !style) return 0;
 
     scroll.w = NK_MAX(scroll.w, 1);
-    scroll.h = NK_MAX(scroll.h, 2 * scroll.w);
+    scroll.h = NK_MAX(scroll.h, 0);
     if (target <= scroll.h) return 0;
 
     /* optional scrollbar buttons */
@@ -14949,7 +14949,7 @@ nk_do_scrollbarv(nk_flags *state,
         button.w = scroll.w;
         button.h = scroll.w;
 
-        scroll_h = scroll.h - 2 * button.h;
+        scroll_h = NK_MAX(scroll.h - 2 * button.h,0);
         scroll_step = NK_MIN(step, button_pixel_inc);
 
         /* decrement button */
@@ -14975,7 +14975,7 @@ nk_do_scrollbarv(nk_flags *state,
     scroll_off = scroll_offset / target;
 
     /* calculate scrollbar cursor bounds */
-    cursor.h = (scroll_ratio * scroll.h) - (2*style->border + 2*style->padding.y);
+    cursor.h = NK_MAX((scroll_ratio * scroll.h) - (2*style->border + 2*style->padding.y), 0);
     cursor.y = scroll.y + (scroll_off * scroll.h) + style->border + style->padding.y;
     cursor.w = scroll.w - (2 * style->border + 2 * style->padding.x);
     cursor.x = scroll.x + style->border + style->padding.x;
@@ -14984,12 +14984,12 @@ nk_do_scrollbarv(nk_flags *state,
     empty_north.x = scroll.x;
     empty_north.y = scroll.y;
     empty_north.w = scroll.w;
-    empty_north.h = cursor.y - scroll.y;
+    empty_north.h = NK_MAX(cursor.y - scroll.y, 0);
 
     empty_south.x = scroll.x;
     empty_south.y = cursor.y + cursor.h;
     empty_south.w = scroll.w;
-    empty_south.h = (scroll.y + scroll.h) - (cursor.y + cursor.h);
+    empty_south.h = NK_MAX((scroll.y + scroll.h) - (cursor.y + cursor.h), 0);
 
     /* update scrollbar */
     scroll_offset = nk_scrollbar_behavior(state, in, has_scrolling, &scroll, &cursor,
@@ -18006,7 +18006,6 @@ nk_panel_end(struct nk_context *ctx)
         window->popup.con_count = 0;
     }
     window->popup.combo_count = 0;
-
     /* helper to make sure you have a 'nk_tree_push' for every 'nk_tree_pop' */
     NK_ASSERT(!layout->row.tree_depth);
 }
