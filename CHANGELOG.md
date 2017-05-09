@@ -11,6 +11,7 @@
 
 Changes:
 --------
+- 2017/05/09 (1.38.1) - Fixed scaler dragging behavior if window size hits minimum size
 - 2017/05/06 (1.38.0) - Added platform double-click support
 - 2017/04/20 (1.37.1) - Fixed key repeat found inside glfw demo backends
 - 2017/04/20 (1.37.0) - Extended properties with selection and clipbard support

@@ -17939,20 +17939,27 @@ nk_panel_end(struct nk_context *ctx)
             int left_mouse_click_in_scaler = nk_input_has_mouse_click_down_in_rect(in,
                     NK_BUTTON_LEFT, scaler, nk_true);
 
-            if (nk_input_is_mouse_down(in, NK_BUTTON_LEFT) && left_mouse_down && left_mouse_click_in_scaler) {
+            if (left_mouse_down && left_mouse_click_in_scaler) {
                 float delta_x = in->mouse.delta.x;
                 if (layout->flags & NK_WINDOW_SCALE_LEFT) {
                     delta_x = -delta_x;
                     window->bounds.x += in->mouse.delta.x;
                 }
-                window->bounds.w = NK_MAX(window_size.x, window->bounds.w + delta_x);
-
-                /* dragging in y-direction is only possible if static window */
-                if (!(layout->flags & NK_WINDOW_DYNAMIC))
-                    window->bounds.h = NK_MAX(window_size.y, window->bounds.h + in->mouse.delta.y);
+                /* dragging in x-direction  */
+                if (window_size.x < window->bounds.w + delta_x) {
+                    window->bounds.w = window->bounds.w + delta_x;
+                    scaler.x += in->mouse.delta.x;
+                }
+                /* dragging in y-direction (only possible if static window) */
+                if (!(layout->flags & NK_WINDOW_DYNAMIC)) {
+                    if (window_size.y < window->bounds.h + in->mouse.delta.y) {
+                        window->bounds.h = window->bounds.h + in->mouse.delta.y;
+                        scaler.y += in->mouse.delta.y;
+                    }
+                }
                 ctx->style.cursor_active = ctx->style.cursors[NK_CURSOR_RESIZE_TOP_RIGHT_DOWN_LEFT];
-                in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.x = scaler.x + in->mouse.delta.x + scaler.w/2.0f;
-                in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.y = scaler.y + in->mouse.delta.y + scaler.h/2.0f;
+                in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.x = scaler.x + scaler.w/2.0f;
+                in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.y = scaler.y + scaler.h/2.0f;
             }
         }
     }
