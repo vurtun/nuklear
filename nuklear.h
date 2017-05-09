@@ -5084,6 +5084,7 @@ nk_dtoa(char *s, double n)
 }
 
 #ifdef NK_INCLUDE_STANDARD_VARARGS
+#ifndef NK_INCLUDE_STANDARD_IO
 static int
 nk_vsnprintf(char *buf, int buf_size, const char *fmt, va_list args)
 {
@@ -5402,6 +5403,7 @@ nk_vsnprintf(char *buf, int buf_size, const char *fmt, va_list args)
     result = (len >= buf_size)?-1:len;
     return result;
 }
+#endif
 
 NK_INTERN int
 nk_strfmt(char *buf, int buf_size, const char *fmt, va_list args)
