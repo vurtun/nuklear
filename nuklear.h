@@ -17946,15 +17946,19 @@ nk_panel_end(struct nk_context *ctx)
                     window->bounds.x += in->mouse.delta.x;
                 }
                 /* dragging in x-direction  */
-                if (window_size.x < window->bounds.w + delta_x) {
-                    window->bounds.w = window->bounds.w + delta_x;
-                    scaler.x += in->mouse.delta.x;
+                if (window->bounds.w + delta_x >= window_size.x) {
+                    if ((delta_x < 0) || (delta_x > 0 && in->mouse.pos.x >= scaler.x)) {
+                        window->bounds.w = window->bounds.w + delta_x;
+                        scaler.x += in->mouse.delta.x;
+                    }
                 }
                 /* dragging in y-direction (only possible if static window) */
                 if (!(layout->flags & NK_WINDOW_DYNAMIC)) {
                     if (window_size.y < window->bounds.h + in->mouse.delta.y) {
-                        window->bounds.h = window->bounds.h + in->mouse.delta.y;
-                        scaler.y += in->mouse.delta.y;
+                        if ((in->mouse.delta.y < 0) || (in->mouse.delta.y > 0 && in->mouse.pos.y >= scaler.y)) {
+                            window->bounds.h = window->bounds.h + in->mouse.delta.y;
+                            scaler.y += in->mouse.delta.y;
+                        }
                     }
                 }
                 ctx->style.cursor_active = ctx->style.cursors[NK_CURSOR_RESIZE_TOP_RIGHT_DOWN_LEFT];

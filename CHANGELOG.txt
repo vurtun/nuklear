@@ -1,7 +1,7 @@
 # Changelog
 [date][x.yy.zz]-[description]
 
-- [date]: current date on which the change has been pushed
+- [date]: date on which the change has been pushed
 - [x.yy.zz]: Numerical version string representation. Each version number on the right
              resets back to zero if version on the left is incremented.
     - [x]: Major version with API and library breaking (extremly rare, maybe never)
@@ -11,6 +11,7 @@
 
 Changes:
 --------
+- 2017/05/10 (1.38.3) - Fixed wrong min window size mouse scaling over boundries
 - 2017/05/09 (1.38.2) - Fixed vertical scrollbar drawing with not enough space
 - 2017/05/09 (1.38.1) - Fixed scaler dragging behavior if window size hits minimum size
 - 2017/05/06 (1.38.0) - Added platform double-click support
