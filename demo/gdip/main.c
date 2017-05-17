@@ -69,6 +69,7 @@ int main(void)
 
     /* Win32 */
     memset(&wc, 0, sizeof(wc));
+    wc.style = CS_DBLCLKS;
     wc.lpfnWndProc = WindowProc;
     wc.hInstance = GetModuleHandleW(0);
     wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
