@@ -1791,7 +1791,6 @@ NK_API int nk_button_text_styled(struct nk_context*, const struct nk_style_butto
 NK_API int nk_button_label_styled(struct nk_context*, const struct nk_style_button*, const char *title);
 NK_API int nk_button_symbol_styled(struct nk_context*, const struct nk_style_button*, enum nk_symbol_type);
 NK_API int nk_button_image_styled(struct nk_context*, const struct nk_style_button*, struct nk_image img);
-NK_API int k_button_symbol_label_styled(struct nk_context*,const struct nk_style_button*, enum nk_symbol_type, const char*, nk_flags text_alignment);
 NK_API int nk_button_symbol_text_styled(struct nk_context*,const struct nk_style_button*, enum nk_symbol_type, const char*, int, nk_flags alignment);
 NK_API int nk_button_symbol_label_styled(struct nk_context *ctx, const struct nk_style_button *style, enum nk_symbol_type symbol, const char *title, nk_flags align);
 NK_API int nk_button_image_label_styled(struct nk_context*,const struct nk_style_button*, struct nk_image img, const char*, nk_flags text_alignment);
