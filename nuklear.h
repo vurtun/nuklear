@@ -19936,9 +19936,10 @@ nk_widget_has_mouse_click_down(struct nk_context *ctx, enum nk_buttons btn, int 
 NK_API enum nk_widget_layout_states
 nk_widget(struct nk_rect *bounds, const struct nk_context *ctx)
 {
-    struct nk_rect c;
+    struct nk_rect c, v;
     struct nk_window *win;
     struct nk_panel *layout;
+    const struct nk_input *in;
 
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
@@ -19950,6 +19951,7 @@ nk_widget(struct nk_rect *bounds, const struct nk_context *ctx)
     nk_panel_alloc_space(bounds, ctx);
     win = ctx->current;
     layout = win->layout;
+    in = &ctx->input;
     c = layout->clip;
 
     /*  if one of these triggers you forgot to add an `if` condition around either
@@ -19972,9 +19974,10 @@ nk_widget(struct nk_rect *bounds, const struct nk_context *ctx)
     c.w = (float)((int)c.w);
     c.h = (float)((int)c.h);
 
+    nk_unify(&v, &c, bounds->x, bounds->y, bounds->x + bounds->w, bounds->y + bounds->h);
     if (!NK_INTERSECT(c.x, c.y, c.w, c.h, bounds->x, bounds->y, bounds->w, bounds->h))
         return NK_WIDGET_INVALID;
-    if (!NK_CONTAINS(bounds->x, bounds->y, bounds->w, bounds->h, c.x, c.y, c.w, c.h))
+    if (!NK_INBOX(in->mouse.pos.x, in->mouse.pos.y, v.x, v.y, v.w, v.h))
         return NK_WIDGET_ROM;
     return NK_WIDGET_VALID;
 }

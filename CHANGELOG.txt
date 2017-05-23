@@ -11,6 +11,7 @@
 
 Changes:
 --------
+- 2017/05/23 (1.38.4) - Fixed activation behavior for widgets partially clipped
 - 2017/05/10 (1.38.3) - Fixed wrong min window size mouse scaling over boundries
 - 2017/05/09 (1.38.2) - Fixed vertical scrollbar drawing with not enough space
 - 2017/05/09 (1.38.1) - Fixed scaler dragging behavior if window size hits minimum size
