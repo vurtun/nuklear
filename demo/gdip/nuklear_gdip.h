@@ -999,6 +999,7 @@ nk_gdip_handle_event(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
         return 1;
 
     case WM_LBUTTONUP:
+        nk_input_button(&gdip.ctx, NK_BUTTON_DOUBLE, (short)LOWORD(lparam), (short)HIWORD(lparam), 0);
         nk_input_button(&gdip.ctx, NK_BUTTON_LEFT, (short)LOWORD(lparam), (short)HIWORD(lparam), 0);
         ReleaseCapture();
         return 1;
@@ -1029,6 +1030,10 @@ nk_gdip_handle_event(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
     case WM_MOUSEMOVE:
         nk_input_motion(&gdip.ctx, (short)LOWORD(lparam), (short)HIWORD(lparam));
+        return 1;
+
+    case WM_LBUTTONDBLCLK:
+        nk_input_button(&gdip.ctx, NK_BUTTON_DOUBLE, (short)LOWORD(lparam), (short)HIWORD(lparam), 1);
         return 1;
     }
 
