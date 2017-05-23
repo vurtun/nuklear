@@ -108,7 +108,7 @@ OPTIONAL DEFINES:
         <!> If used needs to be defined for implementation and header <!>
 
     NK_INCLUDE_FONT_BAKING
-        Defining this adds the `stb_truetype` and `stb_rect_pack` implementation
+        Defining this adds `stb_truetype` and `stb_rect_pack` implementation
         to this library and provides font baking and rendering.
         If you already have font handling or do not want to use this font handler
         you don't have to define it.
@@ -842,7 +842,8 @@ NK_API void nk_input_end(struct nk_context*);
  *  application only depends on the UI and does not require any outside calculations.
  *  If you actually only update on input make sure to update the UI two times each
  *  frame and call `nk_clear` directly after the first pass and only draw in
- *  the second pass.
+ *  the second pass. In addition it is recommended to also add additional timers
+ *  to make sure the UI is not drawn more than a fixed number of frames per second.
  *
  *      struct nk_context ctx;
  *      nk_init_xxx(&ctx, ...);
@@ -877,7 +878,7 @@ NK_API void nk_input_end(struct nk_context*);
  *  allocate a memory buffer that will store each unique drawing output.
  *  After each frame you compare the draw command memory inside the library
  *  with your allocated buffer by memcmp. If memcmp detects differences
- *  you have to copy the nuklears command buffer into the allocated buffer
+ *  you have to copy the command buffer into the allocated buffer
  *  and then draw like usual (this example uses fixed memory but you could
  *  use dynamically allocated memory).
  *
@@ -12325,6 +12326,7 @@ nk_font_atlas_cleanup(struct nk_font_atlas *atlas)
             atlas->permanent.free(atlas->permanent.userdata, iter->ttf_blob);
             atlas->permanent.free(atlas->permanent.userdata, iter);
         }
+        atlas->config = 0;
     }
 }
 
@@ -20040,7 +20042,6 @@ nk_spacing(struct nk_context *ctx, int cols)
             nk_panel_alloc_row(ctx, win);
         cols = index;
     }
-
     /* non table layout need to allocate space */
     if (layout->row.type != NK_LAYOUT_DYNAMIC_FIXED &&
         layout->row.type != NK_LAYOUT_STATIC_FIXED) {
@@ -21906,7 +21907,7 @@ nk_popup_begin(struct nk_context *ctx, enum nk_popup_type type,
         win->popup.type = NK_PANEL_POPUP;
     }
 
-    /* make sure we have to correct popup */
+    /* make sure we have correct popup */
     if (win->popup.name != title_hash) {
         if (!win->popup.active) {
             nk_zero(popup, sizeof(*popup));
@@ -22368,7 +22369,7 @@ nk_contextual_end(struct nk_context *ctx)
     NK_ASSERT(panel->type & NK_PANEL_SET_POPUP);
     if (panel->flags & NK_WINDOW_DYNAMIC) {
         /* Close behavior
-        This is a bit hack solution since we do not now before we end our popup
+        This is a bit of a hack solution since we do not know before we end our popup
         how big it will be. We therefore do not directly know when a
         click outside the non-blocking popup must close it at that direct frame.
         Instead it will be closed in the next frame.*/
@@ -22379,7 +22380,6 @@ nk_contextual_end(struct nk_context *ctx)
             body.y = (panel->at_y + panel->footer_height + panel->border + padding.y + panel->row.height);
             body.h = (panel->bounds.y + panel->bounds.h) - body.y;
         }
-
         {int pressed = nk_input_is_mouse_pressed(&ctx->input, NK_BUTTON_LEFT);
         int in_body = nk_input_is_mouse_hovering_rect(&ctx->input, body);
         if (pressed && in_body)
