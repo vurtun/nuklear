@@ -3137,6 +3137,7 @@ NK_FORMAT_COLOR_BEGIN,
     NK_FORMAT_R32G32B32,
 
     NK_FORMAT_R8G8B8A8,
+    NK_FORMAT_B8G8R8A8,
     NK_FORMAT_R16G15B16A16,
     NK_FORMAT_R32G32B32A32,
     NK_FORMAT_R32G32B32A32_FLOAT,
@@ -7905,6 +7906,11 @@ nk_draw_vertex_color(void *attribute, const float *values,
     case NK_FORMAT_R8G8B8: {
         struct nk_color col = nk_rgba_fv(values);
         NK_MEMCPY(attribute, &col.r, sizeof(col));
+    } break;
+    case NK_FORMAT_B8G8R8A8: {
+        struct nk_color col = nk_rgba_fv(values);
+        struct nk_color bgra = nk_rgba(col.b, col.g, col.r, col.a);
+        NK_MEMCPY(attribute, &bgra, sizeof(bgra));
     } break;
     case NK_FORMAT_R16G15B16: {
         nk_ushort col[3];
