@@ -14512,6 +14512,8 @@ nk_slider_behavior(nk_flags *state, struct nk_rect *logical_cursor,
 {
     int left_mouse_down;
     int left_mouse_click_in_cursor;
+ 
+    NK_UNUSED(style);
 
     /* check if visual cursor is being dragged */
     nk_widget_state_reset(state);
