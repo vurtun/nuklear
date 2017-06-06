@@ -6529,7 +6529,6 @@ nk_buffer_alloc(struct nk_buffer *b, enum nk_buffer_allocation_type type,
         else unaligned = nk_ptr_add(void, b->memory.ptr, b->size - size);
         memory = nk_buffer_align(unaligned, align, &alignment, type);
     }
-
     if (type == NK_BUFFER_FRONT)
         b->allocated += size + alignment;
     else b->size -= (size + alignment);
@@ -8912,7 +8911,7 @@ nk_convert(struct nk_context *ctx, struct nk_buffer *cmds,
         default: break;
         }
     }
-    res |= (cmds->needed > cmds->allocated) ? NK_CONVERT_COMMAND_BUFFER_FULL: 0;
+    res |= (cmds->needed > cmds->allocated + (cmds->memory.size - cmds->size)) ? NK_CONVERT_COMMAND_BUFFER_FULL: 0;
     res |= (vertices->needed > vertices->allocated) ? NK_CONVERT_VERTEX_BUFFER_FULL: 0;
     res |= (elements->needed > elements->allocated) ? NK_CONVERT_ELEMENT_BUFFER_FULL: 0;
     return res;
@@ -11520,10 +11519,9 @@ nk_font_find_glyph(struct nk_font *font, nk_rune unicode)
     glyph = font->fallback;
     count = nk_range_count(font->info.ranges);
     for (i = 0; i < count; ++i) {
-        int diff;
         nk_rune f = font->info.ranges[(i*2)+0];
         nk_rune t = font->info.ranges[(i*2)+1];
-        diff = (int)((t - f) + 1);
+        int diff = (int)((t - f) + 1);
         if (unicode >= f && unicode <= t)
             return &font->glyphs[((nk_rune)total_glyphs + (unicode - f))];
         total_glyphs += diff;
@@ -11544,6 +11542,7 @@ nk_font_init(struct nk_font *font, float pixel_height,
         return;
 
     baked = *baked_font;
+    font->fallback = 0;
     font->info = baked;
     font->scale = (float)pixel_height / (float)font->info.height;
     font->glyphs = &glyphs[baked_font->glyph_offset];
