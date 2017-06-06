@@ -71,6 +71,9 @@ nk_sdl_render(enum nk_anti_aliasing AA)
     int display_width, display_height;
     struct nk_vec2 scale;
 
+    NK_UNUSED(max_vertex_buffer);
+    NK_UNUSED(max_element_buffer);
+
     SDL_GetWindowSize(sdl.win, &width, &height);
     SDL_GL_GetDrawableSize(sdl.win, &display_width, &display_height);
     scale.x = (float)display_width/(float)width;
