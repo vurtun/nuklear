@@ -1655,6 +1655,7 @@ NK_API void nk_layout_space_begin(struct nk_context*, enum nk_layout_format, flo
 NK_API void nk_layout_space_push(struct nk_context*, struct nk_rect);
 NK_API void nk_layout_space_end(struct nk_context*);
 
+NK_API struct nk_rect nk_layout_widget_bounds(struct nk_context*);
 NK_API struct nk_rect nk_layout_space_bounds(struct nk_context*);
 NK_API struct nk_vec2 nk_layout_space_to_screen(struct nk_context*, struct nk_vec2);
 NK_API struct nk_vec2 nk_layout_space_to_local(struct nk_context*, struct nk_vec2);
@@ -19385,6 +19386,26 @@ nk_layout_space_bounds(struct nk_context *ctx)
     ret.x = layout->clip.x;
     ret.y = layout->clip.y;
     ret.w = layout->clip.w;
+    ret.h = layout->row.height;
+    return ret;
+}
+
+NK_API struct nk_rect
+nk_layout_widget_bounds(struct nk_context *ctx)
+{
+    struct nk_rect ret;
+    struct nk_window *win;
+    struct nk_panel *layout;
+
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx->current->layout);
+    win = ctx->current;
+    layout = win->layout;
+
+    ret.x = layout->at_x;
+    ret.y = layout->clip.y;
+    ret.w = layout->bounds.w - NK_MAX(layout->at_x - layout->bounds.x,0);
     ret.h = layout->row.height;
     return ret;
 }
