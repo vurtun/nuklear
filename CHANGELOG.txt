@@ -11,6 +11,7 @@
 
 Changes:
 --------
+- 2017/06/08 (1.39.1) - Fixed property text edit handling bug caused by past `nk_widget` fix
 - 2017/06/08 (1.39.0) - Added function to retrieve window space without calling a nk_layout_xxx function
 - 2017/06/06 (1.38.5) - Fixed `nk_convert` return flag for command buffer
 - 2017/05/23 (1.38.4) - Fixed activation behavior for widgets partially clipped

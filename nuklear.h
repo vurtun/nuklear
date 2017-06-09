@@ -6134,7 +6134,7 @@ nk_text_clamp(const struct nk_user_font *font, const char *text,
             sep_len = len;
             break;
         }
-        if (i == NK_MAX(sep_count,0)){
+        if (i == sep_count){
             last_width = sep_width = width;
             sep_g = g+1;
         }
@@ -15985,7 +15985,6 @@ nk_do_property(nk_flags *ws,
             variant->value.d = NK_CLAMP(variant->min_value.d, variant->value.d - variant->step.d, variant->max_value.d); break;
         }
     }
-
     /* execute left button  */
     if (nk_do_button_symbol(ws, out, right, style->sym_right, behavior, &style->inc_button, in, font)) {
         switch (variant->kind) {
@@ -15998,7 +15997,6 @@ nk_do_property(nk_flags *ws,
             variant->value.d = NK_CLAMP(variant->min_value.d, variant->value.d + variant->step.d, variant->max_value.d); break;
         }
     }
-
     if (old != NK_PROPERTY_EDIT && (*state == NK_PROPERTY_EDIT)) {
         /* property has been activated so setup buffer */
         NK_MEMCPY(buffer, dst, (nk_size)*length);
@@ -16025,15 +16023,13 @@ nk_do_property(nk_flags *ws,
         filters[filter], text_edit, &style->edit, (*state == NK_PROPERTY_EDIT) ? in: 0, font);
 
     *length = text_edit->string.len;
-    active = text_edit->active;
     *cursor = text_edit->cursor;
     *select_begin = text_edit->select_start;
     *select_end = text_edit->select_end;
+    if (text_edit->active && nk_input_is_key_pressed(in, NK_KEY_ENTER))
+        text_edit->active = nk_false;
 
-    if (active && nk_input_is_key_pressed(in, NK_KEY_ENTER))
-        active = !active;
-
-    if (old && !active) {
+    if (active && !text_edit->active) {
         /* property is now not active so convert edit text to value*/
         *state = NK_PROPERTY_DEFAULT;
         buffer[*len] = '\0';
@@ -21156,7 +21152,6 @@ nk_property(struct nk_context *ctx, const char *name, struct nk_property_variant
     style = &ctx->style;
     s = nk_widget(&bounds, ctx);
     if (!s) return;
-    in = (s == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
 
     /* calculate hash from name */
     if (name[0] == '#') {
@@ -21184,6 +21179,8 @@ nk_property(struct nk_context *ctx, const char *name, struct nk_property_variant
     /* execute property widget */
     old_state = *state;
     ctx->text_edit.clip = ctx->clip;
+    in = ((s == NK_WIDGET_ROM && !win->property.active) ||
+        layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
     nk_do_property(&ctx->last_widget_state, &win->buffer, bounds, name,
         variant, inc_per_pixel, buffer, len, state, cursor, select_begin,
         select_end, &style->property, filter, in, style->font, &ctx->text_edit,
@@ -21204,7 +21201,6 @@ nk_property(struct nk_context *ctx, const char *name, struct nk_property_variant
             ctx->input.mouse.grabbed = nk_true;
         }
     }
-
     /* check if previously active property is now inactive */
     if (*state == NK_PROPERTY_DEFAULT && old_state != NK_PROPERTY_DEFAULT) {
         if (old_state == NK_PROPERTY_DRAG) {
@@ -21212,6 +21208,8 @@ nk_property(struct nk_context *ctx, const char *name, struct nk_property_variant
             ctx->input.mouse.grabbed = nk_false;
             ctx->input.mouse.ungrab = nk_true;
         }
+        win->property.select_start = 0;
+        win->property.select_end = 0;
         win->property.active = 0;
     }
 }
