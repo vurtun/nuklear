@@ -21632,10 +21632,12 @@ nk_plot(struct nk_context *ctx, enum nk_chart_type type, const float *values,
         min_value = NK_MIN(values[i + offset], min_value);
         max_value = NK_MAX(values[i + offset], max_value);
     }
-    nk_chart_begin(ctx, type, count, min_value, max_value);
-    for (i = 0; i < count; ++i)
-        nk_chart_push(ctx, values[i + offset]);
-    nk_chart_end(ctx);
+
+    if (nk_chart_begin(ctx, type, count, min_value, max_value)) {
+        for (i = 0; i < count; ++i)
+            nk_chart_push(ctx, values[i + offset]);
+        nk_chart_end(ctx);
+    }
 }
 
 NK_API void
@@ -21656,10 +21658,12 @@ nk_plot_function(struct nk_context *ctx, enum nk_chart_type type, void *userdata
         min_value = NK_MIN(value, min_value);
         max_value = NK_MAX(value, max_value);
     }
-    nk_chart_begin(ctx, type, count, min_value, max_value);
-    for (i = 0; i < count; ++i)
-        nk_chart_push(ctx, value_getter(userdata, i + offset));
-    nk_chart_end(ctx);
+
+    if (nk_chart_begin(ctx, type, count, min_value, max_value)) {
+        for (i = 0; i < count; ++i)
+            nk_chart_push(ctx, value_getter(userdata, i + offset));
+        nk_chart_end(ctx);
+    }
 }
 
 /* -------------------------------------------------------------
