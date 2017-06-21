@@ -1426,23 +1426,23 @@ NK_API void nk_window_show_if(struct nk_context*, const char *name, enum nk_show
  *  is that you have to define the row height for each. However the row height
  *  often depends on the height of the font.
  *
- *  To fix that internally nuklear uses a minimum height that is set to the currently
- *  active font and overwrites the row height value if zero.
+ *  To fix that internally nuklear uses a minimum row height that is set to the
+ *  height plus padding of currently active font and overwrites the row height
+ *  value if zero.
  *
  *  If you manually want to change the minimum row height then
  *  use nk_layout_set_min_row_height, and use nk_layout_reset_min_row_height to
  *  reset it back to be derived from font height.
  *
  *  Also if you change the font in nuklear it will automatically change the minimum
- *  row height for you and . That *  means if you change the font but still want
+ *  row height for you and. This means if you change the font but still want
  *  a minimum row height smaller than the font you have to repush your value.
  *
  *  For actually more advanced UI I would even recommend using the `nk_layout_space_xxx`
  *  layouting method in combination with a cassowary constraint solver (there are
  *  some versions on github with permissive license model) to take over all control over widget
  *  layouting yourself. However for quick and dirty layouting using all the other layouting
- *  functions.
- *
+ *  functions should be fine.
  *
  *  Usage
  *  -------------------
@@ -1467,6 +1467,11 @@ NK_API void nk_window_show_if(struct nk_context*, const char *name, enum nk_show
  *          // second row with same parameter as defined above
  *          nk_widget(...);
  *          nk_widget(...);
+ *
+ *          // third row uses 0 for height which will use auto layouting
+ *          nk_layout_row_dynamic(&ctx, 0, 2);
+ *          nk_widget(...);
+ *          nk_widget(...);
  *      }
  *      nk_end(...);
  *
@@ -1482,6 +1487,11 @@ NK_API void nk_window_show_if(struct nk_context*, const char *name, enum nk_show
  *          nk_widget(...);
  *
  *          // second row with same parameter as defined above
+ *          nk_widget(...);
+ *          nk_widget(...);
+ *
+ *          // third row uses 0 for height which will use auto layouting
+ *          nk_layout_row_static(&ctx, 0, 80, 2);
  *          nk_widget(...);
  *          nk_widget(...);
  *      }
@@ -1512,11 +1522,19 @@ NK_API void nk_window_show_if(struct nk_context*, const char *name, enum nk_show
  *          nk_layout_row_push(ctx, 0.75f);
  *          nk_widget(...);
  *          nk_layout_row_end(ctx);
+ *
+ *          // third row with auto generated height: composed of two widgets with window ratio 0.25 and 0.75
+ *          nk_layout_row_begin(ctx, NK_DYNAMIC, 0, 2);
+ *          nk_layout_row_push(ctx, 0.25f);
+ *          nk_widget(...);
+ *          nk_layout_row_push(ctx, 0.75f);
+ *          nk_widget(...);
+ *          nk_layout_row_end(ctx);
  *      }
  *      nk_end(...);
  *
  *  4.) nk_layout_row
- *  The retain mode counterpart to API nk_layout_row_xxx is the single nk_layout_row
+ *  The array counterpart to API nk_layout_row_xxx is the single nk_layout_row
  *  functions. Instead of pushing either pixel or window ratio for every widget
  *  it allows to define it by array. The trade of for less control is that
  *  `nk_layout_row` is automatically repeating. Otherwise the behavior is the
@@ -1532,6 +1550,14 @@ NK_API void nk_window_show_if(struct nk_context*, const char *name, enum nk_show
  *          nk_widget(...);
  *
  *          // two rows with height: 30 composed of two widgets with window ratio 0.25 and 0.75
+ *          const float ratio[] = {0.25, 0.75};
+ *          nk_layout_row(ctx, NK_DYNAMIC, 30, 2, ratio);
+ *          nk_widget(...);
+ *          nk_widget(...);
+ *          nk_widget(...);
+ *          nk_widget(...);
+ *
+ *          // two rows with auto generated height composed of two widgets with window ratio 0.25 and 0.75
  *          const float ratio[] = {0.25, 0.75};
  *          nk_layout_row(ctx, NK_DYNAMIC, 30, 2, ratio);
  *          nk_widget(...);
@@ -1563,9 +1589,14 @@ NK_API void nk_window_show_if(struct nk_context*, const char *name, enum nk_show
  *          nk_layout_row_template_push_static(ctx, 80);
  *          nk_layout_row_template_end(ctx);
  *
- *          nk_widget(...); // dynamic widget completly can go to zero
+ *          nk_widget(...); // dynamic widget can go to zero if not enough space
  *          nk_widget(...); // variable widget with min 80 pixel but can grow bigger if enough space
  *          nk_widget(...); // static widget with fixed 80 pixel width
+ *
+ *          // second row same layout
+ *          nk_widget(...);
+ *          nk_widget(...);
+ *          nk_widget(...);
  *      }
  *      nk_end(...);
  *
@@ -1598,32 +1629,34 @@ NK_API void nk_window_show_if(struct nk_context*, const char *name, enum nk_show
  *
  *  Reference
  *  -------------------
- *  nk_layout_set_min_row_height    - set the currently used minimum row height to a specified value
- *  nk_layout_reset_min_row_height  - resets the currently used minimum row height to font height
+ *  nk_layout_set_min_row_height            - set the currently used minimum row height to a specified value
+ *  nk_layout_reset_min_row_height          - resets the currently used minimum row height to font height
  *
- *  nk_layout_row_dynamic           - current layout is divided into n same sized gowing columns
- *  nk_layout_row_static            - current layout is divided into n same fixed sized columns
- *  nk_layout_row_begin             - starts a new row with given height and number of columns
- *  nk_layout_row_push              - pushes another column with given size or window ratio
- *  nk_layout_row_end               - finished previously started row
- *  nk_layout_row                   - specifies row columns in array as either window ratio or size
+ *  nk_layout_widget_bounds                 - calculates current width a static layout row can fit inside a window
+ *  nk_layout_ratio_from_pixel              - utility functions to calculate window ratio from pixel size
  *
- *  nk_layout_row_template_begin
- *  nk_layout_row_template_push_dynamic
- *  nk_layout_row_template_push_variable
- *  nk_layout_row_template_push_static
- *  nk_layout_row_template_end
+ *  nk_layout_row_dynamic                   - current layout is divided into n same sized gowing columns
+ *  nk_layout_row_static                    - current layout is divided into n same fixed sized columns
+ *  nk_layout_row_begin                     - starts a new row with given height and number of columns
+ *  nk_layout_row_push                      - pushes another column with given size or window ratio
+ *  nk_layout_row_end                       - finished previously started row
+ *  nk_layout_row                           - specifies row columns in array as either window ratio or size
  *
- *  nk_layout_space_begin
- *  nk_layout_space_push
- *  nk_layout_space_end
+ *  nk_layout_row_template_begin            - begins the row template declaration
+ *  nk_layout_row_template_push_dynamic     - adds a dynamic column that dynamically grows and can go to zero if not enough space
+ *  nk_layout_row_template_push_variable    - adds a variable column that dynamically grows but does not shrink below specified pixel width
+ *  nk_layout_row_template_push_static      - adds a static column that does not grow and will always have the same size
+ *  nk_layout_row_template_end              - marks the end of the row template
  *
- *  nk_layout_space_bounds
- *  nk_layout_space_to_screen
- *  nk_layout_space_to_local
- *  nk_layout_space_rect_to_screen
- *  nk_layout_space_rect_to_local
- *  nk_layout_ratio_from_pixel
+ *  nk_layout_space_begin                   - begins a new layouting space that allows to specify each widgets position and size
+ *  nk_layout_space_push                    - pushes position and size of the next widget in own coordiante space either as pixel or ratio
+ *  nk_layout_space_end                     - marks the end of the layouting space
+ *
+ *  nk_layout_space_bounds                  - callable after nk_layout_space_begin and returns total space allocated
+ *  nk_layout_space_to_screen               - convertes vector from nk_layout_space coordiant space into screen space
+ *  nk_layout_space_to_local                - convertes vector from screem space into nk_layout_space coordinates
+ *  nk_layout_space_rect_to_screen          - convertes rectangle from nk_layout_space coordiant space into screen space
+ *  nk_layout_space_rect_to_local           - convertes rectangle from screem space into nk_layout_space coordinates
  */
 /*  nk_layout_set_min_row_height - sets the currently used minimum row height.
  *  IMPORTANT: The passed height needs to include both your prefered row height
@@ -1637,12 +1670,21 @@ NK_API void nk_layout_set_min_row_height(struct nk_context*, float height);
  *  Parameters:
  *      @ctx must point to an previously initialized `nk_context` struct after call `nk_begin_xxx` */
 NK_API void nk_layout_reset_min_row_height(struct nk_context*);
+/*  nk_layout_widget_bounds - returns the width of the next row allocate by one of the layouting functions
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context` */
+NK_API struct nk_rect nk_layout_widget_bounds(struct nk_context*);
+/*  nk_layout_ratio_from_pixel - utility functions to calculate window ratio from pixel size
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context`
+ *      @pixel_width to convert to window ratio */
+NK_API float nk_layout_ratio_from_pixel(struct nk_context*, float pixel_width);
 /*  nk_layout_row_dynamic - Sets current row layout to share horizontal space
  *  between @cols number of widgets evenly. Once called all subsequent widget
  *  calls greater than @cols will allocate a new row with same layout.
  *  Parameters:
  *      @ctx must point to an previously initialized `nk_context` struct after call `nk_begin_xxx`
- *      @height holds row height to allocate from panel for widget height
+ *      @row_height holds height of each widget in row or zero for auto layouting
  *      @cols number of widget inside row */
 NK_API void nk_layout_row_dynamic(struct nk_context *ctx, float height, int cols);
 /*  nk_layout_row_static - Sets current row layout to fill @cols number of widgets
@@ -1658,7 +1700,7 @@ NK_API void nk_layout_row_static(struct nk_context *ctx, float height, int item_
  *  Parameters:
  *      @ctx must point to an previously initialized `nk_context` struct after call `nk_begin_xxx`
  *      @fmt either `NK_DYNAMIC` for window ratio or `NK_STATIC` for fixed size columns
- *      @row_height holds width of each widget in row
+ *      @row_height holds height of each widget in row or zero for auto layouting
  *      @cols number of widget inside row */
 NK_API void nk_layout_row_begin(struct nk_context *ctx, enum nk_layout_format fmt, float row_height, int cols);
 /*  nk_layout_row_push - Specifies either window ratio or width of a single column
@@ -1666,26 +1708,80 @@ NK_API void nk_layout_row_begin(struct nk_context *ctx, enum nk_layout_format fm
  *      @ctx must point to an previously initialized `nk_context` struct after call `nk_layout_row_begin`
  *      @value either a window ratio or fixed width depending on @fmt in previous `nk_layout_row_begin` call */
 NK_API void nk_layout_row_push(struct nk_context*, float value);
+/*  nk_layout_row_end - finished previously started row
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context` struct after call `nk_layout_row_begin` */
 NK_API void nk_layout_row_end(struct nk_context*);
+/*  nk_layout_row - specifies row columns in array as either window ratio or size
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context`
+ *      @fmt either `NK_DYNAMIC` for window ratio or `NK_STATIC` for fixed size columns
+ *      @row_height holds height of each widget in row or zero for auto layouting
+ *      @cols number of widget inside row */
 NK_API void nk_layout_row(struct nk_context*, enum nk_layout_format, float height, int cols, const float *ratio);
-
-NK_API void nk_layout_row_template_begin(struct nk_context*, float height);
+/*  nk_layout_row_template_begin - Begins the row template declaration
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context` struct
+ *      @row_height holds height of each widget in row or zero for auto layouting */
+NK_API void nk_layout_row_template_begin(struct nk_context*, float row_height);
+/*  nk_layout_row_template_push_dynamic - adds a dynamic column that dynamically grows and can go to zero if not enough space
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context` struct after call `nk_layout_row_template_begin` */
 NK_API void nk_layout_row_template_push_dynamic(struct nk_context*);
+/*  nk_layout_row_template_push_variable - adds a variable column that dynamically grows but does not shrink below specified pixel width
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context` struct after call `nk_layout_row_template_begin`
+ *      @min_width holds the minimum pixel width the next column must be */
 NK_API void nk_layout_row_template_push_variable(struct nk_context*, float min_width);
+/*  nk_layout_row_template_push_static - adds a static column that does not grow and will always have the same size
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context` struct after call `nk_layout_row_template_begin`
+ *      @width holds the absolulte pixel width value the next column must be */
 NK_API void nk_layout_row_template_push_static(struct nk_context*, float width);
+/*  nk_layout_row_template_end - marks the end of the row template
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context` struct after call `nk_layout_row_template_begin` */
 NK_API void nk_layout_row_template_end(struct nk_context*);
-
+/*  nk_layout_space_begin - begins a new layouting space that allows to specify each widgets position and size.
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context` struct
+ *      @fmt either `NK_DYNAMIC` for window ratio or `NK_STATIC` for fixed size columns
+ *      @row_height holds height of each widget in row or zero for auto layouting
+ *      @widget_count number of widgets inside row */
 NK_API void nk_layout_space_begin(struct nk_context*, enum nk_layout_format, float height, int widget_count);
+/*  nk_layout_space_push - pushes position and size of the next widget in own coordiante space either as pixel or ratio
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context` struct after call `nk_layout_space_begin`
+ *      @bounds position and size in laoyut space local coordinates */
 NK_API void nk_layout_space_push(struct nk_context*, struct nk_rect);
+/*  nk_layout_space_end - marks the end of the layout space
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context` struct after call `nk_layout_space_begin` */
 NK_API void nk_layout_space_end(struct nk_context*);
-
-NK_API struct nk_rect nk_layout_widget_bounds(struct nk_context*);
+/*  nk_layout_space_bounds - returns total space allocated for `nk_layout_space`
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context` struct after call `nk_layout_space_begin` */
 NK_API struct nk_rect nk_layout_space_bounds(struct nk_context*);
+/*  nk_layout_space_to_screen - convertes vector from nk_layout_space coordiant space into screen space
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context` struct after call `nk_layout_space_begin`
+ *      @vec position to convert from layout space into screen coordinate space */
 NK_API struct nk_vec2 nk_layout_space_to_screen(struct nk_context*, struct nk_vec2);
+/*  nk_layout_space_to_screen - convertes vector from layout space into screen space
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context` struct after call `nk_layout_space_begin`
+ *      @vec position to convert from screen space into layout coordinate space */
 NK_API struct nk_vec2 nk_layout_space_to_local(struct nk_context*, struct nk_vec2);
+/*  nk_layout_space_rect_to_screen - convertes rectangle from screen space into layout space
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context` struct after call `nk_layout_space_begin`
+ *      @bounds rectangle to convert from layout space into screen space */
 NK_API struct nk_rect nk_layout_space_rect_to_screen(struct nk_context*, struct nk_rect);
+/*  nk_layout_space_rect_to_local - convertes rectangle from layout space into screen space
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context` struct after call `nk_layout_space_begin`
+ *      @bounds rectangle to convert from screen space into layout space */
 NK_API struct nk_rect nk_layout_space_rect_to_local(struct nk_context*, struct nk_rect);
-NK_API float nk_layout_ratio_from_pixel(struct nk_context*, float pixel_width);
 /* =============================================================================
  *
  *                                  GROUP
@@ -19474,7 +19570,7 @@ nk_layout_widget_bounds(struct nk_context *ctx)
     layout = win->layout;
 
     ret.x = layout->at_x;
-    ret.y = layout->clip.y;
+    ret.y = layout->at_y;
     ret.w = layout->bounds.w - NK_MAX(layout->at_x - layout->bounds.x,0);
     ret.h = layout->row.height;
     return ret;
