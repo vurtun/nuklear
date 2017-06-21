@@ -11,6 +11,8 @@
 
 Changes:
 --------
+- 2017/06/08 (1.40.0) - Removed the breaking part of last commit. Auto layout now only
+                        comes in effect if you pass in zero was row height argument
 - 2017/06/08 (1.40.0) - BREAKING CHANGE: while not directly API breaking it will change
                         how layouting works. From now there will be an internal minimum
                         row height derived from font height. If you need a row smaller than

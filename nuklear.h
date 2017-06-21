@@ -1,5 +1,5 @@
 /*
- Nuklear - 1.37.0 - public domain
+ Nuklear - 1.40.0 - public domain
  no warrenty implied; use at your own risk.
  authored from 2015-2017 by Micha Mettke
 
@@ -19053,7 +19053,10 @@ nk_panel_layout(const struct nk_context *ctx, struct nk_window *win,
     layout->row.index = 0;
     layout->at_y += layout->row.height;
     layout->row.columns = cols;
-    layout->row.height = NK_MAX(height, layout->row.min_height) + item_spacing.y;
+    if (height == 0.0f)
+        layout->row.height = NK_MAX(height, layout->row.min_height) + item_spacing.y;
+    else layout->row.height = height + item_spacing.y;
+
     layout->row.item_offset = 0;
     if (layout->flags & NK_WINDOW_DYNAMIC) {
         /* draw background for dynamic panels */
