@@ -11,6 +11,11 @@
 
 Changes:
 --------
+- 2017/06/08 (1.40.0) - BREAKING CHANGE: while not directly API breaking it will change
+                        how layouting works. From now there will be an internal minimum
+                        row height derived from font height. If you need a row smaller than
+                        that you can directly set it by `nk_layout_set_min_row_height` and
+                        reset the value back by calling `nk_layout_reset_min_row_height.
 - 2017/06/08 (1.39.1) - Fixed property text edit handling bug caused by past `nk_widget` fix
 - 2017/06/08 (1.39.0) - Added function to retrieve window space without calling a nk_layout_xxx function
 - 2017/06/06 (1.38.5) - Fixed `nk_convert` return flag for command buffer

@@ -1424,16 +1424,22 @@ NK_API void nk_window_show_if(struct nk_context*, const char *name, enum nk_show
  *
  *  Biggest limitation with using all these APIs outside the `nk_layout_space_xxx` API
  *  is that you have to define the row height for each. However the row height
- *  often depends on the height of the font. So I would recommend writing
- *  a higher level layouting functions that just calls each function with default font height
- *  plus some spacing between rows. The reason why this library does't support this
- *  behavior by default is to grant more control.
+ *  often depends on the height of the font.
+ *  Internally nuklear uses a minimum height that is set to the currently
+ *  active font. However this prevents row heights smaller than the height of the
+ *  font. If you still want to have row smaller than the minimum font height
+ *  use nk_layout_set_min_row_height, or use nk_layout_reset_min_row_height and
+ *  Also if you change the font in nuklear it will automatically change the font
+ *  for you and reset the stack holding the pused min row height values. That
+ *  means if you change the font but still want a row height smaller than the font
+ *  you have to repush your value.
  *
  *  For actually more advanced UI I would even recommend using the `nk_layout_space_xxx`
  *  layouting method in combination with a cassowary constraint solver (there are
  *  some versions on github with permissive license model) to take over all control over widget
  *  layouting yourself. However for quick and dirty layouting using all the other layouting
- *  functions, especially if you don't change the font height, should be fine.
+ *  functions.
+ *
  *
  *  Usage
  *  -------------------
@@ -1589,6 +1595,9 @@ NK_API void nk_window_show_if(struct nk_context*, const char *name, enum nk_show
  *
  *  Reference
  *  -------------------
+ *  nk_layout_set_min_row_height    - set the currently used minimum row height to a specified value
+ *  nk_layout_reset_min_row_height  - resets the currently used minimum row height to font height
+ *
  *  nk_layout_row_dynamic           - current layout is divided into n same sized gowing columns
  *  nk_layout_row_static            - current layout is divided into n same fixed sized columns
  *  nk_layout_row_begin             - starts a new row with given height and number of columns
@@ -1613,6 +1622,18 @@ NK_API void nk_window_show_if(struct nk_context*, const char *name, enum nk_show
  *  nk_layout_space_rect_to_local
  *  nk_layout_ratio_from_pixel
  */
+/*  nk_layout_set_min_row_height - sets the currently used minimum row height.
+ *  IMPORTANT: The passed height needs to include both your prefered row height
+ *  as well as padding. No internal padding is added.
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context` struct after call `nk_begin_xxx`
+ *      @height new minimum row height to be used for auto generating the row height */
+NK_API void nk_layout_set_min_row_height(struct nk_context*, float height);
+/*  nk_layout_reset_min_row_height - Reset the currently used minimum row height
+ *  back to font height + text padding + additional padding (style_window.min_row_height_padding)
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context` struct after call `nk_begin_xxx` */
+NK_API void nk_layout_reset_min_row_height(struct nk_context*);
 /*  nk_layout_row_dynamic - Sets current row layout to share horizontal space
  *  between @cols number of widgets evenly. Once called all subsequent widget
  *  calls greater than @cols will allocate a new row with same layout.
@@ -3633,6 +3654,7 @@ struct nk_style_window {
     float group_border;
     float tooltip_border;
     float popup_border;
+    float min_row_height_padding;
 
     float rounding;
     struct nk_vec2 spacing;
@@ -3735,6 +3757,7 @@ struct nk_row_layout {
     enum nk_panel_row_layout_type type;
     int index;
     float height;
+    float min_height;
     int columns;
     const float *ratio;
     float item_width;
@@ -16819,6 +16842,7 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     win->tooltip_border = 1.0f;
     win->popup_border = 1.0f;
     win->border = 2.0f;
+    win->min_row_height_padding = 8;
 
     win->padding = nk_vec2(4,4);
     win->group_padding = nk_vec2(4,4);
@@ -16834,10 +16858,13 @@ nk_style_set_font(struct nk_context *ctx, const struct nk_user_font *font)
 {
     struct nk_style *style;
     NK_ASSERT(ctx);
+
     if (!ctx) return;
     style = &ctx->style;
     style->font = font;
     ctx->stacks.fonts.head = 0;
+    if (ctx->current)
+        nk_layout_reset_min_row_height(ctx);
 }
 
 NK_API int
@@ -17564,6 +17591,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title, enum nk_panel_type pan
     layout->max_x = 0;
     layout->header_height = 0;
     layout->footer_height = 0;
+    nk_layout_reset_min_row_height(ctx);
     layout->row.index = 0;
     layout->row.columns = 0;
     layout->row.ratio = 0;
@@ -18927,6 +18955,43 @@ nk_menubar_end(struct nk_context *ctx)
  *                          LAYOUT
  *
  * --------------------------------------------------------------*/
+NK_API void
+nk_layout_set_min_row_height(struct nk_context *ctx, float height)
+{
+    struct nk_window *win;
+    struct nk_panel *layout;
+
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout)
+        return;
+
+    win = ctx->current;
+    layout = win->layout;
+    layout->row.min_height = height;
+}
+
+NK_API void
+nk_layout_reset_min_row_height(struct nk_context *ctx)
+{
+    struct nk_window *win;
+    struct nk_panel *layout;
+    struct nk_font *font;
+
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout)
+        return;
+
+    win = ctx->current;
+    layout = win->layout;
+    layout->row.min_height = ctx->style.font->height;
+    layout->row.min_height += ctx->style.text.padding.y*2;
+    layout->row.min_height += ctx->style.window.min_row_height_padding*2;
+}
+
 NK_INTERN float
 nk_layout_row_calculate_usable_space(const struct nk_style *style, enum nk_panel_type type,
     float total_space, int columns)
@@ -18985,7 +19050,7 @@ nk_panel_layout(const struct nk_context *ctx, struct nk_window *win,
     layout->row.index = 0;
     layout->at_y += layout->row.height;
     layout->row.columns = cols;
-    layout->row.height = height + item_spacing.y;
+    layout->row.height = NK_MAX(height, layout->row.min_height) + item_spacing.y;
     layout->row.item_offset = 0;
     if (layout->flags & NK_WINDOW_DYNAMIC) {
         /* draw background for dynamic panels */
