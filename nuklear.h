@@ -1425,14 +1425,17 @@ NK_API void nk_window_show_if(struct nk_context*, const char *name, enum nk_show
  *  Biggest limitation with using all these APIs outside the `nk_layout_space_xxx` API
  *  is that you have to define the row height for each. However the row height
  *  often depends on the height of the font.
- *  Internally nuklear uses a minimum height that is set to the currently
- *  active font. However this prevents row heights smaller than the height of the
- *  font. If you still want to have row smaller than the minimum font height
- *  use nk_layout_set_min_row_height, or use nk_layout_reset_min_row_height and
- *  Also if you change the font in nuklear it will automatically change the font
- *  for you and reset the stack holding the pused min row height values. That
- *  means if you change the font but still want a row height smaller than the font
- *  you have to repush your value.
+ *
+ *  To fix that internally nuklear uses a minimum height that is set to the currently
+ *  active font and overwrites the row height value if zero.
+ *
+ *  If you manually want to change the minimum row height then
+ *  use nk_layout_set_min_row_height, and use nk_layout_reset_min_row_height to
+ *  reset it back to be derived from font height.
+ *
+ *  Also if you change the font in nuklear it will automatically change the minimum
+ *  row height for you and . That *  means if you change the font but still want
+ *  a minimum row height smaller than the font you have to repush your value.
  *
  *  For actually more advanced UI I would even recommend using the `nk_layout_space_xxx`
  *  layouting method in combination with a cassowary constraint solver (there are
