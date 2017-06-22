@@ -7338,7 +7338,7 @@ nk_stroke_line(struct nk_command_buffer *b, float x0, float y0,
 {
     struct nk_command_line *cmd;
     NK_ASSERT(b);
-    if (!b) return;
+    if (!b || line_thickness <= 0) return;
     cmd = (struct nk_command_line*)
         nk_command_buffer_push(b, NK_COMMAND_LINE, sizeof(*cmd));
     if (!cmd) return;
@@ -7357,7 +7357,7 @@ nk_stroke_curve(struct nk_command_buffer *b, float ax, float ay,
 {
     struct nk_command_curve *cmd;
     NK_ASSERT(b);
-    if (!b || col.a == 0) return;
+    if (!b || col.a == 0 || line_thickness <= 0) return;
 
     cmd = (struct nk_command_curve*)
         nk_command_buffer_push(b, NK_COMMAND_CURVE, sizeof(*cmd));
@@ -7380,7 +7380,7 @@ nk_stroke_rect(struct nk_command_buffer *b, struct nk_rect rect,
 {
     struct nk_command_rect *cmd;
     NK_ASSERT(b);
-    if (!b || c.a == 0 || rect.w == 0 || rect.h == 0) return;
+    if (!b || c.a == 0 || rect.w == 0 || rect.h == 0 || line_thickness <= 0) return;
     if (b->use_clipping) {
         const struct nk_rect *clip = &b->clip;
         if (!NK_INTERSECT(rect.x, rect.y, rect.w, rect.h,
@@ -7455,7 +7455,7 @@ nk_stroke_circle(struct nk_command_buffer *b, struct nk_rect r,
     float line_thickness, struct nk_color c)
 {
     struct nk_command_circle *cmd;
-    if (!b || r.w == 0 || r.h == 0) return;
+    if (!b || r.w == 0 || r.h == 0 || line_thickness <= 0) return;
     if (b->use_clipping) {
         const struct nk_rect *clip = &b->clip;
         if (!NK_INTERSECT(r.x, r.y, r.w, r.h, clip->x, clip->y, clip->w, clip->h))
@@ -7500,7 +7500,7 @@ nk_stroke_arc(struct nk_command_buffer *b, float cx, float cy, float radius,
     float a_min, float a_max, float line_thickness, struct nk_color c)
 {
     struct nk_command_arc *cmd;
-    if (!b || c.a == 0) return;
+    if (!b || c.a == 0 || line_thickness <= 0) return;
     cmd = (struct nk_command_arc*)
         nk_command_buffer_push(b, NK_COMMAND_ARC, sizeof(*cmd));
     if (!cmd) return;
@@ -7537,7 +7537,7 @@ nk_stroke_triangle(struct nk_command_buffer *b, float x0, float y0, float x1,
 {
     struct nk_command_triangle *cmd;
     NK_ASSERT(b);
-    if (!b || c.a == 0) return;
+    if (!b || c.a == 0 || line_thickness <= 0) return;
     if (b->use_clipping) {
         const struct nk_rect *clip = &b->clip;
         if (!NK_INBOX(x0, y0, clip->x, clip->y, clip->w, clip->h) &&
@@ -7596,7 +7596,7 @@ nk_stroke_polygon(struct nk_command_buffer *b,  float *points, int point_count,
     struct nk_command_polygon *cmd;
 
     NK_ASSERT(b);
-    if (!b || col.a == 0) return;
+    if (!b || col.a == 0 || line_thickness <= 0) return;
     size = sizeof(*cmd) + sizeof(short) * 2 * (nk_size)point_count;
     cmd = (struct nk_command_polygon*) nk_command_buffer_push(b, NK_COMMAND_POLYGON, size);
     if (!cmd) return;
@@ -7640,7 +7640,7 @@ nk_stroke_polyline(struct nk_command_buffer *b, float *points, int point_count,
     struct nk_command_polyline *cmd;
 
     NK_ASSERT(b);
-    if (!b || col.a == 0) return;
+    if (!b || col.a == 0 || line_thickness <= 0) return;
     size = sizeof(*cmd) + sizeof(short) * 2 * (nk_size)point_count;
     cmd = (struct nk_command_polyline*) nk_command_buffer_push(b, NK_COMMAND_POLYLINE, size);
     if (!cmd) return;
@@ -19079,7 +19079,6 @@ nk_layout_reset_min_row_height(struct nk_context *ctx)
 {
     struct nk_window *win;
     struct nk_panel *layout;
-    struct nk_font *font;
 
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);

@@ -11,6 +11,7 @@
 
 Changes:
 --------
+- 2017/06/30 (1.40.1) - Fixed drawing lines smaller or equal zero
 - 2017/06/08 (1.40.0) - Removed the breaking part of last commit. Auto layout now only
                         comes in effect if you pass in zero was row height argument
 - 2017/06/08 (1.40.0) - BREAKING CHANGE: while not directly API breaking it will change
