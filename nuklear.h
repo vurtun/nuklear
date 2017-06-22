@@ -19079,7 +19079,6 @@ nk_layout_reset_min_row_height(struct nk_context *ctx)
 {
     struct nk_window *win;
     struct nk_panel *layout;
-    struct nk_font *font;
 
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
