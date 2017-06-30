@@ -7386,7 +7386,6 @@ nk_stroke_rect(struct nk_command_buffer *b, struct nk_rect rect,
         if (!NK_INTERSECT(rect.x, rect.y, rect.w, rect.h,
             clip->x, clip->y, clip->w, clip->h)) return;
     }
-
     cmd = (struct nk_command_rect*)
         nk_command_buffer_push(b, NK_COMMAND_RECT, sizeof(*cmd));
     if (!cmd) return;
