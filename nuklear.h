@@ -4231,7 +4231,7 @@ template<typename T, int size_diff> struct nk_helper{enum {value = size_diff};};
 template<typename T> struct nk_helper<T,0>{enum {value = nk_alignof<T>::value};};
 template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
     diff = sizeof(Big) - sizeof(T), value = nk_helper<Big, diff>::value};};
-#define NK_ALIGNOF(t) (nk_alignof<t>::value);
+#define NK_ALIGNOF(t) (nk_alignof<t>::value)
 #elif defined(_MSC_VER)
 #define NK_ALIGNOF(t) (__alignof(t))
 #else
