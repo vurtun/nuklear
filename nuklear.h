@@ -11165,11 +11165,11 @@ struct nk_font_baker {
     struct nk_tt_pack_range *ranges;
 };
 
-NK_GLOBAL const nk_size nk_rect_align = NK_ALIGNOF(struct nk_rp_rect);
-NK_GLOBAL const nk_size nk_range_align = NK_ALIGNOF(struct nk_tt_pack_range);
-NK_GLOBAL const nk_size nk_char_align = NK_ALIGNOF(struct nk_tt_packedchar);
-NK_GLOBAL const nk_size nk_build_align = NK_ALIGNOF(struct nk_font_bake_data);
-NK_GLOBAL const nk_size nk_baker_align = NK_ALIGNOF(struct nk_font_baker);
+NK_GLOBAL const nk_size nk_rect_align = NK_ALIGNOF(struct nk_rp_rect)
+NK_GLOBAL const nk_size nk_range_align = NK_ALIGNOF(struct nk_tt_pack_range)
+NK_GLOBAL const nk_size nk_char_align = NK_ALIGNOF(struct nk_tt_packedchar)
+NK_GLOBAL const nk_size nk_build_align = NK_ALIGNOF(struct nk_font_bake_data)
+NK_GLOBAL const nk_size nk_baker_align = NK_ALIGNOF(struct nk_font_baker)
 
 NK_INTERN int
 nk_range_count(const nk_rune *range)
