@@ -3983,8 +3983,7 @@ struct nk_window {
     unsigned int scrolled;
 
     struct nk_table *tables;
-    unsigned short table_count;
-    unsigned short table_size;
+    unsigned int table_count;
 
     /* window list hooks */
     struct nk_window *next;
@@ -4087,10 +4086,11 @@ struct nk_configuration_stacks {
  *                          CONTEXT
  * =============================================================*/
 #define NK_VALUE_PAGE_CAPACITY \
-    ((NK_MAX(sizeof(struct nk_window),sizeof(struct nk_panel)) / sizeof(nk_uint)) / 2)
+    (((NK_MAX(sizeof(struct nk_window),sizeof(struct nk_panel)) / sizeof(nk_uint))) / 2)
 
 struct nk_table {
     unsigned int seq;
+    unsigned int size;
     nk_hash keys[NK_VALUE_PAGE_CAPACITY];
     nk_uint values[NK_VALUE_PAGE_CAPACITY];
     struct nk_table *next, *prev;
@@ -18260,16 +18260,16 @@ nk_push_table(struct nk_window *win, struct nk_table *tbl)
         win->tables = tbl;
         tbl->next = 0;
         tbl->prev = 0;
+        tbl->size = 0;
         win->table_count = 1;
-        win->table_size = 0;
         return;
     }
     win->tables->prev = tbl;
     tbl->next = win->tables;
     tbl->prev = 0;
+    tbl->size = 0;
     win->tables = tbl;
     win->table_count++;
-    win->table_size = 0;
 }
 
 NK_INTERN void
@@ -18292,32 +18292,31 @@ nk_add_value(struct nk_context *ctx, struct nk_window *win,
     NK_ASSERT(ctx);
     NK_ASSERT(win);
     if (!win || !ctx) return 0;
-    if (!win->tables || win->table_size >= NK_VALUE_PAGE_CAPACITY) {
+    if (!win->tables || win->tables->size >= NK_VALUE_PAGE_CAPACITY) {
         struct nk_table *tbl = nk_create_table(ctx);
         NK_ASSERT(tbl);
         if (!tbl) return 0;
         nk_push_table(win, tbl);
     }
     win->tables->seq = win->seq;
-    win->tables->keys[win->table_size] = name;
-    win->tables->values[win->table_size] = value;
-    return &win->tables->values[win->table_size++];
+    win->tables->keys[win->tables->size] = name;
+    win->tables->values[win->tables->size] = value;
+    return &win->tables->values[win->tables->size++];
 }
 
 NK_INTERN nk_uint*
 nk_find_value(struct nk_window *win, nk_hash name)
 {
-    nk_ushort size = win->table_size;
     struct nk_table *iter = win->tables;
     while (iter) {
-        nk_ushort i = 0;
+        unsigned int i = 0;
+        unsigned int size = iter->size;
         for (i = 0; i < size; ++i) {
             if (iter->keys[i] == name) {
                 iter->seq = win->seq;
                 return &iter->values[i];
             }
-        }
-        size = NK_VALUE_PAGE_CAPACITY;
+        } size = NK_VALUE_PAGE_CAPACITY;
         iter = iter->next;
     }
     return 0;
