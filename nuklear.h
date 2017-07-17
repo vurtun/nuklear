@@ -17320,7 +17320,6 @@ nk_clear(struct nk_context *ctx)
             iter = iter->next;
             continue;
         }
-
         /* remove hotness from hidden or closed windows*/
         if (((iter->flags & NK_WINDOW_HIDDEN) ||
             (iter->flags & NK_WINDOW_CLOSED)) &&
@@ -17332,7 +17331,6 @@ nk_clear(struct nk_context *ctx)
             nk_free_window(ctx, iter->popup.win);
             iter->popup.win = 0;
         }
-
         /* remove unused window state tables */
         {struct nk_table *n, *it = iter->tables;
         while (it) {
@@ -17346,7 +17344,6 @@ nk_clear(struct nk_context *ctx)
             }
             it = n;
         }}
-
         /* window itself is not used anymore so free */
         if (iter->seq != ctx->seq || iter->flags & NK_WINDOW_CLOSED) {
             next = iter->next;
@@ -17470,7 +17467,8 @@ nk_build(struct nk_context *ctx)
     buffer = (nk_byte*)ctx->memory.memory.ptr;
     while (iter != 0) {
         struct nk_window *next = iter->next;
-        if (iter->buffer.last == iter->buffer.begin || (iter->flags & NK_WINDOW_HIDDEN))
+        if (iter->buffer.last == iter->buffer.begin || (iter->flags & NK_WINDOW_HIDDEN)||
+            iter->seq != ctx->seq)
             goto cont;
 
         cmd = nk_ptr_add(struct nk_command, buffer, iter->buffer.last);
@@ -17517,7 +17515,6 @@ nk__begin(struct nk_context *ctx)
         nk_build(ctx);
         ctx->build = nk_true;
     }
-
     iter = ctx->begin;
     while (iter && ((iter->buffer.begin == iter->buffer.end) || (iter->flags & NK_WINDOW_HIDDEN)))
         iter = iter->next;
