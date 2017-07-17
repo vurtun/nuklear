@@ -3306,6 +3306,9 @@ struct nk_draw_list {
     unsigned int path_count;
     unsigned int path_offset;
 
+    enum nk_anti_aliasing line_AA;
+    enum nk_anti_aliasing shape_AA;
+
 #ifdef NK_INCLUDE_COMMAND_USERDATA
     nk_handle userdata;
 #endif
@@ -3313,7 +3316,7 @@ struct nk_draw_list {
 
 /* draw list */
 NK_API void nk_draw_list_init(struct nk_draw_list*);
-NK_API void nk_draw_list_setup(struct nk_draw_list*, const struct nk_convert_config*, struct nk_buffer *cmds, struct nk_buffer *vertices, struct nk_buffer *elements);
+NK_API void nk_draw_list_setup(struct nk_draw_list*, const struct nk_convert_config*, struct nk_buffer *cmds, struct nk_buffer *vertices, struct nk_buffer *elements, enum nk_anti_aliasing line_aa,enum nk_anti_aliasing shape_aa);
 NK_API void nk_draw_list_clear(struct nk_draw_list*);
 
 /* drawing */
@@ -7764,7 +7767,8 @@ nk_draw_list_init(struct nk_draw_list *list)
 
 NK_API void
 nk_draw_list_setup(struct nk_draw_list *canvas, const struct nk_convert_config *config,
-    struct nk_buffer *cmds, struct nk_buffer *vertices, struct nk_buffer *elements)
+    struct nk_buffer *cmds, struct nk_buffer *vertices, struct nk_buffer *elements,
+    enum nk_anti_aliasing line_aa, enum nk_anti_aliasing shape_aa)
 {
     NK_ASSERT(canvas);
     NK_ASSERT(config);
@@ -7778,6 +7782,8 @@ nk_draw_list_setup(struct nk_draw_list *canvas, const struct nk_convert_config *
     canvas->config = *config;
     canvas->elements = elements;
     canvas->vertices = vertices;
+    canvas->line_AA = line_aa;
+    canvas->shape_AA = shape_aa;
     canvas->clip_rect = nk_null_rect;
 }
 
@@ -8670,8 +8676,13 @@ nk_draw_list_stroke_line(struct nk_draw_list *list, struct nk_vec2 a,
 {
     NK_ASSERT(list);
     if (!list || !col.a) return;
-    nk_draw_list_path_line_to(list, nk_vec2_add(a, nk_vec2(0.5f, 0.5f)));
-    nk_draw_list_path_line_to(list, nk_vec2_add(b, nk_vec2(0.5f, 0.5f)));
+    if (list->line_AA == NK_ANTI_ALIASING_ON) {
+        nk_draw_list_path_line_to(list, a);
+        nk_draw_list_path_line_to(list, b);
+    } else {
+        nk_draw_list_path_line_to(list, nk_vec2_sub(a,nk_vec2(0.5f,0.5f)));
+        nk_draw_list_path_line_to(list, nk_vec2_sub(b,nk_vec2(0.5f,0.5f)));
+    }
     nk_draw_list_path_stroke(list,  col, NK_STROKE_OPEN, thickness);
 }
 
@@ -8681,9 +8692,14 @@ nk_draw_list_fill_rect(struct nk_draw_list *list, struct nk_rect rect,
 {
     NK_ASSERT(list);
     if (!list || !col.a) return;
-    nk_draw_list_path_rect_to(list, nk_vec2(rect.x + 0.5f, rect.y + 0.5f),
-        nk_vec2(rect.x + rect.w + 0.5f, rect.y + rect.h + 0.5f), rounding);
-    nk_draw_list_path_fill(list,  col);
+
+    if (list->line_AA == NK_ANTI_ALIASING_ON) {
+        nk_draw_list_path_rect_to(list, nk_vec2(rect.x, rect.y),
+            nk_vec2(rect.x + rect.w, rect.y + rect.h), rounding);
+    } else {
+        nk_draw_list_path_rect_to(list, nk_vec2(rect.x-0.5f, rect.y-0.5f),
+            nk_vec2(rect.x + rect.w, rect.y + rect.h), rounding);
+    } nk_draw_list_path_fill(list,  col);
 }
 
 NK_API void
@@ -8692,9 +8708,13 @@ nk_draw_list_stroke_rect(struct nk_draw_list *list, struct nk_rect rect,
 {
     NK_ASSERT(list);
     if (!list || !col.a) return;
-    nk_draw_list_path_rect_to(list, nk_vec2(rect.x + 0.5f, rect.y + 0.5f),
-        nk_vec2(rect.x + rect.w + 0.5f, rect.y + rect.h + 0.5f), rounding);
-    nk_draw_list_path_stroke(list,  col, NK_STROKE_CLOSED, thickness);
+    if (list->line_AA == NK_ANTI_ALIASING_ON) {
+        nk_draw_list_path_rect_to(list, nk_vec2(rect.x, rect.y),
+            nk_vec2(rect.x + rect.w, rect.y + rect.h), rounding);
+    } else {
+        nk_draw_list_path_rect_to(list, nk_vec2(rect.x-0.5f, rect.y-0.5f),
+            nk_vec2(rect.x + rect.w, rect.y + rect.h), rounding);
+    } nk_draw_list_path_stroke(list,  col, NK_STROKE_CLOSED, thickness);
 }
 
 NK_API void
@@ -8920,7 +8940,8 @@ nk_convert(struct nk_context *ctx, struct nk_buffer *cmds,
     if (!ctx || !cmds || !vertices || !elements || !config || !config->vertex_layout)
         return NK_CONVERT_INVALID_PARAM;
 
-    nk_draw_list_setup(&ctx->draw_list, config, cmds, vertices, elements);
+    nk_draw_list_setup(&ctx->draw_list, config, cmds, vertices, elements,
+        config->line_AA, config->shape_AA);
     nk_foreach(cmd, ctx)
     {
 #ifdef NK_INCLUDE_COMMAND_USERDATA
