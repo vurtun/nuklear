@@ -11,6 +11,8 @@
 
 Changes:
 --------
+- 2017/07/07 (1.40.6) - Fixed missing clipping rect check for hovering/clicked
+                        query for widgets
 - 2017/07/07 (1.40.5) - Fixed drawing bug for vertex output for lines and stroked
                         and filled rectangles
 - 2017/07/07 (1.40.4) - Fixed bug in nk_convert trying to add windows that are in

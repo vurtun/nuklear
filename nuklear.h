@@ -1500,7 +1500,7 @@ NK_API void nk_window_show_if(struct nk_context*, const char *name, enum nk_show
  *  3.) nk_layout_row_xxx
  *  A little bit more advanced layouting API are functions `nk_layout_row_begin`,
  *  `nk_layout_row_push` and `nk_layout_row_end`. They allow to directly
- *  specify each column pixel or window ratio in a row. It support either
+ *  specify each column pixel or window ratio in a row. It supports either
  *  directly setting per column pixel width or widget window ratio but not
  *  both. Furthermore it is a immediate mode API so each value is directly
  *  pushed before calling a widget. Therefore the layout is not automatically
@@ -20100,48 +20100,72 @@ NK_API int
 nk_widget_is_hovered(struct nk_context *ctx)
 {
     int ret;
+    struct nk_rect c, v;
     struct nk_rect bounds;
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
-    if (!ctx || !ctx->current)
+    if (!ctx || !ctx->current || ctx->active != ctx->current)
         return 0;
 
+    c = ctx->current->layout->clip;
+    c.x = (float)((int)c.x);
+    c.y = (float)((int)c.y);
+    c.w = (float)((int)c.w);
+    c.h = (float)((int)c.h);
+
     nk_layout_peek(&bounds, ctx);
-    ret = (ctx->active == ctx->current);
-    ret = ret && nk_input_is_mouse_hovering_rect(&ctx->input, bounds);
-    return ret;
+    nk_unify(&v, &c, bounds.x, bounds.y, bounds.x + bounds.w, bounds.y + bounds.h);
+    if (!NK_INTERSECT(c.x, c.y, c.w, c.h, bounds.x, bounds.y, bounds.w, bounds.h))
+        return 0;
+    return nk_input_is_mouse_hovering_rect(&ctx->input, bounds);
 }
 
 NK_API int
 nk_widget_is_mouse_clicked(struct nk_context *ctx, enum nk_buttons btn)
 {
     int ret;
+    struct nk_rect c, v;
     struct nk_rect bounds;
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
-    if (!ctx || !ctx->current)
+    if (!ctx || !ctx->current || ctx->active != ctx->current)
         return 0;
 
+    c = ctx->current->layout->clip;
+    c.x = (float)((int)c.x);
+    c.y = (float)((int)c.y);
+    c.w = (float)((int)c.w);
+    c.h = (float)((int)c.h);
+
     nk_layout_peek(&bounds, ctx);
-    ret = (ctx->active == ctx->current);
-    ret = ret && nk_input_mouse_clicked(&ctx->input, btn, bounds);
-    return ret;
+    nk_unify(&v, &c, bounds.x, bounds.y, bounds.x + bounds.w, bounds.y + bounds.h);
+    if (!NK_INTERSECT(c.x, c.y, c.w, c.h, bounds.x, bounds.y, bounds.w, bounds.h))
+        return 0;
+    return nk_input_mouse_clicked(&ctx->input, btn, bounds);
 }
 
 NK_API int
 nk_widget_has_mouse_click_down(struct nk_context *ctx, enum nk_buttons btn, int down)
 {
     int ret;
+    struct nk_rect c, v;
     struct nk_rect bounds;
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
-    if (!ctx || !ctx->current)
+    if (!ctx || !ctx->current || ctx->active != ctx->current)
         return 0;
 
+    c = ctx->current->layout->clip;
+    c.x = (float)((int)c.x);
+    c.y = (float)((int)c.y);
+    c.w = (float)((int)c.w);
+    c.h = (float)((int)c.h);
+
     nk_layout_peek(&bounds, ctx);
-    ret = (ctx->active == ctx->current);
-    ret = ret && nk_input_has_mouse_click_down_in_rect(&ctx->input, btn, bounds, down);
-    return ret;
+    nk_unify(&v, &c, bounds.x, bounds.y, bounds.x + bounds.w, bounds.y + bounds.h);
+    if (!NK_INTERSECT(c.x, c.y, c.w, c.h, bounds.x, bounds.y, bounds.w, bounds.h))
+        return 0;
+    return nk_input_has_mouse_click_down_in_rect(&ctx->input, btn, bounds, down);
 }
 
 NK_API enum nk_widget_layout_states
