@@ -20099,7 +20099,6 @@ nk_widget_height(struct nk_context *ctx)
 NK_API int
 nk_widget_is_hovered(struct nk_context *ctx)
 {
-    int ret;
     struct nk_rect c, v;
     struct nk_rect bounds;
     NK_ASSERT(ctx);
@@ -20123,7 +20122,6 @@ nk_widget_is_hovered(struct nk_context *ctx)
 NK_API int
 nk_widget_is_mouse_clicked(struct nk_context *ctx, enum nk_buttons btn)
 {
-    int ret;
     struct nk_rect c, v;
     struct nk_rect bounds;
     NK_ASSERT(ctx);
@@ -20147,7 +20145,6 @@ nk_widget_is_mouse_clicked(struct nk_context *ctx, enum nk_buttons btn)
 NK_API int
 nk_widget_has_mouse_click_down(struct nk_context *ctx, enum nk_buttons btn, int down)
 {
-    int ret;
     struct nk_rect c, v;
     struct nk_rect bounds;
     NK_ASSERT(ctx);
