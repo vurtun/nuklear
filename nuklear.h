@@ -8586,11 +8586,39 @@ nk_draw_list_path_arc_to(struct nk_draw_list *list, struct nk_vec2 center,
     NK_ASSERT(list);
     if (!list) return;
     if (radius == 0.0f) return;
-    for (i = 0; i <= segments; ++i) {
-        const float a = a_min + ((float)i / ((float)segments) * (a_max - a_min));
-        const float x = center.x + (float)NK_COS(a) * radius;
-        const float y = center.y + (float)NK_SIN(a) * radius;
+
+    // This algorithm for arc drawing relies on
+    // these two trigonometric identities:
+    //     sin(a + b) = sin(a) * cos(b) + cos(a) * sin(b)
+    //     cos(a + b) = cos(a) * cos(b) - sin(a) * sin(b)
+    //
+    // Two coordinates (x, y) of a point on a circle centered on
+    // the origin can be written in polar form as:
+    //     x = r * cos(a)
+    //     y = r * sin(a)
+    // where r is the radius of the circle,
+    //       a is the angle between (x, y) and the origin.
+    //
+    // This allows us to rotate the coordinates around the
+    // origin by an angle b using the following transformation:
+    //     x' = r * cos(a + b) = x * cos(b) - y * sin(b)
+    //     y' = r * sin(a + b) = y * cos(b) + x * sin(b)
+
+    const float d_angle = (a_max - a_min) / (float)segments;
+    const float sin_d = (float)NK_SIN(d_angle);
+    const float cos_d = (float)NK_COS(d_angle);
+
+    float cx = (float)NK_COS(a_min) * radius;
+    float cy = (float)NK_SIN(a_min) * radius;
+    for(i = 0; i <= segments; ++i) {
+        const float x = center.x + cx;
+        const float y = center.y + cy;
         nk_draw_list_path_line_to(list, nk_vec2(x, y));
+
+        const float new_cx = cx * cos_d - cy * sin_d;
+        const float new_cy = cy * cos_d + cx * sin_d;
+        cx = new_cx;
+        cy = new_cy;
     }
 }
 
