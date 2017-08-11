@@ -49,12 +49,10 @@ main(int argc, char* argv[])
 	SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_EVENTS);
 	TTF_Init();
-	TTF_Font * font = NULL;
 	SDL_Window *win = SDL_CreateWindow("Demo", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI);
 	SDL_Renderer *  ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
-	///TTF_OpenFont()
 	
-	struct nk_color background;
+    struct nk_color background;
     int win_width, win_height;
     int running = 1;
 
@@ -80,7 +78,7 @@ main(int argc, char* argv[])
 
 	background= nk_rgb(111, 33, 44);
 	background.a = 128;
-    //background = nk_rgb(28,48,62);
+    	//background = nk_rgb(28,48,62);
 	while (running)
 	{
 		/* Input */
@@ -141,20 +139,12 @@ main(int argc, char* argv[])
 		/* Draw */
 		SDL_SetRenderDrawColor(ren, background.r, background.b, background.g, background.a);
 		SDL_RenderClear(ren);
-
-		{float bg[4];
-		nk_color_fv(bg, background);
-		SDL_GetWindowSize(win, &win_width, &win_height);
-		nk_sdl_soft_render();
-		}
-	
+                nk_sdl_soft_render();
 		SDL_RenderPresent(ren);
-
 	}
 
 cleanup:
     nk_sdl_soft_shutdown();
-//    SDL_GL_DeleteContext(glContext);
     SDL_DestroyWindow(win);
     SDL_Quit();
     return 0;
