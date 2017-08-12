@@ -8587,23 +8587,24 @@ nk_draw_list_path_arc_to(struct nk_draw_list *list, struct nk_vec2 center,
     if (!list) return;
     if (radius == 0.0f) return;
 
-    // This algorithm for arc drawing relies on
-    // these two trigonometric identities:
-    //     sin(a + b) = sin(a) * cos(b) + cos(a) * sin(b)
-    //     cos(a + b) = cos(a) * cos(b) - sin(a) * sin(b)
-    //
-    // Two coordinates (x, y) of a point on a circle centered on
-    // the origin can be written in polar form as:
-    //     x = r * cos(a)
-    //     y = r * sin(a)
-    // where r is the radius of the circle,
-    //       a is the angle between (x, y) and the origin.
-    //
-    // This allows us to rotate the coordinates around the
-    // origin by an angle b using the following transformation:
-    //     x' = r * cos(a + b) = x * cos(b) - y * sin(b)
-    //     y' = r * sin(a + b) = y * cos(b) + x * sin(b)
+    /*  This algorithm for arc drawing relies on these two trigonometric identities[1]:
+            sin(a + b) = sin(a) * cos(b) + cos(a) * sin(b)
+            cos(a + b) = cos(a) * cos(b) - sin(a) * sin(b)
 
+        Two coordinates (x, y) of a point on a circle centered on
+        the origin can be written in polar form as:
+            x = r * cos(a)
+            y = r * sin(a)
+        where r is the radius of the circle,
+            a is the angle between (x, y) and the origin.
+
+        This allows us to rotate the coordinates around the
+        origin by an angle b using the following transformation:
+            x' = r * cos(a + b) = x * cos(b) - y * sin(b)
+            y' = r * sin(a + b) = y * cos(b) + x * sin(b)
+
+        [1] https://en.wikipedia.org/wiki/List_of_trigonometric_identities#Angle_sum_and_difference_identities
+    */
     const float d_angle = (a_max - a_min) / (float)segments;
     const float sin_d = (float)NK_SIN(d_angle);
     const float cos_d = (float)NK_COS(d_angle);
