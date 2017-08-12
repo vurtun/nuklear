@@ -18770,6 +18770,8 @@ nk_window_is_hovered(struct nk_context *ctx)
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
     if (!ctx || !ctx->current) return 0;
+    if(ctx->current->flags & NK_WINDOW_HIDDEN)
+        return 0;
     return nk_input_is_mouse_hovering_rect(&ctx->input, ctx->current->bounds);
 }
 
@@ -18782,13 +18784,15 @@ nk_window_is_any_hovered(struct nk_context *ctx)
     iter = ctx->begin;
     while (iter) {
         /* check if window is being hovered */
-        if (iter->flags & NK_WINDOW_MINIMIZED) {
-            struct nk_rect header = iter->bounds;
-            header.h = ctx->style.font->height + 2 * ctx->style.window.header.padding.y;
-            if (nk_input_is_mouse_hovering_rect(&ctx->input, header))
+        if(!(iter->flags & NK_WINDOW_HIDDEN)) {
+            if (iter->flags & NK_WINDOW_MINIMIZED) {
+                struct nk_rect header = iter->bounds;
+                header.h = ctx->style.font->height + 2 * ctx->style.window.header.padding.y;
+                if (nk_input_is_mouse_hovering_rect(&ctx->input, header))
+                    return 1;
+            } else if (nk_input_is_mouse_hovering_rect(&ctx->input, iter->bounds)) {
                 return 1;
-        } else if (nk_input_is_mouse_hovering_rect(&ctx->input, iter->bounds)) {
-            return 1;
+            }
         }
         /* check if window popup is being hovered */
         if (iter->popup.active && iter->popup.win && nk_input_is_mouse_hovering_rect(&ctx->input, iter->popup.win->bounds))
