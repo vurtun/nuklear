@@ -10,7 +10,9 @@
 #include <limits.h>
 #include <time.h>
 
-#include <SDL2/SDL.h>
+#include <SDL.h>
+#include <SDL_ttf.h>
+
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_STANDARD_VARARGS
@@ -51,18 +53,17 @@ main(int argc, char* argv[])
 	TTF_Init();
 	SDL_Window *win = SDL_CreateWindow("Demo", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI);
 	SDL_Renderer *  ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
-	
-    struct nk_color background;
-    int win_width, win_height;
-    int running = 1;
+
+	TTF_Font * Font = TTF_OpenFont("font/Ubuntu-Regular.ttf", 13);
+
+	struct nk_color background;
+    	int running = 1;
 
     /* GUI */
-    struct nk_context *ctx;
-
-    SDL_GetWindowSize(win, &win_width, &win_height);
+    	struct nk_context *ctx;
 
 
-    ctx = nk_sdl_soft_init(ren);
+    	ctx = nk_sdl_soft_init(ren, Font);
     /* Load Fonts: if none of these are loaded a default font will be used  */
     /* Load Cursor: if you uncomment cursor loading please hide the cursor */
 	//{struct nk_font_atlas *atlas;
@@ -76,9 +77,8 @@ main(int argc, char* argv[])
 	/*struct nk_font *cousine = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Cousine-Regular.ttf", 13, 0);*/
 	//nk_sdl_font_stash_end(); }
 
-	background= nk_rgb(111, 33, 44);
-	background.a = 128;
-    	//background = nk_rgb(28,48,62);
+	//background= nk_rgb(111, 33, 44);
+    	background = nk_rgb(28,48,62);
 	while (running)
 	{
 		/* Input */
@@ -92,6 +92,8 @@ main(int argc, char* argv[])
 
 
 		/* GUI */
+
+
 		if (nk_begin(ctx, "Demo", nk_rect(50, 50, 200, 200),
 			NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE |
 			NK_WINDOW_CLOSABLE | NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE))
@@ -137,10 +139,13 @@ main(int argc, char* argv[])
 		/* ----------------------------------------- */
 
 		/* Draw */
-		SDL_SetRenderDrawColor(ren, background.r, background.b, background.g, background.a);
+		SDL_SetRenderDrawColor(ren, background.r, background.g, background.b, background.a);
 		SDL_RenderClear(ren);
-                nk_sdl_soft_render();
+
+		nk_sdl_soft_render();
+		
 		SDL_RenderPresent(ren);
+
 	}
 
 cleanup:

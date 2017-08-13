@@ -13,11 +13,9 @@
 #ifndef NK_SDL_SOFT_H_
 #define NK_SDL_SOFT_H_
 #include <SDL.h>
-#include <SDL_image.h>
-
 #include <SDL_ttf.h>
 
-NK_API struct nk_context *  nk_sdl_soft_init(SDL_Renderer *ren); //1
+NK_API struct nk_context *  nk_sdl_soft_init(SDL_Renderer *ren, TTF_Font * font); //1
 NK_API int                  nk_sdl_handle_event(SDL_Event *evt); //1
 NK_API void                 nk_sdl_soft_render();//1
 NK_API void                 nk_sdl_soft_shutdown(void);//1
@@ -39,10 +37,11 @@ NK_API void                 nk_sdl_font_stash_end(void);
 static struct {
 	SDL_Renderer * ren;
 	SDL_Texture * font_tex;
+	TTF_Font * ttf_font;
 	struct nk_draw_null_texture null;
 	struct nk_user_font *font;
 	struct nk_buffer cmds;
-    struct nk_context ctx;
+   	struct nk_context ctx;
 	struct nk_font_atlas atlas;
 } sdl_soft;
 
@@ -64,7 +63,7 @@ nk_sdl_soft_render()
 		case NK_COMMAND_NOP: break;
 		case NK_COMMAND_SCISSOR: {
 			const struct nk_command_scissor *s = (const struct nk_command_scissor*)cmd;
-		//need procedure
+		        //I do not understand why this is working without him
 		} break;
 		case NK_COMMAND_LINE: {
 			const struct nk_command_line *l = (const struct nk_command_line *)cmd;
@@ -398,7 +397,30 @@ nk_sdl_soft_render()
 		} break;
 		case NK_COMMAND_TEXT: {
 			const struct nk_command_text *t = (const struct nk_command_text*)cmd;
-			//need help 
+			SDL_Texture * texture;
+			SDL_Surface * textSurface;
+			SDL_Color fg;
+			SDL_Rect SrcR;
+			SDL_Rect DestR;
+			fg.r = t->foreground.r;
+			fg.g = t->foreground.g;
+			fg.b = t->foreground.b;
+			fg.a = t->foreground.a;
+
+			SrcR.x = 0;
+			SrcR.y = 0;
+			DestR.x = t->x;
+			DestR.y = t->y;
+			SDL_SetRenderDrawColor(sdl_soft.ren, t->background.r, t->background.g, t->background.b, t->background.a);
+			textSurface = TTF_RenderUTF8_Solid(sdl_soft.ttf_font, t->string, fg);
+			texture = SDL_CreateTextureFromSurface(sdl_soft.ren, textSurface);
+			SDL_QueryTexture(texture, NULL, NULL, &DestR.w, &DestR.h);
+			SrcR.h = DestR.h;
+			SrcR.w = DestR.w;
+			SDL_RenderCopy(sdl_soft.ren, texture, &SrcR, &DestR);
+			SDL_FreeSurface(textSurface);
+			SDL_DestroyTexture(texture);
+
 		} break;
 		case NK_COMMAND_CURVE: {
 			const struct nk_command_curve *q = (const struct nk_command_curve *)cmd;
@@ -412,7 +434,7 @@ nk_sdl_soft_render()
 
 		case NK_COMMAND_IMAGE: {
 			const struct nk_command_image *i = (const struct nk_command_image *)cmd;
-			//need procedure
+			
 		} break;
 		case NK_COMMAND_ARC: {
 			//need procedure
@@ -454,11 +476,11 @@ nk_sdl_clipbard_copy(nk_handle usr, const char *text, int len)
 }
 
 NK_API struct nk_context*
-nk_sdl_soft_init(SDL_Renderer *ren)
+nk_sdl_soft_init(SDL_Renderer *ren, TTF_Font * font)
 {
 	SDL_Surface *surface;
 	Uint32 rmask, gmask, bmask, amask;
-
+	sdl_soft.ttf_font = font;
 	sdl_soft.ren = ren;
 	nk_init_default(&sdl_soft.ctx, 0);
 	nk_buffer_init_default(&sdl_soft.cmds);
