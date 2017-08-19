@@ -5067,7 +5067,7 @@ nk_iceilf(float x)
 {
     if (x >= 0) {
         int i = (int)x;
-        return i;
+        return (x > i) ? i+1: i;
     } else {
         int t = (int)x;
         float r = x - (float)t;
