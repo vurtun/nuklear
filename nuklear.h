@@ -724,13 +724,12 @@ NK_API void nk_input_key(struct nk_context*, enum nk_keys, int down);
  *      @y must contain an integer describing mouse cursor y-position on click up/down
  *      @down must be 0 for key is up and 1 for key is down */
 NK_API void nk_input_button(struct nk_context*, enum nk_buttons, int x, int y, int down);
-/*  nk_input_char - Copies a single ASCII character into an internal text buffer
- *  This is basically a helper function to quickly push ASCII characters into
- *  nuklear. Note that you can only push up to NK_INPUT_MAX bytes into
- *  struct `nk_input` between `nk_input_begin` and `nk_input_end`.
+/*  nk_input_scroll - Copies the last mouse scroll value to nuklear. Is generally
+ *  a  scroll value. So does not have to come from mouse and could also originate
+ *  from touch for example.
  *  Parameters:
  *      @ctx must point to an previously initialized `nk_context` struct
- *      @c must be a single ASCII character preferable one that can be printed */
+ *      @val vector with both X- as well as Y-scroll value */
 NK_API void nk_input_scroll(struct nk_context*, struct nk_vec2 val);
 /*  nk_input_char - Copies a single ASCII character into an internal text buffer
  *  This is basically a helper function to quickly push ASCII characters into
