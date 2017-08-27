@@ -1,5 +1,5 @@
 /*
- Nuklear - 1.40.7 - public domain
+ Nuklear - 1.40.8 - public domain
  no warranty implied; use at your own risk.
  authored from 2015-2017 by Micha Mettke
 
@@ -18824,6 +18824,10 @@ nk_window_is_any_hovered(struct nk_context *ctx)
     while (iter) {
         /* check if window is being hovered */
         if(!(iter->flags & NK_WINDOW_HIDDEN)) {
+            /* check if window popup is being hovered */
+            if (iter->popup.active && iter->popup.win && nk_input_is_mouse_hovering_rect(&ctx->input, iter->popup.win->bounds))
+                return 1;
+
             if (iter->flags & NK_WINDOW_MINIMIZED) {
                 struct nk_rect header = iter->bounds;
                 header.h = ctx->style.font->height + 2 * ctx->style.window.header.padding.y;
@@ -18833,9 +18837,6 @@ nk_window_is_any_hovered(struct nk_context *ctx)
                 return 1;
             }
         }
-        /* check if window popup is being hovered */
-        if (iter->popup.active && iter->popup.win && nk_input_is_mouse_hovering_rect(&ctx->input, iter->popup.win->bounds))
-            return 1;
         iter = iter->next;
     }
     return 0;
