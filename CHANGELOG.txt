@@ -11,6 +11,7 @@
 
 Changes:
 --------
+- 2017/08/27 (1.40.7) - Fixed window background flag
 - 2017/07/07 (1.40.6) - Fixed missing clipping rect check for hovering/clicked
                         query for widgets
 - 2017/07/07 (1.40.5) - Fixed drawing bug for vertex output for lines and stroked
