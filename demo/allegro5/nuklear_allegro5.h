@@ -95,11 +95,9 @@ static float
 nk_allegro5_font_get_text_width(nk_handle handle, float height, const char *text, int len)
 {
     NkAllegro5Font *font = (NkAllegro5Font*)handle.ptr;
-
     if (!font || !text) {
         return 0;
     }
-
     /* We must copy into a new buffer with exact length null-terminated
        as nuklear uses variable size buffers and al_get_text_width doesn't
        accept a length, it infers length from null-termination
@@ -107,7 +105,6 @@ nk_allegro5_font_get_text_width(nk_handle handle, float height, const char *text
     char strcpy[len+1];
     strncpy((char*)&strcpy, text, len);
     strcpy[len] = '\0';
-
     return al_get_text_width(font->font, strcpy);
 }
 
@@ -289,7 +286,7 @@ nk_allegro5_handle_event(ALLEGRO_EVENT *ev)
         case ALLEGRO_EVENT_MOUSE_AXES: {
             nk_input_motion(ctx, ev->mouse.x, ev->mouse.y);
             if (ev->mouse.dz != 0) {
-                nk_input_scroll(ctx, (float)ev->mouse.dz / al_get_mouse_wheel_precision());
+                nk_input_scroll(ctx, nk_vec2(0,(float)ev->mouse.dz / al_get_mouse_wheel_precision()));
             }
         } break;
         case ALLEGRO_EVENT_MOUSE_BUTTON_DOWN:
@@ -342,7 +339,7 @@ nk_allegro5_handle_event(ALLEGRO_EVENT *ev)
         case ALLEGRO_EVENT_KEY_UP: {
             int kc = ev->keyboard.keycode;
             int down = ev->type == ALLEGRO_EVENT_KEY_DOWN;
-            
+
             if (kc == ALLEGRO_KEY_LSHIFT || kc == ALLEGRO_KEY_RSHIFT) nk_input_key(ctx, NK_KEY_SHIFT, down);
             else if (kc == ALLEGRO_KEY_DELETE)    nk_input_key(ctx, NK_KEY_DEL, down);
             else if (kc == ALLEGRO_KEY_ENTER)     nk_input_key(ctx, NK_KEY_ENTER, down);
@@ -367,7 +364,7 @@ nk_allegro5_handle_event(ALLEGRO_EVENT *ev)
             int kc = ev->keyboard.keycode;
             int control_mask = (ev->keyboard.modifiers & ALLEGRO_KEYMOD_CTRL) ||
                                (ev->keyboard.modifiers & ALLEGRO_KEYMOD_COMMAND);
-            
+
             if (kc == ALLEGRO_KEY_C && control_mask) {
                 nk_input_key(ctx, NK_KEY_COPY, 1);
             } else if (kc == ALLEGRO_KEY_V && control_mask) {
@@ -380,9 +377,7 @@ nk_allegro5_handle_event(ALLEGRO_EVENT *ev)
                 nk_input_key(ctx, NK_KEY_TEXT_REDO, 1);
             } else if (kc == ALLEGRO_KEY_A && control_mask) {
                 nk_input_key(ctx, NK_KEY_TEXT_SELECT_ALL, 1);
-            }
-            else {
-                
+            } else {
                 if (kc != ALLEGRO_KEY_BACKSPACE &&
                     kc != ALLEGRO_KEY_LEFT &&
                     kc != ALLEGRO_KEY_RIGHT &&
@@ -398,7 +393,6 @@ nk_allegro5_handle_event(ALLEGRO_EVENT *ev)
                     nk_input_unicode(ctx, ev->keyboard.unichar);
                 }
             }
-
         } break;
         default: break;
     }
@@ -462,3 +456,4 @@ void nk_allegro5_shutdown(void)
 }
 
 #endif /* NK_ALLEGRO5_IMPLEMENTATION */
+

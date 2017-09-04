@@ -27,9 +27,6 @@
 #define WINDOW_WIDTH 1200
 #define WINDOW_HEIGHT 800
 
-#define MAX_VERTEX_BUFFER 512 * 1024
-#define MAX_ELEMENT_BUFFER 128 * 1024
-
 #define UNUSED(a) (void)a
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #define MAX(a,b) ((a) < (b) ? (b) : (a))
@@ -155,7 +152,7 @@ int main(void)
          * with blending, scissor, face culling and depth test and defaults everything
          * back into a default state. Make sure to either save and restore or
          * reset your own state after drawing rendering the UI. */
-        nk_glfw3_render(NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
+        nk_glfw3_render(NK_ANTI_ALIASING_ON);
         glfwSwapBuffers(win);}
     }
     nk_glfw3_shutdown();

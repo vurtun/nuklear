@@ -1,7 +1,7 @@
 # Changelog
 [date][x.yy.zz]-[description]
 
-- [date]: current date on which the change has been pushed
+- [date]: date on which the change has been pushed
 - [x.yy.zz]: Numerical version string representation. Each version number on the right
              resets back to zero if version on the left is incremented.
     - [x]: Major version with API and library breaking (extremly rare, maybe never)
@@ -11,6 +11,46 @@
 
 Changes:
 --------
+- 2017/08/27 (1.40.8) - Fixed `nk_item_is_any_active` for hidden windows
+- 2017/08/27 (1.40.7) - Fixed window background flag
+- 2017/07/07 (1.40.6) - Fixed missing clipping rect check for hovering/clicked
+                        query for widgets
+- 2017/07/07 (1.40.5) - Fixed drawing bug for vertex output for lines and stroked
+                        and filled rectangles
+- 2017/07/07 (1.40.4) - Fixed bug in nk_convert trying to add windows that are in
+                        process of being destroyed.
+- 2017/07/07 (1.40.3) - Fixed table internal bug caused by storing table size in
+                        window instead of directly in table.
+- 2017/06/30 (1.40.2) - Removed unneeded semicolon in C++ NK_ALIGNOF macro
+- 2017/06/30 (1.40.1) - Fixed drawing lines smaller or equal zero
+- 2017/06/08 (1.40.0) - Removed the breaking part of last commit. Auto layout now only
+                        comes in effect if you pass in zero was row height argument
+- 2017/06/08 (1.40.0) - BREAKING CHANGE: while not directly API breaking it will change
+                        how layouting works. From now there will be an internal minimum
+                        row height derived from font height. If you need a row smaller than
+                        that you can directly set it by `nk_layout_set_min_row_height` and
+                        reset the value back by calling `nk_layout_reset_min_row_height.
+- 2017/06/08 (1.39.1) - Fixed property text edit handling bug caused by past `nk_widget` fix
+- 2017/06/08 (1.39.0) - Added function to retrieve window space without calling a nk_layout_xxx function
+- 2017/06/06 (1.38.5) - Fixed `nk_convert` return flag for command buffer
+- 2017/05/23 (1.38.4) - Fixed activation behavior for widgets partially clipped
+- 2017/05/10 (1.38.3) - Fixed wrong min window size mouse scaling over boundries
+- 2017/05/09 (1.38.2) - Fixed vertical scrollbar drawing with not enough space
+- 2017/05/09 (1.38.1) - Fixed scaler dragging behavior if window size hits minimum size
+- 2017/05/06 (1.38.0) - Added platform double-click support
+- 2017/04/20 (1.37.1) - Fixed key repeat found inside glfw demo backends
+- 2017/04/20 (1.37.0) - Extended properties with selection and clipbard support
+- 2017/04/20 (1.36.2) - Fixed #405 overlapping rows with zero padding and spacing
+- 2017/04/09 (1.36.1) - Fixed #403 with another widget float error
+- 2017/04/09 (1.36.0) - Added window `NK_WINDOW_NO_INPUT` and `NK_WINDOW_NOT_INTERACTIVE` flags
+- 2017/04/09 (1.35.3) - Fixed buffer heap corruption
+- 2017/03/25 (1.35.2) - Fixed popup overlapping for `NK_WINDOW_BACKGROUND` windows
+- 2017/03/25 (1.35.1) - Fixed windows closing behavior
+- 2017/03/18 (1.35.0) - Added horizontal scroll requested in #377
+- 2017/03/18 (1.34.3) - Fixed long window header titles
+- 2017/03/04 (1.34.2) - Fixed text edit filtering
+- 2017/03/04 (1.34.1) - Fixed group closable flag
+- 2017/02/25 (1.34.0) - Added custom draw command for better language binding support
 - 2017/01/24 (1.33.0) - Added programatic way of remove edit focus
 - 2017/01/24 (1.32.3) - Fixed wrong define for basic type definitions for windows
 - 2017/01/21 (1.32.2) - Fixed input capture from hidden or closed windows

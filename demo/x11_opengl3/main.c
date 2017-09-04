@@ -63,9 +63,9 @@ struct XWindow {
     Atom wm_delete_window;
     int width, height;
 };
-static int gl_err = FALSE;
+static int gl_err = nk_false;
 static int gl_error_handler(Display *dpy, XErrorEvent *ev)
-{UNUSED((dpy, ev)); gl_err = TRUE;return 0;}
+{UNUSED((dpy, ev)); gl_err = nk_true;return 0;}
 
 static void
 die(const char *fmt, ...)
@@ -84,7 +84,7 @@ has_extension(const char *string, const char *ext)
     const char *start, *where, *term;
     where = strchr(ext, ' ');
     if (where || *ext == '\0')
-        return FALSE;
+        return nk_false;
 
     for (start = string;;) {
         where = strstr((const char*)start, ext);
@@ -92,11 +92,11 @@ has_extension(const char *string, const char *ext)
         term = where + strlen(ext);
         if (where == start || *(where - 1) == ' ') {
             if (*term == ' ' || *term == '\0')
-                return TRUE;
+                return nk_true;
         }
         start = term;
     }
-    return FALSE;
+    return nk_false;
 }
 
 int main(int argc, char **argv)
@@ -187,7 +187,7 @@ int main(int argc, char **argv)
         glxCreateContext create_context = (glxCreateContext)
             glXGetProcAddressARB((const GLubyte*)"glXCreateContextAttribsARB");
 
-        gl_err = FALSE;
+        gl_err = nk_false;
         if (!has_extension(extensions_str, "GLX_ARB_create_context") || !create_context) {
             fprintf(stdout, "[X11]: glXCreateContextAttribARB() not found...\n");
             fprintf(stdout, "[X11]: ... using old-style GLX context\n");
@@ -206,7 +206,7 @@ int main(int argc, char **argv)
                  * return the newest context version compatible with OpenGL
                  * version less than version 3.0.*/
                 attr[1] = 1; attr[3] = 0;
-                gl_err = FALSE;
+                gl_err = nk_false;
                 fprintf(stdout, "[X11] Failed to create OpenGL 3.0 context\n");
                 fprintf(stdout, "[X11] ... using old-style GLX context!\n");
                 glContext = create_context(win.dpy, win.fbc, 0, True, attr);
@@ -286,7 +286,6 @@ int main(int argc, char **argv)
             }
         }
         nk_end(ctx);
-        if (nk_window_is_closed(ctx, "Demo")) break;
 
         /* -------------- EXAMPLES ---------------- */
         /*calculator(ctx);*/

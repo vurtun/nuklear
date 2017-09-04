@@ -36,6 +36,10 @@ NK_API void                 nk_x11_device_destroy(void);
 #include <stdlib.h>
 #include <string.h>
 
+#include <sys/time.h>
+#include <unistd.h>
+#include <time.h>
+
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xresource.h>
@@ -44,11 +48,11 @@ NK_API void                 nk_x11_device_destroy(void);
 #include <GL/gl.h>
 #include <GL/glx.h>
 
-#ifndef FALSE
-#define FALSE 0
+#ifndef NK_X11_DOUBLE_CLICK_LO
+#define NK_X11_DOUBLE_CLICK_LO 20
 #endif
-#ifndef TRUE
-#define TRUE 1
+#ifndef NK_X11_DOUBLE_CLICK_HI
+#define NK_X11_DOUBLE_CLICK_HI 200
 #endif
 
 #ifdef NK_XLIB_LOAD_OPENGL_EXTENSIONS
@@ -189,6 +193,7 @@ static struct nk_x11 {
     Cursor cursor;
     Display *dpy;
     Window win;
+    long last_button_click;
 } x11;
 
 #ifdef __APPLE__
@@ -199,6 +204,14 @@ static struct nk_x11 {
 
 #ifdef NK_XLIB_LOAD_OPENGL_EXTENSIONS
 #include <GL/glx.h>
+
+NK_INTERN long
+nk_timestamp(void)
+{
+    struct timeval tv;
+    if (gettimeofday(&tv, NULL) < 0) return 0;
+    return (long)((long)tv.tv_sec * 1000 + (long)tv.tv_usec/1000);
+}
 
 NK_INTERN int
 nk_x11_stricmpn(const char *a, const char *b, int len)
@@ -216,7 +229,7 @@ nk_x11_check_extension(struct opengl_info *GL, const char *ext)
     const char *start, *where, *term;
     where = strchr(ext, ' ');
     if (where || *ext == '\0')
-        return FALSE;
+        return nk_false;
 
     for (start = GL->extensions_str;;) {
         where = strstr((const char*)start, ext);
@@ -224,11 +237,11 @@ nk_x11_check_extension(struct opengl_info *GL, const char *ext)
         term = where + strlen(ext);
         if (where == start || *(where - 1) == ' ') {
             if (*term == ' ' || *term == '\0')
-                return TRUE;
+                return nk_true;
         }
         start = term;
     }
-    return FALSE;
+    return nk_false;
 }
 
 #define GL_EXT(name) (nk##name)nk_gl_ext(#name)
@@ -247,7 +260,7 @@ nk_gl_ext(const char *name)
 NK_INTERN int
 nk_load_opengl(struct opengl_info *gl)
 {
-    int failed = FALSE;
+    int failed = nk_false;
     gl->version_str = (const char*)glGetString(GL_VERSION);
     glGetIntegerv(GL_MAJOR_VERSION, &gl->major_version);
     glGetIntegerv(GL_MINOR_VERSION, &gl->minor_version);
@@ -255,7 +268,6 @@ nk_load_opengl(struct opengl_info *gl)
         fprintf(stderr, "[GL]: Graphics card does not fullfill minimum OpenGL 2.0 support\n");
         return 0;
     }
-
     gl->version = (float)gl->major_version + (float)gl->minor_version * 0.1f;
     gl->renderer_str = (const char*)glGetString(GL_RENDERER);
     gl->extensions_str = (const char*)glGetString(GL_EXTENSIONS);
@@ -327,19 +339,19 @@ nk_load_opengl(struct opengl_info *gl)
     }
     if (!gl->vertex_buffer_obj_available) {
         fprintf(stdout, "[GL] Error: GL_ARB_vertex_buffer_object is not available!\n");
-        failed = TRUE;
+        failed = nk_true;
     }
     if (!gl->fragment_program_available) {
         fprintf(stdout, "[GL] Error: GL_ARB_fragment_program is not available!\n");
-        failed = TRUE;
+        failed = nk_true;
     }
     if (!gl->vertex_array_obj_available) {
         fprintf(stdout, "[GL] Error: GL_ARB_vertex_array_object is not available!\n");
-        failed = TRUE;
+        failed = nk_true;
     }
     if (!gl->frame_buffer_object_available) {
         fprintf(stdout, "[GL] Error: GL_ARB_framebuffer_object is not available!\n");
-        failed = TRUE;
+        failed = nk_true;
     }
     return !failed;
 }
@@ -661,16 +673,22 @@ nk_x11_handle_event(XEvent *evt)
         /* Button handler */
         int down = (evt->type == ButtonPress);
         const int x = evt->xbutton.x, y = evt->xbutton.y;
-        if (evt->xbutton.button == Button1)
+        if (evt->xbutton.button == Button1) {
+            if (down) { /* Double-Click Button handler */
+                long dt = nk_timestamp() - x11.last_button_click;
+                if (dt > NK_X11_DOUBLE_CLICK_LO && dt < NK_X11_DOUBLE_CLICK_HI)
+                    nk_input_button(ctx, NK_BUTTON_DOUBLE, x, y, nk_true);
+                x11.last_button_click = nk_timestamp();
+            } else nk_input_button(ctx, NK_BUTTON_DOUBLE, x, y, nk_false);
             nk_input_button(ctx, NK_BUTTON_LEFT, x, y, down);
-        if (evt->xbutton.button == Button2)
+        } else if (evt->xbutton.button == Button2)
             nk_input_button(ctx, NK_BUTTON_MIDDLE, x, y, down);
         else if (evt->xbutton.button == Button3)
             nk_input_button(ctx, NK_BUTTON_RIGHT, x, y, down);
         else if (evt->xbutton.button == Button4)
-            nk_input_scroll(ctx, 1.0f);
+            nk_input_scroll(ctx, nk_vec2(0,1.0f));
         else if (evt->xbutton.button == Button5)
-            nk_input_scroll(ctx, -1.0f);
+            nk_input_scroll(ctx, nk_vec2(0,-1.0f));
         else return 0;
         return 1;
     } else if (evt->type == MotionNotify) {

@@ -400,26 +400,31 @@ nk_sdl_handle_event(SDL_Event *evt)
         /* mouse button */
         int down = evt->type == SDL_MOUSEBUTTONDOWN;
         const int x = evt->button.x, y = evt->button.y;
-        if (evt->button.button == SDL_BUTTON_LEFT)
+        if (evt->button.button == SDL_BUTTON_LEFT) {
+            if (evt->button.clicks > 1)
+                nk_input_button(ctx, NK_BUTTON_DOUBLE, x, y, down);
             nk_input_button(ctx, NK_BUTTON_LEFT, x, y, down);
-        if (evt->button.button == SDL_BUTTON_MIDDLE)
+        } else if (evt->button.button == SDL_BUTTON_MIDDLE)
             nk_input_button(ctx, NK_BUTTON_MIDDLE, x, y, down);
-        if (evt->button.button == SDL_BUTTON_RIGHT)
+        else if (evt->button.button == SDL_BUTTON_RIGHT)
             nk_input_button(ctx, NK_BUTTON_RIGHT, x, y, down);
         return 1;
     } else if (evt->type == SDL_MOUSEMOTION) {
+        /* mouse motion */
         if (ctx->input.mouse.grabbed) {
             int x = (int)ctx->input.mouse.prev.x, y = (int)ctx->input.mouse.prev.y;
             nk_input_motion(ctx, x + evt->motion.xrel, y + evt->motion.yrel);
         } else nk_input_motion(ctx, evt->motion.x, evt->motion.y);
         return 1;
     } else if (evt->type == SDL_TEXTINPUT) {
+        /* text input */
         nk_glyph glyph;
         memcpy(glyph, evt->text.text, NK_UTF_SIZE);
         nk_input_glyph(ctx, glyph);
         return 1;
     } else if (evt->type == SDL_MOUSEWHEEL) {
-        nk_input_scroll(ctx,(float)evt->wheel.y);
+        /* mouse wheel */
+        nk_input_scroll(ctx,nk_vec2((float)evt->wheel.x,(float)evt->wheel.y));
         return 1;
     }
     return 0;

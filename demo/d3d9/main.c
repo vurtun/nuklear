@@ -2,7 +2,7 @@
 #define COBJMACROS
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#include <d3d11.h>
+#include <d3d9.h>
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
@@ -10,9 +10,6 @@
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
-
-#define MAX_VERTEX_BUFFER 512 * 1024
-#define MAX_INDEX_BUFFER 128 * 1024
 
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
@@ -22,9 +19,9 @@
 #define NK_INCLUDE_FONT_BAKING
 #define NK_INCLUDE_DEFAULT_FONT
 #define NK_IMPLEMENTATION
-#define NK_D3D11_IMPLEMENTATION
+#define NK_D3D9_IMPLEMENTATION
 #include "../../nuklear.h"
-#include "nuklear_d3d11.h"
+#include "nuklear_d3d9.h"
 
 /* ===============================================================
  *
@@ -49,44 +46,9 @@
  *                          DEMO
  *
  * ===============================================================*/
-static IDXGISwapChain *swap_chain;
-static ID3D11Device *device;
-static ID3D11DeviceContext *context;
-static ID3D11RenderTargetView* rt_view;
-
-static void
-set_swap_chain_size(int width, int height)
-{
-    ID3D11Texture2D *back_buffer;
-    D3D11_RENDER_TARGET_VIEW_DESC desc;
-    HRESULT hr;
-
-    if (rt_view)
-        ID3D11RenderTargetView_Release(rt_view);
-
-    ID3D11DeviceContext_OMSetRenderTargets(context, 0, NULL, NULL);
-
-    hr = IDXGISwapChain_ResizeBuffers(swap_chain, 0, width, height, DXGI_FORMAT_UNKNOWN, 0);
-    if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET || hr == DXGI_ERROR_DRIVER_INTERNAL_ERROR)
-    {
-        /* to recover from this, you'll need to recreate device and all the resources */
-        MessageBoxW(NULL, L"DXGI device is removed or reset!", L"Error", 0);
-        exit(0);
-    }
-    assert(SUCCEEDED(hr));
-
-    memset(&desc, 0, sizeof(desc));
-    desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-
-    hr = IDXGISwapChain_GetBuffer(swap_chain, 0, &IID_ID3D11Texture2D, &back_buffer);
-    assert(SUCCEEDED(hr));
-
-    hr = ID3D11Device_CreateRenderTargetView(device, (ID3D11Resource *)back_buffer, &desc, &rt_view);
-    assert(SUCCEEDED(hr));
-
-    ID3D11Texture2D_Release(back_buffer);
-}
+static IDirect3DDevice9 *device;
+static IDirect3DDevice9Ex *deviceEx;
+static D3DPRESENT_PARAMETERS present;
 
 static LRESULT CALLBACK
 WindowProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
@@ -98,20 +60,90 @@ WindowProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
         return 0;
 
     case WM_SIZE:
-        if (swap_chain)
+        if (device)
         {
-            int width = LOWORD(lparam);
-            int height = HIWORD(lparam);
-            set_swap_chain_size(width, height);
-            nk_d3d11_resize(context, width, height);
+            UINT width = LOWORD(lparam);
+            UINT height = HIWORD(lparam);
+            if (width != 0 && height != 0 &&
+                (width != present.BackBufferWidth || height != present.BackBufferHeight))
+            {
+                nk_d3d9_release();
+                present.BackBufferWidth = width;
+                present.BackBufferHeight = height;
+                HRESULT hr = IDirect3DDevice9_Reset(device, &present);
+                NK_ASSERT(SUCCEEDED(hr));
+                nk_d3d9_resize(width, height);
+            }
         }
         break;
     }
 
-    if (nk_d3d11_handle_event(wnd, msg, wparam, lparam))
+    if (nk_d3d9_handle_event(wnd, msg, wparam, lparam))
         return 0;
 
     return DefWindowProcW(wnd, msg, wparam, lparam);
+}
+
+static void create_d3d9_device(HWND wnd)
+{
+    HRESULT hr;
+
+    present.PresentationInterval = D3DPRESENT_INTERVAL_DEFAULT;
+    present.BackBufferWidth = WINDOW_WIDTH;
+    present.BackBufferHeight = WINDOW_HEIGHT;
+    present.BackBufferFormat = D3DFMT_X8R8G8B8;
+    present.BackBufferCount = 1;
+    present.MultiSampleType = D3DMULTISAMPLE_NONE;
+    present.SwapEffect = D3DSWAPEFFECT_DISCARD;
+    present.hDeviceWindow = wnd;
+    present.EnableAutoDepthStencil = TRUE;
+    present.AutoDepthStencilFormat = D3DFMT_D24S8;
+    present.Flags = D3DPRESENTFLAG_DISCARD_DEPTHSTENCIL;
+    present.Windowed = TRUE;
+
+    {/* first try to create Direct3D9Ex device if possible (on Windows 7+) */
+        typedef HRESULT WINAPI Direct3DCreate9ExPtr(UINT, IDirect3D9Ex**);
+        Direct3DCreate9ExPtr *Direct3DCreate9Ex = (void *)GetProcAddress(GetModuleHandleA("d3d9.dll"), "Direct3DCreate9Ex");
+        if (Direct3DCreate9Ex) {
+            IDirect3D9Ex *d3d9ex;
+            if (SUCCEEDED(Direct3DCreate9Ex(D3D_SDK_VERSION, &d3d9ex))) {
+                hr = IDirect3D9Ex_CreateDeviceEx(d3d9ex, D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, wnd,
+                    D3DCREATE_HARDWARE_VERTEXPROCESSING | D3DCREATE_PUREDEVICE | D3DCREATE_FPU_PRESERVE,
+                    &present, NULL, &deviceEx);
+                if (SUCCEEDED(hr)) {
+                    device = (IDirect3DDevice9 *)deviceEx;
+                } else {
+                    /* hardware vertex processing not supported, no big deal
+                    retry with software vertex processing */
+                    hr = IDirect3D9Ex_CreateDeviceEx(d3d9ex, D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, wnd,
+                        D3DCREATE_SOFTWARE_VERTEXPROCESSING | D3DCREATE_PUREDEVICE | D3DCREATE_FPU_PRESERVE,
+                        &present, NULL, &deviceEx);
+                    if (SUCCEEDED(hr)) {
+                        device = (IDirect3DDevice9 *)deviceEx;
+                    }
+                }
+                IDirect3D9Ex_Release(d3d9ex);
+            }
+        }
+    }
+
+    if (!device) {
+        /* otherwise do regular D3D9 setup */
+        IDirect3D9 *d3d9 = Direct3DCreate9(D3D_SDK_VERSION);
+
+        hr = IDirect3D9_CreateDevice(d3d9, D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, wnd,
+            D3DCREATE_HARDWARE_VERTEXPROCESSING | D3DCREATE_PUREDEVICE | D3DCREATE_FPU_PRESERVE,
+            &present, &device);
+        if (FAILED(hr)) {
+            /* hardware vertex processing not supported, no big deal
+            retry with software vertex processing */
+            hr = IDirect3D9_CreateDevice(d3d9, D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, wnd,
+                D3DCREATE_SOFTWARE_VERTEXPROCESSING | D3DCREATE_PUREDEVICE | D3DCREATE_FPU_PRESERVE,
+                &present, &device);
+            NK_ASSERT(SUCCEEDED(hr));
+        }
+        IDirect3D9_Release(d3d9);
+    }
 }
 
 int main(void)
@@ -125,9 +157,6 @@ int main(void)
     DWORD exstyle = WS_EX_APPWINDOW;
     HWND wnd;
     int running = 1;
-    HRESULT hr;
-    D3D_FEATURE_LEVEL feature_level;
-    DXGI_SWAP_CHAIN_DESC swap_chain_desc;
 
     /* Win32 */
     memset(&wc, 0, sizeof(wc));
@@ -146,45 +175,21 @@ int main(void)
         rect.right - rect.left, rect.bottom - rect.top,
         NULL, NULL, wc.hInstance, NULL);
 
-    /* D3D11 setup */
-    memset(&swap_chain_desc, 0, sizeof(swap_chain_desc));
-    swap_chain_desc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    swap_chain_desc.BufferDesc.RefreshRate.Numerator = 60;
-    swap_chain_desc.BufferDesc.RefreshRate.Denominator = 1;
-    swap_chain_desc.SampleDesc.Count = 1;
-    swap_chain_desc.SampleDesc.Quality = 0;
-    swap_chain_desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    swap_chain_desc.BufferCount = 1;
-    swap_chain_desc.OutputWindow = wnd;
-    swap_chain_desc.Windowed = TRUE;
-    swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-    swap_chain_desc.Flags = 0;
-    if (FAILED(D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE,
-        NULL, 0, NULL, 0, D3D11_SDK_VERSION, &swap_chain_desc,
-        &swap_chain, &device, &feature_level, &context)))
-    {
-        /* if hardware device fails, then try WARP high-performance
-           software rasterizer, this is useful for RDP sessions */
-        hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_WARP,
-            NULL, 0, NULL, 0, D3D11_SDK_VERSION, &swap_chain_desc,
-            &swap_chain, &device, &feature_level, &context);
-        assert(SUCCEEDED(hr));
-    }
-    set_swap_chain_size(WINDOW_WIDTH, WINDOW_HEIGHT);
+    create_d3d9_device(wnd);
 
     /* GUI */
-    ctx = nk_d3d11_init(device, WINDOW_WIDTH, WINDOW_HEIGHT, MAX_VERTEX_BUFFER, MAX_INDEX_BUFFER);
+    ctx = nk_d3d9_init(device, WINDOW_WIDTH, WINDOW_HEIGHT);
     /* Load Fonts: if none of these are loaded a default font will be used  */
     /* Load Cursor: if you uncomment cursor loading please hide the cursor */
     {struct nk_font_atlas *atlas;
-    nk_d3d11_font_stash_begin(&atlas);
+    nk_d3d9_font_stash_begin(&atlas);
     /*struct nk_font *droid = nk_font_atlas_add_from_file(atlas, "../../extra_font/DroidSans.ttf", 14, 0);*/
     /*struct nk_font *robot = nk_font_atlas_add_from_file(atlas, "../../extra_font/Roboto-Regular.ttf", 14, 0);*/
     /*struct nk_font *future = nk_font_atlas_add_from_file(atlas, "../../extra_font/kenvector_future_thin.ttf", 13, 0);*/
     /*struct nk_font *clean = nk_font_atlas_add_from_file(atlas, "../../extra_font/ProggyClean.ttf", 12, 0);*/
     /*struct nk_font *tiny = nk_font_atlas_add_from_file(atlas, "../../extra_font/ProggyTiny.ttf", 10, 0);*/
     /*struct nk_font *cousine = nk_font_atlas_add_from_file(atlas, "../../extra_font/Cousine-Regular.ttf", 13, 0);*/
-    nk_d3d11_font_stash_end();
+    nk_d3d9_font_stash_end();
     /*nk_style_load_all_cursors(ctx, atlas->cursors);*/
     /*nk_style_set_font(ctx, &droid->handle)*/;}
 
@@ -200,8 +205,7 @@ int main(void)
         /* Input */
         MSG msg;
         nk_input_begin(ctx);
-        while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
-        {
+        while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
             if (msg.message == WM_QUIT)
                 running = 0;
             TranslateMessage(&msg);
@@ -249,30 +253,46 @@ int main(void)
         /*node_editor(ctx);*/
         /* ----------------------------------------- */
 
-        {/* Draw */
-        float bg[4];
-        nk_color_fv(bg, background);
-        ID3D11DeviceContext_ClearRenderTargetView(context, rt_view, bg);
-        ID3D11DeviceContext_OMSetRenderTargets(context, 1, &rt_view, NULL);
-        nk_d3d11_render(context, NK_ANTI_ALIASING_ON);
-        hr = IDXGISwapChain_Present(swap_chain, 1, 0);
-        if (hr == DXGI_ERROR_DEVICE_RESET || hr == DXGI_ERROR_DEVICE_REMOVED) {
-            /* to recover from this, you'll need to recreate device and all the resources */
-            MessageBoxW(NULL, L"D3D11 device is lost or removed!", L"Error", 0);
-            break;
-        } else if (hr == DXGI_STATUS_OCCLUDED) {
-            /* window is not visible, so vsync won't work. Let's sleep a bit to reduce CPU usage */
-            Sleep(10);
+        /* Draw */
+        {
+            HRESULT hr;
+
+            hr = IDirect3DDevice9_Clear(device, 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL,
+                D3DCOLOR_ARGB(background.a, background.r, background.g, background.b), 0.0f, 0);
+            NK_ASSERT(SUCCEEDED(hr));
+
+            hr = IDirect3DDevice9_BeginScene(device);
+            NK_ASSERT(SUCCEEDED(hr));
+
+            nk_d3d9_render(NK_ANTI_ALIASING_ON);
+
+            hr = IDirect3DDevice9_EndScene(device);
+            NK_ASSERT(SUCCEEDED(hr));
+
+            if (deviceEx) {
+                hr = IDirect3DDevice9Ex_PresentEx(deviceEx, NULL, NULL, NULL, NULL, 0);
+            } else {
+                hr = IDirect3DDevice9_Present(device, NULL, NULL, NULL, NULL);
+            }
+
+            if (hr == D3DERR_DEVICELOST || hr == D3DERR_DEVICEHUNG || hr == D3DERR_DEVICEREMOVED) {
+                /* to recover from this, you'll need to recreate device and all the resources */
+                MessageBoxW(NULL, L"D3D9 device is lost or removed!", L"Error", 0);
+                break;
+            } else if (hr == S_PRESENT_OCCLUDED) {
+                /* window is not visible, so vsync won't work. Let's sleep a bit to reduce CPU usage */
+                Sleep(10);
+            }
+            NK_ASSERT(SUCCEEDED(hr));
         }
-        assert(SUCCEEDED(hr));}
     }
 
-    ID3D11DeviceContext_ClearState(context);
-    nk_d3d11_shutdown();
-    ID3D11ShaderResourceView_Release(rt_view);
-    ID3D11DeviceContext_Release(context);
-    ID3D11Device_Release(device);
-    IDXGISwapChain_Release(swap_chain);
+    nk_d3d9_shutdown();
+    if (deviceEx) {
+        IDirect3DDevice9Ex_Release(deviceEx);
+    } else {
+        IDirect3DDevice9_Release(device);
+    }
     UnregisterClassW(wc.lpszClassName, wc.hInstance);
     return 0;
 }

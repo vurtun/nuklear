@@ -34,6 +34,10 @@ NK_API void                 nk_x11_shutdown(void);
 #include <stdlib.h>
 #include <string.h>
 
+#include <sys/time.h>
+#include <unistd.h>
+#include <time.h>
+
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xresource.h>
@@ -41,11 +45,11 @@ NK_API void                 nk_x11_shutdown(void);
 
 #include <GL/gl.h>
 
-#ifndef FALSE
-#define FALSE 0
+#ifndef NK_X11_DOUBLE_CLICK_LO
+#define NK_X11_DOUBLE_CLICK_LO 20
 #endif
-#ifndef TRUE
-#define TRUE 1
+#ifndef NK_X11_DOUBLE_CLICK_HI
+#define NK_X11_DOUBLE_CLICK_HI 200
 #endif
 
 struct nk_x11_vertex {
@@ -67,7 +71,16 @@ static struct nk_x11 {
     Cursor cursor;
     Display *dpy;
     Window win;
+    long last_button_click;
 } x11;
+
+NK_INTERN long
+nk_timestamp(void)
+{
+    struct timeval tv;
+    if (gettimeofday(&tv, NULL) < 0) return 0;
+    return (long)((long)tv.tv_sec * 1000 + (long)tv.tv_usec/1000);
+}
 
 NK_INTERN void
 nk_x11_device_upload_atlas(const void *image, int width, int height)
@@ -291,16 +304,22 @@ nk_x11_handle_event(XEvent *evt)
         /* Button handler */
         int down = (evt->type == ButtonPress);
         const int x = evt->xbutton.x, y = evt->xbutton.y;
-        if (evt->xbutton.button == Button1)
+        if (evt->xbutton.button == Button1) {
+            if (down) { /* Double-Click Button handler */
+                long dt = nk_timestamp() - x11.last_button_click;
+                if (dt > NK_X11_DOUBLE_CLICK_LO && dt < NK_X11_DOUBLE_CLICK_HI)
+                    nk_input_button(ctx, NK_BUTTON_DOUBLE, x, y, nk_true);
+                x11.last_button_click = nk_timestamp();
+            } else nk_input_button(ctx, NK_BUTTON_DOUBLE, x, y, nk_false);
             nk_input_button(ctx, NK_BUTTON_LEFT, x, y, down);
-        if (evt->xbutton.button == Button2)
+        } else if (evt->xbutton.button == Button2)
             nk_input_button(ctx, NK_BUTTON_MIDDLE, x, y, down);
         else if (evt->xbutton.button == Button3)
             nk_input_button(ctx, NK_BUTTON_RIGHT, x, y, down);
         else if (evt->xbutton.button == Button4)
-            nk_input_scroll(ctx, 1.0f);
+            nk_input_scroll(ctx, nk_vec2(0,1.0f));
         else if (evt->xbutton.button == Button5)
-            nk_input_scroll(ctx, -1.0f);
+            nk_input_scroll(ctx, nk_vec2(0,-1.0f));
         else return 0;
         return 1;
     } else if (evt->type == MotionNotify) {

@@ -87,7 +87,7 @@ sleep_for(long t)
  *                          EXAMPLE
  *
  * ===============================================================*/
-/* This are some code examples to provide a small overview of what can be
+/* These are some code examples to provide a small overview of what can be
  * done with this library. To try out an example uncomment the include
  * and the corresponding function. */
 /*#include "../style.c"*/
@@ -113,11 +113,11 @@ main(void)
     memset(&xw, 0, sizeof xw);
     xw.dpy = XOpenDisplay(NULL);
     if (!xw.dpy) die("Could not open a display; perhaps $DISPLAY is not set?");
-
     xw.root = DefaultRootWindow(xw.dpy);
     xw.screen = XDefaultScreen(xw.dpy);
     xw.vis = XDefaultVisual(xw.dpy, xw.screen);
     xw.cmap = XCreateColormap(xw.dpy,xw.root,xw.vis,AllocNone);
+
     xw.swa.colormap = xw.cmap;
     xw.swa.event_mask =
         ExposureMask | KeyPressMask | KeyReleaseMask |
@@ -127,11 +127,11 @@ main(void)
     xw.win = XCreateWindow(xw.dpy, xw.root, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, 0,
         XDefaultDepth(xw.dpy, xw.screen), InputOutput,
         xw.vis, CWEventMask | CWColormap, &xw.swa);
+
     XStoreName(xw.dpy, xw.win, "X11");
     XMapWindow(xw.dpy, xw.win);
     xw.wm_delete_window = XInternAtom(xw.dpy, "WM_DELETE_WINDOW", False);
     XSetWMProtocols(xw.dpy, xw.win, &xw.wm_delete_window, 1);
-
     XGetWindowAttributes(xw.dpy, xw.win, &xw.attr);
     xw.width = (unsigned int)xw.attr.width;
     xw.height = (unsigned int)xw.attr.height;
@@ -145,6 +145,7 @@ main(void)
     /*set_style(ctx, THEME_RED);*/
     /*set_style(ctx, THEME_BLUE);*/
     /*set_style(ctx, THEME_DARK);*/
+
     while (running)
     {
         /* Input */
@@ -178,7 +179,7 @@ main(void)
             nk_property_int(ctx, "Compression:", 0, &property, 100, 10, 1);
         }
         nk_end(ctx);
-        if (nk_window_is_closed(ctx, "Demo")) break;
+        if (nk_window_is_hidden(ctx, "Demo")) break;
 
         /* -------------- EXAMPLES ---------------- */
         /*calculator(ctx);*/

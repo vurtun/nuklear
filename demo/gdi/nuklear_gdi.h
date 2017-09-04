@@ -57,6 +57,78 @@ static struct {
     struct nk_context ctx;
 } gdi;
 
+static void
+nk_create_image(struct nk_image * image, const char * frame_buffer, const int width, const int height)
+{
+    if (image && frame_buffer && (width > 0) && (height > 0))
+    {
+        image->w = width;
+        image->h = height;
+        image->region[0] = 0;
+        image->region[1] = 0;
+        image->region[2] = width;
+        image->region[3] = height;
+        
+        INT row = ((width * 3 + 3) & ~3);
+        BITMAPINFO bi = { 0 };
+        bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+        bi.bmiHeader.biWidth = width;
+        bi.bmiHeader.biHeight = height;
+        bi.bmiHeader.biPlanes = 1;
+        bi.bmiHeader.biBitCount = 24;
+        bi.bmiHeader.biCompression = BI_RGB;
+        bi.bmiHeader.biSizeImage = row * height;
+        
+        LPBYTE lpBuf, pb = NULL;
+        HBITMAP hbm = CreateDIBSection(NULL, &bi, DIB_RGB_COLORS, (void**)&lpBuf, NULL, 0);
+        
+        pb = lpBuf + row * height;
+        unsigned char * src = (unsigned char *)frame_buffer;
+        for (int v = 0; v<height; v++)
+        {
+            pb -= row;
+            for (int i = 0; i < row; i += 3)
+            {
+                pb[i + 0] = src[0];
+                pb[i + 1] = src[1];
+                pb[i + 2] = src[2];
+                src += 3;
+            }
+        }        
+        SetDIBits(NULL, hbm, 0, height, lpBuf, &bi, DIB_RGB_COLORS);
+        image->handle.ptr = hbm;
+    }
+}
+
+static void
+nk_delete_image(struct nk_image * image)
+{
+    if (image && image->handle.id != 0)
+    {
+        HBITMAP hbm = image->handle.ptr;
+        DeleteObject(hbm);
+        memset(image, 0, sizeof(struct nk_image));
+    }
+}
+
+static void
+nk_gdi_draw_image(short x, short y, unsigned short w, unsigned short h,
+	struct nk_image img, struct nk_color col)
+{
+    HBITMAP	hbm = img.handle.ptr;
+    HDC     hDCBits;
+    BITMAP  bitmap;
+    
+    if (!gdi.memory_dc || !hbm)
+        return;
+    
+    hDCBits = CreateCompatibleDC(gdi.memory_dc);
+    GetObject(hbm, sizeof(BITMAP), (LPSTR)&bitmap);
+    SelectObject(hDCBits, hbm);
+    StretchBlt(gdi.memory_dc, x, y, w, h, hDCBits, 0, 0, bitmap.bmWidth, bitmap.bmHeight, SRCCOPY);
+    DeleteDC(hDCBits);
+}
+
 static COLORREF
 convert_color(struct nk_color c)
 {
@@ -627,6 +699,7 @@ nk_gdi_handle_event(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
         return 1;
 
     case WM_LBUTTONUP:
+        nk_input_button(&gdi.ctx, NK_BUTTON_DOUBLE, (short)LOWORD(lparam), (short)HIWORD(lparam), 0);
         nk_input_button(&gdi.ctx, NK_BUTTON_LEFT, (short)LOWORD(lparam), (short)HIWORD(lparam), 0);
         ReleaseCapture();
         return 1;
@@ -652,11 +725,15 @@ nk_gdi_handle_event(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
         return 1;
 
     case WM_MOUSEWHEEL:
-        nk_input_scroll(&gdi.ctx, (float)(short)HIWORD(wparam) / WHEEL_DELTA);
+        nk_input_scroll(&gdi.ctx, nk_vec2(0,(float)(short)HIWORD(wparam) / WHEEL_DELTA));
         return 1;
 
     case WM_MOUSEMOVE:
         nk_input_motion(&gdi.ctx, (short)LOWORD(lparam), (short)HIWORD(lparam));
+        return 1;
+
+    case WM_LBUTTONDBLCLK:
+        nk_input_button(&gdi.ctx, NK_BUTTON_DOUBLE, (short)LOWORD(lparam), (short)HIWORD(lparam), 1);
         return 1;
     }
 
@@ -747,7 +824,10 @@ nk_gdi_render(struct nk_color clear)
                 q->end, q->line_thickness, q->color);
         } break;
         case NK_COMMAND_RECT_MULTI_COLOR:
-        case NK_COMMAND_IMAGE:
+        case NK_COMMAND_IMAGE: {
+			const struct nk_command_image *i = (const struct nk_command_image *)cmd;
+			nk_gdi_draw_image(i->x, i->y, i->w, i->h, i->img, i->col);
+		} break;
         case NK_COMMAND_ARC:
         case NK_COMMAND_ARC_FILLED:
         default: break;
