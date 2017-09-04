@@ -53,7 +53,7 @@ NK_API void                 nk_xfont_del(Display *dpy, XFont *font);
 #include <time.h>
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "../stb_image.h"
+#include "../../example/stb_image.h"
 
 
 #ifndef NK_X11_DOUBLE_CLICK_LO
