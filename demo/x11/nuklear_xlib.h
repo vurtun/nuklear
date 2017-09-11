@@ -26,8 +26,10 @@ NK_API void                 nk_xlib_paste(nk_handle, struct nk_text_edit*);
 NK_API void                 nk_xlib_copy(nk_handle, const char*, int len);
 
 /* Image */
+#ifdef NK_XLIB_INCLUDE_STB_IMAGE
 NK_API struct nk_image nk_xsurf_load_image_from_file(char const *filename);
 NK_API struct nk_image nk_xsurf_load_image_from_memory(const void *membuf, nk_uint membufSize);
+#endif
 
 /* Font */
 NK_API XFont*               nk_xfont_create(Display *dpy, const char *name);
@@ -52,8 +54,14 @@ NK_API void                 nk_xfont_del(Display *dpy, XFont *font);
 #include <unistd.h>
 #include <time.h>
 
+
+#ifdef NK_XLIB_IMPLEMENT_STB_IMAGE
 #define STB_IMAGE_IMPLEMENTATION
+#endif
+
+#ifdef NK_XLIB_INCLUDE_STB_IMAGE
 #include "../../example/stb_image.h"
+#endif
 
 
 #ifndef NK_X11_DOUBLE_CLICK_LO
@@ -397,6 +405,7 @@ nk_xsurf_draw_text(XSurface *surf, short x, short y, unsigned short w, unsigned 
 }
 
 
+#ifdef NK_XLIB_INCLUDE_STB_IMAGE
 NK_INTERN struct nk_image
 nk_stbi_image_to_xsurf(unsigned char *data, int width, int height, int channels) {
     XSurface *surf = xlib.surf;
@@ -481,6 +490,7 @@ nk_xsurf_load_image_from_file(char const *filename)
     data = stbi_load(filename, &x, &y, &n, 0);
     return nk_stbi_image_to_xsurf(data, x, y, n);
 }
+#endif /* NK_XLIB_INCLUDE_STB_IMAGE */
 
 NK_INTERN void
 nk_xsurf_draw_image(XSurface *surf, short x, short y, unsigned short w, unsigned short h,
@@ -503,7 +513,6 @@ nk_xsurf_image_free(struct nk_image* image)
     XSurface *surf = xlib.surf;
     XImageWithAlpha *aimage = image->handle.ptr;
     if (!aimage) return;
-    /*stbi_image_free(aimage->ximage->data);*/
     XDestroyImage(aimage->ximage);
     XFreePixmap(surf->dpy, aimage->clipMask);
     XFreeGC(surf->dpy, aimage->clipMaskGC);
@@ -945,4 +954,3 @@ nk_xlib_render(Drawable screen, struct nk_color clear)
     nk_xsurf_blit(screen, surf, surf->w, surf->h);
 }
 #endif
-
