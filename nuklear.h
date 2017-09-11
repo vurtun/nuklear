@@ -18468,7 +18468,7 @@ nk_insert_window(struct nk_context *ctx, struct nk_window *win,
         ctx->active = ctx->end;
         ctx->end->flags &= ~(nk_flags)NK_WINDOW_ROM;
     } else {
-        ctx->end->flags |= NK_WINDOW_ROM;
+        /*ctx->end->flags |= NK_WINDOW_ROM;*/
         ctx->begin->prev = win;
         win->next = ctx->begin;
         win->prev = 0;
