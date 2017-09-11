@@ -1,5 +1,5 @@
 /*
- * Nuklear - v1.32.0 - public domain
+ * Nuklear - v1.40.8 - public domain
  * no warrenty implied; use at your own risk.
  * authored from 2015-2017 by Micha Mettke
  */
@@ -25,6 +25,12 @@ NK_API void                 nk_xlib_push_font(XFont*);
 NK_API void                 nk_xlib_paste(nk_handle, struct nk_text_edit*);
 NK_API void                 nk_xlib_copy(nk_handle, const char*, int len);
 
+/* Image */
+#ifdef NK_XLIB_INCLUDE_STB_IMAGE
+NK_API struct nk_image nk_xsurf_load_image_from_file(char const *filename);
+NK_API struct nk_image nk_xsurf_load_image_from_memory(const void *membuf, nk_uint membufSize);
+#endif
+
 /* Font */
 NK_API XFont*               nk_xfont_create(Display *dpy, const char *name);
 NK_API void                 nk_xfont_del(Display *dpy, XFont *font);
@@ -48,6 +54,16 @@ NK_API void                 nk_xfont_del(Display *dpy, XFont *font);
 #include <unistd.h>
 #include <time.h>
 
+
+#ifdef NK_XLIB_IMPLEMENT_STB_IMAGE
+#define STB_IMAGE_IMPLEMENTATION
+#endif
+
+#ifdef NK_XLIB_INCLUDE_STB_IMAGE
+#include "../../example/stb_image.h"
+#endif
+
+
 #ifndef NK_X11_DOUBLE_CLICK_LO
 #define NK_X11_DOUBLE_CLICK_LO 20
 #endif
@@ -56,6 +72,7 @@ NK_API void                 nk_xfont_del(Display *dpy, XFont *font);
 #endif
 
 typedef struct XSurface XSurface;
+typedef struct XImageWithAlpha XImageWithAlpha;
 struct XFont {
     int ascent;
     int descent;
@@ -71,6 +88,11 @@ struct XSurface {
     Window root;
     Drawable drawable;
     unsigned int w, h;
+};
+struct XImageWithAlpha {
+    XImage* ximage;
+    GC clipMaskGC;
+    Pixmap clipMask;
 };
 static struct  {
     char *clipboard_data;
@@ -260,7 +282,6 @@ NK_INTERN void
 nk_xsurf_stroke_triangle(XSurface *surf, short x0, short y0, short x1,
     short y1, short x2, short y2, unsigned short line_thickness, struct nk_color col)
 {
-    XPoint pnts[3];
     unsigned long c = nk_color_from_byte(&col.r);
     XSetForeground(surf->dpy, surf->gc, c);
     XSetLineAttributes(surf->dpy, surf->gc, line_thickness, LineSolid, CapButt, JoinMiter);
@@ -382,6 +403,122 @@ nk_xsurf_draw_text(XSurface *surf, short x, short y, unsigned short w, unsigned 
         XmbDrawString(surf->dpy,surf->drawable,font->set,surf->gc,tx,ty,(const char*)text,(int)len);
     else XDrawString(surf->dpy, surf->drawable, surf->gc, tx, ty, (const char*)text, (int)len);
 }
+
+
+#ifdef NK_XLIB_INCLUDE_STB_IMAGE
+NK_INTERN struct nk_image
+nk_stbi_image_to_xsurf(unsigned char *data, int width, int height, int channels) {
+    XSurface *surf = xlib.surf;
+    struct nk_image img;
+    int bpl = channels;
+    long i, isize = width*height*channels;
+    XImageWithAlpha *aimage = (XImageWithAlpha*)calloc( 1, sizeof(XImageWithAlpha) );
+    int depth = DefaultDepth(surf->dpy, surf->screen); 
+    if (data == NULL) return nk_image_id(0);
+    if (aimage == NULL) return nk_image_id(0);
+    
+    switch (depth){
+        case 24:
+            bpl = 4;
+        break;
+        case 16:
+        case 15:
+            bpl = 2;
+        break;
+        default:
+            bpl = 1;
+        break;
+    }
+    
+    /* rgba to bgra */
+    if (channels >= 3){
+        for (i=0; i < isize; i += channels) {
+            unsigned char red  = data[i+2];
+            unsigned char blue = data[i];
+            data[i]   = red;
+            data[i+2] = blue;
+        }
+    }
+
+    if (channels == 4){
+        const unsigned alpha_treshold = 127;        
+        aimage->clipMask = XCreatePixmap(surf->dpy, surf->drawable, width, height, 1);
+        
+        if( aimage->clipMask ){
+            aimage->clipMaskGC = XCreateGC(surf->dpy, aimage->clipMask, 0, 0);
+            XSetForeground(surf->dpy, aimage->clipMaskGC, BlackPixel(surf->dpy, surf->screen));
+            XFillRectangle(surf->dpy, aimage->clipMask, aimage->clipMaskGC, 0, 0, width, height);
+
+            XSetForeground(surf->dpy, aimage->clipMaskGC, WhitePixel(surf->dpy, surf->screen));
+            for (i=0; i < isize; i += channels){
+                unsigned char alpha = data[i+3];
+                int div = i / channels;
+                int x = div % width;
+                int y = div / width;
+                if( alpha > alpha_treshold )
+                    XDrawPoint(surf->dpy, aimage->clipMask, aimage->clipMaskGC, x, y);
+            }
+        }
+    }
+    
+    aimage->ximage = XCreateImage(surf->dpy, 
+           CopyFromParent, depth, 
+           ZPixmap, 0, 
+           (char*)data, 
+           width, height, 
+           bpl*8, bpl * width); 
+    img = nk_image_ptr( (void*)aimage);
+    img.h = height;
+    img.w = width;
+    return img;
+}
+
+NK_API struct nk_image
+nk_xsurf_load_image_from_memory(const void *membuf, nk_uint membufSize)
+{
+    int x,y,n;
+    unsigned char *data;
+    data = stbi_load_from_memory(membuf, membufSize, &x, &y, &n, 0);
+    return nk_stbi_image_to_xsurf(data, x, y, n);
+}
+
+NK_API struct nk_image
+nk_xsurf_load_image_from_file(char const *filename)
+{
+    int x,y,n;
+    unsigned char *data;
+    data = stbi_load(filename, &x, &y, &n, 0);
+    return nk_stbi_image_to_xsurf(data, x, y, n);
+}
+#endif /* NK_XLIB_INCLUDE_STB_IMAGE */
+
+NK_INTERN void
+nk_xsurf_draw_image(XSurface *surf, short x, short y, unsigned short w, unsigned short h,
+    struct nk_image img, struct nk_color col)
+{
+    XImageWithAlpha *aimage = img.handle.ptr;
+    if (aimage){
+        if (aimage->clipMask){
+            XSetClipMask(surf->dpy, surf->gc, aimage->clipMask);
+            XSetClipOrigin(surf->dpy, surf->gc, x, y); 
+        }
+        XPutImage(surf->dpy, surf->drawable, surf->gc, aimage->ximage, 0, 0, x, y, w, h);
+        XSetClipMask(surf->dpy, surf->gc, None);
+    }
+}
+
+void
+nk_xsurf_image_free(struct nk_image* image)
+{
+    XSurface *surf = xlib.surf;
+    XImageWithAlpha *aimage = image->handle.ptr;
+    if (!aimage) return;
+    XDestroyImage(aimage->ximage);
+    XFreePixmap(surf->dpy, aimage->clipMask);
+    XFreeGC(surf->dpy, aimage->clipMaskGC);
+    free(aimage);
+}
+
 
 NK_INTERN void
 nk_xsurf_clear(XSurface *surf, unsigned long color)
@@ -802,8 +939,11 @@ nk_xlib_render(Drawable screen, struct nk_color clear)
             nk_xsurf_stroke_curve(surf, q->begin, q->ctrl[0], q->ctrl[1],
                 q->end, 22, q->line_thickness, q->color);
         } break;
+        case NK_COMMAND_IMAGE: {
+            const struct nk_command_image *i = (const struct nk_command_image *)cmd;
+            nk_xsurf_draw_image(surf, i->x, i->y, i->w, i->h, i->img, i->col);
+        } break;
         case NK_COMMAND_RECT_MULTI_COLOR:
-        case NK_COMMAND_IMAGE:
         case NK_COMMAND_ARC:
         case NK_COMMAND_ARC_FILLED:
         case NK_COMMAND_CUSTOM:
@@ -814,4 +954,3 @@ nk_xlib_render(Drawable screen, struct nk_color clear)
     nk_xsurf_blit(screen, surf, surf->w, surf->h);
 }
 #endif
-
