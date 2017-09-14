@@ -17375,8 +17375,12 @@ nk_clear(struct nk_context *ctx)
         /* remove hotness from hidden or closed windows*/
         if (((iter->flags & NK_WINDOW_HIDDEN) ||
             (iter->flags & NK_WINDOW_CLOSED)) &&
-            iter == ctx->active)
-            ctx->active = iter->next;
+            iter == ctx->active) {
+            ctx->active = iter->prev;
+            ctx->end = iter->prev;
+            if (ctx->active)
+                ctx->active->flags &= ~NK_WINDOW_ROM;
+        }
 
         /* free unused popup windows */
         if (iter->popup.win && iter->popup.win->seq != ctx->seq) {
@@ -18577,8 +18581,10 @@ nk_begin_titled(struct nk_context *ctx, const char *name, const char *title,
          *      provided demo backends). */
         NK_ASSERT(win->seq != ctx->seq);
         win->seq = ctx->seq;
-        if (!ctx->active && !(win->flags & NK_WINDOW_HIDDEN))
+        if (!ctx->active && !(win->flags & NK_WINDOW_HIDDEN)) {
             ctx->active = win;
+            ctx->end = win;
+        }
     }
     if (win->flags & NK_WINDOW_HIDDEN) {
         ctx->current = win;
