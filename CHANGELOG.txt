@@ -11,6 +11,9 @@
 
 Changes:
 --------
+- 2017/09/14 (2.00.0) - BREAKING CHANGE: Modifing window position and size funtions now
+                        require the name of the window and must happen outside the window
+                        building process (between function call nk_begin and nk_end).
 - 2017/09/11 (1.40.9) - Fixed window background flag if background window is declared last
 - 2017/08/27 (1.40.8) - Fixed `nk_item_is_any_active` for hidden windows
 - 2017/08/27 (1.40.7) - Fixed window background flag
