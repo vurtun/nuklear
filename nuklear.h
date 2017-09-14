@@ -21314,7 +21314,9 @@ nk_edit_buffer(struct nk_context *ctx, nk_flags flags,
         }
         if (flags & NK_EDIT_CLIPBOARD)
             edit->clip = ctx->clip;
-    }
+        edit->active = win->edit.active;
+    } else edit->active = nk_false;
+    edit->mode = win->edit.mode;
 
     filter = (!filter) ? nk_filter_default: filter;
     prev_state = (unsigned char)edit->active;

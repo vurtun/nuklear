@@ -11,6 +11,7 @@
 
 Changes:
 --------
+- 2017/09/14 (2.00.2) - Fixed nk_edit_buffer and nk_edit_focus behavior
 - 2017/09/14 (2.00.1) - Fixed window closing behavior
 - 2017/09/14 (2.00.0) - BREAKING CHANGE: Modifing window position and size funtions now
                         require the name of the window and must happen outside the window
