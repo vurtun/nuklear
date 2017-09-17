@@ -4243,7 +4243,7 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #define NK_ALIGNOF(t) ((char*)(&((struct {char c; t _h;}*)0)->_h) - (char*)0)
 #endif
 
-#endif /* NK_H_ */
+#endif /* NK_NUKLEAR_H_ */
 /*
  * ==============================================================
  *
