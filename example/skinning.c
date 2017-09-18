@@ -428,7 +428,6 @@ int main(int argc, char *argv[])
         ctx.style.window.border = 3;
 
         /* window header */
-        ctx.style.window.header;
         ctx.style.window.header.normal = nk_style_item_image(media.header);
         ctx.style.window.header.hover = nk_style_item_image(media.header);
         ctx.style.window.header.active = nk_style_item_image(media.header);
