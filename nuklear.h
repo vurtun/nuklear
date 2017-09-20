@@ -23653,4 +23653,4 @@ NK_API void
 nk_menu_end(struct nk_context *ctx)
 {nk_contextual_end(ctx);}
 
-#endif
+#endif /* NK_IMPLEMENTATION */
