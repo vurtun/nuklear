@@ -2,4 +2,5 @@ demo/*/*.exe
 demo/*/*.obj
 docs/xml
 docs/build
+docs/src
 *.tmp
