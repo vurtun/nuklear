@@ -389,8 +389,12 @@ nk_xsurf_draw_text(XSurface *surf, short x, short y, unsigned short w, unsigned 
     const char *text, int len, XFont *font, struct nk_color cbg, struct nk_color cfg)
 {
     int tx, ty;
+    unsigned long bg = nk_color_from_byte(&cbg.r);
     unsigned long fg = nk_color_from_byte(&cfg.r);
-    (void)cbg;
+
+    XSetForeground(surf->dpy, surf->gc, bg);
+    XFillRectangle(surf->dpy, surf->drawable, surf->gc, (int)x, (int)y, (unsigned)w, (unsigned)h);
+    if(!text || !font || !len) return;
 
     tx = (int)x;
     ty = (int)y + font->ascent;
