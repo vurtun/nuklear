@@ -335,7 +335,6 @@ extern "C" {
  */
 
 #ifdef NK_USE_MODERN_STDLIB
- /* @TODO: implement dtoa() using stdlib. */
  #if defined(NK_USE_FIXED_TYPES) || defined(NK_INCLUDE_DEFAULT_ALLOCATOR) \
   || defined(NK_INCLUDE_STANDARD_IO) || defined(NK_INCLUDE_STANDARD_VARARGS) \
   || defined(NK_ASSERT) || defined(NK_MEMSET) || defined(NK_MEMCPY) \
@@ -359,6 +358,7 @@ extern "C" {
    #define NK_SIN sin
    #define NK_COS cos
    #define NK_STRTOD strtod
+   #define NK_DTOA nk_dtoa_libc
    #define NK_VSNPRINTF vsnprintf
  #endif
 #endif
@@ -4356,7 +4356,11 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #define NK_STRTOD nk_strtod
 #endif
 #ifndef NK_DTOA
-#define NK_DTOA nk_dtoa
+ #ifdef NK_INCLUDE_STANDARD_IO
+   #define NK_DTOA nk_dtoa_libc
+ #else
+   #define NK_DTOA nk_dtoa
+ #endif
 #endif
 
 #define NK_DEFAULT (-1)
@@ -5278,6 +5282,16 @@ nk_dtoa(char *s, double n)
     *(c) = '\0';
     return s;
 }
+
+#ifdef NK_INCLUDE_STANDARD_IO
+NK_INTERN char*
+nk_dtoa_libc(char *s, double n)
+{
+    NK_ASSERT(s);
+    if (!s) return 0;
+    return sprintf(s, "%g", n) >= 0 ? s : 0;
+}
+#endif
 
 #ifdef NK_INCLUDE_STANDARD_VARARGS
 #ifndef NK_INCLUDE_STANDARD_IO
