@@ -34,7 +34,7 @@ USAGE:
     and does not contain the actual implementation.
 
     The implementation mode requires to define  the preprocessor macro
-    NK_IMPLEMENTATION in *one* .c/.cpp file before #includeing this file, e.g.:
+    NK_IMPLEMENTATION in *one* .c/.cpp file before #including this file, e.g.:
 
         #define NK_IMPLEMENTATION
         #include "nuklear.h"
@@ -62,7 +62,7 @@ FEATURES:
         - Complete control with ability to use skinning to decorate widgets
     - Bendable UI library with widget ranging from/to
         - Basic widgets like buttons, checkboxes, slider, ...
-        - Advanced widget like abstract comboboxes, contextual menus,...
+        - Advanced widgets like abstract comboboxes, contextual menus,...
     - Compile time configuration to only compile what you need
         - Subset which can be used if you do not want to link or use the standard library
     - Can be easily modified to only update on user input instead of frame updates
@@ -71,6 +71,17 @@ OPTIONAL DEFINES:
     NK_PRIVATE
         If defined declares all functions as static, so they can only be accessed
         inside the file that contains the implementation
+
+    NK_USE_MODERN_STDLIB
+        If defined assumes that you have C99 or newer libc, includes all needed standard
+        headers and defines all the required optional defines to fully utilize the libc.
+        <!> If used other optional defines that deal with stdlib can't be used. <!>
+        <!> If used needs to be defined for implementation and header. <!>
+
+    NK_DO_NOT_USE_STDLIB
+        If defined configures Nuklear to be fully independent. Asserts won't work.
+        <!> If used other optional defines that deal with stdlib can't be used. <!>
+        <!> If used needs to be defined for implementation and header. <!>
 
     NK_INCLUDE_FIXED_TYPES
         If defined it will include header <stdint.h> for fixed sized types
@@ -322,6 +333,41 @@ extern "C" {
  *
  * ===============================================================
  */
+
+#ifdef NK_USE_MODERN_STDLIB
+ /* @TODO: implement dtoa() and strtod() using stdlib. */
+ #if defined(NK_USE_FIXED_TYPES) || defined(NK_INCLUDE_DEFAULT_ALLOCATOR) \
+  || defined(NK_INCLUDE_STANDARD_IO) || defined(NK_INCLUDE_STANDARD_VARARGS) \
+  || defined(NK_ASSERT) || defined(NK_MEMSET) || defined(NK_MEMCPY) \
+  || defined(NK_SQRT) || defined(NK_SIN) || defined(NK_COS) || defined(NK_VSNPRINTF)
+    #error "You can't use this define with other defines that deal with stdlib"
+ #endif
+ #define NK_USE_FIXED_TYPES
+ #define NK_INCLUDE_DEFAULT_ALLOCATOR
+ #define NK_INCLUDE_STANDARD_IO
+ #define NK_INCLUDE_STANDARD_VARARGS
+ #ifdef NK_IMPLEMENTATION
+   #include <string.h>
+   #include <math.h>
+   #define NK_MEMSET memset
+   #define NK_MEMCPY memcpy
+   #define NK_SQRT sqrt
+   #define NK_SIN sin
+   #define NK_COS cos
+   #define NK_VSNPRINTF vsnprintf
+ #endif
+#endif
+
+#ifdef NK_DO_NOT_USE_STDLIB
+ #if defined(NK_USE_FIXED_TYPES) || defined(NK_INCLUDE_DEFAULT_ALLOCATOR) \
+  || defined(NK_INCLUDE_STANDARD_IO) || defined(NK_INCLUDE_STANDARD_VARARGS) \
+  || defined(NK_ASSERT) || defined(NK_MEMSET) || defined(NK_MEMCPY) \
+  || defined(NK_SQRT) || defined(NK_SIN) || defined(NK_COS) || defined(NK_VSNPRINTF)
+    #error "You can't use this define with other defines that deal with stdlib"
+ #endif
+ #define NK_ASSERT(expr) (void)(0)
+#endif
+
 #ifdef NK_INCLUDE_FIXED_TYPES
  #include <stdint.h>
  #define NK_INT8 int8_t
