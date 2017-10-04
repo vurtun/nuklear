@@ -4282,21 +4282,27 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 
 #ifndef NK_MEMSET
 #define NK_MEMSET nk_memset
+#define NK_MEMSET_IMPLEMENTATION
 #endif
 #ifndef NK_MEMCPY
 #define NK_MEMCPY nk_memcopy
+#define NK_MEMCPY_IMPLEMENTATION
 #endif
 #ifndef NK_SQRT
 #define NK_SQRT nk_sqrt
+#define NK_SQRT_IMPLEMENTATION
 #endif
 #ifndef NK_SIN
 #define NK_SIN nk_sin
+#define NK_SIN_IMPLEMENTATION
 #endif
 #ifndef NK_COS
 #define NK_COS nk_cos
+#define NK_COS_IMPLEMENTATION
 #endif
 #ifndef NK_STRTOD
 #define NK_STRTOD nk_strtod
+#define NK_STRTOD_IMPLEMENTATION
 #endif
 #ifndef NK_DTOA
 #define NK_DTOA nk_dtoa
@@ -4390,6 +4396,8 @@ NK_GLOBAL const struct nk_color nk_yellow = {255,255,0,255};
     (it can actually approximate a lot more functions) can be
     found here: www.lolengine.net/wiki/oss/lolremez
 */
+#if defined NK_INCLUDE_VERTEX_BUFFER_OUTPUT || \
+    defined NK_SQRT_IMPLEMENTATION && defined NK_INCLUDE_DEFAULT_FONT
 NK_INTERN float
 nk_inv_sqrt(float number)
 {
@@ -4402,13 +4410,17 @@ nk_inv_sqrt(float number)
     conv.f = conv.f * (threehalfs - (x2 * conv.f * conv.f));
     return conv.f;
 }
+#endif
 
+#if defined NK_SQRT_IMPLEMENTATION && defined NK_INCLUDE_DEFAULT_FONT
 NK_INTERN float
 nk_sqrt(float x)
 {
     return x * nk_inv_sqrt(x);
 }
+#endif /* NK_SQRT_IMPLEMENTATION */
 
+#if defined NK_SIN_IMPLEMENTATION && defined NK_INCLUDE_VERTEX_BUFFER_OUTPUT
 NK_INTERN float
 nk_sin(float x)
 {
@@ -4422,7 +4434,9 @@ nk_sin(float x)
     NK_STORAGE const float a7 = +1.38235642404333740e-4f;
     return a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*(a5 + x*(a6 + x*a7))))));
 }
+#endif /* NK_SIN_IMPLEMENTATION */
 
+#if defined NK_COS_IMPLEMENTATION && defined NK_INCLUDE_VERTEX_BUFFER_OUTPUT
 NK_INTERN float
 nk_cos(float x)
 {
@@ -4436,6 +4450,7 @@ nk_cos(float x)
     NK_STORAGE const float a7 = -5.23022132118824778e-14f;
     return a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*(a5 + x*(a6 + x*a7))))));
 }
+#endif /* NK_COS_IMPLEMENTATION */
 
 NK_INTERN nk_uint
 nk_round_up_pow2(nk_uint v)
@@ -4577,6 +4592,7 @@ NK_INTERN int nk_is_upper(int c){return (c >= 'A' && c <= 'Z') || (c >= 0xC0 && 
 NK_INTERN int nk_to_upper(int c) {return (c >= 'a' && c <= 'z') ? (c - ('a' - 'A')) : c;}
 NK_INTERN int nk_to_lower(int c) {return (c >= 'A' && c <= 'Z') ? (c - ('a' + 'A')) : c;}
 
+#ifdef NK_MEMCPY_IMPLEMENTATION
 NK_INTERN void*
 nk_memcopy(void *dst0, const void *src0, nk_size length)
 {
@@ -4633,7 +4649,9 @@ nk_memcopy(void *dst0, const void *src0, nk_size length)
 done:
     return (dst0);
 }
+#endif /* NK_MEMCPY_IMPLEMENTATION */
 
+#ifdef NK_MEMSET_IMPLEMENTATION
 NK_INTERN void
 nk_memset(void *ptr, int c0, nk_size size)
 {
@@ -4685,6 +4703,7 @@ nk_memset(void *ptr, int c0, nk_size size)
     #undef nk_wsize
     #undef nk_wmask
 }
+#endif /* NK_MEMSET_IMPLEMENTATION */
 
 NK_INTERN void
 nk_zero(void *ptr, nk_size size)
@@ -4727,6 +4746,7 @@ nk_strtoi(const char *str, const char **endptr)
     return neg*value;
 }
 
+#ifdef NK_STRTOD_IMPLEMENTATION
 NK_API double
 nk_strtod(const char *str, const char **endptr)
 {
@@ -4784,13 +4804,20 @@ nk_strtod(const char *str, const char **endptr)
         *endptr = p;
     return number;
 }
+#endif /* NK_STRTOD_IMPLEMENTATION */
 
 NK_API float
 nk_strtof(const char *str, const char **endptr)
 {
     float float_value;
     double double_value;
+#ifdef NK_STRTOD_IMPLEMENTATION
     double_value = NK_STRTOD(str, endptr);
+#else
+    char *tmpptr = NULL;
+    double_value = NK_STRTOD(str, &tmpptr);
+    if (endptr != NULL) *endptr = tmpptr;
+#endif /* NK_STRTOD_IMPLEMENTATION */
     float_value = (float)double_value;
     return float_value;
 }
@@ -5057,12 +5084,14 @@ nk_ifloord(double x)
     return (int)x;
 }
 
+#ifdef NK_INCLUDE_FONT_BAKING
 NK_INTERN int
 nk_ifloorf(float x)
 {
     x = (float)((int)x - ((x < 0.0f) ? 1 : 0));
     return (int)x;
 }
+#endif /* NK_INCLUDE_FONT_BAKING */
 
 NK_INTERN int
 nk_iceilf(float x)
@@ -5610,7 +5639,7 @@ nk_murmur_hash(const void * key, int len, nk_hash seed)
     return h1;
 }
 
-#ifdef NK_INCLUDE_STANDARD_IO
+#if defined NK_INCLUDE_STANDARD_IO && defined NK_INCLUDE_FONT_BAKING
 NK_INTERN char*
 nk_file_load(const char* path, nk_size* siz, struct nk_allocator *alloc)
 {
@@ -16115,11 +16144,11 @@ nk_do_property(nk_flags *ws,
             num_len = nk_strlen(string);
             break;
         case NK_PROPERTY_FLOAT:
-            nk_dtoa(string, (double)variant->value.f);
+            NK_DTOA(string, (double)variant->value.f);
             num_len = nk_string_float_limit(string, NK_MAX_FLOAT_PRECISION);
             break;
         case NK_PROPERTY_DOUBLE:
-            nk_dtoa(string, variant->value.d);
+            NK_DTOA(string, variant->value.d);
             num_len = nk_string_float_limit(string, NK_MAX_FLOAT_PRECISION);
             break;
         }
@@ -16222,7 +16251,7 @@ nk_do_property(nk_flags *ws,
             break;
         case NK_PROPERTY_DOUBLE:
             nk_string_float_limit(buffer, NK_MAX_FLOAT_PRECISION);
-            variant->value.d = nk_strtod(buffer, 0);
+            variant->value.d = NK_STRTOD(buffer, 0);
             variant->value.d = NK_CLAMP(variant->min_value.d, variant->value.d, variant->max_value.d);
             break;
         }
