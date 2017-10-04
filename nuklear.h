@@ -335,11 +335,12 @@ extern "C" {
  */
 
 #ifdef NK_USE_MODERN_STDLIB
- /* @TODO: implement dtoa() and strtod() using stdlib. */
+ /* @TODO: implement dtoa() using stdlib. */
  #if defined(NK_USE_FIXED_TYPES) || defined(NK_INCLUDE_DEFAULT_ALLOCATOR) \
   || defined(NK_INCLUDE_STANDARD_IO) || defined(NK_INCLUDE_STANDARD_VARARGS) \
   || defined(NK_ASSERT) || defined(NK_MEMSET) || defined(NK_MEMCPY) \
-  || defined(NK_SQRT) || defined(NK_SIN) || defined(NK_COS) || defined(NK_VSNPRINTF)
+  || defined(NK_SQRT) || defined(NK_SIN) || defined(NK_COS) \
+  || defined(NK_STRTOD) || defined(NK_VSNPRINTF)
     #error "You can't use this define with other defines that deal with stdlib"
  #endif
  #if !defined(__STDC_VERSION__) || (__STDC_VERSION__ < 199901L)
@@ -357,6 +358,7 @@ extern "C" {
    #define NK_SQRT sqrt
    #define NK_SIN sin
    #define NK_COS cos
+   #define NK_STRTOD strtod
    #define NK_VSNPRINTF vsnprintf
  #endif
 #endif
@@ -365,7 +367,8 @@ extern "C" {
  #if defined(NK_USE_FIXED_TYPES) || defined(NK_INCLUDE_DEFAULT_ALLOCATOR) \
   || defined(NK_INCLUDE_STANDARD_IO) || defined(NK_INCLUDE_STANDARD_VARARGS) \
   || defined(NK_ASSERT) || defined(NK_MEMSET) || defined(NK_MEMCPY) \
-  || defined(NK_SQRT) || defined(NK_SIN) || defined(NK_COS) || defined(NK_VSNPRINTF)
+  || defined(NK_SQRT) || defined(NK_SIN) || defined(NK_COS) \
+  || defined(NK_STRTOD) || defined(NK_VSNPRINTF)
     #error "You can't use this define with other defines that deal with stdlib"
  #endif
  #define NK_ASSERT(expr) (void)(0)
@@ -2348,8 +2351,13 @@ NK_API int nk_strlen(const char *str);
 NK_API int nk_stricmp(const char *s1, const char *s2);
 NK_API int nk_stricmpn(const char *s1, const char *s2, int n);
 NK_API int nk_strtoi(const char *str, const char **endptr);
-NK_API float nk_strtof(const char *str, const char **endptr);
-NK_API double nk_strtod(const char *str, const char **endptr);
+#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199101L)
+NK_API float nk_strtof(const char *restrict str, char **restrict endptr);
+NK_API double nk_strtod(const char *restrict str, char **restrict endptr);
+#else
+NK_API float nk_strtof(const char *str, char **endptr);
+NK_API double nk_strtod(const char *str, char **endptr);
+#endif
 NK_API int nk_strfilter(const char *text, const char *regexp);
 NK_API int nk_strmatch_fuzzy_string(char const *str, char const *pattern, int *out_score);
 NK_API int nk_strmatch_fuzzy_text(const char *txt, int txt_len, const char *pattern, int *out_score);
@@ -4776,8 +4784,13 @@ nk_strtoi(const char *str, const char **endptr)
     return neg*value;
 }
 
+#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199101L)
 NK_API double
-nk_strtod(const char *str, const char **endptr)
+nk_strtod(const char *restrict str, char **restrict endptr)
+#else
+NK_API double
+nk_strtod(const char *str, char **endptr)
+#endif
 {
     double m;
     double neg = 1.0;
@@ -4830,12 +4843,17 @@ nk_strtod(const char *str, const char **endptr)
     }
     number = value * neg;
     if (endptr)
-        *endptr = p;
+        *endptr = (char *) p;
     return number;
 }
 
+#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199101L)
 NK_API float
-nk_strtof(const char *str, const char **endptr)
+nk_strtof(const char *restrict str, char **restrict endptr)
+#else
+NK_API float
+nk_strtof(const char *str, char **endptr)
+#endif
 {
     float float_value;
     double double_value;
