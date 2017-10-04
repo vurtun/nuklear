@@ -342,6 +342,9 @@ extern "C" {
   || defined(NK_SQRT) || defined(NK_SIN) || defined(NK_COS) || defined(NK_VSNPRINTF)
     #error "You can't use this define with other defines that deal with stdlib"
  #endif
+ #if !defined(__STDC_VERSION__) || (__STDC_VERSION__ < 199901L)
+    #error "C99 or newer required for this define to work"
+ #endif
  #define NK_USE_FIXED_TYPES
  #define NK_INCLUDE_DEFAULT_ALLOCATOR
  #define NK_INCLUDE_STANDARD_IO
