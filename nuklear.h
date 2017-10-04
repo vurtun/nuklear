@@ -14944,7 +14944,7 @@ nk_draw_progress(struct nk_command_buffer *out, nk_flags state,
     } else nk_draw_image(out, *bounds, &background->data.image, nk_white);
 
     /* draw cursor */
-    if (background->type == NK_STYLE_ITEM_COLOR) {
+    if (cursor->type == NK_STYLE_ITEM_COLOR) {
         nk_fill_rect(out, *scursor, style->rounding, cursor->data.color);
         nk_stroke_rect(out, *scursor, style->rounding, style->border, style->border_color);
     } else nk_draw_image(out, *scursor, &cursor->data.image, nk_white);
