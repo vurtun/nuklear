@@ -51,12 +51,9 @@ NK_API void                  nk_rawfb_resize_fb(struct rawfb_context *rawfb, voi
 
 struct rawfb_image {
     void *pixels;
-    int w;
-    int h;
-    int pitch;
+    int w, h, pitch;
     enum nk_font_atlas_format format;
 };
-
 struct rawfb_context {
     struct nk_context ctx;
     struct nk_rect scissors;
@@ -90,9 +87,7 @@ nk_color_from_byte(const nk_byte *c)
 
 static void
 nk_rawfb_setpixel(const struct rawfb_context *rawfb,
-                  const short x0,
-                  const short y0,
-                  const struct nk_color col)
+    const short x0, const short y0, const struct nk_color col)
 {
     unsigned int c = nk_color_from_byte(&col.r);
     unsigned int *ptr = (unsigned int *)rawfb->fb.pixels;
@@ -105,54 +100,38 @@ nk_rawfb_setpixel(const struct rawfb_context *rawfb,
         *ptr = c;
 }
 
-/*
- * This function is called the most. Try to optimize it a bit...
- *
- * It does not check for scissors or image borders.
- * The caller has to make sure it does no exceed bounds.
- */
 static void
 nk_rawfb_line_horizontal(const struct rawfb_context *rawfb,
-                         const short x0,
-                         const short y,
-                         const short x1,
-                         const struct nk_color col)
+    const short x0, const short y, const short x1, const struct nk_color col)
 {
+    /* This function is called the most. Try to optimize it a bit...
+     * It does not check for scissors or image borders.
+     * The caller has to make sure it does no exceed bounds. */
     unsigned int i, n;
     unsigned int c[16];
     unsigned int *ptr = (unsigned int *)rawfb->fb.pixels;
-
     ptr += y * rawfb->fb.w;
     ptr += x0;
 
     n = x1 - x0;
-
     for (i = 0; i < sizeof(c) / sizeof(c[0]); i++)
         c[i] = nk_color_from_byte(&col.r);
 
     while (n > 16) {
         memcpy((void *)ptr, c, sizeof(c));
-        n -= 16;
-        ptr += 16;
-    }
-
-    for (i = 0; i < n; i++)
+        n -= 16; ptr += 16;
+    } for (i = 0; i < n; i++)
         ptr[i] = c[i];
 }
 
 static void
 nk_rawfb_imagesetpixel(const struct rawfb_image *img,
-                       const int x0,
-                       const int y0,
-                       const struct nk_color col)
+    const int x0, const int y0, const struct nk_color col)
 {
     unsigned char *ptr;
-
     NK_ASSERT(img);
-
     if (y0 < img->h && y0 > 0 && x0 > 0 && x0 < img->w) {
         ptr = img->pixels;
-
         if (img->format == NK_FONT_ATLAS_ALPHA8) {
             ptr += img->pitch * y0;
             ptr[x0] = col.a;
@@ -164,18 +143,13 @@ nk_rawfb_imagesetpixel(const struct rawfb_image *img,
 }
 
 static struct nk_color
-nk_image_getpixel(const struct rawfb_image *img,
-                  const int x0,
-                  const int y0)
+nk_image_getpixel(const struct rawfb_image *img, const int x0, const int y0)
 {
     struct nk_color col = {0, 0, 0, 0};
     unsigned char *ptr;
-
     NK_ASSERT(img);
-
     if (y0 < img->h && y0 > 0 && x0 > 0 && x0 < img->w) {
         ptr = img->pixels;
-
         if (img->format == NK_FONT_ATLAS_ALPHA8) {
             ptr += img->pitch * y0;
             col.a = ptr[x0];
@@ -184,31 +158,23 @@ nk_image_getpixel(const struct rawfb_image *img,
             ptr += img->pitch * y0;
             col = ((struct nk_color *)ptr)[x0];
         }
-    }
-
-    return col;
+    } return col;
 }
 
 static void
 nk_image_blendpixel(const struct rawfb_image *img,
-                    const int x0,
-                    const int y0,
-                    struct nk_color col)
+    const int x0, const int y0, struct nk_color col)
 {
     struct nk_color col2;
     unsigned char inv_a;
-
     if (col.a == 0)
         return;
 
     inv_a = 0xff - col.a;
-
     col2 = nk_image_getpixel(img, x0, y0);
-
     col.r = (col.r * col.a + col2.r * inv_a) >> 8;
     col.g = (col.g * col.a + col2.g * inv_a) >> 8;
     col.b = (col.b * col.a + col2.b * inv_a) >> 8;
-
     nk_rawfb_imagesetpixel(img, x0, y0, col);
 }
 
@@ -227,15 +193,11 @@ nk_rawfb_scissor(struct rawfb_context *rawfb,
 
 static void
 nk_rawfb_stroke_line(const struct rawfb_context *rawfb,
-                     short x0,
-                     short y0,
-                     short x1,
-                     short y1,
-                     const unsigned int line_thickness,
-                     const struct nk_color col)
+    short x0, short y0, short x1, short y1,
+    const unsigned int line_thickness, const struct nk_color col)
 {
-    int dy, dx, stepx, stepy;
     short tmp;
+    int dy, dx, stepx, stepy;
 
     dy = y1 - y0;
     dx = x1 - x0;
@@ -251,36 +213,27 @@ nk_rawfb_stroke_line(const struct rawfb_context *rawfb,
             x1 = x0;
             x0 = tmp;
         }
-
         x1 = MIN(rawfb->scissors.w - 1, x1);
         x0 = MIN(rawfb->scissors.w - 1, x0);
         x1 = MAX(rawfb->scissors.x, x1);
         x0 = MAX(rawfb->scissors.x, x0);
-
         nk_rawfb_line_horizontal(rawfb, x0, y0, x1, col);
-
         return;
     }
-
     if (dy < 0) {
         dy = -dy;
         stepy = -1;
-    } else {
-        stepy = 1;
-    }
+    } else stepy = 1;
 
     if (dx < 0) {
         dx = -dx;
         stepx = -1;
-    } else {
-        stepx = 1;
-    }
+    } else stepx = 1;
 
     dy <<= 1;
     dx <<= 1;
 
     nk_rawfb_setpixel(rawfb, x0, y0, col);
-
     if (dx > dy) {
         int fraction = dy - (dx >> 1);
         while (x0 != x1) {
@@ -308,18 +261,14 @@ nk_rawfb_stroke_line(const struct rawfb_context *rawfb,
 
 static void
 nk_rawfb_fill_polygon(const struct rawfb_context *rawfb,
-                      const struct nk_vec2i *pnts,
-                      int count,
-                      const struct nk_color col)
+    const struct nk_vec2i *pnts, int count, const struct nk_color col)
 {
-#define MAX_POINTS 64
-
     int i = 0;
+    #define MAX_POINTS 64
     int left = 10000, top = 10000, bottom = 0, right = 0;
-    int  nodes, nodeX[MAX_POINTS], pixelX, pixelY, j, swap ;
+    int nodes, nodeX[MAX_POINTS], pixelX, pixelY, j, swap ;
 
-    if (count == 0)
-        return;
+    if (count == 0) return;
     if (count > MAX_POINTS)
         count = MAX_POINTS;
 
@@ -333,26 +282,20 @@ nk_rawfb_fill_polygon(const struct rawfb_context *rawfb,
             top = pnts[i].y;
         if (bottom < pnts[i].y)
             bottom = pnts[i].y;
-    }
+    } bottom++; right++;
 
-    bottom ++;
-    right ++;
     /* Polygon scanline algorithm released under public-domain by Darel Rex Finley, 2007 */
-
     /*  Loop through the rows of the image. */
     for (pixelY = top; pixelY < bottom; pixelY ++) {
-        /*  Build a list of nodes. */
-        nodes = 0;
+        nodes = 0; /*  Build a list of nodes. */
         j = count - 1;
         for (i = 0; i < count; i++) {
-            if (((pnts[i].y < pixelY) && (pnts[j].y >= pixelY))
-                 ||  ((pnts[j].y < pixelY) && (pnts[i].y >= pixelY))) {
-                nodeX[nodes++]=
-                    (int) ((float)pnts[i].x +
-                     ((float)pixelY - (float)pnts[i].y) / ((float)pnts[j].y - (float)pnts[i].y)
+            if (((pnts[i].y < pixelY) && (pnts[j].y >= pixelY)) ||
+                ((pnts[j].y < pixelY) && (pnts[i].y >= pixelY))) {
+                nodeX[nodes++]= (int)((float)pnts[i].x
+                     + ((float)pixelY - (float)pnts[i].y) / ((float)pnts[j].y - (float)pnts[i].y)
                      * ((float)pnts[j].x - (float)pnts[i].x));
-            }
-            j = i;
+            } j = i;
         }
 
         /*  Sort the nodes, via a simple “Bubble” sort. */
@@ -362,41 +305,27 @@ nk_rawfb_fill_polygon(const struct rawfb_context *rawfb,
                 swap = nodeX[i];
                 nodeX[i] = nodeX[i+1];
                 nodeX[i+1] = swap;
-                if (i)
-                    i--;
-            } else {
-                i++;
-            }
+                if (i) i--;
+            } else i++;
         }
-
         /*  Fill the pixels between node pairs. */
         for (i = 0; i < nodes; i += 2) {
-            if (nodeX[i    ] >= right)
-                break;
-            if (nodeX[i + 1] >  left) {
-                if (nodeX[i    ] < left)
-                    nodeX[i    ]= left ;
-                if (nodeX[i + 1] > right)
-                    nodeX[i + 1]= right;
+            if (nodeX[i+0] >= right) break;
+            if (nodeX[i+1] > left) {
+                if (nodeX[i+0] < left) nodeX[i+0] = left ;
+                if (nodeX[i+1] > right) nodeX[i+1] = right;
                 for (pixelX = nodeX[i]; pixelX < nodeX[i + 1]; pixelX++)
                     nk_rawfb_setpixel(rawfb, pixelX, pixelY, col);
             }
         }
     }
-
     #undef MAX_POINTS
 }
 
-
 static void
 nk_rawfb_stroke_arc(const struct rawfb_context *rawfb,
-                    short x0,
-                    short y0,
-                    short w,
-                    short h,
-                    const short s,
-                    const short line_thickness,
-                    const struct nk_color col)
+    short x0, short y0, short w, short h, const short s,
+    const short line_thickness, const struct nk_color col)
 {
     /* Bresenham's ellipses - modified to draw one quarter */
     const int a2 = (w * w) / 4;
@@ -404,17 +333,13 @@ nk_rawfb_stroke_arc(const struct rawfb_context *rawfb,
     const int fa2 = 4 * a2, fb2 = 4 * b2;
     int x, y, sigma;
 
-    if (s != 0 && s != 90 && s != 180 && s != 270)
-        return;
-
-    if (w < 1 || h < 1)
-        return;
+    if (s != 0 && s != 90 && s != 180 && s != 270) return;
+    if (w < 1 || h < 1) return;
 
     /* Convert upper left to center */
     h = (h + 1) / 2;
     w = (w + 1) / 2;
-    x0 += w;
-    y0 += h;
+    x0 += w; y0 += h;
 
     /* First half */
     for (x = 0, y = h, sigma = 2*b2+a2*(1-2*h); b2*x <= a2*y; x++) {
@@ -429,8 +354,7 @@ nk_rawfb_stroke_arc(const struct rawfb_context *rawfb,
         if (sigma >= 0) {
             sigma += fa2 * (1 - y);
             y--;
-        }
-        sigma += b2 * ((4 * x) + 6);
+        } sigma += b2 * ((4 * x) + 6);
     }
 
     /* Second half */
@@ -446,19 +370,13 @@ nk_rawfb_stroke_arc(const struct rawfb_context *rawfb,
         if (sigma >= 0) {
             sigma += fb2 * (1 - x);
             x--;
-        }
-        sigma += a2 * ((4 * y) + 6);
+        } sigma += a2 * ((4 * y) + 6);
     }
 }
 
 static void
-nk_rawfb_fill_arc(const struct rawfb_context *rawfb,
-                  short x0,
-                  short y0,
-                  short w,
-                  short h,
-                  const short s,
-                  const struct nk_color col)
+nk_rawfb_fill_arc(const struct rawfb_context *rawfb, short x0, short y0,
+    short w, short h, const short s, const struct nk_color col)
 {
     /* Bresenham's ellipses - modified to fill one quarter */
     const int a2 = (w * w) / 4;
@@ -466,11 +384,8 @@ nk_rawfb_fill_arc(const struct rawfb_context *rawfb,
     const int fa2 = 4 * a2, fb2 = 4 * b2;
     int x, y, sigma;
     struct nk_vec2i pnts[3];
-
+    if (w < 1 || h < 1) return;
     if (s != 0 && s != 90 && s != 180 && s != 270)
-        return;
-
-    if (w < 1 || h < 1)
         return;
 
     /* Convert upper left to center */
@@ -483,6 +398,7 @@ nk_rawfb_fill_arc(const struct rawfb_context *rawfb,
     pnts[0].y = y0;
     pnts[2].x = x0;
     pnts[2].y = y0;
+
     /* First half */
     for (x = 0, y = h, sigma = 2*b2+a2*(1-2*h); b2*x <= a2*y; x++) {
         if (s == 180) {
@@ -494,15 +410,12 @@ nk_rawfb_fill_arc(const struct rawfb_context *rawfb,
         } else if (s == 90) {
             pnts[1].x = x0 - x; pnts[1].y = y0 - y;
         }
-
         nk_rawfb_fill_polygon(rawfb, pnts, 3, col);
         pnts[2] = pnts[1];
-
         if (sigma >= 0) {
             sigma += fa2 * (1 - y);
             y--;
-        }
-        sigma += b2 * ((4 * x) + 6);
+        } sigma += b2 * ((4 * x) + 6);
     }
 
     /* Second half */
@@ -516,27 +429,19 @@ nk_rawfb_fill_arc(const struct rawfb_context *rawfb,
         } else if (s == 90) {
             pnts[1].x = x0 - x; pnts[1].y = y0 - y;
         }
-
         nk_rawfb_fill_polygon(rawfb, pnts, 3, col);
         pnts[2] = pnts[1];
-
         if (sigma >= 0) {
             sigma += fb2 * (1 - x);
             x--;
-        }
-        sigma += a2 * ((4 * y) + 6);
+        } sigma += a2 * ((4 * y) + 6);
     }
 }
 
 static void
 nk_rawfb_stroke_rect(const struct rawfb_context *rawfb,
-                     const short x,
-                     const short y,
-                     const short w,
-                     const short h,
-                     const short r,
-                     const short line_thickness,
-                     const struct nk_color col)
+    const short x, const short y, const short w, const short h,
+    const short r, const short line_thickness, const struct nk_color col)
 {
     if (r == 0) {
         nk_rawfb_stroke_line(rawfb, x, y, x + w, y, line_thickness, col);
@@ -567,18 +472,13 @@ nk_rawfb_stroke_rect(const struct rawfb_context *rawfb,
 
 static void
 nk_rawfb_fill_rect(const struct rawfb_context *rawfb,
-                   const short x,
-                   const short y,
-                   const short w,
-                   const short h,
-                   const short r,
-                   const struct nk_color col)
+    const short x, const short y, const short w, const short h,
+    const short r, const struct nk_color col)
 {
+    int i;
     if (r == 0) {
-        int i;
-        for (i = 0; i < h; i++) {
+        for (i = 0; i < h; i++)
             nk_rawfb_stroke_line(rawfb, x, y + i, x + w, y + i, 1, col);
-        }
     } else {
         const short xc = x + r;
         const short yc = y + r;
@@ -629,36 +529,24 @@ nk_rawfb_fill_rect(const struct rawfb_context *rawfb,
 
 static void
 nk_rawfb_fill_triangle(const struct rawfb_context *rawfb,
-                       const short x0,
-                       const short y0,
-                       const short x1,
-                       const short y1,
-                       const short x2,
-                       const short y2,
-                       const struct nk_color col)
+    const short x0, const short y0, const short x1, const short y1,
+    const short x2, const short y2, const struct nk_color col)
 {
     struct nk_vec2i pnts[3];
-
     pnts[0].x = x0;
     pnts[0].y = y0;
     pnts[1].x = x1;
     pnts[1].y = y1;
     pnts[2].x = x2;
     pnts[2].y = y2;
-
     nk_rawfb_fill_polygon(rawfb, pnts, 3, col);
 }
 
 static void
 nk_rawfb_stroke_triangle(const struct rawfb_context *rawfb,
-                         const short x0,
-                         const short y0,
-                         const short x1,
-                         const short y1,
-                         const short x2,
-                         const short y2,
-                         const unsigned short line_thickness,
-                         const struct nk_color col)
+    const short x0, const short y0, const short x1, const short y1,
+    const short x2, const short y2, const unsigned short line_thickness,
+    const struct nk_color col)
 {
     nk_rawfb_stroke_line(rawfb, x0, y0, x1, y1, line_thickness, col);
     nk_rawfb_stroke_line(rawfb, x1, y1, x2, y2, line_thickness, col);
@@ -667,26 +555,21 @@ nk_rawfb_stroke_triangle(const struct rawfb_context *rawfb,
 
 static void
 nk_rawfb_stroke_polygon(const struct rawfb_context *rawfb,
-                        const struct nk_vec2i *pnts,
-                        const int count,
-                        const unsigned short line_thickness,
-                        const struct nk_color col)
+    const struct nk_vec2i *pnts, const int count,
+    const unsigned short line_thickness, const struct nk_color col)
 {
     int i;
     for (i = 1; i < count; ++i)
         nk_rawfb_stroke_line(rawfb, pnts[i-1].x, pnts[i-1].y, pnts[i].x,
                 pnts[i].y, line_thickness, col);
-
     nk_rawfb_stroke_line(rawfb, pnts[count-1].x, pnts[count-1].y,
             pnts[0].x, pnts[0].y, line_thickness, col);
 }
 
 static void
 nk_rawfb_stroke_polyline(const struct rawfb_context *rawfb,
-                         const struct nk_vec2i *pnts,
-                         const int count,
-                         const unsigned short line_thickness,
-                         const struct nk_color col)
+    const struct nk_vec2i *pnts, const int count,
+    const unsigned short line_thickness, const struct nk_color col)
 {
     int i;
     for (i = 0; i < count-1; ++i)
@@ -696,11 +579,7 @@ nk_rawfb_stroke_polyline(const struct rawfb_context *rawfb,
 
 static void
 nk_rawfb_fill_circle(const struct rawfb_context *rawfb,
-                     short x0,
-                     short y0,
-                     short w,
-                     short h,
-                     const struct nk_color col)
+    short x0, short y0, short w, short h, const struct nk_color col)
 {
     /* Bresenham's ellipses */
     const int a2 = (w * w) / 4;
@@ -721,10 +600,8 @@ nk_rawfb_fill_circle(const struct rawfb_context *rawfb,
         if (sigma >= 0) {
             sigma += fa2 * (1 - y);
             y--;
-        }
-        sigma += b2 * ((4 * x) + 6);
+        } sigma += b2 * ((4 * x) + 6);
     }
-
     /* Second half */
     for (x = w, y = 0, sigma = 2*a2+b2*(1-2*w); a2*y <= b2*x; y++) {
         nk_rawfb_stroke_line(rawfb, x0 - x, y0 + y, x0 + x, y0 + y, 1, col);
@@ -732,19 +609,14 @@ nk_rawfb_fill_circle(const struct rawfb_context *rawfb,
         if (sigma >= 0) {
             sigma += fb2 * (1 - x);
             x--;
-        }
-        sigma += a2 * ((4 * y) + 6);
+        } sigma += a2 * ((4 * y) + 6);
     }
 }
 
 static void
 nk_rawfb_stroke_circle(const struct rawfb_context *rawfb,
-                       short x0,
-                       short y0,
-                       short w,
-                       short h,
-                       const short line_thickness,
-                       const struct nk_color col)
+    short x0, short y0, short w, short h, const short line_thickness,
+    const struct nk_color col)
 {
     /* Bresenham's ellipses */
     const int a2 = (w * w) / 4;
@@ -767,10 +639,8 @@ nk_rawfb_stroke_circle(const struct rawfb_context *rawfb,
         if (sigma >= 0) {
             sigma += fa2 * (1 - y);
             y--;
-        }
-        sigma += b2 * ((4 * x) + 6);
+        } sigma += b2 * ((4 * x) + 6);
     }
-
     /* Second half */
     for (x = w, y = 0, sigma = 2*a2+b2*(1-2*w); a2*y <= b2*x; y++) {
         nk_rawfb_setpixel(rawfb, x0 + x, y0 + y, col);
@@ -780,20 +650,16 @@ nk_rawfb_stroke_circle(const struct rawfb_context *rawfb,
         if (sigma >= 0) {
             sigma += fb2 * (1 - x);
             x--;
-        }
-        sigma += a2 * ((4 * y) + 6);
+        } sigma += a2 * ((4 * y) + 6);
     }
 }
 
 static void
 nk_rawfb_stroke_curve(const struct rawfb_context *rawfb,
-                      const struct nk_vec2i p1,
-                      const struct nk_vec2i p2,
-                      const struct nk_vec2i p3,
-                      const struct nk_vec2i p4,
-                      const unsigned int num_segments,
-                      const unsigned short line_thickness,
-                      const struct nk_color col)
+    const struct nk_vec2i p1, const struct nk_vec2i p2,
+    const struct nk_vec2i p3, const struct nk_vec2i p4,
+    const unsigned int num_segments, const unsigned short line_thickness,
+    const struct nk_color col)
 {
     unsigned int i_step, segments;
     float t_step;
@@ -817,52 +683,42 @@ nk_rawfb_stroke_curve(const struct rawfb_context *rawfb,
 }
 
 static void
-nk_rawfb_clear(const struct rawfb_context *rawfb,
-               const struct nk_color col)
+nk_rawfb_clear(const struct rawfb_context *rawfb, const struct nk_color col)
 {
     nk_rawfb_fill_rect(rawfb, 0, 0, rawfb->fb.w, rawfb->fb.h, 0, col);
 }
 
 NK_API struct rawfb_context*
-nk_rawfb_init(void *fb,
-              void *tex_mem,
-              const unsigned int w,
-              const unsigned int h,
-              const unsigned int pitch)
+nk_rawfb_init(void *fb, void *tex_mem, const unsigned int w, const unsigned int h,
+    const unsigned int pitch)
 {
     const void *tex;
     struct rawfb_context *rawfb;
-
     rawfb = malloc(sizeof(struct rawfb_context));
     if (!rawfb)
         return NULL;
 
     nk_memset(rawfb, 0, sizeof(struct rawfb_context));
-
     rawfb->font_tex.pixels = tex_mem;
     rawfb->font_tex.format = NK_FONT_ATLAS_ALPHA8;
-    rawfb->font_tex.w = 0;
-    rawfb->font_tex.h = 0;
+    rawfb->font_tex.w = rawfb->font_tex.h = 0;
 
     rawfb->fb.pixels = fb;
     rawfb->fb.w= w;
     rawfb->fb.h = h;
 
 #if defined(RAWFB_XRGB_8888) || defined(RAWFB_RGBX_8888)
-        rawfb->fb.format = NK_FONT_ATLAS_RGBA32;
-        rawfb->fb.pitch = pitch;
+    rawfb->fb.format = NK_FONT_ATLAS_RGBA32;
+    rawfb->fb.pitch = pitch;
 #else
-#error Fixme
+    #error Fixme
 #endif
 
     nk_init_default(&rawfb->ctx, 0);
-
     nk_font_atlas_init_default(&rawfb->atlas);
     nk_font_atlas_begin(&rawfb->atlas);
-
     tex = nk_font_atlas_bake(&rawfb->atlas, &rawfb->font_tex.w, &rawfb->font_tex.h, rawfb->font_tex.format);
-    if (!tex)
-        return 0;
+    if (!tex) return 0;
 
     switch(rawfb->font_tex.format) {
     case NK_FONT_ATLAS_ALPHA8:
@@ -872,35 +728,25 @@ nk_rawfb_init(void *fb,
         rawfb->font_tex.pitch = rawfb->font_tex.w * 4;
         break;
     };
-
     /* Store the font texture in tex scratch memory */
     memcpy(rawfb->font_tex.pixels, tex, rawfb->font_tex.pitch * rawfb->font_tex.h);
-
     nk_font_atlas_end(&rawfb->atlas, nk_handle_ptr(NULL), NULL);
-
     if (rawfb->atlas.default_font)
         nk_style_set_font(&rawfb->ctx, &rawfb->atlas.default_font->handle);
-
     nk_style_load_all_cursors(&rawfb->ctx, rawfb->atlas.cursors);
-
     nk_rawfb_scissor(rawfb, 0, 0, rawfb->fb.w, rawfb->fb.h);
-
     return rawfb;
 }
 
 static void
 nk_rawfb_stretch_image(const struct rawfb_image *dst,
-                       const struct rawfb_image *src,
-                       const struct nk_rect *dst_rect,
-                       const struct nk_rect *src_rect,
-                       const struct nk_rect *dst_scissors)
+    const struct rawfb_image *src, const struct nk_rect *dst_rect,
+    const struct nk_rect *src_rect, const struct nk_rect *dst_scissors)
 {
-    struct nk_color col;
     short i, j;
-
+    struct nk_color col;
     float xinc = src_rect->w / dst_rect->w;
     float yinc = src_rect->h / dst_rect->h;
-
     float xoff = src_rect->x, yoff = src_rect->y;
 
     /* Simple nearest filtering rescaling */
@@ -923,16 +769,13 @@ nk_rawfb_stretch_image(const struct rawfb_image *dst,
 }
 
 static void
-nk_rawfb_font_query_font_glyph(nk_handle handle,
-                               const float height,
-                               struct nk_user_font_glyph *glyph,
-                               const nk_rune codepoint,
-                               const nk_rune next_codepoint)
+nk_rawfb_font_query_font_glyph(nk_handle handle, const float height,
+    struct nk_user_font_glyph *glyph, const nk_rune codepoint,
+    const nk_rune next_codepoint)
 {
     float scale;
     const struct nk_font_glyph *g;
     struct nk_font *font;
-
     NK_ASSERT(glyph);
     NK_UNUSED(next_codepoint);
 
@@ -954,12 +797,9 @@ nk_rawfb_font_query_font_glyph(nk_handle handle,
 
 NK_API void
 nk_rawfb_draw_text(const struct rawfb_context *rawfb,
-                   const struct nk_user_font *font,
-                   const struct nk_rect rect,
-                   const char *text,
-                   const int len,
-                   const float font_height,
-                   const struct nk_color fg)
+    const struct nk_user_font *font, const struct nk_rect rect,
+    const char *text, const int len, const float font_height,
+    const struct nk_color fg)
 {
     float x = 0;
     int text_len = 0;
@@ -968,7 +808,6 @@ nk_rawfb_draw_text(const struct rawfb_context *rawfb,
     int glyph_len = 0;
     int next_glyph_len = 0;
     struct nk_user_font_glyph g;
-
     if (!len || !text) return;
 
     x = 0;
@@ -989,7 +828,6 @@ nk_rawfb_draw_text(const struct rawfb_context *rawfb,
 
         /* calculate and draw glyph drawing rectangle and image */
         char_width = g.xadvance;
-
         src_rect.x = g.uv[0].x * rawfb->font_tex.w;
         src_rect.y = g.uv[0].y * rawfb->font_tex.h;
         src_rect.w = g.uv[1].x * rawfb->font_tex.w - g.uv[0].x * rawfb->font_tex.w;
@@ -1001,7 +839,6 @@ nk_rawfb_draw_text(const struct rawfb_context *rawfb,
         dst_rect.h = ceilf(g.height);
 
         /* TODO: account fg */
-
         /* Use software rescaling to blit glyph from font_text to framebuffer */
         nk_rawfb_stretch_image(&rawfb->fb, &rawfb->font_tex, &dst_rect, &src_rect, &rawfb->scissors);
 
@@ -1015,12 +852,8 @@ nk_rawfb_draw_text(const struct rawfb_context *rawfb,
 
 NK_API void
 nk_rawfb_drawimage(const struct rawfb_context *rawfb,
-                   const int x,
-                   const int y,
-                   const int w,
-                   const int h,
-                   const struct nk_image *img,
-                   const struct nk_color *col)
+    const int x, const int y, const int w, const int h,
+    const struct nk_image *img, const struct nk_color *col)
 {
     struct nk_rect src_rect;
     struct nk_rect dst_rect;
@@ -1034,7 +867,6 @@ nk_rawfb_drawimage(const struct rawfb_context *rawfb,
     dst_rect.y = y;
     dst_rect.w = w;
     dst_rect.h = h;
-
     nk_rawfb_stretch_image(&rawfb->fb, &rawfb->font_tex, &dst_rect, &src_rect, &rawfb->scissors);
 }
 
@@ -1065,7 +897,6 @@ nk_rawfb_render(const struct rawfb_context *rawfb,
                 const unsigned char enable_clear)
 {
     const struct nk_command *cmd;
-
     if (enable_clear)
         nk_rawfb_clear(rawfb, clear);
 
@@ -1144,7 +975,7 @@ nk_rawfb_render(const struct rawfb_context *rawfb,
         } break;
         default: break;
         }
-    }
-    nk_clear((struct nk_context*)&rawfb->ctx);
+    } nk_clear((struct nk_context*)&rawfb->ctx);
 }
 #endif
+

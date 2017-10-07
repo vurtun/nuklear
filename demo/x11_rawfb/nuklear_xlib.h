@@ -70,73 +70,51 @@ nk_xlib_init(Display *dpy, Visual *vis, int screen, Window root,
     XFreePixmap(dpy, blank);}
 
     xlib.fallback = False;
-    do
-    {
-        int status;
-
-        /* Initialize shared memory according to:
+    do {/* Initialize shared memory according to:
          * https://www.x.org/archive/X11R7.5/doc/Xext/mit-shm.html */
-
-        if (!XShmQueryExtension(dpy))
-        {
+        int status;
+        if (!XShmQueryExtension(dpy)) {
             printf("No XShm Extension available.\n");
             xlib.fallback = True;
             break;
         }
-
         xlib.ximg = XShmCreateImage(dpy, vis, depth, ZPixmap, NULL, &xlib.xsi, w, h);
-        if (!xlib.ximg)
-        {
+        if (!xlib.ximg) {
             xlib.fallback = True;
             break;
         }
-
         xlib.xsi.shmid = shmget(IPC_PRIVATE, xlib.ximg->bytes_per_line * xlib.ximg->height, IPC_CREAT | 0777);
-        if (xlib.xsi.shmid < 0)
-        {
+        if (xlib.xsi.shmid < 0) {
             XDestroyImage(xlib.ximg);
             xlib.fallback = True;
             break;
         }
-
         xlib.xsi.shmaddr = xlib.ximg->data = shmat(xlib.xsi.shmid, NULL, 0);
-        if ((size_t)xlib.xsi.shmaddr < 0)
-        {
+        if ((size_t)xlib.xsi.shmaddr < 0) {
             XDestroyImage(xlib.ximg);
             xlib.fallback = True;
             break;
         }
-
         xlib.xsi.readOnly = False;
         status = XShmAttach(dpy, &xlib.xsi);
-        if (!status)
-        {
+        if (!status) {
             shmdt(xlib.xsi.shmaddr);
             XDestroyImage(xlib.ximg);
             xlib.fallback = True;
             break;
-        }
-
-        XSync(dpy, False);
-
+        } XSync(dpy, False);
         shmctl(xlib.xsi.shmid, IPC_RMID, NULL);
     } while(0);
 
-    if (xlib.fallback)
-    {
+    if (xlib.fallback) {
         xlib.ximg = XCreateImage(dpy, vis, depth, ZPixmap, 0, NULL, w, h, 32, 0);
-        if (!xlib.ximg)
-            return 0;
-
+        if (!xlib.ximg) return 0;
         xlib.ximg->data = malloc(h * xlib.ximg->bytes_per_line);
         if (!xlib.ximg->data)
             return 0;
     }
-
     xlib.gc = XDefaultGC(dpy, screen);
-
     *fb = xlib.ximg->data;
-
     return 1;
 }
 
@@ -208,8 +186,7 @@ nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt, struct r
                         nk_input_glyph(&rawfb->ctx, buf);
                 }
             }
-        }
-        XFree(code);
+        } XFree(code);
         return 1;
     } else if (evt->type == ButtonPress || evt->type == ButtonRelease) {
         /* Button handler */
@@ -235,8 +212,7 @@ nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt, struct r
             rawfb->ctx.input.mouse.pos.x = rawfb->ctx.input.mouse.prev.x;
             rawfb->ctx.input.mouse.pos.y = rawfb->ctx.input.mouse.prev.y;
             XWarpPointer(xlib.dpy, None, xlib.root, 0, 0, 0, 0, (int)rawfb->ctx.input.mouse.pos.x, (int)rawfb->ctx.input.mouse.pos.y);
-        }
-        return 1;
+        } return 1;
     } else if (evt->type == Expose || evt->type == ConfigureNotify) {
         /* Window resize handler */
         XWindowAttributes attr;
@@ -248,12 +224,8 @@ nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt, struct r
         height = (unsigned int)attr.height;
 
         nk_xlib_shutdown();
-
-        nk_xlib_init(dpy, XDefaultVisual(dpy, screen), screen, win,
-                 width, height, &fb);
-
+        nk_xlib_init(dpy, XDefaultVisual(dpy, screen), screen, win, width, height, &fb);
         nk_rawfb_resize_fb(rawfb, fb, width, height, width * 4);
-
     } else if (evt->type == KeymapNotify) {
         XRefreshKeyboardMapping(&evt->xmapping);
         return 1;
@@ -261,28 +233,22 @@ nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt, struct r
         XUndefineCursor(xlib.dpy, xlib.root);
     } else if (evt->type == EnterNotify) {
         XDefineCursor(xlib.dpy, xlib.root, xlib.cursor);
-    }
-
-    return 0;
+    } return 0;
 }
 
 NK_API void
 nk_xlib_shutdown(void)
 {
     XFreeCursor(xlib.dpy, xlib.cursor);
-    if (xlib.fallback)
-    {
+    if (xlib.fallback) {
         free(xlib.ximg->data);
         XDestroyImage(xlib.ximg);
-    }
-    else
-    {
+    } else {
         XShmDetach(xlib.dpy, &xlib.xsi);
         XDestroyImage(xlib.ximg);
         shmdt(xlib.xsi.shmaddr);
         shmctl(xlib.xsi.shmid, IPC_RMID, NULL);
-    }
-    nk_memset(&xlib, 0, sizeof(xlib));
+    } nk_memset(&xlib, 0, sizeof(xlib));
 }
 
 NK_API void
@@ -291,8 +257,8 @@ nk_xlib_render(Drawable screen)
     if (xlib.fallback)
         XPutImage(xlib.dpy, screen, xlib.gc, xlib.ximg,
             0, 0, 0, 0, xlib.ximg->width, xlib.ximg->height);
-    else
-        XShmPutImage(xlib.dpy, screen, xlib.gc, xlib.ximg,
+    else XShmPutImage(xlib.dpy, screen, xlib.gc, xlib.ximg,
             0, 0, 0, 0, xlib.ximg->width, xlib.ximg->height, False);
 }
 #endif
+
