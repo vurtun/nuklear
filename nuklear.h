@@ -2468,7 +2468,7 @@ typedef void(*nk_query_font_glyph_f)(nk_handle handle, float font_height,
                                     struct nk_user_font_glyph *glyph,
                                     nk_rune codepoint, nk_rune next_codepoint);
 
-#ifdef NK_INCLUDE_VERTEX_BUFFER_OUTPUT
+#if defined(NK_INCLUDE_VERTEX_BUFFER_OUTPUT) || defined(NK_INCLUDE_SOFTWARE_FONT)
 struct nk_user_font_glyph {
     struct nk_vec2 uv[2];
     /* texture coordinates */
