@@ -10,10 +10,6 @@
 #include <limits.h>
 #include <time.h>
 
-#include <GL/glew.h>
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengles2.h>
-
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_STANDARD_VARARGS
@@ -55,19 +51,96 @@
  *                          DEMO
  *
  * ===============================================================*/
+
+
+/* Platform */
+SDL_Window *win;
+int running = nk_true;
+
+    
+
+void 
+MainLoop(void* loopArg){
+    struct nk_context *ctx = (struct nk_context *)loopArg;
+
+    /* Input */
+    SDL_Event evt;
+    nk_input_begin(ctx);
+    while (SDL_PollEvent(&evt)) {
+        if (evt.type == SDL_QUIT) running = nk_false;
+        nk_sdl_handle_event(&evt);
+    }
+    nk_input_end(ctx);
+
+
+    /* GUI */
+    if (nk_begin(ctx, "Demo", nk_rect(50, 50, 200, 200),
+        NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
+        NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
+    {
+        nk_menubar_begin(ctx);
+        nk_layout_row_begin(ctx, NK_STATIC, 25, 2);
+        nk_layout_row_push(ctx, 45);
+        if (nk_menu_begin_label(ctx, "FILE", NK_TEXT_LEFT, nk_vec2(120, 200))) {
+            nk_layout_row_dynamic(ctx, 30, 1);
+            nk_menu_item_label(ctx, "OPEN", NK_TEXT_LEFT);
+            nk_menu_item_label(ctx, "CLOSE", NK_TEXT_LEFT);
+            nk_menu_end(ctx);
+        }
+        nk_layout_row_push(ctx, 45);
+        if (nk_menu_begin_label(ctx, "EDIT", NK_TEXT_LEFT, nk_vec2(120, 200))) {
+            nk_layout_row_dynamic(ctx, 30, 1);
+            nk_menu_item_label(ctx, "COPY", NK_TEXT_LEFT);
+            nk_menu_item_label(ctx, "CUT", NK_TEXT_LEFT);
+            nk_menu_item_label(ctx, "PASTE", NK_TEXT_LEFT);
+            nk_menu_end(ctx);
+        }
+        nk_layout_row_end(ctx);
+        nk_menubar_end(ctx);
+
+        enum {EASY, HARD};
+        static int op = EASY;
+        static int property = 20;
+        nk_layout_row_static(ctx, 30, 80, 1);
+        if (nk_button_label(ctx, "button"))
+            fprintf(stdout, "button pressed\n");
+        nk_layout_row_dynamic(ctx, 30, 2);
+        if (nk_option_label(ctx, "easy", op == EASY)) op = EASY;
+        if (nk_option_label(ctx, "hard", op == HARD)) op = HARD;
+        nk_layout_row_dynamic(ctx, 25, 1);
+        nk_property_int(ctx, "Compression:", 0, &property, 100, 10, 1);
+    }
+    nk_end(ctx);
+
+    /* -------------- EXAMPLES ---------------- */
+    /*calculator(ctx);*/
+    /*overview(ctx);*/
+    /*node_editor(ctx);*/
+    /* ----------------------------------------- */
+
+    /* Draw */
+    {float bg[4];
+    int win_width, win_height;
+    nk_color_fv(bg, nk_rgb(28,48,62));
+    SDL_GetWindowSize(win, &win_width, &win_height);
+    glViewport(0, 0, win_width, win_height);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glClearColor(bg[0], bg[1], bg[2], bg[3]);
+    /* IMPORTANT: `nk_sdl_render` modifies some global OpenGL state
+     * with blending, scissor, face culling, depth test and viewport and
+     * defaults everything back into a default state.
+     * Make sure to either a.) save and restore or b.) reset your own state after
+     * rendering the UI. */
+    nk_sdl_render(NK_ANTI_ALIASING_ON, MAX_VERTEX_MEMORY, MAX_ELEMENT_MEMORY);
+    SDL_GL_SwapWindow(win);}
+}
+
 int
 main(int argc, char* argv[])
 {
-    /* Platform */
-    SDL_Window *win;
-    SDL_GLContext glContext;
-    struct nk_color background;
-    int win_width, win_height;
-    int running = 1;
-
     /* GUI */
     struct nk_context *ctx;
-
+    SDL_GLContext glContext;
     /* SDL setup */
     SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
     /*SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER|SDL_INIT_EVENTS); // - do NOT init SDL on GL ES 2 */
@@ -80,15 +153,9 @@ main(int argc, char* argv[])
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_OPENGL|SDL_WINDOW_SHOWN|SDL_WINDOW_ALLOW_HIGHDPI);
     glContext = SDL_GL_CreateContext(win);
-    SDL_GetWindowSize(win, &win_width, &win_height);
 
     /* OpenGL setup */
     glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-    glewExperimental = 1;
-    if (glewInit() != GLEW_OK) {
-        fprintf(stderr, "Failed to setup GLEW\n");
-        exit(1);
-    }
 
     ctx = nk_sdl_init(win);
     /* Load Fonts: if none of these are loaded a default font will be used  */
@@ -111,81 +178,13 @@ main(int argc, char* argv[])
     /*set_style(ctx, THEME_BLUE);*/
     /*set_style(ctx, THEME_DARK);*/
 
-    background = nk_rgb(28,48,62);
-    while (running)
-    {
-        /* Input */
-        SDL_Event evt;
-        nk_input_begin(ctx);
-        while (SDL_PollEvent(&evt)) {
-            if (evt.type == SDL_QUIT) goto cleanup;
-            nk_sdl_handle_event(&evt);
-        }
-        nk_input_end(ctx);
+#if defined(__EMSCRIPTEN__)
+    #include <emscripten.h>
+    emscripten_set_main_loop_arg(MainLoop, (void*)ctx, 0, nk_true);
+#else
+    while (running) MainLoop((void*)ctx);
+#endif
 
-
-        /* GUI */
-        if (nk_begin(ctx, "Demo", nk_rect(50, 50, 200, 200),
-            NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
-            NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
-        {
-            nk_menubar_begin(ctx);
-            nk_layout_row_begin(ctx, NK_STATIC, 25, 2);
-            nk_layout_row_push(ctx, 45);
-            if (nk_menu_begin_label(ctx, "FILE", NK_TEXT_LEFT, nk_vec2(120, 200))) {
-                nk_layout_row_dynamic(ctx, 30, 1);
-                nk_menu_item_label(ctx, "OPEN", NK_TEXT_LEFT);
-                nk_menu_item_label(ctx, "CLOSE", NK_TEXT_LEFT);
-                nk_menu_end(ctx);
-            }
-            nk_layout_row_push(ctx, 45);
-            if (nk_menu_begin_label(ctx, "EDIT", NK_TEXT_LEFT, nk_vec2(120, 200))) {
-                nk_layout_row_dynamic(ctx, 30, 1);
-                nk_menu_item_label(ctx, "COPY", NK_TEXT_LEFT);
-                nk_menu_item_label(ctx, "CUT", NK_TEXT_LEFT);
-                nk_menu_item_label(ctx, "PASTE", NK_TEXT_LEFT);
-                nk_menu_end(ctx);
-            }
-            nk_layout_row_end(ctx);
-            nk_menubar_end(ctx);
-
-            enum {EASY, HARD};
-            static int op = EASY;
-            static int property = 20;
-            nk_layout_row_static(ctx, 30, 80, 1);
-            if (nk_button_label(ctx, "button"))
-                fprintf(stdout, "button pressed\n");
-            nk_layout_row_dynamic(ctx, 30, 2);
-            if (nk_option_label(ctx, "easy", op == EASY)) op = EASY;
-            if (nk_option_label(ctx, "hard", op == HARD)) op = HARD;
-            nk_layout_row_dynamic(ctx, 25, 1);
-            nk_property_int(ctx, "Compression:", 0, &property, 100, 10, 1);
-        }
-        nk_end(ctx);
-
-        /* -------------- EXAMPLES ---------------- */
-        /*calculator(ctx);*/
-        /*overview(ctx);*/
-        /*node_editor(ctx);*/
-        /* ----------------------------------------- */
-
-        /* Draw */
-        {float bg[4];
-        nk_color_fv(bg, background);
-        SDL_GetWindowSize(win, &win_width, &win_height);
-        glViewport(0, 0, win_width, win_height);
-        glClear(GL_COLOR_BUFFER_BIT);
-        glClearColor(bg[0], bg[1], bg[2], bg[3]);
-        /* IMPORTANT: `nk_sdl_render` modifies some global OpenGL state
-         * with blending, scissor, face culling, depth test and viewport and
-         * defaults everything back into a default state.
-         * Make sure to either a.) save and restore or b.) reset your own state after
-         * rendering the UI. */
-        nk_sdl_render(NK_ANTI_ALIASING_ON, MAX_VERTEX_MEMORY, MAX_ELEMENT_MEMORY);
-        SDL_GL_SwapWindow(win);}
-    }
-
-cleanup:
     nk_sdl_shutdown();
     SDL_GL_DeleteContext(glContext);
     SDL_DestroyWindow(win);
