@@ -9,12 +9,17 @@ OBJ = $(SRC:.c=.o)
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
-	LIBS = -lSDL2 -framework OpenGLES -lm -lGLEW
+	LIBS = -lSDL2 -framework OpenGLES -lm
 else
-	LIBS = -lSDL2 -lGLESv2 -lm -lGLU -lGLEW
+	LIBS = -lSDL2 -lGLESv2 -lm
 endif
 
-$(BIN):
+$(BIN): prepare
+	$(CC) $(SRC) $(CFLAGS) -o bin/$(BIN) $(LIBS)
+
+web: prepare
+	emcc $(SRC) -Os -s USE_SDL=2 -o bin/index.html 
+
+prepare:
 	@mkdir -p bin
 	rm -f bin/$(BIN) $(OBJS)
-	$(CC) $(SRC) $(CFLAGS) -o bin/$(BIN) $(LIBS)
