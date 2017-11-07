@@ -18965,11 +18965,10 @@ nk_window_set_position(struct nk_context *ctx,
     const char *name, struct nk_vec2 pos)
 {
     struct nk_rect bounds;
-    bounds.x = pos.x;
-    bounds.y = pos.y;
-    bounds.w = ctx->current->bounds.w;
-    bounds.h = ctx->current->bounds.h;
-    nk_window_set_bounds(ctx, name, bounds);
+    struct nk_window *win = nk_window_find(ctx, name);
+    if (!win) return;
+    win->bounds.x = pos.x;
+    win->bounds.y = pos.y;
 }
 
 NK_API void
@@ -18977,11 +18976,10 @@ nk_window_set_size(struct nk_context *ctx,
     const char *name, struct nk_vec2 size)
 {
     struct nk_rect bounds;
-    bounds.x = ctx->current->bounds.x;
-    bounds.y = ctx->current->bounds.y;
-    bounds.w = size.x;
-    bounds.h = size.y;
-    nk_window_set_bounds(ctx, name, bounds);
+    struct nk_window *win = nk_window_find(ctx, name);
+    if (!win) return;
+    win->bounds.w = size.x;
+    win->bounds.h = size.y;
 }
 
 NK_API void
@@ -21268,8 +21266,8 @@ nk_edit_string(struct nk_context *ctx, nk_flags flags,
         win->edit.sel_start = edit->select_start;
         win->edit.sel_end = edit->select_end;
         win->edit.mode = edit->mode;
-        win->edit.scrollbar.x = (nk_ushort)edit->scrollbar.x;
-        win->edit.scrollbar.y = (nk_ushort)edit->scrollbar.y;
+        win->edit.scrollbar.x = (nk_uint)edit->scrollbar.x;
+        win->edit.scrollbar.y = (nk_uint)edit->scrollbar.y;
     }
     return state;
 }
