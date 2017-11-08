@@ -18964,7 +18964,6 @@ NK_API void
 nk_window_set_position(struct nk_context *ctx,
     const char *name, struct nk_vec2 pos)
 {
-    struct nk_rect bounds;
     struct nk_window *win = nk_window_find(ctx, name);
     if (!win) return;
     win->bounds.x = pos.x;
@@ -18975,7 +18974,6 @@ NK_API void
 nk_window_set_size(struct nk_context *ctx,
     const char *name, struct nk_vec2 size)
 {
-    struct nk_rect bounds;
     struct nk_window *win = nk_window_find(ctx, name);
     if (!win) return;
     win->bounds.w = size.x;
