@@ -19,12 +19,11 @@ else
 	SFML_DIR = /home/ricky/Libraries/SFML
 
 	UNAME_S := $(shell uname -s)
-  ifeq ($(UNAME_S),Darwin)
-	  LIBS =  -lsfml-window -lsfml-system -pthread -framework OpenGL
-  else
+	ifeq ($(UNAME_S),Darwin)
+		LIBS = -lsfml-window -lsfml-system -pthread -framework OpenGL
+	else
 		LIBS = -DSFML_STATIC -lsfml-window-s -lsfml-system-s -pthread -ludev -lGL -lX11 -lXrandr
-  endif
-
+	endif
 endif
 
 SFML_INC = -I $(SFML_DIR)/include
