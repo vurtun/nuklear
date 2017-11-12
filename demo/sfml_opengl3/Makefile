@@ -21,11 +21,11 @@ else
 	GLAD_DIR = /home/ricky/Libraries/GLAD
 
 	UNAME_S := $(shell uname -s)
-  ifeq ($(UNAME_S),Darwin)
-	  LIBS = -lsfml-window -lsfml-system -pthread -framework OpenGL
-  else
-	  LIBS = -DSFML_STATIC -lsfml-window-s -lsfml-system-s -pthread -ludev -lGL -lX11 -lXrandr
-  endif
+	ifeq ($(UNAME_S),Darwin)
+		LIBS = -lsfml-window -lsfml-system -pthread -framework OpenGL
+	else
+		LIBS = -DSFML_STATIC -lsfml-window-s -lsfml-system-s -pthread -ludev -lGL -lX11 -lXrandr
+	endif
 endif
 
 SFML_INC = -I $(SFML_DIR)/include
