@@ -16115,11 +16115,11 @@ nk_do_property(nk_flags *ws,
             num_len = nk_strlen(string);
             break;
         case NK_PROPERTY_FLOAT:
-            nk_dtoa(string, (double)variant->value.f);
+            NK_DTOA(string, (double)variant->value.f);
             num_len = nk_string_float_limit(string, NK_MAX_FLOAT_PRECISION);
             break;
         case NK_PROPERTY_DOUBLE:
-            nk_dtoa(string, variant->value.d);
+            NK_DTOA(string, variant->value.d);
             num_len = nk_string_float_limit(string, NK_MAX_FLOAT_PRECISION);
             break;
         }
