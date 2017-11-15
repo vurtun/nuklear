@@ -2502,6 +2502,7 @@ enum nk_font_coord_type {
     NK_COORD_PIXEL /* texture coordinates inside font glyphs are in absolute pixel */
 };
 
+struct nk_font;
 struct nk_baked_font {
     float height;
     /* height of the font  */
@@ -2547,6 +2548,8 @@ struct nk_font_config {
     /* font to setup in the baking process: NOTE: not needed for font atlas */
     nk_rune fallback_glyph;
     /* fallback glyph to use if a given rune is not found */
+    struct nk_font_config *n;
+    struct nk_font_config *p;
 };
 
 struct nk_font_glyph {
@@ -11301,7 +11304,7 @@ nk_font_baker_memory(nk_size *temp, int *glyph_count,
 {
     int range_count = 0;
     int total_range_count = 0;
-    struct nk_font_config *iter;
+    struct nk_font_config *iter, *i;
 
     NK_ASSERT(config_list);
     NK_ASSERT(glyph_count);
@@ -11310,16 +11313,15 @@ nk_font_baker_memory(nk_size *temp, int *glyph_count,
         *glyph_count = 0;
         return;
     }
-
     *glyph_count = 0;
-    if (!config_list->range)
-        config_list->range = nk_font_default_glyph_ranges();
     for (iter = config_list; iter; iter = iter->next) {
-        range_count = nk_range_count(iter->range);
-        total_range_count += range_count;
-        *glyph_count += nk_range_glyph_count(iter->range, range_count);
+        i = iter;
+        do {if (!i->range) iter->range = nk_font_default_glyph_ranges();
+            range_count = nk_range_count(i->range);
+            total_range_count += range_count;
+            *glyph_count += nk_range_glyph_count(i->range, range_count);
+        } while ((i = i->n) != iter);
     }
-
     *temp = (nk_size)*glyph_count * sizeof(struct nk_rp_rect);
     *temp += (nk_size)total_range_count * sizeof(struct nk_tt_pack_range);
     *temp += (nk_size)*glyph_count * sizeof(struct nk_tt_packedchar);
@@ -11351,7 +11353,7 @@ nk_font_bake_pack(struct nk_font_baker *baker,
     struct nk_allocator *alloc)
 {
     NK_STORAGE const nk_size max_height = 1024 * 32;
-    const struct nk_font_config *config_iter;
+    const struct nk_font_config *config_iter, *it;
     int total_glyph_count = 0;
     int total_range_count = 0;
     int range_count = 0;
@@ -11366,18 +11368,19 @@ nk_font_bake_pack(struct nk_font_baker *baker,
 
     if (!image_memory || !width || !height || !config_list || !count) return nk_false;
     for (config_iter = config_list; config_iter; config_iter = config_iter->next) {
-        range_count = nk_range_count(config_iter->range);
-        total_range_count += range_count;
-        total_glyph_count += nk_range_glyph_count(config_iter->range, range_count);
+        it = config_iter;
+        do {range_count = nk_range_count(it->range);
+            total_range_count += range_count;
+            total_glyph_count += nk_range_glyph_count(it->range, range_count);
+        } while ((it = it->n) != config_iter);
     }
-
     /* setup font baker from temporary memory */
     for (config_iter = config_list; config_iter; config_iter = config_iter->next) {
-        const struct nk_font_config *cfg = config_iter;
-        if (!nk_tt_InitFont(&baker->build[i++].info, (const unsigned char*)cfg->ttf_blob, 0))
+        it = config_iter;
+        do {if (!nk_tt_InitFont(&baker->build[i++].info, (const unsigned char*)it->ttf_blob, 0))
             return nk_false;
+        } while ((it = it->n) != config_iter);
     }
-
     *height = 0;
     *width = (total_glyph_count > 1000) ? 1024 : 512;
     nk_tt_PackBegin(&baker->spc, 0, (int)*width, (int)max_height, 0, 1, alloc);
@@ -11406,47 +11409,48 @@ nk_font_bake_pack(struct nk_font_baker *baker,
 
         /* first font pass: pack all glyphs */
         for (input_i = 0, config_iter = config_list; input_i < count && config_iter;
-            input_i++, config_iter = config_iter->next)
-        {
-            int n = 0;
-            int glyph_count;
-            const nk_rune *in_range;
-            const struct nk_font_config *cfg = config_iter;
-            struct nk_font_bake_data *tmp = &baker->build[input_i];
+            config_iter = config_iter->next) {
+            it = config_iter;
+            do {int n = 0;
+                int glyph_count;
+                const nk_rune *in_range;
+                const struct nk_font_config *cfg = it;
+                struct nk_font_bake_data *tmp = &baker->build[input_i++];
 
-            /* count glyphs + ranges in current font */
-            glyph_count = 0; range_count = 0;
-            for (in_range = cfg->range; in_range[0] && in_range[1]; in_range += 2) {
-                glyph_count += (int)(in_range[1] - in_range[0]) + 1;
-                range_count++;
-            }
+                /* count glyphs + ranges in current font */
+                glyph_count = 0; range_count = 0;
+                for (in_range = cfg->range; in_range[0] && in_range[1]; in_range += 2) {
+                    glyph_count += (int)(in_range[1] - in_range[0]) + 1;
+                    range_count++;
+                }
 
-            /* setup ranges  */
-            tmp->ranges = baker->ranges + range_n;
-            tmp->range_count = (nk_rune)range_count;
-            range_n += range_count;
-            for (i = 0; i < range_count; ++i) {
-                in_range = &cfg->range[i * 2];
-                tmp->ranges[i].font_size = cfg->size;
-                tmp->ranges[i].first_unicode_codepoint_in_range = (int)in_range[0];
-                tmp->ranges[i].num_chars = (int)(in_range[1]- in_range[0]) + 1;
-                tmp->ranges[i].chardata_for_range = baker->packed_chars + char_n;
-                char_n += tmp->ranges[i].num_chars;
-            }
+                /* setup ranges  */
+                tmp->ranges = baker->ranges + range_n;
+                tmp->range_count = (nk_rune)range_count;
+                range_n += range_count;
+                for (i = 0; i < range_count; ++i) {
+                    in_range = &cfg->range[i * 2];
+                    tmp->ranges[i].font_size = cfg->size;
+                    tmp->ranges[i].first_unicode_codepoint_in_range = (int)in_range[0];
+                    tmp->ranges[i].num_chars = (int)(in_range[1]- in_range[0]) + 1;
+                    tmp->ranges[i].chardata_for_range = baker->packed_chars + char_n;
+                    char_n += tmp->ranges[i].num_chars;
+                }
 
-            /* pack */
-            tmp->rects = baker->rects + rect_n;
-            rect_n += glyph_count;
-            nk_tt_PackSetOversampling(&baker->spc, cfg->oversample_h, cfg->oversample_v);
-            n = nk_tt_PackFontRangesGatherRects(&baker->spc, &tmp->info,
-                tmp->ranges, (int)tmp->range_count, tmp->rects);
-            nk_rp_pack_rects((struct nk_rp_context*)baker->spc.pack_info, tmp->rects, (int)n);
+                /* pack */
+                tmp->rects = baker->rects + rect_n;
+                rect_n += glyph_count;
+                nk_tt_PackSetOversampling(&baker->spc, cfg->oversample_h, cfg->oversample_v);
+                n = nk_tt_PackFontRangesGatherRects(&baker->spc, &tmp->info,
+                    tmp->ranges, (int)tmp->range_count, tmp->rects);
+                nk_rp_pack_rects((struct nk_rp_context*)baker->spc.pack_info, tmp->rects, (int)n);
 
-            /* texture height */
-            for (i = 0; i < n; ++i) {
-                if (tmp->rects[i].was_packed)
-                    *height = NK_MAX(*height, tmp->rects[i].y + tmp->rects[i].h);
-            }
+                /* texture height */
+                for (i = 0; i < n; ++i) {
+                    if (tmp->rects[i].was_packed)
+                        *height = NK_MAX(*height, tmp->rects[i].y + tmp->rects[i].h);
+                }
+            } while ((it = it->n) != config_iter);
         }
         NK_ASSERT(rect_n == total_glyph_count);
         NK_ASSERT(char_n == total_glyph_count);
@@ -11465,6 +11469,7 @@ nk_font_bake(struct nk_font_baker *baker, void *image_memory, int width, int hei
     int input_i = 0;
     nk_rune glyph_n = 0;
     const struct nk_font_config *config_iter;
+    const struct nk_font_config *it;
 
     NK_ASSERT(image_memory);
     NK_ASSERT(width);
@@ -11482,88 +11487,88 @@ nk_font_bake(struct nk_font_baker *baker, void *image_memory, int width, int hei
     baker->spc.pixels = (unsigned char*)image_memory;
     baker->spc.height = (int)height;
     for (input_i = 0, config_iter = config_list; input_i < font_count && config_iter;
-        ++input_i, config_iter = config_iter->next)
-    {
-        const struct nk_font_config *cfg = config_iter;
-        struct nk_font_bake_data *tmp = &baker->build[input_i];
-        nk_tt_PackSetOversampling(&baker->spc, cfg->oversample_h, cfg->oversample_v);
-        nk_tt_PackFontRangesRenderIntoRects(&baker->spc, &tmp->info, tmp->ranges,
-            (int)tmp->range_count, tmp->rects, &baker->alloc);
-    }
-    nk_tt_PackEnd(&baker->spc, &baker->alloc);
+        config_iter = config_iter->next) {
+        it = config_iter;
+        do {const struct nk_font_config *cfg = it;
+            struct nk_font_bake_data *tmp = &baker->build[input_i++];
+            nk_tt_PackSetOversampling(&baker->spc, cfg->oversample_h, cfg->oversample_v);
+            nk_tt_PackFontRangesRenderIntoRects(&baker->spc, &tmp->info, tmp->ranges,
+                (int)tmp->range_count, tmp->rects, &baker->alloc);
+        } while ((it = it->n) != config_iter);
+    } nk_tt_PackEnd(&baker->spc, &baker->alloc);
 
     /* third pass: setup font and glyphs */
     for (input_i = 0, config_iter = config_list; input_i < font_count && config_iter;
-        ++input_i, config_iter = config_iter->next)
-    {
-        nk_size i = 0;
-        int char_idx = 0;
-        nk_rune glyph_count = 0;
-        const struct nk_font_config *cfg = config_iter;
-        struct nk_font_bake_data *tmp = &baker->build[input_i];
-        struct nk_baked_font *dst_font = cfg->font;
+        config_iter = config_iter->next) {
+        it = config_iter;
+        do {nk_size i = 0;
+            int char_idx = 0;
+            nk_rune glyph_count = 0;
+            const struct nk_font_config *cfg = it;
+            struct nk_font_bake_data *tmp = &baker->build[input_i++];
+            struct nk_baked_font *dst_font = cfg->font;
 
-        float font_scale = nk_tt_ScaleForPixelHeight(&tmp->info, cfg->size);
-        int unscaled_ascent, unscaled_descent, unscaled_line_gap;
-        nk_tt_GetFontVMetrics(&tmp->info, &unscaled_ascent, &unscaled_descent,
-                                &unscaled_line_gap);
+            float font_scale = nk_tt_ScaleForPixelHeight(&tmp->info, cfg->size);
+            int unscaled_ascent, unscaled_descent, unscaled_line_gap;
+            nk_tt_GetFontVMetrics(&tmp->info, &unscaled_ascent, &unscaled_descent,
+                                    &unscaled_line_gap);
 
-        /* fill baked font */
-        if (!cfg->merge_mode) {
-            dst_font->ranges = cfg->range;
-            dst_font->height = cfg->size;
-            dst_font->ascent = ((float)unscaled_ascent * font_scale);
-            dst_font->descent = ((float)unscaled_descent * font_scale);
-            dst_font->glyph_offset = glyph_n;
-        }
-
-        /* fill own baked font glyph array */
-        for (i = 0; i < tmp->range_count; ++i)
-        {
-            struct nk_tt_pack_range *range = &tmp->ranges[i];
-            for (char_idx = 0; char_idx < range->num_chars; char_idx++)
-            {
-                nk_rune codepoint = 0;
-                float dummy_x = 0, dummy_y = 0;
-                struct nk_tt_aligned_quad q;
-                struct nk_font_glyph *glyph;
-
-                /* query glyph bounds from stb_truetype */
-                const struct nk_tt_packedchar *pc = &range->chardata_for_range[char_idx];
-                if (!pc->x0 && !pc->x1 && !pc->y0 && !pc->y1) continue;
-                codepoint = (nk_rune)(range->first_unicode_codepoint_in_range + char_idx);
-                nk_tt_GetPackedQuad(range->chardata_for_range, (int)width,
-                    (int)height, char_idx, &dummy_x, &dummy_y, &q, 0);
-
-                /* fill own glyph type with data */
-                glyph = &glyphs[dst_font->glyph_offset + (unsigned int)glyph_count];
-                glyph->codepoint = codepoint;
-                glyph->x0 = q.x0; glyph->y0 = q.y0;
-                glyph->x1 = q.x1; glyph->y1 = q.y1;
-                glyph->y0 += (dst_font->ascent + 0.5f);
-                glyph->y1 += (dst_font->ascent + 0.5f);
-                glyph->w = glyph->x1 - glyph->x0 + 0.5f;
-                glyph->h = glyph->y1 - glyph->y0;
-
-                if (cfg->coord_type == NK_COORD_PIXEL) {
-                    glyph->u0 = q.s0 * (float)width;
-                    glyph->v0 = q.t0 * (float)height;
-                    glyph->u1 = q.s1 * (float)width;
-                    glyph->v1 = q.t1 * (float)height;
-                } else {
-                    glyph->u0 = q.s0;
-                    glyph->v0 = q.t0;
-                    glyph->u1 = q.s1;
-                    glyph->v1 = q.t1;
-                }
-                glyph->xadvance = (pc->xadvance + cfg->spacing.x);
-                if (cfg->pixel_snap)
-                    glyph->xadvance = (float)(int)(glyph->xadvance + 0.5f);
-                glyph_count++;
+            /* fill baked font */
+            if (!cfg->merge_mode) {
+                dst_font->ranges = cfg->range;
+                dst_font->height = cfg->size;
+                dst_font->ascent = ((float)unscaled_ascent * font_scale);
+                dst_font->descent = ((float)unscaled_descent * font_scale);
+                dst_font->glyph_offset = glyph_n;
             }
-        }
-        dst_font->glyph_count = glyph_count;
-        glyph_n += dst_font->glyph_count;
+
+            /* fill own baked font glyph array */
+            for (i = 0; i < tmp->range_count; ++i) {
+                struct nk_tt_pack_range *range = &tmp->ranges[i];
+                for (char_idx = 0; char_idx < range->num_chars; char_idx++)
+                {
+                    nk_rune codepoint = 0;
+                    float dummy_x = 0, dummy_y = 0;
+                    struct nk_tt_aligned_quad q;
+                    struct nk_font_glyph *glyph;
+
+                    /* query glyph bounds from stb_truetype */
+                    const struct nk_tt_packedchar *pc = &range->chardata_for_range[char_idx];
+                    if (!pc->x0 && !pc->x1 && !pc->y0 && !pc->y1) continue;
+                    codepoint = (nk_rune)(range->first_unicode_codepoint_in_range + char_idx);
+                    nk_tt_GetPackedQuad(range->chardata_for_range, (int)width,
+                        (int)height, char_idx, &dummy_x, &dummy_y, &q, 0);
+
+                    /* fill own glyph type with data */
+                    glyph = &glyphs[dst_font->glyph_offset + dst_font->glyph_count + (unsigned int)glyph_count];
+                    glyph->codepoint = codepoint;
+                    glyph->x0 = q.x0; glyph->y0 = q.y0;
+                    glyph->x1 = q.x1; glyph->y1 = q.y1;
+                    glyph->y0 += (dst_font->ascent + 0.5f);
+                    glyph->y1 += (dst_font->ascent + 0.5f);
+                    glyph->w = glyph->x1 - glyph->x0 + 0.5f;
+                    glyph->h = glyph->y1 - glyph->y0;
+
+                    if (cfg->coord_type == NK_COORD_PIXEL) {
+                        glyph->u0 = q.s0 * (float)width;
+                        glyph->v0 = q.t0 * (float)height;
+                        glyph->u1 = q.s1 * (float)width;
+                        glyph->v1 = q.t1 * (float)height;
+                    } else {
+                        glyph->u0 = q.s0;
+                        glyph->v0 = q.t0;
+                        glyph->u1 = q.s1;
+                        glyph->v1 = q.t1;
+                    }
+                    glyph->xadvance = (pc->xadvance + cfg->spacing.x);
+                    if (cfg->pixel_snap)
+                        glyph->xadvance = (float)(int)(glyph->xadvance + 0.5f);
+                    glyph_count++;
+                }
+            }
+            dst_font->glyph_count += glyph_count;
+            glyph_n += glyph_count;
+        } while ((it = it->n) != config_iter);
     }
 }
 
@@ -11690,6 +11695,7 @@ nk_font_find_glyph(struct nk_font *font, nk_rune unicode)
     int count;
     int total_glyphs = 0;
     const struct nk_font_glyph *glyph = 0;
+    const struct nk_font_config *iter = 0;
 
     NK_ASSERT(font);
     NK_ASSERT(font->glyphs);
@@ -11697,15 +11703,17 @@ nk_font_find_glyph(struct nk_font *font, nk_rune unicode)
     if (!font || !font->glyphs) return 0;
 
     glyph = font->fallback;
-    count = nk_range_count(font->info.ranges);
-    for (i = 0; i < count; ++i) {
-        nk_rune f = font->info.ranges[(i*2)+0];
-        nk_rune t = font->info.ranges[(i*2)+1];
-        int diff = (int)((t - f) + 1);
-        if (unicode >= f && unicode <= t)
-            return &font->glyphs[((nk_rune)total_glyphs + (unicode - f))];
-        total_glyphs += diff;
-    }
+    iter = font->config;
+    do {count = nk_range_count(iter->range);
+        for (i = 0; i < count; ++i) {
+            nk_rune f = iter->range[(i*2)+0];
+            nk_rune t = iter->range[(i*2)+1];
+            int diff = (int)((t - f) + 1);
+            if (unicode >= f && unicode <= t)
+                return &font->glyphs[((nk_rune)total_glyphs + (unicode - f))];
+            total_glyphs += diff;
+        }
+    } while ((iter = iter->n) != font->config);
     return glyph;
 }
 
@@ -12057,6 +12065,7 @@ nk_font_config(float pixel_height)
     cfg.merge_mode = 0;
     cfg.fallback_glyph = '?';
     cfg.font = 0;
+    cfg.n = 0;
     return cfg;
 }
 
@@ -12140,33 +12149,33 @@ nk_font_atlas_add(struct nk_font_atlas *atlas, const struct nk_font_config *conf
         !atlas->temporary.alloc || !atlas->temporary.free)
         return 0;
 
-    /* allocate and insert font config into list */
+    /* allocate font config  */
     cfg = (struct nk_font_config*)
         atlas->permanent.alloc(atlas->permanent.userdata,0, sizeof(struct nk_font_config));
     NK_MEMCPY(cfg, config, sizeof(*config));
-    if (!atlas->config) {
-        atlas->config = cfg;
-        cfg->next = 0;
-    } else {
-        cfg->next = atlas->config;
-        atlas->config = cfg;
-    }
+    cfg->n = cfg;
+    cfg->p = cfg;
 
-    /* allocate new font */
     if (!config->merge_mode) {
+        /* insert font config into list */
+        if (!atlas->config) {
+            atlas->config = cfg;
+            cfg->next = 0;
+        } else {
+            atlas->config->next = cfg;
+            cfg->next = atlas->config;
+            atlas->config = cfg;
+        }
+
+        /* allocate new font */
         font = (struct nk_font*)
             atlas->permanent.alloc(atlas->permanent.userdata,0, sizeof(struct nk_font));
         NK_ASSERT(font);
+        nk_zero(font, sizeof(*font));
         if (!font) return 0;
         font->config = cfg;
-    } else {
-        NK_ASSERT(atlas->font_num);
-        font = atlas->fonts;
-        font->config = cfg;
-    }
 
-    /* insert font into list */
-    if (!config->merge_mode) {
+        /* insert font into list */
         if (!atlas->fonts) {
             atlas->fonts = font;
             font->next = 0;
@@ -12175,8 +12184,20 @@ nk_font_atlas_add(struct nk_font_atlas *atlas, const struct nk_font_config *conf
             atlas->fonts = font;
         }
         cfg->font = &font->info;
-    }
+    } else {
+        /* extend previously added font */
+        struct nk_font *f = 0;
+        struct nk_font_config *c = 0;
+        NK_ASSERT(atlas->font_num);
+        f = atlas->fonts;
+        c = f->config;
+        cfg->font = &f->info;
 
+        cfg->n = c;
+        cfg->p = c->p;
+        c->p->n = cfg;
+        c->p = cfg;
+    }
     /* create own copy of .TTF font blob */
     if (!config->ttf_data_owned_by_atlas) {
         cfg->ttf_blob = atlas->permanent.alloc(atlas->permanent.userdata,0, cfg->ttf_size);
@@ -12500,6 +12521,13 @@ nk_font_atlas_cleanup(struct nk_font_atlas *atlas)
     if (atlas->config) {
         struct nk_font_config *iter, *next;
         for (iter = atlas->config; iter; iter = next) {
+            struct nk_font_config *i, *n;
+            for (i = iter->n; i != iter; i = n) {
+                n = i->n;
+                atlas->permanent.free(atlas->permanent.userdata, i->ttf_blob);
+                atlas->permanent.free(atlas->permanent.userdata, i);
+            }
+
             next = iter->next;
             atlas->permanent.free(atlas->permanent.userdata, iter->ttf_blob);
             atlas->permanent.free(atlas->permanent.userdata, iter);
