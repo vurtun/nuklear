@@ -1,5 +1,5 @@
 /*
- Nuklear - 2.00.0 - public domain
+ Nuklear - 2.00.4 - public domain
  no warranty implied; use at your own risk.
  authored from 2015-2017 by Micha Mettke
 
@@ -17394,9 +17394,10 @@ nk_clear(struct nk_context *ctx)
     /* garbage collector */
     iter = ctx->begin;
     while (iter) {
-        /* make sure minimized windows do not get removed */
+        /* make sure valid minimized windows do not get removed */
         if ((iter->flags & NK_WINDOW_MINIMIZED) &&
-            !(iter->flags & NK_WINDOW_CLOSED)) {
+            !(iter->flags & NK_WINDOW_CLOSED) &&
+            iter->seq == ctx->seq) {
             iter = iter->next;
             continue;
         }
@@ -17409,7 +17410,6 @@ nk_clear(struct nk_context *ctx)
             if (ctx->active)
                 ctx->active->flags &= ~NK_WINDOW_ROM;
         }
-
         /* free unused popup windows */
         if (iter->popup.win && iter->popup.win->seq != ctx->seq) {
             nk_free_window(ctx, iter->popup.win);
@@ -17425,8 +17425,7 @@ nk_clear(struct nk_context *ctx)
                 nk_free_table(ctx, it);
                 if (it == iter->tables)
                     iter->tables = n;
-            }
-            it = n;
+            } it = n;
         }}
         /* window itself is not used anymore so free */
         if (iter->seq != ctx->seq || iter->flags & NK_WINDOW_CLOSED) {
@@ -17525,7 +17524,7 @@ nk_finish(struct nk_context *ctx, struct nk_window *win)
 NK_INTERN void
 nk_build(struct nk_context *ctx)
 {
-    struct nk_window *iter = 0;
+    struct nk_window *it = 0;
     struct nk_command *cmd = 0;
     nk_byte *buffer = 0;
 
@@ -17547,38 +17546,38 @@ nk_build(struct nk_context *ctx)
         nk_finish_buffer(ctx, &ctx->overlay);
     }
     /* build one big draw command list out of all window buffers */
-    iter = ctx->begin;
+    it = ctx->begin;
     buffer = (nk_byte*)ctx->memory.memory.ptr;
-    while (iter != 0) {
-        struct nk_window *next = iter->next;
-        if (iter->buffer.last == iter->buffer.begin || (iter->flags & NK_WINDOW_HIDDEN)||
-            iter->seq != ctx->seq)
+    while (it != 0) {
+        struct nk_window *next = it->next;
+        if (it->buffer.last == it->buffer.begin || (it->flags & NK_WINDOW_HIDDEN)||
+            it->seq != ctx->seq)
             goto cont;
 
-        cmd = nk_ptr_add(struct nk_command, buffer, iter->buffer.last);
+        cmd = nk_ptr_add(struct nk_command, buffer, it->buffer.last);
         while (next && ((next->buffer.last == next->buffer.begin) ||
             (next->flags & NK_WINDOW_HIDDEN)))
             next = next->next; /* skip empty command buffers */
 
         if (next) cmd->next = next->buffer.begin;
-        cont: iter = next;
+        cont: it = next;
     }
     /* append all popup draw commands into lists */
-    iter = ctx->begin;
-    while (iter != 0) {
-        struct nk_window *next = iter->next;
+    it = ctx->begin;
+    while (it != 0) {
+        struct nk_window *next = it->next;
         struct nk_popup_buffer *buf;
-        if (!iter->popup.buf.active)
+        if (!it->popup.buf.active)
             goto skip;
 
-        buf = &iter->popup.buf;
+        buf = &it->popup.buf;
         cmd->next = buf->begin;
         cmd = nk_ptr_add(struct nk_command, buffer, buf->last);
         buf->active = nk_false;
-        skip: iter = next;
+        skip: it = next;
     }
-    /* append overlay commands */
     if (cmd) {
+        /* append overlay commands */
         if (ctx->overlay.end != ctx->overlay.begin)
             cmd->next = ctx->overlay.begin;
         else cmd->next = ctx->memory.allocated;
@@ -17600,7 +17599,8 @@ nk__begin(struct nk_context *ctx)
         ctx->build = nk_true;
     }
     iter = ctx->begin;
-    while (iter && ((iter->buffer.begin == iter->buffer.end) || (iter->flags & NK_WINDOW_HIDDEN)))
+    while (iter && ((iter->buffer.begin == iter->buffer.end) ||
+        (iter->flags & NK_WINDOW_HIDDEN) || iter->seq != ctx->seq))
         iter = iter->next;
     if (!iter) return 0;
     return nk_ptr_add_const(struct nk_command, buffer, iter->buffer.begin);
