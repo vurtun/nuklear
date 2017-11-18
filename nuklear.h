@@ -18618,7 +18618,7 @@ nk_begin_titled(struct nk_context *ctx, const char *name, const char *title,
         ctx->current = win;
         win->layout = 0;
         return 0;
-    }
+    } else nk_start(ctx, win);
 
     /* window overlapping */
     if (!(win->flags & NK_WINDOW_HIDDEN) && !(win->flags & NK_WINDOW_NO_INPUT))
@@ -18631,7 +18631,6 @@ nk_begin_titled(struct nk_context *ctx, const char *name, const char *title,
             win->bounds: nk_rect(win->bounds.x, win->bounds.y, win->bounds.w, h);
 
         /* activate window if hovered and no other window is overlapping this window */
-        nk_start(ctx, win);
         inpanel = nk_input_has_mouse_click_down_in_rect(&ctx->input, NK_BUTTON_LEFT, win_bounds, nk_true);
         inpanel = inpanel && ctx->input.mouse.buttons[NK_BUTTON_LEFT].clicked;
         ishovered = nk_input_is_mouse_hovering_rect(&ctx->input, win_bounds);
@@ -18698,7 +18697,6 @@ nk_begin_titled(struct nk_context *ctx, const char *name, const char *title,
                 win->flags |= NK_WINDOW_ROM;
         }
     }
-
     win->layout = (struct nk_panel*)nk_create_panel(ctx);
     ctx->current = win;
     ret = nk_panel_begin(ctx, title, NK_PANEL_WINDOW);
