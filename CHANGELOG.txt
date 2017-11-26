@@ -11,6 +11,8 @@
 
 Changes:
 --------
+- 2017/11/18 (2.00.5) - Fixed window becoming hidden with flag NK_WINDOW_NO_INPUT
+- 2017/11/15 (2.00.4) - Fixed font merging
 - 2017/11/07 (2.00.3) - Fixed window size and position modifier functions
 - 2017/09/14 (2.00.2) - Fixed nk_edit_buffer and nk_edit_focus behavior
 - 2017/09/14 (2.00.1) - Fixed window closing behavior
