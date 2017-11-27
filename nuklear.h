@@ -8616,22 +8616,23 @@ nk_draw_list_path_arc_to(struct nk_draw_list *list, struct nk_vec2 center,
 
         [1] https://en.wikipedia.org/wiki/List_of_trigonometric_identities#Angle_sum_and_difference_identities
     */
-    const float d_angle = (a_max - a_min) / (float)segments;
+    {const float d_angle = (a_max - a_min) / (float)segments;
     const float sin_d = (float)NK_SIN(d_angle);
     const float cos_d = (float)NK_COS(d_angle);
 
     float cx = (float)NK_COS(a_min) * radius;
     float cy = (float)NK_SIN(a_min) * radius;
     for(i = 0; i <= segments; ++i) {
+        float new_cx, new_cy;
         const float x = center.x + cx;
         const float y = center.y + cy;
         nk_draw_list_path_line_to(list, nk_vec2(x, y));
 
-        const float new_cx = cx * cos_d - cy * sin_d;
-        const float new_cy = cy * cos_d + cx * sin_d;
+        new_cx = cx * cos_d - cy * sin_d;
+        new_cy = cy * cos_d + cx * sin_d;
         cx = new_cx;
         cy = new_cy;
-    }
+    }}
 }
 
 NK_API void
@@ -21342,7 +21343,7 @@ nk_edit_buffer(struct nk_context *ctx, nk_flags flags,
         }
         if (flags & NK_EDIT_CLIPBOARD)
             edit->clip = ctx->clip;
-        edit->active = win->edit.active;
+        edit->active = (unsigned char)win->edit.active;
     } else edit->active = nk_false;
     edit->mode = win->edit.mode;
 
