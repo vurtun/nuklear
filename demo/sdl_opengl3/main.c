@@ -55,8 +55,7 @@
  *                          DEMO
  *
  * ===============================================================*/
-int
-main(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
     /* Platform */
     SDL_Window *win;
@@ -103,7 +102,7 @@ main(int argc, char* argv[])
     /*struct nk_font *cousine = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Cousine-Regular.ttf", 13, 0);*/
     nk_sdl_font_stash_end();
     /*nk_style_load_all_cursors(ctx, atlas->cursors);*/
-    /*nk_style_set_font(ctx, &roboto->handle)*/;}
+    /*nk_style_set_font(ctx, &roboto->handle);*/}
 
     /* style.c */
     /*set_style(ctx, THEME_WHITE);*/
@@ -120,45 +119,24 @@ main(int argc, char* argv[])
         while (SDL_PollEvent(&evt)) {
             if (evt.type == SDL_QUIT) goto cleanup;
             nk_sdl_handle_event(&evt);
-        }
-        nk_input_end(ctx);
-
+        } nk_input_end(ctx);
 
         /* GUI */
-        if (nk_begin(ctx, "Demo", nk_rect(50, 50, 200, 200),
+        if (nk_begin(ctx, "Demo1", nk_rect(50, 50, 200, 200),
             NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
             NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
         {
-            nk_menubar_begin(ctx);
-            nk_layout_row_begin(ctx, NK_STATIC, 25, 2);
-            nk_layout_row_push(ctx, 45);
-            if (nk_menu_begin_label(ctx, "FILE", NK_TEXT_LEFT, nk_vec2(120, 200))) {
-                nk_layout_row_dynamic(ctx, 30, 1);
-                nk_menu_item_label(ctx, "OPEN", NK_TEXT_LEFT);
-                nk_menu_item_label(ctx, "CLOSE", NK_TEXT_LEFT);
-                nk_menu_end(ctx);
-            }
-            nk_layout_row_push(ctx, 45);
-            if (nk_menu_begin_label(ctx, "EDIT", NK_TEXT_LEFT, nk_vec2(120, 200))) {
-                nk_layout_row_dynamic(ctx, 30, 1);
-                nk_menu_item_label(ctx, "COPY", NK_TEXT_LEFT);
-                nk_menu_item_label(ctx, "CUT", NK_TEXT_LEFT);
-                nk_menu_item_label(ctx, "PASTE", NK_TEXT_LEFT);
-                nk_menu_end(ctx);
-            }
-            nk_layout_row_end(ctx);
-            nk_menubar_end(ctx);
-
             enum {EASY, HARD};
             static int op = EASY;
             static int property = 20;
+
             nk_layout_row_static(ctx, 30, 80, 1);
             if (nk_button_label(ctx, "button"))
-                fprintf(stdout, "button pressed\n");
+                printf("button pressed!\n");
             nk_layout_row_dynamic(ctx, 30, 2);
             if (nk_option_label(ctx, "easy", op == EASY)) op = EASY;
             if (nk_option_label(ctx, "hard", op == HARD)) op = HARD;
-            nk_layout_row_dynamic(ctx, 25, 1);
+            nk_layout_row_dynamic(ctx, 22, 1);
             nk_property_int(ctx, "Compression:", 0, &property, 100, 10, 1);
         }
         nk_end(ctx);
