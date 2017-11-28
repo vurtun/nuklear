@@ -12169,11 +12169,11 @@ nk_font_atlas_add(struct nk_font_atlas *atlas, const struct nk_font_config *conf
             atlas->config = cfg;
             cfg->next = 0;
         } else {
-            atlas->config->next = cfg;
-            cfg->next = atlas->config;
-            atlas->config = cfg;
+            struct nk_font_config *i = atlas->config;
+            while (i->next) i = i->next;
+            i->next = cfg;
+            cfg->next = 0;
         }
-
         /* allocate new font */
         font = (struct nk_font*)
             atlas->permanent.alloc(atlas->permanent.userdata,0, sizeof(struct nk_font));
