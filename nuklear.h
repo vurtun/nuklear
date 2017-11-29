@@ -12523,23 +12523,18 @@ nk_font_atlas_cleanup(struct nk_font_atlas *atlas)
     NK_ASSERT(atlas->temporary.free);
     NK_ASSERT(atlas->permanent.alloc);
     NK_ASSERT(atlas->permanent.free);
-
     if (!atlas || !atlas->permanent.alloc || !atlas->permanent.free) return;
     if (atlas->config) {
-        struct nk_font_config *iter, *next;
-        for (iter = atlas->config; iter; iter = next) {
-            struct nk_font_config *i, *n;
-            for (i = iter->n; i != iter; i = n) {
-                n = i->n;
+        struct nk_font_config *iter;
+        for (iter = atlas->config; iter; iter = iter->next) {
+            struct nk_font_config *i;
+            for (i = iter->n; i != iter; i = i->n) {
                 atlas->permanent.free(atlas->permanent.userdata, i->ttf_blob);
-                atlas->permanent.free(atlas->permanent.userdata, i);
+                i->ttf_blob = 0;
             }
-
-            next = iter->next;
             atlas->permanent.free(atlas->permanent.userdata, iter->ttf_blob);
-            atlas->permanent.free(atlas->permanent.userdata, iter);
+            iter->ttf_blob = 0;
         }
-        atlas->config = 0;
     }
 }
 
@@ -12553,7 +12548,23 @@ nk_font_atlas_clear(struct nk_font_atlas *atlas)
     NK_ASSERT(atlas->permanent.free);
     if (!atlas || !atlas->permanent.alloc || !atlas->permanent.free) return;
 
-    nk_font_atlas_cleanup(atlas);
+    if (atlas->config) {
+        struct nk_font_config *iter, *next;
+        for (iter = atlas->config; iter; iter = next) {
+            struct nk_font_config *i, *n;
+            for (i = iter->n; i != iter; i = n) {
+                n = i->n;
+                if (i->ttf_blob)
+                    atlas->permanent.free(atlas->permanent.userdata, i->ttf_blob);
+                atlas->permanent.free(atlas->permanent.userdata, i);
+            }
+            next = iter->next;
+            if (i->ttf_blob)
+                atlas->permanent.free(atlas->permanent.userdata, iter->ttf_blob);
+            atlas->permanent.free(atlas->permanent.userdata, iter);
+        }
+        atlas->config = 0;
+    }
     if (atlas->fonts) {
         struct nk_font *iter, *next;
         for (iter = atlas->fonts; iter; iter = next) {
