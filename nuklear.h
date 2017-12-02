@@ -5643,7 +5643,7 @@ nk_file_load(const char* path, nk_size* siz, struct nk_allocator *alloc)
         fclose(fd);
         return 0;
     }
-    *siz = (nk_size)fread(buf, *siz, 1, fd);
+    *siz = (nk_size)fread(buf, 1,*siz, fd);
     fclose(fd);
     return buf;
 }
