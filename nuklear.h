@@ -3044,6 +3044,7 @@ struct nk_command_circle {
     short x, y;
     unsigned short line_thickness;
     unsigned short w, h;
+    unsigned int segments;
     struct nk_color color;
 };
 
@@ -3051,6 +3052,7 @@ struct nk_command_circle_filled {
     struct nk_command header;
     short x, y;
     unsigned short w, h;
+    unsigned int segments;
     struct nk_color color;
 };
 
@@ -3141,6 +3143,7 @@ struct nk_command_buffer {
 NK_API void nk_stroke_line(struct nk_command_buffer *b, float x0, float y0, float x1, float y1, float line_thickness, struct nk_color);
 NK_API void nk_stroke_curve(struct nk_command_buffer*, float, float, float, float, float, float, float, float, float line_thickness, struct nk_color);
 NK_API void nk_stroke_rect(struct nk_command_buffer*, struct nk_rect, float rounding, float line_thickness, struct nk_color);
+NK_API void nk_stroke_circle_seg(struct nk_command_buffer*, struct nk_rect, float line_thickness, struct nk_color, unsigned int);
 NK_API void nk_stroke_circle(struct nk_command_buffer*, struct nk_rect, float line_thickness, struct nk_color);
 NK_API void nk_stroke_arc(struct nk_command_buffer*, float cx, float cy, float radius, float a_min, float a_max, float line_thickness, struct nk_color);
 NK_API void nk_stroke_triangle(struct nk_command_buffer*, float, float, float, float, float, float, float line_thichness, struct nk_color);
@@ -3150,6 +3153,7 @@ NK_API void nk_stroke_polygon(struct nk_command_buffer*, float*, int point_count
 /* filled shades */
 NK_API void nk_fill_rect(struct nk_command_buffer*, struct nk_rect, float rounding, struct nk_color);
 NK_API void nk_fill_rect_multi_color(struct nk_command_buffer*, struct nk_rect, struct nk_color left, struct nk_color top, struct nk_color right, struct nk_color bottom);
+NK_API void nk_fill_circle_seg(struct nk_command_buffer*, struct nk_rect, struct nk_color, unsigned int);
 NK_API void nk_fill_circle(struct nk_command_buffer*, struct nk_rect, struct nk_color);
 NK_API void nk_fill_arc(struct nk_command_buffer*, float cx, float cy, float radius, float a_min, float a_max, struct nk_color);
 NK_API void nk_fill_triangle(struct nk_command_buffer*, float x0, float y0, float x1, float y1, float x2, float y2, struct nk_color);
@@ -7458,8 +7462,8 @@ nk_fill_rect_multi_color(struct nk_command_buffer *b, struct nk_rect rect,
 }
 
 NK_API void
-nk_stroke_circle(struct nk_command_buffer *b, struct nk_rect r,
-    float line_thickness, struct nk_color c)
+nk_stroke_circle_seg(struct nk_command_buffer *b, struct nk_rect r,
+    float line_thickness, struct nk_color c, unsigned int segments)
 {
     struct nk_command_circle *cmd;
     if (!b || r.w == 0 || r.h == 0 || line_thickness <= 0) return;
@@ -7477,11 +7481,20 @@ nk_stroke_circle(struct nk_command_buffer *b, struct nk_rect r,
     cmd->y = (short)r.y;
     cmd->w = (unsigned short)NK_MAX(r.w, 0);
     cmd->h = (unsigned short)NK_MAX(r.h, 0);
+    cmd->segments = segments;
     cmd->color = c;
 }
 
 NK_API void
-nk_fill_circle(struct nk_command_buffer *b, struct nk_rect r, struct nk_color c)
+nk_stroke_circle(struct nk_command_buffer *b, struct nk_rect r,
+    float line_thickness, struct nk_color c)
+{
+    nk_stroke_circle_seg(b, r, line_thickness, c, 0);
+}
+
+NK_API void
+nk_fill_circle_seg(struct nk_command_buffer *b, struct nk_rect r,
+    struct nk_color c, unsigned int segments)
 {
     struct nk_command_circle_filled *cmd;
     NK_ASSERT(b);
@@ -7499,7 +7512,14 @@ nk_fill_circle(struct nk_command_buffer *b, struct nk_rect r, struct nk_color c)
     cmd->y = (short)r.y;
     cmd->w = (unsigned short)NK_MAX(r.w, 0);
     cmd->h = (unsigned short)NK_MAX(r.h, 0);
+    cmd->segments = segments;
     cmd->color = c;
+}
+
+NK_API void
+nk_fill_circle(struct nk_command_buffer *b, struct nk_rect r, struct nk_color c)
+{
+    nk_fill_circle_seg(b, r, c, 0);
 }
 
 NK_API void
@@ -9025,13 +9045,14 @@ nk_convert(struct nk_context *ctx, struct nk_buffer *cmds,
             const struct nk_command_circle *c = (const struct nk_command_circle*)cmd;
             nk_draw_list_stroke_circle(&ctx->draw_list, nk_vec2((float)c->x + (float)c->w/2,
                 (float)c->y + (float)c->h/2), (float)c->w/2, c->color,
-                config->circle_segment_count, c->line_thickness);
+                c->segments != 0 ? c->segments : config->circle_segment_count,
+                c->line_thickness);
         } break;
         case NK_COMMAND_CIRCLE_FILLED: {
             const struct nk_command_circle_filled *c = (const struct nk_command_circle_filled *)cmd;
             nk_draw_list_fill_circle(&ctx->draw_list, nk_vec2((float)c->x + (float)c->w/2,
                 (float)c->y + (float)c->h/2), (float)c->w/2, c->color,
-                config->circle_segment_count);
+                c->segments != 0 ? c->segments : config->circle_segment_count);
         } break;
         case NK_COMMAND_ARC: {
             const struct nk_command_arc *c = (const struct nk_command_arc*)cmd;
