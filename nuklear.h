@@ -11784,9 +11784,7 @@ nk_font_init(struct nk_font *font, float pixel_height,
  * MIT license (see License.txt in http://www.upperbounds.net/download/ProggyClean.ttf.zip)
  * Download and more information at http://upperbounds.net
  *-----------------------------------------------------------------------------*/
-#ifdef NK_INCLUDE_DEFAULT_FONT
-
- #ifdef __clang__
+#ifdef __clang__
 #pragma clang diagnostic push
 
 #pragma clang diagnostic ignored "-Woverlength-strings"
@@ -11794,6 +11792,8 @@ nk_font_init(struct nk_font *font, float pixel_height,
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverlength-strings"
 #endif
+
+#ifdef NK_INCLUDE_DEFAULT_FONT
 
 NK_GLOBAL const char nk_proggy_clean_ttf_compressed_data_base85[11980+1] =
     "7])#######hV0qs'/###[),##/l:$#Q6>##5[n42>c-TH`->>#/e>11NNV=Bv(*:.F?uu#(gRU.o0XGH`$vhLG1hxt9?W`#,5LsCp#-i>.r$<$6pD>Lb';9Crc6tgXmKVeU2cD4Eo3R/"
