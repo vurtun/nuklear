@@ -12187,8 +12187,10 @@ nk_font_atlas_add(struct nk_font_atlas *atlas, const struct nk_font_config *conf
             atlas->fonts = font;
             font->next = 0;
         } else {
-            font->next = atlas->fonts;
-            atlas->fonts = font;
+            struct nk_font *i = atlas->fonts;
+            while (i->next) i = i->next;
+            i->next = font;
+            font->next = 0;
         }
         cfg->font = &font->info;
     } else {
