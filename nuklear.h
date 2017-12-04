@@ -2106,6 +2106,9 @@ NK_API void nk_contextual_end(struct nk_context*);
  *
  * ============================================================================= */
 NK_API void nk_tooltip(struct nk_context*, const char*);
+#ifdef NK_INCLUDE_STANDARD_VARARGS
+NK_API void nk_tooltipf(struct nk_context*, const char*, ...);
+#endif
 NK_API int nk_tooltip_begin(struct nk_context*, float width);
 NK_API void nk_tooltip_end(struct nk_context*);
 /* =============================================================================
@@ -22469,10 +22472,10 @@ nk_tooltip_begin(struct nk_context *ctx, float width)
     if (win->popup.win && (win->popup.type & NK_PANEL_SET_NONBLOCK))
         return 0;
 
-    bounds.w = width;
-    bounds.h = nk_null_rect.h;
-    bounds.x = (in->mouse.pos.x + 1) - win->layout->clip.x;
-    bounds.y = (in->mouse.pos.y + 1) - win->layout->clip.y;
+    bounds.w = nk_iceilf(width);
+    bounds.h = nk_iceilf(nk_null_rect.h);
+    bounds.x = nk_ifloorf(in->mouse.pos.x + 1) - win->layout->clip.x;
+    bounds.y = nk_ifloorf(in->mouse.pos.y + 1) - win->layout->clip.y;
 
     ret = nk_popup_begin(ctx, NK_POPUP_DYNAMIC,
         "__##Tooltip##__", NK_WINDOW_NO_SCROLLBAR|NK_WINDOW_BORDER, bounds);
@@ -22528,6 +22531,19 @@ nk_tooltip(struct nk_context *ctx, const char *text)
         nk_tooltip_end(ctx);
     }
 }
+#ifdef NK_INCLUDE_STANDARD_VARARGS
+NK_API void
+nk_tooltipf(struct nk_context *ctx, const char *fmt, ...)
+{
+    char buf[256];
+    va_list args;
+    va_start(args, fmt);
+    nk_strfmt(buf, NK_LEN(buf), fmt, args);
+    va_end(args);
+    nk_tooltip(ctx, buf);
+}
+#endif
+
 /* -------------------------------------------------------------
  *
  *                          CONTEXTUAL

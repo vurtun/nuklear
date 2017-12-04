@@ -564,12 +564,8 @@ overview(struct nk_context *ctx)
                 nk_chart_end(ctx);
             }
 
-            if (index != -1) {
-                char buffer[NK_MAX_NUMBER_BUFFER];
-                float val = (float)cos((float)index*step);
-                sprintf(buffer, "Value: %.2f", val);
-                nk_tooltip(ctx, buffer);
-            }
+            if (index != -1)
+                nk_tooltipf(ctx, "Value: %.2f", (float)cos((float)index*step));
             if (line_index != -1) {
                 nk_layout_row_dynamic(ctx, 20, 1);
                 nk_labelf(ctx, NK_TEXT_LEFT, "Selected value: %.2f", (float)cos((float)index*step));
@@ -589,11 +585,8 @@ overview(struct nk_context *ctx)
                 }
                 nk_chart_end(ctx);
             }
-            if (index != -1) {
-                char buffer[NK_MAX_NUMBER_BUFFER];
-                sprintf(buffer, "Value: %.2f", (float)fabs(sin(step * (float)index)));
-                nk_tooltip(ctx, buffer);
-            }
+            if (index != -1)
+                nk_tooltipf(ctx, "Value: %.2f", (float)fabs(sin(step * (float)index)));
             if (col_index != -1) {
                 nk_layout_row_dynamic(ctx, 20, 1);
                 nk_labelf(ctx, NK_TEXT_LEFT, "Selected value: %.2f", (float)fabs(sin(step * (float)col_index)));
