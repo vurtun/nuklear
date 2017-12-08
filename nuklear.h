@@ -19954,6 +19954,9 @@ nk_layout_peek(struct nk_rect *bounds, struct nk_context *ctx)
         layout->row.index = 0;
     }
     nk_layout_widget_space(bounds, ctx, win, nk_false);
+    if (!layout->row.index) {
+        bounds->x -= layout->row.item_offset;
+    }
     layout->at_y = y;
     layout->row.index = index;
 }
