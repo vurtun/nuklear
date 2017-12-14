@@ -4480,7 +4480,7 @@ nk_rectiv(const int *r)
 NK_API struct nk_vec2
 nk_rect_pos(struct nk_rect r)
 {
-    return nk_vec2(r.x, r.y):
+    return nk_vec2(r.x, r.y);
 }
 
 NK_API struct nk_vec2
