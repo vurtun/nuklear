@@ -4511,10 +4511,9 @@ nk_shrink_rect(struct nk_rect r, float amount)
 {
     r.w = NK_MAX(r.w, 2 * amount);
     r.h = NK_MAX(r.h, 2 * amount);
-    r.x = r.x + amount;
-    r.y = r.y + amount;
-    r.w = r.w - 2 * amount;
-    r.h = r.h - 2 * amount;
+    r.x += amount; r.y += amount;
+    r.w -= 2 * amount;
+    r.h -= 2 * amount;
     return r;
 }
 
