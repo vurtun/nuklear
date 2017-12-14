@@ -4467,10 +4467,8 @@ NK_API struct nk_rect
 nk_recti(int x, int y, int w, int h)
 {
     struct nk_rect r;
-    r.x = (float)x;
-    r.y = (float)y;
-    r.w = (float)w;
-    r.h = (float)h;
+    r.x = (float)x; r.y = (float)y;
+    r.w = (float)w; r.h = (float)h;
     return r;
 }
 
