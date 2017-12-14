@@ -4480,17 +4480,13 @@ nk_rectiv(const int *r)
 NK_API struct nk_vec2
 nk_rect_pos(struct nk_rect r)
 {
-    struct nk_vec2 ret;
-    ret.x = r.x; ret.y = r.y;
-    return ret;
+    return nk_vec2(r.x, r.y):
 }
 
 NK_API struct nk_vec2
 nk_rect_size(struct nk_rect r)
 {
-    struct nk_vec2 ret;
-    ret.x = r.w; ret.y = r.h;
-    return ret;
+    return nk_vec2(r.w, r.h);
 }
 
 NK_INTERN struct nk_rect
@@ -4505,7 +4501,9 @@ nk_pad_rect(struct nk_rect r, struct nk_vec2 pad)
 }
 
 NK_INTERN struct nk_rect nk_shrink_rect(struct nk_rect r, float amount)
-{ return nk_pad_rect(r, nk_vec2(amount, amount)); }
+{
+    return nk_pad_rect(r, nk_vec2(amount, amount));
+}
 
 NK_API struct nk_vec2
 nk_vec2(float x, float y)
