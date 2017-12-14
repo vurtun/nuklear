@@ -4331,19 +4331,6 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #define NK_UINT_MIN 0
 #define NK_UINT_MAX 4294967295u
 
-/* Make sure correct type size:
- * This will fire with a negative subscript error if the type sizes
- * are set incorrectly by the compiler, and compile out if not */
-NK_STATIC_ASSERT(sizeof(nk_size) >= sizeof(void*));
-NK_STATIC_ASSERT(sizeof(nk_ptr) == sizeof(void*));
-NK_STATIC_ASSERT(sizeof(nk_flags) >= 4);
-NK_STATIC_ASSERT(sizeof(nk_rune) >= 4);
-NK_STATIC_ASSERT(sizeof(nk_ushort) == 2);
-NK_STATIC_ASSERT(sizeof(nk_short) == 2);
-NK_STATIC_ASSERT(sizeof(nk_uint) == 4);
-NK_STATIC_ASSERT(sizeof(nk_int) == 4);
-NK_STATIC_ASSERT(sizeof(nk_byte) == 1);
-
 NK_GLOBAL const struct nk_rect nk_null_rect = {-8192.0f, -8192.0f, 16384, 16384};
 #define NK_FLOAT_PRECISION 0.00000000000001
 
