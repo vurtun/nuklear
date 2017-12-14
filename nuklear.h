@@ -4177,7 +4177,7 @@ struct nk_context {
 #define NK_MAX_FLOAT_PRECISION 2
 
 #define NK_UNUSED(x) ((void)(x))
-#define NK_SATURATE(x) (NK_MAX(0, NK_MIN(1.0f, x)))
+#define NK_SATURATE(x) (NK_CLAMP(0, (x), 1.0f))
 #define NK_LEN(a) (sizeof(a)/sizeof(a)[0])
 #define NK_ABS(a) (((a) < 0) ? -(a) : (a))
 #define NK_BETWEEN(x, a, b) ((a) <= (x) && (x) < (b))
