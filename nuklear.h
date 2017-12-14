@@ -306,7 +306,7 @@ extern "C" {
 
 #define NK_MIN(a,b) ((a) < (b) ? (a) : (b))
 #define NK_MAX(a,b) ((a) < (b) ? (b) : (a))
-#define NK_CLAMP(i,v,x) (NK_MAX(NK_MIN(v,x), i))
+#define NK_CLAMP(min,val,max) (NK_MAX(NK_MIN(val,max), min))
 /*
  * ===============================================================
  *
