@@ -301,11 +301,7 @@ extern "C" {
 #endif
 
 #ifndef NK_FILE_LINE
-#ifdef _MSC_VER
-#define NK_FILE_LINE __FILE__ ":" NK_MACRO_STRINGIFY(__COUNTER__)
-#else
 #define NK_FILE_LINE __FILE__ ":" NK_MACRO_STRINGIFY(__LINE__)
-#endif
 #endif
 
 #define NK_MIN(a,b) ((a) < (b) ? (a) : (b))
