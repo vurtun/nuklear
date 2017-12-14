@@ -4509,14 +4509,13 @@ nk_rect_size(struct nk_rect r)
 NK_INTERN struct nk_rect
 nk_shrink_rect(struct nk_rect r, float amount)
 {
-    struct nk_rect res;
     r.w = NK_MAX(r.w, 2 * amount);
     r.h = NK_MAX(r.h, 2 * amount);
-    res.x = r.x + amount;
-    res.y = r.y + amount;
-    res.w = r.w - 2 * amount;
-    res.h = r.h - 2 * amount;
-    return res;
+    r.x = r.x + amount;
+    r.y = r.y + amount;
+    r.w = r.w - 2 * amount;
+    r.h = r.h - 2 * amount;
+    return r;
 }
 
 NK_INTERN struct nk_rect
