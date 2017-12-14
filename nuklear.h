@@ -4494,17 +4494,6 @@ nk_rect_size(struct nk_rect r)
 }
 
 NK_INTERN struct nk_rect
-nk_shrink_rect(struct nk_rect r, float amount)
-{
-    r.w = NK_MAX(r.w, 2 * amount);
-    r.h = NK_MAX(r.h, 2 * amount);
-    r.x += amount; r.y += amount;
-    r.w -= 2 * amount;
-    r.h -= 2 * amount;
-    return r;
-}
-
-NK_INTERN struct nk_rect
 nk_pad_rect(struct nk_rect r, struct nk_vec2 pad)
 {
     r.w = NK_MAX(r.w, 2 * pad.x);
@@ -4514,6 +4503,9 @@ nk_pad_rect(struct nk_rect r, struct nk_vec2 pad)
     r.h -= 2 * pad.y;
     return r;
 }
+
+NK_INTERN struct nk_rect nk_shrink_rect(struct nk_rect r, float amount)
+{ return nk_pad_rect(r, nk_vec2(amount, amount)); }
 
 NK_API struct nk_vec2
 nk_vec2(float x, float y)
