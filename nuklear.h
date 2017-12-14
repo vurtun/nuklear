@@ -294,11 +294,7 @@ extern "C" {
 #define NK_STRING_JOIN_DELAY(arg1, arg2) NK_STRING_JOIN_IMMEDIATE(arg1, arg2)
 #define NK_STRING_JOIN(arg1, arg2) NK_STRING_JOIN_DELAY(arg1, arg2)
 
-#ifdef _MSC_VER
-#define NK_UNIQUE_NAME(name) NK_STRING_JOIN(name,__COUNTER__)
-#else
 #define NK_UNIQUE_NAME(name) NK_STRING_JOIN(name,__LINE__)
-#endif
 
 #ifndef NK_STATIC_ASSERT
 #define NK_STATIC_ASSERT(exp) typedef char NK_UNIQUE_NAME(_dummy_array)[(exp)?1:-1]
