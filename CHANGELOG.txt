@@ -11,6 +11,7 @@
 
 Changes:
 --------
+- 2017/12/23 (2.00.7) - Fixed nk_edit_buffer behavior if activated to allow input
 - 2017/12/23 (2.00.7) - Fixed modifyable progressbar dragging visuals and input behavior
 - 2017/12/04 (2.00.6) - Added formated string tooltip widget
 - 2017/11/18 (2.00.5) - Fixed window becoming hidden with flag NK_WINDOW_NO_INPUT
