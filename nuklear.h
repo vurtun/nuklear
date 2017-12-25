@@ -1,5 +1,5 @@
 /*
- Nuklear - 2.00.4 - public domain
+ Nuklear - 2.00.7 - public domain
  no warranty implied; use at your own risk.
  authored from 2015-2017 by Micha Mettke
 
@@ -15028,7 +15028,7 @@ nk_do_progress(nk_flags *state,
     prog_scale = (float)value / (float)max;
 
     /* update progressbar */
-    prog_value = NK_CLAMP(0, value, max);
+    prog_value = NK_MIN(value, max);
     prog_value = nk_progress_behavior(state, in, bounds, cursor,max, prog_value, modifiable);
     cursor.w = cursor.w * prog_scale;
 
