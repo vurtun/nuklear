@@ -294,27 +294,19 @@ extern "C" {
 #define NK_STRING_JOIN_DELAY(arg1, arg2) NK_STRING_JOIN_IMMEDIATE(arg1, arg2)
 #define NK_STRING_JOIN(arg1, arg2) NK_STRING_JOIN_DELAY(arg1, arg2)
 
-#ifdef _MSC_VER
-#define NK_UNIQUE_NAME(name) NK_STRING_JOIN(name,__COUNTER__)
-#else
 #define NK_UNIQUE_NAME(name) NK_STRING_JOIN(name,__LINE__)
-#endif
 
 #ifndef NK_STATIC_ASSERT
 #define NK_STATIC_ASSERT(exp) typedef char NK_UNIQUE_NAME(_dummy_array)[(exp)?1:-1]
 #endif
 
 #ifndef NK_FILE_LINE
-#ifdef _MSC_VER
-#define NK_FILE_LINE __FILE__ ":" NK_MACRO_STRINGIFY(__COUNTER__)
-#else
 #define NK_FILE_LINE __FILE__ ":" NK_MACRO_STRINGIFY(__LINE__)
-#endif
 #endif
 
 #define NK_MIN(a,b) ((a) < (b) ? (a) : (b))
 #define NK_MAX(a,b) ((a) < (b) ? (b) : (a))
-#define NK_CLAMP(i,v,x) (NK_MAX(NK_MIN(v,x), i))
+#define NK_CLAMP(min,val,max) (NK_MAX(NK_MIN(val,max), min))
 /*
  * ===============================================================
  *
@@ -4285,7 +4277,7 @@ struct nk_context {
 #define NK_MAX_FLOAT_PRECISION 2
 
 #define NK_UNUSED(x) ((void)(x))
-#define NK_SATURATE(x) (NK_MAX(0, NK_MIN(1.0f, x)))
+#define NK_SATURATE(x) (NK_CLAMP(0, (x), 1.0f))
 #define NK_LEN(a) (sizeof(a)/sizeof(a)[0])
 #define NK_ABS(a) (((a) < 0) ? -(a) : (a))
 #define NK_BETWEEN(x, a, b) ((a) <= (x) && (x) < (b))
@@ -4439,19 +4431,6 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #define NK_UINT_MIN 0
 #define NK_UINT_MAX 4294967295u
 
-/* Make sure correct type size:
- * This will fire with a negative subscript error if the type sizes
- * are set incorrectly by the compiler, and compile out if not */
-NK_STATIC_ASSERT(sizeof(nk_size) >= sizeof(void*));
-NK_STATIC_ASSERT(sizeof(nk_ptr) == sizeof(void*));
-NK_STATIC_ASSERT(sizeof(nk_flags) >= 4);
-NK_STATIC_ASSERT(sizeof(nk_rune) >= 4);
-NK_STATIC_ASSERT(sizeof(nk_ushort) == 2);
-NK_STATIC_ASSERT(sizeof(nk_short) == 2);
-NK_STATIC_ASSERT(sizeof(nk_uint) == 4);
-NK_STATIC_ASSERT(sizeof(nk_int) == 4);
-NK_STATIC_ASSERT(sizeof(nk_byte) == 1);
-
 NK_GLOBAL const struct nk_rect nk_null_rect = {-8192.0f, -8192.0f, 16384, 16384};
 #define NK_FLOAT_PRECISION 0.00000000000001
 
@@ -4575,10 +4554,8 @@ NK_API struct nk_rect
 nk_recti(int x, int y, int w, int h)
 {
     struct nk_rect r;
-    r.x = (float)x;
-    r.y = (float)y;
-    r.w = (float)w;
-    r.h = (float)h;
+    r.x = (float)x; r.y = (float)y;
+    r.w = (float)w; r.h = (float)h;
     return r;
 }
 
@@ -4603,30 +4580,13 @@ nk_rectiv(const int *r)
 NK_API struct nk_vec2
 nk_rect_pos(struct nk_rect r)
 {
-    struct nk_vec2 ret;
-    ret.x = r.x; ret.y = r.y;
-    return ret;
+    return nk_vec2(r.x, r.y);
 }
 
 NK_API struct nk_vec2
 nk_rect_size(struct nk_rect r)
 {
-    struct nk_vec2 ret;
-    ret.x = r.w; ret.y = r.h;
-    return ret;
-}
-
-NK_INTERN struct nk_rect
-nk_shrink_rect(struct nk_rect r, float amount)
-{
-    struct nk_rect res;
-    r.w = NK_MAX(r.w, 2 * amount);
-    r.h = NK_MAX(r.h, 2 * amount);
-    res.x = r.x + amount;
-    res.y = r.y + amount;
-    res.w = r.w - 2 * amount;
-    res.h = r.h - 2 * amount;
-    return res;
+    return nk_vec2(r.w, r.h);
 }
 
 NK_INTERN struct nk_rect
@@ -4638,6 +4598,11 @@ nk_pad_rect(struct nk_rect r, struct nk_vec2 pad)
     r.w -= 2 * pad.x;
     r.h -= 2 * pad.y;
     return r;
+}
+
+NK_INTERN struct nk_rect nk_shrink_rect(struct nk_rect r, float amount)
+{
+    return nk_pad_rect(r, nk_vec2(amount, amount));
 }
 
 NK_API struct nk_vec2
