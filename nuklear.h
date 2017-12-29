@@ -1788,12 +1788,127 @@ NK_API struct nk_rect nk_layout_space_rect_to_local(struct nk_context*, struct n
  *
  *                                  GROUP
  *
- * ============================================================================= */
+ * ============================================================================= 
+ * Groups are basically windows inside windows. They allow to subdivide space
+ * in a window to layout widgets as a group. Almost all more complex widget
+ * layouting requirements can be solved using groups and basic layouting
+ * fuctionality. Groups just like windows are identified by an unique name and
+ * internally keep track of scrollbar offsets by default. However additional
+ * versions are provided to directly manage the scrollbar.
+ *
+ * Usage
+ * -------------------
+ * To create a group you have to call one of the three `nk_group_begin_xxx`
+ * functions to start group declarations and `nk_group_end` at the end. Furthermore it
+ * is required to check the return value of `nk_group_begin_xxx` and only process
+ * widgets inside the window if the value is not 0.
+ * Nesting groups is possible and even encouraged since many layouting schemes
+ * can only be achieved by nesting. Groups, unlike windows, need `nk_group_end`
+ * to be only called if the corosponding `nk_group_begin_xxx` call does not return 0:
+ *
+ *      if (nk_group_begin_xxx(ctx, ...) {
+ *          [... widgets ...]
+ *          nk_group_end(ctx);
+ *      }
+ *
+ * In the grand concept groups groups can be called after starting a window
+ * with `nk_begin_xxx` and before calling `nk_end`:
+ *
+ *      struct nk_context ctx;
+ *      nk_init_xxx(&ctx, ...);
+ *      while (1) {
+ *          Event evt;
+ *          nk_input_begin(&ctx);
+ *          while (GetEvent(&evt)) {
+ *              if (evt.type == MOUSE_MOVE)
+ *                  nk_input_motion(&ctx, evt.motion.x, evt.motion.y);
+ *              else if (evt.type == [...]) {
+ *                  nk_input_xxx(...);
+ *              }
+ *          }
+ *          nk_input_end(&ctx);
+ *
+ *          if (nk_begin_xxx(...) {
+ *              [...widgets...]
+ *              nk_layout_row_dynamic(...);
+ *              if (nk_group_begin_xxx(ctx, ...) {
+ *                  [... widgets ...]
+ *                  nk_group_end(ctx);
+ *              }
+ *          }
+ *          nk_end(ctx);
+ *
+ *          const struct nk_command *cmd = 0;
+ *          nk_foreach(cmd, &ctx) {
+ *          case NK_COMMAND_LINE:
+ *              your_draw_line_function(...)
+ *              break;
+ *          case NK_COMMAND_RECT
+ *              your_draw_rect_function(...)
+ *              break;
+ *          case ...:
+ *              [...]
+ *          }
+ *          nk_clear(&ctx);
+ *      }
+ *      nk_free(&ctx);
+ *
+ *  Reference
+ *  -------------------
+ *  nk_group_begin                  - Start a new group with internal scrollbar handling
+ *  nk_group_end                    - Ends a group. Should only be called if nk_group_begin returned non-zero
+ *  nk_group_scrolled_offset_begin  - Start a new group with manual separated handling of scrollbar x- and y-offset
+ *  nk_group_scrolled_begin         - Start a new group with manual scrollbar handling
+ *  nk_group_scrolled_end           - Ends a group with manual scrollbar handling. Should only be called if nk_group_begin returned non-zero
+ */
+/*  nk_group_begin - starts a new widget group. Requires a previous layouting
+ *  function to specify a pos/size.
+ *  Parameters:
+ *      @ctx must point to a previously initialized `nk_context` struct after call `nk_begin_xxx`
+ *      @title window unique group title used to both for identification and display title in the group header
+ *      @flags same as window flags from `enum nk_panel_flags` */
 NK_API int nk_group_begin(struct nk_context*, const char *title, nk_flags);
-NK_API int nk_group_scrolled_offset_begin(struct nk_context*, nk_uint *x_offset, nk_uint *y_offset, const char*, nk_flags);
-NK_API int nk_group_scrolled_begin(struct nk_context*, struct nk_scroll*, const char *title, nk_flags);
-NK_API void nk_group_scrolled_end(struct nk_context*);
+/*  nk_group_end - ends a widget group
+ *  Parameters:
+ *      @ctx must point to a previously initialized `nk_context` struct after call `nk_group_begin` */
 NK_API void nk_group_end(struct nk_context*);
+/*  nk_group_scrolled_offset_begin - starts a new widget group. requires a previous
+ *  layouting function to specify a size. Does not keep track of scrollbar.
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context` struct after call `nk_begin_xxx`
+ *      @x_offset scrollbar x-offset to offset all widgets inside the group horizontally.
+ *      @y_offset scrollbar y-offset to offset all widgets inside the group vertically
+ *      @title window unique group title used to both identify and display in the group header
+ *      @flags same as window flags from `enum nk_panel_flags` */
+NK_API int nk_group_scrolled_offset_begin(struct nk_context*, nk_uint *x_offset, nk_uint *y_offset, const char *title, nk_flags flags);
+/*  nk_group_scrolled_begin - starts a new widget group. requires a previous
+ *  layouting function to specify a size. Does not keep track of scrollbar.
+ *  Parameters:
+ *      @ctx must point to an previously initialized `nk_context` struct after call `nk_begin_xxx`
+ *      @off both x- and y- scroll offset. Allows for manual scrollbar control
+ *      @title window unique group title used to both identify and display in the group header
+ *      @flags same as window flags from `enum nk_panel_flags` */
+NK_API int nk_group_scrolled_begin(struct nk_context*, struct nk_scroll *off, const char *title, nk_flags);
+/*  nk_group_end - ends a widget group after calling nk_group_scrolled_offset_begin or
+ *  nk_group_scrolled_begin.
+ *  Parameters:
+ *      @ctx must point to a previously initialized `nk_context`. */
+NK_API void nk_group_scrolled_end(struct nk_context*);
+/* =============================================================================
+ *
+ *                                  TREE
+ *
+ * ============================================================================= */
+#define nk_tree_push(ctx, type, title, state) nk_tree_push_hashed(ctx, type, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),__LINE__)
+#define nk_tree_push_id(ctx, type, title, state, id) nk_tree_push_hashed(ctx, type, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),id)
+NK_API int nk_tree_push_hashed(struct nk_context*, enum nk_tree_type, const char *title, enum nk_collapse_states initial_state, const char *hash, int len,int seed);
+#define nk_tree_image_push(ctx, type, img, title, state) nk_tree_image_push_hashed(ctx, type, img, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),__LINE__)
+#define nk_tree_image_push_id(ctx, type, img, title, state, id) nk_tree_image_push_hashed(ctx, type, img, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),id)
+NK_API int nk_tree_image_push_hashed(struct nk_context*, enum nk_tree_type, struct nk_image, const char *title, enum nk_collapse_states initial_state, const char *hash, int len,int seed);
+NK_API void nk_tree_pop(struct nk_context*);
+NK_API int nk_tree_state_push(struct nk_context*, enum nk_tree_type, const char *title, enum nk_collapse_states *state);
+NK_API int nk_tree_state_image_push(struct nk_context*, enum nk_tree_type, struct nk_image, const char *title, enum nk_collapse_states *state);
+NK_API void nk_tree_state_pop(struct nk_context*);
 /* =============================================================================
  *
  *                                  LIST VIEW
@@ -1810,21 +1925,6 @@ struct nk_list_view {
 };
 NK_API int nk_list_view_begin(struct nk_context*, struct nk_list_view *out, const char *id, nk_flags, int row_height, int row_count);
 NK_API void nk_list_view_end(struct nk_list_view*);
-/* =============================================================================
- *
- *                                  TREE
- *
- * ============================================================================= */
-#define nk_tree_push(ctx, type, title, state) nk_tree_push_hashed(ctx, type, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),__LINE__)
-#define nk_tree_push_id(ctx, type, title, state, id) nk_tree_push_hashed(ctx, type, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),id)
-NK_API int nk_tree_push_hashed(struct nk_context*, enum nk_tree_type, const char *title, enum nk_collapse_states initial_state, const char *hash, int len,int seed);
-#define nk_tree_image_push(ctx, type, img, title, state) nk_tree_image_push_hashed(ctx, type, img, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),__LINE__)
-#define nk_tree_image_push_id(ctx, type, img, title, state, id) nk_tree_image_push_hashed(ctx, type, img, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),id)
-NK_API int nk_tree_image_push_hashed(struct nk_context*, enum nk_tree_type, struct nk_image, const char *title, enum nk_collapse_states initial_state, const char *hash, int len,int seed);
-NK_API void nk_tree_pop(struct nk_context*);
-NK_API int nk_tree_state_push(struct nk_context*, enum nk_tree_type, const char *title, enum nk_collapse_states *state);
-NK_API int nk_tree_state_image_push(struct nk_context*, enum nk_tree_type, struct nk_image, const char *title, enum nk_collapse_states *state);
-NK_API void nk_tree_state_pop(struct nk_context*);
 /* =============================================================================
  *
  *                                  WIDGET
