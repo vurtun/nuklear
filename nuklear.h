@@ -5693,13 +5693,14 @@ nk_murmur_hash(const void * key, int len, nk_hash seed)
     tail = (const nk_byte*)(data + nblocks*4);
     k1 = 0;
     switch (len & 3) {
-    case 3: k1 ^= (nk_uint)(tail[2] << 16);
-    case 2: k1 ^= (nk_uint)(tail[1] << 8u);
+    case 3: k1 ^= (nk_uint)(tail[2] << 16); /* fallthrough */
+    case 2: k1 ^= (nk_uint)(tail[1] << 8u); /* fallthrough */
     case 1: k1 ^= tail[0];
             k1 *= c1;
             k1 = NK_ROTL(k1,15);
             k1 *= c2;
             h1 ^= k1;
+            break;
     default: break;
     }
 
