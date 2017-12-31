@@ -891,7 +891,6 @@ overview(struct nk_context *ctx)
             if (nk_tree_push(ctx, NK_TREE_NODE, "Notebook", NK_MINIMIZED))
             {
                 static int current_tab = 0;
-                struct nk_vec2 item_padding;
                 struct nk_rect bounds;
                 float step = (2*3.141592654f) / 32;
                 enum chart_type {CHART_LINE, CHART_HISTO, CHART_MIXED};
