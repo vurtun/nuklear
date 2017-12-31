@@ -315,6 +315,21 @@ extern "C" {
 #define NK_MIN(a,b) ((a) < (b) ? (a) : (b))
 #define NK_MAX(a,b) ((a) < (b) ? (b) : (a))
 #define NK_CLAMP(i,v,x) (NK_MAX(NK_MIN(v,x), i))
+
+#ifdef NK_INCLUDE_STANDARD_VARARGS
+#if defined(_MSC_VER) && (_MSC_VER >= 1600) /* VS 2010 and above */
+#include <sal.h>
+#define NK_PRINTF_FORMAT_STRING _Printf_format_string_
+#else
+#define NK_PRINTF_FORMAT_STRING
+#endif
+#if defined(__GNUC__)
+#define NK_PRINTF_VARARG_FUNC(fmtargnumber) __attribute__((format(__printf__, fmtargnumber, fmtargnumber+1)))
+#else
+#define NK_PRINTF_VARARG_FUNC(fmtargnumber)
+#endif
+#endif
+
 /*
  * ===============================================================
  *
@@ -1984,10 +1999,10 @@ NK_API void nk_label_wrap(struct nk_context*, const char*);
 NK_API void nk_label_colored_wrap(struct nk_context*, const char*, struct nk_color);
 NK_API void nk_image(struct nk_context*, struct nk_image);
 #ifdef NK_INCLUDE_STANDARD_VARARGS
-NK_API void nk_labelf(struct nk_context*, nk_flags, const char*, ...);
-NK_API void nk_labelf_colored(struct nk_context*, nk_flags align, struct nk_color, const char*,...);
-NK_API void nk_labelf_wrap(struct nk_context*, const char*,...);
-NK_API void nk_labelf_colored_wrap(struct nk_context*, struct nk_color, const char*,...);
+NK_API void nk_labelf(struct nk_context*, nk_flags, NK_PRINTF_FORMAT_STRING const char*, ...) NK_PRINTF_VARARG_FUNC(3);
+NK_API void nk_labelf_colored(struct nk_context*, nk_flags, struct nk_color, NK_PRINTF_FORMAT_STRING const char*,...) NK_PRINTF_VARARG_FUNC(4);
+NK_API void nk_labelf_wrap(struct nk_context*, NK_PRINTF_FORMAT_STRING const char*,...) NK_PRINTF_VARARG_FUNC(2);
+NK_API void nk_labelf_colored_wrap(struct nk_context*, struct nk_color, NK_PRINTF_FORMAT_STRING const char*,...) NK_PRINTF_VARARG_FUNC(3);
 NK_API void nk_value_bool(struct nk_context*, const char *prefix, int);
 NK_API void nk_value_int(struct nk_context*, const char *prefix, int);
 NK_API void nk_value_uint(struct nk_context*, const char *prefix, unsigned int);
