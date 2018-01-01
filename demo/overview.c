@@ -100,8 +100,8 @@ overview(struct nk_context *ctx)
                     const float values[]={26.0f,13.0f,30.0f,15.0f,25.0f,10.0f,20.0f,40.0f,12.0f,8.0f,22.0f,28.0f};
                     menu_state = MENU_CHART;
                     nk_layout_row_dynamic(ctx, 150, 1);
-                    nk_chart_begin(ctx, NK_CHART_COLUMN, LEN(values), 0, 50);
-                    for (i = 0; i < LEN(values); ++i)
+                    nk_chart_begin(ctx, NK_CHART_COLUMN, NK_LEN(values), 0, 50);
+                    for (i = 0; i < NK_LEN(values); ++i)
                         nk_chart_push(ctx, values[i]);
                     nk_chart_end(ctx);
                     nk_tree_pop(ctx);
@@ -328,7 +328,7 @@ overview(struct nk_context *ctx)
 
                 /* default combobox */
                 nk_layout_row_static(ctx, 25, 200, 1);
-                current_weapon = nk_combo(ctx, weapons, LEN(weapons), current_weapon, 25, nk_vec2(200,200));
+                current_weapon = nk_combo(ctx, weapons, NK_LEN(weapons), current_weapon, 25, nk_vec2(200,200));
 
                 /* slider color combobox */
                 if (nk_combo_begin_color(ctx, combo_color, nk_vec2(200,200))) {
@@ -416,8 +416,8 @@ overview(struct nk_context *ctx)
                     size_t i = 0;
                     static const float values[]={26.0f,13.0f,30.0f,15.0f,25.0f,10.0f,20.0f,40.0f, 12.0f, 8.0f, 22.0f, 28.0f, 5.0f};
                     nk_layout_row_dynamic(ctx, 150, 1);
-                    nk_chart_begin(ctx, NK_CHART_COLUMN, LEN(values), 0, 50);
-                    for (i = 0; i < LEN(values); ++i) {
+                    nk_chart_begin(ctx, NK_CHART_COLUMN, NK_LEN(values), 0, 50);
+                    for (i = 0; i < NK_LEN(values); ++i) {
                         nk_flags res = nk_chart_push(ctx, values[i]);
                         if (res & NK_CHART_CLICKED) {
                             chart_selection = values[i];
@@ -475,7 +475,7 @@ overview(struct nk_context *ctx)
                         if (nk_button_symbol(ctx, NK_SYMBOL_TRIANGLE_LEFT)) {
                             if (sel_date.tm_mon == 0) {
                                 sel_date.tm_mon = 11;
-                                sel_date.tm_year = MAX(0, sel_date.tm_year-1);
+                                sel_date.tm_year = NK_MAX(0, sel_date.tm_year-1);
                             } else sel_date.tm_mon--;
                         }
                         nk_layout_row_push(ctx, 0.9f);
@@ -501,7 +501,7 @@ overview(struct nk_context *ctx)
 
                         /* weekdays  */
                         nk_layout_row_dynamic(ctx, 35, 7);
-                        for (i = 0; i < (int)LEN(week_days); ++i)
+                        for (i = 0; i < (int)NK_LEN(week_days); ++i)
                             nk_label(ctx, week_days[i], NK_TEXT_CENTERED);
 
                         /* days  */
