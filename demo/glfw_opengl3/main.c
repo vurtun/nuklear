@@ -31,23 +31,38 @@
 #define MAX_VERTEX_BUFFER 512 * 1024
 #define MAX_ELEMENT_BUFFER 128 * 1024
 
-#define UNUSED(a) (void)a
-#define MIN(a,b) ((a) < (b) ? (a) : (b))
-#define MAX(a,b) ((a) < (b) ? (b) : (a))
-#define LEN(a) (sizeof(a)/sizeof(a)[0])
-
 /* ===============================================================
  *
  *                          EXAMPLE
  *
  * ===============================================================*/
 /* This are some code examples to provide a small overview of what can be
- * done with this library. To try out an example uncomment the include
- * and the corresponding function. */
-/*#include "../style.c"*/
-/*#include "../calculator.c"*/
-/*#include "../overview.c"*/
-/*#include "../node_editor.c"*/
+ * done with this library. To try out an example uncomment the defines */
+/*#define INCLUDE_ALL */
+/*#define INCLUDE_STYLE */
+/*#define INCLUDE_CALCULATOR */
+/*#define INCLUDE_OVERVIEW */
+/*#define INCLUDE_NODE_EDITOR */
+
+#ifdef INCLUDE_ALL
+  #define INCLUDE_STYLE
+  #define INCLUDE_CALCULATOR
+  #define INCLUDE_OVERVIEW
+  #define INCLUDE_NODE_EDITOR
+#endif
+
+#ifdef INCLUDE_STYLE
+  #include "../style.c"
+#endif
+#ifdef INCLUDE_CALCULATOR
+  #include "../calculator.c"
+#endif
+#ifdef INCLUDE_OVERVIEW
+  #include "../overview.c"
+#endif
+#ifdef INCLUDE_NODE_EDITOR
+  #include "../node_editor.c"
+#endif
 
 /* ===============================================================
  *
@@ -104,11 +119,12 @@ int main(void)
     /*nk_style_load_all_cursors(ctx, atlas->cursors);*/
     /*nk_style_set_font(ctx, &droid->handle);*/}
 
-    /* style.c */
+    #ifdef INCLUDE_STYLE
     /*set_style(ctx, THEME_WHITE);*/
     /*set_style(ctx, THEME_RED);*/
     /*set_style(ctx, THEME_BLUE);*/
     /*set_style(ctx, THEME_DARK);*/
+    #endif
 
     background = nk_rgb(28,48,62);
     while (!glfwWindowShouldClose(win))
@@ -153,9 +169,15 @@ int main(void)
         nk_end(ctx);
 
         /* -------------- EXAMPLES ---------------- */
-        /*calculator(ctx);*/
-        /*overview(ctx);*/
-        /*node_editor(ctx);*/
+        #ifdef INCLUDE_CALCULATOR
+          calculator(ctx);
+        #endif
+        #ifdef INCLUDE_OVERVIEW
+          overview(ctx);
+        #endif
+        #ifdef INCLUDE_NODE_EDITOR
+          node_editor(ctx);
+        #endif
         /* ----------------------------------------- */
 
         /* Draw */

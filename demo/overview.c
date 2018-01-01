@@ -228,7 +228,7 @@ overview(struct nk_context *ctx)
 
                 nk_label(ctx, "Slider float", NK_TEXT_LEFT);
                 nk_slider_float(ctx, 0, &float_slider, 5.0, 0.5f);
-                nk_labelf(ctx, NK_TEXT_LEFT, "Progressbar" , prog_value);
+                nk_labelf(ctx, NK_TEXT_LEFT, "Progressbar: %zu" , prog_value);
                 nk_progress(ctx, &prog_value, 100, NK_MODIFIABLE);
 
                 nk_layout_row(ctx, NK_STATIC, 25, 2, ratio);
@@ -924,6 +924,7 @@ overview(struct nk_context *ctx)
                 {
                     nk_style_pop_vec2(ctx);
                     switch (current_tab) {
+                    default: break;
                     case CHART_LINE:
                         nk_layout_row_dynamic(ctx, 100, 1);
                         bounds = nk_widget_bounds(ctx);
