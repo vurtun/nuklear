@@ -3447,7 +3447,6 @@ NK_API void nk_draw_list_clear(struct nk_draw_list*);
 NK_API const struct nk_draw_command* nk__draw_list_begin(const struct nk_draw_list*, const struct nk_buffer*);
 NK_API const struct nk_draw_command* nk__draw_list_next(const struct nk_draw_command*, const struct nk_buffer*, const struct nk_draw_list*);
 NK_API const struct nk_draw_command* nk__draw_list_end(const struct nk_draw_list*, const struct nk_buffer*);
-NK_API void nk_draw_list_clear(struct nk_draw_list *list);
 
 /* path */
 NK_API void nk_draw_list_path_clear(struct nk_draw_list*);
@@ -8149,74 +8148,79 @@ nk_draw_vertex_layout_element_is_end_of_layout(
 }
 
 NK_INTERN void
-nk_draw_vertex_color(void *attribute, const float *values,
+nk_draw_vertex_color(void *attr, const float *vals,
     enum nk_draw_vertex_layout_format format)
 {
     /* if this triggers you tried to provide a value format for a color */
+    float val[4];
     NK_ASSERT(format >= NK_FORMAT_COLOR_BEGIN);
     NK_ASSERT(format <= NK_FORMAT_COLOR_END);
     if (format < NK_FORMAT_COLOR_BEGIN || format > NK_FORMAT_COLOR_END) return;
+
+    val[0] = NK_SATURATE(vals[0]);
+    val[1] = NK_SATURATE(vals[1]);
+    val[2] = NK_SATURATE(vals[2]);
+    val[3] = NK_SATURATE(vals[3]);
 
     switch (format) {
     default: NK_ASSERT(0 && "Invalid vertex layout color format"); break;
     case NK_FORMAT_R8G8B8A8:
     case NK_FORMAT_R8G8B8: {
-        struct nk_color col = nk_rgba_fv(values);
-        NK_MEMCPY(attribute, &col.r, sizeof(col));
+        struct nk_color col = nk_rgba_fv(val);
+        NK_MEMCPY(attr, &col.r, sizeof(col));
     } break;
     case NK_FORMAT_B8G8R8A8: {
-        struct nk_color col = nk_rgba_fv(values);
+        struct nk_color col = nk_rgba_fv(val);
         struct nk_color bgra = nk_rgba(col.b, col.g, col.r, col.a);
-        NK_MEMCPY(attribute, &bgra, sizeof(bgra));
+        NK_MEMCPY(attr, &bgra, sizeof(bgra));
     } break;
     case NK_FORMAT_R16G15B16: {
         nk_ushort col[3];
-        col[0] = (nk_ushort)NK_CLAMP(NK_USHORT_MIN, values[0] * NK_USHORT_MAX, NK_USHORT_MAX);
-        col[1] = (nk_ushort)NK_CLAMP(NK_USHORT_MIN, values[1] * NK_USHORT_MAX, NK_USHORT_MAX);
-        col[2] = (nk_ushort)NK_CLAMP(NK_USHORT_MIN, values[2] * NK_USHORT_MAX, NK_USHORT_MAX);
-        NK_MEMCPY(attribute, col, sizeof(col));
+        col[0] = (nk_ushort)(val[0]*(float)NK_USHORT_MAX);
+        col[1] = (nk_ushort)(val[1]*(float)NK_USHORT_MAX);
+        col[2] = (nk_ushort)(val[2]*(float)NK_USHORT_MAX);
+        NK_MEMCPY(attr, col, sizeof(col));
     } break;
     case NK_FORMAT_R16G15B16A16: {
         nk_ushort col[4];
-        col[0] = (nk_ushort)NK_CLAMP(NK_USHORT_MIN, values[0] * NK_USHORT_MAX, NK_USHORT_MAX);
-        col[1] = (nk_ushort)NK_CLAMP(NK_USHORT_MIN, values[1] * NK_USHORT_MAX, NK_USHORT_MAX);
-        col[2] = (nk_ushort)NK_CLAMP(NK_USHORT_MIN, values[2] * NK_USHORT_MAX, NK_USHORT_MAX);
-        col[3] = (nk_ushort)NK_CLAMP(NK_USHORT_MIN, values[3] * NK_USHORT_MAX, NK_USHORT_MAX);
-        NK_MEMCPY(attribute, col, sizeof(col));
+        col[0] = (nk_ushort)(val[0]*(float)NK_USHORT_MAX);
+        col[1] = (nk_ushort)(val[1]*(float)NK_USHORT_MAX);
+        col[2] = (nk_ushort)(val[2]*(float)NK_USHORT_MAX);
+        col[3] = (nk_ushort)(val[3]*(float)NK_USHORT_MAX);
+        NK_MEMCPY(attr, col, sizeof(col));
     } break;
     case NK_FORMAT_R32G32B32: {
         nk_uint col[3];
-        col[0] = (nk_uint)NK_CLAMP(NK_UINT_MIN, values[0] * NK_UINT_MAX, NK_UINT_MAX);
-        col[1] = (nk_uint)NK_CLAMP(NK_UINT_MIN, values[1] * NK_UINT_MAX, NK_UINT_MAX);
-        col[2] = (nk_uint)NK_CLAMP(NK_UINT_MIN, values[2] * NK_UINT_MAX, NK_UINT_MAX);
-        NK_MEMCPY(attribute, col, sizeof(col));
+        col[0] = (nk_uint)(val[0]*(float)NK_UINT_MAX);
+        col[1] = (nk_uint)(val[1]*(float)NK_UINT_MAX);
+        col[2] = (nk_uint)(val[2]*(float)NK_UINT_MAX);
+        NK_MEMCPY(attr, col, sizeof(col));
     } break;
     case NK_FORMAT_R32G32B32A32: {
         nk_uint col[4];
-        col[0] = (nk_uint)NK_CLAMP(NK_UINT_MIN, values[0] * NK_UINT_MAX, NK_UINT_MAX);
-        col[1] = (nk_uint)NK_CLAMP(NK_UINT_MIN, values[1] * NK_UINT_MAX, NK_UINT_MAX);
-        col[2] = (nk_uint)NK_CLAMP(NK_UINT_MIN, values[2] * NK_UINT_MAX, NK_UINT_MAX);
-        col[3] = (nk_uint)NK_CLAMP(NK_UINT_MIN, values[3] * NK_UINT_MAX, NK_UINT_MAX);
-        NK_MEMCPY(attribute, col, sizeof(col));
+        col[0] = (nk_uint)(val[0]*(float)NK_UINT_MAX);
+        col[1] = (nk_uint)(val[1]*(float)NK_UINT_MAX);
+        col[2] = (nk_uint)(val[2]*(float)NK_UINT_MAX);
+        col[3] = (nk_uint)(val[3]*(float)NK_UINT_MAX);
+        NK_MEMCPY(attr, col, sizeof(col));
     } break;
     case NK_FORMAT_R32G32B32A32_FLOAT:
-        NK_MEMCPY(attribute, values, sizeof(float)*4);
+        NK_MEMCPY(attr, val, sizeof(float)*4);
         break;
     case NK_FORMAT_R32G32B32A32_DOUBLE: {
         double col[4];
-        col[0] = (double)NK_SATURATE(values[0]);
-        col[1] = (double)NK_SATURATE(values[1]);
-        col[2] = (double)NK_SATURATE(values[2]);
-        col[3] = (double)NK_SATURATE(values[3]);
-        NK_MEMCPY(attribute, col, sizeof(col));
+        col[0] = (double)val[0];
+        col[1] = (double)val[1];
+        col[2] = (double)val[2];
+        col[3] = (double)val[3];
+        NK_MEMCPY(attr, col, sizeof(col));
     } break;
     case NK_FORMAT_RGB32:
     case NK_FORMAT_RGBA32: {
-        struct nk_color col = nk_rgba_fv(values);
+        struct nk_color col = nk_rgba_fv(val);
         nk_uint color = nk_color_u32(col);
-        NK_MEMCPY(attribute, &color, sizeof(color));
-    } break;
-    }
+        NK_MEMCPY(attr, &color, sizeof(color));
+    } break; }
 }
 
 NK_INTERN void
@@ -8232,32 +8236,32 @@ nk_draw_vertex_element(void *dst, const float *values, int value_count,
         switch (format) {
         default: NK_ASSERT(0 && "invalid vertex layout format"); break;
         case NK_FORMAT_SCHAR: {
-            char value = (char)NK_CLAMP(NK_SCHAR_MIN, values[value_index], NK_SCHAR_MAX);
+            char value = (char)NK_CLAMP((float)NK_SCHAR_MIN, values[value_index], (float)NK_SCHAR_MAX);
             NK_MEMCPY(attribute, &value, sizeof(value));
             attribute = (void*)((char*)attribute + sizeof(char));
         } break;
         case NK_FORMAT_SSHORT: {
-            nk_short value = (nk_short)NK_CLAMP(NK_SSHORT_MIN, values[value_index], NK_SSHORT_MAX);
+            nk_short value = (nk_short)NK_CLAMP((float)NK_SSHORT_MIN, values[value_index], (float)NK_SSHORT_MAX);
             NK_MEMCPY(attribute, &value, sizeof(value));
             attribute = (void*)((char*)attribute + sizeof(value));
         } break;
         case NK_FORMAT_SINT: {
-            nk_int value = (nk_int)NK_CLAMP(NK_SINT_MIN, values[value_index], NK_SINT_MAX);
+            nk_int value = (nk_int)NK_CLAMP((float)NK_SINT_MIN, values[value_index], (float)NK_SINT_MAX);
             NK_MEMCPY(attribute, &value, sizeof(value));
             attribute = (void*)((char*)attribute + sizeof(nk_int));
         } break;
         case NK_FORMAT_UCHAR: {
-            unsigned char value = (unsigned char)NK_CLAMP(NK_UCHAR_MIN, values[value_index], NK_UCHAR_MAX);
+            unsigned char value = (unsigned char)NK_CLAMP((float)NK_UCHAR_MIN, values[value_index], (float)NK_UCHAR_MAX);
             NK_MEMCPY(attribute, &value, sizeof(value));
             attribute = (void*)((char*)attribute + sizeof(unsigned char));
         } break;
         case NK_FORMAT_USHORT: {
-            nk_ushort value = (nk_ushort)NK_CLAMP(NK_USHORT_MIN, values[value_index], NK_USHORT_MAX);
+            nk_ushort value = (nk_ushort)NK_CLAMP((float)NK_USHORT_MIN, values[value_index], (float)NK_USHORT_MAX);
             NK_MEMCPY(attribute, &value, sizeof(value));
             attribute = (void*)((char*)attribute + sizeof(value));
             } break;
         case NK_FORMAT_UINT: {
-            nk_uint value = (nk_uint)NK_CLAMP(NK_UINT_MIN, values[value_index], NK_UINT_MAX);
+            nk_uint value = (nk_uint)NK_CLAMP((float)NK_UINT_MIN, values[value_index], (float)NK_UINT_MAX);
             NK_MEMCPY(attribute, &value, sizeof(value));
             attribute = (void*)((char*)attribute + sizeof(nk_uint));
         } break;
@@ -15060,7 +15064,7 @@ nk_progress_behavior(nk_flags *state, struct nk_input *in,
     int left_mouse_click_in_cursor = 0;
 
     nk_widget_state_reset(state);
-    if (!in) return value;
+    if (!in || !modifiable) return value;
     left_mouse_down = in && in->mouse.buttons[NK_BUTTON_LEFT].down;
     left_mouse_click_in_cursor = in && nk_input_has_mouse_click_down_in_rect(in,
             NK_BUTTON_LEFT, cursor, nk_true);
@@ -15068,13 +15072,9 @@ nk_progress_behavior(nk_flags *state, struct nk_input *in,
         *state = NK_WIDGET_STATE_HOVERED;
 
     if (in && left_mouse_down && left_mouse_click_in_cursor) {
-        int left_mouse_down = in->mouse.buttons[NK_BUTTON_LEFT].down;
-        int left_mouse_click_in_cursor = nk_input_has_mouse_click_down_in_rect(in,
-            NK_BUTTON_LEFT, r, nk_true);
-
         if (left_mouse_down && left_mouse_click_in_cursor) {
             float ratio = NK_MAX(0, (float)(in->mouse.pos.x - cursor.x)) / (float)cursor.w;
-            value = (nk_size)NK_CLAMP(0, (float)max * ratio, max);
+            value = (nk_size)NK_CLAMP(0, (float)max * ratio, (float)max);
             in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.x = cursor.x + cursor.w/2.0f;
             *state |= NK_WIDGET_STATE_ACTIVE;
         }
@@ -22578,6 +22578,7 @@ nk_popup_end(struct nk_context *ctx)
 NK_API int
 nk_tooltip_begin(struct nk_context *ctx, float width)
 {
+    int x,y,w,h;
     struct nk_window *win;
     const struct nk_input *in;
     struct nk_rect bounds;
@@ -22595,10 +22596,15 @@ nk_tooltip_begin(struct nk_context *ctx, float width)
     if (win->popup.win && (win->popup.type & NK_PANEL_SET_NONBLOCK))
         return 0;
 
-    bounds.w = nk_iceilf(width);
-    bounds.h = nk_iceilf(nk_null_rect.h);
-    bounds.x = nk_ifloorf(in->mouse.pos.x + 1) - win->layout->clip.x;
-    bounds.y = nk_ifloorf(in->mouse.pos.y + 1) - win->layout->clip.y;
+    w = nk_iceilf(width);
+    h = nk_iceilf(nk_null_rect.h);
+    x = nk_ifloorf(in->mouse.pos.x + 1) - (int)win->layout->clip.x;
+    y = nk_ifloorf(in->mouse.pos.y + 1) - (int)win->layout->clip.y;
+
+    bounds.x = (float)x;
+    bounds.y = (float)y;
+    bounds.w = (float)w;
+    bounds.h = (float)h;
 
     ret = nk_popup_begin(ctx, NK_POPUP_DYNAMIC,
         "__##Tooltip##__", NK_WINDOW_NO_SCROLLBAR|NK_WINDOW_BORDER, bounds);
