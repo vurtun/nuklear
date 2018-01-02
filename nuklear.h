@@ -1863,7 +1863,7 @@ NK_API struct nk_rect nk_layout_space_rect_to_local(struct nk_context*, struct n
  *          nk_group_end(ctx);
  *      }
  *
- * In the grand concept groups groups can be called after starting a window
+ * In the grand concept groups can be called after starting a window
  * with `nk_begin_xxx` and before calling `nk_end`:
  *
  *      struct nk_context ctx;
