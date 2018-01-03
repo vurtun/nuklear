@@ -101,6 +101,7 @@ languages. Furthermore there are no guarantee that all bindings will always be k
 - [Chicken](https://github.com/wasamasa/nuklear) by wasamasa@github.comx
 - [Nim](https://github.com/zacharycarter/nuklear-nim) by zacharycarter@github.com
 - [Lua/Löve2d](https://github.com/keharriso/love-nuklear) by Kevin Harrison
+- [Python](https://github.com/billsix/pyNuklear) by William Emerison Six
 
 ## Credits
 Developed by Micha Mettke and every direct or indirect contributor to the GitHub.
