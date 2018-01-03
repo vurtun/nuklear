@@ -2,7 +2,7 @@
 BIN = zahnrad
 
 # Flags
-CFLAGS = -std=c89 -pedantic -O2 -Wunused -DRAWFB_XRGB_8888
+CFLAGS += -std=c89 -pedantic -O2 -Wunused -DRAWFB_XRGB_8888
 
 SRC = main.c
 OBJ = $(SRC:.c=.o)
