@@ -85,14 +85,6 @@ die(const char *fmt, ...)
     exit(EXIT_FAILURE);
 }
 
-static void*
-xcalloc(size_t siz, size_t n)
-{
-    void *ptr = calloc(siz, n);
-    if (!ptr) die("Out of memory\n");
-    return ptr;
-}
-
 static long
 timestamp(void)
 {
@@ -118,12 +110,32 @@ sleep_for(long t)
  *
  * ===============================================================*/
 /* This are some code examples to provide a small overview of what can be
- * done with this library. To try out an example uncomment the include
- * and the corresponding function. */
-/*#include "../style.c"*/
-/*#include "../calculator.c"*/
-#include "../overview.c"
-#include "../node_editor.c"
+ * done with this library. To try out an example uncomment the defines */
+/*#define INCLUDE_ALL */
+/*#define INCLUDE_STYLE */
+/*#define INCLUDE_CALCULATOR */
+/*#define INCLUDE_OVERVIEW */
+/*#define INCLUDE_NODE_EDITOR */
+
+#ifdef INCLUDE_ALL
+  #define INCLUDE_STYLE
+  #define INCLUDE_CALCULATOR
+  #define INCLUDE_OVERVIEW
+  #define INCLUDE_NODE_EDITOR
+#endif
+
+#ifdef INCLUDE_STYLE
+  #include "../style.c"
+#endif
+#ifdef INCLUDE_CALCULATOR
+  #include "../calculator.c"
+#endif
+#ifdef INCLUDE_OVERVIEW
+  #include "../overview.c"
+#endif
+#ifdef INCLUDE_NODE_EDITOR
+  #include "../node_editor.c"
+#endif
 
 /* ===============================================================
  *
@@ -141,7 +153,6 @@ main(void)
     struct rawfb_context *rawfb;
     void *fb = NULL;
     unsigned char tex_scratch[512 * 512];
-    XSizeHints hints;
 
     /* X11 */
     memset(&xw, 0, sizeof xw);
@@ -175,14 +186,14 @@ main(void)
 
     /* GUI */
     rawfb = nk_rawfb_init(fb, tex_scratch, xw.width, xw.height, xw.width * 4);
-    if (!rawfb)
-        running = 0;
+    if (!rawfb) running = 0;
 
-    /* style.c */
+    #ifdef INCLUDE_STYLE
     /*set_style(ctx, THEME_WHITE);*/
     /*set_style(ctx, THEME_RED);*/
     /*set_style(ctx, THEME_BLUE);*/
     /*set_style(ctx, THEME_DARK);*/
+    #endif
 
     while (running) {
         /* Input */
@@ -216,9 +227,15 @@ main(void)
         if (nk_window_is_closed(&rawfb->ctx, "Demo")) break;
 
         /* -------------- EXAMPLES ---------------- */
-        /*calculator(ctx);*/
-        overview(&rawfb->ctx);
-        node_editor(&rawfb->ctx);
+        #ifdef INCLUDE_CALCULATOR
+          calculator(ctx);
+        #endif
+        #ifdef INCLUDE_OVERVIEW
+          overview(ctx);
+        #endif
+        #ifdef INCLUDE_NODE_EDITOR
+          node_editor(ctx);
+        #endif
         /* ----------------------------------------- */
 
         /* Draw framebuffer */

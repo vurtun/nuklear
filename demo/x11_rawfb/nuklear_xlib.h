@@ -234,10 +234,10 @@ nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt, struct r
         } return 1;
     } else if (evt->type == Expose || evt->type == ConfigureNotify) {
         /* Window resize handler */
+        void *fb;
+        unsigned int width, height;
         XWindowAttributes attr;
         XGetWindowAttributes(dpy, win, &attr);
-        unsigned int width, height;
-        void *fb;
 
         width = (unsigned int)attr.width;
         height = (unsigned int)attr.height;

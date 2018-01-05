@@ -132,7 +132,7 @@ WindowProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
 int main(void)
 {
     struct nk_context *ctx;
-    struct nk_color background;
+    struct nk_colorf bg;
 
     WNDCLASSW wc;
     RECT rect = { 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT };
@@ -211,7 +211,7 @@ int main(void)
     /*set_style(ctx, THEME_DARK);*/
     #endif
 
-    background = nk_rgb(28,48,62);
+    bg.r = 0.10f, bg.g = 0.18f, bg.b = 0.24f, bg.a = 1.0f;
     while (running)
     {
         /* Input */
@@ -247,14 +247,14 @@ int main(void)
             nk_layout_row_dynamic(ctx, 20, 1);
             nk_label(ctx, "background:", NK_TEXT_LEFT);
             nk_layout_row_dynamic(ctx, 25, 1);
-            if (nk_combo_begin_color(ctx, background, nk_vec2(nk_widget_width(ctx),400))) {
+            if (nk_combo_begin_color(ctx, nk_rgb_cf(bg), nk_vec2(nk_widget_width(ctx),400))) {
                 nk_layout_row_dynamic(ctx, 120, 1);
-                background = nk_color_picker(ctx, background, NK_RGBA);
+                bg = nk_color_picker(ctx, bg, NK_RGBA);
                 nk_layout_row_dynamic(ctx, 25, 1);
-                background.r = (nk_byte)nk_propertyi(ctx, "#R:", 0, background.r, 255, 1,1);
-                background.g = (nk_byte)nk_propertyi(ctx, "#G:", 0, background.g, 255, 1,1);
-                background.b = (nk_byte)nk_propertyi(ctx, "#B:", 0, background.b, 255, 1,1);
-                background.a = (nk_byte)nk_propertyi(ctx, "#A:", 0, background.a, 255, 1,1);
+                bg.r = nk_propertyf(ctx, "#R:", 0, bg.r, 1.0f, 0.01f,0.005f);
+                bg.g = nk_propertyf(ctx, "#G:", 0, bg.g, 1.0f, 0.01f,0.005f);
+                bg.b = nk_propertyf(ctx, "#B:", 0, bg.b, 1.0f, 0.01f,0.005f);
+                bg.a = nk_propertyf(ctx, "#A:", 0, bg.a, 1.0f, 0.01f,0.005f);
                 nk_combo_end(ctx);
             }
         }
@@ -272,10 +272,8 @@ int main(void)
         #endif
         /* ----------------------------------------- */
 
-        {/* Draw */
-        float bg[4];
-        nk_color_fv(bg, background);
-        ID3D11DeviceContext_ClearRenderTargetView(context, rt_view, bg);
+        /* Draw */
+        ID3D11DeviceContext_ClearRenderTargetView(context, rt_view, &bg.r);
         ID3D11DeviceContext_OMSetRenderTargets(context, 1, &rt_view, NULL);
         nk_d3d11_render(context, NK_ANTI_ALIASING_ON);
         hr = IDXGISwapChain_Present(swap_chain, 1, 0);
@@ -287,7 +285,7 @@ int main(void)
             /* window is not visible, so vsync won't work. Let's sleep a bit to reduce CPU usage */
             Sleep(10);
         }
-        assert(SUCCEEDED(hr));}
+        assert(SUCCEEDED(hr));
     }
 
     ID3D11DeviceContext_ClearState(context);

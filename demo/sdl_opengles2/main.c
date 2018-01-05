@@ -57,9 +57,7 @@
 SDL_Window *win;
 int running = nk_true;
 
-    
-
-void 
+static void
 MainLoop(void* loopArg){
     struct nk_context *ctx = (struct nk_context *)loopArg;
 
@@ -135,8 +133,7 @@ MainLoop(void* loopArg){
     SDL_GL_SwapWindow(win);}
 }
 
-int
-main(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
     /* GUI */
     struct nk_context *ctx;
