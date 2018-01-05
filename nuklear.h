@@ -6176,7 +6176,7 @@ nk_colorf_hsva_f(float *out_h, float *out_s,
     *out_h = NK_ABS(K + (in.g - in.b)/(6.0f * chroma + 1e-20f));
     *out_s = chroma / (in.r + 1e-20f);
     *out_v = in.r;
-    *out_a = (float)in.a / 255.0f;
+    *out_a = in.a;
 
 }
 
