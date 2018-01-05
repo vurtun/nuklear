@@ -319,7 +319,7 @@ overview(struct nk_context *ctx)
                 static int check_values[5];
                 static float position[3];
                 static struct nk_color combo_color = {130, 50, 50, 255};
-                static struct nk_color combo_color2 = {130, 180, 50, 255};
+                static struct nk_colorf combo_color2 = {0.509f, 0.705f, 0.2f, 1.0f};
                 static size_t prog_a =  20, prog_b = 40, prog_c = 10, prog_d = 90;
                 static const char *weapons[] = {"Fist","Pistol","Shotgun","Plasma","BFG"};
 
@@ -344,9 +344,8 @@ overview(struct nk_context *ctx)
                     combo_color.a = (nk_byte)nk_slide_int(ctx, 0, combo_color.a , 255, 5);
                     nk_combo_end(ctx);
                 }
-
                 /* complex color combobox */
-                if (nk_combo_begin_color(ctx, combo_color2, nk_vec2(200,400))) {
+                if (nk_combo_begin_color(ctx, nk_rgb_cf(combo_color2), nk_vec2(200,400))) {
                     enum color_mode {COL_RGB, COL_HSV};
                     static int col_mode = COL_RGB;
                     #ifndef DEMO_DO_NOT_USE_COLOR_PICKER
@@ -360,22 +359,21 @@ overview(struct nk_context *ctx)
 
                     nk_layout_row_dynamic(ctx, 25, 1);
                     if (col_mode == COL_RGB) {
-                        combo_color2.r = (nk_byte)nk_propertyi(ctx, "#R:", 0, combo_color2.r, 255, 1,1);
-                        combo_color2.g = (nk_byte)nk_propertyi(ctx, "#G:", 0, combo_color2.g, 255, 1,1);
-                        combo_color2.b = (nk_byte)nk_propertyi(ctx, "#B:", 0, combo_color2.b, 255, 1,1);
-                        combo_color2.a = (nk_byte)nk_propertyi(ctx, "#A:", 0, combo_color2.a, 255, 1,1);
+                        combo_color2.r = nk_propertyf(ctx, "#R:", 0, combo_color2.r, 1.0f, 0.01f,0.005f);
+                        combo_color2.g = nk_propertyf(ctx, "#G:", 0, combo_color2.g, 1.0f, 0.01f,0.005f);
+                        combo_color2.b = nk_propertyf(ctx, "#B:", 0, combo_color2.b, 1.0f, 0.01f,0.005f);
+                        combo_color2.a = nk_propertyf(ctx, "#A:", 0, combo_color2.a, 1.0f, 0.01f,0.005f);
                     } else {
-                        nk_byte tmp[4];
-                        nk_color_hsva_bv(tmp, combo_color2);
-                        tmp[0] = (nk_byte)nk_propertyi(ctx, "#H:", 0, tmp[0], 255, 1,1);
-                        tmp[1] = (nk_byte)nk_propertyi(ctx, "#S:", 0, tmp[1], 255, 1,1);
-                        tmp[2] = (nk_byte)nk_propertyi(ctx, "#V:", 0, tmp[2], 255, 1,1);
-                        tmp[3] = (nk_byte)nk_propertyi(ctx, "#A:", 0, tmp[3], 255, 1,1);
-                        combo_color2 = nk_hsva_bv(tmp);
+                        float hsva[4];
+                        nk_colorf_hsva_fv(hsva, combo_color2);
+                        hsva[0] = nk_propertyf(ctx, "#H:", 0, hsva[0], 1.0f, 0.01f,0.05f);
+                        hsva[1] = nk_propertyf(ctx, "#S:", 0, hsva[1], 1.0f, 0.01f,0.05f);
+                        hsva[2] = nk_propertyf(ctx, "#V:", 0, hsva[2], 1.0f, 0.01f,0.05f);
+                        hsva[3] = nk_propertyf(ctx, "#A:", 0, hsva[3], 1.0f, 0.01f,0.05f);
+                        combo_color2 = nk_hsva_colorfv(hsva);
                     }
                     nk_combo_end(ctx);
                 }
-
                 /* progressbar combobox */
                 sum = prog_a + prog_b + prog_c + prog_d;
                 sprintf(buffer, "%lu", sum);
@@ -459,7 +457,9 @@ overview(struct nk_context *ctx)
                     if (nk_combo_begin_label(ctx, buffer, nk_vec2(350,400)))
                     {
                         int i = 0;
-                        const char *month[] = {"January", "February", "March", "Apil", "May", "June", "July", "August", "September", "Ocotober", "November", "December"};
+                        const char *month[] = {"January", "February", "March",
+                            "April", "May", "June", "July", "August", "September",
+                            "October", "November", "December"};
                         const char *week_days[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
                         const int month_days[] = {31,28,31,30,31,30,31,31,30,31,30,31};
                         int year = sel_date.tm_year+1900;

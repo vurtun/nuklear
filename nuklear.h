@@ -1,5 +1,5 @@
 /*
- Nuklear - 2.00.7 - public domain
+ Nuklear - 3.00.0 - public domain
  no warranty implied; use at your own risk.
  authored from 2015-2017 by Micha Mettke
 
@@ -2130,8 +2130,8 @@ NK_API nk_size nk_prog(struct nk_context*, nk_size cur, nk_size max, int modifya
  *                                  COLOR PICKER
  *
  * ============================================================================= */
-NK_API struct nk_color nk_color_picker(struct nk_context*, struct nk_color, enum nk_color_format);
-NK_API int nk_color_pick(struct nk_context*, struct nk_color*, enum nk_color_format);
+NK_API struct nk_colorf nk_color_picker(struct nk_context*, struct nk_colorf, enum nk_color_format);
+NK_API int nk_color_pick(struct nk_context*, struct nk_colorf*, enum nk_color_format);
 /* =============================================================================
  *
  *                                  PROPERTIES
@@ -2365,6 +2365,7 @@ NK_API struct nk_color nk_rgb_iv(const int *rgb);
 NK_API struct nk_color nk_rgb_bv(const nk_byte* rgb);
 NK_API struct nk_color nk_rgb_f(float r, float g, float b);
 NK_API struct nk_color nk_rgb_fv(const float *rgb);
+NK_API struct nk_color nk_rgb_cf(struct nk_colorf c);
 NK_API struct nk_color nk_rgb_hex(const char *rgb);
 
 NK_API struct nk_color nk_rgba(int r, int g, int b, int a);
@@ -2373,7 +2374,13 @@ NK_API struct nk_color nk_rgba_iv(const int *rgba);
 NK_API struct nk_color nk_rgba_bv(const nk_byte *rgba);
 NK_API struct nk_color nk_rgba_f(float r, float g, float b, float a);
 NK_API struct nk_color nk_rgba_fv(const float *rgba);
+NK_API struct nk_color nk_rgba_cf(struct nk_colorf c);
 NK_API struct nk_color nk_rgba_hex(const char *rgb);
+
+NK_API struct nk_colorf nk_hsva_colorf(float h, float s, float v, float a);
+NK_API struct nk_colorf nk_hsva_colorfv(float *c);
+NK_API void nk_colorf_hsva_f(float *out_h, float *out_s, float *out_v, float *out_a, struct nk_colorf in);
+NK_API void nk_colorf_hsva_fv(float *hsva, struct nk_colorf in);
 
 NK_API struct nk_color nk_hsv(int h, int s, int v);
 NK_API struct nk_color nk_hsv_iv(const int *hsv);
@@ -2390,6 +2397,7 @@ NK_API struct nk_color nk_hsva_fv(const float *hsva);
 /* color (conversion nuklear --> user) */
 NK_API void nk_color_f(float *r, float *g, float *b, float *a, struct nk_color);
 NK_API void nk_color_fv(float *rgba_out, struct nk_color);
+NK_API struct nk_colorf nk_color_cf(struct nk_color);
 NK_API void nk_color_d(double *r, double *g, double *b, double *a, struct nk_color);
 NK_API void nk_color_dv(double *rgba_out, struct nk_color);
 
@@ -5959,6 +5967,12 @@ nk_rgba_fv(const float *c)
 }
 
 NK_API struct nk_color
+nk_rgba_cf(struct nk_colorf c)
+{
+    return nk_rgba_f(c.r, c.g, c.b, c.a);
+}
+
+NK_API struct nk_color
 nk_rgb_f(float r, float g, float b)
 {
     struct nk_color ret;
@@ -5973,6 +5987,12 @@ NK_API struct nk_color
 nk_rgb_fv(const float *c)
 {
     return nk_rgb_f(c[0], c[1], c[2]);
+}
+
+NK_API struct nk_color
+nk_rgb_cf(struct nk_colorf c)
+{
+    return nk_rgb_f(c.r, c.g, c.b);
 }
 
 NK_API struct nk_color
@@ -6027,18 +6047,16 @@ nk_hsva_bv(const nk_byte *c)
     return nk_hsva(c[0], c[1], c[2], c[3]);
 }
 
-NK_API struct nk_color
-nk_hsva_f(float h, float s, float v, float a)
+NK_API struct nk_colorf
+nk_hsva_colorf(float h, float s, float v, float a)
 {
-    struct nk_colorf out = {0,0,0,0};
-    float p, q, t, f;
     int i;
-
+    float p, q, t, f;
+    struct nk_colorf out = {0,0,0,0};
     if (s <= 0.0f) {
-        out.r = v; out.g = v; out.b = v;
-        return nk_rgb_f(out.r, out.g, out.b);
+        out.r = v; out.g = v; out.b = v; out.a = a;
+        return out;
     }
-
     h = h / (60.0f/360.0f);
     i = (int)h;
     f = h - (float)i;
@@ -6052,9 +6070,22 @@ nk_hsva_f(float h, float s, float v, float a)
     case 2: out.r = p; out.g = v; out.b = t; break;
     case 3: out.r = p; out.g = q; out.b = v; break;
     case 4: out.r = t; out.g = p; out.b = v; break;
-    case 5: out.r = v; out.g = p; out.b = q; break;
-    }
-    return nk_rgba_f(out.r, out.g, out.b, a);
+    case 5: out.r = v; out.g = p; out.b = q; break;}
+    out.a = a;
+    return out;
+}
+
+NK_API struct nk_colorf
+nk_hsva_colorfv(float *c)
+{
+    return nk_hsva_colorf(c[0], c[1], c[2], c[3]);
+}
+
+NK_API struct nk_color
+nk_hsva_f(float h, float s, float v, float a)
+{
+    struct nk_colorf c = nk_hsva_colorf(h, s, v, a);
+    return nk_rgba_f(c.r, c.g, c.b, c.a);
 }
 
 NK_API struct nk_color
@@ -6089,6 +6120,14 @@ nk_color_fv(float *c, struct nk_color in)
     nk_color_f(&c[0], &c[1], &c[2], &c[3], in);
 }
 
+NK_API struct nk_colorf
+nk_color_cf(struct nk_color in)
+{
+    struct nk_colorf o;
+    nk_color_f(&o.r, &o.g, &o.b, &o.a, in);
+    return o;
+}
+
 NK_API void
 nk_color_d(double *r, double *g, double *b, double *a, struct nk_color in)
 {
@@ -6120,27 +6159,39 @@ nk_color_hsv_fv(float *out, struct nk_color in)
 }
 
 NK_API void
-nk_color_hsva_f(float *out_h, float *out_s,
-    float *out_v, float *out_a, struct nk_color in)
+nk_colorf_hsva_f(float *out_h, float *out_s,
+    float *out_v, float *out_a, struct nk_colorf in)
 {
     float chroma;
     float K = 0.0f;
-    float r,g,b,a;
-
-    nk_color_f(&r,&g,&b,&a, in);
-    if (g < b) {
-        const float t = g; g = b; b = t;
+    if (in.g < in.b) {
+        const float t = in.g; in.g = in.b; in.b = t;
         K = -1.f;
     }
-    if (r < g) {
-        const float t = r; r = g; g = t;
+    if (in.r < in.g) {
+        const float t = in.r; in.r = in.g; in.g = t;
         K = -2.f/6.0f - K;
     }
-    chroma = r - ((g < b) ? g: b);
-    *out_h = NK_ABS(K + (g - b)/(6.0f * chroma + 1e-20f));
-    *out_s = chroma / (r + 1e-20f);
-    *out_v = r;
+    chroma = in.r - ((in.g < in.b) ? in.g: in.b);
+    *out_h = NK_ABS(K + (in.g - in.b)/(6.0f * chroma + 1e-20f));
+    *out_s = chroma / (in.r + 1e-20f);
+    *out_v = in.r;
     *out_a = (float)in.a / 255.0f;
+
+}
+
+NK_API void
+nk_colorf_hsva_fv(float *hsva, struct nk_colorf in)
+{
+    nk_colorf_hsva_f(&hsva[0], &hsva[1], &hsva[2], &hsva[3], in);
+}
+NK_API void
+nk_color_hsva_f(float *out_h, float *out_s,
+    float *out_v, float *out_a, struct nk_color in)
+{
+    struct nk_colorf col;
+    nk_color_f(&col.r,&col.g,&col.b,&col.a, in);
+    nk_colorf_hsva_f(out_h, out_s, out_v, out_a, col);
 }
 
 NK_API void
@@ -16447,7 +16498,7 @@ NK_INTERN int
 nk_color_picker_behavior(nk_flags *state,
     const struct nk_rect *bounds, const struct nk_rect *matrix,
     const struct nk_rect *hue_bar, const struct nk_rect *alpha_bar,
-    struct nk_color *color, const struct nk_input *in)
+    struct nk_colorf *color, const struct nk_input *in)
 {
     float hsva[4];
     int value_changed = 0;
@@ -16459,19 +16510,17 @@ nk_color_picker_behavior(nk_flags *state,
     NK_ASSERT(color);
 
     /* color matrix */
-    nk_color_hsva_fv(hsva, *color);
+    nk_colorf_hsva_fv(hsva, *color);
     if (nk_button_behavior(state, *matrix, in, NK_BUTTON_REPEATER)) {
         hsva[1] = NK_SATURATE((in->mouse.pos.x - matrix->x) / (matrix->w-1));
         hsva[2] = 1.0f - NK_SATURATE((in->mouse.pos.y - matrix->y) / (matrix->h-1));
         value_changed = hsv_changed = 1;
     }
-
     /* hue bar */
     if (nk_button_behavior(state, *hue_bar, in, NK_BUTTON_REPEATER)) {
         hsva[0] = NK_SATURATE((in->mouse.pos.y - hue_bar->y) / (hue_bar->h-1));
         value_changed = hsv_changed = 1;
     }
-
     /* alpha bar */
     if (alpha_bar) {
         if (nk_button_behavior(state, *alpha_bar, in, NK_BUTTON_REPEATER)) {
@@ -16481,14 +16530,13 @@ nk_color_picker_behavior(nk_flags *state,
     }
     nk_widget_state_reset(state);
     if (hsv_changed) {
-        *color = nk_hsva_fv(hsva);
+        *color = nk_hsva_colorfv(hsva);
         *state = NK_WIDGET_STATE_ACTIVE;
     }
     if (value_changed) {
-        color->a = (nk_byte)(hsva[3] * 255.0f);
+        color->a = hsva[3];
         *state = NK_WIDGET_STATE_ACTIVE;
     }
-
     /* set color picker widget state */
     if (nk_input_is_mouse_hovering_rect(in, *bounds))
         *state = NK_WIDGET_STATE_HOVERED;
@@ -16502,7 +16550,7 @@ nk_color_picker_behavior(nk_flags *state,
 NK_INTERN void
 nk_draw_color_picker(struct nk_command_buffer *o, const struct nk_rect *matrix,
     const struct nk_rect *hue_bar, const struct nk_rect *alpha_bar,
-    struct nk_color color)
+    struct nk_colorf col)
 {
     NK_STORAGE const struct nk_color black = {0,0,0,255};
     NK_STORAGE const struct nk_color white = {255, 255, 255, 255};
@@ -16519,16 +16567,11 @@ nk_draw_color_picker(struct nk_command_buffer *o, const struct nk_rect *matrix,
     NK_ASSERT(hue_bar);
 
     /* draw hue bar */
-    nk_color_hsv_fv(hsva, color);
+    nk_colorf_hsva_fv(hsva, col);
     for (i = 0; i < 6; ++i) {
         NK_GLOBAL const struct nk_color hue_colors[] = {
-            {255, 0, 0, 255},
-            {255,255,0,255},
-            {0,255,0,255},
-            {0, 255,255,255},
-            {0,0,255,255},
-            {255, 0, 255, 255},
-            {255, 0, 0, 255}
+            {255, 0, 0, 255}, {255,255,0,255}, {0,255,0,255}, {0, 255,255,255},
+            {0,0,255,255}, {255, 0, 255, 255}, {255, 0, 0, 255}
         };
         nk_fill_rect_multi_color(o,
             nk_rect(hue_bar->x, hue_bar->y + (float)i * (hue_bar->h/6.0f) + 0.5f,
@@ -16541,7 +16584,7 @@ nk_draw_color_picker(struct nk_command_buffer *o, const struct nk_rect *matrix,
 
     /* draw alpha bar */
     if (alpha_bar) {
-        float alpha = NK_SATURATE((float)color.a/255.0f);
+        float alpha = NK_SATURATE(col.a);
         line_y = (float)(int)(alpha_bar->y +  (1.0f - alpha) * matrix->h + 0.5f);
 
         nk_fill_rect_multi_color(o, *alpha_bar, white, white, black, black);
@@ -16566,7 +16609,7 @@ nk_draw_color_picker(struct nk_command_buffer *o, const struct nk_rect *matrix,
 
 NK_INTERN int
 nk_do_color_picker(nk_flags *state,
-    struct nk_command_buffer *out, struct nk_color *color,
+    struct nk_command_buffer *out, struct nk_colorf *col,
     enum nk_color_format fmt, struct nk_rect bounds,
     struct nk_vec2 padding, const struct nk_input *in,
     const struct nk_user_font *font)
@@ -16578,10 +16621,10 @@ nk_do_color_picker(nk_flags *state,
     float bar_w;
 
     NK_ASSERT(out);
-    NK_ASSERT(color);
+    NK_ASSERT(col);
     NK_ASSERT(state);
     NK_ASSERT(font);
-    if (!out || !color || !state || !font)
+    if (!out || !col || !state || !font)
         return ret;
 
     bar_w = font->height;
@@ -16606,8 +16649,8 @@ nk_do_color_picker(nk_flags *state,
     alpha_bar.h = matrix.h;
 
     ret = nk_color_picker_behavior(state, &bounds, &matrix, &hue_bar,
-        (fmt == NK_RGBA) ? &alpha_bar:0, color, in);
-    nk_draw_color_picker(out, &matrix, &hue_bar, (fmt == NK_RGBA) ? &alpha_bar:0, *color);
+        (fmt == NK_RGBA) ? &alpha_bar:0, col, in);
+    nk_draw_color_picker(out, &matrix, &hue_bar, (fmt == NK_RGBA) ? &alpha_bar:0, *col);
     return ret;
 }
 
@@ -21792,7 +21835,7 @@ nk_propertyd(struct nk_context *ctx, const char *name, double min,
  *
  * --------------------------------------------------------------*/
 NK_API int
-nk_color_pick(struct nk_context * ctx, struct nk_color *color,
+nk_color_pick(struct nk_context * ctx, struct nk_colorf *color,
     enum nk_color_format fmt)
 {
     struct nk_window *win;
@@ -21820,8 +21863,8 @@ nk_color_pick(struct nk_context * ctx, struct nk_color *color,
                 nk_vec2(0,0), in, config->font);
 }
 
-NK_API struct nk_color
-nk_color_picker(struct nk_context *ctx, struct nk_color color,
+NK_API struct nk_colorf
+nk_color_picker(struct nk_context *ctx, struct nk_colorf color,
     enum nk_color_format fmt)
 {
     nk_color_pick(ctx, &color, fmt);
