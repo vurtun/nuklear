@@ -34,7 +34,7 @@ USAGE:
     and does not contain the actual implementation.
 
     The implementation mode requires to define  the preprocessor macro
-    NK_IMPLEMENTATION in *one* .c/.cpp file before #includeing this file, e.g.:
+    NK_IMPLEMENTATION in *one* .c/.cpp file before #including this file, e.g.:
 
         #define NK_IMPLEMENTATION
         #include "nuklear.h"
@@ -62,7 +62,7 @@ FEATURES:
         - Complete control with ability to use skinning to decorate widgets
     - Bendable UI library with widget ranging from/to
         - Basic widgets like buttons, checkboxes, slider, ...
-        - Advanced widget like abstract comboboxes, contextual menus,...
+        - Advanced widgets like abstract comboboxes, contextual menus,...
     - Compile time configuration to only compile what you need
         - Subset which can be used if you do not want to link or use the standard library
     - Can be easily modified to only update on user input instead of frame updates
@@ -71,6 +71,17 @@ OPTIONAL DEFINES:
     NK_PRIVATE
         If defined declares all functions as static, so they can only be accessed
         inside the file that contains the implementation
+
+    NK_USE_MODERN_STDLIB
+        If defined assumes that you have C99 or newer libc, includes all needed standard
+        headers and defines all the required optional defines to fully utilize the libc.
+        <!> If used other optional defines that deal with stdlib can't be used. <!>
+        <!> If used needs to be defined for implementation and header. <!>
+
+    NK_DO_NOT_USE_STDLIB
+        If defined configures Nuklear to be fully independent. Asserts won't work.
+        <!> If used other optional defines that deal with stdlib can't be used. <!>
+        <!> If used needs to be defined for implementation and header. <!>
 
     NK_INCLUDE_FIXED_TYPES
         If defined it will include header <stdint.h> for fixed sized types
@@ -374,6 +385,47 @@ extern "C" {
  *
  * ===============================================================
  */
+
+#ifdef NK_USE_MODERN_STDLIB
+ #if defined(NK_USE_FIXED_TYPES) || defined(NK_INCLUDE_DEFAULT_ALLOCATOR) \
+  || defined(NK_INCLUDE_STANDARD_IO) || defined(NK_INCLUDE_STANDARD_VARARGS) \
+  || defined(NK_ASSERT) || defined(NK_MEMSET) || defined(NK_MEMCPY) \
+  || defined(NK_SQRT) || defined(NK_SIN) || defined(NK_COS) \
+  || defined(NK_STRTOD) || defined(NK_VSNPRINTF)
+    #error "You can't use this define with other defines that deal with stdlib"
+ #endif
+ #if !defined(__STDC_VERSION__) || (__STDC_VERSION__ < 199901L)
+    #error "C99 or newer required for this define to work"
+ #endif
+ #define NK_USE_FIXED_TYPES
+ #define NK_INCLUDE_DEFAULT_ALLOCATOR
+ #define NK_INCLUDE_STANDARD_IO
+ #define NK_INCLUDE_STANDARD_VARARGS
+ #ifdef NK_IMPLEMENTATION
+   #include <string.h>
+   #include <math.h>
+   #define NK_MEMSET memset
+   #define NK_MEMCPY memcpy
+   #define NK_SQRT sqrt
+   #define NK_SIN sin
+   #define NK_COS cos
+   #define NK_STRTOD strtod
+   #define NK_DTOA nk_dtoa_libc
+   #define NK_VSNPRINTF vsnprintf
+ #endif
+#endif
+
+#ifdef NK_DO_NOT_USE_STDLIB
+ #if defined(NK_USE_FIXED_TYPES) || defined(NK_INCLUDE_DEFAULT_ALLOCATOR) \
+  || defined(NK_INCLUDE_STANDARD_IO) || defined(NK_INCLUDE_STANDARD_VARARGS) \
+  || defined(NK_ASSERT) || defined(NK_MEMSET) || defined(NK_MEMCPY) \
+  || defined(NK_SQRT) || defined(NK_SIN) || defined(NK_COS) \
+  || defined(NK_STRTOD) || defined(NK_VSNPRINTF)
+    #error "You can't use this define with other defines that deal with stdlib"
+ #endif
+ #define NK_ASSERT(expr) (void)(0)
+#endif
+
 #ifdef NK_INCLUDE_FIXED_TYPES
  #include <stdint.h>
  #define NK_INT8 int8_t
@@ -2462,8 +2514,13 @@ NK_API int nk_strlen(const char *str);
 NK_API int nk_stricmp(const char *s1, const char *s2);
 NK_API int nk_stricmpn(const char *s1, const char *s2, int n);
 NK_API int nk_strtoi(const char *str, const char **endptr);
-NK_API float nk_strtof(const char *str, const char **endptr);
-NK_API double nk_strtod(const char *str, const char **endptr);
+#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199101L)
+NK_API float nk_strtof(const char *restrict str, char **restrict endptr);
+NK_API double nk_strtod(const char *restrict str, char **restrict endptr);
+#else
+NK_API float nk_strtof(const char *str, char **endptr);
+NK_API double nk_strtod(const char *str, char **endptr);
+#endif
 NK_API int nk_strfilter(const char *text, const char *regexp);
 NK_API int nk_strmatch_fuzzy_string(char const *str, char const *pattern, int *out_score);
 NK_API int nk_strmatch_fuzzy_text(const char *txt, int txt_len, const char *pattern, int *out_score);
@@ -4464,7 +4521,11 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #define NK_STRTOD nk_strtod
 #endif
 #ifndef NK_DTOA
-#define NK_DTOA nk_dtoa
+ #ifdef NK_INCLUDE_STANDARD_IO
+   #define NK_DTOA nk_dtoa_libc
+ #else
+   #define NK_DTOA nk_dtoa
+ #endif
 #endif
 
 #define NK_DEFAULT (-1)
@@ -4892,8 +4953,13 @@ nk_strtoi(const char *str, const char **endptr)
     return neg*value;
 }
 
+#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199101L)
 NK_API double
-nk_strtod(const char *str, const char **endptr)
+nk_strtod(const char *restrict str, char **restrict endptr)
+#else
+NK_API double
+nk_strtod(const char *str, char **endptr)
+#endif
 {
     double m;
     double neg = 1.0;
@@ -4946,12 +5012,17 @@ nk_strtod(const char *str, const char **endptr)
     }
     number = value * neg;
     if (endptr)
-        *endptr = p;
+        *endptr = (char *) p;
     return number;
 }
 
+#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199101L)
 NK_API float
-nk_strtof(const char *str, const char **endptr)
+nk_strtof(const char *restrict str, char **restrict endptr)
+#else
+NK_API float
+nk_strtof(const char *str, char **endptr)
+#endif
 {
     float float_value;
     double double_value;
@@ -5376,6 +5447,16 @@ nk_dtoa(char *s, double n)
     *(c) = '\0';
     return s;
 }
+
+#ifdef NK_INCLUDE_STANDARD_IO
+NK_INTERN char*
+nk_dtoa_libc(char *s, double n)
+{
+    NK_ASSERT(s);
+    if (!s) return 0;
+    return sprintf(s, "%g", n) >= 0 ? s : 0;
+}
+#endif
 
 #ifdef NK_INCLUDE_STANDARD_VARARGS
 #ifndef NK_INCLUDE_STANDARD_IO
