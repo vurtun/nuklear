@@ -10,10 +10,12 @@
 ///     2. Constants section
 ///     3. Dependencies section
 /// 5. Example section
-/// 6. License section
-/// 7. Changelog section
-/// 8. Gallery section
-/// 9. Credits section
+/// 6. API section
+///     1. Context section
+/// 7. License section
+/// 8. Changelog section
+/// 9. Gallery section
+/// 10. Credits section
 ///
 /// ## About
 /// This is a minimal state immediate mode graphical user interface toolkit
@@ -82,19 +84,19 @@
 ///     Every time nuklear is included define the same compiler flags. This very important not doing so could lead to compiler errors or even worse stack corruptions.
 ///
 /// ### Flags
-/// Flag | Description
-/// -----|-------------
-/// NK_PRIVATE | If defined declares all functions as static, so they can only be accessed inside the file that contains the implementation
-/// NK_INCLUDE_FIXED_TYPES | If defined it will include header `<stdint.h>` for fixed sized types otherwise nuklear tries to select the correct type. If that fails it will throw a compiler error and you have to select the correct types yourself.
-/// NK_INCLUDE_DEFAULT_ALLOCATOR | if defined it will include header `<stdlib.h>` and provide additional functions to use this library without caring for memory allocation control and therefore ease memory management.
-/// NK_INCLUDE_STANDARD_IO | if defined it will include header `<stdio.h>` and provide additional functions depending on file loading.
-/// NK_INCLUDE_STANDARD_VARARGS | if defined it will include header <stdio.h> and provide additional functions depending on file loading.
+/// Flag                            | Description
+/// --------------------------------|------------------------------------------
+/// NK_PRIVATE                      | If defined declares all functions as static, so they can only be accessed inside the file that contains the implementation
+/// NK_INCLUDE_FIXED_TYPES          | If defined it will include header `<stdint.h>` for fixed sized types otherwise nuklear tries to select the correct type. If that fails it will throw a compiler error and you have to select the correct types yourself.
+/// NK_INCLUDE_DEFAULT_ALLOCATOR    | if defined it will include header `<stdlib.h>` and provide additional functions to use this library without caring for memory allocation control and therefore ease memory management.
+/// NK_INCLUDE_STANDARD_IO          | if defined it will include header `<stdio.h>` and provide additional functions depending on file loading.
+/// NK_INCLUDE_STANDARD_VARARGS     | if defined it will include header <stdio.h> and provide additional functions depending on file loading.
 /// NK_INCLUDE_VERTEX_BUFFER_OUTPUT | Defining this adds a vertex draw command list backend to this library, which allows you to convert queue commands into vertex draw commands. This is mainly if you need a hardware accessible format for OpenGL, DirectX, Vulkan, Metal,...
-/// NK_INCLUDE_FONT_BAKING | Defining this adds `stb_truetype` and `stb_rect_pack` implementation to this library and provides font baking and rendering. If you already have font handling or do not want to use this font handler you don't have to define it.
-/// NK_INCLUDE_DEFAULT_FONT | Defining this adds the default font: ProggyClean.ttf into this library which can be loaded into a font atlas and allows using this library without having a truetype font
-/// NK_INCLUDE_COMMAND_USERDATA | Defining this adds a userdata pointer into each command. Can be useful for example if you want to provide custom shaders depending on the used widget. Can be combined with the style structures.
-/// NK_BUTTON_TRIGGER_ON_RELEASE |  Different platforms require button clicks occurring either on buttons being pressed (up to down) or released (down to up). By default this library will react on buttons being pressed, but if you define this it will only trigger if a button is released.
-/// NK_ZERO_COMMAND_MEMORY | Defining this will zero out memory for each drawing command added to a drawing queue (inside nk_command_buffer_push). Zeroing command memory is very useful for fast checking (using memcmp) if command buffers are equal and avoid drawing frames when nothing on screen has changed since previous frame.
+/// NK_INCLUDE_FONT_BAKING          | Defining this adds `stb_truetype` and `stb_rect_pack` implementation to this library and provides font baking and rendering. If you already have font handling or do not want to use this font handler you don't have to define it.
+/// NK_INCLUDE_DEFAULT_FONT         | Defining this adds the default font: ProggyClean.ttf into this library which can be loaded into a font atlas and allows using this library without having a truetype font
+/// NK_INCLUDE_COMMAND_USERDATA     | Defining this adds a userdata pointer into each command. Can be useful for example if you want to provide custom shaders depending on the used widget. Can be combined with the style structures.
+/// NK_BUTTON_TRIGGER_ON_RELEASE    |  Different platforms require button clicks occurring either on buttons being pressed (up to down) or released (down to up). By default this library will react on buttons being pressed, but if you define this it will only trigger if a button is released.
+/// NK_ZERO_COMMAND_MEMORY          | Defining this will zero out memory for each drawing command added to a drawing queue (inside nk_command_buffer_push). Zeroing command memory is very useful for fast checking (using memcmp) if command buffers are equal and avoid drawing frames when nothing on screen has changed since previous frame.
 ///
 /// !!! WARNING
 ///     The following flags will pull in the standard C library:
@@ -114,11 +116,11 @@
 ///     - NK_INCLUDE_COMMAND_USERDATA
 ///
 /// ### Constants
-/// Define | Description
-/// -----|-------------
-/// NK_BUFFER_DEFAULT_INITIAL_SIZE | Initial buffer size allocated by all buffers while using the default allocator functions included by defining NK_INCLUDE_DEFAULT_ALLOCATOR. If you don't want to allocate the default 4k memory then redefine it.
-/// NK_MAX_NUMBER_BUFFER | Maximum buffer size for the conversion buffer between float and string Under normal circumstances this should be more than sufficient.
-/// NK_INPUT_MAX | Defines the max number of bytes which can be added as text input in one frame. Under normal circumstances this should be more than sufficient.
+/// Define                          | Description
+/// --------------------------------|---------------------------------------
+/// NK_BUFFER_DEFAULT_INITIAL_SIZE  | Initial buffer size allocated by all buffers while using the default allocator functions included by defining NK_INCLUDE_DEFAULT_ALLOCATOR. If you don't want to allocate the default 4k memory then redefine it.
+/// NK_MAX_NUMBER_BUFFER            | Maximum buffer size for the conversion buffer between float and string Under normal circumstances this should be more than sufficient.
+/// NK_INPUT_MAX                    | Defines the max number of bytes which can be added as text input in one frame. Under normal circumstances this should be more than sufficient.
 ///
 /// !!! WARNING
 ///     The following constants if defined need to be defined for both header and implementation:
@@ -127,17 +129,17 @@
 ///     - NK_INPUT_MAX
 ///
 /// ### Dependencies
-/// Function | Description
-/// -----|-------------
-/// NK_ASSERT | If you don't define this, nuklear will use <assert.h> with assert().
-/// NK_MEMSET | You can define this to 'memset' or your own memset implementation replacement. If not nuklear will use its own version.
-/// NK_MEMCPY | You can define this to 'memcpy' or your own memcpy implementation replacement. If not nuklear will use its own version.
-/// NK_SQRT | You can define this to 'sqrt' or your own sqrt implementation replacement. If not nuklear will use its own slow and not highly accurate version.
-/// NK_SIN | You can define this to 'sinf' or your own sine implementation replacement. If not nuklear will use its own approximation implementation.
-/// NK_COS | You can define this to 'cosf' or your own cosine implementation replacement. If not nuklear will use its own approximation implementation.
-/// NK_STRTOD | You can define this to `strtod` or your own string to double conversion implementation replacement. If not defined nuklear will use its own imprecise and possibly unsafe version (does not handle nan or infinity!).
-/// NK_DTOA | You can define this to `dtoa` or your own double to string conversion implementation replacement. If not defined nuklear will use its own imprecise and possibly unsafe version (does not handle nan or infinity!).
-/// NK_VSNPRINTF | If you define `NK_INCLUDE_STANDARD_VARARGS` as well as `NK_INCLUDE_STANDARD_IO` and want to be safe define this to `vsnprintf` on compilers supporting later versions of C or C++. By default nuklear will check for your stdlib version in C as well as compiler version in C++. if `vsnprintf` is available it will define it to `vsnprintf` directly. If not defined and if you have older versions of C or C++ it will be defined to `vsprintf` which is unsafe.
+/// Function    | Description
+/// ------------|-------------
+/// NK_ASSERT   | If you don't define this, nuklear will use <assert.h> with assert().
+/// NK_MEMSET   | You can define this to 'memset' or your own memset implementation replacement. If not nuklear will use its own version.
+/// NK_MEMCPY   | You can define this to 'memcpy' or your own memcpy implementation replacement. If not nuklear will use its own version.
+/// NK_SQRT     | You can define this to 'sqrt' or your own sqrt implementation replacement. If not nuklear will use its own slow and not highly accurate version.
+/// NK_SIN      | You can define this to 'sinf' or your own sine implementation replacement. If not nuklear will use its own approximation implementation.
+/// NK_COS      | You can define this to 'cosf' or your own cosine implementation replacement. If not nuklear will use its own approximation implementation.
+/// NK_STRTOD   | You can define this to `strtod` or your own string to double conversion implementation replacement. If not defined nuklear will use its own imprecise and possibly unsafe version (does not handle nan or infinity!).
+/// NK_DTOA     | You can define this to `dtoa` or your own double to string conversion implementation replacement. If not defined nuklear will use its own imprecise and possibly unsafe version (does not handle nan or infinity!).
+/// NK_VSNPRINTF| If you define `NK_INCLUDE_STANDARD_VARARGS` as well as `NK_INCLUDE_STANDARD_IO` and want to be safe define this to `vsnprintf` on compilers supporting later versions of C or C++. By default nuklear will check for your stdlib version in C as well as compiler version in C++. if `vsnprintf` is available it will define it to `vsnprintf` directly. If not defined and if you have older versions of C or C++ it will be defined to `vsprintf` which is unsafe.
 ///
 /// !!! WARNING
 ///     The following dependencies will pull in the standard C library if not redefined:
@@ -197,6 +199,7 @@
 ///
 /// ![](https://cloud.githubusercontent.com/assets/8057201/10187981/584ecd68-675c-11e5-897c-822ef534a876.png)
 ///
+/// ## API
 ///
 */
 #ifndef NK_NUKLEAR_H_
@@ -484,101 +487,159 @@ enum nk_symbol_type {
  *                                  CONTEXT
  *
  * =============================================================================*/
-/*  Contexts are the main entry point and the majestro of nuklear and contain all required state.
- *  They are used for window, memory, input, style, stack, commands and time management and need
- *  to be passed into all nuklear GUI specific functions.
- *
- *  Usage
- *  -------------------
- *  To use a context it first has to be initialized which can be achieved by calling
- *  one of either `nk_init_default`, `nk_init_fixed`, `nk_init`, `nk_init_custom`.
- *  Each takes in a font handle and a specific way of handling memory. Memory control
- *  hereby ranges from standard library to just specifying a fixed sized block of memory
- *  which nuklear has to manage itself from.
- *
- *      struct nk_context ctx;
- *      nk_init_xxx(&ctx, ...);
- *      while (1) {
- *          [...]
- *          nk_clear(&ctx);
- *      }
- *      nk_free(&ctx);
- *
- *  Reference
- *  -------------------
- *  nk_init_default     - Initializes context with standard library memory allocation (malloc,free)
- *  nk_init_fixed       - Initializes context from single fixed size memory block
- *  nk_init             - Initializes context with memory allocator callbacks for alloc and free
- *  nk_init_custom      - Initializes context from two buffers. One for draw commands the other for window/panel/table allocations
- *  nk_clear            - Called at the end of the frame to reset and prepare the context for the next frame
- *  nk_free             - Shutdown and free all memory allocated inside the context
- *  nk_set_user_data    - Utility function to pass user data to draw command
+/*/// ### Context
+/// Contexts are the main entry point and the majestro of nuklear and contain all required state.
+/// They are used for window, memory, input, style, stack, commands and time management and need
+/// to be passed into all nuklear GUI specific functions.
+///
+/// #### Usage
+/// To use a context it first has to be initialized which can be achieved by calling
+/// one of either `nk_init_default`, `nk_init_fixed`, `nk_init`, `nk_init_custom`.
+/// Each takes in a font handle and a specific way of handling memory. Memory control
+/// hereby ranges from standard library to just specifying a fixed sized block of memory
+/// which nuklear has to manage itself from.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// struct nk_context ctx;
+/// nk_init_xxx(&ctx, ...);
+/// while (1) {
+///     // [...]
+///     nk_clear(&ctx);
+/// }
+/// nk_free(&ctx);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// #### Reference
+/// Function            | Description
+/// --------------------|---------------------------
+/// __nk_init_default__ | Initializes context with standard library memory allocation (malloc,free)
+/// __nk_init_fixed__   | Initializes context from single fixed size memory block
+/// __nk_init__         | Initializes context with memory allocator callbacks for alloc and free
+/// __nk_init_custom__  | Initializes context from two buffers. One for draw commands the other for window/panel/table allocations
+/// __nk_clear__        | Called at the end of the frame to reset and prepare the context for the next frame
+/// __nk_free__         | Shutdown and free all memory allocated inside the context
+/// __nk_set_user_data__| Utility function to pass user data to draw command
  */
 #ifdef NK_INCLUDE_DEFAULT_ALLOCATOR
-/*  nk_init_default - Initializes a `nk_context` struct with a default standard library allocator.
- *  Should be used if you don't want to be bothered with memory management in nuklear.
- *  Parameters:
- *      @ctx must point to an either stack or heap allocated `nk_context` struct
- *      @font must point to a previously initialized font handle for more info look at font documentation
- *  Return values:
- *      true(1) on success
- *      false(0) on failure */
+/*/// #### nk_init_default
+/// Initializes a `nk_context` struct with a default standard library allocator.
+/// Should be used if you don't want to be bothered with memory management in nuklear.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// NK_API int nk_init_default(struct nk_context *ctx, const struct nk_user_font *font);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter   | Description
+/// ------------|-------------
+/// __ctx__     | Must point to an either stack or heap allocated `nk_context` struct
+/// __font__    | Must point to a previously initialized font handle for more info look at font documentation
+///
+/// Returns either `false(0)` on failure or `true(1)` on success.
+///
+*/
 NK_API int nk_init_default(struct nk_context*, const struct nk_user_font*);
 #endif
-/*  nk_init_fixed - Initializes a `nk_context` struct from a single fixed size memory block
- *  Should be used if you want complete control over nuklear's memory management.
- *  Especially recommended for system with little memory or systems with virtual memory.
- *  For the later case you can just allocate for example 16MB of virtual memory
- *  and only the required amount of memory will actually be committed.
- *  IMPORTANT: make sure the passed memory block is aligned correctly for `nk_draw_commands`
- *  Parameters:
- *      @ctx must point to an either stack or heap allocated `nk_context` struct
- *      @memory must point to a previously allocated memory block
- *      @size must contain the total size of @memory
- *      @font must point to a previously initialized font handle for more info look at font documentation
- *  Return values:
- *      true(1) on success
- *      false(0) on failure */
+/*/// #### nk_init_fixed
+/// Initializes a `nk_context` struct from a single fixed size memory block
+/// Should be used if you want complete control over nuklear's memory management.
+/// Especially recommended for system with little memory or systems with virtual memory.
+/// For the later case you can just allocate for example 16MB of virtual memory
+/// and only the required amount of memory will actually be committed.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// NK_API int nk_init_fixed(struct nk_context *ctx, void *memory, nk_size size, const struct nk_user_font *font);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// !!! Warning
+///     make sure the passed memory block is aligned correctly for `nk_draw_commands`.
+///
+/// Parameter   | Description
+/// ------------|-------------
+/// __ctx__     | Must point to an either stack or heap allocated `nk_context` struct
+/// __memory__  | Must point to a previously allocated memory block
+/// __size__    | Must contain the total size of __memory__
+/// __font__    | Must point to a previously initialized font handle for more info look at font documentation
+///
+/// Returns either `false(0)` on failure or `true(1)` on success.
+*/
 NK_API int nk_init_fixed(struct nk_context*, void *memory, nk_size size, const struct nk_user_font*);
-/*  nk_init - Initializes a `nk_context` struct with memory allocation callbacks for nuklear to allocate
- *  memory from. Used internally for `nk_init_default` and provides a kitchen sink allocation
- *  interface to nuklear. Can be useful for cases like monitoring memory consumption.
- *  Parameters:
- *      @ctx must point to an either stack or heap allocated `nk_context` struct
- *      @alloc must point to a previously allocated memory allocator
- *      @font must point to a previously initialized font handle for more info look at font documentation
- *  Return values:
- *      true(1) on success
- *      false(0) on failure */
+/*/// #### nk_init
+/// Initializes a `nk_context` struct with memory allocation callbacks for nuklear to allocate
+/// memory from. Used internally for `nk_init_default` and provides a kitchen sink allocation
+/// interface to nuklear. Can be useful for cases like monitoring memory consumption.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// NK_API int nk_init(struct nk_context *ctx, struct nk_allocator *alloc, const struct nk_user_font *font);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter   | Description
+/// ------------|-------------
+/// __ctx__     | Must point to an either stack or heap allocated `nk_context` struct
+/// __alloc__   | Must point to a previously allocated memory allocator
+/// __font__    | Must point to a previously initialized font handle for more info look at font documentation
+///
+/// Returns either `false(0)` on failure or `true(1)` on success.
+*/
 NK_API int nk_init(struct nk_context*, struct nk_allocator*, const struct nk_user_font*);
-/*  nk_init_custom - Initializes a `nk_context` struct from two different either fixed or growing
- *  buffers. The first buffer is for allocating draw commands while the second buffer is
- *  used for allocating windows, panels and state tables.
- *  Parameters:
- *      @ctx must point to an either stack or heap allocated `nk_context` struct
- *      @cmds must point to a previously initialized memory buffer either fixed or dynamic to store draw commands into
- *      @pool must point to a previously initialized memory buffer either fixed or dynamic to store windows, panels and tables
- *      @font must point to a previously initialized font handle for more info look at font documentation
- *  Return values:
- *      true(1) on success
- *      false(0) on failure */
+/*/// #### nk_init_custom
+/// Initializes a `nk_context` struct from two different either fixed or growing
+/// buffers. The first buffer is for allocating draw commands while the second buffer is
+/// used for allocating windows, panels and state tables.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// NK_API int nk_init_custom(struct nk_context *ctx, struct nk_buffer *cmds, struct nk_buffer *pool, const struct nk_user_font *font);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter   | Description
+/// ------------|-------------
+/// __ctx__     | Must point to an either stack or heap allocated `nk_context` struct
+/// __cmds__    | Must point to a previously initialized memory buffer either fixed or dynamic to store draw commands into
+/// __pool__    | Must point to a previously initialized memory buffer either fixed or dynamic to store windows, panels and tables
+/// __font__    | Must point to a previously initialized font handle for more info look at font documentation
+///
+/// Returns either `false(0)` on failure or `true(1)` on success.
+*/
 NK_API int nk_init_custom(struct nk_context*, struct nk_buffer *cmds, struct nk_buffer *pool, const struct nk_user_font*);
-/*  nk_clear - Resets the context state at the end of the frame. This includes mostly
- *  garbage collector tasks like removing windows or table not called and therefore
- *  used anymore.
- *  Parameters:
- *      @ctx must point to a previously initialized `nk_context` struct */
+/*/// #### nk_clear
+/// Resets the context state at the end of the frame. This includes mostly
+/// garbage collector tasks like removing windows or table not called and therefore
+/// used anymore.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// NK_API void nk_clear(struct nk_context *ctx);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter   | Description
+/// ------------|-------------
+/// __ctx__     | Must point to a previously initialized `nk_context` struct
+*/
 NK_API void nk_clear(struct nk_context*);
-/*  nk_free - Frees all memory allocated by nuklear. Not needed if context was
- *  initialized with `nk_init_fixed`.
- *  Parameters:
- *      @ctx must point to a previously initialized `nk_context` struct */
+/*/// #### nk_free
+/// Frees all memory allocated by nuklear. Not needed if context was
+/// initialized with `nk_init_fixed`.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// NK_API void nk_free(struct nk_context *ctx);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter   | Description
+/// ------------|-------------
+/// __ctx__     | Must point to a previously initialized `nk_context` struct
+*/
 NK_API void nk_free(struct nk_context*);
 #ifdef NK_INCLUDE_COMMAND_USERDATA
-/*  nk_set_user_data - Sets the currently passed userdata passed down into each draw command.
- *  Parameters:
- *      @ctx must point to a previously initialized `nk_context` struct
- *      @data handle with either pointer or index to be passed into every draw commands */
+/*/// #### nk_set_user_data
+/// Sets the currently passed userdata passed down into each draw command.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// NK_API void nk_set_user_data(struct nk_context *ctx, nk_handle data);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter   | Description
+/// ------------|-------------
+/// __ctx__     | Must point to a previously initialized `nk_context` struct
+/// __data__    | Handle with either pointer or index to be passed into every draw commands
+*/
 NK_API void nk_set_user_data(struct nk_context*, nk_handle handle);
 #endif
 /* =============================================================================
