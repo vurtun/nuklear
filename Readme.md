@@ -25,7 +25,7 @@ render backends it only focuses on the actual UI.
 - No global or hidden state
 - Customizable library modules (you can compile and use only what you need)
 - Optional font baker and vertex buffer output
-- [documentation](https://rawgit.com/vurtun/nuklear/master/doc/nuklear.html)
+- [Documentation](https://rawgit.com/vurtun/nuklear/master/doc/nuklear.html)
 
 ## Building
 
