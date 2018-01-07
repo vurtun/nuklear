@@ -1,7 +1,0 @@
-name: nuklear-docs
-
-channels:
-    - conda-forge
-
-dependencies:
-    - breathe
