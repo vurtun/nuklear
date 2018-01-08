@@ -12,6 +12,7 @@
 /// 5. Example section
 /// 6. API section
 ///     1. Context section
+///     2. Input section
 /// 7. License section
 /// 8. Changelog section
 /// 9. Gallery section
@@ -511,7 +512,7 @@ enum nk_symbol_type {
 ///
 /// #### Reference
 /// Function            | Description
-/// --------------------|---------------------------
+/// --------------------|-------------------------------------------------------
 /// __nk_init_default__ | Initializes context with standard library memory allocation (malloc,free)
 /// __nk_init_fixed__   | Initializes context from single fixed size memory block
 /// __nk_init__         | Initializes context with memory allocator callbacks for alloc and free
@@ -530,7 +531,7 @@ enum nk_symbol_type {
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///
 /// Parameter   | Description
-/// ------------|-------------
+/// ------------|---------------------------------------------------------------
 /// __ctx__     | Must point to an either stack or heap allocated `nk_context` struct
 /// __font__    | Must point to a previously initialized font handle for more info look at font documentation
 ///
@@ -540,7 +541,7 @@ enum nk_symbol_type {
 NK_API int nk_init_default(struct nk_context*, const struct nk_user_font*);
 #endif
 /*/// #### nk_init_fixed
-/// Initializes a `nk_context` struct from a single fixed size memory block
+/// Initializes a `nk_context` struct from single fixed size memory block
 /// Should be used if you want complete control over nuklear's memory management.
 /// Especially recommended for system with little memory or systems with virtual memory.
 /// For the later case you can just allocate for example 16MB of virtual memory
@@ -554,7 +555,7 @@ NK_API int nk_init_default(struct nk_context*, const struct nk_user_font*);
 ///     make sure the passed memory block is aligned correctly for `nk_draw_commands`.
 ///
 /// Parameter   | Description
-/// ------------|-------------
+/// ------------|--------------------------------------------------------------
 /// __ctx__     | Must point to an either stack or heap allocated `nk_context` struct
 /// __memory__  | Must point to a previously allocated memory block
 /// __size__    | Must contain the total size of __memory__
@@ -573,7 +574,7 @@ NK_API int nk_init_fixed(struct nk_context*, void *memory, nk_size size, const s
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///
 /// Parameter   | Description
-/// ------------|-------------
+/// ------------|---------------------------------------------------------------
 /// __ctx__     | Must point to an either stack or heap allocated `nk_context` struct
 /// __alloc__   | Must point to a previously allocated memory allocator
 /// __font__    | Must point to a previously initialized font handle for more info look at font documentation
@@ -591,7 +592,7 @@ NK_API int nk_init(struct nk_context*, struct nk_allocator*, const struct nk_use
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///
 /// Parameter   | Description
-/// ------------|-------------
+/// ------------|---------------------------------------------------------------
 /// __ctx__     | Must point to an either stack or heap allocated `nk_context` struct
 /// __cmds__    | Must point to a previously initialized memory buffer either fixed or dynamic to store draw commands into
 /// __pool__    | Must point to a previously initialized memory buffer either fixed or dynamic to store windows, panels and tables
@@ -610,7 +611,7 @@ NK_API int nk_init_custom(struct nk_context*, struct nk_buffer *cmds, struct nk_
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///
 /// Parameter   | Description
-/// ------------|-------------
+/// ------------|-----------------------------------------------------------
 /// __ctx__     | Must point to a previously initialized `nk_context` struct
 */
 NK_API void nk_clear(struct nk_context*);
@@ -623,7 +624,7 @@ NK_API void nk_clear(struct nk_context*);
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///
 /// Parameter   | Description
-/// ------------|-------------
+/// ------------|-----------------------------------------------------------
 /// __ctx__     | Must point to a previously initialized `nk_context` struct
 */
 NK_API void nk_free(struct nk_context*);
@@ -636,7 +637,7 @@ NK_API void nk_free(struct nk_context*);
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///
 /// Parameter   | Description
-/// ------------|-------------
+/// ------------|--------------------------------------------------------------
 /// __ctx__     | Must point to a previously initialized `nk_context` struct
 /// __data__    | Handle with either pointer or index to be passed into every draw commands
 */
@@ -647,54 +648,67 @@ NK_API void nk_set_user_data(struct nk_context*, nk_handle handle);
  *                                  INPUT
  *
  * =============================================================================*/
-/*  The input API is responsible for holding the current input state composed of
- *  mouse, key and text input states.
- *  It is worth noting that no direct os or window handling is done in nuklear.
- *  Instead all input state has to be provided by platform specific code. This in one hand
- *  expects more work from the user and complicates usage but on the other hand
- *  provides simple abstraction over a big number of platforms, libraries and other
- *  already provided functionality.
- *
- *  Usage
- *  -------------------
- *  Input state needs to be provided to nuklear by first calling `nk_input_begin`
- *  which resets internal state like delta mouse position and button transistions.
- *  After `nk_input_begin` all current input state needs to be provided. This includes
- *  mouse motion, button and key pressed and released, text input and scrolling.
- *  Both event- or state-based input handling are supported by this API
- *  and should work without problems. Finally after all input state has been
- *  mirrored `nk_input_end` needs to be called to finish input process.
- *
- *      struct nk_context ctx;
- *      nk_init_xxx(&ctx, ...);
- *      while (1) {
- *          Event evt;
- *          nk_input_begin(&ctx);
- *          while (GetEvent(&evt)) {
- *              if (evt.type == MOUSE_MOVE)
- *                  nk_input_motion(&ctx, evt.motion.x, evt.motion.y);
- *              else if (evt.type == ...) {
- *                  ...
- *              }
- *          }
- *          nk_input_end(&ctx);
- *          [...]
- *          nk_clear(&ctx);
- *      }
- *      nk_free(&ctx);
- *
- *  Reference
- *  -------------------
- *  nk_input_begin      - Begins the input mirroring process. Needs to be called before all other `nk_input_xxx` calls
- *  nk_input_motion     - Mirrors mouse cursor position
- *  nk_input_key        - Mirrors key state with either pressed or released
- *  nk_input_button     - Mirrors mouse button state with either pressed or released
- *  nk_input_scroll     - Mirrors mouse scroll values
- *  nk_input_char       - Adds a single ASCII text character into an internal text buffer
- *  nk_input_glyph      - Adds a single multi-byte UTF-8 character into an internal text buffer
- *  nk_input_unicode    - Adds a single unicode rune into an internal text buffer
- *  nk_input_end        - Ends the input mirroring process by calculating state changes. Don't call any `nk_input_xxx` function referenced above after this call
- */
+/*/// ### Input
+/// The input API is responsible for holding the current input state composed of
+/// mouse, key and text input states.
+/// It is worth noting that no direct os or window handling is done in nuklear.
+/// Instead all input state has to be provided by platform specific code. This in one hand
+/// expects more work from the user and complicates usage but on the other hand
+/// provides simple abstraction over a big number of platforms, libraries and other
+/// already provided functionality.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// nk_input_begin(&ctx);
+/// while (GetEvent(&evt)) {
+///     if (evt.type == MOUSE_MOVE)
+///         nk_input_motion(&ctx, evt.motion.x, evt.motion.y);
+///     else if (evt.type == [...]) {
+///         // [...]
+///     }
+/// } nk_input_end(&ctx);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// #### Usage
+/// Input state needs to be provided to nuklear by first calling `nk_input_begin`
+/// which resets internal state like delta mouse position and button transistions.
+/// After `nk_input_begin` all current input state needs to be provided. This includes
+/// mouse motion, button and key pressed and released, text input and scrolling.
+/// Both event- or state-based input handling are supported by this API
+/// and should work without problems. Finally after all input state has been
+/// mirrored `nk_input_end` needs to be called to finish input process.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// struct nk_context ctx;
+/// nk_init_xxx(&ctx, ...);
+/// while (1) {
+///     Event evt;
+///     nk_input_begin(&ctx);
+///     while (GetEvent(&evt)) {
+///         if (evt.type == MOUSE_MOVE)
+///             nk_input_motion(&ctx, evt.motion.x, evt.motion.y);
+///         else if (evt.type == [...]) {
+///             // [...]
+///         }
+///     }
+///     nk_input_end(&ctx);
+///     // [...]
+///     nk_clear(&ctx);
+/// } nk_free(&ctx);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// #### Reference
+/// Function            | Description
+/// --------------------|-------------------------------------------------------
+/// __nk_input_begin__  | Begins the input mirroring process. Needs to be called before all other `nk_input_xxx` calls
+/// __nk_input_motion__ | Mirrors mouse cursor position
+/// __nk_input_key__    | Mirrors key state with either pressed or released
+/// __nk_input_button__ | Mirrors mouse button state with either pressed or released
+/// __nk_input_scroll__ | Mirrors mouse scroll values
+/// __nk_input_char__   | Adds a single ASCII text character into an internal text buffer
+/// __nk_input_glyph__  | Adds a single multi-byte UTF-8 character into an internal text buffer
+/// __nk_input_unicode__| Adds a single unicode rune into an internal text buffer
+/// __nk_input_end__    | Ends the input mirroring process by calculating state changes. Don't call any `nk_input_xxx` function referenced above after this call
+*/
 enum nk_keys {
     NK_KEY_NONE,
     NK_KEY_SHIFT,
@@ -737,66 +751,140 @@ enum nk_buttons {
     NK_BUTTON_DOUBLE,
     NK_BUTTON_MAX
 };
-/*  nk_input_begin - Begins the input mirroring process by resetting text, scroll
- *  mouse previous mouse position and movement as well as key state transitions,
- *  Parameters:
- *      @ctx must point to an previously initialized `nk_context` struct */
+/*/// #### nk_input_begin
+/// Begins the input mirroring process by resetting text, scroll
+/// mouse previous mouse position and movement as well as key state transitions,
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// NK_API void nk_input_begin(struct nk_context*);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter   | Description
+/// ------------|-----------------------------------------------------------
+/// __ctx__     | Must point to a previously initialized `nk_context` struct
+*/
 NK_API void nk_input_begin(struct nk_context*);
-/*  nk_input_motion - Mirrors current mouse position to nuklear
- *  Parameters:
- *      @ctx must point to an previously initialized `nk_context` struct
- *      @x must contain an integer describing the current mouse cursor x-position
- *      @y must contain an integer describing the current mouse cursor y-position */
+/*/// #### nk_input_motion
+/// Mirrors current mouse position to nuklear
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// NK_API void nk_input_motion(struct nk_context *ctx, int x, int y);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter   | Description
+/// ------------|-----------------------------------------------------------
+/// __ctx__     | Must point to a previously initialized `nk_context` struct
+/// __x__       | Must hold an integer describing the current mouse cursor x-position
+/// __y__       | Must hold an integer describing the current mouse cursor y-position
+*/
 NK_API void nk_input_motion(struct nk_context*, int x, int y);
-/*  nk_input_key - Mirrors state of a specific key to nuklear
- *  Parameters:
- *      @ctx must point to an previously initialized `nk_context` struct
- *      @key must be any value specified in enum `nk_keys` that needs to be mirrored
- *      @down must be 0 for key is up and 1 for key is down */
+/*/// #### nk_input_key
+/// Mirrors state of a specific key to nuklear
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// NK_API void nk_input_key(struct nk_context*, enum nk_keys key, int down);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter   | Description
+/// ------------|-----------------------------------------------------------
+/// __ctx__     | Must point to a previously initialized `nk_context` struct
+/// __key__     | Must be any value specified in enum `nk_keys` that needs to be mirrored
+/// __down__    | Must be 0 for key is up and 1 for key is down
+*/
 NK_API void nk_input_key(struct nk_context*, enum nk_keys, int down);
-/*  nk_input_button - Mirrors the state of a specific mouse button to nuklear
- *  Parameters:
- *      @ctx must point to an previously initialized `nk_context` struct
- *      @nk_buttons must be any value specified in enum `nk_buttons` that needs to be mirrored
- *      @x must contain an integer describing mouse cursor x-position on click up/down
- *      @y must contain an integer describing mouse cursor y-position on click up/down
- *      @down must be 0 for key is up and 1 for key is down */
+/*/// #### nk_input_button
+/// Mirrors the state of a specific mouse button to nuklear
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// NK_API void nk_input_button(struct nk_context *ctx, enum nk_buttons btn, int x, int y, int down);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter   | Description
+/// ------------|-----------------------------------------------------------
+/// __ctx__     | Must point to a previously initialized `nk_context` struct
+/// __btn__     | Must be any value specified in enum `nk_buttons` that needs to be mirrored
+/// __x__       | Must contain an integer describing mouse cursor x-position on click up/down
+/// __y__       | Must contain an integer describing mouse cursor y-position on click up/down
+/// __down__    | Must be 0 for key is up and 1 for key is down
+*/
 NK_API void nk_input_button(struct nk_context*, enum nk_buttons, int x, int y, int down);
-/*  nk_input_scroll - Copies the last mouse scroll value to nuklear. Is generally
- *  a  scroll value. So does not have to come from mouse and could also originate
- *  from touch for example.
- *  Parameters:
- *      @ctx must point to an previously initialized `nk_context` struct
- *      @val vector with both X- as well as Y-scroll value */
+/*/// #### nk_input_scroll
+/// Copies the last mouse scroll value to nuklear. Is generally
+/// a scroll value. So does not have to come from mouse and could also originate
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// NK_API void nk_input_scroll(struct nk_context *ctx, struct nk_vec2 val);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter   | Description
+/// ------------|-----------------------------------------------------------
+/// __ctx__     | Must point to a previously initialized `nk_context` struct
+/// __val__     | vector with both X- as well as Y-scroll value
+*/
 NK_API void nk_input_scroll(struct nk_context*, struct nk_vec2 val);
-/*  nk_input_char - Copies a single ASCII character into an internal text buffer
- *  This is basically a helper function to quickly push ASCII characters into
- *  nuklear. Note that you can only push up to NK_INPUT_MAX bytes into
- *  struct `nk_input` between `nk_input_begin` and `nk_input_end`.
- *  Parameters:
- *      @ctx must point to an previously initialized `nk_context` struct
- *      @c must be a single ASCII character preferable one that can be printed */
+/*/// #### nk_input_char
+/// Copies a single ASCII character into an internal text buffer
+/// This is basically a helper function to quickly push ASCII characters into
+/// nuklear.
+///
+/// !!! Note
+///     Stores up to NK_INPUT_MAX bytes between `nk_input_begin` and `nk_input_end`.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// NK_API void nk_input_char(struct nk_context *ctx, char c);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter   | Description
+/// ------------|-----------------------------------------------------------
+/// __ctx__     | Must point to a previously initialized `nk_context` struct
+/// __c__       | Must be a single ASCII character preferable one that can be printed
+*/
 NK_API void nk_input_char(struct nk_context*, char);
-/*  nk_input_unicode - Converts a encoded unicode rune into UTF-8 and copies the result
- *  into an internal text buffer.
- *  Note that you can only push up to NK_INPUT_MAX bytes into
- *  struct `nk_input` between `nk_input_begin` and `nk_input_end`.
- *  Parameters:
- *      @ctx must point to an previously initialized `nk_context` struct
- *      @glyph UTF-32 unicode codepoint */
+/*/// #### nk_input_glyph
+/// Converts an encoded unicode rune into UTF-8 and copies the result into an
+/// internal text buffer.
+///
+/// !!! Note
+///     Stores up to NK_INPUT_MAX bytes between `nk_input_begin` and `nk_input_end`.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// NK_API void nk_input_glyph(struct nk_context *ctx, const nk_glyph g);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter   | Description
+/// ------------|-----------------------------------------------------------
+/// __ctx__     | Must point to a previously initialized `nk_context` struct
+/// __g__       | UTF-32 unicode codepoint
+*/
 NK_API void nk_input_glyph(struct nk_context*, const nk_glyph);
-/*  nk_input_unicode - Converts a unicode rune into UTF-8 and copies the result
- *  into an internal text buffer.
- *  Note that you can only push up to NK_INPUT_MAX bytes into
- *  struct `nk_input` between `nk_input_begin` and `nk_input_end`.
- *  Parameters:
- *      @ctx must point to an previously initialized `nk_context` struct
- *      @glyph UTF-32 unicode codepoint */
+/*/// #### nk_input_unicode
+/// Converts a unicode rune into UTF-8 and copies the result
+/// into an internal text buffer.
+/// !!! Note
+///     Stores up to NK_INPUT_MAX bytes between `nk_input_begin` and `nk_input_end`.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// NK_API void nk_input_unicode(struct nk_context*, nk_rune rune);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter   | Description
+/// ------------|-----------------------------------------------------------
+/// __ctx__     | Must point to a previously initialized `nk_context` struct
+/// __rune__    | UTF-32 unicode codepoint
+*/
 NK_API void nk_input_unicode(struct nk_context*, nk_rune);
-/*  nk_input_end - End the input mirroring process by resetting mouse grabbing
- *  state to ensure the mouse cursor is not grabbed indefinitely.
- *  Parameters:
- *      @ctx must point to an previously initialized `nk_context` struct */
+/*/// #### nk_input_end
+/// End the input mirroring process by resetting mouse grabbing
+/// state to ensure the mouse cursor is not grabbed indefinitely.///
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// NK_API void nk_input_end(struct nk_context *ctx);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter   | Description
+/// ------------|-----------------------------------------------------------
+/// __ctx__     | Must point to a previously initialized `nk_context` struct
+*/
 NK_API void nk_input_end(struct nk_context*);
 /* =============================================================================
  *
