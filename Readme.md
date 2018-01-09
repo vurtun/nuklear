@@ -103,7 +103,7 @@ languages. Furthermore there are no guarantee that all bindings will always be k
 - [Nim](https://github.com/zacharycarter/nuklear-nim) by zacharycarter@github.com
 - [Lua/Löve2d](https://github.com/keharriso/love-nuklear) by Kevin Harrison
 - [Python](https://github.com/billsix/pyNuklear) by William Emerison Six
-- [CSharp](https://github.com/cartman300/NuklearDotNet) by cartman300@github.com
+- [CSharp/.NET](https://github.com/cartman300/NuklearDotNet) by cartman300@github.com
 
 ## Credits
 Developed by Micha Mettke and every direct or indirect contributor to the GitHub.
