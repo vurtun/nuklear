@@ -1761,6 +1761,7 @@ nk_free(&ctx);
 Function                        | Description
 --------------------------------|-------------------------------------------
 nk_group_begin                  | Start a new group with internal scrollbar handling
+nk_group_begin_titled           | Start a new group with separeted name and title and internal scrollbar handling
 nk_group_end                    | Ends a group. Should only be called if nk_group_begin returned non-zero
 nk_group_scrolled_offset_begin  | Start a new group with manual separated handling of scrollbar x- and y-offset
 nk_group_scrolled_begin         | Start a new group with manual scrollbar handling
@@ -1773,8 +1774,20 @@ NK_API int nk_group_begin(struct nk_context*, const char *title, nk_flags);
 Parameter   | Description
 ------------|-----------------------------------------------------------
 __ctx__     | Must point to an previously initialized `nk_context` struct
-__title__   | Must point to an previously initialized `nk_context` struct
-__flags__   | Must point to an previously initialized `nk_context` struct
+__title__   | Must be an unique identifier for this group that is also used for the group header
+__flags__   | Window flags defined in `enum nk_panel_flags` with a number of different group behaviors
+Returns `true(1)` if visible and fillable with widgets or `false(0)` otherwise
+#### nk_group_begin_titled
+Starts a new widget group. Requires a previous layouting function to specify a pos/size.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+NK_API int nk_group_begin_titled(struct nk_context*, const char *name, const char *title, nk_flags);
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Parameter   | Description
+------------|-----------------------------------------------------------
+__ctx__     | Must point to an previously initialized `nk_context` struct
+__id__      | Must be an unique identifier for this group
+__title__   | Group header title
+__flags__   | Window flags defined in `enum nk_panel_flags` with a number of different group behaviors
 Returns `true(1)` if visible and fillable with widgets or `false(0)` otherwise
 #### nk_group_end
 Ends a widget group

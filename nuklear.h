@@ -2578,6 +2578,7 @@ NK_API struct nk_rect nk_layout_space_rect_to_local(struct nk_context*, struct n
 /// Function                        | Description
 /// --------------------------------|-------------------------------------------
 /// nk_group_begin                  | Start a new group with internal scrollbar handling
+/// nk_group_begin_titled           | Start a new group with separeted name and title and internal scrollbar handling
 /// nk_group_end                    | Ends a group. Should only be called if nk_group_begin returned non-zero
 /// nk_group_scrolled_offset_begin  | Start a new group with manual separated handling of scrollbar x- and y-offset
 /// nk_group_scrolled_begin         | Start a new group with manual scrollbar handling
@@ -2592,12 +2593,28 @@ NK_API struct nk_rect nk_layout_space_rect_to_local(struct nk_context*, struct n
 /// Parameter   | Description
 /// ------------|-----------------------------------------------------------
 /// __ctx__     | Must point to an previously initialized `nk_context` struct
-/// __title__   | Must point to an previously initialized `nk_context` struct
-/// __flags__   | Must point to an previously initialized `nk_context` struct
+/// __title__   | Must be an unique identifier for this group that is also used for the group header
+/// __flags__   | Window flags defined in `enum nk_panel_flags` with a number of different group behaviors
 ///
 /// Returns `true(1)` if visible and fillable with widgets or `false(0)` otherwise
 */
 NK_API int nk_group_begin(struct nk_context*, const char *title, nk_flags);
+/*/// #### nk_group_begin_titled
+/// Starts a new widget group. Requires a previous layouting function to specify a pos/size.
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// NK_API int nk_group_begin_titled(struct nk_context*, const char *name, const char *title, nk_flags);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter   | Description
+/// ------------|-----------------------------------------------------------
+/// __ctx__     | Must point to an previously initialized `nk_context` struct
+/// __id__      | Must be an unique identifier for this group
+/// __title__   | Group header title
+/// __flags__   | Window flags defined in `enum nk_panel_flags` with a number of different group behaviors
+///
+/// Returns `true(1)` if visible and fillable with widgets or `false(0)` otherwise
+*/
+NK_API int nk_group_begin_titled(struct nk_context*, const char *name, const char *title, nk_flags);
 /*/// #### nk_group_end
 /// Ends a widget group
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
@@ -23026,36 +23043,43 @@ nk_group_scrolled_begin(struct nk_context *ctx,
 {return nk_group_scrolled_offset_begin(ctx, &scroll->x, &scroll->y, title, flags);}
 
 NK_API int
-nk_group_begin(struct nk_context *ctx, const char *title, nk_flags flags)
+nk_group_begin_titled(struct nk_context *ctx, const char *id,
+    const char *title, nk_flags flags)
 {
-    int title_len;
-    nk_hash title_hash;
+    int id_len;
+    nk_hash id_hash;
     struct nk_window *win;
     nk_uint *x_offset;
     nk_uint *y_offset;
 
     NK_ASSERT(ctx);
-    NK_ASSERT(title);
+    NK_ASSERT(id);
     NK_ASSERT(ctx->current);
     NK_ASSERT(ctx->current->layout);
-    if (!ctx || !ctx->current || !ctx->current->layout || !title)
+    if (!ctx || !ctx->current || !ctx->current->layout || !id)
         return 0;
 
     /* find persistent group scrollbar value */
     win = ctx->current;
-    title_len = (int)nk_strlen(title);
-    title_hash = nk_murmur_hash(title, (int)title_len, NK_PANEL_GROUP);
-    x_offset = nk_find_value(win, title_hash);
+    id_len = (int)nk_strlen(id);
+    id_hash = nk_murmur_hash(id, (int)id_len, NK_PANEL_GROUP);
+    x_offset = nk_find_value(win, id_hash);
     if (!x_offset) {
-        x_offset = nk_add_value(ctx, win, title_hash, 0);
-        y_offset = nk_add_value(ctx, win, title_hash+1, 0);
+        x_offset = nk_add_value(ctx, win, id_hash, 0);
+        y_offset = nk_add_value(ctx, win, id_hash+1, 0);
 
         NK_ASSERT(x_offset);
         NK_ASSERT(y_offset);
         if (!x_offset || !y_offset) return 0;
         *x_offset = *y_offset = 0;
-    } else y_offset = nk_find_value(win, title_hash+1);
+    } else y_offset = nk_find_value(win, id_hash+1);
     return nk_group_scrolled_offset_begin(ctx, x_offset, y_offset, title, flags);
+}
+
+NK_API int
+nk_group_begin(struct nk_context *ctx, const char *title, nk_flags flags)
+{
+    return nk_group_begin_titled(ctx, title, title, flags);
 }
 
 NK_API void
@@ -24690,6 +24714,7 @@ nk_menu_end(struct nk_context *ctx)
 ///    - [yy]: Minor version with non-breaking API and library changes
 ///    - [zz]: Bug fix version with no direct changes to API
 ///
+/// - 2017/01/12 (3.00.2) - Added `nk_group_begin_titled` for separed group identifier and title
 /// - 2017/01/07 (3.00.1) - Started to change documentation style
 /// - 2017/01/05 (3.00.0) - BREAKING CHANGE: The previous color picker API was broken
 ///                        because of conversions between float and byte color representation.
