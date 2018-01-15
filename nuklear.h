@@ -2911,7 +2911,7 @@ NK_API void nk_tree_state_pop(struct nk_context*);
  * ============================================================================= */
 struct nk_list_view {
 /* public: */
-    begin, end, count;
+    int begin, end, count;
 /* private: */
     int total_height;
     struct nk_context *ctx;
