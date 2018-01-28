@@ -19258,30 +19258,14 @@ nk_panel_end(struct nk_context *ctx)
     if (layout->flags & NK_WINDOW_BORDER)
     {
         struct nk_color border_color = nk_panel_get_border_color(style, layout->type);
-        const float padding_y = (layout->flags & NK_WINDOW_MINIMIZED) ?
-            style->window.border + window->bounds.y + layout->header_height:
-            (layout->flags & NK_WINDOW_DYNAMIC)?
-            layout->bounds.y + layout->bounds.h + layout->footer_height:
-            window->bounds.y + window->bounds.h;
-
-        /* draw border top */
-        nk_stroke_line(out,window->bounds.x,window->bounds.y,
-            window->bounds.x + window->bounds.w, window->bounds.y,
-            layout->border, border_color);
-
-        /* draw bottom border */
-        nk_stroke_line(out, window->bounds.x, padding_y,
-            window->bounds.x + window->bounds.w, padding_y, layout->border, border_color);
-
-        /* draw left border */
-        nk_stroke_line(out, window->bounds.x + layout->border*0.5f,
-            window->bounds.y, window->bounds.x + layout->border*0.5f,
-            padding_y, layout->border, border_color);
-
-        /* draw right border */
-        nk_stroke_line(out, window->bounds.x + window->bounds.w - layout->border*0.5f,
-            window->bounds.y, window->bounds.x + window->bounds.w - layout->border*0.5f,
-            padding_y, layout->border, border_color);
+        const float padding_y = (layout->flags & NK_WINDOW_MINIMIZED)
+            ? (style->window.border + window->bounds.y + layout->header_height)
+            : ((layout->flags & NK_WINDOW_DYNAMIC)
+                ? (layout->bounds.y + layout->bounds.h + layout->footer_height)
+                : (window->bounds.y + window->bounds.h));
+        struct nk_rect b = window->bounds;
+        b.h = padding_y - window->bounds.y;
+        nk_stroke_rect(out, b, 0, layout->border, border_color);
     }
 
     /* scaler */
@@ -20957,7 +20941,7 @@ nk_layout_widget_space(struct nk_rect *bounds, const struct nk_context *ctx,
     switch (layout->row.type) {
     case NK_LAYOUT_DYNAMIC_FIXED: {
         /* scaling fixed size widgets item width */
-        item_width = NK_MAX(1.0f,panel_space-1.0f) / (float)layout->row.columns;
+        item_width = NK_MAX(1.0f,panel_space) / (float)layout->row.columns;
         item_offset = (float)layout->row.index * item_width;
         item_spacing = (float)layout->row.index * spacing.x;
     } break;
@@ -24926,6 +24910,7 @@ nk_menu_end(struct nk_context *ctx)
 ///    - [yy]: Minor version with non-breaking API and library changes
 ///    - [zz]: Bug fix version with no direct changes to API
 ///
+/// - 2017/01/28 (3.00.2) - Fixed panel window border drawing bug
 /// - 2017/01/12 (3.00.2) - Added `nk_group_begin_titled` for separed group identifier and title
 /// - 2017/01/07 (3.00.1) - Started to change documentation style
 /// - 2017/01/05 (3.00.0) - BREAKING CHANGE: The previous color picker API was broken
