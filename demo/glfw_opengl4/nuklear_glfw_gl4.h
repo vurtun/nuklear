@@ -202,13 +202,13 @@ nk_glfw3_device_create()
     }
 
     /* Persistent mapped buffers */
-    GLsizei vb_size = dev->max_vertex_buffer;
+    {GLsizei vb_size = dev->max_vertex_buffer;
     GLsizei eb_size = dev->max_element_buffer;
     GLbitfield flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
     glNamedBufferStorage(dev->vbo, vb_size, 0, flags);
     glNamedBufferStorage(dev->ebo, eb_size, 0, flags);
     dev->vert_buffer = (struct nk_glfw_vertex*) glMapNamedBufferRange(dev->vbo, 0, vb_size, flags);
-    dev->elem_buffer = (int*) glMapNamedBufferRange(dev->ebo, 0, eb_size, flags);
+    dev->elem_buffer = (int*) glMapNamedBufferRange(dev->ebo, 0, eb_size, flags);}
 
     memset(dev->tex_ids, 0, sizeof(dev->tex_ids));
     memset(dev->tex_handles, 0, sizeof(dev->tex_handles));
@@ -217,13 +217,12 @@ nk_glfw3_device_create()
 NK_INTERN int
 nk_glfw3_get_available_tex_index()
 {
+    int i = 0;
     struct nk_glfw_device *dev = &glfw.ogl;
-    for (int i=0; i<NK_GLFW_MAX_TEXTURES; i++) {
+    for (i = 0; i < NK_GLFW_MAX_TEXTURES; i++) {
         if (dev->tex_ids[i] == 0)
             return i;
-    }
-
-    assert(0); /* max textures reached */
+    } assert(0); /* max textures reached */
     return -1;
 }
 
@@ -246,16 +245,14 @@ nk_glfw3_get_tex_ogl_handle(int tex_index)
 NK_API int
 nk_glfw3_create_texture(const void* image, int width, int height)
 {
+    GLuint id;
+    GLsizei w = (GLsizei)width;
+    GLsizei h = (GLsizei)height;
     struct nk_glfw_device *dev = &glfw.ogl;
-
     int tex_index = nk_glfw3_get_available_tex_index();
     if (tex_index < 0)
         return -1;
 
-    GLsizei w = (GLsizei)width;
-    GLsizei h = (GLsizei)height;
-
-    GLuint id;
     glCreateTextures(GL_TEXTURE_2D, 1, &id);
     dev->tex_ids[tex_index] = id;
 
@@ -266,14 +263,12 @@ nk_glfw3_create_texture(const void* image, int width, int height)
     glTextureStorage2D(id, 1, GL_RGBA8, w, h);
     if (image)
         glTextureSubImage2D(id, 0, 0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, image);
-    else
-        glClearTexImage(id, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+    else glClearTexImage(id, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
 
-    GLuint64 handle = glGetTextureHandleARB(id);
+    {GLuint64 handle = glGetTextureHandleARB(id);
     glMakeTextureHandleResidentARB(handle);
     dev->tex_handles[tex_index] = handle;
-
-    return tex_index;
+    return tex_index;}
 }
 
 NK_API void
@@ -281,12 +276,13 @@ nk_glfw3_destroy_texture(int tex_index)
 {
     struct nk_glfw_device *dev = &glfw.ogl;
     GLuint id = nk_glfw3_get_tex_ogl_id(tex_index);
-    if (id==0) return;
-    GLuint64 handle = nk_glfw3_get_tex_ogl_handle(tex_index);
+    if (id == 0) return;
+
+    {GLuint64 handle = nk_glfw3_get_tex_ogl_handle(tex_index);
     glMakeTextureHandleNonResidentARB(handle);
     glDeleteTextures(1, &id);
     dev->tex_ids[tex_index] = 0;
-    dev->tex_handles[tex_index] = 0;
+    dev->tex_handles[tex_index] = 0;}
 }
 
 NK_INTERN void
@@ -299,6 +295,7 @@ nk_glfw3_device_upload_atlas(const void *image, int width, int height)
 NK_API void
 nk_glfw3_device_destroy(void)
 {
+    int i = 0;
     struct nk_glfw_device *dev = &glfw.ogl;
     glDetachShader(dev->prog, dev->vert_shdr);
     glDetachShader(dev->prog, dev->frag_shdr);
@@ -306,7 +303,9 @@ nk_glfw3_device_destroy(void)
     glDeleteShader(dev->frag_shdr);
     glDeleteProgram(dev->prog);
     nk_glfw3_destroy_texture(dev->font_tex_index);
-    for (int i=0; i<NK_GLFW_MAX_TEXTURES; i++) { nk_glfw3_destroy_texture(i); }
+
+    for (i = 0; i < NK_GLFW_MAX_TEXTURES; i++)
+        nk_glfw3_destroy_texture(i);
     glUnmapNamedBuffer(dev->vbo);
     glUnmapNamedBuffer(dev->ebo);
     glDeleteBuffers(1, &dev->vbo);
@@ -377,42 +376,44 @@ nk_glfw3_render(enum nk_anti_aliasing AA)
         {
             /* Wait until GPU is done with buffer */
             nk_glfw3_wait_for_buffer_unlock();
+            {
+                /* fill convert configuration */
+                struct nk_convert_config config;
+                static const struct nk_draw_vertex_layout_element vertex_layout[] = {
+                    {NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct nk_glfw_vertex, position)},
+                    {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct nk_glfw_vertex, uv)},
+                    {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct nk_glfw_vertex, col)},
+                    {NK_VERTEX_LAYOUT_END}
+                };
+                NK_MEMSET(&config, 0, sizeof(config));
+                config.vertex_layout = vertex_layout;
+                config.vertex_size = sizeof(struct nk_glfw_vertex);
+                config.vertex_alignment = NK_ALIGNOF(struct nk_glfw_vertex);
+                config.null = dev->null;
+                config.circle_segment_count = 22;
+                config.curve_segment_count = 22;
+                config.arc_segment_count = 22;
+                config.global_alpha = 1.0f;
+                config.shape_AA = AA;
+                config.line_AA = AA;
 
-            /* fill convert configuration */
-            struct nk_convert_config config;
-            static const struct nk_draw_vertex_layout_element vertex_layout[] = {
-                {NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct nk_glfw_vertex, position)},
-                {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct nk_glfw_vertex, uv)},
-                {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct nk_glfw_vertex, col)},
-                {NK_VERTEX_LAYOUT_END}
-            };
-            NK_MEMSET(&config, 0, sizeof(config));
-            config.vertex_layout = vertex_layout;
-            config.vertex_size = sizeof(struct nk_glfw_vertex);
-            config.vertex_alignment = NK_ALIGNOF(struct nk_glfw_vertex);
-            config.null = dev->null;
-            config.circle_segment_count = 22;
-            config.curve_segment_count = 22;
-            config.arc_segment_count = 22;
-            config.global_alpha = 1.0f;
-            config.shape_AA = AA;
-            config.line_AA = AA;
-
-            /* setup buffers to load vertices and elements */
-            nk_buffer_init_fixed(&vbuf, vertices, (size_t)dev->max_vertex_buffer);
-            nk_buffer_init_fixed(&ebuf, elements, (size_t)dev->max_element_buffer);
-            nk_convert(&glfw.ctx, &dev->cmds, &vbuf, &ebuf, &config);
-
-            /* Lock buffer until GPU has finished draw command */
+                /* setup buffers to load vertices and elements */
+                nk_buffer_init_fixed(&vbuf, vertices, (size_t)dev->max_vertex_buffer);
+                nk_buffer_init_fixed(&ebuf, elements, (size_t)dev->max_element_buffer);
+                nk_convert(&glfw.ctx, &dev->cmds, &vbuf, &ebuf, &config);
+            } /* Lock buffer until GPU has finished draw command */
             nk_glfw3_lock_buffer();
         }
 
         /* iterate over and execute each draw command */
         nk_draw_foreach(cmd, &glfw.ctx, &dev->cmds)
         {
+            int tex_index;
+            GLuint64 tex_handle;
             if (!cmd->elem_count) continue;
-            int tex_index = cmd->texture.id;
-            GLuint64 tex_handle = nk_glfw3_get_tex_ogl_handle(tex_index);
+
+            tex_index = cmd->texture.id;
+            tex_handle = nk_glfw3_get_tex_ogl_handle(tex_index);
 
             /* tex handle must be made resident in each context that uses it */
             if (!glIsTextureHandleResidentARB(tex_handle))
@@ -507,10 +508,10 @@ nk_glfw3_init(GLFWwindow *win, enum nk_glfw_init_state init_state,
     glfw.ctx.clip.userdata = nk_handle_ptr(0);
     glfw.last_button_click = 0;
 
-    struct nk_glfw_device *dev = &glfw.ogl;
+    {struct nk_glfw_device *dev = &glfw.ogl;
     dev->max_vertex_buffer = max_vertex_buffer;
     dev->max_element_buffer = max_element_buffer;
-    nk_glfw3_device_create();
+    nk_glfw3_device_create();}
 
     glfw.is_double_click_down = nk_false;
     glfw.double_click_pos = nk_vec2(0, 0);

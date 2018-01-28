@@ -79,6 +79,7 @@ int main(void)
     int width = 0, height = 0;
     struct nk_context *ctx;
     struct nk_colorf bg;
+    struct nk_image img;
 
     /* GLFW */
     glfwSetErrorCallback(error_callback);
@@ -129,12 +130,12 @@ int main(void)
     /* Create bindless texture.
      * The index returned is not the opengl resource id.
      * IF you need the GL resource id use: nk_glfw3_get_tex_ogl_id() */
-    enum {tex_width=256, tex_height=256};
+    {int tex_index = 0;
+    enum {tex_width = 256, tex_height = 256};
     char pixels[tex_width * tex_height * 4];
     memset(pixels, 128, sizeof(pixels));
-
-    int tex_index = nk_glfw3_create_texture(pixels, tex_width, tex_height);
-    struct nk_image img = nk_image_id(tex_index);
+    tex_index = nk_glfw3_create_texture(pixels, tex_width, tex_height);
+    img = nk_image_id(tex_index);}
 
     bg.r = 0.10f, bg.g = 0.18f, bg.b = 0.24f, bg.a = 1.0f;
     while (!glfwWindowShouldClose(win))
