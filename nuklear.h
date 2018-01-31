@@ -12555,8 +12555,8 @@ nk_font_bake_pack(struct nk_font_baker *baker,
             /* pack custom user data first so it will be in the upper left corner*/
             struct nk_rp_rect custom_space;
             nk_zero(&custom_space, sizeof(custom_space));
-            custom_space.w = (nk_rp_coord)((custom->w * 2) + 1);
-            custom_space.h = (nk_rp_coord)(custom->h + 1);
+            custom_space.w = (nk_rp_coord)(custom->w);
+            custom_space.h = (nk_rp_coord)(custom->h);
 
             nk_tt_PackSetOversampling(&baker->spc, 1, 1);
             nk_rp_pack_rects((struct nk_rp_context*)baker->spc.pack_info, &custom_space, 1);
@@ -24910,6 +24910,7 @@ nk_menu_end(struct nk_context *ctx)
 ///    - [yy]: Minor version with non-breaking API and library changes
 ///    - [zz]: Bug fix version with no direct changes to API
 ///
+/// - 2017/01/31 (3.00.5) - Fixed overcalculation of cursor data in font baking process
 /// - 2017/01/31 (3.00.4) - Removed name collision with stb_truetype
 /// - 2017/01/28 (3.00.3) - Fixed panel window border drawing bug
 /// - 2017/01/12 (3.00.2) - Added `nk_group_begin_titled` for separed group identifier and title
