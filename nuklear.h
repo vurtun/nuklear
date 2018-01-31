@@ -11045,7 +11045,7 @@ nk_tt_GetGlyphBox(const struct nk_tt_fontinfo *info, int glyph_index,
 }
 
 NK_INTERN int
-stbtt__close_shape(struct nk_tt_vertex *vertices, int num_vertices, int was_off,
+nk_tt__close_shape(struct nk_tt_vertex *vertices, int num_vertices, int was_off,
     int start_off, nk_int sx, nk_int sy, nk_int scx, nk_int scy, nk_int cx, nk_int cy)
 {
    if (start_off) {
@@ -11151,7 +11151,7 @@ nk_tt_GetGlyphShape(const struct nk_tt_fontinfo *info, struct nk_allocator *allo
 
             if (next_move == i) {
                 if (i != 0)
-                    num_vertices = stbtt__close_shape(vertices, num_vertices, was_off, start_off, sx,sy,scx,scy,cx,cy);
+                    num_vertices = nk_tt__close_shape(vertices, num_vertices, was_off, start_off, sx,sy,scx,scy,cx,cy);
 
                 /* now start the new one                */
                 start_off = !(flags & 1);
@@ -11194,7 +11194,7 @@ nk_tt_GetGlyphShape(const struct nk_tt_fontinfo *info, struct nk_allocator *allo
                 }
             }
         }
-        num_vertices = stbtt__close_shape(vertices, num_vertices, was_off, start_off, sx,sy,scx,scy,cx,cy);
+        num_vertices = nk_tt__close_shape(vertices, num_vertices, was_off, start_off, sx,sy,scx,scy,cx,cy);
     } else if (numberOfContours == -1) {
         /* Compound shapes. */
         int more = 1;
@@ -11852,7 +11852,7 @@ nk_tt__rasterize(struct nk_tt__bitmap *result, struct nk_tt__point *pts,
     }
 
     /* now sort the edges by their highest point (should snap to integer, and then by x) */
-    /*STBTT_sort(e, n, sizeof(e[0]), stbtt__edge_compare); */
+    /*STBTT_sort(e, n, sizeof(e[0]), nk_tt__edge_compare); */
     nk_tt__sort_edges(e, n);
     /* now, traverse the scanlines and find the intersections on each scanline, use xor winding rule */
     nk_tt__rasterize_sorted_edges(result, e, n, vsubsample, off_x, off_y, alloc);
@@ -24910,7 +24910,8 @@ nk_menu_end(struct nk_context *ctx)
 ///    - [yy]: Minor version with non-breaking API and library changes
 ///    - [zz]: Bug fix version with no direct changes to API
 ///
-/// - 2017/01/28 (3.00.2) - Fixed panel window border drawing bug
+/// - 2017/01/31 (3.00.4) - Removed name collision with stb_truetype
+/// - 2017/01/28 (3.00.3) - Fixed panel window border drawing bug
 /// - 2017/01/12 (3.00.2) - Added `nk_group_begin_titled` for separed group identifier and title
 /// - 2017/01/07 (3.00.1) - Started to change documentation style
 /// - 2017/01/05 (3.00.0) - BREAKING CHANGE: The previous color picker API was broken
