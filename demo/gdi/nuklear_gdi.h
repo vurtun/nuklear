@@ -564,7 +564,7 @@ nk_gdi_handle_event(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
     case WM_SIZE:
     {
         unsigned width = LOWORD(lparam);
-        unsigned height = LOWORD(lparam);
+        unsigned height = HIWORD(lparam);
         if (width != gdi.width || height != gdi.height)
         {
             DeleteObject(gdi.bitmap);
