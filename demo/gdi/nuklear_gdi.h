@@ -170,13 +170,6 @@ nk_gdi_stroke_rect(HDC dc, short x, short y, unsigned short w,
     unsigned short h, unsigned short r, unsigned short line_thickness, struct nk_color col)
 {
     COLORREF color = convert_color(col);
-    POINT points[] = {
-        { x, y },
-        { x + w, y },
-        { x + w, y + h },
-        { x, y + h },
-        { x, y },
-    };
 
     HPEN pen = NULL;
     if (line_thickness == 1) {
@@ -186,9 +179,15 @@ nk_gdi_stroke_rect(HDC dc, short x, short y, unsigned short w,
         SelectObject(dc, pen);
     }
 
-    Polyline(dc, points, 5);
+    HGDIOBJ br = SelectObject(dc, GetStockObject(NULL_BRUSH));
+    if (r == 0) {
+        Rectangle(dc, x, y, x + w, y + h);
+    } else {
+        RoundRect(dc, x, y, x + w, y + h, r, r);
+    }
+    SelectObject(dc, br);
 
-    if (pen) {
+    if (pen) { 
         SelectObject(dc, GetStockObject(DC_PEN));
         DeleteObject(pen);
     }
