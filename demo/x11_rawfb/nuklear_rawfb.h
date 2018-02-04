@@ -90,9 +90,11 @@ nk_rawfb_setpixel(const struct rawfb_context *rawfb,
     const short x0, const short y0, const struct nk_color col)
 {
     unsigned int c = nk_color_from_byte(&col.r);
-    unsigned int *ptr = (unsigned int *)rawfb->fb.pixels;
+    unsigned char *pixels = rawfb->fb.pixels;
+    unsigned int *ptr;
 
-    ptr += y0 * rawfb->fb.w;
+    pixels += y0 * rawfb->fb.pitch;
+    ptr = (unsigned int *)pixels;
     ptr += x0;
 
     if (y0 < rawfb->scissors.h && y0 >= rawfb->scissors.y &&
@@ -109,8 +111,11 @@ nk_rawfb_line_horizontal(const struct rawfb_context *rawfb,
      * The caller has to make sure it does no exceed bounds. */
     unsigned int i, n;
     unsigned int c[16];
-    unsigned int *ptr = (unsigned int *)rawfb->fb.pixels;
-    ptr += y * rawfb->fb.w;
+    unsigned char *pixels = rawfb->fb.pixels;
+    unsigned int *ptr;
+
+    pixels += y * rawfb->fb.pitch;
+    ptr = (unsigned int *)pixels;
     ptr += x0;
 
     n = x1 - x0;
