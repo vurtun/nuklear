@@ -1564,20 +1564,20 @@ NK_API struct nk_vec2 nk_window_get_size(const struct nk_context*);
 /// Returns the current window width
 */
 NK_API float nk_window_get_width(const struct nk_context*);
-/*/// #### nk_window_get_width
+/*/// #### nk_window_get_height
 ///
 /// Returns the height of the currently processed window.
 /// !!! WARNING
 ///     Only call this function between calls `nk_begin_xxx` and `nk_end`
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
-/// float nk_window_get_width(const struct nk_context *ctx);
+/// float nk_window_get_height(const struct nk_context *ctx);
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///
 /// Parameter   | Description
 /// ------------|-----------------------------------------------------------
 /// __ctx__     | Must point to an previously initialized `nk_context` struct
 ///
-/// Returns the current window width
+/// Returns the current window height
 */
 NK_API float nk_window_get_height(const struct nk_context*);
 /*/// #### nk_window_get_panel
