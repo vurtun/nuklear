@@ -310,7 +310,6 @@ nk_sdl_handle_event(SDL_Event *evt)
             nk_input_button(ctx, NK_BUTTON_MIDDLE, x, y, down);
         else if (evt->button.button == SDL_BUTTON_RIGHT)
             nk_input_button(ctx, NK_BUTTON_RIGHT, x, y, down);
-        else return 0;
         return 1;
     } else if (evt->type == SDL_MOUSEMOTION) {
         /* mouse motion */
