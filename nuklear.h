@@ -17,6 +17,8 @@
 ///     4. Window section
 ///     5. Layouting section
 ///     6. Groups section
+///     7. Tree section
+///     8. Properties section
 /// 7. License section
 /// 8. Changelog section
 /// 9. Gallery section
@@ -2760,6 +2762,8 @@ NK_API void nk_group_scrolled_end(struct nk_context*);
 /// __type__    | Value from the nk_tree_type section to visually mark a tree node header as either a collapseable UI section or tree node
 /// __title__   | Label printed in the tree header
 /// __state__   | Initial tree state value out of nk_collapse_states
+///
+/// Returns `true(1)` if visible and fillable with widgets or `false(0)` otherwise
 */
 #define nk_tree_push(ctx, type, title, state) nk_tree_push_hashed(ctx, type, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),__LINE__)
 /*/// #### nk_tree_push_id
@@ -2775,6 +2779,8 @@ NK_API void nk_group_scrolled_end(struct nk_context*);
 /// __title__   | Label printed in the tree header
 /// __state__   | Initial tree state value out of nk_collapse_states
 /// __id__      | Loop counter index if this function is called in a loop
+///
+/// Returns `true(1)` if visible and fillable with widgets or `false(0)` otherwise
 */
 #define nk_tree_push_id(ctx, type, title, state, id) nk_tree_push_hashed(ctx, type, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),id)
 /*/// #### nk_tree_push_hashed
@@ -2793,6 +2799,8 @@ NK_API void nk_group_scrolled_end(struct nk_context*);
 /// __hash__    | Memory block or string to generate the ID from
 /// __len__     | Size of passed memory block or string in __hash__
 /// __seed__    | Seeding value if this function is called in a loop or default to `0`
+///
+/// Returns `true(1)` if visible and fillable with widgets or `false(0)` otherwise
 */
 NK_API int nk_tree_push_hashed(struct nk_context*, enum nk_tree_type, const char *title, enum nk_collapse_states initial_state, const char *hash, int len,int seed);
 /*/// #### nk_tree_image_push
@@ -2814,6 +2822,8 @@ NK_API int nk_tree_push_hashed(struct nk_context*, enum nk_tree_type, const char
 /// __img__     | Image to display inside the header on the left of the label
 /// __title__   | Label printed in the tree header
 /// __state__   | Initial tree state value out of nk_collapse_states
+///
+/// Returns `true(1)` if visible and fillable with widgets or `false(0)` otherwise
 */
 #define nk_tree_image_push(ctx, type, img, title, state) nk_tree_image_push_hashed(ctx, type, img, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),__LINE__)
 /*/// #### nk_tree_image_push_id
@@ -2832,6 +2842,8 @@ NK_API int nk_tree_push_hashed(struct nk_context*, enum nk_tree_type, const char
 /// __title__   | Label printed in the tree header
 /// __state__   | Initial tree state value out of nk_collapse_states
 /// __id__      | Loop counter index if this function is called in a loop
+///
+/// Returns `true(1)` if visible and fillable with widgets or `false(0)` otherwise
 */
 #define nk_tree_image_push_id(ctx, type, img, title, state, id) nk_tree_image_push_hashed(ctx, type, img, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),id)
 /*/// #### nk_tree_image_push_hashed
@@ -2851,6 +2863,8 @@ NK_API int nk_tree_push_hashed(struct nk_context*, enum nk_tree_type, const char
 /// __hash__    | Memory block or string to generate the ID from
 /// __len__     | Size of passed memory block or string in __hash__
 /// __seed__    | Seeding value if this function is called in a loop or default to `0`
+///
+/// Returns `true(1)` if visible and fillable with widgets or `false(0)` otherwise
 */
 NK_API int nk_tree_image_push_hashed(struct nk_context*, enum nk_tree_type, struct nk_image, const char *title, enum nk_collapse_states initial_state, const char *hash, int len,int seed);
 /*/// #### nk_tree_pop
@@ -2876,6 +2890,8 @@ NK_API void nk_tree_pop(struct nk_context*);
 /// __type__    | Value from the nk_tree_type section to visually mark a tree node header as either a collapseable UI section or tree node
 /// __title__   | Label printed in the tree header
 /// __state__   | Persistent state to update
+///
+/// Returns `true(1)` if visible and fillable with widgets or `false(0)` otherwise
 */
 NK_API int nk_tree_state_push(struct nk_context*, enum nk_tree_type, const char *title, enum nk_collapse_states *state);
 /*/// #### nk_tree_state_image_push
@@ -2891,6 +2907,8 @@ NK_API int nk_tree_state_push(struct nk_context*, enum nk_tree_type, const char 
 /// __type__    | Value from the nk_tree_type section to visually mark a tree node header as either a collapseable UI section or tree node
 /// __title__   | Label printed in the tree header
 /// __state__   | Persistent state to update
+///
+/// Returns `true(1)` if visible and fillable with widgets or `false(0)` otherwise
 */
 NK_API int nk_tree_state_image_push(struct nk_context*, enum nk_tree_type, struct nk_image, const char *title, enum nk_collapse_states *state);
 /*/// #### nk_tree_state_pop
@@ -3079,12 +3097,209 @@ NK_API int nk_color_pick(struct nk_context*, struct nk_colorf*, enum nk_color_fo
  *
  *                                  PROPERTIES
  *
- * ============================================================================= */
+ * =============================================================================
+/// ### Properties
+/// Properties are the main value modification widgets in Nuklear. Changing a value
+/// can be achieved by dragging, adding/removing incremental steps on button click
+/// or by directly typing a number.
+///
+/// #### Usage
+/// Each property requires a unique name for identifaction that is also used for
+/// displaying a label. If you want to use the same name multiple times make sure
+/// add a '#' before your name. The '#' will not be shown but will generate a
+/// unique ID. Each propery also takes in a minimum and maximum value. If you want
+/// to make use of the complete number range of a type just use the provided
+/// type limits from `limits.h`. For example `INT_MIN` and `INT_MAX` for
+/// `nk_property_int` and `nk_propertyi`. In additional each property takes in
+/// a increment value that will be added or subtracted if either the increment
+/// decrement button is clicked. Finally there is a value for increment per pixel
+/// dragged that is added or subtracted from the value.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// int value = 0;
+/// struct nk_context ctx;
+/// nk_init_xxx(&ctx, ...);
+/// while (1) {
+///     // Input
+///     Event evt;
+///     nk_input_begin(&ctx);
+///     while (GetEvent(&evt)) {
+///         if (evt.type == MOUSE_MOVE)
+///             nk_input_motion(&ctx, evt.motion.x, evt.motion.y);
+///         else if (evt.type == [...]) {
+///             nk_input_xxx(...);
+///         }
+///     }
+///     nk_input_end(&ctx);
+///     //
+///     // Window
+///     if (nk_begin_xxx(...) {
+///         // Property
+///         nk_layout_row_dynamic(...);
+///         nk_property_int(ctx, "ID", INT_MIN, &value, INT_MAX, 1, 1);
+///     }
+///     nk_end(ctx);
+///     //
+///     // Draw
+///     const struct nk_command *cmd = 0;
+///     nk_foreach(cmd, &ctx) {
+///     switch (cmd->type) {
+///     case NK_COMMAND_LINE:
+///         your_draw_line_function(...)
+///         break;
+///     case NK_COMMAND_RECT
+///         your_draw_rect_function(...)
+///         break;
+///     case ...:
+///         // [...]
+///     }
+//      nk_clear(&ctx);
+/// }
+/// nk_free(&ctx);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// #### Reference
+/// Function            | Description
+/// --------------------|-------------------------------------------
+/// nk_property_int     | Integer property directly modifing a passed in value
+/// nk_property_float   | Float property directly modifing a passed in value
+/// nk_property_double  | Double property directly modifing a passed in value
+/// nk_propertyi        | Integer property returning the modified int value
+/// nk_propertyf        | Float property returning the modified float value
+/// nk_propertyd        | Double property returning the modified double value
+///
+*/
+/*/// #### nk_property_int
+/// Integer property directly modifing a passed in value
+/// !!! WARNING
+///     To generate a unique property ID using the same label make sure to insert
+///     a `#` at the beginning. It will not be shown but guarantees correct behavior.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// void nk_property_int(struct nk_context *ctx, const char *name, int min, int *val, int max, int step, float inc_per_pixel);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter           | Description
+/// --------------------|-----------------------------------------------------------
+/// __ctx__             | Must point to an previously initialized `nk_context` struct after calling a layouting function
+/// __name__            | String used both as a label as well as a unique identifier
+/// __min__             | Minimum value not allowed to be underflown
+/// __val__             | Integer pointer to be modified
+/// __max__             | Maximum value not allowed to be overflown
+/// __step__            | Increment added and subtracted on increment and decrement button
+/// __inc_per_pixel__   | Value per pixel added or subtracted on dragging
+*/
 NK_API void nk_property_int(struct nk_context*, const char *name, int min, int *val, int max, int step, float inc_per_pixel);
+/*/// #### nk_property_float
+/// Float property directly modifing a passed in value
+/// !!! WARNING
+///     To generate a unique property ID using the same label make sure to insert
+///     a `#` at the beginning. It will not be shown but guarantees correct behavior.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// void nk_property_float(struct nk_context *ctx, const char *name, float min, float *val, float max, float step, float inc_per_pixel);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter           | Description
+/// --------------------|-----------------------------------------------------------
+/// __ctx__             | Must point to an previously initialized `nk_context` struct after calling a layouting function
+/// __name__            | String used both as a label as well as a unique identifier
+/// __min__             | Minimum value not allowed to be underflown
+/// __val__             | Float pointer to be modified
+/// __max__             | Maximum value not allowed to be overflown
+/// __step__            | Increment added and subtracted on increment and decrement button
+/// __inc_per_pixel__   | Value per pixel added or subtracted on dragging
+*/
 NK_API void nk_property_float(struct nk_context*, const char *name, float min, float *val, float max, float step, float inc_per_pixel);
+/*/// #### nk_property_double
+/// Double property directly modifing a passed in value
+/// !!! WARNING
+///     To generate a unique property ID using the same label make sure to insert
+///     a `#` at the beginning. It will not be shown but guarantees correct behavior.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// void nk_property_double(struct nk_context *ctx, const char *name, double min, double *val, double max, double step, double inc_per_pixel);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter           | Description
+/// --------------------|-----------------------------------------------------------
+/// __ctx__             | Must point to an previously initialized `nk_context` struct after calling a layouting function
+/// __name__            | String used both as a label as well as a unique identifier
+/// __min__             | Minimum value not allowed to be underflown
+/// __val__             | Double pointer to be modified
+/// __max__             | Maximum value not allowed to be overflown
+/// __step__            | Increment added and subtracted on increment and decrement button
+/// __inc_per_pixel__   | Value per pixel added or subtracted on dragging
+*/
 NK_API void nk_property_double(struct nk_context*, const char *name, double min, double *val, double max, double step, float inc_per_pixel);
+/*/// #### nk_propertyi
+/// Integer property modifing a passed in value and returning the new value
+/// !!! WARNING
+///     To generate a unique property ID using the same label make sure to insert
+///     a `#` at the beginning. It will not be shown but guarantees correct behavior.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// int nk_propertyi(struct nk_context *ctx, const char *name, int min, int val, int max, int step, float inc_per_pixel);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter           | Description
+/// --------------------|-----------------------------------------------------------
+/// __ctx__             | Must point to an previously initialized `nk_context` struct after calling a layouting function
+/// __name__            | String used both as a label as well as a unique identifier
+/// __min__             | Minimum value not allowed to be underflown
+/// __val__             | Current integer value to be modified and returned
+/// __max__             | Maximum value not allowed to be overflown
+/// __step__            | Increment added and subtracted on increment and decrement button
+/// __inc_per_pixel__   | Value per pixel added or subtracted on dragging
+///
+/// Returns the new modified integer value
+*/
 NK_API int nk_propertyi(struct nk_context*, const char *name, int min, int val, int max, int step, float inc_per_pixel);
+/*/// #### nk_propertyf
+/// Float property modifing a passed in value and returning the new value
+/// !!! WARNING
+///     To generate a unique property ID using the same label make sure to insert
+///     a `#` at the beginning. It will not be shown but guarantees correct behavior.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// float nk_propertyf(struct nk_context *ctx, const char *name, float min, float val, float max, float step, float inc_per_pixel);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter           | Description
+/// --------------------|-----------------------------------------------------------
+/// __ctx__             | Must point to an previously initialized `nk_context` struct after calling a layouting function
+/// __name__            | String used both as a label as well as a unique identifier
+/// __min__             | Minimum value not allowed to be underflown
+/// __val__             | Current float value to be modified and returned
+/// __max__             | Maximum value not allowed to be overflown
+/// __step__            | Increment added and subtracted on increment and decrement button
+/// __inc_per_pixel__   | Value per pixel added or subtracted on dragging
+///
+/// Returns the new modified float value
+*/
 NK_API float nk_propertyf(struct nk_context*, const char *name, float min, float val, float max, float step, float inc_per_pixel);
+/*/// #### nk_propertyd
+/// Float property modifing a passed in value and returning the new value
+/// !!! WARNING
+///     To generate a unique property ID using the same label make sure to insert
+///     a `#` at the beginning. It will not be shown but guarantees correct behavior.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// float nk_propertyd(struct nk_context *ctx, const char *name, double min, double val, double max, double step, double inc_per_pixel);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter           | Description
+/// --------------------|-----------------------------------------------------------
+/// __ctx__             | Must point to an previously initialized `nk_context` struct after calling a layouting function
+/// __name__            | String used both as a label as well as a unique identifier
+/// __min__             | Minimum value not allowed to be underflown
+/// __val__             | Current double value to be modified and returned
+/// __max__             | Maximum value not allowed to be overflown
+/// __step__            | Increment added and subtracted on increment and decrement button
+/// __inc_per_pixel__   | Value per pixel added or subtracted on dragging
+///
+/// Returns the new modified double value
+*/
 NK_API double nk_propertyd(struct nk_context*, const char *name, double min, double val, double max, double step, float inc_per_pixel);
 /* =============================================================================
  *
@@ -6002,7 +6217,6 @@ nk_strmatch_fuzzy_text(const char *str, int str_len,
      * if found then out_score is also set. Score value has no intrinsic meaning.
      * Range varies with pattern. Can only compare scores with same search pattern. */
 
-    /* ------- scores --------- */
     /* bonus for adjacent matches */
     #define NK_ADJACENCY_BONUS 5
     /* bonus if match occurs after a separator */
@@ -13597,7 +13811,7 @@ nk_font_atlas_bake(struct nk_font_atlas *atlas, int *width, int *height,
 
     /* initialize each cursor */
     {NK_STORAGE const struct nk_vec2 nk_cursor_data[NK_CURSOR_COUNT][3] = {
-        /* Pos ----- Size ------- Offset --*/
+        /* Pos      Size        Offset */
         {{ 0, 3},   {12,19},    { 0, 0}},
         {{13, 0},   { 7,16},    { 4, 8}},
         {{31, 0},   {23,23},    {11,11}},
