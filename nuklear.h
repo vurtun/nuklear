@@ -25124,12 +25124,12 @@ nk_menu_end(struct nk_context *ctx)
 ///    - [yy]: Minor version with non-breaking API and library changes
 ///    - [zz]: Bug fix version with no direct changes to API
 ///
-/// - 2017/01/31 (3.00.5) - Fixed overcalculation of cursor data in font baking process
-/// - 2017/01/31 (3.00.4) - Removed name collision with stb_truetype
-/// - 2017/01/28 (3.00.3) - Fixed panel window border drawing bug
-/// - 2017/01/12 (3.00.2) - Added `nk_group_begin_titled` for separed group identifier and title
-/// - 2017/01/07 (3.00.1) - Started to change documentation style
-/// - 2017/01/05 (3.00.0) - BREAKING CHANGE: The previous color picker API was broken
+/// - 2018/01/31 (3.00.5) - Fixed overcalculation of cursor data in font baking process
+/// - 2018/01/31 (3.00.4) - Removed name collision with stb_truetype
+/// - 2018/01/28 (3.00.3) - Fixed panel window border drawing bug
+/// - 2018/01/12 (3.00.2) - Added `nk_group_begin_titled` for separed group identifier and title
+/// - 2018/01/07 (3.00.1) - Started to change documentation style
+/// - 2018/01/05 (3.00.0) - BREAKING CHANGE: The previous color picker API was broken
 ///                        because of conversions between float and byte color representation.
 ///                        Color pickers now use floating point values to represent
 ///                        HSV values. To get back the old behavior I added some additional
