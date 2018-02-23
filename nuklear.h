@@ -22499,7 +22499,7 @@ nk_slider_float(struct nk_context *ctx, float min_value, float *value, float max
 
     state = nk_widget(&bounds, ctx);
     if (!state) return ret;
-    in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
+    in = (/*state == NK_WIDGET_ROM || */ layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
 
     old_value = *value;
     *value = nk_do_slider(&ctx->last_widget_state, &win->buffer, bounds, min_value,
@@ -25124,6 +25124,7 @@ nk_menu_end(struct nk_context *ctx)
 ///    - [yy]: Minor version with non-breaking API and library changes
 ///    - [zz]: Bug fix version with no direct changes to API
 ///
+/// - 2018/02/23 (3.00.6) - Fixed slider dragging behavior
 /// - 2018/01/31 (3.00.5) - Fixed overcalculation of cursor data in font baking process
 /// - 2018/01/31 (3.00.4) - Removed name collision with stb_truetype
 /// - 2018/01/28 (3.00.3) - Fixed panel window border drawing bug
