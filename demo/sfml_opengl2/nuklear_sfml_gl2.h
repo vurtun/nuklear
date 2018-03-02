@@ -81,6 +81,9 @@ nk_sfml_render(enum nk_anti_aliasing AA)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glViewport(0, 0, (GLsizei)window_width, (GLsizei)window_height);
+    glMatrixMode(GL_TEXTURE);
+    glPushMatrix();
+    glLoadIdentity();
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
@@ -165,6 +168,8 @@ nk_sfml_render(enum nk_anti_aliasing AA)
     glDisable(GL_TEXTURE_2D);
 
     glBindTexture(GL_TEXTURE_2D, 0);
+    glMatrixMode(GL_TEXTURE);
+    glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
     glPopMatrix();
     glMatrixMode(GL_PROJECTION);
@@ -319,6 +324,8 @@ nk_sfml_handle_event(sf::Event* evt)
     } else if(evt->type == sf::Event::TouchBegan || evt->type == sf::Event::TouchEnded) {
         int down = evt->type == sf::Event::TouchBegan;
         const int x = evt->touch.x, y = evt->touch.y;
+		ctx->input.mouse.pos.x = x;
+		ctx->input.mouse.pos.y = y;
         nk_input_button(ctx, NK_BUTTON_LEFT, x, y, down);
         return 1;
     } else if(evt->type == sf::Event::TouchMoved) {

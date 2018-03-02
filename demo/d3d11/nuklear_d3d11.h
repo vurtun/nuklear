@@ -316,6 +316,7 @@ nk_d3d11_handle_event(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
         return 1;
 
     case WM_LBUTTONUP:
+        nk_input_button(&d3d11.ctx, NK_BUTTON_DOUBLE, (short)LOWORD(lparam), (short)HIWORD(lparam), 0);
         nk_input_button(&d3d11.ctx, NK_BUTTON_LEFT, (short)LOWORD(lparam), (short)HIWORD(lparam), 0);
         ReleaseCapture();
         return 1;
@@ -347,6 +348,10 @@ nk_d3d11_handle_event(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
     case WM_MOUSEMOVE:
         nk_input_motion(&d3d11.ctx, (short)LOWORD(lparam), (short)HIWORD(lparam));
         return 1;
+
+    case WM_LBUTTONDBLCLK:
+        nk_input_button(&d3d11.ctx, NK_BUTTON_DOUBLE, (short)LOWORD(lparam), (short)HIWORD(lparam), 1);
+        return 1;
     }
 
     return 0;
@@ -367,10 +372,6 @@ nk_d3d11_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
                 LPCWSTR wstr = (LPCWSTR)GlobalLock(mem);
                 if (wstr)
                 {
-#ifdef NK_INCLUDE_UNICODE_SUPPORT
-					NK_STATIC_ASSERT(sizeof(nk_tchar) == sizeof(wchar_t));
-					nk_textedit_paste(edit, wstr, size / sizeof(wchar_t));
-#else
                     int utf8size = WideCharToMultiByte(CP_UTF8, 0, wstr, size / sizeof(wchar_t), NULL, 0, NULL, NULL);
                     if (utf8size)
                     {
@@ -382,7 +383,6 @@ nk_d3d11_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
                             free(utf8);
                         }
                     }
-#endif
                     GlobalUnlock(mem); 
                 }
             }
@@ -392,17 +392,12 @@ nk_d3d11_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
 }
 
 static void
-nk_d3d11_clipbard_copy(nk_handle usr, const nk_tchar *text, int len)
+nk_d3d11_clipbard_copy(nk_handle usr, const char *text, int len)
 {
     (void)usr;
     if (OpenClipboard(NULL))
     {
-#ifndef NK_INCLUDE_UNICODE_SUPPORT
         int wsize = MultiByteToWideChar(CP_UTF8, 0, text, len, NULL, 0);
-#else
-		const int wsize = len;
-		NK_STATIC_ASSERT(sizeof(nk_tchar) == sizeof(wchar_t));
-#endif
         if (wsize)
         {
             HGLOBAL mem = GlobalAlloc(GMEM_MOVEABLE, (wsize + 1) * sizeof(wchar_t));
@@ -411,14 +406,10 @@ nk_d3d11_clipbard_copy(nk_handle usr, const nk_tchar *text, int len)
                 wchar_t* wstr = (wchar_t*)GlobalLock(mem);
                 if (wstr)
                 {
-#ifndef NK_INCLUDE_UNICODE_SUPPORT
                     MultiByteToWideChar(CP_UTF8, 0, text, len, wstr, wsize);
-#else
-					NK_MEMCPY(wstr, text, wsize * sizeof(wchar_t));
-#endif
-					wstr[wsize] = 0;
+                    wstr[wsize] = 0;
                     GlobalUnlock(mem);
-                    SetClipboardData(CF_UNICODETEXT, mem);
+                    SetClipboardData(CF_UNICODETEXT, mem); 
                 }
             }
         }

@@ -221,6 +221,7 @@ nk_sdl_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_b
         const struct nk_draw_command *cmd;
         void *vertices, *elements;
         const nk_draw_index *offset = NULL;
+        struct nk_buffer vbuf, ebuf;
 
         /* allocate vertex and element buffer */
         glBindVertexArray(dev->vao);
@@ -255,10 +256,9 @@ nk_sdl_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_b
             config.line_AA = AA;
 
             /* setup buffers to load vertices and elements */
-            {struct nk_buffer vbuf, ebuf;
             nk_buffer_init_fixed(&vbuf, vertices, (nk_size)max_vertex_buffer);
             nk_buffer_init_fixed(&ebuf, elements, (nk_size)max_element_buffer);
-            nk_convert(&sdl.ctx, &dev->cmds, &vbuf, &ebuf, &config);}
+            nk_convert(&sdl.ctx, &dev->cmds, &vbuf, &ebuf, &config);
         }
         glUnmapBuffer(GL_ARRAY_BUFFER);
         glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
@@ -400,25 +400,30 @@ nk_sdl_handle_event(SDL_Event *evt)
         /* mouse button */
         int down = evt->type == SDL_MOUSEBUTTONDOWN;
         const int x = evt->button.x, y = evt->button.y;
-        if (evt->button.button == SDL_BUTTON_LEFT)
+        if (evt->button.button == SDL_BUTTON_LEFT) {
+            if (evt->button.clicks > 1)
+                nk_input_button(ctx, NK_BUTTON_DOUBLE, x, y, down);
             nk_input_button(ctx, NK_BUTTON_LEFT, x, y, down);
-        if (evt->button.button == SDL_BUTTON_MIDDLE)
+        } else if (evt->button.button == SDL_BUTTON_MIDDLE)
             nk_input_button(ctx, NK_BUTTON_MIDDLE, x, y, down);
-        if (evt->button.button == SDL_BUTTON_RIGHT)
+        else if (evt->button.button == SDL_BUTTON_RIGHT)
             nk_input_button(ctx, NK_BUTTON_RIGHT, x, y, down);
         return 1;
     } else if (evt->type == SDL_MOUSEMOTION) {
+        /* mouse motion */
         if (ctx->input.mouse.grabbed) {
             int x = (int)ctx->input.mouse.prev.x, y = (int)ctx->input.mouse.prev.y;
             nk_input_motion(ctx, x + evt->motion.xrel, y + evt->motion.yrel);
         } else nk_input_motion(ctx, evt->motion.x, evt->motion.y);
         return 1;
     } else if (evt->type == SDL_TEXTINPUT) {
+        /* text input */
         nk_glyph glyph;
         memcpy(glyph, evt->text.text, NK_UTF_SIZE);
         nk_input_glyph(ctx, glyph);
         return 1;
     } else if (evt->type == SDL_MOUSEWHEEL) {
+        /* mouse wheel */
         nk_input_scroll(ctx,nk_vec2((float)evt->wheel.x,(float)evt->wheel.y));
         return 1;
     }

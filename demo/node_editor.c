@@ -104,7 +104,7 @@ node_editor_add(struct node_editor *editor, const char *name, struct nk_rect bou
 {
     static int IDs = 0;
     struct node *node;
-    assert((nk_size)editor->node_count < LEN(editor->node_buf));
+    NK_ASSERT((nk_size)editor->node_count < NK_LEN(editor->node_buf));
     node = &editor->node_buf[editor->node_count++];
     node->ID = IDs++;
     node->value = 0;
@@ -122,7 +122,7 @@ node_editor_link(struct node_editor *editor, int in_id, int in_slot,
     int out_id, int out_slot)
 {
     struct node_link *link;
-    assert((nk_size)editor->link_count < LEN(editor->links));
+    NK_ASSERT((nk_size)editor->link_count < NK_LEN(editor->links));
     link = &editor->links[editor->link_count++];
     link->input_id = in_id;
     link->input_slot = in_slot;
@@ -169,6 +169,7 @@ node_editor(struct nk_context *ctx)
         {
             struct node *it = nodedit->begin;
             struct nk_rect size = nk_layout_space_bounds(ctx);
+            struct nk_panel *node = 0;
 
             if (nodedit->show_grid) {
                 /* display grid */
@@ -182,7 +183,6 @@ node_editor(struct nk_context *ctx)
             }
 
             /* execute each node as a movable group */
-            struct nk_panel *node;
             while (it) {
                 /* calculate scrolled node window position and size */
                 nk_layout_space_push(ctx, nk_rect(it->bounds.x - nodedit->scrolling.x,

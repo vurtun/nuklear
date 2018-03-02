@@ -1,4 +1,29 @@
-/* nuklear - v1.32.0 - public domain */
+/*
+ * MIT License
+ *
+ * Copyright (c) 2016-2017 Patrick Rudolph <siro@das-labor.org>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ * Based on x11/main.c.
+ *
+*/
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,18 +35,30 @@
 #include <unistd.h>
 #include <time.h>
 
+#define RAWFB_RGBX_8888
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_STANDARD_VARARGS
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
 #define NK_IMPLEMENTATION
-#define NK_XLIB_IMPLEMENTATION
+#define NK_XLIBSHM_IMPLEMENTATION
+#define NK_RAWFB_IMPLEMENTATION
+#define NK_INCLUDE_FONT_BAKING
+#define NK_INCLUDE_DEFAULT_FONT
+#define NK_INCLUDE_SOFTWARE_FONT
+
 #include "../../nuklear.h"
+#include "nuklear_rawfb.h"
 #include "nuklear_xlib.h"
 
 #define DTIME           20
 #define WINDOW_WIDTH    800
 #define WINDOW_HEIGHT   600
+
+#define UNUSED(a) (void)a
+#define MIN(a,b) ((a) < (b) ? (a) : (b))
+#define MAX(a,b) ((a) < (b) ? (b) : (a))
+#define LEN(a) (sizeof(a)/sizeof(a)[0])
 
 typedef struct XWindow XWindow;
 struct XWindow {
@@ -33,10 +70,8 @@ struct XWindow {
     XSetWindowAttributes swa;
     Window win;
     int screen;
-    XFont *font;
     unsigned int width;
     unsigned int height;
-    Atom wm_delete_window;
 };
 
 static void
@@ -113,39 +148,45 @@ main(void)
     long dt;
     long started;
     int running = 1;
+    int status;
     XWindow xw;
-    struct nk_context *ctx;
+    struct rawfb_context *rawfb;
+    void *fb = NULL;
+    unsigned char tex_scratch[512 * 512];
 
     /* X11 */
     memset(&xw, 0, sizeof xw);
     xw.dpy = XOpenDisplay(NULL);
     if (!xw.dpy) die("Could not open a display; perhaps $DISPLAY is not set?");
+
     xw.root = DefaultRootWindow(xw.dpy);
     xw.screen = XDefaultScreen(xw.dpy);
     xw.vis = XDefaultVisual(xw.dpy, xw.screen);
     xw.cmap = XCreateColormap(xw.dpy,xw.root,xw.vis,AllocNone);
-
     xw.swa.colormap = xw.cmap;
     xw.swa.event_mask =
         ExposureMask | KeyPressMask | KeyReleaseMask |
         ButtonPress | ButtonReleaseMask| ButtonMotionMask |
         Button1MotionMask | Button3MotionMask | Button4MotionMask | Button5MotionMask|
-        PointerMotionMask | KeymapStateMask;
+        PointerMotionMask | KeymapStateMask | EnterWindowMask | LeaveWindowMask;
     xw.win = XCreateWindow(xw.dpy, xw.root, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, 0,
         XDefaultDepth(xw.dpy, xw.screen), InputOutput,
         xw.vis, CWEventMask | CWColormap, &xw.swa);
 
     XStoreName(xw.dpy, xw.win, "X11");
     XMapWindow(xw.dpy, xw.win);
-    xw.wm_delete_window = XInternAtom(xw.dpy, "WM_DELETE_WINDOW", False);
-    XSetWMProtocols(xw.dpy, xw.win, &xw.wm_delete_window, 1);
     XGetWindowAttributes(xw.dpy, xw.win, &xw.attr);
     xw.width = (unsigned int)xw.attr.width;
     xw.height = (unsigned int)xw.attr.height;
 
+    /* Framebuffer emulator */
+    status = nk_xlib_init(xw.dpy, xw.vis, xw.screen, xw.win, xw.width, xw.height, &fb);
+    if (!status || !fb)
+        return 0;
+
     /* GUI */
-    xw.font = nk_xfont_create(xw.dpy, "fixed");
-    ctx = nk_xlib_init(xw.font, xw.dpy, xw.screen, xw.win, xw.width, xw.height);
+    rawfb = nk_rawfb_init(fb, tex_scratch, xw.width, xw.height, xw.width * 4);
+    if (!rawfb) running = 0;
 
     #ifdef INCLUDE_STYLE
     /*set_style(ctx, THEME_WHITE);*/
@@ -154,40 +195,36 @@ main(void)
     /*set_style(ctx, THEME_DARK);*/
     #endif
 
-    while (running)
-    {
+    while (running) {
         /* Input */
         XEvent evt;
         started = timestamp();
-        nk_input_begin(ctx);
-        while (XPending(xw.dpy)) {
-            XNextEvent(xw.dpy, &evt);
-            if (evt.type == ClientMessage) goto cleanup;
+        nk_input_begin(&rawfb->ctx);
+        while (XCheckWindowEvent(xw.dpy, xw.win, xw.swa.event_mask, &evt)) {
             if (XFilterEvent(&evt, xw.win)) continue;
-            nk_xlib_handle_event(xw.dpy, xw.screen, xw.win, &evt);
+            nk_xlib_handle_event(xw.dpy, xw.screen, xw.win, &evt, rawfb);
         }
-        nk_input_end(ctx);
+        nk_input_end(&rawfb->ctx);
 
         /* GUI */
-        if (nk_begin(ctx, "Demo", nk_rect(50, 50, 200, 200),
-            NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
-            NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
-        {
+        if (nk_begin(&rawfb->ctx, "Demo", nk_rect(50, 50, 200, 200),
+            NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|
+            NK_WINDOW_CLOSABLE|NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE)) {
             enum {EASY, HARD};
             static int op = EASY;
             static int property = 20;
 
-            nk_layout_row_static(ctx, 30, 80, 1);
-            if (nk_button_label(ctx, "button"))
+            nk_layout_row_static(&rawfb->ctx, 30, 80, 1);
+            if (nk_button_label(&rawfb->ctx, "button"))
                 fprintf(stdout, "button pressed\n");
-            nk_layout_row_dynamic(ctx, 30, 2);
-            if (nk_option_label(ctx, "easy", op == EASY)) op = EASY;
-            if (nk_option_label(ctx, "hard", op == HARD)) op = HARD;
-            nk_layout_row_dynamic(ctx, 25, 1);
-            nk_property_int(ctx, "Compression:", 0, &property, 100, 10, 1);
+            nk_layout_row_dynamic(&rawfb->ctx, 30, 2);
+            if (nk_option_label(&rawfb->ctx, "easy", op == EASY)) op = EASY;
+            if (nk_option_label(&rawfb->ctx, "hard", op == HARD)) op = HARD;
+            nk_layout_row_dynamic(&rawfb->ctx, 25, 1);
+            nk_property_int(&rawfb->ctx, "Compression:", 0, &property, 100, 10, 1);
         }
-        nk_end(ctx);
-        if (nk_window_is_hidden(ctx, "Demo")) break;
+        nk_end(&rawfb->ctx);
+        if (nk_window_is_closed(&rawfb->ctx, "Demo")) break;
 
         /* -------------- EXAMPLES ---------------- */
         #ifdef INCLUDE_CALCULATOR
@@ -201,9 +238,12 @@ main(void)
         #endif
         /* ----------------------------------------- */
 
-        /* Draw */
+        /* Draw framebuffer */
+        nk_rawfb_render(rawfb, nk_rgb(30,30,30), 1);
+
+        /* Emulate framebuffer */
         XClearWindow(xw.dpy, xw.win);
-        nk_xlib_render(xw.win, nk_rgb(30,30,30));
+        nk_xlib_render(xw.win);
         XFlush(xw.dpy);
 
         /* Timing */
@@ -212,8 +252,7 @@ main(void)
             sleep_for(DTIME - dt);
     }
 
-cleanup:
-    nk_xfont_del(xw.dpy, xw.font);
+    nk_rawfb_shutdown(rawfb);
     nk_xlib_shutdown();
     XUnmapWindow(xw.dpy, xw.win);
     XFreeColormap(xw.dpy, xw.cmap);
