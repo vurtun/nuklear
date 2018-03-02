@@ -18789,6 +18789,8 @@ nk_clear(struct nk_context *ctx)
             iter == ctx->active) {
             ctx->active = iter->prev;
             ctx->end = iter->prev;
+            if (!ctx->end)
+                ctx->begin = 0;
             if (ctx->active)
                 ctx->active->flags &= ~(unsigned)NK_WINDOW_ROM;
         }
