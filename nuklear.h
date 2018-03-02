@@ -744,7 +744,7 @@ NK_API void nk_set_user_data(struct nk_context*, nk_handle handle);
 /// __nk_input_glyph__  | Adds a single multi-byte UTF-8 character into an internal text buffer
 /// __nk_input_unicode__| Adds a single unicode rune into an internal text buffer
 /// __nk_input_end__    | Ends the input mirroring process by calculating state changes. Don't call any `nk_input_xxx` function referenced above after this call
- */
+*/
 enum nk_keys {
     NK_KEY_NONE,
     NK_KEY_SHIFT,
@@ -866,7 +866,7 @@ NK_API void nk_input_scroll(struct nk_context*, struct nk_vec2 val);
 /// !!! Note
 ///     Stores up to NK_INPUT_MAX bytes between `nk_input_begin` and `nk_input_end`.
 ///
-/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /// void nk_input_char(struct nk_context *ctx, nk_tchar c);
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///
@@ -1579,7 +1579,7 @@ NK_API struct nk_vec2 nk_window_get_position(const struct nk_context *ctx);
 ///
 /// Returns a `nk_vec2` struct with window width and height
 */
-NK_API struct nk_vec2           nk_window_get_size(const struct nk_context*);
+NK_API struct nk_vec2 nk_window_get_size(const struct nk_context*);
 /*/// #### nk_window_get_width
 ///
 /// Returns the width of the currently processed window.
@@ -1595,7 +1595,7 @@ NK_API struct nk_vec2           nk_window_get_size(const struct nk_context*);
 ///
 /// Returns the current window width
 */
-NK_API float                    nk_window_get_width(const struct nk_context*);
+NK_API float nk_window_get_width(const struct nk_context*);
 /*/// #### nk_window_get_height
 ///
 /// Returns the height of the currently processed window.
@@ -1611,7 +1611,7 @@ NK_API float                    nk_window_get_width(const struct nk_context*);
 ///
 /// Returns the current window height
 */
-NK_API float                    nk_window_get_height(const struct nk_context*);
+NK_API float nk_window_get_height(const struct nk_context*);
 /*/// #### nk_window_get_panel
 ///
 /// Returns the underlying panel which contains all processing state of the current window.
@@ -1629,7 +1629,7 @@ NK_API float                    nk_window_get_height(const struct nk_context*);
 ///
 /// Returns a pointer to window internal `nk_panel` state.
 */
-NK_API struct nk_panel*         nk_window_get_panel(struct nk_context*);
+NK_API struct nk_panel* nk_window_get_panel(struct nk_context*);
 /*/// #### nk_window_get_content_region
 ///
 /// Returns the position and size of the currently visible and non-clipped space
@@ -1648,7 +1648,7 @@ NK_API struct nk_panel*         nk_window_get_panel(struct nk_context*);
 /// Returns `nk_rect` struct with screen position and size (no scrollbar offset)
 /// of the visible space inside the current window
 */
-NK_API struct nk_rect           nk_window_get_content_region(struct nk_context*);
+NK_API struct nk_rect nk_window_get_content_region(struct nk_context*);
 /*/// #### nk_window_get_content_region_min
 ///
 /// Returns the upper left position of the currently visible and non-clipped
@@ -1667,7 +1667,7 @@ NK_API struct nk_rect           nk_window_get_content_region(struct nk_context*)
 /// returns `nk_vec2` struct with  upper left screen position (no scrollbar offset)
 /// of the visible space inside the current window
 */
-NK_API struct nk_vec2           nk_window_get_content_region_min(struct nk_context*);
+NK_API struct nk_vec2 nk_window_get_content_region_min(struct nk_context*);
 /*/// #### nk_window_get_content_region_max
 ///
 /// Returns the lower right screen position of the currently visible and
@@ -1686,7 +1686,7 @@ NK_API struct nk_vec2           nk_window_get_content_region_min(struct nk_conte
 /// Returns `nk_vec2` struct with lower right screen position (no scrollbar offset)
 /// of the visible space inside the current window
 */
-NK_API struct nk_vec2           nk_window_get_content_region_max(struct nk_context*);
+NK_API struct nk_vec2 nk_window_get_content_region_max(struct nk_context*);
 /*/// #### nk_window_get_content_region_size
 ///
 /// Returns the size of the currently visible and non-clipped space inside the
@@ -1704,7 +1704,7 @@ NK_API struct nk_vec2           nk_window_get_content_region_max(struct nk_conte
 ///
 /// Returns `nk_vec2` struct with size the visible space inside the current window
 */
-NK_API struct nk_vec2           nk_window_get_content_region_size(struct nk_context*);
+NK_API struct nk_vec2 nk_window_get_content_region_size(struct nk_context*);
 /*/// #### nk_window_get_canvas
 /// Returns the draw command buffer. Can be used to draw custom widgets
 /// !!! WARNING
@@ -1738,7 +1738,7 @@ NK_API struct nk_command_buffer* nk_window_get_canvas(struct nk_context*);
 ///
 /// Returns `false(0)` if current window is not active or `true(1)` if it is
 */
-NK_API int                      nk_window_has_focus(const struct nk_context*);
+NK_API int nk_window_has_focus(const struct nk_context*);
 /*/// #### nk_window_is_hovered
 /// Return if the current window is being hovered
 /// !!! WARNING
@@ -1753,7 +1753,7 @@ NK_API int                      nk_window_has_focus(const struct nk_context*);
 ///
 /// Returns `true(1)` if current window is hovered or `false(0)` otherwise
 */
-NK_API int                      nk_window_is_hovered(struct nk_context*);
+NK_API int nk_window_is_hovered(struct nk_context*);
 /*/// #### nk_window_is_collapsed
 /// Returns if the window with given name is currently minimized/collapsed
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
@@ -1823,7 +1823,7 @@ NK_API int nk_window_is_active(struct nk_context*, const nk_tchar*);
 ///
 /// Returns `true(1)` if any window is hovered or `false(0)` otherwise
 */
-NK_API int                      nk_window_is_any_hovered(struct nk_context*);
+NK_API int nk_window_is_any_hovered(struct nk_context*);
 /*/// #### nk_item_is_any_active
 /// Returns if the any window is being hovered or any widget is currently active.
 /// Can be used to decide if input should be processed by UI or your specific input handling.
@@ -1838,7 +1838,7 @@ NK_API int                      nk_window_is_any_hovered(struct nk_context*);
 ///
 /// Returns `true(1)` if any window is hovered or any item is active or `false(0)` otherwise
 */
-NK_API int                      nk_item_is_any_active(struct nk_context*);
+NK_API int nk_item_is_any_active(struct nk_context*);
 /*/// #### nk_window_set_bounds
 /// Updates position and size of window with passed in name
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
@@ -2339,7 +2339,7 @@ NK_API void nk_layout_row_begin(struct nk_context *ctx, enum nk_layout_format fm
 /// __ctx__     | Must point to an previously initialized `nk_context` struct after call `nk_begin_xxx`
 /// __value__   | either a window ratio or fixed width depending on @fmt in previous `nk_layout_row_begin` call
 */
-NK_API void                     nk_layout_row_push(struct nk_context*, float value);
+NK_API void nk_layout_row_push(struct nk_context*, float value);
 /*/// #### nk_layout_row_end
 /// Finished previously started row
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
@@ -2350,7 +2350,7 @@ NK_API void                     nk_layout_row_push(struct nk_context*, float val
 /// ------------|-----------------------------------------------------------
 /// __ctx__     | Must point to an previously initialized `nk_context` struct after call `nk_begin_xxx`
 */
-NK_API void                     nk_layout_row_end(struct nk_context*);
+NK_API void nk_layout_row_end(struct nk_context*);
 /*/// #### nk_layout_row
 /// Specifies row columns in array as either window ratio or size
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
@@ -2364,7 +2364,7 @@ NK_API void                     nk_layout_row_end(struct nk_context*);
 /// __height__  | Holds height of each widget in row or zero for auto layouting
 /// __columns__ | Number of widget inside row
 */
-NK_API void                     nk_layout_row(struct nk_context*, enum nk_layout_format, float height, int cols, const float *ratio);
+NK_API void nk_layout_row(struct nk_context*, enum nk_layout_format, float height, int cols, const float *ratio);
 /*/// #### nk_layout_row_template_begin
 /// Begins the row template declaration
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
@@ -2388,7 +2388,7 @@ NK_API void nk_layout_row_template_begin(struct nk_context*, float row_height);
 /// __ctx__     | Must point to an previously initialized `nk_context` struct after call `nk_begin_xxx`
 /// __height__  | Holds height of each widget in row or zero for auto layouting
 */
-NK_API void                     nk_layout_row_template_push_dynamic(struct nk_context*);
+NK_API void nk_layout_row_template_push_dynamic(struct nk_context*);
 /*/// #### nk_layout_row_template_push_variable
 /// Adds a variable column that dynamically grows but does not shrink below specified pixel width
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
@@ -2400,7 +2400,7 @@ NK_API void                     nk_layout_row_template_push_dynamic(struct nk_co
 /// __ctx__     | Must point to an previously initialized `nk_context` struct after call `nk_begin_xxx`
 /// __width__   | Holds the minimum pixel width the next column must always be
 */
-NK_API void                     nk_layout_row_template_push_variable(struct nk_context*, float min_width);
+NK_API void nk_layout_row_template_push_variable(struct nk_context*, float min_width);
 /*/// #### nk_layout_row_template_push_static
 /// Adds a static column that does not grow and will always have the same size
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
@@ -2412,7 +2412,7 @@ NK_API void                     nk_layout_row_template_push_variable(struct nk_c
 /// __ctx__     | Must point to an previously initialized `nk_context` struct after call `nk_begin_xxx`
 /// __width__   | Holds the absolute pixel width value the next column must be
 */
-NK_API void                     nk_layout_row_template_push_static(struct nk_context*, float width);
+NK_API void nk_layout_row_template_push_static(struct nk_context*, float width);
 /*/// #### nk_layout_row_template_end
 /// Marks the end of the row template
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
@@ -2423,7 +2423,7 @@ NK_API void                     nk_layout_row_template_push_static(struct nk_con
 /// ------------|-----------------------------------------------------------
 /// __ctx__     | Must point to an previously initialized `nk_context` struct after call `nk_begin_xxx`
 */
-NK_API void                     nk_layout_row_template_end(struct nk_context*);
+NK_API void nk_layout_row_template_end(struct nk_context*);
 /*/// #### nk_layout_space_begin
 /// Begins a new layouting space that allows to specify each widgets position and size.
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
@@ -2437,7 +2437,7 @@ NK_API void                     nk_layout_row_template_end(struct nk_context*);
 /// __height__  | Holds height of each widget in row or zero for auto layouting
 /// __columns__ | Number of widgets inside row
 */
-NK_API void                     nk_layout_space_begin(struct nk_context*, enum nk_layout_format, float height, int widget_count);
+NK_API void nk_layout_space_begin(struct nk_context*, enum nk_layout_format, float height, int widget_count);
 /*/// #### nk_layout_space_push
 /// Pushes position and size of the next widget in own coordinate space either as pixel or ratio
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
@@ -2460,7 +2460,7 @@ NK_API void nk_layout_space_push(struct nk_context*, struct nk_rect bounds);
 /// ------------|-----------------------------------------------------------
 /// __ctx__     | Must point to an previously initialized `nk_context` struct after call `nk_layout_space_begin`
 */
-NK_API void                     nk_layout_space_end(struct nk_context*);
+NK_API void nk_layout_space_end(struct nk_context*);
 /*/// #### nk_layout_space_bounds
 /// Utility function to calculate total space allocated for `nk_layout_space`
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
@@ -2473,7 +2473,7 @@ NK_API void                     nk_layout_space_end(struct nk_context*);
 ///
 /// Returns `nk_rect` holding the total space allocated
 */
-NK_API struct nk_rect           nk_layout_space_bounds(struct nk_context*);
+NK_API struct nk_rect nk_layout_space_bounds(struct nk_context*);
 /*/// #### nk_layout_space_to_screen
 /// Converts vector from nk_layout_space coordinate space into screen space
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
@@ -2487,7 +2487,7 @@ NK_API struct nk_rect           nk_layout_space_bounds(struct nk_context*);
 ///
 /// Returns transformed `nk_vec2` in screen space coordinates
 */
-NK_API struct nk_vec2           nk_layout_space_to_screen(struct nk_context*, struct nk_vec2);
+NK_API struct nk_vec2 nk_layout_space_to_screen(struct nk_context*, struct nk_vec2);
 /*/// #### nk_layout_space_to_screen
 /// Converts vector from layout space into screen space
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
@@ -2501,7 +2501,7 @@ NK_API struct nk_vec2           nk_layout_space_to_screen(struct nk_context*, st
 ///
 /// Returns transformed `nk_vec2` in layout space coordinates
 */
-NK_API struct nk_vec2           nk_layout_space_to_local(struct nk_context*, struct nk_vec2);
+NK_API struct nk_vec2 nk_layout_space_to_local(struct nk_context*, struct nk_vec2);
 /*/// #### nk_layout_space_rect_to_screen
 /// Converts rectangle from screen space into layout space
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
@@ -2515,7 +2515,7 @@ NK_API struct nk_vec2           nk_layout_space_to_local(struct nk_context*, str
 ///
 /// Returns transformed `nk_rect` in screen space coordinates
 */
-NK_API struct nk_rect           nk_layout_space_rect_to_screen(struct nk_context*, struct nk_rect);
+NK_API struct nk_rect nk_layout_space_rect_to_screen(struct nk_context*, struct nk_rect);
 /*/// #### nk_layout_space_rect_to_local
 /// Converts rectangle from layout space into screen space
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
@@ -2529,7 +2529,7 @@ NK_API struct nk_rect           nk_layout_space_rect_to_screen(struct nk_context
 ///
 /// Returns transformed `nk_rect` in layout space coordinates
 */
-NK_API struct nk_rect           nk_layout_space_rect_to_local(struct nk_context*, struct nk_rect);
+NK_API struct nk_rect nk_layout_space_rect_to_local(struct nk_context*, struct nk_rect);
 /* =============================================================================
  *
  *                                  GROUP
@@ -2657,7 +2657,7 @@ NK_API int nk_group_begin_titled(struct nk_context*, const nk_tchar *name, const
 /// ------------|-----------------------------------------------------------
 /// __ctx__     | Must point to an previously initialized `nk_context` struct
 */
-NK_API void                     nk_group_end(struct nk_context*);
+NK_API void nk_group_end(struct nk_context*);
 /*/// #### nk_group_scrolled_offset_begin
 /// starts a new widget group. requires a previous layouting function to specify
 /// a size. Does not keep track of scrollbar.
@@ -2966,8 +2966,8 @@ struct nk_list_view {
     nk_uint *scroll_pointer;
     nk_uint scroll_value;
 };
-NK_API int                      nk_list_view_begin(struct nk_context*, struct nk_list_view *out, const nk_tchar *id, nk_flags, int row_height, int row_count);
-NK_API void                     nk_list_view_end(struct nk_list_view*);
+NK_API int nk_list_view_begin(struct nk_context*, struct nk_list_view *out, const nk_tchar *id, nk_flags, int row_height, int row_count);
+NK_API void nk_list_view_end(struct nk_list_view*);
 /* =============================================================================
  *
  *                                  WIDGET
@@ -3046,24 +3046,24 @@ NK_API void nk_value_color_hex(struct nk_context*, const nk_tchar *prefix, struc
  * ============================================================================= */
 NK_API int nk_button_text(struct nk_context*, const nk_tchar *title, int len);
 NK_API int nk_button_label(struct nk_context*, const nk_tchar *title);
-NK_API int                      nk_button_color(struct nk_context*, struct nk_color);
-NK_API int                      nk_button_symbol(struct nk_context*, enum nk_symbol_type);
-NK_API int                      nk_button_image(struct nk_context*, struct nk_image img);
+NK_API int nk_button_color(struct nk_context*, struct nk_color);
+NK_API int nk_button_symbol(struct nk_context*, enum nk_symbol_type);
+NK_API int nk_button_image(struct nk_context*, struct nk_image img);
 NK_API int nk_button_symbol_label(struct nk_context*, enum nk_symbol_type, const nk_tchar*, nk_flags text_alignment);
 NK_API int nk_button_symbol_text(struct nk_context*, enum nk_symbol_type, const nk_tchar*, int, nk_flags alignment);
 NK_API int nk_button_image_label(struct nk_context*, struct nk_image img, const nk_tchar*, nk_flags text_alignment);
 NK_API int nk_button_image_text(struct nk_context*, struct nk_image img, const nk_tchar*, int, nk_flags alignment);
 NK_API int nk_button_text_styled(struct nk_context*, const struct nk_style_button*, const nk_tchar *title, int len);
 NK_API int nk_button_label_styled(struct nk_context*, const struct nk_style_button*, const nk_tchar *title);
-NK_API int                      nk_button_symbol_styled(struct nk_context*, const struct nk_style_button*, enum nk_symbol_type);
-NK_API int                      nk_button_image_styled(struct nk_context*, const struct nk_style_button*, struct nk_image img);
+NK_API int nk_button_symbol_styled(struct nk_context*, const struct nk_style_button*, enum nk_symbol_type);
+NK_API int nk_button_image_styled(struct nk_context*, const struct nk_style_button*, struct nk_image img);
 NK_API int nk_button_symbol_text_styled(struct nk_context*,const struct nk_style_button*, enum nk_symbol_type, const nk_tchar*, int, nk_flags alignment);
 NK_API int nk_button_symbol_label_styled(struct nk_context *ctx, const struct nk_style_button *style, enum nk_symbol_type symbol, const nk_tchar *title, nk_flags align);
 NK_API int nk_button_image_label_styled(struct nk_context*,const struct nk_style_button*, struct nk_image img, const nk_tchar*, nk_flags text_alignment);
 NK_API int nk_button_image_text_styled(struct nk_context*,const struct nk_style_button*, struct nk_image img, const nk_tchar*, int, nk_flags alignment);
-NK_API void                     nk_button_set_behavior(struct nk_context*, enum nk_button_behavior);
-NK_API int                      nk_button_push_behavior(struct nk_context*, enum nk_button_behavior);
-NK_API int                      nk_button_pop_behavior(struct nk_context*);
+NK_API void nk_button_set_behavior(struct nk_context*, enum nk_button_behavior);
+NK_API int nk_button_push_behavior(struct nk_context*, enum nk_button_behavior);
+NK_API int nk_button_pop_behavior(struct nk_context*);
 /* =============================================================================
  *
  *                                  CHECKBOX
@@ -10380,7 +10380,7 @@ nk_draw_list_path_arc_to(struct nk_draw_list *list, struct nk_vec2 center,
 
     float cx = (float)NK_COS(a_min) * radius;
     float cy = (float)NK_SIN(a_min) * radius;
-    for (i = 0; i <= segments; ++i) {
+    for(i = 0; i <= segments; ++i) {
         float new_cx, new_cy;
         const float x = center.x + cx;
         const float y = center.y + cy;
@@ -13979,16 +13979,16 @@ nk_font_atlas_add(struct nk_font_atlas *atlas, const struct nk_font_config *conf
 
     if (!config->merge_mode) {
         /* insert font config into list */
-    if (!atlas->config) {
-        atlas->config = cfg;
-        cfg->next = 0;
-    } else {
+        if (!atlas->config) {
+            atlas->config = cfg;
+            cfg->next = 0;
+        } else {
             struct nk_font_config *i = atlas->config;
             while (i->next) i = i->next;
             i->next = cfg;
             cfg->next = 0;
-    }
-    /* allocate new font */
+        }
+        /* allocate new font */
         font = (struct nk_font*)
             atlas->permanent.alloc(atlas->permanent.userdata,0, sizeof(struct nk_font));
         NK_ASSERT(font);
@@ -13996,7 +13996,7 @@ nk_font_atlas_add(struct nk_font_atlas *atlas, const struct nk_font_config *conf
         if (!font) return 0;
         font->config = cfg;
 
-    /* insert font into list */
+        /* insert font into list */
         if (!atlas->fonts) {
             atlas->fonts = font;
             font->next = 0;
@@ -14466,7 +14466,7 @@ nk_input_key(struct nk_context *ctx, enum nk_keys key, int down)
     if (!ctx) return;
     in = &ctx->input;
     if (in->keyboard.keys[key].down != down)
-    in->keyboard.keys[key].clicked++;
+        in->keyboard.keys[key].clicked++;
     in->keyboard.keys[key].down = down;
 }
 
@@ -19504,10 +19504,10 @@ nk_build(struct nk_context *ctx)
     }
     if (cmd) {
         /* append overlay commands */
-            if (ctx->overlay.end != ctx->overlay.begin)
-                cmd->next = ctx->overlay.begin;
-            else cmd->next = ctx->memory.allocated;
-        }
+        if (ctx->overlay.end != ctx->overlay.begin)
+            cmd->next = ctx->overlay.begin;
+        else cmd->next = ctx->memory.allocated;
+    }
 }
 
 NK_API const struct nk_command*
