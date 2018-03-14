@@ -290,7 +290,7 @@ int main(void)
 
     ID3D11DeviceContext_ClearState(context);
     nk_d3d11_shutdown();
-    ID3D11ShaderResourceView_Release(rt_view);
+    ID3D11RenderTargetView_Release(rt_view);
     ID3D11DeviceContext_Release(context);
     ID3D11Device_Release(device);
     IDXGISwapChain_Release(swap_chain);
