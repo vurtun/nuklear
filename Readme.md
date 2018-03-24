@@ -102,7 +102,9 @@ languages. Furthermore there are no guarantee that all bindings will always be k
 - [Chicken](https://github.com/wasamasa/nuklear) by wasamasa@github.com
 - [Nim](https://github.com/zacharycarter/nuklear-nim) by zacharycarter@github.com
 - [Lua/Löve2d](https://github.com/keharriso/love-nuklear) by Kevin Harrison
-- [Python](https://github.com/billsix/pyNuklear) by William Emerison Six
+- Python
+  - [pyNuklear](https://github.com/billsix/pyNuklear) by William Emerison Six (ctypes-based wrapper)
+  - [pynk](https://github.com/nathanrw/nuklear-cffi) by nathanrw@github.com (cffi binding)
 - [CSharp/.NET](https://github.com/cartman300/NuklearDotNet) by cartman300@github.com
 
 ## Credits
