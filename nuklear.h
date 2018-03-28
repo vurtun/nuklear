@@ -15838,13 +15838,12 @@ nk_draw_checkbox(struct nk_command_buffer *out,
 
     /* draw background and cursor */
     if (background->type == NK_STYLE_ITEM_COLOR) {
-        nk_fill_rect(out, *selector, 0, style->border_color);
-        nk_fill_rect(out, nk_shrink_rect(*selector, style->border), 0, background->data.color);
+		nk_stroke_rect(out, *selector, 2, 2, background->data.color);
     } else nk_draw_image(out, *selector, &background->data.image, nk_white);
     if (active) {
         if (cursor->type == NK_STYLE_ITEM_IMAGE)
             nk_draw_image(out, *cursors, &cursor->data.image, nk_white);
-        else nk_fill_rect(out, *cursors, 0, cursor->data.color);
+        else nk_fill_rect(out, *cursors, 0, background->data.color);
     }
 
     text.padding.x = 0;
@@ -15881,13 +15880,12 @@ nk_draw_option(struct nk_command_buffer *out,
 
     /* draw background and cursor */
     if (background->type == NK_STYLE_ITEM_COLOR) {
-        nk_fill_circle(out, *selector, style->border_color);
-        nk_fill_circle(out, nk_shrink_rect(*selector, style->border), background->data.color);
+        nk_stroke_circle(out, *selector, 2, background->data.color);
     } else nk_draw_image(out, *selector, &background->data.image, nk_white);
     if (active) {
         if (cursor->type == NK_STYLE_ITEM_IMAGE)
             nk_draw_image(out, *cursors, &cursor->data.image, nk_white);
-        else nk_fill_circle(out, *cursors, cursor->data.color);
+        else nk_fill_circle(out, *cursors, background->data.color);
     }
 
     text.padding.x = 0;
