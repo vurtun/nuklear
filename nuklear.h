@@ -17157,7 +17157,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
                     if (cursor_pos.x < edit->scrollbar.x)
                         edit->scrollbar.x = (float)(int)NK_MAX(0.0f, cursor_pos.x - scroll_increment);
                     if (cursor_pos.x >= edit->scrollbar.x + area.w)
-                        edit->scrollbar.x = (float)(int)NK_MAX(0.0f, cursor_pos.x);
+                        edit->scrollbar.x = (float)(int)NK_MAX(0.0f, edit->scrollbar.x + scroll_increment);
                 } else edit->scrollbar.x = 0;
 
                 if (flags & NK_EDIT_MULTILINE) {
