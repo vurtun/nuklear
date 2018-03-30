@@ -889,8 +889,9 @@ nk_xlib_render(Drawable screen, struct nk_color clear)
         } break;
         case NK_COMMAND_RECT: {
             const struct nk_command_rect *r = (const struct nk_command_rect *)cmd;
-            nk_xsurf_stroke_rect(surf, r->x, r->y, r->w, r->h,
-                (unsigned short)r->rounding, r->line_thickness, r->color);
+            nk_xsurf_stroke_rect(surf, r->x, r->y, NK_MAX(r->w -r->line_thickness, 0),
+                NK_MAX(r->h - r->line_thickness, 0), (unsigned short)r->rounding,
+                r->line_thickness, r->color);
         } break;
         case NK_COMMAND_RECT_FILLED: {
             const struct nk_command_rect_filled *r = (const struct nk_command_rect_filled *)cmd;

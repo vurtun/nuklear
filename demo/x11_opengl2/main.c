@@ -211,8 +211,8 @@ int main(void)
             glContext = glXCreateNewContext(win.dpy, win.fbc, GLX_RGBA_TYPE, 0, True);
         } else {
             GLint attr[] = {
-                GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
-                GLX_CONTEXT_MINOR_VERSION_ARB, 0,
+                GLX_CONTEXT_MAJOR_VERSION_ARB, 2,
+                GLX_CONTEXT_MINOR_VERSION_ARB, 2,
                 None
             };
             glContext = create_context(win.dpy, win.fbc, 0, True, attr);

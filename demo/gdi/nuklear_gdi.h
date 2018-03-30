@@ -179,14 +179,15 @@ nk_gdi_stroke_rect(HDC dc, short x, short y, unsigned short w,
         SelectObject(dc, pen);
     }
 
-    SetDCBrushColor(dc, OPAQUE);
+    HGDIOBJ br = SelectObject(dc, GetStockObject(NULL_BRUSH));
     if (r == 0) {
         Rectangle(dc, x, y, x + w, y + h);
     } else {
         RoundRect(dc, x, y, x + w, y + h, r, r);
     }
+    SelectObject(dc, br);
 
-    if (pen) {
+    if (pen) { 
         SelectObject(dc, GetStockObject(DC_PEN));
         DeleteObject(pen);
     }
@@ -562,7 +563,7 @@ nk_gdi_handle_event(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
     case WM_SIZE:
     {
         unsigned width = LOWORD(lparam);
-        unsigned height = LOWORD(lparam);
+        unsigned height = HIWORD(lparam);
         if (width != gdi.width || height != gdi.height)
         {
             DeleteObject(gdi.bitmap);

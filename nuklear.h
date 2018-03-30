@@ -17,6 +17,8 @@
 ///     4. Window section
 ///     5. Layouting section
 ///     6. Groups section
+///     7. Tree section
+///     8. Properties section
 /// 7. License section
 /// 8. Changelog section
 /// 9. Gallery section
@@ -1564,20 +1566,20 @@ NK_API struct nk_vec2 nk_window_get_size(const struct nk_context*);
 /// Returns the current window width
 */
 NK_API float nk_window_get_width(const struct nk_context*);
-/*/// #### nk_window_get_width
+/*/// #### nk_window_get_height
 ///
 /// Returns the height of the currently processed window.
 /// !!! WARNING
 ///     Only call this function between calls `nk_begin_xxx` and `nk_end`
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
-/// float nk_window_get_width(const struct nk_context *ctx);
+/// float nk_window_get_height(const struct nk_context *ctx);
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///
 /// Parameter   | Description
 /// ------------|-----------------------------------------------------------
 /// __ctx__     | Must point to an previously initialized `nk_context` struct
 ///
-/// Returns the current window width
+/// Returns the current window height
 */
 NK_API float nk_window_get_height(const struct nk_context*);
 /*/// #### nk_window_get_panel
@@ -2760,6 +2762,8 @@ NK_API void nk_group_scrolled_end(struct nk_context*);
 /// __type__    | Value from the nk_tree_type section to visually mark a tree node header as either a collapseable UI section or tree node
 /// __title__   | Label printed in the tree header
 /// __state__   | Initial tree state value out of nk_collapse_states
+///
+/// Returns `true(1)` if visible and fillable with widgets or `false(0)` otherwise
 */
 #define nk_tree_push(ctx, type, title, state) nk_tree_push_hashed(ctx, type, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),__LINE__)
 /*/// #### nk_tree_push_id
@@ -2775,6 +2779,8 @@ NK_API void nk_group_scrolled_end(struct nk_context*);
 /// __title__   | Label printed in the tree header
 /// __state__   | Initial tree state value out of nk_collapse_states
 /// __id__      | Loop counter index if this function is called in a loop
+///
+/// Returns `true(1)` if visible and fillable with widgets or `false(0)` otherwise
 */
 #define nk_tree_push_id(ctx, type, title, state, id) nk_tree_push_hashed(ctx, type, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),id)
 /*/// #### nk_tree_push_hashed
@@ -2793,6 +2799,8 @@ NK_API void nk_group_scrolled_end(struct nk_context*);
 /// __hash__    | Memory block or string to generate the ID from
 /// __len__     | Size of passed memory block or string in __hash__
 /// __seed__    | Seeding value if this function is called in a loop or default to `0`
+///
+/// Returns `true(1)` if visible and fillable with widgets or `false(0)` otherwise
 */
 NK_API int nk_tree_push_hashed(struct nk_context*, enum nk_tree_type, const char *title, enum nk_collapse_states initial_state, const char *hash, int len,int seed);
 /*/// #### nk_tree_image_push
@@ -2814,6 +2822,8 @@ NK_API int nk_tree_push_hashed(struct nk_context*, enum nk_tree_type, const char
 /// __img__     | Image to display inside the header on the left of the label
 /// __title__   | Label printed in the tree header
 /// __state__   | Initial tree state value out of nk_collapse_states
+///
+/// Returns `true(1)` if visible and fillable with widgets or `false(0)` otherwise
 */
 #define nk_tree_image_push(ctx, type, img, title, state) nk_tree_image_push_hashed(ctx, type, img, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),__LINE__)
 /*/// #### nk_tree_image_push_id
@@ -2832,6 +2842,8 @@ NK_API int nk_tree_push_hashed(struct nk_context*, enum nk_tree_type, const char
 /// __title__   | Label printed in the tree header
 /// __state__   | Initial tree state value out of nk_collapse_states
 /// __id__      | Loop counter index if this function is called in a loop
+///
+/// Returns `true(1)` if visible and fillable with widgets or `false(0)` otherwise
 */
 #define nk_tree_image_push_id(ctx, type, img, title, state, id) nk_tree_image_push_hashed(ctx, type, img, title, state, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),id)
 /*/// #### nk_tree_image_push_hashed
@@ -2851,6 +2863,8 @@ NK_API int nk_tree_push_hashed(struct nk_context*, enum nk_tree_type, const char
 /// __hash__    | Memory block or string to generate the ID from
 /// __len__     | Size of passed memory block or string in __hash__
 /// __seed__    | Seeding value if this function is called in a loop or default to `0`
+///
+/// Returns `true(1)` if visible and fillable with widgets or `false(0)` otherwise
 */
 NK_API int nk_tree_image_push_hashed(struct nk_context*, enum nk_tree_type, struct nk_image, const char *title, enum nk_collapse_states initial_state, const char *hash, int len,int seed);
 /*/// #### nk_tree_pop
@@ -2876,6 +2890,8 @@ NK_API void nk_tree_pop(struct nk_context*);
 /// __type__    | Value from the nk_tree_type section to visually mark a tree node header as either a collapseable UI section or tree node
 /// __title__   | Label printed in the tree header
 /// __state__   | Persistent state to update
+///
+/// Returns `true(1)` if visible and fillable with widgets or `false(0)` otherwise
 */
 NK_API int nk_tree_state_push(struct nk_context*, enum nk_tree_type, const char *title, enum nk_collapse_states *state);
 /*/// #### nk_tree_state_image_push
@@ -2891,6 +2907,8 @@ NK_API int nk_tree_state_push(struct nk_context*, enum nk_tree_type, const char 
 /// __type__    | Value from the nk_tree_type section to visually mark a tree node header as either a collapseable UI section or tree node
 /// __title__   | Label printed in the tree header
 /// __state__   | Persistent state to update
+///
+/// Returns `true(1)` if visible and fillable with widgets or `false(0)` otherwise
 */
 NK_API int nk_tree_state_image_push(struct nk_context*, enum nk_tree_type, struct nk_image, const char *title, enum nk_collapse_states *state);
 /*/// #### nk_tree_state_pop
@@ -2978,6 +2996,7 @@ NK_API void nk_label_colored(struct nk_context*, const char*, nk_flags align, st
 NK_API void nk_label_wrap(struct nk_context*, const char*);
 NK_API void nk_label_colored_wrap(struct nk_context*, const char*, struct nk_color);
 NK_API void nk_image(struct nk_context*, struct nk_image);
+NK_API void nk_image_color(struct nk_context*, struct nk_image, struct nk_color);
 #ifdef NK_INCLUDE_STANDARD_VARARGS
 NK_API void nk_labelf(struct nk_context*, nk_flags, NK_PRINTF_FORMAT_STRING const char*, ...) NK_PRINTF_VARARG_FUNC(3);
 NK_API void nk_labelf_colored(struct nk_context*, nk_flags, struct nk_color, NK_PRINTF_FORMAT_STRING const char*,...) NK_PRINTF_VARARG_FUNC(4);
@@ -3079,12 +3098,209 @@ NK_API int nk_color_pick(struct nk_context*, struct nk_colorf*, enum nk_color_fo
  *
  *                                  PROPERTIES
  *
- * ============================================================================= */
+ * =============================================================================
+/// ### Properties
+/// Properties are the main value modification widgets in Nuklear. Changing a value
+/// can be achieved by dragging, adding/removing incremental steps on button click
+/// or by directly typing a number.
+///
+/// #### Usage
+/// Each property requires a unique name for identifaction that is also used for
+/// displaying a label. If you want to use the same name multiple times make sure
+/// add a '#' before your name. The '#' will not be shown but will generate a
+/// unique ID. Each propery also takes in a minimum and maximum value. If you want
+/// to make use of the complete number range of a type just use the provided
+/// type limits from `limits.h`. For example `INT_MIN` and `INT_MAX` for
+/// `nk_property_int` and `nk_propertyi`. In additional each property takes in
+/// a increment value that will be added or subtracted if either the increment
+/// decrement button is clicked. Finally there is a value for increment per pixel
+/// dragged that is added or subtracted from the value.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// int value = 0;
+/// struct nk_context ctx;
+/// nk_init_xxx(&ctx, ...);
+/// while (1) {
+///     // Input
+///     Event evt;
+///     nk_input_begin(&ctx);
+///     while (GetEvent(&evt)) {
+///         if (evt.type == MOUSE_MOVE)
+///             nk_input_motion(&ctx, evt.motion.x, evt.motion.y);
+///         else if (evt.type == [...]) {
+///             nk_input_xxx(...);
+///         }
+///     }
+///     nk_input_end(&ctx);
+///     //
+///     // Window
+///     if (nk_begin_xxx(...) {
+///         // Property
+///         nk_layout_row_dynamic(...);
+///         nk_property_int(ctx, "ID", INT_MIN, &value, INT_MAX, 1, 1);
+///     }
+///     nk_end(ctx);
+///     //
+///     // Draw
+///     const struct nk_command *cmd = 0;
+///     nk_foreach(cmd, &ctx) {
+///     switch (cmd->type) {
+///     case NK_COMMAND_LINE:
+///         your_draw_line_function(...)
+///         break;
+///     case NK_COMMAND_RECT
+///         your_draw_rect_function(...)
+///         break;
+///     case ...:
+///         // [...]
+///     }
+//      nk_clear(&ctx);
+/// }
+/// nk_free(&ctx);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// #### Reference
+/// Function            | Description
+/// --------------------|-------------------------------------------
+/// nk_property_int     | Integer property directly modifing a passed in value
+/// nk_property_float   | Float property directly modifing a passed in value
+/// nk_property_double  | Double property directly modifing a passed in value
+/// nk_propertyi        | Integer property returning the modified int value
+/// nk_propertyf        | Float property returning the modified float value
+/// nk_propertyd        | Double property returning the modified double value
+///
+*/
+/*/// #### nk_property_int
+/// Integer property directly modifing a passed in value
+/// !!! WARNING
+///     To generate a unique property ID using the same label make sure to insert
+///     a `#` at the beginning. It will not be shown but guarantees correct behavior.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// void nk_property_int(struct nk_context *ctx, const char *name, int min, int *val, int max, int step, float inc_per_pixel);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter           | Description
+/// --------------------|-----------------------------------------------------------
+/// __ctx__             | Must point to an previously initialized `nk_context` struct after calling a layouting function
+/// __name__            | String used both as a label as well as a unique identifier
+/// __min__             | Minimum value not allowed to be underflown
+/// __val__             | Integer pointer to be modified
+/// __max__             | Maximum value not allowed to be overflown
+/// __step__            | Increment added and subtracted on increment and decrement button
+/// __inc_per_pixel__   | Value per pixel added or subtracted on dragging
+*/
 NK_API void nk_property_int(struct nk_context*, const char *name, int min, int *val, int max, int step, float inc_per_pixel);
+/*/// #### nk_property_float
+/// Float property directly modifing a passed in value
+/// !!! WARNING
+///     To generate a unique property ID using the same label make sure to insert
+///     a `#` at the beginning. It will not be shown but guarantees correct behavior.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// void nk_property_float(struct nk_context *ctx, const char *name, float min, float *val, float max, float step, float inc_per_pixel);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter           | Description
+/// --------------------|-----------------------------------------------------------
+/// __ctx__             | Must point to an previously initialized `nk_context` struct after calling a layouting function
+/// __name__            | String used both as a label as well as a unique identifier
+/// __min__             | Minimum value not allowed to be underflown
+/// __val__             | Float pointer to be modified
+/// __max__             | Maximum value not allowed to be overflown
+/// __step__            | Increment added and subtracted on increment and decrement button
+/// __inc_per_pixel__   | Value per pixel added or subtracted on dragging
+*/
 NK_API void nk_property_float(struct nk_context*, const char *name, float min, float *val, float max, float step, float inc_per_pixel);
+/*/// #### nk_property_double
+/// Double property directly modifing a passed in value
+/// !!! WARNING
+///     To generate a unique property ID using the same label make sure to insert
+///     a `#` at the beginning. It will not be shown but guarantees correct behavior.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// void nk_property_double(struct nk_context *ctx, const char *name, double min, double *val, double max, double step, double inc_per_pixel);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter           | Description
+/// --------------------|-----------------------------------------------------------
+/// __ctx__             | Must point to an previously initialized `nk_context` struct after calling a layouting function
+/// __name__            | String used both as a label as well as a unique identifier
+/// __min__             | Minimum value not allowed to be underflown
+/// __val__             | Double pointer to be modified
+/// __max__             | Maximum value not allowed to be overflown
+/// __step__            | Increment added and subtracted on increment and decrement button
+/// __inc_per_pixel__   | Value per pixel added or subtracted on dragging
+*/
 NK_API void nk_property_double(struct nk_context*, const char *name, double min, double *val, double max, double step, float inc_per_pixel);
+/*/// #### nk_propertyi
+/// Integer property modifing a passed in value and returning the new value
+/// !!! WARNING
+///     To generate a unique property ID using the same label make sure to insert
+///     a `#` at the beginning. It will not be shown but guarantees correct behavior.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// int nk_propertyi(struct nk_context *ctx, const char *name, int min, int val, int max, int step, float inc_per_pixel);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter           | Description
+/// --------------------|-----------------------------------------------------------
+/// __ctx__             | Must point to an previously initialized `nk_context` struct after calling a layouting function
+/// __name__            | String used both as a label as well as a unique identifier
+/// __min__             | Minimum value not allowed to be underflown
+/// __val__             | Current integer value to be modified and returned
+/// __max__             | Maximum value not allowed to be overflown
+/// __step__            | Increment added and subtracted on increment and decrement button
+/// __inc_per_pixel__   | Value per pixel added or subtracted on dragging
+///
+/// Returns the new modified integer value
+*/
 NK_API int nk_propertyi(struct nk_context*, const char *name, int min, int val, int max, int step, float inc_per_pixel);
+/*/// #### nk_propertyf
+/// Float property modifing a passed in value and returning the new value
+/// !!! WARNING
+///     To generate a unique property ID using the same label make sure to insert
+///     a `#` at the beginning. It will not be shown but guarantees correct behavior.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// float nk_propertyf(struct nk_context *ctx, const char *name, float min, float val, float max, float step, float inc_per_pixel);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter           | Description
+/// --------------------|-----------------------------------------------------------
+/// __ctx__             | Must point to an previously initialized `nk_context` struct after calling a layouting function
+/// __name__            | String used both as a label as well as a unique identifier
+/// __min__             | Minimum value not allowed to be underflown
+/// __val__             | Current float value to be modified and returned
+/// __max__             | Maximum value not allowed to be overflown
+/// __step__            | Increment added and subtracted on increment and decrement button
+/// __inc_per_pixel__   | Value per pixel added or subtracted on dragging
+///
+/// Returns the new modified float value
+*/
 NK_API float nk_propertyf(struct nk_context*, const char *name, float min, float val, float max, float step, float inc_per_pixel);
+/*/// #### nk_propertyd
+/// Float property modifing a passed in value and returning the new value
+/// !!! WARNING
+///     To generate a unique property ID using the same label make sure to insert
+///     a `#` at the beginning. It will not be shown but guarantees correct behavior.
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// float nk_propertyd(struct nk_context *ctx, const char *name, double min, double val, double max, double step, double inc_per_pixel);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter           | Description
+/// --------------------|-----------------------------------------------------------
+/// __ctx__             | Must point to an previously initialized `nk_context` struct after calling a layouting function
+/// __name__            | String used both as a label as well as a unique identifier
+/// __min__             | Minimum value not allowed to be underflown
+/// __val__             | Current double value to be modified and returned
+/// __max__             | Maximum value not allowed to be overflown
+/// __step__            | Increment added and subtracted on increment and decrement button
+/// __inc_per_pixel__   | Value per pixel added or subtracted on dragging
+///
+/// Returns the new modified double value
+*/
 NK_API double nk_propertyd(struct nk_context*, const char *name, double min, double val, double max, double step, float inc_per_pixel);
 /* =============================================================================
  *
@@ -6002,7 +6218,6 @@ nk_strmatch_fuzzy_text(const char *str, int str_len,
      * if found then out_score is also set. Score value has no intrinsic meaning.
      * Range varies with pattern. Can only compare scores with same search pattern. */
 
-    /* ------- scores --------- */
     /* bonus for adjacent matches */
     #define NK_ADJACENCY_BONUS 5
     /* bonus if match occurs after a separator */
@@ -11045,7 +11260,7 @@ nk_tt_GetGlyphBox(const struct nk_tt_fontinfo *info, int glyph_index,
 }
 
 NK_INTERN int
-stbtt__close_shape(struct nk_tt_vertex *vertices, int num_vertices, int was_off,
+nk_tt__close_shape(struct nk_tt_vertex *vertices, int num_vertices, int was_off,
     int start_off, nk_int sx, nk_int sy, nk_int scx, nk_int scy, nk_int cx, nk_int cy)
 {
    if (start_off) {
@@ -11151,7 +11366,7 @@ nk_tt_GetGlyphShape(const struct nk_tt_fontinfo *info, struct nk_allocator *allo
 
             if (next_move == i) {
                 if (i != 0)
-                    num_vertices = stbtt__close_shape(vertices, num_vertices, was_off, start_off, sx,sy,scx,scy,cx,cy);
+                    num_vertices = nk_tt__close_shape(vertices, num_vertices, was_off, start_off, sx,sy,scx,scy,cx,cy);
 
                 /* now start the new one                */
                 start_off = !(flags & 1);
@@ -11194,7 +11409,7 @@ nk_tt_GetGlyphShape(const struct nk_tt_fontinfo *info, struct nk_allocator *allo
                 }
             }
         }
-        num_vertices = stbtt__close_shape(vertices, num_vertices, was_off, start_off, sx,sy,scx,scy,cx,cy);
+        num_vertices = nk_tt__close_shape(vertices, num_vertices, was_off, start_off, sx,sy,scx,scy,cx,cy);
     } else if (numberOfContours == -1) {
         /* Compound shapes. */
         int more = 1;
@@ -11852,7 +12067,7 @@ nk_tt__rasterize(struct nk_tt__bitmap *result, struct nk_tt__point *pts,
     }
 
     /* now sort the edges by their highest point (should snap to integer, and then by x) */
-    /*STBTT_sort(e, n, sizeof(e[0]), stbtt__edge_compare); */
+    /*STBTT_sort(e, n, sizeof(e[0]), nk_tt__edge_compare); */
     nk_tt__sort_edges(e, n);
     /* now, traverse the scanlines and find the intersections on each scanline, use xor winding rule */
     nk_tt__rasterize_sorted_edges(result, e, n, vsubsample, off_x, off_y, alloc);
@@ -12555,8 +12770,8 @@ nk_font_bake_pack(struct nk_font_baker *baker,
             /* pack custom user data first so it will be in the upper left corner*/
             struct nk_rp_rect custom_space;
             nk_zero(&custom_space, sizeof(custom_space));
-            custom_space.w = (nk_rp_coord)((custom->w * 2) + 1);
-            custom_space.h = (nk_rp_coord)(custom->h + 1);
+            custom_space.w = (nk_rp_coord)(custom->w);
+            custom_space.h = (nk_rp_coord)(custom->h);
 
             nk_tt_PackSetOversampling(&baker->spc, 1, 1);
             nk_rp_pack_rects((struct nk_rp_context*)baker->spc.pack_info, &custom_space, 1);
@@ -13597,7 +13812,7 @@ nk_font_atlas_bake(struct nk_font_atlas *atlas, int *width, int *height,
 
     /* initialize each cursor */
     {NK_STORAGE const struct nk_vec2 nk_cursor_data[NK_CURSOR_COUNT][3] = {
-        /* Pos ----- Size ------- Offset --*/
+        /* Pos      Size        Offset */
         {{ 0, 3},   {12,19},    { 0, 0}},
         {{13, 0},   { 7,16},    { 4, 8}},
         {{31, 0},   {23,23},    {11,11}},
@@ -18575,6 +18790,8 @@ nk_clear(struct nk_context *ctx)
             iter == ctx->active) {
             ctx->active = iter->prev;
             ctx->end = iter->prev;
+            if (!ctx->end)
+                ctx->begin = 0;
             if (ctx->active)
                 ctx->active->flags &= ~(unsigned)NK_WINDOW_ROM;
         }
@@ -18724,7 +18941,7 @@ nk_build(struct nk_context *ctx)
 
         cmd = nk_ptr_add(struct nk_command, buffer, it->buffer.last);
         while (next && ((next->buffer.last == next->buffer.begin) ||
-            (next->flags & NK_WINDOW_HIDDEN)))
+            (next->flags & NK_WINDOW_HIDDEN) || next->seq != ctx->seq))
             next = next->next; /* skip empty command buffers */
 
         if (next) cmd->next = next->buffer.begin;
@@ -19258,30 +19475,14 @@ nk_panel_end(struct nk_context *ctx)
     if (layout->flags & NK_WINDOW_BORDER)
     {
         struct nk_color border_color = nk_panel_get_border_color(style, layout->type);
-        const float padding_y = (layout->flags & NK_WINDOW_MINIMIZED) ?
-            style->window.border + window->bounds.y + layout->header_height:
-            (layout->flags & NK_WINDOW_DYNAMIC)?
-            layout->bounds.y + layout->bounds.h + layout->footer_height:
-            window->bounds.y + window->bounds.h;
-
-        /* draw border top */
-        nk_stroke_line(out,window->bounds.x,window->bounds.y,
-            window->bounds.x + window->bounds.w, window->bounds.y,
-            layout->border, border_color);
-
-        /* draw bottom border */
-        nk_stroke_line(out, window->bounds.x, padding_y,
-            window->bounds.x + window->bounds.w, padding_y, layout->border, border_color);
-
-        /* draw left border */
-        nk_stroke_line(out, window->bounds.x + layout->border*0.5f,
-            window->bounds.y, window->bounds.x + layout->border*0.5f,
-            padding_y, layout->border, border_color);
-
-        /* draw right border */
-        nk_stroke_line(out, window->bounds.x + window->bounds.w - layout->border*0.5f,
-            window->bounds.y, window->bounds.x + window->bounds.w - layout->border*0.5f,
-            padding_y, layout->border, border_color);
+        const float padding_y = (layout->flags & NK_WINDOW_MINIMIZED)
+            ? (style->window.border + window->bounds.y + layout->header_height)
+            : ((layout->flags & NK_WINDOW_DYNAMIC)
+                ? (layout->bounds.y + layout->bounds.h + layout->footer_height)
+                : (window->bounds.y + window->bounds.h));
+        struct nk_rect b = window->bounds;
+        b.h = padding_y - window->bounds.y;
+        nk_stroke_rect(out, b, 0, layout->border, border_color);
     }
 
     /* scaler */
@@ -20957,7 +21158,7 @@ nk_layout_widget_space(struct nk_rect *bounds, const struct nk_context *ctx,
     switch (layout->row.type) {
     case NK_LAYOUT_DYNAMIC_FIXED: {
         /* scaling fixed size widgets item width */
-        item_width = NK_MAX(1.0f,panel_space-1.0f) / (float)layout->row.columns;
+        item_width = NK_MAX(1.0f,panel_space) / (float)layout->row.columns;
         item_offset = (float)layout->row.index * item_width;
         item_spacing = (float)layout->row.index * spacing.x;
     } break;
@@ -21739,7 +21940,21 @@ nk_image(struct nk_context *ctx, struct nk_image img)
     if (!nk_widget(&bounds, ctx)) return;
     nk_draw_image(&win->buffer, bounds, &img, nk_white);
 }
+NK_API void
+nk_image_color(struct nk_context *ctx, struct nk_image img, struct nk_color col)
+{
+    struct nk_window *win;
+    struct nk_rect bounds;
 
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
+
+    win = ctx->current;
+    if (!nk_widget(&bounds, ctx)) return;
+    nk_draw_image(&win->buffer, bounds, &img, col);
+}
 /*----------------------------------------------------------------
  *
  *                          BUTTON
@@ -22301,7 +22516,7 @@ nk_slider_float(struct nk_context *ctx, float min_value, float *value, float max
 
     state = nk_widget(&bounds, ctx);
     if (!state) return ret;
-    in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
+    in = (/*state == NK_WIDGET_ROM || */ layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
 
     old_value = *value;
     *value = nk_do_slider(&ctx->last_widget_state, &win->buffer, bounds, min_value,
@@ -24926,9 +25141,13 @@ nk_menu_end(struct nk_context *ctx)
 ///    - [yy]: Minor version with non-breaking API and library changes
 ///    - [zz]: Bug fix version with no direct changes to API
 ///
-/// - 2017/01/12 (3.00.2) - Added `nk_group_begin_titled` for separed group identifier and title
-/// - 2017/01/07 (3.00.1) - Started to change documentation style
-/// - 2017/01/05 (3.00.0) - BREAKING CHANGE: The previous color picker API was broken
+/// - 2018/02/23 (3.00.6) - Fixed slider dragging behavior
+/// - 2018/01/31 (3.00.5) - Fixed overcalculation of cursor data in font baking process
+/// - 2018/01/31 (3.00.4) - Removed name collision with stb_truetype
+/// - 2018/01/28 (3.00.3) - Fixed panel window border drawing bug
+/// - 2018/01/12 (3.00.2) - Added `nk_group_begin_titled` for separed group identifier and title
+/// - 2018/01/07 (3.00.1) - Started to change documentation style
+/// - 2018/01/05 (3.00.0) - BREAKING CHANGE: The previous color picker API was broken
 ///                        because of conversions between float and byte color representation.
 ///                        Color pickers now use floating point values to represent
 ///                        HSV values. To get back the old behavior I added some additional
