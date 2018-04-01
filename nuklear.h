@@ -4644,7 +4644,6 @@ struct nk_draw_list {
 /* draw list */
 NK_API void nk_draw_list_init(struct nk_draw_list*);
 NK_API void nk_draw_list_setup(struct nk_draw_list*, const struct nk_convert_config*, struct nk_buffer *cmds, struct nk_buffer *vertices, struct nk_buffer *elements, enum nk_anti_aliasing line_aa,enum nk_anti_aliasing shape_aa);
-NK_API void nk_draw_list_clear(struct nk_draw_list*);
 
 /* drawing */
 #define nk_draw_list_foreach(cmd, can, b) for((cmd)=nk__draw_list_begin(can, b); (cmd)!=0; (cmd)=nk__draw_list_next(cmd, b, can))
@@ -9154,6 +9153,13 @@ nk_draw_list_setup(struct nk_draw_list *canvas, const struct nk_convert_config *
     canvas->line_AA = line_aa;
     canvas->shape_AA = shape_aa;
     canvas->clip_rect = nk_null_rect;
+
+    canvas->cmd_offset = 0;
+    canvas->element_count = 0;
+    canvas->vertex_count = 0;
+    canvas->cmd_offset = 0;
+    canvas->cmd_count = 0;
+    canvas->path_count = 0;
 }
 
 NK_API const struct nk_draw_command*
@@ -9208,22 +9214,6 @@ nk__draw_list_next(const struct nk_draw_command *cmd,
     if (cmd <= end) return 0;
     return (cmd-1);
 }
-
-NK_API void
-nk_draw_list_clear(struct nk_draw_list *list)
-{
-    NK_ASSERT(list);
-    if (!list) return;
-    list->element_count = 0;
-    list->vertex_count = 0;
-    list->cmd_offset = 0;
-    list->cmd_count = 0;
-    list->path_count = 0;
-    list->vertices = 0;
-    list->elements = 0;
-    list->clip_rect = nk_null_rect;
-}
-
 NK_INTERN struct nk_vec2*
 nk_draw_list_alloc_path(struct nk_draw_list *list, int count)
 {
@@ -18763,9 +18753,6 @@ nk_clear(struct nk_context *ctx)
     ctx->last_widget_state = 0;
     ctx->style.cursor_active = ctx->style.cursors[NK_CURSOR_ARROW];
     NK_MEMSET(&ctx->overlay, 0, sizeof(ctx->overlay));
-#ifdef NK_INCLUDE_VERTEX_BUFFER_OUTPUT
-    nk_draw_list_clear(&ctx->draw_list);
-#endif
 
     /* garbage collector */
     iter = ctx->begin;
@@ -25134,6 +25121,7 @@ nk_menu_end(struct nk_context *ctx)
 ///    - [yy]: Minor version with non-breaking API and library changes
 ///    - [zz]: Bug fix version with no direct changes to API
 ///
+/// - 2018/04/01 (4.00.1) - Fixed calling `nk_convert` multiple time per single frame
 /// - 2018/04/01 (4.00.0) - BREAKING CHANGE: nk_draw_list_clear no longer tries to
 ///                         clear provided buffers. So make sure to either free
 ///                         or clear each passed buffer after calling nk_convert.
