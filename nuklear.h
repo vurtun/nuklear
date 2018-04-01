@@ -9214,13 +9214,6 @@ nk_draw_list_clear(struct nk_draw_list *list)
 {
     NK_ASSERT(list);
     if (!list) return;
-    if (list->buffer)
-        nk_buffer_clear(list->buffer);
-    if (list->vertices)
-        nk_buffer_clear(list->vertices);
-    if (list->elements)
-        nk_buffer_clear(list->elements);
-
     list->element_count = 0;
     list->vertex_count = 0;
     list->cmd_offset = 0;
@@ -25137,10 +25130,13 @@ nk_menu_end(struct nk_context *ctx)
 /// -[date]: date on which the change has been pushed
 /// -[x.yy.zz]: Numerical version string representation. Each version number on the right
 ///             resets back to zero if version on the left is incremented.
-///    - [x]: Major version with API and library breaking
+///    - [x]: Major version with API and library breaking changes
 ///    - [yy]: Minor version with non-breaking API and library changes
 ///    - [zz]: Bug fix version with no direct changes to API
 ///
+/// - 2018/04/01 (4.00.0) - BREAKING CHANGE: nk_draw_list_clear no longer tries to
+///                         clear provided buffers. So make sure to either free
+///                         or clear each passed buffer after calling nk_convert.
 /// - 2018/02/23 (3.00.6) - Fixed slider dragging behavior
 /// - 2018/01/31 (3.00.5) - Fixed overcalculation of cursor data in font baking process
 /// - 2018/01/31 (3.00.4) - Removed name collision with stb_truetype
