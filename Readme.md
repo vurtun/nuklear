@@ -119,7 +119,7 @@ Big thank you to Omar Cornut (ocornut@github) for his [imgui](https://github.com
 giving me the inspiration for this library, Casey Muratori for handmade hero
 and his original immediate mode graphical user interface idea and Sean
 Barrett for his amazing single header [libraries](https://github.com/nothings/stb) which restored my faith
-in libraries and brought me to create some of my own. Finally Apoorva Joshi for his singe-header file packer.
+in libraries and brought me to create some of my own. Finally Apoorva Joshi for his singe-header [file packer](http://apoorvaj.io/single-header-packer.html).
 
 ## License
 ```
