@@ -2246,9 +2246,14 @@ X...XXXXXXXXXXXXX...X -           "
 -[date]: date on which the change has been pushed
 -[x.yy.zz]: Numerical version string representation. Each version number on the right
             resets back to zero if version on the left is incremented.
-   - [x]: Major version with API and library breaking
+   - [x]: Major version with API and library breaking changes
    - [yy]: Minor version with non-breaking API and library changes
    - [zz]: Bug fix version with no direct changes to API
+- 2018/04/01 (4.00.1) - Fixed calling `nk_convert` multiple time per single frame
+- 2018/04/01 (4.00.0) - BREAKING CHANGE: nk_draw_list_clear no longer tries to
+                        clear provided buffers. So make sure to either free
+                        or clear each passed buffer after calling nk_convert.
+- 2018/02/23 (3.00.6) - Fixed slider dragging behavior
 - 2018/01/31 (3.00.5) - Fixed overcalculation of cursor data in font baking process
 - 2018/01/31 (3.00.4) - Removed name collision with stb_truetype
 - 2018/01/28 (3.00.3) - Fixed panel window border drawing bug
@@ -2528,6 +2533,7 @@ Big thank you to Omar Cornut (ocornut@github) for his [imgui library](https://gi
 giving me the inspiration for this library, Casey Muratori for handmade hero
 and his original immediate mode graphical user interface idea and Sean
 Barret for his amazing single header libraries which restored my faith
-in libraries and brought me to create some of my own.
+in libraries and brought me to create some of my own. Finally Apoorva Joshi
+for his single header file packer.
 <script>markdeepOptions={tocStyle:'medium'};</script>
 <!-- Markdeep: --><script src='https://casual-effects.com/markdeep/latest/markdeep.min.js?'></script>
