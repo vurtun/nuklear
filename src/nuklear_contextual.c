@@ -25,6 +25,8 @@ nk_contextual_begin(struct nk_context *ctx, nk_flags flags, struct nk_vec2 size,
     NK_ASSERT(ctx->current->layout);
     if (!ctx || !ctx->current || !ctx->current->layout)
         return 0;
+    if (ctx->current != ctx->active)
+        return 0;
 
     win = ctx->current;
     ++win->popup.con_count;
