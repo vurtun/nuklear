@@ -108,6 +108,8 @@ nk_text_colored(struct nk_context *ctx, const char *str, int len,
     struct nk_vec2 item_padding;
     struct nk_rect bounds;
     struct nk_text text;
+    int linelen = 0;
+    int glyphs = 0;
 
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
