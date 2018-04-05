@@ -1002,6 +1002,45 @@ nk_file_load(const char* path, nk_size* siz, struct nk_allocator *alloc)
     return buf;
 }
 #endif
+
+NK_LIB int
+nk_text_trimline(const char *text, int text_len) {
+    if (text[text_len - 2] == '\r' && text[text_len - 1] == '\n')
+        return text_len - 2; /* trailing \r\n */
+    else if (text[text_len - 1] == '\r' || text[text_len - 1] == '\n')
+        return text_len - 1; /* trailing \r or \n */
+    return text_len;
+}
+NK_LIB int
+nk_text_linelen(const char *text, int text_len, int *glyphs)
+{
+    int i = 0;
+    int glyph_len = 0;
+    float last_width = 0;
+    nk_rune unicode = 0;
+    nk_rune lastuni = 0;
+    int len = 0;
+    int g = 0;
+
+    glyph_len = nk_utf_decode(text, &unicode, text_len);
+    while (glyph_len && (len < text_len)) {
+        len += glyph_len;
+        /* \r doesn't count as newline by itself, since it might be part of \r\n. */
+        int newline = unicode == '\n';
+
+        lastuni = unicode;
+        glyph_len = nk_utf_decode(&text[len], &unicode, text_len - len);
+        /* If we had an \r, but the upcoming character wasn't an \n,
+         * then the \r actually was a newline. End before consuming next glyph. */
+        if (lastuni == '\r' && unicode != '\n')
+            break;
+        g++;
+        if (newline)
+            break;
+    }
+    *glyphs = g;
+    return len;
+}
 NK_LIB int
 nk_text_clamp(const struct nk_user_font *font, const char *text,
     int text_len, float space, int *glyphs, float *text_width,
@@ -1011,6 +1050,7 @@ nk_text_clamp(const struct nk_user_font *font, const char *text,
     int glyph_len = 0;
     float last_width = 0;
     nk_rune unicode = 0;
+    nk_rune lastuni = 0;
     float width = 0;
     int len = 0;
     int g = 0;
@@ -1025,20 +1065,35 @@ nk_text_clamp(const struct nk_user_font *font, const char *text,
     while (glyph_len && (width < space) && (len < text_len)) {
         len += glyph_len;
         s = font->width(font->userdata, font->height, text, len);
+        /* \r doesn't count as newline by itself, since it might be part of \r\n. */
+        int newline = unicode == '\n';
+        int separator = nk_true;
         for (i = 0; i < sep_count; ++i) {
             if (unicode != sep_list[i]) continue;
+            separator = nk_false;
+            break;
+        }
+        /* But \r still counts as a separator. */
+        if (separator || newline || unicode == '\r')
+        {
             sep_width = last_width = width;
             sep_g = g+1;
             sep_len = len;
-            break;
         }
         if (i == sep_count){
             last_width = sep_width = width;
             sep_g = g+1;
         }
         width = s;
+        lastuni = unicode;
         glyph_len = nk_utf_decode(&text[len], &unicode, text_len - len);
+        /* If we had an \r, but the upcoming character wasn't an \n,
+         * then the \r actually was a newline. End before consuming next glyph. */
+        if (lastuni == '\r' && unicode != '\n')
+            break;
         g++;
+        if (newline)
+            break;
     }
     if (len >= text_len) {
         *glyphs = g;
