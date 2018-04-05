@@ -3221,7 +3221,7 @@ NK_API void nk_contextual_end(struct nk_context*);
 NK_API void nk_tooltip(struct nk_context*, const char*);
 #ifdef NK_INCLUDE_STANDARD_VARARGS
 NK_API void nk_tooltipf(struct nk_context*, NK_PRINTF_FORMAT_STRING const char*, ...) NK_PRINTF_VARARG_FUNC(2);
-+NK_API void nk_tooltipfv(struct nk_context*, NK_PRINTF_FORMAT_STRING const char*, va_list) NK_PRINTF_VALIST_FUNC(2);
+NK_API void nk_tooltipfv(struct nk_context*, NK_PRINTF_FORMAT_STRING const char*, va_list) NK_PRINTF_VALIST_FUNC(2);
 #endif
 NK_API int nk_tooltip_begin(struct nk_context*, float width);
 NK_API void nk_tooltip_end(struct nk_context*);
