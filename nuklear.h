@@ -19237,6 +19237,13 @@ nk_text_wrap(struct nk_context *ctx, const char *str, int len)
     nk_text_wrap_colored(ctx, str, len, ctx->style.text.color);
 }
 NK_API void
+nk_text_multiline(struct nk_context *ctx, const char *str, int len)
+{
+    NK_ASSERT(ctx);
+    if (!ctx) return;
+    nk_text_multiline_colored(ctx, str, len, ctx->style.text.color);
+}
+NK_API void
 nk_label(struct nk_context *ctx, const char *str, nk_flags alignment)
 {
     nk_text(ctx, str, nk_strlen(str), alignment);
