@@ -7246,9 +7246,7 @@ nk_text_trimline(const char *text, int text_len) {
 NK_LIB int
 nk_text_linelen(const char *text, int text_len, int *glyphs)
 {
-    int i = 0;
     int glyph_len = 0;
-    float last_width = 0;
     nk_rune unicode = 0;
     nk_rune lastuni = 0;
     int len = 0;
@@ -19259,6 +19257,17 @@ nk_label_colored_wrap(struct nk_context *ctx, const char *str, struct nk_color c
 {
     nk_text_wrap_colored(ctx, str, nk_strlen(str), color);
 }
+NK_API void
+nk_label_multiline(struct nk_context *ctx, const char *str)
+{
+    nk_text_multiline(ctx, str, nk_strlen(str));
+}
+NK_API void
+nk_label_colored_multiline(struct nk_context *ctx, const char *str, struct nk_color color)
+{
+    nk_text_multiline_colored(ctx, str, nk_strlen(str), color);
+}
+
 
 
 
