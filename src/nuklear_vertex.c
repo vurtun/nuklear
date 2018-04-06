@@ -450,7 +450,6 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
         nk_buffer_mark(list->vertices, NK_BUFFER_FRONT);
         size = pnt_size * ((thick_line) ? 5 : 3) * points_count;
         normals = (struct nk_vec2*) nk_buffer_alloc(list->vertices, NK_BUFFER_FRONT, size, pnt_align);
-        NK_ASSERT(normals);
         if (!normals) return;
         temp = normals + points_count;
 
@@ -687,7 +686,6 @@ nk_draw_list_fill_poly_convex(struct nk_draw_list *list,
         nk_buffer_mark(list->vertices, NK_BUFFER_FRONT);
         size = pnt_size * points_count;
         normals = (struct nk_vec2*) nk_buffer_alloc(list->vertices, NK_BUFFER_FRONT, size, pnt_align);
-        NK_ASSERT(normals);
         if (!normals) return;
         vtx = (void*)((nk_byte*)list->vertices->memory.ptr + vertex_offset);
 
