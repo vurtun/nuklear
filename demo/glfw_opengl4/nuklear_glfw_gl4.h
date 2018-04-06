@@ -17,7 +17,7 @@
 #include <GLFW/glfw3.h>
 
 enum nk_glfw_init_state{
-    NK_GLFW3_DEFAULT=0,
+    NK_GLFW3_DEFAULT = 0,
     NK_GLFW3_INSTALL_CALLBACKS
 };
 
@@ -155,6 +155,24 @@ nk_glfw3_device_create()
     glCompileShader(dev->vert_shdr);
     glCompileShader(dev->frag_shdr);
     glGetShaderiv(dev->vert_shdr, GL_COMPILE_STATUS, &status);
+
+    GLint len = 0;
+    glGetShaderiv(dev->vert_shdr, GL_INFO_LOG_LENGTH, &len);
+    if (len > 1) {
+        char *log = calloc((size_t)len, sizeof(char));
+        glGetShaderInfoLog(dev->vert_shdr, len, NULL, log);
+        fprintf(stdout, "[GL]: failed to compile shader: %s", log);
+        free(log);
+    }
+
+    glGetShaderiv(dev->frag_shdr, GL_INFO_LOG_LENGTH, &len);
+    if (len > 1) {
+        char *log = calloc((size_t)len, sizeof(char));
+        glGetShaderInfoLog(dev->frag_shdr, len, NULL, log);
+        fprintf(stdout, "[GL]: failed to compile shader: %s", log);
+        free(log);
+    }
+
     assert(status == GL_TRUE);
     glGetShaderiv(dev->frag_shdr, GL_COMPILE_STATUS, &status);
     assert(status == GL_TRUE);
@@ -401,8 +419,7 @@ nk_glfw3_render(enum nk_anti_aliasing AA)
                 nk_buffer_init_fixed(&vbuf, vertices, (size_t)dev->max_vertex_buffer);
                 nk_buffer_init_fixed(&ebuf, elements, (size_t)dev->max_element_buffer);
                 nk_convert(&glfw.ctx, &dev->cmds, &vbuf, &ebuf, &config);
-            } /* Lock buffer until GPU has finished draw command */
-            nk_glfw3_lock_buffer();
+            }
         }
 
         /* iterate over and execute each draw command */
@@ -430,12 +447,13 @@ nk_glfw3_render(enum nk_anti_aliasing AA)
         }
         nk_clear(&glfw.ctx);
     }
-
     /* default OpenGL state */
     glUseProgram(0);
     glBindVertexArray(0);
     glDisable(GL_BLEND);
     glDisable(GL_SCISSOR_TEST);
+    /* Lock buffer until GPU has finished draw command */
+    nk_glfw3_lock_buffer();
 }
 
 NK_API void
