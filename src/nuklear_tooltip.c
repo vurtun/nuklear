@@ -94,11 +94,16 @@ nk_tooltip(struct nk_context *ctx, const char *text)
 NK_API void
 nk_tooltipf(struct nk_context *ctx, const char *fmt, ...)
 {
-    char buf[256];
     va_list args;
     va_start(args, fmt);
-    nk_strfmt(buf, NK_LEN(buf), fmt, args);
+    nk_tooltipfv(ctx, fmt, args);
     va_end(args);
+}
+NK_API void
+nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
+{
+    char buf[256];
+    nk_strfmt(buf, NK_LEN(buf), fmt, args);
     nk_tooltip(ctx, buf);
 }
 #endif
