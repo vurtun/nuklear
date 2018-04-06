@@ -150,44 +150,70 @@ NK_API void
 nk_labelf_colored(struct nk_context *ctx, nk_flags flags,
     struct nk_color color, const char *fmt, ...)
 {
-    char buf[256];
     va_list args;
     va_start(args, fmt);
-    nk_strfmt(buf, NK_LEN(buf), fmt, args);
-    nk_label_colored(ctx, buf, flags, color);
+    nk_labelfv_colored(ctx, flags, color, fmt, args);
     va_end(args);
 }
 NK_API void
 nk_labelf_colored_wrap(struct nk_context *ctx, struct nk_color color,
     const char *fmt, ...)
 {
-    char buf[256];
     va_list args;
     va_start(args, fmt);
-    nk_strfmt(buf, NK_LEN(buf), fmt, args);
-    nk_label_colored_wrap(ctx, buf, color);
+    nk_labelfv_colored_wrap(ctx, color, fmt, args);
     va_end(args);
 }
 NK_API void
 nk_labelf(struct nk_context *ctx, nk_flags flags, const char *fmt, ...)
 {
-    char buf[256];
     va_list args;
     va_start(args, fmt);
-    nk_strfmt(buf, NK_LEN(buf), fmt, args);
-    nk_label(ctx, buf, flags);
+    nk_labelfv(ctx, flags, fmt, args);
     va_end(args);
 }
 NK_API void
 nk_labelf_wrap(struct nk_context *ctx, const char *fmt,...)
 {
-    char buf[256];
     va_list args;
     va_start(args, fmt);
-    nk_strfmt(buf, NK_LEN(buf), fmt, args);
-    nk_label_wrap(ctx, buf);
+    nk_labelfv_wrap(ctx, fmt, args);
     va_end(args);
 }
+NK_API void
+nk_labelfv_colored(struct nk_context *ctx, nk_flags flags,
+    struct nk_color color, const char *fmt, va_list args)
+{
+    char buf[256];
+    nk_strfmt(buf, NK_LEN(buf), fmt, args);
+    nk_label_colored(ctx, buf, flags, color);
+}
+
+NK_API void
+nk_labelfv_colored_wrap(struct nk_context *ctx, struct nk_color color,
+    const char *fmt, va_list args)
+{
+    char buf[256];
+    nk_strfmt(buf, NK_LEN(buf), fmt, args);
+    nk_label_colored_wrap(ctx, buf, color);
+}
+
+NK_API void
+nk_labelfv(struct nk_context *ctx, nk_flags flags, const char *fmt, va_list args)
+{
+    char buf[256];
+    nk_strfmt(buf, NK_LEN(buf), fmt, args);
+    nk_label(ctx, buf, flags);
+}
+
+NK_API void
+nk_labelfv_wrap(struct nk_context *ctx, const char *fmt, va_list args)
+{
+    char buf[256];
+    nk_strfmt(buf, NK_LEN(buf), fmt, args);
+    nk_label_wrap(ctx, buf);
+}
+
 NK_API void
 nk_value_bool(struct nk_context *ctx, const char *prefix, int value)
 {
