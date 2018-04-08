@@ -7297,10 +7297,10 @@ nk_text_clamp(const struct nk_user_font *font, const char *text,
         s = font->width(font->userdata, font->height, text, len);
         /* \r doesn't count as newline by itself, since it might be part of \r\n. */
         int newline = unicode == '\n';
-        int separator = nk_true;
+        int separator = nk_false;
         for (i = 0; i < sep_count; ++i) {
             if (unicode != sep_list[i]) continue;
-            separator = nk_false;
+            separator = nk_true;
             break;
         }
         /* But \r still counts as a separator. */
