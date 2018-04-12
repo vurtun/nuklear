@@ -101,7 +101,9 @@ languages. Furthermore there are no guarantee that all bindings will always be k
 - [Rust](https://github.com/snuk182/nuklear-rust) by snuk182@github.com
 - [Chicken](https://github.com/wasamasa/nuklear) by wasamasa@github.com
 - [Nim](https://github.com/zacharycarter/nuklear-nim) by zacharycarter@github.com
-- [Lua/Löve2d](https://github.com/keharriso/love-nuklear) by Kevin Harrison
+- Lua
+  - [LÖVE-Nuklear](https://github.com/keharriso/love-nuklear) by Kevin Harrison
+  - [MoonNuklear](https://github.com/stetre/moonnuklear) by Stefano Trettel
 - Python
   - [pyNuklear](https://github.com/billsix/pyNuklear) by William Emerison Six (ctypes-based wrapper)
   - [pynk](https://github.com/nathanrw/nuklear-cffi) by nathanrw@github.com (cffi binding)
