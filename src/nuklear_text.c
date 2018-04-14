@@ -49,8 +49,7 @@ nk_widget_text(struct nk_command_buffer *o, struct nk_rect b,
         label.y = b.y + b.h - f->height;
         label.h = f->height;
     }
-    nk_draw_text(o, label, (const char*)string,
-        len, f, t->background, t->text);
+    nk_draw_text(o, label, (const char*)string, len, f, t->background, t->text);
 }
 NK_LIB void
 nk_widget_text_wrap(struct nk_command_buffer *o, struct nk_rect b,

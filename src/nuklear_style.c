@@ -221,6 +221,7 @@ nk_style_from_table(struct nk_context *ctx, const struct nk_color *table)
     select->text_hover_active   = table[NK_COLOR_TEXT];
     select->text_pressed_active = table[NK_COLOR_TEXT];
     select->padding         = nk_vec2(2.0f,2.0f);
+    select->image_padding   = nk_vec2(2.0f,2.0f);
     select->touch_padding   = nk_vec2(0,0);
     select->userdata        = nk_handle_ptr(0);
     select->rounding        = 0.0f;

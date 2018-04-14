@@ -887,7 +887,38 @@ overview(struct nk_context *ctx)
                 }
                 nk_tree_pop(ctx);
             }
-
+            if (nk_tree_push(ctx, NK_TREE_NODE, "Tree", NK_MINIMIZED))
+            {
+                static int root_selected = 0;
+                int sel = root_selected;
+                if (nk_tree_element_push(ctx, NK_TREE_NODE, "Root", NK_MINIMIZED, &sel)) {
+                    static int selected[8];
+                    int i = 0, node_select = selected[0];
+                    if (sel != root_selected) {
+                        root_selected = sel;
+                        for (i = 0; i < 8; ++i)
+                            selected[i] = sel;
+                    }
+                    if (nk_tree_element_push(ctx, NK_TREE_NODE, "Node", NK_MINIMIZED, &node_select)) {
+                        int j = 0;
+                        static int sel_nodes[4];
+                        if (node_select != selected[0]) {
+                            selected[0] = node_select;
+                            for (i = 0; i < 8; ++i)
+                                sel_nodes[i] = node_select;
+                        }
+                        nk_layout_row_static(ctx, 18, 100, 1);
+                        for (j = 0; j < 4; ++j)
+                            nk_selectable_symbol_label(ctx, NK_SYMBOL_CIRCLE_SOLID, (sel_nodes[j]) ? "Selected": "Unselected", NK_TEXT_RIGHT, &sel_nodes[j]);
+                        nk_tree_element_pop(ctx);
+                    }
+                    nk_layout_row_static(ctx, 18, 100, 1);
+                    for (i = 1; i < 8; ++i)
+                        nk_selectable_symbol_label(ctx, NK_SYMBOL_CIRCLE_SOLID, (selected[i]) ? "Selected": "Unselected", NK_TEXT_RIGHT, &selected[i]);
+                    nk_tree_element_pop(ctx);
+                }
+                nk_tree_pop(ctx);
+            }
             if (nk_tree_push(ctx, NK_TREE_NODE, "Notebook", NK_MINIMIZED))
             {
                 static int current_tab = 0;
