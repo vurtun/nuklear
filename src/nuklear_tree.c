@@ -317,7 +317,7 @@ nk_tree_element_base(struct nk_context *ctx, enum nk_tree_type type,
         state = nk_add_value(ctx, win, tree_hash, 0);
         *state = initial_state;
     } return nk_tree_element_image_push_hashed_base(ctx, type, img, title,
-        nk_strlen(title), state, selected);
+        nk_strlen(title), (enum nk_collapse_states*)state, selected);
 }
 NK_API int
 nk_tree_element_push_hashed(struct nk_context *ctx, enum nk_tree_type type,

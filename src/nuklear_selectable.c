@@ -87,7 +87,7 @@ nk_do_selectable(nk_flags *state, struct nk_command_buffer *out,
 
     /* draw selectable */
     if (style->draw_begin) style->draw_begin(out, style->userdata);
-    nk_draw_selectable(out, *state, style, *value, &bounds, 0,0,0, str, len, align, font);
+    nk_draw_selectable(out, *state, style, *value, &bounds, 0,0,NK_SYMBOL_NONE, str, len, align, font);
     if (style->draw_end) style->draw_end(out, style->userdata);
     return old_value != *value;
 }
@@ -134,7 +134,7 @@ nk_do_selectable_image(nk_flags *state, struct nk_command_buffer *out,
 
     /* draw selectable */
     if (style->draw_begin) style->draw_begin(out, style->userdata);
-    nk_draw_selectable(out, *state, style, *value, &bounds, &icon, img, 0, str, len, align, font);
+    nk_draw_selectable(out, *state, style, *value, &bounds, &icon, img, NK_SYMBOL_NONE, str, len, align, font);
     if (style->draw_end) style->draw_end(out, style->userdata);
     return old_value != *value;
 }
