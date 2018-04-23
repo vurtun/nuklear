@@ -16925,6 +16925,8 @@ nk_contextual_begin(struct nk_context *ctx, nk_flags flags, struct nk_vec2 size,
     is_clicked = nk_input_mouse_clicked(&ctx->input, NK_BUTTON_RIGHT, trigger_bounds);
     if (win->popup.active_con && win->popup.con_count != win->popup.active_con)
         return 0;
+    if (!is_open && win->popup.active_con)
+        win->popup.active_con = 0;
     if ((!is_open && !is_clicked))
         return 0;
 
