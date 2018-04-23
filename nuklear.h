@@ -18732,6 +18732,7 @@ nk_list_view_begin(struct nk_context *ctx, struct nk_list_view *view,
 
     view->total_height = row_height * NK_MAX(row_count,1);
     view->begin = (int)NK_MAX(((float)view->scroll_value / (float)row_height), 0.0f);
+    view->count = (int)NK_MAX(nk_iceilf((layout->clip.h)/(float)row_height),0);
     view->count = NK_MIN(view->count, row_count - view->begin);
     view->end = view->begin + view->count;
     view->ctx = ctx;
