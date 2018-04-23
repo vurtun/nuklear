@@ -1,4 +1,3 @@
-
 static int
 overview(struct nk_context *ctx)
 {
@@ -221,7 +220,6 @@ overview(struct nk_context *ctx)
                 option = nk_option_label(ctx, "optionB", option == B) ? B : option;
                 option = nk_option_label(ctx, "optionC", option == C) ? C : option;
 
-
                 nk_layout_row(ctx, NK_STATIC, 30, 2, ratio);
                 nk_labelf(ctx, NK_TEXT_LEFT, "Slider int");
                 nk_slider_int(ctx, 0, &int_slider, 10, 1);
@@ -252,6 +250,32 @@ overview(struct nk_context *ctx)
 
                 nk_tree_pop(ctx);
             }
+
+            if (nk_tree_push(ctx, NK_TREE_NODE, "Inactive", NK_MINIMIZED))
+            {
+                static int inactive = 1;
+                nk_layout_row_dynamic(ctx, 30, 1);
+                nk_checkbox_label(ctx, "Inactive", &inactive);
+
+                nk_layout_row_static(ctx, 30, 80, 1);
+                if (inactive) {
+                    struct nk_style_button button;
+                    button = ctx->style.button;
+                    ctx->style.button.normal = nk_style_item_color(nk_rgb(40,40,40));
+                    ctx->style.button.hover = nk_style_item_color(nk_rgb(40,40,40));
+                    ctx->style.button.active = nk_style_item_color(nk_rgb(40,40,40));
+                    ctx->style.button.border_color = nk_rgb(60,60,60);
+                    ctx->style.button.text_background = nk_rgb(60,60,60);
+                    ctx->style.button.text_normal = nk_rgb(60,60,60);
+                    ctx->style.button.text_hover = nk_rgb(60,60,60);
+                    ctx->style.button.text_active = nk_rgb(60,60,60);
+                    nk_button_label(ctx, "button");
+                    ctx->style.button = button;
+                } else if (nk_button_label(ctx, "button"))
+                    fprintf(stdout, "button pressed\n");
+                nk_tree_pop(ctx);
+            }
+
 
             if (nk_tree_push(ctx, NK_TREE_NODE, "Selectable", NK_MINIMIZED))
             {
