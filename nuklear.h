@@ -21260,7 +21260,7 @@ nk_draw_scrollbar(struct nk_command_buffer *out, nk_flags state,
     }
 
     /* draw cursor */
-    if (background->type == NK_STYLE_ITEM_COLOR) {
+    if (cursor->type == NK_STYLE_ITEM_COLOR) {
         nk_fill_rect(out, *scroll, style->rounding_cursor, cursor->data.color);
         nk_stroke_rect(out, *scroll, style->rounding_cursor, style->border_cursor, style->cursor_border_color);
     } else nk_draw_image(out, *scroll, &cursor->data.image, nk_white);
