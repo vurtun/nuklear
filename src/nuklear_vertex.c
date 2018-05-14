@@ -223,6 +223,18 @@ nk_draw_list_alloc_vertices(struct nk_draw_list *list, nk_size count)
         list->config.vertex_size*count, list->config.vertex_alignment);
     if (!vtx) return 0;
     list->vertex_count += (unsigned int)count;
+
+    /* This assert triggers because your are drawing a lot of stuff and nuklear
+     * defined `nk_draw_index` as `nk_ushort` to safe space be default.
+     *
+     * So you reached the maximum number of indicies or rather vertexes.
+     * To solve this issue please change typdef `nk_draw_index` to `nk_uint`
+     * and don't forget to specify the new element size in your drawing
+     * backend (OpenGL, DirectX, ...). For example in OpenGL for `glDrawElements`
+     * instead of specifing `GL_UNSIGNED_SHORT` you have to define `GL_UNSIGNED_INT`.
+     * Sorry for the inconvenience. */
+    NK_ASSERT((sizeof(nk_draw_index) == 2 && list->vertex_count < NK_USHORT_MAX &&
+        "To many verticies for 16-bit vertex indicies. Please read comment above on how to solve this problem");
     return vtx;
 }
 NK_INTERN nk_draw_index*
