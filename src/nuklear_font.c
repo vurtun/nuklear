@@ -2578,16 +2578,15 @@ nk_font_init(struct nk_font *font, float pixel_height,
  * MIT license (see License.txt in http://www.upperbounds.net/download/ProggyClean.ttf.zip)
  * Download and more information at http://upperbounds.net
  *-----------------------------------------------------------------------------*/
-#ifdef NK_INCLUDE_DEFAULT_FONT
-
- #ifdef __clang__
+#ifdef __clang__
 #pragma clang diagnostic push
-
 #pragma clang diagnostic ignored "-Woverlength-strings"
 #elif defined(__GNUC__) || defined(__GNUG__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverlength-strings"
 #endif
+
+#ifdef NK_INCLUDE_DEFAULT_FONT
 
 NK_GLOBAL const char nk_proggy_clean_ttf_compressed_data_base85[11980+1] =
     "7])#######hV0qs'/###[),##/l:$#Q6>##5[n42>c-TH`->>#/e>11NNV=Bv(*:.F?uu#(gRU.o0XGH`$vhLG1hxt9?W`#,5LsCp#-i>.r$<$6pD>Lb';9Crc6tgXmKVeU2cD4Eo3R/"
@@ -2676,6 +2675,7 @@ NK_GLOBAL const char nk_proggy_clean_ttf_compressed_data_base85[11980+1] =
     "TmD<#%JSMFove:CTBEXI:<eh2g)B,3h2^G3i;#d3jD>)4kMYD4lVu`4m`:&5niUA5@(A5BA1]PBB:xlBCC=2CDLXMCEUtiCf&0g2'tN?PGT4CPGT4CPGT4CPGT4CPGT4CPGT4CPGT4CP"
     "GT4CPGT4CPGT4CPGT4CPGT4CPGT4CP-qekC`.9kEg^+F$kwViFJTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5o,^<-28ZI'O?;xp"
     "O?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xp;7q-#lLYI:xvD=#";
+
 #endif /* NK_INCLUDE_DEFAULT_FONT */
 
 #define NK_CURSOR_DATA_W 90
