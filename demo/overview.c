@@ -928,7 +928,7 @@ overview(struct nk_context *ctx)
                         static int sel_nodes[4];
                         if (node_select != selected[0]) {
                             selected[0] = node_select;
-                            for (i = 0; i < 8; ++i)
+                            for (i = 0; i < 4; ++i)
                                 sel_nodes[i] = node_select;
                         }
                         nk_layout_row_static(ctx, 18, 100, 1);
