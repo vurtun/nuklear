@@ -335,7 +335,7 @@ extern "C" {
  #define NK_POINTER_TYPE uintptr_t
 #else
   #ifndef NK_INT8
-    #define NK_INT8 char
+    #define NK_INT8 signed char
   #endif
   #ifndef NK_UINT8
     #define NK_UINT8 unsigned char
