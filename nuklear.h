@@ -671,8 +671,8 @@ NK_API void nk_set_user_data(struct nk_context*, nk_handle handle);
 /*/// ### Input
 /// The input API is responsible for holding the current input state composed of
 /// mouse, key and text input states.
-/// It is worth noting that no direct os or window handling is done in nuklear.
-/// Instead all input state has to be provided by platform specific code. This in one hand
+/// It is worth noting that no direct OS or window handling is done in nuklear.
+/// Instead all input state has to be provided by platform specific code. This on one hand
 /// expects more work from the user and complicates usage but on the other hand
 /// provides simple abstraction over a big number of platforms, libraries and other
 /// already provided functionality.
@@ -773,7 +773,7 @@ enum nk_buttons {
 };
 /*/// #### nk_input_begin
 /// Begins the input mirroring process by resetting text, scroll
-/// mouse previous mouse position and movement as well as key state transitions,
+/// mouse, previous mouse position and movement as well as key state transitions,
 ///
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
 /// void nk_input_begin(struct nk_context*);
@@ -799,7 +799,7 @@ NK_API void nk_input_begin(struct nk_context*);
 */
 NK_API void nk_input_motion(struct nk_context*, int x, int y);
 /*/// #### nk_input_key
-/// Mirrors state of a specific key to nuklear
+/// Mirrors the state of a specific key to nuklear
 ///
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
 /// void nk_input_key(struct nk_context*, enum nk_keys key, int down);
@@ -831,6 +831,7 @@ NK_API void nk_input_button(struct nk_context*, enum nk_buttons, int x, int y, i
 /*/// #### nk_input_scroll
 /// Copies the last mouse scroll value to nuklear. Is generally
 /// a scroll value. So does not have to come from mouse and could also originate
+/// TODO finish this sentence
 ///
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
 /// void nk_input_scroll(struct nk_context *ctx, struct nk_vec2 val);
@@ -895,7 +896,7 @@ NK_API void nk_input_glyph(struct nk_context*, const nk_glyph);
 NK_API void nk_input_unicode(struct nk_context*, nk_rune);
 /*/// #### nk_input_end
 /// End the input mirroring process by resetting mouse grabbing
-/// state to ensure the mouse cursor is not grabbed indefinitely.///
+/// state to ensure the mouse cursor is not grabbed indefinitely.
 ///
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
 /// void nk_input_end(struct nk_context *ctx);
@@ -1169,7 +1170,7 @@ struct nk_convert_config {
 */
 NK_API const struct nk_command* nk__begin(struct nk_context*);
 /*/// #### nk__next
-/// Returns a draw command list iterator to iterate all draw
+/// Returns draw command pointer pointing to the next command inside the draw command list
 ///
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
 /// const struct nk_command* nk__next(struct nk_context*, const struct nk_command*);
@@ -1195,7 +1196,7 @@ NK_API const struct nk_command* nk__next(struct nk_context*, const struct nk_com
 /// __ctx__     | Must point to an previously initialized `nk_context` struct at the end of a frame
 /// __cmd__     | Command pointer initialized to NULL
 ///
-/// Returns draw command pointer pointing to the next command inside the draw command list
+/// Iterates over each draw command inside the context draw command list
 */
 #define nk_foreach(c, ctx) for((c) = nk__begin(ctx); (c) != 0; (c) = nk__next(ctx,c))
 #ifdef NK_INCLUDE_VERTEX_BUFFER_OUTPUT
@@ -1230,7 +1231,7 @@ NK_API const struct nk_command* nk__next(struct nk_context*, const struct nk_com
 */
 NK_API nk_flags nk_convert(struct nk_context*, struct nk_buffer *cmds, struct nk_buffer *vertices, struct nk_buffer *elements, const struct nk_convert_config*);
 /*/// #### nk__draw_begin
-/// Returns a draw vertex command buffer iterator to iterate each the vertex draw command buffer
+/// Returns a draw vertex command buffer iterator to iterate over the vertex draw command buffer
 ///
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
 /// const struct nk_draw_command* nk__draw_begin(const struct nk_context*, const struct nk_buffer*);
@@ -1298,7 +1299,7 @@ NK_API const struct nk_draw_command* nk__draw_next(const struct nk_draw_command*
 /// ### Window
 /// Windows are the main persistent state used inside nuklear and are life time
 /// controlled by simply "retouching" (i.e. calling) each window each frame.
-/// All widgets inside nuklear can only be added inside function pair `nk_begin_xxx`
+/// All widgets inside nuklear can only be added inside the function pair `nk_begin_xxx`
 /// and `nk_end`. Calling any widgets outside these two functions will result in an
 /// assert in debug or no state change in release mode.<br /><br />
 ///
@@ -1469,7 +1470,7 @@ enum nk_panel_flags {
 NK_API int nk_begin(struct nk_context *ctx, const char *title, struct nk_rect bounds, nk_flags flags);
 /*/// #### nk_begin_titled
 /// Extended window start with separated title and identifier to allow multiple
-/// windows with same name but not title
+/// windows with same title but not name
 ///
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
 /// int nk_begin_titled(struct nk_context *ctx, const char *name, const char *title, struct nk_rect bounds, nk_flags flags);
@@ -1513,12 +1514,12 @@ NK_API void nk_end(struct nk_context *ctx);
 /// __name__    | Window identifier
 ///
 /// Returns a `nk_window` struct pointing to the identified window or NULL if
-/// no window with given name was found
+/// no window with the given name was found
 */
 NK_API struct nk_window *nk_window_find(struct nk_context *ctx, const char *name);
 /*/// #### nk_window_get_bounds
-///
 /// Returns a rectangle with screen position and size of the currently processed window
+///
 /// !!! WARNING
 ///     Only call this function between calls `nk_begin_xxx` and `nk_end`
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
@@ -1532,9 +1533,9 @@ NK_API struct nk_window *nk_window_find(struct nk_context *ctx, const char *name
 /// Returns a `nk_rect` struct with window upper left window position and size
 */
 NK_API struct nk_rect nk_window_get_bounds(const struct nk_context *ctx);
-/*/// #### nk_window_get_bounds
-///
+/*/// #### nk_window_get_position
 /// Returns the position of the currently processed window.
+///
 /// !!! WARNING
 ///     Only call this function between calls `nk_begin_xxx` and `nk_end`
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
@@ -1549,8 +1550,8 @@ NK_API struct nk_rect nk_window_get_bounds(const struct nk_context *ctx);
 */
 NK_API struct nk_vec2 nk_window_get_position(const struct nk_context *ctx);
 /*/// #### nk_window_get_size
-///
 /// Returns the size with width and height of the currently processed window.
+///
 /// !!! WARNING
 ///     Only call this function between calls `nk_begin_xxx` and `nk_end`
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
@@ -1565,8 +1566,8 @@ NK_API struct nk_vec2 nk_window_get_position(const struct nk_context *ctx);
 */
 NK_API struct nk_vec2 nk_window_get_size(const struct nk_context*);
 /*/// #### nk_window_get_width
-///
 /// Returns the width of the currently processed window.
+///
 /// !!! WARNING
 ///     Only call this function between calls `nk_begin_xxx` and `nk_end`
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
@@ -1581,8 +1582,8 @@ NK_API struct nk_vec2 nk_window_get_size(const struct nk_context*);
 */
 NK_API float nk_window_get_width(const struct nk_context*);
 /*/// #### nk_window_get_height
-///
 /// Returns the height of the currently processed window.
+///
 /// !!! WARNING
 ///     Only call this function between calls `nk_begin_xxx` and `nk_end`
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
@@ -1597,12 +1598,12 @@ NK_API float nk_window_get_width(const struct nk_context*);
 */
 NK_API float nk_window_get_height(const struct nk_context*);
 /*/// #### nk_window_get_panel
-///
 /// Returns the underlying panel which contains all processing state of the current window.
+///
 /// !!! WARNING
 ///     Only call this function between calls `nk_begin_xxx` and `nk_end`
 /// !!! WARNING
-///     Do not keep the returned panel pointer around it is only valid until `nk_end`
+///     Do not keep the returned panel pointer around, it is only valid until `nk_end`
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
 /// struct nk_panel* nk_window_get_panel(struct nk_context *ctx);
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1615,9 +1616,9 @@ NK_API float nk_window_get_height(const struct nk_context*);
 */
 NK_API struct nk_panel* nk_window_get_panel(struct nk_context*);
 /*/// #### nk_window_get_content_region
-///
 /// Returns the position and size of the currently visible and non-clipped space
 /// inside the currently processed window.
+///
 /// !!! WARNING
 ///     Only call this function between calls `nk_begin_xxx` and `nk_end`
 ///
@@ -1634,9 +1635,9 @@ NK_API struct nk_panel* nk_window_get_panel(struct nk_context*);
 */
 NK_API struct nk_rect nk_window_get_content_region(struct nk_context*);
 /*/// #### nk_window_get_content_region_min
-///
 /// Returns the upper left position of the currently visible and non-clipped
 /// space inside the currently processed window.
+///
 /// !!! WARNING
 ///     Only call this function between calls `nk_begin_xxx` and `nk_end`
 ///
@@ -1653,9 +1654,9 @@ NK_API struct nk_rect nk_window_get_content_region(struct nk_context*);
 */
 NK_API struct nk_vec2 nk_window_get_content_region_min(struct nk_context*);
 /*/// #### nk_window_get_content_region_max
-///
 /// Returns the lower right screen position of the currently visible and
 /// non-clipped space inside the currently processed window.
+///
 /// !!! WARNING
 ///     Only call this function between calls `nk_begin_xxx` and `nk_end`
 ///
@@ -1672,9 +1673,9 @@ NK_API struct nk_vec2 nk_window_get_content_region_min(struct nk_context*);
 */
 NK_API struct nk_vec2 nk_window_get_content_region_max(struct nk_context*);
 /*/// #### nk_window_get_content_region_size
-///
 /// Returns the size of the currently visible and non-clipped space inside the
 /// currently processed window
+///
 /// !!! WARNING
 ///     Only call this function between calls `nk_begin_xxx` and `nk_end`
 ///
@@ -2282,7 +2283,7 @@ NK_API float nk_layout_ratio_from_pixel(struct nk_context*, float pixel_width);
 /// __columns__ | Number of widget inside row
 */
 NK_API void nk_layout_row_dynamic(struct nk_context *ctx, float height, int cols);
-/*/// #### nk_layout_row_dynamic
+/*/// #### nk_layout_row_static
 /// Sets current row layout to fill @cols number of widgets
 /// in row with same @item_width horizontal size. Once called all subsequent widget
 /// calls greater than @cols will allocate a new row with same layout.
@@ -2472,7 +2473,7 @@ NK_API struct nk_rect nk_layout_space_bounds(struct nk_context*);
 /// Returns transformed `nk_vec2` in screen space coordinates
 */
 NK_API struct nk_vec2 nk_layout_space_to_screen(struct nk_context*, struct nk_vec2);
-/*/// #### nk_layout_space_to_screen
+/*/// #### nk_layout_space_to_local
 /// Converts vector from layout space into screen space
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
 /// struct nk_vec2 nk_layout_space_to_local(struct nk_context*, struct nk_vec2);
