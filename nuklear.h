@@ -16176,8 +16176,8 @@ nk_begin_titled(struct nk_context *ctx, const char *name, const char *title,
 {
     struct nk_window *win;
     struct nk_style *style;
-    nk_hash title_hash;
-    int title_len;
+    nk_hash name_hash;
+    int name_len;
     int ret = 0;
 
     NK_ASSERT(ctx);
@@ -16190,12 +16190,12 @@ nk_begin_titled(struct nk_context *ctx, const char *name, const char *title,
 
     /* find or create window */
     style = &ctx->style;
-    title_len = (int)nk_strlen(name);
-    title_hash = nk_murmur_hash(name, (int)title_len, NK_WINDOW_TITLE);
-    win = nk_find_window(ctx, title_hash, name);
+    name_len = (int)nk_strlen(name);
+    name_hash = nk_murmur_hash(name, (int)name_len, NK_WINDOW_TITLE);
+    win = nk_find_window(ctx, name_hash, name);
     if (!win) {
         /* create new window */
-        nk_size name_length = (nk_size)nk_strlen(name);
+        nk_size name_length = (nk_size)name_len;
         win = (struct nk_window*)nk_create_window(ctx);
         NK_ASSERT(win);
         if (!win) return 0;
@@ -16207,7 +16207,7 @@ nk_begin_titled(struct nk_context *ctx, const char *name, const char *title,
 
         win->flags = flags;
         win->bounds = bounds;
-        win->name = title_hash;
+        win->name = name_hash;
         name_length = NK_MIN(name_length, NK_WINDOW_MAX_NAME-1);
         NK_MEMCPY(win->name_string, name, name_length);
         win->name_string[name_length] = 0;
