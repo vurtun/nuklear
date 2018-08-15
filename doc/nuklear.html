@@ -317,7 +317,7 @@ while (GetEvent(&evt)) {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #### Usage
 Input state needs to be provided to nuklear by first calling `nk_input_begin`
-which resets internal state like delta mouse position and button transistions.
+which resets internal state like delta mouse position and button transitions.
 After `nk_input_begin` all current input state needs to be provided. This includes
 mouse motion, button and key pressed and released, text input and scrolling.
 Both event- or state-based input handling are supported by this API
@@ -865,7 +865,7 @@ NK_WINDOW_NO_SCROLLBAR      | Removes the scrollbar from the window
 NK_WINDOW_TITLE             | Forces a header at the top at the window showing the title
 NK_WINDOW_SCROLL_AUTO_HIDE  | Automatically hides the window scrollbar if no user interaction: also requires delta time in `nk_context` to be set each frame
 NK_WINDOW_BACKGROUND        | Always keep window in the background
-NK_WINDOW_SCALE_LEFT        | Puts window scaler in the left-ottom corner instead right-bottom
+NK_WINDOW_SCALE_LEFT        | Puts window scaler in the left-bottom corner instead right-bottom
 NK_WINDOW_NO_INPUT          | Prevents window of scaling, moving or getting focus
 #### nk_collapse_states
 State           | Description
