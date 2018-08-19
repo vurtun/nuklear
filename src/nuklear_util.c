@@ -914,23 +914,23 @@ nk_murmur_hash(const void * key, int len, nk_hash seed)
 {
     /* 32-Bit MurmurHash3: https://code.google.com/p/smhasher/wiki/MurmurHash3*/
     #define NK_ROTL(x,r) ((x) << (r) | ((x) >> (32 - r)))
-    union {const nk_uint *i; const nk_byte *b;} conv = {0};
-    const nk_byte *data = (const nk_byte*)key;
-    const int nblocks = len/4;
+
     nk_uint h1 = seed;
+    nk_uint k1;
+    const nk_byte *data = (const nk_byte*)key;
+    const nk_byte *keyptr = data;
+    const int bsize = sizeof(k1);
+    const int nblocks = len/4;
+
     const nk_uint c1 = 0xcc9e2d51;
     const nk_uint c2 = 0x1b873593;
     const nk_byte *tail;
-    const nk_uint *blocks;
-    nk_uint k1;
     int i;
 
     /* body */
     if (!key) return 0;
-    conv.b = (data + nblocks*4);
-    blocks = (const nk_uint*)conv.i;
-    for (i = -nblocks; i; ++i) {
-        k1 = blocks[i];
+    for (i = 0; i < nblocks; ++i, keyptr += bsize) {
+        memcpy(&k1, keyptr, bsize);
         k1 *= c1;
         k1 = NK_ROTL(k1,15);
         k1 *= c2;
@@ -944,15 +944,15 @@ nk_murmur_hash(const void * key, int len, nk_hash seed)
     tail = (const nk_byte*)(data + nblocks*4);
     k1 = 0;
     switch (len & 3) {
-    case 3: k1 ^= (nk_uint)(tail[2] << 16); /* fallthrough */
-    case 2: k1 ^= (nk_uint)(tail[1] << 8u); /* fallthrough */
-    case 1: k1 ^= tail[0];
+        case 3: k1 ^= (nk_uint)(tail[2] << 16); /* fallthrough */
+        case 2: k1 ^= (nk_uint)(tail[1] << 8u); /* fallthrough */
+        case 1: k1 ^= tail[0];
             k1 *= c1;
             k1 = NK_ROTL(k1,15);
             k1 *= c2;
             h1 ^= k1;
             break;
-    default: break;
+        default: break;
     }
 
     /* finalization */
