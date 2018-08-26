@@ -371,11 +371,11 @@ nk_panel_end(struct nk_context *ctx)
         nk_fill_rect(out, empty_space, 0, style->window.background);
 
         /* fill bottom empty space */
-        if (*layout->offset_x != 0 && !(layout->flags & NK_WINDOW_NO_SCROLLBAR)) {
+        if (layout->footer_height > 0) {
             empty_space.x = window->bounds.x;
             empty_space.y = layout->bounds.y + layout->bounds.h;
             empty_space.w = window->bounds.w;
-            empty_space.h = scrollbar_size.y;
+            empty_space.h = layout->footer_height;
             nk_fill_rect(out, empty_space, 0, style->window.background);
         }
     }
