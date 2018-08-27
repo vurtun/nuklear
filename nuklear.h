@@ -105,6 +105,7 @@
 /// NK_INCLUDE_COMMAND_USERDATA     | Defining this adds a userdata pointer into each command. Can be useful for example if you want to provide custom shaders depending on the used widget. Can be combined with the style structures.
 /// NK_BUTTON_TRIGGER_ON_RELEASE    | Different platforms require button clicks occurring either on buttons being pressed (up to down) or released (down to up). By default this library will react on buttons being pressed, but if you define this it will only trigger if a button is released.
 /// NK_ZERO_COMMAND_MEMORY          | Defining this will zero out memory for each drawing command added to a drawing queue (inside nk_command_buffer_push). Zeroing command memory is very useful for fast checking (using memcmp) if command buffers are equal and avoid drawing frames when nothing on screen has changed since previous frame.
+/// NK_UINT_DRAW_INDEX              | Defining this will set the size of vertex index elements when using NK_VERTEX_BUFFER_OUTPUT to 32bit instead of the default of 16bit
 ///
 /// !!! WARNING
 ///     The following flags will pull in the standard C library:
@@ -122,6 +123,7 @@
 ///     - NK_INCLUDE_DEFAULT_FONT
 ///     - NK_INCLUDE_STANDARD_VARARGS
 ///     - NK_INCLUDE_COMMAND_USERDATA
+///     - NK_UINT_DRAW_INDEX
 ///
 /// ### Constants
 /// Define                          | Description
@@ -1083,12 +1085,12 @@ NK_API void nk_input_end(struct nk_context*);
 ///
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
 /// // fill configuration
-//  struct your_vertex
-//  {
-//      float pos[2]; // important to keep it to 2 floats
-//      float uv[2];
-//      unsigned char col[4];
-//  };
+/// struct your_vertex
+/// {
+///     float pos[2]; // important to keep it to 2 floats
+///     float uv[2];
+///     unsigned char col[4];
+/// };
 /// struct nk_convert_config cfg = {};
 /// static const struct nk_draw_vertex_layout_element vertex_layout[] = {
 ///     {NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct your_vertex, pos)},
@@ -4593,7 +4595,11 @@ NK_API int nk_input_is_key_down(const struct nk_input*, enum nk_keys);
     In fact it is probably more powerful than needed but allows even more crazy
     things than this library provides by default.
 */
+#ifdef NK_UINT_DRAW_INDEX
+typedef nk_uint nk_draw_index;
+#else
 typedef nk_ushort nk_draw_index;
+#endif
 enum nk_draw_list_stroke {
     NK_STROKE_OPEN = nk_false,
     /* build up path has no connection back to the beginning */
@@ -9364,8 +9370,10 @@ nk_draw_list_alloc_vertices(struct nk_draw_list *list, nk_size count)
      * backend (OpenGL, DirectX, ...). For example in OpenGL for `glDrawElements`
      * instead of specifing `GL_UNSIGNED_SHORT` you have to define `GL_UNSIGNED_INT`.
      * Sorry for the inconvenience. */
+#ifndef NK_UINT_DRAW_INDEX
     NK_ASSERT((sizeof(nk_draw_index) == 2 && list->vertex_count < NK_USHORT_MAX &&
         "To many verticies for 16-bit vertex indicies. Please read comment above on how to solve this problem"));
+#endif
     return vtx;
 }
 NK_INTERN nk_draw_index*

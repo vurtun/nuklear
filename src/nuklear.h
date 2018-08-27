@@ -867,6 +867,12 @@ NK_API void nk_input_end(struct nk_context*);
 ///
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
 /// // fill configuration
+/// struct your_vertex
+/// {
+///     float pos[2]; // important to keep it to 2 floats
+///     float uv[2];
+///     unsigned char col[4];
+/// };
 /// struct nk_convert_config cfg = {};
 /// static const struct nk_draw_vertex_layout_element vertex_layout[] = {
 ///     {NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct your_vertex, pos)},
@@ -4371,7 +4377,11 @@ NK_API int nk_input_is_key_down(const struct nk_input*, enum nk_keys);
     In fact it is probably more powerful than needed but allows even more crazy
     things than this library provides by default.
 */
+#ifdef NK_UINT_DRAW_INDEX
+typedef nk_uint nk_draw_index;
+#else
 typedef nk_ushort nk_draw_index;
+#endif
 enum nk_draw_list_stroke {
     NK_STROKE_OPEN = nk_false,
     /* build up path has no connection back to the beginning */
