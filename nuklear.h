@@ -1083,6 +1083,12 @@ NK_API void nk_input_end(struct nk_context*);
 ///
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
 /// // fill configuration
+//  struct your_vertex
+//  {
+//      float pos[2]; // important to keep it to 2 floats
+//      float uv[2];
+//      unsigned char col[4];
+//  };
 /// struct nk_convert_config cfg = {};
 /// static const struct nk_draw_vertex_layout_element vertex_layout[] = {
 ///     {NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct your_vertex, pos)},
@@ -1426,7 +1432,7 @@ NK_API const struct nk_draw_command* nk__draw_next(const struct nk_draw_command*
 /// NK_WINDOW_TITLE             | Forces a header at the top at the window showing the title
 /// NK_WINDOW_SCROLL_AUTO_HIDE  | Automatically hides the window scrollbar if no user interaction: also requires delta time in `nk_context` to be set each frame
 /// NK_WINDOW_BACKGROUND        | Always keep window in the background
-/// NK_WINDOW_SCALE_LEFT        | Puts window scaler in the left-ottom corner instead right-bottom
+/// NK_WINDOW_SCALE_LEFT        | Puts window scaler in the left-bottom corner instead right-bottom
 /// NK_WINDOW_NO_INPUT          | Prevents window of scaling, moving or getting focus
 ///
 /// #### nk_collapse_states
@@ -2693,7 +2699,7 @@ NK_API void nk_group_scrolled_end(struct nk_context*);
  *
  *                                  TREE
  *
- * ============================================================================= 
+ * =============================================================================
 /// ### Tree
 /// Trees represent two different concept. First the concept of a collapsable
 /// UI section that can be either in a hidden or visibile state. They allow the UI
