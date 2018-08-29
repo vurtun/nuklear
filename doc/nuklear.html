@@ -96,6 +96,7 @@ NK_INCLUDE_DEFAULT_FONT         | Defining this adds the default font: ProggyCle
 NK_INCLUDE_COMMAND_USERDATA     | Defining this adds a userdata pointer into each command. Can be useful for example if you want to provide custom shaders depending on the used widget. Can be combined with the style structures.
 NK_BUTTON_TRIGGER_ON_RELEASE    | Different platforms require button clicks occurring either on buttons being pressed (up to down) or released (down to up). By default this library will react on buttons being pressed, but if you define this it will only trigger if a button is released.
 NK_ZERO_COMMAND_MEMORY          | Defining this will zero out memory for each drawing command added to a drawing queue (inside nk_command_buffer_push). Zeroing command memory is very useful for fast checking (using memcmp) if command buffers are equal and avoid drawing frames when nothing on screen has changed since previous frame.
+NK_UINT_DRAW_INDEX              | Defining this will set the size of vertex index elements when using NK_VERTEX_BUFFER_OUTPUT to 32bit instead of the default of 16bit
 !!! WARNING
     The following flags will pull in the standard C library:
     - NK_INCLUDE_DEFAULT_ALLOCATOR
@@ -111,6 +112,7 @@ NK_ZERO_COMMAND_MEMORY          | Defining this will zero out memory for each dr
     - NK_INCLUDE_DEFAULT_FONT
     - NK_INCLUDE_STANDARD_VARARGS
     - NK_INCLUDE_COMMAND_USERDATA
+    - NK_UINT_DRAW_INDEX
 ### Constants
 Define                          | Description
 --------------------------------|---------------------------------------
@@ -300,8 +302,8 @@ __data__    | Handle with either pointer or index to be passed into every draw c
 ### Input
 The input API is responsible for holding the current input state composed of
 mouse, key and text input states.
-It is worth noting that no direct os or window handling is done in nuklear.
-Instead all input state has to be provided by platform specific code. This in one hand
+It is worth noting that no direct OS or window handling is done in nuklear.
+Instead all input state has to be provided by platform specific code. This on one hand
 expects more work from the user and complicates usage but on the other hand
 provides simple abstraction over a big number of platforms, libraries and other
 already provided functionality.
@@ -317,7 +319,7 @@ while (GetEvent(&evt)) {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #### Usage
 Input state needs to be provided to nuklear by first calling `nk_input_begin`
-which resets internal state like delta mouse position and button transitions.
+which resets internal state like delta mouse position and button transistions.
 After `nk_input_begin` all current input state needs to be provided. This includes
 mouse motion, button and key pressed and released, text input and scrolling.
 Both event- or state-based input handling are supported by this API
@@ -355,7 +357,7 @@ __nk_input_unicode__| Adds a single unicode rune into an internal text buffer
 __nk_input_end__    | Ends the input mirroring process by calculating state changes. Don't call any `nk_input_xxx` function referenced above after this call
 #### nk_input_begin
 Begins the input mirroring process by resetting text, scroll
-mouse previous mouse position and movement as well as key state transitions,
+mouse, previous mouse position and movement as well as key state transitions,
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
 void nk_input_begin(struct nk_context*);
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -373,7 +375,7 @@ __ctx__     | Must point to a previously initialized `nk_context` struct
 __x__       | Must hold an integer describing the current mouse cursor x-position
 __y__       | Must hold an integer describing the current mouse cursor y-position
 #### nk_input_key
-Mirrors state of a specific key to nuklear
+Mirrors the state of a specific key to nuklear
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
 void nk_input_key(struct nk_context*, enum nk_keys key, int down);
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -397,6 +399,7 @@ __down__    | Must be 0 for key is up and 1 for key is down
 #### nk_input_scroll
 Copies the last mouse scroll value to nuklear. Is generally
 a scroll value. So does not have to come from mouse and could also originate
+TODO finish this sentence
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
 void nk_input_scroll(struct nk_context *ctx, struct nk_vec2 val);
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -443,7 +446,7 @@ __ctx__     | Must point to a previously initialized `nk_context` struct
 __rune__    | UTF-32 unicode codepoint
 #### nk_input_end
 End the input mirroring process by resetting mouse grabbing
-state to ensure the mouse cursor is not grabbed indefinitely.///
+state to ensure the mouse cursor is not grabbed indefinitely.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
 void nk_input_end(struct nk_context *ctx);
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -610,6 +613,12 @@ After successfully converting all draw commands just iterate over and execute al
 vertex draw commands:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
 // fill configuration
+struct your_vertex
+{
+    float pos[2]; // important to keep it to 2 floats
+    float uv[2];
+    unsigned char col[4];
+};
 struct nk_convert_config cfg = {};
 static const struct nk_draw_vertex_layout_element vertex_layout[] = {
     {NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct your_vertex, pos)},
@@ -666,7 +675,7 @@ Parameter   | Description
 __ctx__     | must point to an previously initialized `nk_context` struct at the end of a frame
 Returns draw command pointer pointing to the first command inside the draw command list
 #### nk__next
-Returns a draw command list iterator to iterate all draw
+Returns draw command pointer pointing to the next command inside the draw command list
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
 const struct nk_command* nk__next(struct nk_context*, const struct nk_command*);
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -684,7 +693,7 @@ Parameter   | Description
 ------------|-----------------------------------------------------------
 __ctx__     | Must point to an previously initialized `nk_context` struct at the end of a frame
 __cmd__     | Command pointer initialized to NULL
-Returns draw command pointer pointing to the next command inside the draw command list
+Iterates over each draw command inside the context draw command list
 #### nk_convert
 Converts all internal draw commands into vertex draw commands and fills
 three buffers with vertexes, vertex draw commands and vertex indices. The vertex format
@@ -709,7 +718,7 @@ NK_CONVERT_COMMAND_BUFFER_FULL  | The provided buffer for storing draw commands 
 NK_CONVERT_VERTEX_BUFFER_FULL   | The provided buffer for storing vertices is full or failed to allocate more memory
 NK_CONVERT_ELEMENT_BUFFER_FULL  | The provided buffer for storing indicies is full or failed to allocate more memory
 #### nk__draw_begin
-Returns a draw vertex command buffer iterator to iterate each the vertex draw command buffer
+Returns a draw vertex command buffer iterator to iterate over the vertex draw command buffer
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
 const struct nk_draw_command* nk__draw_begin(const struct nk_context*, const struct nk_buffer*);
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -752,7 +761,7 @@ __ctx__     | Must point to an previously initialized `nk_context` struct at the
 ### Window
 Windows are the main persistent state used inside nuklear and are life time
 controlled by simply "retouching" (i.e. calling) each window each frame.
-All widgets inside nuklear can only be added inside function pair `nk_begin_xxx`
+All widgets inside nuklear can only be added inside the function pair `nk_begin_xxx`
 and `nk_end`. Calling any widgets outside these two functions will result in an
 assert in debug or no state change in release mode.<br /><br />
 Each window holds frame persistent state like position, size, flags, state tables,
@@ -889,7 +898,7 @@ Returns `true(1)` if the window can be filled up with widgets from this point
 until `nk_end` or `false(0)` otherwise for example if minimized
 #### nk_begin_titled
 Extended window start with separated title and identifier to allow multiple
-windows with same name but not title
+windows with same title but not name
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
 int nk_begin_titled(struct nk_context *ctx, const char *name, const char *title, struct nk_rect bounds, nk_flags flags);
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -921,7 +930,7 @@ Parameter   | Description
 __ctx__     | Must point to an previously initialized `nk_context` struct
 __name__    | Window identifier
 Returns a `nk_window` struct pointing to the identified window or NULL if
-no window with given name was found
+no window with the given name was found
 #### nk_window_get_bounds
 Returns a rectangle with screen position and size of the currently processed window
 !!! WARNING
@@ -933,7 +942,7 @@ Parameter   | Description
 ------------|-----------------------------------------------------------
 __ctx__     | Must point to an previously initialized `nk_context` struct
 Returns a `nk_rect` struct with window upper left window position and size
-#### nk_window_get_bounds
+#### nk_window_get_position
 Returns the position of the currently processed window.
 !!! WARNING
     Only call this function between calls `nk_begin_xxx` and `nk_end`
@@ -982,7 +991,7 @@ Returns the underlying panel which contains all processing state of the current 
 !!! WARNING
     Only call this function between calls `nk_begin_xxx` and `nk_end`
 !!! WARNING
-    Do not keep the returned panel pointer around it is only valid until `nk_end`
+    Do not keep the returned panel pointer around, it is only valid until `nk_end`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
 struct nk_panel* nk_window_get_panel(struct nk_context *ctx);
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1520,7 +1529,7 @@ Parameter   | Description
 __ctx__     | Must point to an previously initialized `nk_context` struct after call `nk_begin_xxx`
 __height__  | Holds height of each widget in row or zero for auto layouting
 __columns__ | Number of widget inside row
-#### nk_layout_row_dynamic
+#### nk_layout_row_static
 Sets current row layout to fill @cols number of widgets
 in row with same @item_width horizontal size. Once called all subsequent widget
 calls greater than @cols will allocate a new row with same layout.
@@ -1663,7 +1672,7 @@ Parameter   | Description
 __ctx__     | Must point to an previously initialized `nk_context` struct after call `nk_layout_space_begin`
 __vec__     | Position to convert from layout space into screen coordinate space
 Returns transformed `nk_vec2` in screen space coordinates
-#### nk_layout_space_to_screen
+#### nk_layout_space_to_local
 Converts vector from layout space into screen space
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
 struct nk_vec2 nk_layout_space_to_local(struct nk_context*, struct nk_vec2);
