@@ -18026,21 +18026,21 @@ nk_layout_widget_space(struct nk_rect *bounds, const struct nk_context *ctx,
     panel_space = nk_layout_row_calculate_usable_space(&ctx->style, layout->type,
                                             layout->bounds.w, layout->row.columns);
 
-    #define FRAC(x) (x - (int)x) /* will be used to remove fookin gaps */
+    #define NK_FRAC(x) (x - (int)x) /* will be used to remove fookin gaps */
     /* calculate the width of one item inside the current layout space */
     switch (layout->row.type) {
     case NK_LAYOUT_DYNAMIC_FIXED: {
         /* scaling fixed size widgets item width */
         float w = NK_MAX(1.0f,panel_space) / (float)layout->row.columns;
         item_offset = (float)layout->row.index * w;
-        item_width = w + FRAC(item_offset);
+        item_width = w + NK_FRAC(item_offset);
         item_spacing = (float)layout->row.index * spacing.x;
     } break;
     case NK_LAYOUT_DYNAMIC_ROW: {
         /* scaling single ratio widget width */
         float w = layout->row.item_width * panel_space;
         item_offset = layout->row.item_offset;
-        item_width = w + FRAC(item_offset);
+        item_width = w + NK_FRAC(item_offset);
         item_spacing = 0;
 
         if (modify) {
@@ -18055,8 +18055,8 @@ nk_layout_widget_space(struct nk_rect *bounds, const struct nk_context *ctx,
         bounds->x -= (float)*layout->offset_x;
         bounds->y = layout->at_y + (layout->row.height * layout->row.item.y);
         bounds->y -= (float)*layout->offset_y;
-        bounds->w = layout->bounds.w  * layout->row.item.w + FRAC(bounds->x);
-        bounds->h = layout->row.height * layout->row.item.h + FRAC(bounds->y);
+        bounds->w = layout->bounds.w  * layout->row.item.w + NK_FRAC(bounds->x);
+        bounds->h = layout->row.height * layout->row.item.h + NK_FRAC(bounds->y);
         return;
     }
     case NK_LAYOUT_DYNAMIC: {
@@ -18069,7 +18069,7 @@ nk_layout_widget_space(struct nk_rect *bounds, const struct nk_context *ctx,
         w = (ratio * panel_space);
         item_spacing = (float)layout->row.index * spacing.x;
         item_offset = layout->row.item_offset;
-        item_width = w + FRAC(item_offset);
+        item_width = w + NK_FRAC(item_offset);
 
         if (modify) {
             layout->row.item_offset += w;
@@ -18115,11 +18115,11 @@ nk_layout_widget_space(struct nk_rect *bounds, const struct nk_context *ctx,
         NK_ASSERT(layout->row.index < NK_MAX_LAYOUT_ROW_TEMPLATE_COLUMNS);
         w = layout->row.templates[layout->row.index];
         item_offset = layout->row.item_offset;
-        item_width = w + FRAC(item_offset);
+        item_width = w + NK_FRAC(item_offset);
         item_spacing = (float)layout->row.index * spacing.x;
         if (modify) layout->row.item_offset += w;
     } break;
-    #undef FRAC
+    #undef NK_FRAC
     default: NK_ASSERT(0); break;
     };
 
