@@ -919,6 +919,7 @@ nk_murmur_hash(const void * key, int len, nk_hash seed)
     nk_uint k1;
     const nk_byte *data = (const nk_byte*)key;
     const nk_byte *keyptr = data;
+    nk_byte *k1ptr;
     const int bsize = sizeof(k1);
     const int nblocks = len/4;
 
@@ -930,7 +931,12 @@ nk_murmur_hash(const void * key, int len, nk_hash seed)
     /* body */
     if (!key) return 0;
     for (i = 0; i < nblocks; ++i, keyptr += bsize) {
-        memcpy(&k1, keyptr, bsize);
+        k1ptr = (nk_byte*)&k1;
+        k1ptr[0] = keyptr[0];
+        k1ptr[1] = keyptr[1];
+        k1ptr[2] = keyptr[2];
+        k1ptr[3] = keyptr[3];
+
         k1 *= c1;
         k1 = NK_ROTL(k1,15);
         k1 *= c2;
