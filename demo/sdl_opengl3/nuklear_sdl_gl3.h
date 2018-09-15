@@ -286,7 +286,7 @@ nk_sdl_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element_b
 }
 
 static void
-nk_sdl_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
+nk_sdl_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
 {
     const char *text = SDL_GetClipboardText();
     if (text) nk_textedit_paste(edit, text, nk_strlen(text));
@@ -294,7 +294,7 @@ nk_sdl_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
 }
 
 static void
-nk_sdl_clipbard_copy(nk_handle usr, const char *text, int len)
+nk_sdl_clipboard_copy(nk_handle usr, const char *text, int len)
 {
     char *str = 0;
     (void)usr;
@@ -312,8 +312,8 @@ nk_sdl_init(SDL_Window *win)
 {
     sdl.win = win;
     nk_init_default(&sdl.ctx, 0);
-    sdl.ctx.clip.copy = nk_sdl_clipbard_copy;
-    sdl.ctx.clip.paste = nk_sdl_clipbard_paste;
+    sdl.ctx.clip.copy = nk_sdl_clipboard_copy;
+    sdl.ctx.clip.paste = nk_sdl_clipboard_paste;
     sdl.ctx.clip.userdata = nk_handle_ptr(0);
     nk_sdl_device_create();
     return &sdl.ctx;

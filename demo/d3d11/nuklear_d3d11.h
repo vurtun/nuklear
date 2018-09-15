@@ -358,7 +358,7 @@ nk_d3d11_handle_event(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
 }
 
 static void
-nk_d3d11_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
+nk_d3d11_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
 {
     (void)usr;
     if (IsClipboardFormatAvailable(CF_UNICODETEXT) && OpenClipboard(NULL))
@@ -392,7 +392,7 @@ nk_d3d11_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
 }
 
 static void
-nk_d3d11_clipbard_copy(nk_handle usr, const char *text, int len)
+nk_d3d11_clipboard_copy(nk_handle usr, const char *text, int len)
 {
     (void)usr;
     if (OpenClipboard(NULL))
@@ -427,8 +427,8 @@ nk_d3d11_init(ID3D11Device *device, int width, int height, unsigned int max_vert
     ID3D11Device_AddRef(device);
 
     nk_init_default(&d3d11.ctx, 0);
-    d3d11.ctx.clip.copy = nk_d3d11_clipbard_copy;
-    d3d11.ctx.clip.paste = nk_d3d11_clipbard_paste;
+    d3d11.ctx.clip.copy = nk_d3d11_clipboard_copy;
+    d3d11.ctx.clip.paste = nk_d3d11_clipboard_paste;
     d3d11.ctx.clip.userdata = nk_handle_ptr(0);
 
     nk_buffer_init_default(&d3d11.cmds);
