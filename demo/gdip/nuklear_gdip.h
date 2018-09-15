@@ -740,7 +740,7 @@ nk_gdipfont_del(GdipFont *font)
 }
 
 static void
-nk_gdip_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
+nk_gdip_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
 {
     HGLOBAL mem;
     SIZE_T size;
@@ -792,7 +792,7 @@ nk_gdip_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
 }
 
 static void
-nk_gdip_clipbard_copy(nk_handle usr, const char *text, int len)
+nk_gdip_clipboard_copy(nk_handle usr, const char *text, int len)
 {
     HGLOBAL mem;
     wchar_t* wstr;
@@ -849,8 +849,8 @@ nk_gdip_init(HWND hwnd, unsigned int width, unsigned int height)
     for(i=0; i< sizeof(gdip.fontCollection)/sizeof(gdip.fontCollection[0]); i++)
         gdip.fontCollection[i] = NULL;
     nk_init_default(&gdip.ctx, NULL);
-    gdip.ctx.clip.copy = nk_gdip_clipbard_copy;
-    gdip.ctx.clip.paste = nk_gdip_clipbard_paste;
+    gdip.ctx.clip.copy = nk_gdip_clipboard_copy;
+    gdip.ctx.clip.paste = nk_gdip_clipboard_paste;
     gdip.curFontCollection = 0;
     return &gdip.ctx;
 }
