@@ -465,7 +465,7 @@ nk_gdifont_del(GdiFont *font)
 }
 
 static void
-nk_gdi_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
+nk_gdi_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
 {
     (void)usr;
     if (IsClipboardFormatAvailable(CF_UNICODETEXT) && OpenClipboard(NULL))
@@ -499,7 +499,7 @@ nk_gdi_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
 }
 
 static void
-nk_gdi_clipbard_copy(nk_handle usr, const char *text, int len)
+nk_gdi_clipboard_copy(nk_handle usr, const char *text, int len)
 {
     if (OpenClipboard(NULL))
     {
@@ -540,8 +540,8 @@ nk_gdi_init(GdiFont *gdifont, HDC window_dc, unsigned int width, unsigned int he
     SelectObject(gdi.memory_dc, gdi.bitmap);
 
     nk_init_default(&gdi.ctx, font);
-    gdi.ctx.clip.copy = nk_gdi_clipbard_copy;
-    gdi.ctx.clip.paste = nk_gdi_clipbard_paste;
+    gdi.ctx.clip.copy = nk_gdi_clipboard_copy;
+    gdi.ctx.clip.paste = nk_gdi_clipboard_paste;
     return &gdi.ctx;
 }
 
