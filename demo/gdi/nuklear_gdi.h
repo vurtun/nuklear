@@ -113,9 +113,9 @@ nk_delete_image(struct nk_image * image)
 
 static void
 nk_gdi_draw_image(short x, short y, unsigned short w, unsigned short h,
-	struct nk_image img, struct nk_color col)
+    struct nk_image img, struct nk_color col)
 {
-    HBITMAP	hbm = img.handle.ptr;
+    HBITMAP hbm = img.handle.ptr;
     HDC     hDCBits;
     BITMAP  bitmap;
     
@@ -826,9 +826,9 @@ nk_gdi_render(struct nk_color clear)
         } break;
         case NK_COMMAND_RECT_MULTI_COLOR:
         case NK_COMMAND_IMAGE: {
-			const struct nk_command_image *i = (const struct nk_command_image *)cmd;
-			nk_gdi_draw_image(i->x, i->y, i->w, i->h, i->img, i->col);
-		} break;
+            const struct nk_command_image *i = (const struct nk_command_image *)cmd;
+            nk_gdi_draw_image(i->x, i->y, i->w, i->h, i->img, i->col);
+        } break;
         case NK_COMMAND_ARC:
         case NK_COMMAND_ARC_FILLED:
         default: break;
