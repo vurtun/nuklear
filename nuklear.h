@@ -25562,6 +25562,6 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
 /// and his original immediate mode graphical user interface idea and Sean
 /// Barret for his amazing single header libraries which restored my faith
 /// in libraries and brought me to create some of my own. Finally Apoorva Joshi
-/// for his single header file packer.
+/// for her single header file packer.
 */
 
