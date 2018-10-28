@@ -223,14 +223,14 @@ nk_glfw3_mouse_button_callback(GLFWwindow* window, int button, int action, int m
         double dt = glfwGetTime() - glfw.last_button_click;
         if (dt > NK_GLFW_DOUBLE_CLICK_LO && dt < NK_GLFW_DOUBLE_CLICK_HI) {
             glfw.is_double_click_down = nk_true;
-            glfw.double_click_pos = nk_vec2(x, y);
+            glfw.double_click_pos = nk_vec2((float)x, (float)y);
         }
         glfw.last_button_click = glfwGetTime();
     } else glfw.is_double_click_down = nk_false;
 }
 
 NK_INTERN void
-nk_glfw3_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
+nk_glfw3_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
 {
     const char *text = glfwGetClipboardString(glfw.win);
     if (text) nk_textedit_paste(edit, text, nk_strlen(text));
@@ -238,7 +238,7 @@ nk_glfw3_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
 }
 
 NK_INTERN void
-nk_glfw3_clipbard_copy(nk_handle usr, const char *text, int len)
+nk_glfw3_clipboard_copy(nk_handle usr, const char *text, int len)
 {
     char *str = 0;
     (void)usr;
@@ -261,8 +261,8 @@ nk_glfw3_init(GLFWwindow *win, enum nk_glfw_init_state init_state)
         glfwSetMouseButtonCallback(win, nk_glfw3_mouse_button_callback);
     }
     nk_init_default(&glfw.ctx, 0);
-    glfw.ctx.clip.copy = nk_glfw3_clipbard_copy;
-    glfw.ctx.clip.paste = nk_glfw3_clipbard_paste;
+    glfw.ctx.clip.copy = nk_glfw3_clipboard_copy;
+    glfw.ctx.clip.paste = nk_glfw3_clipboard_paste;
     glfw.ctx.clip.userdata = nk_handle_ptr(0);
     nk_buffer_init_default(&glfw.ogl.cmds);
 
@@ -352,7 +352,7 @@ nk_glfw3_new_frame(void)
     glfwGetCursorPos(win, &x, &y);
     nk_input_motion(ctx, (int)x, (int)y);
     if (ctx->input.mouse.grabbed) {
-        glfwSetCursorPos(glfw.win, ctx->input.mouse.prev.x, ctx->input.mouse.prev.y);
+        glfwSetCursorPos(glfw.win, (double)ctx->input.mouse.prev.x, (double)ctx->input.mouse.prev.y);
         ctx->input.mouse.pos.x = ctx->input.mouse.prev.x;
         ctx->input.mouse.pos.y = ctx->input.mouse.prev.y;
     }
@@ -360,7 +360,7 @@ nk_glfw3_new_frame(void)
     nk_input_button(ctx, NK_BUTTON_LEFT, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
     nk_input_button(ctx, NK_BUTTON_MIDDLE, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS);
     nk_input_button(ctx, NK_BUTTON_RIGHT, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS);
-    nk_input_button(ctx, NK_BUTTON_DOUBLE, glfw.double_click_pos.x, glfw.double_click_pos.y, glfw.is_double_click_down);
+    nk_input_button(ctx, NK_BUTTON_DOUBLE, (int)glfw.double_click_pos.x, (int)glfw.double_click_pos.y, glfw.is_double_click_down);
     nk_input_scroll(ctx, glfw.scroll);
     nk_input_end(&glfw.ctx);
     glfw.text_len = 0;

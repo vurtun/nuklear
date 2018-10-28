@@ -1,5 +1,5 @@
 # Flags
-CFLAGS = -std=c99 -pedantic -O2
+CFLAGS += -std=c99 -pedantic -O2
 LIBS :=
 
 ifeq ($(OS),Windows_NT)
@@ -7,11 +7,12 @@ BIN := $(BIN).exe
 	LIBS := -lglfw3 -lopengl32 -lm -lGLU32 -lGLEW32
 else
 	UNAME_S := $(shell uname -s)
+	GLFW3 := $(shell pkg-config --libs glfw3)
 	ifeq ($(UNAME_S),Darwin)
-		LIBS := -lglfw3 -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo -lm -lGLEW -L/usr/local/lib
+		LIBS := $(GLFW3) -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo -lm -lGLEW -L/usr/local/lib
 		CFLAGS += -I/usr/local/include
 	else
-		LIBS := -lglfw -lGL -lm -lGLU -lGLEW
+		LIBS := $(GLFW3) -lGL -lm -lGLU -lGLEW
 	endif
 endif
 

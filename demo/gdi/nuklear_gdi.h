@@ -179,14 +179,15 @@ nk_gdi_stroke_rect(HDC dc, short x, short y, unsigned short w,
         SelectObject(dc, pen);
     }
 
-    SetDCBrushColor(dc, OPAQUE);
+    HGDIOBJ br = SelectObject(dc, GetStockObject(NULL_BRUSH));
     if (r == 0) {
         Rectangle(dc, x, y, x + w, y + h);
     } else {
         RoundRect(dc, x, y, x + w, y + h, r, r);
     }
+    SelectObject(dc, br);
 
-    if (pen) {
+    if (pen) { 
         SelectObject(dc, GetStockObject(DC_PEN));
         DeleteObject(pen);
     }
@@ -464,7 +465,7 @@ nk_gdifont_del(GdiFont *font)
 }
 
 static void
-nk_gdi_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
+nk_gdi_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
 {
     (void)usr;
     if (IsClipboardFormatAvailable(CF_UNICODETEXT) && OpenClipboard(NULL))
@@ -498,7 +499,7 @@ nk_gdi_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
 }
 
 static void
-nk_gdi_clipbard_copy(nk_handle usr, const char *text, int len)
+nk_gdi_clipboard_copy(nk_handle usr, const char *text, int len)
 {
     if (OpenClipboard(NULL))
     {
@@ -539,8 +540,8 @@ nk_gdi_init(GdiFont *gdifont, HDC window_dc, unsigned int width, unsigned int he
     SelectObject(gdi.memory_dc, gdi.bitmap);
 
     nk_init_default(&gdi.ctx, font);
-    gdi.ctx.clip.copy = nk_gdi_clipbard_copy;
-    gdi.ctx.clip.paste = nk_gdi_clipbard_paste;
+    gdi.ctx.clip.copy = nk_gdi_clipboard_copy;
+    gdi.ctx.clip.paste = nk_gdi_clipboard_paste;
     return &gdi.ctx;
 }
 
@@ -562,7 +563,7 @@ nk_gdi_handle_event(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
     case WM_SIZE:
     {
         unsigned width = LOWORD(lparam);
-        unsigned height = LOWORD(lparam);
+        unsigned height = HIWORD(lparam);
         if (width != gdi.width || height != gdi.height)
         {
             DeleteObject(gdi.bitmap);

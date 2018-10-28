@@ -68,9 +68,53 @@ static struct {
 } d3d9;
 
 NK_API void
+nk_d3d9_create_state()
+{
+    HRESULT hr;
+
+    hr = IDirect3DDevice9_BeginStateBlock(d3d9.device);
+    NK_ASSERT(SUCCEEDED(hr));
+
+    /* vertex format */
+    IDirect3DDevice9_SetFVF(d3d9.device, D3DFVF_XYZ + D3DFVF_DIFFUSE + D3DFVF_TEX1);
+
+    /* blend state */
+    IDirect3DDevice9_SetRenderState(d3d9.device, D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+    IDirect3DDevice9_SetRenderState(d3d9.device, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+    IDirect3DDevice9_SetRenderState(d3d9.device, D3DRS_ALPHABLENDENABLE, TRUE);
+    IDirect3DDevice9_SetRenderState(d3d9.device, D3DRS_BLENDOP, D3DBLENDOP_ADD);
+
+    /* render state */
+    IDirect3DDevice9_SetRenderState(d3d9.device, D3DRS_LIGHTING, FALSE);
+    IDirect3DDevice9_SetRenderState(d3d9.device, D3DRS_ZENABLE, FALSE);
+    IDirect3DDevice9_SetRenderState(d3d9.device, D3DRS_ZWRITEENABLE, FALSE);
+    IDirect3DDevice9_SetRenderState(d3d9.device, D3DRS_CULLMODE, D3DCULL_NONE);
+    IDirect3DDevice9_SetRenderState(d3d9.device, D3DRS_SCISSORTESTENABLE, TRUE);
+
+    /* sampler state */
+    IDirect3DDevice9_SetSamplerState(d3d9.device, 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+    IDirect3DDevice9_SetSamplerState(d3d9.device, 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+    IDirect3DDevice9_SetSamplerState(d3d9.device, 0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+    IDirect3DDevice9_SetSamplerState(d3d9.device, 0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+
+    /* texture stage state */
+    IDirect3DDevice9_SetTextureStageState(d3d9.device, 0, D3DTSS_COLOROP, D3DTOP_MODULATE);
+    IDirect3DDevice9_SetTextureStageState(d3d9.device, 0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
+    IDirect3DDevice9_SetTextureStageState(d3d9.device, 0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
+    IDirect3DDevice9_SetTextureStageState(d3d9.device, 0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
+    IDirect3DDevice9_SetTextureStageState(d3d9.device, 0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+    IDirect3DDevice9_SetTextureStageState(d3d9.device, 0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
+
+    hr = IDirect3DDevice9_EndStateBlock(d3d9.device, &d3d9.state);
+    NK_ASSERT(SUCCEEDED(hr));
+}
+
+NK_API void
 nk_d3d9_render(enum nk_anti_aliasing AA)
 {
     HRESULT hr;
+
+    nk_d3d9_create_state();
 
     hr = IDirect3DStateBlock9_Apply(d3d9.state);
     NK_ASSERT(SUCCEEDED(hr));
@@ -146,6 +190,9 @@ nk_d3d9_render(enum nk_anti_aliasing AA)
     }
 
     nk_clear(&d3d9.ctx);
+
+    IDirect3DStateBlock9_Apply(d3d9.state);
+    IDirect3DStateBlock9_Release(d3d9.state);
 }
 
 static void
@@ -168,7 +215,6 @@ NK_API void
 nk_d3d9_release(void)
 {
     IDirect3DTexture9_Release(d3d9.texture);
-    IDirect3DStateBlock9_Release(d3d9.state);
 }
 
 static void
@@ -203,47 +249,11 @@ nk_d3d9_create_font_texture()
 NK_API void
 nk_d3d9_resize(int width, int height)
 {
-    HRESULT hr;
-
     if (d3d9.texture) {
         nk_d3d9_create_font_texture();
     }
 
-    hr = IDirect3DDevice9_BeginStateBlock(d3d9.device);
-    NK_ASSERT(SUCCEEDED(hr));
-
-    /* vertex format */
-    IDirect3DDevice9_SetFVF(d3d9.device, D3DFVF_XYZ + D3DFVF_DIFFUSE + D3DFVF_TEX1);
-
-    /* blend state */
-    IDirect3DDevice9_SetRenderState(d3d9.device, D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
-    IDirect3DDevice9_SetRenderState(d3d9.device, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-    IDirect3DDevice9_SetRenderState(d3d9.device, D3DRS_ALPHABLENDENABLE, TRUE);
-    IDirect3DDevice9_SetRenderState(d3d9.device, D3DRS_BLENDOP, D3DBLENDOP_ADD);
-
-    /* render state */
-    IDirect3DDevice9_SetRenderState(d3d9.device, D3DRS_LIGHTING, FALSE);
-    IDirect3DDevice9_SetRenderState(d3d9.device, D3DRS_ZENABLE, FALSE);
-    IDirect3DDevice9_SetRenderState(d3d9.device, D3DRS_ZWRITEENABLE, FALSE);
-    IDirect3DDevice9_SetRenderState(d3d9.device, D3DRS_CULLMODE, D3DCULL_NONE);
-    IDirect3DDevice9_SetRenderState(d3d9.device, D3DRS_SCISSORTESTENABLE, TRUE);
-
-    /* sampler state */
-    IDirect3DDevice9_SetSamplerState(d3d9.device, 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-    IDirect3DDevice9_SetSamplerState(d3d9.device, 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-    IDirect3DDevice9_SetSamplerState(d3d9.device, 0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-    IDirect3DDevice9_SetSamplerState(d3d9.device, 0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-
-    /* texture stage state */
-    IDirect3DDevice9_SetTextureStageState(d3d9.device, 0, D3DTSS_COLOROP, D3DTOP_MODULATE);
-    IDirect3DDevice9_SetTextureStageState(d3d9.device, 0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-    IDirect3DDevice9_SetTextureStageState(d3d9.device, 0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
-    IDirect3DDevice9_SetTextureStageState(d3d9.device, 0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
-    IDirect3DDevice9_SetTextureStageState(d3d9.device, 0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
-    IDirect3DDevice9_SetTextureStageState(d3d9.device, 0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
-
-    hr = IDirect3DDevice9_EndStateBlock(d3d9.device, &d3d9.state);
-    NK_ASSERT(SUCCEEDED(hr));
+    nk_d3d9_create_state();
 
     nk_d3d9_get_projection_matrix(width, height, &d3d9.projection.m[0][0]);
     d3d9.viewport.Width = width;

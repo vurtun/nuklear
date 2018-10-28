@@ -389,8 +389,12 @@ nk_xsurf_draw_text(XSurface *surf, short x, short y, unsigned short w, unsigned 
     const char *text, int len, XFont *font, struct nk_color cbg, struct nk_color cfg)
 {
     int tx, ty;
+    unsigned long bg = nk_color_from_byte(&cbg.r);
     unsigned long fg = nk_color_from_byte(&cfg.r);
-    (void)cbg;
+
+    XSetForeground(surf->dpy, surf->gc, bg);
+    XFillRectangle(surf->dpy, surf->drawable, surf->gc, (int)x, (int)y, (unsigned)w, (unsigned)h);
+    if(!text || !font || !len) return;
 
     tx = (int)x;
     ty = (int)y + font->ascent;
@@ -885,8 +889,9 @@ nk_xlib_render(Drawable screen, struct nk_color clear)
         } break;
         case NK_COMMAND_RECT: {
             const struct nk_command_rect *r = (const struct nk_command_rect *)cmd;
-            nk_xsurf_stroke_rect(surf, r->x, r->y, r->w, r->h,
-                (unsigned short)r->rounding, r->line_thickness, r->color);
+            nk_xsurf_stroke_rect(surf, r->x, r->y, NK_MAX(r->w -r->line_thickness, 0),
+                NK_MAX(r->h - r->line_thickness, 0), (unsigned short)r->rounding,
+                r->line_thickness, r->color);
         } break;
         case NK_COMMAND_RECT_FILLED: {
             const struct nk_command_rect_filled *r = (const struct nk_command_rect_filled *)cmd;

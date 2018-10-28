@@ -5,7 +5,7 @@
 This is a minimal state immediate mode graphical user interface toolkit
 written in ANSI C and licensed under public domain. It was designed as a simple
 embeddable user interface for application and does not have any dependencies,
-a default renderbackend or OS window and input handling but instead provides a very modular
+a default render backend or OS window and input handling but instead provides a very modular
 library approach by using simple input state for input and draw
 commands describing primitive shapes as output. So instead of providing a
 layered library that tries to abstract over a number of platform and
@@ -25,6 +25,7 @@ render backends it only focuses on the actual UI.
 - No global or hidden state
 - Customizable library modules (you can compile and use only what you need)
 - Optional font baker and vertex buffer output
+- [Documentation](https://rawgit.com/vurtun/nuklear/master/doc/nuklear.html)
 
 ## Building
 
@@ -98,27 +99,69 @@ languages. Furthermore there are no guarantee that all bindings will always be k
 - [Java](https://github.com/glegris/nuklear4j) by Guillaume Legris
 - [Golang](https://github.com/golang-ui/nuklear) by golang-ui@github.com
 - [Rust](https://github.com/snuk182/nuklear-rust) by snuk182@github.com
-- [Chicken](https://github.com/wasamasa/nuklear) by wasamasa@github.comx
+- [Chicken](https://github.com/wasamasa/nuklear) by wasamasa@github.com
 - [Nim](https://github.com/zacharycarter/nuklear-nim) by zacharycarter@github.com
-- [Lua/Löve2d](https://github.com/keharriso/love-nuklear) by Kevin Harrison
+- Lua
+  - [LÖVE-Nuklear](https://github.com/keharriso/love-nuklear) by Kevin Harrison
+  - [MoonNuklear](https://github.com/stetre/moonnuklear) by Stefano Trettel
+- Python
+  - [pyNuklear](https://github.com/billsix/pyNuklear) by William Emerison Six (ctypes-based wrapper)
+  - [pynk](https://github.com/nathanrw/nuklear-cffi) by nathanrw@github.com (cffi binding)
+- [CSharp/.NET](https://github.com/cartman300/NuklearDotNet) by cartman300@github.com
 
 ## Credits
 Developed by Micha Mettke and every direct or indirect contributor to the GitHub.
 
 
-Embeds `stb_texedit`, `stb_truetype` and `stb_rectpack` by Sean Barret (public domain)  
+Embeds `stb_texedit`, `stb_truetype` and `stb_rectpack` by Sean Barrett (public domain)
 Embeds `ProggyClean.ttf` font by Tristan Grimmer (MIT license).
 
 
 Big thank you to Omar Cornut (ocornut@github) for his [imgui](https://github.com/ocornut/imgui) library and
 giving me the inspiration for this library, Casey Muratori for handmade hero
 and his original immediate mode graphical user interface idea and Sean
-Barret for his amazing single header [libraries](https://github.com/nothings/stb) which restored my faith
-in libraries and brought me to create some of my own.
+Barrett for his amazing single header [libraries](https://github.com/nothings/stb) which restored my faith
+in libraries and brought me to create some of my own. Finally Apoorva Joshi for his singe-header [file packer](http://apoorvaj.io/single-header-packer.html).
 
 ## License
-
-This software is dual-licensed to the public domain and under the following
-license: you are granted a perpetual, irrevocable license to copy, modify,
-publish and distribute this file as you see fit.
-
+```
+------------------------------------------------------------------------------
+This software is available under 2 licenses -- choose whichever you prefer.
+------------------------------------------------------------------------------
+ALTERNATIVE A - MIT License
+Copyright (c) 2017 Micha Mettke
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+------------------------------------------------------------------------------
+ALTERNATIVE B - Public Domain (www.unlicense.org)
+This is free and unencumbered software released into the public domain.
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
+commercial or non-commercial, and by any means.
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
+this software under copyright law.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+-----------------------------------------------------------------------------
+```

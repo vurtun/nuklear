@@ -1,2 +1,8 @@
 demo/*/*.exe
 demo/*/*.obj
+demo/*/bin/*
+example/bin/*
+docs/xml
+docs/build
+docs/src
+*.tmp

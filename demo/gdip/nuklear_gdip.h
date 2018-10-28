@@ -1,5 +1,5 @@
 /*
- * Nuklear - 1.32.0 - public domain
+ * Nuklear - 1.40.8 - public domain
  * no warrenty implied; use at your own risk.
  * authored from 2015-2017 by Micha Mettke
  */
@@ -388,6 +388,8 @@ GdipMeasureString(
 GpStatus WINGDIPAPI
 GdipSetTextRenderingHint(GpGraphics *graphics, TextRenderingHint mode);
 
+LWSTDAPI_(IStream *) SHCreateMemStream(const BYTE *pInit, _In_ UINT cbInit);
+
 struct GdipFont
 {
     struct nk_user_font nk;
@@ -403,7 +405,8 @@ static struct {
     GpPen *pen;
     GpSolidFill *brush;
     GpStringFormat *format;
-    GpFontCollection *fontCollection;
+    GpFontCollection *fontCollection[10];
+    INT curFontCollection;
 
     struct nk_context ctx;
 } gdip;
@@ -458,8 +461,9 @@ nk_gdip_fill_rect(short x, short y, unsigned short w,
         GdipFillRectangleI(gdip.memory, gdip.brush, x, y, w, h);
     } else {
         INT d = 2 * r;
-        GdipFillRectangleI(gdip.memory, gdip.brush, x + r - 1, y, w - d + 2, h);
-        GdipFillRectangleI(gdip.memory, gdip.brush, x, y + r - 1, w, h - d + 2);
+        GdipFillRectangleI(gdip.memory, gdip.brush, x + r, y, w - d, h);
+        GdipFillRectangleI(gdip.memory, gdip.brush, x, y + r, r, h - d);
+        GdipFillRectangleI(gdip.memory, gdip.brush, x + w - r, y + r, r, h - d);
         GdipFillPieI(gdip.memory, gdip.brush, x, y, d, d, 180, 90);
         GdipFillPieI(gdip.memory, gdip.brush, x + w - d, y, d, d, 270, 90);
         GdipFillPieI(gdip.memory, gdip.brush, x + w - d, y + h - d, d, d, 0, 90);
@@ -668,36 +672,42 @@ nk_gdipfont_create(const char *name, int size)
     return font;
 }
 
+GpFontCollection* 
+nk_gdip_getCurFontCollection(){
+    return gdip.fontCollection[gdip.curFontCollection];
+}
+
 GdipFont*
 nk_gdipfont_create_from_collection(int size){
     GpFontFamily **families;
     INT count;
     GdipFont *font = (GdipFont*)calloc(1, sizeof(GdipFont));
-    if( GdipGetFontCollectionFamilyCount(gdip.fontCollection, &count) ) return NULL;
+    if( GdipGetFontCollectionFamilyCount(nk_gdip_getCurFontCollection(), &count) ) return NULL;
     families = (GpFontFamily**)calloc(1, sizeof(GpFontFamily*));
     if( !families ) return NULL;
-    if( GdipGetFontCollectionFamilyList(gdip.fontCollection, count, families, &count) ) return NULL;
+    if( GdipGetFontCollectionFamilyList(nk_gdip_getCurFontCollection(), count, families, &count) ) return NULL;
     if( count < 1 ) return NULL;
     if( GdipCreateFont(families[count-1], (REAL)size, FontStyleRegular, UnitPixel, &font->handle) ) return NULL;
     free(families);
+    gdip.curFontCollection++;
     return font;
 }
 
 GdipFont*
 nk_gdipfont_create_from_memory(const void* membuf, int membufSize, int size)
 {
-    if( !gdip.fontCollection )
-        if( GdipNewPrivateFontCollection(&gdip.fontCollection) ) return NULL;
-    if( GdipPrivateAddMemoryFont(gdip.fontCollection, membuf, membufSize) ) return NULL;
+    if( !nk_gdip_getCurFontCollection() )
+        if( GdipNewPrivateFontCollection(&gdip.fontCollection[gdip.curFontCollection]) ) return NULL;
+    if( GdipPrivateAddMemoryFont(nk_gdip_getCurFontCollection(), membuf, membufSize) ) return NULL;
     return nk_gdipfont_create_from_collection(size);
 }
 
 GdipFont*
 nk_gdipfont_create_from_file(const WCHAR* filename, int size)
 {
-    if( !gdip.fontCollection )
-        if( GdipNewPrivateFontCollection(&gdip.fontCollection) ) return NULL;
-    if( GdipPrivateAddFontFile(gdip.fontCollection, filename) ) return NULL;    
+    if( !nk_gdip_getCurFontCollection() )
+        if( GdipNewPrivateFontCollection(&gdip.fontCollection[gdip.curFontCollection]) ) return NULL;
+    if( GdipPrivateAddFontFile(nk_gdip_getCurFontCollection(), filename) ) return NULL;    
     return nk_gdipfont_create_from_collection(size);
 }
 
@@ -730,7 +740,7 @@ nk_gdipfont_del(GdipFont *font)
 }
 
 static void
-nk_gdip_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
+nk_gdip_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
 {
     HGLOBAL mem;
     SIZE_T size;
@@ -782,7 +792,7 @@ nk_gdip_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
 }
 
 static void
-nk_gdip_clipbard_copy(nk_handle usr, const char *text, int len)
+nk_gdip_clipboard_copy(nk_handle usr, const char *text, int len)
 {
     HGLOBAL mem;
     wchar_t* wstr;
@@ -822,6 +832,7 @@ nk_gdip_clipbard_copy(nk_handle usr, const char *text, int len)
 NK_API struct nk_context*
 nk_gdip_init(HWND hwnd, unsigned int width, unsigned int height)
 {
+    int i;
     GdiplusStartupInput startup = { 1, NULL, FALSE, TRUE };
     GdiplusStartup(&gdip.token, &startup, NULL);
 
@@ -835,10 +846,12 @@ nk_gdip_init(HWND hwnd, unsigned int width, unsigned int height)
         StringFormatFlagsMeasureTrailingSpaces | StringFormatFlagsNoWrap |
         StringFormatFlagsNoClip);
 
-    gdip.fontCollection = NULL;
+    for(i=0; i< sizeof(gdip.fontCollection)/sizeof(gdip.fontCollection[0]); i++)
+        gdip.fontCollection[i] = NULL;
     nk_init_default(&gdip.ctx, NULL);
-    gdip.ctx.clip.copy = nk_gdip_clipbard_copy;
-    gdip.ctx.clip.paste = nk_gdip_clipbard_paste;
+    gdip.ctx.clip.copy = nk_gdip_clipboard_copy;
+    gdip.ctx.clip.paste = nk_gdip_clipboard_paste;
+    gdip.curFontCollection = 0;
     return &gdip.ctx;
 }
 
@@ -1043,7 +1056,9 @@ nk_gdip_handle_event(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
 NK_API void
 nk_gdip_shutdown(void)
 {
-    GdipDeletePrivateFontCollection( &gdip.fontCollection );
+    int i;
+    for(i=0; i< gdip.curFontCollection; i++)
+        GdipDeletePrivateFontCollection( &gdip.fontCollection[i] );
     GdipDeleteGraphics(gdip.window);
     GdipDeleteGraphics(gdip.memory);
     GdipDisposeImage(gdip.bitmap);
@@ -1056,7 +1071,7 @@ nk_gdip_shutdown(void)
 }
 
 NK_API void
-nk_gdip_render_gui(enum nk_anti_aliasing AA)
+nk_gdip_prerender_gui(enum nk_anti_aliasing AA)
 {
     const struct nk_command *cmd;
 
@@ -1140,6 +1155,12 @@ nk_gdip_render_gui(enum nk_anti_aliasing AA)
         default: break;
         }
     }
+}
+
+NK_API void
+nk_gdip_render_gui(enum nk_anti_aliasing AA)
+{
+    nk_gdip_prerender_gui(AA);
     nk_gdip_blit(gdip.window);
     nk_clear(&gdip.ctx);
 }

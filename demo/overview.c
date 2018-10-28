@@ -1,4 +1,3 @@
-
 static int
 overview(struct nk_context *ctx)
 {
@@ -36,9 +35,10 @@ overview(struct nk_context *ctx)
             static nk_size mprog = 60;
             static int mslider = 10;
             static int mcheck = nk_true;
-
             nk_menubar_begin(ctx);
-            nk_layout_row_begin(ctx, NK_STATIC, 25, 4);
+
+            /* menu #1 */
+            nk_layout_row_begin(ctx, NK_STATIC, 25, 5);
             nk_layout_row_push(ctx, 45);
             if (nk_menu_begin_label(ctx, "MENU", NK_TEXT_LEFT, nk_vec2(120, 200)))
             {
@@ -55,6 +55,59 @@ overview(struct nk_context *ctx)
                 nk_checkbox_label(ctx, "check", &check);
                 nk_menu_end(ctx);
             }
+            /* menu #2 */
+            nk_layout_row_push(ctx, 60);
+            if (nk_menu_begin_label(ctx, "ADVANCED", NK_TEXT_LEFT, nk_vec2(200, 600)))
+            {
+                enum menu_state {MENU_NONE,MENU_FILE, MENU_EDIT,MENU_VIEW,MENU_CHART};
+                static enum menu_state menu_state = MENU_NONE;
+                enum nk_collapse_states state;
+
+                state = (menu_state == MENU_FILE) ? NK_MAXIMIZED: NK_MINIMIZED;
+                if (nk_tree_state_push(ctx, NK_TREE_TAB, "FILE", &state)) {
+                    menu_state = MENU_FILE;
+                    nk_menu_item_label(ctx, "New", NK_TEXT_LEFT);
+                    nk_menu_item_label(ctx, "Open", NK_TEXT_LEFT);
+                    nk_menu_item_label(ctx, "Save", NK_TEXT_LEFT);
+                    nk_menu_item_label(ctx, "Close", NK_TEXT_LEFT);
+                    nk_menu_item_label(ctx, "Exit", NK_TEXT_LEFT);
+                    nk_tree_pop(ctx);
+                } else menu_state = (menu_state == MENU_FILE) ? MENU_NONE: menu_state;
+
+                state = (menu_state == MENU_EDIT) ? NK_MAXIMIZED: NK_MINIMIZED;
+                if (nk_tree_state_push(ctx, NK_TREE_TAB, "EDIT", &state)) {
+                    menu_state = MENU_EDIT;
+                    nk_menu_item_label(ctx, "Copy", NK_TEXT_LEFT);
+                    nk_menu_item_label(ctx, "Delete", NK_TEXT_LEFT);
+                    nk_menu_item_label(ctx, "Cut", NK_TEXT_LEFT);
+                    nk_menu_item_label(ctx, "Paste", NK_TEXT_LEFT);
+                    nk_tree_pop(ctx);
+                } else menu_state = (menu_state == MENU_EDIT) ? MENU_NONE: menu_state;
+
+                state = (menu_state == MENU_VIEW) ? NK_MAXIMIZED: NK_MINIMIZED;
+                if (nk_tree_state_push(ctx, NK_TREE_TAB, "VIEW", &state)) {
+                    menu_state = MENU_VIEW;
+                    nk_menu_item_label(ctx, "About", NK_TEXT_LEFT);
+                    nk_menu_item_label(ctx, "Options", NK_TEXT_LEFT);
+                    nk_menu_item_label(ctx, "Customize", NK_TEXT_LEFT);
+                    nk_tree_pop(ctx);
+                } else menu_state = (menu_state == MENU_VIEW) ? MENU_NONE: menu_state;
+
+                state = (menu_state == MENU_CHART) ? NK_MAXIMIZED: NK_MINIMIZED;
+                if (nk_tree_state_push(ctx, NK_TREE_TAB, "CHART", &state)) {
+                    size_t i = 0;
+                    const float values[]={26.0f,13.0f,30.0f,15.0f,25.0f,10.0f,20.0f,40.0f,12.0f,8.0f,22.0f,28.0f};
+                    menu_state = MENU_CHART;
+                    nk_layout_row_dynamic(ctx, 150, 1);
+                    nk_chart_begin(ctx, NK_CHART_COLUMN, NK_LEN(values), 0, 50);
+                    for (i = 0; i < NK_LEN(values); ++i)
+                        nk_chart_push(ctx, values[i]);
+                    nk_chart_end(ctx);
+                    nk_tree_pop(ctx);
+                } else menu_state = (menu_state == MENU_CHART) ? MENU_NONE: menu_state;
+                nk_menu_end(ctx);
+            }
+            /* menu widgets */
             nk_layout_row_push(ctx, 70);
             nk_progress(ctx, &mprog, 100, NK_MODIFIABLE);
             nk_slider_int(ctx, 0, &mslider, 16, 1);
@@ -167,14 +220,13 @@ overview(struct nk_context *ctx)
                 option = nk_option_label(ctx, "optionB", option == B) ? B : option;
                 option = nk_option_label(ctx, "optionC", option == C) ? C : option;
 
-
                 nk_layout_row(ctx, NK_STATIC, 30, 2, ratio);
                 nk_labelf(ctx, NK_TEXT_LEFT, "Slider int");
                 nk_slider_int(ctx, 0, &int_slider, 10, 1);
 
                 nk_label(ctx, "Slider float", NK_TEXT_LEFT);
                 nk_slider_float(ctx, 0, &float_slider, 5.0, 0.5f);
-                nk_labelf(ctx, NK_TEXT_LEFT, "Progressbar" , prog_value);
+                nk_labelf(ctx, NK_TEXT_LEFT, "Progressbar: %zu" , prog_value);
                 nk_progress(ctx, &prog_value, 100, NK_MODIFIABLE);
 
                 nk_layout_row(ctx, NK_STATIC, 25, 2, ratio);
@@ -198,6 +250,32 @@ overview(struct nk_context *ctx)
 
                 nk_tree_pop(ctx);
             }
+
+            if (nk_tree_push(ctx, NK_TREE_NODE, "Inactive", NK_MINIMIZED))
+            {
+                static int inactive = 1;
+                nk_layout_row_dynamic(ctx, 30, 1);
+                nk_checkbox_label(ctx, "Inactive", &inactive);
+
+                nk_layout_row_static(ctx, 30, 80, 1);
+                if (inactive) {
+                    struct nk_style_button button;
+                    button = ctx->style.button;
+                    ctx->style.button.normal = nk_style_item_color(nk_rgb(40,40,40));
+                    ctx->style.button.hover = nk_style_item_color(nk_rgb(40,40,40));
+                    ctx->style.button.active = nk_style_item_color(nk_rgb(40,40,40));
+                    ctx->style.button.border_color = nk_rgb(60,60,60);
+                    ctx->style.button.text_background = nk_rgb(60,60,60);
+                    ctx->style.button.text_normal = nk_rgb(60,60,60);
+                    ctx->style.button.text_hover = nk_rgb(60,60,60);
+                    ctx->style.button.text_active = nk_rgb(60,60,60);
+                    nk_button_label(ctx, "button");
+                    ctx->style.button = button;
+                } else if (nk_button_label(ctx, "button"))
+                    fprintf(stdout, "button pressed\n");
+                nk_tree_pop(ctx);
+            }
+
 
             if (nk_tree_push(ctx, NK_TREE_NODE, "Selectable", NK_MINIMIZED))
             {
@@ -265,7 +343,7 @@ overview(struct nk_context *ctx)
                 static int check_values[5];
                 static float position[3];
                 static struct nk_color combo_color = {130, 50, 50, 255};
-                static struct nk_color combo_color2 = {130, 180, 50, 255};
+                static struct nk_colorf combo_color2 = {0.509f, 0.705f, 0.2f, 1.0f};
                 static size_t prog_a =  20, prog_b = 40, prog_c = 10, prog_d = 90;
                 static const char *weapons[] = {"Fist","Pistol","Shotgun","Plasma","BFG"};
 
@@ -274,7 +352,7 @@ overview(struct nk_context *ctx)
 
                 /* default combobox */
                 nk_layout_row_static(ctx, 25, 200, 1);
-                current_weapon = nk_combo(ctx, weapons, LEN(weapons), current_weapon, 25, nk_vec2(200,200));
+                current_weapon = nk_combo(ctx, weapons, NK_LEN(weapons), current_weapon, 25, nk_vec2(200,200));
 
                 /* slider color combobox */
                 if (nk_combo_begin_color(ctx, combo_color, nk_vec2(200,200))) {
@@ -290,9 +368,8 @@ overview(struct nk_context *ctx)
                     combo_color.a = (nk_byte)nk_slide_int(ctx, 0, combo_color.a , 255, 5);
                     nk_combo_end(ctx);
                 }
-
                 /* complex color combobox */
-                if (nk_combo_begin_color(ctx, combo_color2, nk_vec2(200,400))) {
+                if (nk_combo_begin_color(ctx, nk_rgb_cf(combo_color2), nk_vec2(200,400))) {
                     enum color_mode {COL_RGB, COL_HSV};
                     static int col_mode = COL_RGB;
                     #ifndef DEMO_DO_NOT_USE_COLOR_PICKER
@@ -306,22 +383,21 @@ overview(struct nk_context *ctx)
 
                     nk_layout_row_dynamic(ctx, 25, 1);
                     if (col_mode == COL_RGB) {
-                        combo_color2.r = (nk_byte)nk_propertyi(ctx, "#R:", 0, combo_color2.r, 255, 1,1);
-                        combo_color2.g = (nk_byte)nk_propertyi(ctx, "#G:", 0, combo_color2.g, 255, 1,1);
-                        combo_color2.b = (nk_byte)nk_propertyi(ctx, "#B:", 0, combo_color2.b, 255, 1,1);
-                        combo_color2.a = (nk_byte)nk_propertyi(ctx, "#A:", 0, combo_color2.a, 255, 1,1);
+                        combo_color2.r = nk_propertyf(ctx, "#R:", 0, combo_color2.r, 1.0f, 0.01f,0.005f);
+                        combo_color2.g = nk_propertyf(ctx, "#G:", 0, combo_color2.g, 1.0f, 0.01f,0.005f);
+                        combo_color2.b = nk_propertyf(ctx, "#B:", 0, combo_color2.b, 1.0f, 0.01f,0.005f);
+                        combo_color2.a = nk_propertyf(ctx, "#A:", 0, combo_color2.a, 1.0f, 0.01f,0.005f);
                     } else {
-                        nk_byte tmp[4];
-                        nk_color_hsva_bv(tmp, combo_color2);
-                        tmp[0] = (nk_byte)nk_propertyi(ctx, "#H:", 0, tmp[0], 255, 1,1);
-                        tmp[1] = (nk_byte)nk_propertyi(ctx, "#S:", 0, tmp[1], 255, 1,1);
-                        tmp[2] = (nk_byte)nk_propertyi(ctx, "#V:", 0, tmp[2], 255, 1,1);
-                        tmp[3] = (nk_byte)nk_propertyi(ctx, "#A:", 0, tmp[3], 255, 1,1);
-                        combo_color2 = nk_hsva_bv(tmp);
+                        float hsva[4];
+                        nk_colorf_hsva_fv(hsva, combo_color2);
+                        hsva[0] = nk_propertyf(ctx, "#H:", 0, hsva[0], 1.0f, 0.01f,0.05f);
+                        hsva[1] = nk_propertyf(ctx, "#S:", 0, hsva[1], 1.0f, 0.01f,0.05f);
+                        hsva[2] = nk_propertyf(ctx, "#V:", 0, hsva[2], 1.0f, 0.01f,0.05f);
+                        hsva[3] = nk_propertyf(ctx, "#A:", 0, hsva[3], 1.0f, 0.01f,0.05f);
+                        combo_color2 = nk_hsva_colorfv(hsva);
                     }
                     nk_combo_end(ctx);
                 }
-
                 /* progressbar combobox */
                 sum = prog_a + prog_b + prog_c + prog_d;
                 sprintf(buffer, "%lu", sum);
@@ -362,8 +438,8 @@ overview(struct nk_context *ctx)
                     size_t i = 0;
                     static const float values[]={26.0f,13.0f,30.0f,15.0f,25.0f,10.0f,20.0f,40.0f, 12.0f, 8.0f, 22.0f, 28.0f, 5.0f};
                     nk_layout_row_dynamic(ctx, 150, 1);
-                    nk_chart_begin(ctx, NK_CHART_COLUMN, LEN(values), 0, 50);
-                    for (i = 0; i < LEN(values); ++i) {
+                    nk_chart_begin(ctx, NK_CHART_COLUMN, NK_LEN(values), 0, 50);
+                    for (i = 0; i < NK_LEN(values); ++i) {
                         nk_flags res = nk_chart_push(ctx, values[i]);
                         if (res & NK_CHART_CLICKED) {
                             chart_selection = values[i];
@@ -405,7 +481,9 @@ overview(struct nk_context *ctx)
                     if (nk_combo_begin_label(ctx, buffer, nk_vec2(350,400)))
                     {
                         int i = 0;
-                        const char *month[] = {"January", "February", "March", "Apil", "May", "June", "July", "August", "September", "Ocotober", "November", "December"};
+                        const char *month[] = {"January", "February", "March",
+                            "April", "May", "June", "July", "August", "September",
+                            "October", "November", "December"};
                         const char *week_days[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
                         const int month_days[] = {31,28,31,30,31,30,31,31,30,31,30,31};
                         int year = sel_date.tm_year+1900;
@@ -421,7 +499,7 @@ overview(struct nk_context *ctx)
                         if (nk_button_symbol(ctx, NK_SYMBOL_TRIANGLE_LEFT)) {
                             if (sel_date.tm_mon == 0) {
                                 sel_date.tm_mon = 11;
-                                sel_date.tm_year = MAX(0, sel_date.tm_year-1);
+                                sel_date.tm_year = NK_MAX(0, sel_date.tm_year-1);
                             } else sel_date.tm_mon--;
                         }
                         nk_layout_row_push(ctx, 0.9f);
@@ -447,7 +525,7 @@ overview(struct nk_context *ctx)
 
                         /* weekdays  */
                         nk_layout_row_dynamic(ctx, 35, 7);
-                        for (i = 0; i < (int)LEN(week_days); ++i)
+                        for (i = 0; i < (int)NK_LEN(week_days); ++i)
                             nk_label(ctx, week_days[i], NK_TEXT_CENTERED);
 
                         /* days  */
@@ -564,12 +642,8 @@ overview(struct nk_context *ctx)
                 nk_chart_end(ctx);
             }
 
-            if (index != -1) {
-                char buffer[NK_MAX_NUMBER_BUFFER];
-                float val = (float)cos((float)index*step);
-                sprintf(buffer, "Value: %.2f", val);
-                nk_tooltip(ctx, buffer);
-            }
+            if (index != -1)
+                nk_tooltipf(ctx, "Value: %.2f", (float)cos((float)index*step));
             if (line_index != -1) {
                 nk_layout_row_dynamic(ctx, 20, 1);
                 nk_labelf(ctx, NK_TEXT_LEFT, "Selected value: %.2f", (float)cos((float)index*step));
@@ -589,11 +663,8 @@ overview(struct nk_context *ctx)
                 }
                 nk_chart_end(ctx);
             }
-            if (index != -1) {
-                char buffer[NK_MAX_NUMBER_BUFFER];
-                sprintf(buffer, "Value: %.2f", (float)fabs(sin(step * (float)index)));
-                nk_tooltip(ctx, buffer);
-            }
+            if (index != -1)
+                nk_tooltipf(ctx, "Value: %.2f", (float)fabs(sin(step * (float)index)));
             if (col_index != -1) {
                 nk_layout_row_dynamic(ctx, 20, 1);
                 nk_labelf(ctx, NK_TEXT_LEFT, "Selected value: %.2f", (float)fabs(sin(step * (float)col_index)));
@@ -640,7 +711,7 @@ overview(struct nk_context *ctx)
             struct nk_rect bounds;
 
             /* menu contextual */
-            nk_layout_row_static(ctx, 30, 150, 1);
+            nk_layout_row_static(ctx, 30, 160, 1);
             bounds = nk_widget_bounds(ctx);
             nk_label(ctx, "Right click me for menu", NK_TEXT_LEFT);
 
@@ -840,11 +911,41 @@ overview(struct nk_context *ctx)
                 }
                 nk_tree_pop(ctx);
             }
-
+            if (nk_tree_push(ctx, NK_TREE_NODE, "Tree", NK_MINIMIZED))
+            {
+                static int root_selected = 0;
+                int sel = root_selected;
+                if (nk_tree_element_push(ctx, NK_TREE_NODE, "Root", NK_MINIMIZED, &sel)) {
+                    static int selected[8];
+                    int i = 0, node_select = selected[0];
+                    if (sel != root_selected) {
+                        root_selected = sel;
+                        for (i = 0; i < 8; ++i)
+                            selected[i] = sel;
+                    }
+                    if (nk_tree_element_push(ctx, NK_TREE_NODE, "Node", NK_MINIMIZED, &node_select)) {
+                        int j = 0;
+                        static int sel_nodes[4];
+                        if (node_select != selected[0]) {
+                            selected[0] = node_select;
+                            for (i = 0; i < 4; ++i)
+                                sel_nodes[i] = node_select;
+                        }
+                        nk_layout_row_static(ctx, 18, 100, 1);
+                        for (j = 0; j < 4; ++j)
+                            nk_selectable_symbol_label(ctx, NK_SYMBOL_CIRCLE_SOLID, (sel_nodes[j]) ? "Selected": "Unselected", NK_TEXT_RIGHT, &sel_nodes[j]);
+                        nk_tree_element_pop(ctx);
+                    }
+                    nk_layout_row_static(ctx, 18, 100, 1);
+                    for (i = 1; i < 8; ++i)
+                        nk_selectable_symbol_label(ctx, NK_SYMBOL_CIRCLE_SOLID, (selected[i]) ? "Selected": "Unselected", NK_TEXT_RIGHT, &selected[i]);
+                    nk_tree_element_pop(ctx);
+                }
+                nk_tree_pop(ctx);
+            }
             if (nk_tree_push(ctx, NK_TREE_NODE, "Notebook", NK_MINIMIZED))
             {
                 static int current_tab = 0;
-                struct nk_vec2 item_padding;
                 struct nk_rect bounds;
                 float step = (2*3.141592654f) / 32;
                 enum chart_type {CHART_LINE, CHART_HISTO, CHART_MIXED};
@@ -878,6 +979,7 @@ overview(struct nk_context *ctx)
                 {
                     nk_style_pop_vec2(ctx);
                     switch (current_tab) {
+                    default: break;
                     case CHART_LINE:
                         nk_layout_row_dynamic(ctx, 100, 1);
                         bounds = nk_widget_bounds(ctx);
