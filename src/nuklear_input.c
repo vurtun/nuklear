@@ -60,8 +60,12 @@ nk_input_key(struct nk_context *ctx, enum nk_keys key, int down)
     NK_ASSERT(ctx);
     if (!ctx) return;
     in = &ctx->input;
+#ifdef NK_KEYSTATE_BASED_INPUT
     if (in->keyboard.keys[key].down != down)
         in->keyboard.keys[key].clicked++;
+#else
+    in->keyboard.keys[key].clicked++;
+#endif
     in->keyboard.keys[key].down = down;
 }
 NK_API void
