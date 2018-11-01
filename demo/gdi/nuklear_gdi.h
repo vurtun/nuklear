@@ -113,9 +113,9 @@ nk_delete_image(struct nk_image * image)
 
 static void
 nk_gdi_draw_image(short x, short y, unsigned short w, unsigned short h,
-	struct nk_image img, struct nk_color col)
+    struct nk_image img, struct nk_color col)
 {
-    HBITMAP	hbm = img.handle.ptr;
+    HBITMAP hbm = img.handle.ptr;
     HDC     hDCBits;
     BITMAP  bitmap;
     
@@ -208,6 +208,58 @@ nk_gdi_fill_rect(HDC dc, short x, short y, unsigned short w,
         SetDCBrushColor(dc, color);
         RoundRect(dc, x, y, x + w, y + h, r, r);
     }
+}
+static void
+nk_gdi_set_vertexColor(PTRIVERTEX tri, struct nk_color col)
+{
+    tri->Red   = col.r << 8;
+    tri->Green = col.g << 8;
+    tri->Blue  = col.b << 8;
+    tri->Alpha = 0xff << 8;
+}
+
+static void
+nk_gdi_rect_multi_color(HDC dc, short x, short y, unsigned short w,
+    unsigned short h, struct nk_color left, struct nk_color top,
+    struct nk_color right, struct nk_color bottom)
+{
+    BLENDFUNCTION alphaFunction;
+    GRADIENT_RECT gRect;
+    GRADIENT_TRIANGLE gTri[2];
+    TRIVERTEX vt[4];
+    alphaFunction.BlendOp = AC_SRC_OVER;
+    alphaFunction.BlendFlags = 0;
+    alphaFunction.SourceConstantAlpha = 0;
+    alphaFunction.AlphaFormat = AC_SRC_ALPHA;
+
+    /* TODO: This Case Needs Repair.*/
+    /* Top Left Corner */
+    vt[0].x     = x;
+    vt[0].y     = y;
+    nk_gdi_set_vertexColor(&vt[0], left);
+    /* Top Right Corner */
+    vt[1].x     = x+w;
+    vt[1].y     = y;
+    nk_gdi_set_vertexColor(&vt[1], top);
+    /* Bottom Left Corner */
+    vt[2].x     = x;
+    vt[2].y     = y+h;
+    nk_gdi_set_vertexColor(&vt[2], right);
+
+    /* Bottom Right Corner */
+    vt[3].x     = x+w;
+    vt[3].y     = y+h;
+    nk_gdi_set_vertexColor(&vt[3], bottom);
+
+    gTri[0].Vertex1 = 0;
+    gTri[0].Vertex2 = 1;
+    gTri[0].Vertex3 = 2;
+    gTri[1].Vertex1 = 2;
+    gTri[1].Vertex2 = 1;
+    gTri[1].Vertex3 = 3;
+    GdiGradientFill(dc, vt, 4, gTri, 2 , GRADIENT_FILL_TRIANGLE);
+    AlphaBlend(gdi.window_dc,  x, y, x+w, y+h,gdi.memory_dc, x, y, x+w, y+h,alphaFunction);
+
 }
 
 static void
@@ -420,6 +472,7 @@ static void
 nk_gdi_blit(HDC dc)
 {
     BitBlt(dc, 0, 0, gdi.width, gdi.height, gdi.memory_dc, 0, 0, SRCCOPY);
+
 }
 
 GdiFont*
@@ -824,11 +877,14 @@ nk_gdi_render(struct nk_color clear)
             nk_gdi_stroke_curve(memory_dc, q->begin, q->ctrl[0], q->ctrl[1],
                 q->end, q->line_thickness, q->color);
         } break;
-        case NK_COMMAND_RECT_MULTI_COLOR:
+        case NK_COMMAND_RECT_MULTI_COLOR: {
+            const struct nk_command_rect_multi_color *r = (const struct nk_command_rect_multi_color *)cmd;
+            nk_gdi_rect_multi_color(memory_dc, r->x, r->y,r->w, r->h, r->left, r->top, r->right, r->bottom);
+        } break;
         case NK_COMMAND_IMAGE: {
-			const struct nk_command_image *i = (const struct nk_command_image *)cmd;
-			nk_gdi_draw_image(i->x, i->y, i->w, i->h, i->img, i->col);
-		} break;
+            const struct nk_command_image *i = (const struct nk_command_image *)cmd;
+            nk_gdi_draw_image(i->x, i->y, i->w, i->h, i->img, i->col);
+        } break;
         case NK_COMMAND_ARC:
         case NK_COMMAND_ARC_FILLED:
         default: break;
