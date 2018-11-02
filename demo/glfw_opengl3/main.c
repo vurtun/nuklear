@@ -75,7 +75,7 @@ static void error_callback(int e, const char *d)
 int main(void)
 {
     /* Platform */
-    struct nk_glfw glfw;
+    struct nk_glfw glfw = {0};
     GLFWwindow *win;
     int width = 0, height = 0;
     struct nk_context *ctx;
