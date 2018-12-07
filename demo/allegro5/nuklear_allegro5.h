@@ -233,7 +233,7 @@ nk_allegro5_render()
             al_draw_polyline((const float*)&vertices, (2 * sizeof(float)),
                 (int)p->point_count, ALLEGRO_LINE_JOIN_ROUND, ALLEGRO_LINE_CAP_CLOSED,
                 color, (float)p->line_thickness, 0.0);
-	    free(vertices);
+            free(vertices);
         } break;
         case NK_COMMAND_POLYGON_FILLED: {
             pf = (const struct nk_command_polygon_filled *)cmd;
@@ -244,7 +244,7 @@ nk_allegro5_render()
                 vertices[(i*2) + 1] = pf->points[i].y;
             }
             al_draw_filled_polygon((const float*)&vertices, (int)pf->point_count, color);
-	    free(vertices);
+            free(vertices);
         } break;
         case NK_COMMAND_POLYLINE: {
             pl = (const struct nk_command_polyline *)cmd;
@@ -257,7 +257,7 @@ nk_allegro5_render()
             al_draw_polyline((const float*)&vertices, (2 * sizeof(float)),
                 (int)p->point_count, ALLEGRO_LINE_JOIN_ROUND, ALLEGRO_LINE_CAP_ROUND,
                 color, (float)pl->line_thickness, 0.0);
-	    free(vertices);
+            free(vertices);
         } break;
         case NK_COMMAND_TEXT: {
             txt = (const struct nk_command_text*)cmd;
