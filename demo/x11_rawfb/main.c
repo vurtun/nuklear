@@ -228,13 +228,13 @@ main(void)
 
         /* -------------- EXAMPLES ---------------- */
         #ifdef INCLUDE_CALCULATOR
-          calculator(ctx);
+          calculator(&rawfb->ctx);
         #endif
         #ifdef INCLUDE_OVERVIEW
-          overview(ctx);
+          overview(&rawfb->ctx);
         #endif
         #ifdef INCLUDE_NODE_EDITOR
-          node_editor(ctx);
+          node_editor(&rawfb->ctx);
         #endif
         /* ----------------------------------------- */
 
