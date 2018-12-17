@@ -3467,6 +3467,8 @@ NK_API void nk_plot_function(struct nk_context*, enum nk_chart_type, void *userd
 NK_API int nk_popup_begin(struct nk_context*, enum nk_popup_type, const char*, nk_flags, struct nk_rect bounds);
 NK_API void nk_popup_close(struct nk_context*);
 NK_API void nk_popup_end(struct nk_context*);
+NK_API void nk_popup_get_scroll(struct nk_context*, nk_uint *offset_x, nk_uint *offset_y);
+NK_API void nk_popup_set_scroll(struct nk_context*, nk_uint offset_x, nk_uint offset_y);
 /* =============================================================================
  *
  *                                  COMBOBOX
@@ -17009,7 +17011,36 @@ nk_popup_end(struct nk_context *ctx)
     ctx->current = win;
     nk_push_scissor(&win->buffer, win->layout->clip);
 }
+NK_API void
+nk_popup_get_scroll(struct nk_context *ctx, nk_uint *offset_x, nk_uint *offset_y)
+{
+    struct nk_window *popup;
 
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout)
+        return;
+
+    popup = ctx->current;
+    *offset_x = popup->scrollbar.x;
+    *offset_y = popup->scrollbar.y;
+}
+NK_API void
+nk_popup_set_scroll(struct nk_context *ctx, nk_uint offset_x, nk_uint offset_y)
+{
+    struct nk_window *popup;
+
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout)
+        return;
+
+    popup = ctx->current;
+    popup->scrollbar.x = offset_x;
+    popup->scrollbar.y = offset_y;
+}
 
 
 
