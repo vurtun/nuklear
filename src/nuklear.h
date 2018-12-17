@@ -2479,6 +2479,34 @@ NK_API int nk_group_scrolled_begin(struct nk_context*, struct nk_scroll *off, co
 /// __ctx__     | Must point to an previously initialized `nk_context` struct
 */
 NK_API void nk_group_scrolled_end(struct nk_context*);
+/*/// #### nk_group_get_scroll
+/// Gets the scroll position of the given group.
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// void nk_group_get_scroll(struct nk_context*, const char *id, nk_uint *x_offset, nk_uint *y_offset);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter    | Description
+/// -------------|-----------------------------------------------------------
+/// __ctx__      | Must point to an previously initialized `nk_context` struct
+/// __id__       | The id of the group to get the scroll position of
+/// __x_offset__ | A pointer to the x offset output
+/// __y_offset__ | A pointer to the y offset output
+*/
+NK_API void nk_group_get_scroll(struct nk_context*, const char *id, nk_uint *x_offset, nk_uint *y_offset);
+/*/// #### nk_group_set_scroll
+/// Sets the scroll position of the given group.
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// void nk_group_set_scroll(struct nk_context*, const char *id, nk_uint x_offset, nk_uint y_offset);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter    | Description
+/// -------------|-----------------------------------------------------------
+/// __ctx__      | Must point to an previously initialized `nk_context` struct
+/// __id__       | The id of the group to scroll
+/// __x_offset__ | The x offset to scroll to
+/// __y_offset__ | The y offset to scroll to
+*/
+NK_API void nk_group_set_scroll(struct nk_context*, const char *id, nk_uint x_offset, nk_uint y_offset);
 /* =============================================================================
  *
  *                                  TREE
@@ -5395,4 +5423,3 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #endif
 
 #endif /* NK_NUKLEAR_H_ */
-
