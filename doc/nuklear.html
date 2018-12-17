@@ -97,6 +97,7 @@ NK_INCLUDE_COMMAND_USERDATA     | Defining this adds a userdata pointer into eac
 NK_BUTTON_TRIGGER_ON_RELEASE    | Different platforms require button clicks occurring either on buttons being pressed (up to down) or released (down to up). By default this library will react on buttons being pressed, but if you define this it will only trigger if a button is released.
 NK_ZERO_COMMAND_MEMORY          | Defining this will zero out memory for each drawing command added to a drawing queue (inside nk_command_buffer_push). Zeroing command memory is very useful for fast checking (using memcmp) if command buffers are equal and avoid drawing frames when nothing on screen has changed since previous frame.
 NK_UINT_DRAW_INDEX              | Defining this will set the size of vertex index elements when using NK_VERTEX_BUFFER_OUTPUT to 32bit instead of the default of 16bit
+NK_KEYSTATE_BASED_INPUT         | Define this if your backend uses key state for each frame rather than key press/release events
 !!! WARNING
     The following flags will pull in the standard C library:
     - NK_INCLUDE_DEFAULT_ALLOCATOR
@@ -845,6 +846,7 @@ nk_window_get_content_region_min    | Returns the upper rectangle position of th
 nk_window_get_content_region_max    | Returns the upper rectangle position of the currently visible and non-clipped space inside the currently processed window
 nk_window_get_content_region_size   | Returns the size of the currently visible and non-clipped space inside the currently processed window
 nk_window_get_canvas                | Returns the draw command buffer. Can be used to draw custom widgets
+nk_window_get_scroll                | Gets the scroll offset of the current window
 nk_window_has_focus                 | Returns if the currently processed window is currently active
 nk_window_is_collapsed              | Returns if the window with given name is currently minimized/collapsed
 nk_window_is_closed                 | Returns if the currently processed window was closed
@@ -857,6 +859,7 @@ nk_window_set_bounds                | Updates position and size of the currently
 nk_window_set_position              | Updates position of the currently process window
 nk_window_set_size                  | Updates the size of the currently processed window
 nk_window_set_focus                 | Set the currently processed window as active window
+nk_window_set_scroll                | Sets the scroll offset of the current window
 nk_window_close                     | Closes the window with given window name which deletes the window at the end of the frame
 nk_window_collapse                  | Collapses the window with given window name
 nk_window_collapse_if               | Collapses the window with given window name if the given condition was met
@@ -923,7 +926,7 @@ __ctx__     | Must point to an previously initialized `nk_context` struct
 #### nk_window_find
 Finds and returns a window from passed name
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
-void nk_end(struct nk_context *ctx);
+struct nk_window *nk_window_find(struct nk_context *ctx, const char *name);
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Parameter   | Description
 ------------|-----------------------------------------------------------
@@ -1064,6 +1067,18 @@ Parameter   | Description
 __ctx__     | Must point to an previously initialized `nk_context` struct
 Returns a pointer to window internal `nk_command_buffer` struct used as
 drawing canvas. Can be used to do custom drawing.
+#### nk_window_get_scroll
+Gets the scroll offset for the current window
+!!! WARNING
+    Only call this function between calls `nk_begin_xxx` and `nk_end`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+void nk_window_get_scroll(struct nk_context *ctx, nk_uint *offset_x, nk_uint *offset_y);
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Parameter    | Description
+-------------|-----------------------------------------------------------
+__ctx__      | Must point to an previously initialized `nk_context` struct
+__offset_x__ | A pointer to the x offset output
+__offset_y__ | A pointer to the y offset output
 #### nk_window_has_focus
 Returns if the currently processed window is currently active
 !!! WARNING
@@ -1186,6 +1201,18 @@ Parameter   | Description
 ------------|-----------------------------------------------------------
 __ctx__     | Must point to an previously initialized `nk_context` struct
 __name__    | Identifier of the window to set focus on
+#### nk_window_set_scroll
+Sets the scroll offset for the current window
+!!! WARNING
+    Only call this function between calls `nk_begin_xxx` and `nk_end`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+void nk_window_set_scroll(struct nk_context *ctx, nk_uint offset_x, nk_uint offset_y);
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Parameter    | Description
+-------------|-----------------------------------------------------------
+__ctx__      | Must point to an previously initialized `nk_context` struct
+__offset_x__ | The x offset to scroll to
+__offset_y__ | The y offset to scroll to
 #### nk_window_close
 Closes a window and marks it for being freed at the end of the frame
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
@@ -1843,6 +1870,28 @@ void nk_group_scrolled_end(struct nk_context*);
 Parameter   | Description
 ------------|-----------------------------------------------------------
 __ctx__     | Must point to an previously initialized `nk_context` struct
+#### nk_group_get_scroll
+Gets the scroll position of the given group.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+void nk_group_get_scroll(struct nk_context*, const char *id, nk_uint *x_offset, nk_uint *y_offset);
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Parameter    | Description
+-------------|-----------------------------------------------------------
+__ctx__      | Must point to an previously initialized `nk_context` struct
+__id__       | The id of the group to get the scroll position of
+__x_offset__ | A pointer to the x offset output
+__y_offset__ | A pointer to the y offset output
+#### nk_group_set_scroll
+Sets the scroll position of the given group.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+void nk_group_set_scroll(struct nk_context*, const char *id, nk_uint x_offset, nk_uint y_offset);
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Parameter    | Description
+-------------|-----------------------------------------------------------
+__ctx__      | Must point to an previously initialized `nk_context` struct
+__id__       | The id of the group to scroll
+__x_offset__ | The x offset to scroll to
+__y_offset__ | The y offset to scroll to
 ### Tree
 Trees represent two different concept. First the concept of a collapsable
 UI section that can be either in a hidden or visibile state. They allow the UI
@@ -2258,6 +2307,7 @@ X...XXXXXXXXXXXXX...X -           "
    - [x]: Major version with API and library breaking changes
    - [yy]: Minor version with non-breaking API and library changes
    - [zz]: Bug fix version with no direct changes to API
+- 2018/10/31 (4.00.2) - Added NK_KEYSTATE_BASED_INPUT to "fix" state based backends
 - 2018/04/01 (4.00.1) - Fixed calling `nk_convert` multiple time per single frame
 - 2018/04/01 (4.00.0) - BREAKING CHANGE: nk_draw_list_clear no longer tries to
                         clear provided buffers. So make sure to either free

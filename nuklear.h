@@ -1402,6 +1402,7 @@ NK_API const struct nk_draw_command* nk__draw_next(const struct nk_draw_command*
 /// nk_window_get_content_region_max    | Returns the upper rectangle position of the currently visible and non-clipped space inside the currently processed window
 /// nk_window_get_content_region_size   | Returns the size of the currently visible and non-clipped space inside the currently processed window
 /// nk_window_get_canvas                | Returns the draw command buffer. Can be used to draw custom widgets
+/// nk_window_get_scroll                | Gets the scroll offset of the current window
 /// nk_window_has_focus                 | Returns if the currently processed window is currently active
 /// nk_window_is_collapsed              | Returns if the window with given name is currently minimized/collapsed
 /// nk_window_is_closed                 | Returns if the currently processed window was closed
@@ -1415,6 +1416,7 @@ NK_API const struct nk_draw_command* nk__draw_next(const struct nk_draw_command*
 /// nk_window_set_position              | Updates position of the currently process window
 /// nk_window_set_size                  | Updates the size of the currently processed window
 /// nk_window_set_focus                 | Set the currently processed window as active window
+/// nk_window_set_scroll                | Sets the scroll offset of the current window
 //
 /// nk_window_close                     | Closes the window with given window name which deletes the window at the end of the frame
 /// nk_window_collapse                  | Collapses the window with given window name
@@ -1718,6 +1720,22 @@ NK_API struct nk_vec2 nk_window_get_content_region_size(struct nk_context*);
 /// drawing canvas. Can be used to do custom drawing.
 */
 NK_API struct nk_command_buffer* nk_window_get_canvas(struct nk_context*);
+/*/// #### nk_window_get_scroll
+/// Gets the scroll offset for the current window
+/// !!! WARNING
+///     Only call this function between calls `nk_begin_xxx` and `nk_end`
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// void nk_window_get_scroll(struct nk_context *ctx, nk_uint *offset_x, nk_uint *offset_y);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter    | Description
+/// -------------|-----------------------------------------------------------
+/// __ctx__      | Must point to an previously initialized `nk_context` struct
+/// __offset_x__ | A pointer to the x offset output
+/// __offset_y__ | A pointer to the y offset output
+*/
+NK_API void nk_window_get_scroll(struct nk_context*, nk_uint *offset_x, nk_uint *offset_y);
 /*/// #### nk_window_has_focus
 /// Returns if the currently processed window is currently active
 /// !!! WARNING
@@ -1884,6 +1902,22 @@ NK_API void nk_window_set_size(struct nk_context*, const char *name, struct nk_v
 /// __name__    | Identifier of the window to set focus on
 */
 NK_API void nk_window_set_focus(struct nk_context*, const char *name);
+/*/// #### nk_window_set_scroll
+/// Sets the scroll offset for the current window
+/// !!! WARNING
+///     Only call this function between calls `nk_begin_xxx` and `nk_end`
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// void nk_window_set_scroll(struct nk_context *ctx, nk_uint offset_x, nk_uint offset_y);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter    | Description
+/// -------------|-----------------------------------------------------------
+/// __ctx__      | Must point to an previously initialized `nk_context` struct
+/// __offset_x__ | The x offset to scroll to
+/// __offset_y__ | The y offset to scroll to
+*/
+NK_API void nk_window_set_scroll(struct nk_context*, nk_uint offset_x, nk_uint offset_y);
 /*/// #### nk_window_close
 /// Closes a window and marks it for being freed at the end of the frame
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
@@ -2609,6 +2643,8 @@ NK_API struct nk_rect nk_layout_space_rect_to_local(struct nk_context*, struct n
 /// nk_group_scrolled_offset_begin  | Start a new group with manual separated handling of scrollbar x- and y-offset
 /// nk_group_scrolled_begin         | Start a new group with manual scrollbar handling
 /// nk_group_scrolled_end           | Ends a group with manual scrollbar handling. Should only be called if nk_group_begin returned non-zero
+// nk_group_get_scroll              | Gets the scroll offset for the given group
+// nk_group_set_scroll              | Sets the scroll offset for the given group
 */
 /*/// #### nk_group_begin
 /// Starts a new widget group. Requires a previous layouting function to specify a pos/size.
@@ -16486,6 +16522,18 @@ nk_window_get_panel(struct nk_context *ctx)
     if (!ctx || !ctx->current) return 0;
     return ctx->current->layout;
 }
+NK_API void
+nk_window_get_scroll(struct nk_context *ctx, nk_uint *offset_x, nk_uint *offset_y)
+{
+    struct nk_window *win;
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
+    if (!ctx || !ctx->current)
+        return ;
+    win = ctx->current;
+    *offset_x = win->scrollbar.x;
+    *offset_y = win->scrollbar.y;
+}
 NK_API int
 nk_window_has_focus(const struct nk_context *ctx)
 {
@@ -16652,6 +16700,18 @@ nk_window_set_size(struct nk_context *ctx,
     win->bounds.h = size.y;
 }
 NK_API void
+nk_window_set_scroll(struct nk_context *ctx, nk_uint offset_x, nk_uint offset_y)
+{
+    struct nk_window *win;
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
+    if (!ctx || !ctx->current)
+        return;
+    win = ctx->current;
+    win->scrollbar.x = offset_x;
+    win->scrollbar.y = offset_y;
+}
+NK_API void
 nk_window_collapse(struct nk_context *ctx, const char *name,
                     enum nk_collapse_states c)
 {
@@ -16721,7 +16781,6 @@ nk_window_set_focus(struct nk_context *ctx, const char *name)
     }
     ctx->active = win;
 }
-
 
 
 

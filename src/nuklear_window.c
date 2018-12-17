@@ -403,6 +403,18 @@ nk_window_get_panel(struct nk_context *ctx)
     if (!ctx || !ctx->current) return 0;
     return ctx->current->layout;
 }
+NK_API void
+nk_window_get_scroll(struct nk_context *ctx, nk_uint *offset_x, nk_uint *offset_y)
+{
+    struct nk_window *win;
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
+    if (!ctx || !ctx->current)
+        return ;
+    win = ctx->current;
+    *offset_x = win->scrollbar.x;
+    *offset_y = win->scrollbar.y;
+}
 NK_API int
 nk_window_has_focus(const struct nk_context *ctx)
 {
@@ -569,6 +581,18 @@ nk_window_set_size(struct nk_context *ctx,
     win->bounds.h = size.y;
 }
 NK_API void
+nk_window_set_scroll(struct nk_context *ctx, nk_uint offset_x, nk_uint offset_y)
+{
+    struct nk_window *win;
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
+    if (!ctx || !ctx->current)
+        return;
+    win = ctx->current;
+    win->scrollbar.x = offset_x;
+    win->scrollbar.y = offset_y;
+}
+NK_API void
 nk_window_collapse(struct nk_context *ctx, const char *name,
                     enum nk_collapse_states c)
 {
@@ -638,4 +662,3 @@ nk_window_set_focus(struct nk_context *ctx, const char *name)
     }
     ctx->active = win;
 }
-
