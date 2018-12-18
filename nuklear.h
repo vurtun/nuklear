@@ -242,7 +242,22 @@ extern "C" {
 #ifndef NK_SCROLLBAR_HIDING_TIMEOUT
   #define NK_SCROLLBAR_HIDING_TIMEOUT 4.0f
 #endif
-/*
+/* if the mouse is held for this many frames over a repeater, 
+ * it will activate again */
+#ifndef NK_REPEATER_INTERVAL
+    #define NK_REPEATER_INTERVAL 8
+#endif
+/* if a repeater activates this many times, its interval will
+ * decrease */
+#ifndef NK_REPEATER_ACCELERATION_INTERVAL
+    #define NK_REPEATER_ACCELERATION_INTERVAL 5
+#endif
+/* if a repeater's interval decreases it can go no lower than
+ * this */
+#ifndef NK_REPEATER_MINIMUM_INTERVAL
+    #define NK_REPEATER_MINIMUM_INTERVAL 1
+#endif
+ /*
  * ==============================================================
  *
  *                          HELPER
@@ -4534,6 +4549,7 @@ struct nk_mouse_button {
     int down;
     unsigned int clicked;
     struct nk_vec2 clicked_pos;
+    unsigned int frames_down;
 };
 struct nk_mouse {
     struct nk_mouse_button buttons[NK_BUTTON_MAX];
@@ -4571,6 +4587,7 @@ NK_API int nk_input_is_mouse_prev_hovering_rect(const struct nk_input*, struct n
 NK_API int nk_input_is_mouse_hovering_rect(const struct nk_input*, struct nk_rect);
 NK_API int nk_input_mouse_clicked(const struct nk_input*, enum nk_buttons, struct nk_rect);
 NK_API int nk_input_is_mouse_down(const struct nk_input*, enum nk_buttons);
+NK_API int nk_input_should_mouse_repeat(const struct nk_input*, enum nk_buttons);
 NK_API int nk_input_is_mouse_pressed(const struct nk_input*, enum nk_buttons);
 NK_API int nk_input_is_mouse_released(const struct nk_input*, enum nk_buttons);
 NK_API int nk_input_is_key_pressed(const struct nk_input*, enum nk_keys);
@@ -13904,6 +13921,10 @@ nk_input_end(struct nk_context *ctx)
         in->mouse.ungrab = 0;
         in->mouse.grab = 0;
     }
+    for (int i = 0; i < NK_BUTTON_MAX; ++i) {
+        if (in->mouse.buttons[i].down)
+            in->mouse.buttons[i].frames_down++;
+    }
 }
 NK_API void
 nk_input_motion(struct nk_context *ctx, int x, int y)
@@ -13940,13 +13961,19 @@ nk_input_button(struct nk_context *ctx, enum nk_buttons id, int x, int y, int do
     NK_ASSERT(ctx);
     if (!ctx) return;
     in = &ctx->input;
-    if (in->mouse.buttons[id].down == down) return;
-
     btn = &in->mouse.buttons[id];
+
+    if (btn->down == down)
+        return;
+
     btn->clicked_pos.x = (float)x;
     btn->clicked_pos.y = (float)y;
     btn->down = down;
     btn->clicked++;
+    if (down)
+        btn->frames_down = -1;
+    else
+        btn->frames_down = 0;
 }
 NK_API void
 nk_input_scroll(struct nk_context *ctx, struct nk_vec2 val)
@@ -14072,6 +14099,18 @@ nk_input_is_mouse_down(const struct nk_input *i, enum nk_buttons id)
 {
     if (!i) return nk_false;
     return i->mouse.buttons[id].down;
+}
+NK_API int
+nk_input_should_mouse_repeat(const struct nk_input *i, enum nk_buttons id)
+{
+    if (!i) return nk_false;
+    int interval = NK_REPEATER_INTERVAL;
+    int ticks = i->mouse.buttons[id].frames_down / NK_REPEATER_INTERVAL;
+    int acceleration_level = ticks / NK_REPEATER_ACCELERATION_INTERVAL;
+    interval -= acceleration_level;
+    if (interval < NK_REPEATER_MINIMUM_INTERVAL)
+        interval = NK_REPEATER_MINIMUM_INTERVAL;
+    return (i->mouse.buttons[id].frames_down % interval) == 0;
 }
 NK_API int
 nk_input_is_mouse_pressed(const struct nk_input *i, enum nk_buttons id)
@@ -19558,8 +19597,10 @@ nk_button_behavior(nk_flags *state, struct nk_rect r,
         if (nk_input_is_mouse_down(i, NK_BUTTON_LEFT))
             *state = NK_WIDGET_STATE_ACTIVE;
         if (nk_input_has_mouse_click_in_rect(i, NK_BUTTON_LEFT, r)) {
+            int should_do_repeat = nk_input_is_mouse_down(i, NK_BUTTON_LEFT) &&
+                nk_input_should_mouse_repeat(i, NK_BUTTON_LEFT);
             ret = (behavior != NK_BUTTON_DEFAULT) ?
-                nk_input_is_mouse_down(i, NK_BUTTON_LEFT):
+                should_do_repeat :
 #ifdef NK_BUTTON_TRIGGER_ON_RELEASE
                 nk_input_is_mouse_released(i, NK_BUTTON_LEFT);
 #else
@@ -23457,6 +23498,8 @@ nk_do_property(nk_flags *ws,
     struct nk_rect edit;
     struct nk_rect empty;
 
+    enum nk_button_behavior arrow_behavior = NK_BUTTON_REPEATER;
+
     /* left decrement button */
     left.h = font->height/2;
     left.w = left.h;
@@ -23525,8 +23568,8 @@ nk_do_property(nk_flags *ws,
     nk_draw_property(out, style, &property, &label, *ws, name, name_len, font);
     if (style->draw_end) style->draw_end(out, style->userdata);
 
-    /* execute right button  */
-    if (nk_do_button_symbol(ws, out, left, style->sym_left, behavior, &style->dec_button, in, font)) {
+    /* execute left button  */
+    if (nk_do_button_symbol(ws, out, left, style->sym_left, arrow_behavior, &style->dec_button, in, font)) {
         switch (variant->kind) {
         default: break;
         case NK_PROPERTY_INT:
@@ -23537,8 +23580,8 @@ nk_do_property(nk_flags *ws,
             variant->value.d = NK_CLAMP(variant->min_value.d, variant->value.d - variant->step.d, variant->max_value.d); break;
         }
     }
-    /* execute left button  */
-    if (nk_do_button_symbol(ws, out, right, style->sym_right, behavior, &style->inc_button, in, font)) {
+    /* execute right button  */
+    if (nk_do_button_symbol(ws, out, right, style->sym_right, arrow_behavior, &style->inc_button, in, font)) {
         switch (variant->kind) {
         default: break;
         case NK_PROPERTY_INT:
