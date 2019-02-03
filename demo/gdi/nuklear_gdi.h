@@ -105,7 +105,7 @@ nk_delete_image(struct nk_image * image)
 {
     if (image && image->handle.id != 0)
     {
-        HBITMAP hbm = image->handle.ptr;
+        HBITMAP hbm = (HBITMAP)(image->handle.ptr);
         DeleteObject(hbm);
         memset(image, 0, sizeof(struct nk_image));
     }
@@ -115,7 +115,7 @@ static void
 nk_gdi_draw_image(short x, short y, unsigned short w, unsigned short h,
     struct nk_image img, struct nk_color col)
 {
-    HBITMAP hbm = img.handle.ptr;
+    HBITMAP hbm = (HBITMAP)(img.handle.ptr);
     HDC     hDCBits;
     BITMAP  bitmap;
     
