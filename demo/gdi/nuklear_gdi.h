@@ -399,6 +399,7 @@ nk_gdi_stroke_circle(HDC dc, short x, short y, unsigned short w,
         SelectObject(dc, pen);
     }
 
+    HGDIOBJ br = SelectObject(dc, GetStockObject(NULL_BRUSH));
     SetDCBrushColor(dc, OPAQUE);
     Ellipse(dc, x, y, x + w, y + h);
 
