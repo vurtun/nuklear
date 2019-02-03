@@ -385,6 +385,38 @@ nk_xsurf_stroke_curve(XSurface *surf, struct nk_vec2i p1,
 }
 
 NK_INTERN void
+nk_xdraw_stroke_arc(XSurface* surf, short cx, short cy, unsigned short r, float amin, float adelta, unsigned short line_thickness, struct nk_color col)
+{
+	float ul_x = cx - r;
+	float ul_y = cy - r;
+
+	int width = 2*r;
+	int height = width;
+
+	unsigned long c = nk_color_from_byte(&col.r);
+	XSetForeground(surf->dpy, surf->gc, c);
+
+	XSetLineAttributes(surf->dpy, surf->gc, line_thickness, LineSolid, CapButt, JoinMiter);
+	XDrawArc(surf->dpy, surf->drawable, surf->gc, ul_x, ul_y, width, height, (int)(-amin*64), (int)(-adelta*64));
+	XSetLineAttributes(surf->dpy, surf->gc, 1, LineSolid, CapButt, JoinMiter);
+}
+
+NK_INTERN void
+nk_xdraw_fill_arc(XSurface* surf, short cx, short cy, unsigned short r, float amin, float adelta, struct nk_color col)
+{
+	float ul_x = cx - r;
+	float ul_y = cy - r;
+
+	int width = 2*r;
+	int height = width;
+
+	unsigned long c = nk_color_from_byte(&col.r);
+	XSetForeground(surf->dpy, surf->gc, c);
+
+	XFillArc(surf->dpy, surf->drawable, surf->gc, ul_x, ul_y, width, height, -amin*64, -adelta*64);
+}
+
+NK_INTERN void
 nk_xsurf_draw_text(XSurface *surf, short x, short y, unsigned short w, unsigned short h,
     const char *text, int len, XFont *font, struct nk_color cbg, struct nk_color cfg)
 {
@@ -946,7 +978,17 @@ nk_xlib_render(Drawable screen, struct nk_color clear)
         } break;
         case NK_COMMAND_RECT_MULTI_COLOR:
         case NK_COMMAND_ARC:
-        case NK_COMMAND_ARC_FILLED:
+		{
+			const struct nk_command_arc *q = (const struct nk_command_arc *)cmd;
+			nk_xdraw_stroke_arc(surf, q->cx, q->cy, q->r, q->a[0], q->a[1], q->line_thickness, q->color);
+			break;
+		}
+		case NK_COMMAND_ARC_FILLED:
+		{
+			const struct nk_command_arc_filled *q = (const struct nk_command_arc_filled *)cmd;
+			nk_xdraw_fill_arc(surf, q->cx, q->cy, q->r, q->a[0], q->a[1], q->color);
+			break;
+		}
         case NK_COMMAND_CUSTOM:
         default: break;
         }
