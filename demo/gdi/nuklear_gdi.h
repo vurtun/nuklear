@@ -412,9 +412,9 @@ nk_gdi_stroke_circle(HDC dc, short x, short y, unsigned short w,
 static void
 nk_gdi_stroke_arc(HDC dc, short cx, short cy, unsigned short r, float amin, float adelta, unsigned short line_thickness, struct nk_color col)
 {
-	COLORREF color = convert_color(col);
+    COLORREF color = convert_color(col);
 
-	/* setup pen */
+    /* setup pen */
     HPEN pen = NULL;
     if (line_thickness == 1)
         SetDCPenColor(dc, color);
@@ -433,12 +433,12 @@ nk_gdi_stroke_arc(HDC dc, short cx, short cy, unsigned short r, float amin, floa
 
     /* calculate arc and draw */
     float start_x = cx + r*nk_cos((amin+adelta)*NK_PI/180.0);
-	float start_y = cy + r*nk_sin((amin+adelta)*NK_PI/180.0);
+    float start_y = cy + r*nk_sin((amin+adelta)*NK_PI/180.0);
 
-	float end_x = cx + r*nk_cos(amin*NK_PI/180.0);
-	float end_y = cy + r*nk_sin(amin*NK_PI/180.0);
+    float end_x = cx + r*nk_cos(amin*NK_PI/180.0);
+    float end_y = cy + r*nk_sin(amin*NK_PI/180.0);
 
-	SetArcDirection(dc, AD_COUNTERCLOCKWISE);
+    SetArcDirection(dc, AD_COUNTERCLOCKWISE);
     Arc(dc, cx-r, cy-r, cx+r, cy+r, start_x, start_y, end_x, end_y);
 
     if (pen)
@@ -451,12 +451,12 @@ nk_gdi_stroke_arc(HDC dc, short cx, short cy, unsigned short r, float amin, floa
 static void
 nk_gdi_fill_arc(HDC dc, short cx, short cy, unsigned short r, float amin, float adelta, struct nk_color col)
 {
-	COLORREF color = convert_color(col);
+    COLORREF color = convert_color(col);
     SetDCBrushColor(dc, color);
     SetDCPenColor(dc, color);
 
     float start_x = cx + r*nk_cos((amin+adelta)*NK_PI/180.0);
-	float start_y = cy + r*nk_sin((amin+adelta)*NK_PI/180.0);
+    float start_y = cy + r*nk_sin((amin+adelta)*NK_PI/180.0);
 
     float end_x = cx + r*nk_cos(amin*NK_PI/180.0);
     float end_y = cy + r*nk_sin(amin*NK_PI/180.0);
@@ -961,4 +961,3 @@ nk_gdi_render(struct nk_color clear)
 }
 
 #endif
-
