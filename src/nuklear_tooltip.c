@@ -11,7 +11,7 @@ nk_tooltip_begin(struct nk_context *ctx, float width)
 {
     int x,y,w,h;
     struct nk_window *win;
-    const struct nk_input *in;
+    struct nk_input *in;
     struct nk_rect bounds;
     int ret;
 
@@ -107,5 +107,3 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
     nk_tooltip(ctx, buf);
 }
 #endif
-
-

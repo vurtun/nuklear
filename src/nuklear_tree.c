@@ -14,7 +14,7 @@ nk_tree_state_base(struct nk_context *ctx, enum nk_tree_type type,
     struct nk_panel *layout;
     const struct nk_style *style;
     struct nk_command_buffer *out;
-    const struct nk_input *in;
+    struct nk_input *in;
     const struct nk_style_button *button;
     enum nk_symbol_type symbol;
     float row_height;
@@ -195,7 +195,7 @@ nk_tree_element_image_push_hashed_base(struct nk_context *ctx, enum nk_tree_type
     struct nk_panel *layout;
     const struct nk_style *style;
     struct nk_command_buffer *out;
-    const struct nk_input *in;
+    struct nk_input *in;
     const struct nk_style_button *button;
     enum nk_symbol_type symbol;
     float row_height;
@@ -338,4 +338,3 @@ nk_tree_element_pop(struct nk_context *ctx)
 {
     nk_tree_state_pop(ctx);
 }
-

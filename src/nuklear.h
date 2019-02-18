@@ -4391,6 +4391,7 @@ struct nk_mouse {
     unsigned char grab;
     unsigned char grabbed;
     unsigned char ungrab;
+    unsigned char clicked;
 };
 
 struct nk_key {
@@ -4408,21 +4409,21 @@ struct nk_input {
     struct nk_mouse mouse;
 };
 
-NK_API int nk_input_has_mouse_click(const struct nk_input*, enum nk_buttons);
-NK_API int nk_input_has_mouse_click_in_rect(const struct nk_input*, enum nk_buttons, struct nk_rect);
-NK_API int nk_input_has_mouse_click_down_in_rect(const struct nk_input*, enum nk_buttons, struct nk_rect, int down);
-NK_API int nk_input_is_mouse_click_in_rect(const struct nk_input*, enum nk_buttons, struct nk_rect);
-NK_API int nk_input_is_mouse_click_down_in_rect(const struct nk_input *i, enum nk_buttons id, struct nk_rect b, int down);
-NK_API int nk_input_any_mouse_click_in_rect(const struct nk_input*, struct nk_rect);
-NK_API int nk_input_is_mouse_prev_hovering_rect(const struct nk_input*, struct nk_rect);
-NK_API int nk_input_is_mouse_hovering_rect(const struct nk_input*, struct nk_rect);
-NK_API int nk_input_mouse_clicked(const struct nk_input*, enum nk_buttons, struct nk_rect);
-NK_API int nk_input_is_mouse_down(const struct nk_input*, enum nk_buttons);
-NK_API int nk_input_is_mouse_pressed(const struct nk_input*, enum nk_buttons);
-NK_API int nk_input_is_mouse_released(const struct nk_input*, enum nk_buttons);
-NK_API int nk_input_is_key_pressed(const struct nk_input*, enum nk_keys);
-NK_API int nk_input_is_key_released(const struct nk_input*, enum nk_keys);
-NK_API int nk_input_is_key_down(const struct nk_input*, enum nk_keys);
+NK_API int nk_input_has_mouse_click(struct nk_input*, enum nk_buttons);
+NK_API int nk_input_has_mouse_click_in_rect(struct nk_input*, enum nk_buttons, struct nk_rect);
+NK_API int nk_input_has_mouse_click_down_in_rect(struct nk_input*, enum nk_buttons, struct nk_rect, int down);
+NK_API int nk_input_is_mouse_click_in_rect(struct nk_input*, enum nk_buttons, struct nk_rect);
+NK_API int nk_input_is_mouse_click_down_in_rect(struct nk_input *i, enum nk_buttons id, struct nk_rect b, int down);
+NK_API int nk_input_any_mouse_click_in_rect(struct nk_input*, struct nk_rect);
+NK_API int nk_input_is_mouse_prev_hovering_rect(struct nk_input*, struct nk_rect);
+NK_API int nk_input_is_mouse_hovering_rect(struct nk_input*, struct nk_rect);
+NK_API int nk_input_mouse_clicked(struct nk_input*, enum nk_buttons, struct nk_rect);
+NK_API int nk_input_is_mouse_down(struct nk_input*, enum nk_buttons);
+NK_API int nk_input_is_mouse_pressed(struct nk_input*, enum nk_buttons);
+NK_API int nk_input_is_mouse_released(struct nk_input*, enum nk_buttons);
+NK_API int nk_input_is_key_pressed(struct nk_input*, enum nk_keys);
+NK_API int nk_input_is_key_released(struct nk_input*, enum nk_keys);
+NK_API int nk_input_is_key_down(struct nk_input*, enum nk_keys);
 
 /* ===============================================================
  *

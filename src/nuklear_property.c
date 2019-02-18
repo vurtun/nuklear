@@ -7,7 +7,7 @@
  *
  * ===============================================================*/
 NK_LIB void
-nk_drag_behavior(nk_flags *state, const struct nk_input *in,
+nk_drag_behavior(nk_flags *state, struct nk_input *in,
     struct nk_rect drag, struct nk_property_variant *variant,
     float inc_per_pixel)
 {
@@ -46,7 +46,7 @@ nk_drag_behavior(nk_flags *state, const struct nk_input *in,
         *state |= NK_WIDGET_STATE_LEFT;
 }
 NK_LIB void
-nk_property_behavior(nk_flags *ws, const struct nk_input *in,
+nk_property_behavior(nk_flags *ws, struct nk_input *in,
     struct nk_rect property,  struct nk_rect label, struct nk_rect edit,
     struct nk_rect empty, int *state, struct nk_property_variant *variant,
     float inc_per_pixel)
@@ -492,4 +492,3 @@ nk_propertyd(struct nk_context *ctx, const char *name, double min,
     val = variant.value.d;
     return val;
 }
-
