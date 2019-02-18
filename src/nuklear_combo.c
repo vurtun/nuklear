@@ -44,7 +44,7 @@ NK_API int
 nk_combo_begin_text(struct nk_context *ctx, const char *selected, int len,
     struct nk_vec2 size)
 {
-    const struct nk_input *in;
+    struct nk_input *in;
     struct nk_window *win;
     struct nk_style *style;
 
@@ -139,7 +139,7 @@ nk_combo_begin_color(struct nk_context *ctx, struct nk_color color, struct nk_ve
 {
     struct nk_window *win;
     struct nk_style *style;
-    const struct nk_input *in;
+    struct nk_input *in;
 
     struct nk_rect header;
     int is_clicked = nk_false;
@@ -216,7 +216,7 @@ nk_combo_begin_symbol(struct nk_context *ctx, enum nk_symbol_type symbol, struct
 {
     struct nk_window *win;
     struct nk_style *style;
-    const struct nk_input *in;
+    struct nk_input *in;
 
     struct nk_rect header;
     int is_clicked = nk_false;
@@ -399,7 +399,7 @@ nk_combo_begin_image(struct nk_context *ctx, struct nk_image img, struct nk_vec2
 {
     struct nk_window *win;
     struct nk_style *style;
-    const struct nk_input *in;
+    struct nk_input *in;
 
     struct nk_rect header;
     int is_clicked = nk_false;
@@ -760,4 +760,3 @@ nk_combobox_callback(struct nk_context *ctx,
 {
     *selected = nk_combo_callback(ctx, item_getter, userdata,  *selected, count, item_height, size);
 }
-
