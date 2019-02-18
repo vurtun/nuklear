@@ -70,7 +70,7 @@ nk_contextual_item_text(struct nk_context *ctx, const char *text, int len,
     nk_flags alignment)
 {
     struct nk_window *win;
-    const struct nk_input *in;
+    struct nk_input *in;
     const struct nk_style *style;
 
     struct nk_rect bounds;
@@ -105,7 +105,7 @@ nk_contextual_item_image_text(struct nk_context *ctx, struct nk_image img,
     const char *text, int len, nk_flags align)
 {
     struct nk_window *win;
-    const struct nk_input *in;
+    struct nk_input *in;
     const struct nk_style *style;
 
     struct nk_rect bounds;
@@ -141,7 +141,7 @@ nk_contextual_item_symbol_text(struct nk_context *ctx, enum nk_symbol_type symbo
     const char *text, int len, nk_flags align)
 {
     struct nk_window *win;
-    const struct nk_input *in;
+    struct nk_input *in;
     const struct nk_style *style;
 
     struct nk_rect bounds;
@@ -218,4 +218,3 @@ nk_contextual_end(struct nk_context *ctx)
     nk_popup_end(ctx);
     return;
 }
-

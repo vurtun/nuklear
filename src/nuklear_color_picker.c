@@ -10,7 +10,7 @@ NK_LIB int
 nk_color_picker_behavior(nk_flags *state,
     const struct nk_rect *bounds, const struct nk_rect *matrix,
     const struct nk_rect *hue_bar, const struct nk_rect *alpha_bar,
-    struct nk_colorf *color, const struct nk_input *in)
+    struct nk_colorf *color, struct nk_input *in)
 {
     float hsva[4];
     int value_changed = 0;
@@ -121,7 +121,7 @@ NK_LIB int
 nk_do_color_picker(nk_flags *state,
     struct nk_command_buffer *out, struct nk_colorf *col,
     enum nk_color_format fmt, struct nk_rect bounds,
-    struct nk_vec2 padding, const struct nk_input *in,
+    struct nk_vec2 padding, struct nk_input *in,
     const struct nk_user_font *font)
 {
     int ret = 0;
@@ -170,7 +170,7 @@ nk_color_pick(struct nk_context * ctx, struct nk_colorf *color,
     struct nk_window *win;
     struct nk_panel *layout;
     const struct nk_style *config;
-    const struct nk_input *in;
+    struct nk_input *in;
 
     enum nk_widget_layout_states state;
     struct nk_rect bounds;
@@ -198,4 +198,3 @@ nk_color_picker(struct nk_context *ctx, struct nk_colorf color,
     nk_color_pick(ctx, &color, fmt);
     return color;
 }
-

@@ -7,7 +7,7 @@
  *
  * ===============================================================*/
 NK_LIB int
-nk_toggle_behavior(const struct nk_input *in, struct nk_rect select,
+nk_toggle_behavior(struct nk_input *in, struct nk_rect select,
     nk_flags *state, int active)
 {
     nk_widget_state_reset(state);
@@ -109,7 +109,7 @@ NK_LIB int
 nk_do_toggle(nk_flags *state,
     struct nk_command_buffer *out, struct nk_rect r,
     int *active, const char *str, int len, enum nk_toggle_type type,
-    const struct nk_style_toggle *style, const struct nk_input *in,
+    const struct nk_style_toggle *style, struct nk_input *in,
     const struct nk_user_font *font)
 {
     int was_active;
@@ -177,7 +177,7 @@ nk_check_text(struct nk_context *ctx, const char *text, int len, int active)
 {
     struct nk_window *win;
     struct nk_panel *layout;
-    const struct nk_input *in;
+    struct nk_input *in;
     const struct nk_style *style;
 
     struct nk_rect bounds;
@@ -272,7 +272,7 @@ nk_option_text(struct nk_context *ctx, const char *text, int len, int is_active)
 {
     struct nk_window *win;
     struct nk_panel *layout;
-    const struct nk_input *in;
+    struct nk_input *in;
     const struct nk_style *style;
 
     struct nk_rect bounds;
@@ -317,4 +317,3 @@ nk_radio_label(struct nk_context *ctx, const char *label, int *active)
 {
     return nk_radio_text(ctx, label, nk_strlen(label), active);
 }
-

@@ -4325,6 +4325,7 @@ struct nk_mouse {
     unsigned char grab;
     unsigned char grabbed;
     unsigned char ungrab;
+    unsigned char clicked;
 };
 
 struct nk_key {
@@ -5395,4 +5396,3 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #endif
 
 #endif /* NK_NUKLEAR_H_ */
-
