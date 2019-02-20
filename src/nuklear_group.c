@@ -196,8 +196,10 @@ nk_group_get_scroll(struct nk_context *ctx, const char *id, nk_uint *x_offset, n
         if (!x_offset_ptr || !y_offset_ptr) return;
         *x_offset_ptr = *y_offset_ptr = 0;
     } else y_offset_ptr = nk_find_value(win, id_hash+1);
-    *x_offset = *x_offset_ptr;
-    *y_offset = *y_offset_ptr;
+    if (x_offset)
+      *x_offset = *x_offset_ptr;
+    if (y_offset)
+      *y_offset = *y_offset_ptr;
 }
 NK_API void
 nk_group_set_scroll(struct nk_context *ctx, const char *id, nk_uint x_offset, nk_uint y_offset)

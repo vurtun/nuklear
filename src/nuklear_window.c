@@ -412,8 +412,10 @@ nk_window_get_scroll(struct nk_context *ctx, nk_uint *offset_x, nk_uint *offset_
     if (!ctx || !ctx->current)
         return ;
     win = ctx->current;
-    *offset_x = win->scrollbar.x;
-    *offset_y = win->scrollbar.y;
+    if (offset_x)
+      *offset_x = win->scrollbar.x;
+    if (offset_y)
+      *offset_y = win->scrollbar.y;
 }
 NK_API int
 nk_window_has_focus(const struct nk_context *ctx)

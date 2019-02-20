@@ -1732,8 +1732,8 @@ NK_API struct nk_command_buffer* nk_window_get_canvas(struct nk_context*);
 /// Parameter    | Description
 /// -------------|-----------------------------------------------------------
 /// __ctx__      | Must point to an previously initialized `nk_context` struct
-/// __offset_x__ | A pointer to the x offset output
-/// __offset_y__ | A pointer to the y offset output
+/// __offset_x__ | A pointer to the x offset output (or NULL to ignore)
+/// __offset_y__ | A pointer to the y offset output (or NULL to ignore)
 */
 NK_API void nk_window_get_scroll(struct nk_context*, nk_uint *offset_x, nk_uint *offset_y);
 /*/// #### nk_window_has_focus
@@ -2744,8 +2744,8 @@ NK_API void nk_group_scrolled_end(struct nk_context*);
 /// -------------|-----------------------------------------------------------
 /// __ctx__      | Must point to an previously initialized `nk_context` struct
 /// __id__       | The id of the group to get the scroll position of
-/// __x_offset__ | A pointer to the x offset output
-/// __y_offset__ | A pointer to the y offset output
+/// __x_offset__ | A pointer to the x offset output (or NULL to ignore)
+/// __y_offset__ | A pointer to the y offset output (or NULL to ignore)
 */
 NK_API void nk_group_get_scroll(struct nk_context*, const char *id, nk_uint *x_offset, nk_uint *y_offset);
 /*/// #### nk_group_set_scroll
@@ -16533,8 +16533,10 @@ nk_window_get_scroll(struct nk_context *ctx, nk_uint *offset_x, nk_uint *offset_
     if (!ctx || !ctx->current)
         return ;
     win = ctx->current;
-    *offset_x = win->scrollbar.x;
-    *offset_y = win->scrollbar.y;
+    if (offset_x)
+      *offset_x = win->scrollbar.x;
+    if (offset_y)
+      *offset_y = win->scrollbar.y;
 }
 NK_API int
 nk_window_has_focus(const struct nk_context *ctx)
@@ -17023,8 +17025,10 @@ nk_popup_get_scroll(struct nk_context *ctx, nk_uint *offset_x, nk_uint *offset_y
         return;
 
     popup = ctx->current;
-    *offset_x = popup->scrollbar.x;
-    *offset_y = popup->scrollbar.y;
+    if (offset_x)
+      *offset_x = popup->scrollbar.x;
+    if (offset_y)
+      *offset_y = popup->scrollbar.y;
 }
 NK_API void
 nk_popup_set_scroll(struct nk_context *ctx, nk_uint offset_x, nk_uint offset_y)
@@ -18866,8 +18870,10 @@ nk_group_get_scroll(struct nk_context *ctx, const char *id, nk_uint *x_offset, n
         if (!x_offset_ptr || !y_offset_ptr) return;
         *x_offset_ptr = *y_offset_ptr = 0;
     } else y_offset_ptr = nk_find_value(win, id_hash+1);
-    *x_offset = *x_offset_ptr;
-    *y_offset = *y_offset_ptr;
+    if (x_offset)
+      *x_offset = *x_offset_ptr;
+    if (y_offset)
+      *y_offset = *y_offset_ptr;
 }
 NK_API void
 nk_group_set_scroll(struct nk_context *ctx, const char *id, nk_uint x_offset, nk_uint y_offset)

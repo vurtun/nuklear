@@ -237,8 +237,10 @@ nk_popup_get_scroll(struct nk_context *ctx, nk_uint *offset_x, nk_uint *offset_y
         return;
 
     popup = ctx->current;
-    *offset_x = popup->scrollbar.x;
-    *offset_y = popup->scrollbar.y;
+    if (offset_x)
+      *offset_x = popup->scrollbar.x;
+    if (offset_y)
+      *offset_y = popup->scrollbar.y;
 }
 NK_API void
 nk_popup_set_scroll(struct nk_context *ctx, nk_uint offset_x, nk_uint offset_y)
