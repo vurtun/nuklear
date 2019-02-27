@@ -403,7 +403,7 @@ nk_allegro5_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
 {
     char *text = al_get_clipboard_text(allegro5.dsp);
     if (text) nk_textedit_paste(edit, text, nk_strlen(text));
-    (void)usr;
+    NK_UNUSED(usr);
     al_free(text);
 }
 
@@ -411,7 +411,7 @@ NK_INTERN void
 nk_allegro5_clipboard_copy(nk_handle usr, const char *text, int len)
 {
     char *str = 0;
-    (void)usr;
+    NK_UNUSED(usr);
     if (!len) return;
     str = (char*)malloc((size_t)len+1);
     if (!str) return;

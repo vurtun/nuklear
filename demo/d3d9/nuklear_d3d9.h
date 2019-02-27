@@ -425,7 +425,7 @@ nk_d3d9_handle_event(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
 static void
 nk_d3d9_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
 {
-    (void)usr;
+    NK_UNUSED(usr);
     if (!IsClipboardFormatAvailable(CF_UNICODETEXT) && OpenClipboard(NULL)) {
         return;
     }
@@ -465,7 +465,7 @@ nk_d3d9_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
 static void
 nk_d3d9_clipboard_copy(nk_handle usr, const char *text, int len)
 {
-    (void)usr;
+    NK_UNUSED(usr);
     if (!OpenClipboard(NULL)) {
         return;
     }

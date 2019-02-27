@@ -200,7 +200,7 @@ nk_glfw3_render(enum nk_anti_aliasing AA)
 NK_API void
 nk_glfw3_char_callback(GLFWwindow *win, unsigned int codepoint)
 {
-    (void)win;
+    NK_UNUSED(win);
     if (glfw.text_len < NK_GLFW_TEXT_MAX)
         glfw.text[glfw.text_len++] = codepoint;
 }
@@ -208,7 +208,8 @@ nk_glfw3_char_callback(GLFWwindow *win, unsigned int codepoint)
 NK_API void
 nk_gflw3_scroll_callback(GLFWwindow *win, double xoff, double yoff)
 {
-    (void)win; (void)xoff;
+    NK_UNUSED(win);
+    NK_UNUSED(xoff);
     glfw.scroll.x += (float)xoff;
     glfw.scroll.y += (float)yoff;
 }
@@ -234,14 +235,14 @@ nk_glfw3_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
 {
     const char *text = glfwGetClipboardString(glfw.win);
     if (text) nk_textedit_paste(edit, text, nk_strlen(text));
-    (void)usr;
+    NK_UNUSED(usr);
 }
 
 NK_INTERN void
 nk_glfw3_clipboard_copy(nk_handle usr, const char *text, int len)
 {
     char *str = 0;
-    (void)usr;
+    NK_UNUSED(usr);
     if (!len) return;
     str = (char*)malloc((size_t)len+1);
     if (!str) return;
