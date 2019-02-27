@@ -280,7 +280,7 @@ int main(void)
         {
             HRESULT hr;
             hr = IDirect3DDevice9_Clear(device, 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL,
-                D3DCOLOR_COLORVALUE(bg.a, bg.r, bg.g, bg.b), 0.0f, 0);
+                D3DCOLOR_COLORVALUE(bg.r, bg.g, bg.b, bg.a), 0.0f, 0);
             NK_ASSERT(SUCCEEDED(hr));
 
             hr = IDirect3DDevice9_BeginScene(device);
