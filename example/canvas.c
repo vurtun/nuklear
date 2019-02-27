@@ -33,11 +33,6 @@
 #define MAX_VERTEX_MEMORY 512 * 1024
 #define MAX_ELEMENT_MEMORY 128 * 1024
 
-#define UNUSED(a) (void)a
-#define MIN(a,b) ((a) < (b) ? (a) : (b))
-#define MAX(a,b) ((a) < (b) ? (b) : (a))
-#define LEN(a) (sizeof(a)/sizeof(a)[0])
-
 #define NK_SHADER_VERSION "#version 150\n"
 
 /* ===============================================================
@@ -307,7 +302,7 @@ static void error_callback(int e, const char *d){printf("Error %d: %s\n", e, d);
 static void text_input(GLFWwindow *win, unsigned int codepoint)
 {nk_input_unicode((struct nk_context*)glfwGetWindowUserPointer(win), codepoint);}
 static void scroll_input(GLFWwindow *win, double _, double yoff)
-{UNUSED(_);nk_input_scroll((struct nk_context*)glfwGetWindowUserPointer(win), nk_vec2(0, (float)yoff));}
+{NK_UNUSED(_);nk_input_scroll((struct nk_context*)glfwGetWindowUserPointer(win), nk_vec2(0, (float)yoff));}
 
 static void
 pump_input(struct nk_context *ctx, GLFWwindow *win)

@@ -32,11 +32,6 @@
 #define MAX_VERTEX_MEMORY 512 * 1024
 #define MAX_ELEMENT_MEMORY 128 * 1024
 
-#define UNUSED(a) (void)a
-#define MIN(a,b) ((a) < (b) ? (a) : (b))
-#define MAX(a,b) ((a) < (b) ? (b) : (a))
-#define LEN(a) (sizeof(a)/sizeof(a)[0])
-
 #ifdef __APPLE__
   #define NK_SHADER_VERSION "#version 150\n"
 #else
@@ -334,7 +329,7 @@ static void error_callback(int e, const char *d){printf("Error %d: %s\n", e, d);
 static void text_input(GLFWwindow *win, unsigned int codepoint)
 {nk_input_unicode((struct nk_context*)glfwGetWindowUserPointer(win), codepoint);}
 static void scroll_input(GLFWwindow *win, double _, double yoff)
-{UNUSED(_);nk_input_scroll((struct nk_context*)glfwGetWindowUserPointer(win), nk_vec2(0, (float)yoff));}
+{NK_UNUSED(_);nk_input_scroll((struct nk_context*)glfwGetWindowUserPointer(win), nk_vec2(0, (float)yoff));}
 
 int main(int argc, char *argv[])
 {
@@ -768,7 +763,7 @@ int main(int argc, char *argv[])
             nk_layout_row_dynamic(&ctx, 25, 1);
             nk_edit_string(&ctx, NK_EDIT_FIELD, field_buffer, &field_len, 64, nk_filter_default);
             nk_property_float(&ctx, "#X:", -1024.0f, &pos, 1024.0f, 1, 1);
-            current_weapon = nk_combo(&ctx, weapons, LEN(weapons), current_weapon, 25, nk_vec2(nk_widget_width(&ctx),200));
+            current_weapon = nk_combo(&ctx, weapons, NK_LEN(weapons), current_weapon, 25, nk_vec2(nk_widget_width(&ctx),200));
 
             nk_layout_row_dynamic(&ctx, 100, 1);
             if (nk_chart_begin_colored(&ctx, NK_CHART_LINES, nk_rgb(255,0,0), nk_rgb(150,0,0), 32, 0.0f, 1.0f)) {
