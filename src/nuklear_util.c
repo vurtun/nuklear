@@ -1078,7 +1078,7 @@ nk_text_calculate_text_bounds(const struct nk_user_font *font,
 
     *glyphs = 0;
     while ((text_len < byte_len) && glyph_len) {
-        if (unicode == '\n') {
+        if (unicode == '\n' || unicode == '\v') {
             text_size.x = NK_MAX(text_size.x, line_width);
             text_size.y += line_height;
             line_width = 0;
