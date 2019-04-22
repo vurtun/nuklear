@@ -81,7 +81,7 @@ void sdl_draw_text(TTF_Font *font, const char *str, int x, int y, struct nk_colo
     SDL_Texture *texture = SDL_CreateTextureFromSurface(sdl.renderer, surface);
     int texW = 0, texH = 0;
     SDL_QueryTexture(texture, NULL, NULL, &texW, &texH);
-    SDL_Rect dstrect = {x, y-8, texW, texH };
+    SDL_Rect dstrect = {x, y, texW, texH };
     SDL_RenderCopy(sdl.renderer, texture, NULL, &dstrect);
     SDL_FreeSurface(surface);
     SDL_DestroyTexture(texture);
@@ -261,8 +261,8 @@ nk_sdl_font_get_text_width(nk_handle handle, float height, const char *text, int
     strncpy((char*)&strcpy, text, len);
     strcpy[len] = '\0';
     
-    int w;
-    TTF_SizeText(font, strcpy, &w, &sdl.font_height);
+    int w, h;
+    TTF_SizeText(font, strcpy, &w, &h);
     return (float)w;
 }
 
@@ -271,6 +271,7 @@ nk_sdl_init(SDL_Window *win, SDL_Renderer *renderer)
 {
     struct nk_user_font *font = &sdl.user_font;
     font->userdata = nk_handle_ptr(sdl.ttf_font);
+    font->height = TTF_FontHeight(sdl.ttf_font);
     font->width = nk_sdl_font_get_text_width;
 
     sdl.win = win;
