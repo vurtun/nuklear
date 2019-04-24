@@ -136,7 +136,6 @@ void sdl_draw_filled_polygon(const Sint16 *vx, const Sint16 *vy, int n, struct n
 void sdl_draw_image(struct nk_image *img, int x, int y, int w, int h) {
     SDL_Texture *texture = img->handle.ptr;
     SDL_RenderCopy(sdl.renderer, texture, NULL, &(SDL_Rect){x, y, w, h});
-    printf("Out: %d,%d,%d,%d\n", x, y, w, h);
 }
 
 NK_API void
