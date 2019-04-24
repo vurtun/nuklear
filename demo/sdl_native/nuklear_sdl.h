@@ -77,7 +77,7 @@ static void nk_color_to_sdl_color(struct nk_color color)
 }
 
 void sdl_draw_text(TTF_Font *font, const char *str, int x, int y, struct nk_color c) {
-    SDL_Surface *surface = TTF_RenderText_Solid(font, str, (SDL_Color){c.r, c.g, c.b});
+    SDL_Surface *surface = TTF_RenderText_Blended(font, str, (SDL_Color){c.r, c.g, c.b});
     SDL_Texture *texture = SDL_CreateTextureFromSurface(sdl.renderer, surface);
     int texW = 0, texH = 0;
     SDL_QueryTexture(texture, NULL, NULL, &texW, &texH);
@@ -131,6 +131,12 @@ void sdl_draw_arc(int x, int y, int rad, int start, int end, struct nk_color col
 
 void sdl_draw_filled_polygon(const Sint16 *vx, const Sint16 *vy, int n, struct nk_color color) {
     filledPolygonRGBA(sdl.renderer, vx, vy, n, color.r, color.g, color.b, color.a);
+}
+
+void sdl_draw_image(struct nk_image *img, int x, int y, int w, int h) {
+    SDL_Texture *texture = img->handle.ptr;
+    SDL_RenderCopy(sdl.renderer, texture, NULL, &(SDL_Rect){x, y, w, h});
+    printf("Out: %d,%d,%d,%d\n", x, y, w, h);
 }
 
 NK_API void
@@ -216,7 +222,10 @@ nk_sdl_render(void)
                 sdl_draw_arc((float)a->cx, (float)a->cy, (float)a->r, a->a[0],a->a[1], a->color);
             }break;
             case NK_COMMAND_RECT_MULTI_COLOR:
-            case NK_COMMAND_IMAGE:
+            case NK_COMMAND_IMAGE: {
+                const struct nk_command_image *i = (const struct nk_command_image *)cmd;
+                sdl_draw_image(&i->img, i->x, i->y, i->w, i->h);
+            }break;
             case NK_COMMAND_ARC_FILLED:
             default: break;
        }
