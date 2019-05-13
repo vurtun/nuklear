@@ -81,6 +81,7 @@ sleep_for(long t)
 /*#define INCLUDE_CALCULATOR */
 /*#define INCLUDE_OVERVIEW */
 /*#define INCLUDE_NODE_EDITOR */
+/*#define INCLUDE_EDITTEST*/
 
 #ifdef INCLUDE_ALL
   #define INCLUDE_STYLE
@@ -100,6 +101,9 @@ sleep_for(long t)
 #endif
 #ifdef INCLUDE_NODE_EDITOR
   #include "../node_editor.c"
+#endif
+#ifdef INCLUDE_EDITTEST
+  #include "edittest.c"
 #endif
 
 /* ===============================================================
@@ -198,6 +202,9 @@ main(void)
         #endif
         #ifdef INCLUDE_NODE_EDITOR
           node_editor(ctx);
+        #endif
+        #ifdef INCLUDE_EDITTEST
+          edittest(ctx);
         #endif
         /* ----------------------------------------- */
 
