@@ -2,16 +2,16 @@
 BIN = demo
 
 # Flags
-CFLAGS = -std=c89 -pedantic -O2
+CFLAGS = -std=c99 -pedantic -O2
 
 SRC = main.c
 OBJ = $(SRC:.c=.o)
 
 ifeq ($(OS),Windows_NT)
 BIN := $(BIN).exe
-LIBS = -lmingw32 -lSDLmain -lSDL -lm
+LIBS = -lmingw32 -lSDLmain -lSDL2 -lm
 else
-LIBS = -lSDL -lSDL_gfx -lm
+LIBS = -lSDL2 -lSDL2_gfx -lm
 endif
 
 $(BIN):

@@ -8,13 +8,15 @@
 #include <assert.h>
 #include <math.h>
 
-#include <SDL/SDL.h>
+#include <SDL2/SDL.h>
 
 /* these defines are both needed for the header
  * and source file. So if you split them remember
  * to copy them as well. */
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
+//#define NK_INCLUDE_FONT_BAKING
+//#define NK_INCLUDE_DEFAULT_FONT
 #include "nuklear_sdl.h"
 #include "nuklear_sdl.c"
 
@@ -24,7 +26,8 @@
 int
 main(void)
 {
-	static SDL_Surface *screen_surface;
+	SDL_Window* window;
+	SDL_Renderer* renderer;
 	struct nk_color background;
 	struct nk_colorf bg;
 	int win_width, win_height;
@@ -37,13 +40,25 @@ main(void)
 		printf( "Can't init SDL:  %s\n", SDL_GetError( ) );
 		return 1;
 	}
-	screen_surface = SDL_SetVideoMode(WINDOW_WIDTH, WINDOW_HEIGHT, 32, SDL_SWSURFACE);
-	if (screen_surface == NULL) {
-		printf( "Can't set video mode: %s\n", SDL_GetError( ) );
+
+
+	window = SDL_CreateWindow("SDL2_gfx demo",
+                              SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                              WINDOW_WIDTH, WINDOW_HEIGHT,
+                              SDL_WINDOW_SHOWN|SDL_WINDOW_ALLOW_HIGHDPI);
+
+	if (!window) {
+		printf("Can't create window: %s\n", SDL_GetError());
+		return 1;
+	}
+	/* try VSYNC and ACCELERATED */
+	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
+	if (!renderer) {
+		printf("Can't create renderer: %s\n", SDL_GetError());
 		return 1;
 	}
 
-	if (!(ctx = nk_sdl_init(screen_surface))) {
+	if (!(ctx = nk_sdl_init(window, renderer))) {
 		printf("nk_sdl_init() failed!");
 		return 1;
 	}
@@ -104,6 +119,8 @@ main(void)
 
 cleanup:
 	nk_sdl_shutdown();
+	SDL_DestroyRenderer(renderer);
+	SDL_DestroyWindow(window);
 	SDL_Quit();
 	return 0;
 }
