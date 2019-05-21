@@ -24,6 +24,7 @@ static struct nk_sdl {
 } sdl;
 
 static nk_sdl_Font *sdl_font;
+static struct nk_user_font font;
 static SDL_Rect sdl_clip_rect;
 
 static void
@@ -337,11 +338,9 @@ nk_sdl_get_text_width(nk_handle handle, float height, const char *text, int len)
 NK_API struct nk_context*
 nk_sdl_init(SDL_Surface *screen_surface)
 {
-	struct nk_user_font font;
-
 	sdl_font = (nk_sdl_Font*)calloc(1, sizeof(nk_sdl_Font));
-	sdl_font->width = 8; /* Default in  the SDL_gfx library */
-	sdl_font->height = 8; /* Default in  the SDL_gfx library */
+	sdl_font->width = 8; /* Default in the SDL_gfx library */
+	sdl_font->height = 8; /* Default in the SDL_gfx library */
 	if (!sdl_font)
 		return NULL;
 
@@ -417,9 +416,9 @@ nk_sdl_handle_event(SDL_Event *evt)
 		if (evt->button.button == SDL_BUTTON_RIGHT)
 			nk_input_button(ctx, NK_BUTTON_RIGHT, x, y, down);
 		if (evt->button.button == SDL_BUTTON_WHEELUP)
-			nk_input_scroll(ctx, 1.0f);
+			nk_input_scroll(ctx, nk_vec2(0, 1.0f));
 		if (evt->button.button == SDL_BUTTON_WHEELDOWN)
-			nk_input_scroll(ctx, -1.0f);
+			nk_input_scroll(ctx, nk_vec2(0, -1.0f));
 	} else if (evt->type == SDL_MOUSEMOTION) {
 		nk_input_motion(ctx, evt->motion.x, evt->motion.y);
 	}
