@@ -2,9 +2,9 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL2_gfxPrimitives.h>
 
-#include "nuklear_sdl.h"
 #define NK_IMPLEMENTATION
-#include "../../nuklear.h"
+#include "nuklear_sdl.h"
+//#include "../../nuklear.h"
 
 #ifndef MAX
 #define MAX(a,b) ((a) < (b) ? (b) : (a))
@@ -323,13 +323,23 @@ nk_sdl_render(struct nk_color clear)
 static void
 nk_sdl_clipbard_paste(nk_handle usr, struct nk_text_edit *edit)
 {
-	/* Not supported in SDL 1.2. Use platform specific code.  */
+    const char *text = SDL_GetClipboardText();
+    if (text) nk_textedit_paste(edit, text, nk_strlen(text));
+    (void)usr;
 }
 
 static void
 nk_sdl_clipbard_copy(nk_handle usr, const char *text, int len)
 {
-	/* Not supported in SDL 1.2. Use platform specific code.  */
+    char *str = 0;
+    (void)usr;
+    if (!len) return;
+    str = (char*)malloc((size_t)len+1);
+    if (!str) return;
+    memcpy(str, text, (size_t)len);
+    str[len] = '\0';
+    SDL_SetClipboardText(str);
+    free(str);
 }
 
 static float

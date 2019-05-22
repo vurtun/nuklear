@@ -6,7 +6,8 @@
 #include <string.h>
 #include <math.h>
 #include <assert.h>
-#include <math.h>
+#include <limits.h>
+#include <time.h>
 
 #include <SDL2/SDL.h>
 
@@ -15,16 +16,50 @@
  * to copy them as well. */
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
+#define NK_INCLUDE_STANDARD_VARARGS
 //#define NK_INCLUDE_FONT_BAKING
 //#define NK_INCLUDE_DEFAULT_FONT
-#include "nuklear_sdl.h"
+//#include "nuklear_sdl.h"
 #include "nuklear_sdl.c"
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 
-int
-main(void)
+
+/* ===============================================================
+ *
+ *                          EXAMPLE
+ *
+ * ===============================================================*/
+/* This are some code examples to provide a small overview of what can be
+ * done with this library. To try out an example uncomment the defines */
+// #define INCLUDE_ALL
+/*#define INCLUDE_STYLE */
+/*#define INCLUDE_CALCULATOR */
+#define INCLUDE_OVERVIEW
+/*#define INCLUDE_NODE_EDITOR */
+
+#ifdef INCLUDE_ALL
+  #define INCLUDE_STYLE
+  #define INCLUDE_CALCULATOR
+  #define INCLUDE_OVERVIEW
+  #define INCLUDE_NODE_EDITOR
+#endif
+
+#ifdef INCLUDE_STYLE
+  #include "../style.c"
+#endif
+#ifdef INCLUDE_CALCULATOR
+  #include "../calculator.c"
+#endif
+#ifdef INCLUDE_OVERVIEW
+  #include "../overview.c"
+#endif
+#ifdef INCLUDE_NODE_EDITOR
+  #include "../node_editor.c"
+#endif
+
+int main(void)
 {
 	SDL_Window* window;
 	SDL_Renderer* renderer;
@@ -62,6 +97,14 @@ main(void)
 		printf("nk_sdl_init() failed!");
 		return 1;
 	}
+
+    /* style.c */
+    #ifdef INCLUDE_STYLE
+    // set_style(ctx, THEME_WHITE);
+    // set_style(ctx, THEME_RED);
+    // set_style(ctx, THEME_BLUE);
+    // set_style(ctx, THEME_DARK);
+    #endif
 
 	background = nk_rgb(28,48,62);
 	bg = nk_color_cf(background);
@@ -112,6 +155,19 @@ main(void)
 		}
 		nk_end(ctx);}
 
+		/* -------------- EXAMPLES ---------------- */
+#ifdef INCLUDE_CALCULATOR
+		calculator(ctx);
+#endif
+#ifdef INCLUDE_OVERVIEW
+		overview(ctx);
+#endif
+#ifdef INCLUDE_NODE_EDITOR
+		node_editor(ctx);
+#endif
+		/* ----------------------------------------- */
+
+		SDL_Delay(50);
 		/* Draw */
 		/* nk_color_fv(bg, background); */
 		nk_sdl_render(nk_rgb_cf(bg));
