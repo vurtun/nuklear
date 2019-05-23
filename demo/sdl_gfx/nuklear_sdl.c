@@ -373,13 +373,12 @@ nk_sdl_init(SDL_Window* window, SDL_Renderer* renderer)
 NK_API void
 nk_sdl_handle_event(SDL_Event *evt)
 {
-
 	struct nk_context *ctx = &sdl.ctx;
 	if (evt->type == SDL_KEYUP || evt->type == SDL_KEYDOWN) {
 		/* key events */
 		int down = evt->type == SDL_KEYDOWN;
-        const Uint8* state = SDL_GetKeyboardState(0);
-        SDL_Keycode sym = evt->key.keysym.sym;
+		const Uint8* state = SDL_GetKeyboardState(0);
+		SDL_Keycode sym = evt->key.keysym.sym;
 		if (sym == SDLK_RSHIFT || sym == SDLK_LSHIFT)
 			nk_input_key(ctx, NK_KEY_SHIFT, down);
 		else if (sym == SDLK_DELETE)
@@ -395,19 +394,19 @@ nk_sdl_handle_event(SDL_Event *evt)
 		else if (sym == SDLK_END)
 			nk_input_key(ctx, NK_KEY_TEXT_END, down);
 		else if (sym == SDLK_z)
-            nk_input_key(ctx, NK_KEY_TEXT_UNDO, down && state[SDL_SCANCODE_LCTRL]);
-        else if (sym == SDLK_r)
-            nk_input_key(ctx, NK_KEY_TEXT_REDO, down && state[SDL_SCANCODE_LCTRL]);
-        else if (sym == SDLK_c)
-            nk_input_key(ctx, NK_KEY_COPY, down && state[SDL_SCANCODE_LCTRL]);
-        else if (sym == SDLK_v)
-            nk_input_key(ctx, NK_KEY_PASTE, down && state[SDL_SCANCODE_LCTRL]);
-        else if (sym == SDLK_x)
-            nk_input_key(ctx, NK_KEY_CUT, down && state[SDL_SCANCODE_LCTRL]);
-        else if (sym == SDLK_b)
-            nk_input_key(ctx, NK_KEY_TEXT_LINE_START, down && state[SDL_SCANCODE_LCTRL]);
-        else if (sym == SDLK_e)
-            nk_input_key(ctx, NK_KEY_TEXT_LINE_END, down && state[SDL_SCANCODE_LCTRL]);
+			nk_input_key(ctx, NK_KEY_TEXT_UNDO, down && state[SDL_SCANCODE_LCTRL]);
+		else if (sym == SDLK_r)
+			nk_input_key(ctx, NK_KEY_TEXT_REDO, down && state[SDL_SCANCODE_LCTRL]);
+		else if (sym == SDLK_c)
+			nk_input_key(ctx, NK_KEY_COPY, down && state[SDL_SCANCODE_LCTRL]);
+		else if (sym == SDLK_v)
+			nk_input_key(ctx, NK_KEY_PASTE, down && state[SDL_SCANCODE_LCTRL]);
+		else if (sym == SDLK_x)
+			nk_input_key(ctx, NK_KEY_CUT, down && state[SDL_SCANCODE_LCTRL]);
+		else if (sym == SDLK_b)
+			nk_input_key(ctx, NK_KEY_TEXT_LINE_START, down && state[SDL_SCANCODE_LCTRL]);
+		else if (sym == SDLK_e)
+			nk_input_key(ctx, NK_KEY_TEXT_LINE_END, down && state[SDL_SCANCODE_LCTRL]);
 		else if (sym == SDLK_LEFT) {
 			if (state[KMOD_LCTRL])
 				nk_input_key(ctx, NK_KEY_TEXT_WORD_LEFT, down);
@@ -431,6 +430,11 @@ nk_sdl_handle_event(SDL_Event *evt)
         nk_input_scroll(ctx,nk_vec2((float)evt->wheel.x,(float)evt->wheel.y));
 	} else if (evt->type == SDL_MOUSEMOTION) {
 		nk_input_motion(ctx, evt->motion.x, evt->motion.y);
+	} else if (evt->type == SDL_TEXTINPUT) {
+		// text input
+		nk_glyph glyph;
+		memcpy(glyph, evt->text.text, NK_UTF_SIZE);
+		nk_input_glyph(ctx, glyph);
 	}
 }
 

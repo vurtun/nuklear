@@ -17,8 +17,10 @@
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
 #define NK_INCLUDE_STANDARD_VARARGS
+#define NK_INCLUDE_FIXED_TYPES
+#define NK_INCLUDE_STANDARD_IO
 //#define NK_INCLUDE_FONT_BAKING
-//#define NK_INCLUDE_DEFAULT_FONT
+#define NK_INCLUDE_DEFAULT_FONT
 //#include "nuklear_sdl.h"
 #include "nuklear_sdl.c"
 
@@ -34,10 +36,10 @@
 /* This are some code examples to provide a small overview of what can be
  * done with this library. To try out an example uncomment the defines */
 // #define INCLUDE_ALL
-/*#define INCLUDE_STYLE */
-/*#define INCLUDE_CALCULATOR */
+#define INCLUDE_STYLE
+// #define INCLUDE_CALCULATOR
 #define INCLUDE_OVERVIEW
-/*#define INCLUDE_NODE_EDITOR */
+// #define INCLUDE_NODE_EDITOR
 
 #ifdef INCLUDE_ALL
   #define INCLUDE_STYLE
@@ -100,7 +102,7 @@ int main(void)
 
     /* style.c */
     #ifdef INCLUDE_STYLE
-    // set_style(ctx, THEME_WHITE);
+     set_style(ctx, THEME_WHITE);
     // set_style(ctx, THEME_RED);
     // set_style(ctx, THEME_BLUE);
     // set_style(ctx, THEME_DARK);
@@ -146,10 +148,10 @@ int main(void)
 				nk_layout_row_dynamic(ctx, 120, 1);
 				bg = nk_color_picker(ctx, bg, NK_RGBA);
 				nk_layout_row_dynamic(ctx, 25, 1);
-                bg.r = nk_propertyf(ctx, "#R:", 0, bg.r, 1.0f, 0.01f,0.005f);
-                bg.g = nk_propertyf(ctx, "#G:", 0, bg.g, 1.0f, 0.01f,0.005f);
-                bg.b = nk_propertyf(ctx, "#B:", 0, bg.b, 1.0f, 0.01f,0.005f);
-                bg.a = nk_propertyf(ctx, "#A:", 0, bg.a, 1.0f, 0.01f,0.005f);
+				bg.r = nk_propertyf(ctx, "#R:", 0, bg.r, 1.0f, 0.01f,0.005f);
+				bg.g = nk_propertyf(ctx, "#G:", 0, bg.g, 1.0f, 0.01f,0.005f);
+				bg.b = nk_propertyf(ctx, "#B:", 0, bg.b, 1.0f, 0.01f,0.005f);
+				bg.a = nk_propertyf(ctx, "#A:", 0, bg.a, 1.0f, 0.01f,0.005f);
 				nk_combo_end(ctx);
 			}}
 		}
