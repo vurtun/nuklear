@@ -24,8 +24,8 @@
 //#include "nuklear_sdl.h"
 #include "nuklear_sdl.c"
 
-#define WINDOW_WIDTH 800
-#define WINDOW_HEIGHT 600
+#define WINDOW_WIDTH 1200
+#define WINDOW_HEIGHT 800
 
 
 /* ===============================================================
@@ -36,7 +36,7 @@
 /* This are some code examples to provide a small overview of what can be
  * done with this library. To try out an example uncomment the defines */
 // #define INCLUDE_ALL
-#define INCLUDE_STYLE
+// #define INCLUDE_STYLE
 // #define INCLUDE_CALCULATOR
 #define INCLUDE_OVERVIEW
 // #define INCLUDE_NODE_EDITOR
@@ -100,13 +100,13 @@ int main(void)
 		return 1;
 	}
 
-    /* style.c */
-    #ifdef INCLUDE_STYLE
-     set_style(ctx, THEME_WHITE);
-    // set_style(ctx, THEME_RED);
-    // set_style(ctx, THEME_BLUE);
-    // set_style(ctx, THEME_DARK);
-    #endif
+	/* style.c */
+#ifdef INCLUDE_STYLE
+	// set_style(ctx, THEME_WHITE);
+	// set_style(ctx, THEME_RED);
+	// set_style(ctx, THEME_BLUE);
+	// set_style(ctx, THEME_DARK);
+#endif
 
 	background = nk_rgb(28,48,62);
 	bg = nk_color_cf(background);

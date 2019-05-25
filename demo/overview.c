@@ -712,6 +712,7 @@ overview(struct nk_context *ctx)
 
             /* menu contextual */
             nk_layout_row_static(ctx, 30, 160, 1);
+            //nk_layout_row_dynamic(ctx, 30, 1);
             bounds = nk_widget_bounds(ctx);
             nk_label(ctx, "Right click me for menu", NK_TEXT_LEFT);
 
