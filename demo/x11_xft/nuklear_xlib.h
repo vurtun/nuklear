@@ -430,7 +430,7 @@ nk_xsurf_draw_text(XSurface *surf, short x, short y, unsigned short w, unsigned 
         xrc.blue = cfg.b * 257;
         xrc.alpha = cfg.a * 257;
         XftColorAllocValue(surf->dpy, xlib.vis, xlib.cmap, &xrc, &color);
-        XftDrawString8(surf->ftdraw, &color, font->ft, tx, ty, (FcChar8*)text, len);
+        XftDrawStringUtf8(surf->ftdraw, &color, font->ft, tx, ty, (FcChar8*)text, len);
     }
 #else
     XSetForeground(surf->dpy, surf->gc, fg);
@@ -632,7 +632,7 @@ nk_xfont_get_text_width(nk_handle handle, float height, const char *text, int le
     XGlyphInfo g;
     if(!font || !text)
         return 0;
-    XftTextExtents8(xlib.dpy, font->ft, (FcChar8*)text, len, &g);
+    XftTextExtentsUtf8(xlib.dpy, font->ft, (FcChar8*)text, len, &g);
     return g.width;
 #else
     XRectangle r;
