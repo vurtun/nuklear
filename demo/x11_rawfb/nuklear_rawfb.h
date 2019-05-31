@@ -171,9 +171,14 @@ nk_image_blendpixel(const struct rawfb_image *img,
     const int x0, const int y0, struct nk_color col)
 {
     struct nk_color col2;
+    struct nk_color t;
     unsigned char inv_a;
     if (col.a == 0)
         return;
+
+    t = col;
+    col.b = t.r;
+    col.r = t.b;
 
     inv_a = 0xff - col.a;
     col2 = nk_image_getpixel(img, x0, y0);
@@ -746,7 +751,8 @@ nk_rawfb_init(void *fb, void *tex_mem, const unsigned int w, const unsigned int 
 static void
 nk_rawfb_stretch_image(const struct rawfb_image *dst,
     const struct rawfb_image *src, const struct nk_rect *dst_rect,
-    const struct nk_rect *src_rect, const struct nk_rect *dst_scissors)
+    const struct nk_rect *src_rect, const struct nk_rect *dst_scissors,
+    const struct nk_color *fg)
 {
     short i, j;
     struct nk_color col;
@@ -765,6 +771,10 @@ nk_rawfb_stretch_image(const struct rawfb_image *dst,
                     continue;
             }
             col = nk_image_getpixel(src, (int)xoff, (int) yoff);
+	    /* This assumes the font atlas uses transparent black for non-glyph pixels */
+	    if (col.r) col.r = fg->r;
+	    if (col.g) col.g = fg->g;
+	    if (col.b) col.b = fg->b;
             nk_image_blendpixel(dst, i + (int)(dst_rect->x + 0.5f), j + (int)(dst_rect->y + 0.5f), col);
             xoff += xinc;
         }
@@ -843,9 +853,8 @@ nk_rawfb_draw_text(const struct rawfb_context *rawfb,
         dst_rect.w = ceilf(g.width);
         dst_rect.h = ceilf(g.height);
 
-        /* TODO: account fg */
         /* Use software rescaling to blit glyph from font_text to framebuffer */
-        nk_rawfb_stretch_image(&rawfb->fb, &rawfb->font_tex, &dst_rect, &src_rect, &rawfb->scissors);
+        nk_rawfb_stretch_image(&rawfb->fb, &rawfb->font_tex, &dst_rect, &src_rect, &rawfb->scissors, &fg);
 
         /* offset next glyph */
         text_len += glyph_len;
@@ -872,7 +881,7 @@ nk_rawfb_drawimage(const struct rawfb_context *rawfb,
     dst_rect.y = y;
     dst_rect.w = w;
     dst_rect.h = h;
-    nk_rawfb_stretch_image(&rawfb->fb, &rawfb->font_tex, &dst_rect, &src_rect, &rawfb->scissors);
+    nk_rawfb_stretch_image(&rawfb->fb, &rawfb->font_tex, &dst_rect, &src_rect, &rawfb->scissors, col);
 }
 
 NK_API void
