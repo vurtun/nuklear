@@ -218,8 +218,8 @@ nk_rawfb_stroke_line(const struct rawfb_context *rawfb,
             x1 = x0;
             x0 = tmp;
         }
-        x1 = MIN(rawfb->scissors.w - 1, x1);
-        x0 = MIN(rawfb->scissors.w - 1, x0);
+        x1 = MIN(rawfb->scissors.w, x1);
+        x0 = MIN(rawfb->scissors.w, x0);
         x1 = MAX(rawfb->scissors.x, x1);
         x0 = MAX(rawfb->scissors.x, x0);
         nk_rawfb_line_horizontal(rawfb, x0, y0, x1, col);
