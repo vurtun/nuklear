@@ -722,7 +722,7 @@ nk_gdipfont_get_text_width(nk_handle handle, float height, const char *text, int
     if (!font || !text)
         return 0;
 
-    (void)height;
+    NK_UNUSED(height);
     wsize = MultiByteToWideChar(CP_UTF8, 0, text, len, NULL, 0);
     wstr = (WCHAR*)_alloca(wsize * sizeof(wchar_t));
     MultiByteToWideChar(CP_UTF8, 0, text, len, wstr, wsize);
@@ -747,7 +747,7 @@ nk_gdip_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
     LPCWSTR wstr;
     int utf8size;
     char* utf8;
-    (void)usr;
+    NK_UNUSED(usr);
 
     if (!IsClipboardFormatAvailable(CF_UNICODETEXT) && OpenClipboard(NULL))
         return;
@@ -797,7 +797,7 @@ nk_gdip_clipboard_copy(nk_handle usr, const char *text, int len)
     HGLOBAL mem;
     wchar_t* wstr;
     int wsize;
-    (void)usr;
+    NK_UNUSED(usr);
 
     if (!OpenClipboard(NULL))
         return;

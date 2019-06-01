@@ -291,14 +291,14 @@ nk_sdl_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
 {
     const char *text = SDL_GetClipboardText();
     if (text) nk_textedit_paste(edit, text, nk_strlen(text));
-    (void)usr;
+    NK_UNUSED(usr);
 }
 
 static void
 nk_sdl_clipboard_copy(nk_handle usr, const char *text, int len)
 {
     char *str = 0;
-    (void)usr;
+    NK_UNUSED(usr);
     if (!len) return;
     str = (char*)malloc((size_t)len+1);
     if (!str) return;

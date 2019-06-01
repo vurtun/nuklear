@@ -520,7 +520,7 @@ nk_gdifont_del(GdiFont *font)
 static void
 nk_gdi_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
 {
-    (void)usr;
+    NK_UNUSED(usr);
     if (IsClipboardFormatAvailable(CF_UNICODETEXT) && OpenClipboard(NULL))
     {
         HGLOBAL mem = GetClipboardData(CF_UNICODETEXT); 

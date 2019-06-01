@@ -187,7 +187,8 @@ nk_sfml_clipboard_paste(nk_handle usr, struct nk_text_edit* edit)
 
     if(text)
         nk_textedit_paste(edit, text, nk_strlen(text));
-        (void)usr;
+
+    NK_UNUSED(usr);
 #endif
 }
 
@@ -196,7 +197,7 @@ nk_sfml_clipboard_copy(nk_handle usr, const char* text, int len)
 {
 #if 0
     char* str = 0;
-    (void)usr;
+    NK_UNUSED(usr);
     if(!len) return;
     str = (char*)malloc((size_t)len+1);
     if(!str) return;

@@ -62,13 +62,6 @@ struct rawfb_context {
     struct nk_font_atlas atlas;
 };
 
-#ifndef MIN
-#define MIN(a,b) ((a) < (b) ? (a) : (b))
-#endif
-#ifndef MAX
-#define MAX(a,b) ((a) < (b) ? (b) : (a))
-#endif
-
 static unsigned int
 nk_color_from_byte(const nk_byte *c)
 {
@@ -190,10 +183,10 @@ nk_rawfb_scissor(struct rawfb_context *rawfb,
                  const float w,
                  const float h)
 {
-    rawfb->scissors.x = MIN(MAX(x, 0), rawfb->fb.w);
-    rawfb->scissors.y = MIN(MAX(y, 0), rawfb->fb.h);
-    rawfb->scissors.w = MIN(MAX(w + x, 0), rawfb->fb.w);
-    rawfb->scissors.h = MIN(MAX(h + y, 0), rawfb->fb.h);
+    rawfb->scissors.x = NK_CLAMP(0, x, rawfb->fb.w);
+    rawfb->scissors.y = NK_CLAMP(0, y, rawfb->fb.h);
+    rawfb->scissors.w = NK_CLAMP(0, w + x, rawfb->fb.w);
+    rawfb->scissors.h = NK_CLAMP(0, h + y, rawfb->fb.h);
 }
 
 static void
@@ -218,10 +211,10 @@ nk_rawfb_stroke_line(const struct rawfb_context *rawfb,
             x1 = x0;
             x0 = tmp;
         }
-        x1 = MIN(rawfb->scissors.w - 1, x1);
-        x0 = MIN(rawfb->scissors.w - 1, x0);
-        x1 = MAX(rawfb->scissors.x, x1);
-        x0 = MAX(rawfb->scissors.x, x0);
+        x1 = NK_MIN(rawfb->scissors.w - 1, x1);
+        x0 = NK_MIN(rawfb->scissors.w - 1, x0);
+        x1 = NK_MAX(rawfb->scissors.x, x1);
+        x0 = NK_MAX(rawfb->scissors.x, x0);
         nk_rawfb_line_horizontal(rawfb, x0, y0, x1, col);
         return;
     }
@@ -670,7 +663,7 @@ nk_rawfb_stroke_curve(const struct rawfb_context *rawfb,
     float t_step;
     struct nk_vec2i last = p1;
 
-    segments = MAX(num_segments, 1);
+    segments = NK_MAX(num_segments, 1);
     t_step = 1.0f/(float)segments;
     for (i_step = 1; i_step <= segments; ++i_step) {
         float t = t_step * (float)i_step;

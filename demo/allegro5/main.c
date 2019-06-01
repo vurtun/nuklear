@@ -25,11 +25,6 @@
 #include "nuklear_allegro5.h"
 
 
-#define UNUSED(a) (void)a
-#define MIN(a,b) ((a) < (b) ? (a) : (b))
-#define MAX(a,b) ((a) < (b) ? (b) : (a))
-#define LEN(a) (sizeof(a)/sizeof(a)[0])
-
 /* ===============================================================
  *
  *                          EXAMPLE

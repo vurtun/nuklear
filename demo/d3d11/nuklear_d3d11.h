@@ -360,7 +360,7 @@ nk_d3d11_handle_event(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
 static void
 nk_d3d11_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
 {
-    (void)usr;
+    NK_UNUSED(usr);
     if (IsClipboardFormatAvailable(CF_UNICODETEXT) && OpenClipboard(NULL))
     {
         HGLOBAL mem = GetClipboardData(CF_UNICODETEXT); 
@@ -394,7 +394,7 @@ nk_d3d11_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
 static void
 nk_d3d11_clipboard_copy(nk_handle usr, const char *text, int len)
 {
-    (void)usr;
+    NK_UNUSED(usr);
     if (OpenClipboard(NULL))
     {
         int wsize = MultiByteToWideChar(CP_UTF8, 0, text, len, NULL, 0);
