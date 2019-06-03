@@ -1,4 +1,4 @@
-/* nuklear - v1.00 - public domain */
+/* nuklear - v4.00 - public domain */
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -21,8 +21,10 @@
 #define NK_INCLUDE_STANDARD_IO
 //#define NK_INCLUDE_FONT_BAKING
 #define NK_INCLUDE_DEFAULT_FONT
-//#include "nuklear_sdl.h"
-#include "nuklear_sdl.c"
+#define NK_IMPLEMENTATION
+#define NK_SDL_IMPLEMENTATION
+#include "../../nuklear.h"
+#include "nuklear_sdl.h"
 
 #define WINDOW_WIDTH 1200
 #define WINDOW_HEIGHT 800
@@ -144,7 +146,7 @@ int main(void)
 			nk_layout_row_dynamic(ctx, 20, 1);
 			nk_label(ctx, "background:", NK_TEXT_LEFT);
 			nk_layout_row_dynamic(ctx, 25, 1);
-            if (nk_combo_begin_color(ctx, nk_rgb_cf(bg), nk_vec2(nk_widget_width(ctx),400))) {
+			if (nk_combo_begin_color(ctx, nk_rgb_cf(bg), nk_vec2(nk_widget_width(ctx),400))) {
 				nk_layout_row_dynamic(ctx, 120, 1);
 				bg = nk_color_picker(ctx, bg, NK_RGBA);
 				nk_layout_row_dynamic(ctx, 25, 1);
@@ -171,7 +173,6 @@ int main(void)
 
 		SDL_Delay(50);
 		/* Draw */
-		/* nk_color_fv(bg, background); */
 		nk_sdl_render(nk_rgb_cf(bg));
 	}
 
