@@ -870,7 +870,6 @@ nk_rawfb_stretch_image(const struct rawfb_image *dst,
                     continue;
             }
             col = nk_image_getpixel(src, (int)xoff, (int) yoff);
-	    /* This assumes the font atlas uses transparent black for non-glyph pixels */
 	    if (col.r || col.g || col.b)
 	    {
 		col.r = fg->r;
