@@ -73,12 +73,12 @@ static unsigned int
 nk_rawfb_color2int(const struct nk_color *c)
 {
     unsigned int res = 0;
-#if defined(RAWFB_RGBX_8888)
+#if defined(RAWFB_RGBX_8888) && !defined(RAWFB_XRGB_8888)
     res |= c->r << 24;
     res |= c->g << 16;
     res |= c->b << 8;
     res |= c->a;
-#elif defined(RAWFB_XRGB_8888)
+#elif defined(RAWFB_XRGB_8888) && !defined(RAWFB_RGBX_8888)
     res |= c->a << 24;
     res |= c->r << 16;
     res |= c->g << 8;
@@ -93,12 +93,12 @@ static struct nk_color
 nk_rawfb_int2color(const unsigned int i)
 {
     struct nk_color col;
-#if defined(RAWFB_RGBX_8888)
+#if defined(RAWFB_RGBX_8888) && !defined(RAWFB_XRGB_8888)
     col.r = (i >> 24) & 0xff;
     col.g = (i >> 16) & 0xff;
     col.b = (i >> 8) & 0xff;
     col.a = (i >> 0) & 0xff;
-#elif defined(RAWFB_XRGB_8888)
+#elif defined(RAWFB_XRGB_8888) && !defined(RAWFB_RGBX_8888)
     col.a = (i >> 24) & 0xff;
     col.r = (i >> 16) & 0xff;
     col.g = (i >> 8) & 0xff;
