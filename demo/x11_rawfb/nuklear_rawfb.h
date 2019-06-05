@@ -70,19 +70,19 @@ struct rawfb_context {
 #endif
 
 static unsigned int
-nk_rawfb_color2int(const struct nk_color *c)
+nk_rawfb_color2int(const struct nk_color c)
 {
     unsigned int res = 0;
 #if defined(RAWFB_RGBX_8888) && !defined(RAWFB_XRGB_8888)
-    res |= c->r << 24;
-    res |= c->g << 16;
-    res |= c->b << 8;
-    res |= c->a;
+    res |= c.r << 24;
+    res |= c.g << 16;
+    res |= c.b << 8;
+    res |= c.a;
 #elif defined(RAWFB_XRGB_8888) && !defined(RAWFB_RGBX_8888)
-    res |= c->a << 24;
-    res |= c->r << 16;
-    res |= c->g << 8;
-    res |= c->b << 0;
+    res |= c.a << 24;
+    res |= c.r << 16;
+    res |= c.g << 8;
+    res |= c.b << 0;
 #else
 #error Define one of RAWFB_RGBX_8888 , RAWFB_XRGB_8888
 #endif
@@ -113,7 +113,7 @@ static void
 nk_rawfb_ctx_setpixel(const struct rawfb_context *rawfb,
     const short x0, const short y0, const struct nk_color col)
 {
-    unsigned int c = nk_rawfb_color2int(&col);
+    unsigned int c = nk_rawfb_color2int(col);
     unsigned char *pixels = rawfb->fb.pixels;
     unsigned int *ptr;
 
@@ -144,7 +144,7 @@ nk_rawfb_line_horizontal(const struct rawfb_context *rawfb,
 
     n = x1 - x0;
     for (i = 0; i < sizeof(c) / sizeof(c[0]); i++)
-        c[i] = nk_rawfb_color2int(&col);
+        c[i] = nk_rawfb_color2int(col);
 
     while (n > 16) {
         memcpy((void *)ptr, c, sizeof(c));
@@ -157,7 +157,7 @@ static void
 nk_rawfb_img_setpixel(const struct rawfb_image *img,
     const int x0, const int y0, const struct nk_color col)
 {
-    unsigned int c = nk_rawfb_color2int(&col);
+    unsigned int c = nk_rawfb_color2int(col);
     unsigned char *ptr;
     unsigned int *pixel;
     NK_ASSERT(img);
