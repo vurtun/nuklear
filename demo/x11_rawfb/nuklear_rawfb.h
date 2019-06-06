@@ -70,26 +70,50 @@ struct rawfb_context {
 #endif
 
 static unsigned int
-nk_color_from_byte(const nk_byte *c)
+nk_rawfb_color2int(const struct nk_color c)
 {
     unsigned int res = 0;
-#if defined(RAWFB_RGBX_8888)
-    res |= (unsigned int)c[0] << 16;
-    res |= (unsigned int)c[1] << 8;
-    res |= (unsigned int)c[2] << 0;
-#elif defined(RAWFB_XRGB_8888)
-    res = ((unsigned int *)c)[0];
+#if defined(RAWFB_RGBX_8888) && !defined(RAWFB_XRGB_8888)
+    res |= c.r << 24;
+    res |= c.g << 16;
+    res |= c.b << 8;
+    res |= c.a;
+#elif defined(RAWFB_XRGB_8888) && !defined(RAWFB_RGBX_8888)
+    res |= c.a << 24;
+    res |= c.r << 16;
+    res |= c.g << 8;
+    res |= c.b << 0;
 #else
 #error Define one of RAWFB_RGBX_8888 , RAWFB_XRGB_8888
 #endif
     return (res);
 }
 
+static struct nk_color
+nk_rawfb_int2color(const unsigned int i)
+{
+    struct nk_color col;
+#if defined(RAWFB_RGBX_8888) && !defined(RAWFB_XRGB_8888)
+    col.r = (i >> 24) & 0xff;
+    col.g = (i >> 16) & 0xff;
+    col.b = (i >> 8) & 0xff;
+    col.a = (i >> 0) & 0xff;
+#elif defined(RAWFB_XRGB_8888) && !defined(RAWFB_RGBX_8888)
+    col.a = (i >> 24) & 0xff;
+    col.r = (i >> 16) & 0xff;
+    col.g = (i >> 8) & 0xff;
+    col.b = (i >> 0) & 0xff;
+#else
+#error Define one of RAWFB_RGBX_8888 , RAWFB_XRGB_8888
+#endif
+    return col;
+}
+
 static void
-nk_rawfb_setpixel(const struct rawfb_context *rawfb,
+nk_rawfb_ctx_setpixel(const struct rawfb_context *rawfb,
     const short x0, const short y0, const struct nk_color col)
 {
-    unsigned int c = nk_color_from_byte(&col.r);
+    unsigned int c = nk_rawfb_color2int(col);
     unsigned char *pixels = rawfb->fb.pixels;
     unsigned int *ptr;
 
@@ -120,7 +144,7 @@ nk_rawfb_line_horizontal(const struct rawfb_context *rawfb,
 
     n = x1 - x0;
     for (i = 0; i < sizeof(c) / sizeof(c[0]); i++)
-        c[i] = nk_color_from_byte(&col.r);
+        c[i] = nk_rawfb_color2int(col);
 
     while (n > 16) {
         memcpy((void *)ptr, c, sizeof(c));
@@ -130,44 +154,49 @@ nk_rawfb_line_horizontal(const struct rawfb_context *rawfb,
 }
 
 static void
-nk_rawfb_imagesetpixel(const struct rawfb_image *img,
+nk_rawfb_img_setpixel(const struct rawfb_image *img,
     const int x0, const int y0, const struct nk_color col)
 {
+    unsigned int c = nk_rawfb_color2int(col);
     unsigned char *ptr;
+    unsigned int *pixel;
     NK_ASSERT(img);
-    if (y0 < img->h && y0 > 0 && x0 > 0 && x0 < img->w) {
+    if (y0 < img->h && y0 >= 0 && x0 >= 0 && x0 < img->w) {
         ptr = img->pixels;
+	ptr += img->pitch * y0;
+	pixel = (unsigned int *)ptr;
+
         if (img->format == NK_FONT_ATLAS_ALPHA8) {
-            ptr += img->pitch * y0;
             ptr[x0] = col.a;
         } else {
-            ptr += img->pitch * y0;
-            ((struct nk_color *)ptr)[x0] = col;
+	    pixel[x0] = c;
         }
     }
 }
 
 static struct nk_color
-nk_image_getpixel(const struct rawfb_image *img, const int x0, const int y0)
+nk_rawfb_img_getpixel(const struct rawfb_image *img, const int x0, const int y0)
 {
     struct nk_color col = {0, 0, 0, 0};
     unsigned char *ptr;
+    unsigned int *pixel;
     NK_ASSERT(img);
-    if (y0 < img->h && y0 > 0 && x0 > 0 && x0 < img->w) {
+    if (y0 < img->h && y0 >= 0 && x0 >= 0 && x0 < img->w) {
         ptr = img->pixels;
+	ptr += img->pitch * y0;
+
         if (img->format == NK_FONT_ATLAS_ALPHA8) {
-            ptr += img->pitch * y0;
             col.a = ptr[x0];
             col.b = col.g = col.r = 0xff;
         } else {
-            ptr += img->pitch * y0;
-            col = ((struct nk_color *)ptr)[x0];
+	    pixel = ptr;
+	    pixel += x0;
+	    col = nk_rawfb_int2color(*pixel);
         }
     } return col;
 }
-
 static void
-nk_image_blendpixel(const struct rawfb_image *img,
+nk_rawfb_img_blendpixel(const struct rawfb_image *img,
     const int x0, const int y0, struct nk_color col)
 {
     struct nk_color col2;
@@ -176,11 +205,11 @@ nk_image_blendpixel(const struct rawfb_image *img,
         return;
 
     inv_a = 0xff - col.a;
-    col2 = nk_image_getpixel(img, x0, y0);
+    col2 = nk_rawfb_img_getpixel(img, x0, y0);
     col.r = (col.r * col.a + col2.r * inv_a) >> 8;
     col.g = (col.g * col.a + col2.g * inv_a) >> 8;
     col.b = (col.b * col.a + col2.b * inv_a) >> 8;
-    nk_rawfb_imagesetpixel(img, x0, y0, col);
+    nk_rawfb_img_setpixel(img, x0, y0, col);
 }
 
 static void
@@ -238,7 +267,7 @@ nk_rawfb_stroke_line(const struct rawfb_context *rawfb,
     dy <<= 1;
     dx <<= 1;
 
-    nk_rawfb_setpixel(rawfb, x0, y0, col);
+    nk_rawfb_ctx_setpixel(rawfb, x0, y0, col);
     if (dx > dy) {
         int fraction = dy - (dx >> 1);
         while (x0 != x1) {
@@ -248,7 +277,7 @@ nk_rawfb_stroke_line(const struct rawfb_context *rawfb,
             }
             x0 += stepx;
             fraction += dy;
-            nk_rawfb_setpixel(rawfb, x0, y0, col);
+            nk_rawfb_ctx_setpixel(rawfb, x0, y0, col);
         }
     } else {
         int fraction = dx - (dy >> 1);
@@ -259,7 +288,7 @@ nk_rawfb_stroke_line(const struct rawfb_context *rawfb,
             }
             y0 += stepy;
             fraction += dx;
-            nk_rawfb_setpixel(rawfb, x0, y0, col);
+            nk_rawfb_ctx_setpixel(rawfb, x0, y0, col);
         }
     }
 }
@@ -320,7 +349,7 @@ nk_rawfb_fill_polygon(const struct rawfb_context *rawfb,
                 if (nodeX[i+0] < left) nodeX[i+0] = left ;
                 if (nodeX[i+1] > right) nodeX[i+1] = right;
                 for (pixelX = nodeX[i]; pixelX < nodeX[i + 1]; pixelX++)
-                    nk_rawfb_setpixel(rawfb, pixelX, pixelY, col);
+                    nk_rawfb_ctx_setpixel(rawfb, pixelX, pixelY, col);
             }
         }
     }
@@ -349,13 +378,13 @@ nk_rawfb_stroke_arc(const struct rawfb_context *rawfb,
     /* First half */
     for (x = 0, y = h, sigma = 2*b2+a2*(1-2*h); b2*x <= a2*y; x++) {
         if (s == 180)
-            nk_rawfb_setpixel(rawfb, x0 + x, y0 + y, col);
+            nk_rawfb_ctx_setpixel(rawfb, x0 + x, y0 + y, col);
         else if (s == 270)
-            nk_rawfb_setpixel(rawfb, x0 - x, y0 + y, col);
+            nk_rawfb_ctx_setpixel(rawfb, x0 - x, y0 + y, col);
         else if (s == 0)
-            nk_rawfb_setpixel(rawfb, x0 + x, y0 - y, col);
+            nk_rawfb_ctx_setpixel(rawfb, x0 + x, y0 - y, col);
         else if (s == 90)
-            nk_rawfb_setpixel(rawfb, x0 - x, y0 - y, col);
+            nk_rawfb_ctx_setpixel(rawfb, x0 - x, y0 - y, col);
         if (sigma >= 0) {
             sigma += fa2 * (1 - y);
             y--;
@@ -365,13 +394,13 @@ nk_rawfb_stroke_arc(const struct rawfb_context *rawfb,
     /* Second half */
     for (x = w, y = 0, sigma = 2*a2+b2*(1-2*w); a2*y <= b2*x; y++) {
         if (s == 180)
-            nk_rawfb_setpixel(rawfb, x0 + x, y0 + y, col);
+            nk_rawfb_ctx_setpixel(rawfb, x0 + x, y0 + y, col);
         else if (s == 270)
-            nk_rawfb_setpixel(rawfb, x0 - x, y0 + y, col);
+            nk_rawfb_ctx_setpixel(rawfb, x0 - x, y0 + y, col);
         else if (s == 0)
-            nk_rawfb_setpixel(rawfb, x0 + x, y0 - y, col);
+            nk_rawfb_ctx_setpixel(rawfb, x0 + x, y0 - y, col);
         else if (s == 90)
-            nk_rawfb_setpixel(rawfb, x0 - x, y0 - y, col);
+            nk_rawfb_ctx_setpixel(rawfb, x0 - x, y0 - y, col);
         if (sigma >= 0) {
             sigma += fb2 * (1 - x);
             x--;
@@ -637,10 +666,10 @@ nk_rawfb_stroke_circle(const struct rawfb_context *rawfb,
 
     /* First half */
     for (x = 0, y = h, sigma = 2*b2+a2*(1-2*h); b2*x <= a2*y; x++) {
-        nk_rawfb_setpixel(rawfb, x0 + x, y0 + y, col);
-        nk_rawfb_setpixel(rawfb, x0 - x, y0 + y, col);
-        nk_rawfb_setpixel(rawfb, x0 + x, y0 - y, col);
-        nk_rawfb_setpixel(rawfb, x0 - x, y0 - y, col);
+        nk_rawfb_ctx_setpixel(rawfb, x0 + x, y0 + y, col);
+        nk_rawfb_ctx_setpixel(rawfb, x0 - x, y0 + y, col);
+        nk_rawfb_ctx_setpixel(rawfb, x0 + x, y0 - y, col);
+        nk_rawfb_ctx_setpixel(rawfb, x0 - x, y0 - y, col);
         if (sigma >= 0) {
             sigma += fa2 * (1 - y);
             y--;
@@ -648,10 +677,10 @@ nk_rawfb_stroke_circle(const struct rawfb_context *rawfb,
     }
     /* Second half */
     for (x = w, y = 0, sigma = 2*a2+b2*(1-2*w); a2*y <= b2*x; y++) {
-        nk_rawfb_setpixel(rawfb, x0 + x, y0 + y, col);
-        nk_rawfb_setpixel(rawfb, x0 - x, y0 + y, col);
-        nk_rawfb_setpixel(rawfb, x0 + x, y0 - y, col);
-        nk_rawfb_setpixel(rawfb, x0 - x, y0 - y, col);
+        nk_rawfb_ctx_setpixel(rawfb, x0 + x, y0 + y, col);
+        nk_rawfb_ctx_setpixel(rawfb, x0 - x, y0 + y, col);
+        nk_rawfb_ctx_setpixel(rawfb, x0 + x, y0 - y, col);
+        nk_rawfb_ctx_setpixel(rawfb, x0 - x, y0 - y, col);
         if (sigma >= 0) {
             sigma += fb2 * (1 - x);
             x--;
@@ -746,7 +775,8 @@ nk_rawfb_init(void *fb, void *tex_mem, const unsigned int w, const unsigned int 
 static void
 nk_rawfb_stretch_image(const struct rawfb_image *dst,
     const struct rawfb_image *src, const struct nk_rect *dst_rect,
-    const struct nk_rect *src_rect, const struct nk_rect *dst_scissors)
+    const struct nk_rect *src_rect, const struct nk_rect *dst_scissors,
+    const struct nk_color *fg)
 {
     short i, j;
     struct nk_color col;
@@ -764,8 +794,14 @@ nk_rawfb_stretch_image(const struct rawfb_image *dst,
                 if (j + (int)(dst_rect->y + 0.5f) < dst_scissors->y || j + (int)(dst_rect->y + 0.5f) >= dst_scissors->h)
                     continue;
             }
-            col = nk_image_getpixel(src, (int)xoff, (int) yoff);
-            nk_image_blendpixel(dst, i + (int)(dst_rect->x + 0.5f), j + (int)(dst_rect->y + 0.5f), col);
+            col = nk_rawfb_img_getpixel(src, (int)xoff, (int) yoff);
+	    if (col.r || col.g || col.b)
+	    {
+		col.r = fg->r;
+		col.g = fg->g;
+		col.b = fg->b;
+	    }
+            nk_rawfb_img_blendpixel(dst, i + (int)(dst_rect->x + 0.5f), j + (int)(dst_rect->y + 0.5f), col);
             xoff += xinc;
         }
         xoff = src_rect->x;
@@ -843,9 +879,8 @@ nk_rawfb_draw_text(const struct rawfb_context *rawfb,
         dst_rect.w = ceilf(g.width);
         dst_rect.h = ceilf(g.height);
 
-        /* TODO: account fg */
         /* Use software rescaling to blit glyph from font_text to framebuffer */
-        nk_rawfb_stretch_image(&rawfb->fb, &rawfb->font_tex, &dst_rect, &src_rect, &rawfb->scissors);
+        nk_rawfb_stretch_image(&rawfb->fb, &rawfb->font_tex, &dst_rect, &src_rect, &rawfb->scissors, &fg);
 
         /* offset next glyph */
         text_len += glyph_len;
@@ -872,7 +907,7 @@ nk_rawfb_drawimage(const struct rawfb_context *rawfb,
     dst_rect.y = y;
     dst_rect.w = w;
     dst_rect.h = h;
-    nk_rawfb_stretch_image(&rawfb->fb, &rawfb->font_tex, &dst_rect, &src_rect, &rawfb->scissors);
+    nk_rawfb_stretch_image(&rawfb->fb, &rawfb->font_tex, &dst_rect, &src_rect, &rawfb->scissors, col);
 }
 
 NK_API void

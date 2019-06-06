@@ -35,7 +35,7 @@
 #include <unistd.h>
 #include <time.h>
 
-#define RAWFB_RGBX_8888
+#define RAWFB_XRGB_8888
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_STANDARD_VARARGS
