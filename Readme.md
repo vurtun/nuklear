@@ -97,7 +97,7 @@ I cannot atest for their quality since I am not necessarily proficient in either
 languages. Furthermore there are no guarantee that all bindings will always be kept up to date:
 
 - [Java](https://github.com/glegris/nuklear4j) by Guillaume Legris
-- [D](https://github.com/Timu5/bindbc-nuklear) by Stephan Dilly
+- [D](https://github.com/Timu5/bindbc-nuklear) by Mateusz Muszyński
 - [Golang](https://github.com/golang-ui/nuklear) by golang-ui@github.com
 - [Rust](https://github.com/snuk182/nuklear-rust) by snuk182@github.com
 - [Chicken](https://github.com/wasamasa/nuklear) by wasamasa@github.com
