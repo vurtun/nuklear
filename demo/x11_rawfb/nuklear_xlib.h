@@ -35,7 +35,7 @@
 
 #include <X11/Xlib.h>
 
-NK_API int  nk_xlib_init(Display *dpy, Visual *vis, int screen, Window root, unsigned int w, unsigned int h, void **fb);
+NK_API int  nk_xlib_init(Display *dpy, Visual *vis, int screen, Window root, unsigned int w, unsigned int h, void **fb, rawfb_pl *pl);
 NK_API int  nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt, struct rawfb_context *rawfb);
 NK_API void nk_xlib_render(Drawable screen);
 NK_API void nk_xlib_shutdown(void);
@@ -71,7 +71,7 @@ static struct  {
 
 NK_API int
 nk_xlib_init(Display *dpy, Visual *vis, int screen, Window root,
-    unsigned int w, unsigned int h, void **fb)
+    unsigned int w, unsigned int h, void **fb, rawfb_pl *pl)
 {
     unsigned int depth = XDefaultDepth(dpy, screen);
     xlib.dpy = dpy;
@@ -134,6 +134,24 @@ nk_xlib_init(Display *dpy, Visual *vis, int screen, Window root,
     }
     xlib.gc = XDefaultGC(dpy, screen);
     *fb = xlib.ximg->data;
+
+    if (xlib.ximg->red_mask == 0xff0000 &&
+	xlib.ximg->green_mask == 0xff00 &&
+	xlib.ximg->blue_mask == 0xff &&
+	xlib.ximg->bits_per_pixel == 32) {
+	*pl = PIXEL_LAYOUT_XRGB_8888;
+    }
+    else if (xlib.ximg->red_mask == 0xff000000 &&
+	     xlib.ximg->green_mask == 0xff0000 &&
+	     xlib.ximg->blue_mask == 0xff00 &&
+	     xlib.ximg->bits_per_pixel == 32) {
+	*pl = PIXEL_LAYOUT_RGBX_8888;
+    }
+    else {
+	printf("Unrecognized pixel layout.\n");
+	return 0;
+    }
+
     return 1;
 }
 
@@ -238,13 +256,14 @@ nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt, struct r
         unsigned int width, height;
         XWindowAttributes attr;
         XGetWindowAttributes(dpy, win, &attr);
+	rawfb_pl pl;
 
         width = (unsigned int)attr.width;
         height = (unsigned int)attr.height;
 
         nk_xlib_shutdown();
-        nk_xlib_init(dpy, XDefaultVisual(dpy, screen), screen, win, width, height, &fb);
-        nk_rawfb_resize_fb(rawfb, fb, width, height, width * 4);
+        nk_xlib_init(dpy, XDefaultVisual(dpy, screen), screen, win, width, height, &fb, &pl);
+        nk_rawfb_resize_fb(rawfb, fb, width, height, width * 4, pl);
     } else if (evt->type == KeymapNotify) {
         XRefreshKeyboardMapping(&evt->xmapping);
         return 1;

@@ -35,7 +35,6 @@
 #include <unistd.h>
 #include <time.h>
 
-#define RAWFB_XRGB_8888
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_STANDARD_VARARGS
@@ -152,6 +151,7 @@ main(void)
     XWindow xw;
     struct rawfb_context *rawfb;
     void *fb = NULL;
+    rawfb_pl pl;
     unsigned char tex_scratch[512 * 512];
 
     /* X11 */
@@ -180,12 +180,12 @@ main(void)
     xw.height = (unsigned int)xw.attr.height;
 
     /* Framebuffer emulator */
-    status = nk_xlib_init(xw.dpy, xw.vis, xw.screen, xw.win, xw.width, xw.height, &fb);
+    status = nk_xlib_init(xw.dpy, xw.vis, xw.screen, xw.win, xw.width, xw.height, &fb, &pl);
     if (!status || !fb)
         return 0;
 
     /* GUI */
-    rawfb = nk_rawfb_init(fb, tex_scratch, xw.width, xw.height, xw.width * 4);
+    rawfb = nk_rawfb_init(fb, tex_scratch, xw.width, xw.height, xw.width * 4, pl);
     if (!rawfb) running = 0;
 
     #ifdef INCLUDE_STYLE

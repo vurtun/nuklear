@@ -33,11 +33,18 @@
 
 struct rawfb_context;
 
+typedef enum rawfb_pixel_layout {
+    PIXEL_LAYOUT_XRGB_8888,
+    PIXEL_LAYOUT_RGBX_8888,
+}
+rawfb_pl;
+
+
 /* All functions are thread-safe */
-NK_API struct rawfb_context *nk_rawfb_init(void *fb, void *tex_mem, const unsigned int w, const unsigned int h, const unsigned int pitch);
+NK_API struct rawfb_context *nk_rawfb_init(void *fb, void *tex_mem, const unsigned int w, const unsigned int h, const unsigned int pitch, const rawfb_pl pl);
 NK_API void                  nk_rawfb_render(const struct rawfb_context *rawfb, const struct nk_color clear, const unsigned char enable_clear);
 NK_API void                  nk_rawfb_shutdown(struct rawfb_context *rawfb);
-NK_API void                  nk_rawfb_resize_fb(struct rawfb_context *rawfb, void *fb, const unsigned int w, const unsigned int h, const unsigned int pitch);
+NK_API void                  nk_rawfb_resize_fb(struct rawfb_context *rawfb, void *fb, const unsigned int w, const unsigned int h, const unsigned int pitch, const rawfb_pl pl);
 
 #endif
 /*
@@ -48,10 +55,10 @@ NK_API void                  nk_rawfb_resize_fb(struct rawfb_context *rawfb, voi
  * ===============================================================
  */
 #ifdef NK_RAWFB_IMPLEMENTATION
-
 struct rawfb_image {
     void *pixels;
     int w, h, pitch;
+    rawfb_pl pl;
     enum nk_font_atlas_format format;
 };
 struct rawfb_context {
@@ -70,42 +77,54 @@ struct rawfb_context {
 #endif
 
 static unsigned int
-nk_rawfb_color2int(const struct nk_color c)
+nk_rawfb_color2int(const struct nk_color c, rawfb_pl pl)
 {
     unsigned int res = 0;
-#if defined(RAWFB_RGBX_8888) && !defined(RAWFB_XRGB_8888)
-    res |= c.r << 24;
-    res |= c.g << 16;
-    res |= c.b << 8;
-    res |= c.a;
-#elif defined(RAWFB_XRGB_8888) && !defined(RAWFB_RGBX_8888)
-    res |= c.a << 24;
-    res |= c.r << 16;
-    res |= c.g << 8;
-    res |= c.b << 0;
-#else
-#error Define one of RAWFB_RGBX_8888 , RAWFB_XRGB_8888
-#endif
+
+    switch (pl) {
+    case PIXEL_LAYOUT_RGBX_8888:
+	res |= c.r << 24;
+	res |= c.g << 16;
+	res |= c.b << 8;
+	res |= c.a;
+	break;
+    case PIXEL_LAYOUT_XRGB_8888:
+	res |= c.a << 24;
+	res |= c.r << 16;
+	res |= c.g << 8;
+	res |= c.b << 0;
+	break;
+
+    default:
+	perror("Unsupported pixel layout.\n");
+	break;
+    }
     return (res);
 }
 
 static struct nk_color
-nk_rawfb_int2color(const unsigned int i)
+nk_rawfb_int2color(const unsigned int i, rawfb_pl pl)
 {
-    struct nk_color col;
-#if defined(RAWFB_RGBX_8888) && !defined(RAWFB_XRGB_8888)
-    col.r = (i >> 24) & 0xff;
-    col.g = (i >> 16) & 0xff;
-    col.b = (i >> 8) & 0xff;
-    col.a = (i >> 0) & 0xff;
-#elif defined(RAWFB_XRGB_8888) && !defined(RAWFB_RGBX_8888)
-    col.a = (i >> 24) & 0xff;
-    col.r = (i >> 16) & 0xff;
-    col.g = (i >> 8) & 0xff;
-    col.b = (i >> 0) & 0xff;
-#else
-#error Define one of RAWFB_RGBX_8888 , RAWFB_XRGB_8888
-#endif
+    struct nk_color col = {0,0,0,0};
+
+    switch (pl) {
+    case PIXEL_LAYOUT_RGBX_8888:
+	col.r = (i >> 24) & 0xff;
+	col.g = (i >> 16) & 0xff;
+	col.b = (i >> 8) & 0xff;
+	col.a = (i >> 0) & 0xff;
+	break;
+    case PIXEL_LAYOUT_XRGB_8888:
+	col.a = (i >> 24) & 0xff;
+	col.r = (i >> 16) & 0xff;
+	col.g = (i >> 8) & 0xff;
+	col.b = (i >> 0) & 0xff;
+	break;
+
+    default:
+	perror("Unsupported pixel layout.\n");
+	break;
+    }
     return col;
 }
 
@@ -113,7 +132,7 @@ static void
 nk_rawfb_ctx_setpixel(const struct rawfb_context *rawfb,
     const short x0, const short y0, const struct nk_color col)
 {
-    unsigned int c = nk_rawfb_color2int(col);
+    unsigned int c = nk_rawfb_color2int(col, rawfb->fb.pl);
     unsigned char *pixels = rawfb->fb.pixels;
     unsigned int *ptr;
 
@@ -144,7 +163,7 @@ nk_rawfb_line_horizontal(const struct rawfb_context *rawfb,
 
     n = x1 - x0;
     for (i = 0; i < sizeof(c) / sizeof(c[0]); i++)
-        c[i] = nk_rawfb_color2int(col);
+        c[i] = nk_rawfb_color2int(col, rawfb->fb.pl);
 
     while (n > 16) {
         memcpy((void *)ptr, c, sizeof(c));
@@ -157,7 +176,7 @@ static void
 nk_rawfb_img_setpixel(const struct rawfb_image *img,
     const int x0, const int y0, const struct nk_color col)
 {
-    unsigned int c = nk_rawfb_color2int(col);
+    unsigned int c = nk_rawfb_color2int(col, img->pl);
     unsigned char *ptr;
     unsigned int *pixel;
     NK_ASSERT(img);
@@ -191,7 +210,7 @@ nk_rawfb_img_getpixel(const struct rawfb_image *img, const int x0, const int y0)
         } else {
 	    pixel = ptr;
 	    pixel += x0;
-	    col = nk_rawfb_int2color(*pixel);
+	    col = nk_rawfb_int2color(*pixel, img->pl);
         }
     } return col;
 }
@@ -799,7 +818,7 @@ nk_rawfb_clear(const struct rawfb_context *rawfb, const struct nk_color col)
 
 NK_API struct rawfb_context*
 nk_rawfb_init(void *fb, void *tex_mem, const unsigned int w, const unsigned int h,
-    const unsigned int pitch)
+    const unsigned int pitch, const rawfb_pl pl)
 {
     const void *tex;
     struct rawfb_context *rawfb;
@@ -815,19 +834,30 @@ nk_rawfb_init(void *fb, void *tex_mem, const unsigned int w, const unsigned int 
     rawfb->fb.pixels = fb;
     rawfb->fb.w= w;
     rawfb->fb.h = h;
+    rawfb->fb.pl = pl;
 
-#if defined(RAWFB_XRGB_8888) || defined(RAWFB_RGBX_8888)
+    if (pl == PIXEL_LAYOUT_RGBX_8888 || pl == PIXEL_LAYOUT_XRGB_8888) {
     rawfb->fb.format = NK_FONT_ATLAS_RGBA32;
     rawfb->fb.pitch = pitch;
-#else
-    #error Fixme
-#endif
+    }
+    else {
+	perror("Unsupported pixel layout.\n");
+	free(rawfb);
+	return NULL;
+    }
 
-    nk_init_default(&rawfb->ctx, 0);
+    if (0 == nk_init_default(&rawfb->ctx, 0)) {
+	free(rawfb);
+	return NULL;
+    }
+
     nk_font_atlas_init_default(&rawfb->atlas);
     nk_font_atlas_begin(&rawfb->atlas);
     tex = nk_font_atlas_bake(&rawfb->atlas, &rawfb->font_tex.w, &rawfb->font_tex.h, rawfb->font_tex.format);
-    if (!tex) return 0;
+    if (!tex) {
+	free(rawfb);
+	return NULL;
+    }
 
     switch(rawfb->font_tex.format) {
     case NK_FONT_ATLAS_ALPHA8:
@@ -988,9 +1018,11 @@ nk_rawfb_drawimage(const struct rawfb_context *rawfb,
 NK_API void
 nk_rawfb_shutdown(struct rawfb_context *rawfb)
 {
-    nk_free(&rawfb->ctx);
-    nk_memset(rawfb, 0, sizeof(struct rawfb_context));
-    free(rawfb);
+    if (rawfb) {
+	nk_free(&rawfb->ctx);
+	nk_memset(rawfb, 0, sizeof(struct rawfb_context));
+	free(rawfb);
+    }
 }
 
 NK_API void
@@ -998,12 +1030,14 @@ nk_rawfb_resize_fb(struct rawfb_context *rawfb,
                    void *fb,
                    const unsigned int w,
                    const unsigned int h,
-                   const unsigned int pitch)
+                   const unsigned int pitch,
+		   const rawfb_pl pl)
 {
     rawfb->fb.w = w;
     rawfb->fb.h = h;
     rawfb->fb.pixels = fb;
     rawfb->fb.pitch = pitch;
+    rawfb->fb.pl = pl;
 }
 
 NK_API void
