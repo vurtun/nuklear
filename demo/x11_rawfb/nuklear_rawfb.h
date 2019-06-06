@@ -561,6 +561,81 @@ nk_rawfb_fill_rect(const struct rawfb_context *rawfb,
     }
 }
 
+NK_API void
+nk_rawfb_draw_rect_multi_color(const struct rawfb_context *rawfb,
+    const short x, const short y, const short w, const short h, struct nk_color tl,
+    struct nk_color tr, struct nk_color br, struct nk_color bl)
+{
+    int i, j;
+    struct nk_color *edge_buf;
+    struct nk_color *edge_t;
+    struct nk_color *edge_b;
+    struct nk_color *edge_l;
+    struct nk_color *edge_r;
+    struct nk_color pixel;
+
+    edge_buf = malloc(((2*w) + (2*h)) * sizeof(struct nk_color));
+    if (edge_buf == NULL)
+	return;
+
+    edge_t = edge_buf;
+    edge_b = edge_buf + w;
+    edge_l = edge_buf + (w*2);
+    edge_r = edge_buf + (w*2) + h;
+
+    /* Top and bottom edge gradients */
+    for (i=0; i<w; i++)
+    {
+	edge_t[i].r = (((((float)tr.r - tl.r)/(w-1))*i) + 0.5) + tl.r;
+	edge_t[i].g = (((((float)tr.g - tl.g)/(w-1))*i) + 0.5) + tl.g;
+	edge_t[i].b = (((((float)tr.b - tl.b)/(w-1))*i) + 0.5) + tl.b;
+	edge_t[i].a = (((((float)tr.a - tl.a)/(w-1))*i) + 0.5) + tl.a;
+
+	edge_b[i].r = (((((float)br.r - bl.r)/(w-1))*i) + 0.5) + bl.r;
+	edge_b[i].g = (((((float)br.g - bl.g)/(w-1))*i) + 0.5) + bl.g;
+	edge_b[i].b = (((((float)br.b - bl.b)/(w-1))*i) + 0.5) + bl.b;
+	edge_b[i].a = (((((float)br.a - bl.a)/(w-1))*i) + 0.5) + bl.a;
+    }
+
+    /* Left and right edge gradients */
+    for (i=0; i<h; i++)
+    {
+	edge_l[i].r = (((((float)bl.r - tl.r)/(h-1))*i) + 0.5) + tl.r;
+	edge_l[i].g = (((((float)bl.g - tl.g)/(h-1))*i) + 0.5) + tl.g;
+	edge_l[i].b = (((((float)bl.b - tl.b)/(h-1))*i) + 0.5) + tl.b;
+	edge_l[i].a = (((((float)bl.a - tl.a)/(h-1))*i) + 0.5) + tl.a;
+
+	edge_r[i].r = (((((float)br.r - tr.r)/(h-1))*i) + 0.5) + tr.r;
+	edge_r[i].g = (((((float)br.g - tr.g)/(h-1))*i) + 0.5) + tr.g;
+	edge_r[i].b = (((((float)br.b - tr.b)/(h-1))*i) + 0.5) + tr.b;
+	edge_r[i].a = (((((float)br.a - tr.a)/(h-1))*i) + 0.5) + tr.a;
+    }
+
+    for (i=0; i<h; i++) {
+	for (j=0; j<w; j++) {
+	    if (i==0) {
+		nk_rawfb_img_blendpixel(&rawfb->fb, x+j, y+i, edge_t[j]);
+	    } else if (i==h-1) {
+		nk_rawfb_img_blendpixel(&rawfb->fb, x+j, y+i, edge_b[j]);
+	    } else {
+		if (j==0) {
+		    nk_rawfb_img_blendpixel(&rawfb->fb, x+j, y+i, edge_l[i]);
+		} else if (j==w-1) {
+		    nk_rawfb_img_blendpixel(&rawfb->fb, x+j, y+i, edge_r[i]);
+		} else {
+		    pixel.r = (((((float)edge_r[i].r - edge_l[i].r)/(w-1))*j) + 0.5) + edge_l[i].r;
+		    pixel.g = (((((float)edge_r[i].g - edge_l[i].g)/(w-1))*j) + 0.5) + edge_l[i].g;
+		    pixel.b = (((((float)edge_r[i].b - edge_l[i].b)/(w-1))*j) + 0.5) + edge_l[i].b;
+		    pixel.a = (((((float)edge_r[i].a - edge_l[i].a)/(w-1))*j) + 0.5) + edge_l[i].a;
+		    nk_rawfb_img_blendpixel(&rawfb->fb, x+j, y+i, pixel);
+		}
+	    }
+	}
+    }
+
+    free(edge_buf);
+}
+
 static void
 nk_rawfb_fill_triangle(const struct rawfb_context *rawfb,
     const short x0, const short y0, const short x1, const short y1,
@@ -1002,7 +1077,10 @@ nk_rawfb_render(const struct rawfb_context *rawfb,
             nk_rawfb_stroke_curve(rawfb, q->begin, q->ctrl[0], q->ctrl[1],
                 q->end, 22, q->line_thickness, q->color);
         } break;
-        case NK_COMMAND_RECT_MULTI_COLOR:
+        case NK_COMMAND_RECT_MULTI_COLOR: {
+	    const struct nk_command_rect_multi_color *q = (const struct nk_command_rect_multi_color *)cmd;
+	    nk_rawfb_draw_rect_multi_color(rawfb, q->x, q->y, q->w, q->h, q->left, q->top, q->right, q->bottom);
+	} break;
         case NK_COMMAND_IMAGE: {
             const struct nk_command_image *q = (const struct nk_command_image *)cmd;
             nk_rawfb_drawimage(rawfb, q->x, q->y, q->w, q->h, &q->img, &q->col);
