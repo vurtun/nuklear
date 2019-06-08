@@ -97,7 +97,7 @@ int main(void)
 		return 1;
 	}
 
-	if (!(ctx = nk_sdl_init(window, renderer))) {
+	if (!(ctx = nk_sdl_init(window, renderer, 1, 1))) {
 		printf("nk_sdl_init() failed!");
 		return 1;
 	}
@@ -173,7 +173,8 @@ int main(void)
 
 		SDL_Delay(50);
 		/* Draw */
-		nk_sdl_render(nk_rgb_cf(bg));
+		background = nk_rgb_cf(bg);
+		nk_sdl_render(&background, SDL_TRUE);
 	}
 
 cleanup:

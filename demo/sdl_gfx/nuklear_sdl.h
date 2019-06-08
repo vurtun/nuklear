@@ -17,9 +17,10 @@
 
 typedef struct nk_sdl_Font nk_sdl_Font;
 
-NK_API struct nk_context *nk_sdl_init(SDL_Window* window, SDL_Renderer* renderer);
+NK_API struct nk_context *nk_sdl_init(SDL_Window* window, SDL_Renderer* renderer, float x_scale, float y_scale);
 NK_API void nk_sdl_handle_event(SDL_Event *evt);
-NK_API void nk_sdl_render(struct nk_color clear);
+NK_API void nk_sdl_scale(float x_scale, float y_scale);
+NK_API void nk_sdl_render(struct nk_color* clear, int do_present);
 NK_API void nk_sdl_shutdown(void);
 
 #endif
@@ -58,6 +59,9 @@ static struct nk_sdl {
 static nk_sdl_Font *sdl_font;
 static struct nk_user_font font;
 static SDL_Rect sdl_clip_rect;
+
+static float scale_x;
+static float scale_y;
 
 static void
 nk_sdl_scissor(SDL_Renderer* renderer, float x, float y, float w, float h)
@@ -253,25 +257,21 @@ static void
 nk_sdl_clear(SDL_Renderer* renderer, struct nk_color col)
 {
 	int w, h;
-	// could set clip rect to entire window here...but let user
-	// decide that
+	// could set clip rect here, but lets let user
+	// decide
 	SDL_GetWindowSize(sdl.window, &w, &h);
 	nk_sdl_fill_rect(renderer, 0, 0, w, h, 0, col);
 }
 
-static void
-nk_sdl_blit(SDL_Renderer* renderer)
-{
-	SDL_RenderPresent(renderer);
-}
 
 NK_API void
-nk_sdl_render(struct nk_color clear)
+nk_sdl_render(struct nk_color* clear, int do_present)
 {
 	const struct nk_command *cmd;
 
 	SDL_Renderer* ren = sdl.renderer;
-	nk_sdl_clear(ren, clear);
+	if (clear)
+		nk_sdl_clear(ren, *clear);
 
 	nk_foreach(cmd, &sdl.ctx)
 	{
@@ -348,9 +348,10 @@ nk_sdl_render(struct nk_color clear)
 		}
 	}
 
-	nk_sdl_blit(ren);
-	nk_clear(&sdl.ctx);
+	if (do_present)
+		SDL_RenderPresent(ren);
 
+	nk_clear(&sdl.ctx);
 }
 
 static void
@@ -381,8 +382,15 @@ nk_sdl_get_text_width(nk_handle handle, float height, const char *text, int len)
 	return len * sdl_font->width;
 }
 
+NK_API void
+nk_sdl_scale(float x_scale, float y_scale)
+{
+	scale_x = x_scale;
+	scale_y = y_scale;
+}
+
 NK_API struct nk_context*
-nk_sdl_init(SDL_Window* window, SDL_Renderer* renderer)
+nk_sdl_init(SDL_Window* window, SDL_Renderer* renderer, float x_scale, float y_scale)
 {
 	sdl_font = (nk_sdl_Font*)calloc(1, sizeof(nk_sdl_Font));
 	sdl_font->width = 8; /* Default in the SDL_gfx library */
@@ -393,6 +401,9 @@ nk_sdl_init(SDL_Window* window, SDL_Renderer* renderer)
 	font.userdata = nk_handle_ptr(sdl_font);
 	font.height = (float)sdl_font->height;
 	font.width = nk_sdl_get_text_width;
+
+	scale_x = x_scale;
+	scale_y = y_scale;
 
 	sdl.window = window;
 	sdl.renderer = renderer;
@@ -452,7 +463,7 @@ nk_sdl_handle_event(SDL_Event *evt)
 	} else if (evt->type == SDL_MOUSEBUTTONDOWN || evt->type == SDL_MOUSEBUTTONUP) {
 		/* mouse button */
 		int down = evt->type == SDL_MOUSEBUTTONDOWN;
-		const int x = evt->button.x, y = evt->button.y;
+		const int x = evt->button.x/scale_x, y = evt->button.y/scale_y;
 		if (evt->button.button == SDL_BUTTON_LEFT)
 			nk_input_button(ctx, NK_BUTTON_LEFT, x, y, down);
 		if (evt->button.button == SDL_BUTTON_MIDDLE)
@@ -462,7 +473,7 @@ nk_sdl_handle_event(SDL_Event *evt)
 	} else if (evt->type == SDL_MOUSEWHEEL) {
         nk_input_scroll(ctx,nk_vec2((float)evt->wheel.x,(float)evt->wheel.y));
 	} else if (evt->type == SDL_MOUSEMOTION) {
-		nk_input_motion(ctx, evt->motion.x, evt->motion.y);
+		nk_input_motion(ctx, evt->motion.x/scale_x, evt->motion.y/scale_y);
 	} else if (evt->type == SDL_TEXTINPUT) {
 		// text input
 		nk_glyph glyph;
