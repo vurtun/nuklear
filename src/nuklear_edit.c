@@ -98,7 +98,7 @@ nk_edit_draw_text(struct nk_command_buffer *out,
     if (!glyph_len) return;
     while ((text_len < byte_len) && glyph_len)
     {
-        if (unicode == '\n') {
+        if (unicode == '\n' || unicode == '\v') {
             /* new line separator so draw previous line */
             struct nk_rect label;
             label.y = pos_y + line_offset;
@@ -332,6 +332,14 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
     } else nk_draw_image(out, bounds, &background->data.image, nk_white);}
 
     area.w = NK_MAX(0, area.w - style->cursor_size);
+    if (flags & NK_EDIT_MULTILINE){
+        area.y += row_height/2.0f;
+	area.h -= row_height;
+
+ 	/* calculate clipping rectangle */
+        old_clip = out->clip;
+        nk_unify(&clip, &old_clip, area.x, area.y, area.x + area.w, area.y + area.h);
+    }
     if (edit->active)
     {
         int total_lines = 1;
@@ -421,7 +429,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
                     selection_offset_end.x = row_size.x;
                     select_end_ptr = text + text_len;
                 }
-                if (unicode == '\n') {
+                if (unicode == '\n' || unicode == '\v') {
                     text_size.x = NK_MAX(text_size.x, line_width);
                     total_lines++;
                     line_width = 0;
@@ -468,7 +476,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
                     /* vertical scroll */
                     if (cursor_pos.y < edit->scrollbar.y)
                         edit->scrollbar.y = NK_MAX(0.0f, cursor_pos.y - row_height);
-                    if (cursor_pos.y >= edit->scrollbar.y + area.h)
+                    if (cursor_pos.y >= edit->scrollbar.y + area.h - row_height)
                         edit->scrollbar.y = edit->scrollbar.y + row_height;
                 } else edit->scrollbar.y = 0;
             }
@@ -783,6 +791,142 @@ nk_edit_buffer(struct nk_context *ctx, nk_flags flags,
                     filter, edit, &style->edit, in, style->font);
 
     if (ctx->last_widget_state & NK_WIDGET_STATE_HOVER)
+        ctx->style.cursor_active = ctx->style.cursors[NK_CURSOR_TEXT];
+    if (edit->active && prev_state != edit->active) {
+        /* current edit is now hot */
+        win->edit.active = nk_true;
+        win->edit.name = hash;
+    } else if (prev_state && !edit->active) {
+        /* current edit is now cold */
+        win->edit.active = nk_false;
+    } return ret_flags;
+}
+NK_API nk_flags
+nk_edit_buffer_wrap(struct nk_context *ctx, nk_flags flags,
+    struct nk_text_edit *edit, nk_plugin_filter filter)
+{
+    struct nk_window *win;
+    struct nk_style *style;
+    struct nk_input *in;
+
+     enum nk_widget_layout_states state;
+    struct nk_rect bounds;
+
+     nk_flags ret_flags = 0;
+    unsigned char prev_state;
+    nk_hash hash;
+
+     /* make sure correct values */
+    NK_ASSERT(ctx);
+    NK_ASSERT(edit);
+    NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout)
+        return 0;
+
+     win = ctx->current;
+    style = &ctx->style;
+    state = nk_widget(&bounds, ctx);
+    if (!state) return state;
+
+     float wrap_w = bounds.w - (2.0f * style->edit.padding.x + 2 * style->edit.border) - 2 * style->font->height;
+    if (flags & NK_EDIT_MULTILINE)
+        wrap_w = NK_MAX(0, wrap_w - style->edit.scrollbar_size.x);
+
+     /* ---------------- wrap text in text edit widget ----------------------*/
+    char *text = nk_str_get(&edit->string);
+    int byte_len = nk_str_len_char(&edit->string);
+    double w = 0, line_w = 0;
+    if (text){
+        int text_len = 0, last_spc = 0;
+        int glyph_len = 0;
+        nk_rune unicode = 0;
+
+         glyph_len = nk_utf_decode(text+text_len, &unicode, byte_len-text_len);
+        while ((text_len < byte_len) && glyph_len){ /* sweep the string */
+            glyph_len = nk_utf_decode(text+text_len, &unicode, byte_len-text_len);
+            /* find the good point for break a line (in space caracter) */
+            if ((unicode == ' ') || (unicode == '\t')){
+                last_spc = text_len;
+                glyph_len = 1;
+            }
+            /* convert line break to space temporaly, until find a good point to break */
+            else if (unicode == '\v'){
+                nk_str_delete_chars(&edit->string, text_len, 1);
+                if (edit->cursor >= text_len) edit->cursor--;
+                continue;
+            }
+            /* consider a \n caracter as a paragraph break */
+            else if (unicode == '\n'){
+                /* reset the line parameters */
+                last_spc = 0;
+                line_w = 0;
+                glyph_len = 1;
+            }
+
+             /* get graphical width of current glyph */
+            w = style->font->width(style->font->userdata, style->font->height, text+text_len, glyph_len);
+            /* update width of current line */
+            line_w += w;
+
+             if (line_w > wrap_w){ /* verify  if current line width exceeds the drawing area */
+                byte_len = nk_str_len_char(&edit->string);
+		/* consider a tolerance of two glyphs to avoid repetitive breaks */
+                int tolerance = 0;
+                char *near_line = strpbrk(text + text_len, "\v\n");
+                if (near_line) tolerance = near_line - text - text_len; /* tolerance until the next break */
+                else tolerance = byte_len - text_len; /* tolerance until the string end */
+                if (tolerance > 3){ /* need to break */
+                    if (last_spc){ /* if has a good point for break, use it */
+                        nk_str_insert_text_char(&edit->string, last_spc + 1, "\v", 1);
+                        if (edit->cursor >= last_spc) edit->cursor++;
+                        /* start the current line in break point */
+                        text_len = last_spc + 1;
+                        glyph_len = 1;
+                        last_spc = 0;
+                        line_w = 0;
+                    }
+                    else{
+                        nk_str_insert_text_char(&edit->string, text_len, "\v", 1);
+                        if (edit->cursor >= text_len) edit->cursor++;
+                        line_w = 0;
+                    }
+                }
+            }
+
+             text_len += glyph_len;
+            text = nk_str_get(&edit->string);
+	    byte_len = nk_str_len_char(&edit->string);
+        }
+    }
+    /*--------------------------------------------------------------*/
+
+     in = (win->layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
+
+     /* check if edit is currently hot item */
+    hash = win->edit.seq++;
+    if (win->edit.active && hash == win->edit.name) {
+        if (flags & NK_EDIT_NO_CURSOR)
+            edit->cursor = edit->string.len;
+        if (!(flags & NK_EDIT_SELECTABLE)) {
+            edit->select_start = edit->cursor;
+            edit->select_end = edit->cursor;
+        }
+        if (flags & NK_EDIT_CLIPBOARD)
+            edit->clip = ctx->clip;
+        edit->active = (unsigned char)win->edit.active;
+    } else edit->active = nk_false;
+    edit->mode = win->edit.mode;
+
+
+     filter = (!filter) ? nk_filter_default: filter;
+    prev_state = (unsigned char)edit->active;
+    in = (flags & NK_EDIT_READ_ONLY) ? 0: in;
+    ret_flags = nk_do_edit(&ctx->last_widget_state, &win->buffer, bounds, flags|NK_EDIT_NO_HORIZONTAL_SCROLL,
+                    filter, edit, &style->edit, in, style->font);
+
+
+     if (ctx->last_widget_state & NK_WIDGET_STATE_HOVER)
         ctx->style.cursor_active = ctx->style.cursors[NK_CURSOR_TEXT];
     if (edit->active && prev_state != edit->active) {
         /* current edit is now hot */

@@ -3160,6 +3160,7 @@ enum nk_edit_events {
 NK_API nk_flags nk_edit_string(struct nk_context*, nk_flags, char *buffer, int *len, int max, nk_plugin_filter);
 NK_API nk_flags nk_edit_string_zero_terminated(struct nk_context*, nk_flags, char *buffer, int max, nk_plugin_filter);
 NK_API nk_flags nk_edit_buffer(struct nk_context*, nk_flags, struct nk_text_edit*, nk_plugin_filter);
+NK_API nk_flags nk_edit_buffer_wrap(struct nk_context*, nk_flags, struct nk_text_edit*, nk_plugin_filter);
 NK_API void nk_edit_focus(struct nk_context*, nk_flags flags);
 NK_API void nk_edit_unfocus(struct nk_context*);
 /* =============================================================================

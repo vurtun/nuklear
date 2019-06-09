@@ -149,6 +149,7 @@ nk_nonblock_begin(struct nk_context *ctx,
             root->flags |= NK_WINDOW_REMOVE_ROM;
             root = root->parent;
         }
+	win->popup.buf.active = is_active;
         return is_active;
     }
     popup->bounds = body;
