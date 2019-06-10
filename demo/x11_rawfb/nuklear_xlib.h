@@ -148,7 +148,7 @@ nk_xlib_init(Display *dpy, Visual *vis, int screen, Window root,
 	*pl = PIXEL_LAYOUT_RGBX_8888;
     }
     else {
-	printf("Unrecognized pixel layout.\n");
+	perror("nk_xlib_init(): Unrecognized pixel layout.\n");
 	return 0;
     }
 

@@ -92,11 +92,11 @@ nk_rawfb_color2int(const struct nk_color c, rawfb_pl pl)
 	res |= c.a << 24;
 	res |= c.r << 16;
 	res |= c.g << 8;
-	res |= c.b << 0;
+	res |= c.b;
 	break;
 
     default:
-	perror("Unsupported pixel layout.\n");
+	perror("nk_rawfb_color2int(): Unsupported pixel layout.\n");
 	break;
     }
     return (res);
@@ -112,17 +112,17 @@ nk_rawfb_int2color(const unsigned int i, rawfb_pl pl)
 	col.r = (i >> 24) & 0xff;
 	col.g = (i >> 16) & 0xff;
 	col.b = (i >> 8) & 0xff;
-	col.a = (i >> 0) & 0xff;
+	col.a = i & 0xff;
 	break;
     case PIXEL_LAYOUT_XRGB_8888:
 	col.a = (i >> 24) & 0xff;
 	col.r = (i >> 16) & 0xff;
 	col.g = (i >> 8) & 0xff;
-	col.b = (i >> 0) & 0xff;
+	col.b = i & 0xff;
 	break;
 
     default:
-	perror("Unsupported pixel layout.\n");
+	perror("nk_rawfb_int2color(): Unsupported pixel layout.\n");
 	break;
     }
     return col;
@@ -137,8 +137,7 @@ nk_rawfb_ctx_setpixel(const struct rawfb_context *rawfb,
     unsigned int *ptr;
 
     pixels += y0 * rawfb->fb.pitch;
-    ptr = (unsigned int *)pixels;
-    ptr += x0;
+    ptr = (unsigned int *)pixels + x0;
 
     if (y0 < rawfb->scissors.h && y0 >= rawfb->scissors.y &&
         x0 >= rawfb->scissors.x && x0 < rawfb->scissors.w)
@@ -158,8 +157,7 @@ nk_rawfb_line_horizontal(const struct rawfb_context *rawfb,
     unsigned int *ptr;
 
     pixels += y * rawfb->fb.pitch;
-    ptr = (unsigned int *)pixels;
-    ptr += x0;
+    ptr = (unsigned int *)pixels + x0;
 
     n = x1 - x0;
     for (i = 0; i < sizeof(c) / sizeof(c[0]); i++)
@@ -181,8 +179,7 @@ nk_rawfb_img_setpixel(const struct rawfb_image *img,
     unsigned int *pixel;
     NK_ASSERT(img);
     if (y0 < img->h && y0 >= 0 && x0 >= 0 && x0 < img->w) {
-        ptr = img->pixels;
-	ptr += img->pitch * y0;
+        ptr = img->pixels + (img->pitch * y0);
 	pixel = (unsigned int *)ptr;
 
         if (img->format == NK_FONT_ATLAS_ALPHA8) {
@@ -198,19 +195,17 @@ nk_rawfb_img_getpixel(const struct rawfb_image *img, const int x0, const int y0)
 {
     struct nk_color col = {0, 0, 0, 0};
     unsigned char *ptr;
-    unsigned int *pixel;
+    unsigned int pixel;
     NK_ASSERT(img);
     if (y0 < img->h && y0 >= 0 && x0 >= 0 && x0 < img->w) {
-        ptr = img->pixels;
-	ptr += img->pitch * y0;
+        ptr = img->pixels + (img->pitch * y0);
 
         if (img->format == NK_FONT_ATLAS_ALPHA8) {
             col.a = ptr[x0];
             col.b = col.g = col.r = 0xff;
         } else {
-	    pixel = ptr;
-	    pixel += x0;
-	    col = nk_rawfb_int2color(*pixel, img->pl);
+	    pixel = ((unsigned int *)ptr)[x0];
+	    col = nk_rawfb_int2color(pixel, img->pl);
         }
     } return col;
 }
@@ -841,7 +836,7 @@ nk_rawfb_init(void *fb, void *tex_mem, const unsigned int w, const unsigned int 
     rawfb->fb.pitch = pitch;
     }
     else {
-	perror("Unsupported pixel layout.\n");
+	perror("nk_rawfb_init(): Unsupported pixel layout.\n");
 	free(rawfb);
 	return NULL;
     }
