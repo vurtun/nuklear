@@ -8,6 +8,7 @@
 ///    - [yy]: Minor version with non-breaking API and library changes
 ///    - [zz]: Bug fix version with no direct changes to API
 ///
+/// - 2019/06/12 (4.00.3) - Fix panel background drawing bug
 /// - 2018/10/31 (4.00.2) - Added NK_KEYSTATE_BASED_INPUT to "fix" state based backends
                             like GLFW without breaking key repeat behavior on event based.
 /// - 2018/04/01 (4.00.1) - Fixed calling `nk_convert` multiple time per single frame
