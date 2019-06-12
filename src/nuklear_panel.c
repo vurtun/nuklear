@@ -362,7 +362,7 @@ nk_panel_end(struct nk_context *ctx)
         nk_fill_rect(out, empty_space, 0, style->window.background);
 
         /* fill right empty space */
-        empty_space.x = layout->bounds.x + layout->bounds.w - layout->border;
+        empty_space.x = layout->bounds.x + layout->bounds.w;
         empty_space.y = layout->bounds.y;
         empty_space.w = panel_padding.x + layout->border;
         empty_space.h = layout->bounds.h;

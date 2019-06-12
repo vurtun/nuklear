@@ -1514,7 +1514,7 @@ NK_API void nk_end(struct nk_context *ctx);
 /// Finds and returns a window from passed name
 ///
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
-/// void nk_end(struct nk_context *ctx);
+/// struct nk_window *nk_window_find(struct nk_context *ctx, const char *name);
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///
 /// Parameter   | Description
@@ -15813,7 +15813,7 @@ nk_panel_end(struct nk_context *ctx)
         nk_fill_rect(out, empty_space, 0, style->window.background);
 
         /* fill right empty space */
-        empty_space.x = layout->bounds.x + layout->bounds.w - layout->border;
+        empty_space.x = layout->bounds.x + layout->bounds.w;
         empty_space.y = layout->bounds.y;
         empty_space.w = panel_padding.x + layout->border;
         empty_space.h = layout->bounds.h;
@@ -25277,6 +25277,7 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
 ///    - [yy]: Minor version with non-breaking API and library changes
 ///    - [zz]: Bug fix version with no direct changes to API
 ///
+/// - 2019/06/12 (4.00.3) - Fix panel background drawing bug
 /// - 2018/10/31 (4.00.2) - Added NK_KEYSTATE_BASED_INPUT to "fix" state based backends
                             like GLFW without breaking key repeat behavior on event based.
 /// - 2018/04/01 (4.00.1) - Fixed calling `nk_convert` multiple time per single frame
