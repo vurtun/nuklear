@@ -1,15 +1,6 @@
 /* nuklear - v4.00 - public domain */
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdarg.h>
-#include <string.h>
-#include <math.h>
-#include <assert.h>
-#include <limits.h>
-#include <time.h>
 
-#include <SDL2/SDL.h>
+#include <stdarg.h>
 
 /* these defines are both needed for the header
  * and source file. So if you split them remember
@@ -17,10 +8,9 @@
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
 #define NK_INCLUDE_STANDARD_VARARGS
-#define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
-//#define NK_INCLUDE_FONT_BAKING
-#define NK_INCLUDE_DEFAULT_FONT
+// #define NK_INCLUDE_FONT_BAKING
+// #define NK_INCLUDE_DEFAULT_FONT
 #define NK_IMPLEMENTATION
 #define NK_SDL_IMPLEMENTATION
 #include "../../nuklear.h"
@@ -28,6 +18,17 @@
 
 #define WINDOW_WIDTH 1200
 #define WINDOW_HEIGHT 800
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <math.h>
+#include <assert.h>
+#include <limits.h>
+#include <time.h>
+
+#include <SDL2/SDL.h>
 
 
 /* ===============================================================
@@ -40,7 +41,7 @@
 // #define INCLUDE_ALL
 // #define INCLUDE_STYLE
 // #define INCLUDE_CALCULATOR
-#define INCLUDE_OVERVIEW
+// #define INCLUDE_OVERVIEW
 // #define INCLUDE_NODE_EDITOR
 
 #ifdef INCLUDE_ALL
@@ -107,7 +108,7 @@ int main(void)
 	// set_style(ctx, THEME_WHITE);
 	// set_style(ctx, THEME_RED);
 	// set_style(ctx, THEME_BLUE);
-	// set_style(ctx, THEME_DARK);
+	set_style(ctx, THEME_DARK);
 #endif
 
 	background = nk_rgb(28,48,62);
@@ -132,6 +133,9 @@ int main(void)
 			enum {EASY, HARD};
 			static int op = EASY;
 			static int property = 20;
+			static float x_scale = 1;
+			static float y_scale = 1;
+
 
 			nk_layout_row_static(ctx, 30, 80, 1);
 			if (nk_button_label(ctx, "button"))
@@ -156,6 +160,27 @@ int main(void)
 				bg.a = nk_propertyf(ctx, "#A:", 0, bg.a, 1.0f, 0.01f,0.005f);
 				nk_combo_end(ctx);
 			}}
+
+			// NOTE: scaling looks best at exact integer multiples obviously,
+			// but 0.5 increments is a good compromise between granularity and looks
+			float ratio[] = { 0.6f, 0.2f, 0.2f };
+			nk_layout_row(ctx, NK_DYNAMIC, 0, 3, ratio);
+			nk_label(ctx, "GUI scaling:", NK_TEXT_LEFT);
+			if (nk_button_symbol(ctx, NK_SYMBOL_MINUS)) {
+				x_scale -= 0.5;
+				y_scale -= 0.5;
+				nk_sdl_scale(x_scale, y_scale);
+				SDL_RenderSetScale(renderer, x_scale, y_scale);
+				printf("scale = %.2f %.2f\n", x_scale, y_scale);
+			}
+			if (nk_button_symbol(ctx, NK_SYMBOL_PLUS)) {
+				x_scale += 0.5;
+				y_scale += 0.5;
+				nk_sdl_scale(x_scale, y_scale);
+				SDL_RenderSetScale(renderer, x_scale, y_scale);
+				printf("scale = %.1f %.1f\n", x_scale, y_scale);
+			}
+
 		}
 		nk_end(ctx);}
 
