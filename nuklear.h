@@ -4540,6 +4540,29 @@ NK_API void nk_draw_text(struct nk_command_buffer*, struct nk_rect, const char *
 NK_API void nk_push_scissor(struct nk_command_buffer*, struct nk_rect);
 NK_API void nk_push_custom(struct nk_command_buffer*, struct nk_rect, nk_command_custom_callback, nk_handle usr);
 
+/* subpixel APIs */
+#ifdef NK_ENABLE_SUBPIXEL_API
+NK_API void nk_stroke_line_subpixel(struct nk_command_buffer *b, float x0, float y0, float x1, float y1, float line_thickness, struct nk_color);
+NK_API void nk_stroke_curve_subpixel(struct nk_command_buffer*, float, float, float, float, float, float, float, float, float line_thickness, struct nk_color);
+NK_API void nk_stroke_rect_subpixel(struct nk_command_buffer*, struct nk_rect, float rounding, float line_thickness, struct nk_color);
+NK_API void nk_stroke_circle_subpixel(struct nk_command_buffer*, struct nk_rect, float line_thickness, struct nk_color);
+NK_API void nk_stroke_arc_subpixel(struct nk_command_buffer*, float cx, float cy, float radius, float a_min, float a_max, float line_thickness, struct nk_color);
+NK_API void nk_stroke_triangle_subpixel(struct nk_command_buffer*, float, float, float, float, float, float, float line_thichness, struct nk_color);
+NK_API void nk_stroke_polyline_subpixel(struct nk_command_buffer*, float *points, int point_count, float line_thickness, struct nk_color col);
+NK_API void nk_stroke_polygon_subpixel(struct nk_command_buffer*, float*, int point_count, float line_thickness, struct nk_color);
+
+NK_API void nk_fill_rect_subpixel(struct nk_command_buffer*, struct nk_rect, float rounding, struct nk_color);
+NK_API void nk_fill_rect_multi_color_subpixel(struct nk_command_buffer*, struct nk_rect, struct nk_color left, struct nk_color top, struct nk_color right, struct nk_color bottom);
+NK_API void nk_fill_circle_subpixel(struct nk_command_buffer*, struct nk_rect, struct nk_color);
+NK_API void nk_fill_arc_subpixel(struct nk_command_buffer*, float cx, float cy, float radius, float a_min, float a_max, struct nk_color);
+NK_API void nk_fill_triangle_subpixel(struct nk_command_buffer*, float x0, float y0, float x1, float y1, float x2, float y2, struct nk_color);
+NK_API void nk_fill_polygon_subpixel(struct nk_command_buffer*, float*, int point_count, struct nk_color);
+
+NK_API void nk_draw_image_subpixel(struct nk_command_buffer*, struct nk_rect, const struct nk_image*, struct nk_color);
+NK_API void nk_draw_text_subpixel(struct nk_command_buffer*, struct nk_rect, const char *text, int len, const struct nk_user_font*, struct nk_color, struct nk_color);
+NK_API void nk_push_scissor_subpixel(struct nk_command_buffer*, struct nk_rect);
+#endif
+
 /* ===============================================================
  *
  *                          INPUT
