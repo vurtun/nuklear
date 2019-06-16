@@ -105,7 +105,7 @@ nk_delete_image(struct nk_image * image)
 {
     if (image && image->handle.id != 0)
     {
-        HBITMAP hbm = image->handle.ptr;
+        HBITMAP hbm = (HBITMAP)image->handle.ptr;
         DeleteObject(hbm);
         memset(image, 0, sizeof(struct nk_image));
     }
@@ -115,7 +115,7 @@ static void
 nk_gdi_draw_image(short x, short y, unsigned short w, unsigned short h,
     struct nk_image img, struct nk_color col)
 {
-    HBITMAP hbm = img.handle.ptr;
+    HBITMAP hbm = (HBITMAP)img.handle.ptr;
     HDC     hDCBits;
     BITMAP  bitmap;
     
@@ -483,7 +483,7 @@ nk_gdifont_create(const char *name, int size)
     if (!font)
         return NULL;
     font->dc = CreateCompatibleDC(0);
-    font->handle = CreateFont(size, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, name);
+    font->handle = CreateFontA(size, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, name);
     SelectObject(font->dc, font->handle);
     GetTextMetricsW(font->dc, &metric);
     font->height = metric.tmHeight;
