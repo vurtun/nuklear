@@ -203,6 +203,11 @@ NK_STATIC_ASSERT(sizeof(nk_rune) >= 4);
 NK_STATIC_ASSERT(sizeof(nk_size) >= sizeof(void*));
 NK_STATIC_ASSERT(sizeof(nk_ptr) >= sizeof(void*));
 
+/* Sub-pixel API can be enabled by defining following macro.
+ * This will allow drawing in subpixel precision,
+ * but will increase memory footprint. */
+/* #define NK_ENABLE_SUBPIXEL_API */
+
 /* ============================================================================
  *
  *                                  API
@@ -246,6 +251,16 @@ typedef union {void *ptr; int id;} nk_handle;
 struct nk_image {nk_handle handle;unsigned short w,h;unsigned short region[4];};
 struct nk_cursor {struct nk_image img; struct nk_vec2 size, offset;};
 struct nk_scroll {nk_uint x, y;};
+
+#ifdef NK_ENABLE_SUBPIXEL_API
+typedef float nk_scalar_cmd;
+typedef float nk_unsigned_scalar_cmd;
+typedef struct nk_vec2 nk_vec2_cmd;
+#else
+typedef short nk_scalar_cmd;
+typedef unsigned short nk_unsigned_scalar_cmd;
+typedef struct nk_vec2i nk_vec2_cmd;
+#endif
 
 enum nk_heading         {NK_UP, NK_RIGHT, NK_DOWN, NK_LEFT};
 enum nk_button_behavior {NK_BUTTON_DEFAULT, NK_BUTTON_REPEATER};
@@ -4119,48 +4134,48 @@ struct nk_command {
 
 struct nk_command_scissor {
     struct nk_command header;
-    short x, y;
-    unsigned short w, h;
+    nk_scalar_cmd x, y;
+    nk_unsigned_scalar_cmd w, h;
 };
 
 struct nk_command_line {
     struct nk_command header;
-    unsigned short line_thickness;
-    struct nk_vec2i begin;
-    struct nk_vec2i end;
+    nk_unsigned_scalar_cmd line_thickness;
+    nk_vec2_cmd begin;
+    nk_vec2_cmd end;
     struct nk_color color;
 };
 
 struct nk_command_curve {
     struct nk_command header;
-    unsigned short line_thickness;
-    struct nk_vec2i begin;
-    struct nk_vec2i end;
-    struct nk_vec2i ctrl[2];
+    nk_unsigned_scalar_cmd line_thickness;
+    nk_vec2_cmd begin;
+    nk_vec2_cmd end;
+    nk_vec2_cmd ctrl[2];
     struct nk_color color;
 };
 
 struct nk_command_rect {
     struct nk_command header;
-    unsigned short rounding;
-    unsigned short line_thickness;
-    short x, y;
-    unsigned short w, h;
+    nk_unsigned_scalar_cmd rounding;
+    nk_unsigned_scalar_cmd line_thickness;
+    nk_scalar_cmd x, y;
+    nk_unsigned_scalar_cmd w, h;
     struct nk_color color;
 };
 
 struct nk_command_rect_filled {
     struct nk_command header;
-    unsigned short rounding;
-    short x, y;
-    unsigned short w, h;
+    nk_unsigned_scalar_cmd rounding;
+    nk_scalar_cmd x, y;
+    nk_unsigned_scalar_cmd w, h;
     struct nk_color color;
 };
 
 struct nk_command_rect_multi_color {
     struct nk_command header;
-    short x, y;
-    unsigned short w, h;
+    nk_scalar_cmd x, y;
+    nk_unsigned_scalar_cmd w, h;
     struct nk_color left;
     struct nk_color top;
     struct nk_color bottom;
@@ -4169,49 +4184,49 @@ struct nk_command_rect_multi_color {
 
 struct nk_command_triangle {
     struct nk_command header;
-    unsigned short line_thickness;
-    struct nk_vec2i a;
-    struct nk_vec2i b;
-    struct nk_vec2i c;
+    nk_unsigned_scalar_cmd line_thickness;
+    nk_vec2_cmd a;
+    nk_vec2_cmd b;
+    nk_vec2_cmd c;
     struct nk_color color;
 };
 
 struct nk_command_triangle_filled {
     struct nk_command header;
-    struct nk_vec2i a;
-    struct nk_vec2i b;
-    struct nk_vec2i c;
+    nk_vec2_cmd a;
+    nk_vec2_cmd b;
+    nk_vec2_cmd c;
     struct nk_color color;
 };
 
 struct nk_command_circle {
     struct nk_command header;
-    short x, y;
-    unsigned short line_thickness;
-    unsigned short w, h;
+    nk_scalar_cmd x, y;
+    nk_unsigned_scalar_cmd line_thickness;
+    nk_unsigned_scalar_cmd w, h;
     struct nk_color color;
 };
 
 struct nk_command_circle_filled {
     struct nk_command header;
-    short x, y;
-    unsigned short w, h;
+    nk_scalar_cmd x, y;
+    nk_unsigned_scalar_cmd w, h;
     struct nk_color color;
 };
 
 struct nk_command_arc {
     struct nk_command header;
-    short cx, cy;
-    unsigned short r;
-    unsigned short line_thickness;
+    nk_scalar_cmd cx, cy;
+    nk_unsigned_scalar_cmd r;
+    nk_unsigned_scalar_cmd line_thickness;
     float a[2];
     struct nk_color color;
 };
 
 struct nk_command_arc_filled {
     struct nk_command header;
-    short cx, cy;
-    unsigned short r;
+    nk_scalar_cmd cx, cy;
+    nk_unsigned_scalar_cmd r;
     float a[2];
     struct nk_color color;
 };
@@ -4219,30 +4234,30 @@ struct nk_command_arc_filled {
 struct nk_command_polygon {
     struct nk_command header;
     struct nk_color color;
-    unsigned short line_thickness;
+    nk_unsigned_scalar_cmd line_thickness;
     unsigned short point_count;
-    struct nk_vec2i points[1];
+    nk_vec2_cmd points[1];
 };
 
 struct nk_command_polygon_filled {
     struct nk_command header;
     struct nk_color color;
     unsigned short point_count;
-    struct nk_vec2i points[1];
+    nk_vec2_cmd points[1];
 };
 
 struct nk_command_polyline {
     struct nk_command header;
     struct nk_color color;
-    unsigned short line_thickness;
+    nk_unsigned_scalar_cmd line_thickness;
     unsigned short point_count;
-    struct nk_vec2i points[1];
+    nk_vec2_cmd points[1];
 };
 
 struct nk_command_image {
     struct nk_command header;
-    short x, y;
-    unsigned short w, h;
+    nk_scalar_cmd x, y;
+    nk_unsigned_scalar_cmd w, h;
     struct nk_image img;
     struct nk_color col;
 };
@@ -4262,8 +4277,8 @@ struct nk_command_text {
     const struct nk_user_font *font;
     struct nk_color background;
     struct nk_color foreground;
-    short x, y;
-    unsigned short w, h;
+    nk_scalar_cmd x, y;
+    nk_unsigned_scalar_cmd w, h;
     float height;
     int length;
     char string[1];
