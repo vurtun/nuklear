@@ -165,7 +165,6 @@ int main(void)
 
         /* Draw */
         win.setActive(true);
-        nk_color_fv(bg, background);
         glClear(GL_COLOR_BUFFER_BIT);
         glClearColor(bg.r, bg.g, bg.b, bg.a);
         /* IMPORTANT: `nk_sfml_render` modifies some global OpenGL state
