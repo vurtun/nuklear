@@ -13,6 +13,17 @@
 #ifndef NK_GDI_H_
 #define NK_GDI_H_
 
+// suppress compiler warnings for changes C89 -> C++11
+#ifdef __GNUC__
+    #if ( __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6) )
+        #pragma GCC diagnostic ignored "-Wpadded"
+        #pragma GCC diagnostic ignored "-Wold-style-cast"
+        #pragma GCC diagnostic ignored "-Wzero-as-null-pointer-constant"
+        #pragma GCC diagnostic ignored "-Wcast-align"
+        #pragma GCC diagnostic ignored "-Wcast-"
+    #endif
+#endif
+
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
@@ -28,6 +39,7 @@ NK_API void nk_gdifont_del(GdiFont *font);
 NK_API void nk_gdi_set_font(GdiFont *font);
 
 #endif
+
 
 /*
  * ==============================================================
@@ -62,28 +74,32 @@ nk_create_image(struct nk_image * image, const char * frame_buffer, const int wi
 {
     if (image && frame_buffer && (width > 0) && (height > 0))
     {
-        image->w = width;
-        image->h = height;
+        image->w = (unsigned short)width;
+        image->h = (unsigned short)height;
         image->region[0] = 0;
         image->region[1] = 0;
-        image->region[2] = width;
-        image->region[3] = height;
+        image->region[2] = (unsigned short)width;
+        image->region[3] = (unsigned short)height;
         
         INT row = ((width * 3 + 3) & ~3);
-        BITMAPINFO bi = { 0 };
+        BITMAPINFO bi;
+        memset( &bi, 0, sizeof(bi) );
         bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
         bi.bmiHeader.biWidth = width;
         bi.bmiHeader.biHeight = height;
         bi.bmiHeader.biPlanes = 1;
         bi.bmiHeader.biBitCount = 24;
         bi.bmiHeader.biCompression = BI_RGB;
-        bi.bmiHeader.biSizeImage = row * height;
+        bi.bmiHeader.biSizeImage = (unsigned long)(row * height);
         
         LPBYTE lpBuf, pb = NULL;
         HBITMAP hbm = CreateDIBSection(NULL, &bi, DIB_RGB_COLORS, (void**)&lpBuf, NULL, 0);
         
         pb = lpBuf + row * height;
+
+        // cast from "const char *" to "unsigned char *" to iterate over the buffer
         unsigned char * src = (unsigned char *)frame_buffer;
+
         for (int v = 0; v<height; v++)
         {
             pb -= row;
@@ -95,7 +111,7 @@ nk_create_image(struct nk_image * image, const char * frame_buffer, const int wi
                 src += 3;
             }
         }        
-        SetDIBits(NULL, hbm, 0, height, lpBuf, &bi, DIB_RGB_COLORS);
+        SetDIBits(NULL, hbm, 0, (unsigned int)height, lpBuf, &bi, DIB_RGB_COLORS);
         image->handle.ptr = hbm;
     }
 }
@@ -115,6 +131,8 @@ static void
 nk_gdi_draw_image(short x, short y, unsigned short w, unsigned short h,
     struct nk_image img, struct nk_color col)
 {
+    NK_UNUSED(col);
+
     HBITMAP hbm = (HBITMAP)img.handle.ptr;
     HDC     hDCBits;
     BITMAP  bitmap;
@@ -132,7 +150,7 @@ nk_gdi_draw_image(short x, short y, unsigned short w, unsigned short h,
 static COLORREF
 convert_color(struct nk_color c)
 {
-    return c.r | (c.g << 8) | (c.b << 16);
+    return ((DWORD)c.r | ((DWORD)c.g << 8) | ((DWORD)c.b << 16));
 }
 
 static void
@@ -152,7 +170,7 @@ nk_gdi_stroke_line(HDC dc, short x0, short y0, short x1,
     if (line_thickness == 1) {
         SetDCPenColor(dc, color);
     } else {
-        pen = CreatePen(PS_SOLID, line_thickness, color);
+        pen = CreatePen(PS_SOLID, (int)line_thickness, color);
         SelectObject(dc, pen);
     }
 
@@ -212,9 +230,9 @@ nk_gdi_fill_rect(HDC dc, short x, short y, unsigned short w,
 static void
 nk_gdi_set_vertexColor(PTRIVERTEX tri, struct nk_color col)
 {
-    tri->Red   = col.r << 8;
-    tri->Green = col.g << 8;
-    tri->Blue  = col.b << 8;
+    tri->Red   = (unsigned short)(col.r << 8);
+    tri->Green = (unsigned short)(col.g << 8);
+    tri->Blue  = (unsigned short)(col.b << 8);
     tri->Alpha = 0xff << 8;
 }
 
@@ -224,7 +242,6 @@ nk_gdi_rect_multi_color(HDC dc, short x, short y, unsigned short w,
     struct nk_color right, struct nk_color bottom)
 {
     BLENDFUNCTION alphaFunction;
-    GRADIENT_RECT gRect;
     GRADIENT_TRIANGLE gTri[2];
     TRIVERTEX vt[4];
     alphaFunction.BlendOp = AC_SRC_OVER;
@@ -442,27 +459,29 @@ static void
 nk_gdi_draw_text(HDC dc, short x, short y, unsigned short w, unsigned short h,
     const char *text, int len, GdiFont *font, struct nk_color cbg, struct nk_color cfg)
 {
+    NK_UNUSED(w);
+    NK_UNUSED(h);
     int wsize;
     WCHAR* wstr;
 
     if(!text || !font || !len) return;
 
     wsize = MultiByteToWideChar(CP_UTF8, 0, text, len, NULL, 0);
-    wstr = (WCHAR*)_alloca(wsize * sizeof(wchar_t));
+    wstr = (WCHAR*)_alloca((unsigned long long)wsize * sizeof(wchar_t));
     MultiByteToWideChar(CP_UTF8, 0, text, len, wstr, wsize);
 
     SetBkColor(dc, convert_color(cbg));
     SetTextColor(dc, convert_color(cfg));
 
     SelectObject(dc, font->handle);
-    ExtTextOutW(dc, x, y, ETO_OPAQUE, NULL, wstr, wsize, NULL);
+    ExtTextOutW(dc, x, y, ETO_OPAQUE, NULL, wstr, (unsigned int)wsize, NULL);
 }
 
 static void
 nk_gdi_clear(HDC dc, struct nk_color col)
 {
     COLORREF color = convert_color(col);
-    RECT rect = { 0, 0, gdi.width, gdi.height };
+    RECT rect = { 0, 0, (LONG)gdi.width, (LONG)gdi.height };
     SetBkColor(dc, color);
 
     ExtTextOutW(dc, 0, 0, ETO_OPAQUE, &rect, NULL, 0, NULL);
@@ -471,7 +490,7 @@ nk_gdi_clear(HDC dc, struct nk_color col)
 static void
 nk_gdi_blit(HDC dc)
 {
-    BitBlt(dc, 0, 0, gdi.width, gdi.height, gdi.memory_dc, 0, 0, SRCCOPY);
+    BitBlt(dc, 0, 0, (LONG)gdi.width, (LONG)gdi.height, gdi.memory_dc, 0, 0, SRCCOPY);
 
 }
 
@@ -493,6 +512,7 @@ nk_gdifont_create(const char *name, int size)
 static float
 nk_gdifont_get_text_width(nk_handle handle, float height, const char *text, int len)
 {
+    NK_UNUSED(height);
     GdiFont *font = (GdiFont*)handle.ptr;
     SIZE size;
     int wsize;
@@ -501,7 +521,7 @@ nk_gdifont_get_text_width(nk_handle handle, float height, const char *text, int 
         return 0;
 
     wsize = MultiByteToWideChar(CP_UTF8, 0, text, len, NULL, 0);
-    wstr = (WCHAR*)_alloca(wsize * sizeof(wchar_t));
+    wstr = (WCHAR*)_alloca((SIZE_T)wsize * sizeof(wchar_t));
     MultiByteToWideChar(CP_UTF8, 0, text, len, wstr, wsize);
     if (GetTextExtentPoint32W(font->dc, wstr, wsize, &size))
         return (float)size.cx;
@@ -535,7 +555,7 @@ nk_gdi_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
                     int utf8size = WideCharToMultiByte(CP_UTF8, 0, wstr, (int)(size / sizeof(wchar_t)), NULL, 0, NULL, NULL);
                     if (utf8size)
                     {
-                        char* utf8 = (char*)malloc(utf8size);
+                        char* utf8 = (char*)malloc((unsigned int)utf8size);
                         if (utf8)
                         {
                             WideCharToMultiByte(CP_UTF8, 0, wstr, (int)(size / sizeof(wchar_t)), utf8, utf8size, NULL, NULL);
@@ -554,12 +574,13 @@ nk_gdi_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
 static void
 nk_gdi_clipboard_copy(nk_handle usr, const char *text, int len)
 {
+    NK_UNUSED(usr);
     if (OpenClipboard(NULL))
     {
         int wsize = MultiByteToWideChar(CP_UTF8, 0, text, len, NULL, 0);
         if (wsize)
         {
-            HGLOBAL mem = (HGLOBAL)GlobalAlloc(GMEM_MOVEABLE, (wsize + 1) * sizeof(wchar_t));
+            HGLOBAL mem = (HGLOBAL)GlobalAlloc(GMEM_MOVEABLE, ((SIZE_T)wsize + 1) * sizeof(wchar_t));
             if (mem)
             {
                 wchar_t* wstr = (wchar_t*)GlobalLock(mem);
@@ -585,7 +606,7 @@ nk_gdi_init(GdiFont *gdifont, HDC window_dc, unsigned int width, unsigned int he
     font->height = (float)gdifont->height;
     font->width = nk_gdifont_get_text_width;
 
-    gdi.bitmap = CreateCompatibleBitmap(window_dc, width, height);
+    gdi.bitmap = CreateCompatibleBitmap(window_dc, (int)width, (int)height);
     gdi.window_dc = window_dc;
     gdi.memory_dc = CreateCompatibleDC(window_dc);
     gdi.width = width;
@@ -615,12 +636,12 @@ nk_gdi_handle_event(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
     {
     case WM_SIZE:
     {
-        unsigned width = LOWORD(lparam);
-        unsigned height = HIWORD(lparam);
+        unsigned int width = LOWORD(lparam);
+        unsigned int height = HIWORD(lparam);
         if (width != gdi.width || height != gdi.height)
         {
             DeleteObject(gdi.bitmap);
-            gdi.bitmap = CreateCompatibleBitmap(gdi.window_dc, width, height);
+            gdi.bitmap = CreateCompatibleBitmap(gdi.window_dc, (int)width, (int)height);
             gdi.width = width;
             gdi.height = height;
             SelectObject(gdi.memory_dc, gdi.bitmap);
