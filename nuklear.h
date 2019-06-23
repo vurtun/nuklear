@@ -1217,7 +1217,7 @@ NK_API const struct nk_command* nk__next(struct nk_context*, const struct nk_com
 ///
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
 /// nk_flags nk_convert(struct nk_context *ctx, struct nk_buffer *cmds,
-//      struct nk_buffer *vertices, struct nk_buffer *elements, const struct nk_convert_config*);
+///     struct nk_buffer *vertices, struct nk_buffer *elements, const struct nk_convert_config*);
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///
 /// Parameter   | Description
@@ -2630,7 +2630,7 @@ NK_API struct nk_rect nk_layout_space_rect_to_local(struct nk_context*, struct n
 ///     case ...:
 ///         // [...]
 ///     }
-//      nk_clear(&ctx);
+///     nk_clear(&ctx);
 /// }
 /// nk_free(&ctx);
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2643,8 +2643,8 @@ NK_API struct nk_rect nk_layout_space_rect_to_local(struct nk_context*, struct n
 /// nk_group_scrolled_offset_begin  | Start a new group with manual separated handling of scrollbar x- and y-offset
 /// nk_group_scrolled_begin         | Start a new group with manual scrollbar handling
 /// nk_group_scrolled_end           | Ends a group with manual scrollbar handling. Should only be called if nk_group_begin returned non-zero
-// nk_group_get_scroll              | Gets the scroll offset for the given group
-// nk_group_set_scroll              | Sets the scroll offset for the given group
+/// nk_group_get_scroll             | Gets the scroll offset for the given group
+/// nk_group_set_scroll             | Sets the scroll offset for the given group
 */
 /*/// #### nk_group_begin
 /// Starts a new widget group. Requires a previous layouting function to specify a pos/size.
@@ -3259,7 +3259,7 @@ NK_API int nk_color_pick(struct nk_context*, struct nk_colorf*, enum nk_color_fo
 ///     case ...:
 ///         // [...]
 ///     }
-//      nk_clear(&ctx);
+///     nk_clear(&ctx);
 /// }
 /// nk_free(&ctx);
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
