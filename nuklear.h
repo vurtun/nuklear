@@ -1217,7 +1217,7 @@ NK_API const struct nk_command* nk__next(struct nk_context*, const struct nk_com
 ///
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
 /// nk_flags nk_convert(struct nk_context *ctx, struct nk_buffer *cmds,
-//      struct nk_buffer *vertices, struct nk_buffer *elements, const struct nk_convert_config*);
+///     struct nk_buffer *vertices, struct nk_buffer *elements, const struct nk_convert_config*);
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///
 /// Parameter   | Description
@@ -1402,6 +1402,7 @@ NK_API const struct nk_draw_command* nk__draw_next(const struct nk_draw_command*
 /// nk_window_get_content_region_max    | Returns the upper rectangle position of the currently visible and non-clipped space inside the currently processed window
 /// nk_window_get_content_region_size   | Returns the size of the currently visible and non-clipped space inside the currently processed window
 /// nk_window_get_canvas                | Returns the draw command buffer. Can be used to draw custom widgets
+/// nk_window_get_scroll                | Gets the scroll offset of the current window
 /// nk_window_has_focus                 | Returns if the currently processed window is currently active
 /// nk_window_is_collapsed              | Returns if the window with given name is currently minimized/collapsed
 /// nk_window_is_closed                 | Returns if the currently processed window was closed
@@ -1415,6 +1416,7 @@ NK_API const struct nk_draw_command* nk__draw_next(const struct nk_draw_command*
 /// nk_window_set_position              | Updates position of the currently process window
 /// nk_window_set_size                  | Updates the size of the currently processed window
 /// nk_window_set_focus                 | Set the currently processed window as active window
+/// nk_window_set_scroll                | Sets the scroll offset of the current window
 //
 /// nk_window_close                     | Closes the window with given window name which deletes the window at the end of the frame
 /// nk_window_collapse                  | Collapses the window with given window name
@@ -1718,6 +1720,22 @@ NK_API struct nk_vec2 nk_window_get_content_region_size(struct nk_context*);
 /// drawing canvas. Can be used to do custom drawing.
 */
 NK_API struct nk_command_buffer* nk_window_get_canvas(struct nk_context*);
+/*/// #### nk_window_get_scroll
+/// Gets the scroll offset for the current window
+/// !!! WARNING
+///     Only call this function between calls `nk_begin_xxx` and `nk_end`
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// void nk_window_get_scroll(struct nk_context *ctx, nk_uint *offset_x, nk_uint *offset_y);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter    | Description
+/// -------------|-----------------------------------------------------------
+/// __ctx__      | Must point to an previously initialized `nk_context` struct
+/// __offset_x__ | A pointer to the x offset output (or NULL to ignore)
+/// __offset_y__ | A pointer to the y offset output (or NULL to ignore)
+*/
+NK_API void nk_window_get_scroll(struct nk_context*, nk_uint *offset_x, nk_uint *offset_y);
 /*/// #### nk_window_has_focus
 /// Returns if the currently processed window is currently active
 /// !!! WARNING
@@ -1884,6 +1902,22 @@ NK_API void nk_window_set_size(struct nk_context*, const char *name, struct nk_v
 /// __name__    | Identifier of the window to set focus on
 */
 NK_API void nk_window_set_focus(struct nk_context*, const char *name);
+/*/// #### nk_window_set_scroll
+/// Sets the scroll offset for the current window
+/// !!! WARNING
+///     Only call this function between calls `nk_begin_xxx` and `nk_end`
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// void nk_window_set_scroll(struct nk_context *ctx, nk_uint offset_x, nk_uint offset_y);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter    | Description
+/// -------------|-----------------------------------------------------------
+/// __ctx__      | Must point to an previously initialized `nk_context` struct
+/// __offset_x__ | The x offset to scroll to
+/// __offset_y__ | The y offset to scroll to
+*/
+NK_API void nk_window_set_scroll(struct nk_context*, nk_uint offset_x, nk_uint offset_y);
 /*/// #### nk_window_close
 /// Closes a window and marks it for being freed at the end of the frame
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
@@ -2596,7 +2630,7 @@ NK_API struct nk_rect nk_layout_space_rect_to_local(struct nk_context*, struct n
 ///     case ...:
 ///         // [...]
 ///     }
-//      nk_clear(&ctx);
+///     nk_clear(&ctx);
 /// }
 /// nk_free(&ctx);
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2609,6 +2643,8 @@ NK_API struct nk_rect nk_layout_space_rect_to_local(struct nk_context*, struct n
 /// nk_group_scrolled_offset_begin  | Start a new group with manual separated handling of scrollbar x- and y-offset
 /// nk_group_scrolled_begin         | Start a new group with manual scrollbar handling
 /// nk_group_scrolled_end           | Ends a group with manual scrollbar handling. Should only be called if nk_group_begin returned non-zero
+/// nk_group_get_scroll             | Gets the scroll offset for the given group
+/// nk_group_set_scroll             | Sets the scroll offset for the given group
 */
 /*/// #### nk_group_begin
 /// Starts a new widget group. Requires a previous layouting function to specify a pos/size.
@@ -2698,6 +2734,34 @@ NK_API int nk_group_scrolled_begin(struct nk_context*, struct nk_scroll *off, co
 /// __ctx__     | Must point to an previously initialized `nk_context` struct
 */
 NK_API void nk_group_scrolled_end(struct nk_context*);
+/*/// #### nk_group_get_scroll
+/// Gets the scroll position of the given group.
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// void nk_group_get_scroll(struct nk_context*, const char *id, nk_uint *x_offset, nk_uint *y_offset);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter    | Description
+/// -------------|-----------------------------------------------------------
+/// __ctx__      | Must point to an previously initialized `nk_context` struct
+/// __id__       | The id of the group to get the scroll position of
+/// __x_offset__ | A pointer to the x offset output (or NULL to ignore)
+/// __y_offset__ | A pointer to the y offset output (or NULL to ignore)
+*/
+NK_API void nk_group_get_scroll(struct nk_context*, const char *id, nk_uint *x_offset, nk_uint *y_offset);
+/*/// #### nk_group_set_scroll
+/// Sets the scroll position of the given group.
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~c
+/// void nk_group_set_scroll(struct nk_context*, const char *id, nk_uint x_offset, nk_uint y_offset);
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///
+/// Parameter    | Description
+/// -------------|-----------------------------------------------------------
+/// __ctx__      | Must point to an previously initialized `nk_context` struct
+/// __id__       | The id of the group to scroll
+/// __x_offset__ | The x offset to scroll to
+/// __y_offset__ | The y offset to scroll to
+*/
+NK_API void nk_group_set_scroll(struct nk_context*, const char *id, nk_uint x_offset, nk_uint y_offset);
 /* =============================================================================
  *
  *                                  TREE
@@ -3195,7 +3259,7 @@ NK_API int nk_color_pick(struct nk_context*, struct nk_colorf*, enum nk_color_fo
 ///     case ...:
 ///         // [...]
 ///     }
-//      nk_clear(&ctx);
+///     nk_clear(&ctx);
 /// }
 /// nk_free(&ctx);
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -3403,6 +3467,8 @@ NK_API void nk_plot_function(struct nk_context*, enum nk_chart_type, void *userd
 NK_API int nk_popup_begin(struct nk_context*, enum nk_popup_type, const char*, nk_flags, struct nk_rect bounds);
 NK_API void nk_popup_close(struct nk_context*);
 NK_API void nk_popup_end(struct nk_context*);
+NK_API void nk_popup_get_scroll(struct nk_context*, nk_uint *offset_x, nk_uint *offset_y);
+NK_API void nk_popup_set_scroll(struct nk_context*, nk_uint offset_x, nk_uint offset_y);
 /* =============================================================================
  *
  *                                  COMBOBOX
@@ -5614,7 +5680,6 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #endif
 
 #endif /* NK_NUKLEAR_H_ */
-
 
 #ifdef NK_IMPLEMENTATION
 
@@ -16459,6 +16524,20 @@ nk_window_get_panel(struct nk_context *ctx)
     if (!ctx || !ctx->current) return 0;
     return ctx->current->layout;
 }
+NK_API void
+nk_window_get_scroll(struct nk_context *ctx, nk_uint *offset_x, nk_uint *offset_y)
+{
+    struct nk_window *win;
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
+    if (!ctx || !ctx->current)
+        return ;
+    win = ctx->current;
+    if (offset_x)
+      *offset_x = win->scrollbar.x;
+    if (offset_y)
+      *offset_y = win->scrollbar.y;
+}
 NK_API int
 nk_window_has_focus(const struct nk_context *ctx)
 {
@@ -16625,6 +16704,18 @@ nk_window_set_size(struct nk_context *ctx,
     win->bounds.h = size.y;
 }
 NK_API void
+nk_window_set_scroll(struct nk_context *ctx, nk_uint offset_x, nk_uint offset_y)
+{
+    struct nk_window *win;
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
+    if (!ctx || !ctx->current)
+        return;
+    win = ctx->current;
+    win->scrollbar.x = offset_x;
+    win->scrollbar.y = offset_y;
+}
+NK_API void
 nk_window_collapse(struct nk_context *ctx, const char *name,
                     enum nk_collapse_states c)
 {
@@ -16694,7 +16785,6 @@ nk_window_set_focus(struct nk_context *ctx, const char *name)
     }
     ctx->active = win;
 }
-
 
 
 
@@ -16923,7 +17013,38 @@ nk_popup_end(struct nk_context *ctx)
     ctx->current = win;
     nk_push_scissor(&win->buffer, win->layout->clip);
 }
+NK_API void
+nk_popup_get_scroll(struct nk_context *ctx, nk_uint *offset_x, nk_uint *offset_y)
+{
+    struct nk_window *popup;
 
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout)
+        return;
+
+    popup = ctx->current;
+    if (offset_x)
+      *offset_x = popup->scrollbar.x;
+    if (offset_y)
+      *offset_y = popup->scrollbar.y;
+}
+NK_API void
+nk_popup_set_scroll(struct nk_context *ctx, nk_uint offset_x, nk_uint offset_y)
+{
+    struct nk_window *popup;
+
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout)
+        return;
+
+    popup = ctx->current;
+    popup->scrollbar.x = offset_x;
+    popup->scrollbar.y = offset_y;
+}
 
 
 
@@ -18719,7 +18840,74 @@ nk_group_end(struct nk_context *ctx)
 {
     nk_group_scrolled_end(ctx);
 }
+NK_API void
+nk_group_get_scroll(struct nk_context *ctx, const char *id, nk_uint *x_offset, nk_uint *y_offset)
+{
+    int id_len;
+    nk_hash id_hash;
+    struct nk_window *win;
+    nk_uint *x_offset_ptr;
+    nk_uint *y_offset_ptr;
 
+    NK_ASSERT(ctx);
+    NK_ASSERT(id);
+    NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout || !id)
+        return;
+
+    /* find persistent group scrollbar value */
+    win = ctx->current;
+    id_len = (int)nk_strlen(id);
+    id_hash = nk_murmur_hash(id, (int)id_len, NK_PANEL_GROUP);
+    x_offset_ptr = nk_find_value(win, id_hash);
+    if (!x_offset_ptr) {
+        x_offset_ptr = nk_add_value(ctx, win, id_hash, 0);
+        y_offset_ptr = nk_add_value(ctx, win, id_hash+1, 0);
+
+        NK_ASSERT(x_offset_ptr);
+        NK_ASSERT(y_offset_ptr);
+        if (!x_offset_ptr || !y_offset_ptr) return;
+        *x_offset_ptr = *y_offset_ptr = 0;
+    } else y_offset_ptr = nk_find_value(win, id_hash+1);
+    if (x_offset)
+      *x_offset = *x_offset_ptr;
+    if (y_offset)
+      *y_offset = *y_offset_ptr;
+}
+NK_API void
+nk_group_set_scroll(struct nk_context *ctx, const char *id, nk_uint x_offset, nk_uint y_offset)
+{
+    int id_len;
+    nk_hash id_hash;
+    struct nk_window *win;
+    nk_uint *x_offset_ptr;
+    nk_uint *y_offset_ptr;
+
+    NK_ASSERT(ctx);
+    NK_ASSERT(id);
+    NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout || !id)
+        return;
+
+    /* find persistent group scrollbar value */
+    win = ctx->current;
+    id_len = (int)nk_strlen(id);
+    id_hash = nk_murmur_hash(id, (int)id_len, NK_PANEL_GROUP);
+    x_offset_ptr = nk_find_value(win, id_hash);
+    if (!x_offset_ptr) {
+        x_offset_ptr = nk_add_value(ctx, win, id_hash, 0);
+        y_offset_ptr = nk_add_value(ctx, win, id_hash+1, 0);
+
+        NK_ASSERT(x_offset_ptr);
+        NK_ASSERT(y_offset_ptr);
+        if (!x_offset_ptr || !y_offset_ptr) return;
+        *x_offset_ptr = *y_offset_ptr = 0;
+    } else y_offset_ptr = nk_find_value(win, id_hash+1);
+    *x_offset_ptr = x_offset;
+    *y_offset_ptr = y_offset;
+}
 
 
 
@@ -25277,6 +25465,7 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
 ///    - [yy]: Minor version with non-breaking API and library changes
 ///    - [zz]: Bug fix version with no direct changes to API
 ///
+/// - 2019/06/23 (4.01.0) - Added nk_***_get_scroll and nk_***_set_scroll for groups, windows, and popups
 /// - 2019/06/12 (4.00.3) - Fix panel background drawing bug
 /// - 2018/10/31 (4.00.2) - Added NK_KEYSTATE_BASED_INPUT to "fix" state based backends
                             like GLFW without breaking key repeat behavior on event based.
@@ -25547,7 +25736,6 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
 /// - 2016/07/15 (1.00.0) - Changed button API to use context dependend button
 ///                        behavior instead of passing it for every function call.
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 /// ## Gallery
 /// ![Figure [blue]: Feature overview with blue color styling](https://cloud.githubusercontent.com/assets/8057201/13538240/acd96876-e249-11e5-9547-5ac0b19667a0.png)
 /// ![Figure [red]: Feature overview with red color styling](https://cloud.githubusercontent.com/assets/8057201/13538243/b04acd4c-e249-11e5-8fd2-ad7744a5b446.png)
