@@ -178,6 +178,10 @@ nk_xsurf_resize(XSurface *surf, unsigned int w, unsigned int h)
     if(surf->drawable) XFreePixmap(surf->dpy, surf->drawable);
     surf->drawable = XCreatePixmap(surf->dpy, surf->root, w, h,
         (unsigned int)DefaultDepth(surf->dpy, surf->screen));
+#ifdef NK_XLIB_USE_XFT
+	XftDrawChange(surf->ftdraw, surf->drawable);
+#endif
+	return;
 }
 
 NK_INTERN void
