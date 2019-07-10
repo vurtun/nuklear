@@ -159,7 +159,7 @@ nk_glfw3_device_create()
     GLint len = 0;
     glGetShaderiv(dev->vert_shdr, GL_INFO_LOG_LENGTH, &len);
     if (len > 1) {
-        char *log = calloc((size_t)len, sizeof(char));
+        char *log = (char*)calloc((size_t)len, sizeof(char));
         glGetShaderInfoLog(dev->vert_shdr, len, NULL, log);
         fprintf(stdout, "[GL]: failed to compile shader: %s", log);
         free(log);
@@ -167,7 +167,7 @@ nk_glfw3_device_create()
 
     glGetShaderiv(dev->frag_shdr, GL_INFO_LOG_LENGTH, &len);
     if (len > 1) {
-        char *log = calloc((size_t)len, sizeof(char));
+        char *log = (char*)calloc((size_t)len, sizeof(char));
         glGetShaderInfoLog(dev->frag_shdr, len, NULL, log);
         fprintf(stdout, "[GL]: failed to compile shader: %s", log);
         free(log);
