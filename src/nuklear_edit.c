@@ -532,6 +532,8 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
         }
         if (background->type == NK_STYLE_ITEM_IMAGE)
             background_color = nk_rgba(0,0,0,0);
+        else if (background->type == NK_STYLE_ITEM_NINE_PATCH)
+            background_color = nk_rgba(0,0,0,0);
         else background_color = background->data.color;
 
 
@@ -638,6 +640,8 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
             text_color = style->text_normal;
         }
         if (background->type == NK_STYLE_ITEM_IMAGE)
+            background_color = nk_rgba(0,0,0,0);
+        else if (background->type == NK_STYLE_ITEM_NINE_PATCH)
             background_color = nk_rgba(0,0,0,0);
         else background_color = background->data.color;
         nk_edit_draw_text(out, style, area.x - edit->scrollbar.x,

@@ -52,6 +52,9 @@ nk_tree_state_base(struct nk_context *ctx, enum nk_tree_type type,
         if (background->type == NK_STYLE_ITEM_IMAGE) {
             nk_draw_image(out, header, &background->data.image, nk_white);
             text.background = nk_rgba(0,0,0,0);
+        } else if (background->type == NK_STYLE_ITEM_NINE_PATCH) {
+            nk_draw_nine_patch(out, header, &background->data.nine_patch, nk_white);
+            text.background = nk_rgba(0,0,0,0);
         } else {
             text.background = background->data.color;
             nk_fill_rect(out, header, 0, style->tab.border_color);
@@ -237,6 +240,9 @@ nk_tree_element_image_push_hashed_base(struct nk_context *ctx, enum nk_tree_type
         const struct nk_style_item *background = &style->tab.background;
         if (background->type == NK_STYLE_ITEM_IMAGE) {
             nk_draw_image(out, header, &background->data.image, nk_white);
+            text.background = nk_rgba(0,0,0,0);
+        } else if (background->type == NK_STYLE_ITEM_NINE_PATCH) {
+            nk_draw_nine_patch(out, header, &background->data.nine_patch, nk_white);
             text.background = nk_rgba(0,0,0,0);
         } else {
             text.background = background->data.color;

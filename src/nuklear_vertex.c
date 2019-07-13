@@ -1125,6 +1125,154 @@ nk_draw_list_add_image(struct nk_draw_list *list, struct nk_image texture,
             nk_vec2(rect.x + rect.w, rect.y + rect.h),
             nk_vec2(0.0f, 0.0f), nk_vec2(1.0f, 1.0f),color);
 }
+static void emit_nine_patch(struct nk_draw_list *list, struct nk_nine_patch *nine_patch,
+    struct nk_rect *rect, struct nk_color color, struct nk_vec2 min_corner,
+    struct nk_vec2 max_corner)
+{
+    float left = (float)nine_patch->margin[0]/(float)nine_patch->w;
+    float top = (float)nine_patch->margin[1]/(float)nine_patch->h;
+    float right = (float)nine_patch->margin[2]/(float)nine_patch->w;
+    float bottom = (float)nine_patch->margin[3]/(float)nine_patch->h;
+    /*
+         0       1         2
+                top
+         3 left  4   right 5
+               bottom
+         6       7         8
+    */
+    {
+        /* 0 */
+        struct nk_vec2 uv[2];
+        uv[0].x = min_corner.x;
+        uv[0].y = min_corner.y;
+        uv[1].x = min_corner.x + left;
+        uv[1].y = min_corner.y + top;
+        nk_draw_list_push_rect_uv(list,
+            nk_vec2(rect->x, rect->y),
+            nk_vec2(rect->x + nine_patch->margin[0], rect->y + nine_patch->margin[1]),
+            uv[0], uv[1], color);
+    }
+    {
+        /* 1 */
+        struct nk_vec2 uv[2];
+        uv[0].x = min_corner.x + left;
+        uv[0].y = min_corner.y;
+        uv[1].x = max_corner.x - right;
+        uv[1].y = min_corner.y + top;
+        nk_draw_list_push_rect_uv(list,
+            nk_vec2(rect->x + nine_patch->margin[0], rect->y),
+            nk_vec2(rect->x + rect->w - nine_patch->margin[2], rect->y + nine_patch->margin[1]),
+            uv[0], uv[1], color);
+    }
+    {
+        /* 2 */
+        struct nk_vec2 uv[2];
+        uv[0].x = max_corner.x - right;
+        uv[0].y = min_corner.y;
+        uv[1].x = max_corner.x;
+        uv[1].y = min_corner.y + top;
+        nk_draw_list_push_rect_uv(list,
+            nk_vec2(rect->x + rect->w - nine_patch->margin[2], rect->y),
+            nk_vec2(rect->x + rect->w, rect->y + nine_patch->margin[1]),
+            uv[0], uv[1], color);
+    }
+
+    {
+        /* 3 */
+        struct nk_vec2 uv[2];
+        uv[0].x = min_corner.x;
+        uv[0].y = min_corner.y + top;
+        uv[1].x = min_corner.x + left;
+        uv[1].y = max_corner.y - bottom;
+        nk_draw_list_push_rect_uv(list,
+            nk_vec2(rect->x, rect->y + nine_patch->margin[1]),
+            nk_vec2(rect->x + nine_patch->margin[0], rect->y + rect->h - nine_patch->margin[3]),
+            uv[0], uv[1], color);
+    }
+    {
+        /* 4 */
+        struct nk_vec2 uv[2];
+        uv[0].x = min_corner.x + left;
+        uv[0].y = min_corner.y + top;
+        uv[1].x = max_corner.x - right;
+        uv[1].y = max_corner.y - bottom;
+        nk_draw_list_push_rect_uv(list,
+            nk_vec2(rect->x + nine_patch->margin[0], rect->y + nine_patch->margin[1]),
+            nk_vec2(rect->x + rect->w - nine_patch->margin[2], rect->y + rect->h - nine_patch->margin[3]),
+            uv[0], uv[1], color);
+    }
+    {
+        /* 5 */
+        struct nk_vec2 uv[2];
+        uv[0].x = max_corner.x - right;
+        uv[0].y = min_corner.y + top;
+        uv[1].x = max_corner.x;
+        uv[1].y = max_corner.y - bottom;
+        nk_draw_list_push_rect_uv(list,
+            nk_vec2(rect->x + rect->w - nine_patch->margin[2], rect->y + nine_patch->margin[1]),
+            nk_vec2(rect->x + rect->w, rect->y + rect->h - nine_patch->margin[3]),
+            uv[0], uv[1], color);
+    }
+
+
+    {
+        /* 6 */
+        struct nk_vec2 uv[2];
+        uv[0].x = min_corner.x;
+        uv[0].y = max_corner.y - bottom;
+        uv[1].x = min_corner.x + left;
+        uv[1].y = max_corner.y;
+        nk_draw_list_push_rect_uv(list,
+            nk_vec2(rect->x, rect->y + rect->h - nine_patch->margin[3]),
+            nk_vec2(rect->x + nine_patch->margin[0], rect->y + rect->h),
+            uv[0], uv[1], color);
+    }
+    {
+        /* 7 */
+        struct nk_vec2 uv[2];
+        uv[0].x = min_corner.x + left;
+        uv[0].y = max_corner.y - bottom;
+        uv[1].x = max_corner.x - right;
+        uv[1].y = max_corner.y;
+        nk_draw_list_push_rect_uv(list,
+            nk_vec2(rect->x + nine_patch->margin[0], rect->y + rect->h - nine_patch->margin[3]),
+            nk_vec2(rect->x + rect->w - nine_patch->margin[2], rect->y + rect->h),
+            uv[0], uv[1], color);
+    }
+    {
+        /* 8 */
+        struct nk_vec2 uv[2];
+        uv[0].x = max_corner.x - right;
+        uv[0].y = max_corner.y - bottom;
+        uv[1].x = max_corner.x;
+        uv[1].y = max_corner.y;
+        nk_draw_list_push_rect_uv(list,
+            nk_vec2(rect->x + rect->w - nine_patch->margin[2], rect->y + rect->h - nine_patch->margin[3]),
+            nk_vec2(rect->x + rect->w, rect->y + rect->h),
+            uv[0], uv[1], color);
+    }
+
+}
+NK_API void
+nk_draw_list_add_nine_patch(struct nk_draw_list *list, struct nk_nine_patch nine_patch,
+    struct nk_rect rect, struct nk_color color)
+{
+    NK_ASSERT(list);
+    if (!list) return;
+    /* push new command with given texture */
+    nk_draw_list_push_image(list, nine_patch.handle);
+    // is subimage?
+    if (!(nine_patch.w == 0 && nine_patch.h == 0)) {
+        struct nk_vec2 min_corner;
+        struct nk_vec2 max_corner;
+        min_corner.x = (float)nine_patch.region[0]/(float)nine_patch.w;
+        min_corner.y = (float)nine_patch.region[1]/(float)nine_patch.h;
+        max_corner.x = (float)(nine_patch.region[0] + nine_patch.region[2])/(float)nine_patch.w;
+        max_corner.y = (float)(nine_patch.region[1] + nine_patch.region[3])/(float)nine_patch.h;
+        emit_nine_patch(list, &nine_patch, &rect, color, min_corner, max_corner);
+    } else
+        emit_nine_patch(list, &nine_patch, &rect, color, nk_vec2(0.0f, 0.0f), nk_vec2(1.0f, 1.0f));
+}
 NK_API void
 nk_draw_list_add_text(struct nk_draw_list *list, const struct nk_user_font *font,
     struct nk_rect rect, const char *text, int len, float font_height,
@@ -1304,6 +1452,10 @@ nk_convert(struct nk_context *ctx, struct nk_buffer *cmds,
         case NK_COMMAND_IMAGE: {
             const struct nk_command_image *i = (const struct nk_command_image*)cmd;
             nk_draw_list_add_image(&ctx->draw_list, i->img, nk_rect(i->x, i->y, i->w, i->h), i->col);
+        } break;
+        case NK_COMMAND_NINE_PATCH: {
+            const struct nk_command_nine_patch *i = (const struct nk_command_nine_patch*)cmd;
+            nk_draw_list_add_nine_patch(&ctx->draw_list, i->np, nk_rect(i->x, i->y, i->w, i->h), i->col);
         } break;
         case NK_COMMAND_CUSTOM: {
             const struct nk_command_custom *c = (const struct nk_command_custom*)cmd;

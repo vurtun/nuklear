@@ -58,6 +58,8 @@ nk_chart_begin_colored(struct nk_context *ctx, enum nk_chart_type type,
     background = &style->background;
     if (background->type == NK_STYLE_ITEM_IMAGE) {
         nk_draw_image(&win->buffer, bounds, &background->data.image, nk_white);
+    } else if (background->type == NK_STYLE_ITEM_NINE_PATCH) {
+        nk_draw_nine_patch(&win->buffer, bounds, &background->data.nine_patch, nk_white);
     } else {
         nk_fill_rect(&win->buffer, bounds, style->rounding, style->border_color);
         nk_fill_rect(&win->buffer, nk_shrink_rect(bounds, style->border),

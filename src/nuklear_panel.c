@@ -219,6 +219,9 @@ nk_panel_begin(struct nk_context *ctx, const char *title, enum nk_panel_type pan
         if (background->type == NK_STYLE_ITEM_IMAGE) {
             text.background = nk_rgba(0,0,0,0);
             nk_draw_image(&win->buffer, header, &background->data.image, nk_white);
+        } else if (background->type == NK_STYLE_ITEM_NINE_PATCH) {
+            text.background = nk_rgba(0,0,0,0);
+            nk_draw_nine_patch(&win->buffer, header, &background->data.nine_patch, nk_white);
         } else {
             text.background = background->data.color;
             nk_fill_rect(out, header, 0, background->data.color);
@@ -294,6 +297,8 @@ nk_panel_begin(struct nk_context *ctx, const char *title, enum nk_panel_type pan
         body.h = (win->bounds.h - layout->header_height);
         if (style->window.fixed_background.type == NK_STYLE_ITEM_IMAGE)
             nk_draw_image(out, body, &style->window.fixed_background.data.image, nk_white);
+        else if (style->window.fixed_background.type == NK_STYLE_ITEM_NINE_PATCH)
+            nk_draw_nine_patch(out, body, &style->window.fixed_background.data.nine_patch, nk_white);
         else nk_fill_rect(out, body, 0, style->window.fixed_background.data.color);
     }
 
@@ -509,6 +514,8 @@ nk_panel_end(struct nk_context *ctx)
         {const struct nk_style_item *item = &style->window.scaler;
         if (item->type == NK_STYLE_ITEM_IMAGE)
             nk_draw_image(out, scaler, &item->data.image, nk_white);
+        else if (item->type == NK_STYLE_ITEM_NINE_PATCH)
+            nk_draw_nine_patch(out, scaler, &item->data.nine_patch, nk_white);
         else {
             if (layout->flags & NK_WINDOW_SCALE_LEFT) {
                 nk_fill_triangle(out, scaler.x, scaler.y, scaler.x,

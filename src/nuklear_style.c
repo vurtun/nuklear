@@ -63,6 +63,14 @@ nk_style_item_image(struct nk_image img)
     return i;
 }
 NK_API struct nk_style_item
+nk_style_item_nine_patch(struct nk_nine_patch np)
+{
+    struct nk_style_item i;
+    i.type = NK_STYLE_ITEM_NINE_PATCH;
+    i.data.nine_patch = np;
+    return i;
+}
+NK_API struct nk_style_item
 nk_style_item_color(struct nk_color col)
 {
     struct nk_style_item i;
