@@ -10394,13 +10394,15 @@ static void emit_nine_patch(struct nk_draw_list *list, struct nk_nine_patch *nin
     float top = (float)nine_patch->margin[1]/(float)nine_patch->h;
     float right = (float)nine_patch->margin[2]/(float)nine_patch->w;
     float bottom = (float)nine_patch->margin[3]/(float)nine_patch->h;
-    // 0       1         2
-    //        top
-    // 3 left  4   right 5
-    //       bottom
-    // 6       7         8
+    /*
+         0       1         2
+                top
+         3 left  4   right 5
+               bottom
+         6       7         8
+    */
     {
-        // 0
+        /* 0 */
         struct nk_vec2 uv[2];
         uv[0].x = min_corner.x;
         uv[0].y = min_corner.y;
@@ -10412,7 +10414,7 @@ static void emit_nine_patch(struct nk_draw_list *list, struct nk_nine_patch *nin
             uv[0], uv[1], color);
     }
     {
-        // 1
+        /* 1 */
         struct nk_vec2 uv[2];
         uv[0].x = min_corner.x + left;
         uv[0].y = min_corner.y;
@@ -10424,7 +10426,7 @@ static void emit_nine_patch(struct nk_draw_list *list, struct nk_nine_patch *nin
             uv[0], uv[1], color);
     }
     {
-        // 2
+        /* 2 */
         struct nk_vec2 uv[2];
         uv[0].x = max_corner.x - right;
         uv[0].y = min_corner.y;
@@ -10437,7 +10439,7 @@ static void emit_nine_patch(struct nk_draw_list *list, struct nk_nine_patch *nin
     }
 
     {
-        // 3
+        /* 3 */
         struct nk_vec2 uv[2];
         uv[0].x = min_corner.x;
         uv[0].y = min_corner.y + top;
@@ -10449,7 +10451,7 @@ static void emit_nine_patch(struct nk_draw_list *list, struct nk_nine_patch *nin
             uv[0], uv[1], color);
     }
     {
-        // 4
+        /* 4 */
         struct nk_vec2 uv[2];
         uv[0].x = min_corner.x + left;
         uv[0].y = min_corner.y + top;
@@ -10461,7 +10463,7 @@ static void emit_nine_patch(struct nk_draw_list *list, struct nk_nine_patch *nin
             uv[0], uv[1], color);
     }
     {
-        // 5
+        /* 5 */
         struct nk_vec2 uv[2];
         uv[0].x = max_corner.x - right;
         uv[0].y = min_corner.y + top;
@@ -10475,7 +10477,7 @@ static void emit_nine_patch(struct nk_draw_list *list, struct nk_nine_patch *nin
 
 
     {
-        // 6
+        /* 6 */
         struct nk_vec2 uv[2];
         uv[0].x = min_corner.x;
         uv[0].y = max_corner.y - bottom;
@@ -10487,7 +10489,7 @@ static void emit_nine_patch(struct nk_draw_list *list, struct nk_nine_patch *nin
             uv[0], uv[1], color);
     }
     {
-        // 7
+        /* 7 */
         struct nk_vec2 uv[2];
         uv[0].x = min_corner.x + left;
         uv[0].y = max_corner.y - bottom;
@@ -10499,7 +10501,7 @@ static void emit_nine_patch(struct nk_draw_list *list, struct nk_nine_patch *nin
             uv[0], uv[1], color);
     }
     {
-        // 8
+        /* 8 */
         struct nk_vec2 uv[2];
         uv[0].x = max_corner.x - right;
         uv[0].y = max_corner.y - bottom;
@@ -20735,6 +20737,8 @@ nk_draw_checkbox(struct nk_command_buffer *out,
     if (background->type == NK_STYLE_ITEM_COLOR) {
         nk_fill_rect(out, *selector, 0, style->border_color);
         nk_fill_rect(out, nk_shrink_rect(*selector, style->border), 0, background->data.color);
+    } else if (background->type == NK_STYLE_ITEM_NINE_PATCH) {
+        nk_draw_nine_patch(out, *selector, &background->data.nine_patch, nk_white);
     } else nk_draw_image(out, *selector, &background->data.image, nk_white);
     if (active) {
         if (cursor->type == NK_STYLE_ITEM_IMAGE)
@@ -20779,11 +20783,13 @@ nk_draw_option(struct nk_command_buffer *out,
     if (background->type == NK_STYLE_ITEM_COLOR) {
         nk_fill_circle(out, *selector, style->border_color);
         nk_fill_circle(out, nk_shrink_rect(*selector, style->border), background->data.color);
+    } else if (background->type == NK_STYLE_ITEM_NINE_PATCH) {
+        nk_draw_nine_patch(out, *selector, &background->data.nine_patch, nk_white);
     } else nk_draw_image(out, *selector, &background->data.image, nk_white);
     if (active) {
         if (cursor->type == NK_STYLE_ITEM_IMAGE)
             nk_draw_image(out, *cursors, &cursor->data.image, nk_white);
-        else if (cursor->type == NK_STYLE_ITEM_IMAGE)
+        else if (cursor->type == NK_STYLE_ITEM_NINE_PATCH)
             nk_draw_nine_patch(out, *cursors, &cursor->data.nine_patch, nk_white);
         else nk_fill_circle(out, *cursors, cursor->data.color);
     }
@@ -21657,12 +21663,16 @@ nk_draw_progress(struct nk_command_buffer *out, nk_flags state,
     if (background->type == NK_STYLE_ITEM_COLOR) {
         nk_fill_rect(out, *bounds, style->rounding, background->data.color);
         nk_stroke_rect(out, *bounds, style->rounding, style->border, style->border_color);
+    } else if (background->type == NK_STYLE_ITEM_NINE_PATCH) {
+        nk_draw_nine_patch(out, *bounds, &background->data.nine_patch, nk_white);
     } else nk_draw_image(out, *bounds, &background->data.image, nk_white);
 
     /* draw cursor */
     if (cursor->type == NK_STYLE_ITEM_COLOR) {
         nk_fill_rect(out, *scursor, style->rounding, cursor->data.color);
         nk_stroke_rect(out, *scursor, style->rounding, style->border, style->border_color);
+    } else if (background->type == NK_STYLE_ITEM_NINE_PATCH) {
+        nk_draw_nine_patch(out, *scursor, &cursor->data.nine_patch, nk_white);
     } else nk_draw_image(out, *scursor, &cursor->data.image, nk_white);
 }
 NK_LIB nk_size
@@ -21843,6 +21853,8 @@ nk_draw_scrollbar(struct nk_command_buffer *out, nk_flags state,
     if (background->type == NK_STYLE_ITEM_COLOR) {
         nk_fill_rect(out, *bounds, style->rounding, background->data.color);
         nk_stroke_rect(out, *bounds, style->rounding, style->border, style->border_color);
+    } else if (background->type == NK_STYLE_ITEM_NINE_PATCH) {
+        nk_draw_nine_patch(out, *bounds, &background->data.nine_patch, nk_white);
     } else {
         nk_draw_image(out, *bounds, &background->data.image, nk_white);
     }
@@ -21851,6 +21863,8 @@ nk_draw_scrollbar(struct nk_command_buffer *out, nk_flags state,
     if (cursor->type == NK_STYLE_ITEM_COLOR) {
         nk_fill_rect(out, *scroll, style->rounding_cursor, cursor->data.color);
         nk_stroke_rect(out, *scroll, style->rounding_cursor, style->border_cursor, style->cursor_border_color);
+    } else if (cursor->type == NK_STYLE_ITEM_NINE_PATCH) {
+        nk_draw_nine_patch(out, *scroll, &cursor->data.nine_patch, nk_white);
     } else nk_draw_image(out, *scroll, &cursor->data.image, nk_white);
 }
 NK_LIB float
@@ -23393,7 +23407,11 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
     if (background->type == NK_STYLE_ITEM_COLOR) {
         nk_stroke_rect(out, bounds, style->rounding, style->border, style->border_color);
         nk_fill_rect(out, bounds, style->rounding, background->data.color);
-    } else nk_draw_image(out, bounds, &background->data.image, nk_white);}
+    }
+    else if (background->type == NK_STYLE_ITEM_NINE_PATCH) {
+        nk_draw_nine_patch(out, bounds, &background->data.nine_patch, nk_white);
+    }
+    else nk_draw_image(out, bounds, &background->data.image, nk_white);}
 
     area.w = NK_MAX(0, area.w - style->cursor_size);
     if (edit->active)
