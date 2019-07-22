@@ -193,6 +193,11 @@ nk_xsurf_scissor(XSurface *surf, float x, float y, float w, float h)
     clip_rect.width = (unsigned short)(w+2);
     clip_rect.height = (unsigned short)(h+2);
     XSetClipRectangles(surf->dpy, surf->gc, 0, 0, &clip_rect, 1, Unsorted);
+
+#ifdef NK_XLIB_USE_XFT
+	XftDrawSetClipRectangles(surf->ftdraw, 0, 0, &clip_rect, 1);
+#endif
+	return;
 }
 
 NK_INTERN void
@@ -426,22 +431,21 @@ nk_xsurf_draw_text(XSurface *surf, short x, short y, unsigned short w, unsigned 
     tx = (int)x;
     ty = (int)y + font->ascent;
 #ifdef NK_XLIB_USE_XFT
-    {
-        XRenderColor xrc;
-        XftColor color;
-        xrc.red = cfg.r * 257;
-        xrc.green = cfg.g * 257;
-        xrc.blue = cfg.b * 257;
-        xrc.alpha = cfg.a * 257;
-        XftColorAllocValue(surf->dpy, xlib.vis, xlib.cmap, &xrc, &color);
-        XftDrawStringUtf8(surf->ftdraw, &color, font->ft, tx, ty, (FcChar8*)text, len);
-    }
+    XRenderColor xrc;
+    XftColor color;
+    xrc.red = cfg.r * 257;
+    xrc.green = cfg.g * 257;
+    xrc.blue = cfg.b * 257;
+    xrc.alpha = cfg.a * 257;
+    XftColorAllocValue(surf->dpy, xlib.vis, xlib.cmap, &xrc, &color);
+    XftDrawStringUtf8(surf->ftdraw, &color, font->ft, tx, ty, (FcChar8*)text, len);
+	XftColorFree(surf->dpy, xlib.vis, xlib.cmap, &color);
 #else
     XSetForeground(surf->dpy, surf->gc, fg);
-    if(font->set)
-        XmbDrawString(surf->dpy,surf->drawable,font->set,surf->gc,tx,ty,(const char*)text,(int)len);
+    if(font->set) XmbDrawString(surf->dpy,surf->drawable, font->set, surf->gc, tx, ty, (const char*)text, (int)len);
     else XDrawString(surf->dpy, surf->drawable, surf->gc, tx, ty, (const char*)text, (int)len);
 #endif
+	return;
 }
 
 
@@ -576,6 +580,9 @@ nk_xsurf_blit(Drawable target, XSurface *surf, unsigned int w, unsigned int h)
 NK_INTERN void
 nk_xsurf_del(XSurface *surf)
 {
+#ifdef NK_XLIB_USE_XFT
+	XftDrawDestroy(surf->ftdraw);
+#endif
     XFreePixmap(surf->dpy, surf->drawable);
     XFreeGC(surf->dpy, surf->gc);
     free(surf);
@@ -586,7 +593,7 @@ nk_xfont_create(Display *dpy, const char *name)
 {
 #ifdef NK_XLIB_USE_XFT
     XFont *font = (XFont*)calloc(1, sizeof(XFont));
-    font->ft = XftFontOpenName(dpy, 0, name);
+    font->ft = XftFontOpenName(dpy, XDefaultScreen(dpy), name);
     if (!font->ft) {
         fprintf(stderr, "missing font: %s\n", name);
         return font;
@@ -632,16 +639,17 @@ NK_INTERN float
 nk_xfont_get_text_width(nk_handle handle, float height, const char *text, int len)
 {
     XFont *font = (XFont*)handle.ptr;
+
+	if(!font || !text)
+		return 0;
+
 #ifdef NK_XLIB_USE_XFT
     XGlyphInfo g;
-    if(!font || !text)
-        return 0;
+
     XftTextExtentsUtf8(xlib.dpy, font->ft, (FcChar8*)text, len, &g);
-    return g.width;
+    return g.xOff;
 #else
     XRectangle r;
-    if(!font || !text)
-        return 0;
 
     if(font->set) {
         XmbTextExtents(font->set, (const char*)text, len, NULL, &r);
@@ -658,6 +666,7 @@ nk_xfont_del(Display *dpy, XFont *font)
 {
     if(!font) return;
 #ifdef NK_XLIB_USE_XFT
+	XftFontClose(dpy, font->ft);
 #else
     if(font->set)
         XFreeFontSet(dpy, font->set);
