@@ -5680,7 +5680,7 @@ template<typename T> struct nk_alignof{struct Big {T x; char c;}; enum {
 #endif
 
 #endif /* NK_NUKLEAR_H_ */
-
+
 #ifdef NK_IMPLEMENTATION
 
 #ifndef NK_INTERNAL_H
@@ -16922,7 +16922,11 @@ nk_nonblock_begin(struct nk_context *ctx,
     } else {
         /* close the popup if user pressed outside or in the header */
         int pressed, in_body, in_header;
+#ifdef NK_BUTTON_TRIGGER_ON_RELEASE
+		pressed = nk_input_is_mouse_released(&ctx->input, NK_BUTTON_LEFT);
+#else
         pressed = nk_input_is_mouse_pressed(&ctx->input, NK_BUTTON_LEFT);
+#endif
         in_body = nk_input_is_mouse_hovering_rect(&ctx->input, body);
         in_header = nk_input_is_mouse_hovering_rect(&ctx->input, header);
         if (pressed && (!in_body || in_header))
@@ -25410,7 +25414,7 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
 
 
 #endif /* NK_IMPLEMENTATION */
-
+
 /*
 /// ## License
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~none
@@ -25465,6 +25469,7 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
 ///    - [yy]: Minor version with non-breaking API and library changes
 ///    - [zz]: Bug fix version with no direct changes to API
 ///
+/// - 2019/08/09 (4.01.1) - Fix a bug where combo box can't be closed by clicking the header when NK_BUTTON_TRIGGER_ON_RELEASE is defined
 /// - 2019/06/23 (4.01.0) - Added nk_***_get_scroll and nk_***_set_scroll for groups, windows, and popups
 /// - 2019/06/12 (4.00.3) - Fix panel background drawing bug
 /// - 2018/10/31 (4.00.2) - Added NK_KEYSTATE_BASED_INPUT to "fix" state based backends
@@ -25760,5 +25765,5 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
 /// Barret for his amazing single header libraries which restored my faith
 /// in libraries and brought me to create some of my own. Finally Apoorva Joshi
 /// for his single header file packer.
-*/
+*/
 
