@@ -821,7 +821,7 @@ nk_rawfb_init(void *fb, void *tex_mem, const unsigned int w, const unsigned int 
     if (!rawfb)
         return NULL;
 
-    nk_memset(rawfb, 0, sizeof(struct rawfb_context));
+    NK_MEMSET(rawfb, 0, sizeof(struct rawfb_context));
     rawfb->font_tex.pixels = tex_mem;
     rawfb->font_tex.format = NK_FONT_ATLAS_ALPHA8;
     rawfb->font_tex.w = rawfb->font_tex.h = 0;
@@ -1015,7 +1015,7 @@ nk_rawfb_shutdown(struct rawfb_context *rawfb)
 {
     if (rawfb) {
 	nk_free(&rawfb->ctx);
-	nk_memset(rawfb, 0, sizeof(struct rawfb_context));
+	NK_MEMSET(rawfb, 0, sizeof(struct rawfb_context));
 	free(rawfb);
     }
 }
