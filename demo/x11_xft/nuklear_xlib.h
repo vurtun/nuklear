@@ -941,7 +941,7 @@ nk_xlib_shutdown(void)
     nk_xsurf_del(xlib.surf);
     nk_free(&xlib.ctx);
     XFreeCursor(xlib.dpy, xlib.cursor);
-    nk_memset(&xlib, 0, sizeof(xlib));
+    NK_MEMSET(&xlib, 0, sizeof(xlib));
 }
 
 NK_API void

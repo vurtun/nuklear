@@ -286,7 +286,7 @@ nk_xlib_shutdown(void)
         XDestroyImage(xlib.ximg);
         shmdt(xlib.xsi.shmaddr);
         shmctl(xlib.xsi.shmid, IPC_RMID, NULL);
-    } nk_memset(&xlib, 0, sizeof(xlib));
+    } NK_MEMSET(&xlib, 0, sizeof(xlib));
 }
 
 NK_API void
