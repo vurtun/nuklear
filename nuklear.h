@@ -3524,6 +3524,7 @@ NK_API void nk_contextual_end(struct nk_context*);
  *
  * ============================================================================= */
 NK_API void nk_tooltip(struct nk_context*, const char*);
+NK_API void nk_tooltip_text(struct nk_context*, const char*, int);
 #ifdef NK_INCLUDE_STANDARD_VARARGS
 NK_API void nk_tooltipf(struct nk_context*, NK_PRINTF_FORMAT_STRING const char*, ...) NK_PRINTF_VARARG_FUNC(2);
 NK_API void nk_tooltipfv(struct nk_context*, NK_PRINTF_FORMAT_STRING const char*, va_list) NK_PRINTF_VALIST_FUNC(2);
@@ -25355,12 +25356,11 @@ nk_tooltip_end(struct nk_context *ctx)
     nk_popup_end(ctx);
 }
 NK_API void
-nk_tooltip(struct nk_context *ctx, const char *text)
+nk_tooltip_text(struct nk_context *ctx, const char *text, int len)
 {
     const struct nk_style *style;
     struct nk_vec2 padding;
 
-    int text_len;
     float text_width;
     float text_height;
 
@@ -25376,18 +25376,22 @@ nk_tooltip(struct nk_context *ctx, const char *text)
     padding = style->window.padding;
 
     /* calculate size of the text and tooltip */
-    text_len = nk_strlen(text);
     text_width = style->font->width(style->font->userdata,
-                    style->font->height, text, text_len);
+                    style->font->height, text, len);
     text_width += (4 * padding.x);
     text_height = (style->font->height + 2 * padding.y);
 
     /* execute tooltip and fill with text */
     if (nk_tooltip_begin(ctx, (float)text_width)) {
         nk_layout_row_dynamic(ctx, (float)text_height, 1);
-        nk_text(ctx, text, text_len, NK_TEXT_LEFT);
+        nk_text(ctx, text, len, NK_TEXT_LEFT);
         nk_tooltip_end(ctx);
     }
+}
+NK_API void
+nk_tooltip(struct nk_context *ctx, const char *text)
+{
+    nk_tooltip_text(ctx, text, nk_strlen(text));
 }
 #ifdef NK_INCLUDE_STANDARD_VARARGS
 NK_API void
