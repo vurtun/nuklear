@@ -5936,7 +5936,7 @@ NK_LIB void nk_draw_button_image(struct nk_command_buffer *out, const struct nk_
 NK_LIB int nk_do_button_image(nk_flags *state, struct nk_command_buffer *out, struct nk_rect bounds, struct nk_image img, enum nk_button_behavior b, const struct nk_style_button *style, const struct nk_input *in);
 NK_LIB void nk_draw_button_text_symbol(struct nk_command_buffer *out, const struct nk_rect *bounds, const struct nk_rect *label, const struct nk_rect *symbol, nk_flags state, const struct nk_style_button *style, const char *str, int len, enum nk_symbol_type type, const struct nk_user_font *font);
 NK_LIB int nk_do_button_text_symbol(nk_flags *state, struct nk_command_buffer *out, struct nk_rect bounds, enum nk_symbol_type symbol, const char *str, int len, nk_flags align, enum nk_button_behavior behavior, const struct nk_style_button *style, const struct nk_user_font *font, const struct nk_input *in);
-NK_LIB void nk_draw_button_text_image(struct nk_command_buffer *out, const struct nk_rect *bounds, const struct nk_rect *label, const struct nk_rect *image, nk_flags state, const struct nk_style_button *style, const char *str, int len, const struct nk_user_font *font, const struct nk_image *img);
+NK_LIB void nk_draw_button_text_image(struct nk_command_buffer *out, const struct nk_rect *bounds, const struct nk_rect *label, const struct nk_rect *image, nk_flags state, const struct nk_style_button *style, const char *str, int len, const struct nk_user_font *font, const struct nk_image *img, nk_flags text_alignment);
 NK_LIB int nk_do_button_text_image(nk_flags *state, struct nk_command_buffer *out, struct nk_rect bounds, struct nk_image img, const char* str, int len, nk_flags align, enum nk_button_behavior behavior, const struct nk_style_button *style, const struct nk_user_font *font, const struct nk_input *in);
 
 /* toggle */
@@ -20002,7 +20002,7 @@ nk_draw_button_text_image(struct nk_command_buffer *out,
     const struct nk_rect *bounds, const struct nk_rect *label,
     const struct nk_rect *image, nk_flags state, const struct nk_style_button *style,
     const char *str, int len, const struct nk_user_font *font,
-    const struct nk_image *img)
+    const struct nk_image *img, nk_flags text_alignment)
 {
     struct nk_text text;
     const struct nk_style_item *background;
@@ -20019,7 +20019,7 @@ nk_draw_button_text_image(struct nk_command_buffer *out,
     else text.text = style->text_normal;
 
     text.padding = nk_vec2(0,0);
-    nk_widget_text(out, *label, str, len, &text, NK_TEXT_CENTERED, font);
+    nk_widget_text(out, *label, str, len, &text, text_alignment, font);
     nk_draw_image(out, *image, img, nk_white);
 }
 NK_LIB int
@@ -20054,7 +20054,7 @@ nk_do_button_text_image(nk_flags *state,
     icon.h -= 2 * style->image_padding.y;
 
     if (style->draw_begin) style->draw_begin(out, style->userdata);
-    nk_draw_button_text_image(out, &bounds, &content, &icon, *state, style, str, len, font, &img);
+    nk_draw_button_text_image(out, &bounds, &content, &icon, *state, style, str, len, font, &img, align);
     if (style->draw_end) style->draw_end(out, style->userdata);
     return ret;
 }
