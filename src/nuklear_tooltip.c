@@ -76,7 +76,6 @@ nk_tooltip(struct nk_context *ctx, const char *text)
     style = &ctx->style;
     padding = style->window.padding;
 
-    /* calculate size of the text and tooltip */
 	text_width = nk_layout_get_label_width(ctx, text);
     text_width += (4 * padding.x);
     text_height = (style->font->height + 2 * padding.y);

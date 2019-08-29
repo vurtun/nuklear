@@ -2558,6 +2558,9 @@ NK_API struct nk_rect nk_layout_space_rect_to_screen(struct nk_context*, struct 
 /// Returns transformed `nk_rect` in layout space coordinates
 */
 NK_API struct nk_rect nk_layout_space_rect_to_local(struct nk_context*, struct nk_rect);
+NK_API float nk_layout_get_font_width(const struct nk_user_font *font, const char *text, int text_len);
+NK_API float nk_layout_get_text_width(struct nk_context*, const char *text, int text_len);
+NK_API float nk_layout_get_label_width(struct nk_context*, const char *label);
 /* =============================================================================
  *
  *                                  GROUP
@@ -7347,7 +7350,7 @@ nk_text_clamp(const struct nk_user_font *font, const char *text,
     glyph_len = nk_utf_decode(text, &unicode, text_len);
     while (glyph_len && (width < space) && (len < text_len)) {
         len += glyph_len;
-        s = font->width(font->userdata, font->height, text, len);
+		s = nk_layout_get_font_width(font, text, len);
         for (i = 0; i < sep_count; ++i) {
             if (unicode != sep_list[i]) continue;
             sep_width = last_width = width;
@@ -7391,7 +7394,7 @@ nk_text_calculate_text_bounds(const struct nk_user_font *font,
 
     glyph_len = nk_utf_decode(begin, &unicode, byte_len);
     if (!glyph_len) return text_size;
-    glyph_width = font->width(font->userdata, font->height, begin, glyph_len);
+	glyph_width = nk_layout_get_font_width(font, begin, glyph_len);
 
     *glyphs = 0;
     while ((text_len < byte_len) && glyph_len) {
@@ -7419,7 +7422,7 @@ nk_text_calculate_text_bounds(const struct nk_user_font *font,
         text_len += glyph_len;
         line_width += (float)glyph_width;
         glyph_len = nk_utf_decode(begin + text_len, &unicode, byte_len-text_len);
-        glyph_width = font->width(font->userdata, font->height, begin+text_len, glyph_len);
+		glyph_width = nk_layout_get_font_width(font, begin+text_len, glyph_len);
         continue;
     }
 
@@ -7433,7 +7436,6 @@ nk_text_calculate_text_bounds(const struct nk_user_font *font,
         *remaining = begin+text_len;
     return text_size;
 }
-
 
 
 
@@ -9182,7 +9184,7 @@ nk_draw_text(struct nk_command_buffer *b, struct nk_rect r,
     }
 
     /* make sure text fits inside bounds */
-    text_width = font->width(font->userdata, font->height, string, length);
+    text_width = nk_layout_get_font_width(font, string, length);
     if (text_width > r.w){
         int glyphs = 0;
         float txt_width = (float)text_width;
@@ -9205,7 +9207,6 @@ nk_draw_text(struct nk_command_buffer *b, struct nk_rect r,
     NK_MEMCPY(cmd->string, string, (nk_size)length);
     cmd->string[length] = '\0';
 }
-
 
 
 
@@ -15789,7 +15790,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title, enum nk_panel_type pan
         {/* window header title */
         int text_len = nk_strlen(title);
         struct nk_rect label = {0,0,0,0};
-        float t = font->width(font->userdata, font->height, title, text_len);
+        float t = nk_layout_get_font_width(font, title, text_len);
         text.padding = nk_vec2(0,0);
 
         label.x = header.x + style->window.header.padding.x;
@@ -16117,7 +16118,6 @@ nk_panel_end(struct nk_context *ctx)
     /* helper to make sure you have a 'nk_tree_push' for every 'nk_tree_pop' */
     NK_ASSERT(!layout->row.tree_depth);
 }
-
 
 
 
@@ -17606,6 +17606,23 @@ nk_layout_reset_min_row_height(struct nk_context *ctx)
     layout->row.min_height += ctx->style.text.padding.y*2;
     layout->row.min_height += ctx->style.window.min_row_height_padding*2;
 }
+NK_API float
+nk_layout_get_font_width(const struct nk_user_font *font, const char *text, int text_len)
+{
+	return font->width(font->userdata, font->height, text, text_len);
+}
+NK_API float
+nk_layout_get_text_width(struct nk_context *ctx, const char *text, int text_len)
+{
+	const struct nk_style *style = &ctx->style;
+	return style->font->width(style->font->userdata, style->font->height, text, text_len);
+}
+NK_API float
+nk_layout_get_label_width(struct nk_context *ctx, const char *label)
+{
+	const struct nk_style *style = &ctx->style;
+	return style->font->width(style->font->userdata, style->font->height, label, nk_strlen(label));
+}
 NK_LIB float
 nk_layout_row_calculate_usable_space(const struct nk_style *style, enum nk_panel_type type,
     float total_space, int columns)
@@ -18332,7 +18349,6 @@ nk_layout_peek(struct nk_rect *bounds, struct nk_context *ctx)
 
 
 
-
 /* ===============================================================
  *
  *                              TREE
@@ -18533,7 +18549,6 @@ nk_tree_element_image_push_hashed_base(struct nk_context *ctx, enum nk_tree_type
     float row_height;
     struct nk_vec2 padding;
 
-    int text_len;
     float text_width;
 
     struct nk_vec2 item_spacing;
@@ -18603,9 +18618,7 @@ nk_tree_element_image_push_hashed_base(struct nk_context *ctx, enum nk_tree_type
     /* draw label */
     {nk_flags dummy = 0;
     struct nk_rect label;
-    /* calculate size of the text and tooltip */
-    text_len = nk_strlen(title);
-    text_width = style->font->width(style->font->userdata, style->font->height, title, text_len);
+	text_width = nk_layout_get_label_width(ctx, title);
     text_width += (4 * padding.x);
 
     header.w = NK_MAX(header.w, sym.w + item_spacing.x);
@@ -18656,7 +18669,7 @@ nk_tree_element_push_hashed(struct nk_context *ctx, enum nk_tree_type type,
     const char *title, enum nk_collapse_states initial_state,
     int *selected, const char *hash, int len, int seed)
 {
-    return nk_tree_element_base(ctx, type, 0, title, initial_state, selected, hash, len, seed);
+	return nk_tree_element_base(ctx, type, 0, title, initial_state, selected, hash, len, seed);
 }
 NK_API int
 nk_tree_element_image_push_hashed(struct nk_context *ctx, enum nk_tree_type type,
@@ -18670,7 +18683,6 @@ nk_tree_element_pop(struct nk_context *ctx)
 {
     nk_tree_state_pop(ctx);
 }
-
 
 
 
@@ -21718,7 +21730,7 @@ nk_textedit_get_width(const struct nk_text_edit *edit, int line_start, int char_
     int len = 0;
     nk_rune unicode = 0;
     const char *str = nk_str_at_const(&edit->string, line_start + char_id, &unicode, &len);
-    return font->width(font->userdata, font->height, str, len);
+    return nk_layout_get_font_width(font, str, len);
 }
 NK_INTERN void
 nk_textedit_layout_row(struct nk_text_edit_row *r, struct nk_text_edit *edit,
@@ -22711,7 +22723,6 @@ nk_textedit_free(struct nk_text_edit *state)
 
 
 
-
 /* ===============================================================
  *
  *                          FILTER
@@ -22837,7 +22848,7 @@ nk_edit_draw_text(struct nk_command_buffer *out,
             glyph_len = nk_utf_decode(text + text_len, &unicode, byte_len-text_len);
             continue;
         }
-        glyph_width = font->width(font->userdata, font->height, text+text_len, glyph_len);
+        glyph_width = nk_layout_get_font_width(font, text + text_len, glyph_len);
         line_width += (float)glyph_width;
         text_len += glyph_len;
         glyph_len = nk_utf_decode(text + text_len, &unicode, byte_len-text_len);
@@ -23074,7 +23085,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
             int row_begin = 0;
 
             glyph_len = nk_utf_decode(text, &unicode, len);
-            glyph_width = font->width(font->userdata, font->height, text, glyph_len);
+            glyph_width = nk_layout_get_font_width(font, text, glyph_len);
             line_width = 0;
 
             /* iterate all lines */
@@ -23140,7 +23151,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
                     glyphs++;
                     row_begin = text_len;
                     glyph_len = nk_utf_decode(text + text_len, &unicode, len-text_len);
-                    glyph_width = font->width(font->userdata, font->height, text+text_len, glyph_len);
+					glyph_width = nk_layout_get_font_width(font, text + text_len, glyph_len);
                     continue;
                 }
 
@@ -23149,8 +23160,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
                 line_width += (float)glyph_width;
 
                 glyph_len = nk_utf_decode(text + text_len, &unicode, len-text_len);
-                glyph_width = font->width(font->userdata, font->height,
-                    text+text_len, glyph_len);
+				glyph_width = nk_layout_get_font_width(font, text + text_len, glyph_len);
                 continue;
             }
             text_size.y = (float)total_lines * row_height;
@@ -23319,7 +23329,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
 
                 label.x = area.x + cursor_pos.x - edit->scrollbar.x;
                 label.y = area.y + cursor_pos.y - edit->scrollbar.y;
-                label.w = font->width(font->userdata, font->height, cursor_ptr, glyph_len);
+				label.w = nk_layout_get_font_width(font, cursor_ptr, glyph_len);
                 label.h = row_height;
 
                 txt.padding = nk_vec2(0,0);
@@ -23518,7 +23528,6 @@ nk_edit_string_zero_terminated(struct nk_context *ctx, nk_flags flags,
 
 
 
-
 /* ===============================================================
  *
  *                              PROPERTY
@@ -23653,7 +23662,7 @@ nk_do_property(nk_flags *ws,
 
     /* text label */
     name_len = nk_strlen(name);
-    size = font->width(font->userdata, font->height, name, name_len);
+    size = nk_layout_get_font_width(font, name, name_len);
     label.x = left.x + left.w + style->padding.x;
     label.w = (float)size + 2 * style->padding.x;
     label.y = property.y + style->border + style->padding.y;
@@ -23667,7 +23676,7 @@ nk_do_property(nk_flags *ws,
 
     /* edit */
     if (*state == NK_PROPERTY_EDIT) {
-        size = font->width(font->userdata, font->height, buffer, *len);
+		size = nk_layout_get_font_width(font, buffer, *len);
         size += style->edit.cursor_size;
         length = len;
         dst = buffer;
@@ -23687,7 +23696,7 @@ nk_do_property(nk_flags *ws,
             num_len = nk_string_float_limit(string, NK_MAX_FLOAT_PRECISION);
             break;
         }
-        size = font->width(font->userdata, font->height, string, num_len);
+		size = nk_layout_get_font_width(font, string, num_len);
         dst = string;
         length = &num_len;
     }
@@ -24010,7 +24019,6 @@ nk_propertyd(struct nk_context *ctx, const char *name, double min,
     val = variant.value.d;
     return val;
 }
-
 
 
 
@@ -25375,17 +25383,14 @@ nk_tooltip(struct nk_context *ctx, const char *text)
     style = &ctx->style;
     padding = style->window.padding;
 
-    /* calculate size of the text and tooltip */
-    text_len = nk_strlen(text);
-    text_width = style->font->width(style->font->userdata,
-                    style->font->height, text, text_len);
+	text_width = nk_layout_get_label_width(ctx, text);
     text_width += (4 * padding.x);
     text_height = (style->font->height + 2 * padding.y);
 
     /* execute tooltip and fill with text */
     if (nk_tooltip_begin(ctx, (float)text_width)) {
         nk_layout_row_dynamic(ctx, (float)text_height, 1);
-        nk_text(ctx, text, text_len, NK_TEXT_LEFT);
+        nk_label(ctx, text, NK_TEXT_LEFT);
         nk_tooltip_end(ctx);
     }
 }
@@ -25406,8 +25411,6 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
     nk_tooltip(ctx, buf);
 }
 #endif
-
-
 
 #endif /* NK_IMPLEMENTATION */
 
