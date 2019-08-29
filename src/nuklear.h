@@ -2792,10 +2792,10 @@ NK_API int nk_tree_state_image_push(struct nk_context*, enum nk_tree_type, struc
 */
 NK_API void nk_tree_state_pop(struct nk_context*);
 
-#define nk_tree_element_push(ctx, type, title, state, sel) nk_tree_element_push_hashed(ctx, type, title, state, sel, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),__LINE__)
-#define nk_tree_element_push_id(ctx, type, title, state, sel, id) nk_tree_element_push_hashed(ctx, type, title, state, sel, NK_FILE_LINE,nk_strlen(NK_FILE_LINE),id)
-NK_API int nk_tree_element_push_hashed(struct nk_context*, enum nk_tree_type, const char *title, enum nk_collapse_states initial_state, int *selected, const char *hash, int len, int seed);
-NK_API int nk_tree_element_image_push_hashed(struct nk_context*, enum nk_tree_type, struct nk_image, const char *title, enum nk_collapse_states initial_state, int *selected, const char *hash, int len,int seed);
+#define nk_tree_element_push(ctx, type, title, state, sel, trigger_bounds) nk_tree_element_push_hashed(ctx, type, title, state, sel, trigger_bounds, NK_FILE_LINE, nk_strlen(NK_FILE_LINE), __LINE__)
+#define nk_tree_element_push_id(ctx, type, title, state, sel, trigger_bounds, id) nk_tree_element_push_hashed(ctx, type, title, state, sel, trigger_bounds, NK_FILE_LINE, nk_strlen(NK_FILE_LINE), id)
+NK_API int nk_tree_element_push_hashed(struct nk_context*, enum nk_tree_type, const char *title, enum nk_collapse_states initial_state, int *selected, struct nk_rect *trigger_bounds, const char *hash, int len, int seed);
+NK_API int nk_tree_element_image_push_hashed(struct nk_context*, enum nk_tree_type, struct nk_image, const char *title, enum nk_collapse_states initial_state, int *selected, struct nk_rect *trigger_bounds, const char *hash, int len,int seed);
 NK_API void nk_tree_element_pop(struct nk_context*);
 
 /* =============================================================================
