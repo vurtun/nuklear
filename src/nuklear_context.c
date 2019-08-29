@@ -311,6 +311,7 @@ nk__begin(struct nk_context *ctx)
 {
     struct nk_window *iter;
     nk_byte *buffer;
+	const struct nk_command *begin;
     NK_ASSERT(ctx);
     if (!ctx) return 0;
     if (!ctx->count) return 0;
@@ -325,9 +326,10 @@ nk__begin(struct nk_context *ctx)
         (iter->flags & NK_WINDOW_HIDDEN) || iter->seq != ctx->seq))
         iter = iter->next;
     if (!iter) return 0;
-    return nk_ptr_add_const(struct nk_command, buffer, iter->buffer.begin);
+	begin = nk_ptr_add_const(struct nk_command, buffer, iter->buffer.begin);
+	ctx->loop = begin;
+    return begin;
 }
-
 NK_API const struct nk_command*
 nk__next(struct nk_context *ctx, const struct nk_command *cmd)
 {
@@ -335,10 +337,17 @@ nk__next(struct nk_context *ctx, const struct nk_command *cmd)
     const struct nk_command *next;
     NK_ASSERT(ctx);
     if (!ctx || !cmd || !ctx->count) return 0;
-    if (cmd->next >= ctx->memory.allocated) return 0;
+    if (!cmd->next || cmd->next >= ctx->memory.allocated) return 0;
     buffer = (nk_byte*)ctx->memory.memory.ptr;
     next = nk_ptr_add_const(struct nk_command, buffer, cmd->next);
-    return next;
+
+	/* loop detection */
+	if (!ctx->loop || !ctx->loop->next || ctx->loop->next >= ctx->memory.allocated) ctx->loop = 0;
+	else {
+		ctx->loop = nk_ptr_add_const(struct nk_command, buffer, ctx->loop->next);
+		if (!ctx->loop->next || ctx->loop->next >= ctx->memory.allocated) ctx->loop = 0;
+		else ctx->loop = nk_ptr_add_const(struct nk_command, buffer, ctx->loop->next);
+	}
+	if (next == ctx->loop) return 0;
+    else return next;
 }
-
-
