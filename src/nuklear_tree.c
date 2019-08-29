@@ -201,7 +201,6 @@ nk_tree_element_image_push_hashed_base(struct nk_context *ctx, enum nk_tree_type
     float row_height;
     struct nk_vec2 padding;
 
-    int text_len;
     float text_width;
 
     struct nk_vec2 item_spacing;
@@ -271,9 +270,7 @@ nk_tree_element_image_push_hashed_base(struct nk_context *ctx, enum nk_tree_type
     /* draw label */
     {nk_flags dummy = 0;
     struct nk_rect label;
-    /* calculate size of the text and tooltip */
-    text_len = nk_strlen(title);
-    text_width = style->font->width(style->font->userdata, style->font->height, title, text_len);
+	text_width = nk_layout_get_label_width(ctx, title);
     text_width += (4 * padding.x);
 
     header.w = NK_MAX(header.w, sym.w + item_spacing.x);
@@ -324,7 +321,7 @@ nk_tree_element_push_hashed(struct nk_context *ctx, enum nk_tree_type type,
     const char *title, enum nk_collapse_states initial_state,
     int *selected, const char *hash, int len, int seed)
 {
-    return nk_tree_element_base(ctx, type, 0, title, initial_state, selected, hash, len, seed);
+	return nk_tree_element_base(ctx, type, 0, title, initial_state, selected, hash, len, seed);
 }
 NK_API int
 nk_tree_element_image_push_hashed(struct nk_context *ctx, enum nk_tree_type type,
@@ -338,4 +335,3 @@ nk_tree_element_pop(struct nk_context *ctx)
 {
     nk_tree_state_pop(ctx);
 }
-

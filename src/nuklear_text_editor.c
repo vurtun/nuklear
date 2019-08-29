@@ -37,7 +37,7 @@ nk_textedit_get_width(const struct nk_text_edit *edit, int line_start, int char_
     int len = 0;
     nk_rune unicode = 0;
     const char *str = nk_str_at_const(&edit->string, line_start + char_id, &unicode, &len);
-    return font->width(font->userdata, font->height, str, len);
+    return nk_layout_get_font_width(font, str, len);
 }
 NK_INTERN void
 nk_textedit_layout_row(struct nk_text_edit_row *r, struct nk_text_edit *edit,
@@ -1026,4 +1026,3 @@ nk_textedit_free(struct nk_text_edit *state)
     if (!state) return;
     nk_str_free(&state->string);
 }
-

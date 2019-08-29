@@ -77,16 +77,14 @@ nk_tooltip(struct nk_context *ctx, const char *text)
     padding = style->window.padding;
 
     /* calculate size of the text and tooltip */
-    text_len = nk_strlen(text);
-    text_width = style->font->width(style->font->userdata,
-                    style->font->height, text, text_len);
+	text_width = nk_layout_get_label_width(ctx, text);
     text_width += (4 * padding.x);
     text_height = (style->font->height + 2 * padding.y);
 
     /* execute tooltip and fill with text */
     if (nk_tooltip_begin(ctx, (float)text_width)) {
         nk_layout_row_dynamic(ctx, (float)text_height, 1);
-        nk_text(ctx, text, text_len, NK_TEXT_LEFT);
+        nk_label(ctx, text, NK_TEXT_LEFT);
         nk_tooltip_end(ctx);
     }
 }
@@ -107,5 +105,3 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
     nk_tooltip(ctx, buf);
 }
 #endif
-
-

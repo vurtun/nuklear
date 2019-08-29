@@ -126,7 +126,7 @@ nk_edit_draw_text(struct nk_command_buffer *out,
             glyph_len = nk_utf_decode(text + text_len, &unicode, byte_len-text_len);
             continue;
         }
-        glyph_width = font->width(font->userdata, font->height, text+text_len, glyph_len);
+        glyph_width = nk_layout_get_font_width(font, text + text_len, glyph_len);
         line_width += (float)glyph_width;
         text_len += glyph_len;
         glyph_len = nk_utf_decode(text + text_len, &unicode, byte_len-text_len);
@@ -363,7 +363,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
             int row_begin = 0;
 
             glyph_len = nk_utf_decode(text, &unicode, len);
-            glyph_width = font->width(font->userdata, font->height, text, glyph_len);
+            glyph_width = nk_layout_get_font_width(font, text, glyph_len);
             line_width = 0;
 
             /* iterate all lines */
@@ -429,7 +429,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
                     glyphs++;
                     row_begin = text_len;
                     glyph_len = nk_utf_decode(text + text_len, &unicode, len-text_len);
-                    glyph_width = font->width(font->userdata, font->height, text+text_len, glyph_len);
+					glyph_width = nk_layout_get_font_width(font, text + text_len, glyph_len);
                     continue;
                 }
 
@@ -438,8 +438,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
                 line_width += (float)glyph_width;
 
                 glyph_len = nk_utf_decode(text + text_len, &unicode, len-text_len);
-                glyph_width = font->width(font->userdata, font->height,
-                    text+text_len, glyph_len);
+				glyph_width = nk_layout_get_font_width(font, text + text_len, glyph_len);
                 continue;
             }
             text_size.y = (float)total_lines * row_height;
@@ -608,7 +607,7 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
 
                 label.x = area.x + cursor_pos.x - edit->scrollbar.x;
                 label.y = area.y + cursor_pos.y - edit->scrollbar.y;
-                label.w = font->width(font->userdata, font->height, cursor_ptr, glyph_len);
+				label.w = nk_layout_get_font_width(font, cursor_ptr, glyph_len);
                 label.h = row_height;
 
                 txt.padding = nk_vec2(0,0);
@@ -803,4 +802,3 @@ nk_edit_string_zero_terminated(struct nk_context *ctx, nk_flags flags,
     buffer[NK_MIN(NK_MAX(max-1,0), len)] = '\0';
     return result;
 }
-

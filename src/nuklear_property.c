@@ -135,7 +135,7 @@ nk_do_property(nk_flags *ws,
 
     /* text label */
     name_len = nk_strlen(name);
-    size = font->width(font->userdata, font->height, name, name_len);
+    size = nk_layout_get_font_width(font, name, name_len);
     label.x = left.x + left.w + style->padding.x;
     label.w = (float)size + 2 * style->padding.x;
     label.y = property.y + style->border + style->padding.y;
@@ -149,7 +149,7 @@ nk_do_property(nk_flags *ws,
 
     /* edit */
     if (*state == NK_PROPERTY_EDIT) {
-        size = font->width(font->userdata, font->height, buffer, *len);
+		size = nk_layout_get_font_width(font, buffer, *len);
         size += style->edit.cursor_size;
         length = len;
         dst = buffer;
@@ -169,7 +169,7 @@ nk_do_property(nk_flags *ws,
             num_len = nk_string_float_limit(string, NK_MAX_FLOAT_PRECISION);
             break;
         }
-        size = font->width(font->userdata, font->height, string, num_len);
+		size = nk_layout_get_font_width(font, string, num_len);
         dst = string;
         length = &num_len;
     }
@@ -492,4 +492,3 @@ nk_propertyd(struct nk_context *ctx, const char *name, double min,
     val = variant.value.d;
     return val;
 }
-

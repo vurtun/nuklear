@@ -273,7 +273,7 @@ nk_panel_begin(struct nk_context *ctx, const char *title, enum nk_panel_type pan
         {/* window header title */
         int text_len = nk_strlen(title);
         struct nk_rect label = {0,0,0,0};
-        float t = font->width(font->userdata, font->height, title, text_len);
+        float t = nk_layout_get_font_width(font, title, text_len);
         text.padding = nk_vec2(0,0);
 
         label.x = header.x + style->window.header.padding.x;
@@ -601,4 +601,3 @@ nk_panel_end(struct nk_context *ctx)
     /* helper to make sure you have a 'nk_tree_push' for every 'nk_tree_pop' */
     NK_ASSERT(!layout->row.tree_depth);
 }
-

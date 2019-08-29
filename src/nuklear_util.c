@@ -1030,7 +1030,7 @@ nk_text_clamp(const struct nk_user_font *font, const char *text,
     glyph_len = nk_utf_decode(text, &unicode, text_len);
     while (glyph_len && (width < space) && (len < text_len)) {
         len += glyph_len;
-        s = font->width(font->userdata, font->height, text, len);
+		s = nk_layout_get_font_width(font, text, len);
         for (i = 0; i < sep_count; ++i) {
             if (unicode != sep_list[i]) continue;
             sep_width = last_width = width;
@@ -1074,7 +1074,7 @@ nk_text_calculate_text_bounds(const struct nk_user_font *font,
 
     glyph_len = nk_utf_decode(begin, &unicode, byte_len);
     if (!glyph_len) return text_size;
-    glyph_width = font->width(font->userdata, font->height, begin, glyph_len);
+	glyph_width = nk_layout_get_font_width(font, begin, glyph_len);
 
     *glyphs = 0;
     while ((text_len < byte_len) && glyph_len) {
@@ -1102,7 +1102,7 @@ nk_text_calculate_text_bounds(const struct nk_user_font *font,
         text_len += glyph_len;
         line_width += (float)glyph_width;
         glyph_len = nk_utf_decode(begin + text_len, &unicode, byte_len-text_len);
-        glyph_width = font->width(font->userdata, font->height, begin+text_len, glyph_len);
+		glyph_width = nk_layout_get_font_width(font, begin+text_len, glyph_len);
         continue;
     }
 
@@ -1116,4 +1116,3 @@ nk_text_calculate_text_bounds(const struct nk_user_font *font,
         *remaining = begin+text_len;
     return text_size;
 }
-

@@ -455,7 +455,7 @@ nk_draw_text(struct nk_command_buffer *b, struct nk_rect r,
     }
 
     /* make sure text fits inside bounds */
-    text_width = font->width(font->userdata, font->height, string, length);
+    text_width = nk_layout_get_font_width(font, string, length);
     if (text_width > r.w){
         int glyphs = 0;
         float txt_width = (float)text_width;
@@ -478,4 +478,3 @@ nk_draw_text(struct nk_command_buffer *b, struct nk_rect r,
     NK_MEMCPY(cmd->string, string, (nk_size)length);
     cmd->string[length] = '\0';
 }
-

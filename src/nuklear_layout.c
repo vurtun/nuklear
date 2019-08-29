@@ -40,6 +40,23 @@ nk_layout_reset_min_row_height(struct nk_context *ctx)
     layout->row.min_height += ctx->style.text.padding.y*2;
     layout->row.min_height += ctx->style.window.min_row_height_padding*2;
 }
+NK_API float
+nk_layout_get_font_width(const struct nk_user_font *font, const char *text, int text_len)
+{
+	return font->width(font->userdata, font->height, text, text_len);
+}
+NK_API float
+nk_layout_get_text_width(struct nk_context *ctx, const char *text, int text_len)
+{
+	const struct nk_style *style = &ctx->style;
+	return style->font->width(style->font->userdata, style->font->height, text, text_len);
+}
+NK_API float
+nk_layout_get_label_width(struct nk_context *ctx, const char *label)
+{
+	const struct nk_style *style = &ctx->style;
+	return style->font->width(style->font->userdata, style->font->height, label, nk_strlen(label));
+}
 NK_LIB float
 nk_layout_row_calculate_usable_space(const struct nk_style *style, enum nk_panel_type type,
     float total_space, int columns)
@@ -762,4 +779,3 @@ nk_layout_peek(struct nk_rect *bounds, struct nk_context *ctx)
     layout->at_y = y;
     layout->row.index = index;
 }
-

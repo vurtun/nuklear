@@ -2339,6 +2339,9 @@ NK_API struct nk_rect nk_layout_space_rect_to_screen(struct nk_context*, struct 
 /// Returns transformed `nk_rect` in layout space coordinates
 */
 NK_API struct nk_rect nk_layout_space_rect_to_local(struct nk_context*, struct nk_rect);
+NK_API float nk_layout_get_font_width(const struct nk_user_font *font, const char *text, int text_len);
+NK_API float nk_layout_get_text_width(struct nk_context*, const char *text, int text_len);
+NK_API float nk_layout_get_label_width(struct nk_context*, const char *label);
 /* =============================================================================
  *
  *                                  GROUP
