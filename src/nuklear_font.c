@@ -2347,6 +2347,7 @@ nk_font_bake(struct nk_font_baker *baker, void *image_memory, int width, int hei
                 dst_font->ascent = ((float)unscaled_ascent * font_scale);
                 dst_font->descent = ((float)unscaled_descent * font_scale);
                 dst_font->glyph_offset = glyph_n;
+                dst_font->glyph_count = 0;
             }
 
             /* fill own baked font glyph array */
