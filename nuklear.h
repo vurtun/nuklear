@@ -12895,6 +12895,9 @@ nk_font_bake(struct nk_font_baker *baker, void *image_memory, int width, int hei
                 dst_font->ascent = ((float)unscaled_ascent * font_scale);
                 dst_font->descent = ((float)unscaled_descent * font_scale);
                 dst_font->glyph_offset = glyph_n;
+                // Need to zero this, or it will carry over from a previous
+                // bake, and cause a segfault when accessing glyphs[].
+                dst_font->glyph_count = 0;
             }
 
             /* fill own baked font glyph array */
@@ -25465,6 +25468,9 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
 ///    - [yy]: Minor version with non-breaking API and library changes
 ///    - [zz]: Bug fix version with no direct changes to API
 ///
+/// - 2019/09/08 (4.01.1) - Fixed a bug wherein re-baking of fonts caused a segmentation
+///                         fault due to dst_font->glyph_count not being zeroed on subsequent
+///                         bakes of the same set of fonts.
 /// - 2019/06/23 (4.01.0) - Added nk_***_get_scroll and nk_***_set_scroll for groups, windows, and popups
 /// - 2019/06/12 (4.00.3) - Fix panel background drawing bug
 /// - 2018/10/31 (4.00.2) - Added NK_KEYSTATE_BASED_INPUT to "fix" state based backends
