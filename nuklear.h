@@ -6087,15 +6087,18 @@ nk_sin(float x)
 NK_LIB float
 nk_cos(float x)
 {
-    NK_STORAGE const float a0 = +1.00238601909309722f;
-    NK_STORAGE const float a1 = -3.81919947353040024e-2f;
-    NK_STORAGE const float a2 = -3.94382342128062756e-1f;
-    NK_STORAGE const float a3 = -1.18134036025221444e-1f;
-    NK_STORAGE const float a4 = +1.07123798512170878e-1f;
-    NK_STORAGE const float a5 = -1.86637164165180873e-2f;
-    NK_STORAGE const float a6 = +9.90140908664079833e-4f;
-    NK_STORAGE const float a7 = -5.23022132118824778e-14f;
-    return a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*(a5 + x*(a6 + x*a7))))));
+    // New implementation. Also generated using lolremez.
+    // Old version significantly deviated from expected results.
+    NK_STORAGE const float a0 = 9.9995999154986614e-1f;
+    NK_STORAGE const float a1 = 1.2548995793001028e-3f;
+    NK_STORAGE const float a2 = -5.0648546280678015e-1f;
+    NK_STORAGE const float a3 = 1.2942246466519995e-2f;
+    NK_STORAGE const float a4 = 2.8668384702547972e-2f;
+    NK_STORAGE const float a5 = 7.3726485210586547e-3f;
+    NK_STORAGE const float a6 = -3.8510875386947414e-3f;
+    NK_STORAGE const float a7 = 4.7196604604366623e-4f;
+    NK_STORAGE const float a8 = -1.8776444013090451e-5f;
+    return a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*(a5 + x*(a6 + x*(a7 + x*a8)))))));
 }
 NK_LIB nk_uint
 nk_round_up_pow2(nk_uint v)
@@ -25468,6 +25471,7 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
 ///    - [yy]: Minor version with non-breaking API and library changes
 ///    - [zz]: Bug fix version with no direct changes to API
 ///
+/// - 2019/09/10 (4.01.2) - Fixed the nk_cos function, which deviated significantly.
 /// - 2019/09/08 (4.01.1) - Fixed a bug wherein re-baking of fonts caused a segmentation
 ///                         fault due to dst_font->glyph_count not being zeroed on subsequent
 ///                         bakes of the same set of fonts.

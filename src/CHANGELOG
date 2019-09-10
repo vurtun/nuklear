@@ -8,6 +8,7 @@
 ///    - [yy]: Minor version with non-breaking API and library changes
 ///    - [zz]: Bug fix version with no direct changes to API
 ///
+/// - 2019/09/10 (4.01.2) - Fixed the nk_cos function, which deviated significantly.
 /// - 2019/09/08 (4.01.1) - Fixed a bug wherein re-baking of fonts caused a segmentation
 ///                         fault due to dst_font->glyph_count not being zeroed on subsequent
 ///                         bakes of the same set of fonts.
