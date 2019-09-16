@@ -207,7 +207,6 @@ nk_tree_element_image_push_hashed_base(struct nk_context *ctx, enum nk_tree_type
     struct nk_vec2 item_spacing;
     struct nk_rect header = {0,0,0,0};
     struct nk_rect sym = {0,0,0,0};
-    struct nk_text text;
 
     nk_flags ws = 0;
     enum nk_widget_layout_states widget_state;
@@ -237,14 +236,12 @@ nk_tree_element_image_push_hashed_base(struct nk_context *ctx, enum nk_tree_type
         const struct nk_style_item *background = &style->tab.background;
         if (background->type == NK_STYLE_ITEM_IMAGE) {
             nk_draw_image(out, header, &background->data.image, nk_white);
-            text.background = nk_rgba(0,0,0,0);
         } else {
-            text.background = background->data.color;
             nk_fill_rect(out, header, 0, style->tab.border_color);
             nk_fill_rect(out, nk_shrink_rect(header, style->tab.border),
                 style->tab.rounding, background->data.color);
         }
-    } else text.background = style->window.background;
+    }
 
     in = (!(layout->flags & NK_WINDOW_ROM)) ? &ctx->input: 0;
     in = (in && widget_state == NK_WIDGET_VALID) ? &ctx->input : 0;
