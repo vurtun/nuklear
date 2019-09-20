@@ -16928,7 +16928,11 @@ nk_nonblock_begin(struct nk_context *ctx,
     } else {
         /* close the popup if user pressed outside or in the header */
         int pressed, in_body, in_header;
+#ifdef NK_BUTTON_TRIGGER_ON_RELEASE
+        pressed = nk_input_is_mouse_released(&ctx->input, NK_BUTTON_LEFT);
+#else
         pressed = nk_input_is_mouse_pressed(&ctx->input, NK_BUTTON_LEFT);
+#endif
         in_body = nk_input_is_mouse_hovering_rect(&ctx->input, body);
         in_header = nk_input_is_mouse_hovering_rect(&ctx->input, header);
         if (pressed && (!in_body || in_header))
@@ -25471,6 +25475,8 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
 ///    - [yy]: Minor version with non-breaking API and library changes
 ///    - [zz]: Bug fix version with no direct changes to API
 ///
+/// - 2019/09/20 (4.01.3) - Fixed a bug wherein combobox cannot be closed by clicking the header
+///                         when NK_BUTTON_TRIGGER_ON_RELEASE is defined.
 /// - 2019/09/10 (4.01.2) - Fixed the nk_cos function, which deviated significantly.
 /// - 2019/09/08 (4.01.1) - Fixed a bug wherein re-baking of fonts caused a segmentation
 ///                         fault due to dst_font->glyph_count not being zeroed on subsequent
