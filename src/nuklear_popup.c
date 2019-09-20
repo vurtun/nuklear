@@ -134,7 +134,11 @@ nk_nonblock_begin(struct nk_context *ctx,
     } else {
         /* close the popup if user pressed outside or in the header */
         int pressed, in_body, in_header;
+#ifdef NK_BUTTON_TRIGGER_ON_RELEASE
+        pressed = nk_input_is_mouse_released(&ctx->input, NK_BUTTON_LEFT);
+#else
         pressed = nk_input_is_mouse_pressed(&ctx->input, NK_BUTTON_LEFT);
+#endif
         in_body = nk_input_is_mouse_hovering_rect(&ctx->input, body);
         in_header = nk_input_is_mouse_hovering_rect(&ctx->input, header);
         if (pressed && (!in_body || in_header))
