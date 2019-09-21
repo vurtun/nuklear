@@ -955,12 +955,11 @@ nk_draw_list_fill_rect(struct nk_draw_list *list, struct nk_rect rect,
 {
     NK_ASSERT(list);
     if (!list || !col.a) return;
-
     if (list->line_AA == NK_ANTI_ALIASING_ON) {
         nk_draw_list_path_rect_to(list, nk_vec2(rect.x, rect.y),
             nk_vec2(rect.x + rect.w, rect.y + rect.h), rounding);
     } else {
-        nk_draw_list_path_rect_to(list, nk_vec2(rect.x-0.5f, rect.y-0.5f),
+        nk_draw_list_path_rect_to(list, nk_vec2(rect.x+0.5f, rect.y+0.5f),
             nk_vec2(rect.x + rect.w, rect.y + rect.h), rounding);
     } nk_draw_list_path_fill(list,  col);
 }
@@ -974,7 +973,7 @@ nk_draw_list_stroke_rect(struct nk_draw_list *list, struct nk_rect rect,
         nk_draw_list_path_rect_to(list, nk_vec2(rect.x, rect.y),
             nk_vec2(rect.x + rect.w, rect.y + rect.h), rounding);
     } else {
-        nk_draw_list_path_rect_to(list, nk_vec2(rect.x-0.5f, rect.y-0.5f),
+        nk_draw_list_path_rect_to(list, nk_vec2(rect.x+0.5f, rect.y+0.5f),
             nk_vec2(rect.x + rect.w, rect.y + rect.h), rounding);
     } nk_draw_list_path_stroke(list,  col, NK_STROKE_CLOSED, thickness);
 }
