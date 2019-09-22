@@ -1,16 +1,25 @@
 language: c
+sudo: required
+dist: xenial
 
 os:
-    - linux
+  - linux
 
 compiler:
-    - gcc
-    - clang
+  - gcc
+  - clang
 
 before_install:
-    - if [ $TRAVIS_OS_NAME == linux ]; then sudo add-apt-repository -y ppa:pyglfw/pyglfw && sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends libglfw3 libglfw3-dev libglew-dev; fi
+  - if [ $TRAVIS_OS_NAME == linux ]; then 
+      sudo apt-get update -qq;
+      sudo apt-get install -y --no-install-recommends libglfw3 libglfw3-dev libglew-dev;
+      wget https://github.com/glfw/glfw/releases/download/3.3/glfw-3.3.zip;
+      unzip glfw-3.3.zip && cd glfw-3.3;
+      cmake -DBUILD_SHARED_LIBS=true -DGLFW_BUILD_EXAMPLES=false -DGLFW_BUILD_TESTS=false -DGLFW_BUILD_DOCS=false .;
+      sudo make -j $CPU_NUM install && cd ..;
+    fi
 
 script:
-    - make -C demo/glfw_opengl3 CFLAGS="-Wall -DINCLUDE_ALL"
-    - make -C demo/glfw_opengl2
-    - make -C example
+  - make -C demo/glfw_opengl2
+  - make -C demo/glfw_opengl3
+  - make -C example
