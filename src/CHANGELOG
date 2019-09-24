@@ -10,7 +10,7 @@
 ///
 /// - 2019/09/23 (4.02.0) - Improved algorithm for mitre joints on thick lines, preserving correct
 ///                        thickness up to 90 degrees angles (e.g. rectangles).
-/// - 2019/09/23 (4.01.4) - Fixed a drawing bug caused by changes from 1.40.5 for
+/// - 2019/09/23 (4.01.4) - Fixed a drawing bug introduced in 1.40.5 for
 ///                        stroked and filled rectangles when `NK_ANTI_ALIASING_OFF` is used.
 /// - 2019/09/20 (4.01.3) - Fixed a bug wherein combobox cannot be closed by clicking the header
 ///                        when `NK_BUTTON_TRIGGER_ON_RELEASE` is defined.
@@ -39,8 +39,8 @@
 ///                        color conversion functions to cast between `nk_color` and `nk_colorf`.
 /// - 2017/12/23 (2.00.7) - Fixed small warning.
 /// - 2017/12/23 (2.00.7) - Fixed `nk_edit_buffer` behavior if activated to allow input.
-/// - 2017/12/23 (2.00.7) - Fixed modifyable progressbar dragging visuals and input behavior.
-/// - 2017/12/04 (2.00.6) - Added formated string tooltip widget.
+/// - 2017/12/23 (2.00.7) - Fixed modifiable progressbar dragging visuals and input behavior.
+/// - 2017/12/04 (2.00.6) - Added formatted string tooltip widget.
 /// - 2017/11/18 (2.00.5) - Fixed window becoming hidden with flag `NK_WINDOW_NO_INPUT`.
 /// - 2017/11/15 (2.00.4) - Fixed font merging.
 /// - 2017/11/07 (2.00.3) - Fixed window size and position modifier functions.
@@ -60,7 +60,7 @@
 ///                        process of being destroyed.
 /// - 2017/07/07 (1.40.3) - Fixed table internal bug caused by storing table size in
 ///                        window instead of directly in table.
-/// - 2017/06/30 (1.40.2) - Removed unneeded semicolon in C++ NK_ALIGNOF macro.
+/// - 2017/06/30 (1.40.2) - Removed unnecessary semicolon in C++ NK_ALIGNOF macro.
 /// - 2017/06/30 (1.40.1) - Fixed drawing lines smaller or equal zero.
 /// - 2017/06/08 (1.40.0) - Removed the breaking part of last commit. Auto layout now only
 ///                        comes in effect if you pass in zero was row height argument.
@@ -102,7 +102,7 @@
 /// - 2016/12/03 (1.29.1) - Fixed wrapped text with no seperator and C89 error.
 /// - 2016/12/03 (1.29.0) - Changed text wrapping to process words not characters.
 /// - 2016/11/22 (1.28.6) - Fixed window minimized closing bug.
-/// - 2016/11/19 (1.28.5) - Fixed abstract combo box closing behavior.
+/// - 2016/11/19 (1.28.5) - Fixed abstract combobox closing behavior.
 /// - 2016/11/19 (1.28.4) - Fixed tooltip flickering.
 /// - 2016/11/19 (1.28.3) - Fixed memory leak caused by popup repeated closing.
 /// - 2016/11/18 (1.28.2) - Fixed memory leak caused by popup panel allocation.
@@ -178,7 +178,7 @@
 ///                        is not defined by supporting the biggest compiler GCC, clang and MSVC.
 /// - 2016/09/07 (1.15.3) - Fixed `NK_INCLUDE_COMMAND_USERDATA` define to not cause an error.
 /// - 2016/09/04 (1.15.2) - Fixed wrong combobox height calculation.
-/// - 2016/09/03 (1.15.1) - Fixed gaps inside combo boxes in OpenGL.
+/// - 2016/09/03 (1.15.1) - Fixed gaps inside comboboxes in OpenGL.
 /// - 2016/09/02 (1.15.0) - Changed nuklear to not have any default vertex layout and
 ///                        instead made it user provided. The range of types to convert
 ///                        to is quite limited at the moment, but I would be more than
@@ -192,7 +192,7 @@
 /// - 2016/08/30 (1.13.2) - Fixed close and minimize button which would fire even if the
 ///                        window was in Read Only Mode.
 /// - 2016/08/30 (1.13.1) - Fixed popup panel padding handling which was previously just
-///                        a hack for combo box and menu.
+///                        a hack for combobox and menu.
 /// - 2016/08/30 (1.13.0) - Removed `NK_WINDOW_DYNAMIC` flag from public API since
 ///                        it is bugged and causes issues in window selection.
 /// - 2016/08/30 (1.12.0) - Removed scaler size. The size of the scaler is now
@@ -210,7 +210,7 @@
 /// - 2016/08/26 (1.10.0) - Added stacks for temporary style/UI changes in code.
 /// - 2016/08/25 (1.10.0) - Changed `nk_input_is_key_pressed` and 'nk_input_is_key_released'
 ///                        to account for key press and release happening in one frame.
-/// - 2016/08/25 (1.10.0) - Added additional nk_edit flag to directly jump to the end on activate.
+/// - 2016/08/25 (1.10.0) - Added additional `nk_edit` flag to directly jump to the end on activate.
 /// - 2016/08/17 (1.09.6) - Removed invalid check for value zero in `nk_propertyx`.
 /// - 2016/08/16 (1.09.5) - Fixed ROM mode for deeper levels of popup windows parents.
 /// - 2016/08/15 (1.09.4) - Editbox are now still active if enter was pressed with flag
@@ -226,7 +226,7 @@
 ///                        hidden and therefore not visible.
 /// - 2016/08/12 (1.09.1) - `nk_window_is_closed` now queries the correct flag `NK_WINDOW_CLOSED`
 ///                        instead of the old flag `NK_WINDOW_HIDDEN`.
-/// - 2016/08/09 (1.09.0) - Added additional double version to nk_property and changed
+/// - 2016/08/09 (1.09.0) - Added additional double version to `nk_property` and changed
 ///                        the underlying implementation to not cast to float and instead
 ///                        work directly on the given values.
 /// - 2016/08/09 (1.08.0) - Added additional define to overwrite library internal
@@ -281,7 +281,7 @@
 ///                        you have to also set a delta time inside the `nk_context`.
 /// - 2016/07/25 (1.01.1) - Fixed small panel and panel border drawing bugs.
 /// - 2016/07/15 (1.01.0) - Added software cursor to `nk_style` and `nk_context`.
-/// - 2016/07/15 (1.01.0) - Added const correctness to `nk_buffer_push' data argument.
+/// - 2016/07/15 (1.01.0) - Added const correctness to `nk_buffer_push` data argument.
 /// - 2016/07/15 (1.01.0) - Removed internal font baking API and simplified
 ///                        font atlas memory management by converting pointer
 ///                        arrays for fonts and font configurations to lists.
