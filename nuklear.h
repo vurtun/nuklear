@@ -2135,7 +2135,7 @@ NK_API void nk_window_show_if(struct nk_context*, const char *name, enum nk_show
 ///     if (nk_begin_xxx(...) {
 ///         // two rows with height: 30 composed of two widgets with width 60 and 40
 ///         const float size[] = {60,40};
-///         nk_layout_row(ctx, NK_STATIC, 30, 2, ratio);
+///         nk_layout_row(ctx, NK_STATIC, 30, 2, size);
 ///         nk_widget(...);
 ///         nk_widget(...);
 ///         nk_widget(...);
