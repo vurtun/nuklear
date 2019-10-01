@@ -77,7 +77,7 @@ die(const char *fmt, ...)
     exit(EXIT_FAILURE);
 }
 
-/* function icon_load () is not used in this file but might be useful :) */
+/* function icon_load () is not used to build this file but might still be useful :) */
 /*
 static struct nk_image	
 icon_load(const char *filename)	
