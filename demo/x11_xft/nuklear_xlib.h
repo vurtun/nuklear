@@ -178,6 +178,10 @@ nk_xsurf_resize(XSurface *surf, unsigned int w, unsigned int h)
     if(surf->drawable) XFreePixmap(surf->dpy, surf->drawable);
     surf->drawable = XCreatePixmap(surf->dpy, surf->root, w, h,
         (unsigned int)DefaultDepth(surf->dpy, surf->screen));
+#ifdef NK_XLIB_USE_XFT
+	XftDrawChange(surf->ftdraw, surf->drawable);
+#endif
+	return;
 }
 
 NK_INTERN void
@@ -189,6 +193,11 @@ nk_xsurf_scissor(XSurface *surf, float x, float y, float w, float h)
     clip_rect.width = (unsigned short)(w+2);
     clip_rect.height = (unsigned short)(h+2);
     XSetClipRectangles(surf->dpy, surf->gc, 0, 0, &clip_rect, 1, Unsorted);
+
+#ifdef NK_XLIB_USE_XFT
+	XftDrawSetClipRectangles(surf->ftdraw, 0, 0, &clip_rect, 1);
+#endif
+	return;
 }
 
 NK_INTERN void
@@ -422,22 +431,21 @@ nk_xsurf_draw_text(XSurface *surf, short x, short y, unsigned short w, unsigned 
     tx = (int)x;
     ty = (int)y + font->ascent;
 #ifdef NK_XLIB_USE_XFT
-    {
-        XRenderColor xrc;
-        XftColor color;
-        xrc.red = cfg.r * 257;
-        xrc.green = cfg.g * 257;
-        xrc.blue = cfg.b * 257;
-        xrc.alpha = cfg.a * 257;
-        XftColorAllocValue(surf->dpy, xlib.vis, xlib.cmap, &xrc, &color);
-        XftDrawString8(surf->ftdraw, &color, font->ft, tx, ty, (FcChar8*)text, len);
-    }
+    XRenderColor xrc;
+    XftColor color;
+    xrc.red = cfg.r * 257;
+    xrc.green = cfg.g * 257;
+    xrc.blue = cfg.b * 257;
+    xrc.alpha = cfg.a * 257;
+    XftColorAllocValue(surf->dpy, xlib.vis, xlib.cmap, &xrc, &color);
+    XftDrawStringUtf8(surf->ftdraw, &color, font->ft, tx, ty, (FcChar8*)text, len);
+	XftColorFree(surf->dpy, xlib.vis, xlib.cmap, &color);
 #else
     XSetForeground(surf->dpy, surf->gc, fg);
-    if(font->set)
-        XmbDrawString(surf->dpy,surf->drawable,font->set,surf->gc,tx,ty,(const char*)text,(int)len);
+    if(font->set) XmbDrawString(surf->dpy,surf->drawable, font->set, surf->gc, tx, ty, (const char*)text, (int)len);
     else XDrawString(surf->dpy, surf->drawable, surf->gc, tx, ty, (const char*)text, (int)len);
 #endif
+	return;
 }
 
 
@@ -572,6 +580,9 @@ nk_xsurf_blit(Drawable target, XSurface *surf, unsigned int w, unsigned int h)
 NK_INTERN void
 nk_xsurf_del(XSurface *surf)
 {
+#ifdef NK_XLIB_USE_XFT
+	XftDrawDestroy(surf->ftdraw);
+#endif
     XFreePixmap(surf->dpy, surf->drawable);
     XFreeGC(surf->dpy, surf->gc);
     free(surf);
@@ -582,7 +593,7 @@ nk_xfont_create(Display *dpy, const char *name)
 {
 #ifdef NK_XLIB_USE_XFT
     XFont *font = (XFont*)calloc(1, sizeof(XFont));
-    font->ft = XftFontOpenName(dpy, 0, name);
+    font->ft = XftFontOpenName(dpy, XDefaultScreen(dpy), name);
     if (!font->ft) {
         fprintf(stderr, "missing font: %s\n", name);
         return font;
@@ -628,16 +639,17 @@ NK_INTERN float
 nk_xfont_get_text_width(nk_handle handle, float height, const char *text, int len)
 {
     XFont *font = (XFont*)handle.ptr;
+
+	if(!font || !text)
+		return 0;
+
 #ifdef NK_XLIB_USE_XFT
     XGlyphInfo g;
-    if(!font || !text)
-        return 0;
-    XftTextExtents8(xlib.dpy, font->ft, (FcChar8*)text, len, &g);
-    return g.width;
+
+    XftTextExtentsUtf8(xlib.dpy, font->ft, (FcChar8*)text, len, &g);
+    return g.xOff;
 #else
     XRectangle r;
-    if(!font || !text)
-        return 0;
 
     if(font->set) {
         XmbTextExtents(font->set, (const char*)text, len, NULL, &r);
@@ -654,6 +666,7 @@ nk_xfont_del(Display *dpy, XFont *font)
 {
     if(!font) return;
 #ifdef NK_XLIB_USE_XFT
+	XftFontClose(dpy, font->ft);
 #else
     if(font->set)
         XFreeFontSet(dpy, font->set);
@@ -769,6 +782,7 @@ nk_xlib_handle_event(Display *dpy, int screen, Window win, XEvent *evt)
         int ret, down = (evt->type == KeyPress);
         KeySym *code = XGetKeyboardMapping(xlib.surf->dpy, (KeyCode)evt->xkey.keycode, 1, &ret);
         if (*code == XK_Shift_L || *code == XK_Shift_R) nk_input_key(ctx, NK_KEY_SHIFT, down);
+        else if (*code == XK_Control_L || *code == XK_Control_R) nk_input_key(ctx, NK_KEY_CTRL, down);
         else if (*code == XK_Delete)    nk_input_key(ctx, NK_KEY_DEL, down);
         else if (*code == XK_Return)    nk_input_key(ctx, NK_KEY_ENTER, down);
         else if (*code == XK_Tab)       nk_input_key(ctx, NK_KEY_TAB, down);
@@ -928,7 +942,7 @@ nk_xlib_shutdown(void)
     nk_xsurf_del(xlib.surf);
     nk_free(&xlib.ctx);
     XFreeCursor(xlib.dpy, xlib.cursor);
-    nk_memset(&xlib, 0, sizeof(xlib));
+    NK_MEMSET(&xlib, 0, sizeof(xlib));
 }
 
 NK_API void

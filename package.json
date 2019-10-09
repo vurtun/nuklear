@@ -1,6 +1,6 @@
 {
   "name": "nuklear",
-  "version": "1.0.0",
+  "version": "4.01.3",
   "repo": "vurtun/nuklear",
   "description": "A small ANSI C gui toolkit",
   "keywords": ["gl", "ui", "toolkit"],

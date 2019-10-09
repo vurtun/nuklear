@@ -97,9 +97,9 @@ nk_sfml_render(enum nk_anti_aliasing AA)
     glEnableClientState(GL_COLOR_ARRAY);
     {
         GLsizei vs = sizeof(struct nk_sfml_vertex);
-        size_t vp = offsetof(struct nk_sfml_vertex, position);
-        size_t vt = offsetof(struct nk_sfml_vertex, uv);
-        size_t vc = offsetof(struct nk_sfml_vertex, col);
+        size_t vp = NK_OFFSETOF(struct nk_sfml_vertex, position);
+        size_t vt = NK_OFFSETOF(struct nk_sfml_vertex, uv);
+        size_t vc = NK_OFFSETOF(struct nk_sfml_vertex, col);
 
         /* convert from command queue into draw  list and draw to screen */
         const struct nk_draw_command* cmd;

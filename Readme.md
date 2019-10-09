@@ -25,7 +25,7 @@ render backends it only focuses on the actual UI.
 - No global or hidden state
 - Customizable library modules (you can compile and use only what you need)
 - Optional font baker and vertex buffer output
-- [Documentation](https://rawgit.com/vurtun/nuklear/master/doc/nuklear.html)
+- [Documentation](https://cdn.statically.io/gh/vurtun/nuklear/master/doc/nuklear.html)
 
 ## Building
 
@@ -97,6 +97,7 @@ I cannot atest for their quality since I am not necessarily proficient in either
 languages. Furthermore there are no guarantee that all bindings will always be kept up to date:
 
 - [Java](https://github.com/glegris/nuklear4j) by Guillaume Legris
+- [D](https://github.com/Timu5/bindbc-nuklear) by Mateusz Muszyński
 - [Golang](https://github.com/golang-ui/nuklear) by golang-ui@github.com
 - [Rust](https://github.com/snuk182/nuklear-rust) by snuk182@github.com
 - [Chicken](https://github.com/wasamasa/nuklear) by wasamasa@github.com

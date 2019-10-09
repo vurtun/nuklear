@@ -134,9 +134,9 @@ nk_sfml_device_create(void)
     {
         /* buffer setup */
         GLsizei vs = sizeof(struct nk_sfml_vertex);
-        size_t vp = offsetof(struct nk_sfml_vertex, position);
-        size_t vt = offsetof(struct nk_sfml_vertex, uv);
-        size_t vc = offsetof(struct nk_sfml_vertex, col);
+        size_t vp = NK_OFFSETOF(struct nk_sfml_vertex, position);
+        size_t vt = NK_OFFSETOF(struct nk_sfml_vertex, uv);
+        size_t vc = NK_OFFSETOF(struct nk_sfml_vertex, col);
 
         glGenBuffers(1, &dev->vbo);
         glGenBuffers(1, &dev->ebo);
