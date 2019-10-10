@@ -6087,8 +6087,8 @@ nk_sin(float x)
 NK_LIB float
 nk_cos(float x)
 {
-    // New implementation. Also generated using lolremez.
-    // Old version significantly deviated from expected results.
+    /* New implementation. Also generated using lolremez. */
+    /* Old version significantly deviated from expected results. */
     NK_STORAGE const float a0 = 9.9995999154986614e-1f;
     NK_STORAGE const float a1 = 1.2548995793001028e-3f;
     NK_STORAGE const float a2 = -5.0648546280678015e-1f;
