@@ -21,7 +21,7 @@
 
 typedef struct NKSdlFont NKSdlFont;
 NK_API struct nk_context*   nk_sdl_init(SDL_Window *win, SDL_Renderer *renderer);
-NK_API int                  nk_sdl_handle_event(SDL_Event *evt);
+NK_API void                 nk_sdl_handle_event(SDL_Event *evt);
 NK_API void                 nk_sdl_render(void);
 NK_API void                 nk_sdl_shutdown(void);
 
@@ -60,7 +60,6 @@ NK_API void nk_sdl_font_create_from_file(const char *file_name, int font_size, i
     sdl.ttf_font = TTF_OpenFont(file_name, font_size);
     if (sdl.ttf_font == NULL) {
         fprintf(stdout, "Unable to load font file: %s\n", file_name);
-        return NULL;
     }
 }
 
@@ -144,7 +143,7 @@ nk_sdl_render(void)
     const struct nk_command *cmd;
     nk_foreach(cmd, &sdl.ctx)
     {
-       Uint32 color; 
+    //    Uint32 color; temporalmente no tiene uso. 
        switch (cmd->type) {
             case NK_COMMAND_NOP: {}break;
             case NK_COMMAND_SCISSOR: {
@@ -265,12 +264,12 @@ nk_sdl_font_get_text_width(nk_handle handle, float height, const char *text, int
        as nuklear uses variable size buffers and al_get_text_width doesn't
        accept a length, it infers length from null-termination
        (which is unsafe API design by allegro devs!) */
-    char strcpy[len+1];
-    strncpy((char*)&strcpy, text, len);
-    strcpy[len] = '\0';
+    char tmp_buffer[len+1];
+    strncpy((char*)&tmp_buffer, text, len);
+    tmp_buffer[len] = '\0';
     
     int w, h;
-    TTF_SizeText(font, strcpy, &w, &h);
+    TTF_SizeText(font, tmp_buffer, &w, &h);
     return (float)w;
 }
 
@@ -295,7 +294,7 @@ nk_sdl_init(SDL_Window *win, SDL_Renderer *renderer)
     return &sdl.ctx;
 }
 
-NK_API int
+NK_API void
 nk_sdl_handle_event(SDL_Event *evt)
 {
     struct nk_context *ctx = &sdl.ctx;
@@ -361,8 +360,7 @@ nk_sdl_handle_event(SDL_Event *evt)
             if (state[SDL_SCANCODE_LCTRL])
                 nk_input_key(ctx, NK_KEY_TEXT_WORD_RIGHT, down);
             else nk_input_key(ctx, NK_KEY_RIGHT, down);
-        } else return 0;
-        return 1;
+        }
     } else if (evt->type == SDL_MOUSEBUTTONDOWN || evt->type == SDL_MOUSEBUTTONUP) {
         /* mouse button */
         int down = evt->type == SDL_MOUSEBUTTONDOWN;
@@ -375,26 +373,21 @@ nk_sdl_handle_event(SDL_Event *evt)
             nk_input_button(ctx, NK_BUTTON_MIDDLE, x, y, down);
         else if (evt->button.button == SDL_BUTTON_RIGHT)
             nk_input_button(ctx, NK_BUTTON_RIGHT, x, y, down);
-        return 1;
     } else if (evt->type == SDL_MOUSEMOTION) {
         /* mouse motion */
         if (ctx->input.mouse.grabbed) {
             int x = (int)ctx->input.mouse.prev.x, y = (int)ctx->input.mouse.prev.y;
             nk_input_motion(ctx, x + evt->motion.xrel, y + evt->motion.yrel);
         } else nk_input_motion(ctx, evt->motion.x, evt->motion.y);
-        return 1;
     } else if (evt->type == SDL_TEXTINPUT) {
         /* text input */
         nk_glyph glyph;
         memcpy(glyph, evt->text.text, NK_UTF_SIZE);
         nk_input_glyph(ctx, glyph);
-        return 1;
     } else if (evt->type == SDL_MOUSEWHEEL) {
         /* mouse wheel */
         nk_input_scroll(ctx,nk_vec2((float)evt->wheel.x,(float)evt->wheel.y));
-        return 1;
     }
-    return 0;
 }
 
 NK_API
