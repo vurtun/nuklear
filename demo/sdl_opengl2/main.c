@@ -67,7 +67,7 @@
  *
  * ===============================================================*/
 int
-main(void)
+main(int argc, char *argv[])
 {
     /* Platform */
     SDL_Window *win;
