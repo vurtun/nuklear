@@ -2,25 +2,25 @@
 
 [![Build Status](https://travis-ci.org/vurtun/nuklear.svg)](https://travis-ci.org/vurtun/nuklear)
 
-This is a minimal state immediate mode graphical user interface toolkit
+This is a minimal-state, immediate-mode graphical user interface toolkit
 written in ANSI C and licensed under public domain. It was designed as a simple
 embeddable user interface for application and does not have any dependencies,
-a default render backend or OS window and input handling but instead provides a very modular
-library approach by using simple input state for input and draw
-commands describing primitive shapes as output. So instead of providing a
+a default render backend or OS window/input handling but instead provides a
+highly modular, library-based approach, with simple input state for input and
+draw commands describing primitive shapes as output. So instead of providing a
 layered library that tries to abstract over a number of platform and
-render backends it only focuses on the actual UI.
+render backends, it focuses only on the actual UI.
 
 ## Features
 
-- Immediate mode graphical user interface toolkit
-- Single header library
+- Immediate-mode graphical user interface toolkit
+- Single-header library
 - Written in C89 (ANSI C)
 - Small codebase (~18kLOC)
 - Focus on portability, efficiency and simplicity
 - No dependencies (not even the standard library if not wanted)
 - Fully skinnable and customizable
-- Low memory footprint with total memory control if needed or wanted
+- Low memory footprint with total control of memory usage if needed / wanted
 - UTF-8 support
 - No global or hidden state
 - Customizable library modules (you can compile and use only what you need)
@@ -29,19 +29,19 @@ render backends it only focuses on the actual UI.
 
 ## Building
 
-This library is self contained in one single header file and can be used either
-in header only mode or in implementation mode. The header only mode is used
+This library is self-contained in one single header file and can be used either
+in header-only mode or in implementation mode. The header-only mode is used
 by default when included and allows including this header in other headers
 and does not contain the actual implementation.
 
-The implementation mode requires to define  the preprocessor macro
+The implementation mode requires defining the preprocessor macro
 `NK_IMPLEMENTATION` in *one* .c/.cpp file before `#include`ing this file, e.g.:
 ```c
 #define NK_IMPLEMENTATION
 #include "nuklear.h"
 ```
 IMPORTANT: Every time you include "nuklear.h" you have to define the same optional flags.
-This is very important not doing it either leads to compiler errors or even worse stack corruptions.
+This is very important; not doing it either leads to compiler errors, or even worse, stack corruptions.
 
 ## Gallery
 
@@ -93,7 +93,7 @@ nk_end(&ctx);
 
 ## Bindings
 There are a number of nuklear bindings for different languges created by other authors.
-I cannot atest for their quality since I am not necessarily proficient in either of these
+I cannot attest for their quality since I am not necessarily proficient in any of these
 languages. Furthermore there are no guarantee that all bindings will always be kept up to date:
 
 - [Java](https://github.com/glegris/nuklear4j) by Guillaume Legris
@@ -120,7 +120,7 @@ Embeds `ProggyClean.ttf` font by Tristan Grimmer (MIT license).
 
 Big thank you to Omar Cornut (ocornut@github) for his [imgui](https://github.com/ocornut/imgui) library and
 giving me the inspiration for this library, Casey Muratori for handmade hero
-and his original immediate mode graphical user interface idea and Sean
+and his original immediate-mode graphical user interface idea and Sean
 Barrett for his amazing single header [libraries](https://github.com/nothings/stb) which restored my faith
 in libraries and brought me to create some of my own. Finally Apoorva Joshi for his singe-header [file packer](http://apoorvaj.io/single-header-packer.html).
 
