@@ -590,6 +590,7 @@ nk_window_set_scroll(struct nk_context *ctx, nk_uint offset_x, nk_uint offset_y)
     NK_ASSERT(ctx->current);
     if (!ctx || !ctx->current)
         return;
+    win = ctx->current;
     win->scrollbar.x = offset_x;
     win->scrollbar.y = offset_y;
 }
