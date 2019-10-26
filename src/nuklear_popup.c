@@ -250,6 +250,21 @@ NK_API void
 nk_popup_set_scroll(struct nk_context *ctx, nk_uint offset_x, nk_uint offset_y)
 {
     struct nk_window *popup;
+
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout)
+        return;
+
+    popup = ctx->current;
+    popup->scrollbar.x = offset_x;
+    popup->scrollbar.y = offset_y;
+}
+NK_API void
+nk_popup_scroll_here(struct nk_context *ctx)
+{
+    struct nk_window *popup;
     struct nk_panel *layout;
     struct nk_rect *bounds;
 
@@ -262,6 +277,6 @@ nk_popup_set_scroll(struct nk_context *ctx, nk_uint offset_x, nk_uint offset_y)
     popup = ctx->current;
     layout = popup->layout;
     bounds = &popup->bounds;
-    popup->scrollbar.x = NK_CLAMP(0, offset_x, layout->at_x - bounds->x);
-    popup->scrollbar.y = NK_CLAMP(0, offset_y, layout->at_y - bounds->y);
+    popup->scrollbar.x = layout->at_x - bounds->x;
+    popup->scrollbar.y = layout->at_y - bounds->y;
 }

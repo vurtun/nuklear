@@ -207,6 +207,39 @@ nk_group_set_scroll(struct nk_context *ctx, const char *id, nk_uint x_offset, nk
     int id_len;
     nk_hash id_hash;
     struct nk_window *win;
+    nk_uint *x_offset_ptr;
+    nk_uint *y_offset_ptr;
+
+    NK_ASSERT(ctx);
+    NK_ASSERT(id);
+    NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout || !id)
+        return;
+
+    /* find persistent group scrollbar value */
+    win = ctx->current;
+    id_len = (int)nk_strlen(id);
+    id_hash = nk_murmur_hash(id, (int)id_len, NK_PANEL_GROUP);
+    x_offset_ptr = nk_find_value(win, id_hash);
+    if (!x_offset_ptr) {
+        x_offset_ptr = nk_add_value(ctx, win, id_hash, 0);
+        y_offset_ptr = nk_add_value(ctx, win, id_hash+1, 0);
+
+        NK_ASSERT(x_offset_ptr);
+        NK_ASSERT(y_offset_ptr);
+        if (!x_offset_ptr || !y_offset_ptr) return;
+        *x_offset_ptr = *y_offset_ptr = 0;
+    } else y_offset_ptr = nk_find_value(win, id_hash+1);
+    *x_offset_ptr = x_offset;
+    *y_offset_ptr = y_offset;
+}
+NK_API void
+nk_group_scroll_here(struct nk_context *ctx, const char *id)
+{
+    int id_len;
+    nk_hash id_hash;
+    struct nk_window *win;
     struct nk_panel *layout;
     struct nk_rect *bounds;
     nk_uint *x_offset_ptr;
@@ -235,6 +268,6 @@ nk_group_set_scroll(struct nk_context *ctx, const char *id, nk_uint x_offset, nk
     } else y_offset_ptr = nk_find_value(win, id_hash+1);
     layout = win->layout;
     bounds = &win->bounds;
-    *x_offset_ptr = NK_CLAMP(0, x_offset, layout->at_x - bounds->x);
-    *y_offset_ptr = NK_CLAMP(0, y_offset, layout->at_y - bounds->y);
+    *x_offset_ptr = layout->at_x - bounds->x;
+    *y_offset_ptr = layout->at_y - bounds->y;
 }
