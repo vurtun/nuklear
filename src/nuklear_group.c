@@ -207,6 +207,8 @@ nk_group_set_scroll(struct nk_context *ctx, const char *id, nk_uint x_offset, nk
     int id_len;
     nk_hash id_hash;
     struct nk_window *win;
+    struct nk_panel *layout;
+    struct nk_rect *bounds;
     nk_uint *x_offset_ptr;
     nk_uint *y_offset_ptr;
 
@@ -231,6 +233,8 @@ nk_group_set_scroll(struct nk_context *ctx, const char *id, nk_uint x_offset, nk
         if (!x_offset_ptr || !y_offset_ptr) return;
         *x_offset_ptr = *y_offset_ptr = 0;
     } else y_offset_ptr = nk_find_value(win, id_hash+1);
-    *x_offset_ptr = x_offset;
-    *y_offset_ptr = y_offset;
+    layout = win->layout;
+    bounds = &win->bounds;
+    *x_offset_ptr = NK_CLAMP(0, x_offset, layout->at_x - bounds->x);
+    *y_offset_ptr = NK_CLAMP(0, y_offset, layout->at_y - bounds->y);
 }

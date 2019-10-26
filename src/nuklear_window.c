@@ -586,13 +586,17 @@ NK_API void
 nk_window_set_scroll(struct nk_context *ctx, nk_uint offset_x, nk_uint offset_y)
 {
     struct nk_window *win;
+    struct nk_panel *layout;
+    struct nk_rect *bounds;
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
     if (!ctx || !ctx->current)
         return;
     win = ctx->current;
-    win->scrollbar.x = offset_x;
-    win->scrollbar.y = offset_y;
+    layout = win->layout;
+    bounds = &win->bounds;
+    win->scrollbar.x = NK_CLAMP(0, offset_x, layout->at_x - bounds->x);
+    win->scrollbar.y = NK_CLAMP(0, offset_y, layout->at_y - bounds->y);
 }
 NK_API void
 nk_window_collapse(struct nk_context *ctx, const char *name,

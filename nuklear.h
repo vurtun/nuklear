@@ -6087,8 +6087,8 @@ nk_sin(float x)
 NK_LIB float
 nk_cos(float x)
 {
-    /* New implementation. Also generated using lolremez. */
-    /* Old version significantly deviated from expected results. */
+    // New implementation. Also generated using lolremez.
+    // Old version significantly deviated from expected results.
     NK_STORAGE const float a0 = 9.9995999154986614e-1f;
     NK_STORAGE const float a1 = 1.2548995793001028e-3f;
     NK_STORAGE const float a2 = -5.0648546280678015e-1f;
@@ -16713,13 +16713,17 @@ NK_API void
 nk_window_set_scroll(struct nk_context *ctx, nk_uint offset_x, nk_uint offset_y)
 {
     struct nk_window *win;
+    struct nk_panel *layout;
+    struct nk_rect *bounds;
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
     if (!ctx || !ctx->current)
         return;
     win = ctx->current;
-    win->scrollbar.x = offset_x;
-    win->scrollbar.y = offset_y;
+    layout = win->layout;
+    bounds = &win->bounds;
+    win->scrollbar.x = NK_CLAMP(0, offset_x, layout->at_x - bounds->x);
+    win->scrollbar.y = NK_CLAMP(0, offset_y, layout->at_y - bounds->y);
 }
 NK_API void
 nk_window_collapse(struct nk_context *ctx, const char *name,
@@ -17044,6 +17048,8 @@ NK_API void
 nk_popup_set_scroll(struct nk_context *ctx, nk_uint offset_x, nk_uint offset_y)
 {
     struct nk_window *popup;
+    struct nk_panel *layout;
+    struct nk_rect *bounds;
 
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
@@ -17052,8 +17058,10 @@ nk_popup_set_scroll(struct nk_context *ctx, nk_uint offset_x, nk_uint offset_y)
         return;
 
     popup = ctx->current;
-    popup->scrollbar.x = offset_x;
-    popup->scrollbar.y = offset_y;
+    layout = popup->layout;
+    bounds = &popup->bounds;
+    popup->scrollbar.x = NK_CLAMP(0, offset_x, layout->at_x - bounds->x);
+    popup->scrollbar.y = NK_CLAMP(0, offset_y, layout->at_y - bounds->y);
 }
 
 
@@ -18891,6 +18899,8 @@ nk_group_set_scroll(struct nk_context *ctx, const char *id, nk_uint x_offset, nk
     int id_len;
     nk_hash id_hash;
     struct nk_window *win;
+    struct nk_panel *layout;
+    struct nk_rect *bounds;
     nk_uint *x_offset_ptr;
     nk_uint *y_offset_ptr;
 
@@ -18915,8 +18925,10 @@ nk_group_set_scroll(struct nk_context *ctx, const char *id, nk_uint x_offset, nk
         if (!x_offset_ptr || !y_offset_ptr) return;
         *x_offset_ptr = *y_offset_ptr = 0;
     } else y_offset_ptr = nk_find_value(win, id_hash+1);
-    *x_offset_ptr = x_offset;
-    *y_offset_ptr = y_offset;
+    layout = win->layout;
+    bounds = &win->bounds;
+    *x_offset_ptr = NK_CLAMP(0, x_offset, layout->at_x - bounds->x);
+    *y_offset_ptr = NK_CLAMP(0, y_offset, layout->at_y - bounds->y);
 }
 
 
