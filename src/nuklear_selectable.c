@@ -58,7 +58,7 @@ nk_draw_selectable(struct nk_command_buffer *out,
 NK_LIB int
 nk_do_selectable(nk_flags *state, struct nk_command_buffer *out,
     struct nk_rect bounds, const char *str, int len, nk_flags align, int *value,
-    const struct nk_style_selectable *style, const struct nk_input *in,
+    const struct nk_style_selectable *style, struct nk_input *in,
     const struct nk_user_font *font)
 {
     int old_value;
@@ -95,7 +95,7 @@ NK_LIB int
 nk_do_selectable_image(nk_flags *state, struct nk_command_buffer *out,
     struct nk_rect bounds, const char *str, int len, nk_flags align, int *value,
     const struct nk_image *img, const struct nk_style_selectable *style,
-    const struct nk_input *in, const struct nk_user_font *font)
+    struct nk_input *in, const struct nk_user_font *font)
 {
     int old_value;
     struct nk_rect touch;
@@ -142,7 +142,7 @@ NK_LIB int
 nk_do_selectable_symbol(nk_flags *state, struct nk_command_buffer *out,
     struct nk_rect bounds, const char *str, int len, nk_flags align, int *value,
     enum nk_symbol_type sym, const struct nk_style_selectable *style,
-    const struct nk_input *in, const struct nk_user_font *font)
+    struct nk_input *in, const struct nk_user_font *font)
 {
     int old_value;
     struct nk_rect touch;
@@ -192,7 +192,7 @@ nk_selectable_text(struct nk_context *ctx, const char *str, int len,
 {
     struct nk_window *win;
     struct nk_panel *layout;
-    const struct nk_input *in;
+    struct nk_input *in;
     const struct nk_style *style;
 
     enum nk_widget_layout_states state;
@@ -221,7 +221,7 @@ nk_selectable_image_text(struct nk_context *ctx, struct nk_image img,
 {
     struct nk_window *win;
     struct nk_panel *layout;
-    const struct nk_input *in;
+    struct nk_input *in;
     const struct nk_style *style;
 
     enum nk_widget_layout_states state;
@@ -250,7 +250,7 @@ nk_selectable_symbol_text(struct nk_context *ctx, enum nk_symbol_type sym,
 {
     struct nk_window *win;
     struct nk_panel *layout;
-    const struct nk_input *in;
+    struct nk_input *in;
     const struct nk_style *style;
 
     enum nk_widget_layout_states state;
@@ -319,4 +319,3 @@ nk_select_symbol_label(struct nk_context *ctx, enum nk_symbol_type sym,
 {
     return nk_select_symbol_text(ctx, sym, title, nk_strlen(title), align, value);
 }
-

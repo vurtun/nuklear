@@ -107,7 +107,7 @@ nk_chart_push_line(struct nk_context *ctx, struct nk_window *win,
     struct nk_chart *g, float value, int slot)
 {
     struct nk_panel *layout = win->layout;
-    const struct nk_input *i = &ctx->input;
+    struct nk_input *i = &ctx->input;
     struct nk_command_buffer *out = &win->buffer;
 
     nk_flags ret = 0;
@@ -315,4 +315,3 @@ nk_plot_function(struct nk_context *ctx, enum nk_chart_type type, void *userdata
         nk_chart_end(ctx);
     }
 }
-

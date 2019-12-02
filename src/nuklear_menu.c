@@ -112,7 +112,7 @@ nk_menu_begin_text(struct nk_context *ctx, const char *title, int len,
     nk_flags align, struct nk_vec2 size)
 {
     struct nk_window *win;
-    const struct nk_input *in;
+    struct nk_input *in;
     struct nk_rect header;
     int is_clicked = nk_false;
     nk_flags state;
@@ -143,7 +143,7 @@ nk_menu_begin_image(struct nk_context *ctx, const char *id, struct nk_image img,
 {
     struct nk_window *win;
     struct nk_rect header;
-    const struct nk_input *in;
+    struct nk_input *in;
     int is_clicked = nk_false;
     nk_flags state;
 
@@ -167,7 +167,7 @@ nk_menu_begin_symbol(struct nk_context *ctx, const char *id,
     enum nk_symbol_type sym, struct nk_vec2 size)
 {
     struct nk_window *win;
-    const struct nk_input *in;
+    struct nk_input *in;
     struct nk_rect header;
     int is_clicked = nk_false;
     nk_flags state;
@@ -193,7 +193,7 @@ nk_menu_begin_image_text(struct nk_context *ctx, const char *title, int len,
 {
     struct nk_window *win;
     struct nk_rect header;
-    const struct nk_input *in;
+    struct nk_input *in;
     int is_clicked = nk_false;
     nk_flags state;
 
@@ -225,7 +225,7 @@ nk_menu_begin_symbol_text(struct nk_context *ctx, const char *title, int len,
 {
     struct nk_window *win;
     struct nk_rect header;
-    const struct nk_input *in;
+    struct nk_input *in;
     int is_clicked = nk_false;
     nk_flags state;
 
@@ -292,4 +292,3 @@ nk_menu_end(struct nk_context *ctx)
 {
     nk_contextual_end(ctx);
 }
-

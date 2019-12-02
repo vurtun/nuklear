@@ -4391,6 +4391,7 @@ struct nk_mouse {
     unsigned char grab;
     unsigned char grabbed;
     unsigned char ungrab;
+    unsigned char clicked;
 };
 
 struct nk_key {

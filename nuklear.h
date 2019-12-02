@@ -4610,6 +4610,7 @@ struct nk_mouse {
     unsigned char grab;
     unsigned char grabbed;
     unsigned char ungrab;
+    unsigned char clicked;
 };
 
 struct nk_key {
@@ -5925,29 +5926,29 @@ NK_LIB void nk_widget_text(struct nk_command_buffer *o, struct nk_rect b, const 
 NK_LIB void nk_widget_text_wrap(struct nk_command_buffer *o, struct nk_rect b, const char *string, int len, const struct nk_text *t, const struct nk_user_font *f);
 
 /* button */
-NK_LIB int nk_button_behavior(nk_flags *state, struct nk_rect r, const struct nk_input *i, enum nk_button_behavior behavior);
+NK_LIB int nk_button_behavior(nk_flags *state, struct nk_rect r, struct nk_input *i, enum nk_button_behavior behavior);
 NK_LIB const struct nk_style_item* nk_draw_button(struct nk_command_buffer *out, const struct nk_rect *bounds, nk_flags state, const struct nk_style_button *style);
-NK_LIB int nk_do_button(nk_flags *state, struct nk_command_buffer *out, struct nk_rect r, const struct nk_style_button *style, const struct nk_input *in, enum nk_button_behavior behavior, struct nk_rect *content);
+NK_LIB int nk_do_button(nk_flags *state, struct nk_command_buffer *out, struct nk_rect r, const struct nk_style_button *style, struct nk_input *in, enum nk_button_behavior behavior, struct nk_rect *content);
 NK_LIB void nk_draw_button_text(struct nk_command_buffer *out, const struct nk_rect *bounds, const struct nk_rect *content, nk_flags state, const struct nk_style_button *style, const char *txt, int len, nk_flags text_alignment, const struct nk_user_font *font);
-NK_LIB int nk_do_button_text(nk_flags *state, struct nk_command_buffer *out, struct nk_rect bounds, const char *string, int len, nk_flags align, enum nk_button_behavior behavior, const struct nk_style_button *style, const struct nk_input *in, const struct nk_user_font *font);
+NK_LIB int nk_do_button_text(nk_flags *state, struct nk_command_buffer *out, struct nk_rect bounds, const char *string, int len, nk_flags align, enum nk_button_behavior behavior, const struct nk_style_button *style, struct nk_input *in, const struct nk_user_font *font);
 NK_LIB void nk_draw_button_symbol(struct nk_command_buffer *out, const struct nk_rect *bounds, const struct nk_rect *content, nk_flags state, const struct nk_style_button *style, enum nk_symbol_type type, const struct nk_user_font *font);
-NK_LIB int nk_do_button_symbol(nk_flags *state, struct nk_command_buffer *out, struct nk_rect bounds, enum nk_symbol_type symbol, enum nk_button_behavior behavior, const struct nk_style_button *style, const struct nk_input *in, const struct nk_user_font *font);
+NK_LIB int nk_do_button_symbol(nk_flags *state, struct nk_command_buffer *out, struct nk_rect bounds, enum nk_symbol_type symbol, enum nk_button_behavior behavior, const struct nk_style_button *style, struct nk_input *in, const struct nk_user_font *font);
 NK_LIB void nk_draw_button_image(struct nk_command_buffer *out, const struct nk_rect *bounds, const struct nk_rect *content, nk_flags state, const struct nk_style_button *style, const struct nk_image *img);
-NK_LIB int nk_do_button_image(nk_flags *state, struct nk_command_buffer *out, struct nk_rect bounds, struct nk_image img, enum nk_button_behavior b, const struct nk_style_button *style, const struct nk_input *in);
+NK_LIB int nk_do_button_image(nk_flags *state, struct nk_command_buffer *out, struct nk_rect bounds, struct nk_image img, enum nk_button_behavior b, const struct nk_style_button *style, struct nk_input *in);
 NK_LIB void nk_draw_button_text_symbol(struct nk_command_buffer *out, const struct nk_rect *bounds, const struct nk_rect *label, const struct nk_rect *symbol, nk_flags state, const struct nk_style_button *style, const char *str, int len, enum nk_symbol_type type, const struct nk_user_font *font);
-NK_LIB int nk_do_button_text_symbol(nk_flags *state, struct nk_command_buffer *out, struct nk_rect bounds, enum nk_symbol_type symbol, const char *str, int len, nk_flags align, enum nk_button_behavior behavior, const struct nk_style_button *style, const struct nk_user_font *font, const struct nk_input *in);
+NK_LIB int nk_do_button_text_symbol(nk_flags *state, struct nk_command_buffer *out, struct nk_rect bounds, enum nk_symbol_type symbol, const char *str, int len, nk_flags align, enum nk_button_behavior behavior, const struct nk_style_button *style, const struct nk_user_font *font, struct nk_input *in);
 NK_LIB void nk_draw_button_text_image(struct nk_command_buffer *out, const struct nk_rect *bounds, const struct nk_rect *label, const struct nk_rect *image, nk_flags state, const struct nk_style_button *style, const char *str, int len, const struct nk_user_font *font, const struct nk_image *img);
-NK_LIB int nk_do_button_text_image(nk_flags *state, struct nk_command_buffer *out, struct nk_rect bounds, struct nk_image img, const char* str, int len, nk_flags align, enum nk_button_behavior behavior, const struct nk_style_button *style, const struct nk_user_font *font, const struct nk_input *in);
+NK_LIB int nk_do_button_text_image(nk_flags *state, struct nk_command_buffer *out, struct nk_rect bounds, struct nk_image img, const char* str, int len, nk_flags align, enum nk_button_behavior behavior, const struct nk_style_button *style, const struct nk_user_font *font, struct nk_input *in);
 
 /* toggle */
 enum nk_toggle_type {
     NK_TOGGLE_CHECK,
     NK_TOGGLE_OPTION
 };
-NK_LIB int nk_toggle_behavior(const struct nk_input *in, struct nk_rect select, nk_flags *state, int active);
+NK_LIB int nk_toggle_behavior(struct nk_input *in, struct nk_rect select, nk_flags *state, int active);
 NK_LIB void nk_draw_checkbox(struct nk_command_buffer *out, nk_flags state, const struct nk_style_toggle *style, int active, const struct nk_rect *label, const struct nk_rect *selector, const struct nk_rect *cursors, const char *string, int len, const struct nk_user_font *font);
 NK_LIB void nk_draw_option(struct nk_command_buffer *out, nk_flags state, const struct nk_style_toggle *style, int active, const struct nk_rect *label, const struct nk_rect *selector, const struct nk_rect *cursors, const char *string, int len, const struct nk_user_font *font);
-NK_LIB int nk_do_toggle(nk_flags *state, struct nk_command_buffer *out, struct nk_rect r, int *active, const char *str, int len, enum nk_toggle_type type, const struct nk_style_toggle *style, const struct nk_input *in, const struct nk_user_font *font);
+NK_LIB int nk_do_toggle(nk_flags *state, struct nk_command_buffer *out, struct nk_rect r, int *active, const char *str, int len, enum nk_toggle_type type, const struct nk_style_toggle *style, struct nk_input *in, const struct nk_user_font *font);
 
 /* progress */
 NK_LIB nk_size nk_progress_behavior(nk_flags *state, struct nk_input *in, struct nk_rect r, struct nk_rect cursor, nk_size max, nk_size value, int modifiable);
@@ -5967,17 +5968,17 @@ NK_LIB float nk_do_scrollbarh(nk_flags *state, struct nk_command_buffer *out, st
 
 /* selectable */
 NK_LIB void nk_draw_selectable(struct nk_command_buffer *out, nk_flags state, const struct nk_style_selectable *style, int active, const struct nk_rect *bounds, const struct nk_rect *icon, const struct nk_image *img, enum nk_symbol_type sym, const char *string, int len, nk_flags align, const struct nk_user_font *font);
-NK_LIB int nk_do_selectable(nk_flags *state, struct nk_command_buffer *out, struct nk_rect bounds, const char *str, int len, nk_flags align, int *value, const struct nk_style_selectable *style, const struct nk_input *in, const struct nk_user_font *font);
-NK_LIB int nk_do_selectable_image(nk_flags *state, struct nk_command_buffer *out, struct nk_rect bounds, const char *str, int len, nk_flags align, int *value, const struct nk_image *img, const struct nk_style_selectable *style, const struct nk_input *in, const struct nk_user_font *font);
+NK_LIB int nk_do_selectable(nk_flags *state, struct nk_command_buffer *out, struct nk_rect bounds, const char *str, int len, nk_flags align, int *value, const struct nk_style_selectable *style, struct nk_input *in, const struct nk_user_font *font);
+NK_LIB int nk_do_selectable_image(nk_flags *state, struct nk_command_buffer *out, struct nk_rect bounds, const char *str, int len, nk_flags align, int *value, const struct nk_image *img, const struct nk_style_selectable *style, struct nk_input *in, const struct nk_user_font *font);
 
 /* edit */
 NK_LIB void nk_edit_draw_text(struct nk_command_buffer *out, const struct nk_style_edit *style, float pos_x, float pos_y, float x_offset, const char *text, int byte_len, float row_height, const struct nk_user_font *font, struct nk_color background, struct nk_color foreground, int is_selected);
 NK_LIB nk_flags nk_do_edit(nk_flags *state, struct nk_command_buffer *out, struct nk_rect bounds, nk_flags flags, nk_plugin_filter filter, struct nk_text_edit *edit, const struct nk_style_edit *style, struct nk_input *in, const struct nk_user_font *font);
 
 /* color-picker */
-NK_LIB int nk_color_picker_behavior(nk_flags *state, const struct nk_rect *bounds, const struct nk_rect *matrix, const struct nk_rect *hue_bar, const struct nk_rect *alpha_bar, struct nk_colorf *color, const struct nk_input *in);
+NK_LIB int nk_color_picker_behavior(nk_flags *state, const struct nk_rect *bounds, const struct nk_rect *matrix, const struct nk_rect *hue_bar, const struct nk_rect *alpha_bar, struct nk_colorf *color, struct nk_input *in);
 NK_LIB void nk_draw_color_picker(struct nk_command_buffer *o, const struct nk_rect *matrix, const struct nk_rect *hue_bar, const struct nk_rect *alpha_bar, struct nk_colorf col);
-NK_LIB int nk_do_color_picker(nk_flags *state, struct nk_command_buffer *out, struct nk_colorf *col, enum nk_color_format fmt, struct nk_rect bounds, struct nk_vec2 padding, const struct nk_input *in, const struct nk_user_font *font);
+NK_LIB int nk_do_color_picker(nk_flags *state, struct nk_command_buffer *out, struct nk_colorf *col, enum nk_color_format fmt, struct nk_rect bounds, struct nk_vec2 padding, struct nk_input *in, const struct nk_user_font *font);
 
 /* property */
 enum nk_property_status {
@@ -6010,14 +6011,13 @@ NK_LIB struct nk_property_variant nk_property_variant_int(int value, int min_val
 NK_LIB struct nk_property_variant nk_property_variant_float(float value, float min_value, float max_value, float step);
 NK_LIB struct nk_property_variant nk_property_variant_double(double value, double min_value, double max_value, double step);
 
-NK_LIB void nk_drag_behavior(nk_flags *state, const struct nk_input *in, struct nk_rect drag, struct nk_property_variant *variant, float inc_per_pixel);
-NK_LIB void nk_property_behavior(nk_flags *ws, const struct nk_input *in, struct nk_rect property,  struct nk_rect label, struct nk_rect edit, struct nk_rect empty, int *state, struct nk_property_variant *variant, float inc_per_pixel);
+NK_LIB void nk_drag_behavior(nk_flags *state, struct nk_input *in, struct nk_rect drag, struct nk_property_variant *variant, float inc_per_pixel);
+NK_LIB void nk_property_behavior(nk_flags *ws, struct nk_input *in, struct nk_rect property,  struct nk_rect label, struct nk_rect edit, struct nk_rect empty, int *state, struct nk_property_variant *variant, float inc_per_pixel);
 NK_LIB void nk_draw_property(struct nk_command_buffer *out, const struct nk_style_property *style, const struct nk_rect *bounds, const struct nk_rect *label, nk_flags state, const char *name, int len, const struct nk_user_font *font);
 NK_LIB void nk_do_property(nk_flags *ws, struct nk_command_buffer *out, struct nk_rect property, const char *name, struct nk_property_variant *variant, float inc_per_pixel, char *buffer, int *len, int *state, int *cursor, int *select_begin, int *select_end, const struct nk_style_property *style, enum nk_property_filter filter, struct nk_input *in, const struct nk_user_font *font, struct nk_text_edit *text_edit, enum nk_button_behavior behavior);
 NK_LIB void nk_property(struct nk_context *ctx, const char *name, struct nk_property_variant *variant, float inc_per_pixel, const enum nk_property_filter filter);
 
 #endif
-
 
 
 
@@ -13958,6 +13958,7 @@ nk_input_begin(struct nk_context *ctx)
     in->mouse.prev.y = in->mouse.pos.y;
     in->mouse.delta.x = 0;
     in->mouse.delta.y = 0;
+    in->mouse.clicked = 0;
     for (i = 0; i < NK_KEY_MAX; i++)
         in->keyboard.keys[i].clicked = 0;
 }
@@ -14076,7 +14077,7 @@ nk_input_has_mouse_click_in_rect(const struct nk_input *i, enum nk_buttons id,
     struct nk_rect b)
 {
     const struct nk_mouse_button *btn;
-    if (!i) return nk_false;
+    if (!i || i->mouse.clicked) return nk_false;
     btn = &i->mouse.buttons[id];
     if (!NK_INBOX(btn->clicked_pos.x,btn->clicked_pos.y,b.x,b.y,b.w,b.h))
         return nk_false;
@@ -14189,7 +14190,6 @@ nk_input_is_key_down(const struct nk_input *i, enum nk_keys key)
     if (k->down) return nk_true;
     return nk_false;
 }
-
 
 
 
@@ -17128,7 +17128,7 @@ nk_contextual_item_text(struct nk_context *ctx, const char *text, int len,
     nk_flags alignment)
 {
     struct nk_window *win;
-    const struct nk_input *in;
+    struct nk_input *in;
     const struct nk_style *style;
 
     struct nk_rect bounds;
@@ -17163,7 +17163,7 @@ nk_contextual_item_image_text(struct nk_context *ctx, struct nk_image img,
     const char *text, int len, nk_flags align)
 {
     struct nk_window *win;
-    const struct nk_input *in;
+    struct nk_input *in;
     const struct nk_style *style;
 
     struct nk_rect bounds;
@@ -17199,7 +17199,7 @@ nk_contextual_item_symbol_text(struct nk_context *ctx, enum nk_symbol_type symbo
     const char *text, int len, nk_flags align)
 {
     struct nk_window *win;
-    const struct nk_input *in;
+    struct nk_input *in;
     const struct nk_style *style;
 
     struct nk_rect bounds;
@@ -17276,7 +17276,6 @@ nk_contextual_end(struct nk_context *ctx)
     nk_popup_end(ctx);
     return;
 }
-
 
 
 
@@ -17392,7 +17391,7 @@ nk_menu_begin_text(struct nk_context *ctx, const char *title, int len,
     nk_flags align, struct nk_vec2 size)
 {
     struct nk_window *win;
-    const struct nk_input *in;
+    struct nk_input *in;
     struct nk_rect header;
     int is_clicked = nk_false;
     nk_flags state;
@@ -17423,7 +17422,7 @@ nk_menu_begin_image(struct nk_context *ctx, const char *id, struct nk_image img,
 {
     struct nk_window *win;
     struct nk_rect header;
-    const struct nk_input *in;
+    struct nk_input *in;
     int is_clicked = nk_false;
     nk_flags state;
 
@@ -17447,7 +17446,7 @@ nk_menu_begin_symbol(struct nk_context *ctx, const char *id,
     enum nk_symbol_type sym, struct nk_vec2 size)
 {
     struct nk_window *win;
-    const struct nk_input *in;
+    struct nk_input *in;
     struct nk_rect header;
     int is_clicked = nk_false;
     nk_flags state;
@@ -17473,7 +17472,7 @@ nk_menu_begin_image_text(struct nk_context *ctx, const char *title, int len,
 {
     struct nk_window *win;
     struct nk_rect header;
-    const struct nk_input *in;
+    struct nk_input *in;
     int is_clicked = nk_false;
     nk_flags state;
 
@@ -17505,7 +17504,7 @@ nk_menu_begin_symbol_text(struct nk_context *ctx, const char *title, int len,
 {
     struct nk_window *win;
     struct nk_rect header;
-    const struct nk_input *in;
+    struct nk_input *in;
     int is_clicked = nk_false;
     nk_flags state;
 
@@ -17572,7 +17571,6 @@ nk_menu_end(struct nk_context *ctx)
 {
     nk_contextual_end(ctx);
 }
-
 
 
 
@@ -18356,7 +18354,7 @@ nk_tree_state_base(struct nk_context *ctx, enum nk_tree_type type,
     struct nk_panel *layout;
     const struct nk_style *style;
     struct nk_command_buffer *out;
-    const struct nk_input *in;
+    struct nk_input *in;
     const struct nk_style_button *button;
     enum nk_symbol_type symbol;
     float row_height;
@@ -18537,7 +18535,7 @@ nk_tree_element_image_push_hashed_base(struct nk_context *ctx, enum nk_tree_type
     struct nk_panel *layout;
     const struct nk_style *style;
     struct nk_command_buffer *out;
-    const struct nk_input *in;
+    struct nk_input *in;
     const struct nk_style_button *button;
     enum nk_symbol_type symbol;
     float row_height;
@@ -18680,7 +18678,6 @@ nk_tree_element_pop(struct nk_context *ctx)
 {
     nk_tree_state_pop(ctx);
 }
-
 
 
 
@@ -19251,7 +19248,6 @@ nk_spacing(struct nk_context *ctx, int cols)
 
 
 
-
 /* ===============================================================
  *
  *                              TEXT
@@ -19746,7 +19742,7 @@ nk_draw_symbol(struct nk_command_buffer *out, enum nk_symbol_type type,
 }
 NK_LIB int
 nk_button_behavior(nk_flags *state, struct nk_rect r,
-    const struct nk_input *i, enum nk_button_behavior behavior)
+    struct nk_input *i, enum nk_button_behavior behavior)
 {
     int ret = 0;
     nk_widget_state_reset(state);
@@ -19769,6 +19765,7 @@ nk_button_behavior(nk_flags *state, struct nk_rect r,
         *state |= NK_WIDGET_STATE_ENTERED;
     else if (nk_input_is_mouse_prev_hovering_rect(i, r))
         *state |= NK_WIDGET_STATE_LEFT;
+    i->mouse.clicked = ret;
     return ret;
 }
 NK_LIB const struct nk_style_item*
@@ -19793,7 +19790,7 @@ nk_draw_button(struct nk_command_buffer *out,
 }
 NK_LIB int
 nk_do_button(nk_flags *state, struct nk_command_buffer *out, struct nk_rect r,
-    const struct nk_style_button *style, const struct nk_input *in,
+    const struct nk_style_button *style, struct nk_input *in,
     enum nk_button_behavior behavior, struct nk_rect *content)
 {
     struct nk_rect bounds;
@@ -19843,7 +19840,7 @@ NK_LIB int
 nk_do_button_text(nk_flags *state,
     struct nk_command_buffer *out, struct nk_rect bounds,
     const char *string, int len, nk_flags align, enum nk_button_behavior behavior,
-    const struct nk_style_button *style, const struct nk_input *in,
+    const struct nk_style_button *style, struct nk_input *in,
     const struct nk_user_font *font)
 {
     struct nk_rect content;
@@ -19889,7 +19886,7 @@ NK_LIB int
 nk_do_button_symbol(nk_flags *state,
     struct nk_command_buffer *out, struct nk_rect bounds,
     enum nk_symbol_type symbol, enum nk_button_behavior behavior,
-    const struct nk_style_button *style, const struct nk_input *in,
+    const struct nk_style_button *style, struct nk_input *in,
     const struct nk_user_font *font)
 {
     int ret;
@@ -19920,7 +19917,7 @@ NK_LIB int
 nk_do_button_image(nk_flags *state,
     struct nk_command_buffer *out, struct nk_rect bounds,
     struct nk_image img, enum nk_button_behavior b,
-    const struct nk_style_button *style, const struct nk_input *in)
+    const struct nk_style_button *style, struct nk_input *in)
 {
     int ret;
     struct nk_rect content;
@@ -19980,7 +19977,7 @@ nk_do_button_text_symbol(nk_flags *state,
     struct nk_command_buffer *out, struct nk_rect bounds,
     enum nk_symbol_type symbol, const char *str, int len, nk_flags align,
     enum nk_button_behavior behavior, const struct nk_style_button *style,
-    const struct nk_user_font *font, const struct nk_input *in)
+    const struct nk_user_font *font, struct nk_input *in)
 {
     int ret;
     struct nk_rect tri = {0,0,0,0};
@@ -20037,7 +20034,7 @@ nk_do_button_text_image(nk_flags *state,
     struct nk_command_buffer *out, struct nk_rect bounds,
     struct nk_image img, const char* str, int len, nk_flags align,
     enum nk_button_behavior behavior, const struct nk_style_button *style,
-    const struct nk_user_font *font, const struct nk_input *in)
+    const struct nk_user_font *font, struct nk_input *in)
 {
     int ret;
     struct nk_rect icon;
@@ -20119,7 +20116,7 @@ nk_button_text_styled(struct nk_context *ctx,
 {
     struct nk_window *win;
     struct nk_panel *layout;
-    const struct nk_input *in;
+    struct nk_input *in;
 
     struct nk_rect bounds;
     enum nk_widget_layout_states state;
@@ -20161,7 +20158,7 @@ nk_button_color(struct nk_context *ctx, struct nk_color color)
 {
     struct nk_window *win;
     struct nk_panel *layout;
-    const struct nk_input *in;
+    struct nk_input *in;
     struct nk_style_button button;
 
     int ret = 0;
@@ -20197,7 +20194,7 @@ nk_button_symbol_styled(struct nk_context *ctx,
 {
     struct nk_window *win;
     struct nk_panel *layout;
-    const struct nk_input *in;
+    struct nk_input *in;
 
     struct nk_rect bounds;
     enum nk_widget_layout_states state;
@@ -20229,7 +20226,7 @@ nk_button_image_styled(struct nk_context *ctx, const struct nk_style_button *sty
 {
     struct nk_window *win;
     struct nk_panel *layout;
-    const struct nk_input *in;
+    struct nk_input *in;
 
     struct nk_rect bounds;
     enum nk_widget_layout_states state;
@@ -20263,7 +20260,7 @@ nk_button_symbol_text_styled(struct nk_context *ctx,
 {
     struct nk_window *win;
     struct nk_panel *layout;
-    const struct nk_input *in;
+    struct nk_input *in;
 
     struct nk_rect bounds;
     enum nk_widget_layout_states state;
@@ -20310,7 +20307,7 @@ nk_button_image_text_styled(struct nk_context *ctx,
 {
     struct nk_window *win;
     struct nk_panel *layout;
-    const struct nk_input *in;
+    struct nk_input *in;
 
     struct nk_rect bounds;
     enum nk_widget_layout_states state;
@@ -20352,14 +20349,13 @@ NK_API int nk_button_image_label_styled(struct nk_context *ctx,
 
 
 
-
 /* ===============================================================
  *
  *                              TOGGLE
  *
  * ===============================================================*/
 NK_LIB int
-nk_toggle_behavior(const struct nk_input *in, struct nk_rect select,
+nk_toggle_behavior(struct nk_input *in, struct nk_rect select,
     nk_flags *state, int active)
 {
     nk_widget_state_reset(state);
@@ -20461,7 +20457,7 @@ NK_LIB int
 nk_do_toggle(nk_flags *state,
     struct nk_command_buffer *out, struct nk_rect r,
     int *active, const char *str, int len, enum nk_toggle_type type,
-    const struct nk_style_toggle *style, const struct nk_input *in,
+    const struct nk_style_toggle *style, struct nk_input *in,
     const struct nk_user_font *font)
 {
     int was_active;
@@ -20529,7 +20525,7 @@ nk_check_text(struct nk_context *ctx, const char *text, int len, int active)
 {
     struct nk_window *win;
     struct nk_panel *layout;
-    const struct nk_input *in;
+    struct nk_input *in;
     const struct nk_style *style;
 
     struct nk_rect bounds;
@@ -20624,7 +20620,7 @@ nk_option_text(struct nk_context *ctx, const char *text, int len, int is_active)
 {
     struct nk_window *win;
     struct nk_panel *layout;
-    const struct nk_input *in;
+    struct nk_input *in;
     const struct nk_style *style;
 
     struct nk_rect bounds;
@@ -20669,7 +20665,6 @@ nk_radio_label(struct nk_context *ctx, const char *label, int *active)
 {
     return nk_radio_text(ctx, label, nk_strlen(label), active);
 }
-
 
 
 
@@ -20731,7 +20726,7 @@ nk_draw_selectable(struct nk_command_buffer *out,
 NK_LIB int
 nk_do_selectable(nk_flags *state, struct nk_command_buffer *out,
     struct nk_rect bounds, const char *str, int len, nk_flags align, int *value,
-    const struct nk_style_selectable *style, const struct nk_input *in,
+    const struct nk_style_selectable *style, struct nk_input *in,
     const struct nk_user_font *font)
 {
     int old_value;
@@ -20768,7 +20763,7 @@ NK_LIB int
 nk_do_selectable_image(nk_flags *state, struct nk_command_buffer *out,
     struct nk_rect bounds, const char *str, int len, nk_flags align, int *value,
     const struct nk_image *img, const struct nk_style_selectable *style,
-    const struct nk_input *in, const struct nk_user_font *font)
+    struct nk_input *in, const struct nk_user_font *font)
 {
     int old_value;
     struct nk_rect touch;
@@ -20815,7 +20810,7 @@ NK_LIB int
 nk_do_selectable_symbol(nk_flags *state, struct nk_command_buffer *out,
     struct nk_rect bounds, const char *str, int len, nk_flags align, int *value,
     enum nk_symbol_type sym, const struct nk_style_selectable *style,
-    const struct nk_input *in, const struct nk_user_font *font)
+    struct nk_input *in, const struct nk_user_font *font)
 {
     int old_value;
     struct nk_rect touch;
@@ -20865,7 +20860,7 @@ nk_selectable_text(struct nk_context *ctx, const char *str, int len,
 {
     struct nk_window *win;
     struct nk_panel *layout;
-    const struct nk_input *in;
+    struct nk_input *in;
     const struct nk_style *style;
 
     enum nk_widget_layout_states state;
@@ -20894,7 +20889,7 @@ nk_selectable_image_text(struct nk_context *ctx, struct nk_image img,
 {
     struct nk_window *win;
     struct nk_panel *layout;
-    const struct nk_input *in;
+    struct nk_input *in;
     const struct nk_style *style;
 
     enum nk_widget_layout_states state;
@@ -20923,7 +20918,7 @@ nk_selectable_symbol_text(struct nk_context *ctx, enum nk_symbol_type sym,
 {
     struct nk_window *win;
     struct nk_panel *layout;
-    const struct nk_input *in;
+    struct nk_input *in;
     const struct nk_style *style;
 
     enum nk_widget_layout_states state;
@@ -20992,7 +20987,6 @@ nk_select_symbol_label(struct nk_context *ctx, enum nk_symbol_type sym,
 {
     return nk_select_symbol_text(ctx, sym, title, nk_strlen(title), align, value);
 }
-
 
 
 
@@ -23535,7 +23529,7 @@ nk_edit_string_zero_terminated(struct nk_context *ctx, nk_flags flags,
  *
  * ===============================================================*/
 NK_LIB void
-nk_drag_behavior(nk_flags *state, const struct nk_input *in,
+nk_drag_behavior(nk_flags *state, struct nk_input *in,
     struct nk_rect drag, struct nk_property_variant *variant,
     float inc_per_pixel)
 {
@@ -23574,7 +23568,7 @@ nk_drag_behavior(nk_flags *state, const struct nk_input *in,
         *state |= NK_WIDGET_STATE_LEFT;
 }
 NK_LIB void
-nk_property_behavior(nk_flags *ws, const struct nk_input *in,
+nk_property_behavior(nk_flags *ws, struct nk_input *in,
     struct nk_rect property,  struct nk_rect label, struct nk_rect edit,
     struct nk_rect empty, int *state, struct nk_property_variant *variant,
     float inc_per_pixel)
@@ -24024,7 +24018,6 @@ nk_propertyd(struct nk_context *ctx, const char *name, double min,
 
 
 
-
 /* ==============================================================
  *
  *                          CHART
@@ -24131,7 +24124,7 @@ nk_chart_push_line(struct nk_context *ctx, struct nk_window *win,
     struct nk_chart *g, float value, int slot)
 {
     struct nk_panel *layout = win->layout;
-    const struct nk_input *i = &ctx->input;
+    struct nk_input *i = &ctx->input;
     struct nk_command_buffer *out = &win->buffer;
 
     nk_flags ret = 0;
@@ -24343,7 +24336,6 @@ nk_plot_function(struct nk_context *ctx, enum nk_chart_type type, void *userdata
 
 
 
-
 /* ==============================================================
  *
  *                          COLOR PICKER
@@ -24353,7 +24345,7 @@ NK_LIB int
 nk_color_picker_behavior(nk_flags *state,
     const struct nk_rect *bounds, const struct nk_rect *matrix,
     const struct nk_rect *hue_bar, const struct nk_rect *alpha_bar,
-    struct nk_colorf *color, const struct nk_input *in)
+    struct nk_colorf *color, struct nk_input *in)
 {
     float hsva[4];
     int value_changed = 0;
@@ -24464,7 +24456,7 @@ NK_LIB int
 nk_do_color_picker(nk_flags *state,
     struct nk_command_buffer *out, struct nk_colorf *col,
     enum nk_color_format fmt, struct nk_rect bounds,
-    struct nk_vec2 padding, const struct nk_input *in,
+    struct nk_vec2 padding, struct nk_input *in,
     const struct nk_user_font *font)
 {
     int ret = 0;
@@ -24513,7 +24505,7 @@ nk_color_pick(struct nk_context * ctx, struct nk_colorf *color,
     struct nk_window *win;
     struct nk_panel *layout;
     const struct nk_style *config;
-    const struct nk_input *in;
+    struct nk_input *in;
 
     enum nk_widget_layout_states state;
     struct nk_rect bounds;
@@ -24541,7 +24533,6 @@ nk_color_picker(struct nk_context *ctx, struct nk_colorf color,
     nk_color_pick(ctx, &color, fmt);
     return color;
 }
-
 
 
 
@@ -24589,7 +24580,7 @@ NK_API int
 nk_combo_begin_text(struct nk_context *ctx, const char *selected, int len,
     struct nk_vec2 size)
 {
-    const struct nk_input *in;
+    struct nk_input *in;
     struct nk_window *win;
     struct nk_style *style;
 
@@ -24684,7 +24675,7 @@ nk_combo_begin_color(struct nk_context *ctx, struct nk_color color, struct nk_ve
 {
     struct nk_window *win;
     struct nk_style *style;
-    const struct nk_input *in;
+    struct nk_input *in;
 
     struct nk_rect header;
     int is_clicked = nk_false;
@@ -24761,7 +24752,7 @@ nk_combo_begin_symbol(struct nk_context *ctx, enum nk_symbol_type symbol, struct
 {
     struct nk_window *win;
     struct nk_style *style;
-    const struct nk_input *in;
+    struct nk_input *in;
 
     struct nk_rect header;
     int is_clicked = nk_false;
@@ -24944,7 +24935,7 @@ nk_combo_begin_image(struct nk_context *ctx, struct nk_image img, struct nk_vec2
 {
     struct nk_window *win;
     struct nk_style *style;
-    const struct nk_input *in;
+    struct nk_input *in;
 
     struct nk_rect header;
     int is_clicked = nk_false;
@@ -25309,7 +25300,6 @@ nk_combobox_callback(struct nk_context *ctx,
 
 
 
-
 /* ===============================================================
  *
  *                              TOOLTIP
@@ -25320,7 +25310,7 @@ nk_tooltip_begin(struct nk_context *ctx, float width)
 {
     int x,y,w,h;
     struct nk_window *win;
-    const struct nk_input *in;
+    struct nk_input *in;
     struct nk_rect bounds;
     int ret;
 
@@ -25416,8 +25406,6 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
     nk_tooltip(ctx, buf);
 }
 #endif
-
-
 
 #endif /* NK_IMPLEMENTATION */
 
