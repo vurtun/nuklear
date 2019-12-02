@@ -2135,7 +2135,7 @@ NK_API void nk_window_show_if(struct nk_context*, const char *name, enum nk_show
 ///     if (nk_begin_xxx(...) {
 ///         // two rows with height: 30 composed of two widgets with width 60 and 40
 ///         const float size[] = {60,40};
-///         nk_layout_row(ctx, NK_STATIC, 30, 2, ratio);
+///         nk_layout_row(ctx, NK_STATIC, 30, 2, size);
 ///         nk_widget(...);
 ///         nk_widget(...);
 ///         nk_widget(...);
@@ -9226,7 +9226,7 @@ nk_draw_list_init(struct nk_draw_list *list)
     NK_ASSERT(list);
     if (!list) return;
     nk_zero(list, sizeof(*list));
-    for (i = 0; i < NK_LEN(list->circle_vtx); ++i) {
+    for (i = 0; i < NK_LEN(list->circle_vtx); i++) {
         const float a = ((float)i / (float)NK_LEN(list->circle_vtx)) * 2 * NK_PI;
         list->circle_vtx[i].x = (float)NK_COS(a);
         list->circle_vtx[i].y = (float)NK_SIN(a);
@@ -9634,10 +9634,11 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
     NK_ASSERT(list);
     if (!list || points_count < 2) return;
 
-    color.a = (nk_byte)((float)color.a * list->config.global_alpha);
+    const struct nk_vec2 uv = list->config.null.uv;
+
     count = points_count;
-    if (!closed) count = points_count-1;
-    thick_line = thickness > 1.0f;
+    if (!closed)
+        count = points_count-1;
 
 #ifdef NK_INCLUDE_COMMAND_USERDATA
     nk_draw_list_push_userdata(list, list->userdata);
@@ -9648,6 +9649,7 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
     col_trans = col;
     col_trans.a = 0;
 
+    thick_line = thickness > 1.0f;
     if (aliasing == NK_ANTI_ALIASING_ON) {
         /* ANTI-ALIASED STROKE */
         const float AA_SIZE = 1.0f;
@@ -9659,8 +9661,8 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
         nk_size vertex_offset;
         nk_size index = list->vertex_count;
 
-        const nk_size idx_count = (thick_line) ?  (count * 18) : (count * 12);
-        const nk_size vtx_count = (thick_line) ? (points_count * 4): (points_count *3);
+        const nk_size idx_count = thick_line ? count*18 : count*12;
+        const nk_size vtx_count = thick_line ? points_count*4 : points_count*3;
 
         void *vtx = nk_draw_list_alloc_vertices(list, vtx_count);
         nk_draw_index *ids = nk_draw_list_alloc_elements(list, idx_count);
@@ -9681,8 +9683,8 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
         vtx = (void*)((nk_byte*)list->vertices->memory.ptr + vertex_offset);
 
         /* calculate normals */
-        for (i1 = 0; i1 < count; ++i1) {
-            const nk_size i2 = ((i1 + 1) == points_count) ? 0 : (i1 + 1);
+        for (i1 = 0; i1 < count; i1++) {
+            const nk_size i2 = (i1+1) == points_count ? 0 : i1+1;
             struct nk_vec2 diff = nk_vec2_sub(points[i2], points[i1]);
             float len;
 
@@ -9707,8 +9709,8 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
                 temp[0] = nk_vec2_add(points[0], nk_vec2_muls(normals[0], AA_SIZE));
                 temp[1] = nk_vec2_sub(points[0], nk_vec2_muls(normals[0], AA_SIZE));
                 d = nk_vec2_muls(normals[points_count-1], AA_SIZE);
-                temp[(points_count-1) * 2 + 0] = nk_vec2_add(points[points_count-1], d);
-                temp[(points_count-1) * 2 + 1] = nk_vec2_sub(points[points_count-1], d);
+                temp[(points_count-1)*2+0] = nk_vec2_add(points[points_count-1], d);
+                temp[(points_count-1)*2+1] = nk_vec2_sub(points[points_count-1], d);
             }
 
             /* fill elements */
@@ -9716,15 +9718,15 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
             for (i1 = 0; i1 < count; i1++) {
                 struct nk_vec2 dm;
                 float dmr2;
-                nk_size i2 = ((i1 + 1) == points_count) ? 0 : (i1 + 1);
-                nk_size idx2 = ((i1+1) == points_count) ? index: (idx1 + 3);
+                nk_size i2 = (i1+1) == points_count ? 0 : i1+1;
+                nk_size idx2 = (i1+1) == points_count ? index : idx1+3;
 
                 /* average normals */
                 dm = nk_vec2_muls(nk_vec2_add(normals[i1], normals[i2]), 0.5f);
-                dmr2 = dm.x * dm.x + dm.y* dm.y;
-                if (dmr2 > 0.000001f) {
+                dmr2 = dm.x*dm.x + dm.y*dm.y;
+                if (dmr2 < 0.5f) {
+                    dmr2 = 0.5f;
                     float scale = 1.0f/dmr2;
-                    scale = NK_MIN(100.0f, scale);
                     dm = nk_vec2_muls(dm, scale);
                 }
 
@@ -9732,19 +9734,18 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
                 temp[i2*2+0] = nk_vec2_add(points[i2], dm);
                 temp[i2*2+1] = nk_vec2_sub(points[i2], dm);
 
-                ids[0] = (nk_draw_index)(idx2 + 0); ids[1] = (nk_draw_index)(idx1+0);
-                ids[2] = (nk_draw_index)(idx1 + 2); ids[3] = (nk_draw_index)(idx1+2);
-                ids[4] = (nk_draw_index)(idx2 + 2); ids[5] = (nk_draw_index)(idx2+0);
-                ids[6] = (nk_draw_index)(idx2 + 1); ids[7] = (nk_draw_index)(idx1+1);
-                ids[8] = (nk_draw_index)(idx1 + 0); ids[9] = (nk_draw_index)(idx1+0);
-                ids[10]= (nk_draw_index)(idx2 + 0); ids[11]= (nk_draw_index)(idx2+1);
+                /* add indexes */
+                ids[0] = (nk_draw_index)(idx2 + 0); ids[1] = (nk_draw_index)(idx1 + 0); ids[2] = (nk_draw_index)(idx1 + 2);
+                ids[3] = (nk_draw_index)(idx1 + 2); ids[4] = (nk_draw_index)(idx2 + 2); ids[5] = (nk_draw_index)(idx2 + 0);
+                ids[6] = (nk_draw_index)(idx2 + 1); ids[7] = (nk_draw_index)(idx1 + 1); ids[8] = (nk_draw_index)(idx1 + 0);
+                ids[9] = (nk_draw_index)(idx1 + 0); ids[10] = (nk_draw_index)(idx2 + 0); ids[11] = (nk_draw_index)(idx2 + 1);
                 ids += 12;
+
                 idx1 = idx2;
             }
 
             /* fill vertices */
-            for (i = 0; i < points_count; ++i) {
-                const struct nk_vec2 uv = list->config.null.uv;
+            for (i = 0; i < points_count; i++) {
                 vtx = nk_draw_vertex(vtx, &list->config, points[i], uv, col);
                 vtx = nk_draw_vertex(vtx, &list->config, temp[i*2+0], uv, col_trans);
                 vtx = nk_draw_vertex(vtx, &list->config, temp[i*2+1], uv, col_trans);
@@ -9761,7 +9762,7 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
                 temp[2] = nk_vec2_sub(points[0], d2);
                 temp[3] = nk_vec2_sub(points[0], d1);
 
-                d1 = nk_vec2_muls(normals[points_count-1], half_inner_thickness + AA_SIZE);
+                d1 = nk_vec2_muls(normals[points_count-1], (half_inner_thickness + AA_SIZE));
                 d2 = nk_vec2_muls(normals[points_count-1], half_inner_thickness);
 
                 temp[(points_count-1)*4+0] = nk_vec2_add(points[points_count-1], d1);
@@ -9772,21 +9773,21 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
 
             /* add all elements */
             idx1 = index;
-            for (i1 = 0; i1 < count; ++i1) {
+            for (i1 = 0; i1 < count; i1++) {
                 struct nk_vec2 dm_out, dm_in;
-                const nk_size i2 = ((i1+1) == points_count) ? 0: (i1 + 1);
-                nk_size idx2 = ((i1+1) == points_count) ? index: (idx1 + 4);
+                const nk_size i2 = (i1+1) == points_count ? 0 : i1+1;
+                nk_size idx2 = (i1+1) == points_count ? index : idx1+4;
 
                 /* average normals */
                 struct nk_vec2 dm = nk_vec2_muls(nk_vec2_add(normals[i1], normals[i2]), 0.5f);
-                float dmr2 = dm.x * dm.x + dm.y* dm.y;
-                if (dmr2 > 0.000001f) {
+                float dmr2 = dm.x*dm.x + dm.y*dm.y;
+                if (dmr2 < 0.5f) {
+                    dmr2 = 0.5f;
                     float scale = 1.0f/dmr2;
-                    scale = NK_MIN(100.0f, scale);
                     dm = nk_vec2_muls(dm, scale);
                 }
 
-                dm_out = nk_vec2_muls(dm, ((half_inner_thickness) + AA_SIZE));
+                dm_out = nk_vec2_muls(dm, (half_inner_thickness + AA_SIZE));
                 dm_in = nk_vec2_muls(dm, half_inner_thickness);
                 temp[i2*4+0] = nk_vec2_add(points[i2], dm_out);
                 temp[i2*4+1] = nk_vec2_add(points[i2], dm_in);
@@ -9794,22 +9795,19 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
                 temp[i2*4+3] = nk_vec2_sub(points[i2], dm_out);
 
                 /* add indexes */
-                ids[0] = (nk_draw_index)(idx2 + 1); ids[1] = (nk_draw_index)(idx1+1);
-                ids[2] = (nk_draw_index)(idx1 + 2); ids[3] = (nk_draw_index)(idx1+2);
-                ids[4] = (nk_draw_index)(idx2 + 2); ids[5] = (nk_draw_index)(idx2+1);
-                ids[6] = (nk_draw_index)(idx2 + 1); ids[7] = (nk_draw_index)(idx1+1);
-                ids[8] = (nk_draw_index)(idx1 + 0); ids[9] = (nk_draw_index)(idx1+0);
-                ids[10]= (nk_draw_index)(idx2 + 0); ids[11] = (nk_draw_index)(idx2+1);
-                ids[12]= (nk_draw_index)(idx2 + 2); ids[13] = (nk_draw_index)(idx1+2);
-                ids[14]= (nk_draw_index)(idx1 + 3); ids[15] = (nk_draw_index)(idx1+3);
-                ids[16]= (nk_draw_index)(idx2 + 3); ids[17] = (nk_draw_index)(idx2+2);
+                ids[0] = (nk_draw_index)(idx2 + 1); ids[1] = (nk_draw_index)(idx1 + 1); ids[2] = (nk_draw_index)(idx1 + 2);
+                ids[3] = (nk_draw_index)(idx1 + 2); ids[4] = (nk_draw_index)(idx2 + 2); ids[5] = (nk_draw_index)(idx2 + 1);
+                ids[6] = (nk_draw_index)(idx2 + 1); ids[7] = (nk_draw_index)(idx1 + 1); ids[8] = (nk_draw_index)(idx1 + 0);
+                ids[9] = (nk_draw_index)(idx1 + 0); ids[10] = (nk_draw_index)(idx2 + 0); ids[11] = (nk_draw_index)(idx2 + 1);
+                ids[12] = (nk_draw_index)(idx2 + 2); ids[13] = (nk_draw_index)(idx1 + 2); ids[14] = (nk_draw_index)(idx1 + 3);
+                ids[15] = (nk_draw_index)(idx1 + 3); ids[16] = (nk_draw_index)(idx2 + 3); ids[17] = (nk_draw_index)(idx2 + 2);
                 ids += 18;
+
                 idx1 = idx2;
             }
 
             /* add vertices */
-            for (i = 0; i < points_count; ++i) {
-                const struct nk_vec2 uv = list->config.null.uv;
+            for (i = 0; i < points_count; i++) {
                 vtx = nk_draw_vertex(vtx, &list->config, temp[i*4+0], uv, col_trans);
                 vtx = nk_draw_vertex(vtx, &list->config, temp[i*4+1], uv, col);
                 vtx = nk_draw_vertex(vtx, &list->config, temp[i*4+2], uv, col);
@@ -9822,16 +9820,17 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
         /* NON ANTI-ALIASED STROKE */
         nk_size i1 = 0;
         nk_size idx = list->vertex_count;
-        const nk_size idx_count = count * 6;
-        const nk_size vtx_count = count * 4;
+        const nk_size idx_count = count*6;
+        const nk_size vtx_count = count*4;
+
         void *vtx = nk_draw_list_alloc_vertices(list, vtx_count);
         nk_draw_index *ids = nk_draw_list_alloc_elements(list, idx_count);
+
         if (!vtx || !ids) return;
 
-        for (i1 = 0; i1 < count; ++i1) {
+        for (i1 = 0; i1 < count; i1++) {
             float dx, dy;
-            const struct nk_vec2 uv = list->config.null.uv;
-            const nk_size i2 = ((i1+1) == points_count) ? 0 : i1 + 1;
+            const nk_size i2 = (i1+1) == points_count ? 0 : i1+1;
             const struct nk_vec2 p1 = points[i1];
             const struct nk_vec2 p2 = points[i2];
             struct nk_vec2 diff = nk_vec2_sub(p2, p1);
@@ -9842,9 +9841,9 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
             if (len != 0.0f)
                 len = nk_inv_sqrt(len);
             else len = 1.0f;
-            diff = nk_vec2_muls(diff, len);
 
             /* add vertices */
+            diff = nk_vec2_muls(diff, len);
             dx = diff.x * (thickness * 0.5f);
             dy = diff.y * (thickness * 0.5f);
 
@@ -9853,10 +9852,8 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
             vtx = nk_draw_vertex(vtx, &list->config, nk_vec2(p2.x - dy, p2.y + dx), uv, col);
             vtx = nk_draw_vertex(vtx, &list->config, nk_vec2(p1.x - dy, p1.y + dx), uv, col);
 
-            ids[0] = (nk_draw_index)(idx+0); ids[1] = (nk_draw_index)(idx+1);
-            ids[2] = (nk_draw_index)(idx+2); ids[3] = (nk_draw_index)(idx+0);
-            ids[4] = (nk_draw_index)(idx+2); ids[5] = (nk_draw_index)(idx+3);
-
+            ids[0] = (nk_draw_index)(idx); ids[1] = (nk_draw_index)(idx + 1); ids[2] = (nk_draw_index)(idx + 2);
+            ids[3] = (nk_draw_index)(idx); ids[4] = (nk_draw_index)(idx + 2); ids[5] = (nk_draw_index)(idx + 3);
             ids += 6;
             idx += 4;
         }
@@ -9915,9 +9912,7 @@ nk_draw_list_fill_poly_convex(struct nk_draw_list *list,
 
         /* add elements */
         for (i = 2; i < points_count; i++) {
-            ids[0] = (nk_draw_index)(vtx_inner_idx);
-            ids[1] = (nk_draw_index)(vtx_inner_idx + ((i-1) << 1));
-            ids[2] = (nk_draw_index)(vtx_inner_idx + (i << 1));
+            ids[0] = (nk_draw_index)(vtx_inner_idx); ids[1] = (nk_draw_index)(vtx_inner_idx+((i-1)<<1)); ids[2] = (nk_draw_index)(vtx_inner_idx+(i<<1));
             ids += 3;
         }
 
@@ -9932,8 +9927,8 @@ nk_draw_list_fill_poly_convex(struct nk_draw_list *list,
             if (len != 0.0f)
                 len = nk_inv_sqrt(len);
             else len = 1.0f;
-            diff = nk_vec2_muls(diff, len);
 
+            diff = nk_vec2_muls(diff, len);
             normals[i0].x = diff.y;
             normals[i0].y = -diff.x;
         }
@@ -9945,9 +9940,9 @@ nk_draw_list_fill_poly_convex(struct nk_draw_list *list,
             struct nk_vec2 n1 = normals[i1];
             struct nk_vec2 dm = nk_vec2_muls(nk_vec2_add(n0, n1), 0.5f);
             float dmr2 = dm.x*dm.x + dm.y*dm.y;
-            if (dmr2 > 0.000001f) {
-                float scale = 1.0f / dmr2;
-                scale = NK_MIN(scale, 100.0f);
+            if (dmr2 < 0.5f) {
+                dmr2 = 0.5f;
+                float scale = 1.0f/dmr2;
                 dm = nk_vec2_muls(dm, scale);
             }
             dm = nk_vec2_muls(dm, AA_SIZE * 0.5f);
@@ -9956,13 +9951,9 @@ nk_draw_list_fill_poly_convex(struct nk_draw_list *list,
             vtx = nk_draw_vertex(vtx, &list->config, nk_vec2_sub(points[i1], dm), uv, col);
             vtx = nk_draw_vertex(vtx, &list->config, nk_vec2_add(points[i1], dm), uv, col_trans);
 
-            /* add indexes */
-            ids[0] = (nk_draw_index)(vtx_inner_idx+(i1<<1));
-            ids[1] = (nk_draw_index)(vtx_inner_idx+(i0<<1));
-            ids[2] = (nk_draw_index)(vtx_outer_idx+(i0<<1));
-            ids[3] = (nk_draw_index)(vtx_outer_idx+(i0<<1));
-            ids[4] = (nk_draw_index)(vtx_outer_idx+(i1<<1));
-            ids[5] = (nk_draw_index)(vtx_inner_idx+(i1<<1));
+            /* add indexes for fringes */
+            ids[0] = (nk_draw_index)(vtx_inner_idx+(i1<<1)); ids[1] = (nk_draw_index)(vtx_inner_idx+(i0<<1)); ids[2] = (nk_draw_index)(vtx_outer_idx+(i0<<1));
+            ids[3] = (nk_draw_index)(vtx_outer_idx+(i0<<1)); ids[4] = (nk_draw_index)(vtx_outer_idx+(i1<<1)); ids[5] = (nk_draw_index)(vtx_inner_idx+(i1<<1));
             ids += 6;
         }
         /* free temporary normals + points */
@@ -9976,12 +9967,10 @@ nk_draw_list_fill_poly_convex(struct nk_draw_list *list,
         nk_draw_index *ids = nk_draw_list_alloc_elements(list, idx_count);
 
         if (!vtx || !ids) return;
-        for (i = 0; i < vtx_count; ++i)
+        for (i = 0; i < vtx_count; i++)
             vtx = nk_draw_vertex(vtx, &list->config, points[i], list->config.null.uv, col);
-        for (i = 2; i < points_count; ++i) {
-            ids[0] = (nk_draw_index)index;
-            ids[1] = (nk_draw_index)(index+ i - 1);
-            ids[2] = (nk_draw_index)(index+i);
+        for (i = 2; i < points_count; i++) {
+            ids[0] = (nk_draw_index)(index); ids[1] = (nk_draw_index)(index+i-1); ids[2] = (nk_draw_index)(index+i);
             ids += 3;
         }
     }
@@ -10062,7 +10051,7 @@ nk_draw_list_path_arc_to(struct nk_draw_list *list, struct nk_vec2 center,
 
     float cx = (float)NK_COS(a_min) * radius;
     float cy = (float)NK_SIN(a_min) * radius;
-    for(i = 0; i <= segments; ++i) {
+    for(i = 0; i <= segments; i++) {
         float new_cx, new_cy;
         const float x = center.x + cx;
         const float y = center.y + cy;
@@ -10112,15 +10101,15 @@ nk_draw_list_path_curve_to(struct nk_draw_list *list, struct nk_vec2 p2,
 
     p1 = nk_draw_list_path_last(list);
     t_step = 1.0f/(float)num_segments;
-    for (i_step = 1; i_step <= num_segments; ++i_step) {
+    for (i_step = 1; i_step <= num_segments; i_step++) {
         float t = t_step * (float)i_step;
         float u = 1.0f - t;
         float w1 = u*u*u;
         float w2 = 3*u*u*t;
         float w3 = 3*u*t*t;
-        float w4 = t * t *t;
-        float x = w1 * p1.x + w2 * p2.x + w3 * p3.x + w4 * p4.x;
-        float y = w1 * p1.y + w2 * p2.y + w3 * p3.y + w4 * p4.y;
+        float w4 = t*t*t;
+        float x = w1*p1.x + w2*p2.x + w3*p3.x + w4*p4.x;
+        float y = w1*p1.y + w2*p2.y + w3*p3.y + w4*p4.y;
         nk_draw_list_path_line_to(list, nk_vec2(x,y));
     }
 }
@@ -10172,7 +10161,7 @@ nk_draw_list_fill_rect(struct nk_draw_list *list, struct nk_rect rect,
         nk_draw_list_path_rect_to(list, nk_vec2(rect.x, rect.y),
             nk_vec2(rect.x + rect.w, rect.y + rect.h), rounding);
     } else {
-        nk_draw_list_path_rect_to(list, nk_vec2(rect.x-0.5f, rect.y-0.5f),
+        nk_draw_list_path_rect_to(list, nk_vec2(rect.x+0.5f, rect.y+0.5f),
             nk_vec2(rect.x + rect.w, rect.y + rect.h), rounding);
     } nk_draw_list_path_fill(list,  col);
 }
@@ -10186,7 +10175,7 @@ nk_draw_list_stroke_rect(struct nk_draw_list *list, struct nk_rect rect,
         nk_draw_list_path_rect_to(list, nk_vec2(rect.x, rect.y),
             nk_vec2(rect.x + rect.w, rect.y + rect.h), rounding);
     } else {
-        nk_draw_list_path_rect_to(list, nk_vec2(rect.x-0.5f, rect.y-0.5f),
+        nk_draw_list_path_rect_to(list, nk_vec2(rect.x+0.5f, rect.y+0.5f),
             nk_vec2(rect.x + rect.w, rect.y + rect.h), rounding);
     } nk_draw_list_path_stroke(list,  col, NK_STROKE_CLOSED, thickness);
 }
@@ -10484,7 +10473,7 @@ nk_convert(struct nk_context *ctx, struct nk_buffer *cmds,
         case NK_COMMAND_POLYGON: {
             int i;
             const struct nk_command_polygon*p = (const struct nk_command_polygon*)cmd;
-            for (i = 0; i < p->point_count; ++i) {
+            for (i = 0; i < p->point_count; i++) {
                 struct nk_vec2 pnt = nk_vec2((float)p->points[i].x, (float)p->points[i].y);
                 nk_draw_list_path_line_to(&ctx->draw_list, pnt);
             }
@@ -10493,7 +10482,7 @@ nk_convert(struct nk_context *ctx, struct nk_buffer *cmds,
         case NK_COMMAND_POLYGON_FILLED: {
             int i;
             const struct nk_command_polygon_filled *p = (const struct nk_command_polygon_filled*)cmd;
-            for (i = 0; i < p->point_count; ++i) {
+            for (i = 0; i < p->point_count; i++) {
                 struct nk_vec2 pnt = nk_vec2((float)p->points[i].x, (float)p->points[i].y);
                 nk_draw_list_path_line_to(&ctx->draw_list, pnt);
             }
@@ -10502,7 +10491,7 @@ nk_convert(struct nk_context *ctx, struct nk_buffer *cmds,
         case NK_COMMAND_POLYLINE: {
             int i;
             const struct nk_command_polyline *p = (const struct nk_command_polyline*)cmd;
-            for (i = 0; i < p->point_count; ++i) {
+            for (i = 0; i < p->point_count; i++) {
                 struct nk_vec2 pnt = nk_vec2((float)p->points[i].x, (float)p->points[i].y);
                 nk_draw_list_path_line_to(&ctx->draw_list, pnt);
             }
@@ -25475,20 +25464,24 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
 ///    - [yy]: Minor version with non-breaking API and library changes
 ///    - [zz]: Bug fix version with no direct changes to API
 ///
+/// - 2019/09/23 (4.02.0) - Improved algorithm for mitre joints on thick lines, preserving correct
+///                        thickness up to 90 degrees angles (e.g. rectangles).
+/// - 2019/09/23 (4.01.4) - Fixed a drawing bug introduced in 1.40.5 for
+///                        stroked and filled rectangles when `NK_ANTI_ALIASING_OFF` is used.
 /// - 2019/09/20 (4.01.3) - Fixed a bug wherein combobox cannot be closed by clicking the header
-///                        when NK_BUTTON_TRIGGER_ON_RELEASE is defined.
-/// - 2019/09/10 (4.01.2) - Fixed the nk_cos function, which deviated significantly.
+///                        when `NK_BUTTON_TRIGGER_ON_RELEASE` is defined.
+/// - 2019/09/10 (4.01.2) - Fixed the `nk_cos` function, which deviated significantly.
 /// - 2019/09/08 (4.01.1) - Fixed a bug wherein re-baking of fonts caused a segmentation
 ///                        fault due to dst_font->glyph_count not being zeroed on subsequent
 ///                        bakes of the same set of fonts.
-/// - 2019/06/23 (4.01.0) - Added nk_***_get_scroll and nk_***_set_scroll for groups, windows, and popups.
+/// - 2019/06/23 (4.01.0) - Added `nk_***_get_scroll` and `nk_***_set_scroll` for groups, windows, and popups.
 /// - 2019/06/12 (4.00.3) - Fix panel background drawing bug.
-/// - 2018/10/31 (4.00.2) - Added NK_KEYSTATE_BASED_INPUT to "fix" state based backends
+/// - 2018/10/31 (4.00.2) - Added `NK_KEYSTATE_BASED_INPUT` to "fix" state based backends
 ///                        like GLFW without breaking key repeat behavior on event based.
 /// - 2018/04/01 (4.00.1) - Fixed calling `nk_convert` multiple time per single frame.
-/// - 2018/04/01 (4.00.0) - BREAKING CHANGE: nk_draw_list_clear no longer tries to
+/// - 2018/04/01 (4.00.0) - BREAKING CHANGE: `nk_draw_list_clear` no longer tries to
 ///                        clear provided buffers. So make sure to either free
-///                        or clear each passed buffer after calling nk_convert.
+///                        or clear each passed buffer after calling `nk_convert`.
 /// - 2018/02/23 (3.00.6) - Fixed slider dragging behavior.
 /// - 2018/01/31 (3.00.5) - Fixed overcalculation of cursor data in font baking process.
 /// - 2018/01/31 (3.00.4) - Removed name collision with stb_truetype.
@@ -25499,12 +25492,11 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
 ///                        because of conversions between float and byte color representation.
 ///                        Color pickers now use floating point values to represent
 ///                        HSV values. To get back the old behavior I added some additional
-///                        color conversion functions to cast between nk_color and
-///                        nk_colorf.
+///                        color conversion functions to cast between `nk_color` and `nk_colorf`.
 /// - 2017/12/23 (2.00.7) - Fixed small warning.
 /// - 2017/12/23 (2.00.7) - Fixed `nk_edit_buffer` behavior if activated to allow input.
-/// - 2017/12/23 (2.00.7) - Fixed modifyable progressbar dragging visuals and input behavior.
-/// - 2017/12/04 (2.00.6) - Added formated string tooltip widget.
+/// - 2017/12/23 (2.00.7) - Fixed modifiable progressbar dragging visuals and input behavior.
+/// - 2017/12/04 (2.00.6) - Added formatted string tooltip widget.
 /// - 2017/11/18 (2.00.5) - Fixed window becoming hidden with flag `NK_WINDOW_NO_INPUT`.
 /// - 2017/11/15 (2.00.4) - Fixed font merging.
 /// - 2017/11/07 (2.00.3) - Fixed window size and position modifier functions.
@@ -25512,7 +25504,7 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
 /// - 2017/09/14 (2.00.1) - Fixed window closing behavior.
 /// - 2017/09/14 (2.00.0) - BREAKING CHANGE: Modifing window position and size funtions now
 ///                        require the name of the window and must happen outside the window
-///                        building process (between function call nk_begin and nk_end).
+///                        building process (between function call `nk_begin` and `nk_end`).
 /// - 2017/09/11 (1.40.9) - Fixed window background flag if background window is declared last.
 /// - 2017/08/27 (1.40.8) - Fixed `nk_item_is_any_active` for hidden windows.
 /// - 2017/08/27 (1.40.7) - Fixed window background flag.
@@ -25520,11 +25512,11 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
 ///                        query for widgets.
 /// - 2017/07/07 (1.40.5) - Fixed drawing bug for vertex output for lines and stroked
 ///                        and filled rectangles.
-/// - 2017/07/07 (1.40.4) - Fixed bug in nk_convert trying to add windows that are in
+/// - 2017/07/07 (1.40.4) - Fixed bug in `nk_convert` trying to add windows that are in
 ///                        process of being destroyed.
 /// - 2017/07/07 (1.40.3) - Fixed table internal bug caused by storing table size in
 ///                        window instead of directly in table.
-/// - 2017/06/30 (1.40.2) - Removed unneeded semicolon in C++ NK_ALIGNOF macro.
+/// - 2017/06/30 (1.40.2) - Removed unnecessary semicolon in C++ NK_ALIGNOF macro.
 /// - 2017/06/30 (1.40.1) - Fixed drawing lines smaller or equal zero.
 /// - 2017/06/08 (1.40.0) - Removed the breaking part of last commit. Auto layout now only
 ///                        comes in effect if you pass in zero was row height argument.
@@ -25532,7 +25524,7 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
 ///                        how layouting works. From now there will be an internal minimum
 ///                        row height derived from font height. If you need a row smaller than
 ///                        that you can directly set it by `nk_layout_set_min_row_height` and
-///                        reset the value back by calling `nk_layout_reset_min_row_height.
+///                        reset the value back by calling `nk_layout_reset_min_row_height`.
 /// - 2017/06/08 (1.39.1) - Fixed property text edit handling bug caused by past `nk_widget` fix.
 /// - 2017/06/08 (1.39.0) - Added function to retrieve window space without calling a `nk_layout_xxx` function.
 /// - 2017/06/06 (1.38.5) - Fixed `nk_convert` return flag for command buffer.
@@ -25566,7 +25558,7 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
 /// - 2016/12/03 (1.29.1) - Fixed wrapped text with no seperator and C89 error.
 /// - 2016/12/03 (1.29.0) - Changed text wrapping to process words not characters.
 /// - 2016/11/22 (1.28.6) - Fixed window minimized closing bug.
-/// - 2016/11/19 (1.28.5) - Fixed abstract combo box closing behavior.
+/// - 2016/11/19 (1.28.5) - Fixed abstract combobox closing behavior.
 /// - 2016/11/19 (1.28.4) - Fixed tooltip flickering.
 /// - 2016/11/19 (1.28.3) - Fixed memory leak caused by popup repeated closing.
 /// - 2016/11/18 (1.28.2) - Fixed memory leak caused by popup panel allocation.
@@ -25612,7 +25604,7 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
 ///                        varargs but not stdio was defined I will use my own function.
 /// - 2016/09/15 (1.21.2) - Fixed panel `close` behavior for deeper panel levels.
 /// - 2016/09/15 (1.21.1) - Fixed C++ errors and wrong argument to `nk_panel_get_xxxx`.
-/// - 2016/09/13 (1.21.0) - !BREAKING! Fixed nonblocking popup behavior in menu, combo,
+/// - 2016/09/13 (1.21.0) - BREAKING CHANGE: Fixed nonblocking popup behavior in menu, combo,
 ///                        and contextual which prevented closing in y-direction if
 ///                        popup did not reach max height.
 ///                        In addition the height parameter was changed into vec2
@@ -25642,7 +25634,7 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
 ///                        is not defined by supporting the biggest compiler GCC, clang and MSVC.
 /// - 2016/09/07 (1.15.3) - Fixed `NK_INCLUDE_COMMAND_USERDATA` define to not cause an error.
 /// - 2016/09/04 (1.15.2) - Fixed wrong combobox height calculation.
-/// - 2016/09/03 (1.15.1) - Fixed gaps inside combo boxes in OpenGL.
+/// - 2016/09/03 (1.15.1) - Fixed gaps inside comboboxes in OpenGL.
 /// - 2016/09/02 (1.15.0) - Changed nuklear to not have any default vertex layout and
 ///                        instead made it user provided. The range of types to convert
 ///                        to is quite limited at the moment, but I would be more than
@@ -25656,7 +25648,7 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
 /// - 2016/08/30 (1.13.2) - Fixed close and minimize button which would fire even if the
 ///                        window was in Read Only Mode.
 /// - 2016/08/30 (1.13.1) - Fixed popup panel padding handling which was previously just
-///                        a hack for combo box and menu.
+///                        a hack for combobox and menu.
 /// - 2016/08/30 (1.13.0) - Removed `NK_WINDOW_DYNAMIC` flag from public API since
 ///                        it is bugged and causes issues in window selection.
 /// - 2016/08/30 (1.12.0) - Removed scaler size. The size of the scaler is now
@@ -25674,7 +25666,7 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
 /// - 2016/08/26 (1.10.0) - Added stacks for temporary style/UI changes in code.
 /// - 2016/08/25 (1.10.0) - Changed `nk_input_is_key_pressed` and 'nk_input_is_key_released'
 ///                        to account for key press and release happening in one frame.
-/// - 2016/08/25 (1.10.0) - Added additional nk_edit flag to directly jump to the end on activate.
+/// - 2016/08/25 (1.10.0) - Added additional `nk_edit` flag to directly jump to the end on activate.
 /// - 2016/08/17 (1.09.6) - Removed invalid check for value zero in `nk_propertyx`.
 /// - 2016/08/16 (1.09.5) - Fixed ROM mode for deeper levels of popup windows parents.
 /// - 2016/08/15 (1.09.4) - Editbox are now still active if enter was pressed with flag
@@ -25688,9 +25680,9 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
 ///                        of glyphes for font with multiple ranges.
 /// - 2016/08/12 (1.09.1) - Added additional function to check if window is currently
 ///                        hidden and therefore not visible.
-/// - 2016/08/12 (1.09.1) - nk_window_is_closed now queries the correct flag `NK_WINDOW_CLOSED`
+/// - 2016/08/12 (1.09.1) - `nk_window_is_closed` now queries the correct flag `NK_WINDOW_CLOSED`
 ///                        instead of the old flag `NK_WINDOW_HIDDEN`.
-/// - 2016/08/09 (1.09.0) - Added additional double version to nk_property and changed
+/// - 2016/08/09 (1.09.0) - Added additional double version to `nk_property` and changed
 ///                        the underlying implementation to not cast to float and instead
 ///                        work directly on the given values.
 /// - 2016/08/09 (1.08.0) - Added additional define to overwrite library internal
@@ -25734,18 +25726,18 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
 /// - 2016/08/03 (1.04.0) - Added functions to show/hide software cursor.
 /// - 2016/08/03 (1.04.0) - Added `NK_WINDOW_BACKGROUND` flag to force a window
 ///                        to be always in the background of the screen.
-/// - 2016/08/03 (1.03.2) - Removed invalid assert macro for NK_RGB color picker.
+/// - 2016/08/03 (1.03.2) - Removed invalid assert macro for `NK_RGB` color picker.
 /// - 2016/08/01 (1.03.1) - Added helper macros into header include guard.
 /// - 2016/07/29 (1.03.0) - Moved the window/table pool into the header part to
 ///                        simplify memory management by removing the need to
 ///                        allocate the pool.
 /// - 2016/07/29 (1.02.0) - Added auto scrollbar hiding window flag which if enabled
-///                        will hide the window scrollbar after NK_SCROLLBAR_HIDING_TIMEOUT
+///                        will hide the window scrollbar after `NK_SCROLLBAR_HIDING_TIMEOUT`
 ///                        seconds without window interaction. To make it work
 ///                        you have to also set a delta time inside the `nk_context`.
 /// - 2016/07/25 (1.01.1) - Fixed small panel and panel border drawing bugs.
 /// - 2016/07/15 (1.01.0) - Added software cursor to `nk_style` and `nk_context`.
-/// - 2016/07/15 (1.01.0) - Added const correctness to `nk_buffer_push' data argument.
+/// - 2016/07/15 (1.01.0) - Added const correctness to `nk_buffer_push` data argument.
 /// - 2016/07/15 (1.01.0) - Removed internal font baking API and simplified
 ///                        font atlas memory management by converting pointer
 ///                        arrays for fonts and font configurations to lists.

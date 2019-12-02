@@ -14,7 +14,7 @@ nk_draw_list_init(struct nk_draw_list *list)
     NK_ASSERT(list);
     if (!list) return;
     nk_zero(list, sizeof(*list));
-    for (i = 0; i < NK_LEN(list->circle_vtx); ++i) {
+    for (i = 0; i < NK_LEN(list->circle_vtx); i++) {
         const float a = ((float)i / (float)NK_LEN(list->circle_vtx)) * 2 * NK_PI;
         list->circle_vtx[i].x = (float)NK_COS(a);
         list->circle_vtx[i].y = (float)NK_SIN(a);
@@ -422,10 +422,11 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
     NK_ASSERT(list);
     if (!list || points_count < 2) return;
 
-    color.a = (nk_byte)((float)color.a * list->config.global_alpha);
+    const struct nk_vec2 uv = list->config.null.uv;
+
     count = points_count;
-    if (!closed) count = points_count-1;
-    thick_line = thickness > 1.0f;
+    if (!closed)
+        count = points_count-1;
 
 #ifdef NK_INCLUDE_COMMAND_USERDATA
     nk_draw_list_push_userdata(list, list->userdata);
@@ -436,6 +437,7 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
     col_trans = col;
     col_trans.a = 0;
 
+    thick_line = thickness > 1.0f;
     if (aliasing == NK_ANTI_ALIASING_ON) {
         /* ANTI-ALIASED STROKE */
         const float AA_SIZE = 1.0f;
@@ -447,8 +449,8 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
         nk_size vertex_offset;
         nk_size index = list->vertex_count;
 
-        const nk_size idx_count = (thick_line) ?  (count * 18) : (count * 12);
-        const nk_size vtx_count = (thick_line) ? (points_count * 4): (points_count *3);
+        const nk_size idx_count = thick_line ? count*18 : count*12;
+        const nk_size vtx_count = thick_line ? points_count*4 : points_count*3;
 
         void *vtx = nk_draw_list_alloc_vertices(list, vtx_count);
         nk_draw_index *ids = nk_draw_list_alloc_elements(list, idx_count);
@@ -469,8 +471,8 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
         vtx = (void*)((nk_byte*)list->vertices->memory.ptr + vertex_offset);
 
         /* calculate normals */
-        for (i1 = 0; i1 < count; ++i1) {
-            const nk_size i2 = ((i1 + 1) == points_count) ? 0 : (i1 + 1);
+        for (i1 = 0; i1 < count; i1++) {
+            const nk_size i2 = (i1+1) == points_count ? 0 : i1+1;
             struct nk_vec2 diff = nk_vec2_sub(points[i2], points[i1]);
             float len;
 
@@ -495,8 +497,8 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
                 temp[0] = nk_vec2_add(points[0], nk_vec2_muls(normals[0], AA_SIZE));
                 temp[1] = nk_vec2_sub(points[0], nk_vec2_muls(normals[0], AA_SIZE));
                 d = nk_vec2_muls(normals[points_count-1], AA_SIZE);
-                temp[(points_count-1) * 2 + 0] = nk_vec2_add(points[points_count-1], d);
-                temp[(points_count-1) * 2 + 1] = nk_vec2_sub(points[points_count-1], d);
+                temp[(points_count-1)*2+0] = nk_vec2_add(points[points_count-1], d);
+                temp[(points_count-1)*2+1] = nk_vec2_sub(points[points_count-1], d);
             }
 
             /* fill elements */
@@ -504,15 +506,15 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
             for (i1 = 0; i1 < count; i1++) {
                 struct nk_vec2 dm;
                 float dmr2;
-                nk_size i2 = ((i1 + 1) == points_count) ? 0 : (i1 + 1);
-                nk_size idx2 = ((i1+1) == points_count) ? index: (idx1 + 3);
+                nk_size i2 = (i1+1) == points_count ? 0 : i1+1;
+                nk_size idx2 = (i1+1) == points_count ? index : idx1+3;
 
                 /* average normals */
                 dm = nk_vec2_muls(nk_vec2_add(normals[i1], normals[i2]), 0.5f);
-                dmr2 = dm.x * dm.x + dm.y* dm.y;
-                if (dmr2 > 0.000001f) {
+                dmr2 = dm.x*dm.x + dm.y*dm.y;
+                if (dmr2 < 0.5f) {
+                    dmr2 = 0.5f;
                     float scale = 1.0f/dmr2;
-                    scale = NK_MIN(100.0f, scale);
                     dm = nk_vec2_muls(dm, scale);
                 }
 
@@ -520,19 +522,18 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
                 temp[i2*2+0] = nk_vec2_add(points[i2], dm);
                 temp[i2*2+1] = nk_vec2_sub(points[i2], dm);
 
-                ids[0] = (nk_draw_index)(idx2 + 0); ids[1] = (nk_draw_index)(idx1+0);
-                ids[2] = (nk_draw_index)(idx1 + 2); ids[3] = (nk_draw_index)(idx1+2);
-                ids[4] = (nk_draw_index)(idx2 + 2); ids[5] = (nk_draw_index)(idx2+0);
-                ids[6] = (nk_draw_index)(idx2 + 1); ids[7] = (nk_draw_index)(idx1+1);
-                ids[8] = (nk_draw_index)(idx1 + 0); ids[9] = (nk_draw_index)(idx1+0);
-                ids[10]= (nk_draw_index)(idx2 + 0); ids[11]= (nk_draw_index)(idx2+1);
+                /* add indexes */
+                ids[0] = (nk_draw_index)(idx2 + 0); ids[1] = (nk_draw_index)(idx1 + 0); ids[2] = (nk_draw_index)(idx1 + 2);
+                ids[3] = (nk_draw_index)(idx1 + 2); ids[4] = (nk_draw_index)(idx2 + 2); ids[5] = (nk_draw_index)(idx2 + 0);
+                ids[6] = (nk_draw_index)(idx2 + 1); ids[7] = (nk_draw_index)(idx1 + 1); ids[8] = (nk_draw_index)(idx1 + 0);
+                ids[9] = (nk_draw_index)(idx1 + 0); ids[10] = (nk_draw_index)(idx2 + 0); ids[11] = (nk_draw_index)(idx2 + 1);
                 ids += 12;
+
                 idx1 = idx2;
             }
 
             /* fill vertices */
-            for (i = 0; i < points_count; ++i) {
-                const struct nk_vec2 uv = list->config.null.uv;
+            for (i = 0; i < points_count; i++) {
                 vtx = nk_draw_vertex(vtx, &list->config, points[i], uv, col);
                 vtx = nk_draw_vertex(vtx, &list->config, temp[i*2+0], uv, col_trans);
                 vtx = nk_draw_vertex(vtx, &list->config, temp[i*2+1], uv, col_trans);
@@ -549,7 +550,7 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
                 temp[2] = nk_vec2_sub(points[0], d2);
                 temp[3] = nk_vec2_sub(points[0], d1);
 
-                d1 = nk_vec2_muls(normals[points_count-1], half_inner_thickness + AA_SIZE);
+                d1 = nk_vec2_muls(normals[points_count-1], (half_inner_thickness + AA_SIZE));
                 d2 = nk_vec2_muls(normals[points_count-1], half_inner_thickness);
 
                 temp[(points_count-1)*4+0] = nk_vec2_add(points[points_count-1], d1);
@@ -560,21 +561,21 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
 
             /* add all elements */
             idx1 = index;
-            for (i1 = 0; i1 < count; ++i1) {
+            for (i1 = 0; i1 < count; i1++) {
                 struct nk_vec2 dm_out, dm_in;
-                const nk_size i2 = ((i1+1) == points_count) ? 0: (i1 + 1);
-                nk_size idx2 = ((i1+1) == points_count) ? index: (idx1 + 4);
+                const nk_size i2 = (i1+1) == points_count ? 0 : i1+1;
+                nk_size idx2 = (i1+1) == points_count ? index : idx1+4;
 
                 /* average normals */
                 struct nk_vec2 dm = nk_vec2_muls(nk_vec2_add(normals[i1], normals[i2]), 0.5f);
-                float dmr2 = dm.x * dm.x + dm.y* dm.y;
-                if (dmr2 > 0.000001f) {
+                float dmr2 = dm.x*dm.x + dm.y*dm.y;
+                if (dmr2 < 0.5f) {
+                    dmr2 = 0.5f;
                     float scale = 1.0f/dmr2;
-                    scale = NK_MIN(100.0f, scale);
                     dm = nk_vec2_muls(dm, scale);
                 }
 
-                dm_out = nk_vec2_muls(dm, ((half_inner_thickness) + AA_SIZE));
+                dm_out = nk_vec2_muls(dm, (half_inner_thickness + AA_SIZE));
                 dm_in = nk_vec2_muls(dm, half_inner_thickness);
                 temp[i2*4+0] = nk_vec2_add(points[i2], dm_out);
                 temp[i2*4+1] = nk_vec2_add(points[i2], dm_in);
@@ -582,22 +583,19 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
                 temp[i2*4+3] = nk_vec2_sub(points[i2], dm_out);
 
                 /* add indexes */
-                ids[0] = (nk_draw_index)(idx2 + 1); ids[1] = (nk_draw_index)(idx1+1);
-                ids[2] = (nk_draw_index)(idx1 + 2); ids[3] = (nk_draw_index)(idx1+2);
-                ids[4] = (nk_draw_index)(idx2 + 2); ids[5] = (nk_draw_index)(idx2+1);
-                ids[6] = (nk_draw_index)(idx2 + 1); ids[7] = (nk_draw_index)(idx1+1);
-                ids[8] = (nk_draw_index)(idx1 + 0); ids[9] = (nk_draw_index)(idx1+0);
-                ids[10]= (nk_draw_index)(idx2 + 0); ids[11] = (nk_draw_index)(idx2+1);
-                ids[12]= (nk_draw_index)(idx2 + 2); ids[13] = (nk_draw_index)(idx1+2);
-                ids[14]= (nk_draw_index)(idx1 + 3); ids[15] = (nk_draw_index)(idx1+3);
-                ids[16]= (nk_draw_index)(idx2 + 3); ids[17] = (nk_draw_index)(idx2+2);
+                ids[0] = (nk_draw_index)(idx2 + 1); ids[1] = (nk_draw_index)(idx1 + 1); ids[2] = (nk_draw_index)(idx1 + 2);
+                ids[3] = (nk_draw_index)(idx1 + 2); ids[4] = (nk_draw_index)(idx2 + 2); ids[5] = (nk_draw_index)(idx2 + 1);
+                ids[6] = (nk_draw_index)(idx2 + 1); ids[7] = (nk_draw_index)(idx1 + 1); ids[8] = (nk_draw_index)(idx1 + 0);
+                ids[9] = (nk_draw_index)(idx1 + 0); ids[10] = (nk_draw_index)(idx2 + 0); ids[11] = (nk_draw_index)(idx2 + 1);
+                ids[12] = (nk_draw_index)(idx2 + 2); ids[13] = (nk_draw_index)(idx1 + 2); ids[14] = (nk_draw_index)(idx1 + 3);
+                ids[15] = (nk_draw_index)(idx1 + 3); ids[16] = (nk_draw_index)(idx2 + 3); ids[17] = (nk_draw_index)(idx2 + 2);
                 ids += 18;
+
                 idx1 = idx2;
             }
 
             /* add vertices */
-            for (i = 0; i < points_count; ++i) {
-                const struct nk_vec2 uv = list->config.null.uv;
+            for (i = 0; i < points_count; i++) {
                 vtx = nk_draw_vertex(vtx, &list->config, temp[i*4+0], uv, col_trans);
                 vtx = nk_draw_vertex(vtx, &list->config, temp[i*4+1], uv, col);
                 vtx = nk_draw_vertex(vtx, &list->config, temp[i*4+2], uv, col);
@@ -610,16 +608,17 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
         /* NON ANTI-ALIASED STROKE */
         nk_size i1 = 0;
         nk_size idx = list->vertex_count;
-        const nk_size idx_count = count * 6;
-        const nk_size vtx_count = count * 4;
+        const nk_size idx_count = count*6;
+        const nk_size vtx_count = count*4;
+
         void *vtx = nk_draw_list_alloc_vertices(list, vtx_count);
         nk_draw_index *ids = nk_draw_list_alloc_elements(list, idx_count);
+
         if (!vtx || !ids) return;
 
-        for (i1 = 0; i1 < count; ++i1) {
+        for (i1 = 0; i1 < count; i1++) {
             float dx, dy;
-            const struct nk_vec2 uv = list->config.null.uv;
-            const nk_size i2 = ((i1+1) == points_count) ? 0 : i1 + 1;
+            const nk_size i2 = (i1+1) == points_count ? 0 : i1+1;
             const struct nk_vec2 p1 = points[i1];
             const struct nk_vec2 p2 = points[i2];
             struct nk_vec2 diff = nk_vec2_sub(p2, p1);
@@ -630,9 +629,9 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
             if (len != 0.0f)
                 len = nk_inv_sqrt(len);
             else len = 1.0f;
-            diff = nk_vec2_muls(diff, len);
 
             /* add vertices */
+            diff = nk_vec2_muls(diff, len);
             dx = diff.x * (thickness * 0.5f);
             dy = diff.y * (thickness * 0.5f);
 
@@ -641,10 +640,8 @@ nk_draw_list_stroke_poly_line(struct nk_draw_list *list, const struct nk_vec2 *p
             vtx = nk_draw_vertex(vtx, &list->config, nk_vec2(p2.x - dy, p2.y + dx), uv, col);
             vtx = nk_draw_vertex(vtx, &list->config, nk_vec2(p1.x - dy, p1.y + dx), uv, col);
 
-            ids[0] = (nk_draw_index)(idx+0); ids[1] = (nk_draw_index)(idx+1);
-            ids[2] = (nk_draw_index)(idx+2); ids[3] = (nk_draw_index)(idx+0);
-            ids[4] = (nk_draw_index)(idx+2); ids[5] = (nk_draw_index)(idx+3);
-
+            ids[0] = (nk_draw_index)(idx); ids[1] = (nk_draw_index)(idx + 1); ids[2] = (nk_draw_index)(idx + 2);
+            ids[3] = (nk_draw_index)(idx); ids[4] = (nk_draw_index)(idx + 2); ids[5] = (nk_draw_index)(idx + 3);
             ids += 6;
             idx += 4;
         }
@@ -703,9 +700,7 @@ nk_draw_list_fill_poly_convex(struct nk_draw_list *list,
 
         /* add elements */
         for (i = 2; i < points_count; i++) {
-            ids[0] = (nk_draw_index)(vtx_inner_idx);
-            ids[1] = (nk_draw_index)(vtx_inner_idx + ((i-1) << 1));
-            ids[2] = (nk_draw_index)(vtx_inner_idx + (i << 1));
+            ids[0] = (nk_draw_index)(vtx_inner_idx); ids[1] = (nk_draw_index)(vtx_inner_idx+((i-1)<<1)); ids[2] = (nk_draw_index)(vtx_inner_idx+(i<<1));
             ids += 3;
         }
 
@@ -720,8 +715,8 @@ nk_draw_list_fill_poly_convex(struct nk_draw_list *list,
             if (len != 0.0f)
                 len = nk_inv_sqrt(len);
             else len = 1.0f;
-            diff = nk_vec2_muls(diff, len);
 
+            diff = nk_vec2_muls(diff, len);
             normals[i0].x = diff.y;
             normals[i0].y = -diff.x;
         }
@@ -733,9 +728,9 @@ nk_draw_list_fill_poly_convex(struct nk_draw_list *list,
             struct nk_vec2 n1 = normals[i1];
             struct nk_vec2 dm = nk_vec2_muls(nk_vec2_add(n0, n1), 0.5f);
             float dmr2 = dm.x*dm.x + dm.y*dm.y;
-            if (dmr2 > 0.000001f) {
-                float scale = 1.0f / dmr2;
-                scale = NK_MIN(scale, 100.0f);
+            if (dmr2 < 0.5f) {
+                dmr2 = 0.5f;
+                float scale = 1.0f/dmr2;
                 dm = nk_vec2_muls(dm, scale);
             }
             dm = nk_vec2_muls(dm, AA_SIZE * 0.5f);
@@ -744,13 +739,9 @@ nk_draw_list_fill_poly_convex(struct nk_draw_list *list,
             vtx = nk_draw_vertex(vtx, &list->config, nk_vec2_sub(points[i1], dm), uv, col);
             vtx = nk_draw_vertex(vtx, &list->config, nk_vec2_add(points[i1], dm), uv, col_trans);
 
-            /* add indexes */
-            ids[0] = (nk_draw_index)(vtx_inner_idx+(i1<<1));
-            ids[1] = (nk_draw_index)(vtx_inner_idx+(i0<<1));
-            ids[2] = (nk_draw_index)(vtx_outer_idx+(i0<<1));
-            ids[3] = (nk_draw_index)(vtx_outer_idx+(i0<<1));
-            ids[4] = (nk_draw_index)(vtx_outer_idx+(i1<<1));
-            ids[5] = (nk_draw_index)(vtx_inner_idx+(i1<<1));
+            /* add indexes for fringes */
+            ids[0] = (nk_draw_index)(vtx_inner_idx+(i1<<1)); ids[1] = (nk_draw_index)(vtx_inner_idx+(i0<<1)); ids[2] = (nk_draw_index)(vtx_outer_idx+(i0<<1));
+            ids[3] = (nk_draw_index)(vtx_outer_idx+(i0<<1)); ids[4] = (nk_draw_index)(vtx_outer_idx+(i1<<1)); ids[5] = (nk_draw_index)(vtx_inner_idx+(i1<<1));
             ids += 6;
         }
         /* free temporary normals + points */
@@ -764,12 +755,10 @@ nk_draw_list_fill_poly_convex(struct nk_draw_list *list,
         nk_draw_index *ids = nk_draw_list_alloc_elements(list, idx_count);
 
         if (!vtx || !ids) return;
-        for (i = 0; i < vtx_count; ++i)
+        for (i = 0; i < vtx_count; i++)
             vtx = nk_draw_vertex(vtx, &list->config, points[i], list->config.null.uv, col);
-        for (i = 2; i < points_count; ++i) {
-            ids[0] = (nk_draw_index)index;
-            ids[1] = (nk_draw_index)(index+ i - 1);
-            ids[2] = (nk_draw_index)(index+i);
+        for (i = 2; i < points_count; i++) {
+            ids[0] = (nk_draw_index)(index); ids[1] = (nk_draw_index)(index+i-1); ids[2] = (nk_draw_index)(index+i);
             ids += 3;
         }
     }
@@ -850,7 +839,7 @@ nk_draw_list_path_arc_to(struct nk_draw_list *list, struct nk_vec2 center,
 
     float cx = (float)NK_COS(a_min) * radius;
     float cy = (float)NK_SIN(a_min) * radius;
-    for(i = 0; i <= segments; ++i) {
+    for(i = 0; i <= segments; i++) {
         float new_cx, new_cy;
         const float x = center.x + cx;
         const float y = center.y + cy;
@@ -900,15 +889,15 @@ nk_draw_list_path_curve_to(struct nk_draw_list *list, struct nk_vec2 p2,
 
     p1 = nk_draw_list_path_last(list);
     t_step = 1.0f/(float)num_segments;
-    for (i_step = 1; i_step <= num_segments; ++i_step) {
+    for (i_step = 1; i_step <= num_segments; i_step++) {
         float t = t_step * (float)i_step;
         float u = 1.0f - t;
         float w1 = u*u*u;
         float w2 = 3*u*u*t;
         float w3 = 3*u*t*t;
-        float w4 = t * t *t;
-        float x = w1 * p1.x + w2 * p2.x + w3 * p3.x + w4 * p4.x;
-        float y = w1 * p1.y + w2 * p2.y + w3 * p3.y + w4 * p4.y;
+        float w4 = t*t*t;
+        float x = w1*p1.x + w2*p2.x + w3*p3.x + w4*p4.x;
+        float y = w1*p1.y + w2*p2.y + w3*p3.y + w4*p4.y;
         nk_draw_list_path_line_to(list, nk_vec2(x,y));
     }
 }
@@ -960,7 +949,7 @@ nk_draw_list_fill_rect(struct nk_draw_list *list, struct nk_rect rect,
         nk_draw_list_path_rect_to(list, nk_vec2(rect.x, rect.y),
             nk_vec2(rect.x + rect.w, rect.y + rect.h), rounding);
     } else {
-        nk_draw_list_path_rect_to(list, nk_vec2(rect.x-0.5f, rect.y-0.5f),
+        nk_draw_list_path_rect_to(list, nk_vec2(rect.x+0.5f, rect.y+0.5f),
             nk_vec2(rect.x + rect.w, rect.y + rect.h), rounding);
     } nk_draw_list_path_fill(list,  col);
 }
@@ -974,7 +963,7 @@ nk_draw_list_stroke_rect(struct nk_draw_list *list, struct nk_rect rect,
         nk_draw_list_path_rect_to(list, nk_vec2(rect.x, rect.y),
             nk_vec2(rect.x + rect.w, rect.y + rect.h), rounding);
     } else {
-        nk_draw_list_path_rect_to(list, nk_vec2(rect.x-0.5f, rect.y-0.5f),
+        nk_draw_list_path_rect_to(list, nk_vec2(rect.x+0.5f, rect.y+0.5f),
             nk_vec2(rect.x + rect.w, rect.y + rect.h), rounding);
     } nk_draw_list_path_stroke(list,  col, NK_STROKE_CLOSED, thickness);
 }
@@ -1272,7 +1261,7 @@ nk_convert(struct nk_context *ctx, struct nk_buffer *cmds,
         case NK_COMMAND_POLYGON: {
             int i;
             const struct nk_command_polygon*p = (const struct nk_command_polygon*)cmd;
-            for (i = 0; i < p->point_count; ++i) {
+            for (i = 0; i < p->point_count; i++) {
                 struct nk_vec2 pnt = nk_vec2((float)p->points[i].x, (float)p->points[i].y);
                 nk_draw_list_path_line_to(&ctx->draw_list, pnt);
             }
@@ -1281,7 +1270,7 @@ nk_convert(struct nk_context *ctx, struct nk_buffer *cmds,
         case NK_COMMAND_POLYGON_FILLED: {
             int i;
             const struct nk_command_polygon_filled *p = (const struct nk_command_polygon_filled*)cmd;
-            for (i = 0; i < p->point_count; ++i) {
+            for (i = 0; i < p->point_count; i++) {
                 struct nk_vec2 pnt = nk_vec2((float)p->points[i].x, (float)p->points[i].y);
                 nk_draw_list_path_line_to(&ctx->draw_list, pnt);
             }
@@ -1290,7 +1279,7 @@ nk_convert(struct nk_context *ctx, struct nk_buffer *cmds,
         case NK_COMMAND_POLYLINE: {
             int i;
             const struct nk_command_polyline *p = (const struct nk_command_polyline*)cmd;
-            for (i = 0; i < p->point_count; ++i) {
+            for (i = 0; i < p->point_count; i++) {
                 struct nk_vec2 pnt = nk_vec2((float)p->points[i].x, (float)p->points[i].y);
                 nk_draw_list_path_line_to(&ctx->draw_list, pnt);
             }
