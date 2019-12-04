@@ -106,6 +106,8 @@ nk_draw_scrollbar(struct nk_command_buffer *out, nk_flags state,
     if (background->type == NK_STYLE_ITEM_COLOR) {
         nk_fill_rect(out, *bounds, style->rounding, background->data.color);
         nk_stroke_rect(out, *bounds, style->rounding, style->border, style->border_color);
+    } else if (background->type == NK_STYLE_ITEM_NINE_PATCH) {
+        nk_draw_nine_patch(out, *bounds, &background->data.nine_patch, nk_white);
     } else {
         nk_draw_image(out, *bounds, &background->data.image, nk_white);
     }
@@ -114,6 +116,8 @@ nk_draw_scrollbar(struct nk_command_buffer *out, nk_flags state,
     if (cursor->type == NK_STYLE_ITEM_COLOR) {
         nk_fill_rect(out, *scroll, style->rounding_cursor, cursor->data.color);
         nk_stroke_rect(out, *scroll, style->rounding_cursor, style->border_cursor, style->cursor_border_color);
+    } else if (cursor->type == NK_STYLE_ITEM_NINE_PATCH) {
+        nk_draw_nine_patch(out, *scroll, &cursor->data.nine_patch, nk_white);
     } else nk_draw_image(out, *scroll, &cursor->data.image, nk_white);
 }
 NK_LIB float

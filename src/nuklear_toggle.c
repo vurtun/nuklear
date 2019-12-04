@@ -51,10 +51,14 @@ nk_draw_checkbox(struct nk_command_buffer *out,
     if (background->type == NK_STYLE_ITEM_COLOR) {
         nk_fill_rect(out, *selector, 0, style->border_color);
         nk_fill_rect(out, nk_shrink_rect(*selector, style->border), 0, background->data.color);
+    } else if (background->type == NK_STYLE_ITEM_NINE_PATCH) {
+        nk_draw_nine_patch(out, *selector, &background->data.nine_patch, nk_white);
     } else nk_draw_image(out, *selector, &background->data.image, nk_white);
     if (active) {
         if (cursor->type == NK_STYLE_ITEM_IMAGE)
             nk_draw_image(out, *cursors, &cursor->data.image, nk_white);
+        else if (cursor->type == NK_STYLE_ITEM_NINE_PATCH)
+            nk_draw_nine_patch(out, *cursors, &cursor->data.nine_patch, nk_white);
         else nk_fill_rect(out, *cursors, 0, cursor->data.color);
     }
 
@@ -93,10 +97,14 @@ nk_draw_option(struct nk_command_buffer *out,
     if (background->type == NK_STYLE_ITEM_COLOR) {
         nk_fill_circle(out, *selector, style->border_color);
         nk_fill_circle(out, nk_shrink_rect(*selector, style->border), background->data.color);
+    } else if (background->type == NK_STYLE_ITEM_NINE_PATCH) {
+        nk_draw_nine_patch(out, *selector, &background->data.nine_patch, nk_white);
     } else nk_draw_image(out, *selector, &background->data.image, nk_white);
     if (active) {
         if (cursor->type == NK_STYLE_ITEM_IMAGE)
             nk_draw_image(out, *cursors, &cursor->data.image, nk_white);
+        else if (cursor->type == NK_STYLE_ITEM_NINE_PATCH)
+            nk_draw_nine_patch(out, *cursors, &cursor->data.nine_patch, nk_white);
         else nk_fill_circle(out, *cursors, cursor->data.color);
     }
 

@@ -93,6 +93,8 @@ nk_draw_slider(struct nk_command_buffer *out, nk_flags state,
     /* draw background */
     if (background->type == NK_STYLE_ITEM_IMAGE) {
         nk_draw_image(out, *bounds, &background->data.image, nk_white);
+    } else if (background->type == NK_STYLE_ITEM_NINE_PATCH) {
+        nk_draw_nine_patch(out, *bounds, &background->data.nine_patch, nk_white);
     } else {
         nk_fill_rect(out, *bounds, style->rounding, background->data.color);
         nk_stroke_rect(out, *bounds, style->rounding, style->border, style->border_color);
@@ -105,6 +107,8 @@ nk_draw_slider(struct nk_command_buffer *out, nk_flags state,
     /* draw cursor */
     if (cursor->type == NK_STYLE_ITEM_IMAGE)
         nk_draw_image(out, *visual_cursor, &cursor->data.image, nk_white);
+    else if (cursor->type == NK_STYLE_ITEM_NINE_PATCH)
+        nk_draw_nine_patch(out, *visual_cursor, &cursor->data.nine_patch, nk_white);
     else nk_fill_circle(out, *visual_cursor, cursor->data.color);
 }
 NK_LIB float

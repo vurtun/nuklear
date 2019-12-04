@@ -414,6 +414,30 @@ nk_draw_image(struct nk_command_buffer *b, struct nk_rect r,
     cmd->img = *img;
     cmd->col = col;
 }
+
+NK_API void
+nk_draw_nine_patch(struct nk_command_buffer *b, struct nk_rect r,
+    const struct nk_nine_patch *np, struct nk_color col)
+{
+    struct nk_command_nine_patch *cmd;
+    NK_ASSERT(b);
+    if (!b) return;
+    if (b->use_clipping) {
+        const struct nk_rect *c = &b->clip;
+        if (c->w == 0 || c->h == 0 || !NK_INTERSECT(r.x, r.y, r.w, r.h, c->x, c->y, c->w, c->h))
+            return;
+    }
+
+    cmd = (struct nk_command_nine_patch*)
+        nk_command_buffer_push(b, NK_COMMAND_NINE_PATCH, sizeof(*cmd));
+    if (!cmd) return;
+    cmd->x = (short)r.x;
+    cmd->y = (short)r.y;
+    cmd->w = (unsigned short)NK_MAX(0, r.w);
+    cmd->h = (unsigned short)NK_MAX(0, r.h);
+    cmd->np = *np;
+    cmd->col = col;
+}
 NK_API void
 nk_push_custom(struct nk_command_buffer *b, struct nk_rect r,
     nk_command_custom_callback cb, nk_handle usr)

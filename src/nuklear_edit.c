@@ -329,7 +329,11 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
     if (background->type == NK_STYLE_ITEM_COLOR) {
         nk_stroke_rect(out, bounds, style->rounding, style->border, style->border_color);
         nk_fill_rect(out, bounds, style->rounding, background->data.color);
-    } else nk_draw_image(out, bounds, &background->data.image, nk_white);}
+    }
+    else if (background->type == NK_STYLE_ITEM_NINE_PATCH) {
+        nk_draw_nine_patch(out, bounds, &background->data.nine_patch, nk_white);
+    }
+    else nk_draw_image(out, bounds, &background->data.image, nk_white);}
 
     area.w = NK_MAX(0, area.w - style->cursor_size);
     if (edit->active)
@@ -532,6 +536,8 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
         }
         if (background->type == NK_STYLE_ITEM_IMAGE)
             background_color = nk_rgba(0,0,0,0);
+        else if (background->type == NK_STYLE_ITEM_NINE_PATCH)
+            background_color = nk_rgba(0,0,0,0);
         else background_color = background->data.color;
 
 
@@ -638,6 +644,8 @@ nk_do_edit(nk_flags *state, struct nk_command_buffer *out,
             text_color = style->text_normal;
         }
         if (background->type == NK_STYLE_ITEM_IMAGE)
+            background_color = nk_rgba(0,0,0,0);
+        else if (background->type == NK_STYLE_ITEM_NINE_PATCH)
             background_color = nk_rgba(0,0,0,0);
         else background_color = background->data.color;
         nk_edit_draw_text(out, style, area.x - edit->scrollbar.x,

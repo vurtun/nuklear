@@ -45,6 +45,9 @@ nk_draw_selectable(struct nk_command_buffer *out,
     if (background->type == NK_STYLE_ITEM_IMAGE) {
         nk_draw_image(out, *bounds, &background->data.image, nk_white);
         text.background = nk_rgba(0,0,0,0);
+    } else if (background->type == NK_STYLE_ITEM_NINE_PATCH) {
+        nk_draw_nine_patch(out, *bounds, &background->data.nine_patch, nk_white);
+        text.background = nk_rgba(0,0,0,0);
     } else {
         nk_fill_rect(out, *bounds, style->rounding, background->data.color);
         text.background = background->data.color;

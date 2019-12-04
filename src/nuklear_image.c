@@ -138,3 +138,120 @@ nk_image_color(struct nk_context *ctx, struct nk_image img, struct nk_color col)
     nk_draw_image(&win->buffer, bounds, &img, col);
 }
 
+NK_API struct nk_nine_patch
+nk_nine_patch_handle(nk_handle handle, unsigned short l, unsigned short t,
+    unsigned short r, unsigned short b)
+{
+    struct nk_nine_patch s;
+    nk_zero(&s, sizeof(s));
+    s.handle = handle;
+    s.w = 0; s.h = 0;
+    s.region[0] = 0;
+    s.region[1] = 0;
+    s.region[2] = 0;
+    s.region[3] = 0;
+    s.margin[0] = l;
+    s.margin[1] = t;
+    s.margin[2] = r;
+    s.margin[3] = b;
+    return s;
+}
+NK_API struct nk_nine_patch
+nk_nine_patch_ptr(void *ptr, unsigned short l, unsigned short t,
+    unsigned short r, unsigned short b)
+{
+    struct nk_nine_patch s;
+    nk_zero(&s, sizeof(s));
+    NK_ASSERT(ptr);
+    s.handle.ptr = ptr;
+    s.w = 0; s.h = 0;
+    s.region[0] = 0;
+    s.region[1] = 0;
+    s.region[2] = 0;
+    s.region[3] = 0;
+    s.margin[0] = l;
+    s.margin[1] = t;
+    s.margin[2] = r;
+    s.margin[3] = b;
+    return s;
+}
+NK_API struct nk_nine_patch
+nk_nine_patch_id(int id, unsigned short l, unsigned short t,
+    unsigned short r, unsigned short b)
+{
+    struct nk_nine_patch s;
+    nk_zero(&s, sizeof(s));
+    s.handle.id = id;
+    s.w = 0; s.h = 0;
+    s.region[0] = 0;
+    s.region[1] = 0;
+    s.region[2] = 0;
+    s.region[3] = 0;
+    s.margin[0] = l;
+    s.margin[1] = t;
+    s.margin[2] = r;
+    s.margin[3] = b;
+    return s;
+}
+
+NK_API int
+nk_nine_patch_is_sub(const struct nk_nine_patch* np)
+{
+    NK_ASSERT(np);
+    return !(np->w == 0 && np->h == 0);
+}
+
+NK_API struct nk_nine_patch
+nk_sub_nine_patch_ptr(void *ptr, unsigned short w, unsigned short h, struct nk_rect r,
+    unsigned short l, unsigned short t, unsigned short ri, unsigned short b)
+{
+    struct nk_nine_patch s;
+    nk_zero(&s, sizeof(s));
+    s.handle.ptr = ptr;
+    s.w = w; s.h = h;
+    s.region[0] = (unsigned short)r.x;
+    s.region[1] = (unsigned short)r.y;
+    s.region[2] = (unsigned short)r.w;
+    s.region[3] = (unsigned short)r.h;
+    s.margin[0] = l;
+    s.margin[1] = t;
+    s.margin[2] = ri;
+    s.margin[3] = b;
+    return s;
+}
+NK_API struct nk_nine_patch
+nk_sub_nine_patch_id(int id, unsigned short w, unsigned short h, struct nk_rect r,
+    unsigned short l, unsigned short t, unsigned short ri, unsigned short b)
+{
+    struct nk_nine_patch s;
+    nk_zero(&s, sizeof(s));
+    s.handle.id = id;
+    s.w = w; s.h = h;
+    s.region[0] = (unsigned short)r.x;
+    s.region[1] = (unsigned short)r.y;
+    s.region[2] = (unsigned short)r.w;
+    s.region[3] = (unsigned short)r.h;
+    s.margin[0] = l;
+    s.margin[1] = t;
+    s.margin[2] = ri;
+    s.margin[3] = b;
+    return s;
+}
+NK_API struct nk_nine_patch
+nk_sub_nine_patch_handle(nk_handle handle, unsigned short w, unsigned short h, struct nk_rect r,
+    unsigned short l, unsigned short t, unsigned short ri, unsigned short b)
+{
+    struct nk_nine_patch s;
+    nk_zero(&s, sizeof(s));
+    s.handle = handle;
+    s.w = w; s.h = h;
+    s.region[0] = (unsigned short)r.x;
+    s.region[1] = (unsigned short)r.y;
+    s.region[2] = (unsigned short)r.w;
+    s.region[3] = (unsigned short)r.h;
+    s.margin[0] = l;
+    s.margin[1] = t;
+    s.margin[2] = ri;
+    s.margin[3] = b;
+    return s;
+}
