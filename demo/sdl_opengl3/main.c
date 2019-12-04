@@ -97,12 +97,12 @@ int main(void)
     SDL_GetWindowSize(win, &win_width, &win_height);
 
     /* OpenGL setup */
-    glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
     glewExperimental = 1;
     if (glewInit() != GLEW_OK) {
         fprintf(stderr, "Failed to setup GLEW\n");
         exit(1);
     }
+    glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
     ctx = nk_sdl_init(win);
     /* Load Fonts: if none of these are loaded a default font will be used  */
