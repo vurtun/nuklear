@@ -54,7 +54,7 @@ nk_widget_text(struct nk_command_buffer *o, struct nk_rect b,
 NK_LIB void
 nk_widget_text_wrap(struct nk_command_buffer *o, struct nk_rect b,
     const char *string, int len, const struct nk_text *t,
-    const struct nk_user_font *f)
+    const struct nk_user_font *f, int do_wrap)
 {
     float width;
     int glyphs = 0;
@@ -81,13 +81,20 @@ nk_widget_text_wrap(struct nk_command_buffer *o, struct nk_rect b,
     line.w = b.w - 2 * t->padding.x;
     line.h = 2 * t->padding.y + f->height;
 
-    fitting = nk_text_clamp(f, string, len, line.w, &glyphs, &width, seperator,NK_LEN(seperator));
+    /* If we aren't doing wrapping, we just use newline characters to determine line length. */
+    if (do_wrap)
+        fitting = nk_text_clamp(f, string, len, line.w, &glyphs, &width, seperator, NK_LEN(seperator));
+    else
+        fitting = nk_text_linelen(string, len, &glyphs);
     while (done < len) {
         if (!fitting || line.y + line.h >= (b.y + b.h)) break;
-        nk_widget_text(o, line, &string[done], fitting, &text, NK_TEXT_LEFT, f);
+        nk_widget_text(o, line, &string[done], nk_text_trimline(&string[done], fitting), &text, NK_TEXT_LEFT, f);
         done += fitting;
         line.y += f->height + 2 * t->padding.y;
-        fitting = nk_text_clamp(f, &string[done], len - done, line.w, &glyphs, &width, seperator,NK_LEN(seperator));
+        if (do_wrap)
+            fitting = nk_text_clamp(f, &string[done], len - done, line.w, &glyphs, &width, seperator,NK_LEN(seperator));
+        else
+            fitting = nk_text_linelen(&string[done], len - done, &glyphs);
     }
 }
 NK_API void
@@ -100,6 +107,8 @@ nk_text_colored(struct nk_context *ctx, const char *str, int len,
     struct nk_vec2 item_padding;
     struct nk_rect bounds;
     struct nk_text text;
+    int linelen = 0;
+    int glyphs = 0;
 
     NK_ASSERT(ctx);
     NK_ASSERT(ctx->current);
@@ -115,7 +124,9 @@ nk_text_colored(struct nk_context *ctx, const char *str, int len,
     text.padding.y = item_padding.y;
     text.background = style->window.background;
     text.text = color;
-    nk_widget_text(&win->buffer, bounds, str, len, &text, alignment, style->font);
+    linelen = nk_text_linelen(str, len, &glyphs);
+    linelen = nk_text_trimline(str, linelen);
+    nk_widget_text(&win->buffer, bounds, str, linelen, &text, alignment, style->font);
 }
 NK_API void
 nk_text_wrap_colored(struct nk_context *ctx, const char *str,
@@ -142,7 +153,34 @@ nk_text_wrap_colored(struct nk_context *ctx, const char *str,
     text.padding.y = item_padding.y;
     text.background = style->window.background;
     text.text = color;
-    nk_widget_text_wrap(&win->buffer, bounds, str, len, &text, style->font);
+    nk_widget_text_wrap(&win->buffer, bounds, str, len, &text, style->font, nk_true);
+}
+NK_API void
+nk_text_multiline_colored(struct nk_context *ctx, const char *str,
+    int len, struct nk_color color)
+{
+    struct nk_window *win;
+    const struct nk_style *style;
+
+    struct nk_vec2 item_padding;
+    struct nk_rect bounds;
+    struct nk_text text;
+
+    NK_ASSERT(ctx);
+    NK_ASSERT(ctx->current);
+    NK_ASSERT(ctx->current->layout);
+    if (!ctx || !ctx->current || !ctx->current->layout) return;
+
+    win = ctx->current;
+    style = &ctx->style;
+    nk_panel_alloc_space(&bounds, ctx);
+    item_padding = style->text.padding;
+
+    text.padding.x = item_padding.x;
+    text.padding.y = item_padding.y;
+    text.background = style->window.background;
+    text.text = color;
+    nk_widget_text_wrap(&win->buffer, bounds, str, len, &text, style->font, nk_false);
 }
 #ifdef NK_INCLUDE_STANDARD_VARARGS
 NK_API void
@@ -164,6 +202,15 @@ nk_labelf_colored_wrap(struct nk_context *ctx, struct nk_color color,
     va_end(args);
 }
 NK_API void
+nk_labelf_colored_multiline(struct nk_context *ctx, struct nk_color color,
+    const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    nk_labelfv_colored_multiline(ctx, color, fmt, args);
+    va_end(args);
+}
+NK_API void
 nk_labelf(struct nk_context *ctx, nk_flags flags, const char *fmt, ...)
 {
     va_list args;
@@ -180,6 +227,14 @@ nk_labelf_wrap(struct nk_context *ctx, const char *fmt,...)
     va_end(args);
 }
 NK_API void
+ nk_labelf_multiline(struct nk_context *ctx, const char *fmt,...)
+ {
+    va_list args;
+    va_start(args, fmt);
+    nk_labelfv_multiline(ctx, fmt, args);
+    va_end(args);
+}
+NK_API void
 nk_labelfv_colored(struct nk_context *ctx, nk_flags flags,
     struct nk_color color, const char *fmt, va_list args)
 {
@@ -187,7 +242,6 @@ nk_labelfv_colored(struct nk_context *ctx, nk_flags flags,
     nk_strfmt(buf, NK_LEN(buf), fmt, args);
     nk_label_colored(ctx, buf, flags, color);
 }
-
 NK_API void
 nk_labelfv_colored_wrap(struct nk_context *ctx, struct nk_color color,
     const char *fmt, va_list args)
@@ -196,7 +250,14 @@ nk_labelfv_colored_wrap(struct nk_context *ctx, struct nk_color color,
     nk_strfmt(buf, NK_LEN(buf), fmt, args);
     nk_label_colored_wrap(ctx, buf, color);
 }
-
+NK_API void
+nk_labelfv_colored_multiline(struct nk_context *ctx, struct nk_color color,
+    const char *fmt, va_list args)
+{
+    char buf[256];
+    nk_strfmt(buf, NK_LEN(buf), fmt, args);
+    nk_label_colored_multiline(ctx, buf, color);
+}
 NK_API void
 nk_labelfv(struct nk_context *ctx, nk_flags flags, const char *fmt, va_list args)
 {
@@ -204,7 +265,6 @@ nk_labelfv(struct nk_context *ctx, nk_flags flags, const char *fmt, va_list args
     nk_strfmt(buf, NK_LEN(buf), fmt, args);
     nk_label(ctx, buf, flags);
 }
-
 NK_API void
 nk_labelfv_wrap(struct nk_context *ctx, const char *fmt, va_list args)
 {
@@ -212,7 +272,13 @@ nk_labelfv_wrap(struct nk_context *ctx, const char *fmt, va_list args)
     nk_strfmt(buf, NK_LEN(buf), fmt, args);
     nk_label_wrap(ctx, buf);
 }
-
+NK_API void
+nk_labelfv_multiline(struct nk_context *ctx, const char *fmt, va_list args)
+{
+    char buf[256];
+    nk_strfmt(buf, NK_LEN(buf), fmt, args);
+    nk_label_multiline(ctx, buf);
+}
 NK_API void
 nk_value_bool(struct nk_context *ctx, const char *prefix, int value)
 {
@@ -269,6 +335,13 @@ nk_text_wrap(struct nk_context *ctx, const char *str, int len)
     nk_text_wrap_colored(ctx, str, len, ctx->style.text.color);
 }
 NK_API void
+nk_text_multiline(struct nk_context *ctx, const char *str, int len)
+{
+    NK_ASSERT(ctx);
+    if (!ctx) return;
+    nk_text_multiline_colored(ctx, str, len, ctx->style.text.color);
+}
+NK_API void
 nk_label(struct nk_context *ctx, const char *str, nk_flags alignment)
 {
     nk_text(ctx, str, nk_strlen(str), alignment);
@@ -289,4 +362,15 @@ nk_label_colored_wrap(struct nk_context *ctx, const char *str, struct nk_color c
 {
     nk_text_wrap_colored(ctx, str, nk_strlen(str), color);
 }
+NK_API void
+nk_label_multiline(struct nk_context *ctx, const char *str)
+{
+    nk_text_multiline(ctx, str, nk_strlen(str));
+}
+NK_API void
+nk_label_colored_multiline(struct nk_context *ctx, const char *str, struct nk_color color)
+{
+    nk_text_multiline_colored(ctx, str, nk_strlen(str), color);
+}
+
 

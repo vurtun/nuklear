@@ -163,6 +163,7 @@ overview(struct nk_context *ctx)
                 nk_label_wrap(ctx, "This is a very long line to hopefully get this text to be wrapped into multiple lines to show line wrapping");
                 nk_layout_row_dynamic(ctx, 100, 1);
                 nk_label_wrap(ctx, "This is another long text to show dynamic window changes on multiline text");
+                nk_label_multiline(ctx, "This is multiline text that will only wrap on newlines in the text\nThis is another line of manually wrapping multiline text");
                 nk_tree_pop(ctx);
             }
 
