@@ -17625,15 +17625,12 @@ nk_layout_row_calculate_usable_space(const struct nk_style *style, enum nk_panel
     float panel_space;
 
     struct nk_vec2 spacing;
-    struct nk_vec2 padding;
 
     spacing = style->window.spacing;
-    padding = nk_panel_get_padding(style, type);
 
     /* calculate the usable panel space */
-    panel_padding = 2 * padding.x;
     panel_spacing = (float)NK_MAX(columns - 1, 0) * spacing.x;
-    panel_space  = total_space - panel_padding - panel_spacing;
+    panel_space  = total_space - panel_spacing;
     return panel_space;
 }
 NK_LIB void
@@ -18177,7 +18174,6 @@ nk_layout_widget_space(struct nk_rect *bounds, const struct nk_context *ctx,
     NK_ASSERT(bounds);
 
     spacing = style->window.spacing;
-    padding = nk_panel_get_padding(style, layout->type);
     panel_space = nk_layout_row_calculate_usable_space(&ctx->style, layout->type,
                                             layout->bounds.w, layout->row.columns);
 
@@ -18282,7 +18278,7 @@ nk_layout_widget_space(struct nk_rect *bounds, const struct nk_context *ctx,
     bounds->w = item_width;
     bounds->h = layout->row.height - spacing.y;
     bounds->y = layout->at_y - (float)*layout->offset_y;
-    bounds->x = layout->at_x + item_offset + item_spacing + padding.x;
+    bounds->x = layout->at_x + item_offset + item_spacing;
     if (((bounds->x + bounds->w) > layout->max_x) && modify)
         layout->max_x = bounds->x + bounds->w;
     bounds->x -= (float)*layout->offset_x;
@@ -25475,6 +25471,7 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
 ///    - [yy]: Minor version with non-breaking API and library changes
 ///    - [zz]: Bug fix version with no direct changes to API
 ///
+/// - 2019/11/09 (4.01.4) - Fix bug where width padding was applied twice
 /// - 2019/09/20 (4.01.3) - Fixed a bug wherein combobox cannot be closed by clicking the header
 ///                        when NK_BUTTON_TRIGGER_ON_RELEASE is defined.
 /// - 2019/09/10 (4.01.2) - Fixed the nk_cos function, which deviated significantly.
