@@ -68,6 +68,7 @@ static struct nk_allegro5 {
 NK_API NkAllegro5Font*
 nk_allegro5_font_create_from_file(const char *file_name, int font_size, int flags)
 {
+    NkAllegro5Font *font;
     if (!al_init_image_addon()) {
         fprintf(stdout, "Unable to initialize required allegro5 image addon\n");
         exit(1);
@@ -80,7 +81,7 @@ nk_allegro5_font_create_from_file(const char *file_name, int font_size, int flag
         fprintf(stdout, "Unable to initialize required allegro5 TTF font addon\n");
         exit(1);
     }
-    NkAllegro5Font *font = (NkAllegro5Font*)calloc(1, sizeof(NkAllegro5Font));
+    font = (NkAllegro5Font*)calloc(1, sizeof(NkAllegro5Font));
 
     font->font = al_load_font(file_name, font_size, flags);
     if (font->font == NULL) {
@@ -95,6 +96,8 @@ static float
 nk_allegro5_font_get_text_width(nk_handle handle, float height, const char *text, int len)
 {
     NkAllegro5Font *font = (NkAllegro5Font*)handle.ptr;
+    float result;
+    char* strcpy;
     if (!font || !text) {
         return 0;
     }
@@ -102,10 +105,12 @@ nk_allegro5_font_get_text_width(nk_handle handle, float height, const char *text
        as nuklear uses variable size buffers and al_get_text_width doesn't
        accept a length, it infers length from null-termination
        (which is unsafe API design by allegro devs!) */
-    char strcpy[len+1];
-    strncpy((char*)&strcpy, text, len);
+    strcpy = (char*) malloc((len+1) * sizeof(char));
+    strncpy(strcpy, text, len);
     strcpy[len] = '\0';
-    return al_get_text_width(font->font, strcpy);
+    result = al_get_text_width(font->font, strcpy);
+    free(strcpy);
+    return result;
 }
 
 NK_API void
@@ -137,6 +142,26 @@ NK_API void
 nk_allegro5_render()
 {
     const struct nk_command *cmd;
+    float xr, yr;
+    int i;
+    const struct nk_command_scissor *s;
+    const struct nk_command_line *l;
+    const struct nk_command_rect *r;
+    const struct nk_command_rect_filled *rf;
+    const struct nk_command_circle *c;
+    const struct nk_command_circle_filled *cf;
+    const struct nk_command_triangle *t;
+    const struct nk_command_triangle_filled *tf;
+    const struct nk_command_polygon *p;
+    const struct nk_command_polygon_filled *pf;
+    const struct nk_command_polyline *pl;
+    const struct nk_command_text *txt;
+    const struct nk_command_curve *q;
+    const struct nk_command_arc *a;
+
+    float *vertices;
+    float points[8];
+    NkAllegro5Font *font;
 
     al_set_target_backbuffer(allegro5.dsp);
 
@@ -146,64 +171,61 @@ nk_allegro5_render()
         switch (cmd->type) {
         case NK_COMMAND_NOP: break;
         case NK_COMMAND_SCISSOR: {
-            const struct nk_command_scissor *s =(const struct nk_command_scissor*)cmd;
+            s = (const struct nk_command_scissor*)cmd;
             al_set_clipping_rectangle((int)s->x, (int)s->y, (int)s->w, (int)s->h);
         } break;
         case NK_COMMAND_LINE: {
-            const struct nk_command_line *l = (const struct nk_command_line *)cmd;
+            l = (const struct nk_command_line *)cmd;
             color = nk_color_to_allegro_color(l->color);
             al_draw_line((float)l->begin.x, (float)l->begin.y, (float)l->end.x,
                 (float)l->end.y, color, (float)l->line_thickness);
         } break;
         case NK_COMMAND_RECT: {
-            const struct nk_command_rect *r = (const struct nk_command_rect *)cmd;
+            r = (const struct nk_command_rect *)cmd;
             color = nk_color_to_allegro_color(r->color);
             al_draw_rounded_rectangle((float)r->x, (float)r->y, (float)(r->x + r->w),
                 (float)(r->y + r->h), (float)r->rounding, (float)r->rounding, color,
                 (float)r->line_thickness);
         } break;
         case NK_COMMAND_RECT_FILLED: {
-            const struct nk_command_rect_filled *r = (const struct nk_command_rect_filled *)cmd;
-            color = nk_color_to_allegro_color(r->color);
-            al_draw_filled_rounded_rectangle((float)r->x, (float)r->y,
-                (float)(r->x + r->w), (float)(r->y + r->h), (float)r->rounding,
-                (float)r->rounding, color);
+            rf = (const struct nk_command_rect_filled *)cmd;
+            color = nk_color_to_allegro_color(rf->color);
+            al_draw_filled_rounded_rectangle((float)rf->x, (float)rf->y,
+                (float)(rf->x + rf->w), (float)(rf->y + rf->h), (float)rf->rounding,
+                (float)rf->rounding, color);
         } break;
         case NK_COMMAND_CIRCLE: {
-            const struct nk_command_circle *c = (const struct nk_command_circle *)cmd;
+            c = (const struct nk_command_circle *)cmd;
             color = nk_color_to_allegro_color(c->color);
-            float xr, yr;
             xr = (float)c->w/2;
             yr = (float)c->h/2;
             al_draw_ellipse(((float)(c->x)) + xr, ((float)c->y) + yr,
                 xr, yr, color, (float)c->line_thickness);
         } break;
         case NK_COMMAND_CIRCLE_FILLED: {
-            const struct nk_command_circle_filled *c = (const struct nk_command_circle_filled *)cmd;
-            color = nk_color_to_allegro_color(c->color);
-            float xr, yr;
-            xr = (float)c->w/2;
-            yr = (float)c->h/2;
-            al_draw_filled_ellipse(((float)(c->x)) + xr, ((float)c->y) + yr,
+            cf = (const struct nk_command_circle_filled *)cmd;
+            color = nk_color_to_allegro_color(cf->color);
+            xr = (float)cf->w/2;
+            yr = (float)cf->h/2;
+            al_draw_filled_ellipse(((float)(cf->x)) + xr, ((float)cf->y) + yr,
                 xr, yr, color);
         } break;
         case NK_COMMAND_TRIANGLE: {
-            const struct nk_command_triangle*t = (const struct nk_command_triangle*)cmd;
+            t = (const struct nk_command_triangle*)cmd;
             color = nk_color_to_allegro_color(t->color);
             al_draw_triangle((float)t->a.x, (float)t->a.y, (float)t->b.x, (float)t->b.y,
                 (float)t->c.x, (float)t->c.y, color, (float)t->line_thickness);
         } break;
         case NK_COMMAND_TRIANGLE_FILLED: {
-            const struct nk_command_triangle_filled *t = (const struct nk_command_triangle_filled *)cmd;
-            color = nk_color_to_allegro_color(t->color);
-            al_draw_filled_triangle((float)t->a.x, (float)t->a.y, (float)t->b.x,
-                (float)t->b.y, (float)t->c.x, (float)t->c.y, color);
+            tf = (const struct nk_command_triangle_filled *)cmd;
+            color = nk_color_to_allegro_color(tf->color);
+            al_draw_filled_triangle((float)tf->a.x, (float)tf->a.y, (float)tf->b.x,
+                (float)tf->b.y, (float)tf->c.x, (float)tf->c.y, color);
         } break;
         case NK_COMMAND_POLYGON: {
-            const struct nk_command_polygon *p = (const struct nk_command_polygon*)cmd;
+            p = (const struct nk_command_polygon*)cmd;
             color = nk_color_to_allegro_color(p->color);
-            int i;
-            float vertices[p->point_count * 2];
+            vertices = malloc(p->point_count * 2 * sizeof(float));
             for (i = 0; i < p->point_count; i++) {
                 vertices[i*2] = p->points[i].x;
                 vertices[(i*2) + 1] = p->points[i].y;
@@ -211,43 +233,43 @@ nk_allegro5_render()
             al_draw_polyline((const float*)&vertices, (2 * sizeof(float)),
                 (int)p->point_count, ALLEGRO_LINE_JOIN_ROUND, ALLEGRO_LINE_CAP_CLOSED,
                 color, (float)p->line_thickness, 0.0);
+            free(vertices);
         } break;
         case NK_COMMAND_POLYGON_FILLED: {
-            const struct nk_command_polygon_filled *p = (const struct nk_command_polygon_filled *)cmd;
-            color = nk_color_to_allegro_color(p->color);
-            int i;
-            float vertices[p->point_count * 2];
-            for (i = 0; i < p->point_count; i++) {
-                vertices[i*2] = p->points[i].x;
-                vertices[(i*2) + 1] = p->points[i].y;
+            pf = (const struct nk_command_polygon_filled *)cmd;
+            color = nk_color_to_allegro_color(pf->color);
+            vertices = malloc(pf->point_count * 2 * sizeof(float));
+            for (i = 0; i < pf->point_count; i++) {
+                vertices[i*2] = pf->points[i].x;
+                vertices[(i*2) + 1] = pf->points[i].y;
             }
-            al_draw_filled_polygon((const float*)&vertices, (int)p->point_count, color);
+            al_draw_filled_polygon((const float*)&vertices, (int)pf->point_count, color);
+            free(vertices);
         } break;
         case NK_COMMAND_POLYLINE: {
-            const struct nk_command_polyline *p = (const struct nk_command_polyline *)cmd;
-            color = nk_color_to_allegro_color(p->color);
-            int i;
-            float vertices[p->point_count * 2];
-            for (i = 0; i < p->point_count; i++) {
-                vertices[i*2] = p->points[i].x;
-                vertices[(i*2) + 1] = p->points[i].y;
+            pl = (const struct nk_command_polyline *)cmd;
+            color = nk_color_to_allegro_color(pl->color);
+            vertices = malloc(pl->point_count * 2 * sizeof(float));
+            for (i = 0; i < pl->point_count; i++) {
+                vertices[i*2] = pl->points[i].x;
+                vertices[(i*2) + 1] = pl->points[i].y;
             }
             al_draw_polyline((const float*)&vertices, (2 * sizeof(float)),
                 (int)p->point_count, ALLEGRO_LINE_JOIN_ROUND, ALLEGRO_LINE_CAP_ROUND,
-                color, (float)p->line_thickness, 0.0);
+                color, (float)pl->line_thickness, 0.0);
+            free(vertices);
         } break;
         case NK_COMMAND_TEXT: {
-            const struct nk_command_text *t = (const struct nk_command_text*)cmd;
-            color = nk_color_to_allegro_color(t->foreground);
-            NkAllegro5Font *font = (NkAllegro5Font*)t->font->userdata.ptr;
+            txt = (const struct nk_command_text*)cmd;
+            color = nk_color_to_allegro_color(txt->foreground);
+            font = (NkAllegro5Font*)txt->font->userdata.ptr;
             al_draw_text(font->font,
-                color, (float)t->x, (float)t->y, 0,
-                (const char*)t->string);
+                color, (float)txt->x, (float)txt->y, 0,
+                (const char*)txt->string);
         } break;
         case NK_COMMAND_CURVE: {
-            const struct nk_command_curve *q = (const struct nk_command_curve *)cmd;
+            q = (const struct nk_command_curve *)cmd;
             color = nk_color_to_allegro_color(q->color);
-            float points[8];
             points[0] = (float)q->begin.x;
             points[1] = (float)q->begin.y;
             points[2] = (float)q->ctrl[0].x;
@@ -259,7 +281,7 @@ nk_allegro5_render()
             al_draw_spline(points, color, (float)q->line_thickness);
         } break;
         case NK_COMMAND_ARC: {
-            const struct nk_command_arc *a = (const struct nk_command_arc *)cmd;
+            a = (const struct nk_command_arc *)cmd;
             color = nk_color_to_allegro_color(a->color);
             al_draw_arc((float)a->cx, (float)a->cy, (float)a->r, a->a[0],
                 a->a[1], color, (float)a->line_thickness);
@@ -277,6 +299,8 @@ NK_API void
 nk_allegro5_handle_event(ALLEGRO_EVENT *ev)
 {
     struct nk_context *ctx = &allegro5.ctx;
+    int button;
+    int kc, down, control_mask;
     switch (ev->type) {
         case ALLEGRO_EVENT_DISPLAY_RESIZE: {
             allegro5.width = (unsigned int)ev->display.width;
@@ -291,7 +315,7 @@ nk_allegro5_handle_event(ALLEGRO_EVENT *ev)
         } break;
         case ALLEGRO_EVENT_MOUSE_BUTTON_DOWN:
         case ALLEGRO_EVENT_MOUSE_BUTTON_UP: {
-            int button = NK_BUTTON_LEFT;
+            button = NK_BUTTON_LEFT;
             if (ev->mouse.button == 2) {
                 button = NK_BUTTON_RIGHT;
             }
@@ -337,8 +361,8 @@ nk_allegro5_handle_event(ALLEGRO_EVENT *ev)
         } break;
         case ALLEGRO_EVENT_KEY_DOWN:
         case ALLEGRO_EVENT_KEY_UP: {
-            int kc = ev->keyboard.keycode;
-            int down = ev->type == ALLEGRO_EVENT_KEY_DOWN;
+            kc = ev->keyboard.keycode;
+            down = ev->type == ALLEGRO_EVENT_KEY_DOWN;
 
             if (kc == ALLEGRO_KEY_LSHIFT || kc == ALLEGRO_KEY_RSHIFT) nk_input_key(ctx, NK_KEY_SHIFT, down);
             else if (kc == ALLEGRO_KEY_DELETE)    nk_input_key(ctx, NK_KEY_DEL, down);
@@ -361,8 +385,8 @@ nk_allegro5_handle_event(ALLEGRO_EVENT *ev)
             }
         } break;
         case ALLEGRO_EVENT_KEY_CHAR: {
-            int kc = ev->keyboard.keycode;
-            int control_mask = (ev->keyboard.modifiers & ALLEGRO_KEYMOD_CTRL) ||
+            kc = ev->keyboard.keycode;
+            control_mask = (ev->keyboard.modifiers & ALLEGRO_KEYMOD_CTRL) ||
                                (ev->keyboard.modifiers & ALLEGRO_KEYMOD_COMMAND);
 
             if (kc == ALLEGRO_KEY_C && control_mask) {
@@ -425,12 +449,13 @@ NK_API struct nk_context*
 nk_allegro5_init(NkAllegro5Font *allegro5font, ALLEGRO_DISPLAY *dsp,
     unsigned int width, unsigned int height)
 {
+    struct nk_user_font *font;
     if (!al_init_primitives_addon()) {
         fprintf(stdout, "Unable to initialize required allegro5 primitives addon\n");
         exit(1);
     }
 
-    struct nk_user_font *font = &allegro5font->nk;
+    font = &allegro5font->nk;
     font->userdata = nk_handle_ptr(allegro5font);
     font->height = (float)allegro5font->height;
     font->width = nk_allegro5_font_get_text_width;
