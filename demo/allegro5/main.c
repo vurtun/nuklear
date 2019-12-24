@@ -55,6 +55,8 @@ int main(void)
     /* Platform */
     ALLEGRO_DISPLAY *display = NULL;
     ALLEGRO_EVENT_QUEUE *event_queue = NULL;
+    NkAllegro5Font *font;
+    struct nk_context *ctx;
 
     if (!al_init()) {
         fprintf(stdout, "failed to initialize allegro5!\n");
@@ -85,9 +87,7 @@ int main(void)
     al_register_event_source(event_queue, al_get_mouse_event_source());
     al_register_event_source(event_queue, al_get_keyboard_event_source());
 
-    NkAllegro5Font *font;
     font = nk_allegro5_font_create_from_file("../../../extra_font/Roboto-Regular.ttf", 12, 0);
-    struct nk_context *ctx;
 
     ctx = nk_allegro5_init(font, display, WINDOW_WIDTH, WINDOW_HEIGHT);
 

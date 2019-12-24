@@ -199,7 +199,7 @@ overview(struct nk_context *ctx)
                 /* Basic widgets */
                 static int int_slider = 5;
                 static float float_slider = 2.5f;
-                static size_t prog_value = 40;
+                static nk_size prog_value = 40;
                 static float property_float = 2;
                 static int property_int = 10;
                 static int property_neg = 10;
@@ -226,7 +226,7 @@ overview(struct nk_context *ctx)
 
                 nk_label(ctx, "Slider float", NK_TEXT_LEFT);
                 nk_slider_float(ctx, 0, &float_slider, 5.0, 0.5f);
-                nk_labelf(ctx, NK_TEXT_LEFT, "Progressbar: %zu" , prog_value);
+                nk_labelf(ctx, NK_TEXT_LEFT, "Progressbar: %u" , (int)prog_value);
                 nk_progress(ctx, &prog_value, 100, NK_MODIFIABLE);
 
                 nk_layout_row(ctx, NK_STATIC, 25, 2, ratio);
