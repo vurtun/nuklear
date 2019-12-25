@@ -12,10 +12,14 @@ BIN := $(BIN).exe
 LIBS = -lglfw3 -lopengl32 -lm -lGLU32
 else
 	UNAME_S := $(shell uname -s)
+	GLFW3 := $(shell pkg-config --libs glfw3)
 	ifeq ($(UNAME_S),Darwin)
 		LIBS := -lglfw3 -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo -lm -lGLEW -L/usr/local/lib
+	else ifeq ($(UNAME_S),FreeBSD)
+		LIBS := $(GLFW3) -lGL -lm -lGLU -lGLEW
+		CFLAGS += -I/usr/local/include	
 	else
-		LIBS = -lglfw -lGL -lm -lGLU
+		LIBS = $(GLFW3) -lGL -lm -lGLU
 	endif
 endif
 
