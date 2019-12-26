@@ -76,7 +76,8 @@ static void error_callback(int e, const char *d)
 int main(void)
 {
     /* Platform */
-    static GLFWwindow *win;
+    struct nk_glfw glfw = {0};
+    GLFWwindow *win;
     int width = 0, height = 0;
     struct nk_context *ctx;
     struct nk_colorf bg;
@@ -105,18 +106,18 @@ int main(void)
         exit(1);
     }
 
-    ctx = nk_glfw3_init(win, NK_GLFW3_INSTALL_CALLBACKS);
+    ctx = nk_glfw3_init(&glfw, win, NK_GLFW3_INSTALL_CALLBACKS);
     /* Load Fonts: if none of these are loaded a default font will be used  */
     /* Load Cursor: if you uncomment cursor loading please hide the cursor */
     {struct nk_font_atlas *atlas;
-    nk_glfw3_font_stash_begin(&atlas);
+    nk_glfw3_font_stash_begin(&glfw, &atlas);
     /*struct nk_font *droid = nk_font_atlas_add_from_file(atlas, "../../../extra_font/DroidSans.ttf", 14, 0);*/
     /*struct nk_font *roboto = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Roboto-Regular.ttf", 14, 0);*/
     /*struct nk_font *future = nk_font_atlas_add_from_file(atlas, "../../../extra_font/kenvector_future_thin.ttf", 13, 0);*/
     /*struct nk_font *clean = nk_font_atlas_add_from_file(atlas, "../../../extra_font/ProggyClean.ttf", 12, 0);*/
     /*struct nk_font *tiny = nk_font_atlas_add_from_file(atlas, "../../../extra_font/ProggyTiny.ttf", 10, 0);*/
     /*struct nk_font *cousine = nk_font_atlas_add_from_file(atlas, "../../../extra_font/Cousine-Regular.ttf", 13, 0);*/
-    nk_glfw3_font_stash_end();
+    nk_glfw3_font_stash_end(&glfw);
     /*nk_style_load_all_cursors(ctx, atlas->cursors);*/
     /*nk_style_set_font(ctx, &droid->handle);*/}
 
@@ -132,7 +133,7 @@ int main(void)
     {
         /* Input */
         glfwPollEvents();
-        nk_glfw3_new_frame();
+        nk_glfw3_new_frame(&glfw);
 
         /* GUI */
         if (nk_begin(ctx, "Demo", nk_rect(50, 50, 230, 250),
@@ -191,10 +192,10 @@ int main(void)
          * defaults everything back into a default state.
          * Make sure to either a.) save and restore or b.) reset your own state after
          * rendering the UI. */
-        nk_glfw3_render(NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
+        nk_glfw3_render(&glfw, NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
         glfwSwapBuffers(win);
     }
-    nk_glfw3_shutdown();
+    nk_glfw3_shutdown(&glfw);
     glfwTerminate();
     return 0;
 }
